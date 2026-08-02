@@ -1,0 +1,43 @@
+KRK — Messbericht der kopflosen Strecke (Schritt 3)
+====================================================
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-02T16:46:54Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Bildwiederholrate     von system_profiler nicht gemeldet; Hauptbildschirm 2880 x 1800 Retina (kopflose Strecke zeichnet nicht)
+Cache-Zustand         warm (ein ungezaehlter Vorlauf, danach nur weitere Zugriffe)
+Wiederholungen        20
+Pruefordner           /Users/k1/Library/Caches/org.stalmann.krk/pruefordner/b
+Startwert             2
+Eintraege je Lauf     10000 (laut Steckbrief: 10000)
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+Zahlen
+------
+Messgroesse                                          95. Perzentil        Median       Minimum
+Lesen bis zum ersten Stapel (Anteil an L2)                4.961 ms      4.824 ms      4.332 ms
+Vollstaendiges Lesen samt Sortierung (L3, L10)           20.413 ms     19.490 ms     18.055 ms
+
+Einzelwerte
+-----------
+Lesen bis zum ersten Stapel:
+  4.332 ms  4.832 ms  4.866 ms  4.906 ms  4.826 ms
+  4.675 ms  4.793 ms  4.847 ms  4.809 ms  4.784 ms
+  4.822 ms  4.787 ms  4.692 ms  4.961 ms  5.321 ms
+  4.890 ms  4.720 ms  4.875 ms  4.770 ms  4.862 ms
+Vollstaendiges Lesen samt Sortierung:
+  18.055 ms  19.054 ms  19.516 ms  19.718 ms  19.252 ms
+  18.957 ms  19.500 ms  19.852 ms  19.052 ms  19.396 ms
+  19.368 ms  19.179 ms  19.015 ms  20.413 ms  20.908 ms
+  19.915 ms  19.527 ms  19.514 ms  19.481 ms  19.641 ms
+
+Lesart
+------
+Diese Strecke misst ohne Fenster und ohne AppKit. "Lesen bis zum ersten
+Stapel" ist der Anteil des Kerns an L2, nicht L2 selbst: was das Zeichnen
+dazulegt, misst erst der Messmodus der Anwendung (Schritt 21). L1, L4 bis
+L9 kommen auf dieser Strecke nicht vor. Das 95. Perzentil ist der Wert
+des naechsten Rangs, nicht interpoliert: bei zwanzig Laeufen der
+neunzehnte der sortierten Reihe.

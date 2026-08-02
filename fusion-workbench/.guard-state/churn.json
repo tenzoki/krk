@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 66,
-      "changesThisSession": 23,
-      "lastChange": "2026-08-02T16:31:37.745Z",
-      "thrashingScore": 64
+      "totalChanges": 67,
+      "changesThisSession": 24,
+      "lastChange": "2026-08-02T16:51:21.987Z",
+      "thrashingScore": 66
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -445,15 +445,15 @@
       "thrashingScore": 0
     },
     "crates/krk-bench/Cargo.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:37:04.525Z",
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T16:40:37.499Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/main.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:37:05.818Z",
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T16:40:32.462Z",
       "thrashingScore": 0
     },
     "xtask/Cargo.toml": {
@@ -586,6 +586,48 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-02T16:31:54.586Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-bench/src/fixture.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T16:41:10.840Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-bench/src/messen.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:37:33.483Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-bench/src/bericht.rs": {
+      "totalChanges": 5,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-02T16:46:23.595Z",
+      "thrashingScore": 7
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1850-pruefordner-erzeuger-und-kopflose-messstrecke.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:49:05.208Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_bildwiederholrate-am-referenzgeraet-nicht-per-system-profiler-erhebbar.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:50:41.105Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_pruefordner-sind-duennbesetzt-und-taugen-nicht-fuer-die-kopiermessung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:51:00.017Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_dateilisten-der-planschritte-lassen-wiederholt-die-cargo-toml-aus.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:51:17.197Z",
       "thrashingScore": 0
     }
   },

@@ -403,7 +403,7 @@ flowchart TD
 - Abhängigkeiten: S1
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: der Leser eines erzeugten Ordners mit 5.000 Einträgen liefert 5.000 Einträge in mindestens 5 Stapeln; alle acht Sortierungen liefern die erwartete Reihenfolge; Ordner stehen vor Dateien; der Filter blendet Namen mit führendem Punkt aus; ein mitten im Lauf abgebrochener Leser liefert einen Teilbestand und meldet den Abbruch. `grep -rln 'unsafe' crates/krk-core/src` nennt genau eine Datei, `verzeichnis/sys.rs`, und diese trägt `#[allow(unsafe_code)]`.
 
-#### 3. **Prüfordner-Erzeuger und kopflose Messstrecke**
+#### 3. [DONE] **Prüfordner-Erzeuger und kopflose Messstrecke**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-bench/src/{main.rs,fixture.rs,messen.rs,bericht.rs}`, `messungen/.gitkeep`

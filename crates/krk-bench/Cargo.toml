@@ -6,3 +6,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+# Die Messstrecke misst den Verzeichnisleser des Kerns. Sie bindet ihn ueber
+# den Pfad ein, weil beide im selben Workspace liegen und miteinander versioniert
+# werden.
+krk-core = { path = "../krk-core" }

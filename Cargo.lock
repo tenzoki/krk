@@ -52,6 +52,9 @@ dependencies = [
 [[package]]
 name = "krk-bench"
 version = "0.1.0"
+dependencies = [
+ "krk-core",
+]
 
 [[package]]
 name = "krk-core"
