@@ -411,7 +411,7 @@ flowchart TD
 - Abhängigkeiten: S2
 - Abnahmekriterium: zweimaliger Aufruf von `fixture --eintraege 10000 --seed 1` in zwei verschiedene Zielordner liefert identische Namens- und Größenlisten, prüfbar über `ls -la <ordner> | shasum`. Dasselbe mit `--eintraege 100000`. Ein Aufruf mit `--seed 2` liefert bei gleicher Eintragszahl eine andere Liste als der mit `--seed 1`, womit die Prüfordner A und B unterscheidbar sind. `messen --kopflos` schreibt eine Datei unter `messungen/`, deren Kopf die sechs genannten Angaben trägt und deren Zahlenteil je Messgröße das 95. Perzentil über zwanzig Läufe nennt. `messen --kalt` ohne Rechte bricht mit Rückgabewert ungleich 0 ab und gibt keine Zahl aus.
 
-#### 4. **Bündelbeschreibung `Info.plist`**
+#### 4. [DONE] **Bündelbeschreibung `Info.plist`**
 
 - Ausführender: `ontocoder`
 - Dateien: `resources/Info.plist`

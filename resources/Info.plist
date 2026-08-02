@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Buendelbeschreibung fuer KRK.app. `cargo xtask bundle` (Schritt 5) kopiert
+	  diese Datei unveraendert nach `KRK.app/Contents/Info.plist`; es gibt keine
+	  Ersetzung von Platzhaltern beim Bauen.
+	-->
+
+	<key>CFBundleIdentifier</key>
+	<string>org.stalmann.krk</string>
+
+	<key>CFBundleName</key>
+	<string>KRK</string>
+
+	<!--
+	  Der Name des Binaerprogramms, nicht der des Cargo-Pakets: das Paket heisst
+	  `krk-ui`, sein `[[bin]]`-Ziel heisst `krk`. Schritt 5 nimmt an
+	  `KRK.app/Contents/MacOS/krk` ab, dieser Wert muss dazu passen.
+	-->
+	<key>CFBundleExecutable</key>
+	<string>krk</string>
+
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<!--
+	  Fuehrt `version = "0.1.0"` aus `[workspace.package]` der `Cargo.toml` von
+	  Hand nach. Beide Stellen sind beim Anheben der Version gemeinsam zu ziehen.
+	-->
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+
+	<key>CFBundleVersion</key>
+	<string>1</string>
+
+	<!--
+	  Mindest-Zielsystem macOS 15, dieselbe Zahl wie
+	  `MACOSX_DEPLOYMENT_TARGET = "15.0"` in `.cargo/config.toml`. Weicht sie ab,
+	  startet ein Buendel auf einem System, fuer das sein Binaerprogramm nicht
+	  gebaut ist, oder umgekehrt.
+	-->
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+
+	<key>NSHighResolutionCapable</key>
+	<true/>
+
+	<!--
+	  Die fuenf Rueckfragetexte des Systemmechanismus fuer Transparenz,
+	  Zustimmung und Kontrolle. KRK wird ausserhalb der App-Sandbox
+	  ausgeliefert, weil C9 Zugriff auf jeden lokalen Pfad einschliesslich
+	  `/Volumes` verlangt; der Zugriff auf die geschuetzten Ordner laeuft
+	  stattdessen ueber diese Rueckfragen am signierten Buendel.
+
+	  Die Texte sind Oberflaeche: macOS zeigt sie dem Nutzer woertlich im
+	  Berechtigungsdialog. Je ein Satz, der den Zweck nennt, wie C4 es verlangt.
+	  Deutsch nach Plan (Schritt 4 und `### Frage 7`) und nach der Projektsprache
+	  `de`; Du-Form, weil die deutschsprachige Oberflaeche von macOS 15 sie im
+	  umgebenden Dialogtext ebenfalls verwendet.
+	-->
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>KRK zeigt deinen Schreibtisch als Ordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.</string>
+
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>KRK zeigt deinen Dokumentenordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.</string>
+
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>KRK zeigt deinen Download-Ordner an, damit du geladene Dateien von dort öffnen, kopieren, verschieben und umbenennen kannst.</string>
+
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>KRK zeigt angeschlossene Wechselmedien wie USB-Sticks und externe Festplatten an, damit du Dateien zwischen ihnen und deinem Mac kopieren und verschieben kannst.</string>
+
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>KRK zeigt bereits verbundene Netzlaufwerke wie jeden anderen Ordner an, damit du Dateien darin öffnen und bearbeiten kannst; eine eigene Verbindung zu einem Server baut KRK nicht auf.</string>
+</dict>
+</plist>
