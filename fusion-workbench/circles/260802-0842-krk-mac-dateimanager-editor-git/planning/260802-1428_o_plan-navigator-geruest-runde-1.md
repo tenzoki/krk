@@ -443,7 +443,7 @@ flowchart TD
 - Abnahmekriterium: `plutil -lint resources/Info.plist` beendet mit 0. `plutil -extract CFBundleShortVersionString raw resources/Info.plist` liefert `__KRK_VERSION__`. `grep -q '0\.1\.0' resources/Info.plist` findet nichts mehr, weder im Wert noch im Kommentar; damit steht keine Versionsnummer mehr in der Datei. Die fünf TCC-Texte und die übrigen Schlüssel sind im Diff unverändert.
 - **Warum das ein eigener Schritt ist.** Der Defekt `issues/260802-1835_c_versionsnummer-steht-an-zwei-stellen-ohne-abgleich.md` wird an zwei Dateien behoben, einer Datendatei und einem Bauwerkzeug. Die Zuschnittregel dieses Plans erlaubt keinen Schritt mit zwei Ausführenden, also steht die Datenänderung hier und die Ersetzung in S5. Die Reihenfolge ist bindend: ein S5, das vor S4b läuft, findet keinen Platzhalter und bricht ab, wie es soll.
 
-#### 5. **Bündelbau, Versionsersetzung und lokale Signierung**
+#### 5. [DONE] **Bündelbau, Versionsersetzung und lokale Signierung**
 
 - Ausführender: `coder`
 - Dateien: `xtask/src/{bundle.rs,sign.rs}`, `xtask/src/main.rs` (einbindend: `mod bundle; mod sign;` und die Unterbefehlsauswahl), `README.md`

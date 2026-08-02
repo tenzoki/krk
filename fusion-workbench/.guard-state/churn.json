@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 111,
-      "changesThisSession": 68,
-      "lastChange": "2026-08-02T17:12:34.600Z",
-      "thrashingScore": 169
+      "totalChanges": 112,
+      "changesThisSession": 69,
+      "lastChange": "2026-08-02T17:30:49.202Z",
+      "thrashingScore": 171
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -463,10 +463,10 @@
       "thrashingScore": 0
     },
     "xtask/src/main.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:37:07.866Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T17:24:13.091Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
@@ -640,6 +640,36 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-02T17:12:05.661Z",
+      "thrashingScore": 0
+    },
+    "xtask/src/bundle.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T17:22:22.249Z",
+      "thrashingScore": 0
+    },
+    "xtask/src/sign.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T17:23:59.830Z",
+      "thrashingScore": 0
+    },
+    "README.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T17:23:47.254Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1927-buendelbau-versionsersetzung-und-lokale-signierung.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T17:29:29.657Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1935_o_frage-7-und-schritt-5-widersprechen-sich-bei-der-signaturidentitaet.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T17:31:08.451Z",
       "thrashingScore": 0
     }
   },

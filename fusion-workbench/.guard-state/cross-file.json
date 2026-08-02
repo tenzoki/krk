@@ -266,9 +266,9 @@
       "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "pingBackCount": 9,
-      "totalEdits": 111,
-      "lastEditTimestamp": "2026-08-02T17:12:34.601Z"
+      "pingBackCount": 10,
+      "totalEdits": 112,
+      "lastEditTimestamp": "2026-08-02T17:30:49.203Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "pingBackCount": 1,
@@ -386,9 +386,9 @@
       "lastEditTimestamp": "2026-08-02T15:37:06.620Z"
     },
     "xtask/src/main.rs": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T15:37:07.867Z"
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T17:24:13.093Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
       "pingBackCount": 0,
@@ -534,8 +534,33 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-02T17:12:05.662Z"
+    },
+    "xtask/src/bundle.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T17:22:22.250Z"
+    },
+    "xtask/src/sign.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T17:23:59.831Z"
+    },
+    "README.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T17:23:47.256Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1927-buendelbau-versionsersetzung-und-lokale-signierung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T17:29:29.658Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1935_o_frage-7-und-schritt-5-widersprechen-sich-bei-der-signaturidentitaet.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T17:31:08.452Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md",
-  "lastEditTimestamp": "2026-08-02T17:12:34.601Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1935_o_frage-7-und-schritt-5-widersprechen-sich-bei-der-signaturidentitaet.md",
+  "lastEditTimestamp": "2026-08-02T17:31:08.452Z"
 }
