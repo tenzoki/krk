@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`, `shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`
 
 ---
 
@@ -40,8 +40,18 @@ Shift+Delete ist als Löschtaste vorbelegt, aber die Kombination trägt in den b
 
 Option 2 hält den schnellen Weg sicher und gibt dem endgültigen Löschen eine eigene, bewusst zu treffende Taste. Der Preis, zwei Löschbefehle zu erklären, fällt gegen einen unwiederbringlich gelöschten Ordner kaum ins Gewicht. Die Abwägung ist eine Empfehlung, keine geprüfte Aussage.
 
+## Antwort des Nutzers
+
+Der Nutzer hat am 260802-1105 geantwortet, wörtlich: "Delete löscht in Papierkorb, FN+F8 endgültig".
+
+Die Antwort folgt der Aufteilung aus Möglichkeit 2, ändert aber die Tasten. Der schnelle Weg in den Papierkorb liegt auf der Taste Delete allein, nicht auf Shift+Delete. Das endgültige Löschen liegt auf Fn+F8. Shift+Delete kommt in der Antwort nicht mehr vor und bleibt ab Werk unbelegt.
+
+**Zur Rückfrage vor dem endgültigen Löschen hat der Nutzer nichts gesagt.** Der Shaper hat sie festgelegt: Fn+F8 fragt genau einmal je Vorgang nach, mit Abbrechen als Vorbelegung. Begründung: der unwiderrufliche Weg hat keinen Rückweg, und ein eigener Rückgängig-Speicher scheidet aus, weil er ein zweiter Papierkorb wäre und gegen die Maxime "supersimpel" liefe. Die Rückfrage kostet einen Tastendruck je Vorgang, nicht je Eintrag, und bremst die Tastaturarbeit nicht, weil das alltägliche Löschen über Delete ohne jede Rückfrage läuft. Der Nutzer kann diese Festlegung bei der Durchsicht des Specs umstoßen.
+
+**Abweichung zur Circle-Directive.** Der Abschnitt `## Directive` des Circle-Datensatzes nennt "Shift+Delete zum Löschen". Die Antwort des Nutzers ersetzt das. Der Widerspruch ist als Defekt festgehalten in `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md` und wird am Plan-Gate vom Nutzer entschieden.
+
 ---
-Answered:
+Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`:136-141 — Delete räumt in den Papierkorb, Fn+F8 löscht endgültig mit einmaliger Rückfrage je Vorgang; Shift+Delete bleibt ab Werk unbelegt.
 Implemented:
 Deferred:
 Superseded by:

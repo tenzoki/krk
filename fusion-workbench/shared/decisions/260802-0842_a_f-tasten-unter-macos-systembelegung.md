@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`, `shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`
 
 ---
 
@@ -40,8 +40,14 @@ Die Vorbelegung des Circles legt die Norton-Funktionen auf F3 bis F8. Auf einem 
 
 Option 3 löst das Problem ohne Rückfrage an den Nutzer und ohne Eingriff in dessen Systemeinstellungen. Der Nachteil, zwei Einträge in der Belegungstabelle zu führen, lässt sich entschärfen, indem die Konfigurationsoberfläche beide als eine Zeile mit zwei Auslösern darstellt. Diese Empfehlung ist eine Abwägung, keine geprüfte Aussage; die Entscheidung liegt beim Nutzer.
 
+## Antwort des Nutzers
+
+Der Nutzer hat am 260802-1105 Möglichkeit 1 gewählt: ausgeliefert wird ausschließlich die Fn-Kombination, Fn+F3 bis Fn+F8. Die nackten Funktionstasten bleiben unbelegt. Begründung des Nutzers: die Belegung funktioniert damit auf jedem Mac ohne Systemeingriff.
+
+Die Empfehlung des Shapers, Möglichkeit 3, ist damit abgelehnt. Der Vorteil von Möglichkeit 1 gegenüber Möglichkeit 3 liegt in der Belegungsansicht: sie führt je Funktion eine Zeile statt zweier. Der im Contra genannte Fall einer externen PC-Tastatur ohne Fn-Taste bleibt bestehen und ist über die freie Konfigurierbarkeit aufzufangen, nicht über die Vorbelegung.
+
 ---
-Answered:
+Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`:107-113 — Möglichkeit 1 gewählt: Vorbelegung ist Fn+F3 bis Fn+F8, die nackten F-Tasten bleiben frei, kein Systemeingriff nötig.
 Implemented:
 Deferred:
 Superseded by:

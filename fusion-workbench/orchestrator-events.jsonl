@@ -4,3 +4,5 @@
 {"ts":"2026-08-02T08:13:59","event":"circle_activated","agent":"orchestrator","detail":"260802-0842-krk-mac-dateimanager-editor-git: _a_ -> _t_, .active-circle written; Plane skipped (config is unfilled template)"}
 {"ts":"2026-08-02T08:14:50","event":"session_start","agent":"orchestrator","detail":"Circle 260802-0842-krk-mac-dateimanager-editor-git active; domain=code (heuristic said strategic, overridden per Circle record); 5 open decisions, 1 open issue, no plan"}
 {"ts":"2026-08-02T08:29:25","event":"scope_resolved","agent":"orchestrator","detail":"mode=custom; walking-skeleton scope (navigator core); technology via analyst comparison + decision gate; CLAUDE.md first; 4 pre-tasks queued"}
+{"ts":"2026-08-02T08:33:03","event":"task_done","task":"PRE-1","agent":"coder","detail":"CLAUDE.md angelegt mit **Language:** de; Sprachaufloesung verifiziert (chat-voice-de.yaml)"}
+{"ts":"2026-08-02T08:33:03","event":"commit","task":"PRE-1","agent":"orchestrator","detail":"c0682ff initial project state; ede2645 untrack transient session state"}

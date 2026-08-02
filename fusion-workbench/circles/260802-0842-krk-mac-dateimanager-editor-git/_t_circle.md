@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** anticipated
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md
 **Active session history:** (none yet)
 
 ---

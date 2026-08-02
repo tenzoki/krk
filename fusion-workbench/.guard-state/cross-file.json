@@ -16,9 +16,9 @@
       "lastEditTimestamp": "2026-08-02T05:50:35.778Z"
     },
     ".gitignore": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T05:50:38.295Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T08:32:52.178Z"
     },
     "shared/history/260802-0755-orchestrator-session.md": {
       "pingBackCount": 0,
@@ -31,14 +31,14 @@
       "lastEditTimestamp": "2026-08-02T06:43:33.473Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T06:43:59.792Z"
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:09:38.604Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T06:44:19.762Z"
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:10:05.271Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md": {
       "pingBackCount": 0,
@@ -99,8 +99,63 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-02T08:31:56.557Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
+      "pingBackCount": 2,
+      "totalEdits": 13,
+      "lastEditTimestamp": "2026-08-02T09:09:01.304Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T09:10:59.284Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_umbenennen-im-stapel-umfang.md": {
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:10:22.493Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T08:40:32.785Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:14:05.120Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md": {
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:12:56.575Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_claude-md-tabelle-offener-entscheidungen-veraltet.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:11:44.863Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:12:49.228Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/validate.mjs": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T09:16:56.405Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/metrics.mjs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:17:19.828Z"
+    },
+    "reviews/260802-1118-conceptrev-spec-navigator-geruest.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:19:55.153Z"
     }
   },
-  "lastEditFile": "fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md",
-  "lastEditTimestamp": "2026-08-02T08:32:24.704Z"
+  "lastEditFile": "reviews/260802-1118-conceptrev-spec-navigator-geruest.md",
+  "lastEditTimestamp": "2026-08-02T09:19:55.153Z"
 }
