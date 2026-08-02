@@ -1,0 +1,16 @@
+**Wir bauen eine native Anwendung für den Mac in der Art von ForkLift / Norton Commander, namens KRK.**
+
+**Maximen:**
+- Superschnell
+- Supersimpel
+- Steuerung über Keyboard, außerdem Maus-/Trackpad-Unterstützung
+- Eingebauter Editor für Text, Code, Markdown, jeweils im Raw- und Format-Modus
+- Editor kann: zu Zeile springen, Copy & Paste, Suchen, Ersetzen, Positionen und Bereiche im Text markieren und als Lesezeichen im eigenen Home speichern, Git add/commit/revert, Versionen anzeigen/auschecken (Slider zur Steuerung), ...
+- Navigation zwischen Foldern und Files: zwei Fenster mit je mehreren Tabs zum schnellen Navigieren, Suchen und Ersetzen über mehrere Dateien, Dateien/Folder erzeugen, löschen, umbenennen (auch bulk), Copy & Paste, Multifile-Copy
+- Links neben den Fenstern ist eine Bookmark-/Favoriten-Leiste sowie Geräte-Standardordner (User Home, Laufwerke, ...)
+- Rechts neben den Fenstern ist ein Preview-Fenster-Frame (zeigt Inhalt, sonst Metadaten), auch dort Tabs; in der Navigation ausgewählte Inhalte kommen in den aktuellen Tab und bleiben dort, bis etwas anderes ausgewählt wird. Wenn zu einem anderen Tab gewechselt wird, bleibt der Inhalt im vorigen Tab bestehen. Im gleichen Frame können auch File-/Folder-Compares angezeigt werden.
+- Wenn ohne Probleme möglich: integrierter Browser, sodass Websites navigiert werden können.
+- Später: Integration eines Code-SDKs (o. Ä.), um AI zu integrieren – vor allem Tool Use und Coding, aber auch Analyse und Textverfassung.
+- Mögliche Ausbaustufe: KRK wird Kommandozentrale für Fusion.
+
+Kleine Anmerkung: Bei "code code sdk" bin ich mir nicht sicher, ob ein Tippfehler vorliegt oder ob ein bestimmtes SDK gemeint war (z. B. "Claude Code SDK") – falls ja, sag Bescheid, dann passe ich die Stelle präziser an.

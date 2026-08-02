@@ -1,0 +1,62 @@
+# fusion-workbench session state — for resumption after restart
+# Updated: 260802-1014
+
+session:
+  directive: "KRK: native macOS-Anwendung, lokale Dateien vollständig über die Tastatur navigieren, bearbeiten und versionieren. Erste Runde: lauffähiges Navigator-Gerüst."
+  mode: "custom"
+  domain: "code"
+  started: "260802-1014"
+  history_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md"
+  git_head_at_start: "(none — repository has no commits yet)"
+
+progress:
+  turn: 0
+  max_turns: 5
+  tasks_total: 0
+  tasks_done: 0
+  tasks_skipped: 0
+  tasks_errored: 0
+  commits: 0
+  turn_start_head: null
+  paused_at_task: null
+  directive_revisions_this_session: 0
+
+current_task:
+  id: "PRE-1"
+  summary: "CLAUDE.md mit Sprachdeklaration und Projektkontext anlegen"
+  agent: "coder"
+  status: "queued"
+  source_file: "shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md"
+
+work_queue:
+  - id: "PRE-1"
+    summary: "CLAUDE.md mit **Language:** de und Projektkontext anlegen"
+    agent: "coder"
+    status: "queued"
+  - id: "PRE-2"
+    summary: "Spec für das Navigator-Gerüst (shaper); löst F-Tasten- und Löschen-Entscheidung, setzt messbare Tempo-Zusagen"
+    agent: "shaper"
+    status: "queued"
+  - id: "PRE-3"
+    summary: "Technologievergleich (analyst) gegen die Maximen; legt Entscheidungsdatensatz vor"
+    agent: "analyst"
+    status: "queued"
+  - id: "PRE-4"
+    summary: "Implementierungsplan für das Navigator-Gerüst (planner)"
+    agent: "planner"
+    status: "queued"
+
+plan_context:
+  plan_file: "(none yet)"
+  user_directive: >
+    Phase-0-Klärung 260802-1014: (1) Planumfang = erst ein lauffähiges Gerüst —
+    zwei Panes mit Tabs, Navigation, Tastaturbelegung, Dateioperationen; Editor und
+    Git folgen in späteren Runden desselben Circles. (2) Technologiewahl nicht
+    vorgeben, sondern durch analyst vergleichen und als Entscheidung vorlegen.
+    (3) CLAUDE.md jetzt anlegen.
+  key_findings: >
+    Fünf offene Entscheidungen in shared/decisions/. Für das Navigator-Gerüst binden
+    zwei davon: F-Tasten unter macOS-Systembelegung und Löschen (Papierkorb oder
+    endgültig). Die drei übrigen (Git-revert-Bedeutung, Editor-Formatansicht,
+    Code-SDK) betreffen spätere Runden. Domain-Heuristik ergab strategic; bewusst
+    auf code gesetzt, Begründung im Sitzungsprotokoll.

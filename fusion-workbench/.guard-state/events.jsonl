@@ -1,0 +1,181 @@
+{"ts":"2026-08-01T20:13:15.514Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:18.621Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-01T20:13:18.732Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-01T20:13:20.518Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:23.268Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:28.495Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:29.502Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:33.345Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:34.247Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:13:58.661Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:14:15.272Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260801-2213-orchestrator-session.md"}
+{"ts":"2026-08-01T20:14:15.393Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260801-2213-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-01T20:14:19.050Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:14:22.991Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-01T20:14:23.088Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-01T20:43:28.318Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T20:57:08.250Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:09.644Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:10.887Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:17.334Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:22.285Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:30.107Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-01T21:13:30.202Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-01T21:13:34.343Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:34.626Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:37.153Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:42.352Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:45.191Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:48.410Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:13:49.015Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:05.906Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:19.763Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:24.569Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:25.439Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:41.182Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260801-2314-orchestrator-session.md"}
+{"ts":"2026-08-01T21:14:41.294Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260801-2314-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-01T21:14:45.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:14:49.207Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-01T21:14:49.302Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-01T21:43:34.848Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:43:39.443Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:43:56.213Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:43:57.069Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:43:59.768Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:44:01.166Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:44:22.439Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T21:44:28.617Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T22:00:24.321Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T22:00:24.999Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T22:00:28.039Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T22:00:28.640Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-01T22:00:48.925Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:48:41.946Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:48:56.872Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:01.789Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:12.437Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:15.640Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:19.117Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:44.268Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:49:49.166Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:50:01.571Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:50:05.660Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:50:19.012Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:50:24.448Z","event":"guard_allow","tool":"Write","file":".claude/settings.local.json"}
+{"ts":"2026-08-02T05:50:35.779Z","event":"tracker_record","tool":"Write","file":".claude/settings.local.json","detail":"File change recorded"}
+{"ts":"2026-08-02T05:50:38.199Z","event":"guard_allow","tool":"Write","file":".gitignore"}
+{"ts":"2026-08-02T05:50:38.296Z","event":"tracker_record","tool":"Write","file":".gitignore","detail":"File change recorded"}
+{"ts":"2026-08-02T05:53:43.877Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:53:44.545Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:53:50.948Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:53:51.738Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:53:57.257Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:53:58.977Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:06.496Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-02T05:54:06.597Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-02T05:54:09.340Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:11.891Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:16.803Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:23.251Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:23.714Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:34.943Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:44.686Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:46.291Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:55.247Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:54:58.440Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:55:06.520Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:55:26.482Z","event":"guard_allow","tool":"Write","file":"shared/history/260802-0755-orchestrator-session.md"}
+{"ts":"2026-08-02T05:55:26.588Z","event":"tracker_record","tool":"Write","file":"shared/history/260802-0755-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-02T05:55:31.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T05:55:34.503Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-02T05:55:34.596Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-02T06:29:11.688Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:29:15.432Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:29:32.206Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:29:32.897Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:29:36.338Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:29:40.074Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:30:01.294Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:40:28.610Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:40:31.519Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:40:41.396Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:41:03.546Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:42:48.847Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:43:33.375Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md"}
+{"ts":"2026-08-02T06:43:33.473Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:43:59.696Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md"}
+{"ts":"2026-08-02T06:43:59.793Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:44:19.664Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md"}
+{"ts":"2026-08-02T06:44:19.762Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:44:42.958Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md"}
+{"ts":"2026-08-02T06:44:43.052Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:45:04.573Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md"}
+{"ts":"2026-08-02T06:45:04.681Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:45:22.594Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md"}
+{"ts":"2026-08-02T06:45:22.693Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:45:30.753Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md"}
+{"ts":"2026-08-02T06:45:30.847Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:46:03.417Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260802-0842-shaper-krk-mac-dateimanager-editor-git.md"}
+{"ts":"2026-08-02T06:46:03.514Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260802-0842-shaper-krk-mac-dateimanager-editor-git.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:46:06.745Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:46:33.806Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:23.284Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:32.815Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:37.802Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:43.611Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:44.342Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:47.224Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:47.985Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:51:52.075Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:06.454Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:12.442Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:19.582Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:20.247Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:49.506Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:52:53.584Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:53:07.217Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T06:53:23.815Z","event":"guard_allow","tool":"Edit","file":"circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md"}
+{"ts":"2026-08-02T06:53:23.915Z","event":"tracker_record","tool":"Edit","file":"circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:53:57.576Z","event":"guard_allow","tool":"Write","file":"portfolio.md"}
+{"ts":"2026-08-02T06:53:57.675Z","event":"tracker_record","tool":"Write","file":"portfolio.md","detail":"File change recorded"}
+{"ts":"2026-08-02T06:54:23.282Z","event":"guard_allow","tool":"Write","file":"shared/history/260802-0853-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-02T06:54:23.382Z","event":"tracker_record","tool":"Write","file":"shared/history/260802-0853-playmaker-direct-dispatch.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:13:33.517Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:13:37.326Z","event":"guard_block","tool":"Bash","file":"\"$CDIR/_a_circle.md\"","detail":"Protected path"}
+{"ts":"2026-08-02T08:13:40.367Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:13:43.570Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:13:50.279Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:13:54.960Z","event":"guard_allow","tool":"Write","file":"orchestrator-live.md"}
+{"ts":"2026-08-02T08:13:55.076Z","event":"tracker_record","tool":"Write","file":"orchestrator-live.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:13:59.460Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:14:05.332Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:14:06.911Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:14:15.229Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:14:46.486Z","event":"guard_allow","tool":"Write","file":"circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md"}
+{"ts":"2026-08-02T08:14:46.618Z","event":"tracker_record","tool":"Write","file":"circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:14:50.947Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:14:55.248Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-02T08:14:55.368Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-02T08:29:20.600Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/agentstate.yaml"}
+{"ts":"2026-08-02T08:29:20.699Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/agentstate.yaml","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-02T08:29:25.128Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:29:31.771Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-02T08:29:31.868Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-02T08:29:55.390Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:29:55.600Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:01.951Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:02.211Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:19.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:24.636Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:47.261Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:30:47.460Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:31:15.658Z","event":"guard_allow","tool":"Write","file":"CLAUDE.md"}
+{"ts":"2026-08-02T08:31:15.751Z","event":"tracker_record","tool":"Write","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:31:20.470Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:31:37.610Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:31:56.463Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md"}
+{"ts":"2026-08-02T08:31:56.558Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:32:10.393Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T08:32:24.595Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md"}
+{"ts":"2026-08-02T08:32:24.705Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md","detail":"File change recorded"}
+{"ts":"2026-08-02T08:32:28.735Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}

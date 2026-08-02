@@ -1,0 +1,106 @@
+{
+  "files": {
+    "fusion-workbench/shared/history/260801-2213-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-01T20:14:15.393Z"
+    },
+    "fusion-workbench/shared/history/260801-2314-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-01T21:14:41.293Z"
+    },
+    ".claude/settings.local.json": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T05:50:35.778Z"
+    },
+    ".gitignore": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T05:50:38.295Z"
+    },
+    "shared/history/260802-0755-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T05:55:26.587Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:43:33.473Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:43:59.792Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:44:19.762Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:44:43.051Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:45:04.680Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:45:22.692Z"
+    },
+    "fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T08:32:24.704Z"
+    },
+    "fusion-workbench/shared/history/260802-0842-shaper-krk-mac-dateimanager-editor-git.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:46:03.513Z"
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:53:23.915Z"
+    },
+    "portfolio.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:53:57.675Z"
+    },
+    "shared/history/260802-0853-playmaker-direct-dispatch.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T06:54:23.381Z"
+    },
+    "orchestrator-live.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T08:13:55.075Z"
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T08:14:46.617Z"
+    },
+    "CLAUDE.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T08:31:15.750Z"
+    },
+    "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T08:31:56.557Z"
+    }
+  },
+  "lastEditFile": "fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md",
+  "lastEditTimestamp": "2026-08-02T08:32:24.704Z"
+}

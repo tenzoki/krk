@@ -1,0 +1,6 @@
+{"ts":"2026-08-01T20:14:18","event":"session_start","detail":"setup only; no directive stated; domain=code (fallback); empty project"}
+{"ts":"2026-08-01T21:14:45","event":"session_start","detail":"setup only — no directive resolved yet; domain=code"}
+{"ts":"2026-08-02T05:55:30","event":"session_start","agent":"orchestrator","detail":"setup only; no directive stated; domain=code (fallback, empty project); no active Circle"}
+{"ts":"2026-08-02T08:13:59","event":"circle_activated","agent":"orchestrator","detail":"260802-0842-krk-mac-dateimanager-editor-git: _a_ -> _t_, .active-circle written; Plane skipped (config is unfilled template)"}
+{"ts":"2026-08-02T08:14:50","event":"session_start","agent":"orchestrator","detail":"Circle 260802-0842-krk-mac-dateimanager-editor-git active; domain=code (heuristic said strategic, overridden per Circle record); 5 open decisions, 1 open issue, no plan"}
+{"ts":"2026-08-02T08:29:25","event":"scope_resolved","agent":"orchestrator","detail":"mode=custom; walking-skeleton scope (navigator core); technology via analyst comparison + decision gate; CLAUDE.md first; 4 pre-tasks queued"}

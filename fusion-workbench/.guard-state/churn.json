@@ -1,0 +1,125 @@
+{
+  "files": {
+    "fusion-workbench/shared/history/260801-2213-orchestrator-session.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-01T20:14:15.392Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260801-2314-orchestrator-session.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-01T21:14:41.292Z",
+      "thrashingScore": 0
+    },
+    ".claude/settings.local.json": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T05:50:35.777Z",
+      "thrashingScore": 0
+    },
+    ".gitignore": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T05:50:38.295Z",
+      "thrashingScore": 0
+    },
+    "shared/history/260802-0755-orchestrator-session.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T05:55:26.586Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:43:33.472Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:43:59.791Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:44:19.761Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:44:43.051Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:45:04.680Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:45:22.691Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md": {
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T08:32:24.704Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260802-0842-shaper-krk-mac-dateimanager-editor-git.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:46:03.513Z",
+      "thrashingScore": 0
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:53:23.914Z",
+      "thrashingScore": 0
+    },
+    "portfolio.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:53:57.674Z",
+      "thrashingScore": 0
+    },
+    "shared/history/260802-0853-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T06:54:23.381Z",
+      "thrashingScore": 0
+    },
+    "orchestrator-live.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T08:13:55.074Z",
+      "thrashingScore": 0
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T08:14:46.616Z",
+      "thrashingScore": 0
+    },
+    "CLAUDE.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T08:31:15.750Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T08:31:56.557Z",
+      "thrashingScore": 0
+    }
+  },
+  "sessionStart": "2026-08-02T08:13:55.074Z"
+}
