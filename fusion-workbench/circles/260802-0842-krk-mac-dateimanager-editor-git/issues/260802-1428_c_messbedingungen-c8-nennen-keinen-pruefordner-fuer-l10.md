@@ -21,3 +21,10 @@ Der Rest der Messbedingungen trägt für L10 unverändert: zwanzig Wiederholunge
 **Vom Plan bereits aufgefangen, aber nicht geheilt.** Der Plan `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` legt in Schritt S3 einen Erzeuger an, der beide Größen aus demselben deterministischen Verfahren mit festem Startwert erzeugt (`fixture --eintraege N --seed S`). Die Wiederholbarkeit ist damit technisch hergestellt. Der Spec sagt sie trotzdem nicht zu, und maßgeblich für die Abnahme ist der Spec.
 
 **Aufgefallen bei:** der Beantwortung der Frage "Wie die Messungen aus C8 automatisiert und wiederholbar gemacht werden, einschließlich der Erzeugung des Prüfordners" aus `## Offen für den Planner`, Sitzung `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1428-planner-navigator-geruest-runde-1.md`.
+
+---
+Resolved: Am 260802-1445 im Spec geschlossen, ohne Rückfrage an den Nutzer. Die Lücke betraf allein die Beschreibung einer Messbedingung, nicht eine der zehn Zahlen und keine Wahl zwischen Möglichkeiten; damit war sie kein Entscheidungspunkt, sondern ein Mangel des Textes.
+
+Der Satz unter **Messbedingungen** in C8 lautet jetzt: "Prüfordner sind zwei eigens erzeugte, flache Ordner aus gemischten Dateitypen und Größen, einer mit 10.000 Einträgen für L2 und L3 und einer mit 100.000 Einträgen für L10. Beide entstehen nach demselben Verfahren, das bei gleicher Eingabe dieselbe Zusammensetzung liefert. Ohne diese Reproduzierbarkeit messen zwei Läufe zwei verschiedene Ordner, und die zwanzig Wiederholungen unten tragen nichts."
+
+Die Reproduzierbarkeit ist als Abnahmebedingung formuliert, nicht als Verfahren. Wie sie hergestellt wird, bleibt Sache des Plans, der sie in Schritt S3 mit einem Erzeuger und festem Startwert des Zufallsgenerators löst. Der Spec sagt sie jetzt zu, und maßgeblich für die Abnahme ist der Spec.

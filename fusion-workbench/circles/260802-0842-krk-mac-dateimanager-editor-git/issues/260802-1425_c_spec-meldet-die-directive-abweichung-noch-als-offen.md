@@ -19,3 +19,10 @@ Zusätzlich nennt der Gatehinweis am Kopf des Specs die Abweichung als bestehend
 **Warum der Shaper es nicht in derselben Bearbeitung behoben hat:** der Auftrag vom 260802-1423 untersagte jeden schreibenden Zugriff auf das Verzeichnis `planning/`.
 
 **Aufgefallen bei:** der Behebung der beiden Defekte vom 260802-1417, Sitzung `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1423-shaper-circle-datensatz-korrektur.md`.
+
+---
+Resolved: Am 260802-1445 nachgezogen, nachdem der Circle-Datensatz vollständig auf dem Stand von C3 war; der Abschnitt musste dadurch nur einmal angefasst werden.
+
+Der Abschnitt `## Abgleich mit der Circle-Directive` führt jetzt eine Einleitung, die ihn ausdrücklich als Geschichte des Abgleichs ausweist, und schließt mit einem datierten Stand. Die beiden gemeldeten Absätze stehen im Rückblick statt in der Gegenwart: der erste zitiert den Wortlaut vom 260802-1127 als überholte Fassung, der zweite hält die Abweichung vom 260802-1409 und ihre Behebung am 260802-1423 samt neuem Wortlaut fest und nennt den Defekt unter seinem geschlossenen Namen. Der neue Schlussabsatz nennt auch die beiden am 260802-1445 nachgezogenen Stellen im Circle-Datensatz und stellt fest, dass eine Abweichung derzeit nicht bekannt ist.
+
+Der Gatehinweis am Kopf des Specs meldet die Abweichung nicht mehr als bestehend. An seine Stelle tritt ein Hinweis auf die eine Frage, die seit dem 260802-1428 wieder offen ist: was L4 mit "wiederhergestellten Tabs" meint.

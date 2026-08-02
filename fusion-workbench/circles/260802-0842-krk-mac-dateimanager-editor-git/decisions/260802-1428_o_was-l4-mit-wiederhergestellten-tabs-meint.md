@@ -49,6 +49,18 @@ Der entscheidende Punkt ist die Messbarkeit. Eine Zusage, deren Einhaltung davon
 
 Die Abwägung ist eine Empfehlung auf Basis der Systematik des Specs, keine geprüfte Aussage. Die Entscheidung liegt beim Nutzer.
 
+## Nachtrag des Shapers 260802-1445: was der Frage als Autor von C8 noch fehlt
+
+Die drei Möglichkeiten tragen, und die Empfehlung des Planners bleibt unwidersprochen. Drei Punkte kommen hinzu, die aus der Herkunft der Zusagen folgen und die Frage schärfen, ohne sie zu beantworten.
+
+**Erstens: C8 nennt keine Sitzungslage, auf der L4 gemessen wird, und das trifft alle drei Möglichkeiten.** Die Messbedingungen legen Referenzgerät, Cache-Zustand, Prüfordner und zwanzig Wiederholungen fest. L4 ist die einzige der zehn Zusagen, deren Messung an einem Zustand hängt, den ein vorheriger Lauf hinterlassen hat: an den Tabs, die wiederhergestellt werden. Selbst unter Möglichkeit 1 wächst die Startlast mit der Zahl der sichtbaren Tabs, weil jeder von ihnen eine erste Bildschirmseite braucht. Die Antwort auf diese Frage muss deshalb einen Satz für die Messbedingungen mitliefern, etwa: zwei Dateifenster mit je einem Tab auf dem Prüfordner mit 10.000 Einträgen. Ohne einen solchen Satz bleibt L4 auch unter der milderen Lesart nicht wiederholbar, und der Grund, aus dem der Planner die Frage gestellt hat, besteht fort.
+
+**Zweitens: die Frage reicht über L4 hinaus bis L5, und beide hängen an derselben Antwort.** C1 lässt beliebig viele Tabs je Dateifenster zu, sichtbar ist höchstens einer je Fenster. Möglichkeit 1 spricht von "jedem sichtbaren Tab" und stellt damit stillschweigend die Anschlussfrage, wann ein Tab im Hintergrund gelesen wird. Wird er erst beim Hinwechseln gelesen, gerät L5 in dieselbe Klemme wie L4: L5 sagt 50 ms für den Tabwechsel zu, und ein Ordner mit 100.000 Einträgen ist in 50 ms nicht vollständig gelesen. Die Antwort sollte deshalb in einem Zug festhalten, ob die gewählte Lesart auch für den Tabwechsel gilt. Diese Ausweitung ist bewusst in diesen Datensatz gezogen und nicht als zweite Frage danebengestellt: es ist derselbe Begriff, an derselben Stufengrenze, und zwei Datensätze würden zwei Antworten erlauben, die sich widersprechen können.
+
+**Drittens: was die Antwort am Spec ändert, ist eng begrenzt.** Betroffen sind die Zeile L4 in der Tabelle von C8, ein Satz unter den Messbedingungen desselben Abschnitts und, falls Punkt zwei mitbeantwortet wird, die Zeile L5. C1 bleibt unberührt; die Wiederherstellung der Tabs samt Ordner und Auswahl ist unter jeder Lesart zugesagt. Keine der zehn Zahlen ändert sich.
+
+**Zur Empfehlung.** Der Shaper schließt sich Möglichkeit 1 an, aus einem Grund, der im Aufbau von C8 liegt. Der Abschnitt trennt "sichtbar und bedienbar" von "vollständig gelesen" bereits einmal, in L2 gegen L3. Möglichkeit 1 wendet dieselbe Trennung auf den Kaltstart und, mit Punkt zwei, auf den Tabwechsel an und kommt damit auf eine Regel für drei Fälle. Möglichkeit 3 führt eine Schwelle ein, die der Spec sonst nirgends kennt, und Möglichkeit 2 macht eine Zusage vom Inhalt der letzten Sitzung abhängig. Die Abwägung stützt sich auf die Systematik des Specs, nicht auf eine Messung; die Entscheidung liegt beim Nutzer.
+
 ---
 Answered:
 Implemented:
