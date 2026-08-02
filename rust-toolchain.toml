@@ -1,0 +1,6 @@
+# Die Werkzeugkette ist festgeschrieben, damit jeder Bau dieselbe ist.
+[toolchain]
+channel = "1.97.1"
+targets = ["x86_64-apple-darwin", "aarch64-apple-darwin"]
+components = ["rustfmt", "clippy"]
+profile = "minimal"

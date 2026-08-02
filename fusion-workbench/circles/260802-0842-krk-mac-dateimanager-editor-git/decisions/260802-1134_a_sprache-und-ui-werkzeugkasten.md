@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** analyst
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md` (die Analyse, auf der dieser Datensatz beruht), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitte C3, C8, C9 und `## Offen für den Planner`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md`, `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`, `shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md` (die Analyse, auf der dieser Datensatz beruht), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitte C3, C8, C9 und `## Offen für den Planner`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md`, `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`, `shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md`
 
 ---
 

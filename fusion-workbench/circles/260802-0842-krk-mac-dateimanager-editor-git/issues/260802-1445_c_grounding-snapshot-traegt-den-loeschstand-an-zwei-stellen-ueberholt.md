@@ -27,3 +27,10 @@ Die Schreibweise "Fn+F8" behauptet dieselbe Unterscheidung, die die Messung auss
 **Beleg für den Sachstand:** `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`, Antwort des Nutzers vom 260802-1105. Ausformuliert im Spec, Abschnitt C3, Abnahmekriterien zu Delete, F8 und Shift+Delete, und in C4 unter "Getroffene Festlegungen". Für die Nichtunterscheidbarkeit von Fn+F8 und F8: `spikes/fn-tasten/messung-A.txt`, Ereignisse #03 bis #05, und `spikes/fn-tasten/messung-A-neuauswertung.txt`.
 
 **Aufgefallen bei:** dem Nachziehen der drei Reststellen vom 260802-1425 und 260802-1428, Sitzung `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1445-shaper-restellen-fn-und-c8.md`.
+
+---
+Resolved: Beide Stellen im Abschnitt `## Grounding snapshot` von `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` stehen auf dem Stand von C3. Stelle 1, der Absatz "Bedienmodell", behält die ursprüngliche Aussage und trägt darunter den späteren Stand: Shift+Delete ist ab Werk unbelegt, Delete und Cmd+Delete räumen in den Papierkorb, F8 und Cmd+Opt+Delete löschen endgültig. Stelle 2, der Eintrag zum Löschentscheid, schreibt jetzt F8 statt "Fn+F8" und nennt beide Cmd-Kürzel.
+
+In derselben Bearbeitung sind drei weitere Stellen desselben Abschnitts nachgezogen worden, die dieser Defekt nicht nannte und die der Nutzer mit der Freigabe vom 260802-1735 mit abgedeckt hat: die Ausgangslage führte Sprache und UI-Werkzeugkasten noch als offen, obwohl sie seit dem 260802-1150 entschieden sind; die Liste der Entscheidungsdatensätze im Circle nannte zwei von inzwischen fünf; und die Forderung an den Aktivierungs-Spec, die Maxime "superschnell" in messbare Zusagen zu überführen, ist mit C8 erfüllt. Alle drei folgen dem Muster von Stelle 1: die ursprüngliche Aussage bleibt stehen, der spätere Stand tritt daneben.
+
+Sitzung: `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1735-shaper-l4-entscheid-und-grounding.md`.

@@ -1,0 +1,9 @@
+# Mindest-Zielsystem macOS 15. Gilt fuer jeden Bau im Workspace, auch fuer die
+# beiden Kreuzziele, und wird spaeter am Binaerformat nachgewiesen
+# (`vtool -show-build-version`).
+[env]
+MACOSX_DEPLOYMENT_TARGET = "15.0"
+
+# Macht das Bauwerkzeug unter seinem gewohnten Namen erreichbar: `cargo xtask <befehl>`.
+[alias]
+xtask = "run --package xtask --"

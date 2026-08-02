@@ -21,6 +21,8 @@ Zusatz: alle Fenster sind variable in der Größe und können per Tastenbefehl e
 
 Das Projekt ist ein leeres Repository. Außer `idea.txt` und dem frisch eingerichteten `fusion-workbench/` existiert kein Code, kein `CLAUDE.md` und keine Vorentscheidung. Es gibt daher weder ein bestehendes Muster zu erben noch eine Abstraktion wiederzuverwenden. Jede technische Festlegung, von der Sprache über das UI-Toolkit bis zur Git-Anbindung, ist offen und gehört in den Plan, nicht in diese Directive.
 
+**Stand 260802-1735.** Der Absatz oben beschreibt den 260802-0842 und bleibt als Ausgangspunkt stehen. Zwei seiner Aussagen sind überholt: `CLAUDE.md` gibt es seit dem 260802-1014, und die Wahl von Sprache und UI-Werkzeugkasten ist seit dem 260802-1150 getroffen. KRK entsteht in Rust mit AppKit über `objc2`, außerhalb der App-Sandbox, mit macOS 15 als Mindest-Zielsystem und Unterstützung bis macOS 26. Der Datensatz dazu ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md`, die zugrunde liegende Untersuchung `circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md`.
+
 Quelle der Directive ist `idea.txt` im Projektwurzelverzeichnis. Vorbilder sind laut Entwurf ForkLift und Norton Commander. Die Maximen des Entwurfs lauten superschnell, supersimpel, Steuerung über die Tastatur bei zusätzlicher Maus- und Trackpad-Unterstützung.
 
 ### Oberfläche und Datenfluss
@@ -57,6 +59,8 @@ Das Vorschaufenster hält seinen Inhalt pro Tab fest. Eine Auswahl im Dateifenst
 
 **Bedienmodell.** Jede Taste ist konfigurierbar, das ist die Grundhaltung. Die ausgelieferte Vorbelegung ist Mac-typisch, also Cmd-Kürzel und Pfeiltasten, und trägt zusätzlich die Norton-Belegung auf F3 bis F8. Löschen ist ausdrücklich auf Shift+Delete vorbelegt. Damit ist Löschen ab Werk auf zwei Wegen erreichbar, über F8 aus der Norton-Reihe und über Shift+Delete; beides ist gewollt und kein Konflikt.
 
+*Später überholt, Stand 260802-1735:* Shift+Delete ist ab Werk unbelegt. Die Antwort des Nutzers vom 260802-1105 hat das Löschen anders geteilt, und die Klärungsrunde oben liegt davor. Ausgeliefert wird: Delete und Cmd+Delete räumen in den Papierkorb, F8 und Cmd+Opt+Delete löschen endgültig und fragen einmal je Vorgang nach. Shift+Delete kann der Nutzer frei belegen, KRK liefert die Kombination nicht vorbelegt aus. Maßgeblich ist C3 des Specs `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`; der Datensatz dazu ist `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+
 **Laufwerke.** Nur lokal: interne Platten, externe Medien und alles, was der Finder bereits eingehängt hat. Ein vom Finder gemountetes Netzlaufwerk erscheint damit als gewöhnlicher Pfad und ist eingeschlossen. Eigene Server-Protokolle sind es nicht.
 
 **Code-SDK.** Offen, siehe Entscheidungsdatensatz unten.
@@ -71,7 +75,7 @@ Der Nutzer hat die Einordnung zweier Punkte an den Shaper delegiert. Beide bleib
 
 ### Offene Entscheidungen
 
-Stand 260802-1127. Drei der ursprünglich fünf Fragen im geteilten Speicher sind noch offen, zwei sind beantwortet. Alle Pfade sind auf den Marker gezogen, den die Datei heute trägt.
+Stand 260802-1735. Drei der ursprünglich fünf Fragen im geteilten Speicher sind noch offen, zwei sind beantwortet. Alle Pfade sind auf den Marker gezogen, den die Datei heute trägt.
 
 Noch offen, keine davon bindet die Runde 1:
 
@@ -82,16 +86,21 @@ Noch offen, keine davon bindet die Runde 1:
 Beantwortet am 260802-1105, eingearbeitet in den Spec:
 
 - `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` — die Antwort des Nutzers vom 260802-1105 lautete: ausgeliefert wird ausschließlich die Fn-Kombination, Fn+F3 bis Fn+F8, die nackten Funktionstasten bleiben frei. Der Nachtrag vom 260802-1409 hält den Stand nach der Messung fest und ersetzt die Formulierung, nicht die Wahl. KRK belegt das Tastenereignis der Funktionstaste und kann Fn+F3 von einem nackten F3 nicht unterscheiden; die ausgelieferte Belegung heißt darum F3 bis F8, und die Zusage der freien nackten Funktionstasten beschreibt keinen erreichbaren Zustand. Seit demselben Tag trägt jede Funktion der Norton-Reihe ab Werk zusätzlich ein Cmd-Kürzel. Die Einzelheiten stehen in C3 des Specs.
-- `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` — die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig.
+- `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` — die Taste Delete räumt in den Papierkorb, F8 löscht endgültig. Seit dem 260802-1409 trägt jeder der beiden Wege zusätzlich ein Cmd-Kürzel: Cmd+Delete für den Papierkorb und Cmd+Opt+Delete für das endgültige Löschen. Die Schreibweise "Fn+F8" aus der ursprünglichen Fassung ist mit der Messung vom 260802-1409 entfallen, weil KRK Fn+F8 und ein nacktes F8 nicht unterscheiden kann.
 
-Im Circle selbst liegen zwei weitere Datensätze, beide beantwortet:
+Im Circle selbst liegen fünf Datensätze, vier davon beantwortet:
 
 - `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_umbenennen-im-stapel-umfang.md` — Umbenennen im Stapel mit Musterregeln und Vorschau.
 - `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` — die zehn Zeitzusagen und das Referenzgerät, ein MacBook Pro 15 Zoll von 2018 mit Intel Core i9 und 60-Hz-Bildschirm.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md` — Rust mit AppKit über `objc2`, Auslieferung außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 mit Unterstützung bis macOS 26. Entschieden am 260802-1150 gegen die Empfehlung der Untersuchung, begründet mit Editor und Git-Anbindung als späteren Runden desselben Circles.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_was-l4-mit-wiederhergestellten-tabs-meint.md` — der Kaltstart aus L4 zählt die bedienbare Oberfläche mit der ersten Bildschirmseite jedes sichtbaren Tabs, nicht die vollständig gelesenen Ordner; dieselbe Lesart gilt für den Tabwechsel aus L5. Entschieden am 260802-1735, eingearbeitet in C8 des Specs.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` — **offen.** Wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt. Die Frage bindet die Runde 1 nicht, muss aber beantwortet sein, bevor eine spätere Runde die erste neuere Schnittstelle anspricht.
 
 ### Was der Aktivierungs-Spec zusätzlich festlegen muss
 
 Die Maxime "superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec muss sie in messbare Zusagen übersetzen, etwa wie lange ein Verzeichnis mit zehntausend Einträgen bis zur Anzeige braucht und ab welcher Dateigröße der Editor eine andere Ladestrategie fährt. Ohne solche Zahlen lässt sich später nicht prüfen, ob die Maxime eingehalten wurde.
+
+**Erledigt, Stand 260802-1735.** Der Abschnitt C8 des Specs `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` führt zehn Zeitzusagen samt Referenzgerät, Prüfordnern, Prüfsitzung und zwanzig Wiederholungen je Messung. Der Nutzer hat die zehn Zahlen am 260802-1105 bestätigt und am 260802-1735 festgelegt, was der Kaltstart aus L4 und der Tabwechsel aus L5 als abgeschlossen zählen. Was der Editor ab welcher Dateigröße anders lädt, bleibt der Editor-Runde vorbehalten und ist in Runde 1 nicht zugesagt.
 
 ### Ausdrücklich außerhalb dieses Circles
 

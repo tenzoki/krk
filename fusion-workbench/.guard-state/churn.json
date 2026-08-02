@@ -19,10 +19,10 @@
       "thrashingScore": 0
     },
     ".gitignore": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T08:32:52.177Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:37:15.229Z",
+      "thrashingScore": 1
     },
     "shared/history/260802-0755-orchestrator-session.md": {
       "totalChanges": 1,
@@ -121,10 +121,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "totalChanges": 41,
-      "changesThisSession": 9,
-      "lastChange": "2026-08-02T12:52:36.635Z",
-      "thrashingScore": 27
+      "totalChanges": 49,
+      "changesThisSession": 8,
+      "lastChange": "2026-08-02T15:39:12.013Z",
+      "thrashingScore": 28
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "totalChanges": 6,
@@ -139,10 +139,10 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
-      "totalChanges": 9,
-      "changesThisSession": 6,
-      "lastChange": "2026-08-02T12:45:46.634Z",
-      "thrashingScore": 11
+      "totalChanges": 14,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-02T15:40:15.595Z",
+      "thrashingScore": 10
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "totalChanges": 3,
@@ -278,124 +278,220 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:26:12.111Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_circle-datensatz-status-widerspricht-dem-marker.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:26:25.535Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md": {
       "totalChanges": 4,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:21:09.071Z",
       "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1409-shaper-fn-tasten-messung-und-cmd-kuerzel.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:21:05.975Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_o_circle-datensatz-wiederholt-die-ueberholte-fn-zusage-an-zwei-stellen.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:48:00.487Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_o_spec-meldet-die-directive-abweichung-noch-als-offen.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:48:12.157Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1423-shaper-circle-datensatz-korrektur.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:27:32.661Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 43,
-      "changesThisSession": 43,
-      "lastChange": "2026-08-02T13:03:31.188Z",
-      "thrashingScore": 96
+      "totalChanges": 44,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:43:28.041Z",
+      "thrashingScore": 14
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:48:24.603Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md": {
-      "totalChanges": 2,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-02T12:47:42.078Z",
-      "thrashingScore": 0
+      "totalChanges": 5,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T15:41:00.697Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:38:40.922Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1428-planner-navigator-geruest-runde-1.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:41:28.297Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_grounding-snapshot-nennt-shift-delete-noch-als-vorbelegt.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:48:45.290Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260802-1447-conceptrev-plan-navigator-geruest-runde-1.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:49:12.029Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_grounding-snapshot-traegt-den-loeschstand-an-zwei-stellen-ueberholt.md": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 1,
-      "lastChange": "2026-08-02T12:50:20.624Z",
+      "lastChange": "2026-08-02T15:41:13.523Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_c_circle-datensatz-wiederholt-die-ueberholte-fn-zusage-an-zwei-stellen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:50:30.478Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1445-shaper-restellen-fn-und-c8.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T12:52:22.580Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_plan-nennt-die-c8-luecke-und-zwei-defekte-noch-als-offen.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T13:03:21.987Z",
       "thrashingScore": 0
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/check.mjs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T13:02:02.112Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T13:04:31.171Z",
+      "thrashingScore": 0
+    },
+    "Cargo.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:32.073Z",
+      "thrashingScore": 0
+    },
+    "rust-toolchain.toml": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:36:36.762Z",
+      "thrashingScore": 0
+    },
+    ".cargo/config.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:41.857Z",
+      "thrashingScore": 0
+    },
+    "rustfmt.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:42.486Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/Cargo.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:45.496Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/lib.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:50.417Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/Cargo.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:54.813Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/main.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:36:57.638Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-bench/Cargo.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:37:04.525Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-bench/src/main.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:37:05.818Z",
+      "thrashingScore": 0
+    },
+    "xtask/Cargo.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:37:06.619Z",
+      "thrashingScore": 0
+    },
+    "xtask/src/main.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:37:07.866Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:41:44.432Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1741-cargo-workspace-und-bauzuschnitt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:42:18.329Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1735-shaper-l4-entscheid-und-grounding.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:42:30.568Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1755_o_plan-legt-den-cargo-xtask-alias-in-keinem-schritt-an.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:43:04.976Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-02T12:20:31.712Z"
+  "sessionStart": "2026-08-02T15:36:32.073Z"
 }

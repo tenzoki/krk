@@ -383,7 +383,7 @@ flowchart TD
 
 ### Phase A: Fundament und früher Durchstich
 
-#### 1. **Cargo-Workspace und Bauzuschnitt**
+#### 1. [DONE] **Cargo-Workspace und Bauzuschnitt**
 
 - Ausführender: `coder`
 - Dateien: `Cargo.toml`, `rust-toolchain.toml`, `.cargo/config.toml`, `.gitignore`, `rustfmt.toml`, `crates/krk-core/{Cargo.toml,src/lib.rs}`, `crates/krk-ui/{Cargo.toml,src/main.rs}`, `crates/krk-bench/{Cargo.toml,src/main.rs}`, `xtask/{Cargo.toml,src/main.rs}`

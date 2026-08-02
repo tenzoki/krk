@@ -3,3 +3,8 @@
 # fusion-workbench: fluechtiger Sitzungszustand, gehoert nicht ins Repository
 fusion-workbench/.commit-lock/
 fusion-workbench/.session-marker
+
+# Rust: Bauergebnisse. Cargo.lock bleibt versioniert, weil der Workspace
+# Binaerprogramme baut und jeder Bau dieselben Abhaengigkeiten treffen soll.
+/target/
+**/*.rs.bk

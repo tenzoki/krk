@@ -16,9 +16,9 @@
       "lastEditTimestamp": "2026-08-02T05:50:35.778Z"
     },
     ".gitignore": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-02T08:32:52.178Z"
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T15:37:15.230Z"
     },
     "shared/history/260802-0755-orchestrator-session.md": {
       "pingBackCount": 0,
@@ -101,9 +101,9 @@
       "lastEditTimestamp": "2026-08-02T08:31:56.557Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "pingBackCount": 13,
-      "totalEdits": 41,
-      "lastEditTimestamp": "2026-08-02T12:52:36.636Z"
+      "pingBackCount": 14,
+      "totalEdits": 49,
+      "lastEditTimestamp": "2026-08-02T15:39:12.014Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "pingBackCount": 4,
@@ -116,9 +116,9 @@
       "lastEditTimestamp": "2026-08-02T09:10:22.493Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
-      "pingBackCount": 4,
-      "totalEdits": 9,
-      "lastEditTimestamp": "2026-08-02T12:45:46.636Z"
+      "pingBackCount": 5,
+      "totalEdits": 14,
+      "lastEditTimestamp": "2026-08-02T15:40:15.597Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "pingBackCount": 1,
@@ -266,9 +266,9 @@
       "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "pingBackCount": 4,
-      "totalEdits": 43,
-      "lastEditTimestamp": "2026-08-02T13:03:31.189Z"
+      "pingBackCount": 5,
+      "totalEdits": 44,
+      "lastEditTimestamp": "2026-08-02T15:43:28.042Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "pingBackCount": 1,
@@ -276,9 +276,9 @@
       "lastEditTimestamp": "2026-08-02T12:48:24.605Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-02T12:47:42.079Z"
+      "pingBackCount": 2,
+      "totalEdits": 5,
+      "lastEditTimestamp": "2026-08-02T15:41:00.698Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md": {
       "pingBackCount": 0,
@@ -301,9 +301,9 @@
       "lastEditTimestamp": "2026-08-02T12:49:12.030Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_grounding-snapshot-traegt-den-loeschstand-an-zwei-stellen-ueberholt.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T12:50:20.626Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:41:13.524Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_c_circle-datensatz-wiederholt-die-ueberholte-fn-zusage-an-zwei-stellen.md": {
       "pingBackCount": 0,
@@ -329,8 +329,88 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-02T13:04:31.172Z"
+    },
+    "Cargo.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:32.074Z"
+    },
+    "rust-toolchain.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:36:36.764Z"
+    },
+    ".cargo/config.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:41.859Z"
+    },
+    "rustfmt.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:42.488Z"
+    },
+    "crates/krk-core/Cargo.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:45.498Z"
+    },
+    "crates/krk-core/src/lib.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:50.418Z"
+    },
+    "crates/krk-ui/Cargo.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:54.815Z"
+    },
+    "crates/krk-ui/src/main.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:36:57.639Z"
+    },
+    "crates/krk-bench/Cargo.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:37:04.526Z"
+    },
+    "crates/krk-bench/src/main.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:37:05.819Z"
+    },
+    "xtask/Cargo.toml": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:37:06.620Z"
+    },
+    "xtask/src/main.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:37:07.867Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:41:44.434Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1741-cargo-workspace-und-bauzuschnitt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:42:18.331Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1735-shaper-l4-entscheid-und-grounding.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:42:30.570Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1755_o_plan-legt-den-cargo-xtask-alias-in-keinem-schritt-an.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:43:04.978Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md",
-  "lastEditTimestamp": "2026-08-02T13:04:31.172Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md",
+  "lastEditTimestamp": "2026-08-02T15:43:28.042Z"
 }
