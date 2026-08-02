@@ -19,3 +19,16 @@ Das bindet **Schritt 21** (Messmodus in der Anwendung): dort läuft KRK selbst, 
 **Nebenbefund derselben Meldung:** Zeile 149 verlangt acht Kopfangaben, die Änderungsliste von Schritt 3 nennt sechs. Der `coder` hat die Obermenge gewählt und alle acht eingebaut. Der `planner` sollte die beiden Stellen angleichen, damit die nächste Umsetzung nicht wieder abwägen muss.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 3, Protokoll `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1850-pruefordner-erzeuger-und-kopflose-messstrecke.md`.
+
+---
+Resolved: Die Bildwiederholrate kommt ab jetzt aus der laufenden Anwendung. Der Plan `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` ist am 260802-1859 an vier Stellen nachgezogen.
+
+`### Frage 5` trägt die Regel: gelesen wird `NSScreen.maximumFramesPerSecond` von dem Bildschirm, auf dem das gemessene Fenster steht, also über `NSWindow.screen()`. Hat das Fenster keinen Bildschirm, bricht der Messlauf mit einer Meldung ab, statt auf den Hauptbildschirm auszuweichen; ein Ersatzweg wäre die Sonderregel, die die Maxime "supersimpel" ausschließt, und eine Messung ohne sichtbares Fenster misst L1 ohnehin nicht. Dieselbe Haltung wie bei `--kalt` ohne Rechte.
+
+S21 schreibt die Regel aus. **S8 erhebt die Rate schon**, und das ist eine Abweichung vom Vorschlag dieses Defekts: S8 ist die erste Messung, die in der Anwendung läuft, und sie misst L1. Die Rate erst in S21 zu erheben hieße, das Gate S8 gegen eine Zusage abzunehmen, deren Herleitung dort noch ungeprüft ist.
+
+Für die kopflose Strecke aus S3 bleibt es bei der ausgeschriebenen Lücke, wie dieser Defekt es vorsieht.
+
+Verfügbarkeit geprüft, nicht angenommen: `maximumFramesPerSecond` liegt in `objc2-app-kit-0.3.2` unter `src/generated/NSScreen.rs:168-170` und liefert einen `NSInteger`. Die Kiste führt der Workspace seit S1.
+
+**Nebenbefund erledigt.** S3 verlangte sechs Kopfangaben, `### Frage 5` acht. Beide Stellen nennen jetzt acht, mit der Bildwiederholrate als ausgeschriebener Lücke auf der kopflosen Strecke. Das Abnahmekriterium von S3 ist mitgezogen.
