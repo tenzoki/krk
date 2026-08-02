@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 11,
-      "changesThisSession": 11,
-      "lastChange": "2026-08-02T12:41:06.716Z",
-      "thrashingScore": 21
+      "totalChanges": 43,
+      "changesThisSession": 43,
+      "lastChange": "2026-08-02T13:03:31.188Z",
+      "thrashingScore": 96
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -379,9 +379,21 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_plan-nennt-die-c8-luecke-und-zwei-defekte-noch-als-offen.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T13:03:21.987Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/check.mjs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T13:02:02.112Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md": {
       "totalChanges": 1,
       "changesThisSession": 1,
-      "lastChange": "2026-08-02T12:52:08.685Z",
+      "lastChange": "2026-08-02T13:04:31.171Z",
       "thrashingScore": 0
     }
   },

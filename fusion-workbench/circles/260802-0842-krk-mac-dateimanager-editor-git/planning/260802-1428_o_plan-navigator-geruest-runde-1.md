@@ -1,7 +1,8 @@
 # Implementierungsplan: KRK Navigator-Gerüst (Runde 1)
 
-**Datum:** 2026-08-02, 14:28
+**Datum:** 2026-08-02, 14:28; nachgezogen 2026-08-02, 15:01
 **Status:** Entwurf, zur Abnahme
+**Nachzug:** Die Konzeptprüfung `reviews/260802-1447-conceptrev-plan-navigator-geruest-runde-1.md` (Verdikt "acceptable") ist eingearbeitet: vier Kanten im Abhängigkeitsgraphen dazu, zwei Rückwege im Schichtungsgraphen dazu, S10 und S11 getauscht, Selbstprüfung nachgerechnet. Der Entwurf selbst ist unverändert. Dazu sind drei überholte Verweise auf den heutigen Stand gezogen, gemeldet in `issues/260802-1445_c_plan-nennt-die-c8-luecke-und-zwei-defekte-noch-als-offen.md`.
 **Spec:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`
 **Bindende Entscheidung zur Technologie:** `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md`
 **Ausführende Agenten:** `coder` und `ontocoder`
@@ -33,9 +34,9 @@ Zwei Folgerungen daraus binden den Bauzuschnitt. Der Bau der Anwendung kommt vol
 
 Der Rechner, auf dem diese Sitzung läuft, ist zugleich das Referenzgerät aus C8. Was hier gemessen wird, gilt unmittelbar für die Abnahme.
 
-## Zwei gemeldete Defekte, die den Plan nicht ändern
+## Zwei Defekte am Circle-Datensatz, inzwischen geschlossen
 
-`issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md` und `issues/260802-1417_o_circle-datensatz-status-widerspricht-dem-marker.md` betreffen beide den Circle-Datensatz, nicht den Spec. Für die Tastenbelegung gilt C3 des Specs, weil C3 die Messung kennt und die Directive-Zeile nicht. Ein anderer Agent behebt beide parallel.
+`issues/260802-1417_c_directive-zeile-sagt-freie-funktionstasten-zu.md` und `issues/260802-1417_c_circle-datensatz-status-widerspricht-dem-marker.md` betrafen beide den Circle-Datensatz, nicht den Spec. Beide sind seit dem 260802-1423 geschlossen. Für die Tastenbelegung gilt unverändert C3 des Specs, weil C3 die Messung kennt und die Directive-Zeile sie nicht kannte.
 
 ---
 
@@ -52,7 +53,7 @@ Sechs Randbedingungen aus dem Abschnitt `## Constraints` desselben Datensatzes b
 | Randbedingung | Wo sie im Plan zuschlägt |
 |---|---|
 | Die zehn Zeitzusagen gelten unverändert auf dem Gerät von 2018 | S3, S8, S21, S22 |
-| C3 verlangt Laufzeit-Umbelegung und Zugriff auf systemseitig belegte Tasten | S7, S9, S10, S20 |
+| C3 verlangt Laufzeit-Umbelegung und Zugriff auf systemseitig belegte Tasten | S7, S9, S11, S20 |
 | "supersimpel" wirkt als Ausschlussgrund | durchgängig, siehe `## Wie dieser Plan die Maxime "supersimpel" einlöst` |
 | KRK wird außerhalb der App-Sandbox ausgeliefert | S4, S5, S23 |
 | Mindest-Zielsystem macOS 15 | S1 (`MACOSX_DEPLOYMENT_TARGET`), S5 (Prüfung am Binärformat) |
@@ -76,19 +77,19 @@ Der Sortierschlüssel für den Namen wird beim Lesen einmal je Eintrag berechnet
 
 ```mermaid
 flowchart LR
-  NAV["Navigation setzt Ordner, Generation um 1 erhoeht"]
+  NAV["Navigation setzt Ordner, Generation um 1 erhöht"]
   W["Arbeitsfaden liest mit getattrlistbulk"]
-  Q["Kanal an den Hauptfaden, jeder Stapel traegt seine Generation"]
+  Q["Kanal an den Hauptfaden, jeder Stapel trägt seine Generation"]
   GATE{"Generation noch aktuell?"}
   DROP["Stapel verwerfen"]
-  APPEND["Eintraege an das Ordnermodell anhaengen"]
+  APPEND["Einträge an das Ordnermodell anhängen"]
   FIRST["Erster Stapel: erste Bildschirmseite steht, L2"]
-  MORE["Folgende Stapel: noteNumberOfRowsChanged, hoechstens einmal je Bild"]
+  MORE["Folgende Stapel: noteNumberOfRowsChanged, höchstens einmal je Bild"]
   SORT["Letzter Stapel: Sichtreihenfolge und Bildlaufleiste stehen, L3 und L10"]
 
   NAV -->|startet| W
-  W -->|Stapel zu 1024 Eintraegen| Q
-  Q --> GATE
+  W -->|Stapel zu 1024 Einträgen| Q
+  Q -->|Hauptfaden prüft| GATE
   GATE -->|nein| DROP
   GATE -->|ja| APPEND
   APPEND -->|erster| FIRST
@@ -104,7 +105,7 @@ Die `NSTableView` bekommt eine feste `rowHeight`. Eine Dateiliste hat gleich hoh
 
 **Über FSEvents, mit einem einzigen Auffrischungspfad für fremde und eigene Änderungen.** Ein `FSEventStream` beobachtet die Ordner, die gerade in einem der beiden Dateifenster sichtbar sind, mit einer Sammelverzögerung von 300 ms und ohne `kFSEventStreamCreateFlagFileEvents`: die Auflösung auf Verzeichnisebene genügt, weil KRK ohnehin den ganzen Ordner neu liest. Der Strom wird bei jeder Navigation neu aufgesetzt, es sind nie mehr als zwei Pfade zu beobachten.
 
-Der Punkt, an dem dieser Entwurf gegen die naheliegende Alternative gewinnt: **das Auffrischen nach einer eigenen Dateioperation läuft über denselben Eintrittspunkt.** C4 verlangt "Nach jeder Operation zeigen beide Dateifenster den neuen Stand, ohne dass der Nutzer auffrischen muss". Die Operationsmaschine ruft am Ende dieselbe Funktion `ordner_neu_lesen(pfad)` auf, die auch der FSEvents-Rückruf aufruft. Eine Funktion, zwei Auslöser. Ein zweiter Auffrischungsweg für eigene Änderungen wäre die Sonderregel mit eigenem Rückfallweg, die die Maxime "supersimpel" ausschließt.
+Der Punkt, an dem dieser Entwurf gegen die naheliegende Alternative gewinnt: **das Auffrischen nach einer eigenen Dateioperation läuft über denselben Eintrittspunkt.** C4 verlangt "Nach jeder Operation zeigen beide Dateifenster den neuen Stand, ohne dass der Nutzer auffrischen muss". Der gemeldete Abschluss einer Dateioperation läuft in dieselbe Funktion `ordner_neu_lesen(pfad)`, die auch der FSEvents-Rückruf aufruft. Eine Funktion, zwei Auslöser. Beide Auslöser liegen in `krk-ui`: die Operationsmaschine in `krk-core` ruft nicht nach oben, sie meldet ihren Abschluss über denselben Fortschrittskanal, über den sie auch den Fortschritt meldet. Ein zweiter Auffrischungsweg für eigene Änderungen wäre die Sonderregel mit eigenem Rückfallweg, die die Maxime "supersimpel" ausschließt.
 
 Eingehängte und ausgeworfene Datenträger sind ein anderer Mechanismus und bekommen einen eigenen: `NSWorkspace.notificationCenter` mit `didMountNotification`, `willUnmountNotification` und `didUnmountNotification`. Das bedient C5 (Datenträger erscheint und verschwindet in der Leiste) und C9 (ein Dateifenster auf einem ausgeworfenen Volume meldet den Verlust und wechselt auf einen erreichbaren Ordner). FSEvents beobachtet Ordnerinhalte, `NSWorkspace` beobachtet Datenträger; die beiden überschneiden sich nicht.
 
@@ -133,10 +134,11 @@ Jede Datei wird atomar geschrieben: in eine Nachbardatei schreiben, dann `rename
 | Zusage | Was gemessen wird | Strecke | Schritt |
 |---|---|---|---|
 | L2, L3, L10 | Lesen und Sortieren im Ordnermodell | kopflos | S3 |
-| L1, L5, L6, L7, L8, L9 | Tastendruck bis sichtbare Reaktion | in der Anwendung | S21 |
+| L1, L5, L6, L8, L9 | Tastendruck bis sichtbare Reaktion | in der Anwendung | S21 |
+| L7 | Tastendruck bis die Vorschau steht | in der Anwendung, setzt das Vorschaufenster aus S19 voraus | S21, nach S19 |
 | L4 | Prozessstart bis bedienbare Oberfläche | in der Anwendung, von außen gestartet | S21 |
 
-**Der Prüfordner wird erzeugt, nicht gesammelt.** `cargo run -p krk-bench -- fixture --eintraege 10000 --seed 1 --out <pfad>` legt einen flachen Ordner mit gemischten Dateitypen und Größen an. Der feste Startwert des Zufallsgenerators macht den Ordner reproduzierbar: derselbe Startwert erzeugt dieselbe Liste, auf jedem Gerät. Für L10 dasselbe mit `--eintraege 100000`. Beide Größen sind gefordert, die Messbedingungen in C8 nennen nur die kleinere; der Defekt dazu ist gemeldet, siehe `## Angelegte Defekte und Entscheidungen`.
+**Der Prüfordner wird erzeugt, nicht gesammelt.** `cargo run -p krk-bench -- fixture --eintraege 10000 --seed 1 --out <pfad>` legt einen flachen Ordner mit gemischten Dateitypen und Größen an. Der feste Startwert des Zufallsgenerators macht den Ordner reproduzierbar: derselbe Startwert erzeugt dieselbe Liste, auf jedem Gerät. Für L10 dasselbe mit `--eintraege 100000`. Die Messbedingungen in C8 nennen seit dem 260802-1445 beide Größen und verlangen ausdrücklich, dass beide nach demselben Verfahren entstehen, das bei gleicher Eingabe dieselbe Zusammensetzung liefert. Der feste Startwert des Zufallsgenerators ist die Umsetzung genau dieser Zusage.
 
 **Kalt heißt `purge`.** Den Dateisystem-Cache leert unter macOS allein `sudo purge`; einen Weg, ihn für ein einzelnes Verzeichnis zu leeren, gibt es nicht. Die Messstrecke ruft `purge` bei `--kalt` selbst auf und **bricht mit einer Meldung ab**, wenn sie die Rechte nicht hat, statt eine warme Zahl als kalte auszugeben.
 
@@ -158,17 +160,20 @@ Der Papierkorb ist `NSFileManager.trashItemAtURL:resultingItemURL:error:`. Damit
 
 ```mermaid
 stateDiagram-v2
+  state "Läuft" as Laeuft
+  state "Übersprungen" as Uebersprungen
+
   [*] --> Laeuft: Arbeitsfaden startet, Hauptfaden bleibt frei
-  Laeuft --> Laeuft: Eintrag fertig, Fortschritt gebuendelt gemeldet
+  Laeuft --> Laeuft: Eintrag fertig, Fortschritt gebündelt gemeldet
   Laeuft --> Konflikt: Zielname bereits belegt
-  Konflikt --> Laeuft: Nutzer waehlt, wahlweise fuer alle weiteren
+  Konflikt --> Laeuft: Nutzer wählt, wahlweise für alle weiteren
   Konflikt --> Abgebrochen: Nutzer bricht ab
   Laeuft --> Uebersprungen: einzelner Eintrag scheitert, etwa an Rechten
-  Uebersprungen --> Laeuft: naechster Eintrag
+  Uebersprungen --> Laeuft: nächster Eintrag
   Laeuft --> Abgebrochen: Abbruchbefehl, copyfile liefert COPYFILE_QUIT
-  Laeuft --> Fertig: alle Eintraege abgearbeitet
-  Abgebrochen --> [*]: nennt die Zahl der uebertragenen Eintraege
-  Fertig --> [*]: nennt die uebersprungenen Eintraege mit Grund
+  Laeuft --> Fertig: alle Einträge abgearbeitet
+  Abgebrochen --> [*]: nennt die Zahl der übertragenen Einträge
+  Fertig --> [*]: nennt die übersprungenen Einträge mit Grund
 ```
 
 Der Zustand `Uebersprungen` bildet die C4-Festlegung ab, dass eine gescheiterte Einzelposition den Stapel nicht abbricht. Er sammelt Eintrag und Grund und gibt beides am Ende aus.
@@ -193,15 +198,16 @@ Eine Freigabe für Bedienungshilfen braucht KRK **nicht**. Die Fn-Messung hat be
 
 ```mermaid
 flowchart TD
-  subgraph ui["krk-ui: Ansichten, ausschliesslich auf dem Hauptfaden"]
+  subgraph ui["krk-ui: Ansichten, ausschließlich auf dem Hauptfaden"]
     direction LR
-    APP["Fenster, Menue, Vier-Bereiche-Layout"]
+    APP["Fenster, Menü, Vier-Bereiche-Layout"]
     TBL["Dateifenster als NSTableView"]
     EVT["NSEvent-Abgriff"]
-    SIDE["Lesezeichen, Geraete, Vorschau"]
+    SIDE["Lesezeichen, Geräte, Vorschau"]
+    REFRESH["ordner_neu_lesen: der eine Auffrischungspfad"]
   end
   subgraph bridge["krk-ui/src/appkit: einziges Modul mit unsafe"]
-    WRAP["Sichere Huellen um jeden AppKit-Aufruf"]
+    WRAP["Sichere Hüllen um jeden AppKit-Aufruf"]
     CLS["define_class!: sechs Protokolldeklarationen"]
   end
   subgraph core["krk-core: reines Rust, ohne AppKit, ohne unsafe, ohne Fenster testbar"]
@@ -218,24 +224,34 @@ flowchart TD
     FS["Dateisystem, FSEvents, NSWorkspace"]
   end
 
-  APP -->|ruft ueber| WRAP
-  TBL -->|ruft ueber| WRAP
-  EVT -->|ruft ueber| WRAP
-  SIDE -->|ruft ueber| WRAP
+  APP -->|ruft über| WRAP
+  TBL -->|ruft über| WRAP
+  EVT -->|ruft über| WRAP
+  SIDE -->|ruft über| WRAP
   TBL -->|liest Zeilen aus| MODEL
-  EVT -->|schlaegt nach in| KEYS
+  EVT -->|schlägt nach in| KEYS
   SIDE -->|liest| CFG
   KEYS -->|liefert Kommando an| OPS
-  WRAP --> CLS
+  WRAP -->|deklariert Protokolle über| CLS
   WRAP -->|unsicherer Fremdaufruf| AK
-  CLS -->|erfuellt Protokolle von| AK
-  SCAN -->|fuellt| MODEL
-  CFG -->|laedt| KEYS
-  SCAN -->|liest ueber getattrlistbulk| FS
-  OPS -->|schreibt ueber copyfile und rename| FS
+  CLS -->|erfüllt Protokolle von| AK
+  SCAN -->|füllt| MODEL
+  CFG -->|lädt| KEYS
+  SCAN -->|liest über getattrlistbulk| FS
+  OPS -->|schreibt über copyfile und rename| FS
+  OPS -->|Papierkorb über injizierte Schnittstelle| WRAP
+  FS -->|FSEvents-Rückruf| REFRESH
+  OPS -->|Abschluss über den Fortschrittskanal| REFRESH
+  REFRESH -->|stößt einen neuen Lesevorgang an| SCAN
 ```
 
-Der hohe Eingangsgrad des Knotens `Sichere Huellen um jeden AppKit-Aufruf` ist die eigentliche Aussage des Graphen und keine Nachlässigkeit. Der Technologieentscheid bringt drei dauerhafte Kosten mit, die die Analyse benennt: es gibt keinen Oberflächenbau, jedes Objective-C-Protokoll ist von Hand zu deklarieren, und jeder AppKit-Aufruf ist ein unsicherer Fremdaufruf. Die dritte dieser Kosten wird an genau einer Stelle bezahlt: `krk-core` kennt AppKit nicht, damit ist der ganze Kern ohne Fenster testbar, und `unsafe` an AppKit steht ausschließlich unter `crates/krk-ui/src/appkit/`.
+**Zwei Kanten laufen gegen die Schichtung, und beide sind gewollt.** Der Graph zeichnet Aufrufe, und drei Viertel davon laufen von oben nach unten. Genau zwei tun es nicht, und sie sind die einzigen Stellen, an denen der Entwurf die Grenze in die andere Richtung überschreitet.
+
+Die erste ist der Auffrischungspfad aus Frage 3. Der Knoten `ordner_neu_lesen` hat zwei Auslöser, den FSEvents-Rückruf und den gemeldeten Abschluss einer Dateioperation, und stößt seinerseits einen neuen Lesevorgang an. Damit trägt der Graph einen Zyklus: `Verzeichnisleser` liest über das Dateisystem, das Dateisystem meldet die Änderung an `ordner_neu_lesen`, und der liest neu. Dieser Zyklus ist die Sache selbst und kein Entwurfsfehler; ein Dateimanager, der fremde Änderungen anzeigt, hat notwendig eine Rückrichtung aus dem Dateisystem. Der Spec zeichnet dieselbe Schleife und hat sie in der Prüfung vom 260802-1118 als gewollt bestätigt bekommen. Von einer Modulkopplung im Sinne von `HYG-NO-CYCLES` unterscheidet ihn, dass er über das Betriebssystem läuft und nicht über eine gegenseitige Kistenabhängigkeit: `krk-core` kennt `krk-ui` nicht, weder im Zyklus noch außerhalb.
+
+Die zweite ist die Papierkorb-Schnittstelle aus S15. `NSFileManager.trashItemAtURL:` liegt in `krk-ui/src/appkit/`, weil es ein AppKit-Aufruf ist; die Operationsmaschine in `krk-core` ruft es über eine Schnittstelle, die ihr injiziert wird. Der Aufruf läuft damit von unten nach oben, die Übersetzungsabhängigkeit weiterhin von oben nach unten. Das ist die einzige Abhängigkeitsumkehr des Entwurfs, und sie steht im Graphen, statt hinter der Zeichenrichtung zu verschwinden. Sie erzeugt keinen Zyklus, weil `Sichere Hüllen um jeden AppKit-Aufruf` keinen Weg zurück in den Kern hat.
+
+Der hohe Eingangsgrad des Knotens `Sichere Hüllen um jeden AppKit-Aufruf` ist die eigentliche Aussage des Graphen und keine Nachlässigkeit. Der Technologieentscheid bringt drei dauerhafte Kosten mit, die die Analyse benennt: es gibt keinen Oberflächenbau, jedes Objective-C-Protokoll ist von Hand zu deklarieren, und jeder AppKit-Aufruf ist ein unsicherer Fremdaufruf. Die dritte dieser Kosten wird an genau einer Stelle bezahlt: `krk-core` kennt AppKit nicht, damit ist der ganze Kern ohne Fenster testbar, und `unsafe` an AppKit steht ausschließlich unter `crates/krk-ui/src/appkit/`.
 
 Durchgesetzt wird die Grenze über zwei Übersetzerregeln, und die Unterscheidung zwischen ihnen ist keine Feinheit. `krk-ui` trägt `#![warn(unsafe_code)]`, und allein das Modul `appkit` trägt `#[allow(unsafe_code)]`. `krk-core` trägt `#![deny(unsafe_code)]` und **nicht** `forbid`, weil auch der Kern zwei Systemaufrufe braucht, die es in Rust nur als Fremdaufruf gibt: `getattrlistbulk` für das Lesen und `copyfile` für das Kopieren. Beide liegen in einem einzigen Modul `verzeichnis::sys` mit `#[allow(unsafe_code)]`. `forbid` ließe sich an dieser Stelle nicht öffnen, das ist gerade sein Zweck, und die Regel wäre dann entweder falsch oder der Systemaufruf müsste in eine eigene Kiste ausgelagert werden. Eine vierte Kiste für zwei Funktionen wäre die teurere Antwort auf dieselbe Frage. `krk-core` ist damit AppKit-frei und trägt genau ein Modul mit `unsafe`, nicht null.
 
@@ -249,7 +265,7 @@ krk/
 ├── crates/
 │   ├── krk-core/                 # deny(unsafe_code), kein AppKit; unsafe nur in verzeichnis::sys
 │   ├── krk-ui/                   # Binaerziel; src/appkit/ ist das einzige unsafe
-│   └── krk-bench/                # Pruefordner-Erzeuger und kopflose Messstrecke
+│   └── krk-bench/                # Prüfordner-Erzeuger und kopflose Messstrecke
 ├── xtask/                        # bundle, sign, messen, release
 ├── resources/
 │   ├── Info.plist                # ontocoder
@@ -282,27 +298,27 @@ Jeder Schritt nennt seine Dateien und ein Abnahmekriterium, das an einem Diff od
 
 ```mermaid
 flowchart TD
-  subgraph A["Phase A: Fundament und frueher Durchstich"]
+  subgraph A["Phase A: Fundament und früher Durchstich"]
     direction TB
     S1["S1 Cargo-Workspace"]
     S2["S2 Verzeichnisleser und Ordnermodell"]
-    S3["S3 Pruefordner und kopflose Messstrecke"]
+    S3["S3 Prüfordner und kopflose Messstrecke"]
     S4["S4 Info.plist"]
-    S5["S5 Buendel und lokale Signierung"]
-    S6["S6 Fenster, Menue, echte Dateiliste"]
+    S5["S5 Bündel und lokale Signierung"]
+    S6["S6 Fenster, Menü, echte Dateiliste"]
     S7["S7 Tastenereignisse und Pfeiltasten"]
-    S8["S8 Fruehmessung als Gate"]
+    S8["S8 Frühmessung als Gate"]
   end
-  subgraph B["Phase B: Belegung und Ablage"]
+  subgraph B["Phase B: Ablage und Belegung"]
     direction TB
     S9["S9 Auslieferungsbelegung"]
-    S10["S10 Belegungsmaschine"]
-    S11["S11 Ablage unter Application Support"]
+    S10["S10 Ablage unter Application Support"]
+    S11["S11 Belegungsmaschine"]
   end
   subgraph C["Phase C: Aufbau und Navigation"]
     direction TB
     S12["S12 Vier Bereiche, Tabs, Sichtbarkeit"]
-    S13["S13 Tastaturnavigation vollstaendig"]
+    S13["S13 Tastaturnavigation vollständig"]
     S14["S14 Dateisystem-Beobachtung und Volumes"]
   end
   subgraph D["Phase D: Dateioperationen"]
@@ -313,14 +329,14 @@ flowchart TD
   end
   subgraph E["Phase E: Nebenbereiche"]
     direction TB
-    S18["S18 Lesezeichen und Geraete"]
+    S18["S18 Lesezeichen und Geräte"]
     S19["S19 Vorschaufenster"]
     S20["S20 Belegungsansicht"]
   end
   subgraph F["Phase F: Abnahme und Auslieferung"]
     direction TB
     S21["S21 Messmodus in der Anwendung"]
-    S22["S22 Vollstaendige Messreihe"]
+    S22["S22 Vollständige Messreihe"]
     S23["S23 Auslieferungspaket"]
   end
 
@@ -335,10 +351,10 @@ flowchart TD
   S3 --> S8
   S7 --> S8
   S8 -->|Gate| S9
-  S9 --> S10
-  S1 --> S11
-  S11 --> S10
-  S10 --> S12
+  S1 --> S10
+  S9 --> S11
+  S10 --> S11
+  S11 --> S12
   S12 --> S13
   S12 --> S14
   S13 --> S15
@@ -346,14 +362,22 @@ flowchart TD
   S15 --> S16
   S16 --> S17
   S14 --> S18
-  S11 --> S18
+  S10 --> S18
   S12 --> S19
-  S10 --> S20
+  S11 --> S20
   S16 --> S21
+  S19 -->|L7 misst die Vorschau| S21
   S21 --> S22
   S5 --> S23
   S22 --> S23
+  S17 -->|Runde vollständig| S23
+  S18 -->|Runde vollständig| S23
+  S20 -->|Runde vollständig| S23
 ```
+
+**Die Nummernfolge ist eine gültige Ausführungsreihenfolge.** Jede der 33 Kanten läuft von der kleineren zur größeren Nummer. Wer die 23 Schritte der Reihe nach abarbeitet, trifft keinen Schritt vor seiner Voraussetzung. Dafür stehen die Ablage unter Application Support und die Belegungsmaschine in dieser Reihenfolge in Phase B: die Belegungsmaschine liest die Nutzerbelegung über die Ablage, also kommt die Ablage zuerst.
+
+**Vier Kanten führen die Phase F an die Runde heran, und sie tun zwei verschiedene Dinge.** Die Kante von S19 auf S21 ist eine technische Voraussetzung: S21 misst L7, die Vorschau-Zusage, und die Vorschau baut S19. Ohne diese Kante ließe sich der Messmodus abnehmen, während eine der sechs gemessenen Zusagen an einer Ansicht hängt, die es noch nicht gibt. Die drei Kanten von S17, S18 und S20 auf S23 sind etwas anderes: keine dieser drei Fähigkeiten wird gemessen, aber alle drei gehören zum Umfang der Runde. Die Kanten sagen, dass ein Auslieferungspaket erst entsteht, wenn C4 mit dem Stapel-Umbenennen, C5 mit der Lesezeichen- und Geräteleiste und die Belegungsansicht aus C3 fertig sind. Eine vierte Kante von S19 auf S23 wäre überflüssig, weil S19 über S21 und S22 ohnehin vor S23 liegt; sie stünde nur doppelt im Graphen.
 
 ---
 
@@ -422,10 +446,11 @@ flowchart TD
 - Änderungen: die kopflose Strecke aus S3 um eine erste Messung am laufenden Durchstich ergänzen. Gemessen werden L1 (Tastendruck bis Ende des Zeichendurchgangs, über `CADisplayLink`), L2 und L3 auf dem 10.000er-Prüfordner, L4 (Prozessstart bis bedienbares Fenster, von außen gestartet und über einen Zeitstempel der Anwendung abgeschlossen) und L10 auf dem 100.000er-Prüfordner. Zwanzig Wiederholungen, 95. Perzentil.
 - Abhängigkeiten: S3, S7
 - Abnahmekriterium: `messungen/<datum>-durchstich.txt` liegt vor, trägt den vollständigen Bedingungskopf und nennt für L1, L2, L3, L4 und L10 je einen Wert für das 95. Perzentil. **Der Schritt gilt als bestanden, wenn L1 ≤ 16 ms, L2 ≤ 100 ms, L3 ≤ 400 ms warm, L4 ≤ 1000 ms und die erste Bildschirmseite bei 100.000 Einträgen ≤ 100 ms liegen.** Verfehlt einer der fünf Werte die Zusage, endet der Schritt mit einem angelegten Entscheidungsdatensatz und **ohne** Reparaturversuch: dann steht der Technologieentscheid zur Debatte, und das ist eine Frage an den Nutzer, keine an den `coder`.
+- **Wartet auf eine Nutzerentscheidung, ohne blockiert zu sein:** was L4 mit "wiederhergestellten Tabs" meint, liegt als `decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md` beim Nutzer. Bis zur Antwort misst S8 L4 als Spanne bis zur bedienbaren Oberfläche mit der ersten Bildschirmseite und schreibt diese Lesart im Bericht aus. Am Durchstich gibt es noch keine wiederhergestellte Sitzung, die Lesarten fallen hier also ohnehin zusammen; die Antwort bindet erst S21 und S22.
 
 ---
 
-### Phase B: Belegung und Ablage
+### Phase B: Ablage und Belegung
 
 #### 9. **Auslieferungsbelegung als Datentabelle**
 
@@ -435,21 +460,21 @@ flowchart TD
 - Abhängigkeiten: S8
 - Abnahmekriterium: die Datei ist gültiges TOML. Der Diff zeigt: keine Kombination erscheint bei zwei verschiedenen Funktionen; jede Funktion außer dem F4-Eintrag trägt mindestens eine Kombination; die sechs Zeilen der C3-Tabelle stehen mit genau den dort genannten Kürzeln (`f3`+`cmd+y`, `f5`+`cmd+shift+k`, `f6`+`cmd+shift+v`, `f7`+`cmd+shift+n`, `f8`+`cmd+opt+delete`, `delete`+`cmd+delete`); die Zeichenketten `shift+delete`, `cmd+c` und `cmd+v` kommen in keiner Tastenliste vor; die Schreibweise `fn+` kommt nirgends vor.
 
-#### 10. **Belegungsmaschine**
-
-- Ausführender: `coder`
-- Dateien: `crates/krk-core/src/tasten/{belegung.rs,parser.rs,konflikt.rs}`, `crates/krk-core/tests/belegung.rs`
-- Änderungen: Einlesen der Auslieferungsbelegung über `include_str!("../../../resources/default-keymap.toml")`, Einlesen der Nutzerbelegung aus `keymap.toml`, wobei die Nutzerdatei die Auslieferungsbelegung vollständig ersetzt und nicht ergänzt. Übersetzung der Kombinationsschreibweise in Tastencode plus normalisierte Maske über eine Tabelle, die die gemessenen Codes 99, 96 und 100 für F3, F5 und F8 sowie die dokumentierten 118, 97 und 98 für F4, F6 und F7 führt. Nachschlag von (Tastencode, Maske) auf Kommando. Konflikterkennung, die bei einer doppelt vergebenen Kombination die andere Funktion benennt. Zurücksetzen auf den Auslieferungszustand. Rückfall auf die Sprungmarke aus C2, wenn eine Taste ohne Zusatztaste keiner Funktion zugeordnet ist.
-- Abhängigkeiten: S9, S11
-- Abnahmekriterium: `cargo test -p krk-core belegung` beendet mit 0 und deckt ab: die Auslieferungsbelegung ist konfliktfrei; ein Nachschlag auf Tastencode 99 trifft dieselbe Funktion, gleich ob `function` im Rohereignis gesetzt war; die Zuweisung einer bereits vergebenen Kombination liefert einen Konflikt mit dem Namen der anderen Funktion; die Zuweisung einer zweiten Kombination an dieselbe Funktion liefert keinen Konflikt; Zurücksetzen stellt die eingebettete Tabelle wieder her; ein unbelegter Buchstabe ohne Zusatztaste fällt auf die Sprungmarke durch. Der Diff zeigt, dass die Codes für F4, F6 und F7 als dokumentiert und nicht als gemessen gekennzeichnet sind.
-
-#### 11. **Ablage unter Application Support**
+#### 10. **Ablage unter Application Support**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/ablage/{mod.rs,pfade.rs,atomar.rs,sitzung.rs,lesezeichen.rs}`, `crates/krk-core/tests/ablage.rs`
 - Änderungen: Auflösung von `~/Library/Application Support/KRK/` samt Anlage beim ersten Start. Atomares Schreiben über Nachbardatei plus `rename`. Serialisierung der drei Dateien über `serde`. Gebündeltes Schreiben des Sitzungszustands, höchstens alle 2 s und einmal beim Beenden. Beschädigte oder nicht lesbare Dateien werden benannt und durch den Auslieferungszustand ersetzt, statt den Start scheitern zu lassen; die Ersetzung wird auf der Standardfehlerausgabe gemeldet.
 - Abhängigkeiten: S1
 - Abnahmekriterium: `cargo test -p krk-core ablage` beendet mit 0 und deckt ab: Schreiben und Wiedereinlesen aller drei Dateien in einem temporären Verzeichnis ergibt denselben Inhalt; ein Abbruch zwischen Schreiben und Umbenennen lässt die alte Datei unverändert; eine syntaktisch kaputte Datei führt zum Auslieferungszustand und zu einer Meldung, nicht zu einem Abbruch.
+
+#### 11. **Belegungsmaschine**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-core/src/tasten/{belegung.rs,parser.rs,konflikt.rs}`, `crates/krk-core/tests/belegung.rs`
+- Änderungen: Einlesen der Auslieferungsbelegung über `include_str!("../../../resources/default-keymap.toml")`, Einlesen der Nutzerbelegung aus `keymap.toml`, wobei die Nutzerdatei die Auslieferungsbelegung vollständig ersetzt und nicht ergänzt. Übersetzung der Kombinationsschreibweise in Tastencode plus normalisierte Maske über eine Tabelle, die die gemessenen Codes 99, 96 und 100 für F3, F5 und F8 sowie die dokumentierten 118, 97 und 98 für F4, F6 und F7 führt. Nachschlag von (Tastencode, Maske) auf Kommando. Konflikterkennung, die bei einer doppelt vergebenen Kombination die andere Funktion benennt. Zurücksetzen auf den Auslieferungszustand. Rückfall auf die Sprungmarke aus C2, wenn eine Taste ohne Zusatztaste keiner Funktion zugeordnet ist.
+- Abhängigkeiten: S9, S10
+- Abnahmekriterium: `cargo test -p krk-core belegung` beendet mit 0 und deckt ab: die Auslieferungsbelegung ist konfliktfrei; ein Nachschlag auf Tastencode 99 trifft dieselbe Funktion, gleich ob `function` im Rohereignis gesetzt war; die Zuweisung einer bereits vergebenen Kombination liefert einen Konflikt mit dem Namen der anderen Funktion; die Zuweisung einer zweiten Kombination an dieselbe Funktion liefert keinen Konflikt; Zurücksetzen stellt die eingebettete Tabelle wieder her; ein unbelegter Buchstabe ohne Zusatztaste fällt auf die Sprungmarke durch. Der Diff zeigt, dass die Codes für F4, F6 und F7 als dokumentiert und nicht als gemessen gekennzeichnet sind.
 
 ---
 
@@ -459,8 +484,8 @@ flowchart TD
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/{aufteilung.rs,tableiste.rs}`, `crates/krk-ui/src/{fenstermodell.rs,tabs.rs}`, `crates/krk-core/src/sitzung.rs`
-- Änderungen: `NSSplitView` mit vier Bereichen und `define_class!` für den `NSSplitViewDelegate` mit Mindestbreiten. Tabmodell je Dateifenster: Tab öffnen, schließen, vor und zurück; beim Schließen des letzten Tabs bleibt das Fenster stehen und zeigt das Benutzerverzeichnis. Kennzeichnung des aktiven Fensters, sichtbar auch bei gleichem Ordner in beiden Fenstern. Ein- und Ausblenden der Lesezeichenleiste, des zweiten Dateifensters und der Vorschau, mit Wiederherstellung der vorherigen Breite; der Befehl, der das letzte sichtbare Dateifenster ausblenden würde, wird ohne Meldung verworfen. Sitzungswiederherstellung über S11: Tabs, Ordner, Auswahl, Breiten, Sichtbarkeit, Sortierung. Beide Fenster halten getrennte Auswahl und Bildlaufposition, auch bei gleichem Ordner.
-- Abhängigkeiten: S10
+- Änderungen: `NSSplitView` mit vier Bereichen und `define_class!` für den `NSSplitViewDelegate` mit Mindestbreiten. Tabmodell je Dateifenster: Tab öffnen, schließen, vor und zurück; beim Schließen des letzten Tabs bleibt das Fenster stehen und zeigt das Benutzerverzeichnis. Kennzeichnung des aktiven Fensters, sichtbar auch bei gleichem Ordner in beiden Fenstern. Ein- und Ausblenden der Lesezeichenleiste, des zweiten Dateifensters und der Vorschau, mit Wiederherstellung der vorherigen Breite; der Befehl, der das letzte sichtbare Dateifenster ausblenden würde, wird ohne Meldung verworfen. Sitzungswiederherstellung über S10: Tabs, Ordner, Auswahl, Breiten, Sichtbarkeit, Sortierung. Beide Fenster halten getrennte Auswahl und Bildlaufposition, auch bei gleichem Ordner.
+- Abhängigkeiten: S11
 - Abnahmekriterium: im laufenden Bündel erfüllen sich die sechs Abnahmekriterien aus C1 und die fünf aus C7 einzeln nachprüfbar. Prüfbar per Kommando: nach Beenden und Neustart zeigt `plutil -p` beziehungsweise ein Blick in `~/Library/Application Support/KRK/session.toml` dieselben Tabs, Ordner und Breiten wie vor dem Beenden, und die Oberfläche stimmt damit überein. `cargo test -p krk-core sitzung` prüft die Serialisierung des Fenster- und Tabmodells.
 
 #### 13. **Tastaturnavigation vollständig (C2)**
@@ -475,7 +500,7 @@ flowchart TD
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/{fsevents.rs,volumes.rs}`, `crates/krk-ui/src/auffrischung.rs`
-- Änderungen: `FSEventStream` über die gerade sichtbaren Ordner mit 300 ms Sammelverzögerung, neu aufgesetzt bei jeder Navigation. Eine Funktion `ordner_neu_lesen(pfad)` als einziger Auffrischungspfad, aufgerufen vom FSEvents-Rückruf und später von der Operationsmaschine. Wiederverwendung des gestückelten Lesevorgangs aus S2 samt Generationszähler, sodass eine Auffrischung eines 100.000er-Ordners die Eingabe nicht blockiert. Auswahl und Bildlaufposition überleben eine Auffrischung, soweit die Einträge noch existieren. `NSWorkspace`-Beobachtung für `didMount`, `willUnmount` und `didUnmount`; ein Dateifenster auf einem ausgeworfenen Volume meldet den Verlust und wechselt auf das Benutzerverzeichnis.
+- Änderungen: `FSEventStream` über die gerade sichtbaren Ordner mit 300 ms Sammelverzögerung, neu aufgesetzt bei jeder Navigation. Eine Funktion `ordner_neu_lesen(pfad)` als einziger Auffrischungspfad, aufgerufen vom FSEvents-Rückruf und später vom gemeldeten Abschluss einer Dateioperation aus S16. Beide Auslöser liegen in `krk-ui`; `krk-core` ruft die Funktion nicht. Wiederverwendung des gestückelten Lesevorgangs aus S2 samt Generationszähler, sodass eine Auffrischung eines 100.000er-Ordners die Eingabe nicht blockiert. Auswahl und Bildlaufposition überleben eine Auffrischung, soweit die Einträge noch existieren. `NSWorkspace`-Beobachtung für `didMount`, `willUnmount` und `didUnmount`; ein Dateifenster auf einem ausgeworfenen Volume meldet den Verlust und wechselt auf das Benutzerverzeichnis.
 - Abhängigkeiten: S12
 - Abnahmekriterium: eine im Terminal mit `touch` angelegte Datei erscheint im offenen Dateifenster innerhalb von 1 s ohne Zutun. Eine mit `rm` entfernte verschwindet ebenso. Das Auswerfen eines eingehängten Datenträgers, auf den ein Dateifenster zeigt, führt zu einer Meldung und zum Wechsel auf das Benutzerverzeichnis, nicht zum Blockieren. Der Diff zeigt genau eine Definition von `ordner_neu_lesen` und keinen zweiten Auffrischungspfad.
 
@@ -516,7 +541,7 @@ flowchart TD
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/leiste.rs`, `crates/krk-ui/src/leistenmodell.rs`, `crates/krk-core/src/lesezeichen.rs`
 - Änderungen: die Leiste links mit zwei sichtbar getrennten Bereichen. Oben die Lesezeichen aus `bookmarks.toml`, unten das Benutzerverzeichnis, die internen Datenträger und alles gerade Eingehängte, gespeist aus `NSFileManager.mountedVolumeURLs` und aktualisiert über die `NSWorkspace`-Beobachtung aus S14. Anlegen des aktuellen Ordners als Lesezeichen mit Namensvergabe, Umbenennen, Löschen, Reihenfolge ändern, alles über die Tastatur. Fokuswechsel in die Leiste und zurück. Auswahl setzt den Ordner des aktiven Dateifensters, ohne den Tab zu wechseln. Lesezeichen auf nicht mehr vorhandene Ordner sind als ungültig markiert und melden bei Auswahl den Grund.
-- Abhängigkeiten: S11, S14
+- Abhängigkeiten: S10, S14
 - Abnahmekriterium: die acht Abnahmekriterien aus C5 sind im laufenden Bündel einzeln nachweisbar. Prüfbar per Kommando: nach dem Anlegen eines Lesezeichens enthält `~/Library/Application Support/KRK/bookmarks.toml` den Eintrag, und nach Neustart erscheint er wieder. Das Einhängen eines Abbilds über `hdiutil attach` lässt den Datenträger ohne Neustart in der Leiste erscheinen.
 
 #### 19. **Vorschaufenster mit eigenen Tabs (C6)**
@@ -532,7 +557,7 @@ flowchart TD
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/belegungsansicht.rs`, `crates/krk-ui/src/belegungsmodell.rs`
 - Änderungen: eine Ansicht, die jede Funktion mit ihrer aktuellen Belegung listet, **genau eine Zeile je Funktion**, mit allen Kombinationen dieser Funktion in dieser einen Zeile. Zuweisung durch Drücken der gewünschten Kombination. Konfliktmeldung mit Nennung der anderen Funktion. Befehl zum Zurücksetzen auf den Auslieferungszustand. Speicherung nach `keymap.toml` beim Verlassen. Beschriftung der Funktionstasten als F3 bis F8, ohne "Fn+" an irgendeiner Stelle. Der F4-Eintrag erscheint als für den Editor reserviert. Papierkorb und endgültiges Löschen erscheinen als zwei Zeilen. Kombinationen, die sich allein durch gedrücktes fn unterscheiden, sind nicht anlegbar, was sich aus der Normalisierung aus S7 von selbst ergibt.
-- Abhängigkeiten: S10
+- Abhängigkeiten: S11
 - Abnahmekriterium: die sechs Abnahmekriterien aus C3 zur Belegungsansicht sind im laufenden Bündel einzeln nachweisbar. Prüfbar per Kommando: die geänderte Belegung steht nach dem Verlassen der Ansicht in `~/Library/Application Support/KRK/keymap.toml` und überlebt einen Neustart; nach dem Zurücksetzen stimmt sie mit `resources/default-keymap.toml` überein. Eine Textsuche über die Ansichtstexte im Diff findet keine Zeichenfolge `Fn+`.
 
 ---
@@ -544,7 +569,8 @@ flowchart TD
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/messmodus.rs`, `crates/krk-bench/src/messen.rs`, `xtask/src/messen.rs`
 - Änderungen: `KRK.app --messmodus <plan.toml>` spielt eine beschriebene Folge synthetischer `NSEvent`s in die eigene Ereignisschlange und misst die Spanne vom Ereigniszeitstempel bis zum Ende des Zeichendurchgangs über `CADisplayLink`. Abgedeckt werden L1, L5, L6, L7, L8 und L9; L4 misst der äußere Aufrufer über den Zeitstempel, den die Anwendung bei bedienbarer Oberfläche schreibt. Zwanzig Wiederholungen, 95. Perzentil, Zusammenführung mit dem kopflosen Bericht aus S3 zu einem Bericht über alle zehn Zusagen. `cargo xtask messen` ist der eine Einstiegspunkt für beide Strecken.
-- Abhängigkeiten: S16
+- Abhängigkeiten: S16, S19. S19 steht dabei, weil L7 die Vorschau misst und S19 sie baut; ohne das Vorschaufenster ist eine der sechs Zusagen dieser Strecke nicht messbar.
+- **Wartet auf eine Nutzerentscheidung, ohne blockiert zu sein:** die Messvorschrift für L5, den Tabwechsel, hängt an `decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md`. Der Shaper hat den Datensatz am 260802-1445 auf L5 ausgeweitet: liest man einen Tab im Hintergrund erst beim Hinwechseln, gerät L5 mit 50 ms in dieselbe Klemme wie L4. Der Entwurf ändert sich durch keine der Lesarten, wohl aber die Zahl, gegen die S22 abnimmt. Liegt die Antwort bis S21 nicht vor, misst der Schritt L5 bis zur bedienbaren ersten Bildschirmseite und schreibt diese Lesart im Bericht aus.
 - Abnahmekriterium: `cargo xtask messen --alle --ordner10k <pfad> --ordner100k <pfad>` erzeugt einen Bericht, der alle zehn Zusagen L1 bis L10 mit 95. Perzentil, Median und Minimum ausweist und den vollständigen Bedingungskopf trägt. Der Bericht kennzeichnet die L1-Messung ausdrücklich als Spanne bis zum Ende des Zeichendurchgangs und nicht als Bildschirmmessung.
 
 #### 22. **Vollständige Messreihe auf dem Referenzgerät**
@@ -553,6 +579,7 @@ flowchart TD
 - Dateien: `messungen/<datum>-MacBookPro15-1-abnahme.txt`, `CLAUDE.md`
 - Änderungen: die vollständige Messreihe auf dem `MacBookPro15,1` fahren, warm und kalt, mit den Prüfordnern zu 10.000 und 100.000 Einträgen. Ergebnis versionieren. `CLAUDE.md` um die nun vorhandenen Bau-, Test- und Messkommandos ergänzen, die der Abschnitt `## Projektstand` bisher ausdrücklich als noch nicht vorhanden führt.
 - Abhängigkeiten: S21
+- **Dieser Schritt wartet auf die Antwort, er rät sie nicht.** `decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md` liegt beim Nutzer und bestimmt zwei Dinge, die S22 zur Abnahme braucht: die Bedeutung von L4 und, seit dem Nachtrag des Shapers vom 260802-1445, die Sitzungslage, auf der L4 gemessen wird. C8 legt Referenzgerät, Cache-Zustand, Prüfordner und zwanzig Wiederholungen fest, aber keine Tab-Belegung, und L4 ist die einzige der zehn Zusagen, deren Messung an dem hängt, was ein vorheriger Lauf hinterlassen hat. Ohne diesen Satz ist die Messreihe nicht wiederholbar. Der Schritt läuft deshalb erst, wenn die Antwort vorliegt; alles vor S22 ist davon unberührt.
 - Abnahmekriterium: die Berichtsdatei liegt vor, trägt `MacBookPro15,1` im Kopf und nennt für jede der zehn Zusagen einen gemessenen Wert und ein Urteil gehalten oder verfehlt. Jede verfehlte Zusage führt zu einem angelegten Entscheidungsdatensatz, nicht zu einer stillschweigenden Lockerung, wie C8 es ausdrücklich verlangt. Der Diff an `CLAUDE.md` ersetzt den Satz über das fehlende Bau- und Testkommando durch die tatsächlichen Kommandos.
 
 #### 23. **Auslieferungspaket**
@@ -560,7 +587,7 @@ flowchart TD
 - Ausführender: `coder`
 - Dateien: `xtask/src/release.rs`, `README.md`
 - Änderungen: `cargo xtask release` baut eine universelle Binärdatei über beide Ziele und `lipo`, signiert mit einer Developer-ID-Identität und aktivierter gehärteter Laufzeitumgebung (`codesign --options runtime`), reicht das Bündel über `xcrun notarytool submit --wait` zur Beglaubigung ein und heftet das Ergebnis mit `xcrun stapler staple` an. Fehlt eine der Voraussetzungen, bricht der Schritt mit einer benennenden Meldung ab.
-- Abhängigkeiten: S5, S22
+- Abhängigkeiten: S5, S17, S18, S20, S22. S17, S18 und S20 sind keine technische Voraussetzung des Bauvorgangs, sondern die Vollständigkeit der Runde: ein Auslieferungspaket entsteht erst, wenn das Stapel-Umbenennen aus C4, die Lesezeichen- und Geräteleiste aus C5 und die Belegungsansicht aus C3 stehen. S19 (Vorschaufenster, C6) liegt über S21 und S22 ohnehin davor und braucht keine eigene Kante.
 - Abnahmekriterium: `lipo -archs` auf der gebauten Binärdatei meldet `x86_64 arm64`. `codesign -dv --verbose=4` meldet die gehärtete Laufzeitumgebung. **Dieser Schritt hat eine benannte äußere Abhängigkeit:** `xcrun notarytool` und `xcrun stapler` setzen das vollständige Xcode voraus, und die Beglaubigung setzt ein Apple-Entwicklerkonto mit einer Developer-ID-Identität voraus. Solange eines von beidem fehlt, gilt der Schritt als abgenommen, wenn Bau, `lipo` und die Signierung mit gehärteter Laufzeitumgebung durchlaufen und der Beglaubigungsteil mit der benennenden Meldung abbricht. Der Bau selbst bleibt in allen Schritten davor ohne Xcode lauffähig; nur dieser eine Schritt braucht es.
 
 ---
@@ -617,8 +644,8 @@ Der Zuschnitt folgt der Trennung, die der Aufbau ohnehin zieht.
 | Jeder AppKit-Aufruf ist ein unsicherer Fremdaufruf, und Fehler darin äußern sich als Abstürze ohne Rückverfolgung. | `unsafe` liegt in genau zwei Modulen: `crates/krk-ui/src/appkit/` für AppKit und `krk-core/src/verzeichnis/sys.rs` für die beiden Systemaufrufe. Durchgesetzt über `#![deny(unsafe_code)]` in `krk-core` und `#![warn(unsafe_code)]` in `krk-ui`, jeweils mit `#[allow(unsafe_code)]` an der einen zugelassenen Stelle. Ein Absturz hat damit einen begrenzten Suchraum. |
 | Es gibt keinen Oberflächenbau; jede Ansicht entsteht im Code, und die Vier-Bereiche-Aufteilung mit Tabs ist der teuerste Einzelposten. | S12 ist ein eigener Schritt und kommt erst nach dem bestandenen Gate S8. Vor S12 steht kein Layout-Code, der bei einem Technologiewechsel verloren ginge. |
 | TCC fragt bei jedem Bau erneut, weil die Signaturidentität wechselt, und die Freigaben werden unprüfbar. | S5 verbietet die Ad-hoc-Signatur und verlangt eine über Bauläufe stabile lokale Identität. |
-| Die Codes für F6 und F7 sind dokumentiert, nicht gemessen. Der Spec hält das ausdrücklich fest und verschiebt die Prüfung auf die Abnahme. | S10 kennzeichnet die drei ungemessenen Codes im Quelltext als solche. S7 liefert mit `--tasten-protokoll` das Werkzeug, sie bei der Abnahme in einem Zug nachzuprüfen. |
-| Eine restaurierte Sitzung zeigt auf einen Ordner mit 100.000 Einträgen, und L4 mit 1000 ms kollidiert mit L10 mit 4 s. | Der Plan liest L4 als "bedienbare Oberfläche mit den Tabs an ihren Ordnern und der ersten Bildschirmseite", nicht als "vollständig gelesen". Die Lesart ist als Entscheidungsdatensatz gemeldet, siehe unten. Der Entwurf hält sie auch unter der strengeren Lesart nicht auf, weil der gestückelte Lesevorgang ohnehin nach dem ersten Stapel bedienbar ist. |
+| Die Codes für F6 und F7 sind dokumentiert, nicht gemessen. Der Spec hält das ausdrücklich fest und verschiebt die Prüfung auf die Abnahme. | S11 kennzeichnet die drei ungemessenen Codes im Quelltext als solche. S7 liefert mit `--tasten-protokoll` das Werkzeug, sie bei der Abnahme in einem Zug nachzuprüfen. |
+| Eine restaurierte Sitzung zeigt auf einen Ordner mit 100.000 Einträgen, und L4 mit 1000 ms kollidiert mit L10 mit 4 s. | Der Plan liest L4 als "bedienbare Oberfläche mit den Tabs an ihren Ordnern und der ersten Bildschirmseite", nicht als "vollständig gelesen". Die Lesart liegt als Entscheidungsdatensatz beim Nutzer, siehe unten, und bindet S22. Der Entwurf hält sie auch unter der strengeren Lesart nicht auf, weil der gestückelte Lesevorgang ohnehin nach dem ersten Stapel bedienbar ist. |
 
 ## Wie dieser Plan die Maxime "supersimpel" einlöst
 
@@ -632,9 +659,9 @@ Die Sprungmarke aus C2 und die freie Belegung aus C3 sind der einzige Punkt, an 
 
 Drei Punkte sind beim Planen aufgefallen und liegen als eigene Dateien, nicht in diesem Plan vergraben:
 
-- `issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md` — die Messbedingungen in C8 definieren nur den Ordner mit 10.000 Einträgen, L10 misst aber auf 100.000.
-- `decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md` — ob L4 mit "wiederhergestellten Tabs" die vollständig gelesenen Ordner meint oder die bedienbare erste Bildschirmseite. Unter der ersten Lesart widersprechen sich L4 und L10.
-- `decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` — wie KRK eine Schnittstelle ansteuert, die es erst ab macOS 26 gibt, nachdem der Technologiedatensatz Rückwärtskompatibilität bis macOS 15 mit Laufzeitabfrage und Ersatzweg zusagt. Bindet Runde 1 nicht, siehe unten.
+- `issues/260802-1428_c_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md` — **erledigt.** Die Messbedingungen in C8 definierten nur den Ordner mit 10.000 Einträgen, L10 misst aber auf 100.000. Der Shaper hat den Satz am 260802-1445 auf beide Größen gezogen und die Reproduzierbarkeit als Abnahmebedingung formuliert. S3 setzt sie um.
+- `decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md` — **offen, liegt beim Nutzer.** Ob L4 mit "wiederhergestellten Tabs" die vollständig gelesenen Ordner meint oder die bedienbare erste Bildschirmseite. Unter der ersten Lesart widersprechen sich L4 und L10. Der Shaper hat den Datensatz am 260802-1445 um zwei Punkte ergänzt: C8 nennt keine Sitzungslage, auf der L4 gemessen wird, und dieselbe Frage stellt sich für den Tabwechsel aus L5. Der Plan wartet die Antwort in S22 ab und misst in S8 und S21 bis dahin die mildere Lesart, ausgeschrieben im Bericht.
+- `decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` — **offen.** Wie KRK eine Schnittstelle ansteuert, die es erst ab macOS 26 gibt, nachdem der Technologiedatensatz Rückwärtskompatibilität bis macOS 15 mit Laufzeitabfrage und Ersatzweg zusagt. Bindet Runde 1 nicht, siehe unten.
 
 ## Offene Fragen
 
@@ -645,4 +672,12 @@ Drei Punkte sind beim Planen aufgefallen und liegen als eigene Dateien, nicht in
 
 ---
 
-**Diagramm-Selbstprüfung.** Der Schichtungsgraph hat 13 Knoten und 15 Kanten, Verhältnis 1,15, ohne Zyklus. Der Eingangsgrad 4 am Knoten `Sichere Huellen um jeden AppKit-Aufruf` ist die Aussage des Graphen und im Fließtext darunter begründet: die unsichere Grenze wird an genau einer Stelle bezahlt. Der Ladepfad hat 9 Knoten und 8 Kanten mit einer Verzweigung am Generationsprüfer, ohne Zyklus. Der Zustandsgraph der Dateioperation hat 6 Zustände und 11 Übergänge; die Schleifen an `Laeuft` und über `Uebersprungen` bilden die C4-Festlegung ab, dass eine gescheiterte Einzelposition den Stapel nicht abbricht. Der Abhängigkeitsgraph der Schritte hat 23 Knoten und 29 Kanten, Verhältnis 1,26, ist zyklenfrei und in sechs Phasen geschichtet. Rückwärtskanten hat er keine: jede Kante läuft in Phasenreihenfolge vorwärts. Die weiteste Spanne überbrückt S5 nach S23, weil das Auslieferungspaket auf dem Bündelbau der Phase A aufsetzt.
+**Diagramm-Selbstprüfung.** Stand nach der Konzeptprüfung vom 260802-1447 und dem Nachzug, der ihre vier Befunde umsetzt.
+
+Der **Schichtungsgraph** hat 14 Knoten und 19 Kanten, Verhältnis 1,36. Der Eingangsgrad 5 am Knoten `Sichere Hüllen um jeden AppKit-Aufruf` ist der höchste des Graphen und im Fließtext darunter begründet: die unsichere Grenze wird an genau einer Stelle bezahlt. Der Graph trägt **genau einen Zyklus**, `Verzeichnisleser` → `Dateisystem` → `ordner_neu_lesen` → `Verzeichnisleser`. Er ist gewollt und im Abschnitt "Zwei Kanten laufen gegen die Schichtung" begründet: ein Dateimanager, der fremde Änderungen anzeigt, hat notwendig eine Rückrichtung aus dem Dateisystem, und sie läuft über das Betriebssystem, nicht über eine gegenseitige Kistenabhängigkeit. Zwei Kanten laufen gegen die gezeichnete Schichtung, der Auffrischungspfad und die injizierte Papierkorb-Schnittstelle; beide stehen jetzt im Graphen, statt hinter der Zeichenrichtung zu verschwinden. Alle 19 Kanten tragen ein Label.
+
+Der **Ladepfad** hat 9 Knoten und 8 Kanten mit einer Verzweigung am Generationsprüfer, ohne Zyklus. Alle 8 Kanten tragen ein Label.
+
+Der **Zustandsgraph der Dateioperation** hat 5 benannte Zustände, dazu den Pseudo-Zustand `[*]` als Start und Ende, und 11 Übergänge. Er trägt drei Schleifen: `Läuft` auf sich selbst, `Läuft` über `Übersprungen` und `Läuft` über `Konflikt`. Alle drei bilden Festlegungen aus C4 ab; die Schleife über `Übersprungen` namentlich die, dass eine gescheiterte Einzelposition den Stapel nicht abbricht. In einem Lebenszyklus sind Schleifen die Normalform; beide Endzustände erreichen `[*]`.
+
+Der **Abhängigkeitsgraph der Schritte** hat 23 Knoten und 33 Kanten, Verhältnis 1,43, ist zyklenfrei und in sechs Phasen geschichtet. Die Nummernfolge ist eine gültige Ausführungsreihenfolge: **jede der 33 Kanten läuft von der kleineren zur größeren Schrittnummer**, und damit auch in Phasenreihenfolge vorwärts. Die Vorgängerfassung verletzte das an einer Stelle, `S11 → S10`; der Tausch von Ablage und Belegungsmaschine hat sie behoben. An der Abhängigkeit selbst ändert das nichts: die Belegungsmaschine liest die Nutzerbelegung über die Ablage, vorher wie nachher. Der höchste Ausgangsgrad liegt mit 4 bei S1, der höchste Eingangsgrad mit 5 bei S23. Die weiteste Spanne überbrückt S5 nach S23, weil das Auslieferungspaket auf dem Bündelbau der Phase A aufsetzt. Vier Kanten sind gegenüber der geprüften Fassung dazugekommen: S19 → S21, weil S21 die Vorschau-Zusage L7 misst, sowie S17 → S23, S18 → S23 und S20 → S23, weil ein Auslieferungspaket die Vollständigkeit der Runde voraussetzt.

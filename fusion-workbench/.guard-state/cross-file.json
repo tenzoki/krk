@@ -266,9 +266,9 @@
       "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "pingBackCount": 1,
-      "totalEdits": 11,
-      "lastEditTimestamp": "2026-08-02T12:41:06.717Z"
+      "pingBackCount": 4,
+      "totalEdits": 43,
+      "lastEditTimestamp": "2026-08-02T13:03:31.189Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "pingBackCount": 1,
@@ -316,11 +316,21 @@
       "lastEditTimestamp": "2026-08-02T12:52:22.581Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_plan-nennt-die-c8-luecke-und-zwei-defekte-noch-als-offen.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T13:03:21.988Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/check.mjs": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T13:02:02.113Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md": {
       "pingBackCount": 0,
       "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T12:52:08.686Z"
+      "lastEditTimestamp": "2026-08-02T13:04:31.172Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md",
-  "lastEditTimestamp": "2026-08-02T12:52:36.636Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md",
+  "lastEditTimestamp": "2026-08-02T13:04:31.172Z"
 }
