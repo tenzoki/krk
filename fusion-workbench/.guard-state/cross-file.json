@@ -266,9 +266,9 @@
       "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "pingBackCount": 8,
-      "totalEdits": 110,
-      "lastEditTimestamp": "2026-08-02T17:07:56.275Z"
+      "pingBackCount": 9,
+      "totalEdits": 111,
+      "lastEditTimestamp": "2026-08-02T17:12:34.601Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "pingBackCount": 1,
@@ -476,9 +476,9 @@
       "lastEditTimestamp": "2026-08-02T16:26:11.738Z"
     },
     "resources/Info.plist": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T16:29:35.126Z"
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T17:11:09.759Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1829-buendelbeschreibung-info-plist.md": {
       "pingBackCount": 0,
@@ -529,8 +529,13 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-02T17:08:40.805Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1911-versionsplatzhalter-in-der-info-plist.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T17:12:05.662Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1859-plan-nachzug-vier-befunde.md",
-  "lastEditTimestamp": "2026-08-02T17:08:40.805Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md",
+  "lastEditTimestamp": "2026-08-02T17:12:34.601Z"
 }

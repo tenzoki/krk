@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 110,
-      "changesThisSession": 67,
-      "lastChange": "2026-08-02T17:07:56.273Z",
-      "thrashingScore": 166
+      "totalChanges": 111,
+      "changesThisSession": 68,
+      "lastChange": "2026-08-02T17:12:34.600Z",
+      "thrashingScore": 169
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -571,10 +571,10 @@
       "thrashingScore": 0
     },
     "resources/Info.plist": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T16:29:35.124Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T17:11:09.758Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1829-buendelbeschreibung-info-plist.md": {
       "totalChanges": 1,
@@ -634,6 +634,12 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-02T17:08:40.803Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1911-versionsplatzhalter-in-der-info-plist.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T17:12:05.661Z",
       "thrashingScore": 0
     }
   },

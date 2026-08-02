@@ -434,7 +434,7 @@ flowchart TD
 - Abhängigkeiten: S1
 - Abnahmekriterium: `plutil -lint resources/Info.plist` beendet mit 0. `plutil -extract NSDesktopFolderUsageDescription raw resources/Info.plist` und die vier weiteren Schlüssel liefern je einen nichtleeren deutschen Satz. `plutil -extract LSMinimumSystemVersion raw resources/Info.plist` liefert `15.0`.
 
-#### 4b. **Versionsplatzhalter in der `Info.plist`**
+#### 4b. [DONE] **Versionsplatzhalter in der `Info.plist`**
 
 - Ausführender: `ontocoder`
 - Dateien: `resources/Info.plist`

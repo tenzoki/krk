@@ -4,8 +4,8 @@
 <dict>
 	<!--
 	  Buendelbeschreibung fuer KRK.app. `cargo xtask bundle` (Schritt 5) kopiert
-	  diese Datei unveraendert nach `KRK.app/Contents/Info.plist`; es gibt keine
-	  Ersetzung von Platzhaltern beim Bauen.
+	  diese Datei nach `KRK.app/Contents/Info.plist` und setzt dabei den
+	  Versionsplatzhalter ein; sonst uebernimmt es sie unveraendert.
 	-->
 
 	<key>CFBundleIdentifier</key>
@@ -26,11 +26,13 @@
 	<string>APPL</string>
 
 	<!--
-	  Fuehrt `version = "0.1.0"` aus `[workspace.package]` der `Cargo.toml` von
-	  Hand nach. Beide Stellen sind beim Anheben der Version gemeinsam zu ziehen.
+	  Platzhalter, keine Zahl. Die Version wohnt allein im Feld `version` unter
+	  `[workspace.package]` der `Cargo.toml`. `cargo xtask bundle` (Schritt 5)
+	  setzt sie beim Kopieren an diese Stelle und bricht ab, wenn es den
+	  Platzhalter hier nicht findet. Von Hand ist hier nichts nachzufuehren.
 	-->
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>__KRK_VERSION__</string>
 
 	<key>CFBundleVersion</key>
 	<string>1</string>
