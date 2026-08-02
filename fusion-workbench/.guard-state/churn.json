@@ -20,7 +20,7 @@
     },
     ".gitignore": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T08:32:52.177Z",
       "thrashingScore": 0
     },
@@ -38,13 +38,13 @@
     },
     "fusion-workbench/shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md": {
       "totalChanges": 3,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:09:38.604Z",
       "thrashingScore": 1
     },
     "fusion-workbench/shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md": {
       "totalChanges": 3,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:10:05.270Z",
       "thrashingScore": 1
     },
@@ -68,7 +68,7 @@
     },
     "fusion-workbench/shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T08:32:24.704Z",
       "thrashingScore": 0
     },
@@ -98,130 +98,166 @@
     },
     "orchestrator-live.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T08:13:55.074Z",
       "thrashingScore": 0
     },
     "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T08:14:46.616Z",
       "thrashingScore": 0
     },
     "CLAUDE.md": {
       "totalChanges": 8,
-      "changesThisSession": 8,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:30:19.733Z",
       "thrashingScore": 14
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T08:31:56.557Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
       "totalChanges": 23,
-      "changesThisSession": 23,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:31:46.267Z",
       "thrashingScore": 49
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "totalChanges": 6,
-      "changesThisSession": 6,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:29:19.213Z",
       "thrashingScore": 10
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_umbenennen-im-stapel-umfang.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:10:22.492Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:29:44.840Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:14:05.119Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md": {
       "totalChanges": 4,
-      "changesThisSession": 4,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:32:54.472Z",
       "thrashingScore": 5
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_claude-md-tabelle-offener-entscheidungen-veraltet.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:11:44.862Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:41:02.834Z",
       "thrashingScore": 3
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/validate.mjs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:16:56.404Z",
       "thrashingScore": 0
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/metrics.mjs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:17:19.827Z",
       "thrashingScore": 0
     },
     "reviews/260802-1118-conceptrev-spec-navigator-geruest.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:19:55.152Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1130-coder-claude-md-entscheidungsstand.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:30:50.327Z",
       "thrashingScore": 0
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/mmv/check.mjs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:32:28.389Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1127-shaper-directive-korrektur-und-referenzgeraet.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:34:07.731Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:40:16.448Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 1,
-      "lastChange": "2026-08-02T09:39:35.735Z",
+      "lastChange": "2026-08-02T10:20:23.803Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1134-analyst-sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T09:40:13.348Z",
+      "thrashingScore": 0
+    },
+    "spikes/fn-tasten/beobachter.swift": {
+      "totalChanges": 5,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-02T10:31:35.444Z",
+      "thrashingScore": 7
+    },
+    "spikes/fn-tasten/starten.sh": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T10:29:35.534Z",
+      "thrashingScore": 0
+    },
+    "spikes/fn-tasten/.gitignore": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T10:29:39.214Z",
+      "thrashingScore": 0
+    },
+    "spikes/fn-tasten/README.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T10:32:55.880Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T10:34:01.254Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T11:30:44.520Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-02T08:13:55.074Z"
+  "sessionStart": "2026-08-02T10:20:23.803Z"
 }

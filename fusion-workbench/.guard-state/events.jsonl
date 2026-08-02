@@ -551,3 +551,110 @@
 {"ts":"2026-08-02T09:41:02.836Z","event":"cross_file_warning","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
 {"ts":"2026-08-02T09:41:02.836Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md","detail":"File change recorded"}
 {"ts":"2026-08-02T09:41:07.855Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T09:41:19.151Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:19:55.182Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:20:23.669Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md"}
+{"ts":"2026-08-02T10:20:23.803Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:20:23.804Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:20:23.805Z","event":"cross_file_critical","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:20:23.805Z","event":"cross_file_warning","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:20:23.805Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md","detail":"File change recorded"}
+{"ts":"2026-08-02T10:20:27.952Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:04.838Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:09.614Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:09.861Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:14.926Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:15.856Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:20.779Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:22.133Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:26.898Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:21:27.876Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:24:36.678Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:24:37.569Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:26:03.962Z","event":"guard_allow","tool":"Write","file":"spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:26:04.054Z","event":"churn_critical","tool":"Write","file":"spikes/fn-tasten/beobachter.swift","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:26:04.054Z","event":"churn_warning","tool":"Write","file":"spikes/fn-tasten/beobachter.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:26:04.056Z","event":"cross_file_critical","tool":"Write","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:26:04.056Z","event":"cross_file_warning","tool":"Write","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:26:04.056Z","event":"tracker_record","tool":"Write","file":"spikes/fn-tasten/beobachter.swift","detail":"File change recorded"}
+{"ts":"2026-08-02T10:27:29.171Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:27:38.676Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:27:41.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:27:53.738Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:28:03.385Z","event":"guard_allow","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:28:03.487Z","event":"churn_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:28:03.487Z","event":"churn_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:28:03.488Z","event":"cross_file_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:28:03.489Z","event":"cross_file_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:28:03.489Z","event":"tracker_record","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"File change recorded"}
+{"ts":"2026-08-02T10:28:09.592Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:28:12.165Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:28:15.917Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:28:33.212Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:28:39.004Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:29:18.291Z","event":"guard_allow","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:29:18.389Z","event":"churn_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:18.389Z","event":"churn_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:29:18.390Z","event":"cross_file_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:18.391Z","event":"cross_file_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:29:18.391Z","event":"tracker_record","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"File change recorded"}
+{"ts":"2026-08-02T10:29:22.944Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:29:25.316Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:29:29.372Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:29:35.443Z","event":"guard_allow","tool":"Write","file":"spikes/fn-tasten/starten.sh"}
+{"ts":"2026-08-02T10:29:35.534Z","event":"churn_critical","tool":"Write","file":"spikes/fn-tasten/starten.sh","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:35.534Z","event":"churn_warning","tool":"Write","file":"spikes/fn-tasten/starten.sh","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:29:35.536Z","event":"cross_file_critical","tool":"Write","file":"spikes/fn-tasten/starten.sh","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:35.536Z","event":"cross_file_warning","tool":"Write","file":"spikes/fn-tasten/starten.sh","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:29:35.536Z","event":"tracker_record","tool":"Write","file":"spikes/fn-tasten/starten.sh","detail":"File change recorded"}
+{"ts":"2026-08-02T10:29:39.122Z","event":"guard_allow","tool":"Write","file":"spikes/fn-tasten/.gitignore"}
+{"ts":"2026-08-02T10:29:39.215Z","event":"churn_critical","tool":"Write","file":"spikes/fn-tasten/.gitignore","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:39.215Z","event":"churn_warning","tool":"Write","file":"spikes/fn-tasten/.gitignore","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:29:39.216Z","event":"cross_file_critical","tool":"Write","file":"spikes/fn-tasten/.gitignore","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:29:39.216Z","event":"cross_file_warning","tool":"Write","file":"spikes/fn-tasten/.gitignore","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:29:39.216Z","event":"tracker_record","tool":"Write","file":"spikes/fn-tasten/.gitignore","detail":"File change recorded"}
+{"ts":"2026-08-02T10:30:16.409Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:31:23.993Z","event":"guard_allow","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:31:24.094Z","event":"churn_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:31:24.095Z","event":"churn_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-02T10:31:24.096Z","event":"cross_file_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:31:24.096Z","event":"cross_file_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:31:24.096Z","event":"tracker_record","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"File change recorded"}
+{"ts":"2026-08-02T10:31:35.351Z","event":"guard_allow","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:31:35.445Z","event":"churn_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:31:35.445Z","event":"churn_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:31:35.446Z","event":"cross_file_critical","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:31:35.447Z","event":"cross_file_warning","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:31:35.447Z","event":"tracker_record","tool":"Edit","file":"spikes/fn-tasten/beobachter.swift","detail":"File change recorded"}
+{"ts":"2026-08-02T10:31:40.479Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:32:55.785Z","event":"guard_allow","tool":"Write","file":"spikes/fn-tasten/README.md"}
+{"ts":"2026-08-02T10:32:55.880Z","event":"churn_critical","tool":"Write","file":"spikes/fn-tasten/README.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:32:55.880Z","event":"churn_warning","tool":"Write","file":"spikes/fn-tasten/README.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:32:55.881Z","event":"cross_file_critical","tool":"Write","file":"spikes/fn-tasten/README.md","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:32:55.882Z","event":"cross_file_warning","tool":"Write","file":"spikes/fn-tasten/README.md","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:32:55.882Z","event":"tracker_record","tool":"Write","file":"spikes/fn-tasten/README.md","detail":"File change recorded"}
+{"ts":"2026-08-02T10:33:03.107Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:33:09.458Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:33:14.813Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:33:20.842Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T10:34:01.161Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md"}
+{"ts":"2026-08-02T10:34:01.254Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:34:01.254Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T10:34:01.256Z","event":"cross_file_critical","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T10:34:01.256Z","event":"cross_file_warning","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T10:34:01.256Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md","detail":"File change recorded"}
+{"ts":"2026-08-02T11:30:15.366Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:30:18.678Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:30:44.405Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md"}
+{"ts":"2026-08-02T11:30:44.521Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T11:30:44.521Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, spikes/fn-tasten/beobachter.swift"}
+{"ts":"2026-08-02T11:30:44.523Z","event":"cross_file_critical","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md","detail":"Cross-file ping-back: 2 file(s) repeatedly revisited: CLAUDE.md, fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"}
+{"ts":"2026-08-02T11:30:44.523Z","event":"cross_file_warning","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md","detail":"Cross-file ping-back rising: 1 file(s) revisited: fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md"}
+{"ts":"2026-08-02T11:30:44.523Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md","detail":"File change recorded"}
+{"ts":"2026-08-02T11:30:50.807Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:00.317Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:05.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:09.551Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:12.538Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:17.004Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-02T11:31:21.331Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}

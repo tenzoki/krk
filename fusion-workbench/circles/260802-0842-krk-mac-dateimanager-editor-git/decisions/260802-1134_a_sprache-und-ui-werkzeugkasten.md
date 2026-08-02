@@ -52,7 +52,13 @@ Zwei weitere Punkte stützen die Empfehlung. C3 wird von einem einzigen `NSEvent
 Die Empfehlung ist eine Abwägung auf Basis dokumentierter Mechanismen, keine Messung. Zu L1 und L4 existiert für keinen Kandidaten eine veröffentlichte Vergleichsmessung auf einem Intel-Mac; die Analyse hält das ausdrücklich fest. Die Entscheidung liegt beim Nutzer.
 
 ---
-Answered:
+Answered: Nutzerentscheidung am 260802-1150, festgehalten in `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md` — **Möglichkeit 3, Rust mit AppKit über `objc2`.** Der Nutzer ist der Empfehlung nicht gefolgt und hat das begründet abgewogen bekommen: die Analyse wertet Rust vor allem deshalb ab, weil sein Vorteil (tree-sitter für die Syntaxhervorhebung, `git2-rs` für Git, beide ohne Umweg über eine C-Schnittstelle) erst in späteren Runden greife. Dieser Circle enthält Editor und Git-Anbindung jedoch ausdrücklich als spätere Runden derselben Arbeit, nicht als Möglichkeit. Der Vorteil fällt damit innerhalb des Circles an, und der vom Analysten genannte Kipp-Punkt ("verlangt eine spätere Runde aus eigenem Grund einen Rust-Kern, verschiebt sich die Rechnung zugunsten von Möglichkeit 3, und ein Wechsel nach Runde 1 wäre teuer") ist bereits erfüllt.
+
+Zwei Randbedingungen der Analyse bleiben unverändert bindend: KRK wird außerhalb der App-Sandbox ausgeliefert, und die zehn Zeitzusagen werden auf dem Gerät von 2018 abgenommen (Nutzerentscheidung derselben Runde). Beide sind werkzeugunabhängig.
+
+Ergänzend entschieden: KRK unterstützt macOS 26 und bleibt rückwärtskompatibel bis macOS 15. Das Mindest-Zielsystem ist macOS 15; Schnittstellen ab macOS 26 werden zur Laufzeit abgefragt und haben jeweils einen Ersatzweg. Damit ist die Systemobergrenze des Referenzgeräts kein Ausschluss, sondern Aufwand.
+
+Zwei Annahmen sind auf Wunsch des Nutzers vor dem Plan zu prüfen: (a) ob Fn+F3 bis Fn+F8 als gewöhnliche Tastenereignisse ankommen, (b) wie `objc2` Schnittstellen behandelt, die es erst ab macOS 26 gibt. Punkt (b) hat die Analyse nicht betrachtet, weil er erst durch diese Wahl entsteht.
 Implemented:
 Deferred:
 Superseded by:
