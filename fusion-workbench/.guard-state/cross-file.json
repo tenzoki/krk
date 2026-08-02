@@ -116,9 +116,9 @@
       "lastEditTimestamp": "2026-08-02T09:10:22.493Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
-      "pingBackCount": 2,
-      "totalEdits": 3,
-      "lastEditTimestamp": "2026-08-02T09:29:44.841Z"
+      "pingBackCount": 3,
+      "totalEdits": 6,
+      "lastEditTimestamp": "2026-08-02T12:25:15.708Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "pingBackCount": 1,
@@ -231,14 +231,14 @@
       "lastEditTimestamp": "2026-08-02T12:18:07.391Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T12:18:33.001Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:26:12.112Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_circle-datensatz-status-widerspricht-dem-marker.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T12:18:41.477Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:26:25.536Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md": {
       "pingBackCount": 1,
@@ -249,8 +249,48 @@
       "pingBackCount": 1,
       "totalEdits": 2,
       "lastEditTimestamp": "2026-08-02T12:21:05.976Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_o_circle-datensatz-wiederholt-die-ueberholte-fn-zusage-an-zwei-stellen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:25:44.456Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1425_o_spec-meldet-die-directive-abweichung-noch-als-offen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:26:00.148Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1423-shaper-circle-datensatz-korrektur.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
+      "pingBackCount": 1,
+      "totalEdits": 11,
+      "lastEditTimestamp": "2026-08-02T12:41:06.717Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:37:20.623Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:37:52.357Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:38:40.923Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1428-planner-navigator-geruest-runde-1.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:41:28.298Z"
     }
   },
-  "lastEditFile": "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md",
-  "lastEditTimestamp": "2026-08-02T12:21:09.072Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1428-planner-navigator-geruest-runde-1.md",
+  "lastEditTimestamp": "2026-08-02T12:41:28.298Z"
 }

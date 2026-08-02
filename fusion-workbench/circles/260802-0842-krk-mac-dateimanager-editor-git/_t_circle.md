@@ -2,16 +2,16 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** active
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md
-**Active session history:** (none yet)
+**Active session history:** circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md
 
 ---
 
 ## Directive
 
-KRK ist eine native macOS-Anwendung, mit der lokale Dateien vollständig über die Tastatur navigiert, bearbeitet und versioniert werden. Die Oberfläche besteht aus einer Lesezeichen- und Geräteleiste links, zwei Dateifenstern mit je mehreren Tabs in der Mitte und einem Vorschaufenster mit eigenen Tabs rechts. Dateien und Ordner lassen sich anlegen, kopieren, verschieben, löschen und im Stapel umbenennen, auch über mehrere ausgewählte Einträge hinweg. Der eingebaute Editor öffnet Text, Code und Markdown in einer Rohansicht und einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und speichert Marken auf Textstellen und Textbereiche als Lesezeichen im Home-Verzeichnis des Nutzers. Git ist eingebaut: hinzufügen, committen, Änderungen verwerfen sowie ältere Versionen über einen Schieberegler ansehen und auschecken. Jede Tastenbelegung ist frei konfigurierbar; ausgeliefert wird eine Mac-typische Vorbelegung, die die Norton-Reihe auf Fn+F3 bis Fn+F8 legt und die nackten Funktionstasten frei lässt. Die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig und fragt dabei einmal je Vorgang nach.
+KRK ist eine native macOS-Anwendung, mit der lokale Dateien vollständig über die Tastatur navigiert, bearbeitet und versioniert werden. Die Oberfläche besteht aus einer Lesezeichen- und Geräteleiste links, zwei Dateifenstern mit je mehreren Tabs in der Mitte und einem Vorschaufenster mit eigenen Tabs rechts. Dateien und Ordner lassen sich anlegen, kopieren, verschieben, löschen und im Stapel umbenennen, auch über mehrere ausgewählte Einträge hinweg. Der eingebaute Editor öffnet Text, Code und Markdown in einer Rohansicht und einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und speichert Marken auf Textstellen und Textbereiche als Lesezeichen im Home-Verzeichnis des Nutzers. Git ist eingebaut: hinzufügen, committen, Änderungen verwerfen sowie ältere Versionen über einen Schieberegler ansehen und auschecken. Jede Tastenbelegung ist frei konfigurierbar; ausgeliefert wird eine Mac-typische Vorbelegung, die jede Funktion der Norton-Reihe auf zwei Wegen erreichbar macht, über die Funktionstasten F3 bis F8 und über ein Cmd-Kürzel. Die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig und fragt dabei einmal je Vorgang nach.
 
 Zusatz: alle Fenster sind variable in der Größe und können per Tastenbefehl ein- und ausgeblendet werden.
 
@@ -108,6 +108,8 @@ Die Maxime "superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec
 (keine)
 
 ## Turn log
+
+- **Vorlauf** (kein Turn; Sitzung 260802-1014): commits c0682ff..f865fca (sechs Stück); Kohärenzurteil: keines, weil kein Turn abgeschlossen wurde; Sitzungshistorie: `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md`. Inhalt: CLAUDE.md mit Sprachdeklaration (c0682ff), Aufräumen der mitverfolgten Sitzungsdateien (ede2645), der Spec für Runde 1 (f427e97), Technologievergleich und Korrektur der Directive-Zeile (19c9597), Technologiewahl und das Prüfprogramm für die F-Tasten (6b7b725), Berichtigung seiner Auswertung samt Fortschreibung von C3 (f865fca). Diese Arbeit lag vor dem ersten eigentlichen Turn: sie hat den Spec erstellt und die Eingangsfragen geklärt, aber keine Aufgabenliste abgearbeitet und keine Kohärenzprüfung durchlaufen.
 
 ## Activation proposal
 
