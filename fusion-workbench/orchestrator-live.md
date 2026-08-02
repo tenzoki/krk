@@ -1,25 +1,24 @@
 # Orchestrator — Live
 
-**Turn:** --/5 | **Tasks:** 3/4 | **Commits:** 5 | **Errors:** 0
+**Turn:** 1/5 | **Tasks:** 1/23 | **Commits:** 11 | **Errors:** 0
 **Started:** 10:14 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
 
 ## Current
-  [GATE] user -> Tastenfolge im Prüfprogramm drücken (spikes/fn-tasten) + Xcode installieren
+  [RUNNING] coder -> S2 Verzeichnisleser und Ordnermodell
+  [RUNNING] planner -> Plan auf den L4-Entscheid und den xtask-Alias nachziehen
 
 ## This Turn
-  [DONE]    coder -> CLAUDE.md mit Sprachdeklaration (PRE-1) ............ c0682ff
-  [DONE]    orchestrator -> Flüchtigen Sitzungszustand entfernt ......... ede2645
-  [DONE]    shaper -> Spec Navigator-Gerüst, 9 Fähigkeiten (PRE-2) ...... f427e97
-  [DONE]    conceptrev -> Diagrammprüfung, Verdikt acceptable ........... f427e97
-  [DONE]    analyst -> Technologievergleich, 3 Möglichkeiten (PRE-3) .... 19c9597
-  [DONE]    shaper -> Directive-Korrektur + Referenzgerät .............. 19c9597
-  [DONE]    coder -> F-Tasten-Prüfprogramm gebaut ..................... 6b7b725
-  [DONE]    orchestrator -> Rust 1.97.1 installiert (x86_64 + aarch64)
-  [GATE]    user -> Messung durchführen, Xcode installieren
-  [QUEUED]  planner -> Implementierungsplan Navigator-Gerüst (PRE-4)
+  [DONE]    coder -> S1 Cargo-Workspace und Bauzuschnitt ............ 7dc5ea6
+  [RUNNING] coder -> S2 Verzeichnisleser und Ordnermodell
+  [RUNNING] planner -> Plan nachziehen (L4, xtask-Alias)
+  [GATE]    user -> S4 Info.plist (ontocoder-Schritt, braucht Freigabe)
+  [QUEUED]  coder -> S3 Prüfordner-Erzeuger und kopflose Messstrecke
+  [QUEUED]  coder -> S5 Bündelbau und lokale Signierung
+  [QUEUED]  coder -> S6 Fenster, Menü, echte Dateiliste
 
 ## Up Next
-  (nach PRE-4: Phase 1 Warteschlange bauen, dann Turn 1)
+  S7 Tastenereignisse -> S8 Frühmessung als Gate (Messung entscheidet über den Fortgang)
 
 ## Blocked
-  PRE-4 planner -> wartet auf das Messergebnis der F-Tasten-Prüfung
+  S5 -> wartet auf S4 (Info.plist)
+  S6 -> wartet auf S2 und S5

@@ -266,9 +266,9 @@
       "lastEditTimestamp": "2026-08-02T12:27:32.662Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "pingBackCount": 5,
-      "totalEdits": 44,
-      "lastEditTimestamp": "2026-08-02T15:43:28.042Z"
+      "pingBackCount": 6,
+      "totalEdits": 65,
+      "lastEditTimestamp": "2026-08-02T16:26:17.208Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "pingBackCount": 1,
@@ -356,9 +356,9 @@
       "lastEditTimestamp": "2026-08-02T15:36:45.498Z"
     },
     "crates/krk-core/src/lib.rs": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T15:36:50.418Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:54:54.401Z"
     },
     "crates/krk-ui/Cargo.toml": {
       "pingBackCount": 0,
@@ -406,11 +406,76 @@
       "lastEditTimestamp": "2026-08-02T15:42:30.570Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1755_o_plan-legt-den-cargo-xtask-alias-in-keinem-schritt-an.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:50:21.126Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1746-plan-nachzug-l4-antwort-und-xtask-alias.md": {
       "pingBackCount": 0,
       "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T15:43:04.978Z"
+      "lastEditTimestamp": "2026-08-02T15:50:59.281Z"
+    },
+    "crates/krk-core/src/verzeichnis/eintrag.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:51:05.644Z"
+    },
+    "crates/krk-core/src/verzeichnis/sys.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 5,
+      "lastEditTimestamp": "2026-08-02T15:59:24.699Z"
+    },
+    "crates/krk-core/src/verzeichnis/sortierung.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:52:48.732Z"
+    },
+    "crates/krk-core/src/verzeichnis/leser.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T15:59:34.205Z"
+    },
+    "crates/krk-core/src/verzeichnis/modell.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T15:54:36.116Z"
+    },
+    "crates/krk-core/src/verzeichnis/mod.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:54:45.583Z"
+    },
+    "crates/krk-core/tests/verzeichnis.rs": {
+      "pingBackCount": 2,
+      "totalEdits": 6,
+      "lastEditTimestamp": "2026-08-02T16:01:31.353Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T15:57:25.263Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag2.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T16:00:54.591Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1803-verzeichnisleser-und-ordnermodell.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T16:04:29.744Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1810_o_abnahmekriterium-mit-grep-unsafe-kann-nicht-aufgehen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T16:25:33.306Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T16:26:11.738Z"
     }
   },
   "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md",
-  "lastEditTimestamp": "2026-08-02T15:43:28.042Z"
+  "lastEditTimestamp": "2026-08-02T16:26:17.208Z"
 }

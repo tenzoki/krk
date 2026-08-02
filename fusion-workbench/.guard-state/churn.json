@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 44,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:43:28.041Z",
-      "thrashingScore": 14
+      "totalChanges": 65,
+      "changesThisSession": 22,
+      "lastChange": "2026-08-02T16:26:17.207Z",
+      "thrashingScore": 61
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -427,9 +427,9 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/lib.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:36:50.417Z",
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:54:54.400Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/Cargo.toml": {
@@ -487,9 +487,87 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1755_o_plan-legt-den-cargo-xtask-alias-in-keinem-schritt-an.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:50:21.125Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1746-plan-nachzug-l4-antwort-und-xtask-alias.md": {
       "totalChanges": 1,
       "changesThisSession": 1,
-      "lastChange": "2026-08-02T15:43:04.976Z",
+      "lastChange": "2026-08-02T15:50:59.280Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/verzeichnis/eintrag.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:51:05.643Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/verzeichnis/sys.rs": {
+      "totalChanges": 5,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-02T15:59:24.698Z",
+      "thrashingScore": 7
+    },
+    "crates/krk-core/src/verzeichnis/sortierung.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:52:48.731Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/verzeichnis/leser.rs": {
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T15:59:34.204Z",
+      "thrashingScore": 3
+    },
+    "crates/krk-core/src/verzeichnis/modell.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T15:54:36.114Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/verzeichnis/mod.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:54:45.582Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/tests/verzeichnis.rs": {
+      "totalChanges": 6,
+      "changesThisSession": 6,
+      "lastChange": "2026-08-02T16:01:31.351Z",
+      "thrashingScore": 10
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T15:57:25.261Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag2.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:00:54.590Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1803-verzeichnisleser-und-ordnermodell.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:04:29.742Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1810_o_abnahmekriterium-mit-grep-unsafe-kann-nicht-aufgehen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:25:33.305Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T16:26:11.736Z",
       "thrashingScore": 0
     }
   },

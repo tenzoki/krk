@@ -1,5 +1,5 @@
 # fusion-workbench session state — for resumption after restart
-# Updated: 260802-1014
+# Updated: 260802-1800
 
 session:
   directive: "KRK: native macOS-Anwendung, lokale Dateien vollständig über die Tastatur navigieren, bearbeiten und versionieren. Erste Runde: lauffähiges Navigator-Gerüst."
@@ -7,56 +7,85 @@ session:
   domain: "code"
   started: "260802-1014"
   history_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md"
-  git_head_at_start: "(none — repository has no commits yet)"
+  git_head_at_start: "(none — repository had no commits)"
 
 progress:
-  turn: 0
+  turn: 1
   max_turns: 5
-  tasks_total: 0
-  tasks_done: 0
+  tasks_total: 23
+  tasks_done: 1
   tasks_skipped: 0
   tasks_errored: 0
-  commits: 0
-  turn_start_head: null
+  commits: 11
+  turn_start_head: "0056561"
   paused_at_task: null
   directive_revisions_this_session: 0
 
 current_task:
-  id: "PRE-1"
-  summary: "CLAUDE.md mit Sprachdeklaration und Projektkontext anlegen"
+  id: "S2"
+  summary: "Verzeichnisleser und Ordnermodell (getattrlistbulk, gestückelt, abbrechbar)"
   agent: "coder"
-  status: "queued"
-  source_file: "shared/issues/260802-0842_o_projektsprache-nicht-deklariert.md"
+  status: "running"
+  source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md"
 
 work_queue:
-  - id: "PRE-1"
-    summary: "CLAUDE.md mit **Language:** de und Projektkontext anlegen"
+  - id: "S1"
+    summary: "Cargo-Workspace und Bauzuschnitt"
+    agent: "coder"
+    status: "done"
+    commit: "7dc5ea6"
+  - id: "S2"
+    summary: "Verzeichnisleser und Ordnermodell"
+    agent: "coder"
+    status: "running"
+  - id: "S3"
+    summary: "Prüfordner-Erzeuger und kopflose Messstrecke"
     agent: "coder"
     status: "queued"
-  - id: "PRE-2"
-    summary: "Spec für das Navigator-Gerüst (shaper); löst F-Tasten- und Löschen-Entscheidung, setzt messbare Tempo-Zusagen"
-    agent: "shaper"
+  - id: "S4"
+    summary: "Bündelbeschreibung Info.plist"
+    agent: "ontocoder"
     status: "queued"
-  - id: "PRE-3"
-    summary: "Technologievergleich (analyst) gegen die Maximen; legt Entscheidungsdatensatz vor"
-    agent: "analyst"
+  - id: "S5"
+    summary: "Bündelbau und lokale Signierung"
+    agent: "coder"
     status: "queued"
-  - id: "PRE-4"
-    summary: "Implementierungsplan für das Navigator-Gerüst (planner)"
-    agent: "planner"
+  - id: "S6"
+    summary: "Fenster, Menü, echte Dateiliste"
+    agent: "coder"
+    status: "queued"
+  - id: "S7"
+    summary: "Tastenereignisse und Pfeiltasten"
+    agent: "coder"
+    status: "queued"
+  - id: "S8"
+    summary: "Frühmessung als Gate (L1, L2, L3, L4, L10)"
+    agent: "coder"
+    status: "queued"
+  - id: "S9-S23"
+    summary: "Phasen B bis F, siehe Plan"
+    agent: "coder/ontocoder"
     status: "queued"
 
 plan_context:
-  plan_file: "(none yet)"
+  plan_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md"
   user_directive: >
-    Phase-0-Klärung 260802-1014: (1) Planumfang = erst ein lauffähiges Gerüst —
-    zwei Panes mit Tabs, Navigation, Tastaturbelegung, Dateioperationen; Editor und
-    Git folgen in späteren Runden desselben Circles. (2) Technologiewahl nicht
-    vorgeben, sondern durch analyst vergleichen und als Entscheidung vorlegen.
-    (3) CLAUDE.md jetzt anlegen.
+    Phase-0-Klärung 260802-1014: Planumfang = lauffähiges Navigator-Gerüst;
+    Technologie durch analyst vergleichen lassen. Technologieentscheid
+    260802-1150: Rust mit AppKit über objc2, gegen die Empfehlung des
+    Analysten, weil Editor und Git zu diesem Circle gehören und den
+    Rust-Vorteil innerhalb des Circles anfallen lassen. Abnahmegerät bleibt
+    das MacBook Pro von 2018. macOS 26 unterstützt, rückwärtskompatibel bis
+    macOS 15. Tastenbelegung: Norton-Reihe plus zweiter Weg über Cmd-Kürzel,
+    Beschriftung schlicht "F3". L4/L5: bedienbar heißt erste Bildschirmseite
+    steht, nicht vollständig gelesen.
   key_findings: >
-    Fünf offene Entscheidungen in shared/decisions/. Für das Navigator-Gerüst binden
-    zwei davon: F-Tasten unter macOS-Systembelegung und Löschen (Papierkorb oder
-    endgültig). Die drei übrigen (Git-revert-Bedeutung, Editor-Formatansicht,
-    Code-SDK) betreffen spätere Runden. Domain-Heuristik ergab strategic; bewusst
-    auf code gesetzt, Begründung im Sitzungsprotokoll.
+    Schritt 8 ist ein Gate: verfehlt eine der fünf gemessenen Zusagen ihre
+    Zahl, endet der Schritt mit einer Entscheidungsvorlage statt mit einem
+    Reparaturversuch, und der Technologieentscheid steht zur Debatte. Zu dem
+    Zeitpunkt sind neun Schritte investiert und keine Zeile Layout-Code.
+    Das Abnahmegerät hat einen Touch Bar statt einer F-Tastenreihe; die
+    Messung zeigt, dass KRK Fn+F3 und nacktes F3 nicht unterscheiden kann,
+    es bindet den Tastencode. Offen: die Verfügbarkeitsprüfung für
+    macOS-26-Schnittstellen in objc2 (bindet Runde 1 nicht), sowie drei
+    Entscheidungen im geteilten Speicher für spätere Runden.

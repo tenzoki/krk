@@ -10,3 +10,5 @@
 //! Systemaufrufe `getattrlistbulk` und `copyfile` und traegt dafuer
 //! `#[allow(unsafe_code)]`. `forbid` liesse sich an dieser Stelle nicht
 //! oeffnen, das ist gerade sein Zweck.
+
+pub mod verzeichnis;

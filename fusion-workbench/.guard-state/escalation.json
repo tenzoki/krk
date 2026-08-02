@@ -1,7 +1,7 @@
 {
   "haltActive": false,
   "consecutiveBlocks": 0,
-  "lastBlockTimestamp": "2026-08-02T08:13:37.324Z",
+  "lastBlockTimestamp": "2026-08-02T15:57:29.694Z",
   "recentEvents": [
     {
       "level": "block",
@@ -10,6 +10,14 @@
       "timestamp": "2026-08-02T08:13:37.324Z",
       "toolName": "Bash",
       "filePath": "\"$CDIR/_a_circle.md\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf $D` writes `$D`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-02T15:57:29.694Z",
+      "toolName": "Bash",
+      "filePath": "$D"
     }
   ]
 }
