@@ -20,7 +20,7 @@
     },
     ".gitignore": {
       "totalChanges": 3,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:37:15.229Z",
       "thrashingScore": 1
     },
@@ -122,7 +122,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
       "totalChanges": 49,
-      "changesThisSession": 8,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:39:12.013Z",
       "thrashingScore": 28
     },
@@ -140,7 +140,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
       "totalChanges": 14,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:40:15.595Z",
       "thrashingScore": 10
     },
@@ -320,7 +320,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
       "totalChanges": 112,
-      "changesThisSession": 69,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:30:49.202Z",
       "thrashingScore": 171
     },
@@ -332,7 +332,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_was-l4-mit-wiederhergestellten-tabs-meint.md": {
       "totalChanges": 5,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:41:00.697Z",
       "thrashingScore": 3
     },
@@ -362,7 +362,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1445_o_grounding-snapshot-traegt-den-loeschstand-an-zwei-stellen-ueberholt.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:41:13.523Z",
       "thrashingScore": 0
     },
@@ -398,280 +398,286 @@
     },
     "Cargo.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:32.073Z",
       "thrashingScore": 0
     },
     "rust-toolchain.toml": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:36.762Z",
       "thrashingScore": 0
     },
     ".cargo/config.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:41.857Z",
       "thrashingScore": 0
     },
     "rustfmt.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:42.486Z",
       "thrashingScore": 0
     },
     "crates/krk-core/Cargo.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:45.496Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/lib.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:54:54.400Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/Cargo.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:54.813Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/src/main.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:36:57.638Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/Cargo.toml": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:40:37.499Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/main.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:40:32.462Z",
       "thrashingScore": 0
     },
     "xtask/Cargo.toml": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:37:06.619Z",
       "thrashingScore": 0
     },
     "xtask/src/main.rs": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:24:13.091Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:41:44.432Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1741-cargo-workspace-und-bauzuschnitt.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:42:18.329Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1735-shaper-l4-entscheid-und-grounding.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:42:30.568Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1755_o_plan-legt-den-cargo-xtask-alias-in-keinem-schritt-an.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:50:21.125Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1746-plan-nachzug-l4-antwort-und-xtask-alias.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:50:59.280Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/eintrag.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:51:05.643Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/sys.rs": {
       "totalChanges": 5,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:59:24.698Z",
       "thrashingScore": 7
     },
     "crates/krk-core/src/verzeichnis/sortierung.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:52:48.731Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/leser.rs": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:59:34.204Z",
       "thrashingScore": 3
     },
     "crates/krk-core/src/verzeichnis/modell.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:54:36.114Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/mod.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:54:45.582Z",
       "thrashingScore": 0
     },
     "crates/krk-core/tests/verzeichnis.rs": {
       "totalChanges": 6,
-      "changesThisSession": 6,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:01:31.351Z",
       "thrashingScore": 10
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T15:57:25.261Z",
       "thrashingScore": 0
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag2.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:00:54.590Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1803-verzeichnisleser-und-ordnermodell.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:04:29.742Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1810_o_abnahmekriterium-mit-grep-unsafe-kann-nicht-aufgehen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:25:33.305Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:26:11.736Z",
       "thrashingScore": 0
     },
     "resources/Info.plist": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:11:09.758Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1829-buendelbeschreibung-info-plist.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:31:00.964Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1835_o_versionsnummer-steht-an-zwei-stellen-ohne-abgleich.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:31:54.586Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/fixture.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:41:10.840Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/messen.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:37:33.483Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/bericht.rs": {
       "totalChanges": 5,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:46:23.595Z",
       "thrashingScore": 7
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1850-pruefordner-erzeuger-und-kopflose-messstrecke.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:49:05.208Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_bildwiederholrate-am-referenzgeraet-nicht-per-system-profiler-erhebbar.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:50:41.105Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_pruefordner-sind-duennbesetzt-und-taugen-nicht-fuer-die-kopiermessung.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:51:00.017Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1900_o_dateilisten-der-planschritte-lassen-wiederholt-die-cargo-toml-aus.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T16:51:17.197Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1859-plan-nachzug-vier-befunde.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:08:40.803Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1911-versionsplatzhalter-in-der-info-plist.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:12:05.661Z",
       "thrashingScore": 0
     },
     "xtask/src/bundle.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:22:22.249Z",
       "thrashingScore": 0
     },
     "xtask/src/sign.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:23:59.830Z",
       "thrashingScore": 0
     },
     "README.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:23:47.254Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1927-buendelbau-versionsersetzung-und-lokale-signierung.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:29:29.657Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1935_o_frage-7-und-schritt-5-widersprechen-sich-bei-der-signaturidentitaet.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T17:31:08.451Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-2050_o_signaturidentitaet-wird-nur-unter-einem-festen-namen-gefunden.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T20:45:55.643Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-02T15:36:32.073Z"
+  "sessionStart": "2026-08-02T20:45:55.643Z"
 }
