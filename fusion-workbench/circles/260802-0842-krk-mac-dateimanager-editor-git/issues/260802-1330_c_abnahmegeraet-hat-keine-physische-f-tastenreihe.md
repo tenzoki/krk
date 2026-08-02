@@ -23,3 +23,6 @@ Damit heißt "Fn+F3" auf genau dem Gerät, auf dem C3 abgenommen wird, nicht "zw
 **Belege:** `spikes/fn-tasten/README.md` (Abschnitt mit den Vorabbefunden), Historie `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md`. Die eigentliche Messung der Ereigniszustellung steht noch aus; sie braucht Tastendrücke des Nutzers.
 
 **Aufgefallen bei:** der Vorprüfung zu C3, beauftragt vom Orchestrator in der Sitzung `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md`.
+
+---
+Resolved: Der Nutzer hat am 260802-1409 beide Fragen beantwortet. Zu Frage 1: seine Alltagstastatur ist die eingebaute Tastatur eines Apple-Silicon-MacBooks mit echter Funktionstastenreihe, der Touch Bar steht also nur beim Abnahmegerät im Weg. Zu Frage 2: die Norton-Reihe bleibt auf den Funktionstasten, und jede dieser Funktionen trägt ab Werk zusätzlich ein Cmd-Kürzel, damit sie auf einem Touch-Bar-Gerät ohne Blick nach unten erreichbar ist. Die Kürzel und die Regel, nach der sie gewählt wurden, stehen in `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`, Abschnitt C3. Frage 3 des Defekts war keine Frage, sondern eine Feststellung, und bleibt gültig: die Belegung ist frei konfigurierbar, der Befund betraf nur die Vorbelegung.

@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** answered
 **Filed by:** shaper
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_c_directive-zeile-widerspricht-loeschantwort.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_c_abnahmegeraet-hat-keine-physische-f-tastenreihe.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md`, `spikes/fn-tasten/messung-A.txt`
 
 ---
 
@@ -36,6 +36,8 @@ Die Vorbelegung des Circles legt die Norton-Funktionen auf F3 bis F8. Auf einem 
 - Die Norton-Zuordnung selbst steht fest: F3 Ansehen, F4 Bearbeiten, F5 Kopieren, F6 Verschieben und Umbenennen, F7 Ordner anlegen, F8 Löschen.
 - Löschen ist zusätzlich auf Shift+Delete vorbelegt und bleibt damit auch dann erreichbar, wenn F8 auf einem System nicht ankommt.
 
+Die Abschnitte `## Question`, `## Options`, `## Constraints` und `## Recommendation` geben den Stand bei der Ablage am 260802-0842 wieder und werden nicht nachgeführt. Der letzte Punkt oben ist überholt: Shift+Delete ist seit dem 260802-1105 ab Werk unbelegt. Maßgeblich sind die Antwort des Nutzers und der Nachtrag weiter unten.
+
 ## Recommendation
 
 Option 3 löst das Problem ohne Rückfrage an den Nutzer und ohne Eingriff in dessen Systemeinstellungen. Der Nachteil, zwei Einträge in der Belegungstabelle zu führen, lässt sich entschärfen, indem die Konfigurationsoberfläche beide als eine Zeile mit zwei Auslösern darstellt. Diese Empfehlung ist eine Abwägung, keine geprüfte Aussage; die Entscheidung liegt beim Nutzer.
@@ -46,8 +48,20 @@ Der Nutzer hat am 260802-1105 Möglichkeit 1 gewählt: ausgeliefert wird ausschl
 
 Die Empfehlung des Shapers, Möglichkeit 3, ist damit abgelehnt. Der Vorteil von Möglichkeit 1 gegenüber Möglichkeit 3 liegt in der Belegungsansicht: sie führt je Funktion eine Zeile statt zweier. Der im Contra genannte Fall einer externen PC-Tastatur ohne Fn-Taste bleibt bestehen und ist über die freie Konfigurierbarkeit aufzufangen, nicht über die Vorbelegung.
 
+## Nachtrag 260802-1409: die Messung, und was sie an der Lage ändert
+
+Die Antwort des Nutzers bleibt gültig, ihre Begründung und ihre Formulierung nicht. Drei Befunde haben die Frage seit dem 260802-1105 verschoben.
+
+**Die Wahl zwischen Möglichkeit 1 und Möglichkeit 3 bestand technisch nie.** Gemessen wurde am 260802-1137 auf dem Abnahmegerät `MacBookPro15,1`, macOS 15.7.7, Systemeinstellung "F1, F2 usw." aus. Fn+F3, Fn+F5 und Fn+F8 kommen in einer gewöhnlichen Anwendung im Vordergrund als gewöhnliche `keyDown`-Ereignisse an, mit den Tastencodes 99, 96 und 100, den Zeichen U+F706, U+F708 und U+F70B und gesetztem Modifikator `function` (0x800000). Beleg: `spikes/fn-tasten/messung-A.txt`, Ereignisse #03 bis #05. Der Modifikator `function` weist keine körperlich gedrückte fn-Taste nach; AppKit setzt ihn bei jeder Taste aus dem Funktionstasten-Zeichenbereich. KRK kann Fn+F3 und ein nacktes F3 deshalb nicht unterscheiden. Die ausgelieferte Belegung ist der Tastencode, nicht die Fingerhaltung, und "die nackten F-Tasten bleiben frei" beschreibt keinen erreichbaren Zustand. Möglichkeit 1 und Möglichkeit 3 fallen in der Umsetzung zusammen; der Vorteil, den die Antwort des Nutzers für Möglichkeit 1 nennt, die eine Zeile je Funktion, stellt sich damit von selbst ein.
+
+**Zur Lesart der Messdatei.** Die Selbstauswertung in `spikes/fn-tasten/messung-A.txt` meldet Frage 2 als beantwortet und ist darin falsch. Das rohe Protokoll zeigt bei Ereignis #08 ein `flagsChanged geändert=+function` unmittelbar vor dem zweiten Abschnitt und bei #12 das zugehörige `-function`; der Nutzer musste fn halten, weil sein Gerät ohne fn keine F3 erzeugt. Die korrigierte Auswertung derselben Rohdaten steht in `spikes/fn-tasten/messung-A-neuauswertung.txt`. Ob die nackten Funktionstasten auf einem Gerät mit echter Tastenreihe ankommen, ist unverändert ungemessen, ebenso die Wirkung der Systemeinstellung. Beides bindet den Plan nicht, weil KRK den Tastencode belegt und kein Abnahmekriterium am Ergebnis hängt; die Begründung steht im Spec in C3.
+
+**Das Abnahmegerät trägt einen Touch Bar.** Dort heißt die Funktionstaste nicht "Taste drücken", sondern "fn halten und auf Glas tippen". Für eine Anwendung, deren erste Maxime die Tastatursteuerung ist, verfehlt das den Zweck. Der Nutzer hat am 260802-1409 entschieden: die Norton-Reihe bleibt auf den Funktionstasten, und jede dieser Funktionen trägt ab Werk zusätzlich ein Mac-typisches Cmd-Kürzel. Zwei Wege ab Werk auf dieselbe Funktion, in derselben Zeile der Belegungsansicht. Seine Alltagstastatur ist die eingebaute Tastatur eines Apple-Silicon-MacBooks mit echter Funktionstastenreihe; der Touch Bar steht also nur bei der Abnahme im Weg, nicht bei der täglichen Arbeit.
+
+Damit ist die Antwort vom 260802-1105 erweitert, nicht ersetzt. Die gewählte Möglichkeit 1 trägt weiterhin, sie heißt nur anders: KRK belegt die Funktionstasten F3 bis F8 und schreibt sie auch so, ohne "Fn+" davor. Die konkreten Cmd-Kürzel und die Regel, nach der sie gewählt wurden, stehen im Spec und werden hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderlaufen.
+
 ---
-Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`:107-113 — Möglichkeit 1 gewählt: Vorbelegung ist Fn+F3 bis Fn+F8, die nackten F-Tasten bleiben frei, kein Systemeingriff nötig.
+Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`, Abschnitt C3 — Möglichkeit 1 gewählt und am 260802-1409 um einen zweiten Weg erweitert: KRK belegt die Funktionstasten F3 bis F8 als Tastencode, ohne Systemeingriff, und legt jede Norton-Funktion zusätzlich auf ein Cmd-Kürzel. Beleg für die Zustellung der Tastenereignisse: `spikes/fn-tasten/messung-A.txt`.
 Implemented:
 Deferred:
 Superseded by:

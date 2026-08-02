@@ -1,0 +1,85 @@
+# KRK — Messung der Fn-Tasten-Annahme (C3 des Navigator-Specs)
+
+Durchgang:            A
+Zeitpunkt:            2026-08-02T11:37:46Z
+macOS:                Version 15.7.7 (Build 24G720)
+com.apple.keyboard.fnState beim Start dieses Durchgangs:
+                      nicht gesetzt — Systemvorgabe, also AUS (nackte F-Tasten steuern Hardware)
+
+Gemessen wird, was eine gewöhnliche AppKit-Anwendung im Vordergrund über
+einen lokalen NSEvent-Abgriff erhält. Keine Bedienungshilfen-Freigabe,
+kein globaler Abgriff, kein Event Tap.
+
+## Rohes Ereignisprotokoll
+
+#01    2.44s  13:37:49.009  keyDown  code=  0 (a)  zeichen='a'  ohneMod='a'  mod=keine  roh=0x00000100
+#02    4.03s  13:37:50.596  flagsChanged  code= 63 (fn)  mod=function  roh=0x00800100  geändert=+function
+#03    6.93s  13:37:53.496  keyDown  code= 99 (F3)  zeichen=U+F706  ohneMod=U+F706  mod=function  roh=0x00800100
+#04    8.55s  13:37:55.115  keyDown  code= 96 (F5)  zeichen=U+F708  ohneMod=U+F708  mod=function  roh=0x00800100
+#05   10.91s  13:37:57.478  keyDown  code=100 (F8)  zeichen=U+F70B  ohneMod=U+F70B  mod=function  roh=0x00800100
+#06   11.70s  13:37:58.263  flagsChanged  code= 63 (fn)  mod=keine  roh=0x00000100  geändert=-function
+#07   12.99s  13:37:59.556  keyDown  code= 11 (b)  zeichen='b'  ohneMod='b'  mod=keine  roh=0x00000100
+#08   15.15s  13:38:01.715  flagsChanged  code= 63 (fn)  mod=function  roh=0x00800100  geändert=+function
+#09   15.99s  13:38:02.560  keyDown  code= 99 (F3)  zeichen=U+F706  ohneMod=U+F706  mod=function  roh=0x00800100
+#10   16.82s  13:38:03.386  keyDown  code= 96 (F5)  zeichen=U+F708  ohneMod=U+F708  mod=function  roh=0x00800100
+#11   17.78s  13:38:04.348  keyDown  code=100 (F8)  zeichen=U+F70B  ohneMod=U+F70B  mod=function  roh=0x00800100
+#12   20.18s  13:38:06.746  flagsChanged  code= 63 (fn)  mod=keine  roh=0x00000100  geändert=-function
+#13   22.82s  13:38:09.389  keyDown  code=  8 (c)  zeichen='c'  ohneMod='c'  mod=keine  roh=0x00000100
+#14   24.81s  13:38:11.375  flagsChanged  code= 63 (fn)  mod=function  roh=0x00800100  geändert=+function
+#15   25.07s  13:38:11.640  flagsChanged  code= 63 (fn)  mod=keine  roh=0x00000100  geändert=-function
+#16   26.64s  13:38:13.206  flagsChanged  code= 56 (Shift links)  mod=shift  roh=0x00020102  geändert=+shift
+#17   27.10s  13:38:13.670  flagsChanged  code= 56 (Shift links)  mod=keine  roh=0x00000100  geändert=-shift
+
+
+## Auswertung nach Abschnitten
+
+Marken gefunden: a=0, b=6, c=12
+
+### Abschnitt 1 (zwischen 'a' und 'b') — gedrückt wurde Fn+F3, Fn+F5, Fn+F8
+
+  keyDown  code=99 (F3)  zeichen=U+F706  mod=function
+  keyDown  code=96 (F5)  zeichen=U+F708  mod=function
+  keyDown  code=100 (F8)  zeichen=U+F70B  mod=function
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+
+### Abschnitt 2 (zwischen 'b' und 'c') — gedrückt wurde F3, F5, F8 ohne Fn
+
+  keyDown  code=99 (F3)  zeichen=U+F706  mod=function
+  keyDown  code=96 (F5)  zeichen=U+F708  mod=function
+  keyDown  code=100 (F8)  zeichen=U+F70B  mod=function
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+
+### Abschnitt 3 (nach 'c') — gedrückt wurde Fn allein, dann Shift allein
+
+  Kein keyDown empfangen.
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+  flagsChanged  code=56 (Shift links)  geändert=+shift  mod=shift
+  flagsChanged  code=56 (Shift links)  geändert=-shift  mod=keine
+
+## Abgeleitete Antworten aus diesem Durchgang
+
+Frage 1 — Kommen Fn+F3 bis Fn+F8 als gewöhnliche Tastenereignisse an?
+  JA. 3 von 3 erwarteten kamen an: F3=code 99/mod function, F5=code 96/mod function, F8=code 100/mod function
+
+Frage 2 — Kommen die nackten F3 bis F8 an?
+  JA. 3 von 3 erwarteten kamen an: F3=code 99/mod function, F5=code 96/mod function, F8=code 100/mod function
+
+Frage 3 — Wirkung der Systemeinstellung?
+  Dieser Durchgang misst genau einen Zustand: nicht gesetzt — Systemvorgabe, also AUS (nackte F-Tasten steuern Hardware)
+  Die Antwort braucht beide Durchgänge. Vergleiche diese Datei mit der
+  des anderen Durchgangs.
+
+Frage 4 — Löst die Fn-Taste selbst ein flagsChanged aus?
+  JA. 2 Ereignis(se) mit function-Wechsel: code 63 +function, code 63 -function
+  Kontrollprobe Shift: 2 shift-Wechsel angekommen, der Abgriff arbeitet.
+
+## Vergleich mit dem dokumentierten Erwartungswert
+
+Erwartet nach Carbon HIToolbox und AppKit-Konstanten, nicht gemessen:
+  F3=code 99, F4=118, F5=96, F6=97, F7=98, F8=100, fn=63
+  Zeichen F3..F8 = U+F706 bis U+F70B
+  Modifikator function = Bit 23 (0x800000)
+Weicht die Messung oben davon ab, gilt die Messung.

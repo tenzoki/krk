@@ -101,9 +101,9 @@
       "lastEditTimestamp": "2026-08-02T08:31:56.557Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "pingBackCount": 6,
-      "totalEdits": 23,
-      "lastEditTimestamp": "2026-08-02T09:31:46.269Z"
+      "pingBackCount": 10,
+      "totalEdits": 33,
+      "lastEditTimestamp": "2026-08-02T12:20:56.696Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "pingBackCount": 4,
@@ -186,9 +186,9 @@
       "lastEditTimestamp": "2026-08-02T09:40:13.350Z"
     },
     "spikes/fn-tasten/beobachter.swift": {
-      "pingBackCount": 1,
-      "totalEdits": 5,
-      "lastEditTimestamp": "2026-08-02T10:31:35.446Z"
+      "pingBackCount": 2,
+      "totalEdits": 11,
+      "lastEditTimestamp": "2026-08-02T12:14:59.034Z"
     },
     "spikes/fn-tasten/starten.sh": {
       "pingBackCount": 0,
@@ -201,9 +201,9 @@
       "lastEditTimestamp": "2026-08-02T10:29:39.215Z"
     },
     "spikes/fn-tasten/README.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T10:32:55.881Z"
+      "pingBackCount": 1,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T12:16:22.793Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md": {
       "pingBackCount": 0,
@@ -211,11 +211,46 @@
       "lastEditTimestamp": "2026-08-02T10:34:01.255Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:18:52.575Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-nackt.txt": {
       "pingBackCount": 0,
       "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T11:30:44.522Z"
+      "lastEditTimestamp": "2026-08-02T12:15:33.813Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-uebersprungen.txt": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:15:39.554Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1416-bugfix-fn-tasten-auswertung.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:18:07.391Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:18:33.001Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_circle-datensatz-status-widerspricht-dem-marker.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T12:18:41.477Z"
+    },
+    "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md": {
+      "pingBackCount": 1,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-02T12:21:09.072Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1409-shaper-fn-tasten-messung-und-cmd-kuerzel.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T12:21:05.976Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md",
-  "lastEditTimestamp": "2026-08-02T11:30:44.522Z"
+  "lastEditFile": "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md",
+  "lastEditTimestamp": "2026-08-02T12:21:09.072Z"
 }

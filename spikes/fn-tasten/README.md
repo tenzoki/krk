@@ -149,6 +149,13 @@ Touch Bar, dann statt der drei Tasten **einmal `x`** drücken. Der Bericht melde
 Abschnitt dann als "übersprungen" statt als "nein". Ein übersprungener Abschnitt darf nicht
 als Antwort auf Frage 2 gelesen werden.
 
+Wird dort stattdessen fn gehalten, um die F-Tasten überhaupt zu erreichen, meldet der
+Bericht "nicht messbar auf diesem Gerät". Auch das ist kein "nein": Abschnitt 2 hat dann
+nur Abschnitt 1 wiederholt. Ob fn körperlich gedrückt war, entnimmt die Auswertung allein
+den `flagsChanged` der Taste 63 — das `mod=`-Feld eines `keyDown` taugt dafür nicht, weil
+AppKit `function` bei jeder Taste aus dem Funktionstasten-Unicodebereich setzt, auch bei
+einer nackten F3 (siehe oben, "Gefolgert").
+
 ### Drei Durchgänge
 
 | Durchgang | Zustand des Rechners | Beantwortet | Schritte 6 bis 8 |
@@ -185,6 +192,17 @@ Messung ohne ihren Zustand dasteht.
 
 `spikes/fn-tasten/messung-<Durchgang>.txt`, also `messung-A.txt` und so fort, jeweils neben
 dem Programm. Derselbe Bericht geht zusätzlich auf die Standardausgabe im Terminal.
+
+Die Auswertung lässt sich ohne neue Messung wiederholen:
+
+```sh
+./beobachter --auswerten messung-A.txt
+```
+
+Das liest das rohe Ereignisprotokoll aus der Datei zurück, rechnet die Antworten neu und
+schreibt sie auf die Standardausgabe. Die Quelldatei bleibt unangetastet. Wird die
+Auswertung korrigiert, gehört das Ergebnis in eine Datei daneben — die Messdatei selbst ist
+der Beleg und wird nicht überschrieben.
 
 Der Bericht enthält vier Teile: den Kopf mit Zeitpunkt, macOS-Version und dem Wert von
 `com.apple.keyboard.fnState`; das rohe Ereignisprotokoll mit Nummer, Zeit, Art, `keyCode`,

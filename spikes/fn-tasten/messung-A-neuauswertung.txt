@@ -1,0 +1,88 @@
+# KRK — Neuauswertung von messung-A.txt
+
+Erstellt:             2026-08-02
+Quelle:               messung-A.txt (unverändert, Rohprotokoll der Messung vom 2026-08-02)
+Erzeugt mit:          ./beobachter --auswerten messung-A.txt
+
+## Warum diese Datei
+
+Die Auswertung, die am 2026-08-02 zusammen mit der Messung in `messung-A.txt`
+geschrieben wurde, war FEHLERHAFT. Sie meldete zu Frage 2:
+
+    JA. 3 von 3 erwarteten kamen an: F3=code 99/mod function, ...
+
+Das war falsch. Die Auswertung prüfte nur, ob ein keyDown mit dem erwarteten
+Tastencode im Abschnitt vorkam, und nicht, ob die fn-Taste dabei gedrückt war.
+Im Rohprotokoll steht (#08 bis #12), dass fn während des gesamten Abschnitts 2
+gehalten war: Abschnitt 2 hat Abschnitt 1 wiederholt. Auf dem Messgerät
+(MacBookPro15,1, Touch Bar statt F-Tastenreihe) gibt es ohne gehaltenes fn
+überhaupt keine F3; Frage 2 ist dort nicht messbar. Statt 'x' zu drücken, wie
+es die Anleitung für diesen Fall vorsieht, wurde fn gehalten.
+
+Das ROHPROTOKOLL in messung-A.txt ist davon nicht berührt und bleibt gültig.
+Nur die daraus abgeleiteten Antworten waren falsch. Sie stehen unten korrigiert.
+Die Befunde zu den Fragen 1 und 4 ändern sich nicht.
+
+# Neuauswertung von messung-A.txt
+
+Nachgerechnet am:     2026-08-02T12:16:00Z
+Ereignisse gelesen:   17
+
+## Auswertung nach Abschnitten
+
+Marken gefunden: a=0, b=6, c=12
+
+### Abschnitt 1 (zwischen 'a' und 'b') — gedrückt wurde Fn+F3, Fn+F5, Fn+F8
+
+  keyDown  code=99 (F3)  zeichen=U+F706  mod=function  fn=gehalten
+  keyDown  code=96 (F5)  zeichen=U+F708  mod=function  fn=gehalten
+  keyDown  code=100 (F8)  zeichen=U+F70B  mod=function  fn=gehalten
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+
+### Abschnitt 2 (zwischen 'b' und 'c') — gedrückt wurde F3, F5, F8 ohne Fn
+
+  keyDown  code=99 (F3)  zeichen=U+F706  mod=function  fn=gehalten
+  keyDown  code=96 (F5)  zeichen=U+F708  mod=function  fn=gehalten
+  keyDown  code=100 (F8)  zeichen=U+F70B  mod=function  fn=gehalten
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+
+### Abschnitt 3 (nach 'c') — gedrückt wurde Fn allein, dann Shift allein
+
+  Kein keyDown empfangen.
+  flagsChanged  code=63 (fn)  geändert=+function  mod=function
+  flagsChanged  code=63 (fn)  geändert=-function  mod=keine
+  flagsChanged  code=56 (Shift links)  geändert=+shift  mod=shift
+  flagsChanged  code=56 (Shift links)  geändert=-shift  mod=keine
+
+## Abgeleitete Antworten aus diesem Durchgang
+
+Frage 1 — Kommen Fn+F3 bis Fn+F8 als gewöhnliche Tastenereignisse an?
+  JA. 3 von 3 erwarteten kamen an: F3=code 99/mod function/fn gehalten, F5=code 96/mod function/fn gehalten, F8=code 100/mod function/fn gehalten
+
+Frage 2 — Kommen die nackten F3 bis F8 an?
+  NICHT MESSBAR AUF DIESEM GERÄT. In Abschnitt 2 kamen zwar 3 Funktionstasten-keyDown an, aber alle bei gehaltener fn-Taste: F3=code 99/mod function/fn gehalten, F5=code 96/mod function/fn gehalten, F8=code 100/mod function/fn gehalten. Abschnitt 2 wiederholt damit Abschnitt 1 und sagt nichts über die nackten F-Tasten. Wo die Tastatur keine physische F-Tastenreihe hat, sondern einen Touch Bar, gibt es im Auslieferungszustand ohne gehaltenes fn überhaupt keine F3: Frage 2 ist dort nicht stellbar und nur über Durchgang B oder C zu beantworten.
+
+Frage 3 — Wirkung der Systemeinstellung?
+  Dieser Durchgang misst genau einen Zustand: nicht gesetzt — Systemvorgabe, also AUS (nackte F-Tasten steuern Hardware)
+  Die Antwort braucht beide Durchgänge. Vergleiche diese Datei mit der
+  des anderen Durchgangs.
+
+Frage 4 — Löst die Fn-Taste selbst ein flagsChanged aus?
+  JA. 2 Ereignis(se) mit function-Wechsel: code 63 +function, code 63 -function
+  Kontrollprobe Shift: 2 shift-Wechsel angekommen, der Abgriff arbeitet.
+
+Ob fn körperlich gehalten war, entnimmt die Auswertung allein den
+flagsChanged der Taste 63, nicht dem mod=-Feld der einzelnen Taste: AppKit
+setzt `function` bei jeder Taste aus dem Funktionstasten-Unicodebereich,
+auch bei einer nackten F3.
+
+## Vergleich mit dem dokumentierten Erwartungswert
+
+Erwartet nach Carbon HIToolbox und AppKit-Konstanten, nicht gemessen:
+  F3=code 99, F4=118, F5=96, F6=97, F7=98, F8=100, fn=63
+  Zeichen F3..F8 = U+F706 bis U+F70B
+  Modifikator function = Bit 23 (0x800000)
+Weicht die Messung oben davon ab, gilt die Messung.
+

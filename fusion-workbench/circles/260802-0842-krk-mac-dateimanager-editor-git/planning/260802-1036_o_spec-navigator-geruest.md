@@ -1,11 +1,13 @@
 # Spec: KRK Navigator-Gerüst (Runde 1)
 
-**Datum:** 2026-08-02, überarbeitet 260802-1127
+**Datum:** 2026-08-02, überarbeitet 260802-1409
 **Status:** Entwurf, alle Nutzerantworten eingearbeitet, keine Frage dieser Runde offen
 **Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
 **Quelle:** Circle-Directive im Datensatz `_t_circle.md`, zugeschnitten auf die erste Runde durch den Nutzer in der Phase-0-Klärung.
 
 > **Gatehinweis für den Planner:** Dieser Spec ist noch nicht abgenommen, trägt aber keine offene Nutzerfrage mehr. Die vier Fragen A bis D hat der Nutzer am 260802-1105 beantwortet, das Referenzgerät für die Zeitzusagen aus C8 am 260802-1127 benannt; die Antworten stehen als verbindliche Abnahmekriterien in C3, C4 und C8. Die frühere Abweichung zwischen der Löschantwort und der Circle-Directive ist behoben: der Nutzer hat die Directive-Zeile korrigieren lassen, siehe `## Abgleich mit der Circle-Directive`.
+>
+> **Stand 260802-1409:** C3 ist auf die Messung der Fn-Tasten-Annahme fortgeschrieben. Drei Punkte sind neu und binden den Plan: die Tastencode-Sicht statt der Schreibweise "Fn+F3", ein zweiter Weg ab Werk über Cmd-Kürzel, und die Beschriftungsregel für die Belegungsansicht. Die Directive-Zeile im Circle-Datensatz weicht seitdem erneut ab; der Defekt dazu ist gemeldet, siehe `## Abgleich mit der Circle-Directive`.
 
 ## Directive dieser Runde
 
@@ -98,28 +100,58 @@ stateDiagram-v2
 
 ### C3: Tastenbelegung, frei konfigurierbar mit ausgelieferter Vorbelegung
 
-**Beschreibung:** Jede Taste und jede Tastenkombination ist frei belegbar; das ist die Grundhaltung der Anwendung und keine Zusatzfunktion. Ausgeliefert wird eine Vorbelegung, die sich auf einem Mac vertraut anfühlt, also Cmd-Kürzel und Pfeiltasten, ergänzt um die Norton-Reihe auf Fn+F3 bis Fn+F8 und die Taste Delete zum Räumen in den Papierkorb. Die Fn-Kombination ist gewählt, weil sie auf jedem Mac ankommt, ohne dass der Nutzer eine Systemeinstellung ändert. Der Nutzer sieht seine Belegung in einer eigenen Ansicht, ändert sie dort und stellt die Auslieferungsbelegung jederzeit wieder her.
+**Beschreibung:** Jede Taste und jede Tastenkombination ist frei belegbar; das ist die Grundhaltung der Anwendung und keine Zusatzfunktion. Ausgeliefert wird eine Vorbelegung, die jede Funktion der Norton-Reihe auf zwei Wegen erreichbar macht: über die Funktionstaste F3 bis F8 und über ein Mac-typisches Cmd-Kürzel. Beide Wege zeigen auf dieselbe Funktion und stehen in derselben Zeile der Belegungsansicht. Der zweite Weg entstand aus einem gemessenen Befund: das Abnahmegerät trägt einen Touch Bar statt einer Funktionstastenreihe, und ein Kopierbefehl, der dort den Blick auf ein Glasfeld verlangt, verfehlt die Maxime der Tastatursteuerung. Die Taste Delete räumt in den Papierkorb. Der Nutzer sieht seine Belegung in einer eigenen Ansicht, ändert sie dort und stellt die Auslieferungsbelegung jederzeit wieder her.
+
+**Was KRK technisch belegt.** KRK belegt das Tastenereignis der Funktionstaste, nicht eine Fingerhaltung. Die Messung vom 2026-08-02 auf dem Abnahmegerät (`MacBookPro15,1`, macOS 15.7.7, Systemeinstellung "F1, F2 usw." aus) zeigt: Fn+F3, Fn+F5 und Fn+F8 kommen in einer gewöhnlichen Anwendung im Vordergrund als gewöhnliche `keyDown`-Ereignisse an, mit den Tastencodes 99, 96 und 100, den Zeichen U+F706, U+F708 und U+F70B und gesetztem Modifikator `function` (0x800000). Beleg: `spikes/fn-tasten/messung-A.txt`, Ereignisse #03 bis #05. Die fn-Taste selbst liefert kein `keyDown`, sondern nur einen Zustandswechsel mit Tastencode 63 (Ereignisse #14 und #15; die Kontrollprobe mit Shift belegt, dass der Abgriff arbeitet).
+
+Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nach. AppKit setzt ihn bei jeder Taste aus dem Funktionstasten-Zeichenbereich, also auch bei den Pfeiltasten (dokumentiert, in dieser Messung nicht eigens geprüft). KRK kann Fn+F3 und ein nacktes F3 deshalb nicht unterscheiden, weil beide dasselbe Ereignis erzeugen. Die ausgelieferte Belegung heißt darum F3 und nicht Fn+F3. Diese Lesart stützt die frühere Festlegung, dass eine Belegung je Funktion genügt, und macht zugleich die Beschriftung "Fn+F3" für Nutzer mit echter Funktionstastenreihe falsch.
+
+**Wie die Messung zu lesen ist.** Die Selbstauswertung in `spikes/fn-tasten/messung-A.txt` meldet unter "Frage 2 — Kommen die nackten F3 bis F8 an?" ein "JA" und ist an dieser Stelle falsch. Im rohen Ereignisprotokoll steht bei Ereignis #08 ein `flagsChanged geändert=+function` unmittelbar vor den drei Tastendrücken des zweiten Abschnitts und bei #12 das zugehörige `-function`. Der Nutzer musste fn halten, weil sein Gerät ohne fn keine F3 erzeugt; Abschnitt 2 hat damit Abschnitt 1 wiederholt. Ob die nackten Funktionstasten auf einem Gerät mit echter Tastenreihe ankommen, bleibt ungemessen. Die Auswertungslogik des Prüfprogramms prüft nur, ob ein Tastendruck ankam, nicht ob fn dabei gedrückt war. Der Programmfehler ist gesondert behoben; die korrigierte Auswertung derselben Rohdaten steht in `spikes/fn-tasten/messung-A-neuauswertung.txt` und deckt sich mit der Lesart hier. Die Rohdaten in `messung-A.txt` sind vom Fehler nicht berührt.
 
 **Abnahmekriterien:**
 - [ ] Eine Ansicht listet jede Funktion mit ihrer aktuellen Belegung. Der Nutzer weist einer Funktion eine neue Kombination zu, indem er sie drückt.
-- [ ] Belegt der Nutzer eine Kombination, die bereits vergeben ist, meldet KRK den Konflikt und nennt die andere Funktion, statt die Belegung stillschweigend zu überschreiben.
+- [ ] Die Belegungsansicht führt je Funktion genau eine Zeile. Trägt eine Funktion mehrere Kombinationen, stehen alle in dieser einen Zeile. Eine zweite Zeile für einen zweiten Weg gibt es nicht.
+- [ ] Belegt der Nutzer eine Kombination, die bereits einer anderen Funktion gehört, meldet KRK den Konflikt und nennt die andere Funktion, statt die Belegung stillschweigend zu überschreiben. Mehrere Kombinationen auf derselben Funktion sind kein Konflikt.
 - [ ] Ein Befehl setzt die gesamte Belegung auf den Auslieferungszustand zurück.
 - [ ] Die geänderte Belegung überlebt Beenden und Neustart.
-- [ ] Die Norton-Zuordnung der Auslieferungsbelegung lautet: Fn+F3 Vorschau anzeigen, Fn+F5 Kopieren, Fn+F6 Verschieben und Umbenennen, Fn+F7 Ordner anlegen, Fn+F8 endgültig löschen.
-- [ ] Auf einem unveränderten Mac lösen Fn+F3 bis Fn+F8 die genannten Funktionen aus, ohne dass der Nutzer die Systemeinstellung "F1, F2 usw. als Standard-Funktionstasten verwenden" aktiviert hat.
-- [ ] Die Belegungsansicht führt je Funktion genau eine Zeile. Eine zweite Zeile für die nackte Funktionstaste gibt es nicht.
-- [ ] Hat der Nutzer die genannte Systemeinstellung von sich aus aktiviert, lösen die nackten Tasten F3 bis F8 dieselben Funktionen aus, weil in diesem Systemzustand die nackte Taste dasselbe Tastenereignis erzeugt wie sonst die Fn-Kombination. KRK unterscheidet die beiden Wege nicht und braucht dafür keine zweite Belegung.
-- [ ] Fn+F4 ist in dieser Runde unbelegt und in der Belegungsansicht als für den Editor reserviert gekennzeichnet.
-- [ ] Die Taste Delete ist ab Werk mit dem Räumen in den Papierkorb belegt, Fn+F8 mit dem endgültigen Löschen. Beide sind verschiedene Funktionen und stehen als zwei Zeilen in der Belegungsansicht. Das Verhalten beider steht in C4.
+- [ ] Die Auslieferungsbelegung ist in sich konfliktfrei: keine Kombination ist zwei verschiedenen Funktionen zugewiesen.
+- [ ] Die Norton-Zuordnung der Auslieferungsbelegung lautet: F3 Vorschau anzeigen, F5 Kopieren, F6 Verschieben und Umbenennen, F7 Ordner anlegen, F8 endgültig löschen. Gemeint ist jeweils das Tastenereignis der Funktionstaste, gleich ob der Nutzer es mit gehaltener fn-Taste erzeugt oder ohne.
+- [ ] Auf dem Abnahmegerät lösen F3, F5 und F8 die genannten Funktionen aus, ohne dass der Nutzer die Systemeinstellung "F1, F2 usw. als Standard-Funktionstasten verwenden" aktiviert. Für diese drei Tasten ist die Zustellung des Ereignisses gemessen (`spikes/fn-tasten/messung-A.txt`); für F6 und F7 ist sie nicht gemessen und wird bei der Abnahme mitgeprüft.
+- [ ] Jede Funktion der Norton-Reihe trägt ab Werk zusätzlich das Cmd-Kürzel aus der Tabelle unten. Beide Wege lösen dieselbe Funktion aus und sind an keine Tastaturbauart gebunden.
+- [ ] Die Belegungsansicht beschriftet Funktionstasten als F3 bis F8. Sie schreibt an keiner Stelle "Fn+" vor eine Kombination.
+- [ ] Der Nutzer kann fn nicht als Zusatztaste einer Belegung verwenden. KRK bietet keine Belegung an, die sich von einer anderen allein durch gedrücktes fn unterscheidet.
+- [ ] F4 ist in dieser Runde unbelegt und in der Belegungsansicht als für den Editor reserviert gekennzeichnet. Ein Cmd-Kürzel trägt diese Funktion in dieser Runde ebenfalls nicht.
+- [ ] Die Taste Delete ist ab Werk mit dem Räumen in den Papierkorb belegt, zusätzlich Cmd+Delete. F8 und Cmd+Opt+Delete lösen das endgültige Löschen aus. Papierkorb und endgültiges Löschen sind zwei verschiedene Funktionen und stehen als zwei Zeilen in der Belegungsansicht. Das Verhalten beider steht in C4.
 - [ ] Shift+Delete ist ab Werk unbelegt. Der Nutzer kann die Kombination frei belegen, KRK liefert sie nicht vorbelegt aus.
+- [ ] Cmd+C und Cmd+V sind ab Werk unbelegt und bleiben für eine Zwischenablage einer späteren Runde frei.
+
+**Die ausgelieferten Cmd-Kürzel:**
+
+| Funktion | Norton-Taste | Cmd-Kürzel | Woher das Kürzel stammt |
+|---|---|---|---|
+| Vorschau anzeigen | F3 | Cmd+Y | Finder: Übersicht (Quick Look), dieselbe Funktion |
+| Kopieren in das andere Fenster | F5 | Cmd+Shift+K | eigene Form, K wie Kopieren |
+| Verschieben in das andere Fenster | F6 | Cmd+Shift+V | eigene Form, V wie Verschieben |
+| Ordner anlegen | F7 | Cmd+Shift+N | Finder: Neuer Ordner, dieselbe Funktion |
+| Endgültig löschen | F8 | Cmd+Opt+Delete | Finder: sofort löschen, dieselbe Funktion |
+| In den Papierkorb räumen | Delete | Cmd+Delete | Finder: In den Papierkorb legen, dieselbe Funktion |
 
 **Getroffene Festlegungen:**
-- Ausgeliefert wird ausschließlich die Fn-Kombination (Antwort des Nutzers auf Frage A, Möglichkeit 1 des Datensatzes `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`). Die nackten F-Tasten bleiben frei, damit die Belegungsansicht je Funktion eine Zeile trägt statt zweier.
-- Fn+F4 bleibt in Runde 1 unbelegt, weil die Norton-Bedeutung "Bearbeiten" auf den Editor zeigt und der Editor erst in einer späteren Runde entsteht. Eine Belegung mit dem Systemeditor wäre ein Behelf, den die spätere Runde wieder entfernen müsste.
-- Fn+F3 zeigt in dieser Runde die Vorschau, was der Norton-Bedeutung "Ansehen" entspricht und ohne den Editor auskommt.
-- Mit "Delete" ist die Taste gemeint, die auf jeder Mac-Tastatur mit "delete" beschriftet ist, also die Rückschritt-Taste über der Return-Taste. Die Vorwärts-Löschtaste heißt auf dem Mac ebenfalls delete, ist aber auf tragbaren Geräten nur über Fn+delete erreichbar und deshalb nicht gemeint.
+- Ausgeliefert werden zwei Wege je Funktion: die Norton-Reihe und ein Cmd-Kürzel (Antwort des Nutzers vom 260802-1409). Damit ist die frühere Wahl, ausschließlich die Funktionstasten zu belegen, erweitert, nicht aufgehoben; der Datensatz `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` trägt den Nachtrag.
+- Die Cmd-Kürzel folgen zwei Regeln. Wo der Mac für genau dieselbe Funktion bereits ein Kürzel kennt, übernimmt KRK es unverändert: Cmd+Y für die Übersicht, Cmd+Shift+N für den neuen Ordner, Cmd+Opt+Delete für das sofortige Löschen und Cmd+Delete für den Papierkorb. Für die beiden Übertragungen zwischen den Dateifenstern gibt es kein Mac-Vorbild, weil der Finder nur den Zweischritt über die Zwischenablage kennt; sie erhalten deshalb eine eigene, einheitliche Form mit dem Anfangsbuchstaben des deutschen Verbs, Cmd+Shift+K und Cmd+Shift+V.
+- Cmd+C und Cmd+V bleiben ausdrücklich unbelegt. Das Kopieren in KRK ist ein Einschrittvorgang von einem Fenster ins andere und nicht das Ablegen in der Zwischenablage; die beiden Tasten mit der KRK-Bedeutung zu besetzen, würde eine vertraute Mac-Bedeutung überschreiben und eine spätere Zwischenablage-Runde blockieren. Cmd+Shift+V liegt einen Tastendruck neben einem künftigen Cmd+V; dieses Risiko ist gesehen und in Kauf genommen, solange Cmd+V unbelegt bleibt.
+- Die Prüfung der Kürzel gegen die Systemkürzel von macOS beruht auf der dokumentierten Kürzelliste, nicht auf einer Messung. Keines der sechs Kürzel ist dort belegt. Zeigt sich bei der Umsetzung eine Kollision, gilt der gemessene Befund und das betroffene Kürzel wird über einen Entscheidungsdatensatz ersetzt.
+- "Vorschau anzeigen" aus der Norton-Reihe und das Ein- und Ausblenden des Vorschaufensters aus C7 sind dieselbe Funktion und tragen eine Zeile in der Belegungsansicht. Zwei getrennte Funktionen mit fast gleicher Wirkung wären eine Sonderregel ohne Gegenwert. Diese Festlegung hat der Shaper getroffen; sie ist der Punkt in dieser Runde, den der Nutzer am ehesten anders sehen könnte.
+- F4 bleibt in Runde 1 unbelegt, weil die Norton-Bedeutung "Bearbeiten" auf den Editor zeigt und der Editor erst in einer späteren Runde entsteht. Eine Belegung mit dem Systemeditor wäre ein Behelf, den die spätere Runde wieder entfernen müsste.
+- F3 zeigt in dieser Runde die Vorschau, was der Norton-Bedeutung "Ansehen" entspricht und ohne den Editor auskommt.
+- Mit "Delete" ist die Taste gemeint, die auf jeder Mac-Tastatur mit "delete" beschriftet ist, also die Rückschritt-Taste über der Return-Taste. Die Vorwärts-Löschtaste heißt auf dem Mac ebenfalls delete, ist aber auf tragbaren Geräten nur über fn+delete erreichbar und deshalb nicht gemeint.
+- KRK erkennt die Tastaturbauart nicht und liefert keine je nach Gerät verschiedene Vorbelegung aus. Eine Erkennung wäre die Sonderregel mit eigenem Rückfallweg, die die Maxime "supersimpel" ausschließt.
 
-**Anforderung an die Technologiewahl (Eingabe für den analyst, keine Festlegung):** Die Anwendung muss Tastenereignisse so früh entgegennehmen, dass sie systemseitig vorbelegte Tasten erreicht und dass jede Kombination zur Laufzeit umbelegbar ist. Eine Umgebung, die nur eine feste Menge von Tastenkürzeln zulässt, trägt C3 nicht.
+**Prüfung gegen die Maxime "supersimpel".** Die zweite Vorbelegung besteht. Sie fügt keinen Mechanismus hinzu: die Belegung bildet ohnehin Kombination auf Funktion ab, und mehrere Kombinationen auf einer Funktion sind in einer frei konfigurierbaren Belegung der Normalfall, den der Nutzer sich sonst selbst einrichten würde. Es entsteht keine Ausnahme, keine Fallunterscheidung und kein Rückfallweg. Der einzige Preis liegt in der Belegungsansicht, und er ist mit der Ein-Zeilen-Regel bezahlt: die Zeile gehört der Funktion, die Kombinationen stehen darin, und das Umbelegen bleibt ein Vorgang an einer Stelle. Die Maxime wäre erst verletzt, wenn KRK die beiden Wege verschieden behandelte, etwa durch Geräteerkennung, durch einen Umschaltmodus oder durch zwei getrennte Belegungstabellen. Alle drei sind hiermit ausgeschlossen.
+
+**Was ungemessen bleibt, und was es nicht bindet.** Zwei der vier Fragen des Prüfprogramms sind offen: ob die nackten Funktionstasten auf einem Gerät mit echter Tastenreihe ankommen (Frage 2) und wie sich die Systemeinstellung "F1, F2 usw. als Standard-Funktionstasten verwenden" auswirkt (Frage 3). Beide binden den Plan nicht, und der Grund ist derselbe: KRK belegt den Tastencode und kann die Wege nicht unterscheiden, also hängt kein Verhalten und kein Abnahmekriterium am Ergebnis. Die Systemeinstellung verschiebt allenfalls, welche Fingerhaltung den Tastencode erzeugt. Für den Nutzer, der sie einschaltet, bleibt die Beschriftung "F3" richtig, und das Cmd-Kürzel steht ohnehin daneben. Die Messung wird nachgeholt, sobald eine der beiden Bedingungen eintritt: ein Abnahmekriterium einer späteren Runde sagt ein bestimmtes Verhalten bei eingeschalteter Systemeinstellung zu, oder ein Nutzer meldet, dass eine Funktionstaste bei ihm nicht auslöst. Die Anleitung dazu steht in `spikes/fn-tasten/README.md` als Durchgang B und C.
+
+**Anforderung an die Technologiewahl (Eingabe für den analyst, keine Festlegung):** Die Anwendung muss Tastenereignisse so früh entgegennehmen, dass sie systemseitig vorbelegte Tasten erreicht und dass jede Kombination zur Laufzeit umbelegbar ist. Eine Umgebung, die nur eine feste Menge von Tastenkürzeln zulässt, trägt C3 nicht. Die Messung belegt, dass ein lokaler Ereignisabgriff einer gewöhnlichen Anwendung im Vordergrund für die Funktionstasten ausreicht; eine Freigabe für Bedienungshilfen war dafür nicht nötig.
 
 ### C4: Dateioperationen, einzeln und im Stapel
 
@@ -134,9 +166,9 @@ stateDiagram-v2
 - [ ] Scheitert eine Operation an einem einzelnen Eintrag, etwa wegen fehlender Rechte, läuft sie mit den übrigen weiter und meldet am Ende eine Liste der übersprungenen Einträge mit Grund.
 - [ ] Nach jeder Operation zeigen beide Dateifenster den neuen Stand, ohne dass der Nutzer auffrischen muss.
 - [ ] Beim ersten Zugriff auf einen von macOS geschützten Ordner, etwa Schreibtisch, Dokumente oder Downloads, fordert KRK die Systemfreigabe an und erklärt in einem Satz, wozu.
-- [ ] Löschen in den Papierkorb: die Taste Delete verschiebt die Auswahl des aktiven Fensters in den Papierkorb des Systems, sofort und ohne Rückfrage. Sie wirkt auf eine Mehrfachauswahl und auf Ordner mit Inhalt.
-- [ ] Delete löst nur dann eine Löschung aus, wenn der Eingabefokus in einem Dateifenster steht. In der Pfadeingabe, im Umbenennen-Feld und in jedem anderen Textfeld bleibt sie die Rückschritt-Taste.
-- [ ] Endgültiges Löschen: Fn+F8 löscht die Auswahl ohne Umweg über den Papierkorb. Auch diese Funktion wirkt auf eine Mehrfachauswahl und auf Ordner mit Inhalt.
+- [ ] Löschen in den Papierkorb: die Taste Delete, ebenso Cmd+Delete, verschiebt die Auswahl des aktiven Fensters in den Papierkorb des Systems, sofort und ohne Rückfrage. Beide wirken auf eine Mehrfachauswahl und auf Ordner mit Inhalt.
+- [ ] Die Löschtasten lösen nur dann eine Löschung aus, wenn der Eingabefokus in einem Dateifenster steht. In der Pfadeingabe, im Umbenennen-Feld und in jedem anderen Textfeld bleiben Delete und Cmd+Delete die gewohnten Textbefehle.
+- [ ] Endgültiges Löschen: F8, ebenso Cmd+Opt+Delete, löscht die Auswahl ohne Umweg über den Papierkorb. Auch diese Funktion wirkt auf eine Mehrfachauswahl und auf Ordner mit Inhalt.
 - [ ] Vor dem endgültigen Löschen fragt KRK genau einmal je Vorgang nach, unabhängig von der Zahl der betroffenen Einträge. Die Rückfrage nennt die Zahl der Einträge und, falls Ordner darunter sind, deren Zahl gesondert.
 - [ ] Die Rückfrage ist vollständig über die Tastatur zu beantworten. Vorbelegt ist Abbrechen, sodass ein reflexhaftes Bestätigen mit der Return-Taste nichts löscht.
 - [ ] Zu einer über Delete gelöschten Auswahl gibt es einen Rückweg über den Papierkorb des Systems. Einen eigenen Rückgängig-Speicher führt KRK nicht.
@@ -148,7 +180,7 @@ stateDiagram-v2
 **Getroffene Festlegungen:**
 - Namenskonflikt fragt einmal nach, mit einer Option für alle weiteren Fälle (Vorbelegung, entspricht ForkLift; stilles Überschreiben wäre Datenverlust, stilles Überspringen wäre unbemerkter Datenverlust am Ziel).
 - Eine gescheiterte Einzelposition bricht den Stapel nicht ab (Vorbelegung; der Abbruch bei Eintrag 3 von 2.000 wäre in der Praxis die häufigere Enttäuschung).
-- Löschen ist zweigeteilt: Delete räumt in den Papierkorb, Fn+F8 löscht endgültig. Das ist die wörtliche Antwort des Nutzers auf Frage B, festgehalten in `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+- Löschen ist zweigeteilt: Delete räumt in den Papierkorb, F8 löscht endgültig. Das ist die wörtliche Antwort des Nutzers auf Frage B, festgehalten in `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`. Die Zweiteilung bleibt unberührt davon, dass seit dem 260802-1409 beide Funktionen zusätzlich ein Cmd-Kürzel tragen (C3).
 - Das endgültige Löschen fragt einmal nach. Diese Festlegung hat der Shaper getroffen, weil der Nutzer zur Rückfrage nichts gesagt hat. Die Begründung: der Nutzer hat den schnellen Alltagsweg und den unwiderruflichen Weg auf zwei verschiedene Tasten gelegt, und nur der zweite hat keinen Rückweg. Ein eigener Rückgängig-Speicher scheidet aus, weil er ein zweiter Papierkorb wäre und damit gegen die Maxime "supersimpel" liefe. Bleibt als Sicherung allein die Rückfrage. Sie kostet einen Tastendruck je Vorgang, nicht je Eintrag, und bremst die Tastaturarbeit nicht, weil das alltägliche Löschen über Delete ohne jede Rückfrage läuft.
 - Das Umbenennen im Stapel kommt mit Musterregeln und Vorschau (Antwort des Nutzers auf Frage D, Möglichkeit 2 des Datensatzes `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_umbenennen-im-stapel-umfang.md`). Groß- und Kleinschreibung als eigene Regel hat der Nutzer nicht genannt und ist deshalb nicht Teil der Zusage; eine Umschaltung der Schreibweise lässt sich über Suchen und Ersetzen nicht ausdrücken und bleibt einer späteren Runde vorbehalten.
 
@@ -188,7 +220,7 @@ stateDiagram-v2
 
 **Abnahmekriterien:**
 - [ ] Die Trennlinien zwischen Lesezeichenleiste, den beiden Dateifenstern und der Vorschau lassen sich mit der Maus verschieben und über einen Tastenbefehl schrittweise verbreitern und verschmälern.
-- [ ] Je ein Tastenbefehl blendet die Lesezeichenleiste, das zweite Dateifenster und die Vorschau aus und wieder ein.
+- [ ] Je ein Tastenbefehl blendet die Lesezeichenleiste, das zweite Dateifenster und die Vorschau aus und wieder ein. Für die Vorschau ist das dieselbe Funktion, die C3 als "Vorschau anzeigen" führt und ab Werk auf F3 und Cmd+Y legt; sie trägt eine Zeile in der Belegungsansicht.
 - [ ] Die verbleibenden Bereiche nutzen den frei gewordenen Platz. Beim Wiedereinblenden stellt KRK die vorherige Breite wieder her.
 - [ ] Mindestens ein Dateifenster bleibt immer sichtbar. Ein Befehl, der das letzte ausblenden würde, wird ohne Fehlermeldung ignoriert.
 - [ ] Breiten und Sichtbarkeit überleben Beenden und Neustart.
@@ -236,7 +268,9 @@ Das benannte Referenzgerät hat 60 Hz, womit die Herleitung von L1 und L9 dort w
 
 ## Randbedingungen
 
-Die Vorbelegung der Tasten ist eine Vorbelegung und keine Festschreibung. Jede Aussage über Fn+F3 bis Fn+F8 oder über die Taste Delete beschreibt den Auslieferungszustand; die Freiheit des Nutzers, jede Taste umzubelegen, bleibt unberührt und ist selbst eine Abnahmebedingung (C3).
+Die Vorbelegung der Tasten ist eine Vorbelegung und keine Festschreibung. Jede Aussage über F3 bis F8, über die Cmd-Kürzel aus C3 oder über die Taste Delete beschreibt den Auslieferungszustand; die Freiheit des Nutzers, jede Taste umzubelegen, bleibt unberührt und ist selbst eine Abnahmebedingung (C3).
+
+"F3" bis "F8" bezeichnen in diesem Dokument durchgehend das Tastenereignis der jeweiligen Funktionstaste, nicht eine bestimmte Fingerhaltung. Ob der Nutzer die Taste mit gehaltener fn-Taste erzeugt oder ohne, ist für KRK nicht unterscheidbar; die Messung in `spikes/fn-tasten/messung-A.txt` belegt das für F3, F5 und F8. Die frühere Schreibweise "Fn+F3 bis Fn+F8" ist damit im ganzen Dokument ersetzt.
 
 Sprache, UI-Werkzeugkasten und alle weiteren technischen Mittel sind offen. Kein Agent trifft eine solche Wahl nebenbei im Zuge einer anderen Aufgabe. Die Festlegung erfolgt über einen eigenen Entscheidungsdatensatz, sobald der analyst die Kandidaten verglichen hat. Die in C3 und C8 genannten Anforderungen sind die Eingabe für diesen Vergleich, nicht seine Vorwegnahme.
 
@@ -246,7 +280,7 @@ Die Maxime "supersimpel" wird in dieser Runde nicht in Zahlen überführt. Sie w
 
 ## Nicht in dieser Runde, aber im Circle
 
-Der eingebaute Editor bleibt draußen. Dazu zählen die Rohansicht und die Formatansicht, der Sprung zu einer Zeilennummer, das Suchen und Ersetzen innerhalb der geöffneten Datei sowie das Speichern von Textmarken auf Stellen und Bereiche als Lesezeichen im Benutzerverzeichnis. Fn+F4 bleibt deshalb unbelegt und für den Editor reserviert.
+Der eingebaute Editor bleibt draußen. Dazu zählen die Rohansicht und die Formatansicht, der Sprung zu einer Zeilennummer, das Suchen und Ersetzen innerhalb der geöffneten Datei sowie das Speichern von Textmarken auf Stellen und Bereiche als Lesezeichen im Benutzerverzeichnis. F4 bleibt deshalb unbelegt und für den Editor reserviert, und erhält in dieser Runde auch kein Cmd-Kürzel.
 
 Das Umschalten der Groß- und Kleinschreibung als eigene Regel beim Umbenennen im Stapel bleibt draußen. Der Nutzer hat in seiner Antwort auf Frage D Suchen und Ersetzen sowie die fortlaufende Nummerierung genannt, die Schreibweise nicht.
 
@@ -284,11 +318,15 @@ Der Nutzer hat am Spec-Gate die Korrektur der Directive-Zeile gewählt, nicht di
 
 Der Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_c_directive-zeile-widerspricht-loeschantwort.md` ist geschlossen.
 
+**Seit dem 260802-1409 weicht die Directive-Zeile erneut ab, aus einem neuen Grund.** Sie sagt zu, dass die Vorbelegung "die nackten Funktionstasten frei lässt". Die Messung zeigt, dass KRK genau das nicht leisten kann: die nackte F3 und Fn+F3 erzeugen dasselbe Tastenereignis, und wer das eine belegt, belegt das andere mit. Die Zusage ist damit nicht falsch formuliert, sondern technisch unerfüllbar. Zweitens nennt die Zeile den zweiten Weg über die Cmd-Kürzel nicht, den der Nutzer am 260802-1409 zusätzlich bestellt hat. Der Shaper hat den Circle-Datensatz in dieser Runde nicht angefasst, weil dafür keine Freigabe vorlag. Gemeldet als `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md`. Bis zur Korrektur gilt für die Tastenbelegung C3 dieses Specs, weil C3 die Messung kennt und die Directive-Zeile nicht.
+
 ## Offene Nutzerentscheidungen
 
-Keine. Die vier Fragen A bis D sind beantwortet und eingearbeitet, und das Referenzgerät für die Zeitzusagen aus C8 ist seit dem 260802-1127 benannt. Der zugehörige Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` trägt den Marker "beantwortet" und nennt Gerät und Begründung vollständig.
+Keine. Die vier Fragen A bis D sind beantwortet und eingearbeitet, das Referenzgerät für die Zeitzusagen aus C8 ist seit dem 260802-1127 benannt, und die drei Folgefragen zur Tastenbelegung hat der Nutzer am 260802-1409 beantwortet. Der Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` trägt den Marker "beantwortet" und nennt Gerät und Begründung vollständig.
 
-Offen bleiben allein drei Entscheidungsdatensätze im geteilten Speicher, die spätere Runden betreffen und diese Runde nicht binden; sie stehen im Abschnitt `## Nicht in dieser Runde, aber im Circle`.
+Zwei Punkte aus dieser Runde hat der Shaper selbst entschieden, weil der Nutzer sie ihm ausdrücklich überlassen oder nicht angesprochen hat. Beide stehen als Festlegung in C3 und sind dort begründet: die konkreten Cmd-Kürzel samt der Regel, nach der sie gewählt wurden, und die Gleichsetzung von "Vorschau anzeigen" mit dem Ein- und Ausblenden des Vorschaufensters aus C7. Der zweite Punkt ist der, den der Nutzer am ehesten anders sehen könnte.
+
+Offen bleiben drei Entscheidungsdatensätze im geteilten Speicher, die spätere Runden betreffen und diese Runde nicht binden; sie stehen im Abschnitt `## Nicht in dieser Runde, aber im Circle`. Ungemessen bleiben zwei der vier Fragen des Fn-Tasten-Prüfprogramms. Warum sie den Plan nicht binden und wann die Messung nachzuholen ist, steht in C3 unter `Was ungemessen bleibt, und was es nicht bindet`.
 
 ---
 

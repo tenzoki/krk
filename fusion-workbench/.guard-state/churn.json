@@ -121,10 +121,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "totalChanges": 23,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T09:31:46.267Z",
-      "thrashingScore": 49
+      "totalChanges": 33,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T12:20:56.694Z",
+      "thrashingScore": 11
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "totalChanges": 6,
@@ -212,7 +212,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T10:20:23.803Z",
       "thrashingScore": 0
     },
@@ -223,41 +223,83 @@
       "thrashingScore": 0
     },
     "spikes/fn-tasten/beobachter.swift": {
-      "totalChanges": 5,
-      "changesThisSession": 5,
-      "lastChange": "2026-08-02T10:31:35.444Z",
-      "thrashingScore": 7
+      "totalChanges": 11,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:14:59.032Z",
+      "thrashingScore": 21
     },
     "spikes/fn-tasten/starten.sh": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T10:29:35.534Z",
       "thrashingScore": 0
     },
     "spikes/fn-tasten/.gitignore": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T10:29:39.214Z",
       "thrashingScore": 0
     },
     "spikes/fn-tasten/README.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T10:32:55.880Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:16:22.792Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1224-spike-fn-tasten.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-02T10:34:01.254Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_o_abnahmegeraet-hat-keine-physische-f-tastenreihe.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:18:52.574Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-nackt.txt": {
       "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:15:33.812Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-uebersprungen.txt": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:15:39.553Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1416-bugfix-fn-tasten-auswertung.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:18:07.390Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:18:32.999Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_circle-datensatz-status-widerspricht-dem-marker.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-02T12:18:41.475Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md": {
+      "totalChanges": 4,
       "changesThisSession": 1,
-      "lastChange": "2026-08-02T11:30:44.520Z",
+      "lastChange": "2026-08-02T12:21:09.071Z",
+      "thrashingScore": 1
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1409-shaper-fn-tasten-messung-und-cmd-kuerzel.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T12:21:05.975Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-02T10:20:23.803Z"
+  "sessionStart": "2026-08-02T12:20:31.712Z"
 }
