@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T08:31:15.750Z",
-      "thrashingScore": 0
+      "totalChanges": 8,
+      "changesThisSession": 8,
+      "lastChange": "2026-08-02T09:30:19.733Z",
+      "thrashingScore": 14
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -121,16 +121,16 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "totalChanges": 13,
-      "changesThisSession": 13,
-      "lastChange": "2026-08-02T09:09:01.303Z",
-      "thrashingScore": 26
+      "totalChanges": 23,
+      "changesThisSession": 23,
+      "lastChange": "2026-08-02T09:31:46.267Z",
+      "thrashingScore": 49
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
-      "totalChanges": 2,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-02T09:10:59.284Z",
-      "thrashingScore": 0
+      "totalChanges": 6,
+      "changesThisSession": 6,
+      "lastChange": "2026-08-02T09:29:19.213Z",
+      "thrashingScore": 10
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_umbenennen-im-stapel-umfang.md": {
       "totalChanges": 3,
@@ -139,10 +139,10 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T08:40:32.785Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T09:29:44.840Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "totalChanges": 3,
@@ -151,10 +151,10 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md": {
-      "totalChanges": 3,
-      "changesThisSession": 3,
-      "lastChange": "2026-08-02T09:12:56.574Z",
-      "thrashingScore": 3
+      "totalChanges": 4,
+      "changesThisSession": 4,
+      "lastChange": "2026-08-02T09:32:54.472Z",
+      "thrashingScore": 5
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_claude-md-tabelle-offener-entscheidungen-veraltet.md": {
       "totalChanges": 1,
@@ -163,10 +163,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-02T09:12:49.228Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-02T09:41:02.834Z",
+      "thrashingScore": 3
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/validate.mjs": {
       "totalChanges": 2,
@@ -184,6 +184,42 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-02T09:19:55.152Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1130-coder-claude-md-entscheidungsstand.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T09:30:50.327Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/mmv/check.mjs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T09:32:28.389Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1127-shaper-directive-korrektur-und-referenzgeraet.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T09:34:07.731Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T09:40:16.448Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-02T09:39:35.735Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1134-analyst-sprache-und-ui-werkzeugkasten.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-02T09:40:13.348Z",
       "thrashingScore": 0
     }
   },

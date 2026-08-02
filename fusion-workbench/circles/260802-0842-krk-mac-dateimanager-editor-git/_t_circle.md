@@ -11,7 +11,7 @@
 
 ## Directive
 
-KRK ist eine native macOS-Anwendung, mit der lokale Dateien vollständig über die Tastatur navigiert, bearbeitet und versioniert werden. Die Oberfläche besteht aus einer Lesezeichen- und Geräteleiste links, zwei Dateifenstern mit je mehreren Tabs in der Mitte und einem Vorschaufenster mit eigenen Tabs rechts. Dateien und Ordner lassen sich anlegen, kopieren, verschieben, löschen und im Stapel umbenennen, auch über mehrere ausgewählte Einträge hinweg. Der eingebaute Editor öffnet Text, Code und Markdown in einer Rohansicht und einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und speichert Marken auf Textstellen und Textbereiche als Lesezeichen im Home-Verzeichnis des Nutzers. Git ist eingebaut: hinzufügen, committen, Änderungen verwerfen sowie ältere Versionen über einen Schieberegler ansehen und auschecken. Jede Tastenbelegung ist frei konfigurierbar, ausgeliefert wird eine Mac-typische Vorbelegung, ergänzt um F3 bis F8 im Norton-Stil und Shift+Delete zum Löschen.
+KRK ist eine native macOS-Anwendung, mit der lokale Dateien vollständig über die Tastatur navigiert, bearbeitet und versioniert werden. Die Oberfläche besteht aus einer Lesezeichen- und Geräteleiste links, zwei Dateifenstern mit je mehreren Tabs in der Mitte und einem Vorschaufenster mit eigenen Tabs rechts. Dateien und Ordner lassen sich anlegen, kopieren, verschieben, löschen und im Stapel umbenennen, auch über mehrere ausgewählte Einträge hinweg. Der eingebaute Editor öffnet Text, Code und Markdown in einer Rohansicht und einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und speichert Marken auf Textstellen und Textbereiche als Lesezeichen im Home-Verzeichnis des Nutzers. Git ist eingebaut: hinzufügen, committen, Änderungen verwerfen sowie ältere Versionen über einen Schieberegler ansehen und auschecken. Jede Tastenbelegung ist frei konfigurierbar; ausgeliefert wird eine Mac-typische Vorbelegung, die die Norton-Reihe auf Fn+F3 bis Fn+F8 legt und die nackten Funktionstasten frei lässt. Die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig und fragt dabei einmal je Vorgang nach.
 
 Zusatz: alle Fenster sind variable in der Größe und können per Tastenbefehl ein- und ausgeblendet werden.
 
@@ -71,13 +71,23 @@ Der Nutzer hat die Einordnung zweier Punkte an den Shaper delegiert. Beide bleib
 
 ### Offene Entscheidungen
 
-Fünf Fragen sind gestellt und noch nicht beantwortet. Der Aktivierungs-Spec muss sie aufgreifen:
+Stand 260802-1127. Drei der ursprünglich fünf Fragen im geteilten Speicher sind noch offen, zwei sind beantwortet. Alle Pfade sind auf den Marker gezogen, den die Datei heute trägt.
 
-- `shared/decisions/260802-0842_o_f-tasten-unter-macos-systembelegung.md` — F3 bis F8 sind auf dem Mac ab Werk mit Systemfunktionen belegt.
-- `shared/decisions/260802-0842_o_loeschen-papierkorb-oder-endgueltig.md` — was Shift+Delete tatsächlich tut.
-- `shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md` — was "revert" aus dem Entwurf konkret meint.
-- `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` — was die Formatansicht je Dateityp zeigt.
-- `shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md` — welches Code-SDK die spätere KI-Anbindung tragen soll.
+Noch offen, keine davon bindet die Runde 1:
+
+- `shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md` — was "revert" aus dem Entwurf konkret meint. Gehört zur Git-Runde.
+- `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` — was die Formatansicht je Dateityp zeigt. Gehört zur Editor-Runde.
+- `shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md` — welches Code-SDK die spätere KI-Anbindung tragen soll. Der Datensatz hält seine eigene Nichtbindung ausdrücklich fest.
+
+Beantwortet am 260802-1105, eingearbeitet in den Spec:
+
+- `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` — ausgeliefert wird ausschließlich die Fn-Kombination, Fn+F3 bis Fn+F8. Die nackten Funktionstasten bleiben frei.
+- `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` — die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig.
+
+Im Circle selbst liegen zwei weitere Datensätze, beide beantwortet:
+
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_umbenennen-im-stapel-umfang.md` — Umbenennen im Stapel mit Musterregeln und Vorschau.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` — die zehn Zeitzusagen und das Referenzgerät, ein MacBook Pro 15 Zoll von 2018 mit Intel Core i9 und 60-Hz-Bildschirm.
 
 ### Was der Aktivierungs-Spec zusätzlich festlegen muss
 

@@ -20,3 +20,10 @@ Damit stehen zwei Dokumente gegeneinander. Verbindlich ist die Antwort des Nutze
 - `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`, Abschnitt `## Abweichung zur Circle-Directive`
 
 **Nebenbefund:** `CLAUDE.md` trifft keine Aussage über die Tastenvorbelegung und ist von diesem Widerspruch nicht betroffen. Getrennt davon führen `CLAUDE.md` und derselbe Circle-Datensatz zwei inzwischen beantwortete Entscheidungen noch als offen; das ist ein eigener Defekt, siehe `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md`.
+
+---
+Resolved: Der Nutzer hat am Spec-Gate die Korrektur der Directive-Zeile gewählt. Der Shaper hat den Schlusssatz des Abschnitts `## Directive` in `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` am 260802-1127 ersetzt; er lautet jetzt: "Jede Tastenbelegung ist frei konfigurierbar; ausgeliefert wird eine Mac-typische Vorbelegung, die die Norton-Reihe auf Fn+F3 bis Fn+F8 legt und die nackten Funktionstasten frei lässt. Die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig und fragt dabei einmal je Vorgang nach." Kein anderer Abschnitt des Datensatzes wurde durch diese Korrektur berührt.
+
+Der oben genannte Grund "das behebt nicht der Shaper" galt für den regulären in-Circle-Klärungsmodus. Der Orchestrator hat die Grenze für genau diesen einen Satz ausdrücklich aufgehoben, weil die Korrektur die Wahl des Nutzers am Spec-Gate war und der Shaper die Directive ursprünglich verfasst hat.
+
+Der Spec `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` trägt den Vorgang nach: der Abschnitt hieß `## Abweichung zur Circle-Directive` und heißt jetzt `## Abgleich mit der Circle-Directive`; er hält den alten und den neuen Wortlaut fest. C3 und C4 des Specs bleiben unverändert gültig, weil die Directive auf die Antworten gezogen wurde und nicht umgekehrt.

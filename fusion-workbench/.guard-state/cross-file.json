@@ -91,9 +91,9 @@
       "lastEditTimestamp": "2026-08-02T08:14:46.617Z"
     },
     "CLAUDE.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T08:31:15.750Z"
+      "pingBackCount": 6,
+      "totalEdits": 8,
+      "lastEditTimestamp": "2026-08-02T09:30:19.735Z"
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "pingBackCount": 0,
@@ -101,14 +101,14 @@
       "lastEditTimestamp": "2026-08-02T08:31:56.557Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "pingBackCount": 2,
-      "totalEdits": 13,
-      "lastEditTimestamp": "2026-08-02T09:09:01.304Z"
+      "pingBackCount": 6,
+      "totalEdits": 23,
+      "lastEditTimestamp": "2026-08-02T09:31:46.269Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-02T09:10:59.284Z"
+      "pingBackCount": 4,
+      "totalEdits": 6,
+      "lastEditTimestamp": "2026-08-02T09:29:19.214Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_umbenennen-im-stapel-umfang.md": {
       "pingBackCount": 1,
@@ -116,9 +116,9 @@
       "lastEditTimestamp": "2026-08-02T09:10:22.493Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T08:40:32.785Z"
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:29:44.841Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1036-shaper-spec-navigator-geruest.md": {
       "pingBackCount": 1,
@@ -126,9 +126,9 @@
       "lastEditTimestamp": "2026-08-02T09:14:05.120Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md": {
-      "pingBackCount": 1,
-      "totalEdits": 3,
-      "lastEditTimestamp": "2026-08-02T09:12:56.575Z"
+      "pingBackCount": 2,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-02T09:32:54.473Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_claude-md-tabelle-offener-entscheidungen-veraltet.md": {
       "pingBackCount": 0,
@@ -136,9 +136,9 @@
       "lastEditTimestamp": "2026-08-02T09:11:44.863Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T09:12:49.228Z"
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-02T09:41:02.835Z"
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/validate.mjs": {
       "pingBackCount": 0,
@@ -154,8 +154,38 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-02T09:19:55.153Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1130-coder-claude-md-entscheidungsstand.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:30:50.328Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/mmv/check.mjs": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T09:32:28.391Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1127-shaper-directive-korrektur-und-referenzgeraet.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:34:07.732Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T09:40:16.450Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_o_sprache-und-ui-werkzeugkasten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-02T09:39:35.736Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1134-analyst-sprache-und-ui-werkzeugkasten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-02T09:40:13.350Z"
     }
   },
-  "lastEditFile": "reviews/260802-1118-conceptrev-spec-navigator-geruest.md",
-  "lastEditTimestamp": "2026-08-02T09:19:55.153Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_beantwortete-entscheidungen-noch-als-offen-gefuehrt.md",
+  "lastEditTimestamp": "2026-08-02T09:41:02.835Z"
 }

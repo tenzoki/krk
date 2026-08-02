@@ -2,17 +2,38 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`
 
 ---
 
+## Antwort: das Referenzgerät
+
+Der Nutzer hat am 260802-1127 Möglichkeit 1 gewählt und das Gerät benannt, auf dem diese Sitzung läuft. Damit ist der Datensatz vollständig beantwortet.
+
+| Angabe | Wert |
+|---|---|
+| Modell | MacBook Pro 15 Zoll, 2018 (Modellkennung `MacBookPro15,1`) |
+| Prozessor | 8-Core Intel Core i9, 2,3 GHz, Hyper-Threading aktiv |
+| Arbeitsspeicher | 16 GB |
+| Grafik | Intel UHD Graphics 630 und Radeon Pro 560X |
+| Bildschirm | 2880×1800 Retina, 60 Hz |
+| Betriebssystem zum Zeitpunkt der Festlegung | macOS 15.7.7 |
+
+Die Angaben stammen aus `system_profiler` auf ebendiesem Gerät und sind insoweit geprüft.
+
+Die Wahl ist die strengere von zweien, und zwar bewusst. Der Nutzer gibt an, sein eigentlicher Arbeitscomputer sei ein "M2 Pro Max", also ein Apple-Silicon-Mac; die Bezeichnung ist mehrdeutig und vermutlich als M2 Max oder M2 Pro zu lesen. Diese Angabe ist eine Aussage des Nutzers und keine von uns geprüfte Tatsache. Für die Zusagen ist die Mehrdeutigkeit ohne Belang: gemessen und abgenommen wird auf dem Intel-Gerät von 2018. Was dort die zehn Zahlen hält, hält sie auf dem neueren Apple-Silicon-Mac erst recht, weil dieser in Einzelkernleistung, Speicheranbindung und Datenträgerdurchsatz durchweg darüber liegt.
+
+Die Bildwiederholrate des benannten Geräts beträgt 60 Hz. Damit trifft die Herleitung von L1 und L9 unverändert zu: 16 ms sind auf diesem Bildschirm genau ein Einzelbild, und die in Abschnitt C8 des Specs vermerkte 120-Hz-Einschränkung greift hier nicht.
+
+Sobald KRK auf mehr als diesem einen Gerät abgenommen wird, ist ein Mindestgerät nachzuziehen. Das ist dann ein eigener Entscheidungsdatensatz und keine stille Erweiterung dieses hier.
+
 ## Erledigter Teil: die Zahlen
 
 Die ursprüngliche Frage lautete, welche Zahlen KRK zur Zusage macht, damit die Maxime "superschnell" prüfbar wird. Dieser Teil ist beantwortet. Der Nutzer hat am 260802-1105 Möglichkeit 1 gewählt und alle zehn Werte der Tabelle in Abschnitt C8 des Specs unverändert übernommen. Sie sind damit Abnahmekriterien der Runde 1, nachzulesen in `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8.
 
-Der Datensatz bleibt trotzdem offen, weil die zweite Hälfte der Frage unbeantwortet ist.
+Die zweite Hälfte der Frage, das Gerät, ist seit dem 260802-1127 ebenfalls beantwortet, siehe den Abschnitt darüber.
 
 ## Question
 
@@ -55,7 +76,7 @@ Die Angabe muss vor der ersten Messung vorliegen. Weder der Technologievergleich
 Möglichkeit 1, mit einer Ergänzung. Der Entwicklungs-Mac ist verfügbar, und eine Zusage, die niemand misst, hilft nicht. Der Spec sollte die vollständige Gerätebeschreibung tragen, damit später nachvollziehbar bleibt, worauf sich die Zahlen bezogen. Sobald KRK auf mehr als einem Gerät läuft, ist ein Mindestgerät nachzuziehen; das ist dann ein eigener Entscheidungsdatensatz und keine stille Erweiterung dieses hier. Die Abwägung ist eine Empfehlung, keine geprüfte Aussage.
 
 ---
-Answered:
+Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, Unterabschnitt "Messbedingungen" — Referenzgerät ist das MacBook Pro 15 Zoll von 2018 (`MacBookPro15,1`), 8-Core Intel Core i9 mit 2,3 GHz, 16 GB Arbeitsspeicher, 2880×1800 bei 60 Hz, macOS 15.7.7. Bewusst die strengere Wahl gegenüber dem Apple-Silicon-Arbeitsrechner des Nutzers. Die zehn Zahlen selbst waren bereits am 260802-1105 bestätigt.
 Implemented:
 Deferred:
 Superseded by:

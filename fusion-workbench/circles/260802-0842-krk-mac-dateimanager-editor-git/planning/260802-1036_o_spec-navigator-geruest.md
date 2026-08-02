@@ -1,11 +1,11 @@
 # Spec: KRK Navigator-Gerüst (Runde 1)
 
-**Datum:** 2026-08-02, überarbeitet 260802-1105
-**Status:** Entwurf, vier Nutzerantworten eingearbeitet, eine Teilfrage offen
+**Datum:** 2026-08-02, überarbeitet 260802-1127
+**Status:** Entwurf, alle Nutzerantworten eingearbeitet, keine Frage dieser Runde offen
 **Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
 **Quelle:** Circle-Directive im Datensatz `_t_circle.md`, zugeschnitten auf die erste Runde durch den Nutzer in der Phase-0-Klärung.
 
-> **Gatehinweis für den Planner:** Dieser Spec ist noch nicht abgenommen. Die vier Fragen A bis D hat der Nutzer am 260802-1105 beantwortet; die Antworten stehen als verbindliche Abnahmekriterien in C3, C4 und C8. Zwei Punkte bleiben zu behandeln. Erstens fehlt weiterhin das Referenzgerät, auf dem die Zeitzusagen aus C8 gelten; es muss vor der ersten Messung benannt sein, siehe `## Offene Nutzerentscheidungen`. Zweitens weicht die eingearbeitete Antwort zum Löschen vom Wortlaut der Circle-Directive ab, siehe `## Abweichung zur Circle-Directive`. Der Nutzer bestätigt oder korrigiert die betroffene Directive-Zeile am Plan-Gate.
+> **Gatehinweis für den Planner:** Dieser Spec ist noch nicht abgenommen, trägt aber keine offene Nutzerfrage mehr. Die vier Fragen A bis D hat der Nutzer am 260802-1105 beantwortet, das Referenzgerät für die Zeitzusagen aus C8 am 260802-1127 benannt; die Antworten stehen als verbindliche Abnahmekriterien in C3, C4 und C8. Die frühere Abweichung zwischen der Löschantwort und der Circle-Directive ist behoben: der Nutzer hat die Directive-Zeile korrigieren lassen, siehe `## Abgleich mit der Circle-Directive`.
 
 ## Directive dieser Runde
 
@@ -22,31 +22,32 @@ flowchart LR
   K["Tastenbelegung, frei konfigurierbar"]
   subgraph fenster["Fensterzeile, links nach rechts"]
     direction LR
-    L["Lesezeichen und Geraete"]
+    L["Lesezeichen und Geräteordner"]
     P1["Dateifenster 1, mit Tabs"]
     P2["Dateifenster 2, mit Tabs"]
-    V["Vorschau, mit Tabs"]
+    V["Vorschaufenster, mit Tabs"]
   end
-  O["Dateioperationen: anlegen, kopieren, verschieben, loeschen, umbenennen, Stapel"]
+  D["Dateioperationen: anlegen, kopieren, verschieben, löschen, umbenennen, Stapel"]
   FS["Lokales Dateisystem"]
 
   K -->|navigiert in| P1
   K -->|navigiert in| P2
-  K -->|startet| O
+  K -->|startet| D
   K -->|blendet ein und aus| L
+  K -->|blendet ein und aus| P2
   K -->|blendet ein und aus| V
   L -->|setzt Ordner| P1
   L -->|setzt Ordner| P2
   P1 -->|aktive Auswahl| V
   P2 -->|aktive Auswahl| V
-  P1 -->|Quelle| O
-  P2 -->|Ziel| O
-  O -->|schreibt| FS
-  FS -->|liefert Eintraege| P1
-  FS -->|liefert Eintraege| P2
+  P1 -->|Quelle| D
+  P2 -->|Ziel| D
+  D -->|schreibt| FS
+  FS -->|liefert Einträge| P1
+  FS -->|liefert Einträge| P2
 ```
 
-Zwei Eigenschaften des Graphen sind gewollt und keine Nachlässigkeit. Der Knoten `Tastenbelegung` zeigt auf fünf andere Knoten, weil die Tastatur in KRK die einzige vollständige Bedienoberfläche ist; jede Funktion muss von dort erreichbar sein. Und `Dateisystem` liegt in einem Zyklus mit den Dateifenstern und den Operationen, weil genau das die Arbeitsschleife ist: lesen, auswählen, schreiben, erneut lesen. Eine Operation, die den Ordnerinhalt ändert, muss die betroffenen Fenster ohne Zutun des Nutzers auffrischen.
+Zwei Eigenschaften des Graphen sind gewollt und keine Nachlässigkeit. Der Knoten `Tastenbelegung` zeigt auf fünf andere Knoten, weil die Tastatur in KRK die einzige vollständige Bedienoberfläche ist; jede Funktion muss von dort erreichbar sein. Auf das zweite Dateifenster zeigt er zweimal, weil die Tastatur dort zwei verschiedene Dinge tut: sie navigiert darin, und sie blendet es aus und wieder ein. C7 sagt das Ausblenden für drei Bereiche zu, für die Lesezeichenleiste, das zweite Dateifenster und das Vorschaufenster, und alle drei tragen die Kante. Die zweite gewollte Eigenschaft sind die beiden Zyklen über `Lokales Dateisystem`, je einer pro Dateifenster. Sie bilden die Arbeitsschleife ab: lesen, auswählen, schreiben, erneut lesen. Eine Operation, die den Ordnerinhalt ändert, muss die betroffenen Fenster ohne Zutun des Nutzers auffrischen.
 
 Das Halteverhalten der Vorschau-Tabs, das der Circle-Datensatz beschreibt, ist ein Zustandsverhalten pro Tab:
 
@@ -56,7 +57,7 @@ stateDiagram-v2
   Aktiv --> Aktiv: neue Auswahl im Dateifenster ersetzt den Inhalt
   Aktiv --> Inaktiv: Nutzer wechselt auf einen anderen Vorschau-Tab
   Inaktiv --> Inaktiv: Auswahl im Dateifenster wechselt, Inhalt bleibt stehen
-  Inaktiv --> Aktiv: Nutzer wechselt auf diesen Tab zurueck, Inhalt unveraendert
+  Inaktiv --> Aktiv: Nutzer wechselt auf diesen Tab zurück, Inhalt unverändert
 ```
 
 ## Fähigkeiten
@@ -197,7 +198,8 @@ stateDiagram-v2
 **Beschreibung:** Die Maxime "superschnell" wird hier in Zahlen überführt, weil sie sonst nicht prüfbar ist. Die folgenden Zusagen sind die Abnahmekriterien der Maxime. Sie gelten für die Runde 1 und schränken die Technologiewahl faktisch ein, was beabsichtigt ist: sie sind die Eingabe für den Vergleich, den der analyst als nächstes anstellt.
 
 **Messbedingungen:**
-- Referenzgerät ist der Entwicklungs-Mac des Nutzers mit interner SSD. **Modell, Baujahr, Prozessor und Bildwiederholrate des Bildschirms sind noch offen** und müssen vor der ersten Messung feststehen, siehe `## Offene Nutzerentscheidungen`. Bis dahin sind die Zahlen unten verbindlich, aber noch auf keinem benannten Gerät nachprüfbar.
+- Referenzgerät ist ein MacBook Pro 15 Zoll von 2018 mit interner SSD, Modellkennung `MacBookPro15,1`: 8-Core Intel Core i9 mit 2,3 GHz und aktivem Hyper-Threading, 16 GB Arbeitsspeicher, Intel UHD Graphics 630 und Radeon Pro 560X, Bildschirm 2880×1800 Retina mit 60 Hz, macOS 15.7.7 zum Zeitpunkt der Festlegung. Der Nutzer hat das Gerät am 260802-1127 benannt; die Angaben sind mit `system_profiler` auf ebendiesem Gerät ausgelesen. Datensatz: `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md`.
+- Die Wahl ist bewusst die strengere. Als eigentlichen Arbeitsrechner nennt der Nutzer einen Apple-Silicon-Mac, seiner Angabe nach ein "M2 Pro Max"; die Bezeichnung ist mehrdeutig und vermutlich als M2 Max oder M2 Pro zu lesen. Geprüft ist diese Angabe nicht, und sie muss es auch nicht sein: gemessen und abgenommen wird auf dem Intel-Gerät von 2018. Was dort die zehn Zahlen hält, hält sie auf dem neueren Gerät erst recht.
 - "Kalt" heißt: erster Zugriff nach dem Leeren des Dateisystem-Caches. "Warm" heißt: jeder weitere Zugriff auf denselben Ordner.
 - Prüfordner ist ein eigens erzeugter, flacher Ordner mit 10.000 Einträgen aus gemischten Dateitypen und Größen.
 - Jede Messung wird zwanzigmal wiederholt. Die Zusage gilt für das 95. Perzentil, nicht für den Mittelwert.
@@ -221,7 +223,7 @@ Die Werte L1, L2, L5, L6 und L7 stammen aus zwei etablierten Größen: der Bildw
 
 Zeigt der Vergleich der Technologiekandidaten durch den analyst, dass eine dieser Zahlen keinen tragfähigen Kandidaten übrig lässt, wird sie über einen neuen Entscheidungsdatensatz abgelöst und nicht stillschweigend gelockert.
 
-Bei einem Gerät mit 120 Hz Bildwiederholrate halbiert sich das Einzelbildbudget auf 8 ms. L1 und L9 nennen bewusst den konservativeren 60-Hz-Wert, damit die Zusage auf jedem Mac gilt.
+Das benannte Referenzgerät hat 60 Hz, womit die Herleitung von L1 und L9 dort wörtlich zutrifft: 16 ms sind genau ein Einzelbild. Auf einem Gerät mit 120 Hz halbiert sich das Einzelbildbudget auf 8 ms; L1 und L9 bleiben trotzdem bei 16 ms, weil die Zusage auf jedem Mac gelten soll.
 
 ### C9: Nur lokale Laufwerke
 
@@ -274,22 +276,20 @@ Die folgenden Punkte sind technische Entscheidungen und gehören in den Plan, ni
 - Wie lange laufende Dateioperationen nebenläufig ausgeführt und abgebrochen werden, ohne die Zusagen L1 und L9 zu verletzen.
 - Welche Signierung und welche Systemfreigaben die Anwendung braucht, um die von macOS geschützten Ordner zu erreichen.
 
-## Abweichung zur Circle-Directive
+## Abgleich mit der Circle-Directive
 
-Die Antwort des Nutzers zum Löschen weicht vom Wortlaut der Circle-Directive ab. Der Abschnitt `## Directive` in `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` schließt mit dem Satz: "Jede Tastenbelegung ist frei konfigurierbar, ausgeliefert wird eine Mac-typische Vorbelegung, ergänzt um F3 bis F8 im Norton-Stil und Shift+Delete zum Löschen."
+Der Spec und die Circle-Directive stimmen seit dem 260802-1127 überein. Bis dahin schloss der Abschnitt `## Directive` in `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` mit dem Satz "Jede Tastenbelegung ist frei konfigurierbar, ausgeliefert wird eine Mac-typische Vorbelegung, ergänzt um F3 bis F8 im Norton-Stil und Shift+Delete zum Löschen." Zwei Angaben darin waren überholt: die nackten Tasten F3 bis F8 und Shift+Delete als Löschtaste.
 
-Die Antwort des Nutzers vom 260802-1105 lautet wörtlich: "Delete löscht in Papierkorb, FN+F8 endgültig". Shift+Delete kommt darin nicht mehr vor. Verbindlich für diese Runde ist die Antwort, nicht der Directive-Satz. Der Spec belegt deshalb die Taste Delete mit dem Räumen in den Papierkorb und Fn+F8 mit dem endgültigen Löschen, und lässt Shift+Delete ab Werk frei.
+Der Nutzer hat am Spec-Gate die Korrektur der Directive-Zeile gewählt, nicht die Rücknahme der Antworten. Der Satz lautet jetzt: "Jede Tastenbelegung ist frei konfigurierbar; ausgeliefert wird eine Mac-typische Vorbelegung, die die Norton-Reihe auf Fn+F3 bis Fn+F8 legt und die nackten Funktionstasten frei lässt. Die Taste Delete räumt in den Papierkorb, Fn+F8 löscht endgültig und fragt dabei einmal je Vorgang nach." C3 und C4 dieses Specs bleiben damit unverändert gültig.
 
-Derselbe Directive-Satz nennt außerdem "F3 bis F8", während die Antwort auf Frage A ausdrücklich nur die Fn-Kombination belegt. Auch hier gilt die Antwort.
-
-Der Shaper ändert die Directive nicht; im in-Circle-Klärungsmodus darf er den Circle-Datensatz nicht anfassen. Die Abweichung ist als Defekt festgehalten in `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`. Der Nutzer bestätigt am Plan-Gate entweder die Directive-Zeile in ihrer alten Form, was diesen Spec ändern würde, oder er korrigiert die Zeile auf den neuen Stand.
+Der Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_c_directive-zeile-widerspricht-loeschantwort.md` ist geschlossen.
 
 ## Offene Nutzerentscheidungen
 
-Die vier Fragen A bis D sind beantwortet und eingearbeitet. Eine Teilfrage bleibt offen.
+Keine. Die vier Fragen A bis D sind beantwortet und eingearbeitet, und das Referenzgerät für die Zeitzusagen aus C8 ist seit dem 260802-1127 benannt. Der zugehörige Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` trägt den Marker "beantwortet" und nennt Gerät und Begründung vollständig.
 
-**Referenzgerät für die Zeitzusagen aus C8.** Datensatz: `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md`. Die zehn Zahlen selbst sind bestätigt und verbindlich. Offen ist allein das Gerät, auf dem sie gelten: Modell, Baujahr, Prozessor und Bildwiederholrate des Bildschirms. Ohne diese Angaben ist keine der zehn Zusagen nachprüfbar, weil dieselbe Zahl auf zwei verschiedenen Macs verschiedene Anforderungen bedeutet. Die Angabe muss vor der ersten Messung vorliegen. Sie blockiert weder den Technologievergleich durch den analyst noch den Plan, weil beide gegen die Zahlen arbeiten und nicht gegen das Gerät.
+Offen bleiben allein drei Entscheidungsdatensätze im geteilten Speicher, die spätere Runden betreffen und diese Runde nicht binden; sie stehen im Abschnitt `## Nicht in dieser Runde, aber im Circle`.
 
 ---
 
-**Diagramm-Selbstprüfung:** Das erste Diagramm hat 7 Knoten und 13 Kanten. Der hohe Ausgangsgrad des Knotens `Tastenbelegung` und der Zyklus über `Dateisystem` sind im Fließtext darunter begründet. Das zweite Diagramm hat 2 Zustände und 4 Übergänge und zeigt nur das Halteverhalten eines Vorschau-Tabs.
+**Diagramm-Selbstprüfung:** Das erste Diagramm hat 7 Knoten und 15 Kanten, Verhältnis 2,14. Der Knoten `Tastenbelegung` hat den Ausgangsgrad 6 auf 5 verschiedene Ziele; dieser Wert und die beiden Zyklen über `Lokales Dateisystem` sind im Fließtext unter dem Diagramm begründet. Kein Knoten ist verwaist, jede Kante trägt ein Label. Das zweite Diagramm hat 2 Zustände und 4 Übergänge und zeigt nur das Halteverhalten eines Vorschau-Tabs, nicht dessen Lebensdauer; ein Endzustand fehlt deshalb bewusst.
