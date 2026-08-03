@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** coder
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8 (Zeile L1 und der Absatz zur Bildwiederholrate), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritt 8 und `### Frage 5` (Absatz "Zur Ehrlichkeit der L1-Messung"), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md`, Messbericht `messungen/260803-1554-durchstich.txt`
 
@@ -77,8 +77,24 @@ Die Ergänzung: der Messbericht sollte für L1 und L9 zusätzlich den Anteil der
 
 Gegen Möglichkeit 4 spricht diese Messung deutlich. Der Technologieentscheid Rust mit `objc2` ist von den Zahlen nicht in Frage gestellt: KRK liest 100.000 Einträge in 0,98 s statt zugesagter 4 s, zeigt die erste Bildschirmseite eines solchen Ordners nach 53 ms statt zugesagter 100 ms und steht 0,3 s nach dem Prozessstart bedienbar da statt nach zugesagter 1 s. Diese Einschätzung stützt sich auf die Messung dieses Tages und auf die Rechnung oben; sie ist keine Aussage über einen Vergleich mit Swift, der nicht angestellt wurde.
 
+## Antwort des Nutzers, 260803-1810
+
+**Gewählt ist Möglichkeit 2: das Abnahmemaß ändern.** Nicht das 95. Perzentil der Zeitspanne, sondern der Anteil der Tastendrücke, die ihr nächstes Bild erreichen. Ausdrücklich **nicht** gewählt ist Möglichkeit 4, den Technologieentscheid aufzumachen. Rust mit `objc2` bleibt.
+
+Die Empfehlung dieses Datensatzes lautete anders. Sie stand auf Möglichkeit 1 mit einer Ergänzung aus Möglichkeit 2: die Zusage auf ein Bild statt auf gerundete 16 ms stellen und den Anteil als ausgewiesene Kennzahl daneben führen. Der Nutzer hat den Anteil stattdessen zum Abnahmemaß selbst gemacht.
+
+**Zwei Begründungen tragen dieselbe Wahl, und sie sind verschieden.**
+
+Die erste ist messtechnisch und steht oben in diesem Datensatz: die 16 ms liegen innerhalb der Streuung ihres eigenen Messverfahrens. Das 95. Perzentil der Wartezeit auf die nächste Bildgrenze liegt selbst für eine Anwendung ohne jede Verarbeitungszeit bei rund 15,8 ms, mit einer Streuung von mehreren Millisekunden. Acht von achtzehn Runden verfehlten die Zahl, zehn hielten sie, bei unverändertem Programm.
+
+Die zweite kommt vom Nutzer und geht weiter. Sie argumentiert nicht über das Messverfahren, sondern über die Wahrnehmung: eine Spanne dieser Größe ist für einen Menschen nicht unterscheidbar, die Zahl beschreibt also überhaupt keine erlebbare Eigenschaft. Seine Formulierung: "Kein Mensch nimmt 16ms wahr. Also kein reales Problem und kein Grund für eine Technologieumentscheidung. Abnahmemaß anpassen." Damit fällt nicht nur die Abnehmbarkeit der Zahl weg, sondern ihr Anspruch, überhaupt etwas über die Erfahrung des Nutzers auszusagen. Der Anteil der Tastendrücke, die ihr Bild erreichen, sagt das.
+
+**Der Einwand aus Möglichkeit 2 bleibt bestehen und ist nicht ausgeräumt.** C8 nahm bis dahin alle zehn Zusagen einheitlich über das 95. Perzentil einer Zeitspanne ab, und für L1 und L9 steht danach ein zweites Abnahmemaß daneben. Der Spec schreibt jetzt aus, warum das für diese beiden Zusagen trotzdem richtig ist, damit ein späterer Leser die Ausnahme nicht für eine Nachlässigkeit hält: Abschnitt C8, Absätze ab `Warum L1 und L9 den Anteil zählen und nicht die Spanne`.
+
+**Was noch aussteht.** Die Auswertung in `crates/krk-bench/src/messen.rs` rechnet für L1 und L9 weiterhin das alte Maß. Was umzustellen ist, steht im Plan in S8 unter `Was der coder daraufhin umzustellen hat`. Erst wenn diese Umstellung steht und eine Messung gegen das neue Maß vorliegt, kommt dieser Datensatz auf "umgesetzt".
+
 ---
-Answered:
+Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, Zeilen L1 und L9 der Zusagentabelle sowie die Absätze ab `Warum L1 und L9 den Anteil zählen und nicht die Spanne` — Nutzer wählt am 260803-1810 Möglichkeit 2: L1 und L9 nehmen über den Anteil der Eingaben ab, die ihr nächstes Bild erreichen, mindestens 95 Prozent je Runde; Möglichkeit 4 (Technologiewechsel) ausdrücklich abgelehnt. Auswertung im Plan: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md`, `### Frage 5` und S8.
 Implemented:
 Deferred:
 Superseded by:

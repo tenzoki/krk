@@ -13,3 +13,6 @@ Dazu kommt der Bedingungskopf. Er trägt acht Angaben, darunter `sysctl -n hw.mo
 Umgesetzt ist deshalb: `messmodus.rs` hält den Ablauf, die zwanzig Wiederholungen und die Ausgabe der Einzelwerte; das 95. Perzentil und der Bericht liegen in `crates/krk-bench/src/messen.rs`, das die Perzentilfunktion seit Schritt 3 führt. Der Satz im Plan ist entsprechend nachzuziehen. Dieselbe Formulierung steht sinngemäß in Schritt 21 und trifft dort denselben Punkt: auch dort misst der äußere Aufrufer L4.
 
 Was der Absatz richtig sagt und was unberührt bleibt: in `messmodus.rs` steht keine `use objc2`-Zeile, und über die Grenze gehen nur gewöhnliche Rust-Werte.
+
+---
+Resolved: Der Absatz zur Grenze in S8 weist `messmodus.rs` jetzt den Ablauf, die zwanzig Wiederholungen und die Ausgabe der Einzelwerte zu; ein eigener Absatz daneben legt Auswertung und Bericht nach `crates/krk-bench/` und nennt beide Gründe, den Prozesswechsel bei L4 und den Bedingungskopf aus `bericht.rs`. Dieselbe Formulierung in S21 ist mitgezogen. Der Plan steht damit auf dem umgesetzten Stand. Zur Auswertung gehört seit der Nutzerentscheidung vom 260803-1810 auch der Anteil im nächsten Bild für L1 und L9; auch er liegt in `crates/krk-bench/src/messen.rs`. Behoben am 260803-1819 vom `planner` in `260802-1428_o_plan-navigator-geruest-runde-1.md`.
