@@ -228,6 +228,32 @@ impl DateifensterQuelle {
         self.einzug_starten();
     }
 
+    /// Wie viele Zeilen das Ordnermodell gerade traegt.
+    ///
+    /// Nur zum Ablesen. Die Zahl ist dieselbe, die die Datenquelle AppKit
+    /// meldet, und sie ist zugleich die Antwort auf die Frage, ob die erste
+    /// Bildschirmseite steht: der Einzugstakt haengt den Stapel an und meldet
+    /// der Tabelle im selben Zug die neue Zeilenzahl.
+    pub fn zeilen(&self) -> usize {
+        self.ivars().modell.borrow().zeilenzahl()
+    }
+
+    /// Ob gerade ein Lesevorgang laeuft.
+    ///
+    /// Nur zum Ablesen. `false` heisst: gelesen **und** sortiert, denn der
+    /// Einzugstakt gibt den Vorgang erst nach `abschliessen` frei.
+    pub fn liest_noch(&self) -> bool {
+        self.ivars().lesevorgang.borrow().is_some()
+    }
+
+    /// Welche Zeile ausgewaehlt ist; -1, wenn keine.
+    ///
+    /// Nur zum Ablesen, unmittelbar von `NSTableView`, wo die Auswahl heute
+    /// wohnt.
+    pub fn auswahlzeile(&self) -> isize {
+        self.ivars().tabelle.selectedRow()
+    }
+
     /// Bricht einen laufenden Lesevorgang ab und laesst stehen, was schon da ist.
     pub fn lesen_abbrechen(&self) {
         self.einzug_beenden();

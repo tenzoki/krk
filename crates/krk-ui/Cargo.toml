@@ -18,5 +18,11 @@ path = "src/main.rs"
 krk-core = { path = "../krk-core" }
 block2 = { workspace = true }
 objc2 = { workspace = true }
-objc2-app-kit = { workspace = true }
+# Das Merkmal `objc2-quartz-core` schaltet in `objc2-app-kit` die Methode
+# `NSView.displayLinkWithTarget:selector:` frei; ohne sie gibt es keine
+# Bildgrenze und damit keine ehrliche Messung von L1.
+objc2-app-kit = { workspace = true, features = ["objc2-quartz-core"] }
 objc2-foundation = { workspace = true }
+# Unmittelbar genannt, weil `bildtakt.rs` den Typnamen `CADisplayLink`
+# schreibt: der Takt wird festgehalten, nicht nur einmal gerufen.
+objc2-quartz-core = { workspace = true }

@@ -13,18 +13,36 @@
 //!
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
+//!
+//! `messmodus` liegt ausdruecklich **neben** `appkit` und nicht darin: es haelt
+//! den Ablauf der Fruehmessung und nennt keine `objc2`-Kiste.
 
 mod appkit;
+mod messmodus;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
 /// einschaltet.
 const MARKE_TASTEN_PROTOKOLL: &str = "--tasten-protokoll";
 
+/// Der Rueckgabewert bei einer falsch aufgerufenen Befehlszeile.
+const AUFRUFFEHLER: i32 = 2;
+
 fn main() {
     // Unbekannte Marken werden uebergangen und nicht bemaengelt: LaunchServices
-    // haengt einem ueber den Finder gestarteten Buendel eigene an.
-    let tasten_protokoll = std::env::args()
-        .skip(1)
+    // haengt einem ueber den Finder gestarteten Buendel eigene an. Eine
+    // fehlerhafte `--messmodus`-Angabe ist etwas anderes: sie ist genannt, aber
+    // unvollstaendig, und daraus stillschweigend einen gewoehnlichen Start zu
+    // machen hiesse, ein Fenster zu oeffnen, wo eine Messung bestellt war.
+    let argumente: Vec<String> = std::env::args().skip(1).collect();
+    let tasten_protokoll = argumente
+        .iter()
         .any(|marke| marke == MARKE_TASTEN_PROTOKOLL);
-    appkit::starten(tasten_protokoll);
+    let messaufgabe = match messmodus::Aufgabe::aus_argumenten(&argumente) {
+        Ok(aufgabe) => aufgabe,
+        Err(meldung) => {
+            eprintln!("krk: {meldung}");
+            std::process::exit(AUFRUFFEHLER);
+        }
+    };
+    appkit::starten(tasten_protokoll, messaufgabe);
 }

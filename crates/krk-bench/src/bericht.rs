@@ -69,7 +69,7 @@ fn unbekannt() -> String {
 /// Der Unterschied macht bei einem Verzeichnisleser leicht den Faktor fuenf
 /// aus. Eine Zahl, die nicht sagt, aus welchem Bau sie stammt, ist gegen eine
 /// Zusage nicht abnehmbar; deshalb steht die Bauart im Kopf.
-fn bauart() -> &'static str {
+pub fn bauart() -> &'static str {
     if cfg!(debug_assertions) {
         "Bau ohne Optimierung (debug) — nicht zur Abnahme einer Zusage geeignet"
     } else {
@@ -204,7 +204,7 @@ pub fn schreiben(ziel: &Path, reihe: &Messreihe, text: &str) -> io::Result<PathB
 // Angaben des Geraets
 // ---------------------------------------------------------------------------
 
-fn befehl_ausgabe(programm: &str, argumente: &[&str]) -> String {
+pub fn befehl_ausgabe(programm: &str, argumente: &[&str]) -> String {
     match Command::new(programm).args(argumente).output() {
         Ok(ausgabe) if ausgabe.status.success() => {
             String::from_utf8_lossy(&ausgabe.stdout).trim().to_owned()
@@ -215,7 +215,7 @@ fn befehl_ausgabe(programm: &str, argumente: &[&str]) -> String {
 }
 
 /// `sw_vers` zu einer Zeile zusammengezogen.
-fn betriebssystem() -> String {
+pub fn betriebssystem() -> String {
     let roh = befehl_ausgabe("/usr/bin/sw_vers", &[]);
     let teile: Vec<&str> = roh
         .lines()

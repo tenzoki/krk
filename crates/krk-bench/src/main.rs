@@ -34,7 +34,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use messen::{Cache, Messreihe, WIEDERHOLUNGEN};
+use messen::{Cache, Durchstich, Messreihe, WIEDERHOLUNGEN};
 
 const HILFE: &str = "\
 krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
@@ -50,6 +50,21 @@ krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
       --kalt   leert vor jedem Lauf den Dateisystem-Cache ueber purge und
                bricht ab, wenn das nicht gelingt. Braucht sudo.
       --ziel   ein anderer Berichtsordner als messungen/.
+
+  krk-bench durchstich --buendel PFAD --ordner-a PFAD --ordner100k PFAD
+                       [--runden N] [--ziel PFAD]
+      Faehrt die Fruehmessung aus Schritt 8 am laufenden Buendel: L1, L2, L3,
+      L4 und L10, zwanzigmal je Runde, und schreibt einen Bericht nach
+      messungen/.
+      --buendel  das Binaerprogramm im Buendel, also
+                 target/KRK.app/Contents/MacOS/krk. Nicht der Ordner KRK.app
+                 und nicht ueber `open`: ein so gestartetes Buendel hat keine
+                 Standardausgabe, und ohne die kommt keine Zahl zurueck.
+      --runden   wie oft die ganze Messung wiederholt wird, vorbelegt mit 1.
+                 Eine Zusage gilt nur als gehalten, wenn sie es in jeder Runde
+                 tut.
+      --ziel     ein anderer Berichtsordner als messungen/.
+      Rueckgabewert 0, wenn alle fuenf Zusagen ihre Zahl halten, sonst 1.
 
   krk-bench --hilfe
 ";
@@ -94,6 +109,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     match befehl.as_str() {
         "fixture" => fixture_bauen(&argumente[1..]),
         "messen" => messen_fahren(&argumente[1..]),
+        "durchstich" => durchstich_fahren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");
             Ok(())
@@ -207,6 +223,74 @@ fn messen_fahren(argumente: &[String]) -> Result<(), Abbruch> {
 
 fn schreiben_und_melden(ziel: &Path, reihe: &Messreihe, text: &str) -> Result<PathBuf, Abbruch> {
     bericht::schreiben(ziel, reihe, text).map_err(Abbruch::from)
+}
+
+// ---------------------------------------------------------------------------
+// durchstich
+// ---------------------------------------------------------------------------
+
+fn durchstich_fahren(argumente: &[String]) -> Result<(), Abbruch> {
+    let mut programm: Option<PathBuf> = None;
+    let mut ordner_a: Option<PathBuf> = None;
+    let mut ordner100k: Option<PathBuf> = None;
+    let mut runden: usize = 1;
+    let mut ziel = PathBuf::from(bericht::MESSUNGEN);
+
+    let mut rest = argumente.iter();
+    while let Some(marke) = rest.next() {
+        match marke.as_str() {
+            "--buendel" => programm = Some(PathBuf::from(wert(&mut rest, "--buendel")?)),
+            "--ordner-a" => ordner_a = Some(PathBuf::from(wert(&mut rest, "--ordner-a")?)),
+            "--ordner100k" => ordner100k = Some(PathBuf::from(wert(&mut rest, "--ordner100k")?)),
+            "--runden" => runden = zahl(&mut rest, "--runden")?,
+            "--ziel" => ziel = PathBuf::from(wert(&mut rest, "--ziel")?),
+            anderes => {
+                return Err(Abbruch::Aufruf(format!(
+                    "durchstich kennt {anderes:?} nicht"
+                )));
+            }
+        }
+    }
+
+    let programm = programm.ok_or_else(|| Abbruch::Aufruf("--buendel fehlt".to_owned()))?;
+    let ordner_a = ordner_a.ok_or_else(|| Abbruch::Aufruf("--ordner-a fehlt".to_owned()))?;
+    let ordner100k = ordner100k.ok_or_else(|| Abbruch::Aufruf("--ordner100k fehlt".to_owned()))?;
+    if runden == 0 {
+        return Err(Abbruch::Aufruf(
+            "eine Messung ohne Runden ergibt keine Zahl".to_owned(),
+        ));
+    }
+    for ordner in [&ordner_a, &ordner100k] {
+        if !ordner.is_dir() {
+            return Err(Abbruch::Lauf(format!(
+                "{} ist kein Verzeichnis",
+                ordner.display()
+            )));
+        }
+    }
+
+    let lauf = Durchstich {
+        programm,
+        ordner_a,
+        ordner100k,
+        wiederholungen: WIEDERHOLUNGEN,
+        runden,
+    };
+    let ergebnis = lauf.fahren()?;
+    let text = messen::durchstich_bericht(&lauf, &ergebnis);
+    let geschrieben = messen::durchstich_schreiben(&ziel, &text)?;
+    print!("{text}");
+    println!("Bericht: {}", geschrieben.display());
+
+    if ergebnis.bestanden() {
+        Ok(())
+    } else {
+        // Kein stiller Erfolg auf einer verfehlten Zusage: das Gate des
+        // Schrittes haengt an diesem Rueckgabewert.
+        Err(Abbruch::Lauf(
+            "mindestens eine Zusage ist verfehlt; der Bericht nennt welche.".to_owned(),
+        ))
+    }
 }
 
 // ---------------------------------------------------------------------------

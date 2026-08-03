@@ -32,7 +32,10 @@ use std::ptr::NonNull;
 use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2_app_kit::{NSEvent, NSEventMask};
+use objc2_app_kit::{
+    NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSWindow,
+};
+use objc2_foundation::{MainThreadMarker, NSPoint, NSProcessInfo, NSString};
 
 use krk_core::tasten::{self, Tastendruck};
 
@@ -89,6 +92,51 @@ impl Drop for Tastenabgriff {
         // `addLocalMonitorForEventsMatchingMask:handler:` und ist damit von der
         // Art, die `removeMonitor:` erwartet.
         unsafe { NSEvent::removeMonitor(&self.merkzeichen) };
+    }
+}
+
+/// Der virtuelle Tastencode von Pfeil ab.
+const CODE_PFEIL_AB: u16 = 125;
+
+/// Das Zeichen, das AppKit einem Pfeil ab beilegt (`NSDownArrowFunctionKey`).
+const ZEICHEN_PFEIL_AB: char = '\u{F701}';
+
+/// Stellt ein Pfeil-ab-Ereignis in die eigene Ereignisschlange.
+///
+/// Die Messung von L1 braucht einen Tastendruck, den kein Mensch ausloest, und
+/// sie braucht ihn zwanzigmal. Das Ereignis geht denselben Weg wie ein
+/// koerperlicher Druck: ueber die Schlange der Anwendung in den lokalen
+/// Abgriff oben, durch die Normalisierung und den Nachschlag im Kern bis in die
+/// Datenquelle. Nichts an [`behandeln`] ist dafuer geaendert.
+///
+/// **Was das nicht belegt.** Dass eine koerperlich gedrueckte Taste dieselben
+/// Ereignisse erzeugt, ist damit nicht gemessen. Die Marken `function` und
+/// `numericPad` setzt dieser Aufruf selbst, weil AppKit sie bei den
+/// Pfeiltasten setzt; belegt ist das aus der Messung vom 260802-1137 und nicht
+/// aus dieser Sonde. Der Messbericht schreibt beides aus.
+pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
+    let zeichen = NSString::from_str(&ZEICHEN_PFEIL_AB.to_string());
+    let ereignis = NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
+        NSEventType::KeyDown,
+        NSPoint::ZERO,
+        NSEventModifierFlags::Function | NSEventModifierFlags::NumericPad,
+        NSProcessInfo::processInfo().systemUptime(),
+        fenster.windowNumber(),
+        None,
+        &zeichen,
+        &zeichen,
+        false,
+        CODE_PFEIL_AB,
+    );
+    match ereignis {
+        // `atStart: false` haengt das Ereignis hinten an, wie es das System
+        // mit einem echten Tastendruck tut. Vorn einzureihen wuerde die
+        // Schlange umsortieren und damit etwas anderes messen.
+        Some(ereignis) => NSApplication::sharedApplication(mtm).postEvent_atStart(&ereignis, false),
+        // AppKit gibt hier nur bei einem falsch gebauten Ereignis `nil`
+        // zurueck. Still weiterzumessen hiesse, eine Wiederholung zu zaehlen,
+        // die nie stattgefunden hat.
+        None => eprintln!("krk: das synthetische Tastenereignis liess sich nicht bauen"),
     }
 }
 

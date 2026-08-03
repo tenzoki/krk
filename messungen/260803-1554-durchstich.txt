@@ -1,0 +1,269 @@
+KRK — Messbericht der Fruehmessung (Schritt 8)
+==============================================
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-03T15:54:17Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Bildwiederholrate     60 Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des gemessenen Fensters
+Cache-Zustand         warm (siehe Abschnitt Einschraenkungen: purge braucht Rechte, die dieser Lauf nicht hat)
+Wiederholungen        20 je Zusage und Runde, 5 Runden
+Pruefordner A         /tmp/krk-pruefordner-a (Startwert 1, 10000 Eintraege laut Steckbrief)
+Pruefordner 100k      /tmp/krk-pruefordner-gross (Startwert 3, 100000 Eintraege laut Steckbrief)
+Gemessenes Buendel    target/KRK.app/Contents/MacOS/krk
+Sitzungslage L4       ein Fenster, ein Dateifenster, keine wiederhergestellte Sitzung, Startordner ist Pruefordner A
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+Zahlen
+------
+Das 95. Perzentil steht je Runde einmal. Ausgewiesen sind das beste und
+das schlechteste der 5 Runden; Median, Minimum und Maximum laufen ueber
+alle Einzelwerte aller Runden.
+
+Gemessene Groesse                                          p95 bestes p95 schlecht      Median     Minimum     Maximum    Zusage   Urteil
+L1 — Tastendruck bis Ende des Zeichendurchgangs             13.678 ms    16.225 ms    8.007 ms    3.035 ms   16.590 ms     16 ms   VERFEHLT, gehalten in 4 von 5 Runden
+L2 — Pruefordner A: erste Bildschirmseite                   43.851 ms    45.071 ms   42.063 ms   26.213 ms   45.903 ms    100 ms   gehalten in allen 5 Runden
+L3 — Pruefordner A: vollstaendig gelesen und sortiert      143.600 ms   160.411 ms  124.566 ms   89.541 ms  176.813 ms    400 ms   gehalten in allen 5 Runden
+L4 — Prozessstart bis bedienbares Fenster                  294.555 ms   303.540 ms  289.722 ms  274.207 ms  325.356 ms   1000 ms   gehalten in allen 5 Runden
+L10 — 100.000 Eintraege: erste Bildschirmseite              51.445 ms    53.052 ms   49.787 ms   44.034 ms   54.105 ms    100 ms   gehalten in allen 5 Runden
+L10b — 100.000 Eintraege: vollstaendig gelesen (Beigabe)   965.260 ms  1020.449 ms  882.530 ms  717.514 ms 1100.194 ms     keine   nicht abgefragt
+
+Urteil des Gates: NICHT bestanden — mindestens eine Zusage verfehlt ihre Zahl in mindestens einer Runde.
+
+Das 95. Perzentil Runde fuer Runde
+----------------------------------
+L1      16.225 ms  13.688 ms  14.434 ms  13.678 ms  14.141 ms
+L2      45.071 ms  44.833 ms  43.851 ms  44.551 ms  44.541 ms
+L3      143.600 ms  158.944 ms  160.411 ms  159.402 ms  145.636 ms
+L4      303.540 ms  300.169 ms  301.799 ms  294.555 ms  297.501 ms
+L10     51.952 ms  52.083 ms  53.052 ms  51.445 ms  52.042 ms
+L10b    998.754 ms  1006.053 ms  1020.449 ms  1004.300 ms  965.260 ms
+
+Einzelwerte
+-----------
+L1 (Tastendruck bis Ende des Zeichendurchgangs):
+  Runde 1:
+    16.225 ms  3.953 ms  5.453 ms  10.076 ms  15.147 ms
+    8.826 ms  3.879 ms  10.623 ms  3.526 ms  4.418 ms
+    12.849 ms  4.061 ms  4.688 ms  7.594 ms  10.580 ms
+    14.408 ms  16.590 ms  4.027 ms  5.928 ms  8.927 ms
+  Runde 2:
+    7.123 ms  10.352 ms  13.143 ms  6.818 ms  15.851 ms
+    7.048 ms  9.967 ms  5.618 ms  9.922 ms  3.824 ms
+    10.956 ms  13.688 ms  5.554 ms  3.994 ms  7.204 ms
+    5.338 ms  9.342 ms  3.035 ms  4.506 ms  11.436 ms
+  Runde 3:
+    8.532 ms  11.857 ms  14.434 ms  8.939 ms  12.034 ms
+    5.941 ms  3.975 ms  7.687 ms  5.405 ms  9.740 ms
+    5.359 ms  8.140 ms  6.510 ms  8.572 ms  3.997 ms
+    13.503 ms  16.576 ms  4.796 ms  8.969 ms  12.521 ms
+  Runde 4:
+    4.023 ms  6.548 ms  10.221 ms  3.956 ms  10.360 ms
+    13.351 ms  9.085 ms  13.300 ms  6.277 ms  8.248 ms
+    6.737 ms  9.490 ms  4.888 ms  7.875 ms  12.916 ms
+    3.984 ms  7.157 ms  16.378 ms  13.678 ms  3.979 ms
+  Runde 5:
+    7.009 ms  10.382 ms  13.425 ms  4.618 ms  7.657 ms
+    11.659 ms  3.973 ms  6.899 ms  15.205 ms  8.361 ms
+    4.959 ms  7.819 ms  12.233 ms  5.997 ms  8.972 ms
+    11.094 ms  14.141 ms  4.041 ms  4.094 ms  7.278 ms
+L2 (Pruefordner A: erste Bildschirmseite):
+  Runde 1:
+    43.104 ms  45.071 ms  38.365 ms  39.673 ms  44.747 ms
+    28.814 ms  40.953 ms  43.364 ms  41.434 ms  42.536 ms
+    44.172 ms  40.654 ms  43.190 ms  45.591 ms  43.195 ms
+    44.022 ms  42.702 ms  40.178 ms  43.050 ms  41.556 ms
+  Runde 2:
+    42.513 ms  44.678 ms  41.893 ms  41.345 ms  28.313 ms
+    42.511 ms  41.177 ms  44.942 ms  39.813 ms  43.603 ms
+    44.245 ms  43.014 ms  41.414 ms  43.286 ms  43.792 ms
+    41.019 ms  43.089 ms  38.253 ms  44.833 ms  44.270 ms
+  Runde 3:
+    37.982 ms  26.213 ms  42.648 ms  42.037 ms  41.638 ms
+    41.627 ms  43.399 ms  42.620 ms  43.851 ms  39.769 ms
+    43.440 ms  43.323 ms  40.714 ms  41.820 ms  41.681 ms
+    42.089 ms  37.410 ms  44.436 ms  43.468 ms  37.792 ms
+  Runde 4:
+    41.087 ms  42.235 ms  44.465 ms  38.806 ms  41.799 ms
+    39.038 ms  42.886 ms  44.292 ms  43.810 ms  37.725 ms
+    40.082 ms  45.903 ms  43.704 ms  42.628 ms  44.551 ms
+    39.739 ms  43.772 ms  40.696 ms  39.204 ms  40.945 ms
+  Runde 5:
+    37.532 ms  42.009 ms  39.920 ms  42.226 ms  42.505 ms
+    40.557 ms  41.786 ms  37.443 ms  44.285 ms  41.614 ms
+    41.300 ms  41.890 ms  41.521 ms  43.145 ms  42.861 ms
+    41.487 ms  45.477 ms  41.333 ms  39.381 ms  44.541 ms
+L3 (Pruefordner A: vollstaendig gelesen und sortiert):
+  Runde 1:
+    125.929 ms  108.959 ms  121.554 ms  125.836 ms  111.414 ms
+    124.402 ms  143.600 ms  126.966 ms  175.044 ms  107.393 ms
+    142.844 ms  138.971 ms  125.162 ms  126.180 ms  139.013 ms
+    126.420 ms  125.660 ms  125.070 ms  127.056 ms  125.845 ms
+  Runde 2:
+    127.108 ms  125.062 ms  107.862 ms  109.977 ms  138.328 ms
+    108.673 ms  107.554 ms  94.909 ms  154.332 ms  108.733 ms
+    106.579 ms  121.448 ms  124.729 ms  176.511 ms  141.716 ms
+    142.782 ms  141.513 ms  158.944 ms  143.965 ms  108.245 ms
+  Runde 3:
+    114.421 ms  107.114 ms  158.450 ms  144.250 ms  159.515 ms
+    125.753 ms  126.079 ms  143.445 ms  106.986 ms  108.805 ms
+    160.411 ms  109.395 ms  103.423 ms  110.393 ms  142.303 ms
+    106.335 ms  175.894 ms  126.727 ms  109.342 ms  107.305 ms
+  Runde 4:
+    109.946 ms  122.344 ms  109.955 ms  123.758 ms  158.163 ms
+    142.224 ms  126.144 ms  125.805 ms  91.866 ms  125.542 ms
+    111.837 ms  125.615 ms  159.402 ms  111.052 ms  106.590 ms
+    92.462 ms  91.849 ms  159.584 ms  90.357 ms  108.530 ms
+  Runde 5:
+    123.008 ms  107.571 ms  107.163 ms  123.969 ms  93.537 ms
+    109.248 ms  89.541 ms  105.605 ms  176.813 ms  124.327 ms
+    124.163 ms  126.372 ms  122.626 ms  144.514 ms  109.688 ms
+    109.319 ms  125.661 ms  110.730 ms  126.897 ms  145.636 ms
+L4 (Prozessstart bis bedienbares Fenster):
+  Runde 1:
+    283.192 ms  300.581 ms  290.358 ms  292.786 ms  285.037 ms
+    290.294 ms  288.432 ms  311.603 ms  300.352 ms  282.304 ms
+    292.159 ms  294.351 ms  284.427 ms  296.638 ms  303.540 ms
+    291.226 ms  286.362 ms  298.088 ms  298.274 ms  295.620 ms
+  Runde 2:
+    302.564 ms  289.220 ms  286.743 ms  291.250 ms  300.005 ms
+    288.034 ms  286.433 ms  300.169 ms  291.783 ms  285.948 ms
+    285.264 ms  288.575 ms  286.721 ms  290.142 ms  285.950 ms
+    297.783 ms  292.444 ms  295.567 ms  289.286 ms  293.773 ms
+  Runde 3:
+    309.594 ms  295.257 ms  301.799 ms  289.131 ms  297.035 ms
+    293.138 ms  295.683 ms  284.537 ms  287.925 ms  286.819 ms
+    285.779 ms  280.689 ms  292.786 ms  281.164 ms  284.895 ms
+    280.401 ms  274.207 ms  289.146 ms  297.859 ms  279.306 ms
+  Runde 4:
+    325.356 ms  289.314 ms  291.439 ms  281.216 ms  293.036 ms
+    294.555 ms  279.095 ms  286.888 ms  288.286 ms  282.426 ms
+    282.679 ms  279.252 ms  281.589 ms  294.248 ms  278.229 ms
+    291.303 ms  286.937 ms  290.331 ms  291.142 ms  284.624 ms
+  Runde 5:
+    297.501 ms  291.355 ms  291.285 ms  284.841 ms  279.210 ms
+    289.885 ms  305.526 ms  293.241 ms  285.754 ms  293.178 ms
+    283.191 ms  288.790 ms  284.674 ms  291.330 ms  284.493 ms
+    282.149 ms  294.352 ms  289.559 ms  285.468 ms  291.624 ms
+L10 (100.000 Eintraege: erste Bildschirmseite):
+  Runde 1:
+    48.124 ms  51.828 ms  46.896 ms  45.607 ms  51.896 ms
+    46.605 ms  44.431 ms  44.211 ms  48.408 ms  50.673 ms
+    44.034 ms  47.444 ms  54.105 ms  47.075 ms  49.161 ms
+    47.905 ms  51.174 ms  51.534 ms  51.952 ms  48.728 ms
+  Runde 2:
+    50.679 ms  51.831 ms  51.176 ms  49.780 ms  49.182 ms
+    48.622 ms  49.794 ms  44.515 ms  52.025 ms  50.688 ms
+    51.073 ms  48.251 ms  48.375 ms  50.020 ms  51.992 ms
+    46.014 ms  52.827 ms  52.083 ms  46.851 ms  47.567 ms
+  Runde 3:
+    52.508 ms  53.052 ms  47.664 ms  47.043 ms  50.938 ms
+    51.344 ms  53.131 ms  49.164 ms  52.029 ms  50.287 ms
+    53.030 ms  46.473 ms  51.094 ms  52.198 ms  48.013 ms
+    50.764 ms  51.550 ms  51.601 ms  50.849 ms  50.697 ms
+  Runde 4:
+    47.108 ms  50.021 ms  47.975 ms  46.703 ms  49.818 ms
+    46.872 ms  44.577 ms  45.271 ms  48.943 ms  49.845 ms
+    49.446 ms  52.551 ms  48.661 ms  51.286 ms  47.936 ms
+    51.445 ms  47.520 ms  48.869 ms  50.758 ms  50.865 ms
+  Runde 5:
+    47.278 ms  50.070 ms  48.603 ms  50.578 ms  51.954 ms
+    48.141 ms  51.879 ms  52.042 ms  47.817 ms  46.903 ms
+    48.997 ms  45.118 ms  47.759 ms  49.173 ms  50.867 ms
+    45.929 ms  50.153 ms  50.124 ms  46.731 ms  52.081 ms
+L10b (100.000 Eintraege: vollstaendig gelesen (Beigabe)):
+  Runde 1:
+    832.766 ms  998.754 ms  847.284 ms  833.254 ms  970.068 ms
+    1100.194 ms  941.523 ms  883.187 ms  871.715 ms  794.710 ms
+    853.873 ms  921.253 ms  970.891 ms  870.301 ms  849.956 ms
+    763.982 ms  938.870 ms  819.355 ms  819.639 ms  881.873 ms
+  Runde 2:
+    717.514 ms  905.275 ms  889.074 ms  951.089 ms  939.820 ms
+    912.185 ms  880.774 ms  837.391 ms  933.385 ms  837.709 ms
+    877.270 ms  884.239 ms  1006.053 ms  783.420 ms  779.244 ms
+    1016.062 ms  820.214 ms  817.571 ms  816.765 ms  855.925 ms
+  Runde 3:
+    757.148 ms  902.481 ms  953.063 ms  1038.070 ms  1020.449 ms
+    862.370 ms  919.898 ms  976.145 ms  957.635 ms  821.751 ms
+    971.533 ms  864.803 ms  958.301 ms  1014.792 ms  896.810 ms
+    924.381 ms  904.030 ms  935.630 ms  949.709 ms  764.213 ms
+  Runde 4:
+    799.514 ms  1012.366 ms  735.232 ms  886.974 ms  830.463 ms
+    791.767 ms  743.390 ms  872.071 ms  954.747 ms  934.315 ms
+    912.765 ms  1004.300 ms  811.031 ms  979.768 ms  835.706 ms
+    899.501 ms  828.692 ms  818.707 ms  855.512 ms  933.394 ms
+  Runde 5:
+    840.557 ms  854.387 ms  832.330 ms  904.859 ms  953.018 ms
+    1020.617 ms  864.946 ms  898.288 ms  952.944 ms  863.452 ms
+    864.035 ms  884.188 ms  799.247 ms  839.868 ms  893.832 ms
+    830.615 ms  965.260 ms  815.167 ms  804.181 ms  915.403 ms
+
+Einschraenkungen dieser Messung
+-------------------------------
+**L4 ist warm gemessen, C8 sagt Kaltstart.** "Kalt" heisst laut C8: erster
+Zugriff nach dem Leeren des Dateisystem-Caches, und geleert wird er unter macOS
+allein von `purge`, das Rechte braucht, die dieser Lauf nicht hat. Ein
+Passwortdialog laesst sich in einem Messlauf nicht beantworten. Der Bericht
+weist L4 deshalb als warm aus, statt eine warme Zahl unter die Ueberschrift
+"kalt" zu setzen. Warm ist der leichtere Fall: die Zahl unten ist eine
+Untergrenze fuer die Zusage, die C8 wirklich stellt. L2, L3 und L10 sind von der
+Luecke nicht betroffen, weil C8 sie ohnehin warm zusagt.
+
+**Die Sitzungslage aus C8 ist am Durchstich nicht herstellbar.** C8 schreibt fuer
+L4 eine Pruefsitzung aus zwei Dateifenstern mit je zwei Tabs vor. Tabs gibt es
+in KRK erst mit Schritt 12. Gemessen ist deshalb der Start des Buendels mit
+einem Fenster und ohne wiederhergestellte Sitzung, auf Pruefordner A. Die
+Abnahme gegen die Pruefsitzung leistet Schritt 22. Die gemessene Zahl ist damit
+guenstiger als die spaetere: zwei sichtbare Tabs kosten zwei erste
+Bildschirmseiten statt einer.
+
+**Der koerperliche Tastendruck bleibt ungemessen.** L1 wird mit einem
+synthetischen Ereignis ausgeloest; naeheres im Abschnitt Lesart.
+
+**Der Bildtakt kann stehenbleiben.** Ein `CADisplayLink` taktet nur, solange das
+Fenster sichtbar ist. Bleibt er stehen, bricht der Messlauf nach zehn Sekunden
+mit einer Meldung ab und gibt keine Zahl aus; die Meldung nennt die Zahl der
+seither eingegangenen Bildgrenzen und trennt damit ein stehendes Bild von einer
+langsamen Oberflaeche.
+
+Lesart
+------
+Jede Spanne endet an einer Bildgrenze. Die Anwendung haengt dafuer einen
+CADisplayLink an die Ansicht des Dateifensters; sein Rueckruf kommt einmal je
+Bildwiederholung. Gemessen ist damit die Spanne bis zur ersten Bildgrenze, an
+der die Aenderung im Modell steht — nicht der Zeitpunkt, an dem ein Pixel auf
+dem Schirm ist. Aus dem eigenen Prozess heraus ist dieser Zeitpunkt nicht
+feststellbar; der Plan nennt die Bildgrenze ausdruecklich als die erreichbare
+Naeherung, statt eine Photonenmessung zu behaupten. Jede Zahl unten ist deshalb
+auf ein Bild genau, bei 60 Hz also auf 16,7 ms.
+
+L1 wird mit einem synthetischen Tastenereignis ausgeloest. Die Anwendung baut
+ein NSEvent vom Typ keyDown mit dem Tastencode 125 (Pfeil ab) und stellt es
+ueber NSApplication.postEvent:atStart: hinten in die eigene Ereignisschlange.
+Von dort geht es denselben Weg wie ein koerperlicher Druck: durch den lokalen
+Ereignisabgriff, die Normalisierung der Zusatztasten und den Nachschlag im Kern
+bis in die Datenquelle des Dateifensters. Dass eine koerperlich gedrueckte
+Taste dieselben Ereignisse erzeugt, ist damit nicht gemessen.
+
+Der Ausloeser jeder Messung haengt an einem Zeitgeber mit 97 ms und nicht an
+der Bildgrenze. Loeste die Bildgrenze selbst aus, laege zwischen Ausloeser und
+naechster Bildgrenze immer genau ein volles Bild, und L1 haette bei 60 Hz
+konstant 16,7 ms — nicht gemessen, sondern gebaut. 97 ms sind bei 60 Hz 5,82
+Bilder; ueber zwanzig Wiederholungen wandert der Ausloesezeitpunkt damit durch
+das Bild.
+
+L4 misst der aeussere Aufrufer, nicht die Anwendung: er nimmt die Uhrzeit
+unmittelbar vor dem Start des Prozesses, und die Anwendung meldet die Uhrzeit,
+zu der ihre Oberflaeche bedienbar ist. Bedienbar heisst nach der
+Nutzerentscheidung vom 260802-1735: Fenster steht, Tastenabgriff eingerichtet,
+erste Bildschirmseite des Startordners sichtbar. Das vollstaendige Lesen laeuft
+danach weiter und faellt unter L3.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
+zwanzig Laeufen der neunzehnte der sortierten Reihe.
+
+Eine Runde ist genau die Messung, die C8 vorschreibt: zwanzig Wiederholungen je
+Zusage, das 95. Perzentil darueber. Der Bericht faehrt mehrere Runden, weil ein
+Urteil, das von Runde zu Runde wechselt, kein Urteil ist. Eine Zusage gilt hier
+nur dann als gehalten, wenn sie es in jeder Runde tut.

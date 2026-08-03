@@ -23,6 +23,16 @@ toml = "1"
 objc2 = "0.6"
 objc2-app-kit = "0.3"
 objc2-foundation = "0.3"
+# Core Animation, aber nur das eine Stueck davon. `CADisplayLink` ist die
+# Bildgrenze, an der die Fruehmessung aus Schritt 8 ihre Spannen beendet;
+# `NSView.displayLinkWithTarget:selector:` liefert ihn und liegt hinter dem
+# Merkmal `objc2-quartz-core` von `objc2-app-kit`. Die Vorgabemerkmale dieser
+# Kiste zoegen Metal, Core Video und ein Dutzend Ebenenklassen mit herein, von
+# denen KRK nichts braucht; deshalb `default-features = false`.
+objc2-quartz-core = { version = "0.3", default-features = false, features = [
+    "std",
+    "CADisplayLink",
+] }
 # Objective-C-Bloecke. `NSEvent.addLocalMonitorForEventsMatchingMask:handler:`
 # nimmt seinen Rueckruf als Block entgegen; ohne diese Kiste laesst sich keiner
 # bauen. `objc2-app-kit` fuehrt sie ohnehin schon als Vorbedingung, hier steht

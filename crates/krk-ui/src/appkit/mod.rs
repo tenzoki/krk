@@ -7,13 +7,14 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Fuenf Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Sechs Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
 //! anwendung ──> menue
 //!           ──> fenster ──> tabelle ──> krk-core::verzeichnis
 //!           ──> ereignisse ──┘      ──> krk-core::tasten
+//!           ──> bildtakt ──> crate::messmodus
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
@@ -24,9 +25,16 @@
 //! Delegierter, und die Anbindung an das Ordnermodell des Kerns.
 //! [`ereignisse`] haelt den lokalen Ereignisabgriff und ist der einzige
 //! Eintrittspunkt fuer Tastendruecke; er schlaegt sie im Kern nach und reicht
-//! das Kommando an die Datenquelle des Dateifensters weiter.
+//! das Kommando an die Datenquelle des Dateifensters weiter. [`bildtakt`] haelt
+//! den `CADisplayLink` und den Nachschlag der Bildwiederholrate, die beiden
+//! Beruehrungen mit AppKit, die die Fruehmessung aus Schritt 8 braucht.
+//!
+//! Der Pfeil von [`bildtakt`] nach `crate::messmodus` ist der einzige, der aus
+//! diesem Verzeichnis herausfuehrt, und er traegt nur gewoehnliche Rust-Werte:
+//! die Bildwiederholrate als Zahl und die Zeitpunkte der Bildgrenzen.
 
 mod anwendung;
+mod bildtakt;
 mod ereignisse;
 mod fenster;
 mod menue;
