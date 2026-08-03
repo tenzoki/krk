@@ -552,7 +552,7 @@ Zwei Defekte am Schritt selbst sind bei der Umsetzung aufgefallen und mit diesem
 - Abhängigkeiten: S8
 - Abnahmekriterium: die Datei ist gültiges TOML. Der Diff zeigt: keine Kombination erscheint bei zwei verschiedenen Funktionen; jede Funktion außer dem F4-Eintrag trägt mindestens eine Kombination; die sechs Zeilen der C3-Tabelle stehen mit genau den dort genannten Kürzeln (`f3`+`cmd+y`, `f5`+`cmd+shift+k`, `f6`+`cmd+shift+v`, `f7`+`cmd+shift+n`, `f8`+`cmd+opt+delete`, `delete`+`cmd+delete`); die Zeichenketten `shift+delete`, `cmd+c` und `cmd+v` kommen in keiner Tastenliste vor; die Schreibweise `fn+` kommt nirgends vor.
 
-#### 10. **Ablage unter Application Support**
+#### 10. [DONE] **Ablage unter Application Support**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/ablage/{mod.rs,pfade.rs,atomar.rs,sitzung.rs,lesezeichen.rs}`, `crates/krk-core/src/lib.rs` (einbindend: `pub mod ablage;`), `crates/krk-core/tests/ablage.rs`

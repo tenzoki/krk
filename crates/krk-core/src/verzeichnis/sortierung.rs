@@ -6,10 +6,18 @@
 
 use std::cmp::Ordering;
 
+use serde::{Deserialize, Serialize};
+
 use super::eintrag::{Eintrag, Typ};
 
 /// Wonach sortiert wird.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// Die Ableitungen von `serde` gehoeren hierher und nicht in die Ablage: der
+/// Sitzungszustand aus C7 haelt die Sortierung je Tab, und eine eigene
+/// Aufzaehlung daneben waere eine zweite Wahrheit darueber, wonach KRK
+/// sortieren kann.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Schluessel {
     /// Nach dem Namen, ueber den vorberechneten Sortierschluessel.
     Name,
@@ -32,7 +40,8 @@ impl Schluessel {
 }
 
 /// In welche Richtung sortiert wird.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Richtung {
     /// Aufsteigend: klein vor gross, frueh vor spaet.
     Aufsteigend,
@@ -54,7 +63,8 @@ impl Richtung {
 }
 
 /// Eine der acht Sortierungen.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Sortierung {
     /// Wonach sortiert wird.
     pub schluessel: Schluessel,

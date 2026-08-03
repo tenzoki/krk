@@ -1,0 +1,108 @@
+//! Atomares Schreiben: erst vollstaendig in eine Nachbardatei, dann
+//! `rename(2)` auf das Ziel.
+//!
+//! `rename` innerhalb eines Dateisystems ist unteilbar. Wer die Zieldatei
+//! liest, sieht deshalb entweder den alten Inhalt ganz oder den neuen ganz,
+//! nie eine halb geschriebene Datei. Ein Absturz vor dem `rename` laesst die
+//! alte Datei genau so stehen, wie sie war.
+//!
+//! **Der Vorgang ist in zwei Schritte geteilt, und das ist keine Bequemlichkeit
+//! fuer die Pruefung.** [`vorbereiten`] endet genau in der Luecke zwischen
+//! Schreiben und Umbenennen, [`Nachbardatei::umbenennen`] schliesst sie. Nur so
+//! laesst sich die Zusage "ein Abbruch dazwischen laesst die alte Datei
+//! unveraendert" an einem Prozess pruefen, der wirklich stirbt, statt an einem,
+//! der die Luecke nur nachspielt. [`schreiben`] setzt beide Schritte zusammen
+//! und ist der Weg, den der Alltag geht.
+
+use std::fs;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+
+/// Die Endung, die die Nachbardatei vom Ziel unterscheidet.
+pub const NACHBARENDUNG: &str = "neu";
+
+/// Der Pfad der Nachbardatei zu einem Ziel.
+///
+/// Der Name ist fest abgeleitet und traegt keine Laufnummer. Ein Absturz
+/// hinterlaesst damit hoechstens eine einzige liegengebliebene Datei statt
+/// einer wachsenden Reihe, und der naechste Schreibvorgang ueberschreibt sie.
+/// Gelesen wird sie von niemandem.
+pub fn nachbarpfad(ziel: &Path) -> io::Result<PathBuf> {
+    let Some(name) = ziel.file_name() else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{} traegt keinen Dateinamen", ziel.display()),
+        ));
+    };
+    let mut nachbarname = name.to_os_string();
+    nachbarname.push(".");
+    nachbarname.push(NACHBARENDUNG);
+    Ok(ziel.with_file_name(nachbarname))
+}
+
+/// Eine geschriebene, aber noch nicht umbenannte Nachbardatei.
+///
+/// Solange sie besteht, ist das Ziel unberuehrt. Wird sie fallengelassen,
+/// statt umbenannt zu werden, raeumt sie sich ab. Ein Absturz fuehrt kein
+/// `Drop` aus; dann bleibt die Nachbardatei liegen, und genau deshalb muss ihr
+/// Name harmlos sein, siehe [`nachbarpfad`].
+#[must_use = "ohne umbenennen() bleibt das Ziel unveraendert"]
+#[derive(Debug)]
+pub struct Nachbardatei {
+    ziel: PathBuf,
+    nachbar: PathBuf,
+    abraeumen: bool,
+}
+
+impl Nachbardatei {
+    /// Das Ziel, auf das diese Nachbardatei umbenannt wird.
+    pub fn ziel(&self) -> &Path {
+        &self.ziel
+    }
+
+    /// Die Nachbardatei selbst.
+    pub fn nachbarpfad(&self) -> &Path {
+        &self.nachbar
+    }
+
+    /// Der zweite Schritt: das unteilbare Umbenennen auf das Ziel.
+    ///
+    /// Scheitert es, bleibt das Ziel unveraendert und die Nachbardatei wird
+    /// abgeraeumt.
+    pub fn umbenennen(mut self) -> io::Result<()> {
+        fs::rename(&self.nachbar, &self.ziel)?;
+        self.abraeumen = false;
+        Ok(())
+    }
+}
+
+impl Drop for Nachbardatei {
+    fn drop(&mut self) {
+        if self.abraeumen {
+            let _ = fs::remove_file(&self.nachbar);
+        }
+    }
+}
+
+/// Der erste Schritt: den Inhalt vollstaendig in die Nachbardatei schreiben.
+///
+/// Nach der Rueckkehr stehen die Daten auf der Platte, das Ziel ist noch alt.
+/// `sync_all` sorgt dafuer, dass das Umbenennen nicht einen Namen auf einen
+/// noch nicht geschriebenen Inhalt setzt.
+pub fn vorbereiten(ziel: &Path, inhalt: &str) -> io::Result<Nachbardatei> {
+    let nachbar = nachbarpfad(ziel)?;
+    let mut datei = fs::File::create(&nachbar)?;
+    datei.write_all(inhalt.as_bytes())?;
+    datei.sync_all()?;
+    drop(datei);
+    Ok(Nachbardatei {
+        ziel: ziel.to_path_buf(),
+        nachbar,
+        abraeumen: true,
+    })
+}
+
+/// Schreibt den Inhalt atomar auf das Ziel.
+pub fn schreiben(ziel: &Path, inhalt: &str) -> io::Result<()> {
+    vorbereiten(ziel, inhalt)?.umbenennen()
+}
