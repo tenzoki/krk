@@ -117,3 +117,16 @@ Verweis auf eine Messdatei ist an dieser Stelle nicht zu haben; siehe
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2025. Beide Gegenproben sind da.
+
+**Die acht Bitwerte**, in `crates/krk-ui/src/appkit/ereignisse.rs`: `die_acht_rohen_bitwerte_des_kerns_stimmen_mit_appkit_ueberein` hält jeden Wert aus `krk_core::tasten::normalisierung::roh` gegen sein Gegenstück in `NSEventModifierFlags` und nennt bei einem Fehlschlag den Namen. Daneben steht `die_maske_eines_pfeils_kommt_leer_im_kern_an`: sie geht den Weg, den `behandeln` geht, also über `modifierFlags().0 as u64`, damit der Vergleich nicht bloß zwei Konstanten betrifft, die niemanden angehen.
+
+**Nachgewiesen, dass die Prüfung greift.** `roh::BEFEHL` versuchsweise auf `1 << 21` gesetzt — genau der Fall, den dieser Datensatz beschreibt — und die Prüfung gefahren: `der Wert fuer Command weicht von NSEventModifierFlags ab, left: 2097152, right: 1048576`. Danach zurückgenommen.
+
+**Abweichung von der vorgeschlagenen Stelle, mit Grund.** Der Datensatz sagt, die Prüfung gehöre nicht unter `src/appkit/`, weil sie keinen Objective-C-Aufruf macht. Sie liegt trotzdem dort, in `ereignisse.rs`. Der geschlossene Defekt `260803-1345_c_dateiliste-von-s8-legt-objc2-code-ausserhalb-von-appkit-ab.md` hat die Grenze anders gezogen: sie hängt an jeder Berührung mit `objc2` und nicht an der Übersetzerregel, und `260803-1530_o_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen.md` schlägt genau dafür eine Prüfvorschrift auf `use objc2` vor. Eine Datei mit `use objc2_app_kit` neben `appkit/` wäre der erste Verstoß gegen diese Vorschrift. `ereignisse.rs` ist außerdem der richtige Ort der Sache nach: es ist die Datei, deren `behandeln` die Annahme macht, dass die Bits übereinstimmen. Nachgeprüft: `grep -rEln '^[[:space:]]*use +objc2' crates/krk-ui/src` gibt weiter keine Zeile außerhalb von `appkit/` aus.
+
+**Die fünf Tastencodes**, in `crates/krk-core/tests/tasten.rs`: `die_fuenf_verdrahteten_tastencodes_stimmen_mit_der_carbon_tabelle_ueberein` hält sie einmal als Zahl gegen ihre Konstanten. Die Quelle ist benannt und am 260803-2025 im SDK nachgesehen, nicht aus dem Gedächtnis zitiert: `Carbon.framework/Frameworks/HIToolbox.framework/Headers/Events.h`, `kVK_Return = 0x24` (Zeile 266), `kVK_PageUp = 0x74` (304), `kVK_PageDown = 0x79` (309), `kVK_DownArrow = 0x7D` (313), `kVK_UpArrow = 0x7E` (314). Alle fünf stimmen. Der Kommentar sagt dazu, dass es dafür keine Messung gibt und warum der Weg über `objc2` hier nicht offensteht.
+
+Nebenbefund, eigener Datensatz: `issues/260803-2025_o_der-tastencode-von-pfeil-ab-steht-an-zwei-stellen.md`.

@@ -82,3 +82,12 @@ liest.
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2025. Geschlossen mit dem Ausgang, den dieser Datensatz selbst vorsieht: `decisions/260803-2025_o_wie-zeigt-krk-dem-nutzer-fehler.md`. **Der Programmtext ist unverändert; die beiden `eprintln!` stehen weiter da.**
+
+**Der Befund trägt.** Nachgeprüft am 260803-2025: `anwendung.rs` meldet den fehlenden Tastenabgriff über `eprintln!`, `tabelle.rs` den unvollständig gelesenen Ordner ebenso, und `issues/260803-1309_o_tastenprotokoll-ueber-open-ist-nicht-lesbar.md` hält für denselben Prozess fest, dass LaunchServices beide Kanäle ins Leere hängt. In der Betriebsart der Abnahme ist die Fehlerbehandlung damit still.
+
+**Warum trotzdem keine Änderung.** Der Datensatz sagt es im Abschnitt "Was zu tun ist" selbst: "Beides ist eine Festlegung, keine Reparatur." Der Ordnerfehler braucht die Statuszeile aus C1, die kein Schritt heute baut. Der fehlende Tastenabgriff braucht eine Antwort auf die Frage, ob KRK ohne Tastatursteuerung überhaupt weiterlaufen soll, und die gehört dem Nutzer. Ein `NSAlert` an dieser Stelle wäre eine erfundene Verhaltensänderung, kein Nachzug eines Belegs.
+
+Der Entscheidungsdatensatz stellt die Frage für beide Stellen zusammen, nennt drei Möglichkeiten samt Vor- und Nachteilen und empfiehlt eine. Er trägt außerdem die Zuordnung: der Ordnerfehler an den Schritt, der die Statuszeile baut, der Startfehler an einen eigenen kleinen Schritt neben S6.

@@ -105,3 +105,14 @@ Programmtext denselben Mechanismus nennen.
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2025. Möglichkeit 2 gewählt: die Prüfung ist entfernt, und der Text nennt jetzt den wirksamen Mechanismus.
+
+**Warum nicht Möglichkeit 1.** Eine Prüfung zu belegen, die die Umsetzung nie erreicht, hieße einen zweiten Mechanismus neben dem tragenden stehen zu lassen. Der Datensatz nennt die Wahl der Umsetzung selbst die bessere: ein einziger gehaltener Lesevorgang braucht weder Nummer noch Prüfung, und "der alte Kanal ist weg" ist die stärkere Zusage.
+
+**Geändert.** In `crates/krk-ui/src/appkit/tabelle.rs` ist die Bedingung `modell.gehoert_dazu(meldung.generation())` aus `stapel_uebernehmen` heraus; an ihrer Stelle steht eine Zeile, die sagt, warum keine Prüfung nötig ist. Der Modulkopf beschreibt statt der Nummer den Weg, der wirklich trägt: `ordner_lesen` lässt den alten `Lesevorgang` fallen, damit fällt sein Empfänger, `Lesevorgang::drop` setzt das Abbruchkennzeichen, der Lesefaden prüft es vor jedem Systemaufruf und zwischen zwei Stapeln, und spätestens das nächste `send` scheitert am verschwundenen Empfänger. Er hält dazu fest, dass die Prüfung bis zum 260803 danebenstand und warum sie nicht greifen konnte, damit sie nicht unbesehen zurückkehrt. Die Dokumentation von `Ordnermodell::generation` (`crates/krk-core/src/verzeichnis/modell.rs`) sagte denselben Satz und ist mitgezogen.
+
+**Was die Nummer weiter trägt** und deshalb bleibt: sie benennt den Lesefaden, und sie sagt dem Modell beim Leeren, zu welchem Lauf sein Inhalt gehört. `Ordnermodell::gehoert_dazu` bleibt ebenfalls, es steht in `crates/krk-core/tests/verzeichnis.rs` und in `crates/krk-bench/src/messen.rs:228`.
+
+**Zwei Nachzüge, beide als eigener Datensatz.** Der Plan sagt in `### Frage 2` weiter das Alte; er war für diesen Auftrag gesperrt, weil der `planner` zur selben Zeit darin arbeitet: `issues/260803-2025_o_frage-2-des-plans-nennt-den-unwirksamen-mechanismus.md`. `Meldung::generation` und `Lesevorgang::generation` haben jetzt keinen Aufrufer mehr, und `leser.rs` lag außerhalb des Auftragsumfangs: `issues/260803-2025_o_zwei-generationsleser-im-kern-haben-keinen-aufrufer-mehr.md`.

@@ -102,3 +102,16 @@ Ein Kandidat für eine Prüfung ohne Fenster liegt damit im Kern: `zeile_von` na
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2019. Die Auswahl wohnt jetzt im `Ordnermodell` und hängt dort am Eintragsindex.
+
+**Abweichung von der vorgeschlagenen Stelle, mit Grund.** Der Datensatz schlägt ein Feld in `QuelleIvars` vor. Es liegt stattdessen in `crates/krk-core/src/verzeichnis/modell.rs`, aus zwei Gründen. Erstens sagt der Modulkopf des Modells seit Schritt 2 zu, dass die Auswahl einen Sortierwechsel übersteht, und `sicht_neu_aufbauen` ist die eine Stelle, an der sie es tun muss; von den drei öffentlichen Wegen dorthin (`abschliessen`, `sortierung_setzen`, `verstecke_ausblenden_setzen`) hätte sonst jeder seine eigene Sicherung gebraucht. Zweitens ist eine Auswahl in `QuelleIvars` ohne Fenster nicht prüfbar, und dieser Defekt verlangte eine Prüfung, die ihn fängt.
+
+**Was dazugekommen ist.** `Ordnermodell` trägt `auswahl: Option<u32>` samt `auswahl()`, `auswahl_setzen()` und `auswahl_zeile()`; `leeren` hebt die Auswahl auf. In `crates/krk-ui/src/appkit/tabelle.rs` übersetzt `auswahl_merken` eine Zeile in ihren Eintrag und `auswahl_zeigen` einen Eintrag zurück in eine Zeile. Gerufen wird `auswahl_merken` von `auswahl_verschieben` (Tastatur) und vom neuen Delegiertenrückruf `tableViewSelectionDidChange:` (Maus), `auswahl_zeigen` von `einziehen`, `lesen_abbrechen` und `ordner_lesen`. `einziehen` hält den Eintrag in einer lokalen Bindung über `reloadData` hinweg, weil ein Auswahlrückruf während des Neuladens sonst die schon sortierte Sicht vorfände.
+
+**Nachweis, dass die Prüfung den Fehler fängt.** `die_auswahl_ueberlebt_das_sortieren_am_ende_des_lesevorgangs` (`modell.rs`) baut den Fall des Datensatzes nach: `zzz.txt` in Lesereihenfolge vor `Applications`, Auswahl auf `zzz.txt`, dann `abschliessen`. Gegen den Stand vor der Reparatur gefahren, also mit einer `auswahl_zeile`, die die gemerkte Zeilennummer unverändert zurückgibt, schlägt sie fehl mit `left: Some("Applications") / right: Some("zzz.txt")` — wörtlich der Ausgang, den dieser Datensatz beschreibt. Mit der Reparatur ist sie grün. Zwei weitere Proben decken das Leeren beim Ordnerwechsel und das Aus- und Wiedereinblenden versteckter Einträge ab; die zweite schlägt gegen den alten Stand ebenfalls fehl.
+
+**Am laufenden Bündel nachgefahren.** `target/KRK.app/Contents/MacOS/krk --messmodus spannen` mit den Prüfordnern zu 10.000 und 100.000 Einträgen: 40 Lesevorgänge und 20 Pfeil-ab-Drücke, kein doppelter `RefCell`-Zugriff, alle 20 L1-Werte gezählt (die zählen nur, wenn die Auswahl wirklich umspringt), L10 vollständig bei 0,83 bis 1,08 s und damit im Rahmen des Messberichts vom 260803-1641.
+
+Nicht mitgenommen: `sortierung_setzen` über den Spaltenkopf gibt es noch nicht (C2, S13). Das Modell trägt die Auswahl über diesen Weg schon; die Oberfläche muss dann nur `auswahl_zeigen` rufen.

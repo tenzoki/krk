@@ -16,10 +16,24 @@
 //! Stapel die Zusage L2 (erste Bildschirmseite sichtbar), waehrend der Rest
 //! anhaengt, und die Tabelle zeichnet hoechstens einmal je Bild neu.
 //!
-//! Jeder Stapel traegt seine Generationsnummer. Wer schnell durch Ordner
-//! navigiert, hat mehrere Lesevorgaenge unterwegs; der Hauptfaden verwirft
-//! jeden Stapel, dessen Generation nicht mehr die des Modells ist. Das ersetzt
-//! eine Abbruchbehandlung je Lesevorgang durch eine Bedingung.
+//! **Was einen Ordnerwechsel mitten im Lesen traegt.** Nicht die
+//! Generationsnummer, die jeder Stapel mitfuehrt. Die Quelle haelt immer nur
+//! genau einen Lesevorgang und liest allein aus dessen Kanal; jede Meldung, die
+//! sie zu sehen bekommt, traegt deshalb ohnehin die Generation des Modells.
+//! Getragen wird der Wechsel davon, dass `ordner_lesen` den alten
+//! `Lesevorgang` fallen laesst. Damit faellt sein Empfaenger, und der alte Lauf
+//! wird wirklich beendet statt nur ueberhoert: `Lesevorgang::drop` setzt das
+//! Abbruchkennzeichen, das der Lesefaden vor jedem Systemaufruf und zwischen
+//! zwei Stapeln prueft, und spaetestens das naechste `send` scheitert am
+//! verschwundenen Empfaenger. Der Abbruch greift innerhalb von zwei Stapeln.
+//!
+//! Die Nummer bleibt und traegt anderes: sie benennt den Lesefaden und sagt dem
+//! Modell beim Leeren, zu welchem Lauf sein Inhalt gehoert. Eine Prueferei je
+//! Stapel stand hier bis zum 260803 daneben. Sie konnte nie greifen, weil
+//! `ordner_lesen` Modell- und Lesevorgangsgeneration in denselben zwei Zeilen
+//! auf denselben Wert setzt, und sie verdeckte den Mechanismus, der wirklich
+//! traegt. Wer sie fuer mehrere gleichzeitige Lesevorgaenge wieder braucht,
+//! bringt den Fall mit, in dem sie greift.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -35,9 +49,9 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSDate,
-    NSDateFormatter, NSDateFormatterStyle, NSIndexSet, NSInteger, NSObject, NSObjectProtocol,
-    NSPoint, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer,
-    ns_string,
+    NSDateFormatter, NSDateFormatterStyle, NSIndexSet, NSInteger, NSNotification, NSObject,
+    NSObjectProtocol, NSPoint, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString,
+    NSTimeInterval, NSTimer, ns_string,
 };
 
 use krk_core::tasten::Kommando;
@@ -53,8 +67,24 @@ const ZEILENHOEHE: f64 = 20.0;
 
 /// Der Takt, in dem der Hauptfaden den Kanal des Lesers leerraeumt.
 ///
-/// Ein Sechzigstel einer Sekunde ist ein Bild auf dem Referenzgeraet. Haeufiger
-/// zu raeumen brauchte es nicht, weil die Tabelle ohnehin nicht oefter zeichnet.
+/// Ein Sechzigstel einer Sekunde ist ein Bild auf dem Referenzgeraet, und das
+/// ist seit Schritt 8 erhoben und keine Annahme mehr: [`super::bildtakt`] liest
+/// die Rate aus `NSScreen.maximumFramesPerSecond` am Bildschirm des gemessenen
+/// Fensters, und der Bedingungskopf jedes Messberichts schreibt sie aus, zuletzt
+/// `messungen/260803-1641-durchstich.txt` mit 60 Hz. Haeufiger zu raeumen
+/// brauchte es dort nicht, weil die Tabelle ohnehin nicht oefter zeichnet.
+///
+/// **Der Takt liest die Rate trotzdem nicht, und das ist eine Festlegung.** Auf
+/// einem Bildschirm mit 120 Hz raeumte er nur bei jedem zweiten Bild: die Liste
+/// baute sich langsamer auf, als der Schirm es zuliesse, waehrend die Zusage aus
+/// dem Modulkopf, hoechstens einmal je Bild zu zeichnen, weiter haelt. Dagegen
+/// staende ein Zeitgeber, der bei jedem Bildschirmwechsel des Fensters neu
+/// aufzuhaengen waere, und die Frage, was er tut, wenn das Fenster auf keinem
+/// Bildschirm steht. Die Antwort des Projekts darauf ist der Abbruch mit
+/// Meldung ([`super::bildtakt::bildwiederholrate`]); fuer einen gewoehnlichen
+/// Lesevorgang kommt sie nicht in Frage, und ein fester Rueckfallwert waere die
+/// Sonderregel mit eigenem Rueckfallweg, die die Maxime "supersimpel"
+/// ausschliesst.
 const EINZUGSTAKT: NSTimeInterval = 1.0 / 60.0;
 
 /// Die Generation eines Modells, das noch nichts gelesen hat.
@@ -223,6 +253,11 @@ impl DateifensterQuelle {
         *self.ivars().lesevorgang.borrow_mut() = None;
         self.ivars().modell.borrow_mut().leeren(generation);
         self.ivars().tabelle.reloadData();
+        // `leeren` hat die Auswahl des alten Ordners aufgehoben; die Tabelle
+        // erfaehrt es hier. Sich darauf zu verlassen, dass `reloadData` eine
+        // Zeilennummer jenseits der neuen Zeilenzahl von selbst fallen laesst,
+        // hiesse, eine Zusage von AppKit anzunehmen statt sie zu geben.
+        self.auswahl_zeigen(None);
 
         *self.ivars().lesevorgang.borrow_mut() = Some(Lesevorgang::starten(pfad, generation));
         self.einzug_starten();
@@ -248,8 +283,9 @@ impl DateifensterQuelle {
 
     /// Welche Zeile ausgewaehlt ist; -1, wenn keine.
     ///
-    /// Nur zum Ablesen, unmittelbar von `NSTableView`, wo die Auswahl heute
-    /// wohnt.
+    /// Nur zum Ablesen, und ausdruecklich von der `NSTableView` und nicht vom
+    /// Modell: die Messung von L1 fragt, welche Zeile der Nutzer *sieht*, und
+    /// das ist die der Tabelle.
     pub fn auswahlzeile(&self) -> isize {
         self.ivars().tabelle.selectedRow()
     }
@@ -260,8 +296,12 @@ impl DateifensterQuelle {
         if let Some(vorgang) = self.ivars().lesevorgang.borrow_mut().take() {
             vorgang.abbrechen();
         }
+        let ausgewaehlt = self.ivars().modell.borrow().auswahl();
         self.ivars().modell.borrow_mut().abschliessen();
         self.ivars().tabelle.reloadData();
+        // Auch der Abbruch sortiert; auch hier zeigt die alte Zeilennummer
+        // danach auf einen anderen Eintrag.
+        self.auswahl_zeigen(ausgewaehlt);
     }
 
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
@@ -315,6 +355,45 @@ impl DateifensterQuelle {
         let auswahl = NSIndexSet::indexSetWithIndex(ziel as usize);
         tabelle.selectRowIndexes_byExtendingSelection(&auswahl, false);
         tabelle.scrollRowToVisible(ziel as NSInteger);
+        // Ausdruecklich und nicht ueber den Delegiertenrueckruf: ob AppKit die
+        // Auswahlmeldung auch bei einer selbst gesetzten Auswahl schickt, ist
+        // eine Zusage, die dieser Weg nicht braucht.
+        self.auswahl_merken();
+    }
+
+    /// Haelt fest, welcher Eintrag der ausgewaehlten Zeile entspricht.
+    ///
+    /// Der Weg von der Zeile zum Eintrag laeuft genau hier und sonst nirgends.
+    /// Gerufen wird er von jeder Stelle, an der sich die Auswahl der Tabelle
+    /// aendert: von [`DateifensterQuelle::auswahl_verschieben`] und vom
+    /// Auswahlrueckruf des Delegierten, den die Maus ausloest.
+    fn auswahl_merken(&self) {
+        let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
+        let eintrag = zeile.and_then(|zeile| self.ivars().modell.borrow().eintragsindex(zeile));
+        self.ivars().modell.borrow_mut().auswahl_setzen(eintrag);
+    }
+
+    /// Setzt die Auswahl auf den genannten Eintrag und zieht die Tabelle nach.
+    ///
+    /// Das ist die Gegenrichtung zu [`DateifensterQuelle::auswahl_merken`] und
+    /// die Stelle, an der die Auswahl ein Umsortieren uebersteht: der Eintrag
+    /// bleibt derselbe, seine Zeile ist eine andere. `None` hebt die Auswahl
+    /// auf.
+    fn auswahl_zeigen(&self, eintrag: Option<u32>) {
+        self.ivars().modell.borrow_mut().auswahl_setzen(eintrag);
+        let zeile = self.ivars().modell.borrow().auswahl_zeile();
+        let tabelle = &self.ivars().tabelle;
+        // Eine leere Indexmenge hebt die Auswahl auf. Der Fall tritt ein, wenn
+        // nichts ausgewaehlt war und wenn der ausgewaehlte Eintrag gerade
+        // ausgeblendet ist.
+        let auswahl = match zeile {
+            Some(zeile) => NSIndexSet::indexSetWithIndex(zeile),
+            None => NSIndexSet::new(),
+        };
+        tabelle.selectRowIndexes_byExtendingSelection(&auswahl, false);
+        if let Some(zeile) = zeile {
+            tabelle.scrollRowToVisible(zeile as NSInteger);
+        }
     }
 
     /// Steigt in den ausgewaehlten Ordner hinein.
@@ -356,9 +435,20 @@ impl DateifensterQuelle {
         if fertig {
             self.einzug_beenden();
             *self.ivars().lesevorgang.borrow_mut() = None;
+            // Der ausgewaehlte Eintrag steht in einer lokalen Bindung, bevor
+            // die Tabelle neu laedt: `reloadData` kann dabei die Auswahl der
+            // Tabelle anfassen und damit den Rueckruf ausloesen, der das
+            // Modell nachfuehrt — und der faende jetzt die sortierte Sicht vor
+            // und schriebe den falschen Eintrag hinein.
+            let ausgewaehlt = self.ivars().modell.borrow().auswahl();
             // Erst jetzt steht die Sortierung. Die bisher angezeigten Zeilen
             // standen in Lesereihenfolge, also muss die Tabelle sie neu holen.
             self.ivars().tabelle.reloadData();
+            // Und die Auswahl des Nutzers wandert mit ihrem Eintrag an dessen
+            // neue Zeile. Die Spanne, in der er waehlen kann, ist gemessen: auf
+            // dem Ordner mit 100.000 Eintraegen liegen zwischen der ersten
+            // Bildschirmseite und der fertigen Sortierung rund 800 ms.
+            self.auswahl_zeigen(ausgewaehlt);
         } else if angehaengt {
             self.ivars().tabelle.noteNumberOfRowsChanged();
         }
@@ -375,10 +465,11 @@ impl DateifensterQuelle {
         let mut modell = self.ivars().modell.borrow_mut();
         let mut angehaengt = false;
         let mut fertig = false;
+        // Ohne Pruefung der Generation, und das ist Absicht: gelesen wird
+        // allein aus dem Kanal des gerade gehaltenen Lesevorgangs, und dessen
+        // Generation ist die des Modells. Der Modulkopf schreibt aus, was einen
+        // Ordnerwechsel mitten im Lesen wirklich traegt.
         for meldung in vorgang.meldungen().try_iter() {
-            if !modell.gehoert_dazu(meldung.generation()) {
-                continue;
-            }
             match meldung {
                 Meldung::Stapel { eintraege, .. } => {
                     modell.anhaengen(eintraege);
@@ -479,6 +570,18 @@ define_class!(
             // Rueckgabetyp umschreibt und der Fragezeichenoperator hier
             // deshalb nicht greift.
             self.zellenansicht(tabelle, spalte, zeile)
+        }
+
+        /// Die Auswahl hat sich geaendert, meist durch einen Mausklick.
+        ///
+        /// Die Tastatur laeuft nicht hierueber, sondern meldet sich in
+        /// `auswahl_verschieben` selbst. Beide muenden in dieselbe Funktion,
+        /// damit es nur eine Stelle gibt, die eine Zeile in einen Eintrag
+        /// uebersetzt.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(tableViewSelectionDidChange:))]
+        fn auswahl_geaendert(&self, _meldung: &NSNotification) {
+            self.ivars().quelle.auswahl_merken();
         }
     }
 );
@@ -629,8 +732,15 @@ impl Dateifenster {
         let quelle = DateifensterQuelle::neu(mtm, tabelle.clone());
         let delegierter = DateifensterDelegierter::neu(mtm, quelle);
         // SAFETY: Beide Objekte beantworten die Protokolle, die sie oben
-        // implementieren, und leben laenger als die Tabelle: `Dateifenster`
-        // haelt sie fest.
+        // implementieren. Ueber ihre Lebensdauer verlangt die Bindung nichts,
+        // und die Tabelle ueberlebt beide: sie faellt mitten im Abbau von
+        // Quelle und Delegiertem. Getragen wird der Aufruf von der Art der
+        // beiden Eigenschaften, die `objc2` an derselben Stelle nennt: "This is
+        // a weak property"
+        // (`objc2-app-kit-0.3.2/src/generated/NSTableView.rs:402-421`). Weil
+        // beide nullende schwache Verweise sind, steht dort `nil`, sobald
+        // Quelle oder Delegierter in ihren `dealloc` gehen, und die Tabelle
+        // sendet danach an niemanden mehr.
         unsafe {
             tabelle.setDataSource(Some(ProtocolObject::from_ref(delegierter.quelle())));
             tabelle.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));

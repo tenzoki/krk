@@ -9,6 +9,13 @@
 //! Nutzdaten, und die Auswahl des Nutzers bleibt ueber einen Sortierwechsel
 //! hinweg stabil, weil sie am Eintragsindex haengt und nicht an der
 //! Zeilennummer.
+//!
+//! **Die Auswahl wohnt deshalb hier und nicht in der Tabelle der Oberflaeche.**
+//! Das Modell fuehrt sie als Eintragsindex; die Oberflaeche fragt vor jedem
+//! Zeichendurchgang mit [`Ordnermodell::auswahl_zeile`] nach der Zeile, in der
+//! der ausgewaehlte Eintrag gerade steht. Laege sie als Zeilennummer in der
+//! `NSTableView`, zeigte dieselbe Nummer nach jedem [`Ordnermodell::abschliessen`]
+//! und nach jedem [`Ordnermodell::sortierung_setzen`] auf einen anderen Eintrag.
 
 use super::eintrag::Eintrag;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
@@ -21,6 +28,11 @@ pub struct Ordnermodell {
     sortierung: Sortierung,
     verstecke_ausblenden: bool,
     generation: u64,
+    /// Der ausgewaehlte Eintrag, als Index in `eintraege`.
+    ///
+    /// Ein Index und keine Zeilennummer: `sichtreihenfolge` wird bei jedem
+    /// Sortierwechsel neu gebaut, `eintraege` nicht.
+    auswahl: Option<u32>,
 }
 
 impl Ordnermodell {
@@ -32,13 +44,17 @@ impl Ordnermodell {
             sortierung: Sortierung::default(),
             verstecke_ausblenden: true,
             generation,
+            auswahl: None,
         }
     }
 
     /// Die Generation, zu der dieses Modell gehoert.
     ///
-    /// Der Hauptfaden verwirft jeden Stapel, dessen Generation nicht mit dieser
-    /// uebereinstimmt.
+    /// Sie sagt, aus welchem Lesevorgang der Inhalt stammt. Die Oberflaeche
+    /// prueft sie **nicht** je Stapel: sie haelt immer nur einen Lesevorgang
+    /// und liest allein aus dessen Kanal. Der Modulkopf von
+    /// `krk-ui/src/appkit/tabelle.rs` schreibt aus, was einen Ordnerwechsel
+    /// mitten im Lesen stattdessen traegt.
     pub fn generation(&self) -> u64 {
         self.generation
     }
@@ -49,10 +65,14 @@ impl Ordnermodell {
     }
 
     /// Leert das Modell und setzt es auf eine neue Generation.
+    ///
+    /// Die Auswahl faellt mit: sie zeigt auf einen Eintrag des alten Ordners,
+    /// und im neuen gibt es ihn nicht.
     pub fn leeren(&mut self, generation: u64) {
         self.eintraege.clear();
         self.sichtreihenfolge.clear();
         self.generation = generation;
+        self.auswahl = None;
     }
 
     /// Haengt einen gelesenen Stapel an.
@@ -155,6 +175,34 @@ impl Ordnermodell {
             .position(|index| *index == eintragsindex)
     }
 
+    /// Der ausgewaehlte Eintrag, als Index in [`Ordnermodell::eintraege`].
+    ///
+    /// Die Oberflaeche braucht ihn, wenn sie die Tabelle gleich neu laden
+    /// laesst: waehrend des Neuladens gibt es keine tragfaehige Zeilennummer.
+    pub fn auswahl(&self) -> Option<u32> {
+        self.auswahl
+    }
+
+    /// Setzt die Auswahl auf den genannten Eintrag oder hebt sie auf.
+    ///
+    /// Genommen wird der Eintragsindex und nicht die Zeile. Wer eine Zeile
+    /// hat, rechnet sie mit [`Ordnermodell::eintragsindex`] um; genau diese
+    /// eine Umrechnung ist der Grund, aus dem die Auswahl ein Umsortieren
+    /// uebersteht.
+    pub fn auswahl_setzen(&mut self, eintragsindex: Option<u32>) {
+        self.auswahl = eintragsindex;
+    }
+
+    /// Die Zeile, in der der ausgewaehlte Eintrag gerade steht.
+    ///
+    /// `None`, wenn nichts ausgewaehlt ist oder der ausgewaehlte Eintrag
+    /// gerade ausgeblendet ist. Im zweiten Fall bleibt der gemerkte Eintrag
+    /// stehen: blendet der Nutzer die versteckten Eintraege wieder ein, ist
+    /// seine Auswahl wieder da, statt beim Umschalten verloren zu gehen.
+    pub fn auswahl_zeile(&self) -> Option<usize> {
+        self.zeile_von(self.auswahl?)
+    }
+
     /// Alle sichtbaren Eintraege in Sichtreihenfolge.
     pub fn zeilen(&self) -> impl Iterator<Item = &Eintrag> {
         self.sichtreihenfolge
@@ -178,5 +226,113 @@ impl Ordnermodell {
         self.sichtreihenfolge.sort_unstable_by(|links, rechts| {
             sortierung.vergleiche(&eintraege[*links as usize], &eintraege[*rechts as usize])
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::SystemTime;
+
+    use super::super::eintrag::Typ;
+    use super::*;
+
+    /// Ein Eintrag fuer die Proben unten.
+    ///
+    /// Der Sortierschluessel bleibt leer, und das ist kein Versaeumnis: die
+    /// beiden Eintraege jeder Probe stehen in verschiedenen Gruppen (Ordner vor
+    /// Datei), also entscheidet allein die Gruppe. Den Schluessel hier
+    /// nachzubauen hiesse, die Berechnung aus `Eintrag::aus_roh` ein zweites
+    /// Mal zu fuehren.
+    fn eintrag(name: &str, typ: Typ) -> Eintrag {
+        Eintrag {
+            name: name.to_owned(),
+            sortierschluessel: Box::default(),
+            groesse: 0,
+            geaendert: SystemTime::UNIX_EPOCH,
+            typ,
+            versteckt: name.starts_with('.'),
+        }
+    }
+
+    /// Ein Modell in Lesereihenfolge: erst die Datei, dann der Ordner.
+    ///
+    /// Genau diese Reihenfolge dreht [`Ordnermodell::abschliessen`] um.
+    fn gelesen() -> Ordnermodell {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag("zzz.txt", Typ::Datei),
+            eintrag("Applications", Typ::Ordner),
+        ]);
+        modell
+    }
+
+    fn name_in_zeile(modell: &Ordnermodell, zeile: usize) -> Option<&str> {
+        modell.zeile(zeile).map(|eintrag| eintrag.name.as_str())
+    }
+
+    fn auswaehlen(modell: &mut Ordnermodell, name: &str) -> usize {
+        let zeile = modell
+            .zeilen()
+            .position(|eintrag| eintrag.name == name)
+            .expect("der Eintrag steht nicht in der Sicht");
+        let index = modell.eintragsindex(zeile);
+        modell.auswahl_setzen(index);
+        zeile
+    }
+
+    /// Der Fall aus dem Defekt: waehrend des Lesens ausgewaehlt, danach
+    /// sortiert.
+    #[test]
+    fn die_auswahl_ueberlebt_das_sortieren_am_ende_des_lesevorgangs() {
+        let mut modell = gelesen();
+        let zeile_vorher = auswaehlen(&mut modell, "zzz.txt");
+
+        modell.abschliessen();
+
+        assert_ne!(
+            name_in_zeile(&modell, zeile_vorher),
+            Some("zzz.txt"),
+            "die Probe traegt nur, wenn unter der alten Zeilennummer jetzt ein \
+             anderer Eintrag steht"
+        );
+        let zeile_nachher = modell
+            .auswahl_zeile()
+            .expect("die Auswahl ist beim Sortieren verloren gegangen");
+        assert_eq!(name_in_zeile(&modell, zeile_nachher), Some("zzz.txt"));
+    }
+
+    #[test]
+    fn ein_neuer_ordner_hebt_die_auswahl_auf() {
+        let mut modell = gelesen();
+        auswaehlen(&mut modell, "zzz.txt");
+
+        modell.leeren(2);
+
+        assert_eq!(modell.auswahl(), None);
+        assert_eq!(modell.auswahl_zeile(), None);
+    }
+
+    #[test]
+    fn eine_ausgeblendete_auswahl_kommt_beim_einblenden_zurueck() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag(".versteckt.txt", Typ::Datei),
+            eintrag("Applications", Typ::Ordner),
+        ]);
+        modell.verstecke_ausblenden_setzen(false);
+        auswaehlen(&mut modell, ".versteckt.txt");
+
+        modell.verstecke_ausblenden_setzen(true);
+        assert_eq!(
+            modell.auswahl_zeile(),
+            None,
+            "der Eintrag ist nicht sichtbar"
+        );
+
+        modell.verstecke_ausblenden_setzen(false);
+        let zeile = modell
+            .auswahl_zeile()
+            .expect("die Auswahl ist verloren gegangen");
+        assert_eq!(name_in_zeile(&modell, zeile), Some(".versteckt.txt"));
     }
 }

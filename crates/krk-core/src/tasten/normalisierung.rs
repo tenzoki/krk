@@ -7,19 +7,40 @@
 //! Hilfetaste.
 //!
 //! **Die Loeschung von `function` ist keine Vorsichtsmassnahme, sondern die
-//! Umsetzung eines Abnahmekriteriums.** Die Messung vom 260802-1137
-//! (`spikes/fn-tasten/messung-A-neuauswertung.txt`) hat gezeigt, dass AppKit
-//! `function` bei jeder Taste aus dem Funktionstasten-Zeichenbereich setzt,
-//! auch bei den Pfeiltasten, und dass Fn+F3 und ein nacktes F3 dasselbe
-//! Ereignis erzeugen. Das Bit sagt damit nichts darueber, ob der Nutzer fn
-//! gehalten hat. Ein Nachschlag, der es mitfuehrte, haette fuer dieselbe Taste
-//! zwei Eintraege, von denen der Nutzer nur einen erreichen kann. C3 des Specs
-//! verlangt genau das Gegenteil: "Der Nutzer kann fn nicht als Zusatztaste
-//! einer Belegung verwenden".
+//! Umsetzung eines Abnahmekriteriums.** C3 des Specs verlangt: "Der Nutzer kann
+//! fn nicht als Zusatztaste einer Belegung verwenden". Ein Nachschlag, der das
+//! Bit mitfuehrte, haette fuer dieselbe Taste zwei Eintraege.
 //!
-//! Die Feststelltaste faellt aus demselben Grund weg: sie ist ein Zustand der
-//! Tastatur und keine gehaltene Taste. Der Zehnerblock ebenfalls, denn AppKit
-//! setzt sein Bit auch bei den Pfeiltasten.
+//! **Was dazu gemessen ist, und was nicht.** Die Messung vom 260802-1137 zeigt
+//! F3, F5 und F8 mit gesetztem `function`: `roh=0x00800100`
+//! (`spikes/fn-tasten/messung-A.txt:17-19`). Gemessen ist damit **nur** der
+//! Fall mit gehaltener fn-Taste. Ob ein nacktes F3 dasselbe Ereignis liefert,
+//! ist am Referenzgeraet nicht messbar, weil es dort ohne fn ueberhaupt keine
+//! F3 gibt; die Neuauswertung derselben Rohdaten sagt zu dieser Frage
+//! ausdruecklich "NICHT MESSBAR AUF DIESEM GERAET"
+//! (`spikes/fn-tasten/messung-A-neuauswertung.txt:64-65`), und
+//! `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`
+//! haelt denselben Stand fest. Dass beide dasselbe Ereignis liefern, ist
+//! deshalb eine **abgeleitete Annahme** und kein Messergebnis. Sie stuetzt
+//! sich auf die Beschreibung im AppKit-Kopf, die das Bit an die gedrueckte
+//! Taste haengt und nicht an eine gehaltene: "Set if any function key is
+//! pressed" (`NSEvent.h`, `NSEventModifierFlagFunction`).
+//!
+//! Die Loeschung haengt nicht an dieser Annahme. Traegt sie, sagt das Bit
+//! nichts ueber die gehaltene fn-Taste und gehoert nicht in die Maske; traegt
+//! sie nicht, verbietet C3 den zweiten Eintrag trotzdem.
+//!
+//! Die Feststelltaste faellt aus einem eigenen Grund weg: sie ist ein Zustand
+//! der Tastatur und keine gehaltene Taste. Der Zehnerblock ebenso, und hier ist
+//! der AppKit-Kopf eindeutig: `NSEventModifierFlagNumericPad` ist "set if any
+//! key in the numeric keypad is pressed", also eine Eigenschaft der gedrueckten
+//! Taste und keine gehaltene Zusatztaste. **Ob AppKit das Bit auch bei den
+//! Pfeiltasten setzt, ist im Projekt nicht gemessen**: in `messung-A.txt` kommt
+//! keine Pfeiltaste vor, und die Sonde aus Schritt 7 taugt als Beleg nicht, weil
+//! sie beide Bits selbst setzt. Fuer die Loeschung ist die Frage ohne Belang,
+//! und der Fall ist geprueft, gleich wie AppKit sich verhaelt:
+//! `ein_pfeil_mit_gesetztem_function_und_zehnerblock_bleibt_ein_nackter_pfeil`
+//! in `crates/krk-core/tests/tasten.rs`.
 
 use std::fmt;
 use std::ops::{BitOr, BitOrAssign};

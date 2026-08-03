@@ -21,9 +21,14 @@ const TASTE_K: u16 = 40;
 
 #[test]
 fn f3_mit_und_ohne_function_ergibt_dieselbe_nachschlagemaske() {
-    // Die Messung vom 260802-1137 zeigt F3 immer mit gesetztem `function`,
-    // gleich ob der Nutzer fn gehalten hat oder nicht. Der Nachschlag darf die
-    // beiden deshalb nicht unterscheiden.
+    // C3 verlangt, dass fn keine Zusatztaste einer Belegung ist: der
+    // Nachschlag darf die beiden Faelle nicht unterscheiden. Gemessen ist am
+    // 260802-1137 nur der eine von ihnen, F3 mit gehaltener fn
+    // (`spikes/fn-tasten/messung-A.txt:17-19`); der andere ist am
+    // Referenzgeraet nicht messbar. Der Modulkopf von
+    // `krk-core/src/tasten/normalisierung.rs` schreibt beides aus. Diese
+    // Pruefung haengt nicht daran, welches Ereignis ein nacktes F3 erzeugt:
+    // sie deckt beide ab.
     let mit_function = Tastendruck::aus_ereignis(F3, roh::FUNKTION);
     let ohne_function = Tastendruck::aus_ereignis(F3, 0);
 
@@ -83,6 +88,28 @@ fn ein_pfeil_mit_gesetztem_function_und_zehnerblock_bleibt_ein_nackter_pfeil() {
 
     assert_eq!(druck.maske, ModMaske::LEER);
     assert_eq!(kommando(druck), Some(Kommando::AuswahlRunter));
+}
+
+/// Die Gegenprobe zu den fuenf Tastencodes: einmal als Zahl.
+///
+/// Die Zahlen stammen aus der Carbon-Tabelle `kVK_*` in
+/// `HIToolbox.framework/Headers/Events.h` des macOS-SDK, nachgesehen am
+/// 260803: `kVK_Return = 0x24`, `kVK_PageUp = 0x74`, `kVK_PageDown = 0x79`,
+/// `kVK_DownArrow = 0x7D`, `kVK_UpArrow = 0x7E`. Eine Messung gibt es dafuer
+/// nicht, in `spikes/fn-tasten/messung-A.txt` kommt keine Pfeiltaste vor;
+/// `objc2` fuehrt die Tastencodes ebenfalls nicht, sonst stuende hier ein
+/// Vergleich wie in `krk-ui` fuer die acht Modifikatorbits.
+///
+/// Ohne diese Probe kann die Pruefung darunter nur scheitern, wenn jemand eine
+/// der beiden Listen aendert und die andere nicht. Ob `PFEIL_AB` wirklich 125
+/// ist, pruefte dann nichts.
+#[test]
+fn die_fuenf_verdrahteten_tastencodes_stimmen_mit_der_carbon_tabelle_ueberein() {
+    assert_eq!(code::RETURN, 0x24);
+    assert_eq!(code::BILD_AUF, 0x74);
+    assert_eq!(code::BILD_AB, 0x79);
+    assert_eq!(code::PFEIL_AB, 0x7D);
+    assert_eq!(code::PFEIL_AUF, 0x7E);
 }
 
 #[test]

@@ -121,3 +121,12 @@ ist damit maschinell gesichert.
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2025. Beide Kommentare nennen jetzt zuerst die dokumentierte Bedingung und danach, wodurch sie hier erfüllt ist.
+
+**Der Ereignisabgriff** (`crates/krk-ui/src/appkit/ereignisse.rs`) zitiert die eine Bedingung, die die Bindung stellt: "`block` block's return must be a valid pointer or null", mit Fundstelle `objc2-app-kit-0.3.2/src/generated/NSEvent.rs:1173-1175`, am 260803-2025 nachgesehen. Erfüllt ist sie, weil der Block entweder `null_mut` liefert oder den Zeiger, den AppKit selbst hereingegeben hat. Signatur und Lebensdauer stehen ausdrücklich **nicht** mehr als Begründung da, mit dem Grund daneben: die erste prüft der Übersetzer, die zweite regelt `RcBlock`.
+
+**Datenquelle und Delegierter der Tabelle** (`crates/krk-ui/src/appkit/tabelle.rs`): der falsch herum stehende Halbsatz ist weg. An seiner Stelle steht die nullende schwache Eigenschaft, die `objc2` an derselben Stelle dokumentiert ("This is a weak property", `NSTableView.rs:402-421`), samt der Folge: sobald Quelle oder Delegierter in ihren `dealloc` gehen, steht dort `nil`, und die Tabelle sendet an niemanden mehr. Die Abbaureihenfolge des Datensatzes ist übernommen, aber als Feststellung und nicht als Begründung: die Tabelle überlebt beide.
+
+Nicht mitgenommen, weil außerhalb dieses Datensatzes: die vorgeschlagene Regel für die folgenden Schritte gehört in den Abschnitt `## Aufbau` des Plans, und der Plan war für diesen Auftrag gesperrt. Der Vorschlag steht im Datensatz oben und ist damit auffindbar.

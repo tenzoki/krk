@@ -77,3 +77,12 @@ Drei Sätze umschreiben, keine Zeile Programmtext ändern:
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: 260803-2025. Modulkopf von `crates/krk-core/src/tasten/normalisierung.rs` und Kommentar in `crates/krk-core/tests/tasten.rs` umgeschrieben, keine Zeile Programmtext geändert.
+
+**Die drei Sätze im Einzelnen.** Erstens steht die Messung jetzt nur noch für den Fall, den sie zeigt: F3, F5 und F8 mit `roh=0x00800100`, also mit gesetztem `function`, bei gehaltener fn (`spikes/fn-tasten/messung-A.txt:17-19`, nachgesehen). Dass ein nacktes F3 dasselbe Ereignis liefert, ist ausdrücklich als abgeleitete Annahme gekennzeichnet, mit Verweis auf das "NICHT MESSBAR AUF DIESEM GERÄT" der Neuauswertung (Zeile 64-65) und auf `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`. Zweitens ist "auch bei den Pfeiltasten" als Messaussage gestrichen; der Kopf schreibt jetzt aus, dass es im Projekt **nicht** gemessen ist, weil `messung-A.txt` keine Pfeiltaste enthält und die Sonde aus S7 die Bits selbst setzt. Drittens ist der Zehnerblock nicht mehr über die Pfeiltasten begründet, sondern über den AppKit-Kopf selbst: `NSEventModifierFlagNumericPad` ist "set if any key in the numeric keypad is pressed", also eine Eigenschaft der gedrückten Taste und keine gehaltene Zusatztaste.
+
+**Ein Beleg mehr, als der Datensatz verlangt.** Der Datensatz schlägt für den Zehnerblock die AppKit-Dokumentation vor. Nachgesehen ist stattdessen der SDK-Kopf selbst, `MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSEvent.h`, Zeilen 173 und 175. Er trägt beide zitierten Sätze wörtlich. Was er **nicht** trägt, ist die Aussage über die Pfeiltasten; deshalb steht sie jetzt als ungemessen da und nicht als belegt.
+
+**Warum die Löschung an keiner der beiden offenen Fragen hängt.** Der Kopf schreibt das jetzt aus: trägt die Annahme über das nackte F3, sagt das Bit nichts über die gehaltene fn-Taste und gehört nicht in die Maske; trägt sie nicht, verbietet C3 den zweiten Eintrag trotzdem. Beim Zehnerblock deckt `ein_pfeil_mit_gesetztem_function_und_zehnerblock_bleibt_ein_nackter_pfeil` beide Verhaltensweisen von AppKit ab.

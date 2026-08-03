@@ -76,9 +76,14 @@ impl Tastenabgriff {
             }
         });
 
-        // SAFETY: Der Block hat die Signatur, die der Abgriff verlangt, und
-        // AppKit kopiert ihn beim Einrichten auf den Haldenspeicher. Er haelt
-        // `ziel` fest und ueberlebt damit den Aufruf.
+        // SAFETY: Die Bindung stellt genau eine Bedingung, "`block` block's
+        // return must be a valid pointer or null"
+        // (`objc2-app-kit-0.3.2/src/generated/NSEvent.rs:1173-1175`). Der Block
+        // oben liefert nichts anderes: entweder `null_mut`, oder den Zeiger,
+        // den AppKit selbst hereingegeben hat und der fuer die Dauer des
+        // Aufrufs gilt. Signatur und Lebensdauer stehen hier nicht als
+        // Begruendung, weil die erste der Uebersetzer prueft und die zweite
+        // `RcBlock` regelt.
         let merkzeichen = unsafe {
             NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &block)
         }?;
@@ -165,5 +170,72 @@ fn behandeln(ziel: &DateifensterQuelle, ereignis: &NSEvent, protokoll: bool) -> 
             true
         }
         None => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use krk_core::tasten::normalisierung::roh;
+
+    use super::*;
+
+    /// Die Gegenprobe zu den acht Bitwerten, die der Kern abgeschrieben fuehrt.
+    ///
+    /// `krk-core` darf `objc2-app-kit` nicht kennen; das ist die
+    /// Architekturgrenze und bleibt so. Es fuehrt die Werte deshalb als nackte
+    /// Zahlen, und bis hierher hat nichts sie mit ihrer Quelle verglichen: die
+    /// Pruefungen in `krk-core` speisen dieselben Konstanten ein, die die
+    /// Umsetzung liest, und bestaetigen sie damit gegen sich selbst. Stuende
+    /// `BEFEHL` auf `1 << 21`, blieben sie gruen und KRK hielte den Zehnerblock
+    /// fuer die Befehlstaste.
+    ///
+    /// `krk-ui` kennt beide Kisten und ist damit die eine Stelle, an der die
+    /// Kopie gegen ihre Quelle zu halten ist, ohne die Grenze anzufassen und
+    /// ohne eine zweite Wahrheit anzulegen. Diese Pruefung macht keinen
+    /// Objective-C-Aufruf; sie liest zwei Konstanten.
+    #[test]
+    fn die_acht_rohen_bitwerte_des_kerns_stimmen_mit_appkit_ueberein() {
+        let paare = [
+            (
+                "CapsLock",
+                roh::FESTSTELLTASTE,
+                NSEventModifierFlags::CapsLock,
+            ),
+            ("Shift", roh::UMSCHALT, NSEventModifierFlags::Shift),
+            ("Control", roh::STEUERUNG, NSEventModifierFlags::Control),
+            ("Option", roh::WAHL, NSEventModifierFlags::Option),
+            ("Command", roh::BEFEHL, NSEventModifierFlags::Command),
+            (
+                "NumericPad",
+                roh::ZEHNERBLOCK,
+                NSEventModifierFlags::NumericPad,
+            ),
+            ("Help", roh::HILFE, NSEventModifierFlags::Help),
+            ("Function", roh::FUNKTION, NSEventModifierFlags::Function),
+        ];
+        for (name, im_kern, in_appkit) in paare {
+            assert_eq!(
+                im_kern, in_appkit.0 as u64,
+                "der Wert fuer {name} weicht von NSEventModifierFlags ab"
+            );
+        }
+    }
+
+    /// Der Weg, den `behandeln` geht, faengt bei dieser Umrechnung an.
+    ///
+    /// Ohne sie waere der Vergleich oben eine Behauptung ueber zwei Konstanten,
+    /// die niemanden betrifft. `modifierFlags().0 as u64` ist die Stelle, an der
+    /// die AppKit-Bits in den Kern laufen.
+    #[test]
+    fn die_maske_eines_pfeils_kommt_leer_im_kern_an() {
+        let wie_appkit_es_liefert =
+            (NSEventModifierFlags::Function | NSEventModifierFlags::NumericPad).0 as u64;
+        let druck = Tastendruck::aus_ereignis(CODE_PFEIL_AB, wie_appkit_es_liefert);
+
+        assert!(druck.maske.ist_leer());
+        assert_eq!(
+            tasten::kommando(druck),
+            Some(krk_core::tasten::Kommando::AuswahlRunter)
+        );
     }
 }
