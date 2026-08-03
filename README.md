@@ -79,25 +79,43 @@ also prüfbar, ob KRK diese Zusagen einhält.
 `cargo xtask bundle` sucht die Identität in dieser Reihenfolge:
 
 1. die Umgebungsvariable `KRK_SIGN_IDENTITY`, falls sie einen nichtleeren Wert hat;
-2. eine Identität mit dem Namen `KRK Entwicklung` im Schlüsselbund.
+2. eine Identität mit dem Namen `KRK Entwicklung` im Schlüsselbund;
+3. die einzige gültige Identität im Schlüsselbund, falls es genau eine gibt.
 
-Findet es keine von beiden, **bricht es ab und baut kein Bündel**. Es weicht
+Greift keine der drei, **bricht der Bau ab und baut kein Bündel**. Er weicht
 nicht auf eine Ad-hoc-Signatur (`codesign -s -`) aus, und das ist der Punkt: eine
 Ad-hoc-Signatur bekommt bei jedem Bau einen anderen Hash. Das System hielte dann
 jeden Bau für eine andere Anwendung und fragte bei jedem Start erneut nach dem
 Zugriff auf die geschützten Ordner. Eine stabile Identität fragt einmal.
 
+Stufe 3 greift bei null gültigen Identitäten nicht und bei mehr als einer auch
+nicht, weil die Wahl dann geraten wäre. In beiden Fällen nennt die
+Abbruchmeldung die Wege: die ausdrückliche Wahl über `KRK_SIGN_IDENTITY` oder
+das Anlegen von `KRK Entwicklung`. Bei mehreren gültigen Identitäten zählt sie
+außerdem auf, welche gefunden wurden.
+
 Welche Identitäten es gibt:
 
 ```sh
-security find-identity -p codesigning
+security find-identity -p codesigning      # alle, auch die nicht als gültig bewerteten
+security find-identity -v -p codesigning   # nur die gültigen
 ```
 
-Die Liste wird ohne `-v` abgefragt. `-v` zeigt nur die als gültig bewerteten
-Identitäten, und eine selbstsignierte Identität ohne gesetzte
-Vertrauenseinstellung gilt als nicht vertrauenswürdig
-(`CSSMERR_TP_NOT_TRUSTED`). Signieren und Prüfen funktionieren mit ihr trotzdem;
-die Vertrauenseinstellung braucht erst, wer das Bündel auf einem fremden Rechner
+**Die beiden Stufen fragen verschieden ab, und das ist Absicht.** Stufe 2 fragt
+ohne `-v`. `-v` zeigt nur die als gültig bewerteten Identitäten, und eine
+selbstsignierte Identität ohne gesetzte Vertrauenseinstellung gilt als nicht
+vertrauenswürdig (`CSSMERR_TP_NOT_TRUSTED`). Signieren und Prüfen funktionieren
+mit ihr trotzdem. Wer `KRK Entwicklung` angelegt hat, hat sich für diese
+Identität entschieden, und der Bau hat sie nicht auszusortieren.
+
+Stufe 3 fragt mit `-v`. Dort wählt der Bau aus einer Menge aus, ohne dass jemand
+die Wahl getroffen hätte, und automatisch gewählt werden soll nur, was auch
+signieren kann. Ohne `-v` griffe die Stufe sonst nach einem abgelaufenen
+Zertifikat oder einem, dessen Kette sich nicht aufbaut, und der Bau scheiterte
+danach an einer Meldung von `codesign`, die den Grund nicht nennt (siehe den
+Abschnitt zur abgelaufenen Zertifikatskette weiter unten).
+
+Die Vertrauenseinstellung braucht erst, wer das Bündel auf einem fremden Rechner
 an Gatekeeper vorbeibringen will, und dafür ist ohnehin eine Developer-ID nötig.
 
 ### Entwicklungsidentität anlegen
@@ -141,6 +159,44 @@ ins Repository. Nach dem Import sind sie entbehrlich:
 ```sh
 rm krk-entwicklung-key.pem krk-entwicklung-cert.pem krk-entwicklung.p12
 ```
+
+### Abgelaufene Zertifikatskette (`errSecInternalComponent`)
+
+`codesign` scheitert mit dieser Meldung, obwohl Zertifikat und privater
+Schlüssel im Anmeldeschlüsselbund liegen:
+
+```text
+Warning: unable to build chain to self-signed root for signer
+  "Apple Development: <Name> (<Kennung>)"
+errSecInternalComponent
+```
+
+Dazu passt: `security find-identity -p codesigning` zeigt die Identität,
+`security find-identity -v -p codesigning` meldet null gültige.
+
+**Die Meldung deutet in die falsche Richtung.** Sie nennt die eigene Identität,
+und die ist in Ordnung; das Zwischenzertifikat, an dem es liegt, erwähnt sie mit
+keinem Wort. Im System-Schlüsselbund liegt das Apple-Zwischenzertifikat in einer
+alten Fassung, abgelaufen am 2023-02-07. Ein heute von Apple ausgestelltes
+Entwicklerzertifikat kommt dagegen von der G3-Instanz (`issuer=CN=Apple
+Worldwide Developer Relations Certification Authority, OU=G3`), und ohne deren
+Zertifikat baut sich die Kette zur Apple Root CA nicht auf.
+
+Die Behebung holt das aktuelle Zwischenzertifikat in den Anmeldeschlüsselbund:
+
+```sh
+curl -fsS -o AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+security import AppleWWDRCAG3.cer -k ~/Library/Keychains/login.keychain-db
+```
+
+Danach meldet `security find-identity -v -p codesigning` die Identität als
+gültig, und `codesign -dvv target/KRK.app` zeigt die vollständige Kette bis zur
+Apple Root CA samt `TeamIdentifier`.
+
+Das abgelaufene alte Zwischenzertifikat im System-Schlüsselbund muss dafür
+**nicht** entfernt werden; die Kette baut sich neben ihm richtig auf. Es zu
+entfernen verlangt erhöhte Rechte und ist erst der nächste Versuch, falls der
+Fehler trotz vorhandenem G3-Zertifikat bleibt.
 
 ### Prüfen, was signiert wurde
 
