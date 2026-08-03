@@ -56,4 +56,47 @@ stimmt seit Schritt 1 nicht mehr. Auch die Technologiewahl steht dort als offen,
 
 ## Verlauf
 
-(wird je Turn fortgeschrieben)
+### Turn 1 — 260803-1042 bis 260803-1335
+
+Sieben von acht Aufgaben abgeschlossen, sieben Commits von `def6fa7` bis `3e14b38`. Die
+achte, die Frühmessung aus Schritt 8, hängt an einer Handlung des Nutzers und nicht an
+Code.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T1 | orchestrator | `4884f85` | Die unfertige Signaturarbeit geprüft und committet, Defekt `260802-2050` geschlossen |
+| T2 | planner | `3877dbc` | Frage 7 auf den umgesetzten Stand gezogen, die unhaltbare `unsafe`-Prüfvorschrift in den Schritten 2 und 15 ersetzt |
+| T3 | coder | `e43316d` | Hilfetext von `cargo xtask` beschreibt die Identitätssuche in drei Stufen |
+| T3b | planner | `b427c74` | Nutzerentscheid zur `unsafe`-Grenze festgehalten, Plan an fünf Stellen nachgezogen |
+| T4 | coder | `569e8e0` | Schritt 6: Fenster, Menü, echte Dateiliste, vier `define_class!`-Deklarationen |
+| T5 | coder | `6b4fb2d` | Schritt 7: Ereignisabgriff, Modifikator-Normalisierung in `krk-core`, Protokollmodus |
+| T7 | coder | `3e14b38` | `CLAUDE.md` auf den Projektstand, zwei Entscheidungsmarker nachgezogen |
+
+**Der Nutzerentscheid dieses Turns.** Beim Korrigieren der beiden Plandefekte fand der
+planner denselben Fehler an einem dritten Ort, im Abnahmekriterium von Schritt 6. Die
+Auflösung konnte dort nicht dieselbe sein: `krk-core` trägt `#![deny(unsafe_code)]` und
+lässt den Bau scheitern, `krk-ui` trug `#![warn(unsafe_code)]` und meldete nur. Der Nutzer
+hat auf `deny` entschieden. Der Plan hatte die `warn`-Wahl an keiner Stelle begründet,
+während er die Wahl von `deny` gegen `forbid` für `krk-core` ausführlich herleitet; die
+Begründung steht jetzt in `## Aufbau` und deckt beide Kisten ab. Datensatz:
+`decisions/260803-1208_i_unsafe-grenze-in-krk-ui-erzwungen-oder-beobachtet.md`.
+
+**Was blockiert.** Auf dem Gerät steht ein Schlüsselbund-Dialog von macOS. `codesign`
+wartet auf die Freigabe des privaten Schlüssels und braucht einen Klick auf "Immer
+erlauben". Ein Hintergrundlauf von `cargo xtask bundle` steht seit 260803-1315 in diesem
+Zustand, `target/KRK.app` ist unsigniert. Betroffen sind die Messung aus Schritt 8 und drei
+Abnahmepunkte aus Schritt 7: Pfeiltasten und Bildtasten am laufenden Bündel sowie das
+Tastenprotokoll für die Codes 99, 96 und 100.
+
+**Defekte.** Sechs geschlossen (`260802-1810`, `260802-1935`, `260802-2050`, `260803-1042`,
+`260803-1200`, `260803-1309` zum Entscheidungsmarker), drei neu und offen, alle drei aus
+Schritt 7 und alle drei über die Plandatei selbst: die Dateiliste von Schritt 7 nennt fünf
+nötige Dateien nicht, das Abnahmekommando filtert nach Prüfungsnamen statt nach Datei, und
+das Tastenprotokoll ist über `open` nicht lesbar.
+
+**Ein gemeldeter Befund trägt nicht.** Der coder von T7 hielt die leere Zeile `Implemented:`
+in mehreren Entscheidungsdatensätzen für einen Fehler. Sie gehört zur Vorlage aus
+`rules/fusion-workbench-conventions.md` und ist bei einem beantworteten Datensatz richtig;
+sie wird erst beim Übergang auf umgesetzt gefüllt. Kein Defekt angelegt. Die beiden anderen
+Befunde desselben Berichts trugen: fünf Verweise auf den alten `_a_`-Pfad im Plan und ein
+Kopf, der `answered` sagte, während der Dateiname `_i_` trug. Beide nachgezogen.
