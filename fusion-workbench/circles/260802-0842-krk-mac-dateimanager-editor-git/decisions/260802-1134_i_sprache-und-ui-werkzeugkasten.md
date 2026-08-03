@@ -62,3 +62,6 @@ Zwei Annahmen sind auf Wunsch des Nutzers vor dem Plan zu prüfen: (a) ob Fn+F3 
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Implemented: 7dc5ea6 bis 6b4fb2d — der Cargo-Workspace steht in Rust mit vier Mitgliedern, `krk-ui` bindet AppKit über `objc2`, `objc2-app-kit` und `objc2-foundation` und trägt seit `569e8e0` ein Fenster mit einer echten Dateiliste. Nachgeprüft am 260803-1330: `crates/krk-ui/Cargo.toml` führt die drei `objc2`-Kisten, `crates/krk-ui/src/appkit/` enthält fünf Module mit den vier `define_class!`-Deklarationen, und `cargo build --workspace` beendet mit 0.

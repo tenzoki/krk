@@ -4,79 +4,79 @@
 
 ## Worum es geht
 
-KRK ist eine native macOS-Anwendung zum Navigieren, Bearbeiten und Versionieren lokaler Dateien, in der Tradition von ForkLift und Norton Commander. Die Oberfläche besteht aus einer Lesezeichen- und Geräteleiste links, zwei Dateifenstern mit je mehreren Tabs in der Mitte und einem Vorschaufenster mit eigenen Tabs rechts. Der Editor öffnet Text, Code und Markdown in einer Rohansicht und einer Formatansicht. Git ist eingebaut, beschränkt auf hinzufügen, committen, verwerfen sowie ältere Versionen ansehen und auschecken.
+KRK ist eine native macOS-Anwendung zum Navigieren, Bearbeiten und Versionieren lokaler Dateien, in der Tradition von ForkLift und Norton Commander: Lesezeichen- und Geräteleiste links, zwei Dateifenster mit je mehreren Tabs in der Mitte, Vorschaufenster rechts, dazu ein Editor mit Rohansicht und Formatansicht und eine auf vier Operationen beschränkte Git-Anbindung.
 
 Die vollständige Directive steht im Circle-Datensatz `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, Abschnitt `## Directive`. Dieser Abschnitt hier ist die Kurzfassung, nicht die verbindliche Formulierung.
 
+Pfade der Form `planning/…`, `decisions/…`, `analyses/…` und `issues/…` sind in dieser Datei relativ zu diesem Circle-Verzeichnis zu lesen.
+
 ## Maximen
 
-Aus `idea.txt`:
+Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zusätzlicher Maus- und Trackpad-Unterstützung.
 
-- Superschnell
-- Supersimpel
-- Steuerung über die Tastatur, ergänzt um Maus- und Trackpad-Unterstützung
-
-Die Maxime "superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec der ersten Runde übersetzt sie in Abschnitt `### C8: Messbare Geschwindigkeit` in Zeitzusagen: `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`. Das Referenzgerät, auf dem diese Zusagen gemessen werden, ist im Datensatz `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` festgehalten.
+"Superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec übersetzt die Maxime in Abschnitt `### C8: Messbare Geschwindigkeit` in zehn Zeitzusagen; das Referenzgerät, auf dem sie gemessen werden, steht im Datensatz `decisions/260802-1036_a_leistungszusagen-navigator.md`.
 
 ## Projektstand
 
-Geprüft am 260802-1130. Es gibt weiterhin keinen Quellcode und keine Architektur. Im Projektwurzelverzeichnis liegen:
+Geprüft am 260803-1321. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung zeigt ein Fenster mit einer echten Dateiliste, die sich mit den Pfeiltasten bedienen lässt.
 
 ```
 krk/
-├── CLAUDE.md            # diese Datei
-├── idea.txt             # der ursprüngliche Entwurf, Quelle der Directive
-├── .gitignore
-├── .claude/             # lokale Claude-Code-Einstellungen (nicht versioniert)
-└── fusion-workbench/    # Circles, Entscheidungen, Issues, Historie
+├── Cargo.toml            # Workspace mit vier Mitgliedern, Version an einer Stelle
+├── rust-toolchain.toml   # Rust 1.97.1, beide Mac-Architekturen
+├── .cargo/config.toml    # MACOSX_DEPLOYMENT_TARGET=15.0, Alias `cargo xtask`
+├── crates/krk-core/      # Kern ohne AppKit: Verzeichnisleser, Ordnermodell, Tastennormalisierung
+├── crates/krk-ui/        # Binärziel `krk`, AppKit-Anteil unter src/appkit/
+├── crates/krk-bench/     # Prüfordner-Erzeuger und kopflose Messstrecke
+├── xtask/                # Bauwerkzeug: Bündel, Versionsersetzung, Signierung
+├── resources/Info.plist  # Bündelbeschreibung mit Versionsplatzhalter
+├── messungen/            # Messberichte der kopflosen Strecke
+├── spikes/fn-tasten/     # Wegwerf-Prüfcode zur Fn-Tastenfrage, nicht weitergepflegt
+├── README.md             # Bauen, Signieren, Versionspflege im Einzelnen
+├── idea.txt              # der ursprüngliche Entwurf, Quelle der Directive
+└── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-Kein Build-Verzeichnis, keine Projektdatei, keine Abhängigkeitsdeklaration, keine Tests. Es gibt daher auch **kein Build-Kommando und kein Testkommando** — beides entsteht erst mit der ersten Implementierung und wird dann hier nachgetragen.
+Den Ausführungsstand führt der Plan `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`: 8 der 24 Schritte tragen dort `[DONE]`, als nächstes steht S8, die Frühmessung als Gate. Drei Defekte sind offen (Marker `_o_` unter `issues/`), alle drei betreffen Schritt 7.
 
-Was inzwischen vorliegt, sind zwei Dokumente im aktiven Circle:
+`krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 
-| Datei | Was drinsteht |
-|---|---|
-| `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` | Spec der ersten Runde (Navigator-Gerüst), Fähigkeiten C1 bis C9. Entwurf, noch nicht abgenommen. |
-| `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260802-1118-conceptrev-spec-navigator-geruest.md` | Konzeptprüfung der Diagramme dieses Specs, Verdikt "acceptable". |
+## Bauen und prüfen
 
-Analysen gibt es noch keine: `fusion-workbench/shared/analyses/` und `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/` sind beide leer. Der Technologievergleich, der unten als Voraussetzung genannt ist, hat also noch nicht stattgefunden.
+```sh
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace --all-targets
+cargo fmt --all --check
+cargo xtask bundle          # baut und signiert target/KRK.app im Profil release
+```
+
+**`cargo` steht auf diesem Gerät nicht auf dem Standard-PATH.** Es liegt unter `$HOME/.cargo/bin`. Jeder Aufruf braucht deshalb den vollen Pfad oder ein vorangestelltes `export PATH="$HOME/.cargo/bin:$PATH"`.
+
+`cargo xtask` ist kein eingebautes Kommando, sondern der Alias aus `.cargo/config.toml`. Der Bündelbau **verlangt eine Signaturidentität**, sucht sie in drei Stufen und bricht ohne Bündel ab, wenn keine greift; auf eine Ad-hoc-Signatur weicht er nicht aus. Die drei Stufen, das Anlegen einer Entwicklungsidentität, der Fehler `errSecInternalComponent` und die Versionspflege stehen in `README.md`.
 
 ## Technologiewahl
 
-Offen. Sprache, UI-Toolkit und Git-Anbindung sind nicht festgelegt. Die Festlegung erfolgt über einen Entscheidungsdatensatz unter `fusion-workbench/shared/decisions/`, sobald der analyst die Kandidaten verglichen hat. Bis dahin gilt keine Vorfestlegung, auch keine implizite: kein Agent wählt ein Toolkit nebenbei im Zuge einer anderen Aufgabe.
+Getroffen am 260802-1150: **Rust mit AppKit über `objc2`**, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26. Der Datensatz ist `decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md`, die Gegenüberstellung der Kandidaten `analyses/260802-1134-sprache-und-ui-werkzeugkasten.md`, beide im aktiven Circle.
 
 ## Bindende Grundlage: die Entscheidungsdatensätze
 
-Die Entscheidungsdatensätze sind die bindende Grundlage für jede Planung und jede Implementierung. **Verbindlich ist der Dateibestand, nicht diese Tabelle.** Den Stand trägt der Marker im Dateinamen: `_o_` offen, `_a_` beantwortet, `_i_` umgesetzt, `_d_` zurückgestellt, `_s_` überholt. Wer den aktuellen Stand braucht, listet beide Speicher auf, nicht nur einen:
+Die Entscheidungsdatensätze sind die bindende Grundlage für jede Planung und jede Implementierung. **Verbindlich ist der Dateibestand, nicht diese Aufstellung.** Den Stand trägt der Marker im Dateinamen: `_o_` offen, `_a_` beantwortet aber noch nicht in Code umgesetzt, `_i_` umgesetzt, `_d_` zurückgestellt, `_s_` überholt. Wer den aktuellen Stand braucht, listet beide Speicher auf, nicht nur einen:
 
 - `fusion-workbench/shared/decisions/` — projektweite Fragen
 - `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/` — Fragen des aktiven Circles
 
-Die folgende Aufstellung gibt den am 260802-1130 geprüften Stand wieder. Weicht sie vom Dateibestand ab, gilt der Dateibestand.
+Beantwortet oder umgesetzt sind am 260803-1321 sieben Fragen. Die Antwort steht jeweils in der Zeile `Answered:` ihres Datensatzes und ausformuliert im Spec oder im Plan; sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderläuft.
 
-**Beantwortet.** Die Antwort selbst steht im jeweiligen Datensatz in der Zeile `Answered:` und ausformuliert im Spec. Sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderläuft.
+**Offen** sind fünf Fragen, drei projektweite und zwei des Circles:
 
-| Datei | Frage |
-|---|---|
-| `fusion-workbench/shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` | Wie erreicht KRK die Tasten F3 bis F8, die macOS ab Werk selbst belegt? |
-| `fusion-workbench/shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` | Löscht Shift+Delete in den Papierkorb oder endgültig, und fragt KRK vorher nach? |
-| `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_umbenennen-im-stapel-umfang.md` | Wie weit reicht "im Stapel umbenennen" in der ersten Runde? |
-| `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` | Auf welchem Referenzgerät gelten die zehn Zeitzusagen aus Abschnitt C8 des Specs? |
+- `260802-0842_o_git-verwerfen-bedeutung.md` — verwirft "revert" die Änderungen der Datei oder nimmt es einen Commit zurück?
+- `260802-0842_o_editor-formatansicht-je-dateityp.md` — was zeigt die Formatansicht bei Text, bei Code und bei Markdown?
+- `260802-0842_o_code-sdk-fuer-ki-integration.md` — welches Code-SDK trägt die spätere KI-Anbindung?
+- `260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` — wie steuert KRK aus Rust eine Schnittstelle an, die es erst ab macOS 26 gibt?
+- `260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md` — sortiert KRK Dateinamen sprachsensitiv, und wonach ordnet "Sortierung nach Typ"?
 
-**Offen.** Diese Fragen sind gestellt und noch nicht beantwortet:
-
-| Datei | Frage |
-|---|---|
-| `fusion-workbench/shared/decisions/260802-0842_o_git-verwerfen-bedeutung.md` | Bedeutet "revert" aus dem Entwurf: Änderungen der Datei verwerfen oder einen Commit zurücknehmen? |
-| `fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` | Was zeigt die Formatansicht bei Text, bei Code und bei Markdown? |
-| `fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md` | Welches Code-SDK trägt die spätere KI-Anbindung? |
-
-Die ersten beiden offenen Fragen binden den aktiven Circle. Die dritte, das Code-SDK, hält ihre eigene Nichtbindung fest: die KI-Anbindung liegt ausdrücklich außerhalb des aktiven Circles.
-
-Eine beantwortete Entscheidung ist damit noch nicht erledigt: `_a_` heißt, die Antwort ist festgehalten, aber noch nicht in Code umgesetzt. Erst die Umsetzung zieht den Marker auf `_i_`.
-
-Ausdrücklich außerhalb des aktiven Circles liegen außerdem: integrierter Browser, Datei- und Ordnervergleich, Suchen und Ersetzen über mehrere Dateien, Zugriff über Server-Protokolle sowie Git jenseits der oben genannten vier Operationen. Die Abgrenzung im Einzelnen steht im Circle-Datensatz.
+Die Sortierfrage bindet Schritt S12, die Verfügbarkeitsprüfung erst die Runde, die eine Schnittstelle über macOS 15 hinaus anspricht. Außerhalb des aktiven Circles liegen die KI-Anbindung, ein integrierter Browser, Datei- und Ordnervergleich, Suchen und Ersetzen über mehrere Dateien, Zugriff über Server-Protokolle sowie Git jenseits der vier genannten Operationen. Die Abgrenzung im Einzelnen steht im Circle-Datensatz.
 
 ## Sprache
 

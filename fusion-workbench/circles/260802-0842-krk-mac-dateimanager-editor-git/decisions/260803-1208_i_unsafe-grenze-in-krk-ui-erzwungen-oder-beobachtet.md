@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1200_o_abnahmekriterium-von-schritt-6-traegt-denselben-grep-fehler.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Abschnitt `## Aufbau` sowie die Schritte S1 und S6 und die Risikotabelle, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1200_o_abnahmekriterium-von-schritt-6-traegt-denselben-grep-fehler.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Abschnitt `## Aufbau` sowie die Schritte S1 und S6 und die Risikotabelle, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md`
 
 ---
 
