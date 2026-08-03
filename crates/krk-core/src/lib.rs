@@ -11,4 +11,5 @@
 //! `#[allow(unsafe_code)]`. `forbid` liesse sich an dieser Stelle nicht
 //! oeffnen, das ist gerade sein Zweck.
 
+pub mod tasten;
 pub mod verzeichnis;

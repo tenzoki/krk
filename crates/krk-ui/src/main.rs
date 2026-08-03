@@ -16,6 +16,15 @@
 
 mod appkit;
 
+/// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
+/// einschaltet.
+const MARKE_TASTEN_PROTOKOLL: &str = "--tasten-protokoll";
+
 fn main() {
-    appkit::starten();
+    // Unbekannte Marken werden uebergangen und nicht bemaengelt: LaunchServices
+    // haengt einem ueber den Finder gestarteten Buendel eigene an.
+    let tasten_protokoll = std::env::args()
+        .skip(1)
+        .any(|marke| marke == MARKE_TASTEN_PROTOKOLL);
+    appkit::starten(tasten_protokoll);
 }

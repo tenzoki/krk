@@ -17,19 +17,23 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{MainThreadMarker, NSNotification, NSObject, NSObjectProtocol};
 
+use super::ereignisse::Tastenabgriff;
 use super::fenster::{self, FensterDelegierter};
 use super::menue;
 use super::tabelle::Dateifenster;
 
 /// Was der Anwendungsdelegierte haelt.
 ///
-/// Alle drei Felder tragen Objekte, die AppKit nur schwach referenziert oder
-/// gar nicht kennt. Faellt eines von ihnen, faellt das Fenster mit.
-#[derive(Default)]
+/// Die vier Zellen tragen Objekte, die AppKit nur schwach referenziert oder gar
+/// nicht kennt. Faellt eines von ihnen, faellt das Fenster mit, und faellt der
+/// Tastenabgriff, meldet er sich bei AppKit ab.
 pub struct AnwendungsIvars {
+    /// Ob der Protokollmodus `--tasten-protokoll` laeuft.
+    tasten_protokoll: bool,
     fenster: OnceCell<Retained<NSWindow>>,
     fenster_delegierter: OnceCell<Retained<FensterDelegierter>>,
     dateifenster: OnceCell<Dateifenster>,
+    tastenabgriff: OnceCell<Tastenabgriff>,
 }
 
 define_class!(
@@ -57,8 +61,14 @@ define_class!(
 
 impl Anwendungsdelegierter {
     /// Einen Anwendungsdelegierten ohne Oberflaeche.
-    fn neu(mtm: MainThreadMarker) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(AnwendungsIvars::default());
+    fn neu(mtm: MainThreadMarker, tasten_protokoll: bool) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(AnwendungsIvars {
+            tasten_protokoll,
+            fenster: OnceCell::new(),
+            fenster_delegierter: OnceCell::new(),
+            dateifenster: OnceCell::new(),
+            tastenabgriff: OnceCell::new(),
+        });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
     }
@@ -79,6 +89,19 @@ impl Anwendungsdelegierter {
         let _ = ivars.fenster.set(fenster);
 
         if let Some(dateifenster) = ivars.dateifenster.get() {
+            let abgriff =
+                Tastenabgriff::einrichten(dateifenster.quelle().retain(), ivars.tasten_protokoll);
+            match abgriff {
+                Some(abgriff) => {
+                    let _ = ivars.tastenabgriff.set(abgriff);
+                }
+                // Ohne Abgriff bewegt keine Taste mehr die Auswahl. Das still
+                // hinzunehmen hiesse, eine Anwendung auszuliefern, deren erste
+                // Maxime die Tastatursteuerung ist und die keine hat.
+                None => eprintln!(
+                    "krk: der Tastenabgriff liess sich nicht einrichten, die Tastatursteuerung bleibt aus"
+                ),
+            }
             dateifenster.quelle().ordner_lesen(&heimatverzeichnis());
         }
         if let Some(fenster) = ivars.fenster.get() {
@@ -88,7 +111,10 @@ impl Anwendungsdelegierter {
 }
 
 /// Startet die Anwendung. Kehrt zurueck, wenn sie beendet ist.
-pub fn starten() {
+///
+/// `tasten_protokoll` schaltet den Modus `--tasten-protokoll` aus der
+/// Befehlszeile durch bis zum Ereignisabgriff.
+pub fn starten(tasten_protokoll: bool) {
     let mtm = MainThreadMarker::new()
         .expect("die Oberflaeche von KRK laeuft ausschliesslich auf dem Hauptfaden");
 
@@ -98,7 +124,7 @@ pub fn starten() {
 
     // Der Delegierte bleibt bis zum Ende von `starten` am Leben, weil
     // `NSApplication` ihn nur schwach haelt.
-    let delegierter = Anwendungsdelegierter::neu(mtm);
+    let delegierter = Anwendungsdelegierter::neu(mtm, tasten_protokoll);
     anwendung.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
 
     anwendung.run();

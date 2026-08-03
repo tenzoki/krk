@@ -23,3 +23,8 @@ toml = "1"
 objc2 = "0.6"
 objc2-app-kit = "0.3"
 objc2-foundation = "0.3"
+# Objective-C-Bloecke. `NSEvent.addLocalMonitorForEventsMatchingMask:handler:`
+# nimmt seinen Rueckruf als Block entgegen; ohne diese Kiste laesst sich keiner
+# bauen. `objc2-app-kit` fuehrt sie ohnehin schon als Vorbedingung, hier steht
+# sie als unmittelbare Abhaengigkeit von `krk-ui`.
+block2 = "0.6"

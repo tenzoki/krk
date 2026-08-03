@@ -7,12 +7,13 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Vier Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Fuenf Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
 //! anwendung ──> menue
 //!           ──> fenster ──> tabelle ──> krk-core::verzeichnis
+//!           ──> ereignisse ──┘      ──> krk-core::tasten
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
@@ -21,8 +22,12 @@
 //! [`fenster`] baut das Fenster und seinen Delegierten. [`tabelle`] haelt das
 //! Dateifenster: `NSTableView` in einer `NSScrollView`, Datenquelle und
 //! Delegierter, und die Anbindung an das Ordnermodell des Kerns.
+//! [`ereignisse`] haelt den lokalen Ereignisabgriff und ist der einzige
+//! Eintrittspunkt fuer Tastendruecke; er schlaegt sie im Kern nach und reicht
+//! das Kommando an die Datenquelle des Dateifensters weiter.
 
 mod anwendung;
+mod ereignisse;
 mod fenster;
 mod menue;
 mod tabelle;

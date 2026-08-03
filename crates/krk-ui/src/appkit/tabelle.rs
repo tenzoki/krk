@@ -22,7 +22,7 @@
 //! eine Abbruchbehandlung je Lesevorgang durch eine Bedingung.
 
 use std::cell::{Cell, RefCell};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use objc2::rc::Retained;
@@ -35,10 +35,12 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSDate,
-    NSDateFormatter, NSDateFormatterStyle, NSInteger, NSObject, NSObjectProtocol, NSPoint, NSRect,
-    NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, ns_string,
+    NSDateFormatter, NSDateFormatterStyle, NSIndexSet, NSInteger, NSObject, NSObjectProtocol,
+    NSPoint, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer,
+    ns_string,
 };
 
+use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::{Abschluss, Eintrag, Lesevorgang, Meldung, Ordnermodell, Typ};
 
 /// Die Hoehe einer Zeile in Punkten.
@@ -142,6 +144,12 @@ pub struct QuelleIvars {
     tabelle: Retained<NSTableView>,
     /// Die gelesenen Eintraege und ihre Sichtreihenfolge.
     modell: RefCell<Ordnermodell>,
+    /// Der Ordner, der gerade angezeigt wird.
+    ///
+    /// Ein Eintrag traegt nur seinen Namen, keinen Pfad. Ohne den Ordner
+    /// daneben liesse sich aus einer ausgewaehlten Zeile kein Ziel bauen, in
+    /// das der Nutzer hineinsteigen kann.
+    pfad: RefCell<Option<PathBuf>>,
     /// Der Lesevorgang, der gerade laeuft, falls einer laeuft.
     lesevorgang: RefCell<Option<Lesevorgang>>,
     /// Die Generation, die der naechste Lesevorgang bekommt.
@@ -191,6 +199,7 @@ impl DateifensterQuelle {
         let this = Self::alloc(mtm).set_ivars(QuelleIvars {
             tabelle,
             modell: RefCell::new(Ordnermodell::neu(GENERATION_LEER)),
+            pfad: RefCell::new(None),
             lesevorgang: RefCell::new(None),
             letzte_generation: Cell::new(GENERATION_LEER),
             einzug: RefCell::new(None),
@@ -206,6 +215,7 @@ impl DateifensterQuelle {
     pub fn ordner_lesen(&self, pfad: &Path) {
         let generation = self.ivars().letzte_generation.get() + 1;
         self.ivars().letzte_generation.set(generation);
+        *self.ivars().pfad.borrow_mut() = Some(pfad.to_path_buf());
 
         // Der bisherige Lesevorgang faellt hier. Sein Arbeitsfaden bemerkt den
         // Abbruch und endet von selbst; auf ihn zu warten hiesse, eine
@@ -226,6 +236,82 @@ impl DateifensterQuelle {
         }
         self.ivars().modell.borrow_mut().abschliessen();
         self.ivars().tabelle.reloadData();
+    }
+
+    /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
+    ///
+    /// Der Abgriff kennt weder Tabelle noch Modell; er liefert das Kommando,
+    /// und die Auslegung steht hier, wo beide zu Hause sind.
+    pub fn kommando_ausfuehren(&self, kommando: Kommando) {
+        match kommando {
+            Kommando::AuswahlHoch => self.auswahl_verschieben(-1),
+            Kommando::AuswahlRunter => self.auswahl_verschieben(1),
+            Kommando::SeiteHoch => self.auswahl_verschieben(-self.seitenhoehe()),
+            Kommando::SeiteRunter => self.auswahl_verschieben(self.seitenhoehe()),
+            Kommando::Oeffnen => self.auswahl_oeffnen(),
+        }
+    }
+
+    /// Wie viele Zeilen eine Bildschirmseite fasst.
+    ///
+    /// Gefragt wird die Tabelle und nicht gerechnet: die Zahl der sichtbaren
+    /// Zeilen haengt an der Fenstergroesse, und die aendert der Nutzer. Das
+    /// Mindestmass von einer Zeile faengt den Fall ab, dass die Tabelle noch
+    /// keine Groesse hat; eine Seitentaste, die um null Zeilen springt, waere
+    /// eine tote Taste.
+    fn seitenhoehe(&self) -> isize {
+        let tabelle = &self.ivars().tabelle;
+        let sichtbare = tabelle.rowsInRect(tabelle.visibleRect()).length as isize;
+        sichtbare.max(1)
+    }
+
+    /// Verschiebt die Auswahl um die genannte Zahl von Zeilen.
+    ///
+    /// Am Rand bleibt sie stehen, statt umzulaufen. Ohne bestehende Auswahl
+    /// faengt sie an dem Rand an, aus dem die Bewegung kommt: Pfeil ab setzt
+    /// auf die erste Zeile, Pfeil auf auf die letzte.
+    fn auswahl_verschieben(&self, schritte: isize) {
+        let zeilen = self.ivars().modell.borrow().zeilenzahl();
+        let Some(letzte) = zeilen.checked_sub(1) else {
+            return;
+        };
+        let letzte = letzte as isize;
+
+        let tabelle = &self.ivars().tabelle;
+        // `selectedRow` liefert -1, solange nichts ausgewaehlt ist.
+        let jetzt = tabelle.selectedRow();
+        let ziel = if jetzt < 0 {
+            if schritte < 0 { letzte } else { 0 }
+        } else {
+            jetzt.saturating_add(schritte).clamp(0, letzte)
+        };
+
+        let auswahl = NSIndexSet::indexSetWithIndex(ziel as usize);
+        tabelle.selectRowIndexes_byExtendingSelection(&auswahl, false);
+        tabelle.scrollRowToVisible(ziel as NSInteger);
+    }
+
+    /// Steigt in den ausgewaehlten Ordner hinein.
+    ///
+    /// Eine Datei oeffnet nichts: das Ansehen und das Bearbeiten sind eigene
+    /// Funktionen und kommen mit dem Editor, nicht mit diesem Schritt. Einer
+    /// symbolischen Verknuepfung folgt KRK hier ebenfalls nicht, weil der Leser
+    /// sie als Verknuepfung meldet und nicht als das, worauf sie zeigt.
+    fn auswahl_oeffnen(&self) {
+        let Ok(zeile) = usize::try_from(self.ivars().tabelle.selectedRow()) else {
+            return;
+        };
+        let name = self.mit_zeile(zeile, |eintrag| {
+            eintrag.ist_ordner().then(|| eintrag.name.clone())
+        });
+        let Some(Some(name)) = name else {
+            return;
+        };
+        let pfad = self.ivars().pfad.borrow().clone();
+        let Some(pfad) = pfad else {
+            return;
+        };
+        self.ordner_lesen(&pfad.join(name));
     }
 
     /// Reicht den Eintrag der genannten Zeile an eine Auswertung weiter.

@@ -67,3 +67,6 @@ Nicht umgesetzt: `crates/krk-ui/src/main.rs` trägt weiterhin `#![warn(unsafe_co
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Implemented: 569e8e0 — `crates/krk-ui/src/main.rs` trägt `#![deny(unsafe_code)]`, `crates/krk-ui/src/appkit/mod.rs` trägt `#![allow(unsafe_code)]` als einzige Ausnahme der Kiste. Nachgeprüft am 260803-1315: `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/` nennt genau zwei Dateien, `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der `coder` hat zusätzlich nachgemessen, dass ein probeweise eingefügter `unsafe`-Block den Bau scheitern lässt.
