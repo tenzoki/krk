@@ -13,3 +13,12 @@ Herkunft: gefunden beim Schreiben von `resources/default-keymap.toml` (Plan Schr
 Wie die Datei den Widerspruch vorläufig auflöst: F6 und `shift+cmd+v` tragen allein das Verschieben, so wie es die Cmd-Kürzel-Tabelle und das Abnahmekriterium von Schritt 9 wörtlich vorschreiben. Das Umbenennen hat eine eigene Zeile mit `shift+f6` und `shift+cmd+u` bekommen; die Umschalttaste vor F6 ist die Norton- und Total-Commander-Form für das Umbenennen und hält die Nähe zu F6, ohne die Kombination zu teilen.
 
 Was zu entscheiden ist: ob die Formulierung in Zeile 120 auf "F6 Verschieben" gezogen wird (dann beschreibt sie nur noch, was die Tabelle sagt, und die Datei stimmt bereits) oder ob der Nutzer für das Umbenennen eine andere Kombination will als `shift+f6`. Der zweite Fall ändert eine Zeile in `resources/default-keymap.toml`.
+
+---
+Resolved: Der erste Fall gilt. Der Nutzer hat am 260803-2110 entschieden: F6 verschiebt, `shift+f6` und `shift+cmd+u` benennen um. Die Kürzel-Tabelle aus C3 gilt damit unverändert, und die Formulierung "Verschieben und Umbenennen" ist aus dem Abnahmekriterium gestrichen. `resources/default-keymap.toml` bleibt unangetastet; die Datei stand schon richtig.
+
+Der Grund, den dieser Datensatz nennt, trägt die Wahl: C4 führt das Umbenennen als eigene Operation, und C3 schließt zwei Funktionen auf einer Kombination aus. Die Zusammenlegung von Verschieben und Umbenennen auf F6 ist die Norton-Commander-Form; für KRK gilt sie nicht.
+
+Die Durchsicht auf dieselbe Formulierung an anderer Stelle hat zwei Fundstellen ergeben. Der Plan trägt sie nirgends. `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` nennt sie in der Zeile "F6 Verschieben und Umbenennen", dort aber als Beschreibung der Norton-Zuordnung selbst und nicht der von KRK ausgelieferten Belegung; die Aussage über Norton bleibt richtig und ist deshalb unverändert geblieben.
+
+Geändert: `planning/260802-1036_o_spec-navigator-geruest.md`, C3. Das Abnahmekriterium nennt für F6 nur noch das Verschieben, ein neues Kriterium darunter führt das Umbenennen als eigene Funktion aus C4 auf Shift+F6 und Cmd+Shift+U, und eine Festlegung begründet die Trennung. Der Plan nennt die Trennung in Schritt 9.
