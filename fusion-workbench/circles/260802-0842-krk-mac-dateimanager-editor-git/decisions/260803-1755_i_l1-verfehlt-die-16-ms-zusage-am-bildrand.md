@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** coder
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8 (Zeile L1 und der Absatz zur Bildwiederholrate), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritt 8 und `### Frage 5` (Absatz "Zur Ehrlichkeit der L1-Messung"), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md`, Messbericht `messungen/260803-1554-durchstich.txt`
 
@@ -93,8 +93,30 @@ Die zweite kommt vom Nutzer und geht weiter. Sie argumentiert nicht über das Me
 
 **Was noch aussteht.** Die Auswertung in `crates/krk-bench/src/messen.rs` rechnet für L1 und L9 weiterhin das alte Maß. Was umzustellen ist, steht im Plan in S8 unter `Was der coder daraufhin umzustellen hat`. Erst wenn diese Umstellung steht und eine Messung gegen das neue Maß vorliegt, kommt dieser Datensatz auf "umgesetzt".
 
+## Umsetzung, 260803-1845
+
+**Umgestellt und nachgemessen. L1 hält das neue Maß in allen fünf Runden mit 20 von 20.**
+
+Die Auswertung trägt das Abnahmemaß jetzt als eigenen Typ `Abnahmemass` mit drei Fällen: `Perzentil(Duration)` für die acht Zusagen, die eine Dauer zusagen, `AnteilImBild { bildlaenge }` für L1 und später L9, und `Keine` für eine Zahl, die der Bericht nennt, ohne dass das Gate sie abfragt. Die Bildlänge steht im Fall selbst und nicht beim Aufrufer; damit trägt eine Zusage ihr Maß vollständig, und `gehalten_in` kommt ohne ein zweites Argument aus, das bei acht von zehn Zusagen unbenutzt bliebe. Der Anteil wird ganzzahlig verglichen, damit genau 19 von 20 hält und das Urteil nicht an einer Rundung im letzten Bit hängt.
+
+Fehlt die Bildwiederholrate, bricht die Auswertung ab, statt 60 Hz zu unterstellen. Das ist strukturell und nicht durch Sorgfalt gelöst: `Durchstichergebnis` führt die Rate nicht mehr als `Option`, und ohne Rate entsteht gar kein Ergebnis.
+
+**Die Zahlen der Nachmessung**, fünf Runden zu zwanzig Wiederholungen, dieselben Bedingungen wie am 260803-1554, Bericht `messungen/260803-1641-durchstich.txt`:
+
+| Zusage | Maß | Gemessen | Urteil |
+|---|---|---|---|
+| L1 Tastendruck bis Ende des Zeichendurchgangs | Anteil im nächsten Bild, mindestens 95 % je Runde | 100 % in jeder der fünf Runden, 100 von 100 Tastendrücken | gehalten |
+| L2 erste Bildschirmseite auf Prüfordner A | 95. Perzentil ≤ 100 ms | 41,176 bis 53,079 ms | gehalten |
+| L3 vollständiges Lesen auf A, warm | 95. Perzentil ≤ 400 ms | 120,695 bis 145,780 ms | gehalten |
+| L4 Prozessstart bis bedienbares Fenster | 95. Perzentil ≤ 1000 ms | 282,391 bis 715,185 ms | gehalten |
+| L10 erste Bildschirmseite bei 100.000 Einträgen | 95. Perzentil ≤ 100 ms | 50,447 bis 54,486 ms | gehalten |
+
+**Die Änderung war nicht kosmetisch.** Das 95. Perzentil von L1 lag in dieser Messung zwischen 14,912 und 16,633 ms; unter der alten Zusage von 16 ms hätte L1 in vier von fünf Runden verfehlt, während kein einziger der hundert Tastendrücke sein Bild verpasst hat. Die beiden Maße fällen an denselben Daten entgegengesetzte Urteile, und das neue ist das, welches die zugesagte Eigenschaft misst.
+
+**Ein Befund an einer anderen Zusage.** L4 hat sich verschoben: 715,185 ms für das 95. Perzentil in Runde 2 gegen 294,555 bis 303,540 ms in der ersten Messung. Die Zusage hält weiterhin in jeder Runde. Die Codeänderung scheidet als Ursache aus, weil sie allein die Rechnung über vorliegende Werte betrifft. Gemeldet als `issues/260803-1845_o_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md`; L1 und dieser Datensatz sind davon nicht berührt.
+
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, Zeilen L1 und L9 der Zusagentabelle sowie die Absätze ab `Warum L1 und L9 den Anteil zählen und nicht die Spanne` — Nutzer wählt am 260803-1810 Möglichkeit 2: L1 und L9 nehmen über den Anteil der Eingaben ab, die ihr nächstes Bild erreichen, mindestens 95 Prozent je Runde; Möglichkeit 4 (Technologiewechsel) ausdrücklich abgelehnt. Auswertung im Plan: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md`, `### Frage 5` und S8.
-Implemented:
+Implemented: `crates/krk-bench/src/messen.rs:377` — `Abnahmemass` mit den drei Fällen `Perzentil`, `AnteilImBild { bildlaenge }` und `Keine` löst das eine Feld `schwelle` ab; L1 nimmt über den Anteil ab, die acht Dauerzusagen unverändert über das 95. Perzentil, und ohne gemeldete Bildwiederholrate bricht die Auswertung ab. Nachgemessen am 260803-1641 über fünf Runden: L1 erreicht in jeder Runde 20 von 20 Bildern, Bericht `messungen/260803-1641-durchstich.txt`. Der Commit dazu steht beim Orchestrator aus; der `coder` committet nicht selbst.
 Deferred:
 Superseded by:

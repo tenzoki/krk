@@ -29,6 +29,14 @@
 //! **Das Perzentil.** Die Zusagen aus C8 gelten fuer das 95. Perzentil, nicht
 //! fuer den Mittelwert. Ein Mittelwert ueber zwanzig Laeufe verbirgt genau den
 //! Ausreisser, den ein Nutzer bemerkt.
+//!
+//! # Zwei Abnahmemasse
+//!
+//! Die Auswertung der Fruehmessung weiter unten kennt seit dem 260803-1810 zwei
+//! Masse, und welches gilt, haengt an der Art der Zusage: eine zugesagte Dauer
+//! wird ueber das Perzentil abgenommen, eine zugesagte Bildgrenze ueber den
+//! Anteil der Eingaben, die ihr naechstes Bild erreichen. Siehe
+//! [`Abnahmemass`].
 
 use std::fmt::Write as _;
 use std::io::{self, BufRead, BufReader, Read};
@@ -46,8 +54,16 @@ use crate::fixture;
 /// Wie oft jede Messung wiederholt wird. C8 schreibt zwanzig vor.
 pub const WIEDERHOLUNGEN: usize = 20;
 
-/// Der Anteil, fuer den die Zusagen aus C8 gelten.
+/// Der Anteil, fuer den die acht Zusagen aus C8 gelten, die eine Dauer zusagen.
 pub const PERZENTIL: f64 = 0.95;
+
+/// Wie viel Prozent der Eingaben ihr naechstes Bild erreichen muessen.
+///
+/// Das zweite Abnahmemass aus C8, gueltig fuer L1 und L9 seit dem 260803-1810.
+/// Als ganze Zahl gefuehrt, damit das Urteil ohne Fliesskommavergleich
+/// feststeht: bei zwanzig Wiederholungen darf hoechstens eine ihr Bild
+/// verpassen.
+pub const ANTEIL_IM_BILD_PROZENT: usize = 95;
 
 /// Das Werkzeug, das den Dateisystem-Cache leert.
 const PURGE: &str = "/usr/sbin/purge";
@@ -341,6 +357,51 @@ const FRIST_START: Duration = Duration::from_secs(60);
 /// haengenden Lauf ab.
 const FRIST_SPANNEN: Duration = Duration::from_secs(300);
 
+/// Wie eine Zusage aus C8 abgenommen wird.
+///
+/// **Zwei Masse, und welches gilt, haengt an der Art der Zusage.** Acht der
+/// zehn Zusagen sagen eine **Dauer** zu, die der Nutzer abwartet: ein Ordner
+/// ist gelesen, ein Fenster steht. Dort ist das 95. Perzentil der gemessenen
+/// Spanne das richtige Mass, weil die Spanne selbst das Erlebnis ist. L1 und L9
+/// sagen etwas anderes zu, naemlich dass die Reaktion **im naechsten Bild**
+/// erscheint. Oberhalb dieser Grenze kann die Maschine nicht besser werden,
+/// unterhalb kann der Mensch nicht unterscheiden; das Perzentil einer solchen
+/// Spanne misst, an welcher Stelle des Bildes der Tastendruck eintraf, und
+/// nicht, wie schnell KRK ist.
+///
+/// Der Nutzer hat das am 260803-1810 entschieden. Herleitung im Spec unter C8,
+/// Absaetze ab `Warum L1 und L9 den Anteil zaehlen und nicht die Spanne`, und
+/// im Datensatz
+/// `decisions/260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Abnahmemass {
+    /// Das 95. Perzentil der Runde liegt hoechstens bei dieser Grenze.
+    Perzentil(Duration),
+    /// Mindestens [`ANTEIL_IM_BILD_PROZENT`] der Einzelwerte einer Runde liegen
+    /// hoechstens bei einer Bildlaenge.
+    ///
+    /// Die Bildlaenge steht hier und nicht beim Aufrufer, damit eine Zusage ihr
+    /// Mass vollstaendig traegt: [`Zusage::gehalten_in`] braucht dann kein
+    /// zweites Argument, das bei acht der zehn Zusagen ohnehin unbenutzt bliebe.
+    AnteilImBild { bildlaenge: Duration },
+    /// Der Bericht nennt die Zahl, das Gate fragt sie nicht ab.
+    Keine,
+}
+
+impl Abnahmemass {
+    /// Das Mass in Worten, wie der Bericht es je Zeile ausweist.
+    ///
+    /// Damit steht in jeder Zeile der Zahlentabelle, nach welcher Regel sie
+    /// beurteilt ist, statt dass der Leser es aus der Kennung erschliessen muss.
+    pub fn beschreibung(self) -> String {
+        match self {
+            Self::Perzentil(grenze) => format!("p95 <= {} ms", grenze.as_millis()),
+            Self::AnteilImBild { .. } => format!(">= {ANTEIL_IM_BILD_PROZENT} % im Bild"),
+            Self::Keine => "keine".to_owned(),
+        }
+    }
+}
+
 /// Eine Zusage aus C8 mit ihren gemessenen Werten.
 ///
 /// **Warum die Werte nach Runden getrennt bleiben.** Eine Runde ist genau die
@@ -357,9 +418,8 @@ pub struct Zusage {
     pub kennung: &'static str,
     /// Was gemessen wurde, in einem Satzteil.
     pub was: &'static str,
-    /// Die zugesagte Obergrenze. `None` bei einer Zahl, die der Bericht nennt,
-    /// ohne dass das Gate von Schritt 8 sie abfragt.
-    pub schwelle: Option<Duration>,
+    /// Nach welcher Regel diese Zusage abgenommen wird.
+    pub mass: Abnahmemass,
     /// Die Einzelwerte, Runde fuer Runde.
     pub runden: Vec<Vec<Duration>>,
 }
@@ -402,12 +462,74 @@ impl Zusage {
         self.alle_werte().into_iter().max().unwrap_or_default()
     }
 
+    /// Je Runde: wie viele Eingaben ihr naechstes Bild erreicht haben, und wie
+    /// viele es waren.
+    ///
+    /// `None`, wenn diese Zusage nicht ueber den Anteil abgenommen wird. Eine
+    /// Eingabe erreicht ihr naechstes Bild, wenn die Spanne vom Zeitstempel des
+    /// Tastenereignisses bis zum Ende des Zeichendurchgangs hoechstens eine
+    /// Bildlaenge betraegt; ist sie groesser, wird die Aenderung erst mit dem
+    /// uebernaechsten Bild sichtbar.
+    pub fn im_bild(&self) -> Option<Vec<(usize, usize)>> {
+        let Abnahmemass::AnteilImBild { bildlaenge } = self.mass else {
+            return None;
+        };
+        Some(
+            self.runden
+                .iter()
+                .map(|werte| {
+                    let erreicht = werte.iter().filter(|wert| **wert <= bildlaenge).count();
+                    (erreicht, werte.len())
+                })
+                .collect(),
+        )
+    }
+
+    /// Der Anteil erreichter Bilder je Runde, in Prozent.
+    pub fn anteile_im_bild(&self) -> Option<Vec<f64>> {
+        self.im_bild().map(|runden| {
+            runden
+                .into_iter()
+                .map(|(erreicht, gesamt)| anteil_prozent(erreicht, gesamt))
+                .collect()
+        })
+    }
+
+    /// Der schlechteste Anteil ueber alle Runden, in Prozent.
+    ///
+    /// An dieser Zahl haengt das Urteil, denn gehalten heisst in jeder Runde
+    /// gehalten.
+    pub fn schlechtester_anteil(&self) -> Option<f64> {
+        self.anteile_im_bild()
+            .map(|anteile| anteile.into_iter().fold(f64::INFINITY, f64::min))
+            .filter(|wert| wert.is_finite())
+    }
+
     /// In wie vielen Runden die Zusage gehalten hat, und wie viele es waren.
+    ///
+    /// `None`, wenn das Gate diese Zusage nicht abfragt.
     pub fn gehalten_in(&self) -> Option<(usize, usize)> {
-        let grenze = self.schwelle?;
-        let perzentile = self.perzentile();
-        let gehalten = perzentile.iter().filter(|wert| **wert <= grenze).count();
-        Some((gehalten, perzentile.len()))
+        match self.mass {
+            Abnahmemass::Perzentil(grenze) => {
+                let perzentile = self.perzentile();
+                let gehalten = perzentile.iter().filter(|wert| **wert <= grenze).count();
+                Some((gehalten, perzentile.len()))
+            }
+            Abnahmemass::AnteilImBild { .. } => {
+                let runden = self.im_bild()?;
+                let gehalten = runden
+                    .iter()
+                    .filter(|(erreicht, gesamt)| {
+                        // Ganzzahlig verglichen, damit genau 19 von 20 haelt und
+                        // das Urteil nicht an einer Rundung im letzten Bit haengt.
+                        // Eine Runde ohne Werte haelt nicht.
+                        *gesamt > 0 && erreicht * 100 >= gesamt * ANTEIL_IM_BILD_PROZENT
+                    })
+                    .count();
+                Some((gehalten, runden.len()))
+            }
+            Abnahmemass::Keine => None,
+        }
     }
 
     /// Ob die Zusage in **jeder** Runde gehalten hat.
@@ -422,6 +544,40 @@ impl Zusage {
 
     fn alle_werte(&self) -> Vec<Duration> {
         self.runden.iter().flatten().copied().collect()
+    }
+}
+
+/// Der Anteil in Prozent. Eine Runde ohne Werte hat den Anteil null.
+fn anteil_prozent(erreicht: usize, gesamt: usize) -> f64 {
+    if gesamt == 0 {
+        return 0.0;
+    }
+    100.0 * erreicht as f64 / gesamt as f64
+}
+
+/// Die Laenge eines Bildes, gebildet aus der gemeldeten Bildwiederholrate.
+///
+/// **Fehlt die Rate, bricht die Auswertung ab, statt 60 Hz zu unterstellen.**
+/// Seit dem 260803-1810 ist die Rate nicht mehr nur eine Angabe im
+/// Bedingungskopf, sondern Bestandteil des Urteils ueber L1: die Bildlaenge ist
+/// ihr Kehrwert, und an ihr entscheidet sich je Einzelwert, ob eine Eingabe ihr
+/// naechstes Bild erreicht hat. Dieselbe Haltung wie bei `--kalt` ohne Rechte
+/// und bei einem Fenster ohne Bildschirm. Plan S8, Punkt 2 der Umstellung, und
+/// `### Frage 5`.
+fn bildlaenge_bilden(rate: Option<i64>) -> io::Result<(i64, Duration)> {
+    match rate {
+        Some(hertz) if hertz > 0 => Ok((hertz, Duration::from_secs_f64(1.0 / hertz as f64))),
+        Some(hertz) => Err(io::Error::other(format!(
+            "die Anwendung hat eine Bildwiederholrate von {hertz} Hz gemeldet. Daraus \
+             laesst sich keine Bildlaenge bilden, und ohne Bildlaenge ist L1 nicht \
+             abnehmbar."
+        ))),
+        None => Err(io::Error::other(
+            "die Anwendung hat keine Bildwiederholrate gemeldet. L1 nimmt seit dem \
+             260803-1810 ueber den Anteil der Eingaben ab, die ihr naechstes Bild \
+             erreichen, und die Bildlaenge ist der Kehrwert dieser Rate. Die Auswertung \
+             bricht deshalb ab, statt 60 Hz zu unterstellen.",
+        )),
     }
 }
 
@@ -464,7 +620,16 @@ struct Rohrunde {
 #[derive(Debug, Clone)]
 pub struct Durchstichergebnis {
     /// Die Bildwiederholrate, wie die Anwendung sie aus `NSScreen` gelesen hat.
-    pub bildwiederholrate: Option<i64>,
+    ///
+    /// Keine Option: ohne die Rate gibt es kein Urteil ueber L1, und
+    /// [`bildlaenge_bilden`] bricht dann ab, bevor ein Ergebnis entsteht.
+    pub bildwiederholrate: i64,
+    /// Eine Bildlaenge, der Kehrwert der Rate. Am Referenzgeraet 16,667 ms.
+    ///
+    /// Steht neben der Rate, weil der Bedingungskopf beide nennt und weil L1
+    /// gegen diese Zahl abgenommen wird. Beide entstehen in [`Durchstich::fahren`]
+    /// aus einem Aufruf von [`bildlaenge_bilden`].
+    pub bildlaenge: Duration,
     /// Die gemessenen Zusagen, in der Reihenfolge des Berichts.
     pub zusagen: Vec<Zusage>,
 }
@@ -497,37 +662,42 @@ impl Durchstich {
                 .collect()
         };
 
+        let (bildwiederholrate, bildlaenge) = bildlaenge_bilden(rate)?;
+
         Ok(Durchstichergebnis {
-            bildwiederholrate: rate,
+            bildwiederholrate,
+            bildlaenge,
             zusagen: vec![
                 Zusage {
                     kennung: "L1",
                     was: "Tastendruck bis Ende des Zeichendurchgangs",
-                    schwelle: Some(Duration::from_millis(16)),
+                    // Seit dem 260803-1810 nicht mehr 16 ms auf das Perzentil,
+                    // sondern der Anteil der Eingaben, die ihr Bild erreichen.
+                    mass: Abnahmemass::AnteilImBild { bildlaenge },
                     runden: sammeln(|runde| &runde.l1),
                 },
                 Zusage {
                     kennung: "L2",
                     was: "Pruefordner A: erste Bildschirmseite",
-                    schwelle: Some(Duration::from_millis(100)),
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
                     runden: sammeln(|runde| &runde.l2),
                 },
                 Zusage {
                     kennung: "L3",
                     was: "Pruefordner A: vollstaendig gelesen und sortiert",
-                    schwelle: Some(Duration::from_millis(400)),
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(400)),
                     runden: sammeln(|runde| &runde.l3),
                 },
                 Zusage {
                     kennung: "L4",
                     was: "Prozessstart bis bedienbares Fenster",
-                    schwelle: Some(Duration::from_millis(1000)),
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(1000)),
                     runden: sammeln(|runde| &runde.l4),
                 },
                 Zusage {
                     kennung: "L10",
                     was: "100.000 Eintraege: erste Bildschirmseite",
-                    schwelle: Some(Duration::from_millis(100)),
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
                     runden: sammeln(|runde| &runde.l10_erste),
                 },
                 Zusage {
@@ -536,7 +706,7 @@ impl Durchstich {
                     // C8 sagt hierfuer 4 s warm zu. Das Gate von Schritt 8
                     // fragt die Zahl nicht ab; der Bericht nennt sie, weil sie
                     // ohnehin anfaellt.
-                    schwelle: None,
+                    mass: Abnahmemass::Keine,
                     runden: sammeln(|runde| &runde.l10_voll),
                 },
             ],
@@ -797,6 +967,8 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
 
     let _ = writeln!(text, "Zahlen");
     let _ = writeln!(text, "------");
+    text.push_str(ZWEI_MASSE);
+    let _ = writeln!(text);
     let _ = writeln!(
         text,
         "Das 95. Perzentil steht je Runde einmal. Ausgewiesen sind das beste und"
@@ -806,27 +978,39 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
         "das schlechteste der {} Runden; Median, Minimum und Maximum laufen ueber",
         lauf.runden
     );
-    let _ = writeln!(text, "alle Einzelwerte aller Runden.");
+    let _ = writeln!(
+        text,
+        "alle Einzelwerte aller Runden. Die Spalte \"im Bild\" traegt den Anteil der"
+    );
+    let _ = writeln!(text, "schlechtesten Runde, weil an ihr das Urteil haengt.");
     let _ = writeln!(text);
     let _ = writeln!(
         text,
-        "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>10}   Urteil",
-        "Gemessene Groesse", "p95 bestes", "p95 schlecht", "Median", "Minimum", "Maximum", "Zusage"
+        "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   Urteil",
+        "Gemessene Groesse",
+        "p95 bestes",
+        "p95 schlecht",
+        "Median",
+        "Minimum",
+        "Maximum",
+        "im Bild",
+        "Abnahme nach"
     );
     for zusage in &ergebnis.zusagen {
         let _ = writeln!(
             text,
-            "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>10}   {}",
+            "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   {}",
             format!("{} — {}", zusage.kennung, zusage.was),
             bericht::spanne(zusage.bestes_perzentil()),
             bericht::spanne(zusage.schlechtestes_perzentil()),
             bericht::spanne(zusage.median()),
             bericht::spanne(zusage.minimum()),
             bericht::spanne(zusage.maximum()),
-            match zusage.schwelle {
-                Some(grenze) => format!("{} ms", grenze.as_millis()),
-                None => "keine".to_owned(),
+            match zusage.schlechtester_anteil() {
+                Some(prozent) => format!("{prozent:.1} %"),
+                None => "-".to_owned(),
             },
+            zusage.mass.beschreibung(),
             urteil(zusage)
         );
     }
@@ -835,15 +1019,19 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
         text,
         "Urteil des Gates: {}",
         if ergebnis.bestanden() {
-            "bestanden — jede der fuenf abgefragten Zusagen haelt ihre Zahl in jeder Runde."
+            "bestanden — jede der fuenf abgefragten Zusagen haelt ihr Mass in jeder Runde."
         } else {
-            "NICHT bestanden — mindestens eine Zusage verfehlt ihre Zahl in mindestens einer Runde."
+            "NICHT bestanden — mindestens eine Zusage verfehlt ihr Mass in mindestens einer Runde."
         }
     );
     let _ = writeln!(text);
 
     let _ = writeln!(text, "Das 95. Perzentil Runde fuer Runde");
     let _ = writeln!(text, "----------------------------------");
+    let _ = writeln!(
+        text,
+        "Fuer L1 eine Kennzahl ohne eigenes Urteil; das Urteil steht im Abschnitt darunter."
+    );
     for zusage in &ergebnis.zusagen {
         let werte: Vec<String> = zusage
             .perzentile()
@@ -853,6 +1041,40 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
         let _ = writeln!(text, "{:<8}{}", zusage.kennung, werte.join("  "));
     }
     let _ = writeln!(text);
+
+    let anteilszeilen: Vec<&Zusage> = ergebnis
+        .zusagen
+        .iter()
+        .filter(|zusage| zusage.im_bild().is_some())
+        .collect();
+    if !anteilszeilen.is_empty() {
+        let _ = writeln!(text, "Der Anteil im naechsten Bild, Runde fuer Runde");
+        let _ = writeln!(text, "---------------------------------------------");
+        let _ = writeln!(
+            text,
+            "Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine"
+        );
+        let _ = writeln!(
+            text,
+            "Bildlaenge betraegt, hier {}. Gehalten heisst: in jeder Runde mindestens {} %.",
+            bericht::spanne(ergebnis.bildlaenge),
+            ANTEIL_IM_BILD_PROZENT
+        );
+        for zusage in anteilszeilen {
+            let runden = zusage.im_bild().unwrap_or_default();
+            let werte: Vec<String> = runden
+                .into_iter()
+                .map(|(erreicht, gesamt)| {
+                    format!(
+                        "{:.1} % ({erreicht}/{gesamt})",
+                        anteil_prozent(erreicht, gesamt)
+                    )
+                })
+                .collect();
+            let _ = writeln!(text, "{:<8}{}", zusage.kennung, werte.join("  "));
+        }
+        let _ = writeln!(text);
+    }
 
     let _ = writeln!(text, "Einzelwerte");
     let _ = writeln!(text, "-----------");
@@ -905,6 +1127,18 @@ pub fn durchstich_schreiben(ziel: &Path, text: &str) -> io::Result<PathBuf> {
     Ok(pfad)
 }
 
+/// Warum in einer Tabelle zwei Abnahmemasse nebeneinander stehen.
+const ZWEI_MASSE: &str = "\
+Zwei Abnahmemasse stehen nebeneinander, und die Spalte \"Abnahme nach\" nennt je
+Zeile, welches gilt. Acht der zehn Zusagen aus C8 sagen eine Dauer zu, die der
+Nutzer abwartet; sie werden ueber das 95. Perzentil der Runde abgenommen. L1 und
+L9 sagen zu, dass die Reaktion im naechsten Bild erscheint; sie werden seit dem
+260803-1810 ueber den Anteil der Eingaben abgenommen, die das erreichen. Die
+Spalte \"im Bild\" traegt diesen Anteil und steht auf \"-\", wo das Mass nicht
+gilt. Fuer L1 sind Perzentil, Median, Minimum und Maximum Kennzahlen ohne
+eigenes Urteil.
+";
+
 /// Wie der Cache-Zustand im Kopf beschrieben wird.
 const CACHE: &str = "warm (siehe Abschnitt Einschraenkungen: purge braucht \
 Rechte, die dieser Lauf nicht hat)";
@@ -937,6 +1171,14 @@ Bildschirmseiten statt einer.
 **Der koerperliche Tastendruck bleibt ungemessen.** L1 wird mit einem
 synthetischen Ereignis ausgeloest; naeheres im Abschnitt Lesart.
 
+**Das Bild selbst bleibt ungemessen, und eine Bildgrenze ist keine
+Photonenmessung.** Eine Bildgrenze ist der Zeitpunkt, an dem das System sein
+naechstes Bild vorbereitet, nicht der, an dem ein Pixel leuchtet. Aus dem
+eigenen Prozess heraus ist der zweite nicht feststellbar. Das faellt beim
+Anteilsmass staerker ins Gewicht als beim Perzentil, weil die Bildlaenge dort
+die Grenze selbst ist: ein Wert dicht an der Grenze koennte bei einer echten
+Bildschirmmessung auf die andere Seite fallen. Naeheres im Abschnitt Lesart.
+
 **Der Bildtakt kann stehenbleiben.** Ein `CADisplayLink` taktet nur, solange das
 Fenster sichtbar ist. Bleibt er stehen, bricht der Messlauf nach zehn Sekunden
 mit einer Meldung ab und gibt keine Zahl aus; die Meldung nennt die Zahl der
@@ -945,13 +1187,12 @@ langsamen Oberflaeche.
 ";
 
 fn rate_beschreiben(ergebnis: &Durchstichergebnis) -> String {
-    match ergebnis.bildwiederholrate {
-        Some(hertz) => format!(
-            "{hertz} Hz, gelesen aus NSScreen.maximumFramesPerSecond \
-             am Bildschirm des gemessenen Fensters"
-        ),
-        None => "nicht erhoben".to_owned(),
-    }
+    format!(
+        "{} Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des \
+         gemessenen Fensters; eine Bildlaenge sind damit {}",
+        ergebnis.bildwiederholrate,
+        bericht::spanne(ergebnis.bildlaenge)
+    )
 }
 
 /// Pfad, Startwert und Eintragszahl eines Pruefordners.
@@ -1008,10 +1249,26 @@ danach weiter und faellt unter L3.
 Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
 zwanzig Laeufen der neunzehnte der sortierten Reihe.
 
+L1 wird nicht darueber abgenommen. Der Nutzer hat das Abnahmemass am 260803-1810
+geaendert: nicht mehr 16 ms fuer das 95. Perzentil, sondern der Anteil der
+Eingaben, die ihr naechstes Bild erreichen. Zwei Gruende tragen die Aenderung.
+Messtechnisch lagen die 16 ms innerhalb der Streuung ihres eigenen Verfahrens:
+das 95. Perzentil der Wartezeit auf die naechste Bildgrenze liegt selbst fuer
+eine Anwendung ohne jede Verarbeitungszeit bei rund 15,8 ms, und acht von
+achtzehn Runden verfehlten die Zahl bei unveraendertem Programm. Wahrnehmbar ist
+eine Spanne dieser Groesse ohnehin nicht; eine Zahl, die keine unterscheidbare
+Eigenschaft beschreibt, taugt nicht als Abnahmekriterium. Die Vorschrift steht in
+C8 unter \"Warum L1 und L9 den Anteil zaehlen und nicht die Spanne\", der
+Datensatz ist 260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md.
+
+Die Bildlaenge ist der Kehrwert der Bildwiederholrate aus NSScreen, hier also
+kein angenommener Wert. Fehlt die Rate, bricht die Auswertung ab und gibt keine
+Zahl aus, statt 60 Hz zu unterstellen.
+
 Eine Runde ist genau die Messung, die C8 vorschreibt: zwanzig Wiederholungen je
-Zusage, das 95. Perzentil darueber. Der Bericht faehrt mehrere Runden, weil ein
-Urteil, das von Runde zu Runde wechselt, kein Urteil ist. Eine Zusage gilt hier
-nur dann als gehalten, wenn sie es in jeder Runde tut.
+Zusage. Der Bericht faehrt mehrere Runden, weil ein Urteil, das von Runde zu
+Runde wechselt, kein Urteil ist. Eine Zusage gilt hier nur dann als gehalten,
+wenn sie es in jeder Runde tut.
 ";
 
 #[cfg(test)]
@@ -1101,6 +1358,135 @@ mod tests {
         assert_eq!(median(&[ms(1), ms(2), ms(3)]), ms(2));
         assert_eq!(median(&[ms(10), ms(20), ms(30), ms(40)]), ms(25));
         assert_eq!(median(&[]), Duration::ZERO);
+    }
+
+    /// Eine Bildlaenge bei 60 Hz, auf die Nanosekunde gerundet.
+    fn ein_bild() -> Duration {
+        Duration::from_secs_f64(1.0 / 60.0)
+    }
+
+    fn anteilszusage(runden: Vec<Vec<Duration>>) -> Zusage {
+        Zusage {
+            kennung: "L1",
+            was: "Tastendruck bis Ende des Zeichendurchgangs",
+            mass: Abnahmemass::AnteilImBild {
+                bildlaenge: ein_bild(),
+            },
+            runden,
+        }
+    }
+
+    #[test]
+    fn eine_bildlaenge_entsteht_nur_aus_einer_gemeldeten_rate() {
+        let (hertz, bildlaenge) = bildlaenge_bilden(Some(60)).expect("60 Hz sind gueltig");
+        assert_eq!(hertz, 60);
+        assert!((bildlaenge.as_secs_f64() * 1_000.0 - 16.667).abs() < 0.001);
+
+        // Ohne Rate wird nicht auf 60 Hz zurueckgefallen, sondern abgebrochen.
+        let fehler = bildlaenge_bilden(None).expect_err("ohne Rate darf es keine Zahl geben");
+        assert!(
+            fehler.to_string().contains("keine Bildwiederholrate"),
+            "unerwartete Meldung: {fehler}"
+        );
+        assert!(bildlaenge_bilden(Some(0)).is_err());
+        assert!(bildlaenge_bilden(Some(-1)).is_err());
+    }
+
+    #[test]
+    fn eine_eingabe_erreicht_ihr_bild_bis_genau_zur_bildlaenge() {
+        // Genau eine Bildlaenge zaehlt noch als erreicht, ein Nanosekunde mehr
+        // nicht: C8 sagt "hoechstens eine Bildlaenge".
+        let zusage = anteilszusage(vec![vec![
+            Duration::ZERO,
+            ein_bild(),
+            ein_bild() + Duration::from_nanos(1),
+            ein_bild() * 2,
+        ]]);
+        assert_eq!(zusage.im_bild(), Some(vec![(2, 4)]));
+        assert_eq!(zusage.schlechtester_anteil(), Some(50.0));
+    }
+
+    #[test]
+    fn eine_von_zwanzig_darf_ihr_bild_verpassen() {
+        let schnell = ms(8);
+        let langsam = ein_bild() * 2;
+
+        let neunzehn = {
+            let mut werte = vec![schnell; 19];
+            werte.push(langsam);
+            anteilszusage(vec![werte])
+        };
+        assert_eq!(neunzehn.gehalten_in(), Some((1, 1)));
+        assert_eq!(neunzehn.immer_gehalten(), Some(true));
+
+        let achtzehn = {
+            let mut werte = vec![schnell; 18];
+            werte.push(langsam);
+            werte.push(langsam);
+            anteilszusage(vec![werte])
+        };
+        assert_eq!(achtzehn.gehalten_in(), Some((0, 1)));
+        assert_eq!(achtzehn.immer_gehalten(), Some(false));
+    }
+
+    #[test]
+    fn gehalten_heisst_auch_beim_anteil_in_jeder_runde_gehalten() {
+        let gute_runde = vec![ms(8); 20];
+        let schlechte_runde = vec![ein_bild() * 2; 20];
+        let zusage = anteilszusage(vec![gute_runde.clone(), schlechte_runde, gute_runde]);
+
+        assert_eq!(zusage.gehalten_in(), Some((2, 3)));
+        assert_eq!(zusage.immer_gehalten(), Some(false));
+        assert_eq!(zusage.schlechtester_anteil(), Some(0.0));
+
+        // Das Perzentil bleibt als Kennzahl erhalten, faellt aber kein Urteil.
+        assert!(zusage.bestes_perzentil() <= zusage.schlechtestes_perzentil());
+    }
+
+    #[test]
+    fn das_perzentilmass_bleibt_unberuehrt() {
+        let zusage = Zusage {
+            kennung: "L2",
+            was: "Pruefordner A: erste Bildschirmseite",
+            mass: Abnahmemass::Perzentil(ms(100)),
+            runden: vec![vec![ms(40); 20], vec![ms(120); 20]],
+        };
+        assert_eq!(zusage.gehalten_in(), Some((1, 2)));
+        assert_eq!(zusage.immer_gehalten(), Some(false));
+
+        // Der Anteil im naechsten Bild gilt fuer diese Zusage nicht und wird
+        // deshalb auch nicht ausgewiesen.
+        assert_eq!(zusage.im_bild(), None);
+        assert_eq!(zusage.schlechtester_anteil(), None);
+    }
+
+    #[test]
+    fn eine_zusage_ohne_mass_bekommt_kein_urteil() {
+        let zusage = Zusage {
+            kennung: "L10b",
+            was: "100.000 Eintraege: vollstaendig gelesen (Beigabe)",
+            mass: Abnahmemass::Keine,
+            runden: vec![vec![ms(900); 20]],
+        };
+        assert_eq!(zusage.gehalten_in(), None);
+        assert_eq!(zusage.immer_gehalten(), None);
+        assert_eq!(urteil(&zusage), "nicht abgefragt");
+    }
+
+    #[test]
+    fn jede_zeile_nennt_ihr_abnahmemass() {
+        assert_eq!(
+            Abnahmemass::Perzentil(ms(100)).beschreibung(),
+            "p95 <= 100 ms"
+        );
+        assert_eq!(
+            Abnahmemass::AnteilImBild {
+                bildlaenge: ein_bild()
+            }
+            .beschreibung(),
+            ">= 95 % im Bild"
+        );
+        assert_eq!(Abnahmemass::Keine.beschreibung(), "keine");
     }
 
     #[test]
