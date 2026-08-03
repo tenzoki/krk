@@ -74,3 +74,8 @@ Bis dahin steht der Zustand.
 
 **Aufgefallen bei:** der Prüfung von Schritt 6 und 7,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: Der Datensatz nannte selbst den richtigen Ausgang, und er ist genommen. Die Wahl zwischen den beiden Antworten ist eine Festlegung über das Verhalten der Anwendung und keine Planungsentscheidung; weder C1 noch C7 des Specs beantwortet sie, weil C1 das Schließen des letzten Tabs regelt und C7 das Ein- und Ausblenden der Bereiche innerhalb des einen Fensters. Die Frage liegt deshalb als `decisions/260803-2007_o_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md` mit beiden Möglichkeiten, ihren Dateifolgen und einer Empfehlung für Möglichkeit 1.
+
+Die Lücke im Plan ist zugleich geschlossen: S12 nimmt sie auf. S12 ist der Schritt, der das Fenstermodell anlegt, er hat noch nicht begonnen, und beide Antworten sind dort am billigsten; die zweite fällt sogar mit seiner ohnehin anstehenden Arbeit zusammen. S12 trägt jetzt die Beschreibung der Sackgasse, den Verweis auf den Entscheidungsdatensatz als Abhängigkeit und ein Abnahmekriterium, das ein laufendes KRK ohne Fenster und ohne Rückweg ausschließt. S6 bleibt unberührt: sein Vermerk `[DONE]` und sein Kriterium ändern sich nicht, weil beide wörtlich erfüllt sind. Nachgezogen am 260803-2007.

@@ -35,3 +35,6 @@ zweimal aufmacht.
 **Was zu tun ist.** Die Dateiliste von S7 um die fünf Einträge ergänzen, jeweils mit
 dem Vermerk `(einbindend)` dort, wo er zutrifft. Am Code ist nichts zu ändern; er ist
 gebaut, geprüft und formatiert.
+
+---
+Resolved: Die Dateiliste von S7 trägt die fünf genannten Einträge, dazu die `Cargo.lock`, die die neue Abhängigkeit `block2` mechanisch mitzieht und die versioniert ist; die Regel im Kopf von `## Implementierungsschritte` nennt diesen sechsten Fall seit dem Nachzug vom 260803-1819. Jeder Eintrag trägt den Vermerk, der zutrifft: die beiden `Cargo.toml` als `(einbindend)`, `main.rs`, `anwendung.rs` und `tabelle.rs` als `(erweitert)`. Am Code ist nichts geändert. Nachgezogen am 260803-2007.

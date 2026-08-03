@@ -36,3 +36,6 @@ jede empfangene Taste erzeugt eine Zeile der Form
 `tastencode=125 maske=keine kommando=AuswahlRunter`. Der Modulkommentar von
 `crates/krk-ui/src/appkit/ereignisse.rs` hält den Punkt an der Stelle fest, an der
 das Protokoll geschrieben wird.
+
+---
+Resolved: Das Kriterium von S7 startet das Bündel jetzt unmittelbar über `target/KRK.app/Contents/MacOS/krk --tasten-protokoll`, also Weg 1 des Datensatzes. Der Code bleibt unberührt. Der Absatz zum Kriterium hält den Grund fest, damit der Startweg nicht bei der nächsten Durchsicht auf `open` zurückgezogen wird: gemessen wird, welchen Tastencode AppKit liefert, und daran ändert der Startweg nichts; der einzige Unterschied ist, dass der Prozess die TCC-Freigaben des Terminals erbt, was für eine Messung ohne geschützten Ordner folgenlos bleibt. Die Prüfung von S6, die ebenfalls `open target/KRK.app` verwendet, ist nicht betroffen: sie liest keine Standardausgabe, sondern sieht ein Fenster an. Nachgezogen am 260803-2007.

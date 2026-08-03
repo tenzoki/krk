@@ -45,3 +45,6 @@ Betroffen sind unter anderem die beiden Prüfungen, die das Kriterium wörtlich 
 endet, ohne die Prüfungen ausgeführt zu haben, die es benennt, gibt eine Zusage ohne
 Deckung. Dasselbe Muster steckt in S2 und S15, die `cargo test -p krk-core` ohne
 Filter verlangen und deshalb nicht betroffen sind.
+
+---
+Resolved: Das Kriterium von S7 verlangt jetzt `cargo test -p krk-core --test tasten`, also Weg 1 des Datensatzes; der Code bleibt unberührt. Die Vermutung des Datensatzes, das Muster stecke sonst nur in S2 und S15 und beide seien nicht betroffen, hat die Durchsicht am 260803-2007 widerlegt: S2 ist tatsächlich ungefiltert und damit sauber, S15 nicht. Der Namensfilter stand in sechs weiteren Kriterien und ist überall auf `--test` gezogen: S10 (`ablage`), S11 (`belegung`), S13 (`navigation`), S15 (`operation`) und S17 (`umbenennen`) wählen jetzt ihr Testprogramm. S12 war der schwerste Fall: es verlangte `cargo test -p krk-core sitzung`, wozu es gar kein Testprogramm gibt, weil die Prüfungen nach der eigenen Dateiliste des Schritts in `crates/krk-core/tests/ablage.rs` hineinwachsen; das Kriterium steht jetzt auf `--test ablage`. Ungefiltert und damit unberührt bleiben S1 (`cargo test --workspace`) und S2.
