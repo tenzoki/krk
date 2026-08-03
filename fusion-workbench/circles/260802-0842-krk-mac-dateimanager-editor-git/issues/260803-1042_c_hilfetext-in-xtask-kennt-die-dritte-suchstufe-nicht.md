@@ -17,3 +17,6 @@ Der Nutzer liest also bei `cargo xtask --hilfe` und in jeder Fehlermeldung (`mai
 **Was zu tun ist.** Der `coder` zieht den Absatz in `HILFE` auf die drei Stufen nach. Der Wortlaut soll sagen, was der Bau tut, nicht wie `sign.rs` aufgebaut ist: ausdrückliche Angabe schlägt alles, sonst der Name "KRK Entwicklung", sonst die einzige gültige Identität, sonst Abbruch mit Anleitung. `README.md` beschreibt die drei Stufen bereits korrekt und dient als Vorlage.
 
 **Grenzen.** Nur `xtask/src/main.rs`. Kein Eingriff in `sign.rs`, `bundle.rs` oder `crates/`.
+
+---
+Resolved: Der Absatz in `HILFE` (`xtask/src/main.rs:30`) nennt jetzt alle drei Stufen — `KRK_SIGN_IDENTITY` falls nichtleer, sonst der Name "KRK Entwicklung" im Schlüsselbund, sonst die einzige gültige Identität —, und den Abbruch mit Anleitung, wenn keine Stufe greift. Geprüft in beiden Ausgabelagen: `cargo xtask --hilfe` (Rückgabewert 0) und ein unbekannter Unterbefehl (Rückgabewert 2). `cargo build`, `cargo test`, `cargo fmt --check` und `cargo clippy` über den Workspace enden mit 0.

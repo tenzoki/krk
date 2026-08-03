@@ -27,10 +27,12 @@ xtask — Bauwerkzeug fuer KRK
       an, kopiert resources/Info.plist mit eingesetzter Version, schreibt
       PkgInfo und signiert das Buendel lokal.
 
-      Die Signaturidentitaet kommt aus der Umgebungsvariablen
-      KRK_SIGN_IDENTITY. Fehlt sie, wird im Schluesselbund die lokale
-      Identitaet \"KRK Entwicklung\" gesucht. Fehlt auch die, bricht der Bau
-      mit einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
+      Die Signaturidentitaet sucht der Bau in drei Stufen: die
+      Umgebungsvariable KRK_SIGN_IDENTITY, falls sie nichtleer ist; sonst
+      eine Identitaet namens \"KRK Entwicklung\" im Schluesselbund; sonst
+      die einzige gueltige Identitaet des Schluesselbunds, falls es genau
+      eine gibt. Findet keine Stufe eine Identitaet, bricht der Bau mit
+      einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
 
   cargo xtask --hilfe
 ";
