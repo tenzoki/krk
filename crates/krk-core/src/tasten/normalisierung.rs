@@ -90,16 +90,24 @@ impl ModMaske {
     /// Die Umschalttaste (`shift`).
     pub const UMSCHALT: Self = Self(1 << 3);
 
-    /// Die vier Zusatztasten mit ihrem Namen, in der Reihenfolge der Anzeige.
+    /// Die vier Zusatztasten mit ihrem Namen, in der Reihenfolge der
+    /// Schreibweise.
     ///
-    /// Die Reihenfolge ist fest, damit `command+shift` und `shift+command`
-    /// denselben Text ergeben. Die Namen sind die, unter denen
-    /// `resources/default-keymap.toml` die Zusatztasten spaeter fuehrt.
+    /// **Die eine Liste fuer beide Richtungen.** Der Parser aus
+    /// [`super::parser`] liest die Zusatztasten einer Kombination hierueber,
+    /// und [`fmt::Display`] schreibt sie hierueber zurueck; Reihenfolge und
+    /// Schreibweise koennen deshalb nicht auseinanderlaufen.
+    ///
+    /// Die Namen und die Reihenfolge sind die von
+    /// `resources/default-keymap.toml`, und das ist die Reihenfolge, in der
+    /// macOS die Zusatztasten schreibt (⌃⌥⇧⌘). Dass die Reihenfolge fest ist,
+    /// heisst: `shift+cmd` und `cmd+shift` sind nicht zwei Schreibweisen fuer
+    /// dasselbe, sondern eine richtige und eine falsche.
     pub const BENANNT: [(Self, &'static str); 4] = [
-        (Self::BEFEHL, "command"),
-        (Self::STEUERUNG, "control"),
-        (Self::WAHL, "option"),
+        (Self::STEUERUNG, "ctrl"),
+        (Self::WAHL, "opt"),
         (Self::UMSCHALT, "shift"),
+        (Self::BEFEHL, "cmd"),
     ];
 
     /// Die gesetzten Bits als Zahl.
@@ -133,10 +141,14 @@ impl BitOrAssign for ModMaske {
 }
 
 impl fmt::Display for ModMaske {
-    /// Schreibt die Maske als `command+shift`, die leere als `keine`.
+    /// Schreibt die Maske als `shift+cmd`, die leere als `keine`.
     ///
-    /// Diese Schreibweise geht in den Protokollmodus `--tasten-protokoll` und
-    /// ist damit das, was der Nutzer bei der Abnahme liest.
+    /// Es ist die Schreibweise von `resources/default-keymap.toml`: was der
+    /// Protokollmodus `--tasten-protokoll` ausgibt, kann der Nutzer so in seine
+    /// `keymap.toml` uebernehmen. Die leere Maske heisst dort `keine`, weil eine
+    /// leere Ausgabe an dieser Stelle wie eine fehlende aussaehe;
+    /// [`Kombination`](super::parser::Kombination) laesst sie deshalb ganz weg,
+    /// statt diesen Text zu uebernehmen.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.ist_leer() {
             return f.write_str("keine");
@@ -197,8 +209,14 @@ mod tests {
     fn die_anzeige_haelt_eine_feste_reihenfolge() {
         let erst_umschalt = ModMaske::UMSCHALT | ModMaske::BEFEHL;
         let erst_befehl = ModMaske::BEFEHL | ModMaske::UMSCHALT;
-        assert_eq!(erst_umschalt.to_string(), "command+shift");
-        assert_eq!(erst_befehl.to_string(), "command+shift");
+        assert_eq!(erst_umschalt.to_string(), "shift+cmd");
+        assert_eq!(erst_befehl.to_string(), "shift+cmd");
+    }
+
+    #[test]
+    fn die_anzeige_folgt_der_schreibweise_der_belegungsdatei() {
+        let alle = ModMaske::STEUERUNG | ModMaske::WAHL | ModMaske::UMSCHALT | ModMaske::BEFEHL;
+        assert_eq!(alle.to_string(), "ctrl+opt+shift+cmd");
     }
 
     #[test]

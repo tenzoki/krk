@@ -24,3 +24,6 @@ Der zweite Wert daneben, `ZEICHEN_PFEIL_AB` (`'\u{F701}'`, `NSDownArrowFunctionK
 `CODE_PFEIL_AB` entfernen und an seiner Stelle `tasten::code::PFEIL_AB` schreiben.
 
 **Aufgefallen bei:** der Behebung von `issues/260803-1536_c_die-pruefungen-bestaetigen-die-appkit-bitwerte-gegen-sich-selbst.md`.
+
+---
+Resolved: Mit der Umsetzung von Schritt 11 am 260803-2317 aufgelöst. `crates/krk-ui/src/appkit/ereignisse.rs` schreibt jetzt `const CODE_PFEIL_AB: u16 = code_von_pflicht("down");`. Die Zahl steht nicht mehr in der Datei, sondern kommt zur Übersetzungszeit aus `krk_core::tasten::parser::TASTEN`, der einen Tastentabelle des Programms. Ein Tippfehler im Namen bricht den Bau ab, statt eine zweite Wahrheit anzulegen. `krk_core::tasten::code`, das Modul mit den fünf abgeschriebenen Konstanten aus Schritt 7, ist zusammen mit der verdrahteten Tabelle entfallen; auch die Prüfdatei `crates/krk-core/tests/tasten.rs` holt ihre Tastencodes seither über `code_von_pflicht`. Belegt durch `grep -rn ": u16 = " crates/`: außerhalb von `parser.rs` steht keine Konstante mehr, die einen Tastencode als Zahl trägt.

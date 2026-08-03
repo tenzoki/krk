@@ -1,0 +1,533 @@
+//! Die Kombinationsschreibweise und die eine Tabelle der Tastencodes.
+//!
+//! Zwei Dinge stehen hier, und beide genau einmal im ganzen Programm:
+//!
+//! 1. **[`TASTEN`], die Tabelle der virtuellen Tastencodes.** Sie ordnet jedem
+//!    Namen der Schreibweise eine Zahl zu und sagt zu jeder Zahl, woher sie
+//!    stammt. Wer irgendwo einen Tastencode braucht, holt ihn ueber
+//!    [`code_von`] oder [`code_von_pflicht`] hier ab; eine zweite Zahl daneben
+//!    waere eine zweite Wahrheit ueber dieselbe Taste.
+//! 2. **[`Kombination`], die gelesene Form von `shift+cmd+k`.** Sie traegt die
+//!    Taste und die normalisierte Maske und schreibt sich ueber [`fmt::Display`]
+//!    wieder in genau die Zeichenkette zurueck, aus der sie gelesen wurde.
+//!
+//! # Die Schreibweise
+//!
+//! `[ctrl+][opt+][shift+][cmd+]<taste>`, in genau dieser Reihenfolge. Sie ist
+//! die Reihenfolge, in der macOS die Zusatztasten schreibt (⌃⌥⇧⌘), und der
+//! Kopf von `resources/default-keymap.toml` beschreibt sie als Vertrag dieses
+//! Parsers. Die Namen der vier Zusatztasten stehen nicht hier, sondern in
+//! [`ModMaske::BENANNT`]; sie gehoeren der Maske und werden zum Lesen wie zum
+//! Schreiben von dort geholt.
+//!
+//! Die Reihenfolge wird **erzwungen** und nicht bloss angeboten. `cmd+shift+k`
+//! ist ein Fehler und nicht die zweite Schreibweise fuer `shift+cmd+k`: zwei
+//! Schreibweisen fuer eine Kombination waeren zwei Zeilen in der Belegungsdatei,
+//! die dasselbe meinen, und der Vergleich zweier Belegungen muesste sie erst
+//! wieder auf eine Form bringen.
+//!
+//! Die fn-Taste ist keine Zusatztaste dieser Schreibweise. C3 des Specs
+//! verlangt das ausdruecklich, und
+//! [`normalisieren`](super::normalisierung::normalisieren) loescht das Bit
+//! schon vor dem Nachschlag; [`Schreibfehler::FnAlsZusatztaste`] sagt es dem,
+//! der es dennoch schreibt.
+//!
+//! # Woher die Tastencodes stammen
+//!
+//! Jeder Eintrag traegt seine [`Herkunft`], und die Unterscheidung ist keine
+//! Formalitaet, sondern die Belegkette. **Drei Codes sind am Referenzgeraet
+//! gemessen** (F3, F5 und F8 mit 99, 96 und 100, `spikes/fn-tasten/messung-A.txt`
+//! Ereignisse #03 bis #05); **alle uebrigen sind nur dokumentiert**, aus der
+//! Carbon-Tabelle `kVK_*` in `HIToolbox.framework/Headers/Events.h` des
+//! macOS-SDK, nachgesehen am 260803. Fuer F4, F6 und F7 heisst das: 118, 97 und
+//! 98 hat in diesem Projekt niemand gedrueckt. Sie stehen hier, weil die
+//! Auslieferungsbelegung sie braucht, und sie stehen als
+//! [`Herkunft::Dokumentiert`], damit niemand sie fuer gemessen haelt.
+
+use std::fmt;
+use std::str::FromStr;
+
+use super::Tastendruck;
+use super::normalisierung::ModMaske;
+
+/// Woher der Tastencode eines Eintrags stammt.
+///
+/// Beide Faelle nennen den Carbon-Namen. Der Unterschied liegt allein darin, ob
+/// das Projekt die Zahl selbst gesehen hat.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Herkunft {
+    /// Am Referenzgeraet gemessen. `beleg` nennt die Fundstelle im Messbericht.
+    Gemessen {
+        /// Der Name aus der Carbon-Tabelle `kVK_*`.
+        kvk: &'static str,
+        /// Die Fundstelle der Messung.
+        beleg: &'static str,
+    },
+    /// Aus der Carbon-Tabelle uebernommen und im Projekt nie gemessen.
+    Dokumentiert {
+        /// Der Name aus der Carbon-Tabelle `kVK_*`.
+        kvk: &'static str,
+    },
+}
+
+impl Herkunft {
+    /// Der Name aus der Carbon-Tabelle, in beiden Faellen.
+    pub const fn kvk(self) -> &'static str {
+        match self {
+            Herkunft::Gemessen { kvk, .. } | Herkunft::Dokumentiert { kvk } => kvk,
+        }
+    }
+
+    /// Wahr, wenn das Projekt diesen Tastencode selbst gemessen hat.
+    pub const fn ist_gemessen(self) -> bool {
+        matches!(self, Herkunft::Gemessen { .. })
+    }
+}
+
+/// Ein Eintrag der Tastentabelle: ein Name der Schreibweise, sein Tastencode
+/// und dessen Herkunft.
+///
+/// Ein virtueller Tastencode benennt die **Stelle** auf der Tastatur und nicht
+/// das Zeichen. Er ist damit unabhaengig von der Tastaturbelegung des Systems,
+/// und genau deshalb belegt KRK ihn und nicht das gemeldete Zeichen (C3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Taste {
+    /// Der Name, unter dem die Schreibweise diese Taste kennt.
+    pub name: &'static str,
+    /// Der virtuelle Tastencode aus `NSEvent.keyCode`.
+    pub code: u16,
+    /// Woher der Tastencode stammt.
+    pub herkunft: Herkunft,
+}
+
+/// Ein gemessener Eintrag der Tabelle.
+const fn gemessen(name: &'static str, code: u16, kvk: &'static str, beleg: &'static str) -> Taste {
+    Taste {
+        name,
+        code,
+        herkunft: Herkunft::Gemessen { kvk, beleg },
+    }
+}
+
+/// Ein nur dokumentierter Eintrag der Tabelle.
+const fn dokumentiert(name: &'static str, code: u16, kvk: &'static str) -> Taste {
+    Taste {
+        name,
+        code,
+        herkunft: Herkunft::Dokumentiert { kvk },
+    }
+}
+
+/// Die Fundstelle der Messung, je Funktionstaste.
+const MESSUNG: &str = "spikes/fn-tasten/messung-A.txt";
+
+/// Alle Tasten, die die Schreibweise benennen kann.
+///
+/// Die eine Tabelle. Sie deckt, was der Plan in Schritt 9 aufzaehlt: `f3` bis
+/// `f8`, `delete`, `up`, `down`, `pageup`, `pagedown`, `home`, `end`, `return`,
+/// `tab`, `esc`, `space` sowie die Buchstaben und die Ziffern.
+pub const TASTEN: [Taste; 53] = [
+    // Die Norton-Reihe. Drei dieser sechs Codes sind gemessen, drei nicht.
+    gemessen("f3", 99, "kVK_F3", MESSUNG),
+    dokumentiert("f4", 118, "kVK_F4"),
+    gemessen("f5", 96, "kVK_F5", MESSUNG),
+    dokumentiert("f6", 97, "kVK_F6"),
+    dokumentiert("f7", 98, "kVK_F7"),
+    gemessen("f8", 100, "kVK_F8", MESSUNG),
+    // Steuertasten.
+    dokumentiert("delete", 51, "kVK_Delete"),
+    dokumentiert("return", 36, "kVK_Return"),
+    dokumentiert("tab", 48, "kVK_Tab"),
+    dokumentiert("esc", 53, "kVK_Escape"),
+    dokumentiert("space", 49, "kVK_Space"),
+    // Bewegung in der Liste.
+    dokumentiert("up", 126, "kVK_UpArrow"),
+    dokumentiert("down", 125, "kVK_DownArrow"),
+    dokumentiert("pageup", 116, "kVK_PageUp"),
+    dokumentiert("pagedown", 121, "kVK_PageDown"),
+    dokumentiert("home", 115, "kVK_Home"),
+    dokumentiert("end", 119, "kVK_End"),
+    // Die Buchstaben, in der Reihenfolge des Alphabets und nicht der Codes.
+    dokumentiert("a", 0, "kVK_ANSI_A"),
+    dokumentiert("b", 11, "kVK_ANSI_B"),
+    dokumentiert("c", 8, "kVK_ANSI_C"),
+    dokumentiert("d", 2, "kVK_ANSI_D"),
+    dokumentiert("e", 14, "kVK_ANSI_E"),
+    dokumentiert("f", 3, "kVK_ANSI_F"),
+    dokumentiert("g", 5, "kVK_ANSI_G"),
+    dokumentiert("h", 4, "kVK_ANSI_H"),
+    dokumentiert("i", 34, "kVK_ANSI_I"),
+    dokumentiert("j", 38, "kVK_ANSI_J"),
+    dokumentiert("k", 40, "kVK_ANSI_K"),
+    dokumentiert("l", 37, "kVK_ANSI_L"),
+    dokumentiert("m", 46, "kVK_ANSI_M"),
+    dokumentiert("n", 45, "kVK_ANSI_N"),
+    dokumentiert("o", 31, "kVK_ANSI_O"),
+    dokumentiert("p", 35, "kVK_ANSI_P"),
+    dokumentiert("q", 12, "kVK_ANSI_Q"),
+    dokumentiert("r", 15, "kVK_ANSI_R"),
+    dokumentiert("s", 1, "kVK_ANSI_S"),
+    dokumentiert("t", 17, "kVK_ANSI_T"),
+    dokumentiert("u", 32, "kVK_ANSI_U"),
+    dokumentiert("v", 9, "kVK_ANSI_V"),
+    dokumentiert("w", 13, "kVK_ANSI_W"),
+    dokumentiert("x", 7, "kVK_ANSI_X"),
+    dokumentiert("y", 16, "kVK_ANSI_Y"),
+    dokumentiert("z", 6, "kVK_ANSI_Z"),
+    // Die Ziffern der oberen Reihe. Der Zehnerblock traegt eigene Codes und
+    // steht nicht in der Schreibweise.
+    dokumentiert("0", 29, "kVK_ANSI_0"),
+    dokumentiert("1", 18, "kVK_ANSI_1"),
+    dokumentiert("2", 19, "kVK_ANSI_2"),
+    dokumentiert("3", 20, "kVK_ANSI_3"),
+    dokumentiert("4", 21, "kVK_ANSI_4"),
+    dokumentiert("5", 23, "kVK_ANSI_5"),
+    dokumentiert("6", 22, "kVK_ANSI_6"),
+    dokumentiert("7", 26, "kVK_ANSI_7"),
+    dokumentiert("8", 28, "kVK_ANSI_8"),
+    dokumentiert("9", 25, "kVK_ANSI_9"),
+];
+
+/// Zeichenweiser Vergleich zweier Namen zur Uebersetzungszeit.
+///
+/// `str`-Vergleich ist in einer `const fn` nicht zu haben; dieser Ersatz macht
+/// [`code_von`] in einem `const`-Zusammenhang benutzbar und damit die Zusage
+/// "die Tabelle steht an genau einer Stelle" auch dort einloesbar, wo bisher
+/// eine abgeschriebene Zahl stand.
+const fn namen_gleich(links: &str, rechts: &str) -> bool {
+    let (links, rechts) = (links.as_bytes(), rechts.as_bytes());
+    if links.len() != rechts.len() {
+        return false;
+    }
+    let mut stelle = 0;
+    while stelle < links.len() {
+        if links[stelle] != rechts[stelle] {
+            return false;
+        }
+        stelle += 1;
+    }
+    true
+}
+
+/// Der Tastencode zu einem Namen der Schreibweise, falls die Tabelle ihn kennt.
+///
+/// Zur Uebersetzungszeit auswertbar, damit auch eine Konstante ihre Zahl von
+/// hier holen kann statt sie abzuschreiben.
+pub const fn code_von(name: &str) -> Option<u16> {
+    let mut stelle = 0;
+    while stelle < TASTEN.len() {
+        if namen_gleich(TASTEN[stelle].name, name) {
+            return Some(TASTEN[stelle].code);
+        }
+        stelle += 1;
+    }
+    None
+}
+
+/// Wie [`code_von`], aber ein unbekannter Name bricht die Uebersetzung ab.
+///
+/// Fuer Konstanten, deren Name im Programmtext steht und den die Tabelle
+/// deshalb kennen muss. Ein Tippfehler wird zum Uebersetzungsfehler und nicht
+/// zu einer toten Taste.
+pub const fn code_von_pflicht(name: &str) -> u16 {
+    match code_von(name) {
+        Some(code) => code,
+        None => panic!("die Tastentabelle kennt diesen Namen nicht"),
+    }
+}
+
+/// Der Tabelleneintrag zu einem Namen der Schreibweise.
+pub fn taste_mit_namen(name: &str) -> Option<Taste> {
+    TASTEN.into_iter().find(|taste| taste.name == name)
+}
+
+/// Der Tabelleneintrag zu einem Tastencode.
+pub fn taste_mit_code(code: u16) -> Option<Taste> {
+    TASTEN.into_iter().find(|taste| taste.code == code)
+}
+
+/// Warum eine Zeichenkette keine Kombination ergibt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Schreibfehler {
+    /// Vor dem letzten `+` steht kein Tastenname.
+    LeereTaste,
+    /// Ein Teil vor dem letzten `+` ist keine der vier Zusatztasten.
+    UnbekannteZusatztaste(String),
+    /// `fn` ist nach C3 keine Zusatztaste einer Belegung.
+    FnAlsZusatztaste,
+    /// Dieselbe Zusatztaste steht zweimal.
+    ZusatztasteDoppelt(String),
+    /// Die Zusatztasten stehen nicht in der vorgeschriebenen Reihenfolge.
+    ReihenfolgeVerletzt {
+        /// Die Zusatztaste, die zu spaet steht.
+        zusatztaste: String,
+        /// Die, hinter der sie steht und vor der sie stehen muesste.
+        hinter: String,
+    },
+    /// Die Tabelle [`TASTEN`] kennt diesen Tastennamen nicht.
+    UnbekannterTastenname(String),
+}
+
+impl fmt::Display for Schreibfehler {
+    fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Schreibfehler::LeereTaste => ausgabe.write_str("es fehlt der Tastenname"),
+            Schreibfehler::UnbekannteZusatztaste(text) => write!(
+                ausgabe,
+                "\"{text}\" ist keine Zusatztaste; erlaubt sind {}",
+                zusatztasten_aufzaehlen()
+            ),
+            Schreibfehler::FnAlsZusatztaste => ausgabe.write_str(
+                "fn ist keine Zusatztaste einer Belegung; KRK belegt den Tastencode, \
+                 und F3 mit gehaltener fn erzeugt denselben wie ein nacktes F3",
+            ),
+            Schreibfehler::ZusatztasteDoppelt(text) => {
+                write!(ausgabe, "die Zusatztaste \"{text}\" steht zweimal")
+            }
+            Schreibfehler::ReihenfolgeVerletzt {
+                zusatztaste,
+                hinter,
+            } => write!(
+                ausgabe,
+                "\"{zusatztaste}\" steht hinter \"{hinter}\"; \
+                 die Reihenfolge ist {}",
+                zusatztasten_aufzaehlen()
+            ),
+            Schreibfehler::UnbekannterTastenname(text) => {
+                write!(
+                    ausgabe,
+                    "\"{text}\" ist kein Tastenname dieser Schreibweise"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for Schreibfehler {}
+
+/// Die vier Zusatztasten als Aufzaehlung, fuer die Fehlermeldungen.
+fn zusatztasten_aufzaehlen() -> String {
+    ModMaske::BENANNT
+        .iter()
+        .map(|(_, name)| *name)
+        .collect::<Vec<&str>>()
+        .join(", ")
+}
+
+/// Eine gelesene Kombination: eine Taste und die Zusatztasten davor.
+///
+/// Der Nachschlag geht ueber [`Kombination::tastendruck`] und damit ueber die
+/// **normalisierte** Maske; die rohen Flaggen eines AppKit-Ereignisses kommen
+/// hier nie an.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Kombination {
+    taste: Taste,
+    maske: ModMaske,
+}
+
+impl Kombination {
+    /// Eine Kombination aus einem Tabelleneintrag und einer Maske.
+    pub const fn neu(taste: Taste, maske: ModMaske) -> Self {
+        Self { taste, maske }
+    }
+
+    /// Liest die Schreibweise `[ctrl+][opt+][shift+][cmd+]<taste>`.
+    pub fn lesen(text: &str) -> Result<Self, Schreibfehler> {
+        let teile: Vec<&str> = text.split('+').collect();
+        let Some((name, zusaetze)) = teile.split_last() else {
+            return Err(Schreibfehler::LeereTaste);
+        };
+
+        let mut maske = ModMaske::LEER;
+        let mut letzte: Option<usize> = None;
+        for zusatz in zusaetze {
+            if *zusatz == "fn" {
+                return Err(Schreibfehler::FnAlsZusatztaste);
+            }
+            let Some(stelle) = ModMaske::BENANNT
+                .iter()
+                .position(|(_, benannt)| benannt == zusatz)
+            else {
+                return Err(Schreibfehler::UnbekannteZusatztaste((*zusatz).to_owned()));
+            };
+            let (bit, _) = ModMaske::BENANNT[stelle];
+            if maske.enthaelt(bit) {
+                return Err(Schreibfehler::ZusatztasteDoppelt((*zusatz).to_owned()));
+            }
+            if let Some(vorige) = letzte
+                && stelle < vorige
+            {
+                return Err(Schreibfehler::ReihenfolgeVerletzt {
+                    zusatztaste: (*zusatz).to_owned(),
+                    hinter: ModMaske::BENANNT[vorige].1.to_owned(),
+                });
+            }
+            maske |= bit;
+            letzte = Some(stelle);
+        }
+
+        if name.is_empty() {
+            return Err(Schreibfehler::LeereTaste);
+        }
+        let Some(taste) = taste_mit_namen(name) else {
+            return Err(Schreibfehler::UnbekannterTastenname((*name).to_owned()));
+        };
+        Ok(Self::neu(taste, maske))
+    }
+
+    /// Die Kombination zu einem Tastendruck, falls die Tabelle die Taste kennt.
+    ///
+    /// `None` heisst: diese Taste hat in der Schreibweise keinen Namen und
+    /// laesst sich deshalb nicht in `keymap.toml` ablegen. Der Aufrufer sagt das
+    /// dem Nutzer, statt eine Zeile zu schreiben, die niemand wieder einlesen
+    /// kann.
+    pub fn aus_tastendruck(druck: Tastendruck) -> Option<Self> {
+        taste_mit_code(druck.code).map(|taste| Self::neu(taste, druck.maske))
+    }
+
+    /// Der Tabelleneintrag der Taste.
+    pub const fn taste(self) -> Taste {
+        self.taste
+    }
+
+    /// Die normalisierte Maske der Zusatztasten.
+    pub const fn maske(self) -> ModMaske {
+        self.maske
+    }
+
+    /// Der Tastendruck, unter dem diese Kombination nachgeschlagen wird.
+    pub const fn tastendruck(self) -> Tastendruck {
+        Tastendruck::neu(self.taste.code, self.maske)
+    }
+}
+
+impl fmt::Display for Kombination {
+    /// Schreibt die Kombination in genau der Form, aus der sie gelesen wurde.
+    fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if !self.maske.ist_leer() {
+            write!(ausgabe, "{}+", self.maske)?;
+        }
+        ausgabe.write_str(self.taste.name)
+    }
+}
+
+impl FromStr for Kombination {
+    type Err = Schreibfehler;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Self::lesen(text)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jeder_name_und_jeder_code_steht_genau_einmal() {
+        for (stelle, taste) in TASTEN.into_iter().enumerate() {
+            for andere in TASTEN.into_iter().skip(stelle + 1) {
+                assert_ne!(taste.name, andere.name, "der Name steht zweimal");
+                assert_ne!(taste.code, andere.code, "der Tastencode steht zweimal");
+            }
+        }
+    }
+
+    #[test]
+    fn die_tabelle_deckt_die_ganze_schreibweise_ab() {
+        let benannt: Vec<&str> = TASTEN.iter().map(|taste| taste.name).collect();
+        for name in [
+            "f3", "f4", "f5", "f6", "f7", "f8", "delete", "up", "down", "pageup", "pagedown",
+            "home", "end", "return", "tab", "esc", "space",
+        ] {
+            assert!(benannt.contains(&name), "{name} fehlt in der Tabelle");
+        }
+        for buchstabe in 'a'..='z' {
+            assert!(
+                code_von(&buchstabe.to_string()).is_some(),
+                "{buchstabe} fehlt"
+            );
+        }
+        for ziffer in '0'..='9' {
+            assert!(code_von(&ziffer.to_string()).is_some(), "{ziffer} fehlt");
+        }
+    }
+
+    #[test]
+    fn code_von_ist_zur_uebersetzungszeit_auswertbar() {
+        const PFEIL_AB: u16 = code_von_pflicht("down");
+        assert_eq!(PFEIL_AB, 125);
+        assert_eq!(code_von("gibtsnicht"), None);
+    }
+
+    #[test]
+    fn die_reihenfolge_der_zusatztasten_wird_erzwungen() {
+        assert!(Kombination::lesen("shift+cmd+k").is_ok());
+        assert_eq!(
+            Kombination::lesen("cmd+shift+k"),
+            Err(Schreibfehler::ReihenfolgeVerletzt {
+                zusatztaste: "shift".to_owned(),
+                hinter: "cmd".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn fn_wird_als_zusatztaste_abgewiesen() {
+        assert_eq!(
+            Kombination::lesen("fn+f3"),
+            Err(Schreibfehler::FnAlsZusatztaste)
+        );
+    }
+
+    #[test]
+    fn eine_doppelte_zusatztaste_ist_ein_fehler() {
+        assert_eq!(
+            Kombination::lesen("cmd+cmd+k"),
+            Err(Schreibfehler::ZusatztasteDoppelt("cmd".to_owned()))
+        );
+    }
+
+    #[test]
+    fn eine_fehlende_oder_unbekannte_taste_ist_ein_fehler() {
+        assert_eq!(Kombination::lesen(""), Err(Schreibfehler::LeereTaste));
+        assert_eq!(Kombination::lesen("cmd+"), Err(Schreibfehler::LeereTaste));
+        assert_eq!(
+            Kombination::lesen("cmd+left"),
+            Err(Schreibfehler::UnbekannterTastenname("left".to_owned()))
+        );
+        assert_eq!(
+            Kombination::lesen("meta+k"),
+            Err(Schreibfehler::UnbekannteZusatztaste("meta".to_owned()))
+        );
+    }
+
+    #[test]
+    fn jede_taste_der_tabelle_ueberlebt_lesen_und_schreiben() {
+        let masken = [
+            ModMaske::LEER,
+            ModMaske::BEFEHL,
+            ModMaske::UMSCHALT | ModMaske::BEFEHL,
+            ModMaske::STEUERUNG | ModMaske::WAHL | ModMaske::UMSCHALT | ModMaske::BEFEHL,
+        ];
+        for taste in TASTEN {
+            for maske in masken {
+                let kombination = Kombination::neu(taste, maske);
+                let geschrieben = kombination.to_string();
+                assert_eq!(
+                    Kombination::lesen(&geschrieben),
+                    Ok(kombination),
+                    "{geschrieben} laesst sich nicht wieder einlesen"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn eine_taste_ohne_namen_ergibt_keine_kombination() {
+        // Tastencode 10 ist auf einer deutschen Tastatur die Taste links neben
+        // der 1; die Schreibweise kennt keinen Namen dafuer.
+        let druck = Tastendruck::neu(10, ModMaske::LEER);
+        assert_eq!(Kombination::aus_tastendruck(druck), None);
+    }
+}

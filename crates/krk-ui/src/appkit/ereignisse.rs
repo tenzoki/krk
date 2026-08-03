@@ -17,7 +17,7 @@
 //! **Der Weg eines Tastendrucks**, vom Ereignis bis in das Ordnermodell:
 //!
 //! ```text
-//! NSEvent ──> Tastendruck::aus_ereignis ──> tasten::kommando
+//! NSEvent ──> Tastendruck::aus_ereignis ──> Belegung::nachschlag
 //!                  (Maske normalisiert)          │
 //!                                                v
 //!                       DateifensterQuelle::kommando_ausfuehren
@@ -26,6 +26,17 @@
 //! Trifft der Nachschlag, schluckt der Abgriff das Ereignis (er liefert
 //! `nil`); sonst reicht er es unveraendert weiter, damit Cmd+Q, Cmd+W und die
 //! Texteingabe des Systems ihren gewohnten Weg gehen.
+//!
+//! **Der Nachschlag geht seit Schritt 11 in die Belegung und nicht mehr in eine
+//! verdrahtete Tabelle.** Der Abgriff haelt seine eigene [`Belegung`], geladen
+//! beim Einrichten ueber [`belegung::fuer_den_betrieb`]: die `keymap.toml` des
+//! Nutzers, sonst die eingebettete Auslieferungsbelegung.
+//!
+//! **Geschluckt wird nur, was auch ausgefuehrt wurde.** Die Belegung kennt jede
+//! Funktion aus C1 bis C7, gebaut sind in dieser Runde erst fuenf. Eine Taste,
+//! die einer noch ungebauten Funktion gehoert, geht deshalb unveraendert
+//! weiter, statt ins Leere geschluckt zu werden; sonst naehme der Abgriff dem
+//! Menue etwa Cmd+W ab, ohne etwas an seine Stelle zu setzen.
 
 use std::ptr::NonNull;
 
@@ -37,7 +48,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{MainThreadMarker, NSPoint, NSProcessInfo, NSString};
 
-use krk_core::tasten::{self, Tastendruck};
+use krk_core::tasten::belegung::{self, Belegung};
+use krk_core::tasten::{Kombination, Nachschlag, Tastendruck, code_von_pflicht};
 
 use super::tabelle::DateifensterQuelle;
 
@@ -60,12 +72,13 @@ impl Tastenabgriff {
     ///
     /// `protokoll` schaltet den Modus `--tasten-protokoll`: jeder empfangene
     /// Tastendruck geht mit seinem Code und seiner normalisierten Maske auf die
-    /// Standardausgabe, gleich ob die Tabelle ihn kennt.
+    /// Standardausgabe, gleich ob die Belegung ihn kennt.
     pub fn einrichten(ziel: Retained<DateifensterQuelle>, protokoll: bool) -> Option<Self> {
+        let belegung = belegung::fuer_den_betrieb();
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
             // SAFETY: AppKit reicht dem Block einen gueltigen Zeiger auf das
             // Ereignis, das fuer die Dauer des Aufrufs lebt.
-            let geschluckt = behandeln(&ziel, unsafe { ereignis.as_ref() }, protokoll);
+            let geschluckt = behandeln(&ziel, &belegung, unsafe { ereignis.as_ref() }, protokoll);
             if geschluckt {
                 // `nil` heisst: das Ereignis geht nicht weiter.
                 std::ptr::null_mut()
@@ -101,7 +114,11 @@ impl Drop for Tastenabgriff {
 }
 
 /// Der virtuelle Tastencode von Pfeil ab.
-const CODE_PFEIL_AB: u16 = 125;
+///
+/// Die Zahl steht hier nicht: sie kommt zur Uebersetzungszeit aus der einen
+/// Tastentabelle des Kerns. Ein Tippfehler im Namen bricht den Bau ab, statt
+/// eine zweite Wahrheit ueber denselben Tastencode anzulegen.
+const CODE_PFEIL_AB: u16 = code_von_pflicht("down");
 
 /// Das Zeichen, das AppKit einem Pfeil ab beilegt (`NSDownArrowFunctionKey`).
 const ZEICHEN_PFEIL_AB: char = '\u{F701}';
@@ -146,31 +163,60 @@ pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
 }
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
-fn behandeln(ziel: &DateifensterQuelle, ereignis: &NSEvent, protokoll: bool) -> bool {
+fn behandeln(
+    ziel: &DateifensterQuelle,
+    belegung: &Belegung,
+    ereignis: &NSEvent,
+    protokoll: bool,
+) -> bool {
     let druck = Tastendruck::aus_ereignis(ereignis.keyCode(), ereignis.modifierFlags().0 as u64);
-    let kommando = tasten::kommando(druck);
+    let nachschlag = belegung.nachschlag(druck);
 
     if protokoll {
-        // Auf die Standardausgabe, wie der Plan es vorschreibt. Sichtbar ist
-        // sie nur, wenn KRK aus einem Terminal gestartet wurde: ein ueber
-        // `open` gestartetes Buendel bekommt von LaunchServices keine.
-        let nachschlag = match kommando {
-            Some(kommando) => format!("{kommando:?}"),
-            None => "unbelegt".to_owned(),
-        };
-        println!(
-            "tastencode={} maske={} kommando={nachschlag}",
-            druck.code, druck.maske
-        );
+        protokollieren(druck, nachschlag);
     }
 
-    match kommando {
+    let Nachschlag::Funktion(funktion) = nachschlag else {
+        // Sprungmarke und Unbelegt gehen beide weiter. Das Tippen der
+        // Anfangsbuchstaben aus C2 baut Schritt 13; bis dahin ist der
+        // Tastendruck fuer KRK ohne Wirkung, und ihn zu schlucken hiesse, ihn
+        // auch dem System wegzunehmen.
+        return false;
+    };
+    match funktion.kommando() {
         Some(kommando) => {
             ziel.kommando_ausfuehren(kommando);
             true
         }
+        // Belegt, aber in dieser Runde noch nicht gebaut. Siehe den Modulkopf:
+        // geschluckt wird nur, was auch ausgefuehrt wurde.
         None => false,
     }
+}
+
+/// Schreibt eine Zeile des Modus `--tasten-protokoll`.
+///
+/// Auf die Standardausgabe, wie der Plan es vorschreibt. Sichtbar ist sie nur,
+/// wenn KRK aus einem Terminal gestartet wurde: ein ueber `open` gestartetes
+/// Buendel bekommt von LaunchServices keine.
+///
+/// Die Zeile nennt den Tastencode, weil die Abnahme von Schritt 7 daran haengt,
+/// und daneben die Kombination in der Schreibweise von `keymap.toml`, damit der
+/// Nutzer sie von hier in seine Belegung uebernehmen kann.
+fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
+    let kombination = match Kombination::aus_tastendruck(druck) {
+        Some(kombination) => kombination.to_string(),
+        None => "(kein Name in der Schreibweise)".to_owned(),
+    };
+    let funktion = match nachschlag {
+        Nachschlag::Funktion(funktion) => funktion.kennung().to_owned(),
+        Nachschlag::Sprungmarke => "(Sprungmarke)".to_owned(),
+        Nachschlag::Unbelegt => "(unbelegt)".to_owned(),
+    };
+    println!(
+        "tastencode={} maske={} kombination={kombination} funktion={funktion}",
+        druck.code, druck.maske
+    );
 }
 
 #[cfg(test)]
@@ -226,6 +272,11 @@ mod tests {
     /// Ohne sie waere der Vergleich oben eine Behauptung ueber zwei Konstanten,
     /// die niemanden betrifft. `modifierFlags().0 as u64` ist die Stelle, an der
     /// die AppKit-Bits in den Kern laufen.
+    ///
+    /// Seit Schritt 11 prueft sie den ganzen Weg: die rohen Bits von AppKit
+    /// gehen durch die Normalisierung in den Nachschlag der
+    /// Auslieferungsbelegung, und heraus kommt das Kommando, das `behandeln` an
+    /// die Datenquelle gibt.
     #[test]
     fn die_maske_eines_pfeils_kommt_leer_im_kern_an() {
         let wie_appkit_es_liefert =
@@ -233,8 +284,12 @@ mod tests {
         let druck = Tastendruck::aus_ereignis(CODE_PFEIL_AB, wie_appkit_es_liefert);
 
         assert!(druck.maske.ist_leer());
+        let belegung = Belegung::auslieferung();
+        let Nachschlag::Funktion(funktion) = belegung.nachschlag(druck) else {
+            panic!("Pfeil ab ist in der Auslieferungsbelegung keiner Funktion zugeordnet");
+        };
         assert_eq!(
-            tasten::kommando(druck),
+            funktion.kommando(),
             Some(krk_core::tasten::Kommando::AuswahlRunter)
         );
     }
