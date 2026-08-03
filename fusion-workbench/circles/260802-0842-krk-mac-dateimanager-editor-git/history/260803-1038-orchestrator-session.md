@@ -165,3 +165,68 @@ Dateilisten von S9 bis S23 sind noch nicht unter der erweiterten Grenzregel durc
 
 **Nächster Schritt:** S9, die Auslieferungsbelegung als Datentabelle, Ausführender
 `ontocoder`. Neun der vierundzwanzig Planschritte tragen `[DONE]`.
+
+### Turn 3 — 260803-1900 bis 260803-2100
+
+Vier Aufgaben, vier Commits. Der Nutzer hat mit "weiter" die Reihenfolge freigegeben; ich
+habe die Schuld aus der Code-Prüfung vor die neuen Planschritte gezogen, weil der Code
+frisch war und Phase C darauf aufbaut.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T13 | coder | `62ce25f` | Auswahl-Fehler und sechs Belegketten-Defekte |
+| T12 | planner | `1ec64bd` | Dateilisten S9 bis S23 durchgegangen, vier Plandefekte |
+| T14 | ontocoder | `d1a8ab1` | S9, Auslieferungsbelegung als Datentabelle |
+| T15 | coder | `0d8e87e` | S10, Ablage unter Application Support |
+
+**Der Auswahl-Fehler ist anders gelöst als der Defekt vorschlug.** Der Datensatz wollte die
+Auswahl in `QuelleIvars` sichern; der `coder` hat sie ins `Ordnermodell` gelegt und an den
+Eintragsindex gehängt. Begründung, die trägt: umsortiert wird in `sicht_neu_aufbauen`, und
+dorthin führen drei öffentliche Wege, die in der Oberfläche je eine eigene Sicherung
+gebraucht hätten. Nachgewiesen hat er die Reparatur, indem er `auswahl_zeile` versuchsweise
+auf den alten Stand zurücksetzte und die Prüfung fehlschlagen sah.
+
+**Die Durchsicht der fünfzehn Dateilisten war größer als vermutet.** Zwölf hatten einen
+Fund, drei standen sauber. Der Defekt hatte fünf Schritte als wahrscheinlichste Treffer
+genannt; sieben weitere kamen dazu, und S15 hatte für den Papierkorb-Aufruf überhaupt keine
+Datei. Zwei wiederkehrende Formen stehen jetzt als Merksatz im Kopf der
+Implementierungsschritte.
+
+### Turn 4 — 260803-2110 bis 260803-2323
+
+Zwei Aufgaben, zwei Commits. **Phase B ist abgeschlossen, zwölf der vierundzwanzig Schritte
+tragen `[DONE]`.**
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T16 | planner | `8bd7b71` | Belegung angenommen, Kürzelschreibweise und F6 nachgezogen |
+| T17 | coder | `73b4d88` | S11, Belegungsmaschine |
+
+**Der Nutzerentscheid dieses Turns.** Ich habe ihm die vollständige Auslieferungsbelegung
+vorgelegt, weil der Spec nur sieben der 46 Belegungen selbst festlegt und die übrigen 39 der
+`ontocoder` gewählt hatte. Er hat sie angenommen ("passt erstmal so") und bestätigt, dass F6
+verschiebt und `shift+f6` umbenennt. Die Annahme steht als Entscheidungsdatensatz
+`decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`,
+nicht als Vermerk im Spec: ein Vermerk hätte die Datendatei verdoppelt, und das "erstmal"
+braucht eine Zustandsspur, die ein Spec-Absatz nicht tragen kann.
+
+**Die Ablösung in S11 ist echt und nachgeprüft.** `grep -rn 'VERDRAHTET' crates/` findet
+nichts mehr, und außerhalb von `parser.rs` trägt keine Konstante einen Tastencode als Zahl:
+`code_von` ist eine `const fn`, sodass auch `ereignisse.rs` seine Zahl von dort holt und ein
+Tippfehler den Bau abbricht.
+
+**Eine Regel hat der `coder` selbst ergänzt, und sie war nötig.** Die Belegung kennt 46
+Funktionen, gebaut sind fünf. Ohne die Regel "geschluckt wird nur, was auch ausgeführt
+wurde" hätte der Ereignisabgriff ab sofort Cmd+W abgefangen und nichts damit getan, womit
+der Menüeintrag "Fenster schließen" aus S6 tot gewesen wäre.
+
+**Offen am Ende von Turn 4.** Vierzehn Defekte und sieben Entscheidungen. Zwei davon gaten
+S12: was nach dem Schließen des letzten Fensters geschieht (`260803-2007`) und wie KRK dem
+Nutzer Fehler zeigt (`260803-2025`, betrifft die Ablage aus S10, deren Ausgabeweg deshalb
+an einer Stelle gebündelt ist). Neu und noch nicht vorgelegt: `cmd+y` für die Vorschau
+liegt auf einer deutschen Tastatur unter der Taste Z, weil KRK die Stelle belegt und nicht
+das Zeichen (`260803-2317`).
+
+**Nächster Schritt:** S12, vier Bereiche, Tabs, aktives Fenster und Sichtbarkeit. Der Plan
+nennt ihn den teuersten Einzelposten, und er ist der erste Schritt hinter dem bestandenen
+Messgate.
