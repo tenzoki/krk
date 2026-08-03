@@ -12,6 +12,10 @@ name = "krk"
 path = "src/main.rs"
 
 [dependencies]
+# Das Ordnermodell und der Verzeichnisleser wohnen im Kern. Die Oberflaeche
+# bindet ihn ueber den Pfad ein, weil beide im selben Workspace liegen und
+# miteinander versioniert werden.
+krk-core = { path = "../krk-core" }
 objc2 = { workspace = true }
 objc2-app-kit = { workspace = true }
 objc2-foundation = { workspace = true }

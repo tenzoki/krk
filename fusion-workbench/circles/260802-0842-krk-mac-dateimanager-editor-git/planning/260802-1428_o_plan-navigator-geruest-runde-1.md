@@ -462,7 +462,7 @@ flowchart TD
 - Abhängigkeiten: S4b
 - Abnahmekriterium: `cargo xtask bundle` erzeugt `target/KRK.app` mit der genannten Struktur. `codesign --verify --strict target/KRK.app` beendet mit 0. `codesign -dvv target/KRK.app` nennt in der Zeile `Authority=` die verwendete Identität und meldet `flags=0x0(none)`, also keine Ad-hoc-Signatur. Zwei `v` sind nötig: `-dv` gibt die Zeile `Authority=` nicht aus und benennt die Identität damit nicht. `vtool -show-build-version target/KRK.app/Contents/MacOS/krk` meldet `minos 15.0`. `plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plist` liefert genau die Zeichenkette, die `[workspace.package]` in `Cargo.toml` als `version` führt, geprüft im Vergleich gegen die `Cargo.toml` und nicht gegen ein Literal im Testbefehl. `grep -q '__KRK_VERSION__' target/KRK.app/Contents/Info.plist` findet nichts, der Platzhalter steht also in keinem ausgelieferten Bündel. Ein Lauf gegen eine `Info.plist` ohne Platzhalter bricht mit Rückgabewert ungleich 0 ab und hinterlässt kein Bündel. Ohne setzbare Identität bricht der Aufruf mit Rückgabewert ungleich 0 und einer Anleitung ab.
 
-#### 6. **Fenster, Menü und echte Dateiliste, erster Teil des Durchstichs**
+#### 6. [DONE] **Fenster, Menü und echte Dateiliste, erster Teil des Durchstichs**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/main.rs` (einbindend: `mod appkit;`, und tragend: die Umstellung der Regel auf `#![deny(unsafe_code)]`, siehe unten), `crates/krk-ui/src/appkit/{mod.rs,anwendung.rs,fenster.rs,tabelle.rs,menue.rs}`, `crates/krk-ui/Cargo.toml` (einbindend: `krk-core = { path = "../krk-core" }`, weil S6 das Ordnermodell aus S2 anbindet und `krk-ui` den Kern bisher nicht führt)
