@@ -31,3 +31,6 @@ Authority=KRK Entwicklung
 Der `planner` zieht das Kriterium auf `-dvv`.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 5, Protokoll `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1927-buendelbau-versionsersetzung-und-lokale-signierung.md`. Der `coder` hat beides gemeldet statt eigenmächtig aufzulösen.
+
+---
+Resolved: Der `planner` hat `### Frage 7` des Plans `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` am 260803-1200 auf den umgesetzten Stand gezogen. Der Abschnitt sagt nicht mehr zu, S5 erzeuge eine Identität, sondern beschreibt die dreistufige Suche (`KRK_SIGN_IDENTITY`, dann der Name `KRK Entwicklung` ohne `-v`, dann die genau eine gültige Identität mit `-v`) samt Abbruch mit Anleitung, wenn keine Stufe greift. Dazu steht dort begruendet, warum ein Bauwerkzeug kein Schlüsselmaterial in den Anmeldeschlüsselbund schreibt, mit Verweis auf `README.md`, Abschnitt "Entwicklungsidentität anlegen". Die `Änderungen` von Schritt 5 nennen jetzt ebenfalls alle drei Stufen; sie führten bisher nur zwei, weil die dritte erst mit Commit 4884f85 dazukam. Der zweite Punkt der Meldung ist ebenfalls behoben: das Abnahmekriterium von Schritt 5 verlangt `codesign -dvv` statt `-dv` und nennt die Zeile `Authority=` als das, was geprüft wird. Am Dateibestand unter `crates/`, `xtask/` und `README.md` hat sich nichts geändert.
