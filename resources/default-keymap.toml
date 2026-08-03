@@ -1,0 +1,315 @@
+# KRK — Auslieferungsbelegung der Tasten
+#
+# Diese Datei ist die alleinige Quelle der ausgelieferten Tastenbelegung. Die
+# Belegungsmaschine aus Schritt 11 des Plans bindet sie ueber `include_str!`
+# ein und loest damit die fest verdrahtete Tabelle aus Schritt 7 ab; eine
+# zweite Belegungstabelle im Code gibt es danach nicht mehr.
+#
+# Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeiten C1 bis
+# C7. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort in der
+# Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
+# `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` und
+# `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+#
+# Aufbau je Eintrag:
+#   id               maschinenlesbarer Bezeichner, ASCII, ohne Umlaute
+#   name             deutsche Beschriftung fuer die Belegungsansicht
+#   tasten           Liste aller Kombinationen, die diese Funktion ausloesen
+#   reserviert_fuer  optional; die Funktion ist benannt und ab Werk unbelegt
+#
+# Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
+# Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
+#
+# Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
+# dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
+# schreibt (ctrl, opt, shift, cmd). "Cmd+Shift+K" aus der Spec-Tabelle heisst
+# hier deshalb `shift+cmd+k`: dieselbe Kombination, in der Schreibweise dieser
+# Datei.
+#
+# Tastennamen: f3 bis f8, delete, up, down, pageup, pagedown, home, end,
+# return, tab, esc, space sowie Buchstaben und Ziffern.
+#
+# Die fn-Taste ist keine Zusatztaste dieser Schreibweise und kommt in keiner
+# Kombination vor. KRK belegt den Tastencode, und F3 mit gehaltener fn-Taste
+# erzeugt denselben Tastencode wie ein nacktes F3 (C3, gemessen in
+# `spikes/fn-tasten/messung-A.txt`).
+#
+# Drei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
+# keiner Tastenliste: Umschalt+Entf sowie Cmd+C und Cmd+V. Die beiden letzten
+# sind fuer eine Zwischenablage einer spaeteren Runde reserviert (C3).
+#
+# Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
+# nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
+# keiner Funktion zugeordnet ist (Plan, Schritt 11).
+
+# ── C3 und C4: die Norton-Reihe, je zwei Wege ────────────────────────────────
+# Jede dieser Funktionen ist ueber die Funktionstaste und ueber ein
+# Cmd-Kuerzel erreichbar. Beide Wege stehen in derselben Zeile.
+
+[[funktion]]
+id = "vorschau_umschalten"
+name = "Vorschau anzeigen und ausblenden"
+tasten = ["f3", "cmd+y"]
+# C3 setzt "Vorschau anzeigen" mit dem Ein- und Ausblenden des
+# Vorschaufensters aus C7 gleich: eine Funktion, ein Eintrag.
+
+[[funktion]]
+id = "kopieren"
+name = "In das andere Fenster kopieren"
+tasten = ["f5", "shift+cmd+k"]
+
+[[funktion]]
+id = "verschieben"
+name = "In das andere Fenster verschieben"
+tasten = ["f6", "shift+cmd+v"]
+
+[[funktion]]
+id = "ordner_anlegen"
+name = "Ordner anlegen"
+tasten = ["f7", "shift+cmd+n"]
+
+[[funktion]]
+id = "endgueltig_loeschen"
+name = "Endgültig löschen"
+tasten = ["f8", "opt+cmd+delete"]
+
+[[funktion]]
+id = "in_papierkorb"
+name = "In den Papierkorb räumen"
+tasten = ["delete", "cmd+delete"]
+
+[[funktion]]
+id = "bearbeiten"
+name = "Bearbeiten"
+tasten = []
+reserviert_fuer = "editor"
+# F4 traegt in dieser Runde weder die Funktionstaste noch ein Cmd-Kuerzel. Die
+# Norton-Bedeutung "Bearbeiten" zeigt auf den Editor, und der entsteht in einer
+# spaeteren Runde (C3).
+
+# ── C1: Dateifenster und Tabs ────────────────────────────────────────────────
+# Dieselben vier Tabbefehle bedienen nach C6 auch die Tabs des
+# Vorschaufensters; sie wirken auf den Bereich, der den Eingabefokus hat.
+
+[[funktion]]
+id = "tab_neu"
+name = "Neuen Tab öffnen"
+tasten = ["cmd+t"]
+
+[[funktion]]
+id = "tab_schliessen"
+name = "Aktiven Tab schließen"
+tasten = ["cmd+w"]
+
+[[funktion]]
+id = "tab_naechster"
+name = "Zum nächsten Tab"
+tasten = ["ctrl+tab"]
+
+[[funktion]]
+id = "tab_voriger"
+name = "Zum vorigen Tab"
+tasten = ["ctrl+shift+tab"]
+
+[[funktion]]
+id = "fenster_wechseln"
+name = "Aktives Dateifenster wechseln"
+tasten = ["tab"]
+
+# ── C2: Navigation in der Liste ──────────────────────────────────────────────
+
+[[funktion]]
+id = "auswahl_hoch"
+name = "Auswahl einen Eintrag nach oben"
+tasten = ["up"]
+
+[[funktion]]
+id = "auswahl_runter"
+name = "Auswahl einen Eintrag nach unten"
+tasten = ["down"]
+
+[[funktion]]
+id = "seite_hoch"
+name = "Auswahl eine Bildschirmseite nach oben"
+tasten = ["pageup"]
+
+[[funktion]]
+id = "seite_runter"
+name = "Auswahl eine Bildschirmseite nach unten"
+tasten = ["pagedown"]
+
+[[funktion]]
+id = "listenanfang"
+name = "An den Anfang der Liste"
+tasten = ["home"]
+
+[[funktion]]
+id = "listenende"
+name = "An das Ende der Liste"
+tasten = ["end"]
+
+[[funktion]]
+id = "oeffnen"
+name = "In den ausgewählten Ordner einsteigen"
+tasten = ["return"]
+
+[[funktion]]
+id = "ordner_aufwaerts"
+name = "In den übergeordneten Ordner"
+tasten = ["cmd+up"]
+# Der Finder legt den Aufstieg auf dieselbe Kombination.
+
+[[funktion]]
+id = "pfadeingabe"
+name = "Pfad eingeben und dorthin springen"
+tasten = ["shift+cmd+g"]
+# Der Finder legt "Gehe zum Ordner" auf dieselbe Kombination.
+
+# ── C2: Mehrfachauswahl ──────────────────────────────────────────────────────
+
+[[funktion]]
+id = "markierung_umschalten"
+name = "Eintrag markieren und zum nächsten rücken"
+tasten = ["space"]
+
+[[funktion]]
+id = "alle_markieren"
+name = "Alle Einträge markieren"
+tasten = ["cmd+a"]
+
+[[funktion]]
+id = "markierung_aufheben"
+name = "Jede Markierung aufheben"
+tasten = ["shift+cmd+a"]
+
+[[funktion]]
+id = "markierung_umkehren"
+name = "Markierung umkehren"
+tasten = ["shift+cmd+i"]
+
+# ── C2: Sortierung und Sichtbarkeit der Einträge ─────────────────────────────
+# Die vier Sortierkriterien liegen auf cmd und der Nummer der Spalte, die
+# Richtung auf einer eigenen Kombination.
+
+[[funktion]]
+id = "sortierung_name"
+name = "Nach Name sortieren"
+tasten = ["cmd+1"]
+
+[[funktion]]
+id = "sortierung_groesse"
+name = "Nach Größe sortieren"
+tasten = ["cmd+2"]
+
+[[funktion]]
+id = "sortierung_datum"
+name = "Nach Änderungsdatum sortieren"
+tasten = ["cmd+3"]
+
+[[funktion]]
+id = "sortierung_typ"
+name = "Nach Typ sortieren"
+tasten = ["cmd+4"]
+
+[[funktion]]
+id = "sortierrichtung_umkehren"
+name = "Sortierrichtung umkehren"
+tasten = ["cmd+r"]
+
+[[funktion]]
+id = "versteckte_umschalten"
+name = "Versteckte Dateien ein- und ausblenden"
+tasten = ["shift+cmd+h"]
+# Der Finder legt das auf cmd+shift+Punkt. Die Schreibweise dieser Datei kennt
+# keinen Namen fuer die Punkt-Taste, deshalb steht hier h wie "hidden".
+
+# ── C4: Dateioperationen ausserhalb der Norton-Reihe ─────────────────────────
+
+[[funktion]]
+id = "datei_anlegen"
+name = "Leere Datei anlegen"
+tasten = ["ctrl+cmd+n"]
+# Parallel zu shift+cmd+n fuer den neuen Ordner.
+
+[[funktion]]
+id = "umbenennen"
+name = "Umbenennen"
+tasten = ["shift+f6", "shift+cmd+u"]
+# Die Norton-Reihe legt das Umbenennen neben das Verschieben auf F6; die
+# Umschalttaste trennt die beiden. C3 belegt F6 selbst mit dem Verschieben.
+
+[[funktion]]
+id = "umbenennen_stapel"
+name = "Im Stapel umbenennen"
+tasten = ["ctrl+cmd+u"]
+
+[[funktion]]
+id = "abbrechen"
+name = "Laufende Operation abbrechen"
+tasten = ["esc"]
+
+# ── C5: Lesezeichen- und Geräteleiste ────────────────────────────────────────
+# Loeschen und Umbenennen tragen hier eigene Kombinationen, weil delete und
+# shift+f6 nach C4 nur im Dateifenster wirken.
+
+[[funktion]]
+id = "lesezeichen_anlegen"
+name = "Ordner als Lesezeichen anlegen"
+tasten = ["cmd+d"]
+
+[[funktion]]
+id = "lesezeichen_umbenennen"
+name = "Lesezeichen umbenennen"
+tasten = ["ctrl+u"]
+
+[[funktion]]
+id = "lesezeichen_loeschen"
+name = "Lesezeichen löschen"
+tasten = ["ctrl+delete"]
+
+[[funktion]]
+id = "lesezeichen_hoch"
+name = "Lesezeichen nach oben verschieben"
+tasten = ["opt+up"]
+
+[[funktion]]
+id = "lesezeichen_runter"
+name = "Lesezeichen nach unten verschieben"
+tasten = ["opt+down"]
+
+[[funktion]]
+id = "fokus_leiste"
+name = "Fokus in die Lesezeichen- und Geräteleiste"
+tasten = ["shift+cmd+l"]
+
+[[funktion]]
+id = "fokus_dateifenster"
+name = "Fokus zurück in das Dateifenster"
+tasten = ["shift+cmd+d"]
+
+# ── C7: Sichtbarkeit und Breiten der Bereiche ────────────────────────────────
+# Das Ein- und Ausblenden der Vorschau steht oben bei "vorschau_umschalten":
+# C7 nennt es ausdruecklich dieselbe Funktion wie "Vorschau anzeigen" aus C3.
+
+[[funktion]]
+id = "leiste_umschalten"
+name = "Lesezeichen- und Geräteleiste ein- und ausblenden"
+tasten = ["opt+cmd+l"]
+
+[[funktion]]
+id = "zweites_fenster_umschalten"
+name = "Zweites Dateifenster ein- und ausblenden"
+tasten = ["opt+cmd+d"]
+
+[[funktion]]
+id = "bereich_verbreitern"
+name = "Aktiven Bereich verbreitern"
+tasten = ["ctrl+b"]
+
+[[funktion]]
+id = "bereich_verschmaelern"
+name = "Aktiven Bereich verschmälern"
+tasten = ["ctrl+s"]
+# Breiter und schmaler laegen auf den Links- und Rechts-Pfeilen; die
+# Schreibweise dieser Datei kennt beide Tasten nicht. Deshalb b wie breiter
+# und s wie schmaler.
