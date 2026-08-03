@@ -100,3 +100,68 @@ in mehreren Entscheidungsdatensätzen für einen Fehler. Sie gehört zur Vorlage
 sie wird erst beim Übergang auf umgesetzt gefüllt. Kein Defekt angelegt. Die beiden anderen
 Befunde desselben Berichts trugen: fünf Verweise auf den alten `_a_`-Pfad im Plan und ein
 Kopf, der `answered` sagte, während der Dateiname `_i_` trug. Beide nachgezogen.
+
+### Turn 2 — 260803-1355 bis 260803-1850
+
+Fünf Aufgaben, fünf Commits. **Phase A ist abgeschlossen und das Messgate bestanden.**
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T9 | planner | `69b016d` | AppKit-Grenze in sechs Dateilisten nachgezogen |
+| T8 | coderev | `47db78d` | Code-Prüfung des AppKit-Durchstichs, acht Defekte |
+| T6 | coder | `7855f6d` | Schritt 8, Frühmessung: Gate zunächst an L1 verfehlt |
+| T10 | planner | `9c3d7e0` | Abnahmemaß für L1 und L9 umgestellt |
+| T11 | coder | `9e0cb7a` | Auswertung umgestellt, nachgemessen, Gate bestanden |
+
+**Das Gate, und was es tatsächlich zutage förderte.** Der erste Lauf verfehlte L1: das
+95. Perzentil lag in einer von fünf Runden bei 16,225 ms gegen zugesagte 16 ms. Die vier
+übrigen Zusagen hielten mit Faktor zwei bis drei Abstand, das vollständige Lesen von
+100.000 Einträgen in 0,98 s gegen zugesagte 4 s.
+
+Der Plan sieht für diesen Fall vor, dass der Technologieentscheid zur Debatte steht. Die
+Messung trug den Verdacht nicht. Der Spec leitet L1 als "ein Bild bei 60 Hz" her, und ein
+Bild sind 16,667 ms; die Zusagentabelle rundet auf 16 ab. Der größte gemessene Einzelwert
+lag bei 16,590 ms, also unter einem Bild. Die gemessene Spanne besteht überwiegend aus
+Warten auf die Bildgrenze, KRKs eigener Anteil bei 3 bis 8 ms; selbst eine Anwendung ohne
+jede Verarbeitungszeit erreichte hier ein 95. Perzentil von rund 15,8 ms. Die Zusage lag
+innerhalb der Streuung ihres eigenen Messverfahrens.
+
+**Der Nutzerentscheid, 260803-1810.** Gewählt ist das geänderte Abnahmemaß: nicht mehr das
+95. Perzentil der Zeitspanne, sondern der Anteil der Eingaben, die ihr nächstes Bild
+erreichen, mindestens 95 Prozent je Runde. Der Technologieentscheid bleibt unangetastet.
+Seine Begründung geht über die der Vorlage hinaus und ist deshalb getrennt festgehalten:
+die Vorlage argumentiert messtechnisch, der Nutzer wahrnehmungsseitig, eine Spanne dieser
+Größe sei für einen Menschen nicht unterscheidbar. Datensatz:
+`decisions/260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md`.
+
+**Die Nachmessung zeigt, dass die Umstellung nicht kosmetisch war.** L1 hält mit 100 von
+100 Tastendrücken, in jeder Runde 20 von 20. Dieselben Rohdaten ergeben ein 95. Perzentil
+zwischen 14,912 und 16,633 ms, das die alte Zusage in vier von fünf Runden verfehlt hätte.
+Zwei Maße, ein Datensatz, entgegengesetzte Urteile.
+
+**Zwei Befunde, die eine Annahme widerlegten, darunter meine eigene.** Der planner hat
+nachgeprüft, dass `NSScreen.maximumFramesPerSecond` und `NSWindow.screen` sichere
+Funktionen sind und außerhalb von `appkit/` anstandslos übersetzt hätten. Von den sechs
+gefundenen Grenzverstößen hätten nur drei den Bau abgebrochen; `#![deny(unsafe_code)]`
+trägt die Grenze zur Hälfte. Der Defekt zu Schritt 8 war sichtbar, weil `CADisplayLink`
+zufällig auf der unsicheren Seite liegt. Betroffen waren sechs Schritte statt der von mir
+im Defekt vermuteten vier, und Schritt 15 hatte für den Papierkorb-Aufruf überhaupt keine
+Datei. Der Nutzer hat entschieden, die ergänzende Prüfung nicht nachträglich in das
+abgenommene Abnahmekriterium von Schritt 6 einzutragen; Defekt `260803-1530` bleibt offen.
+
+**Die Code-Prüfung fällt gut aus.** Hauptfadenregel, Eigentumsverhältnisse und die Inhalte
+aller vierzehn `unsafe`-Stellen sind sauber, kein erreichbarer `RefCell`-Doppelzugriff. Von
+acht Befunden betrifft einer das Verhalten: die Auswahl übersteht das Sortieren am Ende
+eines Lesevorgangs nicht, weil sie nur als Zeilennummer in der Tabelle steht, während
+`Ordnermodell::eintragsindex` und `zeile_von` genau dafür existieren und von niemandem
+gerufen werden.
+
+**Offen am Ende der Sitzung.** Vierzehn Defekte, davon acht aus der Code-Prüfung und zwei,
+die auf eine Nutzerentscheidung warten: die halb erzwungene AppKit-Grenze (`260803-1530`)
+und die Streuung von L4 zwischen den Runden (`260803-1845`, 282 bis 715 ms gegen zugesagte
+1000 ms, Ursache nicht belegbar, weil der Bericht die Systemlast nicht erhebt). Die
+Dateilisten von S9 bis S23 sind noch nicht unter der erweiterten Grenzregel durchgegangen
+(`260803-1819`). Fünf Entscheidungen sind offen, drei umgesetzt.
+
+**Nächster Schritt:** S9, die Auslieferungsbelegung als Datentabelle, Ausführender
+`ontocoder`. Neun der vierundzwanzig Planschritte tragen `[DONE]`.
