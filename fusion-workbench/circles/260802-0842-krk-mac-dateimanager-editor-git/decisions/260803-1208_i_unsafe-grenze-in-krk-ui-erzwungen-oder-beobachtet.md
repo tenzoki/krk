@@ -70,3 +70,15 @@ Superseded by:
 
 ---
 Implemented: 569e8e0 — `crates/krk-ui/src/main.rs` trägt `#![deny(unsafe_code)]`, `crates/krk-ui/src/appkit/mod.rs` trägt `#![allow(unsafe_code)]` als einzige Ausnahme der Kiste. Nachgeprüft am 260803-1315: `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/` nennt genau zwei Dateien, `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der `coder` hat zusätzlich nachgemessen, dass ein probeweise eingefügter `unsafe`-Block den Bau scheitern lässt.
+
+---
+
+## Zum Hergang der Antwort, und ein Argument, das oben fehlt
+
+**Der erste Klick war kein Entscheid.** Die Antwort vom 260803, die weiter oben unter `Answered:` steht, fiel versehentlich: der Nutzer traf die Auswahl, ohne die Folgen geprüft zu haben. Das ist hier festgehalten, weil der Datensatz sonst einen Nutzerentscheid beurkundet, der so nicht gefallen ist, und ein späterer Leser sich auf eine Abwägung berufen würde, die zu diesem Zeitpunkt niemand angestellt hatte.
+
+**Der Entscheid selbst steht.** Der Nutzer hat ihn am 260803 nach Prüfung der Folgen ausdrücklich bestätigt: `krk-ui` behält `#![deny(unsafe_code)]`, aller Kontakt zu `objc2` gehört unter `crates/krk-ui/src/appkit/`, und es bleibt bei genau einer Ausnahme in `appkit/mod.rs`. Die Bestätigung ist die tragende Antwort, nicht der erste Klick.
+
+**Das Argument, das die Abwägung oben nicht führt.** Sie stellt `warn` und `deny` so gegenüber, als unterschieden sie sich nur im Grad der Strenge: eine Warnung melde, ein Fehler breche ab. In diesem Projekt hätte `warn` jedoch **überhaupt nichts** erzwungen, und das ist ein Unterschied in der Art, nicht im Grad. Nachgeprüft am 260803: es gibt kein `.github` und keinen anderen CI-Ordner, kein `-D warnings`, kein `deny(warnings)` und kein `RUSTFLAGS` in `Cargo.toml`, `.cargo/config.toml` oder einer der vier Mitglieds-`Cargo.toml`. Eine Warnung wäre also allein im Bauprotokoll erschienen, das niemand automatisch liest. Die Grenze zum Modul `appkit` wäre damit nicht schwach durchgesetzt gewesen, sondern gar nicht.
+
+**Folge für die kommenden Schritte.** Jeder Planschritt, der `objc2` außerhalb von `crates/krk-ui/src/appkit/` ansiedelt, übersetzt unter `deny` nicht. Die Dateilisten sind daraufhin zu prüfen, bevor der jeweilige Schritt umgesetzt wird. Für S8 ist der Fall bereits eingetreten und als Defekt abgelegt: `issues/260803-1345_o_dateiliste-von-s8-legt-objc2-code-ausserhalb-von-appkit-ab.md`. Für S13 und S16/S17 steht die Prüfung noch aus; sie ist in demselben Defekt vermerkt.
