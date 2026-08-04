@@ -39,10 +39,25 @@
 //! gemessen** (F3, F5 und F8 mit 99, 96 und 100, `spikes/fn-tasten/messung-A.txt`
 //! Ereignisse #03 bis #05); **alle uebrigen sind nur dokumentiert**, aus der
 //! Carbon-Tabelle `kVK_*` in `HIToolbox.framework/Headers/Events.h` des
-//! macOS-SDK, nachgesehen am 260803. Fuer F4, F6 und F7 heisst das: 118, 97 und
-//! 98 hat in diesem Projekt niemand gedrueckt. Sie stehen hier, weil die
-//! Auslieferungsbelegung sie braucht, und sie stehen als
-//! [`Herkunft::Dokumentiert`], damit niemand sie fuer gemessen haelt.
+//! macOS-SDK, nachgesehen am 260803 und fuer die acht Nachtraege erneut am
+//! 260804. Fuer F4, F6 und F7 heisst das: 118, 97 und 98 hat in diesem Projekt
+//! niemand gedrueckt. Sie stehen hier, weil die Auslieferungsbelegung sie
+//! braucht, und sie stehen als [`Herkunft::Dokumentiert`], damit niemand sie
+//! fuer gemessen haelt. Dasselbe gilt fuer `left`, `right` und die sechs
+//! Funktionstasten ausserhalb der Norton-Reihe.
+//!
+//! # Wann die Tabelle waechst
+//!
+//! **Um ganze Tastengruppen, nie um einzelne Tasten.** Eine halbe Gruppe kostet
+//! genau das, was dieses Projekt mit "Pfeil hoch und runter ja, links und
+//! rechts nein" schon einmal bezahlt hat: die Bereichsbreiten aus C7 stehen
+//! seither auf den Behelfsbelegungen `ctrl+b` und `ctrl+s`. Ein Eintrag hier
+//! ist **keine Belegung**: eine Taste, die in keiner Tastenliste von
+//! `resources/default-keymap.toml` steht, loest nichts aus. Er ist die
+//! Voraussetzung dafuer, dass der Nutzer sie ueberhaupt belegen kann: die
+//! Belegungsansicht weist eine Kombination zu, indem der Nutzer sie drueckt,
+//! und [`Kombination::aus_tastendruck`] liefert fuer eine Taste ohne Namen
+//! `None`.
 
 use std::fmt;
 use std::str::FromStr;
@@ -123,10 +138,18 @@ const MESSUNG: &str = "spikes/fn-tasten/messung-A.txt";
 
 /// Alle Tasten, die die Schreibweise benennen kann.
 ///
-/// Die eine Tabelle. Sie deckt, was der Plan in Schritt 9 aufzaehlt: `f3` bis
-/// `f8`, `delete`, `up`, `down`, `pageup`, `pagedown`, `home`, `end`, `return`,
-/// `tab`, `esc`, `space` sowie die Buchstaben und die Ziffern.
-pub const TASTEN: [Taste; 53] = [
+/// Die eine Tabelle. Sie deckt die Funktionstastenreihe `f1` bis `f12`, den
+/// Pfeilblock `up`, `down`, `left` und `right`, dazu `delete`, `pageup`,
+/// `pagedown`, `home`, `end`, `return`, `tab`, `esc`, `space` sowie die
+/// Buchstaben und die Ziffern.
+///
+/// Nicht enthalten sind die Satzzeichen und der Zehnerblock. Ein virtueller
+/// Tastencode benennt eine **Stelle** auf der Tastatur, und bei den
+/// Satzzeichen laeuft die Beschriftung dieser Stelle je nach Tastaturbelegung
+/// weit auseinander: `kVK_ANSI_LeftBracket` traegt auf einer deutschen
+/// Tastatur ein `ü`. Ein Name `bracketleft` bezeichnete fuer einen deutschen
+/// Nutzer eine Taste, die er nicht findet.
+pub const TASTEN: [Taste; 61] = [
     // Die Norton-Reihe. Drei dieser sechs Codes sind gemessen, drei nicht.
     gemessen("f3", 99, "kVK_F3", MESSUNG),
     dokumentiert("f4", 118, "kVK_F4"),
@@ -134,15 +157,26 @@ pub const TASTEN: [Taste; 53] = [
     dokumentiert("f6", 97, "kVK_F6"),
     dokumentiert("f7", 98, "kVK_F7"),
     gemessen("f8", 100, "kVK_F8", MESSUNG),
+    // Der Rest der Funktionstastenreihe. F1 bis F12 traegt jede Mac-Tastatur,
+    // auch die Touch Bar des Referenzgeraets. F13 aufwaerts gibt es allein auf
+    // der Tastatur mit Zehnerblock und steht deshalb nicht hier.
+    dokumentiert("f1", 122, "kVK_F1"),
+    dokumentiert("f2", 120, "kVK_F2"),
+    dokumentiert("f9", 101, "kVK_F9"),
+    dokumentiert("f10", 109, "kVK_F10"),
+    dokumentiert("f11", 103, "kVK_F11"),
+    dokumentiert("f12", 111, "kVK_F12"),
     // Steuertasten.
     dokumentiert("delete", 51, "kVK_Delete"),
     dokumentiert("return", 36, "kVK_Return"),
     dokumentiert("tab", 48, "kVK_Tab"),
     dokumentiert("esc", 53, "kVK_Escape"),
     dokumentiert("space", 49, "kVK_Space"),
-    // Bewegung in der Liste.
+    // Der Pfeilblock, vollstaendig, und die uebrige Bewegung im Blatt.
     dokumentiert("up", 126, "kVK_UpArrow"),
     dokumentiert("down", 125, "kVK_DownArrow"),
+    dokumentiert("left", 123, "kVK_LeftArrow"),
+    dokumentiert("right", 124, "kVK_RightArrow"),
     dokumentiert("pageup", 116, "kVK_PageUp"),
     dokumentiert("pagedown", 121, "kVK_PageDown"),
     dokumentiert("home", 115, "kVK_Home"),
@@ -437,8 +471,9 @@ mod tests {
     fn die_tabelle_deckt_die_ganze_schreibweise_ab() {
         let benannt: Vec<&str> = TASTEN.iter().map(|taste| taste.name).collect();
         for name in [
-            "f3", "f4", "f5", "f6", "f7", "f8", "delete", "up", "down", "pageup", "pagedown",
-            "home", "end", "return", "tab", "esc", "space",
+            "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "delete",
+            "up", "down", "left", "right", "pageup", "pagedown", "home", "end", "return", "tab",
+            "esc", "space",
         ] {
             assert!(benannt.contains(&name), "{name} fehlt in der Tabelle");
         }
@@ -492,9 +527,17 @@ mod tests {
     fn eine_fehlende_oder_unbekannte_taste_ist_ein_fehler() {
         assert_eq!(Kombination::lesen(""), Err(Schreibfehler::LeereTaste));
         assert_eq!(Kombination::lesen("cmd+"), Err(Schreibfehler::LeereTaste));
+        // `arrowleft` ist die Schreibweise anderer Systeme fuer die Taste, die
+        // hier `left` heisst. Als Beispiel taugt der Name dauerhaft: die
+        // Tabelle darf ihn nie aufnehmen, weil er den Tastencode 123 braeuchte,
+        // den `left` schon haelt, und
+        // `jeder_name_und_jeder_code_steht_genau_einmal` laesst keine zwei
+        // Eintraege auf denselben Code. Ein Name aus einer noch fehlenden
+        // Gruppe, etwa `f13` oder ein Satzzeichen, waere hier falsch: die
+        // naechste Erweiterung holte ihn ein.
         assert_eq!(
-            Kombination::lesen("cmd+left"),
-            Err(Schreibfehler::UnbekannterTastenname("left".to_owned()))
+            Kombination::lesen("cmd+arrowleft"),
+            Err(Schreibfehler::UnbekannterTastenname("arrowleft".to_owned()))
         );
         assert_eq!(
             Kombination::lesen("meta+k"),

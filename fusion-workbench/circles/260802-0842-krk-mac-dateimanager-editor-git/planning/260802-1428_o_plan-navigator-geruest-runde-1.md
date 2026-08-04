@@ -626,7 +626,7 @@ Zwei Defekte am Schritt selbst sind bei der Umsetzung aufgefallen und mit diesem
 - Abhängigkeiten: S9, S10
 - Abnahmekriterium: `cargo test -p krk-core --test belegung` beendet mit 0 und deckt ab: die Auslieferungsbelegung ist konfliktfrei; ein Nachschlag auf Tastencode 99 trifft dieselbe Funktion, gleich ob `function` im Rohereignis gesetzt war; die Zuweisung einer bereits vergebenen Kombination liefert einen Konflikt mit dem Namen der anderen Funktion; die Zuweisung einer zweiten Kombination an dieselbe Funktion liefert keinen Konflikt; Zurücksetzen stellt die eingebettete Tabelle wieder her; ein unbelegter Buchstabe ohne Zusatztaste fällt auf die Sprungmarke durch. Der Diff zeigt, dass die Codes für F4, F6 und F7 als dokumentiert und nicht als gemessen gekennzeichnet sind.
 
-#### 11b. **Acht Tastennamen in der Schreibweise nachtragen**
+#### 11b. [DONE] **Acht Tastennamen in der Schreibweise nachtragen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/tasten/parser.rs` (erweitert, aus S11: die Tabelle `TASTEN`, ihre Längenangabe, der Modulkopf mit der Namensliste und die Prüfung `die_tabelle_deckt_die_ganze_schreibweise_ab`), `crates/krk-core/tests/belegung.rs` (erweitert, aus S11: die Gegenprobe `die_tastencodes_stimmen_mit_der_carbon_tabelle_ueberein` nimmt die acht neuen Zahlen auf)

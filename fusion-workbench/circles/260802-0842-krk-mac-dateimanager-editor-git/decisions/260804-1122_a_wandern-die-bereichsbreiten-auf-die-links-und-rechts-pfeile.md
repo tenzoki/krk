@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2045_c_die-kombinationsschreibweise-kennt-die-links-und-rechts-pfeile-nicht.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritte S11b und S11c), `resources/default-keymap.toml`
 
@@ -46,3 +46,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: Nutzerentscheid 260804 — **ja, sie wandern.** `bereich_verbreitern` liegt künftig auf `ctrl+right`, `bereich_verschmaelern` auf `ctrl+left`; `ctrl+b` und `ctrl+s` werden frei und stehen in keiner Tastenliste mehr. Der Grund für die Buchstaben war allein, dass die Kombinationsschreibweise die Seitwärtspfeile nicht kannte, und dieser Grund fällt mit S11b weg. Die Pfeile zeigen die Richtung, statt dass zwei Buchstaben sie benennen, und sie stehen neben `cmd+left` und `cmd+right` der Ordnernavigation: dieselben Tasten, andere Zusatztaste. Umzusetzen in S11c zusammen mit den drei anderen Einträgen; die Umsetzung zieht diesen Datensatz auf `_i_`.

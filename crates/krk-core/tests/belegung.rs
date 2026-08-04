@@ -209,7 +209,8 @@ fn genau_die_drei_funktionstasten_der_messung_sind_gemessen() {
 fn die_tastencodes_stimmen_mit_der_carbon_tabelle_ueberein() {
     // Die Gegenprobe zur Tabelle: einmal als Zahl. Die Werte stammen aus
     // `kVK_*` in `HIToolbox.framework/Headers/Events.h` des macOS-SDK,
-    // nachgesehen am 260803. `objc2` fuehrt die Tastencodes nicht, sonst
+    // nachgesehen am 260803 und fuer die acht Nachtraege am 260804. `objc2`
+    // fuehrt die Tastencodes nicht, sonst
     // stuende hier ein Vergleich gegen die Kiste wie in `krk-ui` fuer die acht
     // Modifikatorbits.
     //
@@ -228,12 +229,20 @@ fn die_tastencodes_stimmen_mit_der_carbon_tabelle_ueberein() {
         ("pagedown", 0x79),
         ("down", 0x7D),
         ("up", 0x7E),
+        ("left", 0x7B),
+        ("right", 0x7C),
+        ("f1", 0x7A),
+        ("f2", 0x78),
         ("f3", 0x63),
         ("f4", 0x76),
         ("f5", 0x60),
         ("f6", 0x61),
         ("f7", 0x62),
         ("f8", 0x64),
+        ("f9", 0x65),
+        ("f10", 0x6D),
+        ("f11", 0x67),
+        ("f12", 0x6F),
         ("a", 0x00),
         ("k", 0x28),
         ("y", 0x10),
