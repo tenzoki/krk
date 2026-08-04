@@ -141,12 +141,22 @@ pub enum Kommando {
     BereichVerbreitern,
     /// Den aktiven Bereich um einen Schritt verschmaelern (C7).
     BereichVerschmaelern,
+    /// Die Auswahl in den Ordner des anderen Dateifensters kopieren (C4).
+    Kopieren,
+    /// Die Auswahl in den Ordner des anderen Dateifensters verschieben (C4).
+    Verschieben,
+    /// Die Auswahl in den Papierkorb des Systems raeumen (C4, Taste Delete).
+    InPapierkorb,
+    /// Die Auswahl endgueltig loeschen (C4, F8; mit Rueckfrage davor).
+    EndgueltigLoeschen,
+    /// Eine laufende Dateioperation abbrechen (C4).
+    Abbrechen,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 31] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 36] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -184,6 +194,11 @@ impl Kommando {
         (Kommando::FensterEinblenden, "fenster_einblenden"),
         (Kommando::BereichVerbreitern, "bereich_verbreitern"),
         (Kommando::BereichVerschmaelern, "bereich_verschmaelern"),
+        (Kommando::Kopieren, "kopieren"),
+        (Kommando::Verschieben, "verschieben"),
+        (Kommando::InPapierkorb, "in_papierkorb"),
+        (Kommando::EndgueltigLoeschen, "endgueltig_loeschen"),
+        (Kommando::Abbrechen, "abbrechen"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.

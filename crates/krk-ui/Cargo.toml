@@ -30,3 +30,11 @@ objc2-quartz-core = { workspace = true }
 # verlinkt `CoreFoundation`; `CoreServices`, wo `FSEventStreamCreate` liegt,
 # verlinkt das `#[link]`-Attribut an jenem `extern`-Block.
 objc2-core-foundation = { workspace = true }
+# Der Weckruf, mit dem der Vermittlerfaden einer Dateioperation den Hauptfaden
+# erreicht (S16). Er ist die eine Stelle, an der ein anderer Faden in AppKit
+# hineinruft, und `dispatch_async` auf die Hauptschlange ist der Weg, den das
+# System dafuer vorsieht. Ein eigener `CFRunLoopSource` waere derselbe
+# Mechanismus mit mehr `unsafe`. Die Kiste liegt ohnehin im Baum, weil
+# `objc2-foundation` sie fuehrt; hier steht sie als unmittelbare
+# Abhaengigkeit von `krk-ui`.
+dispatch2 = { workspace = true }

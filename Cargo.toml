@@ -50,3 +50,8 @@ objc2-quartz-core = { version = "0.3", default-features = false, features = [
 # bauen. `objc2-app-kit` fuehrt sie ohnehin schon als Vorbedingung, hier steht
 # sie als unmittelbare Abhaengigkeit von `krk-ui`.
 block2 = "0.6"
+# Grand Central Dispatch, aber nur die Hauptschlange. Sie traegt den Weckruf
+# des Vermittlerfadens aus Schritt 16: `dispatch_async` auf die Hauptschlange
+# ist der vom System vorgesehene Weg, von einem Arbeitsfaden aus etwas auf dem
+# Hauptfaden ausfuehren zu lassen.
+dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }

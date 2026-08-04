@@ -16,16 +16,22 @@
 //! ```
 //!
 //! [`ordner_neu_lesen`] ist der **einzige** Weg, auf dem ein Dateifenster
-//! seinen Ordner noch einmal liest. Der zweite Ausloeser kommt mit S16 hinzu:
+//! seinen Ordner noch einmal liest. Seit S16 steht auch der zweite Ausloeser:
 //! der ueber den Fortschrittskanal gemeldete Abschluss einer Dateioperation
-//! ruft dieselbe Funktion. Ein eigener Weg fuer die selbst verursachte
-//! Aenderung waere die Sonderregel mit eigenem Rueckfallweg, die die Maxime
-//! "supersimpel" ausschliesst; die erste Abweichung zwischen den beiden Wegen
-//! waere ein Fehler ohne Pruefung.
+//! ruft dieselbe Funktion, in
+//! `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden`, einmal
+//! fuer den Quellordner und einmal fuer den Zielordner. Ein eigener Weg fuer
+//! die selbst verursachte Aenderung waere die Sonderregel mit eigenem
+//! Rueckfallweg, die die Maxime "supersimpel" ausschliesst; die erste
+//! Abweichung zwischen den beiden Wegen waere ein Fehler ohne Pruefung.
 //!
 //! Beide Ausloeser liegen in `krk-ui`. `krk-core` ruft die Funktion nicht: die
 //! Operationsmaschine aus S15 meldet ihren Abschluss nach oben und weiss
 //! nicht, welche Ordner auf dem Schirm stehen.
+//!
+//! **Zwei Aufrufe sind kein zweiter Weg.** Quelle und Ziel sind zwei Pfade, und
+//! `ordner_neu_lesen` nimmt einen. Beim Loeschen und beim Papierkorb gibt es
+//! nur den Quellordner, dann bleibt es bei einem Aufruf.
 //!
 //! # Warum die Pfade nicht bloss verglichen werden
 //!

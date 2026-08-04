@@ -86,6 +86,7 @@ use krk_core::zwischenablage::{self, Ziel};
 
 use crate::kommandos::auswahl::markieren_und_weiter;
 use crate::kommandos::navigation::{Bewegung, zielzeile};
+use crate::kommandos::operationen;
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::tabs::Tabliste;
 
@@ -589,6 +590,17 @@ impl DateifensterQuelle {
             _ => return false,
         }
         true
+    }
+
+    /// Worauf ein Dateioperations-Befehl in diesem Dateifenster wirkt (C4).
+    ///
+    /// Die Regel dahinter, dass die Markierung Vorrang vor der Auswahl hat,
+    /// steht in [`crate::kommandos::operationen::betroffene`] und ist ohne
+    /// Fenster pruefbar; hier bleibt allein die Ausleihe des Tabmodells.
+    pub fn betroffene_eintraege(&self) -> operationen::Auswahl {
+        let tabs = self.ivars().tabs.borrow();
+        let tab = tabs.aktiver();
+        operationen::betroffene(tab.modell(), tab.ordner())
     }
 
     /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.

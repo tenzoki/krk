@@ -34,14 +34,12 @@ use objc2_foundation::{NSFileManager, NSString, NSURL};
 use krk_core::operation::Papierkorb;
 
 /// Der Papierkorb des Systems.
+///
+/// Eingehaengt wird er seit S16 in
+/// [`crate::appkit::anwendung`], wo jeder Auftrag an die Operationsmaschine
+/// entsteht. Bis dahin hatte die Schnittstelle im Kern im laufenden Programm
+/// keine Implementierung.
 #[derive(Debug, Clone, Copy, Default)]
-// Eingehaengt wird er in S16, wo die Oberflaeche zu C4 entsteht und die
-// Operationsmaschine ihren Auftrag bekommt. Bis dahin hat die Schnittstelle im
-// Kern im laufenden Programm keine Implementierung.
-#[expect(
-    dead_code,
-    reason = "wird in S16 in die Operationsmaschine injiziert (Plan, Dateiliste von Schritt 16)"
-)]
 pub struct Systempapierkorb;
 
 impl Papierkorb for Systempapierkorb {

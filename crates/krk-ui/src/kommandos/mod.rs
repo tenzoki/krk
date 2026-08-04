@@ -5,12 +5,13 @@
 //! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
-//! Drei Module entlang dessen geschnitten, was ein Tastenbefehl bewegt:
+//! Vier Module entlang dessen geschnitten, was ein Tastenbefehl bewegt:
 //!
 //! ```text
 //! navigation   Auswahl bewegen: Zeile, Bildschirmseite, Anfang, Ende (C2)
 //! auswahl      Mehrfachauswahl: markieren und weiterruecken (C2)
 //! pfadeingabe  Einen Pfad pruefen und sagen, wohin KRK geht (C2 und C10)
+//! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4)
 //! ```
 //!
 //! **`pfadeingabe` ist die eine Stelle, die einen Pfad prueft.** Zwei Ausloeser
@@ -26,4 +27,5 @@
 
 pub mod auswahl;
 pub mod navigation;
+pub mod operationen;
 pub mod pfadeingabe;

@@ -88,8 +88,11 @@
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Arc;
+use std::thread;
 use std::time::Instant;
 
+use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -103,25 +106,59 @@ use objc2_foundation::{
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{Ablage, Datei, Fensterseite, Sitzung, pfade};
+use krk_core::operation::{
+    self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, freier_name,
+};
 use krk_core::tasten::Kommando;
 use krk_core::tasten::belegung;
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
+use crate::kommandos::operationen::{self, Fokus, Konfliktfrage, Vorgangszustand};
 use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
 use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
 use super::bildtakt::{self, Zeichenende};
+use super::blaetter::fortschritt::Fortschrittsblatt;
+use super::blaetter::{Blattgriff, konflikt, loeschbestaetigung, uebersprungen};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
 use super::menue;
+use super::papierkorb::Systempapierkorb;
 use super::tabelle::Dateifenster;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
+
+/// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
+///
+/// Es gibt hoechstens einen. Solange er laeuft, steht sein Blatt am Fenster und
+/// nimmt jeden Tastenbefehl ausser dem Abbruch entgegen; ein zweiter Vorgang
+/// daneben waere ein zweites Blatt an demselben Fenster, und AppKit stellte es
+/// ohnehin hinten an.
+struct Vorgang {
+    /// Was geschieht. Traegt die Ueberschrift und die Abschlussmeldung.
+    art: Art,
+    /// Der Ordner, aus dem die Eintraege stammen.
+    quellordner: PathBuf,
+    /// Wie viele Positionen der Nutzer ausgewaehlt hatte.
+    positionen: usize,
+    /// Wann der Vorgang begonnen hat. Der Verzug misst ab hier.
+    begonnen: Instant,
+    /// Der Zustand, den der Vermittlerfaden fuellt.
+    zustand: Arc<Vorgangszustand>,
+    /// Das Fortschrittsblatt, sobald es steht.
+    blatt: RefCell<Option<Fortschrittsblatt>>,
+    /// Ob gerade eine Konfliktfrage auf dem Schirm steht.
+    ///
+    /// Solange sie steht, geht kein Fortschrittsblatt auf: AppKit stellte das
+    /// zweite Blatt hinter das erste, und der Arbeitsfaden wartete auf eine
+    /// Antwort, die niemand geben kann.
+    konflikt_steht: Cell<bool>,
+}
 
 /// Was der Anwendungsdelegierte haelt.
 ///
@@ -163,6 +200,16 @@ pub struct AnwendungsIvars {
     /// Ohne dieses Kennzeichen ueberschriebe ein dauerhaft scheiternder
     /// Schreibvorgang alle zwei Sekunden jede andere Meldung.
     schreibfehler_gemeldet: Cell<bool>,
+    /// Die laufende Dateioperation aus C4, falls eine laeuft.
+    vorgang: RefCell<Option<Vorgang>>,
+    /// Ein Blatt, das auf eine Antwort des Nutzers wartet: die Konfliktfrage,
+    /// die Rueckfrage vor dem endgueltigen Loeschen oder die Abschlussliste.
+    ///
+    /// Es steht hier, damit die Escape-Taste es schliessen kann. Ein `NSButton`
+    /// traegt genau eine Tastenentsprechung, und die Eingabetaste liegt in der
+    /// Rueckfrage auf "Abbrechen"; der zweite Weg zum Abbruch laeuft deshalb
+    /// ueber den Befehl `abbrechen` aus `resources/default-keymap.toml`.
+    offenes_blatt: RefCell<Option<Blattgriff>>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -266,6 +313,8 @@ impl Anwendungsdelegierter {
             datentraegerwache: OnceCell::new(),
             sitzungsschreiber: RefCell::new(None),
             schreibfehler_gemeldet: Cell::new(false),
+            vorgang: RefCell::new(None),
+            offenes_blatt: RefCell::new(None),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -541,6 +590,12 @@ impl Anwendungsdelegierter {
         match eingabe {
             Eingabe::Kommando(kommando) => self.kommando_ausfuehren(kommando),
             Eingabe::Zeichen(zeichen) => {
+                // Ein getipptes Zeichen gehoert dem Blatt, solange eines steht:
+                // die Sprungmarke durchsucht eine Liste, die der Nutzer gerade
+                // nicht bedient.
+                if self.blatt_steht() {
+                    return false;
+                }
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv)
                     .quelle()
@@ -549,12 +604,39 @@ impl Anwendungsdelegierter {
         }
     }
 
+    /// Ob am Hauptfenster gerade ein Blatt steht.
+    ///
+    /// Die eine Abfrage dafuer. Sie deckt jedes Blatt ab, auch die Pfadeingabe
+    /// aus C2 und die kommenden aus S17, und nicht nur die vier aus diesem
+    /// Schritt.
+    fn blatt_steht(&self) -> bool {
+        self.ivars()
+            .fenster
+            .get()
+            .and_then(|fenster| fenster.attachedSheet())
+            .is_some()
+    }
+
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
     ///
     /// Liefert, ob es ausgefuehrt wurde; nur dann schluckt der Abgriff das
     /// Ereignis.
     fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
+        // Solange ein Blatt steht oder eine Dateioperation laeuft, kommt allein
+        // der Abbruch durch. Alles uebrige geht unveraendert an AppKit weiter,
+        // damit das Blatt seine eigene Tastaturbedienung behaelt.
+        if (self.blatt_steht() || self.ivars().vorgang.borrow().is_some())
+            && !operationen::waehrend_blatt_erlaubt(kommando)
+        {
+            return false;
+        }
+
         let ausgefuehrt = match kommando {
+            Kommando::Kopieren => self.uebertragen(kommando),
+            Kommando::Verschieben => self.uebertragen(kommando),
+            Kommando::InPapierkorb => self.in_den_papierkorb(),
+            Kommando::EndgueltigLoeschen => self.endgueltig_loeschen(),
+            Kommando::Abbrechen => self.abbrechen(),
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
@@ -645,6 +727,389 @@ impl Anwendungsdelegierter {
         };
         aufteilung.anwenden(&breiten, &sichtbar);
         aufteilung.aktives_markieren(aktiv);
+    }
+
+    // ------------------------------------------------------------------
+    // Dateioperationen (C4)
+    // ------------------------------------------------------------------
+
+    /// Kopieren oder Verschieben in den Ordner des anderen Dateifensters (C4).
+    fn uebertragen(&self, kommando: Kommando) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let ziel = self
+            .dateifenster(aktiv.andere())
+            .quelle()
+            .angezeigter_ordner();
+        let art = match kommando {
+            Kommando::Verschieben => Art::Verschieben { ziel },
+            // Der Aufrufer schickt nur diese beiden; ein drittes Kommando hier
+            // waere ein Fehler im Zweig darueber und nicht in dieser Zeile.
+            _ => Art::Kopieren { ziel },
+        };
+        self.auftrag_stellen(art)
+    }
+
+    /// Die Auswahl in den Papierkorb des Systems raeumen (C4, Taste Delete).
+    ///
+    /// Sofort und ohne Rueckfrage: der Rueckweg ist der Papierkorb des Systems,
+    /// und einen eigenen Rueckgaengig-Speicher fuehrt KRK nicht
+    /// (`shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`).
+    fn in_den_papierkorb(&self) -> bool {
+        if !operationen::loeschtaste_wirkt(self.fokus()) {
+            return false;
+        }
+        self.auftrag_stellen(Art::InDenPapierkorb)
+    }
+
+    /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).
+    fn endgueltig_loeschen(&self) -> bool {
+        if !operationen::loeschtaste_wirkt(self.fokus()) {
+            return false;
+        }
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let auswahl = self.dateifenster(aktiv).quelle().betroffene_eintraege();
+        if auswahl.ist_leer() {
+            self.melden(aktiv, "es ist nichts ausgewählt");
+            return true;
+        }
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+
+        let (frage, erlaeuterung) = operationen::loeschfrage(&auswahl);
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = loeschbestaetigung::zeigen(
+            self.mtm(),
+            fenster,
+            &frage,
+            &erlaeuterung,
+            move |bestaetigt| {
+                let Some(selbst) = schwach.load() else {
+                    return;
+                };
+                *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                if bestaetigt {
+                    selbst.auftrag_stellen(Art::EndgueltigLoeschen);
+                }
+            },
+        );
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        true
+    }
+
+    /// Der Abbruchbefehl (C4).
+    ///
+    /// Er bedient zwei Faelle, und die Reihenfolge ist bindend: ein offenes
+    /// Blatt zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs
+    /// steht und der Abbruch dann ihr gilt.
+    fn abbrechen(&self) -> bool {
+        let blatt = self.ivars().offenes_blatt.borrow_mut().take();
+        if let Some(blatt) = blatt {
+            blatt.abbrechen();
+            return true;
+        }
+        let vorgang = self.ivars().vorgang.borrow();
+        let Some(vorgang) = vorgang.as_ref() else {
+            return false;
+        };
+        vorgang.zustand.abbrechen();
+        if let Some(blatt) = vorgang.blatt.borrow().as_ref() {
+            blatt.stand_setzen("Abbruch angefordert, der Vorgang endet gleich …");
+        }
+        true
+    }
+
+    /// Wo der Eingabefokus steht, soweit es die Loeschtasten angeht (C4).
+    ///
+    /// **Eine Frage, eine Antwort.** Steht ein Blatt am Fenster, ist dessen
+    /// Panel das Schluesselfenster und nicht das Hauptfenster; steht die
+    /// Schreibmarke in einem Textfeld, hat der Ereignisabgriff den Tastendruck
+    /// ohnehin schon weitergereicht und dieses Kommando gar nicht erst
+    /// erzeugt. Im Hauptfenster gibt es in dieser Runde nur die beiden
+    /// Dateilisten; die Lesezeichenleiste aus C5 kommt mit S18, und mit ihr
+    /// bekommt diese Abfrage einen dritten Fall.
+    fn fokus(&self) -> Fokus {
+        let (Some(schluessel), Some(haupt)) = (
+            NSApplication::sharedApplication(self.mtm()).keyWindow(),
+            self.ivars().fenster.get(),
+        ) else {
+            return Fokus::Anderswo;
+        };
+        if schluessel.isEqual(Some(haupt)) {
+            Fokus::Dateifenster
+        } else {
+            Fokus::Anderswo
+        }
+    }
+
+    /// Baut den Auftrag aus der Auswahl des aktiven Dateifensters und startet
+    /// ihn.
+    ///
+    /// Liefert `true`, auch wenn nichts ausgewaehlt war: der Tastendruck ist
+    /// dann verbraucht, und die Statuszeile sagt warum. Ihn weiterzureichen
+    /// hiesse, dass F5 auf leerer Auswahl in der Menueleiste landet.
+    fn auftrag_stellen(&self, art: Art) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let quelle = self.dateifenster(aktiv).quelle();
+        let auswahl = quelle.betroffene_eintraege();
+        if auswahl.ist_leer() {
+            self.melden(aktiv, "es ist nichts ausgewählt");
+            return true;
+        }
+        let quellordner = quelle.angezeigter_ordner();
+        if art.eq(&Art::Kopieren {
+            ziel: quellordner.clone(),
+        }) || art.eq(&Art::Verschieben {
+            ziel: quellordner.clone(),
+        }) {
+            self.melden(aktiv, "Quelle und Ziel sind derselbe Ordner");
+            return true;
+        }
+
+        let positionen = auswahl.zahl();
+        let auftrag = Auftrag {
+            quellen: auswahl.pfade,
+            art: art.clone(),
+            konfliktregel: Default::default(),
+            uebertragung: Default::default(),
+        };
+        // Hier bekommt die Schnittstelle aus `operation/loeschen.rs` ihre
+        // Implementierung: bis zu diesem Aufruf hatte sie im laufenden Programm
+        // keine.
+        let lauf = operation::starten(auftrag, Arc::new(Systempapierkorb));
+
+        let zustand = Arc::new(Vorgangszustand::neu());
+        let fuer_faden = Arc::clone(&zustand);
+        let gestartet = thread::Builder::new()
+            .name("krk-vermittler".to_owned())
+            .spawn(move || vermitteln(lauf, &fuer_faden));
+        if let Err(fehler) = gestartet {
+            // Der Lauf ist mit `gestartet` gefallen und damit abgebrochen; er
+            // hat noch nichts angefasst.
+            self.melden(
+                aktiv,
+                &format!("die Operation liess sich nicht starten: {fehler}"),
+            );
+            return true;
+        }
+
+        *self.ivars().vorgang.borrow_mut() = Some(Vorgang {
+            art,
+            quellordner,
+            positionen,
+            begonnen: Instant::now(),
+            zustand,
+            blatt: RefCell::new(None),
+            konflikt_steht: Cell::new(false),
+        });
+        true
+    }
+
+    /// Der Weckruf des Vermittlerfadens, auf dem Hauptfaden angekommen.
+    ///
+    /// Der Weg dorthin geht ueber die Hauptschlange und den Anwendungsdelegierten
+    /// von `NSApplication`, damit der Weckruf selbst nichts festhalten muss, was
+    /// dem Hauptfaden gehoert.
+    fn vorgang_einziehen(mtm: MainThreadMarker) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        selbst.vorgang_zeichnen();
+    }
+
+    /// Zeichnet den Stand des laufenden Vorgangs.
+    ///
+    /// **Die Reihenfolge ist bindend** und im Modulkopf von
+    /// [`crate::kommandos::operationen`] begruendet: erst `gezeichnet`, dann
+    /// den Stand lesen, dann zeichnen. Umgekehrt fiele eine Meldung, die
+    /// waehrend des Zeichnens eintrifft, zwischen die beiden Schritte.
+    fn vorgang_zeichnen(&self) {
+        // Die Ausleihe endet vor jedem AppKit-Aufruf: ein Blatt ruft zurueck,
+        // und der Rueckruf will denselben `RefCell`.
+        let Some((zustand, art, positionen, begonnen, konflikt_steht)) = ({
+            let vorgang = self.ivars().vorgang.borrow();
+            vorgang.as_ref().map(|vorgang| {
+                (
+                    Arc::clone(&vorgang.zustand),
+                    vorgang.art.clone(),
+                    vorgang.positionen,
+                    vorgang.begonnen,
+                    vorgang.konflikt_steht.get(),
+                )
+            })
+        }) else {
+            return;
+        };
+
+        zustand.buendelung.gezeichnet();
+        let (fortschritt, konflikt, bericht) = zustand.aendern(|stand| {
+            (
+                stand.fortschritt.clone(),
+                stand.konflikt.take(),
+                stand.bericht.take(),
+            )
+        });
+
+        if let Some(bericht) = bericht {
+            self.vorgang_beenden(&bericht);
+            return;
+        }
+        if let Some(konflikt) = konflikt {
+            self.konflikt_fragen(konflikt);
+            return;
+        }
+        if konflikt_steht {
+            return;
+        }
+        if !operationen::blatt_faellig(begonnen, Instant::now()) {
+            return;
+        }
+        self.fortschritt_zeigen(
+            operationen::ueberschrift(&art),
+            &operationen::standtext(fortschritt.as_ref(), positionen),
+        );
+    }
+
+    /// Zeigt das Fortschrittsblatt oder schreibt den neuen Stand hinein.
+    fn fortschritt_zeigen(&self, ueberschrift: &str, stand: &str) {
+        let steht = {
+            let vorgang = self.ivars().vorgang.borrow();
+            let Some(vorgang) = vorgang.as_ref() else {
+                return;
+            };
+            let blatt = vorgang.blatt.borrow();
+            match blatt.as_ref() {
+                Some(blatt) => {
+                    blatt.stand_setzen(stand);
+                    true
+                }
+                None => false,
+            }
+        };
+        if steht {
+            return;
+        }
+
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let blatt = super::blaetter::fortschritt::zeigen(
+            self.mtm(),
+            fenster,
+            ueberschrift,
+            stand,
+            move || {
+                if let Some(selbst) = schwach.load() {
+                    selbst.abbrechen();
+                }
+            },
+        );
+        let vorgang = self.ivars().vorgang.borrow();
+        if let Some(vorgang) = vorgang.as_ref() {
+            *vorgang.blatt.borrow_mut() = Some(blatt);
+        }
+    }
+
+    /// Stellt die Konfliktfrage aus C4 und schickt die Antwort zurueck.
+    ///
+    /// Das Fortschrittsblatt weicht dafuer: an einem Fenster steht genau ein
+    /// Blatt, und AppKit stellte das zweite hinter das erste. Es geht mit der
+    /// naechsten Meldung von selbst wieder auf.
+    fn konflikt_fragen(&self, frage: Konfliktfrage) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        {
+            let vorgang = self.ivars().vorgang.borrow();
+            let Some(vorgang) = vorgang.as_ref() else {
+                return;
+            };
+            vorgang.konflikt_steht.set(true);
+            if let Some(blatt) = vorgang.blatt.borrow_mut().take() {
+                blatt.schliessen();
+            }
+        }
+
+        let vorschlag = freier_name(&frage.ziel);
+        let antwortweg = frage.antwort.clone();
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = konflikt::zeigen(
+            self.mtm(),
+            fenster,
+            &frage.quelle,
+            &frage.ziel,
+            &vorschlag,
+            move |entscheid| {
+                // Ein leerer Name waere kein Name; dann bleibt der Eintrag
+                // stehen, statt unter einem Namen zu landen, den niemand
+                // getippt hat. Die Pruefung im Kern faenge ihn ebenfalls ab und
+                // meldete ihn als uebersprungen; hier ist sie naeher am Nutzer.
+                let entscheid = match &entscheid.antwort {
+                    Konfliktantwort::UmbenennenIn(name) if name.is_empty() => Konfliktentscheid {
+                        antwort: Konfliktantwort::Ueberspringen,
+                        fuer_alle_weiteren: false,
+                    },
+                    _ => entscheid,
+                };
+                let _ = antwortweg.send(entscheid);
+                if let Some(selbst) = schwach.load() {
+                    *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                    let vorgang = selbst.ivars().vorgang.borrow();
+                    if let Some(vorgang) = vorgang.as_ref() {
+                        vorgang.konflikt_steht.set(false);
+                    }
+                }
+            },
+        );
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+    }
+
+    /// Schliesst den Vorgang ab: Blatt weg, Meldung, Auffrischung, Liste.
+    fn vorgang_beenden(&self, bericht: &Bericht) {
+        let Some(vorgang) = self.ivars().vorgang.borrow_mut().take() else {
+            return;
+        };
+        if let Some(blatt) = vorgang.blatt.borrow_mut().take() {
+            blatt.schliessen();
+        }
+
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.melden(
+            aktiv,
+            &operationen::abschlusstext(&vorgang.art, bericht, vorgang.positionen),
+        );
+
+        // **Der eine Auffrischungspfad.** Der gemeldete Abschluss einer
+        // Dateioperation ist der zweite Ausloeser von `ordner_neu_lesen`, den
+        // S14 angelegt und `### Frage 3` zugesagt hat. Ein eigener Weg fuer die
+        // selbst verursachte Aenderung entsteht nicht.
+        auffrischung::ordner_neu_lesen(self, &vorgang.quellordner);
+        if let Art::Kopieren { ziel } | Art::Verschieben { ziel } = &vorgang.art {
+            auffrischung::ordner_neu_lesen(self, ziel);
+        }
+
+        let Some((frage, liste)) = operationen::uebersprungenliste(&bericht.uebersprungen) else {
+            return;
+        };
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = uebersprungen::zeigen(self.mtm(), fenster, &frage, &liste, move || {
+            if let Some(selbst) = schwach.load() {
+                *selbst.ivars().offenes_blatt.borrow_mut() = None;
+            }
+        });
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+    }
+
+    /// Stellt einen Text in die Statuszeile des genannten Dateifensters.
+    fn melden(&self, seite: Fensterseite, text: &str) {
+        self.dateifenster(seite).quelle().meldung_zeigen(text);
     }
 
     // ------------------------------------------------------------------
@@ -812,6 +1277,78 @@ impl Dateifenstersicht for Anwendungsdelegierter {
     fn melden(&self, seite: Fensterseite, text: &str) {
         self.dateifenster(seite).quelle().meldung_zeigen(text);
     }
+}
+
+/// Der Vermittlerfaden zwischen der Operationsmaschine und dem Hauptfaden.
+///
+/// **Er ist kein Takt.** Er schlaeft in `recv`, solange nichts zu melden ist,
+/// und zieht dabei keinen Strom; geweckt wird er von der Meldung selbst, und er
+/// weckt seinerseits den Hauptfaden. Damit haelt die Wahl des Nutzers vom
+/// 260804, die Buendelung ohne Zeitgeber zu bauen
+/// (`issues/260803-2007_o_s16-nennt-keinen-mechanismus-fuer-die-buendelung-der-fortschrittsmeldungen.md`,
+/// Weg 3).
+///
+/// **Warum es ihn ueberhaupt gibt.** Der Empfaenger des Meldekanals darf nicht
+/// zwischen Faeden geteilt werden, und der Hauptfaden darf in `recv` nicht
+/// warten: das waere die Dateisystem-Arbeit auf dem Hauptfaden, die
+/// `### Frage 6` ausschliesst, und L9 fiele mit ihr. Ein Faden, der wartet, ist
+/// der Preis dafuer.
+///
+/// **Der Abbruchwunsch laeuft ueber diesen Faden zurueck**, weil der
+/// [`Lauf`] hier liegt. Er wird nach jeder Meldung geprueft; die Spanne bis zum
+/// Greifen ist damit die bis zur naechsten Meldung, also hoechstens der
+/// Meldeabstand von 8 ms, solange eine Datei uebertragen wird.
+fn vermitteln(lauf: Lauf, zustand: &Arc<Vorgangszustand>) {
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        if zustand.abgebrochen() && !lauf.ist_abgebrochen() {
+            lauf.abbrechen();
+        }
+        let fertig = matches!(meldung, Meldung::Fertig(_));
+        zustand.aendern(|stand| match meldung {
+            Meldung::Fortschritt(fortschritt) => stand.fortschritt = Some(fortschritt),
+            Meldung::Uebersprungen(eintrag) => stand.uebersprungen.push(eintrag),
+            Meldung::Konflikt {
+                quelle,
+                ziel,
+                antwort,
+            } => {
+                stand.konflikt = Some(Konfliktfrage {
+                    quelle,
+                    ziel,
+                    antwort,
+                });
+            }
+            Meldung::Fertig(bericht) => stand.bericht = Some(bericht),
+        });
+        // Auch der Abschluss und die Konfliktfrage gehen durch die Buendelung.
+        // Verworfen wird dabei allein der **Weckruf**, nicht die Meldung: steht
+        // schon einer aus, hat der Hauptfaden noch nicht gelesen und findet
+        // beides beim naechsten Durchgang vor.
+        if zustand.buendelung.melden() {
+            hauptfaden_wecken();
+        }
+        if fertig {
+            break;
+        }
+    }
+    lauf.warten();
+}
+
+/// Weckt den Hauptfaden, damit er den Stand des Vorgangs zeichnet.
+///
+/// Der Block haelt nichts fest, was dem Hauptfaden gehoert: er sucht den
+/// Anwendungsdelegierten dort, wo er ohnehin steht. Damit braucht der Weckruf
+/// keine Verrenkung, um einen `Retained` ueber die Fadengrenze zu tragen.
+fn hauptfaden_wecken() {
+    DispatchQueue::main().exec_async(|| {
+        let Some(mtm) = MainThreadMarker::new() else {
+            // Kann nicht eintreten: die Hauptschlange laeuft auf dem
+            // Hauptfaden. Ein Abbruch waere hier trotzdem falsch, weil er eine
+            // laufende Kopie um ihre Anzeige braechte und nicht um mehr.
+            return;
+        };
+        Anwendungsdelegierter::vorgang_einziehen(mtm);
+    });
 }
 
 /// Der Ordner, auf den ein Dateifenster ausweicht, wenn sein Datentraeger

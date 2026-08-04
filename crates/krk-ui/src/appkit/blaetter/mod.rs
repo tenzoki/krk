@@ -1,25 +1,41 @@
 //! Die gemeinsame Huelle fuer die Blaetter am Fenster.
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
-//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK braucht in
-//! dieser Runde eines, die Pfadeingabe aus C2; fuenf weitere kommen mit den
-//! Schritten 16 und 17 in dieses Verzeichnis, fuer Fortschritt, Abbruch,
-//! Konflikt, Rueckfrage und das Umbenennen im Stapel.
+//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat in dieser
+//! Runde vier: die Pfadeingabe aus C2 und die drei Blaetter zu C4 aus Schritt 16
+//! (Fortschritt mit Abbruch, Konflikt, Rueckfrage vor dem endgueltigen
+//! Loeschen); die Abschlussliste der uebersprungenen Eintraege ist das vierte
+//! zu C4, und das Umbenennen im Stapel kommt mit Schritt 17 dazu.
 //!
 //! ```text
 //! Blatt::neu ──> textfeld_setzen ──> zeigen(fenster, fertig)
 //!                                         │
 //!                        fertig(true|false) auf dem Hauptfaden
+//!
+//! Blatt::mit_schaltflaechen ──> zeigen_mit_wahl(fenster, fertig) ──> Blattgriff
+//!                                         │                             │
+//!                         fertig(Stelle der Schaltflaeche)     schliessen()
 //! ```
 //!
 //! **Die Antwort kommt als gewoehnlicher Rust-Wert zurueck.** Der Aufrufer sieht
-//! einen `bool` und nicht eine `NSModalResponse`; was AppKit dafuer als Zahl
-//! fuehrt, bleibt in dieser Datei.
+//! einen `bool` oder die Stelle der gedrueckten Schaltflaeche und nicht eine
+//! `NSModalResponse`; was AppKit dafuer als Zahl fuehrt, bleibt in dieser Datei.
 //!
 //! **Der Grund fuer eine gemeinsame Huelle** ist derselbe wie ueberall in
 //! diesem Entwurf: fuenf Blaetter mit je eigenem Aufbau waeren fuenf Stellen,
 //! die dieselbe Frage beantworten, und die erste Abweichung zwischen ihnen
 //! faende keine Pruefung.
+//!
+//! # Die Tastenentsprechungen stehen ausdruecklich da
+//!
+//! `NSAlert` gibt die Eingabetaste von sich aus der **ersten** Schaltflaeche und
+//! die Escape-Taste nur einer mit dem Titel "Cancel", den eine
+//! deutschsprachige Anwendung nicht traegt. Beides waere fuer die Rueckfrage vor
+//! dem endgueltigen Loeschen falsch: C4 verlangt dort **Abbrechen** als
+//! Vorbelegung, damit ein reflexhaftes Bestaetigen mit der Eingabetaste nichts
+//! loescht. [`Blatt::mit_schaltflaechen`] nimmt die Taste deshalb je
+//! Schaltflaeche entgegen und loescht die Vorgabe von `NSAlert`, wo sie nicht
+//! gemeint ist.
 //!
 //! # Ein Blatt ist mit der Tastatur bedienbar, und das kostet zwei Vorkehrungen
 //!
@@ -39,7 +55,11 @@
 //! Blatt weder mit der Eingabe- noch mit der Escape-Taste schliessen, und die
 //! Pfadeingabe waere allein mit der Maus bedienbar.
 
+pub mod fortschritt;
+pub mod konflikt;
+pub mod loeschbestaetigung;
 pub mod pfadeingabe;
+pub mod uebersprungen;
 
 use std::cell::RefCell;
 
@@ -48,11 +68,11 @@ use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSControl,
-    NSControlTextEditingDelegate, NSModalResponse, NSTextField, NSTextFieldDelegate, NSTextView,
-    NSView, NSWindow,
+    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSButton,
+    NSControl, NSControlStateValueOff, NSControlTextEditingDelegate, NSEventModifierFlags,
+    NSModalResponse, NSTextField, NSTextFieldDelegate, NSTextView, NSView, NSWindow,
 };
-use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol, NSString};
+use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol, NSString, ns_string};
 
 /// Was der Waechter tut, wenn der Nutzer im Feld bestaetigt oder abbricht.
 ///
@@ -141,9 +161,103 @@ impl Eingabewaechter {
     }
 }
 
-/// Ein Blatt mit einer Frage und zwei Schaltflaechen.
+/// Welche Taste eine Schaltflaeche ausloest.
+///
+/// # Warum es die beiden Eingabetasten mit Zusatztaste gibt
+///
+/// Ein `NSButton` traegt genau **eine** Tastenentsprechung, und der Tabulator
+/// erreicht die Schaltflaechen eines Blattes nur, wenn der Nutzer im System die
+/// vollstaendige Tastaturnavigation eingeschaltet hat. Ein Blatt mit mehr als
+/// zwei Antworten waere ohne Maus damit nicht zu beantworten, und C4 verlangt
+/// fuer die Rueckfrage vor dem endgueltigen Loeschen ausdruecklich das
+/// Gegenteil. Die beiden Kombinationen mit Zusatztaste geben jeder weiteren
+/// Antwort einen eigenen Griff; **das Blatt schreibt sie in seinen
+/// erlaeuternden Text**, sonst waeren sie unauffindbar.
+///
+/// Sie kollidieren mit nichts: `resources/default-keymap.toml` belegt weder die
+/// Eingabetaste noch eine ihrer Kombinationen, der Ereignisabgriff findet
+/// nichts und reicht den Tastendruck an AppKit weiter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Taste {
+    /// Die Eingabetaste. Hoechstens eine Schaltflaeche je Blatt traegt sie.
+    Eingabe,
+    /// Cmd und die Eingabetaste.
+    EingabeMitBefehl,
+    /// Wahltaste und die Eingabetaste.
+    EingabeMitWahl,
+    /// Die Escape-Taste. Hoechstens eine Schaltflaeche je Blatt traegt sie.
+    Escape,
+}
+
+impl Taste {
+    /// Das Zeichen, das `NSButton.keyEquivalent` dafuer traegt.
+    fn zeichen(self) -> &'static NSString {
+        match self {
+            Taste::Eingabe | Taste::EingabeMitBefehl | Taste::EingabeMitWahl => ns_string!("\r"),
+            Taste::Escape => ns_string!("\u{1B}"),
+        }
+    }
+
+    /// Die Zusatztasten, die dazu gehalten werden muessen.
+    fn zusatztasten(self) -> NSEventModifierFlags {
+        match self {
+            Taste::EingabeMitBefehl => NSEventModifierFlags::Command,
+            Taste::EingabeMitWahl => NSEventModifierFlags::Option,
+            _ => NSEventModifierFlags::empty(),
+        }
+    }
+}
+
+/// Eine Schaltflaeche eines Blattes.
+#[derive(Debug, Clone, Copy)]
+pub struct Schaltflaeche<'a> {
+    /// Die Beschriftung.
+    pub titel: &'a str,
+    /// Die Taste, die sie ausloest.
+    pub taste: Taste,
+}
+
+impl<'a> Schaltflaeche<'a> {
+    /// Eine Schaltflaeche mit dieser Beschriftung und dieser Taste.
+    pub fn neu(titel: &'a str, taste: Taste) -> Self {
+        Self { titel, taste }
+    }
+}
+
+/// Ein stehendes Blatt, das der Aufrufer wieder schliessen kann.
+///
+/// Das Fortschrittsblatt braucht das: es geht ohne Zutun des Nutzers auf und
+/// wieder zu, sobald die Operation endet. Die uebrigen Blaetter schliesst der
+/// Nutzer selbst; ihr Griff wird fallen gelassen, und das schadet nicht, weil
+/// AppKit das Blatt haelt, solange es steht.
+pub struct Blattgriff {
+    warnung: Retained<NSAlert>,
+    fenster: Retained<NSWindow>,
+    /// Der Rueckgabewert, den [`Blattgriff::abbrechen`] einsetzt.
+    abbruchcode: NSModalResponse,
+}
+
+impl Blattgriff {
+    /// Schliesst das Blatt mit dem Rueckgabewert seiner abbrechenden
+    /// Schaltflaeche.
+    ///
+    /// Der Abschlussblock laeuft dabei ganz gewoehnlich; ein programmatischer
+    /// Abbruch und ein Klick auf "Abbrechen" gehen damit denselben Weg, und es
+    /// gibt keine zweite Stelle, die einen Abbruch behandelt.
+    pub fn abbrechen(&self) {
+        self.fenster
+            .endSheet_returnCode(&self.warnung.window(), self.abbruchcode);
+    }
+}
+
+/// Ein Blatt mit einer Frage und Schaltflaechen.
 pub struct Blatt {
     warnung: Retained<NSAlert>,
+    /// Die Rueckgabewerte der Schaltflaechen, in der Reihenfolge, in der sie
+    /// angelegt wurden.
+    antworten: Vec<NSModalResponse>,
+    /// Die Stelle der abbrechenden Schaltflaeche, falls es eine gibt.
+    abbruchstelle: Option<usize>,
     /// Der Delegierte des Eingabefeldes, falls es eines gibt.
     ///
     /// Ein `NSControl` haelt seinen Delegierten schwach; die starke Richtung
@@ -159,23 +273,86 @@ impl Blatt {
     /// traegt die Eingabetaste, die zweite bricht ab und traegt die
     /// Escape-Taste. Beides ist die Mac-Gewohnheit, und C2 verlangt sie
     /// ausdruecklich fuer jedes Textfeld.
-    ///
-    /// Beide Tastenentsprechungen stehen hier ausdruecklich und werden nicht
-    /// AppKit ueberlassen: `NSAlert` gibt die Escape-Taste von sich aus allein
-    /// einer Schaltflaeche mit dem Titel "Cancel", und den traegt eine
-    /// deutschsprachige Anwendung nicht. Sie greifen, solange kein Textfeld im
-    /// Bearbeitungszustand steht; fuer diesen Fall gibt es den
-    /// [`Eingabewaechter`].
     pub fn neu(mtm: MainThreadMarker, frage: &str, bestaetigen: &str) -> Self {
+        Self::mit_schaltflaechen(
+            mtm,
+            frage,
+            &[
+                Schaltflaeche::neu(bestaetigen, Taste::Eingabe),
+                Schaltflaeche::neu("Abbrechen", Taste::Escape),
+            ],
+        )
+    }
+
+    /// Ein Blatt mit dieser Frage und diesen Schaltflaechen.
+    ///
+    /// Die erste Schaltflaeche steht rechts und ist die hervorgehobene; welche
+    /// die Eingabetaste traegt, entscheidet allein das Feld
+    /// [`Schaltflaeche::taste`]. Genau deshalb kann die Rueckfrage vor dem
+    /// endgueltigen Loeschen "Abbrechen" vorbelegen, ohne die Reihenfolge zu
+    /// verdrehen, die C4 aufzaehlt.
+    pub fn mit_schaltflaechen(
+        mtm: MainThreadMarker,
+        frage: &str,
+        schaltflaechen: &[Schaltflaeche<'_>],
+    ) -> Self {
         let warnung = NSAlert::new(mtm);
         warnung.setMessageText(&NSString::from_str(frage));
-        let ja = warnung.addButtonWithTitle(&NSString::from_str(bestaetigen));
-        ja.setKeyEquivalent(&NSString::from_str("\r"));
-        let nein = warnung.addButtonWithTitle(&NSString::from_str("Abbrechen"));
-        nein.setKeyEquivalent(&NSString::from_str("\u{1B}"));
+        let mut antworten = Vec::with_capacity(schaltflaechen.len());
+        let mut abbruchstelle = None;
+        for (stelle, schaltflaeche) in schaltflaechen.iter().enumerate() {
+            let knopf = warnung.addButtonWithTitle(&NSString::from_str(schaltflaeche.titel));
+            // Auch `Taste::Keine` wird gesetzt und nicht ausgelassen: `NSAlert`
+            // gibt der ersten Schaltflaeche von sich aus die Eingabetaste, und
+            // ohne das Loeschen traegt sie zwei Blaetter spaeter eine Taste, die
+            // niemand ihr zugedacht hat.
+            knopf.setKeyEquivalent(schaltflaeche.taste.zeichen());
+            knopf.setKeyEquivalentModifierMask(schaltflaeche.taste.zusatztasten());
+            antworten.push(antwort_von_stelle(stelle));
+            if schaltflaeche.taste == Taste::Escape {
+                abbruchstelle = Some(stelle);
+            }
+        }
         Self {
             warnung,
+            antworten,
+            abbruchstelle,
             waechter: None,
+        }
+    }
+
+    /// Setzt den erlaeuternden Text unter der Frage.
+    pub fn erlaeuterung_setzen(&self, text: &str) {
+        self.warnung.setInformativeText(&NSString::from_str(text));
+    }
+
+    /// Macht das Blatt zur Warnung, mit dem Warnzeichen des Systems.
+    ///
+    /// Fuer die Rueckfrage vor dem endgueltigen Loeschen: sie ist der eine
+    /// Vorgang in KRK, der keinen Rueckweg hat.
+    pub fn als_warnung(&self) {
+        self.warnung.setAlertStyle(NSAlertStyle::Critical);
+    }
+
+    /// Haengt eine beliebige Ansicht unter die Frage.
+    ///
+    /// Der allgemeine Fall von [`Blatt::textfeld_setzen`], ohne Ersthelfer und
+    /// ohne Waechter: das Fortschrittsblatt zeigt eine Beschriftung, die
+    /// niemand bedient.
+    pub fn beigabe_setzen(&self, sicht: &NSView) {
+        self.warnung.setAccessoryView(Some(sicht));
+    }
+
+    /// Zeigt das Kaestchen "fuer alle weiteren uebernehmen" (C4).
+    ///
+    /// `NSAlert` fuehrt es als Unterdrueckungskaestchen. Es dafuer zu benutzen
+    /// spart eine eigene Beigabe samt Anordnung, und die Bedeutung ist
+    /// dieselbe: diese Antwort gilt auch fuer die naechsten Faelle.
+    pub fn wahl_fuer_alle_zeigen(&self, titel: &str) {
+        self.warnung.setShowsSuppressionButton(true);
+        if let Some(kaestchen) = self.warnung.suppressionButton() {
+            let knopf: &NSButton = &kaestchen;
+            knopf.setTitle(&NSString::from_str(titel));
         }
     }
 
@@ -204,16 +381,46 @@ impl Blatt {
     /// Kehrt sofort zurueck. Der Rueckruf laeuft auf dem Hauptfaden, sobald der
     /// Nutzer geantwortet hat, und genau einmal: beide Wege, die Schaltflaeche
     /// und die Taste im Feld, muenden in denselben Abschlussblock von AppKit.
+    ///
+    /// "Bestaetigt" heisst: die **erste** Schaltflaeche. Fuer ein Blatt mit
+    /// mehr als zweien ist [`Blatt::zeigen_mit_wahl`] der richtige Weg.
     pub fn zeigen(self, fenster: &NSWindow, fertig: impl Fn(bool) + 'static) {
+        let _griff = self.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| fertig(stelle == 0));
+    }
+
+    /// Zeigt das Blatt am Fenster und meldet die Stelle der gedrueckten
+    /// Schaltflaeche.
+    ///
+    /// Gezaehlt wird in der Reihenfolge, in der die Schaltflaechen angelegt
+    /// wurden. Das zweite Argument des Rueckrufs sagt, ob das Kaestchen aus
+    /// [`Blatt::wahl_fuer_alle_zeigen`] angekreuzt war; ohne Kaestchen ist es
+    /// immer `false`. Der zurueckgegebene [`Blattgriff`] schliesst das Blatt von
+    /// aussen; wer ihn nicht braucht, laesst ihn fallen.
+    pub fn zeigen_mit_wahl(
+        self,
+        fenster: &NSWindow,
+        fertig: impl Fn(usize, bool) + 'static,
+    ) -> Blattgriff {
         // Der Block haelt Warnung und Waechter fest. Ohne das fielen beide mit
         // diesem Aufruf, denn der Aufrufer gibt sie hier ab und AppKit haelt nur
         // das Fenster der Warnung. Der Ring bricht, sobald AppKit den Rueckruf
         // nach der Antwort freigibt.
         let warnung = self.warnung.clone();
         let waechter = self.waechter.clone();
+        let antworten = self.antworten.clone();
         let block = RcBlock::new(move |antwort: NSModalResponse| {
-            let _haelt = (&warnung, &waechter);
-            fertig(antwort == NSAlertFirstButtonReturn);
+            let _haelt = &waechter;
+            // Eine unbekannte Antwort gilt als die letzte Schaltflaeche, und
+            // die ist in jedem Blatt dieser Runde die abbrechende. Lieber
+            // nichts tun als raten.
+            let stelle = antworten
+                .iter()
+                .position(|kandidat| *kandidat == antwort)
+                .unwrap_or(antworten.len().saturating_sub(1));
+            let fuer_alle = warnung
+                .suppressionButton()
+                .is_some_and(|kaestchen| kaestchen.state() != NSControlStateValueOff);
+            fertig(stelle, fuer_alle);
         });
         self.warnung
             .beginSheetModalForWindow_completionHandler(fenster, Some(&block));
@@ -232,5 +439,24 @@ impl Blatt {
                 elternfenster.endSheet_returnCode(&blattfenster, antwort);
             }));
         }
+
+        let abbruchcode = self
+            .abbruchstelle
+            .map_or(NSAlertFirstButtonReturn, antwort_von_stelle);
+        Blattgriff {
+            warnung: self.warnung,
+            fenster: fenster.retain(),
+            abbruchcode,
+        }
     }
+}
+
+/// Der Rueckgabewert, den `NSAlert` fuer die Schaltflaeche an dieser Stelle
+/// liefert.
+///
+/// AppKit zaehlt sie ab `NSAlertFirstButtonReturn` fortlaufend hoch. Die
+/// Umrechnung steht hier einmal, damit keine Zaehlung mit den Zahlen von AppKit
+/// rechnet.
+fn antwort_von_stelle(stelle: usize) -> NSModalResponse {
+    NSAlertFirstButtonReturn + stelle as NSModalResponse
 }

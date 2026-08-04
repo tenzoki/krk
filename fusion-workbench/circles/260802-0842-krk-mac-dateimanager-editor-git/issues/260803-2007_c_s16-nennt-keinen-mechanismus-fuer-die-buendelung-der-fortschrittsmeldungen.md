@@ -52,3 +52,26 @@ begonnen wird.
 
 **Aufgefallen bei:** der Durchsicht der Dateilisten von S9 bis S23 unter der
 erweiterten Regel, `issues/260803-1819_c_dateilisten-von-s9-bis-s23-noch-nicht-unter-der-erweiterten-regel-durchgegangen.md`.
+
+---
+Resolved: Weg 3 ist umgesetzt, gar kein Takt. `crates/krk-ui/src/kommandos/operationen.rs`
+hält die `Buendelung`: der Arbeitsfaden meldet jeden Fortschritt, der
+Vermittlerfaden in `crates/krk-ui/src/appkit/anwendung.rs` setzt einen Weckruf
+über die Hauptschlange ab, und `Buendelung::melden` verwirft ihn, solange der
+vorige nicht gezeichnet ist. `bildtakt.rs` ist unberührt; ein Zeitgeber ist
+nirgends entstanden.
+
+**Der Haken ist belegt.** Die Richtigkeit der Zustandsprüfung hängt an einer
+Reihenfolge auf dem Hauptfaden: erst `gezeichnet`, dann den Stand lesen, dann
+zeichnen. Sie steht im Modulkopf ausgeschrieben und in
+`die_buendelung_haelt_die_zahl_der_weckrufe_klein` festgehalten (5.000 Meldungen
+bei zehn Zeichendurchgängen ergeben genau zehn Weckrufe). Am laufenden Bündel
+gemessen am 260804 mit einer Kopie von 5.000 Einträgen, dreimal wiederholt:
+2.363 bis 2.422 Meldungen des Arbeitsfadens gegen 29 bis 93 Weckrufe und ebenso
+viele Zeichendurchgänge des Hauptfadens. Das Verhältnis liegt zwischen 26:1 und
+82:1, und die Zahl der Zeichendurchgänge bleibt weit unter der Zahl der Bilder,
+die in derselben Spanne vergangen sind. Der Hauptfaden wird nicht überschwemmt.
+
+Verworfen wird ausdrücklich der Weckruf und nicht die Meldung: der Stand steht
+in `Vorgangszustand`, und der Hauptfaden liest beim nächsten Durchgang den
+neuesten. Ein verworfener Weckruf kostet keinen Zwischenstand.
