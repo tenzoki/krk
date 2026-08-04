@@ -33,3 +33,6 @@ seine Abweichungen vom Auslieferungszustand" ziehen.
 S11 richtig.
 
 **Aufgefallen bei:** der Umsetzung von S10, beim Lesen von `### Frage 4`.
+
+---
+Resolved: Die Zelle in der Tabelle von `### Frage 4` lautet jetzt "die vollständige Belegung des Nutzers, nicht nur seine Abweichungen vom Auslieferungszustand", genau der Vorschlag des Datensatzes. Nachgezogen am 260804-2318 vom `planner`.

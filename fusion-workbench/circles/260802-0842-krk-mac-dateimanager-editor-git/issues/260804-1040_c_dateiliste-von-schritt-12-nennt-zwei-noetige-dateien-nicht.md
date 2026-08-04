@@ -43,3 +43,6 @@ Zuordnung maschinell ab.
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 11, Schritt 12, Schritt 13, Kopf von `## Implementierungsschritte`),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1819_c_dateilisten-von-s9-bis-s23-noch-nicht-unter-der-erweiterten-regel-durchgegangen.md`
+
+---
+Resolved: Die Dateiliste von S12 im Plan nennt jetzt `crates/krk-core/src/tasten/belegung.rs` (erweitert, mit allen elf Kennungen) und `crates/krk-ui/src/appkit/ereignisse.rs` (erweitert: Senke statt Ziel). Gegen die Wiederkehr steht der neue Abschnitt "Was eine Dateiliste zusagt, und was nicht" samt der Kommando-Regel im Kopf von `## Implementierungsschritte`: nennt ein Abnahmekriterium einen Tastendruck am laufenden Bündel, führt die Dateiliste `belegung.rs`. Die Regel hätte genau diesen Fall gefangen. Nachgezogen am 260804-2318 vom `planner`.

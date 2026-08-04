@@ -46,3 +46,6 @@ Das ist dasselbe Ordnungsprinzip, das S16b und S14 schon nennen ("ein Ereignis i
 **Der Plan gehört dem `planner`; dieser Defekt ändert ihn nicht.** Der Code ist der Stand, den der Plantext beschreiben soll, und nicht umgekehrt: die vier Ränge sind gebaut, gemessen und belegt.
 
 **Aufgefallen bei:** der Behebung der beiden Defekte vom 260804-1915 am 260804-1940.
+
+---
+Resolved: Alle sechs genannten Stellen sind nachgezogen. Der Absatz nennt vier Quellen mit einer Rangtabelle samt Löschregeln; das `flowchart` hat 8 Knoten und 7 Kanten statt 6 und 5; der Verdrängungssatz stellt auf "sobald alles über ihr gefallen ist" ab und nennt die Messung vom 260804-1940; der Abschlusstext geht als Befehlsantwort in die Zeile; das `stateDiagram-v2` trägt die geänderte Beschriftung bei unveränderter Zahl von Zuständen und Übergängen; und das Abnahmekriterium sagt "sichtbar" ausdrücklich. Die Diagramm-Selbstprüfung am Ende des Plans trägt die neuen Zahlen. Nachgezogen am 260804-2318 vom `planner`.

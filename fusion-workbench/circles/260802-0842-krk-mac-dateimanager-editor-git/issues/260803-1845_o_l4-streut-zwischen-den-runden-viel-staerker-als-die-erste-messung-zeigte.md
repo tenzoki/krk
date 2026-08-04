@@ -23,3 +23,16 @@ Was zu tun ist, vor S22 und nicht jetzt:
 - Kommt sie nicht von außen, ist die Ursache im Startpfad von KRK zu suchen, und dann ist es ein eigener Defekt mit eigener Untersuchung.
 
 Nicht zu tun ist eine Reparatur auf Verdacht. Der Startpfad ist ohne festgestellte Ursache nicht der richtige Ort für einen Eingriff, und der Nutzer hat die Reihenfolge der offenen Defekte festgelegt.
+
+---
+
+**Nachtrag 260804-2318 (`planner`): der Plan trägt die Bedingung jetzt, der Defekt bleibt offen.**
+
+Die Zusage von 1000 ms ist **nicht** angetastet. Sie hält in jeder gefahrenen Runde, und eine Zahl zu senken, die das Werkzeug erreicht, verschenkte eine Eigenschaft. Was den Defekt trägt, ist die unerklärte Streuung, und dagegen steht jetzt eine Vorschrift statt einer Absichtserklärung:
+
+- S22 im Plan bekommt einen eigenen Absatz. Die Messreihe läuft auf einem Gerät ohne konkurrierende Arbeit, und sie wird zweimal gefahren, einmal ruhig und einmal unter bekannter Last, damit der Vergleich die Frage "kommt die Streuung von außen" beantwortet.
+- Das Abnahmekriterium von S22 verlangt beide Berichte und den Vergleich der beiden L4-Spannen im Begleittext.
+- Die neunte Kopfangabe, die Systemlast vor und nach dem Lauf, steht in der Dateiliste von S21 bei `crates/krk-bench/src/bericht.rs`. Der Bericht erhob sie bisher nicht, und genau deshalb war die Ursache aus ihm nicht feststellbar.
+- Eine Reparatur auf Verdacht am Startpfad findet nicht statt; das steht ausdrücklich im Plan.
+
+Offen bleibt der Defekt, weil die zwei Läufe noch nicht gefahren sind. Er schließt mit S22, oder er wird durch einen eigenen Defekt abgelöst, falls der Vergleich zeigt, dass die Streuung nicht von außen kommt.

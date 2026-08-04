@@ -47,3 +47,6 @@ denselben Weg und erbt die Lesart; wird sie geändert, ist S11 der letzte
 Zeitpunkt, an dem das billig ist.
 
 **Aufgefallen bei:** der Umsetzung von S10, beim Lesen von `### Frage 4`.
+
+---
+Resolved: Der Plan schreibt Lesart 1 aus, an beiden Stellen. `### Frage 4` bekommt einen eigenen Absatz mit der Herleitung aus der Handänderbarkeit von `keymap.toml`, und die `Änderungen` von S10 trennen Auslieferungs**zustand** von Auslieferungs**datei** ausdrücklich. Die Umsetzung vom 260803-2051 ist damit bestätigt; an `crates/krk-core/src/ablage/mod.rs` ändert sich nichts. Nachgezogen am 260804-2318 vom `planner`.

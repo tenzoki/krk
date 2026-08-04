@@ -36,3 +36,6 @@ Beide Eingriffe sind gemacht und im Sitzungsbericht
 ausgeschrieben. Der Defekt betrifft die **Plandatei**: ihre Dateiliste ist an
 dieser Stelle unvollständig und sollte um die beiden Einträge samt Begründung
 ergänzt werden, damit die nächste Runde sich nicht dieselbe Frage stellt.
+
+---
+Resolved: Die Dateiliste von S17 im Plan nennt jetzt `crates/krk-ui/src/appkit/anwendung.rs` (erweitert, weil allein der Anwendungsdelegierte beide Dateifenster hält und `ordner_neu_lesen` eine `Dateifenstersicht` verlangt) und `crates/krk-ui/src/tabs.rs` (erweitert, die eine neue Naht `Tabliste::wunschauswahl_setzen`). Gegen die Wiederkehr steht die Naht-Regel im Kopf von `## Implementierungsschritte`. Nachgezogen am 260804-2318 vom `planner`.

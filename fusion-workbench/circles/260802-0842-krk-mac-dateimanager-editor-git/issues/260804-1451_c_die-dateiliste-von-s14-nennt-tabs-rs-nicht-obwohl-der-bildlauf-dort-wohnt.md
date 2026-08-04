@@ -43,3 +43,6 @@ die Dateiliste des Plans bindend ist und der `coder` sie überschritten hat.
 
 **Aufgefallen bei:** der Umsetzung von S14 am 260804,
 `history/260804-1451-s14-dateisystem-beobachtung-und-datentraegerwechsel.md`.
+
+---
+Resolved: Die Dateiliste von S14 im Plan nennt jetzt `crates/krk-ui/src/tabs.rs` (erweitert) mit Begründung und der einen neuen öffentlichen Naht `Tabliste::aktiven_neu_lesen`. Der Zuschnitt des `coder` ist damit bestätigt und nicht nur geduldet: er trägt die Auffrischung über dieselben zwei Felder wie die Sitzungswiederherstellung, ein zweiter Wiederherstellungsweg entsteht nicht. Gegen die Wiederkehr steht die Naht-Regel im Kopf von `## Implementierungsschritte`. Nachgezogen am 260804-2318 vom `planner`.

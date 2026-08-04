@@ -43,3 +43,6 @@ Damit ist beides belegt, aber das Kriterium ist streng genommen an einer Einstel
 Ob C4 und S15 die Unterscheidung aufnehmen sollen, also ausdrücklich sagen, dass Fortschritt und Abbruch für das Kopieren über Datenträgergrenzen zugesagt sind und innerhalb eines Datenträgers gegenstandslos. Die Alternative wäre, `COPYFILE_CLONE` fallen zu lassen, und das wäre teuer erkauft: eine Kopie von 50 GB dauerte dann Minuten statt Millisekunden und verbrauchte 50 GB Plattenplatz.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 15 am 260804-1649.
+
+---
+Resolved: C4 und S15 nehmen die Unterscheidung auf, und zwar ohne eine Ausnahme für den Klonweg zu schreiben. C4 hängt seine Fortschrittszusage seit dem 260804-2318 an einer Laufzeit von 150 ms statt an einer Menge; ein Klon ist nach 0,42 ms fertig, fällt damit von selbst heraus, und die drei Stellen, die von einer Datenmenge sprachen, sind gegenstandslos geworden statt mit einer Ausnahme beschriftet. Datensatz `decisions/260804-2318_a_fortschrittsschwelle-nach-zeit-statt-nach-menge.md`. S15 trägt zusätzlich einen Absatz zu `Uebertragungsart`, der beide Prüfwege benennt und sagt, warum das Abbruchkriterium mit `ImmerBytes` geprüft wird und das kein Behelf ist. `COPYFILE_CLONE` bleibt. **Die 100 ms des Abbruchkriteriums bleiben unverändert.** Nachgezogen am 260804-2318 vom `planner`.

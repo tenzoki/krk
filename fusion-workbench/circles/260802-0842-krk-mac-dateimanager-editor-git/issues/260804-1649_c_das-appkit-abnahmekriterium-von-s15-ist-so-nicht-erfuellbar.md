@@ -42,3 +42,6 @@ Zwei Wege, und beide gehören dem Nutzer:
 Der zweite Weg macht den Code schlechter, um ein Kommando zufriedenzustellen; der erste ist eine Änderung am Plan. Verwandt, aber nicht dasselbe: `issues/260803-1530_o_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen.md` handelt von `krk-ui`, dieser Defekt von `krk-core`.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 15 am 260804-1649.
+
+---
+Resolved: Weg 1 des Datensatzes. Das Kriterium von S15 ist geschärft, statt die Prosa zu verstümmeln, und schließt Dokumentationszeilen aus. Die Begründung steht im Plan, einschließlich des Arguments, dass die Zusage nicht allein am `grep` hängt: `crates/krk-core/Cargo.toml` führt als Abhängigkeiten nur `serde` und `toml`, eine `objc2`-Kiste könnte der Kern also gar nicht einbinden. Rückwirkend gilt die geschärfte Form auch für S2, S7, S9 und S13. Nachgezogen am 260804-2318 vom `planner`.

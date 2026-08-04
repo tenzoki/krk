@@ -40,3 +40,6 @@ Schritt:**
 Gefunden bei der Umsetzung von Schritt 17. Betrifft
 `crates/krk-ui/src/appkit/anwendung.rs` und, im ersten Weg,
 `crates/krk-core/src/operation/`.
+
+---
+Resolved: Weg 1 des Datensatzes, mit einer Änderung an der Schwelle davor. C4 sagt Fortschritt und Abbruch seit dem 260804-2318 für jede Operation zu, die länger als 150 ms läuft, statt ab 100 Einträgen oder 100 MB; die Herleitung steht in `decisions/260804-2318_a_fortschrittsschwelle-nach-zeit-statt-nach-menge.md`. Unter der neuen Schwelle liegt das Stapel-Umbenennen mit gemessenen 525 ms über 5.000 Einträge eindeutig innerhalb der Zusage, und der neue Planschritt S17c setzt es auf die Operationsmaschine aus S15. Der Eingriff ist Wiederverwendung: Arbeitsfaden, Abbruchkennzeichen, Fortschrittskanal und die Sammlung übersprungener Einträge bringt die Maschine mit, und die Arbeit je Eintrag ist ohnehin schon `operation::umbenennen`. Weg 2, C4 eine Ausnahme für das Stapel-Umbenennen zu geben, ist verworfen: eine Sonderregel für eine von fünf Arten, und 525 ms stehende Oberfläche sind für den Nutzer kein Sonderfall. Der Code steht aus und hängt an S17c. Nachgezogen am 260804-2318 vom `planner`.

@@ -17,3 +17,6 @@ Zu klären vor Schritt 12, der die Tabs anlegt und den Menüeintrag ohnehin anfa
 ---
 
 **Stand 260804-0830: in der Sache entschieden, offen bis zur Umsetzung.** Der Nutzer hat am 260804 Möglichkeit 2 aus `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md` gewählt und dabei ausdrücklich festgehalten, dass Cmd+W seine Bedeutung "Tab schließen" aus der Belegung behält. Damit gilt der erste der beiden oben genannten Wege: der Menüeintrag "Fenster schließen" wandert auf Shift+Cmd+W, `resources/default-keymap.toml` bleibt unverändert. Umgesetzt wird die Verschiebung in Schritt 12, der den Menüeintrag ohnehin anfasst; dieser Defekt schließt erst mit dieser Umsetzung.
+
+---
+Resolved: Mit S12 umgesetzt und damit überholt, festgestellt beim Aufräumdurchgang am 260804-2318. Der Menüeintrag "Fenster schließen" trägt seit Commit `537fda5` das Kürzel `shift+cmd+w`, und `cmd+w` gehört allein dem Schließen des Tabs, wie `resources/default-keymap.toml` es seit S9 führt und wie der Nutzer es am 260804 bestätigt hat. Die Doppelbelegung, die diese Meldung beschreibt, besteht nicht mehr. Was offen bleibt, ist eine andere Frage und hat einen eigenen Datensatz: dass Menükürzel überhaupt außerhalb der Konflikterkennung aus C3 liegen, `260804-0907_o_fenster-schliessen-bleibt-als-einzige-belegung-ausserhalb-der-konflikterkennung.md`.

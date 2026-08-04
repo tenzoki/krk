@@ -31,3 +31,6 @@ Die Anweisung an den `coder` lautete ausdrücklich "kein Eingriff in `crates/krk
 Nichts am Code. Die Dateilisten von S16 und, falls die Kennungen dort früher hingehört hätten, von S15 sind nachzuziehen, damit die nächste Durchsicht der Dateilisten nicht denselben Befund noch einmal macht.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 16 am 260804-1813.
+
+---
+Resolved: Die Dateiliste von S16 im Plan nennt jetzt `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, beide `Cargo.toml` samt `Cargo.lock`, und führt `appkit/tabelle.rs` als erweitert statt als lesend. Der Grenzübertritt nach `crates/krk-core/` steht ausdrücklich im Plan, statt dem Umsetzenden überlassen zu bleiben; die Verbotsseite einer Dateiliste bleibt bindend, siehe den neuen Abschnitt "Was eine Dateiliste zusagt, und was nicht". Nachgezogen am 260804-2318 vom `planner`.

@@ -30,3 +30,6 @@ Die Zusage von 200 ms hält mit rund 31 ms Reserve. **Das Abnahmekriterium selbs
 Entweder bekommt L8 in S21 einen Messschritt im Messmodus und das Abnahmekriterium von S16b wird dorthin verschoben, oder der Plan nennt den Weg, den es heute gibt. Ein dritter Weg wäre ein Unterbefehl `xtask messen`, der `krk-bench` ruft; er wäre eine zweite Benennung für dieselbe Sache und widerspräche der Maxime "supersimpel".
 
 **Aufgefallen bei:** der Umsetzung von Schritt 16b am 260804-1915.
+
+---
+Resolved: Die Abnahme von L8 ist von S16b nach S21 verschoben, wo der Messmodus entsteht. S16b nennt `cargo xtask messen` nicht mehr und hält stattdessen die Sondenmessung vom 260804-1915 fest, 95. Perzentil 168,9 ms bei zugesagten 200 ms, mit dem Hinweis, dass die Zahl erst mit S21 wiederholbar wird. Der dritte Weg, ein Unterbefehl `xtask messen`, ist mit Begründung verworfen. **Die Zahl 200 ms bleibt unverändert.** Nachgezogen am 260804-2318 vom `planner`.

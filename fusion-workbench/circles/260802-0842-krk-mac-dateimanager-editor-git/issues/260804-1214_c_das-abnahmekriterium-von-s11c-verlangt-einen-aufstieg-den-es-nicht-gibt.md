@@ -32,3 +32,6 @@ Die Änderung gehört dem `planner`: sie fasst eine Plandatei an, und der Auftra
 ---
 
 Herkunft: gefunden bei der Umsetzung von Schritt 11c am 260804-1214, beim Nachprüfen der Aufzählung `Kommando` gegen die drei neuen Belegungen.
+
+---
+Resolved: Das Abnahmekriterium von S11c steht jetzt auf dem, was der Schritt leisten kann: `cmd+right` steigt ein, `ctrl+left` und `ctrl+right` ändern die Bereichsbreite, `return` löst nichts aus, und `cmd+left` und `cmd+up` sind belegt und folgenlos, bis S13 das Kommando für den Aufstieg baut. Die Begründung über `Kommando::aus_kennung` steht dabei. Nachgezogen am 260804-2318 vom `planner`.

@@ -25,3 +25,6 @@ Die Generationsnummer bleibt und trägt weiterhin zwei Dinge: sie benennt den Le
 Der `coder` hat den Programmtext am 260803-2025 im Auftrag geändert und dabei ausdrücklich die Anweisung gehabt, den Plan nicht anzufassen, weil der `planner` zur selben Zeit in derselben Datei arbeitet. Der Nachzug in `### Frage 2` gehört ihm.
 
 **Aufgefallen bei:** der Behebung von `issues/260803-1536_c_die-generationspruefung-kann-nicht-greifen-und-verdeckt-den-wirksamen-mechanismus.md`, gemeldet in der Prüfung von Schritt 6 und 7, `reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`.
+
+---
+Resolved: `### Frage 2` nennt jetzt den wirksamen Mechanismus: der neue Lesevorgang lässt den alten fallen, `Lesevorgang::drop` setzt das Abbruchkennzeichen, das nächste `send` scheitert am verschwundenen Empfänger, und der Lesefaden prüft vor jedem Systemaufruf und zwischen zwei Stapeln. Die Generationsnummer behält ihre zwei verbliebenen Aufgaben, und der Absatz sagt, was der Knoten im Ladepfad-Diagramm seither zeichnet. Der Abschnitt `## Wie dieser Plan die Maxime "supersimpel" einlöst` ist mitgezogen. Nachgezogen am 260804-2318 vom `planner`.

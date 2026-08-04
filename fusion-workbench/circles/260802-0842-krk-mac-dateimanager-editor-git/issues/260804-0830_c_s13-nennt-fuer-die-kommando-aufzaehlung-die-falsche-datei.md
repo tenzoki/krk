@@ -25,3 +25,6 @@ Bindet S13, den nächsten Schritt nach S12, der die Aufzählung erweitert. Zu kl
 ---
 
 Herkunft: gefunden am 260804-0830 beim Einarbeiten der Fähigkeit C10 in S13, weil die beiden neuen Kommandos der Zwischenablage in dieselbe Aufzählung wachsen.
+
+---
+Resolved: Der falsche Eintrag `crates/krk-core/src/tasten/mod.rs` ist aus der Dateiliste von S13 entfernt; die richtige Angabe `crates/krk-core/src/tasten/belegung.rs` stand bereits daneben und bleibt. Die Durchsicht der übrigen Schritte auf dieselbe Verwechslung, die der Datensatz offenließ, ist mit dieser Runde erledigt: S12 und S16 haben `belegung.rs` nachgetragen bekommen, S17 und S17b führten sie schon richtig, und die Kommando-Regel im Kopf von `## Implementierungsschritte` macht die Zuordnung ab jetzt ableitbar statt suchbar. Nachgezogen am 260804-2318 vom `planner`.

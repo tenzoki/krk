@@ -32,3 +32,6 @@ Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 9b),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-0907_c_drei-fest-verdrahtete-zahlen-im-code-brechen-mit-den-neuen-eintraegen-aus-s9b.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260804-1015-zaehlpruefungen-ohne-literale.md`
+
+---
+Resolved: Der Absatz unter 9b behauptet jetzt nur noch, was die genannte Prüfung deckt, nämlich die Richtung Kommando nach Kennung. Die Zählprüfungen stehen als eigener Punkt daneben, mit Verweis auf den erledigten Rust-Teil und der Regel, dass jede Prüfung, die an einer Anzahl hängt statt an einem Namen, von einem Nachtrag in dieser Datei betroffen ist und ohne Literal gehört. Nachgezogen am 260804-2318 vom `planner`.
