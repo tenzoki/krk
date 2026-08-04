@@ -62,6 +62,20 @@ impl Drop for Pruefordner {
     }
 }
 
+/// Die Kennungen einer Belegung, sortiert: ihr Wortschatz ohne die Reihenfolge.
+///
+/// Die Reihenfolge bleibt aussen vor, weil eine Nutzerdatei die Funktionen, die
+/// sie nennt, nach vorne holt und die uebrigen dahinter antreten laesst.
+fn kennungen(belegung: &Belegung) -> Vec<&str> {
+    let mut gefunden: Vec<&str> = belegung
+        .funktionen()
+        .iter()
+        .map(|funktion| funktion.kennung())
+        .collect();
+    gefunden.sort_unstable();
+    gefunden
+}
+
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
 fn kombi(text: &str) -> Kombination {
     match Kombination::lesen(text) {
@@ -391,8 +405,23 @@ fn eine_zweite_kombination_an_derselben_funktion_ist_kein_konflikt() {
         panic!("die neue Kombination trifft keine Funktion");
     };
     assert_eq!(funktion.kennung(), "kopieren");
-    // Die beiden ausgelieferten Wege bleiben daneben stehen.
-    assert_eq!(funktion.tasten().len(), 3);
+    // Die ausgelieferten Wege bleiben daneben stehen. Wie viele es sind, sagt
+    // die Auslieferungsbelegung und nicht eine Zahl an dieser Stelle.
+    let ab_werk = Belegung::auslieferung();
+    let Some(vorher) = ab_werk.funktion("kopieren") else {
+        panic!("die Funktion kopieren fehlt in der Auslieferungsbelegung");
+    };
+    for ausgeliefert in vorher.tasten() {
+        assert!(
+            funktion.tasten().contains(ausgeliefert),
+            "{ausgeliefert} ist beim Zuweisen von ctrl+k verlorengegangen"
+        );
+    }
+    assert_eq!(
+        funktion.tasten().len(),
+        vorher.tasten().len() + 1,
+        "die neue Kombination kam nicht als einzige hinzu"
+    );
     assert!(belegung.konflikte().is_empty());
 }
 
@@ -484,12 +513,32 @@ tasten = ["ctrl+c"]
         Nachschlag::Unbelegt | Nachschlag::Sprungmarke
     ));
     // Und die Funktionen, die die Datei nicht nennt, stehen unbelegt da, damit
-    // die Belegungsansicht sie weiter auffuehrt.
-    assert_eq!(belegung.funktionen().len(), 46);
-    let Some(verschieben) = belegung.funktion("verschieben") else {
-        panic!("die Funktion verschieben fehlt");
-    };
-    assert!(verschieben.tasten().is_empty());
+    // die Belegungsansicht sie weiter auffuehrt. Gemessen wird das am
+    // Wortschatz der Auslieferungsbelegung und nicht an einer hier
+    // aufgeschriebenen Zahl: die Belegungsdatei waechst mit jeder Runde, und
+    // eine Zahl an dieser Stelle bindet die Pruefung an ihre Groesse statt an
+    // ihre Zusage.
+    let ab_werk = Belegung::auslieferung();
+    assert_eq!(
+        kennungen(&belegung),
+        kennungen(&ab_werk),
+        "die geladene Belegung fuehrt einen anderen Wortschatz als die Auslieferungsbelegung"
+    );
+
+    // Und das ist die Zusage des Namens: belegt ist allein, was die Nutzerdatei
+    // nennt. Eine Datei mit einem Eintrag ergibt eine Funktion mit Tasten, nicht
+    // diese eine und die ausgelieferten dazu.
+    let belegt: Vec<&str> = belegung
+        .funktionen()
+        .iter()
+        .filter(|funktion| !funktion.tasten().is_empty())
+        .map(|funktion| funktion.kennung())
+        .collect();
+    assert_eq!(
+        belegt,
+        ["kopieren"],
+        "die Nutzerdatei nennt eine Funktion, belegt sind aber mehrere"
+    );
 }
 
 #[test]

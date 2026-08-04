@@ -582,7 +582,7 @@ Zwei Defekte am Schritt selbst sind bei der Umsetzung aufgefallen und mit diesem
 
 **Stand 260803-2110: die ausgelieferte Datei ist vom Nutzer durchgesehen und angenommen.** Sie liegt mit 46 Funktionen und 52 Kombinationen unter `resources/default-keymap.toml`, festgeschrieben im Commit `d1a8ab1`. Sieben der 46 Belegungen schreibt der Spec fest, die sechs Zeilen der C3-Tabelle und F4 als unbelegt; die übrigen 39 hat der `ontocoder` nach drei Regeln gewählt, und der Nutzer hat sie als Ganzes angenommen. Die Annahme gilt für diese Runde und ist keine Festschreibung auf Dauer. Sie steht als eigener Datensatz: `decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`.
 
-#### 9b. **Drei Kombinationen in der Auslieferungsbelegung nachtragen**
+#### 9b. [DONE] **Drei Kombinationen in der Auslieferungsbelegung nachtragen**
 
 - Ausführender: `ontocoder`
 - Dateien: `resources/default-keymap.toml`

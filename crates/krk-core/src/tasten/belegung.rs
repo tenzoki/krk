@@ -220,11 +220,13 @@ impl Belegung {
 
     /// Was ein Tastendruck ausloest.
     ///
-    /// Der Durchlauf ist eine gewoehnliche Schleife ueber die 52 ausgelieferten
-    /// Kombinationen und kein Nachschlagbaum. Verglichen werden zwei ganze
-    /// Zahlen; gegen die Zusage L1 von einer Bildlaenge faellt das nicht ins
-    /// Gewicht, und eine abgeleitete Tabelle daneben waere ein zweiter Bestand,
-    /// den jede Aenderung mitfuehren muesste.
+    /// Der Durchlauf ist eine gewoehnliche Schleife ueber die wenigen Dutzend
+    /// ausgelieferten Kombinationen und kein Nachschlagbaum. Verglichen werden
+    /// zwei ganze Zahlen; gegen die Zusage L1 von einer Bildlaenge faellt das
+    /// nicht ins Gewicht, und eine abgeleitete Tabelle daneben waere ein
+    /// zweiter Bestand, den jede Aenderung mitfuehren muesste. Die Groessen-
+    /// ordnung traegt das Argument, die genaue Zahl nicht: sie waechst mit
+    /// jeder Runde, und ein Literal an dieser Stelle veraltet ungeprueft.
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
         for funktion in &self.funktionen {
             if funktion
@@ -572,16 +574,45 @@ mod tests {
         }
     }
 
+    /// Was beim Bauen aus der Datei verschwinden koennte, verschwindet nicht.
+    ///
+    /// Die Vorgaengerin dieser Pruefung schrieb die Zahl der Funktionen und die
+    /// der Kombinationen als Literal hin. Das prueft die Groesse der Datei und
+    /// nicht die Arbeit von [`Belegung::bauen`]: jeder Nachtrag in
+    /// `default-keymap.toml` liess sie fehlschlagen, ohne dass etwas kaputt war.
+    /// Verglichen wird deshalb die gelesene Datei mit der gebauten Belegung.
+    /// [`Belegung::bauen`] verwirft stillschweigend eine Kombination, die
+    /// innerhalb derselben Funktion zweimal steht; genau das faellt hier auf.
     #[test]
-    fn die_auslieferungsbelegung_traegt_die_erwarteten_zahlen() {
+    fn beim_bauen_der_auslieferungsbelegung_geht_kein_eintrag_verloren() {
+        let datei: Belegungsdatei = toml::from_str(AUSLIEFERUNGSTEXT)
+            .expect("die eingebettete Auslieferungsbelegung ist gueltiges TOML");
         let belegung = Belegung::auslieferung();
-        assert_eq!(belegung.funktionen().len(), 46);
-        let kombinationen: usize = belegung
+
+        assert!(
+            !datei.funktionen.is_empty(),
+            "die Auslieferungsbelegung nennt keine einzige Funktion"
+        );
+        assert_eq!(
+            belegung.funktionen().len(),
+            datei.funktionen.len(),
+            "die gebaute Belegung fuehrt nicht so viele Funktionen wie die Datei"
+        );
+
+        let in_der_datei: usize = datei
+            .funktionen
+            .iter()
+            .map(|eintrag| eintrag.tasten.len())
+            .sum();
+        let gebaut: usize = belegung
             .funktionen()
             .iter()
             .map(|funktion| funktion.tasten().len())
             .sum();
-        assert_eq!(kombinationen, 52);
+        assert_eq!(
+            gebaut, in_der_datei,
+            "eine Kombination der Auslieferungsbelegung steht doppelt und ist beim Bauen entfallen"
+        );
     }
 
     #[test]

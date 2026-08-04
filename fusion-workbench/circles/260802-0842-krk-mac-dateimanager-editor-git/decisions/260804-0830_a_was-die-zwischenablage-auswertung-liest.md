@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C10), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 13 und Schritt 19)
 
@@ -83,7 +83,4 @@ bleibt einer. Für die Vorschau gilt dann dieselbe Anzeige wie in C6, weil ein
 Dateiverweis auf eine Datei zeigt und C6 bereits sagt, wie eine Datei aussieht.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
+Answered: Nutzerentscheid 260804 — **Text und Dateiverweis.** Die Auswertung liest beides: einen Pfad oder eine URL als Text, und den Dateiverweis, den der Finder bei `Cmd+C` auf einer Datei ablegt. Die Empfehlung dieses Datensatzes trägt: `Cmd+C` im Finder ist der naheliegendste Weg, einen Pfad in die Zwischenablage zu bringen, und genau dieser Weg legt keinen Text-Pfad ab. Ein reiner Textleser fiele damit im häufigsten Fall aus. Der Preis ist eine zweite Abfrage am Pasteboard. Bindet S13; die Umsetzung zieht diesen Datensatz auf `_i_`.

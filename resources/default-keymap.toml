@@ -302,6 +302,15 @@ name = "Zweites Dateifenster ein- und ausblenden"
 tasten = ["opt+cmd+d"]
 
 [[funktion]]
+id = "fenster_einblenden"
+name = "Fenster einblenden"
+tasten = ["cmd+n"]
+# Der Rueckweg, nachdem das Fenster geschlossen wurde. KRK haelt in dieser
+# Runde genau ein Anwendungsfenster; der Eintrag legt deshalb kein neues an,
+# sondern holt das vorhandene wieder nach vorn. Darum "Fenster einblenden" und
+# nicht "Neues Fenster" (C7).
+
+[[funktion]]
 id = "bereich_verbreitern"
 name = "Aktiven Bereich verbreitern"
 tasten = ["ctrl+b"]
@@ -313,3 +322,33 @@ tasten = ["ctrl+s"]
 # Breiter und schmaler laegen auf den Links- und Rechts-Pfeilen; die
 # Schreibweise dieser Datei kennt beide Tasten nicht. Deshalb b wie breiter
 # und s wie schmaler.
+
+# ── C10: die Zwischenablage als Quelle ───────────────────────────────────────
+# Beide Funktionen lesen die Zwischenablage des Systems; KRK schreibt sie in
+# keinem Fall. Die eine zeigt ihren Inhalt im Vorschaufenster an und blendet
+# es dafuer ein, falls es ausgeblendet ist. Die andere deutet den Inhalt als
+# Ziel: ein absoluter lokaler Pfad fuehrt zum Sprung dorthin, eine http- oder
+# https-Adresse geht an den Systembrowser, alles andere meldet die
+# Statuszeile als nicht verwertbar.
+#
+# Gelesen werden Text und Dateiverweis: ein Pfad oder eine URL als Text, und
+# der Dateiverweis, den der Finder bei Cmd+C auf einer Datei ablegt
+# (Nutzerentscheid 260804,
+# `decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`).
+#
+# Cmd+C und Cmd+V bleiben davon unberuehrt und ab Werk frei: C10 liest nur,
+# was schon in der Zwischenablage steht, und legt nichts ab.
+
+[[funktion]]
+id = "zwischenablage_ansehen"
+name = "Zwischenablage ansehen"
+tasten = ["shift+f3"]
+# F3 zeigt die Vorschau, die Umschalttaste davor wechselt die Quelle.
+# Dieselbe Systematik traegt die Belegung schon bei f6 gegen shift+f6.
+
+[[funktion]]
+id = "zwischenablage_springen"
+name = "Zum Inhalt der Zwischenablage springen"
+tasten = ["opt+cmd+g"]
+# Steht neben shift+cmd+g, der Pfadeingabe von Hand: dieselbe Handlung mit
+# vorausgefuelltem Wert.
