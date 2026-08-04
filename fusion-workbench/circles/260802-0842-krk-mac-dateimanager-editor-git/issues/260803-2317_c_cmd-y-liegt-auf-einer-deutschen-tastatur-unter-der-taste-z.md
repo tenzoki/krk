@@ -40,3 +40,10 @@ Drei Wege stehen offen, und die Wahl gehört dem Nutzer, weil sie die Grundhaltu
 ---
 
 Herkunft: gefunden bei der Umsetzung von Schritt 11 am 260803-2317, beim Eintragen der Buchstaben in die Tastentabelle `crates/krk-core/src/tasten/parser.rs`.
+
+---
+Resolved: 260804-0830, Weg 1 ohne die Umrechnung in der Ansicht. **Der Nutzer hat entschieden, `cmd+y` zu lassen, wie es ist.** Drei Gründe trägt seine Antwort: F3 ist der ausgelieferte Hauptweg zur Vorschau und von der Tastaturbauart nicht berührt, das Cmd-Kürzel ist der zweite Weg und nicht der einzige, und die Belegung ist ab Werk änderbar, sodass jeder Nutzer die Kombination auf die Taste unter seinem Finger legen kann.
+
+**Was das für Schritt 20 heißt.** Weg 1 des Datensatzes nannte als Preis eine Umrechnung in der Belegungsansicht, damit die Ansicht zeigt, was unter dem Finger liegt. Diese Umrechnung ist mit der Entscheidung **nicht** beauftragt: die Belegungsansicht beschriftet weiter nach der Kombinationsschreibweise aus Schritt 9, also `cmd+y` als "Cmd+Y". C3 verlangt von ihr nur, Funktionstasten als F3 bis F8 zu schreiben und nirgends "Fn+" davorzusetzen; eine Zusage über die Beschriftung von Buchstabentasten trägt der Spec nicht. `resources/default-keymap.toml` bleibt unverändert.
+
+**Was offen bleibt und nicht in dieser Runde entschieden wird.** Weg 3, Buchstaben und Ziffern über das gemeldete Zeichen nachzuschlagen und Funktionstasten weiter über den Tastencode, ist die sachlich vollständige Auflösung und verlangt eine zweite Nachschlagart. Sie bleibt einer späteren Runde vorbehalten; dieser Datensatz hält sie fest, und ein neuer Datensatz greift sie auf, sobald eine Fähigkeit sie braucht.

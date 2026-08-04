@@ -1,11 +1,13 @@
 # Spec: KRK Navigator-Gerüst (Runde 1)
 
-**Datum:** 2026-08-02, überarbeitet 260802-1735, 260803-1819 und 260803-2300
-**Status:** Entwurf. Alle Nutzerantworten bis 260803-2110 sind eingearbeitet. Eine offene Nutzerfrage trägt dieser Spec nicht mehr.
+**Datum:** 2026-08-02, überarbeitet 260802-1735, 260803-1819, 260803-2300 und 260804-0830
+**Status:** Entwurf. Alle Nutzerantworten bis 260804-0830 sind eingearbeitet. Eine offene Nutzerfrage trägt dieser Spec nicht mehr.
 **Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
 **Quelle:** Circle-Directive im Datensatz `_t_circle.md`, zugeschnitten auf die erste Runde durch den Nutzer in der Phase-0-Klärung.
 
 > **Gatehinweis für den Planner:** Dieser Spec ist noch nicht abgenommen, trägt aber keine offene Nutzerfrage mehr. Die vier Fragen A bis D hat der Nutzer am 260802-1105 beantwortet, das Referenzgerät für die Zeitzusagen aus C8 am 260802-1127 benannt; die Antworten stehen als verbindliche Abnahmekriterien in C3, C4 und C8. Die frühere Abweichung zwischen der Löschantwort und der Circle-Directive ist behoben: der Nutzer hat die Directive-Zeile korrigieren lassen, siehe `## Abgleich mit der Circle-Directive`.
+>
+> **Stand 260804-0830: der Umfang dieser Runde ist an drei Stellen gewachsen, und das ist die erste Erweiterung seit dem Zuschnitt.** Zwei der drei hat der Nutzer als Funktionen beauftragt, die dritte folgt aus einer beantworteten Entscheidung. Erstens die neue Fähigkeit **C10, die Zwischenablage als Quelle**: der Nutzer sieht ihren Inhalt in der Vorschau an (Shift+F3) und springt zu dem Pfad oder der Adresse darin (Opt+Cmd+G). Zweitens die **Statuszeile am Fuß des Dateifensters** als neues Abnahmekriterium in C1; sie trägt die Fehler, die KRK dem Nutzer zeigen muss, und ist die Antwort auf `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md`. Drittens die Zusage in **C7**, dass KRK nach dem Schließen des Fensters bedienbar bleibt, aus `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`. Keine der zehn Zahlen aus C8 ist berührt, und eine elfte entsteht nicht; die Begründung steht in C10 unter `Verhältnis zu C8`.
 >
 > **Stand 260802-1409:** C3 ist auf die Messung der Fn-Tasten-Annahme fortgeschrieben. Drei Punkte sind neu und binden den Plan: die Tastencode-Sicht statt der Schreibweise "Fn+F3", ein zweiter Weg ab Werk über Cmd-Kürzel, und die Beschriftungsregel für die Belegungsansicht. Die Directive-Zeile im Circle-Datensatz ist am 260802-1423 darauf gezogen worden und stimmt seither mit C3 überein, siehe `## Abgleich mit der Circle-Directive`.
 >
@@ -17,11 +19,13 @@
 
 Nach dieser Runde navigiert der Nutzer lokale Dateien und Ordner vollständig über die Tastatur, in zwei Dateifenstern mit je mehreren Tabs, flankiert von einer Lesezeichen- und Geräteleiste links und einem Vorschaufenster rechts. Er legt Dateien und Ordner an, kopiert, verschiebt, löscht und benennt sie um, auch über mehrere ausgewählte Einträge in einem Zug. Jede Fensterbreite ist verstellbar, jedes Fenster per Tastenbefehl ein- und ausblendbar, und die Anwendung hält dabei die in Abschnitt C8 festgeschriebenen Zeitzusagen ein.
 
+Seit dem 260804-0830 kommt dazu, was in der Zwischenablage des Systems steht: der Nutzer sieht es in der Vorschau an und springt zu dem Pfad oder der Web-Adresse darin (C10).
+
 Der eingebaute Editor und die Git-Anbindung sind Teil des Circles, aber nicht dieser Runde. Sie folgen in späteren Runden desselben Circles.
 
 ## Aufbau und Datenfluss dieser Runde
 
-Die Bezeichner C1 bis C8 verweisen auf die Fähigkeiten weiter unten. Sie sind bewusst nicht mit F nummeriert, weil F3 bis F8 in diesem Dokument die Funktionstasten der Norton-Belegung bezeichnen.
+Die Bezeichner C1 bis C10 verweisen auf die Fähigkeiten weiter unten. Sie sind bewusst nicht mit F nummeriert, weil F3 bis F8 in diesem Dokument die Funktionstasten der Norton-Belegung bezeichnen.
 
 ```mermaid
 flowchart LR
@@ -35,6 +39,8 @@ flowchart LR
   end
   D["Dateioperationen: anlegen, kopieren, verschieben, löschen, umbenennen, Stapel"]
   FS["Lokales Dateisystem"]
+  Z["Zwischenablage des Systems"]
+  B["Systembrowser"]
 
   K -->|navigiert in| P1
   K -->|navigiert in| P2
@@ -42,6 +48,7 @@ flowchart LR
   K -->|blendet ein und aus| L
   K -->|blendet ein und aus| P2
   K -->|blendet ein und aus| V
+  K -->|liest aus| Z
   L -->|setzt Ordner| P1
   L -->|setzt Ordner| P2
   P1 -->|aktive Auswahl| V
@@ -51,9 +58,15 @@ flowchart LR
   D -->|schreibt| FS
   FS -->|liefert Einträge| P1
   FS -->|liefert Einträge| P2
+  Z -->|Inhalt ansehen| V
+  Z -->|enthaltener Pfad setzt Ordner und Auswahl| P1
+  Z -->|enthaltener Pfad setzt Ordner und Auswahl| P2
+  Z -->|enthaltene Web-Adresse| B
 ```
 
-Zwei Eigenschaften des Graphen sind gewollt und keine Nachlässigkeit. Der Knoten `Tastenbelegung` zeigt auf fünf andere Knoten, weil die Tastatur in KRK die einzige vollständige Bedienoberfläche ist; jede Funktion muss von dort erreichbar sein. Auf das zweite Dateifenster zeigt er zweimal, weil die Tastatur dort zwei verschiedene Dinge tut: sie navigiert darin, und sie blendet es aus und wieder ein. C7 sagt das Ausblenden für drei Bereiche zu, für die Lesezeichenleiste, das zweite Dateifenster und das Vorschaufenster, und alle drei tragen die Kante. Die zweite gewollte Eigenschaft sind die beiden Zyklen über `Lokales Dateisystem`, je einer pro Dateifenster. Sie bilden die Arbeitsschleife ab: lesen, auswählen, schreiben, erneut lesen. Eine Operation, die den Ordnerinhalt ändert, muss die betroffenen Fenster ohne Zutun des Nutzers auffrischen.
+Zwei Eigenschaften des Graphen sind gewollt und keine Nachlässigkeit. Der Knoten `Tastenbelegung` zeigt auf sechs andere Knoten, weil die Tastatur in KRK die einzige vollständige Bedienoberfläche ist; jede Funktion muss von dort erreichbar sein. Auf das zweite Dateifenster zeigt er zweimal, weil die Tastatur dort zwei verschiedene Dinge tut: sie navigiert darin, und sie blendet es aus und wieder ein. C7 sagt das Ausblenden für drei Bereiche zu, für die Lesezeichenleiste, das zweite Dateifenster und das Vorschaufenster, und alle drei tragen die Kante. Die zweite gewollte Eigenschaft sind die beiden Zyklen über `Lokales Dateisystem`, je einer pro Dateifenster. Sie bilden die Arbeitsschleife ab: lesen, auswählen, schreiben, erneut lesen. Eine Operation, die den Ordnerinhalt ändert, muss die betroffenen Fenster ohne Zutun des Nutzers auffrischen.
+
+Die beiden Knoten `Zwischenablage des Systems` und `Systembrowser` sind seit dem 260804-0830 dabei und tragen die neue Fähigkeit C10. Die Zwischenablage steht außerhalb der Fensterzeile, weil sie keine Fläche in KRK ist, sondern eine Quelle: KRK liest sie auf Tastenbefehl und schreibt sie nie. Ihre vier ausgehenden Kanten sind die drei Ausgänge derselben einen Auswertung und keine drei Mechanismen; welcher greift, hängt allein daran, was in der Zwischenablage steht. Vier Kanten für drei Ausgänge, weil der Sprung beide Dateifenster als mögliches Ziel hat, so wie die Tastenbelegung darüber auch. Der `Systembrowser` ist ein Blatt des Graphen und liegt außerhalb von KRK, was ihn von einem eingebauten Browser unterscheidet: KRK übergibt die Adresse und zeigt selbst keinen Web-Inhalt.
 
 Das Halteverhalten der Vorschau-Tabs, das der Circle-Datensatz beschreibt, ist ein Zustandsverhalten pro Tab:
 
@@ -79,17 +92,21 @@ stateDiagram-v2
 - [ ] Beim Schließen des letzten Tabs eines Fensters bleibt das Fenster bestehen und zeigt einen Standardordner, statt zu verschwinden.
 - [ ] Nach Beenden und erneutem Start zeigen beide Fenster wieder dieselben Tabs mit denselben Ordnern und derselben Auswahl wie vorher.
 - [ ] Beide Fenster können denselben Ordner zeigen, ohne dass sich ihre Auswahl oder ihre Bildlaufposition gegenseitig beeinflusst.
+- [ ] Jedes Dateifenster trägt am Fuß eine Statuszeile. Sie zeigt jede Meldung, die KRK dem Nutzer über den Zustand dieses Fensters zu sagen hat, namentlich einen Ordner, der sich nicht oder nicht vollständig lesen ließ, samt Grund. Ein Ordner ohne Leserecht ist dadurch von einem leeren Ordner unterscheidbar.
+- [ ] KRK gibt keine Meldung an den Nutzer über die Standardfehlerausgabe. Eine über den Finder gestartete Anwendung hat keine, und eine Meldung, die dorthin geht, gilt als nicht gezeigt.
 
 **Getroffene Festlegungen:**
 - Sitzung wird wiederhergestellt: ja (Vorbelegung, weil ein Dateimanager ohne Wiederherstellung bei jedem Start denselben Navigationsweg erzwingt).
 - Quelle und Ziel: aktives Fenster ist Quelle, das andere ist Ziel (Vorbelegung, folgt dem Vorbild Norton Commander und dem Diagramm im Circle-Datensatz).
+- **Die Statuszeile ist seit dem 260804-0830 zugesagt und war es vorher nicht.** Sie erweitert den Umfang dieser Runde und präzisiert keine frühere Zusage: bis zu diesem Datum nannte kein Abschnitt dieses Specs eine Statuszeile. Zwei Datensätze hatten das Gegenteil angenommen und "C1 verlangt die Statuszeile ohnehin" voneinander abgeschrieben, `issues/260803-1536_c_zwei-fehlermeldungen-erreichen-im-buendel-niemanden.md` und `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md`; der zweite hält den Irrtum jetzt fest. Mit der Wahl des Nutzers vom 260804-0830 für Möglichkeit 1 jenes Datensatzes ist die Zusage echt. Beauftragt ist in dieser Runde allein die Meldung. Den Lesefortschritt und die Zahl der Einträge, die dieselbe Zeile später tragen soll, sagt dieser Spec nicht zu; sie kommen in einer späteren Runde in dieselbe Zeile und nicht in eine zweite daneben.
+- **Der fehlende Tastenabgriff geht nicht über die Statuszeile.** Er ist ein Startfehler, nach dem KRK ohne Tastatursteuerung liefe, also ohne seine erste Maxime. KRK bricht in diesem Fall mit einem Hinweisfenster ab, statt ein Fenster ohne Tastatur zu zeigen. Beides ist dieselbe Wahl aus demselben Datensatz: der eine Fehler betrifft ein Ziel, das der Nutzer gerade nicht erreicht, der andere die Anwendung als ganze.
 
 ### C2: Navigation über die Tastatur
 
 **Beschreibung:** Der Nutzer erreicht jeden Ordner und jede Datei ohne Maus. Die Auswahl bewegt sich mit den Pfeiltasten, springt seitenweise, an den Anfang und an das Ende der Liste. Er steigt in Ordner hinein und wieder heraus, springt über eine Pfadeingabe direkt an einen Ort und findet einen Eintrag durch Tippen der ersten Buchstaben. Maus und Trackpad funktionieren zusätzlich, ersetzen aber nie einen Tastenweg.
 
 **Abnahmekriterien:**
-- [ ] Jede Funktion aus C1 bis C7 ist über mindestens einen Tastenbefehl erreichbar. Keine Funktion ist ausschließlich per Maus bedienbar.
+- [ ] Jede Funktion aus C1 bis C7 und aus C10 ist über mindestens einen Tastenbefehl erreichbar. Keine Funktion ist ausschließlich per Maus bedienbar.
 - [ ] Pfeiltasten bewegen die Auswahl um einen Eintrag, Bild auf und Bild ab um eine Bildschirmseite, und je ein Befehl springt an den Anfang und an das Ende der Liste.
 - [ ] Ein Tastenbefehl steigt in den ausgewählten Ordner ein, ein zweiter in den übergeordneten Ordner. Beim Aufstieg steht die Auswahl auf dem Ordner, aus dem der Nutzer gerade kam.
 - [ ] Ein Tastenbefehl öffnet eine Pfadeingabe. Der Nutzer tippt oder fügt einen absoluten Pfad ein und landet im Zielordner, oder erhält eine Meldung, wenn der Pfad nicht existiert oder nicht lesbar ist.
@@ -101,6 +118,7 @@ stateDiagram-v2
 **Getroffene Festlegungen:**
 - Versteckte Dateien sind beim ersten Start ausgeblendet (Vorbelegung, entspricht dem Verhalten des Finders und von ForkLift).
 - Standardsortierung ist Name aufsteigend, Ordner vor Dateien (Vorbelegung, entspricht beiden Vorbildern).
+- **Der Sprung zu einem Pfad aus der Zwischenablage steht in C10 und nicht hier.** Er benutzt dieselbe Prüfung und dieselbe Navigation wie die Pfadeingabe oben, nur mit einem Wert aus der Zwischenablage statt aus einem Eingabefeld. Beschrieben ist er einmal, in C10, weil dort auch steht, wie KRK den Inhalt der Zwischenablage deutet; ein zweiter Navigationsweg entsteht nicht.
 
 ### C3: Tastenbelegung, frei konfigurierbar mit ausgelieferter Vorbelegung
 
@@ -129,6 +147,7 @@ Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nac
 - [ ] Die Taste Delete ist ab Werk mit dem Räumen in den Papierkorb belegt, zusätzlich Cmd+Delete. F8 und Cmd+Opt+Delete lösen das endgültige Löschen aus. Papierkorb und endgültiges Löschen sind zwei verschiedene Funktionen und stehen als zwei Zeilen in der Belegungsansicht. Das Verhalten beider steht in C4.
 - [ ] Shift+Delete ist ab Werk unbelegt. Der Nutzer kann die Kombination frei belegen, KRK liefert sie nicht vorbelegt aus.
 - [ ] Cmd+C und Cmd+V sind ab Werk unbelegt und bleiben für eine Zwischenablage einer späteren Runde frei.
+- [ ] Drei Funktionen sind seit dem 260804-0830 dazugekommen und tragen ab Werk je eine Kombination: das Einblenden des Fensters auf Cmd+N (C7), das Ansehen der Zwischenablage auf Shift+F3 und der Sprung zu ihrem Inhalt auf Opt+Cmd+G (beide C10). Jede der drei ist wie jede andere frei umbelegbar.
 
 **Die ausgelieferten Cmd-Kürzel:**
 
@@ -143,7 +162,8 @@ Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nac
 
 **Getroffene Festlegungen:**
 - F6 trägt allein das Verschieben. Norton Commander legt Verschieben und Umbenennen zusammen auf F6, und die Abnahmekriterien oben haben diese Zusammenlegung bis zum 260803-2110 wiederholt, während die Kürzel-Tabelle darunter für F6 schon immer nur das Verschieben führte. Aufgelöst ist der Widerspruch zugunsten der Tabelle, entschieden vom Nutzer am 260803-2110. Der Grund ist zwingend: C4 verlangt das Umbenennen als eigene Operation, und das Abnahmekriterium der Konfliktfreiheit oben schließt zwei Funktionen auf einer Kombination aus. Ausgeliefert wird das Umbenennen deshalb auf Shift+F6 und Cmd+Shift+U. Die Umschalttaste vor F6 ist die Norton- und Total-Commander-Form für das Umbenennen; sie hält die Nähe zur Nachbarfunktion, ohne deren Kombination zu teilen. Meldung `issues/260803-2045_c_c3-nennt-f6-verschieben-und-umbenennen-die-belegungstabelle-nur-verschieben.md`.
-- Die vollständige Auslieferungsbelegung steht als Datendatei unter `resources/default-keymap.toml` und nicht in diesem Spec. Der Spec legt sieben ihrer 46 Belegungen selbst fest: die sechs Zeilen der Kürzel-Tabelle oben und F4 als unbelegt. Die übrigen 39 hat der `ontocoder` beim Schreiben der Datei gewählt; der Nutzer hat sie am 260803-2110 durchgesehen und für diese Runde angenommen. Was genau angenommen wurde, mit welcher Begründung und mit welcher Reichweite, steht in `decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`. Die Zahlen hier ein zweites Mal aufzuführen hieße, die Datendatei im Spec zu verdoppeln; verbindlich ist die Datei.
+- Die vollständige Auslieferungsbelegung steht als Datendatei unter `resources/default-keymap.toml` und nicht in diesem Spec. Der Spec legt zehn ihrer 49 Belegungen selbst fest: die sechs Zeilen der Kürzel-Tabelle oben, F4 als unbelegt und die drei Kombinationen vom 260804-0830 im Kriterium darüber. Die übrigen 39 hat der `ontocoder` beim Schreiben der Datei gewählt; der Nutzer hat sie am 260803-2110 durchgesehen und für diese Runde angenommen. Was genau angenommen wurde, mit welcher Begründung und mit welcher Reichweite, steht in `decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`. Jener Datensatz ist umgesetzt und damit endgültig; er beschreibt den Stand von 46 Funktionen mit 52 Kombinationen, den der Nutzer angesehen hat, und die drei neuen Einträge fallen nicht unter seine Annahme, sondern unter diesen Spec. Die Zahlen hier ein zweites Mal aufzuführen hieße, die Datendatei im Spec zu verdoppeln; verbindlich ist die Datei.
+- **Die drei neuen Kombinationen sind gewählt und nicht geerbt, und jede folgt der Nachbarschaft ihrer Funktion.** Shift+F3 zeigt die Vorschau von etwas anderem als der Auswahl: F3 zeigt die Vorschau, die Umschalttaste davor wechselt die Quelle. Dieselbe Systematik trägt die Belegung bereits bei F6 gegen Shift+F6, wo das Verschieben und das Umbenennen nebeneinanderliegen. Opt+Cmd+G steht neben Shift+Cmd+G, der Pfadeingabe von Hand, und ist dieselbe Handlung mit vorausgefülltem Wert. Cmd+N ist die Mac-Form für ein neues Fenster und in der Auslieferungsbelegung frei; belegt sind daneben Shift+Cmd+N für einen neuen Ordner und Ctrl+Cmd+N für eine neue Datei, beide vom 260803. Geprüft am 260804 gegen alle 52 ausgelieferten Kombinationen: keine der drei kollidiert.
 - Ausgeliefert werden zwei Wege je Funktion: die Norton-Reihe und ein Cmd-Kürzel (Antwort des Nutzers vom 260802-1409). Damit ist die frühere Wahl, ausschließlich die Funktionstasten zu belegen, erweitert, nicht aufgehoben; der Datensatz `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` trägt den Nachtrag.
 - Die Cmd-Kürzel folgen zwei Regeln. Wo der Mac für genau dieselbe Funktion bereits ein Kürzel kennt, übernimmt KRK es unverändert: Cmd+Y für die Übersicht, Cmd+Shift+N für den neuen Ordner, Cmd+Opt+Delete für das sofortige Löschen und Cmd+Delete für den Papierkorb. Für die beiden Übertragungen zwischen den Dateifenstern gibt es kein Mac-Vorbild, weil der Finder nur den Zweischritt über die Zwischenablage kennt; sie erhalten deshalb eine eigene, einheitliche Form mit dem Anfangsbuchstaben des deutschen Verbs, Cmd+Shift+K und Cmd+Shift+V.
 - Cmd+C und Cmd+V bleiben ausdrücklich unbelegt. Das Kopieren in KRK ist ein Einschrittvorgang von einem Fenster ins andere und nicht das Ablegen in der Zwischenablage; die beiden Tasten mit der KRK-Bedeutung zu besetzen, würde eine vertraute Mac-Bedeutung überschreiben und eine spätere Zwischenablage-Runde blockieren. Cmd+Shift+V liegt einen Tastendruck neben einem künftigen Cmd+V; dieses Risiko ist gesehen und in Kauf genommen, solange Cmd+V unbelegt bleibt.
@@ -220,6 +240,7 @@ Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nac
 
 **Getroffene Festlegungen:**
 - Die Vorschau von Text und Markdown ist in dieser Runde eine reine Anzeige des Inhalts ohne Formatierung. Die Formatansicht ist Teil des Editors und damit einer späteren Runde. Die dazu offene Entscheidung `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` bindet diese Runde nicht.
+- **Das Vorschaufenster hat seit dem 260804-0830 eine zweite Quelle, und sie steht in C10.** Die Auswahl im Dateifenster ist die eine, die Zwischenablage die andere. Beide füllen dieselbe Fläche und denselben aktiven Tab, und das Halteverhalten des Zustandsdiagramms oben gilt unverändert für beide. Eine zweite Anzeigefläche für die Zwischenablage entsteht nicht.
 
 ### C7: Fenstergrößen und Sichtbarkeit
 
@@ -231,6 +252,13 @@ Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nac
 - [ ] Die verbleibenden Bereiche nutzen den frei gewordenen Platz. Beim Wiedereinblenden stellt KRK die vorherige Breite wieder her.
 - [ ] Mindestens ein Dateifenster bleibt immer sichtbar. Ein Befehl, der das letzte ausblenden würde, wird ohne Fehlermeldung ignoriert.
 - [ ] Breiten und Sichtbarkeit überleben Beenden und Neustart.
+- [ ] Nach dem Schließen des Anwendungsfensters bleibt KRK bedienbar: ein Tastenbefehl und ein Klick auf das Dock-Symbol holen das Fenster zurück. Ein laufendes KRK ohne Fenster und ohne Rückweg ist ausgeschlossen.
+- [ ] Der Menüeintrag, der das Fenster schließt, trägt Shift+Cmd+W. Cmd+W schließt den aktiven Tab aus C1 und nicht das Fenster.
+
+**Getroffene Festlegungen:**
+- **KRK hält in dieser Runde genau ein Anwendungsfenster.** Die beiden Dateifenster aus C1 sind Bereiche darin und keine zwei Fenster des Systems. Der Rückweg oben legt deshalb kein zweites Fenster an, sondern holt dieses eine wieder nach vorn; er heißt in der Belegungsansicht "Fenster einblenden" und liegt ab Werk auf Cmd+N. Die Runde, die mehrere Fenster einführt, benennt ihn in "Neues Fenster" um und behält das Kürzel.
+- **Zwei Fragen bleiben damit ungestellt, und das ist gewollt.** Ob zwei Fenster sich eine Sitzung teilen und was "das aktive Dateifenster" aus C1 bei zwei Fenstern mit je zwei Dateifenstern bedeutet, tritt ohne ein zweites Fenster nicht auf. Beide wären in dieser Runde zu beantworten, obwohl keine Fähigkeit sie stellt, und die Prüfsitzung aus C8 wäre mehrdeutig: L4 endet bei der bedienbaren Oberfläche, und bei zwei Fenstern wäre unklar, welches sie beendet.
+- Der Nutzer hat die Wahl am 260804-0830 getroffen, Möglichkeit 2 aus `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`, gegen die Empfehlung jenes Datensatzes. Der Grund für die Verschiebung des Menüeintrags auf Shift+Cmd+W steht dort: Cmd+W behält seine Bedeutung "Tab schließen" aus der Auslieferungsbelegung, und zwei Funktionen auf einer Kombination schließt C3 aus. Der Defekt dazu ist `issues/260803-2045_o_cmd-w-liegt-in-der-belegung-auf-tab-schliessen-und-im-menue-auf-fenster-schliessen.md`.
 
 ### C8: Messbare Geschwindigkeit
 
@@ -294,6 +322,35 @@ Er trägt aus zwei Gründen nicht. Die Maxime wirkt als Ausschlussgrund gegen ei
 - [ ] KRK bietet keine Oberfläche zum Aufbau einer Serververbindung an, weder für SFTP noch für S3, WebDAV oder SMB.
 - [ ] Wird ein eingehängtes Volume während der Arbeit ausgeworfen, meldet das betroffene Dateifenster den Verlust und wechselt auf einen erreichbaren Ordner, statt zu blockieren.
 
+### C10: Die Zwischenablage als Quelle
+
+**Beschreibung:** KRK liest auf Tastenbefehl, was in der Zwischenablage des Systems steht, und tut damit eines von zwei Dingen. Der eine Befehl zeigt den Inhalt im Vorschaufenster an, so wie C6 den Inhalt der ausgewählten Datei anzeigt. Der andere deutet ihn als Ziel: enthält die Zwischenablage einen lokalen Pfad, springt KRK dorthin; enthält sie eine Web-Adresse, übergibt KRK sie dem Systembrowser. Beide Befehle lesen und schreiben nie.
+
+Der Nutzer hat die Fähigkeit am 260804-0830 beauftragt. Sie ist eine Erweiterung des Umfangs dieser Runde, nicht eine Präzisierung von C2 oder C6, und steht deshalb als eigene Fähigkeit. Der Grund für den eigenen Abschnitt ist die geteilte Mitte: beide Befehle hängen an derselben Auswertung dessen, was in der Zwischenablage steht, und diese Auswertung an zwei Stellen zu beschreiben hieße, zwei Wahrheiten darüber zu führen, was KRK für einen Pfad und was für eine Adresse hält.
+
+**Abnahmekriterien:**
+- [ ] Ein Tastenbefehl füllt den aktiven Vorschau-Tab mit dem Inhalt der Zwischenablage. Ist das Vorschaufenster ausgeblendet, blendet derselbe Befehl es ein. Ausblenden tut er nie; dafür bleibt der Befehl aus C7.
+- [ ] Für die Anzeige gilt dieselbe Dreiteilung wie in C6: Text erscheint als Text, ein Bild erscheint als Bild, und alles andere erscheint als Beschreibung dessen, was in der Zwischenablage liegt. Eine leere Zwischenablage sagt das ausdrücklich, statt eine leere Fläche zu zeigen.
+- [ ] Ein zweiter Tastenbefehl deutet den Inhalt der Zwischenablage als Ziel und hat genau drei Ausgänge: ein lokaler Pfad, eine Web-Adresse, oder nichts Verwertbares.
+- [ ] Enthält die Zwischenablage einen absoluten lokalen Pfad und zeigt dieser auf einen Ordner, wechselt das aktive Dateifenster in diesen Ordner.
+- [ ] Zeigt der Pfad auf eine Datei, wechselt das aktive Dateifenster in deren Ordner und stellt die Auswahl auf den Eintrag. Liegt die Datei bereits im angezeigten Ordner, wechselt KRK den Ordner nicht, sondern setzt allein die Auswahl und blättert den Eintrag ins Bild.
+- [ ] Existiert der Pfad nicht oder ist er nicht lesbar, meldet die Statuszeile aus C1 den Grund, mit derselben Meldung, die die Pfadeingabe aus C2 dafür kennt.
+- [ ] Enthält die Zwischenablage eine Web-Adresse, übergibt KRK sie dem Systembrowser. KRK zeigt selbst keinen Web-Inhalt an.
+- [ ] Enthält die Zwischenablage nichts von beidem, meldet die Statuszeile das und KRK tut sonst nichts. Ein Sprung ins Leere und ein wortloses Nichtstun sind beide ausgeschlossen.
+- [ ] Beide Befehle sind über die Tastatur erreichbar und ab Werk belegt, das Ansehen auf Shift+F3, der Sprung auf Opt+Cmd+G. Beide sind wie jede Belegung frei änderbar (C3).
+- [ ] KRK schreibt in keinem Fall in die Zwischenablage.
+
+**Getroffene Festlegungen:**
+- **Eine Auswertung, drei Ausgänge.** Was in der Zwischenablage steht, deutet KRK an genau einer Stelle, und die Ausgänge sind kein Rückfallweg voneinander: sie schließen sich aus. Ein `file:`-Verweis zählt dabei als Pfad und nicht als Adresse, weil er dasselbe benennt und nur anders geschrieben ist; ihn auszunehmen wäre der Sonderfall, nicht ihn einzuschließen.
+- **Zum Systembrowser gehen allein `http:` und `https:`.** Jedes andere Schema meldet die Statuszeile als nicht verwertbar. Der Grund ist C9: gäbe KRK ein `smb:` oder `ftp:` an das System weiter, baute es über einen Umweg genau die Serververbindung auf, die C9 ausschließt. Zwei Schemata sind eine Aufzählung und keine Fallunterscheidung; die Regel kennt keinen zweiten Zweig.
+- **Der Pfad muss absolut sein, und diese Regel ist geerbt.** C2 verlangt sie schon für die Pfadeingabe von Hand, und der Sprung aus der Zwischenablage ist dieselbe Prüfung mit einem Wert aus einer anderen Quelle. Ein relativer Pfad oder ein bloßer Dateiname ist damit "nichts Verwertbares".
+- **Die Zwischenablage füllt den aktiven Vorschau-Tab und bekommt keinen eigenen.** Das Halteverhalten aus C6 gilt danach unverändert: die nächste Auswahl im Dateifenster ersetzt den Inhalt wieder, und wer ihn behalten will, wechselt auf einen anderen Tab, wo der vorige stehen bleibt. Das ist genau der Zweck, den das Halteverhalten schon hat, und es entsteht keine Tab-Sorte mit eigener Regel. **Dies ist der Punkt dieser Fähigkeit, den der Nutzer am ehesten anders sehen könnte:** wer erwartet, dass die Zwischenablage-Ansicht stehen bleibt, erlebt sie als flüchtig.
+- **Die Zwischenablage aus C10 ist nicht die Zwischenablage der späteren Runde.** C3 hält Cmd+C und Cmd+V ausdrücklich frei, weil das Ablegen und Einsetzen von Dateien einer späteren Runde gehört. C10 berührt das nicht: es liest, was schon dort steht, und legt nichts ab. Die beiden Kombinationen bleiben unbelegt.
+- **Der Systembrowser ist kein eingebauter Browser, und die Grenze des Circles hält.** Der Circle-Datensatz schließt unter `## Außerhalb des gesamten Circles` einen "integrierten Browser zum Navigieren von Websites" aus, und `CLAUDE.md` wiederholt es. KRK übergibt die Adresse an das System und zeigt selbst keinen Web-Inhalt, hält keinen Navigationsverlauf und trägt keine Ansicht dafür; damit bleibt es innerhalb der Grenze. Der Nutzer hat am 260804-0830 dazugesagt, er wolle "bei URL zur Zeit Systembrowser, später eigener". Ein eigener Browser wäre eine Erweiterung des Circles und keine spätere Runde darin, weil die Abgrenzung ihn ausdrücklich ausschließt; ob und wie er festgehalten wird, entscheidet der Nutzer.
+- **Was die Auswertung überhaupt zu lesen bekommt, ist offen.** Die Zwischenablage des Mac hält ihren Inhalt in mehreren Sorten zugleich. Ob KRK neben dem Text auch den Dateiverweis liest, den der Finder beim Kopieren ablegt, steht als `decisions/260804-0830_o_was-die-zwischenablage-auswertung-liest.md`. Die Frage bindet die Abnahmekriterien oben nicht, sondern nur, welche Eingaben unter "nichts Verwertbares" fallen; zu klären vor dem Schritt, der die Auswertung baut.
+
+**Verhältnis zu C8.** Keine der zehn Zahlen ist berührt, und eine elfte entsteht nicht. L7 sagt 100 ms für die Vorschau einer **Textdatei** zu und misst genau das; die Zwischenablage liegt im Arbeitsspeicher, ist keine Datei und trägt in dieser Runde keine eigene Zeitzusage. Der Sprung aus der Zwischenablage liest einen Ordner, und dafür gelten unverändert L2, L3, L6 und L10, weil diese vier den Lesevorgang zusagen und nicht den Weg, auf dem er ausgelöst wurde.
+
 ## Randbedingungen
 
 Die Vorbelegung der Tasten ist eine Vorbelegung und keine Festschreibung. Jede Aussage über F3 bis F8, über die Cmd-Kürzel aus C3 oder über die Taste Delete beschreibt den Auslieferungszustand; die Freiheit des Nutzers, jede Taste umzubelegen, bleibt unberührt und ist selbst eine Abnahmebedingung (C3).
@@ -318,7 +375,7 @@ Drei Entscheidungsdatensätze im geteilten Speicher bleiben offen und werden hie
 
 ## Außerhalb des gesamten Circles
 
-- Integrierter Browser zum Navigieren von Websites.
+- Integrierter Browser zum Navigieren von Websites. **Das Übergeben einer Web-Adresse an den Systembrowser aus C10 fällt nicht darunter** und ist seit dem 260804-0830 Teil dieser Runde: KRK zeigt dabei keinen Web-Inhalt, hält keinen Verlauf und trägt keine Ansicht dafür. Der Nutzer hat einen eigenen Browser für später angekündigt. Der wäre eine Erweiterung dieses Ausschlusses und damit ein eigener Circle, keine spätere Runde dieses Circles; festgelegt ist dazu nichts.
 - KI-Anbindung jeder Art, einschließlich Tool Use, Coding-Unterstützung, Analyse und Textverfassung.
 - KRK als Kommandozentrale für Fusion.
 - Datei- und Ordnervergleich. Ein späterer Circle setzt auf der Versionsdarstellung des Git-Schiebereglers auf, statt einen zweiten Mechanismus danebenzustellen.
@@ -358,9 +415,13 @@ Der Nutzer hat am 260802-1423 die Freigabe für den Circle-Datensatz erteilt und
 
 ## Offene Nutzerentscheidungen
 
-**Keine offene Frage. Die letzte ist am 260803-1810 beantwortet: wie L1 und L9 abgenommen werden, nachdem die Frühmessung die 16 ms verfehlt hat.** Der Nutzer hat Möglichkeit 2 aus `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md` gewählt: nicht das 95. Perzentil der Spanne, sondern der Anteil der Eingaben, die ihr nächstes Bild erreichen. Den Technologieentscheid aufzumachen hat er ausdrücklich abgelehnt; Rust mit `objc2` bleibt. Eingearbeitet ist die Antwort in C8, in den Zeilen L1 und L9 der Zusagentabelle, im Punkt zu den zwanzig Wiederholungen unter den Messbedingungen und in den vier Absätzen ab `Warum L1 und L9 den Anteil zählen und nicht die Spanne`, die auch den Einwand aus der Maxime "supersimpel" ausschreiben. Die acht übrigen Zahlen sind unverändert.
+**Keine offene Frage an den Nutzer. Die letzten drei sind am 260804-0830 beantwortet.** Erstens, was KRK tut, wenn das letzte Fenster geschlossen wird: der Nutzer hat Möglichkeit 2 gewählt, einen Rückweg zum Fenster, `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`. Eingearbeitet ist die Antwort in C7 und in C3. Zweitens, wie KRK dem Nutzer Fehler zeigt: Möglichkeit 1, eine Statuszeile am Fuß des Dateifensters und ein Abbruch mit Hinweisfenster allein beim fehlenden Tastenabgriff, `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md`. Eingearbeitet in C1. Drittens der Defekt zu Cmd+Y auf einer deutschen Tastatur: der Nutzer lässt die Belegung, wie sie ist, weil F3 der erste Weg zur Vorschau ist und jede Belegung änderbar bleibt, `issues/260803-2317_c_cmd-y-liegt-auf-einer-deutschen-tastatur-unter-der-taste-z.md`. C3 ändert sich dadurch nicht.
 
-**Die vorletzte Frage ist am 260802-1735 beantwortet: was L4 in C8 mit "wiederhergestellten Tabs" meint.** Der Planner hatte beim Beantworten der fünften Frage aus `## Offen für den Planner` einen Widerspruch zwischen zwei Zusagen dieses Specs gemeldet: L4 sagte 1000 ms bis zur bedienbaren Oberfläche mit wiederhergestellten Tabs zu, während L10 für einen Ordner mit 100.000 Einträgen 4 s bis zum vollständigen Lesen veranschlagt und C1 zusagt, dass nach einem Neustart dieselben Tabs mit denselben Ordnern wieder erscheinen. Der Nutzer hat die erste der drei Möglichkeiten gewählt: L4 zählt die bedienbare Oberfläche mit der ersten Bildschirmseite jedes sichtbaren Tabs, nicht die vollständig gelesenen Ordner, und dieselbe Lesart gilt für den Tabwechsel aus L5. Der Widerspruch ist damit aufgelöst, ohne dass sich eine der zehn Zahlen ändert. Eingearbeitet ist die Antwort in C8, in den Zeilen L4 und L5, im Absatz "Was L4 und L5 als abgeschlossen zählt" und in den Messbedingungen, die jetzt die Prüfsitzung nennen, auf der L4 und L5 gemessen werden. Der Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_was-l4-mit-wiederhergestellten-tabs-meint.md` trägt die Frage, die drei Möglichkeiten und die Antwort.
+Im selben Zug hat der Nutzer zwei Funktionen beauftragt, die als C10 in diesem Spec stehen. Eine Folgefrage daraus ist offen und bindet die Abnahmekriterien nicht: `decisions/260804-0830_o_was-die-zwischenablage-auswertung-liest.md` fragt, ob die Auswertung neben dem Text auch den Dateiverweis des Finders liest.
+
+**Die vorletzte Frage ist am 260803-1810 beantwortet: wie L1 und L9 abgenommen werden, nachdem die Frühmessung die 16 ms verfehlt hat.** Der Nutzer hat Möglichkeit 2 aus `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md` gewählt: nicht das 95. Perzentil der Spanne, sondern der Anteil der Eingaben, die ihr nächstes Bild erreichen. Den Technologieentscheid aufzumachen hat er ausdrücklich abgelehnt; Rust mit `objc2` bleibt. Eingearbeitet ist die Antwort in C8, in den Zeilen L1 und L9 der Zusagentabelle, im Punkt zu den zwanzig Wiederholungen unter den Messbedingungen und in den vier Absätzen ab `Warum L1 und L9 den Anteil zählen und nicht die Spanne`, die auch den Einwand aus der Maxime "supersimpel" ausschreiben. Die acht übrigen Zahlen sind unverändert.
+
+**Die Frage davor ist am 260802-1735 beantwortet: was L4 in C8 mit "wiederhergestellten Tabs" meint.** Der Planner hatte beim Beantworten der fünften Frage aus `## Offen für den Planner` einen Widerspruch zwischen zwei Zusagen dieses Specs gemeldet: L4 sagte 1000 ms bis zur bedienbaren Oberfläche mit wiederhergestellten Tabs zu, während L10 für einen Ordner mit 100.000 Einträgen 4 s bis zum vollständigen Lesen veranschlagt und C1 zusagt, dass nach einem Neustart dieselben Tabs mit denselben Ordnern wieder erscheinen. Der Nutzer hat die erste der drei Möglichkeiten gewählt: L4 zählt die bedienbare Oberfläche mit der ersten Bildschirmseite jedes sichtbaren Tabs, nicht die vollständig gelesenen Ordner, und dieselbe Lesart gilt für den Tabwechsel aus L5. Der Widerspruch ist damit aufgelöst, ohne dass sich eine der zehn Zahlen ändert. Eingearbeitet ist die Antwort in C8, in den Zeilen L4 und L5, im Absatz "Was L4 und L5 als abgeschlossen zählt" und in den Messbedingungen, die jetzt die Prüfsitzung nennen, auf der L4 und L5 gemessen werden. Der Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_was-l4-mit-wiederhergestellten-tabs-meint.md` trägt die Frage, die drei Möglichkeiten und die Antwort.
 
 Die übrigen Fragen sind beantwortet. Die vier Fragen A bis D sind eingearbeitet, das Referenzgerät für die Zeitzusagen aus C8 ist seit dem 260802-1127 benannt, und die drei Folgefragen zur Tastenbelegung hat der Nutzer am 260802-1409 beantwortet. Der Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md` trägt den Marker "beantwortet" und nennt Gerät und Begründung vollständig.
 
@@ -370,4 +431,4 @@ Offen bleiben drei Entscheidungsdatensätze im geteilten Speicher, die spätere 
 
 ---
 
-**Diagramm-Selbstprüfung:** Das erste Diagramm hat 7 Knoten und 15 Kanten, Verhältnis 2,14. Der Knoten `Tastenbelegung` hat den Ausgangsgrad 6 auf 5 verschiedene Ziele; dieser Wert und die beiden Zyklen über `Lokales Dateisystem` sind im Fließtext unter dem Diagramm begründet. Kein Knoten ist verwaist, jede Kante trägt ein Label. Das zweite Diagramm hat 2 Zustände und 4 Übergänge und zeigt nur das Halteverhalten eines Vorschau-Tabs, nicht dessen Lebensdauer; ein Endzustand fehlt deshalb bewusst.
+**Diagramm-Selbstprüfung**, nachgerechnet am 260804-0830 nach der Aufnahme von C10. Das erste Diagramm hat 9 Knoten und 20 Kanten, Verhältnis 2,22 nach 2,14 vorher. Der Knoten `Tastenbelegung` hat den Ausgangsgrad 7 auf 6 verschiedene Ziele und bleibt damit der Knoten mit dem höchsten Ausgangsgrad; dieser Wert, die beiden Zyklen über `Lokales Dateisystem` und der Ausgangsgrad 4 des neuen Knotens `Zwischenablage des Systems` sind im Fließtext unter dem Diagramm begründet. Neue Zyklen sind nicht entstanden: die Zwischenablage hat keine eingehende Kante außer der von der Tastenbelegung, und der `Systembrowser` ist ein Blatt. Kein Knoten ist verwaist, jede Kante trägt ein Label. Das zweite Diagramm hat 2 Zustände und 4 Übergänge und ist unverändert; es zeigt nur das Halteverhalten eines Vorschau-Tabs, nicht dessen Lebensdauer, und ein Endzustand fehlt deshalb bewusst. Das Halteverhalten gilt seit dem 260804-0830 auch für einen Tab, den C10 mit dem Inhalt der Zwischenablage gefüllt hat; das Diagramm braucht dafür keinen zusätzlichen Zustand, weil die Quelle des Inhalts sein Verhalten nicht ändert.

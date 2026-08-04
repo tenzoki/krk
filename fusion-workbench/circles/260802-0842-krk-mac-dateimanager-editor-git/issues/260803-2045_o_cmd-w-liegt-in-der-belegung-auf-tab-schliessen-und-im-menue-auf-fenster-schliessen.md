@@ -13,3 +13,7 @@ Warum die Belegung trotzdem `cmd+w` nennt: Cmd+W ist auf dem Mac das Kürzel fü
 Zusammenhang mit einer offenen Frage: `decisions/260803-2007_o_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md` steht offen und entscheidet, ob Cmd+W die Anwendung beendet oder ob es einen Rückweg über einen Menüeintrag "Neues Fenster" gibt. Solange sie offen ist, ist auch nicht entschieden, wem Cmd+W gehört. Dieser Defekt löst sie nicht auf, sondern hält fest, dass die Belegung jetzt eine zweite Partei für dieselbe Kombination hat.
 
 Zu klären vor Schritt 12, der die Tabs anlegt und den Menüeintrag ohnehin anfasst. Zwei Wege stehen offen: Cmd+W bleibt beim Tab und das Fenster wandert auf Umschalt+Cmd+W, wie es Browser halten, oder der Menüeintrag behält Cmd+W und das Schließen des Tabs bekommt eine andere Kombination in `resources/default-keymap.toml`.
+
+---
+
+**Stand 260804-0830: in der Sache entschieden, offen bis zur Umsetzung.** Der Nutzer hat am 260804 Möglichkeit 2 aus `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md` gewählt und dabei ausdrücklich festgehalten, dass Cmd+W seine Bedeutung "Tab schließen" aus der Belegung behält. Damit gilt der erste der beiden oben genannten Wege: der Menüeintrag "Fenster schließen" wandert auf Shift+Cmd+W, `resources/default-keymap.toml` bleibt unverändert. Umgesetzt wird die Verschiebung in Schritt 12, der den Menüeintrag ohnehin anfasst; dieser Defekt schließt erst mit dieser Umsetzung.
