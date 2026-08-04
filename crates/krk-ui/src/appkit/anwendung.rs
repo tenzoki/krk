@@ -385,10 +385,17 @@ impl Anwendungsdelegierter {
         if let Some(fenster) = ivars.fenster.get() {
             fenster.makeKeyAndOrderFront(None);
         }
+        // Die Startmeldungen betreffen die Anwendung und kein einzelnes
+        // Dateifenster: die beschaedigte Belegungs- oder Sitzungsdatei, der
+        // unerreichbare Ablageordner. Sie gehen deshalb in die Zeile des
+        // aktiven Dateifensters, dieselbe Wahl wie bei der fehlgeschlagenen
+        // Dateisystembeobachtung weiter unten. Bis zum 260804-1915 standen sie
+        // fest im linken; hat die Sitzung das rechte als aktiv
+        // wiederhergestellt, sah der Nutzer sie in der Zeile, auf die er nicht
+        // blickt.
+        let aktiv = self.ivars().modell.borrow().aktiv();
         for meldung in meldungen {
-            self.dateifenster(Fensterseite::Links)
-                .quelle()
-                .meldung_zeigen(&meldung);
+            self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
         self.messmodus_einrichten();
     }
@@ -637,6 +644,17 @@ impl Anwendungsdelegierter {
             return false;
         }
 
+        // **Die eine Loeschregel der Befehlsantwort.** Was KRK auf den vorigen
+        // Befehl geantwortet hat, gilt bis zum naechsten und keinen Tastendruck
+        // laenger; erst danach darf der Befehl seine eigene Antwort setzen. An
+        // beiden Dateifenstern, weil es genau einen letzten Befehl gibt und
+        // nicht einen je Seite: der Abschlusstext einer Kopie steht im Fenster
+        // des Vorgangs, und ein Befehl im anderen Fenster ist trotzdem neuer.
+        // Damit haengt der oberste Rang an einem Ereignis und an keiner Uhr.
+        for seite in Fensterseite::ALLE {
+            self.dateifenster(seite).quelle().befehlsantwort_loeschen();
+        }
+
         let ausgefuehrt = match kommando {
             Kommando::Kopieren => self.uebertragen(kommando),
             Kommando::Verschieben => self.uebertragen(kommando),
@@ -775,7 +793,7 @@ impl Anwendungsdelegierter {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let auswahl = self.dateifenster(aktiv).quelle().betroffene_eintraege();
         if auswahl.ist_leer() {
-            self.melden(aktiv, "es ist nichts ausgewählt");
+            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
             return true;
         }
         let Some(fenster) = self.ivars().fenster.get() else {
@@ -864,14 +882,12 @@ impl Anwendungsdelegierter {
     fn auftrag_stellen(&self, art: Art) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         // Ein zweiter Vorgang startet nicht, solange einer laeuft, und sagt das
-        // (C4). Die Meldung geht an das Dateifenster, in dem der Nutzer die
-        // Taste gedrueckt hat. Hat dasselbe Fenster den laufenden Vorgang
-        // begonnen, verdraengt dessen Anzeige sie nach der Rangfolge aus
-        // `DateifensterQuelle::meldung_anzeigen`, und der Nutzer sieht sie
-        // nicht; gemessen am 260804-1915 und festgehalten als
+        // (C4). Die Meldung geht als **Befehlsantwort** an das Dateifenster, in
+        // dem der Nutzer die Taste gedrueckt hat, und steht damit auch dann in
+        // der Zeile, wenn genau dieses Fenster den laufenden Vorgang begonnen
+        // hat. Bis zum 260804-1915 war sie eine Fenstermeldung und verschwand
+        // im haeufigen Fall hinter dem eigenen Fortschritt,
         // `issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
-        // Gestartet wird in beiden Faellen nichts, und das ist die Haelfte der
-        // Zusage, die dieser Schritt haelt.
         let laufende_art = self
             .ivars()
             .vorgang
@@ -879,14 +895,14 @@ impl Anwendungsdelegierter {
             .as_ref()
             .map(|vorgang| vorgang.art.clone());
         if let Some(laufende_art) = laufende_art {
-            self.melden(aktiv, &operationen::schon_ein_vorgang(&laufende_art));
+            self.antwort_zeigen(aktiv, &operationen::schon_ein_vorgang(&laufende_art));
             return true;
         }
 
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
         if auswahl.ist_leer() {
-            self.melden(aktiv, "es ist nichts ausgewählt");
+            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
             return true;
         }
         let quellordner = quelle.angezeigter_ordner();
@@ -895,7 +911,7 @@ impl Anwendungsdelegierter {
         }) || art.eq(&Art::Verschieben {
             ziel: quellordner.clone(),
         }) {
-            self.melden(aktiv, "Quelle und Ziel sind derselbe Ordner");
+            self.antwort_zeigen(aktiv, "Quelle und Ziel sind derselbe Ordner");
             return true;
         }
 
@@ -919,7 +935,7 @@ impl Anwendungsdelegierter {
         if let Err(fehler) = gestartet {
             // Der Lauf ist mit `gestartet` gefallen und damit abgebrochen; er
             // hat noch nichts angefasst.
-            self.melden(
+            self.antwort_zeigen(
                 aktiv,
                 &format!("die Operation liess sich nicht starten: {fehler}"),
             );
@@ -1059,14 +1075,27 @@ impl Anwendungsdelegierter {
     /// und nicht an das gerade aktive: der Nutzer darf waehrend der Operation
     /// gewechselt haben, und der Abschlusstext gehoert zu der Zeile, in der der
     /// Fortschritt stand.
+    ///
+    /// **Der Abschlusstext ist eine Befehlsantwort und keine Fenstermeldung.**
+    /// Er ist die, spaet eintreffende, Antwort auf das F5, mit dem der Nutzer
+    /// die Operation gestartet hat, und faellt deshalb mit dem naechsten
+    /// Tastenbefehl statt beim naechsten Ordnerwechsel. Zwei Folgen: er
+    /// ueberschreibt keine waehrend der Operation eingetroffene
+    /// Auswurfmeldung mehr, die deshalb einen Tastendruck spaeter zu sehen ist,
+    /// und er ueberlebt weiterhin die Auffrischung unten, weil eine
+    /// Auffrischung kein Tastenbefehl ist.
     fn vorgang_beenden(&self, bericht: &Bericht) {
         let Some(vorgang) = self.ivars().vorgang.borrow_mut().take() else {
             return;
         };
-        // Erst die Vorgangsanzeige wegnehmen, dann melden: sie hat den Vorrang,
-        // und der Abschlusstext stuende sonst hinter ihr.
+        // Erst die Vorgangsanzeige wegnehmen, dann den Abschlusstext setzen.
+        // Die Reihenfolge ist inzwischen die eines aufgeraeumten Zustands und
+        // keine Bedingung fuer die Sichtbarkeit: eine Befehlsantwort stuende
+        // ohnehin ueber der Vorgangsanzeige. Eine stehengebliebene
+        // Vorgangsanzeige waere aber nach dem naechsten Tastendruck wieder da,
+        // obwohl die Operation vorbei ist.
         self.dateifenster(vorgang.seite).quelle().vorgang_beenden();
-        self.melden(
+        self.antwort_zeigen(
             vorgang.seite,
             &operationen::abschlusstext(&vorgang.art, bericht, vorgang.positionen),
         );
@@ -1095,9 +1124,18 @@ impl Anwendungsdelegierter {
         *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
     }
 
-    /// Stellt einen Text in die Statuszeile des genannten Dateifensters.
-    fn melden(&self, seite: Fensterseite, text: &str) {
-        self.dateifenster(seite).quelle().meldung_zeigen(text);
+    /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
+    /// genannten Dateifensters.
+    ///
+    /// Der oberste der vier Raenge, siehe
+    /// [`crate::appkit::statuszeile::zeile`]. Nicht zu verwechseln mit
+    /// [`Dateifenstersicht::melden`] weiter unten: das ist der Weg der
+    /// Ereignisse, die niemand angefordert hat, und der steht einen Rang
+    /// tiefer.
+    fn antwort_zeigen(&self, seite: Fensterseite, text: &str) {
+        self.dateifenster(seite)
+            .quelle()
+            .befehlsantwort_zeigen(text);
     }
 
     // ------------------------------------------------------------------
@@ -1138,10 +1176,12 @@ impl Anwendungsdelegierter {
         if let Err(fehler) = ergebnis
             && !self.ivars().schreibfehler_gemeldet.replace(true)
         {
+            // In die Zeile des aktiven Dateifensters, aus demselben Grund wie
+            // die Startmeldungen: die Sitzung gehoert der Anwendung und keiner
+            // Seite, und der Nutzer sieht auf die Seite, in der er arbeitet.
             let meldung = format!("die Sitzung liess sich nicht sichern: {fehler}");
-            self.dateifenster(Fensterseite::Links)
-                .quelle()
-                .meldung_zeigen(&meldung);
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
     }
 

@@ -241,12 +241,35 @@ pub struct QuelleIvars {
     /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
     /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
     ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was KRK auf den letzten Tastenbefehl des Nutzers zu sagen hat.
+    ///
+    /// Der oberste der vier Raenge und der einzige, der ueber der
+    /// Vorgangsanzeige steht: "es laeuft bereits eine Operation", "es ist
+    /// nichts ausgewaehlt", "die Zwischenablage ist leer", der Abschlusstext
+    /// eines Vorgangs. Der Nutzer hat eben eine Taste gedrueckt und sieht auf
+    /// die Zeile; eine Antwort, die hinter dem Fortschritt verschwindet, ist
+    /// keine.
+    ///
+    /// **Ihre Loeschregel ist der naechste Tastenbefehl** und sonst nichts:
+    /// `Anwendungsdelegierter::kommando_ausfuehren` raeumt sie an beiden
+    /// Dateifenstern weg, bevor es den naechsten Befehl ausfuehrt. Damit haengt
+    /// sie an einem Ereignis und an keinem Zeitgeber, wie die drei uebrigen
+    /// Quellen auch.
+    befehlsantwort: RefCell<Option<String>>,
     /// Eine Meldung, die dem Fenster gehoert und keinem einzelnen Tab.
     ///
     /// Die beschaedigte Belegungsdatei beim Start und der ausgeworfene
-    /// Datentraeger aus C9. Sie hat Vorrang vor der Tabmeldung und faellt beim
-    /// naechsten Ordner- oder Tabwechsel; siehe
-    /// [`DateifensterQuelle::meldung_anzeigen`].
+    /// Datentraeger aus C9: ein Ereignis, das der Nutzer nicht angefordert hat.
+    /// Sie hat Vorrang vor der Tabmeldung und faellt beim naechsten Ordner-
+    /// oder Tabwechsel; siehe [`DateifensterQuelle::meldung_anzeigen`].
+    ///
+    /// **Eine Antwort auf einen Tastenbefehl gehoert nicht hierher**, sondern
+    /// in `befehlsantwort`. Bis zum 260804-1915 lagen beide in diesem Feld, und
+    /// daran sind die zwei Defekte dieses Tages haengengeblieben: die
+    /// Auswurfmeldung wurde vom Abschlusstext ueberschrieben, weil sie
+    /// dasselbe Feld teilten, und die Meldung auf den zweiten
+    /// Operationsbefehl erbte den Rang eines Ereignisses, obwohl sie eine
+    /// Antwort ist.
     fenstermeldung: RefCell<Option<String>>,
     /// Der Stand einer Dateioperation, die dieses Dateifenster begonnen hat
     /// (C4).
@@ -312,6 +335,7 @@ impl DateifensterQuelle {
             aktivierung: RefCell::new(None),
             sprungmarke: RefCell::new(Sprungmarke::neu()),
             ordnerwechsel: RefCell::new(None),
+            befehlsantwort: RefCell::new(None),
             fenstermeldung: RefCell::new(None),
             vorgangsanzeige: RefCell::new(None),
         });
@@ -806,19 +830,19 @@ impl DateifensterQuelle {
     /// die Navigation dahinter sind dieselben.
     fn zwischenablage_springen(&self) {
         let Some(inhalt) = super::zwischenablage::lesen() else {
-            self.meldung_zeigen("die Zwischenablage ist leer");
+            self.befehlsantwort_zeigen("die Zwischenablage ist leer");
             return;
         };
         match zwischenablage::deuten(&inhalt) {
             Ziel::Pfad(pfad) => self.pfad_anspringen(&pfad),
             Ziel::Web(adresse) => {
                 if !super::zwischenablage::im_browser_oeffnen(&adresse) {
-                    self.meldung_zeigen(&format!(
+                    self.befehlsantwort_zeigen(&format!(
                         "{adresse} liess sich nicht an den Systembrowser uebergeben"
                     ));
                 }
             }
-            Ziel::Nichts => self.meldung_zeigen(
+            Ziel::Nichts => self.befehlsantwort_zeigen(
                 "die Zwischenablage traegt weder einen absoluten Pfad noch eine Web-Adresse",
             ),
         }
@@ -835,7 +859,7 @@ impl DateifensterQuelle {
         match pfadeingabe::pruefen(pfad, &angezeigt) {
             Ergebnis::Wechseln { ordner, auswahl } => self.ordner_lesen(&ordner, auswahl),
             Ergebnis::NurAuswahl { name } => self.eintrag_anspringen(&name),
-            Ergebnis::Meldung(text) => self.meldung_zeigen(&text),
+            Ergebnis::Meldung(text) => self.befehlsantwort_zeigen(&text),
         }
     }
 
@@ -855,7 +879,7 @@ impl DateifensterQuelle {
         };
         match zeile {
             Some(zeile) => self.zeile_setzen(zeile),
-            None => self.meldung_zeigen(&format!("{name} steht nicht in der Liste")),
+            None => self.befehlsantwort_zeigen(&format!("{name} steht nicht in der Liste")),
         }
     }
 
@@ -978,52 +1002,24 @@ impl DateifensterQuelle {
 
     /// Schreibt in die Statuszeile, was gerade dort stehen soll.
     ///
-    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Drei
-    /// Quellen, ein Rang, geordnet nach dem Alter der Aussage:
-    ///
-    /// ```text
-    /// laufender Vorgang?  ─ja─> Stand des Vorgangs, Esc bricht ab
-    ///         │nein
-    /// Fenstermeldung?     ─ja─> Auswurf, beschaedigte Ablagedatei, Abschluss
-    ///         │nein
-    ///                           Tabmeldung des sichtbaren Tabs, sonst leer
-    /// ```
-    ///
-    /// Eine laufende Operation ist das Neueste: sie ist die einzige der drei,
-    /// auf die der Nutzer gerade wartet, und die einzige, die einen Griff
-    /// traegt. Danach kommt die Fenstermeldung, die ein Ereignis beschreibt
-    /// (der Datentraeger ist weg, die Belegungsdatei war beschaedigt), und
-    /// zuletzt die Tabmeldung, die einen Zustand beschreibt (dieser Ordner
-    /// liess sich nicht vollstaendig lesen).
-    ///
-    /// **Eine verdraengte Fenstermeldung bleibt in ihrem Feld** und erscheint,
-    /// sobald [`DateifensterQuelle::vorgang_beenden`] die Vorgangsanzeige
-    /// wegnimmt — **es sei denn**, der Abschlusstext des Vorgangs schreibt
-    /// unmittelbar danach in dasselbe Feld, und das tut er immer. Eine
-    /// Auswurfmeldung waehrend einer Kopie ist damit verloren und nicht bloss
-    /// verzoegert; gemessen am 260804-1915 und festgehalten als
-    /// `issues/260804-1915_o_der-abschlusstext-ueberschreibt-die-verdraengte-fenstermeldung.md`.
-    /// Dieser Schritt entscheidet den Fall nicht.
+    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Vier
+    /// Quellen, ein Rang; die Regel und ihre Begruendung stehen bei
+    /// [`statuszeile::zeile`], die Lebensdauern bei den Feldern in
+    /// [`QuelleIvars`]. Diese Methode liest die vier Felder und uebergibt sie;
+    /// sie entscheidet selbst nichts, damit die Entscheidung an genau einer
+    /// Stelle steht und ohne AppKit pruefbar ist.
     fn meldung_anzeigen(&self) {
-        if let Some(stand) = self.ivars().vorgangsanzeige.borrow().as_deref() {
-            self.ivars()
-                .statuszeile
-                .zeigen(Some((stand, statuszeile::Art::Vorgang)));
-            return;
-        }
-        let meldung = self.ivars().fenstermeldung.borrow().clone().or_else(|| {
-            self.ivars()
-                .tabs
-                .borrow()
-                .aktiver()
-                .meldung()
-                .map(str::to_owned)
-        });
-        self.ivars().statuszeile.zeigen(
-            meldung
-                .as_deref()
-                .map(|text| (text, statuszeile::Art::Fehler)),
-        );
+        let ivars = self.ivars();
+        let befehlsantwort = ivars.befehlsantwort.borrow();
+        let vorgangsanzeige = ivars.vorgangsanzeige.borrow();
+        let fenstermeldung = ivars.fenstermeldung.borrow();
+        let tabs = ivars.tabs.borrow();
+        ivars.statuszeile.zeigen(statuszeile::zeile(
+            befehlsantwort.as_deref(),
+            vorgangsanzeige.as_deref(),
+            fenstermeldung.as_deref(),
+            tabs.aktiver().meldung(),
+        ));
     }
 
     /// Loescht die Meldung des Fensters, falls eine steht.
@@ -1056,6 +1052,35 @@ impl DateifensterQuelle {
         self.meldung_anzeigen();
     }
 
+    /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile.
+    ///
+    /// Der oberste Rang: sie steht auch dann in der Zeile, wenn dieses
+    /// Dateifenster gerade den Fortschritt einer Operation zeigt. Der Nutzer
+    /// hat eben eine Taste gedrueckt und sieht hierher.
+    ///
+    /// Der Weg fuer "es laeuft bereits eine Operation", "es ist nichts
+    /// ausgewaehlt", "die Zwischenablage ist leer" und den Abschlusstext eines
+    /// Vorgangs. Ein Ereignis, das der Nutzer nicht angefordert hat, geht
+    /// weiter ueber [`DateifensterQuelle::meldung_zeigen`].
+    pub fn befehlsantwort_zeigen(&self, antwort: &str) {
+        *self.ivars().befehlsantwort.borrow_mut() = Some(antwort.to_owned());
+        self.meldung_anzeigen();
+    }
+
+    /// Raeumt die Antwort auf den vorigen Tastenbefehl weg.
+    ///
+    /// Die einzige Loeschregel dieses Feldes, gerufen von
+    /// `Anwendungsdelegierter::kommando_ausfuehren` vor jedem Befehl. Stand
+    /// keine Antwort, geschieht nichts: sonst schriebe jeder Pfeiltastendruck
+    /// die Zeile neu, die sich nicht geaendert hat. Stand eine, kommt zum
+    /// Vorschein, was darunter liegt — der Fortschritt der laufenden Operation
+    /// oder die verdraengte Auswurfmeldung.
+    pub fn befehlsantwort_loeschen(&self) {
+        if self.ivars().befehlsantwort.borrow_mut().take().is_some() {
+            self.meldung_anzeigen();
+        }
+    }
+
     /// Schreibt den Stand einer Dateioperation in die Statuszeile (C4).
     ///
     /// Gerufen vom Anwendungsdelegierten fuer das Dateifenster, das den
@@ -1070,10 +1095,13 @@ impl DateifensterQuelle {
 
     /// Nimmt die Vorgangsanzeige weg (C4).
     ///
-    /// Danach steht in der Zeile wieder, was ohne den Vorgang dort stuende:
-    /// eine waehrenddessen verdraengte Fenstermeldung, sonst die Tabmeldung.
-    /// Der Abschlusstext des Vorgangs kommt unmittelbar danach als gewoehnliche
-    /// Fenstermeldung.
+    /// Danach steht in der Zeile wieder, was ohne den Vorgang dort stuende.
+    /// Unmittelbar danach setzt `Anwendungsdelegierter::vorgang_beenden` den
+    /// Abschlusstext als Befehlsantwort, und die steht darueber; eine waehrend
+    /// der Operation eingetroffene Fenstermeldung ist deshalb nicht sofort zu
+    /// sehen, sondern sobald der naechste Tastenbefehl den Abschlusstext
+    /// wegraeumt. Verloren ist sie nicht: die beiden Texte liegen in zwei
+    /// Feldern mit zwei Lebensdauern.
     pub fn vorgang_beenden(&self) {
         *self.ivars().vorgangsanzeige.borrow_mut() = None;
         self.meldung_anzeigen();

@@ -30,6 +30,12 @@
 //! Was diese Zeile in dieser Runde **nicht** traegt: den Lesefortschritt und die
 //! Zahl der Eintraege. C1 sagt beides nicht zu; sie kommen in einer spaeteren
 //! Runde in dieselbe Zeile und nicht in eine zweite daneben.
+//!
+//! # Wer die Zeile bekommt, wenn mehrere zugleich etwas zu sagen haben
+//!
+//! Die Auswahl steht in [`zeile`], einer Funktion ohne AppKit, damit sie
+//! pruefbar ist. Die Lebensdauern der vier Quellen stehen bei ihren Feldern in
+//! `DateifensterQuelle`; hier steht allein die Rangfolge.
 
 use objc2::rc::Retained;
 use objc2_app_kit::{
@@ -57,6 +63,50 @@ pub enum Art {
     Fehler,
     /// Der Stand einer laufenden Dateioperation (C4).
     Vorgang,
+}
+
+/// Was von den vier Quellen jetzt in der Zeile steht.
+///
+/// **Die eine Regel, und kein Sonderfall je Meldungsart.** Die Zeile traegt
+/// einen Text. Steht mehr als eine Aussage, gewinnt die, die dem letzten Tun
+/// des Nutzers am naechsten ist:
+///
+/// ```text
+/// 1  Befehlsantwort    was KRK auf einen Tastenbefehl zu sagen hat
+/// 2  Vorgangsanzeige   der Stand einer laufenden Operation
+/// 3  Fenstermeldung    ein Ereignis am Fenster, das niemand angefordert hat
+/// 4  Tabmeldung        der Zustand des sichtbaren Ordners
+/// ```
+///
+/// Das ist dieselbe Ordnung, die S14 zwischen Fenster- und Tabmeldung gezogen
+/// hat ("ein Ereignis ist neuer als ein Zustand"), zu Ende gefuehrt: eine
+/// laufende Operation ist neuer als ein Ereignis, und die Antwort auf einen
+/// Tastendruck, den der Nutzer eben gemacht hat, ist neuer als beides. S16b
+/// hatte sie mit drei Raengen gebaut und die Befehlsantwort in die
+/// Fenstermeldung gelegt; dort verschwand die Meldung "es laeuft bereits eine
+/// Operation" hinter dem Fortschritt desselben Dateifensters
+/// (`issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
+///
+/// **Verdraengt wird nichts geloescht.** Jede der vier Quellen haelt ihren Text
+/// in ihrem eigenen Feld, und jedes Feld hat genau eine Loeschregel. Eine
+/// verdraengte Aussage erscheint, sobald alles ueber ihr gefallen ist: die
+/// Auswurfmeldung, die waehrend einer Kopie eintrifft, steht auf Rang 3, wartet
+/// die Kopie und deren Abschlusstext (Rang 1) ab und ist mit dem naechsten
+/// Tastenbefehl in der Zeile. Ein Zeitgeber ist dafuer nicht noetig, weil jede
+/// Lebensdauer an einem Ereignis haengt und an keiner Uhr.
+///
+/// Die Art faellt mit dem Rang: allein die Vorgangsanzeige ist kein Fehler.
+pub fn zeile<'a>(
+    befehlsantwort: Option<&'a str>,
+    vorgangsanzeige: Option<&'a str>,
+    fenstermeldung: Option<&'a str>,
+    tabmeldung: Option<&'a str>,
+) -> Option<(&'a str, Art)> {
+    befehlsantwort
+        .map(|text| (text, Art::Fehler))
+        .or_else(|| vorgangsanzeige.map(|text| (text, Art::Vorgang)))
+        .or_else(|| fenstermeldung.map(|text| (text, Art::Fehler)))
+        .or_else(|| tabmeldung.map(|text| (text, Art::Fehler)))
 }
 
 /// Die Textzeile am Fuss eines Dateifensters.
@@ -116,5 +166,108 @@ impl Statuszeile {
                     .setTextColor(Some(&NSColor::secondaryLabelColor()));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Art, zeile};
+
+    #[test]
+    fn ohne_jede_quelle_bleibt_die_zeile_leer() {
+        assert_eq!(zeile(None, None, None, None), None);
+    }
+
+    #[test]
+    fn jede_quelle_steht_fuer_sich_allein_in_der_zeile() {
+        assert_eq!(
+            zeile(Some("Antwort"), None, None, None),
+            Some(("Antwort", Art::Fehler))
+        );
+        assert_eq!(
+            zeile(None, Some("Vorgang"), None, None),
+            Some(("Vorgang", Art::Vorgang))
+        );
+        assert_eq!(
+            zeile(None, None, Some("Ereignis"), None),
+            Some(("Ereignis", Art::Fehler))
+        );
+        assert_eq!(
+            zeile(None, None, None, Some("Zustand")),
+            Some(("Zustand", Art::Fehler))
+        );
+    }
+
+    /// Der Defekt vom 260804-1915: der zweite F5 meldete sich in dem
+    /// Dateifenster, in dem der Fortschritt stand, und war dort unsichtbar.
+    #[test]
+    fn die_befehlsantwort_steht_ueber_dem_laufenden_vorgang() {
+        assert_eq!(
+            zeile(
+                Some("es läuft bereits eine Operation: Kopieren"),
+                Some("Kopieren: 8.189 Einträge …"),
+                None,
+                None
+            ),
+            Some(("es läuft bereits eine Operation: Kopieren", Art::Fehler))
+        );
+    }
+
+    #[test]
+    fn der_laufende_vorgang_steht_ueber_ereignis_und_zustand() {
+        assert_eq!(
+            zeile(
+                None,
+                Some("Kopieren: 8.189 Einträge …"),
+                Some("Datenträger ausgeworfen"),
+                Some("Ordner nicht lesbar")
+            ),
+            Some(("Kopieren: 8.189 Einträge …", Art::Vorgang))
+        );
+    }
+
+    #[test]
+    fn das_ereignis_am_fenster_steht_ueber_dem_zustand_des_ordners() {
+        assert_eq!(
+            zeile(
+                None,
+                None,
+                Some("Datenträger ausgeworfen"),
+                Some("Ordner nicht lesbar")
+            ),
+            Some(("Datenträger ausgeworfen", Art::Fehler))
+        );
+    }
+
+    /// Der Defekt vom 260804-1915: der Abschlusstext ueberschrieb die waehrend
+    /// der Kopie eingetroffene Auswurfmeldung. Er verdeckt sie jetzt, und sie
+    /// steht wieder da, sobald er mit dem naechsten Befehl faellt.
+    #[test]
+    fn die_verdraengte_auswurfmeldung_erscheint_nach_dem_abschlusstext() {
+        let auswurf = "Datenträger „Sicherung“ wurde ausgeworfen";
+        let abschluss = "Kopieren abgebrochen: 9.175 Einträge übertragen";
+        // Waehrend der Kopie: der Fortschritt gewinnt, die Auswurfmeldung
+        // bleibt in ihrem Feld stehen.
+        assert_eq!(
+            zeile(
+                None,
+                Some("Kopieren: 9.131 Einträge …"),
+                Some(auswurf),
+                None
+            ),
+            Some(("Kopieren: 9.131 Einträge …", Art::Vorgang))
+        );
+        // Unmittelbar nach dem Bericht: der Abschlusstext ist die Antwort auf
+        // den Befehl und steht oben.
+        assert_eq!(
+            zeile(Some(abschluss), None, Some(auswurf), None),
+            Some((abschluss, Art::Fehler))
+        );
+        // Der naechste Tastenbefehl raeumt die Antwort weg; jetzt ist die
+        // Auswurfmeldung an der Reihe, statt verloren zu sein.
+        assert_eq!(
+            zeile(None, None, Some(auswurf), None),
+            Some((auswurf, Art::Fehler))
+        );
     }
 }
