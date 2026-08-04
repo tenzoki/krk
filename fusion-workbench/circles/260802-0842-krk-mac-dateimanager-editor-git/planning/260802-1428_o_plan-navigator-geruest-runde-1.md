@@ -727,7 +727,7 @@ Zwei Defekte am Schritt selbst sind bei der Umsetzung aufgefallen und mit diesem
 
 ### Phase D: Dateioperationen
 
-#### 15. **Operationsmaschine (C4, Kern)**
+#### 15. [DONE] **Operationsmaschine (C4, Kern)**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/operation/{mod.rs,auftrag.rs,kopieren.rs,verschieben.rs,loeschen.rs,anlegen.rs,umbenennen.rs,fortschritt.rs}`, `crates/krk-core/src/lib.rs` (einbindend: `pub mod operation;`), `crates/krk-core/src/verzeichnis/sys.rs` (erweitert: die Bindungen an `copyfile(3)` und `rename(2)` kommen in dieses vorhandene Modul, siehe Änderungen), `crates/krk-core/tests/operation.rs`, `crates/krk-ui/src/appkit/papierkorb.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend: `mod papierkorb;`), `crates/krk-core/src/verzeichnis/leser.rs` (lesend, aus S2: das rekursive Kopieren, Verschieben und Löschen läuft über den vorhandenen Leser, der einen Ordner mit `getattrlistbulk` gestückelt ausliest; ein zweiter Verzeichnisdurchlauf daneben wäre die zweite Wahrheit darüber, was in einem Ordner steht), `crates/krk-core/src/verzeichnis/eintrag.rs` (lesend, aus S2: `Typ` unterscheidet Ordner, Datei und Verknüpfung und entscheidet damit, ob ein Eintrag abgestiegen oder kopiert wird)

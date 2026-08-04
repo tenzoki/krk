@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Dreizehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Vierzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -18,6 +18,8 @@
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!                                     ──> statuszeile
+//!
+//! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
@@ -40,6 +42,10 @@
 //! [`fsevents`] haelt die Bindung an FSEvents und beobachtet die Ordner, die
 //! gerade auf dem Schirm stehen; [`volumes`] haelt die `NSWorkspace`-
 //! Beobachtung und meldet, wann ein Datentraeger kommt und geht (beide C9).
+//! [`papierkorb`] haelt `NSFileManager.trashItemAtURL:` und ist die eine
+//! Stelle, an der ein Aufruf von unten nach oben laeuft: die
+//! Operationsmaschine im Kern bekommt ihn ueber eine Schnittstelle
+//! hereingereicht, die AppKit nicht kennt.
 //!
 //! Sechs Pfeile fuehren aus diesem Verzeichnis heraus, und alle sechs tragen
 //! nur gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
@@ -57,6 +63,7 @@ mod ereignisse;
 mod fenster;
 mod fsevents;
 mod menue;
+mod papierkorb;
 mod statuszeile;
 mod tabelle;
 mod tableiste;

@@ -8,8 +8,10 @@
 //!                                  └── sprungmarke
 //! ```
 //!
-//! [`sys`] bindet `getattrlistbulk(2)` und ist die einzige Stelle im Kern mit
-//! einem Fremdaufruf. [`leser`] macht daraus den gestueckelten Lesevorgang auf
+//! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
+//! `getattrlistbulk(2)` fuer das Lesen sowie, seit Schritt 15, `copyfile(3)`
+//! und `renamex_np(2)` fuer die Operationsmaschine. [`leser`] macht aus dem
+//! ersten der drei Aufrufe den gestueckelten Lesevorgang auf
 //! einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, [`sortierung`]
 //! liefert die acht Ordnungen, und [`sprungmarke`] findet einen Eintrag ueber

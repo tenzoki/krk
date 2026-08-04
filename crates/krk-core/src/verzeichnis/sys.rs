@@ -1,10 +1,21 @@
-//! Die Systemschicht des Verzeichnislesers: die Bindung an `getattrlistbulk(2)`.
+//! Die Systemschicht des Kerns: die drei Fremdaufrufe, die KRK braucht.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
-//! genau diese Oeffnung moeglich ist. Spaeter kommt die Bindung an `copyfile(3)`
-//! hierher dazu (Schritt 15 des Plans); ein zweites Modul mit dieser Ausnahme
-//! entsteht nicht.
+//! genau diese Oeffnung moeglich ist. Ein zweites Modul mit dieser Ausnahme
+//! entsteht nicht; mit Schritt 15 sind `copyfile(3)` und `renamex_np(2)`
+//! hierhergekommen statt daneben.
+//!
+//! ```text
+//! getattrlistbulk(2) ──> Schwungleser         ──> verzeichnis::leser
+//! copyfile(3)        ──> datei_kopieren       ──> operation::kopieren
+//! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
+//! ```
+//!
+//! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
+//! Kerns und nicht allein die des Lesers. Es liegt unter `verzeichnis/`, weil
+//! es dort entstanden ist und ein Umzug jede Fundstelle verschoebe, ohne eine
+//! Zeile besser zu machen.
 //!
 //! # Warum `getattrlistbulk` und nicht `readdir` plus `stat`
 //!
@@ -39,10 +50,11 @@
 #![allow(unsafe_code)]
 
 use std::borrow::Cow;
-use std::ffi::{c_int, c_void};
+use std::ffi::{CString, c_char, c_int, c_uint, c_void};
 use std::fs::File;
 use std::io;
 use std::os::fd::AsRawFd;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -328,6 +340,335 @@ fn lies_i64(satz: &[u8], stelle: usize) -> Option<i64> {
     Some(i64::from_ne_bytes(stueck.try_into().ok()?))
 }
 
+// ---------------------------------------------------------------------------
+// copyfile(3): eine Datei uebertragen, mit Fortschritt und Abbruch
+// ---------------------------------------------------------------------------
+
+/// `COPYFILE_ALL` aus `copyfile.h`: Daten, Rechte, Zeiten, ACL und erweiterte
+/// Attribute. Das ist die Zusage aus C4, dass eine Kopie mit allem ankommt,
+/// was der Finder auch mitnimmt.
+const COPYFILE_ALL: u32 = 0x0000_000F;
+
+/// `COPYFILE_CLONE`: auf demselben APFS-Datentraeger einen Klon anlegen statt
+/// die Bytes zu kopieren. Ein bester Versuch; wo Klonen nicht geht, kopiert
+/// `copyfile(3)` von selbst die Bytes.
+///
+/// Das Kennzeichen schliesst `COPYFILE_EXCL` ein: ein vorhandenes Ziel laesst
+/// den Aufruf scheitern. Genau das ist gewollt, denn ueber ein vorhandenes Ziel
+/// entscheidet die Konfliktregel und nicht `copyfile(3)`.
+const COPYFILE_CLONE: u32 = 0x0100_0000;
+
+const COPYFILE_STATE_STATUS_CB: u32 = 6;
+const COPYFILE_STATE_STATUS_CTX: u32 = 7;
+const COPYFILE_STATE_COPIED: u32 = 8;
+const COPYFILE_STATE_WAS_CLONED: u32 = 10;
+
+/// `what`-Werte des Statusrueckrufs, soweit hier gebraucht.
+const COPYFILE_COPY_DATA: c_int = 4;
+
+/// `stage`-Werte des Statusrueckrufs.
+const COPYFILE_FINISH: c_int = 2;
+const COPYFILE_PROGRESS: c_int = 4;
+
+/// Rueckgabewerte des Statusrueckrufs.
+const COPYFILE_CONTINUE: c_int = 0;
+const COPYFILE_QUIT: c_int = 2;
+
+/// `ECANCELED` aus `sys/errno.h`. `copyfile(3)` meldet damit, dass der eigene
+/// Rueckruf `COPYFILE_QUIT` geliefert hat.
+const ECANCELED: i32 = 89;
+
+/// `EXDEV` aus `sys/errno.h`. `rename(2)` meldet damit, dass Quelle und Ziel
+/// auf verschiedenen Datentraegern liegen.
+pub const EXDEV: i32 = 18;
+
+/// `RENAME_EXCL` aus `stdio.h`: scheitert mit `EEXIST`, statt ein vorhandenes
+/// Ziel zu ueberschreiben.
+const RENAME_EXCL: c_uint = 0x0000_0004;
+
+unsafe extern "C" {
+    /// `int copyfile(const char *, const char *, copyfile_state_t, copyfile_flags_t)`
+    fn copyfile(
+        von: *const c_char,
+        nach: *const c_char,
+        zustand: *mut c_void,
+        kennzeichen: u32,
+    ) -> c_int;
+
+    /// `copyfile_state_t copyfile_state_alloc(void)`
+    fn copyfile_state_alloc() -> *mut c_void;
+
+    /// `int copyfile_state_free(copyfile_state_t)`
+    fn copyfile_state_free(zustand: *mut c_void) -> c_int;
+
+    /// `int copyfile_state_set(copyfile_state_t, uint32_t, const void *)`
+    fn copyfile_state_set(zustand: *mut c_void, kennzeichen: u32, wert: *const c_void) -> c_int;
+
+    /// `int copyfile_state_get(copyfile_state_t, uint32_t, void *)`
+    fn copyfile_state_get(zustand: *mut c_void, kennzeichen: u32, ziel: *mut c_void) -> c_int;
+
+    /// `int renamex_np(const char *, const char *, unsigned int)`
+    fn renamex_np(von: *const c_char, nach: *const c_char, kennzeichen: c_uint) -> c_int;
+}
+
+/// Der Typ des Statusrueckrufs, `copyfile_callback_t` aus `copyfile.h`.
+type Statusrueckruf = extern "C" fn(
+    was: c_int,
+    stufe: c_int,
+    zustand: *mut c_void,
+    quelle: *const c_char,
+    ziel: *const c_char,
+    kontext: *mut c_void,
+) -> c_int;
+
+/// Was der Fortschrittsrueckruf dem laufenden Kopiervorgang antwortet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Weiter {
+    /// Weitermachen.
+    Weitermachen,
+    /// Abbrechen. `copyfile(3)` bricht mitten in der Datei ab.
+    Abbrechen,
+}
+
+/// Wie eine einzelne Datei uebertragen wird.
+///
+/// Die Oberflaeche waehlt immer [`Uebertragungsart::KlonenWennMoeglich`]. Die
+/// zweite Variante ist keine Einstellung fuer den Nutzer, sondern die
+/// Beschreibung dessen, was `copyfile(3)` ohnehin tut, sobald Klonen nicht
+/// geht: ueber Datentraegergrenzen hinweg, auf einem Dateisystem ohne
+/// Klonunterstuetzung und auf einem Netzlaufwerk werden die Bytes kopiert.
+/// Benennbar ist sie, weil dieser Weg der einzige ist, auf dem sich ein
+/// Abbruch **innerhalb** einer Datei ueberhaupt beobachten laesst: ein Klon ist
+/// fertig, bevor ein Abbruch ihn erreichen koennte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Uebertragungsart {
+    /// `COPYFILE_ALL | COPYFILE_CLONE`.
+    #[default]
+    KlonenWennMoeglich,
+    /// `COPYFILE_ALL`. Immer die Bytes.
+    ImmerBytes,
+}
+
+/// Was ein Kopiervorgang hinterlassen hat.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Kopierergebnis {
+    /// Wie viele Bytes uebertragen wurden. Nach einem Klon 0, weil keine Bytes
+    /// geflossen sind.
+    pub bytes: u64,
+    /// Wahr, wenn der Rueckruf abgebrochen hat.
+    pub abgebrochen: bool,
+    /// Wahr, wenn das Dateisystem geklont hat, statt zu kopieren.
+    pub geklont: bool,
+}
+
+/// Was der Statusrueckruf mit sich fuehrt.
+struct Kopierkontext<'a> {
+    bytes: u64,
+    melden: &'a mut dyn FnMut(u64) -> Weiter,
+}
+
+/// Der Statusrueckruf, den `copyfile(3)` waehrend der Uebertragung ruft.
+///
+/// Er darf nicht in Panik geraten: ein Abwickeln ueber die C-Grenze hinweg
+/// waere undefiniert. Deshalb steht hier nichts, was scheitern koennte, und der
+/// Rueckruf des Aufrufers bekommt allein eine Zahl zu sehen.
+extern "C" fn statusrueckruf(
+    was: c_int,
+    stufe: c_int,
+    zustand: *mut c_void,
+    _quelle: *const c_char,
+    _ziel: *const c_char,
+    kontext: *mut c_void,
+) -> c_int {
+    if kontext.is_null() {
+        return COPYFILE_CONTINUE;
+    }
+    // SICHERHEIT: `kontext` ist der Zeiger, den `datei_kopieren` ueber
+    // `COPYFILE_STATE_STATUS_CTX` gesetzt hat. Er zeigt auf einen
+    // `Kopierkontext`, der die ganze Laufzeit von `copyfile(3)` ueberlebt, weil
+    // er als lokale Bindung in `datei_kopieren` steht. `copyfile(3)` ruft den
+    // Rueckruf auf demselben Faden und niemals nebenlaeufig, es gibt also
+    // keinen zweiten `&mut` auf denselben Wert.
+    let kontext = unsafe { &mut *kontext.cast::<Kopierkontext<'_>>() };
+
+    if was == COPYFILE_COPY_DATA && (stufe == COPYFILE_PROGRESS || stufe == COPYFILE_FINISH) {
+        let mut kopiert: i64 = 0;
+        // SICHERHEIT: `zustand` ist der Zustand, den `copyfile(3)` uns selbst
+        // hereinreicht. `COPYFILE_STATE_COPIED` schreibt genau einen `off_t`,
+        // und `kopiert` ist ein `i64` derselben Groesse.
+        let gelesen = unsafe {
+            copyfile_state_get(zustand, COPYFILE_STATE_COPIED, (&raw mut kopiert).cast())
+        };
+        if gelesen == 0 {
+            kontext.bytes = kopiert.max(0) as u64;
+        }
+    }
+
+    match (kontext.melden)(kontext.bytes) {
+        Weiter::Weitermachen => COPYFILE_CONTINUE,
+        Weiter::Abbrechen => COPYFILE_QUIT,
+    }
+}
+
+/// Kopiert eine einzelne Datei ueber `copyfile(3)`.
+///
+/// `melden` bekommt waehrend der Uebertragung die Zahl der bisher kopierten
+/// Bytes und entscheidet mit seinem Rueckgabewert, ob weitergemacht wird. Bei
+/// einem Klon wird `melden` nicht gerufen: er ist fertig, bevor es etwas zu
+/// melden gaebe.
+///
+/// Ein vorhandenes Ziel laesst den Aufruf scheitern. Ueber ein vorhandenes Ziel
+/// entscheidet die Konfliktregel, nicht diese Funktion.
+pub fn datei_kopieren(
+    quelle: &Path,
+    ziel: &Path,
+    art: Uebertragungsart,
+    melden: &mut dyn FnMut(u64) -> Weiter,
+) -> io::Result<Kopierergebnis> {
+    let quelle_c = als_c_pfad(quelle)?;
+    let ziel_c = als_c_pfad(ziel)?;
+    let mut kontext = Kopierkontext { bytes: 0, melden };
+
+    // SICHERHEIT: `copyfile_state_alloc` nimmt keine Argumente und liefert
+    // entweder einen gueltigen Zustand oder einen Nullzeiger.
+    let zustand = unsafe { copyfile_state_alloc() };
+    if zustand.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+
+    let ergebnis = mit_zustand_kopieren(zustand, &quelle_c, &ziel_c, art, &mut kontext);
+
+    // SICHERHEIT: `zustand` stammt aus `copyfile_state_alloc`, ist nicht null
+    // und wird hier genau einmal freigegeben.
+    unsafe { copyfile_state_free(zustand) };
+    ergebnis
+}
+
+/// Der Kern von [`datei_kopieren`], damit der Zustand auf jedem Weg
+/// freigegeben wird.
+fn mit_zustand_kopieren(
+    zustand: *mut c_void,
+    quelle: &CString,
+    ziel: &CString,
+    art: Uebertragungsart,
+    kontext: &mut Kopierkontext<'_>,
+) -> io::Result<Kopierergebnis> {
+    let rueckruf: Statusrueckruf = statusrueckruf;
+    // SICHERHEIT: beide Aufrufe setzen einen Zeigerwert in den eigenen Zustand.
+    // `COPYFILE_STATE_STATUS_CB` und `COPYFILE_STATE_STATUS_CTX` uebernehmen
+    // den Zeiger unveraendert, sie lesen ihn nicht. Der Rueckruf ist eine
+    // `extern "C"`-Funktion mit der Signatur aus `copyfile.h`, und `kontext`
+    // lebt laenger als der Aufruf von `copyfile(3)` weiter unten.
+    unsafe {
+        if copyfile_state_set(
+            zustand,
+            COPYFILE_STATE_STATUS_CB,
+            (rueckruf as *const ()).cast::<c_void>(),
+        ) != 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        if copyfile_state_set(
+            zustand,
+            COPYFILE_STATE_STATUS_CTX,
+            std::ptr::from_mut(kontext).cast::<c_void>(),
+        ) != 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+    }
+
+    let kennzeichen = match art {
+        Uebertragungsart::KlonenWennMoeglich => COPYFILE_ALL | COPYFILE_CLONE,
+        Uebertragungsart::ImmerBytes => COPYFILE_ALL,
+    };
+
+    // SICHERHEIT: beide Pfade sind nullterminiert und leben bis zum Ende des
+    // Aufrufs. `zustand` ist gueltig und traegt Rueckruf und Kontext.
+    let rueck = unsafe { copyfile(quelle.as_ptr(), ziel.as_ptr(), zustand, kennzeichen) };
+
+    if rueck != 0 {
+        let fehler = io::Error::last_os_error();
+        if fehler.raw_os_error() == Some(ECANCELED) {
+            return Ok(Kopierergebnis {
+                bytes: kontext.bytes,
+                abgebrochen: true,
+                geklont: false,
+            });
+        }
+        return Err(fehler);
+    }
+
+    Ok(Kopierergebnis {
+        bytes: kontext.bytes,
+        abgebrochen: false,
+        geklont: wurde_geklont(zustand),
+    })
+}
+
+/// Fragt den Zustand, ob das Dateisystem geklont statt kopiert hat.
+///
+/// Der Puffer ist grosszuegiger als das eine Byte, das `copyfile(3)` fuer
+/// seinen `bool` schreibt. Ein zu kleiner Puffer waere ein Ueberlauf, ein zu
+/// grosser kostet sieben Bytes auf dem Stapel.
+fn wurde_geklont(zustand: *mut c_void) -> bool {
+    let mut antwort = [0u8; 8];
+    // SICHERHEIT: `zustand` ist gueltig, und `COPYFILE_STATE_WAS_CLONED`
+    // schreibt einen `bool`, also ein Byte, in den uebergebenen Puffer.
+    let gelesen = unsafe {
+        copyfile_state_get(
+            zustand,
+            COPYFILE_STATE_WAS_CLONED,
+            antwort.as_mut_ptr().cast::<c_void>(),
+        )
+    };
+    gelesen == 0 && antwort[0] != 0
+}
+
+// ---------------------------------------------------------------------------
+// renamex_np(2): verschieben innerhalb eines Datentraegers
+// ---------------------------------------------------------------------------
+
+/// Verschiebt oder benennt um, innerhalb eines Datentraegers, ueber
+/// `rename(2)`.
+///
+/// Der Aufruf geht ueber `renamex_np(2)`, weil allein diese Fassung
+/// `RENAME_EXCL` kennt: mit `nur_wenn_frei` scheitert sie mit `EEXIST`, statt
+/// ein vorhandenes Ziel zu ueberschreiben. `std::fs::rename` kann das nicht
+/// ausdruecken, und ein Blick auf das Ziel vorweg waere ein Zeitfenster, in dem
+/// jemand anderes die Datei anlegt. Mit `nur_wenn_frei = false` ist der Aufruf
+/// das gewoehnliche `rename(2)`.
+///
+/// Liegen Quelle und Ziel auf verschiedenen Datentraegern, meldet der Kern
+/// [`EXDEV`]; der Aufrufer faellt dann auf Kopieren mit anschliessendem
+/// Loeschen zurueck. Die Zahl der Systemaufrufe haengt nicht an der Groesse der
+/// Datei: es ist genau einer, ob die Datei ein Byte oder ein Gigabyte traegt.
+pub fn im_datentraeger_verschieben(alt: &Path, neu: &Path, nur_wenn_frei: bool) -> io::Result<()> {
+    let alt_c = als_c_pfad(alt)?;
+    let neu_c = als_c_pfad(neu)?;
+    let kennzeichen = if nur_wenn_frei { RENAME_EXCL } else { 0 };
+    // SICHERHEIT: beide Pfade sind nullterminiert und leben bis zum Ende des
+    // Aufrufs. `renamex_np` nimmt nur diese drei Werte entgegen.
+    let rueck = unsafe { renamex_np(alt_c.as_ptr(), neu_c.as_ptr(), kennzeichen) };
+    if rueck != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+/// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
+///
+/// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
+/// kommt hier als Fehler zurueck, statt abgeschnitten weitergereicht zu werden.
+fn als_c_pfad(pfad: &Path) -> io::Result<CString> {
+    CString::new(pfad.as_os_str().as_bytes()).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{} enthaelt ein Nullbyte", pfad.display()),
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,6 +677,12 @@ mod tests {
     fn attrlist_hat_die_groesse_aus_sys_attr_h() {
         assert_eq!(size_of::<Attrlist>(), 24);
         assert_eq!(align_of::<Attrlist>(), 4);
+    }
+
+    #[test]
+    fn ein_pfad_mit_nullbyte_kommt_als_fehler_zurueck() {
+        let fehler = als_c_pfad(Path::new("kaputt\0name")).expect_err("das darf nicht durchgehen");
+        assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
     }
 
     #[test]

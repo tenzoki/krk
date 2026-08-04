@@ -6,12 +6,14 @@
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
 //! Die Regel oben lautet `deny` und nicht `forbid`, und der Unterschied ist
-//! Absicht: das spaetere Modul `verzeichnis::sys` bindet die beiden
-//! Systemaufrufe `getattrlistbulk` und `copyfile` und traegt dafuer
+//! Absicht: das Modul `verzeichnis::sys` bindet die Systemaufrufe
+//! `getattrlistbulk`, `copyfile` und `renamex_np` und traegt dafuer
 //! `#[allow(unsafe_code)]`. `forbid` liesse sich an dieser Stelle nicht
-//! oeffnen, das ist gerade sein Zweck.
+//! oeffnen, das ist gerade sein Zweck. Es ist das einzige Modul mit dieser
+//! Ausnahme, und mit Schritt 15 ist es das geblieben.
 
 pub mod ablage;
+pub mod operation;
 pub mod tasten;
 pub mod verzeichnis;
 pub mod zwischenablage;
