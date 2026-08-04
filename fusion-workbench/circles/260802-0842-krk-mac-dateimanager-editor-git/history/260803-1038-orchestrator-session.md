@@ -230,3 +230,61 @@ das Zeichen (`260803-2317`).
 **Nächster Schritt:** S12, vier Bereiche, Tabs, aktives Fenster und Sichtbarkeit. Der Plan
 nennt ihn den teuersten Einzelposten, und er ist der erste Schritt hinter dem bestandenen
 Messgate.
+
+### Turn 5 — 260803-2330 bis 260804-0937
+
+Vier Aufgaben, vier Commits. Der Turn hat den Umfang der Runde erweitert und einen zweiten
+Circle ins Portfolio gebracht.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T18 | planner | `e435ca9` | C10, Statuszeile, Weg zurück zum Fenster |
+| T19 | ontocoder | `bc95183` | S9b, drei Kombinationen nachgetragen |
+| T20 | coder | `bc95183` | Zählprüfungen ohne Literale |
+| T21 | shaper | `82c8ea6` | Anticipated Circle für einen eingebauten Web-Betrachter |
+
+**Der Nutzer hat zwei Funktionen nachbeauftragt**, und sie sind eine Erweiterung des
+Umfangs und keine Präzisierung: die Zwischenablage ansehen (`shift+f3`) und zu ihrem Inhalt
+springen (`opt+cmd+g`). Sie stehen als eigene Fähigkeit C10 im Spec, nicht als Erweiterung
+von C6 und C2, weil beide an derselben Auswertung dessen hängen, was in der Zwischenablage
+steht; diese Auswertung an zwei Stellen zu beschreiben hieße, zwei Wahrheiten darüber zu
+führen. Im Plan sind sie an S13 und S19 verankert, wo die nötigen Bauteile entstehen, statt
+danebengestellt. Der Plan ist dabei von 24 auf 26 Schritte gewachsen.
+
+**Drei Entscheidungen des Nutzers am selben Abend.** Das letzte Fenster bekommt einen Weg
+zurück; Fehler zeigt eine Statuszeile, mit Abbruch allein beim fehlenden Tastenabgriff;
+`cmd+y` bleibt, obwohl es auf einer deutschen Tastatur unter der Taste Z liegt, weil F3 die
+Vorschau trägt und die Belegung ab Werk änderbar ist. Am nächsten Morgen drei weitere: die
+Zwischenablage-Auswertung liest Text und Dateiverweis, der Menüeintrag heißt "Fenster
+einblenden" statt "Neues Fenster", und der eigene Browser bekommt einen anticipated Circle.
+
+**Ein Fehler von mir, vom `planner` gefunden.** Ich hatte ihm mitgegeben, C1 verlange die
+Statuszeile ohnehin. Der Spec nannte sie nirgends; die Behauptung stammte aus einem
+Defektdatensatz, war von dort in den Entscheidungsdatensatz gewandert und von mir ungeprüft
+weitergereicht. Sie steht jetzt als eigenes Abnahmekriterium in C1, mit Vermerk woher sie
+kommt. Ein zweiter Fehler von mir, vom `ontocoder` gefunden: der Zwischenablage-Datensatz
+trug nach meiner Beantwortung zwei `Answered`-Blöcke und im Kopf noch `Status: open`. Beides
+nachgezogen.
+
+**Der Nachtrag in S9b hat drei fest verdrahtete Zahlen im Rust-Code brechen lassen**, und
+der naheliegende Fix wäre der falsche gewesen. Die Zahlen auf 49 und 55 zu heben hätte
+dieselbe Falle für den nächsten Nachtrag wieder aufgestellt. Der `coder` hat die Prüfungen
+stattdessen zahlfrei formuliert und nachgewiesen, dass sie den nächsten Nachtrag überleben:
+probeweise ein vierter Eintrag angehängt, beide Prüfungen grün; danach derselbe Block mit
+einer doppelten Kombination, und die neue Prüfung fällt mit ihrer vorgesehenen Meldung.
+Beide Proben zurückgenommen, die Datei steht wieder auf ihrem Hash.
+
+**Der zweite Circle.** `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` steht als
+geplant (`_a_`) im Portfolio. Er erweitert die Grenze des aktiven Circles und ist keine
+spätere Runde von ihm: eine Runde setzt eine vorhandene Zusage um, dieser holt einen
+ausdrücklichen Ausschluss herein. Der `shaper` hat zwei Spannungen in den Antworten des
+Nutzers aufgelöst statt sie zu übergehen, eine davon vollständig (Verlauf gegen Zurück und
+Vor) und eine zur Hälfte, mit dem Rest als offener Frage im Circle.
+
+**Stand am Ende der Sitzung.** Dreizehn der sechsundzwanzig Planschritte tragen `[DONE]`,
+170 Prüfungen laufen grün, `clippy` meldet nichts, und die `unsafe`-Grenze hält in beiden
+Kisten mit je genau einer Ausnahme. Achtzehn Defekte sind offen, überwiegend Plantext; fünf
+Entscheidungen offen, acht beantwortet, vier umgesetzt.
+
+**Nächster Schritt bleibt S12**, jetzt größer als zu Beginn der Sitzung: er trägt zusätzlich
+die Statuszeile und den Weg zurück zum Fenster.
