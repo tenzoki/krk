@@ -86,8 +86,38 @@ pub enum Kommando {
     SeiteHoch,
     /// Die Auswahl eine Bildschirmseite nach unten.
     SeiteRunter,
+    /// Die Auswahl an den Anfang der Liste (C2).
+    Listenanfang,
+    /// Die Auswahl an das Ende der Liste (C2).
+    Listenende,
     /// In den ausgewaehlten Ordner hineinsteigen.
     Oeffnen,
+    /// In den uebergeordneten Ordner aufsteigen (C2).
+    OrdnerAufwaerts,
+    /// Einen Pfad eingeben und dorthin springen (C2).
+    Pfadeingabe,
+    /// Den Eintrag unter der Auswahl markieren und weiterruecken (C2).
+    MarkierungUmschalten,
+    /// Alle Eintraege markieren (C2).
+    AlleMarkieren,
+    /// Jede Markierung aufheben (C2).
+    MarkierungAufheben,
+    /// Die Markierung umkehren (C2).
+    MarkierungUmkehren,
+    /// Nach Name sortieren (C2).
+    SortierungName,
+    /// Nach Groesse sortieren (C2).
+    SortierungGroesse,
+    /// Nach Aenderungsdatum sortieren (C2).
+    SortierungDatum,
+    /// Nach Typ sortieren (C2).
+    SortierungTyp,
+    /// Die Sortierrichtung umkehren (C2).
+    SortierrichtungUmkehren,
+    /// Versteckte Dateien ein- und ausblenden (C2).
+    VersteckteUmschalten,
+    /// Zu dem springen, was in der Zwischenablage steht (C10).
+    ZwischenablageSpringen,
     /// Einen neuen Tab im aktiven Dateifenster oeffnen (C1).
     TabNeu,
     /// Den aktiven Tab schliessen (C1).
@@ -116,12 +146,30 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 16] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 31] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
         (Kommando::SeiteRunter, "seite_runter"),
+        (Kommando::Listenanfang, "listenanfang"),
+        (Kommando::Listenende, "listenende"),
         (Kommando::Oeffnen, "oeffnen"),
+        (Kommando::OrdnerAufwaerts, "ordner_aufwaerts"),
+        (Kommando::Pfadeingabe, "pfadeingabe"),
+        (Kommando::MarkierungUmschalten, "markierung_umschalten"),
+        (Kommando::AlleMarkieren, "alle_markieren"),
+        (Kommando::MarkierungAufheben, "markierung_aufheben"),
+        (Kommando::MarkierungUmkehren, "markierung_umkehren"),
+        (Kommando::SortierungName, "sortierung_name"),
+        (Kommando::SortierungGroesse, "sortierung_groesse"),
+        (Kommando::SortierungDatum, "sortierung_datum"),
+        (Kommando::SortierungTyp, "sortierung_typ"),
+        (
+            Kommando::SortierrichtungUmkehren,
+            "sortierrichtung_umkehren",
+        ),
+        (Kommando::VersteckteUmschalten, "versteckte_umschalten"),
+        (Kommando::ZwischenablageSpringen, "zwischenablage_springen"),
         (Kommando::TabNeu, "tab_neu"),
         (Kommando::TabSchliessen, "tab_schliessen"),
         (Kommando::TabNaechster, "tab_naechster"),

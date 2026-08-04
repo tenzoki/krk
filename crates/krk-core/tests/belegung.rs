@@ -140,10 +140,28 @@ fn jede_funktion_traegt_genau_eine_zeile_und_die_reservierte_keine_taste() {
 }
 
 #[test]
-fn die_drei_ab_werk_freien_kombinationen_kommen_nicht_vor() {
-    // C3: Umschalt+Entf, Cmd+C und Cmd+V bleiben unbelegt.
+fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
+    // Die Zusage: eine Kombination, die ein Leser belegt erwartete und die
+    // ausdruecklich frei bleibt, steht in keiner Tastenliste. Der Name nennt
+    // ihre Zahl nicht, denn die Liste waechst; eine Zahl im Namen bindet die
+    // Pruefung an ihre Groesse statt an ihre Zusage und muesste bei jedem
+    // Zuwachs mit umbenannt werden.
+    //
+    // Umschalt+Entf loescht nach `shared/decisions/
+    // 260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
+    // Cmd+C und Cmd+V sind fuer eine spaetere Zwischenablage reserviert (C3),
+    // und die Eingabetaste hat der Nutzer am 260804 freigegeben, nachdem der
+    // Einstieg in den Ordner auf cmd+right gewandert ist (C2). Alle vier
+    // fuehrt der Kopfkommentar von `resources/default-keymap.toml` auf.
+    //
+    // ctrl+b und ctrl+s sind mit derselben Aenderung unbelegt geworden und
+    // gehoeren trotzdem nicht hierher. Sie waren eine Behelfsbelegung fuer den
+    // Auf- und Abstieg, deren Grund weggefallen ist; niemand erwartet sie in
+    // einem Dateimanager. Sie hier zu fuehren hiesse zusagen, dass sie frei
+    // bleiben, und wuerde ausgerechnet ctrl+s dem Editor spaeterer Runden
+    // verstellen.
     let belegung = Belegung::auslieferung();
-    for text in ["shift+delete", "cmd+c", "cmd+v"] {
+    for text in ["shift+delete", "cmd+c", "cmd+v", "return"] {
         let druck = kombi(text).tastendruck();
         assert!(
             matches!(
@@ -344,7 +362,7 @@ fn jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste() {
         ("down", Kommando::AuswahlRunter),
         ("pageup", Kommando::SeiteHoch),
         ("pagedown", Kommando::SeiteRunter),
-        ("return", Kommando::Oeffnen),
+        ("cmd+right", Kommando::Oeffnen),
     ];
     for (text, kommando) in erwartet {
         let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi(text).tastendruck()) else {

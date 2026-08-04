@@ -61,13 +61,13 @@
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSControlTextEditingDelegate, NSScrollView, NSTableColumn,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSScrollView, NSTableColumn,
     NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
     NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
 };
@@ -80,10 +80,16 @@ use objc2_foundation::{
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::tasten::Kommando;
-use krk_core::verzeichnis::{Eintrag, Typ};
+use krk_core::verzeichnis::sprungmarke::{self, Sprungmarke};
+use krk_core::verzeichnis::{Eintrag, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts};
+use krk_core::zwischenablage::{self, Ziel};
 
+use crate::kommandos::auswahl::markieren_und_weiter;
+use crate::kommandos::navigation::{Bewegung, zielzeile};
+use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::tabs::Tabliste;
 
+use super::blaetter;
 use super::statuszeile::Statuszeile;
 use super::tableiste::Tableiste;
 
@@ -218,6 +224,11 @@ pub struct QuelleIvars {
     /// Der Weg, auf dem ein Mausklick das aktive Dateifenster umsetzt. Er ist
     /// wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt.
     aktivierung: RefCell<Option<Box<dyn Fn()>>>,
+    /// Die getippten Anfangsbuchstaben aus C2.
+    ///
+    /// Je Dateifenster und nicht je Tab: gesucht wird in der Liste, die gerade
+    /// auf dem Schirm steht, und jeder Tabwechsel setzt sie zurueck.
+    sprungmarke: RefCell<Sprungmarke>,
 }
 
 define_class!(
@@ -269,6 +280,7 @@ impl DateifensterQuelle {
             tabs: RefCell::new(tabs),
             einzug: RefCell::new(None),
             aktivierung: RefCell::new(None),
+            sprungmarke: RefCell::new(Sprungmarke::neu()),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -359,8 +371,14 @@ impl DateifensterQuelle {
     ///
     /// Kehrt sofort zurueck. Der Inhalt trifft gestueckelt ein; die erste
     /// Bildschirmseite steht mit dem ersten Stapel.
-    pub fn ordner_lesen(&self, pfad: &Path) {
-        self.ivars().tabs.borrow_mut().ordner_setzen(pfad);
+    ///
+    /// `auswahl` ist der Name des Eintrags, auf den die Auswahl springt, sobald
+    /// gelesen ist: beim Aufstieg der verlassene Ordner (C2), beim Sprung aus
+    /// der Zwischenablage die genannte Datei (C10).
+    pub fn ordner_lesen(&self, pfad: &Path, auswahl: Option<String>) {
+        self.ivars().tabs.borrow_mut().ordner_setzen(pfad, auswahl);
+        // Der Puffer der Sprungmarke gehoert der Liste, die er durchsucht hat.
+        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         // `ordner_setzen` hat die Auswahl des alten Ordners aufgehoben; die
         // Tabelle erfaehrt es hier. Sich darauf zu verlassen, dass `reloadData`
@@ -374,6 +392,7 @@ impl DateifensterQuelle {
 
     /// Nach einem Tabwechsel: Inhalt, Auswahl, Bildlauf und Leiste nachziehen.
     fn tab_gewechselt(&self) {
+        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
         let bildlauf = self.ivars().tabs.borrow().aktiver().bildlauf();
@@ -453,17 +472,58 @@ impl DateifensterQuelle {
     /// vorher ab; es kommt hier nicht an.
     pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
         match kommando {
-            Kommando::AuswahlHoch => self.auswahl_verschieben(-1),
-            Kommando::AuswahlRunter => self.auswahl_verschieben(1),
-            Kommando::SeiteHoch => self.auswahl_verschieben(-self.seitenhoehe()),
-            Kommando::SeiteRunter => self.auswahl_verschieben(self.seitenhoehe()),
+            Kommando::AuswahlHoch => self.auswahl_bewegen(Bewegung::Um(-1)),
+            Kommando::AuswahlRunter => self.auswahl_bewegen(Bewegung::Um(1)),
+            Kommando::SeiteHoch => self.auswahl_bewegen(Bewegung::Um(-self.seitenhoehe())),
+            Kommando::SeiteRunter => self.auswahl_bewegen(Bewegung::Um(self.seitenhoehe())),
+            Kommando::Listenanfang => self.auswahl_bewegen(Bewegung::Anfang),
+            Kommando::Listenende => self.auswahl_bewegen(Bewegung::Ende),
             Kommando::Oeffnen => self.auswahl_oeffnen(),
+            Kommando::OrdnerAufwaerts => self.ordner_aufwaerts(),
+            Kommando::Pfadeingabe => self.pfadeingabe_zeigen(),
+            Kommando::ZwischenablageSpringen => self.zwischenablage_springen(),
+            Kommando::MarkierungUmschalten => self.markieren_und_weiter(),
+            Kommando::AlleMarkieren => self.markierung_aendern(Ordnermodell::alle_markieren),
+            Kommando::MarkierungAufheben => {
+                self.markierung_aendern(Ordnermodell::markierung_aufheben)
+            }
+            Kommando::MarkierungUmkehren => {
+                self.markierung_aendern(Ordnermodell::markierung_umkehren)
+            }
+            Kommando::SortierungName => self.nach_schluessel_sortieren(Schluessel::Name),
+            Kommando::SortierungGroesse => self.nach_schluessel_sortieren(Schluessel::Groesse),
+            Kommando::SortierungDatum => self.nach_schluessel_sortieren(Schluessel::Geaendert),
+            Kommando::SortierungTyp => self.nach_schluessel_sortieren(Schluessel::Typ),
+            Kommando::SortierrichtungUmkehren => self.sortierrichtung_umkehren(),
+            Kommando::VersteckteUmschalten => self.verstecke_umschalten(),
             Kommando::TabNeu => self.tab_neu(),
             Kommando::TabSchliessen => self.tab_schliessen(),
             Kommando::TabNaechster => self.tab_naechster(),
             Kommando::TabVoriger => self.tab_voriger(),
             // Nicht Sache eines einzelnen Dateifensters.
             _ => return false,
+        }
+        true
+    }
+
+    /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.
+    ///
+    /// Liefert, ob KRK es verbraucht hat. Ein Zeichen, das kein Dateiname
+    /// tragen kann, weist der Kern ab; der Tastendruck geht dann unveraendert
+    /// weiter, statt ins Leere geschluckt zu werden. Findet sich kein Eintrag,
+    /// bleibt die Auswahl stehen und das Zeichen gilt trotzdem als verbraucht:
+    /// der Puffer traegt es, und der naechste Buchstabe baut darauf auf.
+    pub fn sprungmarke_tippen(&self, zeichen: char) -> bool {
+        let zeile = {
+            let mut marke = self.ivars().sprungmarke.borrow_mut();
+            let Some(praefix) = marke.tippen(zeichen, Instant::now()) else {
+                return false;
+            };
+            let tabs = self.ivars().tabs.borrow();
+            sprungmarke::erste_zeile_mit(tabs.aktiver().modell(), praefix)
+        };
+        if let Some(zeile) = zeile {
+            self.zeile_setzen(zeile);
         }
         true
     }
@@ -481,30 +541,29 @@ impl DateifensterQuelle {
         sichtbare.max(1)
     }
 
-    /// Verschiebt die Auswahl um die genannte Zahl von Zeilen.
+    /// Bewegt die Auswahl (C2).
     ///
-    /// Am Rand bleibt sie stehen, statt umzulaufen. Ohne bestehende Auswahl
-    /// faengt sie an dem Rand an, aus dem die Bewegung kommt: Pfeil ab setzt
-    /// auf die erste Zeile, Pfeil auf auf die letzte.
-    fn auswahl_verschieben(&self, schritte: isize) {
-        let zeilen = self.zeilen();
-        let Some(letzte) = zeilen.checked_sub(1) else {
-            return;
-        };
-        let letzte = letzte as isize;
-
-        let tabelle = &self.ivars().tabelle;
+    /// Die Rechnung dahinter steht in [`crate::kommandos::navigation`]; hier
+    /// bleibt allein, was AppKit betrifft: die Zeilennummer der Tabelle
+    /// abfragen und die neue setzen.
+    fn auswahl_bewegen(&self, bewegung: Bewegung) {
         // `selectedRow` liefert -1, solange nichts ausgewaehlt ist.
-        let jetzt = tabelle.selectedRow();
-        let ziel = if jetzt < 0 {
-            if schritte < 0 { letzte } else { 0 }
-        } else {
-            jetzt.saturating_add(schritte).clamp(0, letzte)
-        };
+        let jetzt = self.ivars().tabelle.selectedRow();
+        if let Some(ziel) = zielzeile(bewegung, jetzt, self.zeilen()) {
+            self.zeile_setzen(ziel);
+        }
+    }
 
-        let auswahl = NSIndexSet::indexSetWithIndex(ziel as usize);
+    /// Setzt die Auswahl auf diese Zeile und blaettert sie ins Bild.
+    ///
+    /// Der eine Weg, auf dem die Tastatur die Auswahl umsetzt: die Bewegungen
+    /// aus C2, die Sprungmarke und das Markieren mit Weiterruecken enden alle
+    /// hier.
+    fn zeile_setzen(&self, zeile: usize) {
+        let tabelle = &self.ivars().tabelle;
+        let auswahl = NSIndexSet::indexSetWithIndex(zeile);
         tabelle.selectRowIndexes_byExtendingSelection(&auswahl, false);
-        tabelle.scrollRowToVisible(ziel as NSInteger);
+        tabelle.scrollRowToVisible(zeile as NSInteger);
         // Ausdruecklich und nicht ueber den Delegiertenrueckruf: ob AppKit die
         // Auswahlmeldung auch bei einer selbst gesetzten Auswahl schickt, ist
         // eine Zusage, die dieser Weg nicht braucht.
@@ -589,8 +648,183 @@ impl DateifensterQuelle {
                 .map(|eintrag| tab.ordner().join(&eintrag.name))
         };
         if let Some(ziel) = ziel {
-            self.ordner_lesen(&ziel);
+            self.ordner_lesen(&ziel, None);
         }
+    }
+
+    /// Steigt in den uebergeordneten Ordner auf (C2).
+    ///
+    /// Die Auswahl steht danach auf dem Ordner, aus dem der Nutzer kam. Die
+    /// Rechnung dafuer ist reine Pfadarithmetik und steht im Kern.
+    fn ordner_aufwaerts(&self) {
+        let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
+        if let Some((eltern, verlassen)) = aufwaerts(&hier) {
+            self.ordner_lesen(&eltern, Some(verlassen));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Der eine Navigationsweg: Pfadeingabe und Zwischenablage (C2, C10)
+    // ------------------------------------------------------------------
+
+    /// Zeigt die Pfadeingabe als Blatt am Fenster (C2).
+    ///
+    /// Der erste der beiden Ausloeser des einen Navigationswegs. Steht das
+    /// Fenster nicht (etwa waehrend des Aufbaus), geschieht nichts: ein Blatt
+    /// ohne Fenster gibt es nicht.
+    fn pfadeingabe_zeigen(&self) {
+        let Some(fenster) = self.ivars().tabelle.window() else {
+            return;
+        };
+        let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        blaetter::pfadeingabe::zeigen(
+            self.mtm(),
+            &fenster,
+            &hier.to_string_lossy(),
+            move |eingabe| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.pfad_anspringen(Path::new(eingabe.trim()));
+                }
+            },
+        );
+    }
+
+    /// Springt zu dem, was in der Zwischenablage steht (C10).
+    ///
+    /// Der zweite Ausloeser desselben Navigationswegs. Der Unterschied zur
+    /// Pfadeingabe von Hand ist allein, woher der Wert kommt; die Pruefung und
+    /// die Navigation dahinter sind dieselben.
+    fn zwischenablage_springen(&self) {
+        let Some(inhalt) = super::zwischenablage::lesen() else {
+            self.meldung_zeigen("die Zwischenablage ist leer");
+            return;
+        };
+        match zwischenablage::deuten(&inhalt) {
+            Ziel::Pfad(pfad) => self.pfad_anspringen(&pfad),
+            Ziel::Web(adresse) => {
+                if !super::zwischenablage::im_browser_oeffnen(&adresse) {
+                    self.meldung_zeigen(&format!(
+                        "{adresse} liess sich nicht an den Systembrowser uebergeben"
+                    ));
+                }
+            }
+            Ziel::Nichts => self.meldung_zeigen(
+                "die Zwischenablage traegt weder einen absoluten Pfad noch eine Web-Adresse",
+            ),
+        }
+    }
+
+    /// Prueft einen Pfad und geht dorthin.
+    ///
+    /// **Die eine Stelle, die ein geprueftes Ergebnis anwendet.** Beide
+    /// Ausloeser oben enden hier, und ein zweiter Navigationsweg daneben
+    /// entsteht nicht. Was geprueft wird, steht in
+    /// [`crate::kommandos::pfadeingabe`] und ist ohne Fenster pruefbar.
+    fn pfad_anspringen(&self, pfad: &Path) {
+        let angezeigt = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
+        match pfadeingabe::pruefen(pfad, &angezeigt) {
+            Ergebnis::Wechseln { ordner, auswahl } => self.ordner_lesen(&ordner, auswahl),
+            Ergebnis::NurAuswahl { name } => self.eintrag_anspringen(&name),
+            Ergebnis::Meldung(text) => self.meldung_zeigen(&text),
+        }
+    }
+
+    /// Setzt die Auswahl auf den Eintrag dieses Namens im angezeigten Ordner.
+    ///
+    /// Der Fall aus C10, in dem die genannte Datei bereits vor dem Nutzer
+    /// liegt: KRK wechselt den Ordner nicht, sondern blaettert den Eintrag ins
+    /// Bild. Ein noch laufender Lesevorgang kann ihn noch nicht kennen; dann
+    /// meldet die Statuszeile, statt wortlos nichts zu tun.
+    fn eintrag_anspringen(&self, name: &str) {
+        let zeile = {
+            let tabs = self.ivars().tabs.borrow();
+            let modell = tabs.aktiver().modell();
+            modell
+                .index_von_namen(name)
+                .and_then(|index| modell.zeile_von(index))
+        };
+        match zeile {
+            Some(zeile) => self.zeile_setzen(zeile),
+            None => self.meldung_zeigen(&format!("{name} steht nicht in der Liste")),
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Mehrfachauswahl, Sortierung, versteckte Eintraege (C2)
+    // ------------------------------------------------------------------
+
+    /// Markiert den Eintrag unter der Auswahl und rueckt weiter (C2).
+    fn markieren_und_weiter(&self) {
+        let Ok(zeile) = usize::try_from(self.ivars().tabelle.selectedRow()) else {
+            return;
+        };
+        let weiter = {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            markieren_und_weiter(tabs.aktiver_mut().modell_mut(), zeile)
+        };
+        self.ivars().tabelle.reloadData();
+        match weiter {
+            Some(weiter) => self.zeile_setzen(weiter),
+            // Die letzte Zeile: die Markierung steht, die Auswahl bleibt.
+            None => self.auswahl_anzeigen(),
+        }
+    }
+
+    /// Wendet einen der drei uebrigen Markierungsbefehle an (C2).
+    fn markierung_aendern(&self, aendern: impl FnOnce(&mut Ordnermodell)) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            aendern(tabs.aktiver_mut().modell_mut());
+        }
+        self.ivars().tabelle.reloadData();
+        self.auswahl_anzeigen();
+    }
+
+    /// Sortiert nach diesem Schluessel und schaltet bei Wiederholung die
+    /// Richtung um (C2).
+    fn nach_schluessel_sortieren(&self, schluessel: Schluessel) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            tabs.aktiver_mut()
+                .modell_mut()
+                .nach_schluessel_sortieren(schluessel);
+        }
+        self.umsortiert();
+    }
+
+    /// Kehrt die Sortierrichtung um, ohne den Schluessel zu wechseln (C2).
+    fn sortierrichtung_umkehren(&self) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            let modell = tabs.aktiver_mut().modell_mut();
+            let jetzt = modell.sortierung();
+            modell.sortierung_setzen(Sortierung::neu(
+                jetzt.schluessel,
+                jetzt.richtung.umgekehrt(),
+            ));
+        }
+        self.umsortiert();
+    }
+
+    /// Blendet versteckte Eintraege ein und wieder aus (C2).
+    fn verstecke_umschalten(&self) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            tabs.aktiver_mut().modell_mut().verstecke_umschalten();
+        }
+        self.umsortiert();
+    }
+
+    /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
+    ///
+    /// Die Auswahl haengt am Eintrag und nicht an der Zeile; sie wandert
+    /// deshalb mit und wird hier nur neu angezeigt. Der Puffer der Sprungmarke
+    /// faellt: er hatte die alte Reihenfolge durchsucht.
+    fn umsortiert(&self) {
+        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
+        self.ivars().tabelle.reloadData();
+        self.auswahl_anzeigen();
     }
 
     /// Reicht den Eintrag der genannten Zeile an eine Auswertung weiter.
@@ -601,6 +835,15 @@ impl DateifensterQuelle {
     fn mit_zeile<T>(&self, zeile: usize, auswerten: impl FnOnce(&Eintrag) -> T) -> Option<T> {
         let tabs = self.ivars().tabs.borrow();
         tabs.aktiver().modell().zeile(zeile).map(auswerten)
+    }
+
+    /// Ob der Eintrag dieser Zeile markiert ist (C2).
+    fn zeile_markiert(&self, zeile: usize) -> bool {
+        let tabs = self.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        modell
+            .eintragsindex(zeile)
+            .is_some_and(|index| modell.ist_markiert(index))
     }
 
     // ------------------------------------------------------------------
@@ -840,6 +1083,20 @@ impl DateifensterDelegierter {
             .mit_zeile(zeile, |eintrag| self.beschriften(spalte, eintrag))?;
         let feld = self.feld(tabelle, spalte);
         feld.setStringValue(&NSString::from_str(&text));
+        // Die Markierung aus C2 sichtbar machen. Ohne ein Zeichen auf dem
+        // Schirm waeren die vier Markierungsbefehle nicht nachweisbar, und der
+        // Nutzer wuesste vor einer Dateioperation nicht, worauf sie wirkt.
+        // Orange und nicht blau: die Auswahl faerbt AppKit bereits blau, und
+        // zwei blaue Kennzeichen liessen sich nicht unterscheiden. Die Farbe
+        // wird in **jedem** Durchgang gesetzt und nicht nur im markierten Fall:
+        // die Zellenansichten sind wiederverwendet, und eine ungesetzte Farbe
+        // bliebe die des vorigen Eintrags.
+        let farbe = if self.ivars().quelle.zeile_markiert(zeile) {
+            NSColor::systemOrangeColor()
+        } else {
+            NSColor::labelColor()
+        };
+        feld.setTextColor(Some(&farbe));
         Some(Retained::into_super(Retained::into_super(feld)))
     }
 

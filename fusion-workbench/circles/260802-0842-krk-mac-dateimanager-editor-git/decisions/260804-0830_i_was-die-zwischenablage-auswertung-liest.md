@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C10), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 13 und Schritt 19)
 
@@ -84,3 +84,5 @@ Dateiverweis auf eine Datei zeigt und C6 bereits sagt, wie eine Datei aussieht.
 
 ---
 Answered: Nutzerentscheid 260804 — **Text und Dateiverweis.** Die Auswertung liest beides: einen Pfad oder eine URL als Text, und den Dateiverweis, den der Finder bei `Cmd+C` auf einer Datei ablegt. Die Empfehlung dieses Datensatzes trägt: `Cmd+C` im Finder ist der naheliegendste Weg, einen Pfad in die Zwischenablage zu bringen, und genau dieser Weg legt keinen Text-Pfad ab. Ein reiner Textleser fiele damit im häufigsten Fall aus. Der Preis ist eine zweite Abfrage am Pasteboard. Bindet S13; die Umsetzung zieht diesen Datensatz auf `_i_`.
+
+Implemented: (Commit-Hash wird vom Nutzer nachgetragen) — S13 liest beide Sorten. `crates/krk-ui/src/appkit/zwischenablage.rs` fragt in `lesen` zuerst `NSPasteboardTypeFileURL` und danach `NSPasteboardTypeString` ab; die erste Sorte mit nichtleerem Inhalt gewinnt. Die Deutung dahinter kennt keinen zweiten Zweig für den Dateiverweis: er kommt als `file:`-Zeichenkette an, und `krk_core::zwischenablage::deuten` behandelt ihn als Pfad. Am laufenden Bündel am 260804-1309 nachgewiesen: nach `osascript -e 'set the clipboard to POSIX file "/tmp/krk-abnahme/dora.txt"'` trägt die Zwischenablage allein `«class furl»` und keinen Text (`pbpaste` liefert nichts); `opt+cmd+g` stellt die Auswahl trotzdem auf `dora.txt`. Ein reiner Textleser hätte hier "nichts Verwertbares" gemeldet.

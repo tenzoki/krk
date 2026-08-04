@@ -14,3 +14,4 @@
 pub mod ablage;
 pub mod tasten;
 pub mod verzeichnis;
+pub mod zwischenablage;

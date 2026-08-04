@@ -30,11 +30,16 @@
 //!
 //! # Der Weg eines Tastendrucks
 //!
-//! Der Ereignisabgriff kennt kein Dateifenster; er liefert ein [`Kommando`] an
-//! [`Anwendungsdelegierter::kommando_ausfuehren`]. Der teilt auf: was das
+//! Der Ereignisabgriff kennt kein Dateifenster; er liefert eine [`Eingabe`] an
+//! [`Anwendungsdelegierter::eingabe_ausfuehren`]. Der teilt auf: was das
 //! Fenster als ganzes betrifft, bleibt hier, alles uebrige geht an die
 //! Datenquelle des **aktiven** Dateifensters. Eine zweite Stelle, die
 //! entscheidet, wohin ein Tastendruck geht, entsteht nicht.
+//!
+//! Zwei Sorten von Eingabe kommen an. Ein [`Kommando`] ist eine nachgeschlagene
+//! Funktion; ein Zeichen gehoert der Sprungmarke aus C2 und damit immer dem
+//! aktiven Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer
+//! steht.
 //!
 //! # Der Messmodus haengt an derselben Stelle wie der Tastenabgriff
 //!
@@ -86,7 +91,7 @@ use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
 use super::bildtakt::{self, Zeichenende};
-use super::ereignisse::{self, Tastenabgriff};
+use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::menue;
 use super::tabelle::Dateifenster;
@@ -321,13 +326,15 @@ impl Anwendungsdelegierter {
         meldungen.extend(meldung);
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let abgriff =
-            Tastenabgriff::einrichten(belegung, self.ivars().tasten_protokoll, move |kommando| {
-                match schwach.load() {
-                    Some(selbst) => selbst.kommando_ausfuehren(kommando),
-                    None => false,
-                }
-            });
+        let abgriff = Tastenabgriff::einrichten(
+            self.mtm(),
+            belegung,
+            self.ivars().tasten_protokoll,
+            move |eingabe| match schwach.load() {
+                Some(selbst) => selbst.eingabe_ausfuehren(eingabe),
+                None => false,
+            },
+        );
         match abgriff {
             Some(abgriff) => {
                 let _ = self.ivars().tastenabgriff.set(abgriff);
@@ -353,7 +360,7 @@ impl Anwendungsdelegierter {
             let pfad = aufgabe.startordner().to_path_buf();
             self.dateifenster(Fensterseite::Links)
                 .quelle()
-                .ordner_lesen(&pfad);
+                .ordner_lesen(&pfad, None);
             return;
         }
         let uebersicht = [
@@ -383,14 +390,31 @@ impl Anwendungsdelegierter {
     // Kommandos
     // ------------------------------------------------------------------
 
+    /// Fuehrt aus, was der Ereignisabgriff geliefert hat.
+    ///
+    /// Die eine Stelle, die entscheidet, wohin ein Tastendruck geht. Ein
+    /// getipptes Zeichen gehoert immer dem aktiven Dateifenster, weil die
+    /// Sprungmarke aus C2 die Liste durchsucht, die vor dem Nutzer steht.
+    fn eingabe_ausfuehren(&self, eingabe: Eingabe) -> bool {
+        if self.ivars().dateifenster.get().is_none() {
+            return false;
+        }
+        match eingabe {
+            Eingabe::Kommando(kommando) => self.kommando_ausfuehren(kommando),
+            Eingabe::Zeichen(zeichen) => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .sprungmarke_tippen(zeichen)
+            }
+        }
+    }
+
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
     ///
     /// Liefert, ob es ausgefuehrt wurde; nur dann schluckt der Abgriff das
     /// Ereignis.
     fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
-        if self.ivars().dateifenster.get().is_none() {
-            return false;
-        }
         let ausgefuehrt = match kommando {
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
@@ -600,7 +624,7 @@ impl Anwendungsdelegierter {
         let anweisung = lauf.borrow_mut().naechster_schritt(zustand);
         match anweisung {
             Anweisung::Warten => {}
-            Anweisung::Lesen(pfad) => quelle.ordner_lesen(&pfad),
+            Anweisung::Lesen(pfad) => quelle.ordner_lesen(&pfad, None),
             Anweisung::Taste => ereignisse::pfeil_ab_senden(self.mtm(), fenster),
             Anweisung::Fertig => {
                 lauf.borrow().ausgeben();

@@ -20,3 +20,6 @@ Freigabe, einen vorhandenen Kommentar anzufassen.
 
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260804-0907-s9b-drei-kombinationen-nachgetragen.md`
+
+---
+Resolved: Die Herkunftsangabe im Kopf von `resources/default-keymap.toml` heisst jetzt "Faehigkeiten C1 bis C7 sowie C10". Mitgenommen bei der Umsetzung von Schritt 11c am 260804-1214, weil derselbe Textblock ohnehin angefasst wurde.

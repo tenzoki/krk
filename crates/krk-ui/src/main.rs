@@ -14,15 +14,17 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Drei Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Vier Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der vier Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
 //! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
-//! werden.
+//! werden. `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
+//! C10, darunter die eine Stelle, die einen Pfad prueft.
 
 mod appkit;
 mod fenstermodell;
+mod kommandos;
 mod messmodus;
 mod tabs;
 

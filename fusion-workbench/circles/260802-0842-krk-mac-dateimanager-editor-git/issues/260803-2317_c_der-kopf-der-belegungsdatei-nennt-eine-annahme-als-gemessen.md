@@ -38,3 +38,6 @@ Die Änderung gehört dem `ontocoder`: `resources/default-keymap.toml` ist eine 
 ---
 
 Herkunft: gefunden bei der Umsetzung von Schritt 11 am 260803-2317, beim Lesen des Kopfkommentars als Vertragsbeschreibung des Parsers.
+
+---
+Resolved: Der Klammerzusatz im Kopf von `resources/default-keymap.toml` trennt jetzt Messung und Ableitung. Er lautet: "(C3; gemessen ist allein der Fall mit gehaltener fn-Taste, `spikes/fn-tasten/messung-A.txt` Ereignisse #03 bis #05; der Gleichlauf beider Faelle ist daraus abgeleitet und am Referenzgeraet nicht messbar, weil dessen Touch Bar ohne gehaltenes fn ueberhaupt keine F3 liefert)." Die zitierten Ereignisse sind nachgesehen: #03 code=99 (F3), #04 code=96 (F5), #05 code=100 (F8), alle mit `mod=function`. Der Stand deckt sich damit mit `spikes/fn-tasten/messung-A-neuauswertung.txt:64-65`, mit dem Nachtrag vom 260802-1409 in `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` und mit dem Modulkopf von `crates/krk-core/src/tasten/normalisierung.rs`. Kein Eintrag der Datei hat sich dadurch geaendert. Mitgenommen bei der Umsetzung von Schritt 11c am 260804-1214, weil derselbe Textblock ohnehin angefasst wurde.

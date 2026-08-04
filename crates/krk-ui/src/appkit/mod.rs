@@ -7,15 +7,16 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Neun Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Elf Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
 //! anwendung ──> menue
 //!           ──> fenster ──> aufteilung ──> tabelle ──> krk-core::verzeichnis
 //!           ──> ereignisse            ──> tableiste     crate::tabs
-//!           ──> bildtakt ──> crate::messmodus
-//!                                     ──> statuszeile
+//!           ──> bildtakt ──> crate::messmodus           crate::kommandos
+//!                                     ──> statuszeile   blaetter
+//!                                                       zwischenablage
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
@@ -31,22 +32,28 @@
 //! schlaegt sie im Kern nach und reicht das Kommando an eine gewoehnliche
 //! Rust-Senke weiter. [`bildtakt`] haelt den `CADisplayLink` und den Nachschlag
 //! der Bildwiederholrate, die beiden Beruehrungen mit AppKit, die die
-//! Fruehmessung aus Schritt 8 braucht.
+//! Fruehmessung aus Schritt 8 braucht. [`blaetter`] haelt die gemeinsame Huelle
+//! fuer die Dialoge am Fenster und darin das Eingabeblatt der Pfadeingabe aus
+//! C2. [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
+//! `NSPasteboard` und die Uebergabe einer Web-Adresse an den Systembrowser.
 //!
-//! Drei Pfeile fuehren aus diesem Verzeichnis heraus, und alle drei tragen nur
+//! Vier Pfeile fuehren aus diesem Verzeichnis heraus, und alle vier tragen nur
 //! gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
 //! Bildwiederholrate und die Zeitpunkte der Bildgrenzen, [`tabelle`] haelt das
-//! Tabmodell aus `crate::tabs`, und [`aufteilung`] rechnet die Breiten mit
-//! `crate::fenstermodell`. Keines der drei Ziele nennt eine `objc2`-Kiste.
+//! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`, und
+//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`. Keines der
+//! Ziele nennt eine `objc2`-Kiste.
 
 mod anwendung;
 mod aufteilung;
 mod bildtakt;
+mod blaetter;
 mod ereignisse;
 mod fenster;
 mod menue;
 mod statuszeile;
 mod tabelle;
 mod tableiste;
+mod zwischenablage;
 
 pub use anwendung::starten;

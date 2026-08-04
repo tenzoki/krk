@@ -16,6 +16,13 @@
 //! der ausgewaehlte Eintrag gerade steht. Laege sie als Zeilennummer in der
 //! `NSTableView`, zeigte dieselbe Nummer nach jedem [`Ordnermodell::abschliessen`]
 //! und nach jedem [`Ordnermodell::sortierung_setzen`] auf einen anderen Eintrag.
+//!
+//! **Die Markierung aus C2 wohnt aus demselben Grund hier.** Sie ist etwas
+//! anderes als die Auswahl: die Auswahl ist der eine Eintrag unter dem
+//! Cursor, die Markierung eine Menge von Eintraegen, auf die eine
+//! Dateioperation gleich wirken soll. Auch sie haengt am Eintragsindex und
+//! ueberlebt damit jedes Umsortieren und jedes Ein- und Ausblenden der
+//! versteckten Eintraege.
 
 use super::eintrag::Eintrag;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
@@ -33,6 +40,12 @@ pub struct Ordnermodell {
     /// Ein Index und keine Zeilennummer: `sichtreihenfolge` wird bei jedem
     /// Sortierwechsel neu gebaut, `eintraege` nicht.
     auswahl: Option<u32>,
+    /// Die Markierung aus C2, ein Wahrheitswert je Eintrag.
+    ///
+    /// Parallel zu `eintraege` und nicht zur Sichtreihenfolge, aus demselben
+    /// Grund wie die Auswahl. Eine Liste statt einer Menge, weil "alle
+    /// markieren" bei 100.000 Eintraegen sonst 100.000 Einfuegungen waere.
+    markiert: Vec<bool>,
 }
 
 impl Ordnermodell {
@@ -45,6 +58,7 @@ impl Ordnermodell {
             verstecke_ausblenden: true,
             generation,
             auswahl: None,
+            markiert: Vec::new(),
         }
     }
 
@@ -66,11 +80,12 @@ impl Ordnermodell {
 
     /// Leert das Modell und setzt es auf eine neue Generation.
     ///
-    /// Die Auswahl faellt mit: sie zeigt auf einen Eintrag des alten Ordners,
-    /// und im neuen gibt es ihn nicht.
+    /// Auswahl und Markierung fallen mit: beide zeigen auf Eintraege des alten
+    /// Ordners, und im neuen gibt es sie nicht.
     pub fn leeren(&mut self, generation: u64) {
         self.eintraege.clear();
         self.sichtreihenfolge.clear();
+        self.markiert.clear();
         self.generation = generation;
         self.auswahl = None;
     }
@@ -87,6 +102,7 @@ impl Ordnermodell {
             let index = self.eintraege.len() as u32;
             let sichtbar = !(self.verstecke_ausblenden && eintrag.versteckt);
             self.eintraege.push(eintrag);
+            self.markiert.push(false);
             if sichtbar {
                 self.sichtreihenfolge.push(index);
             }
@@ -201,6 +217,83 @@ impl Ordnermodell {
     /// seine Auswahl wieder da, statt beim Umschalten verloren zu gehen.
     pub fn auswahl_zeile(&self) -> Option<usize> {
         self.zeile_von(self.auswahl?)
+    }
+
+    /// Der Eintragsindex des Eintrags mit diesem Namen.
+    ///
+    /// Der Weg vom Namen zum Eintrag, den der Sprung aus C10 braucht: die
+    /// Zwischenablage nennt eine Datei, und gesucht ist ihre Zeile. Auch die
+    /// ausgeblendeten Eintraege zaehlen; ob der gefundene sichtbar ist, sagt
+    /// danach [`Ordnermodell::zeile_von`].
+    pub fn index_von_namen(&self, name: &str) -> Option<u32> {
+        self.eintraege
+            .iter()
+            .position(|eintrag| eintrag.name == name)
+            .map(|index| index as u32)
+    }
+
+    // ------------------------------------------------------------------
+    // Die Markierung aus C2
+    // ------------------------------------------------------------------
+
+    /// Ob dieser Eintrag markiert ist.
+    pub fn ist_markiert(&self, eintragsindex: u32) -> bool {
+        self.markiert
+            .get(eintragsindex as usize)
+            .copied()
+            .unwrap_or(false)
+    }
+
+    /// Wie viele Eintraege markiert sind.
+    ///
+    /// Ueber alle gelesenen Eintraege, auch die gerade ausgeblendeten: eine
+    /// Markierung, die der Nutzer nicht sieht, besteht trotzdem.
+    pub fn markierungszahl(&self) -> usize {
+        self.markiert.iter().filter(|markiert| **markiert).count()
+    }
+
+    /// Kehrt die Markierung eines einzelnen Eintrags um.
+    ///
+    /// Der erste der vier Markierungsbefehle aus C2, ohne das Weiterruecken der
+    /// Auswahl: das ist Sache der Oberflaeche, die die Zeilen kennt.
+    pub fn markierung_umschalten(&mut self, eintragsindex: u32) {
+        if let Some(markiert) = self.markiert.get_mut(eintragsindex as usize) {
+            *markiert = !*markiert;
+        }
+    }
+
+    /// Markiert alle sichtbaren Eintraege (C2).
+    ///
+    /// Ausgeblendete bleiben unberuehrt. Sie mitzumarkieren hiesse, eine
+    /// spaetere Dateioperation auf Eintraege zu richten, die der Nutzer beim
+    /// Druecken der Taste nicht vor sich hatte.
+    pub fn alle_markieren(&mut self) {
+        for index in &self.sichtreihenfolge {
+            if let Some(markiert) = self.markiert.get_mut(*index as usize) {
+                *markiert = true;
+            }
+        }
+    }
+
+    /// Hebt jede Markierung auf (C2).
+    ///
+    /// Ueber alle Eintraege und nicht nur ueber die sichtbaren: "jede
+    /// Markierung aufheben" heisst jede, und eine stehengebliebene, die der
+    /// Nutzer nicht sieht, waere die Ueberraschung bei der naechsten Operation.
+    pub fn markierung_aufheben(&mut self) {
+        self.markiert.fill(false);
+    }
+
+    /// Kehrt die Markierung aller sichtbaren Eintraege um (C2).
+    ///
+    /// Derselbe Zuschnitt wie [`Ordnermodell::alle_markieren`] und aus
+    /// demselben Grund.
+    pub fn markierung_umkehren(&mut self) {
+        for index in &self.sichtreihenfolge {
+            if let Some(markiert) = self.markiert.get_mut(*index as usize) {
+                *markiert = !*markiert;
+            }
+        }
     }
 
     /// Alle sichtbaren Eintraege in Sichtreihenfolge.

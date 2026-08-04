@@ -377,15 +377,24 @@ impl Tabliste {
 
     /// Laesst den sichtbaren Tab einen anderen Ordner zeigen.
     ///
-    /// Der Weg jeder Navigation: hinein, hinaus, ueber die Pfadeingabe. Der
-    /// bisherige Inhalt faellt, und der Lesevorgang beginnt sofort.
-    pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>) {
+    /// Der Weg jeder Navigation: hinein, hinaus, ueber die Pfadeingabe, aus der
+    /// Zwischenablage. Der bisherige Inhalt faellt, und der Lesevorgang beginnt
+    /// sofort.
+    ///
+    /// `auswahl` ist der Name des Eintrags, auf den die Auswahl springt, sobald
+    /// gelesen ist. Der Aufstieg aus C2 nennt hier den verlassenen Ordner, der
+    /// Sprung aus C10 die genannte Datei. Getragen wird beides von derselben
+    /// `wunschauswahl`, die schon die Sitzungswiederherstellung benutzt: der
+    /// Name ueberlebt einen noch laufenden Lesevorgang, eine Zeilennummer
+    /// nicht.
+    pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<String>) {
         let stelle = self.aktiv;
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let mut zustand = Tabzustand::auf(ordner);
         zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
+        zustand.auswahl = auswahl;
         self.tabs[stelle] = Tabinhalt::aus_zustand(&zustand);
         self.lesen_starten(stelle);
     }

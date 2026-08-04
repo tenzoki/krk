@@ -6,8 +6,8 @@
 # zweite Belegungstabelle im Code gibt es danach nicht mehr.
 #
 # Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeiten C1 bis
-# C7. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort in der
-# Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
+# C7 sowie C10. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort in
+# der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
 # `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` und
 # `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
 #
@@ -26,17 +26,23 @@
 # hier deshalb `shift+cmd+k`: dieselbe Kombination, in der Schreibweise dieser
 # Datei.
 #
-# Tastennamen: f3 bis f8, delete, up, down, pageup, pagedown, home, end,
-# return, tab, esc, space sowie Buchstaben und Ziffern.
+# Tastennamen: f1 bis f12, delete, up, down, left, right, pageup, pagedown,
+# home, end, return, tab, esc, space sowie Buchstaben und Ziffern.
 #
 # Die fn-Taste ist keine Zusatztaste dieser Schreibweise und kommt in keiner
 # Kombination vor. KRK belegt den Tastencode, und F3 mit gehaltener fn-Taste
-# erzeugt denselben Tastencode wie ein nacktes F3 (C3, gemessen in
-# `spikes/fn-tasten/messung-A.txt`).
+# erzeugt denselben Tastencode wie ein nacktes F3 (C3; gemessen ist allein der
+# Fall mit gehaltener fn-Taste, `spikes/fn-tasten/messung-A.txt` Ereignisse #03
+# bis #05; der Gleichlauf beider Faelle ist daraus abgeleitet und am
+# Referenzgeraet nicht messbar, weil dessen Touch Bar ohne gehaltenes fn
+# ueberhaupt keine F3 liefert).
 #
-# Drei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
-# keiner Tastenliste: Umschalt+Entf sowie Cmd+C und Cmd+V. Die beiden letzten
-# sind fuer eine Zwischenablage einer spaeteren Runde reserviert (C3).
+# Vier Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
+# keiner Tastenliste: Umschalt+Entf, Cmd+C und Cmd+V sowie die Eingabetaste.
+# Cmd+C und Cmd+V sind fuer eine Zwischenablage einer spaeteren Runde
+# reserviert (C3). Die Eingabetaste trug bis zum 260804 den Einstieg in einen
+# Ordner; der liegt seither allein auf cmd+right, und der Nutzer hat sie
+# ausdruecklich freigegeben (C2).
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -151,13 +157,16 @@ tasten = ["end"]
 [[funktion]]
 id = "oeffnen"
 name = "In den ausgewählten Ordner einsteigen"
-tasten = ["return"]
+tasten = ["cmd+right"]
 
 [[funktion]]
 id = "ordner_aufwaerts"
 name = "In den übergeordneten Ordner"
-tasten = ["cmd+up"]
-# Der Finder legt den Aufstieg auf dieselbe Kombination.
+tasten = ["cmd+left", "cmd+up"]
+# Zwei Wege mit je eigenem Vorbild. cmd+left ist der Hauptweg aus dem
+# Nutzerentscheid vom 260804: die Ordner liegen in der Richtung der
+# Seitwaertspfeile nebeneinander, und cmd+right steigt gegenlaeufig ein.
+# cmd+up legt der Finder auf denselben Aufstieg.
 
 [[funktion]]
 id = "pfadeingabe"
@@ -313,15 +322,12 @@ tasten = ["cmd+n"]
 [[funktion]]
 id = "bereich_verbreitern"
 name = "Aktiven Bereich verbreitern"
-tasten = ["ctrl+b"]
+tasten = ["ctrl+right"]
 
 [[funktion]]
 id = "bereich_verschmaelern"
 name = "Aktiven Bereich verschmälern"
-tasten = ["ctrl+s"]
-# Breiter und schmaler laegen auf den Links- und Rechts-Pfeilen; die
-# Schreibweise dieser Datei kennt beide Tasten nicht. Deshalb b wie breiter
-# und s wie schmaler.
+tasten = ["ctrl+left"]
 
 # ── C10: die Zwischenablage als Quelle ───────────────────────────────────────
 # Beide Funktionen lesen die Zwischenablage des Systems; KRK schreibt sie in
@@ -352,3 +358,17 @@ name = "Zum Inhalt der Zwischenablage springen"
 tasten = ["opt+cmd+g"]
 # Steht neben shift+cmd+g, der Pfadeingabe von Hand: dieselbe Handlung mit
 # vorausgefuelltem Wert.
+
+# ── C3: die Belegungsansicht ─────────────────────────────────────────────────
+
+[[funktion]]
+id = "belegung_ansehen"
+name = "Tastaturbelegung anzeigen"
+tasten = ["f1"]
+# Das Vorbild ist die Norton-Reihe, wo F1 die Hilfe traegt; fuer eine
+# Anwendung mit der Tastatursteuerung als erster Maxime ist die
+# Belegungsansicht genau das. Auf dem Mac ist F1 keine Hilfetaste, sondern die
+# Verringerung der Bildschirmhelligkeit; hier weicht die Belegung vom Mac ab,
+# anders als bei den sechs Cmd-Kuerzeln der Norton-Reihe oben. Die Ansicht
+# dahinter entsteht spaeter in dieser Runde; bis dahin loest die Taste nichts
+# aus und nimmt dem System das Ereignis nicht weg (C3).

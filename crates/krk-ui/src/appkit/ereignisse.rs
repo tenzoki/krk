@@ -17,16 +17,36 @@
 //! **Der Weg eines Tastendrucks**, vom Ereignis bis zur Ausfuehrung:
 //!
 //! ```text
-//! NSEvent ──> Tastendruck::aus_ereignis ──> Belegung::nachschlag
-//!                  (Maske normalisiert)          │
-//!                                                v
-//!                                       Kommando ──> Senke des Aufrufers
+//! NSEvent ──> Fokusvorbehalt ──> Tastendruck::aus_ereignis ──> Belegung::nachschlag
+//!                  │                  (Maske normalisiert)          │
+//!            Textfeld? ──> weiter                        Kommando ──┤
+//!                                                      Sprungmarke ──> Zeichen
+//!                                                                      │
+//!                                                        Senke des Aufrufers
 //! ```
 //!
 //! Trifft der Nachschlag und fuehrt die Senke das Kommando aus, schluckt der
 //! Abgriff das Ereignis (er liefert `nil`); sonst reicht er es unveraendert
 //! weiter, damit Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren
 //! gewohnten Weg gehen.
+//!
+//! # Der Fokusvorbehalt
+//!
+//! **Tastenbefehle wirken im Dateifenster; Textfelder und Blaetter behalten
+//! ihre AppKit-Bedeutung.** Der Abgriff sieht jeden Tastendruck der Anwendung,
+//! gleich wo der Eingabefokus steht. C2 verlangt fuer jedes Textfeld die
+//! gewohnte Mac-Bedeutung: Return bestaetigt, Cmd+Links und Cmd+Rechts bewegen
+//! die Schreibmarke an Zeilenanfang und Zeilenende. Seit S11c liegt der Auf-
+//! und Abstieg genau auf diesen beiden Kombinationen, und ohne den Vorbehalt
+//! waere die Pfadeingabe aus C2 damit nicht bedienbar: das Blatt stuende offen,
+//! und Cmd+Links wechselte hinter ihm den Ordner.
+//!
+//! Der Abgriff fragt deshalb **vor** dem Nachschlag, ob der Ersthelfer des
+//! Schluesselfensters ein Textfeld ist, und reicht den Tastendruck in diesem
+//! Fall unveraendert weiter. Der Vorbehalt sitzt hier und nicht je Blatt: die
+//! fuenf Blaetter aus S16 und S17 erben ihn dadurch, ohne ihn zu wiederholen.
+//! Gemeldet war das als
+//! `issues/260804-1122_o_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
 //!
 //! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
 //! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es
@@ -47,19 +67,44 @@
 //! Taste, die einer noch ungebauten Funktion gehoert, geht deshalb unveraendert
 //! weiter, statt ins Leere geschluckt zu werden; sonst naehme der Abgriff dem
 //! Menue ein Kuerzel ab, ohne etwas an seine Stelle zu setzen.
+//!
+//! # Die Sprungmarke kommt als Zeichen und nicht als Kommando
+//!
+//! Eine Taste ohne Zusatztaste, die keiner Funktion gehoert, faellt im Kern auf
+//! [`Nachschlag::Sprungmarke`]. Der Kern kennt allein den Tastencode und weiss
+//! nicht, welches Zeichen darauf liegt; das weiss das Ereignis. Der Abgriff
+//! reicht deshalb das Zeichen weiter, und die Regel, welche Zeichen ein
+//! Dateiname tragen kann, steht in `krk_core::verzeichnis::sprungmarke`.
 
 use std::ptr::NonNull;
 
 use block2::RcBlock;
+use objc2::ClassType;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSWindow,
+    NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSText, NSTextField,
+    NSTextView, NSWindow,
 };
-use objc2_foundation::{MainThreadMarker, NSPoint, NSProcessInfo, NSString};
+use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSPoint, NSProcessInfo, NSString};
 
 use krk_core::tasten::Belegung;
 use krk_core::tasten::{Kombination, Kommando, Nachschlag, Tastendruck, code_von_pflicht};
+
+/// Was der Abgriff an den Aufrufer weitergibt.
+///
+/// Zwei Sorten, weil ein Tastendruck zwei Dinge sein kann: eine nachgeschlagene
+/// Funktion oder ein getipptes Zeichen fuer die Sprungmarke aus C2.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Eingabe {
+    /// Eine belegte Kombination.
+    Kommando(Kommando),
+    /// Ein Zeichen fuer die Sprungmarke aus C2.
+    ///
+    /// Ob es ueberhaupt in den Puffer gehoert, entscheidet der Kern; der
+    /// Abgriff reicht weiter, was das Ereignis traegt.
+    Zeichen(char),
+}
 
 /// Ein eingerichteter Ereignisabgriff.
 ///
@@ -85,14 +130,21 @@ impl Tastenabgriff {
     /// Tastendruck geht mit seinem Code und seiner normalisierten Maske auf die
     /// Standardausgabe, gleich ob die Belegung ihn kennt.
     pub fn einrichten(
+        mtm: MainThreadMarker,
         belegung: Belegung,
         protokoll: bool,
-        senke: impl Fn(Kommando) -> bool + 'static,
+        senke: impl Fn(Eingabe) -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
             // SAFETY: AppKit reicht dem Block einen gueltigen Zeiger auf das
             // Ereignis, das fuer die Dauer des Aufrufs lebt.
-            let geschluckt = behandeln(&senke, &belegung, unsafe { ereignis.as_ref() }, protokoll);
+            let geschluckt = behandeln(
+                mtm,
+                &senke,
+                &belegung,
+                unsafe { ereignis.as_ref() },
+                protokoll,
+            );
             if geschluckt {
                 // `nil` heisst: das Ereignis geht nicht weiter.
                 std::ptr::null_mut()
@@ -178,11 +230,18 @@ pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
 fn behandeln(
-    senke: &impl Fn(Kommando) -> bool,
+    mtm: MainThreadMarker,
+    senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
     protokoll: bool,
 ) -> bool {
+    // Der Fokusvorbehalt, vor dem Nachschlag. Siehe den Modulkopf: steht die
+    // Schreibmarke in einem Textfeld, behaelt jede Taste ihre AppKit-Bedeutung.
+    if ersthelfer_nimmt_text(mtm) {
+        return false;
+    }
+
     let druck = Tastendruck::aus_ereignis(ereignis.keyCode(), ereignis.modifierFlags().0 as u64);
     let nachschlag = belegung.nachschlag(druck);
 
@@ -190,19 +249,57 @@ fn behandeln(
         protokollieren(druck, nachschlag);
     }
 
-    let Nachschlag::Funktion(funktion) = nachschlag else {
-        // Sprungmarke und Unbelegt gehen beide weiter. Das Tippen der
-        // Anfangsbuchstaben aus C2 baut Schritt 13; bis dahin ist der
-        // Tastendruck fuer KRK ohne Wirkung, und ihn zu schlucken hiesse, ihn
-        // auch dem System wegzunehmen.
+    match nachschlag {
+        // Belegt und gebaut. Eine Funktion ohne Kommando ist belegt, aber in
+        // dieser Runde noch nicht gebaut; siehe den Modulkopf: geschluckt wird
+        // nur, was auch ausgefuehrt wurde.
+        Nachschlag::Funktion(funktion) => match funktion.kommando() {
+            Some(kommando) => senke(Eingabe::Kommando(kommando)),
+            None => false,
+        },
+        // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: das Tippen
+        // der Anfangsbuchstaben aus C2. Ob das Zeichen in den Puffer gehoert,
+        // entscheidet der Kern.
+        Nachschlag::Sprungmarke => match getipptes_zeichen(ereignis) {
+            Some(zeichen) => senke(Eingabe::Zeichen(zeichen)),
+            None => false,
+        },
+        Nachschlag::Unbelegt => false,
+    }
+}
+
+/// Ob der Ersthelfer des Schluesselfensters Text entgegennimmt.
+///
+/// Gefragt ist das **Schluesselfenster** und nicht das Hauptfenster: steht ein
+/// Blatt am Fenster, ist dessen Panel das Schluesselfenster, und dort sitzt das
+/// Textfeld der Pfadeingabe.
+///
+/// Ein `NSTextField` gibt beim Bearbeiten seinen Ersthelferrang an den
+/// Feldeditor ab, einen gemeinsam genutzten `NSTextView`. Gefragt sind deshalb
+/// beide Klassen: das Feld selbst, solange es nur ausgewaehlt ist, und der
+/// Feldeditor, sobald die Schreibmarke darin steht. `NSText` deckt daneben die
+/// aelteren Textklassen ab, die AppKit weiterhin fuehrt.
+fn ersthelfer_nimmt_text(mtm: MainThreadMarker) -> bool {
+    let Some(fenster) = NSApplication::sharedApplication(mtm).keyWindow() else {
         return false;
     };
-    match funktion.kommando() {
-        // Belegt, aber in dieser Runde noch nicht gebaut. Siehe den Modulkopf:
-        // geschluckt wird nur, was auch ausgefuehrt wurde.
-        Some(kommando) => senke(kommando),
-        None => false,
-    }
+    let Some(ersthelfer) = fenster.firstResponder() else {
+        return false;
+    };
+    ersthelfer.isKindOfClass(NSTextView::class())
+        || ersthelfer.isKindOfClass(NSTextField::class())
+        || ersthelfer.isKindOfClass(NSText::class())
+}
+
+/// Das Zeichen, das dieses Ereignis traegt.
+///
+/// `None` fuer ein Ereignis ohne Zeichen, etwa eine reine Zusatztaste. Genommen
+/// wird das **erste** Zeichen: eine Taste liefert in aller Regel genau eines,
+/// und eine Folge aus mehreren stammt von einer Eingabemethode, deren Ergebnis
+/// nicht in einen Suchpuffer gehoert.
+fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
+    let zeichen = ereignis.characters()?;
+    zeichen.to_string().chars().next()
 }
 
 /// Schreibt eine Zeile des Modus `--tasten-protokoll`.
