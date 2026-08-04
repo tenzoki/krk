@@ -2,9 +2,10 @@
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat in dieser
-//! Runde vier: die Pfadeingabe aus C2 und die drei Blaetter zu C4 (Konflikt,
-//! Rueckfrage vor dem endgueltigen Loeschen, Abschlussliste der uebersprungenen
-//! Eintraege); das Umbenennen im Stapel kommt mit Schritt 17 dazu.
+//! Runde sechs: die Pfadeingabe aus C2 und fuenf zu C4 (Konflikt, Rueckfrage vor
+//! dem endgueltigen Loeschen, Abschlussliste der uebersprungenen Eintraege und
+//! seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen im
+//! Stapel).
 //!
 //! **Der Stand einer laufenden Dateioperation ist seit Schritt 16b keines
 //! mehr.** Er stand bis dahin als fuenftes Blatt hier und ist in die
@@ -64,10 +65,21 @@
 //! Blatt. **Am laufenden Buendel gemessen am 260804:** ohne ihn laesst sich das
 //! Blatt weder mit der Eingabe- noch mit der Escape-Taste schliessen, und die
 //! Pfadeingabe waere allein mit der Maus bedienbar.
+//!
+//! **Ein Blatt haelt genau einen Waechter, auch bei mehreren Feldern.** Das
+//! Stapel-Umbenennen aus Schritt 17 traegt vier Eingabefelder; der Waechter
+//! entscheidet nicht nach Feld, sondern beantwortet zwei Tasten, und die
+//! bedeuten in jedem Feld dasselbe. Vier Waechter waeren vier Wahrheiten
+//! darueber, was die Eingabetaste in einem Blatt tut. Ueber denselben Waechter
+//! laeuft die Meldung, dass sich ein Text geaendert hat
+//! ([`Blatt::textaenderung_melden`]): daran haengt die Vorschau des
+//! Stapel-Umbenennens, die mit jedem getippten Zeichen neu rechnet.
 
 pub mod konflikt;
 pub mod loeschbestaetigung;
+pub mod namenseingabe;
 pub mod pfadeingabe;
+pub mod stapelumbenennen;
 pub mod uebersprungen;
 
 use std::cell::RefCell;
@@ -95,6 +107,11 @@ pub struct WaechterIvars {
     /// Wahlfrei, weil der Waechter vor dem Blatt zur Welt kommt: das Fenster,
     /// an dem das Blatt haengt, kennt erst [`Blatt::zeigen`].
     antwort: RefCell<Option<Antwortweg>>,
+    /// Was zu tun ist, wenn sich der Text eines bewachten Feldes geaendert hat.
+    ///
+    /// Wahlfrei, weil die meisten Blaetter nichts damit anfangen: allein die
+    /// Vorschau des Stapel-Umbenennens rechnet mit jedem Zeichen neu.
+    aenderung: RefCell<Option<Box<dyn Fn()>>>,
 }
 
 define_class!(
@@ -138,6 +155,20 @@ define_class!(
             }
             objc2::runtime::Bool::NO
         }
+
+        /// Der Text eines bewachten Feldes hat sich geaendert.
+        ///
+        /// Gemeldet wird die Aenderung selbst und nicht das Feld: das Blatt
+        /// liest ohnehin alle seine Felder, wenn es neu rechnet, und ein
+        /// Rueckruf je Feld waere eine Fallunterscheidung ohne Fall.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(controlTextDidChange:))]
+        fn text_geaendert(&self, _meldung: &objc2_foundation::NSNotification) {
+            let aenderung = self.ivars().aenderung.borrow();
+            if let Some(aenderung) = aenderung.as_ref() {
+                aenderung();
+            }
+        }
     }
 
     // SAFETY: `NSTextFieldDelegate` hat nur wahlfreie Methoden.
@@ -149,6 +180,7 @@ impl Eingabewaechter {
     fn neu(mtm: MainThreadMarker) -> Retained<Self> {
         let this = Self::alloc(mtm).set_ivars(WaechterIvars {
             antwort: RefCell::new(None),
+            aenderung: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -365,24 +397,58 @@ impl Blatt {
         }
     }
 
-    /// Haengt ein Textfeld unter die Frage und macht es bedienbar.
+    /// Macht diese Ansicht zum Ersthelfer, sobald das Blatt steht.
     ///
-    /// Drei Dinge auf einmal, weil sie zusammengehoeren: das Feld wird zur
-    /// Beigabe des Blattes, es wird der Ersthelfer (sonst muesste der Nutzer
-    /// erst hineinklicken), und es bekommt den [`Eingabewaechter`] als
-    /// Delegierten.
-    pub fn textfeld_setzen(&mut self, mtm: MainThreadMarker, feld: &NSTextField) {
-        let sicht: &NSView = feld;
-        self.warnung.setAccessoryView(Some(sicht));
+    /// Ohne sie muesste der Nutzer in das erste Feld klicken, und ein Blatt,
+    /// das ohne Maus nicht anfaengt, ist ohne Maus nicht bedienbar.
+    pub fn ersthelfer_setzen(&self, sicht: &NSView) {
         self.warnung.window().setInitialFirstResponder(Some(sicht));
+    }
 
-        let waechter = Eingabewaechter::neu(mtm);
+    /// Gibt diesem Textfeld den [`Eingabewaechter`] des Blattes.
+    ///
+    /// Mehrere Felder teilen sich **einen** Waechter; der Grund steht im
+    /// Modulkopf. Ohne ihn verbraucht der Feldeditor die Eingabe- und die
+    /// Escape-Taste selbst, und das Blatt liesse sich mit keiner von beiden
+    /// beantworten.
+    pub fn waechter_anhaengen(&mut self, mtm: MainThreadMarker, feld: &NSTextField) {
+        let waechter = self
+            .waechter
+            .get_or_insert_with(|| Eingabewaechter::neu(mtm))
+            .clone();
         // SAFETY: Der Waechter beantwortet `NSTextFieldDelegate`, das er oben
         // implementiert. Ueber die Lebensdauer verlangt die Bindung nichts; das
         // Feld haelt den Delegierten schwach, und `self.waechter` haelt ihn
         // stark, solange das Blatt lebt.
         unsafe { feld.setDelegate(Some(ProtocolObject::from_ref(&*waechter))) };
-        self.waechter = Some(waechter);
+    }
+
+    /// Hinterlegt, was bei jeder Textaenderung in einem bewachten Feld
+    /// geschieht.
+    ///
+    /// Der Weg der Vorschau des Stapel-Umbenennens: sie rechnet mit jedem
+    /// getippten Zeichen neu, damit der Nutzer die Regel an ihrem Ergebnis
+    /// pruefen kann, bevor er sie ausfuehrt (C4). Ohne einen Waechter geschieht
+    /// nichts; die Meldung braucht ein bewachtes Feld.
+    pub fn textaenderung_melden(&self, melden: Box<dyn Fn()>) {
+        if let Some(waechter) = &self.waechter {
+            *waechter.ivars().aenderung.borrow_mut() = Some(melden);
+        }
+    }
+
+    /// Haengt ein Textfeld unter die Frage und macht es bedienbar.
+    ///
+    /// Drei Dinge auf einmal, weil sie zusammengehoeren: das Feld wird zur
+    /// Beigabe des Blattes, es wird der Ersthelfer (sonst muesste der Nutzer
+    /// erst hineinklicken), und es bekommt den [`Eingabewaechter`] als
+    /// Delegierten. Ein Blatt mit mehreren Feldern setzt die drei Schritte
+    /// einzeln; die Beigabe ist dann der Rahmen um die Felder und nicht eines
+    /// davon.
+    pub fn textfeld_setzen(&mut self, mtm: MainThreadMarker, feld: &NSTextField) {
+        let sicht: &NSView = feld;
+        self.beigabe_setzen(sicht);
+        self.ersthelfer_setzen(sicht);
+        self.waechter_anhaengen(mtm, feld);
     }
 
     /// Zeigt das Blatt am Fenster und meldet, ob bestaetigt wurde.

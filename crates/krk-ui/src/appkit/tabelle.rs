@@ -199,6 +199,21 @@ impl Spalte {
     }
 }
 
+/// Was beim Auswaehlen eines Eintrags anhand seines Namens herauskam.
+///
+/// Siehe [`DateifensterQuelle::eintrag_waehlen`], die eine Stelle, die eine
+/// Zeile anhand ihres Namens auswaehlt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Auswahlversuch {
+    /// Der Eintrag stand in der Liste; die Auswahl steht auf ihm.
+    Gewaehlt,
+    /// Es laeuft noch ein Lesevorgang. Die Auswahl springt auf den Eintrag,
+    /// sobald er eintrifft.
+    Vorgemerkt,
+    /// Die Liste ist gelesen und kennt den Namen nicht.
+    Unbekannt,
+}
+
 /// Was die Datenquelle haelt.
 pub struct QuelleIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
@@ -867,9 +882,28 @@ impl DateifensterQuelle {
     ///
     /// Der Fall aus C10, in dem die genannte Datei bereits vor dem Nutzer
     /// liegt: KRK wechselt den Ordner nicht, sondern blaettert den Eintrag ins
-    /// Bild. Ein noch laufender Lesevorgang kann ihn noch nicht kennen; dann
-    /// meldet die Statuszeile, statt wortlos nichts zu tun.
+    /// Bild. Steht der Name nicht in der fertig gelesenen Liste, meldet die
+    /// Statuszeile das, statt wortlos nichts zu tun.
     fn eintrag_anspringen(&self, name: &str) {
+        if self.eintrag_waehlen(name) == Auswahlversuch::Unbekannt {
+            self.befehlsantwort_zeigen(&format!("{name} steht nicht in der Liste"));
+        }
+    }
+
+    /// Waehlt den Eintrag dieses Namens: jetzt, oder sobald er gelesen ist.
+    ///
+    /// **Die eine Stelle, die eine Zeile anhand ihres Namens auswaehlt.** Zwei
+    /// Aufrufer mit derselben Frage und verschiedener Lage: der Sprung aus der
+    /// Zwischenablage (C10, S13) trifft eine Liste, die schon steht, und das
+    /// Anlegen aus C4 eine, deren Lesevorgang gerade erst begonnen hat. Der
+    /// zweite Fall geht ueber die `wunschauswahl` des Tabs, dieselbe, die auch
+    /// die Sitzungswiederherstellung und der Aufstieg aus C2 benutzen; ein
+    /// zweiter Auswahlweg entsteht nicht.
+    ///
+    /// Der Rueckgabewert sagt, welcher der drei Faelle eingetreten ist. Allein
+    /// [`Auswahlversuch::Unbekannt`] ist eine Auskunft an den Nutzer wert: der
+    /// Name steht in einer fertig gelesenen Liste nicht.
+    pub fn eintrag_waehlen(&self, name: &str) -> Auswahlversuch {
         let zeile = {
             let tabs = self.ivars().tabs.borrow();
             let modell = tabs.aktiver().modell();
@@ -877,10 +911,38 @@ impl DateifensterQuelle {
                 .index_von_namen(name)
                 .and_then(|index| modell.zeile_von(index))
         };
-        match zeile {
-            Some(zeile) => self.zeile_setzen(zeile),
-            None => self.befehlsantwort_zeigen(&format!("{name} steht nicht in der Liste")),
+        if let Some(zeile) = zeile {
+            self.zeile_setzen(zeile);
+            return Auswahlversuch::Gewaehlt;
         }
+        // Ein laufender Lesevorgang kennt den Eintrag noch nicht. Der Name
+        // ueberlebt ihn, eine Zeilennummer nicht: sortiert wird erst mit dem
+        // Abschluss.
+        let liest = self.ivars().tabs.borrow().aktiver().liest();
+        if liest {
+            self.ivars().tabs.borrow_mut().wunschauswahl_setzen(name);
+            return Auswahlversuch::Vorgemerkt;
+        }
+        Auswahlversuch::Unbekannt
+    }
+
+    /// Alle Namen des angezeigten Ordners, auch die ausgeblendeten.
+    ///
+    /// Der Bestand, gegen den die Kollisionspruefung des Stapel-Umbenennens
+    /// vergleicht (C4). Ausdruecklich nicht die Sichtreihenfolge: ein
+    /// ausgeblendeter Eintrag belegt seinen Namen genauso wie ein sichtbarer,
+    /// und eine Pruefung, die ihn uebersaehe, liesse das Umbenennen erst im
+    /// Dateisystem scheitern.
+    pub fn alle_namen(&self) -> Vec<String> {
+        self.ivars()
+            .tabs
+            .borrow()
+            .aktiver()
+            .modell()
+            .eintraege()
+            .iter()
+            .map(|eintrag| eintrag.name.clone())
+            .collect()
     }
 
     // ------------------------------------------------------------------

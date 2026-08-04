@@ -427,6 +427,25 @@ impl Tabliste {
         self.lesen_starten(stelle);
     }
 
+    /// Merkt den Namen vor, auf den die Auswahl des sichtbaren Tabs springt,
+    /// sobald sein Lesevorgang fertig ist.
+    ///
+    /// **Kein zweiter Weg, eine Zeile anhand ihres Namens zu waehlen**, sondern
+    /// derselbe: getragen wird der Name von der `wunschauswahl`, die schon die
+    /// Sitzungswiederherstellung, der Aufstieg aus C2, der Sprung aus der
+    /// Zwischenablage (C10) und die Auffrischung aus C9 benutzen. Neu ist
+    /// allein, dass der Aufrufer den Namen nennen darf, statt ihn aus dem
+    /// bisherigen Zustand des Tabs zu erben.
+    ///
+    /// Der Fall, fuer den es das gibt, ist das Anlegen aus C4: der neue Eintrag
+    /// steht erst in der Liste, wenn der Lesevorgang ihn geliefert hat, und die
+    /// Auswahl soll danach auf ihm stehen. Eine Zeilennummer taugte dafuer
+    /// nicht, weil die Sortierung erst mit dem Abschluss steht.
+    pub fn wunschauswahl_setzen(&mut self, name: impl Into<String>) {
+        let stelle = self.aktiv;
+        self.tabs[stelle].wunschauswahl = Some(name.into());
+    }
+
     /// Startet den Lesevorgang des sichtbaren Tabs.
     ///
     /// Die erste Stufe der Lesereihenfolge aus dem Modulkopf.

@@ -151,12 +151,18 @@ pub enum Kommando {
     EndgueltigLoeschen,
     /// Eine laufende Dateioperation abbrechen (C4).
     Abbrechen,
+    /// Einen Ordner im Ordner des aktiven Fensters anlegen (C4).
+    OrdnerAnlegen,
+    /// Eine leere Datei im Ordner des aktiven Fensters anlegen (C4).
+    DateiAnlegen,
+    /// Die markierten Eintraege im Stapel umbenennen (C4).
+    UmbenennenStapel,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 36] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 39] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -199,6 +205,9 @@ impl Kommando {
         (Kommando::InPapierkorb, "in_papierkorb"),
         (Kommando::EndgueltigLoeschen, "endgueltig_loeschen"),
         (Kommando::Abbrechen, "abbrechen"),
+        (Kommando::OrdnerAnlegen, "ordner_anlegen"),
+        (Kommando::DateiAnlegen, "datei_anlegen"),
+        (Kommando::UmbenennenStapel, "umbenennen_stapel"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.

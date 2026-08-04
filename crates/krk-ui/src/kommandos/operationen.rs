@@ -68,6 +68,7 @@
 //! [`Buendelung::gezeichnet`], dann den Stand lesen, dann zeichnen.** Umgekehrt
 //! ginge eine Meldung verloren, die waehrend des Zeichnens eintrifft.
 
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -508,6 +509,100 @@ pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, St
     Some((frage, zeilen.join("\n")))
 }
 
+// ----------------------------------------------------------------------
+// Anlegen und Umbenennen im Stapel (C4, Schritt 17)
+// ----------------------------------------------------------------------
+
+/// Was einer der beiden Anlegebefehle anlegt (C4).
+///
+/// Eine Aufzaehlung und keine zwei Befehlswege: die Frage an den Nutzer, die
+/// Namenspruefung und die Auswahl auf dem neuen Eintrag sind fuer Ordner und
+/// Datei dieselben. Verschieden ist allein die Kernfunktion, die den Eintrag
+/// anlegt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anlegeart {
+    /// Ein Ordner (`f7`, `shift+cmd+n`).
+    Ordner,
+    /// Eine leere Datei (`ctrl+cmd+n`).
+    Datei,
+}
+
+impl Anlegeart {
+    /// Die Frage in der Kopfzeile des Eingabeblattes.
+    pub fn frage(self) -> &'static str {
+        match self {
+            Anlegeart::Ordner => "Wie soll der neue Ordner heißen?",
+            Anlegeart::Datei => "Wie soll die neue Datei heißen?",
+        }
+    }
+
+    /// Die Beschriftung der bestaetigenden Schaltflaeche.
+    pub fn bestaetigen(self) -> &'static str {
+        "Anlegen"
+    }
+
+    /// Wie eine Meldung den angelegten Eintrag benennt.
+    pub fn benennung(self) -> &'static str {
+        match self {
+            Anlegeart::Ordner => "Ordner",
+            Anlegeart::Datei => "Datei",
+        }
+    }
+}
+
+/// Die Meldung, wenn ein Eintrag angelegt wurde (C4).
+pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
+    format!("{} „{name}“ angelegt", art.benennung())
+}
+
+/// Die Meldung, wenn ein Eintrag nicht angelegt werden konnte (C4).
+///
+/// Der haeufigste Fall ist der bereits vergebene Name, und er bekommt deshalb
+/// einen eigenen Satz statt des Systemwortlauts. Die uebrigen behalten ihn: eine
+/// erfundene Uebersetzung waere ungenauer als das Original. Dieselbe Abwaegung
+/// wie in `krk_core::operation::grund`, die hier nicht wiederverwendet werden
+/// kann, weil sie kistenintern ist und weil sie den Namen des Eintrags nicht
+/// nennt.
+pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
+    match fehler.kind() {
+        io::ErrorKind::AlreadyExists => {
+            format!("es gibt schon einen Eintrag namens „{name}“")
+        }
+        io::ErrorKind::PermissionDenied => format!(
+            "keine Rechte, hier {} „{name}“ anzulegen",
+            match art {
+                Anlegeart::Ordner => "den Ordner",
+                Anlegeart::Datei => "die Datei",
+            }
+        ),
+        _ => format!("„{name}“ ließ sich nicht anlegen: {fehler}"),
+    }
+}
+
+/// Die Meldung nach einem ausgefuehrten Stapel-Umbenennen (C4).
+///
+/// Drei Zahlen, weil drei verschiedene Dinge geschehen sein koennen: umbenannt,
+/// wegen eines Hinweises stehengeblieben, am Dateisystem gescheitert. Die
+/// dritte steht nur da, wenn sie nicht null ist; eine Null, die in neun von
+/// zehn Faellen dasteht, liest niemand mehr.
+pub fn stapelbericht(umbenannt: usize, stehengeblieben: usize, gescheitert: usize) -> String {
+    let mut text = match umbenannt {
+        0 => "nichts umbenannt".to_owned(),
+        1 => "ein Eintrag umbenannt".to_owned(),
+        zahl => format!("{} Einträge umbenannt", self::zahl(zahl)),
+    };
+    if stehengeblieben > 0 {
+        text.push_str(&format!(
+            ", {} stehengeblieben",
+            eintraege_text(stehengeblieben)
+        ));
+    }
+    if gescheitert > 0 {
+        text.push_str(&format!(", {} gescheitert", eintraege_text(gescheitert)));
+    }
+    text
+}
+
 /// "ein Eintrag" beziehungsweise "4.812 Einträge".
 fn eintraege_text(eintraege: usize) -> String {
     match eintraege {
@@ -827,6 +922,49 @@ mod tests {
         assert!(frage.contains("30"), "{frage}");
         assert_eq!(liste.lines().count(), HOECHSTENS_EINZELN + 1);
         assert!(liste.ends_with("… und 18 weitere"), "{liste}");
+    }
+
+    #[test]
+    fn ein_vergebener_name_meldet_den_grund_und_nicht_den_systemwortlaut() {
+        let fehler = io::Error::from(io::ErrorKind::AlreadyExists);
+        let text = anlegefehler(Anlegeart::Ordner, "Bilder", &fehler);
+        assert!(text.contains("Bilder"), "{text}");
+        assert!(text.contains("schon"), "{text}");
+        assert!(!text.contains("kind"), "{text}");
+    }
+
+    #[test]
+    fn beide_anlegebefehle_fragen_dieselbe_frage_mit_eigenem_gegenstand() {
+        assert!(Anlegeart::Ordner.frage().contains("Ordner"));
+        assert!(Anlegeart::Datei.frage().contains("Datei"));
+        assert_eq!(
+            Anlegeart::Ordner.bestaetigen(),
+            Anlegeart::Datei.bestaetigen(),
+            "die Schaltflaeche heisst in beiden Faellen gleich"
+        );
+        assert_eq!(
+            angelegt_text(Anlegeart::Datei, "notiz.md"),
+            "Datei „notiz.md“ angelegt"
+        );
+    }
+
+    #[test]
+    fn der_stapelbericht_nennt_nur_die_zahlen_die_etwas_sagen() {
+        assert_eq!(stapelbericht(50, 0, 0), "50 Einträge umbenannt");
+        assert_eq!(
+            stapelbericht(48, 2, 0),
+            "48 Einträge umbenannt, 2 Einträge stehengeblieben"
+        );
+        let mit_fehler = stapelbericht(1, 0, 1);
+        assert!(
+            mit_fehler.starts_with("ein Eintrag umbenannt"),
+            "{mit_fehler}"
+        );
+        assert!(mit_fehler.contains("gescheitert"), "{mit_fehler}");
+        assert_eq!(
+            stapelbericht(0, 3, 0),
+            "nichts umbenannt, 3 Einträge stehengeblieben"
+        );
     }
 
     #[test]

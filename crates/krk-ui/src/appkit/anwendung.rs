@@ -107,20 +107,24 @@ use objc2_foundation::{
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{Ablage, Datei, Fensterseite, Sitzung, pfade};
 use krk_core::operation::{
-    self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, freier_name,
+    self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
+    freier_name,
 };
 use krk_core::tasten::Kommando;
 use krk_core::tasten::belegung;
+use krk_core::umbenennen::Vorschau;
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
-use crate::kommandos::operationen::{self, Fokus, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::operationen::{self, Anlegeart, Fokus, Konfliktfrage, Vorgangszustand};
 use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
 use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
 use super::bildtakt::{self, Zeichenende};
-use super::blaetter::{Blattgriff, konflikt, loeschbestaetigung, uebersprungen};
+use super::blaetter::{
+    Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
+};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
@@ -661,6 +665,9 @@ impl Anwendungsdelegierter {
             Kommando::InPapierkorb => self.in_den_papierkorb(),
             Kommando::EndgueltigLoeschen => self.endgueltig_loeschen(),
             Kommando::Abbrechen => self.abbrechen(),
+            Kommando::OrdnerAnlegen => self.anlegen(Anlegeart::Ordner),
+            Kommando::DateiAnlegen => self.anlegen(Anlegeart::Datei),
+            Kommando::UmbenennenStapel => self.stapel_umbenennen(),
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
@@ -848,6 +855,154 @@ impl Anwendungsdelegierter {
         };
         self.fortschritt_zeigen(seite, &operationen::abbruchzeile(&art));
         true
+    }
+
+    // ------------------------------------------------------------------
+    // Anlegen und Umbenennen im Stapel (C4, Schritt 17)
+    // ------------------------------------------------------------------
+
+    /// Fragt den Namen und legt danach einen Ordner oder eine leere Datei an
+    /// (C4).
+    ///
+    /// **Ein Weg fuer beide Befehle.** `f7` und `shift+cmd+n` bringen
+    /// [`Anlegeart::Ordner`] mit, `ctrl+cmd+n` [`Anlegeart::Datei`]; alles
+    /// andere ist dasselbe, bis hinunter zu der Kernfunktion, die den Namen
+    /// prueft. Angelegt wird im Ordner des **aktiven** Dateifensters, wie C4 es
+    /// sagt.
+    ///
+    /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
+    /// verbraucht.
+    fn anlegen(&self, art: Anlegeart) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let seite = self.ivars().modell.borrow().aktiv();
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        namenseingabe::zeigen(
+            self.mtm(),
+            fenster,
+            art.frage(),
+            art.bestaetigen(),
+            move |ergebnis| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.anlegen_ausfuehren(seite, art, &ordner, ergebnis);
+                }
+            },
+        );
+        true
+    }
+
+    /// Legt den Eintrag an, frischt auf und setzt die Auswahl auf ihn (C4).
+    ///
+    /// Die Reihenfolge ist bindend. Erst [`auffrischung::ordner_neu_lesen`],
+    /// der eine Auffrischungspfad aus S14, damit beide Dateifenster den neuen
+    /// Eintrag zeigen; dann die Auswahl ueber
+    /// [`Dateifenster::quelle`]`.eintrag_waehlen`, die eine Stelle, die eine
+    /// Zeile anhand ihres Namens waehlt. Der Lesevorgang laeuft zu diesem
+    /// Zeitpunkt noch, also merkt sie den Namen vor und springt, sobald er
+    /// eintrifft.
+    fn anlegen_ausfuehren(
+        &self,
+        seite: Fensterseite,
+        art: Anlegeart,
+        ordner: &Path,
+        ergebnis: Result<String, Namensfehler>,
+    ) {
+        let name = match ergebnis {
+            Ok(name) => name,
+            Err(fehler) => {
+                self.antwort_zeigen(seite, fehler.grund());
+                return;
+            }
+        };
+        let angelegt = match art {
+            Anlegeart::Ordner => operation::ordner_anlegen(ordner, &name),
+            Anlegeart::Datei => operation::datei_anlegen(ordner, &name),
+        };
+        if let Err(fehler) = angelegt {
+            self.antwort_zeigen(seite, &operationen::anlegefehler(art, &name, &fehler));
+            return;
+        }
+
+        auffrischung::ordner_neu_lesen(self, ordner);
+        self.dateifenster(seite).quelle().eintrag_waehlen(&name);
+        self.antwort_zeigen(seite, &operationen::angelegt_text(art, &name));
+    }
+
+    /// Oeffnet das Blatt fuer das Umbenennen im Stapel (C4).
+    ///
+    /// Der **erste** der beiden Befehle, die C4 verlangt: er zeigt die
+    /// Vorschau. Ausgefuehrt wird erst auf den zweiten, die Schaltflaeche
+    /// "Umbenennen" des Blattes.
+    fn stapel_umbenennen(&self) -> bool {
+        let seite = self.ivars().modell.borrow().aktiv();
+        let quelle = self.dateifenster(seite).quelle();
+        let auswahl = quelle.betroffene_eintraege();
+        if auswahl.ist_leer() {
+            self.antwort_zeigen(seite, "es ist nichts ausgewählt");
+            return true;
+        }
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+
+        let ordner = quelle.angezeigter_ordner();
+        // Die Namen in Sichtreihenfolge: sie bestimmen die Reihenfolge der
+        // fortlaufenden Nummer, und `betroffene_eintraege` liefert sie schon in
+        // genau dieser Ordnung.
+        let markierte: Vec<String> = auswahl
+            .pfade
+            .iter()
+            .filter_map(|pfad| pfad.file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .collect();
+        let bestand = quelle.alle_namen();
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        stapelumbenennen::zeigen(self.mtm(), fenster, markierte, bestand, move |vorschau| {
+            if let Some(selbst) = schwach.load() {
+                selbst.stapel_ausfuehren(seite, &ordner, &vorschau);
+            }
+        });
+        true
+    }
+
+    /// Fuehrt aus, was in der bestaetigten Vorschau steht (C4).
+    ///
+    /// Je Zeile genau ein [`krk_core::operation::umbenennen`] aus S15; ein
+    /// zweiter Umbenennungsweg entsteht nicht. Eine Zeile mit Hinweis bleibt
+    /// stehen, und eine gescheiterte bricht den Stapel nicht ab: dieselbe
+    /// Haltung, die C4 fuer die Operationsmaschine festhaelt.
+    ///
+    /// **Ohne Arbeitsfaden.** `rename(2)` fasst keinen Inhalt an und ist auch
+    /// ueber Tausende von Eintraegen in Millisekunden fertig; ein Auftrag an
+    /// die Operationsmaschine waere hier mehr Aufwand als Sache, genau wie beim
+    /// Anlegen.
+    fn stapel_ausfuehren(&self, seite: Fensterseite, ordner: &Path, vorschau: &Vorschau) {
+        let stehengeblieben = vorschau.zeilen().len() - vorschau.auszufuehren().count();
+        let mut umbenannt = 0;
+        let mut gescheitert = 0;
+        let mut erster = None;
+        for zeile in vorschau.auszufuehren() {
+            match operation::umbenennen(&ordner.join(&zeile.alt), &zeile.neu) {
+                Ok(_) => {
+                    umbenannt += 1;
+                    erster.get_or_insert_with(|| zeile.neu.clone());
+                }
+                Err(_) => gescheitert += 1,
+            }
+        }
+
+        auffrischung::ordner_neu_lesen(self, ordner);
+        if let Some(name) = erster {
+            self.dateifenster(seite).quelle().eintrag_waehlen(&name);
+        }
+        self.antwort_zeigen(
+            seite,
+            &operationen::stapelbericht(umbenannt, stehengeblieben, gescheitert),
+        );
     }
 
     /// Wo der Eingabefokus steht, soweit es die Loeschtasten angeht (C4).
