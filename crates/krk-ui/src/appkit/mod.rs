@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Elf Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Dreizehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -15,8 +15,9 @@
 //!           ──> fenster ──> aufteilung ──> tabelle ──> krk-core::verzeichnis
 //!           ──> ereignisse            ──> tableiste     crate::tabs
 //!           ──> bildtakt ──> crate::messmodus           crate::kommandos
-//!                                     ──> statuszeile   blaetter
-//!                                                       zwischenablage
+//!           ──> fsevents ──> crate::auffrischung        blaetter
+//!           ──> volumes  ──> crate::auffrischung        zwischenablage
+//!                                     ──> statuszeile
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
@@ -36,13 +37,17 @@
 //! fuer die Dialoge am Fenster und darin das Eingabeblatt der Pfadeingabe aus
 //! C2. [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
 //! `NSPasteboard` und die Uebergabe einer Web-Adresse an den Systembrowser.
+//! [`fsevents`] haelt die Bindung an FSEvents und beobachtet die Ordner, die
+//! gerade auf dem Schirm stehen; [`volumes`] haelt die `NSWorkspace`-
+//! Beobachtung und meldet, wann ein Datentraeger kommt und geht (beide C9).
 //!
-//! Vier Pfeile fuehren aus diesem Verzeichnis heraus, und alle vier tragen nur
-//! gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
+//! Sechs Pfeile fuehren aus diesem Verzeichnis heraus, und alle sechs tragen
+//! nur gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
 //! Bildwiederholrate und die Zeitpunkte der Bildgrenzen, [`tabelle`] haelt das
-//! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`, und
-//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`. Keines der
-//! Ziele nennt eine `objc2`-Kiste.
+//! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`,
+//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`, und
+//! [`fsevents`] wie [`volumes`] reichen Pfade an `crate::auffrischung`. Keines
+//! der Ziele nennt eine `objc2`-Kiste.
 
 mod anwendung;
 mod aufteilung;
@@ -50,10 +55,12 @@ mod bildtakt;
 mod blaetter;
 mod ereignisse;
 mod fenster;
+mod fsevents;
 mod menue;
 mod statuszeile;
 mod tabelle;
 mod tableiste;
+mod volumes;
 mod zwischenablage;
 
 pub use anwendung::starten;

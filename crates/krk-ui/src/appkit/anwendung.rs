@@ -16,8 +16,28 @@
 //!   ├─ Dateifenster × 2     Tableiste, Dateiliste, Statuszeile, Tabs
 //!   ├─ NSWindow             genau eines, siehe unten
 //!   ├─ Tastenabgriff        der eine Eintrittspunkt fuer Tastendruecke
+//!   ├─ Dateisystemwache     FSEvents auf den sichtbaren Ordnern (C9)
+//!   ├─ Datentraegerwache    NSWorkspace auf Einhaengen und Auswerfen (C9)
 //!   └─ Sitzungsschreiber    gebuendelt, hoechstens alle zwei Sekunden
 //! ```
+//!
+//! Die beiden Wachen stehen hier aus demselben Grund wie der Tastenabgriff:
+//! ohne Halter meldet sich ein Beobachter beim Fallenlassen sofort wieder ab.
+//!
+//! # Der Weg einer fremden Aenderung
+//!
+//! ```text
+//!  Dateisystemwache ──> auffrischung::ordner_neu_lesen ──> Dateifenster::neu_lesen
+//!  Datentraegerwache ─> auffrischung::datentraeger_verloren ─> wechseln + melden
+//!
+//!  jede Navigation ───> Dateisystemwache neu aufsetzen
+//! ```
+//!
+//! Der Anwendungsdelegierte setzt beides zusammen: er ist die einzige Stelle,
+//! die beide Dateifenster **und** das Fenstermodell haelt, und damit die
+//! einzige, die die Frage "welche Ordner stehen gerade auf dem Schirm"
+//! beantworten kann. Die Antwort selbst rechnet [`crate::auffrischung`]; hier
+//! steht nur die Zuleitung.
 //!
 //! **KRK haelt in dieser Runde genau ein Anwendungsfenster.** Die beiden
 //! Dateifenster aus C1 sind Bereiche darin und keine zwei Fenster des Systems.
@@ -66,6 +86,7 @@
 //! Kaltstart zur Haelfte warm.
 
 use std::cell::{Cell, OnceCell, RefCell};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -81,10 +102,11 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
-use krk_core::ablage::{Ablage, Datei, Fensterseite, Sitzung};
+use krk_core::ablage::{Ablage, Datei, Fensterseite, Sitzung, pfade};
 use krk_core::tasten::Kommando;
 use krk_core::tasten::belegung;
 
+use crate::auffrischung::{self, Dateifenstersicht};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
 use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
 use crate::tabs::Tabliste;
@@ -93,8 +115,10 @@ use super::aufteilung::Aufteilung;
 use super::bildtakt::{self, Zeichenende};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
+use super::fsevents::Dateisystemwache;
 use super::menue;
 use super::tabelle::Dateifenster;
+use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
@@ -118,6 +142,17 @@ pub struct AnwendungsIvars {
     /// Die beiden Dateifenster, links zuerst.
     dateifenster: OnceCell<[Dateifenster; 2]>,
     tastenabgriff: OnceCell<Tastenabgriff>,
+    /// Die Beobachtung der sichtbaren Ordner (C9).
+    ///
+    /// Veraenderlich und nicht einmalig wie die uebrigen Halter: ein
+    /// `FSEventStream` aendert seine Pfadliste nach dem Anlegen nicht mehr,
+    /// also wird bei jeder Navigation ein neuer eingerichtet und der alte
+    /// fallen gelassen. Leer, solange kein Ordner feststeht, und dann, wenn
+    /// sich der Strom nicht einrichten liess.
+    dateisystemwache: RefCell<Option<Dateisystemwache>>,
+    /// Die Beobachtung der Datentraeger (C9). Sie steht fuer die ganze
+    /// Laufzeit, weil sie an keinem Pfad haengt.
+    datentraegerwache: OnceCell<Datentraegerwache>,
     /// Der gebuendelte Schreiber fuer `session.toml`.
     ///
     /// Leer im Messmodus und dann, wenn sich der Ablageordner nicht oeffnen
@@ -227,6 +262,8 @@ impl Anwendungsdelegierter {
             aufteilung: OnceCell::new(),
             dateifenster: OnceCell::new(),
             tastenabgriff: OnceCell::new(),
+            dateisystemwache: RefCell::new(None),
+            datentraegerwache: OnceCell::new(),
             sitzungsschreiber: RefCell::new(None),
             schreibfehler_gemeldet: Cell::new(false),
             messlauf: OnceCell::new(),
@@ -278,10 +315,22 @@ impl Anwendungsdelegierter {
                         selbst.aktives_setzen(seite);
                     }
                 }));
+            // Jede Navigation setzt die Dateisystembeobachtung neu auf. Auch
+            // dieser Rueckruf haelt den Delegierten **schwach**, aus demselben
+            // Grund wie der darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .ordnerwechsel_setzen(Box::new(move || {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.dateisystemwache_nachziehen();
+                    }
+                }));
         }
 
         self.aufteilung_nachziehen();
         self.tastenabgriff_einrichten(&mut meldungen);
+        self.datentraegerwache_einrichten();
         self.lesevorgaenge_starten();
         if let Some(fenster) = ivars.fenster.get() {
             fenster.makeKeyAndOrderFront(None);
@@ -346,6 +395,96 @@ impl Anwendungsdelegierter {
             None => eprintln!(
                 "krk: der Tastenabgriff liess sich nicht einrichten, die Tastatursteuerung bleibt aus"
             ),
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Dateisystem und Datentraeger (C9)
+    // ------------------------------------------------------------------
+
+    /// Setzt die Beobachtung der sichtbaren Ordner neu auf (C9).
+    ///
+    /// Gerufen nach jeder Navigation und nach jedem Ein- oder Ausblenden des
+    /// zweiten Dateifensters. Der alte Strom faellt dabei; ein
+    /// `FSEventStream` aendert seine Pfadliste nach dem Anlegen nicht mehr,
+    /// und einen zweiten Strom danebenzustellen hiesse, denselben Ordner
+    /// doppelt zu beobachten.
+    ///
+    /// **Im Messmodus geschieht nichts.** Ein Messlauf misst die Zusagen aus
+    /// C8 auf einem Pruefordner, den niemand nebenher aendert; ein Strom
+    /// darauf brachte Arbeit in die Messung, die im Betrieb an anderer Stelle
+    /// anfiele. Dieselbe Haltung wie bei der Sitzung, die ein Messlauf weder
+    /// laedt noch schreibt.
+    fn dateisystemwache_nachziehen(&self) {
+        if self.ivars().messaufgabe.is_some() {
+            return;
+        }
+        let ordner = auffrischung::sichtbare_ordner(self);
+        // Erst den alten Strom fallen lassen, dann den neuen anlegen: sonst
+        // beobachteten beide gleichzeitig dieselben Pfade.
+        *self.ivars().dateisystemwache.borrow_mut() = None;
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let wache = Dateisystemwache::einrichten(&ordner, move |gemeldet| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            for pfad in gemeldet {
+                auffrischung::ordner_neu_lesen(&*selbst, pfad);
+            }
+        });
+        if wache.is_none() && !ordner.is_empty() {
+            // Ohne Strom zeigt KRK fremde Aenderungen nicht mehr an. Das still
+            // hinzunehmen waere die Sorte Fehler, die erst dem Nutzer auffaellt.
+            self.dateifenster(self.ivars().modell.borrow().aktiv())
+                .quelle()
+                .meldung_zeigen(
+                    "die Ordner lassen sich nicht beobachten; fremde Aenderungen erscheinen erst nach einem Ordnerwechsel",
+                );
+        }
+        *self.ivars().dateisystemwache.borrow_mut() = wache;
+    }
+
+    /// Richtet die Beobachtung der Datentraeger ein (C9).
+    ///
+    /// Sie haengt an keinem Pfad und wird deshalb genau einmal eingerichtet.
+    /// Im Messmodus unterbleibt sie, aus demselben Grund wie die
+    /// Dateisystembeobachtung.
+    fn datentraegerwache_einrichten(&self) {
+        if self.ivars().messaufgabe.is_some() {
+            return;
+        }
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let wache = Datentraegerwache::einrichten(self.mtm(), move |gemeldet| {
+            if let Some(selbst) = schwach.load() {
+                selbst.datentraeger_gewechselt(gemeldet);
+            }
+        });
+        let _ = self.ivars().datentraegerwache.set(wache);
+    }
+
+    /// Ein Datentraeger ist gekommen oder gegangen (C9).
+    fn datentraeger_gewechselt(&self, gemeldet: Datentraeger) {
+        match gemeldet.art {
+            // C5 baut daraus die Geraeteleiste; das ist S18. Bis dahin gibt es
+            // in dieser Runde nichts zu tun: kein Dateifenster zeigt einen
+            // Ordner, den es vorher nicht gab.
+            Wechsel::Eingehaengt => {}
+            // Beide Richtungen enden hier. `willUnmount` ist der geordnete
+            // Auswurf und der Zeitpunkt, zu dem KRK den Ordner freigeben muss,
+            // damit der Auswurf nicht an ihm scheitert; `didUnmount` faengt das
+            // abgezogene Medium ab, das niemand vorher angekuendigt hat. Ein
+            // zweites Mal richtet der Aufruf nichts an: nach dem ersten steht
+            // kein Dateifenster mehr auf dem Datentraeger.
+            Wechsel::WirdAusgeworfen | Wechsel::Ausgeworfen => {
+                let ausweichziel = benutzerverzeichnis();
+                auffrischung::datentraeger_verloren(
+                    self,
+                    &gemeldet.pfad,
+                    &gemeldet.name,
+                    &ausweichziel,
+                );
+            }
         }
     }
 
@@ -443,7 +582,13 @@ impl Anwendungsdelegierter {
 
     /// Blendet einen Bereich aus oder wieder ein (C7).
     fn bereich_umschalten(&self, bereich: Bereich) -> bool {
-        self.ivars().modell.borrow_mut().umschalten(bereich)
+        let umgeschaltet = self.ivars().modell.borrow_mut().umschalten(bereich);
+        // Mit dem zweiten Dateifenster kommt und geht ein beobachteter Ordner.
+        // Die beiden Randbereiche zeigen keinen.
+        if umgeschaltet && bereich == Bereich::Rechts {
+            self.dateisystemwache_nachziehen();
+        }
+        umgeschaltet
     }
 
     /// Aendert die Breite des aktiven Dateifensters um einen Schritt (C7).
@@ -636,6 +781,47 @@ impl Anwendungsdelegierter {
             }
         }
     }
+}
+
+/// Was der Auffrischungspfad aus C9 von den beiden Dateifenstern braucht.
+///
+/// Jede Methode ist eine Zeile: der Delegierte ist die einzige Stelle, die
+/// beide Dateifenster und das Fenstermodell haelt, und deshalb die einzige,
+/// die die Fragen beantworten kann. Die Rechnung darauf steht in
+/// [`crate::auffrischung`] und ist ohne Fenster pruefbar.
+impl Dateifenstersicht for Anwendungsdelegierter {
+    fn ordner(&self, seite: Fensterseite) -> PathBuf {
+        self.dateifenster(seite).quelle().angezeigter_ordner()
+    }
+
+    fn sichtbar(&self, seite: Fensterseite) -> bool {
+        self.ivars()
+            .modell
+            .borrow()
+            .sichtbar(Bereich::von_seite(seite))
+    }
+
+    fn neu_lesen(&self, seite: Fensterseite) {
+        self.dateifenster(seite).quelle().neu_lesen();
+    }
+
+    fn wechseln(&self, seite: Fensterseite, ziel: &Path) {
+        self.dateifenster(seite).quelle().ordner_lesen(ziel, None);
+    }
+
+    fn melden(&self, seite: Fensterseite, text: &str) {
+        self.dateifenster(seite).quelle().meldung_zeigen(text);
+    }
+}
+
+/// Der Ordner, auf den ein Dateifenster ausweicht, wenn sein Datentraeger
+/// verschwindet (C9).
+///
+/// Das Benutzerverzeichnis, und ohne eines die Wurzel. Derselbe Rueckfall wie
+/// beim Standardordner eines Tabs in `krk-core`: ein Dateifenster muss einen
+/// Ordner zeigen, und `/` gibt es immer.
+fn benutzerverzeichnis() -> PathBuf {
+    pfade::benutzerverzeichnis().unwrap_or_else(|| PathBuf::from("/"))
 }
 
 /// Startet die Anwendung. Kehrt zurueck, wenn sie beendet ist.

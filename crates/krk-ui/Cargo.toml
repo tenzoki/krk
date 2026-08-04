@@ -26,3 +26,7 @@ objc2-foundation = { workspace = true }
 # Unmittelbar genannt, weil `bildtakt.rs` den Typnamen `CADisplayLink`
 # schreibt: der Takt wird festgehalten, nicht nur einmal gerufen.
 objc2-quartz-core = { workspace = true }
+# Die Parametertypen der FSEvents-Bindung in `appkit/fsevents.rs`. Die Kiste
+# verlinkt `CoreFoundation`; `CoreServices`, wo `FSEventStreamCreate` liegt,
+# verlinkt das `#[link]`-Attribut an jenem `extern`-Block.
+objc2-core-foundation = { workspace = true }

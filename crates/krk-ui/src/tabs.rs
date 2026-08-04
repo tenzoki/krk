@@ -399,6 +399,34 @@ impl Tabliste {
         self.lesen_starten(stelle);
     }
 
+    /// Liest den sichtbaren Tab noch einmal, ohne den Ordner zu wechseln (C9).
+    ///
+    /// Der Rumpf des einen Auffrischungspfads aus [`crate::auffrischung`].
+    /// Gegenueber [`Tabliste::ordner_setzen`] mit demselben Ordner sind es zwei
+    /// Unterschiede, und beide sind der Grund, aus dem diese Methode besteht:
+    /// der Name des ausgewaehlten Eintrags und die Bildlaufposition gehen als
+    /// Wunsch in den neuen Tab, statt verloren zu gehen.
+    ///
+    /// **Ein zweiter Mechanismus entsteht dabei nicht.** Getragen wird beides
+    /// von den Feldern, die die Sitzungswiederherstellung ohnehin benutzt:
+    /// `wunschauswahl` setzt die Auswahl, sobald gelesen und sortiert ist, und
+    /// `bildlauf_offen` sagt der Ansicht, dass sie die gemerkte Position noch
+    /// herstellen muss. Ein **Name** und keine Zeilennummer, weil eine
+    /// Auffrischung genau dann stattfindet, wenn sich der Ordnerinhalt
+    /// geaendert hat: die Zeile des Eintrags ist danach womoeglich eine andere.
+    /// Ist der Eintrag verschwunden, bleibt die Auswahl leer, wie C9 es
+    /// zulaesst ("soweit die Eintraege noch existieren").
+    pub fn aktiven_neu_lesen(&mut self) {
+        let stelle = self.aktiv;
+        // `zustand` liefert Ordner, Sortierung, Filter, den Namen des
+        // ausgewaehlten Eintrags und die Bildlaufposition in genau der Form,
+        // in der sie auch in `session.toml` stuenden. Aus ihm entsteht der
+        // Tab neu.
+        let zustand = self.tabs[stelle].zustand();
+        self.tabs[stelle] = Tabinhalt::aus_zustand(&zustand);
+        self.lesen_starten(stelle);
+    }
+
     /// Startet den Lesevorgang des sichtbaren Tabs.
     ///
     /// Die erste Stufe der Lesereihenfolge aus dem Modulkopf.
@@ -653,6 +681,33 @@ mod tests {
             liste.zustand().tabs[0].auswahl,
             Some("urlaub.jpg".to_owned())
         );
+    }
+
+    /// Die Zusage aus C9: Auswahl und Bildlaufposition ueberleben eine
+    /// Auffrischung.
+    #[test]
+    fn eine_auffrischung_nimmt_ordner_auswahl_und_bildlauf_mit() {
+        // Ein Ordner, den es gibt: `aktiven_neu_lesen` startet einen
+        // Lesevorgang, und der soll nicht gegen ein Nichts laufen.
+        let vorhanden = std::env::temp_dir().display().to_string();
+        let mut liste = liste(&[&vorhanden]);
+        liste.aktiver_mut().wunschauswahl = Some("bild.jpg".to_owned());
+        liste.aktiver_mut().bildlauf_setzen(240.0);
+
+        liste.aktiven_neu_lesen();
+
+        assert_eq!(liste.aktiver().ordner(), Path::new(&vorhanden));
+        assert_eq!(
+            liste.aktiver().auswahlname().as_deref(),
+            Some("bild.jpg"),
+            "der Name des ausgewaehlten Eintrags geht in den neuen Tab"
+        );
+        assert_eq!(liste.aktiver().bildlauf(), 240.0);
+        assert!(
+            liste.aktiver().bildlauf_ausstehend(),
+            "die Ansicht muss die gemerkte Position noch herstellen"
+        );
+        assert_eq!(liste.zahl(), 1, "es entsteht kein zweiter Tab");
     }
 
     #[test]

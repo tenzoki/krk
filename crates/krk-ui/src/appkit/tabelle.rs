@@ -229,6 +229,24 @@ pub struct QuelleIvars {
     /// Je Dateifenster und nicht je Tab: gesucht wird in der Liste, die gerade
     /// auf dem Schirm steht, und jeder Tabwechsel setzt sie zurueck.
     sprungmarke: RefCell<Sprungmarke>,
+    /// Was gerufen wird, wenn dieses Dateifenster einen anderen Ordner zeigt.
+    ///
+    /// Der Weg, auf dem die Dateisystembeobachtung aus C9 erfaehrt, dass sie
+    /// neu aufzusetzen ist: ein `FSEventStream` aendert seine Pfadliste nach
+    /// dem Anlegen nicht mehr. Wahlfrei, weil die Quelle vor dem
+    /// Anwendungsdelegierten zur Welt kommt.
+    ///
+    /// **Eine Auffrischung ruft ihn ausdruecklich nicht.** Sie wechselt den
+    /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
+    /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
+    ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
+    /// Eine Meldung, die dem Fenster gehoert und keinem einzelnen Tab.
+    ///
+    /// Die beschaedigte Belegungsdatei beim Start und der ausgeworfene
+    /// Datentraeger aus C9. Sie hat Vorrang vor der Tabmeldung und faellt beim
+    /// naechsten Ordner- oder Tabwechsel; siehe
+    /// [`DateifensterQuelle::meldung_anzeigen`].
+    fenstermeldung: RefCell<Option<String>>,
 }
 
 define_class!(
@@ -281,6 +299,8 @@ impl DateifensterQuelle {
             einzug: RefCell::new(None),
             aktivierung: RefCell::new(None),
             sprungmarke: RefCell::new(Sprungmarke::neu()),
+            ordnerwechsel: RefCell::new(None),
+            fenstermeldung: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -295,6 +315,28 @@ impl DateifensterQuelle {
     /// Hinterlegt, was beim Anfassen dieses Dateifensters zu tun ist.
     pub fn aktivierung_setzen(&self, melden: Box<dyn Fn()>) {
         *self.ivars().aktivierung.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was nach einem Ordnerwechsel dieses Dateifensters zu tun ist.
+    pub fn ordnerwechsel_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().ordnerwechsel.borrow_mut() = Some(melden);
+    }
+
+    /// Der Ordner, den der sichtbare Tab gerade zeigt.
+    pub fn angezeigter_ordner(&self) -> PathBuf {
+        self.ivars().tabs.borrow().aktiver().ordner().to_path_buf()
+    }
+
+    /// Meldet, dass dieses Dateifenster jetzt einen anderen Ordner zeigt.
+    ///
+    /// Steht ausdruecklich am Ende der Aufrufer und nicht mittendrin: der
+    /// Empfaenger fragt die Ordner beider Dateifenster ab, und eine noch
+    /// gehaltene Ausleihe des Tabmodells waere der doppelte Zugriff.
+    fn ordnerwechsel_melden(&self) {
+        let melden = self.ivars().ordnerwechsel.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -324,6 +366,7 @@ impl DateifensterQuelle {
         self.ivars().tabs.borrow_mut().sichtbaren_lesen();
         self.einzug_starten();
         self.tableiste_nachziehen();
+        self.ordnerwechsel_melden();
     }
 
     /// Oeffnet einen neuen Tab auf dem Ordner des sichtbaren (C1).
@@ -376,14 +419,52 @@ impl DateifensterQuelle {
     /// gelesen ist: beim Aufstieg der verlassene Ordner (C2), beim Sprung aus
     /// der Zwischenablage die genannte Datei (C10).
     pub fn ordner_lesen(&self, pfad: &Path, auswahl: Option<String>) {
+        self.fenstermeldung_loeschen();
         self.ivars().tabs.borrow_mut().ordner_setzen(pfad, auswahl);
+        self.nach_lesebeginn();
+        self.ordnerwechsel_melden();
+    }
+
+    /// Liest den angezeigten Ordner noch einmal (C9).
+    ///
+    /// **Die eine Stelle, an der eine Auffrischung die Ansicht erreicht.** Der
+    /// Weg dorthin ist [`crate::auffrischung::ordner_neu_lesen`], und den ruft
+    /// heute der FSEvents-Rueckruf und ab S16 zusaetzlich der gemeldete
+    /// Abschluss einer Dateioperation.
+    ///
+    /// Der Ordner bleibt derselbe, also meldet diese Methode keinen
+    /// Ordnerwechsel: der `FSEventStream` beobachtet weiter dieselben Pfade,
+    /// und ihn aus seinem eigenen Rueckruf heraus neu aufzusetzen hiesse, ihn
+    /// mitten im Aufruf freizugeben.
+    ///
+    /// Gelesen wird ueber denselben gestueckelten Lesevorgang wie jede
+    /// Navigation, samt Generationszaehler. Deshalb blockiert auch die
+    /// Auffrischung eines Ordners mit 100.000 Eintraegen die Eingabe nicht.
+    pub fn neu_lesen(&self) {
+        // Zuerst die Bildlaufposition aus der Ansicht in den Tab holen: sie
+        // steht in der `NSScrollView` und nirgends sonst, und der naechste
+        // Schritt baut den Tab neu auf.
+        self.bildlauf_merken();
+        self.ivars().tabs.borrow_mut().aktiven_neu_lesen();
+        self.nach_lesebeginn();
+    }
+
+    /// Zieht die Ansicht nach, nachdem im sichtbaren Tab ein Lesevorgang
+    /// begonnen hat.
+    ///
+    /// Gemeinsam fuer die Navigation und die Auffrischung; ein zweiter
+    /// Ansichtsweg neben diesem entsteht nicht.
+    fn nach_lesebeginn(&self) {
         // Der Puffer der Sprungmarke gehoert der Liste, die er durchsucht hat.
         self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
-        // `ordner_setzen` hat die Auswahl des alten Ordners aufgehoben; die
-        // Tabelle erfaehrt es hier. Sich darauf zu verlassen, dass `reloadData`
-        // eine Zeilennummer jenseits der neuen Zeilenzahl von selbst fallen
-        // laesst, hiesse, eine Zusage von AppKit anzunehmen statt sie zu geben.
+        // Der neue Tab hat noch keine Auswahl; die Tabelle erfaehrt es hier.
+        // Sich darauf zu verlassen, dass `reloadData` eine Zeilennummer
+        // jenseits der neuen Zeilenzahl von selbst fallen laesst, hiesse, eine
+        // Zusage von AppKit anzunehmen statt sie zu geben. Die alte Auswahl
+        // kommt mit dem Abschluss des Lesevorgangs zurueck, ueber
+        // `wunschauswahl` und dieselbe Huelle, die sie nach einem Umsortieren
+        // wiederherstellt.
         self.auswahl_anzeigen();
         self.meldung_anzeigen();
         self.einzug_starten();
@@ -392,6 +473,7 @@ impl DateifensterQuelle {
 
     /// Nach einem Tabwechsel: Inhalt, Auswahl, Bildlauf und Leiste nachziehen.
     fn tab_gewechselt(&self) {
+        self.fenstermeldung_loeschen();
         self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
@@ -404,6 +486,9 @@ impl DateifensterQuelle {
         if self.ivars().tabs.borrow().liest_noch() {
             self.einzug_starten();
         }
+        // Ein anderer Tab heisst ein anderer Ordner auf dem Schirm, und die
+        // Dateisystembeobachtung aus C9 haengt daran.
+        self.ordnerwechsel_melden();
     }
 
     /// Schreibt Beschriftungen und sichtbare Stelle in die Tableiste.
@@ -867,25 +952,49 @@ impl DateifensterQuelle {
         self.ivars().sicht.reflectScrolledClipView(&inhalt);
     }
 
-    /// Zeigt die Meldung des sichtbaren Tabs in der Statuszeile.
+    /// Schreibt in die Statuszeile, was gerade dort stehen soll.
+    ///
+    /// **Eine Regel, zwei Quellen.** Steht eine Meldung des Fensters an, hat sie
+    /// den Vorrang; sonst zeigt die Zeile die Meldung des sichtbaren Tabs. Die
+    /// Reihenfolge folgt daraus, dass eine Fenstermeldung ein Ereignis
+    /// beschreibt (der Datentraeger ist weg, die Belegungsdatei war
+    /// beschaedigt), waehrend eine Tabmeldung einen Zustand beschreibt (dieser
+    /// Ordner liess sich nicht vollstaendig lesen). Das Ereignis ist das
+    /// Neuere.
     fn meldung_anzeigen(&self) {
-        let meldung = self
-            .ivars()
-            .tabs
-            .borrow()
-            .aktiver()
-            .meldung()
-            .map(str::to_owned);
+        let meldung = self.ivars().fenstermeldung.borrow().clone().or_else(|| {
+            self.ivars()
+                .tabs
+                .borrow()
+                .aktiver()
+                .meldung()
+                .map(str::to_owned)
+        });
         self.ivars().statuszeile.zeigen(meldung.as_deref());
+    }
+
+    /// Loescht die Meldung des Fensters, falls eine steht.
+    ///
+    /// Gerufen von jedem echten Ordnerwechsel und von jedem Tabwechsel, und
+    /// ausdruecklich **nicht** von einer Auffrischung: die zeigt denselben
+    /// Ordner, und eine Meldung, die eine Sekunde spaeter von einer fremden
+    /// Aenderung im Hintergrund weggeraeumt wird, ist keine Meldung. Genau das
+    /// geschah am 260804 im laufenden Buendel mit der Auswurfmeldung aus C9,
+    /// weil das Benutzerverzeichnis, auf das ein Dateifenster ausweicht,
+    /// staendig beschrieben wird.
+    fn fenstermeldung_loeschen(&self) {
+        *self.ivars().fenstermeldung.borrow_mut() = None;
     }
 
     /// Stellt eine Meldung in die Statuszeile, die nicht von einem Tab kommt.
     ///
-    /// Der Weg der Startmeldungen: eine beschaedigte `keymap.toml` oder
-    /// `session.toml` gehoert dem Fenster und keinem einzelnen Tab. Der naechste
-    /// Ordnerwechsel loescht sie wieder, und das ist richtig: sie betrifft den
-    /// Start und nicht den Ordner, den der Nutzer gerade ansieht.
+    /// Der Weg der Startmeldungen und der Auswurfmeldung aus C9: eine
+    /// beschaedigte `keymap.toml`, eine beschaedigte `session.toml` oder ein
+    /// verschwundener Datentraeger gehoeren dem Fenster und keinem einzelnen
+    /// Tab. Der naechste Ordner- oder Tabwechsel loescht sie wieder, und das
+    /// ist richtig: sie betrifft nicht den Ordner, den der Nutzer dann ansieht.
     pub fn meldung_zeigen(&self, meldung: &str) {
+        *self.ivars().fenstermeldung.borrow_mut() = Some(meldung.to_owned());
         self.ivars().statuszeile.zeigen(Some(meldung));
     }
 

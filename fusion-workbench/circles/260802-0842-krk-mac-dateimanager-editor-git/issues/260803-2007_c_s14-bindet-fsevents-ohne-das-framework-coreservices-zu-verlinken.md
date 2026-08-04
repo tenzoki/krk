@@ -54,3 +54,35 @@ Fehler; die Meldung hier spart die Suche, sie verhindert keinen Schaden.
 
 **Aufgefallen bei:** der Durchsicht der Dateilisten von S9 bis S23 unter der
 erweiterten Regel, `issues/260803-1819_c_dateilisten-von-s9-bis-s23-noch-nicht-unter-der-erweiterten-regel-durchgegangen.md`.
+
+---
+Resolved: Weg 1 umgesetzt. `crates/krk-ui/src/appkit/fsevents.rs` traegt
+`#[link(name = "CoreServices", kind = "framework")]` am `extern`-Block; ein
+Bauskript ist nicht entstanden.
+
+**Zwei Messungen dazu, am 260804-1440 im Bau nachgestellt.**
+
+Erstens, die Praemisse stimmt: ein Rust-Programm, das allein diesen
+`extern`-Block enthaelt und sonst nichts verlinkt, bindet ohne das Attribut
+nicht. Ein eigens dafuer gebautes Probeprogramm meldete
+`Undefined symbols for architecture x86_64: "_FSEventStreamCreate"`. Das
+Probeprogramm ist danach entfernt worden.
+
+Zweitens, und das steht so nicht im Eintrag: **KRK bindet auch ohne das
+Attribut.** Ein `cargo clean -p krk-ui && cargo build` ohne die Zeile ging
+durch, und `otool -L target/debug/krk` fuehrte `CoreServices` trotzdem auf.
+Der Weg ist eine Reexport-Kette: `AppKit` reexportiert
+`ApplicationServices` (`AppKit.tbd`, Abschnitt `reexported-libraries`), und
+`ApplicationServices` reexportiert `CoreServices`
+(`ApplicationServices.tbd`, derselbe Abschnitt). Der Binder loest
+`_FSEventStreamCreate` ueber diese Kette auf und traegt `CoreServices` von
+sich aus in die Ladebefehle ein; `xcrun dyld_info -fixups` zeigt die Bindung
+als `CoreServices/_FSEventStreamCreate`. Auf der Kommandozeile des Binders
+steht `-framework CoreServices` nicht.
+
+Das aendert die Wahl nicht. Ohne das Attribut haengt die Aufloesung an einer
+Zusage, die AppKit gibt und nicht KRK, und sie faellt still weg, wenn Apple
+die Kette aendert oder eine spaetere Runde AppKit anders einbindet. Mit dem
+Attribut steht die Abhaengigkeit dort, wo die Bindung steht. Der Modulkopf
+von `fsevents.rs` schreibt beides aus, damit die Zeile nicht als
+ueberfluessig entfernt wird.

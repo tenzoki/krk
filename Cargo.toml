@@ -23,6 +23,18 @@ toml = "1"
 objc2 = "0.6"
 objc2-app-kit = "0.3"
 objc2-foundation = "0.3"
+# Core Foundation, aber nur die drei Stuecke, die die FSEvents-Bindung aus
+# Schritt 14 braucht: `CFArray` fuer die Liste der beobachteten Ordner,
+# `CFString` fuer den einzelnen Pfad und `CFRunLoop` fuer die Laufschleife, in
+# die der Strom gehaengt wird. Die Vorgabemerkmale zoegen ein halbes Hundert
+# weiterer Typen mit herein, von denen KRK keinen nennt; deshalb
+# `default-features = false`.
+objc2-core-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "CFArray",
+    "CFString",
+    "CFRunLoop",
+] }
 # Core Animation, aber nur das eine Stueck davon. `CADisplayLink` ist die
 # Bildgrenze, an der die Fruehmessung aus Schritt 8 ihre Spannen beendet;
 # `NSView.displayLinkWithTarget:selector:` liefert ihn und liegt hinter dem
