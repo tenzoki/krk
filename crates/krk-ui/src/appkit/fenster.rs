@@ -1,14 +1,20 @@
 //! Das Fenster und sein Delegierter.
 //!
-//! Der Delegierte hat in Runde 1, Schritt 6 eine einzige Aufgabe, und sie ist
-//! nicht kosmetisch: er bricht den laufenden Lesevorgang ab, sobald das Fenster
+//! Die Inhaltsansicht des Fensters ist seit Schritt 12 die Aufteilung aus
+//! [`super::aufteilung`] mit ihren vier Bereichen und nicht mehr die eine
+//! Tabelle aus Schritt 6.
+//!
+//! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
+//! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
 //! schliesst. Ohne ihn liesse ein Ordner mit 100.000 Eintraegen seinen
 //! Arbeitsfaden und seinen Zeitgeber gegen eine Tabelle weiterlaufen, die
 //! niemand mehr sieht.
 //!
-//! Die Groessenaenderung, die derselbe Delegierte spaeter traegt, kommt mit den
-//! vier Bereichen aus Schritt 12. Bis dahin regelt die Autogroesse der
-//! Bildlaufansicht sie vollstaendig.
+//! **Das Fenster ueberlebt sein Schliessen.** `setReleasedWhenClosed(false)`
+//! sorgt dafuer, und der Anwendungsdelegierte haelt es weiter. Genau darauf
+//! baut der Rueckweg aus C7: "Fenster einblenden" auf Cmd+N und der Klick auf
+//! das Dock-Symbol holen dieses eine Fenster nach vorn, statt ein zweites
+//! anzulegen.
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -22,17 +28,23 @@ use objc2_foundation::{
 use super::tabelle::DateifensterQuelle;
 
 /// Die Groesse, mit der das Fenster beim ersten Start aufgeht.
-const ANFANGSGROESSE: NSSize = NSSize::new(900.0, 600.0);
+///
+/// Breiter als in Schritt 6: vier Bereiche nebeneinander brauchen mehr Platz
+/// als eine Dateiliste.
+const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 
 /// Die Groesse, unter die sich das Fenster nicht ziehen laesst.
 ///
-/// Vier Spalten brauchen Platz; darunter waere die Namensspalte ein Schlitz.
-const MINDESTGROESSE: NSSize = NSSize::new(520.0, 240.0);
+/// Die Summe der vier Mindestbreiten aus [`crate::fenstermodell::Bereich`] plus
+/// Luft fuer die Trennlinien. Darunter faenden die Bereiche keinen Platz mehr,
+/// und die Zusage aus C7, dass jeder von ihnen bedienbar bleibt, waere nicht zu
+/// halten.
+const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0);
 
 /// Was der Fensterdelegierte haelt.
 pub struct FensterIvars {
-    /// Die Datenquelle des Dateifensters in diesem Fenster.
-    quelle: Retained<DateifensterQuelle>,
+    /// Die Datenquellen der beiden Dateifenster, links zuerst.
+    quellen: [Retained<DateifensterQuelle>; 2],
 }
 
 define_class!(
@@ -53,15 +65,20 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(windowWillClose:))]
         fn fenster_schliesst(&self, _meldung: &NSNotification) {
-            self.ivars().quelle.lesen_abbrechen();
+            for quelle in &self.ivars().quellen {
+                quelle.lesen_abbrechen();
+            }
         }
     }
 );
 
 impl FensterDelegierter {
-    /// Einen Delegierten fuer das Fenster, das die genannte Quelle anzeigt.
-    pub fn neu(mtm: MainThreadMarker, quelle: Retained<DateifensterQuelle>) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(FensterIvars { quelle });
+    /// Einen Delegierten fuer das Fenster mit den genannten Dateifenstern.
+    pub fn neu(
+        mtm: MainThreadMarker,
+        quellen: [Retained<DateifensterQuelle>; 2],
+    ) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(FensterIvars { quellen });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
     }
@@ -75,7 +92,8 @@ pub fn hauptfenster(
 ) -> Retained<NSWindow> {
     // SAFETY: Das Fenster gibt sich beim Schliessen nicht selbst frei, siehe
     // `setReleasedWhenClosed` unten. Ohne diese Abschaltung waere die
-    // Referenz, die der Anwendungsdelegierte haelt, nach dem Schliessen tot.
+    // Referenz, die der Anwendungsdelegierte haelt, nach dem Schliessen tot,
+    // und der Rueckweg aus C7 zeigte auf ein freigegebenes Objekt.
     let fenster = unsafe {
         let fenster = NSWindow::initWithContentRect_styleMask_backing_defer(
             NSWindow::alloc(mtm),

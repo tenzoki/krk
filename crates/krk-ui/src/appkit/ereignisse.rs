@@ -14,29 +14,39 @@
 //! Abgriff einer gewoehnlichen Anwendung im Vordergrund auch die
 //! Funktionstasten sieht; KRK braucht die Freigabe deshalb nicht.
 //!
-//! **Der Weg eines Tastendrucks**, vom Ereignis bis in das Ordnermodell:
+//! **Der Weg eines Tastendrucks**, vom Ereignis bis zur Ausfuehrung:
 //!
 //! ```text
 //! NSEvent ──> Tastendruck::aus_ereignis ──> Belegung::nachschlag
 //!                  (Maske normalisiert)          │
 //!                                                v
-//!                       DateifensterQuelle::kommando_ausfuehren
+//!                                       Kommando ──> Senke des Aufrufers
 //! ```
 //!
-//! Trifft der Nachschlag, schluckt der Abgriff das Ereignis (er liefert
-//! `nil`); sonst reicht er es unveraendert weiter, damit Cmd+Q, Cmd+W und die
-//! Texteingabe des Systems ihren gewohnten Weg gehen.
+//! Trifft der Nachschlag und fuehrt die Senke das Kommando aus, schluckt der
+//! Abgriff das Ereignis (er liefert `nil`); sonst reicht er es unveraendert
+//! weiter, damit Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren
+//! gewohnten Weg gehen.
+//!
+//! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
+//! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es
+//! zwei Dateifenster und Kommandos, die keinem von beiden gehoeren, etwa das
+//! Ein- und Ausblenden der Bereiche; er nimmt deshalb eine gewoehnliche
+//! Rust-Senke entgegen und laesst den Aufrufer entscheiden, wohin ein Kommando
+//! geht. Dieselbe Form wie [`super::bildtakt::Zeichenende`]. Sie haelt
+//! zugleich die Modulordnung: `ereignisse` kennt `anwendung` nicht, und ein
+//! Ring zwischen den beiden entsteht nicht.
 //!
 //! **Der Nachschlag geht seit Schritt 11 in die Belegung und nicht mehr in eine
-//! verdrahtete Tabelle.** Der Abgriff haelt seine eigene [`Belegung`], geladen
-//! beim Einrichten ueber [`belegung::fuer_den_betrieb`]: die `keymap.toml` des
-//! Nutzers, sonst die eingebettete Auslieferungsbelegung.
+//! verdrahtete Tabelle.** Die [`Belegung`] kommt beim Einrichten von aussen:
+//! der Aufrufer laedt sie ueber [`belegung::fuer_den_betrieb`] und stellt die
+//! Meldung, falls es eine gab, in die Statuszeile.
 //!
 //! **Geschluckt wird nur, was auch ausgefuehrt wurde.** Die Belegung kennt jede
-//! Funktion aus C1 bis C7, gebaut sind in dieser Runde erst fuenf. Eine Taste,
-//! die einer noch ungebauten Funktion gehoert, geht deshalb unveraendert
+//! Funktion aus C1 bis C7, gebaut ist in dieser Runde ein Teil davon. Eine
+//! Taste, die einer noch ungebauten Funktion gehoert, geht deshalb unveraendert
 //! weiter, statt ins Leere geschluckt zu werden; sonst naehme der Abgriff dem
-//! Menue etwa Cmd+W ab, ohne etwas an seine Stelle zu setzen.
+//! Menue ein Kuerzel ab, ohne etwas an seine Stelle zu setzen.
 
 use std::ptr::NonNull;
 
@@ -48,10 +58,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{MainThreadMarker, NSPoint, NSProcessInfo, NSString};
 
-use krk_core::tasten::belegung::{self, Belegung};
-use krk_core::tasten::{Kombination, Nachschlag, Tastendruck, code_von_pflicht};
-
-use super::tabelle::DateifensterQuelle;
+use krk_core::tasten::Belegung;
+use krk_core::tasten::{Kombination, Kommando, Nachschlag, Tastendruck, code_von_pflicht};
 
 /// Ein eingerichteter Ereignisabgriff.
 ///
@@ -64,7 +72,10 @@ pub struct Tastenabgriff {
 }
 
 impl Tastenabgriff {
-    /// Richtet den Abgriff ein und leitet die Kommandos an `ziel`.
+    /// Richtet den Abgriff ein und leitet jedes gefundene Kommando an `senke`.
+    ///
+    /// Die Senke liefert zurueck, ob sie das Kommando ausgefuehrt hat; nur dann
+    /// schluckt der Abgriff das Ereignis.
     ///
     /// Liefert `None`, wenn AppKit den Abgriff nicht einrichtet. Der Aufrufer
     /// meldet das; still ohne Tastatur weiterzulaufen waere der schlechteste
@@ -73,12 +84,15 @@ impl Tastenabgriff {
     /// `protokoll` schaltet den Modus `--tasten-protokoll`: jeder empfangene
     /// Tastendruck geht mit seinem Code und seiner normalisierten Maske auf die
     /// Standardausgabe, gleich ob die Belegung ihn kennt.
-    pub fn einrichten(ziel: Retained<DateifensterQuelle>, protokoll: bool) -> Option<Self> {
-        let belegung = belegung::fuer_den_betrieb();
+    pub fn einrichten(
+        belegung: Belegung,
+        protokoll: bool,
+        senke: impl Fn(Kommando) -> bool + 'static,
+    ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
             // SAFETY: AppKit reicht dem Block einen gueltigen Zeiger auf das
             // Ereignis, das fuer die Dauer des Aufrufs lebt.
-            let geschluckt = behandeln(&ziel, &belegung, unsafe { ereignis.as_ref() }, protokoll);
+            let geschluckt = behandeln(&senke, &belegung, unsafe { ereignis.as_ref() }, protokoll);
             if geschluckt {
                 // `nil` heisst: das Ereignis geht nicht weiter.
                 std::ptr::null_mut()
@@ -164,7 +178,7 @@ pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
 fn behandeln(
-    ziel: &DateifensterQuelle,
+    senke: &impl Fn(Kommando) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
     protokoll: bool,
@@ -184,12 +198,9 @@ fn behandeln(
         return false;
     };
     match funktion.kommando() {
-        Some(kommando) => {
-            ziel.kommando_ausfuehren(kommando);
-            true
-        }
         // Belegt, aber in dieser Runde noch nicht gebaut. Siehe den Modulkopf:
         // geschluckt wird nur, was auch ausgefuehrt wurde.
+        Some(kommando) => senke(kommando),
         None => false,
     }
 }

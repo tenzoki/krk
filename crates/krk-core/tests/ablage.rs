@@ -6,19 +6,22 @@
 //! [`der_ablageordner_liegt_unter_application_support`], und die liest nur
 //! einen Pfad, ohne etwas anzulegen.
 //!
-//! Schritt 12 laesst die Pruefungen des Fenster- und Tabmodells in diese Datei
-//! hineinwachsen; deshalb waehlt das Abnahmekommando das Testprogramm mit
-//! `--test ablage` und filtert nicht ueber Pruefungsnamen.
+//! Die Pruefungen des Fenster- und Tabmodells sind mit Schritt 12 in diese
+//! Datei hineingewachsen; deshalb waehlt das Abnahmekommando das Testprogramm
+//! mit `--test ablage` und filtert nicht ueber Pruefungsnamen.
 //!
-//! # Zwei Pruefungen laufen in einem eigenen Prozess
+//! # Eine Pruefung laeuft in einem eigenen Prozess
 //!
-//! Der Abbruch zwischen Schreiben und Umbenennen und der Ausgabeweg der
-//! Meldung sind beide nicht im laufenden Testprozess feststellbar: das eine
-//! verlangt einen Prozess, der wirklich stirbt, das andere eine
-//! Standardfehlerausgabe, die jemand mitliest. Beide starten deshalb dieselbe
-//! Testdatei ein zweites Mal, mit einer Umgebungsvariablen als Auftrag. Die
-//! Kindproben tragen `#[ignore]`, damit ein gewoehnlicher Lauf sie nicht
-//! anfasst, und kehren ohne ihre Umgebungsvariable sofort zurueck.
+//! Der Abbruch zwischen Schreiben und Umbenennen ist im laufenden Testprozess
+//! nicht feststellbar: er verlangt einen Prozess, der wirklich stirbt. Er
+//! startet deshalb dieselbe Testdatei ein zweites Mal, mit einer
+//! Umgebungsvariablen als Auftrag. Die Kindprobe traegt `#[ignore]`, damit ein
+//! gewoehnlicher Lauf sie nicht anfasst, und kehrt ohne ihre Umgebungsvariable
+//! sofort zurueck.
+//!
+//! Die zweite Kindprobe ist mit Schritt 12 entfallen. Sie las die
+//! Standardfehlerausgabe mit, weil `ablage::melden` dorthin schrieb; seit der
+//! Kern nichts mehr ausgibt, ist die Zusage ohne zweiten Prozess pruefbar.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -126,6 +129,7 @@ fn beispielsitzung() -> Sitzung {
                         auswahl: Some("urlaub.jpg".to_string()),
                         verstecke_ausgeblendet: false,
                         sortierung: Sortierung::neu(Schluessel::Geaendert, Richtung::Absteigend),
+                        bildlauf: 640.0,
                     },
                 ],
             },
@@ -136,6 +140,7 @@ fn beispielsitzung() -> Sitzung {
                     auswahl: Some("2026-08".to_string()),
                     verstecke_ausgeblendet: true,
                     sortierung: Sortierung::neu(Schluessel::Groesse, Richtung::Aufsteigend),
+                    bildlauf: 0.0,
                 }],
             },
         ],
@@ -317,6 +322,127 @@ fn die_geschriebene_sitzung_ist_lesbares_toml() {
         .filter(|zeile| zeile.starts_with("vorschau ="))
         .collect();
     assert_eq!(vorschauzeilen, ["vorschau = false"], "{text}");
+}
+
+// ---------------------------------------------------------------------------
+// Das Fenster- und Tabmodell (Schritt 12)
+// ---------------------------------------------------------------------------
+
+/// Jedes Feld des Fenster- und Tabmodells kommt so zurueck, wie es hineinging.
+///
+/// Die Pruefung nennt die Felder einzeln, statt sich auf den Vergleich der
+/// ganzen Sitzung zu verlassen: ein Feld, das beim Schreiben oder beim Lesen
+/// verloren geht, faellt hier mit seinem Namen auf.
+#[test]
+fn das_fenster_und_tabmodell_ueberlebt_schreiben_und_wiedereinlesen() {
+    let (_ordner, ablage) = ablage("tabmodell");
+    let vorher = beispielsitzung();
+    ablage
+        .sichern(Datei::Sitzung, &vorher)
+        .expect("schreiben gescheitert");
+
+    let nachher = gelesene_sitzung(&ablage);
+
+    assert_eq!(nachher.aktiv, vorher.aktiv, "das aktive Dateifenster");
+    assert_eq!(nachher.sichtbar, vorher.sichtbar, "die Sichtbarkeit");
+    assert_eq!(nachher.breiten, vorher.breiten, "die Breiten");
+    for seite in Fensterseite::ALLE {
+        let da = nachher.fenster(seite);
+        let war = vorher.fenster(seite);
+        assert_eq!(da.aktiver_tab, war.aktiver_tab, "{seite:?}: sichtbarer Tab");
+        assert_eq!(da.tabs.len(), war.tabs.len(), "{seite:?}: Zahl der Tabs");
+        for (stelle, (jetzt, damals)) in da.tabs.iter().zip(&war.tabs).enumerate() {
+            assert_eq!(
+                jetzt.ordner, damals.ordner,
+                "{seite:?}, Tab {stelle}: Ordner"
+            );
+            assert_eq!(
+                jetzt.auswahl, damals.auswahl,
+                "{seite:?}, Tab {stelle}: Auswahl"
+            );
+            assert_eq!(
+                jetzt.verstecke_ausgeblendet, damals.verstecke_ausgeblendet,
+                "{seite:?}, Tab {stelle}: versteckte Eintraege"
+            );
+            assert_eq!(
+                jetzt.sortierung, damals.sortierung,
+                "{seite:?}, Tab {stelle}: Sortierung"
+            );
+            assert_eq!(
+                jetzt.bildlauf, damals.bildlauf,
+                "{seite:?}, Tab {stelle}: Bildlaufposition"
+            );
+        }
+    }
+}
+
+/// Eine `session.toml` aus der Zeit vor der Bildlaufposition bleibt lesbar.
+///
+/// Jede Struktur des Sitzungszustands traegt `#[serde(default)]`, damit ein
+/// neues Feld eine aeltere Datei nicht ungueltig macht. Schritt 12 ist der
+/// erste, der ein Feld hinzufuegt; ohne diese Pruefung stuende die Zusage nur
+/// im Modulkopf.
+#[test]
+fn eine_sitzung_ohne_bildlaufposition_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("altbestand");
+    let alt = "\
+aktiv = \"rechts\"
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster.tabs]]
+ordner = \"/Users/pruefung/Projekte\"
+verstecke_ausgeblendet = true
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die alte Datei gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    let tab = &geladen.wert.fenster(Fensterseite::Links).tabs[0];
+    assert_eq!(tab.ordner, PathBuf::from("/Users/pruefung/Projekte"));
+    assert_eq!(
+        tab.bildlauf, 0.0,
+        "das neue Feld nimmt seinen Vorgabewert an"
+    );
+    assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
+}
+
+/// Ein Tab mehr im Fenster, und die Datei traegt ihn.
+///
+/// C1 laesst beliebig viele Tabs je Dateifenster zu; die Serialisierung darf
+/// nicht bei einem stehen bleiben.
+#[test]
+fn ein_dateifenster_traegt_beliebig_viele_tabs() {
+    let (_ordner, ablage) = ablage("viele-tabs");
+    let mut sitzung = Sitzung::default();
+    sitzung.fenster_mut(Fensterseite::Links).tabs = vec![
+        Tab::auf("/eins"),
+        Tab::auf("/zwei"),
+        Tab::auf("/drei"),
+        Tab::auf("/vier"),
+    ];
+    sitzung.fenster_mut(Fensterseite::Links).aktiver_tab = 2;
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("schreiben gescheitert");
+
+    let zurueck = gelesene_sitzung(&ablage);
+    let fenster = zurueck.fenster(Fensterseite::Links);
+    assert_eq!(fenster.tabs.len(), 4);
+    assert_eq!(fenster.aktiver_tab, 2);
+    assert_eq!(
+        fenster.aktiver_tab().map(|tab| tab.ordner.clone()),
+        Some(PathBuf::from("/drei"))
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -609,16 +735,12 @@ fn eine_fallengelassene_nachbardatei_raeumt_sich_ab() {
 }
 
 // ---------------------------------------------------------------------------
-// Die beiden Pruefungen mit eigenem Prozess
+// Die Pruefung mit eigenem Prozess
 // ---------------------------------------------------------------------------
 
 /// Die Umgebungsvariable, die die Abbruch-Kindprobe beauftragt. Ihr Wert ist
 /// die Zieldatei.
 const AUFTRAG_ABBRUCH: &str = "KRK_PROBE_ABBRUCH";
-
-/// Die Umgebungsvariable, die die Meldungs-Kindprobe beauftragt. Ihr Wert ist
-/// der Ablageordner.
-const AUFTRAG_MELDUNG: &str = "KRK_PROBE_MELDUNG";
 
 /// Der Inhalt, den das sterbende Kind schreibt.
 const KINDINHALT: &str = "# vom Kind geschrieben, nie umbenannt\naktiv = \"rechts\"\n";
@@ -714,36 +836,36 @@ fn kind_stirbt_zwischen_schreiben_und_umbenennen() {
     std::process::abort();
 }
 
+/// Der Kern gibt nichts aus; er liefert den Satz und laesst den Aufrufer
+/// entscheiden.
+///
+/// Die Vorgaengerin dieser Pruefung startete einen Kindprozess und las seine
+/// Standardfehlerausgabe mit, weil `melden` dorthin schrieb. Seit Schritt 12
+/// tut es das nicht mehr: der Nutzer hat am 260804-0830 die Statuszeile
+/// gewaehlt, und ein ueber den Finder gestartetes Buendel hat ohnehin keine
+/// Standardfehlerausgabe. Die Zusage lautet jetzt umgekehrt, und sie ist ohne
+/// Kindprozess pruefbar.
 #[test]
-fn die_ersetzung_erscheint_auf_der_standardfehlerausgabe() {
-    let (ordner, ablage) = ablage("meldung");
+fn die_ersetzung_kommt_als_text_zurueck_und_landet_auf_keinem_kanal() {
+    let (_ordner, ablage) = ablage("meldung");
     fs::write(ablage.pfad(Datei::Sitzung), KAPUTT).expect("schreiben gescheitert");
 
-    let ergebnis = kindprobe("kind_meldet_eine_ersetzung", AUFTRAG_MELDUNG, ordner.pfad());
+    let (sitzung, meldung) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
 
-    assert!(
-        ergebnis.status.success(),
-        "die Kindprobe ist gescheitert:\n{}",
-        String::from_utf8_lossy(&ergebnis.stderr)
-    );
-    let ausgabe = String::from_utf8_lossy(&ergebnis.stderr);
-    let zeile = ausgabe
-        .lines()
-        .find(|zeile| zeile.starts_with("krk: "))
-        .unwrap_or_else(|| panic!("keine Meldung auf der Standardfehlerausgabe:\n{ausgabe}"));
-    assert!(zeile.contains("session.toml"), "{zeile}");
-    assert!(zeile.contains("ist beschaedigt"), "{zeile}");
-    assert!(zeile.contains("Auslieferungszustand"), "{zeile}");
-}
-
-#[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_MELDUNG gestartet"]
-fn kind_meldet_eine_ersetzung() {
-    let Some(wurzel) = std::env::var_os(AUFTRAG_MELDUNG) else {
-        return;
-    };
-    let ablage =
-        Ablage::oeffnen(Ablageort::an(PathBuf::from(wurzel))).expect("oeffnen gescheitert");
-    let sitzung: Sitzung = ablage.laden(Datei::Sitzung).gemeldet();
     assert_eq!(sitzung, Sitzung::default());
+    let meldung = meldung.expect("eine beschaedigte Datei muss eine Meldung tragen");
+    assert!(meldung.contains("session.toml"), "{meldung}");
+    assert!(meldung.contains("ist beschaedigt"), "{meldung}");
+    assert!(meldung.contains("Auslieferungszustand"), "{meldung}");
+    assert!(
+        !meldung.starts_with("krk: "),
+        "der Programmname gehoert in ein Terminal und nicht in die Statuszeile: {meldung}"
+    );
+
+    // Eine heile Datei liefert keinen Satz, den jemand anzeigen muesste.
+    ablage
+        .sichern(Datei::Sitzung, &beispielsitzung())
+        .expect("schreiben gescheitert");
+    let (_, keine) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+    assert_eq!(keine, None);
 }

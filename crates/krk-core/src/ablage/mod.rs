@@ -28,16 +28,24 @@
 //! loeschen. Ueberschrieben wird sie erst beim naechsten gewoehnlichen
 //! Schreibvorgang.
 //!
-//! # Der eine Ausgabeweg
+//! # Der Kern gibt nichts aus
 //!
-//! [`melden`] ist die einzige Stelle im Kern, die eine [`Ersetzung`] an den
-//! Nutzer gibt. Heute schreibt sie auf die Standardfehlerausgabe, so wie der
-//! Plan es in Schritt 10 vorschreibt. Im Buendel erreicht dieser Weg niemanden,
-//! weil eine ueber `open` gestartete Anwendung keinen Standardfehler hat; die
-//! Frage, welchen Weg KRK stattdessen nimmt, liegt als offene Entscheidung
-//! `decisions/260803-2025_o_wie-zeigt-krk-dem-nutzer-fehler.md`. Weil die
-//! Ablage die Meldung als Wert zurueckgibt und nur diese eine Funktion sie
-//! ausgibt, kostet die Antwort eine Zeile und nicht fuenf.
+//! [`melden`] ist die einzige Stelle im Kern, die aus einer [`Ersetzung`] einen
+//! Satz fuer den Nutzer macht, und sie **schreibt ihn nicht, sondern gibt ihn
+//! zurueck**. Bis Schritt 11 schrieb sie auf die Standardfehlerausgabe; im
+//! Buendel erreichte das niemanden, weil eine ueber den Finder gestartete
+//! Anwendung keine hat. Der Nutzer hat am 260804-0830 Moeglichkeit 1 aus
+//! `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md` gewaehlt: die
+//! Meldung gehoert in die Statuszeile am Fuss des Dateifensters, und die baut
+//! `krk-ui` in Schritt 12. Der Kern schreibt seither auf keinen Kanal mehr, und
+//! das Abnahmekriterium von Schritt 12 prueft es mit einem `grep` ueber
+//! `crates/krk-core/src` nach dem Namen des Ausgabemakros. Deshalb steht der
+//! Name hier nirgends ausgeschrieben: er wuerde die eigene Pruefung brechen.
+//!
+//! **Die Aufrufrichtung bleibt dabei von oben nach unten.** Der Kern ruft die
+//! Oberflaeche nicht an; er liefert einen Wert, und wer ihn geladen hat,
+//! entscheidet, wo er ihn hinstellt. Eine zweite Abhaengigkeitsumkehr neben der
+//! Papierkorb-Schnittstelle entsteht nicht.
 
 pub mod atomar;
 pub mod lesezeichen;
@@ -110,12 +118,19 @@ impl fmt::Display for Ersetzung {
     }
 }
 
-/// Der eine Ausgabeweg, auf dem die Ablage etwas an den Nutzer meldet.
+/// Der Satz, den der Nutzer zu einer [`Ersetzung`] lesen soll.
 ///
-/// Siehe den Abschnitt "Der eine Ausgabeweg" im Modulkopf: aendert sich der
-/// Weg, aendert sich diese Funktion und sonst keine Zeile.
-pub fn melden(ersetzung: &Ersetzung) {
-    eprintln!("krk: {ersetzung}");
+/// Die eine Stelle im Kern, die eine Ersetzung in Worte fasst. Sie gibt den
+/// Text zurueck und schreibt ihn nirgendwohin; siehe den Abschnitt "Der Kern
+/// gibt nichts aus" im Modulkopf.
+///
+/// Der frueher vorangestellte Programmname `krk: ` ist mit Schritt 12
+/// entfallen. Er war die Anrede eines Terminals; in einer Statuszeile, die
+/// ausschliesslich KRK gehoert, benennt er nichts, und der Satz nennt die
+/// betroffene Datei ohnehin selbst.
+#[must_use]
+pub fn melden(ersetzung: &Ersetzung) -> String {
+    ersetzung.to_string()
 }
 
 /// Das Ergebnis eines Ladevorgangs: immer ein Wert, dazu die Meldung, falls
@@ -134,12 +149,14 @@ impl<T> Geladen<T> {
         self.ersetzung.is_some()
     }
 
-    /// Der Wert, und eine etwaige Ersetzung ueber [`melden`] hinaus.
-    pub fn gemeldet(self) -> T {
-        if let Some(ersetzung) = &self.ersetzung {
-            melden(ersetzung);
-        }
-        self.wert
+    /// Der Wert und der Satz, den der Aufrufer dem Nutzer zeigen muss.
+    ///
+    /// Die Vorgaengerin `gemeldet` hat den Satz selbst geschrieben. Sie ist mit
+    /// Schritt 12 entfallen, weil der Kern keinen Ausgabekanal mehr hat: wer
+    /// laedt, bekommt den Text und stellt ihn in seine Statuszeile.
+    pub fn mit_meldung(self) -> (T, Option<String>) {
+        let meldung = self.ersetzung.as_ref().map(melden);
+        (self.wert, meldung)
     }
 }
 

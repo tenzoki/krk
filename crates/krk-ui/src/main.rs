@@ -14,11 +14,17 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! `messmodus` liegt ausdruecklich **neben** `appkit` und nicht darin: es haelt
-//! den Ablauf der Fruehmessung und nennt keine `objc2`-Kiste.
+//! Drei Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
+//! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
+//! Sichtbarkeit der vier Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
+//! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
+//! werden.
 
 mod appkit;
+mod fenstermodell;
 mod messmodus;
+mod tabs;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
 /// einschaltet.

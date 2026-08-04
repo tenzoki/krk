@@ -88,17 +88,54 @@ pub enum Kommando {
     SeiteRunter,
     /// In den ausgewaehlten Ordner hineinsteigen.
     Oeffnen,
+    /// Einen neuen Tab im aktiven Dateifenster oeffnen (C1).
+    TabNeu,
+    /// Den aktiven Tab schliessen (C1).
+    TabSchliessen,
+    /// Zum naechsten Tab wechseln (C1).
+    TabNaechster,
+    /// Zum vorigen Tab wechseln (C1).
+    TabVoriger,
+    /// Das aktive Dateifenster wechseln (C1).
+    FensterWechseln,
+    /// Die Lesezeichen- und Geraeteleiste ein- und ausblenden (C7).
+    LeisteUmschalten,
+    /// Das zweite Dateifenster ein- und ausblenden (C7).
+    ZweitesFensterUmschalten,
+    /// Das Vorschaufenster ein- und ausblenden (C7, dieselbe Funktion wie
+    /// "Vorschau anzeigen" aus C3).
+    VorschauUmschalten,
+    /// Das geschlossene Anwendungsfenster wieder nach vorn holen (C7).
+    FensterEinblenden,
+    /// Den aktiven Bereich um einen Schritt verbreitern (C7).
+    BereichVerbreitern,
+    /// Den aktiven Bereich um einen Schritt verschmaelern (C7).
+    BereichVerschmaelern,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 5] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 16] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
         (Kommando::SeiteRunter, "seite_runter"),
         (Kommando::Oeffnen, "oeffnen"),
+        (Kommando::TabNeu, "tab_neu"),
+        (Kommando::TabSchliessen, "tab_schliessen"),
+        (Kommando::TabNaechster, "tab_naechster"),
+        (Kommando::TabVoriger, "tab_voriger"),
+        (Kommando::FensterWechseln, "fenster_wechseln"),
+        (Kommando::LeisteUmschalten, "leiste_umschalten"),
+        (
+            Kommando::ZweitesFensterUmschalten,
+            "zweites_fenster_umschalten",
+        ),
+        (Kommando::VorschauUmschalten, "vorschau_umschalten"),
+        (Kommando::FensterEinblenden, "fenster_einblenden"),
+        (Kommando::BereichVerbreitern, "bereich_verbreitern"),
+        (Kommando::BereichVerschmaelern, "bereich_verschmaelern"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -417,21 +454,24 @@ pub fn laden(ablage: &Ablage) -> Geladen<Belegung> {
     }
 }
 
-/// Die Belegung fuer den laufenden Betrieb.
+/// Die Belegung fuer den laufenden Betrieb, dazu die Meldung, falls eine
+/// noetig war.
 ///
-/// Der eine Aufruf, den die Oberflaeche beim Start macht. Jede Meldung geht
-/// ueber [`melden`] und damit denselben Weg wie die der uebrigen Ablagedateien;
-/// eine zweite Ausgabestelle entsteht nicht.
-pub fn fuer_den_betrieb() -> Belegung {
+/// Der eine Aufruf, den die Oberflaeche beim Start macht. Jede Meldung nimmt
+/// [`melden`] und damit denselben Weg wie die der uebrigen Ablagedateien; eine
+/// zweite Ausgabestelle entsteht nicht. Geschrieben wird sie hier nicht: der
+/// Kern hat seit Schritt 12 keinen Ausgabekanal, und der Aufrufer in `krk-ui`
+/// setzt den Satz in die Statuszeile.
+pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
     match Ablage::im_benutzerverzeichnis() {
-        Ok(ablage) => laden(&ablage).gemeldet(),
-        Err(fehler) => {
-            melden(&Ersetzung {
+        Ok(ablage) => laden(&ablage).mit_meldung(),
+        Err(fehler) => (
+            Belegung::auslieferung(),
+            Some(melden(&Ersetzung {
                 datei: PathBuf::from(Datei::Belegung.dateiname()),
                 grund: Grund::NichtLesbar(fehler.to_string()),
-            });
-            Belegung::auslieferung()
-        }
+            })),
+        ),
     }
 }
 

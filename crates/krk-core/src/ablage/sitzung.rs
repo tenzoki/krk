@@ -10,10 +10,11 @@
 //! hinzufuegt, macht eine aeltere `session.toml` nicht ungueltig, sondern
 //! nimmt seinen Auslieferungswert an.
 //!
-//! Was hier noch nicht steht, ist Absicht und nicht Auslassung. Die
-//! Bildlaufposition je Tab, die Markierung mehrerer Eintraege und die Tabs des
-//! Vorschaufensters gehoeren zu Faehigkeiten, die Schritt 12 und Schritt 19
-//! erst bauen; sie kommen als Felder in genau diese Strukturen.
+//! Was hier noch nicht steht, ist Absicht und nicht Auslassung. Die Markierung
+//! mehrerer Eintraege und die Tabs des Vorschaufensters gehoeren zu
+//! Faehigkeiten, die Schritt 13 und Schritt 19 erst bauen; sie kommen als
+//! Felder in genau diese Strukturen. Die Bildlaufposition je Tab ist mit
+//! Schritt 12 dazugekommen, als [`Tab::bildlauf`].
 //!
 //! [`Sitzungsschreiber`] haelt die zweite Zusage aus `### Frage 4`: der
 //! Sitzungszustand wird gebuendelt geschrieben, hoechstens alle zwei Sekunden
@@ -68,7 +69,10 @@ impl Fensterseite {
 }
 
 /// Ein Tab eines Dateifensters: ein Ordner mit seiner Sicht darauf.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// Kein `Eq`, und der Grund ist [`Tab::bildlauf`]: eine Gleitkommazahl kennt
+/// keine vollstaendige Gleichheit. Dieselbe Ueberlegung wie bei [`Breiten`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Tab {
     /// Der Ordner, den dieser Tab zeigt.
@@ -84,17 +88,25 @@ pub struct Tab {
     pub verstecke_ausgeblendet: bool,
     /// Nach welchem Schluessel und in welche Richtung sortiert ist.
     pub sortierung: Sortierung,
+    /// Die Bildlaufposition in Punkten, vom oberen Rand der Liste aus.
+    ///
+    /// Sie gehoert zum Tab und nicht zum Dateifenster: C1 verlangt, dass zwei
+    /// Dateifenster denselben Ordner zeigen koennen, ohne dass sich ihre
+    /// Bildlaufposition gegenseitig beeinflusst, und dieselbe Trennung gilt
+    /// zwischen zwei Tabs eines Fensters.
+    pub bildlauf: f64,
 }
 
 impl Default for Tab {
     /// Der Auslieferungszustand: das Benutzerverzeichnis, nichts ausgewaehlt,
-    /// versteckte Eintraege aus, Name aufsteigend.
+    /// versteckte Eintraege aus, Name aufsteigend, ganz oben.
     fn default() -> Self {
         Self {
             ordner: standardordner(),
             auswahl: None,
             verstecke_ausgeblendet: true,
             sortierung: Sortierung::default(),
+            bildlauf: 0.0,
         }
     }
 }
@@ -110,7 +122,7 @@ impl Tab {
 }
 
 /// Eines der beiden Dateifenster mit seinen Tabs.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Dateifenster {
     /// Die Stelle des sichtbaren Tabs in [`Dateifenster::tabs`].
