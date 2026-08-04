@@ -25,3 +25,6 @@ Ob die Zahl im Fortschrittsblatt und in der Abbruchmeldung aus S16 "angefasste E
 Die Entscheidung gehört zu S16, wo das Blatt entsteht; sie steht hier, damit S16 sie nicht übersieht.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 15 am 260804-1649.
+
+---
+Resolved: Nutzerentscheidung vom 260805-0000. Die heutige Lesart wird in C4 ausgeschrieben: gemeldet werden die **angefassten** Einträge. Begründung des Nutzers: die andere Lesart, "erledigte Positionen der Auswahl mal ihre Inhalte", verlangt den Vorabdurchlauf über den Ordnerbaum, den `### Frage 6` des Plans ausschließt. Der Preis ist im Spec benannt: dieselbe Handlung liefert je nach Datenträger eine andere Zahl, weil ein Verschieben über eine Datenträgergrenze absteigen muss, und ein Ordner mit 500 Einträgen meldet kopiert 501 und verschoben 1. Verworfen ist auch die dritte, hier erwogene Möglichkeit, beide Zahlen zu zeigen; sie setzte denselben Vorabdurchlauf voraus. Kein Eingriff am Code: `crates/krk-core/src/operation/fortschritt.rs` zählt bereits so. Eingearbeitet als Abnahmekriterium und als Festlegung in C4 des Specs. Entscheidungsdatensatz `decisions/260805-0000_a_was-die-gemeldete-eintragszahl-zaehlt.md`. Sitzungsbericht `history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`.

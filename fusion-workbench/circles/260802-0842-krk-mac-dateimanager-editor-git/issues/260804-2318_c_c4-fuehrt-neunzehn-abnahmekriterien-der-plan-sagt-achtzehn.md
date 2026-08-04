@@ -37,3 +37,6 @@ Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C4),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Kopf, Nachzug 260804-1832; S16, Abnahmekriterium),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1832_c_die-zahl-der-c4-abnahmekriterien-steht-im-plan-auf-sechzehn-und-im-spec-auf-achtzehn.md`
+
+---
+Resolved: die Zahl ist aus dem Abnahmekriterium von S16 und aus dem Nachzugsvermerk vom 260804-1832 im Plankopf entfernt statt ein drittes Mal nachgezogen, wie dieser Datensatz es vorgeschlagen hat. "Die Abnahmekriterien aus C4, soweit sie an der Oberfläche hängen" sagt dasselbe ohne Literal. Beim Nachziehen fiel derselbe Fehler ein zweites Mal auf: das Abnahmekriterium von S12 sprach von "den acht Abnahmekriterien aus C1 und den sieben aus C7", während C1 schon vorher neun Zeilen der Form `- [ ]` führte und seit dem 260805-0000 zehn führt. Auch dort ist die Zahl entfallen. Kein Eingriff am Spec, kein Eingriff am Code. Sitzungsbericht `history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`.

@@ -48,3 +48,6 @@ Cross-references:
 `crates/krk-ui/src/fenstermodell.rs`,
 `crates/krk-core/src/ablage/sitzung.rs`,
 `resources/default-keymap.toml`
+
+---
+Resolved: Nutzerentscheidung vom 260805-0000, Auflösung 1 dieses Datensatzes in ihrer milderen Form. Das vierte Abnahmekriterium von C7 behält beide Sätze, aber der zweite wird am Modell nachgewiesen und nicht am laufenden Bündel. Begründung des Nutzers: die Lage ist über die ausgelieferte Belegung nicht herstellbar, und ein Kürzel dafür zu erfinden hieße, eine Taste für einen Fehlerfall zu verbrauchen. Die Abweisung selbst bleibt, wo sie ist, in `crates/krk-ui/src/fenstermodell.rs` mit der Prüfung `das_letzte_dateifenster_laesst_sich_nicht_ausblenden`; sie steht dort mit Absicht, damit eine spätere Belegung keinen ungeprüften Weg dorthin öffnet. Verworfen ist Auflösung 2, den Befehl auf das aktive statt immer auf das rechte Dateifenster zu richten. Eingearbeitet in C7 des Specs, als Abnahmekriterium und als Festlegung; im Plan bekommt S12 eine Notiz und bleibt abgenommen. Entscheidungsdatensatz `decisions/260805-0000_a_nachweis-des-verworfenen-ausblendbefehls.md`. Sitzungsbericht `history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`.

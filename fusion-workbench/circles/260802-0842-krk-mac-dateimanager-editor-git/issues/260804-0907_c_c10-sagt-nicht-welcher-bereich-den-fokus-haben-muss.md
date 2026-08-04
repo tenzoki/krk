@@ -37,3 +37,6 @@ baut, und in Schritt 19, der ihr Ergebnis anzeigt.
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C10, C5),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 13 und Schritt 19)
+
+---
+Resolved: Nutzerentscheidung vom 260805-0000. Beide Befehle aus C10, das Ansehen auf Shift+F3 und der Sprung auf Opt+Cmd+G, wirken nur bei Fokus im Dateifenster. Keine Sonderregel für C10: es ist derselbe Vorbehalt, den C4 für die Löschtasten stellt. Für das Ansehen wäre die Frage für sich genommen gegenstandslos; beide derselben Bedingung zu unterwerfen ist die Antwort mit einer Regel weniger. Eingearbeitet als Abnahmekriterium und Festlegung in C10 des Specs. Im Plan setzt S19 die beiden Werte in der Eigenschaft `Wirkungsbereich`, die S18 als Tabelle neben `Kommando` anlegt, sobald es mit der Lesezeichenleiste einen zweiten fokussierbaren Bereich gibt; eine eigene Abfrage je Befehl entsteht nicht. Wie vom Datensatz selbst vorgeschlagen, ist die Frage als Entscheidungsdatensatz umgetragen: `decisions/260805-0000_a_welcher-bereich-den-fokus-fuer-die-zwischenablage-befehle-haben-muss.md`. Sitzungsbericht `history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`.

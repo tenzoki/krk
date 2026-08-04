@@ -41,3 +41,10 @@ S14 ausdrücklich ausschließt; er müsste am selben `ordner_neu_lesen` enden.
 
 **Aufgefallen bei:** der Umsetzung von S14 am 260804,
 `history/260804-1451-s14-dateisystem-beobachtung-und-datentraegerwechsel.md`.
+
+---
+Resolved: Nutzerentscheidung vom 260805-0000. C9 wird auf lokale Dateisysteme eingeengt; einen zweiten Auffrischungsweg bekommt KRK nicht. Begründung des Nutzers: ein Abfragetakt neben FSEvents widerspräche der Ein-Weg-Regel, die dieser Plan an vier Stellen durchhält, und nachprüfen ließe er sich ohne Server ohnehin nicht. C9 schreibt jetzt als Abnahmekriterium aus, was der Nutzer auf einem Netzpfad stattdessen erlebt: Lesen, Navigieren und die Dateioperationen aus C4 wirken wie auf einem lokalen Pfad, eigene Änderungen erscheinen weiterhin ohne Zutun, weil die abgeschlossene Operation die Auffrischung selbst anstößt, und eine fremde Änderung holt er durch Verlassen und Wiederbetreten des Ordners herein. Ein eigener Auffrischungsbefehl entsteht in dieser Runde nicht; die ausgelieferte Belegung kennt keinen. Eingearbeitet in C9 des Specs und in `### Frage 3` des Plans; kein neuer Schritt.
+
+**Die zweite Beobachtung dieses Datensatzes ist damit nicht beantwortet und steht weiter.** Ein Netzpfad, dessen Server verschwindet, lässt Systemaufrufe hängen statt scheitern, und der Lesefaden prüft sein Abbruchkennzeichen zwischen zwei Aufrufen; je Versuch bliebe ein Faden liegen. Sie betrifft den Zugriff und nicht die Auffrischung, wird von der Einengung also nicht mit erledigt und liegt jetzt als eigener Datensatz: `issues/260805-0000_o_ein-toter-netzpfad-laesst-den-lesefaden-haengen.md`.
+
+Entscheidungsdatensatz `decisions/260805-0000_a_auffrischung-auf-netzlaufwerken.md`. Sitzungsbericht `history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`.

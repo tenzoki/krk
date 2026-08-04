@@ -37,3 +37,16 @@ Vorgeschlagen: ein Menü "Bearbeiten" mit den vier Standardeinträgen und ohne f
 ---
 
 Herkunft: gefunden bei der Umsetzung von Schritt 13 am 260804-1309, beim Nachweis des Abnahmekriteriums 5 aus C2 im laufenden Bündel.
+
+---
+
+**Nachtrag 260805-0000: der Plan trägt den Schritt, der Defekt bleibt offen bis zur Umsetzung.**
+
+Der Nutzer hat am 260805-0000 zugleich die Frage beantwortet, die dieser Datensatz als Berührungspunkt nennt: die Menükürzel ziehen in die Konflikterkennung aus C3 ein. Damit kostet das Menü "Bearbeiten" keine vier Kombinationen außerhalb der Konflikterkennung mehr, sondern schließt umgekehrt einen blinden Fleck, den es sonst von zwei auf sechs vergrößert hätte. Beides ist demselben Schritt zugeordnet.
+
+- **S13c** baut das Menü "Bearbeiten" mit den vier Standardeinträgen und Ziel `nil`, lässt das Hauptmenü seine Kürzel aus der Belegung nehmen und tauscht `performClose:` gegen einen eigenen Selektor, damit AppKit kein "Close All" mehr dazustellt.
+- **S13b** trägt die fünf Kürzel vorher in `resources/default-keymap.toml` ein, weil die Datei dem `ontocoder` gehört.
+
+Die Vermutung dieses Datensatzes, C3 stehe der Sache nicht entgegen, hält, und der Grund steht jetzt in C3 ausgeschrieben: ein Menükürzel und eine Belegung sind zwei Zusteller derselben Taste, und der Fokusvorbehalt aus S13 entscheidet, welcher zum Zug kommt. Die spätere Dateizwischenablage braucht deshalb keine zweite Belegung auf Cmd+C, sondern allein eine Umsetzung von `copy:` und `paste:` am Dateifenster; die Antwortkette liefert sie dorthin, wo der Fokus steht.
+
+Entscheidungsdatensatz `decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`. Geschlossen wird dieser Defekt mit der Umsetzung von S13c.
