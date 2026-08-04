@@ -40,3 +40,6 @@ Der Plan trägt den Umbau als eigenen Schritt **S16b**, weil S16 abgenommen ist 
 Im Spec berührt die Entscheidung C1 mit einem Abnahmekriterium zur Rangfolge der drei Quellen, die Beschreibung von C4 und zwei seiner Abnahmekriterien.
 
 **Geschlossen wird dieser Defekt mit der Umsetzung von S16b.**
+
+---
+Resolved: Schritt 16b umgesetzt am 260804-1915. Der Fortschritt steht in der Statuszeile, das Fortschrittsblatt entfällt, und die Tastensperre `waehrend_blatt_erlaubt` gilt nur noch für ein stehendes Blatt. Gemessen am laufenden Bündel während einer Kopie von 30.000 Einträgen, dreimal gleich: kein Blatt steht (`NSWindow.attachedSheet` ist leer), die Auswahl wandert mit den Pfeiltasten von Zeile 2 auf Zeile 5, die Leertaste markiert zwei Einträge, `ctrl+tab` wechselt den Tab von 0 auf 1, `tab` wechselt das aktive Dateifenster, und die Vorgangsanzeige übersteht Tab- und Fensterwechsel. Esc bricht ab. Bericht: `history/260804-1915-s16b-fortschritt-in-der-statuszeile.md`.

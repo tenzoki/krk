@@ -14,6 +14,19 @@
 //! ausdruecklich, dass KRK keine Meldung an den Nutzer ueber die
 //! Standardfehlerausgabe gibt.
 //!
+//! Seit dem 260804-1832 traegt sie eine zweite Art von Meldung: den Stand einer
+//! laufenden Dateioperation aus C4. Der Nutzer hat den Fortschritt aus dem
+//! Blatt hierher verlegt
+//! (`decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`),
+//! weil ein Blatt das Fenster sperrt, das C4 bedienbar zusagt, und auf dem
+//! Referenzgeraet 354 bis 403 ms zum Aufgehen braucht, waehrend L8 200 ms
+//! zusagt.
+//!
+//! **Die Art steht in der Signatur und nicht in einer zweiten Funktion.** Ein
+//! Fortschritt ist kein Fehler und wird nicht rot; eine zweite Funktion neben
+//! [`Statuszeile::zeigen`] waeren zwei Wahrheiten darueber, was in der Zeile
+//! steht.
+//!
 //! Was diese Zeile in dieser Runde **nicht** traegt: den Lesefortschritt und die
 //! Zahl der Eintraege. C1 sagt beides nicht zu; sie kommen in einer spaeteren
 //! Runde in dieselbe Zeile und nicht in eine zweite daneben.
@@ -31,6 +44,20 @@ pub const HOEHE: f64 = 18.0;
 
 /// Der Abstand vom linken Rand, damit der Text nicht an der Trennlinie klebt.
 pub const EINZUG: f64 = 6.0;
+
+/// Was fuer eine Meldung gerade in der Zeile steht.
+///
+/// Zwei Werte, weil die Zeile seit dem 260804-1832 zwei Sorten traegt. Sie
+/// unterscheiden sich allein in der Farbe: ein Fehler ist rot, damit ihn der
+/// Nutzer neben einer leeren Liste nicht uebersieht, und ein Fortschritt ist es
+/// nicht, weil er keiner ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Art {
+    /// Ein Fehler oder ein Hinweis, den der Nutzer bemerken soll.
+    Fehler,
+    /// Der Stand einer laufenden Dateioperation (C4).
+    Vorgang,
+}
 
 /// Die Textzeile am Fuss eines Dateifensters.
 pub struct Statuszeile {
@@ -64,17 +91,24 @@ impl Statuszeile {
         &self.feld
     }
 
-    /// Zeigt eine Meldung an, oder leert die Zeile bei `None`.
+    /// Zeigt eine Meldung der genannten Art an, oder leert die Zeile bei
+    /// `None`.
     ///
-    /// Eine Meldung faerbt die Zeile: ein Ordner ohne Leserecht ist ein Fehler
-    /// und kein Hinweis, und eine graue Zeile am Fuss uebersieht der Nutzer
-    /// neben einer leeren Liste genauso, wie er die Standardfehlerausgabe
-    /// uebersehen hat.
-    pub fn zeigen(&self, meldung: Option<&str>) {
+    /// Ein Fehler faerbt die Zeile rot: ein Ordner ohne Leserecht ist ein
+    /// Fehler und kein Hinweis, und eine graue Zeile am Fuss uebersieht der
+    /// Nutzer neben einer leeren Liste genauso, wie er die
+    /// Standardfehlerausgabe uebersehen hat. Ein Fortschritt bekommt die
+    /// gewoehnliche Textfarbe; auffindbar ist der Abbruch bei ihm nicht ueber
+    /// die Farbe, sondern weil die Zeile ihn benennt ("Esc bricht ab").
+    pub fn zeigen(&self, meldung: Option<(&str, Art)>) {
         match meldung {
-            Some(text) => {
+            Some((text, art)) => {
                 self.feld.setStringValue(&NSString::from_str(text));
-                self.feld.setTextColor(Some(&NSColor::systemRedColor()));
+                let farbe = match art {
+                    Art::Fehler => NSColor::systemRedColor(),
+                    Art::Vorgang => NSColor::labelColor(),
+                };
+                self.feld.setTextColor(Some(&farbe));
             }
             None => {
                 self.feld.setStringValue(ns_string!(""));

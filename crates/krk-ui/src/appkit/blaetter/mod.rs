@@ -2,10 +2,20 @@
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat in dieser
-//! Runde vier: die Pfadeingabe aus C2 und die drei Blaetter zu C4 aus Schritt 16
-//! (Fortschritt mit Abbruch, Konflikt, Rueckfrage vor dem endgueltigen
-//! Loeschen); die Abschlussliste der uebersprungenen Eintraege ist das vierte
-//! zu C4, und das Umbenennen im Stapel kommt mit Schritt 17 dazu.
+//! Runde vier: die Pfadeingabe aus C2 und die drei Blaetter zu C4 (Konflikt,
+//! Rueckfrage vor dem endgueltigen Loeschen, Abschlussliste der uebersprungenen
+//! Eintraege); das Umbenennen im Stapel kommt mit Schritt 17 dazu.
+//!
+//! **Der Stand einer laufenden Dateioperation ist seit Schritt 16b keines
+//! mehr.** Er stand bis dahin als fuenftes Blatt hier und ist in die
+//! Statuszeile des Dateifensters gewandert, weil ein Blatt genau die
+//! Oberflaeche sperrt, die C4 waehrend einer laufenden Operation bedienbar
+//! zusagt, und weil es zum Aufgehen laenger braucht, als L8 zusagt. Die drei
+//! uebrigen bleiben: die beiden Rueckfragen **sollen** sperren, weil die
+//! Operation ohne die Antwort nicht weiterlaeuft, und die Abschlussliste fuehrt
+//! mehrere Eintraege mit Grund und passt in keine einzeilige Statuszeile.
+//! Bindend ist der Entscheid des Nutzers vom 260804-1832, "Blatt oder
+//! Statuszeile", im Entscheidungsspeicher des Circles.
 //!
 //! ```text
 //! Blatt::neu ──> textfeld_setzen ──> zeigen(fenster, fertig)
@@ -55,7 +65,6 @@
 //! Blatt weder mit der Eingabe- noch mit der Escape-Taste schliessen, und die
 //! Pfadeingabe waere allein mit der Maus bedienbar.
 
-pub mod fortschritt;
 pub mod konflikt;
 pub mod loeschbestaetigung;
 pub mod pfadeingabe;
@@ -226,10 +235,11 @@ impl<'a> Schaltflaeche<'a> {
 
 /// Ein stehendes Blatt, das der Aufrufer wieder schliessen kann.
 ///
-/// Das Fortschrittsblatt braucht das: es geht ohne Zutun des Nutzers auf und
-/// wieder zu, sobald die Operation endet. Die uebrigen Blaetter schliesst der
-/// Nutzer selbst; ihr Griff wird fallen gelassen, und das schadet nicht, weil
-/// AppKit das Blatt haelt, solange es steht.
+/// Der Abbruchbefehl braucht das: `esc` schliesst ein stehendes Blatt ueber
+/// seinen Griff, weil ein `NSButton` genau eine Tastenentsprechung traegt und
+/// die Rueckfrage vor dem endgueltigen Loeschen die Eingabetaste auf
+/// "Abbrechen" gelegt hat. Wer den Griff nicht braucht, laesst ihn fallen; das
+/// schadet nicht, weil AppKit das Blatt haelt, solange es steht.
 pub struct Blattgriff {
     warnung: Retained<NSAlert>,
     fenster: Retained<NSWindow>,
@@ -337,8 +347,7 @@ impl Blatt {
     /// Haengt eine beliebige Ansicht unter die Frage.
     ///
     /// Der allgemeine Fall von [`Blatt::textfeld_setzen`], ohne Ersthelfer und
-    /// ohne Waechter: das Fortschrittsblatt zeigt eine Beschriftung, die
-    /// niemand bedient.
+    /// ohne Waechter, fuer eine Beigabe, die ihren Fokus selbst regelt.
     pub fn beigabe_setzen(&self, sicht: &NSView) {
         self.warnung.setAccessoryView(Some(sicht));
     }

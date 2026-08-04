@@ -9,8 +9,9 @@
 //!                                                     │
 //!   Hauptfaden <── Weckruf <── Vermittlerfaden <── Meldung (Kanal)
 //!        │                          │
-//!        ├─ Fortschrittsblatt       └─ Buendelung: verwirft den Weckruf,
-//!        ├─ Konfliktblatt              solange der vorige nicht gezeichnet ist
+//!        ├─ Statuszeile des         └─ Buendelung: verwirft den Weckruf,
+//!        │  Quellfensters              solange der vorige nicht gezeichnet ist
+//!        ├─ Konfliktblatt
 //!        ├─ Loeschbestaetigung
 //!        └─ Abschlussliste
 //! ```
@@ -20,21 +21,33 @@
 //! C4 verlangt einen Fortschritt ab 100 Eintraegen oder 100 MB, L8 verlangt ihn
 //! 200 ms nach dem Start sichtbar. Den Umfang eines Ordnerbaums vorher zu
 //! bestimmen kostet einen eigenen Durchlauf, der die 200 ms selbst aufbrauchen
-//! kann. Statt zweier Schwellen gilt deshalb eine Zeitspanne: das
-//! Fortschrittsblatt erscheint, sobald die Operation [`BLATTVERZUG`] gelaufen
+//! kann. Statt zweier Schwellen gilt deshalb eine Zeitspanne: die
+//! Vorgangsanzeige erscheint, sobald die Operation [`ANZEIGEVERZUG`] gelaufen
 //! ist (`### Frage 6` des Plans). Eine kleine Kopie ist vorher fertig und laesst
-//! kein Blatt aufblitzen.
+//! keine Zeile aufblitzen.
 //!
 //! **Der Verzug wird an einer Meldung gemessen und nicht an einem Zeitgeber.**
-//! Das Blatt geht mit der ersten Meldung auf, die nach 150 ms eintrifft. Der
+//! Die Zeile erscheint mit der ersten Meldung, die nach 150 ms eintrifft. Der
 //! Arbeitsfaden meldet jeden fertigen Eintrag und, waehrend einer einzelnen
 //! grossen Datei, alle 8 ms einen Zwischenstand; die Spanne zwischen dem
-//! Ablauf der 150 ms und dem Aufgehen des Blattes ist damit im Regelfall
+//! Ablauf der 150 ms und dem Erscheinen der Zeile ist damit im Regelfall
 //! kleiner als eine Bildlaenge. Sie ist es **nicht** bei einer Operation, die
 //! ueber Sekunden gar nichts meldet; der einzige solche Fall in dieser Runde
 //! ist `NSFileManager.trashItemAtURL:` auf einem sehr grossen Ordner, der als
 //! ein Eintrag zaehlt und erst am Ende meldet. Das ist der Preis der Wahl
 //! "kein Takt" und im Bericht zu S16 ausgeschrieben.
+//!
+//! # Seit dem 260804-1832 traegt die Statuszeile den Fortschritt
+//!
+//! Bis S16 zeigte ihn ein Blatt am Fenster. Ein Blatt sperrt genau die
+//! Oberflaeche, die C4 waehrend einer laufenden Operation bedienbar zusagt, und
+//! braucht auf dem Referenzgeraet 354 bis 403 ms zum Aufgehen, waehrend L8 den
+//! Fortschritt 200 ms nach Start sichtbar zusagt. Der Nutzer hat ihn in die
+//! Statuszeile des Dateifensters verlegt, das die Operation begonnen hat
+//! (`decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`).
+//! Zwei Folgen stehen in dieser Datei: [`vorgangszeile`] nennt den Abbruch im
+//! eigenen Text, weil er seine Schaltflaeche verloren hat, und
+//! [`waehrend_blatt_erlaubt`] gilt nur noch fuer ein stehendes Blatt.
 //!
 //! # Die Buendelung ohne Takt
 //!
@@ -65,12 +78,15 @@ use krk_core::operation::{Abschluss, Art, Bericht, Fortschritt, Konfliktentschei
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
 
-/// Wie lange eine Operation laufen muss, bevor das Fortschrittsblatt aufgeht.
+/// Wie lange eine Operation laufen muss, bevor die Vorgangsanzeige erscheint.
 ///
-/// 150 ms lassen L8 ("Fortschritt sichtbar, 200 ms nach Start") 50 ms Reserve.
-/// Eine Operation ueber 100 Eintraege oder 100 MB, die C4 als Schwelle nennt,
-/// ist nach 150 ms nachweislich noch nicht fertig.
-pub const BLATTVERZUG: Duration = Duration::from_millis(150);
+/// 150 ms lassen L8 ("Fortschritt in der Statuszeile sichtbar, 200 ms nach
+/// Start") 50 ms Reserve. Eine Operation ueber 100 Eintraege oder 100 MB, die
+/// C4 als Schwelle nennt, ist nach 150 ms nachweislich noch nicht fertig.
+///
+/// Der Name hiess bis zum 260804-1832 `BLATTVERZUG`. Er trug das Blatt in sich,
+/// und das gibt es seit S16b nicht mehr.
+pub const ANZEIGEVERZUG: Duration = Duration::from_millis(150);
 
 /// Hoechstens so viele uebersprungene Eintraege stehen einzeln in der
 /// Abschlussliste.
@@ -80,9 +96,9 @@ pub const BLATTVERZUG: Duration = Duration::from_millis(150);
 /// gezaehlt.
 const HOECHSTENS_EINZELN: usize = 12;
 
-/// Ob das Fortschrittsblatt jetzt faellig ist.
-pub fn blatt_faellig(begonnen: Instant, jetzt: Instant) -> bool {
-    jetzt.duration_since(begonnen) >= BLATTVERZUG
+/// Ob die Vorgangsanzeige jetzt faellig ist.
+pub fn anzeige_faellig(begonnen: Instant, jetzt: Instant) -> bool {
+    jetzt.duration_since(begonnen) >= ANZEIGEVERZUG
 }
 
 // ----------------------------------------------------------------------
@@ -166,12 +182,16 @@ pub enum Fokus {
 /// im Ereignisabgriff und faengt die Pfadeingabe ab, bevor ein Kommando
 /// ueberhaupt entsteht. Diese Regel faengt den zweiten Fall: ein **Blatt** mit
 /// Schaltflaechen, dessen Ersthelfer kein Textfeld ist. Ohne sie loeschte ein
-/// Delete vor dem offenen Fortschrittsblatt in dem Ordner dahinter.
+/// Delete vor der stehenden Rueckfrage in dem Ordner dahinter.
+///
+/// **Eine laufende Operation ist kein Vorbehalt**, seit der Fortschritt in der
+/// Statuszeile steht: C4 sagt seit dem 260804-1832 ausdruecklich zu, dass
+/// Delete waehrend einer Kopie loescht, wenn der Fokus im Dateifenster steht.
 pub fn loeschtaste_wirkt(fokus: Fokus) -> bool {
     fokus == Fokus::Dateifenster
 }
 
-/// Was durchkommt, solange ein Blatt steht oder eine Dateioperation laeuft.
+/// Was durchkommt, solange ein Blatt steht.
 ///
 /// Genau der Abbruchbefehl. Alles uebrige geht unveraendert an AppKit weiter,
 /// damit das Blatt seine eigene Tastaturbedienung behaelt und der Abgriff kein
@@ -183,6 +203,13 @@ pub fn loeschtaste_wirkt(fokus: Fokus) -> bool {
 /// das aktive Dateifenster, statt den Fokus im Blatt weiterzuruecken. Ebenso
 /// loeste die Taste Delete vor der stehenden Rueckfrage eine Loeschung in dem
 /// Ordner dahinter aus.
+///
+/// **Eine laufende Operation zaehlt seit S16b nicht mehr dazu.** Bis dahin
+/// sperrte dieselbe Regel auch, solange ein Vorgang lief, weil er ein Blatt
+/// zeigte. Der Fortschritt steht jetzt in der Statuszeile, es gibt nichts mehr
+/// zu sperren, und die Bedienbarkeit waehrend der Operation ist genau die
+/// Zusage aus C4, um die es geht. Der Name bleibt und trifft ab hier genau:
+/// die Regel gilt fuer ein stehendes Blatt.
 pub fn waehrend_blatt_erlaubt(kommando: Kommando) -> bool {
     kommando == Kommando::Abbrechen
 }
@@ -321,8 +348,23 @@ impl Vorgangszustand {
 // Die Texte, die der Nutzer liest
 // ----------------------------------------------------------------------
 
-/// Die Ueberschrift des Fortschrittsblattes.
-pub fn ueberschrift(art: &Art) -> &'static str {
+/// Wie die Zeile ihre Angaben trennt.
+///
+/// Ein Mittelpunkt statt eines Zeilenumbruchs: die Statuszeile ist einzeilig
+/// (`NSTextField::setMaximumNumberOfLines(1)`), und ein Umbruch waere dort
+/// abgeschnitten statt gelesen.
+const TRENNER: &str = " · ";
+
+/// Was die Zeile ueber den Abbruch sagt.
+///
+/// Er hat mit dem Blatt seine Schaltflaeche verloren und liegt weiter auf
+/// `esc` (`resources/default-keymap.toml`, Kennung `abbrechen`). Damit der
+/// Nutzer ihn findet, nennt die Zeile ihn; das ist die Antwort auf den
+/// Einwand, eine Zeile am Fuss sei leichter zu uebersehen als ein Blatt.
+const ABBRUCHHINWEIS: &str = "Esc bricht ab";
+
+/// Womit eine Operation in der Zeile benannt wird.
+fn ueberschrift(art: &Art) -> &'static str {
     match art {
         Art::Kopieren { .. } => "Kopieren",
         Art::Verschieben { .. } => "Verschieben",
@@ -331,7 +373,11 @@ pub fn ueberschrift(art: &Art) -> &'static str {
     }
 }
 
-/// Die Standzeile des Fortschrittsblattes.
+/// Die Zeile, die waehrend eines laufenden Vorgangs in der Statuszeile steht.
+///
+/// Sie nennt vier Dinge: was laeuft, wie weit es ist, worauf es wirkt und wie
+/// man es abbricht. Der Abbruchhinweis steht am Ende und nicht am Anfang, weil
+/// der Stand die Angabe ist, auf die der Nutzer wartet.
 ///
 /// **Zwei Zahlen, weil eine von beiden je nach Fall nichts sagt.** Die Zahl der
 /// Eintraege ist die des Kerns: was die Operation angefasst hat. Beim
@@ -342,21 +388,45 @@ pub fn ueberschrift(art: &Art) -> &'static str {
 /// `issues/260804-1649_o_die-gemeldete-eintragszahl-bedeutet-beim-verschieben-etwas-anderes-als-beim-kopieren.md`
 /// festgehalten; dieser Schritt entscheidet ihn nicht, er zeigt beide Zahlen
 /// nebeneinander und benennt sie.
-pub fn standtext(fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
+pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
+    let was = ueberschrift(art);
     let Some(fortschritt) = fortschritt else {
-        return format!("{} wird vorbereitet …", positionen_text(positionen));
+        return format!(
+            "{was} wird vorbereitet: {}{TRENNER}{ABBRUCHHINWEIS}",
+            positionen_text(positionen)
+        );
     };
     let name = fortschritt
         .eintrag
         .file_name()
         .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
     format!(
-        "{}, {} — {}\n{}",
+        "{was}: {}, {}, {}{TRENNER}{name}{TRENNER}{ABBRUCHHINWEIS}",
         eintraege_text(fortschritt.eintraege as usize),
         menge(fortschritt.bytes),
         positionen_text(positionen),
-        name
     )
+}
+
+/// Die Zeile, sobald der Nutzer den Abbruch angefordert hat.
+///
+/// Der Vorgang laeuft bis zu seinem Bericht weiter; die Zeile sagt das, statt
+/// stehen zu bleiben, als waere nichts geschehen. Der Abbruchhinweis faellt
+/// weg, weil er beantwortet ist.
+pub fn abbruchzeile(art: &Art) -> String {
+    format!(
+        "{} wird abgebrochen, der Vorgang endet gleich …",
+        ueberschrift(art)
+    )
+}
+
+/// Die Meldung auf einen zweiten Operationsbefehl waehrend eines laufenden
+/// Vorgangs (C4).
+///
+/// KRK haelt genau einen Vorgang. Eine Warteschlange waere die andere Antwort;
+/// sie baut einen Zustand mehr, den keine Zusage verlangt.
+pub fn schon_ein_vorgang(art: &Art) -> String {
+    format!("es läuft bereits eine Operation: {}", ueberschrift(art))
 }
 
 /// Die beiden Zeilen der Rueckfrage vor dem endgueltigen Loeschen (C4).
@@ -621,14 +691,53 @@ mod tests {
     }
 
     #[test]
-    fn das_blatt_geht_erst_nach_150_ms_auf() {
+    fn die_vorgangsanzeige_erscheint_erst_nach_150_ms() {
         let begonnen = Instant::now();
-        assert!(!blatt_faellig(begonnen, begonnen));
-        assert!(!blatt_faellig(
+        assert!(!anzeige_faellig(begonnen, begonnen));
+        assert!(!anzeige_faellig(
             begonnen,
             begonnen + Duration::from_millis(149)
         ));
-        assert!(blatt_faellig(begonnen, begonnen + BLATTVERZUG));
+        assert!(anzeige_faellig(begonnen, begonnen + ANZEIGEVERZUG));
+    }
+
+    /// Die Zeile nennt den Abbruch, weil er seine Schaltflaeche verloren hat.
+    #[test]
+    fn die_vorgangszeile_nennt_den_abbruch_und_bleibt_einzeilig() {
+        let art = Art::Kopieren {
+            ziel: "/tmp".into(),
+        };
+        let vorbereitung = vorgangszeile(&art, None, 3);
+        assert!(vorbereitung.contains("Esc bricht ab"), "{vorbereitung}");
+        assert!(vorbereitung.starts_with("Kopieren"), "{vorbereitung}");
+
+        let zeile = vorgangszeile(
+            &art,
+            Some(&Fortschritt {
+                eintraege: 4_812,
+                bytes: 1_200_000_000,
+                eintrag: PathBuf::from("/tmp/quelle/beispiel.txt"),
+            }),
+            3,
+        );
+        assert!(zeile.contains("4.812"), "{zeile}");
+        assert!(zeile.contains("1,2 GB"), "{zeile}");
+        assert!(zeile.contains("3 ausgewählte Positionen"), "{zeile}");
+        assert!(zeile.contains("beispiel.txt"), "{zeile}");
+        assert!(zeile.contains("Esc bricht ab"), "{zeile}");
+        for text in [&vorbereitung, &zeile] {
+            assert!(
+                !text.contains('\n'),
+                "die Statuszeile ist einzeilig: {text}"
+            );
+        }
+    }
+
+    #[test]
+    fn ein_zweiter_befehl_meldet_den_laufenden_vorgang() {
+        let text = schon_ein_vorgang(&Art::InDenPapierkorb);
+        assert!(text.contains("bereits"), "{text}");
+        assert!(text.contains("In den Papierkorb räumen"), "{text}");
     }
 
     #[test]
@@ -637,6 +746,8 @@ mod tests {
         assert!(!loeschtaste_wirkt(Fokus::Anderswo));
     }
 
+    /// Die Sperre gilt fuer ein stehendes Blatt und nicht mehr fuer einen
+    /// laufenden Vorgang; der zweite Fall wohnt in `kommando_ausfuehren`.
     #[test]
     fn bei_stehendem_blatt_kommt_allein_der_abbruch_durch() {
         assert!(waehrend_blatt_erlaubt(Kommando::Abbrechen));

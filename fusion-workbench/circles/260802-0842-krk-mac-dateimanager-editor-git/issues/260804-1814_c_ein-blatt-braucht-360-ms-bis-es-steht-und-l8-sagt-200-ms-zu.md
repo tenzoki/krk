@@ -42,3 +42,6 @@ Weg 2, den Verzug auf rund 40 ms herunterzunehmen, ist damit gegenstandslos und 
 Nebenbei löst die Wahl das Messproblem, das dieser Datensatz unter Weg 1 benennt. Wann der erste Bildpunkt eines Blattes erscheint, war mit den Mitteln dieses Projekts nicht messbar. Eine Zeile wird ab S16b auf demselben Weg gemessen wie L1, L5, L6 und L7, nämlich vom Ereigniszeitstempel bis zum Ende des Zeichendurchgangs.
 
 **Geschlossen wird dieser Defekt mit der Umsetzung von S16b.**
+
+---
+Resolved: Schritt 16b umgesetzt am 260804-1915. Das Fortschrittsblatt entfällt ersatzlos; der Fortschritt steht in der Statuszeile des Dateifensters, das die Operation begonnen hat. Gemessen am laufenden Bündel, 20 Läufe, Kopie von 5.000 Einträgen: L8 liegt beim 95. Perzentil bei 168,9 ms, kleinster Wert 154,5 ms, größter 169,0 ms. Die Zusage von 200 ms hält. Der Messweg ist der von L1, vom Ereigniszeitstempel bis zum Ende des Zeichendurchgangs; gemessen über eine vorübergehende Sonde, weil `cargo xtask messen` aus dem Abnahmekriterium nicht existiert (`260804-1915_o_das-abnahmekriterium-von-s16b-nennt-cargo-xtask-messen-das-es-nicht-gibt.md`). Bericht: `history/260804-1915-s16b-fortschritt-in-der-statuszeile.md`.

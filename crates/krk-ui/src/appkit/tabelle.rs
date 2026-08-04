@@ -91,7 +91,7 @@ use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::tabs::Tabliste;
 
 use super::blaetter;
-use super::statuszeile::Statuszeile;
+use super::statuszeile::{self, Statuszeile};
 use super::tableiste::Tableiste;
 
 /// Die Hoehe einer Zeile in Punkten.
@@ -248,6 +248,17 @@ pub struct QuelleIvars {
     /// naechsten Ordner- oder Tabwechsel; siehe
     /// [`DateifensterQuelle::meldung_anzeigen`].
     fenstermeldung: RefCell<Option<String>>,
+    /// Der Stand einer Dateioperation, die dieses Dateifenster begonnen hat
+    /// (C4).
+    ///
+    /// **Ein eigenes Feld und keines, das es sich mit der Fenstermeldung
+    /// teilt.** Die Lebensdauern sind die entgegengesetzten: eine
+    /// Fenstermeldung soll beim Ordnerwechsel verschwinden, eine laufende
+    /// Anzeige muss ihn ueberleben, weil die Operation weiterlaeuft und der
+    /// Nutzer seit dem 260804-1832 waehrenddessen navigieren darf. Ein Feld mit
+    /// zwei Loeschregeln waere der Sonderfall, den die Maxime "supersimpel"
+    /// ausschliesst.
+    vorgangsanzeige: RefCell<Option<String>>,
 }
 
 define_class!(
@@ -302,6 +313,7 @@ impl DateifensterQuelle {
             sprungmarke: RefCell::new(Sprungmarke::neu()),
             ordnerwechsel: RefCell::new(None),
             fenstermeldung: RefCell::new(None),
+            vorgangsanzeige: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -966,14 +978,39 @@ impl DateifensterQuelle {
 
     /// Schreibt in die Statuszeile, was gerade dort stehen soll.
     ///
-    /// **Eine Regel, zwei Quellen.** Steht eine Meldung des Fensters an, hat sie
-    /// den Vorrang; sonst zeigt die Zeile die Meldung des sichtbaren Tabs. Die
-    /// Reihenfolge folgt daraus, dass eine Fenstermeldung ein Ereignis
-    /// beschreibt (der Datentraeger ist weg, die Belegungsdatei war
-    /// beschaedigt), waehrend eine Tabmeldung einen Zustand beschreibt (dieser
-    /// Ordner liess sich nicht vollstaendig lesen). Das Ereignis ist das
-    /// Neuere.
+    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Drei
+    /// Quellen, ein Rang, geordnet nach dem Alter der Aussage:
+    ///
+    /// ```text
+    /// laufender Vorgang?  ─ja─> Stand des Vorgangs, Esc bricht ab
+    ///         │nein
+    /// Fenstermeldung?     ─ja─> Auswurf, beschaedigte Ablagedatei, Abschluss
+    ///         │nein
+    ///                           Tabmeldung des sichtbaren Tabs, sonst leer
+    /// ```
+    ///
+    /// Eine laufende Operation ist das Neueste: sie ist die einzige der drei,
+    /// auf die der Nutzer gerade wartet, und die einzige, die einen Griff
+    /// traegt. Danach kommt die Fenstermeldung, die ein Ereignis beschreibt
+    /// (der Datentraeger ist weg, die Belegungsdatei war beschaedigt), und
+    /// zuletzt die Tabmeldung, die einen Zustand beschreibt (dieser Ordner
+    /// liess sich nicht vollstaendig lesen).
+    ///
+    /// **Eine verdraengte Fenstermeldung bleibt in ihrem Feld** und erscheint,
+    /// sobald [`DateifensterQuelle::vorgang_beenden`] die Vorgangsanzeige
+    /// wegnimmt — **es sei denn**, der Abschlusstext des Vorgangs schreibt
+    /// unmittelbar danach in dasselbe Feld, und das tut er immer. Eine
+    /// Auswurfmeldung waehrend einer Kopie ist damit verloren und nicht bloss
+    /// verzoegert; gemessen am 260804-1915 und festgehalten als
+    /// `issues/260804-1915_o_der-abschlusstext-ueberschreibt-die-verdraengte-fenstermeldung.md`.
+    /// Dieser Schritt entscheidet den Fall nicht.
     fn meldung_anzeigen(&self) {
+        if let Some(stand) = self.ivars().vorgangsanzeige.borrow().as_deref() {
+            self.ivars()
+                .statuszeile
+                .zeigen(Some((stand, statuszeile::Art::Vorgang)));
+            return;
+        }
         let meldung = self.ivars().fenstermeldung.borrow().clone().or_else(|| {
             self.ivars()
                 .tabs
@@ -982,7 +1019,11 @@ impl DateifensterQuelle {
                 .meldung()
                 .map(str::to_owned)
         });
-        self.ivars().statuszeile.zeigen(meldung.as_deref());
+        self.ivars().statuszeile.zeigen(
+            meldung
+                .as_deref()
+                .map(|text| (text, statuszeile::Art::Fehler)),
+        );
     }
 
     /// Loescht die Meldung des Fensters, falls eine steht.
@@ -1005,9 +1046,37 @@ impl DateifensterQuelle {
     /// verschwundener Datentraeger gehoeren dem Fenster und keinem einzelnen
     /// Tab. Der naechste Ordner- oder Tabwechsel loescht sie wieder, und das
     /// ist richtig: sie betrifft nicht den Ordner, den der Nutzer dann ansieht.
+    ///
+    /// Geschrieben wird das Feld, gezeichnet wird ueber
+    /// [`DateifensterQuelle::meldung_anzeigen`]. Diese Methode setzt die Zeile
+    /// **nicht** selbst: sie kaeme sonst an der Rangfolge vorbei und
+    /// ueberschriebe eine laufende Vorgangsanzeige.
     pub fn meldung_zeigen(&self, meldung: &str) {
         *self.ivars().fenstermeldung.borrow_mut() = Some(meldung.to_owned());
-        self.ivars().statuszeile.zeigen(Some(meldung));
+        self.meldung_anzeigen();
+    }
+
+    /// Schreibt den Stand einer Dateioperation in die Statuszeile (C4).
+    ///
+    /// Gerufen vom Anwendungsdelegierten fuer das Dateifenster, das den
+    /// Vorgang **begonnen** hat, und nicht fuer das gerade aktive: der Nutzer
+    /// darf waehrend der Operation das Fenster wechseln, und "das aktive
+    /// Fenster" sagt danach nichts mehr darueber, wohin der Fortschritt
+    /// gehoert.
+    pub fn vorgang_zeigen(&self, stand: &str) {
+        *self.ivars().vorgangsanzeige.borrow_mut() = Some(stand.to_owned());
+        self.meldung_anzeigen();
+    }
+
+    /// Nimmt die Vorgangsanzeige weg (C4).
+    ///
+    /// Danach steht in der Zeile wieder, was ohne den Vorgang dort stuende:
+    /// eine waehrenddessen verdraengte Fenstermeldung, sonst die Tabmeldung.
+    /// Der Abschlusstext des Vorgangs kommt unmittelbar danach als gewoehnliche
+    /// Fenstermeldung.
+    pub fn vorgang_beenden(&self) {
+        *self.ivars().vorgangsanzeige.borrow_mut() = None;
+        self.meldung_anzeigen();
     }
 
     /// Ein Takt des Zeitgebers: Stapel uebernehmen, Tabelle benachrichtigen.

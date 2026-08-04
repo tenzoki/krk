@@ -120,7 +120,6 @@ use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
 use super::bildtakt::{self, Zeichenende};
-use super::blaetter::fortschritt::Fortschrittsblatt;
 use super::blaetter::{Blattgriff, konflikt, loeschbestaetigung, uebersprungen};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
@@ -135,13 +134,23 @@ const OHNE_BILDSCHIRM: i32 = 3;
 
 /// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
 ///
-/// Es gibt hoechstens einen. Solange er laeuft, steht sein Blatt am Fenster und
-/// nimmt jeden Tastenbefehl ausser dem Abbruch entgegen; ein zweiter Vorgang
-/// daneben waere ein zweites Blatt an demselben Fenster, und AppKit stellte es
-/// ohnehin hinten an.
+/// **Es gibt hoechstens einen.** Bis S16 hielt die Tastensperre einen zweiten
+/// fern, weil ein Blatt stand und alles ausser dem Abbruch abfing. Seit der
+/// Fortschritt in der Statuszeile steht, ist die Oberflaeche bedienbar und der
+/// Nutzer kann F5 ein zweites Mal druecken; [`Anwendungsdelegierter::auftrag_stellen`]
+/// prueft deshalb selbst und meldet den laufenden Vorgang, statt ihn
+/// stillschweigend zu ueberschreiben. Eine Warteschlange waere die andere
+/// Antwort; sie baut einen Zustand mehr, den keine Zusage verlangt.
 struct Vorgang {
     /// Was geschieht. Traegt die Ueberschrift und die Abschlussmeldung.
     art: Art,
+    /// Das Dateifenster, das den Vorgang begonnen hat.
+    ///
+    /// **Nicht das gerade aktive.** Seit dem 260804-1832 darf der Nutzer
+    /// waehrend einer Operation das Fenster wechseln; danach sagt "das aktive
+    /// Fenster" nichts mehr darueber aus, in welche Statuszeile der Fortschritt
+    /// und der Abschlusstext gehoeren.
+    seite: Fensterseite,
     /// Der Ordner, aus dem die Eintraege stammen.
     quellordner: PathBuf,
     /// Wie viele Positionen der Nutzer ausgewaehlt hatte.
@@ -150,14 +159,6 @@ struct Vorgang {
     begonnen: Instant,
     /// Der Zustand, den der Vermittlerfaden fuellt.
     zustand: Arc<Vorgangszustand>,
-    /// Das Fortschrittsblatt, sobald es steht.
-    blatt: RefCell<Option<Fortschrittsblatt>>,
-    /// Ob gerade eine Konfliktfrage auf dem Schirm steht.
-    ///
-    /// Solange sie steht, geht kein Fortschrittsblatt auf: AppKit stellte das
-    /// zweite Blatt hinter das erste, und der Arbeitsfaden wartete auf eine
-    /// Antwort, die niemand geben kann.
-    konflikt_steht: Cell<bool>,
 }
 
 /// Was der Anwendungsdelegierte haelt.
@@ -622,12 +623,17 @@ impl Anwendungsdelegierter {
     /// Liefert, ob es ausgefuehrt wurde; nur dann schluckt der Abgriff das
     /// Ereignis.
     fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
-        // Solange ein Blatt steht oder eine Dateioperation laeuft, kommt allein
-        // der Abbruch durch. Alles uebrige geht unveraendert an AppKit weiter,
-        // damit das Blatt seine eigene Tastaturbedienung behaelt.
-        if (self.blatt_steht() || self.ivars().vorgang.borrow().is_some())
-            && !operationen::waehrend_blatt_erlaubt(kommando)
-        {
+        // Solange ein Blatt steht, kommt allein der Abbruch durch. Alles
+        // uebrige geht unveraendert an AppKit weiter, damit das Blatt seine
+        // eigene Tastaturbedienung behaelt.
+        //
+        // Ein laufender Vorgang sperrt seit S16b **nicht** mehr: C4 sagt zu,
+        // dass Navigation, Markierung und Tabwechsel waehrend einer Operation
+        // wirken, und der Fortschritt steht in der Statuszeile statt in einem
+        // Blatt. Dass ein zweiter Operationsbefehl nichts startet, prueft
+        // `auftrag_stellen` und meldet es; eine Tastensperre dafuer waere zu
+        // grob.
+        if self.blatt_steht() && !operationen::waehrend_blatt_erlaubt(kommando) {
             return false;
         }
 
@@ -802,20 +808,27 @@ impl Anwendungsdelegierter {
     /// Er bedient zwei Faelle, und die Reihenfolge ist bindend: ein offenes
     /// Blatt zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs
     /// steht und der Abbruch dann ihr gilt.
+    ///
+    /// Seit S16b erreicht `esc` den Vorgang auf dem gewoehnlichen Weg: solange
+    /// kein Blatt steht, schlaegt der Ereignisabgriff `abbrechen` wie jeden
+    /// anderen Befehl nach. Der Griff, den das Fortschrittsblatt als
+    /// Schaltflaeche trug, ist die Taste selbst, und die Vorgangsanzeige nennt
+    /// sie in ihrem Text.
     fn abbrechen(&self) -> bool {
         let blatt = self.ivars().offenes_blatt.borrow_mut().take();
         if let Some(blatt) = blatt {
             blatt.abbrechen();
             return true;
         }
-        let vorgang = self.ivars().vorgang.borrow();
-        let Some(vorgang) = vorgang.as_ref() else {
-            return false;
+        let (art, seite) = {
+            let vorgang = self.ivars().vorgang.borrow();
+            let Some(vorgang) = vorgang.as_ref() else {
+                return false;
+            };
+            vorgang.zustand.abbrechen();
+            (vorgang.art.clone(), vorgang.seite)
         };
-        vorgang.zustand.abbrechen();
-        if let Some(blatt) = vorgang.blatt.borrow().as_ref() {
-            blatt.stand_setzen("Abbruch angefordert, der Vorgang endet gleich …");
-        }
+        self.fortschritt_zeigen(seite, &operationen::abbruchzeile(&art));
         true
     }
 
@@ -850,6 +863,26 @@ impl Anwendungsdelegierter {
     /// hiesse, dass F5 auf leerer Auswahl in der Menueleiste landet.
     fn auftrag_stellen(&self, art: Art) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
+        // Ein zweiter Vorgang startet nicht, solange einer laeuft, und sagt das
+        // (C4). Die Meldung geht an das Dateifenster, in dem der Nutzer die
+        // Taste gedrueckt hat. Hat dasselbe Fenster den laufenden Vorgang
+        // begonnen, verdraengt dessen Anzeige sie nach der Rangfolge aus
+        // `DateifensterQuelle::meldung_anzeigen`, und der Nutzer sieht sie
+        // nicht; gemessen am 260804-1915 und festgehalten als
+        // `issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
+        // Gestartet wird in beiden Faellen nichts, und das ist die Haelfte der
+        // Zusage, die dieser Schritt haelt.
+        let laufende_art = self
+            .ivars()
+            .vorgang
+            .borrow()
+            .as_ref()
+            .map(|vorgang| vorgang.art.clone());
+        if let Some(laufende_art) = laufende_art {
+            self.melden(aktiv, &operationen::schon_ein_vorgang(&laufende_art));
+            return true;
+        }
+
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
         if auswahl.ist_leer() {
@@ -895,12 +928,11 @@ impl Anwendungsdelegierter {
 
         *self.ivars().vorgang.borrow_mut() = Some(Vorgang {
             art,
+            seite: aktiv,
             quellordner,
             positionen,
             begonnen: Instant::now(),
             zustand,
-            blatt: RefCell::new(None),
-            konflikt_steht: Cell::new(false),
         });
         true
     }
@@ -929,15 +961,15 @@ impl Anwendungsdelegierter {
     fn vorgang_zeichnen(&self) {
         // Die Ausleihe endet vor jedem AppKit-Aufruf: ein Blatt ruft zurueck,
         // und der Rueckruf will denselben `RefCell`.
-        let Some((zustand, art, positionen, begonnen, konflikt_steht)) = ({
+        let Some((zustand, art, seite, positionen, begonnen)) = ({
             let vorgang = self.ivars().vorgang.borrow();
             vorgang.as_ref().map(|vorgang| {
                 (
                     Arc::clone(&vorgang.zustand),
                     vorgang.art.clone(),
+                    vorgang.seite,
                     vorgang.positionen,
                     vorgang.begonnen,
-                    vorgang.konflikt_steht.get(),
                 )
             })
         }) else {
@@ -961,78 +993,35 @@ impl Anwendungsdelegierter {
             self.konflikt_fragen(konflikt);
             return;
         }
-        if konflikt_steht {
-            return;
-        }
-        if !operationen::blatt_faellig(begonnen, Instant::now()) {
+        if !operationen::anzeige_faellig(begonnen, Instant::now()) {
             return;
         }
         self.fortschritt_zeigen(
-            operationen::ueberschrift(&art),
-            &operationen::standtext(fortschritt.as_ref(), positionen),
+            seite,
+            &operationen::vorgangszeile(&art, fortschritt.as_ref(), positionen),
         );
     }
 
-    /// Zeigt das Fortschrittsblatt oder schreibt den neuen Stand hinein.
-    fn fortschritt_zeigen(&self, ueberschrift: &str, stand: &str) {
-        let steht = {
-            let vorgang = self.ivars().vorgang.borrow();
-            let Some(vorgang) = vorgang.as_ref() else {
-                return;
-            };
-            let blatt = vorgang.blatt.borrow();
-            match blatt.as_ref() {
-                Some(blatt) => {
-                    blatt.stand_setzen(stand);
-                    true
-                }
-                None => false,
-            }
-        };
-        if steht {
-            return;
-        }
-
-        let Some(fenster) = self.ivars().fenster.get() else {
-            return;
-        };
-        let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let blatt = super::blaetter::fortschritt::zeigen(
-            self.mtm(),
-            fenster,
-            ueberschrift,
-            stand,
-            move || {
-                if let Some(selbst) = schwach.load() {
-                    selbst.abbrechen();
-                }
-            },
-        );
-        let vorgang = self.ivars().vorgang.borrow();
-        if let Some(vorgang) = vorgang.as_ref() {
-            *vorgang.blatt.borrow_mut() = Some(blatt);
-        }
+    /// Schreibt den Stand des Vorgangs in die Statuszeile seines
+    /// Dateifensters (C4).
+    ///
+    /// Eine Zeile erscheint ohne Einblendung mit dem naechsten
+    /// Zeichendurchgang. Genau das macht L8 haltbar: ein Blatt brauchte auf dem
+    /// Referenzgeraet 354 bis 403 ms bis zum Anhaengen, und die Zusage lautet
+    /// 200 ms.
+    fn fortschritt_zeigen(&self, seite: Fensterseite, stand: &str) {
+        self.dateifenster(seite).quelle().vorgang_zeigen(stand);
     }
 
     /// Stellt die Konfliktfrage aus C4 und schickt die Antwort zurueck.
     ///
-    /// Das Fortschrittsblatt weicht dafuer: an einem Fenster steht genau ein
-    /// Blatt, und AppKit stellte das zweite hinter das erste. Es geht mit der
-    /// naechsten Meldung von selbst wieder auf.
+    /// Die Vorgangsanzeige bleibt dabei stehen: sie ist eine Zeile am Fuss des
+    /// Dateifensters und kein zweites Blatt, das AppKit hinter dieses stellen
+    /// muesste. Bis S16 wich hier ein Fortschrittsblatt.
     fn konflikt_fragen(&self, frage: Konfliktfrage) {
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
-        {
-            let vorgang = self.ivars().vorgang.borrow();
-            let Some(vorgang) = vorgang.as_ref() else {
-                return;
-            };
-            vorgang.konflikt_steht.set(true);
-            if let Some(blatt) = vorgang.blatt.borrow_mut().take() {
-                blatt.schliessen();
-            }
-        }
 
         let vorschlag = freier_name(&frage.ziel);
         let antwortweg = frage.antwort.clone();
@@ -1058,28 +1047,27 @@ impl Anwendungsdelegierter {
                 let _ = antwortweg.send(entscheid);
                 if let Some(selbst) = schwach.load() {
                     *selbst.ivars().offenes_blatt.borrow_mut() = None;
-                    let vorgang = selbst.ivars().vorgang.borrow();
-                    if let Some(vorgang) = vorgang.as_ref() {
-                        vorgang.konflikt_steht.set(false);
-                    }
                 }
             },
         );
         *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
     }
 
-    /// Schliesst den Vorgang ab: Blatt weg, Meldung, Auffrischung, Liste.
+    /// Schliesst den Vorgang ab: Anzeige weg, Meldung, Auffrischung, Liste.
+    ///
+    /// **Die Meldung geht an das Dateifenster, das den Vorgang begonnen hat**,
+    /// und nicht an das gerade aktive: der Nutzer darf waehrend der Operation
+    /// gewechselt haben, und der Abschlusstext gehoert zu der Zeile, in der der
+    /// Fortschritt stand.
     fn vorgang_beenden(&self, bericht: &Bericht) {
         let Some(vorgang) = self.ivars().vorgang.borrow_mut().take() else {
             return;
         };
-        if let Some(blatt) = vorgang.blatt.borrow_mut().take() {
-            blatt.schliessen();
-        }
-
-        let aktiv = self.ivars().modell.borrow().aktiv();
+        // Erst die Vorgangsanzeige wegnehmen, dann melden: sie hat den Vorrang,
+        // und der Abschlusstext stuende sonst hinter ihr.
+        self.dateifenster(vorgang.seite).quelle().vorgang_beenden();
         self.melden(
-            aktiv,
+            vorgang.seite,
             &operationen::abschlusstext(&vorgang.art, bericht, vorgang.positionen),
         );
 
