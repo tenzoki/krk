@@ -28,3 +28,17 @@ Drei Wege, ohne Empfehlung:
 Weg 3 hängt mit dem Defekt `260804-1814_o_ein-modales-blatt-widerspricht-der-zusage-dass-die-oberflaeche-bedienbar-bleibt.md` zusammen und ist wahrscheinlich zusammen mit ihm zu entscheiden.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 16 am 260804-1814.
+
+---
+
+## Stand 260804-1832: Weg 3 gewählt, L8 bleibt bei 200 ms
+
+Der Nutzer hat Weg 3 gewählt, den Fortschritt nicht als Blatt zu zeigen. Datensatz: `decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`.
+
+Die Rechnung dahinter: KRKs eigener Anteil von 152 bis 154 ms bleibt unverändert, weil die 150-ms-Regel unverändert bleibt. Weg fallen die rund 360 ms für das Anhängen des Blattes. Eine Zeile in der Statuszeile erscheint mit dem nächsten Zeichendurchgang, am Referenzgerät also rund 17 ms nach dem Setzen. L8 liegt damit bei rund 170 ms. **Eine andere Zahl war nicht nötig; die Zusage bleibt bei 200 ms, und die neun übrigen Zahlen aus C8 sind unberührt.**
+
+Weg 2, den Verzug auf rund 40 ms herunterzunehmen, ist damit gegenstandslos und wird nicht gegangen: die 150 ms tragen weiterhin die Zusage, dass eine kleine Kopie nichts aufblitzen lässt.
+
+Nebenbei löst die Wahl das Messproblem, das dieser Datensatz unter Weg 1 benennt. Wann der erste Bildpunkt eines Blattes erscheint, war mit den Mitteln dieses Projekts nicht messbar. Eine Zeile wird ab S16b auf demselben Weg gemessen wie L1, L5, L6 und L7, nämlich vom Ereigniszeitstempel bis zum Ende des Zeichendurchgangs.
+
+**Geschlossen wird dieser Defekt mit der Umsetzung von S16b.**

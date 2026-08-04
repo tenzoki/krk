@@ -28,3 +28,15 @@ Ob der Fortschritt ein Blatt bleibt oder in eine nicht sperrende Anzeige wandert
 Die Konfliktfrage und die Rückfrage vor dem endgültigen Löschen bleiben in jedem Fall Blätter: sie **sollen** sperren, weil sie auf eine Antwort warten.
 
 **Aufgefallen bei:** der Umsetzung von Schritt 16 am 260804-1814.
+
+---
+
+## Stand 260804-1832: in der Sache entschieden, Umsetzung offen
+
+Der Nutzer hat entschieden, den Fortschritt in die Statuszeile zu stellen. Damit gilt Lesart 2, der Nutzer arbeitet während einer laufenden Operation weiter. Der Datensatz mit den drei Möglichkeiten und ihren Begründungen ist `decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`.
+
+Der Plan trägt den Umbau als eigenen Schritt **S16b**, weil S16 abgenommen ist und stehen bleibt. S16b nimmt das Fortschrittsblatt ersatzlos weg, gibt der Statuszeile eine dritte Quelle mit eigenem Rang und eigener Lebensdauer und schränkt die Tastensperre auf ein stehendes Blatt ein. Konfliktblatt, Löschbestätigung und Abschlussliste bleiben, wie dieser Datensatz es vorgesehen hat; die Abschlussliste zusätzlich deshalb, weil sie mehrere Einträge mit Grund führt und in keine einzeilige Zeile passt.
+
+Im Spec berührt die Entscheidung C1 mit einem Abnahmekriterium zur Rangfolge der drei Quellen, die Beschreibung von C4 und zwei seiner Abnahmekriterien.
+
+**Geschlossen wird dieser Defekt mit der Umsetzung von S16b.**
