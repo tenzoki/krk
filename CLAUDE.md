@@ -53,6 +53,8 @@ cargo xtask bundle          # baut und signiert target/KRK.app im Profil release
 
 **`cargo` steht auf diesem Gerät nicht auf dem Standard-PATH.** Es liegt unter `$HOME/.cargo/bin`. Jeder Aufruf braucht deshalb den vollen Pfad oder ein vorangestelltes `export PATH="$HOME/.cargo/bin:$PATH"`.
 
+Das `Makefile` im Projektwurzelverzeichnis nimmt einem genau das ab und ist eine Hülle um dieselben Kommandos, kein zweites Bauwerkzeug. `make help` listet alle Ziele; `make check` fährt die vier Abnahmekommandos in einem Zug, `make bundle` und `make run` bauen und starten, `make menue` und `make tasten` geben die beiden Protokollmodi aus, `make fixture`, `make messen` und `make durchstich` bedienen die Messstrecke. Wer lieber `cargo` tippt, verliert nichts.
+
 `cargo xtask` ist kein eingebautes Kommando, sondern der Alias aus `.cargo/config.toml`. Der Bündelbau **verlangt eine Signaturidentität**, sucht sie in drei Stufen und bricht ohne Bündel ab, wenn keine greift; auf eine Ad-hoc-Signatur weicht er nicht aus. Die drei Stufen, das Anlegen einer Entwicklungsidentität, der Fehler `errSecInternalComponent` und die Versionspflege stehen in `README.md`.
 
 ## Technologiewahl
