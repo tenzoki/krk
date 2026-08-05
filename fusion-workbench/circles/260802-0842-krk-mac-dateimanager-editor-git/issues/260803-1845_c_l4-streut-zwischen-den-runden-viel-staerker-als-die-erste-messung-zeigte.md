@@ -36,3 +36,6 @@ Die Zusage von 1000 ms ist **nicht** angetastet. Sie hält in jeder gefahrenen R
 - Eine Reparatur auf Verdacht am Startpfad findet nicht statt; das steht ausdrücklich im Plan.
 
 Offen bleibt der Defekt, weil die zwei Läufe noch nicht gefahren sind. Er schließt mit S22, oder er wird durch einen eigenen Defekt abgelöst, falls der Vergleich zeigt, dass die Streuung nicht von außen kommt.
+
+---
+Resolved: S22 hat die Streuung per Vergleich geklärt, sie kommt von außen. Ruhig liegen die fünf Runden-Perzentile von L4 innerhalb von 19,2 ms (378,9 bis 398,1 ms); unter benannter Last (sechs yes-Schleifen, Lastdurchschnitt bis 9,3) steigt das Niveau um rund 50 % und die Spannweite verdreifacht sich, mit einem 761,6-ms-Ausläufer in der Form der Auffälligkeit vom 260803-1641. Die Planvorschrift (ruhiges Gerät, Lastkennzahl im Bedingungskopf) genügt. Beleg: messungen/260805-2207-MacBookPro15-1-abnahme-begleittext.md.
