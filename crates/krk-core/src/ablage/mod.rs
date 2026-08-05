@@ -60,7 +60,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-pub use lesezeichen::{Lesezeichen, Lesezeichenliste};
+pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung};
 pub use pfade::{Ablageort, Datei};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber, Tab,

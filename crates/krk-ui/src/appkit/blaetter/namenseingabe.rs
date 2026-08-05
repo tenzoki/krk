@@ -30,7 +30,7 @@
 use objc2::MainThreadOnly;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSTextField, NSWindow};
-use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
+use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::operation::{Namensfehler, name_pruefen};
 
@@ -60,10 +60,42 @@ pub fn zeigen(
     bestaetigen: &str,
     fertig: impl Fn(Result<String, Namensfehler>) + 'static,
 ) {
+    frei_zeigen(mtm, fenster, frage, bestaetigen, "", move |name| {
+        fertig(name_pruefen(&name).map(|()| name))
+    });
+}
+
+/// Zeigt dieselbe Namenseingabe, ohne den Namen gegen das Dateisystem zu
+/// pruefen.
+///
+/// Der Weg der Lesezeichen aus C5. Ein Lesezeichenname ist eine Beschriftung
+/// und kein Eintrag im Dateisystem: "Projekte/2026" ist ein zulaessiger Name
+/// dafuer, und [`name_pruefen`] wiese ihn ab. Welche Regel gilt, entscheidet
+/// deshalb der Aufrufer; fuer das Lesezeichen ist es
+/// `krk_core::ablage::lesezeichen::name_pruefen`.
+///
+/// **Ein Blatt und kein zweites.** [`zeigen`] laeuft ueber dieselbe Funktion
+/// und legt seine Pruefung darum; zwei Eingabeblaetter fuer einen Namen waeren
+/// zwei Erscheinungsbilder und zwei Tastaturbedienungen fuer dieselbe Frage.
+///
+/// `vorgabe` steht beim Aufgehen im Feld und ist ausgewaehlt: beim Umbenennen
+/// ist es der alte Name, beim Anlegen der Name des Ordners. Wer sie behalten
+/// will, bestaetigt; wer nicht, tippt darueber.
+pub fn frei_zeigen(
+    mtm: MainThreadMarker,
+    fenster: &NSWindow,
+    frage: &str,
+    bestaetigen: &str,
+    vorgabe: &str,
+    fertig: impl Fn(String) + 'static,
+) {
     let feld = NSTextField::initWithFrame(
         NSTextField::alloc(mtm),
         NSRect::new(NSPoint::ZERO, NSSize::new(FELDBREITE, FELDHOEHE)),
     );
+    if !vorgabe.is_empty() {
+        feld.setStringValue(&NSString::from_str(vorgabe));
+    }
 
     let mut blatt = Blatt::neu(mtm, frage, bestaetigen);
     blatt.textfeld_setzen(mtm, &feld);
@@ -73,7 +105,6 @@ pub fn zeigen(
         if !bestaetigt {
             return;
         }
-        let name = feld.stringValue().to_string().trim().to_owned();
-        fertig(name_pruefen(&name).map(|()| name));
+        fertig(feld.stringValue().to_string().trim().to_owned());
     });
 }

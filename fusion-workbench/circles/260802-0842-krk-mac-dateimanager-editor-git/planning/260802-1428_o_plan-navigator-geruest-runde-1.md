@@ -1034,7 +1034,7 @@ stateDiagram-v2
 
 ### Phase E: Nebenbereiche
 
-#### 18. **Lesezeichen- und Geräteleiste (C5)**
+#### 18. [DONE] **Lesezeichen- und Geräteleiste (C5)**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/leiste.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend), `crates/krk-ui/src/appkit/volumes.rs` (erweitert: die Aufzählung über `NSFileManager.mountedVolumeURLs…` kommt neben die `NSWorkspace`-Beobachtung aus S14, siehe unten), `crates/krk-ui/src/leistenmodell.rs`, `crates/krk-ui/src/main.rs` (einbindend: `mod leistenmodell;`), `crates/krk-core/src/ablage/lesezeichen.rs` (erweitert, aus S10), `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert, aus S12: die Leiste ist der linke der vier Bereiche, und S12 legt die `NSSplitView` mit einem noch leeren Bereich an; hier bekommt er seinen Inhalt), `crates/krk-ui/src/fenstermodell.rs` (erweitert, aus S12: die Auswahl eines Lesezeichens setzt den Ordner des aktiven Dateifensters, ohne den Tab zu wechseln, und der Fokus wandert in die Leiste und zurück; beides ist Zustand des Fenstermodells), `crates/krk-core/tests/ablage.rs` (erweitert, aus S10: Anlegen, Umbenennen, Löschen und Reihenfolge der Lesezeichen überleben Schreiben und Wiedereinlesen), `crates/krk-core/src/tasten/belegung.rs` (erweitert, aus S11 und S16: die Aufzählung `Kommando` wächst um die sieben Lesezeichen- und Fokusbefehle und um die Eigenschaft `Wirkungsbereich`, siehe unten), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert, aus S12 und S16: die Zuleitung der Kommandos fragt ab hier vor dem Ausführen einmal nach dem Wirkungsbereich, und die einzelne Abfrage der Löschtasten aus S16 geht darin auf), `crates/krk-core/tests/belegung.rs` (erweitert, aus S11: jedes Kommando trägt genau einen Wirkungsbereich)

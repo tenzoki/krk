@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 use krk_core::ablage::sitzung::SITZUNGSTAKT;
 use krk_core::ablage::{
     Ablage, Ablageort, Breiten, Datei, Dateifenster, Ersetzung, Fensterseite, Geladen, Grund,
-    Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, atomar, pfade,
+    Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung, atomar, pfade,
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
@@ -868,4 +868,73 @@ fn die_ersetzung_kommt_als_text_zurueck_und_landet_auf_keinem_kanal() {
         .expect("schreiben gescheitert");
     let (_, keine) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
     assert_eq!(keine, None);
+}
+
+// ---------------------------------------------------------------------------
+// Die Lesezeichen aus C5 (Schritt 18)
+// ---------------------------------------------------------------------------
+
+/// Anlegen, Umbenennen, Loeschen und Reihenfolge ueberleben Schreiben und
+/// Wiedereinlesen.
+///
+/// Das ist die Zusage "Die Lesezeichen ueberleben Beenden und Neustart" aus C5,
+/// gemessen an derselben Datei, die das laufende Programm schreibt: die vier
+/// Aenderungen laufen ueber [`Lesezeichenliste`], und was danach in
+/// `bookmarks.toml` steht, wird zurueckgelesen und verglichen.
+#[test]
+fn die_vier_aenderungen_an_den_lesezeichen_ueberleben_einen_neustart() {
+    let (_ordner, ablage) = ablage("lesezeichen");
+
+    let mut liste = Lesezeichenliste::default();
+    assert_eq!(
+        liste.anlegen("Projekte", Path::new("/Users/pruefung/Projekte")),
+        0
+    );
+    assert_eq!(
+        liste.anlegen("Sicherung", Path::new("/Volumes/Sicherung")),
+        1
+    );
+    assert_eq!(liste.anlegen("Wurzel", Path::new("/")), 2);
+    assert!(liste.umbenennen(1, "Sicherungsplatte"));
+    assert!(liste.loeschen(0));
+    assert_eq!(liste.verschieben(1, Verschiebung::Hoch), Some(0));
+
+    ablage
+        .sichern(Datei::Lesezeichen, &liste)
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+
+    // Der Neustart: eine zweite Ablage auf demselben Ordner liest die Datei so,
+    // wie das Programm sie beim naechsten Start liest.
+    let wieder = Ablage::oeffnen(Ablageort::an(ablage.ort().wurzel()))
+        .expect("die Ablage laesst sich nicht ein zweites Mal oeffnen");
+    let gelesen: Geladen<Lesezeichenliste> = wieder.laden(Datei::Lesezeichen);
+
+    assert!(!gelesen.ist_ersetzt());
+    assert_eq!(gelesen.wert, liste);
+    assert_eq!(
+        gelesen
+            .wert
+            .eintraege
+            .iter()
+            .map(|eintrag| eintrag.name.as_str())
+            .collect::<Vec<&str>>(),
+        ["Wurzel", "Sicherungsplatte"],
+        "die Reihenfolge der Leiste ist die Reihenfolge der Datei"
+    );
+}
+
+/// Ein Lesezeichen auf einen verschwundenen Ordner ist ungueltig, eines auf
+/// einen vorhandenen nicht (C5).
+#[test]
+fn ein_lesezeichen_kennt_den_zustand_seines_ordners() {
+    let ordner = Pruefordner::neu("gueltigkeit");
+    let datei = ordner.pfad().join("keine-ordner");
+    fs::write(&datei, b"").expect("die Pruefdatei laesst sich nicht schreiben");
+
+    assert!(Lesezeichen::neu("Da", ordner.pfad()).gueltig());
+    assert!(!Lesezeichen::neu("Weg", ordner.pfad().join("fort")).gueltig());
+    assert!(
+        !Lesezeichen::neu("Datei", &datei).gueltig(),
+        "eine Datei ist kein Ordner und kein Ziel fuer ein Lesezeichen"
+    );
 }

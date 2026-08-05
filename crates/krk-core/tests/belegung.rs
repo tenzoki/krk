@@ -16,7 +16,7 @@ use krk_core::ablage::{Ablage, Ablageort, Datei};
 use krk_core::tasten::belegung::{self, Belegung, Belegungsfehler, Zuweisungsfehler};
 use krk_core::tasten::normalisierung::roh;
 use krk_core::tasten::parser::{self, Herkunft};
-use krk_core::tasten::{Kombination, Kommando, ModMaske, Nachschlag, Tastendruck};
+use krk_core::tasten::{Kombination, Kommando, ModMaske, Nachschlag, Tastendruck, Wirkungsbereich};
 
 // ---------------------------------------------------------------------------
 // Pruefordner
@@ -1177,4 +1177,121 @@ tasten = []
             "kaffee_kochen".to_owned()
         ))
     );
+}
+
+// ---------------------------------------------------------------------------
+// Der Wirkungsbereich (Schritt 18, C5)
+// ---------------------------------------------------------------------------
+
+/// Jedes Kommando traegt genau einen Wirkungsbereich.
+///
+/// "Genau einen" hat zwei Haelften, und der Uebersetzer traegt die eine schon:
+/// [`Kommando::wirkungsbereich`] ist eine vollstaendige Fallunterscheidung ohne
+/// Auffangzweig, also nennt jedes Kommando seinen Bereich, und mehr als einen
+/// kann keines nennen. Diese Pruefung traegt die andere Haelfte, die der
+/// Uebersetzer nicht sieht: dass [`Kommando::KENNUNGEN`] jedes Kommando genau
+/// einmal fuehrt. Stuende eines zweimal darin, gaebe es zwei Wege von einer
+/// Kennung zu einem Kommando, und der zweite koennte einen anderen Bereich
+/// bekommen als der erste.
+#[test]
+fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
+    for (stelle, (kommando, kennung)) in Kommando::KENNUNGEN.into_iter().enumerate() {
+        for (andere, weitere) in Kommando::KENNUNGEN.into_iter().skip(stelle + 1) {
+            assert_ne!(kommando, andere, "{kennung} steht zweimal in KENNUNGEN");
+            assert_ne!(kennung, weitere, "die Kennung {kennung} steht zweimal");
+        }
+        // Der Aufruf selbst ist die Probe: er liefert fuer jedes Kommando
+        // einen der drei Werte und kann keinen zweiten liefern.
+        let bereich = kommando.wirkungsbereich();
+        assert!(
+            matches!(
+                bereich,
+                Wirkungsbereich::Dateifenster | Wirkungsbereich::Leiste | Wirkungsbereich::Ueberall
+            ),
+            "{kennung} traegt keinen der drei Bereiche"
+        );
+    }
+}
+
+/// Die drei Faelle, die das Abnahmekriterium von C5 namentlich nennt.
+///
+/// Sie stehen hier als Zusage ueber die **Befehle** und nicht ueber die
+/// Oberflaeche: dass `delete` das Dateifenster braucht und
+/// `lesezeichen_loeschen` die Leiste, ist ohne Fenster pruefbar, und genau
+/// deshalb wohnt der Wirkungsbereich im Kern.
+#[test]
+fn die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt() {
+    assert_eq!(
+        Kommando::InPapierkorb.wirkungsbereich(),
+        Wirkungsbereich::Dateifenster,
+        "delete darf in der Leiste keine Datei loeschen"
+    );
+    assert_eq!(
+        Kommando::EndgueltigLoeschen.wirkungsbereich(),
+        Wirkungsbereich::Dateifenster,
+        "das endgueltige Loeschen ebenso"
+    );
+    assert_eq!(
+        Kommando::Oeffnen.wirkungsbereich(),
+        Wirkungsbereich::Dateifenster,
+        "right darf in der Leiste in keinen Ordner einsteigen"
+    );
+    assert_eq!(
+        Kommando::OrdnerAufwaerts.wirkungsbereich(),
+        Wirkungsbereich::Dateifenster,
+        "left ebenso: seit der Umbelegung vom 260805 ist es eine nackte Taste"
+    );
+    assert_eq!(
+        Kommando::LesezeichenLoeschen.wirkungsbereich(),
+        Wirkungsbereich::Leiste,
+        "lesezeichen_loeschen darf bei Fokus im Dateifenster nicht wirken"
+    );
+}
+
+/// Die Auswahl bewegt sich in beiden Bereichen, und der Fokuswechsel wirkt aus
+/// beiden heraus.
+///
+/// Ohne diese Zusage waere die Leiste nach C5 nicht bedienbar: der Auf- und der
+/// Ab-Pfeil bewegen dort die Auswahl, und der Befehl zurueck in das
+/// Dateifenster muesste aus der Leiste heraus wirken, in der er per
+/// Voraussetzung steht.
+#[test]
+fn die_auswahl_und_der_fokuswechsel_wirken_in_beiden_bereichen() {
+    for kommando in [
+        Kommando::AuswahlHoch,
+        Kommando::AuswahlRunter,
+        Kommando::FokusLeiste,
+        Kommando::FokusDateifenster,
+        Kommando::LesezeichenAnlegen,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Ueberall,
+            "{} braucht keinen bestimmten Bereich im Fokus",
+            kommando.kennung()
+        );
+    }
+}
+
+/// Die sieben Funktionen aus C5 sind gebaut, und keine steht nur in der Datei.
+#[test]
+fn die_sieben_befehle_der_leiste_sind_gebaut() {
+    let belegung = Belegung::auslieferung();
+    for kennung in [
+        "lesezeichen_anlegen",
+        "lesezeichen_umbenennen",
+        "lesezeichen_loeschen",
+        "lesezeichen_hoch",
+        "lesezeichen_runter",
+        "fokus_leiste",
+        "fokus_dateifenster",
+    ] {
+        let Some(funktion) = belegung.funktion(kennung) else {
+            panic!("die Auslieferungsbelegung kennt {kennung} nicht");
+        };
+        assert!(
+            funktion.kommando().is_some(),
+            "{kennung} steht in der Belegung, hat aber kein Kommando"
+        );
+    }
 }

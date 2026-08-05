@@ -26,9 +26,16 @@
 //! Modul: hierher gehoert die Beruehrung mit AppKit, dorthin die Frage, welches
 //! Dateifenster betroffen ist.
 //!
-//! Mit S18 kommt die Aufzaehlung ueber `NSFileManager.mountedVolumeURLs…`
+//! Seit S18 steht die Aufzaehlung ueber `NSFileManager.mountedVolumeURLs…`
 //! daneben, damit ein Modul die ganze Frage "welche Datentraeger gibt es
-//! gerade" beantwortet.
+//! gerade" beantwortet: [`eingehaengte`]. Beobachtung und Aufzaehlung sind
+//! zwei Haelften derselben Frage, und sie auf zwei Module zu verteilen hiesse,
+//! dass die eine Haelfte sich aendert, ohne dass die andere es merkt.
+//!
+//! **Was dieses Modul nicht tut, ist die Liste der Leiste bauen.** Sie enthaelt
+//! neben den Datentraegern das Benutzerverzeichnis, und das ist kein
+//! Datentraeger und kommt aus `krk_core::ablage::pfade`. Zusammengesetzt wird
+//! beides in [`crate::leistenmodell`], das auch die Reihenfolge fuehrt.
 
 use std::path::PathBuf;
 
@@ -39,8 +46,64 @@ use objc2_app_kit::{
     NSWorkspaceVolumeLocalizedNameKey, NSWorkspaceVolumeURLKey, NSWorkspaceWillUnmountNotification,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSString, NSURL,
+    MainThreadMarker, NSArray, NSFileManager, NSNotification, NSObject, NSObjectProtocol, NSString,
+    NSURL, NSURLVolumeLocalizedNameKey, NSVolumeEnumerationOptions,
 };
+
+use crate::leistenmodell::Ort;
+
+/// Alle gerade eingehaengten Datentraeger, in der Reihenfolge des Systems (C5).
+///
+/// Sie fuellen zusammen mit dem Benutzerverzeichnis den unteren Teil der
+/// Leiste. Aufgezaehlt wird mit `SkipHiddenVolumes`, also ohne die
+/// Systemdatentraeger, die auch der Finder nicht zeigt; ein Nutzer, der
+/// `/System/Volumes/VM` in seiner Leiste fuende, haette dort einen Eintrag, den
+/// er nie gewollt hat.
+///
+/// Der Name ist der, den der Finder zeigt (`NSURLVolumeLocalizedNameKey`), und
+/// faellt auf den letzten Namensteil des Einhaengepunkts zurueck. Dieselbe
+/// Ruecknahme wie in [`Datentraegerziel::weitergeben`]: ein Eintrag ohne Namen
+/// waere in der Leiste nicht zuzuordnen.
+///
+/// Ein Datentraeger ohne lesbaren Pfad wird uebergangen und nicht geraten,
+/// ebenfalls wie dort.
+pub fn eingehaengte() -> Vec<Ort> {
+    // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname des
+    // Datentraegernamens. Es wird gelesen und nicht geschrieben.
+    let schluessel_name = unsafe { NSURLVolumeLocalizedNameKey };
+    let schluessel = NSArray::from_slice(&[schluessel_name]);
+    let verwalter = NSFileManager::defaultManager();
+    let Some(orte) = verwalter.mountedVolumeURLsIncludingResourceValuesForKeys_options(
+        Some(&schluessel),
+        NSVolumeEnumerationOptions::SkipHiddenVolumes,
+    ) else {
+        return Vec::new();
+    };
+
+    orte.iter()
+        .filter_map(|url| {
+            let pfad = PathBuf::from(url.path()?.to_string());
+            let name = url
+                .resourceValuesForKeys_error(&schluessel)
+                .ok()
+                .and_then(|werte| werte.objectForKey(schluessel_name))
+                .and_then(|wert| wert.downcast::<NSString>().ok())
+                .map(|text| text.to_string())
+                .unwrap_or_else(|| namensteil(&pfad));
+            Some(Ort::neu(name, pfad))
+        })
+        .collect()
+}
+
+/// Der letzte Namensteil eines Pfades, oder der ganze Pfad.
+///
+/// Der Rueckfall fuer einen Datentraeger ohne Namen. `/` hat keinen
+/// Namensteil, und dort ist der Pfad selbst die beste Auskunft.
+fn namensteil(pfad: &std::path::Path) -> String {
+    pfad.file_name()
+        .map(|teil| teil.to_string_lossy().into_owned())
+        .unwrap_or_else(|| pfad.display().to_string())
+}
 
 /// Was mit einem Datentraeger geschehen ist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,11 +208,7 @@ impl Datentraegerziel {
             .objectForKey(schluessel_name)
             .and_then(|wert| wert.downcast::<NSString>().ok())
             .map(|text| text.to_string())
-            .unwrap_or_else(|| {
-                pfad.file_name()
-                    .map(|teil| teil.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| pfad.display().to_string())
-            });
+            .unwrap_or_else(|| namensteil(&pfad));
         (self.ivars().senke)(Datentraeger { art, pfad, name });
     }
 }

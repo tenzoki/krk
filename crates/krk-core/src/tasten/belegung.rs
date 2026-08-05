@@ -70,6 +70,28 @@
 //!
 //! Nutzerentscheid vom 260805,
 //! `decisions/260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+//!
+//! # Der Wirkungsbereich: welcher Bereich den Fokus haben muss
+//!
+//! Seit Schritt 18 gibt es zwei fokussierbare Bereiche, die beiden
+//! Dateifenster und die Lesezeichenleiste aus C5. Damit wird die Frage "darf
+//! dieser Befehl hier ueberhaupt wirken" fuer **jedes** Kommando faellig:
+//! `delete` darf in der Leiste keine Datei loeschen, `right` dort in keinen
+//! Ordner einsteigen, und `lesezeichen_loeschen` umgekehrt nicht wirken,
+//! solange der Fokus im Dateifenster steht.
+//!
+//! Die Antwort ist **eine Eigenschaft je Kommando** und keine Abfrage je
+//! Aufrufstelle: [`Kommando::wirkungsbereich`]. Vier oder fuenf handgeschriebene
+//! Vorbehalte an vier oder fuenf Stellen waeren das Dickicht aus Sonderregeln,
+//! das die Maxime "supersimpel" ausschliesst; die Zuleitung in `krk-ui` fragt
+//! die Eigenschaft **einmal**, bevor sie ein Kommando ausfuehrt. Die einzelne
+//! Abfrage der Loeschtasten aus Schritt 16 ist darin aufgegangen.
+//!
+//! **Die Eigenschaft steht im Kern, die Antwort in der Oberflaeche.** Dass das
+//! endgueltige Loeschen das Dateifenster braucht, ist eine Aussage ueber den
+//! Befehl und kein AppKit-Wissen; sie ist deshalb hier ohne Fenster pruefbar.
+//! Welcher Bereich den Fokus gerade hat, weiss allein `krk-ui`. Die
+//! Aufrufrichtung bleibt von oben nach unten.
 
 use std::fmt;
 use std::io;
@@ -97,6 +119,36 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
     Belegung::bauen(&datei, None)
         .expect("die eingebettete Auslieferungsbelegung ist in sich nicht schluessig")
 });
+
+/// Welcher Bereich den Eingabefokus haben muss, damit ein Kommando wirkt (C5).
+///
+/// Drei Werte, und die Aufzaehlung ist mit ihnen vollstaendig: KRK hat zwei
+/// fokussierbare Bereiche, und ein Befehl gehoert entweder einem von beiden
+/// oder keinem. Ein vierter Wert entstuende erst mit einem dritten Bereich.
+///
+/// **Der Vorbehalt ist stumm.** Ein Kommando, das hier scheitert, tut nichts
+/// und meldet nichts; der Tastendruck geht unveraendert an AppKit weiter, wie
+/// jeder unbelegte. Eine Meldung waere die Sonderregel, die die Maxime
+/// "supersimpel" ausschliesst, und die drei Abnahmekriterien aus C5 verlangen
+/// von `delete`, `right` und `lesezeichen_loeschen` ausdruecklich nur, dass sie
+/// nichts tun.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Wirkungsbereich {
+    /// Wirkt nur, wenn der Fokus in einem Dateifenster steht.
+    Dateifenster,
+    /// Wirkt nur, wenn der Fokus in der Lesezeichen- und Geraeteleiste steht
+    /// (C5).
+    Leiste,
+    /// Wirkt ohne Vorbehalt.
+    ///
+    /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
+    /// ganzem und keinem Bereich darin: beenden, ein Fenster schliessen, einen
+    /// Bereich ein- und ausblenden, den Fokus setzen. Die anderen bewegen die
+    /// Auswahl und wirken deshalb dort, wo der Fokus gerade steht: beide
+    /// Bereiche sind Listen mit einer Auswahl, und der Auf- und der Ab-Pfeil
+    /// bewegen sie nach C2 wie nach C5.
+    Ueberall,
+}
 
 /// Was ein Tastendruck im Dateifenster ausloest.
 ///
@@ -191,6 +243,20 @@ pub enum Kommando {
     UmbenennenStapel,
     /// Den ausgewaehlten Eintrag direkt in der Liste umbenennen (C4).
     Umbenennen,
+    /// Den Ordner des aktiven Dateifensters als Lesezeichen anlegen (C5).
+    LesezeichenAnlegen,
+    /// Das ausgewaehlte Lesezeichen umbenennen (C5).
+    LesezeichenUmbenennen,
+    /// Das ausgewaehlte Lesezeichen loeschen (C5).
+    LesezeichenLoeschen,
+    /// Das ausgewaehlte Lesezeichen einen Platz nach oben schieben (C5).
+    LesezeichenHoch,
+    /// Das ausgewaehlte Lesezeichen einen Platz nach unten schieben (C5).
+    LesezeichenRunter,
+    /// Den Eingabefokus in die Lesezeichen- und Geraeteleiste setzen (C5).
+    FokusLeiste,
+    /// Den Eingabefokus zurueck in das aktive Dateifenster setzen (C5).
+    FokusDateifenster,
     /// Die Anwendung beenden (C3).
     Beenden,
 }
@@ -198,7 +264,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 42] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 49] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -246,6 +312,13 @@ impl Kommando {
         (Kommando::DateiAnlegen, "datei_anlegen"),
         (Kommando::UmbenennenStapel, "umbenennen_stapel"),
         (Kommando::Umbenennen, "umbenennen"),
+        (Kommando::LesezeichenAnlegen, "lesezeichen_anlegen"),
+        (Kommando::LesezeichenUmbenennen, "lesezeichen_umbenennen"),
+        (Kommando::LesezeichenLoeschen, "lesezeichen_loeschen"),
+        (Kommando::LesezeichenHoch, "lesezeichen_hoch"),
+        (Kommando::LesezeichenRunter, "lesezeichen_runter"),
+        (Kommando::FokusLeiste, "fokus_leiste"),
+        (Kommando::FokusDateifenster, "fokus_dateifenster"),
         (Kommando::Beenden, "beenden"),
     ];
 
@@ -259,6 +332,85 @@ impl Kommando {
             .into_iter()
             .find(|(_, benannt)| *benannt == kennung)
             .map(|(kommando, _)| kommando)
+    }
+
+    /// Welcher Bereich den Eingabefokus haben muss, damit dieses Kommando
+    /// wirkt (C5).
+    ///
+    /// **Genau einer je Kommando, und das erzwingt der Uebersetzer.** Die
+    /// Zuordnung steht als vollstaendige Fallunterscheidung ohne
+    /// Auffangzweig: ein neues Kommando uebersetzt nicht, bevor es hier seinen
+    /// Bereich genannt hat, und mehr als einen kann keines tragen. Eine
+    /// Tabelle mit Auffangzweig gaebe einem vergessenen Kommando
+    /// stillschweigend den Bereich des Nachbarn.
+    ///
+    /// Drei Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
+    /// Befehl ausfuehrt**. Was das Fenstermodell traegt, wirkt ueberall; was
+    /// ein Dateifenster traegt, braucht dessen Fokus; was die Leiste traegt,
+    /// den ihren. Drei Befehle folgen ihr nicht und stehen deshalb hier:
+    /// [`Kommando::AuswahlHoch`] und [`Kommando::AuswahlRunter`] bewegen die
+    /// Auswahl des Bereichs, der den Fokus hat, und gehoeren deshalb keinem
+    /// von beiden allein; [`Kommando::LesezeichenAnlegen`] liest den Ordner
+    /// des aktiven Dateifensters und schreibt in die Leiste, braucht also
+    /// keinen von beiden im Fokus.
+    pub const fn wirkungsbereich(self) -> Wirkungsbereich {
+        match self {
+            // Das Fenster als ganzes.
+            Kommando::FensterWechseln
+            | Kommando::LeisteUmschalten
+            | Kommando::ZweitesFensterUmschalten
+            | Kommando::VorschauUmschalten
+            | Kommando::FensterEinblenden
+            | Kommando::FensterSchliessen
+            | Kommando::BereichVerbreitern
+            | Kommando::BereichVerschmaelern
+            | Kommando::Abbrechen
+            | Kommando::Beenden => Wirkungsbereich::Ueberall,
+            // Die Auswahl des fokussierten Bereichs (C2 und C5).
+            Kommando::AuswahlHoch | Kommando::AuswahlRunter => Wirkungsbereich::Ueberall,
+            // Der Fokuswechsel selbst und das Anlegen eines Lesezeichens (C5).
+            Kommando::FokusLeiste | Kommando::FokusDateifenster | Kommando::LesezeichenAnlegen => {
+                Wirkungsbereich::Ueberall
+            }
+            // Die Leiste (C5).
+            Kommando::LesezeichenUmbenennen
+            | Kommando::LesezeichenLoeschen
+            | Kommando::LesezeichenHoch
+            | Kommando::LesezeichenRunter => Wirkungsbereich::Leiste,
+            // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
+            // hinaus, Navigation, Markierung, Sortierung, Tabs und die
+            // Dateioperationen aus C4.
+            Kommando::SeiteHoch
+            | Kommando::SeiteRunter
+            | Kommando::Listenanfang
+            | Kommando::Listenende
+            | Kommando::Oeffnen
+            | Kommando::OrdnerAufwaerts
+            | Kommando::Pfadeingabe
+            | Kommando::MarkierungUmschalten
+            | Kommando::AlleMarkieren
+            | Kommando::MarkierungAufheben
+            | Kommando::MarkierungUmkehren
+            | Kommando::SortierungName
+            | Kommando::SortierungGroesse
+            | Kommando::SortierungDatum
+            | Kommando::SortierungTyp
+            | Kommando::SortierrichtungUmkehren
+            | Kommando::VersteckteUmschalten
+            | Kommando::ZwischenablageSpringen
+            | Kommando::TabNeu
+            | Kommando::TabSchliessen
+            | Kommando::TabNaechster
+            | Kommando::TabVoriger
+            | Kommando::Kopieren
+            | Kommando::Verschieben
+            | Kommando::InPapierkorb
+            | Kommando::EndgueltigLoeschen
+            | Kommando::OrdnerAnlegen
+            | Kommando::DateiAnlegen
+            | Kommando::UmbenennenStapel
+            | Kommando::Umbenennen => Wirkungsbereich::Dateifenster,
+        }
     }
 
     /// Die Kennung dieses Kommandos in der Belegungsdatei.

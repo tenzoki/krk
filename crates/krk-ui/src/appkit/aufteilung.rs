@@ -13,9 +13,10 @@
 //! Trennlinie. Die Markierung haengt am Rahmen und nicht am Inhalt, damit sie
 //! auch dann eindeutig ist, wenn beide Dateifenster denselben Ordner zeigen.
 //!
-//! Die Lesezeichenleiste und das Vorschaufenster sind in dieser Runde
-//! beschriftete Platzhalter. Ihr Inhalt kommt mit Schritt 18 und Schritt 19;
-//! ihre Breite und ihre Sichtbarkeit gehoeren zu C7 und damit hierher.
+//! Die Lesezeichenleiste steht seit Schritt 18 als eigener Bereich darin und
+//! kommt fertig von [`super::leiste`] herein; das Vorschaufenster ist in dieser
+//! Runde noch ein beschrifteter Platzhalter und bekommt seinen Inhalt mit
+//! Schritt 19. Breite und Sichtbarkeit beider gehoeren zu C7 und damit hierher.
 //!
 //! # Wo die Breiten herkommen
 //!
@@ -122,8 +123,13 @@ pub struct Aufteilung {
 }
 
 impl Aufteilung {
-    /// Baut die vier Bereiche um die beiden Dateifenster.
-    pub fn bauen(mtm: MainThreadMarker, dateifenster: [&Dateifenster; 2]) -> Self {
+    /// Baut die vier Bereiche um die beiden Dateifenster und die Leiste.
+    ///
+    /// Die Leiste kommt fertig herein und wird hier nicht gebaut: sie ist ein
+    /// eigener fokussierbarer Bereich mit eigenem Inhalt, und dieses Modul
+    /// verteilt Breiten und Sichtbarkeit. Dieselbe Aufgabenteilung wie bei den
+    /// beiden Dateifenstern.
+    pub fn bauen(mtm: MainThreadMarker, dateifenster: [&Dateifenster; 2], leiste: &NSView) -> Self {
         let teiler = NSSplitView::initWithFrame(
             NSSplitView::alloc(mtm),
             NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
@@ -140,7 +146,7 @@ impl Aufteilung {
         ];
         // Die Reihenfolge ist die von `Bereich::ALLE` und die einzige, in der
         // die Rechenvorschrift der Breiten die Bereiche wiederfindet.
-        teiler.addSubview(&platzhalter(mtm, "Lesezeichen"));
+        teiler.addSubview(leiste);
         teiler.addSubview(&rahmen[0]);
         teiler.addSubview(&rahmen[1]);
         teiler.addSubview(&platzhalter(mtm, "Vorschau"));

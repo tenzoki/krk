@@ -14,10 +14,12 @@
 //!   ├─ Fenstermodell        aktives Dateifenster, Sichtbarkeit, Breiten
 //!   ├─ Aufteilung           die NSSplitView mit ihren vier Bereichen
 //!   ├─ Dateifenster × 2     Tableiste, Dateiliste, Statuszeile, Tabs
+//!   ├─ Leiste               Lesezeichen und Geraete, der zweite Bereich (C5)
 //!   ├─ NSWindow             genau eines, siehe unten
 //!   ├─ Tastenabgriff        der eine Eintrittspunkt fuer Tastendruecke
 //!   ├─ Dateisystemwache     FSEvents auf den sichtbaren Ordnern (C9)
 //!   ├─ Datentraegerwache    NSWorkspace auf Einhaengen und Auswerfen (C9)
+//!   ├─ Ablage               der Zugang zu bookmarks.toml (C5)
 //!   └─ Sitzungsschreiber    gebuendelt, hoechstens alle zwei Sekunden
 //! ```
 //!
@@ -63,6 +65,35 @@
 //! aktiven Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer
 //! steht.
 //!
+//! # Der eine Fokusvorbehalt (C5)
+//!
+//! Seit Schritt 18 gibt es zwei fokussierbare Bereiche, und
+//! [`Anwendungsdelegierter::kommando_ausfuehren`] fragt **einmal**, wo der
+//! Fokus steht:
+//!
+//! ```text
+//!  Kommando ──> steht ein Blatt? ──> fokus() ──> fokus::wirkt(Wirkungsbereich)
+//!                                       │                    │  nein: nichts
+//!                                       │                    ▼
+//!                                       │            fensterweiter Befehl
+//!                                       └───Adresse──> Dateifenster / Leiste
+//! ```
+//!
+//! Der Wert wird zweimal gebraucht und einmal erhoben. Zuerst als
+//! **Vorbehalt**: [`crate::kommandos::fokus::wirkt`] sagt, ob der Befehl hier
+//! ueberhaupt wirkt, und ein abgewiesener tut nichts und meldet nichts. Danach
+//! als **Adresse**: was weder dem Fenster als ganzem gehoert noch schon
+//! abgewiesen ist, geht an den Bereich, der den Fokus hat, denn beide Bereiche
+//! sind Listen mit einer Auswahl und der Auf- und der Ab-Pfeil bewegen die des
+//! Bereichs vor dem Nutzer. Die einzelne Abfrage der Loeschtasten aus Schritt
+//! 16 ist in dem Vorbehalt aufgegangen und steht nicht daneben.
+//!
+//! **Gefragt wird AppKit und nicht ein eigenes Feld.** Welcher Bereich den
+//! Fokus hat, sagt der Ersthelfer des Fensters; ein Kennzeichen daneben waere
+//! eine zweite Wahrheit, die jeder Mausklick in eine der drei Listen
+//! nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
+//! Ersthelfer und nichts sonst.
+//!
 //! # Der Messmodus haengt an derselben Stelle wie der Tastenabgriff
 //!
 //! Ist `--messmodus` gesetzt, richtet [`Anwendungsdelegierter::oberflaeche_aufbauen`]
@@ -107,7 +138,9 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
-use krk_core::ablage::{Ablage, Datei, Fensterseite, Sitzung, pfade};
+use krk_core::ablage::{
+    Ablage, Datei, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung, lesezeichen, pfade,
+};
 use krk_core::operation::{
     self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
     freier_name,
@@ -118,7 +151,9 @@ use krk_core::tasten::{Belegung, Kommando};
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
-use crate::kommandos::operationen::{self, Anlegeart, Fokus, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::fokus::{self, Fokus};
+use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
+use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
 use crate::tabs::Tabliste;
 
@@ -130,6 +165,7 @@ use super::blaetter::{
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
+use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
 use super::tabelle::Dateifenster;
@@ -199,6 +235,17 @@ pub struct AnwendungsIvars {
     aufteilung: OnceCell<Aufteilung>,
     /// Die beiden Dateifenster, links zuerst.
     dateifenster: OnceCell<[Dateifenster; 2]>,
+    /// Die Lesezeichen- und Geraeteleiste (C5), der zweite fokussierbare
+    /// Bereich.
+    leiste: OnceCell<Leiste>,
+    /// Der Zugang zu `bookmarks.toml` (C5).
+    ///
+    /// Er steht hier und nicht in der Leiste: der Kern legt ab, die Leiste
+    /// zeigt an, und der Delegierte ist die Stelle, an der beide zusammenkommen
+    /// — dieselbe Aufgabenteilung wie bei der Sitzung. Leer, wenn sich der
+    /// Ablageordner nicht oeffnen liess; die Meldung dazu steht dann in der
+    /// Statuszeile, und die Leiste arbeitet ohne zu sichern weiter.
+    ablage: RefCell<Option<Ablage>>,
     tastenabgriff: OnceCell<Tastenabgriff>,
     /// Die Beobachtung der sichtbaren Ordner (C9).
     ///
@@ -366,6 +413,8 @@ impl Anwendungsdelegierter {
             fenster_delegierter: OnceCell::new(),
             aufteilung: OnceCell::new(),
             dateifenster: OnceCell::new(),
+            leiste: OnceCell::new(),
+            ablage: RefCell::new(None),
             tastenabgriff: OnceCell::new(),
             dateisystemwache: RefCell::new(None),
             datentraegerwache: OnceCell::new(),
@@ -393,7 +442,9 @@ impl Anwendungsdelegierter {
             Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[0])),
             Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[1])),
         ];
-        let aufteilung = Aufteilung::bauen(mtm, [&dateifenster[0], &dateifenster[1]]);
+        let leiste = Leiste::bauen(mtm);
+        let aufteilung =
+            Aufteilung::bauen(mtm, [&dateifenster[0], &dateifenster[1]], leiste.sicht());
         let fenster_delegierter = FensterDelegierter::neu(
             mtm,
             [
@@ -406,6 +457,7 @@ impl Anwendungsdelegierter {
         // Erst festhalten, dann anzeigen: das Fenster haelt seinen Delegierten
         // schwach, die Tabelle haelt Datenquelle und Delegierten schwach.
         let _ = ivars.dateifenster.set(dateifenster);
+        let _ = ivars.leiste.set(leiste);
         let _ = ivars.aufteilung.set(aufteilung);
         let _ = ivars.fenster_delegierter.set(fenster_delegierter);
         let _ = ivars.fenster.set(fenster);
@@ -449,6 +501,7 @@ impl Anwendungsdelegierter {
         }
 
         self.aufteilung_nachziehen();
+        self.leiste_einrichten(&mut meldungen);
         self.tastenabgriff_einrichten(&mut meldungen);
         self.datentraegerwache_einrichten();
         self.lesevorgaenge_starten();
@@ -493,7 +546,255 @@ impl Anwendungsdelegierter {
         *ivars.sitzungsschreiber.borrow_mut() = Some(ablage.sitzungsschreiber());
         let (sitzung, meldung) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
         meldungen.extend(meldung);
+        // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
+        // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
+        // den Ordner an, und zweimal anzulegen hiesse, dieselbe Frage zweimal an
+        // das Dateisystem zu stellen.
+        *ivars.ablage.borrow_mut() = Some(ablage);
         (sitzung, meldungen)
+    }
+
+    // ------------------------------------------------------------------
+    // Die Lesezeichen- und Geraeteleiste (C5)
+    // ------------------------------------------------------------------
+
+    /// Die Leiste (C5).
+    fn leiste(&self) -> &Leiste {
+        self.ivars()
+            .leiste
+            .get()
+            .expect("die Leiste steht seit `oberflaeche_aufbauen`")
+    }
+
+    /// Fuellt die Leiste und haengt ihren Rueckruf ein (C5).
+    ///
+    /// Die Lesezeichen kommen aus `bookmarks.toml`, die Geraete vom System.
+    /// Eine beschaedigte Lesezeichendatei geht denselben Weg wie eine
+    /// beschaedigte Sitzung: Auslieferungszustand, also eine leere Liste, und
+    /// eine Meldung in der Statuszeile.
+    fn leiste_einrichten(&self, meldungen: &mut Vec<String>) {
+        let geladen = match self.ivars().ablage.borrow().as_ref() {
+            Some(ablage) => {
+                let (liste, meldung) = ablage
+                    .laden::<Lesezeichenliste>(Datei::Lesezeichen)
+                    .mit_meldung();
+                meldungen.extend(meldung);
+                liste
+            }
+            // Ohne Ablageordner gibt es nichts zu laden und nichts zu sichern.
+            // Die Meldung darueber hat `sitzung_laden` schon gestellt; eine
+            // zweite waere dieselbe Auskunft ein zweites Mal.
+            None => Lesezeichenliste::default(),
+        };
+        let leiste = self.leiste();
+        leiste.quelle().lesezeichen_setzen(&geladen);
+        leiste.quelle().orte_setzen(orte());
+
+        // Der Rueckruf haelt den Delegierten **schwach**, sonst schloesse sich
+        // der Ring Delegierter → Leiste → Quelle → Rueckruf → Delegierter.
+        // Dieselbe Form wie bei den drei Rueckrufen der Dateifenster.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        leiste.quelle().auswahl_setzen(Box::new(move |auswahl| {
+            if let Some(selbst) = schwach.load() {
+                selbst.leistenauswahl_ausfuehren(&auswahl);
+            }
+        }));
+    }
+
+    /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5).
+    ///
+    /// **Die Auswahl setzt den Ordner des aktiven Dateifensters, ohne den Tab
+    /// zu wechseln**: [`DateifensterQuelle::ordner_lesen`] liest in den
+    /// sichtbaren Tab, denselben Weg, den jede Navigation aus C2 geht. Ein
+    /// eigener Lesepfad fuer die Leiste entstuende sonst.
+    ///
+    /// Zeigt ein Lesezeichen auf einen Ordner, den es nicht mehr gibt, nennt
+    /// die Statuszeile den Grund, und es wird nichts gelesen. Das ist die
+    /// Zusage aus C5, "statt kommentarlos nichts zu tun", und sie ist eine
+    /// **Befehlsantwort**: der Nutzer hat die Auswahl eben selbst bewegt.
+    fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        if !auswahl.gueltig {
+            self.antwort_zeigen(
+                aktiv,
+                // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
+                // laengerer Satz endet am rechten Rand des Dateifensters mit
+                // drei Punkten. Gemessen am 260805 im laufenden Buendel.
+                &format!(
+                    "„{}“ fehlt: {} gibt es nicht mehr",
+                    auswahl.name,
+                    auswahl.ordner.display()
+                ),
+            );
+            return;
+        }
+        self.dateifenster(aktiv)
+            .quelle()
+            .ordner_lesen(&auswahl.ordner, None);
+        self.sitzung_vormerken();
+    }
+
+    /// Schreibt die Lesezeichen nach `bookmarks.toml` (C5).
+    ///
+    /// Nach **jeder** Aenderung, wie `### Frage 4` des Plans es fuer diese
+    /// Datei vorschreibt, und nicht gebuendelt wie die Sitzung: eine Aenderung
+    /// an den Lesezeichen ist eine Handlung des Nutzers und keine Nebenwirkung
+    /// des Arbeitens, davon gibt es wenige, und jede soll einen Absturz
+    /// ueberleben.
+    fn lesezeichen_sichern(&self, seite: Fensterseite) {
+        let liste = self.leiste().quelle().lesezeichenliste();
+        let ergebnis = match self.ivars().ablage.borrow().as_ref() {
+            Some(ablage) => ablage.sichern(Datei::Lesezeichen, &liste),
+            None => return,
+        };
+        if let Err(fehler) = ergebnis {
+            self.antwort_zeigen(
+                seite,
+                &format!("die Lesezeichen liessen sich nicht sichern: {fehler}"),
+            );
+        }
+    }
+
+    /// Legt den Ordner des aktiven Dateifensters als Lesezeichen an (C5).
+    ///
+    /// Der Name kommt aus demselben Eingabeblatt, das C4 fuer das Anlegen
+    /// benutzt, vorbelegt mit dem Namen des Ordners: das ist in den meisten
+    /// Faellen der Name, den der Nutzer ohnehin vergeben haette.
+    ///
+    /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
+    /// verbraucht.
+    fn lesezeichen_anlegen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let seite = self.ivars().modell.borrow().aktiv();
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let vorschlag = ordner
+            .file_name()
+            .map(|teil| teil.to_string_lossy().into_owned())
+            .unwrap_or_else(|| ordner.display().to_string());
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        namenseingabe::frei_zeigen(
+            self.mtm(),
+            fenster,
+            "Wie soll das Lesezeichen heißen?",
+            "Anlegen",
+            &vorschlag,
+            move |name| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.lesezeichen_anlegen_ausfuehren(seite, &ordner, &name);
+                }
+            },
+        );
+        true
+    }
+
+    /// Legt das Lesezeichen an und sichert die Datei (C5).
+    fn lesezeichen_anlegen_ausfuehren(&self, seite: Fensterseite, ordner: &Path, name: &str) {
+        if let Err(hinweis) = lesezeichen::name_pruefen(name) {
+            self.antwort_zeigen(seite, hinweis.grund());
+            return;
+        }
+        self.leiste().quelle().lesezeichen_anlegen(name, ordner);
+        self.lesezeichen_sichern(seite);
+        self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
+    }
+
+    /// Benennt das ausgewaehlte Lesezeichen um (C5).
+    ///
+    /// Ueber dasselbe Blatt wie das Anlegen, vorbelegt mit dem alten Namen.
+    /// Steht die Auswahl nicht auf einem Lesezeichen, geschieht nichts und wird
+    /// nichts gemeldet: dieselbe Antwort, die der Wirkungsbereich gibt.
+    fn lesezeichen_umbenennen(&self) -> bool {
+        let (Some(fenster), Some(alt)) = (
+            self.ivars().fenster.get(),
+            self.leiste().quelle().gewaehlter_lesezeichenname(),
+        ) else {
+            return false;
+        };
+        let seite = self.ivars().modell.borrow().aktiv();
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        namenseingabe::frei_zeigen(
+            self.mtm(),
+            fenster,
+            "Wie soll das Lesezeichen heißen?",
+            "Umbenennen",
+            &alt,
+            move |name| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.lesezeichen_umbenennen_ausfuehren(seite, &name);
+                }
+            },
+        );
+        true
+    }
+
+    /// Schreibt den neuen Namen und sichert die Datei (C5).
+    fn lesezeichen_umbenennen_ausfuehren(&self, seite: Fensterseite, name: &str) {
+        if let Err(hinweis) = lesezeichen::name_pruefen(name) {
+            self.antwort_zeigen(seite, hinweis.grund());
+            return;
+        }
+        if self.leiste().quelle().lesezeichen_umbenennen(name) {
+            self.lesezeichen_sichern(seite);
+        }
+    }
+
+    /// Loescht das ausgewaehlte Lesezeichen und sichert die Datei (C5).
+    fn lesezeichen_loeschen(&self) -> bool {
+        if !self.leiste().quelle().lesezeichen_loeschen() {
+            return false;
+        }
+        self.lesezeichen_sichern(self.ivars().modell.borrow().aktiv());
+        true
+    }
+
+    /// Schiebt das ausgewaehlte Lesezeichen einen Platz weiter (C5).
+    fn lesezeichen_verschieben(&self, richtung: Verschiebung) -> bool {
+        if !self.leiste().quelle().lesezeichen_verschieben(richtung) {
+            return false;
+        }
+        self.lesezeichen_sichern(self.ivars().modell.borrow().aktiv());
+        true
+    }
+
+    /// Setzt den Eingabefokus in die Leiste oder in das aktive Dateifenster
+    /// (C5).
+    ///
+    /// Die eine Stelle, die den Fokus **setzt**, so wie
+    /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. In eine
+    /// ausgeblendete Leiste geht der Fokus nicht: dort saehe der Nutzer weder
+    /// seine Auswahl noch, dass seine Tasten irgendwo ankommen.
+    fn fokus_setzen(&self, ziel: Fokus) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        match ziel {
+            Fokus::Leiste => {
+                if !self.ivars().modell.borrow().sichtbar(Bereich::Lesezeichen) {
+                    return false;
+                }
+                fenster.makeFirstResponder(Some(self.leiste().quelle().liste()))
+            }
+            Fokus::Dateifenster | Fokus::Anderswo => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                fenster.makeFirstResponder(Some(self.dateifenster(aktiv).liste()))
+            }
+        }
+    }
+
+    /// Zaehlt die Geraete und Standardorte neu auf (C5).
+    ///
+    /// Gerufen nach jedem Ein- und Aushaengen. Die Leiste prueft dabei zugleich
+    /// die Gueltigkeit der Lesezeichen nach; ein eingehaengter Datentraeger
+    /// macht ein Lesezeichen darauf wieder erreichbar.
+    fn leiste_geraete_nachziehen(&self) {
+        if self.ivars().leiste.get().is_none() {
+            return;
+        }
+        self.leiste().quelle().orte_setzen(orte());
     }
 
     /// Richtet den einen Eintrittspunkt fuer Tastendruecke ein.
@@ -593,12 +894,23 @@ impl Anwendungsdelegierter {
         let _ = self.ivars().datentraegerwache.set(wache);
     }
 
-    /// Ein Datentraeger ist gekommen oder gegangen (C9).
+    /// Ein Datentraeger ist gekommen oder gegangen (C5 und C9).
     fn datentraeger_gewechselt(&self, gemeldet: Datentraeger) {
+        // Die Leiste zieht in jedem der drei Faelle nach: ein eingehaengter
+        // Datentraeger erscheint dort ohne Neustart, ein ausgeworfener
+        // verschwindet, und die Lesezeichen auf ihn wechseln ihre Gueltigkeit
+        // (C5). Die Aufzaehlung fragt das System und nicht die Meldung; welcher
+        // Datentraeger genau gemeldet wurde, ist dafuer belanglos, und eine
+        // Liste, die aus einzelnen Meldungen fortgeschrieben wird, laeuft mit
+        // dem ersten verpassten Ereignis auseinander.
+        //
+        // `willUnmount` zaehlt dabei noch mit: der Datentraeger ist bis zum
+        // Auswurf eingehaengt. Das ist richtig so, denn `didUnmount` folgt
+        // unmittelbar und zaehlt ohne ihn.
+        self.leiste_geraete_nachziehen();
         match gemeldet.art {
-            // C5 baut daraus die Geraeteleiste; das ist S18. Bis dahin gibt es
-            // in dieser Runde nichts zu tun: kein Dateifenster zeigt einen
-            // Ordner, den es vorher nicht gab.
+            // Fuer die Dateifenster gibt es beim Einhaengen nichts zu tun:
+            // keines zeigt einen Ordner, den es vorher nicht gab.
             Wechsel::Eingehaengt => {}
             // Beide Richtungen enden hier. `willUnmount` ist der geordnete
             // Auswurf und der Zeitpunkt, zu dem KRK den Ordner freigeben muss,
@@ -717,6 +1029,18 @@ impl Anwendungsdelegierter {
             return false;
         }
 
+        // **Die eine Stelle, die vor dem Ausfuehren nach dem Fokus fragt.**
+        // Der Wirkungsbereich sagt, welchen Bereich dieser Befehl braucht, und
+        // `fokus` sagt, welcher ihn hat; passt beides nicht zusammen, geschieht
+        // nichts und wird nichts gemeldet. Bis Schritt 18 stand diese Frage an
+        // den beiden Loeschbefehlen; sie ist hier aufgegangen und steht nicht
+        // daneben. Der Wert wird gleich ein zweites Mal gebraucht, dann aber
+        // als Adresse und nicht als Vorbehalt; siehe den Modulkopf.
+        let fokus = self.fokus();
+        if !fokus::wirkt(kommando.wirkungsbereich(), fokus) {
+            return false;
+        }
+
         // **Die eine Loeschregel der Befehlsantwort.** Was KRK auf den vorigen
         // Befehl geantwortet hat, gilt bis zum naechsten und keinen Tastendruck
         // laenger; erst danach darf der Befehl seine eigene Antwort setzen. An
@@ -749,19 +1073,50 @@ impl Anwendungsdelegierter {
             Kommando::Beenden => self.beenden(),
             Kommando::BereichVerbreitern => self.breite_aendern(BREITENSCHRITT),
             Kommando::BereichVerschmaelern => self.breite_aendern(-BREITENSCHRITT),
-            // Alles uebrige gehoert dem aktiven Dateifenster.
-            andere => {
-                let aktiv = self.ivars().modell.borrow().aktiv();
-                self.dateifenster(aktiv)
-                    .quelle()
-                    .kommando_ausfuehren(andere)
-            }
+            // Die Lesezeichen aus C5. Sie stehen hier und nicht in der Leiste,
+            // weil jeder von ihnen danach `bookmarks.toml` schreiben muss und
+            // der Zugang zur Ablage beim Delegierten haengt.
+            Kommando::LesezeichenAnlegen => self.lesezeichen_anlegen(),
+            Kommando::LesezeichenUmbenennen => self.lesezeichen_umbenennen(),
+            Kommando::LesezeichenLoeschen => self.lesezeichen_loeschen(),
+            Kommando::LesezeichenHoch => self.lesezeichen_verschieben(Verschiebung::Hoch),
+            Kommando::LesezeichenRunter => self.lesezeichen_verschieben(Verschiebung::Runter),
+            Kommando::FokusLeiste => self.fokus_setzen(Fokus::Leiste),
+            Kommando::FokusDateifenster => self.fokus_setzen(Fokus::Dateifenster),
+            // Alles uebrige gehoert dem Bereich, der den Fokus hat.
+            andere => self.bereichskommando(fokus, andere),
         };
         if ausgefuehrt {
             self.aufteilung_nachziehen();
             self.sitzung_vormerken();
         }
         ausgefuehrt
+    }
+
+    /// Reicht ein Kommando an den Bereich weiter, der den Fokus hat.
+    ///
+    /// **Keine zweite Fokusabfrage.** Der Wert kommt aus der einen Abfrage in
+    /// [`Self::kommando_ausfuehren`] und beantwortet hier eine andere Frage:
+    /// nicht, **ob** der Befehl wirkt — das hat der Wirkungsbereich schon
+    /// entschieden —, sondern **wohin** er geht. Beide Bereiche sind Listen mit
+    /// einer Auswahl, und der Auf- und der Ab-Pfeil bewegen nach C2 wie nach C5
+    /// die des Bereichs, vor dem der Nutzer steht; ohne eine Adresse gaebe es
+    /// keinen Ort, an den ein solcher Befehl zu richten waere.
+    ///
+    /// [`Fokus::Anderswo`] geht an das Dateifenster. Ein Befehl, der einen
+    /// Bereich braucht, ist dort schon abgewiesen; was uebrig bleibt, ist die
+    /// Bewegung der Auswahl, und die gehoert der Liste, die der Nutzer zuletzt
+    /// bedient hat.
+    fn bereichskommando(&self, fokus: Fokus, kommando: Kommando) -> bool {
+        match fokus {
+            Fokus::Leiste => self.leiste().quelle().kommando_ausfuehren(kommando),
+            Fokus::Dateifenster | Fokus::Anderswo => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .kommando_ausfuehren(kommando)
+            }
+        }
     }
 
     /// Blendet einen Bereich aus oder wieder ein (C7).
@@ -771,6 +1126,17 @@ impl Anwendungsdelegierter {
         // Die beiden Randbereiche zeigen keinen.
         if umgeschaltet && bereich == Bereich::Rechts {
             self.dateisystemwache_nachziehen();
+        }
+        // Eine ausgeblendete Leiste darf den Fokus nicht behalten: der Nutzer
+        // saehe seine Auswahl nicht mehr und wuesste nicht, wo seine Tasten
+        // ankommen. Gesetzt wird ohne Nachfrage, wo er gerade steht — steht er
+        // im Dateifenster, ist der Aufruf wirkungslos, und eine Abfrage dafuer
+        // waere eine zweite Stelle, die nach dem Fokus fragt.
+        if umgeschaltet
+            && bereich == Bereich::Lesezeichen
+            && !self.ivars().modell.borrow().sichtbar(Bereich::Lesezeichen)
+        {
+            self.fokus_setzen(Fokus::Dateifenster);
         }
         umgeschaltet
     }
@@ -887,18 +1253,18 @@ impl Anwendungsdelegierter {
     /// Sofort und ohne Rueckfrage: der Rueckweg ist der Papierkorb des Systems,
     /// und einen eigenen Rueckgaengig-Speicher fuehrt KRK nicht
     /// (`shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`).
+    ///
+    /// **Der Fokusvorbehalt steht seit Schritt 18 nicht mehr hier.** Er stand
+    /// als eigene Abfrage an dieser Stelle und an der von
+    /// [`Self::endgueltig_loeschen`]; heute tragen beide Befehle
+    /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist sie ab, bevor
+    /// sie hier ankommen.
     fn in_den_papierkorb(&self) -> bool {
-        if !operationen::loeschtaste_wirkt(self.fokus()) {
-            return false;
-        }
         self.auftrag_stellen(Art::InDenPapierkorb)
     }
 
     /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).
     fn endgueltig_loeschen(&self) -> bool {
-        if !operationen::loeschtaste_wirkt(self.fokus()) {
-            return false;
-        }
         let aktiv = self.ivars().modell.borrow().aktiv();
         let auswahl = self.dateifenster(aktiv).quelle().betroffene_eintraege();
         if auswahl.ist_leer() {
@@ -1133,15 +1499,21 @@ impl Anwendungsdelegierter {
         );
     }
 
-    /// Wo der Eingabefokus steht, soweit es die Loeschtasten angeht (C4).
+    /// Wo der Eingabefokus steht (C5).
     ///
-    /// **Eine Frage, eine Antwort.** Steht ein Blatt am Fenster, ist dessen
-    /// Panel das Schluesselfenster und nicht das Hauptfenster; steht die
-    /// Schreibmarke in einem Textfeld, hat der Ereignisabgriff den Tastendruck
-    /// ohnehin schon weitergereicht und dieses Kommando gar nicht erst
-    /// erzeugt. Im Hauptfenster gibt es in dieser Runde nur die beiden
-    /// Dateilisten; die Lesezeichenleiste aus C5 kommt mit S18, und mit ihr
-    /// bekommt diese Abfrage einen dritten Fall.
+    /// **Eine Frage, eine Antwort, und AppKit gibt sie.** Der Ersthelfer des
+    /// Fensters ist die Wahrheit ueber den Fokus; ein eigenes Feld daneben
+    /// waere eine zweite, die jeder Mausklick in eine der drei Listen
+    /// nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
+    /// Ersthelfer, statt ein Kennzeichen umzulegen.
+    ///
+    /// Drei Faelle. Steht ein Blatt am Fenster, ist dessen Panel das
+    /// Schluesselfenster und nicht das Hauptfenster: [`Fokus::Anderswo`], und
+    /// ohne diese Antwort loeschte ein Delete vor der stehenden Rueckfrage in
+    /// dem Ordner dahinter. Ist der Ersthelfer die Liste der Leiste,
+    /// [`Fokus::Leiste`]. Sonst eine der beiden Dateilisten. Die Schreibmarke
+    /// in einem Textfeld kommt hier nicht vor: der Ereignisabgriff reicht den
+    /// Tastendruck dann weiter und erzeugt gar kein Kommando.
     fn fokus(&self) -> Fokus {
         let (Some(schluessel), Some(haupt)) = (
             NSApplication::sharedApplication(self.mtm()).keyWindow(),
@@ -1149,10 +1521,18 @@ impl Anwendungsdelegierter {
         ) else {
             return Fokus::Anderswo;
         };
-        if schluessel.isEqual(Some(haupt)) {
-            Fokus::Dateifenster
+        if !schluessel.isEqual(Some(haupt)) {
+            return Fokus::Anderswo;
+        }
+        let in_der_leiste = self.ivars().leiste.get().is_some_and(|leiste| {
+            haupt
+                .firstResponder()
+                .is_some_and(|ersthelfer| ersthelfer.isEqual(Some(leiste.quelle().liste())))
+        });
+        if in_der_leiste {
+            Fokus::Leiste
         } else {
-            Fokus::Anderswo
+            Fokus::Dateifenster
         }
     }
 
@@ -1729,6 +2109,28 @@ fn hauptfaden_wecken() {
 /// Ordner zeigen, und `/` gibt es immer.
 fn benutzerverzeichnis() -> PathBuf {
     pfade::benutzerverzeichnis().unwrap_or_else(|| PathBuf::from("/"))
+}
+
+/// Der untere Teil der Leiste: das Benutzerverzeichnis und die eingehaengten
+/// Datentraeger (C5).
+///
+/// Hier und nicht in [`super::volumes`], weil das Benutzerverzeichnis kein
+/// Datentraeger ist: es kommt aus `krk_core::ablage::pfade`, und jenes Modul
+/// beantwortet die Frage nach den Datentraegern und nur die. Es steht zuoberst,
+/// weil es der Ordner ist, den der Nutzer am haeufigsten will.
+///
+/// Sein Name ist der letzte Namensteil, also der Anmeldename. Ihn ueber
+/// `NSFileManager.displayNameAtPath:` zu uebersetzen brachte nichts: das System
+/// liefert fuer das Benutzerverzeichnis denselben Namen.
+fn orte() -> Vec<Ort> {
+    let zuhause = benutzerverzeichnis();
+    let name = zuhause
+        .file_name()
+        .map(|teil| teil.to_string_lossy().into_owned())
+        .unwrap_or_else(|| zuhause.display().to_string());
+    let mut orte = vec![Ort::neu(name, zuhause)];
+    orte.extend(super::volumes::eingehaengte());
+    orte
 }
 
 /// Startet die Anwendung. Kehrt zurueck, wenn sie beendet ist.

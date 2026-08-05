@@ -49,6 +49,15 @@
 //! eigenen Text, weil er seine Schaltflaeche verloren hat, und
 //! [`waehrend_blatt_erlaubt`] gilt nur noch fuer ein stehendes Blatt.
 //!
+//! # Der Fokusvorbehalt der Loeschtasten ist mit Schritt 18 hier ausgezogen
+//!
+//! Er stand bis dahin in dieser Datei und galt allein fuer `delete` und `f8`.
+//! Seit die Leiste aus C5 einen zweiten fokussierbaren Bereich stellt, ist die
+//! Frage fuer jedes Kommando faellig und keine Frage der Dateioperationen mehr;
+//! sie wohnt jetzt als eine Regel in [`crate::kommandos::fokus`], und die
+//! Loeschtasten tragen sie ueber `Wirkungsbereich::Dateifenster` wie jeder
+//! andere Befehl. Eine zweite Abfrage daneben gibt es nicht.
+//!
 //! # Die Buendelung ohne Takt
 //!
 //! Der Nutzer hat am 260804 Weg 3 aus
@@ -167,33 +176,8 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
 }
 
 // ----------------------------------------------------------------------
-// Der Fokusvorbehalt der Loeschtasten
+// Was durchkommt, solange ein Blatt steht
 // ----------------------------------------------------------------------
-
-/// Wo der Eingabefokus steht, soweit es die Loeschtasten angeht.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Fokus {
-    /// Im Hauptfenster, also in einer der beiden Dateilisten.
-    Dateifenster,
-    /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
-    Anderswo,
-}
-
-/// Ob die Loeschtasten wirken duerfen (C4).
-///
-/// "Die Loeschtasten loesen nur dann eine Loeschung aus, wenn der Eingabefokus
-/// in einem Dateifenster steht." Der Vorbehalt fuer Textfelder sitzt seit S13
-/// im Ereignisabgriff und faengt die Pfadeingabe ab, bevor ein Kommando
-/// ueberhaupt entsteht. Diese Regel faengt den zweiten Fall: ein **Blatt** mit
-/// Schaltflaechen, dessen Ersthelfer kein Textfeld ist. Ohne sie loeschte ein
-/// Delete vor der stehenden Rueckfrage in dem Ordner dahinter.
-///
-/// **Eine laufende Operation ist kein Vorbehalt**, seit der Fortschritt in der
-/// Statuszeile steht: C4 sagt seit dem 260804-1832 ausdruecklich zu, dass
-/// Delete waehrend einer Kopie loescht, wenn der Fokus im Dateifenster steht.
-pub fn loeschtaste_wirkt(fokus: Fokus) -> bool {
-    fokus == Fokus::Dateifenster
-}
 
 /// Was durchkommt, solange ein Blatt steht.
 ///
@@ -890,12 +874,6 @@ mod tests {
         let text = schon_ein_vorgang(&Art::InDenPapierkorb);
         assert!(text.contains("bereits"), "{text}");
         assert!(text.contains("In den Papierkorb räumen"), "{text}");
-    }
-
-    #[test]
-    fn die_loeschtasten_wirken_nur_im_dateifenster() {
-        assert!(loeschtaste_wirkt(Fokus::Dateifenster));
-        assert!(!loeschtaste_wirkt(Fokus::Anderswo));
     }
 
     /// Die Sperre gilt fuer ein stehendes Blatt und nicht mehr fuer einen

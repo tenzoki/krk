@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Vierzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Fuenfzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -25,7 +25,9 @@
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
 //! der einzige Eintrittspunkt von aussen. [`menue`] baut das Hauptmenue von
 //! Hand, weil es ohne Oberflaechenbau kein Nib gibt, aus dem es kaeme.
-//! [`fenster`] baut das Fenster und seinen Delegierten. [`aufteilung`] haelt
+//! [`fenster`] baut das Fenster und seinen Delegierten. [`leiste`] haelt die
+//! Lesezeichen- und Geraeteleiste aus C5, den zweiten fokussierbaren Bereich.
+//! [`aufteilung`] haelt
 //! die `NSSplitView` mit den vier Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
 //! `NSTableView` in einer `NSScrollView`, Datenquelle und Delegierter, und die
@@ -62,6 +64,7 @@ mod blaetter;
 mod ereignisse;
 mod fenster;
 mod fsevents;
+mod leiste;
 mod menue;
 mod papierkorb;
 mod statuszeile;

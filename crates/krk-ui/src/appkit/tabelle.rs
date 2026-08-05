@@ -1899,6 +1899,15 @@ impl Dateifenster {
     pub fn quelle(&self) -> &DateifensterQuelle {
         self.delegierter.quelle()
     }
+
+    /// Die Liste selbst, fuer den Fokuswechsel aus C5.
+    ///
+    /// Nicht die Bildlaufansicht aus [`Dateifenster::sicht`]: den Eingabefokus
+    /// traegt die `NSTableView` darin, und `makeFirstResponder:` will genau
+    /// die. Sie wird sonst nirgends nach aussen gereicht.
+    pub fn liste(&self) -> &NSTableView {
+        &self.quelle().ivars().tabelle
+    }
 }
 
 /// Eine Spalte mit Kennung, Ueberschrift und Breiten.
