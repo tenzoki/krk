@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Siebzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Achtzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -19,6 +19,7 @@
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
+//!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
 //! ```
@@ -48,6 +49,10 @@
 //! [`terminal`] haelt die eine aus C11: die Aufloesung der eingestellten
 //! Buendelkennung und die Uebergabe des angezeigten Ordners an die so gefundene
 //! Anwendung, beides ueber `NSWorkspace`.
+//! [`belegungsansicht`] haelt die Belegungsansicht aus C3 als Blatt am
+//! Fenster: die Tabelle der Funktionen, die Schaltflaechen und die
+//! Meldungszeile, waehrend die Arbeitskopie der Belegung in
+//! `crate::belegungsmodell` wohnt.
 //! [`fsevents`] haelt die Bindung an FSEvents und beobachtet die Ordner, die
 //! gerade auf dem Schirm stehen; [`volumes`] haelt die `NSWorkspace`-
 //! Beobachtung und meldet, wann ein Datentraeger kommt und geht (beide C9).
@@ -56,16 +61,18 @@
 //! Operationsmaschine im Kern bekommt ihn ueber eine Schnittstelle
 //! hereingereicht, die AppKit nicht kennt.
 //!
-//! Sechs Pfeile fuehren aus diesem Verzeichnis heraus, und alle sechs tragen
+//! Sieben Pfeile fuehren aus diesem Verzeichnis heraus, und alle sieben tragen
 //! nur gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
 //! Bildwiederholrate und die Zeitpunkte der Bildgrenzen, [`tabelle`] haelt das
 //! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`,
-//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`, und
-//! [`fsevents`] wie [`volumes`] reichen Pfade an `crate::auffrischung`. Keines
-//! der Ziele nennt eine `objc2`-Kiste.
+//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`,
+//! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
+//! `crate::belegungsmodell`, und [`fsevents`] wie [`volumes`] reichen Pfade an
+//! `crate::auffrischung`. Keines der Ziele nennt eine `objc2`-Kiste.
 
 mod anwendung;
 mod aufteilung;
+mod belegungsansicht;
 mod bildtakt;
 mod blaetter;
 mod ereignisse;

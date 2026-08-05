@@ -156,9 +156,10 @@ use krk_core::operation::{
 };
 use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
-use krk_core::tasten::{Belegung, Kommando};
+use krk_core::tasten::{Belegung, Kommando, Tastendruck};
 
 use crate::auffrischung::{self, Dateifenstersicht};
+use crate::belegungsmodell::Belegungsmodell;
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
@@ -167,6 +168,7 @@ use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
 use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
+use super::belegungsansicht::{self, Belegungsquelle};
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::{
     Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
@@ -232,7 +234,12 @@ pub struct AnwendungsIvars {
     /// seine Kuerzel aus derselben Belegung, und zweimal zu laden hiesse, zwei
     /// Staende derselben Datei nebeneinander zu halten und die Meldung ueber
     /// eine beschaedigte `keymap.toml` zweimal zu erzeugen.
-    belegung: Belegung,
+    ///
+    /// Veraenderlich seit Schritt 20: verlaesst der Nutzer die
+    /// Belegungsansicht mit Aenderungen, tritt die gesicherte Belegung hier an
+    /// die Stelle der geladenen, und Menue wie Ereignisabgriff werden auf sie
+    /// nachgezogen. Eine Quelle, dieselben zwei Abnehmer.
+    belegung: RefCell<Belegung>,
     /// Die von Hand gepflegten Einstellungen aus `settings.toml` (C11).
     ///
     /// Sie haengen hier, wo schon die Belegung und die Sitzung haengen: einmal
@@ -268,7 +275,19 @@ pub struct AnwendungsIvars {
     /// Ablageordner nicht oeffnen liess; die Meldung dazu steht dann in der
     /// Statuszeile, und die Leiste arbeitet ohne zu sichern weiter.
     ablage: RefCell<Option<Ablage>>,
-    tastenabgriff: OnceCell<Tastenabgriff>,
+    /// Der eine Eintrittspunkt fuer Tastendruecke.
+    ///
+    /// Veraenderlich seit Schritt 20: der Abgriff haelt seine Belegung selbst,
+    /// und nach einer Umbelegung wird er fallen gelassen und mit der neuen
+    /// Belegung neu eingerichtet, statt zwei Staende nebeneinander zu halten.
+    tastenabgriff: RefCell<Option<Tastenabgriff>>,
+    /// Die offene Belegungsansicht aus C3, falls eine steht.
+    ///
+    /// Ihr Blattgriff liegt daneben in [`Self::offenes_blatt`], damit `esc`
+    /// sie wie jede Rueckfrage schliesst. Hier steht die Quelle, weil der
+    /// Faenger des Ereignisabgriffs sie waehrend der Aufnahme braucht und der
+    /// Abschluss ihr die Arbeitskopie abnimmt.
+    belegungsansicht: RefCell<Option<Retained<Belegungsquelle>>>,
     /// Die Beobachtung der sichtbaren Ordner (C9).
     ///
     /// Veraenderlich und nicht einmalig wie die uebrigen Halter: ein
@@ -428,7 +447,7 @@ impl Anwendungsdelegierter {
         let this = Self::alloc(mtm).set_ivars(AnwendungsIvars {
             tasten_protokoll,
             messaufgabe,
-            belegung,
+            belegung: RefCell::new(belegung),
             einstellungen: RefCell::new(Einstellungen::default()),
             belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
@@ -439,7 +458,8 @@ impl Anwendungsdelegierter {
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
             ablage: RefCell::new(None),
-            tastenabgriff: OnceCell::new(),
+            tastenabgriff: RefCell::new(None),
+            belegungsansicht: RefCell::new(None),
             dateisystemwache: RefCell::new(None),
             datentraegerwache: OnceCell::new(),
             sitzungsschreiber: RefCell::new(None),
@@ -947,22 +967,10 @@ impl Anwendungsdelegierter {
     /// Die Belegung ist die, aus der [`starten`] schon das Hauptmenue gebaut
     /// hat; sie wird hier nicht ein zweites Mal geladen.
     fn tastenabgriff_einrichten(&self, meldungen: &mut Vec<String>) {
-        let belegung = self.ivars().belegung.clone();
         meldungen.extend(self.ivars().belegungsmeldung.clone());
-
-        let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let abgriff = Tastenabgriff::einrichten(
-            self.mtm(),
-            belegung,
-            self.ivars().tasten_protokoll,
-            move |eingabe| match schwach.load() {
-                Some(selbst) => selbst.eingabe_ausfuehren(eingabe),
-                None => false,
-            },
-        );
-        match abgriff {
+        match self.abgriff_aufsetzen() {
             Some(abgriff) => {
-                let _ = self.ivars().tastenabgriff.set(abgriff);
+                *self.ivars().tastenabgriff.borrow_mut() = Some(abgriff);
             }
             // Ohne Abgriff bewegt keine Taste mehr die Auswahl. Das still
             // hinzunehmen hiesse, eine Anwendung auszuliefern, deren erste
@@ -972,6 +980,59 @@ impl Anwendungsdelegierter {
                 "krk: der Tastenabgriff liess sich nicht einrichten, die Tastatursteuerung bleibt aus"
             ),
         }
+    }
+
+    /// Baut einen Abgriff ueber der Belegung, die gerade gilt.
+    ///
+    /// Der Faenger ist die Aufnahme der Belegungsansicht aus C3; solange keine
+    /// steht oder keine aufnimmt, liefert er `false` und aendert nichts.
+    fn abgriff_aufsetzen(&self) -> Option<Tastenabgriff> {
+        let belegung = self.ivars().belegung.borrow().clone();
+        let fuer_faenger = objc2::rc::Weak::from_retained(&self.retain());
+        let fuer_senke = objc2::rc::Weak::from_retained(&self.retain());
+        Tastenabgriff::einrichten(
+            self.mtm(),
+            belegung,
+            self.ivars().tasten_protokoll,
+            move |druck| match fuer_faenger.load() {
+                Some(selbst) => selbst.tastendruck_fangen(druck),
+                None => false,
+            },
+            move |eingabe| match fuer_senke.load() {
+                Some(selbst) => selbst.eingabe_ausfuehren(eingabe),
+                None => false,
+            },
+        )
+    }
+
+    /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).
+    ///
+    /// Erst abmelden, dann aufsetzen: zwei Abgriffe nebeneinander saehen jeden
+    /// Tastendruck doppelt.
+    fn tastenabgriff_nachziehen(&self) {
+        *self.ivars().tastenabgriff.borrow_mut() = None;
+        match self.abgriff_aufsetzen() {
+            Some(abgriff) => {
+                *self.ivars().tastenabgriff.borrow_mut() = Some(abgriff);
+            }
+            None => eprintln!(
+                "krk: der Tastenabgriff liess sich nicht neu einrichten, die Tastatursteuerung bleibt aus"
+            ),
+        }
+    }
+
+    /// Der Faenger des Ereignisabgriffs: nimmt die Belegungsansicht gerade
+    /// eine Kombination auf, gehoert ihr dieser Tastendruck (C3).
+    fn tastendruck_fangen(&self, druck: Tastendruck) -> bool {
+        let quelle = {
+            let ansicht = self.ivars().belegungsansicht.borrow();
+            match ansicht.as_ref() {
+                Some(quelle) if quelle.nimmt_auf() => quelle.clone(),
+                _ => return false,
+            }
+        };
+        quelle.tastendruck_aufnehmen(druck);
+        true
     }
 
     // ------------------------------------------------------------------
@@ -1230,6 +1291,7 @@ impl Anwendungsdelegierter {
             Kommando::LesezeichenRunter => self.lesezeichen_verschieben(Verschiebung::Runter),
             Kommando::FokusLeiste => self.fokus_setzen(Fokus::Leiste),
             Kommando::FokusDateifenster => self.fokus_setzen(Fokus::Dateifenster),
+            Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -1267,6 +1329,79 @@ impl Anwendungsdelegierter {
                     .quelle()
                     .kommando_ausfuehren(kommando)
             }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Die Belegungsansicht (C3)
+    // ------------------------------------------------------------------
+
+    /// Zeigt die Belegungsansicht als Blatt am Fenster (C3, F1).
+    ///
+    /// Die Ansicht arbeitet auf einer Kopie der geltenden Belegung;
+    /// uebernommen wird sie erst beim Verlassen, in
+    /// [`Self::belegungsansicht_verlassen`]. Der Blattgriff geht nach
+    /// `offenes_blatt`, damit der Abbruchbefehl auf `esc` das Blatt schliesst
+    /// wie jede Rueckfrage.
+    fn belegung_ansehen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let modell = Belegungsmodell::neu(self.ivars().belegung.borrow().clone());
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let (quelle, griff) = belegungsansicht::zeigen(self.mtm(), fenster, modell, move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.belegungsansicht_verlassen();
+            }
+        });
+        *self.ivars().belegungsansicht.borrow_mut() = Some(quelle);
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        true
+    }
+
+    /// Das Blatt der Belegungsansicht ist zu: sichern und nachziehen (C3).
+    ///
+    /// Ohne Aenderung geschieht nichts, und `keymap.toml` bleibt unberuehrt.
+    /// Mit Aenderung wird die Arbeitskopie gesichert und zur geltenden
+    /// Belegung; Hauptmenue und Ereignisabgriff werden auf sie neu aufgebaut,
+    /// damit die Umbelegung sofort wirkt und nicht erst nach einem Neustart.
+    /// Das ist derselbe Aufbauweg wie beim Start: eine Quelle, zwei Abnehmer.
+    fn belegungsansicht_verlassen(&self) {
+        *self.ivars().offenes_blatt.borrow_mut() = None;
+        let Some(quelle) = self.ivars().belegungsansicht.borrow_mut().take() else {
+            return;
+        };
+        let modell = quelle.modell_abgeben();
+        if !modell.geaendert() {
+            return;
+        }
+        let belegung = modell.in_belegung();
+        // Das Sichern scheitert nicht still: eine Belegung, die der Nutzer
+        // gesetzt hat und die den Neustart doch nicht ueberlebt, waere die
+        // Sorte Fehler, die erst Tage spaeter auffaellt.
+        let meldung = match self.ivars().ablage.borrow().as_ref() {
+            Some(ablage) => match belegung.sichern(ablage) {
+                Ok(()) => None,
+                Err(fehler) => Some(format!(
+                    "die Belegung gilt, liess sich aber nicht sichern: {fehler}"
+                )),
+            },
+            None => Some(
+                "die Belegung gilt, ist aber ohne Ablageordner nicht gesichert und geht mit dem Beenden verloren"
+                    .to_owned(),
+            ),
+        };
+        *self.ivars().belegung.borrow_mut() = belegung;
+
+        // Menue und Abgriff auf die neue Belegung, ueber dieselben Wege wie
+        // beim Start.
+        let hauptmenue = menue::hauptmenue(self.mtm(), &self.ivars().belegung.borrow());
+        NSApplication::sharedApplication(self.mtm()).setMainMenu(Some(&hauptmenue));
+        self.tastenabgriff_nachziehen();
+
+        if let Some(meldung) = meldung {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
     }
 

@@ -30,6 +30,20 @@
 //! weiter, damit Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren
 //! gewohnten Weg gehen.
 //!
+//! # Der Faenger: die Aufnahme der Belegungsansicht (C3)
+//!
+//! Die Belegungsansicht weist eine Kombination zu, indem der Nutzer sie
+//! drueckt. Waehrend dieser Aufnahme darf der Tastendruck weder nachgeschlagen
+//! noch weitergereicht werden: die gedrueckte Kombination ist Eingabe und kein
+//! Befehl, und gerade eine schon vergebene muss die Zuweisung erreichen, damit
+//! der Konflikt gemeldet wird, statt die Funktion auszuloesen. Der **Faenger**
+//! steht deshalb vor dem Fokusvorbehalt und dem Nachschlag: liefert er `true`,
+//! hat er den rohen [`Tastendruck`] uebernommen, und das Ereignis ist
+//! verbraucht. Ausserhalb der Aufnahme liefert er `false` und aendert nichts.
+//! Das bleibt **ein** Abgriff mit einem zweiten Abnehmer und wird kein zweiter
+//! Weg: keine Ansicht bekommt eine eigene `keyDown:`-Behandlung, auch die
+//! Belegungsansicht nicht.
+//!
 //! # Der Fokusvorbehalt
 //!
 //! **Tastenbefehle wirken im Dateifenster; Textfelder und Blaetter behalten
@@ -122,6 +136,10 @@ impl Tastenabgriff {
     /// Die Senke liefert zurueck, ob sie das Kommando ausgefuehrt hat; nur dann
     /// schluckt der Abgriff das Ereignis.
     ///
+    /// `faenger` sieht jeden Tastendruck **vor** dem Nachschlag: die Aufnahme
+    /// der Belegungsansicht aus C3, siehe den Modulkopf. Liefert er `true`,
+    /// ist das Ereignis verbraucht.
+    ///
     /// Liefert `None`, wenn AppKit den Abgriff nicht einrichtet. Der Aufrufer
     /// meldet das; still ohne Tastatur weiterzulaufen waere der schlechteste
     /// aller Ausgaenge.
@@ -133,6 +151,7 @@ impl Tastenabgriff {
         mtm: MainThreadMarker,
         belegung: Belegung,
         protokoll: bool,
+        faenger: impl Fn(Tastendruck) -> bool + 'static,
         senke: impl Fn(Eingabe) -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
@@ -140,6 +159,7 @@ impl Tastenabgriff {
             // Ereignis, das fuer die Dauer des Aufrufs lebt.
             let geschluckt = behandeln(
                 mtm,
+                &faenger,
                 &senke,
                 &belegung,
                 unsafe { ereignis.as_ref() },
@@ -231,18 +251,27 @@ pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
 fn behandeln(
     mtm: MainThreadMarker,
+    faenger: &impl Fn(Tastendruck) -> bool,
     senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
     protokoll: bool,
 ) -> bool {
+    let druck = Tastendruck::aus_ereignis(ereignis.keyCode(), ereignis.modifierFlags().0 as u64);
+
+    // Die Aufnahme der Belegungsansicht, vor allem anderen. Siehe den
+    // Modulkopf: waehrend der Aufnahme ist der Tastendruck Eingabe und kein
+    // Befehl, und auch der Fokusvorbehalt hat hier nichts zu sagen.
+    if faenger(druck) {
+        return true;
+    }
+
     // Der Fokusvorbehalt, vor dem Nachschlag. Siehe den Modulkopf: steht die
     // Schreibmarke in einem Textfeld, behaelt jede Taste ihre AppKit-Bedeutung.
     if ersthelfer_nimmt_text(mtm) {
         return false;
     }
 
-    let druck = Tastendruck::aus_ereignis(ereignis.keyCode(), ereignis.modifierFlags().0 as u64);
     let nachschlag = belegung.nachschlag(druck);
 
     if protokoll {

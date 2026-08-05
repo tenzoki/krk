@@ -277,6 +277,9 @@ pub enum Kommando {
     FokusLeiste,
     /// Den Eingabefokus zurueck in das aktive Dateifenster setzen (C5).
     FokusDateifenster,
+    /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
+    /// aenderbar und zuruecksetzbar (C3).
+    BelegungAnsehen,
     /// Die Anwendung beenden (C3).
     Beenden,
 }
@@ -284,7 +287,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 51] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 52] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -341,6 +344,7 @@ impl Kommando {
         (Kommando::LesezeichenRunter, "lesezeichen_runter"),
         (Kommando::FokusLeiste, "fokus_leiste"),
         (Kommando::FokusDateifenster, "fokus_dateifenster"),
+        (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::Beenden, "beenden"),
     ];
 
@@ -379,7 +383,10 @@ impl Kommando {
     /// keinen von beiden im Fokus.
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
-            // Das Fenster als ganzes.
+            // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
+            // weil sie aus jedem Fokus heraus erreichbar sein muss: sie zeigt
+            // die Belegung der ganzen Anwendung und gehoert keinem Bereich,
+            // so wenig wie das Ein- und Ausblenden der Bereiche auf F3.
             Kommando::FensterWechseln
             | Kommando::LeisteUmschalten
             | Kommando::ZweitesFensterUmschalten
@@ -389,6 +396,7 @@ impl Kommando {
             | Kommando::BereichVerbreitern
             | Kommando::BereichVerschmaelern
             | Kommando::Abbrechen
+            | Kommando::BelegungAnsehen
             | Kommando::Beenden => Wirkungsbereich::Ueberall,
             // Die Auswahl des fokussierten Bereichs (C2 und C5).
             Kommando::AuswahlHoch | Kommando::AuswahlRunter => Wirkungsbereich::Ueberall,
