@@ -56,6 +56,27 @@
 	<true/>
 
 	<!--
+	  Die beiden Eintraege, die macOS von sich aus an ein Menue "Bearbeiten"
+	  haengt, bleiben weg: "Emoji & Symbole" und "Diktat starten". Der erste
+	  traegt mit Ctrl+Cmd+Leertaste ein Kuerzel, und C3 sagt zu, dass das
+	  Hauptmenue genau die Kombinationen traegt, die die Belegung fuer seine
+	  Eintraege fuehrt, und keine weitere.
+
+	  `inference:` Dass macOS die beiden ungefragt dazustellt, ist in diesem
+	  Vorhaben nicht nachgemessen. Gemessen ist der gleichgelagerte Fall am
+	  Fenstermenue, wo AppKit ein "Close All" auf Opt+Shift+Cmd+W dazugestellt
+	  hat, das niemand bestellt hatte
+	  (`issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
+	  Ob die beiden Schluessel greifen, misst das Abnahmekriterium von S13c an
+	  `--menue-protokoll` gegen diese Datei.
+	-->
+	<key>NSDisabledCharacterPaletteMenuItem</key>
+	<true/>
+
+	<key>NSDisabledDictationMenuItem</key>
+	<true/>
+
+	<!--
 	  Die fuenf Rueckfragetexte des Systemmechanismus fuer Transparenz,
 	  Zustimmung und Kontrolle. KRK wird ausserhalb der App-Sandbox
 	  ausgeliefert, weil C9 Zugriff auf jeden lokalen Pfad einschliesslich

@@ -16,6 +16,14 @@
 #   name             deutsche Beschriftung fuer die Belegungsansicht
 #   tasten           Liste aller Kombinationen, die diese Funktion ausloesen
 #   reserviert_fuer  optional; die Funktion ist benannt und ab Werk unbelegt
+#   gehalten_von     optional; wer den Tastendruck zustellt, nicht was er tut.
+#                    Einziger Wert "menue": ein NSMenuItem traegt die
+#                    Kombination als Kuerzel, der Ereignisabgriff fuehrt sie
+#                    nicht aus, und die Antwortkette entscheidet, wer sie
+#                    beantwortet. Eine solche Funktion bekommt nie ein
+#                    Kommando. Ohne das Feld waere sie von einer Funktion
+#                    nicht zu unterscheiden, deren Kommando ein spaeterer
+#                    Schritt erst baut, wie es "belegung_ansehen" unten ist.
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
@@ -37,12 +45,26 @@
 # Referenzgeraet nicht messbar, weil dessen Touch Bar ohne gehaltenes fn
 # ueberhaupt keine F3 liefert).
 #
-# Vier Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
-# keiner Tastenliste: Umschalt+Entf, Cmd+C und Cmd+V sowie die Eingabetaste.
-# Cmd+C und Cmd+V sind fuer eine Zwischenablage einer spaeteren Runde
-# reserviert (C3). Die Eingabetaste trug bis zum 260804 den Einstieg in einen
-# Ordner; der liegt seither allein auf cmd+right, und der Nutzer hat sie
-# ausdruecklich freigegeben (C2).
+# Zwei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
+# keiner Tastenliste: Umschalt+Entf und die Eingabetaste. Die Eingabetaste trug
+# bis zum 260804 den Einstieg in einen Ordner; der liegt seither allein auf
+# cmd+right, und der Nutzer hat sie ausdruecklich freigegeben (C2).
+#
+# Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
+# seither die Textbefehle des Menues "Bearbeiten" und sonst nichts, und genau
+# das haelt sie fuer die Dateizwischenablage einer spaeteren Runde frei: ohne
+# jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Die Reservierung aus C3
+# ist damit eingeloest und nicht gebrochen; C3 schreibt aus, warum
+# (Nutzerentscheid vom 260805-0000, `decisions/
+# 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+#
+# Eine Kombination kann im Textfeld etwas anderes bedeuten als im Dateifenster,
+# und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
+# Steht die Schreibmarke in einem Textfeld, reicht der Ereignisabgriff den
+# Tastendruck unveraendert an AppKit weiter, und erst dort wirkt das Menue;
+# steht sie im Dateifenster, schlaegt er in dieser Datei nach. So bewegt
+# cmd+left im Textfeld die Schreibmarke und steigt im Dateifenster in den
+# uebergeordneten Ordner auf.
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -320,6 +342,19 @@ tasten = ["cmd+n"]
 # nicht "Neues Fenster" (C7).
 
 [[funktion]]
+id = "fenster_schliessen"
+name = "Fenster schließen"
+tasten = ["shift+cmd+w"]
+# Das Gegenstueck zum Eintrag darueber und nach demselben Muster gebaut: eine
+# gewoehnliche Funktion mit einem Kommando, das am Anwendungsdelegierten
+# haengt. Der Menueintrag zeigt das Kuerzel an und nimmt es ab S13c von hier;
+# ausgeloest wird die Funktion im Alltag ueber den Ereignisabgriff. Sie traegt
+# deshalb kein `gehalten_von`.
+#
+# cmd+w schliesst den aktiven Tab aus C1 und nicht das Fenster; zwei Funktionen
+# auf einer Kombination schliesst C3 aus. Darum shift+cmd+w (C7).
+
+[[funktion]]
 id = "bereich_verbreitern"
 name = "Aktiven Bereich verbreitern"
 tasten = ["ctrl+right"]
@@ -342,8 +377,11 @@ tasten = ["ctrl+left"]
 # (Nutzerentscheid 260804,
 # `decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`).
 #
-# Cmd+C und Cmd+V bleiben davon unberuehrt und ab Werk frei: C10 liest nur,
-# was schon in der Zwischenablage steht, und legt nichts ab.
+# Cmd+C und Cmd+V bleiben von C10 unberuehrt: C10 liest nur, was schon in der
+# Zwischenablage steht, und legt nichts ab. Ab Werk frei sind die beiden seit
+# dem 260805 nicht mehr; sie tragen die Textbefehle des Menues "Bearbeiten"
+# ganz unten und sonst nichts, und genau das haelt sie fuer die
+# Dateizwischenablage einer spaeteren Runde frei (C3, C10).
 
 [[funktion]]
 id = "zwischenablage_ansehen"
@@ -372,3 +410,51 @@ tasten = ["f1"]
 # anders als bei den sechs Cmd-Kuerzeln der Norton-Reihe oben. Die Ansicht
 # dahinter entsteht spaeter in dieser Runde; bis dahin loest die Taste nichts
 # aus und nimmt dem System das Ereignis nicht weg (C3).
+
+# ── C2: die Textbefehle des Menüs "Bearbeiten" ───────────────────────────────
+# Diese Funktionen fuehrt KRK nicht aus, und sie bekommen nie ein Kommando.
+# Zugestellt werden sie vom Menue "Bearbeiten": ein NSMenuItem traegt die
+# Kombination, und die Antwortkette entscheidet, wer sie beantwortet. Im
+# Textfeld ist das der Feldeditor von AppKit, im Dateifenster heute niemand,
+# weshalb der Eintrag dort grau ist. Genau dieser Punkt ist spaeter der
+# Einhaengepunkt der Dateizwischenablage: wer `copy:` und `paste:` am
+# Dateifenster beantwortet, hat sie, ohne einen zweiten Menueintrag und ohne
+# eine zweite Zeile in dieser Datei.
+#
+# Sie stehen hier, weil C3 zusagt, dass jede Kombination, die in KRK etwas
+# ausloest, in der Belegung steht, von der Konflikterkennung gesehen wird und
+# umbelegbar ist. Ohne diese Eintraege waeren es vier Kuerzel, die keine der
+# drei Zusagen erreicht. Nutzerentscheid vom 260805-0000, `decisions/
+# 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
+#
+# Das Menue ist zugleich der Grund, aus dem ein Textfeld ueberhaupt etwas
+# eingefuegt bekommt: auf dem Mac liegen diese vier Befehle nicht im
+# Textsystem, sondern als Menuekuerzel. C2 sagt fuer die Pfadeingabe
+# ausdruecklich zu, dass der Nutzer einen Pfad einfuegen kann.
+
+[[funktion]]
+id = "text_ausschneiden"
+name = "Ausschneiden"
+tasten = ["cmd+x"]
+gehalten_von = "menue"
+
+[[funktion]]
+id = "text_kopieren"
+name = "Kopieren"
+tasten = ["cmd+c"]
+gehalten_von = "menue"
+
+[[funktion]]
+id = "text_einfuegen"
+name = "Einfügen"
+tasten = ["cmd+v"]
+gehalten_von = "menue"
+
+# Der vierte Textbefehl, "Alles auswählen" auf cmd+a, fehlt hier mit Absicht.
+# cmd+a gehoert seit S9 der Funktion `alle_markieren` weiter oben, und ihn ein
+# zweites Mal zu vergeben liesse die Auslieferungsbelegung an der
+# Konflikterkennung scheitern. Welche der drei moeglichen Aufloesungen gilt,
+# ist eine offene Nutzerfrage: `issues/
+# 260805-0637_o_cmd-a-liegt-schon-auf-alle-markieren-und-s13b-vergibt-es-ein-zweites-mal.md`.
+# Bis dahin zaehlt diese Datei 54 Funktionen und nicht die in S13b zugesagten
+# 55.
