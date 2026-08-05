@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Fuenfzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Sechzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -17,7 +17,7 @@
 //!           ──> bildtakt ──> crate::messmodus           crate::kommandos
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
-//!                                     ──> statuszeile
+//!           ──> terminal              ──> statuszeile
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
 //! ```
@@ -41,6 +41,9 @@
 //! fuer die Dialoge am Fenster und darin das Eingabeblatt der Pfadeingabe aus
 //! C2. [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
 //! `NSPasteboard` und die Uebergabe einer Web-Adresse an den Systembrowser.
+//! [`terminal`] haelt die eine aus C11: die Aufloesung der eingestellten
+//! Buendelkennung und die Uebergabe des angezeigten Ordners an die so gefundene
+//! Anwendung, beides ueber `NSWorkspace`.
 //! [`fsevents`] haelt die Bindung an FSEvents und beobachtet die Ordner, die
 //! gerade auf dem Schirm stehen; [`volumes`] haelt die `NSWorkspace`-
 //! Beobachtung und meldet, wann ein Datentraeger kommt und geht (beide C9).
@@ -70,6 +73,7 @@ mod papierkorb;
 mod statuszeile;
 mod tabelle;
 mod tableiste;
+mod terminal;
 mod volumes;
 mod zwischenablage;
 

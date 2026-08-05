@@ -122,16 +122,27 @@ mod tests {
         ));
     }
 
-    /// Der Blick voraus auf Schritt 18c: der Terminal-Befehl aus C11 braucht
-    /// keinen eigenen Mechanismus.
+    /// Der Terminal-Befehl aus C11 braucht keinen eigenen Mechanismus.
     ///
-    /// Er traegt seinen Fokusvorbehalt, sobald er `Wirkungsbereich::Dateifenster`
-    /// nennt, und diese Pruefung zeigt an einem beliebigen Befehl desselben
-    /// Bereichs, dass die Zuleitung ihn ohne Zusatz abweist. Ein Kommando gibt
-    /// es fuer C11 noch nicht; sobald es eines gibt, faellt es unter dieselbe
-    /// Zeile.
+    /// Die Vorgaengerin dieser Pruefung stand hier als Blick voraus auf Schritt
+    /// 18c und zeigte die Regel an einem beliebigen Befehl desselben Bereichs,
+    /// weil es fuer C11 noch kein Kommando gab. Seit 18c gibt es eines, und die
+    /// Pruefung nennt es: [`Kommando::TerminalOeffnen`] faellt unter dieselbe
+    /// Zeile wie jeder andere Befehl des Dateifensters, ohne Zusatz und ohne
+    /// Meldung.
     #[test]
-    fn ein_befehl_mit_dem_bereich_dateifenster_wird_in_der_leiste_stumm_abgewiesen() {
-        assert!(!wirkt(Wirkungsbereich::Dateifenster, Fokus::Leiste));
+    fn der_terminal_befehl_wird_in_der_leiste_stumm_abgewiesen() {
+        assert_eq!(
+            Kommando::TerminalOeffnen.wirkungsbereich(),
+            Wirkungsbereich::Dateifenster
+        );
+        assert!(!wirkt(
+            Kommando::TerminalOeffnen.wirkungsbereich(),
+            Fokus::Leiste
+        ));
+        assert!(wirkt(
+            Kommando::TerminalOeffnen.wirkungsbereich(),
+            Fokus::Dateifenster
+        ));
     }
 }

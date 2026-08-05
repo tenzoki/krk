@@ -1,4 +1,4 @@
-//! Wo die drei Ablagedateien liegen, und wie der Ordner beim ersten Start
+//! Wo die vier Ablagedateien liegen, und wie der Ordner beim ersten Start
 //! entsteht.
 //!
 //! Der Ort ist `~/Library/Application Support/KRK/`, so wie `### Frage 4` des
@@ -14,10 +14,10 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Die drei Dateien, die KRK unter `Application Support` ablegt.
+/// Die vier Dateien, die KRK unter `Application Support` ablegt.
 ///
-/// Eine Aufzaehlung statt dreier loser Namen: wer alle drei anfassen muss,
-/// laeuft ueber [`Datei::ALLE`] und kann keine vergessen.
+/// Eine Aufzaehlung statt vier loser Namen: wer alle anfassen muss, laeuft
+/// ueber [`Datei::ALLE`] und kann keine vergessen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Datei {
     /// `keymap.toml`: die vollstaendige Belegung des Nutzers.
@@ -29,11 +29,23 @@ pub enum Datei {
     Lesezeichen,
     /// `session.toml`: der Sitzungszustand, siehe [`super::sitzung`].
     Sitzung,
+    /// `settings.toml`: die von Hand gepflegten Einstellungen (C11), siehe
+    /// [`super::einstellungen`].
+    ///
+    /// Die einzige der vier, die KRK im Betrieb nicht schreibt. Sie entsteht
+    /// beim ersten Start aus der eingebetteten Auslieferungsfassung und bleibt
+    /// danach dem Nutzer ueberlassen.
+    Einstellungen,
 }
 
 impl Datei {
-    /// Alle drei, in fester Reihenfolge.
-    pub const ALLE: [Datei; 3] = [Datei::Belegung, Datei::Lesezeichen, Datei::Sitzung];
+    /// Alle vier, in fester Reihenfolge.
+    pub const ALLE: [Datei; 4] = [
+        Datei::Belegung,
+        Datei::Lesezeichen,
+        Datei::Sitzung,
+        Datei::Einstellungen,
+    ];
 
     /// Der Dateiname unterhalb des Ablageordners.
     pub const fn dateiname(self) -> &'static str {
@@ -41,6 +53,7 @@ impl Datei {
             Datei::Belegung => "keymap.toml",
             Datei::Lesezeichen => "bookmarks.toml",
             Datei::Sitzung => "session.toml",
+            Datei::Einstellungen => "settings.toml",
         }
     }
 }
@@ -59,7 +72,7 @@ pub fn benutzerverzeichnis() -> Option<PathBuf> {
     std::env::home_dir()
 }
 
-/// Der Ordner, in dem die drei Dateien liegen.
+/// Der Ordner, in dem die vier Dateien liegen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablageort {
     wurzel: PathBuf,
@@ -96,7 +109,7 @@ impl Ablageort {
         &self.wurzel
     }
 
-    /// Der Pfad einer der drei Dateien.
+    /// Der Pfad einer der vier Dateien.
     pub fn datei(&self, welche: Datei) -> PathBuf {
         self.wurzel.join(welche.dateiname())
     }

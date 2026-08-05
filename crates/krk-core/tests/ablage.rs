@@ -33,8 +33,9 @@ use serde::{Deserialize, Serialize};
 
 use krk_core::ablage::sitzung::SITZUNGSTAKT;
 use krk_core::ablage::{
-    Ablage, Ablageort, Breiten, Datei, Dateifenster, Ersetzung, Fensterseite, Geladen, Grund,
-    Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung, atomar, pfade,
+    Ablage, Ablageort, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung, Fensterseite,
+    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung,
+    atomar, einstellungen, pfade,
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
@@ -84,10 +85,10 @@ fn ablage(zweck: &str) -> (Pruefordner, Ablage) {
 /// Stellvertreter fuer den Inhalt von `keymap.toml`.
 ///
 /// Die Belegung selbst entsteht mit Schritt 11 und liegt nicht in diesem
-/// Modul; die Ablage kennt von der dritten Datei nur ihren Namen und ihren
-/// Weg. Damit die Zusage "alle drei Dateien" trotzdem an drei Dateien geprueft
-/// wird und nicht an zweien, laeuft der dritte Weg hier mit diesem
-/// Stellvertreter, ueber dieselbe Ablage und denselben Pfad.
+/// Modul; die Ablage kennt von dieser Datei nur ihren Namen und ihren Weg.
+/// Damit die Zusage "alle vier Dateien" trotzdem an vier Dateien geprueft wird
+/// und nicht an dreien, laeuft dieser Weg hier mit dem Stellvertreter, ueber
+/// dieselbe Ablage und denselben Pfad.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 struct BelegungStellvertreter {
@@ -201,7 +202,15 @@ fn der_ablageordner_liegt_unter_application_support() {
             welche.dateiname().to_string()
         })
         .collect();
-    assert_eq!(namen, ["keymap.toml", "bookmarks.toml", "session.toml"]);
+    assert_eq!(
+        namen,
+        [
+            "keymap.toml",
+            "bookmarks.toml",
+            "session.toml",
+            "settings.toml"
+        ]
+    );
 }
 
 #[test]
@@ -262,8 +271,13 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
 // Rundlauf: schreiben und wiedereinlesen
 // ---------------------------------------------------------------------------
 
+/// Der Rundlauf jeder Ablagedatei, `settings.toml` eingeschlossen.
+///
+/// Die vierte geht als einzige nicht ueber [`Ablage::sichern`]: sie wird von
+/// Hand gepflegt, und ihr Schreibweg ist das atomare Schreiben eines Textes.
+/// Geprueft wird derselbe Rundlauf, allein die Nutzlast ist eine andere.
 #[test]
-fn alle_drei_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
+fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let (_ordner, ablage) = ablage("rundlauf");
 
     let belegung = beispielbelegung();
@@ -279,6 +293,11 @@ fn alle_drei_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     ablage
         .sichern(Datei::Sitzung, &sitzung)
         .expect("session.toml laesst sich nicht schreiben");
+    atomar::schreiben(
+        &ablage.pfad(Datei::Einstellungen),
+        "terminal = \"com.mitchellh.ghostty\"\n",
+    )
+    .expect("settings.toml laesst sich nicht schreiben");
 
     for welche in Datei::ALLE {
         assert!(
@@ -299,6 +318,13 @@ fn alle_drei_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     assert_eq!(zurueck_belegung.wert, belegung);
     assert_eq!(zurueck_lesezeichen.wert, lesezeichen);
     assert_eq!(zurueck_sitzung.wert, sitzung);
+
+    let zurueck_einstellungen = einstellungen::laden(&ablage);
+    assert!(!zurueck_einstellungen.ist_ersetzt());
+    assert_eq!(
+        zurueck_einstellungen.wert.terminal, "com.mitchellh.ghostty",
+        "der Rundlauf hat den eingestellten Terminal-Eintrag veraendert"
+    );
 }
 
 #[test]
@@ -462,15 +488,18 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
     let belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
     let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
     let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let eingestellt = einstellungen::laden(&ablage);
 
     assert_eq!(belegung.wert, BelegungStellvertreter::default());
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
     assert_eq!(sitzung.wert, Sitzung::default());
+    assert_eq!(eingestellt.wert, Einstellungen::auslieferung());
 
     for (welche, ersetzung) in [
         (Datei::Belegung, belegung.ersetzung),
         (Datei::Lesezeichen, lesezeichen.ersetzung),
         (Datei::Sitzung, sitzung.ersetzung),
+        (Datei::Einstellungen, eingestellt.ersetzung),
     ] {
         pruefe_meldung(&ablage, welche, ersetzung, true);
 
@@ -547,6 +576,151 @@ fn pruefe_meldung(ablage: &Ablage, welche: Datei, ersetzung: Option<Ersetzung>, 
         "die Meldung nennt die Ersetzung nicht: {text}"
     );
     assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
+}
+
+// ---------------------------------------------------------------------------
+// Die von Hand gepflegten Einstellungen (C11, Schritt 18c)
+// ---------------------------------------------------------------------------
+
+/// Der erste Start legt die Datei an, und zwar **mit** ihren Kommentaren.
+///
+/// Die Kommentare sind der Zweck dieser Datei: sie nennen das `mdls`-Kommando,
+/// mit dem der Nutzer die Buendelkennung seiner eigenen Anwendung ausliest.
+/// Ginge die Anlage ueber `Ablage::sichern`, stuende dort eine einzige Zeile,
+/// denn `serde` kennt keine Kommentare.
+#[test]
+fn eine_fehlende_settings_toml_liefert_die_vorbelegung_und_entsteht_mit_kommentaren() {
+    let (_ordner, ablage) = ablage("einstellungen-erststart");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    assert!(!pfad.exists(), "settings.toml steht schon vorher");
+
+    let geladen = einstellungen::laden(&ablage);
+
+    assert_eq!(geladen.wert.terminal, "com.apple.Terminal");
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine fehlende Datei ist der erste Start und keine Meldung wert"
+    );
+
+    let geschrieben = fs::read_to_string(&pfad).expect("settings.toml ist nicht entstanden");
+    assert!(
+        geschrieben.contains("mdls -name kMDItemCFBundleIdentifier"),
+        "die angelegte Datei traegt die Kommentare nicht: {geschrieben}"
+    );
+    let kommentarzeilen = geschrieben
+        .lines()
+        .filter(|zeile| zeile.starts_with('#'))
+        .count();
+    assert!(
+        kommentarzeilen > 20,
+        "die angelegte Datei traegt nur {kommentarzeilen} Kommentarzeilen"
+    );
+
+    // Der zweite Start findet sie vor und schreibt sie nicht noch einmal.
+    fs::write(&pfad, "terminal = \"com.mitchellh.ghostty\"\n").expect("schreiben gescheitert");
+    let wieder = einstellungen::laden(&ablage);
+    assert_eq!(wieder.wert.terminal, "com.mitchellh.ghostty");
+    assert!(!wieder.ist_ersetzt());
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        "terminal = \"com.mitchellh.ghostty\"\n",
+        "die vorhandene Datei wurde ueberschrieben"
+    );
+}
+
+/// Eine kaputte Datei kostet den Inhalt und nicht die Datei.
+#[test]
+fn eine_kaputte_settings_toml_liefert_die_vorbelegung_und_bleibt_liegen() {
+    let (_ordner, ablage) = ablage("einstellungen-kaputt");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    fs::write(&pfad, KAPUTT).expect("schreiben gescheitert");
+
+    let geladen = einstellungen::laden(&ablage);
+
+    assert_eq!(geladen.wert, Einstellungen::auslieferung());
+    let ersetzung = geladen
+        .ersetzung
+        .clone()
+        .expect("die kaputte Datei wurde ohne Meldung ersetzt");
+    assert!(
+        matches!(ersetzung.grund, Grund::Beschaedigt(_)),
+        "{ersetzung:?}"
+    );
+    pruefe_meldung(&ablage, Datei::Einstellungen, geladen.ersetzung, true);
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        KAPUTT,
+        "die kaputte Datei wurde ueberschrieben"
+    );
+}
+
+/// Ein Feld, das die Nutzerdatei nicht nennt, kommt aus der
+/// Auslieferungsfassung. Das ist die eine Abweichung von `keymap.toml`.
+#[test]
+fn eine_settings_toml_ohne_terminal_liefert_die_vorbelegung() {
+    let (_ordner, ablage) = ablage("einstellungen-leer");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let inhalt = "# der Nutzer hat den Eintrag herausgenommen\n";
+    fs::write(&pfad, inhalt).expect("schreiben gescheitert");
+
+    let geladen = einstellungen::laden(&ablage);
+
+    assert_eq!(geladen.wert.terminal, "com.apple.Terminal");
+    assert!(
+        !geladen.ist_ersetzt(),
+        "ein fehlendes Feld ist keine beschaedigte Datei"
+    );
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        inhalt,
+        "die Datei wurde ueberschrieben"
+    );
+}
+
+/// Ein Feld, das KRK nicht kennt, ist in einer von Hand gepflegten Datei fast
+/// immer ein Tippfehler und bekommt deshalb eine Meldung.
+#[test]
+fn ein_unbekanntes_feld_in_settings_toml_gilt_als_beschaedigt() {
+    let (_ordner, ablage) = ablage("einstellungen-tippfehler");
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        "termnal = \"com.apple.Terminal\"\n",
+    )
+    .expect("schreiben gescheitert");
+
+    let geladen = einstellungen::laden(&ablage);
+
+    assert_eq!(geladen.wert, Einstellungen::auslieferung());
+    pruefe_meldung(&ablage, Datei::Einstellungen, geladen.ersetzung, true);
+}
+
+/// Laesst sich die Datei nicht anlegen, sagt KRK das, statt still weiterzulaufen.
+///
+/// Der Ablageordner verschwindet zwischen Oeffnen und Laden. Das ist der eine
+/// Weg, der ohne entzogene Rechte auskommt und deshalb unabhaengig davon
+/// laeuft, unter welchem Benutzer die Pruefung startet.
+#[test]
+fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
+    let ordner = Pruefordner::neu("einstellungen-nicht-anlegbar");
+    let wurzel = ordner.pfad().join("KRK");
+    let ablage = Ablage::oeffnen(Ablageort::an(&wurzel)).expect("Ablage laesst sich nicht oeffnen");
+    fs::remove_dir_all(&wurzel).expect("der Ablageordner laesst sich nicht entfernen");
+
+    let geladen = einstellungen::laden(&ablage);
+
+    assert_eq!(geladen.wert, Einstellungen::auslieferung());
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die gescheiterte Anlage wurde nicht gemeldet");
+    assert!(
+        matches!(ersetzung.grund, Grund::NichtAnlegbar(_)),
+        "{ersetzung:?}"
+    );
+    let text = ersetzung.to_string();
+    assert!(
+        text.contains("settings.toml"),
+        "die Meldung benennt die Datei nicht: {text}"
+    );
 }
 
 // ---------------------------------------------------------------------------

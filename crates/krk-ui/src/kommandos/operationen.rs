@@ -1,5 +1,12 @@
 //! Der Ablauf der Dateioperationen aus C4, ohne AppKit.
 //!
+//! **Seit Schritt 18c stehen auch die beiden Antworten des Terminal-Befehls
+//! aus C11 hier**, am Fuss der Datei. Sie sind keine Dateioperation, teilen
+//! aber deren Zuschnitt vollstaendig: ein Befehl, der auf den sichtbaren Tab
+//! des aktiven Dateifensters wirkt und seine Antwort als Befehlsantwort in die
+//! Statuszeile schreibt. Ein eigenes Modul fuer zwei Saetze waere ein
+//! sechstes unter [`crate::kommandos`] mit einer einzigen Frage.
+//!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Die Ansichten dazu sind die vier Blaetter unter
 //! `appkit/blaetter/`, die Zuleitung steht am Anwendungsdelegierten.
@@ -696,6 +703,48 @@ fn menge(bytes: u64) -> String {
         }
     }
     format!("{bytes} Bytes")
+}
+
+// ----------------------------------------------------------------------
+// Das Terminal im angezeigten Ordner (C11, Schritt 18c)
+// ----------------------------------------------------------------------
+
+/// Ob der Ordner noch da ist, den der Terminal-Befehl uebergeben soll (C11).
+///
+/// `None`, wenn er sich uebergeben laesst; sonst der Satz fuer die Statuszeile.
+/// Der Fall ist der ausgeworfene Datentraeger: der sichtbare Tab traegt den
+/// Pfad noch, den Ordner gibt es nicht mehr.
+///
+/// **Geprueft wird vor dem Aufruf und nicht nach ihm.** Der Rueckruf von
+/// `openURLs:…` bleibt leer (siehe `crate::appkit::terminal`), also ist dies
+/// die eine Gelegenheit, dem Nutzer etwas zu sagen, das er beheben kann.
+///
+/// Nicht ueber [`super::pfadeingabe::pruefen`]: jene Funktion beantwortet
+/// "wohin geht KRK", und ihre Antwort traegt ein Sprungziel samt Auswahl, das
+/// dieser Befehl nicht braucht und nicht auswerten wuerde. Sie verlangte zudem
+/// das Leserecht, das eine Terminal-Sitzung in einem Ordner nicht braucht.
+pub fn terminalordner_fehlt(ordner: &Path) -> Option<String> {
+    match std::fs::metadata(ordner) {
+        Ok(angaben) if angaben.is_dir() => None,
+        Ok(_) => Some(format!("{} ist kein Ordner mehr", ordner.display())),
+        Err(fehler) => Some(format!(
+            "{} ist nicht mehr erreichbar: {fehler}",
+            ordner.display()
+        )),
+    }
+}
+
+/// Die Meldung auf eine Kennung, zu der keine Anwendung installiert ist (C11).
+///
+/// **Sie nennt die eingestellte Kennung**, denn das ist die Angabe, mit der der
+/// Nutzer `settings.toml` berichtigen kann. Auf die Vorbelegung weicht KRK
+/// nicht aus: dann oeffnete sich ein Terminal, das er nicht gewaehlt hat, und
+/// sein Tippfehler bliebe unbemerkt in der Datei stehen.
+pub fn kein_terminal(kennung: &str) -> String {
+    format!(
+        "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; \
+         settings.toml nennt sie unter terminal"
+    )
 }
 
 #[cfg(test)]

@@ -139,7 +139,8 @@ use objc2_foundation::{
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
-    Ablage, Datei, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung, lesezeichen, pfade,
+    Ablage, Datei, Einstellungen, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung,
+    einstellungen, lesezeichen, pfade,
 };
 use krk_core::operation::{
     self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
@@ -169,6 +170,7 @@ use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
 use super::tabelle::Dateifenster;
+use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
@@ -222,6 +224,15 @@ pub struct AnwendungsIvars {
     /// Staende derselben Datei nebeneinander zu halten und die Meldung ueber
     /// eine beschaedigte `keymap.toml` zweimal zu erzeugen.
     belegung: Belegung,
+    /// Die von Hand gepflegten Einstellungen aus `settings.toml` (C11).
+    ///
+    /// Sie haengen hier, wo schon die Belegung und die Sitzung haengen: einmal
+    /// beim Start geladen, danach unveraendert. Kein Weg in dieser Runde
+    /// schreibt sie, und keiner liest die Datei ein zweites Mal. Bis
+    /// [`Self::sitzung_laden`] gelaufen ist, steht hier die eingebettete
+    /// Auslieferungsfassung; im Messmodus bleibt es dabei, weil dort nichts
+    /// geladen wird.
+    einstellungen: RefCell<Einstellungen>,
     /// Die Meldung, falls die Belegung ersetzt werden musste.
     ///
     /// Sie steht hier und nicht in der Statuszeile, weil es die Statuszeile
@@ -407,6 +418,7 @@ impl Anwendungsdelegierter {
             tasten_protokoll,
             messaufgabe,
             belegung,
+            einstellungen: RefCell::new(Einstellungen::default()),
             belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
             fenster: OnceCell::new(),
@@ -545,6 +557,13 @@ impl Anwendungsdelegierter {
         };
         *ivars.sitzungsschreiber.borrow_mut() = Some(ablage.sitzungsschreiber());
         let (sitzung, meldung) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+        meldungen.extend(meldung);
+        // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
+        // `settings.toml` beim ersten Start an; ohne diese Anlage haette der
+        // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
+        // Datei schreibt.
+        let (eingestellt, meldung) = einstellungen::laden(&ablage).mit_meldung();
+        *ivars.einstellungen.borrow_mut() = eingestellt;
         meldungen.extend(meldung);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
         // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
@@ -687,6 +706,40 @@ impl Anwendungsdelegierter {
                 }
             },
         );
+        true
+    }
+
+    /// Oeffnet den angezeigten Ordner in der eingestellten Anwendung (C11).
+    ///
+    /// Der Ordner ist der des **sichtbaren Tabs im aktiven Dateifenster**, und
+    /// er kommt aus der Tabliste, wie bei jedem Befehl, der auf den angezeigten
+    /// Ordner wirkt. Dass der Fokus dafuer im Dateifenster stehen muss, hat die
+    /// eine Abfrage in [`Self::kommando_ausfuehren`] schon entschieden: das
+    /// Kommando traegt `Wirkungsbereich::Dateifenster`. Steht der Fokus in der
+    /// Leiste, ist dieser Rumpf nie erreicht, und **gemeldet wird dann
+    /// nichts** — der Wirkungsbereich ist stumm.
+    ///
+    /// Zwei Fehler kann der Nutzer beheben, und beide stellt der Befehl vor dem
+    /// Aufruf fest: der Ordner ist nicht mehr da, oder zu der eingestellten
+    /// Buendelkennung ist keine Anwendung installiert. Beide gehen als
+    /// Befehlsantwort in die Statuszeile, den ersten der fuenf Raenge; ein
+    /// eigenes Blatt entsteht nicht. Der dritte Fehler aus C11, die beschaedigte
+    /// `settings.toml`, hat sich beim Start gemeldet, denn dort faellt er an.
+    ///
+    /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
+    /// zu melden hatte. Ein `false` gaebe den Tastendruck an AppKit weiter, das
+    /// mit ihm nichts anfangen kann.
+    fn terminal_oeffnen(&self) -> bool {
+        let seite = self.ivars().modell.borrow().aktiv();
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        if let Some(meldung) = operationen::terminalordner_fehlt(&ordner) {
+            self.antwort_zeigen(seite, &meldung);
+            return true;
+        }
+        let kennung = self.ivars().einstellungen.borrow().terminal.clone();
+        if !terminal::ordner_oeffnen(&kennung, &ordner) {
+            self.antwort_zeigen(seite, &operationen::kein_terminal(&kennung));
+        }
         true
     }
 
@@ -1061,6 +1114,7 @@ impl Anwendungsdelegierter {
             Kommando::OrdnerAnlegen => self.anlegen(Anlegeart::Ordner),
             Kommando::DateiAnlegen => self.anlegen(Anlegeart::Datei),
             Kommando::UmbenennenStapel => self.stapel_umbenennen(),
+            Kommando::TerminalOeffnen => self.terminal_oeffnen(),
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),

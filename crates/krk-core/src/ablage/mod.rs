@@ -1,21 +1,30 @@
-//! Die Ablage: drei TOML-Dateien unter `~/Library/Application Support/KRK/`.
+//! Die Ablage: vier TOML-Dateien unter `~/Library/Application Support/KRK/`.
 //!
-//! Vier Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
+//! Fuenf Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
 //!
 //! ```text
 //! pfade ──> mod (Ablage: laden, sichern, melden) ──> atomar
-//!                      ^                ^
-//!                      │                │
-//!               lesezeichen          sitzung
+//!                   ^        ^         ^
+//!                   │        │         │
+//!            lesezeichen  sitzung  einstellungen
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
 //! [`atomar`] schreibt jede Datei ueber eine Nachbardatei und `rename`.
-//! [`sitzung`] und [`lesezeichen`] halten zwei der drei Inhalte; den dritten,
-//! die Belegung aus `keymap.toml`, baut Schritt 11 und legt ihn ueber
-//! [`Ablage::laden`] und [`Ablage::sichern`] hier ab. Die Ablage ist deshalb
-//! ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
+//! [`sitzung`], [`lesezeichen`] und [`einstellungen`] halten drei der vier
+//! Inhalte; den vierten, die Belegung aus `keymap.toml`, baut Schritt 11 und
+//! legt ihn ueber [`Ablage::laden`] und [`Ablage::sichern`] hier ab. Die Ablage
+//! ist deshalb ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
 //! Fehlerbehandlung, nicht die Felder.
+//!
+//! # Eine der vier Dateien entsteht einmal und wird nie wieder geschrieben
+//!
+//! `settings.toml` aus Schritt 18c ist die eine von Hand gepflegte Datei, und
+//! sie geht als einzige **nicht** ueber [`Ablage::sichern`]: die Anlage beim
+//! ersten Start schreibt die eingebettete Auslieferungsfassung woertlich, samt
+//! deren Kommentaren, die `serde` nicht kennt. Der Weg dorthin ist derselbe
+//! [`atomar::schreiben`], allein die Nutzlast ist eine andere; siehe den Kopf
+//! von [`einstellungen`].
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!
@@ -48,6 +57,7 @@
 //! Papierkorb-Schnittstelle entsteht nicht.
 
 pub mod atomar;
+pub mod einstellungen;
 pub mod lesezeichen;
 pub mod pfade;
 pub mod sitzung;
@@ -60,6 +70,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+pub use einstellungen::Einstellungen;
 pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung};
 pub use pfade::{Ablageort, Datei};
 pub use sitzung::{
@@ -75,6 +86,15 @@ pub enum Grund {
     /// Die Datei liess sich lesen, ist aber kein gueltiges TOML oder passt
     /// nicht auf die erwartete Gestalt. Traegt die Meldung des Lesers.
     Beschaedigt(String),
+    /// Die Datei fehlte und liess sich nicht anlegen. Traegt die Meldung des
+    /// Dateisystems.
+    ///
+    /// Nur `settings.toml` kann ihn tragen. Sie ist die eine Datei, die KRK
+    /// beim ersten Start von sich aus anlegt, weil in dieser Runde keine
+    /// Ansicht sie schreibt und der Nutzer sonst nichts zu pflegen haette. Bei
+    /// den drei uebrigen ist eine fehlende Datei der erste Start und keine
+    /// Meldung wert.
+    NichtAnlegbar(String),
 }
 
 impl Grund {
@@ -83,13 +103,16 @@ impl Grund {
         match self {
             Grund::NichtLesbar(_) => "ist nicht lesbar",
             Grund::Beschaedigt(_) => "ist beschaedigt",
+            Grund::NichtAnlegbar(_) => "liess sich nicht anlegen",
         }
     }
 
     /// Die Einzelheit, die das System oder der Leser gemeldet hat.
     pub fn einzelheit(&self) -> &str {
         match self {
-            Grund::NichtLesbar(text) | Grund::Beschaedigt(text) => text,
+            Grund::NichtLesbar(text) | Grund::Beschaedigt(text) | Grund::NichtAnlegbar(text) => {
+                text
+            }
         }
     }
 }
@@ -160,7 +183,7 @@ impl<T> Geladen<T> {
     }
 }
 
-/// Der Zugang zu den drei Dateien unter `Application Support`.
+/// Der Zugang zu den vier Dateien unter `Application Support`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablage {
     ort: Ablageort,
@@ -185,12 +208,12 @@ impl Ablage {
         &self.ort
     }
 
-    /// Der Pfad einer der drei Dateien.
+    /// Der Pfad einer der vier Dateien.
     pub fn pfad(&self, welche: Datei) -> PathBuf {
         self.ort.datei(welche)
     }
 
-    /// Liest eine der drei Dateien.
+    /// Liest eine der vier Dateien.
     ///
     /// Scheitert nie: eine fehlende, nicht lesbare oder beschaedigte Datei
     /// fuehrt zum Auslieferungszustand. Nur die letzten beiden Faelle tragen
@@ -233,7 +256,12 @@ impl Ablage {
         }
     }
 
-    /// Schreibt eine der drei Dateien, atomar ueber [`atomar::schreiben`].
+    /// Schreibt eine der vier Dateien, atomar ueber [`atomar::schreiben`].
+    ///
+    /// **Nicht der Weg zu `settings.toml`.** Die Serialisierung kennt keine
+    /// Kommentare, und die von Hand gepflegte Datei besteht zur Haelfte aus
+    /// ihnen; ihre Anlage schreibt deshalb die eingebettete
+    /// Auslieferungsfassung woertlich. Siehe den Kopf von [`einstellungen`].
     pub fn sichern<T>(&self, welche: Datei, wert: &T) -> io::Result<()>
     where
         T: Serialize,

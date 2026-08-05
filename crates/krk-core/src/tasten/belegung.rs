@@ -243,6 +243,9 @@ pub enum Kommando {
     UmbenennenStapel,
     /// Den ausgewaehlten Eintrag direkt in der Liste umbenennen (C4).
     Umbenennen,
+    /// Den angezeigten Ordner in der eingestellten Terminal-Anwendung
+    /// oeffnen (C11).
+    TerminalOeffnen,
     /// Den Ordner des aktiven Dateifensters als Lesezeichen anlegen (C5).
     LesezeichenAnlegen,
     /// Das ausgewaehlte Lesezeichen umbenennen (C5).
@@ -264,7 +267,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 49] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 50] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -312,6 +315,7 @@ impl Kommando {
         (Kommando::DateiAnlegen, "datei_anlegen"),
         (Kommando::UmbenennenStapel, "umbenennen_stapel"),
         (Kommando::Umbenennen, "umbenennen"),
+        (Kommando::TerminalOeffnen, "terminal_oeffnen"),
         (Kommando::LesezeichenAnlegen, "lesezeichen_anlegen"),
         (Kommando::LesezeichenUmbenennen, "lesezeichen_umbenennen"),
         (Kommando::LesezeichenLoeschen, "lesezeichen_loeschen"),
@@ -378,8 +382,9 @@ impl Kommando {
             | Kommando::LesezeichenHoch
             | Kommando::LesezeichenRunter => Wirkungsbereich::Leiste,
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
-            // hinaus, Navigation, Markierung, Sortierung, Tabs und die
-            // Dateioperationen aus C4.
+            // hinaus, Navigation, Markierung, Sortierung, Tabs, die
+            // Dateioperationen aus C4 und der Terminal-Befehl aus C11, der den
+            // Ordner des sichtbaren Tabs uebergibt.
             Kommando::SeiteHoch
             | Kommando::SeiteRunter
             | Kommando::Listenanfang
@@ -409,7 +414,8 @@ impl Kommando {
             | Kommando::OrdnerAnlegen
             | Kommando::DateiAnlegen
             | Kommando::UmbenennenStapel
-            | Kommando::Umbenennen => Wirkungsbereich::Dateifenster,
+            | Kommando::Umbenennen
+            | Kommando::TerminalOeffnen => Wirkungsbereich::Dateifenster,
         }
     }
 
