@@ -128,12 +128,27 @@ pub struct Fenstermodell {
 
 impl Fenstermodell {
     /// Das Modell aus einer geladenen Sitzung.
+    ///
+    /// **Ein ausgeblendetes Dateifenster kann nicht das aktive sein**, und die
+    /// Zusicherung wird hier hergestellt und nicht nur unterstellt.
+    /// [`Fenstermodell::umschalten`] haelt sie fuer jede Umschaltung zur
+    /// Laufzeit, aber `session.toml` kommt nicht von dort: die Datei ist nach
+    /// C7 zum Lesen und Aendern von Hand gedacht, und `aktiv = "rechts"` neben
+    /// `zweites_dateifenster = false` ist ein Paar, das `serde` anstandslos
+    /// einliest. Ohne diese Zeilen faende der Nutzer nach dem Start seine
+    /// Auswahl, seinen Eingabefokus und jede Dateioperation in einem
+    /// Dateifenster, das er nicht sieht.
     pub fn aus_sitzung(sitzung: &Sitzung) -> Self {
-        Self {
+        let mut modell = Self {
             aktiv: sitzung.aktiv,
             breiten: sitzung.breiten,
             sichtbar: sitzung.sichtbar,
+        };
+        if !modell.sichtbar(Bereich::von_seite(modell.aktiv)) {
+            // Das linke ist immer sichtbar, siehe den Modulkopf.
+            modell.aktiv = Fensterseite::Links;
         }
+        modell
     }
 
     /// Die Sitzung, wie sie in `session.toml` gehoert.
@@ -437,6 +452,36 @@ mod tests {
             assert!(modell.sichtbar(bereich), "{bereich:?} ist ausgeblendet");
         }
         assert_eq!(modell.aktiv(), Fensterseite::Links);
+    }
+
+    /// Eine von Hand geaenderte `session.toml` macht kein ausgeblendetes
+    /// Dateifenster zum aktiven.
+    ///
+    /// Gefunden am 260805 neben dem Fokusdefekt: `umschalten` haelt die
+    /// Zusicherung, `aus_sitzung` hielt sie nicht.
+    #[test]
+    fn ein_ausgeblendetes_dateifenster_kommt_nicht_als_aktives_aus_der_sitzung() {
+        let mut sitzung = Sitzung {
+            aktiv: Fensterseite::Rechts,
+            ..Sitzung::default()
+        };
+        sitzung.sichtbar.zweites_dateifenster = false;
+        let modell = Fenstermodell::aus_sitzung(&sitzung);
+        assert_eq!(
+            modell.aktiv(),
+            Fensterseite::Links,
+            "das aktive Dateifenster waere unsichtbar"
+        );
+
+        // Die Gegenprobe: ist es sichtbar, bleibt es das aktive.
+        let sitzung = Sitzung {
+            aktiv: Fensterseite::Rechts,
+            ..Sitzung::default()
+        };
+        assert_eq!(
+            Fenstermodell::aus_sitzung(&sitzung).aktiv(),
+            Fensterseite::Rechts
+        );
     }
 
     #[test]

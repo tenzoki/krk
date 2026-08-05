@@ -56,6 +56,26 @@ pub enum Fokus {
     Anderswo,
 }
 
+/// Wo der Eingabefokus nach dem Aufbau der Oberflaeche steht.
+///
+/// **Immer derselbe Wert, und er wird nicht gespeichert.** C7 zaehlt auf, was
+/// Beenden und Neustart ueberstehen soll: Tabs, Ordner, Auswahl, Breiten,
+/// Sichtbarkeit und Sortierung. Der Fokus steht nicht darin, und das ist die
+/// richtige Wahl: er ist keine Einstellung, die der Nutzer trifft, sondern der
+/// Ort, an dem er zuletzt getippt hat. Ein Start in die Leiste, weil die letzte
+/// Handlung vor dem Beenden ein `shift+cmd+l` war, waere fuer den Nutzer nicht
+/// vorhersagbar.
+///
+/// Welches der beiden Dateifenster den Fokus bekommt, sagt das aktive aus dem
+/// Fenstermodell; **das** ueberlebt den Neustart, weil C7 es zusagt.
+///
+/// Bis zum 260805 setzte niemand den Fokus beim Start. Der Ersthelfer stand
+/// dann auf der ersten Ansicht der Schluesselansichtskette, seit S18 also auf
+/// der Leiste, und **kein** Befehl mit [`Wirkungsbereich::Dateifenster`] wirkte
+/// bis zum ersten `shift+cmd+d`
+/// (`issues/260805-1845_c_beim-start-liegt-der-fokus-in-der-leiste-und-nicht-im-dateifenster.md`).
+pub const BEIM_START: Fokus = Fokus::Dateifenster;
+
 /// Ob ein Kommando mit diesem Wirkungsbereich hier wirken darf.
 ///
 /// Die eine Regel, und die eine Stelle, an der die beiden Halbwahrheiten
@@ -120,6 +140,31 @@ mod tests {
             Kommando::LesezeichenLoeschen.wirkungsbereich(),
             Fokus::Leiste
         ));
+    }
+
+    /// Nach dem Start wirkt jeder Befehl des Dateifensters.
+    ///
+    /// Die Pruefung zu dem Defekt vom 260805-1845, und sie zaehlt die Befehle
+    /// nicht auf, sondern geht ueber [`Kommando::KENNUNGEN`]: betroffen waren
+    /// **alle** Befehle mit [`Wirkungsbereich::Dateifenster`], und ein Befehl,
+    /// der spaeter dazukommt, ist es dann auch.
+    #[test]
+    fn nach_dem_start_wirkt_jeder_befehl_des_dateifensters() {
+        let mut gezaehlt = 0;
+        for (kommando, kennung) in Kommando::KENNUNGEN {
+            if kommando.wirkungsbereich() != Wirkungsbereich::Dateifenster {
+                continue;
+            }
+            gezaehlt += 1;
+            assert!(
+                wirkt(kommando.wirkungsbereich(), BEIM_START),
+                "„{kennung}“ wirkt beim Start nicht"
+            );
+        }
+        assert!(
+            gezaehlt > 0,
+            "kein Befehl traegt Wirkungsbereich::Dateifenster; die Pruefung liefe leer"
+        );
     }
 
     /// Der Terminal-Befehl aus C11 braucht keinen eigenen Mechanismus.

@@ -40,3 +40,22 @@ die naheliegende Behebung; geprüft ist sie nicht.
 Gefunden bei der Abnahme von Schritt 18c (C11), nicht von ihm verursacht: der
 Befehl `terminal_oeffnen` trägt denselben Wirkungsbereich wie die zwölf
 Befehle, die schon vorher betroffen waren.
+
+---
+Resolved: `oberflaeche_aufbauen` setzt den Eingabefokus als letzte Zeile des
+Aufbaus auf `kommandos::fokus::BEIM_START` (`Fokus::Dateifenster`), über
+dieselbe eine Stelle `fokus_setzen`, die auch die beiden Fokusbefehle aus C5
+gehen. Der Aufruf steht **nach** `makeKeyAndOrderFront`, weil AppKit beim
+ersten Anzeigen sonst die erste Ansicht der Schlüsselansichtskette einsetzt und
+die Zeile davor wirkungslos wäre.
+
+Der Fokus wird nicht gespeichert: C7 zählt Tabs, Ordner, Auswahl, Breiten,
+Sichtbarkeit und Sortierung auf, und der Fokus gehört nicht dazu. Der
+Startzustand ist damit immer derselbe. Aus der Sitzung kommt allein, **welches**
+der beiden Dateifenster den Fokus bekommt.
+
+Am laufenden Bündel geprüft, ohne vorher eine Taste zu drücken, die den Fokus
+setzt: `fokus=Dateifenster`, `right` steigt in den ausgewählten Ordner ein,
+`ctrl+o` öffnet Terminal.app darin. Die Gegenprobe mit abgeschalteter Zeile
+liefert `fokus=Leiste` und weder Einstieg noch Terminal. Einzelheiten in
+`history/260805-1901-fokus-beim-start-in-das-dateifenster.md`.

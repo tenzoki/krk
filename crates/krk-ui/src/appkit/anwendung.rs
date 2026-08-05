@@ -94,6 +94,14 @@
 //! nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
 //! Ersthelfer und nichts sonst.
 //!
+//! **Wo er beim Start steht, sagt trotzdem KRK und nicht AppKit.** Ueberliesse
+//! [`Anwendungsdelegierter::oberflaeche_aufbauen`] die erste Vergabe der
+//! Schluesselansichtskette, bekaeme sie deren erste Ansicht — seit S18 die
+//! Leiste, und damit wirkte kein Befehl des Dateifensters, bis der Nutzer den
+//! Fokus einmal von Hand setzt. Die letzte Zeile des Aufbaus setzt ihn deshalb
+//! auf [`crate::kommandos::fokus::BEIM_START`], ueber dieselbe eine Stelle, die
+//! auch die beiden Fokusbefehle gehen.
+//!
 //! # Der Messmodus haengt an derselben Stelle wie der Tastenabgriff
 //!
 //! Ist `--messmodus` gesetzt, richtet [`Anwendungsdelegierter::oberflaeche_aufbauen`]
@@ -520,6 +528,16 @@ impl Anwendungsdelegierter {
         if let Some(fenster) = ivars.fenster.get() {
             fenster.makeKeyAndOrderFront(None);
         }
+        // **Der Eingabefokus gehoert in das aktive Dateifenster, und zwar
+        // nach `makeKeyAndOrderFront`.** Setzte diese Zeile davor, ueberschriebe
+        // AppKit sie beim ersten Anzeigen mit der ersten Ansicht der
+        // Schluesselansichtskette; das ist seit S18 die Leiste, und genau das
+        // war der Defekt vom 260805-1845. Eine eigene Zeile am Ende des Aufbaus
+        // und keine Zeile der Sitzungswiederherstellung: der Fokus wird nicht
+        // gespeichert, die Begruendung steht an `fokus::BEIM_START`. Aus der
+        // Sitzung kommt allein, **welches** der beiden Dateifenster das aktive
+        // ist.
+        self.fokus_setzen(fokus::BEIM_START);
         // Die Startmeldungen betreffen die Anwendung und kein einzelnes
         // Dateifenster: die beschaedigte Belegungs- oder Sitzungsdatei, der
         // unerreichbare Ablageordner. Sie gehen deshalb in die Zeile des
@@ -820,6 +838,10 @@ impl Anwendungsdelegierter {
     /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. In eine
     /// ausgeblendete Leiste geht der Fokus nicht: dort saehe der Nutzer weder
     /// seine Auswahl noch, dass seine Tasten irgendwo ankommen.
+    ///
+    /// Drei Aufrufer: die beiden Fokusbefehle aus C5, das Ausblenden der
+    /// Leiste, und der Aufbau der Oberflaeche mit
+    /// [`crate::kommandos::fokus::BEIM_START`].
     fn fokus_setzen(&self, ziel: Fokus) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
