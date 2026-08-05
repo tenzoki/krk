@@ -77,11 +77,66 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 }
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
+///
+/// **Nur fuer Kombinationen, an denen die Zusage selbst haengt**, etwa die ab
+/// Werk freie Eingabetaste. Wer eine Kombination braucht, weil eine bestimmte
+/// Funktion sie traegt, nimmt [`ausgeliefert`]; wer eine braucht, weil keine
+/// Funktion sie traegt, nimmt [`frei`]. Eine hier hingeschriebene Kombination
+/// bindet die Pruefung sonst an eine Belegung, die der Nutzer jederzeit aendert:
+/// `oeffnen` ist in zwei Tagen von `return` ueber `cmd+right` auf `right`
+/// gewandert und hat dabei dreimal Pruefungen umgeworfen, an deren Zusage
+/// nichts kaputt war.
 fn kombi(text: &str) -> Kombination {
     match Kombination::lesen(text) {
         Ok(kombination) => kombination,
         Err(fehler) => panic!("\"{text}\" ist keine Kombination: {fehler}"),
     }
+}
+
+/// Eine Kombination, die die Auslieferungsbelegung dieser Funktion gibt.
+///
+/// Die Quelle ist `resources/default-keymap.toml` und nicht diese Datei. Welche
+/// der Wege es ist, wenn die Funktion mehrere traegt, bleibt offen: die
+/// Pruefungen, die den Aufruf machen, brauchen eine ihrer Kombinationen und
+/// nicht eine bestimmte.
+fn ausgeliefert(kennung: &str) -> Kombination {
+    let belegung = Belegung::auslieferung();
+    let Some(funktion) = belegung.funktion(kennung) else {
+        panic!("die Auslieferungsbelegung kennt die Funktion {kennung} nicht");
+    };
+    match funktion.tasten().first() {
+        Some(kombination) => *kombination,
+        None => panic!("{kennung} traegt ab Werk keine Kombination"),
+    }
+}
+
+/// Eine Kombination mit Zusatztaste, die die Auslieferungsbelegung keiner
+/// Funktion gibt.
+///
+/// Gesucht statt hingeschrieben, und aus demselben Grund wie in
+/// [`keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke`]:
+/// jede hingeschriebene Kombination kann eines Tages belegt werden, und dann
+/// faellt eine Pruefung um, die von der Belegung gar nicht handelt. `cmd+q` hat
+/// genau das am 260805 getan
+/// (`issues/260805-0820_c_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
+fn frei() -> Kombination {
+    let belegung = Belegung::auslieferung();
+    let vergeben: Vec<Tastendruck> = belegung
+        .funktionen()
+        .iter()
+        .flat_map(|funktion| funktion.tasten())
+        .map(|kombination| kombination.tastendruck())
+        .collect();
+
+    for taste in parser::TASTEN {
+        for maske in masken_mit_zusatztaste() {
+            let kombination = Kombination::neu(taste, maske);
+            if !vergeben.contains(&kombination.tastendruck()) {
+                return kombination;
+            }
+        }
+    }
+    panic!("die Auslieferungsbelegung laesst keine Kombination mit Zusatztaste frei");
 }
 
 // ---------------------------------------------------------------------------
@@ -149,9 +204,12 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     //
     // Umschalt+Entf loescht nach `shared/decisions/
     // 260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
-    // und die Eingabetaste hat der Nutzer am 260804 freigegeben, nachdem der
-    // Einstieg in den Ordner auf cmd+right gewandert ist (C2). Beide fuehrt der
-    // Kopfkommentar von `resources/default-keymap.toml` auf.
+    // und die Eingabetaste hat der Nutzer am 260804 freigegeben, als der
+    // Einstieg in den Ordner von ihr weggewandert ist (C2). Wohin er gewandert
+    // ist, steht hier bewusst nicht: er ist seither zweimal weitergezogen, und
+    // die Zusage dieser Pruefung haengt nicht daran, sondern allein daran, dass
+    // die Eingabetaste frei bleibt. Beide fuehrt der Kopfkommentar von
+    // `resources/default-keymap.toml` auf.
     //
     // **Cmd+C und Cmd+V standen bis zum 260805 hier und stehen es nicht mehr.**
     // Seit S13b tragen sie die Textbefehle des Menues "Bearbeiten", und die
@@ -576,32 +634,57 @@ fn tastencode_99_trifft_dieselbe_funktion_mit_und_ohne_function() {
     assert_eq!(mit.kennung(), "vorschau_umschalten");
 }
 
+/// Eine Funktion mit mehreren ausgelieferten Wegen ist ueber jeden davon
+/// erreichbar und bleibt eine Zeile der Belegungsansicht (C3).
+///
+/// **Ebenfalls ohne hingeschriebene Kombination.** Die Vorgaengerin fuehrte
+/// sechs Zeilen aus Funktionstaste, Cmd-Kuerzel und Kennung. Das ist dieselbe
+/// Bauart, an der `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste`
+/// dreimal zerbrochen ist, nur eine Tabelle weiter: wer `shift+cmd+k` vom
+/// Kopieren wegnimmt, macht sie rot, ohne dass die Zusage verletzt waere.
+///
+/// Welche Funktionen mehrere Wege tragen, sagt `resources/default-keymap.toml`;
+/// die Pruefung sucht sie dort und misst an allen, die sie findet. Eine Zahl
+/// steht deshalb auch hier nicht: die Datei waechst mit jeder Runde, und die
+/// spaeteren Runden geben Funktionen mehrere Wege, zu denen es noch kein
+/// Kommando gibt. Genau die deckt die Pruefung ab, die
+/// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` nicht sieht.
 #[test]
 fn beide_ausgelieferten_wege_treffen_dieselbe_funktion() {
-    // Die sechs Zeilen der C3-Tabelle: Funktionstaste und Cmd-Kuerzel zeigen
-    // auf eine Funktion und stehen in einer Zeile der Belegungsansicht.
     let belegung = Belegung::auslieferung();
-    let paare = [
-        ("f3", "cmd+y", "vorschau_umschalten"),
-        ("f5", "shift+cmd+k", "kopieren"),
-        ("f6", "shift+cmd+v", "verschieben"),
-        ("f7", "shift+cmd+n", "ordner_anlegen"),
-        ("f8", "opt+cmd+delete", "endgueltig_loeschen"),
-        ("delete", "cmd+delete", "in_papierkorb"),
-    ];
-    for (funktionstaste, kuerzel, kennung) in paare {
-        for text in [funktionstaste, kuerzel] {
-            let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi(text).tastendruck())
+
+    let mut geprueft = 0usize;
+    for funktion in belegung.funktionen() {
+        // Was das Hauptmenue zustellt, kommt im Nachschlag nicht vor; der
+        // Modulkopf von `tasten::belegung` schreibt aus, warum.
+        if funktion.gehalten_von().is_some() || funktion.tasten().len() < 2 {
+            continue;
+        }
+        geprueft += 1;
+        for kombination in funktion.tasten() {
+            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
             else {
-                panic!("{text} trifft keine Funktion");
+                panic!(
+                    "{kombination} trifft keine Funktion, obwohl {} sie traegt",
+                    funktion.kennung()
+                );
             };
             assert_eq!(
+                getroffen.kennung(),
                 funktion.kennung(),
-                kennung,
-                "{text} trifft die falsche Funktion"
+                "{kombination} steht bei {} und trifft eine andere Funktion",
+                funktion.kennung()
             );
         }
     }
+
+    // Ohne diese Zeile bestuende die Pruefung auch dann, wenn die
+    // Auslieferungsbelegung jeder Funktion nur noch einen Weg gaebe und es
+    // nichts mehr zu messen gaebe.
+    assert!(
+        geprueft > 0,
+        "keine Funktion der Auslieferungsbelegung traegt mehr als eine Kombination"
+    );
 }
 
 #[test]
@@ -687,21 +770,52 @@ fn masken_mit_zusatztaste() -> Vec<ModMaske> {
         .collect()
 }
 
+/// Jedes gebaute Kommando ist ueber die Taste erreichbar, die die
+/// Auslieferungsbelegung ihm gibt.
+///
+/// **Ohne hingeschriebene Kombination, und das ist der Punkt.** Die
+/// Vorgaengerin fuehrte fuenf Paare aus Kombination und Kommando, und die Zeile
+/// des Oeffnens hat in zwei Tagen dreimal gewechselt: `return`, dann
+/// `cmd+right`, dann `right`. Jede Umbelegung machte die Pruefung rot, ohne
+/// dass an ihrer Zusage etwas kaputt war
+/// (`issues/260804-1214_c_die-belegungspruefung-bindet-return-noch-an-das-oeffnen.md`,
+/// `issues/260805-1356_c_die-belegungspruefung-bindet-cmd-right-noch-an-das-oeffnen.md`).
+///
+/// Die Zusage braucht die Kombination gar nicht zu kennen. Sie lautet: **es
+/// gibt eine, und der Nachschlag darauf trifft dieses Kommando.** Welche es
+/// ist, sagt `resources/default-keymap.toml`, und das ist die einzige Stelle,
+/// die es sagen darf; eine Wiederholung hier waere eine zweite Wahrheit
+/// darueber, welche Taste was ausloest. Die Pruefung liest ihre Paare deshalb
+/// aus [`Kommando::KENNUNGEN`] und der Belegung und ueberlebt damit jede
+/// Umbelegung, die die Auslieferungsbelegung schluessig laesst.
+///
+/// Gemessen wird an allen gebauten Kommandos und an jeder ihrer
+/// Kombinationen, nicht an fuenfen: das ist mehr Zusage als vorher, nicht
+/// weniger, und sie waechst mit [`Kommando`] mit.
 #[test]
 fn jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste() {
     let belegung = Belegung::auslieferung();
-    let erwartet = [
-        ("up", Kommando::AuswahlHoch),
-        ("down", Kommando::AuswahlRunter),
-        ("pageup", Kommando::SeiteHoch),
-        ("pagedown", Kommando::SeiteRunter),
-        ("cmd+right", Kommando::Oeffnen),
-    ];
-    for (text, kommando) in erwartet {
-        let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi(text).tastendruck()) else {
-            panic!("{text} trifft keine Funktion");
+
+    for (kommando, kennung) in Kommando::KENNUNGEN {
+        let Some(funktion) = belegung.funktion(kennung) else {
+            panic!("die Auslieferungsbelegung kennt die Funktion {kennung} nicht");
         };
-        assert_eq!(funktion.kommando(), Some(kommando));
+        assert!(
+            !funktion.tasten().is_empty(),
+            "{kommando:?} ist gebaut, und {kennung} traegt ab Werk keine Kombination"
+        );
+        for kombination in funktion.tasten() {
+            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
+            else {
+                panic!("{kombination} trifft keine Funktion, obwohl {kennung} sie traegt");
+            };
+            assert_eq!(
+                getroffen.kommando(),
+                Some(kommando),
+                "{kombination} steht bei {kennung} und fuehrt zu {}",
+                getroffen.kennung()
+            );
+        }
     }
 }
 
@@ -732,7 +846,10 @@ fn eine_gehaltene_zusatztaste_nimmt_der_taste_ihr_kommando() {
 #[test]
 fn eine_bereits_vergebene_kombination_liefert_einen_konflikt_mit_dem_namen_der_anderen_funktion() {
     let mut belegung = Belegung::auslieferung();
-    let kombination = kombi("shift+cmd+k"); // gehoert dem Kopieren
+    // Eine Kombination, die dem Kopieren gehoert; welche, sagt die
+    // Auslieferungsbelegung.
+    let kombination = ausgeliefert("kopieren");
+    let name = belegung.funktion("kopieren").unwrap().name().to_owned();
 
     let ergebnis = belegung.zuweisen("verschieben", kombination);
 
@@ -741,12 +858,10 @@ fn eine_bereits_vergebene_kombination_liefert_einen_konflikt_mit_dem_namen_der_a
     };
     assert_eq!(konflikt.kombination, kombination);
     assert_eq!(konflikt.andere.kennung, "kopieren");
-    assert_eq!(konflikt.andere.name, "In das andere Fenster kopieren");
+    assert_eq!(konflikt.andere.name, name);
     assert_eq!(konflikt.bewerber.kennung, "verschieben");
     assert!(
-        konflikt
-            .to_string()
-            .contains("In das andere Fenster kopieren"),
+        konflikt.to_string().contains(&name),
         "die Meldung nennt die andere Funktion nicht: {konflikt}"
     );
     // Die Belegung bleibt unveraendert; nichts wird stillschweigend
@@ -757,7 +872,7 @@ fn eine_bereits_vergebene_kombination_liefert_einen_konflikt_mit_dem_namen_der_a
 #[test]
 fn eine_zweite_kombination_an_derselben_funktion_ist_kein_konflikt() {
     let mut belegung = Belegung::auslieferung();
-    let neue = kombi("ctrl+k");
+    let neue = frei();
 
     assert_eq!(belegung.zuweisen("kopieren", neue), Ok(()));
 
@@ -771,10 +886,10 @@ fn eine_zweite_kombination_an_derselben_funktion_ist_kein_konflikt() {
     let Some(vorher) = ab_werk.funktion("kopieren") else {
         panic!("die Funktion kopieren fehlt in der Auslieferungsbelegung");
     };
-    for ausgeliefert in vorher.tasten() {
+    for weg in vorher.tasten() {
         assert!(
-            funktion.tasten().contains(ausgeliefert),
-            "{ausgeliefert} ist beim Zuweisen von ctrl+k verlorengegangen"
+            funktion.tasten().contains(weg),
+            "{weg} ist beim Zuweisen von {neue} verlorengegangen"
         );
     }
     assert_eq!(
@@ -788,7 +903,7 @@ fn eine_zweite_kombination_an_derselben_funktion_ist_kein_konflikt() {
 #[test]
 fn dieselbe_kombination_zweimal_an_dieselbe_funktion_aendert_nichts() {
     let mut belegung = Belegung::auslieferung();
-    let schon_da = kombi("f5");
+    let schon_da = ausgeliefert("kopieren");
 
     assert_eq!(belegung.zuweisen("kopieren", schon_da), Ok(()));
 
@@ -810,18 +925,20 @@ fn eine_unbekannte_funktion_laesst_sich_nicht_belegen() {
 #[test]
 fn zuruecksetzen_stellt_die_eingebettete_tabelle_wieder_her() {
     let mut belegung = Belegung::auslieferung();
-    assert_eq!(belegung.zuweisen("kopieren", kombi("ctrl+k")), Ok(()));
+    let neue = frei();
+    let ab_werk = ausgeliefert("kopieren");
+    assert_eq!(belegung.zuweisen("kopieren", neue), Ok(()));
     assert_ne!(belegung, Belegung::auslieferung());
 
     belegung.zuruecksetzen();
 
     assert_eq!(belegung, Belegung::auslieferung());
-    let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi("f5").tastendruck()) else {
-        panic!("F5 trifft nach dem Zuruecksetzen keine Funktion");
+    let Nachschlag::Funktion(funktion) = belegung.nachschlag(ab_werk.tastendruck()) else {
+        panic!("{ab_werk} trifft nach dem Zuruecksetzen keine Funktion");
     };
     assert_eq!(funktion.kennung(), "kopieren");
     assert!(matches!(
-        belegung.nachschlag(kombi("ctrl+k").tastendruck()),
+        belegung.nachschlag(neue.tastendruck()),
         Nachschlag::Unbelegt
     ));
 }
@@ -867,11 +984,21 @@ tasten = ["ctrl+c"]
     };
     assert_eq!(funktion.kennung(), "kopieren");
     // Die ausgelieferten Wege derselben Funktion sind fort: ersetzt, nicht
-    // ergaenzt.
-    assert!(matches!(
-        belegung.nachschlag(kombi("f5").tastendruck()),
-        Nachschlag::Unbelegt | Nachschlag::Sprungmarke
-    ));
+    // ergaenzt. Welche das sind, sagt die Auslieferungsbelegung; die Datei oben
+    // gibt dem Kopieren einen Weg, den sie ab Werk nicht hat.
+    for weg in Belegung::auslieferung()
+        .funktion("kopieren")
+        .unwrap()
+        .tasten()
+    {
+        assert!(
+            matches!(
+                belegung.nachschlag(weg.tastendruck()),
+                Nachschlag::Unbelegt | Nachschlag::Sprungmarke
+            ),
+            "{weg} wirkt noch, obwohl die Nutzerdatei die Belegung ersetzt"
+        );
+    }
     // Und die Funktionen, die die Datei nicht nennt, stehen unbelegt da, damit
     // die Belegungsansicht sie weiter auffuehrt. Gemessen wird das am
     // Wortschatz der Auslieferungsbelegung und nicht an einer hier
@@ -907,7 +1034,7 @@ fn eine_geaenderte_belegung_ueberlebt_sichern_und_laden() {
     let ablage =
         Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
     let mut belegung = Belegung::auslieferung();
-    assert_eq!(belegung.zuweisen("kopieren", kombi("ctrl+k")), Ok(()));
+    assert_eq!(belegung.zuweisen("kopieren", frei()), Ok(()));
 
     belegung
         .sichern(&ablage)

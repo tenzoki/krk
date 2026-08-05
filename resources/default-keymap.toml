@@ -48,8 +48,9 @@
 #
 # Zwei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
 # keiner Tastenliste: Umschalt+Entf und die Eingabetaste. Die Eingabetaste trug
-# bis zum 260804 den Einstieg in einen Ordner; der liegt seither allein auf
-# cmd+right, und der Nutzer hat sie ausdruecklich freigegeben (C2).
+# bis zum 260804 den Einstieg in einen Ordner; der liegt seither auf einem
+# Rechtspfeil, bis zum 260805 auf cmd+right und seither auf dem nackten right,
+# und der Nutzer hat die Eingabetaste ausdruecklich freigegeben (C2).
 #
 # Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
 # seither die Textbefehle des Menues "Bearbeiten" und sonst nichts, und genau
@@ -63,9 +64,15 @@
 # und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
 # Steht die Schreibmarke in einem Textfeld, reicht der Ereignisabgriff den
 # Tastendruck unveraendert an AppKit weiter, und erst dort wirkt das Menue;
-# steht sie im Dateifenster, schlaegt er in dieser Datei nach. So bewegt
-# cmd+left im Textfeld die Schreibmarke und steigt im Dateifenster in den
-# uebergeordneten Ordner auf.
+# steht sie im Dateifenster, schlaegt er in dieser Datei nach.
+#
+# Der Vorbehalt fragt vor dem Nachschlag und nicht nach der Kombination, und
+# darum traegt er eine nackte Taste genauso wie eine mit Zusatztaste. Seit dem
+# 260805 ist das der Alltagsfall und nicht mehr der Randfall: left und right
+# steigen im Dateifenster aus einem Ordner aus und in einen ein, und in jedem
+# Textfeld bewegen dieselben beiden Tasten die Schreibmarke, wie ueberall auf
+# dem Mac. In der Pfadeingabe aus C2 haengt daran, dass ein getippter Pfad
+# zeichenweise begehbar bleibt.
 #
 # Daraus folgt, dass dieselbe Kombination bei zwei Funktionen stehen darf,
 # sofern verschiedene Zusteller sie tragen. Ein Konflikt sind zwei Funktionen
@@ -193,16 +200,20 @@ tasten = ["end"]
 [[funktion]]
 id = "oeffnen"
 name = "In den ausgewählten Ordner einsteigen"
-tasten = ["cmd+right"]
+tasten = ["right"]
 
 [[funktion]]
 id = "ordner_aufwaerts"
 name = "In den übergeordneten Ordner"
-tasten = ["cmd+left", "cmd+up"]
-# Zwei Wege mit je eigenem Vorbild. cmd+left ist der Hauptweg aus dem
-# Nutzerentscheid vom 260804: die Ordner liegen in der Richtung der
-# Seitwaertspfeile nebeneinander, und cmd+right steigt gegenlaeufig ein.
-# cmd+up legt der Finder auf denselben Aufstieg.
+tasten = ["left", "cmd+up"]
+# Zwei Wege mit je eigenem Grund. left ist der Hauptweg aus dem Nutzerentscheid
+# vom 260805: eine Ordnernavigation ohne Zusatztaste ist schneller als eine mit,
+# und die Seitwaertspfeile zeigen dabei die Richtung, in der die Ordner
+# nebeneinander liegen; right steigt gegenlaeufig ein. Bis zum 260805 lagen
+# beide Wege auf cmd+left und cmd+right, seit dem 260804 mit derselben Richtung
+# und einer Zusatztaste davor; die Zusatztaste faellt ersatzlos weg. cmd+up legt
+# der Finder auf denselben Aufstieg, und der Nutzer hat es am 260804
+# ausdruecklich als Finder-Gewohnheit gewollt; es bleibt deshalb stehen.
 
 [[funktion]]
 id = "pfadeingabe"
