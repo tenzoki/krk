@@ -12,7 +12,7 @@
 //! ```
 //!
 //! **Dieses Blatt rechnet nichts.** Regelmodell, Vorschau und
-//! Kollisionspruefung stehen in [`krk_core::umbenennen`] und sind dort ohne
+//! Kollisionspruefung stehen in [`krk_core::stapelumbenennen`] und sind dort ohne
 //! Fenster pruefbar; hier steht allein, was AppKit betrifft. Das Blatt liegt
 //! trotzdem in `appkit/`, aus demselben Grund wie die uebrigen: die Vorschau ist
 //! eine `NSTableView` mit eigener Datenquelle, und eine Datenquelle entsteht nur
@@ -54,7 +54,7 @@ use objc2_foundation::{
     ns_string,
 };
 
-use krk_core::umbenennen::{Regel, Vorschau, vorschau};
+use krk_core::stapelumbenennen::{Regel, Vorschau, vorschau};
 
 use super::Blatt;
 
@@ -184,7 +184,7 @@ struct Regelfelder {
 
 impl Regelfelder {
     /// Die Regel, die gerade in den Feldern steht.
-    fn regel(&self) -> Result<Regel, krk_core::umbenennen::Regelfehler> {
+    fn regel(&self) -> Result<Regel, krk_core::stapelumbenennen::Regelfehler> {
         Regel::aus_eingabe(
             &self.suchen.stringValue().to_string(),
             &self.ersetzen.stringValue().to_string(),

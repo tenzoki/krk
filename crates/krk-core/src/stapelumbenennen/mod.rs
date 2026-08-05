@@ -36,7 +36,20 @@
 //! `operation::umbenennen` fasst das Dateisystem an. Dieses Modul nicht: es
 //! rechnet auf Zeichenketten und ist deshalb ohne Pruefordner pruefbar. Die
 //! fuenf Faelle aus dem Abnahmekriterium von S17 laufen in
-//! `tests/umbenennen.rs` ohne eine einzige angelegte Datei.
+//! `tests/stapelumbenennen.rs` ohne eine einzige angelegte Datei.
+//!
+//! # Warum es `stapelumbenennen` heisst und nicht `umbenennen`
+//!
+//! Bis zum 260805 hiess es `krk_core::umbenennen`, und damit trugen zwei
+//! Module des Kerns denselben Namen. Das kostete an jeder Fundstelle einen
+//! Blick auf den Modulpfad, um zu wissen, ob gerade gerechnet oder umbenannt
+//! wird, und eine `use`-Zeile, die beide hereinholte, musste eines von beiden
+//! umbenennen
+//! (`issues/260804-2040_c_zwei-module-des-kerns-heissen-umbenennen.md`).
+//! Dieselbe Sorte Doppelname hat der Plan an zwei anderen Stellen vermieden:
+//! bei der Sitzung in S12 und bei den Lesezeichen in S18
+//! (`ablage/lesezeichen.rs`). Umbenannt wurde das Modul und nicht sein Ort:
+//! wohin es gehoert, steht im Absatz darueber und ist unveraendert.
 
 pub mod kollision;
 pub mod regel;

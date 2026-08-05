@@ -6,12 +6,17 @@
 //! eine Richtung, ein Kanal in die andere.
 //!
 //! ```text
-//!   Hauptfaden                        Arbeitsfaden
-//!   ──────────                        ────────────
-//!   Lauf::abbrechen  ──AtomicBool──>  Steuerung::abgebrochen
-//!   Lauf::meldungen  <───Kanal─────   Steuerung::{fortschritt, ueberspringen}
-//!   Konfliktentscheid ──Kanal──────>  Steuerung::konflikt_loesen (wartet)
+//!   Hauptfaden                            Arbeitsfaden
+//!   ──────────                            ────────────
+//!   Lauf::abbrechen      ──AtomicBool──>  Steuerung::abgebrochen
+//!   Abbruchgriff::abbrechen ──┘ (dasselbe Kennzeichen)
+//!   Lauf::meldungen      <───Kanal─────   Steuerung::{fortschritt, ueberspringen}
+//!   Konfliktentscheid    ──Kanal──────>   Steuerung::konflikt_loesen (wartet)
 //! ```
+//!
+//! [`Abbruchgriff`] gibt es, weil der [`Lauf`] nicht zwischen zwei Faeden
+//! geteilt werden kann; wer ihn einem Faden gibt und trotzdem abbrechen koennen
+//! muss, nimmt den Griff. Die Begruendung steht dort.
 //!
 //! # Warum der Fortschritt getaktet gemeldet wird und die uebrigen Meldungen
 //! nicht
@@ -163,6 +168,36 @@ pub enum Meldung {
     Fertig(Bericht),
 }
 
+/// Der Griff an das Abbruchkennzeichen eines Laufs, fuer sich allein.
+///
+/// **Der Grund, aus dem es ihn gibt.** Ein [`Lauf`] haelt drei Dinge zusammen:
+/// das Abbruchkennzeichen, den Empfaenger des Meldekanals und den Faden. Ein
+/// `Receiver` ist `Send`, aber nicht `Sync`, der Lauf laesst sich also an einen
+/// anderen Faden **geben**, nicht zwischen zweien **teilen**. Wer in `recv`
+/// wartet, muss ihn haben, und das darf nicht der Hauptfaden sein.
+///
+/// Ohne diesen Griff blieb dem Hauptfaden nur ein zweites Kennzeichen, das der
+/// wartende Faden nach jeder Meldung abfragte und weiterreichte. Bei einer
+/// Operation, die ueber Sekunden nichts meldet, wirkte der Abbruch entsprechend
+/// spaet (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// Das Kennzeichen selbst ist ein `AtomicBool` und damit sehr wohl teilbar; nur
+/// herausgegeben wurde es nie.
+///
+/// Ein Griff ist kein zweiter Weg zum Abbruch, sondern derselbe: er zeigt auf
+/// dasselbe Kennzeichen wie [`Lauf::abbrechen`], und der Arbeitsfaden liest
+/// weiter allein dieses eine.
+#[derive(Debug, Clone)]
+pub struct Abbruchgriff {
+    kennzeichen: Arc<AtomicBool>,
+}
+
+impl Abbruchgriff {
+    /// Bricht den Vorgang ab, zu dem dieser Griff gehoert.
+    pub fn abbrechen(&self) {
+        self.kennzeichen.store(true, Ordering::Relaxed);
+    }
+}
+
 /// Ein laufender Vorgang auf einem eigenen Arbeitsfaden.
 pub struct Lauf {
     abbruch: Arc<AtomicBool>,
@@ -188,6 +223,17 @@ impl Lauf {
         &self.meldungen
     }
 
+    /// Ein Griff an das Abbruchkennzeichen, der den Lauf verlassen darf.
+    ///
+    /// Fuer den Aufrufer, der den Lauf einem anderen Faden gibt und trotzdem
+    /// abbrechen koennen muss; siehe [`Abbruchgriff`]. Beliebig oft abrufbar,
+    /// jeder Griff zeigt auf dasselbe Kennzeichen.
+    pub fn abbruchgriff(&self) -> Abbruchgriff {
+        Abbruchgriff {
+            kennzeichen: Arc::clone(&self.abbruch),
+        }
+    }
+
     /// Bricht den Vorgang ab.
     ///
     /// Der Arbeitsfaden bemerkt den Abbruch zwischen zwei Eintraegen und,
@@ -195,11 +241,6 @@ impl Lauf {
     /// `copyfile(3)`.
     pub fn abbrechen(&self) {
         self.abbruch.store(true, Ordering::Relaxed);
-    }
-
-    /// Wahr, wenn der Abbruch angefordert wurde.
-    pub fn ist_abgebrochen(&self) -> bool {
-        self.abbruch.load(Ordering::Relaxed)
     }
 
     /// Wartet, bis der Arbeitsfaden geendet hat.

@@ -15,7 +15,7 @@
 
 pub mod ablage;
 pub mod operation;
+pub mod stapelumbenennen;
 pub mod tasten;
-pub mod umbenennen;
 pub mod verzeichnis;
 pub mod zwischenablage;

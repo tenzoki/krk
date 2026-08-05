@@ -64,3 +64,6 @@ Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-0000-sieben-nutzerantworten-eingearbeitet.md`
+
+---
+Resolved: Nachgezogen am 260805, und die Ursache ist mitbehoben. Es waren mehr als zehn: Spec und Plan tragen jetzt **228 Verweise in Glob-Form**, und kein einziger nennt noch einen festen Marker. Die Regel dahinter: ein Verweis schreibt den Marker nicht aus, sondern `_*_`. Zeitstempel und Thema eines Datensatzes bleiben über jeden Markerwechsel gleich, der Marker ist der einzige Teil des Namens, der sich planmäßig ändert — ein Verweis, der ihn trägt, geht bei jedem Übergang von `_o_` auf `_a_` auf `_i_` kaputt. Das Vorhaben hatte den Fall dreimal, zweimal fiel er zufällig auf. Nachgeprüft am 260805: alle 92 verschiedenen Glob-Verweise des Plans lösen gegen den Dateibestand auf, im Circle-Speicher wie im geteilten. Die Arbeit stammt vom `planner`, der vor seinem Bericht abgebrochen wurde; der orchestrator hat sie nachgeprüft und geschlossen.

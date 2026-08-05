@@ -27,7 +27,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 55 Funktionen mit zusammen 62 Kombinationen.
+# Ausgeliefert sind 56 Funktionen mit zusammen 63 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -476,3 +476,31 @@ id = "text_alles_auswaehlen"
 name = "Alles auswählen"
 tasten = ["cmd+a"]
 gehalten_von = "menue"
+
+# ── C3: das Beenden der Anwendung ────────────────────────────────────────────
+
+[[funktion]]
+id = "beenden"
+name = "KRK beenden"
+tasten = ["cmd+q"]
+# Der sechste und letzte Eintrag des Hauptmenues. C3 sagt zu, dass jede
+# Kombination, die in KRK etwas ausloest, in der Belegung steht, von der
+# Konflikterkennung gesehen wird und umbelegbar ist. Cmd+Q beendet die
+# Anwendung und erreichte bis zum 260805 keine der drei Zusagen: S13b hat fuenf
+# Menuekuerzel nachgetragen und dieses uebersehen (`issues/
+# 260805-0753_c_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
+#
+# Gebaut wie "fenster_schliessen" weiter oben und nicht wie die vier
+# Textbefehle darueber: eine gewoehnliche Funktion, deren Kommando am
+# Anwendungsdelegierten haengt. Der Menueeintrag zeigt das Kuerzel an und nimmt
+# es von hier; ausgeloest wird die Funktion im Alltag ueber den
+# Ereignisabgriff. Sie traegt deshalb kein `gehalten_von`.
+#
+# Der eigene Selektor am Delegierten ist zugleich das Mittel gegen die
+# Zweitform "Quit and Keep Windows" auf Opt+Cmd+Q, die AppKit zu `terminate:`
+# dazustellt, so wie `fensterSchliessen:` es gegen "Close All" war (`issues/
+# 260805-0753_o_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+# Solange er noch nicht steht, traegt die Funktion kein Kommando, wie
+# "belegung_ansehen" oben: der Ereignisabgriff schluckt Cmd+Q dann nicht,
+# sondern reicht es an das Menue weiter, und die Anwendung beendet sich
+# unveraendert.

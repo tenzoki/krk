@@ -28,7 +28,9 @@
 //!
 //! ```text
 //!  Dateisystemwache ──> auffrischung::ordner_neu_lesen ──> Dateifenster::neu_lesen
-//!  Datentraegerwache ─> auffrischung::datentraeger_verloren ─> wechseln + melden
+//!  Datentraegerwache ─> auffrischung::datentraeger_verloren ─> je getroffenem Tab
+//!                                                              tab_wechseln, dann
+//!                                                              einmal melden
 //!
 //!  jede Navigation ───> Dateisystemwache neu aufsetzen
 //! ```
@@ -110,9 +112,9 @@ use krk_core::operation::{
     self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
     freier_name,
 };
+use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::{Belegung, Kommando};
-use krk_core::umbenennen::Vorschau;
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
@@ -283,6 +285,24 @@ define_class!(
         #[unsafe(method(fensterSchliessen:))]
         fn fenster_schliessen_aktion(&self, _absender: Option<&AnyObject>) {
             self.fenster_schliessen();
+        }
+
+        /// Der Menueeintrag "KRK beenden" (C3).
+        ///
+        /// Ein eigener Selektor und nicht `terminate:`, aus demselben Grund wie
+        /// bei `fensterSchliessen:` daneben: zu einem Menueeintrag mit
+        /// `terminate:` stellt AppKit von sich aus eine Zweitform "Quit and
+        /// Keep Windows" auf Opt+Cmd+Q dazu, mit englischer Beschriftung und
+        /// einer Kombination, die weder in der Belegung steht noch umbelegbar
+        /// ist (gemessen am 260805-0753 am laufenden Buendel,
+        /// `issues/260805-0753_c_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+        /// Am Verhalten aendert der Umweg nichts: der Delegierte ruft
+        /// `terminate:` an `NSApplication` selbst.
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(beenden:))]
+        fn beenden_aktion(&self, _absender: Option<&AnyObject>) {
+            self.beenden();
         }
     }
 
@@ -713,6 +733,7 @@ impl Anwendungsdelegierter {
                 true
             }
             Kommando::FensterSchliessen => self.fenster_schliessen(),
+            Kommando::Beenden => self.beenden(),
             Kommando::BereichVerbreitern => self.breite_aendern(BREITENSCHRITT),
             Kommando::BereichVerschmaelern => self.breite_aendern(-BREITENSCHRITT),
             // Alles uebrige gehoert dem aktiven Dateifenster.
@@ -797,6 +818,20 @@ impl Anwendungsdelegierter {
             return false;
         };
         fenster.performClose(None);
+        true
+    }
+
+    /// Beendet die Anwendung (C3).
+    ///
+    /// Die eine Stelle dafuer, und beide Wege gehen darueber: der
+    /// Ereignisabgriff mit [`Kommando::Beenden`] und der Menueeintrag ueber den
+    /// Selektor `beenden:`. `terminate:` und nicht `exit`, damit AppKit seinen
+    /// Ablauf geht und `applicationWillTerminate:` den letzten Sitzungsstand
+    /// noch schreibt.
+    fn beenden(&self) -> bool {
+        // `None` als Absender heisst: kein Steuerelement hat den Aufruf
+        // ausgeloest.
+        NSApplication::sharedApplication(self.mtm()).terminate(None);
         true
     }
 
@@ -1136,7 +1171,10 @@ impl Anwendungsdelegierter {
         // keine.
         let lauf = operation::starten(auftrag, Arc::new(Systempapierkorb));
 
-        let zustand = Arc::new(Vorgangszustand::neu());
+        // Der Griff an das Abbruchkennzeichen bleibt beim Hauptfaden, der Lauf
+        // geht an den Vermittlerfaden. Beide zeigen auf dasselbe Kennzeichen;
+        // siehe `krk_core::operation::Abbruchgriff`.
+        let zustand = Arc::new(Vorgangszustand::neu(lauf.abbruchgriff()));
         let fuer_faden = Arc::clone(&zustand);
         let gestartet = thread::Builder::new()
             .name("krk-vermittler".to_owned())
@@ -1496,6 +1534,14 @@ impl Dateifenstersicht for Anwendungsdelegierter {
         self.dateifenster(seite).quelle().angezeigter_ordner()
     }
 
+    fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf> {
+        self.dateifenster(seite).quelle().tabordner()
+    }
+
+    fn sichtbarer_tab(&self, seite: Fensterseite) -> usize {
+        self.dateifenster(seite).quelle().sichtbarer_tab()
+    }
+
     fn sichtbar(&self, seite: Fensterseite) -> bool {
         self.ivars()
             .modell
@@ -1507,8 +1553,10 @@ impl Dateifenstersicht for Anwendungsdelegierter {
         self.dateifenster(seite).quelle().neu_lesen();
     }
 
-    fn wechseln(&self, seite: Fensterseite, ziel: &Path) {
-        self.dateifenster(seite).quelle().ordner_lesen(ziel, None);
+    fn tab_wechseln(&self, seite: Fensterseite, stelle: usize, ziel: &Path) {
+        self.dateifenster(seite)
+            .quelle()
+            .tab_ordner_setzen(stelle, ziel);
     }
 
     fn melden(&self, seite: Fensterseite, text: &str) {
@@ -1531,15 +1579,15 @@ impl Dateifenstersicht for Anwendungsdelegierter {
 /// `### Frage 6` ausschliesst, und L9 fiele mit ihr. Ein Faden, der wartet, ist
 /// der Preis dafuer.
 ///
-/// **Der Abbruchwunsch laeuft ueber diesen Faden zurueck**, weil der
-/// [`Lauf`] hier liegt. Er wird nach jeder Meldung geprueft; die Spanne bis zum
-/// Greifen ist damit die bis zur naechsten Meldung, also hoechstens der
-/// Meldeabstand von 8 ms, solange eine Datei uebertragen wird.
+/// **Der Abbruchwunsch laeuft nicht mehr ueber diesen Faden.** Bis zum 260805
+/// tat er das: der Hauptfaden setzte ein zweites Kennzeichen, und dieser Faden
+/// reichte es nach jeder Meldung an den [`Lauf`] weiter. Bei einer Operation,
+/// die ueber Sekunden nichts meldet, wirkte der Abbruch entsprechend spaet
+/// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// Der Hauptfaden haelt seit `Lauf::abbruchgriff` das Kennzeichen des Laufs
+/// selbst und setzt es unmittelbar; hier ist dafuer nichts mehr zu tun.
 fn vermitteln(lauf: Lauf, zustand: &Arc<Vorgangszustand>) {
     while let Ok(meldung) = lauf.meldungen().recv() {
-        if zustand.abgebrochen() && !lauf.ist_abgebrochen() {
-            lauf.abbrechen();
-        }
         let fertig = matches!(meldung, Meldung::Fertig(_));
         zustand.aendern(|stand| match meldung {
             Meldung::Fortschritt(fortschritt) => stand.fortschritt = Some(fortschritt),

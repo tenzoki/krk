@@ -379,6 +379,39 @@ impl DateifensterQuelle {
         self.ivars().tabs.borrow().aktiver().ordner().to_path_buf()
     }
 
+    /// Die Ordner aller Tabs, in der Reihenfolge der Leiste (C9).
+    pub fn tabordner(&self) -> Vec<PathBuf> {
+        self.ivars().tabs.borrow().tabordner()
+    }
+
+    /// Die Stelle des sichtbaren Tabs in [`Self::tabordner`].
+    pub fn sichtbarer_tab(&self) -> usize {
+        self.ivars().tabs.borrow().aktive_stelle()
+    }
+
+    /// Laesst den Tab an der genannten Stelle einen anderen Ordner zeigen (C9).
+    ///
+    /// Der Weg des Auswurfs aus [`crate::auffrischung::datentraeger_verloren`],
+    /// und die eine Stelle, an der ein **verdeckter** Tab seinen Ordner
+    /// wechselt. Der sichtbare geht denselben Weg wie jede Navigation; der
+    /// verdeckte bekommt allein seinen neuen Ordner, ohne Lesevorgang und ohne
+    /// Ansichtsarbeit, weil auf keinem Schirm etwas steht, das nachzuziehen
+    /// waere. Gelesen wird er, sobald der Nutzer auf ihn wechselt.
+    ///
+    /// Die Tableiste zieht trotzdem nach: sie zeigt den Namen des Ordners je
+    /// Tab, und der ist ein anderer geworden.
+    pub fn tab_ordner_setzen(&self, stelle: usize, pfad: &Path) {
+        if stelle == self.ivars().tabs.borrow().aktive_stelle() {
+            self.ordner_lesen(pfad, None);
+            return;
+        }
+        self.ivars()
+            .tabs
+            .borrow_mut()
+            .verdeckten_tab_setzen(stelle, pfad);
+        self.tableiste_nachziehen();
+    }
+
     /// Meldet, dass dieses Dateifenster jetzt einen anderen Ordner zeigt.
     ///
     /// Steht ausdruecklich am Ende der Aufrufer und nicht mittendrin: der
@@ -1045,9 +1078,42 @@ impl DateifensterQuelle {
     // Bildlauf, Statuszeile, Einzugstakt
     // ------------------------------------------------------------------
 
+    /// Der Wert, den `bounds().origin.y` der Bildlaufansicht am oberen Rand
+    /// traegt.
+    ///
+    /// **Nicht null.** Die Spaltenueberschriften stehen ueber der Liste, und
+    /// AppKit legt dafuer einen Inhaltsrand an, unter den die Liste laeuft; der
+    /// Ursprung der Bildlaufansicht liegt deshalb um die Kopfhoehe ueber dem
+    /// oberen Rand der Liste. Am 260804 stand in jedem ungescrollten Tab der
+    /// `session.toml` deshalb `bildlauf = -28.0`
+    /// (`issues/260804-1040_c_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
+    ///
+    /// Gefragt ist die Kopfansicht der Tabelle und **nicht** der Inhaltsrand
+    /// der Bildlaufansicht. Beides waere denkbar, gemessen ist nur eines: am
+    /// 260805 lieferte eine Sonde im laufenden Buendel `roh=-28`,
+    /// `contentInsets.top=0` und die Hoehe der Kopfansicht `28`. AppKit haelt
+    /// den Spaltenkopf hier also in der eigenen Kopfansicht der Tabelle und
+    /// nicht als Rand, und ein `contentInsets` an dieser Stelle rechnete
+    /// dauerhaft mit null.
+    ///
+    /// Abgefragt und nicht hingeschrieben: die Kopfhoehe haengt an der
+    /// Systemschriftgroesse, und eine 28 im Programmtext waere auf dem naechsten
+    /// Mac mit anderer Einstellung falsch. Ohne Kopfansicht ist der Ursprung
+    /// null, und die Umrechnung faellt von selbst weg.
+    fn bildlauf_ursprung(&self) -> f64 {
+        match self.ivars().tabelle.headerView() {
+            Some(kopf) => -kopf.frame().size.height,
+            None => 0.0,
+        }
+    }
+
     /// Liest die Bildlaufposition aus der Ansicht in den sichtbaren Tab.
+    ///
+    /// Gemerkt wird der Abstand vom oberen Rand der Liste und nicht der rohe
+    /// Ursprung der Ansicht. Der Nutzer soll `session.toml` lesen und von Hand
+    /// aendern koennen, und dort heisst 0 damit "ganz oben".
     fn bildlauf_merken(&self) {
-        let hoehe = self.ivars().sicht.contentView().bounds().origin.y;
+        let hoehe = self.ivars().sicht.contentView().bounds().origin.y - self.bildlauf_ursprung();
         self.ivars()
             .tabs
             .borrow_mut()
@@ -1056,9 +1122,11 @@ impl DateifensterQuelle {
     }
 
     /// Stellt die genannte Bildlaufposition in der Ansicht her.
+    ///
+    /// Der Rueckweg zu [`Self::bildlauf_merken`], mit demselben Ursprung.
     fn bildlauf_herstellen(&self, hoehe: f64) {
         let inhalt = self.ivars().sicht.contentView();
-        inhalt.scrollToPoint(NSPoint::new(0.0, hoehe));
+        inhalt.scrollToPoint(NSPoint::new(0.0, hoehe + self.bildlauf_ursprung()));
         self.ivars().sicht.reflectScrolledClipView(&inhalt);
     }
 

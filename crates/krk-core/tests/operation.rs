@@ -378,6 +378,61 @@ fn der_abbruch_mitten_in_einer_500_mb_datei_kehrt_binnen_100_ms_zurueck() {
     );
 }
 
+/// Der Abbruch erreicht den Lauf, obwohl der Lauf auf einem anderen Faden
+/// liegt.
+///
+/// **Die Aufstellung ist die des Betriebs.** In KRK haelt der Vermittlerfaden
+/// den `Lauf`, weil er in `recv` wartet, und der Hauptfaden darf das nicht.
+/// Bis zum 260805 blieb dem Hauptfaden nur ein zweites Kennzeichen, das der
+/// wartende Faden nach jeder Meldung abfragte und weiterreichte; bei einer
+/// Operation, die lange nichts meldet, wirkte der Abbruch entsprechend spaet
+/// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// Diese Pruefung haelt fest, dass der Griff den Umweg nicht mehr braucht: der
+/// abbrechende Faden hat den `Lauf` nicht und liest keine einzige Meldung.
+#[test]
+fn der_abbruchgriff_wirkt_von_einem_faden_ohne_den_lauf() {
+    let _reihum = ZEITMESSUNG
+        .lock()
+        .unwrap_or_else(|vergiftet| vergiftet.into_inner());
+    let ordner = Pruefordner::neu("abbruchgriff");
+    let quelle = ordner.unter("riesig.bin");
+    let groesse = 500 * 1024 * 1024;
+    volle_datei(&quelle, groesse);
+    let ziel = ordner.ordner("ziel");
+
+    let auftrag = Auftrag::kopieren(vec![quelle], &ziel)
+        // Wie oben: ohne diese Wahl klont APFS, und ein Klon ist fertig, bevor
+        // ein Abbruch ihn erreichen koennte.
+        .mit_uebertragung(Uebertragungsart::ImmerBytes);
+
+    let lauf = starten(auftrag, Arc::new(OhnePapierkorb));
+    let griff = lauf.abbruchgriff();
+
+    // Der Lauf geht an den Vermittlerfaden und ist auf diesem Faden fort.
+    let vermittler = std::thread::spawn(move || {
+        let bericht = bericht_abholen(lauf.meldungen());
+        lauf.warten();
+        bericht
+    });
+
+    std::thread::sleep(Duration::from_millis(40));
+    griff.abbrechen();
+
+    let bericht = vermittler
+        .join()
+        .expect("der Vermittlerfaden ist gescheitert");
+    assert_eq!(
+        bericht.abschluss,
+        Abschluss::Abgebrochen,
+        "der Griff hat den Lauf nicht erreicht"
+    );
+    assert!(
+        bericht.bytes < groesse,
+        "gemeldet sind {} von {groesse} Bytes; der Abbruch kam zu spaet",
+        bericht.bytes
+    );
+}
+
 #[test]
 fn dieselben_500_mb_sind_als_klon_lange_vor_der_frist_fertig() {
     let _reihum = ZEITMESSUNG

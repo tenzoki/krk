@@ -63,8 +63,8 @@ use crate::verzeichnis::Typ;
 pub use anlegen::{datei_anlegen, ordner_anlegen};
 pub use auftrag::{Art, Auftrag, Konfliktregel};
 pub use fortschritt::{
-    Abschluss, Bericht, Fortschritt, Konfliktantwort, Konfliktentscheid, Lauf, MELDEABSTAND,
-    Meldung, Uebersprungen,
+    Abbruchgriff, Abschluss, Bericht, Fortschritt, Konfliktantwort, Konfliktentscheid, Lauf,
+    MELDEABSTAND, Meldung, Uebersprungen,
 };
 pub use loeschen::{OhnePapierkorb, Papierkorb};
 pub use umbenennen::{Namensfehler, freier_name, name_pruefen, umbenennen};

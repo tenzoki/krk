@@ -122,9 +122,22 @@ pub fn freier_name(ziel: &Path) -> String {
 
 /// Teilt einen Namen in Stamm und Endung, einschliesslich des Punktes.
 ///
+/// **Die eine Stelle, die diese Frage beantwortet.** Bis zum 260805 zog
+/// `crate::stapelumbenennen::regel` fuer die fortlaufende Nummerierung dieselbe
+/// Trennung ein zweites Mal, ueber `Path::file_stem` und `Path::extension`
+/// (`issues/260804-2040_c_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
+/// Beide lieferten dasselbe, und genau das ist die Lage, in der eine Abweichung
+/// spaeter unbemerkt entsteht.
+///
+/// Geblieben ist diese Rechnung und nicht der Weg ueber `Path`, weil sie
+/// geliehene Ausschnitte liefert: `Path::extension` streicht den Punkt, und ihn
+/// wieder anzusetzen kostete je Aufruf eine `String`. Dass die beiden auf jedem
+/// Namen uebereinstimmen, den KRK ueberhaupt antreffen kann, haelt die Pruefung
+/// `die_trennung_stimmt_mit_der_trennung_von_path_ueberein` fest.
+///
 /// Ein fuehrender Punkt zaehlt nicht als Endung: `.gitignore` ist ein Stamm
 /// ohne Endung und nicht eine Endung ohne Stamm.
-fn namen_teilen(name: &str) -> (&str, &str) {
+pub fn namen_teilen(name: &str) -> (&str, &str) {
     match name.rfind('.') {
         Some(stelle) if stelle > 0 => name.split_at(stelle),
         _ => (name, ""),
@@ -164,6 +177,50 @@ mod tests {
         assert_eq!(namen_teilen("archiv.tar.gz"), ("archiv.tar", ".gz"));
         assert_eq!(namen_teilen("liesmich"), ("liesmich", ""));
         assert_eq!(namen_teilen(".gitignore"), (".gitignore", ""));
+    }
+
+    /// Die Rechtfertigung dafuer, dass [`namen_teilen`] die zweite Trennung
+    /// abgeloest hat und nicht umgekehrt.
+    ///
+    /// Die abgeloeste ging ueber `Path::file_stem` und `Path::extension`, mit
+    /// der Begruendung, so zu trennen wie die Standardbibliothek. Diese
+    /// Pruefung haelt fest, dass genau das weiterhin geschieht: sie rechnet
+    /// beide Wege nebeneinander und vergleicht sie.
+    ///
+    /// `..` steht bewusst nicht in der Liste. Dort weichen die beiden ab
+    /// (`namen_teilen` liefert `(".", ".")`, `Path` liefert `("..", "")`), und
+    /// `..` ist kein Name, den KRK antreffen kann: [`name_pruefen`] weist ihn
+    /// als [`Namensfehler::Punktname`] ab, bevor er irgendwo ankommt. Die
+    /// Pruefung darueber haelt das fest.
+    #[test]
+    fn die_trennung_stimmt_mit_der_trennung_von_path_ueberein() {
+        for name in [
+            "bericht.txt",
+            "archiv.tar.gz",
+            ".gitignore",
+            "liesmich",
+            "datei.",
+            "..foo",
+            ".",
+            "a.b.",
+            ".x.y",
+            "",
+        ] {
+            let pfad = Path::new(name);
+            let stamm = pfad
+                .file_stem()
+                .and_then(std::ffi::OsStr::to_str)
+                .unwrap_or(name);
+            let endung = pfad
+                .extension()
+                .and_then(std::ffi::OsStr::to_str)
+                .map_or_else(String::new, |endung| format!(".{endung}"));
+            assert_eq!(
+                namen_teilen(name),
+                (stamm, endung.as_str()),
+                "bei \"{name}\" trennt namen_teilen anders als Path"
+            );
+        }
     }
 
     #[test]

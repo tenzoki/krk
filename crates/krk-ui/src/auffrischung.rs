@@ -59,6 +59,19 @@ pub trait Dateifenstersicht {
     /// Der Ordner, den der sichtbare Tab dieses Dateifensters gerade zeigt.
     fn ordner(&self, seite: Fensterseite) -> PathBuf;
 
+    /// Die Ordner **aller** Tabs dieses Dateifensters, in der Reihenfolge der
+    /// Leiste.
+    ///
+    /// Der Auswurf aus C9 trifft den Tab und nicht das Fenster, deshalb gibt es
+    /// diese Frage neben [`Dateifenstersicht::ordner`]. Fuer die Auffrischung
+    /// waere sie falsch: was in einem verdeckten Tab steht, sieht niemand, und
+    /// ihn bei jeder fremden Aenderung neu zu lesen waere Arbeit fuer einen
+    /// leeren Schirm.
+    fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf>;
+
+    /// Die Stelle des sichtbaren Tabs in [`Dateifenstersicht::tabordner`].
+    fn sichtbarer_tab(&self, seite: Fensterseite) -> usize;
+
     /// Ob dieses Dateifenster auf dem Schirm steht (C7).
     fn sichtbar(&self, seite: Fensterseite) -> bool;
 
@@ -68,8 +81,11 @@ pub trait Dateifenstersicht {
     /// Eintraege noch existieren.
     fn neu_lesen(&self, seite: Fensterseite);
 
-    /// Laesst dieses Dateifenster einen anderen Ordner zeigen.
-    fn wechseln(&self, seite: Fensterseite, ziel: &Path);
+    /// Laesst den Tab an der genannten Stelle einen anderen Ordner zeigen.
+    ///
+    /// Ob dabei sofort gelesen wird, entscheidet der Empfaenger: der sichtbare
+    /// Tab muss, ein verdeckter liest erst, wenn der Nutzer auf ihn wechselt.
+    fn tab_wechseln(&self, seite: Fensterseite, stelle: usize, ziel: &Path);
 
     /// Stellt einen Text in die Statuszeile dieses Dateifensters (C1).
     fn melden(&self, seite: Fensterseite, text: &str);
@@ -119,7 +135,20 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
     aufgefrischt
 }
 
-/// Holt jedes Dateifenster von einem ausgeworfenen Datenträger herunter (C9).
+/// Holt jeden Tab von einem ausgeworfenen Datenträger herunter (C9).
+///
+/// **Jeden Tab, nicht nur den sichtbaren.** Bis zum 260805 blieb ein verdeckter
+/// Tab auf demselben Datentraeger stehen; wer spaeter auf ihn wechselte, sah
+/// eine leere Liste und erfuhr den Grund erst mit dem naechsten Lesevorgang
+/// (`issues/260804-1451_c_ein-verdeckter-tab-auf-einem-ausgeworfenen-datentraeger-behaelt-seinen-toten-pfad.md`).
+/// Ein Pfad, den es nicht mehr gibt, ist in einem verdeckten Tab so tot wie in
+/// einem sichtbaren.
+///
+/// **Die Meldung bleibt eine je Dateifenster.** Sie gehoert der Statuszeile,
+/// und die gehoert dem Fenster und nicht dem Tab; C9 formuliert die Zusage
+/// ebenso. Sie sagt deshalb, was umgezogen ist: der sichtbare Tab, verdeckte,
+/// oder beides. Eine Meldung, die "das Dateifenster zeigt jetzt X" behauptet,
+/// waehrend allein ein verdeckter Tab umgezogen ist, waere schlicht falsch.
 ///
 /// Erst der Wechsel, dann die Meldung: der Wechsel loescht die Statuszeile des
 /// Dateifensters, weil er ihr die Meldung des neuen Ordners gibt, und eine
@@ -134,20 +163,54 @@ pub fn datentraeger_verloren(
 ) -> usize {
     let mut betroffen = 0;
     for seite in Fensterseite::ALLE {
-        if !liegt_auf(&sicht.ordner(seite), datentraeger) {
+        let treffer: Vec<usize> = sicht
+            .tabordner(seite)
+            .iter()
+            .enumerate()
+            .filter(|(_, ordner)| liegt_auf(ordner, datentraeger))
+            .map(|(stelle, _)| stelle)
+            .collect();
+        if treffer.is_empty() {
             continue;
         }
-        sicht.wechseln(seite, ausweichziel);
+        let sichtbarer = sicht.sichtbarer_tab(seite);
+        let sichtbar_dabei = treffer.contains(&sichtbarer);
+        let verdeckt = treffer.len() - usize::from(sichtbar_dabei);
+        for stelle in treffer {
+            sicht.tab_wechseln(seite, stelle, ausweichziel);
+        }
         sicht.melden(
             seite,
-            &format!(
-                "{name} wurde ausgeworfen; das Dateifenster zeigt jetzt {}",
-                ausweichziel.display()
-            ),
+            &auswurfmeldung(name, ausweichziel, sichtbar_dabei, verdeckt),
         );
         betroffen += 1;
     }
     betroffen
+}
+
+/// Der Satz, den die Statuszeile nach einem Auswurf traegt.
+///
+/// Vier Faelle, und jeder sagt genau, was umgezogen ist. Der fuenfte, "nichts
+/// umgezogen", kommt nicht vor: [`datentraeger_verloren`] ruft erst, wenn
+/// mindestens ein Tab getroffen ist.
+fn auswurfmeldung(name: &str, ziel: &Path, sichtbar: bool, verdeckt: usize) -> String {
+    let ziel = ziel.display();
+    match (sichtbar, verdeckt) {
+        (true, 0) => format!("{name} wurde ausgeworfen; das Dateifenster zeigt jetzt {ziel}"),
+        (true, 1) => format!(
+            "{name} wurde ausgeworfen; das Dateifenster und ein verdeckter Tab zeigen jetzt {ziel}"
+        ),
+        (true, zahl) => format!(
+            "{name} wurde ausgeworfen; das Dateifenster und {zahl} verdeckte Tabs zeigen jetzt \
+             {ziel}"
+        ),
+        (false, 1) => {
+            format!("{name} wurde ausgeworfen; ein verdeckter Tab zeigt jetzt {ziel}")
+        }
+        (false, zahl) => {
+            format!("{name} wurde ausgeworfen; {zahl} verdeckte Tabs zeigen jetzt {ziel}")
+        }
+    }
 }
 
 /// Ob zwei Pfade denselben Ordner benennen.
@@ -193,8 +256,13 @@ mod tests {
     use super::*;
 
     /// Ein Paar Dateifenster ohne Fenster darum.
+    ///
+    /// Jedes Dateifenster traegt eine Tabliste. Im Regelfall hat sie genau
+    /// einen Tab, und dann liest sich jede Pruefung wie vor S14;
+    /// [`Probe::mit_tabs`] gibt einer Seite mehrere.
     struct Probe {
-        ordner: [PathBuf; 2],
+        tabs: [Vec<PathBuf>; 2],
+        sichtbarer_tab: [usize; 2],
         sichtbar: [bool; 2],
         /// Was die Probe erlebt hat, in der Reihenfolge des Geschehens.
         protokoll: RefCell<Vec<String>>,
@@ -203,10 +271,18 @@ mod tests {
     impl Probe {
         fn neu(links: &str, rechts: &str) -> Self {
             Self {
-                ordner: [PathBuf::from(links), PathBuf::from(rechts)],
+                tabs: [vec![PathBuf::from(links)], vec![PathBuf::from(rechts)]],
+                sichtbarer_tab: [0, 0],
                 sichtbar: [true, true],
                 protokoll: RefCell::new(Vec::new()),
             }
+        }
+
+        /// Gibt der linken Seite mehrere Tabs; `sichtbar` nennt den sichtbaren.
+        fn mit_tabs(mut self, ordner: &[&str], sichtbar: usize) -> Self {
+            self.tabs[0] = ordner.iter().map(PathBuf::from).collect();
+            self.sichtbarer_tab[0] = sichtbar;
+            self
         }
 
         fn ohne_rechtes(mut self) -> Self {
@@ -225,7 +301,15 @@ mod tests {
 
     impl Dateifenstersicht for Probe {
         fn ordner(&self, seite: Fensterseite) -> PathBuf {
-            self.ordner[seite.index()].clone()
+            self.tabs[seite.index()][self.sichtbarer_tab[seite.index()]].clone()
+        }
+
+        fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf> {
+            self.tabs[seite.index()].clone()
+        }
+
+        fn sichtbarer_tab(&self, seite: Fensterseite) -> usize {
+            self.sichtbarer_tab[seite.index()]
         }
 
         fn sichtbar(&self, seite: Fensterseite) -> bool {
@@ -236,8 +320,12 @@ mod tests {
             self.notieren(format!("neu_lesen {}", seite.index()));
         }
 
-        fn wechseln(&self, seite: Fensterseite, ziel: &Path) {
-            self.notieren(format!("wechseln {} {}", seite.index(), ziel.display()));
+        fn tab_wechseln(&self, seite: Fensterseite, stelle: usize, ziel: &Path) {
+            self.notieren(format!(
+                "wechseln {} tab {stelle} {}",
+                seite.index(),
+                ziel.display()
+            ));
         }
 
         fn melden(&self, seite: Fensterseite, text: &str) {
@@ -320,12 +408,86 @@ mod tests {
         assert_eq!(
             probe.protokoll(),
             [
-                "wechseln 0 /Users/k".to_owned(),
+                "wechseln 0 tab 0 /Users/k".to_owned(),
                 "melden 0 Pruef wurde ausgeworfen; das Dateifenster zeigt jetzt /Users/k"
                     .to_owned(),
             ],
             "erst der Wechsel, dann die Meldung"
         );
+    }
+
+    /// Der Fall, der den Defekt vom 260804-1451 traegt: der sichtbare Tab liegt
+    /// woanders, ein verdeckter auf dem ausgeworfenen Datentraeger.
+    #[test]
+    fn ein_verdeckter_tab_auf_dem_datentraeger_zieht_mit_um() {
+        let probe = Probe::neu("/a", "/b").mit_tabs(&["/a", "/Volumes/Pruef/Fotos"], 0);
+        let betroffen = datentraeger_verloren(
+            &probe,
+            Path::new("/Volumes/Pruef"),
+            "Pruef",
+            Path::new("/Users/k"),
+        );
+        assert_eq!(betroffen, 1);
+        assert_eq!(
+            probe.protokoll(),
+            [
+                "wechseln 0 tab 1 /Users/k".to_owned(),
+                "melden 0 Pruef wurde ausgeworfen; ein verdeckter Tab zeigt jetzt /Users/k"
+                    .to_owned(),
+            ],
+            "der verdeckte Tab zieht um, und die Meldung behauptet nichts ueber den sichtbaren"
+        );
+    }
+
+    #[test]
+    fn sichtbarer_und_verdeckte_tabs_ziehen_zusammen_um() {
+        let probe = Probe::neu("/a", "/b").mit_tabs(
+            &[
+                "/Volumes/Pruef",
+                "/a",
+                "/Volumes/Pruef/Fotos",
+                "/Volumes/Pruef/Musik",
+            ],
+            0,
+        );
+        assert_eq!(
+            datentraeger_verloren(
+                &probe,
+                Path::new("/Volumes/Pruef"),
+                "Pruef",
+                Path::new("/Users/k")
+            ),
+            1
+        );
+        assert_eq!(
+            probe.protokoll(),
+            [
+                "wechseln 0 tab 0 /Users/k".to_owned(),
+                "wechseln 0 tab 2 /Users/k".to_owned(),
+                "wechseln 0 tab 3 /Users/k".to_owned(),
+                "melden 0 Pruef wurde ausgeworfen; das Dateifenster und 2 verdeckte Tabs zeigen \
+                 jetzt /Users/k"
+                    .to_owned(),
+            ],
+            "`/a` bleibt stehen, und die Meldung zaehlt die verdeckten"
+        );
+    }
+
+    /// Ohne diese Zusage bekaeme ein Dateifenster, dessen Tabs alle woanders
+    /// liegen, eine Meldung ueber einen Auswurf, der es nicht betrifft.
+    #[test]
+    fn ein_dateifenster_ohne_getroffenen_tab_bekommt_keine_meldung() {
+        let probe = Probe::neu("/a", "/b").mit_tabs(&["/a", "/c"], 1);
+        assert_eq!(
+            datentraeger_verloren(
+                &probe,
+                Path::new("/Volumes/Pruef"),
+                "Pruef",
+                Path::new("/Users/k")
+            ),
+            0
+        );
+        assert!(probe.protokoll().is_empty());
     }
 
     #[test]

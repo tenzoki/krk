@@ -15,3 +15,6 @@ Herkunft: gefunden bei der Umsetzung von Schritt 11 am 260803-2317.
 **Warum es trotzdem gemeldet ist.** Der Plantext ist die Vorlage für den nächsten Leser, und ein wörtlich übernommener Pfad scheitert bei ihm mit einer Meldung über eine fehlende Datei, deren Ursache er erst suchen muss. Der Fehler ist harmlos, weil der Übersetzer ihn findet; er ist keine stille Abweichung.
 
 **Was zu tun ist.** In Schritt 11 unter `Änderungen` den Pfad auf `include_str!("../../../../resources/default-keymap.toml")` ziehen. Eine Zeile.
+
+---
+Resolved: Der Plan nennt in Schritt 11 jetzt `include_str!("../../../../resources/default-keymap.toml")` und stimmt damit mit `crates/krk-core/src/tasten/belegung.rs:91` überein. Am Code nachgesehen statt Ebenen gezählt: der Plantext stand falsch, der Code war immer richtig. Die Arbeit stammt vom `planner`, der vor seinem Bericht abgebrochen wurde; der orchestrator hat sie nachgeprüft und geschlossen.

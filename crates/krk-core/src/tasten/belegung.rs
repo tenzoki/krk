@@ -189,12 +189,14 @@ pub enum Kommando {
     DateiAnlegen,
     /// Die markierten Eintraege im Stapel umbenennen (C4).
     UmbenennenStapel,
+    /// Die Anwendung beenden (C3).
+    Beenden,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 40] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 41] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -241,6 +243,7 @@ impl Kommando {
         (Kommando::OrdnerAnlegen, "ordner_anlegen"),
         (Kommando::DateiAnlegen, "datei_anlegen"),
         (Kommando::UmbenennenStapel, "umbenennen_stapel"),
+        (Kommando::Beenden, "beenden"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.

@@ -5,24 +5,28 @@
 //! deshalb hier im Programmtext.
 //!
 //! Drei Untermenues: KRK, Bearbeiten, Fenster. Jeder Eintrag bekommt als Ziel
-//! `nil` und laeuft damit ueber die Antwortkette. `terminate:` erreicht
-//! `NSApplication`, `cut:`, `copy:`, `paste:` und `selectAll:` erreichen den
-//! Feldeditor des Textfeldes mit dem Fokus, und `fensterEinblenden:` wie
-//! `fensterSchliessen:` erreichen den Anwendungsdelegierten, an dem die Kette
-//! endet. Ein fest gesetztes Ziel wuerde die Kette umgehen und einen Eintrag
-//! auch dann aktiv lassen, wenn niemand ihn beantworten kann.
+//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:`, `paste:` und
+//! `selectAll:` erreichen den Feldeditor des Textfeldes mit dem Fokus, und
+//! `beenden:`, `fensterEinblenden:` wie `fensterSchliessen:` erreichen den
+//! Anwendungsdelegierten, an dem die Kette endet. Ein fest gesetztes Ziel
+//! wuerde die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn
+//! niemand ihn beantworten kann.
 //!
 //! # Eine Quelle, zwei sichtbare Wege
 //!
-//! **Kein Kuerzel steht hier als Zeichenkette.** [`hauptmenue`] bekommt die
-//! Belegung gereicht und holt das Kuerzel jedes Eintrags unter dessen Kennung
-//! aus ihr. Damit ist `resources/default-keymap.toml` auch fuer das Menue die
-//! alleinige Quelle: die Konflikterkennung aus C3 sieht jede Kombination, der
-//! Nutzer kann jede umbelegen, und eine Umbelegung wirkt auf beide Wege.
-//! Nutzerentscheid vom 260805-0000,
+//! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** [`hauptmenue`]
+//! bekommt die Belegung gereicht und holt das Kuerzel jedes Eintrags unter
+//! dessen Kennung aus ihr. Damit ist `resources/default-keymap.toml` auch fuer
+//! das Menue die alleinige Quelle: die Konflikterkennung aus C3 sieht jede
+//! Kombination, der Nutzer kann jede umbelegen, und eine Umbelegung wirkt auf
+//! beide Wege. Nutzerentscheid vom 260805-0000,
 //! `decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
 //!
-//! Die eine Ausnahme steht in [`NOTBEHELF_BEENDEN`] und ist gemeldet.
+//! Bis zum 260805-0820 stand hier eine Ausnahme: der Eintrag "KRK beenden"
+//! trug Cmd+Q als Zeichenkette im Programmtext, weil die Belegungsdatei die
+//! Funktion `beenden` noch nicht fuehrte. Sie fuehrt sie seither, und die
+//! Ausnahme ist mit ihr weggefallen
+//! (`issues/260805-0753_c_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
 //!
 //! Welchen der beiden Wege ein Tastendruck geht, entscheidet der Fokus. Der
 //! Ereignisabgriff aus [`super::ereignisse`] sieht ihn vor der Menuebehandlung
@@ -47,17 +51,31 @@
 //! `shift+cmd+g`, `cmd+v` gesendet, Feld unveraendert. Defekt
 //! `issues/260804-1309_o_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
 //!
-//! # "Fenster schliessen" traegt einen eigenen Selektor
+//! # Zwei Eintraege tragen einen eigenen Selektor
 //!
-//! Bis Schritt 13c stand dort `performClose:`, und AppKit stellte von sich aus
-//! eine Zweitform "Close All" auf Opt+Shift+Cmd+W dazu, mit englischer
-//! Beschriftung und einer Kombination, die niemand aus der Belegung setzen oder
-//! umbelegen kann (gemessen am 260804-1040 im signierten Buendel,
+//! **"Fenster schliessen".** Bis Schritt 13c stand dort `performClose:`, und
+//! AppKit stellte von sich aus eine Zweitform "Close All" auf Opt+Shift+Cmd+W
+//! dazu, mit englischer Beschriftung und einer Kombination, die niemand aus der
+//! Belegung setzen oder umbelegen kann (gemessen am 260804-1040 im signierten
+//! Buendel,
 //! `issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
 //! Der Eintrag traegt deshalb den eigenen Selektor `fensterSchliessen:` am
 //! Anwendungsdelegierten, so wie "Fenster einblenden" ihn seit Schritt 12 hat;
 //! der Delegierte ruft darauf `performClose:` am Fenster selbst, sodass sich am
 //! Verhalten nichts aendert.
+//!
+//! **"KRK beenden", aus demselben Grund.** Zu `terminate:` stellt AppKit eine
+//! Zweitform "Quit and Keep Windows" auf Opt+Cmd+Q dazu. Sie erscheint spaeter
+//! als die von "Close All": nicht schon nach `finishLaunching`, sondern erst an
+//! der wirklich laufenden Anwendung, weshalb `--menue-protokoll` sie nicht sah
+//! und der Befund vom 260805-0753 ueber die Bedienungshilfen kam
+//! (`issues/260805-0753_c_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+//! Der Eintrag traegt seither `beenden:`, und der Delegierte ruft `terminate:`
+//! an `NSApplication` selbst. Gegengeprueft wie bei "Close All", am selben Weg
+//! wie der Befund: am 260805 traegt das Menue "KRK" der laufenden Anwendung
+//! genau einen Eintrag, "KRK beenden" auf Cmd+Q; die Zweitform ist fort. Der
+//! `inference:` des Defekts, die Zweitform haenge allein an `terminate:`, ist
+//! damit nachgemessen.
 //!
 //! # Die zwei Kuerzel des Fenstermenues, und warum sie so liegen
 //!
@@ -90,26 +108,6 @@ use objc2_foundation::{
 use krk_core::tasten::parser::{self, Taste};
 use krk_core::tasten::{Belegung, Kombination, ModMaske};
 
-/// Das Kuerzel des Eintrags "KRK beenden", solange die Belegung keines fuehrt.
-///
-/// **Die eine Kombination dieser Datei, die nicht aus der Belegung kommt, und
-/// sie ist als Defekt gemeldet.** S13b hat fuenf Menuekuerzel in
-/// `resources/default-keymap.toml` nachgetragen und den sechsten uebersehen:
-/// Cmd+Q loest in KRK etwas aus, steht in keiner Tastenliste, wird von der
-/// Konflikterkennung nicht gesehen und ist nicht umbelegbar — genau der blinde
-/// Fleck, den der Nutzerentscheid vom 260805-0000 schliessen wollte. Die
-/// Belegungsdatei gehoert dem `ontocoder`; dieser Schritt darf sie nur lesen.
-/// Gemeldet als
-/// `issues/260805-0753_o_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`.
-/// Dazu, am selben Eintrag, die Zweitform "Quit and Keep Windows" auf
-/// Opt+Cmd+Q, die AppKit zu `terminate:` dazustellt:
-/// `issues/260805-0753_o_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`.
-///
-/// Sobald die Datei eine Funktion `beenden` mit `gehalten_von = "menue"` auf
-/// `cmd+q` fuehrt, faellt diese Konstante weg und der Eintrag geht denselben
-/// Weg wie die uebrigen sechs.
-const NOTBEHELF_BEENDEN: &str = "cmd+q";
-
 /// Haelt macOS davon ab, dem Menue "Bearbeiten" eigene Eintraege dazuzustellen.
 ///
 /// **Zu rufen vor `NSApplication`, sonst ist es zu spaet.**
@@ -121,20 +119,27 @@ const NOTBEHELF_BEENDEN: &str = "cmd+q";
 /// Fleck, den der Nutzerentscheid vom 260805-0000 schliesst. Sie muss deshalb
 /// nicht bloss unbeachtet bleiben, sondern verschwinden.
 ///
-/// **Die beiden Schluessel in `resources/Info.plist` reichen dafuer nicht.**
-/// Gemessen am 260805 am signierten Buendel: `plutil -extract` liefert fuer
-/// `NSDisabledCharacterPaletteMenuItem` und `NSDisabledDictationMenuItem` in
-/// `KRK.app/Contents/Info.plist` beide Male `true`, und `--menue-protokoll`
-/// zeigte trotzdem "Start Dictation…" und drei Formen von "Emoji & Symbols",
-/// darunter Cmd+Leertaste sichtbar und Ctrl+Cmd+Leertaste verdeckt. Dieselben
-/// beiden Namen als **Nutzervorgabe** wirken: mit
+/// **Die beiden Schluessel in `resources/Info.plist` reichten dafuer nicht.**
+/// Am 260805 trug das signierte Buendel `NSDisabledCharacterPaletteMenuItem`
+/// und `NSDisabledDictationMenuItem` in seiner `Info.plist` beide auf `true`,
+/// und `--menue-protokoll` zeigte trotzdem "Start Dictation…" und drei Formen
+/// von "Emoji & Symbols", darunter Cmd+Leertaste sichtbar und
+/// Ctrl+Cmd+Leertaste verdeckt. Dieselben beiden Namen als **Nutzervorgabe**
+/// wirkten: mit
 /// `-NSDisabledCharacterPaletteMenuItem YES -NSDisabledDictationMenuItem YES`
 /// auf der Befehlszeile war das Menue leer bis auf die vier eigenen Eintraege.
 /// AppKit liest die beiden also aus `NSUserDefaults` und nicht aus der
 /// Bundle-Beschreibung; diese Funktion stellt sie dort in die
 /// Registrierungsebene, die jede Nutzereinstellung ueberschreiben kann.
-/// Gemeldet als
-/// `issues/260805-0753_o_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
+///
+/// **Die Messung steht, ihre Nachstellung nicht mehr.** Die beiden Schluessel
+/// sind am 260805-0820 aus `resources/Info.plist` entfernt, weil sie neben der
+/// Stelle standen, die die Sache traegt; ein `plutil -extract` gegen ein neu
+/// gebautes `KRK.app/Contents/Info.plist` findet sie seither nicht. Wer den
+/// Befund nachstellen will, braucht ein Buendel mit den Schluesseln. Beide
+/// Messungen, die des `coder` mit YES und die Gegenprobe des `ontocoder` mit
+/// NO, stehen vollstaendig in
+/// `issues/260805-0753_c_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
 ///
 /// Was bleibt, ist ein Trenner und ein Untermenue "AutoFill" **ohne Kuerzel**.
 /// Es loest ohne Belegung nichts aus und faellt deshalb nicht unter die Zusage.
@@ -160,11 +165,12 @@ pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu
     hauptmenue.addItem(&untermenue(
         mtm,
         ns_string!("KRK"),
-        &[notbehelf_befehl(
+        &[befehl(
             mtm,
+            belegung,
             ns_string!("KRK beenden"),
-            sel!(terminate:),
-            NOTBEHELF_BEENDEN,
+            sel!(beenden:),
+            "beenden",
         )],
     ));
     hauptmenue.addItem(&untermenue(
@@ -287,31 +293,6 @@ fn ohne_kuerzel(mtm: MainThreadMarker, titel: &NSString, aktion: Sel) -> Retaine
         ns_string!(""),
         NSEventModifierFlags::empty(),
     )
-}
-
-/// Ein Menuebefehl, dessen Kuerzel noch nicht in der Belegung steht.
-///
-/// Der eine Aufrufer ist der Eintrag "KRK beenden"; siehe
-/// [`NOTBEHELF_BEENDEN`].
-fn notbehelf_befehl(
-    mtm: MainThreadMarker,
-    titel: &NSString,
-    aktion: Sel,
-    geschrieben: &str,
-) -> Retained<NSMenuItem> {
-    match Kombination::lesen(geschrieben) {
-        Ok(kombination) => {
-            let (kuerzel, zusatztasten) = appkit_paar(kombination);
-            roher_befehl(mtm, titel, aktion, &kuerzel, zusatztasten)
-        }
-        // Kann nicht eintreten: die Konstante steht im Programmtext und eine
-        // Pruefung liest sie. Ein Abbruch waere hier trotzdem falsch, weil er
-        // die Anwendung um ein Menue braechte.
-        Err(fehler) => {
-            eprintln!("krk: {geschrieben} ist keine Kombination: {fehler}");
-            ohne_kuerzel(mtm, titel, aktion)
-        }
-    }
 }
 
 /// Ein Menuebefehl mit Titel, Aktion und dem fertigen AppKit-Paar.
@@ -597,13 +578,6 @@ mod tests {
         }
     }
 
-    /// Der Notbehelf steht als Zeichenkette im Programmtext; ein Tippfehler
-    /// darin naehme dem Eintrag "KRK beenden" sein Kuerzel.
-    #[test]
-    fn der_notbehelf_fuer_beenden_ist_eine_gueltige_kombination() {
-        assert!(Kombination::lesen(NOTBEHELF_BEENDEN).is_ok());
-    }
-
     /// Die Kennungen, unter denen `hauptmenue` seine Kuerzel sucht, stehen in
     /// der Auslieferungsbelegung. Ohne diese Zusage faende der Aufbau sie beim
     /// Start nicht und schriebe eine Meldung, die niemand liest.
@@ -611,6 +585,7 @@ mod tests {
     fn jede_kennung_des_hauptmenues_steht_in_der_auslieferungsbelegung() {
         let belegung = Belegung::auslieferung();
         for kennung in [
+            "beenden",
             "text_ausschneiden",
             "text_kopieren",
             "text_einfuegen",

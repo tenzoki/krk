@@ -52,16 +52,41 @@
 //! angehalten und freigegeben, und danach faellt die `Box`. Ein Rueckruf auf
 //! eine gefallene Senke gibt es damit nicht.
 //!
-//! Der Rueckruf laeuft auf dem Faden, dessen Laufschleife den Strom
-//! eingeplant hat. Das ist der Hauptfaden, und deshalb darf die Senke die
-//! Oberflaeche anfassen.
+//! Der Rueckruf laeuft auf der Warteschlange, der der Strom zugeteilt ist. Das
+//! ist die Hauptwarteschlange, die der Hauptfaden abarbeitet, und deshalb darf
+//! die Senke die Oberflaeche anfassen.
+//!
+//! # Warteschlange statt Laufschleife
+//!
+//! Bis zum 260805 haengte der Strom ueber `FSEventStreamScheduleWithRunLoop` in
+//! der Laufschleife des Hauptfadens. Der Kopf des Systems fuehrt diesen Aufruf
+//! seit macOS 13 als abgeloest: `API_DEPRECATED("Use
+//! FSEventStreamSetDispatchQueue instead.", macos(10.5, 13.0), ios(6.0,16.0))`
+//! in `FSEvents.h`. Rust sieht Apples Vermerk an einer von Hand geschriebenen
+//! Bindung nicht, der Uebersetzer warnte also nie; ein Aufruf, den Apple seit
+//! drei Hauptversionen abgeloest fuehrt, ist trotzdem eine Zusage auf Zeit.
+//! Gewechselt in
+//! `issues/260804-1451_c_fseventstreamschedulewithrunloop-ist-seit-macos-13-als-veraltet-gekennzeichnet.md`.
+//!
+//! **Die Zuteilung kostet keine neue Bindung.** `dispatch_get_main_queue()` ist
+//! im Kopf des Systems eine `static inline`-Funktion und keine Ausfuhr, der Weg
+//! dorthin waere das Symbol `_dispatch_main_q`. Diesen Weg geht die Kiste
+//! `dispatch2` bereits, und KRK fuehrt sie seit Schritt 16 fuer den Weckruf des
+//! Vermittlerfadens; `DispatchQueue::main()` ist genau dieselbe Warteschlange.
+//!
+//! **Was der Wechsel am Verhalten aendert: nichts, das hier zaehlt.** Die
+//! Hauptwarteschlange wird vom Hauptfaden abgearbeitet, der Rueckruf laeuft also
+//! weiter dort. Die Laufschleifen-Form brauchte dafuer ausdruecklich die
+//! gemeinsamen Modi, weil der gewoehnliche Modus ruht, solange der Nutzer
+//! blaettert oder ein Menue offen haelt; eine Warteschlange kennt diese
+//! Unterscheidung nicht und wird in beiden Faellen abgearbeitet. Die Ueberlegung
+//! zu den Modi entfaellt damit, statt uebergangen zu werden.
 
 use std::ffi::c_void;
 use std::path::PathBuf;
 
-use objc2_core_foundation::{
-    CFArray, CFIndex, CFRetained, CFRunLoop, CFRunLoopMode, CFString, kCFRunLoopCommonModes,
-};
+use dispatch2::DispatchQueue;
+use objc2_core_foundation::{CFArray, CFIndex, CFRetained, CFString};
 
 /// Die Spanne, die FSEvents Aenderungen sammelt, bevor es meldet.
 ///
@@ -133,12 +158,12 @@ unsafe extern "C" {
         kennzeichen: u32,
     ) -> FSEventStreamRef;
 
-    /// `void FSEventStreamScheduleWithRunLoop(FSEventStreamRef, CFRunLoopRef, CFStringRef)`
-    fn FSEventStreamScheduleWithRunLoop(
-        strom: FSEventStreamRef,
-        schleife: &CFRunLoop,
-        modus: &CFRunLoopMode,
-    );
+    /// `void FSEventStreamSetDispatchQueue(FSEventStreamRef, dispatch_queue_t)`
+    ///
+    /// Der Ersatz fuer `FSEventStreamScheduleWithRunLoop`, siehe Modulkopf.
+    /// `dispatch_queue_t` ist ein Zeiger auf das Warteschlangenobjekt; die
+    /// Referenz auf [`DispatchQueue`] ist genau das.
+    fn FSEventStreamSetDispatchQueue(strom: FSEventStreamRef, warteschlange: &DispatchQueue);
 
     /// `Boolean FSEventStreamStart(FSEventStreamRef)`
     ///
@@ -258,21 +283,15 @@ impl Dateisystemwache {
             return None;
         }
 
-        let schleife = CFRunLoop::current()?;
-        // Die gemeinsamen Modi und nicht der gewoehnliche, aus demselben Grund
-        // wie beim Einzugstakt der Dateiliste: der gewoehnliche Modus ruht,
-        // solange der Nutzer blaettert oder ein Menue offen haelt.
-        // SAFETY: Ein Fremdsymbol von CoreFoundation, dieselbe Art Zugriff wie
-        // auf `NSRunLoopCommonModes` beim Einzugstakt der Dateiliste.
-        let modus = unsafe { kCFRunLoopCommonModes }?;
-        // SAFETY: `strom` ist der eben angelegte und noch nicht eingeplante
-        // Strom; `schleife` ist die Laufschleife dieses Fadens.
-        unsafe { FSEventStreamScheduleWithRunLoop(strom, &schleife, modus) };
+        // SAFETY: `strom` ist der eben angelegte und noch keiner Warteschlange
+        // zugeteilte Strom; `DispatchQueue::main()` liefert die
+        // Hauptwarteschlange, die es fuer die Dauer des Prozesses gibt.
+        unsafe { FSEventStreamSetDispatchQueue(strom, DispatchQueue::main()) };
 
-        // SAFETY: `strom` ist eingeplant und noch nicht gestartet.
+        // SAFETY: `strom` ist zugeteilt und noch nicht gestartet.
         let gestartet = unsafe { FSEventStreamStart(strom) } != 0;
         if !gestartet {
-            // SAFETY: `strom` ist angelegt und eingeplant, aber nicht
+            // SAFETY: `strom` ist angelegt und zugeteilt, aber nicht
             // gestartet; genau dafuer sind die beiden Aufrufe da.
             unsafe {
                 FSEventStreamInvalidate(strom);
@@ -290,7 +309,7 @@ impl Dateisystemwache {
 
 impl Drop for Dateisystemwache {
     fn drop(&mut self) {
-        // SAFETY: `self.strom` ist ein gestarteter, eingeplanter Strom. Die
+        // SAFETY: `self.strom` ist ein gestarteter, zugeteilter Strom. Die
         // Reihenfolge Anhalten, Ungueltigmachen, Freigeben ist die, die
         // `FSEvents.h` im Abschnitt "Lifecycle" vorschreibt. Danach ruft
         // FSEvents `gemeldet` nicht mehr, und erst deshalb darf die Senke

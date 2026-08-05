@@ -10,17 +10,25 @@
 //!
 //! **Die Nummer haengt an den Stamm und nicht an den ganzen Namen.** Eine
 //! Kopie, die `foto.jpg007` hiesse, waere keine Bilddatei mehr. Getrennt wird
-//! am letzten Punkt, wie `std::path::Path` es trennt: `archiv.tar.gz` hat den
-//! Stamm `archiv.tar`, und `.gitignore` ist ein Stamm ohne Endung.
+//! am letzten Punkt: `archiv.tar.gz` hat den Stamm `archiv.tar`, und
+//! `.gitignore` ist ein Stamm ohne Endung.
+//!
+//! **Die Trennung steht nicht hier.** Sie steht in
+//! [`crate::operation::umbenennen::namen_teilen`], zusammen mit der
+//! Namenspruefung und dem freien Namen, und dieses Modul ruft sie. Bis zum
+//! 260805 zog es sie ein zweites Mal, ueber `Path::file_stem` und
+//! `Path::extension`; beide lieferten dasselbe, und das ist die Lage, in der
+//! eine Abweichung spaeter unbemerkt entsteht
+//! (`issues/260804-2040_c_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
 //!
 //! **Ein Trennzeichen vor der Nummer setzt KRK nicht.** Wer `Urlaub 007.jpg`
 //! will, ersetzt nach `Urlaub ` mit dem Leerzeichen am Ende; wer `Urlaub007.jpg`
 //! will, laesst es weg. Ein festes Trennzeichen waere eine Entscheidung, die die
 //! Regel dem Nutzer abnimmt, ohne dass er sie zuruecknehmen koennte.
 
-use std::ffi::OsStr;
 use std::fmt;
-use std::path::Path;
+
+use crate::operation::umbenennen::namen_teilen;
 
 /// Wie viele Stellen eine fortlaufende Nummer hoechstens tragen darf.
 ///
@@ -104,7 +112,7 @@ impl Regel {
         let Some(nummerierung) = self.nummerierung else {
             return ersetzt;
         };
-        let (stamm, endung) = stamm_und_endung(&ersetzt);
+        let (stamm, endung) = namen_teilen(&ersetzt);
         format!("{stamm}{}{endung}", nummerierung.ziffern(lauf))
     }
 
@@ -174,27 +182,6 @@ impl fmt::Display for Regelfehler {
 }
 
 impl std::error::Error for Regelfehler {}
-
-/// Teilt einen Namen in Stamm und Endung, die Endung einschliesslich des
-/// Punktes.
-///
-/// Getrennt wird so, wie `std::path::Path` trennt, und deshalb ueber `Path`
-/// statt ueber eine eigene Rechnung: `archiv.tar.gz` hat den Stamm
-/// `archiv.tar`, `.gitignore` ist ein Stamm ohne Endung, und `liesmich` hat
-/// keine. Dass `crate::operation::umbenennen` fuer `freier_name` dieselbe
-/// Trennung noch einmal von Hand zieht, ist als Defekt festgehalten
-/// (`issues/260804-2040_o_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`);
-/// dieser Schritt entscheidet ihn nicht, weil die andere Datei in seiner
-/// Dateiliste als lesend steht.
-fn stamm_und_endung(name: &str) -> (&str, String) {
-    let pfad = Path::new(name);
-    let stamm = pfad.file_stem().and_then(OsStr::to_str).unwrap_or(name);
-    let endung = pfad
-        .extension()
-        .and_then(OsStr::to_str)
-        .map_or_else(String::new, |endung| format!(".{endung}"));
-    (stamm, endung)
-}
 
 #[cfg(test)]
 mod tests {

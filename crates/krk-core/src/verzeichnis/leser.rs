@@ -8,10 +8,26 @@
 //!
 //! Zwei Entwurfsentscheidungen tragen den Rest:
 //!
-//! **Die Generationsnummer** liegt jedem Stapel bei. Wer schnell durch Ordner
-//! navigiert, hat mehrere Lesevorgaenge gleichzeitig unterwegs; der Hauptfaden
-//! verwirft jeden Stapel, dessen Generation nicht mehr die aktuelle ist. Das
-//! erspart jedem einzelnen Lesevorgang eine eigene Abbruchbehandlung.
+//! **Die Generationsnummer** liegt jedem Stapel bei, und sie ist heute kleiner
+//! zugeschnitten als bei ihrer Einfuehrung. Gedacht war sie als Filter am
+//! Hauptfaden: wer schnell durch Ordner navigiert, hat mehrere Lesevorgaenge
+//! unterwegs, und der Hauptfaden sollte jeden Stapel verwerfen, dessen
+//! Generation nicht mehr die aktuelle ist. Dieser Filter konnte nie greifen und
+//! ist am 260803-2025 entfernt worden
+//! (`issues/260803-1536_c_die-generationspruefung-kann-nicht-greifen-und-verdeckt-den-wirksamen-mechanismus.md`):
+//! jeder Tab haelt seinen eigenen [`Lesevorgang`] und liest allein aus dessen
+//! Kanal, ein Ordnerwechsel wirft den alten Vorgang samt Kanal weg, und damit
+//! kann ein fremder Stapel gar nicht erst ankommen.
+//!
+//! Was die Nummer noch traegt, sind zwei Dinge: sie benennt den Lesefaden
+//! (`krk-verzeichnisleser-<n>`), was ein Fadenprotokoll lesbar macht, und sie
+//! sagt [`Ordnermodell::leeren`](super::modell::Ordnermodell::leeren), zu
+//! welchem Lauf der Inhalt des Modells gehoert. Beides sind Aufgaben des
+//! **Aufrufers**, der die Nummer ohnehin haelt; der Lesevorgang und die Meldung
+//! mussten sie ihm deshalb nie zurueckgeben, und die Leser dafuer sind am
+//! 260805-0841 entfallen
+//! (`issues/260803-2025_c_zwei-generationsleser-im-kern-haben-keinen-aufrufer-mehr.md`).
+//! Sie liegt der Meldung weiter bei, weil `krk-bench` sie dort liest.
 //!
 //! **Der Kanal hat eine Kapazitaet von einem Stapel.** Ein unbegrenzter Kanal
 //! wuerde bei einem Ordner mit 100.000 Eintraegen den ganzen Bestand ein
@@ -80,18 +96,8 @@ pub enum Meldung {
     },
 }
 
-impl Meldung {
-    /// Die Generation der Meldung, gleich welcher Art sie ist.
-    pub fn generation(&self) -> u64 {
-        match self {
-            Meldung::Stapel { generation, .. } | Meldung::Fertig { generation, .. } => *generation,
-        }
-    }
-}
-
 /// Ein laufender Lesevorgang auf einem eigenen Faden.
 pub struct Lesevorgang {
-    generation: u64,
     abbruch: Arc<AtomicBool>,
     meldungen: Receiver<Meldung>,
     faden: Option<JoinHandle<()>>,
@@ -109,16 +115,10 @@ impl Lesevorgang {
             .spawn(move || lesefaden(&pfad, generation, &faden_abbruch, &sender))
             .expect("Arbeitsfaden fuer den Verzeichnisleser laesst sich nicht starten");
         Self {
-            generation,
             abbruch,
             meldungen,
             faden: Some(faden),
         }
-    }
-
-    /// Die Generation dieses Lesevorgangs.
-    pub fn generation(&self) -> u64 {
-        self.generation
     }
 
     /// Der Kanal, aus dem der Hauptfaden die Stapel holt.
@@ -133,11 +133,6 @@ impl Lesevorgang {
     /// gueltig.
     pub fn abbrechen(&self) {
         self.abbruch.store(true, Ordering::Relaxed);
-    }
-
-    /// Wahr, wenn der Abbruch angefordert wurde.
-    pub fn ist_abgebrochen(&self) -> bool {
-        self.abbruch.load(Ordering::Relaxed)
     }
 
     /// Wartet, bis der Arbeitsfaden geendet hat.

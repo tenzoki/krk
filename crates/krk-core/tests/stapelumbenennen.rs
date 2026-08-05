@@ -18,7 +18,7 @@
 //! Faelle ohne eine einzige angelegte Datei laufen.
 
 use krk_core::operation::Namensfehler;
-use krk_core::umbenennen::{Kollision, Nummerierung, Regel, vorschau};
+use krk_core::stapelumbenennen::{Kollision, Nummerierung, Regel, vorschau};
 
 /// Hilfe: aus Zeichenketten eine Namensliste.
 fn namen<const N: usize>(liste: [&str; N]) -> Vec<String> {

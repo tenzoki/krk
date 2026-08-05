@@ -75,7 +75,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::SyncSender;
 use std::time::{Duration, Instant};
 
-use krk_core::operation::{Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen};
+use krk_core::operation::{
+    Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen,
+};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
 
@@ -295,40 +297,34 @@ pub struct Anzeigestand {
 pub struct Vorgangszustand {
     /// Die Buendelung der Weckrufe.
     pub buendelung: Buendelung,
-    /// Der Abbruchwunsch des Nutzers.
+    /// Der Griff an das Abbruchkennzeichen des Laufs.
     ///
-    /// Der Hauptfaden setzt ihn, der Vermittlerfaden reicht ihn an den
-    /// [`krk_core::operation::Lauf`] weiter, sobald die naechste Meldung ihn
-    /// aufweckt. Der Hauptfaden kann den Lauf nicht selbst abbrechen, weil der
-    /// Empfaenger seines Kanals nicht zwischen Faeden geteilt werden darf.
-    abbruch: AtomicBool,
+    /// **Das Kennzeichen des Laufs selbst und keine Kopie davon.** Bis zum
+    /// 260805 stand hier ein zweiter `AtomicBool`: der Hauptfaden setzte ihn,
+    /// und der Vermittlerfaden reichte ihn an den Lauf weiter, sobald die
+    /// naechste Meldung ihn aufweckte. Bei einer Operation, die ueber Sekunden
+    /// nichts meldet, wirkte der Abbruch entsprechend spaet
+    /// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+    /// Seit `Lauf::abbruchgriff` das Kennzeichen herausgibt, setzt der
+    /// Hauptfaden es unmittelbar, und der Arbeitsfaden liest es beim naechsten
+    /// Eintrag oder im Statusrueckruf von `copyfile(3)`.
+    abbruch: Abbruchgriff,
     stand: Mutex<Anzeigestand>,
 }
 
-impl Default for Vorgangszustand {
-    fn default() -> Self {
-        Self::neu()
-    }
-}
-
 impl Vorgangszustand {
-    /// Ein leerer Zustand.
-    pub fn neu() -> Self {
+    /// Ein leerer Zustand zu einem eben gestarteten Lauf.
+    pub fn neu(abbruch: Abbruchgriff) -> Self {
         Self {
             buendelung: Buendelung::neu(),
-            abbruch: AtomicBool::new(false),
+            abbruch,
             stand: Mutex::new(Anzeigestand::default()),
         }
     }
 
     /// Der Nutzer hat abgebrochen.
     pub fn abbrechen(&self) {
-        self.abbruch.store(true, Ordering::Relaxed);
-    }
-
-    /// Ob der Nutzer abgebrochen hat.
-    pub fn abgebrochen(&self) -> bool {
-        self.abbruch.load(Ordering::Relaxed)
+        self.abbruch.abbrechen();
     }
 
     /// Reicht eine Aenderung an den Anzeigestand durch.
@@ -768,12 +764,18 @@ mod tests {
     }
 
     /// Dieselbe Rechnung ueber die Fadengrenze, wie sie im Betrieb laeuft.
+    ///
+    /// Geteilt wird die [`Buendelung`] und nicht der ganze [`Vorgangszustand`]
+    /// darum. Im Betrieb steckt sie in ihm, und er steckt in einem `Arc`, den
+    /// sich Haupt- und Vermittlerfaden teilen; gerechnet wird aber allein in
+    /// ihr. Seit der Zustand den Abbruchgriff eines wirklichen Laufs traegt,
+    /// braeuchte diese Pruefung sonst einen Lauf, den sie nicht startet, oder
+    /// einen Griff ohne Lauf, den es zu bauen nicht wert waere.
     #[test]
     fn auch_ueber_die_fadengrenze_weckt_nicht_jede_meldung() {
-        let zustand = Arc::new(Vorgangszustand::neu());
-        let arbeiter = Arc::clone(&zustand);
-        let melder =
-            thread::spawn(move || (0..20_000).filter(|_| arbeiter.buendelung.melden()).count());
+        let buendelung = Arc::new(Buendelung::neu());
+        let arbeiter = Arc::clone(&buendelung);
+        let melder = thread::spawn(move || (0..20_000).filter(|_| arbeiter.melden()).count());
         let weckrufe = melder.join().expect("der Melderfaden ist gescheitert");
         assert!(
             weckrufe <= 20_000,

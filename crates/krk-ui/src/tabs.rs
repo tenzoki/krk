@@ -120,7 +120,15 @@ impl Tabinhalt {
         self.gelesen || self.modell.zeilenzahl() > 0
     }
 
-    /// Die Bildlaufposition in Punkten.
+    /// Die Bildlaufposition in Punkten, vom oberen Rand der Liste aus gezaehlt.
+    ///
+    /// **0 heisst "ganz oben".** Der rohe Ursprung der Bildlaufansicht ist dort
+    /// nicht null, sondern liegt um die Hoehe der Spaltenueberschriften
+    /// darueber; `crate::appkit::tabelle` rechnet ihn beim Merken heraus und
+    /// beim Herstellen wieder hinein. Die Zahl steht in `session.toml`, die der
+    /// Nutzer lesen und von Hand aendern koennen soll, und eine negative Zahl
+    /// fuer "ganz oben" waere dort eine Stolperstelle
+    /// (`issues/260804-1040_c_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
     pub fn bildlauf(&self) -> f64 {
         self.bildlauf
     }
@@ -302,6 +310,40 @@ impl Tabliste {
     /// Die Beschriftungen aller Tabs, in der Reihenfolge der Leiste.
     pub fn titel(&self) -> Vec<String> {
         self.tabs.iter().map(Tabinhalt::titel).collect()
+    }
+
+    /// Die Ordner aller Tabs, in der Reihenfolge der Leiste (C9).
+    ///
+    /// Neben [`Tabliste::aktiver`], weil der Auswurf eines Datentraegers jeden
+    /// Tab trifft und nicht nur den sichtbaren.
+    pub fn tabordner(&self) -> Vec<PathBuf> {
+        self.tabs.iter().map(|tab| tab.ordner.clone()).collect()
+    }
+
+    /// Setzt einen **verdeckten** Tab auf einen anderen Ordner, ohne zu lesen
+    /// (C9).
+    ///
+    /// Der Weg des Auswurfs aus [`crate::auffrischung::datentraeger_verloren`]
+    /// fuer die Tabs, die niemand sieht. Der Tab wird ungelesen: sein bisheriger
+    /// Inhalt gehoert einem Ordner, den es nicht mehr gibt. Gelesen wird er
+    /// erst, wenn der Nutzer auf ihn wechselt, denn `waehlen` ruft
+    /// `ungelesenen_aktiven_nachlesen`. Ein Lesevorgang fuer einen verdeckten
+    /// Tab waere Arbeit fuer einen leeren Schirm; die zweite Stufe der
+    /// Lesereihenfolge ist zu diesem Zeitpunkt laengst gelaufen.
+    ///
+    /// Eine Stelle ausserhalb der Liste und die des sichtbaren Tabs werden
+    /// uebergangen: der sichtbare geht ueber [`Tabliste::ordner_setzen`], damit
+    /// er liest und die Ansicht nachzieht.
+    pub fn verdeckten_tab_setzen(&mut self, stelle: usize, ordner: impl Into<PathBuf>) {
+        if stelle >= self.tabs.len() || stelle == self.aktiv {
+            return;
+        }
+        let sortierung = self.tabs[stelle].modell.sortierung();
+        let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
+        let mut zustand = Tabzustand::auf(ordner);
+        zustand.sortierung = sortierung;
+        zustand.verstecke_ausgeblendet = verstecke;
+        self.tabs[stelle] = Tabinhalt::aus_zustand(&zustand);
     }
 
     /// Was die Lesereihenfolge von diesem Dateifenster wissen muss.

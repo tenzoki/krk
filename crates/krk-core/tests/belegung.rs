@@ -623,15 +623,68 @@ fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_die_sprungmarke() {
     }
 }
 
+/// Die Sprungmarke tippt Anfangsbuchstaben. Eine Kombination mit Zusatztaste
+/// ist keiner und muss weitergehen duerfen, statt in der Sprungmarke zu enden.
+///
+/// **Ohne festes Beispiel, und das ist der Punkt.** Die Vorgaengerin nannte
+/// `cmd+q`. Der Nachtrag des Eintrags `beenden` am 260805-0820 belegte die
+/// Kombination und machte die Pruefung rot, obwohl an der Zusage nichts kaputt
+/// war (`issues/260805-0820_c_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
+/// Ein anderes Beispiel verschoebe den Fehlschlag nur: anders als bei einem
+/// Tastennamen, den die Tabelle nie aufnehmen darf, kann jede Kombination
+/// eines Tages belegt werden. Die Pruefung sucht deshalb selbst, welche
+/// Kombinationen die Auslieferungsbelegung frei laesst, und prueft die Zusage
+/// an allen. Ein Nachtrag in `resources/default-keymap.toml` nimmt ihr damit
+/// einen Fall und laesst die uebrigen stehen.
 #[test]
-fn eine_unbelegte_kombination_mit_zusatztaste_faellt_nicht_auf_die_sprungmarke() {
-    // Die Sprungmarke tippt Anfangsbuchstaben. Cmd+Q ist kein Anfangsbuchstabe,
-    // sondern ein Kuerzel des Systems, und muss weitergehen duerfen.
+fn keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke() {
     let belegung = Belegung::auslieferung();
-    assert_eq!(
-        belegung.nachschlag(kombi("cmd+q").tastendruck()),
-        Nachschlag::Unbelegt
+    let vergeben: Vec<Tastendruck> = belegung
+        .funktionen()
+        .iter()
+        .flat_map(|funktion| funktion.tasten())
+        .map(|kombination| kombination.tastendruck())
+        .collect();
+
+    let mut geprueft = 0usize;
+    for taste in parser::TASTEN {
+        for maske in masken_mit_zusatztaste() {
+            let kombination = Kombination::neu(taste, maske);
+            if vergeben.contains(&kombination.tastendruck()) {
+                continue;
+            }
+            assert_eq!(
+                belegung.nachschlag(kombination.tastendruck()),
+                Nachschlag::Unbelegt,
+                "{kombination} faellt auf die Sprungmarke durch"
+            );
+            geprueft += 1;
+        }
+    }
+
+    // Ohne diese Zeile bestuende die Pruefung auch dann, wenn die
+    // Auslieferungsbelegung eines Tages jede Kombination mit Zusatztaste
+    // vergibt und es nichts mehr zu pruefen gibt.
+    assert!(
+        geprueft > 0,
+        "die Auslieferungsbelegung laesst keine Kombination mit Zusatztaste frei"
     );
+}
+
+/// Die fuenfzehn nicht leeren Masken ueber den vier Zusatztasten.
+///
+/// Gerechnet aus [`ModMaske::BENANNT`] und nicht hingeschrieben: kaeme eine
+/// fuenfte Zusatztaste dazu, waere eine Liste von Hand still unvollstaendig.
+fn masken_mit_zusatztaste() -> Vec<ModMaske> {
+    let bits: Vec<ModMaske> = ModMaske::BENANNT.iter().map(|(bit, _)| *bit).collect();
+    (1..(1u32 << bits.len()))
+        .map(|muster| {
+            bits.iter()
+                .enumerate()
+                .filter(|(stelle, _)| muster & (1 << stelle) != 0)
+                .fold(ModMaske::LEER, |maske, (_, bit)| maske | *bit)
+        })
+        .collect()
 }
 
 #[test]

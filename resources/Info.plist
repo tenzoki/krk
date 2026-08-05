@@ -56,25 +56,37 @@
 	<true/>
 
 	<!--
-	  Die beiden Eintraege, die macOS von sich aus an ein Menue "Bearbeiten"
-	  haengt, bleiben weg: "Emoji & Symbole" und "Diktat starten". Der erste
-	  traegt mit Ctrl+Cmd+Leertaste ein Kuerzel, und C3 sagt zu, dass das
-	  Hauptmenue genau die Kombinationen traegt, die die Belegung fuer seine
-	  Eintraege fuehrt, und keine weitere.
+	  Hier standen bis zum 260805 `NSDisabledCharacterPaletteMenuItem` und
+	  `NSDisabledDictationMenuItem`, mit denen macOS dem Menue "Bearbeiten"
+	  nicht von sich aus "Emoji & Symbole" und "Diktat starten" dazustellen
+	  sollte. **Sie greifen an dieser Stelle nicht.** AppKit liest die beiden
+	  aus `NSUserDefaults` und nicht aus der Buendelbeschreibung, und ein
+	  Schluessel ohne Wirkung in einer Datei, die sagen soll, was gilt, laesst
+	  einen spaeteren Leser die Ursache am falschen Ort suchen.
 
-	  `inference:` Dass macOS die beiden ungefragt dazustellt, ist in diesem
-	  Vorhaben nicht nachgemessen. Gemessen ist der gleichgelagerte Fall am
-	  Fenstermenue, wo AppKit ein "Close All" auf Opt+Shift+Cmd+W dazugestellt
-	  hat, das niemand bestellt hatte
-	  (`issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
-	  Ob die beiden Schluessel greifen, misst das Abnahmekriterium von S13c an
-	  `--menue-protokoll` gegen diese Datei.
+	  Wirksam ist `systemzusaetze_unterdruecken` in
+	  `crates/krk-ui/src/appkit/menue.rs`: die Funktion stellt dieselben beiden
+	  Namen ueber `registerDefaults:` in die unterste Vorgabenebene, bevor
+	  `NSApplication` entsteht. Wer die Unterdrueckung aendern will, aendert
+	  sie dort.
+
+	  Gemessen am 260805 am signierten Buendel, zweimal. Der `coder` hat mit
+	  den Schluesseln allein gemessen: `plutil -extract` liefert fuer beide in
+	  `KRK.app/Contents/Info.plist` `true`, und das mit der
+	  Menueprotokoll-Marke ausgelesene Hauptmenue trug trotzdem "Start
+	  Dictation…" und drei Formen von "Emoji & Symbols", darunter
+	  Ctrl+Cmd+Leertaste. Die Gegenprobe lief ueber dasselbe Buendel, um
+	  `-NSDisabledCharacterPaletteMenuItem NO` und
+	  `-NSDisabledDictationMenuItem NO` auf der Befehlszeile ergaenzt: die
+	  Schluessel standen unveraendert in der Beschreibung, und die fuenf
+	  Systemzeilen kamen zurueck. Beide Befunde stehen in
+	  `issues/260805-0753_c_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
+
+	  Mit den beiden Schluesseln faellt zugleich der einzige Doppelstrich aus
+	  dieser Datei weg, der in einem XML-Kommentar nicht stehen darf: sie ist
+	  seither nicht nur nach `plutil -lint` gueltig, sondern auch nach
+	  `xmllint`.
 	-->
-	<key>NSDisabledCharacterPaletteMenuItem</key>
-	<true/>
-
-	<key>NSDisabledDictationMenuItem</key>
-	<true/>
 
 	<!--
 	  Die fuenf Rueckfragetexte des Systemmechanismus fuer Transparenz,
