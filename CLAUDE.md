@@ -18,7 +18,7 @@ Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zus�
 
 ## Projektstand
 
-Geprüft am 260803-1321. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung zeigt ein Fenster mit einer echten Dateiliste, die sich mit den Pfeiltasten bedienen lässt.
+Geprüft am 260806-0014. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
 
 ```
 krk/
@@ -30,14 +30,14 @@ krk/
 ├── crates/krk-bench/     # Prüfordner-Erzeuger und kopflose Messstrecke
 ├── xtask/                # Bauwerkzeug: Bündel, Versionsersetzung, Signierung
 ├── resources/Info.plist  # Bündelbeschreibung mit Versionsplatzhalter
-├── messungen/            # Messberichte der kopflosen Strecke
+├── messungen/            # Messberichte: kopflose Strecke, Durchstich, Abnahmereihen
 ├── spikes/fn-tasten/     # Wegwerf-Prüfcode zur Fn-Tastenfrage, nicht weitergepflegt
 ├── README.md             # Bauen, Signieren, Versionspflege im Einzelnen
 ├── idea.txt              # der ursprüngliche Entwurf, Quelle der Directive
 └── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-Den Ausführungsstand führt der Plan `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`: 8 der 24 Schritte tragen dort `[DONE]`, als nächstes steht S8, die Frühmessung als Gate. Drei Defekte sind offen (Marker `_o_` unter `issues/`), alle drei betreffen Schritt 7.
+Den Ausführungsstand führt der Plan `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`: 34 der 36 Schritte tragen dort `[DONE]`, offen sind S6b (Abbruch beim fehlenden Tastenabgriff) und S23 (Auslieferungspaket). Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält neun der zehn Zusagen in jeder Runde; L9 verfehlt den Anteil, die Frage dazu steht in `decisions/260806-0014_o_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
 
 `krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 
