@@ -132,6 +132,9 @@ struct Geladen {
 #[derive(Debug)]
 pub struct Ladevorgang {
     empfaenger: Receiver<Geladen>,
+    /// Welche Datei geladen wird. Beim Eintreffen der Meldung wird sie zum
+    /// angezeigten Pfad des Tabs.
+    pfad: PathBuf,
 }
 
 impl Ladevorgang {
@@ -139,13 +142,14 @@ impl Ladevorgang {
     fn starten(pfad: PathBuf) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
+        let fuer_faden = pfad.clone();
         let ergebnis = thread::Builder::new()
             .name("krk-vorschau".to_owned())
             .spawn(move || {
                 let _ = SyncSender::send(
                     &sender,
                     Geladen {
-                        inhalt: laden(&pfad),
+                        inhalt: laden(&fuer_faden),
                     },
                 );
             });
@@ -156,7 +160,7 @@ impl Ladevorgang {
             // einzige Spur, die der Fall hinterlaesst.
             eprintln!("krk: der Vorschau-Arbeitsfaden liess sich nicht starten: {fehler}");
         }
-        Self { empfaenger }
+        Self { empfaenger, pfad }
     }
 }
 
@@ -167,6 +171,13 @@ struct Vorschautab {
     titel: String,
     /// Was der Tab zeigt.
     inhalt: Inhalt,
+    /// Welche Datei [`Vorschautab::inhalt`] zeigt; `None` fuer alles, was
+    /// keine Datei ist, etwa die Zwischenablage oder den leeren Tab.
+    ///
+    /// Der Pfad wechselt erst, wenn der Arbeitsfaden geliefert hat — genau
+    /// wie der Inhalt. Waehrend eines Ladens sagt er also weiterhin, was auf
+    /// dem Schirm steht, und die Endbedingung von L7 fragt genau das.
+    pfad: Option<PathBuf>,
     /// Das laufende Laden, falls eines laeuft.
     ladevorgang: Option<Ladevorgang>,
 }
@@ -176,6 +187,7 @@ impl Vorschautab {
         Self {
             titel: "Leer".to_owned(),
             inhalt: Inhalt::Leer,
+            pfad: None,
             ladevorgang: None,
         }
     }
@@ -302,6 +314,7 @@ impl Vorschaumodell {
         let tab = &mut self.tabs[self.aktiv];
         tab.titel = "Zwischenablage".to_owned();
         tab.ladevorgang = None;
+        tab.pfad = None;
         tab.inhalt = match inhalt {
             Zwischenablageinhalt::Text(text) => Inhalt::Text(text),
             Zwischenablageinhalt::Bild(daten) => Inhalt::Bild {
@@ -319,6 +332,13 @@ impl Vorschaumodell {
         self.tabs.iter().any(|tab| tab.ladevorgang.is_some())
     }
 
+    /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
+    ///
+    /// Nur zum Ablesen, fuer die Endbedingung von L7 im Messmodus.
+    pub fn aktiver_pfad(&self) -> Option<PathBuf> {
+        self.tabs[self.aktiv].pfad.clone()
+    }
+
     /// Holt die wartenden Meldungen aller Tabs ab.
     ///
     /// Liefert, ob sich der **aktive** Tab dabei geaendert hat; nur dann muss
@@ -330,9 +350,11 @@ impl Vorschaumodell {
             let Some(vorgang) = tab.ladevorgang.as_ref() else {
                 continue;
             };
+            let geladener_pfad = vorgang.pfad.clone();
             match vorgang.empfaenger.try_recv() {
                 Ok(geladen) => {
                     tab.inhalt = geladen.inhalt;
+                    tab.pfad = Some(geladener_pfad);
                     tab.ladevorgang = None;
                     if stelle == self.aktiv {
                         aktiver_geaendert = true;

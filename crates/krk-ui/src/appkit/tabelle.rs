@@ -709,6 +709,30 @@ impl DateifensterQuelle {
         self.ivars().tabelle.selectedRow()
     }
 
+    /// Der vollstaendige Pfad des ausgewaehlten Eintrags; `None` ohne Auswahl.
+    ///
+    /// Nur zum Ablesen, fuer die Endbedingung von L7: die Vorschau ist
+    /// fertig, wenn sie genau diesen Pfad zeigt.
+    pub fn auswahl_pfad(&self) -> Option<PathBuf> {
+        let zeile = self.ivars().tabelle.selectedRow();
+        if zeile < 0 {
+            return None;
+        }
+        let tabs = self.ivars().tabs.borrow();
+        let tab = tabs.aktiver();
+        tab.modell()
+            .zeile(zeile as usize)
+            .map(|eintrag| tab.ordner().join(&eintrag.name))
+    }
+
+    /// Ob die Vorgangsanzeige einer Dateioperation in der Statuszeile steht.
+    ///
+    /// Nur zum Ablesen, fuer die Endbedingung von L8: die Zeile erscheint mit
+    /// dem naechsten Zeichendurchgang, nachdem sie hier gesetzt wurde.
+    pub fn vorgang_sichtbar(&self) -> bool {
+        self.ivars().vorgangsanzeige.borrow().is_some()
+    }
+
     /// Bricht jeden laufenden Lesevorgang ab und laesst stehen, was da ist.
     pub fn lesen_abbrechen(&self) {
         self.einzug_beenden();

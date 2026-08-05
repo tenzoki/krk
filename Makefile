@@ -103,16 +103,28 @@ signatur: ## Signatur des gebauten Buendels pruefen
 # Die Pruefordner liegen unter /tmp und nicht im Quellbaum: sie sind gross,
 # reproduzierbar aus ihrem Startwert und gehoeren keinem Commit an.
 ORDNER_A    := /tmp/krk-pruefordner-a
+ORDNER_B    := /tmp/krk-pruefordner-b
 ORDNER_100K := /tmp/krk-pruefordner-gross
+KOPIERZIEL  := /tmp/krk-kopierziel
 
 .PHONY: fixture
-fixture: ## Beide Pruefordner anlegen, 10.000 und 100.000 Eintraege
+fixture: ## Die drei Pruefordner anlegen: A und B mit 10.000, einer mit 100.000
 	$(CARGO) run -p krk-bench --release -- fixture --eintraege 10000  --seed 1 --out $(ORDNER_A)
+	$(CARGO) run -p krk-bench --release -- fixture --eintraege 10000  --seed 2 --out $(ORDNER_B)
 	$(CARGO) run -p krk-bench --release -- fixture --eintraege 100000 --seed 3 --out $(ORDNER_100K)
 
 .PHONY: messen
 messen: ## Kopflos lesen und sortieren messen: make messen ORDNER=/pfad
 	$(CARGO) run -p krk-bench --release -- messen --kopflos --ordner $(or $(ORDNER),$(ORDNER_A))
+
+.PHONY: alle
+alle: ## Alle zehn Zusagen messen (S21): make alle RUNDEN=1
+	$(CARGO) xtask messen --alle \
+	  --ordner-a $(ORDNER_A) \
+	  --ordner-b $(ORDNER_B) \
+	  --ordner100k $(ORDNER_100K) \
+	  --kopierziel $(KOPIERZIEL) \
+	  --runden $(or $(RUNDEN),1)
 
 .PHONY: durchstich
 durchstich: bundle ## Die fuenf Zusagen am Buendel messen: make durchstich RUNDEN=5

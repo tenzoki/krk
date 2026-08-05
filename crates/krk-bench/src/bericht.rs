@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::messen::Messreihe;
+use crate::messen::{self, ANTEIL_IM_BILD_PROZENT, Gesamtergebnis, Gesamtlauf, Messreihe, Zusage};
 
 /// Der Ordner, in dem die Berichte liegen.
 pub const MESSUNGEN: &str = "messungen";
@@ -199,6 +199,290 @@ pub fn schreiben(ziel: &Path, reihe: &Messreihe, text: &str) -> io::Result<PathB
     fs::write(&pfad, text)?;
     Ok(pfad)
 }
+
+// ---------------------------------------------------------------------------
+// Der Abnahmebericht ueber alle zehn Zusagen (Schritt 21)
+// ---------------------------------------------------------------------------
+
+/// Setzt den Abnahmebericht ueber alle zehn Zusagen zusammen.
+///
+/// Der Bedingungskopf traegt die neun verlangten Angaben, darunter die
+/// Bildwiederholrate als Zahl aus `NSScreen` und — als neunte Angabe seit dem
+/// 260804-2318 — die Systemlast vor und nach dem Lauf, an der der
+/// L4-Streuungsvergleich aus S22 pruefbar wird.
+pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String {
+    let mut text = String::new();
+    let _ = writeln!(
+        text,
+        "KRK — Abnahmebericht ueber die zehn Zusagen aus C8 (Schritt 21)"
+    );
+    let _ = writeln!(
+        text,
+        "==============================================================="
+    );
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Bedingungen");
+    let _ = writeln!(text, "-----------");
+    let mut zeile = |name: &str, wert: &str| {
+        let _ = writeln!(text, "{name:<22}{wert}");
+    };
+    zeile("Zeitpunkt", &zeitstempel(SystemTime::now()));
+    zeile(
+        "hw.model",
+        &befehl_ausgabe("/usr/sbin/sysctl", &["-n", "hw.model"]),
+    );
+    zeile("sw_vers", &betriebssystem());
+    zeile(
+        "Bildwiederholrate",
+        &format!(
+            "{} Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des \
+             gemessenen Fensters; eine Bildlaenge sind damit {}",
+            ergebnis.bildwiederholrate,
+            spanne(ergebnis.bildlaenge)
+        ),
+    );
+    zeile(
+        "Cache-Zustand",
+        "warm (purge braucht Rechte, die dieser Lauf nicht hat; L4 ist damit eine \
+         Untergrenze der Kaltstart-Zusage, siehe Einschraenkungen)",
+    );
+    zeile(
+        "Wiederholungen",
+        &format!(
+            "{} je Zusage und Runde, {} Runden",
+            lauf.wiederholungen, lauf.runden
+        ),
+    );
+    zeile("Pruefordner A", &messen::ordner_beschreiben(&lauf.ordner_a));
+    zeile("Pruefordner B", &messen::ordner_beschreiben(&lauf.ordner_b));
+    zeile(
+        "Pruefordner 100k",
+        &messen::ordner_beschreiben(&lauf.ordner100k),
+    );
+    zeile(
+        "Unterordner L6",
+        &messen::ordner_beschreiben(&ergebnis.unterordner),
+    );
+    zeile(
+        "Kopierziel L8/L9",
+        &format!(
+            "{} (derselbe APFS-Datentraeger wie Pruefordner A, geprueft; \
+             Klonweg, keine Durchsatzmessung)",
+            lauf.kopierziel.display()
+        ),
+    );
+    zeile("Pruefsitzung", PRUEFSITZUNG);
+    zeile(
+        "Systemlast",
+        &format!(
+            "vor dem Lauf {}, nach dem Lauf {} (sysctl vm.loadavg)",
+            ergebnis.systemlast_vorher, ergebnis.systemlast_nachher
+        ),
+    );
+    zeile("Gemessenes Buendel", &lauf.programm.display().to_string());
+    zeile(
+        "Werkzeug",
+        &format!(
+            "krk-bench {}, Ziel {}-{}, {}",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::ARCH,
+            std::env::consts::OS,
+            bauart()
+        ),
+    );
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Zahlen");
+    let _ = writeln!(text, "------");
+    let _ = writeln!(
+        text,
+        "Zwei Abnahmemasse stehen nebeneinander, die Spalte \"Abnahme nach\" nennt je"
+    );
+    let _ = writeln!(
+        text,
+        "Zeile, welches gilt: das 95. Perzentil der Runde fuer die Dauerzusagen, der"
+    );
+    let _ = writeln!(
+        text,
+        "Anteil der Eingaben im naechsten Bild fuer L1 und L9. Das Perzentil steht je"
+    );
+    let _ = writeln!(
+        text,
+        "Runde einmal; Median, Minimum und Maximum laufen ueber alle Einzelwerte."
+    );
+    let _ = writeln!(text);
+    let _ = writeln!(
+        text,
+        "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   Urteil",
+        "Gemessene Groesse",
+        "p95 bestes",
+        "p95 schlecht",
+        "Median",
+        "Minimum",
+        "Maximum",
+        "im Bild",
+        "Abnahme nach"
+    );
+    for zusage in &ergebnis.zusagen {
+        let _ = writeln!(
+            text,
+            "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   {}",
+            format!("{} — {}", zusage.kennung, zusage.was),
+            spanne(zusage.bestes_perzentil()),
+            spanne(zusage.schlechtestes_perzentil()),
+            spanne(zusage.median()),
+            spanne(zusage.minimum()),
+            spanne(zusage.maximum()),
+            match zusage.schlechtester_anteil() {
+                Some(prozent) => format!("{prozent:.1} %"),
+                None => "-".to_owned(),
+            },
+            zusage.mass.beschreibung(),
+            messen::urteil(zusage)
+        );
+    }
+    let _ = writeln!(text);
+    let _ = writeln!(
+        text,
+        "Urteil: {}",
+        if ergebnis.bestanden() {
+            "alle zehn Zusagen halten ihr Mass in jeder Runde."
+        } else {
+            "MINDESTENS EINE ZUSAGE IST VERFEHLT; die Tabelle nennt welche. Eine \
+             verfehlte Zusage fuehrt zu einem Entscheidungsdatensatz, nicht zu einer \
+             stillschweigenden Lockerung (C8)."
+        }
+    );
+    let _ = writeln!(text);
+
+    let anteilszeilen: Vec<&Zusage> = ergebnis
+        .zusagen
+        .iter()
+        .filter(|zusage| zusage.im_bild().is_some())
+        .collect();
+    if !anteilszeilen.is_empty() {
+        let _ = writeln!(text, "Der Anteil im naechsten Bild, Runde fuer Runde");
+        let _ = writeln!(text, "---------------------------------------------");
+        let _ = writeln!(
+            text,
+            "Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine"
+        );
+        let _ = writeln!(
+            text,
+            "Bildlaenge betraegt, hier {}. Gehalten heisst: in jeder Runde mindestens {} %.",
+            spanne(ergebnis.bildlaenge),
+            ANTEIL_IM_BILD_PROZENT
+        );
+        for zusage in anteilszeilen {
+            let runden = zusage.im_bild().unwrap_or_default();
+            let werte: Vec<String> = runden
+                .into_iter()
+                .map(|(erreicht, gesamt)| {
+                    let prozent = if gesamt == 0 {
+                        0.0
+                    } else {
+                        100.0 * erreicht as f64 / gesamt as f64
+                    };
+                    format!("{prozent:.1} % ({erreicht}/{gesamt})")
+                })
+                .collect();
+            let _ = writeln!(text, "{:<8}{}", zusage.kennung, werte.join("  "));
+        }
+        let _ = writeln!(text);
+    }
+
+    let _ = writeln!(text, "Einzelwerte");
+    let _ = writeln!(text, "-----------");
+    for zusage in &ergebnis.zusagen {
+        let _ = writeln!(text, "{} ({}):", zusage.kennung, zusage.was);
+        for (nummer, runde) in zusage.runden.iter().enumerate() {
+            let werte: Vec<String> = runde.iter().copied().map(spanne).collect();
+            let _ = writeln!(text, "  Runde {}:", nummer + 1);
+            for buendel in werte.chunks(5) {
+                let _ = writeln!(text, "    {}", buendel.join("  "));
+            }
+        }
+    }
+    let _ = writeln!(text);
+    text.push_str(GESAMT_LESART);
+    text
+}
+
+/// Schreibt den Abnahmebericht in den Messungenordner und liefert seinen Pfad.
+pub fn gesamt_schreiben(ziel: &Path, text: &str) -> io::Result<PathBuf> {
+    if !ziel.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "{} gibt es nicht. Rufe das Werkzeug aus dem Projektwurzelverzeichnis \
+                 auf oder nenne den Ordner ueber --ziel.",
+                ziel.display()
+            ),
+        ));
+    }
+    let pfad = ziel.join(format!(
+        "{}-alle-zusagen.txt",
+        kurzstempel(SystemTime::now())
+    ));
+    fs::write(&pfad, text)?;
+    Ok(pfad)
+}
+
+/// Die Pruefsitzung aus C8, wie der Kopf sie beschreibt.
+const PRUEFSITZUNG: &str = "zwei Dateifenster mit je zwei Tabs: links Pruefordner A \
+sichtbar und B dahinter, rechts umgekehrt; Auswahl in beiden sichtbaren Tabs auf dem \
+ersten Eintrag, Lesezeichenleiste und Vorschau eingeblendet, Breiten im \
+Auslieferungszustand. Hergestellt ueber session.toml, in derselben Serialisierung, \
+die die Anwendung beim Beenden schreibt";
+
+/// Was der Bericht ueber seine eigenen Zahlen sagen muss.
+const GESAMT_LESART: &str = "\
+Lesart und Einschraenkungen
+---------------------------
+**L1 ist die Spanne vom Zeitstempel des Tastenereignisses bis zum Ende des
+Zeichendurchgangs, der die Aenderung traegt — keine Bildschirmmessung.** Eine
+Bildgrenze ist der Zeitpunkt, an dem das System sein naechstes Bild
+vorbereitet, nicht der, an dem ein Pixel leuchtet; aus dem eigenen Prozess
+heraus ist der zweite nicht feststellbar. Dasselbe Ende gilt fuer L5, L6, L7,
+L8 und L9: ein Messweg, kein zweiter daneben.
+
+L1, L5, L6, L7, L8 und L9 sind auf der Pruefsitzung im laufenden Buendel
+gemessen, mit synthetischen Tastenereignissen ueber die eigene
+Ereignisschlange (postEvent:atStart:), die denselben Weg gehen wie ein
+koerperlicher Druck. Der Ausloeser haengt an einem Zeitgeber von 97 ms, keinem
+Vielfachen der Bildlaenge, damit der Druckzeitpunkt ueber die Wiederholungen
+durch das Bild wandert.
+
+**L2, L3 und L10 stammen aus der kopflosen Strecke aus Schritt 3** und sind
+mit diesem Bericht zusammengefuehrt. Fuer L2 und die erste Bildschirmseite von
+L10 ist das der Anteil des Kerns, ohne das Zeichnen; was das Zeichnen dazulegt,
+hat die Fruehmessung aus Schritt 8 am Durchstich gemessen. L3 und das
+vollstaendige Lesen von L10 enden im Kern, ihre Zahlen sind vollstaendig.
+
+**L4 ist warm gemessen, C8 sagt Kaltstart.** purge braucht Rechte, die dieser
+Lauf nicht hat; die Zahl ist eine Untergrenze der Zusage. Gemessen ist der
+Prozessstart bis zur bedienbaren Pruefsitzung: beide sichtbaren Tabs zeigen
+ihre erste Bildschirmseite, die Tastatur reagiert. Die Sitzung kommt aus
+session.toml, geschrieben vom Sitzungslauf davor.
+
+**L5 ist in beiden Faellen mit bereits gelesenen Zielordnern gemessen** (ein
+ungemessener Wechsel davor waermt sie): das ist der Regelfall, den C8 nennt,
+weil KRK nach dem Erreichen der bedienbaren Oberflaeche weiterliest. Ende ist
+die bedienbare erste Bildschirmseite des Ziels; das vollstaendige Lesen fiele
+unter L2, L3 beziehungsweise L10.
+
+**L8 misst den Weg wie L1, L5, L6 und L7**: vom F5-Ereignis bis zum Ende des
+Zeichendurchgangs, mit dem die Vorgangsanzeige in der Statuszeile steht. Die
+Kopie laeuft auf Pruefordner A mit allen Eintraegen markiert, auf demselben
+APFS-Datentraeger; nach der L9-Eingabe wird sie abgebrochen und das
+Kopierziel geleert, damit jede Wiederholung dasselbe misst. L9 zaehlt wie L1
+den Anteil der Eingaben im naechsten Bild, waehrend die Kopie laeuft.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
+zwanzig Laeufen der neunzehnte der sortierten Reihe. Eine Zusage gilt nur als
+gehalten, wenn sie es in jeder Runde tut.
+";
 
 // ---------------------------------------------------------------------------
 // Angaben des Geraets
@@ -447,6 +731,83 @@ mod tests {
         assert_eq!(spanne(Duration::from_millis(12)), "12.000 ms");
         assert_eq!(spanne(Duration::from_micros(1_234)), "1.234 ms");
         assert_eq!(spanne(Duration::ZERO), "0.000 ms");
+    }
+
+    #[test]
+    fn der_abnahmebericht_traegt_alle_zehn_zusagen_und_den_vollen_kopf() {
+        use crate::messen::{Abnahmemass, Gesamtergebnis, Gesamtlauf, Zusage};
+
+        let bildlaenge = Duration::from_secs_f64(1.0 / 60.0);
+        let runde: Vec<Duration> = vec![Duration::from_millis(10); 20];
+        let zusage = |kennung: &'static str, was: &'static str, mass: Abnahmemass| Zusage {
+            kennung,
+            was,
+            mass,
+            runden: vec![runde.clone()],
+        };
+        let lauf = Gesamtlauf {
+            programm: PathBuf::from("/egal/KRK.app/Contents/MacOS/krk"),
+            ordner_a: PathBuf::from("/tmp/a"),
+            ordner_b: PathBuf::from("/tmp/b"),
+            ordner100k: PathBuf::from("/tmp/gross"),
+            kopierziel: PathBuf::from("/tmp/ziel"),
+            wiederholungen: 20,
+            runden: 1,
+        };
+        let p = |ms: u64| Abnahmemass::Perzentil(Duration::from_millis(ms));
+        let ergebnis = Gesamtergebnis {
+            bildwiederholrate: 60,
+            bildlaenge,
+            unterordner: PathBuf::from("/tmp/a-l6"),
+            systemlast_vorher: "{ 1.0 1.0 1.0 }".to_owned(),
+            systemlast_nachher: "{ 1.2 1.1 1.0 }".to_owned(),
+            zusagen: vec![
+                zusage(
+                    "L1",
+                    "Tastendruck",
+                    Abnahmemass::AnteilImBild { bildlaenge },
+                ),
+                zusage("L2", "erste Seite", p(100)),
+                zusage("L3", "vollstaendig", p(400)),
+                zusage("L4", "Start", p(1000)),
+                zusage("L5", "Tabwechsel", p(50)),
+                zusage("L5", "Fensterwechsel", p(50)),
+                zusage("L6", "Unterordner", p(100)),
+                zusage("L7", "Vorschau", p(100)),
+                zusage("L8", "Fortschritt", p(200)),
+                zusage("L9", "Kopie", Abnahmemass::AnteilImBild { bildlaenge }),
+                zusage("L10", "erste Seite", p(100)),
+                zusage("L10", "vollstaendig", p(4000)),
+            ],
+        };
+        let text = gesamt_verfassen(&lauf, &ergebnis);
+
+        // Der Kopf: die drei Pruefordner, das Kopierziel, die Pruefsitzung,
+        // die Bildwiederholrate als Zahl und die Systemlast als neunte Angabe.
+        for angabe in [
+            "Pruefordner A",
+            "Pruefordner B",
+            "Pruefordner 100k",
+            "Unterordner L6",
+            "Kopierziel L8/L9",
+            "Pruefsitzung",
+            "60 Hz, gelesen aus NSScreen.maximumFramesPerSecond",
+            "Systemlast",
+            "vor dem Lauf { 1.0 1.0 1.0 }",
+        ] {
+            assert!(text.contains(angabe), "im Kopf fehlt {angabe}:\n{text}");
+        }
+        // Alle zehn Kennungen stehen in der Tabelle.
+        for kennung in [
+            "L1 —", "L2 —", "L3 —", "L4 —", "L5 —", "L6 —", "L7 —", "L8 —", "L9 —", "L10 —",
+        ] {
+            assert!(text.contains(kennung), "es fehlt die Zusage {kennung}");
+        }
+        // L8 wird gegen 200 ms Perzentil abgenommen, L1 als Spanne bis zum
+        // Ende des Zeichendurchgangs gekennzeichnet.
+        assert!(text.contains("p95 <= 200 ms"));
+        assert!(text.contains("Ende des\nZeichendurchgangs") || text.contains("Zeichendurchgang"));
+        assert!(ergebnis.bestanden());
     }
 
     #[test]

@@ -15,6 +15,7 @@
 //! Buendel pruefbar, und das Buendel steht daher vor dem ersten Fenster.
 
 mod bundle;
+mod messen;
 mod sign;
 
 use std::process::ExitCode;
@@ -33,6 +34,14 @@ xtask — Bauwerkzeug fuer KRK
       die einzige gueltige Identitaet des Schluesselbunds, falls es genau
       eine gibt. Findet keine Stufe eine Identitaet, bricht der Bau mit
       einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
+
+  cargo xtask messen --alle --ordner-a P --ordner-b P --ordner100k P --kopierziel P
+      Der eine Einstiegspunkt fuer beide Messstrecken (Schritt 21): baut das
+      Buendel und faehrt den Abnahmelauf ueber alle zehn Zusagen L1 bis L10
+      in krk-bench. Weitere Marken: --runden N, --ziel PFAD.
+
+  cargo xtask messen --kopflos --ordner P [--kalt] [--ziel P]
+      Die kopflose Strecke aus Schritt 3, unveraendert durchgereicht.
 
   cargo xtask --hilfe
 ";
@@ -80,6 +89,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             println!("Buendel: {}", buendel.display());
             Ok(())
         }
+        "messen" => messen::ausfuehren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");
             Ok(())

@@ -34,7 +34,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use messen::{Cache, Durchstich, Messreihe, WIEDERHOLUNGEN};
+use messen::{Cache, Durchstich, Gesamtlauf, Messreihe, WIEDERHOLUNGEN};
 
 const HILFE: &str = "\
 krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
@@ -50,6 +50,19 @@ krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
       --kalt   leert vor jedem Lauf den Dateisystem-Cache ueber purge und
                bricht ab, wenn das nicht gelingt. Braucht sudo.
       --ziel   ein anderer Berichtsordner als messungen/.
+
+  krk-bench alle --buendel PFAD --ordner-a PFAD --ordner-b PFAD
+                 --ordner100k PFAD --kopierziel PFAD [--runden N] [--ziel PFAD]
+      Der Abnahmelauf aus Schritt 21: alle zehn Zusagen L1 bis L10 in einem
+      Bericht. Die Anwendung misst L1, L5, L6, L7, L8 und L9 auf der
+      Pruefsitzung aus C8, die L4-Starts messen den Kaltpfad auf derselben
+      Sitzung, und die kopflose Strecke aus Schritt 3 traegt L2, L3 und L10
+      bei. Der Unterordner fuer L6 (1.000 Eintraege) entsteht neben
+      Pruefordner A, falls er fehlt.
+      --kopierziel  muss leer sein und auf demselben APFS-Datentraeger
+                    liegen wie Pruefordner A; sonst bricht der Lauf mit
+                    Rueckgabewert ungleich 0 ab und gibt keine Zahl aus.
+      Rueckgabewert 0, wenn alle Zusagen ihr Mass halten, sonst 1.
 
   krk-bench durchstich --buendel PFAD --ordner-a PFAD --ordner100k PFAD
                        [--runden N] [--ziel PFAD]
@@ -110,6 +123,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         "fixture" => fixture_bauen(&argumente[1..]),
         "messen" => messen_fahren(&argumente[1..]),
         "durchstich" => durchstich_fahren(&argumente[1..]),
+        "alle" => alle_fahren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");
             Ok(())
@@ -194,13 +208,14 @@ fn messen_fahren(argumente: &[String]) -> Result<(), Abbruch> {
     }
 
     if !kopflos {
-        // Kein stillschweigendes Ausweichen auf die einzige Strecke, die es
-        // gibt: die Messung an der laufenden Anwendung kommt mit Schritt 21,
-        // und bis dahin soll ein Aufruf ohne --kopflos nicht so aussehen, als
-        // haette er sie gefahren.
+        // Kein stillschweigendes Ausweichen: ein Aufruf ohne --kopflos soll
+        // nicht so aussehen, als haette er eine andere Strecke gefahren. Die
+        // Messung an der laufenden Anwendung erreichen `durchstich` und
+        // `alle`.
         return Err(Abbruch::Aufruf(
-            "--kopflos fehlt. Eine andere Strecke gibt es noch nicht; die Messung an der \
-             laufenden Anwendung entsteht mit Schritt 21 des Plans."
+            "--kopflos fehlt. Diese Strecke misst ohne Fenster; die Messung an der \
+             laufenden Anwendung faehrt `krk-bench alle` (alle zehn Zusagen) oder \
+             `krk-bench durchstich`."
                 .to_owned(),
         ));
     }
@@ -287,6 +302,68 @@ fn durchstich_fahren(argumente: &[String]) -> Result<(), Abbruch> {
     } else {
         // Kein stiller Erfolg auf einer verfehlten Zusage: das Gate des
         // Schrittes haengt an diesem Rueckgabewert.
+        Err(Abbruch::Lauf(
+            "mindestens eine Zusage ist verfehlt; der Bericht nennt welche.".to_owned(),
+        ))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// alle
+// ---------------------------------------------------------------------------
+
+fn alle_fahren(argumente: &[String]) -> Result<(), Abbruch> {
+    let mut programm: Option<PathBuf> = None;
+    let mut ordner_a: Option<PathBuf> = None;
+    let mut ordner_b: Option<PathBuf> = None;
+    let mut ordner100k: Option<PathBuf> = None;
+    let mut kopierziel: Option<PathBuf> = None;
+    let mut runden: usize = 1;
+    let mut ziel = PathBuf::from(bericht::MESSUNGEN);
+
+    let mut rest = argumente.iter();
+    while let Some(marke) = rest.next() {
+        match marke.as_str() {
+            "--buendel" => programm = Some(PathBuf::from(wert(&mut rest, "--buendel")?)),
+            "--ordner-a" => ordner_a = Some(PathBuf::from(wert(&mut rest, "--ordner-a")?)),
+            "--ordner-b" => ordner_b = Some(PathBuf::from(wert(&mut rest, "--ordner-b")?)),
+            "--ordner100k" => ordner100k = Some(PathBuf::from(wert(&mut rest, "--ordner100k")?)),
+            "--kopierziel" => kopierziel = Some(PathBuf::from(wert(&mut rest, "--kopierziel")?)),
+            "--runden" => runden = zahl(&mut rest, "--runden")?,
+            "--ziel" => ziel = PathBuf::from(wert(&mut rest, "--ziel")?),
+            anderes => {
+                return Err(Abbruch::Aufruf(format!("alle kennt {anderes:?} nicht")));
+            }
+        }
+    }
+
+    let lauf = Gesamtlauf {
+        programm: programm.ok_or_else(|| Abbruch::Aufruf("--buendel fehlt".to_owned()))?,
+        ordner_a: ordner_a.ok_or_else(|| Abbruch::Aufruf("--ordner-a fehlt".to_owned()))?,
+        ordner_b: ordner_b.ok_or_else(|| Abbruch::Aufruf("--ordner-b fehlt".to_owned()))?,
+        ordner100k: ordner100k.ok_or_else(|| Abbruch::Aufruf("--ordner100k fehlt".to_owned()))?,
+        kopierziel: kopierziel.ok_or_else(|| Abbruch::Aufruf("--kopierziel fehlt".to_owned()))?,
+        wiederholungen: WIEDERHOLUNGEN,
+        runden,
+    };
+    if runden == 0 {
+        return Err(Abbruch::Aufruf(
+            "eine Messung ohne Runden ergibt keine Zahl".to_owned(),
+        ));
+    }
+
+    let ergebnis = lauf.fahren()?;
+    let text = bericht::gesamt_verfassen(&lauf, &ergebnis);
+    let geschrieben = bericht::gesamt_schreiben(&ziel, &text)?;
+    print!("{text}");
+    println!("Bericht: {}", geschrieben.display());
+
+    if ergebnis.bestanden() {
+        Ok(())
+    } else {
+        // Kein stiller Erfolg auf einer verfehlten Zusage. Die Regel aus C8:
+        // eine verfehlte Zusage fuehrt zu einem Entscheidungsdatensatz, nicht
+        // zu einer stillschweigenden Lockerung.
         Err(Abbruch::Lauf(
             "mindestens eine Zusage ist verfehlt; der Bericht nennt welche.".to_owned(),
         ))

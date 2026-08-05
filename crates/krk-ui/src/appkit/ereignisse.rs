@@ -103,6 +103,7 @@ use objc2_app_kit::{
 use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSPoint, NSProcessInfo, NSString};
 
 use krk_core::tasten::Belegung;
+use krk_core::tasten::normalisierung::{ModMaske, roh};
 use krk_core::tasten::{Kombination, Kommando, Nachschlag, Tastendruck, code_von_pflicht};
 
 /// Was der Abgriff an den Aufrufer weitergibt.
@@ -223,18 +224,91 @@ const ZEICHEN_PFEIL_AB: char = '\u{F701}';
 /// Pfeiltasten setzt; belegt ist das aus der Messung vom 260802-1137 und nicht
 /// aus dieser Sonde. Der Messbericht schreibt beides aus.
 pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
-    let zeichen = NSString::from_str(&ZEICHEN_PFEIL_AB.to_string());
+    ereignis_senden(
+        mtm,
+        fenster,
+        CODE_PFEIL_AB,
+        NSEventModifierFlags::Function | NSEventModifierFlags::NumericPad,
+        &ZEICHEN_PFEIL_AB.to_string(),
+    );
+}
+
+/// Stellt die erste Kombination der genannten Funktion als synthetisches
+/// Tastenereignis in die eigene Ereignisschlange (S21).
+///
+/// Der Weg ist derselbe wie bei [`pfeil_ab_senden`], die Kombination kommt
+/// aber aus der **Belegung** statt aus einer festen Zahl: die Sitzungsstrecke
+/// misst Funktionen, und welcher Tastendruck eine Funktion ausloest, weiss
+/// allein die Belegung. Damit misst der Lauf auch unter einer umbelegten
+/// `keymap.toml` die richtige Funktion — oder bricht ab, wenn sie keine
+/// Kombination mehr traegt, statt eine falsche Taste zu druecken.
+///
+/// Die Zusatztastenmaske traegt genau die vier benannten Zusatztasten der
+/// Kombination. Die Marken `function` und `numericPad`, die AppKit einem
+/// koerperlichen Druck auf Pfeil- und Funktionstasten beilegt, fehlen mit
+/// Absicht: die Normalisierung aus S7 streift sie vor dem Nachschlag ohnehin
+/// ab, und das Ereignis wird vom eigenen Abgriff geschluckt, bevor ein
+/// anderer Abnehmer sie saehe.
+pub fn funktion_senden(
+    mtm: MainThreadMarker,
+    fenster: &NSWindow,
+    belegung: &Belegung,
+    kennung: &str,
+) -> Result<(), String> {
+    let funktion = belegung
+        .funktion(kennung)
+        .ok_or_else(|| format!("die Belegung kennt keine Funktion {kennung:?}"))?;
+    let kombination = funktion.tasten().first().copied().ok_or_else(|| {
+        format!(
+            "die Funktion {kennung:?} traegt keine Kombination; die Sitzungsstrecke \
+             braucht eine Taste, die sie ausloest"
+        )
+    })?;
+    let druck = kombination.tastendruck();
+    ereignis_senden(mtm, fenster, druck.code, rohe_flaggen(druck.maske), "");
+    Ok(())
+}
+
+/// Die AppKit-Zusatztastenmaske zu einer normalisierten Maske des Kerns.
+///
+/// Die Umrechnung laeuft ueber die acht rohen Bitwerte, deren Gleichstand mit
+/// `NSEventModifierFlags` die Pruefung unten haelt; eine zweite Wahrheit ueber
+/// dieselben Bits entsteht nicht.
+fn rohe_flaggen(maske: ModMaske) -> NSEventModifierFlags {
+    let mut bits: u64 = 0;
+    for (teil, bit) in [
+        (ModMaske::BEFEHL, roh::BEFEHL),
+        (ModMaske::STEUERUNG, roh::STEUERUNG),
+        (ModMaske::WAHL, roh::WAHL),
+        (ModMaske::UMSCHALT, roh::UMSCHALT),
+    ] {
+        if maske.enthaelt(teil) {
+            bits |= bit;
+        }
+    }
+    NSEventModifierFlags(bits as usize)
+}
+
+/// Baut ein Tastenereignis und stellt es hinten in die Ereignisschlange.
+fn ereignis_senden(
+    mtm: MainThreadMarker,
+    fenster: &NSWindow,
+    code: u16,
+    flaggen: NSEventModifierFlags,
+    zeichen: &str,
+) {
+    let zeichen = NSString::from_str(zeichen);
     let ereignis = NSEvent::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode(
         NSEventType::KeyDown,
         NSPoint::ZERO,
-        NSEventModifierFlags::Function | NSEventModifierFlags::NumericPad,
+        flaggen,
         NSProcessInfo::processInfo().systemUptime(),
         fenster.windowNumber(),
         None,
         &zeichen,
         &zeichen,
         false,
-        CODE_PFEIL_AB,
+        code,
     );
     match ereignis {
         // `atStart: false` haengt das Ereignis hinten an, wie es das System

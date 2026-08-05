@@ -16,6 +16,11 @@ path = "src/main.rs"
 # bindet ihn ueber den Pfad ein, weil beide im selben Workspace liegen und
 # miteinander versioniert werden.
 krk-core = { path = "../krk-core" }
+# Der Messplan aus S21: `messmodus.rs` liest `plan.toml`, und dessen Abschnitt
+# `[sitzung]` ist dieselbe serde-Struktur, die `session.toml` traegt. Beide
+# Kisten stehen schon im Baum, weil `krk-core` sie fuehrt.
+serde = { workspace = true }
+toml = { workspace = true }
 block2 = { workspace = true }
 objc2 = { workspace = true }
 # Das Merkmal `objc2-quartz-core` schaltet in `objc2-app-kit` die Methode

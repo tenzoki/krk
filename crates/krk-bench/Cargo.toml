@@ -10,3 +10,8 @@ publish.workspace = true
 # den Pfad ein, weil beide im selben Workspace liegen und miteinander versioniert
 # werden.
 krk-core = { path = "../krk-core" }
+# Der Messplan aus S21: `alle` schreibt `plan.toml`, und dessen Abschnitt
+# `[sitzung]` ist die serde-Struktur aus `krk-core/src/ablage/sitzung.rs` —
+# dieselbe Serialisierung, die die Anwendung beim Beenden schreibt.
+serde = { workspace = true }
+toml = { workspace = true }

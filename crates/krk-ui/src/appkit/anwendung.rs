@@ -119,12 +119,20 @@
 //!  Bildtakt (CADisplayLink) ──> messmodus::bildgrenze(Zeitpunkt, Zustand)
 //! ```
 //!
-//! **Ein Messlauf ruehrt die Sitzung des Nutzers nicht an.** Er laedt
-//! `session.toml` nicht und schreibt sie nicht, und allein das linke
+//! **Die Strecken aus S8 ruehren die Sitzung des Nutzers nicht an.** Sie
+//! laden `session.toml` nicht und schreiben sie nicht, und allein das linke
 //! Dateifenster liest den Pruefordner. Beides haelt gemessen, was Schritt 8
 //! gemessen hat: eine wiederhergestellte Sitzung braechte fremde Ordner in die
 //! Messung, und ein zweiter Lesevorgang auf denselben Pruefordner machte den
 //! Kaltstart zur Haelfte warm.
+//!
+//! **Die Sitzungsstrecke aus S21 stellt dagegen die Pruefsitzung aus C8 her
+//! und schreibt sie als `session.toml`**, denn C8 misst L4 und L5 auf genau
+//! dieser Lage, und die folgenden `sitzungsstart`-Laeufe muessen sie beim
+//! gewoehnlichen Wiederherstellen vorfinden. Geschrieben wird ueber den
+//! [`Sitzungsschreiber`], also denselben Weg wie beim Beenden; einen
+//! laufenden Sitzungsschreiber gibt es im Messmodus weiterhin nicht, und die
+//! beiden Wachen aus C9 bleiben aus.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -164,7 +172,7 @@ use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
 use crate::leistenmodell::Ort;
-use crate::messmodus::{Anweisung, Aufgabe, Messlauf, Zustand};
+use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::tabs::Tabliste;
 
 use super::aufteilung::Aufteilung;
@@ -597,12 +605,52 @@ impl Anwendungsdelegierter {
     /// Laedt die Sitzung und den Ablageordner, oder liefert den
     /// Auslieferungszustand.
     ///
-    /// Im Messmodus wird nichts geladen und nichts geschrieben, siehe den
-    /// Modulkopf.
+    /// Im Messmodus haengt der Weg an der Aufgabe, siehe den Modulkopf: die
+    /// Strecken aus S8 laden nichts, die Sitzungsstrecke stellt die
+    /// Pruefsitzung her, und der Sitzungsstart stellt sie wie ein
+    /// gewoehnlicher Start aus `session.toml` wieder her. Ein
+    /// Sitzungsschreiber entsteht in keinem der vier Faelle.
     fn sitzung_laden(&self) -> (Sitzung, Vec<String>) {
         let ivars = self.ivars();
-        if ivars.messaufgabe.is_some() {
-            return (Sitzung::default(), Vec::new());
+        match &ivars.messaufgabe {
+            None => {}
+            Some(Aufgabe::Start { .. } | Aufgabe::Spannen { .. }) => {
+                return (Sitzung::default(), Vec::new());
+            }
+            Some(Aufgabe::Sitzung { plan }) => {
+                // Herstellen heisst schreiben: die folgenden L4-Starts finden
+                // dieselbe Lage in `session.toml` vor. Scheitert das, gibt es
+                // keine Zahl; still auf einer anderen Lage zu messen waere
+                // die schlechteste aller Antworten.
+                if let Err(meldung) = plan.herstellen() {
+                    eprintln!("krk: {meldung}. Es wird keine Zahl ausgegeben.");
+                    std::process::exit(4);
+                }
+                return (plan.sitzung.clone(), Vec::new());
+            }
+            Some(Aufgabe::SitzungsStart) => {
+                let ablage = match Ablage::im_benutzerverzeichnis() {
+                    Ok(ablage) => ablage,
+                    Err(fehler) => {
+                        eprintln!(
+                            "krk: der Ablageordner laesst sich nicht oeffnen ({fehler}); \
+                             ohne ihn gibt es keine Pruefsitzung und keine Zahl."
+                        );
+                        std::process::exit(4);
+                    }
+                };
+                let geladen = ablage.laden::<Sitzung>(Datei::Sitzung);
+                if geladen.ist_ersetzt() {
+                    eprintln!(
+                        "krk: in session.toml steht keine lesbare Pruefsitzung. Der \
+                         Sitzungslauf (--messmodus <plan.toml>) schreibt sie; fahre ihn \
+                         zuerst. Es wird keine Zahl ausgegeben."
+                    );
+                    std::process::exit(4);
+                }
+                let (sitzung, _meldung) = geladen.mit_meldung();
+                return (sitzung, Vec::new());
+            }
         }
         let mut meldungen = Vec::new();
         let ablage = match Ablage::im_benutzerverzeichnis() {
@@ -1142,9 +1190,14 @@ impl Anwendungsdelegierter {
     /// folgen, sobald der sichtbare bedienbar ist; das loest der Einzugstakt
     /// des jeweiligen Dateifensters aus, siehe [`crate::tabs`].
     fn lesevorgaenge_starten(&self) {
-        if let Some(aufgabe) = &self.ivars().messaufgabe {
-            // Ein Messlauf liest allein den Pruefordner, und allein links.
-            let pfad = aufgabe.startordner().to_path_buf();
+        if let Some(aufgabe) = &self.ivars().messaufgabe
+            && let Some(pfad) = aufgabe.startordner()
+        {
+            // Die Strecken aus S8 lesen allein den Pruefordner, und allein
+            // links. Die beiden Sitzungsaufgaben fallen durch auf den
+            // Normalweg darunter: das Lesen der sichtbaren Tabs ist Teil
+            // dessen, was L4 und L5 messen.
+            let pfad = pfad.to_path_buf();
             self.dateifenster(Fensterseite::Links)
                 .quelle()
                 .ordner_lesen(&pfad, None);
@@ -2220,13 +2273,15 @@ impl Anwendungsdelegierter {
         let lauf = Rc::new(RefCell::new(lauf));
         let _ = ivars.messlauf.set(Rc::clone(&lauf));
 
-        let quelle = dateifenster.quelle().retain();
+        // Der Rueckruf haelt den Delegierten **schwach**, wie jeder Rueckruf
+        // dieses Moduls; den Zustand baut `messzustand`, dieselbe Rechnung
+        // wie beim Ausloesetakt.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let takt = Zeichenende::einrichten(self.mtm(), dateifenster.sicht(), move |jetzt| {
-            let zustand = Zustand {
-                zeilen: quelle.zeilen(),
-                liest: quelle.liest_noch(),
-                auswahl: quelle.auswahlzeile(),
+            let Some(selbst) = schwach.load() else {
+                return;
             };
+            let zustand = selbst.messzustand();
             if lauf.borrow_mut().bildgrenze(jetzt, zustand) {
                 std::process::exit(0);
             }
@@ -2256,12 +2311,7 @@ impl Anwendungsdelegierter {
         let (Some(lauf), Some(fenster)) = (ivars.messlauf.get(), ivars.fenster.get()) else {
             return;
         };
-        let quelle = self.dateifenster(Fensterseite::Links).quelle();
-        let zustand = Zustand {
-            zeilen: quelle.zeilen(),
-            liest: quelle.liest_noch(),
-            auswahl: quelle.auswahlzeile(),
-        };
+        let zustand = self.messzustand();
 
         // Die Ausleihe endet vor dem AppKit-Aufruf: der Bildtakt greift auf
         // denselben `RefCell` zu, und ein Zeichendurchgang mitten in einer
@@ -2269,8 +2319,22 @@ impl Anwendungsdelegierter {
         let anweisung = lauf.borrow_mut().naechster_schritt(zustand);
         match anweisung {
             Anweisung::Warten => {}
-            Anweisung::Lesen(pfad) => quelle.ordner_lesen(&pfad, None),
+            Anweisung::Lesen(pfad) => self
+                .dateifenster(Fensterseite::Links)
+                .quelle()
+                .ordner_lesen(&pfad, None),
             Anweisung::Taste => ereignisse::pfeil_ab_senden(self.mtm(), fenster),
+            Anweisung::Funktionstaste(kennung) => {
+                let ergebnis = {
+                    let belegung = ivars.belegung.borrow();
+                    ereignisse::funktion_senden(self.mtm(), fenster, &belegung, kennung)
+                };
+                if let Err(meldung) = ergebnis {
+                    eprintln!("krk: {meldung}. Es wird keine Zahl ausgegeben.");
+                    std::process::exit(4);
+                }
+            }
+            Anweisung::Handeln(handlung) => self.messhandlung(handlung),
             Anweisung::Fertig => {
                 lauf.borrow().ausgeben();
                 std::process::exit(0);
@@ -2279,6 +2343,79 @@ impl Anwendungsdelegierter {
                 eprintln!("krk: {grund}. Es wird keine Zahl ausgegeben.");
                 std::process::exit(4);
             }
+        }
+    }
+
+    /// Fuehrt eine ungemessene Vorbereitung der Sitzungsstrecke aus (S21).
+    ///
+    /// Absichtlich als unmittelbare Aufrufe statt ueber die Ereignisschlange:
+    /// gemessen wird nur, was C8 zusagt, und eine Vorbereitung auf demselben
+    /// Weg stuende der Messung in der Schlange im Weg.
+    fn messhandlung(&self, handlung: Handlung) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        match handlung {
+            Handlung::Listenanfaenge => {
+                for seite in Fensterseite::ALLE {
+                    self.dateifenster(seite)
+                        .quelle()
+                        .kommando_ausfuehren(Kommando::Listenanfang);
+                }
+            }
+            Handlung::Auswaehlen(name) => {
+                self.dateifenster(aktiv).quelle().eintrag_waehlen(&name);
+            }
+            Handlung::AlleMarkieren => {
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .kommando_ausfuehren(Kommando::AlleMarkieren);
+            }
+            Handlung::AktivLesen(pfad) => {
+                self.dateifenster(aktiv).quelle().ordner_lesen(&pfad, None);
+            }
+            Handlung::RechtsLesen(pfad) => {
+                self.dateifenster(Fensterseite::Rechts)
+                    .quelle()
+                    .ordner_lesen(&pfad, None);
+            }
+        }
+    }
+
+    /// Der Zustand der Oberflaeche, wie der Messmodus ihn abliest.
+    ///
+    /// Die drei Zahlen des linken Dateifensters tragen die Strecken aus S8;
+    /// die [`Sitzungslage`] dahinter fuellt die Sitzungsstrecke aus S21. Sie
+    /// wird immer gefuellt, weil sie nur Ablesungen enthaelt und ein zweiter
+    /// Zustandsbauer je Aufgabe zwei Wahrheiten ueber dieselbe Oberflaeche
+    /// waere.
+    fn messzustand(&self) -> Zustand {
+        let links = self.dateifenster(Fensterseite::Links).quelle();
+        let rechts = self.dateifenster(Fensterseite::Rechts).quelle();
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let aktiv_quelle = self.dateifenster(aktiv).quelle();
+        let (vorschau_pfad, vorschau_laedt) = match self.ivars().vorschau.get() {
+            Some(vorschau) => (vorschau.angezeigter_pfad(), vorschau.laedt_noch()),
+            None => (None, false),
+        };
+        Zustand {
+            zeilen: links.zeilen(),
+            liest: links.liest_noch(),
+            auswahl: links.auswahlzeile(),
+            sitzung: Some(Sitzungslage {
+                aktiv_links: aktiv == Fensterseite::Links,
+                zeilen_aktiv: aktiv_quelle.zeilen(),
+                liest_aktiv: aktiv_quelle.liest_noch(),
+                auswahl_aktiv: aktiv_quelle.auswahlzeile(),
+                tab_aktiv: aktiv_quelle.sichtbarer_tab(),
+                ordner_aktiv: aktiv_quelle.angezeigter_ordner(),
+                auswahl_pfad: aktiv_quelle.auswahl_pfad(),
+                zeilen_rechts: rechts.zeilen(),
+                liest_rechts: rechts.liest_noch(),
+                ordner_rechts: rechts.angezeigter_ordner(),
+                vorschau_pfad,
+                vorschau_laedt,
+                vorgang_sichtbar: links.vorgang_sichtbar() || rechts.vorgang_sichtbar(),
+                vorgang_laeuft: self.ivars().vorgang.borrow().is_some(),
+            }),
         }
     }
 }

@@ -271,6 +271,20 @@ impl Vorschaufenster {
         self.takt_starten();
     }
 
+    /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
+    ///
+    /// Nur zum Ablesen, fuer die Endbedingung von L7 im Messmodus.
+    pub fn angezeigter_pfad(&self) -> Option<std::path::PathBuf> {
+        self.ivars().modell.borrow().aktiver_pfad()
+    }
+
+    /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet.
+    ///
+    /// Nur zum Ablesen, fuer dieselbe Endbedingung.
+    pub fn laedt_noch(&self) -> bool {
+        self.ivars().modell.borrow().laedt_noch()
+    }
+
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
     pub fn zwischenablage_anzeigen(&self, inhalt: Zwischenablageinhalt) {
         self.ivars()

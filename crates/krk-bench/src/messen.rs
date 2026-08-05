@@ -745,42 +745,13 @@ impl Durchstich {
     }
 
     /// L4: je Wiederholung ein Prozessstart.
-    ///
-    /// Die Spanne beginnt unmittelbar vor `spawn` und endet an dem Zeitpunkt,
-    /// den die Anwendung meldet, sobald ihre Oberflaeche bedienbar ist. Beide
-    /// Zeitpunkte kommen von derselben Uhr desselben Geraets.
-    ///
-    /// **Was der Anfang einschliesst.** Er liegt einen Wimpernschlag vor dem
-    /// eigentlichen Prozessstart, weil `fork` und `exec` noch hineinfallen. Die
-    /// Zahl ist damit eher zu gross als zu klein, und das ist die richtige
-    /// Richtung fuer eine Abnahme.
     fn starts_messen(&self) -> io::Result<Vec<Duration>> {
         let ordner = self.ordner_a.display().to_string();
-        let mut werte = Vec::with_capacity(self.wiederholungen);
-        for nummer in 1..=self.wiederholungen {
-            let vorher = SystemTime::now();
-            let ausgang = lauf_fahren(
-                &self.programm,
-                &["--messmodus", "start", "--ordner", &ordner],
-                FRIST_START,
-            )?;
-            let nanos = zahl_lesen(&ausgang.messzeilen, "bedienbar").ok_or_else(|| {
-                io::Error::other(format!(
-                    "Start {nummer} von {} hat keinen Zeitpunkt gemeldet.{}",
-                    self.wiederholungen,
-                    ausgang.klage()
-                ))
-            })?;
-            let bedienbar = UNIX_EPOCH + Duration::from_nanos(nanos as u64);
-            let spanne = bedienbar.duration_since(vorher).map_err(|_| {
-                io::Error::other(format!(
-                    "Start {nummer} meldet einen Zeitpunkt vor dem eigenen Start; \
-                     die Uhr des Geraets ist waehrend der Messung gesprungen."
-                ))
-            })?;
-            werte.push(spanne);
-        }
-        Ok(werte)
+        starts_messen(
+            &self.programm,
+            &["--messmodus", "start", "--ordner", &ordner],
+            self.wiederholungen,
+        )
     }
 
     /// L1, L2, L3 und L10 in einem einzigen Prozess.
@@ -815,6 +786,455 @@ impl Durchstich {
             ));
         }
         Ok((rate, ausgang.messzeilen))
+    }
+}
+
+/// Je Wiederholung ein Prozessstart, gemessen bis zur gemeldeten Bedienbarkeit.
+///
+/// Die Spanne beginnt unmittelbar vor `spawn` und endet an dem Zeitpunkt,
+/// den die Anwendung meldet, sobald ihre Oberflaeche bedienbar ist. Beide
+/// Zeitpunkte kommen von derselben Uhr desselben Geraets.
+///
+/// **Was der Anfang einschliesst.** Er liegt einen Wimpernschlag vor dem
+/// eigentlichen Prozessstart, weil `fork` und `exec` noch hineinfallen. Die
+/// Zahl ist damit eher zu gross als zu klein, und das ist die richtige
+/// Richtung fuer eine Abnahme.
+fn starts_messen(
+    programm: &Path,
+    argumente: &[&str],
+    wiederholungen: usize,
+) -> io::Result<Vec<Duration>> {
+    let mut werte = Vec::with_capacity(wiederholungen);
+    for nummer in 1..=wiederholungen {
+        let vorher = SystemTime::now();
+        let ausgang = lauf_fahren(programm, argumente, FRIST_START)?;
+        let nanos = zahl_lesen(&ausgang.messzeilen, "bedienbar").ok_or_else(|| {
+            io::Error::other(format!(
+                "Start {nummer} von {wiederholungen} hat keinen Zeitpunkt gemeldet.{}",
+                ausgang.klage()
+            ))
+        })?;
+        let bedienbar = UNIX_EPOCH + Duration::from_nanos(nanos as u64);
+        let spanne = bedienbar.duration_since(vorher).map_err(|_| {
+            io::Error::other(format!(
+                "Start {nummer} meldet einen Zeitpunkt vor dem eigenen Start; \
+                 die Uhr des Geraets ist waehrend der Messung gesprungen."
+            ))
+        })?;
+        werte.push(spanne);
+    }
+    Ok(werte)
+}
+
+// ---------------------------------------------------------------------------
+// Der Gesamtlauf ueber alle zehn Zusagen (Schritt 21)
+// ---------------------------------------------------------------------------
+
+/// Wie lange der Sitzungslauf der Anwendung hoechstens dauern darf.
+///
+/// Der laengste Teil sind die zwanzig L8/L9-Wiederholungen: je eine begonnene
+/// Kopie von 10.000 Eintraegen, ihr Abbruch, das Leeren des Kopierziels und
+/// die Auffrischung. Zehn Minuten lassen dafuer reichlich Luft und fangen
+/// trotzdem einen haengenden Lauf ab.
+const FRIST_SITZUNG: Duration = Duration::from_secs(600);
+
+/// Der Startwert des L6-Unterordners; die Startwerte 1 bis 3 tragen die drei
+/// Pruefordner aus C8.
+const STARTWERT_L6: u64 = 4;
+
+/// Wie viele Eintraege der L6-Unterordner traegt: die Obergrenze der Zusage.
+const EINTRAEGE_L6: usize = 1_000;
+
+/// Der Gesamtlauf: alle zehn Zusagen aus C8 in einem Bericht.
+///
+/// Drei Strecken laufen zusammen, und die Zusammenfuehrung ist der Zweck des
+/// Laufs: die Sitzungsstrecke der Anwendung (L1, L5, L6, L7, L8, L9), die
+/// L4-Starts auf der Pruefsitzung, und die kopflose Strecke aus S3 fuer L2,
+/// L3 und L10.
+#[derive(Debug, Clone)]
+pub struct Gesamtlauf {
+    /// Das Binaerprogramm im Buendel, `KRK.app/Contents/MacOS/krk`.
+    pub programm: PathBuf,
+    /// Pruefordner A mit 10.000 Eintraegen.
+    pub ordner_a: PathBuf,
+    /// Pruefordner B mit 10.000 Eintraegen an einem anderen Pfad.
+    pub ordner_b: PathBuf,
+    /// Der Pruefordner mit 100.000 Eintraegen.
+    pub ordner100k: PathBuf,
+    /// Das Kopierziel fuer L8 und L9, auf demselben APFS-Datentraeger wie A.
+    pub kopierziel: PathBuf,
+    /// Wie oft jede Zusage innerhalb einer Runde gemessen wird. C8 sagt zwanzig.
+    pub wiederholungen: usize,
+    /// Wie oft die ganze Messung wiederholt wird.
+    pub runden: usize,
+}
+
+/// Die Rohwerte einer Runde des Gesamtlaufs.
+#[derive(Debug, Clone, Default)]
+struct Gesamtrohrunde {
+    l1: Vec<Duration>,
+    l2: Vec<Duration>,
+    l3: Vec<Duration>,
+    l4: Vec<Duration>,
+    l5_tab: Vec<Duration>,
+    l5_fenster: Vec<Duration>,
+    l6: Vec<Duration>,
+    l7: Vec<Duration>,
+    l8: Vec<Duration>,
+    l9: Vec<Duration>,
+    l10_erste: Vec<Duration>,
+    l10_voll: Vec<Duration>,
+}
+
+/// Was der Gesamtlauf ergeben hat.
+#[derive(Debug, Clone)]
+pub struct Gesamtergebnis {
+    /// Die Bildwiederholrate, wie die Anwendung sie aus `NSScreen` gelesen hat.
+    pub bildwiederholrate: i64,
+    /// Eine Bildlaenge, der Kehrwert der Rate.
+    pub bildlaenge: Duration,
+    /// Der Unterordner, an dem L6 gemessen wurde.
+    pub unterordner: PathBuf,
+    /// Die Systemlast unmittelbar vor dem Lauf (`sysctl vm.loadavg`).
+    pub systemlast_vorher: String,
+    /// Die Systemlast unmittelbar nach dem Lauf.
+    pub systemlast_nachher: String,
+    /// Die gemessenen Zusagen, in der Reihenfolge des Berichts.
+    pub zusagen: Vec<Zusage>,
+}
+
+impl Gesamtergebnis {
+    /// Ob jede abgefragte Zusage ihr Mass in jeder Runde haelt.
+    pub fn bestanden(&self) -> bool {
+        self.zusagen
+            .iter()
+            .all(|zusage| zusage.immer_gehalten() != Some(false))
+    }
+}
+
+impl Gesamtlauf {
+    /// Faehrt alle Runden und setzt das Ergebnis zusammen.
+    pub fn fahren(&self) -> io::Result<Gesamtergebnis> {
+        for ordner in [&self.ordner_a, &self.ordner_b, &self.ordner100k] {
+            if !ordner.is_dir() {
+                return Err(io::Error::other(format!(
+                    "{} ist kein Verzeichnis",
+                    ordner.display()
+                )));
+            }
+        }
+        kopierziel_pruefen(&self.ordner_a, &self.kopierziel)?;
+        let unterordner = unterordner_sicherstellen(&self.ordner_a)?;
+        let plan = plan_schreiben(self, &unterordner)?;
+
+        let systemlast_vorher = systemlast();
+        let mut rohrunden = Vec::with_capacity(self.runden);
+        let mut rate = None;
+        for nummer in 1..=self.runden {
+            eprintln!("krk-bench: Runde {nummer} von {}", self.runden);
+            let (gemeldete_rate, runde) = self.eine_gesamtrunde(&plan)?;
+            rate = rate.or(gemeldete_rate);
+            rohrunden.push(runde);
+        }
+        let systemlast_nachher = systemlast();
+        let _ = std::fs::remove_file(&plan);
+
+        let sammeln = |waehlen: fn(&Gesamtrohrunde) -> &Vec<Duration>| -> Vec<Vec<Duration>> {
+            rohrunden
+                .iter()
+                .map(|runde| waehlen(runde).clone())
+                .collect()
+        };
+        let (bildwiederholrate, bildlaenge) = bildlaenge_bilden(rate)?;
+
+        Ok(Gesamtergebnis {
+            bildwiederholrate,
+            bildlaenge,
+            unterordner,
+            systemlast_vorher,
+            systemlast_nachher,
+            zusagen: vec![
+                Zusage {
+                    kennung: "L1",
+                    was: "Tastendruck bis Ende des Zeichendurchgangs",
+                    mass: Abnahmemass::AnteilImBild { bildlaenge },
+                    runden: sammeln(|runde| &runde.l1),
+                },
+                Zusage {
+                    kennung: "L2",
+                    was: "Pruefordner A: erste Bildschirmseite (Kernanteil, kopflos)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+                    runden: sammeln(|runde| &runde.l2),
+                },
+                Zusage {
+                    kennung: "L3",
+                    was: "Pruefordner A: vollstaendig gelesen und sortiert (kopflos, warm)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(400)),
+                    runden: sammeln(|runde| &runde.l3),
+                },
+                Zusage {
+                    kennung: "L4",
+                    was: "Prozessstart bis bedienbare Pruefsitzung (warm)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(1000)),
+                    runden: sammeln(|runde| &runde.l4),
+                },
+                Zusage {
+                    kennung: "L5",
+                    was: "Wechsel auf den verdeckten Tab (Ordner bereits gelesen)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(50)),
+                    runden: sammeln(|runde| &runde.l5_tab),
+                },
+                Zusage {
+                    kennung: "L5",
+                    was: "Wechsel des aktiven Dateifensters",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(50)),
+                    runden: sammeln(|runde| &runde.l5_fenster),
+                },
+                Zusage {
+                    kennung: "L6",
+                    was: "Einstieg in den Unterordner mit 1.000 Eintraegen",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+                    runden: sammeln(|runde| &runde.l6),
+                },
+                Zusage {
+                    kennung: "L7",
+                    was: "Vorschau des ausgewaehlten Eintrags sichtbar",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+                    runden: sammeln(|runde| &runde.l7),
+                },
+                Zusage {
+                    kennung: "L8",
+                    was: "Kopie gestartet bis Fortschritt in der Statuszeile",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(200)),
+                    runden: sammeln(|runde| &runde.l8),
+                },
+                Zusage {
+                    kennung: "L9",
+                    was: "Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs",
+                    mass: Abnahmemass::AnteilImBild { bildlaenge },
+                    runden: sammeln(|runde| &runde.l9),
+                },
+                Zusage {
+                    kennung: "L10",
+                    was: "100.000 Eintraege: erste Bildschirmseite (Kernanteil, kopflos)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+                    runden: sammeln(|runde| &runde.l10_erste),
+                },
+                Zusage {
+                    kennung: "L10",
+                    was: "100.000 Eintraege: vollstaendig gelesen (kopflos, warm)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(4000)),
+                    runden: sammeln(|runde| &runde.l10_voll),
+                },
+            ],
+        })
+    }
+
+    /// Eine Runde: der Sitzungslauf, die L4-Starts, die kopflose Strecke.
+    fn eine_gesamtrunde(&self, plan: &Path) -> io::Result<(Option<i64>, Gesamtrohrunde)> {
+        // Zuerst der Sitzungslauf: er stellt die Pruefsitzung her und
+        // schreibt sie als session.toml, die die L4-Starts danach vorfinden.
+        let (rate, zeilen) = self.sitzung_messen(plan)?;
+        let hole = |name: &str| -> io::Result<Vec<Duration>> {
+            let werte = werte_lesen(&zeilen, name);
+            if werte.len() != self.wiederholungen {
+                return Err(io::Error::other(format!(
+                    "die Anwendung hat fuer {name} {} Werte geliefert, erwartet waren {}. \
+                     Die Reihe wird verworfen.",
+                    werte.len(),
+                    self.wiederholungen
+                )));
+            }
+            Ok(werte)
+        };
+        let l1 = hole("l1")?;
+        let l5_tab = hole("l5-tab")?;
+        let l5_fenster = hole("l5-fenster")?;
+        let l6 = hole("l6")?;
+        let l7 = hole("l7")?;
+        let l8 = hole("l8")?;
+        let l9 = hole("l9")?;
+
+        let l4 = starts_messen(
+            &self.programm,
+            &["--messmodus", "sitzungsstart"],
+            self.wiederholungen,
+        )?;
+
+        // Die kopflose Strecke aus S3: L2 und L3 auf Pruefordner A, L10 auf
+        // dem grossen Ordner, beide warm, wie C8 die Zusagen stellt.
+        let reihe_a = Messreihe::fahren(&self.ordner_a, Cache::Warm, self.wiederholungen)?;
+        let reihe_gross = Messreihe::fahren(&self.ordner100k, Cache::Warm, self.wiederholungen)?;
+
+        Ok((
+            rate,
+            Gesamtrohrunde {
+                l1,
+                l2: reihe_a.groessen[0].werte.clone(),
+                l3: reihe_a.groessen[1].werte.clone(),
+                l4,
+                l5_tab,
+                l5_fenster,
+                l6,
+                l7,
+                l8,
+                l9,
+                l10_erste: reihe_gross.groessen[0].werte.clone(),
+                l10_voll: reihe_gross.groessen[1].werte.clone(),
+            },
+        ))
+    }
+
+    /// Der Sitzungslauf der Anwendung: L1, L5, L6, L7, L8 und L9.
+    fn sitzung_messen(&self, plan: &Path) -> io::Result<(Option<i64>, Vec<String>)> {
+        let planpfad = plan.display().to_string();
+        let ausgang = lauf_fahren(&self.programm, &["--messmodus", &planpfad], FRIST_SITZUNG)?;
+        if !ausgang.messzeilen.iter().any(|zeile| zeile == "fertig") {
+            return Err(io::Error::other(format!(
+                "der Sitzungslauf der Anwendung ist nicht bis zum Ende gekommen.{}",
+                ausgang.klage()
+            )));
+        }
+        let rate = zahl_lesen(&ausgang.messzeilen, "bildwiederholrate").map(|zahl| zahl as i64);
+        if rate.is_none() {
+            return Err(io::Error::other(
+                "die Anwendung hat keine Bildwiederholrate gemeldet. \
+                 Ohne sie ist keine der Bildzusagen gegen ihre Herleitung pruefbar; \
+                 es wird keine Zahl ausgegeben."
+                    .to_owned(),
+            ));
+        }
+        Ok((rate, ausgang.messzeilen))
+    }
+}
+
+/// Prueft das Kopierziel: Verzeichnis, leer, derselbe Datentraeger wie A.
+///
+/// Legt es an, wenn es fehlt. **Ein Ziel auf einem anderen Datentraeger wird
+/// nicht angenommen**, weil die duennbesetzten Pruefdateien dort als Nullen
+/// ausgeschrieben wuerden; die Herleitung steht in `### Frage 5` des Plans.
+/// Und es muss leer sein, weil der Messlauf es zwischen den Wiederholungen
+/// leert und fremder Inhalt dabei nicht verschwinden darf.
+pub fn kopierziel_pruefen(ordner_a: &Path, kopierziel: &Path) -> io::Result<()> {
+    use std::os::unix::fs::MetadataExt as _;
+    if !kopierziel.exists() {
+        std::fs::create_dir_all(kopierziel)?;
+    }
+    if !kopierziel.is_dir() {
+        return Err(io::Error::other(format!(
+            "das Kopierziel {} ist kein Verzeichnis",
+            kopierziel.display()
+        )));
+    }
+    if std::fs::read_dir(kopierziel)?.next().is_some() {
+        return Err(io::Error::other(format!(
+            "das Kopierziel {} ist nicht leer. Der Messlauf leert es zwischen den \
+             Wiederholungen; fremder Inhalt darf dabei nicht verschwinden.",
+            kopierziel.display()
+        )));
+    }
+    let geraet = |pfad: &Path| std::fs::metadata(pfad).map(|angaben| angaben.dev());
+    if geraet(ordner_a)? != geraet(kopierziel)? {
+        return Err(io::Error::other(format!(
+            "das Kopierziel {} liegt auf einem anderen Datentraeger als Pruefordner A \
+             ({}). L8 und L9 messen auf demselben APFS-Datentraeger; auf einem anderen \
+             wuerden die duennbesetzten Pruefdateien als Nullen ausgeschrieben, und die \
+             Zahl waere ein Durchsatz und keine Sichtbarkeitszusage. Es wird keine Zahl \
+             ausgegeben.",
+            kopierziel.display(),
+            ordner_a.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Stellt den L6-Unterordner mit 1.000 Eintraegen neben Pruefordner A sicher.
+///
+/// Er entsteht nach demselben Verfahren wie die drei Pruefordner aus C8, mit
+/// eigenem Startwert und Steckbrief, und wird wiederverwendet, wenn er schon
+/// steht. Ein vorhandener Ordner ohne passenden Steckbrief wird abgewiesen,
+/// statt auf unbekanntem Bestand zu messen.
+fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
+    let name = ordner_a
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "pruefordner".to_owned());
+    let unterordner = ordner_a.with_file_name(format!("{name}-l6"));
+    match fixture::steckbrief_lesen(&unterordner) {
+        Some(brief) if brief.eintraege == EINTRAEGE_L6 => Ok(unterordner),
+        Some(brief) => Err(io::Error::other(format!(
+            "{} traegt laut Steckbrief {} Eintraege statt {EINTRAEGE_L6}. \
+             Loesche den Ordner samt Steckbrief; der Lauf legt ihn neu an.",
+            unterordner.display(),
+            brief.eintraege
+        ))),
+        None if unterordner.exists() => Err(io::Error::other(format!(
+            "{} steht ohne Steckbrief da; auf unbekanntem Bestand misst L6 nicht. \
+             Loesche den Ordner; der Lauf legt ihn neu an.",
+            unterordner.display()
+        ))),
+        None => {
+            fixture::erzeugen(&unterordner, EINTRAEGE_L6, STARTWERT_L6)?;
+            Ok(unterordner)
+        }
+    }
+}
+
+/// Schreibt den Messplan fuer den Sitzungslauf der Anwendung.
+///
+/// Der Abschnitt `[sitzung]` ist die Pruefsitzung aus C8 **in der
+/// Serialisierung von `session.toml`**: zwei Dateifenster mit je zwei Tabs,
+/// links A sichtbar und B dahinter, rechts umgekehrt, alle Bereiche sichtbar,
+/// die Breiten im Auslieferungszustand. Serialisiert wird die Struktur aus
+/// `krk-core/src/ablage/sitzung.rs`; ein zweites Format entsteht nicht.
+fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<PathBuf> {
+    use krk_core::ablage::sitzung::{Dateifenster, Sitzung, Tab};
+
+    let sitzung = Sitzung {
+        fenster: [
+            Dateifenster {
+                aktiver_tab: 0,
+                tabs: vec![Tab::auf(&lauf.ordner_a), Tab::auf(&lauf.ordner_b)],
+            },
+            Dateifenster {
+                aktiver_tab: 0,
+                tabs: vec![Tab::auf(&lauf.ordner_b), Tab::auf(&lauf.ordner_a)],
+            },
+        ],
+        ..Sitzung::default()
+    };
+
+    let mut wurzel = toml::Table::new();
+    wurzel.insert(
+        "kopierziel".to_owned(),
+        toml::Value::String(lauf.kopierziel.display().to_string()),
+    );
+    wurzel.insert(
+        "unterordner".to_owned(),
+        toml::Value::String(unterordner.display().to_string()),
+    );
+    wurzel.insert(
+        "sitzung".to_owned(),
+        toml::Value::try_from(&sitzung).map_err(io::Error::other)?,
+    );
+    let text = toml::to_string(&wurzel).map_err(io::Error::other)?;
+
+    let pfad = std::env::temp_dir().join(format!("krk-messplan-{}.toml", std::process::id()));
+    std::fs::write(&pfad, text)?;
+    Ok(pfad)
+}
+
+/// Die Systemlast, wie `sysctl vm.loadavg` sie meldet.
+///
+/// Die neunte Kopfangabe seit dem 260804-2318: an ihr wird der
+/// L4-Streuungsvergleich aus S22 pruefbar, ob eine Runde unter Fremdlast
+/// lief.
+pub fn systemlast() -> String {
+    let roh = bericht::befehl_ausgabe("/usr/sbin/sysctl", &["-n", "vm.loadavg"]);
+    if roh.is_empty() {
+        "nicht ermittelt".to_owned()
+    } else {
+        roh
     }
 }
 
@@ -1097,7 +1517,7 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
 }
 
 /// Das Urteil zu einer Zusage, in Worten.
-fn urteil(zusage: &Zusage) -> String {
+pub(crate) fn urteil(zusage: &Zusage) -> String {
     match zusage.gehalten_in() {
         None => "nicht abgefragt".to_owned(),
         Some((gehalten, runden)) if gehalten == runden => {
@@ -1196,7 +1616,7 @@ fn rate_beschreiben(ergebnis: &Durchstichergebnis) -> String {
 }
 
 /// Pfad, Startwert und Eintragszahl eines Pruefordners.
-fn ordner_beschreiben(ordner: &Path) -> String {
+pub(crate) fn ordner_beschreiben(ordner: &Path) -> String {
     match fixture::steckbrief_lesen(ordner) {
         Some(brief) => format!(
             "{} (Startwert {}, {} Eintraege laut Steckbrief)",
@@ -1532,6 +1952,93 @@ mod tests {
         let fehler = Messreihe::fahren(ordner.pfad(), Cache::Warm, 0)
             .expect_err("das haette scheitern muessen");
         assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    #[test]
+    fn das_kopierziel_muss_leer_sein_und_wird_notfalls_angelegt() {
+        let wurzel = Wegwerfordner::neu("kopierziel");
+        let a = wurzel.pfad().join("a");
+        fs::create_dir_all(&a).expect("Anlegen gescheitert");
+        let ziel = wurzel.pfad().join("ziel");
+
+        // Fehlt es, wird es angelegt.
+        kopierziel_pruefen(&a, &ziel).expect("ein fehlendes Ziel wird angelegt");
+        assert!(ziel.is_dir());
+        // Leer geht.
+        kopierziel_pruefen(&a, &ziel).expect("ein leeres Ziel ist gueltig");
+        // Gefuellt nicht: der Lauf leert es zwischen den Wiederholungen.
+        fs::write(ziel.join("fremd.txt"), "fremd").expect("schreibbar");
+        let fehler = kopierziel_pruefen(&a, &ziel).expect_err("haette scheitern muessen");
+        assert!(
+            fehler.to_string().contains("nicht leer"),
+            "unerwartete Meldung: {fehler}"
+        );
+    }
+
+    #[test]
+    fn ein_kopierziel_auf_einem_anderen_datentraeger_wird_abgewiesen() {
+        // `/dev` ist ein eigenes Dateisystem (devfs) und damit auf jedem
+        // macOS ein anderes Geraet als der Wegwerfordner unter /tmp; ein
+        // zweiter eingehaengter Datentraeger laesst sich in einer Pruefung
+        // nicht voraussetzen.
+        let wurzel = Wegwerfordner::neu("fremdes-geraet");
+        let ziel = wurzel.pfad().join("ziel");
+        fs::create_dir_all(&ziel).expect("Anlegen gescheitert");
+        let fehler =
+            kopierziel_pruefen(Path::new("/dev"), &ziel).expect_err("haette scheitern muessen");
+        assert!(
+            fehler.to_string().contains("anderen Datentraeger"),
+            "unerwartete Meldung: {fehler}"
+        );
+    }
+
+    #[test]
+    fn der_messplan_traegt_die_pruefsitzung_in_der_serialisierung_der_sitzung() {
+        use krk_core::ablage::sitzung::Sitzung;
+
+        let wurzel = Wegwerfordner::neu("messplan");
+        let lauf = Gesamtlauf {
+            programm: PathBuf::from("/egal/krk"),
+            ordner_a: wurzel.pfad().join("a"),
+            ordner_b: wurzel.pfad().join("b"),
+            ordner100k: wurzel.pfad().join("gross"),
+            kopierziel: wurzel.pfad().join("ziel"),
+            wiederholungen: 20,
+            runden: 1,
+        };
+        let unterordner = wurzel.pfad().join("a-l6");
+        let pfad = plan_schreiben(&lauf, &unterordner).expect("der Plan ist schreibbar");
+        let text = fs::read_to_string(&pfad).expect("lesbar");
+        let _ = fs::remove_file(&pfad);
+
+        // Der Abschnitt [sitzung] ist ueber dieselbe serde-Struktur lesbar,
+        // die session.toml traegt: die eine Serialisierung, kein zweites
+        // Format.
+        let tabelle: toml::Table = toml::from_str(&text).expect("gueltiges TOML");
+        let sitzung: Sitzung = tabelle["sitzung"]
+            .clone()
+            .try_into()
+            .expect("die Pruefsitzung ist eine gewoehnliche Sitzung");
+        assert_eq!(sitzung.fenster[0].tabs.len(), 2);
+        assert_eq!(sitzung.fenster[0].tabs[0].ordner, lauf.ordner_a);
+        assert_eq!(sitzung.fenster[0].tabs[1].ordner, lauf.ordner_b);
+        // Rechts umgekehrt: B sichtbar, A dahinter.
+        assert_eq!(sitzung.fenster[1].tabs[0].ordner, lauf.ordner_b);
+        assert_eq!(sitzung.fenster[1].tabs[1].ordner, lauf.ordner_a);
+        assert_eq!(
+            tabelle["kopierziel"].as_str(),
+            Some(lauf.kopierziel.display().to_string().as_str())
+        );
+        assert_eq!(
+            tabelle["unterordner"].as_str(),
+            Some(unterordner.display().to_string().as_str())
+        );
+    }
+
+    #[test]
+    fn die_systemlast_ist_keine_leere_angabe() {
+        let last = systemlast();
+        assert!(!last.is_empty());
     }
 
     #[test]

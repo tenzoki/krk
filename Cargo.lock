@@ -54,6 +54,8 @@ name = "krk-bench"
 version = "0.1.0"
 dependencies = [
  "krk-core",
+ "serde",
+ "toml",
 ]
 
 [[package]]
@@ -76,6 +78,8 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-foundation",
  "objc2-quartz-core",
+ "serde",
+ "toml",
 ]
 
 [[package]]
