@@ -2,7 +2,7 @@
 
 ---
 **Domain:** data
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `planning/260802-1036_*_spec-navigator-geruest.md` (C2, C3), `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (S11b, S11c, S13, S18), `issues/260804-1214_*_die-belegungspruefung-bindet-return-noch-an-das-oeffnen.md`, `issues/260805-1356_*_die-belegungspruefung-bindet-cmd-right-noch-an-das-oeffnen.md`, `issues/260804-1122_*_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`, `decisions/260804-1122_*_wandern-die-bereichsbreiten-auf-die-links-und-rechts-pfeile.md`, `decisions/260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `history/260805-1356-ordnernavigation-auf-die-nackten-pfeiltasten.md`
 
@@ -97,6 +97,6 @@ Answered: Nutzerentscheid 260805-1356 im Wortlaut, festgehalten in `history/2608
 **Warum dieser Datensatz `_a_` trägt und nicht `_i_`.** Die Daten stehen: `resources/default-keymap.toml` führt seit dem 260805-1356 `tasten = ["right"]` bei `oeffnen` und `tasten = ["left", "cmd+up"]` bei `ordner_aufwaerts`, und `include_str!` hat die Änderung nachweislich in das gebaute Bündel gezogen. Die maschinelle Abnahme ist seit dem 260805-1420 grün, `cargo test -p krk-core --test belegung` meldet 32 von 32.
 
 Eines fehlt trotzdem, und `_i_` verlangt nach `rules/fusion-workbench-conventions.md` die realisierte **und belegte** Umsetzung: **der Bedienversuch am laufenden Bündel steht aus.** Ob die nackten Pfeile ein- und aussteigen und ob der Links-Pfeil in der Pfadeingabe die Schreibmarke bewegt, statt den Ordner zu wechseln, verlangt Tastendrücke in einem sichtbaren Fenster und ist von keinem Agenten dieser Sitzung geprüft worden. Genau dort kann die Umbelegung schiefgehen, denn der Fokusvorbehalt aus S13 ist für die nackte Taste abgeleitet und nicht gemessen; belegt ist er am 260804-1309 mit `cmd+left`, also mit einer Zusatztaste. `_i_` ist terminal und lässt sich nicht zurücknehmen; ihn zu setzen, bevor die Bedienung einmal gesehen wurde, nähme dem Marker seine Aussage. Der Datensatz wandert auf `_i_`, sobald der Bedienversuch vorliegt.
-Implemented:
+Implemented: 13f9463 — `resources/default-keymap.toml` führt `oeffnen` auf `right` und `ordner_aufwaerts` auf `left` und `cmd+up`; Spec und Plan sind an 24 Stellen nachgezogen, und die Belegungsprüfungen lesen ihre Beispiele seither aus der Belegung statt sie zu wiederholen. **Der Bedienversuch, der bis dahin fehlte, ist erbracht:** der Nutzer hat am 260805 bestätigt, dass die nackten Pfeiltasten navigieren. Ungeprüft bleibt allein der Sonderfall, ob der Linkspfeil in der Pfadeingabe die Schreibmarke bewegt statt den Ordner zu wechseln; der Fokusvorbehalt trägt ihn nach demselben Weg wie für `cmd+left`, gemessen ist er für die nackte Taste nicht.
 Deferred:
 Superseded by:
