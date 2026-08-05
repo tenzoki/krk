@@ -1046,7 +1046,7 @@ stateDiagram-v2
 - Abhängigkeiten: S10, S14
 - Abnahmekriterium: die acht Abnahmekriterien aus C5 sind im laufenden Bündel einzeln nachweisbar. Prüfbar per Kommando: nach dem Anlegen eines Lesezeichens enthält `~/Library/Application Support/KRK/bookmarks.toml` den Eintrag, und nach Neustart erscheint er wieder. Das Einhängen eines Abbilds über `hdiutil attach` lässt den Datenträger ohne Neustart in der Leiste erscheinen. **Zum Wirkungsbereich:** `cargo test -p krk-core` beendet mit 0 und deckt ab, dass jedes Kommando genau einen Wirkungsbereich trägt. Im laufenden Bündel löscht `delete` bei Fokus in der Leiste keine Datei im Dateifenster, `right` steigt dort in keinen Ordner ein und bewegt allein die Auswahl der Leiste nicht, und `lesezeichen_loeschen` wirkt bei Fokus im Dateifenster nicht. Der Diff zeigt genau eine Stelle, die vor dem Ausführen eines Kommandos nach dem Fokus fragt, und die aus S16 ist darin aufgegangen statt danebenzustehen.
 
-#### 18b. **`ctrl+o` in der Auslieferungsbelegung und die Auslieferungseinstellungen (C11, C3)**
+#### 18b. [DONE] **`ctrl+o` in der Auslieferungsbelegung und die Auslieferungseinstellungen (C11, C3)**
 
 - Ausführender: `ontocoder`
 - Dateien: `resources/default-keymap.toml` (erweitert, aus S9, S9b, S11c und S13b: ein 57. Eintrag `terminal_oeffnen`, dazu die Zählangabe im Kopfkommentar), `resources/default-settings.toml` (neu)

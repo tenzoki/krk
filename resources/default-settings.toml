@@ -1,0 +1,54 @@
+# KRK — Auslieferungsfassung der Einstellungen
+#
+# Diese Datei ist die alleinige Quelle der ausgelieferten Einstellungen. Die
+# Ablage aus Schritt 18c des Plans bindet sie ueber `include_str!` ein und legt
+# `~/Library/Application Support/KRK/settings.toml` beim ersten Start aus ihr
+# an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht mehr:
+# sie ist die eine Datei der Ablage, die von Hand gepflegt wird.
+#
+# Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeit C11.
+# Bindend ist ausserdem der Datensatz
+# `decisions/260805-1623_a_taste-und-einstellbarkeit-des-terminal-befehls.md`.
+#
+# Aufnahmeregel: hier steht ein Wert, der drei Bedingungen zugleich erfuellt.
+# Er ist keine Tastenbelegung, KRK schreibt ihn im Betrieb nicht selbst, und er
+# hat in dieser Runde keine Oberflaeche. Was KRK selbst fortschreibt, gehoert
+# nach `session.toml`: eine Fensterbreite, eine Sortierung, eine zuletzt
+# besuchte Stelle aendern sich beim Arbeiten und nicht beim Einrichten. Eine
+# Tastenbelegung gehoert nach `keymap.toml`, schon weil der Befehl aus C3, der
+# die gesamte Belegung zuruecksetzt, sonst eine Einstellung mit zuruecksetzte.
+# Und sobald eine Ansicht einen Wert aendern kann, gehoert er nicht mehr
+# hierher: mit der Ansicht kaeme ein Schreibpfad, und ein Schreibpfad loescht
+# die Kommentare, die den Sinn dieser Datei ausmachen. Die Herleitung steht im
+# Plan unter `### Frage 4`.
+#
+# Ein Feld, das die Nutzerdatei nicht nennt, kommt aus dieser Fassung. Das ist
+# die eine Abweichung von `keymap.toml`, wo die Nutzerdatei die
+# Auslieferungsbelegung vollstaendig ersetzt statt sie zu ergaenzen.
+
+# Die Anwendung, die "Ordner im Terminal öffnen" ruft, ab Werk Ctrl+O (C11).
+#
+# Der Wert ist eine Buendelkennung und kein Pfad, und ein Pfad ist keine
+# zulaessige zweite Form. Eine Kennung ueberlebt, was ein Pfad nicht ueberlebt:
+# das Verschieben der Anwendung, ihr Umbenennen und ihren Ersatz durch eine
+# neuere Fassung. Terminal.app selbst ist der Fall, sie liegt seit macOS
+# Catalina unter `/System/Applications/Utilities/` und davor unter
+# `/Applications/Utilities/`.
+#
+# Die Kennung einer installierten Anwendung liest dieses Kommando aus:
+#
+#   mdls -name kMDItemCFBundleIdentifier -raw /Applications/<Name>.app
+#
+# Geprueft sind am 260805-1623 genau zwei Kennungen, und weitere nennt diese
+# Datei nicht: `com.apple.Terminal` fuer Terminal.app unter
+# /System/Applications/Utilities/ und `com.mitchellh.ghostty` fuer Ghostty.app
+# unter /Applications/. Eine ungeprueft hingeschriebene Kennung saehe geprueft
+# aus und schickte den Leser in die Irre, waehrend das Kommando darueber ihn in
+# einem Zug zu der Kennung fuehrt, die auf seinem Geraet gilt.
+#
+# Die eingestellte Anwendung muss Ordner annehmen. Erkennbar ist das an
+# `public.directory` unter `CFBundleDocumentTypes` in ihrer
+# Buendelbeschreibung; die beiden oben genannten fuehren es. Eine Anwendung
+# ohne diesen Eintrag startet auf den Befehl hin, ohne in den Ordner zu
+# wechseln, und KRK kann den Unterschied nicht feststellen (C11).
+terminal = "com.apple.Terminal"

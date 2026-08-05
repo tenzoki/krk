@@ -6,8 +6,8 @@
 # zweite Belegungstabelle im Code gibt es danach nicht mehr.
 #
 # Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeiten C1 bis
-# C7 sowie C10. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort in
-# der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
+# C7, C10 und C11. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
+# in der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
 # `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` und
 # `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
 #
@@ -27,7 +27,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 56 Funktionen mit zusammen 63 Kombinationen.
+# Ausgeliefert sind 57 Funktionen mit zusammen 64 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -421,6 +421,28 @@ name = "Zum Inhalt der Zwischenablage springen"
 tasten = ["opt+cmd+g"]
 # Steht neben shift+cmd+g, der Pfadeingabe von Hand: dieselbe Handlung mit
 # vorausgefuelltem Wert.
+
+# ── C11: das Terminal im angezeigten Ordner ──────────────────────────────────
+# KRK uebergibt den Ordner des sichtbaren Tabs an eine fremde Anwendung und
+# zeigt selbst keine Terminal-Ausgabe. Welche Anwendung gerufen wird, steht
+# nicht hier, sondern als Buendelkennung in `settings.toml`; ausgeliefert wird
+# sie mit `resources/default-settings.toml`.
+
+[[funktion]]
+id = "terminal_oeffnen"
+name = "Ordner im Terminal öffnen"
+tasten = ["ctrl+o"]
+# Der Weg von Total Commander, wo Ctrl+O die Kommandozeile oeffnet. Der Nutzer
+# hat das Vorbild am 260805 als tragenden Grund genannt und shift+cmd+t sowie
+# f9 ausdruecklich verworfen (`decisions/
+# 260805-1623_a_taste-und-einstellbarkeit-des-terminal-befehls.md`). Es ist die
+# einzige Kombination dieser Datei, die einem Vorbild aus Total Commander
+# folgt; ctrl ist auf dem Mac die unueblichste der vier Zusatztasten, und genau
+# darin liegt hier die Wiedererkennung.
+#
+# Ein Cmd-Kuerzel daneben traegt die Funktion nicht. Die Zwei-Wege-Regel aus C3
+# gilt fuer die sechs Funktionen der Norton-Reihe ganz oben und nicht fuer jede
+# Funktion; die vier Funktionen vom 260804 tragen aus demselben Grund je eine.
 
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 
