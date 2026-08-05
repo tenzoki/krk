@@ -110,8 +110,8 @@ use krk_core::operation::{
     self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
     freier_name,
 };
-use krk_core::tasten::Kommando;
 use krk_core::tasten::belegung;
+use krk_core::tasten::{Belegung, Kommando};
 use krk_core::umbenennen::Vorschau;
 
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -176,6 +176,20 @@ pub struct AnwendungsIvars {
     tasten_protokoll: bool,
     /// Die Aufgabe des Messmodus, falls einer laeuft.
     messaufgabe: Option<Aufgabe>,
+    /// Die Belegung des Nutzers, einmal geladen.
+    ///
+    /// Sie kommt von [`starten`] herein und nicht aus einem zweiten Aufruf von
+    /// [`belegung::fuer_den_betrieb`]: seit Schritt 13c nimmt das Hauptmenue
+    /// seine Kuerzel aus derselben Belegung, und zweimal zu laden hiesse, zwei
+    /// Staende derselben Datei nebeneinander zu halten und die Meldung ueber
+    /// eine beschaedigte `keymap.toml` zweimal zu erzeugen.
+    belegung: Belegung,
+    /// Die Meldung, falls die Belegung ersetzt werden musste.
+    ///
+    /// Sie steht hier und nicht in der Statuszeile, weil es die Statuszeile
+    /// beim Laden noch nicht gibt: [`starten`] laeuft vor
+    /// `applicationDidFinishLaunching:`.
+    belegungsmeldung: Option<String>,
     /// Das aktive Dateifenster, die Sichtbarkeit und die Breiten.
     modell: RefCell<Fenstermodell>,
     fenster: OnceCell<Retained<NSWindow>>,
@@ -255,6 +269,21 @@ define_class!(
         fn fenster_einblenden(&self, _absender: Option<&AnyObject>) {
             self.fenster_zeigen();
         }
+
+        /// Der Menueeintrag "Fenster schliessen" (C7).
+        ///
+        /// Ein eigener Selektor und nicht `performClose:`, und das ist der
+        /// ganze Zweck: zu einem Menueeintrag mit `performClose:` stellt AppKit
+        /// von sich aus eine Zweitform "Close All" auf Opt+Shift+Cmd+W dazu,
+        /// eine Kombination, die weder in der Belegung steht noch umbelegbar
+        /// ist (gemessen am 260804-1040). Am Verhalten aendert der Umweg
+        /// nichts: der Delegierte ruft `performClose:` am Fenster selbst.
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(fensterSchliessen:))]
+        fn fenster_schliessen_aktion(&self, _absender: Option<&AnyObject>) {
+            self.fenster_schliessen();
+        }
     }
 
     // SAFETY: `NSApplicationDelegate` stellt keine Bedingungen.
@@ -304,10 +333,14 @@ impl Anwendungsdelegierter {
         mtm: MainThreadMarker,
         tasten_protokoll: bool,
         messaufgabe: Option<Aufgabe>,
+        belegung: Belegung,
+        belegungsmeldung: Option<String>,
     ) -> Retained<Self> {
         let this = Self::alloc(mtm).set_ivars(AnwendungsIvars {
             tasten_protokoll,
             messaufgabe,
+            belegung,
+            belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
             fenster: OnceCell::new(),
             fenster_delegierter: OnceCell::new(),
@@ -431,9 +464,12 @@ impl Anwendungsdelegierter {
     }
 
     /// Richtet den einen Eintrittspunkt fuer Tastendruecke ein.
+    ///
+    /// Die Belegung ist die, aus der [`starten`] schon das Hauptmenue gebaut
+    /// hat; sie wird hier nicht ein zweites Mal geladen.
     fn tastenabgriff_einrichten(&self, meldungen: &mut Vec<String>) {
-        let (belegung, meldung) = belegung::fuer_den_betrieb();
-        meldungen.extend(meldung);
+        let belegung = self.ivars().belegung.clone();
+        meldungen.extend(self.ivars().belegungsmeldung.clone());
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let abgriff = Tastenabgriff::einrichten(
@@ -676,6 +712,7 @@ impl Anwendungsdelegierter {
                 self.fenster_zeigen();
                 true
             }
+            Kommando::FensterSchliessen => self.fenster_schliessen(),
             Kommando::BereichVerbreitern => self.breite_aendern(BREITENSCHRITT),
             Kommando::BereichVerschmaelern => self.breite_aendern(-BREITENSCHRITT),
             // Alles uebrige gehoert dem aktiven Dateifenster.
@@ -744,6 +781,23 @@ impl Anwendungsdelegierter {
         };
         fenster.makeKeyAndOrderFront(None);
         NSApplication::sharedApplication(self.mtm()).activate();
+    }
+
+    /// Schliesst das Fenster (C7).
+    ///
+    /// Die eine Stelle dafuer, und beide Wege gehen darueber: der
+    /// Ereignisabgriff mit [`Kommando::FensterSchliessen`] und der
+    /// Menueeintrag ueber den Selektor `fensterSchliessen:`. `performClose:`
+    /// und nicht `close`, damit der Fensterdelegierte gefragt wird und die
+    /// Schliessanimation dieselbe bleibt wie beim Klick auf den roten Knopf.
+    /// Das Fenster ueberlebt sein Schliessen; "Fenster einblenden" holt es
+    /// zurueck.
+    fn fenster_schliessen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        fenster.performClose(None);
+        true
     }
 
     /// Schreibt Sichtbarkeit, Breiten und die Markierung des aktiven
@@ -1548,18 +1602,58 @@ fn benutzerverzeichnis() -> PathBuf {
 ///
 /// `tasten_protokoll` schaltet den Modus `--tasten-protokoll` aus der
 /// Befehlszeile durch bis zum Ereignisabgriff, `messaufgabe` den Modus
-/// `--messmodus` bis zum Aufbau der Oberflaeche.
-pub fn starten(tasten_protokoll: bool, messaufgabe: Option<Aufgabe>) {
+/// `--messmodus` bis zum Aufbau der Oberflaeche. `menue_protokoll` schreibt das
+/// gebaute Hauptmenue auf die Standardausgabe und kehrt zurueck, ohne ein
+/// Fenster zu oeffnen.
+///
+/// **Die Belegung wird hier geladen und nicht im Delegierten**, weil sie seit
+/// Schritt 13c zwei Abnehmer hat: das Hauptmenue, das seine Kuerzel daraus
+/// nimmt, und den Ereignisabgriff. Eine Quelle, zwei sichtbare Wege.
+pub fn starten(tasten_protokoll: bool, menue_protokoll: bool, messaufgabe: Option<Aufgabe>) {
     let mtm = MainThreadMarker::new()
         .expect("die Oberflaeche von KRK laeuft ausschliesslich auf dem Hauptfaden");
 
+    let (belegung, belegungsmeldung) = belegung::fuer_den_betrieb();
+
+    // Vor `NSApplication`, sonst haengt macOS dem Menue "Bearbeiten" eigene
+    // Eintraege mit eigenen Kuerzeln an; die Begruendung samt Messung steht an
+    // der Funktion.
+    menue::systemzusaetze_unterdruecken();
+
     let anwendung = NSApplication::sharedApplication(mtm);
     anwendung.setActivationPolicy(NSApplicationActivationPolicy::Regular);
-    anwendung.setMainMenu(Some(&menue::hauptmenue(mtm)));
+    let hauptmenue = menue::hauptmenue(mtm, &belegung);
+    anwendung.setMainMenu(Some(&hauptmenue));
+
+    if menue_protokoll {
+        // **`finishLaunching` ist der Zeitpunkt, an dem die Messung ueberhaupt
+        // etwas sieht.** Bis dahin haengt am Menue genau das, was `hauptmenue`
+        // hineingebaut hat; erst dieser Aufruf laesst AppKit seine eigenen
+        // Zusaetze dazustellen. Gemessen am 260805 mit einer Sonde, die
+        // `performClose:` voruebergehend wieder eintrug: davor stand das
+        // Fenstermenue mit zwei Eintraegen da, danach mit dreien, der dritte
+        // "Close All" auf Opt+Shift+Cmd+W mit dem Selektor `closeAll:`. Ohne
+        // den Aufruf sagte dieser Modus nichts ueber die Zusaetze aus und
+        // pruefte allein den eigenen Programmtext.
+        //
+        // Ein Fenster oeffnet er nicht: der Anwendungsdelegierte ist zu diesem
+        // Zeitpunkt noch nicht gesetzt, also erreicht
+        // `applicationDidFinishLaunching:` niemanden und
+        // `oberflaeche_aufbauen` laeuft nicht.
+        anwendung.finishLaunching();
+        menue::protokollieren(&hauptmenue);
+        return;
+    }
 
     // Der Delegierte bleibt bis zum Ende von `starten` am Leben, weil
     // `NSApplication` ihn nur schwach haelt.
-    let delegierter = Anwendungsdelegierter::neu(mtm, tasten_protokoll, messaufgabe);
+    let delegierter = Anwendungsdelegierter::neu(
+        mtm,
+        tasten_protokoll,
+        messaufgabe,
+        belegung,
+        belegungsmeldung,
+    );
     anwendung.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
 
     anwendung.run();

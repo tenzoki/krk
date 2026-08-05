@@ -40,6 +40,36 @@
 //! Tippen der Anfangsbuchstaben. Der Kern sagt nur, dass der Tastendruck dorthin
 //! faellt; welches Zeichen er traegt, weiss allein die Oberflaeche, denn ein
 //! Tastencode benennt eine Stelle auf der Tastatur und kein Zeichen.
+//!
+//! # Der Zusteller, und was er fuer den Konflikt bedeutet
+//!
+//! Seit Schritt 13b fuehrt die Belegung Funktionen, die nicht der
+//! Ereignisabgriff ausfuehrt, sondern das Hauptmenue zustellt. Wer zustellt,
+//! steht in [`Funktion::gehalten_von`]: ohne das Feld der Abgriff, mit dem Wert
+//! `menue` das Hauptmenue. Der Fokusvorbehalt aus C2 teilt jeden Tastendruck
+//! genau einem der beiden zu, eine Funktion ist deshalb in genau einem
+//! Fokuszustand erreichbar.
+//!
+//! Daraus folgt die vollstaendige Regel, und sie ist eine Regel und keine
+//! Ausnahme fuer eine einzelne Taste: **zwei Funktionen sind genau dann ein
+//! Konflikt, wenn sie dieselbe Kombination tragen und denselben Zusteller
+//! haben.** Sie greift an vier Stellen, und keine davon ist entbehrlich:
+//!
+//! | Stelle | Warum |
+//! |---|---|
+//! | [`Belegung::konflikte`] | jedes Einlesen laeuft ueber [`Belegung::bauen`] darauf |
+//! | [`Belegung::zuweisen`] | die Umbelegung durch den Nutzer aus C3 |
+//! | [`Belegung::nachschlag`] | der Abgriff darf nur sehen, was er selbst zustellt |
+//! | [`Funktion::kommando`] | eine zugestellte Funktion fuehrt KRK nie selbst aus |
+//!
+//! Die dritte Stelle traegt die Regel erst: der Nachschlag liefert den ersten
+//! Treffer, und ohne das Ueberspringen haenge das Verhalten an der Reihenfolge
+//! der Eintraege. Stuende `text_alles_auswaehlen` in der Datei des Nutzers vor
+//! `alle_markieren`, faende der Abgriff eine Funktion ohne Kommando, reichte den
+//! Tastendruck weiter, und das Markieren aller Eintraege waere still tot.
+//!
+//! Nutzerentscheid vom 260805,
+//! `decisions/260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
 
 use std::fmt;
 use std::io;
@@ -137,6 +167,8 @@ pub enum Kommando {
     VorschauUmschalten,
     /// Das geschlossene Anwendungsfenster wieder nach vorn holen (C7).
     FensterEinblenden,
+    /// Das Anwendungsfenster schliessen (C7).
+    FensterSchliessen,
     /// Den aktiven Bereich um einen Schritt verbreitern (C7).
     BereichVerbreitern,
     /// Den aktiven Bereich um einen Schritt verschmaelern (C7).
@@ -162,7 +194,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 39] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 40] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -198,6 +230,7 @@ impl Kommando {
         ),
         (Kommando::VorschauUmschalten, "vorschau_umschalten"),
         (Kommando::FensterEinblenden, "fenster_einblenden"),
+        (Kommando::FensterSchliessen, "fenster_schliessen"),
         (Kommando::BereichVerbreitern, "bereich_verbreitern"),
         (Kommando::BereichVerschmaelern, "bereich_verschmaelern"),
         (Kommando::Kopieren, "kopieren"),
@@ -244,6 +277,7 @@ pub struct Funktion {
     name: String,
     tasten: Vec<Kombination>,
     reserviert_fuer: Option<String>,
+    gehalten_von: Option<String>,
 }
 
 impl Funktion {
@@ -268,8 +302,26 @@ impl Funktion {
         self.reserviert_fuer.as_deref()
     }
 
+    /// Wer den Tastendruck zustellt, falls es nicht der Ereignisabgriff ist.
+    ///
+    /// `None` heisst: der Abgriff aus C2 stellt zu. `Some("menue")` heisst: ein
+    /// `NSMenuItem` traegt die Kombination als Kuerzel, und die Antwortkette
+    /// entscheidet, wer sie beantwortet. Siehe den Modulkopf; das Feld sagt,
+    /// **wer zustellt**, und nicht, was der Tastendruck tut.
+    pub fn gehalten_von(&self) -> Option<&str> {
+        self.gehalten_von.as_deref()
+    }
+
     /// Das Kommando dieser Funktion, falls diese Runde es schon ausfuehrt.
+    ///
+    /// Eine zugestellte Funktion hat nie eines: was das Hauptmenue zustellt,
+    /// fuehrt die Antwortkette aus und nicht KRK. Ohne diese Zeile haenge die
+    /// Zusage daran, dass [`Kommando::KENNUNGEN`] die vier Textbefehle zufaellig
+    /// nicht nennt — die vierte Stelle der Zustellerregel aus dem Modulkopf.
     pub fn kommando(&self) -> Option<Kommando> {
+        if self.gehalten_von.is_some() {
+            return None;
+        }
         Kommando::aus_kennung(&self.kennung)
     }
 
@@ -336,8 +388,18 @@ impl Belegung {
     /// zweiter Bestand, den jede Aenderung mitfuehren muesste. Die Groessen-
     /// ordnung traegt das Argument, die genaue Zahl nicht: sie waechst mit
     /// jeder Runde, und ein Literal an dieser Stelle veraltet ungeprueft.
+    ///
+    /// **Eine vom Hauptmenue zugestellte Funktion kommt hier nicht vor.** Der
+    /// Abgriff laeuft nur ausserhalb eines Textfeldes und darf deshalb nur
+    /// sehen, was er selbst zustellt; der Modulkopf schreibt aus, warum das
+    /// keine Zutat, sondern die tragende Haelfte der Zustellerregel ist. Nach
+    /// dem Ueberspringen meint diese Antwort, was ihr Aufrufer braucht: was
+    /// dieser Tastendruck **ausserhalb eines Textfeldes** ausloest.
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
         for funktion in &self.funktionen {
+            if funktion.gehalten_von.is_some() {
+                continue;
+            }
             if funktion
                 .tasten
                 .iter()
@@ -356,8 +418,13 @@ impl Belegung {
     /// Gibt einer Funktion eine weitere Kombination.
     ///
     /// Traegt die Funktion sie schon, geschieht nichts und es ist kein Fehler.
-    /// Traegt eine **andere** Funktion sie, bleibt die Belegung unveraendert und
-    /// der [`Konflikt`] nennt beide Funktionen.
+    /// Traegt eine **andere Funktion desselben Zustellers** sie, bleibt die
+    /// Belegung unveraendert und der [`Konflikt`] nennt beide Funktionen.
+    ///
+    /// Der Zusteller steht hier aus demselben Grund wie in
+    /// [`Belegung::konflikte`]: sonst meldete die Belegungsansicht aus C3 einen
+    /// Konflikt, den das Einlesen nicht kennt, und die beiden Wege in dieselbe
+    /// Belegung widersprachen einander.
     #[allow(clippy::result_large_err)]
     pub fn zuweisen(
         &mut self,
@@ -371,12 +438,13 @@ impl Belegung {
         else {
             return Err(Zuweisungsfehler::UnbekannteFunktion(kennung.to_owned()));
         };
+        let zusteller = self.funktionen[stelle].gehalten_von.clone();
 
-        if let Some(andere) = self
-            .funktionen
-            .iter()
-            .find(|funktion| funktion.kennung != kennung && funktion.tasten.contains(&kombination))
-        {
+        if let Some(andere) = self.funktionen.iter().find(|funktion| {
+            funktion.kennung != kennung
+                && funktion.gehalten_von == zusteller
+                && funktion.tasten.contains(&kombination)
+        }) {
             return Err(Zuweisungsfehler::Konflikt(Konflikt {
                 kombination,
                 andere: andere.benennung(),
@@ -395,19 +463,28 @@ impl Belegung {
         *self = Self::auslieferung();
     }
 
-    /// Jede Kombination, die zwei verschiedene Funktionen beanspruchen.
+    /// Jede Kombination, die zwei Funktionen **desselben Zustellers**
+    /// beanspruchen.
     ///
     /// Leer fuer jede Belegung, die [`Belegung::vom_nutzer`] oder
     /// [`Belegung::auslieferung`] geliefert hat: beide weisen eine
     /// widerspruechliche Datei schon beim Einlesen ab. Die Pruefung steht
     /// trotzdem als eigener Aufruf da, weil das Abnahmekriterium von C3 sie
     /// woertlich verlangt.
+    ///
+    /// Der Zusteller gehoert in den Vergleich, weil zwei Funktionen einander
+    /// nur begegnen koennen, wenn beide im selben Fokuszustand erreichbar sind;
+    /// der Modulkopf schreibt die Regel aus. Ausgeliefert gibt es genau einen
+    /// Fall: `cmd+a` markiert im Dateifenster alle Eintraege und waehlt im
+    /// Textfeld den Text aus.
     pub fn konflikte(&self) -> Vec<Konflikt> {
         let mut gefunden = Vec::new();
         for (stelle, funktion) in self.funktionen.iter().enumerate() {
             for kombination in &funktion.tasten {
                 for vorige in self.funktionen.iter().take(stelle) {
-                    if vorige.tasten.contains(kombination) {
+                    if vorige.gehalten_von == funktion.gehalten_von
+                        && vorige.tasten.contains(kombination)
+                    {
                         gefunden.push(Konflikt {
                             kombination: *kombination,
                             andere: vorige.benennung(),
@@ -467,6 +544,7 @@ impl Belegung {
                 name: eintrag.name.clone(),
                 tasten,
                 reserviert_fuer: eintrag.reserviert_fuer.clone(),
+                gehalten_von: eintrag.gehalten_von.clone(),
             });
         }
 
@@ -638,6 +716,14 @@ impl Default for Belegungsdatei {
 }
 
 impl From<&Belegung> for Belegungsdatei {
+    /// Der Rueckweg, und er traegt jedes Feld mit.
+    ///
+    /// Fehlte hier `gehalten_von`, schriebe [`Belegung::sichern`] eine
+    /// `keymap.toml`, in der `text_alles_auswaehlen` keinen Zusteller mehr
+    /// traegt; beim naechsten Start stuende `cmd+a` bei zwei Funktionen
+    /// desselben Zustellers, das Einlesen meldete einen Konflikt, und der
+    /// Nutzer haette eine Datei, die KRK selbst geschrieben und dann nicht mehr
+    /// angenommen hat.
     fn from(belegung: &Belegung) -> Self {
         Self {
             funktionen: belegung
@@ -652,6 +738,7 @@ impl From<&Belegung> for Belegungsdatei {
                         .map(|kombination| kombination.to_string())
                         .collect(),
                     reserviert_fuer: funktion.reserviert_fuer.clone(),
+                    gehalten_von: funktion.gehalten_von.clone(),
                 })
                 .collect(),
         }
@@ -667,6 +754,14 @@ struct Eintrag {
     tasten: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     reserviert_fuer: Option<String>,
+    /// Wer den Tastendruck zustellt; siehe [`Funktion::gehalten_von`].
+    ///
+    /// Optional wie `reserviert_fuer` daneben, und aus demselben Grund
+    /// weggelassen statt leer geschrieben: die weitaus meisten Funktionen
+    /// tragen es nicht, und `deny_unknown_fields` oben laesst kein Feld durch,
+    /// das der Parser nicht kennt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    gehalten_von: Option<String>,
 }
 
 #[cfg(test)]

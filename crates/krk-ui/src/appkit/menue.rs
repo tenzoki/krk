@@ -1,24 +1,71 @@
-//! Das Hauptmenue, von Hand gebaut.
+//! Das Hauptmenue, von Hand gebaut, mit den Kuerzeln aus der Belegung.
 //!
 //! Der Technologieentscheid bringt keinen Oberflaechenbau mit: es gibt kein
 //! `MainMenu.nib`, aus dem AppKit das Menue laedt. Jeder Eintrag entsteht
 //! deshalb hier im Programmtext.
 //!
-//! Drei Befehle: Beenden, Fenster einblenden, Fenster schliessen. Alle drei
-//! bekommen als Ziel `nil` und laufen damit ueber die Antwortkette:
-//! `terminate:` erreicht `NSApplication`, `performClose:` das Fenster mit dem
-//! Tastaturfokus, und `fensterEinblenden:` den Anwendungsdelegierten, an dem
-//! die Kette endet. Ein fest gesetztes Ziel wuerde die Kette umgehen und einen
-//! Eintrag auch dann aktiv lassen, wenn niemand ihn beantworten kann.
+//! Drei Untermenues: KRK, Bearbeiten, Fenster. Jeder Eintrag bekommt als Ziel
+//! `nil` und laeuft damit ueber die Antwortkette. `terminate:` erreicht
+//! `NSApplication`, `cut:`, `copy:`, `paste:` und `selectAll:` erreichen den
+//! Feldeditor des Textfeldes mit dem Fokus, und `fensterEinblenden:` wie
+//! `fensterSchliessen:` erreichen den Anwendungsdelegierten, an dem die Kette
+//! endet. Ein fest gesetztes Ziel wuerde die Kette umgehen und einen Eintrag
+//! auch dann aktiv lassen, wenn niemand ihn beantworten kann.
+//!
+//! # Eine Quelle, zwei sichtbare Wege
+//!
+//! **Kein Kuerzel steht hier als Zeichenkette.** [`hauptmenue`] bekommt die
+//! Belegung gereicht und holt das Kuerzel jedes Eintrags unter dessen Kennung
+//! aus ihr. Damit ist `resources/default-keymap.toml` auch fuer das Menue die
+//! alleinige Quelle: die Konflikterkennung aus C3 sieht jede Kombination, der
+//! Nutzer kann jede umbelegen, und eine Umbelegung wirkt auf beide Wege.
+//! Nutzerentscheid vom 260805-0000,
+//! `decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
+//!
+//! Die eine Ausnahme steht in [`NOTBEHELF_BEENDEN`] und ist gemeldet.
+//!
+//! Welchen der beiden Wege ein Tastendruck geht, entscheidet der Fokus. Der
+//! Ereignisabgriff aus [`super::ereignisse`] sieht ihn vor der Menuebehandlung
+//! von `NSApplication`. Steht die Schreibmarke in einem Textfeld, kehrt er
+//! sofort zurueck und reicht weiter; dann wirkt das Menue. Steht sie im
+//! Dateifenster, schlaegt er in der Belegung nach — und die vom Menue
+//! gehaltenen Funktionen sieht er dabei nicht, weil `Belegung::nachschlag` sie
+//! ueberspringt. Die vier Textbefehle laufen deshalb auch im Dateifenster ins
+//! Menue und von dort die Antwortkette hinunter, wo heute niemand `paste:`
+//! beantwortet und der Eintrag folglich grau ist. Genau das ist der
+//! Einhaengepunkt der spaeteren Dateizwischenablage: sie beantwortet `copy:`
+//! und `paste:` am Dateifenster und braucht dafuer weder einen zweiten
+//! Menueeintrag noch eine zweite Zeile in der Belegung.
+//!
+//! # Warum es das Menue "Bearbeiten" ueberhaupt gibt
+//!
+//! Auf dem Mac liegen Cmd+X, Cmd+C, Cmd+V und Cmd+A fuer Textfelder nicht im
+//! Textsystem, sondern als Menuekuerzel. Ohne dieses Menue erreicht kein
+//! Tastendruck `cut:`, `copy:`, `paste:` und `selectAll:`, und C2 sagt fuer die
+//! Pfadeingabe ausdruecklich zu, dass der Nutzer einen Pfad **einfuegt**.
+//! Gemessen am 260804-1309 am laufenden Buendel: Pfad in der Zwischenablage,
+//! `shift+cmd+g`, `cmd+v` gesendet, Feld unveraendert. Defekt
+//! `issues/260804-1309_o_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
+//!
+//! # "Fenster schliessen" traegt einen eigenen Selektor
+//!
+//! Bis Schritt 13c stand dort `performClose:`, und AppKit stellte von sich aus
+//! eine Zweitform "Close All" auf Opt+Shift+Cmd+W dazu, mit englischer
+//! Beschriftung und einer Kombination, die niemand aus der Belegung setzen oder
+//! umbelegen kann (gemessen am 260804-1040 im signierten Buendel,
+//! `issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
+//! Der Eintrag traegt deshalb den eigenen Selektor `fensterSchliessen:` am
+//! Anwendungsdelegierten, so wie "Fenster einblenden" ihn seit Schritt 12 hat;
+//! der Delegierte ruft darauf `performClose:` am Fenster selbst, sodass sich am
+//! Verhalten nichts aendert.
 //!
 //! # Die zwei Kuerzel des Fenstermenues, und warum sie so liegen
 //!
 //! **Cmd+W gehoert dem Tab, nicht dem Fenster.** So fuehrt es
 //! `resources/default-keymap.toml` seit Schritt 9 unter `tab_schliessen`, und
 //! der Nutzer hat es am 260804 bestaetigt. Der Menueeintrag "Fenster
-//! schliessen" ist deshalb mit Schritt 12 von Cmd+W auf **Shift+Cmd+W**
-//! gewichen, wie Webbrowser es halten. Defekt
-//! `issues/260803-2045_o_cmd-w-liegt-in-der-belegung-auf-tab-schliessen-und-im-menue-auf-fenster-schliessen.md`.
+//! schliessen" ist deshalb mit Schritt 12 von Cmd+W auf Shift+Cmd+W gewichen,
+//! wie Webbrowser es halten.
 //!
 //! **Cmd+N holt das geschlossene Fenster zurueck.** Bis Schritt 12 lief KRK
 //! nach dem Schliessen des Fensters weiter, mit Menueleiste und ohne jeden Weg
@@ -26,39 +73,133 @@
 //! Tastatursteuerung ist, lag damit ein Kuerzel in Reichweite, das sie
 //! unbedienbar machte. Der Nutzer hat am 260804-0830 Moeglichkeit 2 aus
 //! `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`
-//! gewaehlt. Der Eintrag heisst **"Fenster einblenden"** und nicht "Neues
-//! Fenster", weil er keines anlegt: KRK haelt in dieser Runde genau ein
+//! gewaehlt. Der Eintrag heisst "Fenster einblenden" und nicht "Neues Fenster",
+//! weil er keines anlegt: KRK haelt in dieser Runde genau ein
 //! Anwendungsfenster, es ueberlebt sein Schliessen, und der Eintrag holt es
 //! nach vorn. Die Runde, die mehrere Fenster einfuehrt, benennt ihn um und
 //! behaelt das Kuerzel.
-//!
-//! Dasselbe Kuerzel steht als `fenster_einblenden` in
-//! `resources/default-keymap.toml`, seit Schritt 9b. Beides zugleich ist kein
-//! Widerspruch und auch keine zweite Wahrheit: der Ereignisabgriff sieht jeden
-//! Tastendruck vor der Menuebehandlung von `NSApplication`, fuehrt den Befehl
-//! aus und schluckt das Ereignis. Der Menueeintrag traegt das Kuerzel also
-//! sichtbar, ausgeloest wird er im Alltag ueber die Belegung, und der Nutzer
-//! kann sie umbelegen, ohne dass der Menueweg verloren geht.
 
 use objc2::rc::Retained;
-use objc2::runtime::Sel;
+use objc2::runtime::{AnyObject, Sel};
 use objc2::{MainThreadOnly, sel};
 use objc2_app_kit::{NSEventModifierFlags, NSMenu, NSMenuItem};
-use objc2_foundation::{MainThreadMarker, NSString, ns_string};
+use objc2_foundation::{
+    MainThreadMarker, NSDictionary, NSNumber, NSString, NSUserDefaults, ns_string,
+};
 
-/// Baut das Hauptmenue der Anwendung.
-pub fn hauptmenue(mtm: MainThreadMarker) -> Retained<NSMenu> {
+use krk_core::tasten::parser::{self, Taste};
+use krk_core::tasten::{Belegung, Kombination, ModMaske};
+
+/// Das Kuerzel des Eintrags "KRK beenden", solange die Belegung keines fuehrt.
+///
+/// **Die eine Kombination dieser Datei, die nicht aus der Belegung kommt, und
+/// sie ist als Defekt gemeldet.** S13b hat fuenf Menuekuerzel in
+/// `resources/default-keymap.toml` nachgetragen und den sechsten uebersehen:
+/// Cmd+Q loest in KRK etwas aus, steht in keiner Tastenliste, wird von der
+/// Konflikterkennung nicht gesehen und ist nicht umbelegbar — genau der blinde
+/// Fleck, den der Nutzerentscheid vom 260805-0000 schliessen wollte. Die
+/// Belegungsdatei gehoert dem `ontocoder`; dieser Schritt darf sie nur lesen.
+/// Gemeldet als
+/// `issues/260805-0753_o_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`.
+/// Dazu, am selben Eintrag, die Zweitform "Quit and Keep Windows" auf
+/// Opt+Cmd+Q, die AppKit zu `terminate:` dazustellt:
+/// `issues/260805-0753_o_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`.
+///
+/// Sobald die Datei eine Funktion `beenden` mit `gehalten_von = "menue"` auf
+/// `cmd+q` fuehrt, faellt diese Konstante weg und der Eintrag geht denselben
+/// Weg wie die uebrigen sechs.
+const NOTBEHELF_BEENDEN: &str = "cmd+q";
+
+/// Haelt macOS davon ab, dem Menue "Bearbeiten" eigene Eintraege dazuzustellen.
+///
+/// **Zu rufen vor `NSApplication`, sonst ist es zu spaet.**
+///
+/// macOS haengt an ein Menue "Bearbeiten" von sich aus "Emoji & Symbols" und
+/// "Start Dictation…" an, und der erste traegt ein Kuerzel. Eine Kombination,
+/// die macOS waehlt, steht in keiner Tastenliste, wird von der
+/// Konflikterkennung nicht gesehen und ist nicht umbelegbar — genau der blinde
+/// Fleck, den der Nutzerentscheid vom 260805-0000 schliesst. Sie muss deshalb
+/// nicht bloss unbeachtet bleiben, sondern verschwinden.
+///
+/// **Die beiden Schluessel in `resources/Info.plist` reichen dafuer nicht.**
+/// Gemessen am 260805 am signierten Buendel: `plutil -extract` liefert fuer
+/// `NSDisabledCharacterPaletteMenuItem` und `NSDisabledDictationMenuItem` in
+/// `KRK.app/Contents/Info.plist` beide Male `true`, und `--menue-protokoll`
+/// zeigte trotzdem "Start Dictation…" und drei Formen von "Emoji & Symbols",
+/// darunter Cmd+Leertaste sichtbar und Ctrl+Cmd+Leertaste verdeckt. Dieselben
+/// beiden Namen als **Nutzervorgabe** wirken: mit
+/// `-NSDisabledCharacterPaletteMenuItem YES -NSDisabledDictationMenuItem YES`
+/// auf der Befehlszeile war das Menue leer bis auf die vier eigenen Eintraege.
+/// AppKit liest die beiden also aus `NSUserDefaults` und nicht aus der
+/// Bundle-Beschreibung; diese Funktion stellt sie dort in die
+/// Registrierungsebene, die jede Nutzereinstellung ueberschreiben kann.
+/// Gemeldet als
+/// `issues/260805-0753_o_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
+///
+/// Was bleibt, ist ein Trenner und ein Untermenue "AutoFill" **ohne Kuerzel**.
+/// Es loest ohne Belegung nichts aus und faellt deshalb nicht unter die Zusage.
+pub fn systemzusaetze_unterdruecken() {
+    let ja = NSNumber::new_bool(true);
+    let vorgaben = NSDictionary::from_slices(
+        &[
+            &*NSString::from_str("NSDisabledCharacterPaletteMenuItem"),
+            &*NSString::from_str("NSDisabledDictationMenuItem"),
+        ],
+        &[ja.as_ref() as &AnyObject, ja.as_ref() as &AnyObject],
+    );
+    // SAFETY: `registerDefaults:` nimmt ein `NSDictionary` mit Zeichenketten
+    // als Schluesseln entgegen und kopiert es; genau das steht hier. Es
+    // schreibt nichts auf die Platte, sondern fuellt die unterste Ebene der
+    // Nutzervorgaben, die jede Einstellung des Nutzers ueberschreibt.
+    unsafe { NSUserDefaults::standardUserDefaults().registerDefaults(&vorgaben) };
+}
+
+/// Baut das Hauptmenue der Anwendung aus der Belegung.
+pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu> {
     let hauptmenue = NSMenu::new(mtm);
     hauptmenue.addItem(&untermenue(
         mtm,
         ns_string!("KRK"),
-        &[befehl(
+        &[notbehelf_befehl(
             mtm,
             ns_string!("KRK beenden"),
             sel!(terminate:),
-            ns_string!("q"),
-            NSEventModifierFlags::Command,
+            NOTBEHELF_BEENDEN,
         )],
+    ));
+    hauptmenue.addItem(&untermenue(
+        mtm,
+        ns_string!("Bearbeiten"),
+        &[
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Ausschneiden"),
+                sel!(cut:),
+                "text_ausschneiden",
+            ),
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Kopieren"),
+                sel!(copy:),
+                "text_kopieren",
+            ),
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Einfügen"),
+                sel!(paste:),
+                "text_einfuegen",
+            ),
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Alles auswählen"),
+                sel!(selectAll:),
+                "text_alles_auswaehlen",
+            ),
+        ],
     ));
     hauptmenue.addItem(&untermenue(
         mtm,
@@ -66,17 +207,17 @@ pub fn hauptmenue(mtm: MainThreadMarker) -> Retained<NSMenu> {
         &[
             befehl(
                 mtm,
+                belegung,
                 ns_string!("Fenster einblenden"),
                 sel!(fensterEinblenden:),
-                ns_string!("n"),
-                NSEventModifierFlags::Command,
+                "fenster_einblenden",
             ),
             befehl(
                 mtm,
+                belegung,
                 ns_string!("Fenster schließen"),
-                sel!(performClose:),
-                ns_string!("w"),
-                NSEventModifierFlags::Command | NSEventModifierFlags::Shift,
+                sel!(fensterSchliessen:),
+                "fenster_schliessen",
             ),
         ],
     ));
@@ -103,13 +244,80 @@ fn untermenue(
     eintrag
 }
 
-/// Ein Menuebefehl mit Titel, Aktion, Taste und Zusatztasten.
+/// Ein Menuebefehl, dessen Kuerzel unter `kennung` in der Belegung steht.
 ///
-/// Die Zusatztasten stehen ausdruecklich da und nicht als Grossbuchstabe im
-/// Kuerzel. `NSMenuItem` leitete aus einem `W` zwar dieselbe Anzeige ab, aber
-/// der Diff dieser Datei soll zeigen, welche Zusatztaste gemeint ist; das
-/// Abnahmekriterium von Schritt 12 liest ihn.
+/// Traegt die Funktion mehrere Kombinationen, nimmt der Eintrag die **erste**:
+/// ein `NSMenuItem` haelt genau eine Tastenentsprechung. Der zweite Weg bleibt
+/// ueber den Ereignisabgriff erreichbar und steht mit dem ersten in derselben
+/// Zeile der Belegungsansicht, wie C3 es verlangt.
+///
+/// Traegt sie gar keine, bekommt der Eintrag keine: der Nutzer hat die Belegung
+/// aufgehoben, und ein Kuerzel aus dem Programmtext daruebersetzen hiesse, die
+/// Aufhebung zu uebergehen.
 fn befehl(
+    mtm: MainThreadMarker,
+    belegung: &Belegung,
+    titel: &NSString,
+    aktion: Sel,
+    kennung: &str,
+) -> Retained<NSMenuItem> {
+    let Some(funktion) = belegung.funktion(kennung) else {
+        // Kein Nutzerfehler, sondern einer im Programm: die Kennung steht in
+        // keiner Zeile von `resources/default-keymap.toml`. Ein Menue ohne
+        // Kuerzel ist die vertretbare Folge, ein stilles Weglassen waere es
+        // nicht.
+        eprintln!("krk: die Belegung kennt keine Funktion namens {kennung}");
+        return ohne_kuerzel(mtm, titel, aktion);
+    };
+    match funktion.tasten().first() {
+        Some(kombination) => {
+            let (kuerzel, zusatztasten) = appkit_paar(*kombination);
+            roher_befehl(mtm, titel, aktion, &kuerzel, zusatztasten)
+        }
+        None => ohne_kuerzel(mtm, titel, aktion),
+    }
+}
+
+/// Ein Menuebefehl ohne Tastenentsprechung.
+fn ohne_kuerzel(mtm: MainThreadMarker, titel: &NSString, aktion: Sel) -> Retained<NSMenuItem> {
+    roher_befehl(
+        mtm,
+        titel,
+        aktion,
+        ns_string!(""),
+        NSEventModifierFlags::empty(),
+    )
+}
+
+/// Ein Menuebefehl, dessen Kuerzel noch nicht in der Belegung steht.
+///
+/// Der eine Aufrufer ist der Eintrag "KRK beenden"; siehe
+/// [`NOTBEHELF_BEENDEN`].
+fn notbehelf_befehl(
+    mtm: MainThreadMarker,
+    titel: &NSString,
+    aktion: Sel,
+    geschrieben: &str,
+) -> Retained<NSMenuItem> {
+    match Kombination::lesen(geschrieben) {
+        Ok(kombination) => {
+            let (kuerzel, zusatztasten) = appkit_paar(kombination);
+            roher_befehl(mtm, titel, aktion, &kuerzel, zusatztasten)
+        }
+        // Kann nicht eintreten: die Konstante steht im Programmtext und eine
+        // Pruefung liest sie. Ein Abbruch waere hier trotzdem falsch, weil er
+        // die Anwendung um ein Menue braechte.
+        Err(fehler) => {
+            eprintln!("krk: {geschrieben} ist keine Kombination: {fehler}");
+            ohne_kuerzel(mtm, titel, aktion)
+        }
+    }
+}
+
+/// Ein Menuebefehl mit Titel, Aktion und dem fertigen AppKit-Paar.
+///
+/// Die eine Stelle, die ein `NSMenuItem` anlegt.
+fn roher_befehl(
     mtm: MainThreadMarker,
     titel: &NSString,
     aktion: Sel,
@@ -129,4 +337,294 @@ fn befehl(
     };
     eintrag.setKeyEquivalentModifierMask(zusatztasten);
     eintrag
+}
+
+// ---------------------------------------------------------------------------
+// Die eine Uebersetzung zwischen Kombination und AppKit-Paar
+// ---------------------------------------------------------------------------
+//
+// Sie geht ueber die Tastentabelle aus `krk_core::tasten::parser` und steht
+// genau hier. Eine zweite Uebersetzung, die etwa `shift+cmd+w` unmittelbar auf
+// das Paar aus `w` und `Command | Shift` abbildete, entstuende als zweite
+// Wahrheit ueber dieselbe Kombination.
+
+/// Das AppKit-Paar zu einer Kombination: Kuerzelzeichen und Zusatztastenmaske.
+fn appkit_paar(kombination: Kombination) -> (Retained<NSString>, NSEventModifierFlags) {
+    let zeichen = match zeichen_der_taste(kombination.taste()) {
+        Some(zeichen) => NSString::from_str(&zeichen.to_string()),
+        // Kann mit der Tabelle von heute nicht eintreten; eine Pruefung unten
+        // haelt das fest. Bleibt die Zuordnung eines Tages doch offen, verliert
+        // der Eintrag sein Kuerzel und behaelt seine Beschriftung.
+        None => {
+            eprintln!(
+                "krk: fuer die Taste {} gibt es kein Menuekuerzel",
+                kombination.taste().name
+            );
+            NSString::from_str("")
+        }
+    };
+    (zeichen, maske_nach_appkit(kombination.maske()))
+}
+
+/// Das Zeichen, mit dem AppKit diese Taste als Menuekuerzel fuehrt.
+///
+/// Drei Regeln, keine Liste von Sonderfaellen. Ein einbuchstabiger Name ist
+/// sein eigenes Zeichen; das deckt die Buchstaben und die Ziffern ab. `f1` bis
+/// `f12` liegen als `NSF1FunctionKey` aufwaerts lueckenlos hintereinander und
+/// werden gerechnet. Die uebrigen Namen der Tabelle tragen die Zeichen, die
+/// AppKit in `NSEvent.h` unter `NSUpArrowFunctionKey` und Nachbarn fuehrt,
+/// beziehungsweise die alten Steuerzeichen.
+fn zeichen_der_taste(taste: Taste) -> Option<char> {
+    let name = taste.name;
+    let mut zeichen = name.chars();
+    if let (Some(einziges), None) = (zeichen.next(), zeichen.next()) {
+        return Some(einziges);
+    }
+    if let Some(nummer) = name.strip_prefix('f')
+        && let Ok(nummer) = nummer.parse::<u32>()
+        && (1..=12).contains(&nummer)
+    {
+        // `NSF1FunctionKey` ist 0xF704, und die Reihe laeuft ohne Luecke bis
+        // `NSF35FunctionKey`.
+        return char::from_u32(0xF704 + nummer - 1);
+    }
+    let besonders = match name {
+        "delete" => '\u{0008}', // NSBackspaceCharacter
+        "return" => '\u{000D}', // NSCarriageReturnCharacter
+        "tab" => '\u{0009}',    // NSTabCharacter
+        "esc" => '\u{001B}',    // 0x1B, kein eigener AppKit-Name
+        "space" => ' ',
+        "up" => '\u{F700}',       // NSUpArrowFunctionKey
+        "down" => '\u{F701}',     // NSDownArrowFunctionKey
+        "left" => '\u{F702}',     // NSLeftArrowFunctionKey
+        "right" => '\u{F703}',    // NSRightArrowFunctionKey
+        "pageup" => '\u{F72C}',   // NSPageUpFunctionKey
+        "pagedown" => '\u{F72D}', // NSPageDownFunctionKey
+        "home" => '\u{F729}',     // NSHomeFunctionKey
+        "end" => '\u{F72B}',      // NSEndFunctionKey
+        _ => return None,
+    };
+    Some(besonders)
+}
+
+/// Die Zusatztastenmaske als AppKit-Flaggen.
+fn maske_nach_appkit(maske: ModMaske) -> NSEventModifierFlags {
+    let mut flaggen = NSEventModifierFlags::empty();
+    for (bit, appkit) in paare() {
+        if maske.enthaelt(bit) {
+            flaggen |= appkit;
+        }
+    }
+    flaggen
+}
+
+/// Die Zusatztastenmaske aus AppKit-Flaggen.
+///
+/// Der Rueckweg fuer [`protokollieren`]: dort steht ein `NSMenuItem` und nicht
+/// eine Kombination. Die Feststelltaste, der Zehnerblock, die Hilfetaste und
+/// `function` fallen weg, wie in `krk_core::tasten::normalisierung`.
+fn maske_aus_appkit(flaggen: NSEventModifierFlags) -> ModMaske {
+    let mut maske = ModMaske::LEER;
+    for (bit, appkit) in paare() {
+        if flaggen.contains(appkit) {
+            maske |= bit;
+        }
+    }
+    maske
+}
+
+/// Die vier Zusatztasten der Schreibweise, je mit ihrer AppKit-Flagge.
+///
+/// Die Zuordnung steht hier einmal und traegt beide Richtungen. Die Bitwerte
+/// selbst stehen nicht hier: `krk-core` fuehrt sie in
+/// `normalisierung::roh`, und `ereignisse.rs` haelt sie in
+/// `die_acht_rohen_bitwerte_des_kerns_stimmen_mit_appkit_ueberein` gegen genau
+/// diese Kiste.
+fn paare() -> [(ModMaske, NSEventModifierFlags); 4] {
+    [
+        (ModMaske::STEUERUNG, NSEventModifierFlags::Control),
+        (ModMaske::WAHL, NSEventModifierFlags::Option),
+        (ModMaske::UMSCHALT, NSEventModifierFlags::Shift),
+        (ModMaske::BEFEHL, NSEventModifierFlags::Command),
+    ]
+}
+
+// ---------------------------------------------------------------------------
+// Die Befehlszeilenmarke --menue-protokoll
+// ---------------------------------------------------------------------------
+
+/// Schreibt jeden Eintrag des gebauten Hauptmenues auf die Standardausgabe.
+///
+/// **Die Pruefung liest aus, statt aufzuzaehlen.** Eine Aufzaehlung der heute
+/// bekannten Zusaetze veraltet mit der naechsten macOS-Version, und genau
+/// diesen Fall hat das Vorhaben mit "Close All" schon erlebt. Ausgegeben wird
+/// deshalb, was am `NSMenu` wirklich haengt, einschliesslich der verdeckten
+/// Zweitformen, die AppKit von sich aus dazustellt.
+///
+/// Je Zeile stehen das Untermenue, die Beschriftung, die Kombination in der
+/// Schreibweise von `resources/default-keymap.toml`, das rohe AppKit-Paar aus
+/// Zeichen und Maske sowie der Selektor. Die Kombination erlaubt den Vergleich
+/// gegen die Belegungsdatei, das rohe Paar belegt, was der Eintrag wirklich
+/// traegt.
+///
+/// Vor dem Auslesen bekommt jedes Untermenue ein
+/// [`NSMenu::update`](objc2_app_kit::NSMenu::update): das ist der Aufruf, mit
+/// dem AppKit ein Menue fuer die Anzeige herrichtet. Dass die dazugestellten
+/// Zweitformen ueberhaupt schon dastehen, besorgt der Aufrufer mit
+/// `finishLaunching`; die Begruendung samt Messung steht dort.
+pub fn protokollieren(hauptmenue: &NSMenu) {
+    for oberer in hauptmenue.itemArray().iter() {
+        let Some(untermenue) = oberer.submenu() else {
+            continue;
+        };
+        untermenue.update();
+        let titel = untermenue.title().to_string();
+        for eintrag in untermenue.itemArray().iter() {
+            println!("{}", protokollzeile(&titel, &eintrag));
+        }
+    }
+}
+
+/// Eine Zeile des Modus `--menue-protokoll`.
+fn protokollzeile(untermenue: &str, eintrag: &NSMenuItem) -> String {
+    if eintrag.isSeparatorItem() {
+        return format!("menue=\"{untermenue}\" trenner");
+    }
+    let kuerzel = eintrag.keyEquivalent().to_string();
+    let flaggen = eintrag.keyEquivalentModifierMask();
+    let selektor = match eintrag.action() {
+        Some(auswahl) => auswahl.name().to_string_lossy().into_owned(),
+        None => "(keine Aktion)".to_owned(),
+    };
+    format!(
+        "menue=\"{untermenue}\" eintrag=\"{}\" kombination={} kuerzel={:?} zusatztasten={} \
+         zweitform={} verdeckt={} selektor={selektor}",
+        eintrag.title(),
+        geschriebene_kombination(&kuerzel, flaggen),
+        kuerzel,
+        flaggen.0,
+        ja_nein(eintrag.isAlternate()),
+        ja_nein(eintrag.isHidden()),
+    )
+}
+
+/// Das AppKit-Paar eines Eintrags in der Schreibweise der Belegungsdatei.
+///
+/// `(keines)` fuer einen Eintrag ohne Kuerzel, `(nicht in der Schreibweise)`
+/// fuer eines, dessen Zeichen die Tastentabelle nicht kennt. Beide Antworten
+/// sind fuer den Vergleich gegen `resources/default-keymap.toml` so gut wie
+/// eine Kombination: die Datei kann sie nicht fuehren.
+fn geschriebene_kombination(kuerzel: &str, flaggen: NSEventModifierFlags) -> String {
+    if kuerzel.is_empty() {
+        return "(keines)".to_owned();
+    }
+    let Some(zeichen) = kuerzel.chars().next() else {
+        return "(keines)".to_owned();
+    };
+    // AppKit schreibt ein Kuerzel mit Umschalttaste gern als Grossbuchstaben.
+    // Die Schreibweise der Belegungsdatei kennt nur den Tastennamen, und der
+    // ist klein; die Umschalttaste steht dort in der Maske.
+    let gesucht = zeichen.to_lowercase().next().unwrap_or(zeichen);
+    let treffer = parser::TASTEN
+        .into_iter()
+        .find(|taste| zeichen_der_taste(*taste) == Some(gesucht));
+    match treffer {
+        Some(taste) => Kombination::neu(taste, maske_aus_appkit(flaggen)).to_string(),
+        None => "(nicht in der Schreibweise)".to_owned(),
+    }
+}
+
+/// "ja" oder "nein", fuer die Protokollzeile.
+fn ja_nein(wahr: bool) -> &'static str {
+    if wahr { "ja" } else { "nein" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ohne diese Zusage verloere ein umbelegter Menueeintrag still sein
+    /// Kuerzel.
+    #[test]
+    fn jede_taste_der_tabelle_hat_ein_menuekuerzel() {
+        for taste in parser::TASTEN {
+            assert!(
+                zeichen_der_taste(taste).is_some(),
+                "fuer {} gibt es kein Menuekuerzel",
+                taste.name
+            );
+        }
+    }
+
+    /// Zwei Tasten auf ein Zeichen hiessen: das Protokoll kann die eine nicht
+    /// von der anderen unterscheiden, und der Vergleich gegen die
+    /// Belegungsdatei benennt die falsche Taste.
+    #[test]
+    fn keine_zwei_tasten_teilen_sich_ein_menuekuerzel() {
+        for (stelle, taste) in parser::TASTEN.into_iter().enumerate() {
+            for andere in parser::TASTEN.into_iter().skip(stelle + 1) {
+                assert_ne!(
+                    zeichen_der_taste(taste),
+                    zeichen_der_taste(andere),
+                    "{} und {} tragen dasselbe Menuekuerzel",
+                    taste.name,
+                    andere.name
+                );
+            }
+        }
+    }
+
+    /// Der Weg, den das Protokoll geht: aus der Kombination in das AppKit-Paar
+    /// und zurueck in dieselbe Kombination.
+    #[test]
+    fn jede_kombination_ueberlebt_den_weg_durch_das_appkit_paar() {
+        let masken = [
+            ModMaske::LEER,
+            ModMaske::BEFEHL,
+            ModMaske::UMSCHALT | ModMaske::BEFEHL,
+            ModMaske::STEUERUNG | ModMaske::WAHL | ModMaske::UMSCHALT | ModMaske::BEFEHL,
+        ];
+        for taste in parser::TASTEN {
+            for maske in masken {
+                let kombination = Kombination::neu(taste, maske);
+                let (kuerzel, flaggen) = appkit_paar(kombination);
+                assert_eq!(
+                    geschriebene_kombination(&kuerzel.to_string(), flaggen),
+                    kombination.to_string(),
+                    "{kombination} kommt aus dem AppKit-Paar anders zurueck"
+                );
+            }
+        }
+    }
+
+    /// Der Notbehelf steht als Zeichenkette im Programmtext; ein Tippfehler
+    /// darin naehme dem Eintrag "KRK beenden" sein Kuerzel.
+    #[test]
+    fn der_notbehelf_fuer_beenden_ist_eine_gueltige_kombination() {
+        assert!(Kombination::lesen(NOTBEHELF_BEENDEN).is_ok());
+    }
+
+    /// Die Kennungen, unter denen `hauptmenue` seine Kuerzel sucht, stehen in
+    /// der Auslieferungsbelegung. Ohne diese Zusage faende der Aufbau sie beim
+    /// Start nicht und schriebe eine Meldung, die niemand liest.
+    #[test]
+    fn jede_kennung_des_hauptmenues_steht_in_der_auslieferungsbelegung() {
+        let belegung = Belegung::auslieferung();
+        for kennung in [
+            "text_ausschneiden",
+            "text_kopieren",
+            "text_einfuegen",
+            "text_alles_auswaehlen",
+            "fenster_einblenden",
+            "fenster_schliessen",
+        ] {
+            let Some(funktion) = belegung.funktion(kennung) else {
+                panic!("die Auslieferungsbelegung kennt {kennung} nicht");
+            };
+            assert!(
+                !funktion.tasten().is_empty(),
+                "{kennung} traegt ab Werk keine Kombination"
+            );
+        }
+    }
 }

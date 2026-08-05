@@ -123,3 +123,36 @@ Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C3),
 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`
+
+---
+
+Resolved: 260805 — Möglichkeit 3, entschieden vom Nutzer in
+`decisions/260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+Die drei Zusagen standen nur deshalb gegeneinander, weil die Konflikterkennung
+eine Frage stellte, die zu grob war. Sie fragt künftig nicht mehr allein nach
+der Kombination, sondern nach der Kombination **und** dem Zusteller: zwei
+Funktionen sind genau dann ein Konflikt, wenn sie dieselbe Kombination tragen
+und denselben Zusteller haben. Der Zusteller steht in `gehalten_von`, und der
+Fokusvorbehalt aus S13 teilt jeden Tastendruck genau einem von beiden zu.
+
+Für die Datei heißt das: `alle_markieren` behält `cmd+a` unverändert als einzige
+Kombination, und `text_alles_auswaehlen` trägt `cmd+a` zusätzlich, mit
+`gehalten_von = "menue"`. `resources/default-keymap.toml` zählt damit die in
+S13b zugesagten 55 Funktionen und 62 Kombinationen; der Kommentar an der Stelle
+des fehlenden Blocks ist dem Block gewichen. Geprüft am vollständigen Eintrag
+über einen geparsten Aufbau der Datei: `cmd+a` ist die einzige Kombination bei
+zwei Funktionen, und die beiden haben verschiedene Zusteller. Keine Kombination
+steht bei zwei Funktionen desselben Zustellers.
+
+Damit ist keine der drei Zusagen gebrochen. C3 verlangt eine konfliktfreie
+Auslieferungsbelegung, und konfliktfrei ist sie unter der Regel, die dieser
+Entscheid festlegt. Das Abnahmekriterium von C3 in Zeile 171 des Specs, das
+`cmd+a` allein den Textbefehlen zusprach, ist mit dem Entscheid nachgezogen.
+
+Offen bleibt allein der Code: `Belegung::konflikte`, `Belegung::zuweisen` und
+`Belegung::nachschlag` lernen den Zusteller erst mit S13c, und bis dahin bricht
+`AUSLIEFERUNG` schon am unbekannten Feld ab. Das ist kein Rest dieses Defekts,
+sondern der angekündigte Zuschnitt von S13b, ausgeschrieben im geschlossenen
+Defekt `260805-0637_c_das-abnahmekriterium-von-s13b-verlangt-einen-gruenen-test-den-erst-s13c-gruen-macht.md`.
+
+Nicht committet; der Auftrag behält das Committen dem Orchestrator vor.

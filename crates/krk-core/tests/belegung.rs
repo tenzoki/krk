@@ -149,10 +149,21 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     //
     // Umschalt+Entf loescht nach `shared/decisions/
     // 260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
-    // Cmd+C und Cmd+V sind fuer eine spaetere Zwischenablage reserviert (C3),
     // und die Eingabetaste hat der Nutzer am 260804 freigegeben, nachdem der
-    // Einstieg in den Ordner auf cmd+right gewandert ist (C2). Alle vier
-    // fuehrt der Kopfkommentar von `resources/default-keymap.toml` auf.
+    // Einstieg in den Ordner auf cmd+right gewandert ist (C2). Beide fuehrt der
+    // Kopfkommentar von `resources/default-keymap.toml` auf.
+    //
+    // **Cmd+C und Cmd+V standen bis zum 260805 hier und stehen es nicht mehr.**
+    // Seit S13b tragen sie die Textbefehle des Menues "Bearbeiten", und die
+    // Zusage dieser Pruefung lautet "steht in keiner Tastenliste"; fuer die
+    // beiden stimmt sie nicht mehr. Was sie heute zusagen, naemlich im
+    // Dateifenster nichts auszuloesen, prueft
+    // `der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege` weiter
+    // unten, und dort steht es unter seinem richtigen Grund: nicht "unbelegt",
+    // sondern "vom Menue zugestellt". Die Reservierung aus C3 ist damit
+    // eingeloest und nicht gebrochen (Nutzerentscheid vom 260805-0000,
+    // `decisions/
+    // 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
     //
     // ctrl+b und ctrl+s sind mit derselben Aenderung unbelegt geworden und
     // gehoeren trotzdem nicht hierher. Sie waren eine Behelfsbelegung fuer den
@@ -161,7 +172,7 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // bleiben, und wuerde ausgerechnet ctrl+s dem Editor spaeterer Runden
     // verstellen.
     let belegung = Belegung::auslieferung();
-    for text in ["shift+delete", "cmd+c", "cmd+v", "return"] {
+    for text in ["shift+delete", "return"] {
         let druck = kombi(text).tastendruck();
         assert!(
             matches!(
@@ -171,6 +182,275 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
             "{text} ist ab Werk belegt"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Der Zusteller (Schritt 13c)
+// ---------------------------------------------------------------------------
+//
+// Die Regel, an der die fuenf Pruefungen dieses Abschnitts haengen: zwei
+// Funktionen sind genau dann ein Konflikt, wenn sie dieselbe Kombination tragen
+// und denselben Zusteller haben. Der Zusteller steht in `gehalten_von`: ohne das
+// Feld stellt der Ereignisabgriff aus C2 zu, mit dem Wert "menue" das
+// Hauptmenue. Nutzerentscheid vom 260805, `decisions/
+// 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+
+#[test]
+fn cmd_a_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
+    // Der Fall, der keiner ist, und der einzige seiner Art in der
+    // Auslieferungsbelegung: in der Liste markiert cmd+a alle Eintraege, im
+    // Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich.
+    let belegung = Belegung::auslieferung();
+    let cmd_a = kombi("cmd+a");
+
+    for kennung in ["alle_markieren", "text_alles_auswaehlen"] {
+        let Some(funktion) = belegung.funktion(kennung) else {
+            panic!("die Auslieferungsbelegung kennt {kennung} nicht");
+        };
+        assert!(
+            funktion.tasten().contains(&cmd_a),
+            "{kennung} traegt cmd+a nicht mehr; die Pruefung misst dann nichts"
+        );
+    }
+    assert_eq!(
+        belegung.funktion("alle_markieren").unwrap().gehalten_von(),
+        None
+    );
+    assert_eq!(
+        belegung
+            .funktion("text_alles_auswaehlen")
+            .unwrap()
+            .gehalten_von(),
+        Some("menue")
+    );
+    assert!(
+        belegung.konflikte().is_empty(),
+        "verschiedene Zusteller auf einer Kombination gelten als Konflikt"
+    );
+}
+
+#[test]
+fn zwei_funktionen_desselben_zustellers_auf_einer_kombination_bleiben_ein_konflikt() {
+    // Beide Zusteller, damit die Regel nicht zu "kein Konflikt zwischen Menue
+    // und Dateifenster" verwaessert: zwei Menueeintraege auf derselben
+    // Kombination sind sehr wohl einer.
+    let faelle = [
+        (
+            "abgriff",
+            r#"
+[[funktion]]
+id = "kopieren"
+name = "In das andere Fenster kopieren"
+tasten = ["ctrl+j"]
+
+[[funktion]]
+id = "verschieben"
+name = "In das andere Fenster verschieben"
+tasten = ["ctrl+j"]
+"#,
+            "In das andere Fenster kopieren",
+            "In das andere Fenster verschieben",
+        ),
+        (
+            "menue",
+            r#"
+[[funktion]]
+id = "text_kopieren"
+name = "Kopieren"
+tasten = ["ctrl+j"]
+gehalten_von = "menue"
+
+[[funktion]]
+id = "text_einfuegen"
+name = "Einfügen"
+tasten = ["ctrl+j"]
+gehalten_von = "menue"
+"#,
+            "Kopieren",
+            "Einfügen",
+        ),
+    ];
+
+    for (zweck, keymap, andere, bewerber) in faelle {
+        let ordner = Pruefordner::neu(zweck);
+        let ablage = ordner.ablage_mit(keymap);
+
+        let geladen = belegung::laden(&ablage);
+
+        assert_eq!(
+            geladen.wert,
+            Belegung::auslieferung(),
+            "der Konflikt unter dem Zusteller {zweck} blieb unbemerkt"
+        );
+        let Some(ersetzung) = geladen.ersetzung else {
+            panic!("der Konflikt unter dem Zusteller {zweck} blieb unbemerkt");
+        };
+        let meldung = ersetzung.grund.einzelheit();
+        assert!(
+            meldung.contains(andere) && meldung.contains(bewerber),
+            "die Meldung nennt nicht beide Funktionen: {meldung}"
+        );
+    }
+}
+
+#[test]
+fn die_umbelegung_vergleicht_den_zusteller_ebenso() {
+    // Dieselbe Regel auf dem zweiten Weg in eine Belegung, den die
+    // Belegungsansicht aus C3 geht.
+    let mut belegung = Belegung::auslieferung();
+    let cmd_a = kombi("cmd+a");
+    let cmd_x = kombi("cmd+x");
+
+    // Verschiedene Zusteller: kein Konflikt. cmd+x haelt der Menueeintrag
+    // "Ausschneiden"; das Markieren aller Eintraege stellt der Abgriff zu.
+    assert_eq!(belegung.zuweisen("alle_markieren", cmd_x), Ok(()));
+    assert!(belegung.konflikte().is_empty());
+
+    // Derselbe Zusteller, zweimal Menue: Konflikt, mit beiden Namen.
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) = belegung.zuweisen("text_ausschneiden", cmd_a)
+    else {
+        panic!("cmd+a an einen zweiten Menueeintrag lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "text_alles_auswaehlen");
+    assert_eq!(konflikt.bewerber.kennung, "text_ausschneiden");
+
+    // Derselbe Zusteller, zweimal Abgriff: ebenso.
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) = belegung.zuweisen("markierung_aufheben", cmd_a)
+    else {
+        panic!("cmd+a an eine zweite Funktion des Dateifensters lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "alle_markieren");
+}
+
+#[test]
+fn eine_unbelegte_menuefunktion_nimmt_ihre_kombination_ohne_konflikt_an() {
+    // Der Satz aus dem Abnahmekriterium, an einer Belegung gemessen, in der die
+    // Zuweisung wirklich etwas aendert: `text_alles_auswaehlen` steht ohne
+    // Taste da, `alle_markieren` haelt cmd+a.
+    let ordner = Pruefordner::neu("zuweisen-menue");
+    let ablage = ordner.ablage_mit(
+        r#"
+[[funktion]]
+id = "alle_markieren"
+name = "Alle Einträge markieren"
+tasten = ["cmd+a"]
+
+[[funktion]]
+id = "text_alles_auswaehlen"
+name = "Alles auswählen"
+tasten = []
+gehalten_von = "menue"
+"#,
+    );
+    let mut belegung = belegung::laden(&ablage).wert;
+
+    assert_eq!(
+        belegung.zuweisen("text_alles_auswaehlen", kombi("cmd+a")),
+        Ok(())
+    );
+
+    assert!(belegung.konflikte().is_empty());
+    assert_eq!(
+        belegung
+            .funktion("text_alles_auswaehlen")
+            .unwrap()
+            .tasten()
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege() {
+    // Ohne das Ueberspringen im Nachschlag bestimmte die Reihenfolge der
+    // Eintraege in der Datei des Nutzers, ob das Markieren aller Eintraege noch
+    // wirkt. Diese Datei stellt den Textbefehl bewusst nach vorn.
+    let ordner = Pruefordner::neu("reihenfolge");
+    let ablage = ordner.ablage_mit(
+        r#"
+[[funktion]]
+id = "text_alles_auswaehlen"
+name = "Alles auswählen"
+tasten = ["cmd+a"]
+gehalten_von = "menue"
+
+[[funktion]]
+id = "alle_markieren"
+name = "Alle Einträge markieren"
+tasten = ["cmd+a"]
+
+[[funktion]]
+id = "fenster_schliessen"
+name = "Fenster schließen"
+tasten = ["shift+cmd+w"]
+gehalten_von = "menue"
+"#,
+    );
+    let geladen = belegung::laden(&ablage);
+    assert!(!geladen.ist_ersetzt(), "die Datei ist gueltig");
+    let belegung = geladen.wert;
+
+    let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi("cmd+a").tastendruck()) else {
+        panic!("cmd+a trifft keine Funktion, obwohl alle_markieren sie traegt");
+    };
+    assert_eq!(funktion.kennung(), "alle_markieren");
+    assert_eq!(funktion.kommando(), Some(Kommando::AlleMarkieren));
+
+    // Und eine Funktion, die es sonst gaebe, liefert kein Kommando, sobald das
+    // Hauptmenue sie zustellt: die vierte Stelle der Regel. `fenster_schliessen`
+    // ist der einzige Fall, an dem sich das ueberhaupt messen laesst, weil die
+    // vier Textbefehle ohnehin in keiner Kennung eines Kommandos stehen.
+    let geschlossen = belegung
+        .funktion("fenster_schliessen")
+        .expect("die Funktion steht in der Datei");
+    assert_eq!(geschlossen.gehalten_von(), Some("menue"));
+    assert_eq!(geschlossen.kommando(), None);
+    assert!(matches!(
+        belegung.nachschlag(kombi("shift+cmd+w").tastendruck()),
+        Nachschlag::Unbelegt
+    ));
+
+    // Die drei Textbefehle der Auslieferungsbelegung loesen im Dateifenster
+    // nichts aus. cmd+a fehlt hier, weil es dort das Markieren traegt.
+    let ab_werk = Belegung::auslieferung();
+    for text in ["cmd+x", "cmd+c", "cmd+v"] {
+        assert_eq!(
+            ab_werk.nachschlag(kombi(text).tastendruck()),
+            Nachschlag::Unbelegt,
+            "{text} loest im Dateifenster etwas aus"
+        );
+    }
+}
+
+#[test]
+fn der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit() {
+    // Fehlte `gehalten_von` im Rueckweg, schriebe KRK beim Sichern eine Datei,
+    // die es beim naechsten Start als widerspruechlich abweist.
+    let ordner = Pruefordner::neu("rueckweg");
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+    let belegung = Belegung::auslieferung();
+
+    let text = toml::to_string(&krk_core::tasten::Belegungsdatei::from(&belegung))
+        .expect("die Belegung laesst sich schreiben");
+    assert!(
+        text.contains("gehalten_von"),
+        "der Rueckweg laesst den Zusteller fallen"
+    );
+    let wieder: krk_core::tasten::Belegungsdatei =
+        toml::from_str(&text).expect("und wieder einlesen");
+    assert_eq!(Belegung::vom_nutzer(&wieder), Ok(belegung.clone()));
+
+    // Und derselbe Weg ueber die Platte, den `Belegung::sichern` wirklich geht.
+    belegung
+        .sichern(&ablage)
+        .expect("die Belegung laesst sich sichern");
+    let geladen = belegung::laden(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die selbst geschriebene keymap.toml wurde beim Einlesen abgewiesen"
+    );
+    assert_eq!(geladen.wert, belegung);
 }
 
 // ---------------------------------------------------------------------------

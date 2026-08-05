@@ -27,6 +27,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
+# Ausgeliefert sind 55 Funktionen mit zusammen 62 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -65,6 +66,19 @@
 # steht sie im Dateifenster, schlaegt er in dieser Datei nach. So bewegt
 # cmd+left im Textfeld die Schreibmarke und steigt im Dateifenster in den
 # uebergeordneten Ordner auf.
+#
+# Daraus folgt, dass dieselbe Kombination bei zwei Funktionen stehen darf,
+# sofern verschiedene Zusteller sie tragen. Ein Konflikt sind zwei Funktionen
+# genau dann, wenn sie dieselbe Kombination tragen und denselben Zusteller
+# haben; der Fokusvorbehalt teilt jeden Tastendruck genau einem der beiden zu,
+# und zwei Funktionen mit verschiedenen Zustellern begegnen einander nie. Zwei
+# vom Menue gehaltene Funktionen auf einer Kombination bleiben ein Konflikt,
+# zwei Funktionen des Dateifensters erst recht. Ausgeliefert gibt es genau
+# einen Fall der Doppelung: cmd+a markiert im Dateifenster ueber
+# "alle_markieren" alle Eintraege und waehlt im Textfeld ueber
+# "text_alles_auswaehlen" den Text aus, wie auf dem Mac ueblich
+# (Nutzerentscheid vom 260805, `decisions/
+# 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -450,11 +464,15 @@ name = "Einfügen"
 tasten = ["cmd+v"]
 gehalten_von = "menue"
 
-# Der vierte Textbefehl, "Alles auswählen" auf cmd+a, fehlt hier mit Absicht.
-# cmd+a gehoert seit S9 der Funktion `alle_markieren` weiter oben, und ihn ein
-# zweites Mal zu vergeben liesse die Auslieferungsbelegung an der
-# Konflikterkennung scheitern. Welche der drei moeglichen Aufloesungen gilt,
-# ist eine offene Nutzerfrage: `issues/
-# 260805-0637_o_cmd-a-liegt-schon-auf-alle-markieren-und-s13b-vergibt-es-ein-zweites-mal.md`.
-# Bis dahin zaehlt diese Datei 54 Funktionen und nicht die in S13b zugesagten
-# 55.
+# cmd+a steht auch bei "alle_markieren" weiter oben, und das ist kein Konflikt.
+# Dort stellt der Ereignisabgriff zu, hier das Menue, und der Fokusvorbehalt
+# laesst die beiden einander nie begegnen: in der Liste markiert cmd+a alle
+# Eintraege, im Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich
+# (Nutzerentscheid vom 260805, `decisions/
+# 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+
+[[funktion]]
+id = "text_alles_auswaehlen"
+name = "Alles auswählen"
+tasten = ["cmd+a"]
+gehalten_von = "menue"

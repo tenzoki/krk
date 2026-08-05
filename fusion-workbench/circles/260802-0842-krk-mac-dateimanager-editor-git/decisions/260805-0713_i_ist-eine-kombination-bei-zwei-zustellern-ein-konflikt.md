@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0637_o_cmd-a-liegt-schon-auf-alle-markieren-und-s13b-vergibt-es-ein-zweites-mal.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C2, C3), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (S13, S13b, S13c)
 
@@ -70,4 +70,10 @@ S18 gibt `Kommando` die Eigenschaft `Wirkungsbereich` mit den Werten `Dateifenst
 `inference:` Bleibt eine Kombination im Dateifenster unbelegt, reicht der Abgriff sie weiter, und die Antwortkette von AppKit kann sie beantworten. `NSTableView` bringt eine eigene Auswahlaktion mit; hebt der Nutzer die Belegung von `alle_markieren` auf, könnte `cmd+a` über den Menüeintrag "Alles auswählen" trotzdem alle Zeilen markieren. Gemessen ist das nicht. Es ist keine Ausnahme von der Regel, sondern die Frage, was eine leere Belegung zusagt; sie ist erst fällig, wenn die Belegungsansicht aus S20 das Aufheben einer Belegung anbietet.
 
 Eingearbeitet: `planning/260802-1036_o_spec-navigator-geruest.md` C3 (drei Abnahmekriterien nachgezogen, eine Festlegung neu); `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` bei S13b (der falsche Absatz, der fünfte Eintrag, das Abnahmekriterium) und S13c (die Regel in beiden Hälften, das Abnahmekriterium in beide Richtungen).
-Implemented: <offen — S13c>
+Implemented: <Hash offen — trägt der Orchestrator nach> — S13c hat die Regel an vier Stellen in `crates/krk-core/src/tasten/belegung.rs` umgesetzt.
+
+`Funktion` trägt das Feld `gehalten_von: Option<String>` mit einem Leser daneben, `Eintrag` dasselbe mit `#[serde(default, skip_serializing_if = "Option::is_none")]`, und `impl From<&Belegung> for Belegungsdatei` reicht es auf dem Rückweg durch. Die Regel greift in `Belegung::konflikte` (Vergleich des Zustellers neben der Kombination), in `Belegung::zuweisen` (dasselbe für die Umbelegung) und in `Belegung::nachschlag` (überspringt jede Funktion mit `gehalten_von`).
+
+**Eine vierte Stelle kam hinzu, die der Entscheid nicht nennt:** `Funktion::kommando` liefert `None`, sobald `gehalten_von` gesetzt ist. Ohne sie hinge die Zusage "eine vom Menü gehaltene Funktion liefert kein Kommando" daran, dass `Kommando::KENNUNGEN` die vier Textbefehle zufällig nicht führt. Messbar wird sie an `fenster_schliessen`, der einzigen Funktion, die seit S13c zugleich ein Kommando hat und in einer Nutzerdatei ein `gehalten_von` tragen könnte.
+
+Belegt durch fünf Prüfungen in `crates/krk-core/tests/belegung.rs`, Abschnitt "Der Zusteller (Schritt 13c)": `cmd_a_steht_bei_zwei_funktionen_und_ist_kein_konflikt`, `zwei_funktionen_desselben_zustellers_auf_einer_kombination_bleiben_ein_konflikt`, `die_umbelegung_vergleicht_den_zusteller_ebenso`, `eine_unbelegte_menuefunktion_nimmt_ihre_kombination_ohne_konflikt_an`, `der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege` und `der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit`. Am laufenden Bündel gegengeprüft am 260805-0753: Cmd+A markiert im Dateifenster weiter alle Einträge (drei von drei, abgelesen an der Vorschau des Stapel-Umbenennens) und wählt im Textfeld den Text aus.

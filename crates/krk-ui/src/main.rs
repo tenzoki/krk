@@ -35,6 +35,17 @@ mod tabs;
 /// einschaltet.
 const MARKE_TASTEN_PROTOKOLL: &str = "--tasten-protokoll";
 
+/// Die Befehlszeilenmarke, die das gebaute Hauptmenue ausliest.
+///
+/// Derselbe Zuschnitt wie die Marke darueber und an derselben Stelle
+/// abgefragt. Sie schreibt jeden Eintrag des Hauptmenues mit Beschriftung,
+/// Kuerzel, Zusatztasten und Selektor auf die Standardausgabe und beendet, ohne
+/// ein Fenster zu oeffnen. Damit prueft die Abnahme von C3 durch **Auslesen**
+/// statt durch Aufzaehlen der heute bekannten Zusaetze; eine Aufzaehlung
+/// veraltet mit der naechsten macOS-Version, und genau diesen Fall hat das
+/// Vorhaben mit "Close All" schon erlebt.
+const MARKE_MENUE_PROTOKOLL: &str = "--menue-protokoll";
+
 /// Der Rueckgabewert bei einer falsch aufgerufenen Befehlszeile.
 const AUFRUFFEHLER: i32 = 2;
 
@@ -48,6 +59,7 @@ fn main() {
     let tasten_protokoll = argumente
         .iter()
         .any(|marke| marke == MARKE_TASTEN_PROTOKOLL);
+    let menue_protokoll = argumente.iter().any(|marke| marke == MARKE_MENUE_PROTOKOLL);
     let messaufgabe = match messmodus::Aufgabe::aus_argumenten(&argumente) {
         Ok(aufgabe) => aufgabe,
         Err(meldung) => {
@@ -55,5 +67,5 @@ fn main() {
             std::process::exit(AUFRUFFEHLER);
         }
     };
-    appkit::starten(tasten_protokoll, messaufgabe);
+    appkit::starten(tasten_protokoll, menue_protokoll, messaufgabe);
 }
