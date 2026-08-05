@@ -38,15 +38,25 @@ use krk_core::tasten::Wirkungsbereich;
 
 /// Wo der Eingabefokus steht.
 ///
-/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Drei
+/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Vier
 /// Werte, und sie decken das Fenster vollstaendig ab: die beiden Dateilisten,
-/// die Leiste, und alles uebrige.
+/// die Leiste, das Vorschaufenster, und alles uebrige.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fokus {
     /// In einer der beiden Dateilisten.
     Dateifenster,
     /// In der Lesezeichen- und Geraeteleiste (C5).
     Leiste,
+    /// Im Vorschaufenster (C6), dem dritten fokussierbaren Bereich seit S19.
+    ///
+    /// Hierhin kommt der Fokus in dieser Runde allein per Mausklick in die
+    /// Inhaltsflaeche der Vorschau; einen Tastenbefehl dafuer gibt es noch
+    /// nicht, die offene Frage dazu liegt im Entscheidungsspeicher. Mit dem
+    /// Fokus hier bedienen die vier Tabbefehle aus C1 die Vorschau-Tabs
+    /// ([`Wirkungsbereich::Tabbereich`]), und die beiden Zwischenablage-
+    /// Befehle aus C10 loesen nichts aus, wie ihr Abnahmekriterium es
+    /// verlangt.
+    Vorschau,
     /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
     ///
     /// Ein Kommando, das einen Bereich braucht, wirkt hier nicht. Der Fall ist
@@ -86,6 +96,9 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Ueberall => true,
         Wirkungsbereich::Dateifenster => fokus == Fokus::Dateifenster,
         Wirkungsbereich::Leiste => fokus == Fokus::Leiste,
+        Wirkungsbereich::Tabbereich => {
+            matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
+        }
     }
 }
 
@@ -95,7 +108,12 @@ mod tests {
 
     use super::*;
 
-    const JEDER_FOKUS: [Fokus; 3] = [Fokus::Dateifenster, Fokus::Leiste, Fokus::Anderswo];
+    const JEDER_FOKUS: [Fokus; 4] = [
+        Fokus::Dateifenster,
+        Fokus::Leiste,
+        Fokus::Vorschau,
+        Fokus::Anderswo,
+    ];
 
     #[test]
     fn ein_befehl_ohne_vorbehalt_wirkt_in_jedem_bereich() {
@@ -115,6 +133,56 @@ mod tests {
                 wirkt(Wirkungsbereich::Leiste, fokus),
                 fokus == Fokus::Leiste
             );
+        }
+    }
+
+    /// Die vier Tabbefehle bedienen nach C6 auch die Vorschau-Tabs.
+    ///
+    /// Sie wirken in beiden Bereichen mit Tabs und nirgends sonst: nicht in
+    /// der Leiste, die keine Tabs traegt, und nicht in einem Blatt oder
+    /// Textfeld.
+    #[test]
+    fn ein_tabbefehl_wirkt_in_beiden_bereichen_mit_tabs() {
+        for kommando in [
+            Kommando::TabNeu,
+            Kommando::TabSchliessen,
+            Kommando::TabNaechster,
+            Kommando::TabVoriger,
+        ] {
+            assert_eq!(
+                kommando.wirkungsbereich(),
+                Wirkungsbereich::Tabbereich,
+                "{kommando:?} ist kein Tabbefehl mehr"
+            );
+        }
+        for fokus in JEDER_FOKUS {
+            assert_eq!(
+                wirkt(Wirkungsbereich::Tabbereich, fokus),
+                matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
+            );
+        }
+    }
+
+    /// Die beiden Zwischenablage-Befehle aus C10 brauchen den Fokus im
+    /// Dateifenster.
+    ///
+    /// Das Abnahmekriterium von C10 nennt beide Gegenproben ausdruecklich: in
+    /// der Leiste und im Vorschaufenster loesen sie nichts aus
+    /// (Nutzerentscheid vom 260805-0000).
+    #[test]
+    fn die_zwischenablage_befehle_wirken_nur_im_dateifenster() {
+        for kommando in [
+            Kommando::ZwischenablageAnsehen,
+            Kommando::ZwischenablageSpringen,
+        ] {
+            assert_eq!(
+                kommando.wirkungsbereich(),
+                Wirkungsbereich::Dateifenster,
+                "{kommando:?} traegt nicht den entschiedenen Wirkungsbereich"
+            );
+            assert!(!wirkt(kommando.wirkungsbereich(), Fokus::Leiste));
+            assert!(!wirkt(kommando.wirkungsbereich(), Fokus::Vorschau));
+            assert!(wirkt(kommando.wirkungsbereich(), Fokus::Dateifenster));
         }
     }
 

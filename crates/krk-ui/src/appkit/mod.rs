@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Sechzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Siebzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -18,6 +18,7 @@
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
+//!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
 //! ```
@@ -27,6 +28,9 @@
 //! Hand, weil es ohne Oberflaechenbau kein Nib gibt, aus dem es kaeme.
 //! [`fenster`] baut das Fenster und seinen Delegierten. [`leiste`] haelt die
 //! Lesezeichen- und Geraeteleiste aus C5, den zweiten fokussierbaren Bereich.
+//! [`vorschau`] haelt das Vorschaufenster aus C6, den dritten: Text- und
+//! Bildanzeige samt der zweiten Tableiste, waehrend Tabs und Halteverhalten in
+//! `crate::vorschaumodell` wohnen.
 //! [`aufteilung`] haelt
 //! die `NSSplitView` mit den vier Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
@@ -75,6 +79,7 @@ mod tabelle;
 mod tableiste;
 mod terminal;
 mod volumes;
+mod vorschau;
 mod zwischenablage;
 
 pub use anwendung::starten;

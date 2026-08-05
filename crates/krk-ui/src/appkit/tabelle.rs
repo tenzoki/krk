@@ -247,6 +247,13 @@ pub enum Auswahlversuch {
 /// Schreibweise tragen und keine von beiden zu lesen ist wie ein Bandwurm.
 pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 
+/// Was mit einer neuen Auswahl zu geschehen hat: der vollstaendige Pfad des
+/// ausgewaehlten Eintrags, `None` fuer eine aufgehobene Auswahl.
+///
+/// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
+/// darueber.
+pub type Auswahlmelder = Box<dyn Fn(Option<PathBuf>)>;
+
 /// Was die Datenquelle haelt.
 pub struct QuelleIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
@@ -289,6 +296,17 @@ pub struct QuelleIvars {
     /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
     /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
     ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was gerufen wird, wenn die Auswahl auf einem anderen Eintrag steht
+    /// (C6).
+    ///
+    /// Der Weg, auf dem eine neue Auswahl die Vorschau anstoesst: gemeldet
+    /// wird der vollstaendige Pfad des ausgewaehlten Eintrags, `None` fuer
+    /// eine aufgehobene Auswahl. Gerufen aus [`DateifensterQuelle::
+    /// auswahl_merken`], der einen Stelle, die eine Zeile in einen Eintrag
+    /// uebersetzt; Tastatur und Maus muenden beide dort. Wahlfrei, weil die
+    /// Quelle vor dem Anwendungsdelegierten zur Welt kommt, wie die Rueckrufe
+    /// darueber.
+    auswahlmelder: RefCell<Option<Auswahlmelder>>,
     /// Was gerufen wird, wenn der Nutzer einen Eintrag umbenannt hat (C4).
     ///
     /// Zwei Namen, der alte und der neue, beide schon geprueft. Was mit ihnen
@@ -409,6 +427,7 @@ impl DateifensterQuelle {
             aktivierung: RefCell::new(None),
             sprungmarke: RefCell::new(Sprungmarke::neu()),
             ordnerwechsel: RefCell::new(None),
+            auswahlmelder: RefCell::new(None),
             umbenennung: RefCell::new(None),
             befehlsantwort: RefCell::new(None),
             fenstermeldung: RefCell::new(None),
@@ -438,6 +457,11 @@ impl DateifensterQuelle {
     /// Hinterlegt, was mit einem umbenannten Eintrag zu geschehen hat (C4).
     pub fn umbenennung_setzen(&self, melden: Umbenennungsmelder) {
         *self.ivars().umbenennung.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was bei einer neuen Auswahl zu tun ist (C6).
+    pub fn auswahlmelder_setzen(&self, melden: Auswahlmelder) {
+        *self.ivars().auswahlmelder.borrow_mut() = Some(melden);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -826,10 +850,22 @@ impl DateifensterQuelle {
     /// Auswahlrueckruf des Delegierten, den die Maus ausloest.
     fn auswahl_merken(&self) {
         let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
-        let mut tabs = self.ivars().tabs.borrow_mut();
-        let modell = tabs.aktiver_mut().modell_mut();
-        let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
-        modell.auswahl_setzen(eintrag);
+        let pfad = {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            let ordner = tabs.aktiver().ordner().to_path_buf();
+            let modell = tabs.aktiver_mut().modell_mut();
+            let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
+            modell.auswahl_setzen(eintrag);
+            eintrag
+                .and_then(|eintrag| modell.eintraege().get(eintrag as usize))
+                .map(|eintrag| ordner.join(&eintrag.name))
+        };
+        // Nach dem Ende der Ausleihe: der Melder fuellt die Vorschau aus C6,
+        // und die gehoert einem anderen Halter.
+        let melden = self.ivars().auswahlmelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(pfad);
+        }
     }
 
     /// Zeigt in der Tabelle die Auswahl, die im Modell steht.
@@ -1921,7 +1957,10 @@ fn spaltenkopf(mtm: MainThreadMarker, spalte: Spalte) -> Retained<NSTableColumn>
 }
 
 /// Die Benennung einer Eintragsart.
-fn typ_beschriften(typ: Typ) -> &'static str {
+///
+/// `pub(super)`, weil die Metadatenanzeige der Vorschau (C6) dieselbe
+/// Benennung zeigt; eine zweite Wortliste daneben liefe auseinander.
+pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
     match typ {
         Typ::Ordner => "Ordner",
         Typ::Datei => "Datei",

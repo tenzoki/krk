@@ -14,12 +14,14 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Sechs Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Sieben Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der vier Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
 //! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
-//! werden. `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
+//! werden. `vorschaumodell` haelt die Tabs des Vorschaufensters aus C6 samt
+//! Halteverhalten und dem Lesen der Vorschaudatei auf dem Arbeitsfaden.
+//! `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
 //! C10, darunter die eine Stelle, die einen Pfad prueft. `auffrischung` haelt
 //! den einen Auffrischungspfad aus C9: welche Dateifenster ein gemeldeter Pfad
 //! angeht und was mit ihnen geschieht.
@@ -31,6 +33,7 @@ mod kommandos;
 mod leistenmodell;
 mod messmodus;
 mod tabs;
+mod vorschaumodell;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
 /// einschaltet.

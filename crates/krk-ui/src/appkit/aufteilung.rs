@@ -14,9 +14,9 @@
 //! auch dann eindeutig ist, wenn beide Dateifenster denselben Ordner zeigen.
 //!
 //! Die Lesezeichenleiste steht seit Schritt 18 als eigener Bereich darin und
-//! kommt fertig von [`super::leiste`] herein; das Vorschaufenster ist in dieser
-//! Runde noch ein beschrifteter Platzhalter und bekommt seinen Inhalt mit
-//! Schritt 19. Breite und Sichtbarkeit beider gehoeren zu C7 und damit hierher.
+//! kommt fertig von [`super::leiste`] herein; das Vorschaufenster kommt seit
+//! Schritt 19 ebenso fertig von [`super::vorschau`]. Breite und Sichtbarkeit
+//! beider gehoeren zu C7 und damit hierher.
 //!
 //! # Wo die Breiten herkommen
 //!
@@ -33,11 +33,11 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSBox, NSBoxType, NSColor, NSFont, NSSplitView, NSSplitViewDelegate,
-    NSTextField, NSTitlePosition, NSView,
+    NSAutoresizingMaskOptions, NSBox, NSBoxType, NSColor, NSSplitView, NSSplitViewDelegate,
+    NSTitlePosition, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSInteger, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    MainThreadMarker, NSInteger, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
 };
 
 use krk_core::ablage::{Breiten, Fensterseite, Sichtbarkeit};
@@ -123,13 +123,19 @@ pub struct Aufteilung {
 }
 
 impl Aufteilung {
-    /// Baut die vier Bereiche um die beiden Dateifenster und die Leiste.
+    /// Baut die vier Bereiche um die beiden Dateifenster, die Leiste und die
+    /// Vorschau.
     ///
-    /// Die Leiste kommt fertig herein und wird hier nicht gebaut: sie ist ein
-    /// eigener fokussierbarer Bereich mit eigenem Inhalt, und dieses Modul
-    /// verteilt Breiten und Sichtbarkeit. Dieselbe Aufgabenteilung wie bei den
-    /// beiden Dateifenstern.
-    pub fn bauen(mtm: MainThreadMarker, dateifenster: [&Dateifenster; 2], leiste: &NSView) -> Self {
+    /// Leiste und Vorschau kommen fertig herein und werden hier nicht gebaut:
+    /// beide sind eigene fokussierbare Bereiche mit eigenem Inhalt, und dieses
+    /// Modul verteilt Breiten und Sichtbarkeit. Dieselbe Aufgabenteilung wie
+    /// bei den beiden Dateifenstern.
+    pub fn bauen(
+        mtm: MainThreadMarker,
+        dateifenster: [&Dateifenster; 2],
+        leiste: &NSView,
+        vorschau: &NSView,
+    ) -> Self {
         let teiler = NSSplitView::initWithFrame(
             NSSplitView::alloc(mtm),
             NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
@@ -149,7 +155,7 @@ impl Aufteilung {
         teiler.addSubview(leiste);
         teiler.addSubview(&rahmen[0]);
         teiler.addSubview(&rahmen[1]);
-        teiler.addSubview(&platzhalter(mtm, "Vorschau"));
+        teiler.addSubview(vorschau);
 
         let delegierter = AufteilungsDelegierter::neu(mtm);
         // `NSSplitView.setDelegate:` ist eine sichere Bindung; unsicher ist
@@ -262,29 +268,6 @@ fn gerahmtes_dateifenster(mtm: MainThreadMarker, dateifenster: &Dateifenster) ->
     kasten.setContentViewMargins(NSSize::ZERO);
     kasten.setContentView(Some(&inhalt));
     kasten
-}
-
-/// Ein beschrifteter Platzhalter fuer einen Bereich, den eine spaetere Runde
-/// fuellt.
-fn platzhalter(mtm: MainThreadMarker, name: &str) -> Retained<NSView> {
-    let ansicht = NSView::initWithFrame(
-        NSView::alloc(mtm),
-        NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
-    );
-    let beschriftung = NSTextField::labelWithString(&NSString::from_str(name), mtm);
-    beschriftung.setFont(Some(&NSFont::systemFontOfSize(
-        NSFont::smallSystemFontSize(),
-    )));
-    beschriftung.setTextColor(Some(&NSColor::secondaryLabelColor()));
-    beschriftung.setFrame(NSRect::new(
-        NSPoint::new(statuszeile::EINZUG, AUFBAUGROESSE.height - tableiste::HOEHE),
-        NSSize::new(AUFBAUGROESSE.width - statuszeile::EINZUG, tableiste::HOEHE),
-    ));
-    beschriftung.setAutoresizingMask(
-        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMinYMargin,
-    );
-    ansicht.addSubview(&beschriftung);
-    ansicht
 }
 
 /// Die Ansicht eines Bereichs, falls die Aufteilung sie schon traegt.

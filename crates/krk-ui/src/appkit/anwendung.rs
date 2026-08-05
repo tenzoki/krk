@@ -180,6 +180,7 @@ use super::papierkorb::Systempapierkorb;
 use super::tabelle::Dateifenster;
 use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
+use super::vorschau::Vorschaufenster;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
@@ -257,6 +258,8 @@ pub struct AnwendungsIvars {
     /// Die Lesezeichen- und Geraeteleiste (C5), der zweite fokussierbare
     /// Bereich.
     leiste: OnceCell<Leiste>,
+    /// Das Vorschaufenster (C6), der dritte fokussierbare Bereich.
+    vorschau: OnceCell<Retained<Vorschaufenster>>,
     /// Der Zugang zu `bookmarks.toml` (C5).
     ///
     /// Er steht hier und nicht in der Leiste: der Kern legt ab, die Leiste
@@ -434,6 +437,7 @@ impl Anwendungsdelegierter {
             aufteilung: OnceCell::new(),
             dateifenster: OnceCell::new(),
             leiste: OnceCell::new(),
+            vorschau: OnceCell::new(),
             ablage: RefCell::new(None),
             tastenabgriff: OnceCell::new(),
             dateisystemwache: RefCell::new(None),
@@ -463,8 +467,13 @@ impl Anwendungsdelegierter {
             Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[1])),
         ];
         let leiste = Leiste::bauen(mtm);
-        let aufteilung =
-            Aufteilung::bauen(mtm, [&dateifenster[0], &dateifenster[1]], leiste.sicht());
+        let vorschau = Vorschaufenster::bauen(mtm);
+        let aufteilung = Aufteilung::bauen(
+            mtm,
+            [&dateifenster[0], &dateifenster[1]],
+            leiste.sicht(),
+            vorschau.sicht(),
+        );
         let fenster_delegierter = FensterDelegierter::neu(
             mtm,
             [
@@ -478,6 +487,7 @@ impl Anwendungsdelegierter {
         // schwach, die Tabelle haelt Datenquelle und Delegierten schwach.
         let _ = ivars.dateifenster.set(dateifenster);
         let _ = ivars.leiste.set(leiste);
+        let _ = ivars.vorschau.set(vorschau);
         let _ = ivars.aufteilung.set(aufteilung);
         let _ = ivars.fenster_delegierter.set(fenster_delegierter);
         let _ = ivars.fenster.set(fenster);
@@ -503,6 +513,17 @@ impl Anwendungsdelegierter {
                 .ordnerwechsel_setzen(Box::new(move || {
                     if let Some(selbst) = schwach.load() {
                         selbst.dateisystemwache_nachziehen();
+                    }
+                }));
+            // Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6). Auch
+            // dieser Rueckruf haelt den Delegierten **schwach**, aus demselben
+            // Grund wie die beiden darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .auswahlmelder_setzen(Box::new(move |pfad| {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.vorschau_fuellen(seite, pfad);
                     }
                 }));
             // Das Umbenennen in der Liste aus C4. Die Zelle sammelt den Namen
@@ -601,6 +622,46 @@ impl Anwendungsdelegierter {
             .leiste
             .get()
             .expect("die Leiste steht seit `oberflaeche_aufbauen`")
+    }
+
+    /// Das Vorschaufenster (C6).
+    fn vorschau(&self) -> &Vorschaufenster {
+        self.ivars()
+            .vorschau
+            .get()
+            .expect("das Vorschaufenster steht seit `oberflaeche_aufbauen`")
+    }
+
+    /// Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6).
+    ///
+    /// Nur die Auswahl des **aktiven** Dateifensters: der Rueckruf kommt aus
+    /// beiden, und die Vorschau zeigt, was vor dem Nutzer liegt. Eine
+    /// aufgehobene Auswahl laesst den Tab stehen; das Zustandsdiagramm des
+    /// Specs kennt allein die **neue** Auswahl als Ausloeser.
+    fn vorschau_fuellen(&self, seite: Fensterseite, pfad: Option<PathBuf>) {
+        if seite != self.ivars().modell.borrow().aktiv() {
+            return;
+        }
+        let Some(pfad) = pfad else {
+            return;
+        };
+        self.vorschau().datei_anzeigen(&pfad);
+    }
+
+    /// Zeigt den Inhalt der Zwischenablage im aktiven Vorschau-Tab (C10).
+    ///
+    /// Blendet das Vorschaufenster ein, falls es ausgeblendet war, und
+    /// blendet es **nie** aus: zum Ausblenden bleibt der Befehl aus C7 auf
+    /// F3. Zwei Befehle, die beide umschalten, waeren zwei Wahrheiten ueber
+    /// den Zustand desselben Bereichs.
+    fn zwischenablage_ansehen(&self) -> bool {
+        let inhalt = super::zwischenablage::inhalt_lesen();
+        self.vorschau().zwischenablage_anzeigen(inhalt);
+        let mut modell = self.ivars().modell.borrow_mut();
+        if !modell.sichtbar(Bereich::Vorschau) {
+            modell.umschalten(Bereich::Vorschau);
+        }
+        true
     }
 
     /// Fuellt die Leiste und haengt ihren Rueckruf ein (C5).
@@ -852,6 +913,15 @@ impl Anwendungsdelegierter {
                     return false;
                 }
                 fenster.makeFirstResponder(Some(self.leiste().quelle().liste()))
+            }
+            // In eine ausgeblendete Vorschau geht der Fokus nicht, aus
+            // demselben Grund wie bei der Leiste. Kein Tastenbefehl fuehrt in
+            // dieser Runde hierher; der Arm steht der Vollstaendigkeit halber.
+            Fokus::Vorschau => {
+                if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
+                    return false;
+                }
+                fenster.makeFirstResponder(Some(self.vorschau().fokusansicht()))
             }
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
@@ -1137,6 +1207,7 @@ impl Anwendungsdelegierter {
             Kommando::DateiAnlegen => self.anlegen(Anlegeart::Datei),
             Kommando::UmbenennenStapel => self.stapel_umbenennen(),
             Kommando::TerminalOeffnen => self.terminal_oeffnen(),
+            Kommando::ZwischenablageAnsehen => self.zwischenablage_ansehen(),
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
@@ -1186,6 +1257,10 @@ impl Anwendungsdelegierter {
     fn bereichskommando(&self, fokus: Fokus, kommando: Kommando) -> bool {
         match fokus {
             Fokus::Leiste => self.leiste().quelle().kommando_ausfuehren(kommando),
+            // Die vier Tabbefehle aus C1 bedienen hier die Vorschau-Tabs
+            // (C6); alles andere fuehrt die Vorschau nicht aus, und der
+            // Tastendruck laeuft wie ein unbelegter weiter.
+            Fokus::Vorschau => self.vorschau().kommando_ausfuehren(kommando),
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv)
@@ -1203,14 +1278,15 @@ impl Anwendungsdelegierter {
         if umgeschaltet && bereich == Bereich::Rechts {
             self.dateisystemwache_nachziehen();
         }
-        // Eine ausgeblendete Leiste darf den Fokus nicht behalten: der Nutzer
-        // saehe seine Auswahl nicht mehr und wuesste nicht, wo seine Tasten
-        // ankommen. Gesetzt wird ohne Nachfrage, wo er gerade steht — steht er
-        // im Dateifenster, ist der Aufruf wirkungslos, und eine Abfrage dafuer
-        // waere eine zweite Stelle, die nach dem Fokus fragt.
+        // Ein ausgeblendeter Randbereich darf den Fokus nicht behalten: der
+        // Nutzer saehe seine Auswahl nicht mehr und wuesste nicht, wo seine
+        // Tasten ankommen. Gesetzt wird ohne Nachfrage, wo er gerade steht —
+        // steht er im Dateifenster, ist der Aufruf wirkungslos, und eine
+        // Abfrage dafuer waere eine zweite Stelle, die nach dem Fokus fragt.
+        // Seit S19 gilt das fuer die Leiste wie fuer die Vorschau.
         if umgeschaltet
-            && bereich == Bereich::Lesezeichen
-            && !self.ivars().modell.borrow().sichtbar(Bereich::Lesezeichen)
+            && matches!(bereich, Bereich::Lesezeichen | Bereich::Vorschau)
+            && !self.ivars().modell.borrow().sichtbar(bereich)
         {
             self.fokus_setzen(Fokus::Dateifenster);
         }
@@ -1606,7 +1682,15 @@ impl Anwendungsdelegierter {
                 .is_some_and(|ersthelfer| ersthelfer.isEqual(Some(leiste.quelle().liste())))
         });
         if in_der_leiste {
-            Fokus::Leiste
+            return Fokus::Leiste;
+        }
+        let in_der_vorschau = self.ivars().vorschau.get().is_some_and(|vorschau| {
+            haupt
+                .firstResponder()
+                .is_some_and(|ersthelfer| ersthelfer.isEqual(Some(vorschau.fokusansicht())))
+        });
+        if in_der_vorschau {
+            Fokus::Vorschau
         } else {
             Fokus::Dateifenster
         }

@@ -1,13 +1,18 @@
-//! Die beiden Beruehrungen mit dem System, die C10 braucht.
+//! Die Beruehrungen mit dem System, die C10 braucht, und die **eine** Huelle
+//! um `NSPasteboard`.
 //!
 //! ```text
-//! NSPasteboard ──> lesen ──> krk_core::zwischenablage::deuten
-//!                                     │
-//!                             Ziel::Web ──> im_browser_oeffnen ──> NSWorkspace
+//! NSPasteboard ──> lesen ────────> krk_core::zwischenablage::deuten
+//!              │                            │
+//!              │                    Ziel::Web ──> im_browser_oeffnen ──> NSWorkspace
+//!              └─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
 //! ```
 //!
-//! Beide in einem Modul, weil sie die eine Frage beantworten: was steht in der
-//! Zwischenablage, und wohin geht KRK damit. Denselben Zuschnitt zieht
+//! [`lesen`] traegt seit S13 den Sprung, [`inhalt_lesen`] seit S19 die
+//! Vorschau der Zwischenablage; eine zweite Huelle um `NSPasteboard` entsteht
+//! dabei nicht. Alles in einem Modul, weil es die eine Frage beantwortet: was
+//! steht in der Zwischenablage, und wohin geht KRK damit. Denselben Zuschnitt
+//! zieht
 //! `appkit/volumes.rs`, wo die `NSWorkspace`-Beobachtung und die Aufzaehlung
 //! ueber `NSFileManager` zusammen die eine Frage nach den Datentraegern
 //! beantworten.
@@ -38,8 +43,13 @@
 //! kein Aufruf, der das koennte; `setString:forType:` und `writeObjects:`
 //! kommen nicht vor. Cmd+C und Cmd+V bleiben ab Werk unbelegt (C3).
 
-use objc2_app_kit::{NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypeString, NSWorkspace};
+use objc2_app_kit::{
+    NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeString,
+    NSPasteboardTypeTIFF, NSWorkspace,
+};
 use objc2_foundation::{NSString, NSURL};
+
+use crate::vorschaumodell::Zwischenablageinhalt;
 
 /// Was in der Zwischenablage steht, als eine Zeichenkette.
 ///
@@ -60,6 +70,36 @@ pub fn lesen() -> Option<String> {
         }
     }
     None
+}
+
+/// Was in der Zwischenablage steht, fuer die Vorschau aus C10 gedeutet.
+///
+/// Die Dreiteilung der Anzeige: ein Bild als Bild, Text als Text, und eine
+/// leere Zwischenablage als ausdrueckliche Meldung. Das Bild kommt **vor** dem
+/// Text, weil ein kopiertes Bild oft eine Textbeschreibung neben sich traegt,
+/// etwa die Adresse, von der es stammt; wer ein Bild kopiert, will das Bild
+/// sehen. Ein im Finder kopierter Eintrag legt kein Bild ab und erscheint
+/// deshalb als sein `file:`-Verweis, also als Text.
+///
+/// Gefragt werden PNG und TIFF, die beiden Bildsorten, die `NSPasteboard`
+/// selbst fuehrt; jede bildgebende Anwendung legt mindestens eine davon ab,
+/// und `NSImage` liest beide.
+pub fn inhalt_lesen() -> Zwischenablageinhalt {
+    let ablage = NSPasteboard::generalPasteboard();
+    for sorte in [unsafe { NSPasteboardTypePNG }, unsafe {
+        NSPasteboardTypeTIFF
+    }] {
+        if let Some(daten) = ablage.dataForType(sorte) {
+            let bytes = daten.to_vec();
+            if !bytes.is_empty() {
+                return Zwischenablageinhalt::Bild(bytes);
+            }
+        }
+    }
+    match lesen() {
+        Some(text) => Zwischenablageinhalt::Text(text),
+        None => Zwischenablageinhalt::Leer,
+    }
 }
 
 /// Uebergibt eine Web-Adresse an den Systembrowser (C10).

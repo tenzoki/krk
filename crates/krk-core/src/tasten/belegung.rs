@@ -122,9 +122,15 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 
 /// Welcher Bereich den Eingabefokus haben muss, damit ein Kommando wirkt (C5).
 ///
-/// Drei Werte, und die Aufzaehlung ist mit ihnen vollstaendig: KRK hat zwei
-/// fokussierbare Bereiche, und ein Befehl gehoert entweder einem von beiden
-/// oder keinem. Ein vierter Wert entstuende erst mit einem dritten Bereich.
+/// Vier Werte, und die Aufzaehlung ist mit ihnen vollstaendig: KRK hat seit
+/// Schritt 19 drei fokussierbare Bereiche, die beiden Dateifenster, die Leiste
+/// und das Vorschaufenster. Ein Befehl gehoert einem Dateifenster, der Leiste,
+/// einem Bereich mit Tabs oder keinem. Der vierte Wert [`Wirkungsbereich::
+/// Tabbereich`] ist mit dem Vorschaufenster aus C6 entstanden: die vier
+/// Tabbefehle aus C1 bedienen nach C6 auch dessen Tabs, und zwar in dem
+/// Bereich, der den Fokus gerade hat — so fuehrt es
+/// `resources/default-keymap.toml` seit S9. Ein eigener Vorschau-Wert daneben
+/// entsteht nicht, weil kein Befehl allein im Vorschaufenster wirkt.
 ///
 /// **Der Vorbehalt ist stumm.** Ein Kommando, das hier scheitert, tut nichts
 /// und meldet nichts; der Tastendruck geht unveraendert an AppKit weiter, wie
@@ -139,6 +145,15 @@ pub enum Wirkungsbereich {
     /// Wirkt nur, wenn der Fokus in der Lesezeichen- und Geraeteleiste steht
     /// (C5).
     Leiste,
+    /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
+    /// Dateifenster oder im Vorschaufenster (C1, C6).
+    ///
+    /// Der Wert der vier Tabbefehle. C6 verlangt fuer die Vorschau-Tabs
+    /// "dieselben Befehle zum Oeffnen, Schliessen und Wechseln wie in C1",
+    /// und dieselben Befehle heisst: dieselben vier Kommandos, gerichtet an
+    /// den Bereich vor dem Nutzer. Die Leiste traegt keine Tabs und bleibt
+    /// aussen vor.
+    Tabbereich,
     /// Wirkt ohne Vorbehalt.
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
@@ -200,6 +215,8 @@ pub enum Kommando {
     VersteckteUmschalten,
     /// Zu dem springen, was in der Zwischenablage steht (C10).
     ZwischenablageSpringen,
+    /// Den Inhalt der Zwischenablage im Vorschaufenster ansehen (C10).
+    ZwischenablageAnsehen,
     /// Einen neuen Tab im aktiven Dateifenster oeffnen (C1).
     TabNeu,
     /// Den aktiven Tab schliessen (C1).
@@ -267,7 +284,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 50] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 51] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -291,6 +308,7 @@ impl Kommando {
         ),
         (Kommando::VersteckteUmschalten, "versteckte_umschalten"),
         (Kommando::ZwischenablageSpringen, "zwischenablage_springen"),
+        (Kommando::ZwischenablageAnsehen, "zwischenablage_ansehen"),
         (Kommando::TabNeu, "tab_neu"),
         (Kommando::TabSchliessen, "tab_schliessen"),
         (Kommando::TabNaechster, "tab_naechster"),
@@ -348,10 +366,12 @@ impl Kommando {
     /// Tabelle mit Auffangzweig gaebe einem vergessenen Kommando
     /// stillschweigend den Bereich des Nachbarn.
     ///
-    /// Drei Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
+    /// Vier Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
     /// Befehl ausfuehrt**. Was das Fenstermodell traegt, wirkt ueberall; was
     /// ein Dateifenster traegt, braucht dessen Fokus; was die Leiste traegt,
-    /// den ihren. Drei Befehle folgen ihr nicht und stehen deshalb hier:
+    /// den ihren; die vier Tabbefehle bedienen den Bereich mit Tabs, der den
+    /// Fokus hat (C1 wie C6). Drei Befehle folgen ihr nicht und stehen
+    /// deshalb hier:
     /// [`Kommando::AuswahlHoch`] und [`Kommando::AuswahlRunter`] bewegen die
     /// Auswahl des Bereichs, der den Fokus hat, und gehoeren deshalb keinem
     /// von beiden allein; [`Kommando::LesezeichenAnlegen`] liest den Ordner
@@ -381,10 +401,18 @@ impl Kommando {
             | Kommando::LesezeichenLoeschen
             | Kommando::LesezeichenHoch
             | Kommando::LesezeichenRunter => Wirkungsbereich::Leiste,
+            // Die vier Tabbefehle aus C1. Sie bedienen nach C6 auch die Tabs
+            // des Vorschaufensters und wirken auf den Bereich mit Tabs, der
+            // den Fokus hat; so fuehrt es die Auslieferungsbelegung seit S9.
+            Kommando::TabNeu
+            | Kommando::TabSchliessen
+            | Kommando::TabNaechster
+            | Kommando::TabVoriger => Wirkungsbereich::Tabbereich,
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
-            // hinaus, Navigation, Markierung, Sortierung, Tabs, die
-            // Dateioperationen aus C4 und der Terminal-Befehl aus C11, der den
-            // Ordner des sichtbaren Tabs uebergibt.
+            // hinaus, Navigation, Markierung, Sortierung, die Dateioperationen
+            // aus C4, die beiden Zwischenablage-Befehle aus C10
+            // (Nutzerentscheid vom 260805-0000) und der Terminal-Befehl aus
+            // C11, der den Ordner des sichtbaren Tabs uebergibt.
             Kommando::SeiteHoch
             | Kommando::SeiteRunter
             | Kommando::Listenanfang
@@ -403,10 +431,7 @@ impl Kommando {
             | Kommando::SortierrichtungUmkehren
             | Kommando::VersteckteUmschalten
             | Kommando::ZwischenablageSpringen
-            | Kommando::TabNeu
-            | Kommando::TabSchliessen
-            | Kommando::TabNaechster
-            | Kommando::TabVoriger
+            | Kommando::ZwischenablageAnsehen
             | Kommando::Kopieren
             | Kommando::Verschieben
             | Kommando::InPapierkorb
