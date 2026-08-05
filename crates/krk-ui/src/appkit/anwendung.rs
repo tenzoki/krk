@@ -433,6 +433,19 @@ impl Anwendungsdelegierter {
                         selbst.dateisystemwache_nachziehen();
                     }
                 }));
+            // Das Umbenennen in der Liste aus C4. Die Zelle sammelt den Namen
+            // und prueft ihn; ausgefuehrt wird er hier, weil die Auffrischung
+            // **beide** Dateifenster erreichen muss und das von der Quelle aus
+            // nicht geht. Auch dieser Rueckruf haelt den Delegierten
+            // **schwach**, aus demselben Grund wie die beiden darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .umbenennung_setzen(Box::new(move |alt, neu| {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.umbenennen_ausfuehren(seite, alt, neu);
+                    }
+                }));
         }
 
         self.aufteilung_nachziehen();
@@ -1020,6 +1033,28 @@ impl Anwendungsdelegierter {
         self.antwort_zeigen(seite, &operationen::angelegt_text(art, &name));
     }
 
+    /// Benennt den Eintrag um, den der Nutzer in der Liste bearbeitet hat (C4).
+    ///
+    /// Dieselbe Reihenfolge wie beim Anlegen, und aus denselben Gruenden: erst
+    /// [`krk_core::operation::umbenennen`] aus S15, dann
+    /// [`auffrischung::ordner_neu_lesen`], der eine Auffrischungspfad aus S14,
+    /// dann die Auswahl auf den neuen Namen ueber die eine Stelle, die eine
+    /// Zeile anhand ihres Namens waehlt.
+    ///
+    /// **Ob der Name schon vergeben ist, beantwortet das Dateisystem.**
+    /// `umbenennen` scheitert dann mit [`io::ErrorKind::AlreadyExists`], und
+    /// der Grund geht in die Statuszeile. Eine Vorabprueferei gegen die
+    /// gelesene Liste waere eine zweite Wahrheit ueber denselben Ordner.
+    fn umbenennen_ausfuehren(&self, seite: Fensterseite, alt: &str, neu: &str) {
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        if let Err(fehler) = operation::umbenennen(&ordner.join(alt), neu) {
+            self.antwort_zeigen(seite, &operationen::umbenennungsfehler(neu, &fehler));
+            return;
+        }
+        auffrischung::ordner_neu_lesen(self, &ordner);
+        self.dateifenster(seite).quelle().eintrag_waehlen(neu);
+    }
+
     /// Oeffnet das Blatt fuer das Umbenennen im Stapel (C4).
     ///
     /// Der **erste** der beiden Befehle, die C4 verlangt: er zeigt die
@@ -1052,45 +1087,49 @@ impl Anwendungsdelegierter {
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         stapelumbenennen::zeigen(self.mtm(), fenster, markierte, bestand, move |vorschau| {
             if let Some(selbst) = schwach.load() {
-                selbst.stapel_ausfuehren(seite, &ordner, &vorschau);
+                selbst.stapel_beauftragen(seite, &ordner, &vorschau);
             }
         });
         true
     }
 
-    /// Fuehrt aus, was in der bestaetigten Vorschau steht (C4).
+    /// Gibt die bestaetigte Vorschau als Auftrag an die Operationsmaschine (C4).
     ///
-    /// Je Zeile genau ein [`krk_core::operation::umbenennen`] aus S15; ein
-    /// zweiter Umbenennungsweg entsteht nicht. Eine Zeile mit Hinweis bleibt
-    /// stehen, und eine gescheiterte bricht den Stapel nicht ab: dieselbe
-    /// Haltung, die C4 fuer die Operationsmaschine festhaelt.
+    /// Der **zweite**, ausdrueckliche Befehl aus C4. Bis S17c lief hier eine
+    /// Schleife auf dem Hauptfaden: je Zeile ein
+    /// [`krk_core::operation::umbenennen`], ohne Arbeitsfaden, ohne Fortschritt
+    /// und ohne Abbruch. Ueber wenige Dutzend Eintraege war das richtig; ueber
+    /// 5.000 brauchte es auf dem Referenzgeraet 525 ms, und so lange stand der
+    /// Hauptfaden. Das verfehlte zwei Zusagen aus C4 und L9 aus C8,
+    /// `issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`.
     ///
-    /// **Ohne Arbeitsfaden.** `rename(2)` fasst keinen Inhalt an und ist auch
-    /// ueber Tausende von Eintraegen in Millisekunden fertig; ein Auftrag an
-    /// die Operationsmaschine waere hier mehr Aufwand als Sache, genau wie beim
-    /// Anlegen.
-    fn stapel_ausfuehren(&self, seite: Fensterseite, ordner: &Path, vorschau: &Vorschau) {
-        let stehengeblieben = vorschau.zeilen().len() - vorschau.auszufuehren().count();
-        let mut umbenannt = 0;
-        let mut gescheitert = 0;
-        let mut erster = None;
-        for zeile in vorschau.auszufuehren() {
-            match operation::umbenennen(&ordner.join(&zeile.alt), &zeile.neu) {
-                Ok(_) => {
-                    umbenannt += 1;
-                    erster.get_or_insert_with(|| zeile.neu.clone());
-                }
-                Err(_) => gescheitert += 1,
-            }
+    /// **Die Schwelle haengt an der Zeit und nicht an einer Eintragszahl.** Ein
+    /// Stapel ueber 50 Namen ist nach rund 5 ms durch und laesst keine Zeile
+    /// aufblitzen; einer ueber 5.000 ueberschreitet die 150 ms aus
+    /// [`operationen::ANZEIGEVERZUG`] und zeigt seinen Fortschritt in derselben
+    /// Statuszeile wie Kopieren und Verschieben.
+    ///
+    /// Eine Zeile mit Hinweis kommt gar nicht erst in den Auftrag. Wie viele das
+    /// waren, sagt der Abschlusstext ueber seine beiden Zahlen: umbenannte
+    /// Eintraege und bestaetigte Positionen.
+    fn stapel_beauftragen(&self, seite: Fensterseite, ordner: &Path, vorschau: &Vorschau) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
         }
-
-        auffrischung::ordner_neu_lesen(self, ordner);
-        if let Some(name) = erster {
-            self.dateifenster(seite).quelle().eintrag_waehlen(&name);
+        let paare: Vec<(PathBuf, String)> = vorschau
+            .auszufuehren()
+            .map(|zeile| (ordner.join(&zeile.alt), zeile.neu.clone()))
+            .collect();
+        if paare.is_empty() {
+            self.antwort_zeigen(seite, "nichts umzubenennen: jede Zeile trägt einen Hinweis");
+            return;
         }
-        self.antwort_zeigen(
+        let auftrag = Auftrag::umbenennen_im_stapel(paare);
+        self.auftrag_starten(
             seite,
-            &operationen::stapelbericht(umbenannt, stehengeblieben, gescheitert),
+            auftrag,
+            ordner.to_path_buf(),
+            vorschau.zeilen().len(),
         );
     }
 
@@ -1125,21 +1164,7 @@ impl Anwendungsdelegierter {
     /// hiesse, dass F5 auf leerer Auswahl in der Menueleiste landet.
     fn auftrag_stellen(&self, art: Art) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        // Ein zweiter Vorgang startet nicht, solange einer laeuft, und sagt das
-        // (C4). Die Meldung geht als **Befehlsantwort** an das Dateifenster, in
-        // dem der Nutzer die Taste gedrueckt hat, und steht damit auch dann in
-        // der Zeile, wenn genau dieses Fenster den laufenden Vorgang begonnen
-        // hat. Bis zum 260804-1915 war sie eine Fenstermeldung und verschwand
-        // im haeufigen Fall hinter dem eigenen Fortschritt,
-        // `issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
-        let laufende_art = self
-            .ivars()
-            .vorgang
-            .borrow()
-            .as_ref()
-            .map(|vorgang| vorgang.art.clone());
-        if let Some(laufende_art) = laufende_art {
-            self.antwort_zeigen(aktiv, &operationen::schon_ein_vorgang(&laufende_art));
+        if self.vorgang_laeuft_schon(aktiv) {
             return true;
         }
 
@@ -1162,10 +1187,55 @@ impl Anwendungsdelegierter {
         let positionen = auswahl.zahl();
         let auftrag = Auftrag {
             quellen: auswahl.pfade,
-            art: art.clone(),
+            art,
             konfliktregel: Default::default(),
             uebertragung: Default::default(),
         };
+        self.auftrag_starten(aktiv, auftrag, quellordner, positionen)
+    }
+
+    /// Meldet einen bereits laufenden Vorgang und sagt, ob deshalb nichts
+    /// startet (C4).
+    ///
+    /// KRK haelt genau einen Vorgang. Die Meldung geht als **Befehlsantwort** an
+    /// das Dateifenster, in dem der Nutzer die Taste gedrueckt hat, und steht
+    /// damit auch dann in der Zeile, wenn genau dieses Fenster den laufenden
+    /// Vorgang begonnen hat. Bis zum 260804-1915 war sie eine Fenstermeldung und
+    /// verschwand im haeufigen Fall hinter dem eigenen Fortschritt,
+    /// `issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
+    ///
+    /// **Beide Wege in die Operationsmaschine fragen hier.** Die vier Befehle
+    /// aus der Auswahl gehen ueber [`Self::auftrag_stellen`], das
+    /// Stapel-Umbenennen ueber [`Self::stapel_beauftragen`]; eine zweite Prueferei
+    /// waeren zwei Antworten auf dieselbe Frage.
+    fn vorgang_laeuft_schon(&self, seite: Fensterseite) -> bool {
+        let laufende_art = self
+            .ivars()
+            .vorgang
+            .borrow()
+            .as_ref()
+            .map(|vorgang| vorgang.art.clone());
+        let Some(laufende_art) = laufende_art else {
+            return false;
+        };
+        self.antwort_zeigen(seite, &operationen::schon_ein_vorgang(&laufende_art));
+        true
+    }
+
+    /// Startet einen fertigen Auftrag auf der Operationsmaschine.
+    ///
+    /// Der gemeinsame Teil der beiden Wege: Arbeitsfaden ueber
+    /// [`krk_core::operation::starten`], Vermittlerfaden fuer die Meldungen und
+    /// der [`Vorgang`], an dem der Hauptfaden ihn wiederfindet. Liefert immer
+    /// `true`: der Tastendruck ist verbraucht, gleich ob der Faden zustande kam.
+    fn auftrag_starten(
+        &self,
+        seite: Fensterseite,
+        auftrag: Auftrag,
+        quellordner: PathBuf,
+        positionen: usize,
+    ) -> bool {
+        let art = auftrag.art.clone();
         // Hier bekommt die Schnittstelle aus `operation/loeschen.rs` ihre
         // Implementierung: bis zu diesem Aufruf hatte sie im laufenden Programm
         // keine.
@@ -1183,7 +1253,7 @@ impl Anwendungsdelegierter {
             // Der Lauf ist mit `gestartet` gefallen und damit abgebrochen; er
             // hat noch nichts angefasst.
             self.antwort_zeigen(
-                aktiv,
+                seite,
                 &format!("die Operation liess sich nicht starten: {fehler}"),
             );
             return true;
@@ -1191,7 +1261,7 @@ impl Anwendungsdelegierter {
 
         *self.ivars().vorgang.borrow_mut() = Some(Vorgang {
             art,
-            seite: aktiv,
+            seite,
             quellordner,
             positionen,
             begonnen: Instant::now(),
@@ -1352,8 +1422,23 @@ impl Anwendungsdelegierter {
         // S14 angelegt und `### Frage 3` zugesagt hat. Ein eigener Weg fuer die
         // selbst verursachte Aenderung entsteht nicht.
         auffrischung::ordner_neu_lesen(self, &vorgang.quellordner);
-        if let Art::Kopieren { ziel } | Art::Verschieben { ziel } = &vorgang.art {
-            auffrischung::ordner_neu_lesen(self, ziel);
+        match &vorgang.art {
+            Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
+                auffrischung::ordner_neu_lesen(self, ziel);
+            }
+            // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
+            // neuen Namen, so wie sie nach dem Anlegen auf dem angelegten
+            // Eintrag steht. Der Name kommt aus dem Auftrag selbst und braucht
+            // kein eigenes Feld; scheiterte gerade seine Umbenennung, findet
+            // `eintrag_waehlen` ihn nicht und laesst die Auswahl stehen.
+            Art::UmbenennenImStapel { neue_namen } => {
+                if let Some(erster) = neue_namen.first() {
+                    self.dateifenster(vorgang.seite)
+                        .quelle()
+                        .eintrag_waehlen(erster);
+                }
+            }
+            Art::InDenPapierkorb | Art::EndgueltigLoeschen => {}
         }
 
         let Some((frage, liste)) = operationen::uebersprungenliste(&bericht.uebersprungen) else {

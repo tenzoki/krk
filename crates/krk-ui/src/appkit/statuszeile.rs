@@ -34,8 +34,13 @@
 //! # Wer die Zeile bekommt, wenn mehrere zugleich etwas zu sagen haben
 //!
 //! Die Auswahl steht in [`zeile`], einer Funktion ohne AppKit, damit sie
-//! pruefbar ist. Die Lebensdauern der vier Quellen stehen bei ihren Feldern in
-//! `DateifensterQuelle`; hier steht allein die Rangfolge.
+//! pruefbar ist. Die Lebensdauern der vier Quellen mit eigenem Feld stehen bei
+//! ihren Feldern in `DateifensterQuelle`; hier steht allein die Rangfolge.
+//!
+//! **Der fuenfte Rang hat als einziger kein Feld.** Der Markierungsstand aus
+//! C2 wird bei jedem Schreiben der Zeile aus dem Ordnermodell des sichtbaren
+//! Tabs gerechnet, statt gesetzt und geloescht zu werden; die Begruendung
+//! steht bei `DateifensterQuelle::markierungsstand_text`.
 
 use objc2::rc::Retained;
 use objc2_app_kit::{
@@ -65,7 +70,7 @@ pub enum Art {
     Vorgang,
 }
 
-/// Was von den vier Quellen jetzt in der Zeile steht.
+/// Was von den fuenf Quellen jetzt in der Zeile steht.
 ///
 /// **Die eine Regel, und kein Sonderfall je Meldungsart.** Die Zeile traegt
 /// einen Text. Steht mehr als eine Aussage, gewinnt die, die dem letzten Tun
@@ -76,7 +81,19 @@ pub enum Art {
 /// 2  Vorgangsanzeige   der Stand einer laufenden Operation
 /// 3  Fenstermeldung    ein Ereignis am Fenster, das niemand angefordert hat
 /// 4  Tabmeldung        der Zustand des sichtbaren Ordners
+/// 5  Markierungsstand  was im sichtbaren Tab markiert ist
 /// ```
+///
+/// **Der Markierungsstand steht unter der Tabmeldung und nicht neben ihr.**
+/// Beide beschreiben einen Zustand des sichtbaren Tabs, aber mit
+/// verschiedenen Lebensdauern: die Tabmeldung traegt einen Ordner, der sich
+/// nicht lesen liess, und muss stehen bleiben, waehrend der Nutzer markiert
+/// und die Markierung wieder aufhebt. Beide in ein Feld zu legen gaebe diesem
+/// Feld zwei Loeschregeln, und das ist der Sonderfall, den diese Datei fuer
+/// Befehlsantwort und Fenstermeldung schon einmal ausgeschlossen hat. Unter
+/// der Tabmeldung steht er, weil ein nicht lesbarer Ordner ein Fehler ist und
+/// eine Markierungszahl keiner; er ist der Ruhezustand der Zeile, und ein
+/// Ruhezustand ist der unterste Rang.
 ///
 /// Das ist dieselbe Ordnung, die S14 zwischen Fenster- und Tabmeldung gezogen
 /// hat ("ein Ereignis ist neuer als ein Zustand"), zu Ende gefuehrt: eine
@@ -87,26 +104,30 @@ pub enum Art {
 /// Operation" hinter dem Fortschritt desselben Dateifensters
 /// (`issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
 ///
-/// **Verdraengt wird nichts geloescht.** Jede der vier Quellen haelt ihren Text
-/// in ihrem eigenen Feld, und jedes Feld hat genau eine Loeschregel. Eine
-/// verdraengte Aussage erscheint, sobald alles ueber ihr gefallen ist: die
-/// Auswurfmeldung, die waehrend einer Kopie eintrifft, steht auf Rang 3, wartet
-/// die Kopie und deren Abschlusstext (Rang 1) ab und ist mit dem naechsten
-/// Tastenbefehl in der Zeile. Ein Zeitgeber ist dafuer nicht noetig, weil jede
-/// Lebensdauer an einem Ereignis haengt und an keiner Uhr.
+/// **Verdraengt wird nichts geloescht.** Jede der vier oberen Quellen haelt
+/// ihren Text in ihrem eigenen Feld, und jedes Feld hat genau eine
+/// Loeschregel; der fuenfte Rang wird gerechnet und kann deshalb gar nicht
+/// veralten. Eine verdraengte Aussage erscheint, sobald alles ueber ihr
+/// gefallen ist: die Auswurfmeldung, die waehrend einer Kopie eintrifft, steht
+/// auf Rang 3, wartet die Kopie und deren Abschlusstext (Rang 1) ab und ist mit
+/// dem naechsten Tastenbefehl in der Zeile. Ein Zeitgeber ist dafuer nicht
+/// noetig, weil jede Lebensdauer an einem Ereignis haengt und an keiner Uhr.
 ///
-/// Die Art faellt mit dem Rang: allein die Vorgangsanzeige ist kein Fehler.
+/// Die Art faellt mit dem Rang: Vorgangsanzeige und Markierungsstand sind
+/// keine Fehler, die drei uebrigen sind welche.
 pub fn zeile<'a>(
     befehlsantwort: Option<&'a str>,
     vorgangsanzeige: Option<&'a str>,
     fenstermeldung: Option<&'a str>,
     tabmeldung: Option<&'a str>,
+    markierungsstand: Option<&'a str>,
 ) -> Option<(&'a str, Art)> {
     befehlsantwort
         .map(|text| (text, Art::Fehler))
         .or_else(|| vorgangsanzeige.map(|text| (text, Art::Vorgang)))
         .or_else(|| fenstermeldung.map(|text| (text, Art::Fehler)))
         .or_else(|| tabmeldung.map(|text| (text, Art::Fehler)))
+        .or_else(|| markierungsstand.map(|text| (text, Art::Vorgang)))
 }
 
 /// Die Textzeile am Fuss eines Dateifensters.
@@ -175,25 +196,25 @@ mod tests {
 
     #[test]
     fn ohne_jede_quelle_bleibt_die_zeile_leer() {
-        assert_eq!(zeile(None, None, None, None), None);
+        assert_eq!(zeile(None, None, None, None, None), None);
     }
 
     #[test]
     fn jede_quelle_steht_fuer_sich_allein_in_der_zeile() {
         assert_eq!(
-            zeile(Some("Antwort"), None, None, None),
+            zeile(Some("Antwort"), None, None, None, None),
             Some(("Antwort", Art::Fehler))
         );
         assert_eq!(
-            zeile(None, Some("Vorgang"), None, None),
+            zeile(None, Some("Vorgang"), None, None, None),
             Some(("Vorgang", Art::Vorgang))
         );
         assert_eq!(
-            zeile(None, None, Some("Ereignis"), None),
+            zeile(None, None, Some("Ereignis"), None, None),
             Some(("Ereignis", Art::Fehler))
         );
         assert_eq!(
-            zeile(None, None, None, Some("Zustand")),
+            zeile(None, None, None, Some("Zustand"), None),
             Some(("Zustand", Art::Fehler))
         );
     }
@@ -206,6 +227,7 @@ mod tests {
             zeile(
                 Some("es läuft bereits eine Operation: Kopieren"),
                 Some("Kopieren: 8.189 Einträge …"),
+                None,
                 None,
                 None
             ),
@@ -220,7 +242,8 @@ mod tests {
                 None,
                 Some("Kopieren: 8.189 Einträge …"),
                 Some("Datenträger ausgeworfen"),
-                Some("Ordner nicht lesbar")
+                Some("Ordner nicht lesbar"),
+                Some("12 markiert, davon 3 Ordner, 4,2 MB")
             ),
             Some(("Kopieren: 8.189 Einträge …", Art::Vorgang))
         );
@@ -233,7 +256,8 @@ mod tests {
                 None,
                 None,
                 Some("Datenträger ausgeworfen"),
-                Some("Ordner nicht lesbar")
+                Some("Ordner nicht lesbar"),
+                Some("12 markiert, davon 3 Ordner, 4,2 MB")
             ),
             Some(("Datenträger ausgeworfen", Art::Fehler))
         );
@@ -253,6 +277,7 @@ mod tests {
                 None,
                 Some("Kopieren: 9.131 Einträge …"),
                 Some(auswurf),
+                None,
                 None
             ),
             Some(("Kopieren: 9.131 Einträge …", Art::Vorgang))
@@ -260,14 +285,51 @@ mod tests {
         // Unmittelbar nach dem Bericht: der Abschlusstext ist die Antwort auf
         // den Befehl und steht oben.
         assert_eq!(
-            zeile(Some(abschluss), None, Some(auswurf), None),
+            zeile(Some(abschluss), None, Some(auswurf), None, None),
             Some((abschluss, Art::Fehler))
         );
         // Der naechste Tastenbefehl raeumt die Antwort weg; jetzt ist die
         // Auswurfmeldung an der Reihe, statt verloren zu sein.
         assert_eq!(
-            zeile(None, None, Some(auswurf), None),
+            zeile(None, None, Some(auswurf), None, None),
             Some((auswurf, Art::Fehler))
         );
+    }
+
+    /// Der fuenfte Rang aus S16c: er steht unter allen vieren.
+    #[test]
+    fn der_markierungsstand_steht_hinter_der_tabmeldung() {
+        let markiert = "12 markiert, davon 3 Ordner, 4,2 MB";
+        assert_eq!(
+            zeile(
+                None,
+                None,
+                None,
+                Some("Ordner nicht lesbar"),
+                Some(markiert)
+            ),
+            Some(("Ordner nicht lesbar", Art::Fehler)),
+            "ein nicht lesbarer Ordner ist wichtiger als eine Markierungszahl"
+        );
+        assert_eq!(
+            zeile(None, None, None, None, Some(markiert)),
+            Some((markiert, Art::Vorgang)),
+            "ohne Tabmeldung steht der Markierungsstand in der Zeile"
+        );
+    }
+
+    /// Eine Markierungszahl ist kein Fehler und wird deshalb nicht rot.
+    #[test]
+    fn der_markierungsstand_gilt_nicht_als_fehler() {
+        let (_, art) = zeile(
+            None,
+            None,
+            None,
+            None,
+            Some("3 markiert, davon 0 Ordner, 6 KB"),
+        )
+        .expect("der Markierungsstand steht als einzige Quelle in der Zeile");
+        assert_eq!(art, Art::Vorgang);
+        assert_ne!(art, Art::Fehler);
     }
 }

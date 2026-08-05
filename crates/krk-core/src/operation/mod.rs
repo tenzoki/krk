@@ -135,11 +135,14 @@ fn ausfuehren(
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
 ) -> Abschluss {
-    for pfad in &auftrag.quellen {
+    // Die Stelle laeuft mit, weil das Stapel-Umbenennen den neuen Namen an ihr
+    // findet: er steht in der Art, Stelle fuer Stelle zu `quellen`. Die vier
+    // uebrigen Arten sehen sie nicht.
+    for (stelle, pfad) in auftrag.quellen.iter().enumerate() {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
         }
-        if einen_abarbeiten(auftrag, pfad, papierkorb, steuerung) == Ablauf::Abgebrochen {
+        if einen_abarbeiten(auftrag, stelle, pfad, papierkorb, steuerung) == Ablauf::Abgebrochen {
             return Abschluss::Abgebrochen;
         }
     }
@@ -152,6 +155,7 @@ fn ausfuehren(
 
 fn einen_abarbeiten(
     auftrag: &Auftrag,
+    stelle: usize,
     pfad: &Path,
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
@@ -180,6 +184,16 @@ fn einen_abarbeiten(
         },
         Art::InDenPapierkorb => loeschen::in_den_papierkorb(&quelle, papierkorb, steuerung),
         Art::EndgueltigLoeschen => loeschen::endgueltig_loeschen(&quelle, steuerung),
+        Art::UmbenennenImStapel { .. } => match auftrag.neuer_name(stelle) {
+            Some(neuer_name) => umbenennen::eintrag_umbenennen(&quelle, neuer_name, steuerung),
+            // Die beiden Listen entstehen aus denselben Paaren und sind damit
+            // gleich lang. Der Fall ist trotzdem behandelt, weil ein leiser
+            // Ausfall hier hiesse, einen Eintrag stillschweigend auszulassen.
+            None => {
+                steuerung.ueberspringen(pfad, "es fehlt der neue Name");
+                Ablauf::Weiter
+            }
+        },
     }
 }
 

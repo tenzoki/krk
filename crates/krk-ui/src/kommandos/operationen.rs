@@ -77,6 +77,7 @@ use std::time::{Duration, Instant};
 
 use krk_core::operation::{
     Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen,
+    name_pruefen,
 };
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
@@ -367,6 +368,7 @@ fn ueberschrift(art: &Art) -> &'static str {
         Art::Verschieben { .. } => "Verschieben",
         Art::InDenPapierkorb => "In den Papierkorb räumen",
         Art::EndgueltigLoeschen => "Endgültig löschen",
+        Art::UmbenennenImStapel { .. } => "Umbenennen",
     }
 }
 
@@ -561,9 +563,7 @@ pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
 /// nennt.
 pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
     match fehler.kind() {
-        io::ErrorKind::AlreadyExists => {
-            format!("es gibt schon einen Eintrag namens „{name}“")
-        }
+        io::ErrorKind::AlreadyExists => schon_vergeben(name),
         io::ErrorKind::PermissionDenied => format!(
             "keine Rechte, hier {} „{name}“ anzulegen",
             match art {
@@ -575,30 +575,77 @@ pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
     }
 }
 
-/// Die Meldung nach einem ausgefuehrten Stapel-Umbenennen (C4).
+/// Der Satz zum bereits vergebenen Namen, fuer das Anlegen und das Umbenennen.
 ///
-/// Drei Zahlen, weil drei verschiedene Dinge geschehen sein koennen: umbenannt,
-/// wegen eines Hinweises stehengeblieben, am Dateisystem gescheitert. Die
-/// dritte steht nur da, wenn sie nicht null ist; eine Null, die in neun von
-/// zehn Faellen dasteht, liest niemand mehr.
-pub fn stapelbericht(umbenannt: usize, stehengeblieben: usize, gescheitert: usize) -> String {
-    let mut text = match umbenannt {
-        0 => "nichts umbenannt".to_owned(),
-        1 => "ein Eintrag umbenannt".to_owned(),
-        zahl => format!("{} Einträge umbenannt", self::zahl(zahl)),
-    };
-    if stehengeblieben > 0 {
-        text.push_str(&format!(
-            ", {} stehengeblieben",
-            eintraege_text(stehengeblieben)
-        ));
-    }
-    if gescheitert > 0 {
-        text.push_str(&format!(", {} gescheitert", eintraege_text(gescheitert)));
-    }
-    text
+/// Beide Befehle scheitern am selben Zustand des Ordners und sagen deshalb
+/// denselben Satz. Zwei Formulierungen dafuer waeren zwei Erklaerungen fuer
+/// dieselbe Lage.
+fn schon_vergeben(name: &str) -> String {
+    format!("es gibt schon einen Eintrag namens „{name}“")
 }
 
+// ----------------------------------------------------------------------
+// Umbenennen eines einzelnen Eintrags in der Liste (C4, Schritt 17b)
+// ----------------------------------------------------------------------
+
+/// Was aus dem Namen wird, den der Nutzer in die Namenszelle geschrieben hat.
+///
+/// Drei Ausgaenge und kein `Result`: das Gleichbleiben ist weder ein Erfolg
+/// noch ein Fehler, sondern der haeufigste Ausgang ueberhaupt. Wer die Zelle
+/// oeffnet und sie mit Return wieder schliesst, hat nichts umbenannt und will
+/// darueber auch nichts lesen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Umbenennungswunsch {
+    /// Der Name ist derselbe geblieben. Nichts tun, nichts melden.
+    Unveraendert,
+    /// Ein zulaessiger neuer Name, getrimmt.
+    Neu(String),
+    /// Der Name taugt nicht; der Grund steht im Klartext dabei.
+    Abgelehnt(&'static str),
+}
+
+/// Prueft, was der Nutzer in die Namenszelle geschrieben hat (C4).
+///
+/// Getrimmt wird aus demselben Grund wie in der Namenseingabe des Anlegens:
+/// fuehrende und schliessende Leerzeichen sind so gut wie immer ein Versehen,
+/// und ein Eintrag, den man von seinem Nachbarn nicht unterscheiden kann, ist
+/// keine Hilfe.
+///
+/// **Ob der Name schon vergeben ist, prueft diese Funktion nicht.** Das
+/// beantwortet das Dateisystem beim Umbenennen selbst, und zwar in dem
+/// Augenblick, in dem es zaehlt; eine Vorabprueferei gegen die gelesene Liste
+/// waere eine zweite Wahrheit ueber denselben Ordner und ginge zwischen Lesen
+/// und Umbenennen ohnehin ins Leere. Den Satz dazu liefert
+/// [`umbenennungsfehler`].
+pub fn umbenennung_pruefen(alt: &str, eingabe: &str) -> Umbenennungswunsch {
+    let neu = eingabe.trim();
+    if neu == alt {
+        return Umbenennungswunsch::Unveraendert;
+    }
+    match name_pruefen(neu) {
+        Ok(()) => Umbenennungswunsch::Neu(neu.to_owned()),
+        Err(fehler) => Umbenennungswunsch::Abgelehnt(fehler.grund()),
+    }
+}
+
+/// Die Meldung, wenn ein Eintrag nicht umbenannt werden konnte (C4).
+///
+/// Genannt wird der **neue** Name: der alte steht dem Nutzer noch in der Liste,
+/// der neue ist der, an dem es lag. Der bereits vergebene Name bekommt denselben
+/// Satz wie beim Anlegen; die uebrigen behalten den Systemwortlaut, dieselbe
+/// Abwaegung wie in [`anlegefehler`].
+pub fn umbenennungsfehler(neuer_name: &str, fehler: &io::Error) -> String {
+    match fehler.kind() {
+        io::ErrorKind::AlreadyExists => schon_vergeben(neuer_name),
+        io::ErrorKind::PermissionDenied => {
+            format!("keine Rechte, hier in „{neuer_name}“ umzubenennen")
+        }
+        _ => format!("„{neuer_name}“ ließ sich nicht vergeben: {fehler}"),
+    }
+}
+
+/// Die Meldung nach einem ausgefuehrten Stapel-Umbenennen (C4).
+///
 /// "ein Eintrag" beziehungsweise "4.812 Einträge".
 fn eintraege_text(eintraege: usize) -> String {
     match eintraege {
@@ -616,7 +663,11 @@ fn positionen_text(positionen: usize) -> String {
 }
 
 /// "ein Ordner" beziehungsweise "3 Ordner".
-fn ordner_text(ordner: usize) -> String {
+///
+/// Auch der Markierungsstand aus S16c nennt die Ordner gesondert und benutzt
+/// dieselbe Wendung; die Loeschfrage hat sie zuerst gebraucht, deshalb steht
+/// sie hier und nicht in [`super::auswahl`].
+pub(crate) fn ordner_text(ordner: usize) -> String {
     match ordner {
         1 => "ein Ordner".to_owned(),
         zahl => format!("{} Ordner", self::zahl(zahl)),
@@ -624,7 +675,11 @@ fn ordner_text(ordner: usize) -> String {
 }
 
 /// Eine Zahl mit Punkten als Tausendertrennung, wie sie der Nutzer liest.
-fn zahl(wert: usize) -> String {
+///
+/// Die eine Schreibweise fuer Zahlen in der Oberflaeche. [`super::auswahl`]
+/// nimmt sie fuer den Markierungsstand mit, damit eine markierte Liste
+/// dieselben Punkte zeigt wie ein laufender Vorgang.
+pub(crate) fn zahl(wert: usize) -> String {
     let ziffern = wert.to_string();
     let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);
     for (stelle, ziffer) in ziffern.chars().enumerate() {
@@ -950,23 +1005,29 @@ mod tests {
         );
     }
 
+    /// Seit S17c laeuft das Stapel-Umbenennen ueber die Operationsmaschine und
+    /// bekommt denselben Abschlusstext wie die vier uebrigen Arten. Die beiden
+    /// Zahlen darin sagen zusammen, was `stapelbericht` vorher in einem eigenen
+    /// Satz sagte: umbenannt wurden 48 Eintraege, bestaetigt hatte der Nutzer
+    /// 50 Zeilen, also sind zwei stehengeblieben.
     #[test]
-    fn der_stapelbericht_nennt_nur_die_zahlen_die_etwas_sagen() {
-        assert_eq!(stapelbericht(50, 0, 0), "50 Einträge umbenannt");
-        assert_eq!(
-            stapelbericht(48, 2, 0),
-            "48 Einträge umbenannt, 2 Einträge stehengeblieben"
+    fn der_abschlusstext_des_stapels_nennt_umbenannte_und_bestaetigte_zeilen() {
+        let bericht = Bericht {
+            abschluss: Abschluss::Fertig,
+            eintraege: 48,
+            bytes: 4_812,
+            uebersprungen: Vec::new(),
+        };
+        let text = abschlusstext(
+            &Art::UmbenennenImStapel {
+                neue_namen: Vec::new(),
+            },
+            &bericht,
+            50,
         );
-        let mit_fehler = stapelbericht(1, 0, 1);
-        assert!(
-            mit_fehler.starts_with("ein Eintrag umbenannt"),
-            "{mit_fehler}"
-        );
-        assert!(mit_fehler.contains("gescheitert"), "{mit_fehler}");
-        assert_eq!(
-            stapelbericht(0, 3, 0),
-            "nichts umbenannt, 3 Einträge stehengeblieben"
-        );
+        assert!(text.starts_with("Umbenennen fertig: "), "{text}");
+        assert!(text.contains("48 Einträge"), "{text}");
+        assert!(text.contains("50 ausgewählte Positionen"), "{text}");
     }
 
     #[test]
@@ -976,6 +1037,76 @@ mod tests {
         assert_eq!(zahl(1_000), "1.000");
         assert_eq!(zahl(4_812), "4.812");
         assert_eq!(zahl(1_234_567), "1.234.567");
+    }
+
+    // ------------------------------------------------------------------
+    // Umbenennen eines einzelnen Eintrags (C4, Schritt 17b)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn ein_unveraenderter_name_benennt_nichts_um() {
+        assert_eq!(
+            umbenennung_pruefen("bericht.txt", "bericht.txt"),
+            Umbenennungswunsch::Unveraendert
+        );
+    }
+
+    /// Der haeufigste Weg zum unveraenderten Namen: der Nutzer hat die Zelle
+    /// geoeffnet und nur Leerzeichen angehaengt.
+    #[test]
+    fn leerzeichen_am_rand_fallen_weg_und_ergeben_denselben_namen() {
+        assert_eq!(
+            umbenennung_pruefen("bericht.txt", "  bericht.txt  "),
+            Umbenennungswunsch::Unveraendert
+        );
+    }
+
+    #[test]
+    fn ein_neuer_name_kommt_getrimmt_zurueck() {
+        assert_eq!(
+            umbenennung_pruefen("alt.txt", "  neu.txt "),
+            Umbenennungswunsch::Neu("neu.txt".to_owned())
+        );
+    }
+
+    #[test]
+    fn ein_unzulaessiger_name_wird_mit_grund_abgelehnt() {
+        assert_eq!(
+            umbenennung_pruefen("alt.txt", "   "),
+            Umbenennungswunsch::Abgelehnt("der Name ist leer")
+        );
+        assert_eq!(
+            umbenennung_pruefen("alt.txt", "unter/ordner"),
+            Umbenennungswunsch::Abgelehnt("ein Name darf keinen Schraegstrich enthalten")
+        );
+        assert_eq!(
+            umbenennung_pruefen("alt.txt", ".."),
+            Umbenennungswunsch::Abgelehnt("'.' und '..' sind keine Namen")
+        );
+    }
+
+    /// Der vergebene Name kommt vom Dateisystem und bekommt denselben Satz wie
+    /// beim Anlegen.
+    #[test]
+    fn ein_vergebener_name_meldet_denselben_satz_wie_beim_anlegen() {
+        let vergeben = io::Error::from(io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            umbenennungsfehler("neu.txt", &vergeben),
+            anlegefehler(Anlegeart::Datei, "neu.txt", &vergeben)
+        );
+        assert_eq!(
+            umbenennungsfehler("neu.txt", &vergeben),
+            "es gibt schon einen Eintrag namens „neu.txt“"
+        );
+    }
+
+    #[test]
+    fn ein_anderer_fehler_behaelt_den_systemwortlaut() {
+        let text = umbenennungsfehler("neu.txt", &io::Error::from(io::ErrorKind::NotFound));
+        assert!(
+            text.starts_with("„neu.txt“ ließ sich nicht vergeben: "),
+            "{text}"
+        );
     }
 
     #[test]

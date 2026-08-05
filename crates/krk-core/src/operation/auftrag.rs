@@ -35,6 +35,23 @@ pub enum Art {
     /// der Kern bekommt den Auftrag erst, wenn sie beantwortet ist. Festgelegt
     /// in `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
     EndgueltigLoeschen,
+    /// Im Stapel umbenennen, jeder Eintrag in seinem eigenen Ordner (C4).
+    ///
+    /// Die Regel, aus der die neuen Namen entstehen, rechnet die Oberflaeche;
+    /// der Kern bekommt die fertige Liste. Er prueft sie nicht ein zweites Mal
+    /// auf Kollisionen: was der Nutzer in der Vorschau gesehen hat, ist der
+    /// Auftrag, und ein Name, den das Dateisystem inzwischen vergeben hat,
+    /// scheitert an ebendiesem und landet in der Abschlussliste.
+    UmbenennenImStapel {
+        /// Die neuen Namen, Stelle fuer Stelle zu [`Auftrag::quellen`].
+        ///
+        /// Zwei Listen und keine Liste aus Paaren, weil die Maschine ueber
+        /// `quellen` laeuft wie bei jeder anderen Art. Aneinander gebunden
+        /// werden sie von [`Auftrag::umbenennen_im_stapel`], das die Paare
+        /// auftrennt; ein Aufrufer kann sie deshalb nicht gegeneinander
+        /// verschieben.
+        neue_namen: Vec<String>,
+    },
 }
 
 /// Was geschieht, wenn am Ziel schon ein Eintrag desselben Namens steht.
@@ -94,6 +111,25 @@ impl Auftrag {
         Self::neu(quellen, Art::EndgueltigLoeschen)
     }
 
+    /// Im Stapel umbenennen (C4).
+    ///
+    /// Genommen werden Paare aus altem Pfad und neuem Namen, damit die beiden
+    /// Listen gar nicht erst getrennt uebergeben werden koennen. Aufgetrennt
+    /// werden sie hier, einmal, und danach laufen sie Stelle fuer Stelle
+    /// nebeneinander.
+    pub fn umbenennen_im_stapel(paare: Vec<(PathBuf, String)>) -> Self {
+        let (quellen, neue_namen): (Vec<PathBuf>, Vec<String>) = paare.into_iter().unzip();
+        Self::neu(quellen, Art::UmbenennenImStapel { neue_namen })
+    }
+
+    /// Der neue Name der Quelle an dieser Stelle, sofern die Art einen kennt.
+    pub(crate) fn neuer_name(&self, stelle: usize) -> Option<&str> {
+        match &self.art {
+            Art::UmbenennenImStapel { neue_namen } => neue_namen.get(stelle).map(String::as_str),
+            _ => None,
+        }
+    }
+
     fn neu(quellen: Vec<PathBuf>, art: Art) -> Self {
         Self {
             quellen,
@@ -121,7 +157,9 @@ impl Auftrag {
     pub fn zielordner(&self) -> Option<&PathBuf> {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),
-            Art::InDenPapierkorb | Art::EndgueltigLoeschen => None,
+            // Ein Stapel-Umbenennen hat keinen Zielordner: jeder Eintrag
+            // bleibt, wo er ist, und bekommt nur einen anderen Namen.
+            Art::InDenPapierkorb | Art::EndgueltigLoeschen | Art::UmbenennenImStapel { .. } => None,
         }
     }
 }
@@ -144,6 +182,33 @@ mod tests {
             auftrag.zielordner().map(PathBuf::as_path),
             Some(Path::new("/tmp/b"))
         );
+    }
+
+    #[test]
+    fn ein_stapel_umbenennen_traegt_die_namen_stelle_fuer_stelle_zu_den_quellen() {
+        let auftrag = Auftrag::umbenennen_im_stapel(vec![
+            (PathBuf::from("/tmp/a.txt"), "eins.txt".to_owned()),
+            (PathBuf::from("/tmp/b.txt"), "zwei.txt".to_owned()),
+        ]);
+
+        assert_eq!(
+            auftrag.quellen,
+            vec![PathBuf::from("/tmp/a.txt"), PathBuf::from("/tmp/b.txt")]
+        );
+        assert_eq!(auftrag.neuer_name(0), Some("eins.txt"));
+        assert_eq!(auftrag.neuer_name(1), Some("zwei.txt"));
+        assert_eq!(auftrag.neuer_name(2), None, "jenseits der Liste");
+        assert_eq!(
+            auftrag.zielordner(),
+            None,
+            "jeder Eintrag bleibt, wo er ist"
+        );
+    }
+
+    #[test]
+    fn eine_andere_art_kennt_keinen_neuen_namen() {
+        let auftrag = Auftrag::kopieren(vec![PathBuf::from("/tmp/a")], "/tmp/b");
+        assert_eq!(auftrag.neuer_name(0), None);
     }
 
     #[test]

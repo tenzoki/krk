@@ -27,6 +27,33 @@
 use super::eintrag::Eintrag;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
 
+/// Was gerade markiert ist, in einem Durchlauf gezaehlt.
+///
+/// Drei Werte und keine drei Methoden: die Statuszeile zeigt sie zusammen, und
+/// drei Methoden waeren drei Durchlaeufe ueber dieselbe Liste und drei
+/// Gelegenheiten, unterschiedlich zu filtern.
+///
+/// **Die Groessensumme zaehlt allein Dateien.** [`Eintrag::groesse`] ist fuer
+/// einen Ordner ohne Aussage, und sie zu ermitteln hiesse, ihn zu durchlaufen;
+/// genau diesen Vorabdurchlauf schliesst der Plan aus. Dieselbe Trennung zieht
+/// die Groessenspalte des Dateifensters, die bei einem Ordner `--` zeigt.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Markierungsstand {
+    /// Wie viele Eintraege markiert sind, Ordner eingerechnet.
+    pub zahl: usize,
+    /// Wie viele der markierten Eintraege Ordner sind.
+    pub ordner: usize,
+    /// Die Summe der Groessen der markierten **Dateien**, in Bytes.
+    pub groesse: u64,
+}
+
+impl Markierungsstand {
+    /// Ob ueberhaupt etwas markiert ist.
+    pub fn ist_leer(&self) -> bool {
+        self.zahl == 0
+    }
+}
+
 /// Der Inhalt eines Ordners, wie ihn ein Dateifenster anzeigt.
 #[derive(Debug)]
 pub struct Ordnermodell {
@@ -244,12 +271,30 @@ impl Ordnermodell {
             .unwrap_or(false)
     }
 
-    /// Wie viele Eintraege markiert sind.
+    /// Was markiert ist: Zahl, Ordnerzahl und Groessensumme.
     ///
     /// Ueber alle gelesenen Eintraege, auch die gerade ausgeblendeten: eine
     /// Markierung, die der Nutzer nicht sieht, besteht trotzdem.
-    pub fn markierungszahl(&self) -> usize {
-        self.markiert.iter().filter(|markiert| **markiert).count()
+    ///
+    /// Ein Durchlauf fuer alle drei Werte, und deshalb eine Struktur statt
+    /// dreier Methoden; die Begruendung steht bei [`Markierungsstand`].
+    pub fn markierungsstand(&self) -> Markierungsstand {
+        let mut stand = Markierungsstand::default();
+        for (index, markiert) in self.markiert.iter().enumerate() {
+            if !*markiert {
+                continue;
+            }
+            let Some(eintrag) = self.eintraege.get(index) else {
+                continue;
+            };
+            stand.zahl += 1;
+            if eintrag.ist_ordner() {
+                stand.ordner += 1;
+            } else {
+                stand.groesse = stand.groesse.saturating_add(eintrag.groesse);
+            }
+        }
+        stand
     }
 
     /// Kehrt die Markierung eines einzelnen Eintrags um.

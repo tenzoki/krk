@@ -6,18 +6,26 @@
 //! ```text
 //! name_pruefen  ──> anlegen.rs (Ordner und Datei anlegen)
 //!               ──> umbenennen (hier)
-//!               ──> spaeter: umbenennen im Stapel (S17)
 //! freier_name   ──> fortschritt.rs (Konfliktregel "automatisch umbenennen")
-//! umbenennen    ──> spaeter: umbenennen im Stapel (S17), je Eintrag
+//! umbenennen    ──> eintrag_umbenennen (hier), je Eintrag des Stapels
 //! ```
 //!
-//! Der Stapel aus S17 fuehrt [`umbenennen`] je Eintrag aus; ein zweiter
-//! Umbenennungsweg daneben entsteht nicht.
+//! Der Stapel fuehrt [`umbenennen`] je Eintrag aus; ein zweiter
+//! Umbenennungsweg daneben entsteht nicht. Seit S17c laeuft er ueber die
+//! Operationsmaschine wie Kopieren, Verschieben und Loeschen: auf einem
+//! Arbeitsfaden, mit Abbruchkennzeichen zwischen zwei Eintraegen und einer
+//! Fortschrittsmeldung je Eintrag. 5.000 `rename(2)`-Aufrufe nacheinander
+//! brauchen auf dem Referenzgeraet 525 ms, und so lange stand der Hauptfaden,
+//! solange die Schleife dort lief
+//! (`issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`).
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::verzeichnis::sys::im_datentraeger_verschieben;
+
+use super::fortschritt::Steuerung;
+use super::{Ablauf, Quelle, grund};
 
 /// Was an einem Namen nicht stimmt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,6 +94,35 @@ pub fn umbenennen(pfad: &Path, neuer_name: &str) -> io::Result<PathBuf> {
     }
     im_datentraeger_verschieben(pfad, &ziel, true)?;
     Ok(ziel)
+}
+
+/// Benennt einen Eintrag des Stapels um und meldet den Fortschritt (C4).
+///
+/// Die Arbeit selbst ist [`umbenennen`]; hier kommt dazu, was jede Art der
+/// Operationsmaschine tut: den fertigen Eintrag melden, und einen gescheiterten
+/// mit Grund ueberspringen, statt den Stapel abzubrechen. Die Abbruchpruefung
+/// zwischen zwei Eintraegen steht wie bei den vier uebrigen Arten eine Ebene
+/// hoeher, in [`super::ausfuehren`].
+///
+/// Gemeldet wird die Groesse des Eintrags, obwohl `rename(2)` keinen Inhalt
+/// anfasst. Dasselbe tut das Verschieben innerhalb eines Datentraegers, das
+/// denselben Systemaufruf benutzt; zwei Zaehlweisen fuer denselben Aufruf waeren
+/// zwei Wahrheiten darueber, was eine Operation angefasst hat.
+pub(crate) fn eintrag_umbenennen(
+    quelle: &Quelle<'_>,
+    neuer_name: &str,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    match umbenennen(quelle.pfad, neuer_name) {
+        Ok(_) => {
+            steuerung.eintrag_fertig(quelle.pfad, quelle.groesse);
+            Ablauf::Weiter
+        }
+        Err(fehler) => {
+            steuerung.ueberspringen(quelle.pfad, grund(&fehler));
+            Ablauf::Weiter
+        }
+    }
 }
 
 /// Wie oft ein freier Name hoechstens gesucht wird, bevor der Versuch

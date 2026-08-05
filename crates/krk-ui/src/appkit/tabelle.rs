@@ -67,9 +67,10 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSScrollView, NSTableColumn,
-    NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSScrollView,
+    NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
+    NSTableViewDelegate, NSTableViewStyle, NSTextAlignment, NSTextField,
+    NSUserInterfaceItemIdentification, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSDate,
@@ -84,9 +85,9 @@ use krk_core::verzeichnis::sprungmarke::{self, Sprungmarke};
 use krk_core::verzeichnis::{Eintrag, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts};
 use krk_core::zwischenablage::{self, Ziel};
 
-use crate::kommandos::auswahl::markieren_und_weiter;
+use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::navigation::{Bewegung, zielzeile};
-use crate::kommandos::operationen;
+use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::tabs::Tabliste;
 
@@ -197,7 +198,33 @@ impl Spalte {
             .into_iter()
             .find(|spalte| spalte.kennung() == kennung)
     }
+
+    /// Ob der Nutzer in dieser Spalte schreiben darf (C4).
+    ///
+    /// Allein der Name: die drei uebrigen Spalten zeigen, was das Dateisystem
+    /// ueber den Eintrag sagt, und keine davon laesst sich durch Hinschreiben
+    /// aendern.
+    const fn beschreibbar(self) -> bool {
+        matches!(self, Spalte::Name)
+    }
 }
+
+/// Die Stelle der Namensspalte, wie `editColumn:row:withEvent:select:` sie
+/// nimmt.
+///
+/// Abgeleitet aus [`Spalte::ALLE`] und nicht hingeschrieben: die Reihenfolge
+/// der Spalten steht dort, und eine 0 im Programmtext waere beim naechsten
+/// Umsortieren still falsch.
+const NAMENSSPALTE: NSInteger = {
+    let mut stelle = 0;
+    while stelle < Spalte::ALLE.len() {
+        if Spalte::ALLE[stelle].beschreibbar() {
+            break;
+        }
+        stelle += 1;
+    }
+    stelle as NSInteger
+};
 
 /// Was beim Auswaehlen eines Eintrags anhand seines Namens herauskam.
 ///
@@ -213,6 +240,12 @@ pub enum Auswahlversuch {
     /// Die Liste ist gelesen und kennt den Namen nicht.
     Unbekannt,
 }
+
+/// Was mit einem umbenannten Eintrag zu geschehen hat: alter Name, neuer Name.
+///
+/// Ein eigener Name fuer den Rueckruf, damit das Feld und sein Setzer dieselbe
+/// Schreibweise tragen und keine von beiden zu lesen ist wie ein Bandwurm.
+pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 
 /// Was die Datenquelle haelt.
 pub struct QuelleIvars {
@@ -256,6 +289,15 @@ pub struct QuelleIvars {
     /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
     /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
     ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was gerufen wird, wenn der Nutzer einen Eintrag umbenannt hat (C4).
+    ///
+    /// Zwei Namen, der alte und der neue, beide schon geprueft. Was mit ihnen
+    /// geschieht, entscheidet der Anwendungsdelegierte: die Umbenennung selbst
+    /// laeuft ueber `krk_core::operation::umbenennen`, und die Auffrischung
+    /// muss **beide** Dateifenster erreichen, was von hier aus nicht geht.
+    /// Wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt,
+    /// wie die beiden Rueckrufe darueber.
+    umbenennung: RefCell<Option<Umbenennungsmelder>>,
     /// Was KRK auf den letzten Tastenbefehl des Nutzers zu sagen hat.
     ///
     /// Der oberste der vier Raenge und der einzige, der ueber der
@@ -297,6 +339,21 @@ pub struct QuelleIvars {
     /// zwei Loeschregeln waere der Sonderfall, den die Maxime "supersimpel"
     /// ausschliesst.
     vorgangsanzeige: RefCell<Option<String>>,
+    /// Der Formatierer fuer Byte-Zahlen.
+    ///
+    /// Foundation bringt ihn mit, und er zaehlt in derselben Weise wie der
+    /// Finder: dezimale Vorsaetze, Trennzeichen nach der Spracheinstellung des
+    /// Nutzers. Eine eigene Rechnung waere eine zweite Wahrheit neben der des
+    /// Systems.
+    ///
+    /// **Er wohnt seit S16c hier und nicht mehr beim Delegierten**, weil er
+    /// zwei Aufrufer hat: die Groessenspalte, die der Delegierte beschriftet,
+    /// und den Markierungsstand in der Statuszeile, den diese Quelle rechnet.
+    /// Ein zweiter Formatierer daneben waere eine zweite Schreibweise fuer
+    /// dieselbe Zahl, sobald einer der beiden anders eingestellt wuerde. Der
+    /// Delegierte kommt ueber [`DateifensterDelegierter::quelle`] an ihn heran;
+    /// die starke Richtung geht ohnehin von ihm zur Quelle.
+    groessenformat: Retained<NSByteCountFormatter>,
 }
 
 define_class!(
@@ -340,6 +397,8 @@ impl DateifensterQuelle {
         statuszeile: Statuszeile,
         tabs: Tabliste,
     ) -> Retained<Self> {
+        let groessenformat = NSByteCountFormatter::new();
+        groessenformat.setCountStyle(NSByteCountFormatterCountStyle::File);
         let this = Self::alloc(mtm).set_ivars(QuelleIvars {
             tabelle,
             sicht,
@@ -350,9 +409,11 @@ impl DateifensterQuelle {
             aktivierung: RefCell::new(None),
             sprungmarke: RefCell::new(Sprungmarke::neu()),
             ordnerwechsel: RefCell::new(None),
+            umbenennung: RefCell::new(None),
             befehlsantwort: RefCell::new(None),
             fenstermeldung: RefCell::new(None),
             vorgangsanzeige: RefCell::new(None),
+            groessenformat,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -372,6 +433,11 @@ impl DateifensterQuelle {
     /// Hinterlegt, was nach einem Ordnerwechsel dieses Dateifensters zu tun ist.
     pub fn ordnerwechsel_setzen(&self, melden: Box<dyn Fn()>) {
         *self.ivars().ordnerwechsel.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was mit einem umbenannten Eintrag zu geschehen hat (C4).
+    pub fn umbenennung_setzen(&self, melden: Umbenennungsmelder) {
+        *self.ivars().umbenennung.borrow_mut() = Some(melden);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -670,6 +736,7 @@ impl DateifensterQuelle {
             Kommando::TabSchliessen => self.tab_schliessen(),
             Kommando::TabNaechster => self.tab_naechster(),
             Kommando::TabVoriger => self.tab_voriger(),
+            Kommando::Umbenennen => return self.umbenennung_beginnen(),
             // Nicht Sache eines einzelnen Dateifensters.
             _ => return false,
         }
@@ -997,6 +1064,106 @@ impl DateifensterQuelle {
             // Die letzte Zeile: die Markierung steht, die Auswahl bleibt.
             None => self.auswahl_anzeigen(),
         }
+        self.meldung_anzeigen();
+    }
+
+    // ------------------------------------------------------------------
+    // Umbenennen direkt in der Liste (C4, Schritt 17b)
+    // ------------------------------------------------------------------
+
+    /// Schaltet die Namenszelle des ausgewaehlten Eintrags in den
+    /// Bearbeitungszustand (C4).
+    ///
+    /// C4 verlangt das Umbenennen "direkt in der Liste", also kein Blatt,
+    /// sondern die Zelle selbst. `editColumn:row:withEvent:select:` macht den
+    /// Feldeditor des Fensters zum Ersthelfer und stellt ihn in die Zelle; der
+    /// vorhandene Name steht darin und ist ausgewaehlt, sodass ein Tastendruck
+    /// ihn ersetzt und ein Pfeil ihn behaelt.
+    ///
+    /// Liefert `false`, wenn keine Zeile ausgewaehlt ist oder in ihr kein
+    /// Eintrag steht; dann ist der Tastendruck nicht verbraucht.
+    fn umbenennung_beginnen(&self) -> bool {
+        let Ok(zeile) = usize::try_from(self.ivars().tabelle.selectedRow()) else {
+            return false;
+        };
+        // Waehrend eines Lesevorgangs kann die Zeilennummer der Tabelle dem
+        // Modell um einen Takt voraus sein.
+        if self.mit_zeile(zeile, |_| ()).is_none() {
+            return false;
+        }
+        let Ok(zeile) = NSInteger::try_from(zeile) else {
+            return false;
+        };
+        // Bearbeitet werden kann nur eine sichtbare Zeile. Die Auswahl steht
+        // nach jeder Bewegung im Bild; nach einer Wiederherstellung aus der
+        // Sitzung nicht zwingend.
+        self.ivars().tabelle.scrollRowToVisible(zeile);
+        self.ivars()
+            .tabelle
+            .editColumn_row_withEvent_select(NAMENSSPALTE, zeile, None, true);
+        true
+    }
+
+    /// Wertet aus, was in der Namenszelle steht, und benennt um (C4).
+    ///
+    /// Gerufen aus der Aktion des Feldes, also wenn der Nutzer die Eingabe mit
+    /// Return abschliesst oder die Zelle verlaesst. **Escape kommt hier nicht
+    /// an:** AppKit bricht die Bearbeitung dann ueber `abortEditing` ab, stellt
+    /// den alten Text wieder her und schickt keine Aktion. Genau das verlangt
+    /// C4, "Return uebernimmt, Escape verwirft", und es kostet keine eigene
+    /// Regel.
+    ///
+    /// Die Zeile kommt von der Tabelle ueber `rowForView:` und nicht aus einem
+    /// gemerkten Zustand: die Zellenansicht **ist** das Feld, das die Aktion
+    /// schickt, und die Tabelle weiss, in welcher Zeile sie steht. Ein
+    /// gemerkter Zustand haette eine zweite Loeschregel gebraucht, fuer den
+    /// Fall, dass die Bearbeitung ohne Aktion endet.
+    fn umbenennung_beenden(&self, feld: &NSTextField) {
+        let zeile = self.ivars().tabelle.rowForView(feld);
+        let Ok(zeile) = usize::try_from(zeile) else {
+            return;
+        };
+        let Some(alt) = self.mit_zeile(zeile, |eintrag| eintrag.name.clone()) else {
+            return;
+        };
+        let eingabe = feld.stringValue().to_string();
+
+        match operationen::umbenennung_pruefen(&alt, &eingabe) {
+            // Der haeufigste Ausgang: die Zelle war offen und schliesst wieder,
+            // ohne dass sich etwas geaendert hat.
+            Umbenennungswunsch::Unveraendert => self.zeile_neu_zeichnen(zeile),
+            Umbenennungswunsch::Abgelehnt(grund) => {
+                // Erst die Zelle zuruecksetzen, dann melden: der Nutzer soll
+                // keinen halben Namen stehen sehen, waehrend die Zeile den
+                // Grund nennt.
+                self.zeile_neu_zeichnen(zeile);
+                self.befehlsantwort_zeigen(grund);
+            }
+            Umbenennungswunsch::Neu(neu) => {
+                self.zeile_neu_zeichnen(zeile);
+                let melden = self.ivars().umbenennung.borrow();
+                if let Some(melden) = melden.as_ref() {
+                    melden(&alt, &neu);
+                }
+            }
+        }
+    }
+
+    /// Holt sich die Beschriftung einer Zeile aus dem Modell zurueck.
+    ///
+    /// Der Weg, auf dem eine abgelehnte Eingabe verschwindet: das Feld traegt
+    /// noch den getippten Text, das Modell den unveraenderten Namen, und ein
+    /// Zeichendurchgang schreibt den Namen wieder hinein. Eine eigene
+    /// Zuruecksetzung am Feld waere ein zweiter Weg zu demselben Text.
+    fn zeile_neu_zeichnen(&self, zeile: usize) {
+        let Ok(zeile) = NSInteger::try_from(zeile) else {
+            return;
+        };
+        let zeilen = NSIndexSet::indexSetWithIndex(zeile as usize);
+        let spalten = NSIndexSet::indexSetWithIndex(NAMENSSPALTE as usize);
+        self.ivars()
+            .tabelle
+            .reloadDataForRowIndexes_columnIndexes(&zeilen, &spalten);
     }
 
     /// Wendet einen der drei uebrigen Markierungsbefehle an (C2).
@@ -1007,6 +1174,7 @@ impl DateifensterQuelle {
         }
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
+        self.meldung_anzeigen();
     }
 
     /// Sortiert nach diesem Schluessel und schaltet bei Wiederholung die
@@ -1132,13 +1300,17 @@ impl DateifensterQuelle {
 
     /// Schreibt in die Statuszeile, was gerade dort stehen soll.
     ///
-    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Vier
+    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Fuenf
     /// Quellen, ein Rang; die Regel und ihre Begruendung stehen bei
     /// [`statuszeile::zeile`], die Lebensdauern bei den Feldern in
-    /// [`QuelleIvars`]. Diese Methode liest die vier Felder und uebergibt sie;
-    /// sie entscheidet selbst nichts, damit die Entscheidung an genau einer
-    /// Stelle steht und ohne AppKit pruefbar ist.
+    /// [`QuelleIvars`]. Diese Methode liest die vier Felder, rechnet den
+    /// fuenften Rang und uebergibt alles; sie entscheidet selbst nichts, damit
+    /// die Entscheidung an genau einer Stelle steht und ohne AppKit pruefbar
+    /// ist.
     fn meldung_anzeigen(&self) {
+        // Vor jeder Ausleihe: die Rechnung leiht das Tabmodell selbst aus und
+        // ruft dabei den Groessenformatierer.
+        let markierungsstand = self.markierungsstand_text();
         let ivars = self.ivars();
         let befehlsantwort = ivars.befehlsantwort.borrow();
         let vorgangsanzeige = ivars.vorgangsanzeige.borrow();
@@ -1149,7 +1321,59 @@ impl DateifensterQuelle {
             vorgangsanzeige.as_deref(),
             fenstermeldung.as_deref(),
             tabs.aktiver().meldung(),
+            markierungsstand.as_deref(),
         ));
+    }
+
+    /// Der fuenfte Rang der Statuszeile: was im sichtbaren Tab markiert ist
+    /// (C2).
+    ///
+    /// **Die einzige Quelle der Zeile ohne eigenes Feld, und das ist der
+    /// Entwurf.** Die vier anderen halten je einen Text, den jemand setzt und
+    /// eine Regel loescht. Ein Feld haette hier vier Schreiber, die vier
+    /// Markierungsbefehle, die Auffrischung, den Tabwechsel und den
+    /// Sortierwechsel, und damit vier Gelegenheiten, veraltet zu sein. Die
+    /// Rechnung laeuft ueber eine Liste, die ohnehin im Speicher steht, und hat
+    /// keine.
+    ///
+    /// **Gezeichnet werden muss trotzdem.** Die beiden Markierungsmethoden
+    /// [`Self::markieren_und_weiter`] und [`Self::markierung_aendern`] rufen
+    /// dafuer [`Self::meldung_anzeigen`], so wie sie die Tabelle neu laden.
+    /// Das ist etwas anderes als ein Feld mit vier Schreibern: verpasst einer
+    /// den Aufruf, steht ein alter Text in der Zeile, bis der naechste
+    /// Zeichenanlass kommt, und nirgends ein falscher Zustand. Die beiden
+    /// uebrigen Anlaesse zeichnen ohnehin: [`Self::tab_gewechselt`] und
+    /// [`Self::nach_lesebeginn`] rufen [`Self::meldung_anzeigen`] seit S12 und
+    /// S14, und der Lesebeginn deckt die Auffrischung mit ab, die die
+    /// Markierung leert. Das Umsortieren und das Ein- und Ausblenden brauchen
+    /// es nicht, weil sie die Markierung nicht anfassen und der Stand ueber
+    /// alle gelesenen Eintraege zaehlt, nicht ueber die sichtbaren.
+    fn markierungsstand_text(&self) -> Option<String> {
+        // Die Ausleihe endet mit dieser Anweisung: `markierungsstand` liefert
+        // einen eigenen Wert, und die Zeile darunter ruft Objective-C.
+        let stand = self
+            .ivars()
+            .tabs
+            .borrow()
+            .aktiver()
+            .modell()
+            .markierungsstand();
+        auswahl::markierungsstand_text(stand, &self.groesse_beschriften(stand.groesse))
+    }
+
+    /// Eine Byte-Zahl in der Schreibweise des Systems.
+    ///
+    /// Zwei Aufrufer, ein Formatierer: die Groessenspalte ueber den
+    /// Delegierten und der Markierungsstand oben.
+    fn groesse_beschriften(&self, bytes: u64) -> String {
+        // `stringFromByteCount:` nimmt eine vorzeichenbehaftete Zahl. Eine
+        // Datei jenseits von acht Exabyte gibt es nicht; die Saettigung ist
+        // trotzdem ehrlicher als ein Ueberlauf ins Negative.
+        let bytes = i64::try_from(bytes).unwrap_or(i64::MAX);
+        self.ivars()
+            .groessenformat
+            .stringFromByteCount(bytes)
+            .to_string()
     }
 
     /// Loescht die Meldung des Fensters, falls eine steht.
@@ -1340,13 +1564,18 @@ pub struct DelegiertenIvars {
     /// Anlegen die Kalender- und Sprachtabellen auf und ist damit das teuerste
     /// Objekt im Zeichenweg.
     datumsformat: Retained<NSDateFormatter>,
-    /// Der Formatierer fuer die Spalte mit der Groesse.
+    /// Die Schrift einer unmarkierten Zelle.
     ///
-    /// Foundation bringt ihn mit, und er zaehlt in derselben Weise wie der
-    /// Finder: dezimale Vorsaetze, Trennzeichen nach der Spracheinstellung des
-    /// Nutzers. Eine eigene Rechnung waere eine zweite Wahrheit neben der des
-    /// Systems.
-    groessenformat: Retained<NSByteCountFormatter>,
+    /// Die beiden Schriften entstehen einmal und nicht je Zelle, aus demselben
+    /// Grund wie der Datumsformatierer: sie liegen im Zeichenweg, den ein
+    /// Ordner mit 100.000 Eintraegen oft genug durchlaeuft.
+    schrift: Retained<NSFont>,
+    /// Die Schrift einer markierten Zelle: dieselbe Groesse, fett.
+    ///
+    /// Das zweite Kennzeichen der Markierung aus C2 neben der Farbe. Eine Form
+    /// und keine Farbe, damit es bei jeder Farbfehlsichtigkeit wirkt
+    /// (`decisions/260805-0000_a_zweites-kennzeichen-der-markierung-und-ihr-platz-in-der-statuszeile.md`).
+    fettschrift: Retained<NSFont>,
 }
 
 define_class!(
@@ -1358,6 +1587,19 @@ define_class!(
     #[thread_kind = MainThreadOnly]
     #[ivars = DelegiertenIvars]
     pub struct DateifensterDelegierter;
+
+    impl DateifensterDelegierter {
+        /// Die Aktion der bearbeitbaren Namenszelle (C4).
+        ///
+        /// AppKit schickt sie, wenn die Bearbeitung mit Return endet oder die
+        /// Zelle den Fokus verliert, und ausdruecklich **nicht** nach Escape.
+        // SAFETY: Die Signatur passt zu der, die NSControl an sein Ziel
+        // schickt: ein Argument, der Absender.
+        #[unsafe(method(umbenennungBeendet:))]
+        fn umbenennung_beendet(&self, absender: &NSTextField) {
+            self.ivars().quelle.umbenennung_beenden(absender);
+        }
+    }
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
     unsafe impl NSObjectProtocol for DateifensterDelegierter {}
@@ -1435,16 +1677,27 @@ impl DateifensterDelegierter {
         // Schirm waeren die vier Markierungsbefehle nicht nachweisbar, und der
         // Nutzer wuesste vor einer Dateioperation nicht, worauf sie wirkt.
         // Orange und nicht blau: die Auswahl faerbt AppKit bereits blau, und
-        // zwei blaue Kennzeichen liessen sich nicht unterscheiden. Die Farbe
-        // wird in **jedem** Durchgang gesetzt und nicht nur im markierten Fall:
-        // die Zellenansichten sind wiederverwendet, und eine ungesetzte Farbe
+        // zwei blaue Kennzeichen liessen sich nicht unterscheiden.
+        //
+        // **Zwei Kennzeichen und nicht nur die Farbe.** Eine markierte Zeile
+        // steht in allen vier Spalten fett; wer die Farbe nicht unterscheiden
+        // kann, sieht die Form (S16c). Beide Eigenschaften werden in **jedem**
+        // Durchgang gesetzt und nicht nur im markierten Fall: die
+        // Zellenansichten sind wiederverwendet, und eine ungesetzte Eigenschaft
         // bliebe die des vorigen Eintrags.
-        let farbe = if self.ivars().quelle.zeile_markiert(zeile) {
+        let markiert = self.ivars().quelle.zeile_markiert(zeile);
+        let farbe = if markiert {
             NSColor::systemOrangeColor()
         } else {
             NSColor::labelColor()
         };
         feld.setTextColor(Some(&farbe));
+        let schrift = if markiert {
+            &self.ivars().fettschrift
+        } else {
+            &self.ivars().schrift
+        };
+        feld.setFont(Some(schrift));
         Some(Retained::into_super(Retained::into_super(feld)))
     }
 
@@ -1453,12 +1706,17 @@ impl DateifensterDelegierter {
         let datumsformat = NSDateFormatter::new();
         datumsformat.setDateStyle(NSDateFormatterStyle::ShortStyle);
         datumsformat.setTimeStyle(NSDateFormatterStyle::ShortStyle);
-        let groessenformat = NSByteCountFormatter::new();
-        groessenformat.setCountStyle(NSByteCountFormatterCountStyle::File);
+        // Die Systemschriftgroesse und nicht eine Zahl im Programmtext: sie
+        // haengt an der Einstellung des Nutzers. Beide Schriften nehmen
+        // dieselbe, damit eine markierte Zeile fett wird und nicht groesser.
+        let groesse = NSFont::systemFontSize();
+        let schrift = NSFont::systemFontOfSize(groesse);
+        let fettschrift = NSFont::boldSystemFontOfSize(groesse);
         let this = Self::alloc(mtm).set_ivars(DelegiertenIvars {
             quelle,
             datumsformat,
-            groessenformat,
+            schrift,
+            fettschrift,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -1479,7 +1737,7 @@ impl DateifensterDelegierter {
                     // Inhalts zu summieren hiesse, ihn zu durchlaufen.
                     "--".to_owned()
                 } else {
-                    self.groesse_beschriften(eintrag.groesse)
+                    self.quelle().groesse_beschriften(eintrag.groesse)
                 }
             }
             Spalte::Geaendert => self.datum_beschriften(eintrag.geaendert),
@@ -1496,18 +1754,6 @@ impl DateifensterDelegierter {
         };
         let datum = NSDate::dateWithTimeIntervalSince1970(seit_epoche.as_secs_f64());
         self.ivars().datumsformat.stringFromDate(&datum).to_string()
-    }
-
-    /// Eine Byte-Zahl in der Schreibweise des Systems.
-    fn groesse_beschriften(&self, bytes: u64) -> String {
-        // `stringFromByteCount:` nimmt eine vorzeichenbehaftete Zahl. Eine
-        // Datei jenseits von acht Exabyte gibt es nicht; die Saettigung ist
-        // trotzdem ehrlicher als ein Ueberlauf ins Negative.
-        let bytes = i64::try_from(bytes).unwrap_or(i64::MAX);
-        self.ivars()
-            .groessenformat
-            .stringFromByteCount(bytes)
-            .to_string()
     }
 
     /// Holt eine Zellenansicht aus dem Vorrat der Tabelle oder baut eine neue.
@@ -1528,6 +1774,23 @@ impl DateifensterDelegierter {
         feld.setIdentifier(Some(kennung));
         feld.setAlignment(spalte.ausrichtung());
         feld.setMaximumNumberOfLines(1);
+        if spalte.beschreibbar() {
+            // Das Umbenennen "direkt in der Liste" aus C4. Gesetzt wird es
+            // einmal beim Bau und nicht je Zeichendurchgang: die Kennung der
+            // Zellenansicht ist die der Spalte, ein Feld der Namensspalte
+            // kommt also nur wieder in die Namensspalte, und mit ihm seine
+            // Aktion.
+            feld.setEditable(true);
+            // SAFETY: Ziel ist der Delegierte, den `Dateifenster` festhaelt;
+            // die Aktion ist die Methode, die er oben ausdruecklich fuer diesen
+            // Zweck traegt. `NSControl` haelt sein Ziel schwach, und der
+            // Delegierte ueberlebt das Feld: er haelt die Tabelle mittelbar
+            // ueber die Quelle.
+            unsafe {
+                feld.setTarget(Some(self));
+                feld.setAction(Some(sel!(umbenennungBeendet:)));
+            }
+        }
         feld
     }
 }

@@ -620,6 +620,151 @@ fn umbenennen_benennt_um_und_ueberschreibt_nichts() {
 }
 
 // ---------------------------------------------------------------------------
+// Umbenennen im Stapel ueber die Operationsmaschine (C4, Schritt 17c)
+// ---------------------------------------------------------------------------
+
+/// Legt `anzahl` Dateien an und liefert die Paare aus altem Pfad und neuem
+/// Namen, wie die Vorschau der Oberflaeche sie ausrechnet.
+fn stapel_anlegen(ordner: &Path, anzahl: usize) -> Vec<(PathBuf, String)> {
+    (0..anzahl)
+        .map(|nummer| {
+            let alt = ordner.join(format!("alt-{nummer:05}.txt"));
+            fs::write(&alt, b"x").expect("Datei laesst sich nicht schreiben");
+            (alt, format!("neu-{nummer:05}.txt"))
+        })
+        .collect()
+}
+
+#[test]
+fn ein_stapel_ueber_5000_namen_laeuft_durch() {
+    let ordner = Pruefordner::neu("stapel-5000");
+    let quelle = ordner.ordner("quelle");
+    let paare = stapel_anlegen(&quelle, 5_000);
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::umbenennen_im_stapel(paare));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 5_000);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert!(quelle.join("neu-00000.txt").exists());
+    assert!(quelle.join("neu-04999.txt").exists());
+    assert!(!quelle.join("alt-00000.txt").exists());
+    assert_eq!(
+        eintraege_zaehlen(&quelle),
+        5_000,
+        "kein Eintrag ist verloren"
+    );
+}
+
+/// Der Abbruch aus C4, an der Art gemessen, die S17 auf dem Hauptfaden fuhr.
+///
+/// Die Schleife dort brauchte fuer 5.000 Eintraege 525 ms, in denen nichts
+/// bedienbar war. Hier laeuft sie auf dem Arbeitsfaden, und der Abbruch greift
+/// zwischen zwei Eintraegen.
+#[test]
+fn ein_abbruch_im_stapel_kehrt_binnen_100_ms_zurueck_und_meldet_die_umbenannten() {
+    let ordner = Pruefordner::neu("stapel-abbruch");
+    let quelle = ordner.ordner("quelle");
+    let paare = stapel_anlegen(&quelle, 5_000);
+
+    let lauf = starten(
+        Auftrag::umbenennen_im_stapel(paare),
+        Arc::new(OhnePapierkorb),
+    );
+
+    let mut vor_dem_abbruch = None;
+    let mut bericht = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            Meldung::Fortschritt(stand) if stand.eintraege >= 1_000 => {
+                if vor_dem_abbruch.is_none() {
+                    vor_dem_abbruch = Some(Instant::now());
+                    lauf.abbrechen();
+                }
+            }
+            Meldung::Fertig(fertig) => {
+                bericht = Some(fertig);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let vor_dem_abbruch = vor_dem_abbruch.expect("der Lauf hat nie 1.000 Eintraege gemeldet");
+    let bis_zur_rueckkehr = vor_dem_abbruch.elapsed();
+    let bericht = bericht.expect("der Lauf hat keinen Bericht geschickt");
+    lauf.warten();
+
+    assert_eq!(
+        bericht.abschluss,
+        Abschluss::Abgebrochen,
+        "der Lauf hat den Abbruch nicht bemerkt"
+    );
+    assert!(
+        bis_zur_rueckkehr < Duration::from_millis(100),
+        "der Abbruch kam nach {bis_zur_rueckkehr:?} zurueck, erlaubt sind 100 ms"
+    );
+    assert!(
+        bericht.eintraege >= 1_000 && bericht.eintraege < 5_000,
+        "gemeldet sind {} umbenannte Eintraege; der Abbruch lag nicht mitten im Stapel",
+        bericht.eintraege
+    );
+    // Was der Bericht als umbenannt meldet, steht auch wirklich unter dem neuen
+    // Namen da. Sonst waere die Zahl aus C4 ("wie viele bereits uebertragen
+    // sind") eine Behauptung ohne Deckung.
+    let umbenannt = (0..5_000)
+        .filter(|nummer| quelle.join(format!("neu-{nummer:05}.txt")).exists())
+        .count();
+    assert_eq!(umbenannt as u64, bericht.eintraege);
+}
+
+#[test]
+fn ein_eintrag_ohne_schreibrecht_im_ordner_wird_uebersprungen_und_die_uebrigen_laufen_durch() {
+    let ordner = Pruefordner::neu("stapel-gesperrt");
+    let quelle = ordner.ordner("quelle");
+    let mut paare = stapel_anlegen(&quelle, 5);
+    // Ein Eintrag, den es nicht gibt: das Umbenennen scheitert daran wie an
+    // einem fehlenden Schreibrecht, und der Ordner bleibt beschreibbar, sodass
+    // die uebrigen vier wirklich durchlaufen koennen.
+    let gesperrt = ordner.ordner("gesperrt");
+    let darin = gesperrt.join("unberuehrbar.txt");
+    fs::write(&darin, b"x").expect("Datei laesst sich nicht schreiben");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o500))
+        .expect("Rechte lassen sich nicht setzen");
+    paare.insert(2, (darin.clone(), "geht-nicht.txt".to_owned()));
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::umbenennen_im_stapel(paare));
+
+    assert_eq!(
+        bericht.abschluss,
+        Abschluss::Fertig,
+        "der Stapel ist gelaufen"
+    );
+    assert_eq!(bericht.eintraege, 5, "die fuenf uebrigen sind umbenannt");
+    assert_eq!(
+        bericht.uebersprungen.len(),
+        1,
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(bericht.uebersprungen[0].pfad, darin);
+    assert_eq!(bericht.uebersprungen[0].grund, "keine Rechte");
+    for nummer in 0..5 {
+        assert!(
+            quelle.join(format!("neu-{nummer:05}.txt")).exists(),
+            "neu-{nummer:05}.txt fehlt, obwohl der Stapel weiterlaufen sollte"
+        );
+    }
+    assert!(
+        darin.exists(),
+        "der gesperrte Eintrag heisst noch wie zuvor"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Konflikte
 // ---------------------------------------------------------------------------
 

@@ -30,7 +30,7 @@ pub mod sys;
 
 pub use eintrag::{Eintrag, Typ};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
-pub use modell::Ordnermodell;
+pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
 pub use sprungmarke::Sprungmarke;
 
