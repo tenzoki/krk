@@ -56,6 +56,20 @@ fmt-check: ## Formatierung pruefen, ohne zu aendern
 check: build test fmt-check lint ## Die vier Abnahmekommandos, in der Reihenfolge der Schritte
 	@echo "alle vier gruen"
 
+# Die Schritte stehen als $(MAKE)-Aufrufe und nicht als Voraussetzungen, und
+# das ist der Punkt: make darf Voraussetzungen in beliebiger Reihenfolge
+# abarbeiten und bei -j sogar nebenlaeufig. `frisch: clean check bundle` haette
+# das Aufraeumen mitten in den Bau legen duerfen. Untermakes laufen
+# nacheinander, und bricht eines ab, endet die Kette dort.
+.PHONY: frisch
+frisch: ## Von Grund auf: aufraeumen, uebersetzen, pruefen, signiertes Buendel
+	$(MAKE) clean
+	$(MAKE) check
+	$(MAKE) bundle
+	$(MAKE) signatur
+	@echo
+	@echo "Frisch gebaut und signiert: $(BUENDEL)"
+
 # ── Buendel ──────────────────────────────────────────────────────────────────
 
 .PHONY: bundle
