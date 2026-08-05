@@ -1,39 +1,87 @@
 {
   "haltActive": false,
   "consecutiveBlocks": 0,
-  "lastBlockTimestamp": "2026-08-02T17:24:42.501Z",
+  "lastBlockTimestamp": "2026-08-05T17:01:17.837Z",
   "recentEvents": [
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `mv \"$CDIR/_a_circle.md\" \"$CDIR/_t_circle.md\"` writes `\"$CDIR/_a_circle.md\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-02T08:13:37.324Z",
+      "message": "fusion policy: this Bash command mutates a relative path from a working directory the guard cannot determine. An earlier `cd` in this command moved somewhere only known at run time, so the segment `rm -f *` writes `*` at an unknowable location and it is denied (fail-closed). Name the target as an absolute path, or drop the `cd` and write the path from the project root. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-04T12:38:53.215Z",
       "toolName": "Bash",
-      "filePath": "\"$CDIR/_a_circle.md\""
+      "filePath": "*"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf $D` writes `$D`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-02T15:57:29.694Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm \"$HOME/krk-c9-links/delta-neu.txt\" \"$HOME/krk-c9-links/epsilon-neu.txt\"` writes `\"$HOME/krk-c9-links/delta-neu.txt\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-04T12:40:31.433Z",
       "toolName": "Bash",
-      "filePath": "$D"
+      "filePath": "\"$HOME/krk-c9-links/delta-neu.txt\""
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$PO\"/probe-1 \"$PO\"/probe-2 \"$PO\"/probe-1.pruefordner.toml \"$PO\"/probe-2.pruefordner.toml` writes `\"$PO\"/probe-1`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-02T16:42:01.556Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `perl -0pi -e 's|(ordner = \"/Users/k1/krk-c9-links\"\\n)|$1auswahl = \"gamma.txt\"\\n|' \"$S\"` writes `\"$S\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-04T12:41:19.564Z",
       "toolName": "Bash",
-      "filePath": "\"$PO\"/probe-1"
+      "filePath": "\"$S\""
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$SCRATCH\"` writes `\"$SCRATCH\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-02T17:24:42.501Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$BASIS\"` writes `\"$BASIS\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-04T15:53:18.447Z",
       "toolName": "Bash",
-      "filePath": "\"$SCRATCH\""
+      "filePath": "\"$BASIS\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `mv \"$f.md\" \"$n.md\"` writes `\"$f.md\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-04T21:29:20.481Z",
+      "toolName": "Bash",
+      "filePath": "\"$f.md\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$D\"` writes `\"$D\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-05T09:17:05.768Z",
+      "toolName": "Bash",
+      "filePath": "\"$D\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `do mv \"$f\" \"alt-${f#neu-}\"` writes `\"$f\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-05T11:20:00.579Z",
+      "toolName": "Bash",
+      "filePath": "\"$f\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f ~/Library/Application\\ Support/KRK/bookmarks.toml` writes `~/Library/Application\\`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-05T15:29:40.657Z",
+      "toolName": "Bash",
+      "filePath": "~/Library/Application\\"
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f ~/Library/Application\\ Support/KRK/settings.toml` writes `~/Library/Application\\`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-05T16:44:22.254Z",
+      "toolName": "Bash",
+      "filePath": "~/Library/Application\\"
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f \"$HOME/Library/Application Support/KRK/settings.toml /tmp/krk-session-sicherung.toml` writes `\"$HOME/Library/Application`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-05T17:01:17.837Z",
+      "toolName": "Bash",
+      "filePath": "\"$HOME/Library/Application"
     }
   ]
 }

@@ -288,3 +288,227 @@ Entscheidungen offen, acht beantwortet, vier umgesetzt.
 
 **Nächster Schritt bleibt S12**, jetzt größer als zu Beginn der Sitzung: er trägt zusätzlich
 die Statuszeile und den Weg zurück zum Fenster.
+
+### Turn 6 — 260804-0938 bis 260804-1046
+
+Eine Aufgabe, ein Commit. S12 ist der größte Einzelschritt der Runde gewesen.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T22 | coder | `537fda5` | S12, vier Bereiche, Tabs, Statuszeile und Rückweg zum Fenster |
+
+Der Schritt hat aus einem Fenster mit einer Liste ein Fenster mit einem Aufbau gemacht:
+Leiste, zwei Dateifenster mit je eigenen Tabs, Vorschaubereich, Statuszeile. Die Statuszeile
+und der Weg zurück zum letzten Fenster sind erst in Turn 5 dazugekommen und in demselben
+Schritt mitgebaut worden, statt einen eigenen zu bekommen.
+
+### Turn 7 — 260804-1046 bis 260804-1316
+
+Vier Aufgaben, vier Commits. Der Turn hat eine Belegungsfrage des Nutzers beantwortet und
+dabei die Schreibweise erweitern müssen.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T23 | planner | `734f829` | Acht Tastennamen in der Schreibweise, Ordnernavigation neu belegt |
+| T24 | ontocoder | `2c95f20` | Commit-Hash im Zwischenablage-Entscheid nachgetragen |
+| T25 | ontocoder | `203f606` | S11b, die acht Tastennamen im Parser |
+| T26 | coder | `06dc48b` | S11c und S13, Ordnernavigation auf den Pfeilen, C2 fertig |
+
+**Der Nutzer hat gefragt, wie er einen Ordner nach oben kommt**, und die ehrliche Antwort
+war: gar nicht. Er hat daraufhin `cmd+links` und `cmd+rechts` bestellt und F1 für die
+Belegungsansicht. Die Schreibweise kannte die Pfeiltasten und die Funktionstasten bis dahin
+nicht; sie hat acht Namen dazubekommen, bevor die Belegung sie nennen konnte.
+
+### Turn 8 — 260804-1316 bis 260804-1457
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T27 | coder | `8b29a80` | S14, Dateisystem-Beobachtung und Datenträgerwechsel |
+
+FSEvents hängt an `FSEventStreamSetDispatchQueue` und nicht am veralteten
+`…ScheduleWithRunLoop`. Die Bindung ist von Hand geschrieben und liegt hinter der
+`unsafe`-Grenze in `krk-core`.
+
+### Turn 9 — 260804-1457 bis 260804-1654
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T28 | coder | `daecb45` | S15, Operationsmaschine, der Kern von C4 |
+
+Kopieren über `copyfile(3)`, Umbenennen über `renamex_np(2)` und nicht über `rename(2)`,
+weil nur die erste Form `RENAME_EXCL` kennt und damit ein vorhandenes Ziel nicht still
+überschreibt.
+
+### Turn 10 — 260804-1654 bis 260804-1818
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T29 | coder | `343a7f3` | S16, Fortschritt, Abbruch, Konflikt und Rückfrage |
+
+### Turn 11 — 260804-1818 bis 260804-1945
+
+Drei Aufgaben, drei Commits. Der Turn hat eine gebaute Lösung wieder abgeräumt.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T30 | planner | `6ed0ed1` | Fortschritt in die Statuszeile, S16b und S17b angelegt |
+| T31 | coder | `5a2f05d` | S16b, Fortschritt in der Statuszeile statt im Blatt |
+| T32 | coder | `c89ea66` | Vier Ränge in der Statuszeile, S16b abgenommen |
+
+**Das Fortschrittsblatt aus S16 war die falsche Bauform**, und zwar aus zwei Gründen, die
+erst die Messung gezeigt hat: ein Blatt sperrt genau das Fenster, das C4 benutzbar zusagt,
+und es braucht 354 bis 403 ms zum Anhängen, wo L8 zweihundert verspricht. Der Nutzer hat
+entschieden, den Fortschritt in die Statuszeile zu legen. Dort gemessen: 168,9 ms p95. Die
+Statuszeile hat dafür Ränge bekommen, mit der Regel, dass Verdrängtes nicht gelöscht wird;
+aus vier Rängen sind später in S18 fünf geworden.
+
+### Turn 12 — 260804-1945 bis 260804-2047
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T33 | coder | `91b904e` | S17, Stapel-Umbenennen, Anlegen und die Namenseingabe |
+
+### Turn 13 — 260804-2047 bis 260804-2336
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T34 | planner | `a70baeb` | Aufräumdurchgang, 36 offene Defekte auf 21 |
+
+**Zwei Wurzeln statt zwanzig Symptome.** Erstens trug der Plankopf zwei einander
+widersprechende Zusagen darüber, was eine Dateiliste bedeutet; aufgelöst zu "Leseliste mit
+Begründungen, bindend ist die Verbotsseite". Zweitens trugen Verweise auf Datensätze deren
+Zustandsmarker im Pfad, sodass jeder Zustandswechsel sie brach; 228 Verweise stehen jetzt in
+Globform `_*_`, und alle 92 verschiedenen davon sind nachweislich auflösbar.
+
+### Turn 14 — 260804-2336 bis 260805-0025
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T35 | planner | `395e475` | Sieben Nutzerantworten eingearbeitet, drei neue Schritte |
+
+**Der Nutzer hat die Zeitzusagen ausdrücklich zur Disposition gestellt**: "falls die engen
+Zeitvorgaben Probleme machen: aufweichen, pragmatische Lösungen planen". Der `planner` hat
+acht Fragen vorgelegt, alle sieben Antworten folgten der Empfehlung. Der Plan ist von 33 auf
+36 Schritte gewachsen.
+
+### Turn 15 — 260805-0025 bis 260805-0800
+
+Drei Aufgaben, zwei Commits.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T36 | ontocoder | `db1b559` | Die Konflikterkennung lernt den Zusteller |
+| T37 | planner | `db1b559` | S13b zur Hälfte, Menü "Bearbeiten" |
+| T38 | coder | `58465bf` | S13b und S13c, Menü "Bearbeiten" und die Zustellerregel |
+
+**`cmd+a` hat zwei Funktionen getragen**, und der Plan behauptete, `alle_markieren` liege
+auf `ctrl+a`. `git log -L` über die Belegungsdatei hat gezeigt: es lag nie dort. Die
+Auflösung ist keine Umbelegung, sondern eine Regel: zwei Funktionen streiten nur dann, wenn
+sie dieselbe Kombination **und** denselben Zusteller haben. Was das Menü zustellt, trägt seit
+S13c `gehalten_von = "menue"`.
+
+### Turn 16 — 260805-0800 bis 260805-1004
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T39 | ontocoder | `7e33345` | Datensätze der geschlossenen Defekte nachgezogen |
+| T40 | planner | `7e33345` | Aufräumdurchgang über den Restbestand |
+| T41 | coder | `7e33345` | Vierzehn Defekte geschlossen, S13c abgenommen |
+
+### Turn 17 — 260805-1004 bis 260805-1350
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T42 | coder | `3c7191a` | S16c, S17b und S17c, die Markierung und das Umbenennen |
+
+### Turn 18 — 260805-1350 bis 260805-1539
+
+Drei Aufgaben, drei Commits. Zwei davon kommen aus Wünschen des Nutzers und nicht aus dem
+Plan.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T43 | ontocoder | `13f9463` | Ordnernavigation auf die nackten Pfeiltasten |
+| T44 | coder | `6089ee3` | Makefile als Hülle um die vorhandenen Kommandos |
+| T45 | coder | `3b379c0` | Ziel "frisch" für den Bau von Grund auf |
+
+**Der Nutzer hat die Belegung aus Turn 7 zurückgenommen**: nicht `cmd+links` und
+`cmd+rechts`, sondern die nackten Pfeiltasten, links heraus und rechts hinein. `cmd+hoch`
+bleibt als zweite Form stehen.
+
+**Das Makefile ist keine zweite Bauform**, sondern eine Hülle: cargo liegt auf diesem Gerät
+nicht auf dem Standard-PATH, und jedes Kommando brauchte bis dahin ein vorangestelltes
+Export. Eine Falle steckt darin, und sie hat einmal zugeschlagen: GNU make 3.81, die Fassung
+die macOS mitbringt, führt ein Rezept aus genau einem Wort direkt aus und schlägt das
+Programm dabei in seinem eigenen PATH nach, nicht in dem, den das Makefile exportiert.
+`CARGO` steht deshalb absolut.
+
+**Der erste Lauf von `make menue` hat sofort einen Defekt gefunden**: macOS stellt dem Menü
+"Bearbeiten" ein AutoFill-Untermenü dazu, das `menue.rs` nicht anlegt. Es ist der vierte
+Systemzusatz dieser Art und der harmloseste, weil er keine Tastenkombination trägt.
+
+### Turn 19 — 260805-1539 bis 260805-1735
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T47 | planner | `10642fb` | C11 geplant, den angezeigten Ordner im Terminal öffnen |
+| T48 | coder | `7a0c0a6` | S18, Lesezeichen- und Geräteleiste, und der Wirkungsbereich |
+
+**Der Nutzer hat eine Taste bestellt, die das Terminal im angezeigten Ordner öffnet.** Sie
+ist als eigene Fähigkeit C11 in den Spec gegangen, weil sie eine Einstellung braucht: welche
+Anwendung geöffnet wird, steht ab Werk auf `com.apple.Terminal` und ist änderbar.
+
+**Der Wirkungsbereich aus S18** ist die Antwort darauf, dass es jetzt mehr als einen Ort
+gibt, an dem der Fokus liegen kann. Jedes `Kommando` trägt `Dateifenster`, `Leiste` oder
+`Ueberall`; die Zuteilung ist eine vollständige Fallunterscheidung ohne Auffangzweig, sodass
+ein neues Kommando ohne eigene Zeile nicht übersetzt.
+
+### Turn 20 — 260805-1735 bis 260805-1906
+
+Drei Aufgaben, drei Commits. Der letzte hat einen Fehler behoben, der die Anwendung fast
+unbedienbar gemacht hätte.
+
+| Aufgabe | Ausführender | Commit | Inhalt |
+|---|---|---|---|
+| T49 | ontocoder | `f850f30` | S18b, `ctrl+o` und die Auslieferungseinstellungen |
+| T50 | coder | `48e69df` | S18c, das Terminal im angezeigten Ordner (C11) |
+| T51 | coder | `63cade1` | Der Eingabefokus liegt beim Start im Dateifenster |
+
+**Seit S18 lag der Eingabefokus beim Start in der Leiste**, und bis zum ersten `shift+cmd+d`
+wirkte kein Dateifenster-Befehl. Behoben, indem der Fokus als letzte Zeile von
+`oberflaeche_aufbauen` gesetzt wird, nach `makeKeyAndOrderFront`, und am Bündel ohne
+vorherigen Tastendruck abgenommen.
+
+**Ein Vorfall beim Prüfen, der nicht wieder passieren darf.** Beim Abnehmen von S18 sind
+synthetische Tastendrücke über `osascript` in ein fremdes Fenster gelaufen — eine
+Claude-Code-Sitzung des Nutzers in Ghostty —, weil KRK den Vordergrund verloren hatte.
+Synthetische Tastendrücke gehören seitdem in KRKs eigene Ereignisschlange über
+`postEvent:atStart:`, nie über `osascript`.
+
+---
+
+## Stand bei der Unterbrechung — 260805-2003
+
+Die Sitzung ist an einem sauberen Punkt unterbrochen worden, damit der Nutzer die Umgebung
+neu starten kann. Jede begonnene Aufgabe ist abgeschlossen und committet; das
+Arbeitsverzeichnis trägt außer dem flüchtigen Sitzungszustand nichts. HEAD steht auf
+`63cade1`, 51 Commits seit `def6fa7`.
+
+**Dreißig der sechsunddreißig Planschritte tragen `[DONE]`.** Alle Prüfungen laufen grün,
+`clippy` meldet nichts, die `unsafe`-Grenze hält mit je einer Ausnahme in
+`krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`, das Bündel ist gebaut und
+signiert.
+
+**Es fehlen fünf Schritte:** S19 Vorschaufenster mit eigenen Tabs, S20 Belegungsansicht, und
+die drei Schritte der Phase F — S21 Messmodus, S22 Abnahme gegen die Prüfsitzung, S23
+Auslieferungspaket. Nächster Schritt ist S19; er trägt zugleich die erste Funktion aus C10
+und den offenen Defekt zur Metadatenvorschau.
+
+**Offen sind dreizehn Defekte und sieben Entscheidungen.** Kein Defekt blockiert; zwei sind
+an spätere Schritte gebunden (Metadatenvorschau an S19, L4-Streuung an S22). Von den sieben
+Entscheidungen hat der Nutzer zwei noch nicht gesehen, beide aus dieser Sitzung und beide mit
+Empfehlung: ob der Fokusbefehl eine ausgeblendete Leiste hervorholt, und wann eine von Hand
+geänderte `settings.toml` wirkt.
+
+**Ungeprüft geblieben** ist der Linkspfeil in der Pfadeingabe: ob er dort die Schreibmarke
+bewegt statt den Ordner zu wechseln, ist abgeleitet und nicht gemessen.

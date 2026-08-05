@@ -1,26 +1,26 @@
 # Orchestrator — Live
 
-**Turn:** 1/5 | **Tasks:** 5/24 | **Commits:** 18 | **Errors:** 0
-**Started:** 10:14 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
+**Turn:** 20/30 | **Tasks:** 51/51 | **Commits:** 51 | **Errors:** 0
+**Started:** 10:38 | **Domain:** code | **Elapsed Turns:** 20 | **Guard:** OK (0 blocks)
 
 ## Current
-  [RUNNING] coder -> S5 Bündelbau und lokale Signierung
+  [PAUSIERT] Sauberer Halt fuer einen Neustart, 30 von 36 Schritten
 
-## This Turn
-  [DONE]    coder -> S1 Cargo-Workspace und Bauzuschnitt ............ 7dc5ea6
-  [DONE]    coder -> S2 Verzeichnisleser und Ordnermodell ........... dbfc32d
-  [DONE]    ontocoder -> S4 Bündelbeschreibung Info.plist ........... e9376fa
-  [DONE]    coder -> S3 Prüfordner-Erzeuger und Messstrecke ......... dba616a
-  [DONE]    planner -> Vier Befunde aus S2 bis S4 nachgezogen ....... ee98e4a
-  [DONE]    ontocoder -> S4b Versionsplatzhalter .................... e90cfab
-  [RUNNING] coder -> S5 Bündelbau und lokale Signierung
-  [QUEUED]  coder -> S6 Fenster, Menü, echte Dateiliste
-  [QUEUED]  coder -> S7 Tastenereignisse und Pfeiltasten
-  [QUEUED]  coder -> S8 Frühmessung als Gate
+## So geht es weiter
+  Nach dem Neustart /fusion:setup, dann "Fortsetzen". Der Zustand steht
+  vollstaendig in fusion-workbench/agentstate.yaml, der Verlauf in
+  circles/260802-.../history/260803-1038-orchestrator-session.md
 
-## Up Next
-  S8 ist der Halt: misst L1, L2, L3, L4, L10. Verfehlt eine Zahl ihre Zusage,
-  endet der Schritt mit einer Entscheidungsvorlage statt mit einer Reparatur.
+## Warteschlange
+  S19  Vorschaufenster mit eigenen Tabs (C6), traegt auch shift+f3 aus C10
+  S20  Belegungsansicht (C3), gibt f1 seine Wirkung
+  S21  Messmodus in der Anwendung, Abnahme von L8
+  S22  Abnahme gegen die Pruefsitzung aus C8
+  S23  Auslieferungspaket, maschinelle Pruefung der AppKit-Grenze
 
-## Blocked
-  S6 -> wartet auf S5 (Bündel)
+## Stand
+  HEAD 63cade1, Arbeitsverzeichnis sauber. Alle Pruefungen gruen,
+  Buendel gebaut und signiert. 13 offene Defekte, keiner blockiert.
+  7 offene Entscheidungen, zwei davon neu und dem Nutzer noch nicht
+  vorgelegt (Fokusbefehl bei ausgeblendeter Leiste, Wirkzeitpunkt
+  einer von Hand geaenderten settings.toml).
