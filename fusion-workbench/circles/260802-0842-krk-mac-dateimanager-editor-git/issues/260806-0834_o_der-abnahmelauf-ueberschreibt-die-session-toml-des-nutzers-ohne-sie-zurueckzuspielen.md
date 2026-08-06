@@ -1,0 +1,7 @@
+Der Abnahmelauf überschreibt die session.toml des Nutzers, ohne sie zurückzuspielen
+---
+`Messplan::herstellen` schreibt die Prüfsitzung über den `Sitzungsschreiber` nach `~/Library/Application Support/KRK/session.toml` — in die **echte Ablage des Nutzers** (`crates/krk-ui/src/messmodus.rs`, `herstellen`: `Ablage::im_benutzerverzeichnis()`). Der `Gesamtlauf` in `crates/krk-bench/src/messen.rs` (`fahren` / `eine_gesamtrunde`) sichert den vorigen Stand nirgends und stellt ihn nach dem Lauf nicht wieder her. Wer `make alle` oder `cargo xtask messen --alle` fährt, verliert seine Sitzung (Tabs, Ordner, Breiten) an die Prüfsitzung.
+
+Dass das im Alltag bereits stört, belegt die S21-Session selbst: "Die Sicherung der Nutzer-session.toml wurde nach dem Lauf zurückgespielt" (`fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2335-s21-messmodus-in-der-anwendung.md`, Abschnitt Messlauf) — der coder hat von Hand gerettet, was das Werkzeug selbst leisten sollte.
+---
+Kontext: S21/S22. Der Plan schreibt vor, dass die Prüfsitzung über `session.toml` gesetzt wird (die L4-Starts müssen sie beim gewöhnlichen Wiederherstellen vorfinden); er verbietet aber nirgends, den vorigen Stand zu sichern. Vorschlag: `Gesamtlauf::fahren` legt vor der ersten Runde eine Kopie der vorhandenen `session.toml` an und spielt sie am Ende (auch im Fehlerfall) zurück — dieselbe Sorgfalt, die `kopierziel_pruefen` schon für fremden Inhalt im Kopierziel aufbringt. Adressat: coder.
