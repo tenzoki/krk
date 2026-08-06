@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2045_c_die-kombinationsschreibweise-kennt-die-links-und-rechts-pfeile-nicht.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_i_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritte S11b und S11c), `resources/default-keymap.toml`
 
@@ -43,7 +43,7 @@ Möglichkeit 1, sofern der Nutzer die Richtungsfrage mitbeantwortet. Die Pfeile 
 
 ---
 Answered:
-Implemented:
+Implemented: `06dc48b` (S11c) — `bereich_verbreitern` auf `ctrl+right`, `bereich_verschmaelern` auf `ctrl+left`, `resources/default-keymap.toml:383-391`.
 Deferred:
 Superseded by:
 

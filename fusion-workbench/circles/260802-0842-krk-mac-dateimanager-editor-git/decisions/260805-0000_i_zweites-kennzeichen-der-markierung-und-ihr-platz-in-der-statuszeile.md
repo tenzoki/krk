@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1309_c_die-markierung-ist-allein-an-der-farbe-erkennbar.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C1, C2), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`
 
@@ -58,4 +58,4 @@ Der Preis ist kleiner als ein Feld, denn er ist keines. Die vier vorhandenen Que
 **Was der Rang zeigt.** Zahl der markierten Einträge, davon gesondert die Zahl der Ordner, und die Summe der Größen der markierten **Dateien**; ein Ordner zählt in der Zahl und nicht in der Größe, weil seine Größe einen Durchlauf verlangte. Dieselbe Trennung zieht die Größenspalte heute schon, indem sie bei einem Ordner `--` zeigt. Die Form der Angabe folgt der Rückfrage vor dem endgültigen Löschen aus C4, die die Ordner ebenfalls gesondert nennt. Im Kern liefert `Ordnermodell::markierungsstand` die drei Werte in einem Durchlauf, statt drei Zähler nebeneinanderzustellen; `markierungszahl` wächst dazu.
 
 Eingearbeitet: `planning/260802-1036_o_spec-navigator-geruest.md` C1 (Rangfolge auf fünf, neues Kriterium zum Markierungsstand, vier neue Festlegungen) und C2 (neues Kriterium, eine Festlegung); `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` als neuer Schritt S16c.
-Implemented: <offen — S16c>
+Implemented: `3c7191a` (S16c) — zweites Kennzeichen der Markierung und fünfter Rang der Statuszeile mit `Ordnermodell::markierungsstand`.

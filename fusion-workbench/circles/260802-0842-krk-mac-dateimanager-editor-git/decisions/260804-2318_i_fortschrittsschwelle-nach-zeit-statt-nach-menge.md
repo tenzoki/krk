@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1649_o_innerhalb-eines-apfs-datentraegers-gibt-es-kein-mitten-in-einer-datei.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C4), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (`### Frage 6`, S15, S17c)
 
@@ -53,3 +53,6 @@ Was daraus folgt, steht im Plan: das Stapel-Umbenennen wandert mit dem neuen Sch
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C4, fünftes Abnahmekriterium und der Absatz "Die Schwelle für Fortschritt und Abbruch ist seit dem 260804-2318 eine Zeit und keine Menge") — Schwelle von 100 Einträgen beziehungsweise 100 MB auf 150 ms Laufzeit gezogen; Umsetzung im Code steht als S17c aus.
+
+---
+Implemented: `3c7191a` (S17c) — das Stapel-Umbenennen läuft über die Operationsmaschine; die 150-ms-Regel steht in `crates/krk-ui/src/kommandos/operationen.rs:26`.

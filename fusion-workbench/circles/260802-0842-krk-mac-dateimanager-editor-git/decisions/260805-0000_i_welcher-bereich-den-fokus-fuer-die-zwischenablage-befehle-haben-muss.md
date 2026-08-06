@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** ontocoder (als Defekt), umgetragen vom planner am 260805-0000
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-0907_c_c10-sagt-nicht-welcher-bereich-den-fokus-haben-muss.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C4, C5, C10), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (S13, S18, S19)
 
@@ -42,4 +42,4 @@ Answered: Nutzer am 260805-0000 — Möglichkeit 1. Begründung des Nutzers: der
 Die Eigenschaft gehört in den Kern, neben `Kommando`: dass ein Befehl das Dateifenster braucht, ist eine Aussage über den Befehl und ohne Fenster prüfbar. Welcher Bereich den Fokus gerade hat, weiß allein `krk-ui`. Die Aufrufrichtung bleibt damit von oben nach unten, und eine zweite Abhängigkeitsumkehr neben der Papierkorb-Schnittstelle entsteht nicht.
 
 Eingearbeitet: `planning/260802-1036_o_spec-navigator-geruest.md` C10 (neues Abnahmekriterium, eine Festlegung); `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` bei S18 (die Eigenschaft) und S19 (die zwei Werte, ein Abnahmekriterium, die neue Abhängigkeit S18 → S19).
-Implemented: <offen — S18 und S19>
+Implemented: `7a0c0a6` (S18, Eigenschaft `Wirkungsbereich` je Kommando) und `4886819` (S19, die zwei Werte `Dateifenster` für `zwischenablage_ansehen` und `zwischenablage_springen`).

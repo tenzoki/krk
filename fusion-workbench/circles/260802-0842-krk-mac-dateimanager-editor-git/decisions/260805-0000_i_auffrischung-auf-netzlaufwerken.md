@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1451_c_auf-einem-netzlaufwerk-frischt-krk-fremde-aenderungen-nicht-auf.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0000_o_ein-toter-netzpfad-laesst-den-lesefaden-haengen.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C9), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (`### Frage 3`, S14)
 
@@ -42,4 +42,4 @@ Answered: Nutzer am 260805-0000 — Möglichkeit 1. Begründung des Nutzers: ein
 **Was diese Antwort nicht mit erledigt.** Der beantwortete Defekt trug eine zweite, ungemessene Beobachtung: ein Netzpfad, dessen Server verschwindet, lässt Systemaufrufe hängen statt scheitern, und der Lesefaden prüft sein Abbruchkennzeichen zwischen zwei Aufrufen; je Versuch bliebe ein Faden liegen. Sie betrifft den Zugriff und nicht die Auffrischung und ist deshalb als eigener Defekt abgelegt, statt mit dem beantworteten zu verschwinden: `issues/260805-0000_o_ein-toter-netzpfad-laesst-den-lesefaden-haengen.md`.
 
 Eingearbeitet: `planning/260802-1036_o_spec-navigator-geruest.md` C9 (Beschreibung, ein neues Abnahmekriterium, eine Festlegung); `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` in `### Frage 3`. Kein neuer Schritt, kein Eingriff am Code.
-Implemented: <offen — der Plantext trägt die Einengung; ein Codeeingriff folgt daraus nicht>
+Implemented: `395e475` — Spec C9 trägt die Einengung auf lokale Dateisysteme als Beschreibung, Abnahmekriterium und Festlegung; ein Codeeingriff folgt aus der Antwort nicht.

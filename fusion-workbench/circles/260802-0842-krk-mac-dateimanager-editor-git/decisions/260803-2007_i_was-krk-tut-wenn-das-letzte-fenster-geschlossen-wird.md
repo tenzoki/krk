@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1536_c_nach-cmd-w-bleibt-krk-ohne-fenster-und-ohne-rueckweg.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 12), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C1 und C7)
 
@@ -142,6 +142,6 @@ Folgefragen und behält das Kürzel.
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Schritt 12) — Möglichkeit 2: Menüeintrag "Fenster einblenden" auf Cmd+N plus `applicationShouldHandleReopen:`; Runde 1 kennt weiterhin genau ein Fenster, die beiden Folgefragen zu zwei Fenstern binden sie nicht.
-Implemented:
+Implemented: `537fda5` (S12) — Menüeintrag "Fenster einblenden" (`crates/krk-ui/src/appkit/menue.rs:217`) und `applicationShouldHandleReopen:` (`crates/krk-ui/src/appkit/anwendung.rs:419`).
 Deferred:
 Superseded by:

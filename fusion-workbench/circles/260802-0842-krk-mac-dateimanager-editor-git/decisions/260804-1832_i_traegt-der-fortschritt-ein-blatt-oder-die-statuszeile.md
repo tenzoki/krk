@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1814_o_ein-modales-blatt-widerspricht-der-zusage-dass-die-oberflaeche-bedienbar-bleibt.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1814_o_ein-blatt-braucht-360-ms-bis-es-steht-und-l8-sagt-200-ms-zu.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C1, C4, C8)
 
@@ -37,3 +37,6 @@ Möglichkeit 3, und zwar mit einer ausgeschriebenen Antwort auf ihren Haken. Die
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` → Schritt 16b — der Nutzer hat am 260804-1832 Möglichkeit 3 gewählt. Der Fortschritt geht in die Statuszeile des Dateifensters, das die Operation begonnen hat; der Abbruch bleibt auf `esc` und steht im Text der Zeile. Konfliktblatt, Löschbestätigung und Abschlussliste bleiben Blätter. L8 bleibt bei 200 ms, und die neun übrigen Zahlen aus C8 sind unberührt. Umgesetzt wird der Umbau in S16b; S16 bleibt abgenommen und trägt eine Notiz, die die Abweichung benennt.
+
+---
+Implemented: `5a2f05d` (S16b) und `c89ea66` (vier Ränge) — der Fortschritt steht in der Statuszeile mit eigenem Rang, der Abbruch auf `esc` im Text der Zeile; L8 mit p95 169,777 ms unter der 200-ms-Zusage abgenommen (`messungen/260805-2207-MacBookPro15-1-abnahme.txt`).

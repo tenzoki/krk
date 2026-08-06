@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `planning/260802-1036_*_spec-navigator-geruest.md` (C11), `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (`### Frage 4`, S18b, S18c), `decisions/260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `decisions/260805-1411_*_ordnernavigation-mit-oder-ohne-zusatztaste.md`, `decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`
 
@@ -65,3 +65,6 @@ Zwei Folgeentscheidungen hat der Nutzer dem Planner überlassen, und beide stehe
 
 ---
 Answered: `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` `### Frage 4` und die Schritte S18b und S18c — `ctrl+o` als Kombination, `settings.toml` als vierte Ablagedatei, Bündelkennung als Namensform, Vorbelegung `com.apple.Terminal`. Die Fähigkeit steht als C11 im Spec.
+
+---
+Implemented: `f850f30` (S18b, `ctrl+o` und die Auslieferungseinstellungen `settings.toml`) und `48e69df` (S18c, Aufruf über `NSWorkspace` mit Vorbelegung `com.apple.Terminal`).

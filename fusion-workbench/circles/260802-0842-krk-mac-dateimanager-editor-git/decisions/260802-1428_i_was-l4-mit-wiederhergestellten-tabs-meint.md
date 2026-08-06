@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitte C1 und C8, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritte S8 und S12, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_a_leistungszusagen-navigator.md`
 
@@ -71,6 +71,6 @@ Eingearbeitet in den Spec an vier Stellen, alle in C8: Zeile L4 (`:249`), Zeile 
 Zu Punkt eins des Nachtrags, der Sitzungslage. Der Nutzer hat die Formulierung dem Shaper überlassen. Gewählt ist eine Prüfsitzung aus zwei Dateifenstern mit je zwei Tabs: im ersten Fenster ist der Tab auf Prüfordner A sichtbar und der auf B im Hintergrund, im zweiten Fenster umgekehrt, die Auswahl jeweils auf dem ersten Eintrag, Lesezeichenleiste und Vorschau eingeblendet. A und B sind zwei nach demselben Verfahren erzeugte Ordner mit je 10.000 Einträgen an verschiedenen Pfaden. Die im Nachtrag vorgeschlagene Lage mit je einem Tab auf demselben Ordner ist damit an zwei Punkten erweitert, und beide Erweiterungen haben denselben Grund, die Wiederholbarkeit der Messung. Zwei verschiedene Ordner verhindern, dass der zweite Lesevorgang eines Kaltstarts aus dem Cache des Systems bedient und L4 zur Hälfte warm gemessen wird. Der zweite Tab je Fenster gibt L5 einen Zieltab, ohne den der Tabwechsel in derselben Sitzung nicht messbar wäre; ohne ihn bräuchte L5 eine eigene Sitzungslage, und die zweite Lage wäre die Sonderregel, die die Maxime "supersimpel" ausschließt.
 
 Eine Folgerung, die aus der Entscheidung und den vorhandenen Zahlen folgt und deshalb keine eigene Frage geworden ist: wechselt der Nutzer auf einen Tab, dessen Ordner KRK noch nicht gelesen hat, sagt L5 den Wechsel selbst zu, während die erste Bildschirmseite des Zielordners unter L2 mit 100 ms fällt und das vollständige Lesen unter L3 beziehungsweise L10. Anders ginge es nicht, weil L2 für genau diese erste Bildschirmseite 100 ms veranschlagt und die 50 ms aus L5 sie nicht unterbieten können. Der Fall bleibt der Ausnahmefall, weil KRK nach dem Erreichen der bedienbaren Oberfläche weiterliest. Der Absatz `:257` im Spec schreibt das aus.
-Implemented:
+Implemented: `d09c059` (S21, Messvorschrift im Messmodus) und `e8626b6` (S22, Abnahme) — L4 und L5 messen bis zur bedienbaren ersten Bildschirmseite, ausgewiesen im Bericht `messungen/260805-2207-MacBookPro15-1-abnahme.txt`.
 Deferred:
 Superseded by:

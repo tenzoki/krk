@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C4, `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`
 
@@ -45,6 +45,6 @@ Die Groß- und Kleinschreibung, die Möglichkeit 2 des Datensatzes zusätzlich a
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`:142-145 — Möglichkeit 2 gewählt: Musterregeln für Suchen und Ersetzen sowie fortlaufende Nummerierung, mit Vorschau vor der Ausführung; Groß- und Kleinschreibung nicht enthalten.
-Implemented:
+Implemented: `91b904e` (S17) und `3c7191a` (S17c) — Musterregeln, Nummerierung und Vorschau in `crates/krk-core/src/stapelumbenennen/{regel.rs,vorschau.rs,kollision.rs}`, das Blatt in `crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs`.
 Deferred:
 Superseded by:

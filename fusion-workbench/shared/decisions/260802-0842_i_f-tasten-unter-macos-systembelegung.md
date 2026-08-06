@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_c_directive-zeile-widerspricht-loeschantwort.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1330_c_abnahmegeraet-hat-keine-physische-f-tastenreihe.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1417_o_directive-zeile-sagt-freie-funktionstasten-zu.md`, `spikes/fn-tasten/messung-A.txt`
 
@@ -62,6 +62,6 @@ Damit ist die Antwort vom 260802-1105 erweitert, nicht ersetzt. Die gewählte M�
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`, Abschnitt C3 — Möglichkeit 1 gewählt und am 260802-1409 um einen zweiten Weg erweitert: KRK belegt die Funktionstasten F3 bis F8 als Tastencode, ohne Systemeingriff, und legt jede Norton-Funktion zusätzlich auf ein Cmd-Kürzel. Beleg für die Zustellung der Tastenereignisse: `spikes/fn-tasten/messung-A.txt`.
-Implemented:
+Implemented: `6b4fb2d` (S7, Tastencodes ohne Systemeingriff) und `d1a8ab1` (S9) — F3 bis F8 als Tastencode belegt, jede Norton-Funktion zusätzlich auf einem Cmd-Kürzel, `resources/default-keymap.toml:101-123`.
 Deferred:
 Superseded by:

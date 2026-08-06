@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`
 
@@ -52,6 +52,6 @@ Die Antwort folgt der Aufteilung aus Möglichkeit 2, ändert aber die Tasten. De
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`:136-141 — Delete räumt in den Papierkorb, Fn+F8 löscht endgültig mit einmaliger Rückfrage je Vorgang; Shift+Delete bleibt ab Werk unbelegt.
-Implemented:
+Implemented: `daecb45` (S15, Papierkorbweg in `crates/krk-core/src/operation/loeschen.rs`) und `343a7f3` (S16, Rückfrage vor dem endgültigen Löschen, `crates/krk-ui/src/kommandos/operationen.rs:422-429`); `shift+delete` steht in `resources/default-keymap.toml` in keiner Tastenliste.
 Deferred:
 Superseded by:

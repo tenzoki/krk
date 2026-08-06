@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`
 
@@ -77,6 +77,6 @@ Möglichkeit 1, mit einer Ergänzung. Der Entwicklungs-Mac ist verfügbar, und e
 
 ---
 Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C8, Unterabschnitt "Messbedingungen" — Referenzgerät ist das MacBook Pro 15 Zoll von 2018 (`MacBookPro15,1`), 8-Core Intel Core i9 mit 2,3 GHz, 16 GB Arbeitsspeicher, 2880×1800 bei 60 Hz, macOS 15.7.7. Bewusst die strengere Wahl gegenüber dem Apple-Silicon-Arbeitsrechner des Nutzers. Die zehn Zahlen selbst waren bereits am 260802-1105 bestätigt.
-Implemented:
+Implemented: `e8626b6` — S22-Abnahmereihe auf dem MacBookPro15,1 gefahren; Beleg `messungen/260805-2207-MacBookPro15-1-abnahme.txt` (ruhiges Gerät) und `messungen/260805-2212-MacBookPro15-1-abnahme-unter-last.txt`.
 Deferred:
 Superseded by:

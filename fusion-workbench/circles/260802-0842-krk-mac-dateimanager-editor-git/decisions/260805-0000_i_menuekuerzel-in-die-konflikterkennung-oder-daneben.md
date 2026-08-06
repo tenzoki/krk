@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-0907_c_fenster-schliessen-bleibt-als-einzige-belegung-ausserhalb-der-konflikterkennung.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1309_o_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C2, C3, C7)
 
@@ -53,4 +53,4 @@ Die spätere Dateizwischenablage braucht darum **keine zweite Belegung** auf Cmd
 **Wie die Zusage geprüft wird.** Nicht durch Aufzählen der heute bekannten Zusätze, denn eine Aufzählung veraltet mit der nächsten macOS-Version, und genau diesen Fall hat das Vorhaben mit "Close All" schon erlebt. S13c bekommt eine Befehlszeilenmarke `--menue-protokoll`, die das gebaute Hauptmenü mit allen Kürzeln ausliest; das Abnahmekriterium vergleicht diese Menge gegen `resources/default-keymap.toml`. Dieselbe Prüfung fängt auch die Einträge, die macOS an ein Menü "Bearbeiten" hängt.
 
 Eingearbeitet: `planning/260802-1036_o_spec-navigator-geruest.md` C3 (drei neue Abnahmekriterien, vier neue Festlegungen), C7 (Kriterium zu Shift+Cmd+W), C10 (Festlegung zur Reservierung); `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` als neue Schritte S13b und S13c.
-Implemented: <offen — S13b und S13c>
+Implemented: `58465bf` (S13b und S13c) — die fünf Menükürzel stehen in `resources/default-keymap.toml`, das Hauptmenü nimmt seine Kürzel aus der Belegung, `--menue-protokoll` liest das gebaute Menü aus.

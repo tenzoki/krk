@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1040_c_der-verworfene-ausblendbefehl-aus-c7-hat-keinen-ausloeser.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C7), `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-core/src/ablage/sitzung.rs`
 
