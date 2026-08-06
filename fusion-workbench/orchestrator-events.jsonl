@@ -177,3 +177,41 @@
 {"ts":"2026-08-06T09:37:08","event":"coherence_review","turn":22,"detail":"verdict: ok | Artefakt-Grundlage: 2 Low-Befunde, keiner blockiert | Artefakt-Directive: Commit setzt den Auftrag um | Grundlage-Directive: nichts beruehrt"}
 {"ts":"2026-08-06T09:37:08","event":"turn_end","turn":22,"detail":"1 Aufgabe geloest, 2 Commits, 2 neue Low-Issues; Queue konvergiert"}
 {"ts":"2026-08-06T09:37:08","event":"session_end","detail":"Folgeauftrag F1-Gliederung abgeschlossen (ccaf821, b0bec0c)"}
+{"ts":"2026-08-06T09:41:29","event":"session_start","detail":"Rest der Runde: S6b und 20 offene Defekte, mode=all, domain=code"}
+{"ts":"2026-08-06T09:41:29","event":"queue_built","turn":23,"detail":"4 Aufgaben, 0 blockiert"}
+{"ts":"2026-08-06T09:41:29","event":"turn_start","turn":23,"detail":"4 Aufgaben bereit"}
+{"ts":"2026-08-06T09:41:29","event":"task_start","turn":23,"task":"T1","agent":"coder","detail":"S6b Hinweisfenster beim fehlenden Tastenabgriff"}
+{"ts":"2026-08-06T09:56:00","event":"task_done","turn":23,"task":"T1","agent":"coder","detail":"194ea16; Plan 36/36; Entscheidung 260803-2025 auf _i_; neuer Defekt: S6b-Abnahmekriterium ueberholt"}
+{"ts":"2026-08-06T09:56:00","event":"commit","turn":23,"task":"T1","detail":"194ea16 feat(ui): S6b Abbruch mit Hinweisfenster beim fehlenden Tastenabgriff"}
+{"ts":"2026-08-06T09:56:00","event":"task_start","turn":23,"task":"T2","agent":"coder","detail":"Vorschau- und UI-Befunde, 6 Defekte"}
+{"ts":"2026-08-06T10:36:26","event":"task_done","turn":23,"task":"T2","agent":"coder","detail":"fd5e3c5; 6 Defekte geschlossen; 2 neue (Groessenformatierer weiter gefasst, Messstrecken-Abbruch bei L5-Tab)"}
+{"ts":"2026-08-06T10:36:26","event":"commit","turn":23,"task":"T2","detail":"fd5e3c5 fix(ui): sechs Vorschau- und Oberflaechenbefunde"}
+{"ts":"2026-08-06T10:36:26","event":"task_start","turn":23,"task":"T3","agent":"coder","detail":"Mess- und Werkzeugbefunde, 6 Defekte inkl. L5-Abbruch"}
+{"ts":"2026-08-06T11:07:51","event":"task_done","turn":23,"task":"T3","agent":"coder","detail":"4195aa3; 6 Defekte geschlossen; L5-Abbruch war der fehlende Vordergrund, kein Commit; neue Entscheidung 260806-1303; 1 neuer Defekt L6-Haenger"}
+{"ts":"2026-08-06T11:07:51","event":"commit","turn":23,"task":"T3","detail":"4195aa3 fix(bench): sechs Befunde an Messstrecke und Bauwerkzeug"}
+{"ts":"2026-08-06T11:07:51","event":"task_start","turn":23,"task":"T4","agent":"coder","detail":"Doku- und Tracking-Befunde"}
+{"ts":"2026-08-06T11:15:27","event":"task_done","turn":23,"task":"T4b","agent":"coder","detail":"bfaa9c4; 2 Defekte zu; 62 Markerzitate in 32 Dateien entveraltet; neuer Defekt 260806-1320 fuer den ontocoder"}
+{"ts":"2026-08-06T11:15:27","event":"commit","turn":23,"task":"T4b","detail":"bfaa9c4 chore(code): totes Cargo-Merkmal entfernt, 62 Markerzitate entveraltet"}
+{"ts":"2026-08-06T11:19:10","event":"task_done","turn":23,"task":"T4a","agent":"planner","detail":"1b0f3b0; 6 Planstellen nachgezogen, 5 Defekte zu; Statuszeile vom Orchestrator auf 36/36 gesetzt"}
+{"ts":"2026-08-06T11:19:10","event":"commit","turn":23,"task":"T4a","detail":"1b0f3b0 docs(plan): sechs ueberholte Abnahmekriterien und Dateilisten nachgezogen"}
+{"ts":"2026-08-06T11:19:10","event":"review_start","turn":23,"agent":"coderev","detail":"Durchsicht 8fd50a6..HEAD"}
+{"ts":"2026-08-06T11:32:51","event":"review_done","turn":23,"agent":"coderev","detail":"6 Befunde (1 hoch, 3 mittel, 2 niedrig), Urteil annehmbar"}
+{"ts":"2026-08-06T12:09:21","event":"gate_response","turn":23,"detail":"Bildgrenze 64 MB in den Spec; Auffrischungsaufschub auf schnelle Vorgaenge begrenzen"}
+{"ts":"2026-08-06T12:09:21","event":"task_start","turn":23,"task":"T6","agent":"planner","detail":"Bildgrenze als Zusage in C6"}
+{"ts":"2026-08-06T12:09:21","event":"task_start","turn":23,"task":"T7","agent":"coder","detail":"Auffrischungsaufschub auf schnelle Vorgaenge begrenzen"}
+{"ts":"2026-08-06T12:17:23","event":"task_done","turn":23,"task":"T6","agent":"planner","detail":"27c9515; Bildgrenze als Zusage in C6, C10 verweist darauf, S19 nachgezogen, Datensatz 260806-1412 mit Marker _i_"}
+{"ts":"2026-08-06T12:17:23","event":"commit","turn":23,"task":"T6","detail":"27c9515 docs(spec): die Bildgrenze von 64 MB wird eine Zusage in C6"}
+{"ts":"2026-08-06T14:36:12","event":"task_done","turn":23,"task":"T7","agent":"coder","detail":"89f5570; Aufschub nur fuer schnelle Vorgaenge; neuer Vorbehalt 260806-1445 (schnelles Verschieben)"}
+{"ts":"2026-08-06T14:36:12","event":"commit","turn":23,"task":"T7","detail":"89f5570 fix(ui): der Auffrischungsaufschub gilt nur noch fuer schnelle Vorgaenge"}
+{"ts":"2026-08-06T14:36:12","event":"gate_response","turn":23,"detail":"git-Identitaet lokal gesetzt: Kai Stalmann <kai@stalmann.org>; Fernzugriff war bereits auf tenzoki/krk gebunden"}
+{"ts":"2026-08-06T14:38:47","event":"coherence_review","turn":23,"detail":"verdict: ok | Artefakt-Grundlage: 20 Defekte zu, 8 neu, keiner blockiert | Artefakt-Directive: Plan 36/36, 12 Commits | Grundlage-Directive: 2 Nutzerentscheide umgesetzt, L9 bewusst offen"}
+{"ts":"2026-08-06T14:38:47","event":"turn_end","turn":23,"detail":"7 Aufgaben geloest, 12 Commits, 20 Defekte geschlossen, 8 neue"}
+{"ts":"2026-08-06T14:54:49","event":"rebalance_grounding","turn":23,"detail":"decisions/260802-1810 auf _a_: Nutzerentscheid Moeglichkeit 1, Kollation und Dateiendung; Nachmessung L3/L10 als Auflage"}
+{"ts":"2026-08-06T14:54:49","event":"turn_start","turn":24,"detail":"Umsetzung des Sortierentscheids"}
+{"ts":"2026-08-06T14:54:49","event":"task_start","turn":24,"task":"T8","agent":"coder","detail":"Kollation und Dateiendung, mit Nachmessung L3/L10"}
+{"ts":"2026-08-06T15:25:19","event":"task_done","turn":24,"task":"T8","agent":"coder","detail":"16e4558; L3 41,5ms/400ms, L10 463,8ms/4000ms gehalten; icu_collator, Eintrag 72->88 Bytes; 2 neue Eintraege"}
+{"ts":"2026-08-06T15:25:19","event":"commit","turn":24,"task":"T8","detail":"16e4558 feat(core): sprachsensitive Sortierung und die Dateiendung als Typschluessel"}
+{"ts":"2026-08-06T15:25:19","event":"task_start","turn":24,"task":"T9","agent":"planner","detail":"Sortierung in Plan und Spec verankern"}
+{"ts":"2026-08-06T15:36:27","event":"task_done","turn":24,"task":"T9","agent":"planner","detail":"c8d7f21; Sortierung in C2, C8, Frage 2, S2, S12 und Datenstrukturen verankert; Datensatz auf _i_; Muster als 260806-1735 gefiled"}
+{"ts":"2026-08-06T15:36:27","event":"turn_end","turn":24,"detail":"2 Aufgaben, 2 Commits, Sortierentscheid umgesetzt und verankert"}
+{"ts":"2026-08-06T15:36:27","event":"session_end","detail":"Turns 23-24; Plan 36/36; 22 Defekte geschlossen; L9 und 10 weitere Fragen offen"}

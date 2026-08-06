@@ -1,87 +1,87 @@
 {
   "haltActive": false,
   "consecutiveBlocks": 0,
-  "lastBlockTimestamp": "2026-08-06T09:11:28.524Z",
+  "lastBlockTimestamp": "2026-08-06T15:13:30.532Z",
   "recentEvents": [
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `do mv \"$f\" \"alt-${f#neu-}\"` writes `\"$f\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T11:20:00.579Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f $SP/lauf8.done` writes `$SP/lauf8.done`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T10:49:20.537Z",
       "toolName": "Bash",
-      "filePath": "\"$f\""
+      "filePath": "$SP/lauf8.done"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f ~/Library/Application\\ Support/KRK/bookmarks.toml` writes `~/Library/Application\\`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T15:29:40.657Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `cp ~/Library/Application\\ Support/KRK/session.toml $SP/session-vor-alle.toml` writes `$SP/session-vor-alle.toml`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T11:02:39.882Z",
       "toolName": "Bash",
-      "filePath": "~/Library/Application\\"
+      "filePath": "$SP/session-vor-alle.toml"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f ~/Library/Application\\ Support/KRK/settings.toml` writes `~/Library/Application\\`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T16:44:22.254Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `then cp -p \"$S\" \"$SP/session.toml.NUTZER-SICHERUNG\"` writes `\"$SP/session.toml.NUTZER-SICHERUNG\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T11:38:01.496Z",
       "toolName": "Bash",
-      "filePath": "~/Library/Application\\"
+      "filePath": "\"$SP/session.toml.NUTZER-SICHERUNG\""
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f \"$HOME/Library/Application Support/KRK/settings.toml /tmp/krk-session-sicherung.toml` writes `\"$HOME/Library/Application`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T17:01:17.837Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `cp ~/Library/Application\\ Support/KRK/session.toml $S/session.toml.nutzer` writes `$S/session.toml.nutzer`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T12:22:10.910Z",
       "toolName": "Bash",
-      "filePath": "\"$HOME/Library/Application"
+      "filePath": "$S/session.toml.nutzer"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `{ cp \"$FUSION_PLUGIN_ROOT/stilwerk/$f\" ./fusion-workbench/stilwerk/$f` writes `./fusion-workbench/stilwerk/$f`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T19:17:14.670Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$HOME/Library/Caches/krk-messplatz/kopierziel\"/* 2>/dev/null` writes `\"$HOME/Library/Caches/krk-messplatz/kopierziel\"/*`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T12:27:01.658Z",
       "toolName": "Bash",
-      "filePath": "./fusion-workbench/stilwerk/$f"
+      "filePath": "\"$HOME/Library/Caches/krk-messplatz/kopierziel\"/*"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `then cp \"$HOME/Library/Application Support/KRK/keymap.toml \"$SCRATCH/keymap-backup.toml\"` writes `\"$SCRATCH/keymap-backup.toml\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T20:42:56.216Z",
+      "message": "fusion policy: this Bash command mutates a relative path after a `cd` the shell does not guarantee succeeded. Only `&&` guarantees it — after `;`, `||`, `|`, `&` or a newline bash runs the rest of the command from wherever it never left, so the segment `do LC_ALL=C sed -i  s/260806-1450/260806-1647/g \"$f\"` writes `s/260806-1450/260806-1647/g` at one of two places and the guard cannot tell which (fail-closed). Join the `cd` to what follows it with `&&` — which is also what makes the command correct in the shell — or name the target as an absolute path. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T14:47:25.548Z",
       "toolName": "Bash",
-      "filePath": "\"$SCRATCH/keymap-backup.toml\""
+      "filePath": "s/260806-1450/260806-1647/g"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm \"$HOME/Library/Application Support/KRK/keymap.toml` writes `\"$HOME/Library/Application`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T20:49:47.747Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `mv \"$C/issues/260806-1450_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md\" \"$C/issues/260806-1647_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md\"` writes `\"$C/issues/260806-1450_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T14:47:30.748Z",
       "toolName": "Bash",
-      "filePath": "\"$HOME/Library/Application"
+      "filePath": "\"$C/issues/260806-1450_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md\""
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `then cp \"$S\" \"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-toml-sicherung-$(…).toml\"` writes `\"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-toml-sicherung-$(…).toml\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T21:33:16.035Z",
+      "message": "fusion policy: this Bash command mutates a relative path after a `cd` the shell does not guarantee succeeded. Only `&&` guarantees it — after `;`, `||`, `|`, `&` or a newline bash runs the rest of the command from wherever it never left, so the segment `cat > src/main.rs <<` writes `src/main.rs` at one of two places and the guard cannot tell which (fail-closed). Join the `cd` to what follows it with `&&` — which is also what makes the command correct in the shell — or name the target as an absolute path. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T15:00:48.777Z",
       "toolName": "Bash",
-      "filePath": "\"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-toml-sicherung-$(…).toml\""
+      "filePath": "src/main.rs"
+    },
+    {
+      "level": "block",
+      "trigger": "git_branch_switch",
+      "message": "fusion policy: agents never switch git branches autonomously (prevents branch-drift chaos). If this task genuinely needs a different branch, STOP and ask the user. The user can deliberately allow it by setting FUSION_ALLOW_BRANCH_SWITCH=1 (or FUSION_ALLOW_WORKTREE=1 for worktrees) in the session env.",
+      "timestamp": "2026-08-06T15:13:17.151Z",
+      "toolName": "Bash",
+      "filePath": "git -C /Users/k1/Projects/productive/krk worktree add --detach \"$W\" HEAD 2>"
     },
     {
       "level": "block",
       "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `mv \"$CIRCLE/issues/260803-1845_o_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md\" \"$CIRCLE/issues/260803-1845_c_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md\"` writes `\"$CIRCLE/issues/260803-1845_o_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T22:20:41.831Z",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$S\"` writes `\"$S\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T15:13:30.532Z",
       "toolName": "Bash",
-      "filePath": "\"$CIRCLE/issues/260803-1845_o_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md\""
-    },
-    {
-      "level": "block",
-      "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `cp \"$HOME/Library/Application Support/KRK/session.toml \"$SCRATCH/session.toml.sicherung\" 2>/dev/null` writes `\"$SCRATCH/session.toml.sicherung\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-06T09:11:28.524Z",
-      "toolName": "Bash",
-      "filePath": "\"$SCRATCH/session.toml.sicherung\""
+      "filePath": "\"$S\""
     }
   ]
 }

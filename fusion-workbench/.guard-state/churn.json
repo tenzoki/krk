@@ -121,10 +121,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
-      "totalChanges": 162,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T14:37:47.551Z",
-      "thrashingScore": 78
+      "totalChanges": 176,
+      "changesThisSession": 8,
+      "lastChange": "2026-08-06T15:33:26.108Z",
+      "thrashingScore": 70
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_o_leistungszusagen-navigator.md": {
       "totalChanges": 6,
@@ -319,10 +319,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 421,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T07:04:19.671Z",
-      "thrashingScore": 142
+      "totalChanges": 449,
+      "changesThisSession": 11,
+      "lastChange": "2026-08-06T15:31:55.863Z",
+      "thrashingScore": 167
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1428_o_messbedingungen-c8-nennen-keinen-pruefordner-fuer-l10.md": {
       "totalChanges": 2,
@@ -397,10 +397,10 @@
       "thrashingScore": 0
     },
     "Cargo.toml": {
-      "totalChanges": 5,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-04T15:47:51.176Z",
-      "thrashingScore": 1
+      "totalChanges": 8,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:04:35.904Z",
+      "thrashingScore": 2
     },
     "rust-toolchain.toml": {
       "totalChanges": 2,
@@ -421,9 +421,9 @@
       "thrashingScore": 0
     },
     "crates/krk-core/Cargo.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T15:36:45.496Z",
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:04:42.279Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/lib.rs": {
@@ -445,9 +445,9 @@
       "thrashingScore": 5
     },
     "crates/krk-bench/Cargo.toml": {
-      "totalChanges": 3,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:21:50.884Z",
+      "lastChange": "2026-08-06T11:38:28.548Z",
       "thrashingScore": 1
     },
     "crates/krk-bench/src/main.rs": {
@@ -463,10 +463,10 @@
       "thrashingScore": 0
     },
     "xtask/src/main.rs": {
-      "totalChanges": 10,
+      "totalChanges": 11,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T06:09:50.722Z",
-      "thrashingScore": 5
+      "lastChange": "2026-08-06T10:59:24.962Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
@@ -499,9 +499,9 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/eintrag.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T15:51:05.643Z",
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:06:11.366Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/sys.rs": {
@@ -511,10 +511,10 @@
       "thrashingScore": 3
     },
     "crates/krk-core/src/verzeichnis/sortierung.rs": {
-      "totalChanges": 5,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-03T18:45:53.182Z",
-      "thrashingScore": 3
+      "totalChanges": 11,
+      "changesThisSession": 6,
+      "lastChange": "2026-08-06T15:10:10.342Z",
+      "thrashingScore": 11
     },
     "crates/krk-core/src/verzeichnis/leser.rs": {
       "totalChanges": 7,
@@ -523,22 +523,22 @@
       "thrashingScore": 6
     },
     "crates/krk-core/src/verzeichnis/modell.rs": {
-      "totalChanges": 19,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T09:00:10.290Z",
+      "totalChanges": 20,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:07:45.610Z",
       "thrashingScore": 6
     },
     "crates/krk-core/src/verzeichnis/mod.rs": {
-      "totalChanges": 4,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T09:00:26.022Z",
-      "thrashingScore": 1
+      "totalChanges": 7,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-06T15:07:33.086Z",
+      "thrashingScore": 4
     },
     "crates/krk-core/tests/verzeichnis.rs": {
-      "totalChanges": 6,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T16:01:31.351Z",
-      "thrashingScore": 10
+      "totalChanges": 7,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:19:42.451Z",
+      "thrashingScore": 2
     },
     "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag.rs": {
       "totalChanges": 1,
@@ -565,9 +565,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T16:26:11.736Z",
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:44:48.891Z",
       "thrashingScore": 0
     },
     "resources/Info.plist": {
@@ -595,10 +595,10 @@
       "thrashingScore": 0
     },
     "crates/krk-bench/src/messen.rs": {
-      "totalChanges": 39,
+      "totalChanges": 48,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:32:19.517Z",
-      "thrashingScore": 23
+      "lastChange": "2026-08-06T11:42:42.032Z",
+      "thrashingScore": 30
     },
     "crates/krk-bench/src/bericht.rs": {
       "totalChanges": 11,
@@ -643,10 +643,10 @@
       "thrashingScore": 0
     },
     "xtask/src/bundle.rs": {
-      "totalChanges": 3,
+      "totalChanges": 6,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T06:07:28.237Z",
-      "thrashingScore": 1
+      "lastChange": "2026-08-06T10:59:14.585Z",
+      "thrashingScore": 4
     },
     "xtask/src/sign.rs": {
       "totalChanges": 14,
@@ -739,16 +739,16 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/mod.rs": {
-      "totalChanges": 22,
+      "totalChanges": 25,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T20:39:35.473Z",
-      "thrashingScore": 9
+      "lastChange": "2026-08-06T09:46:25.627Z",
+      "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/menue.rs": {
-      "totalChanges": 20,
+      "totalChanges": 23,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T06:41:01.801Z",
-      "thrashingScore": 6
+      "lastChange": "2026-08-06T11:02:00.889Z",
+      "thrashingScore": 7
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
       "totalChanges": 124,
@@ -763,10 +763,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 234,
-      "changesThisSession": 5,
-      "lastChange": "2026-08-06T09:15:59.009Z",
-      "thrashingScore": 84
+      "totalChanges": 263,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:19:35.756Z",
+      "thrashingScore": 99
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -925,10 +925,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/messmodus.rs": {
-      "totalChanges": 32,
+      "totalChanges": 37,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:30:43.160Z",
-      "thrashingScore": 44
+      "lastChange": "2026-08-06T10:54:30.321Z",
+      "thrashingScore": 18
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-1755_o_l1-verfehlt-die-16-ms-zusage-am-bildrand.md": {
       "totalChanges": 3,
@@ -1477,10 +1477,10 @@
       "thrashingScore": 5
     },
     "crates/krk-ui/src/appkit/zwischenablage.rs": {
-      "totalChanges": 5,
+      "totalChanges": 7,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T20:05:40.714Z",
-      "thrashingScore": 3
+      "lastChange": "2026-08-06T11:44:34.965Z",
+      "thrashingScore": 2
     },
     "crates/krk-ui/src/sonde.rs": {
       "totalChanges": 9,
@@ -1513,10 +1513,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/auffrischung.rs": {
-      "totalChanges": 6,
+      "totalChanges": 13,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T07:09:42.668Z",
-      "thrashingScore": 6
+      "lastChange": "2026-08-06T12:20:01.101Z",
+      "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/fsevents.rs": {
       "totalChanges": 7,
@@ -1651,9 +1651,9 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/operationen.rs": {
-      "totalChanges": 31,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T16:25:15.358Z",
+      "totalChanges": 32,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:07:55.647Z",
       "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/blaetter/fortschritt.rs": {
@@ -2089,9 +2089,9 @@
       "thrashingScore": 0
     },
     "Makefile": {
-      "totalChanges": 6,
+      "totalChanges": 7,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:27:00.304Z",
+      "lastChange": "2026-08-06T10:57:01.347Z",
       "thrashingScore": 2
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1455_o_macos-stellt-dem-menue-bearbeiten-ein-autofill-untermenue-dazu.md": {
@@ -2228,20 +2228,20 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2128-orchestrator-session.md": {
       "totalChanges": 4,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T09:37:14.307Z",
       "thrashingScore": 1
     },
     "crates/krk-ui/src/vorschaumodell.rs": {
-      "totalChanges": 9,
+      "totalChanges": 23,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:19:53.673Z",
-      "thrashingScore": 13
+      "lastChange": "2026-08-06T11:45:15.873Z",
+      "thrashingScore": 15
     },
     "crates/krk-ui/src/appkit/vorschau.rs": {
-      "totalChanges": 4,
+      "totalChanges": 5,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:20:07.156Z",
+      "lastChange": "2026-08-06T10:07:52.234Z",
       "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_o_tastenweg-des-fokus-in-das-vorschaufenster.md": {
@@ -2257,16 +2257,16 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "totalChanges": 17,
-      "changesThisSession": 15,
-      "lastChange": "2026-08-06T09:04:42.757Z",
-      "thrashingScore": 31
+      "totalChanges": 19,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:11:50.800Z",
+      "thrashingScore": 36
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
-      "totalChanges": 10,
-      "changesThisSession": 8,
-      "lastChange": "2026-08-06T09:06:36.437Z",
-      "thrashingScore": 15
+      "totalChanges": 12,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:11:16.801Z",
+      "thrashingScore": 20
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2250-coder-s20-belegungsansicht.md": {
       "totalChanges": 1,
@@ -2281,9 +2281,9 @@
       "thrashingScore": 0
     },
     "xtask/src/messen.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:26:22.997Z",
+      "lastChange": "2026-08-06T10:59:20.762Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-2335_o_l1-und-l9-verfehlen-den-anteil-im-ersten-gesamtlauf-unter-fremdlast.md": {
@@ -2323,10 +2323,10 @@
       "thrashingScore": 0
     },
     "xtask/src/release.rs": {
-      "totalChanges": 1,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T06:09:31.327Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-06T10:58:14.712Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-0813-coder-s23-auslieferungspaket.md": {
       "totalChanges": 1,
@@ -2371,9 +2371,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-0904_o_claude-md-fuehrt-projektstand-und-entscheidungsstand-vom-260803.md": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T07:05:18.938Z",
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:45:37.131Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-0904-reconciliation.md": {
@@ -2384,34 +2384,352 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1054_p_belegungsansicht-gruppiert-nach-funktionsbereich.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T08:55:08.611Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1113-coder-belegungsansicht-funktionsbereiche.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T09:17:33.378Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1123_o_modulkopf-zitiert-den-issue-pfad-mit-ueberholtem-marker.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T09:23:47.715Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1123_o_auswahlwiederherstellung-der-belegungsansicht-umgeht-die-waehlbarkeitspruefung.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T09:24:00.818Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260806-1123-coderev-belegungsansicht-funktionsbereiche.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T09:24:41.929Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1140-orchestrator-session.md": {
+      "totalChanges": 4,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-06T15:37:18.006Z",
+      "thrashingScore": 3
+    },
+    "crates/krk-ui/src/appkit/hinweis.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T09:46:07.257Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1150_o_abnahmekriterium-von-s6b-ist-an-zwei-stellen-ueberholt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T09:53:26.755Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1152-coder-s6b-abbruch-mit-hinweisfenster.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T09:54:37.400Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/zero2.swift": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:04:37.180Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/Probe.app/Contents/Info.plist": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:04:53.416Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/zero3.swift": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:05:23.287Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1215_o_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:15:33.090Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-vorschau-aus.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:23:21.523Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-vorschau-an.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:23:27.596Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe.sh": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:23:35.586Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/spannen.sh": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:26:39.331Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-riesig.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:28:33.519Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe2.sh": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:29:09.529Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1235_o_der-sitzungslauf-der-abnahmestrecke-bricht-bei-l5-tab-ab-und-gibt-keine-zahl-mehr-aus.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:32:05.742Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1240-coder-vorschau-und-ui-defekte.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:33:55.724Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/messplan.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:41:21.027Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/lauf-terminal.command": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T10:49:32.561Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/menue-terminal.command": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:00:29.169Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/alle-terminal.command": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:02:34.205Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:03:39.803Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1304_o_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:04:57.555Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1305-coder-sechs-defekte-messstrecke-und-bauwerkzeug.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:05:45.147Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/marker.py": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:11:02.266Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1312-coder-cfrunloop-merkmal-und-markerzitate.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:13:35.452Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1320_o_die-belegungsdateien-zitieren-workbench-pfade-mit-zustandsmarker.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:15:13.490Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1313-plannachzug-sechs-ueberholte-stellen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:17:37.525Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1328_o_die-sitzungssicherung-ueberlebt-kein-strg-c-obwohl-ihr-kommentar-es-zusagt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:28:28.549Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1329_o_die-bildgrenze-von-64-mb-steht-in-keinem-spec-und-in-keinem-datensatz.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:28:47.145Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1330_o_ein-vorgang-ohne-fertig-meldung-friert-die-dateiliste-dauerhaft-ein.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:29:08.254Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1331_o_der-auffrischungsaufschub-gilt-fuer-alle-fuenf-operationsarten-statt-nur-fuer-die-schnelle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:29:26.509Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1332_o_das-bild-aus-der-zwischenablage-umgeht-beide-groessengrenzen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:29:46.020Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1333_o_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:30:02.755Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260806-1335-coderev-turn-23-s6b-vorschau-messstrecke.md": {
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:45:58.718Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/strg-c-nachweis.sh": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:53:08.787Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe-session.toml": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:54:29.821Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1357-coder-signalgriff-vorgangsabbruch-zwischenablagegrenze.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T11:58:07.152Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1412_i_bildgrenze-der-vorschau.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:15:39.026Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1412-planner-bildgrenze-der-vorschau.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:16:26.993Z",
+      "thrashingScore": 0
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/leserwache.sh": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:25:09.937Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1440-coder-auffrischungsaufschub-nur-fuer-schnelle-vorgaenge.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:41:11.251Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1445_o_ein-schnelles-verschieben-koennte-dieselbe-meldelawine-ausloesen-wie-das-stapel-umbenennen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-06T12:43:14.543Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_i_wie-zeigt-krk-dem-nutzer-fehler.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:44:29.971Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1450_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:45:14.736Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1130_c_der-groessenformatierer-schreibt-zero-kb-auf-englisch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:46:19.377Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1647-reconciliation.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T14:49:22.035Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/verzeichnis/kollation.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:05:25.348Z",
+      "thrashingScore": 0
+    },
+    "messungen/260806-1716-MacBookPro15-1-kollation-l3-l10.txt": {
+      "totalChanges": 4,
+      "changesThisSession": 4,
+      "lastChange": "2026-08-06T15:22:53.178Z",
+      "thrashingScore": 5
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:18:59.851Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1723-coder-sprachsensitive-kollation-und-endung.md": {
+      "totalChanges": 3,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-06T15:23:00.567Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1730_o_welche-sprache-bestimmt-die-sortierordnung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:24:41.408Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1728-planner-sortierung-in-plan-und-spec-verankert.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:35:01.091Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_o_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T15:35:53.291Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-06T08:55:08.611Z"
+  "sessionStart": "2026-08-06T14:44:19.810Z"
 }

@@ -1,15 +1,16 @@
 # Orchestrator — Live
 
-**Turn:** 22/30 | **Tasks:** 1/1 | **Commits:** 2 | **Errors:** 0
-**Started:** 10:54 | **Session:** Complete | **Guard:** OK (0 blocks)
+**Turn:** 24/30 | **Tasks:** 9/9 | **Commits:** 14 | **Errors:** 0
+**Started:** 11:40 | **Session:** Complete | **Guard:** OK (0 blocks)
 
 ## Current
-  [DONE] orchestrator -> Turn 22 abgeschlossen (F1-Gliederung), Sitzung beendet
+  [DONE] orchestrator -> Sitzung abgeschlossen, Sortierentscheid umgesetzt und verankert
 
 ## This Turn
-  [DONE] coder -> Belegungsansicht gliedert nach Funktionsbereichen ..... ccaf821
-  [DONE] coderev -> 2 kleine Befunde gefiled, nichts blockiert .......... b0bec0c
+  [DONE] coder   -> T8 Sprachsensitive Sortierung und Dateiendung ........ 16e4558
+  [DONE] planner -> T9 Sortierung in Plan und Spec verankert ............. c8d7f21
 
 ## Stand
-  Plan: 35/36 Schritte DONE, offen S6b. L9-Entscheidung offen (haelt die
-  Rundenschliessung). 19 offene Defekte, keiner blockiert. Circle bleibt aktiv.
+  Plan 36/36. 22 Defekte in dieser Sitzung geschlossen, 10 offen (keiner
+  blockiert). 11 offene Entscheidungen, darunter L9 (haelt die Rundenschliessung).
+  L3 41,5 ms von 400 ms, L10 463,8 ms von 4000 ms nach der Kollation.
