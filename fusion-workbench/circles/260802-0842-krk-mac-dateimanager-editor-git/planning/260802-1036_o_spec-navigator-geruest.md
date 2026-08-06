@@ -1,11 +1,13 @@
 # Spec: KRK Navigator-Gerüst (Runde 1)
 
-**Datum:** 2026-08-02, überarbeitet 260802-1735, 260803-1819, 260803-2300, 260804-0830, 260804-1122, 260804-1832, 260805-0000, 260805-1411 und 260805-1623
+**Datum:** 2026-08-02, überarbeitet 260802-1735, 260803-1819, 260803-2300, 260804-0830, 260804-1122, 260804-1832, 260805-0000, 260805-1411, 260805-1623 und 260806-1412
 **Status:** Entwurf. Alle Nutzerantworten bis 260805-1411 sind eingearbeitet. Eine offene Nutzerfrage trägt dieser Spec nicht mehr.
 **Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
 **Quelle:** Circle-Directive im Datensatz `*_circle.md`, zugeschnitten auf die erste Runde durch den Nutzer in der Phase-0-Klärung.
 
 > **Gatehinweis für den Planner:** Dieser Spec ist noch nicht abgenommen, trägt aber keine offene Nutzerfrage mehr. Die vier Fragen A bis D hat der Nutzer am 260802-1105 beantwortet, das Referenzgerät für die Zeitzusagen aus C8 am 260802-1127 benannt; die Antworten stehen als verbindliche Abnahmekriterien in C3, C4 und C8. Die frühere Abweichung zwischen der Löschantwort und der Circle-Directive ist behoben: der Nutzer hat die Directive-Zeile korrigieren lassen, siehe `## Abgleich mit der Circle-Directive`.
+>
+> **Stand 260806-1412: die Vorschau zeigt Bilder bis 64 MB, darüber die Metadaten.** Der Nutzer hat die Größengrenze am 260806 bestätigt. Sie steht seit dem 260806-1240 im Code, ohne dass dieser Spec sie kannte, und der Defekt `issues/260806-1329_*_die-bildgrenze-von-64-mb-steht-in-keinem-spec-und-in-keinem-datensatz.md` hat die Lücke gemeldet: C6 sagte den gängigen Bildformaten ihren Inhalt ohne jeden Vorbehalt zu, während ein TIFF von 200 MB längst auf die Metadaten fiel. Berührt ist C6 mit einem nachgezogenen Abnahmekriterium und einer neuen Festlegung, dazu C10 mit einem Halbsatz, weil dieselbe Grenze auch auf dem Weg über die Zwischenablage gilt. Die Textgrenze von 1 MB ist bei dieser Gelegenheit erstmals auch in C6 ausgeschrieben; bisher stand sie allein in der Zusage L7 aus C8. Keine der zehn Zahlen aus C8 ist berührt, und der Umfang der Runde wächst nicht. Der Datensatz ist `decisions/260806-1412_*_bildgrenze-der-vorschau.md`.
 >
 > **Stand 260805-1623: eine elfte Fähigkeit, das Terminal im angezeigten Ordner.** Der Nutzer hat eine Taste beauftragt, die im Ordner des aktiven Dateifensters ein Terminal öffnet. Sie liegt ab Werk auf Ctrl+O, dem Weg von Total Commander, und die gerufene Anwendung ist schon in dieser Runde einstellbar, vorbelegt mit Terminal.app. Der Umfang der Runde wächst damit zum zweiten Mal seit dem Zuschnitt, und zwar an zwei Stellen: um die Fähigkeit **C11** und um eine vierte Ablagedatei `settings.toml`, in der die Einstellung von Hand gepflegt wird. Eine Oberfläche für sie entsteht in dieser Runde nicht. Keine der zehn Zahlen aus C8 ist berührt, und eine elfte entsteht nicht; die Begründung steht in C11 unter `Verhältnis zu C8`. Berührt sind daneben C2 und C3 mit je einem nachgezogenen Abnahmekriterium. Der Datensatz ist `decisions/260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`.
 >
@@ -278,20 +280,23 @@ Der Modifikator `function` weist dabei keine körperlich gedrückte fn-Taste nac
 
 ### C6: Vorschaufenster mit eigenen Tabs
 
-**Beschreibung:** Rechts neben den Dateifenstern steht ein Vorschaufenster mit eigenen Tabs. Die Auswahl im Dateifenster füllt den gerade aktiven Vorschau-Tab. Wechselt der Nutzer auf einen anderen Tab, bleibt der Inhalt im vorigen stehen, bis er dort selbst überschrieben wird. Was sich nicht darstellen lässt, erscheint als Metadaten.
+**Beschreibung:** Rechts neben den Dateifenstern steht ein Vorschaufenster mit eigenen Tabs. Die Auswahl im Dateifenster füllt den gerade aktiven Vorschau-Tab. Wechselt der Nutzer auf einen anderen Tab, bleibt der Inhalt im vorigen stehen, bis er dort selbst überschrieben wird. Was sich nicht darstellen lässt oder über seiner Größengrenze liegt, erscheint als Metadaten.
 
 **Abnahmekriterien:**
 - [ ] Das Vorschaufenster steht rechts von den Dateifenstern und hält beliebig viele Tabs, mit denselben Befehlen zum Öffnen, Schließen und Wechseln wie in C1.
 - [ ] Eine neue Auswahl im Dateifenster ersetzt den Inhalt des aktiven Vorschau-Tabs.
 - [ ] Wechselt der Nutzer den Vorschau-Tab und ändert danach die Auswahl im Dateifenster, bleibt der Inhalt des zuvor aktiven Tabs unverändert stehen.
 - [ ] Kehrt der Nutzer auf einen Tab zurück, zeigt dieser genau den Inhalt, den er beim Verlassen hatte.
-- [ ] Textdateien, Markdown-Dateien und die gängigen Bildformate erscheinen mit ihrem Inhalt.
+- [ ] Textdateien und Markdown-Dateien bis 1 MB erscheinen mit ihrem Inhalt, die gängigen Bildformate bis 64 MB. Oberhalb ihrer Grenze erscheint die Datei als Metadaten, so wie das folgende Kriterium sie für alles Übrige beschreibt.
 - [ ] Alles andere, einschließlich Ordner und Dateien ohne darstellbaren Inhalt, erscheint als Metadaten: Name, vollständiger Pfad, Größe, Änderungsdatum, Rechte und Typ.
 - [ ] Ein Tastenbefehl blendet das Vorschaufenster aus und wieder ein (siehe C7).
 
 **Getroffene Festlegungen:**
 - Die Vorschau von Text und Markdown ist in dieser Runde eine reine Anzeige des Inhalts ohne Formatierung. Die Formatansicht ist Teil des Editors und damit einer späteren Runde. Die dazu offene Entscheidung `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` bindet diese Runde nicht.
 - **Das Vorschaufenster hat seit dem 260804-0830 eine zweite Quelle, und sie steht in C10.** Die Auswahl im Dateifenster ist die eine, die Zwischenablage die andere. Beide füllen dieselbe Fläche und denselben aktiven Tab, und das Halteverhalten des Zustandsdiagramms oben gilt unverändert für beide. Eine zweite Anzeigefläche für die Zwischenablage entsteht nicht.
+- **Die Vorschau trägt zwei Größengrenzen, und die zweite steht seit dem 260806-1412 hier.** Text und Markdown erscheinen bis 1 MB mit ihrem Inhalt, die gängigen Bildformate bis 64 MB; darüber fällt beides auf dieselben sechs Metadaten zurück, die das Kriterium darüber für alles Übrige verlangt. Gelesen wird die Datei dabei gar nicht erst, weil die Größenprüfung vor dem Lesen steht: danach läge sie schon im Arbeitsspeicher, und genau das verhindert die Grenze. Ohne sie liest die Vorschau jede ausgewählte Bilddatei vollständig ein. Zwanzig Tastendrücke Pfeil-ab über 40 Bilddateien zu je 65 MB kosteten am 260806 gemessene 438 MB Arbeitsspeicher und mit der Grenze noch 54 MB; der Defekt dazu ist `issues/260806-0834_*_die-vorschau-liest-bilddateien-ohne-groessengrenze-vollstaendig-in-den-speicher.md`.
+
+  Die 64 MB trennen die Bilder, die der Nutzer im Alltag ansieht, von den Ausreißern: ein Bildschirmfoto eines Retina-Schirms liegt bei wenigen MB, ein Kamera-JPEG unter 20 MB, ein HEIC darunter, während ein TIFF- oder PSD-Export leicht über 100 MB wiegt. Die Textgrenze von 1 MB auf Bilder anzuwenden schiede dagegen jedes gewöhnliche Foto aus der Anzeige aus, und die Zusage dieser Fähigkeit wäre gebrochen. Die Textgrenze selbst ist nicht neu; sie steht seit dem 260802-1036 als Vorbehalt in der Zusage L7 aus C8 und ist mit diesem Nachzug erstmals auch hier ausgeschrieben, damit C6 beide Fälle in derselben Form beschreibt. Keine der zehn Zahlen aus C8 ist berührt: L7 misst eine Textdatei und bleibt bei 100 ms. Datensatz `decisions/260806-1412_*_bildgrenze-der-vorschau.md`, Meldung der Lücke `issues/260806-1329_*_die-bildgrenze-von-64-mb-steht-in-keinem-spec-und-in-keinem-datensatz.md`.
 
 ### C7: Fenstergrößen und Sichtbarkeit
 
@@ -388,7 +393,7 @@ Der Nutzer hat die Fähigkeit am 260804-0830 beauftragt. Sie ist eine Erweiterun
 
 **Abnahmekriterien:**
 - [ ] Ein Tastenbefehl füllt den aktiven Vorschau-Tab mit dem Inhalt der Zwischenablage. Ist das Vorschaufenster ausgeblendet, blendet derselbe Befehl es ein. Ausblenden tut er nie; dafür bleibt der Befehl aus C7.
-- [ ] Für die Anzeige gilt dieselbe Dreiteilung wie in C6: Text erscheint als Text, ein Bild erscheint als Bild, und alles andere erscheint als Beschreibung dessen, was in der Zwischenablage liegt. Eine leere Zwischenablage sagt das ausdrücklich, statt eine leere Fläche zu zeigen.
+- [ ] Für die Anzeige gilt dieselbe Dreiteilung wie in C6: Text erscheint als Text, ein Bild erscheint als Bild, und alles andere erscheint als Beschreibung dessen, was in der Zwischenablage liegt. Eine leere Zwischenablage sagt das ausdrücklich, statt eine leere Fläche zu zeigen. Die Bildgrenze von 64 MB aus C6 gilt auch hier: ein kopiertes Bild darüber erscheint nicht, und an seiner Stelle steht ein Satz, der seine Größe und die Grenze nennt. Metadaten gibt es dafür nicht, weil keine Datei vorliegt, und "zu groß" ist ausdrücklich nicht dasselbe wie "leer".
 - [ ] Ein zweiter Tastenbefehl deutet den Inhalt der Zwischenablage als Ziel und hat genau drei Ausgänge: ein lokaler Pfad, eine Web-Adresse, oder nichts Verwertbares.
 - [ ] Enthält die Zwischenablage einen absoluten lokalen Pfad und zeigt dieser auf einen Ordner, wechselt das aktive Dateifenster in diesen Ordner.
 - [ ] Zeigt der Pfad auf eine Datei, wechselt das aktive Dateifenster in deren Ordner und stellt die Auswahl auf den Eintrag. Liegt die Datei bereits im angezeigten Ordner, wechselt KRK den Ordner nicht, sondern setzt allein die Auswahl und blättert den Eintrag ins Bild.

@@ -48,3 +48,6 @@ klären ist nicht *ob*, sondern *wo es steht* und *welche Zahl es ist*:
 
 **Betrifft:** `krk-ui` (`vorschaumodell.rs`) und das Spec-Dokument. Keine
 Zeitzusage aus C8 berührt; L7 misst eine Textdatei.
+
+---
+Resolved: Nutzerentscheid 260806 — die Grenze steht jetzt als Zusage im Spec. C6 nennt im fünften Abnahmekriterium "Textdateien und Markdown-Dateien bis 1 MB ... die gängigen Bildformate bis 64 MB", darunter eine Festlegung mit Herleitung und Messung; C10 verweist für den Weg über die Zwischenablage darauf. Der Plan ist an S19 nachgezogen. Der Entscheidungsdatensatz ist decisions/260806-1412_i_bildgrenze-der-vorschau.md (Marker _i_, Code und Spec nachgesehen und deckungsgleich).
