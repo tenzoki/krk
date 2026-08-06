@@ -166,8 +166,8 @@ use krk_core::ablage::{
     einstellungen, lesezeichen, pfade,
 };
 use krk_core::operation::{
-    self, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung, Namensfehler,
-    freier_name,
+    self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
+    Namensfehler, freier_name,
 };
 use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
@@ -2632,6 +2632,7 @@ impl Dateifenstersicht for Anwendungsdelegierter {
 /// Der Hauptfaden haelt seit `Lauf::abbruchgriff` das Kennzeichen des Laufs
 /// selbst und setzt es unmittelbar; hier ist dafuer nichts mehr zu tun.
 fn vermitteln(lauf: Lauf, zustand: &Arc<Vorgangszustand>) {
+    let mut abgeschlossen = false;
     while let Ok(meldung) = lauf.meldungen().recv() {
         let fertig = matches!(meldung, Meldung::Fertig(_));
         zustand.aendern(|stand| match meldung {
@@ -2658,10 +2659,55 @@ fn vermitteln(lauf: Lauf, zustand: &Arc<Vorgangszustand>) {
             hauptfaden_wecken();
         }
         if fertig {
+            abgeschlossen = true;
             break;
         }
     }
+    if !abgeschlossen {
+        abbruch_ohne_meldung_nachtragen(zustand);
+    }
     lauf.warten();
+}
+
+/// Traegt den Abschlussbericht nach, den der Arbeitsfaden nicht mehr geschickt
+/// hat.
+///
+/// **Wann der Fall eintritt.** Der Meldekanal schliesst ohne
+/// [`Meldung::Fertig`] genau dann, wenn der Arbeitsfaden aus
+/// `krk_core::operation::starten` vor seiner letzten Zeile abbricht, also bei
+/// einer Panik in `ausfuehren`. Einen Panikpfad dorthin gibt es heute nicht;
+/// dass die Schleife den Fall stillschweigend behandelte, war trotzdem eine
+/// offene Flanke.
+///
+/// **Warum er nicht folgenlos bleiben darf.** Ohne Bericht setzt der Hauptfaden
+/// `stand.bericht` nie, erreicht `vorgang_beenden` nie und leert `ivars.vorgang`
+/// nie. Die Fortschrittszeile bliebe stehen, der naechste Operationsbefehl
+/// wuerde abgewiesen, und seit die Dateisystemwache die Ordner des laufenden
+/// Vorgangs aussetzt, bliebe der Ordner fuer die ganze Laufzeit von jeder
+/// Auffrischung ausgeschlossen — auch von den fremden Aenderungen, die C9
+/// zusagt.
+///
+/// **Dieselbe Bahn und kein zweiter Aufraeumweg.** Nachgetragen wird ein
+/// gewoehnlicher [`Bericht`], der durch [`Vorgangszustand`] und den Weckruf
+/// laeuft wie jeder andere; `vorgang_beenden` raeumt daraufhin von selbst auf.
+/// Die Zahlen kommen aus dem letzten Zwischenstand und nicht aus Nullen: was
+/// vor dem Abbruch durchlief, ist uebertragen, und der Nutzer liest in der
+/// Abschlusszeile, wie weit es kam.
+fn abbruch_ohne_meldung_nachtragen(zustand: &Arc<Vorgangszustand>) {
+    zustand.aendern(|stand| {
+        let (eintraege, bytes) = stand.fortschritt.as_ref().map_or((0, 0), |zwischenstand| {
+            (zwischenstand.eintraege, zwischenstand.bytes)
+        });
+        stand.bericht = Some(Bericht {
+            abschluss: Abschluss::Abgebrochen,
+            eintraege,
+            bytes,
+            uebersprungen: std::mem::take(&mut stand.uebersprungen),
+        });
+    });
+    if zustand.buendelung.melden() {
+        hauptfaden_wecken();
+    }
 }
 
 /// Weckt den Hauptfaden, damit er den Stand des Vorgangs zeichnet.

@@ -20,6 +20,17 @@ publish = false
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 toml = "1"
+# Signalbehandlung, nur fuer die Messstrecke. `std` kennt keine Signale, und die
+# einzige Zusage, die daran haengt, ist die Sitzungssicherung aus
+# `krk-bench/src/messen.rs`: sie muss den vorigen Stand auch dann zurueckspielen,
+# wenn ein Gesamtlauf mit Strg+C abgebrochen wird. `signal-hook` nimmt den
+# Signalgriff entgegen und meldet ihn ueber ein Selbstrohr an einen gewoehnlichen
+# Faden weiter; das Zurueckspielen laeuft damit ausserhalb des Signalkontextes und
+# darf Dateien schreiben und melden. Zwei Wirkungen, die hier zaehlen: `krk-bench`
+# behaelt `#![deny(unsafe_code)]`, und die Kiste bringt nichts mit ausser
+# `signal-hook-registry` und `libc`, das ueber `objc2` ohnehin schon im Baum steht.
+# `default-features = false` laesst den `channel`-Teil weg, den kein Modul nennt.
+signal-hook = { version = "0.4", default-features = false, features = ["iterator"] }
 objc2 = "0.6"
 objc2-app-kit = "0.3"
 objc2-foundation = "0.3"

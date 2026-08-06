@@ -35,3 +35,6 @@ Der Fix hängt an der Klärung der Zahl selbst, siehe
 
 **Betrifft:** `krk-ui` (`appkit/zwischenablage.rs`, `vorschaumodell.rs`). C6 und
 C10. Keine Zeitzusage aus C8 berührt.
+
+---
+Resolved: Die Länge des NSData wird vor to_vec() gegen BILDGRENZE geprüft; oberhalb erscheint ein Hinweis statt der Bytes. Der Weg über die Zwischenablage trägt damit dieselbe Grenze wie der über die Datei.

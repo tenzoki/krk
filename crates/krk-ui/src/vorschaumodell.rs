@@ -44,6 +44,17 @@
 //! kann. Ueber der Grenze faellt sie eine Stufe frueher darauf zurueck, ohne
 //! gelesen zu haben.
 //!
+//! **Die Bildgrenze gilt auf beiden Wegen in dieselbe Flaeche.** In die Anzeige
+//! fuehren zwei Wege, der Dateiweg ueber [`laden`] und der der Zwischenablage
+//! aus C10 ueber [`Vorschaumodell::zwischenablage_anzeigen`]. Bis zum 260806
+//! trug allein der erste die Grenze; ein kopiertes TIFF ueber 100 MB lief am
+//! zweiten vorbei in den Speicher
+//! (`issues/260806-1332_*_das-bild-aus-der-zwischenablage-umgeht-beide-
+//! groessengrenzen.md`). Gemessen wird jetzt auch dort vor dem Kopieren, an der
+//! Laenge des `NSData`, und mit derselben Konstanten. Eine Textgrenze braucht
+//! der zweite Weg nicht: was aus der Zwischenablage als Text kommt, ist bereits
+//! eine `String` im Speicher, und eine Pruefung danach spart nichts mehr.
+//!
 //! **Die Rechte erhebt der Arbeitsfaden beim Anzeigen**, mit einem `stat(2)`
 //! auf den einen angezeigten Pfad. `Eintrag` aus S2 bleibt so schmal, wie L10
 //! es verlangt; das ist Weg 2 aus `issues/260803-2007_*_die-metadatenvorschau-
@@ -358,6 +369,7 @@ impl Vorschaumodell {
                 daten: Arc::new(daten),
                 metadaten: None,
             },
+            Zwischenablageinhalt::BildZuGross(groesse) => Inhalt::Hinweis(zu_gross_text(groesse)),
             Zwischenablageinhalt::Leer => {
                 Inhalt::Hinweis("Die Zwischenablage ist leer.".to_owned())
             }
@@ -431,8 +443,31 @@ pub enum Zwischenablageinhalt {
     Text(String),
     /// Die rohen Daten eines Bildes in einem Format, das `NSImage` liest.
     Bild(Vec<u8>),
+    /// Ein Bild ueber [`BILDGRENZE`], mit seiner Groesse in Bytes.
+    ///
+    /// **Ein eigener Fall und keine Variante von [`Leer`].** Die
+    /// Zwischenablage traegt ja ein Bild; nur die Vorschau zeigt es nicht.
+    /// Wer beides in einen Fall zoege, koennte dem Nutzer den Unterschied
+    /// zwischen "nichts kopiert" und "zu gross" nicht sagen.
+    ///
+    /// [`Leer`]: Zwischenablageinhalt::Leer
+    BildZuGross(u64),
     /// Weder Text noch Bild.
     Leer,
+}
+
+/// Der Satz, den ein Bild ueber der Bildgrenze statt seiner selbst zeigt.
+///
+/// Beide Zahlen kommen aus je einer Quelle: die Groesse aus dem `NSData` der
+/// Zwischenablage, die Grenze aus [`BILDGRENZE`]. Eine zweite Zahl im Text
+/// entsteht nicht, und wer die Konstante aendert, aendert den Satz mit.
+fn zu_gross_text(groesse: u64) -> String {
+    let in_mb = |bytes: u64| bytes / (1024 * 1024);
+    format!(
+        "Das Bild in der Zwischenablage ist {} MB groß. Die Vorschau zeigt Bilder bis {} MB.",
+        in_mb(groesse),
+        in_mb(BILDGRENZE)
+    )
 }
 
 /// Liest den Eintrag und ordnet ihn in die Dreiteilung aus C6 ein.
@@ -639,6 +674,27 @@ mod tests {
             *modell.aktiver_inhalt(),
             Inhalt::Hinweis("Die Zwischenablage ist leer.".to_owned()),
             "C10: keine leere Flaeche"
+        );
+        assert_eq!(modell.titel()[0], "Zwischenablage");
+    }
+
+    /// Ein Bild ueber der Grenze wird benannt und nicht gezeigt.
+    ///
+    /// Geprueft wird die Zuordnung im Modell; dass die Groesse vor dem Kopieren
+    /// erhoben wird, entscheidet `appkit/zwischenablage.rs`, wo kein Pruefcode
+    /// hinkommt.
+    #[test]
+    fn ein_bild_ueber_der_bildgrenze_erscheint_als_hinweis() {
+        let mut modell = Vorschaumodell::neu();
+        modell.zwischenablage_anzeigen(Zwischenablageinhalt::BildZuGross(100 * 1024 * 1024));
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            Inhalt::Hinweis(
+                "Das Bild in der Zwischenablage ist 100 MB groß. \
+                 Die Vorschau zeigt Bilder bis 64 MB."
+                    .to_owned()
+            ),
+            "C10: der Nutzer erfaehrt, warum sein Bild fehlt"
         );
         assert_eq!(modell.titel()[0], "Zwischenablage");
     }

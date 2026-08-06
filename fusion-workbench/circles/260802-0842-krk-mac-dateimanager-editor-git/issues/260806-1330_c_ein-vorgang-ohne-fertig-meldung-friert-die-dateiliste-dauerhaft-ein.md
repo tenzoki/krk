@@ -50,3 +50,6 @@ Fall auf: es nimmt die Fortschrittszeile weg, frischt die Ordner auf und leert
 
 **Betrifft:** `krk-ui` (`appkit/anwendung.rs`), Grenze zu `krk-core`
 (`operation/mod.rs`). C4 und C9. Keine Zeitzusage aus C8 berührt.
+
+---
+Resolved: Schließt der Meldekanal ohne Fertig, trägt abbruch_ohne_meldung_nachtragen einen Abschluss::Abgebrochen-Bericht auf derselben Bahn nach, und vorgang_beenden räumt auf. Ein Ordner kann damit nicht mehr dauerhaft von der Auffrischung ausgeschlossen bleiben.

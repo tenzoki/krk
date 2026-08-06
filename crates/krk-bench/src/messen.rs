@@ -42,6 +42,7 @@ use std::fmt::Write as _;
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -927,8 +928,9 @@ impl Gesamtlauf {
         let unterordner = unterordner_sicherstellen(&self.ordner_a)?;
         let plan = plan_schreiben(self, &unterordner)?;
         // Vor der ersten Runde, nicht erst vor dem ersten Sitzungslauf: der
-        // Wert lebt bis zum Ende von `fahren` und spielt die Sitzung des
-        // Nutzers auch dann zurueck, wenn eine Runde mit `?` abbricht.
+        // Waechter lebt bis zum Ende von `fahren` und spielt die Sitzung des
+        // Nutzers auch dann zurueck, wenn eine Runde mit `?` abbricht oder der
+        // Messende mit Strg+C dazwischenfaehrt.
         let _sitzung = Sitzungssicherung::anlegen()?;
 
         let systemlast_vorher = systemlast();
@@ -1126,8 +1128,25 @@ impl Gesamtlauf {
 /// **Zurueckgespielt wird in [`Drop`] und nicht am Ende von
 /// [`Gesamtlauf::fahren`].** Jede Runde kann mit `?` abbrechen, und gerade der
 /// Abbruch ist der Fall, in dem eine Zeile am Ende der Funktion nicht mehr
-/// liefe. Ein SIGKILL von aussen ueberlebt auch das nicht; alles darunter
-/// schon.
+/// liefe. Eine Panik wickelt ebenso ab und laeuft ueber dieselbe Bahn, weil der
+/// Workspace kein `panic = "abort"` setzt.
+///
+/// **Ein Signal wickelt dagegen nicht ab.** SIGINT (Strg+C) und SIGTERM enden
+/// ueber den Standardgriff, ohne dass ein einziges [`Drop`] liefe. Ein
+/// Gesamtlauf faehrt Minuten bis Viertelstunden, und Strg+C ist der uebliche
+/// Weg, ihn abzubrechen; deshalb haengt [`signalwache_starten`] fuer SIGINT,
+/// SIGTERM und SIGHUP einen eigenen Griff ein, der ueber [`SICHERUNG`] an
+/// dieselbe Sicherung kommt.
+///
+/// **Was ungedeckt bleibt**, und zwar vollstaendig aufgezaehlt:
+///
+/// - SIGKILL und SIGSTOP. Beide lassen sich nicht abfangen, von keinem
+///   Programm.
+/// - Ein Signal, das **nur** `krk-bench` erreicht und nicht den gerade
+///   laufenden `krk`-Kindprozess: ein `kill` auf die eine Prozessnummer statt
+///   Strg+C, das die ganze Vordergrundgruppe trifft. Der Waechter spielt dann
+///   zwar zurueck, das weiterlaufende Kind schreibt beim Beenden aber wieder
+///   die Pruefsitzung darueber.
 struct Sitzungssicherung {
     /// Der Pfad der echten `session.toml`.
     pfad: PathBuf,
@@ -1136,17 +1155,112 @@ struct Sitzungssicherung {
     vorher: Option<Vec<u8>>,
 }
 
+/// Die Sicherung an der Stelle, an der auch der Signalfaden sie erreicht.
+///
+/// [`Sitzungswaechter`] haelt sie nicht selbst, denn der Signalfaden kaeme an
+/// den Stapel von [`Gesamtlauf::fahren`] nicht heran. Beide Wege zurueck nehmen
+/// sie hier mit `take` heraus, und deshalb spielt genau einer von beiden
+/// zurueck: wer zuerst kommt.
+static SICHERUNG: Mutex<Option<Sitzungssicherung>> = Mutex::new(None);
+
+/// Spielt den gesicherten Stand zurueck, sofern es noch niemand getan hat.
+///
+/// Der zweite Aufruf ist folgenlos, und das ist die Bedingung und nicht nur
+/// eine angenehme Eigenschaft: haette der Signalfaden schon zurueckgespielt,
+/// duerfte ein spaeter fallender [`Sitzungswaechter`] nicht noch einmal
+/// schreiben.
+fn sitzung_zurueckspielen() {
+    let genommen = SICHERUNG
+        .lock()
+        .unwrap_or_else(|vergiftet| vergiftet.into_inner())
+        .take();
+    // Das Schloss ist mit dem Ende der Anweisung darueber schon wieder offen;
+    // es wacht ueber das "genau einmal" und nicht ueber das Schreiben.
+    drop(genommen);
+}
+
+/// Solange er lebt, steht die Pruefsitzung in der Ablage des Nutzers.
+///
+/// Sein Ende ist der regulaere Weg zurueck, und er greift auf denselben drei
+/// Wegen wie bisher: am Ende von [`Gesamtlauf::fahren`], beim `?`-Abbruch einer
+/// Runde und beim Abwickeln einer Panik.
+struct Sitzungswaechter;
+
+impl Drop for Sitzungswaechter {
+    fn drop(&mut self) {
+        sitzung_zurueckspielen();
+    }
+}
+
+/// Haengt den Griff ein, der die Sitzung auch bei einem Signal zurueckspielt.
+///
+/// **Warum eine Kiste dafuer und nicht `libc` von Hand.** Ein Griff, der
+/// unmittelbar im Signalkontext laeuft, duerfte weder eine Datei schreiben noch
+/// melden; `signal-hook` schreibt dort nur in ein Selbstrohr und laesst das
+/// Zurueckspielen auf diesem gewoehnlichen Faden geschehen. `krk-bench` behaelt
+/// damit sein `#![deny(unsafe_code)]`, und der Grenzstein aus CLAUDE.md bleibt,
+/// wo er steht: `unsafe` nur in `krk-core/src/verzeichnis/sys.rs` und
+/// `krk-ui/src/appkit/mod.rs`.
+///
+/// **Warum das keine Messung verfaelscht.** Der Faden schlaeft im `read` auf
+/// dem Rohr und kostet keine Rechenzeit; er wacht genau einmal auf, und dann
+/// endet der Lauf ohnehin. `signal-hook` haengt seinen Griff mit `SA_RESTART`
+/// ein, also bricht kein Systemaufruf der Messstrecke mit `EINTR` ab. Und der
+/// Griff steht allein in `krk-bench`: `krk-ui` und `krk-core` sind
+/// ausgelieferter Code und fassen kein Signal an.
+fn signalwache_starten() -> io::Result<()> {
+    use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
+    use signal_hook::iterator::Signals;
+
+    // SIGHUP steht daneben, weil er dieselbe Ursache hat: das Fenster, in dem
+    // der Lauf faehrt, wird geschlossen statt mit Strg+C abgebrochen.
+    let mut signale = Signals::new([SIGINT, SIGTERM, SIGHUP]).map_err(|fehler| {
+        io::Error::other(format!(
+            "der Signalgriff laesst sich nicht einhaengen: {fehler}. Ohne ihn \
+             ueberlebte die Sitzung des Nutzers kein Strg+C, und der Lauf schriebe \
+             gleich die Pruefsitzung darueber; es wird keine Zahl ausgegeben."
+        ))
+    })?;
+    thread::Builder::new()
+        .name("krk-bench-signalwache".to_owned())
+        .spawn(move || {
+            let Some(signal) = signale.forever().next() else {
+                return;
+            };
+            sitzung_zurueckspielen();
+            eprintln!(
+                "krk-bench: Signal {signal} empfangen, der Lauf bricht ab. \
+                 Die Sitzung des Nutzers steht wieder."
+            );
+            // 128 + Signalnummer ist der Ausgangswert, den eine Shell fuer
+            // einen durch ein Signal beendeten Prozess ohnehin bildet; Strg+C
+            // ergibt damit die gewohnte 130.
+            std::process::exit(128 + signal);
+        })?;
+    Ok(())
+}
+
 impl Sitzungssicherung {
     /// Liest den vorigen Stand, bevor der Lauf ihn ueberschreibt.
     ///
     /// Eine Datei, die daliegt und sich **nicht lesen** laesst, bricht den Lauf
     /// ab. Weiterzumessen hiesse, eine Sitzung zu ueberschreiben, die sich
-    /// nicht zurueckspielen laesst; eine Zahl ist das nicht wert.
-    fn anlegen() -> io::Result<Self> {
-        Self::an(
+    /// nicht zurueckspielen laesst; eine Zahl ist das nicht wert. Aus demselben
+    /// Grund bricht auch ein Signalgriff ab, der sich nicht einhaengen laesst.
+    fn anlegen() -> io::Result<Sitzungswaechter> {
+        let sicherung = Self::an(
             krk_core::ablage::Ablageort::im_benutzerverzeichnis()?
                 .datei(krk_core::ablage::Datei::Sitzung),
-        )
+        )?;
+        *SICHERUNG
+            .lock()
+            .unwrap_or_else(|vergiftet| vergiftet.into_inner()) = Some(sicherung);
+        // Erst ablegen, dann einhaengen: der Faden faende die Stelle sonst leer
+        // vor. Scheitert das Einhaengen, faellt die eben abgelegte Sicherung
+        // wieder weg, und es steht noch nichts, was zurueckzuspielen waere.
+        let waechter = Sitzungswaechter;
+        signalwache_starten()?;
+        Ok(waechter)
     }
 
     /// Dieselbe Sicherung an einem frei gewaehlten Pfad.
@@ -2155,6 +2269,41 @@ mod tests {
         assert!(
             !pfad.exists(),
             "die Pruefsitzung bleibt liegen, wo der Nutzer keine Sitzung hatte"
+        );
+    }
+
+    /// Der Weg, den der Signalfaden geht, spielt zurueck und dann nichts mehr.
+    ///
+    /// Ein Signal laesst sich in einem Pruefprozess nicht ausloesen, ohne ihn zu
+    /// beenden. Geprueft wird deshalb die Stelle, an der Signalfaden und
+    /// [`Sitzungswaechter`] zusammenkommen — beide rufen
+    /// [`sitzung_zurueckspielen`], und der zweite Aufruf muss folgenlos sein.
+    #[test]
+    fn der_signalweg_spielt_zurueck_und_dann_nichts_mehr() {
+        let ordner = Wegwerfordner::neu("sitzung-signalweg");
+        fs::create_dir_all(ordner.pfad()).expect("anlegbar");
+        let pfad = ordner.pfad().join("session.toml");
+        fs::write(&pfad, b"die Sitzung des Nutzers").expect("schreibbar");
+
+        let sicherung = Sitzungssicherung::an(pfad.clone()).expect("sicherbar");
+        *SICHERUNG.lock().expect("nicht vergiftet") = Some(sicherung);
+        fs::write(&pfad, b"die Pruefsitzung").expect("schreibbar");
+
+        // Der erste Aufruf ist der des Signalfadens.
+        sitzung_zurueckspielen();
+        assert_eq!(
+            fs::read(&pfad).expect("lesbar"),
+            b"die Sitzung des Nutzers".to_vec()
+        );
+
+        // Der zweite ist der des Waechters, der beim Abwickeln hinterherfaellt.
+        // Er darf nichts mehr anfassen, sonst ueberschriebe ein spaetes Ende
+        // einen Stand, den der Nutzer inzwischen selbst geschrieben hat.
+        fs::write(&pfad, b"was der Nutzer inzwischen schrieb").expect("schreibbar");
+        sitzung_zurueckspielen();
+        assert_eq!(
+            fs::read(&pfad).expect("lesbar"),
+            b"was der Nutzer inzwischen schrieb".to_vec()
         );
     }
 

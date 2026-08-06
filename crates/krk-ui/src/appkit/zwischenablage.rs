@@ -49,7 +49,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSString, NSURL};
 
-use crate::vorschaumodell::Zwischenablageinhalt;
+use crate::vorschaumodell::{BILDGRENZE, Zwischenablageinhalt};
 
 /// Was in der Zwischenablage steht, als eine Zeichenkette.
 ///
@@ -84,12 +84,25 @@ pub fn lesen() -> Option<String> {
 /// Gefragt werden PNG und TIFF, die beiden Bildsorten, die `NSPasteboard`
 /// selbst fuehrt; jede bildgebende Anwendung legt mindestens eine davon ab,
 /// und `NSImage` liest beide.
+///
+/// **Die Bildgrenze aus C6 gilt hier genauso wie im Dateiweg.** Sie steht
+/// **vor** `to_vec()`, aus demselben Grund, aus dem sie in
+/// [`crate::vorschaumodell`] vor `std::fs::read` steht: danach laege das Bild
+/// schon im Arbeitsspeicher, und genau das verhindert die Grenze. Ein in einem
+/// Bildbearbeitungsprogramm kopiertes TIFF liegt ohne Weiteres ueber 100 MB.
+/// Gefragt wird die Laenge des `NSData`, nicht seine Bytes; die Daten bleiben
+/// dabei im Pasteboard-Server liegen, wo sie ohnehin schon stehen. Die Zahl
+/// selbst kommt aus [`BILDGRENZE`], eine zweite entsteht nicht.
 pub fn inhalt_lesen() -> Zwischenablageinhalt {
     let ablage = NSPasteboard::generalPasteboard();
     for sorte in [unsafe { NSPasteboardTypePNG }, unsafe {
         NSPasteboardTypeTIFF
     }] {
         if let Some(daten) = ablage.dataForType(sorte) {
+            let laenge = daten.len() as u64;
+            if laenge > BILDGRENZE {
+                return Zwischenablageinhalt::BildZuGross(laenge);
+            }
             let bytes = daten.to_vec();
             if !bytes.is_empty() {
                 return Zwischenablageinhalt::Bild(bytes);

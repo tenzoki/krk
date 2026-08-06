@@ -41,3 +41,10 @@ Fall "vorher gab es keine `session.toml`" ist ebenfalls richtig behandelt
 
 **Betrifft:** `krk-bench`, nur die Messstrecke. Kein Einfluss auf `krk-ui` oder
 `krk-core`, keine der zehn Zeitzusagen aus C8 berührt.
+
+---
+Resolved: SIGINT, SIGTERM und SIGHUP hängen jetzt einen Griff ein, der die session.toml zurückspielt und mit 128 + Signalnummer endet (crates/krk-bench/src/messen.rs). Neue Abhängigkeit signal-hook 0.4, nur in krk-bench, ohne Vorgabemerkmale: std kennt keine Signal-Schnittstelle, libc verlangte einen unsafe-Block und damit den Grenzstein aus CLAUDE.md, ein Wächterprozess schüfe ein neues Fehlerbild (verwaister Wächter schriebe in eine später angelegte Sitzung), und ctrlc zieht nix nach. signal-hook schreibt im Signalkontext nur in ein Selbstrohr; das Zurückspielen läuft auf einem gewöhnlichen Faden. Die Messung bleibt unberührt, weil die Registrierung SA_RESTART setzt und kein Systemaufruf mit EINTR abbricht.
+
+Die Zusage im Kommentar ist auf das herabgesetzt, was tatsächlich gilt, und zählt das Ungedeckte auf: SIGKILL, SIGSTOP, und ein Signal, das nur krk-bench erreicht und nicht den laufenden krk-Kindprozess.
+
+Nachweis: kill -INT an die Prozessgruppe während eines Laufs; die session.toml steht danach byteweise auf dem Stand vor dem Lauf (907acf51... vorher und nachher, 417f63ee... während des Laufs), Ausgangswert 130, kein krk-Prozess übrig.
