@@ -174,15 +174,23 @@ impl Leistenmodell {
     /// Liefert, ob sich dabei etwas geaendert hat; nur dann muss die Ansicht
     /// neu zeichnen.
     ///
-    /// Gerufen an drei Stellen, und die dritte ist die, die die Zusage aus C5
-    /// traegt: wenn ein Datentraeger gekommen oder gegangen ist, wenn die
-    /// Lesezeichen sich aendern, und **bevor eine Auswahl gemeldet wird**. Ein
-    /// Ordner kann verschwinden, ohne dass ein Datentraeger es tut, etwa weil
-    /// der Nutzer ihn in KRK selbst geloescht hat; ohne die dritte Stelle
-    /// meldete die Leiste dann einen Ordner als gueltig, den es nicht mehr
-    /// gibt. Bei jedem Zeichendurchgang zu fragen waere dagegen ein
-    /// Systemaufruf je Zeile und Bild, und die Leiste zeichnet oefter, als der
-    /// Nutzer in ihr etwas tut.
+    /// Gerufen an vier Anlaessen: wenn ein Datentraeger gekommen oder gegangen
+    /// ist, wenn die Lesezeichen sich aendern, wenn eine Dateioperation aus C4
+    /// abgeschlossen ist, und **bevor eine Auswahl gemeldet wird**.
+    ///
+    /// Der letzte traegt die Zusage aus C5: ein Ordner kann verschwinden, ohne
+    /// dass ein Datentraeger es tut, und ohne ihn meldete die Leiste einen
+    /// Ordner als gueltig, den es nicht mehr gibt. Der dritte haelt die
+    /// angezeigte Marke im haeufigsten dieser Faelle aktuell, dem Loeschen in
+    /// KRK selbst; er sitzt in
+    /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden` und
+    /// ist dort begruendet.
+    ///
+    /// Bei jedem Zeichendurchgang zu fragen waere dagegen ein Systemaufruf je
+    /// Zeile und Bild, und die Leiste zeichnet oefter, als der Nutzer in ihr
+    /// etwas tut. Loescht ein **fremdes** Programm den Ordner, steht die Marke
+    /// deshalb weiterhin bis zur naechsten Auswahl falsch; die Zusage aus C5
+    /// haelt auch dann, weil die Auswahl den Grund immer meldet.
     pub fn gueltigkeit_pruefen(&mut self) -> bool {
         let mut geaendert = false;
         for gemerkt in &mut self.lesezeichen {
@@ -631,5 +639,39 @@ mod tests {
         let _ = std::fs::remove_dir_all(&ordner);
         modell.gueltigkeit_pruefen();
         assert!(modell.ungueltig(1));
+    }
+
+    /// Der vierte Anlass aus C5: eine abgeschlossene Dateioperation hat den
+    /// Ordner eines Lesezeichens geloescht.
+    ///
+    /// Die Stelle, die den Anlass ausloest, sitzt in
+    /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden` und
+    /// ist nur ueber AppKit erreichbar. Pruefbar ohne Fenster ist, was sie dort
+    /// ruft, und dabei vor allem der **Rueckgabewert**: an ihm allein haengt das
+    /// Neuzeichnen der Leiste. Meldete die Pruefung `false`, bliebe die Zeile
+    /// schwarz, obwohl der Ordner fort ist.
+    #[test]
+    fn nach_einer_dateioperation_meldet_die_pruefung_den_geloeschten_ordner() {
+        let ordner = std::env::temp_dir().join("krk-leiste-vorgang-beenden");
+        std::fs::create_dir_all(&ordner).expect("der Pruefordner laesst sich nicht anlegen");
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Sicherung",
+            &ordner,
+        )]));
+        assert!(!modell.ungueltig(1), "der Ordner steht noch");
+
+        // Was eine Dateioperation aus C4 tut, wenn sie ihn loescht.
+        std::fs::remove_dir_all(&ordner).expect("der Pruefordner laesst sich nicht loeschen");
+
+        assert!(
+            modell.gueltigkeit_pruefen(),
+            "ohne die gemeldete Aenderung zeichnete die Leiste nicht neu"
+        );
+        assert_eq!(modell.beschriftung(1).as_deref(), Some("Sicherung (fehlt)"));
+        assert!(
+            !modell.gueltigkeit_pruefen(),
+            "ein zweiter Anlass ohne Aenderung zeichnet die Leiste nicht noch einmal"
+        );
     }
 }

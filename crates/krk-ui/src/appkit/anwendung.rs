@@ -2322,6 +2322,36 @@ impl Anwendungsdelegierter {
             | Art::EndgueltigLoeschen => {}
         }
 
+        // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
+        // Ein abgeschlossener Vorgang kann den Ordner eines Lesezeichens
+        // beseitigt oder angelegt haben. Bis zum 260806 blieb die Marke danach
+        // auf dem Stand des letzten der drei uebrigen Anlaesse stehen: der
+        // Nutzer loeschte den Ordner in KRK selbst, sah die Leiste an und fand
+        // den Eintrag unveraendert schwarz
+        // (`issues/260805-1730_*_die-gueltigkeit-eines-lesezeichens-veraltet-zwischen-zwei-anlaessen.md`).
+        //
+        // **Warum hier und nicht in der Dateisystembeobachtung.** Der gemeldete
+        // Fall ist das Loeschen in KRK selbst, und C9 haelt bereits fest, dass
+        // eine abgeschlossene Dateioperation die Auffrischung von sich aus
+        // anstoesst. Der Anlass haengt sich an dieselbe Stelle und kostet damit
+        // keinen neuen Mechanismus, keine erweiterte Pfadliste in
+        // `auffrischung::sichtbare_ordner` und kein Neuaufsetzen des
+        // FSEvents-Stroms bei jeder Lesezeichenaenderung. Der Weg ueber die
+        // Beobachtung deckte zusaetzlich das fremde Programm ab, greift auf
+        // Netzpfaden nach C9 ohnehin nicht und waere ein zweiter Mechanismus
+        // fuer eine Marke.
+        //
+        // **Was offen bleibt.** Loescht ein **fremdes** Programm den Ordner,
+        // steht die Marke weiterhin bis zur naechsten Auswahl falsch. Die Zusage
+        // aus C5 haelt auch dann, weil die Auswahl den Grund immer meldet.
+        //
+        // **Auch nach einem Teilabbruch.** Diese Stelle wird ebenso erreicht,
+        // wenn der Lauf abgebrochen wurde: der Abbruch traegt seinen Bericht
+        // ueber `abbruch_ohne_meldung_nachtragen` nach und laeuft dieselbe Bahn.
+        // Ein teilweise geloeschter Ordner ist entweder fort oder noch da, und
+        // beides will die Marke wissen.
+        self.leiste().quelle().gueltigkeit_nachziehen();
+
         let Some((frage, liste)) = operationen::uebersprungenliste(&bericht.uebersprungen) else {
             return;
         };

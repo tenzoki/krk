@@ -221,13 +221,21 @@ impl Leistenquelle {
 
     /// Prueft die Ordner der Lesezeichen und zeichnet neu, falls noetig (C5).
     ///
+    /// Zwei Aufrufer: [`Leistenquelle::auswahl_melden`], bevor eine Auswahl
+    /// gemeldet wird, und
+    /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden`, sobald
+    /// eine Dateioperation aus C4 abgeschlossen ist. Die beiden anderen Anlaesse
+    /// aus [`Leistenmodell::gueltigkeit_pruefen`] laufen ueber
+    /// [`Leistenquelle::lesezeichen_setzen`] und [`Leistenquelle::orte_setzen`],
+    /// die ohnehin die ganze Liste neu zeichnen.
+    ///
     /// **Nach dem Neuzeichnen die Auswahl wieder setzen**, und das ist keine
     /// Vorsichtsmassnahme: `reloadData` nimmt der `NSTableView` ihre Auswahl,
     /// waehrend das Modell seine behaelt. Ohne die zweite Zeile verschwand die
     /// blaue Zeile unter der Hand des Nutzers, sobald ein Lesezeichen seine
     /// Gueltigkeit wechselte, und der naechste Pfeil sprang scheinbar aus dem
     /// Nichts weiter. Beobachtet am 260805 im laufenden Buendel.
-    fn gueltigkeit_nachziehen(&self) {
+    pub fn gueltigkeit_nachziehen(&self) {
         if self.ivars().modell.borrow_mut().gueltigkeit_pruefen() {
             self.ivars().tabelle.reloadData();
             self.auswahl_anzeigen();

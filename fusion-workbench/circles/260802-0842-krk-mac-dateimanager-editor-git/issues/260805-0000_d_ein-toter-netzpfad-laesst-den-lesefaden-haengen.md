@@ -63,3 +63,29 @@ Der Aufräumdurchgang vom 260805 hat diesen Datensatz angesehen und **liegen gel
 **Und ohne Server bleibt jede Wahl unbelegt.** Der Datensatz sagt es selbst: zu messen erst, wenn ein Server dafür bereitsteht. Ein eigens aufgesetzter Server, den man mitten im Lesen abschaltet, ist die Voraussetzung dafür, überhaupt zu sehen, an welchem Systemaufruf es hängt und ob eine Zeitschranke ihn erreicht.
 
 Der Aufwand liegt damit über dem der übrigen sieben Aufräumdefekte desselben Durchgangs zusammen, und das Ergebnis wäre ohne Messung eine Vermutung mehr. Fällig bleibt es, wie oben, vor der Abnahme von C9 auf einem Netzpfad.
+
+---
+
+## Nutzerentscheid vom 260806-2300: zurückgestellt mit benanntem Auslöser
+
+Der Nutzer hat den Defekt zurückgestellt. Der Marker wechselt auf `_d_`; er
+bleibt beschrieben und zählt nicht mehr gegen die Runde 1.
+
+**Der Auslöser, ab dem er wieder fällig ist:** sobald ein eigens aufgesetzter
+Prüfserver bereitsteht, spätestens aber, bevor jemand die Fähigkeit C9 auf
+einem Netzpfad abnimmt, dessen Server mitten im Lesen wegbricht.
+
+**Warum das die Runde nicht aufhält, nachgesehen am Spec.** C9 trägt vier
+Abnahmekriterien, und keines verlangt diesen Fall. Das erste sagt zu, dass
+jeder vom Finder eingehängte Pfad erreichbar ist und Lesen, Navigieren und die
+Dateioperationen dort wirken wie lokal. Das zweite schließt eine eigene
+Serveroberfläche aus. Das dritte deckt den **Auswurf** eines eingehängten
+Volumes ab, also den angekündigten Weggang, nicht das stumme Verschwinden des
+Servers. Das vierte engt die selbsttätige Auffrischung auf lokale
+Dateisysteme ein. Ein Server, der mitten in einem Systemaufruf verschwindet,
+steht in keinem der vier.
+
+**Was beim Wiederaufgreifen nicht noch einmal geprüft werden muss.** Der
+Nachtrag vom 260805-0947 oben hat den Schaden eingegrenzt und den zweiten der
+beiden Wege als bereits gegangen ausgewiesen. Übrig ist allein die
+Zeitschranke, und sie ist eine Entwurfsentscheidung, keine Kleinigkeit.
