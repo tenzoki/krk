@@ -1,0 +1,139 @@
+# fusion-workbench session state — for resumption after restart
+# Updated: 260806-1745
+#
+# ABSICHTLICH ANGELEGT, nicht Rest einer abgestürzten Sitzung.
+# Der Nutzer hat die Sitzung 260806-1140 am 260806 sauber beendet und um einen
+# Wiederaufnahmepunkt gebeten: erst die Defekte, dann der Rest. Beim nächsten
+# /fusion:setup findet Schritt 1 diese Datei und bietet "Fortsetzen" an.
+
+session:
+  directive: "KRK: native macOS-Anwendung, lokale Dateien vollständig über die Tastatur navigieren, bearbeiten und versionieren. Erste Runde: lauffähiges Navigator-Gerüst."
+  mode: "all"
+  domain: "code"
+  started: "260806-1745"
+  history_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1140-orchestrator-session.md"
+  git_head_at_start: "c1e8edc"
+
+progress:
+  turn: 25
+  max_turns: 30
+  tasks_total: 12
+  tasks_done: 0
+  tasks_skipped: 0
+  tasks_errored: 0
+  commits: 0
+  turn_start_head: null
+  paused_at_task: null
+  directive_revisions_this_session: 0
+
+current_task: null
+
+# Reihenfolge nach Nutzerwunsch: erst die zehn offenen Defekte (D1 bis D8),
+# dann der Rest (R1 bis R4). Zwei Aufgaben tragen ein Nutzer-Gate, eine davon
+# blockiert die Rundenschließung.
+work_queue:
+  - id: "D1"
+    summary: "Die Spalte Typ zeigt die Eintragsart, sortiert aber nach der Endung — Nutzerentscheid nötig, drei Wege stehen im Eintrag"
+    agent: "coder"
+    status: "queued"
+    gate: "Nutzerentscheid vor der Umsetzung"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md"
+  - id: "D2"
+    summary: "Fünf offene Entscheidungen zeigen auf einen Planschritt, ohne dort genannt zu sein — Dokumentenpflege an Plan und Spec"
+    agent: "planner"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_o_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md"
+  - id: "D3"
+    summary: "Die AppKit-Grenzprüfung sieht nur use-Zeilen und nur eine von drei Kisten"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1333_o_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten.md"
+  - id: "D4"
+    summary: "Ein toter Netzpfad lässt den Lesefaden hängen — braucht einen Entwurf, nicht nur einen Handgriff"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0000_o_ein-toter-netzpfad-laesst-den-lesefaden-haengen.md"
+  - id: "D5"
+    summary: "Die Gültigkeit eines Lesezeichens veraltet zwischen zwei Anlässen — hängt an der offenen Frage 260805-1730"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1730_o_die-gueltigkeit-eines-lesezeichens-veraltet-zwischen-zwei-anlaessen.md"
+  - id: "D6"
+    summary: "Ein schnelles Verschieben könnte dieselbe Meldelawine auslösen wie das Stapel-Umbenennen — erst messen, dann entscheiden"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1445_o_ein-schnelles-verschieben-koennte-dieselbe-meldelawine-ausloesen-wie-das-stapel-umbenennen.md"
+  - id: "D7"
+    summary: "Der Sitzungslauf blieb einmal von drei Malen bei L6 stehen — sporadisch, braucht Wiederholungsläufe"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1304_o_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md"
+  - id: "D8"
+    summary: "Zwei Datenbefunde in resources/: jede Byte-Angabe auf Englisch, und Workbench-Pfade mit Zustandsmarker"
+    agent: "ontocoder"
+    status: "queued"
+    gate: "ontocoder-Aufgabe, Nutzer-Gate vor der Umsetzung"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1215_o_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md"
+  - id: "R1"
+    summary: "L9-Zusage: verfehlt den 95-Prozent-Anteil auch auf dem ruhigen Gerät. Hält die Rundenschließung, Empfehlung im Datensatz ist Möglichkeit 1 (Ursache im Hauptfaden beheben)"
+    agent: "coder"
+    status: "queued"
+    gate: "Nutzerentscheid, danach Umsetzung und Nachmessung"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-0014_o_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md"
+  - id: "R2"
+    summary: "Vier weitere offene Fragen des Circles beantworten: Tastenweg des Fokus in die Vorschau, Entfernen einzelner Kombination, Fokusbefehl bei ausgeblendeter Leiste, Wirkung einer von Hand geänderten settings.toml"
+    agent: "orchestrator"
+    status: "queued"
+    gate: "reine Nutzerentscheide"
+  - id: "R3"
+    summary: "CLAUDE.md-Revision: Projekt- und Entscheidungsstand sind vom 260803 und überholt"
+    agent: "coder"
+    status: "queued"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-0904_o_claude-md-fuehrt-projektstand-und-entscheidungsstand-vom-260803.md"
+  - id: "R4"
+    summary: "Rundenabschluss: nach der L9-Klärung Plan und Spec auf _c_, Circle-Datensatz auf _c_, Portfolio auffrischen"
+    agent: "orchestrator"
+    status: "queued"
+
+plan_context:
+  plan_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md"
+  spec_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md"
+
+  user_directive: >
+    Nutzer am 260806 nach Abschluss der Sitzung 260806-1140: "schließe das so
+    ab, dass ich an gleicher Stelle weiter machen kann, zunächst die Defekte
+    fixen, dann der Rest. ich will einmal neu starten." Die Reihenfolge ist
+    damit gesetzt: erst D1 bis D8, dann R1 bis R4.
+
+  key_findings: >
+    STAND. Alle 36 Planschritte tragen [DONE]. Runde 1 schließt nicht vor der
+    Klärung der L9-Frage (Nutzerentscheid 260806, ausdrücklich offen gehalten).
+    HEAD c1e8edc, Arbeitsverzeichnis sauber, make check grün.
+
+    WIE GEBAUT WIRD. cargo liegt nicht auf dem Standard-PATH, sondern unter
+    $HOME/.cargo/bin. Das Makefile im Wurzelverzeichnis setzt den PATH selbst:
+    make check fährt die vier Abnahmekommandos, make bundle baut und signiert,
+    make alle fährt die volle Messstrecke, make fixture legt die Prüfordner an.
+    Der Messplatz liegt unter ~/Library/Caches/krk-messplatz, nicht mehr /tmp.
+
+    MESSEN. Der Abnahmelauf verlangt KRK im Vordergrund — aus dem Hintergrund
+    gestartet weist die Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl
+    ab, und die Strecke meldet NICHT_IM_VORDERGRUND. Aus einem Terminalfenster
+    im Vordergrund läuft sie durch. Die offene Frage dazu ist 260806-1303.
+    Synthetische Tastendrücke gehören in KRKs eigene Ereignisschlange über
+    postEvent:atStart:, nicht über osascript.
+
+    ZWEI AUFGABEN TRAGEN EIN NUTZER-GATE. D1 (Spalte Typ) braucht einen
+    Entscheid zwischen drei Wegen, D8 ist eine ontocoder-Aufgabe. R1 ist die
+    L9-Frage und hält die Rundenschließung.
+
+    WAS DER NÄCHSTE CODER WISSEN MUSS. Der Wirkungsbereich in belegung.rs ist
+    eine vollständige Fallunterscheidung ohne Auffangzweig mit vier Werten;
+    jedes neue Kommando braucht dort eine Zeile. Dasselbe gilt für
+    schiebt_auffrischung_auf in auffrischung.rs und für bereich_des_kommandos
+    in belegungsmodell.rs. Der Sortierschlüssel entsteht einmal beim Lesen und
+    trägt die Kollation als Bytefolge — das ist die Voraussetzung dafür, dass
+    L3 und L10 halten, und darf nicht in einen paarweisen Vergleich zurück.
+
+    GIT. Identität ist seit dem 260806 lokal gesetzt (Kai Stalmann,
+    kai@stalmann.org), der Fernzugriff steht auf tenzoki/krk. Nichts gepusht.

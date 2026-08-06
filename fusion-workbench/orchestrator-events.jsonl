@@ -215,3 +215,4 @@
 {"ts":"2026-08-06T15:36:27","event":"task_done","turn":24,"task":"T9","agent":"planner","detail":"c8d7f21; Sortierung in C2, C8, Frage 2, S2, S12 und Datenstrukturen verankert; Datensatz auf _i_; Muster als 260806-1735 gefiled"}
 {"ts":"2026-08-06T15:36:27","event":"turn_end","turn":24,"detail":"2 Aufgaben, 2 Commits, Sortierentscheid umgesetzt und verankert"}
 {"ts":"2026-08-06T15:36:27","event":"session_end","detail":"Turns 23-24; Plan 36/36; 22 Defekte geschlossen; L9 und 10 weitere Fragen offen"}
+{"ts":"2026-08-06T15:41:56","event":"session_end","detail":"Wiederaufnahmepunkt gesetzt: 12 Aufgaben, erst D1-D8 (Defekte), dann R1-R4; agentstate.yaml absichtlich angelegt"}

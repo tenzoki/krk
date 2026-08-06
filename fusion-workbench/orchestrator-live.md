@@ -1,16 +1,25 @@
 # Orchestrator — Live
 
-**Turn:** 24/30 | **Tasks:** 9/9 | **Commits:** 14 | **Errors:** 0
-**Started:** 11:40 | **Session:** Complete | **Guard:** OK (0 blocks)
+**Turn:** --/30 | **Tasks:** 0/12 | **Commits:** 0 | **Errors:** 0
+**Started:** -- | **Session:** Wartet auf Wiederaufnahme | **Guard:** OK (0 blocks)
 
 ## Current
-  [DONE] orchestrator -> Sitzung abgeschlossen, Sortierentscheid umgesetzt und verankert
+  [PAUSED] orchestrator -> Wiederaufnahmepunkt gesetzt, /fusion:setup startet die Fortsetzung
 
-## This Turn
-  [DONE] coder   -> T8 Sprachsensitive Sortierung und Dateiendung ........ 16e4558
-  [DONE] planner -> T9 Sortierung in Plan und Spec verankert ............. c8d7f21
+## Up Next
+  D1  coder   -> Spalte "Typ" zeigt die Eintragsart, sortiert nach der Endung (GATE)
+  D2  planner -> Fuenf Entscheidungen in Plan und Spec verankern
+  D3  coder   -> AppKit-Grenzpruefung sieht nur use-Zeilen und eine von drei Kisten
+  D4  coder   -> Toter Netzpfad laesst den Lesefaden haengen
+  D5  coder   -> Gueltigkeit eines Lesezeichens veraltet zwischen zwei Anlaessen
+  D6  coder   -> Schnelles Verschieben: Meldelawine erst messen
+  D7  coder   -> Sitzungslauf blieb einmal von drei Malen bei L6 stehen
+  D8  ontocoder -> Zwei Datenbefunde in resources/ (GATE)
+  R1  coder   -> L9-Zusage, haelt die Rundenschliessung (GATE)
+  R2  orchestrator -> Vier weitere offene Fragen beantworten
+  R3  coder   -> CLAUDE.md-Revision
+  R4  orchestrator -> Rundenabschluss und Portfolio
 
 ## Stand
-  Plan 36/36. 22 Defekte in dieser Sitzung geschlossen, 10 offen (keiner
-  blockiert). 11 offene Entscheidungen, darunter L9 (haelt die Rundenschliessung).
-  L3 41,5 ms von 400 ms, L10 463,8 ms von 4000 ms nach der Kollation.
+  HEAD c1e8edc, Arbeitsverzeichnis sauber, make check gruen. Plan 36/36.
+  10 offene Defekte, 11 offene Entscheidungen. Circle bleibt aktiv.

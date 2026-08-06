@@ -62,6 +62,12 @@ Die Warteschlange ist unterwegs um fünf Aufgaben gewachsen: T4 zerfiel in einen
 - T9 Verankerung in Plan und Spec (`c8d7f21`)
 - Circuit breaker: OK
 
+## Wiederaufnahme (260806-1745)
+
+Der Nutzer beendet die Sitzung, um neu zu starten, und hat die Reihenfolge für die Fortsetzung vorgegeben: **erst die Defekte, dann der Rest.** Der Wiederaufnahmepunkt liegt in `fusion-workbench/agentstate.yaml` mit zwölf Aufgaben, D1 bis D8 für die zehn offenen Defekte und R1 bis R4 für den Rest. Beim nächsten `/fusion:setup` findet Schritt 1 die Datei und bietet „Fortsetzen" an.
+
+Drei Aufgaben tragen ein Nutzer-Gate: D1 (die Spalte „Typ" braucht einen Entscheid zwischen drei Wegen), D8 (eine `ontocoder`-Aufgabe an den Auslieferungsdaten) und R1 (die L9-Zusage, die die Rundenschließung hält).
+
 ## Remaining Work
 
 - **Elf offene Entscheidungen**, darunter die L9-Zusage (`260806-0014`), die die Rundenschließung hält, und zwei neue aus dieser Sitzung
