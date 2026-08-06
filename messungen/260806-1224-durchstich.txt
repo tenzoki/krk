@@ -1,0 +1,190 @@
+KRK — Messbericht der Fruehmessung (Schritt 8)
+==============================================
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-06T12:24:13Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Bildwiederholrate     60 Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des gemessenen Fensters; eine Bildlaenge sind damit 16.667 ms
+Cache-Zustand         warm (siehe Abschnitt Einschraenkungen: purge braucht Rechte, die dieser Lauf nicht hat)
+Wiederholungen        20 je Zusage und Runde, 1 Runden
+Pruefordner A         /Users/k1/Library/Caches/krk-messplatz/pruefordner-a (Startwert 1, 10000 Eintraege laut Steckbrief)
+Pruefordner 100k      /Users/k1/Library/Caches/krk-messplatz/pruefordner-gross (Startwert 3, 100000 Eintraege laut Steckbrief)
+Gemessenes Buendel    target/KRK.app/Contents/MacOS/krk
+Sitzungslage L4       ein Fenster, ein Dateifenster, keine wiederhergestellte Sitzung, Startordner ist Pruefordner A
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+Zahlen
+------
+Zwei Abnahmemasse stehen nebeneinander, und die Spalte "Abnahme nach" nennt je
+Zeile, welches gilt. Acht der zehn Zusagen aus C8 sagen eine Dauer zu, die der
+Nutzer abwartet; sie werden ueber das 95. Perzentil der Runde abgenommen. L1 und
+L9 sagen zu, dass die Reaktion im naechsten Bild erscheint; sie werden seit dem
+260803-1810 ueber den Anteil der Eingaben abgenommen, die das erreichen. Die
+Spalte "im Bild" traegt diesen Anteil und steht auf "-", wo das Mass nicht
+gilt. Fuer L1 sind Perzentil, Median, Minimum und Maximum Kennzahlen ohne
+eigenes Urteil.
+
+Das 95. Perzentil steht je Runde einmal. Ausgewiesen sind das beste und
+das schlechteste der 1 Runden; Median, Minimum und Maximum laufen ueber
+alle Einzelwerte aller Runden. Die Spalte "im Bild" traegt den Anteil der
+schlechtesten Runde, weil an ihr das Urteil haengt.
+
+Gemessene Groesse                                          p95 bestes p95 schlecht      Median     Minimum     Maximum    im Bild        Abnahme nach   Urteil
+L1 — Tastendruck bis Ende des Zeichendurchgangs             16.531 ms    16.531 ms   10.430 ms    8.068 ms   16.612 ms    100.0 %     >= 95 % im Bild   gehalten in allen 1 Runden
+L2 — Pruefordner A: erste Bildschirmseite                   50.435 ms    50.435 ms   46.010 ms   39.371 ms   52.986 ms          -       p95 <= 100 ms   gehalten in allen 1 Runden
+L3 — Pruefordner A: vollstaendig gelesen und sortiert      147.478 ms   147.478 ms  112.612 ms   93.795 ms  164.541 ms          -       p95 <= 400 ms   gehalten in allen 1 Runden
+L4 — Prozessstart bis bedienbares Fenster                  316.689 ms   316.689 ms  307.192 ms  298.181 ms  570.499 ms          -      p95 <= 1000 ms   gehalten in allen 1 Runden
+L10 — 100.000 Eintraege: erste Bildschirmseite              57.026 ms    57.026 ms   52.617 ms   47.026 ms   57.520 ms          -       p95 <= 100 ms   gehalten in allen 1 Runden
+L10b — 100.000 Eintraege: vollstaendig gelesen (Beigabe)   789.054 ms   789.054 ms  715.514 ms  683.355 ms  934.649 ms          -               keine   nicht abgefragt
+
+Urteil des Gates: bestanden — jede der fuenf abgefragten Zusagen haelt ihr Mass in jeder Runde.
+
+Das 95. Perzentil Runde fuer Runde
+----------------------------------
+Fuer L1 eine Kennzahl ohne eigenes Urteil; das Urteil steht im Abschnitt darunter.
+L1      16.531 ms
+L2      50.435 ms
+L3      147.478 ms
+L4      316.689 ms
+L10     57.026 ms
+L10b    789.054 ms
+
+Der Anteil im naechsten Bild, Runde fuer Runde
+---------------------------------------------
+Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine
+Bildlaenge betraegt, hier 16.667 ms. Gehalten heisst: in jeder Runde mindestens 95 %.
+L1      100.0 % (20/20)
+
+Einzelwerte
+-----------
+L1 (Tastendruck bis Ende des Zeichendurchgangs):
+  Runde 1:
+    8.068 ms  10.154 ms  11.663 ms  16.612 ms  10.448 ms
+    11.343 ms  10.061 ms  15.734 ms  8.781 ms  12.694 ms
+    9.852 ms  15.214 ms  9.940 ms  13.169 ms  10.029 ms
+    16.531 ms  10.354 ms  12.156 ms  10.412 ms  10.021 ms
+L2 (Pruefordner A: erste Bildschirmseite):
+  Runde 1:
+    52.986 ms  46.224 ms  42.217 ms  46.814 ms  44.053 ms
+    50.435 ms  46.596 ms  39.371 ms  43.160 ms  45.457 ms
+    43.836 ms  47.920 ms  46.618 ms  44.237 ms  45.863 ms
+    41.533 ms  44.135 ms  46.721 ms  46.158 ms  47.042 ms
+L3 (Pruefordner A: vollstaendig gelesen und sortiert):
+  Runde 1:
+    128.644 ms  112.603 ms  142.874 ms  95.279 ms  110.100 ms
+    126.746 ms  112.621 ms  93.795 ms  144.953 ms  110.743 ms
+    110.844 ms  97.946 ms  142.400 ms  126.668 ms  111.977 ms
+    109.388 ms  109.508 ms  164.541 ms  146.044 ms  147.478 ms
+L4 (Prozessstart bis bedienbares Fenster):
+  Runde 1:
+    570.499 ms  310.619 ms  309.641 ms  304.727 ms  298.181 ms
+    304.700 ms  309.702 ms  302.935 ms  301.076 ms  300.947 ms
+    300.023 ms  303.810 ms  309.339 ms  302.608 ms  305.600 ms
+    308.784 ms  308.966 ms  312.854 ms  316.689 ms  312.559 ms
+L10 (100.000 Eintraege: erste Bildschirmseite):
+  Runde 1:
+    47.640 ms  49.021 ms  56.833 ms  47.112 ms  51.637 ms
+    49.433 ms  53.598 ms  50.878 ms  53.939 ms  57.520 ms
+    56.573 ms  47.026 ms  57.026 ms  55.866 ms  54.807 ms
+    50.450 ms  51.112 ms  53.733 ms  56.662 ms  50.195 ms
+L10b (100.000 Eintraege: vollstaendig gelesen (Beigabe)):
+  Runde 1:
+    683.355 ms  697.682 ms  699.931 ms  727.172 ms  711.292 ms
+    693.643 ms  708.103 ms  715.633 ms  934.649 ms  769.896 ms
+    702.367 ms  699.856 ms  730.482 ms  749.462 ms  789.054 ms
+    773.448 ms  746.927 ms  715.395 ms  709.766 ms  741.671 ms
+
+Einschraenkungen dieser Messung
+-------------------------------
+**L4 ist warm gemessen, C8 sagt Kaltstart.** "Kalt" heisst laut C8: erster
+Zugriff nach dem Leeren des Dateisystem-Caches, und geleert wird er unter macOS
+allein von `purge`, das Rechte braucht, die dieser Lauf nicht hat. Ein
+Passwortdialog laesst sich in einem Messlauf nicht beantworten. Der Bericht
+weist L4 deshalb als warm aus, statt eine warme Zahl unter die Ueberschrift
+"kalt" zu setzen. Warm ist der leichtere Fall: die Zahl unten ist eine
+Untergrenze fuer die Zusage, die C8 wirklich stellt. L2, L3 und L10 sind von der
+Luecke nicht betroffen, weil C8 sie ohnehin warm zusagt.
+
+**Die Sitzungslage aus C8 ist am Durchstich nicht herstellbar.** C8 schreibt fuer
+L4 eine Pruefsitzung aus zwei Dateifenstern mit je zwei Tabs vor. Tabs gibt es
+in KRK erst mit Schritt 12. Gemessen ist deshalb der Start des Buendels mit
+einem Fenster und ohne wiederhergestellte Sitzung, auf Pruefordner A. Die
+Abnahme gegen die Pruefsitzung leistet Schritt 22. Die gemessene Zahl ist damit
+guenstiger als die spaetere: zwei sichtbare Tabs kosten zwei erste
+Bildschirmseiten statt einer.
+
+**Der koerperliche Tastendruck bleibt ungemessen.** L1 wird mit einem
+synthetischen Ereignis ausgeloest; naeheres im Abschnitt Lesart.
+
+**Das Bild selbst bleibt ungemessen, und eine Bildgrenze ist keine
+Photonenmessung.** Eine Bildgrenze ist der Zeitpunkt, an dem das System sein
+naechstes Bild vorbereitet, nicht der, an dem ein Pixel leuchtet. Aus dem
+eigenen Prozess heraus ist der zweite nicht feststellbar. Das faellt beim
+Anteilsmass staerker ins Gewicht als beim Perzentil, weil die Bildlaenge dort
+die Grenze selbst ist: ein Wert dicht an der Grenze koennte bei einer echten
+Bildschirmmessung auf die andere Seite fallen. Naeheres im Abschnitt Lesart.
+
+**Der Bildtakt kann stehenbleiben.** Ein `CADisplayLink` taktet nur, solange das
+Fenster sichtbar ist. Bleibt er stehen, bricht der Messlauf nach zehn Sekunden
+mit einer Meldung ab und gibt keine Zahl aus; die Meldung nennt die Zahl der
+seither eingegangenen Bildgrenzen und trennt damit ein stehendes Bild von einer
+langsamen Oberflaeche.
+
+Lesart
+------
+Jede Spanne endet an einer Bildgrenze. Die Anwendung haengt dafuer einen
+CADisplayLink an die Ansicht des Dateifensters; sein Rueckruf kommt einmal je
+Bildwiederholung. Gemessen ist damit die Spanne bis zur ersten Bildgrenze, an
+der die Aenderung im Modell steht — nicht der Zeitpunkt, an dem ein Pixel auf
+dem Schirm ist. Aus dem eigenen Prozess heraus ist dieser Zeitpunkt nicht
+feststellbar; der Plan nennt die Bildgrenze ausdruecklich als die erreichbare
+Naeherung, statt eine Photonenmessung zu behaupten. Jede Zahl unten ist deshalb
+auf ein Bild genau, bei 60 Hz also auf 16,7 ms.
+
+L1 wird mit einem synthetischen Tastenereignis ausgeloest. Die Anwendung baut
+ein NSEvent vom Typ keyDown mit dem Tastencode 125 (Pfeil ab) und stellt es
+ueber NSApplication.postEvent:atStart: hinten in die eigene Ereignisschlange.
+Von dort geht es denselben Weg wie ein koerperlicher Druck: durch den lokalen
+Ereignisabgriff, die Normalisierung der Zusatztasten und den Nachschlag im Kern
+bis in die Datenquelle des Dateifensters. Dass eine koerperlich gedrueckte
+Taste dieselben Ereignisse erzeugt, ist damit nicht gemessen.
+
+Der Ausloeser jeder Messung haengt an einem Zeitgeber mit 97 ms und nicht an
+der Bildgrenze. Loeste die Bildgrenze selbst aus, laege zwischen Ausloeser und
+naechster Bildgrenze immer genau ein volles Bild, und L1 haette bei 60 Hz
+konstant 16,7 ms — nicht gemessen, sondern gebaut. 97 ms sind bei 60 Hz 5,82
+Bilder; ueber zwanzig Wiederholungen wandert der Ausloesezeitpunkt damit durch
+das Bild.
+
+L4 misst der aeussere Aufrufer, nicht die Anwendung: er nimmt die Uhrzeit
+unmittelbar vor dem Start des Prozesses, und die Anwendung meldet die Uhrzeit,
+zu der ihre Oberflaeche bedienbar ist. Bedienbar heisst nach der
+Nutzerentscheidung vom 260802-1735: Fenster steht, Tastenabgriff eingerichtet,
+erste Bildschirmseite des Startordners sichtbar. Das vollstaendige Lesen laeuft
+danach weiter und faellt unter L3.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
+zwanzig Laeufen der neunzehnte der sortierten Reihe.
+
+L1 wird nicht darueber abgenommen. Der Nutzer hat das Abnahmemass am 260803-1810
+geaendert: nicht mehr 16 ms fuer das 95. Perzentil, sondern der Anteil der
+Eingaben, die ihr naechstes Bild erreichen. Zwei Gruende tragen die Aenderung.
+Messtechnisch lagen die 16 ms innerhalb der Streuung ihres eigenen Verfahrens:
+das 95. Perzentil der Wartezeit auf die naechste Bildgrenze liegt selbst fuer
+eine Anwendung ohne jede Verarbeitungszeit bei rund 15,8 ms, und acht von
+achtzehn Runden verfehlten die Zahl bei unveraendertem Programm. Wahrnehmbar ist
+eine Spanne dieser Groesse ohnehin nicht; eine Zahl, die keine unterscheidbare
+Eigenschaft beschreibt, taugt nicht als Abnahmekriterium. Die Vorschrift steht in
+C8 unter "Warum L1 und L9 den Anteil zaehlen und nicht die Spanne", der
+Datensatz ist 260803-1755_*_l1-verfehlt-die-16-ms-zusage-am-bildrand.md.
+
+Die Bildlaenge ist der Kehrwert der Bildwiederholrate aus NSScreen, hier also
+kein angenommener Wert. Fehlt die Rate, bricht die Auswertung ab und gibt keine
+Zahl aus, statt 60 Hz zu unterstellen.
+
+Eine Runde ist genau die Messung, die C8 vorschreibt: zwanzig Wiederholungen je
+Zusage. Der Bericht faehrt mehrere Runden, weil ein Urteil, das von Runde zu
+Runde wechselt, kein Urteil ist. Eine Zusage gilt hier nur dann als gehalten,
+wenn sie es in jeder Runde tut.

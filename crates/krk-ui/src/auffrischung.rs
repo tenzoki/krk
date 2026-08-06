@@ -33,6 +33,15 @@
 //! `ordner_neu_lesen` nimmt einen. Beim Loeschen und beim Papierkorb gibt es
 //! nur den Quellordner, dann bleibt es bei einem Aufruf.
 //!
+//! # Der Aufschub waehrend eines eigenen Vorgangs
+//!
+//! Der erste Ausloeser wird ausgesetzt, solange ein eigener Vorgang die
+//! gemeldeten Ordner umschreibt — aber nur, wenn seine Operationsart schneller
+//! aendert, als ein Lesevorgang fertig wird. Welche Art das ist, entscheidet
+//! [`schiebt_auffrischung_auf`] und sonst nichts; [`aufgeschobene_ordner`]
+//! legt die Ordner daneben, und [`auffrischung_aufgeschoben`] beantwortet
+//! damit den einzelnen gemeldeten Pfad.
+//!
 //! # Warum die Pfade nicht bloss verglichen werden
 //!
 //! FSEvents meldet den Pfad in aufgeloester Form: unter `/tmp` angelegte
@@ -48,6 +57,7 @@
 use std::path::{Component, Path, PathBuf};
 
 use krk_core::ablage::Fensterseite;
+use krk_core::operation::Art;
 
 /// Was der Auffrischungspfad von den beiden Dateifenstern braucht.
 ///
@@ -135,8 +145,73 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
     aufgefrischt
 }
 
-/// Ob ein gemeldeter Pfad einen Ordner benennt, den ein eigener laufender
-/// Vorgang gerade umschreibt.
+/// Ob ein Vorgang dieser Art die Auffrischung seiner Ordner aufschiebt.
+///
+/// **Die eine Stelle, an der "schnell" entschieden wird.** Die
+/// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
+/// sechste Operationsart bricht hier den Bau ab und erzwingt eine bewusste
+/// Einordnung, statt still in den Aufschub oder still an ihm vorbei zu laufen.
+///
+/// **Das Stapel-Umbenennen schiebt auf.** Es schreibt Verzeichniseintraege und
+/// sonst nichts; 5.000 davon sind auf dem Referenzgeraet in wenigen hundert
+/// Millisekunden durch. Jede einzelne meldet FSEvents, und die naechste Meldung
+/// setzt den Lesevorgang neu auf, bevor er seinen ersten Stapel angehaengt hat.
+/// Das war der Defekt vom 260805-1337, den [`auffrischung_aufgeschoben`]
+/// abfaengt.
+///
+/// **Die uebrigen vier schieben nicht auf.** Kopieren, Verschieben, Papierkorb
+/// und endgueltiges Loeschen melden in gemaechlichem Takt; zwischen zwei
+/// Meldungen wird ein Lesevorgang fertig, und der Nutzer sieht einen
+/// angezeigten Zielordner sich waehrend des Laufs fuellen statt in einem Schlag
+/// am Ende. Bis `fd5e3c5` war das so, danach nicht mehr, und seit der
+/// Nutzerentscheidung vom 260806 wieder
+/// (`issues/260806-1331_*_der-auffrischungsaufschub-gilt-fuer-alle-fuenf-
+/// operationsarten-statt-nur-fuer-die-schnelle.md`).
+///
+/// **Eine Kante bleibt bewusst stehen.** Ein Verschieben innerhalb **eines**
+/// Datentraegers laeuft ueber `rename(2)` und ist damit so schnell wie ein
+/// Stapel-Umbenennen; ueber genuegend Eintraege koennte es dieselbe
+/// Meldelawine ausloesen. Beobachtet worden ist das nicht, und die Entscheidung
+/// nennt das Verschieben ausdruecklich als nicht aufschiebend. Tritt der Fall
+/// auf, gehoert die Antwort an die Lesestelle — ein Lesevorgang, der sein
+/// Ordnermodell erst mit dem ersten gelieferten Stapel ersetzt, statt es vorab
+/// zu leeren — und nicht in eine zweite Ausnahme hier.
+pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
+    match art {
+        Art::UmbenennenImStapel { .. } => true,
+        Art::Kopieren { .. }
+        | Art::Verschieben { .. }
+        | Art::InDenPapierkorb
+        | Art::EndgueltigLoeschen => false,
+    }
+}
+
+/// Die Ordner, deren Auffrischung ein laufender Vorgang aufschiebt.
+///
+/// Die Ordner des Vorgangs kommen herein und gehen unveraendert wieder hinaus,
+/// wenn seine Art nach [`schiebt_auffrischung_auf`] aufschiebt; sonst kommt
+/// eine leere Liste zurueck, und [`auffrischung_aufgeschoben`] verneint danach
+/// jeden Pfad.
+///
+/// **Die Aufzaehlung der Ordner selbst gehoert dem Vorgang** und steht in
+/// `crate::appkit::anwendung`, wo sie zugleich die Abschlussauffrischung
+/// bedient. Hier faellt allein die Entscheidung, ob sie fuer den Aufschub
+/// zaehlt; damit steht diese Entscheidung ausserhalb von AppKit und ist ohne
+/// Fenster pruefbar.
+pub fn aufgeschobene_ordner(art: &Art, ordner_des_vorgangs: Vec<PathBuf>) -> Vec<PathBuf> {
+    if schiebt_auffrischung_auf(art) {
+        ordner_des_vorgangs
+    } else {
+        Vec::new()
+    }
+}
+
+/// Ob die Auffrischung dieses gemeldeten Pfades gerade aufgeschoben ist.
+///
+/// Die Liste kommt aus [`aufgeschobene_ordner`] und ist in zwei Faellen leer:
+/// es laeuft kein eigener Vorgang, oder der laufende schiebt nicht auf. Dann
+/// ist die Antwort fuer jeden Pfad "nein", und die Dateisystemwache liest wie
+/// ohne Vorgang.
 ///
 /// **Wozu die Frage gestellt wird.** Ein Stapel-Umbenennen aus C4 laeuft seit
 /// S17c auf einem Arbeitsfaden und aendert dabei denselben Ordner, den das
@@ -159,8 +234,8 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 /// Aenderung anderswo frischt weiter ohne Zutun auf, wie C9 es zusagt. Eine
 /// fremde Aenderung **in** diesen Ordnern geht nicht verloren, sie erscheint
 /// eine Auffrischung spaeter, naemlich mit der des Abschlusses.
-pub fn gehoert_zu_vorgang(pfad: &Path, ordner_des_vorgangs: &[PathBuf]) -> bool {
-    ordner_des_vorgangs
+pub fn auffrischung_aufgeschoben(pfad: &Path, aufgeschobene_ordner: &[PathBuf]) -> bool {
+    aufgeschobene_ordner
         .iter()
         .any(|einer| gleicher_ordner(einer, pfad))
 }
@@ -425,30 +500,107 @@ mod tests {
         assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 2);
     }
 
-    /// Der Aufschub aus dem Defekt vom 260805-1337: der Ordner des laufenden
-    /// Vorgangs wird erkannt, jeder andere nicht.
+    /// Ein Stapel-Umbenennen mit einem Namen; der Inhalt spielt fuer die
+    /// Einordnung keine Rolle, die Art tut es.
+    fn ein_umbenennen() -> Art {
+        Art::UmbenennenImStapel {
+            neue_namen: vec!["neu.txt".to_owned()],
+        }
+    }
+
+    /// Die vier Arten, die nicht aufschieben, in einer Liste; so faellt beim
+    /// Hinzukommen einer fuenften auf, dass sie hier fehlt.
+    fn die_gemaechlichen() -> [Art; 4] {
+        [
+            Art::Kopieren {
+                ziel: PathBuf::from("/ziel"),
+            },
+            Art::Verschieben {
+                ziel: PathBuf::from("/ziel"),
+            },
+            Art::InDenPapierkorb,
+            Art::EndgueltigLoeschen,
+        ]
+    }
+
+    /// Die Zuordnung "schnell / nicht schnell" steht an einer Stelle; diese
+    /// Pruefung geht sie fuer alle fuenf Operationsarten durch
+    /// (`issues/260806-1331_*`).
     #[test]
-    fn der_ordner_eines_laufenden_vorgangs_wird_erkannt() {
-        let vorgang = [PathBuf::from("/a"), PathBuf::from("/ziel")];
-        assert!(gehoert_zu_vorgang(Path::new("/a"), &vorgang));
+    fn allein_das_stapel_umbenennen_schiebt_die_auffrischung_auf() {
         assert!(
-            gehoert_zu_vorgang(Path::new("/a/"), &vorgang),
+            schiebt_auffrischung_auf(&ein_umbenennen()),
+            "das Stapel-Umbenennen meldet schneller, als ein Lesevorgang fertig wird"
+        );
+        for art in die_gemaechlichen() {
+            assert!(
+                !schiebt_auffrischung_auf(&art),
+                "{art:?} fuellt seinen angezeigten Ordner waehrend des Laufs"
+            );
+        }
+    }
+
+    /// Die zweite Haelfte derselben Entscheidung: die Ordner eines
+    /// gemaechlichen Vorgangs kommen gar nicht erst in die Aufschubliste.
+    #[test]
+    fn nur_ein_aufschiebender_vorgang_gibt_seine_ordner_in_die_aufschubliste() {
+        let ordner = || vec![PathBuf::from("/a"), PathBuf::from("/ziel")];
+        assert_eq!(
+            aufgeschobene_ordner(&ein_umbenennen(), ordner()),
+            ordner(),
+            "die Ordner des Stapel-Umbenennens gehen unveraendert durch"
+        );
+        for art in die_gemaechlichen() {
+            assert!(
+                aufgeschobene_ordner(&art, ordner()).is_empty(),
+                "{art:?} schiebt nichts auf"
+            );
+        }
+    }
+
+    /// Der Aufschub aus dem Defekt vom 260805-1337: der Ordner des laufenden
+    /// Stapel-Umbenennens wird erkannt, jeder andere nicht.
+    #[test]
+    fn der_ordner_eines_aufschiebenden_vorgangs_wird_erkannt() {
+        let vorgang = aufgeschobene_ordner(
+            &ein_umbenennen(),
+            vec![PathBuf::from("/a"), PathBuf::from("/ziel")],
+        );
+        assert!(auffrischung_aufgeschoben(Path::new("/a"), &vorgang));
+        assert!(
+            auffrischung_aufgeschoben(Path::new("/a/"), &vorgang),
             "der Schlussstrich macht keinen anderen Ordner"
         );
-        assert!(gehoert_zu_vorgang(Path::new("/ziel"), &vorgang));
+        assert!(auffrischung_aufgeschoben(Path::new("/ziel"), &vorgang));
         assert!(
-            !gehoert_zu_vorgang(Path::new("/b"), &vorgang),
+            !auffrischung_aufgeschoben(Path::new("/b"), &vorgang),
             "eine fremde Aenderung anderswo frischt weiter auf (C9)"
         );
         assert!(
-            !gehoert_zu_vorgang(Path::new("/a/unterordner"), &vorgang),
+            !auffrischung_aufgeschoben(Path::new("/a/unterordner"), &vorgang),
             "der Unterordner ist nicht der Ordner des Vorgangs"
         );
     }
 
+    /// Die Gegenrichtung an derselben Kette: eine laufende Kopie in den
+    /// angezeigten Zielordner haelt keine Meldung zurueck.
+    #[test]
+    fn eine_laufende_kopie_haelt_ihren_zielordner_nicht_zurueck() {
+        let kopie = Art::Kopieren {
+            ziel: PathBuf::from("/ziel"),
+        };
+        let vorgang =
+            aufgeschobene_ordner(&kopie, vec![PathBuf::from("/a"), PathBuf::from("/ziel")]);
+        assert!(
+            !auffrischung_aufgeschoben(Path::new("/ziel"), &vorgang),
+            "der Zielordner fuellt sich waehrend des Laufs"
+        );
+        assert!(!auffrischung_aufgeschoben(Path::new("/a"), &vorgang));
+    }
+
     #[test]
     fn ohne_laufenden_vorgang_schiebt_nichts_auf() {
-        assert!(!gehoert_zu_vorgang(Path::new("/a"), &[]));
+        assert!(!auffrischung_aufgeschoben(Path::new("/a"), &[]));
     }
 
     #[test]

@@ -45,3 +45,10 @@ und bezahlt dafür mit dem Verhalten aller anderen Operationsarten.
 
 **Betrifft:** `krk-ui` (`auffrischung.rs`, `appkit/anwendung.rs`). C4 und C9.
 Keine Zeitzusage aus C8 berührt.
+
+---
+Resolved: Nutzerentscheid 260806 — der Aufschub gilt nur noch für schnelle Vorgänge. Die Einordnung steht als schiebt_auffrischung_auf(&Art) -> bool in crates/krk-ui/src/auffrischung.rs, vollständige Fallunterscheidung ohne Auffangzweig an genau einer Stelle; eine probeweise sechste Art-Variante bricht den Bau an vier Stellen ab. gehoert_zu_vorgang heißt jetzt auffrischung_aufgeschoben, weil die übergebene Liste nicht mehr die Ordner des Vorgangs sind, sondern die aufgeschobenen. Vorgang::ordner bleibt die eine Aufzählung für Aufschub und Abschlussauffrischung.
+
+Vier Prüfungen decken alle fünf Operationsarten; dass sie beißen, ist gezeigt: der Stand von fd5e3c5 wiederhergestellt lässt 2 fehlschlagen, Art::UmbenennenImStapel => false lässt 3 fehlschlagen. Am Bündel ist keine Richtung als Verhalten vorgeführt, und der Grund ist gemessen: die einzige Dateioperation, die der Messmodus auslöst, ist die Kopie aus L8/L9, die rund 300 ms nach F5 abbricht — bei 0,3 s Sammelverzögerung des FSEventStream trifft der erste Meldestapel frühestens zusammen mit dem Abbruch ein. Gegenprobe, dass der Weg überhaupt arbeitet: 0 Verzeichnisleser-Fäden ohne Zutun, 29 bei 30 fremden Änderungen im angezeigten Ordner.
+
+Vorbehalt als eigener Eintrag weitergeführt: issues/260806-1445_o_ein-schnelles-verschieben-koennte-dieselbe-meldelawine-ausloesen-wie-das-stapel-umbenennen.md.

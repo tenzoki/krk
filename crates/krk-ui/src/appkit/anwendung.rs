@@ -239,9 +239,14 @@ impl Vorgang {
     /// **Die eine Stelle, die diese Frage beantwortet.** Zwei Aufrufer stellen
     /// sie, und beide brauchen dieselbe Antwort: der Abschluss frischt genau
     /// diese Ordner auf, und die Dateisystemwache schiebt genau fuer sie die
-    /// Auffrischung auf, solange der Vorgang laeuft. Zwei Aufzaehlungen
-    /// nebeneinander waeren zwei Wahrheiten darueber, was eine Operation
-    /// anfasst.
+    /// Auffrischung auf, solange ein aufschiebender Vorgang laeuft. Zwei
+    /// Aufzaehlungen nebeneinander waeren zwei Wahrheiten darueber, was eine
+    /// Operation anfasst.
+    ///
+    /// **Ob aufgeschoben wird, entscheidet diese Aufzaehlung nicht.** Das tut
+    /// [`auffrischung::schiebt_auffrischung_auf`] anhand der Operationsart. Der
+    /// Abschluss frischt danach unveraendert fuer jede Art auf; aufgeschoben
+    /// wird allein beim Stapel-Umbenennen.
     fn ordner(&self) -> Vec<PathBuf> {
         let mut ordner = vec![self.quellordner.clone()];
         match &self.art {
@@ -1221,13 +1226,15 @@ impl Anwendungsdelegierter {
             let Some(selbst) = schwach.load() else {
                 return;
             };
-            // Was ein eigener laufender Vorgang gerade umschreibt, wird nicht
-            // bei jeder Meldung neu gelesen: die Begruendung steht an
-            // `auffrischung::gehoert_zu_vorgang`, und der Abschluss holt die
-            // Auffrischung fuer genau diese Ordner nach.
-            let eigene = selbst.vorgangsordner();
+            // Was ein eigener **schneller** Vorgang gerade umschreibt, wird
+            // nicht bei jeder Meldung neu gelesen: die Begruendung steht an
+            // `auffrischung::schiebt_auffrischung_auf`, und der Abschluss holt
+            // die Auffrischung fuer genau diese Ordner nach. Eine Kopie oder
+            // eine Verschiebung schiebt nichts auf; ihr angezeigter Zielordner
+            // fuellt sich waehrend des Laufs.
+            let aufgeschoben = selbst.aufgeschobene_ordner();
             for pfad in gemeldet {
-                if auffrischung::gehoert_zu_vorgang(pfad, &eigene) {
+                if auffrischung::auffrischung_aufgeschoben(pfad, &aufgeschoben) {
                     continue;
                 }
                 auffrischung::ordner_neu_lesen(&*selbst, pfad);
@@ -1245,13 +1252,19 @@ impl Anwendungsdelegierter {
         *self.ivars().dateisystemwache.borrow_mut() = wache;
     }
 
-    /// Die Ordner der laufenden Dateioperation; leer, wenn keine laeuft.
-    fn vorgangsordner(&self) -> Vec<PathBuf> {
+    /// Die Ordner, deren Auffrischung ein laufender Vorgang gerade aufschiebt.
+    ///
+    /// Leer in zwei Faellen: es laeuft keine Dateioperation, oder die laufende
+    /// schiebt nicht auf. Welche Art aufschiebt, steht in
+    /// [`auffrischung::schiebt_auffrischung_auf`] und wird hier nicht ein
+    /// zweites Mal beantwortet; diese Methode reicht nur die Ordner des
+    /// Vorgangs hinueber.
+    fn aufgeschobene_ordner(&self) -> Vec<PathBuf> {
         self.ivars()
             .vorgang
             .borrow()
             .as_ref()
-            .map(Vorgang::ordner)
+            .map(|vorgang| auffrischung::aufgeschobene_ordner(&vorgang.art, vorgang.ordner()))
             .unwrap_or_default()
     }
 
