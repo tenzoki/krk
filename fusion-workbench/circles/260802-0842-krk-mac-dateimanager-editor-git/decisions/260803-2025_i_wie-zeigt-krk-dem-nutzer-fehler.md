@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** coder
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1536_c_zwei-fehlermeldungen-erreichen-im-buendel-niemanden.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-1309_o_tastenprotokoll-ueber-open-ist-nicht-lesbar.md`, Spec C1 (Statuszeile), `circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260803-1536-coderev-appkit-durchstich-schritt-6-und-7.md` Befund M3
 
@@ -98,3 +98,5 @@ Superseded by:
 
 ---
 Implemented: S6b (dieser Commit) — die Statuszeile trug S12, der NSAlert beim fehlgeschlagenen Tastenabgriff steht jetzt in crates/krk-ui/src/appkit/hinweis.rs; beide None-Zweige des Tastenabgriffs in anwendung.rs zeigen ihn und beenden danach die Anwendung. Damit ist Möglichkeit 1 aus diesem Datensatz vollständig umgesetzt.
+
+Abgleich 260806-1647: "dieser Commit" ist `194ea16`, nachgetragen, weil ein Verweis auf den schreibenden Commit sich selbst nicht auflöst. Nachgesehen: `crates/krk-ui/src/appkit/hinweis.rs:1-77` (neu in `194ea16`) trägt den einzigen anwendungsmodalen `NSAlert`, `crates/krk-ui/src/appkit/anwendung.rs` ruft ihn aus beiden `None`-Zweigen des Tastenabgriffs. Der Marker `_i_` steht zu Recht.

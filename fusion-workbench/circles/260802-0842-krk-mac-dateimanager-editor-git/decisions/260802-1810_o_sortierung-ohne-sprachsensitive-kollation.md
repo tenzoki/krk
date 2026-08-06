@@ -53,3 +53,18 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+**Abgleich 260806-1647 — die Frage ist unbeantwortet, und der Schritt, den sie binden sollte, ist längst abgenommen.**
+
+Der Datensatz sagt oben: "Die Frage muss vor Schritt 12 beantwortet sein, weil die Sortierung dort in der Oberfläche sichtbar wird und Nutzererwartungen weckt." S12 trägt seit dem 260804-1040 `[DONE]`, und alle 36 Schritte des Plans stehen inzwischen auf `[DONE]`. Die Frage ist in der Zwischenzeit nicht beantwortet worden.
+
+Nachgesehen am Code, Stand `89f5570`:
+
+- `crates/krk-core/src/verzeichnis/eintrag.rs:80-86` — `sortierschluessel_bauen` schreibt im eigenen Kommentar aus, dass er die sprachsensitive Kollation **nicht** leistet. Die Vorbelegung aus dem Datensatz gilt unverändert: `Äpfel` sortiert hinter `Zebra`.
+- `crates/krk-core/src/verzeichnis/eintrag.rs` trägt kein Feld für die Dateiendung; die Typsortierung ordnet weiter nach der Aufzählung Ordner/Datei/Verknüpfung (`crates/krk-core/src/verzeichnis/sortierung.rs`).
+
+Der Marker bleibt `_o_`: beide Vorbelegungen stehen unverändert, und keine ist bestätigt worden. Die Empfehlung des Datensatzes hing an Schritt 8 als Messgate; das Gate ist seit dem 260803-1755 durch, und die Abnahme-Messreihe aus S22 liegt vor (`messungen/260805-2207-MacBookPro15-1-abnahme.txt`). Die Bedingung, unter der die Empfehlung "erst nach der Messung entscheiden" lautete, ist damit erfüllt.
+
+Weder der Plan noch der Spec nennt diesen Datensatz an einer Stelle; gemeldet als `issues/260806-1647_*_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md`.

@@ -35,3 +35,7 @@ beschriftet, und eine zweite Rechnung daneben wäre eine zweite Wahrheit.
 
 ---
 Übergeben: Die Prüfung hat den Defekt weiter gefasst als seine Beschreibung — nicht nur die Null, sondern jede Byte-Angabe erscheint auf Englisch. Weitergeführt als issues/260806-1215_o_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md, dessen Auflösung beim ontocoder liegt. Dieser Eintrag geht darin auf.
+
+---
+
+**Abgleich 260806-1647: der Marker `_c_` steht, das beschriebene Verhalten steht aber auch noch.** "Zero KB" erscheint unverändert; behoben ist hier nichts, der Eintrag ist in den weiteren übergegangen. Das deckt `_c_` in seiner zweiten Lesart ("resolved, **or** closed") ab, und der Nachfolger `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md` trägt `_o_`, sodass die Sache nicht verschwindet. Für den Leser, der nur die Markerliste überfliegt, bleibt es trotzdem eine Falle: die Zeile `Übergeben:` steht an der Stelle, an der die Konvention `Resolved:` erwartet. Der Marker bleibt, weil ein Umzug auf `_d_` die Sache als zurückgestellt ausgäbe, was sie nicht ist. Gemeldet wird der Punkt nicht als eigener Defekt; er steht im Abgleichsbericht `history/260806-1647-reconciliation.md`.

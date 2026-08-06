@@ -1,7 +1,7 @@
 # Spec: KRK Navigator-Gerüst (Runde 1)
 
 **Datum:** 2026-08-02, überarbeitet 260802-1735, 260803-1819, 260803-2300, 260804-0830, 260804-1122, 260804-1832, 260805-0000, 260805-1411, 260805-1623 und 260806-1412
-**Status:** Entwurf. Alle Nutzerantworten bis 260805-1411 sind eingearbeitet. Eine offene Nutzerfrage trägt dieser Spec nicht mehr.
+**Status:** Entwurf. Alle Nutzerantworten bis 260806-1412 sind eingearbeitet, zuletzt die Bildgrenze von 64 MB in C6 und C10 (Abgleich 260806-1647: die Zeile nannte bis dahin 260805-1411 und übersprang damit die beiden Nachzüge 260805-1623 und 260806-1412 aus der Datumszeile darüber). Eine offene Nutzerfrage trägt dieser Spec nicht mehr.
 **Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
 **Quelle:** Circle-Directive im Datensatz `*_circle.md`, zugeschnitten auf die erste Runde durch den Nutzer in der Phase-0-Klärung.
 

@@ -358,3 +358,26 @@ muss zurückgenommen werden. Der Turn behebt neunzehn gemeldete Defekte und
 schafft dabei einen neuen echten (`260806-1328`), eine Entwurfsfrage
 (`260806-1331`) und drei kleinere Lücken. Das Verhältnis ist gut. Die Zusagen in
 den Modulköpfen brauchen einen Nachzug, sonst laufen Text und Code auseinander.
+
+---
+
+## Stand der sechs Befunde, Abgleich 260806-1647
+
+Die Befunde selbst sind unverändert; hier steht nur, was seither aus ihnen
+geworden ist. Nachgesehen am Code, Stand `89f5570`.
+
+| Befund | Stand | Beleg |
+|---|---|---|
+| `260806-1329` Bildgrenze steht nirgends geschrieben | geschlossen | `27c9515`; Spec C6 Zeile 290 und die Festlegung 297-299, C10 Zeile 396; Datensatz `decisions/260806-1412_i_bildgrenze-der-vorschau.md` |
+| `260806-1328` Sitzungssicherung überlebt kein Strg+C | geschlossen | `3c69ae4`; `crates/krk-bench/src/messen.rs:1150-1300` (`Sitzungssicherung`, `Sitzungswaechter`, beide mit `Drop`), `signal-hook 0.4` in `Cargo.toml:33` und `crates/krk-bench/Cargo.toml:20` |
+| `260806-1330` Vorgang ohne Fertig-Meldung friert die Liste ein | geschlossen | `3c69ae4`; `crates/krk-ui/src/appkit/anwendung.rs:2680` und `:2709` (`abbruch_ohne_meldung_nachtragen`) |
+| `260806-1331` Auffrischungsaufschub gilt für alle fünf Arten | geschlossen | `89f5570`; `crates/krk-ui/src/auffrischung.rs:179` (`schiebt_auffrischung_auf`) und `:237` (`auffrischung_aufgeschoben`), vier Prüfungen ab `:532`. Vorbehalt weitergeführt als `issues/260806-1445_*_ein-schnelles-verschieben-koennte-dieselbe-meldelawine-ausloesen-wie-das-stapel-umbenennen.md` |
+| `260806-1332` Bild aus der Zwischenablage umgeht beide Grenzen | geschlossen | `3c69ae4`; `crates/krk-ui/src/appkit/zwischenablage.rs:52` und `:95` prüfen `BILDGRENZE` vor `to_vec()` |
+| `260806-1333` Grenzprüfung sieht nur `use`-Zeilen und eine Kiste | **offen** | `xtask/src/release.rs:102-105` prüft weiter allein `crates/krk-ui/src`; `krk-core`, `krk-bench` und `xtask` bleiben ungeprüft |
+
+Die Befundtexte oben zitieren die Defektdateien mit ihrem damaligen Marker `_o_`.
+Fünf davon tragen jetzt `_c_`; die Zitate bleiben als Aufzeichnung des
+Prüfzeitpunkts stehen, aufgelöst werden sie über Zeitstempel und Thementeil.
+
+`cargo test --workspace` läuft am Stand `89f5570` grün durch: 13 Testprogramme,
+474 Prüfungen, 0 Fehlschläge, 1 übersprungene.
