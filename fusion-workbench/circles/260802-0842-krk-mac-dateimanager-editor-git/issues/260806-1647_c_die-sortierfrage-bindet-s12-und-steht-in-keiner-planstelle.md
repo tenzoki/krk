@@ -33,3 +33,8 @@ Die Empfehlung des Datensatzes lautete "Möglichkeit 3 bis zur Messung, danach M
 
 ---
 Resolved: Der Datensatz decisions/260802-1810 ist beantwortet und umgesetzt; die Sortierung ist damit in Plan und Spec zu verankern (Nachzug folgt). Der Code sortiert seit diesem Turn sprachsensitiv, und die Dateiendung ist Feld in Eintrag und Schlüssel der Typsortierung.
+
+---
+Resolved: Nachzug 260806-1728. Der Spec nennt die Sortierung jetzt in C2 (Abnahmekriterium und Festlegung) und in C8 (L3 und L10 decken das Sortieren mit); der Plan verankert den Datensatz in `### Frage 2`, an S2 und S12, führt die beiden neuen Felder in `## Datenstrukturen` und listet ihn unter den angelegten Entscheidungen. Beide Köpfe tragen einen Nachzugsabsatz mit der Lehre: eine Entscheidung, die sich für einen Schritt bindend erklärt, muss in diesem Schritt auffindbar sein.
+
+Das Muster ist weitergeführt: fünf weitere offene Datensätze zeigen auf einen Planschritt, ohne dort genannt zu sein — issues/260806-1735_o_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md.

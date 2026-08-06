@@ -73,3 +73,12 @@ Weder der Plan noch der Spec nennt diesen Datensatz an einer Stelle; gemeldet al
 Answered: Nutzerentscheid 260806 im Rebalance-Gate des Turns 23 — **Möglichkeit 1, beides richtigstellen.** Die Namenssortierung bekommt sprachsensitive Kollation, und die Dateiendung wird ein Feld in Eintrag und der Schlüssel der Typsortierung. Die Bedingung der ursprünglichen Empfehlung ("erst nach dem Messgate entscheiden") ist erfüllt: das Gate aus S8 ist seit dem 260803-1755 durch, und die Abnahme-Messreihe aus S22 liegt als Vergleichsgrundlage vor (messungen/260805-2207-MacBookPro15-1-abnahme.txt).
 
 Auflage aus den Constraints dieses Datensatzes: L3 und L10 decken Lesen und Sortieren, und beide hängen an der Größe von Eintrag. Die Umsetzung ist deshalb ohne Nachmessung beider Zusagen nicht abgenommen. Verfehlt eine der beiden ihre Zahl, gilt die Regel des Plans — ein neuer Entscheidungsdatensatz, keine stillschweigende Lockerung.
+
+---
+Implemented: 16e4558 — crates/krk-core/src/verzeichnis/kollation.rs baut den sprachsensitiven Sortierschlüssel über icu_collator als Bytefolge, Eintrag trägt endungsschluessel und endung_ab, sortierung.rs ordnet die Typsortierung nach der Endung. Gemessen (messungen/260806-1716-MacBookPro15-1-kollation-l3-l10.txt, 95. Perzentil der schlechtesten von fünf Runden): L3 41,5 ms gegen 400 ms zugesagt, L10 463,8 ms gegen 4000 ms — beide gehalten in allen fünf Runden, Faktor 9,6 und 8,6.
+
+Zur Wahl des Weges: icu_collator schreibt den Vergleich als Bytefolge aus (write_sort_key_to) und erhält damit den Zuschnitt aus Schritt 2 — der Schlüssel entsteht einmal beim Lesen, das Sortieren vergleicht nur Bytes. Beide Alternativen kennen allein den paarweisen Vergleich und hätten die Kollation von 100.000 Aufrufen auf rund 1,7 Millionen je Lauf verschoben: localizedStandardCompare: über objc2-foundation hat keine Schlüsselbildung und hätte krk-core zusätzlich an Foundation gebunden, feruca hält sein Modul sort_key privat.
+
+Kosten: Eintrag wächst von 72 auf 88 Bytes, auf der Halde 44,4 statt 56,9 Bytes je Eintrag; das Programm wächst um 1,26 MB durch die eingebackenen CLDR-Tabellen.
+
+Nicht mitentschieden und als eigener Datensatz weitergeführt: welche Sprache die Ordnung bestimmt (decisions/260806-1730_o_welche-sprache-bestimmt-die-sortierordnung.md).
