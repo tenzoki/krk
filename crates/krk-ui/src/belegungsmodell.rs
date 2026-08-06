@@ -15,13 +15,26 @@
 //!            beim Verlassen: in_belegung ──> Belegung::sichern (keymap.toml)
 //! ```
 //!
-//! # Eine Zeile je Funktion
+//! # Eine Zeile je Funktion, gegliedert nach Funktionsbereich
 //!
 //! C3 verlangt: genau eine Zeile je Funktion, alle Kombinationen dieser
 //! Funktion in dieser einen Zeile. Das ist hier keine Rechenleistung, sondern
 //! die Gestalt der Belegung selbst: [`Belegung::funktionen`] fuehrt jede
-//! Funktion genau einmal, mit allen ihren Kombinationen. Das Modell zaehlt
-//! sie ab und erfindet keine zweite Ordnung.
+//! Funktion genau einmal, mit allen ihren Kombinationen.
+//!
+//! Angezeigt werden die Funktionen nicht in der Reihenfolge der Datei,
+//! sondern gruppiert nach [`Funktionsbereich`] (Nutzerauftrag vom 260806,
+//! `issues/260806-1054_p_belegungsansicht-gruppiert-nach-funktionsbereich.md`):
+//! vor den Funktionen eines Bereichs steht eine Ueberschriftszeile mit seinem
+//! Namen. Die Zuordnung Funktion → Bereich steht an genau einer Stelle,
+//! [`bereich`], und dort als vollstaendige Fallunterscheidung ueber
+//! [`Kommando`] ohne Auffangzweig: ein neues Kommando uebersetzt nicht, bevor
+//! es seinen Bereich genannt hat. Die wenigen Funktionen ohne Kommando (der
+//! reservierte Editor-Eintrag, die vier Textbefehle des Menues) stehen
+//! daneben mit Namen; dass keine vergessen ist, prueft
+//! `jede_kennung_hat_einen_funktionsbereich` gegen die
+//! Auslieferungsbelegung. Innerhalb eines Bereichs bleibt die Reihenfolge
+//! der Datei erhalten — eine zweite Ordnung neben ihr entsteht nicht.
 //!
 //! # Die Beschriftung geht ueber die Tastentabelle
 //!
@@ -32,7 +45,178 @@
 //! zweite Namensliste entsteht nicht, und "Fn+" kann an keiner Stelle
 //! erscheinen, weil die Schreibweise fn nicht kennt (C3, S7).
 
-use krk_core::tasten::{Belegung, Kombination, Tastendruck};
+use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
+
+/// Die Funktionsbereiche der Belegungsansicht, in der Reihenfolge der
+/// Anzeige.
+///
+/// Ein Bereich buendelt die Funktionen, die derselben Gegend der Anwendung
+/// gelten; die Ansicht setzt vor seine Funktionen eine Ueberschriftszeile.
+/// [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich) traegt diese
+/// Gliederung nicht: er beantwortet, welcher Bereich den Fokus haben muss,
+/// und wirft dabei Fenster-, Fokus- und Anwendungsbefehle in einen Topf
+/// (`Ueberall`), den kein Nutzer als Ordnung wiedererkennt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Funktionsbereich {
+    /// Bewegung, Navigation, Markierung, Sortierung und Sichtbarkeit in der
+    /// Dateiliste (C2, C10).
+    Dateilisting,
+    /// Kopieren, Verschieben, Loeschen, Anlegen, Umbenennen, Abbrechen und
+    /// das Terminal im angezeigten Ordner (C4, C11).
+    Dateioperationen,
+    /// Die vier Tabbefehle (C1, nach C6 auch fuer die Vorschau-Tabs).
+    Tabs,
+    /// Das Vorschaufenster und was es anzeigt (C3, C6, C10).
+    Vorschau,
+    /// Die Lesezeichen- und Geraeteleiste und der Fokuswechsel (C5).
+    LeisteUndFokus,
+    /// Das Anwendungsfenster und seine Bereiche: wechseln, ein- und
+    /// ausblenden, Breiten (C1, C7).
+    Fenster,
+    /// Die Anwendung als ganze: Belegungsansicht und Beenden (C3).
+    Anwendung,
+    /// Die vier Textbefehle, die das Menue "Bearbeiten" zustellt (C2).
+    Textbefehle,
+    /// Der Editor einer spaeteren Runde; sein F4-Eintrag ist reserviert (C3).
+    Editor,
+}
+
+impl Funktionsbereich {
+    /// Alle Bereiche, in der Reihenfolge der Anzeige.
+    pub const ALLE: [Funktionsbereich; 9] = [
+        Funktionsbereich::Dateilisting,
+        Funktionsbereich::Dateioperationen,
+        Funktionsbereich::Tabs,
+        Funktionsbereich::Vorschau,
+        Funktionsbereich::LeisteUndFokus,
+        Funktionsbereich::Fenster,
+        Funktionsbereich::Anwendung,
+        Funktionsbereich::Textbefehle,
+        Funktionsbereich::Editor,
+    ];
+
+    /// Die Ueberschrift des Bereichs in der Ansicht.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Funktionsbereich::Dateilisting => "Dateilisting",
+            Funktionsbereich::Dateioperationen => "Dateioperationen",
+            Funktionsbereich::Tabs => "Tabs",
+            Funktionsbereich::Vorschau => "Vorschau",
+            Funktionsbereich::LeisteUndFokus => "Leiste und Fokus",
+            Funktionsbereich::Fenster => "Fenster",
+            Funktionsbereich::Anwendung => "Anwendung",
+            Funktionsbereich::Textbefehle => "Textbefehle",
+            Funktionsbereich::Editor => "Editor",
+        }
+    }
+}
+
+/// Der Funktionsbereich einer Funktion, aus ihrer Kennung.
+///
+/// **Die eine Stelle der Zuordnung.** Fuer jede Funktion mit einem
+/// [`Kommando`] antwortet die vollstaendige Fallunterscheidung in
+/// [`bereich_des_kommandos`]; die Funktionen ohne Kommando stehen hier mit
+/// Namen, und es sind genau die, die nie eines bekommen: der fuer den Editor
+/// reservierte Eintrag und die vier vom Menue zugestellten Textbefehle.
+/// `None` heisst: die Zuordnung kennt diese Kennung nicht — das faengt die
+/// Pruefung `jede_kennung_hat_einen_funktionsbereich`, bevor es eine Ansicht
+/// erreicht.
+pub fn bereich(kennung: &str) -> Option<Funktionsbereich> {
+    if let Some(kommando) = Kommando::aus_kennung(kennung) {
+        return Some(bereich_des_kommandos(kommando));
+    }
+    match kennung {
+        "bearbeiten" => Some(Funktionsbereich::Editor),
+        "text_ausschneiden" | "text_kopieren" | "text_einfuegen" | "text_alles_auswaehlen" => {
+            Some(Funktionsbereich::Textbefehle)
+        }
+        _ => None,
+    }
+}
+
+/// Der Funktionsbereich jedes Kommandos, ohne Auffangzweig.
+///
+/// Der Uebersetzer erzwingt die Vollstaendigkeit: ein neues Kommando
+/// uebersetzt nicht, bevor es hier seinen Bereich genannt hat — dasselbe
+/// Muster wie [`Kommando::wirkungsbereich`] im Kern.
+const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
+    match kommando {
+        // Die Dateiliste: Bewegung, Navigation, Markierung, Sortierung,
+        // Sichtbarkeit und der Sprung zum Inhalt der Zwischenablage, der
+        // dieselbe Handlung ist wie die Pfadeingabe mit vorausgefuelltem
+        // Wert (C2, C10).
+        Kommando::AuswahlHoch
+        | Kommando::AuswahlRunter
+        | Kommando::SeiteHoch
+        | Kommando::SeiteRunter
+        | Kommando::Listenanfang
+        | Kommando::Listenende
+        | Kommando::Oeffnen
+        | Kommando::OrdnerAufwaerts
+        | Kommando::Pfadeingabe
+        | Kommando::MarkierungUmschalten
+        | Kommando::AlleMarkieren
+        | Kommando::MarkierungAufheben
+        | Kommando::MarkierungUmkehren
+        | Kommando::SortierungName
+        | Kommando::SortierungGroesse
+        | Kommando::SortierungDatum
+        | Kommando::SortierungTyp
+        | Kommando::SortierrichtungUmkehren
+        | Kommando::VersteckteUmschalten
+        | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
+        // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
+        // wie sie auf dem angezeigten Ordner arbeitet.
+        Kommando::Kopieren
+        | Kommando::Verschieben
+        | Kommando::InPapierkorb
+        | Kommando::EndgueltigLoeschen
+        | Kommando::Abbrechen
+        | Kommando::OrdnerAnlegen
+        | Kommando::DateiAnlegen
+        | Kommando::UmbenennenStapel
+        | Kommando::Umbenennen
+        | Kommando::TerminalOeffnen => Funktionsbereich::Dateioperationen,
+        Kommando::TabNeu
+        | Kommando::TabSchliessen
+        | Kommando::TabNaechster
+        | Kommando::TabVoriger => Funktionsbereich::Tabs,
+        // Das Ein- und Ausblenden der Vorschau steht bei ihr und nicht bei
+        // den Fensterbefehlen: wer die Vorschau sucht, sucht unter Vorschau,
+        // und "Zwischenablage ansehen" zeigt in dasselbe Fenster (C3, C10).
+        Kommando::VorschauUmschalten | Kommando::ZwischenablageAnsehen => {
+            Funktionsbereich::Vorschau
+        }
+        // Die Leiste aus C5 samt ihrem Ein- und Ausblenden aus C7 und den
+        // beiden Fokusbefehlen, die zwischen ihr und dem Dateifenster
+        // wechseln.
+        Kommando::LesezeichenAnlegen
+        | Kommando::LesezeichenUmbenennen
+        | Kommando::LesezeichenLoeschen
+        | Kommando::LesezeichenHoch
+        | Kommando::LesezeichenRunter
+        | Kommando::FokusLeiste
+        | Kommando::FokusDateifenster
+        | Kommando::LeisteUmschalten => Funktionsbereich::LeisteUndFokus,
+        // Das Anwendungsfenster und seine Bereiche (C1, C7).
+        Kommando::FensterWechseln
+        | Kommando::ZweitesFensterUmschalten
+        | Kommando::FensterEinblenden
+        | Kommando::FensterSchliessen
+        | Kommando::BereichVerbreitern
+        | Kommando::BereichVerschmaelern => Funktionsbereich::Fenster,
+        Kommando::BelegungAnsehen | Kommando::Beenden => Funktionsbereich::Anwendung,
+    }
+}
+
+/// Eine Zeile der Ansicht: eine Bereichsueberschrift oder eine Funktion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Zeile {
+    /// Die Ueberschriftszeile vor den Funktionen eines Bereichs.
+    Ueberschrift(Funktionsbereich),
+    /// Eine Funktion, als Stelle in [`Belegung::funktionen`].
+    Funktion(usize),
+}
 
 /// Was aus dem Versuch geworden ist, der ausgewaehlten Funktion die gedrueckte
 /// Kombination zu geben.
@@ -59,6 +243,11 @@ pub enum Zuweisung {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Belegungsmodell {
     belegung: Belegung,
+    /// Die Zeilen der Ansicht: je Bereich eine Ueberschrift, darunter seine
+    /// Funktionen. Gebaut aus der Belegung in [`gliederung`]; neu gebaut nur
+    /// beim Zuruecksetzen, denn eine Zuweisung aendert keine Zeile, nur ihren
+    /// Inhalt.
+    zeilen: Vec<Zeile>,
     /// Ob eine Zuweisung oder ein Zuruecksetzen gelungen ist. Nur dann wird
     /// beim Verlassen gesichert; eine unveraenderte Ansicht schreibt nichts.
     geaendert: bool,
@@ -68,14 +257,44 @@ impl Belegungsmodell {
     /// Ein Modell ueber der uebergebenen Belegung, ohne Aenderung.
     pub fn neu(belegung: Belegung) -> Self {
         Self {
+            zeilen: gliederung(&belegung),
             belegung,
             geaendert: false,
         }
     }
 
-    /// Wie viele Zeilen die Ansicht fuehrt: eine je Funktion.
+    /// Wie viele Zeilen die Ansicht fuehrt: eine je Funktion, dazu die
+    /// Ueberschrift vor jedem Bereich.
     pub fn zeilen(&self) -> usize {
-        self.belegung.funktionen().len()
+        self.zeilen.len()
+    }
+
+    /// Die Bereichsueberschrift an dieser Stelle, falls dort eine steht.
+    ///
+    /// `None` heisst: die Zeile ist eine Funktion. Die Ansicht fragt das fuer
+    /// die Gruppenzeilen der Tabelle ab, und eine Ueberschriftszeile ist
+    /// nicht auswaehlbar und nimmt keine Zuweisung an.
+    pub fn ueberschrift(&self, stelle: usize) -> Option<&'static str> {
+        match self.zeilen.get(stelle)? {
+            Zeile::Ueberschrift(bereich) => Some(bereich.name()),
+            Zeile::Funktion(_) => None,
+        }
+    }
+
+    /// Die erste Zeile, die eine Funktion traegt, fuer die Auswahl beim
+    /// Oeffnen: die Zeile 0 ist seit der Gliederung eine Ueberschrift.
+    pub fn erste_funktionszeile(&self) -> Option<usize> {
+        self.zeilen
+            .iter()
+            .position(|zeile| matches!(zeile, Zeile::Funktion(_)))
+    }
+
+    /// Die Funktion hinter dieser Zeile, falls die Zeile eine traegt.
+    fn funktion(&self, stelle: usize) -> Option<&Funktion> {
+        match self.zeilen.get(stelle)? {
+            Zeile::Funktion(funktionsstelle) => self.belegung.funktionen().get(*funktionsstelle),
+            Zeile::Ueberschrift(_) => None,
+        }
     }
 
     /// Die Beschriftung der Funktion an dieser Stelle, fuer die Spalte
@@ -85,7 +304,7 @@ impl Belegungsmodell {
     /// den F4-Eintrag verlangt; eine vom Hauptmenue zugestellte den Zusteller,
     /// damit die beiden Cmd+A-Zeilen unterscheidbar sind.
     pub fn funktionstext(&self, stelle: usize) -> Option<String> {
-        let funktion = self.belegung.funktionen().get(stelle)?;
+        let funktion = self.funktion(stelle)?;
         let mut text = funktion.name().to_owned();
         if let Some(wofuer) = funktion.reserviert_fuer() {
             let wofuer = match wofuer {
@@ -107,7 +326,7 @@ impl Belegungsmodell {
     /// Alle Kombinationen der Funktion an dieser Stelle, in der Anzeigeform,
     /// fuer die Spalte "Belegung".
     pub fn tastentext(&self, stelle: usize) -> Option<String> {
-        let funktion = self.belegung.funktionen().get(stelle)?;
+        let funktion = self.funktion(stelle)?;
         Some(
             funktion
                 .tasten()
@@ -121,10 +340,7 @@ impl Belegungsmodell {
     /// Der blosse Name der Funktion an dieser Stelle, fuer die Aufforderung
     /// waehrend der Aufnahme.
     pub fn name(&self, stelle: usize) -> Option<&str> {
-        self.belegung
-            .funktionen()
-            .get(stelle)
-            .map(|funktion| funktion.name())
+        self.funktion(stelle).map(|funktion| funktion.name())
     }
 
     /// Gibt der Funktion an dieser Stelle die gedrueckte Kombination.
@@ -136,7 +352,7 @@ impl Belegungsmodell {
         let Some(kombination) = Kombination::aus_tastendruck(druck) else {
             return Zuweisung::OhneNamen;
         };
-        let Some(funktion) = self.belegung.funktionen().get(stelle) else {
+        let Some(funktion) = self.funktion(stelle) else {
             return Zuweisung::Abgelehnt("es ist keine Funktion ausgewählt".to_owned());
         };
         let kennung = funktion.kennung().to_owned();
@@ -154,8 +370,13 @@ impl Belegungsmodell {
     }
 
     /// Setzt die Arbeitskopie auf den Auslieferungszustand zurueck (C3).
+    ///
+    /// Die Zeilen werden neu gebaut: eine Belegung des Nutzers darf ihre
+    /// Funktionen anders anordnen als die Auslieferung, und innerhalb eines
+    /// Bereichs folgt die Anzeige dieser Ordnung.
     pub fn zuruecksetzen(&mut self) {
         self.belegung.zuruecksetzen();
+        self.zeilen = gliederung(&self.belegung);
         self.geaendert = true;
     }
 
@@ -178,6 +399,47 @@ impl Default for Belegungsmodell {
     fn default() -> Self {
         Self::neu(Belegung::auslieferung())
     }
+}
+
+/// Die Zeilen der Ansicht ueber einer Belegung: je Bereich eine Ueberschrift,
+/// darunter seine Funktionen in der Reihenfolge der Datei.
+///
+/// Ein Bereich ohne Funktion bekommt keine Ueberschrift; in der
+/// Auslieferungsbelegung ist jeder Bereich besetzt. Eine Funktion ohne
+/// Bereich waere ein Programmierfehler — eine neue Funktion ist erst
+/// vollstaendig, wenn [`bereich`] sie einordnet, und die Pruefung
+/// `jede_kennung_hat_einen_funktionsbereich` haelt das fest. Sie still
+/// auszulassen hiesse, eine Funktion aus der Ansicht verschwinden zu lassen,
+/// die C3 vollstaendig verlangt; deshalb bricht der Bau hier laut ab.
+fn gliederung(belegung: &Belegung) -> Vec<Zeile> {
+    let bereiche: Vec<Funktionsbereich> = belegung
+        .funktionen()
+        .iter()
+        .map(|funktion| {
+            bereich(funktion.kennung()).unwrap_or_else(|| {
+                panic!(
+                    "die Funktion {} hat keinen Funktionsbereich; \
+                     die Zuordnung steht in belegungsmodell::bereich",
+                    funktion.kennung()
+                )
+            })
+        })
+        .collect();
+
+    let mut zeilen = Vec::with_capacity(bereiche.len() + Funktionsbereich::ALLE.len());
+    for gruppe in Funktionsbereich::ALLE {
+        let mut mit_ueberschrift = false;
+        for (stelle, eingeordnet) in bereiche.iter().enumerate() {
+            if *eingeordnet == gruppe {
+                if !mit_ueberschrift {
+                    zeilen.push(Zeile::Ueberschrift(gruppe));
+                    mit_ueberschrift = true;
+                }
+                zeilen.push(Zeile::Funktion(stelle));
+            }
+        }
+    }
+    zeilen
 }
 
 /// Die Anzeigeform einer Kombination: die Schreibweise mit grossem
@@ -212,38 +474,129 @@ mod tests {
 
     use super::*;
 
-    /// Das Modell zaehlt die Funktionen der Belegung ab: eine Zeile je
-    /// Funktion, und Papierkorb und endgueltiges Loeschen sind zwei davon.
+    /// Das Modell fuehrt jede Funktion der Belegung genau einmal: eine Zeile
+    /// je Funktion, und Papierkorb und endgueltiges Loeschen sind zwei davon.
+    /// Dazu kommen allein die Bereichsueberschriften.
     #[test]
     fn eine_zeile_je_funktion() {
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
-        assert_eq!(modell.zeilen(), Belegung::auslieferung().funktionen().len());
+        let ueberschriften = (0..modell.zeilen())
+            .filter(|&stelle| modell.ueberschrift(stelle).is_some())
+            .count();
+        assert_eq!(
+            modell.zeilen(),
+            Belegung::auslieferung().funktionen().len() + ueberschriften,
+            "neben Funktionen und Ueberschriften gibt es keine Zeile"
+        );
 
         let namen: Vec<String> = (0..modell.zeilen())
+            .filter(|&stelle| modell.ueberschrift(stelle).is_none())
             .map(|stelle| {
                 modell
                     .funktionstext(stelle)
-                    .expect("jede Zeile hat einen Text")
+                    .expect("jede Funktionszeile hat einen Text")
             })
             .collect();
+        assert_eq!(
+            namen.len(),
+            Belegung::auslieferung().funktionen().len(),
+            "eine Funktion fehlt in den Zeilen"
+        );
         let mut sortiert = namen.clone();
         sortiert.sort();
         sortiert.dedup();
         assert_eq!(namen.len(), sortiert.len(), "eine Funktion steht zweimal");
+
+        // Auch die blossen Namen sind eindeutig; daran haengt neben der
+        // Verstaendlichkeit der Meldungen der Helfer `zeile_von`.
+        let mut blosse: Vec<&str> = (0..modell.zeilen())
+            .filter_map(|stelle| modell.name(stelle))
+            .collect();
+        blosse.sort_unstable();
+        blosse.dedup();
+        assert_eq!(
+            blosse.len(),
+            namen.len(),
+            "zwei Funktionen teilen den Namen"
+        );
 
         let belegung = Belegung::auslieferung();
         assert!(belegung.funktion("in_papierkorb").is_some());
         assert!(belegung.funktion("endgueltig_loeschen").is_some());
     }
 
+    /// Jede Kennung der Auslieferungsbelegung hat einen Funktionsbereich.
+    ///
+    /// Die Haelfte der Zuordnung, die der Uebersetzer nicht erzwingen kann:
+    /// eine neue Funktion ohne Kommando (reserviert oder zugestellt) faellt
+    /// hier auf, bevor [`gliederung`] am lebenden Blatt abbricht.
+    #[test]
+    fn jede_kennung_hat_einen_funktionsbereich() {
+        for funktion in Belegung::auslieferung().funktionen() {
+            assert!(
+                bereich(funktion.kennung()).is_some(),
+                "die Funktion {} hat keinen Funktionsbereich",
+                funktion.kennung()
+            );
+        }
+    }
+
+    /// Die Zeilen sind nach Funktionsbereichen gegliedert: die erste Zeile
+    /// ist eine Ueberschrift, die Ueberschriften folgen der Reihenfolge von
+    /// [`Funktionsbereich::ALLE`], und jede kommt hoechstens einmal vor.
+    #[test]
+    fn die_zeilen_sind_nach_bereichen_gegliedert() {
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        assert!(
+            modell.ueberschrift(0).is_some(),
+            "vor der ersten Funktion steht keine Ueberschrift"
+        );
+        assert_eq!(modell.erste_funktionszeile(), Some(1));
+
+        let gesehen: Vec<&'static str> = (0..modell.zeilen())
+            .filter_map(|stelle| modell.ueberschrift(stelle))
+            .collect();
+        let erwartet: Vec<&'static str> = Funktionsbereich::ALLE
+            .iter()
+            .map(|bereich| bereich.name())
+            .filter(|name| gesehen.contains(name))
+            .collect();
+        assert_eq!(
+            gesehen, erwartet,
+            "die Ueberschriften folgen nicht der Bereichsreihenfolge oder eine steht doppelt"
+        );
+        // In der Auslieferungsbelegung ist jeder Bereich besetzt.
+        assert_eq!(gesehen.len(), Funktionsbereich::ALLE.len());
+    }
+
+    /// Eine Ueberschriftszeile nimmt keine Zuweisung an.
+    #[test]
+    fn eine_ueberschrift_nimmt_keine_zuweisung_an() {
+        let mut modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let druck = Tastendruck::neu(code_von_pflicht("f9"), ModMaske::LEER);
+        assert_eq!(
+            modell.zuweisen(0, druck),
+            Zuweisung::Abgelehnt("es ist keine Funktion ausgewählt".to_owned())
+        );
+        assert!(!modell.geaendert());
+    }
+
     /// Kein Zeilentext der Ansicht schreibt "Fn+" vor eine Kombination, und
-    /// die Funktionstasten erscheinen als F1 bis F12 (C3).
+    /// die Funktionstasten erscheinen als F1 bis F12 (C3). Das gilt auch fuer
+    /// die Bereichsueberschriften.
     #[test]
     fn keine_zeile_traegt_fn_und_die_funktionstasten_heissen_f1_bis_f12() {
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
         let mut gross_f_gesehen = false;
         for stelle in 0..modell.zeilen() {
-            let tasten = modell.tastentext(stelle).expect("jede Zeile hat Tasten");
+            if let Some(ueberschrift) = modell.ueberschrift(stelle) {
+                assert!(!ueberschrift.contains("Fn+"), "{ueberschrift} traegt Fn+");
+                assert!(!ueberschrift.contains("fn+"), "{ueberschrift} traegt fn+");
+                continue;
+            }
+            let tasten = modell
+                .tastentext(stelle)
+                .expect("jede Funktionszeile hat Tasten");
             let funktion = modell.funktionstext(stelle).expect("und einen Text");
             for text in [&tasten, &funktion] {
                 assert!(!text.contains("Fn+"), "{text} traegt Fn+");
@@ -265,16 +618,13 @@ mod tests {
         assert!(gross_f_gesehen, "keine Zeile zeigt eine Funktionstaste");
     }
 
-    /// Der F4-Eintrag erscheint als fuer den Editor reserviert (C3).
+    /// Der F4-Eintrag erscheint als fuer den Editor reserviert (C3), und er
+    /// steht sichtbar im Bereich "Editor": die naechste Ueberschrift ueber
+    /// ihm traegt diesen Namen.
     #[test]
-    fn der_f4_eintrag_ist_als_reserviert_gekennzeichnet() {
+    fn der_f4_eintrag_ist_als_reserviert_gekennzeichnet_und_steht_im_bereich_editor() {
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
-        let belegung = Belegung::auslieferung();
-        let stelle = belegung
-            .funktionen()
-            .iter()
-            .position(|funktion| funktion.kennung() == "bearbeiten")
-            .expect("die Auslieferungsbelegung kennt die Funktion bearbeiten");
+        let stelle = zeile_von("bearbeiten");
         let text = modell
             .funktionstext(stelle)
             .expect("die Zeile hat einen Text");
@@ -283,6 +633,12 @@ mod tests {
             "{text} nennt den Vorbehalt nicht"
         );
         assert_eq!(modell.tastentext(stelle).as_deref(), Some(""));
+
+        let ueberschrift = (0..stelle)
+            .rev()
+            .find_map(|davor| modell.ueberschrift(davor))
+            .expect("ueber dem F4-Eintrag steht eine Ueberschrift");
+        assert_eq!(ueberschrift, "Editor");
     }
 
     /// Die Zuweisung durch Druecken: eine freie Kombination landet in der
@@ -371,12 +727,22 @@ mod tests {
         );
     }
 
-    /// Die Zeile der genannten Funktion in der Auslieferungsbelegung.
+    /// Die Zeile der genannten Funktion im gegliederten Modell ueber der
+    /// Auslieferungsbelegung.
+    ///
+    /// Der Weg geht ueber den Namen, weil das Modell nach aussen nur die
+    /// Anzeigeform kennt; die Namen der Auslieferungsbelegung sind eindeutig,
+    /// das haelt `eine_zeile_je_funktion` fest.
     fn zeile_von(kennung: &str) -> usize {
-        Belegung::auslieferung()
-            .funktionen()
-            .iter()
-            .position(|funktion| funktion.kennung() == kennung)
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let belegung = Belegung::auslieferung();
+        let name = belegung
+            .funktion(kennung)
             .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"))
+            .name()
+            .to_owned();
+        (0..modell.zeilen())
+            .find(|&stelle| modell.name(stelle) == Some(name.as_str()))
+            .unwrap_or_else(|| panic!("keine Zeile traegt die Funktion {kennung}"))
     }
 }

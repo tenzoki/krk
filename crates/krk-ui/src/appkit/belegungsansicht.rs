@@ -7,6 +7,16 @@
 //! kommt vollstaendig aus [`crate::belegungsmodell`]; dieses Modul zeigt an
 //! und haelt keine eigene Tabelle der Funktionen.
 //!
+//! Die Zeilen sind nach Funktionsbereichen gegliedert (Nutzerauftrag vom
+//! 260806): vor den Funktionen eines Bereichs steht seine Ueberschrift als
+//! Gruppenzeile der Tabelle. Welche Zeile eine Ueberschrift ist, weiss allein
+//! das Modell ([`Belegungsmodell::ueberschrift`]); dieses Modul meldet es der
+//! Tabelle ueber `tableView:isGroupRow:`, verweigert dafuer die Auswahl ueber
+//! `tableView:shouldSelectRow:` — die Pfeiltasten ueberspringen eine solche
+//! Zeile von selbst — und setzt die Anfangsauswahl auf die erste
+//! Funktionszeile, weil die Zeile 0 seither eine Ueberschrift ist. Die
+//! Bedienung aus S20 bleibt unveraendert.
+//!
 //! ```text
 //! F1 ──> Kommando::BelegungAnsehen ──> zeigen(Blatt mit Tabelle)
 //!                                          │ "Zuweisen": Aufnahme an
@@ -63,8 +73,9 @@ const ZEILENHOEHE: f64 = 20.0;
 /// Die Breite der Beigabe in Punkten.
 const BREITE: f64 = 560.0;
 
-/// Die Hoehe der Tabelle in Punkten. 57 Funktionen brauchen einen Rollbalken;
-/// die Zahl hier bestimmt nur, wie viele Zeilen ohne Rollen sichtbar sind.
+/// Die Hoehe der Tabelle in Punkten. 57 Funktionen und neun
+/// Bereichsueberschriften brauchen einen Rollbalken; die Zahl hier bestimmt
+/// nur, wie viele Zeilen ohne Rollen sichtbar sind.
 const TABELLENHOEHE: f64 = 300.0;
 
 /// Der Tastencode der Escape-Taste, aus der einen Tastentabelle des Kerns.
@@ -124,6 +135,23 @@ define_class!(
             zeile: NSInteger,
         ) -> Option<Retained<NSView>> {
             self.zellenansicht(spalte, zeile)
+        }
+
+        /// Eine Bereichsueberschrift ist eine Gruppenzeile: AppKit zeichnet
+        /// sie ueber die ganze Breite und fragt ihre Ansicht ohne Spalte an.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(tableView:isGroupRow:))]
+        fn ist_gruppenzeile(&self, _tabelle: &NSTableView, zeile: NSInteger) -> bool {
+            self.ist_ueberschrift(zeile)
+        }
+
+        /// Eine Bereichsueberschrift ist nicht auswaehlbar; die Pfeiltasten
+        /// ueberspringen sie damit von selbst, und keine Zuweisung kann ihr
+        /// gelten.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(tableView:shouldSelectRow:))]
+        fn darf_zeile_auswaehlen(&self, _tabelle: &NSTableView, zeile: NSInteger) -> bool {
+            !self.ist_ueberschrift(zeile)
         }
     }
 
@@ -243,6 +271,13 @@ impl Belegungsquelle {
         usize::try_from(self.ivars().tabelle.selectedRow()).ok()
     }
 
+    /// Ob diese Zeile eine Bereichsueberschrift ist.
+    fn ist_ueberschrift(&self, zeile: NSInteger) -> bool {
+        usize::try_from(zeile)
+            .ok()
+            .is_some_and(|stelle| self.ivars().modell.borrow().ueberschrift(stelle).is_some())
+    }
+
     /// Schreibt den Stand des Modells in die Tabelle, ohne die Auswahl zu
     /// verlieren.
     ///
@@ -268,6 +303,10 @@ impl Belegungsquelle {
     }
 
     /// Die beschriftete Ansicht fuer eine Zelle.
+    ///
+    /// Eine Gruppenzeile fragt AppKit ohne Spalte an; sie bekommt die
+    /// Bereichsueberschrift des Modells, fett gesetzt. Jede andere Zelle
+    /// traegt den Text ihrer Spalte wie zuvor.
     fn zellenansicht(
         &self,
         spalte: Option<&NSTableColumn>,
@@ -275,20 +314,29 @@ impl Belegungsquelle {
     ) -> Option<Retained<NSView>> {
         let mtm = self.mtm();
         let stelle = usize::try_from(zeile).ok()?;
-        let kennung = spalte?.identifier();
-        let text = {
+        let (text, ist_ueberschrift) = {
             let modell = self.ivars().modell.borrow();
-            if &*kennung == ns_string!("funktion") {
-                modell.funktionstext(stelle)?
-            } else {
-                modell.tastentext(stelle)?
+            match modell.ueberschrift(stelle) {
+                Some(titel) => (titel.to_owned(), true),
+                None => {
+                    let kennung = spalte?.identifier();
+                    let text = if &*kennung == ns_string!("funktion") {
+                        modell.funktionstext(stelle)?
+                    } else {
+                        modell.tastentext(stelle)?
+                    };
+                    (text, false)
+                }
             }
         };
 
         let beschriftung = NSTextField::labelWithString(&NSString::from_str(&text), mtm);
-        beschriftung.setFont(Some(&NSFont::systemFontOfSize(
-            NSFont::smallSystemFontSize(),
-        )));
+        let schrift = if ist_ueberschrift {
+            NSFont::boldSystemFontOfSize(NSFont::smallSystemFontSize())
+        } else {
+            NSFont::systemFontOfSize(NSFont::smallSystemFontSize())
+        };
+        beschriftung.setFont(Some(&schrift));
         beschriftung.setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(0.0, ZEILENHOEHE)));
         beschriftung.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
 
@@ -321,7 +369,8 @@ pub fn zeigen(
     tabelle.setUsesAutomaticRowHeights(false);
     tabelle.setAllowsMultipleSelection(false);
     // Ohne Auswahl gaebe es keine Funktion, der die Zuweisung gelten koennte;
-    // die erste Zeile ist deshalb von Anfang an ausgewaehlt.
+    // ausgewaehlt ist deshalb von Anfang an eine Zeile — unten ausdruecklich
+    // die erste Funktionszeile, denn die Zeile 0 ist eine Ueberschrift.
     tabelle.setAllowsEmptySelection(false);
 
     for (kennung, titel, breite) in [
@@ -351,6 +400,7 @@ pub fn zeigen(
     meldung.setSelectable(false);
     meldung.setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(BREITE, 40.0)));
 
+    let erste_funktionszeile = modell.erste_funktionszeile();
     let quelle = Belegungsquelle::neu(mtm, tabelle.clone(), meldung.clone(), modell);
     // SAFETY: Die Quelle beantwortet beide Protokolle, die sie oben
     // implementiert. Ueber die Lebensdauer verlangt die Bindung nichts;
@@ -361,6 +411,12 @@ pub fn zeigen(
         tabelle.setDelegate(Some(ProtocolObject::from_ref(&*quelle)));
     }
     tabelle.reloadData();
+    // Die Anfangsauswahl auf der ersten Funktionszeile: die Zeile 0 ist eine
+    // Bereichsueberschrift und nicht auswaehlbar.
+    if let Some(zeile) = erste_funktionszeile {
+        let stelle = NSIndexSet::indexSetWithIndex(zeile);
+        tabelle.selectRowIndexes_byExtendingSelection(&stelle, false);
+    }
 
     // Die beiden Schaltflaechen. `NSControl` haelt sein Ziel schwach; die
     // Quelle lebt beim Anwendungsdelegierten, solange das Blatt steht.
