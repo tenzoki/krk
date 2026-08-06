@@ -33,7 +33,7 @@ pub enum Art {
     ///
     /// Die Rueckfrage davor stellt die Oberflaeche, genau einmal je Vorgang;
     /// der Kern bekommt den Auftrag erst, wenn sie beantwortet ist. Festgelegt
-    /// in `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+    /// in `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
     EndgueltigLoeschen,
     /// Im Stapel umbenennen, jeder Eintrag in seinem eigenen Ordner (C4).
     ///

@@ -19,7 +19,7 @@
 //! 260805 zog es sie ein zweites Mal, ueber `Path::file_stem` und
 //! `Path::extension`; beide lieferten dasselbe, und das ist die Lage, in der
 //! eine Abweichung spaeter unbemerkt entsteht
-//! (`issues/260804-2040_c_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
+//! (`issues/260804-2040_*_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
 //!
 //! **Ein Trennzeichen vor der Nummer setzt KRK nicht.** Wer `Urlaub 007.jpg`
 //! will, ersetzt nach `Urlaub ` mit dem Leerzeichen am Ende; wer `Urlaub007.jpg`

@@ -83,7 +83,7 @@ pub enum Fokus {
 /// dann auf der ersten Ansicht der Schluesselansichtskette, seit S18 also auf
 /// der Leiste, und **kein** Befehl mit [`Wirkungsbereich::Dateifenster`] wirkte
 /// bis zum ersten `shift+cmd+d`
-/// (`issues/260805-1845_c_beim-start-liegt-der-fokus-in-der-leiste-und-nicht-im-dateifenster.md`).
+/// (`issues/260805-1845_*_beim-start-liegt-der-fokus-in-der-leiste-und-nicht-im-dateifenster.md`).
 pub const BEIM_START: Fokus = Fokus::Dateifenster;
 
 /// Ob ein Kommando mit diesem Wirkungsbereich hier wirken darf.

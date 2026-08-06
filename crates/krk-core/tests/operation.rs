@@ -386,7 +386,7 @@ fn der_abbruch_mitten_in_einer_500_mb_datei_kehrt_binnen_100_ms_zurueck() {
 /// Bis zum 260805 blieb dem Hauptfaden nur ein zweites Kennzeichen, das der
 /// wartende Faden nach jeder Meldung abfragte und weiterreichte; bei einer
 /// Operation, die lange nichts meldet, wirkte der Abbruch entsprechend spaet
-/// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// (`issues/260804-1816_*_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
 /// Diese Pruefung haelt fest, dass der Griff den Umweg nicht mehr braucht: der
 /// abbrechende Faden hat den `Lauf` nicht und liest keine einzige Meldung.
 #[test]

@@ -2,7 +2,7 @@
 //!
 //! Sie ist der einzige Weg, auf dem KRK dem Nutzer eine laufende Meldung zeigt.
 //! Der Nutzer hat am 260804-0830 Moeglichkeit 1 aus
-//! `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md` gewaehlt: der
+//! `decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` gewaehlt: der
 //! Ordner ohne Leserecht meldet sich hier, und allein der fehlende
 //! Tastenabgriff bricht mit einem Hinweisfenster ab, weil er die Anwendung als
 //! ganze betrifft.
@@ -17,7 +17,7 @@
 //! Seit dem 260804-1832 traegt sie eine zweite Art von Meldung: den Stand einer
 //! laufenden Dateioperation aus C4. Der Nutzer hat den Fortschritt aus dem
 //! Blatt hierher verlegt
-//! (`decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`),
+//! (`decisions/260804-1832_*_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`),
 //! weil ein Blatt das Fenster sperrt, das C4 bedienbar zusagt, und auf dem
 //! Referenzgeraet 354 bis 403 ms zum Aufgehen braucht, waehrend L8 200 ms
 //! zusagt.
@@ -102,7 +102,7 @@ pub enum Art {
 /// hatte sie mit drei Raengen gebaut und die Befehlsantwort in die
 /// Fenstermeldung gelegt; dort verschwand die Meldung "es laeuft bereits eine
 /// Operation" hinter dem Fortschritt desselben Dateifensters
-/// (`issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
+/// (`issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
 ///
 /// **Verdraengt wird nichts geloescht.** Jede der vier oberen Quellen haelt
 /// ihren Text in ihrem eigenen Feld, und jedes Feld hat genau eine

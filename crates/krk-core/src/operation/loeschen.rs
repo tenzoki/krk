@@ -1,7 +1,7 @@
 //! Loeschen: in den Papierkorb des Systems und endgueltig.
 //!
 //! Zwei Wege, wie es der Nutzer am 260802-1105 entschieden hat
-//! (`shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`):
+//! (`shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`):
 //! Delete raeumt in den Papierkorb, F8 loescht endgueltig. Die Rueckfrage vor
 //! dem endgueltigen Loeschen stellt die Oberflaeche, genau einmal je Vorgang;
 //! der Kern bekommt den Auftrag erst danach.

@@ -131,7 +131,7 @@ impl Drop for Zeichenende {
 /// `system_profiler` ist ausdruecklich **nicht** der Weg: am Referenzgeraet
 /// `MacBookPro15,1` fuehrt es zum eingebauten Bildschirm keine Zeile
 /// `Refresh Rate`, festgehalten im geschlossenen Defekt
-/// `260802-1900_c_bildwiederholrate-am-referenzgeraet-nicht-per-system-profiler-erhebbar.md`.
+/// `260802-1900_*_bildwiederholrate-am-referenzgeraet-nicht-per-system-profiler-erhebbar.md`.
 pub fn bildwiederholrate(fenster: &NSWindow) -> Option<isize> {
     fenster
         .screen()

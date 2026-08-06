@@ -14,7 +14,7 @@
 //! unterwegs, und der Hauptfaden sollte jeden Stapel verwerfen, dessen
 //! Generation nicht mehr die aktuelle ist. Dieser Filter konnte nie greifen und
 //! ist am 260803-2025 entfernt worden
-//! (`issues/260803-1536_c_die-generationspruefung-kann-nicht-greifen-und-verdeckt-den-wirksamen-mechanismus.md`):
+//! (`issues/260803-1536_*_die-generationspruefung-kann-nicht-greifen-und-verdeckt-den-wirksamen-mechanismus.md`):
 //! jeder Tab haelt seinen eigenen [`Lesevorgang`] und liest allein aus dessen
 //! Kanal, ein Ordnerwechsel wirft den alten Vorgang samt Kanal weg, und damit
 //! kann ein fremder Stapel gar nicht erst ankommen.
@@ -26,7 +26,7 @@
 //! **Aufrufers**, der die Nummer ohnehin haelt; der Lesevorgang und die Meldung
 //! mussten sie ihm deshalb nie zurueckgeben, und die Leser dafuer sind am
 //! 260805-0841 entfallen
-//! (`issues/260803-2025_c_zwei-generationsleser-im-kern-haben-keinen-aufrufer-mehr.md`).
+//! (`issues/260803-2025_*_zwei-generationsleser-im-kern-haben-keinen-aufrufer-mehr.md`).
 //! Sie liegt der Meldung weiter bei, weil `krk-bench` sie dort liest.
 //!
 //! **Der Kanal hat eine Kapazitaet von einem Stapel.** Ein unbegrenzter Kanal

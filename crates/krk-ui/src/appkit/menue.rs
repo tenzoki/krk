@@ -20,13 +20,13 @@
 //! das Menue die alleinige Quelle: die Konflikterkennung aus C3 sieht jede
 //! Kombination, der Nutzer kann jede umbelegen, und eine Umbelegung wirkt auf
 //! beide Wege. Nutzerentscheid vom 260805-0000,
-//! `decisions/260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
+//! `decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
 //!
 //! Bis zum 260805-0820 stand hier eine Ausnahme: der Eintrag "KRK beenden"
 //! trug Cmd+Q als Zeichenkette im Programmtext, weil die Belegungsdatei die
 //! Funktion `beenden` noch nicht fuehrte. Sie fuehrt sie seither, und die
 //! Ausnahme ist mit ihr weggefallen
-//! (`issues/260805-0753_c_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
+//! (`issues/260805-0753_*_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
 //!
 //! Welchen der beiden Wege ein Tastendruck geht, entscheidet der Fokus. Der
 //! Ereignisabgriff aus [`super::ereignisse`] sieht ihn vor der Menuebehandlung
@@ -49,7 +49,7 @@
 //! Pfadeingabe ausdruecklich zu, dass der Nutzer einen Pfad **einfuegt**.
 //! Gemessen am 260804-1309 am laufenden Buendel: Pfad in der Zwischenablage,
 //! `shift+cmd+g`, `cmd+v` gesendet, Feld unveraendert. Defekt
-//! `issues/260804-1309_o_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
+//! `issues/260804-1309_*_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
 //!
 //! # Zwei Eintraege tragen einen eigenen Selektor
 //!
@@ -58,7 +58,7 @@
 //! dazu, mit englischer Beschriftung und einer Kombination, die niemand aus der
 //! Belegung setzen oder umbelegen kann (gemessen am 260804-1040 im signierten
 //! Buendel,
-//! `issues/260804-1040_c_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
+//! `issues/260804-1040_*_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
 //! Der Eintrag traegt deshalb den eigenen Selektor `fensterSchliessen:` am
 //! Anwendungsdelegierten, so wie "Fenster einblenden" ihn seit Schritt 12 hat;
 //! der Delegierte ruft darauf `performClose:` am Fenster selbst, sodass sich am
@@ -69,7 +69,7 @@
 //! als die von "Close All": nicht schon nach `finishLaunching`, sondern erst an
 //! der wirklich laufenden Anwendung, weshalb `--menue-protokoll` sie nicht sah
 //! und der Befund vom 260805-0753 ueber die Bedienungshilfen kam
-//! (`issues/260805-0753_c_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+//! (`issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
 //! Der Eintrag traegt seither `beenden:`, und der Delegierte ruft `terminate:`
 //! an `NSApplication` selbst. Gegengeprueft wie bei "Close All", am selben Weg
 //! wie der Befund: am 260805 traegt das Menue "KRK" der laufenden Anwendung
@@ -90,7 +90,7 @@
 //! zu einem Fenster; fuer eine Anwendung, deren erste Maxime die
 //! Tastatursteuerung ist, lag damit ein Kuerzel in Reichweite, das sie
 //! unbedienbar machte. Der Nutzer hat am 260804-0830 Moeglichkeit 2 aus
-//! `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`
+//! `decisions/260803-2007_*_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`
 //! gewaehlt. Der Eintrag heisst "Fenster einblenden" und nicht "Neues Fenster",
 //! weil er keines anlegt: KRK haelt in dieser Runde genau ein
 //! Anwendungsfenster, es ueberlebt sein Schliessen, und der Eintrag holt es
@@ -139,7 +139,7 @@ use krk_core::tasten::{Belegung, Kombination, ModMaske};
 /// Befund nachstellen will, braucht ein Buendel mit den Schluesseln. Beide
 /// Messungen, die des `coder` mit YES und die Gegenprobe des `ontocoder` mit
 /// NO, stehen vollstaendig in
-/// `issues/260805-0753_c_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
+/// `issues/260805-0753_*_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
 ///
 /// **Der dritte Zusatz ist ein Untermenue "AutoFill", und er hat einen eigenen
 /// Schluessel mit umgekehrtem Sinn.** Er kam am 260805-1455 mit dem ersten

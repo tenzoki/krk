@@ -17,7 +17,7 @@
 //! Fortschrittsmeldung je Eintrag. 5.000 `rename(2)`-Aufrufe nacheinander
 //! brauchen auf dem Referenzgeraet 525 ms, und so lange stand der Hauptfaden,
 //! solange die Schleife dort lief
-//! (`issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`).
+//! (`issues/260804-2040_*_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`).
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -162,7 +162,7 @@ pub fn freier_name(ziel: &Path) -> String {
 /// **Die eine Stelle, die diese Frage beantwortet.** Bis zum 260805 zog
 /// `crate::stapelumbenennen::regel` fuer die fortlaufende Nummerierung dieselbe
 /// Trennung ein zweites Mal, ueber `Path::file_stem` und `Path::extension`
-/// (`issues/260804-2040_c_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
+/// (`issues/260804-2040_*_die-trennung-von-stamm-und-endung-steht-an-zwei-stellen.md`).
 /// Beide lieferten dasselbe, und genau das ist die Lage, in der eine Abweichung
 /// spaeter unbemerkt entsteht.
 ///

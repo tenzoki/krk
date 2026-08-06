@@ -23,17 +23,23 @@ toml = "1"
 objc2 = "0.6"
 objc2-app-kit = "0.3"
 objc2-foundation = "0.3"
-# Core Foundation, aber nur die drei Stuecke, die die FSEvents-Bindung aus
-# Schritt 14 braucht: `CFArray` fuer die Liste der beobachteten Ordner,
-# `CFString` fuer den einzelnen Pfad und `CFRunLoop` fuer die Laufschleife, in
-# die der Strom gehaengt wird. Die Vorgabemerkmale zoegen ein halbes Hundert
-# weiterer Typen mit herein, von denen KRK keinen nennt; deshalb
+# Core Foundation, aber nur die beiden Stuecke, die die FSEvents-Bindung aus
+# Schritt 14 braucht: `CFArray` fuer die Liste der beobachteten Ordner und
+# `CFString` fuer den einzelnen Pfad. Die Vorgabemerkmale zoegen ein halbes
+# Hundert weiterer Typen mit herein, von denen KRK keinen nennt; deshalb
 # `default-features = false`.
+#
+# `CFRunLoop` stand hier bis zum 260806 als drittes Merkmal, fuer die
+# Laufschleife, in die der Strom gehaengt wurde. Seit dem Wechsel auf
+# `FSEventStreamSetDispatchQueue` nennt kein Modul mehr einen seiner Typen
+# (`issues/260805-0905_*_das-merkmal-cfrunloop-in-cargo-toml-hat-keinen-nutzer-mehr.md`).
+# An der Uebersetzung aendert der Wegfall nichts: `objc2-foundation` schaltet
+# dasselbe Merkmal ohnehin ein, wie `cargo tree -e features` zeigt. Die Zeile
+# faellt weg, weil sie eine Verwendung behauptete, die es nicht mehr gibt.
 objc2-core-foundation = { version = "0.3", default-features = false, features = [
     "std",
     "CFArray",
     "CFString",
-    "CFRunLoop",
 ] }
 # Core Animation, aber nur das eine Stueck davon. `CADisplayLink` ist die
 # Bildgrenze, an der die Fruehmessung aus Schritt 8 ihre Spannen beendet;

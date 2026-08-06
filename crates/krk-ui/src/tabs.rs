@@ -128,7 +128,7 @@ impl Tabinhalt {
     /// beim Herstellen wieder hinein. Die Zahl steht in `session.toml`, die der
     /// Nutzer lesen und von Hand aendern koennen soll, und eine negative Zahl
     /// fuer "ganz oben" waere dort eine Stolperstelle
-    /// (`issues/260804-1040_c_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
+    /// (`issues/260804-1040_*_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
     pub fn bildlauf(&self) -> f64 {
         self.bildlauf
     }

@@ -27,7 +27,7 @@
 //!
 //! Der Nutzer hat sie am 260802-1105 nicht genannt, und der Spec fuehrt sie
 //! ausdruecklich als nicht zugesagt
-//! (`decisions/260802-1036_a_umbenennen-im-stapel-umfang.md`). Eine Umschaltung
+//! (`decisions/260802-1036_*_umbenennen-im-stapel-umfang.md`). Eine Umschaltung
 //! der Schreibweise laesst sich ueber Suchen und Ersetzen nicht ausdruecken,
 //! waere also eine eigene Regelart und damit eine Ausweitung des Umfangs.
 //!
@@ -45,7 +45,7 @@
 //! Blick auf den Modulpfad, um zu wissen, ob gerade gerechnet oder umbenannt
 //! wird, und eine `use`-Zeile, die beide hereinholte, musste eines von beiden
 //! umbenennen
-//! (`issues/260804-2040_c_zwei-module-des-kerns-heissen-umbenennen.md`).
+//! (`issues/260804-2040_*_zwei-module-des-kerns-heissen-umbenennen.md`).
 //! Dieselbe Sorte Doppelname hat der Plan an zwei anderen Stellen vermieden:
 //! bei der Sitzung in S12 und bei den Lesezeichen in S18
 //! (`ablage/lesezeichen.rs`). Umbenannt wurde das Modul und nicht sein Ort:

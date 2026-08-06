@@ -60,7 +60,7 @@
 //! Fall unveraendert weiter. Der Vorbehalt sitzt hier und nicht je Blatt: die
 //! fuenf Blaetter aus S16 und S17 erben ihn dadurch, ohne ihn zu wiederholen.
 //! Gemeldet war das als
-//! `issues/260804-1122_o_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
+//! `issues/260804-1122_*_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
 //!
 //! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
 //! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es

@@ -1314,7 +1314,7 @@ impl DateifensterQuelle {
     /// Ursprung der Bildlaufansicht liegt deshalb um die Kopfhoehe ueber dem
     /// oberen Rand der Liste. Am 260804 stand in jedem ungescrollten Tab der
     /// `session.toml` deshalb `bildlauf = -28.0`
-    /// (`issues/260804-1040_c_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
+    /// (`issues/260804-1040_*_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
     ///
     /// Gefragt ist die Kopfansicht der Tabelle und **nicht** der Inhaltsrand
     /// der Bildlaufansicht. Beides waere denkbar, gemessen ist nur eines: am
@@ -1634,7 +1634,7 @@ pub struct DelegiertenIvars {
     ///
     /// Das zweite Kennzeichen der Markierung aus C2 neben der Farbe. Eine Form
     /// und keine Farbe, damit es bei jeder Farbfehlsichtigkeit wirkt
-    /// (`decisions/260805-0000_a_zweites-kennzeichen-der-markierung-und-ihr-platz-in-der-statuszeile.md`).
+    /// (`decisions/260805-0000_*_zweites-kennzeichen-der-markierung-und-ihr-platz-in-der-statuszeile.md`).
     fettschrift: Retained<NSFont>,
 }
 

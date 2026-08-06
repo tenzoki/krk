@@ -25,7 +25,7 @@
 //!
 //! Der Nutzer hat am 260804 entschieden, dass die Auswertung **Text und
 //! Dateiverweis** liest
-//! (`decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`).
+//! (`decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`).
 //! [`lesen`] fragt deshalb zwei Sorten ab, in dieser Reihenfolge:
 //!
 //! 1. `NSPasteboardTypeFileURL`, den Dateiverweis. Wer im Finder eine Datei mit

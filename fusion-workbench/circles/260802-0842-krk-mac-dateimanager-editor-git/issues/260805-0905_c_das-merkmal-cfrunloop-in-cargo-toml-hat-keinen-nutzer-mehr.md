@@ -29,3 +29,10 @@ Der Aufräumdurchgang vom 260805 war ausdrücklich auf `crates/` begrenzt. `Carg
 ---
 
 Herkunft: gefunden beim Beheben von `issues/260804-1451_c_fseventstreamschedulewithrunloop-ist-seit-macos-13-als-veraltet-gekennzeichnet.md` am 260805-0901. Jener Datensatz sagt den Wegfall des Merkmals voraus.
+
+---
+Resolved: Die Zeile "CFRunLoop" ist aus der Merkmalsliste von objc2-core-foundation entfernt, der Kommentar begründet jetzt nur noch CFArray und CFString.
+
+Korrektur am Datensatz: die Wirkung war hier zu hoch angesetzt. Das Merkmal zog nicht "ein paar Typen mehr in die Übersetzung", sondern gar nichts, weil objc2-foundation es ohnehin einschaltet und Cargos Merkmalsvereinigung es damit eingeschaltet lässt. Cargo.lock ist nach der Änderung unverändert; der Gewinn liegt allein beim Kommentar, der eine Verwendung behauptete, die es nicht gibt.
+
+Beleg auf drei Beinen: kein Modul nennt einen der Typen (einzige Einfuhr crates/krk-ui/src/appkit/fsevents.rs:89 mit CFArray, CFIndex, CFRetained, CFString; die NSRunLoop-Treffer kommen aus objc2-foundation); keine merkmalsabhängige Übersetzung (nur cfg!(debug_assertions) in krk-bench/src/bericht.rs:73); cargo tree -e features -i objc2-core-foundation nannte vorher zwei Einschalter, danach nur noch objc2-foundation.

@@ -96,7 +96,7 @@ pub struct Tab {
     /// trug `-28.0`. Diese Datei soll der Nutzer lesen und von Hand aendern
     /// koennen; eine negative Zahl fuer den obersten Stand war dort eine
     /// Stolperstelle
-    /// (`issues/260804-1040_c_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
+    /// (`issues/260804-1040_*_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
     /// Umgerechnet wird in `krk_ui::appkit::tabelle`, an der einen Stelle, die
     /// die Ansicht ueberhaupt liest und setzt.
     ///

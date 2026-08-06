@@ -118,7 +118,7 @@ fn ausgeliefert(kennung: &str) -> Kombination {
 /// jede hingeschriebene Kombination kann eines Tages belegt werden, und dann
 /// faellt eine Pruefung um, die von der Belegung gar nicht handelt. `cmd+q` hat
 /// genau das am 260805 getan
-/// (`issues/260805-0820_c_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
+/// (`issues/260805-0820_*_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
 fn frei() -> Kombination {
     let belegung = Belegung::auslieferung();
     let vergeben: Vec<Tastendruck> = belegung
@@ -203,7 +203,7 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // Zuwachs mit umbenannt werden.
     //
     // Umschalt+Entf loescht nach `shared/decisions/
-    // 260802-0842_a_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
+    // 260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
     // und die Eingabetaste hat der Nutzer am 260804 freigegeben, als der
     // Einstieg in den Ordner von ihr weggewandert ist (C2). Wohin er gewandert
     // ist, steht hier bewusst nicht: er ist seither zweimal weitergezogen, und
@@ -221,7 +221,7 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // sondern "vom Menue zugestellt". Die Reservierung aus C3 ist damit
     // eingeloest und nicht gebrochen (Nutzerentscheid vom 260805-0000,
     // `decisions/
-    // 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+    // 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
     //
     // ctrl+b und ctrl+s sind mit derselben Aenderung unbelegt geworden und
     // gehoeren trotzdem nicht hierher. Sie waren eine Behelfsbelegung fuer den
@@ -251,7 +251,7 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
 // und denselben Zusteller haben. Der Zusteller steht in `gehalten_von`: ohne das
 // Feld stellt der Ereignisabgriff aus C2 zu, mit dem Wert "menue" das
 // Hauptmenue. Nutzerentscheid vom 260805, `decisions/
-// 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+// 260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
 
 #[test]
 fn cmd_a_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
@@ -712,7 +712,7 @@ fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_die_sprungmarke() {
 /// **Ohne festes Beispiel, und das ist der Punkt.** Die Vorgaengerin nannte
 /// `cmd+q`. Der Nachtrag des Eintrags `beenden` am 260805-0820 belegte die
 /// Kombination und machte die Pruefung rot, obwohl an der Zusage nichts kaputt
-/// war (`issues/260805-0820_c_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
+/// war (`issues/260805-0820_*_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`).
 /// Ein anderes Beispiel verschoebe den Fehlschlag nur: anders als bei einem
 /// Tastennamen, den die Tabelle nie aufnehmen darf, kann jede Kombination
 /// eines Tages belegt werden. Die Pruefung sucht deshalb selbst, welche
@@ -778,8 +778,8 @@ fn masken_mit_zusatztaste() -> Vec<ModMaske> {
 /// des Oeffnens hat in zwei Tagen dreimal gewechselt: `return`, dann
 /// `cmd+right`, dann `right`. Jede Umbelegung machte die Pruefung rot, ohne
 /// dass an ihrer Zusage etwas kaputt war
-/// (`issues/260804-1214_c_die-belegungspruefung-bindet-return-noch-an-das-oeffnen.md`,
-/// `issues/260805-1356_c_die-belegungspruefung-bindet-cmd-right-noch-an-das-oeffnen.md`).
+/// (`issues/260804-1214_*_die-belegungspruefung-bindet-return-noch-an-das-oeffnen.md`,
+/// `issues/260805-1356_*_die-belegungspruefung-bindet-cmd-right-noch-an-das-oeffnen.md`).
 ///
 /// Die Zusage braucht die Kombination gar nicht zu kennen. Sie lautet: **es
 /// gibt eine, und der Nachschlag darauf trifft dieses Kommando.** Welche es

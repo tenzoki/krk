@@ -24,7 +24,7 @@
 //!
 //! Angezeigt werden die Funktionen nicht in der Reihenfolge der Datei,
 //! sondern gruppiert nach [`Funktionsbereich`] (Nutzerauftrag vom 260806,
-//! `issues/260806-1054_p_belegungsansicht-gruppiert-nach-funktionsbereich.md`):
+//! `issues/260806-1054_*_belegungsansicht-gruppiert-nach-funktionsbereich.md`):
 //! vor den Funktionen eines Bereichs steht eine Ueberschriftszeile mit seinem
 //! Namen. Die Zuordnung Funktion → Bereich steht an genau einer Stelle,
 //! [`bereich`], und dort als vollstaendige Fallunterscheidung ueber

@@ -19,7 +19,7 @@
 //! F3 gibt; die Neuauswertung derselben Rohdaten sagt zu dieser Frage
 //! ausdruecklich "NICHT MESSBAR AUF DIESEM GERAET"
 //! (`spikes/fn-tasten/messung-A-neuauswertung.txt:64-65`), und
-//! `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`
+//! `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md`
 //! haelt denselben Stand fest. Dass beide dasselbe Ereignis liefern, ist
 //! deshalb eine **abgeleitete Annahme** und kein Messergebnis. Sie stuetzt
 //! sich auf die Beschreibung im AppKit-Kopf, die das Bit an die gedrueckte

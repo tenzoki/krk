@@ -40,7 +40,7 @@ fn ein_dateipfad_fuehrt_ebenfalls_zum_sprung() {
 ///
 /// Das ist die Sorte, die der Finder bei Cmd+C auf einer Datei ablegt
 /// (Nutzerentscheid 260804,
-/// `decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`). Er
+/// `decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`). Er
 /// zaehlt als Pfad und nicht als Adresse: er benennt dasselbe und ist nur
 /// anders geschrieben.
 #[test]

@@ -23,7 +23,7 @@
 //!
 //! Der Weg dahin ist bindend: das Loeschen faengt erst an, wenn diese Frage mit
 //! Ja beantwortet ist. Der Kern bekommt seinen Auftrag danach, siehe
-//! `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+//! `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
 
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;

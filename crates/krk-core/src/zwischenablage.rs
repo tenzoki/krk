@@ -30,7 +30,7 @@
 //! # Was ueberhaupt gelesen wird
 //!
 //! Text **und** Dateiverweis, nach dem Nutzerentscheid vom 260804
-//! (`decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`). Die
+//! (`decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`). Die
 //! Rangfolge, Dateiverweis vor Text, sitzt in der Oberflaeche, weil allein sie
 //! das Pasteboard kennt. Hier laufen beide Sorten in dieselbe Auswertung: ein
 //! Dateiverweis kommt als `file:`-Zeichenkette an und braucht keinen eigenen

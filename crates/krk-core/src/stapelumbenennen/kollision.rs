@@ -49,7 +49,7 @@ impl Kollision {
     /// Der Text steht **neben** der farbigen Auszeichnung und nicht statt
     /// ihrer: eine Markierung, die allein an der Farbe zu erkennen waere, ist
     /// als Defekt festgehalten
-    /// (`issues/260804-1309_o_die-markierung-ist-allein-an-der-farbe-erkennbar.md`).
+    /// (`issues/260804-1309_*_die-markierung-ist-allein-an-der-farbe-erkennbar.md`).
     ///
     /// **Kurz gehalten, und das ist eine Anforderung und kein Geschmack.** Der
     /// Grund steht in einer Spalte der Vorschau; ein Satz, der dort abgeschnitten

@@ -44,7 +44,7 @@
 //! zurueck**. Bis Schritt 11 schrieb sie auf die Standardfehlerausgabe; im
 //! Buendel erreichte das niemanden, weil eine ueber den Finder gestartete
 //! Anwendung keine hat. Der Nutzer hat am 260804-0830 Moeglichkeit 1 aus
-//! `decisions/260803-2025_a_wie-zeigt-krk-dem-nutzer-fehler.md` gewaehlt: die
+//! `decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` gewaehlt: die
 //! Meldung gehoert in die Statuszeile am Fuss des Dateifensters, und die baut
 //! `krk-ui` in Schritt 12. Der Kern schreibt seither auf keinen Kanal mehr, und
 //! das Abnahmekriterium von Schritt 12 prueft es mit einem `grep` ueber

@@ -179,7 +179,7 @@ pub enum Meldung {
 /// Ohne diesen Griff blieb dem Hauptfaden nur ein zweites Kennzeichen, das der
 /// wartende Faden nach jeder Meldung abfragte und weiterreichte. Bei einer
 /// Operation, die ueber Sekunden nichts meldet, wirkte der Abbruch entsprechend
-/// spaet (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// spaet (`issues/260804-1816_*_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
 /// Das Kennzeichen selbst ist ein `AtomicBool` und damit sehr wohl teilbar; nur
 /// herausgegeben wurde es nie.
 ///

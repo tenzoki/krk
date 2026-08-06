@@ -46,7 +46,7 @@
 //! **KRK haelt in dieser Runde genau ein Anwendungsfenster.** Die beiden
 //! Dateifenster aus C1 sind Bereiche darin und keine zwei Fenster des Systems.
 //! Der Nutzer hat das am 260804-0830 mit Moeglichkeit 2 aus
-//! `decisions/260803-2007_a_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`
+//! `decisions/260803-2007_*_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`
 //! festgelegt: das Fenster ueberlebt sein Schliessen, und zwei Wege holen es
 //! zurueck, der Menueeintrag "Fenster einblenden" auf Cmd+N und der Klick auf
 //! das Dock-Symbol ueber `applicationShouldHandleReopen:`. Ein laufendes KRK
@@ -433,7 +433,7 @@ define_class!(
         /// Keep Windows" auf Opt+Cmd+Q dazu, mit englischer Beschriftung und
         /// einer Kombination, die weder in der Belegung steht noch umbelegbar
         /// ist (gemessen am 260805-0753 am laufenden Buendel,
-        /// `issues/260805-0753_c_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+        /// `issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
         /// Am Verhalten aendert der Umweg nichts: der Delegierte ruft
         /// `terminate:` an `NSApplication` selbst.
         // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
@@ -1726,7 +1726,7 @@ impl Anwendungsdelegierter {
     ///
     /// Sofort und ohne Rueckfrage: der Rueckweg ist der Papierkorb des Systems,
     /// und einen eigenen Rueckgaengig-Speicher fuehrt KRK nicht
-    /// (`shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`).
+    /// (`shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`).
     ///
     /// **Der Fokusvorbehalt steht seit Schritt 18 nicht mehr hier.** Er stand
     /// als eigene Abfrage an dieser Stelle und an der von
@@ -1941,7 +1941,7 @@ impl Anwendungsdelegierter {
     /// und ohne Abbruch. Ueber wenige Dutzend Eintraege war das richtig; ueber
     /// 5.000 brauchte es auf dem Referenzgeraet 525 ms, und so lange stand der
     /// Hauptfaden. Das verfehlte zwei Zusagen aus C4 und L9 aus C8,
-    /// `issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`.
+    /// `issues/260804-2040_*_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md`.
     ///
     /// **Die Schwelle haengt an der Zeit und nicht an einer Eintragszahl.** Ein
     /// Stapel ueber 50 Namen ist nach rund 5 ms durch und laesst keine Zeile
@@ -2064,7 +2064,7 @@ impl Anwendungsdelegierter {
     /// damit auch dann in der Zeile, wenn genau dieses Fenster den laufenden
     /// Vorgang begonnen hat. Bis zum 260804-1915 war sie eine Fenstermeldung und
     /// verschwand im haeufigen Fall hinter dem eigenen Fortschritt,
-    /// `issues/260804-1915_o_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
+    /// `issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
     ///
     /// **Beide Wege in die Operationsmaschine fragen hier.** Die vier Befehle
     /// aus der Auswahl gehen ueber [`Self::auftrag_stellen`], das
@@ -2615,7 +2615,7 @@ impl Dateifenstersicht for Anwendungsdelegierter {
 /// und zieht dabei keinen Strom; geweckt wird er von der Meldung selbst, und er
 /// weckt seinerseits den Hauptfaden. Damit haelt die Wahl des Nutzers vom
 /// 260804, die Buendelung ohne Zeitgeber zu bauen
-/// (`issues/260803-2007_o_s16-nennt-keinen-mechanismus-fuer-die-buendelung-der-fortschrittsmeldungen.md`,
+/// (`issues/260803-2007_*_s16-nennt-keinen-mechanismus-fuer-die-buendelung-der-fortschrittsmeldungen.md`,
 /// Weg 3).
 ///
 /// **Warum es ihn ueberhaupt gibt.** Der Empfaenger des Meldekanals darf nicht
@@ -2628,7 +2628,7 @@ impl Dateifenstersicht for Anwendungsdelegierter {
 /// tat er das: der Hauptfaden setzte ein zweites Kennzeichen, und dieser Faden
 /// reichte es nach jeder Meldung an den [`Lauf`] weiter. Bei einer Operation,
 /// die ueber Sekunden nichts meldet, wirkte der Abbruch entsprechend spaet
-/// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+/// (`issues/260804-1816_*_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
 /// Der Hauptfaden haelt seit `Lauf::abbruchgriff` das Kennzeichen des Laufs
 /// selbst und setzt es unmittelbar; hier ist dafuer nichts mehr zu tun.
 fn vermitteln(lauf: Lauf, zustand: &Arc<Vorgangszustand>) {

@@ -372,7 +372,7 @@ const FRIST_SPANNEN: Duration = Duration::from_secs(300);
 /// Der Nutzer hat das am 260803-1810 entschieden. Herleitung im Spec unter C8,
 /// Absaetze ab `Warum L1 und L9 den Anteil zaehlen und nicht die Spanne`, und
 /// im Datensatz
-/// `decisions/260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md`.
+/// `decisions/260803-1755_*_l1-verfehlt-die-16-ms-zusage-am-bildrand.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Abnahmemass {
     /// Das 95. Perzentil der Runde liegt hoechstens bei dieser Grenze.
@@ -589,7 +589,7 @@ pub struct Durchstich {
     /// Aufgerufen wird es unmittelbar und nicht ueber `open`: ein ueber `open`
     /// gestartetes Buendel hat keine Standardausgabe, und ohne die kaeme keine
     /// Zahl zurueck. Defekt
-    /// `issues/260803-1309_o_tastenprotokoll-ueber-open-ist-nicht-lesbar.md`.
+    /// `issues/260803-1309_*_tastenprotokoll-ueber-open-ist-nicht-lesbar.md`.
     pub programm: PathBuf,
     /// Pruefordner A mit 10.000 Eintraegen.
     pub ordner_a: PathBuf,
@@ -1764,7 +1764,7 @@ achtzehn Runden verfehlten die Zahl bei unveraendertem Programm. Wahrnehmbar ist
 eine Spanne dieser Groesse ohnehin nicht; eine Zahl, die keine unterscheidbare
 Eigenschaft beschreibt, taugt nicht als Abnahmekriterium. Die Vorschrift steht in
 C8 unter \"Warum L1 und L9 den Anteil zaehlen und nicht die Spanne\", der
-Datensatz ist 260803-1755_i_l1-verfehlt-die-16-ms-zusage-am-bildrand.md.
+Datensatz ist 260803-1755_*_l1-verfehlt-die-16-ms-zusage-am-bildrand.md.
 
 Die Bildlaenge ist der Kehrwert der Bildwiederholrate aus NSScreen, hier also
 kein angenommener Wert. Fehlt die Rate, bricht die Auswertung ab und gibt keine

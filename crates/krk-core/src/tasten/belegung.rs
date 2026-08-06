@@ -69,7 +69,7 @@
 //! Tastendruck weiter, und das Markieren aller Eintraege waere still tot.
 //!
 //! Nutzerentscheid vom 260805,
-//! `decisions/260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+//! `decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
 //!
 //! # Der Wirkungsbereich: welcher Bereich den Fokus haben muss
 //!

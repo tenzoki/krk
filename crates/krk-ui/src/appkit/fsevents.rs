@@ -23,7 +23,7 @@
 //! macht die Abhaengigkeit ausdruecklich, es steht bei der Bindung, die sie
 //! braucht, und es bleibt richtig, wenn die Kette sich aendert. Nachgewiesen
 //! und entschieden in
-//! `issues/260803-2007_c_s14-bindet-fsevents-ohne-das-framework-coreservices-zu-verlinken.md`.
+//! `issues/260803-2007_*_s14-bindet-fsevents-ohne-das-framework-coreservices-zu-verlinken.md`.
 //!
 //! # Was beobachtet wird
 //!
@@ -66,7 +66,7 @@
 //! Bindung nicht, der Uebersetzer warnte also nie; ein Aufruf, den Apple seit
 //! drei Hauptversionen abgeloest fuehrt, ist trotzdem eine Zusage auf Zeit.
 //! Gewechselt in
-//! `issues/260804-1451_c_fseventstreamschedulewithrunloop-ist-seit-macos-13-als-veraltet-gekennzeichnet.md`.
+//! `issues/260804-1451_*_fseventstreamschedulewithrunloop-ist-seit-macos-13-als-veraltet-gekennzeichnet.md`.
 //!
 //! **Die Zuteilung kostet keine neue Bindung.** `dispatch_get_main_queue()` ist
 //! im Kopf des Systems eine `static inline`-Funktion und keine Ausfuhr, der Weg

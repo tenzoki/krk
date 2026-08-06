@@ -170,7 +170,7 @@ pub fn gehoert_zu_vorgang(pfad: &Path, ordner_des_vorgangs: &[PathBuf]) -> bool 
 /// **Jeden Tab, nicht nur den sichtbaren.** Bis zum 260805 blieb ein verdeckter
 /// Tab auf demselben Datentraeger stehen; wer spaeter auf ihn wechselte, sah
 /// eine leere Liste und erfuhr den Grund erst mit dem naechsten Lesevorgang
-/// (`issues/260804-1451_c_ein-verdeckter-tab-auf-einem-ausgeworfenen-datentraeger-behaelt-seinen-toten-pfad.md`).
+/// (`issues/260804-1451_*_ein-verdeckter-tab-auf-einem-ausgeworfenen-datentraeger-behaelt-seinen-toten-pfad.md`).
 /// Ein Pfad, den es nicht mehr gibt, ist in einem verdeckten Tab so tot wie in
 /// einem sichtbaren.
 ///

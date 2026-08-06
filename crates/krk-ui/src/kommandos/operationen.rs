@@ -51,7 +51,7 @@
 //! braucht auf dem Referenzgeraet 354 bis 403 ms zum Aufgehen, waehrend L8 den
 //! Fortschritt 200 ms nach Start sichtbar zusagt. Der Nutzer hat ihn in die
 //! Statuszeile des Dateifensters verlegt, das die Operation begonnen hat
-//! (`decisions/260804-1832_a_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`).
+//! (`decisions/260804-1832_*_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`).
 //! Zwei Folgen stehen in dieser Datei: [`vorgangszeile`] nennt den Abbruch im
 //! eigenen Text, weil er seine Schaltflaeche verloren hat, und
 //! [`waehrend_blatt_erlaubt`] gilt nur noch fuer ein stehendes Blatt.
@@ -68,7 +68,7 @@
 //! # Die Buendelung ohne Takt
 //!
 //! Der Nutzer hat am 260804 Weg 3 aus
-//! `issues/260803-2007_o_s16-nennt-keinen-mechanismus-fuer-die-buendelung-der-fortschrittsmeldungen.md`
+//! `issues/260803-2007_*_s16-nennt-keinen-mechanismus-fuer-die-buendelung-der-fortschrittsmeldungen.md`
 //! gewaehlt: **gar kein Takt.** Der Arbeitsfaden meldet jeden Fortschritt, und
 //! der Hauptfaden verwirft einen Weckruf, solange der vorige noch nicht
 //! gezeichnet ist. Kein Zeitgeber, kein dritter Lebenszyklus neben Messlauf und
@@ -296,7 +296,7 @@ pub struct Vorgangszustand {
     /// und der Vermittlerfaden reichte ihn an den Lauf weiter, sobald die
     /// naechste Meldung ihn aufweckte. Bei einer Operation, die ueber Sekunden
     /// nichts meldet, wirkte der Abbruch entsprechend spaet
-    /// (`issues/260804-1816_c_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
+    /// (`issues/260804-1816_*_der-abbruchwunsch-erreicht-den-lauf-erst-mit-der-naechsten-meldung.md`).
     /// Seit `Lauf::abbruchgriff` das Kennzeichen herausgibt, setzt der
     /// Hauptfaden es unmittelbar, und der Arbeitsfaden liest es beim naechsten
     /// Eintrag oder im Statusrueckruf von `copyfile(3)`.
@@ -375,7 +375,7 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// Position, weil `rename(2)` den Inhalt nie beruehrt; beim Kopieren desselben
 /// Ordners sind es Hunderte. Die Zahl der Positionen daneben ist ueber alle
 /// Faelle dieselbe. Der Widerspruch ist als Defekt
-/// `issues/260804-1649_o_die-gemeldete-eintragszahl-bedeutet-beim-verschieben-etwas-anderes-als-beim-kopieren.md`
+/// `issues/260804-1649_*_die-gemeldete-eintragszahl-bedeutet-beim-verschieben-etwas-anderes-als-beim-kopieren.md`
 /// festgehalten; dieser Schritt entscheidet ihn nicht, er zeigt beide Zahlen
 /// nebeneinander und benennt sie.
 pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
