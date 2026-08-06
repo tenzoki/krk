@@ -28,3 +28,6 @@ Es ist dieselbe Falle wie bei den Kriterien, die `grep unsafe` verlangten
 und `issues/260803-1200_c_abnahmekriterium-von-schritt-6-traegt-denselben-grep-fehler.md`):
 ein Suchmuster, das die Zusage nur ungefähr trifft und deshalb an Stellen
 anschlägt, die sie gar nicht meint. Zu berichtigen ist das Kriterium im Plan.
+
+---
+Resolved: Das Kriterium sucht jetzt Command::new|process::Command statt Command::new|std::process und trifft damit 0 statt 11 Stellen (Plannachzug 260806-1313). Am Bestand nachgemessen.

@@ -35,3 +35,6 @@ Fenstermeldung mit dem nächsten Ordnerwechsel.
 
 Zu berichtigen ist der Plansatz, nicht der Code: die Zuordnung "Rang 1" gilt für
 zwei der drei Fehler, der dritte ist eine Startmeldung auf Rang 3.
+
+---
+Resolved: S18c sagt jetzt "Drei Fehler, zwei Ränge" — zwei als Befehlsantwort auf Rang 1, die beschädigte settings.toml als Startmeldung auf Rang 3 (Plannachzug 260806-1313). Der Spec ist nicht berührt: C11 sagt für die beschädigte Ablagedatei nur zu, dass die Vorbelegung gilt und eine Meldung erscheint, "genau wie bei den drei vorhandenen Ablagedateien", und nennt keinen Rang. Die Korrektur folgt dem Spec, statt ihm zu widersprechen.

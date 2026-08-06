@@ -29,3 +29,6 @@ Es ist derselbe Befund wie bei S7, S8, S12, S14, S16 und S17 — festgehalten in
 das den Durchgang für alle Schritte ab S9 zugesagt hat. Für S18c hat er die
 beiden Dateien nicht erwischt. Der Nachtrag gehört in die Dateiliste des
 Schritts.
+
+---
+Resolved: kommandos/fokus.rs und kommandos/mod.rs sind mit Begründung in die Dateiliste von S18c nachgetragen (Plannachzug 260806-1313).

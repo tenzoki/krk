@@ -23,3 +23,6 @@ Der Aufräumdurchgang vom 260805 war ausdrücklich auf `crates/` begrenzt; die P
 ---
 
 Herkunft: gefunden beim Beheben von `issues/260804-2040_c_zwei-module-des-kerns-heissen-umbenennen.md` am 260805-0947. Jener Datensatz nennt die Dateiliste des Plans als betroffen.
+
+---
+Resolved: Die Dateiliste und das Abnahmekriterium von S17 nennen durchgehend stapelumbenennen statt des alten Modulpfads umbenennen (Plannachzug 260806-1313); operation/umbenennen.rs bleibt, weil es das einzelne Umbenennen trägt und nicht den Stapel.

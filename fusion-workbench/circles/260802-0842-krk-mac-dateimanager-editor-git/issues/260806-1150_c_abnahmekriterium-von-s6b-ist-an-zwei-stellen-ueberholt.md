@@ -51,3 +51,6 @@ nichts, und der Schritt ist nach seinem dritten Kriterium (Sichtprüfung am
 laufenden Bündel) abgenommen. Wer die beiden Sätze aber wörtlich nimmt,
 hält S6b für unerfüllt oder reißt fremde Schritte ein.
 Adressat: planner oder reconciler. Schwere: niedrig, Plandrift.
+
+---
+Resolved: Beide Kriterien im Plan neu gefasst (Plannachzug 260806-1313). Kriterium 1 verlangt jetzt kein eprintln! in tastenabgriff_einrichten und tastenabgriff_nachziehen statt in der ganzen Datei; die sechs übrigen gehören dem Messmodus und haben ein exit dahinter. Kriterium 2 verlangt NSAlert::new an zwei Stellen, davon allein hinweis.rs anwendungsmodal über runModal, statt hinweis.rs als einzige Stelle; blaetter/mod.rs legt seit S13 einen an, und derselbe Planschritt begründet zwei Zeilen vorher, warum beide getrennt bleiben.
