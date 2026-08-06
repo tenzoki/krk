@@ -134,7 +134,15 @@ enum Spalte {
     Groesse,
     /// Der Zeitpunkt der letzten Aenderung.
     Geaendert,
-    /// Ordner, Datei oder Verknuepfung.
+    /// Die Dateiendung.
+    ///
+    /// "Typ" heisst in KRK die Dateiendung: die Spalte zeigt sie, die
+    /// Sortierung nach Typ ordnet nach ihr ([`Schluessel::Typ`]), und die
+    /// Tastenfunktion "Nach Typ sortieren" loest dieselbe Ordnung aus. Die
+    /// Eintragsart selbst (Ordner, Datei, Verknuepfung) steht in der
+    /// Metadatenanzeige der Vorschau, nicht in der Tabelle; entschieden am
+    /// 260806, siehe den Datensatz zur Sortierung ohne sprachsensitive
+    /// Kollation.
     Typ,
 }
 
@@ -1801,7 +1809,11 @@ impl DateifensterDelegierter {
                 }
             }
             Spalte::Geaendert => self.datum_beschriften(eintrag.geaendert),
-            Spalte::Typ => typ_beschriften(eintrag.typ).to_owned(),
+            // Die Endung, nicht die Eintragsart: sie ist derselbe Wert, aus
+            // dem die Sortierung nach Typ ihren Schluessel bildet, damit
+            // Anzeige und Ordnung uebereinstimmen. Ein Eintrag ohne Endung
+            // laesst die Zelle leer.
+            Spalte::Typ => eintrag.endung().to_owned(),
         }
     }
 
@@ -1982,8 +1994,9 @@ fn spaltenkopf(mtm: MainThreadMarker, spalte: Spalte) -> Retained<NSTableColumn>
 
 /// Die Benennung einer Eintragsart.
 ///
-/// `pub(super)`, weil die Metadatenanzeige der Vorschau (C6) dieselbe
-/// Benennung zeigt; eine zweite Wortliste daneben liefe auseinander.
+/// Einziger Aufrufer ist die Metadatenanzeige der Vorschau (C6), die die
+/// Eintragsart weiterhin zusagt. Die Spalte `Typ` der Tabelle zeigt seit dem
+/// Entscheid vom 260806 die Dateiendung und ruft diese Wortliste nicht mehr.
 pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
     match typ {
         Typ::Ordner => "Ordner",

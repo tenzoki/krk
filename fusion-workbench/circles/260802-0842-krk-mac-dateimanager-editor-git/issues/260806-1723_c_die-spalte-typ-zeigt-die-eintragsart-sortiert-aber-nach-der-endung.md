@@ -54,3 +54,51 @@ Dokumenttyp, die KRK nicht hat.
 
 **Aufgefallen bei:** der Umsetzung des Entscheids vom 260806
 (`history/260806-1723-sprachsensitive-kollation-und-endung.md`).
+
+---
+
+## Nutzerentscheid vom 260806-2300: ein fuenfter Weg
+
+Der Nutzer hat einen Weg gewaehlt, den die Aufstellung oben nicht fuehrt:
+**die Ueberschrift bleibt "Typ", und die Zelle zeigt die Endung.**
+
+Vorgelegt wurde er, weil drei am Code geprueste Befunde die Wege 1 bis 3 anders
+gewichten, als der Bericht oben es tat:
+
+- **Ordner stehen in jeder der acht Sortierungen vorn** (`gruppe` in
+  `crates/krk-core/src/verzeichnis/sortierung.rs:148`). Ob ein Eintrag Ordner
+  oder Datei ist, bleibt damit an der Position ablesbar, auch wenn die Spalte es
+  nicht mehr schreibt. Der Verlust der Anzeige trifft allein die
+  **Verknuepfung**, die mit den Dateien gruppiert.
+- **Die Tastenfunktion heisst "Nach Typ sortieren"** (`resources/default-keymap.toml:267`,
+  Cmd+4). Eine Spalte namens "Endung" verschoebe den Namensbruch dorthin, statt
+  ihn aufzuloesen, und der Nachzug waere eine Aenderung an einer `.toml`, also
+  eine zweite Aufgabe fuer den `ontocoder`.
+- **Der Spec schreibt die Ueberschrift nirgends fest.** C1 zaehlt die Spalten
+  nicht auf, und C2 verlangt allein, dass es bei vier bleibt. Ein Wechsel des
+  Zelleninhalts kostet damit keinen Spec-Nachzug, ein Wechsel der Ueberschrift
+  schon.
+
+Der gewaehlte Weg beruehrt eine einzige Codestelle, laesst `default-keymap.toml`
+unangetastet, braucht keine breitere Spalte und haelt Spalte, Tastenfunktion und
+Spec-Wortlaut auf demselben Wort. Zugesagt ist damit: "Typ" heisst in KRK die
+Dateiendung, und die Spalte sagt das jetzt auch.
+
+**Was der `coder` umsetzt:**
+
+- `crates/krk-ui/src/appkit/tabelle.rs:1804` und `:1987` — die Zelle der Spalte
+  `Typ` zeigt `eintrag.endung()` statt `typ_beschriften(eintrag.typ)`. Bei einem
+  Eintrag ohne Endung bleibt die Zelle leer.
+- Die Ueberschrift `:170` und die Breite `:180` bleiben unveraendert; eine
+  Endung braucht weniger Platz als "Verknüpfung", nicht mehr.
+- `typ_beschriften` bleibt bestehen: die Metadatenanzeige der Vorschau (C6)
+  ruft sie ueber `crates/krk-ui/src/appkit/vorschau.rs:458` weiterhin, und dort
+  ist die Eintragsart nach wie vor zugesagt.
+
+---
+Resolved: Die Zelle der Spalte `Typ` zeigt jetzt `eintrag.endung()` statt der
+Eintragsart (`crates/krk-ui/src/appkit/tabelle.rs:1816`). Ueberschrift (`:178`)
+und Breite (`:188`) bleiben unveraendert, `typ_beschriften` (`:2000`) bleibt
+fuer die Metadatenanzeige der Vorschau (C6) bestehen und ist jetzt deren
+einziger Aufrufer. `make check` gruen, 497 Pruefungen.
+Bericht: `history/260806-2330-coder-die-spalte-typ-zeigt-die-endung.md`.
