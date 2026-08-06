@@ -81,9 +81,9 @@
       "lastEditTimestamp": "2026-08-02T06:54:23.381Z"
     },
     "orchestrator-live.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T08:13:55.075Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-06T20:58:32.537Z"
     },
     "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
       "pingBackCount": 0,
@@ -626,9 +626,9 @@
       "lastEditTimestamp": "2026-08-06T11:02:00.891Z"
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "pingBackCount": 39,
-      "totalEdits": 124,
-      "lastEditTimestamp": "2026-08-05T21:18:46.152Z"
+      "pingBackCount": 40,
+      "totalEdits": 127,
+      "lastEditTimestamp": "2026-08-06T21:18:12.349Z"
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
       "pingBackCount": 1,
@@ -2251,9 +2251,9 @@
       "lastEditTimestamp": "2026-08-06T15:22:53.180Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-06T15:18:59.854Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-06T21:16:00.192Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1723-coder-sprachsensitive-kollation-und-endung.md": {
       "pingBackCount": 1,
@@ -2274,8 +2274,28 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-06T15:35:53.293Z"
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T20:58:16.434Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T21:20:23.725Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T21:20:45.716Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2330-coder-die-spalte-typ-zeigt-die-endung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-06T21:21:26.774Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1140-orchestrator-session.md",
-  "lastEditTimestamp": "2026-08-06T15:41:39.044Z"
+  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2330-coder-die-spalte-typ-zeigt-die-endung.md",
+  "lastEditTimestamp": "2026-08-06T21:21:26.774Z"
 }

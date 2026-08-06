@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# monitor.sh — HTML-based orchestrator monitor
-# Serves a live dashboard for orchestrator-live.md and agentstate.yaml
+# monitor — HTML-based orchestrator monitor
+# Serves a live dashboard for orchestrator-live.md, agentstate.yaml,
+# orchestrator-events.jsonl and .guard-state/events.jsonl
 # Usage: ./monitor <name> <port> [-d workbench_dir] [-n events] [-i interval_sec]
 
 set -euo pipefail
@@ -20,6 +21,9 @@ if [[ $# -lt 2 ]]; then
   echo "  Note: if another process is listening on <port> when monitor starts, monitor" >&2
   echo "  will SIGTERM it before binding (intentional — clears stale prior monitors)." >&2
   echo "  Pass an unused port if you don't want this behavior." >&2
+  echo "" >&2
+  echo "  Env: MONITOR_BIND sets the bind address (default 0.0.0.0 = LAN-reachable;" >&2
+  echo "  set MONITOR_BIND=127.0.0.1 for loopback-only)." >&2
   exit 1
 fi
 
@@ -68,6 +72,7 @@ PORT = int(sys.argv[2])
 MAX_EVENTS = int(sys.argv[3])
 INTERVAL = int(sys.argv[4])
 BASE_DIR = sys.argv[5]
+BIND = sys.argv[6]
 
 LIVE_MD = os.path.join(BASE_DIR, "orchestrator-live.md")
 EVENTS_JSONL = os.path.join(BASE_DIR, "orchestrator-events.jsonl")
@@ -1145,9 +1150,35 @@ class ReuseServer(http.server.ThreadingHTTPServer):
             pass
         super().server_bind()
 
-server = ReuseServer(("127.0.0.1", PORT), Handler)
+# BIND defaults to 0.0.0.0 (LAN-reachable). MONITOR_BIND=127.0.0.1 gives a
+# loopback-only server — the test suite relies on this, because macOS parks a
+# non-loopback listener of a process without Local Network permission in
+# CLOSED state (never LISTEN) and silently drops its inbound connections.
+server = ReuseServer((BIND, PORT), Handler)
+
+# Loopback-only bind: no LAN URL to print, the server answers on 127.0.0.1 only.
+# IPv4 spellings only — the server is AF_INET (ThreadingHTTPServer default), so
+# an IPv6 bind like ::1 fails at construction and never reaches this check.
+LOOPBACK_BINDS = ("127.0.0.1", "localhost")
+
+# Best-effort LAN address for the printed URL only — failure to detect an
+# address must never be fatal.
+lan_host = None
+if BIND not in LOOPBACK_BINDS:
+    try:
+        lan_host = subprocess.check_output(["ipconfig", "getifaddr", "en0"], stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        pass
+    if not lan_host:
+        try:
+            lan_host = socket.gethostname()
+        except Exception:
+            lan_host = None
+
 print(f"\n  {MONITOR_NAME} — Orchestrator Monitor")
-print(f"  http://localhost:{PORT}")
+print(f"  Local: http://localhost:{PORT}")
+if lan_host:
+    print(f"  LAN:   http://{lan_host}:{PORT}")
 print(f"  Watching: {BASE_DIR}")
 print(f"  Polling every {INTERVAL}s | Showing last {MAX_EVENTS} events")
 print(f"  Press Ctrl+C to stop\n")
@@ -1159,7 +1190,7 @@ except KeyboardInterrupt:
     server.server_close()
 PYTHON_SCRIPT
 
-python3 "$TMPFILE" "$MONITOR_NAME" "$PORT" "$MAX_EVENTS" "$INTERVAL" "$WORKBENCH_DIR" &
+python3 "$TMPFILE" "$MONITOR_NAME" "$PORT" "$MAX_EVENTS" "$INTERVAL" "$WORKBENCH_DIR" "${MONITOR_BIND:-0.0.0.0}" &
 SERVER_PID=$!
 
 trap 'kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; exit 0' INT TERM

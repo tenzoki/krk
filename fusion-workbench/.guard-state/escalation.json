@@ -1,32 +1,8 @@
 {
   "haltActive": false,
   "consecutiveBlocks": 0,
-  "lastBlockTimestamp": "2026-08-06T15:13:30.532Z",
+  "lastBlockTimestamp": "2026-08-06T21:20:14.229Z",
   "recentEvents": [
-    {
-      "level": "block",
-      "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -f $SP/lauf8.done` writes `$SP/lauf8.done`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-06T10:49:20.537Z",
-      "toolName": "Bash",
-      "filePath": "$SP/lauf8.done"
-    },
-    {
-      "level": "block",
-      "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `cp ~/Library/Application\\ Support/KRK/session.toml $SP/session-vor-alle.toml` writes `$SP/session-vor-alle.toml`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-06T11:02:39.882Z",
-      "toolName": "Bash",
-      "filePath": "$SP/session-vor-alle.toml"
-    },
-    {
-      "level": "block",
-      "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `then cp -p \"$S\" \"$SP/session.toml.NUTZER-SICHERUNG\"` writes `\"$SP/session.toml.NUTZER-SICHERUNG\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-06T11:38:01.496Z",
-      "toolName": "Bash",
-      "filePath": "\"$SP/session.toml.NUTZER-SICHERUNG\""
-    },
     {
       "level": "block",
       "trigger": "protected_path",
@@ -82,6 +58,30 @@
       "timestamp": "2026-08-06T15:13:30.532Z",
       "toolName": "Bash",
       "filePath": "\"$S\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a relative path after a `cd` the shell does not guarantee succeeded. Only `&&` guarantees it — after `;`, `||`, `|`, `&` or a newline bash runs the rest of the command from wherever it never left, so the segment `echo \"{\\\"ts\\\":\\\"${TS}\\\",\\\"event\\\":\\\"session_start\\\",\\\"detail\\\":\\\"resume: KRK Runde 1, mode=all, domain=code, 12 Aufgaben aus dem Wiederaufnahmepunkt 260806-1745} >> ./fusion-workbench/orchestrator-events.jsonl` writes `./fusion-workbench/orchestrator-events.jsonl` at one of two places and the guard cannot tell which (fail-closed). Join the `cd` to what follows it with `&&` — which is also what makes the command correct in the shell — or name the target as an absolute path. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T20:58:21.684Z",
+      "toolName": "Bash",
+      "filePath": "./fusion-workbench/orchestrator-events.jsonl"
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `mv \"$I/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md\" \"$I/260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md\"` writes `\"$I/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T21:16:04.937Z",
+      "toolName": "Bash",
+      "filePath": "\"$I/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a relative path after a `cd` the shell does not guarantee succeeded. Only `&&` guarantees it — after `;`, `||`, `|`, `&` or a newline bash runs the rest of the command from wherever it never left, so the segment `git mv 260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md 260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md` writes `260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md` at one of two places and the guard cannot tell which (fail-closed). Join the `cd` to what follows it with `&&` — which is also what makes the command correct in the shell — or name the target as an absolute path. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T21:20:14.229Z",
+      "toolName": "Bash",
+      "filePath": "260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md"
     }
   ]
 }

@@ -1,25 +1,31 @@
 # Orchestrator — Live
 
-**Turn:** --/30 | **Tasks:** 0/12 | **Commits:** 0 | **Errors:** 0
-**Started:** -- | **Session:** Wartet auf Wiederaufnahme | **Guard:** OK (0 blocks)
+**Turn:** 25/30 | **Tasks:** 0/12 | **Commits:** 0 | **Errors:** 0
+**Started:** 22:57 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
 
 ## Current
-  [PAUSED] orchestrator -> Wiederaufnahmepunkt gesetzt, /fusion:setup startet die Fortsetzung
+  [RUNNING] coder -> D1 Spalte Typ zeigt jetzt die Endung (tabelle.rs)
+
+## This Turn
+  [RUNNING] coder -> D1 Spalte Typ zeigt jetzt die Endung
+  [QUEUED]  planner -> D2 Fuenf offene Entscheidungen ohne Planstelle
+  [QUEUED]  coder -> D3 AppKit-Grenzpruefung sieht nur use-Zeilen
+  [QUEUED]  coder -> D4 Toter Netzpfad laesst den Lesefaden haengen
+  [QUEUED]  coder -> D5 Lesezeichen-Gueltigkeit veraltet
+  [QUEUED]  coder -> D6 Schnelles Verschieben, moegliche Meldelawine
+  [QUEUED]  coder -> D7 Sitzungslauf blieb bei L6 stehen
+  [QUEUED]  ontocoder -> D8 Zwei Datenbefunde in resources/ (GATE)
+  [QUEUED]  coder -> R1 L9 verfehlt den Anteil (GATE)
+  [QUEUED]  orchestrator -> R2 Vier offene Fragen beantworten (GATE)
+  [QUEUED]  coder -> R3 CLAUDE.md-Revision
+  [QUEUED]  orchestrator -> R4 Rundenabschluss
 
 ## Up Next
-  D1  coder   -> Spalte "Typ" zeigt die Eintragsart, sortiert nach der Endung (GATE)
-  D2  planner -> Fuenf Entscheidungen in Plan und Spec verankern
-  D3  coder   -> AppKit-Grenzpruefung sieht nur use-Zeilen und eine von drei Kisten
-  D4  coder   -> Toter Netzpfad laesst den Lesefaden haengen
-  D5  coder   -> Gueltigkeit eines Lesezeichens veraltet zwischen zwei Anlaessen
-  D6  coder   -> Schnelles Verschieben: Meldelawine erst messen
-  D7  coder   -> Sitzungslauf blieb einmal von drei Malen bei L6 stehen
-  D8  ontocoder -> Zwei Datenbefunde in resources/ (GATE)
-  R1  coder   -> L9-Zusage, haelt die Rundenschliessung (GATE)
-  R2  orchestrator -> Vier weitere offene Fragen beantworten
-  R3  coder   -> CLAUDE.md-Revision
-  R4  orchestrator -> Rundenabschluss und Portfolio
+  [QUEUED]  planner -> D2 Fuenf offene Entscheidungen ohne Planstelle
+  [QUEUED]  coder -> D3 AppKit-Grenzpruefung sieht nur use-Zeilen
+  [QUEUED]  coder -> D4 Toter Netzpfad laesst den Lesefaden haengen
+  [QUEUED]  coder -> D5 Lesezeichen-Gueltigkeit veraltet
+  [QUEUED]  coder -> D6 Schnelles Verschieben, moegliche Meldelawine
 
-## Stand
-  HEAD c1e8edc, Arbeitsverzeichnis sauber, make check gruen. Plan 36/36.
-  10 offene Defekte, 11 offene Entscheidungen. Circle bleibt aktiv.
+## Blocked
+  R4 Rundenabschluss <- wartet auf R1 (L9-Klaerung)

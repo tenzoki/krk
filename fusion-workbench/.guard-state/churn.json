@@ -97,9 +97,9 @@
       "thrashingScore": 0
     },
     "orchestrator-live.md": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T08:13:55.074Z",
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T20:58:32.534Z",
       "thrashingScore": 0
     },
     "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
@@ -122,7 +122,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md": {
       "totalChanges": 176,
-      "changesThisSession": 8,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:33:26.108Z",
       "thrashingScore": 70
     },
@@ -320,7 +320,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md": {
       "totalChanges": 449,
-      "changesThisSession": 11,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:31:55.863Z",
       "thrashingScore": 167
     },
@@ -398,7 +398,7 @@
     },
     "Cargo.toml": {
       "totalChanges": 8,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:04:35.904Z",
       "thrashingScore": 2
     },
@@ -422,7 +422,7 @@
     },
     "crates/krk-core/Cargo.toml": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:04:42.279Z",
       "thrashingScore": 0
     },
@@ -500,7 +500,7 @@
     },
     "crates/krk-core/src/verzeichnis/eintrag.rs": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:06:11.366Z",
       "thrashingScore": 0
     },
@@ -512,7 +512,7 @@
     },
     "crates/krk-core/src/verzeichnis/sortierung.rs": {
       "totalChanges": 11,
-      "changesThisSession": 6,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:10:10.342Z",
       "thrashingScore": 11
     },
@@ -524,19 +524,19 @@
     },
     "crates/krk-core/src/verzeichnis/modell.rs": {
       "totalChanges": 20,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:07:45.610Z",
       "thrashingScore": 6
     },
     "crates/krk-core/src/verzeichnis/mod.rs": {
       "totalChanges": 7,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:07:33.086Z",
       "thrashingScore": 4
     },
     "crates/krk-core/tests/verzeichnis.rs": {
       "totalChanges": 7,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:19:42.451Z",
       "thrashingScore": 2
     },
@@ -566,7 +566,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:44:48.891Z",
       "thrashingScore": 0
     },
@@ -751,10 +751,10 @@
       "thrashingScore": 7
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "totalChanges": 124,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T21:18:46.149Z",
-      "thrashingScore": 41
+      "totalChanges": 127,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-06T21:18:12.346Z",
+      "thrashingScore": 44
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
       "totalChanges": 2,
@@ -1652,7 +1652,7 @@
     },
     "crates/krk-ui/src/kommandos/operationen.rs": {
       "totalChanges": 32,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:07:55.647Z",
       "thrashingScore": 10
     },
@@ -2372,7 +2372,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-0904_o_claude-md-fuehrt-projektstand-und-entscheidungsstand-vom-260803.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:45:37.131Z",
       "thrashingScore": 0
     },
@@ -2414,7 +2414,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1140-orchestrator-session.md": {
       "totalChanges": 5,
-      "changesThisSession": 4,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:41:39.041Z",
       "thrashingScore": 5
     },
@@ -2612,7 +2612,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260806-1335-coderev-turn-23-s6b-vorschau-messstrecke.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:45:58.718Z",
       "thrashingScore": 0
     },
@@ -2666,70 +2666,94 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_i_wie-zeigt-krk-dem-nutzer-fehler.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:44:29.971Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1450_o_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:45:14.736Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1130_c_der-groessenformatierer-schreibt-zero-kb-auf-englisch.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:46:19.377Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1647-reconciliation.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T14:49:22.035Z",
       "thrashingScore": 0
     },
     "crates/krk-core/src/verzeichnis/kollation.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:05:25.348Z",
       "thrashingScore": 0
     },
     "messungen/260806-1716-MacBookPro15-1-kollation-l3-l10.txt": {
       "totalChanges": 4,
-      "changesThisSession": 4,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:22:53.178Z",
       "thrashingScore": 5
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 1,
-      "lastChange": "2026-08-06T15:18:59.851Z",
+      "lastChange": "2026-08-06T21:16:00.189Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1723-coder-sprachsensitive-kollation-und-endung.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:23:00.567Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1730_o_welche-sprache-bestimmt-die-sortierordnung.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:24:41.408Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1728-planner-sortierung-in-plan-und-spec-verankert.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:35:01.091Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_o_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-06T15:35:53.291Z",
+      "thrashingScore": 0
+    },
+    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T20:58:16.412Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T21:20:23.720Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-06T21:20:45.714Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2330-coder-die-spalte-typ-zeigt-die-endung.md": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-06T21:21:26.772Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-06T14:44:19.810Z"
+  "sessionStart": "2026-08-06T20:58:16.413Z"
 }

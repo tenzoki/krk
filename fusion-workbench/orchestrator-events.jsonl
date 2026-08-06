@@ -216,3 +216,10 @@
 {"ts":"2026-08-06T15:36:27","event":"turn_end","turn":24,"detail":"2 Aufgaben, 2 Commits, Sortierentscheid umgesetzt und verankert"}
 {"ts":"2026-08-06T15:36:27","event":"session_end","detail":"Turns 23-24; Plan 36/36; 22 Defekte geschlossen; L9 und 10 weitere Fragen offen"}
 {"ts":"2026-08-06T15:41:56","event":"session_end","detail":"Wiederaufnahmepunkt gesetzt: 12 Aufgaben, erst D1-D8 (Defekte), dann R1-R4; agentstate.yaml absichtlich angelegt"}
+{"ts":"2026-08-06T20:58:25","event":"session_start","detail":"resume: KRK Runde 1, mode=all, domain=code, 12 Aufgaben aus dem Wiederaufnahmepunkt 260806-1745"}
+{"ts":"2026-08-06T21:16:10","event":"scope_resolved","detail":"mode=all, 12 Aufgaben, Ausfuehrer: coder, planner, ontocoder, orchestrator; 3 Nutzer-Gates"}
+{"ts":"2026-08-06T21:16:10","event":"queue_built","turn":25,"detail":"12 Aufgaben aus dem Wiederaufnahmepunkt, 0 blockiert"}
+{"ts":"2026-08-06T21:16:10","event":"turn_start","turn":25,"detail":"turn_start_head=f9a0462, 12 Aufgaben bereit"}
+{"ts":"2026-08-06T21:16:10","event":"gate_hit","turn":25,"task":"D1","agent":"user","detail":"Nutzerentscheid zwischen den Wegen fuer die Spalte Typ"}
+{"ts":"2026-08-06T21:16:10","event":"gate_response","turn":25,"task":"D1","agent":"user","detail":"proceed: Ueberschrift bleibt Typ, Zelle zeigt die Endung (fuenfter Weg)"}
+{"ts":"2026-08-06T21:16:10","event":"task_start","turn":25,"task":"D1","agent":"coder","detail":"crates/krk-ui/src/appkit/tabelle.rs"}
