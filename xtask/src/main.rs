@@ -16,6 +16,7 @@
 
 mod bundle;
 mod messen;
+mod release;
 mod sign;
 
 use std::process::ExitCode;
@@ -34,6 +35,21 @@ xtask — Bauwerkzeug fuer KRK
       die einzige gueltige Identitaet des Schluesselbunds, falls es genau
       eine gibt. Findet keine Stufe eine Identitaet, bricht der Bau mit
       einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
+
+  cargo xtask release
+      Baut das Auslieferungspaket (Schritt 23): prueft die AppKit-Grenze
+      (keine `use objc2`-Zeile ausserhalb von crates/krk-ui/src/appkit/),
+      uebersetzt beide Mac-Ziele, fuegt sie mit lipo zu einer universellen
+      Binaerdatei zusammen, baut dasselbe Buendel wie `bundle`, signiert mit
+      einer Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht
+      ueber \"xcrun notarytool submit --wait\" zur Beglaubigung ein und heftet
+      das Ergebnis mit \"xcrun stapler staple\" an.
+
+      Die Identitaetssuche laeuft in denselben drei Stufen wie bei `bundle`,
+      nur sucht die zweite nach dem Namensanfang \"Developer ID Application\".
+      Die Beglaubigung braucht das vollstaendige Xcode und ein Schluesselbund-
+      profil des Entwicklerkontos in KRK_NOTARY_PROFILE; fehlt eines, bricht
+      allein sie ab, und das signierte Buendel bleibt liegen.
 
   cargo xtask messen --alle --ordner-a P --ordner-b P --ordner100k P --kopierziel P
       Der eine Einstiegspunkt fuer beide Messstrecken (Schritt 21): baut das
@@ -89,6 +105,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             println!("Buendel: {}", buendel.display());
             Ok(())
         }
+        "release" => release::ausfuehren(&argumente[1..]),
         "messen" => messen::ausfuehren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");

@@ -20,6 +20,13 @@ pub const UMGEBUNGSVARIABLE: &str = "KRK_SIGN_IDENTITY";
 /// Der Name der lokalen Entwicklungsidentitaet, nach der sonst gesucht wird.
 pub const ENTWICKLUNGSIDENTITAET: &str = "KRK Entwicklung";
 
+/// Der Namensanfang jeder Auslieferungsidentitaet von Apple.
+///
+/// Apple stellt sie unter `Developer ID Application: <Name> (<Team>)` aus;
+/// einen frei waehlbaren Namen wie bei der Entwicklungsidentitaet gibt es
+/// nicht. Die Release-Suche prueft deshalb den Anfang statt den ganzen Namen.
+pub const DEVELOPER_ID_PRAEFIX: &str = "Developer ID Application";
+
 /// Eine Signaturidentitaet samt der Stelle, von der sie kommt.
 ///
 /// Die Herkunft steht in der Ausgabe des Baus, damit am Protokoll ablesbar
@@ -61,13 +68,97 @@ pub fn bestimmen() -> Result<Identitaet, Abbruch> {
     Err(Abbruch::Lauf(anleitung(&gueltige)))
 }
 
+/// Bestimmt die Identitaet fuer das Auslieferungspaket (Schritt 23).
+///
+/// Dieselben drei Stufen wie [`bestimmen`], nur sucht die zweite nach dem
+/// Praefix [`DEVELOPER_ID_PRAEFIX`] statt nach dem Namen der
+/// Entwicklungsidentitaet: die Beglaubigung nimmt allein eine von Apple
+/// ausgestellte Developer-ID-Signatur an. Die dritte Stufe bleibt, damit auf
+/// einem Geraet ohne Entwicklerkonto Bau, `lipo` und die Signierung mit
+/// gehaerteter Laufzeitumgebung durchlaufen und erst der Beglaubigungsteil
+/// benennend abbricht — genau der Abnahmeweg, den der Plan fuer diesen Fall
+/// vorschreibt.
+pub fn bestimmen_fuer_release() -> Result<Identitaet, Abbruch> {
+    if let Some(name) = aus_umgebung() {
+        return Ok(Identitaet {
+            name,
+            herkunft: UMGEBUNGSVARIABLE.to_owned(),
+        });
+    }
+    // Wie bei der Entwicklungsidentitaet ohne `-v`: wer eine Developer-ID
+    // angelegt hat, hat sich fuer sie entschieden, und die Suche hat sie nicht
+    // an der Vertrauensbewertung auszusortieren.
+    let developer_ids = developer_id_namen(&gueltige_namen(&auflisten()?));
+    match developer_ids.as_slice() {
+        [einzige] => {
+            return Ok(Identitaet {
+                name: einzige.clone(),
+                herkunft: format!(
+                    "den Schluesselbund unter dem Namensanfang {DEVELOPER_ID_PRAEFIX:?}"
+                ),
+            });
+        }
+        [] => {}
+        mehrere => {
+            let aufzaehlung: Vec<String> = mehrere
+                .iter()
+                .map(|name| format!("\x20      {name:?}"))
+                .collect();
+            return Err(Abbruch::Lauf(format!(
+                "Mehrere Developer-ID-Identitaeten gefunden, die Wahl waere nicht eindeutig:\n\
+                 \n\
+                 {}\n\
+                 \n\
+                 Eine davon ausdruecklich waehlen: {UMGEBUNGSVARIABLE}=\"<Name>\" cargo xtask release",
+                aufzaehlung.join("\n")
+            )));
+        }
+    }
+    let gueltige = gueltige_namen(&auflisten_gueltige()?);
+    if let [einzige] = gueltige.as_slice() {
+        return Ok(Identitaet {
+            name: einzige.clone(),
+            herkunft: "den Schluesselbund als einzige gueltige Identitaet".to_owned(),
+        });
+    }
+    Err(Abbruch::Lauf(anleitung(&gueltige)))
+}
+
+/// Liest aus einer Namensliste die Developer-ID-Identitaeten.
+fn developer_id_namen(namen: &[String]) -> Vec<String> {
+    namen
+        .iter()
+        .filter(|name| name.starts_with(DEVELOPER_ID_PRAEFIX))
+        .cloned()
+        .collect()
+}
+
 /// Signiert das Buendel.
 pub fn signieren(buendel: &Path, identitaet: &Identitaet) -> Result<(), Abbruch> {
+    signieren_mit(buendel, identitaet, &[])
+}
+
+/// Signiert das Buendel mit gehaerteter Laufzeitumgebung (Schritt 23).
+///
+/// `--options runtime` schaltet die gehaertete Laufzeitumgebung ein, ohne die
+/// die Beglaubigung das Buendel ablehnt. `--timestamp` holt einen gesicherten
+/// Zeitstempel von Apples Dienst, die zweite Bedingung der Beglaubigung; der
+/// Aufruf braucht dafuer Netz.
+pub fn signieren_gehaertet(buendel: &Path, identitaet: &Identitaet) -> Result<(), Abbruch> {
+    signieren_mit(
+        buendel,
+        identitaet,
+        &["--options", "runtime", "--timestamp"],
+    )
+}
+
+fn signieren_mit(buendel: &Path, identitaet: &Identitaet, zusatz: &[&str]) -> Result<(), Abbruch> {
     // --force, weil ein kopiertes Binaerprogramm je nach Zielplattform bereits
     // eine Signatur des Uebersetzers tragen kann; ohne die Marke bricht
     // codesign dann mit "is already signed" ab.
     let ausgabe = Command::new("/usr/bin/codesign")
         .args(["--force", "--sign", &identitaet.name])
+        .args(zusatz)
         .arg(buendel)
         .output()
         .map_err(|fehler| Abbruch::Lauf(format!("codesign laesst sich nicht starten: {fehler}")))?;
@@ -325,6 +416,23 @@ Policy: Code Signing
     fn die_vertrauensbewertung_gehoert_nicht_zum_namen() {
         let zeile = "  1) 753C3DBA523A88D7CC8737769B457BC5FFF757DB \"KRK Probe Eins\" (CSSMERR_TP_NOT_TRUSTED)";
         assert_eq!(eintragsname(zeile).unwrap(), "KRK Probe Eins");
+    }
+
+    #[test]
+    fn die_developer_id_wird_am_namensanfang_erkannt() {
+        let namen = gueltige_namen(GUELTIGE_ZWEI);
+        assert_eq!(
+            developer_id_namen(&namen),
+            vec!["Developer ID Application: Kai Stalmann (QYMPYB7MWM)".to_owned()]
+        );
+    }
+
+    #[test]
+    fn eine_entwicklungsidentitaet_ist_keine_developer_id() {
+        // "Apple Development: …" beginnt nicht mit dem Praefix; die zweite
+        // Stufe der Release-Suche darf sie nicht greifen.
+        let namen = gueltige_namen(GUELTIGE_EINE);
+        assert!(developer_id_namen(&namen).is_empty());
     }
 
     #[test]

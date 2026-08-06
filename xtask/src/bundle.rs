@@ -57,6 +57,40 @@ const PKGINFO: &str = "APPL????";
 
 /// Baut `target/KRK.app` und gibt seinen Pfad zurueck.
 pub fn bauen() -> Result<PathBuf, Abbruch> {
+    let vorlage = vorbereiten()?;
+    let identitaet = sign::bestimmen()?;
+
+    uebersetzen(&vorlage.wurzel, &vorlage.binaername, None)?;
+
+    let uebersetzt = zielpfad(&vorlage.wurzel, None, &vorlage.binaername);
+    let buendel = vorlage.zusammensetzen(&uebersetzt)?;
+    sign::signieren(&buendel, &identitaet)?;
+    Ok(buendel)
+}
+
+/// Die geprueften Zutaten des Buendels, vor jedem Uebersetzungslauf gesammelt.
+///
+/// `release` (Schritt 23) baut dasselbe Buendel wie `bundle`, nur ueber eine
+/// universelle Binaerdatei. Damit daneben kein zweiter Buendelbauer entsteht,
+/// die zweite Wahrheit ueber die Struktur von `KRK.app`, sind die Pruefungen
+/// und die Montage hier herausgeloest: beide Unterbefehle rufen dieselben
+/// Funktionen und unterscheiden sich allein darin, welche Binaerdatei in
+/// `Contents/MacOS` wandert und womit signiert wird.
+pub(crate) struct Vorlage {
+    /// Die Projektwurzel, aus dem Manifestordner von `xtask` abgeleitet.
+    pub(crate) wurzel: PathBuf,
+    /// Die Buendelbeschreibung mit bereits eingesetzter Version.
+    plist: String,
+    /// Der Name des Binaerprogramms aus `CFBundleExecutable`.
+    pub(crate) binaername: String,
+}
+
+/// Liest und prueft die Buendelbeschreibung, bevor irgendetwas entsteht.
+///
+/// Traegt die Abbruchreihenfolge aus dem Modulkopf: Versionsersetzung und
+/// Binaername scheitern hier, vor dem ersten Uebersetzungslauf und vor dem
+/// ersten angelegten Verzeichnis.
+pub(crate) fn vorbereiten() -> Result<Vorlage, Abbruch> {
     let wurzel = wurzel();
     let vorlage_pfad = wurzel.join("resources").join("Info.plist");
     let vorlage = fs::read_to_string(&vorlage_pfad).map_err(|fehler| {
@@ -68,43 +102,52 @@ pub fn bauen() -> Result<PathBuf, Abbruch> {
 
     let plist = version_einsetzen(&vorlage)?;
     let binaername = binaername(&vorlage)?;
-    let identitaet = sign::bestimmen()?;
+    Ok(Vorlage {
+        wurzel,
+        plist,
+        binaername,
+    })
+}
 
-    uebersetzen(&wurzel, &binaername)?;
+impl Vorlage {
+    /// Legt `target/KRK.app` aus einer bereits uebersetzten Binaerdatei an.
+    ///
+    /// Signiert wird hier nicht: `bundle` signiert lokal, `release` mit
+    /// Developer-ID und gehaerteter Laufzeitumgebung, und beide tun das nach
+    /// der Montage am fertigen Buendel.
+    pub(crate) fn zusammensetzen(&self, binaerquelle: &Path) -> Result<PathBuf, Abbruch> {
+        let buendel = self.wurzel.join("target").join(BUENDELNAME);
+        let contents = buendel.join("Contents");
+        let macos = contents.join("MacOS");
 
-    let buendel = wurzel.join("target").join(BUENDELNAME);
-    let contents = buendel.join("Contents");
-    let macos = contents.join("MacOS");
+        if buendel.exists() {
+            fs::remove_dir_all(&buendel)
+                .map_err(|fehler| schreibfehler("das alte Buendel entfernen", &buendel, &fehler))?;
+        }
+        fs::create_dir_all(&macos).map_err(|fehler| schreibfehler("anlegen", &macos, &fehler))?;
+        let resources = contents.join("Resources");
+        fs::create_dir_all(&resources)
+            .map_err(|fehler| schreibfehler("anlegen", &resources, &fehler))?;
 
-    if buendel.exists() {
-        fs::remove_dir_all(&buendel)
-            .map_err(|fehler| schreibfehler("das alte Buendel entfernen", &buendel, &fehler))?;
+        let im_buendel = macos.join(&self.binaername);
+        fs::copy(binaerquelle, &im_buendel).map_err(|fehler| {
+            Abbruch::Lauf(format!(
+                "{} laesst sich nicht nach {} kopieren: {fehler}",
+                binaerquelle.display(),
+                im_buendel.display()
+            ))
+        })?;
+
+        let plist_pfad = contents.join("Info.plist");
+        fs::write(&plist_pfad, &self.plist)
+            .map_err(|fehler| schreibfehler("schreiben", &plist_pfad, &fehler))?;
+        let pkginfo_pfad = contents.join("PkgInfo");
+        fs::write(&pkginfo_pfad, PKGINFO)
+            .map_err(|fehler| schreibfehler("schreiben", &pkginfo_pfad, &fehler))?;
+
+        println!("Version {VERSION} in {} eingesetzt.", plist_pfad.display());
+        Ok(buendel)
     }
-    fs::create_dir_all(&macos).map_err(|fehler| schreibfehler("anlegen", &macos, &fehler))?;
-    let resources = contents.join("Resources");
-    fs::create_dir_all(&resources)
-        .map_err(|fehler| schreibfehler("anlegen", &resources, &fehler))?;
-
-    let uebersetzt = wurzel.join("target").join(PROFIL).join(&binaername);
-    let im_buendel = macos.join(&binaername);
-    fs::copy(&uebersetzt, &im_buendel).map_err(|fehler| {
-        Abbruch::Lauf(format!(
-            "{} laesst sich nicht nach {} kopieren: {fehler}",
-            uebersetzt.display(),
-            im_buendel.display()
-        ))
-    })?;
-
-    let plist_pfad = contents.join("Info.plist");
-    fs::write(&plist_pfad, &plist)
-        .map_err(|fehler| schreibfehler("schreiben", &plist_pfad, &fehler))?;
-    let pkginfo_pfad = contents.join("PkgInfo");
-    fs::write(&pkginfo_pfad, PKGINFO)
-        .map_err(|fehler| schreibfehler("schreiben", &pkginfo_pfad, &fehler))?;
-
-    sign::signieren(&buendel, &identitaet)?;
-    println!("Version {VERSION} in {} eingesetzt.", plist_pfad.display());
-    Ok(buendel)
 }
 
 /// Die Projektwurzel.
@@ -177,35 +220,61 @@ fn plist_zeichenkette(plist: &str, schluessel: &str) -> Option<String> {
     Some(wert.trim().to_owned())
 }
 
-/// Uebersetzt das Binaerziel.
-fn uebersetzen(wurzel: &Path, binaername: &str) -> Result<(), Abbruch> {
+/// Uebersetzt das Binaerziel, wahlweise fuer ein ausdrueckliches Ziel-Tripel.
+///
+/// `bundle` uebersetzt ohne Tripel fuer das laufende Geraet; `release` ruft
+/// die Funktion zweimal, einmal je Tripel aus `rust-toolchain.toml`, und fuegt
+/// die Ergebnisse mit `lipo` zusammen.
+pub(crate) fn uebersetzen(
+    wurzel: &Path,
+    binaername: &str,
+    ziel: Option<&str>,
+) -> Result<(), Abbruch> {
     // Cargo setzt CARGO auf den Pfad, unter dem es selbst laeuft. Den zu
     // uebernehmen haelt den Bau auf derselben Werkzeugkette, aus der der Aufruf
     // kam.
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+    let mut argumente = vec![
+        "build",
+        "--profile",
+        PROFIL,
+        "--package",
+        PAKET,
+        "--bin",
+        binaername,
+    ];
+    if let Some(tripel) = ziel {
+        argumente.extend(["--target", tripel]);
+    }
     let status = Command::new(&cargo)
         // Aus der Wurzel heraus, damit der Bau die .cargo/config.toml findet:
         // dort steht MACOSX_DEPLOYMENT_TARGET = "15.0", das Mindest-Zielsystem
         // aus dem Spec, und es soll auch fuer diesen inneren Aufruf gelten.
         .current_dir(wurzel)
-        .args([
-            "build",
-            "--profile",
-            PROFIL,
-            "--package",
-            PAKET,
-            "--bin",
-            binaername,
-        ])
+        .args(&argumente)
         .status()
         .map_err(|fehler| Abbruch::Lauf(format!("{cargo} laesst sich nicht starten: {fehler}")))?;
     if !status.success() {
         return Err(Abbruch::Lauf(format!(
-            "cargo build --profile {PROFIL} --package {PAKET} --bin {binaername} ist \
-             gescheitert ({status})"
+            "cargo {} ist gescheitert ({status})",
+            argumente.join(" ")
         )));
     }
     Ok(())
+}
+
+/// Wo das uebersetzte Binaerprogramm liegt.
+///
+/// Ohne Ziel-Tripel legt Cargo es unter `target/<profil>/` ab, mit Tripel
+/// unter `target/<tripel>/<profil>/`. Der Pfad wird hier hergeleitet und nicht
+/// in `release` ein zweites Mal, damit ein geaendertes Profil beide
+/// Unterbefehle gleichzeitig trifft.
+pub(crate) fn zielpfad(wurzel: &Path, ziel: Option<&str>, binaername: &str) -> PathBuf {
+    let mut pfad = wurzel.join("target");
+    if let Some(tripel) = ziel {
+        pfad = pfad.join(tripel);
+    }
+    pfad.join(PROFIL).join(binaername)
 }
 
 fn schreibfehler(was: &str, pfad: &Path, fehler: &std::io::Error) -> Abbruch {

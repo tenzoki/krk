@@ -208,6 +208,68 @@ codesign -dvv target/KRK.app                # nennt die Identität als Authority
 `flags=0x0(none)` im Kopf der Ausgabe heißt: keine Ad-hoc-Signatur. Eine solche
 stünde dort als `flags=0x2(adhoc)`.
 
+## Auslieferung
+
+```sh
+cargo xtask release
+```
+
+Der Befehl baut das Auslieferungspaket in sechs Stationen; jede bricht mit
+einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt:
+
+1. **AppKit-Grenze prüfen.** Keine `use objc2`-Zeile außerhalb von
+   `crates/krk-ui/src/appkit/`. `#![deny(unsafe_code)]` erzwingt die Grenze
+   nur zur Hälfte, weil ein großer Teil der `objc2`-Bindungen als sicher
+   deklariert ist und außerhalb anstandslos übersetzt; diese Prüfung trägt die
+   andere Hälfte. Von Hand ist es dieselbe Vorschrift wie im Plan:
+   ```sh
+   grep -rEln '^[[:space:]]*use +objc2' crates/krk-ui/src --include='*.rs' \
+     | grep -v '^crates/krk-ui/src/appkit/'   # darf keine Zeile ausgeben
+   ```
+2. **Beide Ziele übersetzen.** `x86_64-apple-darwin` und
+   `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml`. Fehlt
+   eines, nennt der Abbruch das Ziel und das Kommando `rustup target add`.
+3. **`lipo`.** Die beiden Binärdateien werden zu
+   `target/universal/krk` zusammengefügt und sofort geprüft:
+   `lipo -archs` muss `x86_64 arm64` melden.
+4. **Montage.** Dasselbe Bündel wie `cargo xtask bundle`, aus denselben
+   Funktionen, samt Versionsersetzung — nur wandert die universelle
+   Binärdatei nach `Contents/MacOS`.
+5. **Signieren.** Dieselbe dreistufige Identitätssuche wie bei `bundle`, nur
+   sucht die zweite Stufe nach dem Namensanfang `Developer ID Application`
+   statt nach `KRK Entwicklung`. Signiert wird mit gehärteter
+   Laufzeitumgebung und gesichertem Zeitstempel
+   (`codesign --options runtime --timestamp`); beides verlangt die
+   Beglaubigung. Nachprüfen: `codesign -dv --verbose=4 target/KRK.app` zeigt
+   `flags=0x10000(runtime)`.
+6. **Beglaubigen.** `xcrun notarytool submit --wait` reicht das Bündel als
+   Zip bei Apple ein, `xcrun stapler staple` heftet das Urteil an.
+
+Die sechste Station hat zwei äußere Voraussetzungen, und nur sie: das
+vollständige Xcode (die Command Line Tools führen weder `notarytool` noch
+`stapler`) und ein Apple-Entwicklerkonto. Fehlt eines von beidem, bricht
+allein die Beglaubigung ab, und das universell gebaute, signierte Bündel
+bleibt unter `target/KRK.app` liegen — für die lokale Arbeit ist es voll
+brauchbar.
+
+Die Zugangsdaten des Entwicklerkontos erwartet der Befehl als
+Schlüsselbundprofil, dessen Name in der Umgebungsvariablen
+`KRK_NOTARY_PROFILE` steht. Einmalig hinterlegen:
+
+```sh
+xcrun notarytool store-credentials <Profilname> \
+  --apple-id <Apple-ID> --team-id <Team-Kennung> \
+  --password <app-spezifisches-Passwort>
+
+KRK_NOTARY_PROFILE=<Profilname> cargo xtask release
+```
+
+Findet die Identitätssuche keine Developer-ID, aber genau eine gültige andere
+Identität (Stufe 3), läuft der Bau mit ihr durch und sagt dazu, dass die
+Beglaubigung ein so signiertes Bündel nicht annehmen wird. So bleiben Bau,
+`lipo` und die Signierung mit gehärteter Laufzeitumgebung auch auf einem
+Gerät ohne Entwicklerkonto prüfbar.
+
 ## Versionspflege
 
 Die Version steht an **einer** Stelle: im Feld `version` unter
