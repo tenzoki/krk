@@ -140,3 +140,31 @@
 {"ts":"2026-08-05T15:35:16","event":"turn_end","turn":19,"detail":"28 von 36 Schritten"}
 {"ts":"2026-08-05T16:04:49","event":"turn_start","turn":20,"detail":"S18b und S18c, der Terminal-Befehl"}
 {"ts":"2026-08-05T16:04:49","event":"task_start","turn":20,"task":"T49","agent":"ontocoder","detail":"S18b ctrl+o und die Auslieferungseinstellungen"}
+{"ts":"2026-08-05T18:37:32","event":"session_start","detail":"Fortsetzung der unterbrochenen Sitzung 260803-1038; Warteschlange S19-S23; Modus custom; Domaene code"}
+{"ts":"2026-08-05T19:29:06","event":"session_start","detail":"Fortsetzung 260803-1038, Warteschlange S19-S23, mode=custom, domain=code"}
+{"ts":"2026-08-05T19:51:05","event":"turn_start","turn":21,"detail":"5 Aufgaben bereit, S19-S23"}
+{"ts":"2026-08-05T19:51:05","event":"task_start","turn":21,"task":"S19","agent":"coder","detail":"Vorschaufenster mit eigenen Tabs (C6), shift+f3 aus C10, Defekt 260803-2007"}
+{"ts":"2026-08-05T20:22:35","event":"task_done","turn":21,"task":"S19","agent":"coder","detail":"4886819 + 02cb328; Rechte-Defekt 260803-2007 geschlossen; neuer Entscheidungsdatensatz Tastenweg-Vorschau; Abweichung: Wirkungsbereich-Wert Tabbereich"}
+{"ts":"2026-08-05T20:22:35","event":"commit","turn":21,"task":"S19","detail":"4886819 feat(ui): S19 Vorschaufenster mit eigenen Tabs, und shift+f3 aus C10"}
+{"ts":"2026-08-05T20:22:35","event":"task_start","turn":21,"task":"S20","agent":"coder","detail":"Belegungsansicht (C3), gibt f1 seine Wirkung"}
+{"ts":"2026-08-05T20:52:54","event":"task_done","turn":21,"task":"S20","agent":"coder","detail":"89f962d; neue offene Entscheidung: Entfernen einer einzelnen Kombination"}
+{"ts":"2026-08-05T20:52:54","event":"commit","turn":21,"task":"S20","detail":"89f962d feat(ui): S20 Belegungsansicht, F1 bekommt seine Wirkung"}
+{"ts":"2026-08-05T20:53:24","event":"task_start","turn":21,"task":"S21","agent":"coder","detail":"Messmodus in der Anwendung, Abnahme von L8"}
+{"ts":"2026-08-05T21:38:00","event":"task_done","turn":21,"task":"S21","agent":"coder","detail":"d09c059; L8 abgenommen (169,8 ms p95); neuer Defekt: L1/L9 verfehlen Anteil unter Fremdlast"}
+{"ts":"2026-08-05T21:38:00","event":"commit","turn":21,"task":"S21","detail":"d09c059 feat(bench): S21 Messmodus in der Anwendung, L8 abgenommen"}
+{"ts":"2026-08-05T21:38:00","event":"gate_hit","turn":21,"task":"S22","detail":"Messreihe braucht ein ruhiges Geraet ohne konkurrierende Arbeit"}
+{"ts":"2026-08-05T21:45:14","event":"gate_response","turn":21,"task":"S22","detail":"proceed — Nutzer faehrt die Reihe jetzt, Geraet wird ruhig gehalten"}
+{"ts":"2026-08-05T21:45:14","event":"task_start","turn":21,"task":"S22","agent":"coder","detail":"Vollstaendige Messreihe auf dem Referenzgeraet, ruhig und unter Last"}
+{"ts":"2026-08-05T22:21:18","event":"task_done","turn":21,"task":"S22","agent":"coder","detail":"e8626b6 + 11afe60; 9/10 Zusagen halten; L4-Streuung extern belegt, zwei Defekte zu; L9-Entscheidung offen; neuer Defekt tmp-Pruefordner"}
+{"ts":"2026-08-05T22:21:18","event":"commit","turn":21,"task":"S22","detail":"e8626b6 feat(bench): S22 Abnahme-Messreihe, neun von zehn Zusagen halten"}
+{"ts":"2026-08-05T22:21:18","event":"gate_hit","turn":21,"task":"S23","detail":"L9-Entscheidung 260806-0014 bindet die Reihenfolge: Option 1 schiebt S23 hinter Fix und Nachmessung"}
+{"ts":"2026-08-06T06:01:47","event":"gate_response","turn":21,"task":"S23","detail":"proceed — S23 jetzt bauen; L9-Entscheidung: Nutzer bittet erst um Erklaerung"}
+{"ts":"2026-08-06T06:01:47","event":"task_start","turn":21,"task":"S23","agent":"coder","detail":"Auslieferungspaket, maschinelle Pruefung der AppKit-Grenze (Hintergrund)"}
+{"ts":"2026-08-06T06:21:38","event":"task_done","turn":21,"task":"S23","agent":"coder","detail":"d577295; Abnahme nach Sonderregel: Beglaubigung bricht benennend ab (kein Developer-ID-Profil)"}
+{"ts":"2026-08-06T06:21:38","event":"commit","turn":21,"task":"S23","detail":"d577295 feat(build): S23 Auslieferungspaket, cargo xtask release"}
+{"ts":"2026-08-06T06:21:38","event":"review_start","turn":21,"agent":"coderev","detail":"Durchsicht der Turn-21-Aenderungen S19-S23"}
+{"ts":"2026-08-06T06:37:06","event":"review_done","turn":21,"agent":"coderev","detail":"5 neue Issues (2 Medium, 3 Low), Urteil: solide, nichts blockiert"}
+{"ts":"2026-08-06T06:55:33","event":"coherence_review","turn":21,"detail":"verdict: ok | Artefakt-Grundlage: 5 Befunde gefiled, keiner blockiert | Artefakt-Directive: Commits bewegen zur Directive, L9-Frage offen dokumentiert | Grundlage-Directive: 0 beantwortete Entscheidungen beruehrt"}
+{"ts":"2026-08-06T06:55:33","event":"turn_end","turn":21,"detail":"5 Aufgaben geloest, 9 Commits, 6 neue Issues (1 aus S22, 5 aus Review), 3 neue offene Entscheidungen, 3 Defekte geschlossen; Queue konvergiert"}
+{"ts":"2026-08-06T07:07:01","event":"reconciliation","turn":21,"detail":"coherent; 18 Abweichungen korrigiert (16 Entscheidungen _a_ zu _i_, Plan-Statuszeile, 1 neuer Defekt CLAUDE.md-Stand)"}
+{"ts":"2026-08-06T07:08:05","event":"session_end","detail":"5/5 Aufgaben, 10 Commits, coherent; L9-Entscheidung offen, Circle bleibt aktiv"}

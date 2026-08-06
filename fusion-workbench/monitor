@@ -74,15 +74,92 @@ EVENTS_JSONL = os.path.join(BASE_DIR, "orchestrator-events.jsonl")
 STATE_YAML = os.path.join(BASE_DIR, "agentstate.yaml")
 GUARD_EVENTS_JSONL = os.path.join(BASE_DIR, ".guard-state", "events.jsonl")
 
-# Guard events surfaced as sticky warnings on the dashboard. Other guard
-# events (guard_allow, tracker_record, clears) are bookkeeping and are
-# excluded from the warnings panel.
+# Guard events surfaced as sticky rows in the warnings panel. Three kinds
+# qualify, and the distinction is what the panel is for:
+#
+#   - Warnings and blocks (churn_*, cross_file_*, guard_block, guard_halt)
+#     report something the user did not ask for.
+#   - Advisories (guard_advisory) report something the user DID ask for: a
+#     write the guard would normally deny, let through because an override
+#     flag was set. The user turned the guard down, so the user is the one
+#     who has to see what that bought. Rendered at its own "Advisory" level,
+#     not as a warning — see the level mapping in renderWarnings().
+#   - Fail-opens (guard_error) report that a check did not run at all. Both
+#     hooks catch an unexpected exception, allow the call anyway, and record
+#     one of these (hooks/guard.ts and hooks/tracker.ts, in their respective
+#     main().catch handlers). It is the one event meaning "the guard is not
+#     protecting you", so a panel that omits it shows a guard protecting
+#     nothing as normal operation. Rendered at the loudest level the panel
+#     has — see renderWarnings().
+#
+# Everything else a guard hook writes (guard_allow, tracker_record, clears)
+# is bookkeeping: it records the ordinary path, nobody asked to be told
+# about it, and it stays out of the panel.
 WARNING_EVENT_TYPES = {
     "churn_warning", "churn_critical",
     "cross_file_warning", "cross_file_critical",
     "guard_block", "guard_halt",
+    "guard_advisory",
+    "guard_error",
 }
+
+# Subsets of WARNING_EVENT_TYPES, carved out so each can be capped separately.
+# The set above decides what reaches the panel at all; these decide which
+# budget a row is charged to.
+ADVISORY_EVENT_TYPES = {"guard_advisory"}
+ERROR_EVENT_TYPES = {"guard_error"}
+
+# INDEPENDENT CAPS, NOT ONE SHARED BUDGET.
+#
+# The classes arrive at very different rates. A block or a churn warning is
+# rare and each one is individually worth reading. An advisory is emitted once
+# per exempted write, so a curation session with FUSION_ALLOW_RULES_WRITE set —
+# the session the flag exists for — emits one per file it rewrites. Under a
+# single shared budget, thirty rewritten rule files are thirty advisory rows and
+# every guard_block, guard_halt, churn_critical and cross_file_critical older
+# than them is off the panel. That is the failure guard.ts already refuses to
+# cause with guard_allow, arriving through a different door.
+#
+# So the warning class keeps its full 30 whatever the other classes do, and each
+# carve-out gets its own small allowance on top. A burst can no longer evict
+# anything; the worst case is a taller panel.
+#
+# 8 for advisories, deliberately a minority of the panel. What an advisory row
+# has to tell the user is "your override is live, and here is what it bought" —
+# one row establishes that, and a handful gives the shape of the burst. Eight
+# shows a small curation session in full and enough of a large one to recognise
+# the pattern, while leaving the panel still legible as a warnings panel at full
+# advisory load. The complete record is in events.jsonl, which is append-only
+# and where an exhaustive audit belongs; the panel is the 30-row window, and the
+# window is the scarce thing.
+#
+# 8 for fail-opens, and the reason is the same measurement rather than symmetry
+# with the number above. A guard_error is NOT one event per fault. Both hooks
+# fail open per invocation, so a fault that sits on disk — an unparseable
+# config, a corrupted escalation counter, a bug — emits one row per guarded tool
+# call for as long as it sits there. Charged to the warning class it behaves
+# exactly like the advisory burst: thirty ordinary tool calls with a broken
+# tracker push every guard_block, guard_halt, churn_critical and
+# cross_file_critical off the panel, which is a live combination because a
+# tracker failure does not stop the guard from blocking. The reverse is why the
+# class is not simply capped small and forgotten: a busy session's warnings must
+# not push the fail-open row off either, and only a separate budget prevents
+# both directions at once. Eight rather than one because a repeating fault
+# repeats one detail string, which renderWarnings() collapses to a single
+# visible row, so what the budget buys is the VARIETY of errors — two emitters,
+# with room for their exception texts to differ.
 MAX_WARNINGS_RETURNED = 30
+MAX_ADVISORIES_RETURNED = 8
+MAX_ERRORS_RETURNED = 8
+
+# The carve-outs, in the order a row is charged against them. A row matching
+# none of them is charged to the warning class, which is the default and the
+# largest. A fourth class is one entry here plus its own constant above, not a
+# fourth branch in _read_warnings().
+SUBSET_BUDGETS = (
+    (ADVISORY_EVENT_TYPES, MAX_ADVISORIES_RETURNED),
+    (ERROR_EVENT_TYPES, MAX_ERRORS_RETURNED),
+)
 
 HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="en">
@@ -154,13 +231,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .warning-row.critical { border-left-color: var(--red); }
   .warning-row.block    { border-left-color: var(--orange); }
   .warning-row.halt     { border-left-color: var(--red); background: rgba(239,68,68,0.08); }
+  .warning-row.advisory { border-left-color: var(--cyan); }
+  /* A fail-open outranks a block: the block means the guard stopped something,
+     this means the guard stopped running. Styled at the halt level rather than
+     below it, and told apart from a halt by its label. */
+  .warning-row.failopen { border-left-color: var(--red); background: rgba(239,68,68,0.08); }
   .warning-level {
     font-weight: 600; text-transform: uppercase; font-size: 11px;
     padding: 2px 8px; border-radius: 3px; background: var(--bg3); color: var(--yellow);
     min-width: 70px; text-align: center;
   }
-  .warning-row.critical .warning-level, .warning-row.halt .warning-level { color: var(--red); }
+  .warning-row.critical .warning-level, .warning-row.halt .warning-level,
+  .warning-row.failopen .warning-level { color: var(--red); }
   .warning-row.block    .warning-level { color: var(--orange); }
+  .warning-row.advisory .warning-level { color: var(--cyan); }
   .warning-detail { flex: 1; color: var(--fg2); word-break: break-word; }
   .warning-ts { color: var(--fg3); font-size: 11px; white-space: nowrap; }
   .warning-dismiss {
@@ -425,6 +509,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
         levelClass = 'warning'; levelLabel = 'Cross-file';
       } else if (w.event === 'guard_block') { levelClass = 'block'; levelLabel = 'Blocked'; }
       else if (w.event === 'guard_halt')  { levelClass = 'halt'; levelLabel = 'Halt'; }
+      // An advisory is not a warning: an override flag the user set let a
+      // normally-denied write through, and this row is the receipt. The
+      // default level would render it amber and label it "Warning", which
+      // says something went wrong. Nothing did.
+      else if (w.event === 'guard_advisory') { levelClass = 'advisory'; levelLabel = 'Advisory'; }
+      // A fail-open is the one row that means the check did not run: the hook
+      // threw, allowed the call, and recorded this. The default level would
+      // render it amber and label it "Warning", which is below a block — and a
+      // block is a guard that worked. Both emitters word their detail
+      // "<X> error (fail-open): ...", so the label names the half they share
+      // and the detail beside it says which hook.
+      else if (w.event === 'guard_error') { levelClass = 'failopen'; levelLabel = 'Fail-open'; }
       var ts = formatLocalTime(w.ts || '', 'date');
       var key = warningKey(w);
       html += '<div class="warning-row ' + levelClass + '">' +
@@ -922,13 +1018,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return self.LAST_EVENT_TO_MODE.get(last)
 
     def _read_warnings(self):
-        """Read .guard-state/events.jsonl and return the most recent
-        warning-class events. Filters out noise (guard_allow, tracker_record).
-        Returns up to MAX_WARNINGS_RETURNED events, newest last."""
+        """Read .guard-state/events.jsonl and return the most recent panel
+        events. Filters out noise (guard_allow, tracker_record).
+
+        Each class is capped against its own budget and the classes are merged
+        back into one chronological list — up to MAX_WARNINGS_RETURNED warnings
+        plus up to MAX_ADVISORIES_RETURNED advisories plus up to
+        MAX_ERRORS_RETURNED fail-opens, newest last. See the comment on those
+        constants for why the budgets are separate."""
         content, exists = self._read_file(GUARD_EVENTS_JSONL)
         if not exists or not content.strip():
             return []
         warnings = []
+        carved = [[] for _ in SUBSET_BUDGETS]
         for line in content.strip().split("\n"):
             line = line.strip()
             if not line:
@@ -937,9 +1039,32 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 ev = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if ev.get("event") in WARNING_EVENT_TYPES:
+            event = ev.get("event")
+            if event not in WARNING_EVENT_TYPES:
+                continue
+            for bucket, (types, _cap) in zip(carved, SUBSET_BUDGETS):
+                if event in types:
+                    bucket.append(ev)
+                    break
+            else:
                 warnings.append(ev)
-        return warnings[-MAX_WARNINGS_RETURNED:]
+        # Nothing carved out: return exactly what this function always returned,
+        # down to the ordering. The merge below cannot change the result in
+        # this case, but it could change it if the file's timestamps were ever
+        # out of order, and "unchanged when no override was used and nothing
+        # failed open" is worth more than the uniformity.
+        if not any(carved):
+            return warnings[-MAX_WARNINGS_RETURNED:]
+        merged = list(warnings[-MAX_WARNINGS_RETURNED:])
+        for bucket, (_types, cap) in zip(carved, SUBSET_BUDGETS):
+            merged += bucket[-cap:]
+        # Sort on the raw timestamp string. The guard writes ts as
+        # Date.toISOString() — fixed-width, UTC, Z-suffixed — so lexical order
+        # IS chronological order and no parsing (and no parsing failure) is
+        # involved. An event missing ts sorts oldest rather than raising, and
+        # the sort is stable, so events sharing a timestamp keep file order.
+        merged.sort(key=lambda e: e.get("ts") or "")
+        return merged
 
     def do_GET(self):
         if self.path == "/":
