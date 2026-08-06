@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** open
 **Filed by:** coder
-**Cross-references:** `issues/260806-1235_o_der-sitzungslauf-der-abnahmestrecke-bricht-bei-l5-tab-ab-und-gibt-keine-zahl-mehr-aus.md`, `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (S21, S22), Spec C8
+**Cross-references:** `issues/260806-1235_*_der-sitzungslauf-der-abnahmestrecke-bricht-bei-l5-tab-ab-und-gibt-keine-zahl-mehr-aus.md`, `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (S21, S22), `planning/260802-1036_*_spec-navigator-geruest.md` C8
 
 ---
 

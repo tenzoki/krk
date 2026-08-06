@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** open
 **Filed by:** coder
-**Cross-references:** `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (`### Frage 4`, `#### Wohin die Terminal-Einstellung geht`, S18c), `decisions/260805-1623_a_taste-und-einstellbarkeit-des-terminal-befehls.md`, `crates/krk-core/src/ablage/einstellungen.rs`
+**Cross-references:** `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (`### Frage 4`, `#### Wohin die Terminal-Einstellung geht`, S18c), `decisions/260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`, `crates/krk-core/src/ablage/einstellungen.rs`
 
 ---
 
