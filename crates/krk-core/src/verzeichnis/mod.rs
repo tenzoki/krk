@@ -1,18 +1,19 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Sechs Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Sieben Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys  ──> leser ──> eintrag ──> modell <── sortierung
-//!                                  ^
-//!                                  └── sprungmarke
+//!                       ^          ^
+//!                 kollation        └── sprungmarke
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
 //! `getattrlistbulk(2)` fuer das Lesen sowie, seit Schritt 15, `copyfile(3)`
 //! und `renamex_np(2)` fuer die Operationsmaschine. [`leser`] macht aus dem
 //! ersten der drei Aufrufe den gestueckelten Lesevorgang auf
-//! einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt.
+//! einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
+//! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, [`sortierung`]
 //! liefert die acht Ordnungen, und [`sprungmarke`] findet einen Eintrag ueber
 //! die getippten Anfangsbuchstaben (C2).
@@ -22,6 +23,7 @@
 use std::path::{Path, PathBuf};
 
 pub mod eintrag;
+pub mod kollation;
 pub mod leser;
 pub mod modell;
 pub mod sortierung;

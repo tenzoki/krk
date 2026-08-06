@@ -68,3 +68,8 @@ Nachgesehen am Code, Stand `89f5570`:
 Der Marker bleibt `_o_`: beide Vorbelegungen stehen unverändert, und keine ist bestätigt worden. Die Empfehlung des Datensatzes hing an Schritt 8 als Messgate; das Gate ist seit dem 260803-1755 durch, und die Abnahme-Messreihe aus S22 liegt vor (`messungen/260805-2207-MacBookPro15-1-abnahme.txt`). Die Bedingung, unter der die Empfehlung "erst nach der Messung entscheiden" lautete, ist damit erfüllt.
 
 Weder der Plan noch der Spec nennt diesen Datensatz an einer Stelle; gemeldet als `issues/260806-1647_*_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md`.
+
+---
+Answered: Nutzerentscheid 260806 im Rebalance-Gate des Turns 23 — **Möglichkeit 1, beides richtigstellen.** Die Namenssortierung bekommt sprachsensitive Kollation, und die Dateiendung wird ein Feld in Eintrag und der Schlüssel der Typsortierung. Die Bedingung der ursprünglichen Empfehlung ("erst nach dem Messgate entscheiden") ist erfüllt: das Gate aus S8 ist seit dem 260803-1755 durch, und die Abnahme-Messreihe aus S22 liegt als Vergleichsgrundlage vor (messungen/260805-2207-MacBookPro15-1-abnahme.txt).
+
+Auflage aus den Constraints dieses Datensatzes: L3 und L10 decken Lesen und Sortieren, und beide hängen an der Größe von Eintrag. Die Umsetzung ist deshalb ohne Nachmessung beider Zusagen nicht abgenommen. Verfehlt eine der beiden ihre Zahl, gilt die Regel des Plans — ein neuer Entscheidungsdatensatz, keine stillschweigende Lockerung.

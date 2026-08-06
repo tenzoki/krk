@@ -8,3 +8,7 @@ publish.workspace = true
 [dependencies]
 serde = { workspace = true }
 toml = { workspace = true }
+# Die Kollation der Namenssortierung. Sie steht hier und nicht in `krk-ui`,
+# weil der Sortierschluessel im Kern entsteht: `verzeichnis::kollation` ist
+# die einzige Stelle, die die Kiste nennt.
+icu_collator = { workspace = true }

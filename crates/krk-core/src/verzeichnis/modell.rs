@@ -376,20 +376,9 @@ mod tests {
 
     /// Ein Eintrag fuer die Proben unten.
     ///
-    /// Der Sortierschluessel bleibt leer, und das ist kein Versaeumnis: die
-    /// beiden Eintraege jeder Probe stehen in verschiedenen Gruppen (Ordner vor
-    /// Datei), also entscheidet allein die Gruppe. Den Schluessel hier
-    /// nachzubauen hiesse, die Berechnung aus `Eintrag::aus_roh` ein zweites
-    /// Mal zu fuehren.
+    /// Die Sortierschluessel entstehen dabei so, wie sie es beim Lesen tun.
     fn eintrag(name: &str, typ: Typ) -> Eintrag {
-        Eintrag {
-            name: name.to_owned(),
-            sortierschluessel: Box::default(),
-            groesse: 0,
-            geaendert: SystemTime::UNIX_EPOCH,
-            typ,
-            versteckt: name.starts_with('.'),
-        }
+        Eintrag::neu(name.to_owned(), 0, SystemTime::UNIX_EPOCH, typ)
     }
 
     /// Ein Modell in Lesereihenfolge: erst die Datei, dann der Ordner.

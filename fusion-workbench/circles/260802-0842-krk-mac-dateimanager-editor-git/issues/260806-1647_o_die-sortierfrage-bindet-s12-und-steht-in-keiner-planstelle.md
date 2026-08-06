@@ -30,3 +30,6 @@ Die Empfehlung des Datensatzes lautete "Möglichkeit 3 bis zur Messung, danach M
 **Zuständig:** Nachzug an Plan und Spec (planner) und ein Nutzerentscheid am Datensatz; kein Codeeingriff, solange die Frage offen ist.
 
 **Aufgefallen bei:** dem Reconciler-Abgleich 260806-1647 nach Turn 23.
+
+---
+Resolved: Der Datensatz decisions/260802-1810 ist beantwortet und umgesetzt; die Sortierung ist damit in Plan und Spec zu verankern (Nachzug folgt). Der Code sortiert seit diesem Turn sprachsensitiv, und die Dateiendung ist Feld in Eintrag und Schlüssel der Typsortierung.

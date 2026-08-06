@@ -1,0 +1,151 @@
+KRK — Nachmessung von L3 und L10 nach der Umstellung auf sprachsensitive Kollation
+=================================================================================
+
+Wozu dieser Lauf
+----------------
+Der Nutzerentscheid vom 260806 zu
+`decisions/260802-1810_*_sortierung-ohne-sprachsensitive-kollation.md` stellt
+zweierlei um: die Namenssortierung ordnet sprachsensitiv, und die Sortierung
+nach Typ ordnet nach der Dateiendung statt nach der Aufzaehlung
+Ordner/Datei/Verknuepfung.
+
+Der Datensatz macht die Nachmessung zur Auflage: L3 und L10 decken laut C8 das
+vollstaendige Lesen **und Sortieren**, und beide haengen zusaetzlich an der
+Groesse von `Eintrag`. Ein neuer Schluessel je Eintrag wirkt unmittelbar auf
+sie. Gemessen wird auf der kopflosen Strecke aus Schritt 3; der volle
+Sitzungslauf traegt zu diesen beiden Zusagen nichts bei, weil sie im Kern enden.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-06T15:16:30Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Cache-Zustand         warm
+Wiederholungen        20 je Messgroesse und Runde, 5 Runden
+Pruefordner A         ~/Library/Caches/krk-messplatz/pruefordner-a (Startwert 1, 10.000 Eintraege)
+Pruefordner 100k      ~/Library/Caches/krk-messplatz/pruefordner-gross (Startwert 3, 100.000 Eintraege)
+Systemlast            vor dem Lauf { 2.62 2.25 1.82 }, nach dem Lauf { 2.00 2.53 2.16 }
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+**Es sind dieselben Pruefordner wie in der Abnahmereihe** (`260805-2207`): sie
+liegen unveraendert am Messplatz und wurden fuer diesen Lauf nicht neu erzeugt.
+Die Namen und ihre Endungen sind also dieselben.
+
+Drei Reihen nebeneinander
+-------------------------
+Die Abnahmereihe ist am 260805 gelaufen, dieser Lauf am 260806. Ein Vergleich
+allein gegen sie liesse offen, was auf die Umstellung und was auf den
+Tageszustand des Geraets faellt. Deshalb steht eine dritte Reihe daneben:
+**derselbe Messlauf am selben Tag mit dem Code vor der Umstellung**, gebaut aus
+dem Stand `a901596` in einer Kopie des Quellbaums. Jener Stand ist der
+unmittelbare Vorgaenger dieser Umsetzung; der Unterschied zwischen der Basis-
+und der Neu-Reihe ist damit genau diese Umsetzung und sonst nichts.
+
+Zwischen der Abnahmereihe und `a901596` liegen drei Commits. Keiner beruehrt
+`krk-core/src/verzeichnis/`, also keiner den gemessenen Weg; `3c69ae4` aendert
+allerdings `krk-bench/src/messen.rs`, das Messwerkzeug selbst, und zwar an der
+Sitzungssicherung und nicht an der kopflosen Strecke. Auch deshalb ist die
+Basisreihe von heute und nicht die Abnahmereihe der Bezugspunkt fuer den Preis
+der Umstellung.
+
+Zahlen: das 95. Perzentil je Runde, in Millisekunden
+-----------------------------------------------------
+Das Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei zwanzig
+Laeufen der neunzehnte der sortierten Reihe. Eine Zusage gilt nur als gehalten,
+wenn sie es in jeder Runde tut.
+
+L3 — Pruefordner A: vollstaendig gelesen und sortiert (kopflos, warm)
+Zusage: p95 <= 400 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Abnahme 260805 (5 Runden, Werte aus dem Abnahmebericht)          21.372 … 22.044
+  Basis 260806 (vor der Umstellung)  25.489   24.844   25.270   22.521   24.991     25.489
+  Neu   260806 (mit Kollation)       40.652   40.528   41.546   40.663   40.499     41.546
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 10,4 % der
+  Zusage; es bleibt der Faktor 9,6.
+
+L10 — 100.000 Eintraege: vollstaendig gelesen und sortiert (kopflos, warm)
+Zusage: p95 <= 4000 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Abnahme 260805 (5 Runden, Werte aus dem Abnahmebericht)        216.946 … 224.176
+  Basis 260806 (vor der Umstellung) 295.654  294.408  298.139  301.765  296.190    301.765
+  Neu   260806 (mit Kollation)      462.918  461.074  463.839  454.427  455.614    463.839
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 11,6 % der
+  Zusage; es bleibt der Faktor 8,6.
+
+Beigabe: die erste Bildschirmseite (Kernanteil von L2 und L10)
+Zusage jeweils: p95 <= 100 ms
+
+  Messgroesse                            Basis 260806      Neu 260806    Zusage
+  Pruefordner A, erster Stapel        5.753 … 6.405   10.491 … 10.619   <= 100
+  100.000, erster Stapel              7.085 … 7.880   11.679 … 13.331   <= 100
+
+  Beide gehalten. Der erste Stapel traegt bereits fertige Eintraege, also auch
+  deren Schluessel; er ist deshalb mitbetroffen.
+
+Was die Zahlen sagen
+--------------------
+**Die Abnahmereihe reproduziert.** Die Basis von heute liegt bei L3 um 16 % und
+bei L10 um 35 % ueber der Abnahmereihe vom 260805, ohne dass eine Zeile Code
+dazwischen liegt. Das ist der Tageszustand des Geraets. Wer den Preis der
+Umstellung wissen will, liest ihn an der Basis von heute ab und nicht an der
+Abnahmereihe.
+
+**Der Preis der Umstellung.** Gegen die Basis desselben Tages:
+
+  L3  (10.000 Eintraege)    25.489 ms -> 41.546 ms   + 16.1 ms   + 63 %
+  L10 (100.000 Eintraege)  301.765 ms -> 463.839 ms  +162.1 ms   + 54 %
+
+Auf den Eintrag umgerechnet sind das rund 1,6 Mikrosekunden: zwei
+Kollationsschluessel statt einer zeichenweisen Kleinschreibung. Der Aufwand
+faellt beim Lesen an, einmal je Eintrag; das Sortieren selbst vergleicht
+weiterhin nur Bytes und ist von der Umstellung nicht beruehrt. Ein Umsortieren
+im laufenden Betrieb — der Nutzer wechselt die Spalte — kostet deshalb
+unveraendert nichts dazu.
+
+**Die Groesse von `Eintrag`** steigt von 72 auf 88 Bytes (+ 22 %). Das sind die
+16 Bytes des zweiten `Box<[u8]>` fuer den Endungsschluessel. Der Versatz der
+Endung im Namen (`u32`) kostet kein Byte: er liegt in der Luecke, die die
+Ausrichtung der Struktur ohnehin laesst. Zwei Pruefungen in
+`crates/krk-core/src/verzeichnis/eintrag.rs` nageln beides fest, damit ein
+weiteres Feld eine sichtbare Entscheidung bleibt.
+
+Am Speicher gemessen: bei 100.000 Eintraegen sind das 1,6 MB mehr fuer die
+Struktur. Der Halde wird es dabei leichter, nicht schwerer. Ueber die 100.000
+Namen des Pruefordners ausgezaehlt, bei einer mittleren Namenslaenge von 28
+Bytes:
+
+  Kollationsschluessel des Namens    36,2 Bytes
+  Kollationsschluessel der Endung     8,2 Bytes
+  zusammen                           44,4 Bytes
+  bisheriger Sortierschluessel       56,9 Bytes
+
+Der bisherige Schluessel trug den Namen zweimal, einmal kleingeschrieben und
+einmal unveraendert; ein Kollationsschluessel kommt mit rund einem Byte je
+Zeichen und Ebene aus. Unter dem Strich stehen je Eintrag 16 Bytes mehr in der
+Struktur und 12,5 Bytes weniger auf der Halde. Was zunimmt, ist die Zahl der
+Zuteilungen: zwei statt einer, wobei die zweite bei einem Namen ohne Endung
+entfaellt.
+
+**Das Programm waechst um 1,26 MB**, von 2,15 MB auf 3,41 MB. Das sind die
+CLDR-Tabellen, die `icu_collator` ueber sein Merkmal `compiled_data` einbackt.
+C8 stellt keine Zusage ueber die Groesse des Programms; die Zahl steht hier,
+weil sie der zweite messbare Preis der Umstellung ist.
+
+Lesart und Einschraenkungen
+---------------------------
+Diese Strecke misst ohne Fenster und ohne AppKit. "Vollstaendiges Lesen samt
+Sortierung" beginnt beim Aufruf des Lesers und endet mit dem abgeschlossenen,
+sortierten Ordnermodell; L3 und L10 enden im Kern, ihre Zahlen sind damit
+vollstaendig und nicht nur ein Anteil.
+
+Der erste Stapel ist der **Anteil des Kerns** an L2 beziehungsweise an der
+ersten Bildschirmseite von L10, nicht die Zusage selbst: was das Zeichnen
+dazulegt, misst der Messmodus der Anwendung.
+
+Die uebrigen acht Zusagen sind hier nicht gemessen. L1 und L4 bis L9 haengen am
+Fenster und nicht am Verzeichnisleser; die Umstellung fasst keinen ihrer Wege
+an. Wer sie dennoch abgenommen sehen will, faehrt den Gesamtlauf aus Schritt 21.

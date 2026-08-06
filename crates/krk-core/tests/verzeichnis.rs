@@ -411,6 +411,72 @@ fn ordner_stehen_vor_dateien_in_jeder_sortierung() {
     }
 }
 
+/// Ein Ordner mit Umlauten und mit vier verschiedenen Endungen.
+///
+/// Der Ordner aus [`sortierordner`] taugt fuer die beiden Fragen nicht: alle
+/// seine Dateien heissen `.txt`, und keiner seiner Namen traegt einen Umlaut.
+/// Eine Sortierung nach der Endung saehe dort genauso aus wie eine nach dem
+/// Namen, und eine falsche Kollation fiele nicht auf.
+fn kollationsordner() -> Pruefordner {
+    let ordner = Pruefordner::neu("kollation");
+    ordner.ordner("Ähren");
+    ordner.datei("Zebra.md", 10);
+    ordner.datei("Äpfel.zip", 10);
+    ordner.datei("Bäume.md", 10);
+    ordner.datei("LIESMICH", 10);
+    ordner.datei("Übersicht.txt", 10);
+    ordner
+}
+
+/// Die Kollation traegt bis durch den echten Leser hindurch.
+///
+/// Die Pruefungen in `verzeichnis::kollation` bauen ihre Namen selbst. Diese
+/// hier liest sie ueber `getattrlistbulk` aus dem Dateisystem, und damit auch
+/// in der Normalform, in der APFS sie zurueckgibt: `Ä` kommt von dort als `A`
+/// mit Kombinationszeichen und nicht als das eine Zeichen, das dieser
+/// Quelltext schreibt.
+#[test]
+fn umlaute_sortieren_beim_grundbuchstaben_und_nicht_hinter_z() {
+    let ordner = kollationsordner();
+    let modell = geladenes_modell(ordner.pfad());
+
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "Ähren",
+            "Äpfel.zip",
+            "Bäume.md",
+            "LIESMICH",
+            "Übersicht.txt",
+            "Zebra.md",
+        ],
+        "Umlaute muessen beim Grundbuchstaben stehen, nicht hinter Z"
+    );
+}
+
+/// Die Sortierung nach Typ ordnet nach der Endung, und Ordner bleiben vorn.
+#[test]
+fn nach_typ_ordnet_die_endung_und_ordner_stehen_weiter_vorn() {
+    let ordner = kollationsordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+    modell.sortierung_setzen(Sortierung::neu(Schluessel::Typ, Richtung::Aufsteigend));
+
+    assert_eq!(
+        namen(&modell),
+        vec![
+            // Der Ordner zuerst, wie in jeder Sortierung.
+            "Ähren",
+            // Dann die Datei ohne Endung, denn der leere Schluessel steht vorn.
+            "LIESMICH",
+            // Dann md, txt, zip — und bei gleicher Endung entscheidet der Name.
+            "Bäume.md",
+            "Zebra.md",
+            "Übersicht.txt",
+            "Äpfel.zip",
+        ]
+    );
+}
+
 #[test]
 fn vorbelegung_ist_name_aufsteigend() {
     let ordner = sortierordner();

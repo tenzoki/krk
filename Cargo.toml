@@ -20,6 +20,31 @@ publish = false
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 toml = "1"
+# Die sprachsensitive Kollation der Namenssortierung (C1), Antwort auf
+# `decisions/260802-1810_*_sortierung-ohne-sprachsensitive-kollation.md`.
+# Rusts Standardbibliothek bringt keine Kollation mit; ohne sie sortiert
+# `Aepfel` hinter `Zebra`, weil `Ae` in der Unicode-Tabelle nach `Z` steht.
+#
+# Ausschlaggebend fuer diese Kiste und gegen die beiden Alternativen ist
+# `Collator::write_sort_key_to`: sie liefert den Vergleich als **Bytefolge**
+# und haelt damit den Zuschnitt, den `verzeichnis::eintrag` seit Schritt 2
+# traegt — der Schluessel entsteht einmal beim Lesen, das Sortieren vergleicht
+# nur noch Bytes. Beide Alternativen koennen das nicht:
+#
+# - `objc2-foundation` mit `localizedStandardCompare:` waere der Weg, den die
+#   Technologiewahl nahelegt, hat aber keine Schluesselbildung. Er kennt nur
+#   den paarweisen Vergleich und verlangt damit je Sortierschritt einen
+#   Fremdaufruf: bei 100.000 Eintraegen rund 1,7 Millionen statt 100.000
+#   Schluesseln. Dazu haette er `krk-core` an Foundation gebunden, und der
+#   Kern ist die Schicht ohne Fensterwerkzeug (`lib.rs`).
+# - `feruca` setzt denselben Algorithmus in reinem Rust um, haelt sein Modul
+#   `sort_key` aber privat und bietet nach aussen allein `Collator::collate`,
+#   also wieder nur den paarweisen Vergleich.
+#
+# `default-features` bleibt an: das Merkmal `compiled_data` backt die
+# CLDR-Tabellen in das Programm und ist der Grund, aus dem zur Laufzeit keine
+# Datei gesucht und kein Fehler behandelt werden muss.
+icu_collator = "2.2"
 # Signalbehandlung, nur fuer die Messstrecke. `std` kennt keine Signale, und die
 # einzige Zusage, die daran haengt, ist die Sitzungssicherung aus
 # `krk-bench/src/messen.rs`: sie muss den vorigen Stand auch dann zurueckspielen,

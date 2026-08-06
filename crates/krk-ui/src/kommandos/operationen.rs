@@ -757,14 +757,13 @@ mod tests {
     use krk_core::verzeichnis::{Eintrag, Typ};
 
     fn eintrag(name: &str, typ: Typ) -> Eintrag {
-        Eintrag {
-            name: name.to_owned(),
-            sortierschluessel: Box::from(name.as_bytes()),
-            groesse: 0,
-            geaendert: std::time::SystemTime::UNIX_EPOCH,
+        Eintrag::mit_versteckt(
+            name.to_owned(),
+            0,
+            std::time::SystemTime::UNIX_EPOCH,
             typ,
-            versteckt: false,
-        }
+            false,
+        )
     }
 
     fn modell_mit(namen: &[(&str, Typ)]) -> Ordnermodell {
