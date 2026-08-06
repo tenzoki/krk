@@ -43,3 +43,18 @@ ausgeschlossen hat. Ob das den Aufwand wert ist, entscheidet der Coder.
 **Betrifft:** `xtask` (`release.rs`) und das Abnahmekriterium von S23 im
 Plandokument. Kein laufender Code, kein Nutzerverhalten, keine Zeitzusage aus
 C8.
+
+---
+
+Resolved: `xtask/src/release.rs` prüft jetzt beide Formen — die `use`-Zeile über
+`ist_objc2_use` und den ausgeschriebenen Pfad über `nennt_objc2_pfad` — und
+begeht dabei alle drei Quellwurzeln (`crates/krk-ui/src` ohne `appkit/`,
+`crates/krk-core/src`, `crates/krk-bench/src`, Liste `GRENZWURZELN`). Die
+Kommentarbehandlung ist kein Zustandsautomat, sondern die Regel "erstes
+nicht-leeres Zeichen ein `/`, dann wird die Zeile nicht gelesen"; die zwölf
+Kommentarzeilen des Baums treffen sie sämtlich, und in `crates/` steht kein
+Blockkommentar. Die Begründung steht am Programmtext. Vier neue Tests: der
+ausgeschriebene Pfad schlägt an, die zwölf Kommentarzeilen wörtlich nicht, und
+`die_grenzpruefung_laeuft_am_baum_gruen` lässt die Prüfung bei jedem
+`cargo test` am echten Baum laufen. Das Abnahmekriterium von S23 im Plan nennt
+beide Suchen und die drei Wurzeln. `make check` grün.

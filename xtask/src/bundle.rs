@@ -184,7 +184,7 @@ impl Vorlage {
 /// Aus dem Manifestordner von `xtask` abgeleitet und nicht aus dem
 /// Arbeitsverzeichnis: `cargo xtask` laesst sich aus jedem Unterordner rufen,
 /// und das Buendel soll trotzdem immer an derselben Stelle entstehen.
-fn wurzel() -> PathBuf {
+pub(crate) fn wurzel() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("der Manifestordner von xtask liegt in der Projektwurzel")

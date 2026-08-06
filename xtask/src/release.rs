@@ -2,12 +2,16 @@
 //!
 //! Der Weg in sechs Stationen, jede scheitert mit einer benennenden Meldung:
 //!
-//! 1. **AppKit-Grenze pruefen:** keine `use objc2`-Zeile ausserhalb von
-//!    `crates/krk-ui/src/appkit/`. Die Pruefung traegt die Grenzzusage aus dem
-//!    Plan maschinell, weil `#![deny(unsafe_code)]` sie nur zur Haelfte
-//!    erzwingt: ein grosser Teil der `objc2`-Bindungen ist als sicher
-//!    deklariert und uebersetzt ausserhalb anstandslos. Defekt
-//!    `260803-1530_*_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen`.
+//! 1. **AppKit-Grenze pruefen:** keine Nennung einer `objc2`-Kiste ausserhalb
+//!    von `crates/krk-ui/src/appkit/`, weder als `use`-Zeile noch als
+//!    ausgeschriebener Pfad, und das in allen drei Quellwurzeln des Workspace.
+//!    Die Pruefung traegt die Grenzzusage aus dem Plan maschinell, weil
+//!    `#![deny(unsafe_code)]` sie nur zur Haelfte erzwingt: ein grosser Teil
+//!    der `objc2`-Bindungen ist als sicher deklariert und uebersetzt
+//!    ausserhalb anstandslos. Defekte
+//!    `260803-1530_*_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen`
+//!    und
+//!    `260806-1333_*_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten`.
 //! 2. **Beide Ziele uebersetzen:** dieselbe Uebersetzung wie `bundle`, einmal
 //!    je Tripel aus `rust-toolchain.toml`.
 //! 3. **`lipo`:** die beiden Binaerdateien zu einer universellen
@@ -42,6 +46,21 @@ const ZIELE: [&str; 2] = ["x86_64-apple-darwin", "aarch64-apple-darwin"];
 
 /// Die Architekturnamen, die `lipo -archs` danach melden muss.
 const ARCHITEKTUREN: [&str; 2] = ["x86_64", "arm64"];
+
+/// Die Quellwurzeln der AppKit-Grenzpruefung, je mit dem einen Teilbaum
+/// darunter, der als einziger eine `objc2`-Kiste nennen darf.
+///
+/// Alle drei Kisten des Workspace stehen hier, nicht nur `krk-ui`. Fuer
+/// `krk-core` belegt zwar schon das Abnahmekriterium von S15 ueber die
+/// Abhaengigkeiten der Kiste, dass sie keine `objc2`-Kiste uebersetzen kann;
+/// die zweite Pruefung kostet nichts und macht die Grenze an einer Stelle
+/// lesbar statt ueber zwei Kriterien verteilt. Fuer `krk-bench` gab es bis zum
+/// 260806 gar keine Zusage.
+const GRENZWURZELN: [(&str, Option<&str>); 3] = [
+    ("crates/krk-ui/src", Some("appkit")),
+    ("crates/krk-core/src", None),
+    ("crates/krk-bench/src", None),
+];
 
 /// Die Umgebungsvariable mit dem Namen des notarytool-Schluesselbundprofils.
 pub const NOTAR_PROFIL_VARIABLE: &str = "KRK_NOTARY_PROFILE";
@@ -83,27 +102,22 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     Ok(())
 }
 
-/// Prueft, dass ausserhalb von `crates/krk-ui/src/appkit/` keine
-/// `use objc2`-Zeile steht.
+/// Prueft, dass ausserhalb von `crates/krk-ui/src/appkit/` keine `objc2`-Kiste
+/// genannt wird.
 ///
-/// Dieselbe Vorschrift wie im Abnahmekriterium von Schritt 23:
-///
-/// ```text
-/// grep -rEln '^[[:space:]]*use +objc2' crates/krk-ui/src --include='*.rs' \
-///   | grep -v '^crates/krk-ui/src/appkit/'
-/// ```
-///
-/// Eine `objc2`-Bindung kommt ohne eine `use`-Zeile aus einer der
-/// `objc2`-Kisten nicht zustande, gleich ob die Kiste sie als `pub fn` oder
-/// als `pub unsafe fn` fuehrt; die `use`-Zeile faengt damit beide Haelften der
-/// Grenze. Die Verankerung am Zeilenanfang ist Pflicht: unverankert traefe die
-/// Suche die Modulkommentare der Form "In dieser Datei steht keine
-/// `use objc2`-Zeile", gemessen am 260805-0000 mit sechs Treffern.
+/// Dieselbe Vorschrift wie im Abnahmekriterium von Schritt 23, und sie besteht
+/// aus zwei Suchen ueber dieselben drei Quellwurzeln (`GRENZWURZELN`): die
+/// `use`-Zeile aus `ist_objc2_use` und der ausgeschriebene Pfad aus
+/// `nennt_objc2_pfad`. Eine `objc2`-Bindung kommt ohne eines von beidem nicht
+/// zustande, gleich ob die Kiste sie als `pub fn` oder als `pub unsafe fn`
+/// fuehrt; zusammen fangen die zwei Suchen beide Haelften der Grenze.
 fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
-    let quellwurzel = wurzel.join("crates").join("krk-ui").join("src");
-    let ausgenommen = quellwurzel.join("appkit");
     let mut verstoesse = Vec::new();
-    dateien_pruefen(&quellwurzel, &ausgenommen, &mut verstoesse)?;
+    for (quellwurzel, ausnahme) in GRENZWURZELN {
+        let quellwurzel = wurzel.join(quellwurzel);
+        let ausgenommen = ausnahme.map(|name| quellwurzel.join(name));
+        dateien_pruefen(&quellwurzel, ausgenommen.as_deref(), &mut verstoesse)?;
+    }
     if !verstoesse.is_empty() {
         verstoesse.sort();
         let aufzaehlung: Vec<String> = verstoesse
@@ -111,8 +125,9 @@ fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
             .map(|pfad| format!("\x20      {}", pfad.display()))
             .collect();
         return Err(Abbruch::Lauf(format!(
-            "Die AppKit-Grenze ist verletzt: `use objc2` ausserhalb von \
-             crates/krk-ui/src/appkit/ in\n\
+            "Die AppKit-Grenze ist verletzt: eine `objc2`-Kiste ist ausserhalb von \
+             crates/krk-ui/src/appkit/ genannt, als `use`-Zeile oder als ausgeschriebener \
+             Pfad, in\n\
              \n\
              {}\n\
              \n\
@@ -123,8 +138,8 @@ fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
         )));
     }
     println!(
-        "AppKit-Grenze geprueft: keine `use objc2`-Zeile ausserhalb von \
-         crates/krk-ui/src/appkit/."
+        "AppKit-Grenze geprueft: keine `objc2`-Kiste ausserhalb von \
+         crates/krk-ui/src/appkit/, weder als `use`-Zeile noch als ausgeschriebener Pfad."
     );
     Ok(())
 }
@@ -132,10 +147,11 @@ fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
 /// Geht die `.rs`-Dateien unter `ordner` durch und sammelt die Verstoesse.
 ///
 /// Der Teilbaum `ausgenommen` wird nicht betreten: dort, und nur dort, ist
-/// `use objc2` erlaubt.
+/// eine `objc2`-Kiste erlaubt. `None` heisst, dass die Quellwurzel keine
+/// Ausnahme kennt.
 fn dateien_pruefen(
     ordner: &Path,
-    ausgenommen: &Path,
+    ausgenommen: Option<&Path>,
     verstoesse: &mut Vec<PathBuf>,
 ) -> Result<(), Abbruch> {
     let eintraege = fs::read_dir(ordner).map_err(|fehler| {
@@ -146,7 +162,7 @@ fn dateien_pruefen(
             Abbruch::Lauf(format!("{} ist nicht lesbar: {fehler}", ordner.display()))
         })?;
         let pfad = eintrag.path();
-        if pfad == ausgenommen {
+        if ausgenommen.is_some_and(|ausnahme| pfad == ausnahme) {
             continue;
         }
         if pfad.is_dir() {
@@ -159,11 +175,80 @@ fn dateien_pruefen(
         let inhalt = fs::read_to_string(&pfad).map_err(|fehler| {
             Abbruch::Lauf(format!("{} ist nicht lesbar: {fehler}", pfad.display()))
         })?;
-        if inhalt.lines().any(ist_objc2_use) {
+        if inhalt.lines().any(verletzt_grenze) {
             verstoesse.push(pfad);
         }
     }
     Ok(())
+}
+
+/// Ob eine Zeile die AppKit-Grenze verletzt.
+///
+/// Zwei Formen nennen eine `objc2`-Kiste: die `use`-Zeile und der
+/// ausgeschriebene Pfad. Die zweite kam bis zum 260806 durch
+/// (`issues/260806-1333_*_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten.md`);
+/// `objc2::rc::Weak::from_retained(&x)` ist gueltiges Rust ohne jede
+/// `use`-Zeile und steht heute mehrfach in `appkit/anwendung.rs`.
+///
+/// **Was als Kommentar gilt, und warum die Regel so grob ist.** Eine Zeile,
+/// deren erstes nicht-leeres Zeichen ein `/` ist, wird nicht gelesen. Das ist
+/// die ganze Kommentarbehandlung — kein Zustandsautomat fuer `//` und
+/// `/* */`, wie der Defekt ihn erwogen hat. Drei Gruende. Erstens treffen die
+/// zwoelf Kommentarzeilen des Baums, die `objc2` nennen und auf denen die
+/// Pruefung nicht anschlagen darf, allesamt diese Form: sie stehen als `//!`
+/// in Spalte 1. Zweitens gibt es im ganzen Verzeichnis `crates/` keinen
+/// einzigen Blockkommentar, gemessen am 260806; ein Automat dafuer waere Code
+/// gegen einen Fall, den es nicht gibt, und die Maxime des Vorhabens ist
+/// "supersimpel". Drittens faellt die verbleibende Luecke — ein nachgestellter
+/// Kommentar hinter Code, der `objc2::` nennt — zur sicheren Seite: sie meldet
+/// einen Verstoss zu viel, nicht einen zu wenig, und ein Umformulieren des
+/// Kommentars raeumt sie aus. Ein halber Rust-Zerteiler in einem Bauwerkzeug
+/// koennte umgekehrt scheitern, und dann schweigt das Tor.
+fn verletzt_grenze(zeile: &str) -> bool {
+    let inhalt = zeile.trim_start();
+    if inhalt.starts_with('/') {
+        return false;
+    }
+    ist_objc2_use(inhalt) || nennt_objc2_pfad(inhalt)
+}
+
+/// Ob die Zeile einen ausgeschriebenen Pfad in eine `objc2`-Kiste nennt.
+///
+/// Gesucht ist ein Bezeichner, der mit `objc2` beginnt und auf den unmittelbar
+/// `::` folgt: `objc2::rc::Weak`, `objc2_app_kit::NSView`,
+/// `<objc2_foundation::NSString>::from_str`. Vor dem `objc2` muss ein
+/// Zeichen stehen, das kein Bezeichnerzeichen ist, sonst traefe die Suche auch
+/// `meinobjc2::x`, also einen fremden Namen, der nur so endet.
+///
+/// Die Zeile wird nicht auf Kommentare geprueft; das erledigt
+/// `verletzt_grenze` vorher.
+fn nennt_objc2_pfad(zeile: &str) -> bool {
+    let bytes = zeile.as_bytes();
+    let mut ab = 0;
+    while let Some(stelle) = zeile[ab..].find("objc2") {
+        let anfang = ab + stelle;
+        ab = anfang + "objc2".len();
+        if anfang > 0 && ist_bezeichnerzeichen(bytes[anfang - 1]) {
+            continue;
+        }
+        let mut ende = ab;
+        while ende < bytes.len() && ist_bezeichnerzeichen(bytes[ende]) {
+            ende += 1;
+        }
+        if zeile[ende..].starts_with("::") {
+            return true;
+        }
+    }
+    false
+}
+
+/// Ob das Byte in einem Rust-Bezeichner stehen darf.
+///
+/// Nur die ASCII-Haelfte: ein Bezeichner darf zwar auch Unicode tragen, aber
+/// keine Kiste des Vorhabens tut das, und ein Fortsetzungsbyte einer deutschen
+/// Umlaut-Kommentarzeile gilt so als Grenze statt als Bezeichnerzeichen.
+fn ist_bezeichnerzeichen(zeichen: u8) -> bool {
+    zeichen.is_ascii_alphanumeric() || zeichen == b'_'
 }
 
 /// Ob eine Zeile eine `use objc2`-Zeile ist.
@@ -474,6 +559,84 @@ mod tests {
         assert!(ist_objc2_use("use ::objc2::rc::Retained;"));
         assert!(ist_objc2_use("use::objc2_app_kit::NSView;"));
         assert!(ist_objc2_use("    pub use ::objc2::MainThreadMarker;"));
+    }
+
+    /// Die erste der beiden Luecken vom 260806-1333: der ausgeschriebene Pfad.
+    #[test]
+    fn ein_ausgeschriebener_objc2_pfad_ist_ein_verstoss() {
+        // Woertlich aus crates/krk-ui/src/appkit/anwendung.rs:575. Innerhalb
+        // von appkit/ ist die Zeile erlaubt, ausserhalb ist sie der Verstoss,
+        // den die Vorgaengerin nicht sah.
+        assert!(verletzt_grenze(
+            "            let schwach = objc2::rc::Weak::from_retained(&self.retain());"
+        ));
+        assert!(verletzt_grenze("    objc2_app_kit::NSView::alloc(mtm);"));
+        assert!(verletzt_grenze(
+            "    let text = <objc2_foundation::NSString>::from_str(\"x\");"
+        ));
+        assert!(verletzt_grenze(
+            "    fn sicht(&self) -> objc2::rc::Retained<NSView> {"
+        ));
+        // Die `use`-Zeile bleibt ein Verstoss, jetzt ueber dieselbe Frage.
+        assert!(verletzt_grenze("use objc2::rc::Retained;"));
+        assert!(verletzt_grenze("pub use objc2_app_kit::NSView;"));
+        // Ohne `::` ist `objc2` nur ein Wort; die `use`-Zeile faengt es.
+        assert!(verletzt_grenze("use objc2_app_kit as ak;"));
+    }
+
+    /// Die zwoelf Kommentarzeilen, die es heute im Baum gibt — woertlich.
+    ///
+    /// Zehn unter `crates/krk-ui/src` ausserhalb von `appkit/`, zwei unter
+    /// `crates/krk-core/src`. Schlaegt die Pruefung auf einer davon an, ist der
+    /// Bau sofort rot, ohne dass die Grenze verletzt waere.
+    #[test]
+    fn die_kommentarzeilen_des_baums_sind_kein_verstoss() {
+        for zeile in [
+            "//! **Keine Zeile AppKit.** In diesem Verzeichnis steht keine `use objc2`-Zeile,",
+            "//! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der",
+            "//! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile, und",
+            "//! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile, wie",
+            "//! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile und",
+            "//! hier keine `use objc2`-Zeile. Wo der Fokus steht, liest",
+            "//! keine `use objc2`-Zeile**, und das ist nachpruefbar, nicht nur gemeint.",
+            "//! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die",
+            "//! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die",
+            "//! hier keine `use objc2`-Zeile. Die Ansichten dazu sind die vier Blaetter unter",
+            "//! Diese Datei ist reines Rust und nennt keine `objc2`-Kiste. Sie bekommt eine",
+            "//! weiterhin von oben nach unten: `krk-core` nennt keine `objc2`-Kiste. Ein",
+        ] {
+            assert!(!verletzt_grenze(zeile), "schlaegt an auf: {zeile}");
+        }
+        // Und ein Kommentar, der den Pfad ausschreibt: heute steht er so
+        // nirgends, morgen kann er es. Die Kommentarregel faengt ihn.
+        assert!(!verletzt_grenze(
+            "//! Die Huelle um `objc2::rc::Retained` liegt unter `appkit/`."
+        ));
+        assert!(!verletzt_grenze(
+            "    /// Reicht `objc2_app_kit::NSView` nach draussen."
+        ));
+    }
+
+    #[test]
+    fn zeilen_ohne_objc2_sind_kein_verstoss() {
+        assert!(!verletzt_grenze("use std::path::PathBuf;"));
+        assert!(!verletzt_grenze("    let x = std::mem::take(&mut y);"));
+        assert!(!verletzt_grenze(""));
+        // Ein fremder Name, der nur auf `objc2` endet.
+        assert!(!verletzt_grenze("    meinobjc2::rufen();"));
+        // `objc2` ohne folgendes `::` und ohne `use` ist nur ein Wort.
+        assert!(!verletzt_grenze("    let name = \"objc2\";"));
+    }
+
+    /// Die Pruefung am echten Baum, nicht nur an erfundenen Zeilen.
+    ///
+    /// Sie haengt sonst allein an `cargo xtask release`, und das verlangt eine
+    /// Signaturidentitaet und zwei Uebersetzungslaeufe. So laeuft dieselbe
+    /// Pruefung bei jedem `make check` mit und meldet einen Verstoss am Tag,
+    /// an dem er entsteht, statt am Tag der Auslieferung.
+    #[test]
+    fn die_grenzpruefung_laeuft_am_baum_gruen() {
+        appkit_grenze_pruefen(&bundle::wurzel()).expect("die AppKit-Grenze haelt");
     }
 
     #[test]
