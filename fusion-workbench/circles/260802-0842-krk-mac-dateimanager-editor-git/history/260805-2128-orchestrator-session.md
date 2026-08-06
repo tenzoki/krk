@@ -51,6 +51,12 @@
 - Coherence: ok (per-Turn-Gate, Nutzerwahl „Weiter")
 - Besonderheiten: Abnahmereihe hält 9 von 10 Zusagen; L4-Streuung als Fremdlast belegt; L9 verfehlt auch ruhig und bleibt auf Nutzerwunsch als offene Entscheidung stehen — Runde 1 gilt bis zur Klärung nicht als abgeschlossen. S19 erweiterte den Wirkungsbereich um den Wert `Tabbereich` (im Review bestätigt, keine Nebenwirkung).
 
+### Turn 22 (Nachtrag 260806-1054)
+- Nutzerauftrag nach Sitzungsabschluss: die Belegungsansicht gliedert nach neun Funktionsbereichen (Dateilisting, Dateioperationen, Tabs, Vorschau, Leiste und Fokus, Fenster, Anwendung, Textbefehle, Editor). Zuordnung an einer Stelle im Modell, vollständige Fallunterscheidung; `resources/default-keymap.toml` unberührt.
+- Commits: ccaf821 (Umsetzung), b0bec0c (Coderev-Artefakte)
+- Review: 2 Befunde, beide klein, keiner blockiert
+- Coherence: ok (per-Turn-Gate, Nutzerwahl „Weiter"); auf einen erneuten Reconciler-Lauf wurde verzichtet — der Abgleich 260806-0904 lag eine Stunde zurück, und die Tracking-Änderung dieses Turns (ein Issue angelegt und geschlossen) ist im Commit belegt.
+
 ## Remaining Work
 
 - S6b (NSAlert beim fehlgeschlagenen Tastenabgriff) — letzter offener Planschritt

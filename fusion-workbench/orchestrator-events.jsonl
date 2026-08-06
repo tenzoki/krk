@@ -168,3 +168,12 @@
 {"ts":"2026-08-06T06:55:33","event":"turn_end","turn":21,"detail":"5 Aufgaben geloest, 9 Commits, 6 neue Issues (1 aus S22, 5 aus Review), 3 neue offene Entscheidungen, 3 Defekte geschlossen; Queue konvergiert"}
 {"ts":"2026-08-06T07:07:01","event":"reconciliation","turn":21,"detail":"coherent; 18 Abweichungen korrigiert (16 Entscheidungen _a_ zu _i_, Plan-Statuszeile, 1 neuer Defekt CLAUDE.md-Stand)"}
 {"ts":"2026-08-06T07:08:05","event":"session_end","detail":"5/5 Aufgaben, 10 Commits, coherent; L9-Entscheidung offen, Circle bleibt aktiv"}
+{"ts":"2026-08-06T08:55:41","event":"turn_start","turn":22,"detail":"Folgeauftrag: Belegungsansicht nach Funktionsbereich gruppieren"}
+{"ts":"2026-08-06T08:55:41","event":"task_start","turn":22,"task":"F1-GRUPPEN","agent":"coder","detail":"Belegungsansicht gruppiert nach Funktionsbereich"}
+{"ts":"2026-08-06T09:18:50","event":"task_done","turn":22,"task":"F1-GRUPPEN","agent":"coder","detail":"ccaf821; neun Funktionsbereiche, Zuordnung im Modell, Bündelprüfung bestanden"}
+{"ts":"2026-08-06T09:18:50","event":"commit","turn":22,"task":"F1-GRUPPEN","detail":"ccaf821 feat(ui): die Belegungsansicht gliedert nach Funktionsbereichen"}
+{"ts":"2026-08-06T09:18:50","event":"review_start","turn":22,"agent":"coderev","detail":"Durchsicht ccaf821 (2 Dateien)"}
+{"ts":"2026-08-06T09:25:04","event":"review_done","turn":22,"agent":"coderev","detail":"2 Befunde (beide Low), nichts blockiert"}
+{"ts":"2026-08-06T09:37:08","event":"coherence_review","turn":22,"detail":"verdict: ok | Artefakt-Grundlage: 2 Low-Befunde, keiner blockiert | Artefakt-Directive: Commit setzt den Auftrag um | Grundlage-Directive: nichts beruehrt"}
+{"ts":"2026-08-06T09:37:08","event":"turn_end","turn":22,"detail":"1 Aufgabe geloest, 2 Commits, 2 neue Low-Issues; Queue konvergiert"}
+{"ts":"2026-08-06T09:37:08","event":"session_end","detail":"Folgeauftrag F1-Gliederung abgeschlossen (ccaf821, b0bec0c)"}

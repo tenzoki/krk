@@ -1,16 +1,8 @@
 {
   "haltActive": false,
   "consecutiveBlocks": 0,
-  "lastBlockTimestamp": "2026-08-05T22:20:41.831Z",
+  "lastBlockTimestamp": "2026-08-06T09:11:28.524Z",
   "recentEvents": [
-    {
-      "level": "block",
-      "trigger": "protected_path",
-      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `rm -rf \"$D\"` writes `\"$D\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
-      "timestamp": "2026-08-05T09:17:05.768Z",
-      "toolName": "Bash",
-      "filePath": "\"$D\""
-    },
     {
       "level": "block",
       "trigger": "protected_path",
@@ -82,6 +74,14 @@
       "timestamp": "2026-08-05T22:20:41.831Z",
       "toolName": "Bash",
       "filePath": "\"$CIRCLE/issues/260803-1845_o_l4-streut-zwischen-den-runden-viel-staerker-als-die-erste-messung-zeigte.md\""
+    },
+    {
+      "level": "block",
+      "trigger": "protected_path",
+      "message": "fusion policy: this Bash command mutates a file whose target cannot be resolved before it runs. The segment `cp \"$HOME/Library/Application Support/KRK/session.toml \"$SCRATCH/session.toml.sicherung\" 2>/dev/null` writes `\"$SCRATCH/session.toml.sicherung\"`, which the guard cannot prove is outside the protected paths, so it is denied (fail-closed). If the target is genuinely unprotected, write the path out literally instead of building it at run time. Do not rephrase the command — the guard segments compound commands and inspects subshells — and do not re-route through Edit or Write, which are guarded on the same list. STOP and ask the user.",
+      "timestamp": "2026-08-06T09:11:28.524Z",
+      "toolName": "Bash",
+      "filePath": "\"$SCRATCH/session.toml.sicherung\""
     }
   ]
 }

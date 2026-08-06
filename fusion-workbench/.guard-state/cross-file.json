@@ -636,9 +636,9 @@
       "lastEditTimestamp": "2026-08-04T08:14:32.311Z"
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "pingBackCount": 48,
-      "totalEdits": 229,
-      "lastEditTimestamp": "2026-08-05T21:21:39.602Z"
+      "pingBackCount": 49,
+      "totalEdits": 234,
+      "lastEditTimestamp": "2026-08-06T09:15:59.011Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "pingBackCount": 0,
@@ -1856,9 +1856,9 @@
       "lastEditTimestamp": "2026-08-05T18:37:27.761Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2128-orchestrator-session.md": {
-      "pingBackCount": 1,
-      "totalEdits": 3,
-      "lastEditTimestamp": "2026-08-06T07:07:58.403Z"
+      "pingBackCount": 2,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-06T09:37:14.309Z"
     },
     "crates/krk-ui/src/vorschaumodell.rs": {
       "pingBackCount": 2,
@@ -1881,14 +1881,14 @@
       "lastEditTimestamp": "2026-08-05T20:20:39.132Z"
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-05T20:41:52.144Z"
+      "pingBackCount": 2,
+      "totalEdits": 17,
+      "lastEditTimestamp": "2026-08-06T09:04:42.759Z"
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
-      "pingBackCount": 0,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-05T20:39:08.214Z"
+      "pingBackCount": 1,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-06T09:06:36.439Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2250-coder-s20-belegungsansicht.md": {
       "pingBackCount": 0,
@@ -1984,8 +1984,33 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-06T07:05:51.412Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1054_p_belegungsansicht-gruppiert-nach-funktionsbereich.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T08:55:08.614Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1113-coder-belegungsansicht-funktionsbereiche.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T09:17:33.380Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1123_o_modulkopf-zitiert-den-issue-pfad-mit-ueberholtem-marker.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T09:23:47.717Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1123_o_auswahlwiederherstellung-der-belegungsansicht-umgeht-die-waehlbarkeitspruefung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T09:24:00.820Z"
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/reviews/260806-1123-coderev-belegungsansicht-funktionsbereiche.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-06T09:24:41.931Z"
     }
   },
   "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2128-orchestrator-session.md",
-  "lastEditTimestamp": "2026-08-06T07:07:58.403Z"
+  "lastEditTimestamp": "2026-08-06T09:37:14.309Z"
 }
