@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Achtzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Neunzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -18,6 +18,7 @@
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
+//!           ──> hinweis
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
@@ -44,7 +45,11 @@
 //! der Bildwiederholrate, die beiden Beruehrungen mit AppKit, die die
 //! Fruehmessung aus Schritt 8 braucht. [`blaetter`] haelt die gemeinsame Huelle
 //! fuer die Dialoge am Fenster und darin das Eingabeblatt der Pfadeingabe aus
-//! C2. [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
+//! C2. [`hinweis`] haelt daneben das eine **anwendungsmodale** Hinweisfenster:
+//! kein Blatt, keine Antwort, sondern die letzte Ausgabe vor dem Beenden, wenn
+//! sich der Tastenabgriff nicht einrichten laesst. Die Abgrenzung zu den
+//! Blaettern steht in seinem Modulkopf.
+//! [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
 //! `NSPasteboard` und die Uebergabe einer Web-Adresse an den Systembrowser.
 //! [`terminal`] haelt die eine aus C11: die Aufloesung der eingestellten
 //! Buendelkennung und die Uebergabe des angezeigten Ordners an die so gefundene
@@ -78,6 +83,7 @@ mod blaetter;
 mod ereignisse;
 mod fenster;
 mod fsevents;
+mod hinweis;
 mod leiste;
 mod menue;
 mod papierkorb;

@@ -65,6 +65,13 @@
 //! aktiven Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer
 //! steht.
 //!
+//! **Laesst sich der Abgriff nicht einrichten, laeuft KRK nicht weiter.** Beide
+//! Stellen, die ihn aufsetzen — der Aufbau der Oberflaeche und das Nachziehen
+//! nach einer Umbelegung —, gehen dann durch
+//! [`Anwendungsdelegierter::ohne_tastenabgriff_beenden`]: ein modales
+//! Hinweisfenster aus [`super::hinweis`], danach `terminate:`. Der Grund und
+//! der Entscheid des Nutzers stehen an jener Funktion.
+//!
 //! # Der eine Fokusvorbehalt (C5)
 //!
 //! Seit Schritt 18 gibt es zwei fokussierbare Bereiche, und
@@ -184,6 +191,7 @@ use super::blaetter::{
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
+use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
@@ -1020,14 +1028,46 @@ impl Anwendungsdelegierter {
             Some(abgriff) => {
                 *self.ivars().tastenabgriff.borrow_mut() = Some(abgriff);
             }
-            // Ohne Abgriff bewegt keine Taste mehr die Auswahl. Das still
-            // hinzunehmen hiesse, eine Anwendung auszuliefern, deren erste
-            // Maxime die Tastatursteuerung ist und die keine hat. Der Abbruch
-            // mit Hinweisfenster ist Schritt 6b und steht noch aus.
-            None => eprintln!(
-                "krk: der Tastenabgriff liess sich nicht einrichten, die Tastatursteuerung bleibt aus"
-            ),
+            None => self.ohne_tastenabgriff_beenden(),
         }
+    }
+
+    /// Zeigt den Hinweis und beendet KRK, wenn kein Tastenabgriff steht.
+    ///
+    /// Ohne Abgriff bewegt keine Taste die Auswahl. Das still hinzunehmen
+    /// hiesse, eine Anwendung weiterlaufen zu lassen, deren erste Maxime die
+    /// Tastatursteuerung ist und die keine hat; alles, was danach auf dem
+    /// Schirm steht, waere eine Taeuschung. Der Nutzer hat am 260804-0830
+    /// Moeglichkeit 1 aus `decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md`
+    /// gewaehlt und diesen einen Fehler ausdruecklich vom Weg ueber die
+    /// Statuszeile ausgenommen: die Zeile am Fuss eines Fensters waere die
+    /// falsche Lautstaerke, und der Nutzer arbeitete mit einer halben Anwendung
+    /// weiter.
+    ///
+    /// **Die Standardfehlerausgabe scheidet aus.** Ein ueber den Finder oder
+    /// ueber `open` gestartetes Buendel hat keine; LaunchServices haengt sie ins
+    /// Leere, gemessen am 260803-1309. Bis Schritt 6b stand hier genau das, und
+    /// die Meldung erreichte in der einzigen Betriebsart, die die Abnahme
+    /// zulaesst, niemanden.
+    ///
+    /// Beendet wird ueber [`Anwendungsdelegierter::beenden`], also `terminate:`
+    /// und nicht `exit`: derselbe Weg wie beim Menueeintrag, damit
+    /// `applicationWillTerminate:` den letzten Sitzungsstand noch schreibt.
+    /// Beim Start ist das folgenlos, beim Nachziehen nach einer Umbelegung
+    /// nicht — dort hat der Nutzer gearbeitet, und seine Tabs sollen den
+    /// Abbruch ueberleben. `terminate:` kehrt nicht zurueck, solange kein
+    /// `applicationShouldTerminate:` widerspricht, und ein solches gibt es
+    /// nicht; die Aufrufer rechnen trotzdem nicht damit, sondern tun danach
+    /// schlicht nichts mehr.
+    fn ohne_tastenabgriff_beenden(&self) {
+        hinweis::zeigen(
+            self.mtm(),
+            "KRK kann keine Tastendrücke lesen",
+            "Der Tastenabgriff ließ sich nicht einrichten. Ohne ihn bewegt keine \
+             Taste die Auswahl, und kein Tastenkürzel wirkt. KRK wird beendet, \
+             statt mit einem Fenster ohne Tastatursteuerung weiterzulaufen.",
+        );
+        self.beenden();
     }
 
     /// Baut einen Abgriff ueber der Belegung, die gerade gilt.
@@ -1057,15 +1097,19 @@ impl Anwendungsdelegierter {
     ///
     /// Erst abmelden, dann aufsetzen: zwei Abgriffe nebeneinander saehen jeden
     /// Tastendruck doppelt.
+    ///
+    /// **Der Fehlschlag geht denselben Weg wie beim Start.** Die Lage ist
+    /// dieselbe: KRK steht ohne Tastatursteuerung da, nur diesmal mitten in der
+    /// Arbeit. Ein zweiter Weg fuer denselben Fehler waere eine zweite Wahrheit
+    /// darueber, was KRK ohne Abgriff tut, und der eine der beiden, der auf der
+    /// Standardfehlerausgabe endete, waere im Buendel wieder still.
     fn tastenabgriff_nachziehen(&self) {
         *self.ivars().tastenabgriff.borrow_mut() = None;
         match self.abgriff_aufsetzen() {
             Some(abgriff) => {
                 *self.ivars().tastenabgriff.borrow_mut() = Some(abgriff);
             }
-            None => eprintln!(
-                "krk: der Tastenabgriff liess sich nicht neu einrichten, die Tastatursteuerung bleibt aus"
-            ),
+            None => self.ohne_tastenabgriff_beenden(),
         }
     }
 

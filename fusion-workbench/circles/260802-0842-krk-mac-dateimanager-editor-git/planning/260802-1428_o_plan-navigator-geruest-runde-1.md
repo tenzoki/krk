@@ -636,7 +636,7 @@ flowchart TD
 - Abhängigkeiten: S1, S2, S5
 - Abnahmekriterium: `cargo xtask bundle && open target/KRK.app` öffnet ein Fenster mit den echten Einträgen von `$HOME` in vier Spalten mit korrekten Größen und Daten. Cmd+Q beendet, Cmd+W schließt das Fenster. Ein mit S3 erzeugter Ordner mit 100.000 Einträgen lässt sich flüssig durchblättern. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-ui/src` nennt genau eine Datei, `appkit/mod.rs`. Zusammen mit dem erfolgreichen `cargo build -p krk-ui` ist die Zusage damit vollständig belegt: `#![deny(unsafe_code)]` lässt den Bau scheitern, sobald `unsafe` außerhalb von `src/appkit/` steht, und der grep zeigt, dass es die Ausnahme genau einmal gibt. Die Verankerung am Zeilenanfang ist nötig und nicht Zierde: der Modulkommentar von `main.rs` nennt das Attribut im Fließtext, und ein `grep` ohne Anker findet ihn mit (nachgeprüft am 260803-1208, `grep -rn 'allow(unsafe_code)' crates/krk-ui/src` liefert heute genau diese Kommentarzeile). Es ist dieselbe Prüfvorschrift wie in S2 und S15, auf `krk-ui` umgeschrieben.
 
-#### 6b. **Abbruch mit Hinweisfenster beim fehlenden Tastenabgriff**
+#### 6b. [DONE] **Abbruch mit Hinweisfenster beim fehlenden Tastenabgriff**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/hinweis.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend: `mod hinweis;`), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der `None`-Zweig des Tastenabgriffs zeigt den Hinweis und beendet, statt auf die Standardfehlerausgabe zu schreiben)

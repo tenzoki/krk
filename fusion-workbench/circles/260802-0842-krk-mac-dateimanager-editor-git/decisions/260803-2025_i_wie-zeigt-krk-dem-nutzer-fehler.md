@@ -95,3 +95,6 @@ Answered: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Implemented: S6b (dieser Commit) — die Statuszeile trug S12, der NSAlert beim fehlgeschlagenen Tastenabgriff steht jetzt in crates/krk-ui/src/appkit/hinweis.rs; beide None-Zweige des Tastenabgriffs in anwendung.rs zeigen ihn und beenden danach die Anwendung. Damit ist Möglichkeit 1 aus diesem Datensatz vollständig umgesetzt.
