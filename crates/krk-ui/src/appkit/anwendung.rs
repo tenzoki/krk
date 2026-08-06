@@ -232,6 +232,28 @@ struct Vorgang {
     zustand: Arc<Vorgangszustand>,
 }
 
+impl Vorgang {
+    /// Die Ordner, die dieser Vorgang umschreibt: erst die Quelle, dann das
+    /// Ziel, falls es eines gibt.
+    ///
+    /// **Die eine Stelle, die diese Frage beantwortet.** Zwei Aufrufer stellen
+    /// sie, und beide brauchen dieselbe Antwort: der Abschluss frischt genau
+    /// diese Ordner auf, und die Dateisystemwache schiebt genau fuer sie die
+    /// Auffrischung auf, solange der Vorgang laeuft. Zwei Aufzaehlungen
+    /// nebeneinander waeren zwei Wahrheiten darueber, was eine Operation
+    /// anfasst.
+    fn ordner(&self) -> Vec<PathBuf> {
+        let mut ordner = vec![self.quellordner.clone()];
+        match &self.art {
+            Art::Kopieren { ziel } | Art::Verschieben { ziel } => ordner.push(ziel.clone()),
+            // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
+            // Quellordner.
+            Art::InDenPapierkorb | Art::EndgueltigLoeschen | Art::UmbenennenImStapel { .. } => {}
+        }
+        ordner
+    }
+}
+
 /// Was der Anwendungsdelegierte haelt.
 ///
 /// Die Zellen tragen Objekte, die AppKit nur schwach referenziert oder gar
@@ -283,6 +305,18 @@ pub struct AnwendungsIvars {
     leiste: OnceCell<Leiste>,
     /// Das Vorschaufenster (C6), der dritte fokussierbare Bereich.
     vorschau: OnceCell<Retained<Vorschaufenster>>,
+    /// Der Pfad, den die ausgeblendete Vorschau beim Einblenden nachholt (C6,
+    /// C7).
+    ///
+    /// Bei ausgeblendetem Vorschaufenster wird eine neue Auswahl nur hier
+    /// vermerkt und nicht gelesen: bis zum 260806 stiess jeder Zeilenschritt
+    /// auch dann `stat(2)`, einen Arbeitsfaden und ein Dateilesen an, wenn die
+    /// Flaeche, fuer die gelesen wurde, auf keinem Schirm stand. Wer die
+    /// Vorschau ausblendet, will gerade diese Kosten sparen.
+    ///
+    /// Leer heisst: es ist nichts nachzuholen. Der Tab behaelt dann seinen
+    /// Inhalt, wie das Halteverhalten aus C6 es ohnehin sagt.
+    vorschau_nachtrag: RefCell<Option<PathBuf>>,
     /// Der Zugang zu `bookmarks.toml` (C5).
     ///
     /// Er steht hier und nicht in der Leiste: der Kern legt ab, die Leiste
@@ -473,6 +507,7 @@ impl Anwendungsdelegierter {
             dateifenster: OnceCell::new(),
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
+            vorschau_nachtrag: RefCell::new(None),
             ablage: RefCell::new(None),
             tastenabgriff: RefCell::new(None),
             belegungsansicht: RefCell::new(None),
@@ -714,11 +749,35 @@ impl Anwendungsdelegierter {
     /// beiden, und die Vorschau zeigt, was vor dem Nutzer liegt. Eine
     /// aufgehobene Auswahl laesst den Tab stehen; das Zustandsdiagramm des
     /// Specs kennt allein die **neue** Auswahl als Ausloeser.
+    ///
+    /// **Bei ausgeblendeter Vorschau wird nichts gelesen.** Der Pfad geht
+    /// dann in [`AnwendungsIvars::vorschau_nachtrag`], und das Einblenden aus
+    /// C7 holt ihn nach; die Begruendung steht am Feld. Ein zweiter Weg in die
+    /// Vorschau entsteht dabei nicht: nachgeholt wird mit demselben
+    /// `datei_anzeigen`, das auch hier steht.
     fn vorschau_fuellen(&self, seite: Fensterseite, pfad: Option<PathBuf>) {
         if seite != self.ivars().modell.borrow().aktiv() {
             return;
         }
         let Some(pfad) = pfad else {
+            return;
+        };
+        if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
+            *self.ivars().vorschau_nachtrag.borrow_mut() = Some(pfad);
+            return;
+        }
+        // Gelesen wird sofort, also ist nichts mehr nachzuholen.
+        *self.ivars().vorschau_nachtrag.borrow_mut() = None;
+        self.vorschau().datei_anzeigen(&pfad);
+    }
+
+    /// Holt das Laden nach, das die ausgeblendete Vorschau ausgesetzt hat.
+    ///
+    /// Gerufen, sobald das Vorschaufenster wieder auf dem Schirm steht. Ohne
+    /// Vermerk geschieht nichts, und der Tab zeigt weiter, was er beim
+    /// Ausblenden zeigte.
+    fn vorschau_nachtragen(&self) {
+        let Some(pfad) = self.ivars().vorschau_nachtrag.borrow_mut().take() else {
             return;
         };
         self.vorschau().datei_anzeigen(&pfad);
@@ -733,6 +792,10 @@ impl Anwendungsdelegierter {
     fn zwischenablage_ansehen(&self) -> bool {
         let inhalt = super::zwischenablage::inhalt_lesen();
         self.vorschau().zwischenablage_anzeigen(inhalt);
+        // Die Zwischenablage ist die neuere Quelle fuer denselben Tab; ein
+        // waehrend der ausgeblendeten Vorschau vermerkter Pfad ist damit
+        // ueberholt und wird nicht mehr nachgeholt.
+        *self.ivars().vorschau_nachtrag.borrow_mut() = None;
         let mut modell = self.ivars().modell.borrow_mut();
         if !modell.sichtbar(Bereich::Vorschau) {
             modell.umschalten(Bereich::Vorschau);
@@ -1158,7 +1221,15 @@ impl Anwendungsdelegierter {
             let Some(selbst) = schwach.load() else {
                 return;
             };
+            // Was ein eigener laufender Vorgang gerade umschreibt, wird nicht
+            // bei jeder Meldung neu gelesen: die Begruendung steht an
+            // `auffrischung::gehoert_zu_vorgang`, und der Abschluss holt die
+            // Auffrischung fuer genau diese Ordner nach.
+            let eigene = selbst.vorgangsordner();
             for pfad in gemeldet {
+                if auffrischung::gehoert_zu_vorgang(pfad, &eigene) {
+                    continue;
+                }
                 auffrischung::ordner_neu_lesen(&*selbst, pfad);
             }
         });
@@ -1172,6 +1243,16 @@ impl Anwendungsdelegierter {
                 );
         }
         *self.ivars().dateisystemwache.borrow_mut() = wache;
+    }
+
+    /// Die Ordner der laufenden Dateioperation; leer, wenn keine laeuft.
+    fn vorgangsordner(&self) -> Vec<PathBuf> {
+        self.ivars()
+            .vorgang
+            .borrow()
+            .as_ref()
+            .map(Vorgang::ordner)
+            .unwrap_or_default()
     }
 
     /// Richtet die Beobachtung der Datentraeger ein (C9).
@@ -1521,6 +1602,15 @@ impl Anwendungsdelegierter {
             && !self.ivars().modell.borrow().sichtbar(bereich)
         {
             self.fokus_setzen(Fokus::Dateifenster);
+        }
+        // Die eingeblendete Vorschau holt nach, was sie im ausgeblendeten
+        // Zustand ausgesetzt hat; die Begruendung steht an
+        // [`AnwendungsIvars::vorschau_nachtrag`].
+        if umgeschaltet
+            && bereich == Bereich::Vorschau
+            && self.ivars().modell.borrow().sichtbar(bereich)
+        {
+            self.vorschau_nachtragen();
         }
         umgeschaltet
     }
@@ -2193,11 +2283,14 @@ impl Anwendungsdelegierter {
         // Dateioperation ist der zweite Ausloeser von `ordner_neu_lesen`, den
         // S14 angelegt und `### Frage 3` zugesagt hat. Ein eigener Weg fuer die
         // selbst verursachte Aenderung entsteht nicht.
-        auffrischung::ordner_neu_lesen(self, &vorgang.quellordner);
+        //
+        // Diese Auffrischung ist zugleich die, die die Dateisystemwache
+        // waehrend des Vorgangs ausgesetzt hat; `Vorgang::ordner` ist fuer
+        // beide dieselbe Aufzaehlung.
+        for ordner in vorgang.ordner() {
+            auffrischung::ordner_neu_lesen(self, &ordner);
+        }
         match &vorgang.art {
-            Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
-                auffrischung::ordner_neu_lesen(self, ziel);
-            }
             // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
             // neuen Namen, so wie sie nach dem Anlegen auf dem angelegten
             // Eintrag steht. Der Name kommt aus dem Auftrag selbst und braucht
@@ -2210,7 +2303,10 @@ impl Anwendungsdelegierter {
                         .eintrag_waehlen(erster);
                 }
             }
-            Art::InDenPapierkorb | Art::EndgueltigLoeschen => {}
+            Art::Kopieren { .. }
+            | Art::Verschieben { .. }
+            | Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen => {}
         }
 
         let Some((frage, liste)) = operationen::uebersprungenliste(&bericht.uebersprungen) else {

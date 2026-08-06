@@ -135,6 +135,36 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
     aufgefrischt
 }
 
+/// Ob ein gemeldeter Pfad einen Ordner benennt, den ein eigener laufender
+/// Vorgang gerade umschreibt.
+///
+/// **Wozu die Frage gestellt wird.** Ein Stapel-Umbenennen aus C4 laeuft seit
+/// S17c auf einem Arbeitsfaden und aendert dabei denselben Ordner, den das
+/// Dateifenster zeigt. Jede Umbenennung meldet FSEvents, jede Meldung startete
+/// bis zum 260806 einen neuen Lesevorgang, und ein Lesevorgang leert sein
+/// Ordnermodell, bevor er den ersten Stapel anhaengt. Bei 5.000 Umbenennungen
+/// in wenigen Sekunden setzte die naechste Meldung den Lesevorgang neu auf,
+/// bevor er fertig war, und die Liste kam fuer die ganze Laufzeit nicht mehr
+/// zum Fuellen
+/// (`issues/260805-1337_*_die-dateiliste-ist-waehrend-eines-stapel-umbenennens-
+/// im-angezeigten-ordner-leer.md`).
+///
+/// **Was der Nutzer stattdessen sieht.** Die Liste bleibt auf dem Stand vor dem
+/// Vorgang stehen, statt leer zu sein, und der Abschluss frischt sie einmal
+/// auf. Der zweite Ausloeser aus S16 ruft [`ordner_neu_lesen`] ohnehin schon,
+/// und zwar fuer genau diese Ordner; ein eigener Nachhol-Weg entsteht deshalb
+/// nicht.
+///
+/// **Der Aufschub gilt allein fuer die Ordner des Vorgangs.** Eine fremde
+/// Aenderung anderswo frischt weiter ohne Zutun auf, wie C9 es zusagt. Eine
+/// fremde Aenderung **in** diesen Ordnern geht nicht verloren, sie erscheint
+/// eine Auffrischung spaeter, naemlich mit der des Abschlusses.
+pub fn gehoert_zu_vorgang(pfad: &Path, ordner_des_vorgangs: &[PathBuf]) -> bool {
+    ordner_des_vorgangs
+        .iter()
+        .any(|einer| gleicher_ordner(einer, pfad))
+}
+
 /// Holt jeden Tab von einem ausgeworfenen Datenträger herunter (C9).
 ///
 /// **Jeden Tab, nicht nur den sichtbaren.** Bis zum 260805 blieb ein verdeckter
@@ -393,6 +423,32 @@ mod tests {
     fn ein_ausgeblendetes_dateifenster_frischt_trotzdem_auf() {
         let probe = Probe::neu("/a", "/a").ohne_rechtes();
         assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 2);
+    }
+
+    /// Der Aufschub aus dem Defekt vom 260805-1337: der Ordner des laufenden
+    /// Vorgangs wird erkannt, jeder andere nicht.
+    #[test]
+    fn der_ordner_eines_laufenden_vorgangs_wird_erkannt() {
+        let vorgang = [PathBuf::from("/a"), PathBuf::from("/ziel")];
+        assert!(gehoert_zu_vorgang(Path::new("/a"), &vorgang));
+        assert!(
+            gehoert_zu_vorgang(Path::new("/a/"), &vorgang),
+            "der Schlussstrich macht keinen anderen Ordner"
+        );
+        assert!(gehoert_zu_vorgang(Path::new("/ziel"), &vorgang));
+        assert!(
+            !gehoert_zu_vorgang(Path::new("/b"), &vorgang),
+            "eine fremde Aenderung anderswo frischt weiter auf (C9)"
+        );
+        assert!(
+            !gehoert_zu_vorgang(Path::new("/a/unterordner"), &vorgang),
+            "der Unterordner ist nicht der Ordner des Vorgangs"
+        );
+    }
+
+    #[test]
+    fn ohne_laufenden_vorgang_schiebt_nichts_auf() {
+        assert!(!gehoert_zu_vorgang(Path::new("/a"), &[]));
     }
 
     #[test]

@@ -289,6 +289,23 @@ impl Belegungsmodell {
             .position(|zeile| matches!(zeile, Zeile::Funktion(_)))
     }
 
+    /// Die naechste waehlbare Zeile zu einer wiederherzustellenden Stelle.
+    ///
+    /// Die Stelle selbst, falls sie in der Liste liegt und eine Funktion
+    /// traegt; sonst die erste Funktionszeile. `None` heisst, dass es keine
+    /// Funktion gibt, was in einer geladenen Belegung nicht vorkommt.
+    ///
+    /// Reines Rust und deshalb hier und nicht in der Ansicht: die Entscheidung
+    /// ist ohne Fenster pruefbar. Wozu es sie gibt, steht an der einen
+    /// Aufrufstelle in `appkit/belegungsansicht.rs` — der programmatische Weg,
+    /// eine Zeile auszuwaehlen, fragt die Sperre fuer Ueberschriften nicht.
+    pub fn waehlbare_zeile(&self, stelle: usize) -> Option<usize> {
+        if stelle < self.zeilen.len() && self.ueberschrift(stelle).is_none() {
+            return Some(stelle);
+        }
+        self.erste_funktionszeile()
+    }
+
     /// Die Funktion hinter dieser Zeile, falls die Zeile eine traegt.
     fn funktion(&self, stelle: usize) -> Option<&Funktion> {
         match self.zeilen.get(stelle)? {
@@ -579,6 +596,39 @@ mod tests {
             Zuweisung::Abgelehnt("es ist keine Funktion ausgewählt".to_owned())
         );
         assert!(!modell.geaendert());
+    }
+
+    /// Die Auswahlwiederherstellung nach `reloadData` weicht von jeder Zeile
+    /// aus, die nicht waehlbar ist: von einer Ueberschrift und von einer
+    /// Stelle hinter dem Ende der Liste.
+    #[test]
+    fn die_auswahlwiederherstellung_meidet_ueberschriften_und_das_listenende() {
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let erste = modell
+            .erste_funktionszeile()
+            .expect("die Auslieferung hat Funktionen");
+        assert_eq!(
+            modell.waehlbare_zeile(0),
+            Some(erste),
+            "die Zeile 0 ist eine Ueberschrift"
+        );
+        assert_eq!(
+            modell.waehlbare_zeile(erste),
+            Some(erste),
+            "eine Funktionszeile bleibt, wo sie ist"
+        );
+        assert_eq!(
+            modell.waehlbare_zeile(modell.zeilen()),
+            Some(erste),
+            "eine Stelle hinter dem Ende weicht auf die erste Funktion aus"
+        );
+        for stelle in 0..modell.zeilen() {
+            let gewaehlt = modell.waehlbare_zeile(stelle).expect("es gibt Funktionen");
+            assert!(
+                modell.ueberschrift(gewaehlt).is_none(),
+                "die Wiederherstellung landete auf der Ueberschrift {gewaehlt}"
+            );
+        }
     }
 
     /// Kein Zeilentext der Ansicht schreibt "Fn+" vor eine Kombination, und

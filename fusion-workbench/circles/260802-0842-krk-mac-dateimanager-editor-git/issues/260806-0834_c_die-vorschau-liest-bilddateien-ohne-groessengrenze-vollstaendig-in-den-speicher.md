@@ -5,3 +5,6 @@ Die Vorschau liest Bilddateien ohne Größengrenze vollständig in den Speicher
 Dazu kommt: jede Auswahländerung startet über `Ladevorgang::starten` einen eigenen Faden (`crates/krk-ui/src/vorschaumodell.rs:142-164`), und ein überholter Faden liest seine Datei trotzdem zu Ende — nur sein `send` scheitert still. Wer mit gehaltener Pfeiltaste durch einen Ordner großer Bilder läuft, erzeugt einen Faden mit Voll-Lese je Zeilenschritt, unbegrenzt.
 ---
 Kontext: S19 (Vorschaufenster, C6). C6 verlangt "die gängigen Bildformate erscheinen mit ihrem Inhalt", nennt aber keine Grenze — die 1-MB-Regel gilt ausdrücklich nur für Text. Vorschlag: eine Größengrenze auch für Bilder (Metadaten-Rückfall wie bei Text über 1 MB, die Ansicht trägt den Rückfallweg über `Inhalt::Bild { metadaten }` bereits), und/oder die Anzeige ohne Klon der Rohbytes. Die L-Zusagen aus C8 sind nicht berührt (L7 misst eine Textdatei); es geht um Speicher, nicht um Zeit. Adressat: coder.
+
+---
+Resolved: Bildgrenze BILDGRENZE = 64 MB neben der Textgrenze, geprüft vor dem Lesen; darüber greift der vorhandene Rückfall auf die Metadaten. Die Bilddaten halten zusätzlich in einem Arc, was die Kopie bei jedem Neuzeichnen spart. Gemessen: 20 Pfeil-ab über 40 Bildern je 65 MB von 438 MB auf 54 MB.

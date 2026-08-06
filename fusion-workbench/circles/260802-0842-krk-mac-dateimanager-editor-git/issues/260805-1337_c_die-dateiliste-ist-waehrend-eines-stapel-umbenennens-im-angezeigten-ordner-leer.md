@@ -35,3 +35,6 @@ hinaus und deshalb hier als Frage und nicht als Reparatur:
    nachholen. Der Abschluss ruft `ordner_neu_lesen` ohnehin schon.
 2. Die Auffrischung entprellen, also mehrere Meldungen innerhalb einer kurzen Spanne zu
    einem Lesevorgang zusammenfassen. Das hülfe auch bei fremden Änderungen im Stapel.
+
+---
+Resolved: Die Dateisystemwache überspringt die Ordner des eigenen laufenden Vorgangs; Vorgang::ordner ist für den Aufschub und für die Auffrischung am Ende dieselbe Aufzählung.

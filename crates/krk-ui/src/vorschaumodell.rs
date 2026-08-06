@@ -27,11 +27,22 @@
 //! # Die Dreiteilung der Anzeige (C6)
 //!
 //! Textdateien bis 1 MB und Markdown erscheinen als reiner Inhalt, die
-//! gaengigen Bildformate als Bild, alles andere, einschliesslich Ordner, als
-//! Metadaten mit Name, vollstaendigem Pfad, Groesse, Aenderungsdatum, Rechten
-//! und Typ. Eine Textdatei ueber 1 MB faellt auf die Metadaten; das
-//! Abnahmekriterium des Schritts laesst beide Wege zu, und die Metadaten sind
-//! der ohne zweite Leseregel.
+//! gaengigen Bildformate bis 64 MB als Bild, alles andere, einschliesslich
+//! Ordner, als Metadaten mit Name, vollstaendigem Pfad, Groesse,
+//! Aenderungsdatum, Rechten und Typ. Eine Textdatei ueber 1 MB faellt auf die
+//! Metadaten; das Abnahmekriterium des Schritts laesst beide Wege zu, und die
+//! Metadaten sind der ohne zweite Leseregel.
+//!
+//! **Beide Grenzen sind dieselbe Regel mit zwei Zahlen.** Bis zum 260806 trug
+//! allein der Text eine; eine Bilddatei wurde ohne jede Pruefung vollstaendig
+//! gelesen, und ein TIFF-Export von mehreren Gigabyte lief damit als Ganzes in
+//! den Arbeitsspeicher des Referenzgeraets von 2018
+//! (`issues/260806-0834_*_die-vorschau-liest-bilddateien-ohne-groessengrenze-
+//! vollstaendig-in-den-speicher.md`). Der Rueckfallweg ist derselbe wie beim
+//! Text und war schon da: [`Inhalt::Bild`] fuehrt die Metadaten ohnehin mit,
+//! damit die Ansicht bei einer nicht dekodierbaren Datei auf sie zurueckfallen
+//! kann. Ueber der Grenze faellt sie eine Stufe frueher darauf zurueck, ohne
+//! gelesen zu haben.
 //!
 //! **Die Rechte erhebt der Arbeitsfaden beim Anzeigen**, mit einem `stat(2)`
 //! auf den einen angezeigten Pfad. `Eintrag` aus S2 bleibt so schmal, wie L10
@@ -50,6 +61,7 @@
 //! Zwischenablage liegt im Arbeitsspeicher und braucht keinen Faden.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
@@ -58,6 +70,23 @@ use krk_core::verzeichnis::Typ;
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
 pub const TEXTGRENZE: u64 = 1024 * 1024;
+
+/// Bis zu welcher Groesse eine Bilddatei als Bild erscheint (C6).
+///
+/// **Warum 64 MB und nicht die Textgrenze.** Die Zahl trennt die gaengigen
+/// Bildformate, die C6 mit ihrem Inhalt zusagt, von den Ausreissern, die den
+/// Speicher fuellen. Ein Bildschirmfoto eines Retina-Schirms liegt bei wenigen
+/// MB, ein Foto aus einer Kamera als JPEG unter 20 MB, ein HEIC darunter; ein
+/// TIFF- oder PSD-Export dagegen leicht ueber 100 MB. Mit der Textgrenze von
+/// 1 MB fiele ein gewoehnliches Foto aus der Anzeige, und das Abnahmekriterium
+/// von C6 waere gebrochen; ohne jede Grenze wird eine beliebig grosse Datei
+/// gelesen, und genau das war der Defekt.
+pub const BILDGRENZE: u64 = 64 * 1024 * 1024;
+
+/// Die Bildgrenze liegt ueber der Textgrenze, sonst fiele jedes gewoehnliche
+/// Foto aus der Anzeige, die C6 zusagt. Beim Uebersetzen geprueft und nicht
+/// erst beim Pruefen: die Aussage haengt allein an den beiden Zahlen darueber.
+const _: () = assert!(BILDGRENZE > TEXTGRENZE);
 
 /// Die Dateiendungen, die als gaengige Bildformate gelten (C6).
 ///
@@ -109,7 +138,15 @@ pub enum Inhalt {
     /// Mal zu lesen. Fuer ein Bild aus der Zwischenablage sind sie leer.
     Bild {
         /// Die Bytes der Bilddatei oder der Zwischenablage.
-        daten: Vec<u8>,
+        ///
+        /// **Geteilt und nicht kopiert.** Die Ansicht klont den [`Inhalt`] des
+        /// aktiven Tabs bei jedem Neuzeichnen, um die Ausleihe des Modells vor
+        /// dem ersten Objective-C-Aufruf zu beenden; ein blosser `Vec<u8>`
+        /// legte dabei jedes Mal eine zweite Kopie der ganzen Bilddatei an.
+        /// `Arc` macht denselben Klon zu einem Zaehlerschritt. Er und nicht
+        /// `Rc`, weil der Arbeitsfaden den Wert baut und durch einen Kanal
+        /// schickt.
+        daten: Arc<Vec<u8>>,
         /// Die Metadaten der Datei, falls das Bild aus einer kommt.
         metadaten: Option<Metadaten>,
     },
@@ -318,7 +355,7 @@ impl Vorschaumodell {
         tab.inhalt = match inhalt {
             Zwischenablageinhalt::Text(text) => Inhalt::Text(text),
             Zwischenablageinhalt::Bild(daten) => Inhalt::Bild {
-                daten,
+                daten: Arc::new(daten),
                 metadaten: None,
             },
             Zwischenablageinhalt::Leer => {
@@ -427,9 +464,16 @@ fn laden(pfad: &Path) -> Inhalt {
         return Inhalt::Metadaten(metadaten);
     }
     if ist_bildpfad(pfad) {
+        // Ueber der Grenze wird nicht gelesen, sondern beschrieben; dieselbe
+        // Antwort wie beim Text und aus demselben Grund. Die Pruefung steht
+        // **vor** dem Lesen: danach waere die Datei schon im Speicher, und
+        // genau das ist der Fall, den die Grenze verhindert.
+        if metadaten.groesse > BILDGRENZE {
+            return Inhalt::Metadaten(metadaten);
+        }
         return match std::fs::read(pfad) {
             Ok(daten) => Inhalt::Bild {
-                daten,
+                daten: Arc::new(daten),
                 metadaten: Some(metadaten),
             },
             Err(_) => Inhalt::Metadaten(metadaten),
@@ -634,6 +678,46 @@ mod tests {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, TEXTGRENZE + 1);
+        assert_eq!(metadaten.typ, Typ::Datei);
+    }
+
+    /// Ein Bild unter der Grenze erscheint mit seinen Bytes. Die Datei ist
+    /// kein gueltiges PNG; `laden` entscheidet nach der Endung, und die
+    /// Dekodierung ist Sache der Ansicht.
+    #[test]
+    fn ein_bild_unter_der_grenze_kommt_mit_seinen_bytes() {
+        let ordner = std::env::temp_dir().join("krk-vorschau-probe-bild-klein");
+        std::fs::create_dir_all(&ordner).expect("Probenordner");
+        let pfad = ordner.join("bild.png");
+        std::fs::write(&pfad, [0x89, b'P', b'N', b'G']).expect("Probendatei");
+        let Inhalt::Bild { daten, metadaten } = laden(&pfad) else {
+            panic!("unter der Grenze zeigt das Bild");
+        };
+        assert_eq!(*daten, vec![0x89, b'P', b'N', b'G']);
+        assert!(
+            metadaten.is_some(),
+            "die Metadaten fahren als Rueckfall mit"
+        );
+    }
+
+    /// Die Abnahmelage der Bildgrenze: eine Bilddatei darueber wird gar nicht
+    /// erst gelesen und faellt auf die Metadaten.
+    ///
+    /// Die Probendatei entsteht ueber `set_len` und belegt deshalb keine
+    /// 64 MB auf der Platte; `laden` fragt vor der Grenze allein `stat(2)`,
+    /// und der liefert die gesetzte Laenge.
+    #[test]
+    fn ein_bild_ueber_der_grenze_faellt_auf_die_metadaten() {
+        let ordner = std::env::temp_dir().join("krk-vorschau-probe-bild-gross");
+        std::fs::create_dir_all(&ordner).expect("Probenordner");
+        let pfad = ordner.join("gross.tiff");
+        let datei = std::fs::File::create(&pfad).expect("Probendatei");
+        datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
+        drop(datei);
+        let Inhalt::Metadaten(metadaten) = laden(&pfad) else {
+            panic!("ueber der Grenze zeigen die Metadaten");
+        };
+        assert_eq!(metadaten.groesse, BILDGRENZE + 1);
         assert_eq!(metadaten.typ, Typ::Datei);
     }
 

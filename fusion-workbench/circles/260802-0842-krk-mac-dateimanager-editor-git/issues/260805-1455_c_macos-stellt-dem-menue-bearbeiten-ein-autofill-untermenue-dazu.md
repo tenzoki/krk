@@ -31,3 +31,6 @@ Der Selektor `submenuAction:` weist es als Untermenü aus. KRK legt im Menü "Be
 ---
 
 **Aufgefallen bei:** dem ersten Lauf von `make menue`, unmittelbar nach dem Anlegen des Makefiles am 260805-1455. Die Marke `--menue-protokoll` aus S13c ist genau dafür gebaut worden: das gebaute Menü auslesen, statt die heute bekannten Systemzusätze aufzuzählen. Sie hat beim ersten bequemen Aufruf einen vierten gefunden.
+
+---
+Resolved: Der zuvor geratene Schlüssel wirkte nicht; der wirksame heißt NSAutoFillSystemInsertMenuEnabled und wird verneint. Am Bündel geprüft: das Menü "Bearbeiten" zeigt nur noch die vier eigenen Einträge.

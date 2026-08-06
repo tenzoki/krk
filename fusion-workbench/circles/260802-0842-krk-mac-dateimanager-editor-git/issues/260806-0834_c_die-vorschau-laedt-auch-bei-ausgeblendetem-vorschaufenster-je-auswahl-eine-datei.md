@@ -3,3 +3,6 @@ Die Vorschau lädt auch bei ausgeblendetem Vorschaufenster je Auswahländerung e
 `vorschau_fuellen` prüft nur, ob die Auswahl aus dem aktiven Dateifenster kommt — nicht, ob das Vorschaufenster überhaupt sichtbar ist (`crates/krk-ui/src/appkit/anwendung.rs:709-717`). Bei ausgeblendeter Vorschau (F3, C7) löst damit **jede** Auswahlbewegung — auch jede gehaltene Pfeiltaste — weiterhin `datei_anzeigen` aus: ein `stat(2)`, ein Arbeitsfaden und ein Dateilesen bis 1 MB (Bilder unbegrenzt, siehe Schwesterdefekt) je Zeilenschritt, für eine Fläche, die niemand sieht.
 ---
 Kontext: S19 (C6/C7). Das Halteverhalten sagt über den ausgeblendeten Zustand nichts; wer die Vorschau ausblendet, will gerade die Kosten sparen. Ein Fix muss den Fall bedenken, dass die Vorschau nach dem Einblenden die aktuelle Auswahl zeigen soll — etwa: bei unsichtbarer Vorschau nur den Pfad merken und das Laden beim Einblenden nachholen (`bereich_umschalten`, `crates/krk-ui/src/appkit/anwendung.rs:1461-1482`, weiß, wann `Bereich::Vorschau` sichtbar wird). Adressat: coder.
+
+---
+Resolved: Bei ausgeblendeter Vorschau wird nur noch der Pfad vermerkt; das Einblenden holt ihn über dasselbe datei_anzeigen nach. Gemessen: 60-MB-Bild bei ausgeblendeter Vorschau von 231 MB auf 49 MB.

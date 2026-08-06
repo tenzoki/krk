@@ -283,8 +283,24 @@ impl Belegungsquelle {
     ///
     /// `reloadData` nimmt der `NSTableView` ihre Auswahl; dieselbe Vorkehrung
     /// wie in der Leiste.
+    ///
+    /// **Wiederhergestellt wird nur eine waehlbare Zeile.**
+    /// `selectRowIndexes:byExtendingSelection:` fragt
+    /// `tableView:shouldSelectRow:` **nicht**; die Sperre fuer
+    /// Ueberschriftszeilen weiter oben greift allein fuer Maus und Tastatur.
+    /// Nach dem Zuruecksetzen aus C3 baut das Modell seine Zeilenliste neu,
+    /// und dass die Ueberschriften danach an denselben Stellen stehen, haengt
+    /// an einer Zusage aus einer anderen Kiste: das Einlesen einer Belegung
+    /// weist unbekannte Kennungen ab und ergaenzt fehlende, also ist der
+    /// Funktionsbestand immer der der Auslieferung. Der Umweg ueber
+    /// [`Belegungsmodell::waehlbare_zeile`] macht die Absicherung an der
+    /// Aufrufstelle selbst fest, damit die Auswahl nicht auf einer
+    /// Ueberschrift landen kann und "Zuweisen" keine Aufforderung mit leerem
+    /// Funktionsnamen stellt.
     fn nachziehen(&self) {
-        let auswahl = self.gewaehlte_zeile();
+        let auswahl = self
+            .gewaehlte_zeile()
+            .and_then(|zeile| self.ivars().modell.borrow().waehlbare_zeile(zeile));
         self.ivars().tabelle.reloadData();
         if let Some(zeile) = auswahl {
             let stelle = NSIndexSet::indexSetWithIndex(zeile);

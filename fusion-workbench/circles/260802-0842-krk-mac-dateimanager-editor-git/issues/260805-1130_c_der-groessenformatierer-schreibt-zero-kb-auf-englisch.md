@@ -32,3 +32,6 @@ Beide sind Entwurfsentscheidungen mit Wirkung über diesen Schritt hinaus; desha
 hier ein Defekt und keine Reparatur. Der Formatierer selbst ist richtig gewählt: der Plan
 verlangt für den Markierungsstand ausdrücklich denselben, der die Größenspalte
 beschriftet, und eine zweite Rechnung daneben wäre eine zweite Wahrheit.
+
+---
+Übergeben: Die Prüfung hat den Defekt weiter gefasst als seine Beschreibung — nicht nur die Null, sondern jede Byte-Angabe erscheint auf Englisch. Weitergeführt als issues/260806-1215_o_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md, dessen Auflösung beim ontocoder liegt. Dieser Eintrag geht darin auf.

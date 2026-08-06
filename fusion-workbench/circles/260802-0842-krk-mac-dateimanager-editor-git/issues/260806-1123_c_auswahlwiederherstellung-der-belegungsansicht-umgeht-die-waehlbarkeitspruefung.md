@@ -35,3 +35,6 @@ Kopplung; Schwere: niedrig. Die Leiste hat dieselbe Bauart
 (Überschriften über `shouldSelectRow`), hält ihre Auswahl aber im
 eigenen Modell auf wählbaren Zeilen fest (`leistenmodell.rs:140`) und
 ist nicht betroffen. Adressat: coder.
+
+---
+Resolved: Belegungsmodell::waehlbare_zeile weicht von Überschriften und vom Listenende aus; die Auswahlwiederherstellung geht jetzt durch dieselbe Prüfung wie die Ersteinstellung, mit Test.

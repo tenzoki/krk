@@ -351,6 +351,11 @@ impl Vorschaufenster {
     /// Die eine Stelle, die aus einem [`Inhalt`] Anzeige macht. Die Ausleihe
     /// des Modells endet, bevor der erste Objective-C-Aufruf faellt; deshalb
     /// der Umweg ueber den geklonten Inhalt.
+    ///
+    /// **Der Klon kopiert keine Bilddatei.** [`Inhalt::Bild`] haelt seine
+    /// Bytes seit dem 260806 in einem `Arc`, und der Klon hier ist fuer sie
+    /// ein Zaehlerschritt; vorher entstand bei jedem Neuzeichnen eine zweite
+    /// vollstaendige Kopie. Die Begruendung steht am Feld selbst.
     fn anzeigen(&self) {
         let (titel, aktiv, inhalt) = {
             let modell = self.ivars().modell.borrow();

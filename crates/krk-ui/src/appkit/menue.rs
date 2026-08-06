@@ -141,16 +141,37 @@ use krk_core::tasten::{Belegung, Kombination, ModMaske};
 /// NO, stehen vollstaendig in
 /// `issues/260805-0753_c_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
 ///
-/// Was bleibt, ist ein Trenner und ein Untermenue "AutoFill" **ohne Kuerzel**.
-/// Es loest ohne Belegung nichts aus und faellt deshalb nicht unter die Zusage.
+/// **Der dritte Zusatz ist ein Untermenue "AutoFill", und er hat einen eigenen
+/// Schluessel mit umgekehrtem Sinn.** Er kam am 260805-1455 mit dem ersten
+/// `make menue` zum Vorschein: ein Trenner und darunter ein Eintrag mit dem
+/// Selektor `submenuAction:`, den `hauptmenue` nicht anlegt. Er traegt keine
+/// Kombination und bricht deshalb keine Zusage aus C3; er zeigt dem Nutzer
+/// aber ein Untermenue, das ein Dateimanager ohne Formularfelder nicht
+/// bedienen kann, und "supersimpel" spricht dagegen. Der im Defekt vermutete
+/// Name `NSDisabledAutoFillMenuItem` wirkt nicht — am 260806-1203 am gebauten
+/// Buendel gemessen, das Menue trug den Eintrag unveraendert. Der Name, der
+/// wirkt, ist `NSAutoFillSystemInsertMenuEnabled`, und er wird **verneint**
+/// statt bejaht: mit `-NSAutoFillSystemInsertMenuEnabled NO` auf der
+/// Befehlszeile gab `--menue-protokoll` weder den Trenner noch den Eintrag
+/// aus. Deshalb stehen hier zwei Wahrheitswerte und nicht ein gemeinsamer.
+/// Gefunden ist er nicht geraten, sondern in den Zeichenketten des
+/// dyld-Zwischenspeichers gesucht: von den Namen der Form
+/// `NS…AutoFill…`/`NS…Disabled…` ist er der einzige, der ein vom System
+/// eingefuegtes Menue benennt.
 pub fn systemzusaetze_unterdruecken() {
     let ja = NSNumber::new_bool(true);
+    let nein = NSNumber::new_bool(false);
     let vorgaben = NSDictionary::from_slices(
         &[
             &*NSString::from_str("NSDisabledCharacterPaletteMenuItem"),
             &*NSString::from_str("NSDisabledDictationMenuItem"),
+            &*NSString::from_str("NSAutoFillSystemInsertMenuEnabled"),
         ],
-        &[ja.as_ref() as &AnyObject, ja.as_ref() as &AnyObject],
+        &[
+            ja.as_ref() as &AnyObject,
+            ja.as_ref() as &AnyObject,
+            nein.as_ref() as &AnyObject,
+        ],
     );
     // SAFETY: `registerDefaults:` nimmt ein `NSDictionary` mit Zeichenketten
     // als Schluesseln entgegen und kopiert es; genau das steht hier. Es
