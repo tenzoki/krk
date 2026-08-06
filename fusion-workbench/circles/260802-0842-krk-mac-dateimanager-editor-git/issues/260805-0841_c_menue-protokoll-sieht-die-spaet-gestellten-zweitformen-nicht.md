@@ -25,3 +25,6 @@ Schlägt kein Auslesezeitpunkt an, ist die zweite Antwort, im Kopfkommentar der 
 ---
 
 Herkunft: benannt im Datensatz `issues/260805-0753_c_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md` als zweiter, kleinerer Defekt an derselben Stelle; beim Beheben von dessen Hauptteil am 260805-0841 nicht mitgeprüft und deshalb als eigener Datensatz herausgezogen.
+
+---
+Resolved: Nachgemessen mit einer Sonde — die Zweitform erscheint an keinem Auslesezeitpunkt, weil die Marke kein Fenster öffnet und die Anwendung deshalb nie aktiv wird. Es gilt die zweite Antwort des Defekts: der Kopf von protokollieren hält jetzt fest, was die Marke nicht sieht.

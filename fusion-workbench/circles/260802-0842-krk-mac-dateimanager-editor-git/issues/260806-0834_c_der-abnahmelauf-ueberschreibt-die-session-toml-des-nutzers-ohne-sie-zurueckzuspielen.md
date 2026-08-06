@@ -5,3 +5,6 @@ Der Abnahmelauf überschreibt die session.toml des Nutzers, ohne sie zurückzusp
 Dass das im Alltag bereits stört, belegt die S21-Session selbst: "Die Sicherung der Nutzer-session.toml wurde nach dem Lauf zurückgespielt" (`fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2335-s21-messmodus-in-der-anwendung.md`, Abschnitt Messlauf) — der coder hat von Hand gerettet, was das Werkzeug selbst leisten sollte.
 ---
 Kontext: S21/S22. Der Plan schreibt vor, dass die Prüfsitzung über `session.toml` gesetzt wird (die L4-Starts müssen sie beim gewöhnlichen Wiederherstellen vorfinden); er verbietet aber nirgends, den vorigen Stand zu sichern. Vorschlag: `Gesamtlauf::fahren` legt vor der ersten Runde eine Kopie der vorhandenen `session.toml` an und spielt sie am Ende (auch im Fehlerfall) zurück — dieselbe Sorgfalt, die `kopierziel_pruefen` schon für fremden Inhalt im Kopierziel aufbringt. Adressat: coder.
+
+---
+Resolved: Gesamtlauf::fahren legt eine Sitzungssicherung an, die den vorigen Stand in Drop zurückspielt, auch beim Abbruch mit ?. Nach dem Prüflauf war die Nutzer-session.toml byteweise unverändert.

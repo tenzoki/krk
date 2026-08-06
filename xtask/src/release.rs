@@ -168,17 +168,59 @@ fn dateien_pruefen(
 
 /// Ob eine Zeile eine `use objc2`-Zeile ist.
 ///
-/// Das Gegenstueck zu `^[[:space:]]*use +objc2`: Einrueckung, dann `use`, dann
-/// Zwischenraum, dann ein Pfad, der mit `objc2` beginnt. Ein Modulkommentar
-/// wie "In dieser Datei steht keine `use objc2`-Zeile" beginnt nach der
-/// Einrueckung mit `//` und faellt durch — genau die sechs Treffer, die die
-/// unverankerte Suche gefunden haette.
+/// Gelesen wird: Einrueckung, eine mitgeschriebene Sichtbarkeit, `use`, ein
+/// Trenner, ein moegliches fuehrendes `::`, dann ein Pfad, der mit `objc2`
+/// beginnt. Ein Modulkommentar wie "In dieser Datei steht keine `use
+/// objc2`-Zeile" beginnt nach der Einrueckung mit `//` und faellt durch —
+/// genau die sechs Treffer, die eine unverankerte Suche gefunden haette.
+///
+/// **Zwei Schreibweisen, die bis zum 260806 durchkamen.** Die Vorgaengerin
+/// verlangte `use` unmittelbar nach der Einrueckung und `objc2` unmittelbar
+/// nach dem Zwischenraum. `pub use objc2_app_kit::NSView;` beginnt aber mit
+/// `pub`, und `use ::objc2::rc::Retained;` schiebt `::` dazwischen; beide sind
+/// gueltiges Rust, und ein Reexport der ersten Sorte haette jedem weiteren
+/// Verbraucher die eigene `use objc2`-Zeile erspart. Einen Verstoss gab es
+/// nicht, die Luecke war trotzdem da
+/// (`issues/260806-0834_*_die-appkit-grenzpruefung-uebersieht-pub-use-und-use-mit-fuehrendem-doppelpunkt.md`).
 fn ist_objc2_use(zeile: &str) -> bool {
-    let Some(nach_use) = zeile.trim_start().strip_prefix("use") else {
+    let ohne_sichtbarkeit = sichtbarkeit_abstreifen(zeile.trim_start());
+    let Some(nach_use) = ohne_sichtbarkeit.strip_prefix("use") else {
         return false;
     };
     let getrimmt = nach_use.trim_start();
-    getrimmt.len() < nach_use.len() && getrimmt.starts_with("objc2")
+    // Nach `use` steht ein Trenner: Zwischenraum oder das fuehrende `::`.
+    // Ohne beides ist es ein Bezeichner wie `useobjc2`.
+    let pfad = match getrimmt.strip_prefix("::") {
+        Some(rest) => rest.trim_start(),
+        None if getrimmt.len() < nach_use.len() => getrimmt,
+        None => return false,
+    };
+    pfad.starts_with("objc2")
+}
+
+/// Streift ein mitgeschriebenes Sichtbarkeitspraefix ab.
+///
+/// `pub`, `pub(crate)`, `pub(super)`, `pub(in ::eine::stelle)` — alles, was
+/// vor `use` stehen darf. Steht keines da oder faengt das Wort nur mit `pub`
+/// an (`public_use`), kommt die Zeile unveraendert zurueck.
+fn sichtbarkeit_abstreifen(zeile: &str) -> &str {
+    let Some(nach_pub) = zeile.strip_prefix("pub") else {
+        return zeile;
+    };
+    if let Some(offen) = nach_pub.strip_prefix('(') {
+        // Die erste schliessende Klammer ist die zugehoerige: der Inhalt einer
+        // Sichtbarkeitsangabe traegt selbst keine Klammern.
+        return match offen.find(')') {
+            Some(stelle) => offen[stelle + 1..].trim_start(),
+            None => zeile,
+        };
+    }
+    let getrimmt = nach_pub.trim_start();
+    if getrimmt.len() < nach_pub.len() {
+        getrimmt
+    } else {
+        zeile
+    }
 }
 
 /// Prueft, dass beide Ziel-Tripel installiert sind.
@@ -416,6 +458,22 @@ mod tests {
         assert!(!ist_objc2_use("useobjc2::x;"));
         assert!(!ist_objc2_use("user objc2"));
         assert!(!ist_objc2_use("use"));
+        assert!(!ist_objc2_use("pub use crate::appkit;"));
+        assert!(!ist_objc2_use("pub(crate) use std::fmt;"));
+        // Ein Bezeichner, der mit `pub` anfaengt, ist keine Sichtbarkeit.
+        assert!(!ist_objc2_use("public_use objc2::x;"));
+    }
+
+    /// Die beiden Schreibweisen, die bis zum 260806 durchkamen.
+    #[test]
+    fn sichtbarkeit_und_fuehrendes_doppelkolon_kommen_nicht_durch() {
+        assert!(ist_objc2_use("pub use objc2_app_kit::NSView;"));
+        assert!(ist_objc2_use("pub(crate) use objc2::rc::Retained;"));
+        assert!(ist_objc2_use("pub(super) use objc2_foundation::NSString;"));
+        assert!(ist_objc2_use("pub(in crate::appkit) use objc2::sel;"));
+        assert!(ist_objc2_use("use ::objc2::rc::Retained;"));
+        assert!(ist_objc2_use("use::objc2_app_kit::NSView;"));
+        assert!(ist_objc2_use("    pub use ::objc2::MainThreadMarker;"));
     }
 
     #[test]

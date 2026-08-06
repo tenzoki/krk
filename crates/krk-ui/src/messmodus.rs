@@ -87,6 +87,27 @@ pub const OHNE_BILDSCHIRM: &str = "das Fenster steht auf keinem Bildschirm, \
      die Bildwiederholrate ist damit nicht erhebbar. Es wird keine Zahl \
      ausgegeben; auf den Hauptbildschirm weicht die Messung nicht aus.";
 
+/// Die Meldung, mit der die Sitzungsstrecke im Hintergrund abbricht.
+///
+/// **Warum das ein Abbruch ist und keine langsame Oberflaeche.** Ist KRK nicht
+/// die vorderste Anwendung, hat sein Fenster keinen Tastaturfokus, und
+/// `Anwendungsdelegierter::kommando_ausfuehren` weist dann **jeden** Befehl
+/// ab, der einen Wirkungsbereich nennt: der Fokus liegt nirgends, den ein
+/// solcher Befehl braucht. Die synthetischen Tastenereignisse gehen weiterhin
+/// durch den Abgriff, sie loesen nur nichts mehr aus. Was uebrig bleibt, sind
+/// die Befehle mit `Wirkungsbereich::Ueberall` — genau `auswahl_runter`, mit
+/// dem L1 und L7 gemessen werden. Die Strecke lief deshalb bis L5-Tab durch
+/// und blieb dort zehn Sekunden stehen, weil `tab_naechster` im
+/// Wirkungsbereich `Tabbereich` liegt (Defekt vom 260806-1235). Die Meldung
+/// nennt seitdem die Ursache statt der Groesse, die als erste darauf traf.
+pub const NICHT_IM_VORDERGRUND: &str = "KRK ist nicht die vorderste Anwendung. \
+     Ohne Tastaturfokus weist KRK jeden Befehl ab, der einen Wirkungsbereich \
+     nennt, und die Sitzungsstrecke misst nichts als L1 und L7. Starte den Lauf \
+     so, dass KRK nach vorn kommen darf, etwa aus einem Terminalfenster im \
+     Vordergrund, und arbeite waehrend des Laufs nicht in einer anderen \
+     Anwendung weiter. Es wird keine Zahl ausgegeben; im Hintergrund misst die \
+     Strecke nicht.";
+
 /// Die Befehlszeilenmarke, die den Messmodus einschaltet.
 const MARKE: &str = "--messmodus";
 
@@ -336,6 +357,12 @@ pub struct Zustand {
 /// Groesse braucht, steht nicht hier.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sitzungslage {
+    /// Ob KRK die vorderste Anwendung ist.
+    ///
+    /// Keine Messgroesse, sondern die Voraussetzung aller uebrigen: ohne sie
+    /// laeuft kein Befehl mit Wirkungsbereich. Siehe
+    /// [`NICHT_IM_VORDERGRUND`].
+    pub im_vordergrund: bool,
     /// Ob das linke Dateifenster das aktive ist.
     pub aktiv_links: bool,
     /// Zeilen des sichtbaren Tabs im aktiven Dateifenster.
@@ -675,6 +702,12 @@ fn sitzungsmessung_fertig(
 /// Oberflaeche; er fuehrt zum Abbruch ohne Zahl statt zu einem Wert, der
 /// etwas anderes misst als seine Zusage.
 fn messung_unmoeglich(groesse: Sitzungsgroesse, lage: &Sitzungslage) -> Option<String> {
+    // Vor jeder Groesse und fuer jede dieselbe Frage: steht KRK vorn? Der
+    // Vorbehalt haengt an der Strecke und nicht an einer einzelnen Zusage,
+    // und er steht deshalb vor der Aufzaehlung statt in ihr.
+    if !lage.im_vordergrund {
+        return Some(NICHT_IM_VORDERGRUND.to_owned());
+    }
     match groesse {
         Sitzungsgroesse::L1 | Sitzungsgroesse::L7 => (lage.zeilen_aktiv == 0)
             .then(|| "die Liste ist leer; ein Tastendruck kann keine Auswahl bewegen".to_owned()),
@@ -1645,6 +1678,7 @@ mod tests {
     /// Eine Sitzungslage mit unauffaelligen Werten, zum Abwandeln je Pruefung.
     fn lage(ordner: &Planordner) -> Sitzungslage {
         Sitzungslage {
+            im_vordergrund: true,
             aktiv_links: true,
             zeilen_aktiv: 10_000,
             liest_aktiv: false,
@@ -1765,6 +1799,87 @@ mod tests {
                 .filter(|schritt| **schritt == Sitzungsschritt::Aufraeumen)
                 .count(),
             WIEDERHOLUNGEN
+        );
+    }
+
+    /// Im Hintergrund bricht die Strecke ab, statt eine Groesse anzuklagen.
+    ///
+    /// Die Pruefung geht ueber **jede** Messgroesse und nicht nur ueber die,
+    /// die am 260806 als erste darauf traf: der Vorbehalt gehoert der Strecke,
+    /// und L1 und L7 kamen nur deshalb durch, weil `auswahl_runter` als
+    /// einziger Befehl der Strecke ohne Wirkungsbereich auskommt.
+    #[test]
+    fn im_hintergrund_beginnt_keine_messung() {
+        let ordner = Planordner::neu("hintergrund");
+        let hintergrund = Sitzungslage {
+            im_vordergrund: false,
+            ..lage(&ordner)
+        };
+        for groesse in [
+            Sitzungsgroesse::L1,
+            Sitzungsgroesse::L5Tab,
+            Sitzungsgroesse::L5Fenster,
+            Sitzungsgroesse::L6,
+            Sitzungsgroesse::L7,
+            Sitzungsgroesse::L8,
+            Sitzungsgroesse::L9,
+        ] {
+            assert_eq!(
+                messung_unmoeglich(groesse, &hintergrund).as_deref(),
+                Some(NICHT_IM_VORDERGRUND),
+                "{} beginnt im Hintergrund trotzdem",
+                groesse.name()
+            );
+        }
+        // Die Gegenprobe: im Vordergrund steht keiner dieser Groessen der
+        // Vorbehalt im Weg.
+        let vordergrund = lage(&ordner);
+        for groesse in [
+            Sitzungsgroesse::L1,
+            Sitzungsgroesse::L5Tab,
+            Sitzungsgroesse::L5Fenster,
+            Sitzungsgroesse::L6,
+            Sitzungsgroesse::L7,
+            Sitzungsgroesse::L8,
+        ] {
+            assert_eq!(
+                messung_unmoeglich(groesse, &vordergrund),
+                None,
+                "{} wird im Vordergrund abgewiesen",
+                groesse.name()
+            );
+        }
+    }
+
+    /// Der Abbruch faellt am ersten Tastenschritt und nicht erst nach zehn
+    /// Sekunden Geduld.
+    #[test]
+    fn der_hintergrund_bricht_die_erste_messung_ab() {
+        let ordner = Planordner::neu("hintergrund-abbruch");
+        let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
+            plan: ordner.plan(),
+        });
+        lauf.sitzungsstelle = lauf
+            .sitzungsschritte
+            .iter()
+            .position(|schritt| {
+                matches!(
+                    schritt,
+                    Sitzungsschritt::Taste {
+                        messung: Some(Sitzungsgroesse::L1),
+                        ..
+                    }
+                )
+            })
+            .expect("es gibt eine L1-Messung");
+
+        let hintergrund = mit_lage(Sitzungslage {
+            im_vordergrund: false,
+            ..lage(&ordner)
+        });
+        assert_eq!(
+            lauf.naechster_schritt(hintergrund),
+            Anweisung::Abbruch(NICHT_IM_VORDERGRUND.to_owned())
         );
     }
 

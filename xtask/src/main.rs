@@ -101,8 +101,8 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
                     "bundle kennt {ueberzaehlig:?} nicht"
                 )));
             }
-            let buendel = bundle::bauen()?;
-            println!("Buendel: {}", buendel.display());
+            let gebaut = bundle::bauen()?;
+            println!("Buendel: {}", gebaut.buendel.display());
             Ok(())
         }
         "release" => release::ausfuehren(&argumente[1..]),

@@ -926,6 +926,10 @@ impl Gesamtlauf {
         kopierziel_pruefen(&self.ordner_a, &self.kopierziel)?;
         let unterordner = unterordner_sicherstellen(&self.ordner_a)?;
         let plan = plan_schreiben(self, &unterordner)?;
+        // Vor der ersten Runde, nicht erst vor dem ersten Sitzungslauf: der
+        // Wert lebt bis zum Ende von `fahren` und spielt die Sitzung des
+        // Nutzers auch dann zurueck, wenn eine Runde mit `?` abbricht.
+        let _sitzung = Sitzungssicherung::anlegen()?;
 
         let systemlast_vorher = systemlast();
         let mut rohrunden = Vec::with_capacity(self.runden);
@@ -1105,6 +1109,87 @@ impl Gesamtlauf {
             ));
         }
         Ok((rate, ausgang.messzeilen))
+    }
+}
+
+/// Die Sicherung der Nutzersitzung ueber einen Gesamtlauf hinweg.
+///
+/// **Warum es sie gibt.** Der Sitzungslauf stellt die Pruefsitzung aus C8 ueber
+/// `session.toml` her, und zwar in der **echten Ablage des Nutzers**
+/// (`Messplan::herstellen`): die L4-Starts danach muessen sie auf dem
+/// gewoehnlichen Weg vorfinden, sonst maesse L4 etwas anderes als das
+/// Wiederherstellen einer Sitzung. Der Lauf nimmt dem Nutzer damit aber seine
+/// Tabs, Ordner und Breiten weg. Bis zum 260806 hat der Messende sie von Hand
+/// gerettet; dieselbe Sorgfalt, die [`kopierziel_pruefen`] fuer fremden Inhalt
+/// im Kopierziel aufbringt, gehoert auch hierher.
+///
+/// **Zurueckgespielt wird in [`Drop`] und nicht am Ende von
+/// [`Gesamtlauf::fahren`].** Jede Runde kann mit `?` abbrechen, und gerade der
+/// Abbruch ist der Fall, in dem eine Zeile am Ende der Funktion nicht mehr
+/// liefe. Ein SIGKILL von aussen ueberlebt auch das nicht; alles darunter
+/// schon.
+struct Sitzungssicherung {
+    /// Der Pfad der echten `session.toml`.
+    pfad: PathBuf,
+    /// Ihr Inhalt vor dem Lauf. `None` heisst: es gab noch keine, und
+    /// zurueckzuspielen ist dann ihre Abwesenheit.
+    vorher: Option<Vec<u8>>,
+}
+
+impl Sitzungssicherung {
+    /// Liest den vorigen Stand, bevor der Lauf ihn ueberschreibt.
+    ///
+    /// Eine Datei, die daliegt und sich **nicht lesen** laesst, bricht den Lauf
+    /// ab. Weiterzumessen hiesse, eine Sitzung zu ueberschreiben, die sich
+    /// nicht zurueckspielen laesst; eine Zahl ist das nicht wert.
+    fn anlegen() -> io::Result<Self> {
+        Self::an(
+            krk_core::ablage::Ablageort::im_benutzerverzeichnis()?
+                .datei(krk_core::ablage::Datei::Sitzung),
+        )
+    }
+
+    /// Dieselbe Sicherung an einem frei gewaehlten Pfad.
+    ///
+    /// Keine Pruefhintertuer, sondern die Bedingung dafuer, dass das
+    /// Zurueckspielen ueberhaupt ohne die echte Sitzung des Nutzers pruefbar
+    /// ist — dieselbe Form, in der `krk_core::ablage::Ablageort::an` es haelt.
+    fn an(pfad: PathBuf) -> io::Result<Self> {
+        let vorher = match std::fs::read(&pfad) {
+            Ok(inhalt) => Some(inhalt),
+            Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => None,
+            Err(fehler) => {
+                return Err(io::Error::other(format!(
+                    "die Sitzung des Nutzers ({}) liegt da, laesst sich aber nicht sichern: \
+                     {fehler}. Der Messlauf ueberschreibt sie mit der Pruefsitzung und \
+                     koennte sie danach nicht zurueckspielen; es wird keine Zahl ausgegeben.",
+                    pfad.display()
+                )));
+            }
+        };
+        Ok(Self { pfad, vorher })
+    }
+}
+
+impl Drop for Sitzungssicherung {
+    fn drop(&mut self) {
+        let ergebnis = match &self.vorher {
+            Some(inhalt) => std::fs::write(&self.pfad, inhalt),
+            None => match std::fs::remove_file(&self.pfad) {
+                Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => Ok(()),
+                anderes => anderes,
+            },
+        };
+        // Gemeldet und nicht verschwiegen: der Nutzer muss erfahren, dass seine
+        // Sitzung jetzt die Pruefsitzung ist. Ein Panic im Drop waere der
+        // falsche Weg, er verdeckte den eigentlichen Fehler des Laufs.
+        if let Err(fehler) = ergebnis {
+            eprintln!(
+                "krk-bench: die Sitzung des Nutzers liess sich nicht nach {} \
+                 zurueckspielen: {fehler}. Dort steht jetzt die Pruefsitzung.",
+                self.pfad.display()
+            );
+        }
     }
 }
 
@@ -2032,6 +2117,44 @@ mod tests {
         assert_eq!(
             tabelle["unterordner"].as_str(),
             Some(unterordner.display().to_string().as_str())
+        );
+    }
+
+    /// Ein vorhandener Sitzungsstand steht nach dem Lauf wieder da.
+    #[test]
+    fn die_sitzungssicherung_spielt_den_vorigen_stand_zurueck() {
+        let ordner = Wegwerfordner::neu("sitzung-zurueck");
+        fs::create_dir_all(ordner.pfad()).expect("anlegbar");
+        let pfad = ordner.pfad().join("session.toml");
+        fs::write(&pfad, b"die Sitzung des Nutzers").expect("schreibbar");
+
+        {
+            let _sicherung = Sitzungssicherung::an(pfad.clone()).expect("sicherbar");
+            // Der Lauf schreibt die Pruefsitzung darueber.
+            fs::write(&pfad, b"die Pruefsitzung").expect("schreibbar");
+        }
+
+        assert_eq!(
+            fs::read(&pfad).expect("lesbar"),
+            b"die Sitzung des Nutzers".to_vec()
+        );
+    }
+
+    /// Gab es keine Sitzung, ist die Abwesenheit der Stand, der zurueckkommt.
+    #[test]
+    fn ohne_vorigen_stand_bleibt_keine_pruefsitzung_liegen() {
+        let ordner = Wegwerfordner::neu("sitzung-ohne");
+        fs::create_dir_all(ordner.pfad()).expect("anlegbar");
+        let pfad = ordner.pfad().join("session.toml");
+
+        {
+            let _sicherung = Sitzungssicherung::an(pfad.clone()).expect("sicherbar");
+            fs::write(&pfad, b"die Pruefsitzung").expect("schreibbar");
+        }
+
+        assert!(
+            !pfad.exists(),
+            "die Pruefsitzung bleibt liegen, wo der Nutzer keine Sitzung hatte"
         );
     }
 

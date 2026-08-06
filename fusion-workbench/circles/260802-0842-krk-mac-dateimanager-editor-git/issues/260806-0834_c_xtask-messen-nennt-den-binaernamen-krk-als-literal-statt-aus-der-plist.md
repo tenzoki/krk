@@ -3,3 +3,6 @@
 `alle_fahren` in `xtask/src/messen.rs:43` bildet den Pfad zum gemessenen Programm als `buendel.join("Contents/MacOS/krk")` — mit hart geschriebenem Binärnamen. `bundle.rs` leitet denselben Namen bewusst aus `CFBundleExecutable` der `resources/Info.plist` ab (`binaername`, `xtask/src/bundle.rs`) und begründet das als die eine Wahrheit über die Bündelstruktur; `release.rs` hält sich daran (`vorlage.binaername`). Ändert sich der Eintrag in der Plist, baut `messen --alle` ein korrektes Bündel und misst dann gegen einen Pfad, den es nicht gibt.
 ---
 Kontext: S21/S23, Konsistenz im xtask. Vorschlag: `bundle::bauen()` gibt neben dem Bündelpfad den Binärnamen mit heraus (oder `messen` ruft `bundle::vorbereiten()` für den Namen), damit das Literal entfällt. Kein Laufzeitfehler heute — `CFBundleExecutable` steht auf `krk` — aber eine zweite Wahrheit genau der Sorte, die die Modulköpfe ausschließen. Adressat: coder.
+
+---
+Resolved: bundle::bauen liefert Gebaut { buendel, binaer }; der Binärpfad entsteht aus CFBundleExecutable der Info.plist, xtask messen reicht ihn nur durch. Kein Literal mehr.

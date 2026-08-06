@@ -39,13 +39,15 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 
 /// Der Abnahmelauf aus Schritt 21: Buendel bauen, dann `krk-bench alle`.
 fn alle_fahren(argumente: &[String]) -> Result<(), Abbruch> {
-    let buendel = bundle::bauen()?;
-    let binaer = buendel.join("Contents/MacOS/krk");
+    // Der Binaerpfad kommt aus dem Bau und wird hier nicht zusammengesetzt;
+    // sein letzter Namensteil steht in `CFBundleExecutable`. Siehe
+    // [`bundle::Gebaut`].
+    let gebaut = bundle::bauen()?;
 
     let mut befehl: Vec<String> = vec![
         "alle".to_owned(),
         "--buendel".to_owned(),
-        binaer.display().to_string(),
+        gebaut.binaer.display().to_string(),
     ];
     befehl.extend(argumente.iter().filter(|marke| *marke != "--alle").cloned());
     krk_bench(&befehl)

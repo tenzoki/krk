@@ -51,3 +51,6 @@ allein der Sitzungslauf.
 
 **Aufgefallen bei:** dem Versuch, die zehn Zeitzusagen aus C8 nach der Bearbeitung der
 sechs offenen Oberflächendefekte am 260806 gegenzumessen. Adressat: `coder`.
+
+---
+Resolved: Kein Commit war die Ursache. Mit crates/krk-ui/src und xtask/src auf den S22-Stand e8626b6 zurückgenommen bricht der Lauf an derselben Stelle ab. Die Ursache ist der Vordergrund: steht KRK nicht vorn, weist kommando_ausfuehren jeden Befehl mit Wirkungsbereich ab, und nur auswahl_runter (Wirkungsbereich::Ueberall) löst noch aus. Die Strecke verweigert die erste Messung jetzt mit NICHT_IM_VORDERGRUND, statt bei L5-Tab zehn Sekunden zu warten. Die Entwurfsfrage steht als decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md. Nachweis: aus einem Terminalfenster im Vordergrund liefert make alle RUNDEN=1 für alle zwölf Berichtszeilen Zahlen (messungen/260806-1103-alle-zusagen.txt).

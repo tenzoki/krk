@@ -39,3 +39,6 @@ weil jede Messreihe stillschweigend auf einem beschnittenen Bestand laufen
 kann, sobald drei Tage oder eine nächtliche Bereinigung dazwischenliegen.
 README beziehungsweise die Kommentarzeile im `Makefile` ("Die Pruefordner
 liegen unter /tmp") ziehen mit.
+
+---
+Resolved: Das Makefile führt MESSPLATZ := $(HOME)/Library/Caches/krk-messplatz und leitet die vier Pfade daraus ab; die Prüfordner liegen damit außerhalb der Reichweite der Systembereinigung. README.md nannte /tmp gar nicht.

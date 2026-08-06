@@ -2541,6 +2541,14 @@ impl Anwendungsdelegierter {
             liest: links.liest_noch(),
             auswahl: links.auswahlzeile(),
             sitzung: Some(Sitzungslage {
+                // Gefragt ist die **Anwendung** und nicht das Fenster: waehrend
+                // eines Blattes ist dessen Panel das Schluesselfenster, das
+                // Hauptfenster also nicht, und KRK steht trotzdem vorn. Ein
+                // Blatt hat seinen eigenen Vorbehalt in
+                // `kommando_ausfuehren`; hier ginge es als "nicht im
+                // Vordergrund" durch und stellte dem Leser die falsche
+                // Diagnose.
+                im_vordergrund: NSApplication::sharedApplication(self.mtm()).isActive(),
                 aktiv_links: aktiv == Fensterseite::Links,
                 zeilen_aktiv: aktiv_quelle.zeilen(),
                 liest_aktiv: aktiv_quelle.liest_noch(),

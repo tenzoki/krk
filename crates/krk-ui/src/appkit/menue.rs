@@ -461,7 +461,8 @@ fn paare() -> [(ModMaske, NSEventModifierFlags); 4] {
 /// bekannten Zusaetze veraltet mit der naechsten macOS-Version, und genau
 /// diesen Fall hat das Vorhaben mit "Close All" schon erlebt. Ausgegeben wird
 /// deshalb, was am `NSMenu` wirklich haengt, einschliesslich der verdeckten
-/// Zweitformen, die AppKit von sich aus dazustellt.
+/// Zweitformen, die AppKit zu diesem Zeitpunkt schon dazugestellt hat. Welche
+/// das sind und welche nicht, steht unter `# Was diese Marke nicht sieht`.
 ///
 /// Je Zeile stehen das Untermenue, die Beschriftung, die Kombination in der
 /// Schreibweise von `resources/default-keymap.toml`, das rohe AppKit-Paar aus
@@ -474,6 +475,29 @@ fn paare() -> [(ModMaske, NSEventModifierFlags); 4] {
 /// dem AppKit ein Menue fuer die Anzeige herrichtet. Dass die dazugestellten
 /// Zweitformen ueberhaupt schon dastehen, besorgt der Aufrufer mit
 /// `finishLaunching`; die Begruendung samt Messung steht dort.
+///
+/// # Was diese Marke nicht sieht
+///
+/// **Die spaet gestellten Zweitformen.** AppKit stellt nicht alle Zusaetze zur
+/// selben Zeit: "Close All" zu `performClose:` steht schon nach
+/// `finishLaunching` da, "Quit and Keep Windows" zu `terminate:` nicht. Am
+/// 260806 mit einer Sonde nachgemessen, die `terminate:` voruebergehend wieder
+/// eintrug: die Zweitform erscheint **an keinem** Auslesezeitpunkt dieser
+/// Marke — nicht unmittelbar nach `finishLaunching`, nicht nachdem die
+/// Ereignisschleife 0,5 s und nicht nachdem sie 2 s gelaufen ist, und auch
+/// nicht nach einem vorangestellten `activate`. Der Grund liegt in der Marke
+/// selbst: sie oeffnet absichtlich kein Fenster und kehrt zurueck, und ohne
+/// Fenster wird die Anwendung nicht aktiv (`isActive()` blieb in allen sechs
+/// Messungen `false`). Ein spaeterer Auslesezeitpunkt macht sie also nicht
+/// vollstaendig; wer sie vollstaendig haben will, muesste sie in eine
+/// laufende Anwendung mit Fenster verlegen und damit zu etwas anderem machen.
+///
+/// **Was daraus folgt.** Eine Ausgabe ohne Auffaelligkeit belegt das
+/// Abnahmekriterium von C3 nur zur Haelfte. Die zweite Haelfte, die
+/// dazugestellten Zweitformen der laufenden Anwendung, ist am laufenden
+/// Buendel ueber die Bedienungshilfen zu pruefen — so, wie der Befund vom
+/// 260805-0753 entstanden ist. Gemeldet war die Luecke als
+/// `issues/260805-0841_*_menue-protokoll-sieht-die-spaet-gestellten-zweitformen-nicht.md`.
 pub fn protokollieren(hauptmenue: &NSMenu) {
     for oberer in hauptmenue.itemArray().iter() {
         let Some(untermenue) = oberer.submenu() else {

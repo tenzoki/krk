@@ -55,8 +55,25 @@ const PROFIL: &str = "release";
 /// Erzeugerkennung ist unbelegt, dafuer stehen die vier Fragezeichen.
 const PKGINFO: &str = "APPL????";
 
+/// Was ein Buendelbau hinterlaesst.
+///
+/// **Der Binaerpfad steht hier und wird nirgends zusammengesetzt.** Wer das
+/// gebaute Programm aufruft — die Messstrecke tut es —, braucht den Pfad in
+/// `Contents/MacOS`, und dessen letzter Namensteil kommt aus
+/// `CFBundleExecutable` der `resources/Info.plist`. Bis zum 260806 schrieb
+/// `messen` dafuer `krk` als Literal hin; ein geaenderter Eintrag in der Plist
+/// haette dort ein gueltiges Buendel gebaut und danach gegen einen Pfad
+/// gemessen, den es nicht gibt
+/// (`issues/260806-0834_*_xtask-messen-nennt-den-binaernamen-krk-als-literal-statt-aus-der-plist.md`).
+pub struct Gebaut {
+    /// Das fertige, signierte `target/KRK.app`.
+    pub buendel: PathBuf,
+    /// Das Binaerprogramm darin, `KRK.app/Contents/MacOS/<CFBundleExecutable>`.
+    pub binaer: PathBuf,
+}
+
 /// Baut `target/KRK.app` und gibt seinen Pfad zurueck.
-pub fn bauen() -> Result<PathBuf, Abbruch> {
+pub fn bauen() -> Result<Gebaut, Abbruch> {
     let vorlage = vorbereiten()?;
     let identitaet = sign::bestimmen()?;
 
@@ -65,7 +82,8 @@ pub fn bauen() -> Result<PathBuf, Abbruch> {
     let uebersetzt = zielpfad(&vorlage.wurzel, None, &vorlage.binaername);
     let buendel = vorlage.zusammensetzen(&uebersetzt)?;
     sign::signieren(&buendel, &identitaet)?;
-    Ok(buendel)
+    let binaer = vorlage.binaer_im_buendel(&buendel);
+    Ok(Gebaut { buendel, binaer })
 }
 
 /// Die geprueften Zutaten des Buendels, vor jedem Uebersetzungslauf gesammelt.
@@ -129,7 +147,7 @@ impl Vorlage {
         fs::create_dir_all(&resources)
             .map_err(|fehler| schreibfehler("anlegen", &resources, &fehler))?;
 
-        let im_buendel = macos.join(&self.binaername);
+        let im_buendel = self.binaer_im_buendel(&buendel);
         fs::copy(binaerquelle, &im_buendel).map_err(|fehler| {
             Abbruch::Lauf(format!(
                 "{} laesst sich nicht nach {} kopieren: {fehler}",
@@ -147,6 +165,17 @@ impl Vorlage {
 
         println!("Version {VERSION} in {} eingesetzt.", plist_pfad.display());
         Ok(buendel)
+    }
+
+    /// Wo das Binaerprogramm in einem fertigen Buendel liegt.
+    ///
+    /// Die eine Stelle, die `Contents/MacOS/<CFBundleExecutable>` bildet: die
+    /// Montage legt es dorthin, und die Messstrecke ruft es von dort.
+    pub(crate) fn binaer_im_buendel(&self, buendel: &Path) -> PathBuf {
+        buendel
+            .join("Contents")
+            .join("MacOS")
+            .join(&self.binaername)
     }
 }
 

@@ -100,12 +100,26 @@ signatur: ## Signatur des gebauten Buendels pruefen
 
 # ── Messen ───────────────────────────────────────────────────────────────────
 
-# Die Pruefordner liegen unter /tmp und nicht im Quellbaum: sie sind gross,
+# Der Messplatz liegt ausserhalb des Quellbaums: die Pruefordner sind gross,
 # reproduzierbar aus ihrem Startwert und gehoeren keinem Commit an.
-ORDNER_A    := /tmp/krk-pruefordner-a
-ORDNER_B    := /tmp/krk-pruefordner-b
-ORDNER_100K := /tmp/krk-pruefordner-gross
-KOPIERZIEL  := /tmp/krk-kopierziel
+#
+# **Und er liegt nicht mehr unter /tmp.** In der Nacht zum 260806 hat eine
+# Systembereinigung dort saemtliche Unterordner aller vier Bestaende geloescht
+# und die Dateien stehen lassen: leer plus alter Aenderungszeitstempel, und der
+# Pruefordner-Erzeuger datiert seine Zeitstempel absichtlich breit zurueck,
+# damit die Sortierung nach Datum etwas zu sortieren hat. Ein frisch neu
+# erzeugter Bestand verlor seine Unterordner binnen Minuten erneut. Eine
+# Messreihe laeuft damit stillschweigend auf einem beschnittenen Bestand,
+# sobald eine naechtliche Bereinigung dazwischenliegt. Unter
+# ~/Library/Caches/ hat seit dem 260806 kein Bestand mehr Eintraege verloren;
+# derselbe APFS-Datentraeger wie zuvor, also misst L8 dort weiter dasselbe.
+# Der Befund steht in
+# `issues/260806-0014_*_pruefordner-unter-tmp-verlieren-leere-unterordner-an-die-systembereinigung.md`.
+MESSPLATZ   := $(HOME)/Library/Caches/krk-messplatz
+ORDNER_A    := $(MESSPLATZ)/pruefordner-a
+ORDNER_B    := $(MESSPLATZ)/pruefordner-b
+ORDNER_100K := $(MESSPLATZ)/pruefordner-gross
+KOPIERZIEL  := $(MESSPLATZ)/kopierziel
 
 .PHONY: fixture
 fixture: ## Die drei Pruefordner anlegen: A und B mit 10.000, einer mit 100.000
