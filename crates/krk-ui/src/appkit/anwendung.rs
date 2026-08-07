@@ -622,14 +622,24 @@ impl Anwendungsdelegierter {
         self.tastenabgriff_einrichten(&mut meldungen);
         self.datentraegerwache_einrichten();
         self.lesevorgaenge_starten();
-        if let Some(fenster) = ivars.fenster.get() {
-            fenster.makeKeyAndOrderFront(None);
-        }
+        // **Der Start geht denselben Weg nach vorn wie die drei anderen**: der
+        // Menueeintrag "Fenster einblenden", der Klick auf das Dock-Symbol und
+        // das Kommando aus C7 rufen alle `fenster_zeigen`. Bis zum 260807 stand
+        // hier ein nacktes `makeKeyAndOrderFront`, und das ordnet das Fenster
+        // nur **innerhalb** von KRK nach vorn; vorderste Anwendung wird KRK erst
+        // mit `activate()`. Ueber den Finder oder `open` gestartet nimmt
+        // LaunchServices die Aktivierung ab, als Kindprozess eines Terminals
+        // gestartet niemand. Die Sitzungsstrecke aus S21 misst nur, wenn KRK
+        // vorn steht, und brach ohne diese Zeile mit `NICHT_IM_VORDERGRUND` ab.
+        self.fenster_zeigen();
         // **Der Eingabefokus gehoert in das aktive Dateifenster, und zwar
-        // nach `makeKeyAndOrderFront`.** Setzte diese Zeile davor, ueberschriebe
-        // AppKit sie beim ersten Anzeigen mit der ersten Ansicht der
-        // Schluesselansichtskette; das ist seit S18 die Leiste, und genau das
-        // war der Defekt vom 260805-1845. Eine eigene Zeile am Ende des Aufbaus
+        // nach dem `makeKeyAndOrderFront` in `fenster_zeigen`.** Setzte diese
+        // Zeile davor, ueberschriebe AppKit sie beim ersten Anzeigen mit der
+        // ersten Ansicht der Schluesselansichtskette; das ist seit S18 die
+        // Leiste, und genau das war der Defekt vom 260805-1845. Das
+        // `activate()` derselben Funktion aendert daran nichts: es macht KRK
+        // zur vordersten Anwendung und ruehrt den ersten Beantworter des
+        // Fensters nicht an. Eine eigene Zeile am Ende des Aufbaus
         // und keine Zeile der Sitzungswiederherstellung: der Fokus wird nicht
         // gespeichert, die Begruendung steht an `fokus::BEIM_START`. Aus der
         // Sitzung kommt allein, **welches** der beiden Dateifenster das aktive
@@ -1714,6 +1724,12 @@ impl Anwendungsdelegierter {
     ///
     /// Es wird nicht angelegt: `setReleasedWhenClosed(false)` haelt es ueber
     /// sein Schliessen hinweg am Leben, und der Delegierte haelt es weiter.
+    ///
+    /// Die eine Stelle dafuer, und vier Wege gehen darueber: der Menueeintrag
+    /// "Fenster einblenden", der Klick auf das Dock-Symbol, das Kommando aus C7
+    /// und seit dem 260807 der Aufbau der Oberflaeche beim Start. Beide Haelften
+    /// gehoeren zusammen: `makeKeyAndOrderFront` ordnet das Fenster innerhalb
+    /// von KRK nach vorn, `activate()` macht KRK zur vordersten Anwendung.
     fn fenster_zeigen(&self) {
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
