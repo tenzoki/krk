@@ -91,9 +91,9 @@
       "lastEditTimestamp": "2026-08-02T08:14:46.617Z"
     },
     "CLAUDE.md": {
-      "pingBackCount": 12,
-      "totalEdits": 30,
-      "lastEditTimestamp": "2026-08-07T09:32:09.513Z"
+      "pingBackCount": 13,
+      "totalEdits": 31,
+      "lastEditTimestamp": "2026-08-07T17:23:46.786Z"
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "pingBackCount": 0,
@@ -2704,8 +2704,13 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-07T17:21:33.619Z"
+    },
+    "fusion-workbench/shared/history/260807-1930-uebergabe-an-die-editor-runde.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T17:24:32.630Z"
     }
   },
-  "lastEditFile": "fusion-workbench/shared/history/260807-1914-planner-l9-auf-65-prozent-in-spec-und-plan.md",
-  "lastEditTimestamp": "2026-08-07T17:21:33.619Z"
+  "lastEditFile": "fusion-workbench/shared/history/260807-1930-uebergabe-an-die-editor-runde.md",
+  "lastEditTimestamp": "2026-08-07T17:24:32.630Z"
 }

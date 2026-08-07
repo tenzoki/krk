@@ -38,7 +38,11 @@ krk/
 └── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-Den Ausführungsstand führt der Plan `planning/260802-1428_*_plan-navigator-geruest-runde-1.md`: **alle 38 Schritte tragen `[DONE]`**. Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält alle zehn Zusagen, seit der Nutzer L9 am 260807 neu gefasst hat: während einer laufenden Kopie erreicht jede Eingabe spätestens das zweite Bild, mindestens 85 Prozent das erste. **Die Runde 1 ist am 260807-1035 als beschränkter Abschluss geschlossen**, Plan und Spec auf `_c_`, der Circle-Datensatz auf `_b_`. Beschränkt heißt: sieben der zehn Zusagen stehen auf der Messreihe vom 260805, und drei Commits danach haben Wege berührt, die sie messen. Der frische Abnahmelauf am gebauten Bündel steht damit aus und ist die erste Nachholarbeit der nächsten Runde; die `## Closure note` des Circle-Datensatzes schreibt es aus. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
+**Die Runde 1 ist am 260807-1035 als beschränkter Abschluss geschlossen**, Plan und Spec auf `_c_`, der Circle-Datensatz auf `_b_`. Alle 38 Planschritte tragen `[DONE]`, am Code belegt durch den Abgleich `history/260807-1022-reconciliation.md`.
+
+**Der Abnahmelauf ist inzwischen gefahren** (`messungen/260807-1538-alle-zusagen.txt`, der erste vollständige nach der Runde). Neun der zehn Zusagen halten in allen fünf Runden. L9 fiel gegenüber dem 260805 von im Mittel 90 auf 76 Prozent; der Nutzer hat die Zusage daraufhin am 260807-1900 auf **65 Prozent im ersten Bild bei höchstens zwei Bildlängen** gesenkt, zum zweiten Mal an diesem Tag und gegen die Empfehlung des Datensatzes. **Die Ursache der Verschlechterung ist offen**, und der Spec sieht deshalb grüner aus, als die Anwendung ist: `shared/issues/260807-1748_o_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md` führt beide Messreihen, drei ausgeschlossene Erklärungen und drei geordnete Verdächtige, angeführt von `16e4558`.
+
+Offene Defekte führt `issues/` in beiden Speichern (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
 
 `krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 

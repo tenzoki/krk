@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 30,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T09:32:09.510Z",
-      "thrashingScore": 24
+      "totalChanges": 31,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-07T17:23:46.784Z",
+      "thrashingScore": 10
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -3244,6 +3244,12 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-07T17:21:33.616Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260807-1930-uebergabe-an-die-editor-runde.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-07T17:24:32.628Z",
       "thrashingScore": 0
     }
   },
