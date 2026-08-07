@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 28,
-      "changesThisSession": 7,
-      "lastChange": "2026-08-07T08:28:10.366Z",
-      "thrashingScore": 19
+      "totalChanges": 30,
+      "changesThisSession": 9,
+      "lastChange": "2026-08-07T09:32:09.510Z",
+      "thrashingScore": 24
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -3175,15 +3175,21 @@
       "thrashingScore": 0
     },
     "fusion-workbench/portfolio.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-07T08:44:37.793Z",
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-07T09:30:48.146Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/history/260807-1042-playmaker-orchestrator-phase4.md": {
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-07T08:45:02.593Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260807-1129-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-07T09:31:23.317Z",
       "thrashingScore": 0
     }
   },

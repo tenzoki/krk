@@ -91,9 +91,9 @@
       "lastEditTimestamp": "2026-08-02T08:14:46.617Z"
     },
     "CLAUDE.md": {
-      "pingBackCount": 11,
-      "totalEdits": 28,
-      "lastEditTimestamp": "2026-08-07T08:28:10.369Z"
+      "pingBackCount": 12,
+      "totalEdits": 30,
+      "lastEditTimestamp": "2026-08-07T09:32:09.513Z"
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "pingBackCount": 0,
@@ -2646,16 +2646,21 @@
       "lastEditTimestamp": "2026-08-07T08:27:00.948Z"
     },
     "fusion-workbench/portfolio.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-07T08:44:37.795Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-07T09:30:48.149Z"
     },
     "fusion-workbench/shared/history/260807-1042-playmaker-orchestrator-phase4.md": {
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-07T08:45:02.596Z"
+    },
+    "fusion-workbench/shared/history/260807-1129-playmaker-direct-dispatch.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T09:31:23.319Z"
     }
   },
-  "lastEditFile": "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md",
-  "lastEditTimestamp": "2026-08-07T08:47:04.571Z"
+  "lastEditFile": "CLAUDE.md",
+  "lastEditTimestamp": "2026-08-07T09:32:09.513Z"
 }

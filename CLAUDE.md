@@ -6,7 +6,7 @@
 
 KRK ist eine native macOS-Anwendung zum Navigieren, Bearbeiten und Versionieren lokaler Dateien, in der Tradition von ForkLift und Norton Commander: Lesezeichen- und Geräteleiste links, zwei Dateifenster mit je mehreren Tabs in der Mitte, Vorschaufenster rechts, dazu ein Editor mit Rohansicht und Formatansicht und eine auf vier Operationen beschränkte Git-Anbindung.
 
-Die vollständige Directive steht im Circle-Datensatz `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, Abschnitt `## Directive`. Dieser Abschnitt hier ist die Kurzfassung, nicht die verbindliche Formulierung.
+Die vollständige Directive steht im Circle-Datensatz `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_*_circle.md`, Abschnitt `## Directive`. Dieser Abschnitt hier ist die Kurzfassung, nicht die verbindliche Formulierung.
 
 Pfade der Form `planning/…`, `decisions/…`, `analyses/…` und `issues/…` sind in dieser Datei relativ zu diesem Circle-Verzeichnis zu lesen.
 
@@ -38,7 +38,7 @@ krk/
 └── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-Den Ausführungsstand führt der Plan `planning/260802-1428_*_plan-navigator-geruest-runde-1.md`: **alle 38 Schritte tragen `[DONE]`**. Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält alle zehn Zusagen, seit der Nutzer L9 am 260807 neu gefasst hat: während einer laufenden Kopie erreicht jede Eingabe spätestens das zweite Bild, mindestens 85 Prozent das erste. Für den Rundenabschluss fehlt allein ein frischer Abnahmelauf am gebauten Bündel. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
+Den Ausführungsstand führt der Plan `planning/260802-1428_*_plan-navigator-geruest-runde-1.md`: **alle 38 Schritte tragen `[DONE]`**. Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält alle zehn Zusagen, seit der Nutzer L9 am 260807 neu gefasst hat: während einer laufenden Kopie erreicht jede Eingabe spätestens das zweite Bild, mindestens 85 Prozent das erste. **Die Runde 1 ist am 260807-1035 als beschränkter Abschluss geschlossen**, Plan und Spec auf `_c_`, der Circle-Datensatz auf `_b_`. Beschränkt heißt: sieben der zehn Zusagen stehen auf der Messreihe vom 260805, und drei Commits danach haben Wege berührt, die sie messen. Der frische Abnahmelauf am gebauten Bündel steht damit aus und ist die erste Nachholarbeit der nächsten Runde; die `## Closure note` des Circle-Datensatzes schreibt es aus. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
 
 `krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 
