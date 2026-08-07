@@ -72,6 +72,76 @@ vierten Anlass vorübergehend stilllegen, L9 erneut fahren, die Anteile
 vergleichen. Fällt der Unterschied weg, ist die Ursache benannt; bleibt er, ist
 die Vermutung falsch und der nächste Verdächtige ist `5d7e299`.
 
+## Die Gegenmessung ist ausgefallen: die Vermutung ist widerlegt
+
+Nachgetragen am 260807 vom `coder`, vor dem Eingriff. **Die Prüfsitzung führt
+null Lesezeichen.** Damit prüft `Leistenmodell::gueltigkeit_pruefen`
+(`crates/krk-ui/src/leistenmodell.rs:243`) über eine leere Liste, ruft
+`Lesezeichen::gueltig` kein einziges Mal, meldet keine Änderung und löst kein
+`reloadData` aus (`crates/krk-ui/src/appkit/leiste.rs:237`). Der vierte Anlass
+kostet je abgeschlossener Operation einen Funktionsaufruf über eine leere
+Schleife. Er kann die vierzehn Prozentpunkte nicht erklären, und eine
+Gegenmessung an ihm hätte nichts gemessen. Der Eingriff ist deshalb nicht
+gebaut worden.
+
+**Woher die Zahl kommt.** Die Lesezeichen stehen nicht in `session.toml`,
+sondern in `bookmarks.toml` (`crates/krk-core/src/ablage/pfade.rs:54`), einer
+eigenen der vier Ablagedateien. Die Messstrecke schreibt allein die Sitzung:
+`Messplan::sitzung_herstellen` (`crates/krk-ui/src/messmodus.rs:288`) und die
+`Sitzungssicherung` in `crates/krk-bench/src/messen.rs:1359` fassen
+`bookmarks.toml` nicht an. Die Datei liegt im selben Ablageordner, den auch das
+Bündel öffnet, `~/Library/Application Support/KRK/`, und **sie existiert dort
+nicht**: der Ordner trägt am 260807 `session.toml` und `settings.toml` und
+sonst nichts. Eine fehlende Datei liefert den Auslieferungszustand
+(`crates/krk-core/src/ablage/mod.rs:228`), und der ist für die Lesezeichen die
+leere Liste. Angelegt wird `bookmarks.toml` erst mit der ersten Änderung an den
+Lesezeichen (`crates/krk-ui/src/appkit/anwendung.rs:897`); sie hat nie
+stattgefunden.
+
+`inference:` Geprüft ist der Ablagestand am 260807 nach dem Lauf, nicht der zum
+Zeitpunkt des Laufs um 15:38. Beides deckt sich nur, wenn zwischendurch kein
+Lesezeichen angelegt und wieder gelöscht wurde. Der Nutzer bestätigt es in
+einem Blick: steht unter der Überschrift „Lesezeichen“ in der linken Leiste
+keine Zeile, ist die Zahl null.
+
+## Der Ausschluss oben ist zu eng gefasst
+
+Der Abschnitt „Was geprüft und ausgeschlossen ist“ sagt, L9 unterscheide von L1
+**allein** die laufende Kopie. Das trifft nicht zu. Der Messplan markiert vor
+jeder L9-Runde alle Einträge des Prüfordners A
+(`Handlung::AlleMarkieren`, `crates/krk-ui/src/messmodus.rs:858`), und A trägt
+10.000 Einträge (`crates/krk-bench/src/fixture.rs:640`). L1 läuft auf demselben
+Ordner ohne eine einzige Markierung. Zwischen den beiden Messungen stehen also
+zwei Unterschiede, die laufende Kopie und die vollständige Markierung, und der
+Befund trennt sie bislang nicht.
+
+## Was als Nächstes zu prüfen wäre
+
+`inference:`, keine Messung. Das Ordnungskriterium ist nicht „welcher Commit
+hat den Tastenweg berührt“, sondern „was ist an L9 anders als an L1“ — denn L1
+geht denselben Weg und hält bei 100 Prozent. Ein Commit, der den gemeinsamen
+Weg verteuert, hätte L1 mitgenommen.
+
+1. **`16e4558`, die sprachsensitive Kollation.** Der Kollationsschlüssel
+   entsteht je Eintrag beim Lesen (`crates/krk-core/src/verzeichnis/kollation.rs`,
+   Kopf). Kopieren schiebt die Auffrischung nicht auf
+   (`auffrischung::schiebt_auffrischung_auf`), das rechte Fenster zeigt während
+   der Messung das Kopierziel, und die Dateisystemwache liest es während der
+   laufenden Kopie wiederholt neu. Jeder dieser Lesevorgänge baut seither ICU-
+   Schlüssel, auf dem Lesefaden, während zwanzigtausend Dateien kopiert werden.
+   L1 hat weder ein laufendes Kopierziel noch diese Lesevorgänge.
+2. **Die Markierung selbst.** Ob das Zeichnen von 10.000 markierten Zeilen seit
+   dem 260805 teurer geworden ist, ist offen; `3e9613a` und `ac95acf` haben
+   `crates/krk-ui/src/appkit/tabelle.rs` angefasst. Gegen diesen Verdacht
+   spricht, dass L1 dieselben Zeilen zeichnet, nur unmarkiert.
+3. **`5d7e299`, `Tabliste::auswahl_auf_namen`.** Zuletzt, nicht zuerst: die
+   L9-Eingabe läuft dort durch, aber die L1-Eingabe ebenso, und L1 hält.
+
+Vor jedem weiteren Verdacht steht ohnehin die Trennung der beiden Unterschiede
+aus dem Abschnitt darüber. Sie ist keine Sache des `coder`: sie hinge an einer
+zusätzlichen Messgröße, und die Messstrecke ist der Maßstab, an dem der Befund
+gemessen wird.
+
 ## Was daran hängt
 
 Die Zusage L9 steht im Spec unter C8, und der Nutzer hat ihre Fassung erst am
@@ -79,8 +149,12 @@ Die Zusage L9 steht im Spec unter C8, und der Nutzer hat ihre Fassung erst am
 stillschweigende Lockerung, die C8 ausschließt. Die Entscheidung gehört dem
 Nutzer und braucht die Gegenmessung als Grundlage.
 
-**Zuständig:** `coder` für die Gegenmessung, danach der Nutzer für die
-Entscheidung.
+**Zuständig:** ursprünglich `coder` für die Gegenmessung am vierten Anlass.
+Die ist entfallen, weil die Vermutung vor dem Eingriff widerlegt war; der
+Abschnitt „Die Gegenmessung ist ausgefallen“ trägt den Grund. Der Defekt bleibt
+offen und braucht als Nächstes eine Entscheidung des Nutzers darüber, welcher
+der drei genannten Verdächtigen gemessen wird und wie die beiden Unterschiede
+zwischen L1 und L9 getrennt werden.
 
 **Aufgefallen bei:** dem ersten vollständigen Abnahmelauf nach dem beschränkten
 Abschluss der Runde 1, gefahren vom Nutzer am 260807-1538.
