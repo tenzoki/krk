@@ -98,11 +98,13 @@ leere Liste. Angelegt wird `bookmarks.toml` erst mit der ersten Änderung an den
 Lesezeichen (`crates/krk-ui/src/appkit/anwendung.rs:897`); sie hat nie
 stattgefunden.
 
-`inference:` Geprüft ist der Ablagestand am 260807 nach dem Lauf, nicht der zum
-Zeitpunkt des Laufs um 15:38. Beides deckt sich nur, wenn zwischendurch kein
-Lesezeichen angelegt und wieder gelöscht wurde. Der Nutzer bestätigt es in
-einem Blick: steht unter der Überschrift „Lesezeichen“ in der linken Leiste
-keine Zeile, ist die Zahl null.
+~~`inference:` Geprüft ist der Ablagestand am 260807 nach dem Lauf, nicht der
+zum Zeitpunkt des Laufs um 15:38.~~ **Vorbehalt erledigt.** Der Nutzer hat am
+260807-1830 am frisch gebauten Bündel nachgesehen: unter der Überschrift
+„Lesezeichen" in der linken Leiste steht keine Zeile. Die Zahl ist null, und
+zwar an der laufenden Anwendung und nicht nur am Dateibestand. Der vierte
+Anlass ist als Ursache damit gemessen ausgeschlossen und nicht mehr nur
+erschlossen.
 
 ## Der Ausschluss oben ist zu eng gefasst
 
