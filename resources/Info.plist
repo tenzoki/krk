@@ -15,6 +15,39 @@
 	<string>KRK</string>
 
 	<!--
+	  Die Sprachen, die KRK anbietet. **Ohne diesen Schluessel ist KRK fuer
+	  Foundation ein englisches Programm**, ganz gleich, wie das System
+	  eingestellt ist: `Bundle.main.preferredLocalizations` liefert dann
+	  `["en"]`, und der `NSByteCountFormatter` der Groessenspalte beschriftet
+	  jede Angabe unter 1.000 Bytes englisch, `Zero KB`, `1 byte`, `512 bytes`.
+	  Foundation schneidet die Sprachwahl des Nutzers gegen die Sprachen des
+	  Buendels, und die stehen allein in dieser Datei. Ueber die
+	  Registrierungsebene der Nutzervorgaben ist der Wert nicht zu erreichen:
+	  mit `AppleLanguages = ["de"]` blieb `preferredLocalizations` gemessen bei
+	  `["en"]`, weil es ohne Eintrag hier nichts zu schneiden gibt. Defekt
+	  `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`.
+
+	  `de` steht vorn, weil `CLAUDE.md` Deutsch als Projektsprache fuehrt: aus
+	  dieser Liste gewinnt die erste Sprache, die in der Sprachliste des Nutzers
+	  vorkommt, und trifft keine zu, greift die erste dieser Liste.
+
+	  **Eigene `.lproj`-Ordner hat KRK nicht**, und der Schluessel legt keine an.
+	  Er sagt Foundation allein, welche Sprachen das Programm anbietet, und
+	  wirkt damit auf jede Ausgabe, die Foundation oder AppKit selbst
+	  beschriftet. Betroffen sind die von AppKit gestellten Texte, etwa das
+	  Kontextmenue eines Textfeldes; nicht betroffen sind die Spalte
+	  "Aenderungsdatum", die schon heute deutsch ist, weil `NSDateFormatter` der
+	  Region des Systems folgt und nicht dieser Liste, und ebenso wenig die
+	  Schaltflaechen der Blaetter, deren Beschriftungen KRK in
+	  `appkit/blaetter/mod.rs` und `appkit/hinweis.rs` alle selbst setzt.
+	-->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>de</string>
+		<string>en</string>
+	</array>
+
+	<!--
 	  Der Name des Binaerprogramms, nicht der des Cargo-Pakets: das Paket heisst
 	  `krk-ui`, sein `[[bin]]`-Ziel heisst `krk`. Schritt 5 nimmt an
 	  `KRK.app/Contents/MacOS/krk` ab, dieser Wert muss dazu passen.

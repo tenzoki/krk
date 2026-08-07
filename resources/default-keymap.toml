@@ -5,11 +5,11 @@
 # ein und loest damit die fest verdrahtete Tabelle aus Schritt 7 ab; eine
 # zweite Belegungstabelle im Code gibt es danach nicht mehr.
 #
-# Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeiten C1 bis
+# Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeiten C1 bis
 # C7, C10 und C11. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
 # in der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
-# `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md` und
-# `shared/decisions/260802-0842_a_loeschen-papierkorb-oder-endgueltig.md`.
+# `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md` und
+# `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
 #
 # Aufbau je Eintrag:
 #   id               maschinenlesbarer Bezeichner, ASCII, ohne Umlaute
@@ -58,7 +58,7 @@
 # jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Die Reservierung aus C3
 # ist damit eingeloest und nicht gebrochen; C3 schreibt aus, warum
 # (Nutzerentscheid vom 260805-0000, `decisions/
-# 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+# 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
 #
 # Eine Kombination kann im Textfeld etwas anderes bedeuten als im Dateifenster,
 # und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
@@ -85,7 +85,7 @@
 # "alle_markieren" alle Eintraege und waehlt im Textfeld ueber
 # "text_alles_auswaehlen" den Text aus, wie auf dem Mac ueblich
 # (Nutzerentscheid vom 260805, `decisions/
-# 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# 260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -400,7 +400,7 @@ tasten = ["ctrl+left"]
 # Gelesen werden Text und Dateiverweis: ein Pfad oder eine URL als Text, und
 # der Dateiverweis, den der Finder bei Cmd+C auf einer Datei ablegt
 # (Nutzerentscheid 260804,
-# `decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`).
+# `decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`).
 #
 # Cmd+C und Cmd+V bleiben von C10 unberuehrt: C10 liest nur, was schon in der
 # Zwischenablage steht, und legt nichts ab. Ab Werk frei sind die beiden seit
@@ -435,7 +435,7 @@ tasten = ["ctrl+o"]
 # Der Weg von Total Commander, wo Ctrl+O die Kommandozeile oeffnet. Der Nutzer
 # hat das Vorbild am 260805 als tragenden Grund genannt und shift+cmd+t sowie
 # f9 ausdruecklich verworfen (`decisions/
-# 260805-1623_a_taste-und-einstellbarkeit-des-terminal-befehls.md`). Es ist die
+# 260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`). Es ist die
 # einzige Kombination dieser Datei, die einem Vorbild aus Total Commander
 # folgt; ctrl ist auf dem Mac die unueblichste der vier Zusatztasten, und genau
 # darin liegt hier die Wiedererkennung.
@@ -472,7 +472,7 @@ tasten = ["f1"]
 # ausloest, in der Belegung steht, von der Konflikterkennung gesehen wird und
 # umbelegbar ist. Ohne diese Eintraege waeren es vier Kuerzel, die keine der
 # drei Zusagen erreicht. Nutzerentscheid vom 260805-0000, `decisions/
-# 260805-0000_a_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
+# 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
 #
 # Das Menue ist zugleich der Grund, aus dem ein Textfeld ueberhaupt etwas
 # eingefuegt bekommt: auf dem Mac liegen diese vier Befehle nicht im
@@ -502,7 +502,7 @@ gehalten_von = "menue"
 # laesst die beiden einander nie begegnen: in der Liste markiert cmd+a alle
 # Eintraege, im Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich
 # (Nutzerentscheid vom 260805, `decisions/
-# 260805-0713_a_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# 260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
 
 [[funktion]]
 id = "text_alles_auswaehlen"
@@ -521,7 +521,7 @@ tasten = ["cmd+q"]
 # Konflikterkennung gesehen wird und umbelegbar ist. Cmd+Q beendet die
 # Anwendung und erreichte bis zum 260805 keine der drei Zusagen: S13b hat fuenf
 # Menuekuerzel nachgetragen und dieses uebersehen (`issues/
-# 260805-0753_c_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
+# 260805-0753_*_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
 #
 # Gebaut wie "fenster_schliessen" weiter oben und nicht wie die vier
 # Textbefehle darueber: eine gewoehnliche Funktion, deren Kommando am
@@ -532,7 +532,7 @@ tasten = ["cmd+q"]
 # Der eigene Selektor am Delegierten ist zugleich das Mittel gegen die
 # Zweitform "Quit and Keep Windows" auf Opt+Cmd+Q, die AppKit zu `terminate:`
 # dazustellt, so wie `fensterSchliessen:` es gegen "Close All" war (`issues/
-# 260805-0753_o_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+# 260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
 # Solange er noch nicht steht, traegt die Funktion kein Kommando, wie
 # "belegung_ansehen" oben: der Ereignisabgriff schluckt Cmd+Q dann nicht,
 # sondern reicht es an das Menue weiter, und die Anwendung beendet sich

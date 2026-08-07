@@ -6,9 +6,9 @@
 # an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht mehr:
 # sie ist die eine Datei der Ablage, die von Hand gepflegt wird.
 #
-# Quelle: Spec `260802-1036_o_spec-navigator-geruest.md`, Faehigkeit C11.
+# Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeit C11.
 # Bindend ist ausserdem der Datensatz
-# `decisions/260805-1623_a_taste-und-einstellbarkeit-des-terminal-befehls.md`.
+# `decisions/260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`.
 #
 # Aufnahmeregel: hier steht ein Wert, der drei Bedingungen zugleich erfuellt.
 # Er ist keine Tastenbelegung, KRK schreibt ihn im Betrieb nicht selbst, und er

@@ -39,3 +39,12 @@ beschriftet, und eine zweite Rechnung daneben wäre eine zweite Wahrheit.
 ---
 
 **Abgleich 260806-1647: der Marker `_c_` steht, das beschriebene Verhalten steht aber auch noch.** "Zero KB" erscheint unverändert; behoben ist hier nichts, der Eintrag ist in den weiteren übergegangen. Das deckt `_c_` in seiner zweiten Lesart ("resolved, **or** closed") ab, und der Nachfolger `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md` trägt `_o_`, sodass die Sache nicht verschwindet. Für den Leser, der nur die Markerliste überfliegt, bleibt es trotzdem eine Falle: die Zeile `Übergeben:` steht an der Stelle, an der die Konvention `Resolved:` erwartet. Der Marker bleibt, weil ein Umzug auf `_d_` die Sache als zurückgestellt ausgäbe, was sie nicht ist. Gemeldet wird der Punkt nicht als eigener Defekt; er steht im Abgleichsbericht `history/260806-1647-reconciliation.md`.
+
+**Nachtrag 260807-0745: das beschriebene Verhalten steht nicht mehr.** Der
+Halbsatz oben, "Zero KB erscheint unverändert", ist seit dem 260807 überholt.
+Der Nachfolger `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`
+ist umgesetzt: `resources/Info.plist` führt jetzt `CFBundleLocalizations` mit
+`de` vor `en`, und am gebauten Bündel gemessen steht `0 KB`, `1 Byte`,
+`512 Byte`. Der Marker `_c_` dieses Eintrags trägt damit rückwirkend auch seine
+erste Lesart. Behoben wurde es an der Bündelbeschreibung und nicht hier, weil
+der Weg über `setAllowsNonnumericFormatting` gemessen und verworfen ist.

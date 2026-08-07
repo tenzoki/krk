@@ -58,3 +58,24 @@ sagt Foundation allein, welche Sprachen das Programm anbietet.
 **Aufgefallen bei:** der Bearbeitung der sechs offenen Oberflächendefekte am
 260806. Der ursprüngliche Defekt bleibt offen und behält seinen Gegenstand; diese
 Meldung erweitert seinen Umfang und schließt einen seiner beiden Wege aus.
+
+---
+Resolved: `resources/Info.plist:17-49` führt jetzt `CFBundleLocalizations` mit `de`
+an erster und `en` an zweiter Stelle. Gemessen am gebauten Bündel treffen alle sechs
+Werte die vorhergesagte Spalte: `0 KB`, `1 Byte`, `512 Byte`, `999 Byte`, `1 KB`,
+`10 KB`; `preferredLocalizations` wechselt von `["en"]` auf `["de"]`. Die beiden
+aufgetragenen Prüfungen sind erledigt. **Erstens** trägt `xtask` die Datei
+unverändert: `diff resources/Info.plist target/KRK.app/Contents/Info.plist` meldet
+genau die Versionszeile, `plutil -p` zeigt Schlüssel, Reihenfolge und
+`CFBundleExecutable = krk`; die Versionsersetzung ist ein `str::replace`
+(`xtask/src/bundle.rs:200-210`) und der Binärname eine Textsuche am Schlüsselnamen
+(`:241-250`), beide vom neuen `<array>` unberührt. **Zweitens** ändert sich außer den
+Byte-Angaben nur eine weitere Ausgabe, und sie ist erwünscht: die
+Papierkorb-Fehlermeldung aus `appkit/papierkorb.rs:58` kommt deutsch
+(`Die Datei „x" existiert nicht.` statt `The file "x" doesn't exist.`). Nicht
+betroffen sind die Spalte „Änderungsdatum" (`NSDateFormatter` folgt der Systemregion,
+gemessen `02.02.26, 03:40` vor wie nach), das Hauptmenü (`--menue-protokoll` liefert
+dieselben sieben Zeilen) und die Standardknöpfe der Blätter, deren Beschriftungen KRK
+in `appkit/blaetter/mod.rs:346` und `appkit/hinweis.rs:69` alle selbst setzt.
+`make check` grün, `make bundle` gebaut und signiert.
+Bericht: `history/260807-0743-ontocoder-die-sprache-des-buendels-und-die-pfadzitate.md`.
