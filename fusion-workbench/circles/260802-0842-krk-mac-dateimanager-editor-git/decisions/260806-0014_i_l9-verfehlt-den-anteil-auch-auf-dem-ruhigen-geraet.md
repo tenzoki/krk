@@ -75,3 +75,18 @@ Rundenanteil 85 Prozent, größter Einzelwert 23,429 ms bei zwei Bildlängen von
 33,333 ms. Die Auswertung in `crates/krk-bench/src/messen.rs` trägt die neue
 Form noch nicht, gemeldet als
 `issues/260807-0832_*_die-messstrecke-kann-die-neue-zweiteilige-fassung-von-l9-nicht-abnehmen.md`.
+
+Implemented: `d569f8a` — `Abnahmemass::AnteilImBild` trägt jetzt Bildlänge,
+Mindestanteil und eine Obergrenze je Einzelwert; die für L1 und L9 gemeinsame
+Kistenkonstante `ANTEIL_IM_BILD_PROZENT` ist ersatzlos entfallen. L1 steht auf
+95 Prozent ohne Obergrenze, L9 auf 85 Prozent mit zwei Bildlängen. Ein
+Abnahmelauf nimmt L9 damit in der neuen Fassung ab, und der Bericht weist
+neben dem Anteil den größten Einzelwert in Bildlängen aus. Nachgewiesen an den
+100 Einzelwerten der vorliegenden Abnahmereihe, durch dieselbe Auswertung
+gefahren: gehalten in allen fünf Runden, Höchstwerte 1,15 bis 1,41 Bildlängen.
+Der Defekt `issues/260807-0832_*_...` ist damit geschlossen.
+
+**Was für die Rundenschließung offen bleibt:** ein neuer Abnahmelauf, der das
+Urteil am laufenden Bündel führt statt an nachgerechneten Zahlen. Er verlangt
+KRK im Vordergrund aus einem Terminalfenster und damit den Nutzer; kein Agent
+kann ihn fahren.
