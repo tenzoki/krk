@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** implemented
+**Status:** superseded
 **Filed by:** coder
 **Cross-references:** issues/260805-2335_o_l1-und-l9-verfehlen-den-anteil-im-ersten-gesamtlauf-unter-fremdlast.md, messungen/260805-2207-MacBookPro15-1-abnahme.txt, messungen/260805-2207-MacBookPro15-1-abnahme-begleittext.md, planning/260802-1428_o_plan-navigator-geruest-runde-1.md `#### 22.`
 
@@ -90,3 +90,15 @@ Der Defekt `issues/260807-0832_*_...` ist damit geschlossen.
 Urteil am laufenden Bündel führt statt an nachgerechneten Zahlen. Er verlangt
 KRK im Vordergrund aus einem Terminalfenster und damit den Nutzer; kein Agent
 kann ihn fahren.
+
+Superseded by: `shared/decisions/260807-1904_*_l9-verfehlt-auch-die-gesenkte-schwelle-wie-weiter.md`
+— Der hier fehlende Abnahmelauf ist am 260807-1538 vom Nutzer gefahren worden,
+`messungen/260807-1538-alle-zusagen.txt`, und liefert für L9 die Rundenanteile
+90, 75, 80, 65 und 70 Prozent. Die hier beschlossenen 85 Prozent halten damit in
+einer von fünf Runden; der gemessene Boden, auf den diese Antwort die Zusage
+gesenkt hatte, existiert nicht mehr. Der Nutzer hat L9 am 260807-1900 ein zweites
+Mal gesenkt, auf mindestens 65 Prozent im ersten Bild bei unveränderter
+Obergrenze von zwei Bildlängen. Die Obergrenze ist die eine Hälfte dieser
+Antwort, die unverändert weitergilt und in jeder Runde hält. Die Ursache der
+Verschlechterung bleibt in beiden Fassungen unaufgeklärt,
+`shared/issues/260807-1748_*_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md`.

@@ -161,8 +161,37 @@ zwischen L1 und L9 getrennt werden.
 **Aufgefallen bei:** dem ersten vollständigen Abnahmelauf nach dem beschränkten
 Abschluss der Runde 1, gefahren vom Nutzer am 260807-1538.
 
+## Die Zusage ist nachgezogen, dieser Defekt bleibt offen
+
+Nachgetragen am 260807-1900. **Der Nutzer hat L9 ein zweites Mal gesenkt, von 85
+auf 65 Prozent im ersten Bild**, bei unveränderter Obergrenze von zwei
+Bildlängen; der Datensatz dazu ist
+`shared/decisions/260807-1904_*_l9-verfehlt-auch-die-gesenkte-schwelle-wie-weiter.md`.
+Spec und Plan der Runde 1 tragen die neue Zahl, und die Auswertung in
+`crates/krk-bench/src/messen.rs:1148` nimmt gegen sie ab. Der Lauf vom
+260807-1538 gilt damit als gehalten.
+
+**Das ist eine Änderung an der Zusage und keine an der Anwendung. Dieser Defekt
+läuft davon unberührt weiter.** Der Befund oben steht unverändert: L9 ist
+zwischen dem 260805 und dem 260807 um rund vierzehn Prozentpunkte gefallen, drei
+Erklärungen sind ausgeschlossen, und die drei geordneten Verdächtigen sind
+ungemessen. Wer den Spec liest, sieht die Zusage jetzt wieder als gehalten; das
+sagt nichts darüber, warum die Anwendung langsamer geworden ist.
+
+Der Nutzer hat die Senkung damit begründet, dass die Abweichung ihm nicht
+kritisch genug ist, um die Arbeit anzuhalten, und dass der nächste Schritt die
+Editor-Runde ist. Der Preis steht im Datensatz ausgeschrieben: 65 ist wieder ein
+Boden ohne Spielraum, denn die vierte Runde des Laufs traf ihn genau. **Wer die
+Ursache findet, hebt die Zahl wieder an, statt sie ein drittes Mal
+nachzuziehen.**
+
+**Zuständig bleibt der Nutzer** für die Entscheidung, welcher der drei
+Verdächtigen gemessen wird und wie die beiden Unterschiede zwischen L1 und L9,
+die laufende Kopie und die vollständige Markierung, getrennt werden.
+
 Cross-references:
 `messungen/260807-1538-alle-zusagen.txt`,
 `messungen/260805-2207-MacBookPro15-1-abnahme.txt`,
-`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-0014_i_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`,
+`shared/decisions/260807-1904_*_l9-verfehlt-auch-die-gesenkte-schwelle-wie-weiter.md`,
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-0014_*_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1730_c_die-gueltigkeit-eines-lesezeichens-veraltet-zwischen-zwei-anlaessen.md`

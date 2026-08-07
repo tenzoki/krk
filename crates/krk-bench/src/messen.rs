@@ -376,6 +376,11 @@ const FRIST_SPANNEN: Duration = Duration::from_secs(300);
 /// liegt ueber zwei Bildlaengen. Damit gehen die beiden Werte auseinander, und
 /// eine gemeinsame Konstante waere ab da schlicht falsch. Datensatz
 /// `decisions/260806-0014_*_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`.
+///
+/// Am Abend desselben Tages ist L9 ein zweites Mal gesenkt worden, von 85 auf
+/// 65 Prozent, weil der erste vollstaendige Lauf danach den Boden von 85 nicht
+/// mehr traf. L1 blieb dabei unberuehrt bei 95. Die Begruendung und die Kosten
+/// dieser zweiten Senkung stehen an der Zahl selbst, in [`Gesamtlauf::fahren`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Abnahmemass {
     /// Das 95. Perzentil der Runde liegt hoechstens bei dieser Grenze.
@@ -394,7 +399,7 @@ pub enum Abnahmemass {
         /// Wie viel Prozent der Eingaben ihr naechstes Bild erreichen muessen.
         ///
         /// Als ganze Zahl gefuehrt, damit das Urteil ohne Fliesskommavergleich
-        /// feststeht: 17 von 20 sind genau 85 Prozent und halten.
+        /// feststeht: 13 von 20 sind genau 65 Prozent und halten.
         mindestanteil_prozent: usize,
         /// Wie viele Bildlaengen ein **einzelner** Wert hoechstens betragen darf.
         ///
@@ -1118,11 +1123,29 @@ impl Gesamtlauf {
                     kennung: "L9",
                     was: "Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs",
                     // Seit dem 260807-0832 zweiteilig und nicht mehr dasselbe
-                    // Mass wie L1: mindestens 85 Prozent erreichen das erste
-                    // Bild, und jede Eingabe erreicht spaetestens das zweite.
+                    // Mass wie L1: ein Mindestanteil erreicht das erste Bild,
+                    // und jede Eingabe erreicht spaetestens das zweite.
+                    //
+                    // **65 ist kein Entwurfswert, sondern ein gemessener
+                    // Boden.** Der Anteil ist an einem Tag zweimal gesenkt
+                    // worden. Am 260807-0832 von 95 auf 85 Prozent, auf den
+                    // Boden der Abnahmereihe vom 260805-2207. Am 260807-1900
+                    // von 85 auf 65, auf den Boden des Laufs
+                    // `messungen/260807-1538-alle-zusagen.txt`, der 90, 75, 80,
+                    // 65 und 70 Prozent gemessen hat. Die zweite Senkung traegt
+                    // dieser Datensatz, in dem der Nutzer gegen die Empfehlung
+                    // entschieden und die Kosten ausdruecklich festgehalten hat:
+                    // `shared/decisions/260807-1904_*_l9-verfehlt-auch-die-gesenkte-schwelle-wie-weiter.md`
+                    //
+                    // Warum die Anwendung zwischen dem 260805 und dem 260807
+                    // langsamer geworden ist, beantwortet die gesenkte Schwelle
+                    // nicht. Dieser Defekt bleibt offen:
+                    // `shared/issues/260807-1748_*_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md`
+                    // Wer die Ursache findet, hebt die Zahl hier wieder an,
+                    // statt sie ein drittes Mal nachzuziehen.
                     mass: Abnahmemass::AnteilImBild {
                         bildlaenge,
-                        mindestanteil_prozent: 85,
+                        mindestanteil_prozent: 65,
                         obergrenze_bilder: Some(2),
                     },
                     runden: sammeln(|runde| &runde.l9),
@@ -2089,7 +2112,7 @@ mod tests {
         }
     }
 
-    /// Das Mass von L9 seit dem 260807-0832: 85 Prozent im ersten Bild, und
+    /// Das Mass von L9 seit dem 260807-1900: 65 Prozent im ersten Bild, und
     /// keine Eingabe ueber zwei Bildlaengen.
     fn l9_zusage(runden: Vec<Vec<Duration>>) -> Zusage {
         Zusage {
@@ -2097,10 +2120,26 @@ mod tests {
             was: "Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs",
             mass: Abnahmemass::AnteilImBild {
                 bildlaenge: ein_bild(),
-                mindestanteil_prozent: 85,
+                mindestanteil_prozent: 65,
                 obergrenze_bilder: Some(2),
             },
             runden,
+        }
+    }
+
+    /// Die Fassung von L9 zwischen dem 260807-0832 und dem 260807-1900:
+    /// 85 Prozent statt 65, sonst gleich.
+    ///
+    /// Nur fuer den Vorher-Nachher-Vergleich in
+    /// `l9_haelt_die_reihe_vom_260807_erst_nach_der_zweiten_senkung` gedacht.
+    fn l9_zusage_mit_85(runden: Vec<Vec<Duration>>) -> Zusage {
+        Zusage {
+            mass: Abnahmemass::AnteilImBild {
+                bildlaenge: ein_bild(),
+                mindestanteil_prozent: 85,
+                obergrenze_bilder: Some(2),
+            },
+            ..l9_zusage(runden)
         }
     }
 
@@ -2180,8 +2219,8 @@ mod tests {
     ///
     /// Wortgleich aus `messungen/260805-2207-MacBookPro15-1-abnahme.txt`
     /// uebernommen, Zeilen 288 bis 313. Diese hundert Werte sind der Anlass der
-    /// neuen Fassung von L9: nach der alten haelt die Reihe in einer von fuenf
-    /// Runden, nach der neuen in allen fuenf.
+    /// ersten Senkung vom 260807-0832: gegen die 95 Prozent von L1 haelt die
+    /// Reihe in einer von fuenf Runden, gegen 85 in allen fuenf.
     fn l9_abnahmereihe() -> Vec<Vec<Duration>> {
         [
             [
@@ -2211,11 +2250,14 @@ mod tests {
     }
 
     #[test]
-    fn l9_haelt_die_neue_fassung_in_allen_fuenf_gemessenen_runden() {
+    fn l9_haelt_die_reihe_vom_260805_in_allen_fuenf_runden() {
         let zusage = l9_zusage(l9_abnahmereihe());
 
-        // Erste Haelfte: der Anteil im ersten Bild. Runde 2 und Runde 5 liegen
-        // mit 17 von 20 genau auf den geforderten 85 Prozent und halten damit.
+        // Erste Haelfte: der Anteil im ersten Bild. Die schwaechsten Runden
+        // sind Runde 2 und Runde 5 mit 17 von 20; das sind 85 Prozent und
+        // liegt seit dem 260807-1900 zwanzig Punkte ueber der Schwelle. Diese
+        // Reihe traegt die Zusage also mit Spielraum, statt sie zu begrenzen.
+        // Der Boden kommt seither aus dem Lauf vom 260807-1538.
         assert_eq!(
             zusage.im_bild(),
             Some(vec![(18, 20), (17, 20), (18, 20), (20, 20), (17, 20)])
@@ -2252,6 +2294,92 @@ mod tests {
         assert_eq!(zusage.immer_gehalten(), Some(true));
     }
 
+    /// Die fuenf L9-Runden des Laufs vom 260807-1538.
+    ///
+    /// Wortgleich aus `messungen/260807-1538-alle-zusagen.txt` uebernommen,
+    /// Zeilen 299 bis 323. Diese hundert Werte sind der Anlass der zweiten
+    /// Senkung vom 260807-1900: gegen die 85 Prozent des Vormittags haelt die
+    /// Reihe in einer von fuenf Runden, gegen 65 in allen fuenf.
+    fn l9_reihe_260807() -> Vec<Vec<Duration>> {
+        [
+            [
+                18.108, 2.064, 14.331, 5.210, 14.977, 16.217, 1.154, 15.087, 18.832, 7.251, 10.276,
+                14.906, 5.618, 13.155, 1.128, 13.010, 1.359, 9.337, 10.860, 14.915,
+            ],
+            [
+                0.888, 6.825, 17.416, 1.989, 15.083, 13.623, 20.041, 2.998, 3.104, 10.525, 14.548,
+                2.062, 19.944, 6.118, 19.265, 2.192, 19.998, 5.323, 0.819, 7.548,
+            ],
+            [
+                4.241, 3.588, 10.964, 10.726, 1.398, 13.915, 3.107, 21.034, 18.813, 4.212, 5.588,
+                14.128, 2.053, 20.395, 6.809, 4.188, 18.743, 14.246, 4.887, 1.898,
+            ],
+            [
+                16.302, 18.614, 21.002, 5.909, 18.070, 2.165, 14.841, 17.374, 18.223, 2.066, 9.559,
+                11.650, 18.558, 2.137, 17.954, 5.769, 1.959, 11.652, 7.946, 6.399,
+            ],
+            [
+                20.788, 5.000, 3.907, 20.362, 5.518, 12.832, 18.777, 3.904, 28.334, 3.815, 1.125,
+                6.017, 2.014, 18.470, 2.213, 18.123, 2.013, 15.003, 4.205, 7.031,
+            ],
+        ]
+        .iter()
+        .map(|runde| runde.iter().copied().map(msf).collect())
+        .collect()
+    }
+
+    #[test]
+    fn l9_haelt_die_reihe_vom_260807_erst_nach_der_zweiten_senkung() {
+        let zusage = l9_zusage(l9_reihe_260807());
+
+        // Erste Haelfte: der Anteil im ersten Bild. Runde 4 trifft die
+        // geforderten 65 Prozent mit 13 von 20 genau und haelt damit; das ist
+        // der Boden, auf den der Nutzer die Zusage am 260807-1900 gesenkt hat.
+        assert_eq!(
+            zusage.im_bild(),
+            Some(vec![(18, 20), (15, 20), (16, 20), (13, 20), (14, 20)])
+        );
+        assert_eq!(
+            zusage.anteile_im_bild(),
+            Some(vec![90.0, 75.0, 80.0, 65.0, 70.0])
+        );
+
+        // Zweite Haelfte: unveraendert gehalten. Der groesste Einzelwert der
+        // ganzen Reihe sind 1.70 Bildlaengen von zwei erlaubten. Genau daran
+        // haengt, dass nur der Anteil gesenkt wurde und die Obergrenze nicht.
+        let hoechstwerte = zusage
+            .hoechstwerte_in_bildern()
+            .expect("L9 nimmt ueber den Anteil ab");
+        for (nummer, (gemessen, groesster_wert)) in hoechstwerte
+            .iter()
+            .zip([18.832, 20.041, 21.034, 21.002, 28.334])
+            .enumerate()
+        {
+            let erwartet = msf(groesster_wert).as_secs_f64() / ein_bild().as_secs_f64();
+            assert!(
+                (gemessen - erwartet).abs() < 1e-9,
+                "Runde {}: {gemessen} statt {erwartet} Bildlaengen",
+                nummer + 1
+            );
+            assert!(
+                *gemessen < 2.0,
+                "Runde {}: {gemessen} Bildlaengen reissen die Obergrenze",
+                nummer + 1
+            );
+        }
+
+        assert_eq!(zusage.gehalten_in(), Some((5, 5)));
+        assert_eq!(zusage.immer_gehalten(), Some(true));
+
+        // Und der Beleg, dass die Senkung genau das bewirkt, was sie soll:
+        // dieselben hundert Werte verfehlen die Fassung vom Vormittag in vier
+        // der fuenf Runden. Nur Runde 1 mit 90 Prozent haelt die 85.
+        let vormittag = l9_zusage_mit_85(l9_reihe_260807());
+        assert_eq!(vormittag.gehalten_in(), Some((1, 5)));
+        assert_eq!(vormittag.immer_gehalten(), Some(false));
+        assert_eq!(urteil(&vormittag), "VERFEHLT, gehalten in 1 von 5 Runden");
+    }
+
     #[test]
     fn dieselbe_reihe_verfehlt_das_ungesenkte_mass() {
         // Bis zum 260807-0832 nahm L9 gegen dasselbe Mass ab wie L1. Nur die
@@ -2265,10 +2393,10 @@ mod tests {
 
     #[test]
     fn eine_eingabe_ueber_zwei_bildlaengen_reisst_l9_trotz_gehaltenem_anteil() {
-        // Ein erfundener Fall, den die vorliegende Reihe nicht enthaelt: der
-        // Anteil liegt mit 19 von 20 weit ueber den geforderten 85 Prozent, ein
-        // einzelner Wert liegt aber jenseits des zweiten Bildes. Nach der neuen
-        // Fassung ist die Runde damit verfehlt.
+        // Ein erfundener Fall, den keine der beiden Reihen enthaelt: der
+        // Anteil liegt mit 19 von 20 weit ueber den geforderten 65 Prozent, ein
+        // einzelner Wert liegt aber jenseits des zweiten Bildes. Nach der
+        // zweiteiligen Fassung ist die Runde damit verfehlt.
         let mut ueber = vec![ms(8); 19];
         ueber.push(ein_bild() * 2 + Duration::from_nanos(1));
         let zusage = l9_zusage(vec![ueber]);
@@ -2281,11 +2409,16 @@ mod tests {
         knapp.push(ein_bild() * 2);
         assert_eq!(l9_zusage(vec![knapp]).immer_gehalten(), Some(true));
 
-        // Und die erste Haelfte bleibt scharf: vier verpasste Bilder sind
-        // 80 Prozent und damit unter den geforderten 85.
-        let mut vier_verpasst = vec![ms(8); 16];
-        vier_verpasst.extend(vec![ein_bild() + Duration::from_nanos(1); 4]);
-        assert_eq!(l9_zusage(vec![vier_verpasst]).gehalten_in(), Some((0, 1)));
+        // Und die erste Haelfte bleibt scharf, jetzt an der Grenze von 65
+        // Prozent: sieben verpasste Bilder sind 13 von 20 und halten genau,
+        // acht sind 60 Prozent und verfehlen.
+        let mut sieben_verpasst = vec![ms(8); 13];
+        sieben_verpasst.extend(vec![ein_bild() + Duration::from_nanos(1); 7]);
+        assert_eq!(l9_zusage(vec![sieben_verpasst]).gehalten_in(), Some((1, 1)));
+
+        let mut acht_verpasst = vec![ms(8); 12];
+        acht_verpasst.extend(vec![ein_bild() + Duration::from_nanos(1); 8]);
+        assert_eq!(l9_zusage(vec![acht_verpasst]).gehalten_in(), Some((0, 1)));
     }
 
     #[test]
@@ -2339,11 +2472,11 @@ mod tests {
         assert_eq!(
             Abnahmemass::AnteilImBild {
                 bildlaenge: ein_bild(),
-                mindestanteil_prozent: 85,
+                mindestanteil_prozent: 65,
                 obergrenze_bilder: Some(2),
             }
             .beschreibung(),
-            ">= 85 %, <= 2 Bilder"
+            ">= 65 %, <= 2 Bilder"
         );
         assert_eq!(Abnahmemass::Keine.beschreibung(), "keine");
     }
