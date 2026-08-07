@@ -768,7 +768,6 @@ mod tests {
 
     fn modell_mit(namen: &[(&str, Typ)]) -> Ordnermodell {
         let mut modell = Ordnermodell::neu(1);
-        modell.leeren(1);
         modell.anhaengen(namen.iter().map(|(name, typ)| eintrag(name, *typ)));
         modell.abschliessen();
         modell

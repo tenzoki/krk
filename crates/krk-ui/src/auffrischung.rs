@@ -168,14 +168,16 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 /// (`issues/260806-1331_*_der-auffrischungsaufschub-gilt-fuer-alle-fuenf-
 /// operationsarten-statt-nur-fuer-die-schnelle.md`).
 ///
-/// **Eine Kante bleibt bewusst stehen.** Ein Verschieben innerhalb **eines**
-/// Datentraegers laeuft ueber `rename(2)` und ist damit so schnell wie ein
-/// Stapel-Umbenennen; ueber genuegend Eintraege koennte es dieselbe
-/// Meldelawine ausloesen. Beobachtet worden ist das nicht, und die Entscheidung
-/// nennt das Verschieben ausdruecklich als nicht aufschiebend. Tritt der Fall
-/// auf, gehoert die Antwort an die Lesestelle — ein Lesevorgang, der sein
-/// Ordnermodell erst mit dem ersten gelieferten Stapel ersetzt, statt es vorab
-/// zu leeren — und nicht in eine zweite Ausnahme hier.
+/// **Die Kante ist seit dem 260807 geschlossen, und zwar an der Lesestelle.**
+/// Ein Verschieben innerhalb **eines** Datentraegers laeuft ueber `rename(2)`
+/// und ist damit so schnell wie ein Stapel-Umbenennen; ueber genuegend
+/// Eintraege traegt es dieselbe Meldelawine. Beantwortet ist das nicht durch
+/// eine zweite Ausnahme hier, sondern dort, wo die leere Liste entstand:
+/// [`krk_core::verzeichnis::Ordnermodell::lesevorgang_beginnen`] ersetzt den
+/// Bestand erst mit dem ersten gelieferten Stapel, statt ihn vorab zu leeren.
+/// Damit laeuft die Liste bei keiner Operationsart mehr leer, und die
+/// Einordnung hier bleibt bei der einen Frage, die sie beantwortet: ob eine
+/// Auffrischung waehrend des Vorgangs ueberhaupt lohnt.
 pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
     match art {
         Art::UmbenennenImStapel { .. } => true,

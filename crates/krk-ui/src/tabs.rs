@@ -229,6 +229,13 @@ impl Tabinhalt {
 pub struct Einzug {
     /// Der sichtbare Tab hat Zeilen dazubekommen.
     pub angehaengt: bool,
+    /// Der erste Stapel hat die Liste des vorigen Lesevorgangs abgeloest.
+    ///
+    /// Neben `angehaengt`, weil die Ansicht darauf anders antwortet: eine blosse
+    /// neue Zeilenzahl liesse die Auswahl der Tabelle auf einer Zeile stehen,
+    /// die es nach dem Ersatz nicht mehr gibt. Kommt hoechstens einmal je
+    /// Lesevorgang und nur, wenn wirklich Zeilen gefallen sind.
+    pub ersetzt: bool,
     /// Der sichtbare Tab ist fertig gelesen und sortiert.
     pub fertig: bool,
     /// Die Statuszeile des sichtbaren Tabs hat einen neuen Text.
@@ -458,14 +465,23 @@ impl Tabliste {
     /// geaendert hat: die Zeile des Eintrags ist danach womoeglich eine andere.
     /// Ist der Eintrag verschwunden, bleibt die Auswahl leer, wie C9 es
     /// zulaesst ("soweit die Eintraege noch existieren").
+    ///
+    /// **Der Tab bleibt stehen, er entsteht nicht neu.** Bis zum 260807 setzte
+    /// diese Methode einen frischen [`Tabinhalt`] an die Stelle des alten und
+    /// warf damit den gelesenen Bestand weg, noch bevor der neue Lesevorgang
+    /// etwas geliefert hatte. Genau daran hing die leere Liste waehrend eines
+    /// Stapel-Umbenennens. Ordner, Sortierung und Filter aendern sich bei einer
+    /// Auffrischung ohnehin nicht; zurueckzusetzen sind allein der Auswahlname
+    /// und die offene Bildlaufposition, und beide stehen hier.
     pub fn aktiven_neu_lesen(&mut self) {
         let stelle = self.aktiv;
-        // `zustand` liefert Ordner, Sortierung, Filter, den Namen des
-        // ausgewaehlten Eintrags und die Bildlaufposition in genau der Form,
-        // in der sie auch in `session.toml` stuenden. Aus ihm entsteht der
-        // Tab neu.
-        let zustand = self.tabs[stelle].zustand();
-        self.tabs[stelle] = Tabinhalt::aus_zustand(&zustand);
+        let auswahlname = self.tabs[stelle].auswahlname();
+        let tab = &mut self.tabs[stelle];
+        // Der Name des ausgewaehlten Eintrags wird zum Wunsch, den der
+        // Abschluss des neuen Lesevorgangs einloest — dieselben zwei Felder,
+        // die die Sitzungswiederherstellung benutzt, und kein zweiter Weg.
+        tab.wunschauswahl = auswahlname;
+        tab.bildlauf_offen = tab.bildlauf > 0.0;
         self.lesen_starten(stelle);
     }
 
@@ -553,16 +569,26 @@ impl Tabliste {
         einzug
     }
 
-    /// Startet den Lesevorgang eines Tabs und leert sein Modell.
+    /// Startet den Lesevorgang eines Tabs.
+    ///
+    /// **Das Modell wird nicht vorab geleert.** Es bekommt die neue Generation
+    /// und merkt den Ersatz vor; der bisherige Inhalt faellt erst mit dem ersten
+    /// gelieferten Stapel, spaetestens mit dem Abschluss. Was das behebt, steht
+    /// im Modulkopf von [`Ordnermodell`]: bis zum 260807 setzte jede
+    /// Aenderungsmeldung waehrend eines Stapel-Umbenennens den Lesevorgang neu
+    /// auf, bevor sein erster Stapel angehaengt war, und die Liste kam fuer die
+    /// ganze Laufzeit nicht mehr zum Fuellen.
     fn lesen_starten(&mut self, stelle: usize) {
         self.letzte_generation += 1;
         let generation = self.letzte_generation;
         let tab = &mut self.tabs[stelle];
         // Der bisherige Lesevorgang faellt hier. Sein Arbeitsfaden bemerkt den
         // Abbruch und endet von selbst; auf ihn zu warten hiesse, eine
-        // Navigation an den verlassenen Ordner zu haengen.
+        // Navigation an den verlassenen Ordner zu haengen. Zugleich ist das der
+        // Grund, aus dem kein Stapel des alten Laufs mehr ankommen kann: sein
+        // Empfaenger ist weg, und der Bestand mischt sich nicht.
         tab.lesevorgang = None;
-        tab.modell.leeren(generation);
+        tab.modell.lesevorgang_beginnen(generation);
         tab.meldung = None;
         tab.gelesen = false;
         tab.lesevorgang = Some(Lesevorgang::starten(&tab.ordner, generation));
@@ -593,6 +619,9 @@ fn einzug_je_tab(tab: &mut Tabinhalt) -> Einzug {
     for meldung in vorgang.meldungen().try_iter() {
         match meldung {
             Meldung::Stapel { eintraege, .. } => {
+                // Vor dem Anhaengen gefragt: danach ist der Ersatz eingeloest
+                // und die Antwort waere immer "nein".
+                einzug.ersetzt |= tab.modell.ersetzt_beim_naechsten_stapel();
                 tab.modell.anhaengen(eintraege);
                 einzug.angehaengt = true;
             }
@@ -769,6 +798,41 @@ mod tests {
             "die Ansicht muss die gemerkte Position noch herstellen"
         );
         assert_eq!(liste.zahl(), 1, "es entsteht kein zweiter Tab");
+    }
+
+    /// Der Defekt vom 260805-1337, am Tab statt am Modell: eine Auffrischung
+    /// leert die Liste nicht, und auch die fuenfte hintereinander nicht.
+    #[test]
+    fn eine_auffrischung_laesst_die_liste_stehen_bis_ihr_erster_stapel_da_ist() {
+        use krk_core::verzeichnis::{Eintrag, Typ};
+
+        let vorhanden = std::env::temp_dir().display().to_string();
+        let mut liste = liste(&[&vorhanden]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.anhaengen([
+            Eintrag::neu(
+                "a.txt".to_owned(),
+                0,
+                std::time::SystemTime::UNIX_EPOCH,
+                Typ::Datei,
+            ),
+            Eintrag::neu(
+                "b.txt".to_owned(),
+                0,
+                std::time::SystemTime::UNIX_EPOCH,
+                Typ::Datei,
+            ),
+        ]);
+        modell.abschliessen();
+
+        for runde in 1..=5 {
+            liste.aktiven_neu_lesen();
+            assert_eq!(
+                liste.aktiver().modell().zeilenzahl(),
+                2,
+                "die Auffrischung {runde} hat die Liste geleert, bevor sie etwas geliefert hat"
+            );
+        }
     }
 
     #[test]

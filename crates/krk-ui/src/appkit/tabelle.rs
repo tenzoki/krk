@@ -46,7 +46,7 @@
 //! verschwundenen Empfaenger. Der Abbruch greift innerhalb von zwei Stapeln.
 //!
 //! Die Nummer bleibt und traegt anderes: sie benennt den Lesefaden und sagt dem
-//! Modell beim Leeren, zu welchem Lauf sein Inhalt gehoert. Eine Prueferei je
+//! Modell, zu welchem Lauf es gehoert. Eine Prueferei je
 //! Stapel stand hier bis zum 260803 daneben. Sie konnte nie greifen, weil
 //! Modell- und Lesevorgangsgeneration in denselben zwei Zeilen auf denselben
 //! Wert gesetzt werden, und sie verdeckte den Mechanismus, der wirklich traegt.
@@ -623,10 +623,15 @@ impl DateifensterQuelle {
     /// Gelesen wird ueber denselben gestueckelten Lesevorgang wie jede
     /// Navigation, samt Generationszaehler. Deshalb blockiert auch die
     /// Auffrischung eines Ordners mit 100.000 Eintraegen die Eingabe nicht.
+    ///
+    /// **Die Liste bleibt waehrenddessen stehen.** Der Tab behaelt seinen
+    /// gelesenen Bestand, bis der neue Lesevorgang seinen ersten Stapel
+    /// liefert; siehe [`Tabliste::aktiven_neu_lesen`]. Ohne das lief die Liste
+    /// waehrend eines Stapel-Umbenennens im angezeigten Ordner leer.
     pub fn neu_lesen(&self) {
         // Zuerst die Bildlaufposition aus der Ansicht in den Tab holen: sie
         // steht in der `NSScrollView` und nirgends sonst, und der naechste
-        // Schritt baut den Tab neu auf.
+        // Schritt merkt sie als noch herzustellen vor.
         self.bildlauf_merken();
         self.ivars().tabs.borrow_mut().aktiven_neu_lesen();
         self.nach_lesebeginn();
@@ -641,12 +646,15 @@ impl DateifensterQuelle {
         // Der Puffer der Sprungmarke gehoert der Liste, die er durchsucht hat.
         self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
-        // Der neue Tab hat noch keine Auswahl; die Tabelle erfaehrt es hier.
-        // Sich darauf zu verlassen, dass `reloadData` eine Zeilennummer
-        // jenseits der neuen Zeilenzahl von selbst fallen laesst, hiesse, eine
-        // Zusage von AppKit anzunehmen statt sie zu geben. Die alte Auswahl
-        // kommt mit dem Abschluss des Lesevorgangs zurueck, ueber
-        // `wunschauswahl` und dieselbe Huelle, die sie nach einem Umsortieren
+        // Die Auswahl des Modells an die Tabelle geben, statt sich darauf zu
+        // verlassen, dass `reloadData` eine Zeilennummer jenseits der neuen
+        // Zeilenzahl von selbst fallen laesst; das hiesse, eine Zusage von
+        // AppKit anzunehmen statt sie zu geben. Welche Auswahl das ist, haengt
+        // am Weg: eine Navigation hat den Tab ausgetauscht und hat keine, eine
+        // Auffrischung zeigt weiter die Zeilen des bisherigen Lesevorgangs und
+        // behaelt die Auswahl darauf, bis dessen Bestand abgeloest wird. In
+        // beiden Faellen kommt sie mit dem Abschluss ueber `wunschauswahl`
+        // zurueck, also ueber dieselbe Huelle, die sie nach einem Umsortieren
         // wiederherstellt.
         self.auswahl_anzeigen();
         self.meldung_anzeigen();
@@ -1542,6 +1550,13 @@ impl DateifensterQuelle {
             // Bildschirmseite und der fertigen Sortierung rund 800 ms.
             self.auswahl_anzeigen();
             self.gemerkten_bildlauf_herstellen();
+        } else if einzug.ersetzt {
+            // Dieser Stapel hat die Liste des vorigen Lesevorgangs abgeloest.
+            // `noteNumberOfRowsChanged` genuegt dafuer nicht: die Tabelle
+            // zeigte weiter die Zellen des alten Ordners, und ihre Auswahl
+            // stuende auf einer Zeile, die es nicht mehr gibt.
+            self.ivars().tabelle.reloadData();
+            self.auswahl_anzeigen();
         } else if einzug.angehaengt {
             self.ivars().tabelle.noteNumberOfRowsChanged();
         }

@@ -23,6 +23,26 @@
 //! Dateioperation gleich wirken soll. Auch sie haengt am Eintragsindex und
 //! ueberlebt damit jedes Umsortieren und jedes Ein- und Ausblenden der
 //! versteckten Eintraege.
+//!
+//! # Ein Lesevorgang ersetzt, er leert nicht vorab
+//!
+//! ```text
+//! lesevorgang_beginnen(g)   Generation g, Ersatz vorgemerkt
+//!        │                  der alte Bestand steht weiter auf dem Schirm
+//!        ├── erster Stapel ──> Ersatz eingeloest, dann angehaengt
+//!        └── kein Stapel  ────> abschliessen loest den Ersatz ein
+//! ```
+//!
+//! Bis zum 260807 leerte eine Methode `leeren` das Modell beim **Start** eines
+//! Lesevorgangs. Traf die naechste Aenderungsmeldung ein, bevor der erste
+//! Stapel angehaengt war, setzte sie den Lesevorgang neu auf, und der Nutzer sah
+//! fuer die ganze Laufzeit eine leere Liste
+//! (`issues/260805-1337_*_die-dateiliste-ist-waehrend-eines-stapel-umbenennens-im-angezeigten-ordner-leer.md`).
+//! [`Ordnermodell::lesevorgang_beginnen`] merkt den Ersatz stattdessen nur vor;
+//! eingeloest wird er von dem, was als Erstes kommt, und danach nie ein zweites
+//! Mal. Der Bestand ist damit zu keinem Zeitpunkt aus zwei Ordnern gemischt, und
+//! eine leere Zwischenzeit gibt es nur noch dort, wo der neue Ordner wirklich
+//! leer ist.
 
 use super::eintrag::Eintrag;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
@@ -73,6 +93,13 @@ pub struct Ordnermodell {
     /// Grund wie die Auswahl. Eine Liste statt einer Menge, weil "alle
     /// markieren" bei 100.000 Eintraegen sonst 100.000 Einfuegungen waere.
     markiert: Vec<bool>,
+    /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
+    ///
+    /// Gesetzt von [`Ordnermodell::lesevorgang_beginnen`], eingeloest von
+    /// [`Ordnermodell::ersatz_einloesen`]. Solange er aussteht, gehoert der
+    /// Inhalt noch dem vorigen Lauf, die Generation aber schon dem neuen; der
+    /// Modulkopf schreibt aus, warum das die richtige Reihenfolge ist.
+    ersatz_ausstehend: bool,
 }
 
 impl Ordnermodell {
@@ -86,15 +113,19 @@ impl Ordnermodell {
             generation,
             auswahl: None,
             markiert: Vec::new(),
+            ersatz_ausstehend: false,
         }
     }
 
     /// Die Generation, zu der dieses Modell gehoert.
     ///
-    /// Sie sagt, aus welchem Lesevorgang der Inhalt stammt. Die Oberflaeche
-    /// prueft sie **nicht** je Stapel: sie haelt immer nur einen Lesevorgang
-    /// und liest allein aus dessen Kanal. Der Modulkopf von
-    /// `krk-ui/src/appkit/tabelle.rs` schreibt aus, was einen Ordnerwechsel
+    /// Sie sagt, zu welchem Lesevorgang das Modell gehoert. Steht ein Ersatz
+    /// aus, stammt der **Inhalt** noch aus dem vorigen Lauf; das ist die
+    /// Zwischenzeit aus dem Modulkopf und dauert bis zum ersten Stapel.
+    ///
+    /// Die Oberflaeche prueft die Nummer **nicht** je Stapel: sie haelt immer
+    /// nur einen Lesevorgang und liest allein aus dessen Kanal. Der Modulkopf
+    /// von `krk-ui/src/appkit/tabelle.rs` schreibt aus, was einen Ordnerwechsel
     /// mitten im Lesen stattdessen traegt.
     pub fn generation(&self) -> u64 {
         self.generation
@@ -105,19 +136,56 @@ impl Ordnermodell {
         generation == self.generation
     }
 
-    /// Leert das Modell und setzt es auf eine neue Generation.
+    /// Beginnt einen Lesevorgang: neue Generation, Ersatz vorgemerkt.
     ///
-    /// Auswahl und Markierung fallen mit: beide zeigen auf Eintraege des alten
-    /// Ordners, und im neuen gibt es sie nicht.
-    pub fn leeren(&mut self, generation: u64) {
+    /// **Der bisherige Inhalt bleibt stehen.** Er verschwindet erst, wenn der
+    /// neue Lauf liefert: mit seinem ersten Stapel, und wenn er keinen hat, mit
+    /// [`Ordnermodell::abschliessen`]. Ein Ordner, der leer ist oder sich nicht
+    /// lesen laesst, raeumt die alte Liste damit ebenso zuverlaessig wie ein
+    /// voller, nur eine Spur spaeter.
+    ///
+    /// Zweimal hintereinander gerufen — die Meldelawine des Defekts
+    /// `260805-1337` — bleibt es bei einem vorgemerkten Ersatz. Genau daran
+    /// haengt, dass die Liste waehrend eines Stapel-Umbenennens nicht mehr leer
+    /// laeuft.
+    pub fn lesevorgang_beginnen(&mut self, generation: u64) {
+        self.generation = generation;
+        self.ersatz_ausstehend = true;
+    }
+
+    /// Ob der naechste Stapel den angezeigten Bestand abloesen wird.
+    ///
+    /// Wahr, solange ein begonnener Lesevorgang noch nichts geliefert hat und
+    /// noch Zeilen des vorigen stehen. Die Ansicht fragt danach, weil sie diesen
+    /// einen Stapel nicht als blosse neue Zeilenzahl melden darf: die Auswahl
+    /// der Tabelle zeigte sonst auf eine Zeile, die es nach dem Ersatz nicht
+    /// mehr gibt.
+    pub fn ersetzt_beim_naechsten_stapel(&self) -> bool {
+        self.ersatz_ausstehend && !self.sichtreihenfolge.is_empty()
+    }
+
+    /// Loest einen vorgemerkten Ersatz ein: der alte Bestand faellt.
+    ///
+    /// Auswahl und Markierung fallen mit, und zwar hier und nicht schon beim
+    /// Beginn des Lesevorgangs. Beide haengen am Eintragsindex; ein Index, der
+    /// den Ersatz uebersteht, zeigte danach auf einen beliebigen Eintrag des
+    /// neuen Ordners. Was die Auswahl ueber einen Lesevorgang hinweg traegt, ist
+    /// der **Name** in `krk-ui`s `Tabinhalt::wunschauswahl`.
+    fn ersatz_einloesen(&mut self) {
+        if !self.ersatz_ausstehend {
+            return;
+        }
+        self.ersatz_ausstehend = false;
         self.eintraege.clear();
         self.sichtreihenfolge.clear();
         self.markiert.clear();
-        self.generation = generation;
         self.auswahl = None;
     }
 
     /// Haengt einen gelesenen Stapel an.
+    ///
+    /// Loest zuvor einen vorgemerkten Ersatz ein: dieser Stapel ist der erste
+    /// des neuen Laufs, und ab ihm gehoert der Bestand dem neuen Ordner.
     ///
     /// Die neuen Eintraege stehen zunaechst in Lesereihenfolge am Ende der
     /// Sicht. Das ist Absicht: der erste Stapel soll sofort sichtbar sein
@@ -125,6 +193,7 @@ impl Ordnermodell {
     /// Eintraegen hundertmal dieselbe Arbeit. Die Reihenfolge steht mit
     /// [`Ordnermodell::abschliessen`].
     pub fn anhaengen(&mut self, neue: impl IntoIterator<Item = Eintrag>) {
+        self.ersatz_einloesen();
         for eintrag in neue {
             let index = self.eintraege.len() as u32;
             let sichtbar = !(self.verstecke_ausblenden && eintrag.versteckt);
@@ -139,8 +208,15 @@ impl Ordnermodell {
     /// Stellt die endgueltige Reihenfolge her.
     ///
     /// Ruft der Hauptfaden, sobald der Leser seinen Abschluss gemeldet hat,
-    /// gleich ob vollstaendig oder abgebrochen.
+    /// gleich ob vollstaendig, abgebrochen oder gescheitert.
+    ///
+    /// **Der Auffangfall des Ersatzes.** Ein leerer Ordner und ein Ordner, der
+    /// sich nicht oeffnen laesst, liefern keinen einzigen Stapel; ohne diese
+    /// Zeile bliebe die Liste des vorigen Ordners stehen. Der Leser meldet
+    /// seinen Abschluss in jedem dieser Faelle, also gibt es keinen Ausgang, der
+    /// den Ersatz schuldig bleibt.
     pub fn abschliessen(&mut self) {
+        self.ersatz_einloesen();
         self.sicht_neu_aufbauen();
     }
 
@@ -428,15 +504,151 @@ mod tests {
         assert_eq!(name_in_zeile(&modell, zeile_nachher), Some("zzz.txt"));
     }
 
+    /// Der Defekt vom 260805-1337, an der Stelle, an der er entsteht: der
+    /// zweite Lesevorgang darf die Liste nicht leeren, bevor er liefert.
+    #[test]
+    fn ein_zweiter_lesevorgang_laesst_die_alte_liste_stehen() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+        let vorher: Vec<String> = modell.zeilen().map(|e| e.name.clone()).collect();
+
+        modell.lesevorgang_beginnen(2);
+
+        assert_eq!(modell.zeilenzahl(), vorher.len(), "die Liste ist leer");
+        let jetzt: Vec<String> = modell.zeilen().map(|e| e.name.clone()).collect();
+        assert_eq!(jetzt, vorher, "es steht etwas anderes da als vorher");
+        assert!(
+            modell.gehoert_dazu(2),
+            "die Generation gehoert dem neuen Lauf"
+        );
+    }
+
+    /// Die Meldelawine: mehrere Lesevorgaenge kurz hintereinander, keiner
+    /// liefert. Genau hier lief die Liste bis zum 260807 leer.
+    #[test]
+    fn auch_der_fuenfte_neu_aufgesetzte_lesevorgang_leert_nicht() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+
+        for generation in 2..=6 {
+            modell.lesevorgang_beginnen(generation);
+            assert_eq!(
+                modell.zeilenzahl(),
+                2,
+                "der Lesevorgang {generation} hat die Liste geleert"
+            );
+        }
+    }
+
+    #[test]
+    fn der_erste_stapel_loest_den_alten_bestand_ab() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+
+        modell.lesevorgang_beginnen(2);
+        modell.anhaengen([eintrag("neu.txt", Typ::Datei)]);
+
+        assert_eq!(modell.zeilenzahl(), 1);
+        assert_eq!(name_in_zeile(&modell, 0), Some("neu.txt"));
+        assert_eq!(
+            modell.eintraege().len(),
+            1,
+            "der alte Bestand steht noch da"
+        );
+    }
+
+    /// Der zweite Stapel desselben Laufs haengt an, statt ein zweites Mal zu
+    /// ersetzen.
+    #[test]
+    fn der_zweite_stapel_ersetzt_nicht_noch_einmal() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+
+        modell.lesevorgang_beginnen(2);
+        modell.anhaengen([eintrag("eins.txt", Typ::Datei)]);
+        modell.anhaengen([eintrag("zwei.txt", Typ::Datei)]);
+
+        assert_eq!(modell.zeilenzahl(), 2);
+    }
+
+    /// Der Ordner, der nie einen Stapel liefert: leer oder nicht lesbar. Ohne
+    /// diesen Auffangfall bliebe die alte Liste fuer immer stehen.
+    #[test]
+    fn ein_ordner_ohne_stapel_raeumt_die_alte_liste_beim_abschluss() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+        auswaehlen(&mut modell, "zzz.txt");
+
+        modell.lesevorgang_beginnen(2);
+        modell.abschliessen();
+
+        assert_eq!(modell.zeilenzahl(), 0);
+        assert!(modell.eintraege().is_empty());
+        assert_eq!(modell.auswahl(), None);
+    }
+
     #[test]
     fn ein_neuer_ordner_hebt_die_auswahl_auf() {
         let mut modell = gelesen();
+        modell.abschliessen();
         auswaehlen(&mut modell, "zzz.txt");
 
-        modell.leeren(2);
+        modell.lesevorgang_beginnen(2);
+        assert!(
+            modell.auswahl().is_some(),
+            "solange die alten Zeilen stehen, steht auch die Auswahl darauf"
+        );
 
-        assert_eq!(modell.auswahl(), None);
+        modell.anhaengen([eintrag("neu.txt", Typ::Datei)]);
+
+        assert_eq!(modell.auswahl(), None, "die Auswahl faellt mit dem Ersatz");
         assert_eq!(modell.auswahl_zeile(), None);
+    }
+
+    #[test]
+    fn die_markierung_faellt_mit_dem_ersatz_und_nicht_frueher() {
+        let mut modell = gelesen();
+        modell.abschliessen();
+        modell.alle_markieren();
+        assert_eq!(modell.markierungsstand().zahl, 2);
+
+        modell.lesevorgang_beginnen(2);
+        assert_eq!(
+            modell.markierungsstand().zahl,
+            2,
+            "die markierten Eintraege stehen noch auf dem Schirm"
+        );
+
+        modell.anhaengen([eintrag("neu.txt", Typ::Datei)]);
+        assert!(modell.markierungsstand().ist_leer());
+    }
+
+    /// Woran die Ansicht ablesen soll, dass sie die Tabelle neu holen muss
+    /// statt nur eine neue Zeilenzahl zu melden.
+    #[test]
+    fn der_ersatz_wird_nur_angekuendigt_wenn_zeilen_fallen() {
+        let mut leer = Ordnermodell::neu(1);
+        leer.lesevorgang_beginnen(2);
+        assert!(
+            !leer.ersetzt_beim_naechsten_stapel(),
+            "ein leeres Modell hat nichts abzuloesen"
+        );
+
+        let mut modell = gelesen();
+        modell.abschliessen();
+        assert!(
+            !modell.ersetzt_beim_naechsten_stapel(),
+            "ohne begonnenen Lesevorgang steht kein Ersatz aus"
+        );
+
+        modell.lesevorgang_beginnen(2);
+        assert!(modell.ersetzt_beim_naechsten_stapel());
+
+        modell.anhaengen([eintrag("neu.txt", Typ::Datei)]);
+        assert!(
+            !modell.ersetzt_beim_naechsten_stapel(),
+            "eingeloest wird genau einmal"
+        );
     }
 
     #[test]

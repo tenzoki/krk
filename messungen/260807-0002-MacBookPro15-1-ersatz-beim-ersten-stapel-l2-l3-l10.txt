@@ -1,0 +1,148 @@
+KRK — Nachmessung von L2, L3 und L10 nach der Umstellung der Lesestelle auf
+"ersetzen beim ersten Stapel"
+===========================================================================
+
+Wozu dieser Lauf
+----------------
+Der Nutzerentscheid vom 260806-2345 zu
+`issues/260806-1445_*_ein-schnelles-verschieben-koennte-dieselbe-meldelawine-ausloesen-wie-das-stapel-umbenennen.md`
+geht die Ursache an statt den Vorbehalt zu messen: ein Lesevorgang leert sein
+Ordnermodell nicht mehr vorab, sondern ersetzt den Bestand erst mit dem ersten
+gelieferten Stapel. `Ordnermodell::leeren` ist dafuer durch
+`Ordnermodell::lesevorgang_beginnen` ersetzt worden, und `anhaengen` wie
+`abschliessen` loesen den vorgemerkten Ersatz ein.
+
+Die Umstellung liegt genau auf dem Weg, den L2 (erste Bildschirmseite), L3
+(10.000 Eintraege gelesen und sortiert) und L10 (100.000 Eintraege) messen. Sie
+sind deshalb nachzumessen, auch wenn die Aenderung nach Augenschein nichts
+kostet: `anhaengen` bekommt einen Zweig davor, und `abschliessen` ebenfalls.
+
+Gemessen wird auf der kopflosen Strecke aus Schritt 3. Sie endet im Kern, also
+sind L3 und L10 dort vollstaendig; von L2 traegt sie den Kernanteil, und was das
+Zeichnen dazulegt, misst der Messmodus der Anwendung.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-06T23:58Z bis 2026-08-07T00:00Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Cache-Zustand         warm (ein ungezaehlter Vorlauf, danach nur weitere Zugriffe)
+Wiederholungen        20 je Messgroesse und Runde, 5 Runden
+Pruefordner A         ~/Library/Caches/krk-messplatz/pruefordner-a (Startwert 1, 10.000 Eintraege)
+Pruefordner 100k      ~/Library/Caches/krk-messplatz/pruefordner-gross (Startwert 3, 100.000 Eintraege)
+Systemlast            vor dem Lauf { 2.05 2.73 2.33 }, nach dem Lauf { 3.26 2.94 2.46 }
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+**Es sind dieselben Pruefordner wie in der Abnahmereihe** (`260805-2207`) und
+wie in der Kollations-Nachmessung (`260806-1716`): sie liegen unveraendert am
+Messplatz und wurden fuer diesen Lauf nicht neu erzeugt.
+
+Zwei Reihen im Wechsel
+----------------------
+Wie bei der Kollations-Nachmessung steht eine Basisreihe daneben: **derselbe
+Messlauf zur selben Zeit mit dem Code vor der Umstellung**, gebaut aus dem Stand
+`2fbab30` in einer Kopie des Quellbaums (`git archive HEAD`). Der Unterschied
+zwischen Basis und Neu ist damit genau diese Umsetzung und sonst nichts.
+
+Die beiden Reihen laufen **abwechselnd** und nicht nacheinander: je Runde erst
+Neu auf A, dann Basis auf A, dann Neu auf 100k, dann Basis auf 100k. Eine
+Laststeigerung waehrend des Laufs trifft damit beide Reihen gleich, statt der
+zweiten allein anzuhaengen. Die Last ist waehrend dieses Laufs tatsaechlich
+gestiegen (2,05 auf 3,26), und genau dagegen ist der Wechsel gerichtet.
+
+Zahlen: das 95. Perzentil je Runde, in Millisekunden
+-----------------------------------------------------
+Das Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei zwanzig
+Laeufen der neunzehnte der sortierten Reihe. Eine Zusage gilt nur als gehalten,
+wenn sie es in jeder Runde tut.
+
+L3 — Pruefordner A: vollstaendig gelesen und sortiert (kopflos, warm)
+Zusage: p95 <= 400 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Basis 2fbab30          47.841   44.642   47.569   42.035   40.793     47.841
+  Neu (Ersatz)           47.321   42.850   42.857   42.931   41.818     47.321
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 11,8 % der
+  Zusage; es bleibt der Faktor 8,5.
+
+L10 — 100.000 Eintraege: vollstaendig gelesen und sortiert (kopflos, warm)
+Zusage: p95 <= 4000 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Basis 2fbab30         487.896  488.757  492.333  524.526  468.858    524.526
+  Neu (Ersatz)          501.681  489.332  491.754  495.448  476.865    501.681
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 12,5 % der
+  Zusage; es bleibt der Faktor 8,0.
+
+L2 — Pruefordner A: erste Bildschirmseite (Kernanteil, kopflos, warm)
+Zusage: p95 <= 100 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Basis 2fbab30          12.046   11.182   12.384   11.193   10.966     12.384
+  Neu (Ersatz)           11.320   10.922   11.270   12.086   10.887     12.086
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 12,1 % der
+  Zusage.
+
+L10 — 100.000 Eintraege: erste Bildschirmseite (Kernanteil, kopflos, warm)
+Zusage: p95 <= 100 ms
+
+  Reihe                      R1       R2       R3       R4       R5   schlechtestes
+  Basis 2fbab30          14.293   13.515   13.552   13.625   12.805     14.293
+  Neu (Ersatz)           13.496   13.849   13.669   13.360   13.319     13.849
+
+  Urteil: GEHALTEN in allen 5 Runden. Der schlechteste Wert nutzt 13,8 % der
+  Zusage.
+
+Was die Zahlen sagen
+--------------------
+**Die Umstellung kostet nichts.** Gegen die Basis derselben Messung, am Median
+der fuenf Rundenperzentile:
+
+  L3  (10.000 Eintraege)     44.642 ms -> 42.857 ms   - 1.8 ms   - 4,0 %
+  L10 (100.000 Eintraege)   488.757 ms -> 491.754 ms  + 3.0 ms   + 0,6 %
+  L2  (erster Stapel, A)     11.193 ms -> 11.270 ms   + 0.1 ms   + 0,7 %
+  L10 (erster Stapel)        13.552 ms -> 13.496 ms   - 0.1 ms   - 0,4 %
+
+Alle vier Abstaende liegen unter der Streuung der Basisreihe selbst: die spannt
+bei L3 von 40,8 bis 47,8 ms und bei L10 von 468,9 bis 524,5 ms. Zwei der vier
+Abstaende zeigen nach unten. Das ist kein Vorteil der Umstellung, sondern die
+Aussage, dass beide Reihen dasselbe messen.
+
+**Warum das zu erwarten war.** Die kopflose Strecke baut ihr Modell mit
+`Ordnermodell::neu` und ruft `lesevorgang_beginnen` nie; ein Ersatz steht dort
+nie aus. Was die Umstellung auf dieser Strecke hinzufuegt, ist je Stapel ein
+Vergleich eines Wahrheitswerts, bei 100.000 Eintraegen also 98 Vergleiche. Die
+Zahlen bestaetigen genau das.
+
+**Wo der Aufwand stattdessen anfaellt**, und warum er die Zusagen nicht
+beruehrt: das Freigeben der alten Eintraege wandert vom Start des Lesevorgangs
+zum ersten Stapel. Beide Zeitpunkte liegen innerhalb derselben Spanne, die L2
+misst — die Spanne beginnt mit dem Tastendruck, und `lesen_starten` lief schon
+bisher in dessen Behandlung. Verschoben wird der Aufwand also innerhalb des
+Messfensters, nicht hinein.
+
+Lesart und Einschraenkungen
+---------------------------
+Diese Strecke misst ohne Fenster und ohne AppKit. "Vollstaendiges Lesen samt
+Sortierung" beginnt beim Aufruf des Lesers und endet mit dem abgeschlossenen,
+sortierten Ordnermodell; L3 und L10 enden im Kern, ihre Zahlen sind damit
+vollstaendig.
+
+Der erste Stapel ist der **Anteil des Kerns** an L2 beziehungsweise an der
+ersten Bildschirmseite von L10, nicht die Zusage selbst.
+
+**Der neue Ansichtsweg ist hier nicht gemessen.** Loest ein Stapel wirklich
+einen Bestand ab — das ist allein die Auffrischung eines angezeigten Ordners —,
+laesst `DateifensterQuelle::einziehen` die Tabelle einmal neu holen statt nur
+eine neue Zeilenzahl zu melden. Das faellt hoechstens einmal je Lesevorgang an
+und ausserhalb jeder der zehn Zusagen: L2, L3 und L10 messen eine Navigation,
+und die tauscht den Tab weiterhin vollstaendig aus, hat also nichts abzuloesen.
+Wer den Weg dennoch abgenommen sehen will, braucht eine Zusage ueber die
+Auffrischung, und die stellt C8 nicht.
+
+Die uebrigen Zusagen sind hier nicht gemessen. L1 und L4 bis L9 haengen am
+Fenster und nicht am Verzeichnisleser; die Umstellung fasst keinen ihrer Wege
+an. Wer sie dennoch abgenommen sehen will, faehrt den Gesamtlauf aus Schritt 21.

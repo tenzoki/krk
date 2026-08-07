@@ -21,8 +21,9 @@
 //!
 //! Was die Nummer noch traegt, sind zwei Dinge: sie benennt den Lesefaden
 //! (`krk-verzeichnisleser-<n>`), was ein Fadenprotokoll lesbar macht, und sie
-//! sagt [`Ordnermodell::leeren`](super::modell::Ordnermodell::leeren), zu
-//! welchem Lauf der Inhalt des Modells gehoert. Beides sind Aufgaben des
+//! sagt
+//! [`Ordnermodell::lesevorgang_beginnen`](super::modell::Ordnermodell::lesevorgang_beginnen),
+//! zu welchem Lauf das Modell gehoert. Beides sind Aufgaben des
 //! **Aufrufers**, der die Nummer ohnehin haelt; der Lesevorgang und die Meldung
 //! mussten sie ihm deshalb nie zurueckgeben, und die Leser dafuer sind am
 //! 260805-0841 entfallen
