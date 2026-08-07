@@ -793,18 +793,19 @@ impl Anwendungsdelegierter {
     /// Blendet das Vorschaufenster ein, falls es ausgeblendet war, und
     /// blendet es **nie** aus: zum Ausblenden bleibt der Befehl aus C7 auf
     /// F3. Zwei Befehle, die beide umschalten, waeren zwei Wahrheiten ueber
-    /// den Zustand desselben Bereichs.
+    /// den Zustand desselben Bereichs. Der Weg dorthin ist seit dem
+    /// Nutzerentscheid vom 260807 derselbe, den auch die Fokusbefehle nehmen:
+    /// [`Self::bereich_einblenden`].
     fn zwischenablage_ansehen(&self) -> bool {
         let inhalt = super::zwischenablage::inhalt_lesen();
         self.vorschau().zwischenablage_anzeigen(inhalt);
         // Die Zwischenablage ist die neuere Quelle fuer denselben Tab; ein
         // waehrend der ausgeblendeten Vorschau vermerkter Pfad ist damit
-        // ueberholt und wird nicht mehr nachgeholt.
+        // ueberholt und wird nicht mehr nachgeholt. Deshalb steht die Zeile
+        // vor dem Einblenden: danach faende der Nachtrag ihn noch vor und
+        // ueberschriebe den gerade gezeigten Inhalt.
         *self.ivars().vorschau_nachtrag.borrow_mut() = None;
-        let mut modell = self.ivars().modell.borrow_mut();
-        if !modell.sichtbar(Bereich::Vorschau) {
-            modell.umschalten(Bereich::Vorschau);
-        }
+        self.bereich_einblenden(Bereich::Vorschau);
         true
     }
 
@@ -1036,16 +1037,41 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Setzt den Eingabefokus in die Leiste oder in das aktive Dateifenster
-    /// (C5).
+    /// Fuehrt einen Fokusbefehl aus: erst den Bereich hervorholen, dann den
+    /// Fokus setzen (C2, C5, C6).
+    ///
+    /// Der Weg aller drei Fokusbefehle, und sie gehen ihn ohne Sonderfall.
+    /// Welchen Bereich einer hervorholt, sagt
+    /// [`fokus::holt_hervor`](crate::kommandos::fokus::holt_hervor) und sonst
+    /// nichts; dort steht auch, warum das seit dem Nutzerentscheid vom 260807
+    /// geschieht, statt einen ausgeblendeten Bereich stumm abzuweisen.
+    ///
+    /// "Ausgefuehrt" heisst hier: **irgendetwas** ist geschehen. Der Befehl auf
+    /// eine ausgeblendete Leiste blendet sie ein, auch wenn der Fokus danach
+    /// aus einem anderen Grund nicht umzieht; ohne das oder-Zeichen liesse er
+    /// die Aufteilung ungezeichnet stehen.
+    fn fokus_holen(&self, ziel: Fokus) -> bool {
+        let eingeblendet = match fokus::holt_hervor(ziel) {
+            Some(bereich) => self.bereich_einblenden(bereich),
+            None => false,
+        };
+        let gesetzt = self.fokus_setzen(ziel);
+        eingeblendet || gesetzt
+    }
+
+    /// Setzt den Eingabefokus in die Leiste, in die Vorschau oder in das
+    /// aktive Dateifenster (C5, C6).
     ///
     /// Die eine Stelle, die den Fokus **setzt**, so wie
-    /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. In eine
-    /// ausgeblendete Leiste geht der Fokus nicht: dort saehe der Nutzer weder
-    /// seine Auswahl noch, dass seine Tasten irgendwo ankommen.
+    /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. In einen
+    /// ausgeblendeten Randbereich geht der Fokus nicht: dort saehe der Nutzer
+    /// weder seine Auswahl noch, dass seine Tasten irgendwo ankommen. Die
+    /// Sperre bleibt stehen, obwohl [`Self::fokus_holen`] den Bereich vorher
+    /// hervorholt — sie gilt fuer jeden Aufrufer und nicht nur fuer den einen,
+    /// der vorbaut.
     ///
-    /// Drei Aufrufer: die beiden Fokusbefehle aus C5, das Ausblenden der
-    /// Leiste, und der Aufbau der Oberflaeche mit
+    /// Drei Aufrufer: die drei Fokusbefehle ueber [`Self::fokus_holen`], das
+    /// Ausblenden eines Randbereichs, und der Aufbau der Oberflaeche mit
     /// [`crate::kommandos::fokus::BEIM_START`].
     fn fokus_setzen(&self, ziel: Fokus) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
@@ -1059,8 +1085,7 @@ impl Anwendungsdelegierter {
                 fenster.makeFirstResponder(Some(self.leiste().quelle().liste()))
             }
             // In eine ausgeblendete Vorschau geht der Fokus nicht, aus
-            // demselben Grund wie bei der Leiste. Kein Tastenbefehl fuehrt in
-            // dieser Runde hierher; der Arm steht der Vollstaendigkeit halber.
+            // demselben Grund wie bei der Leiste.
             Fokus::Vorschau => {
                 if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
                     return false;
@@ -1480,8 +1505,9 @@ impl Anwendungsdelegierter {
             Kommando::LesezeichenLoeschen => self.lesezeichen_loeschen(),
             Kommando::LesezeichenHoch => self.lesezeichen_verschieben(Verschiebung::Hoch),
             Kommando::LesezeichenRunter => self.lesezeichen_verschieben(Verschiebung::Runter),
-            Kommando::FokusLeiste => self.fokus_setzen(Fokus::Leiste),
-            Kommando::FokusDateifenster => self.fokus_setzen(Fokus::Dateifenster),
+            Kommando::FokusLeiste => self.fokus_holen(Fokus::Leiste),
+            Kommando::FokusDateifenster => self.fokus_holen(Fokus::Dateifenster),
+            Kommando::FokusVorschau => self.fokus_holen(Fokus::Vorschau),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -1599,9 +1625,40 @@ impl Anwendungsdelegierter {
     /// Blendet einen Bereich aus oder wieder ein (C7).
     fn bereich_umschalten(&self, bereich: Bereich) -> bool {
         let umgeschaltet = self.ivars().modell.borrow_mut().umschalten(bereich);
+        if umgeschaltet {
+            self.nach_dem_sichtbarkeitswechsel(bereich);
+        }
+        umgeschaltet
+    }
+
+    /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
+    ///
+    /// Der Weg der Befehle, die einen Bereich **brauchen** statt ihn
+    /// umzuschalten: `shift+f3` aus C10 und die Fokusbefehle seit dem
+    /// Nutzerentscheid vom 260807. Die Regel selbst steht in
+    /// [`Fenstermodell::einblenden`] und damit ausserhalb von AppKit; hier
+    /// kommen allein die Nachzuege dazu, die jeder Sichtbarkeitswechsel
+    /// braucht.
+    fn bereich_einblenden(&self, bereich: Bereich) -> bool {
+        let eingeblendet = self.ivars().modell.borrow_mut().einblenden(bereich);
+        if eingeblendet {
+            self.nach_dem_sichtbarkeitswechsel(bereich);
+        }
+        eingeblendet
+    }
+
+    /// Was nach jedem Wechsel der Sichtbarkeit nachzuziehen ist.
+    ///
+    /// Die eine Stelle dafuer, gerufen von [`Self::bereich_umschalten`] wie von
+    /// [`Self::bereich_einblenden`] und nur, wenn sich etwas geaendert hat. Die
+    /// drei Nachzuege sind nach dem Bereich unterschieden und nicht danach,
+    /// welcher Befehl den Wechsel ausgeloest hat; eine zweite Liste neben
+    /// dieser waere die erste Abweichung zwischen zwei Wegen in denselben
+    /// Zustand.
+    fn nach_dem_sichtbarkeitswechsel(&self, bereich: Bereich) {
         // Mit dem zweiten Dateifenster kommt und geht ein beobachteter Ordner.
         // Die beiden Randbereiche zeigen keinen.
-        if umgeschaltet && bereich == Bereich::Rechts {
+        if bereich == Bereich::Rechts {
             self.dateisystemwache_nachziehen();
         }
         // Ein ausgeblendeter Randbereich darf den Fokus nicht behalten: der
@@ -1610,8 +1667,7 @@ impl Anwendungsdelegierter {
         // steht er im Dateifenster, ist der Aufruf wirkungslos, und eine
         // Abfrage dafuer waere eine zweite Stelle, die nach dem Fokus fragt.
         // Seit S19 gilt das fuer die Leiste wie fuer die Vorschau.
-        if umgeschaltet
-            && matches!(bereich, Bereich::Lesezeichen | Bereich::Vorschau)
+        if matches!(bereich, Bereich::Lesezeichen | Bereich::Vorschau)
             && !self.ivars().modell.borrow().sichtbar(bereich)
         {
             self.fokus_setzen(Fokus::Dateifenster);
@@ -1619,13 +1675,9 @@ impl Anwendungsdelegierter {
         // Die eingeblendete Vorschau holt nach, was sie im ausgeblendeten
         // Zustand ausgesetzt hat; die Begruendung steht an
         // [`AnwendungsIvars::vorschau_nachtrag`].
-        if umgeschaltet
-            && bereich == Bereich::Vorschau
-            && self.ivars().modell.borrow().sichtbar(bereich)
-        {
+        if bereich == Bereich::Vorschau && self.ivars().modell.borrow().sichtbar(bereich) {
             self.vorschau_nachtragen();
         }
-        umgeschaltet
     }
 
     /// Aendert die Breite des aktiven Dateifensters um einen Schritt (C7).

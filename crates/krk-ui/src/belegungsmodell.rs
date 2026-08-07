@@ -66,9 +66,11 @@ pub enum Funktionsbereich {
     Dateioperationen,
     /// Die vier Tabbefehle (C1, nach C6 auch fuer die Vorschau-Tabs).
     Tabs,
-    /// Das Vorschaufenster und was es anzeigt (C3, C6, C10).
+    /// Das Vorschaufenster: was es anzeigt, und wie man hinkommt (C2, C3,
+    /// C6, C10).
     Vorschau,
-    /// Die Lesezeichen- und Geraeteleiste und der Fokuswechsel (C5).
+    /// Die Lesezeichen- und Geraeteleiste und der Fokuswechsel zwischen ihr
+    /// und dem Dateifenster (C5).
     LeisteUndFokus,
     /// Das Anwendungsfenster und seine Bereiche: wechseln, ein- und
     /// ausblenden, Breiten (C1, C7).
@@ -184,9 +186,16 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Das Ein- und Ausblenden der Vorschau steht bei ihr und nicht bei
         // den Fensterbefehlen: wer die Vorschau sucht, sucht unter Vorschau,
         // und "Zwischenablage ansehen" zeigt in dasselbe Fenster (C3, C10).
-        Kommando::VorschauUmschalten | Kommando::ZwischenablageAnsehen => {
-            Funktionsbereich::Vorschau
-        }
+        //
+        // Derselbe Satz ordnet den Fokusbefehl aus C2/C6 hierher und nicht zu
+        // "Leiste und Fokus": diese Gliederung fragt nach der Gegend der
+        // Anwendung und nicht nach dem Mechanismus, sonst stuende auch
+        // `leiste_umschalten` unter "Fenster". Wer wissen will, wie er in die
+        // Vorschau kommt, findet unter "Vorschau" alle drei Befehle, die sie
+        // angehen.
+        Kommando::VorschauUmschalten
+        | Kommando::ZwischenablageAnsehen
+        | Kommando::FokusVorschau => Funktionsbereich::Vorschau,
         // Die Leiste aus C5 samt ihrem Ein- und Ausblenden aus C7 und den
         // beiden Fokusbefehlen, die zwischen ihr und dem Dateifenster
         // wechseln.

@@ -239,6 +239,28 @@ impl Fenstermodell {
         }
     }
 
+    /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
+    ///
+    /// Liefert, ob sich dadurch etwas geaendert hat; ein schon sichtbarer
+    /// Bereich liefert `false` und bleibt unangetastet.
+    ///
+    /// **Die eine Stelle der Asymmetrie**, und sie steht neben
+    /// [`Fenstermodell::umschalten`] statt bei den Befehlen, die sie brauchen.
+    /// Drei tun das heute: `shift+f3` aus C10 zeigt den Inhalt der
+    /// Zwischenablage in der Vorschau, und seit dem Nutzerentscheid vom 260807
+    /// holen auch die Fokusbefehle ihren Bereich hervor
+    /// (`decisions/260805-1730_*_holt-der-fokusbefehl-eine-ausgeblendete-leiste-hervor.md`).
+    /// Der gemeinsame Grund: wer einen Bereich verlangt, verlangt damit, ihn
+    /// zu sehen; ausblenden tut keiner von ihnen, dafuer bleiben die Befehle
+    /// aus C7. Es entsteht deshalb keine zweite Wahrheit ueber die
+    /// Sichtbarkeit, sondern dieselbe Asymmetrie an einer Stelle.
+    pub fn einblenden(&mut self, bereich: Bereich) -> bool {
+        if self.sichtbar(bereich) {
+            return false;
+        }
+        self.umschalten(bereich)
+    }
+
     /// Die gespeicherten Breiten.
     pub fn breiten(&self) -> Breiten {
         self.breiten
@@ -501,6 +523,45 @@ mod tests {
         assert!(!modell.sichtbar(Bereich::Rechts));
         assert!(modell.umschalten(Bereich::Rechts));
         assert!(modell.sichtbar(Bereich::Rechts));
+    }
+
+    /// Das Einblenden holt hervor, was ausgeblendet ist, und laesst alles
+    /// andere stehen.
+    ///
+    /// Die Zusage hinter dem Nutzerentscheid vom 260807: `shift+cmd+l` auf
+    /// eine ausgeblendete Leiste blendet sie ein, `shift+cmd+l` auf eine
+    /// sichtbare laesst sie sichtbar. Ohne die zweite Haelfte waere aus dem
+    /// Fokusbefehl ein zweites Umschalten geworden, und zwei Befehle sagten
+    /// widersprechendes ueber denselben Bereich.
+    #[test]
+    fn das_einblenden_holt_hervor_und_blendet_nie_aus() {
+        for bereich in [Bereich::Lesezeichen, Bereich::Vorschau, Bereich::Rechts] {
+            let mut modell = modell();
+            assert!(
+                modell.sichtbar(bereich),
+                "die Probe beginnt mit sichtbarem Bereich"
+            );
+            assert!(
+                !modell.einblenden(bereich),
+                "ein sichtbarer Bereich aendert sich nicht"
+            );
+            assert!(modell.sichtbar(bereich), "und bleibt sichtbar");
+
+            modell.umschalten(bereich);
+            assert!(!modell.sichtbar(bereich));
+            assert!(modell.einblenden(bereich), "der ausgeblendete kommt hervor");
+            assert!(modell.sichtbar(bereich));
+        }
+    }
+
+    /// Das linke Dateifenster ist nie ausgeblendet, und deshalb hat der
+    /// Fokusbefehl dorthin nichts hervorzuholen.
+    #[test]
+    fn das_letzte_dateifenster_ist_immer_schon_eingeblendet() {
+        let mut modell = modell();
+        assert!(modell.sichtbar(Bereich::Links));
+        assert!(!modell.einblenden(Bereich::Links));
+        assert!(modell.sichtbar(Bereich::Links));
     }
 
     #[test]

@@ -27,7 +27,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 57 Funktionen mit zusammen 64 Kombinationen.
+# Ausgeliefert sind 58 Funktionen mit zusammen 65 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -342,6 +342,21 @@ tasten = ["shift+cmd+l"]
 id = "fokus_dateifenster"
 name = "Fokus zurück in das Dateifenster"
 tasten = ["shift+cmd+d"]
+
+[[funktion]]
+id = "fokus_vorschau"
+name = "Fokus in das Vorschaufenster"
+tasten = ["shift+cmd+y"]
+# Der dritte Fokusbefehl. Er steht hier bei den beiden anderen und nicht unten
+# bei C7, weil dieser Block die Fokusbefehle fuehrt und nicht die Vorschau; das
+# Ein- und Ausblenden der Vorschau steht weiterhin bei "vorschau_umschalten".
+#
+# Der Buchstabe ist nicht frei gewaehlt: die Vorschau traegt in dieser Belegung
+# schon das y, denn cmd+y blendet sie ein und aus, und der Fokusbefehl erbt
+# ihn, wie l und d es fuer die Leiste und das Dateifenster tun. shift+cmd+v
+# waere der naheliegende Buchstabe gewesen und liegt seit S9 beim Verschieben
+# (F6). Nutzerentscheid vom 260807, `decisions/
+# 260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md`.
 
 # ── C7: Sichtbarkeit und Breiten der Bereiche ────────────────────────────────
 # Das Ein- und Ausblenden der Vorschau steht oben bei "vorschau_umschalten":

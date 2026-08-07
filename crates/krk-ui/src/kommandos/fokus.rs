@@ -33,8 +33,18 @@
 //! ausdruecklich nur, dass sie nichts tun; eine Meldung waere eine Sonderregel
 //! mit eigenem Text, und sie muesste fuer jeden der rund fuenfzig Befehle
 //! entscheiden, wann sie zu laut wird.
+//!
+//! # Die Gegenrichtung: was ein Fokusbefehl selbst tut
+//!
+//! Die drei Fokusbefehle aus C5 und C2 sind die Ausnahme von nichts, aber sie
+//! stellen die Frage andersherum: nicht "wirkt dieser Befehl hier", sondern
+//! "wohin fuehrt er, und steht der Bereich dort ueberhaupt auf dem Schirm".
+//! [`holt_hervor`] beantwortet die zweite Haelfte, und zwar fuer alle drei mit
+//! derselben Zeile.
 
 use krk_core::tasten::Wirkungsbereich;
+
+use crate::fenstermodell::Bereich;
 
 /// Wo der Eingabefokus steht.
 ///
@@ -49,13 +59,12 @@ pub enum Fokus {
     Leiste,
     /// Im Vorschaufenster (C6), dem dritten fokussierbaren Bereich seit S19.
     ///
-    /// Hierhin kommt der Fokus in dieser Runde allein per Mausklick in die
-    /// Inhaltsflaeche der Vorschau; einen Tastenbefehl dafuer gibt es noch
-    /// nicht, die offene Frage dazu liegt im Entscheidungsspeicher. Mit dem
-    /// Fokus hier bedienen die vier Tabbefehle aus C1 die Vorschau-Tabs
-    /// ([`Wirkungsbereich::Tabbereich`]), und die beiden Zwischenablage-
-    /// Befehle aus C10 loesen nichts aus, wie ihr Abnahmekriterium es
-    /// verlangt.
+    /// Hierhin kommt der Fokus per Mausklick in die Inhaltsflaeche der
+    /// Vorschau und seit dem Nutzerentscheid vom 260807 ueber den Tastenbefehl
+    /// `fokus_vorschau`. Mit dem Fokus hier bedienen die vier Tabbefehle aus
+    /// C1 die Vorschau-Tabs ([`Wirkungsbereich::Tabbereich`]), und die beiden
+    /// Zwischenablage-Befehle aus C10 loesen nichts aus, wie ihr
+    /// Abnahmekriterium es verlangt.
     Vorschau,
     /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
     ///
@@ -86,6 +95,40 @@ pub enum Fokus {
 /// (`issues/260805-1845_*_beim-start-liegt-der-fokus-in-der-leiste-und-nicht-im-dateifenster.md`).
 pub const BEIM_START: Fokus = Fokus::Dateifenster;
 
+/// Welchen Bereich ein Fokusbefehl hervorholt, bevor er den Fokus setzt.
+///
+/// `None` heisst: es ist nichts hervorzuholen. Der Nutzer hat am 260807
+/// entschieden, dass `fokus_leiste` eine ausgeblendete Leiste **einblendet**,
+/// statt stumm abzuweisen
+/// (`decisions/260805-1730_*_holt-der-fokusbefehl-eine-ausgeblendete-leiste-hervor.md`);
+/// ausgeblendet bleibt der Fokus in einem Bereich, den niemand sieht, ohne
+/// Rueckmeldung haengen, und der Nutzer haelt den Befehl fuer kaputt.
+/// Ausblenden tut kein Fokusbefehl, dafuer bleiben die Befehle aus C7 — die
+/// Asymmetrie selbst steht in [`Fenstermodell::einblenden`](crate::fenstermodell::Fenstermodell::einblenden)
+/// und traegt dort schon `shift+f3` aus C10.
+///
+/// **Die Vorschau steht hier neben der Leiste, und das ist die Antwort, die
+/// aus beiden Nutzerentscheiden vom 260807 zusammen folgt.** Gefragt worden
+/// ist der Nutzer nur zur Leiste; die Regel, die er gewaehlt hat, redet aber
+/// nicht von einer Taste, sondern davon, dass ein Fokusbefehl seinen Bereich
+/// holt. Fuer die Vorschau davon abzuweichen hiesse, `shift+cmd+y` stumm
+/// abzuweisen, waehrend `shift+f3` dasselbe Fenster hervorholt und
+/// `shift+cmd+l` seine Leiste — drei Befehle auf denselben Randbereichen mit
+/// zwei Antworten. Das ist der Sonderfall, den "supersimpel" ausschliesst.
+///
+/// Das aktive Dateifenster ist nie ausgeblendet: das linke laesst C7 gar nicht
+/// ausblenden, und mit dem rechten wandert die Aktivitaet auf das linke
+/// ([`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)).
+/// Fuer [`Fokus::Dateifenster`] ist deshalb nichts hervorzuholen, und
+/// [`Fokus::Anderswo`] ist kein Ziel eines Befehls, sondern ein Befund.
+pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
+    match ziel {
+        Fokus::Leiste => Some(Bereich::Lesezeichen),
+        Fokus::Vorschau => Some(Bereich::Vorschau),
+        Fokus::Dateifenster | Fokus::Anderswo => None,
+    }
+}
+
 /// Ob ein Kommando mit diesem Wirkungsbereich hier wirken darf.
 ///
 /// Die eine Regel, und die eine Stelle, an der die beiden Halbwahrheiten
@@ -104,7 +147,10 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use krk_core::ablage::Sitzung;
     use krk_core::tasten::Kommando;
+
+    use crate::fenstermodell::Fenstermodell;
 
     use super::*;
 
@@ -233,6 +279,77 @@ mod tests {
             gezaehlt > 0,
             "kein Befehl traegt Wirkungsbereich::Dateifenster; die Pruefung liefe leer"
         );
+    }
+
+    /// Der Fokusbefehl in die Vorschau ist gebaut und aus jedem Bereich
+    /// erreichbar (C2, C6).
+    ///
+    /// Die Lueckenschliessung aus dem Nutzerentscheid vom 260807: ohne ihn
+    /// waeren die vier Tabbefehle aus C1 in den Vorschau-Tabs allein per Maus
+    /// erreichbar. Geprueft wird beides, was ohne Fenster pruefbar ist — dass
+    /// die Kennung zu einem Kommando fuehrt, und dass der Befehl aus jedem
+    /// Fokus heraus wirkt.
+    #[test]
+    fn der_fokusbefehl_in_die_vorschau_wirkt_aus_jedem_bereich() {
+        assert_eq!(
+            Kommando::aus_kennung("fokus_vorschau"),
+            Some(Kommando::FokusVorschau),
+            "die Kennung aus der Belegungsdatei fuehrt nicht zum Kommando"
+        );
+        assert_eq!(
+            Kommando::FokusVorschau.wirkungsbereich(),
+            Wirkungsbereich::Ueberall
+        );
+        for fokus in JEDER_FOKUS {
+            assert!(wirkt(Kommando::FokusVorschau.wirkungsbereich(), fokus));
+        }
+    }
+
+    /// Jeder Fokusbefehl holt genau den Bereich hervor, in den er fuehrt.
+    ///
+    /// Der Nutzerentscheid vom 260807 zur Leiste, und dieselbe Zeile fuer die
+    /// Vorschau: ohne das Hervorholen wiese der Befehl auf einen
+    /// ausgeblendeten Bereich stumm ab, und der Nutzer hielte ihn fuer kaputt.
+    /// Das Dateifenster hat nichts hervorzuholen, weil das aktive nie
+    /// ausgeblendet ist.
+    #[test]
+    fn jeder_fokusbefehl_holt_seinen_bereich_hervor() {
+        assert_eq!(holt_hervor(Fokus::Leiste), Some(Bereich::Lesezeichen));
+        assert_eq!(holt_hervor(Fokus::Vorschau), Some(Bereich::Vorschau));
+        assert_eq!(holt_hervor(Fokus::Dateifenster), None);
+        assert_eq!(holt_hervor(Fokus::Anderswo), None);
+    }
+
+    /// Der Fokusbefehl auf einen ausgeblendeten Bereich blendet ihn ein,
+    /// statt stumm abzuweisen.
+    ///
+    /// Die beiden Haelften des Nutzerentscheids vom 260807 an einem Stueck,
+    /// soweit sie ohne Fenster pruefbar sind: [`holt_hervor`] nennt den
+    /// Bereich, [`Fenstermodell::einblenden`] holt ihn hervor, und danach ist
+    /// die Bedingung erfuellt, unter der
+    /// `Anwendungsdelegierter::fokus_setzen` den Fokus hineinlaesst. Das
+    /// Setzen selbst braucht ein Fenster und steht deshalb nicht hier.
+    #[test]
+    fn ein_fokusbefehl_auf_einen_ausgeblendeten_bereich_blendet_ihn_ein() {
+        for (ziel, bereich) in [
+            (Fokus::Leiste, Bereich::Lesezeichen),
+            (Fokus::Vorschau, Bereich::Vorschau),
+        ] {
+            let mut modell = Fenstermodell::aus_sitzung(&Sitzung::default());
+            modell.umschalten(bereich);
+            assert!(!modell.sichtbar(bereich), "die Probe beginnt ausgeblendet");
+
+            let hervorzuholen = holt_hervor(ziel).expect("dieser Befehl holt einen Bereich hervor");
+            assert_eq!(hervorzuholen, bereich);
+            assert!(
+                modell.einblenden(hervorzuholen),
+                "{ziel:?} weist den ausgeblendeten Bereich stumm ab, statt ihn hervorzuholen"
+            );
+            assert!(
+                modell.sichtbar(bereich),
+                "erst der sichtbare Bereich laesst den Fokus hinein"
+            );
+        }
     }
 
     /// Der Terminal-Befehl aus C11 braucht keinen eigenen Mechanismus.

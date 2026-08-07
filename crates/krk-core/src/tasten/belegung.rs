@@ -73,8 +73,9 @@
 //!
 //! # Der Wirkungsbereich: welcher Bereich den Fokus haben muss
 //!
-//! Seit Schritt 18 gibt es zwei fokussierbare Bereiche, die beiden
-//! Dateifenster und die Lesezeichenleiste aus C5. Damit wird die Frage "darf
+//! Seit Schritt 18 gibt es mehr als einen fokussierbaren Bereich: die beiden
+//! Dateifenster und die Lesezeichenleiste aus C5, seit Schritt 19 dazu das
+//! Vorschaufenster aus C6. Damit wird die Frage "darf
 //! dieser Befehl hier ueberhaupt wirken" fuer **jedes** Kommando faellig:
 //! `delete` darf in der Leiste keine Datei loeschen, `right` dort in keinen
 //! Ordner einsteigen, und `lesezeichen_loeschen` umgekehrt nicht wirken,
@@ -277,6 +278,21 @@ pub enum Kommando {
     FokusLeiste,
     /// Den Eingabefokus zurueck in das aktive Dateifenster setzen (C5).
     FokusDateifenster,
+    /// Den Eingabefokus in das Vorschaufenster setzen (C2, C6).
+    ///
+    /// Das dritte Stueck des Fokuswechsels, und ohne es waeren die vier
+    /// Tabbefehle aus C1 in den Vorschau-Tabs allein per Maus erreichbar —
+    /// eine Spannung zu C2, das jede Funktion ueber mindestens einen
+    /// Tastenbefehl verlangt (Nutzerentscheid vom 260807,
+    /// `decisions/260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md`).
+    ///
+    /// Die Taste ist `shift+cmd+y`, und der Buchstabe ist nicht frei gewaehlt:
+    /// die Vorschau traegt in dieser Belegung schon das `y` (`cmd+y` blendet
+    /// sie ein und aus), und der Fokusbefehl erbt ihn, wie `l` und `d` es fuer
+    /// die Leiste und das Dateifenster tun. Wo die Kombination steht, sagt
+    /// allein `resources/default-keymap.toml`; hier steht sie als Begruendung
+    /// und nicht als zweite Wahrheit.
+    FokusVorschau,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -287,7 +303,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 52] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 53] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -344,6 +360,7 @@ impl Kommando {
         (Kommando::LesezeichenRunter, "lesezeichen_runter"),
         (Kommando::FokusLeiste, "fokus_leiste"),
         (Kommando::FokusDateifenster, "fokus_dateifenster"),
+        (Kommando::FokusVorschau, "fokus_vorschau"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::Beenden, "beenden"),
     ];
@@ -401,9 +418,16 @@ impl Kommando {
             // Die Auswahl des fokussierten Bereichs (C2 und C5).
             Kommando::AuswahlHoch | Kommando::AuswahlRunter => Wirkungsbereich::Ueberall,
             // Der Fokuswechsel selbst und das Anlegen eines Lesezeichens (C5).
-            Kommando::FokusLeiste | Kommando::FokusDateifenster | Kommando::LesezeichenAnlegen => {
-                Wirkungsbereich::Ueberall
-            }
+            //
+            // Alle drei Fokusbefehle stehen hier, und sie muessen es: ein
+            // Befehl, der den Fokus **holt**, kann nicht voraussetzen, wo er
+            // gerade steht. Traege einer von ihnen den Bereich, in den er
+            // fuehrt, waere er allein von dort aus erreichbar und damit
+            // nutzlos.
+            Kommando::FokusLeiste
+            | Kommando::FokusDateifenster
+            | Kommando::FokusVorschau
+            | Kommando::LesezeichenAnlegen => Wirkungsbereich::Ueberall,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen
