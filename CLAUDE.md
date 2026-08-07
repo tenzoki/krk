@@ -18,7 +18,7 @@ Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zus�
 
 ## Projektstand
 
-Geprüft am 260806-0014. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
+Geprüft am 260807-1200. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
 
 ```
 krk/
@@ -30,6 +30,7 @@ krk/
 ├── crates/krk-bench/     # Prüfordner-Erzeuger und kopflose Messstrecke
 ├── xtask/                # Bauwerkzeug: Bündel, Versionsersetzung, Signierung
 ├── resources/Info.plist  # Bündelbeschreibung mit Versionsplatzhalter
+├── Makefile              # Hülle um dieselben Kommandos, setzt den PATH zu cargo selbst
 ├── messungen/            # Messberichte: kopflose Strecke, Durchstich, Abnahmereihen
 ├── spikes/fn-tasten/     # Wegwerf-Prüfcode zur Fn-Tastenfrage, nicht weitergepflegt
 ├── README.md             # Bauen, Signieren, Versionspflege im Einzelnen
@@ -37,7 +38,7 @@ krk/
 └── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-Den Ausführungsstand führt der Plan `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`: 34 der 36 Schritte tragen dort `[DONE]`, offen sind S6b (Abbruch beim fehlenden Tastenabgriff) und S23 (Auslieferungspaket). Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält neun der zehn Zusagen in jeder Runde; L9 verfehlt den Anteil, die Frage dazu steht in `decisions/260806-0014_o_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
+Den Ausführungsstand führt der Plan `planning/260802-1428_*_plan-navigator-geruest-runde-1.md`: **alle 38 Schritte tragen `[DONE]`**. Die Abnahme-Messreihe aus S22 (`messungen/260805-2207-MacBookPro15-1-abnahme.txt` samt Begleittext) hält alle zehn Zusagen, seit der Nutzer L9 am 260807 neu gefasst hat: während einer laufenden Kopie erreicht jede Eingabe spätestens das zweite Bild, mindestens 85 Prozent das erste. Für den Rundenabschluss fehlt allein ein frischer Abnahmelauf am gebauten Bündel. Offene Defekte führt `issues/` (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
 
 `krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 
@@ -57,6 +58,20 @@ Das `Makefile` im Projektwurzelverzeichnis nimmt einem genau das ab und ist eine
 
 `cargo xtask` ist kein eingebautes Kommando, sondern der Alias aus `.cargo/config.toml`. Der Bündelbau **verlangt eine Signaturidentität**, sucht sie in drei Stufen und bricht ohne Bündel ab, wenn keine greift; auf eine Ad-hoc-Signatur weicht er nicht aus. Die drei Stufen, das Anlegen einer Entwicklungsidentität, der Fehler `errSecInternalComponent` und die Versionspflege stehen in `README.md`.
 
+## Was man nicht sieht, wenn man es nicht weiß
+
+Fünf Eigenschaften, die jede von ihnen schon einmal eine Sitzung gekostet haben.
+
+**Der Abnahmelauf verlangt KRK im Vordergrund.** Aus dem Hintergrund gestartet weist die Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab, und die Messstrecke meldet `NICHT_IM_VORDERGRUND` statt Zahlen. Aus einem Terminalfenster im Vordergrund läuft sie durch. Kein Agent kann sie deshalb fahren; das ist Nutzerarbeit. Die Frage dazu ist offen (`decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`). Synthetische Tastendrücke gehören in KRKs eigene Ereignisschlange über `postEvent:atStart:` und nicht über `osascript`.
+
+**Der Messplatz liegt unter `~/Library/Caches/krk-messplatz`**, nicht unter `/tmp`. Prüfordner einzelner Testläufe gehören dagegen nicht dorthin: sie tragen Prozesskennung und Laufnummer und räumen sich in `Drop` selbst auf, siehe `Pruefordner` in `krk-core/tests/verzeichnis.rs`.
+
+**Drei Fallunterscheidungen sind vollständig und haben keinen Auffangzweig.** Das ist Absicht: eine neue Variante hält den Bau an und erzwingt eine bewusste Einordnung. Jedes neue Kommando braucht eine Zeile in `Kommando::wirkungsbereich` (`krk-core/src/tasten/belegung.rs`) und in `bereich_des_kommandos` (`krk-ui/src/belegungsmodell.rs`); jede neue Operationsart eine in `schiebt_auffrischung_auf` (`krk-ui/src/auffrischung.rs`).
+
+**Der Sortierschlüssel entsteht einmal beim Lesen** und trägt die Kollation als Bytefolge. Das ist die Voraussetzung dafür, dass L3 und L10 halten, und darf nicht in einen paarweisen Vergleich zurückfallen.
+
+**Ein Lesevorgang leert sein Ordnermodell nicht vorab**, sondern ersetzt es mit dem ersten gelieferten Stapel (`Ordnermodell::lesevorgang_beginnen`). Wer in dieser Spanne den Bestand befragt, sieht den **alten** Ordner. Wer eine Auswahl setzen will, geht deshalb über `Tabliste::auswahl_auf_namen`: es fragt `liest()` zuerst und merkt den Namen vor, statt ihn im alten Bestand zu finden.
+
 ## Technologiewahl
 
 Getroffen am 260802-1150: **Rust mit AppKit über `objc2`**, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26. Der Datensatz ist `decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md`, die Gegenüberstellung der Kandidaten `analyses/260802-1134-sprache-und-ui-werkzeugkasten.md`, beide im aktiven Circle.
@@ -68,17 +83,15 @@ Die Entscheidungsdatensätze sind die bindende Grundlage für jede Planung und j
 - `fusion-workbench/shared/decisions/` — projektweite Fragen
 - `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/` — Fragen des aktiven Circles
 
-Beantwortet oder umgesetzt sind am 260803-1321 sieben Fragen. Die Antwort steht jeweils in der Zeile `Answered:` ihres Datensatzes und ausformuliert im Spec oder im Plan; sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderläuft.
+Die Antwort steht jeweils in der Zeile `Answered:` ihres Datensatzes und ausformuliert im Spec oder im Plan; sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderläuft. Die Aufstellung der offenen Fragen stand hier bis zum 260807 namentlich und ist zweimal in vier Tagen veraltet — deshalb steht sie nicht mehr hier. Wer den Stand braucht, listet beide Speicher auf:
 
-**Offen** sind fünf Fragen, drei projektweite und zwei des Circles:
+```sh
+find fusion-workbench/shared/decisions fusion-workbench/circles/*/decisions -maxdepth 1 -name '*_o_*.md'
+```
 
-- `260802-0842_o_git-verwerfen-bedeutung.md` — verwirft "revert" die Änderungen der Datei oder nimmt es einen Commit zurück?
-- `260802-0842_o_editor-formatansicht-je-dateityp.md` — was zeigt die Formatansicht bei Text, bei Code und bei Markdown?
-- `260802-0842_o_code-sdk-fuer-ki-integration.md` — welches Code-SDK trägt die spätere KI-Anbindung?
-- `260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` — wie steuert KRK aus Rust eine Schnittstelle an, die es erst ab macOS 26 gibt?
-- `260802-1810_o_sortierung-ohne-sprachsensitive-kollation.md` — sortiert KRK Dateinamen sprachsensitiv, und wonach ordnet "Sortierung nach Typ"?
+**Keine offene Frage hält derzeit einen Planschritt auf.** Zwei binden künftige Arbeit statt der laufenden: die Verfügbarkeitsprüfung für Schnittstellen jenseits von macOS 15 bindet die Runde, die eine solche anspricht, und die Frage nach dem Vordergrund des Abnahmelaufs bindet jeden weiteren Messlauf.
 
-Die Sortierfrage bindet Schritt S12, die Verfügbarkeitsprüfung erst die Runde, die eine Schnittstelle über macOS 15 hinaus anspricht. Außerhalb des aktiven Circles liegen die KI-Anbindung, ein integrierter Browser, Datei- und Ordnervergleich, Suchen und Ersetzen über mehrere Dateien, Zugriff über Server-Protokolle sowie Git jenseits der vier genannten Operationen. Die Abgrenzung im Einzelnen steht im Circle-Datensatz.
+Außerhalb des aktiven Circles liegen die KI-Anbindung, ein integrierter Browser, Datei- und Ordnervergleich, Suchen und Ersetzen über mehrere Dateien, Zugriff über Server-Protokolle sowie Git jenseits der vier genannten Operationen. Die Abgrenzung im Einzelnen steht im Circle-Datensatz.
 
 ## Sprache
 

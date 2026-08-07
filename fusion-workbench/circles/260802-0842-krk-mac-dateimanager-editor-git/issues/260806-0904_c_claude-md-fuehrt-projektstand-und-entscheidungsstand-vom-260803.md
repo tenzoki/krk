@@ -29,3 +29,35 @@ Die Datei erklärt selbst den Dateibestand für verbindlich, aber eine Aufstellu
 - `## Bindende Grundlage` steht unverändert auf dem 260803-1321. Zeile 71 sagt "sieben Fragen" beantwortet oder umgesetzt — ausgezählt am Dateibestand sind es **25** (`_i_`: 23 im Circle, 2 in `shared/`), und **kein** Datensatz steht mehr auf `_a_`. Zeile 73 sagt "fünf Fragen" offen — es sind **11** (8 im Circle, 3 in `shared/`), unter ihnen die beiden neuen dieses Turns, `260806-1303` (Vordergrund für den Abnahmelauf) und die weiterhin rundenschließende `260806-0014` (L9).
 - Zeile 81, "Die Sortierfrage bindet Schritt S12", ist unverändert und im Präsens falsch. Der Punkt ist als eigener Defekt weitergeführt, weil er nicht nur `CLAUDE.md` betrifft: `issues/260806-1647_*_die-sortierfrage-bindet-s12-und-steht-in-keiner-planstelle.md`.
 - Die Zahl der offenen Defekte ist von 17 auf 8 gefallen.
+
+---
+Resolved: Revision am 260807-1200 über `/fusion:revise-claude-md`, drei Durchgänge
+(ergänzen, berichtigen, streichen). Die Datei wächst dabei von 87 auf 100 Zeilen.
+
+**Berichtigt.** `## Projektstand` nennt jetzt 38 von 38 abgenommenen Schritten
+statt 34 von 36 und sagt, dass die Abnahmereihe seit der Neufassung von L9 am
+260807 alle zehn Zusagen hält; für den Rundenabschluss fehlt allein ein frischer
+Lauf am gebauten Bündel. Das Datum der Prüfung steht auf 260807-1200.
+`## Bindende Grundlage` nennt keine Zahl beantworteter Fragen mehr.
+
+**Gestrichen, und das ist die eigentliche Antwort auf diesen Defekt.** Die
+namentliche Aufstellung der fünf offenen Entscheidungen ist fort. Sie ist in vier
+Tagen zweimal veraltet und war die Ursache dieses Defekts; eine Aufstellung, die
+sich bei jeder beantworteten Frage selbst überholt, gehört nicht in eine Datei,
+die jede Sitzung ungefragt liest. An ihrer Stelle steht der `find`-Aufruf, der
+beide Speicher auflistet, dazu ein Satz darüber, welche Frage gerade etwas
+aufhält — derzeit keine. Ebenfalls gestrichen: "Die Sortierfrage bindet Schritt
+S12", im Präsens falsch, seit S12 abgenommen und die Frage umgesetzt ist.
+
+**Ergänzt.** Ein Abschnitt `## Was man nicht sieht, wenn man es nicht weiß` mit
+fünf Eigenschaften, von denen jede schon einmal eine Sitzung gekostet hat: der
+Abnahmelauf verlangt KRK im Vordergrund, der Messplatz liegt unter
+`~/Library/Caches/krk-messplatz`, drei Fallunterscheidungen sind vollständig ohne
+Auffangzweig, der Sortierschlüssel entsteht einmal beim Lesen, und ein
+Lesevorgang leert sein Ordnermodell nicht vorab. Dazu das `Makefile` in der
+Verzeichnisübersicht, die es bisher nicht führte, obwohl der Abschnitt darunter
+es als den empfohlenen Weg beschreibt.
+
+Die Zahlen sind am Dateibestand ausgezählt, nicht fortgeschrieben: 38 von 38
+Schritten `[DONE]`, 4 offene Defekte, 31 umgesetzte und 8 offene Entscheidungen,
+keine beantwortete ohne Umsetzung.
