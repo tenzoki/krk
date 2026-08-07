@@ -73,9 +73,16 @@ const ZEILENHOEHE: f64 = 20.0;
 /// Die Breite der Beigabe in Punkten.
 const BREITE: f64 = 560.0;
 
-/// Die Hoehe der Tabelle in Punkten. 57 Funktionen und neun
-/// Bereichsueberschriften brauchen einen Rollbalken; die Zahl hier bestimmt
-/// nur, wie viele Zeilen ohne Rollen sichtbar sind.
+/// Die Hoehe der Tabelle in Punkten. Sie fasst fuenfzehn Zeilen zu je
+/// [`ZEILENHOEHE`]; die Belegung ist mit ihren Funktionen und den neun
+/// Bereichsueberschriften laenger und braucht deshalb einen Rollbalken. Die
+/// Zahl hier bestimmt nur, wie viele Zeilen ohne Rollen sichtbar sind, nicht
+/// wie viele es gibt.
+///
+/// Die Zahl der Funktionen stand hier bis zum 260807 als feste Zahl und lief
+/// mit dem ersten Nachtrag an `resources/default-keymap.toml` auseinander
+/// (`issues/260807-1015_*_der-kommentar-zur-tabellenhoehe-nennt-57-funktionen-und-die-belegung-fuehrt-58.md`).
+/// Sie steht nicht wieder hier, weil die Konstante nie an ihr hing.
 const TABELLENHOEHE: f64 = 300.0;
 
 /// Der Tastencode der Escape-Taste, aus der einen Tastentabelle des Kerns.

@@ -37,3 +37,67 @@ der zehn Zeitzusagen aus C8 betroffen.
 
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1304_o_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md`
+
+---
+
+## Nachgeprüft am 260807 gegen `5d7e299`: der Befund gilt, aber nur noch an einer der drei Stellen
+
+Der Defekt bleibt **offen**. Die vorgeschlagene Änderung ist eine sichtbare
+Änderung am Verhalten und gehört dem Nutzer vorgelegt. Was sich geändert hat,
+ist die Begründung: `5d7e299` hat zwei der drei Stellen aus dem Befund
+herausgenommen, und die dritte steht schwächer da, als der Bericht oben sie
+zeichnet.
+
+**Die Stellen, mit den heutigen Zeilennummern.** Die drei Aufrufer sind
+dieselben geblieben und werfen den Rückgabewert weiterhin weg:
+
+- `crates/krk-ui/src/appkit/anwendung.rs:1937` — `anlegen_ausfuehren`
+- `crates/krk-ui/src/appkit/anwendung.rs:1960` — `umbenennen_ausfuehren`
+- `crates/krk-ui/src/appkit/anwendung.rs:2378` — `vorgang_beenden`, Zweig
+  `Art::UmbenennenImStapel`
+
+`eintrag_waehlen` ist **nicht** nach `tabs.rs` gewandert. Die Methode, die
+diese drei rufen, steht weiterhin als `Tabellenquelle::eintrag_waehlen` in
+`crates/krk-ui/src/appkit/tabelle.rs:1075`. Gewandert ist der **Entscheid**
+darüber, was ein Name ergibt: er sitzt jetzt in
+`Tabliste::auswahl_auf_namen` (`crates/krk-ui/src/tabs.rs:552`), und
+`eintrag_waehlen` reicht ihn nur noch durch und setzt bei `Gewaehlt` die Zeile.
+
+**Was `5d7e299` an der Sache ändert.** `auswahl_auf_namen` fragt seither
+`tab.liest()` **zuerst** und merkt den Namen vor, statt erst im angezeigten
+Bestand zu suchen. Läuft ein Lesevorgang, ist die Antwort damit ohne Ausnahme
+`Vorgemerkt`; `Unbekannt` ist in dieser Spanne nicht mehr erreichbar, sondern
+ausgeschlossen. Alle drei Stellen rufen unmittelbar davor
+`auffrischung::ordner_neu_lesen`, und `Tabellenquelle::neu_lesen`
+(`crates/krk-ui/src/appkit/tabelle.rs:624`) startet den Lesevorgang synchron.
+
+Damit trennen sich die drei:
+
+- **`umbenennen_ausfuehren` (:1960)** nimmt seinen Ordner aus
+  `quelle().angezeigter_ordner()`. Die Auffrischung trifft diese Seite deshalb
+  immer, ein Lesevorgang läuft immer, und `Unbekannt` kann dort nicht mehr
+  eintreten. Die Stelle trägt den Befund nicht mehr.
+- **`anlegen_ausfuehren` (:1937)** hält den Ordner seit dem Öffnen des Blattes
+  fest (`:1887`), und das Blatt sperrt die Navigation, solange es steht. Der
+  Ordner ist beim Ausführen also weiterhin der angezeigte. Dasselbe Ergebnis:
+  `Unbekannt` ist ausgeschlossen. Auch diese Stelle trägt den Befund nicht mehr.
+- **`vorgang_beenden` (:2378)** ist die eine, die bleibt. Zwischen dem Start des
+  Stapel-Umbenennens und seinem Abschluss läuft der Vorgang im Hintergrund, und
+  der Nutzer kann in der Zwischenzeit den Ordner wechseln. Dann frischt
+  `ordner_neu_lesen` auf dieser Seite nichts auf, kein Lesevorgang läuft, und
+  `auswahl_auf_namen` befragt das Modell des **anderen** Ordners. `Unbekannt`
+  ist dort erreichbar, und der Rückgabewert fällt wortlos weg.
+
+**Was das für den Nutzerentscheid bedeutet.** Der Vorschlag "an jeder der drei
+Stellen den `Unbekannt`-Fall melden" ist an zwei Stellen toter Code geworden:
+ein Zweig, den nichts mehr erreicht. Vorzulegen ist damit die eine Stelle, und
+dort ist die Antwort nicht offensichtlich. Der einzige Weg, auf dem `Unbekannt`
+noch entsteht, ist der Ordnerwechsel während eines laufenden
+Stapel-Umbenennens; eine Meldung "«datei-1» steht nicht in der Liste" träfe den
+Nutzer dann in einem Ordner, über den er gerade gar nichts wissen wollte. Das
+ist eher Rauschen als Auskunft. Eine ernstzunehmende Alternative wäre, an
+dieser Stelle gar nichts zu melden und den Rückgabewert ausdrücklich mit einer
+Begründung zu verwerfen (`let _ = …` mit Kommentar), damit der nächste Leser
+sieht, dass das Wegwerfen eine Entscheidung ist und kein Versehen.
+
+**Nachgeprüft von:** `coder`, Aufräumturn 26, ohne Codeänderung.

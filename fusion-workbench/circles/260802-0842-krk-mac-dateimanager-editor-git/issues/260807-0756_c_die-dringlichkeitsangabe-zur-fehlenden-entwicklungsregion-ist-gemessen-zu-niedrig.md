@@ -71,6 +71,27 @@ dem eine Frage bei der nächsten Rundenplanung durchfällt.
 Sitzung 260806-2257 (Commit `880cb70`, Aufgabe D8).
 
 Cross-references:
-`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0745_o_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`
-`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0754_o_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md`
+`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0745_c_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`
+`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0754_c_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md`
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1215_c_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`
+
+---
+Resolved: Beide aufgetragenen Berichtigungen stehen im Datensatz
+`issues/260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`.
+Der Abschnitt "Folgenlos" nennt jetzt den dritten Fall und sagt, dass er nur für einen
+Nutzer gilt, dessen Sprachwahl `de` oder `en` führt; die Dringlichkeit steht auf
+Mittel, der Halbsatz "Kein Nutzer sieht es" ist gestrichen und durch die drei
+sichtbaren Stellen ersetzt (Größenspalte C1, Metadatenzeilen der Vorschau C6, fünfter
+Rang der Statuszeile C1).
+
+**Die Verweisung auf S23 ist dabei nicht bestätigt worden, sondern gefallen.** Dieser
+Datensatz hielt sie für richtig ("Die Zuordnung zu S23 bleibt richtig"). Nachgeprüft
+trägt sie nicht: S23 ist seit dem Commit `d577295` vom 260806-0821 abgenommen, also
+einen Tag vor dem Anlegen der beiden Datensätze, seine Dateiliste nennt
+`resources/Info.plist` nicht, und sein Abnahmekriterium prüft keinen Schlüssel der
+Bündelbeschreibung. Der Schlüssel `CFBundleDevelopmentRegion = de` ist deshalb sofort
+gesetzt statt weitergereicht, und der Vorgängerdatensatz ist mit derselben Änderung
+geschlossen. Die Messung dieses Datensatzes ist am 260807-0952 unabhängig nachgefahren
+und in allen drei Zeilen bestätigt, um eine vierte Sprachwahl `ja` ergänzt.
+`make check` grün.
+Bericht: `history/260807-0952-ontocoder-entwicklungsregion-auswahlregel-und-das-letzte-pfadzitat.md`.

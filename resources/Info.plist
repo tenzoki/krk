@@ -27,9 +27,23 @@
 	  `["en"]`, weil es ohne Eintrag hier nichts zu schneiden gibt. Defekt
 	  `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`.
 
-	  `de` steht vorn, weil `CLAUDE.md` Deutsch als Projektsprache fuehrt: aus
-	  dieser Liste gewinnt die erste Sprache, die in der Sprachliste des Nutzers
-	  vorkommt, und trifft keine zu, greift die erste dieser Liste.
+	  **Die Reihenfolge dieser Liste waehlt nicht aus.** Foundation geht die
+	  Sprachliste des Nutzers der Reihe nach durch und nimmt die erste Sprache,
+	  die hier ueberhaupt angeboten wird; diese Liste sagt allein, welche
+	  Sprachen zur Wahl stehen. Fuehrt die Sprachwahl des Nutzers keine davon,
+	  entscheidet `CFBundleDevelopmentRegion` weiter unten. Ein Rueckfall auf die
+	  erste Sprache dieser Liste greift nur, solange `en` nicht darin steht;
+	  sobald `en` hier steht, gewinnt es den Rueckfall unabhaengig von seinem
+	  Platz. Gemessen am 260807 an gebauten Buendeln: Liste `de, en` mit
+	  Sprachwahl `en-US, de-DE` liefert `en`, Liste `en, de` mit Sprachwahl
+	  `de-DE` liefert `de`, und Liste `de, en` mit Sprachwahl `fr-FR` liefert
+	  ohne Entwicklungsregion `en`, mit `CFBundleDevelopmentRegion = de` dagegen
+	  `de`. Defekt
+	  `issues/260807-0754_*_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md`.
+
+	  `de` steht dennoch vorn: die Reihenfolge ist eine Nutzerentscheidung vom
+	  260807 und nennt die Projektsprache aus `CLAUDE.md` an erster Stelle. Sie
+	  ist unschaedlich, sie waehlt nur nichts aus.
 
 	  **Eigene `.lproj`-Ordner hat KRK nicht**, und der Schluessel legt keine an.
 	  Er sagt Foundation allein, welche Sprachen das Programm anbietet, und
@@ -46,6 +60,27 @@
 		<string>de</string>
 		<string>en</string>
 	</array>
+
+	<!--
+	  Die Sprache, in der die Zeichenketten von KRK urspruenglich geschrieben
+	  sind, und damit der Rueckfall fuer jede Sprachwahl, die keine der oben
+	  angebotenen Sprachen fuehrt. **Ohne diesen Schluessel gewinnt `en` den
+	  Rueckfall**, weil `en` in `CFBundleLocalizations` steht: ein Nutzer mit
+	  franzoesischer Sprachwahl bekaeme dann wieder `Zero KB`, `1 byte`,
+	  `512 bytes` in der Groessenspalte, in den Metadatenzeilen der Vorschau und
+	  im fuenften Rang der Statuszeile. Gemessen am 260807 an zwei gebauten
+	  Buendeln, die sich allein in diesem Schluessel unterscheiden: bei
+	  Sprachwahl `fr-FR` liefert `preferredLocalizations` ohne ihn `en`, mit ihm
+	  `de`.
+
+	  Der Schluessel legt keinen `.lproj`-Ordner an und braucht keinen. Er ist
+	  eine Angabe ueber das Buendel, die Foundation und der Finder lesen, und
+	  `de` ist fuer ein Programm richtig, dessen Prosa durchgaengig deutsch ist.
+	  Defekt
+	  `issues/260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`.
+	-->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>de</string>
 
 	<!--
 	  Der Name des Binaerprogramms, nicht der des Cargo-Pakets: das Paket heisst
@@ -113,7 +148,7 @@
 	  `-NSDisabledDictationMenuItem NO` auf der Befehlszeile ergaenzt: die
 	  Schluessel standen unveraendert in der Beschreibung, und die fuenf
 	  Systemzeilen kamen zurueck. Beide Befunde stehen in
-	  `issues/260805-0753_c_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
+	  `issues/260805-0753_*_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`.
 
 	  Mit den beiden Schluesseln faellt zugleich der einzige Doppelstrich aus
 	  dieser Datei weg, der in einem XML-Kommentar nicht stehen darf: sie ist

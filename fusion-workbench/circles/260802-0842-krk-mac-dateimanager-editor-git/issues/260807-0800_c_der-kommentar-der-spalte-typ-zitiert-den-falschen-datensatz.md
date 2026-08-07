@@ -69,3 +69,14 @@ Gering. Kein Nutzer sieht etwas davon. Der Wert liegt darin, dass die nächste
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1123_c_modulkopf-zitiert-den-issue-pfad-mit-ueberholtem-marker.md`
+
+---
+Resolved: Der Kommentar der Aufzaehlungsvariante `Spalte::Typ`
+(`crates/krk-ui/src/appkit/tabelle.rs:137-154`) nennt jetzt beide Entscheide und
+sagt, welche Haelfte jeder von ihnen traegt: der Sortierungsdatensatz
+`decisions/260802-1810_*_sortierung-ohne-sprachsensitive-kollation.md` den
+Schluessel der Sortierung, der Defektdatensatz
+`issues/260806-1723_*_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md`
+(Abschnitt "ein fuenfter Weg") den Inhalt der Zelle. Beide Pfade ohne
+Zustandsmarker, wie `issues/260806-1320_c_…` es festgelegt hat. `make check`
+gruen, 525 Pruefungen.

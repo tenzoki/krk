@@ -123,10 +123,45 @@ pub struct Auswahl {
 }
 
 /// Ein Lesezeichen mit dem Zustand seines Ordners.
+///
+/// **Die eine Stelle, die die Marke setzt.** Bis zum 260807 taten es zwei:
+/// `Leistenmodell::lesezeichen_setzen` beim Aufbau der Eintraege und
+/// `Leistenmodell::gueltigkeit_pruefen` beim Nachziehen. Beide riefen
+/// [`Lesezeichen::gueltig`], beide lieferten dasselbe, und die erste nannte den
+/// Namen der zweiten nicht — wer die Pruefung erweitert haette, haette sie
+/// uebersehen
+/// (`issues/260807-0012_*_vier-anlaesse-pruefen-die-lesezeichengueltigkeit-auf-drei-verschiedenen-wegen.md`).
+/// Seither schreibt allein [`Gemerkt::nachpruefen`] das Feld, und
+/// [`Gemerkt::neu`] ruft es. Ein `Gemerkt` mit einer Marke, die seinen Ordner
+/// nicht kennt, verlaesst diesen Block nicht.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Gemerkt {
     lesezeichen: Lesezeichen,
     gueltig: bool,
+}
+
+impl Gemerkt {
+    /// Ein Eintrag mit frisch geprueftem Ordner.
+    fn neu(lesezeichen: Lesezeichen) -> Self {
+        // Die Vorbelegung ist gleichgueltig: die naechste Zeile setzt die
+        // Marke, und dazwischen sieht den Eintrag niemand. Sie steht hier,
+        // damit `nachpruefen` die einzige Zeile der Kiste bleibt, die
+        // `Lesezeichen::gueltig` ruft.
+        let mut gemerkt = Self {
+            lesezeichen,
+            gueltig: false,
+        };
+        gemerkt.nachpruefen();
+        gemerkt
+    }
+
+    /// Prueft den Ordner noch einmal.
+    ///
+    /// Liefert, ob die Marke sich dabei geaendert hat.
+    fn nachpruefen(&mut self) -> bool {
+        let jetzt = self.lesezeichen.gueltig();
+        std::mem::replace(&mut self.gueltig, jetzt) != jetzt
+    }
 }
 
 /// Der Inhalt der Leiste und ihre Auswahl.
@@ -151,21 +186,31 @@ impl Leistenmodell {
     }
 
     /// Uebernimmt die Lesezeichen und prueft ihre Ordner (C5).
+    ///
+    /// Der zweite der vier Anlaesse aus [`Leistenmodell::gueltigkeit_pruefen`];
+    /// er laeuft ueber [`Gemerkt::neu`] und damit ueber dieselbe Zeile wie die
+    /// drei anderen.
     pub fn lesezeichen_setzen(&mut self, liste: &Lesezeichenliste) {
-        self.lesezeichen = liste
-            .eintraege
-            .iter()
-            .map(|lesezeichen| Gemerkt {
-                gueltig: lesezeichen.gueltig(),
-                lesezeichen: lesezeichen.clone(),
-            })
-            .collect();
+        self.lesezeichen = liste.eintraege.iter().cloned().map(Gemerkt::neu).collect();
         self.zeilen_bauen();
     }
 
-    /// Uebernimmt die Geraete und Standardorte (C5).
+    /// Uebernimmt die Geraete und Standardorte und prueft die Ordner (C5).
+    ///
+    /// Der erste der vier Anlaesse: die Ortsliste aendert sich genau dann, wenn
+    /// ein Datentraeger gekommen oder gegangen ist, und damit aendert sich, was
+    /// ein Lesezeichen darauf wert ist. Die Pruefung steht deshalb hier und
+    /// nicht beim Aufrufer. Sie dort zu lassen hiesse, jedem kuenftigen
+    /// Aufrufer eine Pflicht mitzugeben, die er vergessen kann, und genau das
+    /// war der dritte der drei Wege, die der Befund vom 260807 zusammengelegt
+    /// hat.
+    ///
+    /// Der Rueckgabewert der Pruefung wird hier nicht gebraucht: die Ortsliste
+    /// hat sich ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall
+    /// neu. Er zaehlt allein am vierten Anlass, wo nichts weiter passiert ist.
     pub fn orte_setzen(&mut self, orte: Vec<Ort>) {
         self.orte = orte;
+        self.gueltigkeit_pruefen();
         self.zeilen_bauen();
     }
 
@@ -175,8 +220,12 @@ impl Leistenmodell {
     /// neu zeichnen.
     ///
     /// Gerufen an vier Anlaessen: wenn ein Datentraeger gekommen oder gegangen
-    /// ist, wenn die Lesezeichen sich aendern, wenn eine Dateioperation aus C4
-    /// abgeschlossen ist, und **bevor eine Auswahl gemeldet wird**.
+    /// ist ([`Leistenmodell::orte_setzen`]), wenn die Lesezeichen sich aendern
+    /// ([`Leistenmodell::lesezeichen_setzen`] ueber [`Gemerkt::neu`]), wenn eine
+    /// Dateioperation aus C4 abgeschlossen ist, und **bevor eine Auswahl
+    /// gemeldet wird**. Die letzten beiden kommen von aussen und laufen ueber
+    /// `crate::appkit::leiste::Leistenquelle::gueltigkeit_nachziehen`; alle vier
+    /// enden in [`Gemerkt::nachpruefen`].
     ///
     /// Der letzte traegt die Zusage aus C5: ein Ordner kann verschwinden, ohne
     /// dass ein Datentraeger es tut, und ohne ihn meldete die Leiste einen
@@ -194,9 +243,9 @@ impl Leistenmodell {
     pub fn gueltigkeit_pruefen(&mut self) -> bool {
         let mut geaendert = false;
         for gemerkt in &mut self.lesezeichen {
-            let jetzt = gemerkt.lesezeichen.gueltig();
-            geaendert |= jetzt != gemerkt.gueltig;
-            gemerkt.gueltig = jetzt;
+            // `|=` und nicht `||`: jeder Eintrag wird geprueft, auch wenn ein
+            // frueherer sich schon geaendert hat.
+            geaendert |= gemerkt.nachpruefen();
         }
         geaendert
     }
@@ -432,7 +481,57 @@ impl Leistenmodell {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
     use super::*;
+
+    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
+    ///
+    /// Dieselbe Form wie `Pruefordner` in `krk-core/tests/verzeichnis.rs`,
+    /// `Wegwerfordner` in `krk-bench/src/fixture.rs` und `Planordner` in
+    /// `crate::messmodus`: Zweck, Prozesskennung und Laufnummer im Namen, und
+    /// das Abraeumen in `Drop`. Zwei Proben hier standen bis zum 260807 auf
+    /// festen Namen; zwei gleichzeitige Testlaeufe haetten denselben Ordner
+    /// getroffen, und ein Fehlschlag haette ihn stehen gelassen
+    /// (`issues/260807-0800_*_zwei-leistenmodell-proben-benutzen-feste-pruefordnernamen-unter-tmp.md`).
+    struct Pruefordner {
+        pfad: PathBuf,
+    }
+
+    impl Pruefordner {
+        /// Ein Name, unter dem noch nichts liegt. Angelegt wird er nicht: die
+        /// beiden Proben brauchen den Ordner mal vorhanden und mal fehlend.
+        fn neu(zweck: &str) -> Self {
+            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
+            let pfad = std::env::temp_dir().join(format!(
+                "krk-leiste-test-{zweck}-{}-{laufnummer}",
+                std::process::id()
+            ));
+            let _ = std::fs::remove_dir_all(&pfad);
+            Self { pfad }
+        }
+
+        fn pfad(&self) -> &Path {
+            &self.pfad
+        }
+
+        fn anlegen(&self) {
+            std::fs::create_dir_all(&self.pfad).expect("der Pruefordner laesst sich nicht anlegen");
+        }
+
+        fn loeschen(&self) {
+            std::fs::remove_dir_all(&self.pfad)
+                .expect("der Pruefordner laesst sich nicht loeschen");
+        }
+    }
+
+    impl Drop for Pruefordner {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.pfad);
+        }
+    }
+
+    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
 
     fn modell() -> Leistenmodell {
         let mut modell = Leistenmodell::neu();
@@ -624,19 +723,19 @@ mod tests {
 
     #[test]
     fn ein_eingehaengter_datentraeger_macht_sein_lesezeichen_gueltig() {
-        let ordner = std::env::temp_dir().join("krk-leiste-gueltigkeit");
-        let _ = std::fs::remove_dir_all(&ordner);
+        let ordner = Pruefordner::neu("gueltigkeit");
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
-            "Kommt", &ordner,
+            "Kommt",
+            ordner.pfad(),
         )]));
         assert!(modell.ungueltig(1));
 
-        std::fs::create_dir_all(&ordner).expect("der Pruefordner laesst sich nicht anlegen");
+        ordner.anlegen();
         modell.gueltigkeit_pruefen();
         assert!(!modell.ungueltig(1));
 
-        let _ = std::fs::remove_dir_all(&ordner);
+        ordner.loeschen();
         modell.gueltigkeit_pruefen();
         assert!(modell.ungueltig(1));
     }
@@ -652,17 +751,17 @@ mod tests {
     /// schwarz, obwohl der Ordner fort ist.
     #[test]
     fn nach_einer_dateioperation_meldet_die_pruefung_den_geloeschten_ordner() {
-        let ordner = std::env::temp_dir().join("krk-leiste-vorgang-beenden");
-        std::fs::create_dir_all(&ordner).expect("der Pruefordner laesst sich nicht anlegen");
+        let ordner = Pruefordner::neu("vorgang-beenden");
+        ordner.anlegen();
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
             "Sicherung",
-            &ordner,
+            ordner.pfad(),
         )]));
         assert!(!modell.ungueltig(1), "der Ordner steht noch");
 
         // Was eine Dateioperation aus C4 tut, wenn sie ihn loescht.
-        std::fs::remove_dir_all(&ordner).expect("der Pruefordner laesst sich nicht loeschen");
+        ordner.loeschen();
 
         assert!(
             modell.gueltigkeit_pruefen(),
@@ -673,5 +772,56 @@ mod tests {
             !modell.gueltigkeit_pruefen(),
             "ein zweiter Anlass ohne Aenderung zeichnet die Leiste nicht noch einmal"
         );
+    }
+
+    /// Der zweite Anlass setzt die Marke so, wie der vierte sie pruefen wuerde.
+    ///
+    /// Die Probe haengt allein am **Rueckgabewert**: findet `gueltigkeit_pruefen`
+    /// unmittelbar nach `lesezeichen_setzen` etwas zu aendern, dann haben die
+    /// beiden Anlaesse verschiedene Vorstellungen davon, was gueltig heisst.
+    /// Bis zum 260807 waren es zwei Codestellen, die dasselbe taten; seither
+    /// ist es eine, und diese Probe haelt sie darauf fest.
+    #[test]
+    fn der_aufbau_und_das_nachziehen_kommen_zum_selben_ergebnis() {
+        let vorhanden = Pruefordner::neu("aufbau-vorhanden");
+        vorhanden.anlegen();
+        let fehlend = Pruefordner::neu("aufbau-fehlend");
+
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Da", vorhanden.pfad()),
+            Lesezeichen::neu("Fort", fehlend.pfad()),
+        ]));
+        assert!(!modell.ungueltig(1));
+        assert!(modell.ungueltig(2));
+
+        assert!(
+            !modell.gueltigkeit_pruefen(),
+            "der Aufbau hat die Marken schon richtig gesetzt"
+        );
+    }
+
+    /// Der erste Anlass: die Ortsliste aendert sich, die Marken ziehen mit.
+    ///
+    /// Die Pruefung stand bis zum 260807 im AppKit-Aufrufer und nicht hier;
+    /// diese Probe kommt ohne Fenster aus und haelt sie im Modell fest.
+    #[test]
+    fn eine_neue_ortsliste_zieht_die_gueltigkeit_nach() {
+        let ordner = Pruefordner::neu("orte-setzen");
+        ordner.anlegen();
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Sicherung",
+            ordner.pfad(),
+        )]));
+        assert!(!modell.ungueltig(1), "der Datentraeger ist eingehaengt");
+
+        // Was ein Auswurf hinterlaesst: der Ordner ist fort, und das System
+        // meldet die kuerzere Ortsliste.
+        ordner.loeschen();
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+
+        assert!(modell.ungueltig(1));
+        assert_eq!(modell.beschriftung(1).as_deref(), Some("Sicherung (fehlt)"));
     }
 }

@@ -66,3 +66,17 @@ Sitzung 260806-2257 (Commit `880cb70`, Aufgabe D8).
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1320_c_die-belegungsdateien-zitieren-workbench-pfade-mit-zustandsmarker.md`
 `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-0743-ontocoder-die-sprache-des-buendels-und-die-pfadzitate.md`
+
+---
+Resolved: `resources/Info.plist:151` trägt jetzt
+`issues/260805-0753_*_die-beiden-info-plist-schluessel-gegen-die-systemeintraege-greifen-nicht.md`
+in Sternform. Eine Zeile in einem XML-Kommentar, kein Wertfeld berührt. Gegen den
+Dateibestand aufgelöst: alle vier Pfadzitate der Datei, die beiden alten und die
+beiden am selben Tag neu entstandenen, treffen über eine Auflösung mit dem Marker als
+Einzelzeichen-Platzhalter auf je genau eine Datei, keines auf zwei und keines auf
+keine. Damit gilt die Sternform im Programm- und Auslieferungsbestand ausnahmslos:
+80 Zitate in `.rs`, 15 in `.toml`, 4 in `resources/Info.plist`, kein einziges mit
+ausgeschriebenem Marker.
+`plutil -lint` und `xmllint --noout` gültig, `__KRK_VERSION__` unberührt,
+`make check` grün.
+Bericht: `history/260807-0952-ontocoder-entwicklungsregion-auswahlregel-und-das-letzte-pfadzitat.md`.

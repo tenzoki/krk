@@ -209,13 +209,12 @@ impl Leistenquelle {
     /// Gerufen beim Aufbau und nach jedem Ein- und Aushaengen. Die
     /// Gueltigkeitspruefung der Lesezeichen laeuft im selben Zug: ein
     /// eingehaengter Datentraeger macht ein Lesezeichen darauf wieder gueltig,
-    /// und ein Auswurf macht es ungueltig.
+    /// und ein Auswurf macht es ungueltig. Sie steht seit dem 260807 in
+    /// [`Leistenmodell::orte_setzen`] und nicht mehr hier; hier stand sie als
+    /// zweiter Weg zu derselben Marke neben
+    /// [`Leistenquelle::gueltigkeit_nachziehen`].
     pub fn orte_setzen(&self, orte: Vec<Ort>) {
-        {
-            let mut modell = self.ivars().modell.borrow_mut();
-            modell.orte_setzen(orte);
-            modell.gueltigkeit_pruefen();
-        }
+        self.ivars().modell.borrow_mut().orte_setzen(orte);
         self.nachziehen();
     }
 

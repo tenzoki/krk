@@ -4,14 +4,16 @@
 //!
 //! 1. **AppKit-Grenze pruefen:** keine Nennung einer `objc2`-Kiste ausserhalb
 //!    von `crates/krk-ui/src/appkit/`, weder als `use`-Zeile noch als
-//!    ausgeschriebener Pfad, und das in allen drei Quellwurzeln des Workspace.
+//!    ausgeschriebener Pfad, und das in jeder `.rs`-Datei unter `crates/`.
 //!    Die Pruefung traegt die Grenzzusage aus dem Plan maschinell, weil
 //!    `#![deny(unsafe_code)]` sie nur zur Haelfte erzwingt: ein grosser Teil
 //!    der `objc2`-Bindungen ist als sicher deklariert und uebersetzt
-//!    ausserhalb anstandslos. Defekte
-//!    `260803-1530_*_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen`
+//!    ausserhalb anstandslos. Wo sie endet und warum sie dort endet, steht bei
+//!    `GRENZWURZEL` und bei `verletzt_grenze`. Defekte
+//!    `260803-1530_*_appkit-grenze-ist-nur-zur-haelfte-maschinell-erzwungen`,
+//!    `260806-1333_*_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten`
 //!    und
-//!    `260806-1333_*_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten`.
+//!    `260807-0800_*_die-appkit-grenzpruefung-kennt-nur-src-baeume-und-nur-die-woertliche-schreibweise`.
 //! 2. **Beide Ziele uebersetzen:** dieselbe Uebersetzung wie `bundle`, einmal
 //!    je Tripel aus `rust-toolchain.toml`.
 //! 3. **`lipo`:** die beiden Binaerdateien zu einer universellen
@@ -47,20 +49,33 @@ const ZIELE: [&str; 2] = ["x86_64-apple-darwin", "aarch64-apple-darwin"];
 /// Die Architekturnamen, die `lipo -archs` danach melden muss.
 const ARCHITEKTUREN: [&str; 2] = ["x86_64", "arm64"];
 
-/// Die Quellwurzeln der AppKit-Grenzpruefung, je mit dem einen Teilbaum
-/// darunter, der als einziger eine `objc2`-Kiste nennen darf.
+/// Die Wurzel der AppKit-Grenzpruefung: das Verzeichnis der Anwendungskisten.
 ///
-/// Alle drei Kisten des Workspace stehen hier, nicht nur `krk-ui`. Fuer
-/// `krk-core` belegt zwar schon das Abnahmekriterium von S15 ueber die
-/// Abhaengigkeiten der Kiste, dass sie keine `objc2`-Kiste uebersetzen kann;
-/// die zweite Pruefung kostet nichts und macht die Grenze an einer Stelle
-/// lesbar statt ueber zwei Kriterien verteilt. Fuer `krk-bench` gab es bis zum
-/// 260806 gar keine Zusage.
-const GRENZWURZELN: [(&str, Option<&str>); 3] = [
-    ("crates/krk-ui/src", Some("appkit")),
-    ("crates/krk-core/src", None),
-    ("crates/krk-bench/src", None),
-];
+/// **Warum das ganze Verzeichnis und nicht die drei `src`-Baeume.** Bis zum
+/// 260807 stand hier eine Liste aus `crates/krk-ui/src`, `crates/krk-core/src`
+/// und `crates/krk-bench/src`. Cargo uebersetzt je Kiste aber ausser `src/`
+/// auch `tests/`, `benches/`, `examples/` und `build.rs`, und `krk-ui` fuehrt
+/// fuenf `objc2`-Abhaengigkeiten: ein `crates/krk-ui/tests/…rs` mit einem
+/// AppKit-Aufruf waere gruen durchgegangen, waehrend das Werkzeug meldete, es
+/// gebe keinen
+/// (`issues/260807-0800_*_die-appkit-grenzpruefung-kennt-nur-src-baeume-und-nur-die-woertliche-schreibweise.md`).
+/// Diese Baeume hier aufzuzaehlen hiesse, Cargos Verzeichnisregeln ein zweites
+/// Mal zu schreiben und mit der naechsten Fassung auseinanderlaufen zu lassen.
+/// Ueber das Kistenverzeichnis zu gehen umfasst sie alle, ohne eine davon zu
+/// kennen, und nimmt zugleich eine vierte Kiste mit, die noch niemand angelegt
+/// hat — die Liste zu ergaenzen war die zweite Art, die Pruefung im
+/// Vorbeigehen zu verlieren.
+///
+/// **Warum `xtask` nicht dazugehoert.** Die Grenze ist eine Zusage ueber die
+/// Anwendung, und `xtask` uebersetzt nicht in `KRK.app` hinein: es baut das
+/// Buendel, es sitzt nicht darin. Dazu nennt genau diese Datei `objc2`
+/// zwangslaeufig, weil sie die Pruefung *ist* — ihre Proben schreiben die
+/// gesuchten Zeilen woertlich aus. Ein Tor, das auf sich selbst anschlaegt,
+/// waere kein Tor.
+const GRENZWURZEL: &str = "crates";
+
+/// Der eine Teilbaum unter [`GRENZWURZEL`], der eine `objc2`-Kiste nennen darf.
+const AUSNAHME: &str = "crates/krk-ui/src/appkit";
 
 /// Die Umgebungsvariable mit dem Namen des notarytool-Schluesselbundprofils.
 pub const NOTAR_PROFIL_VARIABLE: &str = "KRK_NOTARY_PROFILE";
@@ -106,18 +121,19 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 /// genannt wird.
 ///
 /// Dieselbe Vorschrift wie im Abnahmekriterium von Schritt 23, und sie besteht
-/// aus zwei Suchen ueber dieselben drei Quellwurzeln (`GRENZWURZELN`): die
-/// `use`-Zeile aus `ist_objc2_use` und der ausgeschriebene Pfad aus
-/// `nennt_objc2_pfad`. Eine `objc2`-Bindung kommt ohne eines von beidem nicht
-/// zustande, gleich ob die Kiste sie als `pub fn` oder als `pub unsafe fn`
-/// fuehrt; zusammen fangen die zwei Suchen beide Haelften der Grenze.
+/// aus zwei Suchen ueber jede `.rs`-Datei unter [`GRENZWURZEL`] ausserhalb von
+/// [`AUSNAHME`]: die `use`-Zeile aus `ist_objc2_use` und der ausgeschriebene
+/// Pfad aus `nennt_objc2_pfad`. Eine `objc2`-Bindung kommt ohne eines von
+/// beidem nicht zustande, gleich ob die Kiste sie als `pub fn` oder als
+/// `pub unsafe fn` fuehrt; zusammen fangen die zwei Suchen beide Haelften der
+/// Grenze.
 fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
     let mut verstoesse = Vec::new();
-    for (quellwurzel, ausnahme) in GRENZWURZELN {
-        let quellwurzel = wurzel.join(quellwurzel);
-        let ausgenommen = ausnahme.map(|name| quellwurzel.join(name));
-        dateien_pruefen(&quellwurzel, ausgenommen.as_deref(), &mut verstoesse)?;
-    }
+    dateien_pruefen(
+        &wurzel.join(GRENZWURZEL),
+        &wurzel.join(AUSNAHME),
+        &mut verstoesse,
+    )?;
     if !verstoesse.is_empty() {
         verstoesse.sort();
         let aufzaehlung: Vec<String> = verstoesse
@@ -147,11 +163,10 @@ fn appkit_grenze_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
 /// Geht die `.rs`-Dateien unter `ordner` durch und sammelt die Verstoesse.
 ///
 /// Der Teilbaum `ausgenommen` wird nicht betreten: dort, und nur dort, ist
-/// eine `objc2`-Kiste erlaubt. `None` heisst, dass die Quellwurzel keine
-/// Ausnahme kennt.
+/// eine `objc2`-Kiste erlaubt.
 fn dateien_pruefen(
     ordner: &Path,
-    ausgenommen: Option<&Path>,
+    ausgenommen: &Path,
     verstoesse: &mut Vec<PathBuf>,
 ) -> Result<(), Abbruch> {
     let eintraege = fs::read_dir(ordner).map_err(|fehler| {
@@ -162,7 +177,7 @@ fn dateien_pruefen(
             Abbruch::Lauf(format!("{} ist nicht lesbar: {fehler}", ordner.display()))
         })?;
         let pfad = eintrag.path();
-        if ausgenommen.is_some_and(|ausnahme| pfad == ausnahme) {
+        if pfad == ausgenommen {
             continue;
         }
         if pfad.is_dir() {
@@ -194,16 +209,44 @@ fn dateien_pruefen(
 /// deren erstes nicht-leeres Zeichen ein `/` ist, wird nicht gelesen. Das ist
 /// die ganze Kommentarbehandlung — kein Zustandsautomat fuer `//` und
 /// `/* */`, wie der Defekt ihn erwogen hat. Drei Gruende. Erstens treffen die
-/// zwoelf Kommentarzeilen des Baums, die `objc2` nennen und auf denen die
+/// dreizehn Kommentarzeilen des Baums, die `objc2` nennen und auf denen die
 /// Pruefung nicht anschlagen darf, allesamt diese Form: sie stehen als `//!`
-/// in Spalte 1. Zweitens gibt es im ganzen Verzeichnis `crates/` keinen
-/// einzigen Blockkommentar, gemessen am 260806; ein Automat dafuer waere Code
-/// gegen einen Fall, den es nicht gibt, und die Maxime des Vorhabens ist
-/// "supersimpel". Drittens faellt die verbleibende Luecke — ein nachgestellter
-/// Kommentar hinter Code, der `objc2::` nennt — zur sicheren Seite: sie meldet
-/// einen Verstoss zu viel, nicht einen zu wenig, und ein Umformulieren des
-/// Kommentars raeumt sie aus. Ein halber Rust-Zerteiler in einem Bauwerkzeug
-/// koennte umgekehrt scheitern, und dann schweigt das Tor.
+/// oder `//` in Spalte 1 beziehungsweise nach der Einrueckung. Zweitens gibt
+/// es im ganzen Verzeichnis `crates/` keinen einzigen Blockkommentar, gemessen
+/// am 260807; ein Automat dafuer waere Code gegen einen Fall, den es nicht
+/// gibt, und die Maxime des Vorhabens ist "supersimpel". Drittens faellt die
+/// verbleibende Luecke — ein nachgestellter Kommentar hinter Code, der
+/// `objc2::` nennt — zur sicheren Seite: sie meldet einen Verstoss zu viel,
+/// nicht einen zu wenig, und ein Umformulieren des Kommentars raeumt sie aus.
+/// Ein halber Rust-Zerteiler in einem Bauwerkzeug koennte umgekehrt scheitern,
+/// und dann schweigt das Tor.
+///
+/// # Wo die Pruefung endet, und warum sie dort endet
+///
+/// Sie liest Rust-Quelltext und sucht darin die Zeichenfolge `objc2`. Wer die
+/// Kiste unter einem anderen Namen einbindet, kommt deshalb durch, und das ist
+/// eine Festlegung, kein Versehen. Zwei Formen tun das:
+///
+/// - Ein Umbenennen in der `Cargo.toml`:
+///   `appkit = { package = "objc2-app-kit", … }`. Danach ist
+///   `use appkit::NSView;` gueltiges Rust in jeder Datei von `krk-ui`.
+/// - `extern crate objc2 as ak;` innerhalb einer Datei — die Altform aus
+///   Edition 2015, die in Edition 2024 nichts mehr leistet, was `use` nicht
+///   auch leistet. `use objc2_app_kit as ak;` faellt bereits durch
+///   `ist_objc2_use`.
+///
+/// Beide Formen schlaegt die Pruefung nicht, weil sie kein Vertippen sind und
+/// kein Abdriften. Sie fangen soll sie den AppKit-Aufruf, der aus der Huelle
+/// unter `appkit/` herauswandert, weil jemand ihn an der naechstbesten Stelle
+/// brauchte; das ist die Bewegung, die der Plan verbietet und die im Alltag
+/// vorkommt. Ein Umbenennen der Abhaengigkeit ist dagegen ein eigener,
+/// sichtbarer Eingriff in `Cargo.toml`, wo jede der `objc2`-Kisten heute unter
+/// ihrem eigenen Namen und mit einer eigenen Begruendung steht. Es dafuer
+/// einzurichten hiesse, dem Werkzeug ein zweites Dateiformat und eine zweite
+/// Grammatik beizubringen, gegen einen Zug, den niemand versehentlich macht —
+/// genau die Sammlung von Sonderfaellen, die "supersimpel" ausschliesst.
+/// Nachgesehen am 260807: keine `Cargo.toml` des Workspace benennt eine Kiste
+/// um, und keine Datei unter `crates/` schreibt `extern crate`.
 fn verletzt_grenze(zeile: &str) -> bool {
     let inhalt = zeile.trim_start();
     if inhalt.starts_with('/') {
@@ -584,11 +627,14 @@ mod tests {
         assert!(verletzt_grenze("use objc2_app_kit as ak;"));
     }
 
-    /// Die zwoelf Kommentarzeilen, die es heute im Baum gibt — woertlich.
+    /// Die dreizehn Kommentarzeilen, die es heute im Baum gibt — woertlich.
     ///
     /// Zehn unter `crates/krk-ui/src` ausserhalb von `appkit/`, zwei unter
-    /// `crates/krk-core/src`. Schlaegt die Pruefung auf einer davon an, ist der
-    /// Bau sofort rot, ohne dass die Grenze verletzt waere.
+    /// `crates/krk-core/src`, eine unter `crates/krk-core/tests`. Schlaegt die
+    /// Pruefung auf einer davon an, ist der Bau sofort rot, ohne dass die
+    /// Grenze verletzt waere. Die dreizehnte kam am 260807 dazu, nicht weil
+    /// jemand sie geschrieben haette, sondern weil die Pruefung seither auch
+    /// `tests/` liest.
     #[test]
     fn die_kommentarzeilen_des_baums_sind_kein_verstoss() {
         for zeile in [
@@ -604,6 +650,7 @@ mod tests {
             "//! hier keine `use objc2`-Zeile. Die Ansichten dazu sind die vier Blaetter unter",
             "//! Diese Datei ist reines Rust und nennt keine `objc2`-Kiste. Sie bekommt eine",
             "//! weiterhin von oben nach unten: `krk-core` nennt keine `objc2`-Kiste. Ein",
+            "    // nachgesehen am 260803 und fuer die acht Nachtraege am 260804. `objc2`",
         ] {
             assert!(!verletzt_grenze(zeile), "schlaegt an auf: {zeile}");
         }
@@ -637,6 +684,71 @@ mod tests {
     #[test]
     fn die_grenzpruefung_laeuft_am_baum_gruen() {
         appkit_grenze_pruefen(&bundle::wurzel()).expect("die AppKit-Grenze haelt");
+    }
+
+    /// Die Pruefung reicht ueber `src/` hinaus und haelt vor `appkit/` an.
+    ///
+    /// Gebaut wird ein Wegwerf-Workspace mit drei Dateien: eine unter
+    /// `crates/krk-ui/src/appkit/` (erlaubt), eine unter `crates/krk-ui/tests/`
+    /// und eine unter `crates/krk-ui/` selbst (beide verboten). Bis zum 260807
+    /// sah die Pruefung allein `<kiste>/src` und liess die zweite und die
+    /// dritte durch, waehrend sie meldete, es gebe keinen Verstoss
+    /// (`issues/260807-0800_*_die-appkit-grenzpruefung-kennt-nur-src-baeume-und-nur-die-woertliche-schreibweise.md`).
+    #[test]
+    fn die_pruefung_liest_jeden_baum_der_kiste_und_nicht_nur_src() {
+        let wurzel = wegwerfwurzel("grenzbaeume");
+        let ui = wurzel.pfad().join("crates/krk-ui");
+        schreiben(&ui.join("src/appkit/huelle.rs"), "use objc2::rc::Retained;");
+        schreiben(&ui.join("src/modell.rs"), "let x = 1;");
+        schreiben(&ui.join("tests/probe.rs"), "use objc2_app_kit::NSView;");
+        schreiben(&ui.join("build.rs"), "    objc2::rc::Weak::neu();");
+
+        let fehler = appkit_grenze_pruefen(wurzel.pfad())
+            .expect_err("zwei Dateien ausserhalb von appkit/ nennen eine objc2-Kiste");
+        let Abbruch::Lauf(meldung) = fehler else {
+            panic!("die Grenzverletzung ist ein Laufabbruch");
+        };
+        assert!(meldung.contains("tests/probe.rs"), "{meldung}");
+        assert!(meldung.contains("build.rs"), "{meldung}");
+        assert!(
+            !meldung.contains("huelle.rs"),
+            "appkit/ ist die Ausnahme: {meldung}"
+        );
+    }
+
+    /// Ein Wegwerf-Wurzelordner, wie ihn die Proben des Kerns benutzen.
+    struct Wegwerfwurzel {
+        pfad: PathBuf,
+    }
+
+    impl Wegwerfwurzel {
+        fn pfad(&self) -> &Path {
+            &self.pfad
+        }
+    }
+
+    impl Drop for Wegwerfwurzel {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.pfad);
+        }
+    }
+
+    fn wegwerfwurzel(zweck: &str) -> Wegwerfwurzel {
+        let laufnummer = ZAEHLER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let pfad = std::env::temp_dir().join(format!(
+            "krk-xtask-test-{zweck}-{}-{laufnummer}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&pfad);
+        Wegwerfwurzel { pfad }
+    }
+
+    static ZAEHLER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+    fn schreiben(pfad: &Path, inhalt: &str) {
+        fs::create_dir_all(pfad.parent().expect("die Datei hat einen Ordner"))
+            .expect("der Ordner laesst sich nicht anlegen");
+        fs::write(pfad, inhalt).expect("die Datei laesst sich nicht schreiben");
     }
 
     #[test]

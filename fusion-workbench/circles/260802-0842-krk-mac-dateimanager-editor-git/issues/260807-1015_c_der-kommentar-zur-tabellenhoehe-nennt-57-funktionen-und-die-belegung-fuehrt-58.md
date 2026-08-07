@@ -38,3 +38,12 @@ dafür.
 
 ---
 Resolved:
+ Der Kommentar der Konstanten `TABELLENHOEHE`
+(`crates/krk-ui/src/appkit/belegungsansicht.rs:76-86`) nennt gar keine Zahl der
+Funktionen mehr, statt 57 durch 58 zu ersetzen. Der Nachtrag haette den Wert
+richtiggestellt und die Ursache stehen lassen: die Konstante steht auf 300,0
+Punkten und haengt an der Zahl der Zeilen nicht, wie der Kommentar selbst sagte.
+Er sagt jetzt, was nachpruefbar ist und nicht altert — die Tabelle fasst fuenfzehn
+Zeilen zu je `ZEILENHOEHE`, die Belegung ist laenger, also rollt die Ansicht —
+und haelt in einem zweiten Absatz fest, warum die Zahl nicht wieder dort steht.
+Kein Verhalten beruehrt. `make check` gruen, 525 Pruefungen.

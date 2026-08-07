@@ -50,3 +50,44 @@ darin, dass die nächste Änderung an der Prüfung eine Stelle hat statt drei.
 
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1730_c_die-gueltigkeit-eines-lesezeichens-veraltet-zwischen-zwei-anlaessen.md`
+
+---
+Resolved: Aus drei Wegen ist einer geworden, und er heisst `Gemerkt::nachpruefen`
+(`crates/krk-ui/src/leistenmodell.rs:161`). Es ist jetzt die einzige Zeile der
+Kiste, die `Lesezeichen::gueltig` ruft, und die einzige, die das Feld `gueltig`
+schreibt.
+
+**Der denkbare Weg aus dem Bericht, geprueft und abgewandelt.** Vorgeschlagen
+war, `lesezeichen_setzen` mit einer gleichgueltigen Vorbelegung aufbauen und
+danach `gueltigkeit_pruefen` rufen zu lassen. Das ergibt das richtige Ergebnis,
+setzt aber eine Falle: `gueltigkeit_pruefen` liefert "hat sich etwas geaendert",
+und nach einer Vorbelegung heisst diese Antwort "gemessen gegen die
+Vorbelegung", also nichts. Heute wird sie dort verworfen; wer sie morgen liest,
+liest Unsinn. Die Vorbelegung steht deshalb nicht in `lesezeichen_setzen`,
+sondern in `Gemerkt::neu` (`:145`), eine Zeile ueber dem Aufruf, der sie
+ueberschreibt. Ein `Gemerkt` mit einer Marke, die seinen Ordner nicht kennt,
+verlaesst den `impl`-Block nicht, und `Leistenmodell::gueltigkeit_pruefen`
+behaelt eine Antwort, die etwas bedeutet.
+
+**Der vierte Weg, den der Bericht als Geschmacksfrage fuehrte, ist auch fort.**
+`Leistenquelle::orte_setzen` (`crates/krk-ui/src/appkit/leiste.rs:216`) rief
+`gueltigkeit_pruefen` selbst und warf den Rueckgabewert weg. Die Pruefung steht
+jetzt in `Leistenmodell::orte_setzen` (`crates/krk-ui/src/leistenmodell.rs:211`):
+die Ortsliste aendert sich genau dann, wenn ein Datentraeger gekommen oder
+gegangen ist, und damit aendert sich, was ein Lesezeichen darauf wert ist. Sie
+beim Aufrufer zu lassen hiesse, jedem kuenftigen Aufrufer eine Pflicht
+mitzugeben, die er vergessen kann — dieselbe Form, die der Bericht anmahnt. Die
+AppKit-Seite ist damit auf zwei Zeilen geschrumpft und braucht die
+`RefCell`-Klammer nicht mehr.
+
+Kein Verhalten geaendert: alle vier Anlaesse liefern dasselbe Ergebnis wie
+vorher, an denselben Zeitpunkten.
+
+**Zwei neue Proben ohne Fenster.**
+`der_aufbau_und_das_nachziehen_kommen_zum_selben_ergebnis` (`:785`) haengt allein
+am Rueckgabewert: findet `gueltigkeit_pruefen` unmittelbar nach
+`lesezeichen_setzen` etwas zu aendern, dann haben die beiden Anlaesse wieder
+verschiedene Vorstellungen davon, was gueltig heisst.
+`eine_neue_ortsliste_zieht_die_gueltigkeit_nach` (`:809`) haelt den ersten Anlass
+im Modell fest, wo er bisher nur ueber AppKit erreichbar war. `make check`
+gruen, 525 Pruefungen.

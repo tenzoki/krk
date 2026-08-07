@@ -140,9 +140,17 @@ enum Spalte {
     /// Sortierung nach Typ ordnet nach ihr ([`Schluessel::Typ`]), und die
     /// Tastenfunktion "Nach Typ sortieren" loest dieselbe Ordnung aus. Die
     /// Eintragsart selbst (Ordner, Datei, Verknuepfung) steht in der
-    /// Metadatenanzeige der Vorschau, nicht in der Tabelle; entschieden am
-    /// 260806, siehe den Datensatz zur Sortierung ohne sprachsensitive
-    /// Kollation.
+    /// Metadatenanzeige der Vorschau, nicht in der Tabelle.
+    ///
+    /// Zwei Entscheide tragen das, und sie tragen verschiedene Haelften.
+    /// Ueber den **Schluessel der Sortierung** entscheidet
+    /// `decisions/260802-1810_*_sortierung-ohne-sprachsensitive-kollation.md`
+    /// (Nutzerentscheid vom 260806): nach Typ zu ordnen heisst, nach der
+    /// Endung zu ordnen. Ueber den **Inhalt dieser Zelle** sagt er nichts;
+    /// den entscheidet der Nutzer am 260806-2300 in
+    /// `issues/260806-1723_*_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md`,
+    /// Abschnitt "ein fuenfter Weg": die Ueberschrift bleibt "Typ", die Zelle
+    /// zeigt die Endung.
     Typ,
 }
 

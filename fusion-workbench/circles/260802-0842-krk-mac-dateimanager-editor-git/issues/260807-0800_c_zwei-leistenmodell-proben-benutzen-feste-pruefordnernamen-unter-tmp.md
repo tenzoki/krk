@@ -53,3 +53,28 @@ selben Projekt sind kein Arbeitsablauf, den das Vorhaben kennt.
 
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-0014_c_pruefordner-unter-tmp-verlieren-leere-unterordner-an-die-systembereinigung.md`
+
+---
+Resolved: Beide Proben gehen jetzt ueber einen `Pruefordner`
+(`crates/krk-ui/src/leistenmodell.rs:497-535`), gebaut nach derselben Form, die
+der Arbeitsbereich schon dreimal traegt: `Pruefordner` in
+`crates/krk-core/tests/verzeichnis.rs:25`, `Wegwerfordner` in
+`crates/krk-bench/src/fixture.rs:591` und `Planordner` in
+`crates/krk-ui/src/messmodus.rs:1683`. Name aus Zweck, Prozesskennung und
+Laufnummer, `remove_dir_all` beim Anlegen und noch einmal in `Drop`; ein
+Fehlschlag laesst damit nichts stehen, und zwei gleichzeitige Laeufe treffen
+verschiedene Ordner. Kein neuer Mechanismus und kein eigener Weg.
+
+`Pruefordner::neu` legt den Ordner **nicht** an, weil die eine Probe ihn
+zunaechst fehlend braucht und die andere vorhanden; `anlegen()` und `loeschen()`
+stehen daneben und tragen die beiden Zustandswechsel, die beide Proben
+vorfuehren.
+
+Der Messplatz unter `~/Library/Caches/krk-messplatz` bleibt aussen vor: er
+traegt die Pruefordner der Messstrecke, die einen Lauf ueberdauern sollen, und
+diese beiden Proben brauchen das Gegenteil.
+
+In `leistenmodell.rs` bleibt keine Probe mit festem Namen zurueck. Sieben in
+`crates/krk-ui/src/vorschaumodell.rs:704-818` tragen dieselbe Form des Befundes;
+sie standen nicht im Bericht, sind nicht angefasst und waeren ein eigener
+Nachzug. `make check` gruen, 525 Pruefungen.

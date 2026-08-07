@@ -88,3 +88,43 @@ Tor auch dann hält, wenn jemand einen davon anlegt.
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1333_c_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-0834_c_die-appkit-grenzpruefung-uebersieht-pub-use-und-use-mit-fuehrendem-doppelpunkt.md`
+
+---
+Resolved: Weg 1 geschlossen, Weg 2 begruendet offen gelassen.
+
+**Weg 1.** `GRENZWURZELN` ist fort. An seiner Stelle stehen zwei Konstanten:
+`GRENZWURZEL = "crates"` und `AUSNAHME = "crates/krk-ui/src/appkit"`
+(`xtask/src/release.rs:75-78`). Geprueft wird damit jede `.rs`-Datei unter
+`crates/` — `src/`, `tests/`, `benches/`, `examples/`, `build.rs` und jede
+kuenftige Kiste — ohne dass das Werkzeug einen dieser Baumnamen kennt. Der
+denkbare Weg aus dem Bericht (die Baeume je Kiste aufzaehlen und fehlende
+ueberspringen) haette Cargos Verzeichnisregeln ein zweites Mal geschrieben und
+die zweite Luecke offen gelassen: eine vierte Kiste, die niemand in die Liste
+nachtraegt. Der Ueberspringzweig fuer fehlende Ordner entfaellt damit ebenfalls,
+`dateien_pruefen` nimmt den Ausnahmepfad jetzt als `&Path` statt als
+`Option<&Path>` (`:158`). `xtask` bleibt aussen vor, und das steht bei
+`GRENZWURZEL` begruendet: die Grenze ist eine Zusage ueber die Anwendung, `xtask`
+uebersetzt nicht in `KRK.app` hinein, und genau `release.rs` nennt `objc2`
+zwangslaeufig, weil seine Proben die gesuchten Zeilen woertlich ausschreiben.
+
+**Weg 2 bleibt offen, und der Grund steht im Programmtext.** Der Abschnitt "Wo
+die Pruefung endet, und warum sie dort endet" im Kopf von `verletzt_grenze`
+(`xtask/src/release.rs:213-247`) benennt beide Formen — das Umbenennen in der
+`Cargo.toml` und `extern crate objc2 as ak;` — und sagt, warum die Pruefung sie
+nicht schlaegt: sie soll den AppKit-Aufruf fangen, der aus der Huelle
+herauswandert, weil jemand ihn an der naechstbesten Stelle brauchte. Ein
+Umbenennen ist kein Abdriften, sondern ein eigener, sichtbarer Eingriff in eine
+Datei, in der jede `objc2`-Kiste heute unter ihrem eigenen Namen und mit einer
+eigenen Begruendung steht. Dafuer einzurichten hiesse, dem Werkzeug ein zweites
+Dateiformat und eine zweite Grammatik beizubringen; das ist die Sammlung von
+Sonderfaellen, die "supersimpel" ausschliesst. Nachgesehen am 260807: keine
+`Cargo.toml` des Workspace benennt eine Kiste um, und keine Datei unter
+`crates/` schreibt `extern crate`.
+
+**Proben.** Neu ist `die_pruefung_liest_jeden_baum_der_kiste_und_nicht_nur_src`
+(`xtask/src/release.rs:698`): sie baut einen Wegwerf-Workspace mit vier Dateien
+und prueft, dass `tests/probe.rs` und `build.rs` gemeldet werden und
+`src/appkit/huelle.rs` nicht. `die_kommentarzeilen_des_baums_sind_kein_verstoss`
+fuehrt jetzt dreizehn Zeilen statt zwoelf: die dreizehnte steht in
+`crates/krk-core/tests/belegung.rs:568` und war bis heute ausserhalb der
+Pruefung. `make check` gruen, 525 Pruefungen.

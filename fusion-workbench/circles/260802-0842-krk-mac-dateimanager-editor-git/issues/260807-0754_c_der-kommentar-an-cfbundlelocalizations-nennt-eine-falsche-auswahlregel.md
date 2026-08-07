@@ -82,6 +82,24 @@ umstellen zu müssen, um die Sprache zu wechseln.
 Sitzung 260806-2257 (Commit `880cb70`, Aufgabe D8).
 
 Cross-references:
-`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0745_o_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`
+`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0745_c_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1215_c_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`
 `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-0743-ontocoder-die-sprache-des-buendels-und-die-pfadzitate.md`
+
+---
+Resolved: `resources/Info.plist:30-45` ersetzt die beiden widerlegten Sätze durch die
+gemessene Regel. Der Kommentar sagt jetzt, dass die Reihenfolge dieser Liste nicht
+auswählt: Foundation geht die Sprachliste des Nutzers der Reihe nach durch und nimmt
+die erste Sprache, die die Bündelliste anbietet; führt die Sprachwahl keine davon,
+entscheidet `CFBundleDevelopmentRegion`; ein Rückfall auf die erste Sprache der
+Bündelliste greift nur, solange `en` nicht darin steht. Als Beleg stehen drei
+gemessene Fälle daneben, und dieser Datensatz ist genannt.
+**Die Reihenfolge `de` vor `en` steht unverändert**, mit dem ausdrücklichen Zusatz,
+dass sie eine Nutzerentscheidung vom 260807 ist, unschädlich, und nur nichts
+auswählt. Die Messung ist am selben Tag nachgefahren, an zwei Bündeln, deren
+`Info.plist` wörtlich die von `cargo xtask bundle` erzeugte ist, mit vier
+Sprachwahlen: `de, en` mit `en-US, de-DE` liefert `en`, `de, en` mit `fr-FR` und mit
+`ja` liefert ohne Entwicklungsregion `en` und mit ihr `de`.
+`plutil -lint` und `xmllint --noout` gültig, `__KRK_VERSION__` unberührt,
+`make check` grün.
+Bericht: `history/260807-0952-ontocoder-entwicklungsregion-auswahlregel-und-das-letzte-pfadzitat.md`.
