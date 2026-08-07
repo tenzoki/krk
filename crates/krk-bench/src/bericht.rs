@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::messen::{self, ANTEIL_IM_BILD_PROZENT, Gesamtergebnis, Gesamtlauf, Messreihe, Zusage};
+use crate::messen::{self, Gesamtergebnis, Gesamtlauf, Messreihe, Zusage};
 
 /// Der Ordner, in dem die Berichte liegen.
 pub const MESSUNGEN: &str = "messungen";
@@ -305,16 +305,29 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
     );
     let _ = writeln!(
         text,
-        "Anteil der Eingaben im naechsten Bild fuer L1 und L9. Das Perzentil steht je"
+        "Anteil der Eingaben im naechsten Bild fuer L1 und L9. Seit dem 260807-0832"
     );
     let _ = writeln!(
         text,
-        "Runde einmal; Median, Minimum und Maximum laufen ueber alle Einzelwerte."
+        "fordern die beiden verschiedene Anteile, und L9 traegt daneben eine"
     );
+    let _ = writeln!(
+        text,
+        "Obergrenze je Einzelwert; die Spalte \"hoechstwert\" nennt den groessten"
+    );
+    let _ = writeln!(
+        text,
+        "Einzelwert aller Runden in Bildlaengen und traegt damit die zweite Haelfte"
+    );
+    let _ = writeln!(
+        text,
+        "des Urteils. Das Perzentil steht je Runde einmal; Median, Minimum und"
+    );
+    let _ = writeln!(text, "Maximum laufen ueber alle Einzelwerte.");
     let _ = writeln!(text);
     let _ = writeln!(
         text,
-        "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   Urteil",
+        "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>14}{:>22}   Urteil",
         "Gemessene Groesse",
         "p95 bestes",
         "p95 schlecht",
@@ -322,12 +335,13 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
         "Minimum",
         "Maximum",
         "im Bild",
+        "hoechstwert",
         "Abnahme nach"
     );
     for zusage in &ergebnis.zusagen {
         let _ = writeln!(
             text,
-            "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   {}",
+            "{:<64}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>14}{:>22}   {}",
             format!("{} — {}", zusage.kennung, zusage.was),
             spanne(zusage.bestes_perzentil()),
             spanne(zusage.schlechtestes_perzentil()),
@@ -336,6 +350,10 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
             spanne(zusage.maximum()),
             match zusage.schlechtester_anteil() {
                 Some(prozent) => format!("{prozent:.1} %"),
+                None => "-".to_owned(),
+            },
+            match zusage.hoechstwert_in_bildern() {
+                Some(bilder) => format!("{bilder:.2} Bilder"),
                 None => "-".to_owned(),
             },
             zusage.mass.beschreibung(),
@@ -356,41 +374,7 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
     );
     let _ = writeln!(text);
 
-    let anteilszeilen: Vec<&Zusage> = ergebnis
-        .zusagen
-        .iter()
-        .filter(|zusage| zusage.im_bild().is_some())
-        .collect();
-    if !anteilszeilen.is_empty() {
-        let _ = writeln!(text, "Der Anteil im naechsten Bild, Runde fuer Runde");
-        let _ = writeln!(text, "---------------------------------------------");
-        let _ = writeln!(
-            text,
-            "Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine"
-        );
-        let _ = writeln!(
-            text,
-            "Bildlaenge betraegt, hier {}. Gehalten heisst: in jeder Runde mindestens {} %.",
-            spanne(ergebnis.bildlaenge),
-            ANTEIL_IM_BILD_PROZENT
-        );
-        for zusage in anteilszeilen {
-            let runden = zusage.im_bild().unwrap_or_default();
-            let werte: Vec<String> = runden
-                .into_iter()
-                .map(|(erreicht, gesamt)| {
-                    let prozent = if gesamt == 0 {
-                        0.0
-                    } else {
-                        100.0 * erreicht as f64 / gesamt as f64
-                    };
-                    format!("{prozent:.1} % ({erreicht}/{gesamt})")
-                })
-                .collect();
-            let _ = writeln!(text, "{:<8}{}", zusage.kennung, werte.join("  "));
-        }
-        let _ = writeln!(text);
-    }
+    anteil_je_runde(&mut text, ergebnis.bildlaenge, &ergebnis.zusagen);
 
     let _ = writeln!(text, "Einzelwerte");
     let _ = writeln!(text, "-----------");
@@ -407,6 +391,93 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
     let _ = writeln!(text);
     text.push_str(GESAMT_LESART);
     text
+}
+
+/// Der Abschnitt, der beide Haelften des Anteilsmasses Runde fuer Runde nennt.
+///
+/// Zwei Zeilen je Zusage: der Anteil der Eingaben im ersten Bild und der
+/// groesste Einzelwert der Runde in Bildlaengen. Die zweite Zeile ist seit dem
+/// 260807-0832 noetig, denn L9 sagt neben dem Anteil eine Obergrenze je
+/// Einzelwert zu, und ohne sie stuende das Urteil ueber L9 auf halber
+/// Grundlage. Sie steht auch bei L1, wo keine Obergrenze gilt: dort sagt sie,
+/// wie weit die verpassten Eingaben ihr Bild verpasst haben.
+///
+/// Beide Berichte, der Durchstich und die Abnahme, brauchen diesen Abschnitt
+/// Wort fuer Wort gleich. Er steht deshalb einmal hier und nicht zweimal
+/// nebeneinander, wo die eine Fassung der anderen davonlaufen kann.
+pub(crate) fn anteil_je_runde(text: &mut String, bildlaenge: Duration, zusagen: &[Zusage]) {
+    let anteilszeilen: Vec<&Zusage> = zusagen
+        .iter()
+        .filter(|zusage| zusage.im_bild().is_some())
+        .collect();
+    if anteilszeilen.is_empty() {
+        return;
+    }
+
+    let _ = writeln!(text, "Der Anteil im naechsten Bild, Runde fuer Runde");
+    let _ = writeln!(text, "---------------------------------------------");
+    let _ = writeln!(
+        text,
+        "Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine"
+    );
+    let _ = writeln!(
+        text,
+        "Bildlaenge betraegt, hier {}. Wie viel Prozent das sein muessen und",
+        spanne(bildlaenge)
+    );
+    let _ = writeln!(
+        text,
+        "ob eine Obergrenze je Einzelwert danebensteht, nennt die Spalte"
+    );
+    let _ = writeln!(
+        text,
+        "\"Abnahme nach\". Die Zeile \"hoechstwert\" traegt den groessten Einzelwert"
+    );
+    let _ = writeln!(
+        text,
+        "der Runde in Bildlaengen; wo eine Obergrenze gilt, entscheidet sie mit."
+    );
+    let _ = writeln!(
+        text,
+        "Gehalten heisst in jeder Runde gehalten, und zwar in beiden Haelften."
+    );
+    for zusage in anteilszeilen {
+        let anteile: Vec<String> = zusage
+            .im_bild()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(erreicht, gesamt)| {
+                format!(
+                    "{:>18}",
+                    format!(
+                        "{:.1} % ({erreicht}/{gesamt})",
+                        messen::anteil_prozent(erreicht, gesamt)
+                    )
+                )
+            })
+            .collect();
+        let hoechstwerte: Vec<String> = zusage
+            .hoechstwerte_in_bildern()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|bilder| format!("{:>18}", format!("{bilder:.2} Bilder")))
+            .collect();
+        let _ = writeln!(
+            text,
+            "{:<8}{:<12}{}",
+            zusage.kennung,
+            "Anteil",
+            anteile.concat()
+        );
+        let _ = writeln!(
+            text,
+            "{:<8}{:<12}{}",
+            zusage.kennung,
+            "hoechstwert",
+            hoechstwerte.concat()
+        );
+    }
+    let _ = writeln!(text);
 }
 
 /// Schreibt den Abnahmebericht in den Messungenordner und liefert seinen Pfad.
@@ -476,8 +547,11 @@ unter L2, L3 beziehungsweise L10.
 Zeichendurchgangs, mit dem die Vorgangsanzeige in der Statuszeile steht. Die
 Kopie laeuft auf Pruefordner A mit allen Eintraegen markiert, auf demselben
 APFS-Datentraeger; nach der L9-Eingabe wird sie abgebrochen und das
-Kopierziel geleert, damit jede Wiederholung dasselbe misst. L9 zaehlt wie L1
-den Anteil der Eingaben im naechsten Bild, waehrend die Kopie laeuft.
+Kopierziel geleert, damit jede Wiederholung dasselbe misst. L9 zaehlt den
+Anteil der Eingaben im naechsten Bild, waehrend die Kopie laeuft. Den Messweg
+teilt es mit L1, die Schwelle seit dem 260807-0832 nicht mehr: L9 fordert 85
+statt 95 Prozent im ersten Bild und dazu, dass keine einzige Eingabe ueber
+zwei Bildlaengen liegt, also spaetestens das zweite Bild erreicht.
 
 Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
 zwanzig Laeufen der neunzehnte der sortierten Reihe. Eine Zusage gilt nur als
@@ -765,7 +839,11 @@ mod tests {
                 zusage(
                     "L1",
                     "Tastendruck",
-                    Abnahmemass::AnteilImBild { bildlaenge },
+                    Abnahmemass::AnteilImBild {
+                        bildlaenge,
+                        mindestanteil_prozent: 95,
+                        obergrenze_bilder: None,
+                    },
                 ),
                 zusage("L2", "erste Seite", p(100)),
                 zusage("L3", "vollstaendig", p(400)),
@@ -775,7 +853,15 @@ mod tests {
                 zusage("L6", "Unterordner", p(100)),
                 zusage("L7", "Vorschau", p(100)),
                 zusage("L8", "Fortschritt", p(200)),
-                zusage("L9", "Kopie", Abnahmemass::AnteilImBild { bildlaenge }),
+                zusage(
+                    "L9",
+                    "Kopie",
+                    Abnahmemass::AnteilImBild {
+                        bildlaenge,
+                        mindestanteil_prozent: 85,
+                        obergrenze_bilder: Some(2),
+                    },
+                ),
                 zusage("L10", "erste Seite", p(100)),
                 zusage("L10", "vollstaendig", p(4000)),
             ],
@@ -808,6 +894,26 @@ mod tests {
         assert!(text.contains("p95 <= 200 ms"));
         assert!(text.contains("Ende des\nZeichendurchgangs") || text.contains("Zeichendurchgang"));
         assert!(ergebnis.bestanden());
+
+        // L1 und L9 tragen seit dem 260807-0832 verschiedene Masse, und die
+        // Tabelle weist beide Haelften von L9 aus: den Anteil und die
+        // Obergrenze je Einzelwert.
+        assert!(
+            text.contains(">= 95 % im Bild"),
+            "L1 fehlt sein Mass:\n{text}"
+        );
+        assert!(
+            text.contains(">= 85 %, <= 2 Bilder"),
+            "L9 fehlt sein Mass:\n{text}"
+        );
+        assert!(
+            text.contains("hoechstwert"),
+            "der groesste Einzelwert in Bildlaengen fehlt:\n{text}"
+        );
+        assert!(
+            text.contains("0.60 Bilder"),
+            "10 ms sind 0.60 Bildlaengen, die Spalte nennt sie nicht:\n{text}"
+        );
     }
 
     #[test]

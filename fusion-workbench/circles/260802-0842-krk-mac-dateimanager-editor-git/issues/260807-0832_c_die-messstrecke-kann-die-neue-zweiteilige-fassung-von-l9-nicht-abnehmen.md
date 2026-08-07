@@ -31,3 +31,24 @@ Nutzerentscheid:
 `decisions/260806-0014_*_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`.
 Auswertungsregel im Plan: `### Frage 5`,
 `planning/260802-1428_*_plan-navigator-geruest-runde-1.md`.
+---
+Resolved: `Abnahmemass::AnteilImBild` trägt sein Maß jetzt vollständig — Bildlänge,
+geforderter Anteil und eine Obergrenze je Einzelwert in Bildlängen
+(`crates/krk-bench/src/messen.rs:380-408`). Die Kistenkonstante
+`ANTEIL_IM_BILD_PROZENT` ist damit weggefallen; L1 steht an seinen beiden
+Fundstellen auf 95 Prozent ohne Obergrenze, L9 auf 85 Prozent mit `Some(2)`.
+`Zusage::gehalten_in` prüft beide Hälften in derselben Runde und kommt weiterhin
+ohne zweites Argument aus. Beide Berichte weisen die zweite Hälfte aus: die
+Zahlentabelle trägt neben der Spalte "im Bild" die neue Spalte "hoechstwert" mit
+dem größten Einzelwert aller Runden in Bildlängen, und der Abschnitt "Der Anteil
+im naechsten Bild, Runde fuer Runde" nennt je Zusage eine Zeile "Anteil" und eine
+Zeile "hoechstwert"; er steht seither einmal in `bericht::anteil_je_runde` statt
+zweimal nebeneinander. Nachgewiesen an den vorliegenden Zahlen statt an einem
+Abnahmelauf: der Test `l9_haelt_die_neue_fassung_in_allen_fuenf_gemessenen_runden`
+fährt die 100 Einzelwerte aus `messungen/260805-2207-MacBookPro15-1-abnahme.txt`
+(Zeilen 288 bis 313) durch die Auswertung und bestätigt 90, 85, 90, 100 und
+85 Prozent bei Höchstwerten von 19,153 bis 23,429 ms, also gehalten in allen fünf
+Runden; `dieselbe_reihe_verfehlt_das_ungesenkte_mass` hält dagegen, dass dieselbe
+Reihe das alte Maß in vier von fünf Runden verfehlt, und
+`eine_eingabe_ueber_zwei_bildlaengen_reisst_l9_trotz_gehaltenem_anteil` prüft den
+erfundenen Gegenfall. `make check` grün.

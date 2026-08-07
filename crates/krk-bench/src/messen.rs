@@ -35,8 +35,10 @@
 //! Die Auswertung der Fruehmessung weiter unten kennt seit dem 260803-1810 zwei
 //! Masse, und welches gilt, haengt an der Art der Zusage: eine zugesagte Dauer
 //! wird ueber das Perzentil abgenommen, eine zugesagte Bildgrenze ueber den
-//! Anteil der Eingaben, die ihr naechstes Bild erreichen. Siehe
-//! [`Abnahmemass`].
+//! Anteil der Eingaben, die ihr naechstes Bild erreichen. Seit dem 260807-0832
+//! fordern L1 und L9 dabei **verschiedene** Anteile, und L9 traegt daneben eine
+//! Obergrenze je Einzelwert. Jede Zusage traegt ihr Mass deshalb vollstaendig
+//! selbst; siehe [`Abnahmemass`].
 
 use std::fmt::Write as _;
 use std::io::{self, BufRead, BufReader, Read};
@@ -57,14 +59,6 @@ pub const WIEDERHOLUNGEN: usize = 20;
 
 /// Der Anteil, fuer den die acht Zusagen aus C8 gelten, die eine Dauer zusagen.
 pub const PERZENTIL: f64 = 0.95;
-
-/// Wie viel Prozent der Eingaben ihr naechstes Bild erreichen muessen.
-///
-/// Das zweite Abnahmemass aus C8, gueltig fuer L1 und L9 seit dem 260803-1810.
-/// Als ganze Zahl gefuehrt, damit das Urteil ohne Fliesskommavergleich
-/// feststeht: bei zwanzig Wiederholungen darf hoechstens eine ihr Bild
-/// verpassen.
-pub const ANTEIL_IM_BILD_PROZENT: usize = 95;
 
 /// Das Werkzeug, das den Dateisystem-Cache leert.
 const PURGE: &str = "/usr/sbin/purge";
@@ -374,17 +368,41 @@ const FRIST_SPANNEN: Duration = Duration::from_secs(300);
 /// Absaetze ab `Warum L1 und L9 den Anteil zaehlen und nicht die Spanne`, und
 /// im Datensatz
 /// `decisions/260803-1755_*_l1-verfehlt-die-16-ms-zusage-am-bildrand.md`.
+///
+/// **L1 und L9 teilen ihre Schwelle seit dem 260807-0832 nicht mehr.** Bis dahin
+/// forderten beide 95 Prozent im ersten Bild, und die Zahl stand als Konstante
+/// neben dieser Aufzaehlung. Der Nutzer hat L9 an jenem Tag auf 85 Prozent
+/// gesenkt und ihm dafuer eine zweite Haelfte gegeben: keine einzige Eingabe
+/// liegt ueber zwei Bildlaengen. Damit gehen die beiden Werte auseinander, und
+/// eine gemeinsame Konstante waere ab da schlicht falsch. Datensatz
+/// `decisions/260806-0014_*_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Abnahmemass {
     /// Das 95. Perzentil der Runde liegt hoechstens bei dieser Grenze.
     Perzentil(Duration),
-    /// Mindestens [`ANTEIL_IM_BILD_PROZENT`] der Einzelwerte einer Runde liegen
-    /// hoechstens bei einer Bildlaenge.
+    /// Mindestens `mindestanteil_prozent` der Einzelwerte einer Runde liegen
+    /// hoechstens bei einer Bildlaenge, und keiner liegt ueber
+    /// `obergrenze_bilder` Bildlaengen.
     ///
-    /// Die Bildlaenge steht hier und nicht beim Aufrufer, damit eine Zusage ihr
-    /// Mass vollstaendig traegt: [`Zusage::gehalten_in`] braucht dann kein
+    /// Alle drei Angaben stehen hier und nicht beim Aufrufer, damit eine Zusage
+    /// ihr Mass vollstaendig traegt: [`Zusage::gehalten_in`] braucht dann kein
     /// zweites Argument, das bei acht der zehn Zusagen ohnehin unbenutzt bliebe.
-    AnteilImBild { bildlaenge: Duration },
+    AnteilImBild {
+        /// Der Kehrwert der Bildwiederholrate. Bis hierher gilt eine Eingabe
+        /// als im naechsten Bild erschienen.
+        bildlaenge: Duration,
+        /// Wie viel Prozent der Eingaben ihr naechstes Bild erreichen muessen.
+        ///
+        /// Als ganze Zahl gefuehrt, damit das Urteil ohne Fliesskommavergleich
+        /// feststeht: 17 von 20 sind genau 85 Prozent und halten.
+        mindestanteil_prozent: usize,
+        /// Wie viele Bildlaengen ein **einzelner** Wert hoechstens betragen darf.
+        ///
+        /// `None` heisst: die Zusage kennt keine Obergrenze je Einzelwert, es
+        /// zaehlt allein der Anteil. So ist L1 gefasst. L9 traegt seit dem
+        /// 260807-0832 `Some(2)`.
+        obergrenze_bilder: Option<u32>,
+    },
     /// Der Bericht nennt die Zahl, das Gate fragt sie nicht ab.
     Keine,
 }
@@ -394,10 +412,21 @@ impl Abnahmemass {
     ///
     /// Damit steht in jeder Zeile der Zahlentabelle, nach welcher Regel sie
     /// beurteilt ist, statt dass der Leser es aus der Kennung erschliessen muss.
+    /// Eine Zusage mit Obergrenze nennt beide Haelften; nur die eine zu nennen
+    /// hiesse, das Urteil auf halber Grundlage auszuweisen.
     pub fn beschreibung(self) -> String {
         match self {
             Self::Perzentil(grenze) => format!("p95 <= {} ms", grenze.as_millis()),
-            Self::AnteilImBild { .. } => format!(">= {ANTEIL_IM_BILD_PROZENT} % im Bild"),
+            Self::AnteilImBild {
+                mindestanteil_prozent,
+                obergrenze_bilder: None,
+                ..
+            } => format!(">= {mindestanteil_prozent} % im Bild"),
+            Self::AnteilImBild {
+                mindestanteil_prozent,
+                obergrenze_bilder: Some(bilder),
+                ..
+            } => format!(">= {mindestanteil_prozent} %, <= {bilder} Bilder"),
             Self::Keine => "keine".to_owned(),
         }
     }
@@ -472,7 +501,7 @@ impl Zusage {
     /// Bildlaenge betraegt; ist sie groesser, wird die Aenderung erst mit dem
     /// uebernaechsten Bild sichtbar.
     pub fn im_bild(&self) -> Option<Vec<(usize, usize)>> {
-        let Abnahmemass::AnteilImBild { bildlaenge } = self.mass else {
+        let Abnahmemass::AnteilImBild { bildlaenge, .. } = self.mass else {
             return None;
         };
         Some(
@@ -506,6 +535,37 @@ impl Zusage {
             .filter(|wert| wert.is_finite())
     }
 
+    /// Je Runde: der groesste Einzelwert, ausgedrueckt in Bildlaengen.
+    ///
+    /// Die zweite Haelfte der Zusage L9 haengt an dieser Zahl: keine Eingabe
+    /// darf ueber zwei Bildlaengen liegen. Sie steht auch dort, wo keine
+    /// Obergrenze gilt, denn sie sagt dem Leser, wie weit die verpassten
+    /// Eingaben ihr Bild verpasst haben. `None`, wenn diese Zusage nicht ueber
+    /// den Anteil abgenommen wird. Eine Runde ohne Werte hat den Hoechstwert
+    /// null.
+    pub fn hoechstwerte_in_bildern(&self) -> Option<Vec<f64>> {
+        let Abnahmemass::AnteilImBild { bildlaenge, .. } = self.mass else {
+            return None;
+        };
+        Some(
+            self.runden
+                .iter()
+                .map(|werte| {
+                    in_bildern(werte.iter().copied().max().unwrap_or_default(), bildlaenge)
+                })
+                .collect(),
+        )
+    }
+
+    /// Der groesste Einzelwert ueber alle Runden, in Bildlaengen.
+    ///
+    /// An dieser Zahl haengt das Urteil ueber die Obergrenze, denn gehalten
+    /// heisst in jeder Runde gehalten.
+    pub fn hoechstwert_in_bildern(&self) -> Option<f64> {
+        self.hoechstwerte_in_bildern()
+            .map(|runden| runden.into_iter().fold(0.0, f64::max))
+    }
+
     /// In wie vielen Runden die Zusage gehalten hat, und wie viele es waren.
     ///
     /// `None`, wenn das Gate diese Zusage nicht abfragt.
@@ -516,18 +576,34 @@ impl Zusage {
                 let gehalten = perzentile.iter().filter(|wert| **wert <= grenze).count();
                 Some((gehalten, perzentile.len()))
             }
-            Abnahmemass::AnteilImBild { .. } => {
-                let runden = self.im_bild()?;
-                let gehalten = runden
+            Abnahmemass::AnteilImBild {
+                bildlaenge,
+                mindestanteil_prozent,
+                obergrenze_bilder,
+            } => {
+                // Beide Haelften muessen halten, und beide in derselben Runde:
+                // der Anteil im ersten Bild und, wo die Zusage eine nennt, die
+                // Obergrenze je Einzelwert.
+                let obergrenze = obergrenze_bilder.map(|bilder| bildlaenge * bilder);
+                let gehalten = self
+                    .runden
                     .iter()
-                    .filter(|(erreicht, gesamt)| {
-                        // Ganzzahlig verglichen, damit genau 19 von 20 haelt und
-                        // das Urteil nicht an einer Rundung im letzten Bit haengt.
+                    .filter(|werte| {
                         // Eine Runde ohne Werte haelt nicht.
-                        *gesamt > 0 && erreicht * 100 >= gesamt * ANTEIL_IM_BILD_PROZENT
+                        if werte.is_empty() {
+                            return false;
+                        }
+                        let erreicht = werte.iter().filter(|wert| **wert <= bildlaenge).count();
+                        // Ganzzahlig verglichen, damit genau 17 von 20 als 85
+                        // Prozent halten und das Urteil nicht an einer Rundung
+                        // im letzten Bit haengt.
+                        let anteil_haelt = erreicht * 100 >= werte.len() * mindestanteil_prozent;
+                        let grenze_haelt = obergrenze
+                            .is_none_or(|grenze| werte.iter().all(|wert| *wert <= grenze));
+                        anteil_haelt && grenze_haelt
                     })
                     .count();
-                Some((gehalten, runden.len()))
+                Some((gehalten, self.runden.len()))
             }
             Abnahmemass::Keine => None,
         }
@@ -549,11 +625,24 @@ impl Zusage {
 }
 
 /// Der Anteil in Prozent. Eine Runde ohne Werte hat den Anteil null.
-fn anteil_prozent(erreicht: usize, gesamt: usize) -> f64 {
+pub(crate) fn anteil_prozent(erreicht: usize, gesamt: usize) -> f64 {
     if gesamt == 0 {
         return 0.0;
     }
     100.0 * erreicht as f64 / gesamt as f64
+}
+
+/// Eine Spanne, ausgedrueckt in Bildlaengen.
+///
+/// Das ist die Einheit, in der die Obergrenze je Einzelwert zugesagt ist, und
+/// deshalb die Einheit, in der der Bericht sie ausweist: "1.15 Bilder" laesst
+/// sich gegen "hoechstens 2 Bilder" halten, "19.153 ms" erst nach einer
+/// Kopfrechnung, die die Bildlaenge des Geraets kennt.
+fn in_bildern(spanne: Duration, bildlaenge: Duration) -> f64 {
+    if bildlaenge.is_zero() {
+        return 0.0;
+    }
+    spanne.as_secs_f64() / bildlaenge.as_secs_f64()
 }
 
 /// Die Laenge eines Bildes, gebildet aus der gemeldeten Bildwiederholrate.
@@ -674,7 +763,13 @@ impl Durchstich {
                     was: "Tastendruck bis Ende des Zeichendurchgangs",
                     // Seit dem 260803-1810 nicht mehr 16 ms auf das Perzentil,
                     // sondern der Anteil der Eingaben, die ihr Bild erreichen.
-                    mass: Abnahmemass::AnteilImBild { bildlaenge },
+                    // L1 fordert 95 Prozent und kennt keine Obergrenze je
+                    // Einzelwert; das ist der Unterschied zu L9.
+                    mass: Abnahmemass::AnteilImBild {
+                        bildlaenge,
+                        mindestanteil_prozent: 95,
+                        obergrenze_bilder: None,
+                    },
                     runden: sammeln(|runde| &runde.l1),
                 },
                 Zusage {
@@ -963,7 +1058,12 @@ impl Gesamtlauf {
                 Zusage {
                     kennung: "L1",
                     was: "Tastendruck bis Ende des Zeichendurchgangs",
-                    mass: Abnahmemass::AnteilImBild { bildlaenge },
+                    // 95 Prozent im ersten Bild, keine Obergrenze je Einzelwert.
+                    mass: Abnahmemass::AnteilImBild {
+                        bildlaenge,
+                        mindestanteil_prozent: 95,
+                        obergrenze_bilder: None,
+                    },
                     runden: sammeln(|runde| &runde.l1),
                 },
                 Zusage {
@@ -1017,7 +1117,14 @@ impl Gesamtlauf {
                 Zusage {
                     kennung: "L9",
                     was: "Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs",
-                    mass: Abnahmemass::AnteilImBild { bildlaenge },
+                    // Seit dem 260807-0832 zweiteilig und nicht mehr dasselbe
+                    // Mass wie L1: mindestens 85 Prozent erreichen das erste
+                    // Bild, und jede Eingabe erreicht spaetestens das zweite.
+                    mass: Abnahmemass::AnteilImBild {
+                        bildlaenge,
+                        mindestanteil_prozent: 85,
+                        obergrenze_bilder: Some(2),
+                    },
                     runden: sammeln(|runde| &runde.l9),
                 },
                 Zusage {
@@ -1601,11 +1708,19 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
         text,
         "alle Einzelwerte aller Runden. Die Spalte \"im Bild\" traegt den Anteil der"
     );
-    let _ = writeln!(text, "schlechtesten Runde, weil an ihr das Urteil haengt.");
+    let _ = writeln!(
+        text,
+        "schlechtesten Runde, weil an ihr das Urteil haengt; die Spalte \"hoechstwert\""
+    );
+    let _ = writeln!(
+        text,
+        "traegt den groessten Einzelwert aller Runden in Bildlaengen, an dem die"
+    );
+    let _ = writeln!(text, "Obergrenze je Einzelwert haengt.");
     let _ = writeln!(text);
     let _ = writeln!(
         text,
-        "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   Urteil",
+        "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>14}{:>22}   Urteil",
         "Gemessene Groesse",
         "p95 bestes",
         "p95 schlecht",
@@ -1613,12 +1728,13 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
         "Minimum",
         "Maximum",
         "im Bild",
+        "hoechstwert",
         "Abnahme nach"
     );
     for zusage in &ergebnis.zusagen {
         let _ = writeln!(
             text,
-            "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>20}   {}",
+            "{:<56}{:>13}{:>13}{:>12}{:>12}{:>12}{:>11}{:>14}{:>22}   {}",
             format!("{} — {}", zusage.kennung, zusage.was),
             bericht::spanne(zusage.bestes_perzentil()),
             bericht::spanne(zusage.schlechtestes_perzentil()),
@@ -1627,6 +1743,10 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
             bericht::spanne(zusage.maximum()),
             match zusage.schlechtester_anteil() {
                 Some(prozent) => format!("{prozent:.1} %"),
+                None => "-".to_owned(),
+            },
+            match zusage.hoechstwert_in_bildern() {
+                Some(bilder) => format!("{bilder:.2} Bilder"),
                 None => "-".to_owned(),
             },
             zusage.mass.beschreibung(),
@@ -1661,39 +1781,7 @@ pub fn durchstich_bericht(lauf: &Durchstich, ergebnis: &Durchstichergebnis) -> S
     }
     let _ = writeln!(text);
 
-    let anteilszeilen: Vec<&Zusage> = ergebnis
-        .zusagen
-        .iter()
-        .filter(|zusage| zusage.im_bild().is_some())
-        .collect();
-    if !anteilszeilen.is_empty() {
-        let _ = writeln!(text, "Der Anteil im naechsten Bild, Runde fuer Runde");
-        let _ = writeln!(text, "---------------------------------------------");
-        let _ = writeln!(
-            text,
-            "Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine"
-        );
-        let _ = writeln!(
-            text,
-            "Bildlaenge betraegt, hier {}. Gehalten heisst: in jeder Runde mindestens {} %.",
-            bericht::spanne(ergebnis.bildlaenge),
-            ANTEIL_IM_BILD_PROZENT
-        );
-        for zusage in anteilszeilen {
-            let runden = zusage.im_bild().unwrap_or_default();
-            let werte: Vec<String> = runden
-                .into_iter()
-                .map(|(erreicht, gesamt)| {
-                    format!(
-                        "{:.1} % ({erreicht}/{gesamt})",
-                        anteil_prozent(erreicht, gesamt)
-                    )
-                })
-                .collect();
-            let _ = writeln!(text, "{:<8}{}", zusage.kennung, werte.join("  "));
-        }
-        let _ = writeln!(text);
-    }
+    bericht::anteil_je_runde(&mut text, ergebnis.bildlaenge, &ergebnis.zusagen);
 
     let _ = writeln!(text, "Einzelwerte");
     let _ = writeln!(text, "-----------");
@@ -1754,8 +1842,11 @@ Nutzer abwartet; sie werden ueber das 95. Perzentil der Runde abgenommen. L1 und
 L9 sagen zu, dass die Reaktion im naechsten Bild erscheint; sie werden seit dem
 260803-1810 ueber den Anteil der Eingaben abgenommen, die das erreichen. Die
 Spalte \"im Bild\" traegt diesen Anteil und steht auf \"-\", wo das Mass nicht
-gilt. Fuer L1 sind Perzentil, Median, Minimum und Maximum Kennzahlen ohne
-eigenes Urteil.
+gilt. Seit dem 260807-0832 fordern L1 und L9 dabei verschiedene Anteile, und L9
+traegt daneben eine Obergrenze je Einzelwert: keine Eingabe liegt ueber zwei
+Bildlaengen. Die Spalte \"hoechstwert\" traegt diese zweite Haelfte, ausgedrueckt
+in Bildlaengen. Fuer L1 sind Perzentil, Median, Minimum und Maximum Kennzahlen
+ohne eigenes Urteil.
 ";
 
 /// Wie der Cache-Zustand im Kopf beschrieben wird.
@@ -1984,12 +2075,30 @@ mod tests {
         Duration::from_secs_f64(1.0 / 60.0)
     }
 
+    /// Das Mass von L1: 95 Prozent im ersten Bild, keine Obergrenze.
     fn anteilszusage(runden: Vec<Vec<Duration>>) -> Zusage {
         Zusage {
             kennung: "L1",
             was: "Tastendruck bis Ende des Zeichendurchgangs",
             mass: Abnahmemass::AnteilImBild {
                 bildlaenge: ein_bild(),
+                mindestanteil_prozent: 95,
+                obergrenze_bilder: None,
+            },
+            runden,
+        }
+    }
+
+    /// Das Mass von L9 seit dem 260807-0832: 85 Prozent im ersten Bild, und
+    /// keine Eingabe ueber zwei Bildlaengen.
+    fn l9_zusage(runden: Vec<Vec<Duration>>) -> Zusage {
+        Zusage {
+            kennung: "L9",
+            was: "Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs",
+            mass: Abnahmemass::AnteilImBild {
+                bildlaenge: ein_bild(),
+                mindestanteil_prozent: 85,
+                obergrenze_bilder: Some(2),
             },
             runden,
         }
@@ -2062,6 +2171,123 @@ mod tests {
         assert!(zusage.bestes_perzentil() <= zusage.schlechtestes_perzentil());
     }
 
+    /// Ein Einzelwert in Millisekunden, wie der Messbericht ihn ausweist.
+    fn msf(millisekunden: f64) -> Duration {
+        Duration::from_secs_f64(millisekunden / 1_000.0)
+    }
+
+    /// Die fuenf L9-Runden der Abnahmereihe vom 260805-2207.
+    ///
+    /// Wortgleich aus `messungen/260805-2207-MacBookPro15-1-abnahme.txt`
+    /// uebernommen, Zeilen 288 bis 313. Diese hundert Werte sind der Anlass der
+    /// neuen Fassung von L9: nach der alten haelt die Reihe in einer von fuenf
+    /// Runden, nach der neuen in allen fuenf.
+    fn l9_abnahmereihe() -> Vec<Vec<Duration>> {
+        [
+            [
+                7.713, 18.137, 1.910, 14.317, 8.289, 3.405, 6.761, 5.099, 1.577, 2.592, 8.131,
+                3.535, 7.232, 5.806, 6.201, 10.205, 19.153, 12.936, 5.300, 16.138,
+            ],
+            [
+                2.737, 5.590, 10.375, 8.721, 7.420, 2.078, 7.057, 20.203, 12.711, 6.868, 14.839,
+                9.607, 20.913, 1.178, 1.744, 10.884, 4.500, 20.898, 5.850, 9.757,
+            ],
+            [
+                13.252, 10.059, 10.839, 11.677, 13.128, 18.961, 5.694, 6.950, 23.429, 12.537,
+                4.062, 11.914, 15.748, 11.503, 10.105, 5.111, 5.542, 6.101, 3.127, 11.904,
+            ],
+            [
+                12.565, 2.914, 4.974, 6.387, 1.390, 15.674, 5.257, 12.952, 7.846, 13.107, 7.134,
+                2.016, 5.833, 2.749, 6.284, 4.663, 14.468, 7.308, 4.810, 9.415,
+            ],
+            [
+                12.336, 17.469, 16.363, 13.817, 12.297, 14.453, 17.218, 18.825, 8.367, 7.901,
+                13.211, 13.759, 7.635, 2.873, 13.056, 4.723, 11.756, 8.169, 1.648, 14.419,
+            ],
+        ]
+        .iter()
+        .map(|runde| runde.iter().copied().map(msf).collect())
+        .collect()
+    }
+
+    #[test]
+    fn l9_haelt_die_neue_fassung_in_allen_fuenf_gemessenen_runden() {
+        let zusage = l9_zusage(l9_abnahmereihe());
+
+        // Erste Haelfte: der Anteil im ersten Bild. Runde 2 und Runde 5 liegen
+        // mit 17 von 20 genau auf den geforderten 85 Prozent und halten damit.
+        assert_eq!(
+            zusage.im_bild(),
+            Some(vec![(18, 20), (17, 20), (18, 20), (20, 20), (17, 20)])
+        );
+        assert_eq!(
+            zusage.anteile_im_bild(),
+            Some(vec![90.0, 85.0, 90.0, 100.0, 85.0])
+        );
+
+        // Zweite Haelfte: der groesste Einzelwert je Runde, in Bildlaengen.
+        // Keiner erreicht zwei, also erreicht jede Eingabe das zweite Bild.
+        let hoechstwerte = zusage
+            .hoechstwerte_in_bildern()
+            .expect("L9 nimmt ueber den Anteil ab");
+        for (nummer, (gemessen, groesster_wert)) in hoechstwerte
+            .iter()
+            .zip([19.153, 20.913, 23.429, 15.674, 18.825])
+            .enumerate()
+        {
+            let erwartet = msf(groesster_wert).as_secs_f64() / ein_bild().as_secs_f64();
+            assert!(
+                (gemessen - erwartet).abs() < 1e-9,
+                "Runde {}: {gemessen} statt {erwartet} Bildlaengen",
+                nummer + 1
+            );
+            assert!(
+                *gemessen < 2.0,
+                "Runde {}: {gemessen} Bildlaengen reissen die Obergrenze",
+                nummer + 1
+            );
+        }
+
+        assert_eq!(zusage.gehalten_in(), Some((5, 5)));
+        assert_eq!(zusage.immer_gehalten(), Some(true));
+    }
+
+    #[test]
+    fn dieselbe_reihe_verfehlt_das_ungesenkte_mass() {
+        // Bis zum 260807-0832 nahm L9 gegen dasselbe Mass ab wie L1. Nur die
+        // vierte Runde haelt es; genau daran haengt der Nutzerentscheid.
+        let zusage = anteilszusage(l9_abnahmereihe());
+
+        assert_eq!(zusage.gehalten_in(), Some((1, 5)));
+        assert_eq!(zusage.immer_gehalten(), Some(false));
+        assert_eq!(urteil(&zusage), "VERFEHLT, gehalten in 1 von 5 Runden");
+    }
+
+    #[test]
+    fn eine_eingabe_ueber_zwei_bildlaengen_reisst_l9_trotz_gehaltenem_anteil() {
+        // Ein erfundener Fall, den die vorliegende Reihe nicht enthaelt: der
+        // Anteil liegt mit 19 von 20 weit ueber den geforderten 85 Prozent, ein
+        // einzelner Wert liegt aber jenseits des zweiten Bildes. Nach der neuen
+        // Fassung ist die Runde damit verfehlt.
+        let mut ueber = vec![ms(8); 19];
+        ueber.push(ein_bild() * 2 + Duration::from_nanos(1));
+        let zusage = l9_zusage(vec![ueber]);
+        assert_eq!(zusage.im_bild(), Some(vec![(19, 20)]));
+        assert_eq!(zusage.gehalten_in(), Some((0, 1)));
+
+        // Genau zwei Bildlaengen halten noch: C8 sagt "spaetestens das zweite
+        // Bild", nicht "vor dem zweiten Bild".
+        let mut knapp = vec![ms(8); 19];
+        knapp.push(ein_bild() * 2);
+        assert_eq!(l9_zusage(vec![knapp]).immer_gehalten(), Some(true));
+
+        // Und die erste Haelfte bleibt scharf: vier verpasste Bilder sind
+        // 80 Prozent und damit unter den geforderten 85.
+        let mut vier_verpasst = vec![ms(8); 16];
+        vier_verpasst.extend(vec![ein_bild() + Duration::from_nanos(1); 4]);
+        assert_eq!(l9_zusage(vec![vier_verpasst]).gehalten_in(), Some((0, 1)));
+    }
+
     #[test]
     fn das_perzentilmass_bleibt_unberuehrt() {
         let zusage = Zusage {
@@ -2077,6 +2303,7 @@ mod tests {
         // deshalb auch nicht ausgewiesen.
         assert_eq!(zusage.im_bild(), None);
         assert_eq!(zusage.schlechtester_anteil(), None);
+        assert_eq!(zusage.hoechstwert_in_bildern(), None);
     }
 
     #[test]
@@ -2100,10 +2327,23 @@ mod tests {
         );
         assert_eq!(
             Abnahmemass::AnteilImBild {
-                bildlaenge: ein_bild()
+                bildlaenge: ein_bild(),
+                mindestanteil_prozent: 95,
+                obergrenze_bilder: None,
             }
             .beschreibung(),
             ">= 95 % im Bild"
+        );
+        // L9 traegt zwei Haelften, und die Zeile nennt beide. Nur den Anteil zu
+        // nennen hiesse, das Urteil auf halber Grundlage auszuweisen.
+        assert_eq!(
+            Abnahmemass::AnteilImBild {
+                bildlaenge: ein_bild(),
+                mindestanteil_prozent: 85,
+                obergrenze_bilder: Some(2),
+            }
+            .beschreibung(),
+            ">= 85 %, <= 2 Bilder"
         );
         assert_eq!(Abnahmemass::Keine.beschreibung(), "keine");
     }

@@ -18,9 +18,11 @@
 //! Kein Sonderfall, keine Ausnahme. Jeder Auftrag laeuft auf einem eigenen
 //! Arbeitsfaden, der Fortschritt und uebersprungene Eintraege ueber einen Kanal
 //! meldet und ueber ein [`AtomicBool`](std::sync::atomic::AtomicBool)
-//! abgebrochen wird. Damit haelt die Zusage L9 ("keine Eingabe wartet laenger
-//! als 16 ms waehrend einer Stapeloperation") strukturell und nicht durch
-//! Sorgfalt.
+//! abgebrochen wird. Damit haelt die Zusage L9 strukturell und nicht durch
+//! Sorgfalt. Sie lautet seit dem 260807-0832: waehrend einer laufenden Kopie
+//! erreicht jede Eingabe spaetestens das zweite Bild, und mindestens 85 Prozent
+//! erreichen das erste. (Bis dahin stand hier "keine Eingabe wartet laenger als
+//! 16 ms"; diese Fassung ist seit dem 260803-1810 ueberholt.)
 //!
 //! # Drei Dinge, die dieses Modul bewusst nicht selbst tut
 //!
