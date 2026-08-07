@@ -1,76 +1,66 @@
 # Portfolio
 
-**Generated:** 260807-1129 (by playmaker session 260807-1129-playmaker-direct-dispatch)
+**Generated:** 260807-2125 (by playmaker session 260807-2125-playmaker-direct-dispatch)
 **Domain bias:** code
 
 ## Active (_t_)
 
 (keiner)
 
-Kein Circle-Datensatz trägt die Marke `_t_`, und `fusion-workbench/.active-circle` fehlt. Beides zusammen ist der reguläre Zustand nach einem Abschluss und keine Störung. Die Runde 1 wurde am 260807-1035 mit beschränktem Abschluss geschlossen, und der Zeiger wurde dabei gelöscht.
+Kein Circle-Datensatz trägt die Marke `_t_` für aktiv, und `fusion-workbench/.active-circle` fehlt. Beides zusammen ist der reguläre Zustand nach einem Abschluss und keine Störung. Die Runde 1 wurde am 260807-1035 mit beschränktem Abschluss geschlossen, und der Zeiger wurde dabei gelöscht.
 
 ## Anticipated (_a_) — ranked
 
-**Recommended next:** `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — der einzige nicht abgeschlossene Circle; seine Voraussetzungen aus der Runde 1 stehen und sind am Code belegt, und nur ein offener Entscheidungsdatensatz bindet ihn.
+**Recommended next:** `260807-2116-eingebauter-editor-mit-textmarken` — der Nutzer hat den Editor am 260807-1930 als nächste Runde gewählt und den Circle dafür am 260807-2116 anlegen lassen.
 
-**Die Rangfolge hat ein Element.** Nach dem Abschluss der Runde 1 ist dieser Circle der einzige vorgesehene im Portfolio. Eine Reihenfolge mit einem Eintrag sagt nichts über relative Reife, und sie behauptet es hier auch nicht. Die Empfehlung steht auf den absoluten Signalen des Circles.
+**Die Rangfolge hat seit dem letzten Lauf ein zweites Element**, und die beiden Signale zeigen in verschiedene Richtungen. Die Gewichtung `code` bevorzugt vorgesehene Circles mit wenigen unbeantworteten Fragen; nach diesem Maß läge der Web-Betrachter vorn, mit einem zitierten offenen Entscheidungsdatensatz gegen vier beim Editor. Die Übergabe `shared/history/260807-1930-uebergabe-an-die-editor-runde.md` hält dagegen eine ausdrückliche Wahl des Nutzers fest: der Editor ist die nächste Runde, und vom Web-Betrachter sagt dasselbe Dokument, er sei "nicht der gewählte nächste Schritt". Eine festgehaltene Wahl beantwortet die Frage, welcher Circle gewollt ist; der Zählwert beantwortet nur, welcher weniger Klärung braucht. Die Rangfolge folgt der Wahl und benennt den Zählwert daneben.
 
-### 1. `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
+### 1. `260807-2116-eingebauter-editor-mit-textmarken`
+
+**Directive:** KRK öffnet Text, Code und Markdown in einem eingebauten Editor, der als vierter Fokusbereich neben Lesezeichenleiste, den beiden Dateifenstern und dem Vorschaufenster steht und über die freigehaltene Taste F4 erreichbar ist. Er trägt eine Rohansicht und eine Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen, die als Lesezeichen neben den Ordnermarken in `bookmarks.toml` stehen.
+
+**Abhängigkeiten:** eine, `260802-0842-krk-mac-dateimanager-editor-git`, beschränkt abgeschlossen (`_b_`) am 260807-1035. Damit ist die Vorbedingung nach der Rangheuristik gekennzeichnet und nicht erfüllt, denn als erfüllt zählt allein der kohärente Abschluss (`_c_`).
+
+**Warum er vorn steht.** Der Nutzer hat die Reihenfolge selbst festgelegt, und zwar zweimal an einem Tag: in der Übergabe vom 260807-1930 als Aussage und am 260807-2116 als Handlung, mit dem Anlegen dieses Circles über `/fusion:direct`. Die sechs Bauteile, die der Circle laut seinem Grounding von der Runde 1 erbt, liegen auf der Platte und sind am Code geprüft: die F4-Reservierung in `resources/default-keymap.toml:130-137`, die Bereichsaufzählung in `crates/krk-ui/src/fenstermodell.rs:48-70`, die Lesezeichenliste in `crates/krk-core/src/ablage/lesezeichen.rs`, die vier Ablagedateien in `crates/krk-core/src/ablage/pfade.rs`, die Aufteilung der Fensterzeile in `crates/krk-ui/src/appkit/aufteilung.rs` und die Statuszeile in `crates/krk-ui/src/appkit/statuszeile.rs`.
+
+**Was er an Klärung mitbringt.** Vier offene Entscheidungsdatensätze stehen in seinem Grounding, und nur einer bindet vor dem ersten Planschritt: `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` fragt, was die Formatansicht bei Text, bei Code und bei Markdown zeigt, führt drei Möglichkeiten und empfiehlt die dritte, eine schreibgeschützte Leseansicht für alle drei Dateitypen. Die drei anderen ordnet der Circle selbst als zu prüfen ein: die Verfügbarkeitsprüfung für macOS-26-Schnittstellen, der Auffrischungsaufschub und das Überleben der Markierung. Dazu kommen vier eigene Fragen für die Klärungsrunde bei der Aktivierung, von der Herkunft der Datei über den Umgang mit ungespeicherten Änderungen bis zu der Frage, ob eine Textmarke an eine Zeilennummer oder an einen Textinhalt gebunden ist.
+
+**Der schärfste Einwand gegen eine sofortige Aktivierung** ist ein offener Defekt am Zugangsweg. `shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md` hält fest, dass am laufenden Bündel `cmd+y` und `shift+cmd+y` nicht wirken, `f3` dagegen schon. Befehl und Empfänger sind laut Defekt in Ordnung; der Fehlschlag liegt auf dem Weg vom Tastendruck zum Nachschlagen und trifft nur die Formen mit Zusatztaste. Ein Fokusbefehl für den Editor mit Zusatztaste liefe in denselben Fehler. Die beiden im Defekt genannten Verdächtigen sind nicht gemessen.
+
+### 2. `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
 
 **Directive:** KRK zeigt eine Web-Adresse in einem eigenen Betrachter im Vorschaufenster an, statt sie an den Systembrowser abzugeben. Bedient wird er über die Tastatur, mit Sprungmarken auf jedem sichtbaren Link.
-**Dependencies:** ein Vorgänger, `260802-0842-krk-mac-dateimanager-editor-git`, beschränkt abgeschlossen (`_b_`).
-**Offene Entscheidungen im Grounding:** eine bindende, vom Circle selbst als Schlussfolgerung eingeordnet.
-**Offene Fragen im eigenen Datensatz:** drei, Eingabe für die Klärungsrunde bei der Aktivierung.
 
-Die Voraussetzungen aus der Runde 1 sind erfüllt, am Code geprüft und nicht am Marker. Der Datensatz nennt zwei zeitliche Bindungen, die Schritte S13 und S19, und schreibt: "Es kann erst geplant werden, wenn beide stehen." Der Plan `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md` trägt `**Status:** Complete` bei 38 von 38 Schritten, und der Abgleich vom 260807-1022 hat sie am Code belegt. Die vier Bauteile, die dieser Circle laut seinem Grounding erbt, liegen auf der Platte und wurden für diesen Lauf einzeln geprüft: die Auswertung der Zwischenablage in `crates/krk-core/src/zwischenablage.rs`, das Vorschaufenster in `crates/krk-ui/src/appkit/vorschau.rs` mit der Tableiste in `crates/krk-ui/src/appkit/tableiste.rs`, die Statuszeile in `crates/krk-ui/src/appkit/statuszeile.rs` und der Befehl `zwischenablage_springen` auf `opt+cmd+g` in `resources/default-keymap.toml`.
+**Abhängigkeiten:** dieselbe eine, `260802-0842-krk-mac-dateimanager-editor-git`, mit demselben Kennzeichen wegen des beschränkten Abschlusses.
 
-Ein einziger offener Entscheidungsdatensatz bindet den Circle. `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` fragt, wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt. Der Circle ordnet diese Bindung selbst als Schlussfolgerung ein und nicht als geprüfte Tatsache. Für die Gewichtung `code`, die Circles mit wenigen unbeantworteten Fragen bevorzugt, ist ein einzelner Datensatz ein guter Wert. Die drei projektweit offenen Fragen zu Git, Editor-Formatansicht und Code-SDK berühren diesen Circle nicht, und von den vier weiteren offenen Fragen im Circle-Speicher der Runde 1 bindet ihn keine.
-
-Gegen eine sofortige Aktivierung steht die Art des Abschlusses, an dem der Circle hängt. Seine einzige Abhängigkeit ist beschränkt geschlossen und nicht kohärent, und die Beschränkung reicht über die dritte offene Frage des Circles in seine Grundlage hinein. Der Abschnitt `## Warnings` unten führt den Befund aus.
+Nach der reinen Zählung offener Fragen ist dieser Circle der reifere der beiden: sein Grounding zitiert einen einzigen offenen Entscheidungsdatensatz, die Verfügbarkeitsprüfung für macOS-26-Schnittstellen, und ordnet die Bindung selbst als Schlussfolgerung und nicht als geprüfte Aussage ein. Der Nutzer hat ihn dennoch zurückgestellt. Sein Datensatz trägt bereits einen Abschnitt `## Parent grounding stale` vom Lauf 260807-1042, der zwei Stellen benennt, an denen die Beschränkung der Runde 1 in ihn hineinreicht.
 
 ## Recently closed (_c_ / _b_)
 
-### `260802-0842-krk-mac-dateimanager-editor-git` — beschränkter Abschluss (`_b_`), 260807-1035
+Ein Circle ist geschlossen; die Vorlage sieht bis zu fünf vor.
 
-Die Runde 1 hat das Navigator-Gerüst gebaut, und alle 38 Planschritte sind am Code belegt. Beschränkt ist der Beleg der Zeitzusagen: sieben der zehn stehen auf der Abnahmereihe `messungen/260805-2207-MacBookPro15-1-abnahme.txt` vom 260805-2207, und drei spätere Commits haben Wege berührt, die genau diese Zusagen messen. Der Artefakt der Beschränkung ist die Einsicht, dass eine Messreihe an jedem Commit altert, der einen gemessenen Pfad berührt, ohne es selbst zu sagen. Die Nachholarbeit ist ein Abnahmelauf am gebauten Bündel, der KRK im Vordergrund und damit den Nutzer verlangt.
+- `260802-0842-krk-mac-dateimanager-editor-git` — beschränkter Abschluss (`_b_`), 260807-1035. Alle 38 Planschritte sind am Code belegt, aber sieben der zehn Zeitzusagen standen beim Abschluss noch auf einer Messreihe, die drei spätere Commits gealtert hatten; das Gelernte ist, dass eine Messreihe an jedem Commit altert, der einen gemessenen Pfad berührt, und es nicht selbst sagt.
 
 ## Archived (_s_ / _d_)
 
-(keine)
+(keiner)
 
-Kein Circle-Datensatz trägt `_s_` oder `_d_`.
+Kein Circle-Datensatz trägt `_s_` für überholt oder `_d_` für zurückgestellt.
 
 ## Warnings
 
-- `parent-grounding-stale: parent=260804-0933-eingebauter-web-betrachter-im-vorschaufenster child=260802-0842-krk-mac-dateimanager-editor-git` — die dritte offene Frage des vorgesehenen Circles, "Bekommt der Betrachter eine eigene Zeitzusage?", leitet eine mögliche elfte Zusage aus den zehn bestehenden ab. Zwei davon sind für einen Betrachter im Vorschaufenster die naheliegenden Bezugsgrößen, und beide gehören zum ungemessenen Teil: L5, der Tabwechsel mit 50 ms, und L7, die Vorschau mit 100 ms. Die alternden Commits treffen diese Wege nachweislich, `9a47c4a` vom 260807-0933 über `crates/krk-ui/src/kommandos/fokus.rs` und `crates/krk-ui/src/fenstermodell.rs`, `5d7e299` vom 260807-0819 über `crates/krk-ui/src/tabs.rs`. Der Abschnitt `## Parent grounding stale` steht seit dem Lauf 260807-1042 im Datensatz des vorgesehenen Circles.
+**1. Beide vorgesehenen Circles hängen an einem beschränkt abgeschlossenen Vorgänger.** `260802-0842-krk-mac-dateimanager-editor-git` trägt `_b_` und nicht `_c_`. Nach der Rangheuristik zählt allein der kohärente Abschluss als erfüllte Vorbedingung, deshalb tragen beide Kandidaten dasselbe Kennzeichen. Es blockiert keinen von beiden. Beim Web-Betrachter reicht die Beschränkung inhaltlich in den Circle hinein, dokumentiert in seinem eigenen Abschnitt `## Parent grounding stale`; beim Editor hat der Nutzer die Restarbeit der Runde 1 ausdrücklich ausgeklammert und den Preis im Grounding benannt.
 
-- `parent-grounding-stale: der Artefakt der Beschränkung ist an den vorgesehenen Circle adressiert` — die `## Closure note` der Runde 1 schließt mit dem Satz: "Eine spätere Runde, die Zeitzusagen führt, braucht dafür eine Regel statt einer Nachfrage." Ob dieser Circle eine Zeitzusage führt, entscheidet seine eigene dritte Frage. Fällt die Antwort auf ja, ist der Artefakt eine bindende Eingabe für den Aktivierungs-Spec.
+**2. Fünf offene Defekte liegen in einem terminalen Circle und haben damit keinen Bearbeiter.** Unter `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/` tragen fünf Dateien den Marker `_o_`: der einmal hängengebliebene Sitzungslauf bei L6 (260806-1304), die drei Aufrufer von `eintrag_waehlen`, die den Auswahlversuch wegwerfen (260807-0219), die unvollständige Meldung zur Bündelkennung (260807-0930), der Messstrecken-Defekt, den der Plan an zwei Stellen noch als offen führt (260807-1022), und die zweiundzwanzig Verweise mit überholtem Zustandsmarker (260807-1022). Ein terminaler Circle nimmt keine Arbeit mehr auf. Wer einen dieser Defekte behandeln will, muss ihn in einen lebenden Circle oder in den gemeinsamen Speicher holen. Der Playmaker verschiebt keine Defekte; die Entscheidung liegt beim Nutzer.
 
-- `dependency-not-coherent: 260804-0933-eingebauter-web-betrachter-im-vorschaufenster → 260802-0842-krk-mac-dateimanager-editor-git` — die einzige Abhängigkeit des vorgesehenen Circles ist beschränkt abgeschlossen (`_b_`) und nicht kohärent (`_c_`). Nach der Rangheuristik zählt allein `_c_` als erfüllte Vorbedingung. Inhaltlich trägt das Kennzeichen hier, siehe die beiden Befunde oben.
+**3. `CLAUDE.md` führt den L9-Defekt als offen, geschlossen ist er seit dem 260807-1935.** Zeile 43 zitiert `shared/issues/260807-1748_o_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md` und schreibt "Die Ursache der Verschlechterung ist offen" sowie "der Spec sieht deshalb grüner aus, als die Anwendung ist". Auf der Platte trägt die Datei den Marker `_c_`, und ihre Resolved-Zeile hält fest: der Nutzer hat die Einbuße am 260807-1935 angenommen, die Zusage steht bei 65 Prozent im ersten Bild und höchstens zwei Bildlängen, der Abnahmelauf gilt gegen diese Fassung als gehalten, und die Ursache wird nicht weiter verfolgt. Zitat und Aussage in `CLAUDE.md` sind damit beide überholt.
 
-- `stale-path-citations: 260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — vier Zitate im Abschnitt `## Dependencies` zeigen auf Pfade oder Marker, die es so nicht mehr gibt: Zeile 100 auf `planning/260802-1036_o_spec-navigator-geruest.md` (ist `_c_`), Zeile 101 auf `decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md` (ist `_i_`), Zeile 102 auf `260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` (ist `_b_circle.md`), Zeile 106 auf `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (ist `_c_`). Der Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` führt allein Zeile 101. Die drei übrigen sind ihm entgangen, weil sein Abgleich um 260807-1022 lief und damit vor der Umbenennung von 260807-1035, und weil sein Suchmuster `YYMMDD-HHMM_x_name.md` die Form `_t_circle.md` ohnehin nicht erfasst. Der Playmaker berichtigt keine Zitate; ob der Defekt erweitert wird, entscheidet der Nutzer.
+**4. Der Web-Betrachter trägt einen überholten Aktivierungsvorschlag.** Sein Abschnitt `## Activation proposal` vom 260807-1042 nennt ihn "den einzigen nicht abgeschlossenen Circle im Portfolio". Seit dem 260807-2116 gibt es einen zweiten. Der Playmaker schreibt nur an, er überschreibt nicht; maßgeblich ist die Rangfolge in dieser Datei.
 
-- `stale-path-citations: CLAUDE.md` — **neu in diesem Lauf.** `CLAUDE.md:9` verweist auf `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`. Diesen Pfad gibt es seit dem 260807-1035 nicht mehr; der Datensatz heißt `_b_circle.md`. `CLAUDE.md:41` beschreibt die Runde 1 im selben Zug als laufend ("Für den Rundenabschluss fehlt allein ein frischer Abnahmelauf am gebauten Bündel"), und die Runde ist genau deswegen beschränkt abgeschlossen. Beide Stellen zusammen stellen einen abgeschlossenen Circle als aktiv dar, und `CLAUDE.md` ist die Datei, die jede Sitzung als erstes liest. Der Defekt zu den überholten Zustandsmarkern deckt die erste Stelle nicht ab, weil sein Suchmuster die Form `_t_circle.md` nicht erfasst; er führt aus `CLAUDE.md` allein Zeile 17.
+**5. Ein offener Entscheidungsdatensatz zitiert einen Pfad, den es nicht mehr gibt.** `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` führt unter `**Cross-references:**` den Pfad `circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`. Der Datensatz dieses Circles heißt seit dem 260807-1035 `_b_circle.md`. Der Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` beschreibt diese Fehlerklasse und den Weg über die Sternform `_*_`; ob er diese Stelle führt, ist ungeprüft. Der Playmaker berichtigt keine Zitate.
 
-- `issue-count-overstated: 260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker` — der Defekt zählt 22 Stellen, davon sechs in `portfolio.md`. Diese sechs sind seit der Neuerzeugung vom 260807-1042 erledigt, und dieser Lauf hält sie erledigt; der Defekt sagt das selbst voraus. Offen sind noch 16 Stellen, davon zehn im Datensatz der Runde 1. Der Playmaker ändert keine Defektdatensätze, deshalb steht die Zahl im Datensatz weiter auf 22.
+**Keine Abhängigkeitszyklen.** Der gerichtete Graph über die nicht terminalen Circles hat zwei Knoten und keine Kante zwischen ihnen. Beide Kanten zeigen auf den terminalen Vorgänger und damit aus dem Graphen heraus. Der Editor-Circle schreibt in seinem Abschnitt `## Dependencies` ausdrücklich, der Web-Betrachter sei keine Abhängigkeit.
 
-**Keine Abhängigkeitszyklen.** Geprüft wurde der gerichtete Graph über die nicht-terminalen Circles, und das ist nach dem Abschluss der Runde 1 genau einer. Sein einziger ausgehender Verweis zeigt auf einen terminalen Circle, der als Knoten nicht mitzählt. Ein Zyklus braucht mindestens zwei Knoten mit gegenläufigen Kanten; hier gibt es einen Knoten und keine Kante innerhalb des Graphen.
+**Keine neue Kennzeichnung wegen gealterter Grundlage.** Der Lauf hat geprüft, ob der beschränkte Abschluss vom 260807-1035 die Grundlage eines nicht terminalen Circles veralten lässt. Beim Web-Betrachter steht die Kennzeichnung seit dem Lauf 260807-1042 und wird nicht wiederholt. Beim Editor-Circle entfällt sie: sein Grounding ist am 260807-2116 und damit nach dem Abschluss geschrieben, zitiert die Abschlussnotiz wörtlich und trägt den Abschnitt `### Was die Ausklammerung der Messreihen kostet`, der den Preis der Beschränkung selbst benennt. Eine Kennzeichnung "deine Grundlage könnte veraltet sein" wäre hier sachlich falsch.
 
-**Keine Zeigerfehler.** `fusion-workbench/.active-circle` fehlt, und kein Datensatz trägt `_t_`. Diese Kombination ist der reguläre Zustand nach einem Abschluss und löst keine Meldung aus.
-
----
-
-## Details
-
-| Marke | Bedeutung | Anzahl |
-|---|---|---|
-| `_a_` | vorgesehen | 1 |
-| `_t_` | aktiv | 0 |
-| `_c_` | geschlossen-kohärent | 0 |
-| `_b_` | beschränkt abgeschlossen | 1 |
-| `_s_` | überholt | 0 |
-| `_d_` | zurückgestellt | 0 |
-
-Offene Entscheidungen: 8 insgesamt, davon 5 im Circle-Speicher der Runde 1 und 3 im geteilten Speicher. Offene Defekte: 5, alle im Circle-Speicher der Runde 1, dazu einer zurückgestellt (`_d_`). Pläne: 2, beide geschlossen (`_c_`); der geteilte Planungsspeicher ist leer. `tasklist.md` existiert nicht.
-
-Dieser Lauf hat keinen Abschnitt in einen Circle-Datensatz geschrieben. Der Zustand des Portfolios ist seit dem Lauf 260807-1042 unverändert, und die Abschnitte `## Parent grounding stale` und `## Activation proposal` in `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md` stammen von jenem Lauf und gelten weiter. Ein zweiter, inhaltsgleicher Anbau hätte den Datensatz nur verdoppelt. Sitzungshistorie dieses Laufs: `shared/history/260807-1129-playmaker-direct-dispatch.md`.
+**Kein Zeigerproblem.** `.active-circle` fehlt, und kein Datensatz trägt `_t_`. Die vier Fehlbedingungen aus der Bestandsaufnahme (verwaister Zeiger, Zeiger auf einen nicht aktiven Circle, mehr als ein aktiver Circle, fehlender Zeiger bei vorhandenem aktivem Circle) treffen alle nicht zu.

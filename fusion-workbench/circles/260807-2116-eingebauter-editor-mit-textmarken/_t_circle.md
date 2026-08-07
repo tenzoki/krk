@@ -144,3 +144,27 @@ Der zweite vorgesehene Circle, `260804-0933-eingebauter-web-betrachter-im-vorsch
 ## Turn log
 
 (noch keiner)
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260807-2125
+**Playmaker-Lauf:** 260807-2125-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+
+Dieser Circle ist der empfohlene nächste Kandidat, und die Empfehlung steht auf einer festgehaltenen Wahl des Nutzers, nicht auf der Rangheuristik. Die Übergabe `shared/history/260807-1930-uebergabe-an-die-editor-runde.md` schreibt in ihrer Anlasszeile: der Nutzer hat die Runde 1 abgeschlossen und als nächste Runde den Editor gewählt. Dasselbe Dokument sagt vom zweiten vorgesehenen Circle, dem Web-Betrachter, ausdrücklich, er sei "nicht der gewählte nächste Schritt". Der Nutzer hat die Wahl anschließend ausgeführt, indem er diesen Circle am 260807-2116 über `/fusion:direct` anlegen ließ.
+
+**Die Heuristik der Gewichtung `code` sagt das Gegenteil, und der Playmaker unterschlägt es nicht.** Sie bevorzugt vorgesehene Circles mit wenigen unbeantworteten Fragen. Dieser Circle zitiert in seinem `## Grounding snapshot` vier offene Entscheidungsdatensätze, der Web-Betrachter einen. Die vier sind `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`, `.../260807-0010_o_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md` und `.../260807-0020_o_soll-die-markierung-eine-auffrischung-ueberleben.md`. Alle vier tragen den Marker `_o_` auf der Platte, geprüft am 260807-2125. Nur die erste bindet nach dem Grounding dieses Circles vor dem ersten Planschritt; die übrigen drei ordnet der Circle selbst als zu prüfen und nicht als angenommen ein.
+
+Eine festgehaltene Nutzerwahl wiegt schwerer als ein Zählwert über Entscheidungsdatensätze. Der Zählwert ist ein Stellvertreter für die Frage, welcher Circle reif ist; die Wahl beantwortet die Frage, welcher Circle gewollt ist. Wo beide auseinandergehen, benennt der Playmaker den Unterschied und folgt der Wahl.
+
+**Die geerbten Bauteile liegen auf der Platte, geprüft und nicht angenommen.** Die F4-Reservierung steht in `resources/default-keymap.toml:130-137` als Funktion `bearbeiten` mit leerer Tastenliste und dem Feld `reserviert_fuer = "editor"`. Die Aufzählung `Bereich` mit ihren vier Varianten und der Konstanten `ALLE: [Bereich; 4]` steht in `crates/krk-ui/src/fenstermodell.rs:48-70`. Die Lesezeichenliste liegt in `crates/krk-core/src/ablage/lesezeichen.rs`, die Ablagepfade in `crates/krk-core/src/ablage/pfade.rs`, die Aufteilung der Fensterzeile in `crates/krk-ui/src/appkit/aufteilung.rs` und die Statuszeile in `crates/krk-ui/src/appkit/statuszeile.rs`. Sechs von sechs im Grounding genannten Bauteilen sind damit belegt.
+
+**Was gegen eine sofortige Aktivierung spricht, in absteigender Schärfe.**
+
+Der offene Defekt `shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md` trifft den Weg, über den dieser Circle seinen Editor erreichbar machen will. Am laufenden Bündel wirken `cmd+y` und `shift+cmd+y` nicht, `f3` wirkt. Der Defekt hält fest, dass Befehl und Empfänger belegt in Ordnung sind und der Fehlschlag auf dem Weg vom Tastendruck zum Nachschlagen liegt, und zwar nur für die Formen mit Zusatztaste. Ein Fokusbefehl für den Editor mit Zusatztaste träfe denselben Weg. Der Defekt nennt zwei ungeprüfte Verdächtige und ist nicht gemessen.
+
+Die einzige Abhängigkeit, `260802-0842-krk-mac-dateimanager-editor-git`, ist beschränkt abgeschlossen (`_b_`) und nicht kohärent (`_c_`). Nach der Rangheuristik zählt allein `_c_` als erfüllte Vorbedingung. Inhaltlich trägt das Kennzeichen hier weniger weit als beim Web-Betrachter, weil dieser Circle die Restarbeit der Runde 1 auf Weisung des Nutzers vollständig ausklammert und den Preis dafür selbst benennt, im Abschnitt `### Was die Ausklammerung der Messreihen kostet`.
+
+Die erste offene Frage, was die Formatansicht bei Text, bei Code und bei Markdown zeigt, gehört nach dem Grounding vor den ersten Planschritt. Der Datensatz führt drei Möglichkeiten und empfiehlt die dritte, die Formatansicht als schreibgeschützte Leseansicht für alle drei Dateitypen. Die vier offenen Fragen des Grounding-Abschnitts bleiben die erste Arbeit nach dem Übergang auf aktiv; der Shaper im portfolio-activation-Modus klärt sie mit dem Nutzer, bevor ein Plan entsteht.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über `/fusion:next` oder beim Orchestrator.
