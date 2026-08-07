@@ -723,6 +723,31 @@ fn messung_unmoeglich(groesse: Sitzungsgroesse, lage: &Sitzungslage) -> Option<S
     }
 }
 
+/// Die Meldung zu einer Auswahl-Vorbereitung, die ins Leere ging.
+///
+/// [`Handlung::Auswaehlen`] waehlt einen Eintrag an seinem Namen; findet die
+/// Oberflaeche ihn in einer **fertig gelesenen** Liste nicht, ist die
+/// Vorbereitung gescheitert. Der naechste Schritt druecke dann auf einen
+/// anderen Eintrag oder auf keinen, die Endbedingung der Messung stuende nie,
+/// und die Zehn-Sekunden-Geduld liefe ab, ohne zu sagen, woran es lag
+/// (`issues/260806-1304_*_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md`).
+///
+/// Dass **kein Lesevorgang mehr laeuft**, steht in der Meldung, weil es der
+/// Unterschied zum gewoehnlichen Weg ist: waehrend eines Lesevorgangs merkt
+/// die Oberflaeche den Namen vor und springt mit dem Abschluss auf ihn, und
+/// dieser Fall ist kein Fehler. Die Zeilenzahl steht dabei, weil sie die
+/// beiden Faelle trennt, in die ein Fehlschlag zerfaellt: eine leere Liste
+/// heisst, der Ordner kam gar nicht an, eine gefuellte, dass der Name in einem
+/// gelesenen Bestand fehlt.
+pub fn auswahl_ohne_eintrag(name: &str, ordner: &Path, zeilen: usize) -> String {
+    format!(
+        "die Vorbereitung sollte {name} in {} auswaehlen, aber der Name steht dort nicht: \
+         die Liste ist fertig gelesen, es laeuft kein Lesevorgang mehr, und sie traegt \
+         {zeilen} Zeilen. Das ist ein Fehler der Strecke und keine langsame Oberflaeche",
+        ordner.display()
+    )
+}
+
 /// Baut die Schrittliste der Sitzungsstrecke.
 ///
 /// Die Reihenfolge folgt der Pruefsitzung: erst die Messungen, die auf der
@@ -866,6 +891,12 @@ pub struct Messlauf {
     bildwiederholrate: Option<isize>,
     /// Nur fuer die beiden Startaufgaben: ob der Zeitpunkt schon gemeldet ist.
     gemeldet: bool,
+    /// Der Grund, aus dem eine ungemessene Vorbereitung gescheitert ist.
+    ///
+    /// Der eine Weg zurueck aus der Oberflaeche: eine [`Handlung`] wird dort
+    /// ausgefuehrt, und dabei kann sie fehlschlagen. Siehe
+    /// [`Messlauf::vorbereitung_gescheitert`].
+    vorbereitungsfehler: Option<String>,
 }
 
 impl Messlauf {
@@ -908,6 +939,7 @@ impl Messlauf {
             sitzungswerte: Sitzungswerte::default(),
             bildwiederholrate: None,
             gemeldet: false,
+            vorbereitungsfehler: None,
         }
     }
 
@@ -916,12 +948,32 @@ impl Messlauf {
         self.bildwiederholrate = Some(hertz);
     }
 
+    /// Nimmt zur Kenntnis, dass eine ungemessene Vorbereitung gescheitert ist.
+    ///
+    /// Eine [`Handlung`] fuehrt die Oberflaeche aus, und nur sie sieht, ob es
+    /// geklappt hat. Der Grund geht hier hinein und kommt am naechsten
+    /// Ausloesetakt als [`Anweisung::Abbruch`] wieder heraus, also ueber
+    /// **denselben** Weg wie jeder andere Abbruch der Strecke; ein zweiter
+    /// Ausstieg in `appkit` entsteht nicht. Der Abbruch faellt damit rund eine
+    /// Zehntelsekunde spaeter als der Fehlschlag statt nach zehn Sekunden
+    /// Geduld, und er faellt, bevor der naechste Schritt eine Taste absetzt.
+    pub fn vorbereitung_gescheitert(&mut self, grund: String) {
+        self.vorbereitungsfehler = Some(grund);
+    }
+
     /// Fragt, was als naechstes zu tun ist.
     ///
     /// Wird vom Ausloesetakt gerufen. Der Zeitpunkt, ab dem gemessen wird, ist
     /// der dieses Aufrufs und damit **vor** dem AppKit-Aufruf, den der Aufrufer
     /// gleich absetzt.
     pub fn naechster_schritt(&mut self, zustand: Zustand) -> Anweisung {
+        // Eine gescheiterte Vorbereitung steht vor jeder Aufgabe und vor jedem
+        // Schritt: sie hat den Zustand nicht hergestellt, auf dem der naechste
+        // Schritt aufsetzt, und ein Schritt darauf misst etwas anderes als
+        // seine Zusage oder kommt gar nicht ans Ziel.
+        if let Some(grund) = &self.vorbereitungsfehler {
+            return Anweisung::Abbruch(grund.clone());
+        }
         // Die Startaufgaben haben keinen Ablauf: sie warten auf die eine
         // Bildgrenze, an der die erste Bildschirmseite steht. Ohne diese Zeile
         // faende der Ausloesetakt eine leere Schrittliste vor und meldete
@@ -2071,6 +2123,68 @@ mod tests {
             vorher,
             &vorschau_da,
             &plan.unterordner
+        ));
+    }
+
+    /// Eine abgewiesene Auswahl bricht ab, statt in die Geduld zu laufen.
+    ///
+    /// Der Fall aus dem Defekt vom 260806: die Vorbereitung vor einer
+    /// L6-Messung waehlt den Unterordner an seinem Namen aus. Geht das ins
+    /// Leere, druecke der naechste Schritt `oeffnen` auf einen anderen Eintrag
+    /// oder auf keinen, und die Zehn-Sekunden-Geduld liefe ab, ohne den Grund
+    /// zu nennen. Geprueft wird die Ebene unter der Aufrufstelle: welcher der
+    /// drei [`crate::appkit::tabelle::Auswahlversuch`] ein Fehlschlag ist,
+    /// entscheidet die Oberflaeche, und dort ist es ohne Fenster nicht
+    /// erreichbar.
+    #[test]
+    fn eine_abgewiesene_auswahl_bricht_den_lauf_ab() {
+        let ordner = Planordner::neu("auswahl-abgewiesen");
+        let plan = ordner.plan();
+        let mut lauf = Messlauf::neu(Aufgabe::Sitzung { plan: plan.clone() });
+        // Bis zur ersten Auswahl-Vorbereitung der L6-Reihe vorspulen.
+        lauf.sitzungsstelle = lauf
+            .sitzungsschritte
+            .iter()
+            .position(|schritt| {
+                matches!(schritt, Sitzungsschritt::Handeln(Handlung::Auswaehlen(_)))
+            })
+            .expect("die L6-Reihe waehlt den Unterordner an seinem Namen");
+        let name = plan
+            .unterordner
+            .file_name()
+            .expect("der Unterordner hat einen Namen")
+            .to_string_lossy()
+            .into_owned();
+        assert_eq!(
+            lauf.naechster_schritt(mit_lage(lage(&ordner))),
+            Anweisung::Handeln(Handlung::Auswaehlen(name.clone()))
+        );
+
+        // Die Oberflaeche meldet den Fehlschlag zurueck.
+        let eltern = ordner.wurzel.clone();
+        lauf.vorbereitung_gescheitert(auswahl_ohne_eintrag(&name, &eltern, 3));
+
+        // Der naechste Takt bricht ab. Ohne die Rueckmeldung stuende hier die
+        // gemessene Taste `oeffnen`, und erst zehn Sekunden spaeter eine
+        // Geduldsmeldung ueber L6.
+        let anweisung = lauf.naechster_schritt(mit_lage(lage(&ordner)));
+        let Anweisung::Abbruch(grund) = anweisung else {
+            panic!("erwartet war ein Abbruch, gekommen ist {anweisung:?}");
+        };
+        assert!(grund.contains(&name), "der Name fehlt in: {grund}");
+        assert!(
+            grund.contains(&eltern.display().to_string()),
+            "der Ordner fehlt in: {grund}"
+        );
+        assert!(
+            grund.contains("kein Lesevorgang"),
+            "der Lesestand fehlt in: {grund}"
+        );
+        // Und er bleibt ein Abbruch: ein Fehlschlag der Vorbereitung geht
+        // nicht dadurch weg, dass der naechste Takt kommt.
+        assert!(matches!(
+            lauf.naechster_schritt(mit_lage(lage(&ordner))),
+            Anweisung::Abbruch(_)
         ));
     }
 

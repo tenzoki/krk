@@ -195,7 +195,7 @@ use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
-use super::tabelle::Dateifenster;
+use super::tabelle::{Auswahlversuch, Dateifenster};
 use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
@@ -2517,7 +2517,15 @@ impl Anwendungsdelegierter {
                     std::process::exit(4);
                 }
             }
-            Anweisung::Handeln(handlung) => self.messhandlung(handlung),
+            // Eine Vorbereitung, die fehlschlaegt, geht in den Messlauf
+            // zurueck; er bricht am naechsten Takt ab. Der Umweg ueber den
+            // Messlauf statt eines `exit` an Ort und Stelle haelt den einen
+            // Abbruchweg der Strecke zusammen.
+            Anweisung::Handeln(handlung) => {
+                if let Err(grund) = self.messhandlung(handlung) {
+                    lauf.borrow_mut().vorbereitung_gescheitert(grund);
+                }
+            }
             Anweisung::Fertig => {
                 lauf.borrow().ausgeben();
                 std::process::exit(0);
@@ -2534,7 +2542,11 @@ impl Anwendungsdelegierter {
     /// Absichtlich als unmittelbare Aufrufe statt ueber die Ereignisschlange:
     /// gemessen wird nur, was C8 zusagt, und eine Vorbereitung auf demselben
     /// Weg stuende der Messung in der Schlange im Weg.
-    fn messhandlung(&self, handlung: Handlung) {
+    ///
+    /// `Err` heisst: die Vorbereitung hat nicht hergestellt, was der naechste
+    /// Schritt voraussetzt. Der Grund geht an den Messlauf zurueck, der
+    /// daraufhin abbricht.
+    fn messhandlung(&self, handlung: Handlung) -> Result<(), String> {
         let aktiv = self.ivars().modell.borrow().aktiv();
         match handlung {
             Handlung::Listenanfaenge => {
@@ -2545,7 +2557,26 @@ impl Anwendungsdelegierter {
                 }
             }
             Handlung::Auswaehlen(name) => {
-                self.dateifenster(aktiv).quelle().eintrag_waehlen(&name);
+                let quelle = self.dateifenster(aktiv).quelle();
+                match quelle.eintrag_waehlen(&name) {
+                    // Gewaehlt: die Auswahl steht auf dem Eintrag. Vorgemerkt:
+                    // es laeuft noch ein Lesevorgang, und die Auswahl springt
+                    // mit seinem Abschluss auf den Namen. Beides ist der
+                    // gewoehnliche Weg und kein Fehlschlag.
+                    Auswahlversuch::Gewaehlt | Auswahlversuch::Vorgemerkt => {}
+                    // Die Liste ist gelesen und kennt den Namen nicht. Der
+                    // Rueckgabewert wurde bis zum 260807 hier verworfen, und
+                    // der Lauf lief danach in die Zehn-Sekunden-Geduld der
+                    // naechsten Messung, die den Fehlschlag nicht benennen
+                    // konnte.
+                    Auswahlversuch::Unbekannt => {
+                        return Err(crate::messmodus::auswahl_ohne_eintrag(
+                            &name,
+                            &quelle.angezeigter_ordner(),
+                            quelle.zeilen(),
+                        ));
+                    }
+                }
             }
             Handlung::AlleMarkieren => {
                 self.dateifenster(aktiv)
@@ -2561,6 +2592,7 @@ impl Anwendungsdelegierter {
                     .ordner_lesen(&pfad, None);
             }
         }
+        Ok(())
     }
 
     /// Der Zustand der Oberflaeche, wie der Messmodus ihn abliest.

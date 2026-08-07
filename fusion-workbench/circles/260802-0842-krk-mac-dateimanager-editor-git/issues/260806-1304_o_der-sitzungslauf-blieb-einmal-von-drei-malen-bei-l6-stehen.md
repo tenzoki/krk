@@ -43,3 +43,69 @@ Strecke und gehört abgebrochen, nicht in eine Zehn-Sekunden-Geduld.
 
 **Aufgefallen bei:** der Gegenmessung zum L5-Tab-Defekt am 260806-1250.
 Adressat: `coder`.
+
+---
+
+## Gebaut am 260807: der Fehlschlag bricht ab, statt verworfen zu werden
+
+**Was jetzt steht.** `Anwendungsdelegierter::messhandlung` liefert ein
+`Result<(), String>` statt nichts. Bei `Handlung::Auswaehlen` entscheidet der
+`Auswahlversuch` darüber: `Gewaehlt` und `Vorgemerkt` sind der gewöhnliche Weg
+und gehen als `Ok` durch — `Vorgemerkt` heißt, es läuft noch ein Lesevorgang
+und die Auswahl springt mit seinem Abschluss auf den Namen, und das ist kein
+Fehler. Allein `Unbekannt`, der endgültige Fehlschlag in einer fertig
+gelesenen Liste, wird zu `Err`. Der Grund geht über
+`Messlauf::vorbereitung_gescheitert` in den Messlauf zurück und kommt am
+nächsten Auslösetakt als `Anweisung::Abbruch` wieder heraus, also über
+denselben Abbruchweg wie jeder andere Abbruch der Strecke; ein zweiter
+Ausstieg in `appkit` entsteht nicht.
+
+**Was der nächste Lauf sieht.** Statt einer Geduldsmeldung über L6 nach zehn
+Sekunden steht rund eine Zehntelsekunde nach dem Fehlschlag:
+
+```
+krk: die Vorbereitung sollte <name> in <ordner> auswaehlen, aber der Name
+steht dort nicht: die Liste ist fertig gelesen, es laeuft kein Lesevorgang
+mehr, und sie traegt <n> Zeilen. Das ist ein Fehler der Strecke und keine
+langsame Oberflaeche. Es wird keine Zahl ausgegeben.
+```
+
+Der Abbruch fällt, **bevor** der Schritt `oeffnen` seine Taste absetzt: die
+Prüfung steht am Kopf von `naechster_schritt`, vor jeder Aufgabe und jedem
+Schritt. Die Zeilenzahl trennt die beiden Fälle, in die ein Fehlschlag
+zerfällt: null Zeilen heißt, der Elternordner kam gar nicht an, eine gefüllte
+Liste, dass der Name in einem gelesenen Bestand fehlt.
+
+**Der zweite Verdacht ist am Programmtext ausgeräumt.** Geprüft wurde die
+Kette `Handlung::AktivLesen` → `Dateifensterquelle::ordner_lesen`
+(`crates/krk-ui/src/appkit/tabelle.rs:604`) → `Tabliste::ordner_setzen`
+(`crates/krk-ui/src/tabs.rs:439`) → `lesen_starten`
+(`crates/krk-ui/src/tabs.rs:581`). Der Warteschritt kann nicht auf dem Stand
+von vor dem Lesevorgang durchlaufen: `ordner_setzen` setzt einen frischen
+`Tabinhalt` mit leerem Modell an die Stelle des alten und `lesen_starten` setzt
+`lesevorgang = Some(...)`, beides **synchron im selben Auslösetakt**, in dem
+`messen_weiter` die Handlung ausführt. Am nächsten Takt, an dem die Bedingung
+`AktivZeigt(eltern)` erstmals geprüft wird, sind damit zwei ihrer drei Teile
+falsch (`zeilen_aktiv == 0` und `liest_aktiv == true`). Und `liest_aktiv` wird
+erst falsch, nachdem `einzug_je_tab` die Meldung `Fertig` gesehen und
+`Ordnermodell::abschliessen` gerufen hat, das die Sichtreihenfolge neu aufbaut
+(`crates/krk-core/src/verzeichnis/modell.rs:218`) — gelesen **und** sortiert,
+bevor die Auswahl kommt. Eine gleichzeitige Auffrischung aus C9 kann den
+Warteschritt nur verzögern, nicht früher durchlassen: sie setzt `liest` auf
+wahr und lässt die alten Zeilen stehen.
+
+**Was zu tun bleibt.** Welcher der beiden Fälle der Abbruch vom 260806 war,
+ist weiter unbeantwortet, und der Defekt bleibt deshalb offen. Die Frage
+beantwortet der nächste vollständige Sitzungslauf von selbst: bricht er mit
+der Meldung oben ab, war es die verworfene Auswahl, und der Ordner und die
+Zeilenzahl in der Meldung sagen, woran sie scheiterte. Läuft er wieder zehn
+Sekunden in die Geduld über L6, war es nicht die Auswahl, und der Verdacht
+richtet sich auf die Messung selbst. Die Strecke verlangt KRK im Vordergrund
+aus einem Terminalfenster; aus dem Hintergrund weist die
+Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab.
+
+**Geändert:** `crates/krk-ui/src/appkit/anwendung.rs` (Aufrufstelle und
+`messhandlung`), `crates/krk-ui/src/messmodus.rs` (`auswahl_ohne_eintrag`,
+`vorbereitungsfehler`, `vorbereitung_gescheitert`, Prüfung am Kopf von
+`naechster_schritt`, Prüfmodul-Test
+`eine_abgewiesene_auswahl_bricht_den_lauf_ab`). `make check` grün.
