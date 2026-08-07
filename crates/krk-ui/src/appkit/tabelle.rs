@@ -89,7 +89,7 @@ use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::navigation::{Bewegung, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
-use crate::tabs::Tabliste;
+use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::blaetter;
 use super::statuszeile::{self, Statuszeile};
@@ -233,21 +233,6 @@ const NAMENSSPALTE: NSInteger = {
     }
     stelle as NSInteger
 };
-
-/// Was beim Auswaehlen eines Eintrags anhand seines Namens herauskam.
-///
-/// Siehe [`DateifensterQuelle::eintrag_waehlen`], die eine Stelle, die eine
-/// Zeile anhand ihres Namens auswaehlt.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Auswahlversuch {
-    /// Der Eintrag stand in der Liste; die Auswahl steht auf ihm.
-    Gewaehlt,
-    /// Es laeuft noch ein Lesevorgang. Die Auswahl springt auf den Eintrag,
-    /// sobald er eintrifft.
-    Vorgemerkt,
-    /// Die Liste ist gelesen und kennt den Namen nicht.
-    Unbekannt,
-}
 
 /// Was mit einem umbenannten Eintrag zu geschehen hat: alter Name, neuer Name.
 ///
@@ -1068,38 +1053,23 @@ impl DateifensterQuelle {
 
     /// Waehlt den Eintrag dieses Namens: jetzt, oder sobald er gelesen ist.
     ///
-    /// **Die eine Stelle, die eine Zeile anhand ihres Namens auswaehlt.** Zwei
-    /// Aufrufer mit derselben Frage und verschiedener Lage: der Sprung aus der
-    /// Zwischenablage (C10, S13) trifft eine Liste, die schon steht, und das
-    /// Anlegen aus C4 eine, deren Lesevorgang gerade erst begonnen hat. Der
-    /// zweite Fall geht ueber die `wunschauswahl` des Tabs, dieselbe, die auch
-    /// die Sitzungswiederherstellung und der Aufstieg aus C2 benutzen; ein
-    /// zweiter Auswahlweg entsteht nicht.
+    /// **Die AppKit-Seite der einen Stelle, die einen Namen zur Auswahl
+    /// macht.** Entschieden wird in [`Tabliste::auswahl_auf_namen`], und dort
+    /// allein: dass ein laufender Lesevorgang den Namen vormerkt, statt eine
+    /// Zeile zu waehlen, steht in dieser einen Methode. Hier bleibt, was ein
+    /// Fenster braucht — die Zeile in der `NSTableView` setzen, sie ins Bild
+    /// blaettern und die Vorschau aus C6 melden, alles ueber
+    /// [`DateifensterQuelle::zeile_setzen`].
     ///
     /// Der Rueckgabewert sagt, welcher der drei Faelle eingetreten ist. Allein
     /// [`Auswahlversuch::Unbekannt`] ist eine Auskunft an den Nutzer wert: der
     /// Name steht in einer fertig gelesenen Liste nicht.
     pub fn eintrag_waehlen(&self, name: &str) -> Auswahlversuch {
-        let zeile = {
-            let tabs = self.ivars().tabs.borrow();
-            let modell = tabs.aktiver().modell();
-            modell
-                .index_von_namen(name)
-                .and_then(|index| modell.zeile_von(index))
-        };
-        if let Some(zeile) = zeile {
+        let versuch = self.ivars().tabs.borrow_mut().auswahl_auf_namen(name);
+        if let Auswahlversuch::Gewaehlt(zeile) = versuch {
             self.zeile_setzen(zeile);
-            return Auswahlversuch::Gewaehlt;
         }
-        // Ein laufender Lesevorgang kennt den Eintrag noch nicht. Der Name
-        // ueberlebt ihn, eine Zeilennummer nicht: sortiert wird erst mit dem
-        // Abschluss.
-        let liest = self.ivars().tabs.borrow().aktiver().liest();
-        if liest {
-            self.ivars().tabs.borrow_mut().wunschauswahl_setzen(name);
-            return Auswahlversuch::Vorgemerkt;
-        }
-        Auswahlversuch::Unbekannt
+        versuch
     }
 
     /// Alle Namen des angezeigten Ordners, auch die ausgeblendeten.
@@ -1109,6 +1079,16 @@ impl DateifensterQuelle {
     /// ausgeblendeter Eintrag belegt seinen Namen genauso wie ein sichtbarer,
     /// und eine Pruefung, die ihn uebersaehe, liesse das Umbenennen erst im
     /// Dateisystem scheitern.
+    ///
+    /// **Waehrend eines laufenden Lesevorgangs ist die Antwort der Bestand des
+    /// vorigen Laufs** — desselben Ordners, einen Augenblick alt. Das ist
+    /// gewollt und keine dritte Sonderfallzeile: die Vorschau des
+    /// Stapel-Umbenennens ist eine Hilfe und nicht die Wahrheit ueber vergebene
+    /// Namen; die haelt das Dateisystem, wie es bei
+    /// [`crate::appkit::anwendung`]s `umbenennen_ausfuehren` ausgeschrieben
+    /// steht. Bis zum 260807 war die Antwort in dieser Spanne eine **leere**
+    /// Liste, weil eine Auffrischung den Bestand vorab wegwarf; ein alter
+    /// Bestand ist dagegen die bessere Naeherung.
     pub fn alle_namen(&self) -> Vec<String> {
         self.ivars()
             .tabs

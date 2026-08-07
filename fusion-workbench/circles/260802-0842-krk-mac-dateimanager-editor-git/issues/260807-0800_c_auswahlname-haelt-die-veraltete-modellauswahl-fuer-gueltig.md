@@ -82,3 +82,6 @@ geschaffen. Keine der zehn Zeitzusagen aus C8 ist berührt.
 Cross-references:
 `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0800_o_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-und-die-auswahl-faellt-danach-ersatzlos.md`,
 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0020_o_soll-die-markierung-eine-auffrischung-ueberleben.md`
+
+---
+Resolved: `Tabinhalt::auswahlname` (`crates/krk-ui/src/tabs.rs`) stellt die `wunschauswahl` vor die Auswahl des Modells. Eine Fallunterscheidung braucht das nicht und bekommt auch keine: die `wunschauswahl` ist genau dann gesetzt, wenn ein Lesevorgang aussteht, weil allein `wunschauswahl_anwenden` sie mit dem Abschluss herausnimmt. Damit ist der Befund dieselbe Antwort wie `260807-0800_c_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-…` und keine zweite Sonderfallzeile. Probe: `eine_zweite_auffrischung_laesst_den_vorgemerkten_namen_stehen` in `crates/krk-ui/src/tabs.rs`; sie schlägt gegen die alte Reihenfolge fehl.

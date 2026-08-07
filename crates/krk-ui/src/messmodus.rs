@@ -2133,7 +2133,7 @@ mod tests {
     /// Leere, druecke der naechste Schritt `oeffnen` auf einen anderen Eintrag
     /// oder auf keinen, und die Zehn-Sekunden-Geduld liefe ab, ohne den Grund
     /// zu nennen. Geprueft wird die Ebene unter der Aufrufstelle: welcher der
-    /// drei [`crate::appkit::tabelle::Auswahlversuch`] ein Fehlschlag ist,
+    /// drei [`crate::tabs::Auswahlversuch`] ein Fehlschlag ist,
     /// entscheidet die Oberflaeche, und dort ist es ohne Fenster nicht
     /// erreichbar.
     #[test]

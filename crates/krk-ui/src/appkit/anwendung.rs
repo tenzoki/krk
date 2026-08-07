@@ -180,7 +180,7 @@ use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
-use crate::tabs::Tabliste;
+use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
@@ -195,7 +195,7 @@ use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
-use super::tabelle::{Auswahlversuch, Dateifenster};
+use super::tabelle::Dateifenster;
 use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
@@ -2307,8 +2307,18 @@ impl Anwendungsdelegierter {
             // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
             // neuen Namen, so wie sie nach dem Anlegen auf dem angelegten
             // Eintrag steht. Der Name kommt aus dem Auftrag selbst und braucht
-            // kein eigenes Feld; scheiterte gerade seine Umbenennung, findet
-            // `eintrag_waehlen` ihn nicht und laesst die Auswahl stehen.
+            // kein eigenes Feld.
+            //
+            // Die Auffrischung eine Zeile darueber laeuft im selben synchronen
+            // Aufruf, ihr Lesevorgang steht also noch aus. `eintrag_waehlen`
+            // merkt den Namen deshalb vor, statt eine Zeile des alten Bestands
+            // zu waehlen — bei einer Umnummerierung nach oben stuende
+            // `neue_namen[0]` dort naemlich schon, und der erste Stapel raeumte
+            // die Auswahl gleich darauf ersatzlos weg
+            // (`issues/260807-0800_*_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-…`).
+            // Scheiterte gerade die Umbenennung auf diesen Namen, findet ihn
+            // der Abschluss des Lesevorgangs nicht, und die Auswahl bleibt
+            // leer, wie C9 es zulaesst.
             Art::UmbenennenImStapel { neue_namen } => {
                 if let Some(erster) = neue_namen.first() {
                     self.dateifenster(vorgang.seite)
@@ -2563,7 +2573,7 @@ impl Anwendungsdelegierter {
                     // es laeuft noch ein Lesevorgang, und die Auswahl springt
                     // mit seinem Abschluss auf den Namen. Beides ist der
                     // gewoehnliche Weg und kein Fehlschlag.
-                    Auswahlversuch::Gewaehlt | Auswahlversuch::Vorgemerkt => {}
+                    Auswahlversuch::Gewaehlt(_) | Auswahlversuch::Vorgemerkt => {}
                     // Die Liste ist gelesen und kennt den Namen nicht. Der
                     // Rueckgabewert wurde bis zum 260807 hier verworfen, und
                     // der Lauf lief danach in die Zehn-Sekunden-Geduld der

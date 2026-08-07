@@ -182,22 +182,38 @@ impl Tabinhalt {
         }
     }
 
-    /// Der Name des ausgewaehlten Eintrags.
+    /// Der Name des ausgewaehlten Eintrags, so weit er tragfaehig ist.
     ///
     /// Solange der Tab noch nicht gelesen ist, steht in `wunschauswahl` der
     /// Name aus der letzten Sitzung. Ihn stehen zu lassen ist der Unterschied
     /// zwischen "die Auswahl ueberlebt einen Neustart" und "die Auswahl
     /// ueberlebt einen Neustart, sofern der Nutzer den Tab vorher angesehen
     /// hat".
+    ///
+    /// **Die `wunschauswahl` steht vor der Auswahl des Modells und nicht
+    /// dahinter.** Eine Fallunterscheidung braucht das nicht, denn sie ist
+    /// genau dann gesetzt, wenn die Auswahl des Modells nicht tragfaehig ist:
+    /// gefuellt wird sie von einem Aufrufer, der einen Namen vormerkt, und
+    /// herausgenommen von [`Tabinhalt::wunschauswahl_anwenden`] mit dem
+    /// Abschluss des Lesevorgangs. Steht sie, steht also ein Lesevorgang aus —
+    /// und dessen erster Stapel raeumt `modell.auswahl()` weg, weil der
+    /// Eintragsindex dem vorigen Lauf gehoert.
+    ///
+    /// Bis zum 260807 stand sie hinten, und das war dasselbe: `leeren` hatte
+    /// das Modell beim Start des Lesevorgangs geraeumt, `auswahl()` war `None`,
+    /// und der Wunsch kam von selbst zum Zug. Seit `5f2e45d` bleibt der alte
+    /// Bestand stehen, und die alte Reihenfolge schrieb einen kurz zuvor
+    /// vorgemerkten Namen mit dem veralteten zu
+    /// (`issues/260807-0800_*_auswahlname-haelt-die-veraltete-modellauswahl-fuer-gueltig.md`).
     fn auswahlname(&self) -> Option<String> {
-        match self.modell.auswahl() {
-            Some(index) => self
-                .modell
-                .eintraege()
-                .get(index as usize)
-                .map(|eintrag| eintrag.name.clone()),
-            None => self.wunschauswahl.clone(),
+        if let Some(name) = &self.wunschauswahl {
+            return Some(name.clone());
         }
+        let index = self.modell.auswahl()?;
+        self.modell
+            .eintraege()
+            .get(index as usize)
+            .map(|eintrag| eintrag.name.clone())
     }
 
     /// Setzt die Auswahl auf den Eintrag mit dem gemerkten Namen.
@@ -218,6 +234,26 @@ impl Tabinhalt {
             self.modell.auswahl_setzen(Some(index as u32));
         }
     }
+}
+
+/// Was daraus geworden ist, die Auswahl auf einen Namen zu setzen.
+///
+/// Erteilt wird der Auftrag von [`Tabliste::auswahl_auf_namen`], der einen
+/// Stelle, die einen Namen zur Auswahl macht.
+///
+/// **Die Zeile reist bei `Gewaehlt` mit.** Sie steht hier nicht, weil dieser
+/// Wert sie beschriebe, sondern weil die Ansicht sie braucht, um die
+/// `NSTableView` nachzuziehen; sie ein zweites Mal auszurechnen hiesse,
+/// dieselbe Frage zweimal zu stellen. Wer sie nicht braucht, uebergeht sie.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Auswahlversuch {
+    /// Der Eintrag stand sichtbar in der gelesenen Liste, in dieser Zeile.
+    Gewaehlt(usize),
+    /// Es steht ein Lesevorgang aus. Der Name ist vorgemerkt; die Auswahl
+    /// springt auf den Eintrag, sobald der Lesevorgang abgeschlossen ist.
+    Vorgemerkt,
+    /// Die Liste ist gelesen und kennt den Namen nicht.
+    Unbekannt,
 }
 
 /// Was ein Einzug am sichtbaren Tab veraendert hat.
@@ -485,23 +521,48 @@ impl Tabliste {
         self.lesen_starten(stelle);
     }
 
-    /// Merkt den Namen vor, auf den die Auswahl des sichtbaren Tabs springt,
-    /// sobald sein Lesevorgang fertig ist.
+    /// Setzt die Auswahl des sichtbaren Tabs auf den Eintrag dieses Namens:
+    /// jetzt, oder sobald er gelesen ist.
+    ///
+    /// **Die eine Stelle, die einen Namen zur Auswahl macht**, und die eine
+    /// Stelle, die dafuer den laufenden Lesevorgang beruecksichtigt. Sie steht
+    /// hier und nicht in der Ansicht, weil hier beides beieinander liegt: der
+    /// Lesevorgang und die `wunschauswahl`, die den Namen ueber ihn hinweg
+    /// traegt. Die Ansicht bekommt bei `Gewaehlt` die Zeile und setzt sie in
+    /// der `NSTableView`; entschieden wird nichts mehr.
+    ///
+    /// **Der laufende Lesevorgang wird zuerst gefragt und nicht zuletzt.** Was
+    /// er liefert, loest den angezeigten Bestand ab, und mit ihm faellt jeder
+    /// Eintragsindex: der erste Stapel raeumt `modell.auswahl()`, und der
+    /// Abschluss loest ohnehin die `wunschauswahl` ein. Eine jetzt gesetzte
+    /// Zeile ueberlebt das nicht, ein Name schon.
+    ///
+    /// Bis zum 260807 stand die Frage hinten. Solange das Modell beim Start des
+    /// Lesevorgangs geleert wurde, war das dasselbe: der Name war im Bestand
+    /// nicht zu finden, und die Stelle fiel von selbst auf das Vormerken.
+    /// Seit `5f2e45d` bleibt der alte Bestand stehen, die erste Frage gewann,
+    /// und die Auswahl landete auf einer Zeile des vorigen Laufs, die der erste
+    /// Stapel ersatzlos wegraeumte
+    /// (`issues/260807-0800_*_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-und-die-auswahl-faellt-danach-ersatzlos.md`).
     ///
     /// **Kein zweiter Weg, eine Zeile anhand ihres Namens zu waehlen**, sondern
     /// derselbe: getragen wird der Name von der `wunschauswahl`, die schon die
     /// Sitzungswiederherstellung, der Aufstieg aus C2, der Sprung aus der
-    /// Zwischenablage (C10) und die Auffrischung aus C9 benutzen. Neu ist
-    /// allein, dass der Aufrufer den Namen nennen darf, statt ihn aus dem
-    /// bisherigen Zustand des Tabs zu erben.
-    ///
-    /// Der Fall, fuer den es das gibt, ist das Anlegen aus C4: der neue Eintrag
-    /// steht erst in der Liste, wenn der Lesevorgang ihn geliefert hat, und die
-    /// Auswahl soll danach auf ihm stehen. Eine Zeilennummer taugte dafuer
-    /// nicht, weil die Sortierung erst mit dem Abschluss steht.
-    pub fn wunschauswahl_setzen(&mut self, name: impl Into<String>) {
-        let stelle = self.aktiv;
-        self.tabs[stelle].wunschauswahl = Some(name.into());
+    /// Zwischenablage (C10) und die Auffrischung aus C9 benutzen.
+    pub fn auswahl_auf_namen(&mut self, name: &str) -> Auswahlversuch {
+        let tab = &mut self.tabs[self.aktiv];
+        if tab.liest() {
+            tab.wunschauswahl = Some(name.to_owned());
+            return Auswahlversuch::Vorgemerkt;
+        }
+        match tab
+            .modell
+            .index_von_namen(name)
+            .and_then(|index| tab.modell.zeile_von(index))
+        {
+            Some(zeile) => Auswahlversuch::Gewaehlt(zeile),
+            None => Auswahlversuch::Unbekannt,
+        }
     }
 
     /// Startet den Lesevorgang des sichtbaren Tabs.
@@ -833,6 +894,112 @@ mod tests {
                 "die Auffrischung {runde} hat die Liste geleert, bevor sie etwas geliefert hat"
             );
         }
+    }
+
+    /// Ein Eintrag fuer die drei Proben unten.
+    fn datei(name: &str) -> krk_core::verzeichnis::Eintrag {
+        use krk_core::verzeichnis::{Eintrag, Typ};
+        Eintrag::neu(
+            name.to_owned(),
+            0,
+            std::time::SystemTime::UNIX_EPOCH,
+            Typ::Datei,
+        )
+    }
+
+    /// Eine Tabliste mit einem gelesenen Tab auf einem Ordner, den es gibt.
+    ///
+    /// Ein vorhandener Ordner, weil `aktiven_neu_lesen` einen Lesevorgang
+    /// startet und der nicht gegen ein Nichts laufen soll. Geliefert hat er in
+    /// den Proben nie etwas: `einziehen` wird nicht gerufen, der Ersatz steht
+    /// also fuer die ganze Probe aus. Genau das ist die Spanne, um die es geht.
+    fn gelesene_liste(namen: &[&str]) -> Tabliste {
+        let vorhanden = std::env::temp_dir().display().to_string();
+        let mut liste = liste(&[&vorhanden]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.anhaengen(namen.iter().map(|name| datei(name)));
+        modell.abschliessen();
+        liste
+    }
+
+    /// Der deterministische Fall aus
+    /// `issues/260807-0800_*_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-…`:
+    /// ein Stapel-Umbenennen mit Umnummerierung nach oben.
+    ///
+    /// `IMG_1.jpg, IMG_2.jpg` wird zu `IMG_2.jpg, IMG_3.jpg`. Der erste neue
+    /// Name stand schon im alten Bestand, und die Auffrischung laeuft im selben
+    /// synchronen Aufruf wie die Auswahl — der Ersatz steht also garantiert
+    /// noch aus. Waehlte die Stelle jetzt die alte Zeile, raeumte der erste
+    /// Stapel sie ersatzlos weg.
+    ///
+    /// Geprueft wird die Ebene unter der Aufrufstelle: die Entscheidung sitzt
+    /// seit dem 260807 in `auswahl_auf_namen` und ist damit ohne Fenster
+    /// erreichbar. Was die Ebene darueber noch tut — die Zeile in der
+    /// `NSTableView` setzen —, faellt bei `Vorgemerkt` ohnehin weg.
+    #[test]
+    fn der_erste_neue_name_eines_stapel_umbenennens_wird_vorgemerkt() {
+        let mut liste = gelesene_liste(&["IMG_1.jpg", "IMG_2.jpg"]);
+        let index = liste
+            .aktiver()
+            .modell()
+            .index_von_namen("IMG_1.jpg")
+            .expect("IMG_1.jpg steht in der Liste");
+        liste.aktiver_mut().modell_mut().auswahl_setzen(Some(index));
+
+        // Was `abschluss_verarbeiten` nach einem Stapel-Umbenennen tut: erst
+        // auffrischen, dann den ersten neuen Namen waehlen.
+        liste.aktiven_neu_lesen();
+        let versuch = liste.auswahl_auf_namen("IMG_2.jpg");
+
+        assert_eq!(
+            versuch,
+            Auswahlversuch::Vorgemerkt,
+            "der alte Bestand kennt IMG_2.jpg zwar, aber der Ersatz raeumt ihn weg"
+        );
+        assert_eq!(
+            liste.aktiver().auswahlname().as_deref(),
+            Some("IMG_2.jpg"),
+            "der Name traegt die Auswahl ueber den Lesevorgang"
+        );
+    }
+
+    /// Der Fall aus
+    /// `issues/260807-0800_*_auswahlname-haelt-die-veraltete-modellauswahl-fuer-gueltig.md`:
+    /// zwei Auffrischungen vor dem ersten Stapel, mit einem Vormerken dazwischen.
+    #[test]
+    fn eine_zweite_auffrischung_laesst_den_vorgemerkten_namen_stehen() {
+        let mut liste = gelesene_liste(&["alt.txt"]);
+        let index = liste
+            .aktiver()
+            .modell()
+            .index_von_namen("alt.txt")
+            .expect("alt.txt steht in der Liste");
+        liste.aktiver_mut().modell_mut().auswahl_setzen(Some(index));
+
+        liste.aktiven_neu_lesen();
+        liste.auswahl_auf_namen("neu.txt");
+        liste.aktiven_neu_lesen();
+
+        assert_eq!(
+            liste.aktiver().auswahlname().as_deref(),
+            Some("neu.txt"),
+            "die veraltete Auswahl des Modells hat den vorgemerkten Namen zugeschrieben"
+        );
+    }
+
+    /// Ohne laufenden Lesevorgang bleibt es beim alten Weg: der Sprung aus C10
+    /// waehlt die Zeile sofort, und ein Name, den die fertige Liste nicht
+    /// kennt, ist eine Auskunft an den Nutzer.
+    #[test]
+    fn ohne_lesevorgang_waehlt_der_name_seine_zeile() {
+        let mut liste = gelesene_liste(&["b.txt", "a.txt"]);
+
+        assert_eq!(
+            liste.auswahl_auf_namen("b.txt"),
+            Auswahlversuch::Gewaehlt(1),
+            "abschliessen sortiert: a.txt steht in Zeile 0, b.txt in Zeile 1"
+        );
+        assert_eq!(liste.auswahl_auf_namen("c.txt"), Auswahlversuch::Unbekannt);
     }
 
     #[test]
