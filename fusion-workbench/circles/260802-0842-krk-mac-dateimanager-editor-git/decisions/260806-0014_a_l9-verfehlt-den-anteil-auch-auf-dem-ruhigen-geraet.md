@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** coder
 **Cross-references:** issues/260805-2335_o_l1-und-l9-verfehlen-den-anteil-im-ersten-gesamtlauf-unter-fremdlast.md, messungen/260805-2207-MacBookPro15-1-abnahme.txt, messungen/260805-2207-MacBookPro15-1-abnahme-begleittext.md, planning/260802-1428_o_plan-navigator-geruest-runde-1.md `#### 22.`
 
@@ -59,3 +59,19 @@ Option 1. Die Verfehlung ist ein begrenzter Ein-Bild-Rutscher mit klarer
 Verdachtsstelle, kein strukturelles Zu-langsam; die Aussicht, die Zusage
 ohne Lockerung zu halten, ist gut. Option 3 lohnt als erster Schritt der
 Untersuchung innerhalb von Option 1, nicht als eigener Weg.
+
+---
+Answered: planning/260802-1036_*_spec-navigator-geruest.md:360 — Der Nutzer hat
+am 260807 Möglichkeit 2 gewählt, gegen die Empfehlung dieses Datensatzes: L9
+sagt jetzt zu, dass während einer laufenden Kopie jede Eingabe spätestens das
+zweite Bild erreicht und mindestens 85 Prozent das erste. Die Zeile L9 der
+Zusagentabelle steht in C8 des Specs, die Herleitung und der Preis der Wahl im
+selben Abschnitt unter `Getroffene Festlegungen` (:394), die Messvorschrift im
+Absatz `Die Vorschrift, prüfbar formuliert`. Im Plan
+`planning/260802-1428_*_plan-navigator-geruest-runde-1.md` sind `### Frage 5`,
+`### Frage 6`, S21 und S22 nachgezogen; beide Schritte bleiben abgenommen. Beide
+Hälften der neuen Fassung sind an der Abnahmereihe nachgerechnet: kleinster
+Rundenanteil 85 Prozent, größter Einzelwert 23,429 ms bei zwei Bildlängen von
+33,333 ms. Die Auswertung in `crates/krk-bench/src/messen.rs` trägt die neue
+Form noch nicht, gemeldet als
+`issues/260807-0832_*_die-messstrecke-kann-die-neue-zweiteilige-fassung-von-l9-nicht-abnehmen.md`.
