@@ -223,3 +223,58 @@
 {"ts":"2026-08-06T21:16:10","event":"gate_hit","turn":25,"task":"D1","agent":"user","detail":"Nutzerentscheid zwischen den Wegen fuer die Spalte Typ"}
 {"ts":"2026-08-06T21:16:10","event":"gate_response","turn":25,"task":"D1","agent":"user","detail":"proceed: Ueberschrift bleibt Typ, Zelle zeigt die Endung (fuenfter Weg)"}
 {"ts":"2026-08-06T21:16:10","event":"task_start","turn":25,"task":"D1","agent":"coder","detail":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-06T21:23:02","event":"commit","turn":25,"task":"Setup","agent":"orchestrator","detail":"b96bd89 Sitzungsstart 260806-2257"}
+{"ts":"2026-08-06T21:23:02","event":"commit","turn":25,"task":"D1","agent":"coder","detail":"3e9613a die Spalte Typ zeigt die Endung"}
+{"ts":"2026-08-06T21:23:02","event":"task_done","turn":25,"task":"D1","agent":"coder","detail":"3e9613a, make check gruen"}
+{"ts":"2026-08-06T21:23:02","event":"task_start","turn":25,"task":"D2","agent":"planner","detail":"fuenf offene Entscheidungen ohne Planstelle"}
+{"ts":"2026-08-06T21:36:07","event":"commit","turn":25,"task":"D2","agent":"planner","detail":"181ff50 fuenf offene Datensaetze an ihrem Schritt"}
+{"ts":"2026-08-06T21:36:07","event":"task_done","turn":25,"task":"D2","agent":"planner","detail":"181ff50"}
+{"ts":"2026-08-06T21:36:07","event":"task_start","turn":25,"task":"D3","agent":"coder","detail":"xtask/src/release.rs AppKit-Grenzpruefung"}
+{"ts":"2026-08-06T22:05:05","event":"commit","turn":25,"task":"D3","agent":"coder","detail":"4db66ed AppKit-Grenzpruefung beide Formen drei Wurzeln"}
+{"ts":"2026-08-06T22:05:05","event":"task_done","turn":25,"task":"D3","agent":"coder","detail":"4db66ed"}
+{"ts":"2026-08-06T22:05:05","event":"gate_hit","turn":25,"task":"D4+D5","agent":"user","detail":"beide Entwurfsentscheidungen, nicht Programmierarbeit"}
+{"ts":"2026-08-06T22:05:05","event":"gate_response","turn":25,"task":"D4","agent":"user","detail":"defer: zurueckgestellt mit benanntem Ausloeser"}
+{"ts":"2026-08-06T22:05:05","event":"task_deferred","turn":25,"task":"D4","agent":"user"}
+{"ts":"2026-08-06T22:05:05","event":"gate_response","turn":25,"task":"D5","agent":"user","detail":"proceed: vierter Anlass nach jeder abgeschlossenen Dateioperation"}
+{"ts":"2026-08-06T22:05:05","event":"task_start","turn":25,"task":"D5","agent":"coder","detail":"leistenmodell.rs, leiste.rs, Anschluss an den Abschluss einer Dateioperation"}
+{"ts":"2026-08-06T23:43:18","event":"commit","turn":25,"task":"D4+D5","agent":"coder","detail":"2fbab30 vierter Anlass Lesezeichenmarke, D4 zurueckgestellt"}
+{"ts":"2026-08-06T23:43:18","event":"task_done","turn":25,"task":"D5","agent":"coder","detail":"2fbab30"}
+{"ts":"2026-08-06T23:43:18","event":"gate_hit","turn":25,"task":"D6","agent":"user","detail":"unbeobachteter Vorbehalt, drei Wege"}
+{"ts":"2026-08-06T23:43:18","event":"gate_response","turn":25,"task":"D6","agent":"user","detail":"proceed: die Ursache angehen, der Lesevorgang leert nicht mehr vorab"}
+{"ts":"2026-08-06T23:43:18","event":"task_start","turn":25,"task":"D6","agent":"coder","detail":"tabs.rs:565 Ordnermodell erst mit dem ersten Stapel ersetzen"}
+{"ts":"2026-08-07T00:07:39","event":"commit","turn":25,"task":"D6","agent":"coder","detail":"5f2e45d Lesestelle ersetzt erst mit dem ersten Stapel"}
+{"ts":"2026-08-07T00:07:39","event":"task_done","turn":25,"task":"D6","agent":"coder","detail":"5f2e45d, zwei neue Entscheidungen gefiled"}
+{"ts":"2026-08-07T00:07:39","event":"task_start","turn":25,"task":"D7","agent":"coder","detail":"messmodus.rs, abgewiesener Auswahlversuch"}
+{"ts":"2026-08-07T05:35:09","event":"commit","turn":25,"task":"D7","agent":"coder","detail":"81d10c1 abgewiesene Auswahl bricht die Messstrecke ab"}
+{"ts":"2026-08-07T05:35:09","event":"task_done","turn":25,"task":"D7","agent":"coder","detail":"81d10c1, Defekt bleibt offen"}
+{"ts":"2026-08-07T05:35:09","event":"gate_hit","turn":25,"task":"D8","agent":"user","detail":"ontocoder-Aufgabe, Auslieferungsdaten"}
+{"ts":"2026-08-07T05:35:09","event":"gate_response","turn":25,"task":"D8","agent":"user","detail":"proceed: beides umsetzen"}
+{"ts":"2026-08-07T05:35:09","event":"task_start","turn":25,"task":"D8","agent":"ontocoder","detail":"resources/Info.plist, default-keymap.toml, default-settings.toml"}
+{"ts":"2026-08-07T06:04:43","event":"review_done","turn":25,"agent":"ontorev","detail":"3 Befunde"}
+{"ts":"2026-08-07T06:04:43","event":"review_done","turn":25,"agent":"coderev","detail":"5 Befunde, einer schwer"}
+{"ts":"2026-08-07T06:04:43","event":"turn_end","turn":25,"detail":"8 Aufgaben erledigt (7 behoben, 1 zurueckgestellt), 8 Befunde gefiled, 10 Commits"}
+{"ts":"2026-08-07T06:04:43","event":"turn_start","turn":26,"detail":"turn_start_head=79f8933, Rueckfall aus der Durchsicht zuerst"}
+{"ts":"2026-08-07T06:04:43","event":"task_start","turn":26,"task":"CR:01+CR:02","agent":"coder","detail":"eintrag_waehlen und auswahlname gegen den vorgemerkten Ersatz"}
+{"ts":"2026-08-07T06:29:23","event":"commit","turn":26,"task":"CR:01+02","agent":"coder","detail":"5d7e299 Auswahl haengt am Namen"}
+{"ts":"2026-08-07T06:29:23","event":"task_done","turn":26,"task":"CR:01+02","agent":"coder","detail":"5d7e299"}
+{"ts":"2026-08-07T06:29:23","event":"gate_hit","turn":26,"task":"R1","agent":"user","detail":"L9-Zusage, haelt die Rundenschliessung"}
+{"ts":"2026-08-07T06:29:23","event":"gate_response","turn":26,"task":"R1","agent":"user","detail":"proceed: Zusage anpassen, jede Eingabe spaetestens zweites Bild, mindestens 85 Prozent das erste"}
+{"ts":"2026-08-07T06:29:23","event":"task_start","turn":26,"task":"R1","agent":"planner","detail":"C8 in Spec und Plan nachziehen, Datensatz beantworten"}
+{"ts":"2026-08-07T06:40:13","event":"commit","turn":26,"task":"R1","agent":"planner","detail":"84b7a32 L9 sagt zu was gemessen ist"}
+{"ts":"2026-08-07T06:40:13","event":"task_done","turn":26,"task":"R1","agent":"planner","detail":"84b7a32, Datensatz auf _a_"}
+{"ts":"2026-08-07T06:40:13","event":"task_start","turn":26,"task":"R1b","agent":"coder","detail":"messen.rs, Abnahmemass traegt die zweiteilige Fassung"}
+{"ts":"2026-08-07T07:11:37","event":"commit","turn":26,"task":"R1b","agent":"coder","detail":"d569f8a Auswertung nimmt L9 zweiteilig ab; 7e63a9b Datensatz auf _i_"}
+{"ts":"2026-08-07T07:11:37","event":"task_done","turn":26,"task":"R1b","agent":"coder","detail":"d569f8a"}
+{"ts":"2026-08-07T07:11:37","event":"gate_hit","turn":26,"task":"R2","agent":"user","detail":"vier reine Nutzerentscheide"}
+{"ts":"2026-08-07T07:11:37","event":"gate_response","turn":26,"task":"R2","agent":"user","detail":"Fokusbefehl shift+cmd+y; Entfernen so lassen; Leiste einblenden und fokussieren; settings.toml bleibt beim einmaligen Laden"}
+{"ts":"2026-08-07T07:11:37","event":"task_start","turn":26,"task":"R2a","agent":"coder","detail":"fokus_vorschau und fokus_leiste blendet ein"}
+{"ts":"2026-08-07T07:11:37","event":"task_start","turn":26,"task":"R2b","agent":"planner","detail":"vier Datensaetze beantworten, C2 C5 C7 nachziehen"}
+{"ts":"2026-08-07T08:11:51","event":"commit","turn":26,"task":"R2","agent":"orchestrator","detail":"9a47c4a, ac95acf"}
+{"ts":"2026-08-07T08:11:51","event":"task_done","turn":26,"task":"R2","agent":"orchestrator","detail":"vier Datensaetze auf _i_, S19b und S19c auf DONE"}
+{"ts":"2026-08-07T08:11:51","event":"commit","turn":26,"task":"R3","agent":"orchestrator","detail":"710ce84 CLAUDE.md revidiert, 87 auf 100 Zeilen"}
+{"ts":"2026-08-07T08:11:51","event":"task_done","turn":26,"task":"R3","agent":"orchestrator","detail":"710ce84"}
+{"ts":"2026-08-07T08:11:51","event":"turn_end","turn":26,"detail":"R1, R1b, R2, R3 und acht Aufraeumbefunde erledigt"}
+{"ts":"2026-08-07T08:39:33","event":"reconciliation","turn":26,"agent":"reconciler","detail":"Urteil review-needed, 3 Driftbefunde, 6 Statuskopfzeilen richtiggestellt"}
+{"ts":"2026-08-07T08:39:33","event":"gate_hit","turn":26,"task":"R4","agent":"user","detail":"Rebalance nach review-needed"}
+{"ts":"2026-08-07T08:39:33","event":"bounded_closure_proposed","turn":26,"task":"R4","agent":"user","detail":"sieben der zehn Zeitzusagen stehen auf der Messreihe vom 260805, drei Commits danach beruehrten gemessene Wege"}
+{"ts":"2026-08-07T08:46:08","event":"portfolio_refresh","turn":26,"agent":"playmaker","detail":"circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md; shared/history/260807-1042-playmaker-orchestrator-phase4.md; Parent grounding stale am Web-Betrachter"}

@@ -1,31 +1,24 @@
 # Orchestrator — Live
 
-**Turn:** 25/30 | **Tasks:** 0/12 | **Commits:** 0 | **Errors:** 0
-**Started:** 22:57 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
+**Turn:** 26/30 | **Tasks:** 9/13 | **Commits:** 11 | **Errors:** 0
+**Started:** 22:57 | **Domain:** code | **Elapsed Turns:** 1 | **Guard:** OK (0 blocks)
 
 ## Current
-  [RUNNING] coder -> D1 Spalte Typ zeigt jetzt die Endung (tabelle.rs)
+  [GATE]    user -> R1 L9 verfehlt den Anteil, haelt die Rundenschliessung
 
 ## This Turn
-  [RUNNING] coder -> D1 Spalte Typ zeigt jetzt die Endung
-  [QUEUED]  planner -> D2 Fuenf offene Entscheidungen ohne Planstelle
-  [QUEUED]  coder -> D3 AppKit-Grenzpruefung sieht nur use-Zeilen
-  [QUEUED]  coder -> D4 Toter Netzpfad laesst den Lesefaden haengen
-  [QUEUED]  coder -> D5 Lesezeichen-Gueltigkeit veraltet
-  [QUEUED]  coder -> D6 Schnelles Verschieben, moegliche Meldelawine
-  [QUEUED]  coder -> D7 Sitzungslauf blieb bei L6 stehen
-  [QUEUED]  ontocoder -> D8 Zwei Datenbefunde in resources/ (GATE)
-  [QUEUED]  coder -> R1 L9 verfehlt den Anteil (GATE)
-  [QUEUED]  orchestrator -> R2 Vier offene Fragen beantworten (GATE)
-  [QUEUED]  coder -> R3 CLAUDE.md-Revision
-  [QUEUED]  orchestrator -> R4 Rundenabschluss
+  [DONE]    coderev -> Durchsicht Programmtext, 5 Befunde ........... 79f8933
+  [DONE]    ontorev -> Durchsicht Daten, 3 Befunde ................. 82735bc
+  [DONE]    coder -> CR:01+02 Auswahl haengt am Namen ............... 5d7e299
+  [GATE]    user -> R1 L9-Frage
 
 ## Up Next
-  [QUEUED]  planner -> D2 Fuenf offene Entscheidungen ohne Planstelle
-  [QUEUED]  coder -> D3 AppKit-Grenzpruefung sieht nur use-Zeilen
-  [QUEUED]  coder -> D4 Toter Netzpfad laesst den Lesefaden haengen
-  [QUEUED]  coder -> D5 Lesezeichen-Gueltigkeit veraltet
-  [QUEUED]  coder -> D6 Schnelles Verschieben, moegliche Meldelawine
+  [QUEUED]  orchestrator -> R2 Vier offene Fragen beantworten (GATE)
+  [QUEUED]  coder -> R3 CLAUDE.md-Revision
+  [QUEUED]  ontocoder -> CR:03+04 Zwei Befunde in der Info.plist
+  [QUEUED]  coder -> CR:05 Kommentar der Spalte Typ zitiert falsch
+  [QUEUED]  coder -> CR:06 Grenzpruefung kennt nur src-Baeume
+  [QUEUED]  orchestrator -> R4 Rundenabschluss
 
 ## Blocked
   R4 Rundenabschluss <- wartet auf R1 (L9-Klaerung)

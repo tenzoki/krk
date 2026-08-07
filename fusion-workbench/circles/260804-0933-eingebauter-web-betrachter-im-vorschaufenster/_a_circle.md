@@ -108,3 +108,68 @@ Der Plan der Runde 1 hält den Anlass dieses Circles selbst fest, unter seinen o
 ## Turn log
 
 (noch keiner)
+
+## Parent grounding stale
+
+**Festgestellt am:** 260807-1042
+**Playmaker-Lauf:** 260807-1042-playmaker-orchestrator-phase4
+**Beschränkt abgeschlossenes Kind:** `260802-0842-krk-mac-dateimanager-editor-git`, geschlossen am 260807-1035
+
+Der Circle, auf dem dieser hier aufsetzt, trägt seit dem 260807-1035 den beschränkten Abschluss (`_b_`). Seine Beschränkung berührt die Grundlage dieses Circles an zwei Stellen. Beide gehören in die Klärungsrunde bei der Aktivierung, keine hält die Aktivierung auf.
+
+### 1. Die dritte offene Frage steht auf einem gealterten Messstand
+
+Der Abschnitt `## Grounding snapshot` schreibt unter `### Offene Fragen`:
+
+> **3. Bekommt der Betrachter eine eigene Zeitzusage?** Die Maxime "superschnell" trägt in C8 zehn gemessene Zusagen, und keine davon misst Web-Inhalt. [...] Zusagen ließen sich über das setzen, was KRK selbst verantwortet: wie schnell der Tab erscheint, und wie schnell die Sprungmarken nach dem Laden stehen.
+
+Die Frage leitet eine mögliche elfte Zusage aus den zehn bestehenden ab. Genau deren Belegstand ist der Grund der Beschränkung. Die `## Closure note` des Kindes hält fest, dass sieben der zehn Zusagen unverändert auf der Abnahmereihe `messungen/260805-2207-MacBookPro15-1-abnahme.txt` vom 260805-2207 stehen und dass drei spätere Commits Wege berührt haben, die eben diese Zusagen messen.
+
+Zwei der sieben sind für einen Betrachter im Vorschaufenster die naheliegenden Bezugsgrößen, und beide gehören zum ungemessenen Teil:
+
+- **L5**, Wechsel des Tabs oder des aktiven Dateifensters bis zur bedienbaren ersten Bildschirmseite, zugesagt mit 50 ms. Der Satz "wie schnell der Tab erscheint" aus Frage 3 misst denselben Vorgang in einem Vorschau-Tab.
+- **L7**, Vorschau einer Textdatei bis 1 MB sichtbar, zugesagt mit 100 ms. Der Betrachter ist nach dem Grounding dieses Circles die dritte Quelle für den aktiven Vorschau-Tab und teilt sich diesen Weg mit den beiden vorhandenen.
+
+Beide Zahlen stehen in C8 des Specs `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md`.
+
+Die drei alternden Commits treffen diese Wege nachweislich. `9a47c4a` ändert `crates/krk-ui/src/kommandos/fokus.rs` und `crates/krk-ui/src/fenstermodell.rs` und baut den dritten Fokusbefehl in das Vorschaufenster; `5d7e299` ändert `crates/krk-ui/src/tabs.rs`, wo die Tabliste und ihre Auswahl liegen. Der Betrachter setzt auf beiden Bauteilen auf. Eine elfte Zusage, die aus L5 oder L7 abgeleitet wird, erbt damit deren offenen Beleg.
+
+**Was daraus folgt.** Der Aktivierungs-Spec sollte Frage 3 erst nach dem Abnahmelauf beantworten, den die `## Closure note` der Runde 1 als Nachholarbeit benennt (`make fixture`, danach `make alle RUNDEN=5` aus einem Terminalfenster im Vordergrund, mit KRK vorn). Ohne diesen Lauf ist der Ausgangswert unbekannt, gegen den eine neue Zusage gesetzt würde.
+
+### 2. Der Artefakt der Beschränkung ist an diesen Circle adressiert
+
+Die `## Closure note` benennt als Gelerntes: "Eine Messreihe altert an jedem Commit, der einen gemessenen Pfad berührt, und sie sagt es nicht selbst." Sie schließt mit dem Satz: "Eine spätere Runde, die Zeitzusagen führt, braucht dafür eine Regel statt einer Nachfrage."
+
+Ob dieser Circle eine Zeitzusage führt, entscheidet seine eigene Frage 3. Fällt die Antwort auf ja, ist der Artefakt der Beschränkung eine bindende Eingabe: die Runde braucht dann eine Regel, die das Altern der Messung anzeigt, und nicht erst einen Abgleich am Ende, der danach fragt.
+
+### 3. Drei Pfadzitate sind mit der Umbenennung ins Leere gelaufen
+
+Der Abschnitt `## Dependencies` zitiert drei Dateien unter ihrem damaligen Zustandsmarker. Alle drei haben ihn am 260807-1035 verloren, und die zitierten Pfade existieren nicht mehr:
+
+| Zeile | zitiert | ist |
+|---|---|---|
+| 100 | `planning/260802-1036_o_spec-navigator-geruest.md` | `_c_` |
+| 102 | `260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` | `_b_circle.md` |
+| 106 | `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` | `_c_` |
+
+Der Abgleich `history/260807-1022-reconciliation.md` und der daraus entstandene Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` decken diese drei Stellen nicht ab: der Abgleich lief um 260807-1022 und damit vor der Umbenennung, und sein Suchmuster `YYMMDD-HHMM_x_name.md` erfasst die Form `_t_circle.md` ohnehin nicht. Zeile 101 desselben Abschnitts steht dort und ist die einzige Stelle dieses Circles, die der Defekt führt.
+
+Der Playmaker berichtigt keine Zitate. Die Sternform `_*_`, die Plan und Spec seit dem 260805-0000 führen, ist der im Defekt beschriebene Weg.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260807-1042
+**Playmaker-Lauf:** 260807-1042-playmaker-orchestrator-phase4
+**Domain-Gewichtung:** code
+
+Dieser Circle ist der empfohlene nächste Kandidat, und zwar ohne Vergleichswert: er ist nach dem Abschluss der Runde 1 der einzige nicht abgeschlossene Circle im Portfolio. Eine Rangfolge mit einem Element trägt keine Information über relative Reife, deshalb stützt sich die Empfehlung auf die absoluten Signale.
+
+**Die Voraussetzungen sind erfüllt, am Code geprüft.** Der Abschnitt `## Dependencies` nennt zwei zeitliche Bindungen, die Schritte S13 und S19 der Runde 1, und sagt: "Es kann erst geplant werden, wenn beide stehen." Beide stehen. Der Plan `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md` trägt `**Status:** Complete` bei 38 von 38 Schritten, und der Abgleich vom 260807-1022 hat die Schritte am Code belegt statt am Marker. Die vier Bauteile, die dieser Circle laut seinem Grounding erbt, liegen auf der Platte: die Auswertung der Zwischenablage in `crates/krk-core/src/zwischenablage.rs`, das Vorschaufenster in `crates/krk-ui/src/appkit/vorschau.rs` mit der Tableiste in `crates/krk-ui/src/appkit/tableiste.rs`, die Statuszeile in `crates/krk-ui/src/appkit/statuszeile.rs` und der Befehl `zwischenablage_springen` auf `opt+cmd+g` in `resources/default-keymap.toml:436`.
+
+**Ein offener Entscheidungsdatensatz bindet diesen Circle**, und das ist für die Gewichtung `code` ein guter Wert, weil sie Circles mit wenigen unbeantworteten Fragen bevorzugt. Der Grounding-Abschnitt nennt `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` und ordnet die Bindung selbst als `inference:` ein: ein Betrachter spricht eine Systemschnittstelle an, deren Umfang sich zwischen macOS 15 und macOS 26 unterscheidet, und geprüft ist das nicht. Die drei projektweit offenen Datensätze zu Git, Editor-Formatansicht und Code-SDK binden diesen Circle nicht.
+
+**Was gegen eine sofortige Aktivierung spricht.** Die einzige Abhängigkeit ist beschränkt und nicht kohärent geschlossen. Nach der Rangheuristik zählt allein `_c_` als erfüllte Vorbedingung, und `_b_` löst ein Kennzeichen aus. Inhaltlich trägt dieses Kennzeichen hier: die Beschränkung ist der offene Beleg der Zeitzusagen, und der Abschnitt `## Parent grounding stale` oben zeigt, dass er über die dritte offene Frage in diesen Circle hineinreicht. Der Abnahmelauf, den die Runde 1 als Nachholarbeit hinterlässt, verlangt KRK im Vordergrund und damit den Nutzer. Ihn vor der Aktivierung zu fahren kostet wenig und nimmt der Klärungsrunde eine Unbekannte ab.
+
+Die drei offenen Fragen des Grounding-Abschnitts bleiben die erste Arbeit nach dem Übergang auf aktiv. Der Shaper im portfolio-activation-Modus klärt sie mit dem Nutzer, bevor ein Plan entsteht.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über `/fusion:next` oder beim Orchestrator.

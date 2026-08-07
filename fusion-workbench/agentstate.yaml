@@ -1,48 +1,53 @@
 # fusion-workbench session state — for resumption after restart
-# Updated: 260806-1745
+# Updated: 260806-2325
 #
-# ABSICHTLICH ANGELEGT, nicht Rest einer abgestürzten Sitzung.
-# Der Nutzer hat die Sitzung 260806-1140 am 260806 sauber beendet und um einen
-# Wiederaufnahmepunkt gebeten: erst die Defekte, dann der Rest. Beim nächsten
-# /fusion:setup findet Schritt 1 diese Datei und bietet "Fortsetzen" an.
+# Fortgesetzte Sitzung. Der Wiederaufnahmepunkt vom 260806-1745 wurde am
+# 260806-2257 mit "Fortsetzen" uebernommen; Reihenfolge und Zuschnitt der
+# Warteschlange sind unveraendert.
 
 session:
   directive: "KRK: native macOS-Anwendung, lokale Dateien vollständig über die Tastatur navigieren, bearbeiten und versionieren. Erste Runde: lauffähiges Navigator-Gerüst."
   mode: "all"
   domain: "code"
-  started: "260806-1745"
-  history_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1140-orchestrator-session.md"
-  git_head_at_start: "c1e8edc"
+  started: "260806-2257"
+  history_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md"
+  git_head_at_start: "f9a0462"
 
 progress:
   turn: 25
   max_turns: 30
   tasks_total: 12
-  tasks_done: 0
+  tasks_done: 1
   tasks_skipped: 0
   tasks_errored: 0
-  commits: 0
-  turn_start_head: null
+  commits: 2
+  turn_start_head: "f9a0462"
   paused_at_task: null
   directive_revisions_this_session: 0
 
-current_task: null
+current_task:
+  id: "D2"
+  summary: "Fünf offene Entscheidungen zeigen auf einen Planschritt, ohne dort genannt zu sein — Dokumentenpflege an Plan und Spec"
+  agent: "planner"
+  status: "running"
+  source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_p_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md"
 
-# Reihenfolge nach Nutzerwunsch: erst die zehn offenen Defekte (D1 bis D8),
-# dann der Rest (R1 bis R4). Zwei Aufgaben tragen ein Nutzer-Gate, eine davon
+# Reihenfolge nach Nutzerwunsch: erst die offenen Defekte (D1 bis D8),
+# dann der Rest (R1 bis R4). Drei Aufgaben tragen ein Nutzer-Gate, eine davon
 # blockiert die Rundenschließung.
 work_queue:
   - id: "D1"
-    summary: "Die Spalte Typ zeigt die Eintragsart, sortiert aber nach der Endung — Nutzerentscheid nötig, drei Wege stehen im Eintrag"
+    summary: "Die Spalte Typ zeigt die Eintragsart, sortiert aber nach der Endung"
     agent: "coder"
-    status: "queued"
-    gate: "Nutzerentscheid vor der Umsetzung"
-    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_o_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md"
+    status: "done"
+    commit: "3e9613a"
+    gate: "erledigt am 260806-2300: Ueberschrift bleibt Typ, Zelle zeigt die Endung"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md"
   - id: "D2"
     summary: "Fünf offene Entscheidungen zeigen auf einen Planschritt, ohne dort genannt zu sein — Dokumentenpflege an Plan und Spec"
     agent: "planner"
-    status: "queued"
-    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_o_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md"
+    status: "running"
+    source_file: "circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1735_p_fuenf-offene-entscheidungen-zeigen-auf-einen-planschritt-ohne-dort-genannt-zu-sein.md"
   - id: "D3"
     summary: "Die AppKit-Grenzprüfung sieht nur use-Zeilen und nur eine von drei Kisten"
     agent: "coder"
@@ -103,12 +108,23 @@ plan_context:
     Nutzer am 260806 nach Abschluss der Sitzung 260806-1140: "schließe das so
     ab, dass ich an gleicher Stelle weiter machen kann, zunächst die Defekte
     fixen, dann der Rest. ich will einmal neu starten." Die Reihenfolge ist
-    damit gesetzt: erst D1 bis D8, dann R1 bis R4.
+    damit gesetzt: erst D1 bis D8, dann R1 bis R4. Am 260806-2257 mit
+    "Fortsetzen" wieder aufgenommen.
 
   key_findings: >
     STAND. Alle 36 Planschritte tragen [DONE]. Runde 1 schließt nicht vor der
     Klärung der L9-Frage (Nutzerentscheid 260806, ausdrücklich offen gehalten).
-    HEAD c1e8edc, Arbeitsverzeichnis sauber, make check grün.
+    HEAD bei Sitzungsbeginn f9a0462, Arbeitsverzeichnis sauber, make check grün.
+
+    D1 IST ERLEDIGT (3e9613a). Der Nutzer hat einen fünften Weg gewählt, den der
+    Defektbericht nicht führte: die Überschrift der Spalte bleibt "Typ", die
+    Zelle zeigt die Dateiendung. Drei geprüfte Befunde trugen die Wahl. Ordner
+    stehen in jeder der acht Sortierungen vorn, die Eintragsart bleibt also an
+    der Position ablesbar; verloren geht allein die Kennzeichnung der
+    Verknüpfung. Die Tastenfunktion heißt "Nach Typ sortieren" (Cmd+4) in
+    resources/default-keymap.toml, eine Spalte "Endung" verschöbe den Namensbruch
+    dorthin. Und der Spec schreibt die Überschrift nirgends fest, C1 zählt die
+    Spalten nicht auf.
 
     WIE GEBAUT WIRD. cargo liegt nicht auf dem Standard-PATH, sondern unter
     $HOME/.cargo/bin. Das Makefile im Wurzelverzeichnis setzt den PATH selbst:
@@ -123,9 +139,8 @@ plan_context:
     Synthetische Tastendrücke gehören in KRKs eigene Ereignisschlange über
     postEvent:atStart:, nicht über osascript.
 
-    ZWEI AUFGABEN TRAGEN EIN NUTZER-GATE. D1 (Spalte Typ) braucht einen
-    Entscheid zwischen drei Wegen, D8 ist eine ontocoder-Aufgabe. R1 ist die
-    L9-Frage und hält die Rundenschließung.
+    ZWEI AUFGABEN TRAGEN NOCH EIN NUTZER-GATE. D8 ist eine ontocoder-Aufgabe.
+    R1 ist die L9-Frage und hält die Rundenschließung.
 
     WAS DER NÄCHSTE CODER WISSEN MUSS. Der Wirkungsbereich in belegung.rs ist
     eine vollständige Fallunterscheidung ohne Auffangzweig mit vier Werten;
@@ -137,3 +152,7 @@ plan_context:
 
     GIT. Identität ist seit dem 260806 lokal gesetzt (Kai Stalmann,
     kai@stalmann.org), der Fernzugriff steht auf tenzoki/krk. Nichts gepusht.
+
+    GUARD. Ein mv oder rm mit einem Pfad aus einer Shell-Variablen wird
+    fail-closed abgewiesen. Marker-Umbenennungen im workbench deshalb mit
+    ausgeschriebenen absoluten Pfaden.

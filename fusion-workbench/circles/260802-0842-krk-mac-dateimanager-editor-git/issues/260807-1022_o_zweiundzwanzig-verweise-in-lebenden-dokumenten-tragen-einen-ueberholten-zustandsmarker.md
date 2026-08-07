@@ -73,4 +73,30 @@ der zehn Zeitzusagen ist berührt, und kein Verweis zeigt ins Leere — es ist
 allein die Zustandsangabe, die falsch ist.
 
 ---
+
+## Nachtrag 260807-1045: der Satz „kein Verweis zeigt ins Leere" stimmt nicht mehr
+
+Der Rundenabschluss um 260807-1035 hat drei Marker umbenannt, und damit ist der
+Befund über eine bloße Zustandsangabe hinausgewachsen. Drei Zitate im Abschnitt
+`## Dependencies` des Circle-Datensatzes
+`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`
+(Zeilen 100, 102 und 106) zeigen jetzt auf Dateien, die es unter dem genannten
+Namen nicht mehr gibt: der Plan steht auf `_c_`, der Spec auf `_c_`, und
+`_t_circle.md` heißt seit dem Abschluss `_b_circle.md`.
+
+Gefunden hat es der `playmaker` beim Auffrischen des Portfolios. Der Abgleich
+oben konnte sie nicht sehen: er lief um 260807-1022 und damit vor der
+Umbenennung, und sein Suchmuster `YYMMDD-HHMM_x_name.md` erfasst die Form
+`_t_circle.md` ohnehin nicht.
+
+**Zwei Dinge folgen daraus für die Behebung.** Erstens gehört der Circle-Datensatz
+in denselben Durchgang wie die übrigen Verweise; die Sternform trägt dort
+genauso. Zweitens muss das Suchmuster die Form `_x_circle.md` mit abdecken,
+sonst findet der nächste Abgleich dieselbe Stelle wieder nicht.
+
+Der Orchestrator hat die drei Zitate **nicht** berichtigt: ein Circle-Datensatz
+gehört dem `playmaker` und dem `shaper`, und der Orchestrator schreibt dort
+allein die Abschlussnotiz des eigenen Circles.
+
+---
 Resolved:

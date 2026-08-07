@@ -2,10 +2,10 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md (Abnahmekriterien) und circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md (Ausführungsstand)
-**Active session history:** circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md
+**Active spec/plan:** circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md (Abnahmekriterien) und circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md (Ausführungsstand); beide seit dem 260807-1035 auf `_c_`
+**Active session history:** circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md
 
 ---
 
@@ -119,6 +119,22 @@ Die Maxime "superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec
 ## Turn log
 
 - **Vorlauf** (kein Turn; Sitzung 260802-1014): commits c0682ff..f865fca (sechs Stück); Kohärenzurteil: keines, weil kein Turn abgeschlossen wurde; Sitzungshistorie: `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md`. Inhalt: CLAUDE.md mit Sprachdeklaration (c0682ff), Aufräumen der mitverfolgten Sitzungsdateien (ede2645), der Spec für Runde 1 (f427e97), Technologievergleich und Korrektur der Directive-Zeile (19c9597), Technologiewahl und das Prüfprogramm für die F-Tasten (6b7b725), Berichtigung seiner Auswertung samt Fortschreibung von C3 (f865fca). Diese Arbeit lag vor dem ersten eigentlichen Turn: sie hat den Spec erstellt und die Eingangsfragen geklärt, aber keine Aufgabenliste abgearbeitet und keine Kohärenzprüfung durchlaufen.
+
+- **Turn 25 und 26** (Sitzung 260806-2257): commits `f9a0462`..`bd74613` (17 Stück); Kohärenzurteil `review-needed`; Sitzungshistorie: `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md`. Turn 25 hat acht Defektaufgaben abgearbeitet, davon sieben behoben und eine zurückgestellt, und mit zwei Durchsichten geendet, die acht Befunde filten — darunter einen schweren Rückfall aus der eigenen Arbeit desselben Turns. Turn 26 hat den Rückfall behoben, fünf Nutzerentscheide eingeholt und verankert, die Zeitzusage L9 neu gefasst, den dritten Fokusbefehl gebaut und `CLAUDE.md` revidiert.
+
+## Closure note
+
+**Beschränkter Abschluss (`_b_`), entschieden vom Nutzer am 260807-1035.**
+
+**Was die Runde erreicht hat.** Alle 38 Schritte des Plans tragen `[DONE]`, und der Abgleich vom 260807-1022 hat sie am Code belegt statt am Marker. KRK trägt das Navigator-Gerüst der ersten Runde: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und einen Messmodus, der die zehn Zeitzusagen aus C8 am laufenden Bündel abnimmt. Alle drei Bereiche sind seit dem 260807 über die Tastatur erreichbar.
+
+**Warum beschränkt und nicht kohärent.** Der Grund ist der Beleg, nicht die Arbeit. Sieben der zehn Zeitzusagen — L1, L4, L5, L6, L7, L8 und der Zeichenanteil von L2 — stehen unverändert auf der Abnahmereihe `messungen/260805-2207-MacBookPro15-1-abnahme.txt` vom 260805-2207. Nach jener Messung haben drei Commits Wege berührt, die genau diese Zusagen messen: `880cb70` setzt `CFBundleDevelopmentRegion`, wodurch der Größenformatierer je sichtbarer Zeile auf Deutsch wechselt; `5d7e299` zieht die Auswahl nach `Tabliste::auswahl_auf_namen`; `9a47c4a` erweitert die Kommando-Aufzählung, durch die jeder Tastendruck läuft. Frisch gemessen sind L3 und L10 sowie der Kernanteil von L2; für L9 sind die alten Einzelwerte unter der neuen Regel nachgerechnet.
+
+**Was daraus gelernt ist, und das ist der Artefakt dieser Beschränkung.** Eine Messreihe altert an jedem Commit, der einen gemessenen Pfad berührt, und sie sagt es nicht selbst. Die Runde hat ihre Zusagen einmal gemessen und danach weiter am Code gearbeitet, ohne dass ein Mechanismus die Alterung angezeigt hätte; sichtbar wurde sie erst, weil ein Abgleich am Ende ausdrücklich danach gefragt hat. Eine spätere Runde, die Zeitzusagen führt, braucht dafür eine Regel statt einer Nachfrage.
+
+**Was die nächste Runde übernimmt.** Ein Abnahmelauf am gebauten Bündel schließt die Lücke; er verlangt KRK im Vordergrund und damit den Nutzer (`make fixture`, dann `make alle RUNDEN=5` aus einem Terminalfenster im Vordergrund). Dazu sechs offene Entscheidungen und die offenen Defekte unter `issues/`; verbindlich ist der Dateibestand.
+
+**Aufzeichnungen.** Sitzungshistorie `history/260806-2257-orchestrator-session.md`, Abgleich `history/260807-1022-reconciliation.md`, Durchsichten `reviews/260807-0757-ontorev-turn-25-buendelsprache-und-pfadzitate.md` und `reviews/260807-0800-coderev-turn-25-lesestelle-messstrecke-grenzpruefung.md`.
 
 ## Activation proposal
 
