@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (aufgeworfen vom coder bei der Umsetzung von S20)
 **Cross-references:** `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (Schritt S20), `planning/260802-1036_*_spec-navigator-geruest.md` `### C3`, `history/260805-2250-coder-s20-belegungsansicht.md`
 

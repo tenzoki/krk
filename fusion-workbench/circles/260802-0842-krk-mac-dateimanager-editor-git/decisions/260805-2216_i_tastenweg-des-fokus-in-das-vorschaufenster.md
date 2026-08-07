@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** coder (bei der Umsetzung von S19)
 **Cross-references:** `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` `#### 19.`, `planning/260802-1036_*_spec-navigator-geruest.md` `### C6`, `### C10`
 

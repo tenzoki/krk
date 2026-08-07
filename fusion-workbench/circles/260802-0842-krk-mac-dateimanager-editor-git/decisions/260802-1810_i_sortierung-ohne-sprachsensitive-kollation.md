@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** orchestrator (gemeldet vom coder bei der Umsetzung von Schritt 2)
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritt 2 und Abschnitt `## Datenstrukturen`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` Abschnitt C2, `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1803-verzeichnisleser-und-ordnermodell.md`
 

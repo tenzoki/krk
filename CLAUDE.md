@@ -18,7 +18,7 @@ Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zus�
 
 ## Projektstand
 
-Geprüft am 260807-1200. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
+Geprüft am 260807-1011. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
 
 ```
 krk/
@@ -89,7 +89,7 @@ Die Antwort steht jeweils in der Zeile `Answered:` ihres Datensatzes und ausform
 find fusion-workbench/shared/decisions fusion-workbench/circles/*/decisions -maxdepth 1 -name '*_o_*.md'
 ```
 
-**Keine offene Frage hält derzeit einen Planschritt auf.** Zwei binden künftige Arbeit statt der laufenden: die Verfügbarkeitsprüfung für Schnittstellen jenseits von macOS 15 bindet die Runde, die eine solche anspricht, und die Frage nach dem Vordergrund des Abnahmelaufs bindet jeden weiteren Messlauf.
+**Keine offene Frage hält einen Planschritt auf; alle binden künftige Arbeit.** Die Namen liefert das `find` drei Zeilen darüber — eine Zahl an dieser Stelle veraltet auf demselben Weg wie die Aufstellung, die hier bis zum 260807 stand.
 
 Außerhalb des aktiven Circles liegen die KI-Anbindung, ein integrierter Browser, Datei- und Ordnervergleich, Suchen und Ersetzen über mehrere Dateien, Zugriff über Server-Protokolle sowie Git jenseits der vier genannten Operationen. Die Abgrenzung im Einzelnen steht im Circle-Datensatz.
 

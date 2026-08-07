@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** coder
 **Cross-references:** issues/260805-2335_o_l1-und-l9-verfehlen-den-anteil-im-ersten-gesamtlauf-unter-fremdlast.md, messungen/260805-2207-MacBookPro15-1-abnahme.txt, messungen/260805-2207-MacBookPro15-1-abnahme-begleittext.md, planning/260802-1428_o_plan-navigator-geruest-runde-1.md `#### 22.`
 

@@ -54,3 +54,18 @@ Zwölf Aufgaben, Reihenfolge nach Nutzerwunsch. Drei tragen ein Nutzer-Gate.
 ## Turn-Protokoll
 
 (folgt)
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: 38 von 38 Planschritten am Code belegt und S19b/S19c an ihren Abnahmekriterien einzeln nachgeprüft (`crates/krk-core/src/tasten/belegung.rs:295,363,429`, `resources/default-keymap.toml:347`, `cargo test --workspace` grün am Stand `710ce84`); dagegen 3 Driftbefunde neu gemeldet und 6 Statuskopfzeilen richtiggestellt. Der schwerste Driftbefund: der Plan sagt an zwei Stellen, die Auswertung könne die neue Fassung der Zusage L9 nicht abnehmen, was seit `d569f8a` falsch ist. Offene Defekte: 3 offen, 1 zurückgestellt, keiner davon aus einer Durchsicht dieser Sitzung unerledigt.
+- Artifact↔Directive: die 16 Commits von `f9a0462` bis `710ce84` bewegen sich auf die Directive zu. Sie stärken durchweg die Tastatursteuerung und die Verlässlichkeit der Dateiliste: `9a47c4a` gibt dem Vorschaufenster den dritten Fokusbefehl und macht damit alle drei Bereiche über die Tastatur erreichbar, `5d7e299` und `5f2e45d` reparieren Auswahl und Lesestelle, `3e9613a` bringt die Spalte Typ mit ihrer Sortierordnung in Übereinstimmung, `880cb70` gibt dem Bündel seine Sprache. Kein Commit ist quer zur Directive.
+- Grounding↔Directive: 31 umgesetzte und 8 offene Entscheidungen, keine im Widerspruch zur Directive. Eine Spannung ist benannt statt übergangen: die Absenkung der Zusage L9 am 260807 gibt im Kopierfall dauerhaft eine Bildlänge gegen die Maxime "superschnell" ab; der Nutzer hat sie in Kenntnis des Preises gewählt, und `decisions/260806-0014_*_l9-verfehlt-den-anteil-auch-auf-dem-ruhigen-geraet.md` schreibt ihn aus.
+
+**Rebalance recommendation:** revise Artifact
+
+Die Empfehlung meint nicht, die Arbeit sei falsch. Die Directive stimmt, die Grounding stimmt, und die 38 Schritte stehen. Was fehlt, ist der Beleg: sieben der zehn Zeitzusagen — L1, L4, L5, L6, L7, L8 und der Zeichenanteil von L2 — stehen unverändert auf der Abnahmereihe vom 260805-2207, und nach jener Messung haben `880cb70`, `5d7e299` und `9a47c4a` Wege berührt, die genau diese Zusagen messen. Frisch gemessen sind allein L3, L10 und der Kernanteil von L2 (`messungen/260807-0002-…`); für L9 sind die alten Einzelwerte unter der neuen Regel nachgerechnet (`crates/krk-bench/src/messen.rs:2179-2232`). Ein Abnahmelauf am gebauten Bündel schließt die Lücke; er verlangt KRK im Vordergrund und damit den Nutzer.
