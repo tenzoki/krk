@@ -576,7 +576,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase B: Der Kern rechnet, ohne Fenster
 
-#### 8. **`krk-core::text`: Zeilenindex, Suche und Ersetzen**
+#### 8. [DONE] **`krk-core::text`: Zeilenindex, Suche und Ersetzen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/text/mod.rs`, `crates/krk-core/src/text/zeilen.rs`, `crates/krk-core/src/text/suche.rs`, `crates/krk-core/src/lib.rs` (einbindend: `pub mod text;`), `crates/krk-core/tests/text.rs`
@@ -614,7 +614,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S9
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: ein Ordner wird abgewiesen; eine Verknüpfung auf eine Textdatei wird angenommen, eine auf einen Ordner abgewiesen; eine Datei von `EDITORGRENZE + 1` Bytes wird abgewiesen, und die Probe belegt über die Laufzeit oder über eine Zählung der Lesevorgänge, dass sie nicht gelesen wurde; eine Datei mit ungültiger UTF-8-Folge wird abgewiesen und nicht mit Ersatzzeichen geliefert; die drei Abweisungsgründe liefern drei verschiedene Meldetexte.
 
-#### 11. **`Lesezeichen` trägt zwei Sorten**
+#### 11. [DONE] **`Lesezeichen` trägt zwei Sorten**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/ablage/lesezeichen.rs` (erweitert: `Lesezeichen`, `Ziel`, `gueltig`, der Modulkopf), `crates/krk-core/tests/ablage.rs` (erweitert)

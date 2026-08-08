@@ -36,7 +36,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Verschiebung};
+use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Verschiebung, Ziel};
 
 /// Die Ueberschrift des oberen Teils.
 pub const UEBERSCHRIFT_LESEZEICHEN: &str = "Lesezeichen";
@@ -342,14 +342,24 @@ impl Leistenmodell {
     }
 
     /// Was hinter der ausgewaehlten Zeile steht.
+    ///
+    /// **Nur eine Ordnermarke liefert eine Auswahl.** [`Auswahl`] traegt einen
+    /// Ordner, und eine Textmarke hat keinen; sie liefert deshalb `None`, und
+    /// ihre Auswahl bleibt folgenlos. Das ist ein Platzhalter und keine
+    /// Festlegung: **S39** teilt die Auswahl nach der Sorte auf und laesst eine
+    /// Textmarke ihre Datei im Editor anspringen. Bis **S38** das Anlegen
+    /// bringt, entsteht in KRK ohnehin keine Textmarke.
     pub fn gewaehlt(&self) -> Option<Auswahl> {
         match self.zeile(self.auswahl?)? {
             Zeile::Ueberschrift(_) => None,
             Zeile::Lesezeichen(stelle) => {
                 let gemerkt = self.lesezeichen.get(stelle)?;
+                let Ziel::Ordner { ordner } = &gemerkt.lesezeichen.ziel else {
+                    return None;
+                };
                 Some(Auswahl {
                     name: gemerkt.lesezeichen.name.clone(),
-                    ordner: gemerkt.lesezeichen.ordner.clone(),
+                    ordner: ordner.clone(),
                     gueltig: gemerkt.gueltig,
                 })
             }
@@ -376,10 +386,20 @@ impl Leistenmodell {
         }
     }
 
-    /// Legt ein Lesezeichen an und waehlt es aus (C5).
+    /// Legt ein Lesezeichen auf einen Ordner an und waehlt es aus (C5).
+    ///
+    /// Nimmt weiterhin einen Ordner und kein [`Ziel`]: das Anlegen einer
+    /// Textmarke kommt in **S38** und legt dort fest, woher Datei, Zeile und
+    /// Zeileninhalt kommen. Erst dann ist zu entscheiden, ob diese Funktion das
+    /// fertige [`Ziel`] entgegennimmt oder ein zweites Gegenstueck bekommt.
     pub fn anlegen(&mut self, name: &str, ordner: &Path) {
         let mut liste = self.lesezeichenliste();
-        let stelle = liste.anlegen(name, ordner);
+        let stelle = liste.anlegen(
+            name,
+            Ziel::Ordner {
+                ordner: ordner.to_path_buf(),
+            },
+        );
         self.lesezeichen_setzen(&liste);
         self.auswahl = self.zeile_des_lesezeichens(stelle);
     }
@@ -641,6 +661,23 @@ mod tests {
                 gueltig: true,
             })
         );
+    }
+
+    /// Der Platzhalter aus [`Leistenmodell::gewaehlt`], festgehalten, damit
+    /// niemand die Datei einer Textmarke versehentlich als Ordner ausgibt.
+    /// **S39 loest die Probe ab**: dort waehlt eine Textmarke ihre Datei im
+    /// Editor an, statt folgenlos zu bleiben.
+    #[test]
+    fn eine_textmarke_liefert_bis_s39_keine_auswahl() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::textstelle(
+            "Stelle",
+            "/eins/datei.txt",
+            7,
+            "eine Zeile",
+        )]));
+        assert!(modell.waehlen(1));
+        assert_eq!(modell.gewaehlt(), None);
     }
 
     #[test]

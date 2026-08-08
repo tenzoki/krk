@@ -71,7 +71,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 pub use einstellungen::Einstellungen;
-pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung};
+pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel};
 pub use pfade::{Ablageort, Datei};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber, Tab,

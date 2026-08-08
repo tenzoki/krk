@@ -1,4 +1,5 @@
-//! Die Lesezeichen aus C5: frei benannte Verweise auf Ordner.
+//! Die Lesezeichen aus C5 und die Textmarken aus C6: frei benannte Verweise
+//! auf einen Ordner oder auf eine Zeile in einer Datei.
 //!
 //! Die Reihenfolge der Liste ist die Reihenfolge in der Leiste; ein eigenes
 //! Ordnungsfeld gibt es nicht, weil zwei Ordnungen zwei Wahrheiten waeren.
@@ -11,7 +12,18 @@
 //! des unteren Leistenteils. Das ist Ansichtszustand und wohnt in
 //! `krk-ui`; die Geraete kommen ohnehin vom System und werden nicht abgelegt.
 //!
-//! # Gueltig heisst: der Ordner steht noch da
+//! # Eine Liste mit zwei Sorten und keine zweite Liste
+//!
+//! Derselbe Grund, aus dem die Ordnung kein eigenes Feld bekommt, gilt fuer den
+//! Bestand: zwei Listen waeren zwei Wahrheiten. C6 sagt zu, dass beide Sorten
+//! in **einer** Datei und **einer** Ordnung stehen, und die Sorte ist deshalb
+//! eine Eigenschaft des einzelnen Eintrags ([`Ziel`]) und keine Eigenschaft der
+//! Liste. [`Lesezeichenliste`] kennt sie nicht: `anlegen`, `umbenennen`,
+//! `loeschen` und `verschieben` schieben Eintraege in einem `Vec` und fragen an
+//! keiner Stelle nach der Sorte. Damit wirken die vier Befehle aus C5 auf eine
+//! Textmarke wie auf eine Ordnermarke, ohne dass dafuer etwas gebaut wurde.
+//!
+//! # Gueltig heisst: das Ziel steht noch da
 //!
 //! C5 sagt zu, dass ein Lesezeichen auf einen verschwundenen Ordner als
 //! ungueltig markiert ist und bei der Auswahl den Grund nennt, statt
@@ -20,36 +32,171 @@
 //! Lesezeichen und ohne Fenster pruefbar. **Wann** gefragt wird, entscheidet
 //! die Leiste — bei jedem Neuaufbau ihrer Liste und nach jedem Ein- und
 //! Aushaengen eines Datentraegers, nicht bei jedem Zeichendurchgang.
+//!
+//! Fuer eine Textmarke heisst ungueltig **allein, dass die Datei fehlt**. Ob
+//! der gemerkte Zeileninhalt noch auf der gemerkten Nummer steht, entscheidet
+//! sich erst beim Sprung und nur dort. Das ist keine Sparsamkeit, sondern der
+//! tragende Grund der Antwort vom 260808-0017
+//! (`decisions/260807-2147_*_wie-weit-reicht-die-suche-in-der-naehe-einer-textmarke.md`):
+//! die Leiste stellt diese Frage bei jedem Neuaufbau ihrer Liste fuer jede
+//! Marke, und eine Antwort, die dafuer jede gemerkte Datei oeffnen und lesen
+//! muesste, machte aus einer Frage an das Dateisystem einen Lesevorgang je
+//! Marke. [`Lesezeichen::gueltig`] stellt deshalb in beiden Faellen genau eine
+//! Frage und liest keine Datei.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-/// Ein Lesezeichen: ein Name und der Ordner, auf den er zeigt.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Ein Lesezeichen: ein Name und das Ziel, auf das er zeigt.
+///
+/// `#[serde(default)]` steht hier aus demselben Grund, aus dem jede Struktur in
+/// [`super::sitzung`] ihn traegt: ein Feld, das eine spaetere Runde
+/// hinzufuegt, macht eine aeltere `bookmarks.toml` nicht ungueltig, sondern
+/// nimmt seinen Auslieferungswert an. Bis zu dieser Runde war `Lesezeichen` die
+/// einzige serde-Struktur der Ablage ohne diese Vorsorge.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Lesezeichen {
     /// Der Name, den der Nutzer vergeben hat.
     pub name: String,
-    /// Der Ordner, den die Auswahl im aktiven Dateifenster oeffnet.
-    pub ordner: PathBuf,
+    /// Worauf der Name zeigt: ein Ordner oder eine Stelle in einer Datei.
+    ///
+    /// Eingebettet und nicht geschachtelt: in `bookmarks.toml` stehen die
+    /// Felder der gewaehlten Sorte unmittelbar neben `name`, damit die Datei
+    /// von Hand lesbar bleibt.
+    #[serde(flatten)]
+    pub ziel: Ziel,
+}
+
+/// Worauf ein Lesezeichen zeigt: die beiden Sorten aus C5 und C6.
+///
+/// Eine **unmarkierte** Auswahl: in `bookmarks.toml` steht keine Sortenkennung,
+/// sondern allein das Feld `ordner` oder das Feldtrio `datei`, `zeile` und
+/// `zeileninhalt`. Drei Eigenschaften machen diese Form zur richtigen, und alle
+/// drei sind Zusagen und keine Bequemlichkeit:
+///
+/// - **Eine bestehende Datei bleibt gueltig.** Ein Eintrag mit `name` und
+///   `ordner` trifft [`Ziel::Ordner`] und wird unverandert gelesen. Das ist das
+///   dreizehnte Abnahmekriterium von C6.
+/// - **Die Sorte ist eine Eigenschaft des Typs und keine Pruefung zur
+///   Laufzeit.** Genau eine der beiden Sorten liegt vor, nie beide und nie
+///   keine; mit zwei wahlfreien Feldern nebeneinander waere das eine Regel, an
+///   die sich jemand halten muesste. Es gibt deshalb keinen Konstruktor, der
+///   beide Sorten zugleich annimmt.
+/// - **Die Datei bleibt von Hand lesbar**, wie C7 und C11 der Runde 1 es fuer
+///   alle vier Ablagedateien zusagen: keine Sortenkennung, kein
+///   `typ = "textstelle"`, keine geschachtelte Tabelle.
+///
+/// # Der Vorbehalt zu `flatten` und der Ausweg dazu
+///
+/// `#[serde(flatten)]` zwingt den Deserialisierer ueber einen
+/// zwischenspeichernden Weg, und ob `toml` die Verbindung aus `flatten` und
+/// `untagged` traegt, war am Papier nicht zu entscheiden. Die Abnahme ist
+/// deshalb eine Rundreise durch beide Sorten
+/// (`ablage.rs::eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei`).
+/// Sollte sie eines Tages fallen, ist der Ausweg benannt und nicht zu suchen:
+/// `Lesezeichen` wird selbst zur unmarkierten Auswahl mit zwei
+/// Strukturvarianten, die beide ein Feld `name` tragen, und `flatten` entfaellt.
+/// Der Preis dafuer ist, dass `name` von einem Feld zu einer Methode wird und
+/// die Leserstellen mitziehen.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Ziel {
+    /// Ein Ordner, den die Auswahl im aktiven Dateifenster oeffnet (C5).
+    Ordner {
+        /// Der Ordner.
+        ordner: PathBuf,
+    },
+    /// Eine Stelle in einer Datei, auf die die Auswahl den Editor setzt (C6).
+    ///
+    /// Eine **Stelle** und kein Bereich, festgelegt am 260808-0017
+    /// (`decisions/260807-2147_*_traegt-eine-textmarke-auch-einen-bereich-oder-nur-eine-stelle.md`).
+    /// Der tragende Grund war nicht der Aufwand, sondern eine unbeantwortete
+    /// Folgefrage: ein Bereich hat zwei Anker, und was gilt, wenn nach einer
+    /// Aenderung von aussen nur einer wiedergefunden wird, ist zu entscheiden
+    /// und nicht abzuleiten.
+    Textstelle {
+        /// Die Datei, die der Editor oeffnet.
+        datei: PathBuf,
+        /// Die gemerkte Zeilennummer, von 1 an gezaehlt.
+        zeile: u32,
+        /// Der Textinhalt jener Zeile, als Probe beim Sprung.
+        ///
+        /// **Keine eindeutige Kennung.** Eine Marke auf einer Zeile, die in der
+        /// Datei mehrfach steht, etwa auf einer schliessenden Klammer oder
+        /// einer Leerzeile, ist nach einer Aenderung von aussen nicht
+        /// zuverlaessig wiederzufinden. Das ist eine Grenze der gewaehlten
+        /// Regel und keine Luecke der Umsetzung; der Spec haelt sie in C6
+        /// ausdruecklich fest.
+        zeileninhalt: String,
+    },
+}
+
+impl Default for Ziel {
+    /// Der Auslieferungswert einer Lesezeichensorte: ein Ordner ohne Pfad.
+    ///
+    /// Er steht nie in einer geschriebenen Datei; er ist der Wert, den
+    /// `#[serde(default)]` auf [`Lesezeichen`] braucht.
+    fn default() -> Self {
+        Ziel::Ordner {
+            ordner: PathBuf::new(),
+        }
+    }
 }
 
 impl Lesezeichen {
-    /// Ein Lesezeichen aus Name und Ordner.
+    /// Ein Lesezeichen auf einen Ordner (C5).
     pub fn neu(name: impl Into<String>, ordner: impl Into<PathBuf>) -> Self {
         Self {
             name: name.into(),
-            ordner: ordner.into(),
+            ziel: Ziel::Ordner {
+                ordner: ordner.into(),
+            },
         }
     }
 
-    /// Ob der Ordner, auf den es zeigt, noch da ist (C5).
+    /// Ein Lesezeichen auf eine Stelle in einer Datei (C6).
     ///
-    /// Gefragt wird nach einem **Ordner** und nicht nach irgendeinem Eintrag:
-    /// ein Lesezeichen, an dessen Stelle inzwischen eine Datei liegt, laesst
-    /// sich so wenig oeffnen wie eines auf nichts.
+    /// Kein Gegenstueck zu [`Lesezeichen::neu`], das beides annimmt: die Sorte
+    /// ist eine Eigenschaft des Typs, siehe [`Ziel`].
+    pub fn textstelle(
+        name: impl Into<String>,
+        datei: impl Into<PathBuf>,
+        zeile: u32,
+        zeileninhalt: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            ziel: Ziel::Textstelle {
+                datei: datei.into(),
+                zeile,
+                zeileninhalt: zeileninhalt.into(),
+            },
+        }
+    }
+
+    /// Ob das Ziel, auf das es zeigt, noch da ist (C5, C6).
+    ///
+    /// Beide Zweige stellen **genau eine Frage an das Dateisystem und lesen
+    /// keine Datei**; das elfte Abnahmekriterium von C6 verlangt es, und der
+    /// tragende Grund steht im Modulkopf unter "Gueltig heisst: das Ziel steht
+    /// noch da".
+    ///
+    /// Gefragt wird nach der Art des Eintrags und nicht nach irgendeinem: ein
+    /// Ordner-Lesezeichen, an dessen Stelle inzwischen eine Datei liegt, laesst
+    /// sich so wenig oeffnen wie eines auf nichts, und eine Textmarke, an deren
+    /// Stelle ein Ordner steht, ebenso wenig.
+    ///
+    /// Was hier **nicht** gefragt wird: ob der gemerkte Zeileninhalt noch auf
+    /// der gemerkten Nummer steht. Eine Marke, deren Zeile sich geaendert hat
+    /// oder gar nicht mehr auffindbar ist, bleibt gueltig; das entscheidet sich
+    /// beim Sprung und nur dort.
     pub fn gueltig(&self) -> bool {
-        self.ordner.is_dir()
+        match &self.ziel {
+            Ziel::Ordner { ordner } => ordner.is_dir(),
+            Ziel::Textstelle { datei, .. } => datei.is_file(),
+        }
     }
 }
 
@@ -117,15 +264,23 @@ impl Lesezeichenliste {
         self.eintraege.get(stelle)
     }
 
-    /// Haengt ein Lesezeichen unten an und liefert seine Stelle (C5).
+    /// Haengt ein Lesezeichen unten an und liefert seine Stelle (C5, C6).
     ///
     /// Unten und nicht oben: die Reihenfolge gehoert dem Nutzer, und ein neuer
     /// Eintrag, der sich vor seine gesetzten schiebt, nimmt ihm die Ordnung ab,
     /// die er mit `lesezeichen_hoch` und `lesezeichen_runter` hergestellt hat.
     /// Der Name kommt getrimmt herein; gepruefte Namen liefert
     /// [`name_pruefen`].
-    pub fn anlegen(&mut self, name: &str, ordner: &Path) -> usize {
-        self.eintraege.push(Lesezeichen::neu(name.trim(), ordner));
+    ///
+    /// **Eine Tuer fuer beide Sorten.** Die Liste fragt nicht nach der Sorte,
+    /// sie nimmt das fertige [`Ziel`] entgegen und haengt an. Ein zweiter
+    /// Anlegeweg fuer Textmarken daneben waere der zweite Mechanismus fuer
+    /// dieselbe Aufgabe, und die eine Liste mit zwei Sorten haette zwei Tueren.
+    pub fn anlegen(&mut self, name: &str, ziel: Ziel) -> usize {
+        self.eintraege.push(Lesezeichen {
+            name: name.trim().to_owned(),
+            ziel,
+        });
         self.eintraege.len() - 1
     }
 
@@ -198,11 +353,80 @@ mod tests {
             .collect()
     }
 
+    /// Ein Ziel aus einem Pfad, damit die Proben unten kurz bleiben.
+    fn ordner(pfad: &str) -> Ziel {
+        Ziel::Ordner {
+            ordner: PathBuf::from(pfad),
+        }
+    }
+
     #[test]
     fn ein_neues_lesezeichen_haengt_unten_an() {
         let mut liste = liste();
-        assert_eq!(liste.anlegen("  Vier  ", Path::new("/vier")), 3);
+        assert_eq!(liste.anlegen("  Vier  ", ordner("/vier")), 3);
         assert_eq!(namen(&liste), ["Eins", "Zwei", "Drei", "Vier"]);
+    }
+
+    /// Anlegen fragt nicht nach der Sorte: beide gehen durch dieselbe Tuer und
+    /// landen in derselben Liste, in der Reihenfolge des Anlegens (C6).
+    #[test]
+    fn beide_sorten_gehen_durch_dieselbe_tuer_und_in_dieselbe_ordnung() {
+        let mut liste = Lesezeichenliste::default();
+        assert_eq!(liste.anlegen("Projekte", ordner("/p")), 0);
+        assert_eq!(
+            liste.anlegen(
+                "Die Lesestelle",
+                Ziel::Textstelle {
+                    datei: PathBuf::from("/p/leser.rs"),
+                    zeile: 118,
+                    zeileninhalt: "    let mut puffer = vec![];".to_owned(),
+                },
+            ),
+            1
+        );
+        assert_eq!(liste.anlegen("Sicherung", ordner("/s")), 2);
+        assert_eq!(namen(&liste), ["Projekte", "Die Lesestelle", "Sicherung"]);
+    }
+
+    /// Die drei uebrigen Listenaenderungen wirken auf eine Textmarke wie auf
+    /// eine Ordnermarke — das vierte Abnahmekriterium von C6, ohne eigenen Bau.
+    #[test]
+    fn umbenennen_loeschen_und_verschieben_sind_sortenblind() {
+        let mut liste = Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Eins", "/eins"),
+            Lesezeichen::textstelle("Zwei", "/zwei.rs", 7, "fn zwei() {}"),
+            Lesezeichen::textstelle("Drei", "/drei.rs", 9, "fn drei() {}"),
+        ]);
+        assert!(liste.umbenennen(1, "Zweite Stelle"));
+        assert_eq!(liste.verschieben(2, Verschiebung::Hoch), Some(1));
+        assert_eq!(namen(&liste), ["Eins", "Drei", "Zweite Stelle"]);
+        assert!(liste.loeschen(2));
+        assert_eq!(namen(&liste), ["Eins", "Drei"]);
+    }
+
+    /// Ein Lesezeichen traegt genau eine Sorte, nie beide und nie keine.
+    ///
+    /// Der Typ erzwingt es: [`Ziel`] hat zwei Werte, und es gibt **keinen
+    /// Konstruktor**, der Ordner und Textstelle zugleich annimmt. Die
+    /// Fallunterscheidung unten ist deshalb vollstaendig und hat keinen
+    /// Auffangzweig; ein dritter Wert hielte den Bau an.
+    #[test]
+    fn ein_lesezeichen_traegt_genau_eine_sorte() {
+        let marken = [
+            (Lesezeichen::neu("Projekte", "/p"), true),
+            (
+                Lesezeichen::textstelle("Stelle", "/p/leser.rs", 118, "let x = 1;"),
+                false,
+            ),
+        ];
+        for (marke, ist_ordner) in &marken {
+            match &marke.ziel {
+                Ziel::Ordner { .. } => assert!(*ist_ordner, "{} ist keine Ordnermarke", marke.name),
+                Ziel::Textstelle { .. } => {
+                    assert!(!*ist_ordner, "{} ist keine Textmarke", marke.name)
+                }
+            }
+        }
     }
 
     #[test]

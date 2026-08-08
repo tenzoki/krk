@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 use krk_core::ablage::sitzung::SITZUNGSTAKT;
 use krk_core::ablage::{
     Ablage, Ablageort, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung, Fensterseite,
-    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung,
+    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung, Ziel,
     atomar, einstellungen, pfade,
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
@@ -1061,14 +1061,11 @@ fn die_vier_aenderungen_an_den_lesezeichen_ueberleben_einen_neustart() {
 
     let mut liste = Lesezeichenliste::default();
     assert_eq!(
-        liste.anlegen("Projekte", Path::new("/Users/pruefung/Projekte")),
+        liste.anlegen("Projekte", auf("/Users/pruefung/Projekte")),
         0
     );
-    assert_eq!(
-        liste.anlegen("Sicherung", Path::new("/Volumes/Sicherung")),
-        1
-    );
-    assert_eq!(liste.anlegen("Wurzel", Path::new("/")), 2);
+    assert_eq!(liste.anlegen("Sicherung", auf("/Volumes/Sicherung")), 1);
+    assert_eq!(liste.anlegen("Wurzel", auf("/")), 2);
     assert!(liste.umbenennen(1, "Sicherungsplatte"));
     assert!(liste.loeschen(0));
     assert_eq!(liste.verschieben(1, Verschiebung::Hoch), Some(0));
@@ -1110,5 +1107,169 @@ fn ein_lesezeichen_kennt_den_zustand_seines_ordners() {
     assert!(
         !Lesezeichen::neu("Datei", &datei).gueltig(),
         "eine Datei ist kein Ordner und kein Ziel fuer ein Lesezeichen"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Die zweite Sorte: Textmarken in derselben Liste und Datei (C6, Schritt 11)
+// ---------------------------------------------------------------------------
+
+/// Ein Ordnerziel aus einem Pfad, damit die Proben unten kurz bleiben.
+fn auf(pfad: &str) -> Ziel {
+    Ziel::Ordner {
+        ordner: PathBuf::from(pfad),
+    }
+}
+
+/// Eine Beispielliste mit beiden Sorten, absichtlich abwechselnd.
+///
+/// Die Reihenfolge ist die der Leiste und wird nicht nach Sorte gruppiert; der
+/// Modulkopf von `lesezeichen.rs` begruendet es damit, dass zwei Ordnungen zwei
+/// Wahrheiten waeren.
+fn gemischte_liste() -> Lesezeichenliste {
+    Lesezeichenliste::aus(vec![
+        Lesezeichen::neu("Projekte", "/Users/pruefung/Projekte"),
+        Lesezeichen::textstelle(
+            "Die Lesestelle",
+            "/Users/pruefung/Projekte/krk/crates/krk-core/src/verzeichnis/leser.rs",
+            118,
+            "        let mut puffer = vec![0u8; PUFFERGROESSE];",
+        ),
+        Lesezeichen::neu("Sicherung", "/Volumes/Sicherung"),
+        Lesezeichen::textstelle("Der Modulkopf", "/Users/pruefung/notiz.md", 1, "# Notiz"),
+    ])
+}
+
+/// Eine `bookmarks.toml` aus der Zeit vor dieser Runde wird unveraendert
+/// eingelesen (C6, dreizehntes Abnahmekriterium).
+///
+/// Die Datei traegt allein `name` und `ordner` und kein weiteres Feld — genau
+/// die Gestalt, die das laufende Programm bis zum 260807 geschrieben hat. Der
+/// Nutzer verliert seine Lesezeichen nicht.
+#[test]
+fn eine_bookmarks_toml_aus_der_zeit_vor_den_textmarken_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("lesezeichen-altbestand");
+    let alt = "\
+[[eintraege]]
+name = \"Projekte\"
+ordner = \"/Users/pruefung/Projekte\"
+
+[[eintraege]]
+name = \"Sicherung\"
+ordner = \"/Volumes/Sicherung\"
+
+[[eintraege]]
+name = \"Wurzel\"
+ordner = \"/\"
+";
+    fs::write(ablage.pfad(Datei::Lesezeichen), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die alte Datei gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(geladen.wert.zahl(), 3);
+    assert_eq!(
+        geladen.wert,
+        Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Projekte", "/Users/pruefung/Projekte"),
+            Lesezeichen::neu("Sicherung", "/Volumes/Sicherung"),
+            Lesezeichen::neu("Wurzel", "/"),
+        ]),
+        "drei Ordnermarken, in der Reihenfolge der Datei"
+    );
+}
+
+/// Eine Rundreise ueber beide Sorten liefert byteweise dieselbe Datei.
+///
+/// **Das ist die Abnahme des Vorbehalts zu `#[serde(flatten)]`**, den der
+/// Modulkopf von [`Ziel`] benennt: ob `toml` die Verbindung aus `flatten` und
+/// `untagged` traegt, war am Papier nicht zu entscheiden. Geprueft wird
+/// deshalb der ganze Weg, den das laufende Programm geht — schreiben, wieder
+/// einlesen, ein zweites Mal schreiben — und beide Male muss derselbe Text
+/// herauskommen.
+#[test]
+fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
+    let (_ordner, ablage) = ablage("lesezeichen-rundreise");
+    let liste = gemischte_liste();
+
+    ablage
+        .sichern(Datei::Lesezeichen, &liste)
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    let erster = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die geschriebene Datei liest sich nicht zurueck: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(geladen.wert, liste, "der Wert ueberlebt die Rundreise");
+
+    ablage
+        .sichern(Datei::Lesezeichen, &geladen.wert)
+        .expect("bookmarks.toml laesst sich nicht ein zweites Mal schreiben");
+    let zweiter = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+
+    assert_eq!(erster, zweiter, "die Datei ist byteweise dieselbe");
+}
+
+/// Die geschriebene Datei bleibt von Hand lesbar (C6, zwoelftes
+/// Abnahmekriterium, und C7/C11 der Runde 1).
+///
+/// Festgemacht an dem, was **nicht** darin steht: keine geschachtelte Tabelle
+/// unter einem Eintrag und keine Sortenkennung. Die unmarkierte Auswahl [`Ziel`]
+/// legt die Felder der gewaehlten Sorte unmittelbar neben `name`.
+#[test]
+fn die_geschriebene_datei_traegt_weder_geschachtelte_tabelle_noch_sortenkennung() {
+    let (_ordner, ablage) = ablage("lesezeichen-lesbar");
+    ablage
+        .sichern(Datei::Lesezeichen, &gemischte_liste())
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    let text = fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+
+    for kopf in text.lines().filter(|zeile| zeile.starts_with('[')) {
+        assert_eq!(
+            kopf.trim(),
+            "[[eintraege]]",
+            "die Datei traegt eine geschachtelte Tabelle:\n{text}"
+        );
+    }
+    for kennung in ["typ", "sorte", "art", "ziel"] {
+        assert!(
+            !text.contains(&format!("{kennung} =")),
+            "die Datei traegt eine Sortenkennung `{kennung}`:\n{text}"
+        );
+    }
+    assert!(text.contains("ordner = "), "die Ordnermarke fehlt:\n{text}");
+    assert!(
+        text.contains("zeileninhalt = "),
+        "die Textmarke fehlt:\n{text}"
+    );
+}
+
+/// Gueltig heisst fuer eine Textmarke allein, dass die Datei da ist (C6).
+///
+/// Eine Frage an das Dateisystem und **kein Lesevorgang**: der gemerkte
+/// Zeileninhalt kommt darin nicht vor. Die Probe haelt beides fest — die
+/// vorhandene Datei ist gueltig, obwohl ihr Inhalt mit dem gemerkten nichts zu
+/// tun hat, und ein Ordner an der Stelle der Datei ist es nicht.
+#[test]
+fn eine_textmarke_ist_gueltig_solange_ihre_datei_da_ist() {
+    let ordner = Pruefordner::neu("textmarke-gueltigkeit");
+    let datei = ordner.pfad().join("notiz.md");
+    fs::write(&datei, b"ein ganz anderer Inhalt\n").expect("schreiben gescheitert");
+
+    assert!(
+        Lesezeichen::textstelle("Da", &datei, 7, "eine Zeile, die dort nicht steht").gueltig(),
+        "ein abweichender Zeileninhalt macht die Marke nicht ungueltig"
+    );
+    assert!(!Lesezeichen::textstelle("Weg", ordner.pfad().join("fort.md"), 1, "x").gueltig());
+    assert!(
+        !Lesezeichen::textstelle("Ordner", ordner.pfad(), 1, "x").gueltig(),
+        "ein Ordner ist kein Ziel fuer eine Textmarke"
     );
 }
