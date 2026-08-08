@@ -108,9 +108,24 @@ impl Bereich {
 
     /// Ob dieser Bereich sich den frei werdenden Platz teilt.
     ///
-    /// Die beiden Dateifenster tun es, die beiden Randbereiche nicht.
+    /// Die beiden Dateifenster tun es, die festen Bereiche nicht.
+    ///
+    /// **Eine vollstaendige Fallunterscheidung und kein `matches!`.** Bis zur
+    /// Editor-Runde stand hier `matches!(self, Links | Rechts)`, und ein neuer
+    /// Bereich waere still als unbeweglich durchgegangen — mit der richtigen
+    /// Antwort, aber aus dem falschen Grund. Sie soll aus einer Zeile kommen,
+    /// die jemand geschrieben hat, und nicht aus einem Rueckfall. Ein fuenfter
+    /// Bereich haelt jetzt den Bau an, wie es die drei uebrigen vollstaendigen
+    /// Fallunterscheidungen dieses Projekts auch tun.
+    ///
+    /// Dies ist zugleich die **einzige** Stelle, die aufzaehlt, welche
+    /// Bereiche fest stehen; [`bereichsbreiten`] fragt hier nach, statt die
+    /// Liste ein zweites Mal zu fuehren.
     const fn ist_beweglich(self) -> bool {
-        matches!(self, Bereich::Links | Bereich::Rechts)
+        match self {
+            Bereich::Links | Bereich::Rechts => true,
+            Bereich::Lesezeichen | Bereich::Vorschau => false,
+        }
     }
 }
 
@@ -380,14 +395,21 @@ impl Fenstermodell {
 
 /// Verteilt den verfuegbaren Platz auf die vier Bereiche.
 ///
+/// **Die eine Breitenregel des Programms.** Sie steht hier und nirgends sonst;
+/// [`crate::appkit::aufteilung`] setzt nur um, was hier herauskommt.
+///
 /// Ein ausgeblendeter Bereich bekommt `0.0`; seine gespeicherte Breite bleibt
 /// unangetastet und steht beim Wiedereinblenden wieder zur Verfuegung.
 ///
-/// Die Regel in drei Saetzen. Die beiden Randbereiche bekommen ihre
+/// Die Regel in drei Saetzen. Die festen Bereiche bekommen der Reihe nach ihre
 /// gespeicherte Breite, hoechstens aber so viel, dass fuer die Dateifenster
 /// deren Mindestbreite bleibt. Was danach uebrig ist, teilen die sichtbaren
 /// Dateifenster im Verhaeltnis ihrer gespeicherten Breiten. Ist nur eines
 /// sichtbar, bekommt es alles.
+///
+/// **Die Reihenfolge von [`Bereich::ALLE`] ist dabei eine Zusage und kein
+/// Zufall.** Die festen Bereiche werden in dieser Folge bedient, und wer vorn
+/// steht, behaelt seine Wunschbreite, wenn es eng wird.
 ///
 /// Dass die Dateifenster ueber ein **Verhaeltnis** und nicht ueber ihre
 /// absolute Zahl gehen, ist die Antwort auf zwei Fragen zugleich: eine
@@ -409,11 +431,16 @@ pub fn bereichsbreiten(verfuegbar: f64, breiten: &Breiten, sichtbar: &Sichtbarke
         .map(|bereich| bereich.mindestbreite())
         .sum();
 
+    // Welche Bereiche fest stehen, sagt `ist_beweglich` und sonst niemand. Bis
+    // zur Editor-Runde stand hier die Literalliste
+    // `[Bereich::Lesezeichen, Bereich::Vorschau]` als zweite Aufzaehlung
+    // daneben: ein fuenfter fester Bereich, der dort fehlte, haette dauerhaft
+    // die Breite 0 bekommen, ohne dass der Uebersetzer etwas gesagt haette.
     let mut rest = verfuegbar;
-    for bereich in [Bereich::Lesezeichen, Bereich::Vorschau] {
-        if !modell.sichtbar(bereich) {
-            continue;
-        }
+    for bereich in Bereich::ALLE
+        .into_iter()
+        .filter(|bereich| !bereich.ist_beweglich() && modell.sichtbar(*bereich))
+    {
         let gewuenscht = modell
             .breite(bereich)
             .unwrap_or_else(|| bereich.anfangsbreite())
@@ -631,6 +658,30 @@ mod tests {
         modell.umschalten(Bereich::Vorschau);
         let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
         assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0]);
+    }
+
+    /// Welche Bereiche fest stehen, sagt `ist_beweglich` und sonst niemand.
+    ///
+    /// Die Probe zu Befund 6 des Editor-Plans: bis dahin fuehrte
+    /// `bereichsbreiten` die festen Bereiche als Literalliste ein zweites Mal,
+    /// und ein weiterer fester Bereich haette dort still gefehlt und dauerhaft
+    /// die Breite 0 bekommen. Solange das Fenster breit genug ist, bekommt
+    /// jeder feste, sichtbare Bereich seine Breite — hergeleitet aus
+    /// `ist_beweglich` und nicht aus einer Aufzaehlung im Rechenweg.
+    #[test]
+    fn jeder_feste_bereich_bekommt_seine_breite_ohne_zweite_aufzaehlung() {
+        let modell = modell();
+        let breiten = bereichsbreiten(1600.0, &modell.breiten(), &modell.sichtbarkeit());
+        for bereich in Bereich::ALLE {
+            if bereich.ist_beweglich() || !modell.sichtbar(bereich) {
+                continue;
+            }
+            assert_eq!(
+                breiten[bereich.index()],
+                bereich.anfangsbreite(),
+                "{bereich:?} ist fest und sichtbar, bekommt aber nicht seine Breite"
+            );
+        }
     }
 
     #[test]
