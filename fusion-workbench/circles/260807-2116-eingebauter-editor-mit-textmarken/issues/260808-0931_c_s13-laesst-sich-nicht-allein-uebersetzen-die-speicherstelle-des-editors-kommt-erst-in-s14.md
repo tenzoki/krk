@@ -66,3 +66,41 @@ vorkommt.
 
 **Offen bleibt der Kern von S13**: `Bereich::Editor` selbst mit seinen
 Mindest- und Anfangsbreiten und `[f64; 5]`.
+
+## Abschlussnotiz, 260808
+
+**Geschlossen.** Der Befund traf zu, und die vorgeschlagene Auflösung ist
+gefahren: S13, S14 und der `aufteilung.rs`-Anteil von S19 sind als **ein**
+Übersetzungsstand gelandet. Die Zahlen dieses Datensatzes stammten aus einer
+abgeschirmten Kopie; sie sind jetzt am Arbeitsbaum bestätigt.
+
+Die fünf Dateien, wie der Befund sie aufzählt:
+
+- `crates/krk-ui/src/fenstermodell.rs` — `Bereich::Editor` als fünfter Wert
+  hinter `Vorschau`, `ALLE: [Bereich; 5]`, `index()` gleich 4,
+  `mindestbreite()` gleich 320 und `anfangsbreite()` gleich 460 mit der
+  Herleitung aus `### Frage 6` als Kommentar, die Zweige in `sichtbar`,
+  `umschalten`, `breite` und `breite_setzen`, `[f64; 5]` in
+  `breiten_uebernehmen` und `bereichsbreiten`.
+- `crates/krk-core/src/ablage/sitzung.rs` — `Breiten::editor: Option<f64>` mit
+  `skip_serializing_if`, `Sichtbarkeit::editor: bool` mit dem Vorgabewert
+  `false`.
+- `crates/krk-core/tests/ablage.rs` — die beiden Strukturliterale in
+  `beispielsitzung()`, dazu drei neue Proben.
+- `crates/krk-ui/src/appkit/aufteilung.rs` — der `Editor`-Zweig in
+  `sichtbar_im`, `Aufteilung::gemessene_breiten` auf `[f64; 5]`, das
+  `editor`-Feld in den Literalen von `gemessene_breiten(teiler)` und
+  `gemessene_sichtbarkeit`.
+
+`cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace
+--all-targets` und `cargo fmt --all --check` beenden alle sauber; `krk-ui`
+trägt jetzt 195 Proben.
+
+**Die dritte Feststellung des Befunds ist ebenfalls erledigt**: der
+`sichtbar_im`-Zweig, der keinem Schritt gehörte, ist S13 zugeordnet, weil S13
+den Bereich anlegt. Der Plan hält das bei S13 fest, samt der Berichtigung, dass
+es **neun** vollständige Fallunterscheidungen über `Bereich` sind und nicht
+acht.
+
+**Was von S19 offen bleibt**, ist im Plan bei S19 vermerkt: der
+`anwendung.rs`-Anteil mit `breite_aendern` und `sitzung_bauen`.

@@ -4,17 +4,21 @@
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die
 //! Ansicht dazu ist [`crate::appkit::aufteilung`], die aus den Zahlen hier
-//! Rahmen fuer die vier Bereiche einer `NSSplitView` macht.
+//! Rahmen fuer die fuenf Bereiche einer `NSSplitView` macht.
 //!
-//! # Die vier Bereiche
+//! # Die fuenf Bereiche
 //!
 //! ```text
-//! ┌───────────┬──────────────────┬──────────────────┬───────────┐
-//! │ Lesezei-  │ linkes           │ rechtes          │ Vorschau  │
-//! │ chen (C5) │ Dateifenster     │ Dateifenster     │ (C6)      │
-//! └───────────┴──────────────────┴──────────────────┴───────────┘
-//!    fest          beweglich          beweglich         fest
+//! ┌───────────┬──────────────────┬──────────────────┬───────────┬───────────┐
+//! │ Lesezei-  │ linkes           │ rechtes          │ Vorschau  │ Editor    │
+//! │ chen (C5) │ Dateifenster     │ Dateifenster     │ (C6)      │ (C1)      │
+//! └───────────┴──────────────────┴──────────────────┴───────────┴───────────┘
+//!    fest          beweglich          beweglich         fest        fest
 //! ```
+//!
+//! Vorschau und Editor teilen sich dieselbe Stelle am rechten Rand und sind
+//! nie zugleich sichtbar; der gegenseitige Ausschluss selbst kommt in einem
+//! spaeteren Schritt und steht dann ebenfalls hier.
 //!
 //! "Fest" und "beweglich" beziehen sich auf das Verteilen des Platzes: die
 //! beiden Randbereiche behalten ihre Breite, die beiden Dateifenster teilen
@@ -45,7 +49,7 @@ use crate::tabs::Tabuebersicht;
 /// Anschlaege, ein groesserer spraenge ueber die gesuchte Breite hinweg.
 pub const BREITENSCHRITT: f64 = 40.0;
 
-/// Einer der vier Bereiche der Fensterzeile.
+/// Einer der fuenf Bereiche der Fensterzeile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bereich {
     /// Die Lesezeichen- und Geraeteleiste ganz links (C5).
@@ -56,15 +60,22 @@ pub enum Bereich {
     Rechts,
     /// Das Vorschaufenster ganz rechts (C6).
     Vorschau,
+    /// Der eingebaute Editor (C1 der Editor-Runde).
+    ///
+    /// Er steht **hinter** der Vorschau, weil er ihre Stelle in der
+    /// Fensterzeile einnimmt: beide sitzen am rechten Rand und sind nie
+    /// zugleich sichtbar.
+    Editor,
 }
 
 impl Bereich {
-    /// Alle vier, von links nach rechts.
-    pub const ALLE: [Bereich; 4] = [
+    /// Alle fuenf, von links nach rechts.
+    pub const ALLE: [Bereich; 5] = [
         Bereich::Lesezeichen,
         Bereich::Links,
         Bereich::Rechts,
         Bereich::Vorschau,
+        Bereich::Editor,
     ];
 
     /// Die Stelle des Bereichs in der Fensterzeile.
@@ -74,6 +85,7 @@ impl Bereich {
             Bereich::Links => 1,
             Bereich::Rechts => 2,
             Bereich::Vorschau => 3,
+            Bereich::Editor => 4,
         }
     }
 
@@ -89,20 +101,40 @@ impl Bereich {
     ///
     /// Ein Dateifenster braucht mehr, weil vier Spalten hineinpassen muessen;
     /// die beiden Randbereiche tragen je eine Liste mit einer Spalte.
+    ///
+    /// **Der Editor steht mit 320 ueber der Vorschau mit ihren 160**, und der
+    /// Grund ist das vierte Abnahmekriterium von C1: "nicht schmaler, als eine
+    /// Zeile Text noch lesbar ist". Bei der festen Schrift der Rohansicht in
+    /// Systemgroesse traegt diese Breite rund 40 Zeichen. Die Vorschau kommt
+    /// mit weniger aus, weil sie Metadaten zeigt und keine Zeilen.
     pub const fn mindestbreite(self) -> f64 {
         match self {
             Bereich::Lesezeichen => 120.0,
             Bereich::Links | Bereich::Rechts => 240.0,
             Bereich::Vorschau => 160.0,
+            Bereich::Editor => 320.0,
         }
     }
 
     /// Die Breite, mit der der Bereich beim allerersten Start aufgeht.
+    ///
+    /// **Als Punktzahl gesetzt und nicht als Anteil gerechnet.** C1 der
+    /// Editor-Runde verlangt fuer den Editor "rund ein Drittel der
+    /// Fensterbreite"; ein Anteil an dieser Stelle waere ein zweiter Rechenweg
+    /// neben [`bereichsbreiten`], und die Runde 1 traegt fuer alle vier
+    /// bestehenden Bereiche ebenfalls Zahlen.
+    ///
+    /// Die 460 des Editors folgen aus den bestehenden vier: sie summieren sich
+    /// zu 1280, ein Drittel davon sind rund 427. Mit ausgeblendeter Vorschau
+    /// bleiben fuer die beiden Dateifenster 1280 minus 180 minus 460 gleich
+    /// 640, also 320 je Fenster gegen ihre Mindestbreite von 240. Die Zahl gilt
+    /// nur beim allerersten Start; danach gilt die Breite des Nutzers.
     pub const fn anfangsbreite(self) -> f64 {
         match self {
             Bereich::Lesezeichen => 180.0,
             Bereich::Links | Bereich::Rechts => 420.0,
             Bereich::Vorschau => 260.0,
+            Bereich::Editor => 460.0,
         }
     }
 
@@ -124,7 +156,7 @@ impl Bereich {
     const fn ist_beweglich(self) -> bool {
         match self {
             Bereich::Links | Bereich::Rechts => true,
-            Bereich::Lesezeichen | Bereich::Vorschau => false,
+            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => false,
         }
     }
 }
@@ -132,7 +164,7 @@ impl Bereich {
 /// Das gehaltene Fenstermodell.
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
-/// Sichtbarkeit der vier Bereiche und ihre Breiten. Die Tabs selbst haelt
+/// Sichtbarkeit der fuenf Bereiche und ihre Breiten. Die Tabs selbst haelt
 /// [`Tabliste`], je eine Liste je Dateifenster.
 #[derive(Debug)]
 pub struct Fenstermodell {
@@ -213,10 +245,11 @@ impl Fenstermodell {
             Bereich::Links => true,
             Bereich::Rechts => self.sichtbar.zweites_dateifenster,
             Bereich::Vorschau => self.sichtbar.vorschau,
+            Bereich::Editor => self.sichtbar.editor,
         }
     }
 
-    /// Die Sichtbarkeit aller vier Bereiche, von links nach rechts.
+    /// Die Sichtbarkeit aller fuenf Bereiche, von links nach rechts.
     pub fn sichtbarkeit(&self) -> Sichtbarkeit {
         self.sichtbar
     }
@@ -237,6 +270,12 @@ impl Fenstermodell {
             }
             Bereich::Vorschau => {
                 self.sichtbar.vorschau = !self.sichtbar.vorschau;
+                true
+            }
+            // Wie die Vorschau, mit einem Unterschied, den ein spaeterer
+            // Schritt traegt: das Einblenden des einen blendet das andere aus.
+            Bereich::Editor => {
+                self.sichtbar.editor = !self.sichtbar.editor;
                 true
             }
             Bereich::Rechts => {
@@ -332,7 +371,7 @@ impl Fenstermodell {
     /// vorkommt. Am 260804 im laufenden Buendel gemessen: das zweite
     /// Dateifenster kam nach dem Wiedereinblenden auf 269 Punkten statt auf
     /// seinen 406 zurueck, und das verfehlte die Zusage aus C7.
-    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 4]) {
+    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 5]) {
         let beide_dateifenster = self.sichtbar(Bereich::Links) && self.sichtbar(Bereich::Rechts);
         for bereich in Bereich::ALLE {
             if bereich.ist_beweglich() && !beide_dateifenster {
@@ -379,6 +418,7 @@ impl Fenstermodell {
             Bereich::Links => self.breiten.links,
             Bereich::Rechts => self.breiten.rechts,
             Bereich::Vorschau => self.breiten.vorschau,
+            Bereich::Editor => self.breiten.editor,
         }
     }
 
@@ -388,12 +428,13 @@ impl Fenstermodell {
             Bereich::Links => &mut self.breiten.links,
             Bereich::Rechts => &mut self.breiten.rechts,
             Bereich::Vorschau => &mut self.breiten.vorschau,
+            Bereich::Editor => &mut self.breiten.editor,
         };
         *feld = Some(breite);
     }
 }
 
-/// Verteilt den verfuegbaren Platz auf die vier Bereiche.
+/// Verteilt den verfuegbaren Platz auf die fuenf Bereiche.
 ///
 /// **Die eine Breitenregel des Programms.** Sie steht hier und nirgends sonst;
 /// [`crate::appkit::aufteilung`] setzt nur um, was hier herauskommt.
@@ -409,20 +450,24 @@ impl Fenstermodell {
 ///
 /// **Die Reihenfolge von [`Bereich::ALLE`] ist dabei eine Zusage und kein
 /// Zufall.** Die festen Bereiche werden in dieser Folge bedient, und wer vorn
-/// steht, behaelt seine Wunschbreite, wenn es eng wird.
+/// steht, behaelt seine Wunschbreite, wenn es eng wird. Daraus faellt die
+/// Festlegung des Nutzers vom 260808 ohne eine zweite Regel an: die
+/// Lesezeichenleiste steht vor dem Editor, also weicht sie nicht, wenn beide
+/// zugleich stehen, und die beiden Dateifenster ruecken zusammen. Erst wenn ihr
+/// Mindestmass erreicht ist, gibt der Editor nach.
 ///
 /// Dass die Dateifenster ueber ein **Verhaeltnis** und nicht ueber ihre
 /// absolute Zahl gehen, ist die Antwort auf zwei Fragen zugleich: eine
 /// Fenstervergroesserung kommt dort an, wo der Nutzer sie braucht, und die
 /// beiden Tastenbefehle aus C7 verschieben die Trennlinie, statt eine Breite zu
 /// setzen, die der naechste Bildaufbau wieder einkassiert.
-pub fn bereichsbreiten(verfuegbar: f64, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 4] {
+pub fn bereichsbreiten(verfuegbar: f64, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 5] {
     let modell = Fenstermodell {
         aktiv: Fensterseite::Links,
         breiten: *breiten,
         sichtbar: *sichtbar,
     };
-    let mut ergebnis = [0.0_f64; 4];
+    let mut ergebnis = [0.0_f64; 5];
 
     // Was die sichtbaren Dateifenster mindestens brauchen.
     let mindestens_dateifenster: f64 = Bereich::ALLE
@@ -494,10 +539,20 @@ mod tests {
         Fenstermodell::aus_sitzung(&Sitzung::default())
     }
 
+    /// Der Auslieferungszustand zeigt die vier Bereiche der Runde 1 und
+    /// blendet den Editor aus.
+    ///
+    /// Der Editor ist der einzige Bereich, der beim allerersten Start nicht
+    /// steht: er haelt keine Datei, und ein sichtbarer leerer Editor naehme den
+    /// Dateifenstern Platz fuer nichts.
     #[test]
-    fn der_auslieferungszustand_zeigt_alle_vier_bereiche() {
+    fn der_auslieferungszustand_zeigt_alle_bereiche_ausser_dem_editor() {
         let modell = modell();
         for bereich in Bereich::ALLE {
+            if bereich == Bereich::Editor {
+                assert!(!modell.sichtbar(bereich), "der Editor steht schon");
+                continue;
+            }
             assert!(modell.sichtbar(bereich), "{bereich:?} ist ausgeblendet");
         }
         assert_eq!(modell.aktiv(), Fensterseite::Links);
@@ -657,7 +712,144 @@ mod tests {
         modell.umschalten(Bereich::Lesezeichen);
         modell.umschalten(Bereich::Vorschau);
         let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
-        assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0]);
+        assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0, 0.0]);
+    }
+
+    /// Der eingeblendete Editor bekommt seine Breite, und die Dateifenster
+    /// teilen sich den Rest.
+    ///
+    /// Der Fall aus C1 der Editor-Runde: Editor sichtbar, Vorschau
+    /// ausgeblendet. Die Zahlen sind die des Auslieferungszustands.
+    #[test]
+    fn der_eingeblendete_editor_bekommt_seine_breite_und_die_dateifenster_den_rest() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Vorschau);
+        assert!(modell.umschalten(Bereich::Editor));
+        assert!(modell.sichtbar(Bereich::Editor));
+
+        let breiten = bereichsbreiten(1280.0, &modell.breiten(), &modell.sichtbarkeit());
+        assert_eq!(breiten[Bereich::Vorschau.index()], 0.0);
+        assert_eq!(
+            breiten[Bereich::Editor.index()],
+            Bereich::Editor.anfangsbreite(),
+            "{breiten:?}"
+        );
+        assert_eq!(
+            breiten[Bereich::Lesezeichen.index()],
+            Bereich::Lesezeichen.anfangsbreite(),
+            "die Leiste steht vor dem Editor und weicht ihm nicht"
+        );
+        // Was Leiste und Editor uebrig lassen, teilen die beiden Dateifenster
+        // im Verhaeltnis ihrer gleichen Wunschbreiten, also je zur Haelfte.
+        assert!(
+            (breiten[Bereich::Links.index()] - 320.0).abs() < 0.001,
+            "{breiten:?}"
+        );
+        assert!(
+            (breiten[Bereich::Rechts.index()] - 320.0).abs() < 0.001,
+            "{breiten:?}"
+        );
+        let summe: f64 = breiten.iter().sum();
+        assert!((summe - 1280.0).abs() < 0.001, "{breiten:?}");
+    }
+
+    /// Am engen Fenster gewinnt das Mindestmass der Dateifenster gegen die
+    /// Wunschbreite des Editors.
+    ///
+    /// Die Reihenfolge von `Bereich::ALLE` entscheidet, wer nachgibt: die
+    /// Leiste steht vorn und behaelt ihre Breite, der Editor steht hinten und
+    /// bekommt, was uebrig bleibt.
+    #[test]
+    fn am_engen_fenster_gewinnt_das_mindestmass_der_dateifenster() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Vorschau);
+        modell.umschalten(Bereich::Editor);
+
+        let breiten = bereichsbreiten(900.0, &modell.breiten(), &modell.sichtbarkeit());
+        assert_eq!(
+            breiten,
+            [180.0, 240.0, 240.0, 0.0, 240.0],
+            "der Editor gibt nach, die Leiste und die Dateifenster nicht"
+        );
+        assert_eq!(
+            breiten[Bereich::Lesezeichen.index()],
+            Bereich::Lesezeichen.anfangsbreite(),
+            "{breiten:?}"
+        );
+        assert!(
+            breiten[Bereich::Links.index()] >= Bereich::Links.mindestbreite(),
+            "{breiten:?}"
+        );
+        assert!(
+            breiten[Bereich::Rechts.index()] >= Bereich::Rechts.mindestbreite(),
+            "{breiten:?}"
+        );
+        assert!(
+            breiten[Bereich::Editor.index()] < Bereich::Editor.anfangsbreite(),
+            "der Editor haette seine Wunschbreite auf Kosten der Dateifenster behalten: {breiten:?}"
+        );
+        let summe: f64 = breiten.iter().sum();
+        assert!((summe - 900.0).abs() < 0.001, "{breiten:?}");
+    }
+
+    /// Der ausgeblendete Editor bekommt 0 und behaelt seine gespeicherte
+    /// Breite.
+    ///
+    /// Dieselbe Zusage aus C7, die schon fuer Leiste und Vorschau gilt: das
+    /// Wiedereinblenden stellt die vorherige Breite her.
+    #[test]
+    fn der_ausgeblendete_editor_behaelt_seine_gespeicherte_breite() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Vorschau);
+        modell.umschalten(Bereich::Editor);
+        modell.breite_setzen(Bereich::Editor, 500.0);
+
+        modell.umschalten(Bereich::Editor);
+        assert!(!modell.sichtbar(Bereich::Editor));
+        let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        assert_eq!(breiten[Bereich::Editor.index()], 0.0, "{breiten:?}");
+        assert_eq!(modell.breiten().editor, Some(500.0));
+
+        modell.umschalten(Bereich::Editor);
+        let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        assert_eq!(breiten[Bereich::Editor.index()], 500.0, "{breiten:?}");
+    }
+
+    /// Die Lesezeichenleiste weicht dem Editor nicht; die Dateifenster ruecken
+    /// zusammen.
+    ///
+    /// Die Festlegung des Nutzers vom 260808. Sie faellt aus der bestehenden
+    /// Regel an, weil `Bereich::ALLE` die Leiste vor den Editor stellt; eine
+    /// zweite Breitenregel entsteht dafuer nicht.
+    #[test]
+    fn die_leiste_weicht_dem_editor_nicht() {
+        let mut mit_leiste = modell();
+        mit_leiste.umschalten(Bereich::Vorschau);
+        mit_leiste.umschalten(Bereich::Editor);
+        let offen = bereichsbreiten(1280.0, &mit_leiste.breiten(), &mit_leiste.sichtbarkeit());
+
+        let mut ohne_leiste = modell();
+        ohne_leiste.umschalten(Bereich::Vorschau);
+        ohne_leiste.umschalten(Bereich::Editor);
+        ohne_leiste.umschalten(Bereich::Lesezeichen);
+        let zu = bereichsbreiten(1280.0, &ohne_leiste.breiten(), &ohne_leiste.sichtbarkeit());
+
+        // Die Zahlen ausgeschrieben, damit die Zusage nachlesbar ist und nicht
+        // nur als Ungleichung dasteht. 1280 ist die Summe der vier
+        // Anfangsbreiten der Runde 1.
+        assert_eq!(offen, [180.0, 320.0, 320.0, 0.0, 460.0], "Leiste offen");
+        assert_eq!(zu, [0.0, 410.0, 410.0, 0.0, 460.0], "Leiste geschlossen");
+
+        assert_eq!(
+            offen[Bereich::Editor.index()],
+            zu[Bereich::Editor.index()],
+            "die Leiste ist zu Lasten des Editors gegangen: offen {offen:?}, zu {zu:?}"
+        );
+        assert!(
+            zu[Bereich::Links.index()] > offen[Bereich::Links.index()],
+            "die Dateifenster haben den Platz der Leiste nicht bekommen"
+        );
+        assert!(zu[Bereich::Rechts.index()] > offen[Bereich::Rechts.index()]);
     }
 
     /// Welche Bereiche fest stehen, sagt `ist_beweglich` und sonst niemand.

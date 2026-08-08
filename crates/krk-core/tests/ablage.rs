@@ -114,11 +114,13 @@ fn beispielsitzung() -> Sitzung {
             links: Some(520.5),
             rechts: Some(520.5),
             vorschau: None,
+            editor: Some(480.0),
         },
         sichtbar: Sichtbarkeit {
             lesezeichen: false,
             zweites_dateifenster: true,
             vorschau: false,
+            editor: true,
         },
         fenster: [
             Dateifenster {
@@ -265,6 +267,10 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
     assert!(sitzung.sichtbar.lesezeichen);
     assert!(sitzung.sichtbar.zweites_dateifenster);
     assert!(sitzung.sichtbar.vorschau);
+    assert!(
+        !sitzung.sichtbar.editor,
+        "der Editor haelt beim allerersten Start keine Datei und ist ausgeblendet"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +446,110 @@ aktiver_tab = 0
         "das neue Feld nimmt seinen Vorgabewert an"
     );
     assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
+}
+
+/// Eine `session.toml` aus der Zeit vor dem Editor bleibt lesbar.
+///
+/// Die Datei tritt so auf, wie die Runde 1 sie geschrieben hat: mit
+/// `[breiten]` und `[sichtbar]`, aber ohne die beiden Editorfelder. Sie gilt
+/// nicht als beschaedigt, und der Nutzer verliert weder Breiten noch
+/// Sichtbarkeit.
+#[test]
+fn eine_sitzung_ohne_die_editorfelder_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-dem-editor");
+    let alt = "\
+aktiv = \"links\"
+
+[breiten]
+lesezeichen = 180.0
+links = 420.0
+rechts = 420.0
+vorschau = 260.0
+
+[sichtbar]
+lesezeichen = true
+zweites_dateifenster = true
+vorschau = true
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei der Runde 1 gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        !geladen.wert.sichtbar.editor,
+        "der Editor ist ohne eigenes Feld ausgeblendet und nicht sichtbar"
+    );
+    assert_eq!(
+        geladen.wert.breiten.editor, None,
+        "eine nie gesetzte Editorbreite bleibt ungesetzt"
+    );
+    assert_eq!(geladen.wert.breiten.vorschau, Some(260.0));
+    assert!(geladen.wert.sichtbar.vorschau);
+    assert!(geladen.wert.sichtbar.lesezeichen);
+}
+
+/// Breite und Sichtbarkeit des Editors ueberstehen den Rundlauf byteweise.
+///
+/// Der Rundlauf geht ueber zwei Schreibvorgaenge und nicht nur ueber einen
+/// Vergleich der Strukturen: verlore das Schreiben ein Feld, kaeme es beim
+/// Lesen als Vorgabewert zurueck, und die zweite Datei unterschiede sich von
+/// der ersten.
+#[test]
+fn die_editorbreite_ueberlebt_den_rundlauf_byteweise() {
+    let (_ordner, ablage) = ablage("editorbreite");
+    let mut sitzung = Sitzung::default();
+    sitzung.breiten.editor = Some(512.5);
+    sitzung.sichtbar.editor = true;
+    sitzung.sichtbar.vorschau = false;
+
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("schreiben gescheitert");
+    let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    assert!(!geladen.ist_ersetzt());
+    assert_eq!(geladen.wert.breiten.editor, Some(512.5));
+    assert!(geladen.wert.sichtbar.editor);
+
+    ablage
+        .sichern(Datei::Sitzung, &geladen.wert)
+        .expect("zweites Schreiben gescheitert");
+    let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
+}
+
+/// Eine nicht gesetzte Editorbreite steht gar nicht in der Datei.
+///
+/// Dieselbe Zusage wie fuer die uebrigen vier Breiten: `None` heisst "noch nie
+/// gesetzt", und eine Zeile mit einer erfundenen Zahl waere in einer Datei, die
+/// der Nutzer nach C7 von Hand liest, eine Falschaussage.
+#[test]
+fn eine_nicht_gesetzte_editorbreite_steht_nicht_in_der_datei() {
+    let (_ordner, ablage) = ablage("editorbreite-ungesetzt");
+    ablage
+        .sichern(Datei::Sitzung, &Sitzung::default())
+        .expect("schreiben gescheitert");
+
+    let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+
+    // Die einzige verbleibende Zeile mit diesem Namen ist die Sichtbarkeit.
+    let editorzeilen: Vec<&str> = text
+        .lines()
+        .filter(|zeile| zeile.starts_with("editor ="))
+        .collect();
+    assert_eq!(editorzeilen, ["editor = false"], "{text}");
 }
 
 /// Ein Tab mehr im Fenster, und die Datei traegt ihn.

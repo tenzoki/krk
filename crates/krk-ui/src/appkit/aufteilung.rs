@@ -192,8 +192,8 @@ impl Aufteilung {
     ///
     /// Der Weg, auf dem eine mit der Maus verschobene Trennlinie in die Sitzung
     /// kommt: sie steht in den Rahmen der Ansichten und nirgends sonst.
-    pub fn gemessene_breiten(&self) -> [f64; 4] {
-        let mut breiten = [0.0; 4];
+    pub fn gemessene_breiten(&self) -> [f64; 5] {
+        let mut breiten = [0.0; 5];
         for bereich in Bereich::ALLE {
             if let Some(ansicht) = bereichsansicht(&self.teiler, bereich.index()) {
                 breiten[bereich.index()] = ansicht.frame().size.width;
@@ -277,16 +277,25 @@ fn bereichsansicht(teiler: &NSSplitView, stelle: usize) -> Option<Retained<NSVie
 }
 
 /// Ob der Bereich nach der genannten Sichtbarkeit steht.
+///
+/// Eine vollstaendige Fallunterscheidung ueber [`Bereich`]: ein neuer Bereich,
+/// der hier fehlte, waere dauerhaft unsichtbar, ohne dass der Uebersetzer etwas
+/// gesagt haette.
 fn sichtbar_im(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
         Bereich::Links => true,
         Bereich::Rechts => sichtbar.zweites_dateifenster,
         Bereich::Vorschau => sichtbar.vorschau,
+        Bereich::Editor => sichtbar.editor,
     }
 }
 
 /// Die Breiten, die gerade auf dem Schirm stehen.
+///
+/// Ein Bereich, dessen Unteransicht die Aufteilung noch nicht traegt, liefert
+/// `None` und behaelt damit seine gespeicherte Breite. Das trifft heute den
+/// Editor, dessen Textflaeche ein spaeterer Schritt einhaengt.
 fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
     let breite = |stelle: usize| {
         bereichsansicht(teiler, stelle).and_then(|ansicht| {
@@ -299,6 +308,7 @@ fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
         links: breite(Bereich::Links.index()),
         rechts: breite(Bereich::Rechts.index()),
         vorschau: breite(Bereich::Vorschau.index()),
+        editor: breite(Bereich::Editor.index()),
     }
 }
 
@@ -310,10 +320,14 @@ fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
         lesezeichen: steht(Bereich::Lesezeichen.index()),
         zweites_dateifenster: steht(Bereich::Rechts.index()),
         vorschau: steht(Bereich::Vorschau.index()),
+        editor: steht(Bereich::Editor.index()),
     }
 }
 
-/// Setzt die Rahmen der vier Bereiche nach der einen Rechenvorschrift.
+/// Setzt die Rahmen der Bereiche nach der einen Rechenvorschrift.
+///
+/// Bereiche, deren Unteransicht die Aufteilung noch nicht traegt, ueberspringt
+/// die Schleife.
 fn auslegen(teiler: &NSSplitView, breiten: &Breiten, sichtbar: &Sichtbarkeit) {
     let gesamt = teiler.frame().size;
     let sichtbare = Bereich::ALLE

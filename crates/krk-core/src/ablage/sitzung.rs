@@ -163,12 +163,15 @@ impl Dateifenster {
     }
 }
 
-/// Die Breiten der vier Bereiche in Punkten, soweit KRK sie schon kennt.
+/// Die Breiten der fuenf Bereiche in Punkten, soweit KRK sie schon kennt.
 ///
 /// `None` heisst "noch nie gesetzt": dann waehlt der Aufbau der Oberflaeche
 /// die Breite. Eine gespeicherte Zahl gilt auch fuer einen ausgeblendeten
 /// Bereich, weil C7 verlangt, dass das Wiedereinblenden die vorherige Breite
 /// herstellt.
+///
+/// Die Reihenfolge der Felder ist die der Fensterzeile von links nach rechts
+/// und damit die von `krk_ui::fenstermodell::Bereich::ALLE`.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Breiten {
@@ -184,6 +187,14 @@ pub struct Breiten {
     /// Das Vorschaufenster ganz rechts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vorschau: Option<f64>,
+    /// Der eingebaute Editor, der sich die Stelle ganz rechts mit dem
+    /// Vorschaufenster teilt.
+    ///
+    /// Das Feld ist mit der Editor-Runde dazugekommen. Eine `session.toml` aus
+    /// der Zeit davor bleibt lesbar, weil diese Struktur `#[serde(default)]`
+    /// traegt; die Probe dazu steht in `tests/ablage.rs`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub editor: Option<f64>,
 }
 
 /// Welche der Bereiche sichtbar sind.
@@ -200,15 +211,27 @@ pub struct Sichtbarkeit {
     pub zweites_dateifenster: bool,
     /// Das Vorschaufenster.
     pub vorschau: bool,
+    /// Der eingebaute Editor.
+    ///
+    /// Mit der Editor-Runde dazugekommen; eine `session.toml` aus der Zeit
+    /// davor bleibt lesbar und nimmt hier den Vorgabewert an.
+    pub editor: bool,
 }
 
 impl Default for Sichtbarkeit {
-    /// Der Auslieferungszustand: alle vier Bereiche sichtbar.
+    /// Der Auslieferungszustand: die vier Bereiche der Runde 1 sichtbar, der
+    /// Editor ausgeblendet.
+    ///
+    /// **Der Editor steht als einziger auf `false`**, und das ist kein
+    /// Versehen: beim allerersten Start haelt er keine Datei, und ein
+    /// sichtbarer leerer Editor naehme den Dateifenstern Platz fuer nichts. Er
+    /// kommt hervor, wenn ihn jemand verlangt.
     fn default() -> Self {
         Self {
             lesezeichen: true,
             zweites_dateifenster: true,
             vorschau: true,
+            editor: false,
         }
     }
 }
@@ -219,7 +242,7 @@ impl Default for Sichtbarkeit {
 pub struct Sitzung {
     /// Welches Dateifenster das aktive ist. Bei Dateioperationen die Quelle.
     pub aktiv: Fensterseite,
-    /// Die Breiten der vier Bereiche.
+    /// Die Breiten der fuenf Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
     pub sichtbar: Sichtbarkeit,
@@ -232,7 +255,8 @@ pub struct Sitzung {
 
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
-    /// Benutzerverzeichnis, alle Bereiche sichtbar, links aktiv.
+    /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
+    /// ausgeblendet, links aktiv.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),

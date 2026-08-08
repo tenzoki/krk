@@ -635,7 +635,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S8, S11
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt fünf Fälle ab: unveränderte Datei trifft sofort; um zehn Zeilen nach unten verschobene Stelle wird gefunden; um sechzig Zeilen verschobene Stelle wird nicht gefunden und liefert die gemerkte Nummer mit Kennzeichen; ein Zeileninhalt, der im Fenster zweimal vorkommt, liefert den der gemerkten Nummer nächstliegenden; eine gemerkte Nummer über der Zeilenzahl liefert das Dateiende über dieselbe Funktion wie der Zeilensprung aus C5, was die Probe daran festmacht, dass sie beide Wege gegeneinander prüft.
 
-#### 13. **`Bereich::Editor` im Fenstermodell**
+#### 13. [DONE] **`Bereich::Editor` im Fenstermodell**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/fenstermodell.rs` (erweitert: `Bereich`, `ALLE`, `index`, `mindestbreite`, `anfangsbreite`, `ist_beweglich`, `sichtbar`, `umschalten`, `breite`, `breite_setzen`, `breiten_uebernehmen`, `bereichsbreiten`)
@@ -647,8 +647,9 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   `breiten_uebernehmen` und der Rückgabetyp von `bereichsbreiten` gehen von `[f64; 4]` auf `[f64; 5]`.
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo test -p krk-core` und `cargo test -p krk-ui` beenden mit 0. `cargo build --workspace` übersetzt, was belegt, dass alle acht erschöpfenden Fallunterscheidungen über `Bereich` vollständig sind. `grep -n 'Bereich::Lesezeichen, Bereich::Vorschau' crates/krk-ui/src/fenstermodell.rs` findet nichts mehr. Eine Probe deckt ab: bei sichtbarem Editor und ausgeblendeter Vorschau bekommt der Editor seine gespeicherte Breite und die beiden Dateifenster den Rest im Verhältnis; ist das Fenster zu schmal, gewinnt die Mindestbreite der Dateifenster gegen die Wunschbreite des Editors; ein ausgeblendeter Editor bekommt 0 und behält seine gespeicherte Breite.
+- **Umsetzung am 260808:** in zwei Teilen gelandet. Der Teil ohne den fünften Bereich, also die Beseitigung der zweiten Wahrheit aus Befund 6, steht als `fe022e7`; `Bereich::Editor` selbst kam mit S14 und dem vorgezogenen Anteil von S19 als ein Übersetzungsstand nach, weil S13 allein nicht übersetzt (`issues/260808-0931_c_...`). Die Fallunterscheidungen über `Bereich` sind **neun** und nicht acht: die neunte ist `sichtbar_im` in `crates/krk-ui/src/appkit/aufteilung.rs` und trug bis dahin keinen Schritt; sie ist mit diesem Schritt bedient. Der `grep` findet noch zwei Treffer, beide keine zweite Wahrheit: einen Kommentar, der die entfernte Literalliste benennt, und eine Liste in einer Probe über die beim Start sichtbaren Bereiche.
 
-#### 14. **Die Sitzung merkt sich Breite und Sichtbarkeit des Editors**
+#### 14. [DONE] **Die Sitzung merkt sich Breite und Sichtbarkeit des Editors**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/ablage/sitzung.rs` (erweitert: `Breiten`, `Sichtbarkeit`), `crates/krk-core/tests/ablage.rs` (erweitert)
@@ -657,6 +658,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Welche Datei der Editor offen hat, kommt in S30 und nicht hier; dieser Schritt trägt allein die Fensterzeile.
 - Abhängigkeiten: S13
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: eine `session.toml` in der Form vor dieser Runde wird eingelesen, und `sichtbar.editor` ist danach `false`; eine Rundreise mit gesetzter Editorbreite liefert byteweise dieselbe Datei; eine nicht gesetzte Editorbreite steht gar nicht in der geschriebenen Datei.
+- **Umsetzung am 260808:** zusammen mit S13 und dem vorgezogenen Anteil von S19 als ein Übersetzungsstand. Die Abhängigkeit auf S13 lief im Kreis, weil S13 ohne die Speicherstelle hier nicht übersetzt; der Befund steht als `issues/260808-0931_c_...`. Die drei Proben heißen `eine_sitzung_ohne_die_editorfelder_bleibt_lesbar`, `die_editorbreite_ueberlebt_den_rundlauf_byteweise` und `eine_nicht_gesetzte_editorbreite_steht_nicht_in_der_datei`.
 
 #### 15. **`editormodell`: der Stand des Editors ohne AppKit**
 
@@ -710,6 +712,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Dateien: `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: `gemessene_breiten`, `gemessene_sichtbarkeit`, `grenze_links`, `grenze_rechts`), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `breite_aendern`, `sitzung_bauen`)
 - Änderungen: `gemessene_breiten` geht von `[f64; 4]` auf `[f64; 5]`. Die beiden Zugbegrenzungen laufen bereits über `Bereich::ALLE` und `mindestbreite()` und sind damit generisch; sie brauchen keine Änderung, und das Abnahmekriterium prüft es.
   `breite_aendern` liest vor jedem Tastenbefehl die gemessenen Breiten, damit ein Schritt nicht auf eine überholte Zahl aufsetzt; das gilt für den Editor wie für die vier bestehenden Bereiche, und weil `bereich_verbreitern` und `bereich_verschmaelern` den Wirkungsbereich `Ueberall` tragen und auf den Bereich mit dem Fokus wirken, ist das dritte Abnahmekriterium von C1 damit erfüllt, ohne dass ein Befehl hinzukommt.
+- **Der `aufteilung.rs`-Anteil ist am 260808 vorgezogen und erledigt**, zusammen mit S13 und S14 als ein Übersetzungsstand: `Aufteilung::gemessene_breiten` steht auf `[f64; 5]`, die Strukturliterale in `gemessene_breiten(teiler)` und `gemessene_sichtbarkeit` tragen ihr Editorfeld, und `grenze_links` und `grenze_rechts` sind dabei unverändert geblieben, wie das Abnahmekriterium es verlangt. **Offen bleibt der `anwendung.rs`-Anteil**: `breite_aendern` und `sitzung_bauen`, dazu die Probe über die Editorbreite in `session.toml`.
 - Abhängigkeiten: S18
 - Abnahmekriterium: `cargo test -p krk-ui` beendet mit 0. Der Diff zeigt, dass `grenze_links` und `grenze_rechts` unverändert sind; ihre Verallgemeinerung über `ALLE` ist damit belegt und nicht behauptet. **`Nutzerarbeit`** für drei der fünf Kriterien von C1: dass der Editor beim ersten Öffnen rund ein Drittel nimmt, dass er sich nicht unter die Lesbarkeit einer Zeile ziehen lässt und dass eine verstellte Breite Beenden und Neustart überlebt, prüft der Nutzer am laufenden Bündel. Die Sitzungsseite davon ist von einem Agenten prüfbar: eine Probe deckt ab, dass eine verstellte Editorbreite in `session.toml` landet und beim Einlesen wieder herauskommt.
 
