@@ -46,9 +46,9 @@
       "lastEditTimestamp": "2026-08-02T06:44:43.051Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-02T06:45:04.680Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-07T19:40:02.979Z"
     },
     "fusion-workbench/shared/decisions/260802-0842_o_code-sdk-fuer-ki-integration.md": {
       "pingBackCount": 0,
@@ -81,9 +81,9 @@
       "lastEditTimestamp": "2026-08-02T06:54:23.381Z"
     },
     "orchestrator-live.md": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-06T20:58:32.537Z"
+      "pingBackCount": 3,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-07T19:31:37.739Z"
     },
     "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
       "pingBackCount": 0,
@@ -2646,9 +2646,9 @@
       "lastEditTimestamp": "2026-08-07T08:27:00.948Z"
     },
     "fusion-workbench/portfolio.md": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-07T09:30:48.149Z"
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-07T19:27:15.420Z"
     },
     "fusion-workbench/shared/history/260807-1042-playmaker-orchestrator-phase4.md": {
       "pingBackCount": 0,
@@ -2709,8 +2709,148 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-07T17:24:32.630Z"
+    },
+    "fusion-workbench/shared/history/260807-1934-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T17:34:35.926Z"
+    },
+    "shared/issues/260807-1748_o_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T18:19:40.086Z"
+    },
+    "fusion-workbench/shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:12:42.028Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/_a_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:18:10.181Z"
+    },
+    "shared/history/260807-2116-shaper-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:18:45.271Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/_a_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:26:08.987Z"
+    },
+    "fusion-workbench/shared/history/260807-2125-playmaker-direct-dispatch.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:27:54.757Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:39:54.120Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_welche-dateien-oeffnet-der-editor-ueberhaupt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:48:46.882Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:49:24.031Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_wie-weit-reicht-die-suche-in-der-naehe-einer-textmarke.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:50:06.996Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_fuer-welche-sprachen-hebt-die-formatansicht-syntax-hervor.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:50:50.780Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260807-2147_o_der-circle-datensatz-steht-auf-t-und-nennt-sich-im-kopf-anticipated.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:51:08.265Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 1,
+      "totalEdits": 5,
+      "lastEditTimestamp": "2026-08-07T19:57:40.429Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_traegt-eine-textmarke-auch-einen-bereich-oder-nur-eine-stelle.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-07T19:57:47.486Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2147-shaper-spec-editor.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T19:58:25.642Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260807-2202-conceptrev-spec-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T20:03:04.780Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md": {
+      "pingBackCount": 2,
+      "totalEdits": 3,
+      "lastEditTimestamp": "2026-08-08T07:11:38.195Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/shared/issues/260808-0017_o_fusion-rules-gibt-conceptrev-die-stilprofile-nicht-aus.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T22:19:21.199Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T22:29:52.012Z"
+    },
+    "260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T22:30:57.737Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0021_o_die-fuenf-beantworteten-datensaetze-tragen-zwei-answered-zeilen-und-einen-veralteten-kopf.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T22:31:41.278Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0021-shaper-spec-ueberarbeitung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T22:32:16.411Z"
+    },
+    "_t_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-07T22:33:28.068Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 2,
+      "totalEdits": 7,
+      "lastEditTimestamp": "2026-08-08T00:00:20.029Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_o_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T23:56:25.531Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_o_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T23:57:18.400Z"
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0159-planner-plan-editor.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-07T23:59:45.349Z"
     }
   },
-  "lastEditFile": "fusion-workbench/shared/history/260807-1930-uebergabe-an-die-editor-runde.md",
-  "lastEditTimestamp": "2026-08-07T17:24:32.630Z"
+  "lastEditFile": "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md",
+  "lastEditTimestamp": "2026-08-08T07:11:38.195Z"
 }

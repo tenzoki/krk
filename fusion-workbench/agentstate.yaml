@@ -1,0 +1,36 @@
+# fusion-workbench session state — for resumption after restart
+# Updated: 260807-2139
+
+session:
+  directive: "Der eingebaute Editor mit Roh- und Formatansicht und Textmarken — vierter Fokusbereich, F4, Zeilensprung, Suchen und Ersetzen in der offenen Datei, Textmarken in der gemeinsamen Lesezeichenleiste"
+  mode: "custom"
+  domain: "code"
+  started: "260807-2139"
+  history_file: "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md"
+  git_head_at_start: "eef4188"
+
+progress:
+  turn: 0
+  max_turns: 5
+  tasks_total: 0
+  tasks_done: 0
+  tasks_skipped: 0
+  tasks_errored: 0
+  commits: 0
+  turn_start_head: null
+  paused_at_task: null
+  directive_revisions_this_session: 0
+
+current_task:
+  id: "P0b.1"
+  summary: "Shaper erstellt den Spec aus der Directive und den vier Festlegungen"
+  agent: "shaper"
+  status: "running"
+  source_file: "circles/260807-2116-eingebauter-editor-mit-textmarken/_t_circle.md"
+
+work_queue: []
+
+plan_context:
+  plan_file: null
+  user_directive: "Vier Festlegungen der Aktivierungsrunde vom 260807-2139: (1) Formatansicht eine Ansicht pro Dateityp, jeweils eigens besetzt — nicht die Empfehlung des Datensatzes; (2) Einstieg F4 aus dem Dateifenster plus Uebergang aus der Vorschau, der die Datei aktiv mitnimmt; (3) ungespeicherte Aenderungen: Nachfragen beim Schliessen, an allen drei Anlaessen; (4) Textmarke haengt an Zeilennummer plus Textinhalt als Pruefung."
+  key_findings: "Der Defekt shared/issues/260807-2112_o_cmd-y-... trifft den Fokusweg, den der Editor erbt, und gehoert in den Plan. Fuenf offene Defekte und fuenf offene Fragen liegen im terminalen Vorgaenger-Circle ohne Bearbeiter."

@@ -11,7 +11,7 @@
 
 ## Directive
 
-KRK öffnet Text, Code und Markdown in einem eingebauten Editor, der als vierter Fokusbereich neben der Lesezeichenleiste, den beiden Dateifenstern und dem Vorschaufenster steht und über die dafür freigehaltene Taste F4 erreichbar ist. Der Editor trägt eine Rohansicht und eine Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen und Textbereiche. Diese Marken stehen als Lesezeichen in derselben Leiste und in derselben Datei wie die Ordner-Lesezeichen, also in `bookmarks.toml` unter `~/Library/Application Support/KRK/`. Er teilt sich die Fläche mit dem Vorschaufenster zeitlich statt räumlich: wird der Editor geöffnet, schließt sich die Vorschau. Er nimmt rund ein Drittel der Fensterbreite; ist die Lesezeichenleiste geöffnet, rücken die beiden Dateifenster zusammen, damit diese Breite entsteht, und die Leiste weicht nicht. Suchen und Ersetzen über mehrere Dateien gehört nicht dazu.
+KRK öffnet Text, Code und Markdown in einem eingebauten Editor, der als vierter Fokusbereich neben der Lesezeichenleiste, den beiden Dateifenstern und dem Vorschaufenster steht und über die dafür freigehaltene Taste F4 erreichbar ist. Der Editor trägt eine Rohansicht und eine Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen. Diese Marken stehen als Lesezeichen in derselben Leiste und in derselben Datei wie die Ordner-Lesezeichen, also in `bookmarks.toml` unter `~/Library/Application Support/KRK/`. Er teilt sich die Fläche mit dem Vorschaufenster zeitlich statt räumlich: wird der Editor geöffnet, schließt sich die Vorschau. Er nimmt rund ein Drittel der Fensterbreite; ist die Lesezeichenleiste geöffnet, rücken die beiden Dateifenster zusammen, damit diese Breite entsteht, und die Leiste weicht nicht. Suchen und Ersetzen über mehrere Dateien gehört nicht dazu.
 
 ## Grounding snapshot
 
@@ -116,6 +116,10 @@ Der L9-Befund ist nicht Teil dieses Preises. Er ist am 260807 geschlossen (`shar
 ### Offene Fragen für die Klärungsrunde bei der Aktivierung
 
 Ein vorgesehener Circle darf offene Fragen tragen. Die vier unten sind Eingabe für die Aktivierung und je einzeln so gestellt, dass sie den Zuschnitt bestimmen.
+
+> **Alle vier sind beantwortet.** Der Nutzer hat sie am 260807-2139 entschieden, im Wortlaut in `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md`, Abschnitt `## Die vier Festlegungen der Aktivierungsrunde`. Sechs weitere Fragen, die der `shaper` beim Schreiben des Spec anlegte, sind am 260808-0017 beantwortet (`## Die sechs Festlegungen der Spec-Runde`). Der Text unten bleibt als Fragestand vom 260807-2116 stehen; verbindlich sind die Antworten und die Datensätze unter `decisions/` mit dem Marker `_a_`.
+>
+> Zwei Stellen dieses Abschnitts sind dadurch überholt: Frage 4 nennt "Stellen und Bereiche", und das Lesezeichen-Diagramm weiter oben zeigt die Textmarke als "Stelle oder Bereich". Eine Marke ist seit dem 260808-0017 eine Stelle; die Directive ist entsprechend nachgezogen.
 
 **1. Was zeigt die Formatansicht bei Text, bei Code und bei Markdown?** Der Datensatz `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` führt die Frage samt drei Möglichkeiten. Sie gehört vor den ersten Planschritt.
 

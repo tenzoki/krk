@@ -280,3 +280,11 @@
 {"ts":"2026-08-07T08:46:08","event":"portfolio_refresh","turn":26,"agent":"playmaker","detail":"circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md; shared/history/260807-1042-playmaker-orchestrator-phase4.md; Parent grounding stale am Web-Betrachter"}
 {"ts":"2026-08-07T08:48:18","event":"session_end","turn":26,"detail":"Bounded Closure; 2 Turns, 19 Commits, 12 von 12 Aufgaben, 16 Defekte geschlossen, 14 gefiled, 5 Entscheidungen umgesetzt, 7 Nutzer-Gates, 0 Agentenfehler"}
 {"ts":"2026-08-07T17:34:40","event":"session_start","detail":"Setup complete; no Directive yet; domain default=code (heuristic said strategic)"}
+{"ts":"2026-08-07T19:40:27","event":"scope_resolved","detail":"mode=custom; Circle 260807-2116-eingebauter-editor-mit-textmarken; 4 Festlegungen beantwortet; Spec und Plan stehen aus"}
+{"ts":"2026-08-07T19:40:27","event":"shaper_start","agent":"shaper","detail":"Spec fuer den eingebauten Editor"}
+{"ts":"2026-08-07T19:59:19","event":"shaper_done","agent":"shaper","detail":"circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md; 8 Faehigkeiten C1-C8; 5 offene Fragen gefiled; 1 Defekt gefiled"}
+{"ts":"2026-08-07T19:59:19","event":"conceptrev_start","agent":"conceptrev","detail":"Spec 260807-2147, 3 Diagramme"}
+{"ts":"2026-08-07T23:24:10","event":"conceptrev_done","agent":"conceptrev","detail":"Urteil acceptable; 3 Befunde; alle behoben in der Spec-Ueberarbeitung"}
+{"ts":"2026-08-07T23:24:10","event":"gate_hit","detail":"Spec-Abnahme"}
+{"ts":"2026-08-07T23:24:10","event":"gate_response","detail":"approve — 79 Abnahmekriterien, C1-C8, 5 Diagramme"}
+{"ts":"2026-08-07T23:24:10","event":"planner_start","agent":"planner","detail":"Plan aus dem abgenommenen Spec 260807-2147"}

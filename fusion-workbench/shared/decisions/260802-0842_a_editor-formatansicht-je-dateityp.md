@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`
 
@@ -37,7 +37,9 @@ Der Entwurf verlangt für Text, Code und Markdown jeweils eine Rohansicht und ei
 Option 3 gibt allen drei Dateitypen dieselbe Regel und macht den Umschalter überall verständlich. Der Verzicht auf das Schreiben in der gerenderten Markdown-Ansicht ist der Preis, und er ist verschmerzbar, solange der Wechsel schnell geht. Empfehlung, keine geprüfte Aussage.
 
 ---
-Answered:
+Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"1. Formatansicht" — Möglichkeit 1 gewählt: eine Ansicht pro Dateityp, jeweils eigens besetzt. Markdown gerendert, Code mit Syntaxhervorhebung und einklappbaren Blöcken, einfacher Text mit Umbruch am Fensterrand und lesbarer Schriftgröße; die Rohansicht zeigt überall die Zeichen der Datei. Der Nutzer ist damit der Empfehlung dieses Datensatzes (Möglichkeit 3, durchweg schreibgeschützte Leseansicht) nicht gefolgt: die Formatansicht bleibt bearbeitbar, und der hier benannte Preis der schwachen Unterscheidung bei einfachem Text ist angenommen. Entschieden vom Nutzer am 260807-2139.
 Implemented:
 Deferred:
 Superseded by:
+
+Nachtrag 260808-0017: Die Hälfte "mit einklappbaren Blöcken" ist zurückgenommen. Der Nutzer hat für die Syntaxhervorhebung eine fertige Rust-Kiste gewählt (`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_a_fuer-welche-sprachen-hebt-die-formatansicht-syntax-hervor.md`), und solche Kisten bringen die Blockgrenzen nicht mit: Hervorhebung braucht Wortarten, Einklappen braucht Blockgrenzen. Für die Formatansicht bei Code gilt damit in dieser Runde: Syntaxhervorhebung ja, einklappbare Blöcke nein. Die Blöcke sind ein eigenes späteres Vorhaben.

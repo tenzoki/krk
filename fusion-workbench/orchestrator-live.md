@@ -1,7 +1,19 @@
 # Orchestrator — Live
 
-**Active Circle:** 260807-2116-eingebauter-editor-mit-textmarken
-**Session:** Not started — orchestrator Setup will refresh this dashboard on next session start
+**Turn:** --/5 | **Tasks:** --/-- | **Commits:** 0 | **Errors:** 0
+**Started:** 21:39 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
 
 ## Current
-  [READY] orchestrator -> Activation complete; awaiting Turn 1
+  [SHAPING] shaper -> Spec fuer den eingebauten Editor (vier Festlegungen als Eingabe)
+
+## This Turn
+  (no Turn started — Phase 0b Shaping)
+
+## Up Next
+  [QUEUED]  orchestrator -> Human Gate: Spec-Abnahme
+  [QUEUED]  planner -> Plan aus dem abgenommenen Spec
+  [QUEUED]  orchestrator -> Human Gate: Plan-Abnahme
+  [QUEUED]  taskplanner -> Arbeitsschlange bauen
+
+## Blocked
+  (none)
