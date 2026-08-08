@@ -1,7 +1,7 @@
 #![deny(unsafe_code)]
 //! Der Kern von KRK: Verzeichnisleser, Ordnermodell, Belegungstabelle,
-//! Operationsmaschine, das Regelmodell fuer das Umbenennen im Stapel und die
-//! Ablage in TOML.
+//! Operationsmaschine, das Regelmodell fuer das Umbenennen im Stapel, die
+//! Textrechnung des Editors und die Ablage in TOML.
 //!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
@@ -17,5 +17,6 @@ pub mod ablage;
 pub mod operation;
 pub mod stapelumbenennen;
 pub mod tasten;
+pub mod text;
 pub mod verzeichnis;
 pub mod zwischenablage;
