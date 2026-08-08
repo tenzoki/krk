@@ -501,7 +501,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase A: Der Weg vom Tastendruck zum Kommando (C7, C8)
 
-#### 1. **Die Ursache der y-Tasten benennen und belegen**
+#### 1. [DONE] **Die Ursache der y-Tasten benennen und belegen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/tests/belegung.rs` (erweitert: die neue Probe), `fusion-workbench/shared/issues/260807-2112_*_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md` (erweitert: die Abschlussnotiz), `crates/krk-core/src/tasten/parser.rs` (lesend: die Tastentabelle), `crates/krk-ui/src/appkit/menue.rs` (lesend: der Menüaufbau)

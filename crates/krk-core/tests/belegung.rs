@@ -840,6 +840,93 @@ fn eine_gehaltene_zusatztaste_nimmt_der_taste_ihr_kommando() {
 }
 
 // ---------------------------------------------------------------------------
+// Die y-Kuerzel auf einer deutschen Tastatur
+// ---------------------------------------------------------------------------
+
+/// Warum `cmd+y` und `shift+cmd+y` am Referenzgeraet nichts ausloesen, obwohl
+/// beide belegt sind und `f3` denselben Befehl ausloest.
+///
+/// Die Probe haelt zwei Aussagen fest, und die Erklaerung ergibt sich erst aus
+/// beiden zusammen:
+///
+/// 1. `cmd+y` benennt die **Stelle** `kVK_ANSI_Y` mit dem Tastencode 16. KRK
+///    belegt den virtuellen Tastencode und nicht das gemeldete Zeichen; das ist
+///    die Festlegung aus C3 und der Grund, aus dem die Funktionstasten auf jeder
+///    Tastaturbelegung stimmen.
+/// 2. Die Stelle daneben, `kVK_ANSI_Z` mit dem Tastencode 6, traegt in der
+///    Auslieferungsbelegung keine Funktion, unter keiner Zusatztaste.
+///
+/// Auf einer deutschen Tastatur steht auf der Stelle `kVK_ANSI_Y` ein **Z** und
+/// auf `kVK_ANSI_Z` ein **Y**. Wer die Taste mit der Aufschrift Y drueckt,
+/// erzeugt also Tastencode 6, und den belegt nichts; wer die mit der Aufschrift
+/// Z drueckt, erzeugt 16 und blendet die Vorschau ein und aus. Die Ursache
+/// liegt damit nicht im Programm, sondern in der Tastaturbelegung des Geraets,
+/// die KRK nach C3 bewusst nicht ausliest.
+///
+/// Der Defekt dazu ist
+/// `shared/issues/260807-2112_*_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md`,
+/// der Vorgaenger derselben Sache
+/// `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_*_cmd-y-liegt-auf-einer-deutschen-tastatur-unter-der-taste-z.md`,
+/// und die Wahl, was daraus folgt, liegt beim Nutzer:
+/// `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
+///
+/// **Die beiden Kombinationen stehen hier ausnahmsweise hingeschrieben.** Die
+/// uebrigen Pruefungen dieser Datei suchen ihre Kombinationen in der Belegung,
+/// damit eine Umbelegung sie nicht umwirft. Hier ist es umgekehrt: die Zusage
+/// handelt von genau diesen beiden Kombinationen und von der Stelle, auf der
+/// sie liegen. Loest die y-Frage sie auf die Stelle `kVK_ANSI_Z` um, ist diese
+/// Probe rot, und das ist richtig so: dann ist die Erklaerung ueberholt und die
+/// Probe gehoert mit umgeschrieben.
+#[test]
+fn die_y_kuerzel_liegen_auf_kvk_ansi_y_und_die_stelle_kvk_ansi_z_ist_unbelegt() {
+    let belegung = Belegung::auslieferung();
+
+    // Erste Aussage: beide Kuerzel benennen die Stelle kVK_ANSI_Y, Code 16.
+    for text in ["cmd+y", "shift+cmd+y"] {
+        let taste = kombi(text).taste();
+        assert_eq!(
+            taste.code, 16,
+            "{text} benennt nicht mehr den Tastencode 16"
+        );
+        assert_eq!(
+            taste.herkunft.kvk(),
+            "kVK_ANSI_Y",
+            "{text} benennt nicht mehr die Stelle kVK_ANSI_Y"
+        );
+    }
+
+    // Zweite Aussage: die Stelle kVK_ANSI_Z traegt keine Funktion. Erst die
+    // Tabelle, dann die Belegung, dann der Nachschlag: die Stelle ist die
+    // erwartete, keine Funktion nennt sie, und kein Tastendruck auf ihr trifft
+    // etwas.
+    let Some(z) = parser::taste_mit_namen("z") else {
+        panic!("die Tabelle kennt die Taste \"z\" nicht");
+    };
+    assert_eq!(z.code, 6, "die Taste \"z\" benennt nicht mehr den Code 6");
+    assert_eq!(z.herkunft.kvk(), "kVK_ANSI_Z");
+
+    for funktion in belegung.funktionen() {
+        for kombination in funktion.tasten() {
+            assert_ne!(
+                kombination.taste().code,
+                z.code,
+                "{} traegt mit {kombination} die Stelle kVK_ANSI_Z",
+                funktion.kennung()
+            );
+        }
+    }
+
+    for maske in masken_mit_zusatztaste() {
+        let kombination = Kombination::neu(z, maske);
+        assert_eq!(
+            belegung.nachschlag(kombination.tastendruck()),
+            Nachschlag::Unbelegt,
+            "{kombination} trifft eine Funktion"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Zuweisen, Konflikt und Zuruecksetzen
 // ---------------------------------------------------------------------------
 
