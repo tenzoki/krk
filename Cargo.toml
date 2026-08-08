@@ -97,3 +97,65 @@ block2 = "0.6"
 # ist der vom System vorgesehene Weg, von einem Arbeitsfaden aus etwas auf dem
 # Hauptfaden ausfuehren zu lassen.
 dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
+# Die Syntaxhervorhebung der Formatansicht (C3), Antwort auf
+# `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_*_fuer-welche-sprachen-hebt-die-formatansicht-syntax-hervor.md`.
+# Der Nutzer hat am 260808-0017 eine fertige Kiste gewaehlt und nicht von Hand
+# geschriebene Sprachregeln; `syntect` erkennt die Sprache und faerbt ihre
+# Wortarten ein, auf den Sprachdefinitionen von Sublime Text.
+#
+# Keine der bestehenden Abhaengigkeiten leistet das, und zwar aus einem Grund,
+# der kurz ist: keine von ihnen kennt eine Programmiersprache. `icu_collator`
+# sortiert, `signal-hook` faengt Signale, die `objc2`-Kisten reichen AppKit
+# durch. `objc2-foundation` kommt am naechsten, weil `NSAttributedString` einen
+# Markdown-Aufbau mitbringt, aber der endet bei Markdown und sagt zu Rust, TOML
+# oder Shell nichts; C3 nennt alle vier.
+#
+# `default-features = false` ist hier keine Sparsamkeit, sondern die Bedingung
+# der Einbindung. Der Vorgabesatz `default-onig` zieht Oniguruma herein, eine
+# Bibliothek in C, und haette damit die Bauvoraussetzungen des Projekts
+# geaendert. `regex-fancy` tauscht sie gegen `fancy-regex` in reinem Rust; der
+# Bauzusammenhang steht in `syntect`s eigener `Cargo.toml`. Abgeschaltet bleiben
+# `html`, `plist-load`, `yaml-load` und `metadata`, weil KRK die Einfaerbung
+# selbst in Textmerkmale umsetzt, keine HTML-Ausgabe braucht und zur Laufzeit
+# keine fremde Datei laedt.
+#
+# `dump-create` stand im Plan zu S32 ebenfalls unter den abgeschalteten. Das
+# geht nicht: `parsing = [regex-syntax, fnv, dump-create, dump-load]` zieht es
+# mit, gemessen an `syntect` 5.3.0. Der Satz im Plan ist damit ueberholt.
+#
+# `default-syntaxes` bleibt an, obwohl `two-face` unten einen Obermengensatz
+# mitbringt und die Anwendung den Vorgabesatz nie laedt. Gemessen kostet das
+# 1.360 Byte am Programm, weil der ungenutzte Abzug wegoptimiert wird. Dafuer
+# kann `crates/krk-ui/tests/syntaxkiste.rs` belegen, warum `two-face` daneben
+# steht, statt es zu behaupten.
+#
+# **Der angenommene Preis, benannt statt verschwiegen.** `speculation:` Ob die
+# Kiste die Maxime "superschnell" auf dem Referenzgeraet von 2018 haelt, ist
+# ungemessen. Der Abnahmelauf, an dem man es messen wuerde, ist aus dieser Runde
+# ausgeklammert; der Nutzer hat den Preis am 260808-0017 angenommen. Der Spec
+# uebergibt die Kiste unter `## Verhaeltnis zu den zehn Zeitzusagen aus C8 der
+# Runde 1` der spaeteren Messrunde als vierten Gegenstand neben L1, L4 und L7.
+syntect = { version = "5.3.0", default-features = false, features = [
+    "parsing",
+    "default-syntaxes",
+    "default-themes",
+    "dump-load",
+    "regex-fancy",
+] }
+# Die Sprachdefinitionen, die `syntect` nicht mitbringt. Es sind zwei Kisten und
+# nicht eine, und der Grund ist gemessen und nicht angenommen: der Vorgabesatz
+# von `syntect` fuehrt Rust, Markdown und Shell, aber kein TOML, und C3 verlangt
+# TOML ausdruecklich. `two-face` traegt den erweiterten Satz von `bat` nach, 213
+# Sprachdefinitionen gegenueber 75, und ist der uebliche Begleiter von
+# `syntect`. Die Zeile, die den Befund festhaelt, ist
+# `crates/krk-ui/tests/syntaxkiste.rs::ohne_two_face_fehlt_toml`; sie schlaegt
+# fehl, sobald `syntect` TOML nachreicht, und das ist der Anlass, diese Kiste
+# neu zu bewerten.
+#
+# Keine bestehende Abhaengigkeit leistet es aus demselben Grund wie oben.
+#
+# `default-features = false` ist auch hier die Bedingung: der Vorgabesatz
+# `syntect-onig` schaltet in `syntect` `regex-onig` ein und holte Oniguruma
+# durch die Hintertuer wieder herein. `syntect-fancy` haelt beide Kisten auf
+# demselben reinen Rust.
+two-face = { version = "0.5.2", default-features = false, features = ["syntect-fancy"] }

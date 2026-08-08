@@ -43,3 +43,12 @@ objc2-core-foundation = { workspace = true }
 # `objc2-foundation` sie fuehrt; hier steht sie als unmittelbare
 # Abhaengigkeit von `krk-ui`.
 dispatch2 = { workspace = true }
+# Die Syntaxhervorhebung der Formatansicht. Sie steht in `krk-ui` und nicht im
+# Kern, weil sie Farben liefert und Farben in KRK zur Oberflaeche gehoeren; der
+# Kern ist die Schicht ohne Fensterwerkzeug (`krk-core/src/lib.rs`). Die
+# ausfuehrliche Begruendung beider Kisten, die abgeschalteten Vorgabemerkmale und
+# der angenommene Preis stehen an der Versionsangabe in der Wurzel-`Cargo.toml`.
+syntect = { workspace = true }
+# Die Sprachdefinitionen, die `syntect` nicht mitbringt, TOML voran. Ohne sie
+# verfehlt die Formatansicht das fuenfte Abnahmekriterium von C3.
+two-face = { workspace = true }
