@@ -48,9 +48,9 @@ use crate::fenstermodell::Bereich;
 
 /// Wo der Eingabefokus steht.
 ///
-/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Vier
+/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Fuenf
 /// Werte, und sie decken das Fenster vollstaendig ab: die beiden Dateilisten,
-/// die Leiste, das Vorschaufenster, und alles uebrige.
+/// die Leiste, das Vorschaufenster, der eingebaute Editor, und alles uebrige.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fokus {
     /// In einer der beiden Dateilisten.
@@ -66,6 +66,19 @@ pub enum Fokus {
     /// Zwischenablage-Befehle aus C10 loesen nichts aus, wie ihr
     /// Abnahmekriterium es verlangt.
     Vorschau,
+    /// Im eingebauten Editor (C1 der Editor-Runde), dem fuenften
+    /// fokussierbaren Bereich.
+    ///
+    /// Hierhin kommt der Fokus per Mausklick in die Textflaeche, ueber den
+    /// Tastenbefehl `fokus_editor` und auf den beiden Einstiegswegen, die eine
+    /// Datei oeffnen: F4 im Dateifenster und der Uebergang aus der Vorschau.
+    ///
+    /// **Der Wert steht neben [`Fokus::Anderswo`] und nicht darin**, obwohl der
+    /// Ersthelfer in beiden Faellen ein Textsystem sein kann. Der Unterschied
+    /// ist die Naemlichkeit und nicht die Art: das Textfeld eines Blattes gibt
+    /// seinen Ersthelferrang an den Feldeditor ab, und der ist dieselbe Art wie
+    /// die Textflaeche des Editors, aber nicht dasselbe Objekt.
+    Editor,
     /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
     ///
     /// Ein Kommando, das einen Bereich braucht, wirkt hier nicht. Der Fall ist
@@ -116,6 +129,12 @@ pub const BEIM_START: Fokus = Fokus::Dateifenster;
 /// `shift+cmd+l` seine Leiste — drei Befehle auf denselben Randbereichen mit
 /// zwei Antworten. Das ist der Sonderfall, den "supersimpel" ausschliesst.
 ///
+/// **Der Editor steht aus demselben Grund daneben.** C1 der Editor-Runde sagt
+/// zu, dass der Fokusbefehl einen ausgeblendeten Editor hervorholt, sofern er
+/// eine Datei haelt. Die Bedingung "sofern er eine Datei haelt" steht **nicht**
+/// hier, sondern beim Aufrufer: [`holt_hervor`] ist eine reine Zuordnung von
+/// einem Fokusziel auf einen Bereich und kennt keinen Zustand.
+///
 /// Das aktive Dateifenster ist nie ausgeblendet: das linke laesst C7 gar nicht
 /// ausblenden, und mit dem rechten wandert die Aktivitaet auf das linke
 /// ([`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)).
@@ -125,6 +144,7 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
     match ziel {
         Fokus::Leiste => Some(Bereich::Lesezeichen),
         Fokus::Vorschau => Some(Bereich::Vorschau),
+        Fokus::Editor => Some(Bereich::Editor),
         Fokus::Dateifenster | Fokus::Anderswo => None,
     }
 }
@@ -139,8 +159,18 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Ueberall => true,
         Wirkungsbereich::Dateifenster => fokus == Fokus::Dateifenster,
         Wirkungsbereich::Leiste => fokus == Fokus::Leiste,
+        Wirkungsbereich::Vorschau => fokus == Fokus::Vorschau,
+        Wirkungsbereich::Editor => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
+        }
+        // Positiv aufgezaehlt und **nicht** als `fokus != Fokus::Editor`. Die
+        // Verneinung liesse `Fokus::Anderswo` durch, und ein `up` vor der
+        // Rueckfrage des endgueltigen Loeschens bewegte die Auswahl im Ordner
+        // dahinter. Die Begruendung im Langen steht an
+        // [`Wirkungsbereich::Navigator`].
+        Wirkungsbereich::Navigator => {
+            matches!(fokus, Fokus::Dateifenster | Fokus::Leiste | Fokus::Vorschau)
         }
     }
 }
@@ -154,12 +184,77 @@ mod tests {
 
     use super::*;
 
-    const JEDER_FOKUS: [Fokus; 4] = [
+    const JEDER_FOKUS: [Fokus; 5] = [
         Fokus::Dateifenster,
         Fokus::Leiste,
         Fokus::Vorschau,
+        Fokus::Editor,
         Fokus::Anderswo,
     ];
+
+    /// Die ganze Regel auf einen Blick: sieben Wirkungsbereiche mal fuenf
+    /// Fokuswerte, fuenfunddreissig Paare.
+    ///
+    /// Die Pruefungen darunter zeigen jeweils eine Zeile dieser Tafel mit ihrer
+    /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
+    /// Sie ist die Stelle, an der ein sechster Fokuswert oder ein achter
+    /// Wirkungsbereich auffaellt: beide Feldbreiten stehen in der Typangabe,
+    /// und eine vergessene Zeile haelt den Bau an.
+    #[test]
+    fn die_tafel_aus_sieben_wirkungsbereichen_und_fuenf_fokuswerten_geht_auf() {
+        // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
+        // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
+        const TAFEL: [(Wirkungsbereich, [bool; 5]); 7] = [
+            (
+                Wirkungsbereich::Dateifenster,
+                [true, false, false, false, false],
+            ),
+            (Wirkungsbereich::Leiste, [false, true, false, false, false]),
+            (
+                Wirkungsbereich::Vorschau,
+                [false, false, true, false, false],
+            ),
+            (Wirkungsbereich::Editor, [false, false, false, true, false]),
+            (
+                Wirkungsbereich::Tabbereich,
+                [true, false, true, false, false],
+            ),
+            (Wirkungsbereich::Navigator, [true, true, true, false, false]),
+            (Wirkungsbereich::Ueberall, [true, true, true, true, true]),
+        ];
+
+        for (bereich, zeile) in TAFEL {
+            for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
+                assert_eq!(wirkt(bereich, fokus), erwartet, "{bereich:?} in {fokus:?}");
+            }
+        }
+    }
+
+    /// Der Unterschied zwischen `Navigator` und `Ueberall`, an dem Fokuswert,
+    /// fuer den es ihn ueberhaupt gibt.
+    ///
+    /// Ohne [`Wirkungsbereich::Navigator`] traegt `auswahl_hoch` weiter
+    /// [`Wirkungsbereich::Ueberall`], und ein `up` mit dem Fokus im Editor
+    /// bewegte die Auswahl im Dateifenster statt der Schreibmarke. Der Umzug
+    /// der drei betroffenen Befehle steht in S5; diese Pruefung sichert die
+    /// Regel, auf die er sich stuetzt.
+    #[test]
+    fn der_navigator_endet_am_editor_und_ueberall_nicht() {
+        assert!(!wirkt(Wirkungsbereich::Navigator, Fokus::Editor));
+        assert!(wirkt(Wirkungsbereich::Ueberall, Fokus::Editor));
+    }
+
+    /// `Navigator` ist positiv aufgezaehlt und schliesst deshalb auch das
+    /// stehende Blatt aus.
+    ///
+    /// Die Gegenprobe zur Verneinung: waere der Wert als "ueberall ausser im
+    /// Editor" geschrieben, kaeme hier `true` heraus, und ein `up` vor der
+    /// Rueckfrage des endgueltigen Loeschens bewegte die Auswahl im Ordner
+    /// dahinter.
+    #[test]
+    fn der_navigator_schliesst_auch_das_stehende_blatt_aus() {
+        assert!(!wirkt(Wirkungsbereich::Navigator, Fokus::Anderswo));
+    }
 
     #[test]
     fn ein_befehl_ohne_vorbehalt_wirkt_in_jedem_bereich() {
@@ -316,6 +411,7 @@ mod tests {
     fn jeder_fokusbefehl_holt_seinen_bereich_hervor() {
         assert_eq!(holt_hervor(Fokus::Leiste), Some(Bereich::Lesezeichen));
         assert_eq!(holt_hervor(Fokus::Vorschau), Some(Bereich::Vorschau));
+        assert_eq!(holt_hervor(Fokus::Editor), Some(Bereich::Editor));
         assert_eq!(holt_hervor(Fokus::Dateifenster), None);
         assert_eq!(holt_hervor(Fokus::Anderswo), None);
     }

@@ -1288,18 +1288,22 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
             assert_ne!(kennung, weitere, "die Kennung {kennung} steht zweimal");
         }
         // Der Aufruf selbst ist die Probe: er liefert fuer jedes Kommando
-        // einen der vier Werte und kann keinen zweiten liefern. Der vierte,
-        // `Tabbereich`, kam mit dem Vorschaufenster aus S19 dazu.
+        // einen der sieben Werte und kann keinen zweiten liefern.
+        // `Tabbereich` kam mit dem Vorschaufenster aus S19 dazu; `Vorschau`,
+        // `Editor` und `Navigator` mit dem eingebauten Editor.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
                 bereich,
                 Wirkungsbereich::Dateifenster
                     | Wirkungsbereich::Leiste
+                    | Wirkungsbereich::Vorschau
+                    | Wirkungsbereich::Editor
                     | Wirkungsbereich::Tabbereich
+                    | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Ueberall
             ),
-            "{kennung} traegt keinen der vier Bereiche"
+            "{kennung} traegt keinen der sieben Bereiche"
         );
     }
 }

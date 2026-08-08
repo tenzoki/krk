@@ -123,15 +123,34 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 
 /// Welcher Bereich den Eingabefokus haben muss, damit ein Kommando wirkt (C5).
 ///
-/// Vier Werte, und die Aufzaehlung ist mit ihnen vollstaendig: KRK hat seit
-/// Schritt 19 drei fokussierbare Bereiche, die beiden Dateifenster, die Leiste
-/// und das Vorschaufenster. Ein Befehl gehoert einem Dateifenster, der Leiste,
-/// einem Bereich mit Tabs oder keinem. Der vierte Wert [`Wirkungsbereich::
-/// Tabbereich`] ist mit dem Vorschaufenster aus C6 entstanden: die vier
-/// Tabbefehle aus C1 bedienen nach C6 auch dessen Tabs, und zwar in dem
-/// Bereich, der den Fokus gerade hat — so fuehrt es
-/// `resources/default-keymap.toml` seit S9. Ein eigener Vorschau-Wert daneben
-/// entsteht nicht, weil kein Befehl allein im Vorschaufenster wirkt.
+/// Sieben Werte, und die Aufzaehlung ist mit ihnen vollstaendig.
+///
+/// Vier davon tragen die Runde 1. KRK hatte seit Schritt 19 drei fokussierbare
+/// Bereiche, die beiden Dateifenster, die Leiste und das Vorschaufenster, und
+/// ein Befehl gehoerte einem Dateifenster, der Leiste, einem Bereich mit Tabs
+/// oder keinem. [`Wirkungsbereich::Tabbereich`] ist mit dem Vorschaufenster aus
+/// C6 entstanden: die vier Tabbefehle aus C1 bedienen nach C6 auch dessen Tabs,
+/// und zwar in dem Bereich, der den Fokus gerade hat — so fuehrt es
+/// `resources/default-keymap.toml` seit S9.
+///
+/// **Die drei uebrigen kommen mit dem eingebauten Editor.** Bis dahin stand
+/// hier der Satz, ein eigener Vorschau-Wert entstehe nicht, weil kein Befehl
+/// allein im Vorschaufenster wirke. Der Uebergang aus der Vorschau in den
+/// Editor ist genau ein solcher Befehl; der Satz ist damit hinfaellig und
+/// steht nicht mehr hier. Jeder der drei neuen Werte ist sachlich begruendet
+/// und nicht bequem:
+///
+/// - [`Wirkungsbereich::Vorschau`], weil der Uebergang aus der Vorschau in den
+///   Editor allein mit Fokus in der Vorschau wirkt.
+/// - [`Wirkungsbereich::Editor`], weil die Befehle aus C3, C4, C5 und C6 der
+///   Editor-Runde allein im Editor wirken.
+/// - [`Wirkungsbereich::Navigator`], weil drei Befehle bis dahin
+///   [`Wirkungsbereich::Ueberall`] trugen, deren Taste im Editor der
+///   Textflaeche gehoert.
+///
+/// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
+/// Abfrage je Aufrufstelle wird. Drei neue Werte in einer Aufzaehlung sind
+/// billiger als drei handgeschriebene Sonderfaelle im Code.
 ///
 /// **Der Vorbehalt ist stumm.** Ein Kommando, das hier scheitert, tut nichts
 /// und meldet nichts; der Tastendruck geht unveraendert an AppKit weiter, wie
@@ -146,6 +165,22 @@ pub enum Wirkungsbereich {
     /// Wirkt nur, wenn der Fokus in der Lesezeichen- und Geraeteleiste steht
     /// (C5).
     Leiste,
+    /// Wirkt nur, wenn der Fokus im Vorschaufenster steht (C2 der
+    /// Editor-Runde).
+    ///
+    /// Der Wert eines einzigen Befehls, des Uebergangs aus der Vorschau in den
+    /// Editor. Er ist der zweite Einstiegsweg in den Editor neben F4 im
+    /// Dateifenster, festgelegt vom Nutzer am 260807-2139, und er setzt den
+    /// Fokus in der Vorschau voraus: sonst gaebe es keine angezeigte Datei,
+    /// die er uebernaehme.
+    Vorschau,
+    /// Wirkt nur, wenn der Fokus im eingebauten Editor steht (C3 bis C6 der
+    /// Editor-Runde).
+    ///
+    /// Sichern, die Ansicht umschalten, der Zeilensprung, Suchen, Ersetzen und
+    /// die Textmarken wirken allein in der Datei, die der Editor haelt. Mit dem
+    /// Fokus anderswo gibt es keine solche Datei.
+    Editor,
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
@@ -155,6 +190,26 @@ pub enum Wirkungsbereich {
     /// den Bereich vor dem Nutzer. Die Leiste traegt keine Tabs und bleibt
     /// aussen vor.
     Tabbereich,
+    /// Wirkt in den Bereichen des Navigators aus der Runde 1, also im
+    /// Dateifenster, in der Leiste und im Vorschaufenster, aber nicht im
+    /// Editor.
+    ///
+    /// Der Wert der Befehle, deren Taste im Editor der Textflaeche gehoert:
+    /// `fenster_wechseln` auf `tab`, `auswahl_hoch` auf `up` und
+    /// `auswahl_runter` auf `down`. Sie sind in der Runde 1 mit
+    /// [`Wirkungsbereich::Ueberall`] entstanden, weil es damals nichts gab,
+    /// wovon sie auszunehmen waeren. Ohne diesen Wert bewegte `up` im Editor
+    /// die Auswahl im Dateifenster statt der Schreibmarke, und das erste
+    /// Abnahmekriterium von C7 waere gebrochen.
+    ///
+    /// **Positiv formuliert und nicht als Verneinung von
+    /// [`Wirkungsbereich::Editor`].** Der Unterschied zaehlt: ein stehendes
+    /// Blatt und ein Textfeld sind kein Bereich des Navigators und bleiben
+    /// damit ausgeschlossen, so wie sie es unter `Dateifenster` und `Leiste`
+    /// schon sind. "Ueberall ausser im Editor" schloesse sie ein, und ein
+    /// `up` vor der Rueckfrage des endgueltigen Loeschens bewegte die Auswahl
+    /// im Ordner dahinter.
+    Navigator,
     /// Wirkt ohne Vorbehalt.
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als

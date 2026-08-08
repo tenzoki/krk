@@ -1102,6 +1102,12 @@ impl Anwendungsdelegierter {
                 }
                 fenster.makeFirstResponder(Some(self.vorschau().fokusansicht()))
             }
+            // Bis der Editor gebaut ist, gibt es keine Textflaeche, auf die
+            // der Ersthelfer zu setzen waere; der Befehl scheitert und meldet
+            // nichts, wie jeder Fokusbefehl auf einen Bereich, der nicht da
+            // ist. **S17 loest diese Zeile ab** und setzt den Ersthelfer auf
+            // die Textflaeche des Editors.
+            Fokus::Editor => false,
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 fenster.makeFirstResponder(Some(self.dateifenster(aktiv).liste()))
@@ -1550,6 +1556,14 @@ impl Anwendungsdelegierter {
             // (C6); alles andere fuehrt die Vorschau nicht aus, und der
             // Tastendruck laeuft wie ein unbelegter weiter.
             Fokus::Vorschau => self.vorschau().kommando_ausfuehren(kommando),
+            // Solange es keinen Editor gibt, liefert `Anwendungsdelegierter::
+            // fokus` diesen Wert nie, und der Zweig ist unerreichbar. Er
+            // fuehrt den Befehl deshalb nicht aus, statt ihn an das
+            // Dateifenster umzuleiten: dorthin gehoert er nicht, und ein
+            // Tastendruck, den niemand ausfuehrt, laeuft unveraendert an
+            // AppKit weiter. **S17 loest diese Zeile ab** und reicht das
+            // Kommando an den Editor.
+            Fokus::Editor => false,
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv)

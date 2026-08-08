@@ -522,7 +522,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S1
 - Abnahmekriterium: bei Weg 1 trägt C8 zwei umgeschriebene Kriterien und der Diff zeigt keine Programmänderung. Bei Weg 2 zeigt `cargo test -p krk-core` grün und `resources/default-keymap.toml` die beiden getauschten Kombinationen; die Konflikterkennung meldet keinen Konflikt, weil `z` in keiner anderen Tastenliste steht. Bei Weg 3 deckt `cargo test -p krk-core` ab, dass ein Tastendruck mit gemeldetem Zeichen `y` die Funktion `vorschau_umschalten` findet und ein Funktionstastendruck weiterhin über den Code gefunden wird. In jedem Fall gilt zusätzlich: **`Nutzerarbeit`** — die Wirkung am laufenden Bündel prüft der Nutzer, weil die Tastaturbelegung des Geräts eingeht und keine Probe sie nachstellt.
 
-#### 3. **Der fünfte Fokusbereich und die drei neuen Wirkungsbereiche**
+#### 3. [DONE] **Der fünfte Fokusbereich und die drei neuen Wirkungsbereiche**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/tasten/belegung.rs` (erweitert: `Wirkungsbereich` und sein Modulkopf), `crates/krk-ui/src/kommandos/fokus.rs` (erweitert: `Fokus`, `wirkt`, `holt_hervor`, `JEDER_FOKUS`), `crates/krk-core/tests/belegung.rs` (erweitert)
