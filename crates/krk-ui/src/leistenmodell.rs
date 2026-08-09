@@ -10,15 +10,21 @@
 //! # Zwei Teile, eine Liste
 //!
 //! ```text
-//! ┌─────────────────────┐
-//! │ Lesezeichen         │  Ueberschrift, nicht waehlbar
-//! │   Projekte          │  aus bookmarks.toml, Reihenfolge = Reihenfolge
-//! │   Sicherung (fehlt) │  ungueltig: der Ordner ist fort
-//! │ Geräte und Orte     │  Ueberschrift, nicht waehlbar
-//! │   k1                │  das Benutzerverzeichnis
-//! │   Macintosh HD      │  aus NSFileManager.mountedVolumeURLs…
-//! └─────────────────────┘
+//! ┌───────────────────────┐
+//! │ Lesezeichen           │  Ueberschrift, nicht waehlbar
+//! │  📁 Projekte          │  aus bookmarks.toml, Reihenfolge = Reihenfolge
+//! │  📄 Die Lesestelle    │  eine Textmarke aus C6, dieselbe Liste
+//! │  📁 Sicherung (fehlt) │  ungueltig: der Ordner ist fort
+//! │ Geräte und Orte       │  Ueberschrift, nicht waehlbar
+//! │  📁 k1                │  das Benutzerverzeichnis
+//! │  📁 Macintosh HD      │  aus NSFileManager.mountedVolumeURLs…
+//! └───────────────────────┘
 //! ```
+//!
+//! Das Sinnbild vor der Beschriftung kommt aus [`Leistenmodell::sinnbild`] und
+//! sagt, **was die Zeile oeffnet**: einen Ordner oder eine Stelle in einer
+//! Datei. Welches Systemsinnbild das ist, entscheidet die Ansicht; hier steht
+//! die Sorte und kein Bildname.
 //!
 //! C5 verlangt "trennt Lesezeichen sichtbar von Geraeten und Standardorten".
 //! Zwei Tabellen untereinander waeren die andere Antwort; sie haetten zwei
@@ -34,7 +40,7 @@
 //! werden nie abgelegt: was eingehaengt ist, weiss das System besser als eine
 //! Datei von gestern.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Verschiebung, Ziel};
 
@@ -106,6 +112,32 @@ impl Teil {
             Teil::Geraete => UEBERSCHRIFT_GERAETE,
         }
     }
+}
+
+/// Woran der Nutzer die Sorte einer Zeile erkennt (C6).
+///
+/// **Eine Regel ueber alle waehlbaren Zeilen, keine Sonderregel fuer
+/// Textmarken:** das Sinnbild sagt, was die Zeile oeffnet. Ein Geraet oeffnet
+/// einen Ordner und traegt deshalb dasselbe Sinnbild wie ein
+/// Ordner-Lesezeichen; eine Ueberschrift oeffnet nichts und traegt keines.
+/// Zwei Regeln nebeneinander — eine fuer die Lesezeichen, eine fuer die
+/// Geraete — haetten zwei Ausnahmen, sobald der untere Teil einmal etwas
+/// anderes als Ordner fuehrt.
+///
+/// **Ein Sinnbild und keine Farbe.** Eine Farbe allein waere bei
+/// Farbfehlsichtigkeit kein Kennzeichen; dieselbe Ueberlegung, die C2 und C5
+/// zu zwei Kennzeichen gefuehrt hat und die auch hinter [`ZUSATZ_UNGUELTIG`]
+/// steht.
+///
+/// Welches Systemsinnbild daraus wird, entscheidet `crate::appkit::leiste`:
+/// hier steht keine Zeile AppKit und deshalb auch kein Bildname.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sinnbild {
+    /// Die Zeile oeffnet einen Ordner: ein Ordner-Lesezeichen (C5), ein Geraet
+    /// oder ein Standardort.
+    Ordner,
+    /// Die Zeile oeffnet eine Stelle in einer Datei (C6).
+    Textstelle,
 }
 
 /// Was hinter einer ausgewaehlten Zeile steht.
@@ -298,6 +330,33 @@ impl Leistenmodell {
         }
     }
 
+    /// Das Sinnbild, das vor der Beschriftung steht (C6).
+    ///
+    /// `None` fuer eine Ueberschrift: sie oeffnet nichts. Die
+    /// Fallunterscheidung ueber [`Ziel`] ist vollstaendig und hat keinen
+    /// Auffangzweig; eine dritte Sorte hielte den Bau an und erzwaenge die
+    /// Antwort, woran der Nutzer sie erkennt.
+    ///
+    /// **Sie stellt keine Frage an das Dateisystem.** Die Sorte steht im
+    /// Eintrag; ob sein Ziel noch da ist, beantwortet
+    /// [`Leistenmodell::ungueltig`] aus der Marke, die
+    /// [`Gemerkt::nachpruefen`] gesetzt hat.
+    pub fn sinnbild(&self, stelle: usize) -> Option<Sinnbild> {
+        match self.zeile(stelle)? {
+            Zeile::Ueberschrift(_) => None,
+            Zeile::Lesezeichen(stelle) => {
+                Some(match self.lesezeichen.get(stelle)?.lesezeichen.ziel {
+                    Ziel::Ordner { .. } => Sinnbild::Ordner,
+                    Ziel::Textstelle { .. } => Sinnbild::Textstelle,
+                })
+            }
+            Zeile::Ort(stelle) => {
+                self.orte.get(stelle)?;
+                Some(Sinnbild::Ordner)
+            }
+        }
+    }
+
     /// Die ausgewaehlte Zeile.
     pub fn auswahl(&self) -> Option<usize> {
         self.auswahl
@@ -386,20 +445,17 @@ impl Leistenmodell {
         }
     }
 
-    /// Legt ein Lesezeichen auf einen Ordner an und waehlt es aus (C5).
+    /// Legt ein Lesezeichen an und waehlt es aus (C5, C6).
     ///
-    /// Nimmt weiterhin einen Ordner und kein [`Ziel`]: das Anlegen einer
-    /// Textmarke kommt in **S38** und legt dort fest, woher Datei, Zeile und
-    /// Zeileninhalt kommen. Erst dann ist zu entscheiden, ob diese Funktion das
-    /// fertige [`Ziel`] entgegennimmt oder ein zweites Gegenstueck bekommt.
-    pub fn anlegen(&mut self, name: &str, ordner: &Path) {
+    /// **Eine Tuer fuer beide Sorten**, wie [`Lesezeichenliste::anlegen`] eine
+    /// ist: die Funktion nimmt das fertige [`Ziel`] entgegen und fragt an
+    /// keiner Stelle nach der Sorte. Wer die Sorte waehlt, ist der Fokus, und
+    /// das entscheidet `crate::appkit::anwendung` beim Tastendruck; ein zweites
+    /// Gegenstueck fuer Textmarken daneben waere der zweite Mechanismus fuer
+    /// dieselbe Aufgabe.
+    pub fn anlegen(&mut self, name: &str, ziel: Ziel) {
         let mut liste = self.lesezeichenliste();
-        let stelle = liste.anlegen(
-            name,
-            Ziel::Ordner {
-                ordner: ordner.to_path_buf(),
-            },
-        );
+        let stelle = liste.anlegen(name, ziel);
         self.lesezeichen_setzen(&liste);
         self.auswahl = self.zeile_des_lesezeichens(stelle);
     }
@@ -501,6 +557,8 @@ impl Leistenmodell {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::Path;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::*;
@@ -543,6 +601,17 @@ mod tests {
             std::fs::remove_dir_all(&self.pfad)
                 .expect("der Pruefordner laesst sich nicht loeschen");
         }
+
+        /// Legt eine Datei im Pruefordner an und liefert ihren Pfad.
+        ///
+        /// Die Textmarken aus C6 zeigen auf Dateien und nicht auf Ordner; ohne
+        /// diesen Zusatz haette jede Probe dazu ihr eigenes `fs::write`
+        /// geschrieben.
+        fn datei(&self, name: &str, inhalt: &str) -> PathBuf {
+            let pfad = self.pfad.join(name);
+            std::fs::write(&pfad, inhalt).expect("die Pruefdatei laesst sich nicht schreiben");
+            pfad
+        }
     }
 
     impl Drop for Pruefordner {
@@ -570,6 +639,30 @@ mod tests {
         (0..modell.zeilen().len())
             .filter_map(|stelle| modell.beschriftung(stelle))
             .collect()
+    }
+
+    fn sinnbilder(modell: &Leistenmodell) -> Vec<Option<Sinnbild>> {
+        (0..modell.zeilen().len())
+            .map(|stelle| modell.sinnbild(stelle))
+            .collect()
+    }
+
+    /// Ein Ordnerziel aus einem Pfad, damit die Proben kurz bleiben.
+    ///
+    /// Dasselbe Gegenstueck wie in `krk_core::ablage::lesezeichen`.
+    fn ordnerziel(pfad: impl Into<PathBuf>) -> Ziel {
+        Ziel::Ordner {
+            ordner: pfad.into(),
+        }
+    }
+
+    /// Ein Textstellenziel, das auf eine Datei zeigt, die es nicht gibt.
+    fn textziel(datei: impl Into<PathBuf>, zeile: u32, zeileninhalt: &str) -> Ziel {
+        Ziel::Textstelle {
+            datei: datei.into(),
+            zeile,
+            zeileninhalt: zeileninhalt.to_owned(),
+        }
     }
 
     #[test]
@@ -696,9 +789,30 @@ mod tests {
     #[test]
     fn ein_neues_lesezeichen_steht_unten_und_ist_ausgewaehlt() {
         let mut modell = modell();
-        modell.anlegen("Drei", Path::new("/drei"));
+        modell.anlegen("Drei", ordnerziel("/drei"));
         assert_eq!(modell.auswahl(), Some(3));
         assert_eq!(modell.beschriftung(3).as_deref(), Some("Drei (fehlt)"));
+        assert_eq!(modell.lesezeichenliste().zahl(), 3);
+    }
+
+    /// Beide Sorten gehen durch dieselbe Tuer und stehen in einer Ordnung (C6).
+    ///
+    /// Die Probe zu [`Leistenmodell::anlegen`] nach S38: die Funktion nimmt das
+    /// fertige [`Ziel`] entgegen, und die angelegte Textmarke haengt unten an
+    /// wie eine Ordnermarke — keine eigene Ordnung, keine Sortierung nach Sorte.
+    #[test]
+    fn eine_angelegte_textmarke_haengt_unten_an_und_ist_ausgewaehlt() {
+        let mut modell = modell();
+        modell.anlegen(
+            "Die Lesestelle",
+            textziel("/eins/leser.rs", 118, "let x = 1;"),
+        );
+        assert_eq!(modell.auswahl(), Some(3));
+        assert_eq!(modell.sinnbild(3), Some(Sinnbild::Textstelle));
+        assert_eq!(
+            modell.beschriftung(3).as_deref(),
+            Some("Die Lesestelle (fehlt)")
+        );
         assert_eq!(modell.lesezeichenliste().zahl(), 3);
     }
 
@@ -711,6 +825,180 @@ mod tests {
         assert!(!modell.loeschen());
         assert!(!modell.verschieben(Verschiebung::Hoch));
         assert_eq!(modell.lesezeichenliste().zahl(), 2);
+    }
+
+    /// Eine Liste, eine Ordnung, zwei Sinnbilder (C6).
+    ///
+    /// Die Reihenfolge ist die des Anlegens; nach Sorte sortiert wird nicht,
+    /// und eine getrennte Ordnung fuer Textmarken gibt es nicht. Der Modulkopf
+    /// von `krk_core::ablage::lesezeichen` begruendet es damit, dass zwei
+    /// Ordnungen zwei Wahrheiten waeren.
+    #[test]
+    fn eine_gemischte_liste_behaelt_ihre_reihenfolge_und_zeigt_beide_sorten() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Projekte", "/p"),
+            Lesezeichen::textstelle("Die Lesestelle", "/p/leser.rs", 118, "let x = 1;"),
+            Lesezeichen::neu("Sicherung", "/s"),
+        ]));
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+
+        assert_eq!(
+            beschriftungen(&modell),
+            [
+                "Lesezeichen",
+                "Projekte (fehlt)",
+                "Die Lesestelle (fehlt)",
+                "Sicherung (fehlt)",
+                "Geräte und Orte",
+                "Macintosh HD",
+            ]
+        );
+        assert_eq!(
+            sinnbilder(&modell),
+            [
+                None,
+                Some(Sinnbild::Ordner),
+                Some(Sinnbild::Textstelle),
+                Some(Sinnbild::Ordner),
+                None,
+                Some(Sinnbild::Ordner),
+            ],
+            "eine Ueberschrift oeffnet nichts, ein Geraet einen Ordner"
+        );
+    }
+
+    /// Ungueltig heisst fuer eine Textmarke allein, dass die Datei fehlt (C6).
+    ///
+    /// Der tragende Teil der Antwort vom 260808-0017: eine Marke, deren
+    /// gemerkter Zeileninhalt nicht mehr auf der gemerkten Nummer steht, bleibt
+    /// gueltig und bleibt ohne Kennzeichen. Ob der Inhalt noch stimmt,
+    /// entscheidet sich beim Sprung und nur dort.
+    #[test]
+    fn eine_textmarke_ist_ungueltig_wenn_die_datei_fehlt_und_sonst_nie() {
+        let ordner = Pruefordner::neu("textmarke-gueltigkeit");
+        ordner.anlegen();
+        let datei = ordner.datei("leser.rs", "fn eins() {}\nfn zwei() {}\n");
+
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::textstelle("Verschoben", &datei, 2, "fn ganz_anders() {}"),
+            Lesezeichen::textstelle("Fort", ordner.pfad().join("fehlt.rs"), 1, "fn eins() {}"),
+        ]));
+
+        assert!(
+            !modell.ungueltig(1),
+            "der gemerkte Inhalt steht nicht mehr dort, die Datei aber schon"
+        );
+        assert_eq!(modell.beschriftung(1).as_deref(), Some("Verschoben"));
+        assert!(modell.ungueltig(2));
+        assert_eq!(modell.beschriftung(2).as_deref(), Some("Fort (fehlt)"));
+    }
+
+    /// Die vier Lesezeichenbefehle aus C5 wirken auf eine Textmarke wie auf
+    /// eine Ordnermarke (C6).
+    ///
+    /// Ohne eigenen Bau: [`Lesezeichenliste`] fragt an keiner Stelle nach der
+    /// Sorte, und diese Probe haelt es an der Leiste fest.
+    #[test]
+    fn die_vier_lesezeichenbefehle_wirken_auf_eine_textmarke() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Projekte", "/p"),
+            Lesezeichen::textstelle("Stelle", "/p/leser.rs", 118, "let x = 1;"),
+        ]));
+
+        modell.anlegen(
+            "Zweite Stelle",
+            textziel("/p/schreiber.rs", 7, "fn sieben() {}"),
+        );
+        assert_eq!(modell.auswahl(), Some(3));
+
+        assert!(modell.umbenennen("Die zweite Stelle"));
+        assert!(modell.verschieben(Verschiebung::Hoch));
+        assert_eq!(modell.auswahl(), Some(2), "die Auswahl wandert mit");
+        assert_eq!(
+            modell.beschriftung(2).as_deref(),
+            Some("Die zweite Stelle (fehlt)")
+        );
+        assert_eq!(modell.sinnbild(2), Some(Sinnbild::Textstelle));
+
+        assert!(modell.loeschen());
+        assert_eq!(modell.lesezeichenliste().zahl(), 2);
+    }
+
+    /// Das elfte Abnahmekriterium von C6: eine Textmarke kostet in der Leiste
+    /// nicht mehr als eine Ordnermarke.
+    ///
+    /// **Was diese Probe misst und was nicht.** Die Zahl der Systemaufrufe ist
+    /// von innerhalb des Prozesses nicht zu zaehlen. Messbar sind zwei
+    /// Aussagen, und beide zusammen tragen die Zusage:
+    ///
+    /// - **Je Marke eine eigene Frage.** Zehn Marken auf fuenf vorhandene und
+    ///   fuenf fehlende Dateien ergeben fuenf gueltige, und eine Datei, die
+    ///   danach verschwindet, aendert genau ihre Marke. Eine gemeinsame oder
+    ///   eine gemerkte Antwort fiele hier auf.
+    /// - **Kein Lesevorgang.** Die letzte Marke zeigt auf eine Datei ohne
+    ///   Leserecht. Sie bleibt gueltig; wer sie oeffnete, bekaeme `EACCES` und
+    ///   muesste sie fuer ungueltig erklaeren. Unter `root` sagt diese Haelfte
+    ///   weniger, weil dort auch das Oeffnen gelingt — falsch anschlagen kann
+    ///   sie deshalb nicht.
+    #[test]
+    fn zehn_textmarken_kosten_je_eine_frage_und_keinen_lesevorgang() {
+        let ordner = Pruefordner::neu("zehn-textmarken");
+        ordner.anlegen();
+        let mut marken = Vec::new();
+        let mut vorhandene = Vec::new();
+        for nummer in 0..10u32 {
+            let name = format!("zeile-{nummer}.txt");
+            let pfad = match nummer % 2 == 0 {
+                true => {
+                    let pfad = ordner.datei(&name, "eine Zeile\n");
+                    vorhandene.push(pfad.clone());
+                    pfad
+                }
+                false => ordner.pfad().join(&name),
+            };
+            marken.push(Lesezeichen::textstelle(
+                format!("Marke {nummer}"),
+                pfad,
+                1,
+                "eine Zeile",
+            ));
+        }
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(marken));
+        assert_eq!(gueltige_marken(&modell, 10), 5);
+
+        std::fs::remove_file(&vorhandene[0]).expect("die Pruefdatei laesst sich nicht loeschen");
+        assert!(
+            modell.gueltigkeit_pruefen(),
+            "ohne die gemeldete Aenderung zeichnete die Leiste nicht neu"
+        );
+        assert!(modell.ungueltig(1));
+        assert_eq!(gueltige_marken(&modell, 10), 4);
+
+        let verschlossen = ordner.datei("verschlossen.txt", "eine Zeile\n");
+        std::fs::set_permissions(&verschlossen, std::fs::Permissions::from_mode(0o000))
+            .expect("das Leserecht laesst sich nicht nehmen");
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::textstelle(
+            "Verschlossen",
+            &verschlossen,
+            1,
+            "eine Zeile",
+        )]));
+        assert!(
+            !modell.ungueltig(1),
+            "die Pruefung fragt nach der Datei und liest sie nicht"
+        );
+    }
+
+    /// Wie viele der ersten `zahl` Lesezeichenzeilen gueltig sind.
+    fn gueltige_marken(modell: &Leistenmodell, zahl: usize) -> usize {
+        (1..=zahl)
+            .filter(|stelle| !modell.ungueltig(*stelle))
+            .count()
     }
 
     #[test]

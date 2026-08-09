@@ -42,18 +42,19 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSScrollView,
-    NSTableColumn, NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSTextField, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSImage,
+    NSImageScaling, NSImageView, NSScrollView, NSTableColumn, NSTableColumnResizingOptions,
+    NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTableViewStyle, NSTextField, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
     NSRect, NSSize, NSString, ns_string,
 };
 
+use krk_core::ablage::Ziel;
 use krk_core::tasten::Kommando;
 
-use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Zeile};
+use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Sinnbild, Zeile};
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -64,6 +65,36 @@ const ZEILENHOEHE: f64 = 20.0;
 
 /// Der Einzug einer gewoehnlichen Zeile gegenueber der Ueberschrift.
 const EINZUG: f64 = 12.0;
+
+/// Die Breite der Spalte, in der das Sinnbild steht (C6).
+///
+/// Sie steht fuer **jede** waehlbare Zeile, auch wenn das System das Sinnbild
+/// nicht liefert: sonst rueckten die Beschriftungen zweier benachbarter Zeilen
+/// unterschiedlich weit ein, und die Liste saehe zerrissen aus.
+const SINNBILDBREITE: f64 = 16.0;
+
+/// Der Abstand zwischen dem Sinnbild und der Beschriftung.
+const SINNBILDABSTAND: f64 = 5.0;
+
+/// Die Hoehe des Sinnbilds in seiner Spalte.
+const SINNBILDHOEHE: f64 = 14.0;
+
+/// Der Systemname des Sinnbilds fuer einen Ordner (C5).
+const SINNBILD_ORDNER: &str = "folder";
+
+/// Der Systemname des Sinnbilds fuer eine Stelle in einer Datei (C6).
+const SINNBILD_TEXTSTELLE: &str = "doc.text";
+
+/// Die Breite, mit der eine Zelle entsteht, bevor die Tabelle sie auslegt.
+///
+/// Der Wert selbst ist gleichgueltig; das Verhaeltnis in ihm ist es nicht. Eine
+/// Beschriftung mit fester linker Kante und beweglicher Breite behaelt beim
+/// Auslegen ihren rechten Abstand, und der ist genau dann null, wenn sie hier
+/// bis an den rechten Rand der Zelle reicht. Mit der Nullbreite, mit der die
+/// Zelle bis zum 260810 entstand, war er **negativ**, und die Beschriftung ragte
+/// um ihren Einzug ueber die Zelle hinaus; ein langer Name wurde deshalb erst
+/// hinter dem sichtbaren Rand gekuerzt.
+const AUFBAUBREITE: f64 = 200.0;
 
 /// Was die Leiste ihrem Halter meldet.
 ///
@@ -256,9 +287,13 @@ impl Leistenquelle {
         modell.gewaehlt().map(|auswahl| auswahl.name)
     }
 
-    /// Legt ein Lesezeichen an und waehlt es aus (C5).
-    pub fn lesezeichen_anlegen(&self, name: &str, ordner: &std::path::Path) {
-        self.ivars().modell.borrow_mut().anlegen(name, ordner);
+    /// Legt ein Lesezeichen an und waehlt es aus (C5, C6).
+    ///
+    /// Nimmt das fertige [`Ziel`] entgegen und fragt nicht nach der Sorte: die
+    /// Leiste zeigt beide, und welche angelegt wird, hat der Fokus beim
+    /// Tastendruck entschieden.
+    pub fn lesezeichen_anlegen(&self, name: &str, ziel: Ziel) {
+        self.ivars().modell.borrow_mut().anlegen(name, ziel);
         self.nachziehen();
     }
 
@@ -378,15 +413,24 @@ impl Leistenquelle {
     /// aus [`crate::leistenmodell`] und die gedaempfte Farbe hier. Zwei, weil
     /// eine Farbe allein bei Farbfehlsichtigkeit keines ist; dieselbe
     /// Ueberlegung wie bei der Markierung aus C2.
+    ///
+    /// **Vor der Beschriftung steht das Sinnbild der Sorte** (C6): ein Ordner
+    /// oder ein Dokument, aus [`Leistenmodell::sinnbild`]. Es ist das
+    /// Kennzeichen, an dem der Nutzer eine Textmarke von einer Ordnermarke
+    /// unterscheidet, und es steht aus demselben Grund neben der Farbe wie der
+    /// Zusatz "(fehlt)". Seine Spalte steht in jeder waehlbaren Zeile, auch
+    /// wenn das System das Bild nicht liefert; ohne sie ruecken die
+    /// Beschriftungen unterschiedlich weit ein.
     fn zellenansicht(&self, zeile: NSInteger) -> Option<Retained<NSView>> {
         let mtm = self.mtm();
         let stelle = usize::try_from(zeile).ok()?;
-        let (text, ungueltig, ueberschrift) = {
+        let (text, ungueltig, ueberschrift, sinnbild) = {
             let modell = self.ivars().modell.borrow();
             (
                 modell.beschriftung(stelle)?,
                 modell.ungueltig(stelle),
                 matches!(modell.zeile(stelle), Some(Zeile::Ueberschrift(_))),
+                modell.sinnbild(stelle),
             )
         };
 
@@ -399,24 +443,77 @@ impl Leistenquelle {
         } else if ueberschrift {
             beschriftung.setTextColor(Some(&NSColor::secondaryLabelColor()));
         }
-        // Der Einzug trennt die Eintraege von ihrer Ueberschrift. Er steht im
+        // Der Einzug trennt die Eintraege von ihrer Ueberschrift, und die
+        // Sinnbildspalte kommt bei jeder waehlbaren Zeile hinzu. Beides steht im
         // Rahmen und nicht in einer eigenen Zellenklasse: eine Beschriftung mit
         // Abstand nach links ist keine neue Ansichtsart.
-        let einzug = if ueberschrift { 0.0 } else { EINZUG };
+        let einzug = match sinnbild.is_some() {
+            true => EINZUG + SINNBILDBREITE + SINNBILDABSTAND,
+            false => 0.0,
+        };
         beschriftung.setFrame(NSRect::new(
             NSPoint::new(einzug, 0.0),
-            NSSize::new(0.0, ZEILENHOEHE),
+            NSSize::new(AUFBAUBREITE - einzug, ZEILENHOEHE),
         ));
         beschriftung.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
 
         let zelle = NSView::initWithFrame(
             NSView::alloc(mtm),
-            NSRect::new(NSPoint::ZERO, NSSize::new(0.0, ZEILENHOEHE)),
+            NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUBREITE, ZEILENHOEHE)),
         );
         zelle.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        if let Some(bildsicht) =
+            sinnbild.and_then(|sinnbild| sinnbildansicht(mtm, sinnbild, ungueltig))
+        {
+            zelle.addSubview(&bildsicht);
+        }
         zelle.addSubview(&beschriftung);
         Some(zelle)
     }
+}
+
+/// Die Bildansicht fuer das Sinnbild einer Zeile (C6).
+///
+/// `None`, wenn das laufende System das Systemsinnbild nicht kennt. Dann bleibt
+/// die Spalte leer, und die Zeile behaelt ihren Einzug: eine Beschriftung, die
+/// dafuer nach links ruecken wuerde, waere ein zweiter Rechenweg fuer denselben
+/// Rahmen.
+///
+/// Die Fallunterscheidung ueber [`Sinnbild`] ist vollstaendig und hat keinen
+/// Auffangzweig; eine dritte Sorte haelt den Bau an und erzwingt ihr Bild.
+fn sinnbildansicht(
+    mtm: MainThreadMarker,
+    sinnbild: Sinnbild,
+    ungueltig: bool,
+) -> Option<Retained<NSImageView>> {
+    // Die Beschreibung ist die Auskunft, die VoiceOver vorliest; sie nennt die
+    // Sorte und nicht das Bedienelement, wie AppKit es fuer jede
+    // Bildbeschreibung verlangt.
+    let (name, beschreibung) = match sinnbild {
+        Sinnbild::Ordner => (SINNBILD_ORDNER, "Ordner"),
+        Sinnbild::Textstelle => (SINNBILD_TEXTSTELLE, "Textstelle"),
+    };
+    let bild = NSImage::imageWithSystemSymbolName_accessibilityDescription(
+        &NSString::from_str(name),
+        Some(&NSString::from_str(beschreibung)),
+    )?;
+
+    let sicht = NSImageView::imageViewWithImage(&bild, mtm);
+    sicht.setImageScaling(NSImageScaling::ScaleProportionallyDown);
+    sicht.setFrame(NSRect::new(
+        NSPoint::new(EINZUG, (ZEILENHOEHE - SINNBILDHOEHE) / 2.0),
+        NSSize::new(SINNBILDBREITE, SINNBILDHOEHE),
+    ));
+    // Dieselben beiden Farben wie die Beschriftung daneben: das Sinnbild einer
+    // ungueltigen Marke ist so gedaempft wie ihr Text, damit die Zeile als eine
+    // gelesen wird. Die Akzentfarbe waere die dritte, und auf dem blauen Grund
+    // der ausgewaehlten Zeile die schlechter lesbare.
+    let farbe = match ungueltig {
+        true => NSColor::tertiaryLabelColor(),
+        false => NSColor::secondaryLabelColor(),
+    };
+    sicht.setContentTintColor(Some(&farbe));
+    Some(sicht)
 }
 
 /// Die aufgebaute Leiste: ihre Ansicht und die Quelle, die AppKit nur schwach

@@ -1021,6 +1021,8 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Eine Änderung im Editor selbst zieht keine Textmarke nach.** Die Prüfung beim Sprung aus S39 leistet dasselbe und leistet es auch für Änderungen von außen; eine zweite Nachführung daneben wäre ein zweiter Mechanismus für dieselbe Aufgabe.
 - Abhängigkeiten: S11
 - Abnahmekriterium: `cargo test -p krk-ui` beendet mit 0 und deckt ab: bei mehrzeiliger Auswahl entsteht eine Marke auf der Zeile der Schreibmarke. Der Diff zeigt genau einen Anlegebefehl. **`Nutzerarbeit`:** `cmd+d` im Editor fragt nach einem Namen und legt die Marke an; `cmd+d` im Dateifenster legt weiterhin eine Ordnermarke an.
+- **Am 260810-0036 zur Hälfte ausgeführt, zusammen mit S40. Der Schritt bleibt offen.** Gebaut ist die Kette vom Befehl bis in `bookmarks.toml`: `anwendung.rs::lesezeichen_anlegen_ausfuehren`, `Leistenquelle::lesezeichen_anlegen` und `Leistenmodell::anlegen` nehmen seither das fertige `Ziel` entgegen und fragen an keiner Stelle nach der Sorte. Damit ist der zweite der beiden Platzhalter aus `65c8efa` abgelöst; der erste (`Leistenmodell::gewaehlt`) gehört S39 und steht.
+  **Was fehlt, ist der Editor-Zweig des Befehls**, und er hängt an einer Auskunft, die es in `appkit/editor.rs` nicht gibt: Nummer und Inhalt der Zeile, in der die Schreibmarke steht. Sie im Aufrufer zu rechnen hieße, die Umrechnung von AppKits UTF-16-Einheiten in Byteversätze ein zweites Mal aufzuschreiben; sie steht schon als `anfaenge_in_utf16` in `appkit/nummernspalte.rs`. Der Zuschnitt der fehlenden Funktion, die offene Frage nach dem Ende der Auswahl und die zwei verbleibenden Schritte stehen in `issues/260810-0036_o_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`.
 
 #### 39. **Der Sprung auf eine Textmarke**
 
@@ -1032,7 +1034,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S12, S22
 - Abnahmekriterium: `cargo test -p krk-ui` beendet mit 0 und deckt die drei Ausgänge ab: fehlende Datei meldet und springt nicht; vorhandene, aber abgewiesene Datei meldet, springt nicht, und die Marke bleibt gültig; angenommene Datei springt. **`Nutzerarbeit`:** die Auswahl einer Textmarke bei ausgeblendetem Editor holt ihn hervor und setzt die Schreibmarke; eine von außen um zehn Zeilen verschobene Stelle wird getroffen; eine um hundert Zeilen verschobene landet an der gemerkten Nummer und meldet es.
 
-#### 40. **Die Leiste zeigt beide Sorten**
+#### 40. [DONE] **Die Leiste zeigt beide Sorten**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/leistenmodell.rs` (erweitert: `beschriftung`, `ungueltig`, `gewaehlt`), `crates/krk-ui/src/appkit/leiste.rs` (erweitert: `zellenansicht`)
@@ -1042,6 +1044,9 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Ungültig heißt allein, dass die Datei fehlt.** Eine Marke, deren Zeileninhalt sich geändert hat oder gar nicht mehr auffindbar ist, bleibt gültig und bleibt ohne Kennzeichnung in der Leiste. Das ist der tragende Teil der Antwort vom 260808-0017, und es ist der Grund, aus dem die Prüfung eine Frage an das Dateisystem bleibt.
 - Abhängigkeiten: S38
 - Abnahmekriterium: `cargo test -p krk-ui` beendet mit 0 und deckt ab: eine gemischte Liste behält ihre Reihenfolge; eine Textmarke auf eine fehlende Datei trägt den Zusatz "(fehlt)"; eine Textmarke, deren Zeileninhalt sich geändert hat, trägt ihn nicht; die vier Lesezeichenbefehle wirken auf eine Textmarke wie auf eine Ordnermarke. Eine Zählprobe deckt ab, dass die Gültigkeitsprüfung einer Liste aus zehn Textmarken zehn Fragen an das Dateisystem stellt und keine Datei öffnet. **`Nutzerarbeit`:** beide Sorten stehen sichtbar unterscheidbar in einer Leiste, und Textmarken überleben Beenden und Neustart.
+- **Ausgeführt am 260810-0036, zusammen mit der ersten Hälfte von S38.** Das Sinnbild kommt aus `Leistenmodell::sinnbild` und nennt die Sorte, nicht das Bild; `appkit/leiste.rs` macht daraus `folder` oder `doc.text` über `NSImage::imageWithSystemSymbolName:accessibilityDescription:`. An `beschriftung` und `ungueltig` war **nichts** zu ändern: beide lesen die Marke, die `Gemerkt::nachpruefen` gesetzt hat, und `Lesezeichen::gueltig` beantwortet seit S11 beide Sorten mit je einer Frage. `gewaehlt` steht unverändert und gehört S39.
+  **Die Regel des Sinnbilds gilt allen wählbaren Zeilen und nicht nur den Lesezeichen:** es sagt, was die Zeile öffnet. Ein Gerät öffnet einen Ordner und trägt deshalb dasselbe Sinnbild wie eine Ordnermarke, eine Überschrift öffnet nichts und trägt keines. Zwei Regeln nebeneinander hätten zwei Ausnahmen, sobald der untere Teil einmal etwas anderes als Ordner führt; außerdem stünde die Beschriftung eines Geräts dann anders eingerückt als die darüber.
+  **Die Zählprobe misst zwei Aussagen statt einer Zahl, und das ist eine Einschränkung.** Die Zahl der Systemaufrufe ist von innerhalb des Prozesses nicht zu zählen. Messbar und gemessen: je Marke eine eigene, aktuelle Antwort (zehn Marken auf fünf vorhandene und fünf fehlende Dateien ergeben fünf gültige, und eine danach gelöschte Datei ändert genau ihre Marke), und kein Lesevorgang (eine Marke auf eine Datei ohne Leserecht bleibt gültig; wer sie öffnete, bekäme `EACCES`). Die zweite Hälfte sagt unter `root` weniger, weil dort auch das Öffnen gelingt; falsch anschlagen kann sie nicht.
 
 ### Phase H: Abnahme
 

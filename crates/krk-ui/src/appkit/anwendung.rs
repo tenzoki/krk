@@ -174,7 +174,7 @@ use objc2_foundation::{
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
-    Ablage, Datei, Einstellungen, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung,
+    Ablage, Datei, Einstellungen, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung, Ziel,
     einstellungen, lesezeichen, pfade,
 };
 use krk_core::operation::{
@@ -1049,6 +1049,19 @@ impl Anwendungsdelegierter {
     ///
     /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
     /// verbraucht.
+    ///
+    /// **Der zweite Zweig aus S38 fehlt noch.** Mit dem Fokus im Editor soll
+    /// derselbe Befehl die Zeile der Schreibmarke merken und ein
+    /// [`Ziel::Textstelle`] anlegen; ein zweiter Anlegebefehl daneben entsteht
+    /// nicht. Von hier bis in `bookmarks.toml` ist der Weg dafuer gebaut — die
+    /// Kette nimmt seit S38 das fertige [`Ziel`] entgegen und fragt an keiner
+    /// Stelle nach der Sorte. Was fehlt, ist die **Auskunft des Editors ueber
+    /// die Zeile der Schreibmarke**: Nummer und Zeileninhalt. Sie gehoert in
+    /// `super::editor`, weil dort der Stand und die `NSTextView` beieinander
+    /// liegen und die Rechnung von AppKits UTF-16-Einheiten in Byteversaetze
+    /// schon einmal gebaut ist; sie hier ein zweites Mal zu schreiben waere der
+    /// zweite Rechenweg fuer dieselbe Umrechnung. Der Defekt fuehrt es:
+    /// `issues/260810-0036_o_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`.
     fn lesezeichen_anlegen(&self) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
@@ -1069,7 +1082,10 @@ impl Anwendungsdelegierter {
             &vorschlag,
             move |name| {
                 if let Some(selbst) = schwach.load() {
-                    selbst.lesezeichen_anlegen_ausfuehren(seite, &ordner, &name);
+                    let ziel = Ziel::Ordner {
+                        ordner: ordner.clone(),
+                    };
+                    selbst.lesezeichen_anlegen_ausfuehren(seite, &ziel, &name);
                 }
             },
         );
@@ -1110,13 +1126,19 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Legt das Lesezeichen an und sichert die Datei (C5).
-    fn lesezeichen_anlegen_ausfuehren(&self, seite: Fensterseite, ordner: &Path, name: &str) {
+    /// Legt das Lesezeichen an und sichert die Datei (C5, C6).
+    ///
+    /// Nimmt das fertige [`Ziel`] entgegen und fragt nicht nach der Sorte: die
+    /// Sorte hat der Fokus in [`Self::lesezeichen_anlegen`] entschieden, und
+    /// von hier bis in `bookmarks.toml` gibt es fuer beide eine Tuer.
+    fn lesezeichen_anlegen_ausfuehren(&self, seite: Fensterseite, ziel: &Ziel, name: &str) {
         if let Err(hinweis) = lesezeichen::name_pruefen(name) {
             self.antwort_zeigen(seite, hinweis.grund());
             return;
         }
-        self.leiste().quelle().lesezeichen_anlegen(name, ordner);
+        self.leiste()
+            .quelle()
+            .lesezeichen_anlegen(name, ziel.clone());
         self.lesezeichen_sichern(seite);
         self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
     }
