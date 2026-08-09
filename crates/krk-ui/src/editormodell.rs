@@ -143,9 +143,34 @@
 //! Blatt am Fenster, und das Blatt wohnt in `crate::appkit`. Dieses Modul
 //! beantwortet allein, ob es etwas zu fragen gibt
 //! ([`Editormodell::hat_ungesicherten_stand`]), und fuehrt aus, was die
-//! Antwort verlangt. [`Editormodell::oeffnen`] auf ein Modell mit
-//! ungesichertem Stand ersetzt die Datei ohne Rueckfrage; der Aufrufer hat vor
-//! dem Ruf zu fragen.
+//! Antwort verlangt.
+//!
+//! # Die gelesene Datei wird zurueckgehalten, statt den Stand zu ueberschreiben
+//!
+//! Einer der vier Anlaesse gehoert diesem Modul trotzdem, und zwar nicht, weil
+//! es fragte, sondern weil allein hier die Reihenfolge einzuhalten ist, die das
+//! elfte Abnahmekriterium von C2 verlangt: **erst die Pruefung, dann die
+//! Nachfrage.** Gelesen und geprueft wird seit S24 auf dem Arbeitsfaden, und wer
+//! vor [`Editormodell::oeffnen`] fragte, fragte vor der Pruefung — der Nutzer
+//! bekaeme die Nachfrage auch fuer einen Ordner, den der Editor ohnehin abweist.
+//!
+//! ```text
+//!  oeffnen ──> Arbeitsfaden ──> einziehen ──┬─ abgewiesen ─────> Abgewiesen
+//!                                           ├─ kein ungesicherter Stand
+//!                                           │                 ──> Geoeffnet
+//!                                           └─ ungesicherter Stand
+//!                                                             ──> Zurueckgehalten
+//!                                                                      │
+//!            zurueckgehaltenes_uebernehmen  <── Antwort des Nutzers ────┤
+//!            zurueckgehaltenes_fallenlassen <───────────────────────────┘
+//! ```
+//!
+//! Die gelesene Datei wartet dann in [`Editormodell`], und der gehaltene Stand
+//! steht unangetastet da, bis der Aufrufer die Antwort des Nutzers bringt. Das
+//! ist **kein zweiter Stand des Editors**: was der Editor haelt, sagt weiterhin
+//! [`Editormodell::stand`] allein. Der zurueckgehaltene Wert ist ein noch nicht
+//! angenommener Eingang, und er hat genau zwei Ausgaenge, von denen jeder ihn
+//! aufbraucht.
 
 // **Diese Zeile faellt mit Schritt 37 und nicht, wie hier bis zum 260809
 // stand, mit Schritt 16.** Der Schritt 16 baut die Textflaeche und leiht sich
@@ -407,11 +432,12 @@ impl Ladevorgang {
 
 /// Wie ein Ladevorgang ausgegangen ist.
 ///
-/// **Drei Werte, ueberschneidungsfrei und vollstaendig.** Entweder der Editor
+/// **Vier Werte, ueberschneidungsfrei und vollstaendig.** Entweder der Editor
 /// haelt danach eine neue Datei, oder er hielt sie schon und nichts hat sich
-/// bewegt, oder er haelt weiter, was er vorher hielt, und der Nutzer bekommt
-/// den Grund. Ein vierter Ausgang, bei dem der Editor nichts mehr haelt,
-/// entsteht nicht: eine gescheiterte Anfrage wirft nichts weg.
+/// bewegt, oder die gelesene Datei wartet auf die Nachfrage aus C4, oder er
+/// haelt weiter, was er vorher hielt, und der Nutzer bekommt den Grund. Ein
+/// fuenfter Ausgang, bei dem der Editor nichts mehr haelt, entsteht nicht: eine
+/// gescheiterte Anfrage wirft nichts weg.
 ///
 /// **Der mittlere Wert ist seit dem 260809 dabei** und trennt zwei Ausgaenge,
 /// die bis dahin beide `Geoeffnet` hiessen. Der Unterschied ist nicht
@@ -432,8 +458,36 @@ pub enum Ladeausgang {
     /// [`Self::Geoeffnet`]; das ist der Teil des Befehls, der noch etwas zu tun
     /// hat.
     SchonOffen,
+    /// Die Datei ist gelesen und geprueft, wird aber zurueckgehalten: der Editor
+    /// haelt ungesicherten Stand, und die Nachfrage aus C4 steht davor (C2, C4).
+    ///
+    /// **Der Ausgang bewegt nichts.** Der gehaltene Stand, die Abweichungsmarke,
+    /// der Pfad und der Stempel stehen unveraendert da; die Textflaeche wird
+    /// nicht beschrieben. Der Aufrufer hat genau eines zu tun: zu fragen, und
+    /// die Antwort ueber [`Editormodell::zurueckgehaltenes_uebernehmen`] oder
+    /// [`Editormodell::zurueckgehaltenes_fallenlassen`] zurueckzubringen.
+    ///
+    /// Ein Wert und kein `bool` am Ausgang `Geoeffnet`: die drei Ausgaenge
+    /// verlangen drei verschiedene Handlungen der Ansicht, und ein Kennzeichen
+    /// daneben liesse die Fallunterscheidung unvollstaendig, die dieses
+    /// Programm an jeder solchen Stelle erzwingt.
+    Zurueckgehalten,
     /// Der Grund gehoert in die Statuszeile aus C1. Der bisherige Stand bleibt.
     Abgewiesen(Abweisung),
+}
+
+/// Eine gelesene Datei, die auf die Antwort der Nachfrage aus C4 wartet.
+///
+/// Sie haelt den Pfad und die Lieferung des Arbeitsfadens zusammen, weil
+/// [`Editormodell::uebernehmen`] beide braucht und weil zwei Felder nebeneinander
+/// zwei Wahrheiten darueber waeren, ob etwas wartet.
+#[derive(Debug)]
+struct Zurueckgehalten {
+    /// Der Pfad, fuer den der Faden gelesen hat.
+    pfad: PathBuf,
+    /// Was er geliefert hat. Immer ein `Ok`: eine Abweisung wird nie
+    /// zurueckgehalten, sondern sofort gemeldet.
+    geladen: Geladen,
 }
 
 /// Wie ein Sichern ausgegangen ist (C4).
@@ -488,6 +542,12 @@ pub struct Editormodell {
     stempel: Option<Stempel>,
     /// Das laufende Laden, falls eines laeuft (C2).
     ladevorgang: Option<Ladevorgang>,
+    /// Eine gelesene Datei, die auf die Antwort der Nachfrage aus C4 wartet.
+    ///
+    /// `None` ist der gewoehnliche Zustand; belegt ist das Feld allein zwischen
+    /// [`Ladeausgang::Zurueckgehalten`] und der Antwort des Nutzers. Der Grund
+    /// steht im Modulkopf.
+    zurueckgehalten: Option<Zurueckgehalten>,
 }
 
 impl Editormodell {
@@ -578,9 +638,12 @@ impl Editormodell {
     /// [`Self::einziehen`]. `Some(...)` heisst: der Ausgang steht schon fest,
     /// nichts laedt, und der Aufrufer hat ihn jetzt zu behandeln.
     ///
-    /// **Fragt nicht nach.** Steht ungesicherter Stand offen, ist das einer der
-    /// vier Anlaesse aus C4, und die Nachfrage gehoert vor diesen Ruf; siehe
-    /// den Modulkopf.
+    /// **Fragt nicht nach, haelt aber zurueck.** Steht ungesicherter Stand
+    /// offen, ist das einer der vier Anlaesse aus C4. Die Nachfrage gehoert
+    /// nicht vor diesen Ruf, sondern hinter die Pruefung, die auf dem
+    /// Arbeitsfaden laeuft: [`Self::einziehen`] liefert dann
+    /// [`Ladeausgang::Zurueckgehalten`], und der Aufrufer fragt. Der Grund und
+    /// das Bild dazu stehen im Modulkopf.
     ///
     /// # Die Datei, die der Editor schon haelt, wird nicht neu gelesen
     ///
@@ -600,9 +663,9 @@ impl Editormodell {
     /// **Der Preis steht hier und wird nicht verschwiegen:** F4 auf die schon
     /// gehaltene Datei liest sie damit auch dann nicht neu, wenn sie sich von
     /// aussen geaendert hat. Ein Befehl zum Neulesen gibt es nicht, und C2 sagt
-    /// keinen zu; die Aenderung von aussen traegt S31, und die Frage, was mit
-    /// einem ungesicherten Stand dabei geschieht, gehoert der Nachfrage aus C4
-    /// (S27, S28).
+    /// keinen zu; die Aenderung von aussen traegt S31. Die Nachfrage aus C4
+    /// greift auf dieser Abkuerzung nicht, und sie soll es nicht: es wird
+    /// nichts gelesen und nichts ersetzt, also ist auch nichts zu verlieren.
     pub fn oeffnen(&mut self, pfad: &Path) -> Option<Ladeausgang> {
         if self.haelt_bereits(pfad) {
             return Some(Ladeausgang::SchonOffen);
@@ -640,6 +703,60 @@ impl Editormodell {
         }
     }
 
+    /// Nimmt die Lieferung auf oder haelt sie fuer die Nachfrage aus C4
+    /// zurueck.
+    ///
+    /// **Die eine Stelle, an der die Reihenfolge aus dem elften
+    /// Abnahmekriterium von C2 haengt: erst die Pruefung, dann die Nachfrage.**
+    /// Sie steht hier und nicht bei den Einstiegen, und das ist der ganze
+    /// Gewinn: F4, der Uebergang aus der Vorschau und der Sprung auf eine
+    /// Textmarke aus C6 erben die Regel, ohne sie zu kennen. Drei Abfragen bei
+    /// drei Aufrufern waeren drei Wahrheiten darueber, wann gefragt wird, und
+    /// die erste Abweichung zwischen ihnen faende keine Pruefung.
+    ///
+    /// Zwei Faelle gehen unverzueglich durch:
+    ///
+    /// - **Eine Abweisung**, weil sie nichts anfasst. Eine Nachfrage ueber eine
+    ///   Datei, die der Editor gar nicht nimmt, kostete den Nutzer eine Antwort
+    ///   ohne Gegenstand; genau das verbietet das elfte Abnahmekriterium.
+    /// - **Ein Editor ohne ungesicherten Stand**, weil dann nichts zu verlieren
+    ///   ist und es nichts zu fragen gibt.
+    fn uebernehmen_oder_zurueckhalten(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
+        if geladen.ergebnis.is_err() || !self.abweichung {
+            return self.uebernehmen(pfad, geladen);
+        }
+        self.zurueckgehalten = Some(Zurueckgehalten { pfad, geladen });
+        Ladeausgang::Zurueckgehalten
+    }
+
+    /// Nimmt die zurueckgehaltene Datei jetzt auf (C4).
+    ///
+    /// Der Weg der Antworten "sichern" und "verwerfen": in beiden Faellen
+    /// nimmt der Editor die neue Datei, und der bisherige Stand faellt — beim
+    /// Sichern, nachdem er in seiner Datei steht, beim Verwerfen ohne das.
+    ///
+    /// Die Uebernahme geht durch [`Self::uebernehmen`] wie jede andere; es gibt
+    /// keinen zweiten Uebergang in den gehaltenen Stand. `None` heisst: es
+    /// wartete nichts, und dann ist auch nichts zu tun.
+    pub fn zurueckgehaltenes_uebernehmen(&mut self) -> Option<Ladeausgang> {
+        let wartend = self.zurueckgehalten.take()?;
+        Some(self.uebernehmen(wartend.pfad, wartend.geladen))
+    }
+
+    /// Laesst die zurueckgehaltene Datei fallen (C4).
+    ///
+    /// Der Weg der Antwort "abbrechen" und der eines gescheiterten Sicherns:
+    /// der Anlass unterbleibt, der gehaltene Stand bleibt mit seiner
+    /// Abweichungsmarke stehen, und die gelesene Datei wird nicht gebraucht.
+    pub fn zurueckgehaltenes_fallenlassen(&mut self) {
+        self.zurueckgehalten = None;
+    }
+
+    /// Ob eine gelesene Datei auf die Antwort der Nachfrage wartet (C4).
+    pub fn haelt_zurueck(&self) -> bool {
+        self.zurueckgehalten.is_some()
+    }
+
     /// Ob ein Ladevorgang laeuft.
     pub fn laedt_noch(&self) -> bool {
         self.ladevorgang.is_some()
@@ -655,14 +772,16 @@ impl Editormodell {
     /// Bei [`Ladeausgang::Geoeffnet`] steht danach die neue Datei mit ihrem
     /// Stand, ihrem Typ, ihrem Stempel und ohne Abweichung; ein Suchlauf ueber
     /// den alten Stand ist beendet, weil seine Versaetze in den neuen nicht
-    /// mehr passen.
+    /// mehr passen. Bei [`Ladeausgang::Zurueckgehalten`] hat sich dagegen
+    /// nichts bewegt, und der Aufrufer hat zu fragen; siehe
+    /// [`Self::uebernehmen_oder_zurueckhalten`].
     pub fn einziehen(&mut self) -> Option<Ladeausgang> {
         let vorgang = self.ladevorgang.as_ref()?;
         let geladener_pfad = vorgang.pfad.clone();
         match vorgang.empfaenger.try_recv() {
             Ok(geladen) => {
                 self.ladevorgang = None;
-                Some(self.uebernehmen(geladener_pfad, geladen))
+                Some(self.uebernehmen_oder_zurueckhalten(geladener_pfad, geladen))
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => None,
             // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
@@ -781,6 +900,11 @@ impl Editormodell {
     ///
     /// Ein ungesicherter Stand faellt dabei. Die Nachfrage davor gehoert dem
     /// Aufrufer; siehe den Modulkopf.
+    ///
+    /// **Ein laufendes und ein zurueckgehaltenes Laden fallen mit.** Der Editor
+    /// gibt hier alles auf, was er ueber eine Datei weiss, und eine Lieferung,
+    /// die danach noch eintraefe oder wartete, gehoerte zu einer Datei, die
+    /// niemand mehr will.
     pub fn schliessen(&mut self) {
         self.pfad = None;
         self.stand.clear();
@@ -789,6 +913,7 @@ impl Editormodell {
         self.suchlauf = None;
         self.stempel = None;
         self.ladevorgang = None;
+        self.zurueckgehalten = None;
     }
 
     /// Ob die gehaltene Datei sich seit dem Oeffnen oder Sichern geaendert hat
@@ -1253,9 +1378,10 @@ mod tests {
 
     /// Die Abkuerzung greift fuer diese eine Datei und nicht fuer die naechste.
     ///
-    /// Der Wechsel auf eine **andere** Datei bleibt der zweite Anlass aus C4
-    /// und faellt weiterhin ohne Rueckfrage; die Nachfrage baut S28. Die Probe
-    /// haelt fest, dass die Abkuerzung ihn nicht stillschweigend mitnimmt.
+    /// Ohne ungesicherten Stand ist der Wechsel auf eine **andere** Datei ein
+    /// gewoehnliches Oeffnen: es gibt nichts zu verlieren und deshalb nichts zu
+    /// fragen. Die Probe haelt fest, dass die Abkuerzung fuer die gehaltene
+    /// Datei den Wechsel nicht stillschweigend mitnimmt.
     #[test]
     fn eine_andere_datei_wird_weiterhin_gelesen() {
         let ordner = Pruefordner::neu("andere-datei");
@@ -1274,6 +1400,139 @@ mod tests {
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), "zweite\n");
         assert_eq!(modell.pfad(), Some(zweite.as_path()));
+        assert!(!modell.haelt_zurueck());
+    }
+
+    /// Das fuenfte Abnahmekriterium von C4: der Wechsel auf eine andere Datei
+    /// wirft den ungesicherten Stand nicht mehr ohne Nachfrage weg.
+    ///
+    /// **Die Probe hat mit S28 ihre Aussage gewechselt.** Bis dahin hielt sie
+    /// fest, dass F4 auf eine andere Datei den getippten Stand kommentarlos
+    /// ersetzt; die Nachfrage stand als Schritt aus. Jetzt haelt das Modell die
+    /// gelesene Datei zurueck, und der gehaltene Stand steht vollstaendig da,
+    /// bis die Antwort des Nutzers kommt.
+    #[test]
+    fn ein_wechsel_mit_ungesichertem_stand_haelt_die_gelesene_datei_zurueck() {
+        let ordner = Pruefordner::neu("zurueckhalten");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+
+        assert_eq!(modell.oeffnen(&zweite), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+
+        assert!(modell.haelt_zurueck(), "die gelesene Datei wartet");
+        assert_eq!(
+            modell.pfad(),
+            Some(erste.as_path()),
+            "der Editor haelt weiter die erste Datei"
+        );
+        assert_eq!(modell.stand(), "erste, bearbeitet\n");
+        assert!(
+            modell.hat_ungesicherten_stand(),
+            "die Abweichungsmarke steht, solange gefragt wird"
+        );
+    }
+
+    /// C4: "sichern" und "verwerfen" nehmen die zurueckgehaltene Datei auf.
+    ///
+    /// Geprueft wird der Weg beider Antworten, denn er ist derselbe: sie
+    /// unterscheiden sich allein darin, ob der Aufrufer vorher gesichert hat.
+    #[test]
+    fn das_zurueckgehaltene_wird_auf_antwort_aufgenommen() {
+        let ordner = Pruefordner::neu("zurueckgehalten-uebernehmen");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+
+        assert_eq!(modell.oeffnen(&zweite), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            Some(Ladeausgang::Geoeffnet),
+            "die Uebernahme geht denselben Weg wie jedes Oeffnen"
+        );
+        assert_eq!(modell.pfad(), Some(zweite.as_path()));
+        assert_eq!(modell.stand(), "zweite\n");
+        assert!(
+            !modell.hat_ungesicherten_stand(),
+            "die neue Datei kommt ohne Abweichung herein"
+        );
+        assert!(!modell.haelt_zurueck(), "es wartet nichts mehr");
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            None,
+            "ein zweiter Ruf findet nichts und tut nichts"
+        );
+    }
+
+    /// C4: "abbrechen" laesst die gelesene Datei fallen und den Stand stehen.
+    #[test]
+    fn ein_abgebrochener_wechsel_laesst_den_stand_vollstaendig_stehen() {
+        let ordner = Pruefordner::neu("zurueckgehalten-fallenlassen");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+
+        assert_eq!(modell.oeffnen(&zweite), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+
+        modell.zurueckgehaltenes_fallenlassen();
+        assert!(!modell.haelt_zurueck());
+        assert_eq!(modell.pfad(), Some(erste.as_path()));
+        assert_eq!(modell.stand(), "erste, bearbeitet\n");
+        assert!(modell.hat_ungesicherten_stand());
+    }
+
+    /// Das elfte Abnahmekriterium von C2: die Pruefung steht vor der Nachfrage.
+    ///
+    /// Eine Datei, die der Editor ohnehin abweist, wird nicht zurueckgehalten
+    /// und kostet den Nutzer deshalb keine Rueckfrage — auch dann nicht, wenn
+    /// er ungesicherten Stand haelt. Das ist der Fall, an dem die Reihenfolge
+    /// haengt, und er ist der Grund, aus dem das Zurueckhalten im Modell steht
+    /// und nicht bei den beiden Einstiegen.
+    #[test]
+    fn eine_abgewiesene_datei_wird_nicht_zurueckgehalten() {
+        let ordner = Pruefordner::neu("abweisung-ohne-nachfrage");
+        let gute = ordner.datei("gut.txt", "guter Inhalt\n");
+        let mut modell = geoeffnet(&gute);
+        modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
+
+        // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
+        assert_eq!(modell.oeffnen(&ordner.pfad), None);
+        let ausgang = abwarten(&mut modell);
+        assert!(
+            matches!(ausgang, Ladeausgang::Abgewiesen(_)),
+            "eine Abweisung geht unverzueglich durch, {ausgang:?}"
+        );
+        assert!(
+            !modell.haelt_zurueck(),
+            "eine abgewiesene Datei wartet auf keine Antwort"
+        );
+        assert!(modell.hat_ungesicherten_stand());
+    }
+
+    /// C1, C4: das Schliessen gibt auch eine wartende Datei auf.
+    #[test]
+    fn das_schliessen_laesst_die_zurueckgehaltene_datei_fallen() {
+        let ordner = Pruefordner::neu("schliessen-zurueckgehalten");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+
+        assert_eq!(modell.oeffnen(&zweite), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+
+        modell.schliessen();
+        assert!(!modell.haelt_zurueck());
+        assert!(!modell.haelt_datei());
+        assert_eq!(modell.stand(), "");
+        assert!(!modell.hat_ungesicherten_stand());
     }
 
     /// C4: ein gescheitertes Schreiben nennt den Grund und wirft den Stand

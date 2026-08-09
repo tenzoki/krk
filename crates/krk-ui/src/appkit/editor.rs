@@ -22,6 +22,11 @@
 //!            │
 //!            ├─ Geoeffnet ──> stand_einsetzen ──> NSTextView
 //!            └─ jeder Ausgang ──> melden ──> Anwendungsdelegierter
+//!                                                 │ Zurueckgehalten: Blatt
+//!   zurueckgehaltenes_uebernehmen  <───────────────┤ (sichern / verwerfen)
+//!   zurueckgehaltenes_fallenlassen <───────────────┘ (abbrechen)
+//!
+//!   opt+cmd+e ──> Blatt ──> schliessen ──> stand_einsetzen, kopf_nachziehen
 //!
 //!   Tippen ──> textDidChange: ──> Editormodell::bearbeiten ──> kopf_nachziehen
 //!
@@ -486,6 +491,15 @@ impl Editorbereich {
         self.ivars().modell.borrow().haelt_datei()
     }
 
+    /// Ob der Editor Aenderungen haelt, die nicht in der Datei stehen (C4).
+    ///
+    /// Die Frage der vier Anlaesse aus C4: der Anwendungsdelegierte stellt sie,
+    /// bevor er einen Anlass ausfuehrt, der den Stand verloere. Sie geht an das
+    /// Modell und wird hier nicht aus der Textflaeche beantwortet.
+    pub fn hat_ungesicherten_stand(&self) -> bool {
+        self.ivars().modell.borrow().hat_ungesicherten_stand()
+    }
+
     /// Die Datei, die der Editor haelt, falls er eine haelt (C11).
     ///
     /// Der Fenstertitel fragt danach: steht der Fokus im Editor, zeigt der
@@ -562,6 +576,61 @@ impl Editorbereich {
             self.kopf_nachziehen();
         }
         ausgang
+    }
+
+    /// Nimmt die zurueckgehaltene Datei jetzt auf (C4).
+    ///
+    /// Der Weg zurueck aus der Nachfrage, wenn der Nutzer mit "sichern" oder
+    /// "verwerfen" geantwortet hat. Was danach zu tun ist, ist genau das, was
+    /// [`Self::einziehen`] fuer [`Ladeausgang::Geoeffnet`] tut, und deshalb
+    /// steht es hier in derselben Form: Stand in die Flaeche, Kopf nachziehen,
+    /// Ausgang durch dieselbe Senke. Eine zweite Behandlung desselben Wertes
+    /// entsteht damit nicht — der Anwendungsdelegierte sieht `Geoeffnet` und
+    /// holt Fokus und Titel nach, ohne diesen Weg vom gewoehnlichen zu
+    /// unterscheiden.
+    ///
+    /// Wartete nichts, geschieht nichts. Der Fall ist im Ablauf nicht
+    /// erreichbar, weil allein der Rueckruf der Nachfrage hierher fuehrt;
+    /// stillschweigend nichts zu tun ist trotzdem richtig, denn es gibt keine
+    /// Datei, ueber die etwas zu melden waere.
+    pub fn zurueckgehaltenes_uebernehmen(&self) {
+        let ausgang = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .zurueckgehaltenes_uebernehmen();
+        let Some(ausgang) = ausgang else {
+            return;
+        };
+        if ausgang == Ladeausgang::Geoeffnet {
+            self.stand_einsetzen();
+            self.kopf_nachziehen();
+        }
+        self.melden(ausgang);
+    }
+
+    /// Laesst die zurueckgehaltene Datei fallen (C4).
+    ///
+    /// Der Weg zurueck aus der Nachfrage, wenn der Nutzer abgebrochen hat oder
+    /// das Sichern gescheitert ist. Die Flaeche wird dabei nicht angefasst: sie
+    /// traegt unveraendert den Stand, den der Nutzer behalten wollte.
+    pub fn zurueckgehaltenes_fallenlassen(&self) {
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .zurueckgehaltenes_fallenlassen();
+    }
+
+    /// Gibt die gehaltene Datei auf und leert die Flaeche (C1, C4).
+    ///
+    /// Gerufen, wenn der Editor geschlossen wird — nach der Nachfrage aus C4,
+    /// die dem Anwendungsdelegierten gehoert. Der Stand faellt im Modell, und
+    /// die beiden Anzeigen ziehen ueber dieselben zwei Stellen nach wie nach
+    /// jedem anderen Wechsel des Gehaltenen.
+    pub fn schliessen(&self) {
+        self.ivars().modell.borrow_mut().schliessen();
+        self.stand_einsetzen();
+        self.kopf_nachziehen();
     }
 
     /// Holt die Meldung des Arbeitsfadens ab (C2).
@@ -678,7 +747,7 @@ impl Editorbereich {
     /// **Die eine Stelle, die den Kopf beschreibt.** Sie wird gerufen, wo sich
     /// eine der beiden Angaben aendern kann: beim Aufbau, nach einem gelungenen
     /// Oeffnen, beim Uebergang in den ungesicherten Stand, nach einem
-    /// gelungenen Sichern — und mit S28 nach dem Schliessen.
+    /// gelungenen Sichern und seit S28 nach dem Schliessen.
     ///
     /// Was dort steht, entscheidet [`kopfzeile`] ohne AppKit und ist deshalb
     /// ohne Fenster pruefbar.

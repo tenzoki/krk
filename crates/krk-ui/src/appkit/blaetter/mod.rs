@@ -1,11 +1,12 @@
 //! Die gemeinsame Huelle fuer die Blaetter am Fenster.
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
-//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat in dieser
-//! Runde sechs: die Pfadeingabe aus C2 und fuenf zu C4 (Konflikt, Rueckfrage vor
+//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat sieben:
+//! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem endgueltigen Loeschen, Abschlussliste der uebersprungenen Eintraege und
 //! seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen im
-//! Stapel).
+//! Stapel), dazu seit S27 der Editor-Runde die Nachfrage vor dem Verlust eines
+//! ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde).
 //!
 //! **Der Stand einer laufenden Dateioperation ist seit Schritt 16b keines
 //! mehr.** Er stand bis dahin als fuenftes Blatt hier und ist in die
@@ -33,7 +34,7 @@
 //! `NSModalResponse`; was AppKit dafuer als Zahl fuehrt, bleibt in dieser Datei.
 //!
 //! **Der Grund fuer eine gemeinsame Huelle** ist derselbe wie ueberall in
-//! diesem Entwurf: fuenf Blaetter mit je eigenem Aufbau waeren fuenf Stellen,
+//! diesem Entwurf: sieben Blaetter mit je eigenem Aufbau waeren sieben Stellen,
 //! die dieselbe Frage beantworten, und die erste Abweichung zwischen ihnen
 //! faende keine Pruefung.
 //!
@@ -81,6 +82,7 @@ pub mod namenseingabe;
 pub mod pfadeingabe;
 pub mod stapelumbenennen;
 pub mod uebersprungen;
+pub mod ungesichert;
 
 use std::cell::RefCell;
 

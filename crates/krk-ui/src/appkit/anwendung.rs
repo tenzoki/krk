@@ -164,8 +164,8 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSResponder, NSView,
-    NSWindow,
+    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate,
+    NSApplicationTerminateReply, NSResponder, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
@@ -199,6 +199,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
 use super::bildtakt::{self, Zeichenende};
+use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
     Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
 };
@@ -217,6 +218,36 @@ use super::vorschau::Vorschaufenster;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
+
+/// Ein Vorgang, der den ungesicherten Stand des Editors verlieren wuerde (C4).
+///
+/// **Die Anlaesse aus C4, als Wert.** Der Spec zaehlt vier auf; fuenf Werte
+/// stehen hier, weil das Einblenden der Vorschau ueber zwei Befehle erreichbar
+/// ist und beide denselben Editor verdraengen.
+///
+/// **Er steht in keinem Feld.** Der Wert wird in die Schliessung des Blattes
+/// hineinkopiert und faellt mit ihr; siehe
+/// [`Anwendungsdelegierter::nachfrage_zeigen`]. Was er dem Programm bringt, ist
+/// die Erzwingung: [`Anwendungsdelegierter::anlass_ausfuehren`] und
+/// [`Anwendungsdelegierter::anlass_unterbleibt`] sind zwei vollstaendige
+/// Fallunterscheidungen ohne Auffangzweig, und ein sechster Anlass haelt an
+/// beiden den Bau an, statt still den Zweig des Nachbarn zu bekommen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Anlass {
+    /// `opt+cmd+e`: der Editor wird ausgeblendet und gibt seine Datei frei.
+    EditorSchliessen,
+    /// Der Editor nimmt eine andere Datei auf, die schon gelesen und geprueft
+    /// ist und auf die Antwort wartet (C2).
+    AndereDatei,
+    /// `f3` und `cmd+y`: die Vorschau wird eingeblendet und verdraengt den
+    /// Editor nach C1.
+    VorschauUmschalten,
+    /// `shift+cmd+y`: der Fokusbefehl holt die Vorschau hervor und verdraengt
+    /// den Editor nach C1.
+    VorschauFokus,
+    /// KRK wird beendet.
+    Beenden,
+}
 
 /// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
 ///
@@ -396,6 +427,15 @@ pub struct AnwendungsIvars {
     /// Rueckfrage auf "Abbrechen"; der zweite Weg zum Abbruch laeuft deshalb
     /// ueber den Befehl `abbrechen` aus `resources/default-keymap.toml`.
     offenes_blatt: RefCell<Option<Blattgriff>>,
+    /// Ob das laufende Beenden an der Nachfrage aus C4 vorbeigeht.
+    ///
+    /// **Ein Feld, ein Schreiber, ein Leser.** Geschrieben allein von
+    /// [`Anwendungsdelegierter::ohne_tastenabgriff_beenden`], gelesen allein von
+    /// `applicationShouldTerminate:`. Dort ist der Tastenabgriff kaputt, es
+    /// steht bereits ein anwendungsmodaler Hinweis, und ein Blatt mit Rueckfrage
+    /// waere weder bedienbar noch sinnvoll — der Nutzer koennte es nicht
+    /// beantworten, und KRK bliebe stehen.
+    beenden_ohne_nachfrage: Cell<bool>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -493,10 +533,36 @@ define_class!(
             false
         }
 
+        /// KRK soll beendet werden: haelt der Editor ungesicherten Stand,
+        /// steht die Nachfrage aus C4 davor.
+        ///
+        /// **Der vierte Anlass der Nachfrage, und der einzige, der eine Antwort
+        /// an AppKit zurueckgeben muss.** Ein Blatt kehrt sofort zurueck, und
+        /// `terminate:` darf nicht auf eine Rueckgabe warten; deshalb
+        /// `TerminateLater` und die endgueltige Antwort aus dem Rueckruf ueber
+        /// `replyToApplicationShouldTerminate:`. Das ist der Weg, den AppKit
+        /// fuer genau diesen Fall vorsieht.
+        ///
+        /// Weil die Antwort vom 260808-0017 den Anlass Sitzungssicherung in das
+        /// Beenden hineingezogen hat, ist diese Stelle die einzige, an der ein
+        /// ungesicherter Stand vor einem Programmende ueberhaupt bemerkt wird.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(applicationShouldTerminate:))]
+        fn soll_beendet_werden(&self, _absender: &NSApplication) -> NSApplicationTerminateReply {
+            self.beenden_erlauben()
+        }
+
         /// KRK wird beendet: den letzten Sitzungsstand schreiben.
         ///
         /// Der eine Schreibvorgang ohne Ruecksicht auf den Takt, den
         /// `### Frage 4` des Plans neben der Buendelung zusagt.
+        ///
+        /// **Unveraendert seit der Runde 1, und das ist die Zusage:** dieser
+        /// Rueckruf laeuft **nach** der Zustimmung aus
+        /// `applicationShouldTerminate:` und nicht vor ihr. Ein abgebrochenes
+        /// Beenden erreicht ihn nie, und die getaktete Sitzungssicherung traegt
+        /// den ungesicherten Stand weiterhin nicht mit; das siebte
+        /// Abnahmekriterium von C4 verlangt beides.
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(applicationWillTerminate:))]
         fn wird_beendet(&self, _meldung: &NSNotification) {
@@ -545,6 +611,7 @@ impl Anwendungsdelegierter {
             schreibfehler_gemeldet: Cell::new(false),
             vorgang: RefCell::new(None),
             offenes_blatt: RefCell::new(None),
+            beenden_ohne_nachfrage: Cell::new(false),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -1328,11 +1395,31 @@ impl Anwendungsdelegierter {
     /// `applicationWillTerminate:` den letzten Sitzungsstand noch schreibt.
     /// Beim Start ist das folgenlos, beim Nachziehen nach einer Umbelegung
     /// nicht — dort hat der Nutzer gearbeitet, und seine Tabs sollen den
-    /// Abbruch ueberleben. `terminate:` kehrt nicht zurueck, solange kein
-    /// `applicationShouldTerminate:` widerspricht, und ein solches gibt es
-    /// nicht; die Aufrufer rechnen trotzdem nicht damit, sondern tun danach
-    /// schlicht nichts mehr.
+    /// Abbruch ueberleben.
+    ///
+    /// # `terminate:` kehrt seit S28 zurueck, und zwar in genau zwei Faellen
+    ///
+    /// Bis dahin gab es kein `applicationShouldTerminate:`, und der Aufruf kam
+    /// nie zurueck. Seither gibt es eines, und es beantwortet die Nachfrage aus
+    /// C4: haelt der Editor ungesicherten Stand, zeigt es ein Blatt und
+    /// antwortet `TerminateLater`, also kehrt `terminate:` zurueck und KRK
+    /// laeuft weiter, bis der Nutzer geantwortet hat; antwortet er mit
+    /// "abbrechen" oder scheitert das Sichern, laeuft KRK dauerhaft weiter.
+    ///
+    /// **Die drei Aufrufer rechnen weiterhin nicht mit einer Rueckkehr, und sie
+    /// muessen es nicht.** Sie tun danach schlicht nichts mehr, und das bleibt
+    /// richtig: kehrt `terminate:` zurueck, hat entweder der Nutzer das Beenden
+    /// angehalten — dann soll nichts weiter geschehen — oder das Blatt steht
+    /// noch, und die Antwort kommt aus seinem Rueckruf.
+    ///
+    /// **Dieser eine Aufrufer geht an der Nachfrage vorbei**, ueber
+    /// [`AnwendungsIvars::beenden_ohne_nachfrage`]. Hier ist der Tastenabgriff
+    /// kaputt und ein anwendungsmodaler Hinweis steht bereits; ein Blatt mit
+    /// Rueckfrage waere weder bedienbar noch sinnvoll, und KRK bliebe mit einer
+    /// unbeantwortbaren Frage stehen. Der Preis ist benannt: ein ungesicherter
+    /// Stand faellt in diesem Fall ohne Nachfrage.
     fn ohne_tastenabgriff_beenden(&self) {
+        self.ivars().beenden_ohne_nachfrage.set(true);
         hinweis::zeigen(
             self.mtm(),
             "KRK kann keine Tastendrücke lesen",
@@ -1725,7 +1812,9 @@ impl Anwendungsdelegierter {
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
-            Kommando::VorschauUmschalten => self.bereich_umschalten(Bereich::Vorschau),
+            // Der dritte Anlass der Nachfrage aus C4 haengt an diesem Befehl:
+            // eine eingeblendete Vorschau nimmt dem Editor nach C1 die Flaeche.
+            Kommando::VorschauUmschalten => self.vorschau_umschalten(),
             Kommando::FensterEinblenden => {
                 self.fenster_zeigen();
                 true
@@ -1744,7 +1833,9 @@ impl Anwendungsdelegierter {
             Kommando::LesezeichenRunter => self.lesezeichen_verschieben(Verschiebung::Runter),
             Kommando::FokusLeiste => self.fokus_holen(Fokus::Leiste),
             Kommando::FokusDateifenster => self.fokus_holen(Fokus::Dateifenster),
-            Kommando::FokusVorschau => self.fokus_holen(Fokus::Vorschau),
+            // Wie `VorschauUmschalten` daneben: der Fokusbefehl holt seinen
+            // Bereich hervor und verdraengt damit den Editor.
+            Kommando::FokusVorschau => self.fokus_vorschau_holen(),
             Kommando::FokusEditor => self.fokus_editor_holen(),
             // Der erste der beiden Einstiege in den Editor (C2). Er steht hier
             // und nicht bei `bereichskommando`, obwohl er
@@ -1757,6 +1848,10 @@ impl Anwendungsdelegierter {
             // Editorbereich haengt am Delegierten, und `bereichskommando`
             // reicht dem Editor nichts zu (siehe die Begruendung dort).
             Kommando::EditorSichern => self.editor_sichern(),
+            // Der erste Anlass der Nachfrage aus C4. Er steht hier und nicht
+            // bei `bereichskommando`, aus demselben Grund wie das Sichern
+            // darueber: der Editorbereich haengt am Delegierten.
+            Kommando::EditorSchliessen => self.editor_schliessen(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -2079,8 +2174,12 @@ impl Anwendungsdelegierter {
     /// Die eine Stelle dafuer, und beide Wege gehen darueber: der
     /// Ereignisabgriff mit [`Kommando::Beenden`] und der Menueeintrag ueber den
     /// Selektor `beenden:`. `terminate:` und nicht `exit`, damit AppKit seinen
-    /// Ablauf geht und `applicationWillTerminate:` den letzten Sitzungsstand
-    /// noch schreibt.
+    /// Ablauf geht: erst `applicationShouldTerminate:` mit der Nachfrage aus C4,
+    /// dann `applicationWillTerminate:` mit dem letzten Sitzungsstand.
+    ///
+    /// **Der Rueckgabewert `true` sagt nichts ueber das Beenden aus**, sondern
+    /// allein, dass der Tastendruck verbraucht ist. Ob KRK wirklich endet,
+    /// entscheidet seit S29 [`Self::beenden_erlauben`].
     fn beenden(&self) -> bool {
         // `None` als Absender heisst: kein Steuerelement hat den Aufruf
         // ausgeloest.
@@ -3003,6 +3102,16 @@ impl Anwendungsdelegierter {
                 // stattfindet, und der Titel truege weiter die vorige Datei.
                 self.titel_nachziehen(self.fokus());
             }
+            // **Der zweite Anlass der Nachfrage aus C4.** Die Datei ist an
+            // dieser Stelle gelesen und geprueft, und der Editor hat sie noch
+            // nicht aufgenommen; damit steht die Pruefung vor der Nachfrage, wie
+            // das elfte Abnahmekriterium von C2 es verlangt. Der Weg zurueck
+            // geht ueber `Anlass::AndereDatei` und endet in `Geoeffnet`, das
+            // gleich darueber behandelt wird — dieser Zweig holt weder Fokus
+            // noch Titel nach, weil beides dann von selbst hier ankommt.
+            Ladeausgang::Zurueckgehalten => {
+                self.nachfrage_zeigen(Anlass::AndereDatei);
+            }
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
             // Grund geht in die Statuszeile und unterscheidet dort zu gross von
             // nicht als Text lesbar (zehntes Abnahmekriterium von C2).
@@ -3040,22 +3149,310 @@ impl Anwendungsdelegierter {
     /// Nutzer kann es nach dem Grund erneut versuchen. Das zehnte
     /// Abnahmekriterium von C4 verlangt genau das.
     fn editor_sichern(&self) -> bool {
+        if self.ivars().editor.get().is_none() {
+            return false;
+        }
+        self.editor_stand_sichern();
+        true
+    }
+
+    /// Sichert und meldet; liefert, ob der Stand jetzt in der Datei steht.
+    ///
+    /// **Zwei Aufrufer, eine Fallunterscheidung.** `cmd+s` fragt nicht nach dem
+    /// Rueckgabewert, die Nachfrage aus C4 schon: das zehnte Abnahmekriterium
+    /// von C4 verlangt, dass ein Anlass unterbleibt, wenn die Sicherung
+    /// gescheitert ist, statt den Stand mitzunehmen. Genau das ist dieser `bool`
+    /// — und er ist die eine Stelle, an der der Ausgang gelesen wird; eine
+    /// zweite Fehlerbehandlung an der Nachfrage entsteht nicht.
+    ///
+    /// **`NichtsGehalten` liefert `true`.** Ohne gehaltene Datei gibt es keinen
+    /// Stand, den ein Anlass verlieren koennte, also darf er laufen. Erreichbar
+    /// ist der Zweig aus der Nachfrage heraus nicht: sie steht nur, wenn der
+    /// Editor ungesicherten Stand haelt, und den haelt er nur mit einer Datei.
+    fn editor_stand_sichern(&self) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
         };
         match editor.sichern() {
             Sicherungsausgang::Gesichert(pfad) => {
                 self.editormeldung_zeigen(&Editormeldung::Gesichert { pfad });
+                true
             }
             Sicherungsausgang::Gescheitert(grund) => {
                 self.editormeldung_zeigen(&Editormeldung::SichernGescheitert { grund });
+                false
             }
             Sicherungsausgang::NichtsGehalten => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
+                true
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Die Nachfrage vor den vier Anlaessen (C4)
+    // ------------------------------------------------------------------
+
+    /// Ob der Editor Aenderungen haelt, die nicht in seiner Datei stehen (C4).
+    ///
+    /// Die eine Abfrage dafuer; ohne gebauten Editor ist die Antwort `false`.
+    fn editor_haelt_ungesicherten_stand(&self) -> bool {
+        self.ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.hat_ungesicherten_stand())
+    }
+
+    /// Beginnt einen der Anlaesse aus C4 und stellt die Nachfrage, falls noetig.
+    ///
+    /// Der Weg der Anlaesse, deren Vorbedingung allein der ungesicherte Stand
+    /// ist. Zwei gehen an ihm vorbei und haben je einen Grund dafuer: das
+    /// Beenden muss AppKit eine Antwort zurueckgeben und faehrt seinen eigenen
+    /// Vorbehalt in [`Self::beenden_erlauben`]; der Wechsel auf eine andere
+    /// Datei hat seine Vorbedingung schon im Modell geprueft und kommt als
+    /// [`Ladeausgang::Zurueckgehalten`] herein. Beide nehmen danach dieselbe
+    /// [`Self::nachfrage_zeigen`].
+    ///
+    /// Liefert, ob der Tastendruck verbraucht ist — was er in beiden Faellen
+    /// ist, sobald es einen Editor gibt: entweder der Anlass ist gelaufen, oder
+    /// das Blatt steht.
+    fn anlass_beginnen(&self, anlass: Anlass) -> bool {
+        if !self.editor_haelt_ungesicherten_stand() {
+            self.anlass_ausfuehren(anlass);
+            return true;
+        }
+        self.nachfrage_zeigen(anlass)
+    }
+
+    /// Zeigt die Nachfrage aus C4 und laesst den Anlass in der Schliessung
+    /// mitreisen.
+    ///
+    /// **Die eine Aufrufstelle des Blattes**, fuer alle vier Anlaesse. Der
+    /// Anlass wird in die Schliessung **hineinkopiert** und steht in keinem
+    /// Feld: ein Feld, das eine noch nicht ausgefuehrte Absicht ueber den
+    /// Rueckruf hinaus haelt, waere die zweite Wahrheit darueber, was gerade
+    /// beantwortet wird, und ueberlebte einen Rueckruf, der ausbleibt.
+    ///
+    /// Die Schliessung haelt den Anwendungsdelegierten **schwach**, wie alle
+    /// bestehenden Blattaufrufer; der Ring Delegierter → Blatt → Rueckruf →
+    /// Delegierter schloesse sich sonst. Der [`Blattgriff`] geht nach
+    /// `offenes_blatt`, damit `esc` das Blatt wie jede andere Rueckfrage
+    /// schliesst, und der Rueckruf leert ihn als erstes.
+    ///
+    /// Liefert `false`, wenn kein Blatt zu zeigen ist, weil Fenster oder Editor
+    /// fehlen. Der Aufrufer entscheidet dann selbst, was daraus folgt.
+    fn nachfrage_zeigen(&self, anlass: Anlass) -> bool {
+        let (Some(fenster), Some(editor)) = (self.ivars().fenster.get(), self.ivars().editor.get())
+        else {
+            return false;
+        };
+        // Genannt wird die Datei, deren Stand auf dem Spiel steht, also die
+        // gehaltene — nicht die, die der Editor aufnehmen soll.
+        let Some(pfad) = editor.pfad() else {
+            return false;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = ungesichert::zeigen(self.mtm(), fenster, &pfad, move |antwort| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            *selbst.ivars().offenes_blatt.borrow_mut() = None;
+            selbst.nachfrage_beantworten(anlass, antwort);
+        });
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
         true
+    }
+
+    /// Was auf die Antwort des Nutzers folgt (C4).
+    ///
+    /// Die Fallunterscheidung ueber die drei Wahlmoeglichkeiten steht hier
+    /// einmal und nicht je Anlass. Bei "sichern" entscheidet der Ausgang des
+    /// Schreibens, ob der Anlass laeuft: ein gescheitertes Sichern hat seinen
+    /// Grund schon gemeldet, und der Anlass unterbleibt, statt den Stand
+    /// mitzunehmen (zehntes Abnahmekriterium von C4).
+    fn nachfrage_beantworten(&self, anlass: Anlass, antwort: Antwort) {
+        match antwort {
+            Antwort::Sichern => {
+                if self.editor_stand_sichern() {
+                    self.anlass_ausfuehren(anlass);
+                } else {
+                    self.anlass_unterbleibt(anlass);
+                }
+            }
+            Antwort::Verwerfen => self.anlass_ausfuehren(anlass),
+            Antwort::Abbrechen => self.anlass_unterbleibt(anlass),
+        }
+    }
+
+    /// Fuehrt den Anlass aus, nachdem er zulaessig geworden ist (C4).
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig; ein
+    /// sechster Wert haelt hier und in [`Self::anlass_unterbleibt`] den Bau an
+    /// und erzwingt beide Antworten.
+    fn anlass_ausfuehren(&self, anlass: Anlass) {
+        match anlass {
+            Anlass::EditorSchliessen => self.editor_ausblenden(),
+            Anlass::AndereDatei => {
+                if let Some(editor) = self.ivars().editor.get() {
+                    editor.zurueckgehaltenes_uebernehmen();
+                }
+            }
+            Anlass::VorschauUmschalten => {
+                self.bereich_umschalten(Bereich::Vorschau);
+            }
+            Anlass::VorschauFokus => {
+                self.fokus_holen(Fokus::Vorschau);
+            }
+            // Der Nachzug unten geht diesen Anlass nichts an: nach der
+            // Zustimmung legt niemand mehr eine Ansicht aus, und
+            // `applicationWillTerminate:` schreibt die Sitzung ohnehin ein
+            // letztes Mal.
+            Anlass::Beenden => {
+                self.beenden_beantworten(true);
+                return;
+            }
+        }
+        // **Was `kommando_ausfuehren` einem ausgefuehrten Befehl nachzieht.**
+        // Die Fortsetzung laeuft lange nach ihm, und ohne diese beiden Zeilen
+        // stuende die neue Sichtbarkeit im Fenstermodell und nicht auf dem
+        // Schirm.
+        self.aufteilung_nachziehen();
+        self.sitzung_vormerken();
+    }
+
+    /// Was aufzuraeumen ist, wenn der Anlass unterbleibt (C4).
+    ///
+    /// "Abbrechen" und das gescheiterte Sichern gehen denselben Weg: der
+    /// gehaltene Stand bleibt mit seiner Abweichungsmarke stehen, und der Editor
+    /// bleibt, wo er ist. Zwei Anlaesse haben darueber hinaus etwas abzulegen.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
+    fn anlass_unterbleibt(&self, anlass: Anlass) {
+        match anlass {
+            // Nichts zu tun: der Editor steht, wie er stand.
+            Anlass::EditorSchliessen | Anlass::VorschauUmschalten | Anlass::VorschauFokus => {}
+            // Die gelesene Datei wartet nicht weiter: sie kostete sonst bis zu
+            // 16 MB Arbeitsspeicher fuer einen Wechsel, den der Nutzer eben
+            // abgelehnt hat.
+            Anlass::AndereDatei => {
+                if let Some(editor) = self.ivars().editor.get() {
+                    editor.zurueckgehaltenes_fallenlassen();
+                }
+            }
+            Anlass::Beenden => self.beenden_beantworten(false),
+        }
+    }
+
+    /// Blendet den Editor aus und gibt seine Datei frei (C1, C4).
+    ///
+    /// Die Fortsetzung des Anlasses `opt+cmd+e`. Beide Haelften gehoeren
+    /// zusammen: ein ausgeblendeter Editor, der seine Datei behielte, gaebe dem
+    /// Fokusbefehl aus C1 einen Bereich zum Hervorholen, den der Nutzer eben
+    /// geschlossen hat.
+    ///
+    /// Die Sichtbarkeit wird nur geaendert, wenn der Editor sie hat:
+    /// [`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)
+    /// blendet einen ausgeblendeten Bereich sonst ein, und Schliessen brachte
+    /// den Editor hervor.
+    fn editor_ausblenden(&self) {
+        if let Some(editor) = self.ivars().editor.get() {
+            editor.schliessen();
+        }
+        if self.ivars().modell.borrow().sichtbar(Bereich::Editor) {
+            self.bereich_umschalten(Bereich::Editor);
+        }
+        // Der Editor haelt keine Datei mehr; steht der Fokus noch bei ihm, nennt
+        // der Titel sonst weiter eine Datei, die niemand mehr hat.
+        self.titel_nachziehen(self.fokus());
+    }
+
+    /// Ob ein Einblenden der Vorschau den Editor jetzt von der Flaeche naehme
+    /// (C1).
+    ///
+    /// Die Vorbedingung des dritten Anlasses, und sie ist eine Frage an die
+    /// Sichtbarkeit und nicht an den Befehl: verdraengt wird nur ein sichtbarer
+    /// Editor, und nur, wenn die Vorschau dabei sichtbar **wird**. Wer die
+    /// Vorschau ausblendet, verdraengt nichts.
+    fn vorschau_verdraengt_den_editor(&self) -> bool {
+        let modell = self.ivars().modell.borrow();
+        modell.sichtbar(Bereich::Editor) && !modell.sichtbar(Bereich::Vorschau)
+    }
+
+    /// `f3` und `cmd+y`: die Vorschau ein- oder ausblenden (C7).
+    ///
+    /// Der dritte Anlass der Nachfrage aus C4 haengt hier, weil das Einblenden
+    /// der Vorschau den Editor nach C1 von der Flaeche nimmt.
+    fn vorschau_umschalten(&self) -> bool {
+        if self.vorschau_verdraengt_den_editor() {
+            return self.anlass_beginnen(Anlass::VorschauUmschalten);
+        }
+        self.bereich_umschalten(Bereich::Vorschau)
+    }
+
+    /// `shift+cmd+y`: den Fokus in die Vorschau setzen (C5).
+    ///
+    /// **Derselbe Anlass wie `f3`, und deshalb steht die Nachfrage auch hier.**
+    /// Der Fokusbefehl holt seinen Bereich seit dem Nutzerentscheid vom 260807
+    /// hervor, und ein hervorgeholtes Vorschaufenster verdraengt den Editor
+    /// genauso wie ein umgeschaltetes. Ihn auszulassen hiesse, denselben Verlust
+    /// auf dem einen Weg abzufragen und auf dem anderen nicht.
+    fn fokus_vorschau_holen(&self) -> bool {
+        if self.vorschau_verdraengt_den_editor() {
+            return self.anlass_beginnen(Anlass::VorschauFokus);
+        }
+        self.fokus_holen(Fokus::Vorschau)
+    }
+
+    /// `opt+cmd+e`: den Editor schliessen (C1, C4).
+    ///
+    /// Der erste Anlass der Nachfrage. Der Befehl traegt
+    /// [`Wirkungsbereich::Editor`](krk_core::tasten::Wirkungsbereich) und
+    /// erreicht diese Stelle deshalb nur mit dem Fokus in der Textflaeche.
+    fn editor_schliessen(&self) -> bool {
+        if self.ivars().editor.get().is_none() {
+            return false;
+        }
+        self.anlass_beginnen(Anlass::EditorSchliessen)
+    }
+
+    /// Ob KRK sich jetzt beenden darf (C4).
+    ///
+    /// Der vierte Anlass. Drei Wege enden mit `TerminateNow`, und keiner davon
+    /// verliert etwas: das Beenden ohne Tastenabgriff, ein Editor ohne
+    /// ungesicherten Stand und der Fall, dass sich kein Blatt zeigen laesst,
+    /// weil Fenster oder Editor fehlen. Im letzten Fall gaebe es niemanden, der
+    /// die Frage beantworten koennte, und ein `TerminateCancel` liesse KRK ohne
+    /// Rueckweg stehen.
+    ///
+    /// **Steht schon ein Blatt, wird nicht beendet.** Der Ereignisabgriff laesst
+    /// waehrend eines Blattes allein den Abbruch durch, der Menueeintrag "KRK
+    /// beenden" kommt aber ueber die Antwortkette hierher. Ein zweites Blatt
+    /// darauf zu stapeln hiesse, dem Nutzer zwei Fragen zugleich zu stellen und
+    /// die erste unbeantwortet abzuraeumen; er beantwortet stattdessen die
+    /// stehende und beendet danach.
+    fn beenden_erlauben(&self) -> NSApplicationTerminateReply {
+        if self.ivars().beenden_ohne_nachfrage.get() || !self.editor_haelt_ungesicherten_stand() {
+            return NSApplicationTerminateReply::TerminateNow;
+        }
+        if self.blatt_steht() {
+            return NSApplicationTerminateReply::TerminateCancel;
+        }
+        if self.nachfrage_zeigen(Anlass::Beenden) {
+            NSApplicationTerminateReply::TerminateLater
+        } else {
+            NSApplicationTerminateReply::TerminateNow
+        }
+    }
+
+    /// Bringt die Antwort auf `applicationShouldTerminate:` nach (C4).
+    ///
+    /// Die eine Stelle, die `replyToApplicationShouldTerminate:` ruft, und sie
+    /// wird aus dem Rueckruf der Nachfrage genau einmal erreicht: ueber
+    /// [`Self::anlass_ausfuehren`] mit `true`, ueber
+    /// [`Self::anlass_unterbleibt`] mit `false`.
+    fn beenden_beantworten(&self, beenden: bool) {
+        NSApplication::sharedApplication(self.mtm()).replyToApplicationShouldTerminate(beenden);
     }
 
     /// Stellt eine Meldung des Editors in die Statuszeile des **aktiven**
