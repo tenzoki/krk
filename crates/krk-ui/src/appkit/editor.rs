@@ -4,12 +4,41 @@
 //!
 //! ```text
 //! ┌──────────────────────────────┐
+//! │ • lies.md                    │  der Kopf: Dateiname und Abweichungszeichen
+//! ├──────────────────────────────┤
 //! │ NSScrollView                 │  der fuenfte Bereich der Fensterzeile
 //! │  ┌────┬─────────────────────┐│
 //! │  │ 12 │ NSTextView          ││  editierbar, ein Textspeicher
 //! │  └────┴─────────────────────┘│  links die Nummernspalte aus C10
 //! └──────────────────────────────┘
 //! ```
+//!
+//! # Der Kreis, den diese Datei schliesst
+//!
+//! ```text
+//!   F4 ──> datei_oeffnen ──> Editormodell::oeffnen ──┐
+//!                                                    │ Arbeitsfaden
+//!   Einzugstakt (1/60 s) ──> Editormodell::einziehen <┘
+//!            │
+//!            ├─ Geoeffnet ──> stand_einsetzen ──> NSTextView
+//!            └─ jeder Ausgang ──> melden ──> Anwendungsdelegierter
+//!
+//!   Tippen ──> textDidChange: ──> Editormodell::bearbeiten ──> kopf_nachziehen
+//! ```
+//!
+//! **Der untere Pfeil ist der Rueckweg, und ohne ihn ist das Modell blind.**
+//! Bis S26 hatte [`Editormodell::bearbeiten`] keinen Aufrufer: das Getippte
+//! stand allein in der `NSTextView`, `hat_ungesicherten_stand` blieb `false`,
+//! und ein Sichern schriebe den Plattenstand zurueck und meldete Erfolg
+//! (`issues/260809-2148_*_s25-sichern-schriebe-den-plattenstand-weil-die-rueckschreibung-erst-s26-baut.md`).
+//! `textDidChange:` ist die eine Stelle, die AppKit dafuer vorsieht.
+//!
+//! **`setString:` loest den Rueckweg nicht aus.** Eine `NSTextView` meldet ihrem
+//! Delegierten allein die Aenderungen des Nutzers; ein programmatisch gesetzter
+//! Text laeuft an `didChangeText` vorbei. Darauf ruht, dass eine frisch
+//! geoeffnete Datei nicht sofort als geaendert gilt — sichtbar wird ein Bruch
+//! dieser Annahme sofort, naemlich als Abweichungszeichen am Kopf einer eben
+//! geoeffneten Datei.
 //!
 //! **Die Nummernspalte ist nicht hier gebaut, sondern eingehaengt.**
 //! [`super::nummernspalte`] haelt sie, und die Vorschau haengt dieselbe Klasse
@@ -41,6 +70,15 @@
 //! [`Editorbereich::stand_einsetzen`] ist die eine Stelle, die den Text der
 //! Flaeche ersetzt.
 //!
+//! **Der Kopf ist die zweite Anzeige neben der Statuszeile, und er ist eine
+//! andere Art von Aussage.** Die Statuszeile traegt Antworten auf Befehle; der
+//! Kopf traegt einen Zustand, naemlich welche Datei der Editor haelt und ob ihr
+//! Stand von der Platte abweicht. Das zweite Abnahmekriterium von C4 verlangt
+//! ausdruecklich, dass der Nutzer den ungesicherten Stand **ohne** Hinsehen auf
+//! die Statuszeile bemerkt; eine Meldung dort waere die falsche Form, weil sie
+//! mit dem naechsten Befehl verschwaende. Eine zweite Meldeflaeche entsteht
+//! damit nicht: der Kopf beantwortet keine Frage und meldet kein Ereignis.
+//!
 //! **Was der Editor zu melden hat, geht als Wert nach oben und nicht als
 //! fertige Zeile an eine Flaeche.** [`Editormeldung`] benennt es; wohin es
 //! geht, weiss diese Datei nicht. Der Anwendungsdelegierte nimmt den Wert und
@@ -60,20 +98,25 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSScrollView`, `NSTextView`, `NSTextStorage`, `NSLayoutManager` und
-//! `NSTextContainer` stehen seit macOS 10.0 zur Verfuegung; das Buendel zielt
-//! auf 15.0 (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15
-//! hinzugekommen, und deshalb braucht keine der Beruehrungen in dieser Datei
-//! eine Verfuegbarkeitspruefung zur Laufzeit.
+//! `NSScrollView`, `NSTextView`, `NSTextStorage`, `NSLayoutManager`,
+//! `NSTextContainer`, `NSTextField` und `NSTimer` stehen seit macOS 10.0 zur
+//! Verfuegung; das Buendel zielt auf 15.0 (`.cargo/config.toml`). Keine von
+//! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
+//! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSAutoresizingMaskOptions, NSFont, NSScrollView, NSTextView, NSView};
+use objc2::runtime::ProtocolObject;
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
+use objc2_app_kit::{
+    NSAutoresizingMaskOptions, NSColor, NSFont, NSScrollView, NSTextAlignment, NSTextDelegate,
+    NSTextField, NSTextView, NSTextViewDelegate, NSView,
+};
 use objc2_foundation::{
-    MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
+    NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, ns_string,
 };
 
 use krk_core::text::{Abweisung, Fund, Markensprung};
@@ -81,6 +124,7 @@ use krk_core::text::{Abweisung, Fund, Markensprung};
 use crate::editormodell::{Editormodell, Ladeausgang};
 
 use super::nummernspalte::Nummernspalte;
+use super::statuszeile;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
@@ -197,15 +241,55 @@ impl Editormeldung {
 /// ersten Auslegen und ist danach ohne Bedeutung.
 const AUFBAUGROESSE: NSSize = NSSize::new(460.0, 400.0);
 
+/// Der Takt, in dem der Hauptfaden die Meldung des Arbeitsfadens abholt.
+///
+/// Dieselbe Zahl wie der Einzugstakt der Vorschau und des Dateifensters, aus
+/// demselben Grund: haeufiger zu fragen braechte nichts, weil nicht oefter
+/// gezeichnet wird.
+const LADETAKT: NSTimeInterval = 1.0 / 60.0;
+
+/// Das Zeichen, das einen ungesicherten Stand am Kopf anzeigt (C4).
+///
+/// **Vor dem Namen und nicht dahinter.** Der Kopf ist so breit wie der
+/// Editorbereich, und der laesst sich bis auf 320 Punkte schmal ziehen; ein
+/// langer Dateiname wird dann rechts gekuerzt, und ein Zeichen am Ende ginge
+/// mit. Vorn steht es an einer festen Stelle und bleibt in jeder Breite
+/// sichtbar.
+const ABWEICHUNGSZEICHEN: &str = "•";
+
+/// Die Senke, an die jeder [`Ladeausgang`] geht.
+///
+/// Ein eigener Name, weil der Typ an drei Stellen steht — Feld, Setzer und
+/// Aufrufstelle — und ausgeschrieben an jeder von ihnen dieselbe Zeile waere.
+pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang)>;
+
 /// Was der Editorbereich haelt.
 pub struct EditorIvars {
-    /// Die Bildlaufansicht um die Textflaeche; sie ist der Bereich, der in die
-    /// Aufteilung gehaengt wird.
-    rolle: Retained<NSScrollView>,
+    /// Die Ansicht, die in die Aufteilung gehaengt wird: Kopf und Bildlauf
+    /// darin.
+    bereich: Retained<NSView>,
+    /// Der Kopf mit dem Dateinamen und dem Abweichungszeichen (C4).
+    kopf: Retained<NSTextField>,
     /// Die Textflaeche selbst, editierbar und mit einem Textspeicher.
+    ///
+    /// Die Bildlaufansicht um sie herum steht hier **nicht**: sie haengt in
+    /// [`Self::bereich`], der sie festhaelt, und niemand hier spricht sie an.
+    /// Wer sie braucht — S33, um nach einem Ansichtswechsel die Nummernspalte
+    /// neu zeichnen zu lassen —, bekommt sie ueber `enclosingScrollView`.
     text: Retained<NSTextView>,
     /// Der Stand des Editors, ohne AppKit.
     modell: RefCell<Editormodell>,
+    /// Der Zeitgeber, der die Meldung des Arbeitsfadens abholt.
+    ///
+    /// Er haelt das Objekt als Ziel fest, und das Objekt haelt ihn; der Ring
+    /// bricht mit `invalidate`, wie beim Einzugstakt der Vorschau.
+    takt: RefCell<Option<Retained<NSTimer>>>,
+    /// Die Senke, an die jeder [`Ladeausgang`] geht.
+    ///
+    /// Sie haelt den Anwendungsdelegierten **schwach**; die Begruendung steht
+    /// an [`Editorbereich::melder_setzen`]. `None` heisst: der Aufbau ist noch
+    /// nicht so weit, und dann gibt es auch niemanden, der etwas anfinge.
+    melden: RefCell<Option<Ausgangsmelder>>,
 }
 
 define_class!(
@@ -220,32 +304,133 @@ define_class!(
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
     unsafe impl NSObjectProtocol for Editorbereich {}
+
+    // SAFETY: `NSTextDelegate` stellt keine Bedingungen. Die Textflaeche haelt
+    // ihren Delegierten schwach ("This is a weak property",
+    // `objc2-app-kit-0.3.2/src/generated/NSTextView.rs:1258-1263`), und der
+    // Editorbereich haelt die Flaeche stark; ein Ring entsteht deshalb nicht,
+    // und der Delegierte lebt so lange wie die Flaeche.
+    unsafe impl NSTextDelegate for Editorbereich {
+        /// Der Nutzer hat getippt, eingefuegt oder geloescht (C4).
+        ///
+        /// **Der Rueckweg aus der Flaeche ins Modell**, und die eine Stelle,
+        /// die ihn geht; siehe den Modulkopf.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(textDidChange:))]
+        fn text_geaendert(&self, _meldung: &NSNotification) {
+            self.text_zurueckschreiben();
+        }
+    }
+
+    // SAFETY: `NSTextViewDelegate` stellt keine Bedingungen. Er steht hier,
+    // weil `NSTextView::setDelegate:` genau diesen Protokolltyp verlangt; die
+    // eine benutzte Methode, `textDidChange:`, kommt aus dem Obertyp
+    // `NSTextDelegate`.
+    unsafe impl NSTextViewDelegate for Editorbereich {}
+
+    impl Editorbereich {
+        /// Der Rueckruf des Zeitgebers.
+        // SAFETY: Die Signatur passt zu der, die NSTimer aufruft.
+        #[unsafe(method(ladenEinziehen:))]
+        fn laden_einziehen(&self, _zeitgeber: &NSTimer) {
+            self.einziehen();
+        }
+    }
 );
 
 impl Editorbereich {
-    /// Baut die Textflaeche mit einem Modell, das noch keine Datei haelt.
+    /// Baut Kopf und Textflaeche mit einem Modell, das noch keine Datei haelt.
     pub fn bauen(mtm: MainThreadMarker) -> Retained<Self> {
-        let (rolle, text) = textflaeche_bauen(mtm, NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
+        let bereich = NSView::initWithFrame(
+            NSView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
+        );
+        bereich.setAutoresizingMask(
+            NSAutoresizingMaskOptions::ViewWidthSizable
+                | NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+
+        // Der Bildlauf fuellt alles unter dem Kopf und waechst mit; der Kopf
+        // klebt oben und waechst nur in der Breite. Dieselbe Aufteilung wie
+        // Tableiste und Inhaltsflaeche in `super::vorschau`.
+        let (rolle, text) = textflaeche_bauen(
+            mtm,
+            NSRect::new(
+                NSPoint::ZERO,
+                NSSize::new(
+                    AUFBAUGROESSE.width,
+                    AUFBAUGROESSE.height - statuszeile::HOEHE,
+                ),
+            ),
+        );
+        bereich.addSubview(&rolle);
+
+        let kopf = kopf_bauen(mtm);
+        kopf.setFrame(NSRect::new(
+            NSPoint::new(
+                statuszeile::EINZUG,
+                AUFBAUGROESSE.height - statuszeile::HOEHE,
+            ),
+            NSSize::new(
+                AUFBAUGROESSE.width - statuszeile::EINZUG,
+                statuszeile::HOEHE,
+            ),
+        ));
+        bereich.addSubview(&kopf);
 
         let this = Self::alloc(mtm).set_ivars(EditorIvars {
-            rolle,
+            bereich,
+            kopf,
             text,
             modell: RefCell::new(Editormodell::neu()),
+            takt: RefCell::new(None),
+            melden: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
 
+        // Der Rueckweg aus der Flaeche ins Modell (C4). Er steht hier und nicht
+        // in `textflaeche_bauen`, weil es das Objekt erst ab dieser Zeile gibt.
+        this.ivars()
+            .text
+            .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+
         // Die Flaeche zeigt von der ersten Zeichnung an den Stand des Modells
         // und nicht irgendeinen. Beim Aufbau ist er leer, weil der Editor keine
         // Datei haelt; die Zeile steht trotzdem hier, damit es genau einen Weg
-        // vom Modell in die Flaeche gibt und keinen Anfangszustand daneben.
+        // vom Modell in die Flaeche gibt und keinen Anfangszustand daneben. Der
+        // Kopf folgt derselben Regel.
         this.stand_einsetzen();
+        this.kopf_nachziehen();
         this
     }
 
     /// Die Ansicht, die in die Aufteilung gehaengt wird.
+    ///
+    /// Der ganze Bereich mit Kopf und Bildlauf, nicht die Bildlaufansicht
+    /// allein: die Fokusabfrage aus S43 fragt nach dem Enthaltensein in dieser
+    /// Ansicht, und die Textflaeche liegt darin.
     pub fn sicht(&self) -> &NSView {
-        &self.ivars().rolle
+        &self.ivars().bereich
+    }
+
+    /// Traegt die Senke ein, die jeden [`Ladeausgang`] bekommt.
+    ///
+    /// Gerufen vom Aufbau der Oberflaeche, mit einem Rueckruf, der den
+    /// Anwendungsdelegierten **schwach** haelt: sonst schloesse sich der Ring
+    /// Delegierter → Editorbereich → Rueckruf → Delegierter. Derselbe Zuschnitt
+    /// wie `Hauptfenster::melder_setzen` und die uebrigen Melder dieses
+    /// Projekts.
+    ///
+    /// **Warum der Ausgang ueberhaupt einen Rueckweg braucht.** Seit S24 liest
+    /// der Editor auf einem Arbeitsfaden; wann eine Datei steht oder abgewiesen
+    /// ist, weiss der Befehl, der sie angefordert hat, zu seiner eigenen Zeit
+    /// nicht mehr. Der eine Ausgangstyp geht deshalb nicht mehr als Rueckgabe
+    /// an den Aufrufer, sondern durch diese Senke — und zwar **jeder** Ausgang,
+    /// auch der sofort feststehende [`Ladeausgang::SchonOffen`], damit es eine
+    /// Behandlung gibt und nicht zwei.
+    pub fn melder_setzen(&self, melden: Ausgangsmelder) {
+        *self.ivars().melden.borrow_mut() = Some(melden);
     }
 
     /// Die Textflaeche, an der die Naemlichkeitsfrage des Fokusvorbehalts
@@ -292,34 +477,159 @@ impl Editorbereich {
     /// wie es das neunte Abnahmekriterium von C2 verlangt; der Sprung auf eine
     /// Textmarke aus C6 kommt spaeter dazu.
     ///
+    /// **Sie kehrt sofort zurueck und nennt keinen Ausgang.** Gelesen und
+    /// geprueft wird auf dem Arbeitsfaden des Modells, und die Antwort holt
+    /// [`Self::einziehen`] ab; wer wissen will, wie es ausgegangen ist, haengt
+    /// sich ueber [`Self::melder_setzen`] ein. Steht der Ausgang schon fest,
+    /// weil der Editor die Datei bereits haelt, geht er durch dieselbe Senke,
+    /// nur eben sofort.
+    ///
+    /// **Was der Nutzer davon sieht:** F4 auf eine grosse Datei blendet den
+    /// Editor nicht sogleich ein, sondern erst, wenn sie gelesen ist. Das ist
+    /// die Reihenfolge, die das elfte Abnahmekriterium von C2 verlangt — erst
+    /// die Pruefung, dann die Flaeche —, und sie bleibt mit dem Arbeitsfaden
+    /// erhalten, weil auch die Pruefung dort laeuft. Der Gegenwert steht in
+    /// S24: waehrend des Lesens bleiben die beiden Dateifenster bedienbar.
+    ///
     /// Entschieden wird nichts hier: die Pruefung steht in
-    /// `krk_core::text::datei::oeffnen` und ist ueber
-    /// [`Editormodell::jetzt_oeffnen`] erreichbar. Bei
-    /// [`Ladeausgang::Abgewiesen`] bleibt der bisherige Stand vollstaendig
-    /// stehen, und der Grund geht als Wert nach oben; wohin er dort kommt,
-    /// weiss diese Datei nicht (siehe den Modulkopf).
+    /// `krk_core::text::datei::oeffnen` und ist ueber [`Editormodell::oeffnen`]
+    /// erreichbar. Bei [`Ladeausgang::Abgewiesen`] bleibt der bisherige Stand
+    /// vollstaendig stehen, und der Grund geht als Wert nach oben; wohin er
+    /// dort kommt, weiss diese Datei nicht (siehe den Modulkopf).
+    pub fn datei_oeffnen(&self, pfad: &Path) {
+        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad);
+        match sofort {
+            Some(ausgang) => self.melden(ausgang),
+            None => self.takt_starten(),
+        }
+    }
+
+    /// Holt die Meldung des Arbeitsfadens ab (C2).
     ///
-    /// **Bei [`Ladeausgang::SchonOffen`] geschieht hier gar nichts**, und das
-    /// ist die Haelfte der Behebung vom 260809, die in dieser Datei steht: der
-    /// Editor hielt die Datei schon, das Modell hat nicht gelesen, und die
-    /// Textflaeche darf deshalb nicht angefasst werden. Sie traegt in diesem
-    /// Augenblick das, was der Nutzer getippt und noch nicht gesichert hat —
-    /// ein Stand, den das Modell bis S26 gar nicht kennt, weil der Delegierte
-    /// `textDidChange:` mit jenem Schritt kommt. Ein Ruf von
-    /// [`Self::stand_einsetzen`] schriebe hier den Plattenstand des Modells
-    /// darueber; genau so ging die Aenderung des Nutzers verloren
+    /// **Der Vergleich nennt [`Ladeausgang::Geoeffnet`] namentlich und darf
+    /// nicht auf "nicht abgewiesen" gelockert werden.** Das ist die Haelfte der
+    /// Behebung vom 260809, die in dieser Datei steht: bei
+    /// [`Ladeausgang::SchonOffen`] hat das Modell nicht gelesen, und die Flaeche
+    /// traegt das, was der Nutzer getippt und noch nicht gesichert hat; ein Ruf
+    /// von [`Self::stand_einsetzen`] schriebe den Plattenstand darueber, und
+    /// genau so ging die Aenderung des Nutzers verloren
     /// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
-    /// Der Vergleich unten nennt deshalb [`Ladeausgang::Geoeffnet`]
-    /// namentlich und darf nicht auf "nicht abgewiesen" gelockert werden.
+    /// Dass jener Ausgang seit S24 gar nicht mehr hier ankommt, weil das Modell
+    /// ihn entscheidet, bevor ein Faden startet, macht die Namensnennung nicht
+    /// ueberfluessig: sie ist die Stelle, an der ein spaeter dazukommender
+    /// Ausgang auffaellt, statt still mitzulaufen.
     ///
-    /// Die Ausleihe des Modells endet mit der ersten Zeile, bevor
-    /// [`Self::stand_einsetzen`] sie erneut nimmt und in das Textsystem ruft.
-    pub fn datei_oeffnen(&self, pfad: &Path) -> Ladeausgang {
-        let ausgang = self.ivars().modell.borrow_mut().jetzt_oeffnen(pfad);
+    /// **Der Takt endet, sobald nichts mehr laedt**, und zwar auf beiden Wegen:
+    /// nach einer eingetroffenen Meldung und nach einem Faden, der ohne Meldung
+    /// gefallen ist. Der zweite Fall hinterlaesst allein die Zeile auf der
+    /// Standardfehlerausgabe, die `Ladevorgang::starten` schreibt; dasselbe
+    /// gilt seit der Runde 1 fuer die Vorschau.
+    fn einziehen(&self) {
+        let eingetroffen = self.ivars().modell.borrow_mut().einziehen();
+        let Some(ausgang) = eingetroffen else {
+            if !self.ivars().modell.borrow().laedt_noch() {
+                self.takt_beenden();
+            }
+            return;
+        };
+        self.takt_beenden();
         if ausgang == Ladeausgang::Geoeffnet {
             self.stand_einsetzen();
+            self.kopf_nachziehen();
         }
-        ausgang
+        self.melden(ausgang);
+    }
+
+    /// Gibt den Ausgang an die Senke weiter, falls jemand zuhoert.
+    ///
+    /// Die Ausleihe steht waehrend des Rufs, wie bei `Hauptfenster::melden`.
+    /// Sie ist lesend, und der einzige schreibende Zugriff auf dieselbe Zelle
+    /// ist [`Self::melder_setzen`] beim Aufbau; ein Ruf, der ueber AppKit
+    /// hierher zuruecklaeuft, nimmt eine zweite Leseausleihe und keine
+    /// schreibende.
+    fn melden(&self, ausgang: Ladeausgang) {
+        let melden = self.ivars().melden.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(ausgang);
+        }
+    }
+
+    /// Haengt den Zeitgeber in die Laufschleife, falls er noch nicht laeuft.
+    fn takt_starten(&self) {
+        if self.ivars().takt.borrow().is_some() {
+            return;
+        }
+        // SAFETY: `self` ist das Ziel und beantwortet `ladenEinziehen:` mit der
+        // erwarteten Signatur. Der Zeitgeber wird unten in die Laufschleife
+        // gehaengt; `NSRunLoopCommonModes` ist ein Fremdsymbol von Foundation.
+        // Dieselbe Form wie der Einzugstakt der Vorschau.
+        let zeitgeber = unsafe {
+            let zeitgeber = NSTimer::timerWithTimeInterval_target_selector_userInfo_repeats(
+                LADETAKT,
+                self,
+                sel!(ladenEinziehen:),
+                None,
+                true,
+            );
+            NSRunLoop::currentRunLoop().addTimer_forMode(&zeitgeber, NSRunLoopCommonModes);
+            zeitgeber
+        };
+        *self.ivars().takt.borrow_mut() = Some(zeitgeber);
+    }
+
+    /// Nimmt den Zeitgeber aus der Laufschleife und loest den Ring auf.
+    fn takt_beenden(&self) {
+        if let Some(zeitgeber) = self.ivars().takt.borrow_mut().take() {
+            zeitgeber.invalidate();
+        }
+    }
+
+    /// Schreibt zurueck, was der Nutzer in die Flaeche getippt hat (C4).
+    ///
+    /// **Der Rueckweg**, und die eine Stelle, an der der Stand der Flaeche zum
+    /// Stand des Modells wird. Er nimmt den ganzen Text und nicht die geaenderte
+    /// Stelle; der Grund und der Preis stehen an [`Editormodell::bearbeiten`],
+    /// das ihn dabei durch `krk_core::text::datei::in_gehaltene_form` fuehrt.
+    /// Eine `NSTextView` bewahrt eingefuegten Text zeichengetreu auf, also
+    /// kommt ein `\r\n` aus einer Windows-Quelle hier an und darf nicht weiter.
+    ///
+    /// **Der Kopf wird nur beim Uebergang nachgezogen.** Die Abweichungsmarke
+    /// geht von falsch nach wahr und bleibt dort bis zum naechsten Sichern; sie
+    /// bei jedem Anschlag neu in ein `NSTextField` zu schreiben hiesse, je
+    /// Tastendruck ein Auslegen anzustossen, das nichts aendert.
+    ///
+    /// Die Ausleihe des Modells endet vor dem Ruf an den Kopf, wie ueberall in
+    /// dieser Datei.
+    fn text_zurueckschreiben(&self) {
+        let stand = self.ivars().text.string().to_string();
+        let war_abweichend = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            let vorher = modell.hat_ungesicherten_stand();
+            modell.bearbeiten(stand);
+            vorher
+        };
+        if !war_abweichend {
+            self.kopf_nachziehen();
+        }
+    }
+
+    /// Schreibt Dateiname und Abweichungszeichen in den Kopf (C4).
+    ///
+    /// **Die eine Stelle, die den Kopf beschreibt.** Sie wird gerufen, wo sich
+    /// eine der beiden Angaben aendern kann: beim Aufbau, nach einem gelungenen
+    /// Oeffnen, beim Uebergang in den ungesicherten Stand — und mit S25 nach
+    /// einem gelungenen Sichern, mit S28 nach dem Schliessen.
+    ///
+    /// Was dort steht, entscheidet [`kopfzeile`] ohne AppKit und ist deshalb
+    /// ohne Fenster pruefbar.
+    fn kopf_nachziehen(&self) {
+        let zeile = {
+            let modell = self.ivars().modell.borrow();
+            kopfzeile(modell.pfad(), modell.hat_ungesicherten_stand())
+        };
+        self.ivars()
+            .kopf
+            .setStringValue(&NSString::from_str(&zeile));
     }
 
     /// Schreibt den gehaltenen Stand in die Textflaeche.
@@ -340,10 +650,12 @@ impl Editorbereich {
     /// schreibt an der Rueckgaengigverwaltung vorbei und laesst einen bereits
     /// gefuellten Stapel stehen, der auf den Text der vorigen Datei zeigt;
     /// seit `textflaeche_bauen` `allowsUndo` einschaltet, kann so ein Stapel
-    /// entstehen. Heute ist der Fall unerreichbar, weil der einzige Aufrufer
-    /// [`Self::bauen`] ist und die Flaeche dabei leer ist. Mit dem Oeffnen aus
-    /// Schritt 24 wird er erreichbar; der Defekt dazu ist
+    /// entstehen. **Der Fall ist erreichbar**, seit ein Dateiwechsel im Editor
+    /// steht; der offene Defekt dazu ist
     /// `issues/260809-1727_o_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`.
+    /// Bis S26 stand hier, der Fall sei unerreichbar, weil der einzige Aufrufer
+    /// [`Self::bauen`] sei; das war schon seit S22 nicht mehr wahr, denn das
+    /// Oeffnen ruft ebenfalls hierher.
     fn stand_einsetzen(&self) {
         let stand = {
             let modell = self.ivars().modell.borrow();
@@ -351,6 +663,65 @@ impl Editorbereich {
         };
         self.ivars().text.setString(&stand);
     }
+}
+
+/// Was am Kopf des Editorbereichs steht (C4).
+///
+/// **Eine reine Funktion, damit die Anzeige des ungesicherten Standes ohne
+/// Fenster abzunehmen ist.** Sie bekommt die beiden Angaben und gibt die Zeile;
+/// woher die Angaben kommen und wohin die Zeile geht, steht in
+/// [`Editorbereich::kopf_nachziehen`].
+///
+/// **Der Name und nicht der Pfad.** Der volle Pfad steht seit S48 im
+/// Fenstertitel, solange der Fokus im Editor steht; ihn hier zu wiederholen
+/// braechte zwei Anzeigen derselben Angabe und liesse in einem schmalen Editor
+/// den Namen als erstes wegfallen. Ein Pfad ohne letzten Bestandteil ist auf
+/// dem Mac kein Ziel des Editors; kaeme trotzdem einer, steht er ganz da, statt
+/// dass der Kopf leer bliebe.
+///
+/// Ohne Datei bleibt der Kopf leer: der Editor zeigt dann nichts, was einen
+/// Namen haette, und ein Platzhalter waere ein Wort ueber ein Nichts.
+fn kopfzeile(pfad: Option<&Path>, ungesichert: bool) -> String {
+    let Some(pfad) = pfad else {
+        return String::new();
+    };
+    let name = pfad.file_name().map_or_else(
+        || pfad.display().to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    );
+    if ungesichert {
+        format!("{ABWEICHUNGSZEICHEN} {name}")
+    } else {
+        name
+    }
+}
+
+/// Baut den Kopf: eine einzeilige Beschriftung ueber der Textflaeche.
+///
+/// **Dieselben beiden Masse wie die Statuszeile der Dateifenster**, Hoehe und
+/// Einzug, und aus demselben Grund: es ist dieselbe Form, naemlich eine Zeile
+/// in der kleinen Systemschrift am Rand eines Bereichs. Zwei eigene Zahlen
+/// daneben waeren zwei Antworten auf dieselbe Frage, und der Nutzer saehe zwei
+/// verschieden hohe Streifen nebeneinander.
+///
+/// Die Farbe ist die zurueckgenommene Beschriftungsfarbe, wie bei der
+/// Statuszeile ohne Meldung: der Kopf ist eine Angabe und keine Warnung. Das
+/// Abweichungszeichen traegt die Aussage, nicht die Farbe; damit haengt sie
+/// nicht am Farbsehen.
+fn kopf_bauen(mtm: MainThreadMarker) -> Retained<NSTextField> {
+    let kopf = NSTextField::labelWithString(ns_string!(""), mtm);
+    kopf.setFont(Some(&NSFont::systemFontOfSize(
+        NSFont::smallSystemFontSize(),
+    )));
+    kopf.setTextColor(Some(&NSColor::secondaryLabelColor()));
+    kopf.setAlignment(NSTextAlignment::Left);
+    kopf.setMaximumNumberOfLines(1);
+    // Am oberen Rand festgemacht, in der Breite mitwachsend: der Abstand nach
+    // unten ist beweglich, der nach oben nicht.
+    kopf.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMinYMargin,
+    );
+    kopf
 }
 
 /// Baut die Textflaeche: eine editierbare `NSTextView` in einer
@@ -474,6 +845,45 @@ mod tests {
         assert!(
             meldung.text().contains('2'),
             "die Meldung nennt die Zeile, an die sie geführt hat"
+        );
+    }
+
+    /// Das zweite Abnahmekriterium von C4, an der Stelle gemessen, an der der
+    /// Satz entsteht: der Kopf traegt den Namen, und ein ungesicherter Stand
+    /// setzt ein Zeichen davor.
+    #[test]
+    fn der_kopf_zeigt_den_namen_und_bei_abweichung_ein_zeichen() {
+        let pfad = PathBuf::from("/tmp/tief/lies.md");
+
+        assert_eq!(kopfzeile(Some(&pfad), false), "lies.md");
+        let abweichend = kopfzeile(Some(&pfad), true);
+        assert_ne!(
+            abweichend, "lies.md",
+            "ein ungesicherter Stand ist am Kopf zu sehen"
+        );
+        assert!(abweichend.contains("lies.md"), "der Name bleibt lesbar");
+        assert!(
+            abweichend.starts_with(ABWEICHUNGSZEICHEN),
+            "das Zeichen steht vorn, wo eine Kürzung von rechts es nicht erreicht: {abweichend}"
+        );
+    }
+
+    /// Der Kopf nennt den Namen und nicht den Pfad; den vollen Pfad traegt der
+    /// Fenstertitel aus C11.
+    #[test]
+    fn der_kopf_nennt_den_namen_und_nicht_den_pfad() {
+        let pfad = PathBuf::from("/Users/jemand/Projekte/krk/lies.md");
+        assert_eq!(kopfzeile(Some(&pfad), false), "lies.md");
+    }
+
+    /// Ohne gehaltene Datei bleibt der Kopf leer.
+    #[test]
+    fn ohne_datei_bleibt_der_kopf_leer() {
+        assert_eq!(kopfzeile(None, false), "");
+        assert_eq!(
+            kopfzeile(None, true),
+            "",
+            "ohne Datei gibt es auch nichts, was abweichen könnte"
         );
     }
 }

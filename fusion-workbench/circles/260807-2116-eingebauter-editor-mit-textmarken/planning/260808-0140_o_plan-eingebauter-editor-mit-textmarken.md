@@ -440,8 +440,8 @@ flowchart TD
   S16 --> S22
   S22 --> S23
   S22 --> S24
-  S24 --> S25
-  S25 --> S26
+  S24 --> S26
+  S26 --> S25
   S26 --> S27
   S27 --> S28
   S28 --> S29
@@ -470,6 +470,8 @@ flowchart TD
   S41 --> S42
   S2 --> S42
 ```
+
+**Eine Kante ist am 260809-2322 umgedreht worden: S26 steht vor S25 und nicht dahinter.** Der Defekt `issues/260809-2148_c_...` hat gezeigt, dass die Kante `S25 → S26` keine Bauabhängigkeit war, sondern eine Abnahme („nach einem Sichern verschwindet das Kennzeichen"). In der ursprünglichen Richtung hätte S25 den unveränderten Plattenstand zurückgeschrieben und dabei eine gelungene Sicherung gemeldet, weil `Editormodell::bearbeiten` bis S26 keinen Aufrufer hatte. Alles, was hinter S26 hängt, hängt weiterhin dort; S25 ist von der Kette in einen Zweig daneben gerückt.
 
 **Was diese Ordnung trägt.** Der Kopf ist Phase A: ohne den fünften Fokuswert und die Nämlichkeitsfrage lässt sich kein Befehl des Editors prüfen. Phase B ist danach ohne Fenster abnehmbar und kann in einem Zug laufen. Erst S16 bringt beides zusammen, und ab dort verzweigt der Plan in vier Stränge, die einander nicht brauchen: die Einstiege, das Sichern, die Ansichten und die Marken. S42 zieht sie zusammen.
 
@@ -807,9 +809,10 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Die Quelle liegt bereit und braucht keinen zweiten Weg: `Vorschaumodell::aktiver_pfad` (`vorschaumodell.rs:384-389`) liefert den Pfad des aktiven Vorschau-Tabs und ist über `Vorschaufenster::angezeigter_pfad` (`appkit/vorschau.rs:277-279`) erreichbar. Der Spec hat das am Code geprüft.
   Zeigt die Vorschau den Inhalt der Zwischenablage aus C10 der Runde 1 oder ist sie leer, liefert `aktiver_pfad` `None`; der Befehl tut dann nichts und meldet den Grund in der Statuszeile. Dass er außerhalb der Vorschau gar nicht erst wirkt, trägt der Wirkungsbereich `Vorschau` aus S3 und nicht eine Abfrage hier.
 - Abhängigkeiten: S22
+- **Eine Änderung aus S24, die dieser Schritt vorfindet:** `Editorbereich::datei_oeffnen` liefert keinen `Ladeausgang` mehr zurück, sondern stößt das Lesen auf dem Arbeitsfaden an. Der Übergang aus der Vorschau ruft sie und ist damit fertig; was auf das Öffnen folgt — Einblenden, Fokus, Titel, Abweisungsmeldung — steht in `Anwendungsdelegierter::editorausgang_behandeln` und ist für beide Einstiege dieselbe Stelle.
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Der Diff zeigt, dass der Übergang dieselbe Prüffunktion aus `krk-core::text` ruft wie F4; `grep -c` auf den Funktionsnamen findet in `anwendung.rs` genau die erwarteten Aufrufstellen, und eine zweite Prüfregel entsteht nicht. **`Nutzerarbeit`:** mit Fokus in der Vorschau auf einer Textdatei öffnet `cmd+e` sie im Editor und die Vorschau verschwindet; bei Zwischenablage-Inhalt meldet die Statuszeile den Grund.
 
-#### 24. **Das Lesen auf dem Arbeitsfaden**
+#### 24. [DONE] **Das Lesen auf dem Arbeitsfaden**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/editormodell.rs` (erweitert: der Ladevorgang), `crates/krk-ui/src/appkit/editor.rs` (erweitert: der Einzugstakt)
@@ -818,6 +821,11 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Damit ist das erste der beiden Kriterien erfüllt, die an die Stelle einer Zeitzusage treten:** während der Editor eine große Datei einliest, bleiben die beiden Dateifenster und die Lesezeichenleiste bedienbar, weil der Hauptfaden nichts tut, als alle 16 ms in einen Kanal zu schauen. Der Spec führt es unter `## Verhältnis zu den zehn Zeitzusagen`, und **dieser Plan setzt keine Zahl daneben.**
 - Abhängigkeiten: S22
 - Abnahmekriterium: `cargo test -p krk-ui` beendet mit 0 und deckt ab, dass eine zweite Anfrage die erste verfallen lässt, ohne dass deren Antwort den Stand überschreibt. **`Nutzerarbeit`** für das eigentliche Kriterium: mit einer Textdatei nahe 16 MB bleibt die Auswahl im Dateifenster während des Ladens beweglich, ein Tabwechsel geschieht, und die Anwendung hält nicht an.
+- **Umsetzung am 260809-2322, zusammen mit S26.** Der Grund für die Zusammenlegung steht am Defekt `issues/260809-2148_c_...`: beide Schritte fassen dieselben zwei Dateien an, und S25 dazwischen hätte den Plattenstand zurückgeschrieben und eine gelungene Sicherung gemeldet. Vier Vermerke:
+  - **Die Dateizeile oben ist unvollständig: `crates/krk-ui/src/appkit/anwendung.rs` ist mitgezogen, und es geht nicht ohne.** Der Ausgang eines Öffnens steht nach dem Umstieg nicht mehr fest, wenn der Befehl zurückkehrt; er kann deshalb keine Rückgabe von `Editorbereich::datei_oeffnen` mehr sein. `im_editor_oeffnen` stößt nur noch an, und die Behandlung steht in der neuen `editorausgang_behandeln`, die über den Melder aus `Editorbereich::melder_setzen` gerufen wird. Der Rückruf hält den Anwendungsdelegierten schwach, wie die vier bestehenden Melder.
+  - **Jeder Ausgang geht durch dieselbe Senke, auch der sofort feststehende.** `Ladeausgang::SchonOffen` entscheidet sich ohne Faden und könnte als Rückgabe stehen; dann gäbe es zwei Behandlungen desselben Wertes. Er geht deshalb sofort durch den Melder, und `editorausgang_behandeln` ist die eine Fallunterscheidung über die drei Ausgänge.
+  - **`Editormodell::jetzt_oeffnen` ist gefallen, und die Abkürzung ist nach `oeffnen` gewandert**, wie sein eigener Doc-Kommentar es verlangte. `oeffnen` liefert jetzt `Option<Ladeausgang>`: `Some(SchonOffen)`, wenn der Editor die Datei schon hält, sonst `None` und ein laufender Faden. Damit trägt der Weg auf dem Arbeitsfaden die Behebung vom 260809-2029 unverändert weiter; die Probe `ein_zweites_oeffnen_derselben_datei_wirft_den_bearbeiteten_stand_nicht_weg` steht auf dem neuen Weg. Die Probe `der_sofortige_weg_und_der_arbeitsfaden_hinterlassen_denselben_stand` ist mit dem zweiten Leseweg entfallen: sie verglich zwei Wege, von denen es nur noch einen gibt.
+  - **Die Reihenfolge aus dem elften Abnahmekriterium von C2 hält.** Weil auch die Prüfung auf dem Arbeitsfaden läuft, blendet F4 den Editor erst ein, wenn die Datei gelesen ist; eine abgewiesene Datei bekommt die Fläche nie zu sehen. Der Preis ist sichtbar und benannt: bei einer großen Datei vergeht zwischen F4 und dem Erscheinen des Editors die Lesezeit, und in dieser Spanne bleiben die Dateifenster bedienbar — das ist das Kriterium dieses Schrittes.
 
 ### Phase E: Sichern, ungesicherter Stand und die Nachfrage
 
@@ -828,17 +836,24 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Änderungen: `cmd+s` schreibt den Stand des Editors über die Funktion aus S9 in die Datei, also in der entschiedenen Form: nur `\n`, ein abschließender Umbruch, keine Bytefolgenmarke. Danach meldet der Editor keine ungesicherten Änderungen mehr, und der gemerkte Stempel aus Änderungszeit und Größe wird neu gesetzt.
   **Vor dem Schreiben wird der Stempel geprüft**, und wenn die Datei sich seit dem Öffnen oder dem letzten Sichern von außen geändert hat, unterbleibt das Schreiben und die Statuszeile meldet es. Das ist die eine Hälfte des neunten Abnahmekriteriums von C4, die zuverlässig ist; die andere Hälfte, das Melden im laufenden Betrieb, baut S31.
   **Eine gescheiterte Sicherung wirft den Stand nicht weg.** Der Grund geht in die Statuszeile, der Editor behält seine Änderungen, und wenn die Sicherung aus einer Nachfrage heraus angestoßen wurde, unterbleibt der Anlass, statt den Stand mitzunehmen. Das ist das zehnte Abnahmekriterium von C4 und der Grund, aus dem das Zustandsbild des Specs an beiden Stellen im Zustand "ungesichert" landet und nicht im Nichts.
-- Abhängigkeiten: S24
+- Abhängigkeiten: S24 **und S26**. Die zweite ist am 260809-2148 dazugekommen und am 260809-2322 erfüllt: ohne die Rückschreibung schriebe dieser Schritt den Plattenstand zurück und meldete eine gelungene Sicherung. Beide stehen; der Weg ist frei.
+- **Eine Zeile, die dieser Schritt mitzunehmen hat:** nach einem gelungenen Sichern ruft er `Editorbereich::kopf_nachziehen`, sonst trägt der Kopf das Abweichungszeichen weiter, obwohl das Modell keine Abweichung mehr meldet. Die Funktion steht seit S26 und ist die eine Stelle, die den Kopf beschreibt.
 - Abnahmekriterium: `cargo test -p krk-core` deckt die Sicherungsform ab (aus S9). Eine Probe in `crates/krk-ui` deckt ab, dass ein gescheitertes Schreiben den Stand des Modells unverändert lässt und die Abweichung weiterhin gemeldet wird. **`Nutzerarbeit`:** an einer Datei ohne Schreibrecht meldet `cmd+s` den Grund und der Editor behält seine Änderungen.
 
-#### 26. **Der ungesicherte Stand und seine Anzeige**
+#### 26. [DONE] **Der ungesicherte Stand und seine Anzeige**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/editor.rs` (erweitert: die Anzeige), `crates/krk-ui/src/editormodell.rs` (erweitert: die Meldung der Abweichung)
 - Änderungen: Der Editor zeigt an, dass er ungesicherte Änderungen hält, **und zwar so, dass der Nutzer es ohne Hinsehen auf die Statuszeile bemerkt**; das zweite Abnahmekriterium von C4 verlangt es ausdrücklich in dieser Form. Der Weg ist der auf dem Mac übliche und keine eigene Erfindung: der Dateiname am Kopf des Editorbereichs trägt einen Punkt oder ein Sternchen, solange der Stand abweicht. Zwei Kennzeichen sind hier nicht nötig, weil es keine Farbe ist, deren Bedeutung bei Farbfehlsichtigkeit verlorenginge; die Überlegung, die C2 und C5 zu zwei Kennzeichen geführt hat, greift nicht.
   Die Textfläche meldet ihre Änderungen über den Delegierten `textDidChange:`, die eine Stelle, die AppKit dafür vorsieht.
-- Abhängigkeiten: S25
+- Abhängigkeiten: ~~S25~~ **S24** — der Defekt `issues/260809-2148_c_...` hat gezeigt, dass die Abhängigkeit auf S25 keine Bauabhängigkeit war, sondern eine Abnahme („nach einem Sichern verschwindet das Kennzeichen"). In der geplanten Reihenfolge hätte S25 den Plattenstand zurückgeschrieben und Erfolg gemeldet. Umgesetzt wurde deshalb Weg 2 des Datensatzes: S26 steht vor S25.
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Eine Probe deckt ab, dass das Modell nach einer Änderung eine Abweichung meldet und nach einem Sichern nicht mehr. **`Nutzerarbeit`:** ein getipptes Zeichen macht das Kennzeichen sichtbar, `cmd+s` lässt es verschwinden.
+- **Umsetzung am 260809-2322, zusammen mit S24.** Vier Vermerke:
+  - **Der Rückweg ist das Stück, an dem die Kette S25 bis S29 hängt.** `Editorbereich::text_zurueckschreiben` nimmt bei `textDidChange:` den ganzen Text aus der `NSTextView` und gibt ihn an `Editormodell::bearbeiten`, das ihn durch `krk_core::text::datei::in_gehaltene_form` führt. Eine zweite Normalisierung ist nicht entstanden. `hat_ungesicherten_stand` kann damit wahr werden; bis hierher war es immer `false`.
+  - **`setString:` löst den Rückweg nicht aus**, und darauf ruht, dass eine frisch geöffnete Datei nicht sofort als geändert gilt. Eine `NSTextView` meldet ihrem Delegierten allein die Änderungen des Nutzers. Bräche die Annahme, wäre es sofort zu sehen: als Abweichungszeichen am Kopf einer eben geöffneten Datei. Der Modulkopf hält es fest, und die Prüfliste des Nutzers fragt danach.
+  - **Der Kopf ist neu gebaut, weil es keinen gab.** `Editorbereich::sicht` liefert seit diesem Schritt einen Bereich aus Kopf und Bildlaufansicht statt der Bildlaufansicht allein; der Kopf ist eine einzeilige Beschriftung mit dem Dateinamen, davor ein `•`, solange der Stand abweicht. Höhe und Einzug sind die der Statuszeile aus der Runde 1 und keine zweiten Zahlen daneben. Das Zeichen steht **vor** dem Namen, weil ein schmaler Editor von rechts kürzt und ein Zeichen am Ende mitginge. Der volle Pfad bleibt beim Fenstertitel aus C11; der Kopf nennt den Namen.
+  - **Der Kopf wird nur beim Übergang nachgezogen**, nicht bei jedem Anschlag: die Abweichungsmarke geht einmal von falsch nach wahr und bleibt es bis zum Sichern. Was im Kopf steht, entscheidet die reine Funktion `kopfzeile`, und drei Proben in `crates/krk-ui` nehmen sie ohne Fenster ab.
+  - **Der ungemessene Preis der Bauart steht als eigener Datensatz da:** `issues/260809-2322_o_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`. Bei einer Datei nahe 16 MB kostet jeder Anschlag eine vollständige Kopie und einen Durchlauf. Der Ausweg ist benannt und nicht zu suchen; gebaut wird er nicht auf Verdacht.
 
 #### 27. **Das Blatt mit drei Wahlmöglichkeiten**
 

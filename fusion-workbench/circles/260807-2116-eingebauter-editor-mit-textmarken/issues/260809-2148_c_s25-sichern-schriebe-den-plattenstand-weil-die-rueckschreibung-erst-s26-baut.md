@@ -72,3 +72,20 @@ Stück von S26, sondern die Voraussetzung von S25 bis S29.
 Cross-references:
 `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md` (Schritte 25 bis 29),
 `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-2029_c_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`
+
+---
+Resolved: Weg 2 des Datensatzes gegangen — S26 steht vor S25. Am 260809-2322
+sind S24 und S26 zusammen umgesetzt worden, weil beide dieselben zwei Dateien
+anfassen. `Editormodell::bearbeiten` hat seinen Aufrufer bekommen: der
+Delegierte `textDidChange:` in `crates/krk-ui/src/appkit/editor.rs`
+(`Editorbereich::text_zurueckschreiben`) holt den Stand aus der `NSTextView`,
+führt ihn durch `krk_core::text::datei::in_gehaltene_form` und setzt die
+Abweichungsmarke. `hat_ungesicherten_stand` kann damit wahr werden, und S25
+schreibt beim Sichern das Getippte statt des Plattenstandes.
+
+Der dritte, verworfene Weg ist nicht gegangen worden: es gibt weiterhin genau
+zwei Eingänge für fremden Text, und das Sichern holt nichts aus der Fläche.
+
+Der ungemessene Preis dieser Bauart — der ganze Stand je Tastendruck — steht
+jetzt als eigener Datensatz da:
+`issues/260809-2322_o_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`.

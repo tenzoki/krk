@@ -568,6 +568,18 @@ impl Anwendungsdelegierter {
         let leiste = Leiste::bauen(mtm);
         let vorschau = Vorschaufenster::bauen(mtm);
         let editor = Editorbereich::bauen(mtm);
+        // **Der Rueckweg des Editors.** Seit S24 liest er auf einem
+        // Arbeitsfaden, und wie ein Oeffnen ausgegangen ist, steht erst fest,
+        // wenn der Befehl, der es angefordert hat, laengst zurueck ist. Der
+        // Rueckruf haelt den Delegierten **schwach**, aus demselben Grund wie
+        // die vier anderen Melder hier: sonst schloesse sich der Ring
+        // Delegierter → Editorbereich → Rueckruf → Delegierter.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        editor.melder_setzen(Box::new(move |ausgang| {
+            if let Some(selbst) = schwach.load() {
+                selbst.editorausgang_behandeln(ausgang);
+            }
+        }));
         let aufteilung = Aufteilung::bauen(
             mtm,
             [&dateifenster[0], &dateifenster[1]],
@@ -2926,11 +2938,11 @@ impl Anwendungsdelegierter {
     /// und einen Ordner sicher. Diese Funktion liest die Datei nicht und
     /// beurteilt sie nicht; sie reicht den Pfad hinein und den Grund heraus.
     ///
-    /// **Zwei Zwischenstaende, jeder mit seinem Schritt.** Gelesen wird auf dem
-    /// Hauptfaden, weil der Takt, der die Antwort des Arbeitsfadens abholt,
-    /// erst mit dem Lesen auf dem Arbeitsfaden entsteht. Und ein ungesicherter
-    /// Stand faellt beim Wechsel auf eine andere Datei ohne Rueckfrage, weil
-    /// die Nachfrage aus C4 mit ihrem eigenen Schritt kommt.
+    /// **Ein Zwischenstand ist geblieben, einer ist gefallen.** Gelesen wird
+    /// seit S24 auf dem Arbeitsfaden, und deshalb steht der Ausgang nicht mehr
+    /// hier, sondern in [`Self::editorausgang_behandeln`]. Geblieben ist, dass
+    /// ein ungesicherter Stand beim Wechsel auf eine andere Datei ohne
+    /// Rueckfrage faellt: die Nachfrage aus C4 kommt mit ihrem eigenen Schritt.
     fn im_editor_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let Some(pfad) = self.dateifenster(aktiv).quelle().auswahl_pfad() else {
@@ -2946,7 +2958,23 @@ impl Anwendungsdelegierter {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
         };
-        match editor.datei_oeffnen(&pfad) {
+        editor.datei_oeffnen(&pfad);
+        true
+    }
+
+    /// Was auf einen Ladevorgang des Editors folgt (C2, C11).
+    ///
+    /// **Die eine Behandlung fuer beide Zeitpunkte.** Sie kommt aus dem
+    /// Rueckruf, den [`Self::oberflaeche_aufbauen`] eingetragen hat, und sie
+    /// laeuft entweder sofort — wenn der Editor die Datei schon hielt — oder
+    /// beim naechsten Einzugstakt, wenn der Arbeitsfaden geliefert hat. Der
+    /// Aufrufer ist in beiden Faellen derselbe, und deshalb steht die
+    /// Fallunterscheidung einmal.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig; ein
+    /// vierter Ausgang haelt den Bau an.
+    fn editorausgang_behandeln(&self, ausgang: Ladeausgang) {
+        match ausgang {
             // Einblenden und Fokus in einem Zug: `fokus_holen` holt den Bereich
             // hervor und setzt danach den Ersthelfer. Der gegenseitige
             // Ausschluss aus C1 nimmt dabei die Vorschau von der Flaeche, ohne
@@ -2960,7 +2988,7 @@ impl Anwendungsdelegierter {
             // damit den Editor nach C1 verdraengt hat. Verschieden sind die
             // beiden allein beim Modell und bei der Textflaeche, und diese
             // Funktion fasst weder das eine noch die andere an; der Unterschied
-            // steht in `Editorbereich::datei_oeffnen`.
+            // steht in `Editorbereich::einziehen`.
             Ladeausgang::Geoeffnet | Ladeausgang::SchonOffen => {
                 self.fokus_holen(Fokus::Editor);
                 // Der zweite der vier Anlaesse aus C11: der Editor haelt eine
@@ -2969,14 +2997,12 @@ impl Anwendungsdelegierter {
                 // meldet `makeFirstResponder:` keinen Wechsel, weil keiner
                 // stattfindet, und der Titel truege weiter die vorige Datei.
                 self.titel_nachziehen(self.fokus());
-                true
             }
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
             // Grund geht in die Statuszeile und unterscheidet dort zu gross von
             // nicht als Text lesbar (zehntes Abnahmekriterium von C2).
             Ladeausgang::Abgewiesen(abweisung) => {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
-                true
             }
         }
     }

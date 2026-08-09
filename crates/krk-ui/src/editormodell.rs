@@ -123,6 +123,19 @@
 //! Abweisung laesst ihn ebenfalls stehen: der Editor wirft nichts weg, weil
 //! eine andere Datei sich nicht oeffnen liess.
 //!
+//! **Es gibt seit S24 genau einen Leseweg, und er laeuft ueber den Faden.**
+//! Bis dahin stand `jetzt_oeffnen` daneben und las auf dem rufenden Faden, als
+//! benannter Zwischenstand, solange niemand die Antwort des Fadens abholte;
+//! der Takt dafuer steht jetzt in `crate::appkit::editor`. Zwei Lesewege waeren
+//! zwei Wahrheiten darueber, wann der Hauptfaden anhaelt, und der zweite ist
+//! deshalb mit seinem Zwischenstand gefallen. [`Editormodell::uebernehmen`]
+//! bleibt die eine Stelle, an der eine gelesene Datei zum Stand wird.
+//!
+//! Beide Rueckgaben des Weges sagen dasselbe: [`Editormodell::oeffnen`] und
+//! [`Editormodell::einziehen`] liefern `Some(...)`, wenn ein Ausgang zu
+//! behandeln ist, und `None`, wenn der Aufrufer nichts zu tun hat und auf den
+//! Faden wartet.
+//!
 //! # Was dieses Modul nicht tut
 //!
 //! Es **fragt nicht nach**. Die Nachfrage an den vier Anlaessen aus C4 ist ein
@@ -481,7 +494,7 @@ impl Editormodell {
     /// Ob der Editor genau diese Datei schon haelt (C2).
     ///
     /// **Die eine Stelle, an der "dieselbe Datei" beantwortet wird**, und die
-    /// Bedingung, unter der [`Self::jetzt_oeffnen`] nicht liest. Verglichen
+    /// Bedingung, unter der [`Self::oeffnen`] keinen Faden startet. Verglichen
     /// wird der Pfad, wie er hereingereicht wurde, und nicht ein aufgeloester:
     /// beide Seiten stammen aus derselben Quelle, naemlich der Auswahl des
     /// Dateifensters, und ein `canonicalize` daneben kostete einen Zugriff auf
@@ -546,84 +559,51 @@ impl Editormodell {
     /// der Editor eine Datei ueberhaupt oeffnet. Bis die Meldung eintrifft,
     /// haelt der Editor unveraendert, was er vorher hielt.
     ///
+    /// `None` heisst: es laeuft ein Ladevorgang, und sein Ausgang kommt aus
+    /// [`Self::einziehen`]. `Some(...)` heisst: der Ausgang steht schon fest,
+    /// nichts laedt, und der Aufrufer hat ihn jetzt zu behandeln.
+    ///
     /// **Fragt nicht nach.** Steht ungesicherter Stand offen, ist das einer der
     /// vier Anlaesse aus C4, und die Nachfrage gehoert vor diesen Ruf; siehe
     /// den Modulkopf.
     ///
-    /// **Diese Funktion traegt die Abkuerzung aus [`Self::haelt_bereits`]
-    /// noch nicht, und wer sie in Betrieb nimmt, hat sie mitzunehmen.** Sie hat
-    /// heute keinen Aufrufer ausser den Pruefungen; der Weg des Nutzers laeuft
-    /// ueber [`Self::jetzt_oeffnen`], und dort steht die Abkuerzung. Mit S24
-    /// wechselt der Aufrufer auf diese Funktion, und ohne die Abkuerzung kaeme
-    /// der Verlust aus
-    /// `issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`
-    /// stumm zurueck: der Faden laese die Datei neu, [`Self::uebernehmen`]
-    /// setzte den Plattenstand ein, und die Ansicht schriebe ihn ueber das
-    /// Getippte. Der Ausgang dafuer steht bereit und heisst
-    /// [`Ladeausgang::SchonOffen`]; er ist hier nicht vorweggebaut, weil diese
-    /// Funktion keinen Ausgang meldet und S24 ihr erst einen gibt.
-    pub fn oeffnen(&mut self, pfad: &Path) {
-        self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
-    }
-
-    /// Nimmt die genannte Datei auf dem rufenden Faden auf (C2).
-    ///
-    /// **Der Zwischenstand, bis das Lesen auf dem Arbeitsfaden in Betrieb
-    /// geht.** [`Self::oeffnen`] startet den Faden aus dem Modulkopf, aber die
-    /// Antwort holt erst ein Takt auf dem Hauptfaden ab, und den baut ein
-    /// spaeterer Schritt; bis dahin faende [`Self::einziehen`] niemand, der ihn
-    /// ruft. Hier wird deshalb gelesen, wo der Aufrufer steht. Der Preis steht
-    /// im Spec unter `## Verhaeltnis zu den zehn Zeitzusagen`: solange der
-    /// Editor eine grosse Datei einliest, haelt der Hauptfaden an, und die
-    /// Zusage, dass die Dateifenster dabei bedienbar bleiben, gilt noch nicht.
-    ///
-    /// Geprueft wird in `krk_core::text::datei::oeffnen`, derselben einen
-    /// Stelle wie auf dem Arbeitsfaden, und der Stempel wird **vor** dem Lesen
-    /// erhoben, aus dem Grund, der an [`Ladevorgang::starten`] steht. Der
-    /// Uebergang in den gehaltenen Stand geht durch [`Self::uebernehmen`] und
-    /// ist damit derselbe wie dort.
-    ///
-    /// **Fragt nicht nach**, wie [`Self::oeffnen`]; siehe den Modulkopf.
-    ///
     /// # Die Datei, die der Editor schon haelt, wird nicht neu gelesen
     ///
     /// Haelt der Editor genau diesen Pfad, kehrt die Funktion mit
-    /// [`Ladeausgang::SchonOffen`] zurueck, **bevor** sie liest, und ruehrt
-    /// nichts an. Ohne diese Zeile ist ein zweites F4 auf dieselbe Datei ein
-    /// vollwertiges Oeffnen: [`Self::uebernehmen`] setzt den Plattenstand ein,
-    /// loescht die Abweichungsmarke, und die Ansicht schreibt den Plattenstand
-    /// ueber das, was der Nutzer getippt hat. Genau diesen Weg ging der Nutzer
-    /// am 260809, weil die Vorschau den Editor nach C1 verdraengt und F4 der
-    /// einzige Befehl ist, der ihn mit seiner Datei zurueckholt
+    /// [`Ladeausgang::SchonOffen`] zurueck, **bevor** sie einen Faden startet,
+    /// und ruehrt nichts an. Ohne diese Zeile ist ein zweites F4 auf dieselbe
+    /// Datei ein vollwertiges Oeffnen: der Faden laese die Datei neu,
+    /// [`Self::uebernehmen`] setzte den Plattenstand ein, loeschte die
+    /// Abweichungsmarke, und die Ansicht schriebe den Plattenstand ueber das,
+    /// was der Nutzer getippt hat. Genau diesen Weg ging der Nutzer am 260809,
+    /// weil die Vorschau den Editor nach C1 verdraengt und F4 der einzige
+    /// Befehl ist, der ihn mit seiner Datei zurueckholt
     /// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
+    /// Die Abkuerzung stand bis S24 in `jetzt_oeffnen` und ist mit dem Umstieg
+    /// auf den Faden hierher gewandert, wie der Doc-Kommentar dort verlangte.
     ///
     /// **Der Preis steht hier und wird nicht verschwiegen:** F4 auf die schon
     /// gehaltene Datei liest sie damit auch dann nicht neu, wenn sie sich von
     /// aussen geaendert hat. Ein Befehl zum Neulesen gibt es nicht, und C2 sagt
     /// keinen zu; die Aenderung von aussen traegt S31, und die Frage, was mit
     /// einem ungesicherten Stand dabei geschieht, gehoert der Nachfrage aus C4
-    /// (S27, S28). Solange es kein Sichern gibt, ist der ungesicherte Stand das
-    /// einzige Stueck Arbeit im Programm, das sich nicht wiederherstellen
-    /// laesst; der Plattenstand laesst sich jederzeit wieder lesen.
-    pub fn jetzt_oeffnen(&mut self, pfad: &Path) -> Ladeausgang {
+    /// (S27, S28).
+    pub fn oeffnen(&mut self, pfad: &Path) -> Option<Ladeausgang> {
         if self.haelt_bereits(pfad) {
-            return Ladeausgang::SchonOffen;
+            return Some(Ladeausgang::SchonOffen);
         }
-        let stempel = Stempel::von_pfad(pfad);
-        let geladen = Geladen {
-            ergebnis: datei::oeffnen(pfad),
-            stempel,
-        };
-        self.uebernehmen(pfad.to_path_buf(), geladen)
+        self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
+        None
     }
 
     /// Uebernimmt, was ein Lesevorgang geliefert hat.
     ///
     /// **Die eine Stelle, an der eine gelesene Datei zum Stand des Editors
-    /// wird.** Zwei Wege fuehren hierher, [`Self::einziehen`] vom Arbeitsfaden
-    /// und [`Self::jetzt_oeffnen`] vom rufenden; zwei Uebergaenge nebeneinander
-    /// waeren zwei Wahrheiten darueber, was ein geoeffneter Editor haelt, und
-    /// der Umstieg auf den Arbeitsfaden wechselt so nur den Aufrufer.
+    /// wird.** Ein Weg fuehrt hierher, [`Self::einziehen`] vom Arbeitsfaden;
+    /// bis S24 war es daneben `jetzt_oeffnen` vom rufenden Faden. Zwei
+    /// Uebergaenge nebeneinander waeren zwei Wahrheiten darueber, was ein
+    /// geoeffneter Editor haelt, und weil beide durch diese Funktion gingen,
+    /// hat der Wegfall des zweiten Lesewegs am Ergebnis nichts geaendert.
     ///
     /// Bei Erfolg steht danach die neue Datei mit ihrem Stand, ihrem Typ, ihrem
     /// Stempel und ohne Abweichung; ein Suchlauf ueber den alten Stand ist
@@ -653,7 +633,9 @@ impl Editormodell {
     /// Holt die wartende Meldung des Arbeitsfadens ab.
     ///
     /// Liefert `None`, solange keine da ist oder gar kein Vorgang laeuft; nur
-    /// bei `Some` hat die Ansicht etwas zu tun.
+    /// bei `Some` hat die Ansicht etwas zu tun. Gerufen wird sie vom Einzugstakt
+    /// in `crate::appkit::editor`, im Takt von 1/60 s, solange
+    /// [`Self::laedt_noch`] wahr ist.
     ///
     /// Bei [`Ladeausgang::Geoeffnet`] steht danach die neue Datei mit ihrem
     /// Stand, ihrem Typ, ihrem Stempel und ohne Abweichung; ein Suchlauf ueber
@@ -680,8 +662,24 @@ impl Editormodell {
 
     /// Nimmt den bearbeiteten Stand aus der Textflaeche entgegen (C4).
     ///
+    /// **Der Aufrufer ist seit S26 der Delegierte `textDidChange:`** in
+    /// `crate::appkit::editor`, die eine Stelle, die AppKit fuer diese Meldung
+    /// vorsieht. Bis dahin hatte diese Funktion keinen, und was der Nutzer
+    /// tippte, stand allein in der `NSTextView`
+    /// (`issues/260809-2148_*_s25-sichern-schriebe-den-plattenstand-weil-die-rueckschreibung-erst-s26-baut.md`).
+    ///
     /// Setzt die Abweichungsmarke, immer und ohne Vergleich; der Grund und der
     /// Preis stehen im Modulkopf.
+    ///
+    /// **Der ganze Stand kommt herein und nicht die geaenderte Stelle**, und
+    /// das kostet je Tastendruck einen Durchlauf ueber die Datei. Die Wahl ist
+    /// die des Modulkopfs — ein Eingang, eine Wandlungsstelle — und der Ausweg
+    /// ist benannt und nicht zu suchen: `NSTextStorage` meldet den geaenderten
+    /// Bereich mit, und ein Stand, der sich daran fortschreibt, kostete die
+    /// geaenderte Stelle. `speculation:` ungemessen, wie beim Zeilenindex aus
+    /// S46, der dieselbe Frage stellt;
+    /// `issues/260809-2322_*_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`
+    /// fuehrt sie.
     ///
     /// **Beendet einen laufenden Suchlauf.** Seine Versaetze zeigen in den
     /// Stand, aus dem sie gebildet wurden; im neuen koennen sie mitten in einer
@@ -963,7 +961,11 @@ mod tests {
 
     fn geoeffnet(pfad: &Path) -> Editormodell {
         let mut modell = Editormodell::neu();
-        modell.oeffnen(pfad);
+        assert_eq!(
+            modell.oeffnen(pfad),
+            None,
+            "eine neue Datei wird auf dem Arbeitsfaden gelesen"
+        );
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         modell
     }
@@ -1023,8 +1025,8 @@ mod tests {
         let zweite = ordner.datei("zweite.txt", "Inhalt der zweiten Datei\n");
 
         let mut modell = Editormodell::neu();
-        modell.oeffnen(&erste);
-        modell.oeffnen(&zweite);
+        assert_eq!(modell.oeffnen(&erste), None);
+        assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
 
         assert_eq!(modell.pfad(), Some(zweite.as_path()));
@@ -1085,7 +1087,7 @@ mod tests {
         modell.ansicht_umschalten();
         assert_eq!(modell.ansicht(), Ansicht::Roh);
 
-        modell.oeffnen(&zweite);
+        assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(
             modell.ansicht(),
@@ -1104,7 +1106,7 @@ mod tests {
         modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
 
         // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
-        modell.oeffnen(&ordner.pfad);
+        assert_eq!(modell.oeffnen(&ordner.pfad), None);
         let ausgang = abwarten(&mut modell);
         assert!(
             matches!(ausgang, Ladeausgang::Abgewiesen(_)),
@@ -1128,8 +1130,7 @@ mod tests {
     fn eine_datei_ueber_der_grenze_wird_gestellt_und_nicht_aufgenommen() {
         let ordner = Pruefordner::neu("zu-gross");
         let gute = ordner.datei("gut.txt", "guter Inhalt\n");
-        let mut modell = Editormodell::neu();
-        assert_eq!(modell.jetzt_oeffnen(&gute), Ladeausgang::Geoeffnet);
+        let mut modell = geoeffnet(&gute);
 
         let zu_gross = ordner.pfad.join("zu-gross.txt");
         std::fs::File::create(&zu_gross)
@@ -1137,7 +1138,8 @@ mod tests {
             .set_len(datei::EDITORGRENZE + 1)
             .expect("die Pruefdatei laesst sich nicht auf Groesse bringen");
 
-        let ausgang = modell.jetzt_oeffnen(&zu_gross);
+        assert_eq!(modell.oeffnen(&zu_gross), None);
+        let ausgang = abwarten(&mut modell);
         assert!(
             matches!(ausgang, Ladeausgang::Abgewiesen(Abweisung::ZuGross { .. })),
             "eine Datei ueber der Grenze wurde nicht als zu gross abgewiesen: {ausgang:?}"
@@ -1175,7 +1177,7 @@ mod tests {
         modell.bearbeiten("auf der Platte\nund ungesichert getippt\n".to_owned());
         let stempel_vorher = modell.stempel();
 
-        let ausgang = modell.jetzt_oeffnen(&pfad);
+        let ausgang = modell.oeffnen(&pfad);
 
         // Zuerst der Verlust selbst, damit ein Rueckfall ihn und nicht eine
         // Nebensache meldet.
@@ -1186,7 +1188,7 @@ mod tests {
         );
         assert_eq!(
             ausgang,
-            Ladeausgang::SchonOffen,
+            Some(Ladeausgang::SchonOffen),
             "die schon gehaltene Datei wird nicht ein zweites Mal gelesen"
         );
         assert!(
@@ -1217,31 +1219,14 @@ mod tests {
         assert!(modell.haelt_bereits(&erste));
         assert!(!modell.haelt_bereits(&zweite));
 
-        assert_eq!(modell.jetzt_oeffnen(&zweite), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.oeffnen(&zweite),
+            None,
+            "die andere Datei geht auf den Arbeitsfaden"
+        );
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), "zweite\n");
         assert_eq!(modell.pfad(), Some(zweite.as_path()));
-    }
-
-    /// Beide Lesewege hinterlassen denselben Stand.
-    ///
-    /// Der Arbeitsfaden und der rufende Faden gehen durch dieselbe
-    /// [`Editormodell::uebernehmen`]; die Probe haelt fest, dass der Umstieg
-    /// auf den Arbeitsfaden nur den Aufrufer wechselt und nicht das Ergebnis.
-    #[test]
-    fn der_sofortige_weg_und_der_arbeitsfaden_hinterlassen_denselben_stand() {
-        let ordner = Pruefordner::neu("zwei-wege");
-        let pfad = ordner.datei("stand.txt", "eine Zeile\n");
-
-        let ueber_den_faden = geoeffnet(&pfad);
-        let mut sofort = Editormodell::neu();
-        assert_eq!(sofort.jetzt_oeffnen(&pfad), Ladeausgang::Geoeffnet);
-
-        assert_eq!(sofort.pfad(), ueber_den_faden.pfad());
-        assert_eq!(sofort.stand(), ueber_den_faden.stand());
-        assert_eq!(sofort.typ(), ueber_den_faden.typ());
-        assert_eq!(sofort.stempel(), ueber_den_faden.stempel());
-        assert!(!sofort.hat_ungesicherten_stand());
-        assert!(!sofort.laedt_noch());
     }
 
     /// C4: ein gescheitertes Sichern nennt den Grund und wirft den Stand nicht
