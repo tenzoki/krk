@@ -24,6 +24,9 @@
 //!            └─ jeder Ausgang ──> melden ──> Anwendungsdelegierter
 //!
 //!   Tippen ──> textDidChange: ──> Editormodell::bearbeiten ──> kopf_nachziehen
+//!
+//!   cmd+s ──> sichern ──> Editormodell::sichern ──┬─ gelungen ─> kopf_nachziehen
+//!                                                 └─ jeder Ausgang ─> nach oben
 //! ```
 //!
 //! **Der untere Pfeil ist der Rueckweg, und ohne ihn ist das Modell blind.**
@@ -121,7 +124,7 @@ use objc2_foundation::{
 
 use krk_core::text::{Abweisung, Fund, Markensprung};
 
-use crate::editormodell::{Editormodell, Ladeausgang};
+use crate::editormodell::{Editormodell, Ladeausgang, Sicherungsausgang};
 
 use super::nummernspalte::Nummernspalte;
 use super::statuszeile;
@@ -143,11 +146,19 @@ use super::statuszeile;
 /// ```text
 ///  gebaut    Abweisung beim Oeffnen        krk_core::text::datei::oeffnen (S10)
 ///  gebaut    Markenstelle geaendert        krk_core::text::marke (S12)
-///  offen     gescheitertes Sichern         S25
+///  gebaut    gelungenes Sichern            krk_core::text::datei::sichern (S9)
+///  gebaut    gescheitertes Sichern         dieselbe Stelle (S25)
 ///  offen     Zeilennummer ueber der Zahl   S35
 ///  offen     Suche ohne Treffer            S36
 ///  offen     Zahl der ersetzten Treffer    S37
 /// ```
+///
+/// **Das gelungene Sichern meldet sich, obwohl der Kopf es schon zeigt.** Die
+/// beiden sagen Verschiedenes: der Kopf traegt den Zustand, naemlich dass nichts
+/// mehr abweicht, und die Statuszeile die Antwort auf den Tastendruck, naemlich
+/// dass eben geschrieben wurde. Wer `cmd+s` an einer unveraenderten Datei
+/// drueckt, sieht am Kopf nichts geschehen und braucht trotzdem eine Antwort;
+/// kommentarlos nichts zu tun ist in keinem Fall zulaessig.
 ///
 /// **Kommentarlos nichts zu tun ist in keinem Fall zulaessig**; das steht so im
 /// zehnten Abnahmekriterium von C2 und im achten von C6, und dieser Wert ist
@@ -188,6 +199,24 @@ pub enum Editormeldung {
         /// Die gemerkte Zeilennummer, ab 1 gezaehlt, an die die Marke gefuehrt
         /// hat.
         zeile: u32,
+    },
+    /// Der Stand steht in der Datei (C4).
+    Gesichert {
+        /// Die geschriebene Datei. Der volle Pfad, wie bei jeder anderen
+        /// Meldung ueber eine Datei; der Kopf des Editorbereichs nennt daneben
+        /// den blossen Namen.
+        pfad: PathBuf,
+    },
+    /// Es wurde nicht geschrieben, und der Stand des Editors steht unveraendert
+    /// da (C4).
+    ///
+    /// **Der Satz kommt fertig aus dem Modell** und wird hier nicht ein zweites
+    /// Mal gebaut: [`crate::editormodell::Sicherungsausgang::Gescheitert`]
+    /// traegt ihn, weil dort entschieden wird, woran es lag — am Schreiben
+    /// selbst oder an einer Datei, die sich von aussen geaendert hat.
+    SichernGescheitert {
+        /// Der Grund, wie das Modell ihn formuliert hat.
+        grund: String,
     },
 }
 
@@ -230,6 +259,8 @@ impl Editormeldung {
             Self::MarkenstelleGeaendert { zeile } => {
                 format!("die gemerkte Stelle hat sich geändert; die Marke führt auf Zeile {zeile}")
             }
+            Self::Gesichert { pfad } => format!("{} gesichert", pfad.display()),
+            Self::SichernGescheitert { grund } => grund.clone(),
         }
     }
 }
@@ -504,6 +535,35 @@ impl Editorbereich {
         }
     }
 
+    /// Schreibt den gehaltenen Stand in die Datei (C4).
+    ///
+    /// **Geschrieben wird im Modell und hier nicht ein zweites Mal.** Diese
+    /// Funktion reicht den Befehl hinein und den Ausgang heraus; die
+    /// Sicherungsform, die Stempelpruefung und der atomare Schreibweg stehen in
+    /// [`Editormodell::sichern`] und darunter in `krk_core::text::datei`.
+    ///
+    /// **Was sie beitraegt, ist der Kopf.** Nach einem gelungenen Sichern
+    /// meldet das Modell keine Abweichung mehr, und ohne diesen Ruf truege der
+    /// Kopf sein Zeichen weiter, obwohl nichts mehr abweicht. Nach einem
+    /// gescheiterten bleibt der Kopf, wie er ist, weil auch die Abweichung
+    /// bleibt.
+    ///
+    /// **Der Stand kommt nicht aus der Textflaeche.** Er steht im Modell, weil
+    /// `textDidChange:` ihn bei jeder Aenderung dorthin zurueckschreibt (siehe
+    /// den Modulkopf). Ihn hier ein zweites Mal aus der Flaeche zu holen waere
+    /// der zweite Rueckweg, und der eine bestehende waere damit nicht mehr die
+    /// Wahrheit ueber den Stand des Editors.
+    ///
+    /// Die Ausleihe des Modells endet vor dem Ruf an den Kopf, wie ueberall in
+    /// dieser Datei.
+    pub fn sichern(&self) -> Sicherungsausgang {
+        let ausgang = self.ivars().modell.borrow_mut().sichern();
+        if matches!(ausgang, Sicherungsausgang::Gesichert(_)) {
+            self.kopf_nachziehen();
+        }
+        ausgang
+    }
+
     /// Holt die Meldung des Arbeitsfadens ab (C2).
     ///
     /// **Der Vergleich nennt [`Ladeausgang::Geoeffnet`] namentlich und darf
@@ -617,8 +677,8 @@ impl Editorbereich {
     ///
     /// **Die eine Stelle, die den Kopf beschreibt.** Sie wird gerufen, wo sich
     /// eine der beiden Angaben aendern kann: beim Aufbau, nach einem gelungenen
-    /// Oeffnen, beim Uebergang in den ungesicherten Stand — und mit S25 nach
-    /// einem gelungenen Sichern, mit S28 nach dem Schliessen.
+    /// Oeffnen, beim Uebergang in den ungesicherten Stand, nach einem
+    /// gelungenen Sichern — und mit S28 nach dem Schliessen.
     ///
     /// Was dort steht, entscheidet [`kopfzeile`] ohne AppKit und ist deshalb
     /// ohne Fenster pruefbar.
@@ -846,6 +906,32 @@ mod tests {
             meldung.text().contains('2'),
             "die Meldung nennt die Zeile, an die sie geführt hat"
         );
+    }
+
+    /// C4: beide Ausgaenge des Sicherns melden sich, und sie melden
+    /// Verschiedenes.
+    ///
+    /// Der Grund des Fehlschlags kommt fertig aus dem Modell; geprueft wird
+    /// hier, dass die Meldung ihn unveraendert weitergibt, statt einen zweiten
+    /// Satz daneben zu bauen.
+    #[test]
+    fn das_sichern_meldet_gelingen_und_fehlschlag_verschieden() {
+        let gelungen = Editormeldung::Gesichert { pfad: pfad() }.text();
+        assert!(
+            gelungen.contains("probe.txt"),
+            "die Meldung nennt die geschriebene Datei: {gelungen}"
+        );
+
+        let grund = "/tmp/probe.txt ließ sich nicht sichern: Permission denied";
+        let gescheitert = Editormeldung::SichernGescheitert {
+            grund: grund.to_owned(),
+        }
+        .text();
+        assert_eq!(
+            gescheitert, grund,
+            "der Grund des Modells geht unverändert durch"
+        );
+        assert_ne!(gelungen, gescheitert);
     }
 
     /// Das zweite Abnahmekriterium von C4, an der Stelle gemessen, an der der

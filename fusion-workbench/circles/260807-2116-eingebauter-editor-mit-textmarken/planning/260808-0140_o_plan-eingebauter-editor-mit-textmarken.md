@@ -829,7 +829,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase E: Sichern, ungesicherter Stand und die Nachfrage
 
-#### 25. **Sichern**
+#### 25. [DONE] **Sichern**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Zweig für `Kommando::EditorSichern`), `crates/krk-ui/src/editormodell.rs` (erweitert), `crates/krk-ui/src/appkit/editor.rs` (erweitert: den Stand abholen)
@@ -839,6 +839,12 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S24 **und S26**. Die zweite ist am 260809-2148 dazugekommen und am 260809-2322 erfüllt: ohne die Rückschreibung schriebe dieser Schritt den Plattenstand zurück und meldete eine gelungene Sicherung. Beide stehen; der Weg ist frei.
 - **Eine Zeile, die dieser Schritt mitzunehmen hat:** nach einem gelungenen Sichern ruft er `Editorbereich::kopf_nachziehen`, sonst trägt der Kopf das Abweichungszeichen weiter, obwohl das Modell keine Abweichung mehr meldet. Die Funktion steht seit S26 und ist die eine Stelle, die den Kopf beschreibt.
 - Abnahmekriterium: `cargo test -p krk-core` deckt die Sicherungsform ab (aus S9). Eine Probe in `crates/krk-ui` deckt ab, dass ein gescheitertes Schreiben den Stand des Modells unverändert lässt und die Abweichung weiterhin gemeldet wird. **`Nutzerarbeit`:** an einer Datei ohne Schreibrecht meldet `cmd+s` den Grund und der Editor behält seine Änderungen.
+- **Umsetzung am 260809-2358.** Fünf Vermerke:
+  - **Das Sichern selbst stand seit S15; gebaut wurden der Befehl, die Stempelprüfung und die beiden Meldungen.** `Editormodell::sichern` rief `krk_core::text::datei::sichern` schon, hatte aber keinen Aufrufer. Dazugekommen sind der Zweig `Kommando::EditorSichern` in `kommando_ausfuehren`, `Anwendungsdelegierter::editor_sichern` mit der Fallunterscheidung über die drei Ausgänge und `Editorbereich::sichern`, das den Kopf nachzieht. Ein zweiter Schreibweg ist nicht entstanden; `grep -c 'ablage::atomar' crates/krk-ui/src` liefert 0.
+  - **Die Stempelprüfung fragt über `fremd_geaendert` und nicht mit einer zweiten, enger geschnittenen Frage.** S31 sagt dieselbe Frage an zwei Momenten zu, und dies ist der zweite. Daraus folgt, was am Doc-Kommentar von `Editormodell::sichern` als Preis benannt steht: eine **verschwundene** Datei gilt ebenfalls als von außen geändert und wird nicht neu geschrieben, solange die Wahl aus dem Zustandsbild des Specs (`Fremd` mit seinen zwei Ausgängen) nicht gebaut ist. Der Stand des Editors bleibt dabei vollständig stehen. Eine Frage, die das Verschwinden vom Ändern trennte, wäre ein Sonderfall mit eigener Regel an einer Stelle, die genau eine Frage zu stellen hat.
+  - **`Sicherungsausgang::Gesichert` trägt seither den Pfad.** Die Meldung an den Nutzer nennt ihn, wie jede andere Meldung des Editors, und der Aufrufer müsste ihn sonst an einem Modell erfragen, das die Frage eben beantwortet hat, als es schrieb — mit einem `Option`, das an dieser Stelle nie leer ist, weil ein leeres `NichtsGehalten` heißt. Drei Proben sind mitgezogen.
+  - **Zwei Meldungen statt einer.** Neben dem gescheiterten Sichern, das der Schritt vorsah, meldet auch das gelungene. Beide sagen Verschiedenes: der Kopf trägt den Zustand („nichts weicht mehr ab"), die Statuszeile die Antwort auf den Tastendruck („eben geschrieben"). Wer `cmd+s` an einer unveränderten Datei drückt, sieht am Kopf nichts geschehen und bekäme sonst kommentarlos nichts. `Sicherungsausgang::NichtsGehalten` geht **nicht** über `Editormeldung`, sondern über `antwort_zeigen`, nach dem Satz, den S22 für F4 auf leerer Auswahl führt: eine Meldung des Editors handelt von der gehaltenen Datei, und hier hält er keine.
+  - **Die `Nutzerarbeit` oben trifft den Fall nicht ganz, und das ist eine Eigenschaft des atomaren Schreibwegs.** `krk_core::ablage::atomar` schreibt eine Nachbardatei und benennt sie um; ein `rename` gelingt auch auf eine schreibgeschützte **Datei**, solange der **Ordner** darum beschreibbar ist. Die Probe erzeugt den Fehlschlag deshalb am Ordner, und die Prüfliste an den Nutzer fragt danach. Wer eine einzelne Datei sperren will, nimmt im Finder „Geschützt" (das Kennzeichen `uchg`); dann scheitert auch das Umbenennen.
 
 #### 26. [DONE] **Der ungesicherte Stand und seine Anzeige**
 

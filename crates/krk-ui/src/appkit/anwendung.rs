@@ -187,7 +187,7 @@ use krk_core::tasten::{Belegung, Kommando, Tastendruck};
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsmodell::Belegungsmodell;
-use crate::editormodell::Ladeausgang;
+use crate::editormodell::{Ladeausgang, Sicherungsausgang};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, sichtbar_in};
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
@@ -1752,6 +1752,11 @@ impl Anwendungsdelegierter {
             // ausgewaehlten Eintrag, fuellt damit aber einen anderen Bereich,
             // und ein einzelnes Dateifenster kommt an den Editor nicht heran.
             Kommando::Bearbeiten => self.im_editor_oeffnen(),
+            // Das Sichern aus C4. Es traegt `Wirkungsbereich::Editor` und
+            // steht trotzdem hier und nicht bei `bereichskommando`: der
+            // Editorbereich haengt am Delegierten, und `bereichskommando`
+            // reicht dem Editor nichts zu (siehe die Begruendung dort).
+            Kommando::EditorSichern => self.editor_sichern(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -3005,6 +3010,52 @@ impl Anwendungsdelegierter {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
             }
         }
+    }
+
+    /// `cmd+s` schreibt den Stand des Editors in seine Datei (C4).
+    ///
+    /// **Die Fallunterscheidung ueber den Ausgang steht hier einmal**, so wie
+    /// die ueber den Ladeausgang in [`Self::editorausgang_behandeln`]. Sie ist
+    /// vollstaendig und hat keinen Auffangzweig; ein vierter Ausgang haelt den
+    /// Bau an.
+    ///
+    /// **Beide Ausgaenge, die eine Datei betreffen, gehen ueber
+    /// [`Editormeldung`]** und damit in die eine Meldeflaeche des Fensters auf
+    /// Rang 1. Der dritte betrifft keine Datei, weil es keine gibt; er nimmt
+    /// denselben Weg wie F4 auf leerer Auswahl, naemlich [`Self::antwort_zeigen`]
+    /// mit einem eigenen Satz. Eine Variante in [`Editormeldung`] entsteht dafuer
+    /// nicht — sie meldet ueber die gehaltene Datei, und hier haelt der Editor
+    /// keine. Erreichbar ist der Zweig ohnehin kaum: `Wirkungsbereich::Editor`
+    /// laesst den Befehl nur mit dem Fokus in der Textflaeche durch, und die
+    /// bekommt ihn nur mit einer Datei.
+    ///
+    /// **Was der Editor haelt, ist zu diesem Zeitpunkt der getippte Stand.**
+    /// `textDidChange:` schreibt ihn seit S26 bei jeder Aenderung ins Modell
+    /// zurueck; diese Funktion holt nichts aus der Textflaeche und braucht es
+    /// nicht.
+    ///
+    /// **Ein gelungenes Sichern nimmt der Statuszeile keinen anderen Rang
+    /// weg**, und ein gescheitertes wirft nichts weg: der Stand bleibt im
+    /// Modell stehen, das Abweichungszeichen am Kopf bleibt sichtbar, und der
+    /// Nutzer kann es nach dem Grund erneut versuchen. Das zehnte
+    /// Abnahmekriterium von C4 verlangt genau das.
+    fn editor_sichern(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        match editor.sichern() {
+            Sicherungsausgang::Gesichert(pfad) => {
+                self.editormeldung_zeigen(&Editormeldung::Gesichert { pfad });
+            }
+            Sicherungsausgang::Gescheitert(grund) => {
+                self.editormeldung_zeigen(&Editormeldung::SichernGescheitert { grund });
+            }
+            Sicherungsausgang::NichtsGehalten => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
+            }
+        }
+        true
     }
 
     /// Stellt eine Meldung des Editors in die Statuszeile des **aktiven**

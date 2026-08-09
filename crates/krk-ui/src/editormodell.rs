@@ -28,7 +28,8 @@
 //!   │  stand ──> suche::alle ──> Suchlauf: Treffer, der     │
 //!   │                            angesteuerte darunter      │
 //!   │                                                       │
-//!   │  stand ──> text::datei::sichern ──> Platte            │
+//!   │  stand ──> Stempel gleich? ──> sichern ──> Platte     │
+//!   │            sonst: nicht geschrieben                   │
 //!   └───────────────────────────────────────────────────────┘
 //! ```
 //!
@@ -445,9 +446,23 @@ pub enum Ladeausgang {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Sicherungsausgang {
     /// Geschrieben. Der Editor meldet danach keinen ungesicherten Stand mehr.
-    Gesichert,
+    ///
+    /// **Der Pfad steht dabei**, weil die Meldung an den Nutzer ihn nennt, wie
+    /// jede andere Meldung des Editors. Ihn beim Aufrufer ein zweites Mal zu
+    /// erfragen hiesse, ein Modell zu befragen, das die Frage eben beantwortet
+    /// hat, als es schrieb — und es hiesse, mit einem `Option` umzugehen, das
+    /// an dieser Stelle nie leer ist, weil ein leeres
+    /// [`Self::NichtsGehalten`] heisst.
+    Gesichert(PathBuf),
     /// Der Grund gehoert in die Statuszeile; der Stand bleibt unveraendert
     /// stehen, und ein Anlass, der auf dieses Sichern gewartet hat, unterbleibt.
+    ///
+    /// **Zwei Anlaesse fuehren hierher, und beide sagen dasselbe zu**: das
+    /// Schreiben ist gescheitert, und ein Schreiben, das unterblieben ist, weil
+    /// die Datei sich von aussen geaendert hat. Verschieden ist allein der Satz
+    /// darin. Sie zu trennen braechte dem Aufrufer nichts: er hat in beiden
+    /// Faellen dasselbe zu tun, naemlich den Grund zu zeigen und den Anlass
+    /// unterbleiben zu lassen.
     Gescheitert(String),
     /// Der Editor haelt keine Datei; es gibt nichts zu sichern.
     NichtsGehalten,
@@ -713,15 +728,47 @@ impl Editormodell {
     /// Stand mehr, und der Stempel steht auf der eben geschriebenen Datei;
     /// damit gilt sie nicht als von aussen geaendert. Nach einem gescheiterten
     /// bleibt beides, wie es war.
+    ///
+    /// # Der Stempel wird vor dem Schreiben geprueft
+    ///
+    /// Hat die Datei sich seit dem Oeffnen oder dem letzten Sichern von aussen
+    /// geaendert, unterbleibt das Schreiben, und der Grund geht in die
+    /// Statuszeile. Das ist die eine Haelfte des neunten Abnahmekriteriums von
+    /// C4, die ohne Weiteres zuverlaessig ist: sie fragt in dem Augenblick, in
+    /// dem es darauf ankommt, naemlich unmittelbar vor dem Ueberschreiben. Die
+    /// andere Haelfte, das Melden im laufenden Betrieb, kommt mit S31.
+    ///
+    /// **Gefragt wird ueber [`Self::fremd_geaendert`] und nicht mit einer
+    /// zweiten, enger geschnittenen Frage daneben.** Damit gilt eine
+    /// verschwundene oder unlesbar gewordene Datei ebenfalls als geaendert, und
+    /// **das ist der Preis, der hier steht und nicht verschwiegen wird:** wem
+    /// die geoeffnete Datei unter der Hand weggeraeumt wird, der bekommt sie
+    /// aus dem Editor heraus nicht wieder geschrieben, solange die Wahl aus dem
+    /// Zustandsbild des Specs (`Fremd` mit seinen zwei Ausgaengen) nicht
+    /// gebaut ist; sein Stand bleibt dabei vollstaendig stehen. Eine zweite
+    /// Frage, die das Verschwinden vom Aendern trennte, waere ein Sonderfall
+    /// mit eigener Regel an einer Stelle, die genau eine Frage zu stellen hat.
+    ///
+    /// **Ein Wettlauf bleibt und ist nicht zu schliessen.** Zwischen der Frage
+    /// und dem `rename` in `crate::ablage::atomar` liegt eine Spanne, in der
+    /// ein fremder Schreiber zuschlagen kann. Diese Pruefung macht das Fenster
+    /// klein; zu schliessen waere es allein mit einer Sperre auf der Datei, und
+    /// die sagt weder C4 noch der Spec zu.
     pub fn sichern(&mut self) -> Sicherungsausgang {
         let Some(pfad) = self.pfad.as_ref() else {
             return Sicherungsausgang::NichtsGehalten;
         };
+        if self.fremd_geaendert() {
+            return Sicherungsausgang::Gescheitert(format!(
+                "{} hat sich außerhalb von KRK geändert und wird nicht überschrieben",
+                pfad.display()
+            ));
+        }
         match datei::sichern(pfad, &self.stand) {
             Ok(()) => {
                 self.abweichung = false;
                 self.stempel = Stempel::von_pfad(pfad);
-                Sicherungsausgang::Gesichert
+                Sicherungsausgang::Gesichert(pfad.clone())
             }
             Err(fehler) => Sicherungsausgang::Gescheitert(format!(
                 "{} ließ sich nicht sichern: {fehler}",
@@ -999,7 +1046,7 @@ mod tests {
         modell.bearbeiten("erste Zeile\nzweite Zeile\n".to_owned());
         assert!(modell.hat_ungesicherten_stand());
 
-        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert);
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
         assert!(
             !modell.hat_ungesicherten_stand(),
             "C4: nach dem Sichern meldet der Editor keine ungesicherten Aenderungen mehr"
@@ -1229,20 +1276,34 @@ mod tests {
         assert_eq!(modell.pfad(), Some(zweite.as_path()));
     }
 
-    /// C4: ein gescheitertes Sichern nennt den Grund und wirft den Stand nicht
-    /// weg.
+    /// C4: ein gescheitertes Schreiben nennt den Grund und wirft den Stand
+    /// nicht weg.
+    ///
+    /// Der Fehlschlag wird an dem Ort erzeugt, an dem er beim Nutzer entsteht:
+    /// im **Ordner**, nicht an der Datei. `krk_core::ablage::atomar` schreibt
+    /// erst eine Nachbardatei und benennt sie dann um; ein `rename` gelingt
+    /// auch auf eine schreibgeschuetzte Datei, solange der Ordner darum
+    /// beschreibbar ist. Die Rechte werden unmittelbar nach dem Ruf
+    /// zurueckgesetzt, damit der Pruefordner sich in `Drop` abraeumen kann.
     #[test]
-    fn ein_gescheitertes_sichern_laesst_den_stand_stehen() {
+    fn ein_gescheitertes_schreiben_laesst_den_stand_stehen() {
+        use std::os::unix::fs::PermissionsExt;
+
         let ordner = Pruefordner::neu("sichern-scheitert");
-        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let unterordner = ordner.pfad.join("gesperrt");
+        std::fs::create_dir(&unterordner).expect("der Unterordner laesst sich anlegen");
+        let pfad = unterordner.join("stand.txt");
+        std::fs::write(&pfad, "Inhalt\n").expect("die Pruefdatei laesst sich schreiben");
+
         let mut modell = geoeffnet(&pfad);
         modell.bearbeiten("neuer Inhalt\n".to_owned());
 
-        // Der Ordner ist nach dem Oeffnen fort; das Schreiben kann nicht
-        // gelingen, und der Pfad ist derselbe geblieben.
-        std::fs::remove_dir_all(&ordner.pfad).expect("der Pruefordner laesst sich raeumen");
-
+        std::fs::set_permissions(&unterordner, std::fs::Permissions::from_mode(0o500))
+            .expect("die Rechte lassen sich setzen");
         let ausgang = modell.sichern();
+        std::fs::set_permissions(&unterordner, std::fs::Permissions::from_mode(0o700))
+            .expect("die Rechte lassen sich zuruecksetzen");
+
         match ausgang {
             Sicherungsausgang::Gescheitert(grund) => assert!(
                 grund.contains("ließ sich nicht sichern"),
@@ -1255,6 +1316,61 @@ mod tests {
             modell.hat_ungesicherten_stand(),
             "C4: der Stand wird nicht weggeworfen"
         );
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("die Datei ist lesbar"),
+            "Inhalt\n",
+            "ein gescheitertes Schreiben laesst die Datei, wie sie war"
+        );
+    }
+
+    /// Das neunte Abnahmekriterium von C4, an der Stelle, an der der Schaden
+    /// entstuende: eine von aussen geaenderte Datei wird nicht ueberschrieben.
+    #[test]
+    fn eine_von_aussen_geaenderte_datei_wird_nicht_ueberschrieben() {
+        let ordner = Pruefordner::neu("sichern-fremd");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        modell.bearbeiten("im Editor getippt\n".to_owned());
+
+        std::fs::write(&pfad, "von jemand anderem geschrieben\n")
+            .expect("die Datei laesst sich von aussen schreiben");
+
+        match modell.sichern() {
+            Sicherungsausgang::Gescheitert(grund) => assert!(
+                grund.contains("außerhalb von KRK"),
+                "der Grund nennt die fremde Änderung: {grund}"
+            ),
+            sonst => panic!("die fremde Änderung haette das Schreiben anhalten muessen, {sonst:?}"),
+        }
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("die Datei ist lesbar"),
+            "von jemand anderem geschrieben\n",
+            "C4: die fremde Änderung wird nicht ohne Zutun des Nutzers ueberschrieben"
+        );
+        assert_eq!(modell.stand(), "im Editor getippt\n");
+        assert!(
+            modell.hat_ungesicherten_stand(),
+            "der eigene Stand bleibt vollstaendig stehen"
+        );
+    }
+
+    /// Eine verschwundene Datei geht denselben Weg wie eine geaenderte, und der
+    /// Preis dafuer steht am Doc-Kommentar von [`Editormodell::sichern`].
+    #[test]
+    fn eine_verschwundene_datei_wird_nicht_neu_geschrieben() {
+        let ordner = Pruefordner::neu("sichern-fort");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        modell.bearbeiten("im Editor getippt\n".to_owned());
+
+        std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
+
+        assert!(
+            matches!(modell.sichern(), Sicherungsausgang::Gescheitert(_)),
+            "eine verschwundene Datei gilt als von aussen geaendert"
+        );
+        assert!(!pfad.exists(), "geschrieben wurde nichts");
+        assert!(modell.hat_ungesicherten_stand());
     }
 
     #[test]
@@ -1265,6 +1381,11 @@ mod tests {
 
     /// C4: der Stempel steht nach dem Oeffnen und nach dem Sichern auf der
     /// Datei, wie sie auf der Platte liegt.
+    ///
+    /// Die Reihenfolge ist seit S25 die umgekehrte: das Sichern kommt vor der
+    /// fremden Aenderung, weil es nach ihr gar nicht mehr schreibt. Geprueft
+    /// wird dieselbe Zusage — das eigene Sichern ist keine Aenderung von aussen
+    /// und zieht den Stempel mit.
     #[test]
     fn der_stempel_kennt_eine_aenderung_von_aussen() {
         let ordner = Pruefordner::neu("stempel");
@@ -1273,16 +1394,22 @@ mod tests {
         assert!(modell.stempel().is_some());
         assert!(!modell.fremd_geaendert());
 
+        modell.bearbeiten("im Editor geändert\n".to_owned());
+        assert!(
+            !modell.fremd_geaendert(),
+            "die eigene Bearbeitung ruehrt die Datei nicht an"
+        );
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        assert!(
+            !modell.fremd_geaendert(),
+            "das eigene Sichern zieht den Stempel mit"
+        );
+
         std::fs::write(&pfad, "von aussen geaendert\n").expect("die Datei laesst sich schreiben");
         assert!(
             modell.fremd_geaendert(),
             "C4: eine Aenderung von aussen wird bemerkt"
         );
-
-        // Das eigene Sichern ist keine Aenderung von aussen: es zieht den
-        // Stempel mit.
-        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert);
-        assert!(!modell.fremd_geaendert());
     }
 
     #[test]
@@ -1447,7 +1574,7 @@ mod tests {
             "der gehaltene Stand traegt `\\n` als einziges Zeilenende"
         );
 
-        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert);
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
         let auf_der_platte =
             std::fs::read_to_string(&pfad).expect("die Datei ist nach dem Sichern lesbar");
         assert!(
