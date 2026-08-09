@@ -100,9 +100,17 @@
 //! Sichern Zeichen fuer Zeichen wieder in der Datei steht. Eine typografische
 //! Ersetzung von Anfuehrungszeichen oder Bindestrichen aendert Programmtext
 //! still, und die Zusage aus C4 lautet, dass der gesicherte Stand der getippte
-//! ist. Die Formatansicht aus C3 widerspricht dem nicht: sie faerbt ueber
-//! voruebergehende Merkmale des Layoutverwalters ein, die den Textspeicher
-//! nicht anfassen.
+//! ist.
+//!
+//! **Die Formatansicht aus C3 widerspricht dem nicht, und der Grund ist nicht,
+//! wo ihre Merkmale liegen.** Sie setzt Farbe und Unterstreichung als
+//! voruebergehende Merkmale des Layoutverwalters und die Markdown-Auszeichnung
+//! als Merkmale des Textspeichers; warum sie geteilt werden muss, steht im
+//! Modulkopf von [`crate::hervorhebung`]. In die Datei geraet weder das eine
+//! noch das andere, weil der Sicherungsweg
+//! [`Editormodell::stand`](crate::editormodell::Editormodell::stand) schreibt
+//! und der aus `NSTextView::string` kommt — den **Zeichen** der Flaeche. Kein
+//! Merkmal wird auf diesem Weg auch nur gelesen.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -112,26 +120,34 @@
 //! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
 //! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
+use objc2::rc::{Retained, Weak};
+use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSFont, NSScrollView, NSTextAlignment, NSTextDelegate,
-    NSTextField, NSTextView, NSTextViewDelegate, NSView,
+    NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
+    NSAutoresizingMaskOptions, NSColor, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
+    NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextView, NSTextViewDelegate,
+    NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
-    NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, ns_string,
+    MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
+    NSPoint, NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval,
+    NSTimer, ns_string,
 };
 
 use krk_core::text::{Abweisung, Fund, Markensprung};
 
-use crate::editormodell::{Editormodell, Ladeausgang, Sicherungsausgang};
+use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang};
+use crate::hervorhebung::{
+    Abholung, Auszeichnung, Darstellungsart, Einfaerbungsvorgang, Farbe, Formatierung, Tafel,
+};
 
-use super::nummernspalte::Nummernspalte;
+use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
@@ -293,6 +309,92 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
 
+/// Um wie viele Punkte die Formatansicht ihre Grundschrift ueber die der
+/// Rohansicht hebt (C3).
+///
+/// C3 verlangt fuer einfachen Text "eine lesbare Schriftgroesse" und der Plan
+/// "eine gegenueber der Rohansicht lesbarere". Beides nennt keine Zahl, und
+/// diese ist gewaehlt und nicht abgeleitet: zwei Punkte sind der kleinste
+/// Schritt, den man nebeneinandergehalten sieht, und der groesste, der die Zahl
+/// der Zeilen im Bild nicht spuerbar aendert.
+///
+/// **Code bekommt den Zuschlag nicht.** Quelltext wird in der Groesse gelesen,
+/// in der er geschrieben wurde, und der sichtbare Unterschied zur Rohansicht ist
+/// bei ihm die Einfaerbung und der Umbruch.
+const LESEZUSCHLAG: f64 = 2.0;
+
+/// Um welchen Faktor eine Markdown-Ueberschrift ihre Grundschrift ueberschreitet,
+/// nach Stufen von 1 bis 6.
+///
+/// Absteigend, weil `#` mehr wiegt als `######`. Die Zahlen sind gewaehlt und
+/// nicht abgeleitet; sie halten die sechste Stufe noch merklich ueber dem
+/// Fliesstext, damit keine Ueberschrift aussieht wie keine.
+const UEBERSCHRIFTSFAKTOREN: [f64; 6] = [1.7, 1.5, 1.3, 1.2, 1.1, 1.05];
+
+/// Der Einzug einer Markdown-Listenzeile in Punkten (C3).
+///
+/// Er rueckt den ganzen Absatz ein, das Aufzaehlungszeichen eingeschlossen; das
+/// Zeichen selbst bleibt stehen, wie der Datensatz vom 260808-0140 es verlangt.
+const LISTENEINZUG: f64 = 20.0;
+
+define_class!(
+    /// Die Ansicht, in der Kopf und Textflaeche haengen — und die Stelle, an
+    /// der KRK den Wechsel des Erscheinungsbildes bemerkt (S34).
+    ///
+    /// **Sie traegt genau eine Aufgabe ueber die einer `NSView` hinaus.**
+    /// `viewDidChangeEffectiveAppearance` ist die eine Stelle, die AppKit fuer
+    /// die Frage "hat das System auf Dunkel umgestellt" vorsieht, und sie ist
+    /// eine Methode einer Ansicht. Der [`Editorbereich`] ist keine Ansicht,
+    /// sondern ein `NSObject`, also braucht die Meldung eine Ansicht, die sie
+    /// annimmt und weiterreicht.
+    ///
+    /// Die Rueckverbindung ist **schwach**, sonst schloesse sich der Ring
+    /// Editorbereich → Ansicht → Rueckverweis → Editorbereich. Dieselbe Form
+    /// wie der Rueckruf der Tableiste in [`super::vorschau`].
+    // SAFETY:
+    // - Die Oberklasse NSView stellt keine Bedingungen an Unterklassen.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = RefCell<Option<Weak<Editorbereich>>>]
+    pub struct Editorsicht;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Editorsicht {}
+
+    impl Editorsicht {
+        /// Das System hat auf Hell oder Dunkel umgestellt (S34).
+        // SAFETY: Die Signatur entspricht der von NSView.
+        #[unsafe(method(viewDidChangeEffectiveAppearance))]
+        fn erscheinung_gewechselt(&self) {
+            // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht ohne
+            // Argument und ohne Rueckgabe. Sie zuerst, weil AppKit hinter
+            // dieser Methode die Erscheinung der Unteransichten nachzieht und
+            // KRK danach eine bereits umgestellte Flaeche vorfindet.
+            let _: () = unsafe { msg_send![super(self), viewDidChangeEffectiveAppearance] };
+            let editor = self.ivars().borrow().as_ref().and_then(Weak::load);
+            if let Some(editor) = editor {
+                editor.erscheinung_nachziehen();
+            }
+        }
+    }
+);
+
+impl Editorsicht {
+    /// Eine Ansicht mit dem genannten Rahmen, noch ohne Rueckverweis.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
+        // SAFETY: `initWithFrame:` von NSView hat die hier angenommene
+        // Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Traegt den Rueckverweis nach, sobald es den Editorbereich gibt.
+    fn ziel_setzen(&self, editor: &Editorbereich) {
+        *self.ivars().borrow_mut() = Some(Weak::from_retained(&editor.retain()));
+    }
+}
+
 /// Die Senke, an die jeder [`Ladeausgang`] geht.
 ///
 /// Ein eigener Name, weil der Typ an drei Stellen steht — Feld, Setzer und
@@ -303,7 +405,11 @@ pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang)>;
 pub struct EditorIvars {
     /// Die Ansicht, die in die Aufteilung gehaengt wird: Kopf und Bildlauf
     /// darin.
-    bereich: Retained<NSView>,
+    ///
+    /// Eine [`Editorsicht`] und keine blosse `NSView`, weil an ihr die eine
+    /// Meldung haengt, mit der AppKit den Wechsel des Erscheinungsbildes
+    /// anzeigt (S34).
+    bereich: Retained<Editorsicht>,
     /// Der Kopf mit dem Dateinamen und dem Abweichungszeichen (C4).
     kopf: Retained<NSTextField>,
     /// Die Textflaeche selbst, editierbar und mit einem Textspeicher.
@@ -326,6 +432,29 @@ pub struct EditorIvars {
     /// an [`Editorbereich::melder_setzen`]. `None` heisst: der Aufbau ist noch
     /// nicht so weit, und dann gibt es auch niemanden, der etwas anfinge.
     melden: RefCell<Option<Ausgangsmelder>>,
+    /// Das laufende Einfaerben, falls eines laeuft (C3).
+    ///
+    /// Hoechstens eines. Der Editor haelt hoechstens eine Datei und zeigt
+    /// hoechstens eine Ansicht; ein zweiter Lauf daneben faerbte denselben Text
+    /// ein zweites Mal ein. Fallengelassen wird der Vorgang beim Wechsel in die
+    /// Rohansicht und beim Schliessen: sein Empfaenger faellt mit, und das
+    /// `send` des ueberholten Fadens scheitert still.
+    einfaerbung: RefCell<Option<Einfaerbungsvorgang>>,
+    /// Ob der laufende Lauf ueberholt ist und nach seiner Rueckkehr sofort ein
+    /// neuer zu starten ist (C3).
+    ///
+    /// **Das ist die ganze Zusammenfassung schneller Anfragen.** Wer tippt,
+    /// stellt je Anschlag eine Anfrage; laeuft schon eine, wird nicht eine
+    /// zweite gestartet, sondern diese Marke gesetzt. Damit lebt zu jedem
+    /// Zeitpunkt hoechstens ein Faden, und der letzte Stand wird genau einmal
+    /// eingefaerbt, statt jeder Zwischenstand einmal.
+    ///
+    /// Sie traegt beide Anlaesse: einen geaenderten Text und eine gewechselte
+    /// Farbtafel. Beide verlangen dasselbe, naemlich einen neuen Lauf, und eine
+    /// zweite Marke daneben unterschiede etwas, das dieselbe Antwort hat.
+    einfaerbung_erneut: Cell<bool>,
+    /// Welche der beiden Farbtafeln gerade gilt (S34).
+    tafel: Cell<Tafel>,
 }
 
 define_class!(
@@ -377,10 +506,7 @@ define_class!(
 impl Editorbereich {
     /// Baut Kopf und Textflaeche mit einem Modell, das noch keine Datei haelt.
     pub fn bauen(mtm: MainThreadMarker) -> Retained<Self> {
-        let bereich = NSView::initWithFrame(
-            NSView::alloc(mtm),
-            NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
-        );
+        let bereich = Editorsicht::neu(mtm, NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
         bereich.setAutoresizingMask(
             NSAutoresizingMaskOptions::ViewWidthSizable
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
@@ -414,6 +540,7 @@ impl Editorbereich {
         ));
         bereich.addSubview(&kopf);
 
+        let tafel = tafel_der_erscheinung(&bereich);
         let this = Self::alloc(mtm).set_ivars(EditorIvars {
             bereich,
             kopf,
@@ -421,6 +548,9 @@ impl Editorbereich {
             modell: RefCell::new(Editormodell::neu()),
             takt: RefCell::new(None),
             melden: RefCell::new(None),
+            einfaerbung: RefCell::new(None),
+            einfaerbung_erneut: Cell::new(false),
+            tafel: Cell::new(tafel),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -430,14 +560,18 @@ impl Editorbereich {
         this.ivars()
             .text
             .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+        // Derselbe Grund an der Ansicht: der Wechsel des Erscheinungsbildes
+        // laeuft ueber sie hierher, und "hierher" gibt es erst ab dieser Zeile.
+        this.ivars().bereich.ziel_setzen(&this);
 
         // Die Flaeche zeigt von der ersten Zeichnung an den Stand des Modells
         // und nicht irgendeinen. Beim Aufbau ist er leer, weil der Editor keine
         // Datei haelt; die Zeile steht trotzdem hier, damit es genau einen Weg
         // vom Modell in die Flaeche gibt und keinen Anfangszustand daneben. Der
-        // Kopf folgt derselben Regel.
+        // Kopf und die Ansicht folgen derselben Regel.
         this.stand_einsetzen();
         this.kopf_nachziehen();
+        this.darstellung_nachziehen();
         this
     }
 
@@ -605,6 +739,7 @@ impl Editorbereich {
         if ausgang == Ladeausgang::Geoeffnet {
             self.stand_einsetzen();
             self.kopf_nachziehen();
+            self.darstellung_nachziehen();
         }
         self.melden(ausgang);
     }
@@ -631,6 +766,10 @@ impl Editorbereich {
         self.ivars().modell.borrow_mut().schliessen();
         self.stand_einsetzen();
         self.kopf_nachziehen();
+        // Ohne Datei gibt es keine Sprache und nichts einzufaerben; der Ruf
+        // raeumt die gesetzten Merkmale ab und laesst einen laufenden
+        // Einfaerbungsfaden fallen.
+        self.darstellung_nachziehen();
     }
 
     /// Holt die Meldung des Arbeitsfadens ab (C2).
@@ -648,23 +787,39 @@ impl Editorbereich {
     /// ueberfluessig: sie ist die Stelle, an der ein spaeter dazukommender
     /// Ausgang auffaellt, statt still mitzulaufen.
     ///
-    /// **Der Takt endet, sobald nichts mehr laedt**, und zwar auf beiden Wegen:
-    /// nach einer eingetroffenen Meldung und nach einem Faden, der ohne Meldung
-    /// gefallen ist. Der zweite Fall hinterlaesst allein die Zeile auf der
-    /// Standardfehlerausgabe, die `Ladevorgang::starten` schreibt; dasselbe
+    /// **Der Takt endet, sobald nichts mehr laeuft**, und zwar auf beiden
+    /// Wegen: nach einer eingetroffenen Meldung und nach einem Faden, der ohne
+    /// Meldung gefallen ist. Der zweite Fall hinterlaesst allein die Zeile auf
+    /// der Standardfehlerausgabe, die `Ladevorgang::starten` schreibt; dasselbe
     /// gilt seit der Runde 1 fuer die Vorschau.
+    ///
+    /// **Ein Takt fuer zwei Arbeitsfaeden.** Seit S33 laeuft neben dem Lesen das
+    /// Einfaerben auf einem eigenen Faden, und beide werden hier abgeholt. Ein
+    /// zweiter Zeitgeber daneben fragte im selben Sechzigstel dieselbe
+    /// Laufschleife ein zweites Mal; er braechte kein Bild frueher, weil in
+    /// einem Bild nur einmal gezeichnet wird.
     fn einziehen(&self) {
+        self.ladeausgang_einziehen();
+        self.einfaerbung_einziehen();
+        if !self.ivars().modell.borrow().laedt_noch() && self.ivars().einfaerbung.borrow().is_none()
+        {
+            self.takt_beenden();
+        }
+    }
+
+    /// Holt die Meldung des Lesefadens ab (C2).
+    fn ladeausgang_einziehen(&self) {
         let eingetroffen = self.ivars().modell.borrow_mut().einziehen();
         let Some(ausgang) = eingetroffen else {
-            if !self.ivars().modell.borrow().laedt_noch() {
-                self.takt_beenden();
-            }
             return;
         };
-        self.takt_beenden();
         if ausgang == Ladeausgang::Geoeffnet {
             self.stand_einsetzen();
             self.kopf_nachziehen();
+            // Die neue Datei kann eine andere Besetzung der Formatansicht
+            // verlangen als die vorige: Schrift, Umbruch und Einfaerbung
+            // haengen am Dateityp und an der Sprache, die die Kiste kennt.
+            self.darstellung_nachziehen();
         }
         self.melden(ausgang);
     }
@@ -740,6 +895,12 @@ impl Editorbereich {
         if !war_abweichend {
             self.kopf_nachziehen();
         }
+        // Die Einfaerbung gehoert zu dem Stand, aus dem sie gebildet wurde. Wer
+        // ein Anfuehrungszeichen tippt, macht aus dem Rest der Datei eine
+        // Zeichenkette, und ohne diesen Ruf bliebe die alte Farbe stehen. Die
+        // Anfrage kostet nichts, solange schon eine laeuft; siehe
+        // [`Self::einfaerbung_anfordern`].
+        self.einfaerbung_anfordern();
     }
 
     /// Schreibt Dateiname und Abweichungszeichen in den Kopf (C4).
@@ -792,6 +953,426 @@ impl Editorbereich {
         };
         self.ivars().text.setString(&stand);
     }
+
+    // ------------------------------------------------------------------
+    // Die beiden Ansichten (C3)
+    // ------------------------------------------------------------------
+
+    /// Wechselt zwischen Rohansicht und Formatansicht (C3).
+    ///
+    /// **Der ganze Wechsel ist ein Ruf ins Modell und ein Nachziehen der
+    /// Darstellung.** Der Textspeicher wird dabei nicht angefasst, und deshalb
+    /// kann der Wechsel nichts verlieren: es gibt keinen zweiten Textbestand, in
+    /// den etwas verlorengehen koennte, und
+    /// [`Editormodell::ansicht_umschalten`] fasst weder den Stand noch die
+    /// Abweichungsmarke an. Das zehnte Abnahmekriterium von C3 ist damit eine
+    /// Eigenschaft der Bauart und keine Zusage der Sorgfalt.
+    ///
+    /// **Die Schreibmarke bleibt, wo sie ist**, und zwar ohne eigenen Bau: sie
+    /// haengt an Zeichenstellen des Textspeichers, und der bleibt Zeichen fuer
+    /// Zeichen derselbe. Das elfte Abnahmekriterium von C3 faellt daraus an.
+    pub fn ansicht_umschalten(&self) {
+        self.ivars().modell.borrow_mut().ansicht_umschalten();
+        self.darstellung_nachziehen();
+    }
+
+    /// Setzt Grundschrift, Umbruch und Merkmale auf die gewaehlte Ansicht (C3).
+    ///
+    /// **Die eine Stelle, an der die Darstellung entsteht**, und sie kennt vier
+    /// Aufrufer: den Aufbau, ein gelungenes Oeffnen, das Schliessen und den
+    /// Ansichtswechsel. Alle vier stellen dieselbe Frage — welche Ansicht,
+    /// welche Datei —, und eine zweite Stelle daneben waere die erste
+    /// Gelegenheit, sie verschieden zu beantworten.
+    ///
+    /// Die drei Sachen, die sich aendern, stehen in `### Frage 7` des Plans: die
+    /// Schrift, der Umbruch und die Merkmale. Sie werden hier in dieser
+    /// Reihenfolge gesetzt, und die Reihenfolge zaehlt: `setFont:` und
+    /// `setTextColor:` einer `NSTextView` schreiben ueber den **ganzen**
+    /// Textspeicher, also muessen sie vor den Auszeichnungen stehen, die
+    /// einzelne Stellen davon ueberschreiben.
+    ///
+    /// **Die Einfaerbung kommt nicht von hier, sondern spaeter.** Sie laeuft auf
+    /// einem Arbeitsfaden (0,3 MB/s, gemessen; siehe `crate::hervorhebung`), und
+    /// diese Funktion fordert sie nur an. Bis sie eintrifft, steht der Text in
+    /// der Grundfarbe da — dieselbe Spanne, die schon beim Lesen einer grossen
+    /// Datei vergeht, und aus demselben Grund.
+    fn darstellung_nachziehen(&self) {
+        let (ansicht, art) = {
+            let modell = self.ivars().modell.borrow();
+            (
+                modell.ansicht(),
+                crate::hervorhebung::art(modell.pfad(), modell.typ()),
+            )
+        };
+
+        self.grundschrift_setzen(ansicht, art);
+        self.umbruch_setzen(ansicht == Ansicht::Format);
+        self.merkmale_zuruecksetzen();
+
+        match ansicht {
+            Ansicht::Format => self.einfaerbung_anfordern(),
+            // Die Rohansicht zeigt die Zeichen ohne Einfaerbung; ein laufender
+            // Faden hat nichts mehr abzuliefern und faellt mit seinem
+            // Empfaenger.
+            Ansicht::Roh => {
+                *self.ivars().einfaerbung.borrow_mut() = None;
+                self.ivars().einfaerbung_erneut.set(false);
+            }
+        }
+
+        self.nummernspalte_nachziehen();
+    }
+
+    /// Setzt die Grundschrift der Flaeche und damit auch die des naechsten
+    /// Anschlags (C3).
+    ///
+    /// **Eine Regel und keine drei.** Fest geschrieben wird, was Zeichen fuer
+    /// Zeichen gelesen wird: die Rohansicht immer, und die Formatansicht bei
+    /// Code. Alles Uebrige — einfacher Text und Markdown — bekommt die
+    /// Systemschrift mit dem [`LESEZUSCHLAG`]. Das ist die "lesbare
+    /// Schriftgroesse", die C3 fuer einfachen Text zusagt, und zugleich die
+    /// Grundschrift, ueber der die Markdown-Ueberschriften ihre Stufen haben.
+    ///
+    /// `setFont:` schreibt ueber den ganzen Textspeicher **und** setzt die
+    /// Merkmale des naechsten Anschlags. Beides ist gewollt: ohne das zweite
+    /// truege ein neu getipptes Zeichen die Schrift der vorigen Ansicht.
+    fn grundschrift_setzen(&self, ansicht: Ansicht, art: Darstellungsart) {
+        let (fest, groesse) = match (ansicht, art) {
+            (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
+                (true, NSFont::systemFontSize())
+            }
+            (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
+                (false, NSFont::systemFontSize() + LESEZUSCHLAG)
+            }
+        };
+        let schrift = if fest {
+            feste_schrift(groesse)
+        } else {
+            NSFont::systemFontOfSize(groesse)
+        };
+        self.ivars().text.setFont(Some(&schrift));
+        // Die Systemfarbe und nicht die der Tafel: sie loest sich in Hell wie in
+        // Dunkel gegen den Grund der Flaeche auf, und der Grund bleibt nach S34
+        // die Systemfarbe. Aus der Tafel kommen allein die Vordergrundfarben
+        // der Wortarten, und die setzt die Einfaerbung darueber.
+        self.ivars().text.setTextColor(Some(&NSColor::textColor()));
+    }
+
+    /// Schaltet den Umbruch am Fensterrand ein oder aus (C3).
+    ///
+    /// Die Rohansicht zeigt die Zeichen der Datei, also auch ihre Zeilenlaengen:
+    /// ohne Umbruch und mit einem waagerechten Schieber. Die Formatansicht
+    /// bricht am Fensterrand um, wie C3 es fuer einfachen Text ausdruecklich
+    /// zusagt und wie es fuer die beiden anderen Besetzungen ebenso gilt.
+    ///
+    /// **Der Rahmen der Flaeche wird beim Einschalten zurueckgesetzt.** In der
+    /// Rohansicht waechst sie mit der laengsten Zeile; bliebe sie so breit,
+    /// laege der Umbruchrand ausserhalb des Sichtbaren, und der Umbruch griffe
+    /// erst beim naechsten Auslegen aus einem anderen Anlass.
+    fn umbruch_setzen(&self, umbruch: bool) {
+        let text = &self.ivars().text;
+        let Some(rolle) = text.enclosingScrollView() else {
+            return;
+        };
+        let breite = rolle.contentSize().width;
+        rolle.setHasHorizontalScroller(!umbruch);
+        text.setHorizontallyResizable(!umbruch);
+        // SAFETY: Der Behaelter wird von der Flaeche selbst mitgebracht und hier
+        // nur eingestellt; kein fremdes Objekt wird gehalten.
+        if let Some(behaelter) = unsafe { text.textContainer() } {
+            behaelter.setWidthTracksTextView(umbruch);
+            behaelter.setContainerSize(if umbruch {
+                NSSize::new(breite, f64::MAX)
+            } else {
+                NSSize::new(f64::MAX, f64::MAX)
+            });
+        }
+        if umbruch {
+            let hoehe = text.frame().size.height;
+            text.setFrameSize(NSSize::new(breite, hoehe));
+        }
+    }
+
+    /// Nimmt jede gesetzte Auszeichnung wieder heraus.
+    ///
+    /// **Beide Listen**, denn beide werden gesetzt: die voruebergehenden
+    /// Merkmale im Layoutverwalter und der Absatzeinzug im Textspeicher. Schrift
+    /// und Farbe brauchen hier nichts, weil `setFont:` und `setTextColor:` in
+    /// [`Self::grundschrift_setzen`] den ganzen Speicher ueberschreiben; der
+    /// Einzug ist das einzige gesetzte Merkmal, das keines von beiden erreicht.
+    fn merkmale_zuruecksetzen(&self) {
+        let text = &self.ivars().text;
+        // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit und wird
+        // hier nur beschrieben; die Bereiche decken genau den vorhandenen Text.
+        unsafe {
+            if let Some(speicher) = text.textStorage() {
+                let ganz = NSRange::new(0, speicher.length());
+                speicher.removeAttribute_range(NSParagraphStyleAttributeName, ganz);
+                if let Some(verwalter) = text.layoutManager() {
+                    let leer: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
+                    verwalter.setTemporaryAttributes_forCharacterRange(&leer, ganz);
+                }
+            }
+        }
+    }
+
+    /// Fordert eine Einfaerbung des gehaltenen Standes an (C3).
+    ///
+    /// **Hoechstens ein Faden zur Zeit.** Laeuft schon einer, wird kein zweiter
+    /// gestartet, sondern nur vermerkt, dass sein Ergebnis ueberholt sein wird;
+    /// er wird dann nach seiner Rueckkehr sofort wiederholt. Damit kostet ein
+    /// Tastendruck waehrend eines laufenden Laufs nichts, und der Nutzer bekommt
+    /// die Einfaerbung des letzten Standes statt der jedes Zwischenstandes.
+    ///
+    /// **Die Rohansicht fordert nie an**, und die Abfrage steht hier und nicht
+    /// bei den drei Aufrufern. Sie zeigt die Zeichen der Datei ohne
+    /// Einfaerbung; eine Anfrage von dort brachte eine Lieferung zurueck, und
+    /// [`Self::formatierung_anwenden`] faerbte die Rohansicht ein. Der Weg ist
+    /// erreichbar, seit [`Self::text_zurueckschreiben`] bei jedem Anschlag
+    /// anfordert — dort wird nicht nach der Ansicht gefragt, sondern gemeldet,
+    /// dass sich der Text geaendert hat.
+    ///
+    /// Ohne gehaltene Datei geschieht ebenso nichts: es gibt keinen Pfad, an dem
+    /// die Kiste eine Sprache erkennen koennte, und nichts einzufaerben.
+    fn einfaerbung_anfordern(&self) {
+        if self.ivars().einfaerbung.borrow().is_some() {
+            self.ivars().einfaerbung_erneut.set(true);
+            return;
+        }
+        let (stand, pfad, typ) = {
+            let modell = self.ivars().modell.borrow();
+            if !modell.haelt_datei() || modell.ansicht() != Ansicht::Format {
+                return;
+            }
+            (
+                modell.stand().to_owned(),
+                modell.pfad().map(Path::to_path_buf),
+                modell.typ(),
+            )
+        };
+        let vorgang = Einfaerbungsvorgang::starten(stand, pfad, typ, self.ivars().tafel.get());
+        *self.ivars().einfaerbung.borrow_mut() = Some(vorgang);
+        self.ivars().einfaerbung_erneut.set(false);
+        self.takt_starten();
+    }
+
+    /// Holt die Meldung des Einfaerbungsfadens ab (C3).
+    ///
+    /// **Ein ueberholtes Ergebnis wird nicht angewendet, sondern fallengelassen
+    /// und sofort neu angefordert.** Es waere nicht nur veraltet: seine Bereiche
+    /// zeigten in einen Text, der inzwischen kuerzer sein kann, und ein
+    /// `NSRange` hinter dem Text beantwortet AppKit mit einer
+    /// Objective-C-Ausnahme. Die ist in Rust nicht zu fangen und beendet das
+    /// Programm.
+    fn einfaerbung_einziehen(&self) {
+        let abholung = {
+            let vorgang = self.ivars().einfaerbung.borrow();
+            match vorgang.as_ref() {
+                Some(vorgang) => vorgang.abholen(),
+                None => return,
+            }
+        };
+        match abholung {
+            Abholung::Laeuft => {}
+            // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
+            // Sinn mehr. Derselbe Zweig und derselbe Grund wie beim Lesevorgang.
+            Abholung::Weggefallen => {
+                *self.ivars().einfaerbung.borrow_mut() = None;
+                self.ivars().einfaerbung_erneut.set(false);
+            }
+            Abholung::Fertig(formatierung) => {
+                *self.ivars().einfaerbung.borrow_mut() = None;
+                if self.ivars().einfaerbung_erneut.replace(false) {
+                    self.einfaerbung_anfordern();
+                } else {
+                    self.formatierung_anwenden(&formatierung);
+                }
+            }
+        }
+    }
+
+    /// Traegt eine fertige Formatierung in die Flaeche (C3).
+    ///
+    /// **Zwei Listen und zwei Orte**, und der Grund steht im Modulkopf von
+    /// `crate::hervorhebung`: der Layoutverwalter beachtet als voruebergehendes
+    /// Merkmal allein, was die Auslegung nicht aendert. Farbe und
+    /// Unterstreichung gehen deshalb dorthin, Schriftgroesse, Schriftschnitt,
+    /// feste Schrift und Einzug in den Textspeicher. In die **Datei** geraet
+    /// weder das eine noch das andere: gesichert wird
+    /// [`Editormodell::stand`], und der kommt aus den Zeichen der Flaeche und
+    /// nicht aus ihren Merkmalen.
+    ///
+    /// **Der Guertel vorweg.** Stimmt die Laenge nicht mehr, gehoert die
+    /// Lieferung zu einem anderen Stand, und jeder Bereich dahinter waere ein
+    /// Programmabbruch statt eines falschen Bildes. Erreichbar ist der Fall
+    /// nicht, weil ein ueberholtes Ergebnis schon in
+    /// [`Self::einfaerbung_einziehen`] fallengelassen wird; er steht hier, weil
+    /// der Preis eines Irrtums an dieser Stelle das Programm ist.
+    fn formatierung_anwenden(&self, formatierung: &Formatierung) {
+        let text = &self.ivars().text;
+        // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit.
+        let (speicher, verwalter) = unsafe { (text.textStorage(), text.layoutManager()) };
+        let (Some(speicher), Some(verwalter)) = (speicher, verwalter) else {
+            return;
+        };
+        if speicher.length() != formatierung.laenge {
+            return;
+        }
+        let ganz = NSRange::new(0, formatierung.laenge);
+
+        // Die Merkmale des Textspeichers: was auf die Auslegung wirkt.
+        let grundgroesse = NSFont::systemFontSize() + LESEZUSCHLAG;
+        speicher.beginEditing();
+        for stelle in &formatierung.auszeichnungen {
+            let bereich = NSRange::new(stelle.anfang, stelle.laenge);
+            let merkmale = match stelle.art {
+                Auszeichnung::Ueberschrift { stufe } => {
+                    let faktor = UEBERSCHRIFTSFAKTOREN[usize::from(stufe.clamp(1, 6)) - 1];
+                    schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse * faktor))
+                }
+                Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
+                Auszeichnung::Listenzeile => einzugsmerkmal(),
+            };
+            // SAFETY: Der Bereich liegt im Text; die Laenge ist oben geprueft,
+            // und die Stellen der Formatierung sind aufsteigend und
+            // ueberschneidungsfrei.
+            unsafe { speicher.addAttributes_range(&merkmale, bereich) };
+        }
+        speicher.endEditing();
+
+        // Die voruebergehenden Merkmale: was die Auslegung nicht anfasst.
+        let strich = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
+        let mut farben: HashMap<Farbe, Retained<NSColor>> = HashMap::new();
+        // SAFETY: Dieselbe Pruefung deckt beide Schleifen; der Verwalter gehoert
+        // dieser Flaeche.
+        unsafe {
+            verwalter.setTemporaryAttributes_forCharacterRange(&NSDictionary::new(), ganz);
+            for stueck in &formatierung.einfaerbungen {
+                let bereich = NSRange::new(stueck.anfang, stueck.laenge);
+                let farbe = farben
+                    .entry(stueck.farbe)
+                    .or_insert_with(|| nsfarbe(stueck.farbe));
+                verwalter.addTemporaryAttribute_value_forCharacterRange(
+                    NSForegroundColorAttributeName,
+                    farbe,
+                    bereich,
+                );
+                if stueck.unterstrichen {
+                    verwalter.addTemporaryAttribute_value_forCharacterRange(
+                        NSUnderlineStyleAttributeName,
+                        &strich,
+                        bereich,
+                    );
+                }
+            }
+        }
+
+        // Die Auszeichnungen haben die Zeilenkaesten geaendert; die Nummern
+        // stehen sonst neben dem zuletzt gezeichneten Umbruch.
+        self.nummernspalte_nachziehen();
+    }
+
+    /// Zieht die Farbtafel auf das gewechselte Erscheinungsbild nach (S34).
+    ///
+    /// Gerufen von [`Editorsicht`], der einen Stelle, an der AppKit den Wechsel
+    /// meldet. Hat sich die Tafel nicht geaendert, geschieht nichts: die Meldung
+    /// kommt auch bei Wechseln, die Hell und Dunkel nicht betreffen, und ein
+    /// Einfaerbungslauf ueber eine Datei von 16 MB ist kein Preis fuer nichts.
+    ///
+    /// Ob ueberhaupt einzufaerben ist, fragt
+    /// [`Self::einfaerbung_anfordern`] und nicht diese Stelle; die Antwort
+    /// steht dort einmal.
+    fn erscheinung_nachziehen(&self) {
+        let neue = tafel_der_erscheinung(&self.ivars().bereich);
+        if neue == self.ivars().tafel.get() {
+            return;
+        }
+        self.ivars().tafel.set(neue);
+        self.einfaerbung_anfordern();
+    }
+
+    /// Laesst die Nummernspalte neu zeichnen.
+    ///
+    /// Umbruch und Schrift aendern die Zeilenkaesten des Layoutverwalters, ohne
+    /// dass der Textspeicher eine Meldung verschickt, an der die Spalte es
+    /// bemerken koennte; ohne diesen Ruf zeigte die Formatansicht die Nummern
+    /// des zuletzt gezeichneten Umbruchs, und das fuenfte Abnahmekriterium von
+    /// C10 waere gebrochen. Der Vermerk stammt aus S46.
+    fn nummernspalte_nachziehen(&self) {
+        if let Some(rolle) = self.ivars().text.enclosingScrollView() {
+            nummernspalte::spalte_neu_zeichnen(&rolle);
+        }
+    }
+}
+
+/// Welche Farbtafel zum wirksamen Erscheinungsbild dieser Ansicht passt (S34).
+///
+/// **Die eine Zuordnung**, und sie ist eine Zeile und keine Tabelle:
+/// `bestMatchFromAppearancesWithNames:` ist die Stelle, die AppKit fuer diese
+/// Frage vorsieht, und sie beantwortet auch die Erscheinungsbilder mit erhoehtem
+/// Kontrast, indem sie sie auf eines der beiden genannten abbildet.
+///
+/// Alles, was nicht das dunkle Erscheinungsbild ist, bekommt die helle Tafel.
+/// Die Fallunterscheidung ist damit trennscharf und vollstaendig, ohne dass KRK
+/// eine Liste der Erscheinungsbilder fuehrte, die das System kennt.
+fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
+    // SAFETY: Zwei Fremdsymbole von AppKit, die Namen der beiden
+    // Erscheinungsbilder. Sie werden gelesen und nicht geschrieben.
+    let (hell, dunkel) = unsafe { (NSAppearanceNameAqua, NSAppearanceNameDarkAqua) };
+    let namen = NSArray::from_slice(&[hell, dunkel]);
+    match sicht
+        .effectiveAppearance()
+        .bestMatchFromAppearancesWithNames(&namen)
+    {
+        Some(name) if *name == *dunkel => Tafel::Dunkel,
+        _ => Tafel::Hell,
+    }
+}
+
+/// Die feste Schreibmaschinenschrift des Nutzers, hilfsweise die Systemschrift.
+///
+/// Dieselbe Wahl und derselbe Rueckfall wie in `super::nummernspalte`. Ein
+/// System ohne feste Schrift gibt es nicht; der Rueckfall steht da, weil die
+/// Schnittstelle ihn zulaesst und ein Editor ohne Schrift keine Antwort ist.
+fn feste_schrift(groesse: f64) -> Retained<NSFont> {
+    NSFont::userFixedPitchFontOfSize(groesse).unwrap_or_else(|| NSFont::systemFontOfSize(groesse))
+}
+
+/// Ein Merkmalsverzeichnis mit genau einer Schrift darin.
+fn schriftmerkmal(schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject>> {
+    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname der Schrift. Es wird
+    // gelesen und nicht geschrieben.
+    let schluessel = unsafe { [NSFontAttributeName] };
+    let werte: [&AnyObject; 1] = [schrift];
+    NSDictionary::from_slices(&schluessel, &werte)
+}
+
+/// Ein Merkmalsverzeichnis mit dem Einzug einer Listenzeile darin (C3).
+fn einzugsmerkmal() -> Retained<NSDictionary<NSString, AnyObject>> {
+    let stil = NSMutableParagraphStyle::new();
+    // Beide, damit die erste Zeile mit dem Aufzaehlungszeichen genauso weit
+    // einrueckt wie ihre Fortsetzung nach einem Umbruch; sonst haengt das
+    // Zeichen als einziges am linken Rand.
+    stil.setFirstLineHeadIndent(LISTENEINZUG);
+    stil.setHeadIndent(LISTENEINZUG);
+    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
+    let schluessel = unsafe { [NSParagraphStyleAttributeName] };
+    let werte: [&AnyObject; 1] = [&stil];
+    NSDictionary::from_slices(&schluessel, &werte)
+}
+
+/// Eine Farbe der Tafel als `NSColor`.
+///
+/// Im sRGB-Farbraum, weil die Tafeln ihre Werte darin angeben. Ohne Angabe des
+/// Farbraums nimmt AppKit den kalibrierten, und dieselbe Zahl saehe dann anders
+/// aus als in jedem anderen Programm, das dieselbe Tafel zeigt.
+fn nsfarbe(farbe: Farbe) -> Retained<NSColor> {
+    NSColor::colorWithSRGBRed_green_blue_alpha(
+        f64::from(farbe.rot) / 255.0,
+        f64::from(farbe.gruen) / 255.0,
+        f64::from(farbe.blau) / 255.0,
+        1.0,
+    )
 }
 
 /// Was am Kopf des Editorbereichs steht (C4).

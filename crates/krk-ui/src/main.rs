@@ -40,6 +40,7 @@ mod belegungsmodell;
 mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
+mod hervorhebung;
 mod kommandos;
 mod leistenmodell;
 mod messmodus;

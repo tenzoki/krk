@@ -452,6 +452,35 @@ impl Drop for Nummernspalte {
     }
 }
 
+/// Laesst die Spalte einer Bildlaufansicht neu zeichnen, falls sie eine traegt.
+///
+/// **Der Weg von aussen**, und der einzige. [`Nummernspalte::neu_zeichnen`]
+/// verlangt die Spalte selbst, und die haelt niemand ausser der
+/// Bildlaufansicht: [`Nummernspalte::einhaengen`] gibt sie nicht heraus, damit
+/// es keinen zweiten Halter gibt. Wer sie braucht, hat die Bildlaufansicht zur
+/// Hand und bekommt sie hier.
+///
+/// **Der Aufrufer ist, wer Umbruchbreite oder Schrift der Flaeche aendert.** Das
+/// ist seit S33 der Ansichtswechsel des Editors: er aendert beides, und der
+/// Textspeicher verschickt dabei keine Meldung, an der die Spalte den Wechsel
+/// bemerken koennte. Ohne diesen Ruf zeigte die Formatansicht die Nummern des
+/// zuletzt gezeichneten Umbruchs, und das fuenfte Abnahmekriterium von C10
+/// waere gebrochen.
+///
+/// Traegt die Ansicht keine Spalte oder eine fremde, geschieht nichts. Der Fall
+/// ist im Programm nicht erreichbar — beide Flaechen haengen die eine Klasse
+/// ein —, und es gibt nichts zu melden: eine Ansicht ohne Zeilennummern hat
+/// keine, die falsch stehen koennten.
+pub fn spalte_neu_zeichnen(rolle: &NSScrollView) {
+    let Some(spalte) = rolle.verticalRulerView() else {
+        return;
+    };
+    let spalte: &AnyObject = &spalte;
+    if let Some(spalte) = spalte.downcast_ref::<Nummernspalte>() {
+        spalte.neu_zeichnen();
+    }
+}
+
 /// Dieselben Zeilenanfaenge wie im [`Zeilenindex`], in AppKits Koordinate.
 ///
 /// **Ein Koordinatenwechsel und keine zweite Zaehlung.** Welche Stellen

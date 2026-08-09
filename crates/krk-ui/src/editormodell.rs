@@ -81,10 +81,15 @@
 //! Ansichten arbeiten auf demselben Stand und nicht auf zwei Kopien", **ohne
 //! eine Vorkehrung**: [`Editormodell::ansicht_umschalten`] fasst weder
 //! [`Editormodell::stand`] noch die Abweichungsmarke an, und es gibt keinen
-//! zweiten Textbestand, in den etwas verlorengehen koennte. Die Ansicht setzt
-//! die Einfaerbung als voruebergehende Merkmale des Layoutverwalters und
-//! nicht in den Textspeicher; das ist die zweite Haelfte derselben Zusage und
-//! steht in `crate::appkit::editor`.
+//! zweiten Textbestand, in den etwas verlorengehen koennte.
+//!
+//! Die zweite Haelfte derselben Zusage steht in `crate::appkit::editor` und
+//! lautet: **kein Merkmal der Flaeche kann beim Sichern in die Datei geraten.**
+//! Sie haengt nicht daran, in welchem der beiden Speicher ein Merkmal liegt,
+//! sondern daran, dass [`Editormodell::sichern`] allein [`Editormodell::stand`]
+//! schreibt und der aus den **Zeichen** der Flaeche kommt. Warum ein Teil der
+//! Auszeichnung im Textspeicher liegen muss und nicht im Layoutverwalter, steht
+//! im Modulkopf von `crate::hervorhebung`.
 //!
 //! Die Ansichtswahl bleibt ueber einen Dateiwechsel hinweg stehen. Wer eine
 //! Markdown-Datei gerendert liest und danach eine Codedatei oeffnet, bekommt
@@ -242,8 +247,8 @@ impl Ansicht {
 /// Gestellt wird deshalb allein die Frage, die aus dem Pfad zu beantworten ist
 /// und die die Ansicht braucht, bevor sie die Kiste fragt: **verlangt diese
 /// Datei die Markdown-Zutaten?** Ueber Code gegen einfachen Text entscheidet
-/// `crate::appkit::editor` beim Darstellen, indem es die Kiste nach dem Pfad
-/// fragt und ihre Antwort nimmt.
+/// seit S33 `crate::hervorhebung::art` beim Darstellen, indem es die Kiste nach
+/// dem Pfad fragt und ihre Antwort nimmt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Dateityp {
     /// Markdown: die Formatansicht setzt Ueberschriften groesser, rueckt

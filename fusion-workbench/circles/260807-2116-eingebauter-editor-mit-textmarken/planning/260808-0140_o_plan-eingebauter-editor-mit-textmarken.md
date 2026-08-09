@@ -954,7 +954,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Ein kurzer Prüflauf zählt die geladenen Sprachdefinitionen auf und findet Rust, TOML, Markdown und Shell; er zählt die geladenen Farbtafeln auf und findet mindestens eine helle und eine dunkle. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-core/src crates/krk-ui/src` nennt weiterhin genau zwei Dateien. `cargo xtask bundle` läuft durch, und die Größe von `target/KRK.app` wächst um weniger als 10 MB gegenüber dem Stand vor diesem Schritt; die beiden Zahlen stehen im Sitzungsbericht. `Cargo.toml` trägt für jede neue Kiste eine Begründung mit den drei geforderten Angaben.
 
-#### 33. **Rohansicht und Formatansicht auf einem Stand**
+#### 33. [DONE] **Rohansicht und Formatansicht auf einem Stand**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/editor.rs` (erweitert: die beiden Darstellungen), `crates/krk-ui/src/editormodell.rs` (erweitert: die Ansichtswahl und der Dateityp), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Zweig für `Kommando::EditorAnsichtUmschalten`)
@@ -968,7 +968,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S16, S32; und S46, falls es vorher gelaufen ist (die Zeile aus dem Nachtrag entfällt sonst)
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Der Diff zeigt genau einen `NSTextStorage` und keinen zweiten Textbestand; `grep -c 'setString' crates/krk-ui/src/appkit/editor.rs` liefert genau die Stelle, die eine neue Datei einsetzt, und keine im Umschaltweg. Der Diff zeigt, dass die Einfärbung über `setTemporaryAttributes` und nicht über `addAttributes` läuft; das ist der Unterschied zwischen Layoutverwalter und Textspeicher und damit zwischen einer Einfärbung, die beim Sichern nicht mitgeht, und einer, die es könnte. **`Nutzerarbeit`** für sechs der zwölf Kriterien von C3: dass der Umschalter bei jedem Dateityp etwas Sichtbares tut, dass Markdown Überschriften, Listen und Links zeigt, dass Code seine vier Wortarten gegeneinander absetzt, dass eine unbekannte Sprache auf Text zurückfällt, dass eine in der Formatansicht getippte Änderung nach dem Umschalten in der Rohansicht steht, und dass die Schreibmarke ihre Stelle behält.
 
-#### 34. **Die Farbtafeln an Hell und Dunkel binden**
+#### 34. [DONE] **Die Farbtafeln an Hell und Dunkel binden**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/editor.rs` (erweitert: die Wahl der Tafel und der Wechsel)

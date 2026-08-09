@@ -1874,6 +1874,11 @@ impl Anwendungsdelegierter {
             // bei `bereichskommando`, aus demselben Grund wie das Sichern
             // darueber: der Editorbereich haengt am Delegierten.
             Kommando::EditorSchliessen => self.editor_schliessen(),
+            // Der Wechsel zwischen den beiden Ansichten aus C3. Er steht hier
+            // und nicht bei `bereichskommando`, aus demselben Grund wie das
+            // Sichern und das Schliessen darueber: der Editorbereich haengt am
+            // Delegierten.
+            Kommando::EditorAnsichtUmschalten => self.editor_ansicht_umschalten(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -3436,6 +3441,26 @@ impl Anwendungsdelegierter {
             return false;
         }
         self.anlass_beginnen(Anlass::EditorSchliessen)
+    }
+
+    /// Wechselt zwischen Rohansicht und Formatansicht (C3).
+    ///
+    /// **Keine Meldung in der Statuszeile.** Der Befehl tut etwas Sichtbares,
+    /// naemlich die Darstellung zu wechseln; das erste Abnahmekriterium von C3
+    /// verlangt genau das. Ein Satz daneben saegte am Rang der Meldungen, die
+    /// eine Antwort **sind** und nicht nur eine Beschreibung dessen, was der
+    /// Nutzer ohnehin sieht.
+    ///
+    /// **Der Wechsel verliert nichts.** Er fasst den Textspeicher nicht an; die
+    /// Begruendung im Einzelnen steht an
+    /// [`Editorbereich::ansicht_umschalten`](super::editor::Editorbereich::ansicht_umschalten)
+    /// und im Modulkopf von [`crate::editormodell`].
+    fn editor_ansicht_umschalten(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        editor.ansicht_umschalten();
+        true
     }
 
     /// Ob KRK sich jetzt beenden darf (C4).
