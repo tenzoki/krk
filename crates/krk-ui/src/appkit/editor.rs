@@ -5,9 +5,16 @@
 //! ```text
 //! ┌──────────────────────────────┐
 //! │ NSScrollView                 │  der fuenfte Bereich der Fensterzeile
-//! │   NSTextView                 │  editierbar, ein Textspeicher
+//! │  ┌────┬─────────────────────┐│
+//! │  │ 12 │ NSTextView          ││  editierbar, ein Textspeicher
+//! │  └────┴─────────────────────┘│  links die Nummernspalte aus C10
 //! └──────────────────────────────┘
 //! ```
+//!
+//! **Die Nummernspalte ist nicht hier gebaut, sondern eingehaengt.**
+//! [`super::nummernspalte`] haelt sie, und die Vorschau haengt dieselbe Klasse
+//! ein; C10 sagt eine Anzeige fuer beide Flaechen zu und nicht zwei aehnliche.
+//! Im Editor steht sie immer: der Spec laesst sie nicht abschalten.
 //!
 //! **Was hier steht und was im Modell.** Welche Datei der Editor haelt, ihr
 //! Stand, ob er von der Datei abweicht, die Ansichtswahl, der Dateityp und der
@@ -60,7 +67,7 @@
 //! eine Verfuegbarkeitspruefung zur Laufzeit.
 
 use std::cell::RefCell;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
@@ -72,6 +79,8 @@ use objc2_foundation::{
 use krk_core::text::{Abweisung, Fund, Markensprung};
 
 use crate::editormodell::{Editormodell, Ladeausgang};
+
+use super::nummernspalte::Nummernspalte;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
@@ -261,6 +270,21 @@ impl Editorbereich {
         self.ivars().modell.borrow().haelt_datei()
     }
 
+    /// Die Datei, die der Editor haelt, falls er eine haelt (C11).
+    ///
+    /// Der Fenstertitel fragt danach: steht der Fokus im Editor, zeigt der
+    /// Titel den vollen Pfad dieser Datei, auch dann, wenn das aktive
+    /// Dateifenster einen anderen Ordner zeigt. Die Frage geht wie
+    /// [`Self::haelt_datei`] an das Modell und wird hier nicht ein zweites Mal
+    /// beantwortet.
+    ///
+    /// Der Pfad wird abgeschrieben und nicht ausgeliehen: die Ausleihe des
+    /// Modells endet mit dieser Zeile, und der Aufrufer traegt den Wert durch
+    /// AppKit-Aufrufe, die hierher zuruecklaufen koennen.
+    pub fn pfad(&self) -> Option<PathBuf> {
+        self.ivars().modell.borrow().pfad().map(Path::to_path_buf)
+    }
+
     /// Nimmt die genannte Datei auf und zeigt ihren Stand (C2).
     ///
     /// **Der eine Weg, auf dem eine Datei in den Editor kommt.** Beide
@@ -377,6 +401,10 @@ fn textflaeche_bauen(
         text.setFont(Some(&schrift));
     }
     rolle.setDocumentView(Some(&text));
+    // Die Nummernspalte aus C10, dieselbe Klasse, die die Vorschau einhaengt.
+    // Sie steht im Editor immer: der Spec laesst sie nicht abschalten, und der
+    // Editor zeigt ausschliesslich den Inhalt einer Datei.
+    Nummernspalte::einhaengen(mtm, &rolle, &text);
     (rolle, text)
 }
 

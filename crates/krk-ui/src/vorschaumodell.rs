@@ -388,6 +388,26 @@ impl Vorschaumodell {
         self.tabs[self.aktiv].pfad.clone()
     }
 
+    /// Ob der aktive Tab den rohen Inhalt einer **Datei** zeigt (C10).
+    ///
+    /// Die eine Stelle, die entscheidet, ob die Nummernspalte in der Vorschau
+    /// steht. Sie ist wahr allein fuer [`Inhalt::Text`], und auch dort nur,
+    /// wenn der Tab einen Pfad hat: derselbe Wert traegt nach seinem eigenen
+    /// Doc-Kommentar auch den Text aus der Zwischenablage, und das dritte
+    /// Abnahmekriterium von C10 nimmt ihn ausdruecklich aus. Ein Text ohne
+    /// Datei hat keine Dateizeilen, die zu nummerieren waeren.
+    ///
+    /// **Die Fallunterscheidung ist vollstaendig und hat keinen
+    /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein sechster
+    /// Inhalt haelt den Bau an und erzwingt die Antwort auf die Frage, ob
+    /// neben ihm Zeilennummern stehen.
+    pub fn zeigt_dateitext(&self) -> bool {
+        match self.aktiver_inhalt() {
+            Inhalt::Text(_) => self.aktiver_pfad().is_some(),
+            Inhalt::Leer | Inhalt::Bild { .. } | Inhalt::Metadaten(_) | Inhalt::Hinweis(_) => false,
+        }
+    }
+
     /// Holt die wartenden Meldungen aller Tabs ab.
     ///
     /// Liefert, ob sich der **aktive** Tab dabei geaendert hat; nur dann muss
@@ -839,5 +859,70 @@ mod tests {
             Inhalt::Text("aus dem Faden".to_owned())
         );
         assert_eq!(modell.titel()[0], "inhalt.txt");
+    }
+
+    /// Setzt Inhalt und Pfad des aktiven Tabs unmittelbar.
+    ///
+    /// Die beiden gewoehnlichen Wege dorthin, [`Vorschaumodell::datei_anzeigen`]
+    /// und [`Vorschaumodell::zwischenablage_anzeigen`], erreichen zusammen nicht
+    /// alle fuenf Werte von [`Inhalt`]: die Metadaten entstehen nur aus einer
+    /// Datei, die keine Textdatei ist, das Bild nur aus einer lesbaren
+    /// Bilddatei. Die Probe unten deckt die Fallunterscheidung vollstaendig ab
+    /// und setzt deshalb hier an.
+    fn tab_setzen(inhalt: Inhalt, pfad: Option<&str>) -> Vorschaumodell {
+        let mut modell = Vorschaumodell::neu();
+        modell.tabs[0].inhalt = inhalt;
+        modell.tabs[0].pfad = pfad.map(PathBuf::from);
+        modell
+    }
+
+    fn probenmetadaten() -> Metadaten {
+        Metadaten {
+            name: "probe.txt".to_owned(),
+            pfad: PathBuf::from("/tmp/probe.txt"),
+            groesse: 12,
+            geaendert: SystemTime::UNIX_EPOCH,
+            rechte: 0o644,
+            typ: Typ::Datei,
+        }
+    }
+
+    /// Das zweite und das dritte Abnahmekriterium von C10: die Nummern stehen
+    /// beim rohen Inhalt einer Textdatei und sonst nirgends in der Vorschau.
+    #[test]
+    fn allein_der_text_einer_datei_traegt_zeilennummern() {
+        assert!(
+            tab_setzen(
+                Inhalt::Text("eins\nzwei".to_owned()),
+                Some("/tmp/probe.txt")
+            )
+            .zeigt_dateitext(),
+            "der rohe Inhalt einer Textdatei"
+        );
+        assert!(
+            !tab_setzen(Inhalt::Text("aus der Zwischenablage".to_owned()), None).zeigt_dateitext(),
+            "Text ohne Datei: die Zwischenablage aus C10 der Runde 1"
+        );
+        assert!(!tab_setzen(Inhalt::Leer, None).zeigt_dateitext());
+        assert!(
+            !tab_setzen(Inhalt::Hinweis("leer".to_owned()), None).zeigt_dateitext(),
+            "ein Hinweis hat keine Dateizeilen"
+        );
+        assert!(
+            !tab_setzen(Inhalt::Metadaten(probenmetadaten()), Some("/tmp/probe.bin"))
+                .zeigt_dateitext(),
+            "Metadaten stehen fuer eine Datei, sind aber nicht ihr Inhalt"
+        );
+        assert!(
+            !tab_setzen(
+                Inhalt::Bild {
+                    daten: Arc::new(vec![0, 1, 2]),
+                    metadaten: Some(probenmetadaten()),
+                },
+                Some("/tmp/probe.png"),
+            )
+            .zeigt_dateitext(),
+            "ein Bild hat keine Zeilen"
+        );
     }
 }

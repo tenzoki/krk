@@ -80,3 +80,51 @@ in die Vorschau und in den Editor den gemeldeten Fokus zeigt, entscheidet, ob
 der Fall überhaupt eintritt. Tritt er ein, ist der Enthaltensschnitt die
 Antwort, zusammen mit einer Festlegung, wohin der Feldeditor eines Blattes und
 der der Pfadeingabe gehören.
+
+## Behoben am 260809 mit S43
+
+`Anwendungsdelegierter::fokus` fragt seit S43 nach dem **Enthaltensein**. Der
+Durchgang läuft über `Bereich::ALLE`, holt zu jedem Wert die Wurzelansicht über
+die neue Zugriffsfunktion `Aufteilung::bereichssicht` und fragt
+`NSView::isDescendantOf:`; von `Bereich` auf `Fokus` kommt die erschöpfende
+Zuordnung `kommandos::fokus::in_bereich`. Die fünf Teilbäume sind zueinander
+fremd, weil es die fünf Unteransichten einer `NSSplitView` sind, und ein
+Ersthelfer liegt deshalb in höchstens einem.
+
+**Ohne die vorgeschlagene Messung geschnitten, und der Grund ist der Spec.** C9
+verlangt die richtige Antwort als Abnahmekriterium und nicht als Verbesserung
+für den Fall, dass er eintritt: das vierte Kriterium lautet, ein Klick in die
+Bildlaufleiste der Vorschau zeige die Vorschau an und nicht ein Dateifenster.
+Die Fokusanzeige aus C9 ist zugleich der Beleg dafür, dass der Fall eintritt —
+ohne sie war er nicht zu sehen, und genau das hält der Abschnitt "Wie weit es
+heute reicht" oben fest.
+
+**Die erste der beiden Gegenrechnungen ist am Code widerlegt, nicht bezahlt.**
+Sie lautete, der Feldeditor eines Textfeldes im Dateifenster bekäme mit der
+Enthaltensfrage jeden Dateibefehl ab. Nachgerechnet: er bekommt sie heute
+ebenfalls. `fokus()` hielt den Ersthelfer gegen fünf genannte Ansichten, der
+Feldeditor ist keine davon, und der Rückfall antwortete `Fokus::Dateifenster`.
+Vorher wie nachher lautet die Antwort `Dateifenster`; die Enthaltensfrage ändert
+an jener Stelle keine einzige Antwort. Was sie ändert, ist ausschließlich der
+Fall dieses Befundes.
+
+**Die zweite Gegenrechnung ist bezahlt, und sie kostete eine Zeile.** Die
+Wurzelansicht jedes Bereichs geht nach außen — aber nicht als fünf neue
+Zugriffsfunktionen, sondern als eine, die die bestehende Aufzählung `Bereich::ALLE`
+befragt. `Aufteilung::bereichssicht` ist die öffentliche Fassung der schon
+vorhandenen privaten `bereichsansicht`; eine zweite Aufzählung entsteht nicht.
+
+**Der Rückfall auf `Fokus::Dateifenster` bleibt und trägt danach genau einen
+Fall:** einen Ersthelfer, der in keiner der fünf Unteransichten liegt, also das
+Fenster selbst, die Aufteilung oder den Titelbalken. `Fokus::Anderswo` an dieser
+Stelle hieße, dass dann kein Befehl des Dateifensters mehr wirkt, und genau
+diesen Zustand hat der Defekt vom 260805-1845 schon einmal hergestellt.
+
+`fokusansicht` steht unverändert und behält seine Aufgabe: es beantwortet die
+andere Frage, nämlich welche Ansicht den Ersthelferrang **annehmen** soll, wenn
+KRK den Fokus setzt. Der Rang gehört genau einer Ansicht, das Enthaltensein gilt
+für einen ganzen Teilbaum.
+
+**Was am laufenden Bündel noch zu prüfen ist:** in die Bildlaufleiste der
+Vorschau klicken und `up` drücken. Die Auswahl im Dateifenster bewegt sich danach
+nicht mehr, und der Rahmen aus C9 steht auf der Vorschau.

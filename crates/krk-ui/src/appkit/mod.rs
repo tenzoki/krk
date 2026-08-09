@@ -7,8 +7,8 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Zwanzig Module, entlang dessen geschnitten, was AppKit als eigenstaendige
-//! Objekte fuehrt:
+//! Einundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! eigenstaendige Objekte fuehrt:
 //!
 //! ```text
 //! anwendung ──> menue
@@ -20,7 +20,9 @@
 //!           ──> terminal              ──> statuszeile
 //!           ──> hinweis
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
+//!           │             ──> nummernspalte
 //!           ──> editor   ──> crate::editormodell
+//!           │             ──> nummernspalte ──> krk-core::text::zeilen
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
@@ -38,6 +40,11 @@
 //! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
 //! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
 //! und die Vorschau teilen sich denselben Platz in der Fensterzeile.
+//! [`nummernspalte`] haelt die Zeilennummern aus C10, und zwar als **eine**
+//! Klasse fuer beide Textflaechen: Editor und Vorschau haengen dieselbe
+//! `NSRulerView`-Unterklasse in die senkrechte Linealstelle ihrer
+//! Bildlaufansicht. Gezaehlt wird dabei nicht hier, sondern in
+//! `krk_core::text::zeilen`.
 //! [`aufteilung`] haelt
 //! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
@@ -93,6 +100,7 @@ mod fsevents;
 mod hinweis;
 mod leiste;
 mod menue;
+mod nummernspalte;
 mod papierkorb;
 mod statuszeile;
 mod tabelle;

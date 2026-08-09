@@ -1249,7 +1249,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 
 ### Phase J: Der Fokus wird sichtbar (C9)
 
-#### 43. **Die Fokusabfrage fragt nach Enthaltensein statt nach Nämlichkeit**
+#### 43. [DONE] **Die Fokusabfrage fragt nach Enthaltensein statt nach Nämlichkeit**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `fokus`), `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: `bereichssicht`), `crates/krk-ui/src/kommandos/fokus.rs` (erweitert: `in_bereich`), `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md` (erweitert: die Abschlussnotiz)
@@ -1261,7 +1261,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0; der Übersetzer belegt dabei, dass `in_bereich` vollständig ist. Eine Probe in `crates/krk-ui` hält fest, dass `in_bereich` und `holt_hervor` einander umkehren: für jeden der drei Randbereiche liefert `in_bereich(holt_hervor(f).unwrap())` wieder `f`, und beide Dateifensterbereiche liefern `Fokus::Dateifenster`. Der Diff zeigt, dass `fokus()` nicht mehr `fokusansicht` ruft und dass `fokusansicht` unverändert steht. Der Defekt trägt den Marker `_c_`. **`Nutzerarbeit`:** am laufenden Bündel in die Bildlaufleiste der Vorschau klicken und `up` drücken; die Auswahl im Dateifenster bewegt sich danach nicht mehr.
 
-#### 44. **Fünf Kästen, eine Regel, drei Zustände**
+#### 44. [DONE] **Fünf Kästen, eine Regel, drei Zustände**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: `rahmen` auf fünf, `gerahmt` löst `gerahmtes_dateifenster` ab, `rahmen_setzen` löst `aktives_markieren` ab, der Modulkopf), `crates/krk-ui/src/kommandos/fokus.rs` (erweitert: `bereich_mit_fokus`, `Rahmenrolle`, `rahmenrolle`), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `aufteilung_nachziehen`, `fokus_setzen`, `breite_aendern`)
@@ -1274,7 +1274,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 - Abhängigkeiten: S43
 - Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0. Eine Probe deckt `rahmenrolle` über alle fünfzig Paare ab, also fünf Bereiche mal fünf Fokuswerte mal zwei aktive Seiten, und hält dabei drei Zusagen fest: bei jedem Fokuswert außer `Anderswo` trägt genau ein Bereich `Fokussiert`; das aktive Dateifenster trägt `Fokussiert` oder `AktivOhneFokus` und nie `Ruhig`; bei `Anderswo` trägt kein Bereich `Fokussiert`. `grep -rn 'aktives_markieren' crates/krk-ui/src` findet nichts mehr, und `grep -c 'holt_hervor' crates/krk-ui/src/appkit/anwendung.rs` liefert 0: die Zuordnung läuft über `bereich_mit_fokus`. `grep -c 'controlAccentColor' crates/krk-ui/src/appkit/aufteilung.rs` liefert 2, die volle und die zurückgetretene Fassung, und keine Farbe steht als Zahlenwert im Programmtext. **`Nutzerarbeit`:** am laufenden Bündel wandert der Rahmen mit den vier Fokusbefehlen durch alle fünf Bereiche, F4 setzt ihn auf den Editor, und das aktive Dateifenster bleibt dabei erkennbar.
 
-#### 45. **Der eine Auslösepunkt für jeden Wechsel des Ersthelfers**
+#### 45. [DONE] **Der eine Auslösepunkt für jeden Wechsel des Ersthelfers**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/fenster.rs` (erweitert: `Hauptfenster` als Unterklasse von `NSWindow`, `hauptfenster` liefert sie, der Modulkopf), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `oberflaeche_aufbauen` meldet sich an, `fokusanzeige_nachziehen`, die Zeile aus S44 in `fokus_setzen` entfällt)
@@ -1289,7 +1289,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 
 ### Phase K: Die Zeilennummern (C10)
 
-#### 46. **`appkit/nummernspalte`: die eine Spalte, im Editor eingehängt**
+#### 46. [DONE] **`appkit/nummernspalte`: die eine Spalte, im Editor eingehängt**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/nummernspalte.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend: `mod nummernspalte;` und der Modulkopf, der heute zwanzig Module aufzählt), `crates/krk-ui/src/appkit/editor.rs` (erweitert: `textflaeche_bauen` hängt die Spalte ein)
@@ -1304,7 +1304,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 - Abhängigkeiten: keine (S8 und S16 stehen)
 - Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0, `cargo xtask bundle` baut und signiert. `grep -rEn "lines\(\)|match_indices|split\('\\\\n'\)" crates/krk-ui/src/appkit/nummernspalte.rs` findet nichts: die Zählung kommt aus `krk_core::text::zeilen` und entsteht hier nicht ein zweites Mal. `grep -c 'Zeilenindex' crates/krk-ui/src/appkit/nummernspalte.rs` liefert mindestens 1. Der Diff zeigt zwei angemeldete Beobachter und zwei Abmeldungen. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-ui/src` nennt weiterhin genau eine Datei, und keine Zeile trägt `#[allow(dead_code)]`. **`Nutzerarbeit`** für sieben der zwölf Kriterien von C10: die erste Zeile trägt die 1; eine umgelaufene Zeile trägt eine Nummer und ihre Fortsetzungen keine; getippte Zeilen bekommen ihre Nummer ohne Zutun und gelöschte nehmen sie mit; beim Blättern steht neben jeder sichtbaren Zeile ihre Nummer; eine sechsstellige Nummer steht vollständig da; die Nummern sind in Hell und in Dunkel lesbar; eine Auswahl über den ganzen Text nimmt sie nicht mit.
 
-#### 47. **Dieselbe Spalte in der Vorschau, und die Regel, wann sie steht**
+#### 47. [DONE] **Dieselbe Spalte in der Vorschau, und die Regel, wann sie steht**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/vorschau.rs` (erweitert: `textanzeige` hängt die Spalte ein, das Ein- und Ausblenden je Inhalt), `crates/krk-ui/src/vorschaumodell.rs` (erweitert: `zeigt_dateitext`)
@@ -1318,7 +1318,7 @@ Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereic
 
 ### Phase L: Der Fenstertitel (C11)
 
-#### 48. **Der Fenstertitel folgt dem Fokus**
+#### 48. [DONE] **Der Fenstertitel folgt dem Fokus**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/fenstertitel.rs`, `crates/krk-ui/src/main.rs` (einbindend: `mod fenstertitel;` und der Modulkommentar, der seit S15 neun Module neben `appkit` aufzählt), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `titel_nachziehen` und die vier Aufrufstellen aus Frage 17), `crates/krk-ui/src/appkit/tabelle.rs` (lesend: `angezeigter_ordner`), `crates/krk-ui/src/appkit/vorschau.rs` (lesend: `angezeigter_pfad`), `crates/krk-ui/src/appkit/editor.rs` (lesend: der Pfad der gehaltenen Datei)

@@ -7,9 +7,25 @@
 //! ├──────────────────────────────┤
 //! │ Inhaltsflaeche               │  nimmt Klick und Fokus entgegen
 //! │   NSScrollView + NSTextView  │  Text, Metadaten, Hinweise
+//! │     + Nummernspalte          │  nur beim rohen Inhalt einer Datei (C10)
 //! │   NSImageView                │  Bilder; je einer von beiden sichtbar
 //! └──────────────────────────────┘
 //! ```
+//!
+//! **Die Nummernspalte ist dieselbe Klasse wie im Editor.**
+//! [`super::nummernspalte`] haelt sie, und C10 sagt eine Anzeige fuer beide
+//! Flaechen zu und nicht zwei aehnliche. Ob sie steht, entscheidet
+//! [`Vorschaumodell::zeigt_dateitext`] und sonst nichts: sie steht beim rohen
+//! Inhalt einer Textdatei und weder bei einem Bild noch bei Metadaten, einem
+//! Hinweis, einem leeren Tab oder dem Text aus der Zwischenablage.
+//!
+//! **Die Vorschau stammt aus der Runde 1 und wird mit der Nummernspalte zum
+//! ersten Mal seit ihrem Abschluss erweitert.** Der Nutzer hat sie am
+//! 260809-2035 ausdruecklich hereingeholt; die Ausklammerung der Restarbeit
+//! jener Runde gilt den Messreihen und nicht jeder Beruehrung. Eine davon ist
+//! benannt und wird nicht verschwiegen: **L7** misst die Vorschau einer
+//! Textdatei, und die Spalte haengt in genau dieser Flaeche. Eine Zahl steht
+//! hier nicht; der Spec uebergibt L7 an die spaetere Messrunde.
 //!
 //! **Dieselbe Tableiste wie am Dateifenster, ein zweites Mal.** C6 verlangt
 //! fuer die Vorschau-Tabs "dieselben Befehle zum Oeffnen, Schliessen und
@@ -57,6 +73,7 @@ use krk_core::verzeichnis::Typ;
 
 use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
 
+use super::nummernspalte::Nummernspalte;
 use super::tabelle::typ_beschriften;
 use super::tableiste::{self, Tableiste};
 
@@ -357,14 +374,25 @@ impl Vorschaufenster {
     /// ein Zaehlerschritt; vorher entstand bei jedem Neuzeichnen eine zweite
     /// vollstaendige Kopie. Die Begruendung steht am Feld selbst.
     fn anzeigen(&self) {
-        let (titel, aktiv, inhalt) = {
+        let (titel, aktiv, inhalt, zeigt_nummern) = {
             let modell = self.ivars().modell.borrow();
             (
                 modell.titel(),
                 modell.aktive_stelle(),
                 modell.aktiver_inhalt().clone(),
+                modell.zeigt_dateitext(),
             )
         };
+
+        // Die Nummernspalte aus C10, an derselben Stelle geschaltet, an der
+        // Textrolle und Bildansicht sich gegenseitig verbergen. Entschieden
+        // wird nichts hier: `zeigt_dateitext` ist die eine Stelle, die die
+        // Frage beantwortet. Nur beim Wechsel gesetzt, weil `setRulersVisible:`
+        // die Bildlaufansicht neu auslegt.
+        let rolle = &self.ivars().textrolle;
+        if rolle.rulersVisible() != zeigt_nummern {
+            rolle.setRulersVisible(zeigt_nummern);
+        }
 
         match inhalt {
             Inhalt::Leer => self.text_zeigen(LEERTEXT),
@@ -521,5 +549,9 @@ fn textanzeige(
         text.setFont(Some(&schrift));
     }
     rolle.setDocumentView(Some(&text));
+    // **Dieselbe Klasse, die der Editor einhaengt** (C10), und keine zweite
+    // Spalte daneben. Ob sie steht, entscheidet `Vorschaufenster::anzeigen`
+    // ueber `setRulersVisible`; hier entsteht sie nur.
+    Nummernspalte::einhaengen(mtm, &rolle, &text);
     (rolle, text)
 }
