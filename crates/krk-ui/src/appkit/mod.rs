@@ -7,8 +7,9 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Einundzwanzig Module, entlang dessen geschnitten, was AppKit als
-//! eigenstaendige Objekte fuehrt:
+//! Zweiundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
+//! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
 //! ```text
 //! anwendung ──> menue
@@ -45,6 +46,11 @@
 //! `NSRulerView`-Unterklasse in die senkrechte Linealstelle ihrer
 //! Bildlaufansicht. Gezaehlt wird dabei nicht hier, sondern in
 //! `krk_core::text::zeilen`.
+//! [`koordinaten`] haelt den einen Wechsel zwischen den Byteversaetzen von
+//! `krk_core::text` und den UTF-16-Einheiten, in denen AppKits Textsystem
+//! zaehlt. Nummernspalte, Zeilensprung und Suche gehen alle drei durch ihn;
+//! eine zweite Umrechnung daneben muesste die Zusage ueber die Zeichengrenzen
+//! ein zweites Mal tragen.
 //! [`aufteilung`] haelt
 //! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
@@ -98,6 +104,7 @@ mod ereignisse;
 mod fenster;
 mod fsevents;
 mod hinweis;
+mod koordinaten;
 mod leiste;
 mod menue;
 mod nummernspalte;

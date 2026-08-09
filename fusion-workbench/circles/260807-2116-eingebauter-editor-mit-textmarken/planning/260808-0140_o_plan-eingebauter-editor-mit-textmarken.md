@@ -980,7 +980,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase G: Springen, Suchen, Ersetzen und die Marken
 
-#### 35. **Der Zeilensprung**
+#### 35. [DONE] **Der Zeilensprung**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/blaetter/zeilennummer.rs`, `crates/krk-ui/src/appkit/blaetter/mod.rs` (einbindend), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Zweig für `Kommando::EditorZeileSpringen`)
@@ -989,8 +989,12 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Solange das Blatt steht, gilt der Fokusvorbehalt des Ereignisabgriffs unverändert**, und das ist richtig so: der Ersthelfer ist dann der Feldeditor des Textfeldes und nicht die Textfläche des Editors, die Nämlichkeitsfrage aus S4 antwortet mit `false`, und die Befehle des Editors wirken dort nicht. Das ist das siebte Abnahmekriterium von C7, und es fällt ohne eigenen Bau an.
 - Abhängigkeiten: S16
 - Abnahmekriterium: `cargo test -p krk-core` deckt die Zeilenrechnung ab (aus S8). Der Diff zeigt, dass das Blatt `Blatt::textfeld_setzen` benutzt und keine eigene Tastaturbehandlung baut. **`Nutzerarbeit`:** `cmd+j` fragt nach einer Zeilennummer, die Schreibmarke landet dort und die Zeile ist sichtbar; eine zu große Zahl landet am Dateiende und meldet den Grund.
+- **Umsetzung am 260810-0210, zusammen mit S36 und S37:** `crates/krk-ui/src/appkit/blaetter/zeilennummer.rs` (neu), `blaetter/mod.rs` (einbindend), `appkit/editor.rs` (`Editorbereich::zeile_anspringen`, drei neue Werte in `Editormeldung`), `appkit/anwendung.rs` (der Zweig `Kommando::EditorZeileSpringen`). Drei Abweichungen von der Schrittbeschreibung:
+  - **Die Umrechnung ist aus `nummernspalte.rs` in ein eigenes Modul gewandert**, `crates/krk-ui/src/appkit/koordinaten.rs`. Der Schritt sagt sie nicht an, aber S35, S36, S37 und die Auskunft über die Zeile der Schreibmarke brauchen dieselbe Rechnung in zwei Richtungen, und der Defekt `issues/260810-0036` verlangt ausdrücklich, sie nicht ein zweites Mal aufzuschreiben. `nummernspalte::anfaenge_in_utf16` ist auf die Zeile geschrumpft, die den Zeilenindex befragt, und behält seine Proben; das neue Modul trägt `in_utf16` und `in_bytes` mit sieben eigenen.
+  - **Die Fallunterscheidung über `Zeilenlage` ist vollständig gebaut und nicht nur ihr dritter Zweig.** Der Schritt nennt allein die Nummer über der Zeilenzahl; die 0 ist die zweite benannte Lage des Kerns und bekommt ihren eigenen Satz, weil ein `match` ohne Auffangzweig die Antwort erzwingt.
+  - **Eine leere Eingabe meldet nichts und springt nicht.** Sie ist die Abwesenheit einer Eingabe und kein Fehler, dieselbe Wahl wie bei der Pfadeingabe aus C2 der Runde 1. Alles Übrige, was keine Zahl ist, bekommt seinen Satz.
 
-#### 36. **Suchen**
+#### 36. [DONE] **Suchen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/blaetter/suche.rs`, `crates/krk-ui/src/appkit/blaetter/mod.rs` (einbindend), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: drei Zweige), `crates/krk-ui/src/editormodell.rs` (erweitert: der Suchlauf)
@@ -1000,8 +1004,12 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Groß- und Kleinschreibung, reguläre Ausdrücke und die Suchrichtung sind nicht festgelegt und kommen nicht hinzu; der Spec sagt zu, dass gesucht wird, und nicht, mit welchen Schaltern. Jeder Schalter wäre ein Bedienelement und ein Abnahmekriterium mehr.
 - Abhängigkeiten: S35
 - Abnahmekriterium: `cargo test -p krk-core` deckt die Trefferrechnung ab (aus S8). Eine Probe in `crates/krk-ui` deckt ab, dass der Suchlauf nach einer Änderung des Standes neu gerechnet wird und keinen überholten Treffer ansteuert. **`Nutzerarbeit`:** `cmd+f` fragt, `cmd+g` und `ctrl+cmd+g` gehen vor und zurück, die Statuszeile nennt Trefferzahl und Stelle, und eine erfolglose Suche meldet es.
+- **Umsetzung am 260810-0210:** `crates/krk-ui/src/appkit/blaetter/suche.rs` (neu), `blaetter/mod.rs` (einbindend), `appkit/editor.rs` (`suche_beginnen`, `weitersuchen`, `rueckwaerts_suchen`, `suchtexte`, `stelle_zeigen`, `treffer_zeigen`, `suchmeldung`), `appkit/anwendung.rs` (`editor_suchen`, `editorblatt_moeglich`, `editorbefehl` und drei Zweige). Drei Abweichungen:
+  - **Der Suchlauf im Modell war seit S15 fertig und ist nicht angefasst worden.** `crates/krk-ui/src/editormodell.rs` trug `suche_starten`, `weitersuchen`, `rueckwaerts_suchen`, `Suchlauf::meldung` und die Proben dazu bereits; gebaut wurden das Blatt, die Anbindung an die Textfläche und die sechs Befehlszweige. Der Schritt nennt `editormodell.rs` als erweitert — erweitert wurde es nicht, sondern gerufen.
+  - **Die Probe aus dem Abnahmekriterium stand schon**, als `eine_bearbeitung_beendet_den_suchlauf` und `das_ersetzen_bildet_die_trefferliste_im_neuen_stand` in `editormodell.rs`. Beide decken genau das ab, was das Kriterium verlangt.
+  - **Das Blatt trägt beide Felder von Anfang an**, weil S36 und S37 zusammen umgesetzt wurden; ein Zwischenstand mit einem Feld ist nicht entstanden.
 
-#### 37. **Ersetzen**
+#### 37. [DONE] **Ersetzen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/blaetter/suche.rs` (erweitert: das zweite Feld), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: zwei Zweige), `crates/krk-ui/src/editormodell.rs` (erweitert)
@@ -1010,6 +1018,11 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Der Ersatztext kann einen Zeilenumbruch enthalten**, und der Datensatz zur Sicherungsform bindet diesen Schritt deshalb mit: was der Nutzer einfügt, wird beim Sichern nach der entschiedenen Form geschrieben, also mit `\n`. Der Stand des Editors trägt nach S9 ohnehin nur `\n`, weshalb hier nichts Eigenes zu tun ist als es nicht zu brechen; das Abnahmekriterium prüft es.
 - Abhängigkeiten: S36
 - Abnahmekriterium: `cargo test -p krk-core` deckt das Ersetzen ab (aus S8), einschließlich eines Ersatztextes mit `\r\n`, der als `\n` im Stand ankommt. **`Nutzerarbeit`:** `shift+cmd+r` ersetzt einen Treffer und rückt vor, `ctrl+cmd+r` ersetzt alle und nennt die Zahl, und der Editor meldet danach ungesicherte Änderungen.
+- **Umsetzung am 260810-0210:** `appkit/editor.rs` (`treffer_ersetzen`, `alle_treffer_ersetzen`, `stand_erneuern`, das Feld `ersatz`, drei neue Werte in `Editormeldung`), `appkit/anwendung.rs` (zwei Zweige), `crates/krk-ui/src/editormodell.rs` (allein die Ausnahme am Dateikopf). Vier Abweichungen:
+  - **Der Ersatztext wohnt in `appkit/editor.rs` und nicht im Suchlauf.** `krk_core::text::suche` bekommt ihn als Parameter, und was in einem Eingabefeld stand, ist eine Angabe der Oberfläche: sie überlebt einen beendeten Suchlauf, weil das nächste `cmd+f` sie als Startwert wieder anbietet.
+  - **Die Wandlung des Ersatztextes ist nicht neu gebaut worden.** `Editormodell::ersetzung_vorbereiten` führt ihn seit der Behebung von `issues/260809-1646` durch `krk_core::text::datei::in_gehaltene_form`, und zwar vor dem Ersetzen; die Proben `ein_ersatztext_mit_crlf_kommt_in_gehaltener_form_an` und `das_sammelersetzen_wandelt_seinen_ersatztext_ebenfalls` decken das Abnahmekriterium ab.
+  - **Die Zeile `#![allow(dead_code)]` am Kopf von `editormodell.rs` ist gefallen**, wie sie es für S37 angekündigt hatte. Vier von vierzehn Fundstellen haben keinen Aufrufer bekommen und tragen die Ausnahme jetzt einzeln mit ihrem Grund; `stempel` nennt S31, die drei übrigen stehen als `issues/260810-0212`.
+  - **Ein Ersetzen schreibt den gewandelten Stand über `stand_erneuern` in die Textfläche zurück**, dieselben drei Schritte, die ein gelungenes Öffnen geht. Ohne Treffer unterbleibt der Ruf, damit der Rückgängigstapel für nichts nicht fällt.
 
 #### 38. **Eine Textmarke anlegen**
 

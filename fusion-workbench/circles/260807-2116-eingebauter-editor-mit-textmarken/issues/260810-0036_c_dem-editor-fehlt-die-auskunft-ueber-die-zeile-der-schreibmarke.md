@@ -99,3 +99,42 @@ den zweiten Zweig nur noch nicht.
 
 **S38 ist damit nicht erledigt.** Erledigt sind seine Anteile an der Leiste und
 an der Kette bis `bookmarks.toml`, und S40 ganz.
+
+---
+Resolved: Die Auskunft steht als `Editorbereich::schreibmarkenzeile() ->
+Option<(u32, String)>` in `crates/krk-ui/src/appkit/editor.rs`, gebaut mit S35,
+S36 und S37, weil dieselbe Umrechnung dort ohnehin gebraucht wurde.
+
+Die vier Eigenschaften aus dem Vorschlag hält sie alle vier:
+
+1. `None`, wenn der Editor keine Datei hält — gefragt wird `haelt_datei` am
+   Modell und nicht am Text der Fläche.
+2. Eine Zeile und kein Bereich. **Die offene Frage aus Punkt 2 ist entschieden:
+   es gilt der Anfang der Auswahl.** `selectedRange` nennt allein den kleineren
+   Versatz, und in welche Richtung der Nutzer gezogen hat, geht daraus nicht
+   hervor; der Anfang ist damit der einzige Versatz, den AppKit verlässlich
+   liefert. Der Grund steht am Doc-Kommentar der Funktion.
+3. Der Inhalt kommt aus `Editormodell::stand` und nicht von der Platte.
+4. Der Inhalt ist die Zeile ohne ihren Umbruch, geliefert von
+   `Zeilenindex::inhalt_der_zeile`.
+
+**Die Umrechnung ist kein zweites Mal aufgeschrieben worden, sondern aus
+`nummernspalte.rs` herausgewandert.** Der Befund oben ließ die Wahl offen; sie
+ist auf das eigene Modul `crates/krk-ui/src/appkit/koordinaten.rs` gefallen, weil
+seit S35 und S36 vier Aufrufer dieselbe Rechnung brauchen und zwei Richtungen
+statt einer. Es trägt `in_utf16` (mehrere aufsteigende Byteversätze auf einmal,
+Wiederholungen zugelassen) und `in_bytes` (eine Stelle in AppKits Koordinate
+zurück, immer auf einer Zeichengrenze, auch mitten in einem Ersatzzeichenpaar).
+`nummernspalte::anfaenge_in_utf16` ist auf die Zeile geschrumpft, die den Index
+befragt, und behält seine Proben; sieben weitere stehen im neuen Modul.
+
+Nicht mit erledigt und ausdrücklich offen: **Schritt 2 der Aufgabenliste oben**,
+der zweite Zweig in `anwendung.rs::lesezeichen_anlegen`. Er gehört S38 und ist
+dort geführt; `cmd+d` mit dem Fokus im Editor legt bis dahin weiter eine
+Ordnermarke an. Die Funktion trägt deshalb ein `#[allow(dead_code)]` mit S38 als
+benanntem Ablösepunkt, nach demselben Muster wie `Editormeldung::markenstelle`.
+
+Dazu aufgefallen und getrennt geführt:
+`260810-0215_o_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md`
+— die Umrechnung rechnet gegen den gehaltenen Stand, und der ist nach einem
+eingefügten `\r\n` um die gewandelten Zeichen kürzer als der Text der Fläche.

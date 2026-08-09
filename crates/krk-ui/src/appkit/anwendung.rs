@@ -201,7 +201,7 @@ use super::belegungsansicht::{self, Belegungsquelle};
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
-    Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
+    self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
 };
 use super::editor::{Editorbereich, Editormeldung};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
@@ -1879,6 +1879,20 @@ impl Anwendungsdelegierter {
             // Sichern und das Schliessen darueber: der Editorbereich haengt am
             // Delegierten.
             Kommando::EditorAnsichtUmschalten => self.editor_ansicht_umschalten(),
+            // Die sechs Befehle aus C5. Sie stehen hier und nicht bei
+            // `bereichskommando`, aus demselben Grund wie die drei darueber:
+            // der Editorbereich haengt am Delegierten. Die beiden mit einem
+            // Blatt tragen ihre eigene Funktion, weil sie ein Fenster
+            // brauchen; die vier uebrigen sind je ein Ruf in den Editor und
+            // eine Meldung zurueck und gehen deshalb durch dieselbe Stelle.
+            Kommando::EditorZeileSpringen => self.editor_zeile_springen(),
+            Kommando::EditorSuchen => self.editor_suchen(),
+            Kommando::EditorWeitersuchen => self.editorbefehl(Editorbereich::weitersuchen),
+            Kommando::EditorRueckwaertsSuchen => {
+                self.editorbefehl(Editorbereich::rueckwaerts_suchen)
+            }
+            Kommando::EditorErsetzen => self.editorbefehl(Editorbereich::treffer_ersetzen),
+            Kommando::EditorAlleErsetzen => self.editorbefehl(Editorbereich::alle_treffer_ersetzen),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -3215,6 +3229,129 @@ impl Anwendungsdelegierter {
                 true
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Der Zeilensprung, die Suche und das Ersetzen (C5)
+    // ------------------------------------------------------------------
+
+    /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
+    ///
+    /// **Die eine Stelle fuer die vier Befehle ohne Blatt** — Weitersuchen,
+    /// rueckwaerts Weitersuchen, Ersetzen und Alle ersetzen. Sie haben denselben
+    /// Zuschnitt: ein Ruf in den Editor, eine Meldung in die Statuszeile, und
+    /// der Tastendruck ist verbraucht. Vier gleichlautende Funktionen daneben
+    /// waeren vier Gelegenheiten, den Zuschnitt verschieden zu schreiben.
+    ///
+    /// Was der Befehl tut, entscheidet der Editor, und ob er ueberhaupt etwas
+    /// tun kann, ebenfalls: laeuft keine Suche, kommt die Meldung darueber
+    /// zurueck. Diese Funktion stellt keine zweite Vorbedingung daneben.
+    fn editorbefehl(&self, tun: fn(&Editorbereich) -> Editormeldung) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let meldung = tun(editor);
+        self.editormeldung_zeigen(&meldung);
+        true
+    }
+
+    /// `cmd+j`: fragt nach einer Zeilennummer und springt dorthin (C5).
+    ///
+    /// Das Blatt fragt, der Editor springt. **Die Regel fuer eine Nummer ueber
+    /// der Zeilenzahl steht in `krk_core::text::zeilen`** und wird weder hier
+    /// noch im Editor nachgebaut; der Sprung fuehrt dann an das Dateiende und
+    /// meldet den Grund.
+    ///
+    /// Solange das Blatt steht, gilt der Fokusvorbehalt des Ereignisabgriffs
+    /// unveraendert: Ersthelfer ist der Feldeditor des Textfeldes, und die
+    /// Befehle des Editors wirken dort nicht. Das siebte Abnahmekriterium von
+    /// C7 faellt daraus an.
+    fn editor_zeile_springen(&self) -> bool {
+        let Some(fenster) = self.editorblatt_moeglich() else {
+            // Kein Blatt, und der Grund steht schon in der Statuszeile. `true`
+            // verbraucht den Tastendruck trotzdem: der Befehl traegt
+            // `Wirkungsbereich::Editor` und erreicht diese Stelle nur mit dem
+            // Fokus in der Textflaeche, gehoert also dem Editor und nicht der
+            // Menueleiste. Derselbe Grund wie bei F4 auf leerer Auswahl.
+            return true;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        blaetter::zeilennummer::zeigen(self.mtm(), &fenster, move |eingabe| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            let Some(editor) = selbst.ivars().editor.get() else {
+                return;
+            };
+            if let Some(meldung) = editor.zeile_anspringen(&eingabe) {
+                selbst.editormeldung_zeigen(&meldung);
+            }
+        });
+        true
+    }
+
+    /// `cmd+f`: fragt nach Such- und Ersatztext und beginnt die Suche (C5).
+    ///
+    /// **Ein Blatt fuer beide Texte**, und der Ersatztext bleibt danach beim
+    /// Editor stehen: `shift+cmd+r` und `ctrl+cmd+r` setzen ihn ein, ohne ein
+    /// zweites Mal zu fragen. Der Grund steht im Modulkopf von
+    /// [`super::blaetter::suche`].
+    ///
+    /// Die beiden Startwerte kommen aus
+    /// [`Editorbereich::suchtexte`](super::editor::Editorbereich::suchtexte)
+    /// und nicht aus einem Feld hier: was zuletzt gesucht wurde, weiss der
+    /// Suchlauf im Modell, und ein zweiter Vorrat daneben liefe davon weg.
+    fn editor_suchen(&self) -> bool {
+        // Dieselbe Vorbedingung und derselbe Rueckgabewert wie beim
+        // Zeilensprung darueber; die Begruendung steht dort.
+        let (Some(fenster), Some(editor)) =
+            (self.editorblatt_moeglich(), self.ivars().editor.get())
+        else {
+            return true;
+        };
+        let (gesucht, ersatz) = editor.suchtexte();
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        blaetter::suche::zeigen(
+            self.mtm(),
+            &fenster,
+            &gesucht,
+            &ersatz,
+            move |gesucht, ersatz| {
+                let Some(selbst) = schwach.load() else {
+                    return;
+                };
+                let Some(editor) = selbst.ivars().editor.get() else {
+                    return;
+                };
+                let meldung = editor.suche_beginnen(&gesucht, &ersatz);
+                selbst.editormeldung_zeigen(&meldung);
+            },
+        );
+        true
+    }
+
+    /// Das Fenster, an dem ein Eingabeblatt des Editors haengen kann (C5).
+    ///
+    /// **Die eine Vorbedingung der beiden Blattbefehle**, und sie stellt genau
+    /// zwei Fragen: steht ein Fenster, und haelt der Editor eine Datei. Ohne
+    /// Datei gibt es weder eine Zeile, in die gesprungen werden koennte, noch
+    /// einen Text, in dem zu suchen waere; gemeldet wird derselbe Satz, den
+    /// [`Self::editor_stand_sichern`] fuer diesen Fall seit S25 fuehrt.
+    ///
+    /// `None` heisst: kein Blatt. Ob der Tastendruck damit verbraucht ist,
+    /// entscheidet der Aufrufer — er ist es, sobald es einen Editor gibt, weil
+    /// dann eine Antwort in der Statuszeile steht.
+    fn editorblatt_moeglich(&self) -> Option<Retained<NSWindow>> {
+        let (Some(fenster), Some(editor)) = (self.ivars().fenster.get(), self.ivars().editor.get())
+        else {
+            return None;
+        };
+        if !editor.haelt_datei() {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
+            return None;
+        }
+        Some(fenster.retain())
     }
 
     // ------------------------------------------------------------------

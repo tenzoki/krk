@@ -177,22 +177,26 @@
 //! angenommener Eingang, und er hat genau zwei Ausgaenge, von denen jeder ihn
 //! aufbraucht.
 
-// **Diese Zeile faellt mit Schritt 37 und nicht, wie hier bis zum 260809
-// stand, mit Schritt 16.** Der Schritt 16 baut die Textflaeche und leiht sich
-// daraus zwei Stuecke, `Editormodell::neu` und `Editormodell::stand`. Jedes
-// andere haengt an einem Befehl, den es ausloest, und der Befehl kommt mit
-// seinem eigenen Schritt: das Lesen auf dem Arbeitsfaden mit S24, das Sichern
-// mit S25, die Abweichungsmarke mit S26, die beiden Ansichten mit S33, der
-// Suchlauf mit S36 und das Ersetzen mit S37. Der letzte davon ist S37; **dann**
-// ist die Zeile wegzunehmen.
+// **Die Zeile `#![allow(dead_code)]`, die hier bis zum 260810 stand, ist mit
+// S37 gefallen**, wie sie es angekuendigt hatte. Sie deckte vierzehn
+// Fundstellen ab, solange die Befehle des Editors fehlten; mit dem Lesen auf
+// dem Arbeitsfaden (S24), dem Sichern (S25), der Abweichungsmarke (S26), den
+// beiden Ansichten (S33), dem Suchlauf (S36) und dem Ersetzen (S37) haben zehn
+// davon ihren Aufrufer bekommen.
 //
-// Gemessen am 260809 nach S16, mit entfernter Zeile: `cargo clippy --workspace
-// --all-targets` meldet vierzehn Fundstellen toten Werts in dieser Datei, und
-// der Arbeitsbereich stuende rot, weil `make lint` mit `-D warnings` faehrt.
-// Tot ist auch dann nichts: die Pruefungen am Dateiende fassen jedes Stueck
-// dieses Moduls an.
-#![allow(dead_code)]
-
+// **Vier haben ihn nicht**, und sie tragen die Ausnahme seither einzeln, mit
+// dem Grund daran. Das ist der Unterschied, um den es geht: eine Zeile am
+// Dateikopf verbirgt jede kuenftige tote Stelle mit, vier Zeilen an vier
+// Stellen nennen genau die vier. Gemessen am 260810 nach S37, ohne die
+// Ausnahmen: `cargo clippy --workspace --all-targets` meldet `Suchlauf::treffer`,
+// `Editormodell::stempel`, `Editormodell::haelt_zurueck` und
+// `Editormodell::suche_beenden`, und der Arbeitsbereich stuende rot, weil
+// `make lint` mit `-D warnings` faehrt. Tot ist auch dann nichts: die Pruefungen
+// am Dateiende fassen jedes Stueck dieses Moduls an.
+//
+// Von den vieren nennt allein `stempel` einen Schritt, der ihn ruft, naemlich
+// S31. Die drei uebrigen nennt kein Schritt des Plans; sie stehen als
+// `issues/260810-0212_o_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`.
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
@@ -338,6 +342,12 @@ impl Suchlauf {
     }
 
     /// Alle Treffer im gehaltenen Stand, in Textreihenfolge.
+    // **Ohne Aufrufer, und der Plan nennt keinen.** Die Oberflaeche kommt mit
+    // `zahl`, `nummer`, `angesteuert` und `meldung` aus; wer die ganze Liste
+    // braeuchte, waere jemand, der die Treffer alle zugleich zeichnete, und das
+    // sagt C5 nicht zu. Gefuehrt als
+    // `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`.
+    #[allow(dead_code)]
     pub fn treffer(&self) -> &[Treffer] {
         &self.treffer
     }
@@ -611,6 +621,12 @@ impl Editormodell {
     }
 
     /// Der Stempel der Datei beim Oeffnen oder beim letzten Sichern (C4).
+    // **Diese Zeile faellt mit S31**, dem Melden einer Aenderung von aussen im
+    // laufenden Betrieb: dort vergleicht der Editor seinen gemerkten Stempel
+    // gegen den der Platte, sobald FSEvents seinen Ordner meldet. Das Sichern
+    // aus S25 fragt bereits, aber ueber `fremd_geaendert` und ohne den Stempel
+    // selbst in die Hand zu nehmen.
+    #[allow(dead_code)]
     pub fn stempel(&self) -> Option<Stempel> {
         self.stempel
     }
@@ -758,6 +774,11 @@ impl Editormodell {
     }
 
     /// Ob eine gelesene Datei auf die Antwort der Nachfrage wartet (C4).
+    // **Ohne Aufrufer, und der Plan nennt keinen.** Die Oberflaeche braucht die
+    // Frage nicht: sie erfaehrt das Zurueckhalten als `Ladeausgang` und
+    // beantwortet es im Rueckruf des Blattes, ohne zwischendurch nachzusehen.
+    // Gefuehrt im selben Defekt wie `Suchlauf::treffer`.
+    #[allow(dead_code)]
     pub fn haelt_zurueck(&self) -> bool {
         self.zurueckgehalten.is_some()
     }
@@ -991,6 +1012,12 @@ impl Editormodell {
     }
 
     /// Beendet den Suchlauf (C5).
+    // **Ohne Aufrufer, und der Plan nennt keinen.** Der Spec sagt keinen Befehl
+    // zu, der eine Suche beendet; sie endet von selbst, wenn der Nutzer tippt
+    // (`bearbeiten`), eine andere Datei kommt (`uebernehmen`) oder der Editor
+    // schliesst (`schliessen`), und jede dieser drei Stellen setzt das Feld
+    // unmittelbar. Gefuehrt im selben Defekt wie `Suchlauf::treffer`.
+    #[allow(dead_code)]
     pub fn suche_beenden(&mut self) {
         self.suchlauf = None;
     }

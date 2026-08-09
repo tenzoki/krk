@@ -45,3 +45,24 @@ ersetzt; ein Aufrufer, der es selbst täte, wäre die zweite.
 `objc2-foundation` überhaupt angeschaltet ist.** Ist er es nicht, braucht der
 Schritt eine Zeile in `crates/krk-ui/Cargo.toml`, und die lag außerhalb des
 Umfangs des Schrittes, der diesen Defekt abgetrennt hat.
+
+---
+Nachtrag vom 260810-0220, `coder`, bei der Umsetzung von S37: **der Fall hat
+einen zweiten Auslöser bekommen, und er trifft dieselbe Datei.**
+
+`Editorbereich::treffer_ersetzen` und `alle_treffer_ersetzen` schreiben den
+geänderten Stand über `stand_erneuern` in die Textfläche zurück, also über
+`setString:`. Der Rückgängigstapel zeigt danach auf den Text vor diesem
+Schreibvorgang; ein `cmd+z` unmittelbar nach einem Ersetzen wirkt gegen einen
+Stand, den die Fläche nicht mehr trägt.
+
+Bisher stand hier nur der Dateiwechsel, bei dem der stehengebliebene Stapel
+wenigstens zu einer **anderen** Datei gehört. Der neue Weg ist häufiger und
+näher am Nutzer: er ersetzt und macht rückgängig, ohne die Datei gewechselt zu
+haben.
+
+Die Behebung ist unverändert dieselbe und gehört nach wie vor an
+`stand_einsetzen`, nicht an die beiden Ersetzungswege — es gibt genau eine
+Stelle, die den Text der Fläche ersetzt, und dort ist der Stapel zu leeren
+(`NSUndoManager::removeAllActions`) oder das Schreiben rückgängigfähig zu
+machen.

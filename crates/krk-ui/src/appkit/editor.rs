@@ -140,13 +140,14 @@ use objc2_foundation::{
     NSTimer, ns_string,
 };
 
-use krk_core::text::{Abweisung, Fund, Markensprung};
+use krk_core::text::{Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage};
 
-use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang};
+use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
 use crate::hervorhebung::{
     Abholung, Auszeichnung, Darstellungsart, Einfaerbungsvorgang, Farbe, Formatierung, Tafel,
 };
 
+use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
 
@@ -169,9 +170,9 @@ use super::statuszeile;
 ///  gebaut    Markenstelle geaendert        krk_core::text::marke (S12)
 ///  gebaut    gelungenes Sichern            krk_core::text::datei::sichern (S9)
 ///  gebaut    gescheitertes Sichern         dieselbe Stelle (S25)
-///  offen     Zeilennummer ueber der Zahl   S35
-///  offen     Suche ohne Treffer            S36
-///  offen     Zahl der ersetzten Treffer    S37
+///  gebaut    Zeilennummer ausserhalb       krk_core::text::zeilen (S35)
+///  gebaut    Stand der Suche               crate::editormodell::Suchlauf (S36)
+///  gebaut    Zahl der ersetzten Treffer    krk_core::text::suche (S37)
 /// ```
 ///
 /// **Das gelungene Sichern meldet sich, obwohl der Kopf es schon zeigt.** Die
@@ -239,6 +240,54 @@ pub enum Editormeldung {
         /// Der Grund, wie das Modell ihn formuliert hat.
         grund: String,
     },
+    /// Was im Blatt des Zeilensprungs stand, ist keine Zeilennummer (C5).
+    ///
+    /// Der Sprung unterbleibt dann, und die Schreibmarke bleibt stehen. Die
+    /// leere Eingabe kommt hier **nicht** an: sie ist die Abwesenheit einer
+    /// Eingabe und wird wie ein Abbruch behandelt, wie bei der Pfadeingabe aus
+    /// C2 der Runde 1.
+    KeineZeilennummer {
+        /// Was der Nutzer geschrieben hat, ohne umschliessende Leerzeichen.
+        eingabe: String,
+    },
+    /// Die gewuenschte Zeilennummer war 0 (C5).
+    ///
+    /// Zeilennummern zaehlen ab 1, und die 0 ist deshalb keine Zeile. Der
+    /// Sprung fuehrt trotzdem irgendwohin, naemlich an den Textanfang; die
+    /// Regel steht in `krk_core::text::zeilen` und wird hier nicht nachgebaut.
+    ZeileVorDerErsten,
+    /// Die gewuenschte Zeilennummer lag ueber der Zeilenzahl (C5).
+    ///
+    /// Der Sprung fuehrt an das Dateiende, und C5 verlangt, dass der Grund
+    /// gemeldet wird, statt kommentarlos nichts zu tun.
+    ZeileHinterDerLetzten {
+        /// Wie viele Zeilen die Datei hat, die leere letzte mitgezaehlt.
+        zeilenzahl: usize,
+    },
+    /// Wie viele Treffer die Datei enthaelt und der wievielte angesteuert ist
+    /// (C5).
+    ///
+    /// **Der Satz kommt fertig aus dem Modell**, wie bei
+    /// [`Self::SichernGescheitert`]: `crate::editormodell::Suchlauf::meldung`
+    /// baut ihn, weil dort steht, wie viele Treffer es gibt und welcher gerade
+    /// ansteht. Er traegt zugleich die erfolglose Suche, die C5 ebenfalls
+    /// gemeldet haben will; ein zweiter Wert dafuer waere eine zweite Stelle
+    /// mit einer Meinung darueber, was ein Treffer ist.
+    Suchstand {
+        /// Der Satz, wie das Modell ihn formuliert hat.
+        satz: String,
+    },
+    /// Es laeuft keine Suche, an der ein Befehl ansetzen koennte (C5).
+    ///
+    /// Der Ausgang von `cmd+g`, `ctrl+cmd+g`, `shift+cmd+r` und `ctrl+cmd+r`
+    /// ohne ein vorangegangenes `cmd+f`. Kommentarlos nichts zu tun ist in
+    /// keinem Fall zulaessig.
+    KeineSuche,
+    /// So viele Treffer sind in einem Zug ersetzt worden (C5).
+    Ersetzt {
+        /// Die Zahl der ersetzten Treffer; 0, wenn keiner gefunden wurde.
+        zahl: usize,
+    },
 }
 
 impl Editormeldung {
@@ -282,6 +331,22 @@ impl Editormeldung {
             }
             Self::Gesichert { pfad } => format!("{} gesichert", pfad.display()),
             Self::SichernGescheitert { grund } => grund.clone(),
+            Self::KeineZeilennummer { eingabe } => format!("„{eingabe}“ ist keine Zeilennummer"),
+            Self::ZeileVorDerErsten => {
+                "Zeilen zählen ab 1; die Schreibmarke steht am Dateianfang".to_owned()
+            }
+            Self::ZeileHinterDerLetzten { zeilenzahl } => {
+                format!("die Datei hat {zeilenzahl} Zeilen; die Schreibmarke steht am Dateiende")
+            }
+            Self::Suchstand { satz } => satz.clone(),
+            Self::KeineSuche => "es läuft keine Suche".to_owned(),
+            // Die drei Faelle sind ueberschneidungsfrei und vollstaendig; der
+            // Unterschied ist die deutsche Zahlform und nicht die Sache.
+            Self::Ersetzt { zahl } => match zahl {
+                0 => "kein Treffer ersetzt".to_owned(),
+                1 => "ein Treffer ersetzt".to_owned(),
+                zahl => format!("{zahl} Treffer ersetzt"),
+            },
         }
     }
 }
@@ -455,6 +520,22 @@ pub struct EditorIvars {
     einfaerbung_erneut: Cell<bool>,
     /// Welche der beiden Farbtafeln gerade gilt (S34).
     tafel: Cell<Tafel>,
+    /// Der Ersatztext, den der Nutzer zuletzt im Blatt aus S36 eingetragen hat
+    /// (C5).
+    ///
+    /// **Er steht hier und nicht im Modell**, und zwar aus demselben Grund, aus
+    /// dem der Suchtext dort steht: `crate::editormodell::Suchlauf` haelt, was
+    /// die Rechnung braucht, und `krk_core::text::suche` bekommt den Ersatztext
+    /// als Parameter herein. Was der Nutzer in ein Eingabefeld geschrieben hat,
+    /// ist dagegen eine Angabe der Oberflaeche: sie ueberlebt einen beendeten
+    /// Suchlauf, weil das naechste `cmd+f` sie als Startwert wieder anbietet.
+    ///
+    /// Leer heisst: der Ersatz ist die leere Zeichenkette, also loescht das
+    /// Ersetzen den Treffer. Das ist eine gueltige Absicht und kein
+    /// Sonderfall; "es wurde noch nichts eingetragen" und "es wurde
+    /// ausdruecklich nichts eingetragen" verlangen dieselbe Handlung, und ein
+    /// `Option` daneben unterschiede etwas, das dieselbe Antwort hat.
+    ersatz: RefCell<String>,
 }
 
 define_class!(
@@ -551,6 +632,7 @@ impl Editorbereich {
             einfaerbung: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
             tafel: Cell::new(tafel),
+            ersatz: RefCell::new(String::new()),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -737,9 +819,7 @@ impl Editorbereich {
             return;
         };
         if ausgang == Ladeausgang::Geoeffnet {
-            self.stand_einsetzen();
-            self.kopf_nachziehen();
-            self.darstellung_nachziehen();
+            self.stand_erneuern();
         }
         self.melden(ausgang);
     }
@@ -814,12 +894,10 @@ impl Editorbereich {
             return;
         };
         if ausgang == Ladeausgang::Geoeffnet {
-            self.stand_einsetzen();
-            self.kopf_nachziehen();
             // Die neue Datei kann eine andere Besetzung der Formatansicht
             // verlangen als die vorige: Schrift, Umbruch und Einfaerbung
             // haengen am Dateityp und an der Sprache, die die Kiste kennt.
-            self.darstellung_nachziehen();
+            self.stand_erneuern();
         }
         self.melden(ausgang);
     }
@@ -946,12 +1024,345 @@ impl Editorbereich {
     /// Bis S26 stand hier, der Fall sei unerreichbar, weil der einzige Aufrufer
     /// [`Self::bauen`] sei; das war schon seit S22 nicht mehr wahr, denn das
     /// Oeffnen ruft ebenfalls hierher.
+    ///
+    /// **Seit S37 kommt ein zweiter Weg dazu, und er trifft dieselbe Datei.**
+    /// Ein Ersetzen schreibt den geaenderten Stand ueber
+    /// [`Self::stand_erneuern`] zurueck; der Rueckgaengigstapel zeigt danach auf
+    /// den Text vor diesem `setString:`, und ein `cmd+z` gleich darauf wirkt
+    /// gegen einen Stand, den die Flaeche nicht mehr traegt. Der Defekt ist
+    /// derselbe und dort mit vermerkt.
     fn stand_einsetzen(&self) {
         let stand = {
             let modell = self.ivars().modell.borrow();
             NSString::from_str(modell.stand())
         };
         self.ivars().text.setString(&stand);
+    }
+
+    /// Traegt einen von aussen gewechselten Stand in die Flaeche und zieht die
+    /// beiden Anzeigen nach.
+    ///
+    /// **Die drei Schritte, die zusammengehoeren**, und die eine Stelle, an der
+    /// sie stehen: der Text, der Kopf, die Darstellung. Drei Aufrufer gehen
+    /// durch sie — ein gelungenes Oeffnen, die uebernommene zurueckgehaltene
+    /// Datei und seit S37 das Ersetzen —, und ohne diese Funktion waeren es
+    /// drei Stellen mit derselben Reihenfolge und der ersten Gelegenheit, sie
+    /// verschieden zu schreiben.
+    ///
+    /// **Sie gilt nicht fuer den Nutzer, der tippt.** Dessen Weg ist der
+    /// umgekehrte: die Flaeche traegt den Stand schon, und
+    /// [`Self::text_zurueckschreiben`] holt ihn ab. `setString:` von hier aus
+    /// setzte ihm die Schreibmarke an den Anfang und leerte den
+    /// Rueckgaengigstapel bei jedem Anschlag.
+    fn stand_erneuern(&self) {
+        self.stand_einsetzen();
+        self.kopf_nachziehen();
+        self.darstellung_nachziehen();
+    }
+
+    // ------------------------------------------------------------------
+    // Der Zeilensprung, die Suche und das Ersetzen (C5)
+    // ------------------------------------------------------------------
+
+    /// Die Zeile, in der die Schreibmarke steht: Nummer ab 1 und ihr Inhalt
+    /// (C6).
+    ///
+    /// **Sie steht hier und nicht beim Aufrufer**, weil hier der gehaltene
+    /// Stand und die Textflaeche beieinander liegen und die Umrechnung zwischen
+    /// den beiden Koordinaten genau einmal vorkommen soll; der Defekt
+    /// `issues/260810-0036_*_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`
+    /// fuehrt den Grund im Einzelnen. Gerechnet wird in
+    /// [`super::koordinaten`] und in `krk_core::text::zeilen`.
+    ///
+    /// Vier Eigenschaften, die der Aufrufer sich merken darf:
+    ///
+    /// - **`None`, wenn der Editor keine Datei haelt.** Ohne Datei gibt es
+    ///   keine Stelle, die eine Marke bezeichnen koennte.
+    /// - **Eine Zeile und kein Bereich.** Ist mehrzeilig ausgewaehlt, gilt die
+    ///   Zeile am **Anfang** der Auswahl. `selectedRange` nennt allein den
+    ///   kleineren Versatz, und in welche Richtung der Nutzer gezogen hat, geht
+    ///   daraus nicht hervor; der Anfang ist damit der einzige Versatz, den
+    ///   AppKit verlaesslich liefert.
+    /// - **Der Inhalt kommt aus dem gehaltenen Stand und nicht von der
+    ///   Platte.** Dieselbe Regel, die das neunte Abnahmekriterium von C5 der
+    ///   Suche gibt: der Editor merkt sich, was er zeigt.
+    /// - **Der Inhalt ist die Zeile ohne ihren Umbruch**, so wie
+    ///   `Zeilenindex::inhalt_der_zeile` sie liefert;
+    ///   `krk_core::text::marke::wiederfinden` vergleicht spaeter gegen genau
+    ///   diese Form.
+    // **Diese Zeile faellt mit S38**, dem Anlegen einer Textmarke: `cmd+d` mit
+    // dem Fokus im Editor baut sein `krk_core::ablage::Ziel::Textstelle` aus
+    // dieser Auskunft und aus `Editorbereich::pfad`. Der Aufrufer ist der eine,
+    // der fehlt; die Kette dahinter bis `bookmarks.toml` steht. Tot ist nichts:
+    // die Auskunft ist der Gegenstand des Defekts
+    // `issues/260810-0036_*_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`,
+    // und ohne die Zeile stuende der Arbeitsbereich rot, weil `make lint` mit
+    // `-D warnings` faehrt.
+    #[allow(dead_code)]
+    pub fn schreibmarkenzeile(&self) -> Option<(u32, String)> {
+        let stelle = self.schreibmarke_in_utf16();
+        let modell = self.ivars().modell.borrow();
+        if !modell.haelt_datei() {
+            return None;
+        }
+        let stand = modell.stand();
+        let versatz = koordinaten::in_bytes(stand, stelle);
+        let index = Zeilenindex::neu(stand);
+        let nummer = index.zeile_am_versatz(versatz);
+        let inhalt = index.inhalt_der_zeile(stand, nummer)?.to_owned();
+        // Eine Datei von hoechstens 16 MB hat hoechstens 16 Millionen Zeilen;
+        // der Rueckfall ist unerreichbar und steht da, weil ein `as` die Zahl
+        // still verdrehte.
+        Some((u32::try_from(nummer).unwrap_or(u32::MAX), inhalt))
+    }
+
+    /// Wo die Schreibmarke in AppKits Koordinate steht.
+    ///
+    /// Der Anfang der Auswahl, und der Grund dafuer steht an
+    /// [`Self::schreibmarkenzeile`].
+    ///
+    /// # Die Annahme, auf der die Umrechnung ruht
+    ///
+    /// Die Stelle zaehlt in den **Zeichen der Flaeche**, und umgerechnet wird
+    /// sie gegen den **gehaltenen Stand**. Beide sind Zeichen fuer Zeichen
+    /// dieselben, solange nichts sie auseinanderbringt: `stand_einsetzen`
+    /// schreibt den Stand in die Flaeche, `text_zurueckschreiben` holt ihn
+    /// zurueck, und der Ansichtswechsel aus C3 fasst den Textspeicher nicht an.
+    ///
+    /// **Ein Fall bricht die Annahme, und er ist benannt statt verschwiegen:**
+    /// wer Text mit `\r\n` aus einer Windows-Quelle einfuegt, hat danach in der
+    /// Flaeche zwei Zeichen, wo der Stand eines traegt —
+    /// `krk_core::text::datei::in_gehaltene_form` wandelt beim Zurueckschreiben,
+    /// und die Flaeche behaelt ihre Zeichen. Jede Stelle hinter der eingefuegten
+    /// ist dann um die Zahl der `\r` verschoben. Gefuehrt als
+    /// `issues/260810-0215_*_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md`.
+    fn schreibmarke_in_utf16(&self) -> usize {
+        self.ivars().text.selectedRange().location
+    }
+
+    /// Waehlt den Byteversatzbereich in der Flaeche aus und blaettert ihn ins
+    /// Bild.
+    ///
+    /// **Die eine Stelle, die eine Stelle des Standes in der Flaeche sichtbar
+    /// macht.** Der Zeilensprung reicht denselben Versatz zweimal herein und
+    /// bekommt damit eine Schreibmarke ohne Ausdehnung; die Suche reicht Anfang
+    /// und Ende eines Treffers herein und bekommt ihn ausgewaehlt.
+    ///
+    /// Die Nummernspalte wird danach neu gezeichnet: der Sprung kann den
+    /// sichtbaren Ausschnitt verschoben haben, und die Spalte bemerkt das zwar
+    /// an der Klemme, aber nicht, wenn der Ausschnitt schon stimmte und allein
+    /// die Auswahl gewandert ist. Der Ruf kostet ein Bild und ist der Vermerk
+    /// aus S46.
+    fn stelle_zeigen(&self, anfang: usize, ende: usize) {
+        let umgerechnet = {
+            let modell = self.ivars().modell.borrow();
+            koordinaten::in_utf16(modell.stand(), &[anfang, ende])
+        };
+        let [von, bis] = umgerechnet[..] else {
+            return;
+        };
+        let bereich = NSRange::new(von, bis.saturating_sub(von));
+        self.ivars().text.setSelectedRange(bereich);
+        self.ivars().text.scrollRangeToVisible(bereich);
+        self.nummernspalte_nachziehen();
+    }
+
+    /// `cmd+j`: setzt die Schreibmarke an den Anfang der genannten Zeile (C5).
+    ///
+    /// **Gerechnet wird in `krk_core::text::zeilen` und hier nicht ein zweites
+    /// Mal.** Insbesondere die Regel fuer eine Nummer ueber der Zeilenzahl: der
+    /// Sprung fuehrt an das Dateiende und meldet den Grund. Sie steht dort
+    /// einmal, weil die Textmarke aus C6 dieselbe braucht.
+    ///
+    /// **Die leere Eingabe meldet nichts und springt nicht.** Sie ist die
+    /// Abwesenheit einer Eingabe und kein Fehler, wie der Abbruch des Blattes;
+    /// dieselbe Wahl trifft die Pfadeingabe aus C2 der Runde 1. Alles Uebrige,
+    /// was keine Zahl ist, bekommt seinen Satz.
+    ///
+    /// `None` heisst: es gibt nichts zu melden, weil der Sprung eine Zeile
+    /// getroffen hat oder gar nicht stattfand.
+    pub fn zeile_anspringen(&self, eingabe: &str) -> Option<Editormeldung> {
+        let eingabe = eingabe.trim();
+        if eingabe.is_empty() {
+            return None;
+        }
+        let Ok(nummer) = eingabe.parse::<usize>() else {
+            return Some(Editormeldung::KeineZeilennummer {
+                eingabe: eingabe.to_owned(),
+            });
+        };
+
+        let (sprung, zeilenzahl) = {
+            let modell = self.ivars().modell.borrow();
+            let index = Zeilenindex::neu(modell.stand());
+            (index.anfang_der_zeile(nummer), index.zeilenzahl())
+        };
+        self.stelle_zeigen(sprung.versatz, sprung.versatz);
+
+        // Vollstaendig und ohne Auffangzweig: eine vierte Lage haelt den Bau an
+        // und erzwingt die Antwort auf die Frage, ob sie zu melden ist.
+        match sprung.lage {
+            Zeilenlage::Getroffen => None,
+            Zeilenlage::VorDerErsten => Some(Editormeldung::ZeileVorDerErsten),
+            Zeilenlage::HinterDerLetzten => {
+                Some(Editormeldung::ZeileHinterDerLetzten { zeilenzahl })
+            }
+        }
+    }
+
+    /// Der Suchtext des laufenden Suchlaufs und der zuletzt eingetragene
+    /// Ersatztext (C5).
+    ///
+    /// Die beiden Startwerte des Blattes aus S36. Der Suchtext kommt aus dem
+    /// Modell, weil dort steht, wonach gesucht wird; laeuft keine Suche, ist er
+    /// leer.
+    pub fn suchtexte(&self) -> (String, String) {
+        let gesucht = self
+            .ivars()
+            .modell
+            .borrow()
+            .suchlauf()
+            .map(|lauf| lauf.gesucht().to_owned())
+            .unwrap_or_default();
+        (gesucht, self.ivars().ersatz.borrow().clone())
+    }
+
+    /// `cmd+f`: beginnt eine Suche im gehaltenen Stand (C5).
+    ///
+    /// **Gesucht wird ueber den gehaltenen Stand und nicht ueber die Datei auf
+    /// der Platte.** Das neunte Abnahmekriterium von C5 verlangt es, und es
+    /// faellt von selbst an: `krk_core::text::suche` nimmt eine Zeichenkette
+    /// entgegen und keinen Pfad.
+    ///
+    /// **Gesucht wird im Text der Datei und nicht in seiner Darstellung**, und
+    /// deshalb wirkt die Suche in beiden Ansichten aus C3 gleich. Auch das
+    /// faellt von selbst an: die Einfaerbung nach S33 liegt in den
+    /// voruebergehenden Merkmalen des Layoutverwalters und fasst den
+    /// Textspeicher nicht an.
+    ///
+    /// Angesteuert wird der erste Treffer ab der Schreibmarke; hinter dem
+    /// letzten laeuft die Suche um. Die Regel steht in `krk_core::text::suche`.
+    pub fn suche_beginnen(&self, gesucht: &str, ersatz: &str) -> Editormeldung {
+        let stelle = self.schreibmarke_in_utf16();
+        let treffer = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            let ab_versatz = koordinaten::in_bytes(modell.stand(), stelle);
+            modell.suche_starten(gesucht, ab_versatz)
+        };
+        *self.ivars().ersatz.borrow_mut() = ersatz.to_owned();
+        self.treffer_zeigen(treffer);
+        self.suchmeldung()
+    }
+
+    /// `cmd+g`: steuert den naechsten Treffer an (C5).
+    pub fn weitersuchen(&self) -> Editormeldung {
+        self.weiter_mit(Editormodell::weitersuchen)
+    }
+
+    /// `ctrl+cmd+g`: steuert den vorigen Treffer an (C5).
+    pub fn rueckwaerts_suchen(&self) -> Editormeldung {
+        self.weiter_mit(Editormodell::rueckwaerts_suchen)
+    }
+
+    /// Die gemeinsame Haelfte der beiden Befehle darueber.
+    ///
+    /// Sie unterscheiden sich allein in dem Schritt, den sie im Modell tun; der
+    /// Umlauf steckt in `krk_core::text::suche` und nicht hier. Derselbe
+    /// Zuschnitt wie `Editormodell::weiter_mit` eine Ebene tiefer.
+    ///
+    /// Ohne Treffer bleibt die Schreibmarke stehen, wie das fuenfte
+    /// Abnahmekriterium von C5 es verlangt: [`Self::treffer_zeigen`] fasst die
+    /// Flaeche dann nicht an.
+    fn weiter_mit(&self, schritt: fn(&mut Editormodell) -> Option<Treffer>) -> Editormeldung {
+        let treffer = schritt(&mut self.ivars().modell.borrow_mut());
+        self.treffer_zeigen(treffer);
+        self.suchmeldung()
+    }
+
+    /// `shift+cmd+r`: ersetzt den angesteuerten Treffer und rueckt vor (C5).
+    ///
+    /// **Ein Ersetzen ist eine ungesicherte Aenderung im Sinne von C4 und
+    /// schreibt nicht von sich aus in die Datei.** Das achte Abnahmekriterium
+    /// von C5 verlangt es, und es faellt von selbst an: `Editormodell` setzt
+    /// die Abweichungsmarke und ruft nicht `sichern`.
+    ///
+    /// **Der Ersatztext geht durch `krk_core::text::datei::in_gehaltene_form`,
+    /// und zwar vor dem Ersetzen.** Das tut `Editormodell` in
+    /// `ersetzung_vorbereiten`; hier steht keine zweite Wandlung daneben. Der
+    /// Grund, aus dem die Reihenfolge zaehlt, steht im Modulkopf von
+    /// `crate::editormodell`: eine Wandlung danach verschoebe jeden Byteversatz
+    /// hinter der ersetzten Stelle.
+    ///
+    /// **Steht kein Treffer an, wird nichts angefasst.** Der Stand geht dann
+    /// nicht durch [`Self::stand_erneuern`], und der Rueckgaengigstapel bleibt
+    /// stehen; gemeldet wird, warum nichts geschah.
+    pub fn treffer_ersetzen(&self) -> Editormeldung {
+        let steht_an = self
+            .ivars()
+            .modell
+            .borrow()
+            .suchlauf()
+            .and_then(Suchlauf::angesteuert)
+            .is_some();
+        if !steht_an {
+            return self.suchmeldung();
+        }
+
+        let ersatz = self.ivars().ersatz.borrow().clone();
+        let treffer = self.ivars().modell.borrow_mut().treffer_ersetzen(&ersatz);
+        self.stand_erneuern();
+        self.treffer_zeigen(treffer);
+        self.suchmeldung()
+    }
+
+    /// `ctrl+cmd+r`: ersetzt alle Treffer in einem Zug und nennt ihre Zahl
+    /// (C5).
+    ///
+    /// Danach steht kein Treffer mehr an; der Suchlauf bleibt mit seinem
+    /// Suchtext stehen, damit `cmd+f` ihn wieder anbietet. Ohne laufende Suche
+    /// geschieht nichts.
+    pub fn alle_treffer_ersetzen(&self) -> Editormeldung {
+        if self.ivars().modell.borrow().suchlauf().is_none() {
+            return Editormeldung::KeineSuche;
+        }
+
+        let ersatz = self.ivars().ersatz.borrow().clone();
+        let zahl = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .alle_treffer_ersetzen(&ersatz);
+        // Ohne Treffer hat sich der Stand nicht bewegt, und die Flaeche neu zu
+        // beschreiben kostete den Rueckgaengigstapel fuer nichts.
+        if zahl > 0 {
+            self.stand_erneuern();
+        }
+        Editormeldung::Ersetzt { zahl }
+    }
+
+    /// Waehlt den angesteuerten Treffer in der Flaeche aus, falls es einen
+    /// gibt.
+    ///
+    /// Ohne Treffer geschieht nichts, und die Schreibmarke bleibt stehen; das
+    /// fuenfte Abnahmekriterium von C5 verlangt genau das.
+    fn treffer_zeigen(&self, treffer: Option<Treffer>) {
+        if let Some(treffer) = treffer {
+            self.stelle_zeigen(treffer.anfang, treffer.ende);
+        }
+    }
+
+    /// Der Satz ueber den laufenden Suchlauf (C5).
+    ///
+    /// **Gebaut wird er im Modell**, weil dort steht, wie viele Treffer es gibt
+    /// und der wievielte ansteht; diese Funktion waehlt allein zwischen "es
+    /// laeuft eine Suche" und "es laeuft keine".
+    fn suchmeldung(&self) -> Editormeldung {
+        match self.ivars().modell.borrow().suchlauf() {
+            Some(lauf) => Editormeldung::Suchstand {
+                satz: lauf.meldung(),
+            },
+            None => Editormeldung::KeineSuche,
+        }
     }
 
     // ------------------------------------------------------------------
@@ -1582,6 +1993,77 @@ mod tests {
             "der Grund des Modells geht unverändert durch"
         );
         assert_ne!(gelungen, gescheitert);
+    }
+
+    /// C5 verlangt beim Zeilensprung, dass der Grund genannt wird, statt
+    /// kommentarlos nichts zu tun. Die drei Faelle, in denen die Nummer keine
+    /// Zeile bezeichnet, tragen deshalb drei verschiedene Saetze.
+    #[test]
+    fn die_drei_verfehlten_zeilensprünge_tragen_drei_verschiedene_saetze() {
+        let saetze = [
+            Editormeldung::KeineZeilennummer {
+                eingabe: "zwölf".to_owned(),
+            }
+            .text(),
+            Editormeldung::ZeileVorDerErsten.text(),
+            Editormeldung::ZeileHinterDerLetzten { zeilenzahl: 42 }.text(),
+        ];
+        for satz in &saetze {
+            assert!(
+                !satz.is_empty(),
+                "kommentarlos nichts zu sagen ist unzulässig"
+            );
+        }
+        assert!(
+            saetze[0].contains("zwölf"),
+            "die Meldung nennt, was der Nutzer geschrieben hat: {}",
+            saetze[0]
+        );
+        assert!(
+            saetze[2].contains("42"),
+            "die Meldung nennt die Zeilenzahl der Datei: {}",
+            saetze[2]
+        );
+        assert_ne!(saetze[0], saetze[1]);
+        assert_ne!(saetze[1], saetze[2]);
+        assert_ne!(saetze[0], saetze[2]);
+    }
+
+    /// C5 verlangt, dass die Suche Trefferzahl und Stelle nennt und dass eine
+    /// erfolglose Suche sich meldet. Beide Saetze baut das Modell; geprueft wird
+    /// hier, dass die Meldung sie unveraendert weitergibt.
+    #[test]
+    fn der_suchstand_gibt_den_satz_des_modells_unveraendert_weiter() {
+        let satz = "Treffer 2 von 7";
+        assert_eq!(
+            Editormeldung::Suchstand {
+                satz: satz.to_owned()
+            }
+            .text(),
+            satz
+        );
+        assert_ne!(
+            Editormeldung::KeineSuche.text(),
+            satz,
+            "eine gar nicht laufende Suche ist etwas anderes als eine ohne Treffer"
+        );
+        assert!(!Editormeldung::KeineSuche.text().is_empty());
+    }
+
+    /// C5 verlangt, dass das Ersetzen aller Treffer ihre Zahl nennt. Die drei
+    /// Zahlformen sind verschieden, und keine ist leer.
+    #[test]
+    fn das_sammelersetzen_nennt_die_zahl_in_jeder_form() {
+        let keiner = Editormeldung::Ersetzt { zahl: 0 }.text();
+        let einer = Editormeldung::Ersetzt { zahl: 1 }.text();
+        let viele = Editormeldung::Ersetzt { zahl: 7 }.text();
+        assert!(!keiner.is_empty());
+        assert_ne!(keiner, einer);
+        assert_ne!(einer, viele);
+        assert!(
+            viele.contains('7'),
+            "die Meldung nennt die Zahl der ersetzten Treffer: {viele}"
+        );
     }
 
     /// Das zweite Abnahmekriterium von C4, an der Stelle gemessen, an der der

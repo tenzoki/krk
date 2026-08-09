@@ -30,10 +30,16 @@
 //! die sie weiss. Zwei Fragen an die beiden, die je eine Haelfte kennen.
 //!
 //! **Zwei Koordinaten, ein Anfang.** Der Index rechnet in Byteversaetzen eines
-//! UTF-8-Textes, AppKit in UTF-16-Einheiten. [`anfaenge_in_utf16`] wechselt die
-//! Koordinate der Zeilenanfaenge und nichts weiter; welche Stellen Zeilenanfang
-//! sind und wie viele es gibt, sagt weiterhin allein der Index. Ohne den
-//! Wechsel truege jede Zeile hinter dem ersten Umlaut eine falsche Nummer.
+//! UTF-8-Textes, AppKit in UTF-16-Einheiten. [`super::koordinaten`] wechselt
+//! die Koordinate und nichts weiter; welche Stellen Zeilenanfang sind und wie
+//! viele es gibt, sagt weiterhin allein der Index. Ohne den Wechsel truege jede
+//! Zeile hinter dem ersten Umlaut eine falsche Nummer.
+//!
+//! Die Umrechnung stand bis zum 260810 hier und war privat. Sie ist mit dem
+//! Zeilensprung und der Suche aus C5 in ein eigenes Modul gewandert, weil beide
+//! sie brauchen und ein zweiter Rechenweg fuer dieselbe Frage entstanden waere;
+//! [`anfaenge_in_utf16`] ist seither die Zeile, die den Index befragt, und die
+//! Rechnung selbst steht nebenan.
 //!
 //! **Genau eine Nummer je Dateizeile.** Gezeichnet wird nur dort, wo der Anfang
 //! eines Zeilenkastens des Layoutverwalters zugleich ein Zeilenanfang der Datei
@@ -102,6 +108,8 @@ use objc2_foundation::{
 };
 
 use krk_core::text::Zeilenindex;
+
+use super::koordinaten;
 
 /// Der Abstand der Nummer zum linken und zum rechten Rand der Spalte.
 const RAND: f64 = 5.0;
@@ -484,40 +492,22 @@ pub fn spalte_neu_zeichnen(rolle: &NSScrollView) {
 /// Dieselben Zeilenanfaenge wie im [`Zeilenindex`], in AppKits Koordinate.
 ///
 /// **Ein Koordinatenwechsel und keine zweite Zaehlung.** Welche Stellen
-/// Zeilenanfang sind, sagt allein der Index; diese Funktion laeuft einmal ueber
-/// den Text und zaehlt dabei UTF-16-Einheiten statt Bytes. Der Text ist
-/// derselbe, ueber den der Index gelaufen ist, und jeder Zeilenanfang liegt
-/// deshalb auf einer Zeichengrenze.
-///
-/// Ohne den Wechsel truege jede Zeile hinter dem ersten Zeichen ausserhalb von
-/// ASCII eine falsche Nummer, denn der Layoutverwalter zaehlt in UTF-16.
+/// Zeilenanfang sind, sagt allein der Index; gerechnet wird in
+/// [`super::koordinaten::in_utf16`], der einen Stelle des Programms, die
+/// zwischen den beiden Koordinaten wechselt. Der Text ist derselbe, ueber den
+/// der Index gelaufen ist, und jeder Zeilenanfang liegt deshalb auf einer
+/// Zeichengrenze; die Anfaenge kommen aufsteigend, wie die Rechnung es
+/// verlangt.
 fn anfaenge_in_utf16(text: &str, index: &Zeilenindex) -> Vec<usize> {
     let byteanfaenge: Vec<usize> = (1..=index.zeilenzahl())
         .map(|nummer| index.anfang_der_zeile(nummer).versatz)
         .collect();
-
-    let mut umgerechnet = Vec::with_capacity(byteanfaenge.len());
-    let mut naechster = 0usize;
-    let mut gezaehlt = 0usize;
-    for (byte, zeichen) in text.char_indices() {
-        if byteanfaenge.get(naechster) == Some(&byte) {
-            umgerechnet.push(gezaehlt);
-            naechster += 1;
-        }
-        gezaehlt += zeichen.len_utf16();
-    }
-    // Ein Zeilenanfang am Textende hat kein Zeichen mehr hinter sich und kommt
-    // im Durchgang oben nicht vor: die leere letzte Zeile eines Textes, der auf
-    // einem Umbruch endet, und die einzige Zeile des leeren Textes.
-    while naechster < byteanfaenge.len() {
-        umgerechnet.push(gezaehlt);
-        naechster += 1;
-    }
-    umgerechnet
+    koordinaten::in_utf16(text, &byteanfaenge)
 }
 
-/// Der Koordinatenwechsel ist reine Rechnung und braucht kein Fenster; deshalb
-/// steht seine Pruefung hier und nicht unter `Nutzerarbeit`.
+/// Die Zaehlung der Zeilenanfaenge braucht kein Fenster; deshalb steht ihre
+/// Pruefung hier und nicht unter `Nutzerarbeit`. Der Koordinatenwechsel selbst
+/// ist in [`super::koordinaten`] geprueft.
 #[cfg(test)]
 mod tests {
     use super::*;
