@@ -566,13 +566,14 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S5 (die Kennungen müssen zusammenpassen; siehe die Reihenfolgeanmerkung dort)
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0. Die Konflikterkennung aus C3 meldet keinen Konflikt: `Belegung::bauen` macht den ersten Fund zum Fehler (`belegung.rs:789-794`), und ein grüner Bau der Belegung ist damit der Nachweis, dass keine der dreizehn Kombinationen eine bestehende bei demselben Zusteller doppelt. Eine Probe hält fest, dass die Datei 71 Funktionen führt und dass keine Tastenliste die Taste `y` oder `z` neu belegt.
 
-#### 7. **Rückgängig und Wiederholen im Menü "Bearbeiten"**
+#### 7. [DONE] **Rückgängig und Wiederholen im Menü "Bearbeiten"**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/menue.rs` (erweitert: zwei Einträge und ein Trenner im Untermenü "Bearbeiten")
 - Änderungen: Zwei Einträge nach demselben Muster wie die vier bestehenden, über `befehl(mtm, belegung, titel, sel, kennung)`: "Rückgängig" auf `sel!(undo:)` mit der Kennung `text_rueckgaengig`, "Wiederholen" auf `sel!(redo:)` mit `text_wiederholen`. Sie stehen an der Mac-üblichen Stelle, also ganz oben im Untermenü, getrennt durch einen Trenner von den vier Textbefehlen. Kein Ziel wird gesetzt; die Antwortkette entscheidet, wer sie beantwortet, und im Editor ist das der Rückgängigverwalter der `NSTextView`. Kein Kürzel steht als Zeichenkette im Programmtext; beide kommen aus der Belegung, wie `menue.rs:17-23` es für jeden Eintrag festhält.
 - Abhängigkeiten: S6
 - Abnahmekriterium: `make menue` gibt zwei Zeilen mehr aus, `eintrag="Rückgängig"` mit `kombination=cmd+z` und `selektor=undo:` sowie `eintrag="Wiederholen"` mit `kombination=shift+cmd+z` und `selektor=redo:`. Der Aufruf braucht ein gebautes Bündel, aber kein Fenster und keinen Vordergrund; er ist damit von einem Agenten abnehmbar. Dass Rückgängig im Editor **wirkt**, prüft S42 und ist `Nutzerarbeit`.
+- **Umsetzung am 260809:** Beide Einträge stehen ganz oben im Untermenü, `NSMenuItem::separatorItem` trennt sie von den vier Zwischenablage-Befehlen. `make menue` gibt beide geforderten Zeilen aus, samt der Trennerzeile dazwischen. Zwei Stellen daneben sind mitgewandert: der Modulkopf nennt jetzt sechs statt vier Textbefehle und begründet die beiden neuen Einträge damit, dass `undo:` und `redo:` auf dem Mac so wenig im Textsystem liegen wie `paste:`; die Probe `jede_kennung_des_hauptmenues_steht_in_der_auslieferungsbelegung` deckt die beiden neuen Kennungen mit ab. Bericht: `history/260809-1601-coder-s7-rueckgaengig-und-wiederholen-im-menue-bearbeiten.md`.
 
 ### Phase B: Der Kern rechnet, ohne Fenster
 

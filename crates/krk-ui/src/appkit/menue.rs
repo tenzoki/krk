@@ -5,9 +5,10 @@
 //! deshalb hier im Programmtext.
 //!
 //! Drei Untermenues: KRK, Bearbeiten, Fenster. Jeder Eintrag bekommt als Ziel
-//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:`, `paste:` und
-//! `selectAll:` erreichen den Feldeditor des Textfeldes mit dem Fokus, und
-//! `beenden:`, `fensterEinblenden:` wie `fensterSchliessen:` erreichen den
+//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:`, `paste:`,
+//! `selectAll:`, `undo:` und `redo:` erreichen den Feldeditor des Textfeldes
+//! mit dem Fokus beziehungsweise die Textflaeche des Editors, und `beenden:`,
+//! `fensterEinblenden:` wie `fensterSchliessen:` erreichen den
 //! Anwendungsdelegierten, an dem die Kette endet. Ein fest gesetztes Ziel
 //! wuerde die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn
 //! niemand ihn beantworten kann.
@@ -34,7 +35,7 @@
 //! sofort zurueck und reicht weiter; dann wirkt das Menue. Steht sie im
 //! Dateifenster, schlaegt er in der Belegung nach — und die vom Menue
 //! gehaltenen Funktionen sieht er dabei nicht, weil `Belegung::nachschlag` sie
-//! ueberspringt. Die vier Textbefehle laufen deshalb auch im Dateifenster ins
+//! ueberspringt. Die sechs Textbefehle laufen deshalb auch im Dateifenster ins
 //! Menue und von dort die Antwortkette hinunter, wo heute niemand `paste:`
 //! beantwortet und der Eintrag folglich grau ist. Genau das ist der
 //! Einhaengepunkt der spaeteren Dateizwischenablage: sie beantwortet `copy:`
@@ -50,6 +51,13 @@
 //! Gemessen am 260804-1309 am laufenden Buendel: Pfad in der Zwischenablage,
 //! `shift+cmd+g`, `cmd+v` gesendet, Feld unveraendert. Defekt
 //! `issues/260804-1309_*_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
+//!
+//! **`undo:` und `redo:` liegen genauso.** Die `NSTextView` des Editors bringt
+//! ihren Rueckgaengigverwalter mit, aber Cmd+Z und Shift+Cmd+Z erreichen ihn
+//! nur ueber ein Menuekuerzel. Ohne die beiden Eintraege "Rueckgaengig" und
+//! "Wiederholen" haette der Editor kein Rueckgaengig. Sie stehen an der
+//! Mac-ueblichen Stelle ganz oben im Untermenue, durch einen Trenner von den
+//! vier Zwischenablage-Befehlen getrennt.
 //!
 //! # Zwei Eintraege tragen einen eigenen Selektor
 //!
@@ -198,6 +206,21 @@ pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu
         mtm,
         ns_string!("Bearbeiten"),
         &[
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Rückgängig"),
+                sel!(undo:),
+                "text_rueckgaengig",
+            ),
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("Wiederholen"),
+                sel!(redo:),
+                "text_wiederholen",
+            ),
+            NSMenuItem::separatorItem(mtm),
             befehl(
                 mtm,
                 belegung,
@@ -631,6 +654,8 @@ mod tests {
         let belegung = Belegung::auslieferung();
         for kennung in [
             "beenden",
+            "text_rueckgaengig",
+            "text_wiederholen",
             "text_ausschneiden",
             "text_kopieren",
             "text_einfuegen",
