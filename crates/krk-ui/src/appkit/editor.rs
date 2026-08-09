@@ -34,6 +34,14 @@
 //! [`Editorbereich::stand_einsetzen`] ist die eine Stelle, die den Text der
 //! Flaeche ersetzt.
 //!
+//! **Was der Editor zu melden hat, geht als Wert nach oben und nicht als
+//! fertige Zeile an eine Flaeche.** [`Editormeldung`] benennt es; wohin es
+//! geht, weiss diese Datei nicht. Der Anwendungsdelegierte nimmt den Wert und
+//! stellt ihn in die **eine** Meldeflaeche des Fensters aus C1 der Runde 1, auf
+//! den obersten ihrer fuenf Raenge. Eine zweite Meldeflaeche neben ihr entsteht
+//! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
+//! "Der Editor bekommt keine eigene Meldezeile".
+//!
 //! **Reiner Text.** `setRichText(false)` und die vier abgeschalteten
 //! Ersetzungen halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
 //! Sichern Zeichen fuer Zeichen wieder in der Datei steht. Eine typografische
@@ -60,7 +68,106 @@ use objc2_foundation::{
     MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
 };
 
+use krk_core::text::{Abweisung, Fund, Markensprung};
+
 use crate::editormodell::Editormodell;
+
+/// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
+///
+/// **Ein Wert und keine Zeichenkette am Meldeort.** Jede Meldung des Editors
+/// ist die Antwort auf einen Tastenbefehl, und jede geht denselben einen Weg
+/// nach oben; der Wortlaut steht deshalb hier an einer Stelle und nicht bei den
+/// sechs Befehlen, die ihn ausloesen. Wer eine siebte Meldung braucht, setzt
+/// eine Variante dazu und bekommt vom Uebersetzer die fehlende Zeile in
+/// [`Self::text`] angezeigt.
+///
+/// **Die Aufzaehlung ist vollstaendig und hat keinen Auffangzweig**, wie die
+/// drei uebrigen dieser Art im Programm. Sie ist heute kurz, weil erst zwei der
+/// sechs Ausloeser gebaut sind; die vier uebrigen kommen mit ihren Schritten und
+/// tragen ihre Variante bei:
+///
+/// ```text
+///  gebaut    Abweisung beim Oeffnen        krk_core::text::datei::oeffnen (S10)
+///  gebaut    Markenstelle geaendert        krk_core::text::marke (S12)
+///  offen     gescheitertes Sichern         S25
+///  offen     Zeilennummer ueber der Zahl   S35
+///  offen     Suche ohne Treffer            S36
+///  offen     Zahl der ersetzten Treffer    S37
+/// ```
+///
+/// **Kommentarlos nichts zu tun ist in keinem Fall zulaessig**; das steht so im
+/// zehnten Abnahmekriterium von C2 und im achten von C6, und dieser Wert ist
+/// die Form, in der ein Befehl seinen Grund abgibt.
+// **Diese Zeile faellt mit Schritt 22**, dem ersten Ausloeser: F4 weist eine
+// Datei ab und meldet den Grund. Bis dahin steht der Meldeweg gebaut da, ohne
+// dass ein Befehl ihn ginge; die Pruefungen am Dateiende fassen jeden seiner
+// Zweige an. Gemessen am 260809 mit entfernter Zeile: `cargo clippy
+// --workspace --all-targets` meldet drei Fundstellen toten Werts, und der
+// Arbeitsbereich stuende rot, weil `make lint` mit `-D warnings` faehrt.
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Editormeldung {
+    /// Der Editor nimmt die Datei nicht an (C2).
+    ///
+    /// Die drei Gruende bleiben unterschieden, weil das zehnte
+    /// Abnahmekriterium von C2 es verlangt und weil der Datensatz
+    /// `decisions/260807-2147_a_welche-dateien-oeffnet-der-editor-ueberhaupt.md`
+    /// es ausdruecklich fordert. Unterschieden werden sie in
+    /// [`Abweisung::meldung`] und hier nicht ein zweites Mal.
+    Abgewiesen(Abweisung),
+    /// Die Textmarke ist gesprungen, aber ihre gemerkte Stelle war fort (C6).
+    ///
+    /// Der gemerkte Zeileninhalt stand weder auf der gemerkten Nummer noch in
+    /// den `krk_core::text::marke::NAHFENSTER` Zeilen darum. Die Marke fuehrt
+    /// **trotzdem** an die gemerkte Nummer; gemeldet wird, dass die Stelle
+    /// sich geaendert hat, statt kommentarlos irgendwohin zu fuehren.
+    MarkenstelleGeaendert {
+        /// Die gemerkte Zeilennummer, ab 1 gezaehlt, an die die Marke gefuehrt
+        /// hat.
+        zeile: u32,
+    },
+}
+
+#[allow(dead_code)]
+impl Editormeldung {
+    /// Die Meldung des Markensprungs, falls er eine hat (C6).
+    ///
+    /// **Die Fallunterscheidung ueber den Fund steht hier und nicht beim
+    /// Aufrufer.** Ein getroffener und ein verschobener Sprung melden nichts,
+    /// weil beide an der richtigen Stelle landen; allein der dritte Fall
+    /// meldet. Ein vierter Fund haelt den Bau an und erzwingt die Antwort auf
+    /// die Frage, ob er zu melden ist.
+    ///
+    /// **Das beantwortet die eine Haelfte der Auskunft und nicht beide.**
+    /// `krk_core::text::Markensprung` traegt zwei verschiedene Auskuenfte: ob
+    /// der gemerkte Inhalt wiedergefunden wurde ([`Markensprung::fund`]) und ob
+    /// die angesteuerte Nummer im Text ueberhaupt vorkommt
+    /// (`Markensprung::sprung.lage`). Diese Funktion beantwortet die erste. Die
+    /// zweite ist die Meldung der Zeilenlage aus C5, die mit S35 kommt; wie die
+    /// beiden sich einen Rang teilen, wenn sie zusammentreffen, fuehrt
+    /// `issues/260809-1631_o_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`.
+    pub fn markenstelle(sprung: &Markensprung) -> Option<Self> {
+        match sprung.fund {
+            Fund::Getroffen | Fund::Verschoben => None,
+            Fund::NichtGefunden => Some(Self::MarkenstelleGeaendert {
+                zeile: sprung.zeile,
+            }),
+        }
+    }
+
+    /// Der Satz, der dem Nutzer gezeigt wird.
+    ///
+    /// Vollstaendig und ohne Auffangzweig: eine neue Variante haelt den Bau an
+    /// und erzwingt ihren Satz, statt still einen fremden zu bekommen.
+    pub fn text(&self) -> String {
+        match self {
+            Self::Abgewiesen(abweisung) => abweisung.meldung(),
+            Self::MarkenstelleGeaendert { zeile } => {
+                format!("die gemerkte Stelle hat sich geändert; die Marke führt auf Zeile {zeile}")
+            }
+        }
+    }
+}
 
 /// Die Groesse, mit der die Flaeche entsteht, bevor die Aufteilung sie auslegt.
 ///
@@ -197,4 +304,74 @@ fn textflaeche_bauen(
     }
     rolle.setDocumentView(Some(&text));
     (rolle, text)
+}
+
+/// Die Meldungen sind reine Werte und brauchen kein Fenster; deshalb stehen die
+/// Pruefungen hier und nicht unter `Nutzerarbeit`.
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use krk_core::text::marke::wiederfinden;
+
+    use super::*;
+
+    fn pfad() -> PathBuf {
+        PathBuf::from("/tmp/probe.txt")
+    }
+
+    /// Das zehnte Abnahmekriterium von C2: jede Abweisung nennt ihren Grund,
+    /// und "zu gross" ist von "nicht als Text lesbar" zu unterscheiden.
+    #[test]
+    fn die_drei_abweisungsgruende_tragen_drei_verschiedene_saetze() {
+        let saetze = [
+            Editormeldung::Abgewiesen(Abweisung::KeinGueltigesZiel {
+                pfad: pfad(),
+                grund: "ein Ordner".into(),
+            })
+            .text(),
+            Editormeldung::Abgewiesen(Abweisung::ZuGross {
+                pfad: pfad(),
+                groesse: 20 * 1024 * 1024,
+            })
+            .text(),
+            Editormeldung::Abgewiesen(Abweisung::NichtAlsTextLesbar { pfad: pfad() }).text(),
+        ];
+        for satz in &saetze {
+            assert!(
+                !satz.is_empty(),
+                "kommentarlos nichts zu sagen ist unzulässig"
+            );
+        }
+        assert_ne!(saetze[0], saetze[1]);
+        assert_ne!(saetze[1], saetze[2]);
+        assert_ne!(saetze[0], saetze[2]);
+    }
+
+    /// Das achte Abnahmekriterium von C6: nur der Fehlschlag meldet, und er
+    /// meldet, dass die Stelle sich geaendert hat.
+    #[test]
+    fn allein_die_nicht_wiedergefundene_markenstelle_meldet_sich() {
+        let text = "eins\nzwei\ndrei\n";
+        // Der gemerkte Inhalt steht auf der gemerkten Nummer.
+        assert_eq!(
+            Editormeldung::markenstelle(&wiederfinden(text, 2, "zwei")),
+            None
+        );
+        // Er steht daneben und wird im Fenster wiedergefunden.
+        assert_eq!(
+            Editormeldung::markenstelle(&wiederfinden(text, 1, "drei")),
+            None
+        );
+        // Er ist fort: die Marke fuehrt trotzdem, und der Sprung meldet sich.
+        let sprung = wiederfinden(text, 2, "vier");
+        assert_eq!(sprung.fund, Fund::NichtGefunden);
+        let meldung = Editormeldung::markenstelle(&sprung)
+            .expect("ein nicht wiedergefundener Inhalt meldet sich");
+        assert_eq!(meldung, Editormeldung::MarkenstelleGeaendert { zeile: 2 });
+        assert!(
+            meldung.text().contains('2'),
+            "die Meldung nennt die Zeile, an die sie geführt hat"
+        );
+    }
 }

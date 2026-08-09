@@ -749,7 +749,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S17
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Eine Probe deckt ab, dass `holt_hervor(Fokus::Editor)` den Bereich Editor liefert. **`Nutzerarbeit`:** am laufenden Bündel setzt `shift+cmd+e` den Fokus in den Editor, wenn er eine Datei hält, und tut nichts, wenn er keine hält; `shift+cmd+d` führt zurück.
 
-#### 21. **Die Meldungen des Editors in der Statuszeile**
+#### 21. [DONE] **Die Meldungen des Editors in der Statuszeile**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Weg vom Editor in die Statuszeile), `crates/krk-ui/src/appkit/editor.rs` (erweitert: die Meldeschnittstelle)
@@ -757,6 +757,10 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Rang 1 ist der richtige, weil jede Meldung des Editors die Antwort auf einen Tastenbefehl ist: eine Abweisung beim Öffnen, ein gescheitertes Sichern, eine Zeilennummer über der Zeilenzahl, eine Suche ohne Treffer, die Zahl der ersetzten Treffer, eine Textmarke, deren Stelle sich geändert hat. Die Vorrangregel bleibt unangetastet, und eine sechste Quelle entsteht nicht.
 - Abhängigkeiten: S16
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. `grep -c 'Statuszeile' crates/krk-ui/src/appkit/editor.rs` liefert 0: der Editor kennt die Statuszeile nicht, sondern meldet nach oben. Der Diff zeigt keine sechste Quelle in `statuszeile::zeile`.
+- **Umsetzung am 260809-1631:** `Editormeldung` in `crates/krk-ui/src/appkit/editor.rs` benennt, was der Editor zu sagen hat; `Anwendungsdelegierter::editormeldung_zeigen` in `anwendung.rs` stellt es über `antwort_zeigen` auf Rang 1 der Statuszeile des **aktiven** Dateifensters. Die vier Abnahmekommandos laufen durch, `grep -c 'Statuszeile'` auf `editor.rs` liefert 0, und `statuszeile.rs` trägt keine geänderte Zeile: `zeile` hat weiterhin fünf Parameter und fünf Ränge. Drei Vermerke:
+  - **Gebaut sind zwei der sechs Meldungen, und beide haben eine schon gebaute Quelle.** `Editormeldung::Abgewiesen` reicht die drei unterschiedenen Gründe aus `krk_core::text::datei::oeffnen` (S10) über `Abweisung::meldung` durch und formuliert sie nicht neu; `Editormeldung::MarkenstelleGeaendert` trägt den Fall `Fund::NichtGefunden` aus `krk_core::text::marke` (S12). Die vier übrigen aus der Rangbegründung dieses Schrittes haben heute keinen Auslöser und kommen mit S25, S35, S36 und S37; die Aufzählung im Doc-Kommentar führt sie namentlich mit ihrem Schritt.
+  - **Der Meldeweg steht ohne Auslöser da und trägt deshalb zwei `#[allow(dead_code)]`.** Gemessen am 260809 mit entfernten Zeilen: `cargo clippy --workspace --all-targets` meldet drei Fundstellen toten Werts, und der Arbeitsbereich stünde rot, weil `make lint` mit `-D warnings` fährt. Ablösender Schritt ist **S22**, der erste Auslöser; beide Kommentare nennen ihn. Tot ist nichts: zwei Proben in `editor.rs` fassen jeden Zweig von `Editormeldung::text` und `Editormeldung::markenstelle` an.
+  - **Ein Markensprung kann zwei Meldungen zugleich haben, und die Zeile trägt eine.** `Markensprung` führt Fund und Zeilenlage als zwei verschiedene Auskünfte, und `marke.rs` verlangt vom Aufrufer beides zu melden. Dieser Schritt baut die erste; die zweite gehört zum Zeilensprung aus C5 und kommt mit S35. Wie die beiden sich einen Rang teilen, wenn sie zusammentreffen, ist in `issues/260809-1631_o_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md` festgehalten und bei **S39** zu entscheiden.
 
 ### Phase D: Die beiden Einstiege
 

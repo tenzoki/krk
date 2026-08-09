@@ -188,7 +188,7 @@ use super::bildtakt::{self, Zeichenende};
 use super::blaetter::{
     Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
 };
-use super::editor::Editorbereich;
+use super::editor::{Editorbereich, Editormeldung};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
@@ -2516,6 +2516,41 @@ impl Anwendungsdelegierter {
         self.dateifenster(seite)
             .quelle()
             .befehlsantwort_zeigen(text);
+    }
+
+    /// Stellt eine Meldung des Editors in die Statuszeile des **aktiven**
+    /// Dateifensters (C1).
+    ///
+    /// **Der Editor bekommt keine eigene Meldezeile.** Die Uebergabe an diese
+    /// Runde sagt das zu, C1 wiederholt es, und diese Funktion ist die Stelle,
+    /// an der die Zusage haelt: alles, was der Editor zu sagen hat, geht durch
+    /// sie und landet in der einen Zeile, die es seit der Runde 1 gibt. Eine
+    /// sechste Quelle in [`crate::appkit::statuszeile::zeile`] entsteht dabei
+    /// nicht.
+    ///
+    /// **Rang 1 und kein eigener daneben.** Jede Meldung des Editors ist die
+    /// Antwort auf einen Tastenbefehl, den der Nutzer eben gegeben hat: eine
+    /// Abweisung beim Oeffnen, ein gescheitertes Sichern, eine Zeilennummer
+    /// ueber der Zeilenzahl, eine Suche ohne Treffer, die Zahl der ersetzten
+    /// Treffer, eine Textmarke, deren Stelle sich geaendert hat. Damit ist sie
+    /// dasselbe wie die Antworten der Leiste und der Vorschau, und sie nimmt
+    /// deren Weg ueber [`Self::antwort_zeigen`]. Die Vorrangregel bleibt
+    /// unangetastet.
+    ///
+    /// **In das aktive Dateifenster und nicht in eines von beiden nach Wahl.**
+    /// Der Editor steht neben beiden Fenstern und gehoert keinem; die Zeile,
+    /// die der Nutzer im Blick hat, ist die des Fensters, mit dem er zuletzt
+    /// gearbeitet hat. Denselben Bezug nehmen die Befehle ohne eigene Seite
+    /// seit der Runde 1: [`Self::endgueltig_loeschen`] liest `aktiv` und meldet
+    /// „es ist nichts ausgewählt" dorthin, und die beiden Operationsbefehle
+    /// tun es genauso.
+    // **Diese Zeile faellt mit Schritt 22**, dem ersten Ausloeser. Der Grund und
+    // die Messung stehen bei `Editormeldung` in `super::editor`; hier nicht ein
+    // zweites Mal.
+    #[allow(dead_code)]
+    fn editormeldung_zeigen(&self, meldung: &Editormeldung) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.antwort_zeigen(aktiv, &meldung.text());
     }
 
     // ------------------------------------------------------------------
