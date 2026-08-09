@@ -588,7 +588,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: der Zeilenindex einer Datei mit 10.000 Zeilen liefert für jede Zeile denselben Versatz wie ein Durchlauf von Hand; eine Zeilennummer 0 und eine über der Zeilenzahl liefern je das erwartete Ergebnis samt Kennzeichen; eine Suche in einem Text mit Umlauten und Emojis liefert Treffer auf Zeichengrenzen; ein Ersetzen über alle Treffer, bei dem der Ersatztext den Suchtext enthält, endet und liefert die richtige Zahl; ein Ersetzen mit leerem Suchtext liefert null Treffer und ändert nichts.
 
-#### 9. **Das Einlesen und die Sicherungsform**
+#### 9. [DONE] **Das Einlesen und die Sicherungsform**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/text/datei.rs`, `crates/krk-core/src/text/mod.rs` (einbindend), `crates/krk-core/tests/text.rs` (erweitert)
@@ -625,7 +625,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: eine `bookmarks.toml` **in der Form vor dieser Runde**, also mit `name` und `ordner` und ohne jedes weitere Feld, wird eingelesen und liefert drei Ordnermarken; eine Rundreise über beide Sorten liefert byteweise dieselbe Datei; eine geschriebene Datei ist von Hand lesbar, was die Probe daran festmacht, dass sie keine geschachtelte Tabelle und keine Sortenkennung enthält; ein Lesezeichen kann nicht beide Sorten zugleich tragen, was der Typ erzwingt und die Probe am fehlenden Konstruktor festhält; `gueltig()` einer Textmarke auf eine bestehende Datei ist wahr, auf einen bestehenden Ordner falsch.
 
-#### 12. **Die Suche in der Nähe einer Textmarke**
+#### 12. [DONE] **Die Suche in der Nähe einer Textmarke**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/text/marke.rs`, `crates/krk-core/src/text/mod.rs` (einbindend), `crates/krk-core/tests/text.rs` (erweitert)
@@ -634,6 +634,12 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   `NAHFENSTER` trägt einen Kommentar mit `inference:`, dass fünfzig ein Vorschlag und keine gemessene Größe ist, und mit dem Satz, den der Datensatz als Grenze der Fähigkeit festhält: der gemerkte Zeileninhalt ist keine eindeutige Kennung, und eine Marke auf einer mehrfach vorkommenden Zeile ist nach einer Änderung von außen nicht zuverlässig wiederzufinden.
 - Abhängigkeiten: S8, S11
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt fünf Fälle ab: unveränderte Datei trifft sofort; um zehn Zeilen nach unten verschobene Stelle wird gefunden; um sechzig Zeilen verschobene Stelle wird nicht gefunden und liefert die gemerkte Nummer mit Kennzeichen; ein Zeileninhalt, der im Fenster zweimal vorkommt, liefert den der gemerkten Nummer nächstliegenden; eine gemerkte Nummer über der Zeilenzahl liefert das Dateiende über dieselbe Funktion wie der Zeilensprung aus C5, was die Probe daran festmacht, dass sie beide Wege gegeneinander prüft.
+- **Umsetzung am 260809:** `text::marke::wiederfinden` mit `NAHFENSTER`, `Fund` und `Markensprung`. Vier Abweichungen von der Schrittbeschreibung, alle drei ersten aus der Reservierung paralleler Schritte:
+  - Die Proben stehen als `#[cfg(test)] mod tests` **in `marke.rs`** und nicht in `crates/krk-core/tests/text.rs`; die Datei war für S9 reserviert. Zehn Proben, die fünf geforderten Fälle darunter.
+  - `crates/krk-core/src/text/mod.rs` war ebenfalls reserviert, wird aber zwingend gebraucht: ohne `pub mod marke;` übersetzt die neue Datei gar nicht mit und keine Probe liefe. Zwei rein additive Zeilen (`pub mod marke;`, `pub use marke::{Fund, Markensprung};`); der ASCII-Überblick und der Modulkopf dort sind **nicht** nachgezogen und bleiben für S9 zu ergänzen.
+  - `Zeilenindex::inhalt_der_zeile` ist in `crates/krk-core/src/text/zeilen.rs` hinzugekommen, samt zwei Proben. Die Marke vergleicht ganze Zeilen und braucht dafür den Inhalt einer Zeilennummer; ihn in `marke.rs` über `str::lines` zu bilden wäre die zweite Meinung darüber, was eine Zeile beendet, und `str::lines` kennt die leere letzte Zeile nach einem abschließenden `\n` nicht.
+  - Die Regel für gleich weit entfernte Treffer stand im Schritt nicht: bei gleichem Abstand nach oben und nach unten gewinnt die **kleinere** Nummer. Die Wahl ist willkürlich und allein deshalb festgelegt, damit sie wiederholbar ist; sie ist an der Funktion begründet und mit einer eigenen Probe festgehalten.
+  Dazu die Probe `die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus` in `crates/krk-core/tests/ablage.rs`: sie entzieht der gemerkten Datei jedes Leserecht und belegt, dass `Lesezeichen::gueltig` sie trotzdem als gültig meldet. Das ist der tragende Grund der Antwort vom 260808-0017 und war bis dahin nur zugesagt, nicht geprüft.
 
 #### 13. [DONE] **`Bereich::Editor` im Fenstermodell**
 
@@ -847,7 +853,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase F: Die beiden Ansichten
 
-#### 32. **Die Wahl der Kiste für die Syntaxhervorhebung**
+#### 32. [DONE] **Die Wahl der Kiste für die Syntaxhervorhebung**
 
 - Ausführender: `coder`
 - Dateien: `Cargo.toml` (erweitert: `[workspace.dependencies]` mit der geschriebenen Begründung), `crates/krk-ui/Cargo.toml` (erweitert: die Abhängigkeit), `Cargo.lock` (zieht mechanisch mit), `README.md` (erweitert: die Zeile über die fremden Kisten, falls dort eine steht)

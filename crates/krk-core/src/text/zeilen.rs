@@ -119,6 +119,40 @@ impl Zeilenindex {
         }
     }
 
+    /// Der Inhalt der Zeile `nummer` **ohne ihr Zeilenende**, oder `None`,
+    /// wenn die Nummer keine Zeile dieses Textes bezeichnet.
+    ///
+    /// Der Index haelt den Text nicht, deshalb kommt er als Parameter herein;
+    /// es muss derselbe sein, ueber den [`Zeilenindex::neu`] lief. Ist er es
+    /// nicht, liefert die Methode `None`, statt in Panik zu enden: der Zugriff
+    /// geht ueber [`str::get`] und nicht ueber eine Bereichsangabe.
+    ///
+    /// **Sie steht hier und nicht bei ihrem Aufrufer**, weil sie dieselbe
+    /// Kenntnis braucht, die der Index ohnehin traegt: wo eine Zeile anfaengt
+    /// und wo sie aufhoert. Eine zweite Stelle, die den Text an `\n` zerlegt
+    /// — etwa ueber [`str::lines`] —, waere die zweite Meinung darueber, was
+    /// eine Zeile beendet, und der Modulkopf sagt, warum es davon nur eine
+    /// gibt. [`str::lines`] traegt zudem eine andere Zaehlung: es kennt die
+    /// leere letzte Zeile nach einem abschliessenden `\n` nicht.
+    ///
+    /// Hinzugekommen mit dem Schritt zur Suche in der Naehe einer Textmarke
+    /// ([`crate::text::marke`]), der den gemerkten Zeileninhalt gegen den
+    /// tatsaechlichen haelt.
+    pub fn inhalt_der_zeile<'t>(&self, text: &'t str, nummer: usize) -> Option<&'t str> {
+        if nummer == 0 {
+            return None;
+        }
+        let anfang = *self.anfaenge.get(nummer - 1)?;
+        // Das Ende ist der Anfang der naechsten Zeile ohne deren `\n`; bei der
+        // letzten Zeile ist es das Textende. Genau ein Byte, weil der gehaltene
+        // Stand kein `\r\n` mehr traegt, siehe Modulkopf.
+        let ende = match self.anfaenge.get(nummer) {
+            Some(naechster) => naechster.saturating_sub(1),
+            None => self.laenge,
+        };
+        text.get(anfang..ende)
+    }
+
     /// Die Nummer der Zeile, in der `versatz` liegt, ab 1 gezaehlt.
     ///
     /// Ein Versatz hinter dem Textende liefert die letzte Zeile: er entsteht
@@ -171,6 +205,26 @@ mod tests {
                 lage: Zeilenlage::HinterDerLetzten,
             }
         );
+    }
+
+    #[test]
+    fn der_inhalt_einer_zeile_kommt_ohne_ihr_zeilenende() {
+        let text = "eins\nzwei\ndrei";
+        let index = Zeilenindex::neu(text);
+        assert_eq!(index.inhalt_der_zeile(text, 1), Some("eins"));
+        assert_eq!(index.inhalt_der_zeile(text, 3), Some("drei"));
+        assert_eq!(index.inhalt_der_zeile(text, 0), None);
+        assert_eq!(index.inhalt_der_zeile(text, 4), None);
+    }
+
+    #[test]
+    fn die_leere_letzte_zeile_hat_einen_inhalt_und_er_ist_leer() {
+        let text = "eins\n";
+        let index = Zeilenindex::neu(text);
+        assert_eq!(index.inhalt_der_zeile(text, 2), Some(""));
+        // Der Unterschied zu `str::lines`, der den Platz dieser Methode
+        // begruendet: dort gibt es die zweite Zeile gar nicht.
+        assert_eq!(text.lines().count(), 1);
     }
 
     #[test]

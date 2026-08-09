@@ -1383,3 +1383,49 @@ fn eine_textmarke_ist_gueltig_solange_ihre_datei_da_ist() {
         "ein Ordner ist kein Ziel fuer eine Textmarke"
     );
 }
+
+/// Die Gueltigkeitspruefung **oeffnet und liest die Datei nicht** (C6, Schritt
+/// 12).
+///
+/// Die Zusage ist der tragende Grund der Antwort vom 260808-0017
+/// (`decisions/260807-2147_*_wie-weit-reicht-die-suche-in-der-naehe-einer-textmarke.md`):
+/// die Leiste stellt diese Frage bei jedem Neuaufbau ihrer Liste fuer jede
+/// Marke, und ein Lesevorgang je Marke waere etwas anderes als eine Frage an
+/// das Dateisystem.
+///
+/// Die Probe nimmt der Datei jedes Leserecht. Ihre Groesse und ihr Typ bleiben
+/// erfragbar, ihr Inhalt nicht — wer sie oeffnen wollte, bekaeme
+/// `PermissionDenied`. Bleibt die Marke dabei gueltig, hat die Pruefung nicht
+/// gelesen.
+///
+/// **Unter root belegt die Probe nichts**, weil Zugriffsrechte dann nicht
+/// greifen; dieselbe Einschraenkung steht bei
+/// [`eine_nicht_lesbare_datei_fuehrt_ebenso_zum_auslieferungszustand`]. Sie
+/// bricht deshalb erkennbar ab, statt still durchzugehen und eine Zusage
+/// vorzutaeuschen.
+#[test]
+fn die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("textmarke-ohne-lesen");
+    let datei = ordner.pfad().join("verschlossen.md");
+    fs::write(&datei, b"eine Zeile\n").expect("schreiben gescheitert");
+    fs::set_permissions(&datei, fs::Permissions::from_mode(0o000))
+        .expect("die Rechte lassen sich nicht entziehen");
+
+    assert!(
+        fs::read(&datei).is_err(),
+        "die Pruefdatei ist trotz entzogener Rechte lesbar — laeuft der Lauf unter root?"
+    );
+    assert!(
+        Lesezeichen::textstelle("Verschlossen", &datei, 1, "eine Zeile").gueltig(),
+        "gueltig() hat die Datei zu oeffnen versucht, statt nur nach ihr zu fragen"
+    );
+
+    // Das Gegenstueck: verschwindet die Datei, ist die Marke ungueltig. Das ist
+    // der einzige Grund, aus dem sie es wird.
+    fs::set_permissions(&datei, fs::Permissions::from_mode(0o600))
+        .expect("die Rechte lassen sich nicht zuruecksetzen");
+    fs::remove_file(&datei).expect("die Pruefdatei laesst sich nicht loeschen");
+    assert!(!Lesezeichen::textstelle("Verschlossen", &datei, 1, "eine Zeile").gueltig());
+}
