@@ -522,6 +522,61 @@ impl Editormodell {
         self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
     }
 
+    /// Nimmt die genannte Datei auf dem rufenden Faden auf (C2).
+    ///
+    /// **Der Zwischenstand, bis das Lesen auf dem Arbeitsfaden in Betrieb
+    /// geht.** [`Self::oeffnen`] startet den Faden aus dem Modulkopf, aber die
+    /// Antwort holt erst ein Takt auf dem Hauptfaden ab, und den baut ein
+    /// spaeterer Schritt; bis dahin faende [`Self::einziehen`] niemand, der ihn
+    /// ruft. Hier wird deshalb gelesen, wo der Aufrufer steht. Der Preis steht
+    /// im Spec unter `## Verhaeltnis zu den zehn Zeitzusagen`: solange der
+    /// Editor eine grosse Datei einliest, haelt der Hauptfaden an, und die
+    /// Zusage, dass die Dateifenster dabei bedienbar bleiben, gilt noch nicht.
+    ///
+    /// Geprueft wird in `krk_core::text::datei::oeffnen`, derselben einen
+    /// Stelle wie auf dem Arbeitsfaden, und der Stempel wird **vor** dem Lesen
+    /// erhoben, aus dem Grund, der an [`Ladevorgang::starten`] steht. Der
+    /// Uebergang in den gehaltenen Stand geht durch [`Self::uebernehmen`] und
+    /// ist damit derselbe wie dort.
+    ///
+    /// **Fragt nicht nach**, wie [`Self::oeffnen`]; siehe den Modulkopf.
+    pub fn jetzt_oeffnen(&mut self, pfad: &Path) -> Ladeausgang {
+        let stempel = Stempel::von_pfad(pfad);
+        let geladen = Geladen {
+            ergebnis: datei::oeffnen(pfad),
+            stempel,
+        };
+        self.uebernehmen(pfad.to_path_buf(), geladen)
+    }
+
+    /// Uebernimmt, was ein Lesevorgang geliefert hat.
+    ///
+    /// **Die eine Stelle, an der eine gelesene Datei zum Stand des Editors
+    /// wird.** Zwei Wege fuehren hierher, [`Self::einziehen`] vom Arbeitsfaden
+    /// und [`Self::jetzt_oeffnen`] vom rufenden; zwei Uebergaenge nebeneinander
+    /// waeren zwei Wahrheiten darueber, was ein geoeffneter Editor haelt, und
+    /// der Umstieg auf den Arbeitsfaden wechselt so nur den Aufrufer.
+    ///
+    /// Bei Erfolg steht danach die neue Datei mit ihrem Stand, ihrem Typ, ihrem
+    /// Stempel und ohne Abweichung; ein Suchlauf ueber den alten Stand ist
+    /// beendet, weil seine Versaetze in den neuen nicht mehr passen.
+    fn uebernehmen(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
+        match geladen.ergebnis {
+            Ok(stand) => {
+                self.typ = Dateityp::von_pfad(&pfad);
+                self.pfad = Some(pfad);
+                self.stand = stand;
+                self.abweichung = false;
+                self.stempel = geladen.stempel;
+                self.suchlauf = None;
+                Ladeausgang::Geoeffnet
+            }
+            // Der bisherige Stand bleibt vollstaendig stehen: der Editor wirft
+            // nichts weg, weil eine andere Datei sich nicht oeffnen liess.
+            Err(abweisung) => Ladeausgang::Abgewiesen(abweisung),
+        }
+    }
+
     /// Ob ein Ladevorgang laeuft.
     pub fn laedt_noch(&self) -> bool {
         self.ladevorgang.is_some()
@@ -542,21 +597,7 @@ impl Editormodell {
         match vorgang.empfaenger.try_recv() {
             Ok(geladen) => {
                 self.ladevorgang = None;
-                match geladen.ergebnis {
-                    Ok(stand) => {
-                        self.typ = Dateityp::von_pfad(&geladener_pfad);
-                        self.pfad = Some(geladener_pfad);
-                        self.stand = stand;
-                        self.abweichung = false;
-                        self.stempel = geladen.stempel;
-                        self.suchlauf = None;
-                        Some(Ladeausgang::Geoeffnet)
-                    }
-                    // Der bisherige Stand bleibt vollstaendig stehen: der
-                    // Editor wirft nichts weg, weil eine andere Datei sich
-                    // nicht oeffnen liess.
-                    Err(abweisung) => Some(Ladeausgang::Abgewiesen(abweisung)),
-                }
+                Some(self.uebernehmen(geladener_pfad, geladen))
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => None,
             // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
@@ -1004,6 +1045,63 @@ mod tests {
         assert_eq!(modell.pfad(), Some(gute.as_path()));
         assert_eq!(modell.stand(), "guter Inhalt, bearbeitet\n");
         assert!(modell.hat_ungesicherten_stand());
+    }
+
+    /// C2: die Pruefung steht vor dem Aufnehmen, und der Editor nimmt eine
+    /// Datei ueber der Grenze nicht auf.
+    ///
+    /// Die Reihenfolge aus dem elften Abnahmekriterium von C2, auf dem Weg, den
+    /// F4 seit S22 geht. Die Pruefdatei bekommt ihre Groesse ueber `set_len`
+    /// und nicht ueber 16 MB geschriebener Bytes: entschieden wird an der
+    /// Groesse aus `stat(2)`, und genau die steht danach da. Dass die Datei
+    /// dabei gar nicht erst gelesen wird, ist der Punkt des sechsten
+    /// Abnahmekriteriums.
+    #[test]
+    fn eine_datei_ueber_der_grenze_wird_gestellt_und_nicht_aufgenommen() {
+        let ordner = Pruefordner::neu("zu-gross");
+        let gute = ordner.datei("gut.txt", "guter Inhalt\n");
+        let mut modell = Editormodell::neu();
+        assert_eq!(modell.jetzt_oeffnen(&gute), Ladeausgang::Geoeffnet);
+
+        let zu_gross = ordner.pfad.join("zu-gross.txt");
+        std::fs::File::create(&zu_gross)
+            .expect("die Pruefdatei laesst sich nicht anlegen")
+            .set_len(datei::EDITORGRENZE + 1)
+            .expect("die Pruefdatei laesst sich nicht auf Groesse bringen");
+
+        let ausgang = modell.jetzt_oeffnen(&zu_gross);
+        assert!(
+            matches!(ausgang, Ladeausgang::Abgewiesen(Abweisung::ZuGross { .. })),
+            "eine Datei ueber der Grenze wurde nicht als zu gross abgewiesen: {ausgang:?}"
+        );
+        assert_eq!(
+            modell.pfad(),
+            Some(gute.as_path()),
+            "der Editor hat die abgewiesene Datei aufgenommen"
+        );
+        assert_eq!(modell.stand(), "guter Inhalt\n");
+    }
+
+    /// Beide Lesewege hinterlassen denselben Stand.
+    ///
+    /// Der Arbeitsfaden und der rufende Faden gehen durch dieselbe
+    /// [`Editormodell::uebernehmen`]; die Probe haelt fest, dass der Umstieg
+    /// auf den Arbeitsfaden nur den Aufrufer wechselt und nicht das Ergebnis.
+    #[test]
+    fn der_sofortige_weg_und_der_arbeitsfaden_hinterlassen_denselben_stand() {
+        let ordner = Pruefordner::neu("zwei-wege");
+        let pfad = ordner.datei("stand.txt", "eine Zeile\n");
+
+        let ueber_den_faden = geoeffnet(&pfad);
+        let mut sofort = Editormodell::neu();
+        assert_eq!(sofort.jetzt_oeffnen(&pfad), Ladeausgang::Geoeffnet);
+
+        assert_eq!(sofort.pfad(), ueber_den_faden.pfad());
+        assert_eq!(sofort.stand(), ueber_den_faden.stand());
+        assert_eq!(sofort.typ(), ueber_den_faden.typ());
+        assert_eq!(sofort.stempel(), ueber_den_faden.stempel());
+        assert!(!sofort.hat_ungesicherten_stand());
+        assert!(!sofort.laedt_noch());
     }
 
     /// C4: ein gescheitertes Sichern nennt den Grund und wirft den Stand nicht

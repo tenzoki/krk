@@ -60,6 +60,7 @@
 //! eine Verfuegbarkeitspruefung zur Laufzeit.
 
 use std::cell::RefCell;
+use std::path::Path;
 
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
@@ -70,7 +71,7 @@ use objc2_foundation::{
 
 use krk_core::text::{Abweisung, Fund, Markensprung};
 
-use crate::editormodell::Editormodell;
+use crate::editormodell::{Editormodell, Ladeausgang};
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
@@ -98,13 +99,14 @@ use crate::editormodell::Editormodell;
 /// **Kommentarlos nichts zu tun ist in keinem Fall zulaessig**; das steht so im
 /// zehnten Abnahmekriterium von C2 und im achten von C6, und dieser Wert ist
 /// die Form, in der ein Befehl seinen Grund abgibt.
-// **Diese Zeile faellt mit Schritt 22**, dem ersten Ausloeser: F4 weist eine
-// Datei ab und meldet den Grund. Bis dahin steht der Meldeweg gebaut da, ohne
-// dass ein Befehl ihn ginge; die Pruefungen am Dateiende fassen jeden seiner
-// Zweige an. Gemessen am 260809 mit entfernter Zeile: `cargo clippy
-// --workspace --all-targets` meldet drei Fundstellen toten Werts, und der
-// Arbeitsbereich stuende rot, weil `make lint` mit `-D warnings` faehrt.
-#[allow(dead_code)]
+///
+/// **Der erste Ausloeser steht seit S22**: F4 weist eine Datei ab und gibt den
+/// Grund ueber [`Self::Abgewiesen`] nach oben. Bis dahin trugen dieser Wert und
+/// sein Rumpf je ein `#[allow(dead_code)]`; beide sind mit dem Ausloeser
+/// gefallen. Zwei Zeilen sind geblieben, an
+/// [`Self::MarkenstelleGeaendert`] und an [`Self::markenstelle`]: deren
+/// Ausloeser ist der Sprung auf eine Textmarke und nicht F4. Die Ankuendigung
+/// aus S21, S22 loese beide ab, war fuer die Haelfte richtig.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Editormeldung {
     /// Der Editor nimmt die Datei nicht an (C2).
@@ -121,6 +123,14 @@ pub enum Editormeldung {
     /// den `krk_core::text::marke::NAHFENSTER` Zeilen darum. Die Marke fuehrt
     /// **trotzdem** an die gemerkte Nummer; gemeldet wird, dass die Stelle
     /// sich geaendert hat, statt kommentarlos irgendwohin zu fuehren.
+    // **Diese Zeile faellt mit dem Sprung auf eine Textmarke**, dem Ausloeser
+    // dieser Variante. S21 hat S22 fuer beide Meldungen angekuendigt; das war
+    // fuer die Abweisung richtig und fuer die Marke zu frueh — F4 weist Dateien
+    // ab und laesst keine Marke springen. Bis dahin fasst die Pruefung
+    // `allein_die_nicht_wiedergefundene_markenstelle_meldet_sich` am Dateiende
+    // jeden Zweig an, tot ist also nichts. Ohne die Zeile stuende der
+    // Arbeitsbereich rot, weil `make lint` mit `-D warnings` faehrt.
+    #[allow(dead_code)]
     MarkenstelleGeaendert {
         /// Die gemerkte Zeilennummer, ab 1 gezaehlt, an die die Marke gefuehrt
         /// hat.
@@ -128,7 +138,6 @@ pub enum Editormeldung {
     },
 }
 
-#[allow(dead_code)]
 impl Editormeldung {
     /// Die Meldung des Markensprungs, falls er eine hat (C6).
     ///
@@ -146,6 +155,9 @@ impl Editormeldung {
     /// zweite ist die Meldung der Zeilenlage aus C5, die mit S35 kommt; wie die
     /// beiden sich einen Rang teilen, wenn sie zusammentreffen, fuehrt
     /// `issues/260809-1631_o_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`.
+    // Dieselbe Zeile und derselbe Grund wie an `MarkenstelleGeaendert`, deren
+    // einziger Erzeuger diese Funktion ist.
+    #[allow(dead_code)]
     pub fn markenstelle(sprung: &Markensprung) -> Option<Self> {
         match sprung.fund {
             Fund::Getroffen | Fund::Verschoben => None,
@@ -237,6 +249,40 @@ impl Editorbereich {
     /// [`Self::stand_einsetzen`].
     pub fn textflaeche(&self) -> &NSTextView {
         &self.ivars().text
+    }
+
+    /// Ob der Editor eine Datei haelt (C1, C2).
+    ///
+    /// Der Fokusbefehl aus C1 fragt danach: einen ausgeblendeten Editor ohne
+    /// Datei holt er nicht hervor. Die Frage geht an das Modell und wird hier
+    /// nicht aus der Textflaeche beantwortet — ein leerer Text ist keine
+    /// fehlende Datei.
+    pub fn haelt_datei(&self) -> bool {
+        self.ivars().modell.borrow().haelt_datei()
+    }
+
+    /// Nimmt die genannte Datei auf und zeigt ihren Stand (C2).
+    ///
+    /// **Der eine Weg, auf dem eine Datei in den Editor kommt.** Beide
+    /// Einstiege aus C2 gehen ueber ihn und legen damit dieselbe Pruefung an,
+    /// wie es das neunte Abnahmekriterium von C2 verlangt; der Sprung auf eine
+    /// Textmarke aus C6 kommt spaeter dazu.
+    ///
+    /// Entschieden wird nichts hier: die Pruefung steht in
+    /// `krk_core::text::datei::oeffnen` und ist ueber
+    /// [`Editormodell::jetzt_oeffnen`] erreichbar. Bei
+    /// [`Ladeausgang::Abgewiesen`] bleibt der bisherige Stand vollstaendig
+    /// stehen, und der Grund geht als Wert nach oben; wohin er dort kommt,
+    /// weiss diese Datei nicht (siehe den Modulkopf).
+    ///
+    /// Die Ausleihe des Modells endet mit der ersten Zeile, bevor
+    /// [`Self::stand_einsetzen`] sie erneut nimmt und in das Textsystem ruft.
+    pub fn datei_oeffnen(&self, pfad: &Path) -> Ladeausgang {
+        let ausgang = self.ivars().modell.borrow_mut().jetzt_oeffnen(pfad);
+        if ausgang == Ladeausgang::Geoeffnet {
+            self.stand_einsetzen();
+        }
+        ausgang
     }
 
     /// Schreibt den gehaltenen Stand in die Textflaeche.

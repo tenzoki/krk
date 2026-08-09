@@ -186,7 +186,8 @@ use krk_core::tasten::{Belegung, Kommando, Tastendruck};
 
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsmodell::Belegungsmodell;
-use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell};
+use crate::editormodell::Ladeausgang;
+use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, sichtbar_in};
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
 use crate::leistenmodell::Ort;
@@ -1092,6 +1093,41 @@ impl Anwendungsdelegierter {
         eingeblendet || gesetzt
     }
 
+    /// Der vierte Fokusbefehl: in den eingebauten Editor (C1 der Editor-Runde).
+    ///
+    /// Gebaut wie die drei bestehenden, ueber [`Self::fokus_holen`], mit der
+    /// einen Zusatzbedingung aus dem sechsten Abnahmekriterium von C1:
+    /// **haelt der Editor keine Datei und ist er ausgeblendet, tut der Befehl
+    /// nichts.** Ein leerer Editor, den niemand verlangt hat, naehme den
+    /// Dateifenstern Platz fuer nichts und verdraengte dabei nach S18 noch die
+    /// Vorschau; dieselbe Begruendung traegt `Sichtbarkeit::default` fuer den
+    /// Auslieferungszustand.
+    ///
+    /// **Die Bedingung steht hier und nicht in
+    /// [`crate::kommandos::fokus::holt_hervor`].** Jene ist eine reine
+    /// Zuordnung von einem Fokusziel auf einen Bereich und kennt keinen
+    /// Zustand; ihr Doc-Kommentar sagt es ausdruecklich, und ein
+    /// Zustandsvorbehalt darin traefe die drei uebrigen Fokusbefehle mit.
+    ///
+    /// Steht der Editor schon auf dem Schirm, geht der Fokus hinein, auch ohne
+    /// Datei: der Nutzer sieht die Flaeche und soll erfahren, wo seine Tasten
+    /// ankommen. Der Weg zurueck braucht keinen zweiten Befehl, das siebte
+    /// Abnahmekriterium von C1 sagt es — `fokus_dateifenster` traegt
+    /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+    /// wirkt im Editor.
+    fn fokus_editor_holen(&self) -> bool {
+        let ausgeblendet = !self.ivars().modell.borrow().sichtbar(Bereich::Editor);
+        let haelt_datei = self
+            .ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.haelt_datei());
+        if ausgeblendet && !haelt_datei {
+            return false;
+        }
+        self.fokus_holen(Fokus::Editor)
+    }
+
     /// Die Ansicht, an der ein Fokuswert haengt.
     ///
     /// **Die eine Zuordnung von einem Fokuswert auf sein Objekt**, und sie
@@ -1645,6 +1681,13 @@ impl Anwendungsdelegierter {
             Kommando::FokusLeiste => self.fokus_holen(Fokus::Leiste),
             Kommando::FokusDateifenster => self.fokus_holen(Fokus::Dateifenster),
             Kommando::FokusVorschau => self.fokus_holen(Fokus::Vorschau),
+            Kommando::FokusEditor => self.fokus_editor_holen(),
+            // Der erste der beiden Einstiege in den Editor (C2). Er steht hier
+            // und nicht bei `bereichskommando`, obwohl er
+            // `Wirkungsbereich::Dateifenster` traegt: er nimmt dessen
+            // ausgewaehlten Eintrag, fuellt damit aber einen anderen Bereich,
+            // und ein einzelnes Dateifenster kommt an den Editor nicht heran.
+            Kommando::Bearbeiten => self.im_editor_oeffnen(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
@@ -1774,11 +1817,7 @@ impl Anwendungsdelegierter {
 
     /// Blendet einen Bereich aus oder wieder ein (C7).
     fn bereich_umschalten(&self, bereich: Bereich) -> bool {
-        let umgeschaltet = self.ivars().modell.borrow_mut().umschalten(bereich);
-        if umgeschaltet {
-            self.nach_dem_sichtbarkeitswechsel(bereich);
-        }
-        umgeschaltet
+        self.sichtbarkeit_aendern(|modell| modell.umschalten(bereich))
     }
 
     /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
@@ -1790,18 +1829,44 @@ impl Anwendungsdelegierter {
     /// kommen allein die Nachzuege dazu, die jeder Sichtbarkeitswechsel
     /// braucht.
     fn bereich_einblenden(&self, bereich: Bereich) -> bool {
-        let eingeblendet = self.ivars().modell.borrow_mut().einblenden(bereich);
-        if eingeblendet {
-            self.nach_dem_sichtbarkeitswechsel(bereich);
+        self.sichtbarkeit_aendern(|modell| modell.einblenden(bereich))
+    }
+
+    /// Fuehrt eine Aenderung der Sichtbarkeit aus und zieht fuer **jeden**
+    /// Bereich nach, dessen Sichtbarkeit sich dabei geaendert hat.
+    ///
+    /// **Ein Aufruf kann zwei Bereiche bewegen**, seit der gegenseitige
+    /// Ausschluss aus C1 der Editor-Runde in
+    /// [`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)
+    /// steht: wer den Editor einblendet, blendet damit die Vorschau aus. Der
+    /// Bereich, den der Aufrufer genannt hat, sagt darueber nichts mehr; ihm
+    /// den Nachzug allein zu geben, liesse den Fokus in einer Vorschau stehen,
+    /// die niemand mehr sieht.
+    ///
+    /// Gefragt wird deshalb nicht der Name des Aufrufs, sondern die
+    /// Sichtbarkeit vorher gegen die nachher. Damit bleibt der Ausschluss
+    /// vollstaendig im Fenstermodell, und diese Datei kennt ihn nicht: sie
+    /// erfaehrt sein Ergebnis, statt seine Regel ein zweites Mal zu tragen.
+    fn sichtbarkeit_aendern(&self, aendern: impl FnOnce(&mut Fenstermodell) -> bool) -> bool {
+        let vorher = self.ivars().modell.borrow().sichtbarkeit();
+        let geaendert = aendern(&mut self.ivars().modell.borrow_mut());
+        if !geaendert {
+            return false;
         }
-        eingeblendet
+        let nachher = self.ivars().modell.borrow().sichtbarkeit();
+        for bereich in Bereich::ALLE {
+            if sichtbar_in(&vorher, bereich) != sichtbar_in(&nachher, bereich) {
+                self.nach_dem_sichtbarkeitswechsel(bereich);
+            }
+        }
+        true
     }
 
     /// Was nach jedem Wechsel der Sichtbarkeit nachzuziehen ist.
     ///
-    /// Die eine Stelle dafuer, gerufen von [`Self::bereich_umschalten`] wie von
-    /// [`Self::bereich_einblenden`] und nur, wenn sich etwas geaendert hat. Die
-    /// drei Nachzuege sind nach dem Bereich unterschieden und nicht danach,
+    /// Die eine Stelle dafuer, gerufen ueber [`Self::sichtbarkeit_aendern`] und
+    /// nur fuer einen Bereich, dessen Sichtbarkeit sich wirklich geaendert hat.
+    /// Die drei Nachzuege sind nach dem Bereich unterschieden und nicht danach,
     /// welcher Befehl den Wechsel ausgeloest hat; eine zweite Liste neben
     /// dieser waere die erste Abweichung zwischen zwei Wegen in denselben
     /// Zustand.
@@ -1817,9 +1882,16 @@ impl Anwendungsdelegierter {
         // steht er im Dateifenster, ist der Aufruf wirkungslos, und eine
         // Abfrage dafuer waere eine zweite Stelle, die nach dem Fokus fragt.
         // Seit S19 gilt das fuer die Leiste wie fuer die Vorschau.
-        if matches!(bereich, Bereich::Lesezeichen | Bereich::Vorschau)
-            && !self.ivars().modell.borrow().sichtbar(bereich)
-        {
+        //
+        // **Welche Bereiche Randbereiche sind, sagt `Bereich::seite` und keine
+        // Aufzaehlung hier.** Ein Bereich ist genau dann keiner, wenn er kein
+        // Dateifenster ist; bis zur Editor-Runde stand an dieser Stelle die
+        // Literalliste `[Lesezeichen, Vorschau]`, und der Editor waere darin
+        // stumm gefehlt — mit dem Fokus in einer Textflaeche, die nicht mehr
+        // auf dem Schirm steht. Seit S18 kommt er hier auch dann an, wenn ihn
+        // nicht sein eigener Befehl, sondern die eingeblendete Vorschau
+        // verdraengt hat.
+        if bereich.seite().is_none() && !self.ivars().modell.borrow().sichtbar(bereich) {
             self.fokus_setzen(Fokus::Dateifenster);
         }
         // Die eingeblendete Vorschau holt nach, was sie im ausgeblendeten
@@ -1830,12 +1902,29 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Aendert die Breite des aktiven Dateifensters um einen Schritt (C7).
+    /// Aendert die Breite des Bereichs mit dem Fokus um einen Schritt (C7, C1
+    /// der Editor-Runde).
     ///
-    /// Der "aktive Bereich" der beiden Kuerzel ist das aktive Dateifenster.
-    /// Die Lesezeichenleiste und die Vorschau bekommen ihre Breite mit der
-    /// Maus; ihnen ein eigenes Kuerzelpaar zu geben, hiesse vier Befehle fuer
-    /// eine Sache, und C7 verlangt sie nicht.
+    /// **Der "aktive Bereich" der beiden Kuerzel ist der, vor dem der Nutzer
+    /// steht.** Bis zur Editor-Runde war es fest das aktive Dateifenster: die
+    /// Lesezeichenleiste und die Vorschau bekamen ihre Breite mit der Maus, und
+    /// C7 verlangte nichts anderes. Das dritte Abnahmekriterium von C1 verlangt
+    /// es jetzt fuer den Editor, "solange er den Fokus hat", und die Antwort
+    /// darauf ist dieselbe Regel fuer alle vier Bereiche und keine Ausnahme fuer
+    /// einen. Ein eigenes Kuerzelpaar fuer den Editor entsteht dafuer nicht:
+    /// `bereich_verbreitern` und `bereich_verschmaelern` tragen
+    /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+    /// wirken damit aus jedem Bereich heraus.
+    ///
+    /// **Welcher Bereich zu einem Fokuswert gehoert, sagt
+    /// [`crate::kommandos::fokus::holt_hervor`]** — dieselbe Zuordnung, die
+    /// [`Self::fokus_setzen`] schon liest, und keine zweite daneben.
+    /// [`Fokus::Dateifenster`] und [`Fokus::Anderswo`] liefern dort `None` und
+    /// fallen auf das aktive Dateifenster: das erste, weil es zwei Listen und
+    /// einen Fokuswert gibt und das Fenstermodell sagt, welche gemeint ist; das
+    /// zweite aus demselben Grund wie in [`Self::bereichskommando`], naemlich
+    /// dass ein Befehl ohne eigenen Bereich der Liste gilt, die der Nutzer
+    /// zuletzt bedient hat.
     fn breite_aendern(&self, betrag: f64) -> bool {
         // Zuerst nachlesen, was wirklich auf dem Schirm steht: der Nutzer kann
         // die Trennlinie zwischendurch mit der Maus verschoben haben, und ein
@@ -1846,8 +1935,10 @@ impl Anwendungsdelegierter {
                 .borrow_mut()
                 .breiten_uebernehmen(aufteilung.gemessene_breiten());
         }
+        // Vor der Ausleihe: `fokus` liest das Fenstermodell selbst.
+        let ziel = fokus::holt_hervor(self.fokus());
         let mut modell = self.ivars().modell.borrow_mut();
-        let bereich = Bereich::von_seite(modell.aktiv());
+        let bereich = ziel.unwrap_or_else(|| Bereich::von_seite(modell.aktiv()));
         modell.breite_aendern(bereich, betrag);
         true
     }
@@ -2615,6 +2706,62 @@ impl Anwendungsdelegierter {
             .befehlsantwort_zeigen(text);
     }
 
+    /// F4 oeffnet den ausgewaehlten Eintrag des aktiven Dateifensters im
+    /// eingebauten Editor (C2).
+    ///
+    /// Der erste der beiden Einstiegswege. **Die Reihenfolge ist bindend und
+    /// steht im elften Abnahmekriterium von C2: erst die Pruefung, dann die
+    /// Flaeche.** Eine Datei, die der Editor ohnehin abweist, blendet ihn nicht
+    /// ein, verdraengt die Vorschau nicht und kostet den Nutzer spaeter keine
+    /// Rueckfrage.
+    ///
+    /// **Geprueft wird an der einen Stelle** und hier keine zweite Regel
+    /// daneben: `krk_core::text::datei::oeffnen` entscheidet, ob der Editor
+    /// eine Datei annimmt, weist alles Nichttextliche und alles ueber 16 MB ab
+    /// und einen Ordner sicher. Diese Funktion liest die Datei nicht und
+    /// beurteilt sie nicht; sie reicht den Pfad hinein und den Grund heraus.
+    ///
+    /// **Zwei Zwischenstaende, jeder mit seinem Schritt.** Gelesen wird auf dem
+    /// Hauptfaden, weil der Takt, der die Antwort des Arbeitsfadens abholt,
+    /// erst mit dem Lesen auf dem Arbeitsfaden entsteht. Und ein ungesicherter
+    /// Stand faellt beim Wechsel auf eine andere Datei ohne Rueckfrage, weil
+    /// die Nachfrage aus C4 mit ihrem eigenen Schritt kommt.
+    fn im_editor_oeffnen(&self) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let Some(pfad) = self.dateifenster(aktiv).quelle().auswahl_pfad() else {
+            // Kein Eintrag, also nichts, was der Editor annehmen oder abweisen
+            // koennte — keine Abweisung und deshalb keine `Editormeldung`,
+            // sondern derselbe Satz, den `endgueltig_loeschen` seit der Runde 1
+            // fuer die leere Auswahl fuehrt. `true` verbraucht den Tastendruck,
+            // aus demselben Grund wie dort: F4 auf leerer Auswahl gehoert nicht
+            // in die Menueleiste.
+            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+            return true;
+        };
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        match editor.datei_oeffnen(&pfad) {
+            // Einblenden und Fokus in einem Zug: `fokus_holen` holt den Bereich
+            // hervor und setzt danach den Ersthelfer. Der gegenseitige
+            // Ausschluss aus C1 nimmt dabei die Vorschau von der Flaeche, ohne
+            // dass diese Funktion sie nennt. Damit steht der Eingabefokus im
+            // Editor, ohne dass der Nutzer einen zweiten Befehl braucht, wie es
+            // das zweite Abnahmekriterium von C2 verlangt.
+            Ladeausgang::Geoeffnet => {
+                self.fokus_holen(Fokus::Editor);
+                true
+            }
+            // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
+            // Grund geht in die Statuszeile und unterscheidet dort zu gross von
+            // nicht als Text lesbar (zehntes Abnahmekriterium von C2).
+            Ladeausgang::Abgewiesen(abweisung) => {
+                self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
+                true
+            }
+        }
+    }
+
     /// Stellt eine Meldung des Editors in die Statuszeile des **aktiven**
     /// Dateifensters (C1).
     ///
@@ -2641,10 +2788,6 @@ impl Anwendungsdelegierter {
     /// seit der Runde 1: [`Self::endgueltig_loeschen`] liest `aktiv` und meldet
     /// „es ist nichts ausgewählt" dorthin, und die beiden Operationsbefehle
     /// tun es genauso.
-    // **Diese Zeile faellt mit Schritt 22**, dem ersten Ausloeser. Der Grund und
-    // die Messung stehen bei `Editormeldung` in `super::editor`; hier nicht ein
-    // zweites Mal.
-    #[allow(dead_code)]
     fn editormeldung_zeigen(&self, meldung: &Editormeldung) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         self.antwort_zeigen(aktiv, &meldung.text());

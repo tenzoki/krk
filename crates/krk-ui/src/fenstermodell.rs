@@ -17,8 +17,14 @@
 //! ```
 //!
 //! Vorschau und Editor teilen sich dieselbe Stelle am rechten Rand und sind
-//! nie zugleich sichtbar; der gegenseitige Ausschluss selbst kommt in einem
-//! spaeteren Schritt und steht dann ebenfalls hier.
+//! nie zugleich sichtbar. Der gegenseitige Ausschluss steht in
+//! [`Bereich::teilt_flaeche_mit`] und wirkt ueber die eine Schreibstelle
+//! [`Fenstermodell::sichtbar_setzen`]: zur Laufzeit ueber
+//! [`Fenstermodell::umschalten`], durch das auch [`Fenstermodell::einblenden`]
+//! geht, und beim Start ueber [`Fenstermodell::aus_sitzung`] fuer eine von Hand
+//! geschriebene `session.toml`. Damit ist das erste Abnahmekriterium von C1 der
+//! Editor-Runde eingeloest, einschliesslich seines dritten Satzes: beide
+//! zugleich sichtbar zu haben ist ueber keinen Weg erreichbar.
 //!
 //! "Fest" und "beweglich" beziehen sich auf das Verteilen des Platzes: die
 //! beiden Randbereiche behalten ihre Breite, die beiden Dateifenster teilen
@@ -117,6 +123,37 @@ impl Bereich {
         }
     }
 
+    /// Der Bereich, der sich mit diesem dieselbe Flaeche teilt.
+    ///
+    /// **Die eine Stelle des gegenseitigen Ausschlusses aus C1 der
+    /// Editor-Runde.** Vorschau und Editor sitzen beide am rechten Rand und
+    /// teilen sich die Flaeche zeitlich statt raeumlich: wird einer von beiden
+    /// sichtbar, geht der andere. Die Directive nennt ausdruecklich nur die
+    /// eine Richtung, dass der Editor die Vorschau schliesst; die andere folgt
+    /// daraus, dass sonst ein Weg bliebe, auf dem beide dieselbe Flaeche
+    /// beanspruchen. Der Spec fuehrt sie unter `## Was die Abnahme
+    /// mitentscheidet` als Ableitung, die der Nutzer am Gate umstossen kann.
+    ///
+    /// Aus dem Ausschluss folgt, dass [`bereichsbreiten`] unveraendert bleibt:
+    /// hoechstens zwei feste Bereiche sind zugleich zu bedienen, wie vor der
+    /// Editor-Runde. Der Editor bekommt einen fuenften Platz in den Feldern und
+    /// keinen zweiten Rechenweg daneben.
+    ///
+    /// Die Beziehung ist symmetrisch; die Probe `der_ausschluss_ist_gegenseitig`
+    /// haelt es fest, damit ein einseitiger Eintrag nicht eine Richtung stumm
+    /// verliert.
+    ///
+    /// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
+    /// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt den
+    /// Bau an und erzwingt die Antwort darauf, ob er sich eine Flaeche teilt.
+    pub const fn teilt_flaeche_mit(self) -> Option<Bereich> {
+        match self {
+            Bereich::Vorschau => Some(Bereich::Editor),
+            Bereich::Editor => Some(Bereich::Vorschau),
+            Bereich::Lesezeichen | Bereich::Links | Bereich::Rechts => None,
+        }
+    }
+
     /// Die Breite, unter die sich der Bereich nicht ziehen laesst.
     ///
     /// Ein Dateifenster braucht mehr, weil vier Spalten hineinpassen muessen;
@@ -179,6 +216,30 @@ impl Bereich {
     }
 }
 
+/// Ob der Bereich in dieser Sichtbarkeit steht.
+///
+/// **Die eine Zuordnung von einem [`Bereich`] auf sein Feld in
+/// [`Sichtbarkeit`]**, und die Leseseite zu
+/// [`Fenstermodell::sichtbar_setzen`]. [`Fenstermodell::sichtbar`] fragt hier
+/// nach, statt die Zuordnung ein zweites Mal aufzuschreiben.
+///
+/// Frei und nicht an [`Fenstermodell`] gebunden, weil ein Aufrufer sie fuer
+/// einen Stand braucht, der nicht der gehaltene ist: der Anwendungsdelegierte
+/// vergleicht die Sichtbarkeit vor und nach einem Aufruf, um zu erfahren,
+/// **welche** Bereiche er bewegt hat. Seit dem gegenseitigen Ausschluss aus C1
+/// koennen es zwei sein.
+pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
+    match bereich {
+        Bereich::Lesezeichen => sichtbar.lesezeichen,
+        // C7 laesst das letzte Dateifenster nicht ausblenden, und
+        // `Sichtbarkeit` traegt deshalb kein Feld dafuer; siehe den Modulkopf.
+        Bereich::Links => true,
+        Bereich::Rechts => sichtbar.zweites_dateifenster,
+        Bereich::Vorschau => sichtbar.vorschau,
+        Bereich::Editor => sichtbar.editor,
+    }
+}
+
 /// Das gehaltene Fenstermodell.
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
@@ -194,15 +255,24 @@ pub struct Fenstermodell {
 impl Fenstermodell {
     /// Das Modell aus einer geladenen Sitzung.
     ///
-    /// **Ein ausgeblendetes Dateifenster kann nicht das aktive sein**, und die
-    /// Zusicherung wird hier hergestellt und nicht nur unterstellt.
-    /// [`Fenstermodell::umschalten`] haelt sie fuer jede Umschaltung zur
-    /// Laufzeit, aber `session.toml` kommt nicht von dort: die Datei ist nach
-    /// C7 zum Lesen und Aendern von Hand gedacht, und `aktiv = "rechts"` neben
-    /// `zweites_dateifenster = false` ist ein Paar, das `serde` anstandslos
-    /// einliest. Ohne diese Zeilen faende der Nutzer nach dem Start seine
-    /// Auswahl, seinen Eingabefokus und jede Dateioperation in einem
-    /// Dateifenster, das er nicht sieht.
+    /// **Zwei Zusicherungen werden hier hergestellt und nicht nur
+    /// unterstellt**, weil `session.toml` nach C7 zum Lesen und Aendern von
+    /// Hand gedacht ist und `serde` jede Feldkombination anstandslos einliest.
+    /// Zur Laufzeit haelt [`Fenstermodell::umschalten`] beide; die Datei kommt
+    /// nicht von dort.
+    ///
+    /// **Ein ausgeblendetes Dateifenster kann nicht das aktive sein.**
+    /// `aktiv = "rechts"` neben `zweites_dateifenster = false` faende der
+    /// Nutzer sonst nach dem Start als Auswahl, Eingabefokus und Ziel jeder
+    /// Dateioperation in einem Dateifenster, das er nicht sieht.
+    ///
+    /// **Vorschau und Editor stehen nie zugleich.** `vorschau = true` neben
+    /// `editor = true` waere sonst der eine Weg, den das erste Abnahmekriterium
+    /// von C1 der Editor-Runde ausschliesst. Weichen muss der Editor: er haelt
+    /// beim Start keine Datei, und ein sichtbarer leerer Editor naehme den
+    /// Dateifenstern Platz fuer nichts — dieselbe Wahl und dieselbe
+    /// Begruendung, die `Sichtbarkeit::default` fuer den Auslieferungszustand
+    /// trifft.
     pub fn aus_sitzung(sitzung: &Sitzung) -> Self {
         let mut modell = Self {
             aktiv: sitzung.aktiv,
@@ -212,6 +282,9 @@ impl Fenstermodell {
         if !modell.sichtbar(Bereich::von_seite(modell.aktiv)) {
             // Das linke ist immer sichtbar, siehe den Modulkopf.
             modell.aktiv = Fensterseite::Links;
+        }
+        if modell.sichtbar(Bereich::Vorschau) {
+            modell.gegenueber_raeumen(Bereich::Vorschau);
         }
         modell
     }
@@ -258,12 +331,38 @@ impl Fenstermodell {
 
     /// Ob der Bereich sichtbar ist.
     pub fn sichtbar(&self, bereich: Bereich) -> bool {
+        sichtbar_in(&self.sichtbar, bereich)
+    }
+
+    /// Setzt die Sichtbarkeit eines Bereichs.
+    ///
+    /// **Die eine Stelle, die ein Feld von [`Sichtbarkeit`] schreibt.** Der
+    /// gegenseitige Ausschluss aus [`Bereich::teilt_flaeche_mit`] wirkt ueber
+    /// sie und nicht neben ihr; wer sie umgeht, hat eine zweite Wahrheit
+    /// darueber, welche Bereiche stehen.
+    ///
+    /// Fuer [`Bereich::Links`] geschieht nichts, und das ist kein
+    /// Auffangzweig: [`Sichtbarkeit`] traegt gar kein Feld fuer das linke
+    /// Dateifenster, weil C7 zusagt, dass mindestens eines sichtbar bleibt
+    /// (siehe den Modulkopf). Der Weg hierher ist ohnehin versperrt, weil
+    /// [`Self::umschalten`] den Bereich vorher abweist.
+    fn sichtbar_setzen(&mut self, bereich: Bereich, sichtbar: bool) {
         match bereich {
-            Bereich::Lesezeichen => self.sichtbar.lesezeichen,
-            Bereich::Links => true,
-            Bereich::Rechts => self.sichtbar.zweites_dateifenster,
-            Bereich::Vorschau => self.sichtbar.vorschau,
-            Bereich::Editor => self.sichtbar.editor,
+            Bereich::Lesezeichen => self.sichtbar.lesezeichen = sichtbar,
+            Bereich::Links => {}
+            Bereich::Rechts => self.sichtbar.zweites_dateifenster = sichtbar,
+            Bereich::Vorschau => self.sichtbar.vorschau = sichtbar,
+            Bereich::Editor => self.sichtbar.editor = sichtbar,
+        }
+    }
+
+    /// Blendet den Bereich aus, der sich mit dem genannten die Flaeche teilt.
+    ///
+    /// Zu rufen, nachdem der genannte Bereich sichtbar geworden ist. Teilt er
+    /// sich seine Flaeche mit keinem, geschieht nichts.
+    fn gegenueber_raeumen(&mut self, bereich: Bereich) {
+        if let Some(gegenueber) = bereich.teilt_flaeche_mit() {
+            self.sichtbar_setzen(gegenueber, false);
         }
     }
 
@@ -280,35 +379,39 @@ impl Fenstermodell {
     ///
     /// War der ausgeblendete Bereich das aktive Dateifenster, wandert die
     /// Aktivitaet auf das andere.
+    ///
+    /// **Wird der Bereich sichtbar, weicht sein Gegenueber.** Das ist der
+    /// gegenseitige Ausschluss aus C1 der Editor-Runde, und er steht hier fuer
+    /// beide Richtungen in einer Zeile: Vorschau und Editor sind dasselbe Paar,
+    /// gleich von welcher Seite man kommt. [`Self::einblenden`] geht durch
+    /// diese Funktion und erbt ihn damit, statt ihn ein zweites Mal
+    /// aufzuschreiben. Welches Paar es ist, sagt [`Bereich::teilt_flaeche_mit`].
+    ///
+    /// Die Nachfrage vor dem Verdraengen eines Editors mit ungesichertem Stand
+    /// gehoert dem Aufrufer und kommt mit ihrem eigenen Schritt; diese Funktion
+    /// baut die Sichtbarkeit.
     pub fn umschalten(&mut self, bereich: Bereich) -> bool {
+        let jetzt_sichtbar = !self.sichtbar(bereich);
         match bereich {
-            Bereich::Lesezeichen => {
-                self.sichtbar.lesezeichen = !self.sichtbar.lesezeichen;
-                true
-            }
-            Bereich::Vorschau => {
-                self.sichtbar.vorschau = !self.sichtbar.vorschau;
-                true
-            }
-            // Wie die Vorschau, mit einem Unterschied, den ein spaeterer
-            // Schritt traegt: das Einblenden des einen blendet das andere aus.
-            Bereich::Editor => {
-                self.sichtbar.editor = !self.sichtbar.editor;
-                true
+            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => {
+                self.sichtbar_setzen(bereich, jetzt_sichtbar);
             }
             Bereich::Rechts => {
-                self.sichtbar.zweites_dateifenster = !self.sichtbar.zweites_dateifenster;
-                if !self.sichtbar.zweites_dateifenster && self.aktiv == Fensterseite::Rechts {
+                self.sichtbar_setzen(bereich, jetzt_sichtbar);
+                if !jetzt_sichtbar && self.aktiv == Fensterseite::Rechts {
                     self.aktiv = Fensterseite::Links;
                 }
-                true
             }
             // Das letzte sichtbare Dateifenster. Kein ausgeliefertes Kuerzel
             // fuehrt heute hierher; die Abweisung steht trotzdem hier und nicht
             // in der Belegungsdatei, weil eine spaetere Belegung sie sonst
             // umgehen koennte.
-            Bereich::Links => false,
+            Bereich::Links => return false,
         }
+        if jetzt_sichtbar {
+            self.gegenueber_raeumen(bereich);
+        }
+        true
     }
 
     /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
@@ -326,6 +429,12 @@ impl Fenstermodell {
     /// zu sehen; ausblenden tut keiner von ihnen, dafuer bleiben die Befehle
     /// aus C7. Es entsteht deshalb keine zweite Wahrheit ueber die
     /// Sichtbarkeit, sondern dieselbe Asymmetrie an einer Stelle.
+    ///
+    /// **Den gegenseitigen Ausschluss erbt diese Funktion von
+    /// [`Self::umschalten`]**, durch das sie geht: `einblenden(Editor)` blendet
+    /// damit die Vorschau aus, ohne dass der Ausschluss hier ein zweites Mal
+    /// stuende. "Blendet nie einen aus" gilt weiterhin fuer den **genannten**
+    /// Bereich; das Gegenueber weicht, weil beide dieselbe Flaeche haben.
     pub fn einblenden(&mut self, bereich: Bereich) -> bool {
         if self.sichtbar(bereich) {
             return false;
@@ -1043,6 +1152,149 @@ mod tests {
             "vorher {vorher:?}, nachher {nachher:?}"
         );
         assert!((nachher[Bereich::Links.index()] - vorher[Bereich::Links.index()]).abs() < 0.001);
+    }
+
+    /// Der Ausschluss aus C1 ist gegenseitig, und die Zuordnung sagt es in
+    /// beide Richtungen.
+    ///
+    /// Ein einseitiger Eintrag traege die Regel nur fuer den einen Weg, und die
+    /// Probe darunter faende ihn erst an einer von zwei Aufrufreihenfolgen.
+    #[test]
+    fn der_ausschluss_ist_gegenseitig() {
+        assert_eq!(Bereich::Vorschau.teilt_flaeche_mit(), Some(Bereich::Editor));
+        assert_eq!(Bereich::Editor.teilt_flaeche_mit(), Some(Bereich::Vorschau));
+        for bereich in Bereich::ALLE {
+            let Some(gegenueber) = bereich.teilt_flaeche_mit() else {
+                continue;
+            };
+            assert_eq!(
+                gegenueber.teilt_flaeche_mit(),
+                Some(bereich),
+                "{bereich:?} teilt sich die Flaeche mit {gegenueber:?}, aber nicht umgekehrt"
+            );
+        }
+    }
+
+    /// Das erste Abnahmekriterium von C1 der Editor-Runde, Satz eins und zwei:
+    /// wer den einen einblendet, blendet den anderen aus.
+    #[test]
+    fn der_editor_schliesst_die_vorschau_und_die_vorschau_den_editor() {
+        let mut modell = modell();
+        assert!(modell.sichtbar(Bereich::Vorschau), "die Probe beginnt so");
+        assert!(!modell.sichtbar(Bereich::Editor));
+
+        assert!(modell.einblenden(Bereich::Editor));
+        assert!(modell.sichtbar(Bereich::Editor));
+        assert!(
+            !modell.sichtbar(Bereich::Vorschau),
+            "der geoeffnete Editor hat die Vorschau nicht geschlossen"
+        );
+
+        assert!(modell.einblenden(Bereich::Vorschau));
+        assert!(modell.sichtbar(Bereich::Vorschau));
+        assert!(
+            !modell.sichtbar(Bereich::Editor),
+            "die eingeblendete Vorschau hat den Editor nicht verdraengt"
+        );
+    }
+
+    /// Das erste Abnahmekriterium von C1, Satz drei: "Beide zugleich sichtbar
+    /// zu haben ist ueber keinen Weg erreichbar."
+    ///
+    /// Erreichbar sind zur Laufzeit genau zwei Aufrufe, und die Probe faehrt
+    /// jedes Paar aus zweien ueber jeden Bereich, vom Auslieferungszustand aus.
+    /// Geprueft wird nach **jedem** der beiden Aufrufe, damit auch ein
+    /// Zwischenzustand nicht durchgeht.
+    #[test]
+    fn keine_folge_aus_zwei_aufrufen_zeigt_editor_und_vorschau_zugleich() {
+        type Aufruf = fn(&mut Fenstermodell, Bereich) -> bool;
+        const AUFRUFE: [(&str, Aufruf); 2] = [
+            ("umschalten", Fenstermodell::umschalten),
+            ("einblenden", Fenstermodell::einblenden),
+        ];
+
+        for (erster_name, erster) in AUFRUFE {
+            for erster_bereich in Bereich::ALLE {
+                for (zweiter_name, zweiter) in AUFRUFE {
+                    for zweiter_bereich in Bereich::ALLE {
+                        let spur = format!(
+                            "{erster_name}({erster_bereich:?}), {zweiter_name}({zweiter_bereich:?})"
+                        );
+                        let mut modell = modell();
+                        erster(&mut modell, erster_bereich);
+                        beide_nicht_zugleich(&modell, &spur);
+                        zweiter(&mut modell, zweiter_bereich);
+                        beide_nicht_zugleich(&modell, &spur);
+                    }
+                }
+            }
+        }
+    }
+
+    fn beide_nicht_zugleich(modell: &Fenstermodell, spur: &str) {
+        assert!(
+            !(modell.sichtbar(Bereich::Vorschau) && modell.sichtbar(Bereich::Editor)),
+            "Vorschau und Editor stehen zugleich nach: {spur}"
+        );
+    }
+
+    /// Eine von Hand geschriebene `session.toml` bringt die beiden nicht
+    /// zugleich auf den Schirm.
+    ///
+    /// Derselbe Fall und derselbe Grund wie beim ausgeblendeten aktiven
+    /// Dateifenster darueber: `serde` liest jede Feldkombination ein, und die
+    /// Zusicherung gehoert an die Stelle, die sie einloest.
+    #[test]
+    fn eine_von_hand_gesetzte_sitzung_zeigt_nicht_beide_zugleich() {
+        let mut sitzung = Sitzung::default();
+        sitzung.sichtbar.vorschau = true;
+        sitzung.sichtbar.editor = true;
+        let modell = Fenstermodell::aus_sitzung(&sitzung);
+        assert!(modell.sichtbar(Bereich::Vorschau));
+        assert!(
+            !modell.sichtbar(Bereich::Editor),
+            "der Editor haelt beim Start keine Datei und weicht der Vorschau"
+        );
+
+        // Die Gegenprobe: ohne Vorschau bleibt der Editor stehen.
+        let mut sitzung = Sitzung::default();
+        sitzung.sichtbar.vorschau = false;
+        sitzung.sichtbar.editor = true;
+        let modell = Fenstermodell::aus_sitzung(&sitzung);
+        assert!(modell.sichtbar(Bereich::Editor));
+        assert!(!modell.sichtbar(Bereich::Vorschau));
+    }
+
+    /// Eine verstellte Editorbreite steht in `session.toml` und kommt beim
+    /// Einlesen wieder heraus (C1, C7 der Runde 1).
+    ///
+    /// Die Agentenseite des fuenften Abnahmekriteriums von C1. Dass sie
+    /// Beenden und Neustart auch am laufenden Buendel uebersteht, prueft der
+    /// Nutzer; hier laeuft dieselbe Zeichenkette durch, die auf die Platte
+    /// geht, und der Weg ist deshalb derselbe.
+    #[test]
+    fn eine_verstellte_editorbreite_ueberlebt_die_sitzung() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Editor);
+        modell.breite_aendern(Bereich::Editor, BREITENSCHRITT);
+        let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
+        assert_eq!(modell.breiten().editor, Some(gewuenscht));
+
+        let sitzung = modell.sitzung(Sitzung::default().fenster);
+        let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
+        assert!(
+            text.contains("editor"),
+            "die Editorbreite steht nicht in session.toml: {text}"
+        );
+
+        let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
+        let wieder = Fenstermodell::aus_sitzung(&gelesen);
+        assert_eq!(wieder.breiten().editor, Some(gewuenscht));
+        assert!(wieder.sichtbar(Bereich::Editor));
+        assert!(
+            !wieder.sichtbar(Bereich::Vorschau),
+            "der Ausschluss aus C1 uebersteht die Sitzung ebenfalls"
+        );
     }
 
     #[test]
