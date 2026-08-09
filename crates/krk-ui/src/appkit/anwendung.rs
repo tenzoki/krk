@@ -164,11 +164,12 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSResponder, NSWindow,
+    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSResponder, NSView,
+    NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
-    NSTimer,
+    NSString, NSTimer,
 };
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
@@ -188,6 +189,7 @@ use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsmodell::Belegungsmodell;
 use crate::editormodell::Ladeausgang;
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, sichtbar_in};
+use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
 use crate::leistenmodell::Ort;
@@ -582,6 +584,24 @@ impl Anwendungsdelegierter {
         );
         let fenster = fenster::hauptfenster(mtm, aufteilung.sicht(), &fenster_delegierter);
 
+        // **Der eine Ausloesepunkt der Fokusanzeige aus C9.** Das Fenster
+        // meldet jeden erfolgreichen Wechsel des Ersthelfers und jeden Wechsel
+        // zwischen Vorder- und Hintergrund; damit folgt die Anzeige dem Fokus
+        // auch dort, wo nicht KRK ihn gesetzt hat, naemlich beim Mausklick in
+        // eine Flaeche. Der Rueckruf haelt den Delegierten **schwach**, aus
+        // demselben Grund wie die vier darunter: sonst schloesse sich der Ring
+        // Delegierter → Fenster → Rueckruf → Delegierter, und das Fenster lebt
+        // ueber sein Schliessen hinaus.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        fenster.melder_setzen(Box::new(move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.fokusanzeige_nachziehen();
+            }
+        }));
+        // Ab hier nur noch als `NSWindow`: jede uebrige Fensterberuehrung ruft
+        // ohnehin nur Methoden der Oberklasse.
+        let fenster = Retained::into_super(fenster);
+
         // Erst festhalten, dann anzeigen: das Fenster haelt seinen Delegierten
         // schwach, die Tabelle haelt Datenquelle und Delegierten schwach.
         let _ = ivars.dateifenster.set(dateifenster);
@@ -604,15 +624,19 @@ impl Anwendungsdelegierter {
                         selbst.aktives_setzen(seite);
                     }
                 }));
-            // Jede Navigation setzt die Dateisystembeobachtung neu auf. Auch
-            // dieser Rueckruf haelt den Delegierten **schwach**, aus demselben
-            // Grund wie der darueber.
+            // Jede Navigation setzt die Dateisystembeobachtung neu auf und
+            // schreibt den Fenstertitel neu (C11): der Ordnerwechsel und der
+            // Tabwechsel eines Dateifensters sind der erste der vier Anlaesse,
+            // an denen der genannte Pfad sich aendert. Auch dieser Rueckruf
+            // haelt den Delegierten **schwach**, aus demselben Grund wie der
+            // darueber.
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
                 .ordnerwechsel_setzen(Box::new(move || {
                     if let Some(selbst) = schwach.load() {
                         selbst.dateisystemwache_nachziehen();
+                        selbst.titel_nachziehen(selbst.fokus());
                     }
                 }));
             // Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6). Auch
@@ -669,6 +693,12 @@ impl Anwendungsdelegierter {
         // Sitzung kommt allein, **welches** der beiden Dateifenster das aktive
         // ist.
         self.fokus_setzen(fokus::BEIM_START);
+        // **Der Fenstertitel als letzte Handlung des Aufbaus (C11).** Erst
+        // jetzt steht der Fokus, und der Titel folgt ihm. `appkit::fenster`
+        // setzt ihn beim Aufbau des Fensters einmal auf den Namen der
+        // Anwendung; diese Zeile ersetzt ihn durch den Pfad, den das aktive
+        // Dateifenster zeigt.
+        self.titel_nachziehen(self.fokus());
         // Die Startmeldungen betreffen die Anwendung und kein einzelnes
         // Dateifenster: die beschaedigte Belegungs- oder Sitzungsdatei, der
         // unerreichbare Ablageordner. Sie gehen deshalb in die Zeile des
@@ -1075,17 +1105,28 @@ impl Anwendungsdelegierter {
     /// Fokus setzen (C2, C5, C6).
     ///
     /// Der Weg aller drei Fokusbefehle, und sie gehen ihn ohne Sonderfall.
-    /// Welchen Bereich einer hervorholt, sagt
-    /// [`fokus::holt_hervor`](crate::kommandos::fokus::holt_hervor) und sonst
-    /// nichts; dort steht auch, warum das seit dem Nutzerentscheid vom 260807
-    /// geschieht, statt einen ausgeblendeten Bereich stumm abzuweisen.
+    /// In welchem Bereich ein Fokuswert wohnt, sagt
+    /// [`fokus::bereich_mit_fokus`](crate::kommandos::fokus::bereich_mit_fokus)
+    /// und sonst nichts; dort steht auch, warum ein Fokusbefehl seinen Bereich
+    /// seit dem Nutzerentscheid vom 260807 hervorholt, statt ihn stumm
+    /// abzuweisen.
+    ///
+    /// **Das aktive Dateifenster kommt hier ohne Ausnahme mit durch.**
+    /// `bereich_mit_fokus` nennt es fuer [`Fokus::Dateifenster`], und
+    /// [`Fenstermodell::einblenden`](crate::fenstermodell::Fenstermodell::einblenden)
+    /// liefert dafuer `false`, weil es nie ausgeblendet ist: das linke laesst
+    /// C7 gar nicht ausblenden, und mit dem rechten wandert die Aktivitaet auf
+    /// das linke. Bis zum 260809 stand hier `holt_hervor`, das genau deshalb
+    /// `None` lieferte; die Antwort ist dieselbe, und die Zuordnung steht jetzt
+    /// einmal statt zweimal.
     ///
     /// "Ausgefuehrt" heisst hier: **irgendetwas** ist geschehen. Der Befehl auf
     /// eine ausgeblendete Leiste blendet sie ein, auch wenn der Fokus danach
     /// aus einem anderen Grund nicht umzieht; ohne das oder-Zeichen liesse er
     /// die Aufteilung ungezeichnet stehen.
     fn fokus_holen(&self, ziel: Fokus) -> bool {
-        let eingeblendet = match fokus::holt_hervor(ziel) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let eingeblendet = match fokus::bereich_mit_fokus(ziel, aktiv) {
             Some(bereich) => self.bereich_einblenden(bereich),
             None => false,
         };
@@ -1187,21 +1228,32 @@ impl Anwendungsdelegierter {
     /// ankommen. Die Sperre bleibt stehen, obwohl [`Self::fokus_holen`] den
     /// Bereich vorher hervorholt — sie gilt fuer jeden Aufrufer und nicht nur
     /// fuer den einen, der vorbaut. **Welcher Bereich zu einem Fokusziel
-    /// gehoert, sagt [`crate::kommandos::fokus::holt_hervor`]**, dieselbe
-    /// Zuordnung, die die Fokusbefehle schon zum Hervorholen lesen; drei
-    /// handgeschriebene Sichtbarkeitsabfragen daneben waeren eine zweite
-    /// Wahrheit darueber, in welchem Bereich ein Fokuswert wohnt. Das aktive
-    /// Dateifenster ist nie ausgeblendet und liefert dort `None`.
+    /// gehoert, sagt [`crate::kommandos::fokus::bereich_mit_fokus`]**,
+    /// dieselbe Zuordnung, die die Fokusbefehle schon zum Hervorholen lesen und
+    /// die Anzeige aus C9 zum Einfaerben; drei handgeschriebene
+    /// Sichtbarkeitsabfragen daneben waeren eine zweite Wahrheit darueber, in
+    /// welchem Bereich ein Fokuswert wohnt. Das aktive Dateifenster ist nie
+    /// ausgeblendet und faellt deshalb hier nie durch.
     ///
     /// Drei Aufrufer: die Fokusbefehle ueber [`Self::fokus_holen`], das
     /// Ausblenden eines Randbereichs, und der Aufbau der Oberflaeche mit
     /// [`crate::kommandos::fokus::BEIM_START`].
+    ///
+    /// **Die Anzeige zieht diese Funktion nicht selbst nach.** Sie ruft
+    /// `makeFirstResponder`, und die Ueberschreibung in
+    /// [`Hauptfenster`](super::fenster::Hauptfenster) meldet jeden erfolgreichen
+    /// Wechsel an [`Self::fokusanzeige_nachziehen`]. Es gibt einen
+    /// Ausloesepunkt und nicht zwei; ein Nachzug an dieser Stelle waere der
+    /// zweite und liesse den Mausklick weiter aussen vor.
     fn fokus_setzen(&self, ziel: Fokus) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
-        let ausgeblendet = fokus::holt_hervor(ziel)
-            .is_some_and(|bereich| !self.ivars().modell.borrow().sichtbar(bereich));
+        let ausgeblendet = {
+            let modell = self.ivars().modell.borrow();
+            fokus::bereich_mit_fokus(ziel, modell.aktiv())
+                .is_some_and(|bereich| !modell.sichtbar(bereich))
+        };
         if ausgeblendet {
             return false;
         }
@@ -1719,7 +1771,17 @@ impl Anwendungsdelegierter {
             // Die vier Tabbefehle aus C1 bedienen hier die Vorschau-Tabs
             // (C6); alles andere fuehrt die Vorschau nicht aus, und der
             // Tastendruck laeuft wie ein unbelegter weiter.
-            Fokus::Vorschau => self.vorschau().kommando_ausfuehren(kommando),
+            Fokus::Vorschau => {
+                let ausgefuehrt = self.vorschau().kommando_ausfuehren(kommando);
+                if ausgefuehrt {
+                    // Der dritte der vier Anlaesse aus C11: ein Tabwechsel der
+                    // Vorschau zeigt eine andere Datei, und mit dem Fokus hier
+                    // steht deren Pfad im Titel. Der Ersthelfer wechselt dabei
+                    // nicht, also meldet das Fenster nichts.
+                    self.titel_nachziehen(fokus);
+                }
+                ausgefuehrt
+            }
             // **Seit S17 erreichbar, und `false` ist die Antwort, die
             // bleibt.** Der Editor bekommt hier keine Adresse, weil ihm hier
             // nichts zugestellt wird: die neun Befehle mit
@@ -1917,14 +1979,21 @@ impl Anwendungsdelegierter {
     /// wirken damit aus jedem Bereich heraus.
     ///
     /// **Welcher Bereich zu einem Fokuswert gehoert, sagt
-    /// [`crate::kommandos::fokus::holt_hervor`]** — dieselbe Zuordnung, die
-    /// [`Self::fokus_setzen`] schon liest, und keine zweite daneben.
-    /// [`Fokus::Dateifenster`] und [`Fokus::Anderswo`] liefern dort `None` und
-    /// fallen auf das aktive Dateifenster: das erste, weil es zwei Listen und
-    /// einen Fokuswert gibt und das Fenstermodell sagt, welche gemeint ist; das
-    /// zweite aus demselben Grund wie in [`Self::bereichskommando`], naemlich
-    /// dass ein Befehl ohne eigenen Bereich der Liste gilt, die der Nutzer
-    /// zuletzt bedient hat.
+    /// [`crate::kommandos::fokus::bereich_mit_fokus`]** — dieselbe Zuordnung,
+    /// die [`Self::fokus_setzen`] schon liest und die die Anzeige aus C9 zum
+    /// Einfaerben nimmt, und keine zweite daneben. Bis zum 260809 stand hier
+    /// `holt_hervor(...).unwrap_or_else(|| Bereich::von_seite(aktiv))`,
+    /// also dieselbe Rechnung ein zweites Mal; danach haetten die Anzeige und
+    /// die Breitenaenderung verschiedene Bereiche meinen koennen.
+    ///
+    /// **Der Unterschied zur Anzeige bleibt beim Aufrufer und ist gewollt.**
+    /// [`Fokus::Anderswo`] liefert `None`; die Breitenaenderung faellt dann auf
+    /// das aktive Dateifenster, weil ein Befehl ohne eigenen Bereich der Liste
+    /// gilt, die der Nutzer zuletzt bedient hat (derselbe Grund wie in
+    /// [`Self::bereichskommando`]). Die Anzeige laesst bei `None` dagegen alles
+    /// stehen, weil `Anderswo` ein Blatt bedeutet und das siebte
+    /// Abnahmekriterium von C9 verlangt, dass ein Blatt keinem Bereich seine
+    /// Anzeige nimmt.
     fn breite_aendern(&self, betrag: f64) -> bool {
         // Zuerst nachlesen, was wirklich auf dem Schirm steht: der Nutzer kann
         // die Trennlinie zwischendurch mit der Maus verschoben haben, und ein
@@ -1936,9 +2005,11 @@ impl Anwendungsdelegierter {
                 .breiten_uebernehmen(aufteilung.gemessene_breiten());
         }
         // Vor der Ausleihe: `fokus` liest das Fenstermodell selbst.
-        let ziel = fokus::holt_hervor(self.fokus());
+        let fokus = self.fokus();
         let mut modell = self.ivars().modell.borrow_mut();
-        let bereich = ziel.unwrap_or_else(|| Bereich::von_seite(modell.aktiv()));
+        let aktiv = modell.aktiv();
+        let bereich =
+            fokus::bereich_mit_fokus(fokus, aktiv).unwrap_or_else(|| Bereich::von_seite(aktiv));
         modell.breite_aendern(bereich, betrag);
         true
     }
@@ -2000,18 +2071,108 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Schreibt Sichtbarkeit, Breiten und die Markierung des aktiven
-    /// Dateifensters in die Ansicht.
+    /// Schreibt Sichtbarkeit und Breiten in die Ansicht und zieht danach die
+    /// Anzeige nach.
+    ///
+    /// Die Reihenfolge ist bindend: `anwenden` setzt `setHidden`, und eine
+    /// ausgeblendete Ansicht, die den Ersthelfer haelt, laesst AppKit den Rang
+    /// neu vergeben. Der Fokus danach ist deshalb ein anderer als der davor,
+    /// und [`Self::fokusanzeige_nachziehen`] liest ihn frisch.
     fn aufteilung_nachziehen(&self) {
         let Some(aufteilung) = self.ivars().aufteilung.get() else {
             return;
         };
-        let (breiten, sichtbar, aktiv) = {
+        let (breiten, sichtbar) = {
             let modell = self.ivars().modell.borrow();
-            (modell.breiten(), modell.sichtbarkeit(), modell.aktiv())
+            (modell.breiten(), modell.sichtbarkeit())
         };
         aufteilung.anwenden(&breiten, &sichtbar);
-        aufteilung.aktives_markieren(aktiv);
+        self.fokusanzeige_nachziehen();
+    }
+
+    /// Schreibt die Rahmenfarben der fuenf Bereiche und den Fenstertitel (C9,
+    /// C11).
+    ///
+    /// **Der eine Schreiber der Anzeige, mit zwei Anlaessen.** Der erste ist
+    /// die Meldung aus [`Hauptfenster`](super::fenster::Hauptfenster): jeder
+    /// erfolgreiche Wechsel des Ersthelfers und jeder Wechsel zwischen Vorder-
+    /// und Hintergrund. Der zweite ist [`Self::aufteilung_nachziehen`], weil
+    /// ein Sichtbarkeitswechsel die Kaesten neu auslegt.
+    ///
+    /// **Sie ruft weder `anwenden` noch `setHidden`, und das ist keine
+    /// Sparsamkeit, sondern die Vermeidung eines Rings.** Eine ausgeblendete
+    /// Ansicht, die den Ersthelfer haelt, laesst AppKit den Rang neu vergeben,
+    /// also `makeFirstResponder:` erneut aufrufen — und damit diese Meldung ein
+    /// zweites Mal ausloesen. Der Fokusnachzug ist deshalb die kuerzere
+    /// Funktion, die ausschliesslich Farben und den Titel schreibt.
+    ///
+    /// **Steht ein Blatt am Fenster, bleibt alles stehen, wie es stand.** Das
+    /// siebte Abnahmekriterium von C9 verlangt es fuer die Rahmen, das achte
+    /// von C11 fuer den Titel; ein Blatt ist voruebergehend und gehoert dem
+    /// Bereich dahinter. Eine Abfrage, zwei Zusagen.
+    ///
+    /// **Gefragt wird [`Self::ersthelferbereich`] und nicht [`Self::fokus`]**,
+    /// und der Unterschied traegt das achte Abnahmekriterium von C9. `fokus`
+    /// antwortet [`Fokus::Anderswo`], sobald KRK kein Schluesselfenster mehr
+    /// hat — also gerade dann, wenn das Fenster in den Hintergrund geht und die
+    /// Anzeige zuruecktreten soll. Die Begruendung im Langen steht an
+    /// `ersthelferbereich`.
+    fn fokusanzeige_nachziehen(&self) {
+        let (Some(aufteilung), Some(fenster)) =
+            (self.ivars().aufteilung.get(), self.ivars().fenster.get())
+        else {
+            return;
+        };
+        if self.blatt_steht() {
+            return;
+        }
+        let fokus = self.ersthelferbereich();
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        aufteilung.rahmen_setzen(fokus, aktiv, fenster.isKeyWindow());
+        self.titel_nachziehen(fokus);
+    }
+
+    /// Schreibt den absoluten Pfad des Bereichs mit dem Fokus in den
+    /// Fenstertitel (C11).
+    ///
+    /// **Die Regel steht nicht hier.** [`crate::fenstertitel::titel`] ist eine
+    /// reine Funktion ueber die fuenf Fokuswerte, ohne AppKit und ohne
+    /// Auffangzweig; diese Funktion sammelt die drei Pfade ein und schreibt das
+    /// Ergebnis. `None` heisst "den Titel stehen lassen".
+    ///
+    /// Vier Anlaesse rufen sie, drei davon ueber
+    /// [`Self::fokusanzeige_nachziehen`] hinaus: der Ordner- und Tabwechsel
+    /// eines Dateifensters ueber den Melder aus dem Aufbau, der Dateiwechsel im
+    /// Editor, und der Tabwechsel der Vorschau.
+    ///
+    /// **Die Bewegung der Auswahl ruft sie nicht**, und das ist eine Zusage und
+    /// kein Vergessen: L1 aus C8 der Runde 1 misst die Spanne vom Tastendruck
+    /// bis zum Zeichendurchgang im Dateifenster, und ein Titel, der bei jedem
+    /// Druck auf eine Pfeiltaste neu geschrieben wuerde, laege in genau dieser
+    /// Spanne. Der Ordner aendert sich dabei ohnehin nicht.
+    fn titel_nachziehen(&self, fokus: Fokus) {
+        let (Some(fenster), Some(dateifenster)) =
+            (self.ivars().fenster.get(), self.ivars().dateifenster.get())
+        else {
+            return;
+        };
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let ordner = dateifenster[aktiv.index()].quelle().angezeigter_ordner();
+        let editordatei = self.ivars().editor.get().and_then(|editor| editor.pfad());
+        let vorschaudatei = self
+            .ivars()
+            .vorschau
+            .get()
+            .and_then(|vorschau| vorschau.angezeigter_pfad());
+        let Some(titel) = fenstertitel::titel(
+            fokus,
+            &ordner,
+            editordatei.as_deref(),
+            vorschaudatei.as_deref(),
+        ) else {
+            return;
+        };
+        fenster.setTitle(&NSString::from_str(&titel));
     }
 
     // ------------------------------------------------------------------
@@ -2293,35 +2454,45 @@ impl Anwendungsdelegierter {
     /// nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
     /// Ersthelfer, statt ein Kennzeichen umzulegen.
     ///
-    /// Zwei Vorabfragen und ein Durchgang durch [`Fokus::ALLE`]. Steht ein
+    /// Zwei Vorabfragen und ein Durchgang durch [`Bereich::ALLE`]. Steht ein
     /// Blatt am Fenster, ist dessen Panel das Schluesselfenster und nicht das
     /// Hauptfenster: [`Fokus::Anderswo`], und ohne diese Antwort loeschte ein
-    /// Delete vor der stehenden Rueckfrage in dem Ordner dahinter. Sonst wird
-    /// der Ersthelfer gegen die Ansicht jedes Fokuswertes gehalten, die
-    /// [`Self::fokusansicht`] nennt, und der erste Treffer ist die Antwort.
+    /// Delete vor der stehenden Rueckfrage in dem Ordner dahinter.
     ///
-    /// **Der Durchgang steht hier, weil die `if`-Kette davor einen Bereich
-    /// uebersehen hat.** Bis zum 260809 fragte diese Funktion die Leiste und
-    /// die Vorschau und fiel sonst auf [`Fokus::Dateifenster`] zurueck. Der
-    /// Editor kam darin nicht vor, obwohl der Ereignisabgriff seine Textflaeche
-    /// seit S4 durchlaesst: mit der Schreibmarke im Text warf `delete` die
-    /// ausgewaehlte Datei in den Papierkorb, und `up`, `down` und `tab`
-    /// bewegten die Dateiliste
-    /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
-    /// Ein vierter `if` haette denselben Fehler beim fuenften Bereich wieder
-    /// zugelassen; der Durchgang ueber die Aufzaehlung laesst ihn nicht mehr
-    /// zu, und die Ansicht dazu erzwingt der Uebersetzer in
-    /// [`Self::fokusansicht`].
+    /// **Gefragt ist seit S43 das Enthaltensein und nicht mehr die
+    /// Naemlichkeit.** Nicht "**ist** der Ersthelfer diese Ansicht", sondern
+    /// "**liegt** er in diesem Bereich". Der Durchgang laeuft ueber
+    /// [`Bereich::ALLE`], holt zu jedem Wert die Wurzelansicht ueber
+    /// [`Aufteilung::bereichssicht`] und fragt `isDescendantOf:`; von
+    /// [`Bereich`] auf [`Fokus`] kommt die erschoepfende Zuordnung
+    /// [`fokus::in_bereich`](crate::kommandos::fokus::in_bereich). Die fuenf
+    /// Teilbaeume sind zueinander fremd, weil es die fuenf Unteransichten einer
+    /// `NSSplitView` sind; ein Ersthelfer liegt deshalb in hoechstens einem,
+    /// und der erste Treffer ist die Antwort.
     ///
-    /// **Der Rueckfall auf [`Fokus::Dateifenster`] bleibt und ist keine
-    /// Nachlaessigkeit.** Er greift jetzt nur noch fuer einen Ersthelfer, der
-    /// zu **keinem** der fuenf Werte gehoert — vor der ersten Vergabe der
-    /// Schluesselansichtskette etwa, oder fuer eine Ansicht innerhalb eines
-    /// Bereichs, die den Rang an sich gezogen hat. `Anderswo` an dieser Stelle
-    /// hiesse, dass dann **kein** Befehl des Dateifensters mehr wirkt; genau
-    /// diesen Zustand hat der Defekt vom 260805-1845 schon einmal
-    /// hergestellt. Dass der Rueckfall fuer eine Unteransicht der Vorschau
-    /// oder der Leiste die falsche Antwort gibt, ist getrennt festgehalten.
+    /// **Was sich damit am Verhalten aendert, ist genau ein Fall**, und es ist
+    /// der des Defekts
+    /// `issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md`:
+    /// ein Ersthelfer innerhalb der Leiste, der Vorschau oder des Editors, der
+    /// nicht deren eine genannte Ansicht ist — eine Bildlaufleiste etwa —,
+    /// wandert von [`Fokus::Dateifenster`] auf seinen eigenen Bereich. Fuer den
+    /// Feldeditor eines Textfeldes im Dateifenster lautet die Antwort vorher
+    /// wie nachher `Dateifenster`: er ist eine Unteransicht des Dateifensters,
+    /// und der Rueckfall antwortete fuer ihn schon bisher so. Die
+    /// Enthaltensfrage aendert an jener Stelle keine einzige Antwort.
+    ///
+    /// **[`Self::fokusansicht`] bleibt und beantwortet die andere Frage:**
+    /// welche Ansicht den Ersthelferrang **annehmen** soll, wenn KRK den Fokus
+    /// setzt. Der Rang gehoert genau einer Ansicht, das Enthaltensein gilt fuer
+    /// einen ganzen Teilbaum; beide Fragen brauchen ihre eigene Antwort, und
+    /// keine ist die Verdopplung der anderen.
+    ///
+    /// **Der Rueckfall auf [`Fokus::Dateifenster`] bleibt und traegt danach
+    /// genau einen Fall:** einen Ersthelfer, der in **keiner** der fuenf
+    /// Unteransichten liegt, also das Fenster selbst, die Aufteilung oder den
+    /// Titelbalken. `Anderswo` an dieser Stelle hiesse, dass dann **kein**
+    /// Befehl des Dateifensters mehr wirkt; genau diesen Zustand hat der Defekt
+    /// vom 260805-1845 schon einmal hergestellt.
     fn fokus(&self) -> Fokus {
         let (Some(schluessel), Some(haupt)) = (
             NSApplication::sharedApplication(self.mtm()).keyWindow(),
@@ -2332,15 +2503,49 @@ impl Anwendungsdelegierter {
         if !schluessel.isEqual(Some(haupt)) {
             return Fokus::Anderswo;
         }
+        self.ersthelferbereich()
+    }
+
+    /// In welchem Bereich der Ersthelfer des Hauptfensters liegt.
+    ///
+    /// **Die zweite Haelfte von [`Self::fokus`], und sie beantwortet eine
+    /// eigene Frage.** `fokus` fragt: "wohin geht ein Befehl **jetzt**", und
+    /// dazu gehoert die Vorabfrage nach dem Schluesselfenster, denn vor einem
+    /// stehenden Blatt darf kein Befehl des Dateifensters wirken. Diese
+    /// Funktion fragt: "wo liegt der Ersthelfer", und die Antwort darauf haengt
+    /// nicht daran, ob das Fenster gerade vorn steht.
+    ///
+    /// **Der Unterschied ist keine Feinheit, sondern das achte Abnahmekriterium
+    /// von C9.** Geht KRK in den Hintergrund, gibt es kein Schluesselfenster
+    /// mehr, und `fokus` antwortet [`Fokus::Anderswo`]. Die Anzeige soll dann
+    /// aber gerade **zuruecktreten** und nicht stehen bleiben, also braucht sie
+    /// die Antwort, die der Hintergrund nicht aendert. Der Ersthelfer selbst
+    /// wechselt beim Wechsel in den Hintergrund nicht; macOS haelt ihn.
+    ///
+    /// Der Durchgang laeuft ueber [`Bereich::ALLE`] und fragt `isDescendantOf:`
+    /// gegen die Wurzelansicht jedes Bereichs; die Begruendung fuer den
+    /// Enthaltensschnitt steht an [`Self::fokus`].
+    fn ersthelferbereich(&self) -> Fokus {
+        let Some(haupt) = self.ivars().fenster.get() else {
+            return Fokus::Dateifenster;
+        };
         let Some(ersthelfer) = haupt.firstResponder() else {
             return Fokus::Dateifenster;
         };
-        for ziel in Fokus::ALLE {
-            let getroffen = self
-                .fokusansicht(ziel)
-                .is_some_and(|ansicht| ersthelfer.isEqual(Some(ansicht)));
+        // Allein eine Ansicht kann in einem Teilbaum liegen. Ein Ersthelfer,
+        // der keine ist — das Fenster selbst etwa —, faellt unten durch.
+        let (Some(ansicht), Some(aufteilung)) = (
+            ersthelfer.downcast_ref::<NSView>(),
+            self.ivars().aufteilung.get(),
+        ) else {
+            return Fokus::Dateifenster;
+        };
+        for bereich in Bereich::ALLE {
+            let getroffen = aufteilung
+                .bereichssicht(bereich)
+                .is_some_and(|wurzel| ansicht.isDescendantOf(&wurzel));
             if getroffen {
-                return ziel;
+                return fokus::in_bereich(bereich);
             }
         }
         Fokus::Dateifenster
@@ -2758,6 +2963,12 @@ impl Anwendungsdelegierter {
             // steht in `Editorbereich::datei_oeffnen`.
             Ladeausgang::Geoeffnet | Ladeausgang::SchonOffen => {
                 self.fokus_holen(Fokus::Editor);
+                // Der zweite der vier Anlaesse aus C11: der Editor haelt eine
+                // andere Datei als eben noch. Der Fokusnachzug allein genuegt
+                // hier nicht in jedem Fall — steht der Fokus schon im Editor,
+                // meldet `makeFirstResponder:` keinen Wechsel, weil keiner
+                // stattfindet, und der Titel truege weiter die vorige Datei.
+                self.titel_nachziehen(self.fokus());
                 true
             }
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der

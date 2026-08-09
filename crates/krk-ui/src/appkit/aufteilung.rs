@@ -13,11 +13,23 @@
 //! [`crate::fenstermodell`] und nicht hier; dieses Modul verteilt Breiten und
 //! Sichtbarkeit und faellt keine Entscheidung darueber, welcher Bereich steht.
 //!
-//! Jedes Dateifenster steht in einem `NSBox`, und dessen Rahmen ist die
-//! Markierung des aktiven Dateifensters aus C1: der aktive traegt die
-//! Akzentfarbe des Systems, der andere die Farbe einer gewoehnlichen
-//! Trennlinie. Die Markierung haengt am Rahmen und nicht am Inhalt, damit sie
-//! auch dann eindeutig ist, wenn beide Dateifenster denselben Ordner zeigen.
+//! **Jeder der fuenf Bereiche steht in einem `NSBox`**, und dessen Rahmen ist
+//! die Anzeige aus C9: er sagt, welcher Bereich die Tasten annimmt, und
+//! daneben, welches Dateifenster das aktive ist. Die Anzeige haengt am Rahmen
+//! und nicht am Inhalt, damit sie auch dann eindeutig ist, wenn beide
+//! Dateifenster denselben Ordner zeigen; und sie ist fuer alle fuenf dieselbe
+//! Form, weil zwei der fuenf gar keine Auswahl haben, an der sich eine
+//! Auswahlfarbe zeigen liesse.
+//!
+//! Bis zum 260809 trugen allein die beiden Dateifenster einen Kasten, und die
+//! Frage "traegt dieser Bereich einen Rahmen?" hatte zwei Antworten. Jetzt hat
+//! sie eine, und was die Kaesten unterscheidet, ist allein ihre Farbe:
+//! [`crate::kommandos::fokus::rahmenrolle`] entscheidet sie, ausserhalb von
+//! `appkit` und ohne Fenster pruefbar, und [`rahmenfarbe`] setzt jede Rolle in
+//! eine Systemfarbe um. Der Preis ist benannt und klein: zwei Punkte Rahmen
+//! nehmen jedem der drei Randbereiche vier Punkte Inhaltsbreite, und die
+//! Mindestbreiten aus [`Bereich::mindestbreite`] sind an der Flaeche gerechnet
+//! und nicht am Inhalt.
 //!
 //! Die Lesezeichenleiste steht seit Schritt 18 als eigener Bereich darin und
 //! kommt fertig von [`super::leiste`] herein; das Vorschaufenster kommt seit
@@ -56,13 +68,23 @@ use objc2_foundation::{
 use krk_core::ablage::{Breiten, Fensterseite, Sichtbarkeit};
 
 use crate::fenstermodell::Bereich;
+use crate::kommandos::fokus::{Fokus, Rahmenrolle, rahmenrolle};
 
 use super::statuszeile;
 use super::tabelle::Dateifenster;
 use super::tableiste;
 
-/// Die Breite des Rahmens, der das aktive Dateifenster markiert.
+/// Die Breite des Rahmens, der die Anzeige aus C9 traegt.
 const RAHMENBREITE: f64 = 2.0;
+
+/// Wie stark die Akzentfarbe zurueckgenommen wird, wo sie nicht voll gilt.
+///
+/// Zwei Faelle nehmen sie: das aktive Dateifenster ohne Fokus, und jeder
+/// Bereich, solange das Fenster im Hintergrund steht. Beide sollen sichtbar
+/// bleiben und dem Bereich mit dem Fokus nicht den Rang ablaufen; das achte
+/// Abnahmekriterium von C9 verlangt fuer den Hintergrund ausdruecklich
+/// zuruecktreten und nicht verschwinden.
+const ZURUECKGETRETEN: f64 = 0.4;
 
 /// Die Groesse, mit der ein Bereich entsteht, bevor die Aufteilung ihn auslegt.
 const AUFBAUGROESSE: NSSize = NSSize::new(400.0, 400.0);
@@ -130,8 +152,12 @@ pub struct Aufteilung {
     teiler: Retained<NSSplitView>,
     /// `NSSplitView` haelt seinen Delegierten schwach; hier steht er stark.
     _delegierter: Retained<AufteilungsDelegierter>,
-    /// Die Rahmen der beiden Dateifenster, in der Reihenfolge links, rechts.
-    rahmen: [Retained<NSBox>; 2],
+    /// Die Kaesten aller fuenf Bereiche, in der Reihenfolge von
+    /// [`Bereich::ALLE`].
+    ///
+    /// Die Feldbreite steht in der Typangabe: ein sechster Bereich haelt hier
+    /// den Bau an, wie bei [`crate::fenstermodell::Bereich::ALLE`] selbst.
+    rahmen: [Retained<NSBox>; 5],
 }
 
 impl Aufteilung {
@@ -159,17 +185,23 @@ impl Aufteilung {
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
 
+        // Alle fuenf gehen durch dieselbe Funktion, seit C9 die Anzeige auf
+        // alle fuenf ausdehnt. Die beiden Dateifenster bringen ihren Inhalt
+        // nicht fertig mit, sondern in drei Stuecken; `dateifensterinhalt`
+        // legt sie uebereinander, und eingerahmt wird danach wie bei den
+        // uebrigen drei.
         let rahmen = [
-            gerahmtes_dateifenster(mtm, dateifenster[0]),
-            gerahmtes_dateifenster(mtm, dateifenster[1]),
+            gerahmt(mtm, leiste),
+            gerahmt(mtm, &dateifensterinhalt(mtm, dateifenster[0])),
+            gerahmt(mtm, &dateifensterinhalt(mtm, dateifenster[1])),
+            gerahmt(mtm, vorschau),
+            gerahmt(mtm, editor),
         ];
         // Die Reihenfolge ist die von `Bereich::ALLE` und die einzige, in der
         // die Rechenvorschrift der Breiten die Bereiche wiederfindet.
-        teiler.addSubview(leiste);
-        teiler.addSubview(&rahmen[0]);
-        teiler.addSubview(&rahmen[1]);
-        teiler.addSubview(vorschau);
-        teiler.addSubview(editor);
+        for bereich in Bereich::ALLE {
+            teiler.addSubview(&rahmen[bereich.index()]);
+        }
 
         let delegierter = AufteilungsDelegierter::neu(mtm);
         // `NSSplitView.setDelegate:` ist eine sichere Bindung; unsicher ist
@@ -221,31 +253,104 @@ impl Aufteilung {
         breiten
     }
 
-    /// Markiert das aktive Dateifenster (C1).
+    /// Die Wurzelansicht eines Bereichs, falls die Aufteilung sie schon traegt.
     ///
-    /// Die Markierung ist ein farbiger Rahmen und kein Unterschied im Inhalt:
-    /// nur so bleibt sie eindeutig, wenn beide Dateifenster denselben Ordner
-    /// zeigen.
-    pub fn aktives_markieren(&self, seite: Fensterseite) {
-        for kandidat in Fensterseite::ALLE {
-            let kasten = &self.rahmen[kandidat.index()];
-            let farbe = if kandidat == seite {
-                NSColor::controlAccentColor()
-            } else {
-                NSColor::separatorColor()
-            };
-            kasten.setBorderColor(&farbe);
+    /// **Der Preis der Enthaltensfrage aus S43, und er faellt genau einmal
+    /// an.** `Anwendungsdelegierter::fokus` fragt seit dem 260809 nicht mehr,
+    /// welche eine Ansicht den Ersthelferrang traegt, sondern in welchem der
+    /// fuenf Teilbaeume er liegt; dafuer muss die Wurzel jedes Bereichs nach
+    /// aussen. Sie liegt bereits vor, naemlich als Unteransicht der Aufteilung
+    /// an der Stelle [`Bereich::index`], und deshalb entsteht hier keine zweite
+    /// Aufzaehlung neben [`Bereich::ALLE`].
+    ///
+    /// Die fuenf Teilbaeume sind zueinander fremd, weil es die fuenf
+    /// Unteransichten einer `NSSplitView` sind; ein Ersthelfer liegt in
+    /// hoechstens einem.
+    pub fn bereichssicht(&self, bereich: Bereich) -> Option<Retained<NSView>> {
+        bereichsansicht(&self.teiler, bereich.index())
+    }
+
+    /// Faerbt die Rahmen aller fuenf Bereiche (C9).
+    ///
+    /// **Ein Schreiber, drei Angaben, keine Entscheidung.** Welche Rolle ein
+    /// Bereich traegt, rechnet [`rahmenrolle`] ausserhalb von `appkit`; welche
+    /// Farbe eine Rolle bekommt, sagt [`rahmenfarbe`]. Diese Funktion setzt sie
+    /// und faellt selbst keine Fallunterscheidung.
+    ///
+    /// Sie loest `aktives_markieren` ab, das bis zum 260809 zwei Kaesten nach
+    /// der aktiven Seite einfaerbte. Der Unterschied ist nicht die Zahl der
+    /// Kaesten, sondern die Frage: gefaerbt wird jetzt nach dem Fokus, und das
+    /// aktive Dateifenster steht daneben.
+    ///
+    /// `im_vordergrund` ist `isKeyWindow` des Hauptfensters. Steht es im
+    /// Hintergrund, tritt auch die volle Akzentfarbe zurueck, statt zu
+    /// verschwinden; das achte Abnahmekriterium von C9 verlangt genau das, und
+    /// macOS haelt es fuer jede Auswahl so.
+    pub fn rahmen_setzen(&self, fokus: Fokus, aktiv: Fensterseite, im_vordergrund: bool) {
+        for bereich in Bereich::ALLE {
+            let farbe = rahmenfarbe(rahmenrolle(bereich, fokus, aktiv), im_vordergrund);
+            self.rahmen[bereich.index()].setBorderColor(&farbe);
         }
     }
 }
 
-/// Setzt Tableiste, Dateiliste und Statuszeile in einen Rahmen.
+/// Die Systemfarbe zu einer Rahmenrolle (C9).
+///
+/// **Drei Systemfarben und keine eigene Tafel.** Dass die Anzeige dem
+/// Erscheinungsbild von Hell und Dunkel ohne Zutun folgt, faellt daraus an;
+/// dieselbe Begruendung wie in [`super::leiste`] und [`super::tableiste`], wo
+/// steht, warum KRK das Erscheinungsbild nicht selbst nachbaut.
+///
+/// Die zurueckgetretene Fassung ist dieselbe Akzentfarbe mit verringerter
+/// Deckkraft und keine zweite Farbe: nur so bleibt erkennbar, dass beide
+/// dasselbe meinen.
+fn rahmenfarbe(rolle: Rahmenrolle, im_vordergrund: bool) -> Retained<NSColor> {
+    match rolle {
+        Rahmenrolle::Fokussiert if im_vordergrund => NSColor::controlAccentColor(),
+        // Beide Faelle nehmen dieselbe Farbe zurueckgenommen: das aktive
+        // Dateifenster ohne Fokus, und der fokussierte Bereich eines Fensters
+        // im Hintergrund.
+        Rahmenrolle::Fokussiert | Rahmenrolle::AktivOhneFokus => {
+            NSColor::controlAccentColor().colorWithAlphaComponent(ZURUECKGETRETEN)
+        }
+        Rahmenrolle::Ruhig => NSColor::separatorColor(),
+    }
+}
+
+/// Setzt eine fertige Ansicht in einen Kasten mit farbigem Rahmen.
+///
+/// **Die eine Stelle, an der ein Bereich seinen Rahmen bekommt**, seit C9 alle
+/// fuenf einen tragen. Die Farbe bleibt hier die einer gewoehnlichen
+/// Trennlinie; wer sie setzt, ist [`Aufteilung::rahmen_setzen`], und zwar beim
+/// ersten Nachzug des Aufbaus.
+fn gerahmt(mtm: MainThreadMarker, inhalt: &NSView) -> Retained<NSBox> {
+    let kasten = NSBox::initWithFrame(NSBox::alloc(mtm), NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
+    kasten.setBoxType(NSBoxType::Custom);
+    kasten.setTitlePosition(NSTitlePosition::NoTitle);
+    kasten.setBorderWidth(RAHMENBREITE);
+    kasten.setBorderColor(&NSColor::separatorColor());
+    kasten.setFillColor(&NSColor::clearColor());
+    kasten.setContentViewMargins(NSSize::ZERO);
+    kasten.setContentView(Some(inhalt));
+    // Keine Autogroesse am Kasten: die Rahmen der fuenf Unteransichten setzt
+    // `auslegen` bei jeder Groessenaenderung selbst, und der Kasten legt seine
+    // Inhaltsansicht danach von sich aus neu aus. Dieselbe Wahl wie bei den
+    // beiden Dateifenster-Kaesten bis zum 260809.
+    kasten
+}
+
+/// Legt Tableiste, Dateiliste und Statuszeile eines Dateifensters uebereinander.
 ///
 /// Von oben nach unten: die Leiste am Kopf, die Liste dazwischen, die Zeile am
 /// Fuss. Die drei Autogroessen halten die Aufteilung fest, wenn der Nutzer die
 /// Trennlinie verschiebt: die Leiste haengt oben, die Zeile unten, und die
 /// Liste nimmt, was dazwischen frei wird.
-fn gerahmtes_dateifenster(mtm: MainThreadMarker, dateifenster: &Dateifenster) -> Retained<NSBox> {
+///
+/// **Das Einrahmen steht nicht mehr darin.** Bis zum 260809 hiess diese
+/// Funktion `gerahmtes_dateifenster` und tat beides; seit alle fuenf Bereiche
+/// einen Kasten tragen, ist das Einrahmen [`gerahmt`] und gilt fuer alle. Die
+/// drei Randbereiche kommen fertig herein und brauchen diese Haelfte nicht.
+fn dateifensterinhalt(mtm: MainThreadMarker, dateifenster: &Dateifenster) -> Retained<NSView> {
     let inhalt = NSView::initWithFrame(
         NSView::alloc(mtm),
         NSRect::new(NSPoint::ZERO, AUFBAUGROESSE),
@@ -278,15 +383,7 @@ fn gerahmtes_dateifenster(mtm: MainThreadMarker, dateifenster: &Dateifenster) ->
     ));
     inhalt.addSubview(zeile);
 
-    let kasten = NSBox::initWithFrame(NSBox::alloc(mtm), NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
-    kasten.setBoxType(NSBoxType::Custom);
-    kasten.setTitlePosition(NSTitlePosition::NoTitle);
-    kasten.setBorderWidth(RAHMENBREITE);
-    kasten.setBorderColor(&NSColor::separatorColor());
-    kasten.setFillColor(&NSColor::clearColor());
-    kasten.setContentViewMargins(NSSize::ZERO);
-    kasten.setContentView(Some(&inhalt));
-    kasten
+    inhalt
 }
 
 /// Die Ansicht eines Bereichs, falls die Aufteilung sie schon traegt.

@@ -41,7 +41,27 @@
 //! "wohin fuehrt er, und steht der Bereich dort ueberhaupt auf dem Schirm".
 //! [`holt_hervor`] beantwortet die zweite Haelfte, und zwar fuer alle drei mit
 //! derselben Zeile.
+//!
+//! # Vier Zuordnungen zwischen Fokus und Bereich, und keine davon doppelt
+//!
+//! Seit C9 den Fokus sichtbar macht, wird die Beziehung zwischen
+//! [`Fokus`] und [`Bereich`](crate::fenstermodell::Bereich) in beide
+//! Richtungen gebraucht. Sie steht deshalb hier vollstaendig und nicht
+//! verstreut bei den Aufrufern:
+//!
+//! ```text
+//!  Fokus ──holt_hervor──────> Bereich?   was ein Fokusbefehl hervorholt
+//!  Fokus ──bereich_mit_fokus─> Bereich?   wo dieser Fokuswert wohnt (mit aktiver Seite)
+//!  Bereich ──in_bereich──────> Fokus      was gilt, wenn der Ersthelfer darin liegt
+//!  Bereich ──rahmenrolle─────> Rahmenrolle  wie der Kasten aus C9 gefaerbt wird
+//! ```
+//!
+//! Die vierte stuetzt sich auf die zweite, die zweite auf die erste; allein
+//! die dritte steht fuer sich, und die Probe
+//! `das_enthaltensein_und_das_hervorholen_kehren_einander_um` haelt sie gegen
+//! die erste.
 
+use krk_core::ablage::Fensterseite;
 use krk_core::tasten::Wirkungsbereich;
 
 use crate::fenstermodell::Bereich;
@@ -91,21 +111,31 @@ pub enum Fokus {
 impl Fokus {
     /// Alle fuenf Fokuswerte, in einer festen Reihenfolge.
     ///
-    /// **Die eine Aufzaehlung**, und sie ist der Grund, aus dem
-    /// `Anwendungsdelegierter::fokus` nach dem 260809 keinen Bereich mehr
-    /// uebersehen kann: die Fokusabfrage laeuft ueber diese Liste, statt drei
+    /// **Die eine Aufzaehlung, und seit S43 nur noch fuer die Proben.** Sie
+    /// entstand mit S17, weil die Fokusabfrage sie durchlief: statt drei
     /// Vergleiche von Hand zu reihen und alles uebrige auf
-    /// [`Fokus::Dateifenster`] fallen zu lassen. Bis dahin fehlte darin der
-    /// Editor, und jeder Dateibefehl wirkte mit der Schreibmarke im Text
-    /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
+    /// [`Fokus::Dateifenster`] fallen zu lassen, ging sie ueber diese Liste.
+    /// S43 hat die Abfrage auf die Enthaltensfrage umgestellt, und die laeuft
+    /// ueber [`Bereich::ALLE`] statt hierueber: gefragt ist, in welchem der
+    /// fuenf Teilbaeume der Ersthelfer liegt, und die Antwort darauf ist ein
+    /// Bereich. Das Programm zaehlt die Fokuswerte damit nirgends mehr auf,
+    /// und deshalb steht `#[cfg(test)]` daran statt eines `#[allow(dead_code)]`
+    /// mit einer Ankuendigung.
+    ///
+    /// **Die Aufgabe, die geblieben ist, ist keine kleine.** Vier Proben gehen
+    /// ueber diese Liste — die Tafel des Fokusvorbehalts, die fuenfzig Paare
+    /// der Rahmenrolle und zwei weitere —, und ohne sie fuehrte jede von ihnen
+    /// eine eigene Liste derselben fuenf Werte. Die Tafel pruefte dann
+    /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
     ///
     /// **Die Feldbreite steht in der Typangabe.** Ein sechster Wert haelt
-    /// damit den Bau an, wie die Feldbreite von
+    /// damit den Bau der Proben an, wie die Feldbreite von
     /// [`Kommando::KENNUNGEN`](krk_core::tasten::Kommando::KENNUNGEN) es fuer
     /// die Befehle tut; die Aufzaehlung selbst erzwingt der Uebersetzer nicht.
-    /// [`Fokus::Anderswo`] steht darin wie die uebrigen: es haengt an keiner
-    /// Ansicht, und die Fokusabfrage laeuft an ihm vorbei, statt es
-    /// auszunehmen.
+    /// [`Fokus::Anderswo`] steht darin wie die uebrigen, denn genau bei ihm
+    /// haben die Proben etwas festzuhalten: kein Bereich traegt dann die
+    /// Anzeige.
+    #[cfg(test)]
     pub const ALLE: [Fokus; 5] = [
         Fokus::Dateifenster,
         Fokus::Leiste,
@@ -174,6 +204,121 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
         Fokus::Editor => Some(Bereich::Editor),
         Fokus::Dateifenster | Fokus::Anderswo => None,
     }
+}
+
+/// Welcher Fokuswert gilt, wenn der Ersthelfer **in** diesem Bereich liegt.
+///
+/// Die Zuordnung, die `Anwendungsdelegierter::fokus` seit S43 liest. Sie
+/// beantwortet die Enthaltensfrage und nicht die Naemlichkeitsfrage: gefragt
+/// ist nicht, welche eine Ansicht den Ersthelferrang traegt, sondern in
+/// welchem der fuenf Teilbaeume der Rang ueberhaupt liegt. Bis zum 260809
+/// stand statt dessen ein Vergleich gegen fuenf genannte Ansichten, und jeder
+/// Ersthelfer innerhalb eines Randbereichs, der nicht dessen genannte Ansicht
+/// war — eine Bildlaufleiste etwa —, galt als Dateifenster
+/// (`issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md`).
+///
+/// **Zwei Bereiche auf einen Wert, und das ist keine Ungenauigkeit.** Es gibt
+/// fuenf Bereiche und vier fokussierbare Orte: die beiden Dateifenster teilen
+/// sich [`Fokus::Dateifenster`], weil das Fenstermodell sagt, welches der
+/// beiden gemeint ist, und weil jeder Befehl mit
+/// [`Wirkungsbereich::Dateifenster`] fuer beide dieselbe Regel traegt.
+///
+/// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
+/// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt hier den
+/// Bau an und erzwingt seine Einordnung.
+pub const fn in_bereich(bereich: Bereich) -> Fokus {
+    match bereich {
+        Bereich::Lesezeichen => Fokus::Leiste,
+        Bereich::Links | Bereich::Rechts => Fokus::Dateifenster,
+        Bereich::Vorschau => Fokus::Vorschau,
+        Bereich::Editor => Fokus::Editor,
+    }
+}
+
+/// In welchem Bereich ein Fokuswert wohnt.
+///
+/// **Die eine Zuordnung von einem Fokuswert auf seinen Bereich**, und drei
+/// Aufrufer lesen sie: die Fokusanzeige aus C9 ueber [`rahmenrolle`], das
+/// Hervorholen und die Sichtbarkeitssperre der Fokusbefehle, und die
+/// Breitenaenderung aus C7. Bis zum 260809 rechnete jeder von ihnen
+/// `holt_hervor(...).unwrap_or_else(|| Bereich::von_seite(aktiv))` fuer sich;
+/// das war dieselbe Rechnung dreimal, und die Anzeige und die
+/// Breitenaenderung haetten auseinanderlaufen koennen.
+///
+/// Die drei Randbereiche kommen aus [`holt_hervor`] und nicht aus einer
+/// zweiten Aufzaehlung daneben. [`Fokus::Dateifenster`] liefert das **aktive**
+/// Dateifenster: es gibt zwei Listen und einen Fokuswert, und welche der
+/// beiden gemeint ist, sagt allein das Fenstermodell. [`Fokus::Anderswo`]
+/// liefert `None`, denn ein stehendes Blatt gehoert keinem Bereich; was die
+/// Aufrufer daraus machen, ist ihre Sache und verschieden: die Anzeige laesst
+/// dann alles stehen, die Breitenaenderung faellt auf das aktive Dateifenster.
+///
+/// **Vollstaendig und ohne Auffangzweig.**
+pub const fn bereich_mit_fokus(fokus: Fokus, aktiv: Fensterseite) -> Option<Bereich> {
+    match fokus {
+        Fokus::Dateifenster => Some(Bereich::von_seite(aktiv)),
+        Fokus::Leiste | Fokus::Vorschau | Fokus::Editor => holt_hervor(fokus),
+        Fokus::Anderswo => None,
+    }
+}
+
+/// Was der Rahmen eines Bereichs im Augenblick aussagt (C9).
+///
+/// Drei Zustaende und nicht zwei, und der Grund steht im Spec unter C9: der
+/// Akzentrahmen bekommt eine zweite Bedeutung. Bis zur Runde 2 hiess er "dies
+/// ist das aktive Dateifenster", kuenftig heisst er "hier kommen deine Tasten
+/// an". Beide Aussagen sind zu treffen, denn der Nutzer muss auch mit dem
+/// Fokus im Editor sehen, aus welchem Dateifenster F5 kopiert.
+///
+/// **Die Vorbelegung des Specs, und eine andere Antwort aendert einen
+/// Funktionsrumpf und keinen Aufbau.** Der Datensatz
+/// `decisions/260809-2043_*_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md`
+/// ist offen und haelt diesen Bau nicht auf. Waehlt der Nutzer die dritte
+/// Moeglichkeit, den Rahmen allein fuer den Fokus, entfaellt [`Self::AktivOhneFokus`]
+/// aus [`rahmenrolle`] und wird [`Self::Ruhig`]; die fuenf Kaesten, der
+/// Ausloesepunkt und [`bereich_mit_fokus`] bleiben unberuehrt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rahmenrolle {
+    /// Hier kommen die Tasten an.
+    Fokussiert,
+    /// Aus diesem Dateifenster kopiert F5, aber die Tasten kommen woanders an.
+    AktivOhneFokus,
+    /// Weder noch.
+    Ruhig,
+}
+
+/// Welche Rolle der Rahmen dieses Bereichs traegt (C9).
+///
+/// **Die eine Stelle, die entscheidet, welcher Bereich wie eingerahmt wird**,
+/// und sie ist reine Rechnung ohne AppKit. Welche Farbe eine Rolle bekommt,
+/// steht in `super::super::appkit::aufteilung`; diese Funktion kennt keine
+/// Farbe, und die Probe darunter deckt sie ohne Fenster ab.
+///
+/// Drei Zusagen, die die Probe `die_fuenfzig_paare_der_rahmenrolle_gehen_auf`
+/// festhaelt: bei jedem Fokuswert ausser [`Fokus::Anderswo`] traegt genau ein
+/// Bereich [`Rahmenrolle::Fokussiert`]; das aktive Dateifenster traegt nie
+/// [`Rahmenrolle::Ruhig`]; und bei [`Fokus::Anderswo`], also bei einem
+/// stehenden Blatt, traegt kein Bereich [`Rahmenrolle::Fokussiert`].
+///
+/// **Das siebte Abnahmekriterium von C9 faellt daraus an und wird nicht eigens
+/// gebaut:** ein Blatt nimmt keinem Bereich seine Anzeige, weil der Aufrufer
+/// bei [`Fokus::Anderswo`] gar nicht erst schreibt. Die Regel dazu steht beim
+/// Aufrufer, nicht hier; diese Funktion beantwortet die Frage auch fuer
+/// `Anderswo`, damit die Probe sie stellen kann.
+///
+/// Verglichen wird ueber [`Bereich::index`] und nicht mit `==`: `PartialEq`
+/// ist nicht `const`, und diese Zuordnung soll zur Uebersetzungszeit
+/// nachrechenbar bleiben wie ihre Nachbarn.
+pub const fn rahmenrolle(bereich: Bereich, fokus: Fokus, aktiv: Fensterseite) -> Rahmenrolle {
+    if let Some(mit_fokus) = bereich_mit_fokus(fokus, aktiv)
+        && mit_fokus.index() == bereich.index()
+    {
+        return Rahmenrolle::Fokussiert;
+    }
+    if Bereich::von_seite(aktiv).index() == bereich.index() {
+        return Rahmenrolle::AktivOhneFokus;
+    }
+    Rahmenrolle::Ruhig
 }
 
 /// Ob ein Kommando mit diesem Wirkungsbereich hier wirken darf.
@@ -595,6 +740,122 @@ mod tests {
         assert!(
             abgewiesen > 0 && durchgelassen > 0,
             "keine Befehle in einer der beiden Gruppen; die Pruefung liefe leer"
+        );
+    }
+
+    /// [`in_bereich`] und [`holt_hervor`] kehren einander um (S43).
+    ///
+    /// Die beiden Zuordnungen stehen an entgegengesetzten Enden desselben
+    /// Weges: [`holt_hervor`] sagt, welchen Bereich ein Fokusbefehl aufsucht,
+    /// [`in_bereich`] sagt, welcher Fokuswert gilt, wenn der Ersthelfer darin
+    /// liegt. Laufen sie auseinander, fuehrt ein Fokusbefehl in einen Bereich,
+    /// den die Fokusabfrage danach anders benennt — und die Anzeige aus C9
+    /// staende auf einem anderen Kasten als der Ersthelfer.
+    ///
+    /// Die beiden Dateifensterbereiche stehen daneben, weil sie sich einen
+    /// Fokuswert teilen und [`holt_hervor`] fuer ihn `None` liefert.
+    #[test]
+    fn das_enthaltensein_und_das_hervorholen_kehren_einander_um() {
+        for ziel in [Fokus::Leiste, Fokus::Vorschau, Fokus::Editor] {
+            let bereich = holt_hervor(ziel).expect("die drei Randbereiche holen einen Bereich");
+            assert_eq!(
+                in_bereich(bereich),
+                ziel,
+                "{ziel:?} fuehrt in {bereich:?}, und der meldet sich als etwas anderes zurueck"
+            );
+        }
+        for bereich in [Bereich::Links, Bereich::Rechts] {
+            assert_eq!(in_bereich(bereich), Fokus::Dateifenster);
+        }
+    }
+
+    /// Jeder der fuenf Bereiche traegt genau einen Fokuswert (S43).
+    ///
+    /// Die Gegenprobe zur Zusage, auf der die Fokusabfrage steht: die fuenf
+    /// Teilbaeume der Aufteilung sind zueinander fremd, ein Ersthelfer liegt in
+    /// hoechstens einem, und deshalb genuegt der erste Treffer.
+    #[test]
+    fn jeder_bereich_traegt_genau_einen_fokuswert() {
+        for bereich in Bereich::ALLE {
+            let fokus = in_bereich(bereich);
+            assert_ne!(
+                fokus,
+                Fokus::Anderswo,
+                "{bereich:?} liegt im Fenster und ist damit nie Anderswo"
+            );
+        }
+    }
+
+    /// Die ganze Rahmenregel auf einen Blick: fuenf Bereiche mal fuenf
+    /// Fokuswerte mal zwei aktive Seiten, fuenfzig Paare (S44).
+    ///
+    /// Drei Zusagen stehen darin, und jede von ihnen traegt ein
+    /// Abnahmekriterium von C9. Die zweite ist die, die den offenen Datensatz
+    /// `260809-2043` betrifft: unter der Vorbelegung des Specs tragen zwei
+    /// Bereiche eine Markierung, und "die Anzeige" im zweiten
+    /// Abnahmekriterium meint die volle Akzentfarbe.
+    #[test]
+    fn die_fuenfzig_paare_der_rahmenrolle_gehen_auf() {
+        for aktiv in Fensterseite::ALLE {
+            for fokus in Fokus::ALLE {
+                let fokussierte = Bereich::ALLE
+                    .into_iter()
+                    .filter(|bereich| {
+                        rahmenrolle(*bereich, fokus, aktiv) == Rahmenrolle::Fokussiert
+                    })
+                    .count();
+                let erwartet = usize::from(fokus != Fokus::Anderswo);
+                assert_eq!(
+                    fokussierte, erwartet,
+                    "{fokus:?} bei aktivem {aktiv:?}: {fokussierte} Bereiche tragen die volle \
+                     Akzentfarbe, erwartet waren {erwartet}"
+                );
+
+                let aktiver = rahmenrolle(Bereich::von_seite(aktiv), fokus, aktiv);
+                assert_ne!(
+                    aktiver,
+                    Rahmenrolle::Ruhig,
+                    "das aktive Dateifenster ist bei {fokus:?} nicht mehr zu erkennen"
+                );
+            }
+        }
+    }
+
+    /// Der Fokus faerbt genau den Bereich, in dem er wohnt (S44).
+    ///
+    /// Die Feinprobe neben der Zaehlung darueber: nicht nur, dass genau einer
+    /// die volle Akzentfarbe traegt, sondern dass es der richtige ist.
+    #[test]
+    fn die_volle_akzentfarbe_traegt_der_bereich_mit_dem_fokus() {
+        for aktiv in Fensterseite::ALLE {
+            for fokus in Fokus::ALLE {
+                let Some(erwartet) = bereich_mit_fokus(fokus, aktiv) else {
+                    continue;
+                };
+                assert_eq!(rahmenrolle(erwartet, fokus, aktiv), Rahmenrolle::Fokussiert);
+            }
+        }
+    }
+
+    /// [`bereich_mit_fokus`] liefert fuer das Dateifenster das **aktive**.
+    ///
+    /// Die Zeile, wegen der [`holt_hervor`] allein nicht genuegt: es kennt das
+    /// Fenstermodell nicht und antwortet fuer [`Fokus::Dateifenster`] mit
+    /// `None`.
+    #[test]
+    fn der_fokus_im_dateifenster_meint_das_aktive() {
+        assert_eq!(
+            bereich_mit_fokus(Fokus::Dateifenster, Fensterseite::Links),
+            Some(Bereich::Links)
+        );
+        assert_eq!(
+            bereich_mit_fokus(Fokus::Dateifenster, Fensterseite::Rechts),
+            Some(Bereich::Rechts)
+        );
+        assert_eq!(
+            bereich_mit_fokus(Fokus::Anderswo, Fensterseite::Links),
+            None,
+            "ein stehendes Blatt gehoert keinem Bereich"
         );
     }
 

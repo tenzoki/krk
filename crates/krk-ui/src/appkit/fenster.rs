@@ -15,11 +15,51 @@
 //! baut der Rueckweg aus C7: "Fenster einblenden" auf Cmd+N und der Klick auf
 //! das Dock-Symbol holen dieses eine Fenster nach vorn, statt ein zweites
 //! anzulegen.
+//!
+//! # Der eine Ausloesepunkt der Fokusanzeige (C9)
+//!
+//! Seit S45 ist das Fenster eine eigene Klasse, [`Hauptfenster`], und sie hat
+//! genau eine Aufgabe: **melden, dass sich der Ersthelfer oder der
+//! Vordergrund geaendert hat.** C9 verlangt, dass die Anzeige dem Fokus folgt,
+//! gleich auf welchem Weg er dorthin kam, und der Mausklick ist einer davon.
+//!
+//! ```text
+//!  KRK setzt den Fokus ─┐
+//!                       ├─> makeFirstResponder: ──> melden ──> Anwendungsdelegierter
+//!  Mausklick in eine ───┘                                       fokusanzeige_nachziehen
+//!  Flaeche, die den Rang annimmt
+//!
+//!  becomeKeyWindow / resignKeyWindow ────────────> melden
+//! ```
+//!
+//! **Es gibt keine zweite Tuer.** `makeFirstResponder:` ist der einzige Weg,
+//! auf dem der Ersthelferrang wechselt: KRK ruft sie in
+//! `Anwendungsdelegierter::fokus_setzen`, und AppKit ruft dieselbe Methode beim
+//! Mausklick in eine Flaeche, die den Rang annimmt. Drei naheliegende
+//! Alternativen scheiden aus: `NSWindow` verschickt keine Benachrichtigung
+//! ueber den Ersthelfer, die Schluesselwertbeobachtung der Eigenschaft
+//! `firstResponder` ist von Apple nicht zugesagt, und ein Takt, der die Frage
+//! sechzigmal je Sekunde stellt, kostete Strom fuer eine Frage, die sich fast
+//! nie aendert.
+//!
+//! **Die Ueberschreibung ruft zuerst die Oberklasse und meldet nur bei
+//! Erfolg.** Ein abgelehnter Wechsel — eine Flaeche, die den Rang nicht annimmt
+//! — aendert nichts, und eine Meldung darueber liesse die Anzeige ohne Anlass
+//! neu schreiben.
+//!
+//! **Der Griff auf den Anwendungsdelegierten ist schwach**, aus demselben Grund
+//! wie bei jedem Rueckruf dieses Projekts: der Ring Delegierter → Fenster →
+//! Rueckruf → Delegierter schloesse sich sonst, und das Fenster lebt ueber sein
+//! Schliessen hinaus.
+
+use std::cell::RefCell;
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSBackingStoreType, NSView, NSWindow, NSWindowDelegate, NSWindowStyleMask};
+use objc2_app_kit::{
+    NSBackingStoreType, NSResponder, NSView, NSWindow, NSWindowDelegate, NSWindowStyleMask,
+};
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
     ns_string,
@@ -40,6 +80,97 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 /// und die Zusage aus C7, dass jeder von ihnen bedienbar bleibt, waere nicht zu
 /// halten.
 const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0);
+
+/// Was das Hauptfenster haelt.
+pub struct HauptfensterIvars {
+    /// Der Melder, den [`Hauptfenster::melder_setzen`] eintraegt.
+    ///
+    /// Er haelt den Anwendungsdelegierten **schwach**; die Begruendung steht im
+    /// Modulkopf. `None` heisst: der Aufbau ist noch nicht so weit, und dann
+    /// gibt es auch nichts nachzuziehen.
+    melden: RefCell<Option<Box<dyn Fn()>>>,
+}
+
+define_class!(
+    /// Das Hauptfenster: der eine Ausloesepunkt fuer jeden Wechsel des
+    /// Ersthelfers und des Vordergrunds (C9).
+    // SAFETY:
+    // - Die Oberklasse NSWindow stellt an eine Unterklasse keine Bedingungen,
+    //   die hier verletzt wuerden: die drei ueberschriebenen Methoden rufen
+    //   jede zuerst die Fassung der Oberklasse und geben deren Ergebnis
+    //   unveraendert zurueck.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSWindow)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = HauptfensterIvars]
+    pub struct Hauptfenster;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Hauptfenster {}
+
+    impl Hauptfenster {
+        /// Der Ersthelferrang wechselt: erst die Oberklasse, dann melden.
+        // SAFETY: Die Signatur entspricht der von NSWindow.
+        #[unsafe(method(makeFirstResponder:))]
+        fn ersthelfer_setzen(&self, ansicht: Option<&NSResponder>) -> bool {
+            // SAFETY: `makeFirstResponder:` von NSWindow hat die hier
+            // angenommene Signatur.
+            let erfolg: bool = unsafe { msg_send![super(self), makeFirstResponder: ansicht] };
+            if erfolg {
+                self.melden();
+            }
+            // Unveraendert zurueck: der Aufrufer entscheidet daran, ob der
+            // Wechsel stattgefunden hat.
+            erfolg
+        }
+
+        /// Das Fenster kommt in den Vordergrund (C9, achtes Kriterium).
+        // SAFETY: Die Signatur entspricht der von NSWindow.
+        #[unsafe(method(becomeKeyWindow))]
+        fn wird_schluesselfenster(&self) {
+            // SAFETY: `becomeKeyWindow` von NSWindow hat die hier angenommene
+            // Signatur.
+            let () = unsafe { msg_send![super(self), becomeKeyWindow] };
+            self.melden();
+        }
+
+        /// Das Fenster geht in den Hintergrund (C9, achtes Kriterium).
+        // SAFETY: Die Signatur entspricht der von NSWindow.
+        #[unsafe(method(resignKeyWindow))]
+        fn gibt_schluesselrang_ab(&self) {
+            // SAFETY: `resignKeyWindow` von NSWindow hat die hier angenommene
+            // Signatur.
+            let () = unsafe { msg_send![super(self), resignKeyWindow] };
+            self.melden();
+        }
+    }
+);
+
+impl Hauptfenster {
+    /// Traegt den Melder ein, der jeden Wechsel weitergibt.
+    ///
+    /// Gerufen vom Aufbau der Oberflaeche, mit einem Rueckruf, der den
+    /// Anwendungsdelegierten schwach haelt. Derselbe Zuschnitt wie
+    /// `DateifensterQuelle::ordnerwechsel_setzen` und die drei anderen Melder
+    /// dieses Projekts.
+    pub fn melder_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().melden.borrow_mut() = Some(melden);
+    }
+
+    /// Gibt den Wechsel weiter, falls jemand zuhoert.
+    ///
+    /// Die Ausleihe steht waehrend des Rufs, wie bei
+    /// `DateifensterQuelle::ordnerwechsel_melden`. Sie ist lesend, und der
+    /// einzige schreibende Zugriff auf dieselbe Zelle ist
+    /// [`Self::melder_setzen`] beim Aufbau; ein Ruf, der ueber AppKit hierher
+    /// zuruecklaeuft, nimmt eine zweite Leseausleihe und keine schreibende.
+    fn melden(&self) {
+        let melden = self.ivars().melden.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden();
+        }
+    }
+}
 
 /// Was der Fensterdelegierte haelt.
 pub struct FensterIvars {
@@ -85,26 +216,37 @@ impl FensterDelegierter {
 }
 
 /// Baut das Hauptfenster um die genannte Ansicht.
+///
+/// **Liefert seit S45 die Unterklasse und nicht `NSWindow`.** Der einzige
+/// Aufrufer ist `Anwendungsdelegierter::oberflaeche_aufbauen`; er traegt den
+/// Melder ein und legt das Fenster danach als `Retained<NSWindow>` in seine
+/// Ivars. Damit bleibt jede der uebrigen Fensterberuehrungen unveraendert, weil
+/// sie ohnehin nur `NSWindow`-Methoden ruft.
 pub fn hauptfenster(
     mtm: MainThreadMarker,
     inhalt: &NSView,
     delegierter: &FensterDelegierter,
-) -> Retained<NSWindow> {
-    // SAFETY: Das Fenster gibt sich beim Schliessen nicht selbst frei, siehe
-    // `setReleasedWhenClosed` unten. Ohne diese Abschaltung waere die
-    // Referenz, die der Anwendungsdelegierte haelt, nach dem Schliessen tot,
-    // und der Rueckweg aus C7 zeigte auf ein freigegebenes Objekt.
-    let fenster = unsafe {
-        let fenster = NSWindow::initWithContentRect_styleMask_backing_defer(
-            NSWindow::alloc(mtm),
-            NSRect::new(NSPoint::new(0.0, 0.0), ANFANGSGROESSE),
-            NSWindowStyleMask::Titled
+) -> Retained<Hauptfenster> {
+    let this = Hauptfenster::alloc(mtm).set_ivars(HauptfensterIvars {
+        melden: RefCell::new(None),
+    });
+    // SAFETY: `initWithContentRect:styleMask:backing:defer:` von NSWindow hat
+    // die hier angenommene Signatur. Das Fenster gibt sich beim Schliessen
+    // nicht selbst frei, siehe `setReleasedWhenClosed` darunter: ohne diese
+    // Abschaltung waere die Referenz, die der Anwendungsdelegierte haelt, nach
+    // dem Schliessen tot, und der Rueckweg aus C7 zeigte auf ein freigegebenes
+    // Objekt.
+    let fenster: Retained<Hauptfenster> = unsafe {
+        let fenster: Retained<Hauptfenster> = msg_send![
+            super(this),
+            initWithContentRect: NSRect::new(NSPoint::new(0.0, 0.0), ANFANGSGROESSE),
+            styleMask: NSWindowStyleMask::Titled
                 | NSWindowStyleMask::Closable
                 | NSWindowStyleMask::Miniaturizable
                 | NSWindowStyleMask::Resizable,
-            NSBackingStoreType::Buffered,
-            false,
-        );
+            backing: NSBackingStoreType::Buffered,
+            defer: false,
+        ];
         fenster.setReleasedWhenClosed(false);
         fenster
     };
