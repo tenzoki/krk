@@ -275,6 +275,19 @@ impl Editorbereich {
     /// stehen, und der Grund geht als Wert nach oben; wohin er dort kommt,
     /// weiss diese Datei nicht (siehe den Modulkopf).
     ///
+    /// **Bei [`Ladeausgang::SchonOffen`] geschieht hier gar nichts**, und das
+    /// ist die Haelfte der Behebung vom 260809, die in dieser Datei steht: der
+    /// Editor hielt die Datei schon, das Modell hat nicht gelesen, und die
+    /// Textflaeche darf deshalb nicht angefasst werden. Sie traegt in diesem
+    /// Augenblick das, was der Nutzer getippt und noch nicht gesichert hat —
+    /// ein Stand, den das Modell bis S26 gar nicht kennt, weil der Delegierte
+    /// `textDidChange:` mit jenem Schritt kommt. Ein Ruf von
+    /// [`Self::stand_einsetzen`] schriebe hier den Plattenstand des Modells
+    /// darueber; genau so ging die Aenderung des Nutzers verloren
+    /// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
+    /// Der Vergleich unten nennt deshalb [`Ladeausgang::Geoeffnet`]
+    /// namentlich und darf nicht auf "nicht abgewiesen" gelockert werden.
+    ///
     /// Die Ausleihe des Modells endet mit der ersten Zeile, bevor
     /// [`Self::stand_einsetzen`] sie erneut nimmt und in das Textsystem ruft.
     pub fn datei_oeffnen(&self, pfad: &Path) -> Ladeausgang {

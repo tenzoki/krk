@@ -393,15 +393,31 @@ impl Ladevorgang {
 
 /// Wie ein Ladevorgang ausgegangen ist.
 ///
-/// **Zwei Werte, ueberschneidungsfrei und vollstaendig.** Entweder der Editor
-/// haelt danach eine neue Datei, oder er haelt weiter, was er vorher hielt, und
-/// der Nutzer bekommt den Grund. Ein dritter Ausgang, bei dem der Editor
-/// nichts mehr haelt, entsteht nicht: eine gescheiterte Anfrage wirft nichts
-/// weg.
+/// **Drei Werte, ueberschneidungsfrei und vollstaendig.** Entweder der Editor
+/// haelt danach eine neue Datei, oder er hielt sie schon und nichts hat sich
+/// bewegt, oder er haelt weiter, was er vorher hielt, und der Nutzer bekommt
+/// den Grund. Ein vierter Ausgang, bei dem der Editor nichts mehr haelt,
+/// entsteht nicht: eine gescheiterte Anfrage wirft nichts weg.
+///
+/// **Der mittlere Wert ist seit dem 260809 dabei** und trennt zwei Ausgaenge,
+/// die bis dahin beide `Geoeffnet` hiessen. Der Unterschied ist nicht
+/// buchhalterisch: die Ansicht traegt den Stand allein bei [`Self::Geoeffnet`]
+/// in die Textflaeche, und bei [`Self::SchonOffen`] gerade **nicht**. Wer die
+/// beiden zusammenzoege, ueberschriebe die Textflaeche mit einem frisch
+/// gelesenen Plattenstand und naehme dem Nutzer, was er getippt hat; genau das
+/// tat F4 bis zum 260809
+/// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ladeausgang {
     /// Die Datei steht; die Ansicht traegt den Stand in die Textflaeche.
     Geoeffnet,
+    /// Der Editor hielt genau diese Datei schon. Es wurde nicht gelesen, nichts
+    /// am Modell hat sich bewegt, und die Textflaeche bleibt unberuehrt.
+    ///
+    /// Der Aufrufer holt den Editor hervor und setzt den Fokus hinein, wie bei
+    /// [`Self::Geoeffnet`]; das ist der Teil des Befehls, der noch etwas zu tun
+    /// hat.
+    SchonOffen,
     /// Der Grund gehoert in die Statuszeile aus C1. Der bisherige Stand bleibt.
     Abgewiesen(Abweisung),
 }
@@ -462,6 +478,21 @@ impl Editormodell {
         self.pfad.is_some()
     }
 
+    /// Ob der Editor genau diese Datei schon haelt (C2).
+    ///
+    /// **Die eine Stelle, an der "dieselbe Datei" beantwortet wird**, und die
+    /// Bedingung, unter der [`Self::jetzt_oeffnen`] nicht liest. Verglichen
+    /// wird der Pfad, wie er hereingereicht wurde, und nicht ein aufgeloester:
+    /// beide Seiten stammen aus derselben Quelle, naemlich der Auswahl des
+    /// Dateifensters, und ein `canonicalize` daneben kostete einen Zugriff auf
+    /// die Platte fuer eine Frage, die der Vergleich schon beantwortet. Geht
+    /// der Vergleich einmal daneben, liest der Editor neu — der Fehler faellt
+    /// also auf die Seite des bisherigen Verhaltens und nicht auf die eines
+    /// falsch stehengelassenen Standes.
+    pub fn haelt_bereits(&self, pfad: &Path) -> bool {
+        self.pfad.as_deref() == Some(pfad)
+    }
+
     /// Der gehaltene Stand.
     pub fn stand(&self) -> &str {
         &self.stand
@@ -518,6 +549,19 @@ impl Editormodell {
     /// **Fragt nicht nach.** Steht ungesicherter Stand offen, ist das einer der
     /// vier Anlaesse aus C4, und die Nachfrage gehoert vor diesen Ruf; siehe
     /// den Modulkopf.
+    ///
+    /// **Diese Funktion traegt die Abkuerzung aus [`Self::haelt_bereits`]
+    /// noch nicht, und wer sie in Betrieb nimmt, hat sie mitzunehmen.** Sie hat
+    /// heute keinen Aufrufer ausser den Pruefungen; der Weg des Nutzers laeuft
+    /// ueber [`Self::jetzt_oeffnen`], und dort steht die Abkuerzung. Mit S24
+    /// wechselt der Aufrufer auf diese Funktion, und ohne die Abkuerzung kaeme
+    /// der Verlust aus
+    /// `issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`
+    /// stumm zurueck: der Faden laese die Datei neu, [`Self::uebernehmen`]
+    /// setzte den Plattenstand ein, und die Ansicht schriebe ihn ueber das
+    /// Getippte. Der Ausgang dafuer steht bereit und heisst
+    /// [`Ladeausgang::SchonOffen`]; er ist hier nicht vorweggebaut, weil diese
+    /// Funktion keinen Ausgang meldet und S24 ihr erst einen gibt.
     pub fn oeffnen(&mut self, pfad: &Path) {
         self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
     }
@@ -540,7 +584,31 @@ impl Editormodell {
     /// ist damit derselbe wie dort.
     ///
     /// **Fragt nicht nach**, wie [`Self::oeffnen`]; siehe den Modulkopf.
+    ///
+    /// # Die Datei, die der Editor schon haelt, wird nicht neu gelesen
+    ///
+    /// Haelt der Editor genau diesen Pfad, kehrt die Funktion mit
+    /// [`Ladeausgang::SchonOffen`] zurueck, **bevor** sie liest, und ruehrt
+    /// nichts an. Ohne diese Zeile ist ein zweites F4 auf dieselbe Datei ein
+    /// vollwertiges Oeffnen: [`Self::uebernehmen`] setzt den Plattenstand ein,
+    /// loescht die Abweichungsmarke, und die Ansicht schreibt den Plattenstand
+    /// ueber das, was der Nutzer getippt hat. Genau diesen Weg ging der Nutzer
+    /// am 260809, weil die Vorschau den Editor nach C1 verdraengt und F4 der
+    /// einzige Befehl ist, der ihn mit seiner Datei zurueckholt
+    /// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
+    ///
+    /// **Der Preis steht hier und wird nicht verschwiegen:** F4 auf die schon
+    /// gehaltene Datei liest sie damit auch dann nicht neu, wenn sie sich von
+    /// aussen geaendert hat. Ein Befehl zum Neulesen gibt es nicht, und C2 sagt
+    /// keinen zu; die Aenderung von aussen traegt S31, und die Frage, was mit
+    /// einem ungesicherten Stand dabei geschieht, gehoert der Nachfrage aus C4
+    /// (S27, S28). Solange es kein Sichern gibt, ist der ungesicherte Stand das
+    /// einzige Stueck Arbeit im Programm, das sich nicht wiederherstellen
+    /// laesst; der Plattenstand laesst sich jederzeit wieder lesen.
     pub fn jetzt_oeffnen(&mut self, pfad: &Path) -> Ladeausgang {
+        if self.haelt_bereits(pfad) {
+            return Ladeausgang::SchonOffen;
+        }
         let stempel = Stempel::von_pfad(pfad);
         let geladen = Geladen {
             ergebnis: datei::oeffnen(pfad),
@@ -1080,6 +1148,78 @@ mod tests {
             "der Editor hat die abgewiesene Datei aufgenommen"
         );
         assert_eq!(modell.stand(), "guter Inhalt\n");
+    }
+
+    /// Der Verlust vom 260809-2029, an der Stelle nachgestellt, an der er
+    /// entsteht.
+    ///
+    /// Der Weg des Nutzers war: F4 auf eine Datei, tippen, die Vorschau
+    /// einblenden — was den Editor nach C1 verdraengt —, und F4 auf dieselbe
+    /// Datei, um ihn zurueckzuholen. Das zweite F4 war bis zum 260809 ein
+    /// vollwertiges Oeffnen und las die Datei neu; danach stand der
+    /// Plattenstand im Modell, die Abweichungsmarke war geloescht, und
+    /// `Editorbereich::stand_einsetzen` schrieb den Plattenstand ueber das
+    /// Getippte.
+    ///
+    /// Nachgestellt wird der zweite Ruf und nicht der Weg dorthin: die
+    /// Sichtbarkeit der Bereiche ist an dem Verlust unbeteiligt (sie setzt
+    /// `hidden` und faellt keinen Stand), und die Textflaeche braucht ein
+    /// Fenster. Was hier faellt, ist der Stand des Modells — und er ist es, den
+    /// die Ansicht in die Flaeche traegt.
+    #[test]
+    fn ein_zweites_oeffnen_derselben_datei_wirft_den_bearbeiteten_stand_nicht_weg() {
+        let ordner = Pruefordner::neu("zweimal-dieselbe");
+        let pfad = ordner.datei("stand.txt", "auf der Platte\n");
+        let mut modell = geoeffnet(&pfad);
+
+        modell.bearbeiten("auf der Platte\nund ungesichert getippt\n".to_owned());
+        let stempel_vorher = modell.stempel();
+
+        let ausgang = modell.jetzt_oeffnen(&pfad);
+
+        // Zuerst der Verlust selbst, damit ein Rueckfall ihn und nicht eine
+        // Nebensache meldet.
+        assert_eq!(
+            modell.stand(),
+            "auf der Platte\nund ungesichert getippt\n",
+            "260809-2029: das zweite F4 wirft den ungesicherten Stand nicht weg"
+        );
+        assert_eq!(
+            ausgang,
+            Ladeausgang::SchonOffen,
+            "die schon gehaltene Datei wird nicht ein zweites Mal gelesen"
+        );
+        assert!(
+            modell.hat_ungesicherten_stand(),
+            "die Abweichungsmarke ueberlebt den zweiten Ruf"
+        );
+        assert_eq!(modell.pfad(), Some(pfad.as_path()));
+        assert_eq!(
+            modell.stempel(),
+            stempel_vorher,
+            "ohne Lesevorgang bewegt sich auch der Stempel nicht"
+        );
+        assert!(!modell.laedt_noch(), "es wurde kein Ladevorgang gestartet");
+    }
+
+    /// Die Abkuerzung greift fuer diese eine Datei und nicht fuer die naechste.
+    ///
+    /// Der Wechsel auf eine **andere** Datei bleibt der zweite Anlass aus C4
+    /// und faellt weiterhin ohne Rueckfrage; die Nachfrage baut S28. Die Probe
+    /// haelt fest, dass die Abkuerzung ihn nicht stillschweigend mitnimmt.
+    #[test]
+    fn eine_andere_datei_wird_weiterhin_gelesen() {
+        let ordner = Pruefordner::neu("andere-datei");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+
+        assert!(modell.haelt_bereits(&erste));
+        assert!(!modell.haelt_bereits(&zweite));
+
+        assert_eq!(modell.jetzt_oeffnen(&zweite), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.stand(), "zweite\n");
+        assert_eq!(modell.pfad(), Some(zweite.as_path()));
     }
 
     /// Beide Lesewege hinterlassen denselben Stand.

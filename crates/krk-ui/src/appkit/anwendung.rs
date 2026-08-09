@@ -2748,7 +2748,15 @@ impl Anwendungsdelegierter {
             // dass diese Funktion sie nennt. Damit steht der Eingabefokus im
             // Editor, ohne dass der Nutzer einen zweiten Befehl braucht, wie es
             // das zweite Abnahmekriterium von C2 verlangt.
-            Ladeausgang::Geoeffnet => {
+            // `SchonOffen` steht neben `Geoeffnet` und nicht in einem eigenen
+            // Zweig: was hier zu tun bleibt, ist in beiden Faellen dasselbe,
+            // naemlich den Editor hervorzuholen und den Fokus hineinzusetzen.
+            // Genau das braucht der Nutzer, der die Vorschau eingeblendet und
+            // damit den Editor nach C1 verdraengt hat. Verschieden sind die
+            // beiden allein beim Modell und bei der Textflaeche, und diese
+            // Funktion fasst weder das eine noch die andere an; der Unterschied
+            // steht in `Editorbereich::datei_oeffnen`.
+            Ladeausgang::Geoeffnet | Ladeausgang::SchonOffen => {
                 self.fokus_holen(Fokus::Editor);
                 true
             }
