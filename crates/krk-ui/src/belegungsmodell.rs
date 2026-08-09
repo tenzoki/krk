@@ -44,6 +44,19 @@
 //! darauf nur Grossbuchstaben an den Teilanfang: `Shift+Cmd+K`, `F3`. Eine
 //! zweite Namensliste entsteht nicht, und "Fn+" kann an keiner Stelle
 //! erscheinen, weil die Schreibweise fn nicht kennt (C3, S7).
+//!
+//! **Seit S2 ist diese Beschriftung auf jeder Tastaturbelegung wahr, und bis
+//! dahin war sie es nicht.** Ein einbuchstabiger Name benennt seit S2 das
+//! **Zeichen** und nicht mehr die Stelle
+//! ([`Tastenkennung`](krk_core::tasten::Tastenkennung)), und der
+//! Ereignisabgriff schlaegt Buchstaben ueber dasselbe Zeichen nach. Wo die
+//! Ansicht `Cmd+Y` schreibt, ist damit die Taste mit der **Aufschrift** Y
+//! gemeint — auf einer deutschen Tastatur die Stelle `kVK_ANSI_Z`, auf einer
+//! amerikanischen `kVK_ANSI_Y`. Vor S2 zeigte dieselbe Zeile `Cmd+Y` und
+//! wirkte auf der deutschen Tastatur unter der Aufschrift Z. Dieses Modul hat
+//! dafuer keinen Zweig: es schreibt den Namen der Taste auf, und der Kern hat
+//! den Namen auf die Aufschrift gelegt. `die_beschriftung_nennt_die_taste_auf_
+//! einer_deutschen_tastatur` haelt es fest.
 
 use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
 
@@ -835,6 +848,239 @@ mod tests {
             Kommando::aus_kennung("belegung_ansehen"),
             Some(Kommando::BelegungAnsehen)
         );
+    }
+
+    /// Die Ansicht fuehrt die zwoelf Befehle der Editor-Runde unter der
+    /// Ueberschrift "Editor", jeden mit mindestens einer Kombination.
+    ///
+    /// Das achte Abnahmekriterium von C7 sagt zu, dass jeder neue Befehl
+    /// dieser Runde in der Belegungsansicht **aufgefuehrt** ist. Die
+    /// Vollstaendigkeit der Zuordnung prueft
+    /// [`jede_kennung_hat_einen_funktionsbereich`](jede_kennung_hat_einen_funktionsbereich)
+    /// bereits; hier steht die andere Haelfte, naemlich dass die zwoelf im
+    /// **richtigen** Abschnitt landen und dass keine dreizehnte Funktion sich
+    /// dazwischenschiebt.
+    ///
+    /// Die Kennungen stehen ausgeschrieben und nicht aus
+    /// [`bereich_des_kommandos`] abgeleitet: eine Ableitung pruefte die
+    /// Zuordnung gegen sich selbst und liefe mit jedem Umzug stillschweigend
+    /// mit.
+    #[test]
+    fn der_bereich_editor_fuehrt_die_zwoelf_befehle_der_runde() {
+        const EDITORBEFEHLE: [&str; 12] = [
+            "bearbeiten",
+            "editor_aus_vorschau",
+            "fokus_editor",
+            "editor_schliessen",
+            "editor_ansicht_umschalten",
+            "editor_sichern",
+            "editor_zeile_springen",
+            "editor_suchen",
+            "editor_weitersuchen",
+            "editor_rueckwaerts_suchen",
+            "editor_ersetzen",
+            "editor_alle_ersetzen",
+        ];
+
+        let belegung = Belegung::auslieferung();
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let gefuehrt = funktionen_unter(&modell, "Editor");
+
+        for kennung in EDITORBEFEHLE {
+            let funktion = belegung
+                .funktion(kennung)
+                .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"));
+            assert!(
+                gefuehrt.iter().any(|name| name == funktion.name()),
+                "{kennung} steht nicht unter der Ueberschrift Editor, sondern in {:?}",
+                bereich(kennung)
+            );
+            assert!(
+                !funktion.tasten().is_empty(),
+                "{kennung} steht in der Ansicht, traegt aber keine Kombination"
+            );
+        }
+        assert_eq!(
+            gefuehrt.len(),
+            EDITORBEFEHLE.len(),
+            "unter Editor stehen andere Funktionen als die zwoelf Befehle: {gefuehrt:?}"
+        );
+    }
+
+    /// Die beiden anderen neuen Funktionen stehen unter "Textbefehle" und
+    /// nicht beim Editor, und der Abschnitt fuehrt damit sechs.
+    ///
+    /// Rueckgaengig und Wiederholen kommen aus dieser Runde, gehoeren aber
+    /// nicht dem Editor: das Menue "Bearbeiten" stellt sie zu, und im Textfeld
+    /// wirken sie genauso. Die Gliederung fragt nach der Gegend der Anwendung,
+    /// und die ist hier dieselbe wie bei Ausschneiden, Kopieren und Einfuegen.
+    #[test]
+    fn die_beiden_neuen_textbefehle_stehen_unter_textbefehle() {
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let gefuehrt = funktionen_unter(&modell, "Textbefehle");
+        assert_eq!(
+            gefuehrt.len(),
+            6,
+            "der Abschnitt Textbefehle fuehrt nicht sechs Funktionen: {gefuehrt:?}"
+        );
+        for kennung in ["text_rueckgaengig", "text_wiederholen"] {
+            assert_eq!(
+                bereich(kennung),
+                Some(Funktionsbereich::Textbefehle),
+                "{kennung} steht im falschen Abschnitt"
+            );
+        }
+    }
+
+    /// Jede der dreizehn Kennungen, die S6 der Belegungsdatei hinzugefuegt
+    /// hat, ist ueber die Ansicht umbelegbar.
+    ///
+    /// Die zweite Haelfte des achten Abnahmekriteriums von C7: aufgefuehrt zu
+    /// sein genuegt nicht, die Zeile muss auch eine Zuweisung annehmen. Der
+    /// Weg geht bewusst ueber [`Belegungsmodell::zuweisen`] und nicht direkt
+    /// ueber `Belegung::zuweisen`, weil allein der erste die Zeilennummer der
+    /// Ansicht auf die Funktion abbildet.
+    ///
+    /// Die beiden Textbefehle stehen mit in der Liste, obwohl das Menue sie
+    /// zustellt und nicht der Ereignisabgriff: die Zusage von C3 gilt jeder
+    /// Kombination, die in KRK etwas ausloest, gleich wer sie zustellt.
+    #[test]
+    fn jede_neue_kennung_der_editor_runde_ist_umbelegbar() {
+        const NEUE_KENNUNGEN: [&str; 13] = [
+            "editor_aus_vorschau",
+            "fokus_editor",
+            "editor_schliessen",
+            "editor_ansicht_umschalten",
+            "editor_sichern",
+            "editor_zeile_springen",
+            "editor_suchen",
+            "editor_weitersuchen",
+            "editor_rueckwaerts_suchen",
+            "editor_ersetzen",
+            "editor_alle_ersetzen",
+            "text_rueckgaengig",
+            "text_wiederholen",
+        ];
+
+        for kennung in NEUE_KENNUNGEN {
+            let mut modell = Belegungsmodell::neu(Belegung::auslieferung());
+            let stelle = zeile_von(kennung);
+            let name = modell
+                .name(stelle)
+                .expect("die Zeile traegt eine Funktion")
+                .to_owned();
+            // F9 gehoert ab Werk keiner Funktion, weder einer vom Abgriff noch
+            // einer vom Menue zugestellten.
+            let druck = Tastendruck::neu(code_von_pflicht("f9"), ModMaske::LEER);
+            assert_eq!(
+                modell.zuweisen(stelle, druck),
+                Zuweisung::Zugewiesen {
+                    funktion: name,
+                    kombination: "F9".to_owned(),
+                },
+                "{kennung} nimmt keine Zuweisung an"
+            );
+            assert!(modell.geaendert());
+            let tasten = modell.tastentext(stelle).expect("die Zeile hat Tasten");
+            assert!(
+                tasten.contains("F9"),
+                "{kennung} zeigt F9 nicht an: {tasten}"
+            );
+        }
+    }
+
+    /// Die Beschriftung nennt die Taste, die der Nutzer druecken muss — auch
+    /// auf einer deutschen Tastatur.
+    ///
+    /// **Diese Pruefung waere vor S2 gefallen.** Bis dahin schlug der
+    /// Ereignisabgriff Buchstaben ueber den Tastencode nach, also ueber die
+    /// Stelle; die Zeile `Cmd+Y` wirkte auf einer deutschen Tastatur unter der
+    /// Aufschrift Z. Seit S2 ist der Name der Taste ihr Zeichen, und beide
+    /// Richtungen stehen hier: was die Ansicht schreibt, und was ein Druck auf
+    /// die so beschriftete Taste ergibt.
+    #[test]
+    fn die_beschriftung_nennt_die_taste_auf_einer_deutschen_tastatur() {
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let tasten = modell
+            .tastentext(zeile_von("vorschau_umschalten"))
+            .expect("die Zeile hat Tasten");
+        assert!(
+            tasten.contains("Cmd+Y"),
+            "die Vorschau-Zeile schreibt nicht Cmd+Y, sondern {tasten}"
+        );
+
+        // Auf einer deutschen Tastatur traegt die Stelle kVK_ANSI_Z die
+        // Aufschrift Y und meldet das Zeichen 'y'. Genau dieser Druck muss die
+        // Kombination ergeben, die oben in der Zeile steht.
+        let aufschrift_y = Tastendruck::aus_ereignis(code_von_pflicht("z"), Some('y'), roh::BEFEHL);
+        let kombination =
+            Kombination::aus_tastendruck(aufschrift_y).expect("die Taste hat einen Namen");
+        assert_eq!(anzeige(&kombination), "Cmd+Y");
+
+        // Und die Gegenprobe: die Stelle kVK_ANSI_Y traegt dort die Aufschrift
+        // Z und darf die Vorschau nicht umschalten.
+        let aufschrift_z = Tastendruck::aus_ereignis(code_von_pflicht("y"), Some('z'), roh::BEFEHL);
+        let kombination =
+            Kombination::aus_tastendruck(aufschrift_z).expect("die Taste hat einen Namen");
+        assert_eq!(anzeige(&kombination), "Cmd+Z");
+
+        // Die Regel, nicht der Einzelfall: keine Zeile der Ansicht beschriftet
+        // eine ueber ihr Zeichen nachgeschlagene Taste mit etwas anderem als
+        // diesem Zeichen.
+        for funktion in Belegung::auslieferung().funktionen() {
+            for kombination in funktion.tasten() {
+                let Some(zeichen) = kombination.taste().zeichen() else {
+                    continue;
+                };
+                let beschriftet = anzeige(kombination);
+                let letzter = beschriftet
+                    .rsplit('+')
+                    .next()
+                    .expect("eine Anzeigeform ist nie leer");
+                assert_eq!(
+                    letzter,
+                    zeichen.to_ascii_uppercase().to_string(),
+                    "{} beschriftet eine Zeichentaste falsch: {beschriftet}",
+                    funktion.kennung()
+                );
+            }
+        }
+    }
+
+    /// Die Namen der Funktionen unter einer Bereichsueberschrift, in der
+    /// Reihenfolge der Ansicht.
+    ///
+    /// Gelesen wird, wie der Nutzer liest: ab der Ueberschrift bis zur
+    /// naechsten. Damit misst der Helfer die Gliederung und nicht die
+    /// Zuordnung, aus der sie entsteht.
+    fn funktionen_unter(modell: &Belegungsmodell, ueberschrift: &str) -> Vec<String> {
+        let mut namen = Vec::new();
+        let mut darin = false;
+        for stelle in 0..modell.zeilen() {
+            match modell.ueberschrift(stelle) {
+                Some(gesehen) => {
+                    if darin {
+                        break;
+                    }
+                    darin = gesehen == ueberschrift;
+                }
+                None => {
+                    if darin {
+                        namen.push(
+                            modell
+                                .name(stelle)
+                                .expect("eine Funktionszeile hat einen Namen")
+                                .to_owned(),
+                        );
+                    }
+                }
+            }
+        }
+        assert!(
+            !namen.is_empty(),
+            "die Ansicht fuehrt keine Ueberschrift {ueberschrift} mit Funktionen"
+        );
+        namen
     }
 
     /// Die Zeile der genannten Funktion im gegliederten Modell ueber der

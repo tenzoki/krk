@@ -1029,7 +1029,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase H: Abnahme
 
-#### 41. **Die Belegungsansicht führt die neuen Befehle**
+#### 41. [DONE] **Die Belegungsansicht führt die neuen Befehle**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/belegungsmodell.rs` (lesend: `gliederung`), `crates/krk-ui/src/appkit/belegungsansicht.rs` (lesend), `crates/krk-core/tests/belegung.rs` (erweitert)
@@ -1037,6 +1037,10 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Was tatsächlich zu tun ist, zeigt der Lauf: die Probe `jede_kennung_hat_einen_funktionsbereich` (`belegungsmodell.rs:559-568`) fängt eine Kennung ohne Bereich, bevor sie eine Ansicht erreicht, und `gliederung` bricht sonst erst am laufenden Blatt ab. Fällt sie, ist der fehlende Zweig nachzutragen.
 - Abhängigkeiten: S6
 - Abnahmekriterium: `cargo test --workspace` beendet mit 0, einschließlich `jede_kennung_hat_einen_funktionsbereich`. Eine Probe deckt ab, dass die Gliederung unter der Überschrift "Editor" zwölf Funktionen führt und dass jede der dreizehn neuen Kennungen umbelegbar ist, also über `Belegung::zuweisen` erreichbar. **`Nutzerarbeit`:** `f1` zeigt die Belegungsansicht, und der Abschnitt "Editor" führt die neuen Befehle mit ihren Kombinationen.
+- **Ausgeführt am 260810-0011. Die Vermutung des Schrittes hat gehalten: kein Programmteil war zu ändern.** Vier Proben sind hinzugekommen, alle vier grün im ersten Lauf, und sie stehen in `crates/krk-ui/src/belegungsmodell.rs` statt in `crates/krk-core/tests/belegung.rs` — die Zusage gilt der **Ansicht**, und allein `Belegungsmodell::zuweisen` bildet eine Zeilennummer der Ansicht auf ihre Funktion ab. Eine Probe im Kern prüfte `Belegung::zuweisen` und ließe die Gliederung ungeprüft.
+  Die vier: `der_bereich_editor_fuehrt_die_zwoelf_befehle_der_runde` (die zwölf Kennungen ausgeschrieben, jede mit mindestens einer Kombination, und keine dreizehnte im Abschnitt), `die_beiden_neuen_textbefehle_stehen_unter_textbefehle` (Rückgängig und Wiederholen gehören dem Menü und nicht dem Editor; der Abschnitt führt danach sechs), `jede_neue_kennung_der_editor_runde_ist_umbelegbar` (dreizehn Kennungen, je ein frisches Modell, F9), `die_beschriftung_nennt_die_taste_auf_einer_deutschen_tastatur` (die Folge von S2, unten).
+  **Die zweite Hälfte des Schrittes lag nicht in ihm, sondern in S2.** Bis S2 zeigte die Zeile `Cmd+Y` und wirkte auf einer deutschen Tastatur unter der Aufschrift Z; die Ansicht schrieb den Namen der Taste auf, und der Name benannte eine Stelle. Seit S2 benennt er das Zeichen, und dieselbe Zeile ist ohne einen Zweig in diesem Modul wahr geworden. Der Modulkopf hält es fest, die vierte Probe misst es in beiden Richtungen: der Druck auf `kVK_ANSI_Z` mit gemeldetem `y` ergibt `Cmd+Y`, der auf `kVK_ANSI_Y` mit gemeldetem `z` ergibt `Cmd+Z`.
+  **Ein Defekt ist gefiled und gehört `ontocoder`:** `issues/260810-0011_o_zwei-kommentarbloecke-der-belegungsdatei-behaupten-den-nachschlag-ueber-den-tastencode.md`. `resources/default-keymap.toml` begründet an zwei Stellen das Meiden von `y` und `z` mit dem Nachschlag über den Tastencode, den S2 abgelöst hat.
 
 #### 42. **Abgleich, Spec-Nachträge und Abnahme am laufenden Bündel**
 
