@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-08, 01:40
 **Status:** Entwurf, zur Abnahme
-**Spec:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md`, 79 Abnahmekriterien in acht Fähigkeiten C1 bis C8, vom Nutzer am 260808-0043 abgenommen
+**Spec:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md`, 79 Abnahmekriterien in acht Fähigkeiten C1 bis C8, vom Nutzer am 260808-0043 abgenommen; dazu seit dem 260809-2043 die drei Anzeigefähigkeiten C9, C10 und C11 mit einunddreißig weiteren Abnahmekriterien, die der Abschnitt `## Nachtrag vom 260809` unten baut
 **Bindende Entscheidungsdatensätze:** die sechs `_a_`-Datensätze unter `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/`, dazu `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` und `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_*_sprache-und-ui-werkzeugkasten.md`
 **Ausführender Agent:** `coder`, für jeden Schritt
 
@@ -63,6 +63,8 @@ Der zweite Verdächtige, die Normalisierung der Zusatztasten, scheidet an einem 
 **Die Ursache liegt in der Tastaturbelegung, und sie ist im Projekt bereits einmal gefunden und beschlossen worden.** KRK belegt den virtuellen Tastencode und nicht das gemeldete Zeichen; das ist die Festlegung aus C3 der Runde 1, und für die Funktionstasten ist sie richtig. Der Tastencode benennt eine **Stelle** auf der Tastatur (`parser.rs:105-107`). Die Stelle `kVK_ANSI_Y` trägt den Code 16 (`parser.rs:209`), und auf einer deutschen Tastatur steht dort ein **Z**. Wer die Taste mit der Aufschrift Y drückt, erzeugt Code 6, und dieser Code steht in der ganzen Auslieferungsbelegung in keiner Tastenliste. Der Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_c_cmd-y-liegt-auf-einer-deutschen-tastatur-unter-der-taste-z.md` beschreibt genau das; der Nutzer hat ihn am 260804-0830 geschlossen, mit dem tragenden Grund, `f3` sei der Hauptweg und `cmd+y` nur der zweite.
 
 **Dieser Grund trägt seit dem 260807 nicht mehr.** Die Funktion `fokus_vorschau` ist an jenem Tag hinzugekommen und trägt genau eine Kombination, `shift+cmd+y` (`resources/default-keymap.toml:349`). Sie hat keinen zweiten Weg. Der einzige Tastenweg in das Vorschaufenster liegt damit auf einer deutschen Tastatur nicht dort, wo er beschriftet ist, und der Nutzerentscheid `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md` ist der Sache nach nicht eingelöst.
+
+**Die drei Fähigkeiten vom 260809 stellen eine zweite tragende Frage, und auch sie ist ohne Näherung entscheidbar.** Sie lautet: **woher erfährt KRK, dass sich der Ersthelfer geändert hat?** Über einen Fokusbefehl weiß es KRK selbst, weil es ihn setzt; ein Mausklick in eine Fläche ändert ihn dagegen an KRK vorbei, und `Anwendungsdelegierter::fokus` ist eine Abfrage und keine Benachrichtigung. Eine Vorhersage aus dem Ereignisstrom wäre eine Näherung derselben Art wie die widerlegte Frage nach der Klasse des Ersthelfers, denn AppKit vergibt den Rang an Stellen, die der lokale Tastenabgriff gar nicht sieht. Der Mechanismus muss deshalb nicht raten, sondern hinsehen, und AppKit hält dafür genau einen Durchgang bereit: **jeder Wechsel des Ersthelfers geht durch `NSWindow::makeFirstResponder:`**, der programmatische aus `fokus_setzen` ebenso wie der, den AppKit beim Mausklick selbst auslöst. Eine Unterklasse des Fensters, die diese eine Methode überschreibt, beobachtet damit eine entschiedene Größe statt einer vorhergesagten. Dieselbe Unterklasse trägt mit `becomeKeyWindow` und `resignKeyWindow` den Vorder- und Hintergrundwechsel, den das achte Abnahmekriterium von C9 verlangt. Der Abschnitt `## Nachtrag vom 260809` führt es aus.
 
 Damit sind die Abnahmekriterien von C8 in ihrer heutigen Fassung nicht zu erfüllen: `cmd+y` blendet die Vorschau ein und aus, aber nur auf der Taste mit der Aufschrift Z, und kein Programmteil ändert daran etwas, ohne die Festlegung aus C3 anzufassen. **Die Wahl gehört dem Nutzer** und liegt als `decisions/260808-0140_o_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md` vor. Ein Punkt daraus gehört hierher, weil er den dritten Weg billiger macht, als der Datensatz von 260803 ihn eingeschätzt hat: **das Hauptmenü schlägt bereits heute über das Zeichen nach.** `NSMenuItem.keyEquivalent` nimmt eine Zeichenkette entgegen (`menue.rs:322-342`), und genau deshalb wirken `cmd+c` und `cmd+v` auf jeder Tastaturbelegung an der beschrifteten Stelle. Eine zeichenbasierte Nachschlagart wäre also keine fremde Mechanik, sondern die, die vier Funktionen dieses Projekts schon tragen.
 
@@ -925,7 +927,8 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Was "gerendert" bei Markdown heißt, ist eine Auslegung des Planners** und liegt als `decisions/260808-0140_*_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md` vor. Sie hält diesen Schritt nicht auf; der Schritt baut die Auslegung, die mit dem zehnten Abnahmekriterium zusammengeht, also Überschriften größer und fett, Listen eingerückt, Links unterstrichen und eingefärbt, bei stehenbleibenden Auszeichnungszeichen.
   **Die Ansichtswahl ist eine Eigenschaft der geöffneten Datei und nicht der Anwendung.** Wer eine Markdown-Datei gerendert liest und danach eine Codedatei öffnet, bekommt deren Formatansicht und nicht die Rohansicht. Das entspricht dem Halteverhalten der Vorschau-Tabs aus C6 der Runde 1.
   **In beiden Ansichten lässt sich bearbeiten.** Das ist die Wahl des Nutzers vom 260807-2139 gegen die Empfehlung des Datensatzes, und der dort benannte Preis gilt: bei einfachem Text ist der Unterschied zwischen den beiden Ansichten schwach.
-- Abhängigkeiten: S16, S32
+  **Nachtrag vom 260809, aus S46:** das Umschalten ändert Umbruch und Schrift und damit die Zeilenkästen des Layoutverwalters, ohne dass der Textspeicher eine Meldung verschickt. Der Umschaltweg ruft deshalb am Ende `Nummernspalte::neu_zeichnen`; ohne diese Zeile zeigte die Formatansicht die Nummern des zuletzt gezeichneten Umbruchs, und das fünfte Abnahmekriterium von C10 wäre gebrochen.
+- Abhängigkeiten: S16, S32; und S46, falls es vorher gelaufen ist (die Zeile aus dem Nachtrag entfällt sonst)
 - Abnahmekriterium: `cargo build --workspace` beendet mit 0. Der Diff zeigt genau einen `NSTextStorage` und keinen zweiten Textbestand; `grep -c 'setString' crates/krk-ui/src/appkit/editor.rs` liefert genau die Stelle, die eine neue Datei einsetzt, und keine im Umschaltweg. Der Diff zeigt, dass die Einfärbung über `setTemporaryAttributes` und nicht über `addAttributes` läuft; das ist der Unterschied zwischen Layoutverwalter und Textspeicher und damit zwischen einer Einfärbung, die beim Sichern nicht mitgeht, und einer, die es könnte. **`Nutzerarbeit`** für sechs der zwölf Kriterien von C3: dass der Umschalter bei jedem Dateityp etwas Sichtbares tut, dass Markdown Überschriften, Listen und Links zeigt, dass Code seine vier Wortarten gegeneinander absetzt, dass eine unbekannte Sprache auf Text zurückfällt, dass eine in der Formatansicht getippte Änderung nach dem Umschalten in der Rohansicht steht, und dass die Schreibmarke ihre Stelle behält.
 
 #### 34. **Die Farbtafeln an Hell und Dunkel binden**
@@ -1022,12 +1025,340 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   **Vier Nachträge am Spec**, alle in diesem Plan begründet: erstens das abgeleitete Abnahmekriterium zur Sicherungsform in C4 (aus S9); zweitens die beiden ersten Abnahmekriterien von C8, falls Weg 1 aus S2 gewählt wurde; drittens die Anmerkung in C6, dass das Anlegen einer Textmarke auf dem bestehenden Befehl `lesezeichen_anlegen` liegt und kein eigenes Kommando bekommt; viertens die Anmerkung in C7, dass `Wirkungsbereich` auf sieben Werte gewachsen ist und `fenster_wechseln`, `auswahl_hoch` und `auswahl_runter` mit umgezogen sind.
   **`CLAUDE.md`** bekommt den neuen Projektstand, den fünften Bereich, das Modul `krk-core::text`, die neuen fremden Kisten und den Hinweis, dass die Aufzählung `Wirkungsbereich` und die Aufzählung `Bereich` nun sieben beziehungsweise fünf Werte tragen. Der Abschnitt "Was man nicht sieht, wenn man es nicht weiß" bekommt einen sechsten Eintrag: **der Ereignisabgriff fragt nach der Nämlichkeit des Ersthelfers und nicht nach seiner Klasse**, und wer eine zweite Textfläche baut, muss sie dort anmelden, sonst gehört sie AppKit.
   **Die Zusagen aus C8 der Runde 1 bleiben unberührt.** Keine der zehn Zahlen wird geändert, gelockert oder umgedeutet, und diese Runde setzt keine eigene. Der Schritt hält es ausdrücklich fest, weil es das zweite der beiden Kriterien ist, die an die Stelle einer Zeitzusage treten. Die drei berührten Zusagen L1, L4 und L7 und die ungemessene Kiste aus C3 gehen als vier Gegenstände an die spätere Messrunde; der Spec führt sie, und dieser Plan erfindet keine Zahl dazu.
-- Abhängigkeiten: S2, S19, S20, S21, S23, S30, S31, S34, S37, S39, S40, S41 — also jeder Schritt, der kein Nachfolger eines anderen ist
-- Abnahmekriterium: `make check` läuft durch, also `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check`, jeweils mit Rückgabewert 0. `cargo xtask bundle` baut und signiert. Alle 42 Schritte tragen `[DONE]`. **`Nutzerarbeit` für die eigentliche Abnahme:** der Nutzer geht die 79 Abnahmekriterien des Specs und das eine abgeleitete am laufenden Bündel durch, mit KRK im Vordergrund. Kein Agent kann das, und dieser Plan behauptet es nicht.
+  **Drei Nachträge kommen aus dem Abschnitt `## Nachtrag vom 260809` hinzu.** Erstens die Lesart des zweiten Abnahmekriteriums von C9: "die Anzeige" meint die volle Akzentfarbe, und unter der Vorbelegung des Shapers trägt das aktive Dateifenster ohne Fokus daneben eine zurückgetretene Markierung; die Begründung steht in `### Frage 14`. Zweitens bekommt der Abschnitt "Was man nicht sieht, wenn man es nicht weiß" in `CLAUDE.md` einen siebten Eintrag: **jeder Wechsel des Ersthelfers geht durch die Überschreibung von `makeFirstResponder:` in `appkit/fenster.rs`**, und wer eine Anzeige an den Fokus hängt, hängt sie dort an und baut keinen zweiten Beobachter. Drittens nennt `CLAUDE.md` die beiden neuen Module `appkit/nummernspalte` und `fenstertitel` sowie die fünf Kästen der Aufteilung.
+  **Vier Abnahmekriterien der drei Anzeigefähigkeiten sind erst hier zu prüfen**, weil ihr Anlass aus späteren Schritten kommt; die Tabelle dazu steht unter `### Die Reihenfolge gegen die achtzehn offenen Schritte`.
+- Abhängigkeiten: S2, S19, S20, S21, S23, S30, S31, S34, S37, S39, S40, S41 sowie S45, S47 und S48 — also jeder Schritt, der kein Nachfolger eines anderen ist
+- Abnahmekriterium: `make check` läuft durch, also `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check`, jeweils mit Rückgabewert 0. `cargo xtask bundle` baut und signiert. Alle 48 Schritte tragen `[DONE]`. **`Nutzerarbeit` für die eigentliche Abnahme:** der Nutzer geht die 79 Abnahmekriterien der Fähigkeiten C1 bis C8, das eine abgeleitete aus S9 und die einunddreißig der Fähigkeiten C9, C10 und C11 am laufenden Bündel durch, mit KRK im Vordergrund. Kein Agent kann das, und dieser Plan behauptet es nicht.
 
 ---
 
-## Datenstrukturen
+## Nachtrag vom 260809: die drei Anzeigefähigkeiten C9, C10 und C11
+
+Der Spec trägt seit dem 260809-2043 drei Fähigkeiten mehr, und dieser Abschnitt baut sie an den bestehenden Plan an, statt einen zweiten danebenzustellen. Die Nummern S1 bis S42 bleiben unverändert, vierundzwanzig davon erledigt; die sechs neuen Schritte zählen ab S43. Die Abnahme bleibt S42, und seine Abhängigkeitszeile ist um die drei Senken der neuen Bündel erweitert.
+
+**Keiner der sechs neuen Schritte wartet auf einen offenen Schritt der ursprünglichen Runde.** Alles, was sie brauchen, steht: der fünfte Bereich (S13, S16), der fünfte Fokuswert samt der erschöpfenden Fokusansicht (S3, S17), die Textfläche des Editors (S16) und der Zeilenindex im Kern (S8). Der Abschnitt `### Die Reihenfolge gegen die achtzehn offenen Schritte` unten sagt, welche Abnahmekriterien trotzdem erst später zu prüfen sind und warum das keine Abhängigkeit ist.
+
+### Befund 7: Der Wechsel des Ersthelfers hat genau einen Durchgang
+
+Der Spec fragt unter `## Offen für den Planner`, woher die Fokusanzeige erfährt, dass sich der Ersthelfer geändert hat. Die Antwort steht in der Zeile `**Entscheidbarkeit:**` im Kopf und ist am Code aufgenommen: `Anwendungsdelegierter::fokus_setzen` (`anwendung.rs:1199-1216`) ruft `makeFirstResponder`, und AppKit ruft dieselbe Methode beim Mausklick in eine Fläche, die den Rang annimmt. Es gibt keine zweite Tür.
+
+Drei naheliegende Wege scheiden aus, und zwar aus Gründen und nicht aus Geschmack. Eine Benachrichtigung über den Ersthelfer gibt es nicht: `NSWindow` verschickt keine, und die Beobachtung der Eigenschaft `firstResponder` über Schlüsselwertbeobachtung ist von Apple nicht zugesagt. Ein Takt, der die Frage sechzigmal je Sekunde stellt, wäre die Vorhersage, die der Kopf ausschließt, und er kostete Strom für eine Frage, die sich fast nie ändert. Und die fünf fokustragenden Ansichten einzeln melden zu lassen hieße fünf Unterklassen statt einer, von denen drei heute gar keine sind.
+
+Die Fensterunterklasse ist damit **eine** Stelle, und sie trägt zugleich den Vorder- und Hintergrundwechsel. Sie kostet eine Änderung an einer öffentlichen Form: `hauptfenster` liefert danach die Unterklasse statt `NSWindow`. Der einzige Aufrufer ist `oberflaeche_aufbauen`, und die Ivars des Anwendungsdelegierten halten das Fenster weiter als `Retained<NSWindow>`.
+
+### Befund 8: Die Enthaltensfrage kostet an der Stelle nichts, an der der Defekt sie teuer nennt
+
+Das vierte Abnahmekriterium von C9 verlangt, dass ein Klick in die Bildlaufleiste der Vorschau die Vorschau anzeigt und nicht ein Dateifenster. Der Defekt `issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md` beschreibt genau diesen Fall und nennt den anderen Schnitt: nicht "**ist** der Ersthelfer diese Ansicht", sondern "**liegt** er in dieser Ansicht". Er hält den Schnitt für nicht umsonst zu haben und führt zwei Gegenrechnungen. Die erste ist am Code widerlegt.
+
+Sie lautet, der Feldeditor eines Textfeldes im Dateifenster sei eine Unteransicht des Dateifensters und bekäme mit der Enthaltensfrage jeden Dateibefehl ab. Nachgerechnet: **heute bekommt er sie ebenfalls.** `fokus()` hält den Ersthelfer gegen fünf genannte Ansichten, der Feldeditor ist keine davon, und der Rückfall antwortet `Fokus::Dateifenster` (`anwendung.rs:2325-2348`). Vorher wie nachher lautet die Antwort `Dateifenster`, und die Enthaltensfrage ändert an dieser Stelle keine einzige Antwort. Was sie ändert, ist ausschließlich der Fall, den der Defekt beschreibt: ein Ersthelfer innerhalb der Leiste, der Vorschau oder des Editors, der nicht deren genannte Ansicht ist, wandert von `Dateifenster` auf seinen eigenen Bereich.
+
+Die zweite Gegenrechnung bleibt gültig und wird bezahlt: die Wurzelansicht jedes Bereichs muss nach außen gereicht werden. Sie liegt bereits vor, und zwar an einer Stelle, die die Aufzählung schon führt: die fünf Unteransichten der Aufteilung, in der Reihenfolge von `Bereich::ALLE`. `Aufteilung` bekommt dafür eine Zugriffsfunktion neben der bestehenden privaten `bereichsansicht`; eine zweite Aufzählung entsteht nicht.
+
+**Der Defekt schlägt vor, erst zu messen und dann zu schneiden. Dieser Plan schneidet ohne die Messung, und der Grund ist der Spec.** C9 verlangt die richtige Antwort als Abnahmekriterium, nicht als Verbesserung, wenn der Fall eintritt. Eine Anzeige, die den falschen Bereich einrahmt, ist zudem der Beleg dafür, dass er eintritt; ohne sie war er nicht zu sehen, und genau das hält der Defekt fest.
+
+### Befund 9: AppKit hält den Platz für die Nummernspalte schon frei
+
+Der Spec sagt zu, dass Editor und Vorschau **eine** Anzeige teilen, und überlässt dem Planner, womit sie gebaut wird. Am Code aufgenommen: beide setzen eine `NSTextView` in eine `NSScrollView` mit `setHorizontallyResizable(false)` (`appkit/editor.rs:344-382`, `appkit/vorschau.rs:501-525`), und `NSScrollView` hält für genau diesen Zweck eine senkrechte Linealansicht bereit, `setHasVerticalRuler`, `setVerticalRulerView` und `setRulersVisible`. `NSRulerView` steht seit macOS 10.0 zur Verfügung und ist in `objc2-app-kit 0.3.2` samt `drawHashMarksAndLabelsInRect:`, `setClientView:` und `setRuleThickness:` geführt; geprüft am Bibliotheksbestand und nicht angenommen.
+
+Daraus folgt dreierlei ohne weitere Vorkehrung, und alle drei sind Abnahmekriterien von C10. Die Spalte gehört nicht zum Text, weil sie eine Schwesteransicht des Textbehälters ist und nicht sein Inhalt; sie lässt sich nicht mitauswählen, geht beim Kopieren nicht mit und kann beim Sichern nicht in die Datei geraten. Sie läuft beim Blättern mit, weil die Bildlaufansicht sie zusammen mit ihrem Inhalt versetzt. Und sie ist dieselbe Klasse an beiden Flächen, weil beide dieselbe Bauart tragen.
+
+**Eine Eigenschaft von TextKit ist zu benennen, und sie ist keine neue.** Seit macOS 12 legt eine `NSTextView` ihren Textfluss über `NSTextLayoutManager` an; wer `layoutManager` anspricht, lässt AppKit auf den älteren `NSLayoutManager` zurückfallen. Die Nummernspalte braucht ihn, weil allein er die Zeilenkästen des Umbruchs kennt. Dieser Plan hat den Rückfall bereits in `### Frage 7` eingekauft: die Einfärbung aus S33 liegt als vorübergehende Merkmale in genau demselben Verwalter. Beide Schritte sprechen denselben an, der Rückfall geschieht einmal, und ein zweiter Textfluss entsteht nicht.
+
+### Antworten auf die sechs Punkte, die der Spec dem Planner neu überlässt
+
+Der Spec zählt unter `## Offen für den Planner` seit dem 260809 sechs Punkte mehr. Hier stehen die Antworten; die Schritte setzen sie um.
+
+#### Frage 12: Wie die Anzeige aus C9 an die drei Bereiche kommt, die heute keinen Kasten tragen
+
+**Alle fünf Bereiche bekommen einen Kasten, und die Sonderbehandlung der beiden Dateifenster entfällt.** `Aufteilung` hält heute zwei `NSBox`, einen je Dateifenster (`aufteilung.rs:134`); sie hält künftig fünf, in der Reihenfolge von `Bereich::ALLE`. `gerahmtes_dateifenster` wird zu einer Funktion, die eine fertige Ansicht in einen Kasten setzt, und die drei Randbereiche gehen denselben Weg wie die beiden Dateifenster.
+
+Der Gewinn ist nicht die Ersparnis, sondern der Wegfall einer Fallunterscheidung: die Frage "trägt dieser Bereich einen Rahmen?" hat danach für alle fünf dieselbe Antwort, und die Farbe entscheidet allein die Regel aus Frage 14. `Aufteilung::bauen` behält dabei ihre Aufrufform, weil sie Leiste, Vorschau und Editor schon heute als fertige `&NSView` entgegennimmt und das Einrahmen im Modul geschieht.
+
+**Der Preis ist benannt und klein:** ein Rahmen von zwei Punkten nimmt jedem der drei Randbereiche vier Punkte Inhaltsbreite. Die Mindestbreiten aus `Bereich::mindestbreite` sind an der Fläche gerechnet und nicht am Inhalt; die Zahlen bleiben, wo sie stehen.
+
+#### Frage 13: Woher die Anzeige erfährt, dass sich der Ersthelfer geändert hat
+
+**Über eine Unterklasse von `NSWindow`, die `makeFirstResponder:` überschreibt.** Siehe Befund 7 und die Zeile `**Entscheidbarkeit:**` im Kopf. Die Überschreibung ruft zuerst die Fassung der Oberklasse, meldet danach nur bei Erfolg, und die Meldung geht an den Anwendungsdelegierten, den die Unterklasse **schwach** hält, wie jeder Rückruf dieses Projekts.
+
+Zwei Nachbarmethoden derselben Unterklasse tragen den achten Punkt von C9: `becomeKeyWindow` und `resignKeyWindow`. Damit steht der Vorder- und Hintergrundwechsel an derselben Stelle wie der Ersthelferwechsel, und die Anzeige hat einen Auslöser und nicht drei verstreute.
+
+**Der Nachzug fasst die Sichtbarkeit nicht an, und das ist keine Sparsamkeit, sondern die Vermeidung eines Rings.** `aufteilung_nachziehen` ruft `anwenden`, und das setzt `setHidden`; eine ausgeblendete Ansicht, die den Ersthelfer hält, lässt AppKit den Rang neu vergeben, also `makeFirstResponder:` erneut aufrufen. Der Fokusnachzug ist deshalb eine eigene, kürzere Funktion, die ausschließlich Rahmenfarben und Fenstertitel schreibt.
+
+#### Frage 14: Wie die zurückgetretene Form aussieht, mit der das aktive Dateifenster ohne Fokus erkennbar bleibt
+
+**Als dieselbe Systemfarbe mit verringerter Deckkraft, und die Zuordnung steht als reine Funktion außerhalb von `appkit`.**
+
+```rust
+pub enum Rahmenrolle {
+    /// Hier kommen die Tasten an.
+    Fokussiert,
+    /// Aus diesem Dateifenster kopiert F5, aber die Tasten kommen woanders an.
+    AktivOhneFokus,
+    /// Weder noch.
+    Ruhig,
+}
+
+pub const fn rahmenrolle(bereich: Bereich, fokus: Fokus, aktiv: Fensterseite) -> Rahmenrolle
+```
+
+Die Farbe je Rolle entsteht daneben, in `aufteilung.rs`, und nimmt drei Systemfarben und keine eigene Tafel: `controlAccentColor` für `Fokussiert`, dieselbe Farbe über `colorWithAlphaComponent` für `AktivOhneFokus`, `separatorColor` für `Ruhig`. Steht das Fenster im Hintergrund, bekommt auch `Fokussiert` die zurückgetretene Fassung; damit tritt die Anzeige zurück, statt zu verschwinden, wie das achte Abnahmekriterium von C9 es verlangt.
+
+**Der Datensatz `decisions/260809-2043_*_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md` hält S44 nicht auf, und der Zuschnitt sorgt dafür.** Der Spec trägt die erste Möglichkeit als Vorbelegung, und S44 baut sie. Was eine andere Antwort kostet, ist hier ausgerechnet und nicht geschätzt:
+
+| Antwort | Was sich ändert |
+|---|---|
+| Möglichkeit 1, die Vorbelegung | nichts; S44 baut sie |
+| Möglichkeit 3, der Rahmen bedeutet allein den Fokus | ein Zweig in `rahmenrolle`: `AktivOhneFokus` entfällt und wird `Ruhig`. Dazu ein Schritt für die Nennung des aktiven Dateifensters in der Statuszeile oder der Tableiste |
+| Möglichkeit 2, zwei Kanäle | derselbe Zweig, und ein Schritt für die zweite Anzeige. `Rahmenrolle` trägt danach zwei Werte |
+
+In allen drei Fällen bleiben die fünf Kästen, der Auslösepunkt und die Zuordnung von Fokuswert auf Bereich unberührt. **Die Antwort ändert einen Funktionsrumpf und keinen Aufbau.**
+
+**Sie entscheidet zugleich, wie das zweite Abnahmekriterium von C9 zu lesen ist**, und der Datensatz sagt das nicht. Jenes Kriterium verlangt, dass genau ein Bereich "die Anzeige" trägt. Unter der Vorbelegung tragen zwei Bereiche eine Markierung, und "die Anzeige" meint dann die volle Akzentfarbe; unter Möglichkeit 3 trägt sie buchstäblich nur einer. Der Plan liest sie als die volle Akzentfarbe, weil das die einzige Lesart ist, die mit der Vorbelegung zusammengeht, und S42 trägt die Lesart in den Spec nach.
+
+#### Frage 15: Womit die Nummernspalte gebaut wird und wie sie an beide Textflächen kommt
+
+**Als eine `NSRulerView`-Unterklasse in der senkrechten Linealstelle der Bildlaufansicht**, siehe Befund 9. Ein neues Modul `crates/krk-ui/src/appkit/nummernspalte.rs` trägt sie, und beide Flächen hängen dieselbe Klasse ein: `textflaeche_bauen` in `appkit/editor.rs` und `textanzeige` in `appkit/vorschau.rs`.
+
+Gezeichnet wird über `drawHashMarksAndLabelsInRect:`. Die Spalte fragt den Layoutverwalter nach den Zeilenkästen im sichtbaren Bereich, nimmt zu jedem den Zeichenversatz seines Anfangs und fragt damit `Zeilenindex::zeile_am_versatz` nach der Dateizeile. Ein Zeilenkasten, dessen Anfang nicht zugleich ein Zeilenanfang der Datei ist, bekommt keine Nummer; das ist das vierte Abnahmekriterium von C10, und es fällt aus dem Vergleich zweier Zahlen an und nicht aus einer Sonderregel für den Umbruch.
+
+**Die Zählung kommt aus dem Kern, und eine zweite entsteht nicht.** Die Spalte rechnet keine Zeile selbst; sie hält einen `Zeilenindex` und stellt ihm Fragen. Das Abnahmekriterium von S46 misst es, indem es die Datei auf einen eigenen Durchlauf über Zeilenenden absucht und keinen findet.
+
+Die Breite folgt der Stellenzahl der größten Nummer über `setRuleThickness`, gerechnet aus `Zeilenindex::zeilenzahl`; damit steht auch eine sechsstellige Nummer vollständig da. Die Farbe ist `secondaryLabelColor`, eine Systemfarbe, die in Hell und in Dunkel lesbar ist und dem Erscheinungsbild ohne Zutun folgt.
+
+#### Frage 16: Wann die Nummernspalte neu gezeichnet wird, während der Nutzer tippt
+
+**Der Index wird als überholt markiert, wenn sich der Text ändert, und beim nächsten Zeichnen neu gebaut.** Damit fällt je gezeichnetem Bild höchstens ein Neuaufbau an und nicht je Anschlag; zwanzig Tastendrücke innerhalb eines Bildes kosten einen Durchlauf und nicht zwanzig.
+
+Die beiden Anlässe sind benannte Meldungen von AppKit und keine Erfindung: `NSTextStorageDidProcessEditingNotification` für die Änderung des Textes und `NSViewBoundsDidChangeNotification` an der Klemmansicht der Bildlaufansicht für das Blättern. Die zweite verlangt `setPostsBoundsChangedNotifications(true)`; `appkit/volumes.rs:249` zeigt die Form, in der dieses Projekt einen Beobachter anmeldet.
+
+**Der Meldeweg über den Textspeicher und nicht über den Delegierten ist Absicht.** S26 gibt der Textfläche einen Delegierten für `textDidChange:`, und die Spalte darf ihm nicht im Weg stehen; eine `NSTextView` hat einen Delegierten, aber ihr Textspeicher hat beliebig viele Beobachter. Dieselbe Meldung trägt außerdem die Vorschau, die gar keinen Delegierten hat.
+
+**Der angenommene Preis steht am Code und wird nicht verschwiegen.** `speculation:` Ein Neuaufbau über eine Datei nahe der Grenze von 16 MB liest den Text aus der Textfläche und läuft einmal darüber; wie lange das auf dem Referenzgerät von 2018 dauert, ist ungemessen, und diese Runde misst es nicht, weil der Abnahmelauf ausgeklammert ist. Der Ausweg ist benannt und nicht zu suchen: `NSTextStorage` meldet mit jeder Änderung den geänderten Bereich und die Längenänderung mit, und ein Index, der sich daran fortschreibt statt neu zu entstehen, kostet die geänderte Stelle und eine Addition je Zeile dahinter. Er wäre in `krk-core` zu bauen und ohne Fenster abzunehmen. Die Risikotabelle führt ihn.
+
+#### Frage 17: An welcher Stelle der Fenstertitel geschrieben wird
+
+**In einer reinen Funktion ohne AppKit, gerufen an vier Stellen, von denen drei bereits stehen.**
+
+```rust
+pub fn titel(
+    fokus: Fokus,
+    aktiver_ordner: &Path,
+    editordatei: Option<&Path>,
+    vorschaudatei: Option<&Path>,
+) -> Option<String>
+```
+
+Eine erschöpfende Fallunterscheidung über die fünf Fokuswerte, ohne Auffangzweig, in `crates/krk-ui/src/fenstertitel.rs`. `None` heißt "den Titel stehen lassen" und ist die Antwort für `Fokus::Anderswo`, also für ein stehendes Blatt; das achte Abnahmekriterium von C11 verlangt genau das. Editor und Vorschau ohne Pfad fallen auf den Ordner des aktiven Dateifensters, und das ist eine benannte Antwort mit einem Grund und kein Auffangen: der Nutzer arbeitet dann in einem Bereich, der nichts hält, und der Ordner ist die Angabe, die seine nächste Handlung entscheidet.
+
+Die vier Aufrufstellen und warum es genau diese sind:
+
+| Anlass | Wo er schon steht |
+|---|---|
+| Ordnerwechsel und Tabwechsel eines Dateifensters | `Dateifenster::ordnerwechsel_melden` (`appkit/tabelle.rs:511-516`), heute mit einem Empfänger, der die Dateisystemwache nachzieht |
+| Dateiwechsel im Editor | `Anwendungsdelegierter::im_editor_oeffnen` aus S22 und das Schließen aus S28 |
+| Tabwechsel der Vorschau | der Zweig, der `Vorschaufenster::kommando_ausfuehren` ruft |
+| Fokuswechsel | der Auslösepunkt aus Frage 13 |
+
+**Die Bewegung der Auswahl steht nicht darunter, und das ist eine Zusage und kein Vergessen.** Das zehnte Abnahmekriterium von C11 verlangt es, und der Grund ist L1 aus C8 der Runde 1: jene Zusage misst die Spanne vom Tastendruck bis zum Zeichendurchgang im Dateifenster, und ein Fenstertitel, der bei jedem Druck auf eine Pfeiltaste neu geschrieben würde, läge in genau dieser Spanne.
+
+**Kein Stellvertretersymbol.** Der Spec stellt es frei und verbietet allein, es an die Stelle des Pfades zu setzen. `setTitleWithRepresentedFilename:` setzt den Titel auf den letzten Pfadbestandteil und schiede damit ohnehin aus; ein Symbol daneben über `setRepresentedFilename:` wäre erlaubt, bringt aber eine zweite Stelle mit, die bei jedem Wechsel nachzuziehen wäre. Eine Anzeige, ein Schreiber.
+
+### Aufbau: eine Quelle, zwei Anzeigen
+
+```mermaid
+flowchart TD
+  subgraph sicht["krk-ui/appkit — die Seite mit unsafe"]
+    direction TB
+    HF["Hauptfenster<br/>makeFirstResponder:, becomeKeyWindow,<br/>resignKeyWindow"]
+    AN["anwendung<br/>fokus(), fokusanzeige_nachziehen"]
+    AU["aufteilung<br/>fuenf Kaesten, eine Farbe je Rolle"]
+    NS["nummernspalte<br/>NSRulerView, eine Klasse fuer beide"]
+    ED["editor"]
+    VO["vorschau"]
+  end
+  subgraph rein["krk-ui und krk-core — ohne AppKit, ohne Fenster pruefbar"]
+    direction TB
+    FK["kommandos::fokus<br/>in_bereich, bereich_mit_fokus,<br/>rahmenrolle"]
+    FT["fenstertitel<br/>fuenf Fokuswerte, fuenf Antworten"]
+    ZI["krk_core::text::zeilen<br/>Zeilenindex"]
+  end
+
+  HF -->|"meldet jeden Wechsel"| AN
+  AN -->|"fragt Bereich und Rolle"| FK
+  AN -->|"schreibt die Rahmenfarben ueber"| AU
+  AN -->|"fragt den Titel bei"| FT
+  ED -->|"haengt sie ein"| NS
+  VO -->|"haengt dieselbe ein"| NS
+  NS -->|"fragt die Zeilennummer bei"| ZI
+```
+
+Der Schnitt ist der bestehende: was rechnet, liegt im Kern oder neben `appkit`; was AppKit anfasst, liegt darin. Drei Knoten kommen hinzu, und keiner von ihnen ist ein zweiter Weg zu etwas, das es schon gibt.
+
+### Die Abhängigkeit der neuen Schritte
+
+```mermaid
+flowchart TD
+  subgraph J["J — Der Fokus wird sichtbar (C9)"]
+    direction TB
+    S43["S43 Enthaltensein statt Naemlichkeit"]
+    S44["S44 Fuenf Kaesten, drei Zustaende"]
+    S45["S45 Der eine Ausloesepunkt"]
+  end
+  subgraph K["K — Zeilennummern (C10)"]
+    direction TB
+    S46["S46 Nummernspalte im Editor"]
+    S47["S47 Dieselbe Spalte in der Vorschau"]
+  end
+  subgraph L["L — Der Fenstertitel (C11)"]
+    direction TB
+    S48["S48 Der Titel folgt dem Fokus"]
+  end
+  S42["S42 Abgleich und Nutzerabnahme"]
+
+  S43 --> S44
+  S44 --> S45
+  S45 --> S48
+  S46 --> S47
+  S45 --> S42
+  S47 --> S42
+  S48 --> S42
+```
+
+Zwei Ketten und eine Senke. Das Bündel K hängt an keinem Schritt der Bündel J und L; wer will, fährt es zuerst. Innerhalb von J ist die Reihenfolge bindend, weil jeder Schritt den vorigen benutzt und nicht nur ergänzt.
+
+### Wie diese sechs Schritte geschnitten sind
+
+Die Runde hat eine Lehre hinterlassen, und sie steht in drei Defekten: fünf Schritte mussten Stellen außerhalb ihres Umfangs mitziehen, weil der Plan nach Sachthema schnitt statt nach Übersetzbarkeit (`issues/260808-0931_c_...`, `issues/260809-1640_c_...`, `issues/260808-1413_o_...`). **Die sechs neuen Schritte sind deshalb nach Übersetzbarkeit geschnitten:** jeder von ihnen übersetzt für sich, jeder lässt `make check` grün, und keiner hinterlässt eine Zeile, die auf ihren Ablöser wartet.
+
+Zwei Stellen, an denen das den Zuschnitt sichtbar geformt hat. **S48 baut die reine Regel und ihre Aufrufstellen in einem Zug**, statt beides zu trennen; eine Titelregel ohne Aufrufer wäre toter Wert und brächte dasselbe `#[allow(dead_code)]` mit, das S15 und S21 sich eingehandelt haben. **S44 und S45 sind dagegen getrennt**, obwohl beide zur Fokusanzeige gehören: S44 zeigt den Fokus schon für jeden Wechsel, den KRK selbst auslöst, heute also für die vier Fokusbefehle und für F4, später ohne eigenes Zutun auch für den Übergang aus der Vorschau (S23) und den Sprung auf eine Textmarke (S39), weil beide durch `fokus_setzen` gehen; S45 nimmt den Mausklick und den Fensterwechsel dazu und **entfernt** dabei die Zeile, die S44 in `fokus_setzen` gesetzt hat. Der zweite Schritt legt keinen zweiten Weg neben den ersten, sondern zieht ihn in den einen Durchgang zusammen.
+
+### Wo diese Schritte eine öffentliche Form ändern
+
+Die Liste ist vollständig und steht hier statt verstreut in den Schritten, weil ihr Überschreiten der Defekt ist, den die Lehre oben meint.
+
+| Schritt | Form | Wer sie sonst noch benutzt |
+|---|---|---|
+| S43 | `Anwendungsdelegierter::fokus` antwortet für Unteransichten der drei Randbereiche anders als bisher | jeder Leser des Fokus: der Fokusvorbehalt in `kommando_ausfuehren`, `breite_aendern`, der Zeichenzweig in `eingabe_ausfuehren`, ab S48 der Fenstertitel |
+| S43 | `Aufteilung` bekommt `bereichssicht` als öffentliche Zugriffsfunktion | neu, nur `anwendung.rs` |
+| S44 | `Aufteilung::aktives_markieren` entfällt und wird `rahmen_setzen(fokus, aktiv, im_vordergrund)` | ein Aufrufer, `aufteilung_nachziehen` |
+| S44 | `Aufteilung.rahmen` geht von zwei auf fünf Kästen | modulintern |
+| S45 | `hauptfenster` liefert `Retained<Hauptfenster>` statt `Retained<NSWindow>` | ein Aufrufer, `oberflaeche_aufbauen`; die Ivars halten weiter `Retained<NSWindow>` |
+| S47 | `Vorschaumodell` bekommt `zeigt_dateitext` | neu, nur `appkit/vorschau.rs`; die Vorschau stammt aus der Runde 1 und wird hier zum ersten Mal seit ihrem Abschluss erweitert |
+
+Nicht geändert werden: `Aufteilung::bauen`, `Fokus`, `Bereich`, `Wirkungsbereich`, `Kommando`, `resources/default-keymap.toml`, `session.toml` und `bookmarks.toml`. **Die drei Fähigkeiten bringen keinen Tastenbefehl und keine Ablageform mit**, und der Spec sagt es unter `## Die drei vollständigen Fallunterscheidungen` voraus.
+
+### Phase J: Der Fokus wird sichtbar (C9)
+
+#### 43. **Die Fokusabfrage fragt nach Enthaltensein statt nach Nämlichkeit**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `fokus`), `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: `bereichssicht`), `crates/krk-ui/src/kommandos/fokus.rs` (erweitert: `in_bereich`), `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md` (erweitert: die Abschlussnotiz)
+- Änderungen: `Anwendungsdelegierter::fokus` hält den Ersthelfer künftig nicht mehr gegen fünf genannte Ansichten, sondern fragt, in welcher der fünf Bereichsansichten er **liegt**. Die beiden Vorabfragen bleiben unverändert: kein Schlüsselfenster oder ein anderes als das Hauptfenster heißt weiterhin `Fokus::Anderswo`, und damit bleibt die Zusage stehen, dass vor einem Blatt kein Dateibefehl wirkt.
+  Der Durchgang läuft über `Bereich::ALLE`, holt zu jedem Wert die Unteransicht der Aufteilung und fragt `NSView::isDescendantOf`. Die fünf Teilbäume sind zueinander fremd, weil es die fünf Unteransichten einer `NSSplitView` sind; ein Ersthelfer liegt deshalb in höchstens einem. Von `Bereich` auf `Fokus` kommt die neue erschöpfende Zuordnung `fokus::in_bereich`: Lesezeichen auf Leiste, beide Dateifenster auf Dateifenster, Vorschau auf Vorschau, Editor auf Editor.
+  **Der Rückfall auf `Fokus::Dateifenster` bleibt, und er trägt danach genau einen Fall:** einen Ersthelfer, der in keiner der fünf Unteransichten liegt, also das Fenster selbst, die Aufteilung oder den Titelbalken. `Fokus::Anderswo` an dieser Stelle hieße, dass dann kein Befehl des Dateifensters wirkt, und genau diesen Zustand hat der Defekt vom 260805-1845 schon einmal hergestellt. Der bestehende Kommentar dazu bleibt richtig und wird auf den neuen Schnitt gezogen.
+  **`fokusansicht` bleibt und behält seine Aufgabe.** Es beantwortet die andere Frage: welche Ansicht den Ersthelferrang **annehmen** soll, wenn KRK den Fokus setzt. Der Rang gehört genau einer Ansicht, das Enthaltensein gilt für einen ganzen Teilbaum, und beide Fragen brauchen ihre eigene Antwort. Der Doc-Kommentar sagt es, damit der nächste Leser die beiden nicht für eine Verdopplung hält.
+  **Was sich am Verhalten ändert, ist ausschließlich der Fall des Defekts.** Befund 8 rechnet es vor: für den Feldeditor eines Textfeldes im Dateifenster lautet die Antwort vorher wie nachher `Dateifenster`. Die Abschlussnotiz des Defekts hält die Rechnung fest und nennt den Grund, aus dem ohne die vorgeschlagene Messung geschnitten wird, nämlich das vierte Abnahmekriterium von C9.
+- Abhängigkeiten: keine
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0; der Übersetzer belegt dabei, dass `in_bereich` vollständig ist. Eine Probe in `crates/krk-ui` hält fest, dass `in_bereich` und `holt_hervor` einander umkehren: für jeden der drei Randbereiche liefert `in_bereich(holt_hervor(f).unwrap())` wieder `f`, und beide Dateifensterbereiche liefern `Fokus::Dateifenster`. Der Diff zeigt, dass `fokus()` nicht mehr `fokusansicht` ruft und dass `fokusansicht` unverändert steht. Der Defekt trägt den Marker `_c_`. **`Nutzerarbeit`:** am laufenden Bündel in die Bildlaufleiste der Vorschau klicken und `up` drücken; die Auswahl im Dateifenster bewegt sich danach nicht mehr.
+
+#### 44. **Fünf Kästen, eine Regel, drei Zustände**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: `rahmen` auf fünf, `gerahmt` löst `gerahmtes_dateifenster` ab, `rahmen_setzen` löst `aktives_markieren` ab, der Modulkopf), `crates/krk-ui/src/kommandos/fokus.rs` (erweitert: `bereich_mit_fokus`, `Rahmenrolle`, `rahmenrolle`), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `aufteilung_nachziehen`, `fokus_setzen`, `breite_aendern`)
+- Änderungen: Die Antworten aus den Fragen 12 und 14, in dieser Reihenfolge gebaut.
+  `Aufteilung` hält fünf Kästen statt zwei, in der Reihenfolge von `Bereich::ALLE`. `gerahmtes_dateifenster` verliert seine Sonderstellung: der Teil, der Tableiste, Liste und Statuszeile übereinanderlegt, bleibt, und das Einrahmen wird eine eigene Funktion, die eine beliebige fertige Ansicht in einen `NSBox` setzt. Die drei Randbereiche gehen durch dieselbe Funktion.
+  `rahmenrolle` ist die eine Stelle, die entscheidet, welcher Bereich welche Rolle trägt, und sie ist eine reine Funktion außerhalb von `appkit`. Sie stützt sich auf `bereich_mit_fokus`, die neue gemeinsame Zuordnung von einem Fokuswert auf seinen Bereich: die drei Randbereiche über `holt_hervor`, `Fokus::Dateifenster` auf das aktive Dateifenster, `Fokus::Anderswo` auf `None`.
+  **`breite_aendern` zieht auf dieselbe Zuordnung um.** Es rechnet heute `holt_hervor(self.fokus()).unwrap_or_else(|| Bereich::von_seite(aktiv))` (`anwendung.rs:1939-1941`), und das ist dieselbe Rechnung ein zweites Mal. Nach diesem Schritt steht sie einmal, und die Anzeige und die Breitenänderung meinen denselben Bereich. Der Unterschied bleibt beim Aufrufer: `breite_aendern` fällt bei `None` auf das aktive Dateifenster, die Anzeige lässt bei `None` alles stehen, weil `Anderswo` ein Blatt bedeutet und das siebte Abnahmekriterium von C9 verlangt, dass ein Blatt keinem Bereich seine Anzeige nimmt.
+  `aufteilung_nachziehen` ruft statt `aktives_markieren` künftig `rahmen_setzen`, mit dem Fokus, dem aktiven Dateifenster und der Auskunft `isKeyWindow`. Die Ausleihe des Fenstermodells endet dabei vor dem ersten Objective-C-Aufruf, wie schon heute.
+  `fokus_setzen` zieht die Anzeige nach, sobald `makeFirstResponder` erfolgreich war. **Diese Zeile ist ein benannter Zwischenstand und fällt in S45 wieder weg**, sobald der eine Auslösepunkt jeden Wechsel meldet; der Kommentar an ihr nennt S45 als ablösenden Schritt.
+- Abhängigkeiten: S43
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0. Eine Probe deckt `rahmenrolle` über alle fünfzig Paare ab, also fünf Bereiche mal fünf Fokuswerte mal zwei aktive Seiten, und hält dabei drei Zusagen fest: bei jedem Fokuswert außer `Anderswo` trägt genau ein Bereich `Fokussiert`; das aktive Dateifenster trägt `Fokussiert` oder `AktivOhneFokus` und nie `Ruhig`; bei `Anderswo` trägt kein Bereich `Fokussiert`. `grep -rn 'aktives_markieren' crates/krk-ui/src` findet nichts mehr, und `grep -c 'holt_hervor' crates/krk-ui/src/appkit/anwendung.rs` liefert 0: die Zuordnung läuft über `bereich_mit_fokus`. `grep -c 'controlAccentColor' crates/krk-ui/src/appkit/aufteilung.rs` liefert 2, die volle und die zurückgetretene Fassung, und keine Farbe steht als Zahlenwert im Programmtext. **`Nutzerarbeit`:** am laufenden Bündel wandert der Rahmen mit den vier Fokusbefehlen durch alle fünf Bereiche, F4 setzt ihn auf den Editor, und das aktive Dateifenster bleibt dabei erkennbar.
+
+#### 45. **Der eine Auslösepunkt für jeden Wechsel des Ersthelfers**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/appkit/fenster.rs` (erweitert: `Hauptfenster` als Unterklasse von `NSWindow`, `hauptfenster` liefert sie, der Modulkopf), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `oberflaeche_aufbauen` meldet sich an, `fokusanzeige_nachziehen`, die Zeile aus S44 in `fokus_setzen` entfällt)
+- Änderungen: Die Antwort aus Frage 13. Ein `define_class!` über `NSWindow` mit drei Überschreibungen und einem Ivar, einem schwachen Griff auf den Anwendungsdelegierten.
+  `makeFirstResponder:` ruft zuerst die Fassung der Oberklasse und meldet danach nur, wenn sie Erfolg gemeldet hat. `becomeKeyWindow` und `resignKeyWindow` melden nach demselben Muster; sie tragen das achte Abnahmekriterium von C9.
+  **Der Griff ist schwach, aus demselben Grund wie bei allen elf Blattaufrufern:** der Ring Delegierter → Fenster → Rückruf → Delegierter schlösse sich sonst, und das Fenster lebt über sein Schließen hinaus, weil `setReleasedWhenClosed(false)` gesetzt ist.
+  `Anwendungsdelegierter::fokusanzeige_nachziehen` ist der Empfänger und schreibt **nur** Rahmenfarben, ab S48 dazu den Fenstertitel. **Es ruft weder `anwenden` noch `setHidden`**, und der Grund gehört als Kommentar dazu: eine ausgeblendete Ansicht, die den Ersthelfer hält, lässt AppKit den Rang neu vergeben und diese Meldung ein zweites Mal auslösen. `aufteilung_nachziehen` bleibt daneben stehen und ruft dieselbe Funktion; es gibt einen Schreiber der Rahmenfarben und zwei Anlässe.
+  `hauptfenster` liefert danach `Retained<Hauptfenster>`. `oberflaeche_aufbauen` setzt den Melder, bevor es das Fenster als `Retained<NSWindow>` in die Ivars legt; damit bleibt jede der übrigen Fensterberührungen unverändert, weil sie ohnehin nur `NSWindow`-Methoden ruft.
+  Die Zeile aus S44 in `fokus_setzen` entfällt in diesem Schritt. Sie war der Zwischenstand, und ihr Ablöser ist da.
+- Abhängigkeiten: S44
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0, `cargo xtask bundle` baut und signiert. Der Diff zeigt genau eine Überschreibung von `makeFirstResponder:`, dass sie die Oberklasse zuerst ruft, und dass sie ihr Ergebnis unverändert zurückgibt. `grep -c 'fokusanzeige_nachziehen' crates/krk-ui/src/appkit/anwendung.rs` zeigt einen Rumpf und zwei Aufrufstellen, und der Diff belegt, dass die Zeile in `fokus_setzen` verschwunden ist. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-ui/src` nennt weiterhin genau eine Datei. **`Nutzerarbeit`** für fünf der acht Kriterien von C9: ein Mausklick in jeden der fünf Bereiche setzt den Rahmen dorthin; ein Klick in die Bildlaufleiste der Vorschau ebenso; ein anderes Fenster in den Vordergrund zu holen lässt den Rahmen zurücktreten und die Rückkehr stellt ihn unverändert her; ein stehendes Blatt lässt ihn stehen, wo er stand.
+
+### Phase K: Die Zeilennummern (C10)
+
+#### 46. **`appkit/nummernspalte`: die eine Spalte, im Editor eingehängt**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/appkit/nummernspalte.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend: `mod nummernspalte;` und der Modulkopf, der heute zwanzig Module aufzählt), `crates/krk-ui/src/appkit/editor.rs` (erweitert: `textflaeche_bauen` hängt die Spalte ein)
+- Änderungen: Die Antworten aus den Fragen 15 und 16. Ein `define_class!` über `NSRulerView` mit `#[thread_kind = MainThreadOnly]`, einem `RefCell<Zeilenindex>` und einem Kennzeichen "überholt".
+  **Die Untergrenzen der angesprochenen Klassen stehen im Modulkopf**, wie bei jedem AppKit-Modul dieses Projekts: `NSRulerView` steht seit macOS 10.0 zur Verfügung, ebenso `NSLayoutManager`, `NSTextContainer` und `NSClipView`; das Bündel zielt auf 15.0. Keine ist nach macOS 15 hinzugekommen.
+  Eingehängt wird über `setHasVerticalRuler(true)`, `setVerticalRulerView` und `setRulersVisible(true)` an der Bildlaufansicht, dazu `setClientView` auf die Textfläche.
+  Gezeichnet wird in `drawHashMarksAndLabelsInRect:`: den sichtbaren Bereich der Klemmansicht in Zeichenkästen des Layoutverwalters übersetzen, zu jedem Kasten den Zeichenversatz seines Anfangs nehmen und über `Zeilenindex::zeile_am_versatz` die Dateizeile fragen. Gezeichnet wird eine Nummer nur, wenn der Versatz zugleich ein Zeilenanfang der Datei ist; damit trägt eine umgelaufene Zeile genau eine Nummer neben ihrer ersten Bildschirmzeile.
+  **Der Index wird beim Zeichnen neu gebaut, wenn er überholt ist, und sonst nicht.** Zwei Beobachter setzen das Kennzeichen: `NSTextStorageDidProcessEditingNotification` am Textspeicher der Fläche und `NSViewBoundsDidChangeNotification` an der Klemmansicht, letztere nach `setPostsBoundsChangedNotifications(true)`. Der zweite setzt kein Kennzeichen, sondern fordert allein ein neues Bild an; der Text hat sich beim Blättern nicht geändert. Die Anmeldung folgt der Form aus `appkit/volumes.rs:249`, und der Beobachter wird beim Fallen der Spalte wieder abgemeldet.
+  Die Breite folgt der Stellenzahl von `Zeilenindex::zeilenzahl` über `setRuleThickness`, die Farbe ist `secondaryLabelColor`, die Schrift die feste Schreibmaschinenschrift in der kleinen Systemgröße.
+  **Eine öffentliche Zeile für die Nachbarschritte:** `Nummernspalte::neu_zeichnen` fordert ein Bild an, ohne den Index für überholt zu erklären. Wer Umbruch oder Schrift der Fläche ändert, ruft sie; S33 tut das beim Umschalten der Ansicht, und die dortige Änderungszeile nennt es seit diesem Schritt.
+  **`grep -c 'objc2'` bleibt für `editormodell.rs` bei 0.** Die Spalte liegt in `appkit`, das Modell nicht, und die Grenze hält in beide Richtungen.
+- Abhängigkeiten: keine (S8 und S16 stehen)
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0, `cargo xtask bundle` baut und signiert. `grep -rEn "lines\(\)|match_indices|split\('\\\\n'\)" crates/krk-ui/src/appkit/nummernspalte.rs` findet nichts: die Zählung kommt aus `krk_core::text::zeilen` und entsteht hier nicht ein zweites Mal. `grep -c 'Zeilenindex' crates/krk-ui/src/appkit/nummernspalte.rs` liefert mindestens 1. Der Diff zeigt zwei angemeldete Beobachter und zwei Abmeldungen. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-ui/src` nennt weiterhin genau eine Datei, und keine Zeile trägt `#[allow(dead_code)]`. **`Nutzerarbeit`** für sieben der zwölf Kriterien von C10: die erste Zeile trägt die 1; eine umgelaufene Zeile trägt eine Nummer und ihre Fortsetzungen keine; getippte Zeilen bekommen ihre Nummer ohne Zutun und gelöschte nehmen sie mit; beim Blättern steht neben jeder sichtbaren Zeile ihre Nummer; eine sechsstellige Nummer steht vollständig da; die Nummern sind in Hell und in Dunkel lesbar; eine Auswahl über den ganzen Text nimmt sie nicht mit.
+
+#### 47. **Dieselbe Spalte in der Vorschau, und die Regel, wann sie steht**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/appkit/vorschau.rs` (erweitert: `textanzeige` hängt die Spalte ein, das Ein- und Ausblenden je Inhalt), `crates/krk-ui/src/vorschaumodell.rs` (erweitert: `zeigt_dateitext`)
+- Änderungen: Die Vorschau hängt **dieselbe Klasse** ein wie der Editor. Eine zweite Spalte entsteht nicht, und das ist die Zusage, die C10 in seiner Beschreibung macht.
+  Ob sie steht, entscheidet `Vorschaumodell::zeigt_dateitext`: eine erschöpfende Fallunterscheidung über die fünf Werte von `Inhalt`, ohne Auffangzweig. Wahr allein für `Inhalt::Text`, **und auch dort nur, wenn der aktive Tab einen Pfad hat**; `Inhalt::Text` trägt nach seinem eigenen Doc-Kommentar auch den Text aus der Zwischenablage, und das dritte Abnahmekriterium von C10 nimmt ihn ausdrücklich aus. Die Frage nach dem Pfad ist schon gebaut: `Vorschaumodell::aktiver_pfad` (`vorschaumodell.rs:387-392`).
+  `Vorschaufenster::anzeigen` (`appkit/vorschau.rs:359-420`) schaltet die Spalte über `setRulersVisible` ein und aus, an derselben Stelle, an der es heute Textrolle und Bildansicht gegeneinander verbirgt. Ein zweiter Umschaltweg entsteht nicht.
+  **Die Vorschau stammt aus der Runde 1 und wird hier zum ersten Mal seit ihrem Abschluss erweitert.** Der Nutzer hat sie am 260809-2035 ausdrücklich hereingeholt; die Ausklammerung der Restarbeit vom 260807-2116 gilt den Messreihen und nicht jeder Berührung. Der Modulkopf hält es fest, damit der nächste Leser die Erweiterung nicht für einen Übergriff hält.
+  **Der Spec nennt die Belastung, und dieser Schritt wiederholt sie im Code:** L7 aus C8 der Runde 1 misst die Vorschau einer Textdatei, und die Spalte hängt in genau dieser Fläche. Eine Zahl setzt dieser Plan dazu nicht; der Kommentar verweist auf den Spec-Abschnitt, der L7 an die spätere Messrunde übergibt.
+- Abhängigkeiten: S46
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0; der Übersetzer belegt, dass die Fallunterscheidung über `Inhalt` vollständig ist. Eine Probe in `crates/krk-ui` deckt alle fünf Werte von `Inhalt` ab und zusätzlich den Fall `Text` ohne Pfad: nur `Text` mit Pfad liefert wahr. Der Diff zeigt, dass `appkit/vorschau.rs` die Klasse aus `appkit/nummernspalte.rs` benutzt und keine eigene baut. **`Nutzerarbeit`:** eine Textdatei in der Vorschau zeigt die Nummern, ein Bild, ein Ordner und der Inhalt der Zwischenablage zeigen keine.
+
+### Phase L: Der Fenstertitel (C11)
+
+#### 48. **Der Fenstertitel folgt dem Fokus**
+
+- Ausführender: `coder`
+- Dateien: `crates/krk-ui/src/fenstertitel.rs`, `crates/krk-ui/src/main.rs` (einbindend: `mod fenstertitel;` und der Modulkommentar, der seit S15 neun Module neben `appkit` aufzählt), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `titel_nachziehen` und die vier Aufrufstellen aus Frage 17), `crates/krk-ui/src/appkit/tabelle.rs` (lesend: `angezeigter_ordner`), `crates/krk-ui/src/appkit/vorschau.rs` (lesend: `angezeigter_pfad`), `crates/krk-ui/src/appkit/editor.rs` (lesend: der Pfad der gehaltenen Datei)
+- Änderungen: Die Antwort aus Frage 17, Regel und Aufrufstellen in einem Zug. Der Zuschnitt ist bewusst: eine Regel ohne Aufrufer wäre toter Wert, und der Abschnitt `### Wie diese sechs Schritte geschnitten sind` sagt, warum dieser Plan das nicht noch einmal baut.
+  `fenstertitel::titel` ist eine reine Funktion ohne AppKit, mit einer erschöpfenden Fallunterscheidung über die fünf Fokuswerte und ohne Auffangzweig. `Fokus::Anderswo` liefert `None`, und `None` heißt "den Titel stehen lassen"; damit fällt das achte Abnahmekriterium von C11 ohne eigenen Bau an, weil ein Blatt bereits `Anderswo` ergibt.
+  Editor und Vorschau ohne Pfad fallen auf den Ordner des aktiven Dateifensters. Das ist eine benannte Antwort mit einem Grund und kein Auffangen, und der Grund gehört an die Funktion: der Nutzer arbeitet dann in einem Bereich, der nichts hält, und der Ordner entscheidet seine nächste Handlung.
+  **Der Pfad steht ungekürzt.** Kein Ersetzen des Benutzerordners durch eine Tilde, kein Auslassen von Zwischenordnern; was der Titelbalken nicht fasst, kürzt macOS selbst. Der Kommentar nennt den Zweck, aus dem das folgt: der Titel ist zum Lesen und Weiterreichen da.
+  **Der Titel prüft nicht nach.** Zeigt ein Dateifenster einen Ordner, den es nicht mehr gibt, steht dieser Pfad weiter im Titel; die Funktion bekommt Pfade und fragt kein Dateisystem. Das elfte Abnahmekriterium von C11 verlangt es, und es fällt daraus an, dass die Funktion rein ist.
+  `Anwendungsdelegierter::titel_nachziehen` sammelt die drei Pfade und den Fokus, ruft die Funktion und schreibt bei `Some` über `NSWindow::setTitle`. Gerufen wird es an den vier Stellen aus Frage 17; `fokusanzeige_nachziehen` aus S45 ist eine davon und ruft es mit.
+  **Die Bewegung der Auswahl ruft es nicht**, und der Kommentar nennt L1 als Grund. Der Vorschau-Tab wechselt seinen Inhalt auch beim Wandern der Auswahl im Dateifenster; dann steht der Fokus aber im Dateifenster, und der Titel zeigt dessen Ordner, der sich nicht geändert hat. Ein Nachzug an dieser Stelle wäre Arbeit ohne Wirkung, mitten in der Spanne, die L1 misst.
+  `appkit/fenster.rs` bleibt unberührt: es setzt den Titel weiterhin einmal beim Aufbau, und `oberflaeche_aufbauen` ruft `titel_nachziehen` als letzte Handlung, nachdem `fokus::BEIM_START` gesetzt ist.
+- Abhängigkeiten: S45
+- Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0; der Übersetzer belegt die Vollständigkeit der Fallunterscheidung. Eine Probe in `crates/krk-ui` deckt alle fünf Fokuswerte ab, dazu die beiden Rückfälle bei Editor und Vorschau ohne Pfad und die Antwort `None` für `Anderswo`, und hält fest, dass ein Pfad unter dem Benutzerordner ungekürzt zurückkommt. `grep -c 'objc2' crates/krk-ui/src/fenstertitel.rs` liefert 0. `grep -rn 'setTitle' crates/krk-ui/src` zeigt zwei Stellen, den Aufbau und `titel_nachziehen`, und keine dritte. **`Nutzerarbeit`** für neun der elf Kriterien von C11: der Titel folgt dem Fokus durch alle fünf Bereiche; er zeigt die Editordatei, während das aktive Dateifenster einen anderen Ordner zeigt; er zieht bei Ordner-, Tab- und Dateiwechsel nach; eine Pfeiltaste im Dateifenster ändert ihn nicht; ein Blatt lässt ihn stehen; ein geschlossener Editor kommt darin nicht vor.
+
+### Die Reihenfolge gegen die achtzehn offenen Schritte
+
+**Sechs von sechs können sofort laufen.** Kein neuer Schritt hängt an einem offenen Schritt der ursprünglichen Runde; die Abhängigkeiten laufen ausschließlich untereinander und auf erledigte Schritte. Wer die Runde in der Reihenfolge des ursprünglichen Plans weiterfährt, kann die Bündel J, K und L an jeder Stelle dazwischenschieben.
+
+**Vier Abnahmekriterien lassen sich trotzdem erst später prüfen, und das ist keine Abhängigkeit, sondern eine Prüfreihenfolge.** Der Unterschied zählt: der Schritt ist fertig, und was fehlt, ist der Anlass, unter dem sich sein Ergebnis zeigt.
+
+| Kriterium | Wartet auf | Warum |
+|---|---|---|
+| C10, fünftes: dieselben Nummern in Roh- und Formatansicht | S33 | vor S33 gibt es nur eine Ansicht |
+| C10, achtes: der Zeilensprung landet sichtbar | S35 | der Sprungbefehl kommt mit S35 |
+| C10, neuntes: der Sprung auf eine Textmarke landet sichtbar | S39 | dasselbe für die Marke |
+| C9, drittes, in zwei seiner fünf Wege: der Übergang aus der Vorschau und der Sprung auf eine Textmarke | S23, S39 | die beiden Wege sind noch nicht gebaut |
+
+Alle vier stehen in der Abnahmeliste von S42 und nicht als Vorbehalt an den neuen Schritten.
+
+**Eine Verpflichtung läuft in die Gegenrichtung, und sie steht bei S33.** Wer die Umbruchbreite oder die Schrift der Textfläche ändert, ändert die Zeilenkästen, ohne dass der Textspeicher eine Meldung verschickt. S33 ruft deshalb `Nummernspalte::neu_zeichnen`, und seine Änderungszeile nennt es. Ohne diese eine Zeile zeigte die Formatansicht die Nummern des zuletzt gezeichneten Umbruchs.
+
+### Was diese sechs Schritte an bestehenden Schritten ändern
+
+Zwei Schritte bekommen einen Zusatz, und beide sind hier genannt, weil eine stillschweigende Änderung an einem bestehenden Schritt genau der Defekt wäre, den die Lehre dieser Runde meint.
+
+**S33** bekommt eine Zeile in seinen Änderungen: der Aufruf von `Nummernspalte::neu_zeichnen` nach dem Umschalten der Ansicht.
+
+**S42** bekommt drei neue Abhängigkeiten, S45, S47 und S48, und drei weitere Nachträge am Spec und an `CLAUDE.md`. Die Zeilen stehen bei S42 selbst.
+
+
 
 | Struktur | Ort | Was neu ist |
 |---|---|---|
@@ -1043,6 +1374,10 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 | `Bereich` | `krk-ui/src/fenstermodell.rs` | fünfter Wert `Editor`, `ALLE: [Bereich; 5]` |
 | `Editormodell` | `krk-ui/src/editormodell.rs` | neu: Pfad, Stand, Abweichung, Ansichtswahl, Suchlauf, Stempel |
 | `Zeile` | `krk-ui/src/leistenmodell.rs` | die Variante `Lesezeichen(usize)` trägt künftig beide Sorten |
+| `Rahmenrolle` | `krk-ui/src/kommandos/fokus.rs` | neu (S44): drei Werte für die Fokusanzeige, dazu `rahmenrolle` und `bereich_mit_fokus` |
+| `Hauptfenster` | `krk-ui/src/appkit/fenster.rs` | neu (S45): Unterklasse von `NSWindow`, der eine Auslösepunkt für jeden Wechsel des Ersthelfers |
+| `Nummernspalte` | `krk-ui/src/appkit/nummernspalte.rs` | neu (S46): Unterklasse von `NSRulerView`, eine Klasse für Editor und Vorschau |
+| `fenstertitel::titel` | `krk-ui/src/fenstertitel.rs` | neu (S48): eine reine Funktion, fünf Fokuswerte, `None` heißt stehen lassen |
 
 ## Teststrategie
 
@@ -1057,6 +1392,8 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 **Was keine Probe erreicht, ist ausdrücklich benannt.** Neunzehn der 42 Schritte sind vollständig von einem Agenten abnehmbar: S1, S3 bis S16, S18, S21, S27 und S32. Die übrigen 23 tragen den Vermerk `Nutzerarbeit` für einen Teil ihres Abnahmekriteriums oder für das ganze, weil sie KRK im Vordergrund verlangen. `CLAUDE.md` hält fest, dass kein Agent das fahren kann, und die Frage, wie KRK dafür in den Vordergrund kommt, ist offen und bleibt aus dieser Runde ausgeklammert.
 
 Bei S1 und S7 steht die Nutzerarbeit ausdrücklich **neben** dem Abnahmekriterium und nicht darin: S1 lässt sich am Kern abnehmen, und die Bestätigung am laufenden Bündel kostet eine Minute; S7 lässt sich mit `make menue` abnehmen, das ein Bündel, aber keinen Vordergrund braucht.
+
+**Die sechs Schritte vom 260809 folgen demselben Schnitt, und vier von ihnen sind vollständig von einem Agenten abnehmbar.** S46 und S47 nehmen ihre Bauart am Diff und an vier `grep` ab, S43 und S48 zusätzlich an Proben in `crates/krk-ui`, die ohne Fenster laufen: die Umkehrbarkeit von `in_bereich` und `holt_hervor`, die fünfzig Paare von `rahmenrolle`, die fünf Werte von `Inhalt` und die fünf Fokuswerte des Fenstertitels. Was ein Agent nicht erreicht, ist bei allen sechs dasselbe und ausdrücklich benannt: ob der Rahmen, die Nummern und der Titel auf dem Schirm stehen, sieht nur der Nutzer. **Damit steigt die Zahl der vollständig von einem Agenten abnehmbaren Schritte nicht**, weil jeder der sechs für einen Teil seines Abnahmekriteriums `Nutzerarbeit` trägt.
 
 **Kein Schritt setzt eine Zeitzusage.** Der Abnahmelauf ist aus dieser Runde ausgeklammert, und der Spec begründet auf drei Wegen, warum eine elfte Zahl ohne ihn kein Abnahmekriterium wäre, sondern ein Wunsch. An ihre Stelle treten zwei ohne Messstrecke prüfbare Kriterien, und beide stehen an Schritten: die Bedienbarkeit während des Ladens an S24, die Unberührtheit der zehn Zahlen an S42.
 
@@ -1074,6 +1411,10 @@ Bei S1 und S7 steht die Nutzerarbeit ausdrücklich **neben** dem Abnahmekriteriu
 | Die Zahl der Schritte und die Breite der Änderung führen zu einem Zwischenstand, in dem der Bau tagelang rot steht. | Die Phasen A und B sind ohne Fenster abnehmbar und lassen den Bau nach jedem Schritt grün. Die einzige bindende Reihenfolge, die den Bau rot machen kann, steht in `## Aufbau` benannt: S6 vor oder mit S5. |
 | Die Auslegung von "gerendert" aus S33 trifft nicht, was der Nutzer meint, und C3 liefert weniger, als er erwartet. | Der Datensatz liegt vor dem Gate vor, und S33 baut die Auslegung, die mit dem zehnten Abnahmekriterium zusammengeht. Eine andere Auslegung änderte S33 und keinen anderen Schritt. |
 | Der Nutzer wählt in der y-Frage Weg 3, und der Umfang der Runde wächst um eine zweite Nachschlagart. | S2 ist der einzige Schritt, der davon berührt ist, und keiner der 41 übrigen hängt an ihm, weil keine neue Kombination auf `y` oder `z` liegt. Wer den Umfang halten will, wählt Weg 1 oder 2 und behält Weg 3 für eine spätere Runde. |
+| Der Neuaufbau des Zeilenindex kostet bei einer Datei nahe 16 MB je gezeichnetem Bild spürbar Zeit, und das Tippen stockt. | `speculation:` ungemessen, und diese Runde misst es nicht. Der Ausweg ist benannt und nicht zu suchen: `NSTextStorage` meldet den geänderten Bereich und die Längenänderung mit, und ein Index, der sich daran fortschreibt, kostet die geänderte Stelle und eine Addition je Zeile dahinter. Er gehört nach `krk-core` und ist ohne Fenster abzunehmen. S46 baut ihn nicht auf Verdacht. |
+| Die Überschreibung von `makeFirstResponder:` löst sich selbst wieder aus, weil der Nachzug eine Ansicht ausblendet, die den Ersthelfer hält. | `fokusanzeige_nachziehen` schreibt ausschließlich Rahmenfarben und Fenstertitel und ruft weder `anwenden` noch `setHidden`. Das Abnahmekriterium von S45 zeigt es am Diff, und der Kommentar an der Funktion nennt den Grund. |
+| Der Zugriff auf `layoutManager` zwingt die Textfläche auf den älteren Textfluss von TextKit, und eine spätere Fassung von macOS entzieht ihn. | Der Rückfall ist bereits von S33 eingekauft, das die Einfärbung über `setTemporaryAttributes` in denselben Verwalter legt. Beide Schritte sprechen denselben an; ein zweiter Textfluss entsteht nicht, und der Modulkopf von S46 hält die Untergrenze macOS 10.0 fest. |
+| Die Enthaltensfrage aus S43 gibt für einen Ersthelfer eine andere Antwort als erwartet, und ein Dateibefehl wirkt an der falschen Stelle. | Befund 8 rechnet den einzigen Fall vor, in dem sich eine Antwort ändert, und das Abnahmekriterium von S43 prüft ihn am laufenden Bündel mit `up` statt mit einem Löschbefehl. Die Vorabfrage auf das Schlüsselfenster bleibt unverändert, und damit bleibt die Zusage stehen, dass vor einem Blatt kein Dateibefehl wirkt. |
 
 ## Wie dieser Plan die Maxime "supersimpel" einlöst
 
@@ -1091,12 +1432,24 @@ Dazu die Stelle, an der er einen Mechanismus **nicht** anfasst, obwohl es nahel�
 
 **Wo er dagegen wächst, sagt er es.** `Wirkungsbereich` geht von vier auf sieben Werte, und das ist die größte einzelne Zunahme dieser Runde. Der Preis ist benannt: der Fokusvorbehalt bleibt dafür eine Regel und wird keine Abfrage je Aufrufstelle, und der Spec verlangt genau das.
 
+Der Nachtrag vom 260809 setzt die Reihe an vier weiteren Stellen fort.
+
+**Die Sonderstellung der beiden Dateifenster in der Aufteilung verschwindet** (S44). Zwei Bereiche trugen einen Kasten und drei keinen; danach tragen alle fünf einen, und die Frage "hat dieser Bereich einen Rahmen?" hat nur noch eine Antwort.
+
+**Die Fokusanzeige bekommt einen Auslösepunkt und nicht drei** (S45). Ersthelferwechsel, Vordergrund und Hintergrund laufen durch dieselbe Fensterunterklasse, und der Zwischenstand aus S44 wird dabei entfernt statt daneben stehen gelassen.
+
+**Die Zuordnung von einem Fokuswert auf seinen Bereich steht danach einmal** (S44). `breite_aendern` rechnete sie bisher selbst nach; die Anzeige hätte sie ein drittes Mal gebraucht.
+
+**Die Nummernspalte ist eine Klasse für zwei Flächen** (S46, S47), und die Zählung dahinter ist der Zeilenindex des Kerns und keine zweite. Das Abnahmekriterium von S46 misst es, statt es zuzusagen.
+
 ## Angelegte Datensätze
 
-Zwei Entscheidungsdatensätze sind mit diesem Plan entstanden, beide mit dem Marker `_o_`, beide im Speicher dieses Circles, weil sie aus seiner Directive entstanden sind.
+Zwei Entscheidungsdatensätze sind mit diesem Plan entstanden, beide im Speicher dieses Circles, weil sie aus seiner Directive entstanden sind. Beide sind seit dem 260808-0155 beantwortet.
 
 - `decisions/260808-0140_o_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md` — die Voraussetzung von C8 ist am Code widerlegt, und die Wahl zwischen drei Wegen gehört dem Nutzer. Sie hält S1 nicht auf und S2 als einzigen Schritt.
-- `decisions/260808-0140_o_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md` — zwei Abnahmekriterien von C3 lassen sich nicht beide vollständig einlösen, und die Auslegung des Planners ist die eine, die mit beiden zusammengeht. Sie hält keinen Schritt auf und bindet S33.
+- `decisions/260808-0140_*_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md` — zwei Abnahmekriterien von C3 lassen sich nicht beide vollständig einlösen, und die Auslegung des Planners ist die eine, die mit beiden zusammengeht. Sie hält keinen Schritt auf und bindet S33.
+
+**Der Nachtrag vom 260809 legt keinen weiteren Datensatz an, und der Grund ist gerechnet und nicht behauptet.** Die eine offene Frage der drei Fähigkeiten steht bereits, angelegt vom Shaper: `decisions/260809-2043_*_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md`. Sie bindet S44 und hält ihn nicht auf; `### Frage 14` rechnet für jede der drei Möglichkeiten aus, was sie am gebauten Stand kostet, und in allen dreien ist es ein Funktionsrumpf und kein Aufbau. Zwei weitere Punkte, die eine Antwort verlangen könnten, sind an Ort und Stelle beantwortet statt vorgelegt: die Lesart des zweiten Abnahmekriteriums von C9 folgt aus jenem Datensatz und braucht keine eigene Frage (`### Frage 14`), und der Schnitt der Fokusabfrage folgt aus dem vierten Abnahmekriterium von C9, das ihn als Zusage und nicht als Verbesserung verlangt (Befund 8).
 
 ## Offene Fragen
 
@@ -1104,4 +1457,7 @@ Zwei Entscheidungsdatensätze sind mit diesem Plan entstanden, beide mit dem Mar
 - [ ] Die dreizehn vorgeschlagenen Kombinationen aus `### Frage 11` nimmt der Nutzer an oder belegt sie um. Der Spec legt allein F4 fest und überlässt den Rest dem Verfahren der Runde 1: der Planner schlägt vor, der Nutzer entscheidet.
 - [ ] Die Ableitung zur Tab-Taste im Editor (Befund 3) steht dem Nutzer zum Umstoßen offen. Sie ist eine Zeile in `Kommando::wirkungsbereich`.
 - [ ] Der gegenseitige Ausschluss von Editor und Vorschau in beide Richtungen ist eine Ableitung des Shapers, die der Spec unter `## Was die Abnahme mitentscheidet` führt. Wer sie umstößt, ändert C1, C4 und S18.
+- [ ] Der Akzentrahmen (`decisions/260809-2043_*_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md`) ist vor der Abnahme von C9 zu beantworten. S44 baut die Vorbelegung des Specs; die Kostentabelle für die beiden anderen Möglichkeiten steht in `### Frage 14`, und keine von ihnen ändert mehr als einen Funktionsrumpf und höchstens einen zusätzlichen Schritt.
+- [ ] Der Schnitt der Fokusabfrage aus S43 ist eine Ableitung des Planners gegen den Vorschlag des Defekts `issues/260809-1738_*_...`, der erst messen und dann schneiden wollte. Der Grund ist das vierte Abnahmekriterium von C9, das die richtige Antwort zusagt, und Befund 8, der zeigt, dass der einzige benannte Preis des Schnitts an dieser Stelle nicht anfällt. Wer die Reihenfolge lieber hält, verschiebt S43 hinter eine Messung am laufenden Bündel; S44 und S45 laufen dann mit dem heutigen Rückfall und erfüllen das vierte Abnahmekriterium nicht.
+- [ ] Der Fenstertitel bekommt kein Stellvertretersymbol (`### Frage 17`). Der Spec stellt es frei; der Plan lässt es weg, weil es eine zweite Stelle mitbrächte, die bei jedem Wechsel nachzuziehen wäre. Wer es will, bekommt es als eine Zeile in `titel_nachziehen`.
 - [ ] Zwei Nebenbefunde aus der Bestandsaufnahme gehören nicht in diese Runde und sind hier nur genannt, damit sie nicht verlorengehen: `Sitzungsschreiber::abgleichen` hat außerhalb der Proben keinen Aufrufer, ein vorgemerkter Sitzungsstand wartet also auf die nächste Änderung oder auf das Beenden; und die drei Wörter " und Textbereiche" in der Directive des Circle-Datensatzes sind seit dem 260808-0017 überholt und zu streichen, was der Spec unter `## Abgleich mit der Circle-Directive` genau beziffert. Beides gehört dem Nutzer und dem Orchestrator, nicht diesem Plan.
