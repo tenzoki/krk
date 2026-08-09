@@ -1,15 +1,54 @@
-//! Die Kombinationsschreibweise und die eine Tabelle der Tastencodes.
+//! Die Kombinationsschreibweise, die eine Tabelle der Tastencodes und die
+//! Frage, **wonach** eine Taste nachgeschlagen wird.
 //!
-//! Zwei Dinge stehen hier, und beide genau einmal im ganzen Programm:
+//! Drei Dinge stehen hier, und jedes genau einmal im ganzen Programm:
 //!
 //! 1. **[`TASTEN`], die Tabelle der virtuellen Tastencodes.** Sie ordnet jedem
 //!    Namen der Schreibweise eine Zahl zu und sagt zu jeder Zahl, woher sie
 //!    stammt. Wer irgendwo einen Tastencode braucht, holt ihn ueber
 //!    [`code_von`] oder [`code_von_pflicht`] hier ab; eine zweite Zahl daneben
 //!    waere eine zweite Wahrheit ueber dieselbe Taste.
-//! 2. **[`Kombination`], die gelesene Form von `shift+cmd+k`.** Sie traegt die
+//! 2. **[`Tastenkennung`], wonach eine Taste nachgeschlagen wird.** Buchstaben
+//!    und Ziffern ueber das gemeldete **Zeichen**, alles uebrige ueber den
+//!    virtuellen **Tastencode**. Der naechste Abschnitt schreibt aus, warum.
+//! 3. **[`Kombination`], die gelesene Form von `shift+cmd+k`.** Sie traegt die
 //!    Taste und die normalisierte Maske und schreibt sich ueber [`fmt::Display`]
 //!    wieder in genau die Zeichenkette zurueck, aus der sie gelesen wurde.
+//!
+//! # Zwei Nachschlagarten, und warum es zwei sein muessen
+//!
+//! Ein virtueller Tastencode benennt eine **Stelle** auf der Tastatur und kein
+//! Zeichen. Fuer die Funktionstasten und den Pfeilblock ist das die richtige
+//! Groesse: F3 liefert denselben Code auf jeder Tastaturbelegung und auch dann,
+//! wenn der Nutzer fn haelt. Fuer die Buchstaben ist es die falsche. Die Stelle
+//! `kVK_ANSI_Y` traegt den Code 16, und auf einer deutschen Tastatur steht dort
+//! ein **Z**; wer die Taste mit der Aufschrift Y drueckt, erzeugt Code 6. Ein
+//! `cmd+y` ueber den Code lag damit unter der falschen Aufschrift, und `cmd+z`
+//! aus dem Hauptmenue kollidierte mit ihm auf einer Taste
+//! (`circles/260807-2116-eingebauter-editor-mit-textmarken/issues/
+//! 260809-1642_*_auf-einer-deutschen-tastatur-schluckt-cmd-y-das-rueckgaengig-des-editors.md`).
+//!
+//! **Der Zuschnitt beendet eine Asymmetrie, statt eine zu schaffen.** Das
+//! Hauptmenue schlaegt seit S13b bereits ueber das Zeichen nach:
+//! `NSMenuItem.keyEquivalent` nimmt eine **Zeichenkette** entgegen
+//! (`crates/krk-ui/src/appkit/menue.rs:322-342`, die Zuordnung in
+//! `zeichen_der_taste` dort trennt einbuchstabige Namen von den uebrigen genau
+//! wie [`Taste::kennung`] hier), und genau deshalb wirken `cmd+c` und `cmd+v`
+//! auf jeder Tastaturbelegung an der beschrifteten Stelle. Die zeichenbasierte
+//! Nachschlagart ist im Projekt keine fremde Mechanik, sondern die, die vier
+//! Funktionen schon tragen; bis zum 260809 trug der Ereignisabgriff sie nur
+//! nicht mit.
+//!
+//! **Die Festlegung aus C3 der Runde 1 bleibt und wird gegenstandslos.** KRK
+//! erkennt die Tastaturbauart nicht und liefert keine geraeteabhaengige
+//! Vorbelegung aus; es liest zu jedem Tastendruck das Zeichen, das das System
+//! ohnehin meldet, und braucht dafuer nicht zu wissen, welche Tastatur davor
+//! steht. Jede Kombination, die etwas ausloest, steht weiter in der Belegung,
+//! wird von der Konflikterkennung gesehen und ist umbelegbar.
+//!
+//! Nutzerentscheid vom 260808-0155,
+//! `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/
+//! 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
 //!
 //! # Die Schreibweise
 //!
@@ -99,12 +138,37 @@ impl Herkunft {
     }
 }
 
+/// Wonach ein Tastendruck nachgeschlagen wird.
+///
+/// Die eine Stelle, an der die beiden Nachschlagarten des Modulkopfes
+/// auseinandergehen. Sie sind **verschieden und vollstaendig**: jede Taste der
+/// Tabelle traegt genau eine der beiden Kennungen, und zwei Varianten sind nie
+/// gleich. Genau das haelt sie auseinander, wo eine Tastaturbelegung sie
+/// kreuzt: auf einer franzoesischen Tastatur meldet die Stelle
+/// `kVK_ANSI_Semicolon` ein `m`, und die Stelle `kVK_ANSI_M` meldet ein Komma.
+/// Die erste findet ueber [`Tastenkennung::Zeichen`] die Taste `m`; die zweite
+/// traegt kein Zeichen der Schreibweise, faellt auf
+/// [`Tastenkennung::Code`] und findet nichts — statt ueber ihren Code 46
+/// dieselbe Taste `m` ein zweites Mal zu treffen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Tastenkennung {
+    /// Ueber das gemeldete Zeichen: die Buchstaben und die Ziffern.
+    ///
+    /// Immer ein ASCII-Kleinbuchstabe oder eine ASCII-Ziffer;
+    /// [`zeichen_als_kennung`] stellt das fuer jeden Weg hierher sicher.
+    Zeichen(char),
+    /// Ueber den virtuellen Tastencode: die Funktionstasten, der Pfeilblock und
+    /// die Steuertasten.
+    Code(u16),
+}
+
 /// Ein Eintrag der Tastentabelle: ein Name der Schreibweise, sein Tastencode
 /// und dessen Herkunft.
 ///
 /// Ein virtueller Tastencode benennt die **Stelle** auf der Tastatur und nicht
-/// das Zeichen. Er ist damit unabhaengig von der Tastaturbelegung des Systems,
-/// und genau deshalb belegt KRK ihn und nicht das gemeldete Zeichen (C3).
+/// das Zeichen. Fuer die Funktionstasten ist das die richtige Groesse, fuer die
+/// Buchstaben nicht; welche der beiden Kennungen ein Eintrag traegt, sagt
+/// [`Taste::kennung`], und der Modulkopf sagt, warum es zwei sind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Taste {
     /// Der Name, unter dem die Schreibweise diese Taste kennt.
@@ -113,6 +177,33 @@ pub struct Taste {
     pub code: u16,
     /// Woher der Tastencode stammt.
     pub herkunft: Herkunft,
+}
+
+impl Taste {
+    /// Wonach diese Taste nachgeschlagen wird.
+    ///
+    /// **Eine Regel und keine Liste von Sonderfaellen.** Ein einbuchstabiger
+    /// Name aus einem ASCII-Kleinbuchstaben oder einer ASCII-Ziffer ist sein
+    /// eigenes Zeichen; jeder andere Name benennt eine Stelle. Das deckt die
+    /// Tabelle vollstaendig ab, weil ihre Namen genau in diese beiden Sorten
+    /// zerfallen, und es ist dieselbe Regel, nach der
+    /// `zeichen_der_taste` in `crates/krk-ui/src/appkit/menue.rs` seit S13b das
+    /// Menuekuerzel bildet.
+    pub const fn kennung(self) -> Tastenkennung {
+        let name = self.name.as_bytes();
+        if name.len() == 1 && (name[0].is_ascii_lowercase() || name[0].is_ascii_digit()) {
+            return Tastenkennung::Zeichen(name[0] as char);
+        }
+        Tastenkennung::Code(self.code)
+    }
+
+    /// Das Zeichen dieser Taste, falls sie ueber eines nachgeschlagen wird.
+    pub const fn zeichen(self) -> Option<char> {
+        match self.kennung() {
+            Tastenkennung::Zeichen(zeichen) => Some(zeichen),
+            Tastenkennung::Code(_) => None,
+        }
+    }
 }
 
 /// Ein gemessener Eintrag der Tabelle.
@@ -270,14 +361,62 @@ pub const fn code_von_pflicht(name: &str) -> u16 {
     }
 }
 
+/// Das Zeichen der Taste an dieser Stelle, falls die Tabelle sie kennt und
+/// ueber ein Zeichen nachschlaegt.
+///
+/// Zur Uebersetzungszeit auswertbar, damit [`Tastendruck::neu`] es sein bleibt.
+pub const fn zeichen_der_stelle(code: u16) -> Option<char> {
+    let mut stelle = 0;
+    while stelle < TASTEN.len() {
+        if TASTEN[stelle].code == code {
+            return TASTEN[stelle].zeichen();
+        }
+        stelle += 1;
+    }
+    None
+}
+
+/// Das Zeichen, unter dem ein gemeldetes Zeichen nachgeschlagen wird.
+///
+/// **Die eine Stelle, die ein gemeldetes Zeichen auf die Form der Tabelle
+/// bringt.** Sie beantwortet zwei Fragen auf einmal: taugt dieses Zeichen
+/// ueberhaupt als Kennung, und in welcher Schreibung. Gross- und Kleinbuchstabe
+/// sind dieselbe Taste — die Umschalttaste steht als eigenes Bit in der Maske,
+/// und ein `Y` neben einem `y` waeren zwei Eintraege fuer eine Taste. Alles
+/// ausserhalb von ASCII faellt weg: die Tabelle fuehrt keine Umlaute und keine
+/// Satzzeichen (siehe [`TASTEN`]), und die Funktionstasten melden Zeichen aus
+/// dem privaten Bereich von Unicode, die zur Stelle und nicht zum Zeichen
+/// gehoeren.
+///
+/// `None` heisst deshalb: dieser Tastendruck wird ueber seinen Tastencode
+/// nachgeschlagen.
+pub fn zeichen_als_kennung(gemeldet: char) -> Option<char> {
+    let klein = gemeldet.to_ascii_lowercase();
+    klein.is_ascii_alphanumeric().then_some(klein)
+}
+
 /// Der Tabelleneintrag zu einem Namen der Schreibweise.
 pub fn taste_mit_namen(name: &str) -> Option<Taste> {
     TASTEN.into_iter().find(|taste| taste.name == name)
 }
 
 /// Der Tabelleneintrag zu einem Tastencode.
+///
+/// **Ohne Ruecksicht darauf, wonach die gefundene Taste nachgeschlagen wird.**
+/// Wer eine Taste sucht, weil ein Tastendruck sie ausgeloest hat, nimmt
+/// [`Kombination::aus_tastendruck`]; das fragt zuerst die Kennung und findet
+/// eine Buchstabentaste nicht ueber ihre Stelle.
 pub fn taste_mit_code(code: u16) -> Option<Taste> {
     TASTEN.into_iter().find(|taste| taste.code == code)
+}
+
+/// Der Tabelleneintrag zu einem gemeldeten Zeichen.
+///
+/// Das Zeichen geht durch [`zeichen_als_kennung`]; ein `Y` findet damit
+/// dieselbe Taste wie ein `y`.
+pub fn taste_mit_zeichen(gemeldet: char) -> Option<Taste> {
+    let kennung = Tastenkennung::Zeichen(zeichen_als_kennung(gemeldet)?);
+    TASTEN.into_iter().find(|taste| taste.kennung() == kennung)
 }
 
 /// Warum eine Zeichenkette keine Kombination ergibt.
@@ -415,8 +554,25 @@ impl Kombination {
     /// laesst sich deshalb nicht in `keymap.toml` ablegen. Der Aufrufer sagt das
     /// dem Nutzer, statt eine Zeile zu schreiben, die niemand wieder einlesen
     /// kann.
+    ///
+    /// **Gesucht wird ueber die Kennung und nicht ueber den Tastencode.** Das
+    /// ist die Bedingung dafuer, dass die Belegungsansicht aus C3 auf jeder
+    /// Tastaturbelegung die Taste aufschreibt, die der Nutzer gedrueckt hat:
+    /// wer auf einer deutschen Tastatur die Taste mit der Aufschrift Y drueckt,
+    /// bekommt `y` in seine `keymap.toml` und nicht `z`.
+    ///
+    /// Die Stellensuche laesst dabei die Buchstaben und Ziffern **aus**. Ein
+    /// Tastendruck ohne brauchbares Zeichen darf nicht ueber seinen Code bei
+    /// einer Taste landen, die selbst ueber ihr Zeichen nachgeschlagen wird;
+    /// [`Tastenkennung`] fuehrt den Fall aus, in dem das ohne diese Zeile
+    /// einträte.
     pub fn aus_tastendruck(druck: Tastendruck) -> Option<Self> {
-        taste_mit_code(druck.code).map(|taste| Self::neu(taste, druck.maske))
+        let taste = match druck.kennung() {
+            Tastenkennung::Zeichen(zeichen) => taste_mit_zeichen(zeichen),
+            Tastenkennung::Code(code) => taste_mit_code(code)
+                .filter(|taste| matches!(taste.kennung(), Tastenkennung::Code(_))),
+        }?;
+        Some(Self::neu(taste, druck.maske))
     }
 
     /// Der Tabelleneintrag der Taste.
@@ -430,8 +586,16 @@ impl Kombination {
     }
 
     /// Der Tastendruck, unter dem diese Kombination nachgeschlagen wird.
+    ///
+    /// Er traegt beides: die Stelle und, fuer eine Buchstaben- oder
+    /// Zifferntaste, das Zeichen. Welches von beidem der Nachschlag vergleicht,
+    /// entscheidet [`Tastendruck::kennung`].
     pub const fn tastendruck(self) -> Tastendruck {
-        Tastendruck::neu(self.taste.code, self.maske)
+        Tastendruck {
+            code: self.taste.code,
+            zeichen: self.taste.zeichen(),
+            maske: self.maske,
+        }
     }
 }
 
@@ -486,6 +650,80 @@ mod tests {
         for ziffer in '0'..='9' {
             assert!(code_von(&ziffer.to_string()).is_some(), "{ziffer} fehlt");
         }
+    }
+
+    /// Die Fallunterscheidung der beiden Nachschlagarten ist verschieden und
+    /// vollstaendig, und die Tabelle zerfaellt genau in die beiden Sorten.
+    #[test]
+    fn jede_taste_traegt_genau_eine_kennung_und_keine_zwei_dieselbe() {
+        for (stelle, taste) in TASTEN.into_iter().enumerate() {
+            match taste.kennung() {
+                Tastenkennung::Zeichen(zeichen) => {
+                    assert_eq!(
+                        taste.name,
+                        zeichen.to_string(),
+                        "{} wird ueber ein Zeichen nachgeschlagen, das nicht sein Name ist",
+                        taste.name
+                    );
+                    assert!(zeichen.is_ascii_alphanumeric() && !zeichen.is_ascii_uppercase());
+                }
+                Tastenkennung::Code(code) => {
+                    assert_eq!(code, taste.code);
+                    assert!(
+                        taste.name.len() > 1,
+                        "{} ist einbuchstabig und wird trotzdem ueber die Stelle nachgeschlagen",
+                        taste.name
+                    );
+                }
+            }
+            // Zwei Tasten mit derselben Kennung waeren zwei Funktionen auf
+            // einem Tastendruck, die die Konflikterkennung nicht sieht.
+            for andere in TASTEN.into_iter().skip(stelle + 1) {
+                assert_ne!(
+                    taste.kennung(),
+                    andere.kennung(),
+                    "{} und {} werden unter derselben Kennung nachgeschlagen",
+                    taste.name,
+                    andere.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn buchstaben_und_ziffern_gehen_ueber_das_zeichen_die_uebrigen_ueber_den_code() {
+        for zeichen in ('a'..='z').chain('0'..='9') {
+            let Some(taste) = taste_mit_zeichen(zeichen) else {
+                panic!("die Tabelle findet {zeichen} nicht ueber das Zeichen");
+            };
+            assert_eq!(taste.kennung(), Tastenkennung::Zeichen(zeichen));
+            // Gross geschrieben ist es dieselbe Taste: die Umschalttaste steht
+            // in der Maske und nicht im Zeichen.
+            assert_eq!(taste_mit_zeichen(zeichen.to_ascii_uppercase()), Some(taste));
+        }
+        for name in ["f3", "down", "delete", "space", "esc"] {
+            let Some(taste) = taste_mit_namen(name) else {
+                panic!("die Tabelle kennt {name} nicht");
+            };
+            assert_eq!(taste.kennung(), Tastenkennung::Code(taste.code));
+            assert_eq!(taste.zeichen(), None);
+        }
+    }
+
+    /// Was als Kennung taugt, und was auf den Tastencode zurueckfaellt.
+    #[test]
+    fn nur_ascii_buchstaben_und_ziffern_taugen_als_zeichenkennung() {
+        assert_eq!(zeichen_als_kennung('y'), Some('y'));
+        assert_eq!(zeichen_als_kennung('Y'), Some('y'));
+        assert_eq!(zeichen_als_kennung('7'), Some('7'));
+        // Ein Umlaut: die Tabelle fuehrt ihn nicht, siehe ihren Kopf.
+        assert_eq!(zeichen_als_kennung('ü'), None);
+        // Das Zeichen, das AppKit einer F3 beilegt (`NSF3FunctionKey`). Es
+        // gehoert zur Stelle und nicht zum Zeichen.
+        assert_eq!(zeichen_als_kennung('\u{F706}'), None);
+        // Ein Satzzeichen, etwa das, das die Stelle `kVK_ANSI_M` auf einer
+        // franzoesischen Tastatur meldet.
+        assert_eq!(zeichen_als_kennung(','), None);
     }
 
     #[test]
@@ -571,6 +809,33 @@ mod tests {
         // Tastencode 10 ist auf einer deutschen Tastatur die Taste links neben
         // der 1; die Schreibweise kennt keinen Namen dafuer.
         let druck = Tastendruck::neu(10, ModMaske::LEER);
+        assert_eq!(Kombination::aus_tastendruck(druck), None);
+    }
+
+    /// Die Belegungsansicht schreibt auf, was auf der Taste steht, und nicht,
+    /// wo sie liegt.
+    #[test]
+    fn ein_druck_wird_ueber_sein_zeichen_zur_kombination_und_nicht_ueber_seine_stelle() {
+        // Eine deutsche Tastatur: die Taste mit der Aufschrift Y liegt auf der
+        // Stelle `kVK_ANSI_Z` (Code 6) und meldet ein `y`.
+        let druck = Tastendruck::aus_ereignis(
+            code_von_pflicht("z"),
+            Some('y'),
+            super::super::normalisierung::roh::BEFEHL,
+        );
+        let Some(kombination) = Kombination::aus_tastendruck(druck) else {
+            panic!("der Tastendruck ergibt keine Kombination");
+        };
+        assert_eq!(kombination.to_string(), "cmd+y");
+    }
+
+    /// Ein Tastendruck ohne brauchbares Zeichen darf nicht ueber seine Stelle
+    /// bei einer Buchstabentaste landen.
+    #[test]
+    fn eine_stelle_ohne_zeichen_findet_keine_buchstabentaste() {
+        // Auf einer franzoesischen Tastatur meldet die Stelle `kVK_ANSI_M`
+        // (Code 46) ein Komma; die Taste mit der Aufschrift M liegt anderswo.
+        let druck = Tastendruck::aus_ereignis(code_von_pflicht("m"), Some(','), 0);
         assert_eq!(Kombination::aus_tastendruck(druck), None);
     }
 }

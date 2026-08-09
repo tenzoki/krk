@@ -629,8 +629,8 @@ fn tastencode_99_trifft_dieselbe_funktion_mit_und_ohne_function() {
     // beiden Faelle nicht unterscheiden, gleich welches Ereignis ein nacktes F3
     // erzeugt.
     let belegung = Belegung::auslieferung();
-    let mit_function = Tastendruck::aus_ereignis(99, roh::FUNKTION);
-    let ohne_function = Tastendruck::aus_ereignis(99, 0);
+    let mit_function = Tastendruck::aus_ereignis(99, None, roh::FUNKTION);
+    let ohne_function = Tastendruck::aus_ereignis(99, None, 0);
 
     let Nachschlag::Funktion(mit) = belegung.nachschlag(mit_function) else {
         panic!("F3 mit gesetztem function trifft keine Funktion");
@@ -852,104 +852,170 @@ fn eine_gehaltene_zusatztaste_nimmt_der_taste_ihr_kommando() {
 // Die y-Kuerzel auf einer deutschen Tastatur
 // ---------------------------------------------------------------------------
 
-/// Warum `cmd+y` und `shift+cmd+y` am Referenzgeraet nichts ausloesen, obwohl
-/// beide belegt sind und `f3` denselben Befehl ausloest.
+/// Ein Tastendruck auf einer deutschen Tastatur, nachgestellt: die Aufschrift
+/// entscheidet und nicht die Stelle.
 ///
-/// Die Probe haelt zwei Aussagen fest, und die Erklaerung ergibt sich erst aus
-/// beiden zusammen:
+/// **Die Sache, um die es geht.** Ein virtueller Tastencode benennt eine
+/// **Stelle**. Die Stelle `kVK_ANSI_Y` traegt den Code 16, und auf einer
+/// deutschen Tastatur steht dort ein **Z**; auf `kVK_ANSI_Z` mit dem Code 6
+/// steht ein **Y**. Solange der Ereignisabgriff auch Buchstaben ueber die
+/// Stelle nachschlug, lag `cmd+y` unter der Aufschrift Z, und `cmd+z` aus dem
+/// Hauptmenue, das ueber das Zeichen anschlaegt, stiess mit ihm auf einer
+/// Taste zusammen (`issues/
+/// 260809-1642_*_auf-einer-deutschen-tastatur-schluckt-cmd-y-das-rueckgaengig-des-editors.md`).
 ///
-/// 1. `cmd+y` benennt die **Stelle** `kVK_ANSI_Y` mit dem Tastencode 16. KRK
-///    belegt den virtuellen Tastencode und nicht das gemeldete Zeichen; das ist
-///    die Festlegung aus C3 und der Grund, aus dem die Funktionstasten auf jeder
-///    Tastaturbelegung stimmen.
-/// 2. Die Stelle daneben, `kVK_ANSI_Z` mit dem Tastencode 6, traegt in der
-///    Auslieferungsbelegung keine Funktion, die der Ereignisabgriff zustellt,
-///    unter keiner Zusatztaste. Seit der Editor-Runde stehen dort die beiden
-///    vom Menue gehaltenen Kuerzel Cmd+Z und Shift+Cmd+Z; die schlagen ueber
-///    das Zeichen nach statt ueber die Stelle und sind von der Sache, um die
-///    es hier geht, nicht beruehrt. Die Pruefung nimmt sie deshalb aus, mit
-///    der Begruendung an der Stelle.
+/// Seit S2 gehen Buchstaben und Ziffern ueber das gemeldete Zeichen. Die Probe
+/// stellt beide Tastendruecke nach, wie der Abgriff sie meldet, und misst, was
+/// die Belegung antwortet:
 ///
-/// Auf einer deutschen Tastatur steht auf der Stelle `kVK_ANSI_Y` ein **Z** und
-/// auf `kVK_ANSI_Z` ein **Y**. Wer die Taste mit der Aufschrift Y drueckt,
-/// erzeugt also Tastencode 6, und den belegt nichts; wer die mit der Aufschrift
-/// Z drueckt, erzeugt 16 und blendet die Vorschau ein und aus. Die Ursache
-/// liegt damit nicht im Programm, sondern in der Tastaturbelegung des Geraets,
-/// die KRK nach C3 bewusst nicht ausliest.
+/// | Der Nutzer drueckt | Code | Zeichen | Erwartet |
+/// |---|---|---|---|
+/// | Taste mit der Aufschrift **Y** | 6 | `y` | `vorschau_umschalten` |
+/// | Taste mit der Aufschrift **Z** | 16 | `z` | nichts, das der Abgriff zustellt |
 ///
-/// Der Defekt dazu ist
+/// Die zweite Zeile ist die Gegenprobe zur ersten: sie zeigt, dass nicht etwa
+/// beide Tasten dieselbe Funktion treffen. Was auf ihr liegt, naemlich `cmd+z`
+/// als Rueckgaengig, haelt das Hauptmenue; der Nachschlag sieht eine zugestellte
+/// Funktion nie, und das Ereignis laeuft an das Menue weiter.
+///
+/// Der Vorgaengerdefekt ist
 /// `shared/issues/260807-2112_*_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md`,
 /// der Vorgaenger derselben Sache
 /// `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_*_cmd-y-liegt-auf-einer-deutschen-tastatur-unter-der-taste-z.md`,
-/// und die Wahl, was daraus folgt, liegt beim Nutzer:
+/// und die Entscheidung
 /// `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
 ///
-/// **Die beiden Kombinationen stehen hier ausnahmsweise hingeschrieben.** Die
-/// uebrigen Pruefungen dieser Datei suchen ihre Kombinationen in der Belegung,
-/// damit eine Umbelegung sie nicht umwirft. Hier ist es umgekehrt: die Zusage
-/// handelt von genau diesen beiden Kombinationen und von der Stelle, auf der
-/// sie liegen. Loest die y-Frage sie auf die Stelle `kVK_ANSI_Z` um, ist diese
-/// Probe rot, und das ist richtig so: dann ist die Erklaerung ueberholt und die
-/// Probe gehoert mit umgeschrieben.
+/// **Die Kombination steht hier ausnahmsweise hingeschrieben.** Die uebrigen
+/// Pruefungen dieser Datei suchen ihre Kombinationen in der Belegung, damit eine
+/// Umbelegung sie nicht umwirft. Hier ist es umgekehrt: die Zusage handelt von
+/// genau dieser Kombination und von den beiden Stellen, auf denen sie je nach
+/// Tastatur liegt.
 #[test]
-fn die_y_kuerzel_liegen_auf_kvk_ansi_y_und_die_stelle_kvk_ansi_z_ist_unbelegt() {
+fn auf_einer_deutschen_tastatur_findet_die_aufschrift_y_die_vorschau() {
     let belegung = Belegung::auslieferung();
 
-    // Erste Aussage: beide Kuerzel benennen die Stelle kVK_ANSI_Y, Code 16.
-    for text in ["cmd+y", "shift+cmd+y"] {
-        let taste = kombi(text).taste();
-        assert_eq!(
-            taste.code, 16,
-            "{text} benennt nicht mehr den Tastencode 16"
-        );
-        assert_eq!(
-            taste.herkunft.kvk(),
-            "kVK_ANSI_Y",
-            "{text} benennt nicht mehr die Stelle kVK_ANSI_Y"
-        );
-    }
-
-    // Zweite Aussage: die Stelle kVK_ANSI_Z traegt keine Funktion, die KRK
-    // selbst zustellt. Erst die Tabelle, dann die Belegung, dann der
-    // Nachschlag: die Stelle ist die erwartete, keine vom Ereignisabgriff
-    // zugestellte Funktion nennt sie, und kein Tastendruck auf ihr trifft
-    // etwas.
+    let Some(y) = parser::taste_mit_namen("y") else {
+        panic!("die Tabelle kennt die Taste \"y\" nicht");
+    };
     let Some(z) = parser::taste_mit_namen("z") else {
         panic!("die Tabelle kennt die Taste \"z\" nicht");
     };
-    assert_eq!(z.code, 6, "die Taste \"z\" benennt nicht mehr den Code 6");
-    assert_eq!(z.herkunft.kvk(), "kVK_ANSI_Z");
+    assert_eq!((y.code, y.herkunft.kvk()), (16, "kVK_ANSI_Y"));
+    assert_eq!((z.code, z.herkunft.kvk()), (6, "kVK_ANSI_Z"));
 
-    for funktion in belegung.funktionen() {
-        // Die vom Menue zugestellten Funktionen bleiben aussen vor, und der
-        // Grund ist die Sache selbst: ein `NSMenuItem` traegt sein Kuerzel als
-        // **Zeichenkette** und schlaegt damit ueber das Zeichen nach, nicht
-        // ueber die Stelle. Cmd+Z liegt auf jeder Tastaturbelegung dort, wo Z
-        // aufgedruckt ist, genau wie Cmd+C und Cmd+V es seit S13b tun. Die
-        // Zusage dieser Pruefung handelt vom Nachschlag ueber den
-        // Tastencode — dem Weg, auf dem die y-Kuerzel oben scheitern —, und der
-        // sieht eine zugestellte Funktion nie (`Belegung::nachschlag`).
-        if funktion.gehalten_von().is_some() {
-            continue;
-        }
-        for kombination in funktion.tasten() {
-            assert_ne!(
-                kombination.taste().code,
-                z.code,
-                "{} traegt mit {kombination} die Stelle kVK_ANSI_Z",
-                funktion.kennung()
-            );
-        }
-    }
+    // Die Taste mit der Aufschrift Y: sie liegt auf der Stelle kVK_ANSI_Z und
+    // meldet ein `y`.
+    let aufschrift_y = Tastendruck::aus_ereignis(z.code, Some('y'), roh::BEFEHL);
+    let Nachschlag::Funktion(getroffen) = belegung.nachschlag(aufschrift_y) else {
+        panic!("die Taste mit der Aufschrift Y trifft keine Funktion");
+    };
+    assert_eq!(getroffen.kennung(), "vorschau_umschalten");
 
-    for maske in masken_mit_zusatztaste() {
-        let kombination = Kombination::neu(z, maske);
+    // Dieselbe Taste mit Umschalt: der Fokusbefehl, der keinen zweiten Weg hat.
+    let aufschrift_y_mit_umschalt =
+        Tastendruck::aus_ereignis(z.code, Some('y'), roh::BEFEHL | roh::UMSCHALT);
+    let Nachschlag::Funktion(getroffen) = belegung.nachschlag(aufschrift_y_mit_umschalt) else {
+        panic!("die Taste mit der Aufschrift Y trifft mit Umschalt keine Funktion");
+    };
+    assert_eq!(getroffen.kennung(), "fokus_vorschau");
+
+    // Die Gegenprobe: die Taste mit der Aufschrift Z liegt auf der Stelle
+    // kVK_ANSI_Y und meldet ein `z`. Der Abgriff findet dort nichts, und das
+    // Ereignis laeuft an das Hauptmenue, das Cmd+Z als Rueckgaengig fuehrt.
+    for maske in [roh::BEFEHL, roh::BEFEHL | roh::UMSCHALT] {
+        let aufschrift_z = Tastendruck::aus_ereignis(y.code, Some('z'), maske);
         assert_eq!(
-            belegung.nachschlag(kombination.tastendruck()),
+            belegung.nachschlag(aufschrift_z),
             Nachschlag::Unbelegt,
-            "{kombination} trifft eine Funktion"
+            "die Taste mit der Aufschrift Z trifft eine Funktion des Abgriffs"
         );
     }
+}
+
+/// Die Funktionstasten bleiben an ihrer Stelle, gleich welches Zeichen das
+/// Ereignis traegt.
+///
+/// Die andere Haelfte des Zuschnitts, und die, an der C3 der Runde 1 haengt:
+/// F3 liefert denselben Tastencode auf jeder Tastaturbelegung und auch mit
+/// gehaltener fn-Taste. Das Zeichen, das AppKit einer Funktionstaste beilegt,
+/// liegt im privaten Bereich von Unicode und taugt als Kennung nicht; der
+/// Nachschlag faellt deshalb auf die Stelle zurueck.
+#[test]
+fn eine_funktionstaste_wird_weiter_ueber_ihren_code_gefunden() {
+    let belegung = Belegung::auslieferung();
+    let Some(f3) = parser::taste_mit_namen("f3") else {
+        panic!("die Tabelle kennt die Taste \"f3\" nicht");
+    };
+
+    // Drei Formen desselben Drucks: ohne Zeichen, mit dem Zeichen, das AppKit
+    // einer F3 beilegt (`NSF3FunctionKey`), und mit gesetztem function-Bit.
+    for (gemeldet, flaggen) in [
+        (None, 0),
+        (Some('\u{F706}'), 0),
+        (Some('\u{F706}'), roh::FUNKTION),
+    ] {
+        let druck = Tastendruck::aus_ereignis(f3.code, gemeldet, flaggen);
+        assert_eq!(
+            druck.kennung(),
+            krk_core::tasten::Tastenkennung::Code(f3.code),
+            "F3 wird nicht mehr ueber ihre Stelle nachgeschlagen"
+        );
+        let Nachschlag::Funktion(getroffen) = belegung.nachschlag(druck) else {
+            panic!("F3 trifft keine Funktion");
+        };
+        assert_eq!(getroffen.kennung(), "vorschau_umschalten");
+    }
+}
+
+/// Jede Kombination der Auslieferungsbelegung wird ueber die Art
+/// nachgeschlagen, die zu ihrer Taste gehoert.
+///
+/// Die Zusage in einem Satz: **Buchstaben und Ziffern ueber das Zeichen, alles
+/// uebrige ueber den Code**, und zwar fuer jede der ausgelieferten
+/// Kombinationen und nicht fuer eine Handvoll Beispiele. Die Probe zaehlt
+/// beide Sorten mit und besteht nur, wenn beide vorkommen; sonst bestuende sie
+/// auch dann, wenn eine der beiden Nachschlagarten aus der
+/// Auslieferungsbelegung verschwaende.
+#[test]
+fn jede_ausgelieferte_kombination_traegt_die_kennung_ihrer_tastensorte() {
+    use krk_core::tasten::Tastenkennung;
+
+    let belegung = Belegung::auslieferung();
+    let (mut ueber_zeichen, mut ueber_code) = (0usize, 0usize);
+
+    for funktion in belegung.funktionen() {
+        for kombination in funktion.tasten() {
+            let taste = kombination.taste();
+            let einbuchstabig = taste.name.chars().count() == 1;
+            match taste.kennung() {
+                Tastenkennung::Zeichen(zeichen) => {
+                    assert!(
+                        einbuchstabig && zeichen.is_ascii_alphanumeric(),
+                        "{kombination} bei {} geht ueber ein Zeichen, ist aber keine \
+                         Buchstaben- oder Zifferntaste",
+                        funktion.kennung()
+                    );
+                    assert_eq!(taste.name, zeichen.to_string());
+                    ueber_zeichen += 1;
+                }
+                Tastenkennung::Code(code) => {
+                    assert!(
+                        !einbuchstabig,
+                        "{kombination} bei {} ist einbuchstabig und geht ueber die Stelle",
+                        funktion.kennung()
+                    );
+                    assert_eq!(code, taste.code);
+                    ueber_code += 1;
+                }
+            }
+        }
+    }
+
+    assert!(
+        ueber_zeichen > 0 && ueber_code > 0,
+        "die Auslieferungsbelegung kennt nur noch eine der beiden Nachschlagarten \
+         ({ueber_zeichen} ueber das Zeichen, {ueber_code} ueber die Stelle)"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1508,23 +1574,33 @@ fn die_auslieferungsbelegung_fuehrt_einundsiebzig_funktionen() {
     }
 }
 
-/// Keine Kombination, die **KRK selbst** zustellt, liegt auf den beiden
-/// Stellen, die zwischen der deutschen und der amerikanischen Belegung den
-/// Platz tauschen.
+/// Keine Kombination, die **KRK selbst** zustellt, liegt auf `y` oder `z`,
+/// ausser den beiden Vorschau-Kuerzeln aus der Runde 1.
 ///
-/// KRK belegt nach C3 den virtuellen Tastencode, also die Stelle auf der
-/// Tastatur. `kVK_ANSI_Y` und `kVK_ANSI_Z` sind die einzigen beiden Stellen,
-/// deren Aufschrift zwischen den beiden Belegungen wandert; eine Funktion dort
-/// ist auf einer deutschen Tastatur nicht da, wo sie hingeschrieben ist. Genau
-/// daran haengt der offene Defekt zu `cmd+y` und `shift+cmd+y`, und die elf
-/// Editor-Funktionen sind deshalb um beide Stellen herumgelegt.
+/// **Der Grund dieser Zusage ist mit S2 weggefallen, die Zusage selbst steht
+/// noch.** Sie ist in S6 entstanden, als der Ereignisabgriff auch Buchstaben
+/// ueber die **Stelle** nachschlug: `kVK_ANSI_Y` und `kVK_ANSI_Z` tauschen
+/// zwischen der deutschen und der amerikanischen Belegung den Platz, eine
+/// Funktion dort lag also nicht unter ihrer Aufschrift, und die elf
+/// Editor-Funktionen sind deshalb um beide Stellen herumgelegt worden. Seit S2
+/// gehen Buchstaben ueber das gemeldete Zeichen, und keine Stelle wandert mehr:
+/// `cmd+y` liegt auf jeder Tastaturbelegung unter der Aufschrift Y, so wie
+/// `cmd+z` es ueber das Hauptmenue schon tut
+/// (`auf_einer_deutschen_tastatur_findet_die_aufschrift_y_die_vorschau`).
 ///
-/// **Zwei Ausnahmen, und sie sind der Beleg fuer die Regel und nicht ihr
-/// Bruch.** `vorschau_umschalten` und `fokus_vorschau` tragen die y-Kuerzel aus
-/// der Runde 1 und sind der Gegenstand jenes Defekts; wo sie hingehoeren,
-/// entscheidet der Nutzer. Die vom Menue gehaltenen Funktionen zaehlen gar
-/// nicht mit: ihr Kuerzel steht als Zeichenkette am `NSMenuItem` und wird ueber
-/// das **Zeichen** aufgeloest, nicht ueber die Stelle.
+/// Die Pruefung bleibt stehen, bis der Plan nachzieht. Der Satz aus Befund 4
+/// und das Abnahmekriterium von S6, aus denen sie stammt, haengen an einer
+/// offenen Entscheidung des Nutzers
+/// (`issues/260809-1527_*_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`);
+/// sie hier vorwegzunehmen hiesse, eine Zusage stillschweigend fallen zu
+/// lassen, ueber die noch entschieden wird. Dass sie ihre Begruendung verloren
+/// hat, haelt
+/// `issues/260809-1746_*_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md`
+/// fest.
+///
+/// Die vom Menue gehaltenen Funktionen zaehlen nicht mit: ihr Kuerzel steht als
+/// Zeichenkette am `NSMenuItem`, und sie kommen im Nachschlag des Abgriffs
+/// ohnehin nicht vor.
 #[test]
 fn keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen() {
     let belegung = Belegung::auslieferung();
@@ -1537,7 +1613,9 @@ fn keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen() {
                 .code
         })
         .collect();
-    // Die beiden Altlasten aus der Runde 1, ueber die der Nutzer entscheidet.
+    // Die beiden Kuerzel aus der Runde 1. Sie standen bis S2 hier als
+    // Altlasten, ueber die der Nutzer noch zu entscheiden hatte; er hat am
+    // 260808-0155 entschieden, und seither liegen sie unter ihrer Aufschrift.
     let bekannt = ["vorschau_umschalten", "fokus_vorschau"];
 
     for funktion in belegung.funktionen() {
@@ -1547,8 +1625,8 @@ fn keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen() {
         for kombination in funktion.tasten() {
             assert!(
                 !stellen.contains(&kombination.taste().code),
-                "{} liegt mit {kombination} auf einer Stelle, die auf einer \
-                 deutschen Tastatur wandert",
+                "{} liegt mit {kombination} auf einer der beiden Stellen, um die \
+                 der Plan die neuen Kombinationen herumgelegt hat",
                 funktion.kennung()
             );
         }

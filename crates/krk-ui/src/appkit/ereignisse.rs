@@ -20,7 +20,7 @@
 //! ```text
 //! NSEvent
 //!    │
-//!    ├─ Tastendruck::aus_ereignis ..... die Maske ist normalisiert
+//!    ├─ Tastendruck::aus_ereignis ..... Maske normalisiert, Zeichen gemeldet
 //!    │
 //!    ├─ Faenger der Belegungsansicht .. nimmt er auf: Ereignis verbraucht
 //!    │
@@ -121,13 +121,34 @@
 //! weiter, statt ins Leere geschluckt zu werden; sonst naehme der Abgriff dem
 //! Menue ein Kuerzel ab, ohne etwas an seine Stelle zu setzen.
 //!
-//! # Die Sprungmarke kommt als Zeichen und nicht als Kommando
+//! # Zwei Zeichen aus demselben Ereignis, und sie beantworten zwei Fragen
 //!
-//! Eine Taste ohne Zusatztaste, die keiner Funktion gehoert, faellt im Kern auf
-//! [`Nachschlag::Sprungmarke`]. Der Kern kennt allein den Tastencode und weiss
-//! nicht, welches Zeichen darauf liegt; das weiss das Ereignis. Der Abgriff
-//! reicht deshalb das Zeichen weiter, und die Regel, welche Zeichen ein
-//! Dateiname tragen kann, steht in `krk_core::verzeichnis::sprungmarke`.
+//! Seit dem 260809 liest der Abgriff aus jedem Ereignis **zwei** Zeichen, und
+//! sie sind nicht dasselbe:
+//!
+//! | Frage | Woher | Wofuer |
+//! |---|---|---|
+//! | Welche **Taste** wurde gedrueckt? | `charactersByApplyingModifiers:` mit leerer Maske, siehe [`gemeldetes_zeichen`] | der Nachschlag |
+//! | Welches **Zeichen** hat der Nutzer getippt? | `characters`, siehe [`getipptes_zeichen`] | die Sprungmarke aus C2 |
+//!
+//! Die erste Frage ist neu. Bis dahin schlug der Abgriff auch Buchstaben ueber
+//! den virtuellen Tastencode nach, und ein Tastencode benennt die **Stelle** auf
+//! der Tastatur: auf einer deutschen Tastatur lag `cmd+y` unter der Aufschrift
+//! Z, und `cmd+z` aus dem Hauptmenue stiess mit ihm zusammen. Buchstaben und
+//! Ziffern gehen seither ueber das gemeldete Zeichen, die Funktionstasten
+//! weiter ueber den Code. Die Regel und ihre Begruendung stehen im Kern
+//! (`krk_core::tasten::parser`, `Tastenkennung`); hier steht nur, woher das
+//! Zeichen kommt. Nutzerentscheid vom 260808-0155, `decisions/
+//! 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
+//!
+//! Die zweite Frage bleibt, wie sie war. Eine Taste ohne Zusatztaste, die keiner
+//! Funktion gehoert, faellt im Kern auf [`Nachschlag::Sprungmarke`]; welches
+//! Zeichen in den Suchpuffer geht, weiss das Ereignis, und die Regel, welche
+//! Zeichen ein Dateiname tragen kann, steht in
+//! `krk_core::verzeichnis::sprungmarke`. Getippt wird, was auf dem Bildschirm
+//! stuende, samt Grossschreibung; nachgeschlagen wird die Taste. Ein
+//! gemeinsames Zeichen fuer beides waere fuer eine der beiden Fragen die
+//! falsche Antwort.
 
 use std::ptr::NonNull;
 
@@ -297,6 +318,13 @@ pub fn pfeil_ab_senden(mtm: MainThreadMarker, fenster: &NSWindow) {
 /// Absicht: die Normalisierung aus S7 streift sie vor dem Nachschlag ohnehin
 /// ab, und das Ereignis wird vom eigenen Abgriff geschluckt, bevor ein
 /// anderer Abnehmer sie saehe.
+///
+/// **Das Zeichen kommt mit, wo die Kombination eines traegt.** Buchstaben und
+/// Ziffern werden ueber das gemeldete Zeichen nachgeschlagen; ein selbst
+/// gebautes Ereignis ohne Zeichen faende die Funktion nicht mehr, sobald der
+/// Nutzer eine gemessene Funktion auf einen Buchstaben umbelegt. Die
+/// ausgelieferte Belegung fuehrt die beiden gemessenen Funktionen heute auf
+/// `f5` und `down`; die Zeile haengt nicht daran.
 pub fn funktion_senden(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
@@ -313,8 +341,30 @@ pub fn funktion_senden(
         )
     })?;
     let druck = kombination.tastendruck();
-    ereignis_senden(mtm, fenster, druck.code, rohe_flaggen(druck.maske), "");
+    ereignis_senden(
+        mtm,
+        fenster,
+        druck.code,
+        rohe_flaggen(druck.maske),
+        &zeichen_des_ereignisses(kombination),
+    );
     Ok(())
+}
+
+/// Die Zeichenkette, die ein selbst gebautes Ereignis fuer diese Kombination
+/// traegt.
+///
+/// Leer fuer jede Taste, die ueber ihre Stelle nachgeschlagen wird: eine
+/// Funktionstaste meldet ein Zeichen aus dem privaten Bereich von Unicode, und
+/// es in das Ereignis zu schreiben hiesse, eine Angabe zu erfinden, die
+/// niemand liest. Fuer eine Buchstaben- oder Zifferntaste steht hier genau das
+/// Zeichen, unter dem der Nachschlag sie sucht.
+fn zeichen_des_ereignisses(kombination: Kombination) -> String {
+    kombination
+        .taste()
+        .zeichen()
+        .map(String::from)
+        .unwrap_or_default()
 }
 
 /// Die AppKit-Zusatztastenmaske zu einer normalisierten Maske des Kerns.
@@ -380,7 +430,11 @@ fn behandeln(
     ereignis: &NSEvent,
     protokoll: bool,
 ) -> bool {
-    let druck = Tastendruck::aus_ereignis(ereignis.keyCode(), ereignis.modifierFlags().0 as u64);
+    let druck = Tastendruck::aus_ereignis(
+        ereignis.keyCode(),
+        gemeldetes_zeichen(ereignis),
+        ereignis.modifierFlags().0 as u64,
+    );
 
     // Die Aufnahme der Belegungsansicht, vor allem anderen. Siehe den
     // Modulkopf: waehrend der Aufnahme ist der Tastendruck Eingabe und kein
@@ -458,15 +512,51 @@ fn ersthelfer_gehoert_appkit(
         || ersthelfer.isKindOfClass(NSText::class())
 }
 
+/// Das Zeichen, das die gedrueckte Taste **ohne Zusatztasten** meldet.
+///
+/// Die eine Stelle, an der die Tastaturbelegung des Geraets in den Nachschlag
+/// eingeht. `charactersByApplyingModifiers:` beantwortet dieselbe Frage, die
+/// `NSMenuItem.keyEquivalent` fuer das Hauptmenue schon beantwortet: welches
+/// Zeichen steht auf dieser Taste? Mit einer leeren Maske gefragt, faellt
+/// dabei auch die Umschalttaste weg, und `shift+cmd+1` meldet die `1` und nicht
+/// das Ausrufezeichen, das darueber steht.
+///
+/// **Genommen wird das erste Zeichen.** Eine Taste liefert in aller Regel genau
+/// eines; eine Folge aus mehreren stammt von einer Eingabemethode und ist kein
+/// Tastenbefehl. Was davon als Kennung taugt, entscheidet danach
+/// `krk_core::tasten::parser::zeichen_als_kennung`; hier wird nichts gefiltert
+/// und nichts umgeschrieben.
+///
+/// **Der zweite Weg ist fuer die selbst gebauten Ereignisse.** AppKit
+/// beantwortet `charactersByApplyingModifiers:` aus der Tastaturbelegung; fuer
+/// ein Ereignis aus [`ereignis_senden`], das KRK selbst zusammensetzt, steht
+/// die Antwort in den Zeichenketten, die es mitbekommen hat. Es ist dieselbe
+/// Frage an dieselbe Taste, nicht ein zweites Verfahren:
+/// `charactersIgnoringModifiers` ist die aeltere, groebere Form derselben
+/// Auskunft.
+fn gemeldetes_zeichen(ereignis: &NSEvent) -> Option<char> {
+    erstes_zeichen(ereignis.charactersByApplyingModifiers(NSEventModifierFlags::empty()))
+        .or_else(|| erstes_zeichen(ereignis.charactersIgnoringModifiers()))
+}
+
+/// Das erste Zeichen einer AppKit-Zeichenkette, falls sie eines traegt.
+fn erstes_zeichen(text: Option<Retained<NSString>>) -> Option<char> {
+    text?.to_string().chars().next()
+}
+
 /// Das Zeichen, das dieses Ereignis traegt.
+///
+/// Fuer die Sprungmarke aus C2, und deshalb ueber `characters` und nicht ueber
+/// [`gemeldetes_zeichen`]: getippt wird, was auf dem Bildschirm stuende, samt
+/// Grossschreibung. Der Nachschlag fragt die andere Frage, naemlich welche
+/// Taste gedrueckt wurde.
 ///
 /// `None` fuer ein Ereignis ohne Zeichen, etwa eine reine Zusatztaste. Genommen
 /// wird das **erste** Zeichen: eine Taste liefert in aller Regel genau eines,
 /// und eine Folge aus mehreren stammt von einer Eingabemethode, deren Ergebnis
 /// nicht in einen Suchpuffer gehoert.
 fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
-    let zeichen = ereignis.characters()?;
-    zeichen.to_string().chars().next()
+    erstes_zeichen(ereignis.characters())
 }
 
 /// Schreibt eine Zeile des Modus `--tasten-protokoll`.
@@ -476,8 +566,12 @@ fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
 /// Buendel bekommt von LaunchServices keine.
 ///
 /// Die Zeile nennt den Tastencode, weil die Abnahme von Schritt 7 daran haengt,
-/// und daneben die Kombination in der Schreibweise von `keymap.toml`, damit der
-/// Nutzer sie von hier in seine Belegung uebernehmen kann.
+/// daneben das gemeldete Zeichen, weil der Nachschlag fuer Buchstaben und
+/// Ziffern daran haengt, und die Kombination in der Schreibweise von
+/// `keymap.toml`, damit der Nutzer sie von hier in seine Belegung uebernehmen
+/// kann. Auf einer deutschen Tastatur laufen die ersten beiden auseinander, und
+/// genau das soll die Zeile zeigen: die Taste mit der Aufschrift Y meldet
+/// `tastencode=6` und `zeichen=y`.
 fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
     let kombination = match Kombination::aus_tastendruck(druck) {
         Some(kombination) => kombination.to_string(),
@@ -488,8 +582,12 @@ fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
         Nachschlag::Sprungmarke => "(Sprungmarke)".to_owned(),
         Nachschlag::Unbelegt => "(unbelegt)".to_owned(),
     };
+    let zeichen = match druck.zeichen {
+        Some(zeichen) => zeichen.to_string(),
+        None => "(keins)".to_owned(),
+    };
     println!(
-        "tastencode={} maske={} kombination={kombination} funktion={funktion}",
+        "tastencode={} zeichen={zeichen} maske={} kombination={kombination} funktion={funktion}",
         druck.code, druck.maske
     );
 }
@@ -556,7 +654,7 @@ mod tests {
     fn die_maske_eines_pfeils_kommt_leer_im_kern_an() {
         let wie_appkit_es_liefert =
             (NSEventModifierFlags::Function | NSEventModifierFlags::NumericPad).0 as u64;
-        let druck = Tastendruck::aus_ereignis(CODE_PFEIL_AB, wie_appkit_es_liefert);
+        let druck = Tastendruck::aus_ereignis(CODE_PFEIL_AB, None, wie_appkit_es_liefert);
 
         assert!(druck.maske.ist_leer());
         let belegung = Belegung::auslieferung();
@@ -566,6 +664,63 @@ mod tests {
         assert_eq!(
             funktion.kommando(),
             Some(krk_core::tasten::Kommando::AuswahlRunter)
+        );
+    }
+
+    /// Ein selbst gesendetes Ereignis findet seine Funktion wieder, auch wenn
+    /// sie auf einem Buchstaben liegt.
+    ///
+    /// Der Rundlauf ohne AppKit: die Kombination geht ueber
+    /// [`zeichen_des_ereignisses`] und [`rohe_flaggen`] in die Angaben, die
+    /// [`ereignis_senden`] in das Ereignis schreibt, und von dort so zurueck in
+    /// den Kern, wie [`behandeln`] sie wieder herausliest. Am Ende steht
+    /// dieselbe Funktion.
+    ///
+    /// **Was hier nicht gemessen ist.** Ob `charactersByApplyingModifiers:` an
+    /// einem selbst gebauten Ereignis antwortet, sagt diese Pruefung nicht: ein
+    /// `NSEvent` laesst sich in ihr nicht bauen, weil AppKit dafuer den
+    /// Hauptfaden und eine laufende Ereignisschleife braucht, und der Versuch
+    /// haelt den Testlauf an. Gemessen ist der zweite Weg aus
+    /// [`gemeldetes_zeichen`], `charactersIgnoringModifiers`, und der liest
+    /// genau die Zeichenkette zurueck, die das Ereignis mitbekommen hat. Der
+    /// erste Weg kann daneben nur dasselbe liefern oder nichts.
+    ///
+    /// Die Kombination ist gesucht und nicht hingeschrieben: die Messstrecke
+    /// misst heute `f5` und `down`, und die Zusage handelt nicht davon.
+    #[test]
+    fn ein_gesendetes_zeichen_findet_seine_funktion_wieder() {
+        let belegung = Belegung::auslieferung();
+        let mut geprueft = 0usize;
+
+        for funktion in belegung.funktionen() {
+            if funktion.gehalten_von().is_some() {
+                continue;
+            }
+            for kombination in funktion.tasten() {
+                if kombination.taste().zeichen().is_none() {
+                    continue;
+                }
+                let text = zeichen_des_ereignisses(*kombination);
+                let druck = Tastendruck::aus_ereignis(
+                    kombination.taste().code,
+                    text.chars().next(),
+                    rohe_flaggen(kombination.maske()).0 as u64,
+                );
+                let Nachschlag::Funktion(getroffen) = belegung.nachschlag(druck) else {
+                    panic!("{kombination} findet als gesendetes Ereignis keine Funktion");
+                };
+                assert_eq!(
+                    getroffen.kennung(),
+                    funktion.kennung(),
+                    "{kombination} findet als gesendetes Ereignis eine andere Funktion"
+                );
+                geprueft += 1;
+            }
+        }
+
+        assert!(
+            geprueft > 0,
+            "die Auslieferungsbelegung fuehrt keine Kombination auf einem Buchstaben"
         );
     }
 }

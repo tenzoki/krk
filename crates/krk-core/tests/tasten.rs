@@ -41,8 +41,8 @@ fn f3_mit_und_ohne_function_ergibt_dieselbe_nachschlagemaske() {
     // `krk-core/src/tasten/normalisierung.rs` schreibt beides aus. Diese
     // Pruefung haengt nicht daran, welches Ereignis ein nacktes F3 erzeugt:
     // sie deckt beide ab.
-    let mit_function = Tastendruck::aus_ereignis(F3, roh::FUNKTION);
-    let ohne_function = Tastendruck::aus_ereignis(F3, 0);
+    let mit_function = Tastendruck::aus_ereignis(F3, None, roh::FUNKTION);
+    let ohne_function = Tastendruck::aus_ereignis(F3, None, 0);
 
     assert_eq!(mit_function.maske, ohne_function.maske);
     assert_eq!(mit_function, ohne_function);
@@ -51,7 +51,7 @@ fn f3_mit_und_ohne_function_ergibt_dieselbe_nachschlagemaske() {
 
 #[test]
 fn cmd_shift_k_behaelt_beide_bits() {
-    let druck = Tastendruck::aus_ereignis(TASTE_K, roh::BEFEHL | roh::UMSCHALT);
+    let druck = Tastendruck::aus_ereignis(TASTE_K, Some('k'), roh::BEFEHL | roh::UMSCHALT);
 
     assert!(druck.maske.enthaelt(ModMaske::BEFEHL));
     assert!(druck.maske.enthaelt(ModMaske::UMSCHALT));
@@ -96,7 +96,7 @@ fn ein_pfeil_mit_gesetztem_function_und_zehnerblock_bleibt_ein_nackter_pfeil() {
     // AppKit setzt bei den Pfeiltasten beide Bits. Kaeme eines davon in die
     // Maske, faende der Nachschlag das Kommando nicht.
     let roh_wie_appkit = roh::FUNKTION | roh::ZEHNERBLOCK;
-    let druck = Tastendruck::aus_ereignis(PFEIL_AB, roh_wie_appkit);
+    let druck = Tastendruck::aus_ereignis(PFEIL_AB, None, roh_wie_appkit);
 
     assert_eq!(druck.maske, ModMaske::LEER);
 }

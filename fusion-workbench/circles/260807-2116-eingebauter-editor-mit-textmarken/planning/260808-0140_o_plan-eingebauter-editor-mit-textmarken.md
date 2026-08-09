@@ -511,7 +511,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt die beiden Aussagen ab. Der Defekt trägt den Marker `_c_` und eine Abschlussnotiz, die beide Verdächtigen mit Datei und Zeile widerlegt und die Ursache benennt. Damit ist das vierte Abnahmekriterium von C8 eingelöst, und zwar in der einzigen Form, in der es einlösbar ist: die Ursache ist benannt und gemessen, und die Messung besagt, dass sie nicht im Programm liegt.
 - **Zusatz, ausdrücklich `Nutzerarbeit` und für die Abnahme nicht nötig:** ⌘ und die Taste mit der Aufschrift **Z** drücken. Blendet die Vorschau ein und aus, ist die Erklärung am laufenden Bündel bestätigt. Das dauert eine Minute und hängt an keinem Schritt.
 
-#### 2. **Die gewählte Auflösung der y-Frage umsetzen**
+#### 2. [DONE] **Die gewählte Auflösung der y-Frage umsetzen**
 
 - Ausführender: `coder`
 - Dateien: je nach Antwort; bei Weg 2 `resources/default-keymap.toml` (erweitert: zwei Tastenlisten), bei Weg 3 zusätzlich `crates/krk-core/src/tasten/parser.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/appkit/ereignisse.rs`; bei Weg 1 keine Datei am Programm, sondern `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md` (erweitert: die beiden ersten Abnahmekriterien von C8)

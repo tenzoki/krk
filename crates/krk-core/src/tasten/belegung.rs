@@ -38,8 +38,17 @@
 //! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist die Sprungmarke aus C2:
 //! eine Taste **ohne** Zusatztaste, die keiner Funktion gehoert, gehoert dem
 //! Tippen der Anfangsbuchstaben. Der Kern sagt nur, dass der Tastendruck dorthin
-//! faellt; welches Zeichen er traegt, weiss allein die Oberflaeche, denn ein
-//! Tastencode benennt eine Stelle auf der Tastatur und kein Zeichen.
+//! faellt; welches Zeichen in den Suchpuffer geht, entscheidet die Oberflaeche
+//! am Ereignis, weil dort auch die Grossschreibung und die Eingabemethoden
+//! stehen.
+//!
+//! # Wonach nachgeschlagen wird
+//!
+//! **Buchstaben und Ziffern ueber das gemeldete Zeichen, alles uebrige ueber
+//! den virtuellen Tastencode.** Die Regel steht in
+//! [`Tastenkennung`](super::parser::Tastenkennung), ihre Begruendung im Kopf
+//! von [`super::parser`], und der Vergleich in [`Belegung::nachschlag`], wo
+//! auch steht, warum eine zweite Nachschlagart hier keine Sonderregel ist.
 //!
 //! # Der Zusteller, und was er fuer den Konflikt bedeutet
 //!
@@ -777,16 +786,47 @@ impl Belegung {
     /// keine Zutat, sondern die tragende Haelfte der Zustellerregel ist. Nach
     /// dem Ueberspringen meint diese Antwort, was ihr Aufrufer braucht: was
     /// dieser Tastendruck **ausserhalb eines Textfeldes** ausloest.
+    ///
+    /// # Die zweite Nachschlagart, und warum sie hier keine Sonderregel ist
+    ///
+    /// Verglichen werden die Maske und die
+    /// [`Tastenkennung`](super::parser::Tastenkennung): fuer Buchstaben
+    /// und Ziffern das gemeldete **Zeichen**, fuer alles uebrige der virtuelle
+    /// **Tastencode** (Nutzerentscheid vom 260808-0155, `decisions/
+    /// 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`).
+    ///
+    /// Der Vorgaengerdatensatz vom 260803 nannte eine zweite Nachschlagart
+    /// "genau die Sonderregel, die die Maxime supersimpel meidet". Drei Gruende
+    /// stehen dem hier entgegen, und alle drei sind am Code nachzusehen:
+    ///
+    /// 1. **Es ist keine zweite, sondern die schon vorhandene.** Das Hauptmenue
+    ///    schlaegt seit S13b ueber das Zeichen nach; `NSMenuItem.keyEquivalent`
+    ///    nimmt eine Zeichenkette (`crates/krk-ui/src/appkit/menue.rs:322-342`).
+    ///    Vier Funktionen tragen sie bereits. Der Ereignisabgriff zieht damit
+    ///    nach, und der Zuschnitt **beendet eine Asymmetrie**, statt eine zu
+    ///    schaffen.
+    /// 2. **Es ist ein Vergleich und nicht zwei.** Die Wahl steckt vollstaendig
+    ///    in der Kennung, und beide Seiten leiten sie aus derselben Regel ab:
+    ///    die Belegung ueber [`Taste::kennung`](super::parser::Taste::kennung),
+    ///    der Tastendruck ueber [`Tastendruck::kennung`]. Hier steht deshalb
+    ///    eine Gleichheit und kein Zweig je Tastensorte. Ohne diesen Zuschnitt
+    ///    stuende an dieser Stelle kein einfacherer Vergleich, sondern eine
+    ///    Ausnahmeliste je Kombination und je Tastaturbelegung.
+    /// 3. **Ohne sie waere der Nachschlag nicht einmal eindeutig.** Zwei
+    ///    Varianten der Kennung sind nie gleich; ein Buchstabe wird
+    ///    nur ueber sein Zeichen gefunden und eine Stelle nur ueber ihren Code.
+    ///    Ein Nachschlag, der beides gegen den Code fuehrte, traefe auf einer
+    ///    franzoesischen Tastatur zwei verschiedene Tasten auf derselben
+    ///    Funktion, und die Konflikterkennung saehe das nie.
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
         for funktion in &self.funktionen {
             if funktion.gehalten_von.is_some() {
                 continue;
             }
-            if funktion
-                .tasten
-                .iter()
-                .any(|kombination| kombination.tastendruck() == druck)
-            {
+            if funktion.tasten.iter().any(|kombination| {
+                kombination.maske() == druck.maske
+                    && kombination.taste().kennung() == druck.kennung()
+            }) {
                 return Nachschlag::Funktion(funktion);
             }
         }

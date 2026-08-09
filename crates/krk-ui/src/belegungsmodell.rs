@@ -804,8 +804,8 @@ mod tests {
     /// dieselbe Kombination: eine fn-Belegung ist nicht anlegbar (C3, S7).
     #[test]
     fn fn_unterscheidet_keine_kombination() {
-        let mit_fn = Tastendruck::aus_ereignis(code_von_pflicht("f9"), roh::FUNKTION);
-        let ohne = Tastendruck::aus_ereignis(code_von_pflicht("f9"), 0);
+        let mit_fn = Tastendruck::aus_ereignis(code_von_pflicht("f9"), None, roh::FUNKTION);
+        let ohne = Tastendruck::aus_ereignis(code_von_pflicht("f9"), None, 0);
         assert_eq!(mit_fn, ohne);
         assert_eq!(
             Kombination::aus_tastendruck(mit_fn),

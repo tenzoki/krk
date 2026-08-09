@@ -70,3 +70,37 @@ nennt das Weg 2 und rät davon ab, und die Belegung führt das y für die Vorsch
 an drei Stellen mit ausgeschriebener Begründung.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: S2 hat die Nachschlagart des Ereignisabgriffs umgestellt: Buchstaben
+und Ziffern werden über das gemeldete Zeichen nachgeschlagen, Funktionstasten
+weiter über den virtuellen Tastencode. Damit löst sich der Zusammenstoß ohne
+eine Änderung an der Belegung, so wie der Vorschlag es beschrieben hat (Weg 1
+dort, "S2 vorziehen").
+
+Auf einer deutschen Tastatur gilt seither:
+
+| Der Nutzer drückt | Code | Zeichen | Der Abgriff findet | Ergebnis |
+|---|---|---|---|---|
+| Cmd + Aufschrift **Y** | 6 | `y` | `cmd+y` → `vorschau_umschalten` | Die Vorschau klappt auf oder zu |
+| Shift+Cmd + Aufschrift **Y** | 6 | `y` | `shift+cmd+y` → `fokus_vorschau` | Der Fokus springt in die Vorschau |
+| Cmd + Aufschrift **Z** | 16 | `z` | nichts, das der Abgriff zustellt | Das Menü führt `undo:` aus |
+
+Die Regel steht in `krk_core::tasten::parser::Tastenkennung`, der Vergleich in
+`Belegung::nachschlag`, die Quelle des Zeichens in
+`crates/krk-ui/src/appkit/ereignisse.rs`, `gemeldetes_zeichen`
+(`charactersByApplyingModifiers:` mit leerer Maske).
+
+Gemessen an Proben, nicht behauptet: `auf_einer_deutschen_tastatur_findet_die_aufschrift_y_die_vorschau`
+stellt beide Tastendrücke nach und deckt alle drei Zeilen der Tabelle ab;
+`eine_funktionstaste_wird_weiter_ueber_ihren_code_gefunden` hält die andere
+Hälfte fest. Beide Proben sind gegen eine Mutation geprüft: ein Nachschlag
+allein über den Code lässt die erste fallen, eine Kennung ohne Beschränkung auf
+ASCII-Buchstaben und -Ziffern die zweite.
+
+**Was am laufenden Bündel bleibt (`Nutzerarbeit`):** Die Tastaturbelegung des
+Geräts geht ein, und keine Probe stellt sie nach. Zu drücken sind ⌘ und die
+Taste mit der Aufschrift **Y** (die Vorschau muss auf- und zuklappen) und ⌘ und
+die Taste mit der Aufschrift **Z** (das Rückgängig des Editors muss greifen).
+`make tasten` zeigt zu jedem Druck `tastencode=` und `zeichen=`; auf einer
+deutschen Tastatur laufen die beiden auseinander, und genau das ist der Beleg.
