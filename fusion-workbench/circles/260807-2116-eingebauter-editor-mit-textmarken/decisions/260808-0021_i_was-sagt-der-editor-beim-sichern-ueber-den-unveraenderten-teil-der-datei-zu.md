@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_a_welche-dateien-oeffnet-der-editor-ueberhaupt.md` (die Vorfrage, aus deren Antwort diese entsteht), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C4), `crates/krk-ui/src/vorschaumodell.rs:522-527` (die bestehende Textregel der Vorschau)
 
@@ -50,3 +50,4 @@ Möglichkeit 3 empfehlen wir nicht. Sie tauscht eine Regel beim Schreiben gegen 
 
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"11. Sicherungsform" — Möglichkeit 2 gewählt: KRK schreibt beim Sichern immer Unix-Zeilenenden, immer einen abschließenden Umbruch und nie eine Bytefolgenmarke, unabhängig von der Form, die die Datei mitbrachte. Der Nutzer ist damit der Empfehlung dieses Datensatzes (Möglichkeit 1, die Datei behält ihre Form) nicht gefolgt. Der hier benannte Preis ist angenommen: das Sichern ändert Zeilen, die der Nutzer nicht angefasst hat, und eine fremde Datei aus einem Windows-Projekt kommt verändert zurück. Entschieden vom Nutzer am 260808-0043.
+Implemented: a32c0be — cmd+s schreibt ueber krk_core::text::datei::sichern, das die Sicherungsform herstellt: immer Unix-Zeilenenden, immer ein abschliessender Umbruch, nie eine Bytefolgenmarke, unabhaengig von der Form der geoeffneten Datei. Der angenommene Preis ist damit wirksam: das Sichern aendert Zeilen, die der Nutzer nicht angefasst hat. Die Zusage wird beim Einlesen hergestellt (datei::einlesen, Commit 6a9a872) und beim Rueckweg aus der Textflaeche gehalten (in_gehaltene_form, Commit 6488d66); das Sichern muss sie deshalb nicht mehr herstellen.
