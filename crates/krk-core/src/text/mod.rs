@@ -88,6 +88,7 @@ pub mod zeilen;
 // `suche::alle` und `suche::naechster` sagen es. `datei::einlesen`,
 // `datei::sichern` und `datei::in_gehaltene_form` folgen derselben Regel und
 // bleiben deshalb unter ihrem Modulnamen.
+pub use datei::Abweisung;
 pub use marke::{Fund, Markensprung};
 pub use suche::{Ersetzung, Sammelersetzung, Treffer};
 pub use zeilen::{Zeilenindex, Zeilenlage, Zeilensprung};

@@ -1,17 +1,22 @@
-//! Die beiden Enden der Datei: das Einlesen und die Sicherungsform (C2, C4).
+//! Die beiden Enden der Datei: das Oeffnen samt Pruefung, das Einlesen und die
+//! Sicherungsform (C2, C4).
 //!
 //! ```text
-//!  Bytes von der Platte
-//!         │
-//!         └──> einlesen ──> in_gehaltene_form ──> der Stand des Editors
-//!                                   ^                      │
-//!                                   │                      │
-//!                     jeder andere Text, der in            │
-//!                     den Stand geraet (S37)               │
-//!                                                          v
-//!                                            sicherungsform ──> sichern
-//!                                                                  │
-//!                                                     ablage::atomar
+//!  ein Pfad
+//!     │
+//!     └──> oeffnen ──> Abweisung (kein gueltiges Ziel, zu gross, kein Text)
+//!            │
+//!            │  die Bytes, und zwar erst nach der Groessenpruefung
+//!            v
+//!         einlesen ──> in_gehaltene_form ──> der Stand des Editors
+//!                              ^                      │
+//!                              │                      │
+//!                jeder andere Text, der in            │
+//!                den Stand geraet (S37)               │
+//!                                                     v
+//!                                       sicherungsform ──> sichern
+//!                                                             │
+//!                                                ablage::atomar
 //! ```
 //!
 //! # Die Zusage, die zwischen den beiden Enden steht
@@ -71,31 +76,240 @@
 //! ohne Belang, und ein sichtbares `\r` waere ein Zeichen, das beim Sichern
 //! ohnehin verschwindet.
 //!
-//! # Was hier nicht steht
+//! # Der eine Weg von einem Pfad zu einem Stand
 //!
-//! **Kein Weg von einem Pfad zu einem Stand.** [`einlesen`] nimmt Bytes und
-//! keinen Pfad, obwohl [`sichern`] einen Pfad nimmt, und die Unwucht ist
-//! Absicht: die Groessen- und Typpruefung aus C2 muss **vor** dem Lesen
-//! laufen, damit eine Datei ueber der Grenze zu keinem Zeitpunkt vollstaendig
-//! im Arbeitsspeicher steht. Ein `lesen(pfad)` an dieser Stelle waere die
-//! zweite Stelle, die eine Datei oeffnet, und die erste ohne jede Pruefung.
-//! Schritt 10 setzt die Pruefung davor und macht daraus den einen Weg, den
-//! beide Einstiege aus C2 nehmen.
+//! **[`oeffnen`] ist die einzige Stelle im Programm, die eine Datei fuer den
+//! Editor liest.** Beide Einstiege aus C2, F4 und das Menue, rufen sie, und der
+//! Sprung auf eine Textmarke aus C6 ruft sie ebenfalls. Genau das meint C2 mit
+//! "beide Einstiege legen dieselbe Pruefung an"; ein zweiter Leseweg daneben
+//! waere die zweite Wahrheit darueber, welche Datei der Editor annimmt, und die
+//! erste Abweichung zwischen beiden faende keine Pruefung. Es ist derselbe
+//! Zuschnitt, den `krk-ui`s `kommandos::pfadeingabe` fuer den Pfad zieht.
+//!
+//! [`einlesen`] nimmt weiterhin Bytes und keinen Pfad. Die Unwucht gegenueber
+//! [`sichern`] ist Absicht und jetzt erst recht: die Groessenpruefung laeuft
+//! **vor** dem Lesen, damit eine Datei ueber der Grenze zu keinem Zeitpunkt
+//! vollstaendig im Arbeitsspeicher steht (sechstes Abnahmekriterium von C2).
+//! Wer die Bytes schon hat, hat die Grenze schon ueberschritten.
 
 use std::borrow::Cow;
+use std::fs::File;
 use std::io;
-use std::path::Path;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
 /// Die Bytefolgenmarke, wie `String::from_utf8` sie liefert: ein Zeichen am
 /// Anfang der Zeichenkette und keine drei Bytes mehr.
 const BYTEFOLGENMARKE: char = '\u{feff}';
 
+/// Bis zu welcher Groesse der Editor eine Datei vollstaendig einliest (C2).
+///
+/// Drei Aussagen ueber diese Zahl, und alle drei gehoeren hierher:
+///
+/// - **Der Nutzer hat sie am 260808-0017 gewaehlt**, im Datensatz
+///   `decisions/260807-2147_*_welche-dateien-oeffnet-der-editor-ueberhaupt.md`,
+///   und damit gegen die Moeglichkeit, die Grenze der Vorschau zu erben.
+/// - **Sie ist die zweite Zahl neben `TEXTGRENZE`**, den 1 MB der Vorschau in
+///   `krk-ui/src/vorschaumodell.rs`. Zwei Zahlen fuer dieselbe Frage sind
+///   angenommen und kein Versehen: beide tragen **dieselbe Regel**, naemlich
+///   eine Obergrenze fuer das vollstaendige Einlesen in den Arbeitsspeicher.
+///   Verschieden ist allein, wie viel die jeweilige Handlung rechtfertigt, denn
+///   Ansehen ist nicht Bearbeiten.
+/// - `speculation:` **Sie ist ein Vorschlag und keine gemessene Groesse.** Eine
+///   Messung, ab welcher Dateigroesse das Oeffnen im Editor spuerbar wird, gibt
+///   es nicht. Sie liegt weit unter dem, was das Referenzgeraet verkraftet, und
+///   weit ueber den Dateien, die man von Hand bearbeitet.
+pub const EDITORGRENZE: u64 = 16 * 1024 * 1024;
+
+/// Der Editor nimmt mehr an als die Vorschau; genau das war der Grund fuer die
+/// zweite Zahl. Beim Uebersetzen geprueft und nicht erst beim Pruefen, in
+/// derselben Form wie `BILDGRENZE > TEXTGRENZE` in `vorschaumodell.rs`.
+///
+/// Verglichen wird gegen die 1 MB der Vorschau **als Zahl und nicht als
+/// Bezug**: `krk-core` kennt `krk-ui` nicht, und die Abhaengigkeit laeuft nur
+/// in die andere Richtung.
+///
+/// **Was diese Zusicherung deshalb haelt und was nicht.** Sie faengt ein
+/// Absenken von [`EDITORGRENZE`] unter die Vorschaugrenze. Ein **Anheben** der
+/// Vorschaugrenze ueber 16 MB faengt sie nicht, weil jene Zahl in der anderen
+/// Kiste steht. Die vollstaendige Zusicherung gehoert dorthin, wo beide Zahlen
+/// sichtbar sind, also nach `krk-ui`; der Uebergang aus der Vorschau (Schritt
+/// 23) ist die Stelle dafuer. Festgehalten in
+/// `issues/260809-1610_*_die-zusicherung-editorgrenze-groesser-textgrenze-laesst-sich-in-krk-core-nur-halb-schreiben.md`.
+const _: () = assert!(EDITORGRENZE > 1024 * 1024);
+
+/// Warum der Editor eine Datei nicht oeffnet (C2).
+///
+/// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
+/// Sie sind verschieden, weil das neunte Abnahmekriterium von C2 verlangt, "zu
+/// gross" von "nicht als Text lesbar" zu unterscheiden: der Nutzer soll wissen,
+/// ob seine Datei zu gross ist oder gar kein Text, denn die eine Antwort laedt
+/// zum Teilen der Datei ein und die andere nicht.
+///
+/// Jeder Wert traegt den Pfad, weil sein [`meldung`](Self::meldung) in die
+/// Statuszeile aus C1 geht und dort allein steht. Eine zweite Meldeflaeche
+/// entsteht nicht; das hat der Nutzer im Datensatz mitentschieden.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Abweisung {
+    /// Nichts, was ein Texteditor oeffnen koennte.
+    ///
+    /// Der Ordner ist der Fall, den der Datensatz namentlich nennt: er hat
+    /// keinen Inhalt, den ein Texteditor zeigen koennte, und braucht deshalb
+    /// keine eigene Regel. Dieselbe Antwort bekommen der fehlende Pfad, das
+    /// fehlende Leserecht und alles, was keine gewoehnliche Datei ist.
+    KeinGueltigesZiel {
+        /// Der Pfad, wie der Aufrufer ihn uebergeben hat.
+        pfad: PathBuf,
+        /// Woran es lag, in einem Satzteil: der Systemfehler oder die Art.
+        grund: String,
+    },
+    /// Ueber [`EDITORGRENZE`], also gar nicht erst gelesen.
+    ZuGross {
+        /// Der Pfad, wie der Aufrufer ihn uebergeben hat.
+        pfad: PathBuf,
+        /// Die Groesse in Bytes, wie `stat(2)` sie vor dem Lesen gemeldet hat.
+        groesse: u64,
+    },
+    /// Gelesen, aber kein gueltiges UTF-8.
+    ///
+    /// **Das ist der Wert, an dem die bindende Zusage des Datensatzes haengt:**
+    /// kein Weg darf eine Datei beim Sichern veraendern, die der Editor nicht
+    /// vollstaendig und verlustfrei als Text gelesen hat. Wer hier abweist,
+    /// statt mit Ersatzzeichen zu oeffnen, haelt sie ein.
+    NichtAlsTextLesbar {
+        /// Der Pfad, wie der Aufrufer ihn uebergeben hat.
+        pfad: PathBuf,
+    },
+}
+
+impl Abweisung {
+    /// Der Satz fuer die Statuszeile aus C1.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
+    /// vierter Grund haelt den Bau an und erzwingt einen vierten Satz.
+    ///
+    /// **Die Byteangaben stehen roh und nicht in MB.** Der menschenlesbare
+    /// Groessensatz des Programms ist `menge` in
+    /// `krk-ui/src/kommandos/operationen.rs`, und der liegt in der anderen
+    /// Kiste. Ihn hier nachzubauen hiesse, zwei Schreibweisen fuer dieselbe
+    /// Groesse zu haben; die Ansicht kann stattdessen aus den Feldern des
+    /// Wertes ihren eigenen Satz bauen, wenn sie einen schoeneren will.
+    pub fn meldung(&self) -> String {
+        match self {
+            Abweisung::KeinGueltigesZiel { pfad, grund } => {
+                format!(
+                    "{} lässt sich nicht im Editor öffnen: {grund}",
+                    pfad.display()
+                )
+            }
+            Abweisung::ZuGross { pfad, groesse } => format!(
+                "{} ist mit {groesse} Bytes zu groß für den Editor; die Grenze liegt bei {EDITORGRENZE} Bytes",
+                pfad.display()
+            ),
+            Abweisung::NichtAlsTextLesbar { pfad } => {
+                format!(
+                    "{} ist keine Textdatei und wird nicht geöffnet",
+                    pfad.display()
+                )
+            }
+        }
+    }
+}
+
+/// Die **eine** Groessen- und Typpruefung vor dem Oeffnen (C2, C6).
+///
+/// Liefert den fertigen Stand des Editors oder einen benannten Grund, aus dem
+/// nichts geoeffnet wird. Warum es nur diese eine Stelle gibt, steht im
+/// Modulkopf.
+///
+/// # Die Reihenfolge ist bindend
+///
+/// 1. **`metadata` und nicht `symlink_metadata`**, damit eine Verknuepfung nach
+///    dem behandelt wird, worauf sie zeigt. Eine Verknuepfung auf eine
+///    Textdatei ist als Ziel des Oeffnens dieselbe Textdatei; in der Dateiliste
+///    meldet der Leser sie weiter als Verknuepfung, und die beiden Fragen sind
+///    verschieden. Dieselbe Wahl und derselbe Grund wie in
+///    `krk-ui`s `kommandos::pfadeingabe::pruefen`.
+/// 2. **Alles, was keine gewoehnliche Datei ist, faellt hier heraus**, der
+///    Ordner voran. Diese Frage steht **vor** dem Oeffnen und nicht erst vor
+///    dem Lesen, weil ein `File::open` auf eine benannte Roehre so lange
+///    haengt, bis jemand hineinschreibt; das waere eine angehaltene Anwendung
+///    ohne Meldung.
+/// 3. **Die Groesse wird vor dem Lesen geprueft**, so wie die Vorschau es fuer
+///    ihre beiden Grenzen tut. Eine Protokolldatei von zwei Gigabyte darf nicht
+///    erst eingelesen und dann abgewiesen werden; sie steht damit zu keinem
+///    Zeitpunkt vollstaendig im Arbeitsspeicher.
+/// 4. **Erst danach werden die Bytes gelesen und gewandelt.** Scheitert die
+///    Wandlung, wird abgewiesen und nicht mit Ersatzzeichen geoeffnet.
+///
+/// # Die Grenze wird eingehalten und nicht nur vorhergesagt
+///
+/// Schritt 3 fragt `stat(2)`, und zwischen `stat` und `read` kann eine Datei
+/// wachsen. Deshalb liest Schritt 4 hoechstens [`EDITORGRENZE`] `+ 1` Bytes und
+/// weist ab, sobald das eine Byte zuviel ankommt. Der Unterschied ist nicht
+/// akademisch: ohne diese Schranke waere "die Datei steht nie vollstaendig im
+/// Speicher" eine Vorhersage aus einer alten Auskunft, mit ihr ist es eine
+/// Eigenschaft der Bauart. Eine wachsende Protokolldatei ist genau der Fall,
+/// fuer den ein Nutzer den Editor aufmacht.
+pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
+    let kein_ziel = |grund: String| Abweisung::KeinGueltigesZiel {
+        pfad: pfad.to_path_buf(),
+        grund,
+    };
+
+    let angaben = std::fs::metadata(pfad).map_err(|fehler| kein_ziel(fehler.to_string()))?;
+
+    if !angaben.is_file() {
+        return Err(kein_ziel(String::from(if angaben.is_dir() {
+            "ein Ordner hat keinen Text, den der Editor zeigen könnte"
+        } else {
+            "das ist keine gewöhnliche Datei"
+        })));
+    }
+
+    if angaben.len() > EDITORGRENZE {
+        return Err(Abweisung::ZuGross {
+            pfad: pfad.to_path_buf(),
+            groesse: angaben.len(),
+        });
+    }
+
+    let mut datei = File::open(pfad).map_err(|fehler| kein_ziel(fehler.to_string()))?;
+    let mut bytes = Vec::with_capacity(angaben.len() as usize);
+    datei
+        .by_ref()
+        .take(EDITORGRENZE + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
+    if bytes.len() as u64 > EDITORGRENZE {
+        // Die Datei ist zwischen `stat` und `read` gewachsen. Gemeldet wird die
+        // Groesse von jetzt und nicht die von vorhin, denn die alte war nie
+        // wahr; laesst sie sich nicht mehr erheben, steht die untere Schranke
+        // da, die wir sicher wissen.
+        let groesse = datei
+            .metadata()
+            .map(|angaben| angaben.len())
+            .unwrap_or(bytes.len() as u64);
+        return Err(Abweisung::ZuGross {
+            pfad: pfad.to_path_buf(),
+            groesse,
+        });
+    }
+
+    einlesen(bytes).ok_or(Abweisung::NichtAlsTextLesbar {
+        pfad: pfad.to_path_buf(),
+    })
+}
+
 /// Aus den Bytes einer Datei den gehaltenen Stand des Editors.
 ///
 /// `None` heisst: kein gueltiges UTF-8, also keine Textdatei im Sinne von C2.
 /// Der Fehler traegt nichts, was der Aufrufer benutzt; welchen Satz der Nutzer
-/// zu sehen bekommt, entscheidet der Abweisungsgrund aus Schritt 10 und nicht
+/// zu sehen bekommt, entscheidet [`Abweisung::NichtAlsTextLesbar`] und nicht
 /// diese Stelle.
+///
+/// Wer einen Pfad hat und keine Bytes, nimmt [`oeffnen`]: dort steht die
+/// Groessen- und Typpruefung davor.
 ///
 /// Gewandelt wird ueber [`String::from_utf8`], denselben Weg, ueber den die
 /// Vorschau entscheidet, ob eine Datei Text ist

@@ -1,5 +1,6 @@
 //! Die Textrechnung des Editors: Zeilenindex, Suche und Ersetzen (C5, C6,
-//! Schritt 8), dazu das Einlesen und die Sicherungsform (C2, C4, Schritt 9).
+//! Schritt 8), das Einlesen und die Sicherungsform (C2, C4, Schritt 9) und die
+//! eine Groessen- und Typpruefung vor dem Oeffnen (C2, Schritt 10).
 //!
 //! Die fuenf Faelle, die das Abnahmekriterium von S8 namentlich nennt:
 //!
@@ -19,6 +20,17 @@
 //! 7  Eine Datei, die die Zielform schon hat: Rundreise byteweise unveraendert
 //! ```
 //!
+//! Die fuenf Faelle, die das Abnahmekriterium von S10 nennt:
+//!
+//! ```text
+//!  8  Ein Ordner wird abgewiesen
+//!  9  Eine Verknuepfung gilt nach ihrem Ziel
+//! 10  Eine Datei von EDITORGRENZE + 1 Bytes wird abgewiesen, nachweislich
+//!     ohne gelesen zu werden
+//! 11  Eine ungueltige UTF-8-Folge wird abgewiesen, nicht ersetzt
+//! 12  Die drei Abweisungsgruende liefern drei verschiedene Meldetexte
+//! ```
+//!
 //! **Die Faelle 1 bis 5 legen keine einzige Datei an**, weil die Textrechnung
 //! auf Zeichenketten steht; die Faelle ab 6 pruefen die beiden Enden, an denen
 //! Bytes hereinkommen und hinausgehen, und brauchen dafuer einen Pruefordner.
@@ -29,7 +41,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use krk_core::text::{Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
+use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 /// Der Durchlauf von Hand: Byte fuer Byte, ohne die Rechnung des Index.
 ///
@@ -433,4 +445,295 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
         "zwei leere Zeilen\n\n\n",
         "die leeren Zeilen am Ende sind Text des Nutzers"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 10: die eine Groessen- und Typpruefung vor dem Oeffnen
+// ---------------------------------------------------------------------------
+
+// Die fuenf Faelle, die das Abnahmekriterium von S10 namentlich nennt:
+//
+//  8  Ein Ordner wird abgewiesen
+//  9  Eine Verknuepfung gilt nach ihrem Ziel: auf eine Textdatei angenommen,
+//     auf einen Ordner abgewiesen
+// 10  Eine Datei von EDITORGRENZE + 1 Bytes wird abgewiesen, und zwar
+//     nachweislich, ohne gelesen zu werden
+// 11  Eine Datei mit ungueltiger UTF-8-Folge wird abgewiesen und nicht mit
+//     Ersatzzeichen geliefert
+// 12  Die drei Abweisungsgruende liefern drei verschiedene Meldetexte
+
+impl Pruefordner {
+    /// Legt eine Datei der genannten Groesse an, **ohne ein Byte zu
+    /// schreiben**.
+    ///
+    /// `set_len` zieht die Datei auf die Laenge und laesst dahinter ein Loch.
+    /// Auf APFS kostet das weder Platz noch Zeit, und genau deshalb kann eine
+    /// Probe hier von zwei Gigabyte reden, ohne zwei Gigabyte anzulegen. Wer
+    /// das Loch liest, bekommt Nullbytes; die sind gueltiges UTF-8, was den
+    /// Grenzfall unten erst brauchbar macht.
+    fn luecke(&self, name: &str, groesse: u64) -> PathBuf {
+        let pfad = self.pfad.join(name);
+        let datei = fs::File::create(&pfad).expect("Luecke laesst sich nicht anlegen");
+        datei
+            .set_len(groesse)
+            .expect("Luecke laesst sich nicht ziehen");
+        pfad
+    }
+
+    /// Legt einen Unterordner an und liefert seinen Pfad.
+    fn unterordner(&self, name: &str) -> PathBuf {
+        let pfad = self.pfad.join(name);
+        fs::create_dir(&pfad).expect("Unterordner laesst sich nicht anlegen");
+        pfad
+    }
+
+    /// Legt eine weiche Verknuepfung auf das genannte Ziel an.
+    fn verknuepfung(&self, name: &str, ziel: &Path) -> PathBuf {
+        let pfad = self.pfad.join(name);
+        std::os::unix::fs::symlink(ziel, &pfad).expect("Verknuepfung laesst sich nicht anlegen");
+        pfad
+    }
+}
+
+/// Nimmt der Datei jedes Recht, damit ein Lesevorgang an ihr scheitern **muss**.
+fn sperren(pfad: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(pfad, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht setzen");
+}
+
+/// Ob die Sperre auf dieser Kennung ueberhaupt wirkt.
+///
+/// Gefragt wird nicht die Benutzerkennung, sondern die Wirkung: root liest eine
+/// gesperrte Datei trotzdem, und unter root sagt der Nachweis unten nichts aus.
+fn sperre_wirkt(gesperrt: &Path) -> bool {
+    fs::read(gesperrt).is_err()
+}
+
+/// Fall 8: ein Ordner wird abgewiesen.
+///
+/// Er ist der eine Fall, den der Datensatz namentlich als sicher abgewiesen
+/// nennt, und er braucht keine eigene Regel: er ist keine gewoehnliche Datei,
+/// und daran scheitert er.
+#[test]
+fn ein_ordner_wird_abgewiesen() {
+    let ordner = Pruefordner::neu("oeffnen-ordner");
+    let unterordner = ordner.unterordner("ein-ordner");
+
+    let ergebnis = datei::oeffnen(&unterordner);
+    assert!(
+        matches!(ergebnis, Err(Abweisung::KeinGueltigesZiel { .. })),
+        "der Ordner kam nicht als kein gueltiges Ziel zurueck: {ergebnis:?}"
+    );
+    assert!(
+        ergebnis.unwrap_err().meldung().contains("Ordner"),
+        "die Meldung nennt den Ordner nicht"
+    );
+}
+
+/// Fall 9: eine Verknuepfung gilt nach dem, worauf sie zeigt.
+///
+/// Das ist die Wahl `metadata` statt `symlink_metadata`, und sie ist an drei
+/// Zielen gepruefft: Textdatei, Ordner, ins Leere.
+#[test]
+fn eine_verknuepfung_gilt_nach_ihrem_ziel() {
+    let ordner = Pruefordner::neu("oeffnen-verknuepfung");
+    let textdatei = ordner.datei("ziel.txt", b"eins\nzwei\n");
+    let unterordner = ordner.unterordner("ziel-ordner");
+
+    let auf_text = ordner.verknuepfung("auf-text", &textdatei);
+    assert_eq!(
+        datei::oeffnen(&auf_text),
+        Ok(String::from("eins\nzwei\n")),
+        "die Verknuepfung auf eine Textdatei wurde nicht angenommen"
+    );
+
+    let auf_ordner = ordner.verknuepfung("auf-ordner", &unterordner);
+    assert!(
+        matches!(
+            datei::oeffnen(&auf_ordner),
+            Err(Abweisung::KeinGueltigesZiel { .. })
+        ),
+        "die Verknuepfung auf einen Ordner wurde nicht abgewiesen"
+    );
+
+    let ins_leere = ordner.verknuepfung("ins-leere", &ordner.pfad.join("gibt-es-nicht"));
+    assert!(
+        matches!(
+            datei::oeffnen(&ins_leere),
+            Err(Abweisung::KeinGueltigesZiel { .. })
+        ),
+        "die Verknuepfung ins Leere wurde nicht abgewiesen"
+    );
+}
+
+/// Fall 10: eine Datei ueber der Grenze wird abgewiesen, **ohne gelesen zu
+/// werden**.
+///
+/// Der Nachweis steht nicht an der Laufzeit, sondern an den Rechten, und er ist
+/// damit deterministisch. Zwei Dateien, gleich angelegt, gleich gesperrt, und
+/// um genau ein Byte verschieden:
+///
+/// ```text
+///   EDITORGRENZE + 1 Bytes, Rechte 000  ──> ZuGross
+///   EDITORGRENZE     Bytes, Rechte 000  ──> KeinGueltigesZiel (Lesefehler)
+/// ```
+///
+/// Die zweite Zeile ist die tragende: sie zeigt, dass unterhalb der Grenze
+/// **wirklich** geoeffnet und gelesen wird. Kaeme die Groessenpruefung erst
+/// nach dem Lesen, muesste die erste Zeile denselben Lesefehler melden wie die
+/// zweite. Sie tut es nicht, also lag die Pruefung davor.
+#[test]
+fn eine_datei_ueber_der_grenze_wird_abgewiesen_ohne_gelesen_zu_werden() {
+    let ordner = Pruefordner::neu("oeffnen-grenze");
+
+    let ueber_der_grenze = ordner.luecke("zu-gross.log", datei::EDITORGRENZE + 1);
+    let auf_der_grenze = ordner.luecke("gerade-noch.log", datei::EDITORGRENZE);
+    sperren(&ueber_der_grenze);
+    sperren(&auf_der_grenze);
+
+    if !sperre_wirkt(&auf_der_grenze) {
+        // Unter root liest sich auch eine gesperrte Datei. Dann sagt der
+        // Nachweis nichts aus, und eine Probe, die nichts aussagt, behauptet
+        // hier auch nichts.
+        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
+        return;
+    }
+
+    assert_eq!(
+        datei::oeffnen(&ueber_der_grenze),
+        Err(Abweisung::ZuGross {
+            pfad: ueber_der_grenze.clone(),
+            groesse: datei::EDITORGRENZE + 1,
+        }),
+        "die zu grosse Datei kam nicht als zu gross zurueck"
+    );
+    assert!(
+        matches!(
+            datei::oeffnen(&auf_der_grenze),
+            Err(Abweisung::KeinGueltigesZiel { .. })
+        ),
+        "die Datei auf der Grenze wurde nicht gelesen, damit belegt die Probe nichts"
+    );
+}
+
+/// Der Grenzfall selbst: genau [`datei::EDITORGRENZE`] Bytes werden angenommen.
+///
+/// Die Grenze ist ein `>` und kein `>=`, und das ist keine Kleinigkeit: eine
+/// Datei von genau 16 MB ist die, an der ein Nutzer den Unterschied merkt.
+/// Gelesen wird aus einem Loch, also aus Nullbytes; die sind gueltiges UTF-8.
+#[test]
+fn genau_auf_der_grenze_wird_angenommen() {
+    let ordner = Pruefordner::neu("oeffnen-grenzfall");
+    let auf_der_grenze = ordner.luecke("genau.log", datei::EDITORGRENZE);
+
+    let stand = datei::oeffnen(&auf_der_grenze).expect("genau auf der Grenze gehoert angenommen");
+    assert_eq!(stand.len() as u64, datei::EDITORGRENZE);
+}
+
+/// Eine Datei weit ueber der Grenze kostet weder Zeit noch Speicher.
+///
+/// Zwei Gigabyte als Loch: das ist die Protokolldatei aus dem Datensatz. Die
+/// Probe haelt fest, dass die Antwort aus einem `stat(2)` kommt und nicht aus
+/// zwei Gigabyte im Arbeitsspeicher — die Zeitschranke ist grosszuegig, weil
+/// sie nicht messen, sondern nur den Unterschied zwischen Mikrosekunden und
+/// Sekunden treffen soll.
+#[test]
+fn zwei_gigabyte_werden_ohne_arbeitsspeicher_abgewiesen() {
+    use std::time::Instant;
+
+    let ordner = Pruefordner::neu("oeffnen-riesig");
+    let riesig = ordner.luecke("protokoll.log", 2 * 1024 * 1024 * 1024);
+
+    let begonnen = Instant::now();
+    let ergebnis = datei::oeffnen(&riesig);
+    let gedauert = begonnen.elapsed();
+
+    assert_eq!(
+        ergebnis,
+        Err(Abweisung::ZuGross {
+            pfad: riesig.clone(),
+            groesse: 2 * 1024 * 1024 * 1024,
+        })
+    );
+    assert!(
+        gedauert.as_millis() < 500,
+        "die Abweisung hat {} ms gebraucht, das riecht nach gelesenen Bytes",
+        gedauert.as_millis()
+    );
+}
+
+/// Fall 11: eine ungueltige UTF-8-Folge wird abgewiesen und nicht ersetzt.
+///
+/// Hier haengt die bindende Zusage des Datensatzes: kein Weg darf eine Datei
+/// beim Sichern veraendern, die der Editor nicht vollstaendig und verlustfrei
+/// als Text gelesen hat. Die Probe haelt beides fest — dass abgewiesen wird,
+/// und dass kein Ersatzzeichen durchkommt.
+#[test]
+fn ungueltiges_utf8_wird_abgewiesen_und_nicht_ersetzt() {
+    let ordner = Pruefordner::neu("oeffnen-binaer");
+    let binaer = ordner.datei("bild.png", b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe kaputt");
+
+    let ergebnis = datei::oeffnen(&binaer);
+    assert_eq!(
+        ergebnis,
+        Err(Abweisung::NichtAlsTextLesbar {
+            pfad: binaer.clone()
+        })
+    );
+    assert!(
+        !ergebnis.unwrap_err().meldung().contains('\u{fffd}'),
+        "die Meldung traegt ein Ersatzzeichen"
+    );
+}
+
+/// Fall 12: die drei Gruende liefern drei verschiedene Meldetexte.
+///
+/// Das neunte Abnahmekriterium von C2 verlangt, "zu gross" von "nicht als Text
+/// lesbar" zu unterscheiden. Die Probe prueft die Unterschiedlichkeit und nicht
+/// den Wortlaut: der Wortlaut darf sich aendern, die Unterscheidbarkeit nicht.
+#[test]
+fn die_drei_gruende_liefern_drei_verschiedene_meldetexte() {
+    let ordner = Pruefordner::neu("oeffnen-meldungen");
+    let unterordner = ordner.unterordner("ein-ordner");
+    let zu_gross = ordner.luecke("zu-gross.log", datei::EDITORGRENZE + 1);
+    let binaer = ordner.datei("binaer.bin", b"\xff\xfe");
+
+    let meldungen: Vec<String> = [&unterordner, &zu_gross, &binaer]
+        .into_iter()
+        .map(|pfad| {
+            datei::oeffnen(pfad)
+                .expect_err("alle drei gehoeren abgewiesen")
+                .meldung()
+        })
+        .collect();
+
+    assert_eq!(meldungen.len(), 3);
+    for (stelle, meldung) in meldungen.iter().enumerate() {
+        assert!(!meldung.is_empty(), "die {stelle}. Meldung ist leer");
+        assert!(
+            meldungen.iter().filter(|andere| *andere == meldung).count() == 1,
+            "die {stelle}. Meldung ist nicht von den anderen zu unterscheiden: {meldung}"
+        );
+    }
+}
+
+/// Der eine Weg traegt die Wandlung aus Schritt 9 mit.
+///
+/// `oeffnen` ist kein zweiter Leseweg neben `einlesen`, sondern die Pruefung
+/// davor. Die Probe haelt fest, dass eine Datei mit Bytefolgenmarke und CRLF
+/// ueber `oeffnen` denselben Stand liefert wie ueber `einlesen`; liefen die
+/// beiden auseinander, gaebe es zwei Meinungen darueber, was eine Zeile endet.
+#[test]
+fn oeffnen_liefert_denselben_stand_wie_einlesen() {
+    let ordner = Pruefordner::neu("oeffnen-wandlung");
+    let mut roh = Vec::from("\u{feff}".as_bytes());
+    roh.extend_from_slice(b"erste\r\nzweite\r\ndritte ohne Umbruch");
+    let pfad = ordner.datei("windows.txt", &roh);
+
+    let ueber_oeffnen = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    let ueber_einlesen = datei::einlesen(bytes_von(&pfad)).expect("die Datei ist Text");
+
+    assert_eq!(ueber_oeffnen, ueber_einlesen);
+    assert_eq!(ueber_oeffnen, "erste\nzweite\ndritte ohne Umbruch");
 }
