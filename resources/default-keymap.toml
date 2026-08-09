@@ -27,7 +27,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 58 Funktionen mit zusammen 65 Kombinationen.
+# Ausgeliefert sind 71 Funktionen mit zusammen 79 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -130,11 +130,18 @@ tasten = ["delete", "cmd+delete"]
 [[funktion]]
 id = "bearbeiten"
 name = "Bearbeiten"
-tasten = []
-reserviert_fuer = "editor"
-# F4 traegt in dieser Runde weder die Funktionstaste noch ein Cmd-Kuerzel. Die
-# Norton-Bedeutung "Bearbeiten" zeigt auf den Editor, und der entsteht in einer
-# spaeteren Runde (C3).
+tasten = ["f4"]
+# Der Eintrag stand bis zur Editor-Runde mit `reserviert_fuer = "editor"` und
+# ohne Kombination hier: die Norton-Bedeutung "Bearbeiten" zeigt auf den Editor,
+# und den gab es noch nicht. Er oeffnet jetzt den ausgewaehlten Eintrag des
+# Dateifensters im eingebauten Editor (C1 der Editor-Runde).
+#
+# Es bleibt bei der einen Taste. Die Zwei-Wege-Regel aus C3 gilt den sechs
+# Funktionen der Norton-Reihe ganz oben; `bearbeiten` gehoert zu den spaeteren
+# Funktionen, die je eine tragen, wie "terminal_oeffnen" weiter unten. Ein
+# Cmd-Kuerzel daneben braucht es auch sachlich nicht: der zweite Einstiegsweg in
+# den Editor ist kein zweiter Weg auf dieselbe Handlung, sondern eine eigene
+# Funktion mit eigener Quelle ("editor_aus_vorschau" weiter unten).
 
 # ── C1: Dateifenster und Tabs ────────────────────────────────────────────────
 # Dieselben vier Tabbefehle bedienen nach C6 auch die Tabs des
@@ -310,8 +317,14 @@ tasten = ["esc"]
 
 [[funktion]]
 id = "lesezeichen_anlegen"
-name = "Ordner als Lesezeichen anlegen"
+name = "Lesezeichen anlegen"
 tasten = ["cmd+d"]
+# Ein Befehl, zwei Sorten. Mit dem Fokus im Dateifenster merkt er den
+# angezeigten Ordner, mit dem Fokus im Editor die Zeile der Schreibmarke als
+# Textmarke (C6 der Editor-Runde). Die Beschriftung hiess bis dahin "Ordner als
+# Lesezeichen anlegen" und nennt seither keine der beiden Sorten mehr, weil sie
+# beide meint. Ein zweiter Anlegebefehl daneben waere der zweite Mechanismus
+# fuer dieselbe Aufgabe; die Leiste fuehrt beide Sorten in einer Liste.
 
 [[funktion]]
 id = "lesezeichen_umbenennen"
@@ -459,6 +472,107 @@ tasten = ["ctrl+o"]
 # gilt fuer die sechs Funktionen der Norton-Reihe ganz oben und nicht fuer jede
 # Funktion; die vier Funktionen vom 260804 tragen aus demselben Grund je eine.
 
+# ── Der eingebaute Editor ────────────────────────────────────────────────────
+# Elf Funktionen der Editor-Runde. Der Einstieg ueber F4 steht oben in der
+# Norton-Reihe, wo er seit der Runde 1 reserviert war.
+#
+# Fuenf von ihnen teilen sich den Buchstaben e und unterscheiden sich in der
+# Zusatztaste. Das ist die Systematik, die diese Belegung schon bei l und d
+# faehrt: die blanke Cmd-Ebene traegt die Handlung selbst, shift+cmd den
+# Fokusbefehl, opt+cmd das Ein- und Ausblenden, ctrl+cmd die Zweitform.
+#
+# Keine dieser elf Kombinationen liegt auf y oder z. KRK belegt nach C3 der
+# Runde 1 den virtuellen Tastencode, also die **Stelle** auf der Tastatur, und
+# genau diese beiden Stellen tauschen zwischen der deutschen und der
+# amerikanischen Belegung den Platz. Die elf benutzen e, s, f, g, j und r und
+# sind davon nicht beruehrt. Die offene Frage dazu ist
+# `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/
+# 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`;
+# sie haelt keinen dieser Eintraege auf.
+
+[[funktion]]
+id = "editor_aus_vorschau"
+name = "Im Editor bearbeiten"
+tasten = ["cmd+e"]
+# Der zweite Einstiegsweg: die im Vorschaufenster angezeigte Datei in den
+# Editor uebernehmen (Nutzerentscheid vom 260807-2139). e wie Editor, und die
+# blanke Cmd-Ebene traegt die Handlung selbst, so wie cmd+y die Vorschau ein-
+# und ausblendet und cmd+d ein Lesezeichen anlegt.
+
+[[funktion]]
+id = "fokus_editor"
+name = "Fokus in den Editor"
+tasten = ["shift+cmd+e"]
+# Der vierte Fokusbefehl. Die Familie steht seit der Runde 1 auf
+# shift+cmd+<Buchstabe>: shift+cmd+l fuer die Leiste, shift+cmd+d fuer das
+# Dateifenster, shift+cmd+y fuer die Vorschau.
+
+[[funktion]]
+id = "editor_schliessen"
+name = "Editor schließen"
+tasten = ["opt+cmd+e"]
+# Die Umschaltfamilie steht auf opt+cmd+<Buchstabe>: opt+cmd+l fuer die Leiste,
+# opt+cmd+d fuer das zweite Dateifenster. Das Schliessen des Editors ist die
+# Ausblendhaelfte dieser Familie; die Einblendhaelfte tragen F4 und der
+# Uebergang aus der Vorschau, weil beide zugleich eine Datei mitbringen.
+
+[[funktion]]
+id = "editor_ansicht_umschalten"
+name = "Zwischen Roh- und Formatansicht wechseln"
+tasten = ["ctrl+cmd+e"]
+# Die vierte Ebene derselben e-Familie. ctrl+cmd traegt in dieser Belegung
+# schon die Zweitform einer Handlung: ctrl+cmd+u neben shift+cmd+u, ctrl+cmd+n
+# neben shift+cmd+n.
+
+[[funktion]]
+id = "editor_sichern"
+name = "Sichern"
+tasten = ["cmd+s"]
+# Der Mac-Standard, und ab Werk frei.
+
+[[funktion]]
+id = "editor_zeile_springen"
+name = "Zu Zeile springen"
+tasten = ["cmd+j"]
+# BBEdit legt "Gehe zu Zeile" auf dieselbe Kombination. cmd+l waere der naehere
+# Buchstabe und bleibt frei, weil die l-Familie in dieser Belegung der
+# Lesezeichenleiste gehoert.
+
+[[funktion]]
+id = "editor_suchen"
+name = "Im Text suchen"
+tasten = ["cmd+f"]
+# Der Mac-Standard.
+
+[[funktion]]
+id = "editor_weitersuchen"
+name = "Weitersuchen"
+tasten = ["cmd+g"]
+# Der Mac-Standard.
+
+[[funktion]]
+id = "editor_rueckwaerts_suchen"
+name = "Rückwärts weitersuchen"
+tasten = ["ctrl+cmd+g"]
+# Der Mac-Standard waere shift+cmd+g, und der traegt seit der Runde 1 die
+# Pfadeingabe, weil der Finder "Gehe zum Ordner" dorthin legt. Zwei Funktionen
+# auf einer Kombination bei demselben Zusteller schliesst C3 aus. ctrl+cmd+g
+# steht bei opt+cmd+g, dem Sprung zum Inhalt der Zwischenablage.
+
+[[funktion]]
+id = "editor_ersetzen"
+name = "Ersetzen"
+tasten = ["shift+cmd+r"]
+# cmd+r traegt die Sortierrichtung. r wie "replace"; die Belegung nimmt an
+# mehreren Stellen den englischen Anfangsbuchstaben, wo der deutsche belegt ist.
+
+[[funktion]]
+id = "editor_alle_ersetzen"
+name = "Alle ersetzen"
+tasten = ["ctrl+cmd+r"]
+# Dieselbe Systematik wie "umbenennen" gegen "umbenennen_stapel": die
+# Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
+
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 
 [[funktion]]
@@ -490,9 +604,27 @@ tasten = ["f1"]
 # 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
 #
 # Das Menue ist zugleich der Grund, aus dem ein Textfeld ueberhaupt etwas
-# eingefuegt bekommt: auf dem Mac liegen diese vier Befehle nicht im
-# Textsystem, sondern als Menuekuerzel. C2 sagt fuer die Pfadeingabe
-# ausdruecklich zu, dass der Nutzer einen Pfad einfuegen kann.
+# eingefuegt bekommt: auf dem Mac liegen diese Befehle nicht im Textsystem,
+# sondern als Menuekuerzel. C2 sagt fuer die Pfadeingabe ausdruecklich zu, dass
+# der Nutzer einen Pfad einfuegen kann.
+#
+# **Genau daran haengt das Rueckgaengig des Editors.** Die Textflaeche bringt
+# einen Rueckgaengigverwalter mit, aber `undo:` und `redo:` liegen auf dem Mac
+# ebenfalls nicht im Textsystem, sondern als Menuekuerzel: ohne die beiden
+# Eintraege "text_rueckgaengig" und "text_wiederholen" unten haette der Editor
+# kein Rueckgaengig, und das waere ein Editor, den niemand benutzt.
+#
+# Die beiden sind die einzigen Kombinationen dieser Runde auf der Stelle
+# kVK_ANSI_Z, und das ist kein Widerspruch zu der Regel, die die elf
+# Editor-Funktionen um y und z herumlegt. Die Regel gilt dem, was **KRK selbst**
+# zustellt: der Ereignisabgriff schlaegt ueber den virtuellen Tastencode nach,
+# also ueber die Stelle auf der Tastatur, und die tauscht zwischen der deutschen
+# und der amerikanischen Belegung den Platz. Ein Menuekuerzel schlaegt ueber das
+# **Zeichen** nach — `NSMenuItem.keyEquivalent` nimmt eine Zeichenkette
+# entgegen —, und genau deshalb wirken cmd+c und cmd+v auf jeder
+# Tastaturbelegung an der beschrifteten Stelle. Cmd+Z tut es aus demselben
+# Grund. Was hier steht, ist die Anzeige- und Konfliktseite dieser Kuerzel und
+# nicht der Nachschlag, der sie ausloest.
 
 [[funktion]]
 id = "text_ausschneiden"
@@ -524,6 +656,22 @@ id = "text_alles_auswaehlen"
 name = "Alles auswählen"
 tasten = ["cmd+a"]
 gehalten_von = "menue"
+
+[[funktion]]
+id = "text_rueckgaengig"
+name = "Rückgängig"
+tasten = ["cmd+z"]
+gehalten_von = "menue"
+# Der Mac-Standard. Im Editor beantwortet der Rueckgaengigverwalter der
+# Textflaeche das Kuerzel, in einem Textfeld der Feldeditor; KRK fuehrt es in
+# keinem Fall selbst aus.
+
+[[funktion]]
+id = "text_wiederholen"
+name = "Wiederholen"
+tasten = ["shift+cmd+z"]
+gehalten_von = "menue"
+# Das Gegenstueck, ebenfalls der Mac-Standard.
 
 # ── C3: das Beenden der Anwendung ────────────────────────────────────────────
 

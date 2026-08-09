@@ -159,8 +159,17 @@ fn die_auslieferungsbelegung_ist_konfliktfrei() {
     );
 }
 
+/// Jede Funktion steht genau einmal, traegt eine Beschriftung und mindestens
+/// eine Kombination.
+///
+/// **Die Ausnahme fuer reservierte Funktionen bleibt stehen, obwohl die
+/// Auslieferungsbelegung keine mehr fuehrt.** `bearbeiten` war bis zur
+/// Editor-Runde die einzige, und sie traegt seit S6 die Taste F4.
+/// `reserviert_fuer` ist damit nicht weg: es ist ein Feld der Belegungsdatei,
+/// eine `keymap.toml` aus einer aelteren Fassung kann es tragen, und die Regel
+/// "reserviert heisst ohne Kombination" gilt fuer sie weiter.
 #[test]
-fn jede_funktion_traegt_genau_eine_zeile_und_die_reservierte_keine_taste() {
+fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
     let belegung = Belegung::auslieferung();
 
     for (stelle, funktion) in belegung.funktionen().iter().enumerate() {
@@ -177,8 +186,8 @@ fn jede_funktion_traegt_genau_eine_zeile_und_die_reservierte_keine_taste() {
             "{} ohne Beschriftung",
             funktion.kennung()
         );
-        // C3: jede Funktion ausser der fuer den Editor reservierten traegt
-        // mindestens eine Kombination.
+        // C3: jede Funktion ausser einer reservierten traegt mindestens eine
+        // Kombination.
         match funktion.reserviert_fuer() {
             Some(_) => assert!(
                 funktion.tasten().is_empty(),
@@ -854,7 +863,12 @@ fn eine_gehaltene_zusatztaste_nimmt_der_taste_ihr_kommando() {
 ///    die Festlegung aus C3 und der Grund, aus dem die Funktionstasten auf jeder
 ///    Tastaturbelegung stimmen.
 /// 2. Die Stelle daneben, `kVK_ANSI_Z` mit dem Tastencode 6, traegt in der
-///    Auslieferungsbelegung keine Funktion, unter keiner Zusatztaste.
+///    Auslieferungsbelegung keine Funktion, die der Ereignisabgriff zustellt,
+///    unter keiner Zusatztaste. Seit der Editor-Runde stehen dort die beiden
+///    vom Menue gehaltenen Kuerzel Cmd+Z und Shift+Cmd+Z; die schlagen ueber
+///    das Zeichen nach statt ueber die Stelle und sind von der Sache, um die
+///    es hier geht, nicht beruehrt. Die Pruefung nimmt sie deshalb aus, mit
+///    der Begruendung an der Stelle.
 ///
 /// Auf einer deutschen Tastatur steht auf der Stelle `kVK_ANSI_Y` ein **Z** und
 /// auf `kVK_ANSI_Z` ein **Y**. Wer die Taste mit der Aufschrift Y drueckt,
@@ -895,9 +909,10 @@ fn die_y_kuerzel_liegen_auf_kvk_ansi_y_und_die_stelle_kvk_ansi_z_ist_unbelegt() 
         );
     }
 
-    // Zweite Aussage: die Stelle kVK_ANSI_Z traegt keine Funktion. Erst die
-    // Tabelle, dann die Belegung, dann der Nachschlag: die Stelle ist die
-    // erwartete, keine Funktion nennt sie, und kein Tastendruck auf ihr trifft
+    // Zweite Aussage: die Stelle kVK_ANSI_Z traegt keine Funktion, die KRK
+    // selbst zustellt. Erst die Tabelle, dann die Belegung, dann der
+    // Nachschlag: die Stelle ist die erwartete, keine vom Ereignisabgriff
+    // zugestellte Funktion nennt sie, und kein Tastendruck auf ihr trifft
     // etwas.
     let Some(z) = parser::taste_mit_namen("z") else {
         panic!("die Tabelle kennt die Taste \"z\" nicht");
@@ -906,6 +921,17 @@ fn die_y_kuerzel_liegen_auf_kvk_ansi_y_und_die_stelle_kvk_ansi_z_ist_unbelegt() 
     assert_eq!(z.herkunft.kvk(), "kVK_ANSI_Z");
 
     for funktion in belegung.funktionen() {
+        // Die vom Menue zugestellten Funktionen bleiben aussen vor, und der
+        // Grund ist die Sache selbst: ein `NSMenuItem` traegt sein Kuerzel als
+        // **Zeichenkette** und schlaegt damit ueber das Zeichen nach, nicht
+        // ueber die Stelle. Cmd+Z liegt auf jeder Tastaturbelegung dort, wo Z
+        // aufgedruckt ist, genau wie Cmd+C und Cmd+V es seit S13b tun. Die
+        // Zusage dieser Pruefung handelt vom Nachschlag ueber den
+        // Tastencode — dem Weg, auf dem die y-Kuerzel oben scheitern —, und der
+        // sieht eine zugestellte Funktion nie (`Belegung::nachschlag`).
+        if funktion.gehalten_von().is_some() {
+            continue;
+        }
         for kombination in funktion.tasten() {
             assert_ne!(
                 kombination.taste().code,
@@ -1343,20 +1369,20 @@ fn die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt() {
     );
 }
 
-/// Die Auswahl bewegt sich in beiden Bereichen, und der Fokuswechsel wirkt aus
-/// beiden heraus.
+/// Der Fokuswechsel wirkt aus jedem Bereich heraus, und das Anlegen eines
+/// Lesezeichens ebenso.
 ///
-/// Ohne diese Zusage waere die Leiste nach C5 nicht bedienbar: der Auf- und der
-/// Ab-Pfeil bewegen dort die Auswahl, und der Befehl zurueck in das
-/// Dateifenster muesste aus der Leiste heraus wirken, in der er per
-/// Voraussetzung steht.
+/// Ohne diese Zusage waere die Leiste nach C5 nicht bedienbar: der Befehl
+/// zurueck in das Dateifenster muesste aus der Leiste heraus wirken, in der er
+/// per Voraussetzung steht. Der vierte Fokusbefehl der Editor-Runde faellt
+/// unter dieselbe Zeile.
 #[test]
-fn die_auswahl_und_der_fokuswechsel_wirken_in_beiden_bereichen() {
+fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
     for kommando in [
-        Kommando::AuswahlHoch,
-        Kommando::AuswahlRunter,
         Kommando::FokusLeiste,
         Kommando::FokusDateifenster,
+        Kommando::FokusVorschau,
+        Kommando::FokusEditor,
         Kommando::LesezeichenAnlegen,
     ] {
         assert_eq!(
@@ -1365,6 +1391,167 @@ fn die_auswahl_und_der_fokuswechsel_wirken_in_beiden_bereichen() {
             "{} braucht keinen bestimmten Bereich im Fokus",
             kommando.kennung()
         );
+    }
+}
+
+/// Die drei Befehle, deren Taste im Editor der Textflaeche gehoert, tragen den
+/// Navigator und nicht mehr `Ueberall`.
+///
+/// Sie sind in der Runde 1 mit [`Wirkungsbereich::Ueberall`] entstanden, weil
+/// es damals nichts gab, wovon sie auszunehmen waeren. Mit dem eingebauten
+/// Editor gibt es etwas: `up` und `down` bewegen dort die Schreibmarke, `tab`
+/// schreibt einen Tabulator. Ohne den Umzug bewegte ein `up` mit dem Fokus im
+/// Editor die Auswahl im Dateifenster, und das erste Abnahmekriterium von C7
+/// der Editor-Runde waere gebrochen.
+///
+/// Was daraus fuer die Fokuswerte folgt, prueft
+/// `der_navigator_endet_am_editor_und_ueberall_nicht` in `krk-ui`; hier steht
+/// allein die Aussage ueber die Befehle, die ohne Fenster pruefbar ist.
+#[test]
+fn die_drei_befehle_des_navigators_tragen_den_navigator() {
+    for kommando in [
+        Kommando::FensterWechseln,
+        Kommando::AuswahlHoch,
+        Kommando::AuswahlRunter,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Navigator,
+            "{} wirkt weiterhin ueberall und damit auch im Editor",
+            kommando.kennung()
+        );
+    }
+}
+
+/// Die zwoelf Kommandos des Editors tragen die Bereiche, die der Plan ihnen
+/// gibt, und die Aufteilung ist erschoepfend.
+///
+/// Drei Sorten, und die Grenze ist die Frage, was der Befehl voraussetzt.
+/// `bearbeiten` setzt das Dateifenster voraus, dessen ausgewaehlten Eintrag es
+/// oeffnet; der Uebergang aus der Vorschau setzt die Vorschau voraus, deren
+/// angezeigte Datei er uebernimmt; der Fokusbefehl setzt nichts voraus, weil
+/// er den Fokus holt. Die uebrigen acht arbeiten in der Datei, die der Editor
+/// haelt, und ohne Fokus dort gibt es keine.
+#[test]
+fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
+    assert_eq!(
+        Kommando::Bearbeiten.wirkungsbereich(),
+        Wirkungsbereich::Dateifenster,
+        "F4 oeffnet den ausgewaehlten Eintrag des Dateifensters"
+    );
+    assert_eq!(
+        Kommando::EditorAusVorschau.wirkungsbereich(),
+        Wirkungsbereich::Vorschau,
+        "der Uebergang braucht die angezeigte Datei der Vorschau"
+    );
+    assert_eq!(
+        Kommando::FokusEditor.wirkungsbereich(),
+        Wirkungsbereich::Ueberall,
+        "ein Befehl, der den Fokus holt, kann nicht voraussetzen, wo er steht"
+    );
+    for kommando in [
+        Kommando::EditorSchliessen,
+        Kommando::EditorAnsichtUmschalten,
+        Kommando::EditorSichern,
+        Kommando::EditorZeileSpringen,
+        Kommando::EditorSuchen,
+        Kommando::EditorWeitersuchen,
+        Kommando::EditorRueckwaertsSuchen,
+        Kommando::EditorErsetzen,
+        Kommando::EditorAlleErsetzen,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Editor,
+            "{} arbeitet in der Datei des Editors und braucht dessen Fokus",
+            kommando.kennung()
+        );
+    }
+}
+
+/// Die Auslieferungsbelegung fuehrt 71 Funktionen, und die dreizehn neuen der
+/// Editor-Runde stehen darin.
+///
+/// **Die Zahl steht hier ausnahmsweise hingeschrieben.** Die uebrigen
+/// Pruefungen dieser Datei vermeiden das mit gutem Grund: eine Zahl bindet die
+/// Pruefung an die Groesse der Datei statt an ihre Zusage. Hier ist die Zahl
+/// die Zusage — die Kopfzeile von `resources/default-keymap.toml` nennt sie,
+/// und eine Kopfzeile, die von ihrer eigenen Datei abweicht, faellt sonst
+/// niemandem auf. Wer eine Funktion nachtraegt, zieht beide Stellen mit.
+#[test]
+fn die_auslieferungsbelegung_fuehrt_einundsiebzig_funktionen() {
+    let belegung = Belegung::auslieferung();
+    assert_eq!(
+        belegung.funktionen().len(),
+        71,
+        "die Kopfzeile von default-keymap.toml nennt 71 Funktionen"
+    );
+    for kennung in [
+        "editor_aus_vorschau",
+        "fokus_editor",
+        "editor_schliessen",
+        "editor_ansicht_umschalten",
+        "editor_sichern",
+        "editor_zeile_springen",
+        "editor_suchen",
+        "editor_weitersuchen",
+        "editor_rueckwaerts_suchen",
+        "editor_ersetzen",
+        "editor_alle_ersetzen",
+        "text_rueckgaengig",
+        "text_wiederholen",
+    ] {
+        assert!(
+            belegung.funktion(kennung).is_some(),
+            "die Auslieferungsbelegung kennt {kennung} nicht"
+        );
+    }
+}
+
+/// Keine Kombination, die **KRK selbst** zustellt, liegt auf den beiden
+/// Stellen, die zwischen der deutschen und der amerikanischen Belegung den
+/// Platz tauschen.
+///
+/// KRK belegt nach C3 den virtuellen Tastencode, also die Stelle auf der
+/// Tastatur. `kVK_ANSI_Y` und `kVK_ANSI_Z` sind die einzigen beiden Stellen,
+/// deren Aufschrift zwischen den beiden Belegungen wandert; eine Funktion dort
+/// ist auf einer deutschen Tastatur nicht da, wo sie hingeschrieben ist. Genau
+/// daran haengt der offene Defekt zu `cmd+y` und `shift+cmd+y`, und die elf
+/// Editor-Funktionen sind deshalb um beide Stellen herumgelegt.
+///
+/// **Zwei Ausnahmen, und sie sind der Beleg fuer die Regel und nicht ihr
+/// Bruch.** `vorschau_umschalten` und `fokus_vorschau` tragen die y-Kuerzel aus
+/// der Runde 1 und sind der Gegenstand jenes Defekts; wo sie hingehoeren,
+/// entscheidet der Nutzer. Die vom Menue gehaltenen Funktionen zaehlen gar
+/// nicht mit: ihr Kuerzel steht als Zeichenkette am `NSMenuItem` und wird ueber
+/// das **Zeichen** aufgeloest, nicht ueber die Stelle.
+#[test]
+fn keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen() {
+    let belegung = Belegung::auslieferung();
+    // Die beiden Stellen, aus der Tastentabelle statt hingeschrieben.
+    let stellen: Vec<u16> = ["y", "z"]
+        .into_iter()
+        .map(|name| {
+            parser::taste_mit_namen(name)
+                .unwrap_or_else(|| panic!("die Tabelle kennt die Taste \"{name}\" nicht"))
+                .code
+        })
+        .collect();
+    // Die beiden Altlasten aus der Runde 1, ueber die der Nutzer entscheidet.
+    let bekannt = ["vorschau_umschalten", "fokus_vorschau"];
+
+    for funktion in belegung.funktionen() {
+        if funktion.gehalten_von().is_some() || bekannt.contains(&funktion.kennung()) {
+            continue;
+        }
+        for kombination in funktion.tasten() {
+            assert!(
+                !stellen.contains(&kombination.taste().code),
+                "{} liegt mit {kombination} auf einer Stelle, die auf einer \
+                 deutschen Tastatur wandert",
+                funktion.kennung()
+            );
+        }
     }
 }
 

@@ -79,3 +79,23 @@ Zwei Zeilen, beide in `crates/krk-core/src/tasten/belegung.rs`:
    `Kommando::FensterWechseln` je einen Vermerk setzen, dass S5 sie nach
    `Navigator` bringt. Ohne ihn findet die Zuordnungsstelle den Vorwärtsverweis
    nicht, und sie ist die Stelle, die jemand ändert.
+
+---
+
+## Resolved: 260809-1527, gegenstandslos durch S5
+
+Beide Vorschläge sind hinfällig, weil der Umzug selbst gelandet ist. S5 hat
+`FensterWechseln`, `AuswahlHoch` und `AuswahlRunter` in
+`Kommando::wirkungsbereich` nach `Wirkungsbereich::Navigator` gebracht
+(`crates/krk-core/src/tasten/belegung.rs`), mit der Begründung aus Befund 3 als
+Kommentar über dem Zweig. Der Absatz an der Aufzählung `Navigator` steht damit
+in der Gegenwart und ist wahr; ein Vorwärtsverweis auf einen Schritt, der
+bereits gefahren ist, wäre selbst die zweite Wahrheit, die dieser Befund
+beanstandet hat.
+
+Belegt durch die Probe
+`die_drei_befehle_des_navigators_tragen_den_navigator`
+(`crates/krk-core/tests/belegung.rs`). Die Probe
+`der_navigator_endet_am_editor_und_ueberall_nicht` in
+`crates/krk-ui/src/kommandos/fokus.rs` nennt S5 weiterhin als den Schritt, der
+sich auf ihre Regel stützt; das bleibt richtig und ist kein offener Rest.

@@ -533,7 +533,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: keine
 - Abnahmekriterium: `cargo test --workspace` beendet mit 0. `cargo build --workspace` übersetzt, was belegt, dass die drei erschöpfenden Fallunterscheidungen über `Wirkungsbereich` und `Fokus` vollständig sind. Eine Probe deckt für jeden der sieben Wirkungsbereiche und jeden der fünf Fokuswerte ab, was `wirkt` antwortet; 35 Paare, in einer Tabelle geprüft. Eine zweite Probe hält fest, dass `wirkt(Wirkungsbereich::Navigator, Fokus::Editor)` falsch ist und `wirkt(Wirkungsbereich::Ueberall, Fokus::Editor)` wahr.
 
-#### 4. **Der Ersthelfer des Editors bricht den Fokusvorbehalt**
+#### 4. [DONE] **Der Ersthelfer des Editors bricht den Fokusvorbehalt**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/ereignisse.rs` (erweitert: `ersthelfer_nimmt_text` wird `ersthelfer_gehoert_appkit`, `Tastenabgriff::einrichten` und `behandeln` bekommen den dritten Abschluss, das ASCII-Schaubild im Modulkopf wird auf die tatsächliche Reihenfolge gezogen), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Abschluss wird beim Einrichten mitgegeben)
@@ -543,7 +543,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S3
 - Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0. Der Diff zeigt, dass `ersthelfer_gehoert_appkit` die Nämlichkeitsfrage **vor** der Klassenprüfung stellt und dass die Klassenprüfung samt ihrer Begründung unverändert steht. `grep -c 'isKindOfClass' crates/krk-ui/src/appkit/ereignisse.rs` liefert dieselbe Zahl wie vorher; es ist keine vierte Klasse hinzugekommen. Das Schaubild im Modulkopf zeigt die Normalisierung vor dem Vorbehalt, so wie der Code sie fährt.
 
-#### 5. **Die zwölf Kommandos des Editors**
+#### 5. [DONE] **Die zwölf Kommandos des Editors**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/tasten/belegung.rs` (erweitert: `Kommando`, `KENNUNGEN` samt Feldbreite, `Kommando::wirkungsbereich`), `crates/krk-ui/src/belegungsmodell.rs` (erweitert: `bereich_des_kommandos`, und die Namenszeile für `"bearbeiten"` in `bereich` entfällt), `crates/krk-core/tests/belegung.rs` (erweitert)
@@ -555,7 +555,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S3, und S6 muss vor oder mit diesem Schritt landen (siehe `## Aufbau`, Abschnitt zum Ausführer)
 - Abnahmekriterium: `cargo build --workspace` übersetzt, was belegt, dass beide erschöpfenden Fallunterscheidungen vollständig sind. `cargo test -p krk-core` beendet mit 0, einschließlich `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung`; diese Probe ist die Zusicherung, dass Aufzählung und Belegungsdatei zusammenpassen, und sie ist zugleich der Grund für die Reihenfolge zu S6. `grep -n '"bearbeiten"' crates/krk-ui/src/belegungsmodell.rs` findet die Kennung nur noch in Proben und nicht mehr in `bereich`.
 
-#### 6. **Die Auslieferungsbelegung um dreizehn Funktionen erweitern**
+#### 6. [DONE] **Die Auslieferungsbelegung um dreizehn Funktionen erweitern**
 
 - Ausführender: `coder`
 - Dateien: `resources/default-keymap.toml` (erweitert: dreizehn neue `[[funktion]]`-Blöcke, die Tastenliste von `bearbeiten`, die Beschriftung von `lesezeichen_anlegen`, die Kopfzeile mit den Zahlen), `crates/krk-core/tests/belegung.rs` (erweitert: die Zahlen in den Proben)
@@ -603,7 +603,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 - Abhängigkeiten: S8
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt an einer Prüfdatei ab, die zugleich CRLF, keinen abschließenden Umbruch und eine Bytefolgenmarke trägt: nach dem Einlesen enthält der Stand kein `\r` und beginnt nicht mit `U+FEFF`; nach dem Sichern ohne jede Änderung enthält die Datei kein Byte `0x0D`, endet auf genau einem `0x0A` und beginnt nicht mit `EF BB BF`. Eine zweite Probe deckt ab, dass eine Datei, die bereits die Zielform hat, nach einer Rundreise byteweise unverändert ist.
 
-#### 10. **Die eine Größen- und Typprüfung vor dem Öffnen**
+#### 10. [DONE] **Die eine Größen- und Typprüfung vor dem Öffnen**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/text/datei.rs` (erweitert), `crates/krk-core/tests/text.rs` (erweitert)
@@ -613,6 +613,11 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Der Abweisungsgrund ist eine Aufzählung mit drei Werten und ohne Auffangzweig: zu groß mit der Größe, nicht als Text lesbar, kein gültiges Ziel. Jeder trägt seinen Meldetext, und die drei sind verschieden, weil das neunte Abnahmekriterium von C2 verlangt, "zu groß" von "nicht als Text lesbar" zu unterscheiden.
 - Abhängigkeiten: S9
 - Abnahmekriterium: `cargo test -p krk-core` beendet mit 0 und deckt ab: ein Ordner wird abgewiesen; eine Verknüpfung auf eine Textdatei wird angenommen, eine auf einen Ordner abgewiesen; eine Datei von `EDITORGRENZE + 1` Bytes wird abgewiesen, und die Probe belegt über die Laufzeit oder über eine Zählung der Lesevorgänge, dass sie nicht gelesen wurde; eine Datei mit ungültiger UTF-8-Folge wird abgewiesen und nicht mit Ersatzzeichen geliefert; die drei Abweisungsgründe liefern drei verschiedene Meldetexte.
+- **Umsetzung am 260809:** `text::datei::oeffnen` mit `EDITORGRENZE`, `Abweisung` und `Abweisung::meldung`. `crates/krk-core/tests/text.rs` trägt sieben neue Proben, die fünf geforderten Fälle darunter; `cargo test -p krk-core --test text` läuft mit 20 Proben durch. Drei Abweichungen von der Schrittbeschreibung:
+  - **Der Nachweis „nicht gelesen" steht an den Rechten und nicht an der Laufzeit.** Zwei gleich angelegte Löcher, beide auf Rechte `000` gesetzt, um genau ein Byte verschieden: das über der Grenze liefert `ZuGross`, das auf der Grenze einen Lesefehler. Käme die Größenprüfung nach dem Lesen, müssten beide denselben Lesefehler melden. Gegengeprüft am 260809 durch Verschieben der Prüfung hinter das Lesen: genau diese Probe fällt dann und keine andere. Eine zweite Probe weist ein Loch von zwei Gigabyte in Mikrosekunden ab.
+  - **Die Zusicherung zur Übersetzungszeit steht nur halb.** `TEXTGRENZE` liegt in `krk-ui`, und `krk-core` kennt `krk-ui` nicht; in `datei.rs` steht deshalb `assert!(EDITORGRENZE > 1024 * 1024)` mit der Zahl statt dem Bezug. Sie fängt ein Absenken der Editorgrenze, nicht ein Anheben der Vorschaugrenze. Die vollständige gehört nach S23; festgehalten in `issues/260809-1610_o_die-zusicherung-editorgrenze-groesser-textgrenze-laesst-sich-in-krk-core-nur-halb-schreiben.md`.
+  - **Die Grenze wird eingehalten und nicht nur vorhergesagt.** Zwischen `stat` und `read` kann eine Datei wachsen, und eine wachsende Protokolldatei ist genau der Fall, für den man den Editor aufmacht. Gelesen werden deshalb höchstens `EDITORGRENZE + 1` Bytes über `Read::take`; kommt das eine Byte zuviel an, wird abgewiesen. Ohne diese Schranke wäre „die Datei steht nie vollständig im Speicher" eine Vorhersage aus einer alten Auskunft.
+  - `crates/krk-core/src/text/mod.rs` ist um die eine Zeile `pub use datei::Abweisung;` erweitert, rein additiv und der dort festgehaltenen Regel folgend, dass die Typen im Wiederausfuhrblock stehen und die Funktionen nicht.
 
 #### 11. [DONE] **`Lesezeichen` trägt zwei Sorten**
 

@@ -214,10 +214,14 @@ pub enum Wirkungsbereich {
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
     /// ganzem und keinem Bereich darin: beenden, ein Fenster schliessen, einen
-    /// Bereich ein- und ausblenden, den Fokus setzen. Die anderen bewegen die
-    /// Auswahl und wirken deshalb dort, wo der Fokus gerade steht: beide
-    /// Bereiche sind Listen mit einer Auswahl, und der Auf- und der Ab-Pfeil
-    /// bewegen sie nach C2 wie nach C5.
+    /// Bereich ein- und ausblenden. Die anderen sind die vier Fokusbefehle und
+    /// das Anlegen eines Lesezeichens: ein Befehl, der den Fokus **holt**,
+    /// kann nicht voraussetzen, wo er gerade steht.
+    ///
+    /// Der Auf- und der Ab-Pfeil standen bis zum eingebauten Editor hier, weil
+    /// sie die Auswahl des Bereichs bewegen, der den Fokus hat. Sie tragen
+    /// seither [`Wirkungsbereich::Navigator`]: im Editor bewegen dieselben
+    /// beiden Tasten die Schreibmarke.
     Ueberall,
 }
 
@@ -348,6 +352,49 @@ pub enum Kommando {
     /// allein `resources/default-keymap.toml`; hier steht sie als Begruendung
     /// und nicht als zweite Wahrheit.
     FokusVorschau,
+    /// Den ausgewaehlten Eintrag des Dateifensters im eingebauten Editor
+    /// oeffnen (F4, die Norton-Bedeutung "Bearbeiten").
+    ///
+    /// Der erste der beiden Einstiegswege in den Editor. Der Eintrag stand seit
+    /// der Runde 1 als `reserviert_fuer = "editor"` in der
+    /// Auslieferungsbelegung und traegt seit dieser Runde die Taste und dieses
+    /// Kommando.
+    Bearbeiten,
+    /// Die im Vorschaufenster angezeigte Datei in den Editor uebernehmen (C2
+    /// der Editor-Runde).
+    ///
+    /// Der zweite Einstiegsweg, festgelegt vom Nutzer am 260807-2139. Er wirkt
+    /// allein mit dem Fokus in der Vorschau und ist damit der einzige Befehl
+    /// mit [`Wirkungsbereich::Vorschau`].
+    EditorAusVorschau,
+    /// Den Eingabefokus in den eingebauten Editor setzen (C1 der
+    /// Editor-Runde).
+    ///
+    /// Der vierte Fokusbefehl. Er holt einen ausgeblendeten Editor hervor,
+    /// sofern dieser eine Datei haelt; die Bedingung steht beim Aufrufer, die
+    /// Zuordnung von einem Fokusziel auf einen Bereich in `krk_ui`.
+    FokusEditor,
+    /// Den Editor ausblenden (C1 der Editor-Runde).
+    EditorSchliessen,
+    /// Zwischen Rohansicht und Formatansicht wechseln (C3 der Editor-Runde).
+    EditorAnsichtUmschalten,
+    /// Die im Editor geoeffnete Datei sichern (C4 der Editor-Runde).
+    EditorSichern,
+    /// Die Schreibmarke auf eine eingegebene Zeilennummer setzen (C5 der
+    /// Editor-Runde).
+    EditorZeileSpringen,
+    /// Im Text des Editors suchen (C5 der Editor-Runde).
+    EditorSuchen,
+    /// Den naechsten Treffer der laufenden Suche anspringen (C5 der
+    /// Editor-Runde).
+    EditorWeitersuchen,
+    /// Den vorigen Treffer der laufenden Suche anspringen (C5 der
+    /// Editor-Runde).
+    EditorRueckwaertsSuchen,
+    /// Den naechsten Treffer ersetzen (C5 der Editor-Runde).
+    EditorErsetzen,
+    /// Jeden Treffer im ganzen Text ersetzen (C5 der Editor-Runde).
+    EditorAlleErsetzen,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -358,7 +405,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 53] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 65] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -416,6 +463,24 @@ impl Kommando {
         (Kommando::FokusLeiste, "fokus_leiste"),
         (Kommando::FokusDateifenster, "fokus_dateifenster"),
         (Kommando::FokusVorschau, "fokus_vorschau"),
+        (Kommando::Bearbeiten, "bearbeiten"),
+        (Kommando::EditorAusVorschau, "editor_aus_vorschau"),
+        (Kommando::FokusEditor, "fokus_editor"),
+        (Kommando::EditorSchliessen, "editor_schliessen"),
+        (
+            Kommando::EditorAnsichtUmschalten,
+            "editor_ansicht_umschalten",
+        ),
+        (Kommando::EditorSichern, "editor_sichern"),
+        (Kommando::EditorZeileSpringen, "editor_zeile_springen"),
+        (Kommando::EditorSuchen, "editor_suchen"),
+        (Kommando::EditorWeitersuchen, "editor_weitersuchen"),
+        (
+            Kommando::EditorRueckwaertsSuchen,
+            "editor_rueckwaerts_suchen",
+        ),
+        (Kommando::EditorErsetzen, "editor_ersetzen"),
+        (Kommando::EditorAlleErsetzen, "editor_alle_ersetzen"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::Beenden, "beenden"),
     ];
@@ -442,25 +507,24 @@ impl Kommando {
     /// Tabelle mit Auffangzweig gaebe einem vergessenen Kommando
     /// stillschweigend den Bereich des Nachbarn.
     ///
-    /// Vier Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
+    /// Sechs Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
     /// Befehl ausfuehrt**. Was das Fenstermodell traegt, wirkt ueberall; was
     /// ein Dateifenster traegt, braucht dessen Fokus; was die Leiste traegt,
-    /// den ihren; die vier Tabbefehle bedienen den Bereich mit Tabs, der den
-    /// Fokus hat (C1 wie C6). Drei Befehle folgen ihr nicht und stehen
-    /// deshalb hier:
-    /// [`Kommando::AuswahlHoch`] und [`Kommando::AuswahlRunter`] bewegen die
-    /// Auswahl des Bereichs, der den Fokus hat, und gehoeren deshalb keinem
-    /// von beiden allein; [`Kommando::LesezeichenAnlegen`] liest den Ordner
-    /// des aktiven Dateifensters und schreibt in die Leiste, braucht also
-    /// keinen von beiden im Fokus.
+    /// den ihren; was der Editor traegt, den seinen; die vier Tabbefehle
+    /// bedienen den Bereich mit Tabs, der den Fokus hat (C1 wie C6); und drei
+    /// Befehle bedienen den Navigator als ganzen, ohne den Editor. Zwei
+    /// Befehle folgen keiner der sechs Regeln und stehen deshalb hier:
+    /// [`Kommando::LesezeichenAnlegen`] liest den Ordner des aktiven
+    /// Dateifensters oder die Zeile der Schreibmarke im Editor und schreibt
+    /// beides in die Leiste, braucht also keinen Bereich im Fokus; und die
+    /// vier Fokusbefehle koennen nicht voraussetzen, wo der Fokus steht.
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
             // weil sie aus jedem Fokus heraus erreichbar sein muss: sie zeigt
             // die Belegung der ganzen Anwendung und gehoert keinem Bereich,
             // so wenig wie das Ein- und Ausblenden der Bereiche auf F3.
-            Kommando::FensterWechseln
-            | Kommando::LeisteUmschalten
+            Kommando::LeisteUmschalten
             | Kommando::ZweitesFensterUmschalten
             | Kommando::VorschauUmschalten
             | Kommando::FensterEinblenden
@@ -470,11 +534,28 @@ impl Kommando {
             | Kommando::Abbrechen
             | Kommando::BelegungAnsehen
             | Kommando::Beenden => Wirkungsbereich::Ueberall,
-            // Die Auswahl des fokussierten Bereichs (C2 und C5).
-            Kommando::AuswahlHoch | Kommando::AuswahlRunter => Wirkungsbereich::Ueberall,
+            // Die drei Befehle des Navigators, deren Taste im Editor der
+            // Textflaeche gehoert.
+            //
+            // Sie sind in der Runde 1 mit `Ueberall` entstanden, weil es
+            // damals nichts gab, wovon sie auszunehmen waeren: `tab`, `up` und
+            // `down` fanden im ganzen Fenster keinen Bereich, der sie selbst
+            // braucht. Mit dem eingebauten Editor gibt es einen. Ohne diesen
+            // Umzug bewegte ein `up` mit dem Fokus im Editor die Auswahl im
+            // Dateifenster statt der Schreibmarke, und `tab` wechselte das
+            // Dateifenster, statt einen Tabulator zu schreiben; das erste
+            // Abnahmekriterium von C7 der Editor-Runde waere gebrochen.
+            //
+            // `fenster_wechseln` ist dabei eine Ableitung des Planners und
+            // keine Antwort des Nutzers: C7 sagt zu, dass eine Zeichentaste im
+            // Editor ihr Zeichen einfuegt, und zaehlt den Befehl unter denen,
+            // die dort wirken muessen, nicht auf.
+            Kommando::FensterWechseln | Kommando::AuswahlHoch | Kommando::AuswahlRunter => {
+                Wirkungsbereich::Navigator
+            }
             // Der Fokuswechsel selbst und das Anlegen eines Lesezeichens (C5).
             //
-            // Alle drei Fokusbefehle stehen hier, und sie muessen es: ein
+            // Alle vier Fokusbefehle stehen hier, und sie muessen es: ein
             // Befehl, der den Fokus **holt**, kann nicht voraussetzen, wo er
             // gerade steht. Traege einer von ihnen den Bereich, in den er
             // fuehrt, waere er allein von dort aus erreichbar und damit
@@ -482,7 +563,29 @@ impl Kommando {
             Kommando::FokusLeiste
             | Kommando::FokusDateifenster
             | Kommando::FokusVorschau
+            | Kommando::FokusEditor
             | Kommando::LesezeichenAnlegen => Wirkungsbereich::Ueberall,
+            // Der Uebergang aus der Vorschau in den Editor (C2 der
+            // Editor-Runde), der einzige Befehl, der allein im Vorschaufenster
+            // wirkt: ohne Fokus dort gibt es keine angezeigte Datei, die er
+            // uebernaehme.
+            Kommando::EditorAusVorschau => Wirkungsbereich::Vorschau,
+            // Die acht Befehle, die in der Datei arbeiten, die der Editor
+            // haelt (C3 bis C6 der Editor-Runde). Mit dem Fokus anderswo gibt
+            // es keine solche Datei.
+            //
+            // `bearbeiten` steht **nicht** hier, sondern beim Dateifenster:
+            // F4 oeffnet dessen ausgewaehlten Eintrag und setzt den Editor
+            // nicht voraus, sondern fuellt ihn.
+            Kommando::EditorSchliessen
+            | Kommando::EditorAnsichtUmschalten
+            | Kommando::EditorSichern
+            | Kommando::EditorZeileSpringen
+            | Kommando::EditorSuchen
+            | Kommando::EditorWeitersuchen
+            | Kommando::EditorRueckwaertsSuchen
+            | Kommando::EditorErsetzen
+            | Kommando::EditorAlleErsetzen => Wirkungsbereich::Editor,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen
@@ -498,9 +601,12 @@ impl Kommando {
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
             // hinaus, Navigation, Markierung, Sortierung, die Dateioperationen
             // aus C4, die beiden Zwischenablage-Befehle aus C10
-            // (Nutzerentscheid vom 260805-0000) und der Terminal-Befehl aus
-            // C11, der den Ordner des sichtbaren Tabs uebergibt.
-            Kommando::SeiteHoch
+            // (Nutzerentscheid vom 260805-0000), der Terminal-Befehl aus C11,
+            // der den Ordner des sichtbaren Tabs uebergibt, und F4 aus C1 der
+            // Editor-Runde, das den **ausgewaehlten Eintrag** des
+            // Dateifensters im Editor oeffnet.
+            Kommando::Bearbeiten
+            | Kommando::SeiteHoch
             | Kommando::SeiteRunter
             | Kommando::Listenanfang
             | Kommando::Listenende

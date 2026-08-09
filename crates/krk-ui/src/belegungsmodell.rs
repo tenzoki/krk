@@ -29,9 +29,9 @@
 //! Namen. Die Zuordnung Funktion → Bereich steht an genau einer Stelle,
 //! [`bereich`], und dort als vollstaendige Fallunterscheidung ueber
 //! [`Kommando`] ohne Auffangzweig: ein neues Kommando uebersetzt nicht, bevor
-//! es seinen Bereich genannt hat. Die wenigen Funktionen ohne Kommando (der
-//! reservierte Editor-Eintrag, die vier Textbefehle des Menues) stehen
-//! daneben mit Namen; dass keine vergessen ist, prueft
+//! es seinen Bereich genannt hat. Die wenigen Funktionen ohne Kommando (die
+//! sechs Textbefehle des Menues) stehen daneben mit Namen; dass keine
+//! vergessen ist, prueft
 //! `jede_kennung_hat_einen_funktionsbereich` gegen die
 //! Auslieferungsbelegung. Innerhalb eines Bereichs bleibt die Reihenfolge
 //! der Datei erhalten — eine zweite Ordnung neben ihr entsteht nicht.
@@ -77,9 +77,12 @@ pub enum Funktionsbereich {
     Fenster,
     /// Die Anwendung als ganze: Belegungsansicht und Beenden (C3).
     Anwendung,
-    /// Die vier Textbefehle, die das Menue "Bearbeiten" zustellt (C2).
+    /// Die sechs Textbefehle, die das Menue "Bearbeiten" zustellt (C2, und
+    /// Rueckgaengig und Wiederholen aus der Editor-Runde).
     Textbefehle,
-    /// Der Editor einer spaeteren Runde; sein F4-Eintrag ist reserviert (C3).
+    /// Der eingebaute Editor: die beiden Einstiegswege, der Fokus, die beiden
+    /// Ansichten, das Sichern, der Zeilensprung, Suchen und Ersetzen (C1 bis
+    /// C6 der Editor-Runde).
     Editor,
 }
 
@@ -118,20 +121,26 @@ impl Funktionsbereich {
 /// **Die eine Stelle der Zuordnung.** Fuer jede Funktion mit einem
 /// [`Kommando`] antwortet die vollstaendige Fallunterscheidung in
 /// [`bereich_des_kommandos`]; die Funktionen ohne Kommando stehen hier mit
-/// Namen, und es sind genau die, die nie eines bekommen: der fuer den Editor
-/// reservierte Eintrag und die vier vom Menue zugestellten Textbefehle.
-/// `None` heisst: die Zuordnung kennt diese Kennung nicht — das faengt die
-/// Pruefung `jede_kennung_hat_einen_funktionsbereich`, bevor es eine Ansicht
-/// erreicht.
+/// Namen, und es sind genau die, die nie eines bekommen: die sechs vom Menue
+/// zugestellten Textbefehle. `None` heisst: die Zuordnung kennt diese Kennung
+/// nicht — das faengt die Pruefung `jede_kennung_hat_einen_funktionsbereich`,
+/// bevor es eine Ansicht erreicht.
+///
+/// `bearbeiten` stand bis zur Editor-Runde hier unten, weil der F4-Eintrag
+/// reserviert war und kein Kommando trug. Seit S5 traegt er
+/// [`Kommando::Bearbeiten`], der Zweig darueber greift, und eine Zeile hier
+/// behauptete eine zweite Wahrheit ueber denselben Namen.
 pub fn bereich(kennung: &str) -> Option<Funktionsbereich> {
     if let Some(kommando) = Kommando::aus_kennung(kennung) {
         return Some(bereich_des_kommandos(kommando));
     }
     match kennung {
-        "bearbeiten" => Some(Funktionsbereich::Editor),
-        "text_ausschneiden" | "text_kopieren" | "text_einfuegen" | "text_alles_auswaehlen" => {
-            Some(Funktionsbereich::Textbefehle)
-        }
+        "text_ausschneiden"
+        | "text_kopieren"
+        | "text_einfuegen"
+        | "text_alles_auswaehlen"
+        | "text_rueckgaengig"
+        | "text_wiederholen" => Some(Funktionsbereich::Textbefehle),
         _ => None,
     }
 }
@@ -215,6 +224,30 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::BereichVerbreitern
         | Kommando::BereichVerschmaelern => Funktionsbereich::Fenster,
         Kommando::BelegungAnsehen | Kommando::Beenden => Funktionsbereich::Anwendung,
+        // Der eingebaute Editor, und `bearbeiten` steht mit darin.
+        //
+        // Es ist die einzige Stelle, an der diese Gliederung und
+        // [`Kommando::wirkungsbereich`] auseinandergehen, und der Grund ist
+        // derselbe wie beim Ein- und Ausblenden der Vorschau weiter oben: die
+        // Gliederung fragt nach der **Gegend der Anwendung**, der
+        // Wirkungsbereich nach dem Fokus, den ein Befehl braucht. F4 braucht
+        // das Dateifenster, aber wer die Zeile sucht, sucht sie unter "Editor"
+        // und nicht unter "Dateioperationen". Derselbe Satz ordnet den
+        // Uebergang aus der Vorschau hierher und nicht zu "Vorschau": beide
+        // sind Einstiegswege in den Editor, und der Nutzer findet unter
+        // "Editor" alle Befehle, die ihn angehen.
+        Kommando::Bearbeiten
+        | Kommando::EditorAusVorschau
+        | Kommando::FokusEditor
+        | Kommando::EditorSchliessen
+        | Kommando::EditorAnsichtUmschalten
+        | Kommando::EditorSichern
+        | Kommando::EditorZeileSpringen
+        | Kommando::EditorSuchen
+        | Kommando::EditorWeitersuchen
+        | Kommando::EditorRueckwaertsSuchen
+        | Kommando::EditorErsetzen
+        | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
     }
 }
 
@@ -327,8 +360,14 @@ impl Belegungsmodell {
     /// "Funktion".
     ///
     /// Eine reservierte Funktion traegt den Vorbehalt im Text, wie C3 es fuer
-    /// den F4-Eintrag verlangt; eine vom Hauptmenue zugestellte den Zusteller,
-    /// damit die beiden Cmd+A-Zeilen unterscheidbar sind.
+    /// den F4-Eintrag verlangte; eine vom Hauptmenue zugestellte den
+    /// Zusteller, damit die beiden Cmd+A-Zeilen unterscheidbar sind.
+    ///
+    /// Die Auslieferungsbelegung fuehrt seit der Editor-Runde keine
+    /// reservierte Funktion mehr — `bearbeiten` traegt seit S6 die Taste F4.
+    /// Der Zweig bleibt trotzdem stehen: `reserviert_fuer` ist ein Feld der
+    /// Belegungsdatei, und eine `keymap.toml` aus einer aelteren Fassung kann
+    /// es weiterhin tragen.
     pub fn funktionstext(&self, stelle: usize) -> Option<String> {
         let funktion = self.funktion(stelle)?;
         let mut text = funktion.name().to_owned();
@@ -677,21 +716,33 @@ mod tests {
         assert!(gross_f_gesehen, "keine Zeile zeigt eine Funktionstaste");
     }
 
-    /// Der F4-Eintrag erscheint als fuer den Editor reserviert (C3), und er
-    /// steht sichtbar im Bereich "Editor": die naechste Ueberschrift ueber
-    /// ihm traegt diesen Namen.
+    /// Der F4-Eintrag traegt seine Taste und steht sichtbar im Bereich
+    /// "Editor": die naechste Ueberschrift ueber ihm traegt diesen Namen.
+    ///
+    /// **Die Vorgaengerin dieser Pruefung hielt den Vorbehalt fest.** Bis zur
+    /// Editor-Runde stand `bearbeiten` mit `reserviert_fuer = "editor"` und
+    /// ohne Kombination in der Auslieferungsbelegung, und die Zeile las sich
+    /// als "Bearbeiten (reserviert für den Editor)". Seit S5 und S6 traegt die
+    /// Funktion `f4` und [`Kommando::Bearbeiten`]; der Vorbehalt ist
+    /// eingeloest und nicht gebrochen, und die Zusage wandert entsprechend
+    /// mit: der Eintrag ist erreichbar und steht weiter unter "Editor".
     #[test]
-    fn der_f4_eintrag_ist_als_reserviert_gekennzeichnet_und_steht_im_bereich_editor() {
+    fn der_f4_eintrag_traegt_seine_taste_und_steht_im_bereich_editor() {
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
         let stelle = zeile_von("bearbeiten");
         let text = modell
             .funktionstext(stelle)
             .expect("die Zeile hat einen Text");
         assert!(
-            text.contains("reserviert für den Editor"),
-            "{text} nennt den Vorbehalt nicht"
+            !text.contains("reserviert"),
+            "{text} nennt einen Vorbehalt, den es nicht mehr gibt"
         );
-        assert_eq!(modell.tastentext(stelle).as_deref(), Some(""));
+        assert_eq!(modell.tastentext(stelle).as_deref(), Some("F4"));
+        assert_eq!(
+            Kommando::aus_kennung("bearbeiten"),
+            Some(Kommando::Bearbeiten),
+            "die Kennung aus der Belegungsdatei fuehrt nicht zum Kommando"
+        );
 
         let ueberschrift = (0..stelle)
             .rev()

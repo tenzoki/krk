@@ -94,15 +94,22 @@ pub const OHNE_BILDSCHIRM: &str = "das Fenster steht auf keinem Bildschirm, \
 /// `Anwendungsdelegierter::kommando_ausfuehren` weist dann **jeden** Befehl
 /// ab, der einen Wirkungsbereich nennt: der Fokus liegt nirgends, den ein
 /// solcher Befehl braucht. Die synthetischen Tastenereignisse gehen weiterhin
-/// durch den Abgriff, sie loesen nur nichts mehr aus. Was uebrig bleibt, sind
-/// die Befehle mit `Wirkungsbereich::Ueberall` — genau `auswahl_runter`, mit
-/// dem L1 und L7 gemessen werden. Die Strecke lief deshalb bis L5-Tab durch
-/// und blieb dort zehn Sekunden stehen, weil `tab_naechster` im
-/// Wirkungsbereich `Tabbereich` liegt (Defekt vom 260806-1235). Die Meldung
+/// durch den Abgriff, sie loesen nur nichts mehr aus. Die Strecke lief deshalb
+/// bis L5-Tab durch und blieb dort zehn Sekunden stehen, weil `tab_naechster`
+/// im Wirkungsbereich `Tabbereich` liegt (Defekt vom 260806-1235). Die Meldung
 /// nennt seitdem die Ursache statt der Groesse, die als erste darauf traf.
+///
+/// Bis L5-Tab kam die Strecke, weil `auswahl_runter` damals
+/// `Wirkungsbereich::Ueberall` trug und ohne Fokus wirkte. Seit S5 der
+/// Editor-Runde traegt es `Wirkungsbereich::Navigator`, und der schliesst den
+/// Fall "der Fokus liegt nirgends" aus; im Hintergrund misst die Strecke
+/// seither ueberhaupt nichts mehr. Der Satz ueber L1 und L7 ist damit aus der
+/// Meldung gefallen. **Mitgezogen aus S5**, weil eine Meldung, die dem Nutzer
+/// zwei gemessene Groessen verspricht, die es nicht gibt, teurer ist als der
+/// Eingriff ausserhalb der Schrittgrenze; die Messstrecke selbst nimmt S42 ab.
 pub const NICHT_IM_VORDERGRUND: &str = "KRK ist nicht die vorderste Anwendung. \
-     Ohne Tastaturfokus weist KRK jeden Befehl ab, der einen Wirkungsbereich \
-     nennt, und die Sitzungsstrecke misst nichts als L1 und L7. Starte den Lauf \
+     Ohne Tastaturfokus weist KRK jeden Befehl ab, der einen Bereich im Fokus \
+     braucht, und die Sitzungsstrecke misst dann gar nichts. Starte den Lauf \
      so, dass KRK nach vorn kommen darf, etwa aus einem Terminalfenster im \
      Vordergrund, und arbeite waehrend des Laufs nicht in einer anderen \
      Anwendung weiter. Es wird keine Zahl ausgegeben; im Hintergrund misst die \
@@ -1858,8 +1865,9 @@ mod tests {
     ///
     /// Die Pruefung geht ueber **jede** Messgroesse und nicht nur ueber die,
     /// die am 260806 als erste darauf traf: der Vorbehalt gehoert der Strecke,
-    /// und L1 und L7 kamen nur deshalb durch, weil `auswahl_runter` als
-    /// einziger Befehl der Strecke ohne Wirkungsbereich auskommt.
+    /// und L1 und L7 kamen damals nur deshalb durch, weil `auswahl_runter` als
+    /// einziger Befehl der Strecke ohne Fokus auskam. Seit S5 der Editor-Runde
+    /// tut es auch das nicht mehr — es traegt `Wirkungsbereich::Navigator`.
     #[test]
     fn im_hintergrund_beginnt_keine_messung() {
         let ordner = Planordner::neu("hintergrund");
