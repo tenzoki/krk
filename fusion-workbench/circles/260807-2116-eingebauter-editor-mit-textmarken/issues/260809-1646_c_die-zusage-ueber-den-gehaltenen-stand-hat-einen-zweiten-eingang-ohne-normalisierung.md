@@ -109,3 +109,44 @@ In jedem Fall gehört der Fall „Text aus der `NSTextView`" in die Aufzählung 
 `datei.rs:39-45`, die heute nur S37 nennt.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: Aus den drei Eingängen sind **zwei** geworden, und die Zusage hält an
+beiden Enden.
+
+- `bearbeiten` führt den Stand aus der Textfläche durch
+  `datei::in_gehaltene_form` (`crates/krk-ui/src/editormodell.rs`).
+- Die beiden Ersetzungswege teilen sich den neuen privaten Eingang
+  `Editormodell::ersetzung_vorbereiten`. Er liefert den Suchtext des laufenden
+  Suchlaufs und den Ersatztext in der gehaltenen Form; `treffer_ersetzen` und
+  `alle_treffer_ersetzen` rufen `in_gehaltene_form` damit nicht mehr selbst und
+  teilen sich zugleich den `gesucht`-Klon und die Suchlauf-Prüfung, die vorher
+  in beiden ausgeschrieben standen.
+
+Eine zweite Normalisierungsstelle ist nicht entstanden: `in_gehaltene_form`
+bleibt die eine, und `krk-core` ist nicht angefasst worden.
+
+**Auf einen Eingang gehen die beiden nicht, und der Grund ist gemessen.** Der
+Vorschlag oben, allein die Zuweisung an `self.stand` zu wandeln, bricht
+`treffer_ersetzen`: `suche::einen_ersetzen` nennt den nächsten Treffer als
+Byteversatz in den Stand, den es eben gebildet hat. Eine Wandlung danach
+verschiebt jeden Versatz dahinter, und `treffer.iter().position(...)` findet ihn
+in der neu gebildeten Liste nicht mehr. Gegenprobe am 260809-1725, mit der
+verworfenen Bauform eingesetzt: `ein_ersatztext_mit_crlf_kommt_in_gehaltener_form_an`
+fällt mit `left: None, right: Some(9)`, also mit einem Durchgang, der
+kommentarlos stehenbliebe. Der Ersatztext gehört deshalb **vor** das Ersetzen
+gewandelt, nicht der Stand danach. Der Grund steht im Modulkopf von
+`editormodell.rs`.
+
+**Belegt, dass ein eingefügtes CRLF nicht mehr auf der Platte landet:** die
+Probe `ein_eingefuegtes_crlf_landet_nicht_auf_der_platte` gibt über `bearbeiten`
+einen Stand mit `\r\n` herein, sichert ihn und liest die Datei danach von der
+Platte zurück. Sie enthält kein `\r`. Zwei weitere Proben decken die beiden
+Ersetzungswege ab (`ein_ersatztext_mit_crlf_kommt_in_gehaltener_form_an`,
+`das_sammelersetzen_wandelt_seinen_ersatztext_ebenfalls`).
+
+Nicht mit erledigt: der Modulkopf von `krk-core/src/text/datei.rs` nennt in
+seiner Aufzählung weiterhin nur S37 und nicht den Stand aus der `NSTextView`.
+`crates/krk-core/` war für einen parallel laufenden Schritt reserviert; der Fall
+steht als
+`260809-1728_o_der-modulkopf-von-datei-rs-nennt-den-groesseren-der-beiden-eingaenge-nicht.md`.

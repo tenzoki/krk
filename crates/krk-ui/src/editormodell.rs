@@ -42,6 +42,36 @@
 //! und alles hier rechnet darauf. Wer Text von anderswo hereingibt, fuehrt ihn
 //! durch `krk_core::text::datei::in_gehaltene_form`.
 //!
+//! # Die zwei Eingaenge fuer fremden Text
+//!
+//! Fremd heisst: nicht aus `krk_core::text::datei::einlesen`. Das Modell hat
+//! genau zwei solche Eingaenge, und beide fuehren durch `in_gehaltene_form`:
+//!
+//! ```text
+//!  ganzer Stand aus der Textflaeche ──> bearbeiten
+//!                                          │
+//!  Ersatztext aus dem Eingabefeld ──> ersetzung_vorbereiten
+//!                                          │
+//!                                          v
+//!                                  in_gehaltene_form ──> stand
+//! ```
+//!
+//! Der erste ist der groessere: eine `NSTextView` bewahrt eingefuegten Text
+//! zeichengetreu auf, also bringt ein Einfuegen aus einem Windows-Projekt
+//! `\r\n` mit. Der zweite ist der kleinere und war der einzige, den der
+//! Modulkopf von `krk_core::text::datei` bis zum 260809 vorhersah.
+//!
+//! **Die drei Zuweisungen an [`Editormodell::stand`] sind nicht die
+//! Eingaenge**, und daran haengt eine Messung. Wer statt der beiden Eingaenge
+//! die Zuweisungen wandelte, braeche [`Editormodell::treffer_ersetzen`]:
+//! `krk_core::text::suche::einen_ersetzen` liefert den naechsten Treffer als
+//! Byteversatz **in den Stand, den es eben gebildet hat**. Eine Wandlung
+//! danach verschoebe jeden Versatz dahinter, die Suche nach seiner Stelle in
+//! der neu gebildeten Liste ginge leer aus, und der Durchgang bliebe stehen,
+//! ohne dass jemand etwas meldete. Die Probe
+//! `ein_ersatztext_mit_crlf_kommt_in_gehaltener_form_an` haelt genau diesen
+//! Fall fest.
+//!
 //! # Ein Stand, und deshalb kann ein Ansichtswechsel nichts verlieren
 //!
 //! [`Editormodell::stand`] ist die **einzige** Zeichenkette dieses Modells.
@@ -550,8 +580,17 @@ impl Editormodell {
     /// einer Panik. Die beiden Ersetzungswege bilden die Liste stattdessen neu
     /// und sind deshalb die einzigen, auf denen ein Suchlauf eine Aenderung
     /// ueberlebt.
+    ///
+    /// **Der groessere der beiden Eingaenge fuer fremden Text.** Der Stand
+    /// kommt aus einer `NSTextView`, die eingefuegten Text zeichengetreu
+    /// aufbewahrt, also mitsamt einem `\r\n`, das aus einer Windows-Quelle
+    /// hineinkopiert wurde. Gewandelt wird ueber
+    /// `krk_core::text::datei::in_gehaltene_form`, die eine Stelle des
+    /// Programms, die das tut; siehe den Modulkopf. Ein Stand, der die Form
+    /// schon hat, kommt ohne eine einzige Kopie zurueck und kostet einen
+    /// Durchlauf.
     pub fn bearbeiten(&mut self, neuer_stand: String) {
-        self.stand = neuer_stand;
+        self.stand = datei::in_gehaltene_form(neuer_stand);
         self.abweichung = true;
         self.suchlauf = None;
     }
@@ -672,6 +711,29 @@ impl Editormodell {
         self.suchlauf = None;
     }
 
+    /// Was beide Ersetzungswege brauchen, bevor sie `krk_core::text::suche`
+    /// rufen: den Suchtext des laufenden Suchlaufs und den Ersatztext in der
+    /// gehaltenen Form.
+    ///
+    /// **Der kleinere der beiden Eingaenge fuer fremden Text**, und die eine
+    /// Stelle, an der ein Ersatztext ihn nimmt. Er kommt aus einem
+    /// Eingabefeld und traegt ein `\r`, wenn er dort hineinkopiert wurde;
+    /// gewandelt wird ueber `krk_core::text::datei::in_gehaltene_form` und
+    /// nicht mit einer eigenen Wandlung daneben.
+    ///
+    /// **Vor dem Ersetzen und nicht danach**, denn `suche::einen_ersetzen`
+    /// nennt den naechsten Treffer als Byteversatz in den Stand, den es
+    /// gebildet hat. Der Grund im Einzelnen steht im Modulkopf.
+    ///
+    /// `None` heisst: es laeuft keine Suche, und dann ist nichts zu ersetzen.
+    fn ersetzung_vorbereiten(&self, ersatz: &str) -> Option<(String, String)> {
+        let lauf = self.suchlauf.as_ref()?;
+        Some((
+            lauf.gesucht.clone(),
+            datei::in_gehaltene_form(ersatz.to_owned()),
+        ))
+    }
+
     /// Ersetzt den angesteuerten Treffer und steuert den naechsten an (C5).
     ///
     /// Liefert den naechsten Treffer im **neuen** Stand, oder `None`, wenn der
@@ -681,11 +743,10 @@ impl Editormodell {
     ///
     /// Ohne laufenden Suchlauf und ohne angesteuerten Treffer geschieht nichts.
     pub fn treffer_ersetzen(&mut self, ersatz: &str) -> Option<Treffer> {
-        let lauf = self.suchlauf.as_ref()?;
-        let angesteuert = lauf.angesteuert()?;
-        let gesucht = lauf.gesucht.clone();
+        let angesteuert = self.suchlauf.as_ref()?.angesteuert()?;
+        let (gesucht, ersatz) = self.ersetzung_vorbereiten(ersatz)?;
 
-        let ersetzung = suche::einen_ersetzen(&self.stand, &gesucht, ersatz, angesteuert);
+        let ersetzung = suche::einen_ersetzen(&self.stand, &gesucht, &ersatz, angesteuert);
         self.stand = ersetzung.stand;
         self.abweichung = true;
 
@@ -715,12 +776,11 @@ impl Editormodell {
     ///
     /// Ohne laufenden Suchlauf geschieht nichts, und die Zahl ist 0.
     pub fn alle_treffer_ersetzen(&mut self, ersatz: &str) -> usize {
-        let Some(lauf) = self.suchlauf.as_ref() else {
+        let Some((gesucht, ersatz)) = self.ersetzung_vorbereiten(ersatz) else {
             return 0;
         };
-        let gesucht = lauf.gesucht.clone();
 
-        let ersetzung = suche::alle_ersetzen(&self.stand, &gesucht, ersatz);
+        let ersetzung = suche::alle_ersetzen(&self.stand, &gesucht, &ersatz);
         if ersetzung.zahl == 0 {
             return 0;
         }
@@ -1140,6 +1200,75 @@ mod tests {
         let lauf = modell.suchlauf().expect("der Suchlauf steht");
         assert_eq!(lauf.zahl(), 0);
         assert_eq!(lauf.meldung(), "Kein Treffer für „a“");
+    }
+
+    /// Die Entscheidung des Nutzers vom 260808-0043, an dem Ende gemessen, an
+    /// dem sie zaehlt: KRK schreibt beim Sichern immer Unix-Zeilenenden.
+    ///
+    /// Eine `NSTextView` bewahrt eingefuegten Text zeichengetreu auf, also
+    /// steht nach einem Einfuegen aus einer Windows-Quelle ein `\r\n` in dem
+    /// Stand, den sie zurueckgibt. Geprueft wird nicht die Wandlung selbst,
+    /// sondern die Datei auf der Platte: `sicherungsform` wandelt bewusst
+    /// keine Zeilenenden, also faende ein `\r\n` von hier aus jeden Weg
+    /// hinaus.
+    #[test]
+    fn ein_eingefuegtes_crlf_landet_nicht_auf_der_platte() {
+        let ordner = Pruefordner::neu("crlf-sichern");
+        let pfad = ordner.datei("stand.txt", "erste Zeile\n");
+        let mut modell = geoeffnet(&pfad);
+
+        modell.bearbeiten("aus Windows\r\neingefügt\r\nletzte".to_owned());
+        assert_eq!(
+            modell.stand(),
+            "aus Windows\neingefügt\nletzte",
+            "der gehaltene Stand traegt `\\n` als einziges Zeilenende"
+        );
+
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert);
+        let auf_der_platte =
+            std::fs::read_to_string(&pfad).expect("die Datei ist nach dem Sichern lesbar");
+        assert!(
+            !auf_der_platte.contains('\r'),
+            "260808-0043: beim Sichern gehen Unix-Zeilenenden hinaus, {auf_der_platte:?}"
+        );
+        assert_eq!(auf_der_platte, "aus Windows\neingefügt\nletzte\n");
+    }
+
+    /// Der Ersatztext wird **vor** dem Ersetzen gewandelt, nicht der Stand
+    /// danach.
+    ///
+    /// Die beiden Zusicherungen unten trennen die richtige Reihenfolge von der
+    /// falschen. Der gewandelte Ersatztext ist drei Bytes lang, der
+    /// ungewandelte vier; der naechste Treffer steht deshalb auf 9, wenn vorher
+    /// gewandelt wurde, und auf 10, wenn `einen_ersetzen` den rohen Text bekam.
+    /// Im zweiten Fall faende die neu gebildete Trefferliste die 10 nicht, und
+    /// `treffer_ersetzen` lieferte `None` — der Durchgang bliebe kommentarlos
+    /// stehen.
+    #[test]
+    fn ein_ersatztext_mit_crlf_kommt_in_gehaltener_form_an() {
+        let ordner = Pruefordner::neu("crlf-ersatz");
+        let pfad = ordner.datei("stand.txt", "eins zwei eins\n");
+        let mut modell = geoeffnet(&pfad);
+
+        modell.suche_starten("eins", 0);
+        let naechster = modell.treffer_ersetzen("A\r\nB");
+        assert_eq!(modell.stand(), "A\nB zwei eins\n");
+        assert_eq!(
+            naechster.map(|t| t.anfang),
+            Some(9),
+            "der Durchgang steuert den unberuehrten Treffer im gewandelten Stand an"
+        );
+    }
+
+    #[test]
+    fn das_sammelersetzen_wandelt_seinen_ersatztext_ebenfalls() {
+        let ordner = Pruefordner::neu("crlf-sammelersatz");
+        let pfad = ordner.datei("stand.txt", "a b a\n");
+        let mut modell = geoeffnet(&pfad);
+
+        modell.suche_starten("a", 0);
+        assert_eq!(modell.alle_treffer_ersetzen("x\r\ny"), 2);
+        assert_eq!(modell.stand(), "x\ny b x\ny\n");
     }
 
     /// Ein Suchlauf ueberlebt keine Bearbeitung von aussen: seine Versaetze

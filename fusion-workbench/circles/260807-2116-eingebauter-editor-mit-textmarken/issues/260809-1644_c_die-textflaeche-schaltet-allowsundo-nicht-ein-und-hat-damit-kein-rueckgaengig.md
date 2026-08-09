@@ -82,3 +82,21 @@ nimmt ein Cmd+Z den Text der vorigen Datei zurück. Das ist die Stelle von S24;
 hier gehört der Vermerk hin, damit er nicht verlorengeht.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: `textflaeche_bauen` setzt `text.setAllowsUndo(true)`, mit dem Grund
+daneben (`crates/krk-ui/src/appkit/editor.rs`). Die Begründung im Modulkopf von
+`crates/krk-ui/src/appkit/menue.rs` ist nachgezogen: die `NSTextView` bringt
+ihren Rückgängigverwalter mit, benutzt ihn aber erst mit `allowsUndo`, und die
+beiden Menüeinträge sind die zweite Hälfte derselben Sache.
+
+Der Vermerk zu `stand_einsetzen` und `removeAllActions()` ist nicht mit
+geschlossen worden, sondern abgetrennt nach
+`260809-1727_o_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`;
+`stand_einsetzen` trägt einen Doc-Absatz, der dorthin zeigt. Er blieb offen,
+weil `NSUndoManager` möglicherweise eine Zeile in `crates/krk-ui/Cargo.toml`
+braucht, und die lag außerhalb des Umfangs dieses Schrittes.
+
+Dass Rückgängig am laufenden Bündel **wirkt**, bleibt wie in S7 vorgesehen
+Nutzerarbeit (S42); geprüft ist hier allein, dass die Zeile steht und der
+Arbeitsbereich grün bleibt.

@@ -53,11 +53,14 @@
 //! `issues/260804-1309_*_ohne-menue-bearbeiten-laesst-sich-in-kein-textfeld-einfuegen.md`.
 //!
 //! **`undo:` und `redo:` liegen genauso.** Die `NSTextView` des Editors bringt
-//! ihren Rueckgaengigverwalter mit, aber Cmd+Z und Shift+Cmd+Z erreichen ihn
-//! nur ueber ein Menuekuerzel. Ohne die beiden Eintraege "Rueckgaengig" und
-//! "Wiederholen" haette der Editor kein Rueckgaengig. Sie stehen an der
-//! Mac-ueblichen Stelle ganz oben im Untermenue, durch einen Trenner von den
-//! vier Zwischenablage-Befehlen getrennt.
+//! ihren Rueckgaengigverwalter zwar mit, benutzt ihn aber erst, wenn
+//! `allowsUndo` gesetzt ist; das geschieht in `super::editor`, und diese beiden
+//! Eintraege sind die zweite Haelfte derselben Sache. Cmd+Z und Shift+Cmd+Z
+//! erreichen den Verwalter naemlich nur ueber ein Menuekuerzel. Ohne die
+//! beiden Eintraege "Rueckgaengig" und "Wiederholen" haette der Editor kein
+//! Rueckgaengig, und ohne `allowsUndo` blieben die Eintraege grau. Sie stehen
+//! an der Mac-ueblichen Stelle ganz oben im Untermenue, durch einen Trenner
+//! von den vier Zwischenablage-Befehlen getrennt.
 //!
 //! # Zwei Eintraege tragen einen eigenen Selektor
 //!

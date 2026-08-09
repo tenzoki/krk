@@ -252,6 +252,15 @@ impl Editorbereich {
     /// `setString:` den Layoutverwalter, die Delegierten und damit
     /// moeglicherweise KRK selbst erreicht. Den Stand stattdessen zu klonen
     /// hiesse, eine Datei von 16 MB zweimal zu kopieren statt einmal.
+    ///
+    /// **Hier fehlt noch das Leeren des Rueckgaengigstapels.** `setString:`
+    /// schreibt an der Rueckgaengigverwaltung vorbei und laesst einen bereits
+    /// gefuellten Stapel stehen, der auf den Text der vorigen Datei zeigt;
+    /// seit `textflaeche_bauen` `allowsUndo` einschaltet, kann so ein Stapel
+    /// entstehen. Heute ist der Fall unerreichbar, weil der einzige Aufrufer
+    /// [`Self::bauen`] ist und die Flaeche dabei leer ist. Mit dem Oeffnen aus
+    /// Schritt 24 wird er erreichbar; der Defekt dazu ist
+    /// `issues/260809-1727_o_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`.
     fn stand_einsetzen(&self) {
         let stand = {
             let modell = self.ivars().modell.borrow();
@@ -294,6 +303,12 @@ fn textflaeche_bauen(
     text.setAutomaticDashSubstitutionEnabled(false);
     text.setAutomaticTextReplacementEnabled(false);
     text.setAutomaticSpellingCorrectionEnabled(false);
+    // Ohne diese Zeile traegt die Textansicht keine einzige
+    // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
+    // Ende der Antwortkette einen leeren Verwalter vor. `allowsUndo` steht bei
+    // einer programmatisch erzeugten `NSTextView` ab Werk auf `NO`; die
+    // Menueseite derselben Sache steht in `super::menue`.
+    text.setAllowsUndo(true);
     text.setVerticallyResizable(true);
     text.setHorizontallyResizable(false);
     text.setMinSize(NSSize::ZERO);
