@@ -14,16 +14,30 @@
 //! Abgriff einer gewoehnlichen Anwendung im Vordergrund auch die
 //! Funktionstasten sieht; KRK braucht die Freigabe deshalb nicht.
 //!
-//! **Der Weg eines Tastendrucks**, vom Ereignis bis zur Ausfuehrung:
+//! **Der Weg eines Tastendrucks**, vom Ereignis bis zur Ausfuehrung, in der
+//! Reihenfolge, die [`behandeln`] faehrt:
 //!
 //! ```text
-//! NSEvent ──> Fokusvorbehalt ──> Tastendruck::aus_ereignis ──> Belegung::nachschlag
-//!                  │                  (Maske normalisiert)          │
-//!            Textfeld? ──> weiter                        Kommando ──┤
-//!                                                      Sprungmarke ──> Zeichen
-//!                                                                      │
-//!                                                        Senke des Aufrufers
+//! NSEvent
+//!    │
+//!    ├─ Tastendruck::aus_ereignis ..... die Maske ist normalisiert
+//!    │
+//!    ├─ Faenger der Belegungsansicht .. nimmt er auf: Ereignis verbraucht
+//!    │
+//!    ├─ Fokusvorbehalt
+//!    │    ├─ Ersthelfer = Textflaeche des Editors? ──ja──> weiter zum Nachschlag
+//!    │    └─ sonst Textfeld, Feldeditor, Blatt? ────ja──> unveraendert an AppKit
+//!    │
+//!    └─ Belegung::nachschlag
+//!         ├─ Kommando ─────> Senke des Aufrufers
+//!         ├─ Sprungmarke ──> Zeichen ──> Senke des Aufrufers
+//!         └─ unbelegt ─────> unveraendert an AppKit
 //! ```
+//!
+//! Die Normalisierung steht **vor** dem Vorbehalt, weil der Faenger den rohen
+//! [`Tastendruck`] braucht und vor beidem sitzt; bis zum 260808 zeigte das Bild
+//! hier die umgekehrte Reihenfolge und beschrieb damit einen Weg, den der Code
+//! nie gegangen ist.
 //!
 //! Trifft der Nachschlag und fuehrt die Senke das Kommando aus, schluckt der
 //! Abgriff das Ereignis (er liefert `nil`); sonst reicht er es unveraendert
@@ -62,6 +76,31 @@
 //! Gemeldet war das als
 //! `issues/260804-1122_*_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
 //!
+//! **Die eine Ausnahme ist die Textflaeche des Editors.** Sie ist selbst eine
+//! `NSTextView` und fiele damit unter den Vorbehalt; der Editor haette mit dem
+//! Fokus in sich selbst keinen einzigen Tastenbefehl von KRK. Der Vorbehalt
+//! bekommt deshalb keine zweite Regel daneben, sondern eine Ausnahme mit einem
+//! Namen: der Ersthelfer behaelt seine AppKit-Bedeutung, ausser er ist dasselbe
+//! Objekt wie die Textflaeche des Editors.
+//!
+//! **Gefragt ist die Naemlichkeit und nicht die Art.** Eine Frage nach der Art
+//! kann zwei Objekte derselben Art nicht trennen, und der Feldeditor eines
+//! Textfeldes ist dieselbe Art wie die Textflaeche des Editors: beide sind
+//! `NSTextView`. Der Vergleich laeuft deshalb ueber die Objektgleichheit der
+//! Objective-C-Zeiger und nicht ueber einen Klassennamen, ein Kennzeichen an
+//! der Ansicht oder einen Gang durch den Ansichtsbaum. Er ist trennscharf, weil
+//! ein Objekt mit genau einem anderen identisch ist, und vollstaendig, weil die
+//! Frage fuer jeden Ersthelfer eine Antwort hat; eine Liste von Ausnahmen
+//! entsteht nirgends. Die Pruefung auf die drei Textklassen bleibt daneben
+//! unveraendert stehen und behaelt ihren Grund.
+//!
+//! **Der Abgriff kennt den Editor nicht.** Die Naemlichkeitsfrage kommt als
+//! Abschluss von aussen, in derselben Form wie `faenger` und `senke` und von
+//! derselben Stelle, dem Anwendungsdelegierten, der die Textflaeche ohnehin
+//! haelt. Dieses Modul haelt sie nicht; es kennt allein die Frage, die jemand
+//! anders beantwortet. Solange kein Editor gebaut ist, antwortet der Abschluss
+//! immer mit `false`, und der Vorbehalt wirkt wie zuvor.
+//!
 //! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
 //! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es
 //! zwei Dateifenster und Kommandos, die keinem von beiden gehoeren, etwa das
@@ -97,8 +136,8 @@ use objc2::ClassType;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSText, NSTextField,
-    NSTextView, NSWindow,
+    NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSResponder, NSText,
+    NSTextField, NSTextView, NSWindow,
 };
 use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSPoint, NSProcessInfo, NSString};
 
@@ -141,6 +180,13 @@ impl Tastenabgriff {
     /// der Belegungsansicht aus C3, siehe den Modulkopf. Liefert er `true`,
     /// ist das Ereignis verbraucht.
     ///
+    /// `ist_editorflaeche` beantwortet die eine Naemlichkeitsfrage des
+    /// Fokusvorbehalts: ist dieser Ersthelfer dasselbe Objekt wie die
+    /// Textflaeche des Editors? Liefert er `true`, behaelt der Ersthelfer seine
+    /// AppKit-Bedeutung **nicht**, und der Tastendruck laeuft in den
+    /// Nachschlag. Der Abschluss kommt von aussen, weil dieses Modul den Editor
+    /// nicht kennt; siehe den Modulkopf.
+    ///
     /// Liefert `None`, wenn AppKit den Abgriff nicht einrichtet. Der Aufrufer
     /// meldet das; still ohne Tastatur weiterzulaufen waere der schlechteste
     /// aller Ausgaenge.
@@ -153,6 +199,7 @@ impl Tastenabgriff {
         belegung: Belegung,
         protokoll: bool,
         faenger: impl Fn(Tastendruck) -> bool + 'static,
+        ist_editorflaeche: impl Fn(&NSResponder) -> bool + 'static,
         senke: impl Fn(Eingabe) -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
@@ -161,6 +208,7 @@ impl Tastenabgriff {
             let geschluckt = behandeln(
                 mtm,
                 &faenger,
+                &ist_editorflaeche,
                 &senke,
                 &belegung,
                 unsafe { ereignis.as_ref() },
@@ -326,6 +374,7 @@ fn ereignis_senden(
 fn behandeln(
     mtm: MainThreadMarker,
     faenger: &impl Fn(Tastendruck) -> bool,
+    ist_editorflaeche: &impl Fn(&NSResponder) -> bool,
     senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
@@ -341,8 +390,9 @@ fn behandeln(
     }
 
     // Der Fokusvorbehalt, vor dem Nachschlag. Siehe den Modulkopf: steht die
-    // Schreibmarke in einem Textfeld, behaelt jede Taste ihre AppKit-Bedeutung.
-    if ersthelfer_nimmt_text(mtm) {
+    // Schreibmarke in einem Textfeld, behaelt jede Taste ihre AppKit-Bedeutung;
+    // steht sie in der Textflaeche des Editors, nicht.
+    if ersthelfer_gehoert_appkit(mtm, ist_editorflaeche) {
         return false;
     }
 
@@ -371,24 +421,38 @@ fn behandeln(
     }
 }
 
-/// Ob der Ersthelfer des Schluesselfensters Text entgegennimmt.
+/// Ob der Ersthelfer des Schluesselfensters seine AppKit-Bedeutung behaelt.
 ///
 /// Gefragt ist das **Schluesselfenster** und nicht das Hauptfenster: steht ein
 /// Blatt am Fenster, ist dessen Panel das Schluesselfenster, und dort sitzt das
 /// Textfeld der Pfadeingabe.
 ///
-/// Ein `NSTextField` gibt beim Bearbeiten seinen Ersthelferrang an den
-/// Feldeditor ab, einen gemeinsam genutzten `NSTextView`. Gefragt sind deshalb
-/// beide Klassen: das Feld selbst, solange es nur ausgewaehlt ist, und der
+/// **Zuerst die Naemlichkeit, dann die Art.** Ist der Ersthelfer dasselbe
+/// Objekt wie die Textflaeche des Editors, gehoert er nicht AppKit, und der
+/// Tastendruck laeuft in den Nachschlag. Diese Frage steht vor der
+/// Klassenpruefung, weil sie ihr sonst zum Opfer fiele: die Textflaeche des
+/// Editors ist eine `NSTextView` wie der Feldeditor auch, und eine Frage nach
+/// der Art kann die beiden nicht trennen. Siehe den Modulkopf.
+///
+/// Sonst gilt die Pruefung auf die drei Textklassen unveraendert. Ein
+/// `NSTextField` gibt beim Bearbeiten seinen Ersthelferrang an den Feldeditor
+/// ab, einen gemeinsam genutzten `NSTextView`. Gefragt sind deshalb beide
+/// Klassen: das Feld selbst, solange es nur ausgewaehlt ist, und der
 /// Feldeditor, sobald die Schreibmarke darin steht. `NSText` deckt daneben die
 /// aelteren Textklassen ab, die AppKit weiterhin fuehrt.
-fn ersthelfer_nimmt_text(mtm: MainThreadMarker) -> bool {
+fn ersthelfer_gehoert_appkit(
+    mtm: MainThreadMarker,
+    ist_editorflaeche: &impl Fn(&NSResponder) -> bool,
+) -> bool {
     let Some(fenster) = NSApplication::sharedApplication(mtm).keyWindow() else {
         return false;
     };
     let Some(ersthelfer) = fenster.firstResponder() else {
         return false;
     };
+    if ist_editorflaeche(&ersthelfer) {
+        return false;
+    }
     ersthelfer.isKindOfClass(NSTextView::class())
         || ersthelfer.isKindOfClass(NSTextField::class())
         || ersthelfer.isKindOfClass(NSText::class())

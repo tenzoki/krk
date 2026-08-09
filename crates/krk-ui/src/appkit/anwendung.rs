@@ -153,7 +153,7 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSWindow,
+    NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate, NSResponder, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
@@ -1183,9 +1183,15 @@ impl Anwendungsdelegierter {
     ///
     /// Der Faenger ist die Aufnahme der Belegungsansicht aus C3; solange keine
     /// steht oder keine aufnimmt, liefert er `false` und aendert nichts.
+    ///
+    /// Der dritte Abschluss beantwortet die Naemlichkeitsfrage des
+    /// Fokusvorbehalts. Er steht hier und nicht im Abgriff, weil der
+    /// Anwendungsdelegierte die Textflaeche des Editors haelt und
+    /// `appkit::ereignisse` sie nicht kennen soll.
     fn abgriff_aufsetzen(&self) -> Option<Tastenabgriff> {
         let belegung = self.ivars().belegung.borrow().clone();
         let fuer_faenger = objc2::rc::Weak::from_retained(&self.retain());
+        let fuer_editorflaeche = objc2::rc::Weak::from_retained(&self.retain());
         let fuer_senke = objc2::rc::Weak::from_retained(&self.retain());
         Tastenabgriff::einrichten(
             self.mtm(),
@@ -1195,11 +1201,33 @@ impl Anwendungsdelegierter {
                 Some(selbst) => selbst.tastendruck_fangen(druck),
                 None => false,
             },
+            move |ersthelfer| match fuer_editorflaeche.load() {
+                Some(selbst) => selbst.ist_editorflaeche(ersthelfer),
+                None => false,
+            },
             move |eingabe| match fuer_senke.load() {
                 Some(selbst) => selbst.eingabe_ausfuehren(eingabe),
                 None => false,
             },
         )
+    }
+
+    /// Ob dieser Ersthelfer dasselbe Objekt wie die Textflaeche des Editors ist.
+    ///
+    /// Die eine Ausnahme vom Fokusvorbehalt des Ereignisabgriffs. Gefragt ist
+    /// die **Naemlichkeit** und nicht die Art: die Textflaeche des Editors ist
+    /// eine `NSTextView` wie der Feldeditor eines Textfeldes auch, und eine
+    /// Frage nach der Art kann die beiden nicht trennen. Der Vergleich laeuft
+    /// deshalb ueber `isEqual`, in derselben Form wie in
+    /// [`Anwendungsdelegierter::fokus`], das die Liste der Leiste und die
+    /// Inhaltsflaeche der Vorschau seit der Runde 1 genauso erkennt.
+    ///
+    /// **Solange kein Editor gebaut ist, gibt es keine Textflaeche, mit der zu
+    /// vergleichen waere**, und die Antwort ist `false`: der Vorbehalt wirkt
+    /// wie zuvor, und das Verhalten bleibt das heutige. **S16 loest diese Zeile
+    /// ab** und vergleicht den Ersthelfer mit der Textflaeche des Editors.
+    fn ist_editorflaeche(&self, _ersthelfer: &NSResponder) -> bool {
+        false
     }
 
     /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).
