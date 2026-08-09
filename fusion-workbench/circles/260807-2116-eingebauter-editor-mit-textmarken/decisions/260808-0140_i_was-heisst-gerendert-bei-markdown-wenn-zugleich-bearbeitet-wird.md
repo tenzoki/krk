@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md` (C3, drittes und zehntes Abnahmekriterium), `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` (die beantwortete Vorfrage, Möglichkeit 1 gewählt), `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md` §"1. Formatansicht", `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md` (`### Frage 7` und S33)
 
@@ -55,3 +55,6 @@ Sie ist außerdem die einzige, die Markdown nicht zum Sonderfall macht. Einfache
 
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"13. Gerendert bei Markdown" — Möglichkeit 1 gewählt: die Auszeichnungszeichen bleiben stehen, und die ausgezeichneten Stellen bekommen ihre Wirkung (Überschriften größer und fett, Listen eingerückt, Links unterstrichen und eingefärbt, Quelltextblöcke in fester Schrift). Der Stand in der Ansicht ist damit der Stand der Datei, Zeichen für Zeichen, und es entsteht keine zweite Mechanik neben der, die Code und einfacher Text schon benutzen. Der Preis ist angenommen: wer "gerendert" als "wie im Browser" gemeint hat, bekommt das nicht; das dritte Abnahmekriterium hält in seiner schwächeren Lesart. Entschieden vom Nutzer am 260808-0155.
+Implemented: 41309cc — die Formatansicht zeigt bei Markdown Überschriften größer und fett, Listen eingerückt, Links unterstrichen und eingefärbt, Quelltextblöcke in fester Schrift, und die Auszeichnungszeichen bleiben stehen. Der Stand in der Ansicht ist Zeichen für Zeichen der Stand der Datei; gesichert wird `Editormodell::stand`, der aus den Zeichen der Fläche kommt und nie aus ihren Merkmalen.
+
+Nachtrag zur Umsetzung: die Annahme dieses Datensatzes, alle vier Wirkungen ließen sich über vorübergehende Merkmale des Layoutverwalters herstellen, ist am SDK widerlegt (`NSLayoutManager.h:351`: als vorübergehendes Merkmal beachtet wird allein, was die Auslegung nicht ändert). Drei der vier — Überschrift, Einzug, feste Schrift — gehen deshalb in den Textspeicher, Farbe und Unterstreichung in den Layoutverwalter. Die Zusage dieses Datensatzes ist davon unberührt, weil sie nicht an den Merkmalen hängt. Der Defekt `260810-0053` zieht Plan und Datensatztext nach.
