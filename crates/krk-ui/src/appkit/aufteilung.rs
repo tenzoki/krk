@@ -1,11 +1,17 @@
-//! Die Fensterzeile: eine `NSSplitView` mit vier Bereichen.
+//! Die Fensterzeile: eine `NSSplitView` mit fuenf Bereichen.
 //!
 //! ```text
-//! ┌───────────┬──────────────────┬──────────────────┬───────────┐
-//! │ Lesezei-  │ Dateifenster     │ Dateifenster     │ Vorschau  │
-//! │ chen (C5) │ links            │ rechts           │ (C6)      │
-//! └───────────┴──────────────────┴──────────────────┴───────────┘
+//! ┌───────────┬──────────────────┬──────────────────┬───────────┬──────────┐
+//! │ Lesezei-  │ Dateifenster     │ Dateifenster     │ Vorschau  │ Editor   │
+//! │ chen (C5) │ links            │ rechts           │ (C6)      │          │
+//! └───────────┴──────────────────┴──────────────────┴───────────┴──────────┘
 //! ```
+//!
+//! Die beiden rechten Bereiche teilen sich denselben Platz: der Editor nimmt
+//! die Stelle der Vorschau ein, und C1 der Editor-Runde sagt zu, dass beide
+//! nie zugleich zu sehen sind. Die Regel dazu wohnt in
+//! [`crate::fenstermodell`] und nicht hier; dieses Modul verteilt Breiten und
+//! Sichtbarkeit und faellt keine Entscheidung darueber, welcher Bereich steht.
 //!
 //! Jedes Dateifenster steht in einem `NSBox`, und dessen Rahmen ist die
 //! Markierung des aktiven Dateifensters aus C1: der aktive traegt die
@@ -15,8 +21,9 @@
 //!
 //! Die Lesezeichenleiste steht seit Schritt 18 als eigener Bereich darin und
 //! kommt fertig von [`super::leiste`] herein; das Vorschaufenster kommt seit
-//! Schritt 19 ebenso fertig von [`super::vorschau`]. Breite und Sichtbarkeit
-//! beider gehoeren zu C7 und damit hierher.
+//! Schritt 19 ebenso fertig von [`super::vorschau`], der Editor seit Schritt 16
+//! der Editor-Runde von [`super::editor`]. Breite und Sichtbarkeit aller drei
+//! gehoeren zu C7 und damit hierher.
 //!
 //! # Wo die Breiten herkommen
 //!
@@ -128,18 +135,19 @@ pub struct Aufteilung {
 }
 
 impl Aufteilung {
-    /// Baut die vier Bereiche um die beiden Dateifenster, die Leiste und die
-    /// Vorschau.
+    /// Baut die fuenf Bereiche um die beiden Dateifenster, die Leiste, die
+    /// Vorschau und den Editor.
     ///
-    /// Leiste und Vorschau kommen fertig herein und werden hier nicht gebaut:
-    /// beide sind eigene fokussierbare Bereiche mit eigenem Inhalt, und dieses
-    /// Modul verteilt Breiten und Sichtbarkeit. Dieselbe Aufgabenteilung wie
-    /// bei den beiden Dateifenstern.
+    /// Leiste, Vorschau und Editor kommen fertig herein und werden hier nicht
+    /// gebaut: alle drei sind eigene fokussierbare Bereiche mit eigenem Inhalt,
+    /// und dieses Modul verteilt Breiten und Sichtbarkeit. Dieselbe
+    /// Aufgabenteilung wie bei den beiden Dateifenstern.
     pub fn bauen(
         mtm: MainThreadMarker,
         dateifenster: [&Dateifenster; 2],
         leiste: &NSView,
         vorschau: &NSView,
+        editor: &NSView,
     ) -> Self {
         let teiler = NSSplitView::initWithFrame(
             NSSplitView::alloc(mtm),
@@ -161,6 +169,7 @@ impl Aufteilung {
         teiler.addSubview(&rahmen[0]);
         teiler.addSubview(&rahmen[1]);
         teiler.addSubview(vorschau);
+        teiler.addSubview(editor);
 
         let delegierter = AufteilungsDelegierter::neu(mtm);
         // `NSSplitView.setDelegate:` ist eine sichere Bindung; unsicher ist
@@ -297,8 +306,9 @@ fn bereichsansicht(teiler: &NSSplitView, stelle: usize) -> Option<Retained<NSVie
 ///
 /// Der `is_some`-Teil ist keine Vorsichtsmassnahme, sondern die Aussage selbst:
 /// ein Bereich, dessen Unteransicht die Aufteilung nicht traegt, steht nicht im
-/// Fenster, gleich was das Modell ueber ihn sagt. Das trifft bis Schritt 16
-/// den Editor.
+/// Fenster, gleich was das Modell ueber ihn sagt. Er traf bis Schritt 16 der
+/// Editor-Runde den Editor; seit dessen fuenfter Unteransicht trifft er keinen
+/// Bereich mehr, und die Antwort haengt fuer alle fuenf allein an `isHidden`.
 fn steht_im(teiler: &NSSplitView, bereich: Bereich) -> bool {
     bereichsansicht(teiler, bereich.index()).is_some_and(|ansicht| !ansicht.isHidden())
 }
@@ -324,9 +334,10 @@ fn sichtbar_im(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
 
 /// Die Breiten, die gerade auf dem Schirm stehen.
 ///
-/// Ein Bereich, dessen Unteransicht die Aufteilung noch nicht traegt, liefert
-/// `None` und behaelt damit seine gespeicherte Breite. Das trifft heute den
-/// Editor, dessen Textflaeche ein spaeterer Schritt einhaengt.
+/// Ein Bereich, dessen Unteransicht die Aufteilung nicht traegt, liefert `None`
+/// und behaelt damit seine gespeicherte Breite. Seit Schritt 16 der
+/// Editor-Runde stehen alle fuenf Unteransichten; `None` bleibt damit der Fall
+/// eines ausgeblendeten Bereichs, dessen Rahmen die Breite 0 traegt.
 fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
     let breite = |stelle: usize| {
         bereichsansicht(teiler, stelle).and_then(|ansicht| {
@@ -365,9 +376,13 @@ fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
 /// das Modell seit Schritt 13 fuehrt und die Aufteilung erst ab Schritt 16
 /// traegt. Ihn mitzuzaehlen zog einen Trenner zu viel ab und gab ihm seine
 /// Anfangsbreite von 460 Punkten, die anschliessend niemand setzte — die vier
-/// wirklichen Bereiche bekamen sie nicht. Solange keine fuenfte Unteransicht
-/// steht, ist "der Editor ist sichtbar" eine Aussage, die diese Funktion nicht
-/// einloesen kann, und [`steht_im`] fuehrt ihn deshalb als nicht stehend.
+/// wirklichen Bereiche bekamen sie nicht.
+///
+/// **Seit die fuenfte Unteransicht haengt, faellt der Unterschied weg**, und
+/// zwar ohne eine Zeile in dieser Funktion: [`steht_im`] fuehrt den Editor
+/// jetzt als stehend, sobald er nicht ausgeblendet ist, und Zaehler wie
+/// Zuteilung nehmen ihn von selbst auf. Das war der Zweck der Umstellung vom
+/// 260809 und nicht ihr Nebenprodukt.
 ///
 /// Damit sagen Zaehler, Zuteilung und Schleife dasselbe: die Schleife
 /// ueberspringt eine fehlende Unteransicht nicht mehr als Ausnahme, sondern

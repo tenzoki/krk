@@ -188,6 +188,7 @@ use super::bildtakt::{self, Zeichenende};
 use super::blaetter::{
     Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
 };
+use super::editor::Editorbereich;
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
@@ -310,6 +311,13 @@ pub struct AnwendungsIvars {
     leiste: OnceCell<Leiste>,
     /// Das Vorschaufenster (C6), der dritte fokussierbare Bereich.
     vorschau: OnceCell<Retained<Vorschaufenster>>,
+    /// Der eingebaute Editor, der fuenfte Bereich der Fensterzeile.
+    ///
+    /// Er steht hier, weil der Anwendungsdelegierte die eine Stelle ist, die
+    /// den Ersthelfer des Fensters gegen die Textflaeche haelt: der
+    /// Ereignisabgriff fragt ihn nach der Naemlichkeit, und `appkit::ereignisse`
+    /// kennt den Editor nicht.
+    editor: OnceCell<Retained<Editorbereich>>,
     /// Der Pfad, den die ausgeblendete Vorschau beim Einblenden nachholt (C6,
     /// C7).
     ///
@@ -512,6 +520,7 @@ impl Anwendungsdelegierter {
             dateifenster: OnceCell::new(),
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
+            editor: OnceCell::new(),
             vorschau_nachtrag: RefCell::new(None),
             ablage: RefCell::new(None),
             tastenabgriff: RefCell::new(None),
@@ -544,11 +553,13 @@ impl Anwendungsdelegierter {
         ];
         let leiste = Leiste::bauen(mtm);
         let vorschau = Vorschaufenster::bauen(mtm);
+        let editor = Editorbereich::bauen(mtm);
         let aufteilung = Aufteilung::bauen(
             mtm,
             [&dateifenster[0], &dateifenster[1]],
             leiste.sicht(),
             vorschau.sicht(),
+            editor.sicht(),
         );
         let fenster_delegierter = FensterDelegierter::neu(
             mtm,
@@ -564,6 +575,7 @@ impl Anwendungsdelegierter {
         let _ = ivars.dateifenster.set(dateifenster);
         let _ = ivars.leiste.set(leiste);
         let _ = ivars.vorschau.set(vorschau);
+        let _ = ivars.editor.set(editor);
         let _ = ivars.aufteilung.set(aufteilung);
         let _ = ivars.fenster_delegierter.set(fenster_delegierter);
         let _ = ivars.fenster.set(fenster);
@@ -1224,10 +1236,15 @@ impl Anwendungsdelegierter {
     ///
     /// **Solange kein Editor gebaut ist, gibt es keine Textflaeche, mit der zu
     /// vergleichen waere**, und die Antwort ist `false`: der Vorbehalt wirkt
-    /// wie zuvor, und das Verhalten bleibt das heutige. **S16 loest diese Zeile
-    /// ab** und vergleicht den Ersthelfer mit der Textflaeche des Editors.
-    fn ist_editorflaeche(&self, _ersthelfer: &NSResponder) -> bool {
-        false
+    /// dann wie vor dieser Runde. Der Abgriff steht seit `oberflaeche_aufbauen`
+    /// und der Editor auch, aber die Reihenfolge der beiden ist keine Zusage
+    /// dieser Funktion; deshalb `get` und nicht `expect`, wie in
+    /// [`Anwendungsdelegierter::fokus`] fuer Leiste und Vorschau.
+    fn ist_editorflaeche(&self, ersthelfer: &NSResponder) -> bool {
+        self.ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| ersthelfer.isEqual(Some(editor.textflaeche())))
     }
 
     /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).

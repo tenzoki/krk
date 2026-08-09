@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Neunzehn Module, entlang dessen geschnitten, was AppKit als eigenstaendige
+//! Zwanzig Module, entlang dessen geschnitten, was AppKit als eigenstaendige
 //! Objekte fuehrt:
 //!
 //! ```text
@@ -20,6 +20,7 @@
 //!           ──> terminal              ──> statuszeile
 //!           ──> hinweis
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
+//!           ──> editor   ──> crate::editormodell
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
@@ -33,8 +34,12 @@
 //! [`vorschau`] haelt das Vorschaufenster aus C6, den dritten: Text- und
 //! Bildanzeige samt der zweiten Tableiste, waehrend Tabs und Halteverhalten in
 //! `crate::vorschaumodell` wohnen.
+//! [`editor`] haelt die Textflaeche des eingebauten Editors:
+//! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
+//! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
+//! und die Vorschau teilen sich denselben Platz in der Fensterzeile.
 //! [`aufteilung`] haelt
-//! die `NSSplitView` mit den vier Bereichen aus C7, ihre Mindestbreiten und die
+//! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
 //! `NSTableView` in einer `NSScrollView`, Datenquelle und Delegierter, und die
 //! Anbindung an das Tabmodell. [`tableiste`] ist die Leiste an seinem Kopf,
@@ -66,13 +71,14 @@
 //! Operationsmaschine im Kern bekommt ihn ueber eine Schnittstelle
 //! hereingereicht, die AppKit nicht kennt.
 //!
-//! Sieben Pfeile fuehren aus diesem Verzeichnis heraus, und alle sieben tragen
+//! Acht Pfeile fuehren aus diesem Verzeichnis heraus, und alle acht tragen
 //! nur gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
 //! Bildwiederholrate und die Zeitpunkte der Bildgrenzen, [`tabelle`] haelt das
 //! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`,
 //! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`,
 //! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
-//! `crate::belegungsmodell`, und [`fsevents`] wie [`volumes`] reichen Pfade an
+//! `crate::belegungsmodell`, [`editor`] haelt den Stand aus
+//! `crate::editormodell`, und [`fsevents`] wie [`volumes`] reichen Pfade an
 //! `crate::auffrischung`. Keines der Ziele nennt eine `objc2`-Kiste.
 
 mod anwendung;
@@ -80,6 +86,7 @@ mod aufteilung;
 mod belegungsansicht;
 mod bildtakt;
 mod blaetter;
+mod editor;
 mod ereignisse;
 mod fenster;
 mod fsevents;

@@ -692,7 +692,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 ### Phase C: Die Fläche
 
-#### 16. **`appkit/editor`: die Textfläche als fünfter Bereich**
+#### 16. [DONE] **`appkit/editor`: die Textfläche als fünfter Bereich**
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/mod.rs` (einbindend: `mod editor;` und der Modulkopf, der heute neunzehn Module aufzählt), `crates/krk-ui/src/appkit/aufteilung.rs` (erweitert: fünfte Unteransicht, `bauen` nimmt sie entgegen), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: `oberflaeche_aufbauen` erzeugt den Editor, `AnwendungsIvars` hält ihn in einem `OnceCell`)
@@ -703,6 +703,11 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
   Die `NSTextView` meldet ihre Nämlichkeit nach außen über eine Zugriffsfunktion, die der Anwendungsdelegierte für den Abschluss aus S4 braucht.
 - Abhängigkeiten: S4, S14, S15
 - Abnahmekriterium: `cargo build --workspace` und `cargo test --workspace` beenden mit 0. `cargo xtask bundle` baut und signiert. Der Diff zeigt fünf `addSubview`-Aufrufe in der Reihenfolge von `Bereich::ALLE`. `grep -rEln '^[[:space:]]*#!?\[allow\(unsafe_code\)\]' crates/krk-ui/src` nennt weiterhin genau eine Datei, `appkit/mod.rs`; die Grenze ist nicht gewachsen. `grep -c 'objc2' crates/krk-ui/src/editormodell.rs` liefert weiterhin 0, die Grenze hält in beide Richtungen.
+- **Umsetzung am 260809-1603:** `crates/krk-ui/src/appkit/editor.rs` mit `Editorbereich` und `EditorIvars`, eingebunden in `appkit/mod.rs`; `Aufteilung::bauen` nimmt den fünften `&NSView` entgegen; `AnwendungsIvars` hält den Editor in einem `OnceCell`, und `ist_editorflaeche` vergleicht seit diesem Schritt den Ersthelfer über `isEqual` mit `Editorbereich::textflaeche`. Die vier Abnahmekommandos laufen durch, `cargo xtask bundle` baut und signiert, die drei `grep` des Abnahmekriteriums liefern eine Datei, fünf Aufrufe und 0. Vier Vermerke:
+  - **`auslegen` ist unverändert geblieben, wie der Kommentar dort es vorausgesagt hat.** Der Codeanteil des Diffs in `aufteilung.rs` sind genau zwei Zeilen, der neue Parameter und `teiler.addSubview(editor)`; `steht_im`, `gemessene_breiten`, `gemessene_sichtbarkeit`, `auslegen`, `grenze_links` und `grenze_rechts` tragen keine geänderte Zeile. Der Editor steht damit ab sofort in Zähler und Zuteilung, sobald er nicht ausgeblendet ist. Die drei Kommentare in `aufteilung.rs`, die den fehlenden fünften Bereich beschrieben, sind auf den neuen Stand gezogen.
+  - **Das `#![allow(dead_code)]` in `editormodell.rs` ist nicht gefallen, und die Ankündigung aus S15 war falsch.** Gemessen: mit entfernter Zeile meldet `cargo clippy --workspace --all-targets` **vierzehn** Fundstellen toten Werts in dieser Datei. Die Fläche dieses Schrittes leiht sich zwei Stücke, `Editormodell::neu` und `Editormodell::stand`; jedes andere hängt an einem Befehl, der mit seinem eigenen Schritt kommt (S24 Laden, S25 Sichern, S33 die beiden Ansichten, S36 Suchen, S37 Ersetzen). Der Kommentar an der Zeile nennt jetzt **S37** als ablösenden Schritt und die Messung dazu.
+  - **Die Textfläche ist keine eigene Klasse, sondern eine gewöhnliche `NSTextView`.** Ein `define_class!` für sie brächte nichts: sie nimmt den Ersthelferrang als editierbare Textansicht von selbst, und die Nämlichkeitsfrage vergleicht Objekte und nicht Klassen. `Editorbereich` selbst ist das `define_class!` aus der Schrittbeschreibung und hält Bildlaufansicht, Textfläche und Modell.
+  - **Vier Ersetzungen von AppKit sind abgeschaltet**, `setRichText(false)` dazu: automatische Anführungszeichen, Bindestriche, Textersetzung und Rechtschreibkorrektur änderten Programmtext still, und C4 sagt zu, dass der gesicherte Stand der getippte ist. Der Grund steht im Modulkopf.
 
 #### 17. **Der Fokus erkennt den Editor**
 

@@ -103,13 +103,20 @@
 //! ungesichertem Stand ersetzt die Datei ohne Rueckfrage; der Aufrufer hat vor
 //! dem Ruf zu fragen.
 
-// **Diese Zeile faellt mit Schritt 16 und traegt deshalb den Schritt im
-// Namen.** Zwischen S15 und S16 hat dieses Modul keinen Aufrufer im Programm:
-// die Ansicht, die es ausleiht, ist `appkit/editor.rs`, und die kommt einen
-// Schritt spaeter. Ohne die Zeile meldete `cargo clippy -- -D warnings`
-// sechzehn tote Werte, und der Arbeitsbereich stuende zwischen den beiden
-// Schritten rot. Tot ist hier nichts: die Pruefungen am Dateiende fassen jedes
-// oeffentliche Stueck dieses Moduls an, und ab S16 tut es die Ansicht.
+// **Diese Zeile faellt mit Schritt 37 und nicht, wie hier bis zum 260809
+// stand, mit Schritt 16.** Der Schritt 16 baut die Textflaeche und leiht sich
+// daraus zwei Stuecke, `Editormodell::neu` und `Editormodell::stand`. Jedes
+// andere haengt an einem Befehl, den es ausloest, und der Befehl kommt mit
+// seinem eigenen Schritt: das Lesen auf dem Arbeitsfaden mit S24, das Sichern
+// mit S25, die Abweichungsmarke mit S26, die beiden Ansichten mit S33, der
+// Suchlauf mit S36 und das Ersetzen mit S37. Der letzte davon ist S37; **dann**
+// ist die Zeile wegzunehmen.
+//
+// Gemessen am 260809 nach S16, mit entfernter Zeile: `cargo clippy --workspace
+// --all-targets` meldet vierzehn Fundstellen toten Werts in dieser Datei, und
+// der Arbeitsbereich stuende rot, weil `make lint` mit `-D warnings` faehrt.
+// Tot ist auch dann nichts: die Pruefungen am Dateiende fassen jedes Stueck
+// dieses Moduls an.
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
