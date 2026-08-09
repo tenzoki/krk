@@ -97,6 +97,26 @@ impl Bereich {
         }
     }
 
+    /// Das Dateifenster dieses Bereichs, falls er eines ist.
+    ///
+    /// Die Umkehrung von [`Bereich::von_seite`] und **die eine Stelle, die
+    /// aufzaehlt, welche Bereiche Dateifenster sind**. [`Bereich::ist_beweglich`]
+    /// leitet sich daraus ab, statt die Liste ein zweites Mal zu fuehren: ein
+    /// Bereich teilt sich den frei werdenden Platz genau dann, wenn er ein
+    /// Dateifenster ist, und das ist der Grund und nicht nur die Beobachtung.
+    ///
+    /// **Eine vollstaendige Fallunterscheidung und kein `matches!`.** Ein
+    /// sechster Bereich haelt hier den Bau an und erzwingt die Einordnung, wie
+    /// es die uebrigen vollstaendigen Fallunterscheidungen dieses Projekts auch
+    /// tun.
+    pub const fn seite(self) -> Option<Fensterseite> {
+        match self {
+            Bereich::Links => Some(Fensterseite::Links),
+            Bereich::Rechts => Some(Fensterseite::Rechts),
+            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => None,
+        }
+    }
+
     /// Die Breite, unter die sich der Bereich nicht ziehen laesst.
     ///
     /// Ein Dateifenster braucht mehr, weil vier Spalten hineinpassen muessen;
@@ -142,22 +162,20 @@ impl Bereich {
     ///
     /// Die beiden Dateifenster tun es, die festen Bereiche nicht.
     ///
-    /// **Eine vollstaendige Fallunterscheidung und kein `matches!`.** Bis zur
-    /// Editor-Runde stand hier `matches!(self, Links | Rechts)`, und ein neuer
-    /// Bereich waere still als unbeweglich durchgegangen — mit der richtigen
-    /// Antwort, aber aus dem falschen Grund. Sie soll aus einer Zeile kommen,
-    /// die jemand geschrieben hat, und nicht aus einem Rueckfall. Ein fuenfter
-    /// Bereich haelt jetzt den Bau an, wie es die drei uebrigen vollstaendigen
-    /// Fallunterscheidungen dieses Projekts auch tun.
+    /// **Abgeleitet und nicht aufgezaehlt.** Bis zur Editor-Runde stand hier
+    /// `matches!(self, Links | Rechts)`, und ein neuer Bereich waere still als
+    /// unbeweglich durchgegangen — mit der richtigen Antwort, aber aus dem
+    /// falschen Grund. Danach stand hier eine eigene vollstaendige
+    /// Fallunterscheidung, die dieselbe Zweiteilung ein zweites Mal aufschrieb.
+    /// Seit dem 260809 fragt sie [`Bereich::seite`], und die Aufzaehlung steht
+    /// nur noch dort; die Antwort kommt weiterhin aus einer Zeile, die jemand
+    /// geschrieben hat, und der Uebersetzer haelt einen sechsten Bereich
+    /// weiterhin an.
     ///
-    /// Dies ist zugleich die **einzige** Stelle, die aufzaehlt, welche
-    /// Bereiche fest stehen; [`bereichsbreiten`] fragt hier nach, statt die
-    /// Liste ein zweites Mal zu fuehren.
+    /// [`bereichsbreiten`] fragt hier nach, statt die Liste ein drittes Mal zu
+    /// fuehren.
     const fn ist_beweglich(self) -> bool {
-        match self {
-            Bereich::Links | Bereich::Rechts => true,
-            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => false,
-        }
+        self.seite().is_some()
     }
 }
 
@@ -332,12 +350,18 @@ impl Fenstermodell {
     /// 260804 im laufenden Buendel: 40 Punkte Zuwachs bewegten die Linie um 13.
     ///
     /// Am Mindestmass hoert der Schritt auf, statt es zu unterschreiten.
+    ///
+    /// **Das Gegenueber kommt aus [`Fensterseite::andere`]** und nicht aus einer
+    /// eigenen Fallunterscheidung ueber [`Bereich`]. Bis zum 260809 stand hier
+    /// ein `match` mit dem Auffangzweig `_ => Bereich::Links`; er gab die
+    /// richtige Antwort, weil nur die beiden Dateifenster hierher kommen, und
+    /// hat den fuenften Bereich der Editor-Runde stumm aufgenommen, ohne dass
+    /// der Uebersetzer eine Einordnung verlangt haette. Die Frage "welcher
+    /// Bereich ist das Gegenueber" wird jetzt nicht mehr richtig beantwortet,
+    /// sondern gar nicht mehr gestellt.
     pub fn breite_aendern(&mut self, bereich: Bereich, betrag: f64) {
-        if bereich.ist_beweglich() {
-            let anderer = match bereich {
-                Bereich::Links => Bereich::Rechts,
-                _ => Bereich::Links,
-            };
+        if let Some(seite) = bereich.seite() {
+            let anderer = Bereich::von_seite(seite.andere());
             if !self.sichtbar(anderer) {
                 // Ein einziges sichtbares Dateifenster nimmt ohnehin die ganze
                 // Breite; es gibt keine Trennlinie, die sich verschieben liesse.
@@ -874,6 +898,66 @@ mod tests {
                 "{bereich:?} ist fest und sichtbar, bekommt aber nicht seine Breite"
             );
         }
+    }
+
+    /// Beweglich ist ein Bereich genau dann, wenn er ein Dateifenster ist, und
+    /// sein Gegenueber kommt aus [`Fensterseite::andere`].
+    ///
+    /// Die Probe zum Befund vom 260808: `breite_aendern` fuehrte den Partner
+    /// ueber einen `match` mit `_ => Bereich::Links` und hat den fuenften
+    /// Bereich stumm aufgenommen. Seit dem 260809 gibt es die Zuordnung nur in
+    /// `Bereich::seite`, und diese Probe haelt fest, dass sie mit
+    /// `Bereich::von_seite` zusammenpasst.
+    #[test]
+    fn beweglich_ist_genau_ein_dateifenster_und_die_zuordnung_laeuft_in_beide_richtungen() {
+        for bereich in Bereich::ALLE {
+            assert_eq!(
+                bereich.ist_beweglich(),
+                bereich.seite().is_some(),
+                "{bereich:?}"
+            );
+            if let Some(seite) = bereich.seite() {
+                assert_eq!(Bereich::von_seite(seite), bereich, "{bereich:?}");
+            }
+        }
+        for seite in Fensterseite::ALLE {
+            assert_eq!(Bereich::von_seite(seite).seite(), Some(seite));
+        }
+        assert_eq!(
+            Bereich::ALLE
+                .iter()
+                .filter(|bereich| bereich.ist_beweglich())
+                .count(),
+            Fensterseite::ALLE.len(),
+            "es gibt genau so viele bewegliche Bereiche wie Dateifenster"
+        );
+    }
+
+    /// Ein fester Bereich waechst unmittelbar und zieht kein Dateifenster mit.
+    ///
+    /// Der Editor ist der Fall, den der Auffangzweig stumm aufgenommen hatte.
+    #[test]
+    fn ein_fester_bereich_aendert_nur_seine_eigene_breite() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Vorschau);
+        modell.umschalten(Bereich::Editor);
+        let links_vorher = modell.breite_oder_anfang(Bereich::Links);
+        let rechts_vorher = modell.breite_oder_anfang(Bereich::Rechts);
+
+        modell.breite_aendern(Bereich::Editor, BREITENSCHRITT);
+        assert_eq!(
+            modell.breiten().editor,
+            Some(Bereich::Editor.anfangsbreite() + BREITENSCHRITT)
+        );
+        assert_eq!(modell.breite_oder_anfang(Bereich::Links), links_vorher);
+        assert_eq!(modell.breite_oder_anfang(Bereich::Rechts), rechts_vorher);
+
+        // Und er faellt nicht unter sein Mindestmass.
+        modell.breite_aendern(Bereich::Editor, -10_000.0);
+        assert_eq!(
+            modell.breiten().editor,
+            Some(Bereich::Editor.mindestbreite())
+        );
     }
 
     #[test]

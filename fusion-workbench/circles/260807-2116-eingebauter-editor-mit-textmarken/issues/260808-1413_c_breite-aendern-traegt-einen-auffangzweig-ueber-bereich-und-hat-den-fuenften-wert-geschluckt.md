@@ -71,3 +71,28 @@ Partner aus `Fensterseite::andere()` holt, statt ihn ein zweites Mal aus
 gibt es bereits (`fenstermodell.rs:238`), und `Bereich::von_seite` führt zurück
 (`fenstermodell.rs:93-98`); die Aufzählung "welcher Bereich ist das Gegenüber"
 entfiele dann ganz, statt richtig geschrieben zu werden.
+
+---
+Resolved: Am 260809 in `crates/krk-ui/src/fenstermodell.rs` geschlossen, auf dem
+zweiten der beiden vorgeschlagenen Wege — dem kleineren. Der `match` ueber
+`Bereich` ist nicht richtig ausgeschrieben, sondern **entfallen**:
+
+```rust
+if let Some(seite) = bereich.seite() {
+    let anderer = Bereich::von_seite(seite.andere());
+```
+
+Dazu kam `Bereich::seite() -> Option<Fensterseite>`, die Umkehrung von
+`Bereich::von_seite` und eine vollstaendige Fallunterscheidung ohne
+Auffangzweig. `ist_beweglich` zaehlt seitdem nicht mehr selbst auf, sondern
+lautet `self.seite().is_some()`: beweglich ist ein Bereich genau dann, wenn er
+ein Dateifenster ist, und das ist der Grund und nicht nur die Beobachtung. Die
+Aufzaehlung "welche Bereiche sind Dateifenster" steht damit an einer Stelle
+statt an dreien, und die Frage "welcher Bereich ist das Gegenueber" wird nicht
+mehr gestellt.
+
+Zwei Proben halten es fest:
+`beweglich_ist_genau_ein_dateifenster_und_die_zuordnung_laeuft_in_beide_richtungen`
+(`seite` und `von_seite` passen zusammen, `ist_beweglich` folgt aus `seite`) und
+`ein_fester_bereich_aendert_nur_seine_eigene_breite` (`breite_aendern` auf
+`Bereich::Editor` zieht kein Dateifenster mit und haelt das Mindestmass).

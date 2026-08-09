@@ -28,6 +28,12 @@
 //! gerade auf dem Schirm stehen; damit ueberlebt eine mit der Maus verschobene
 //! Trennlinie die naechste Fenstergroessenaenderung, ohne dass eine zweite
 //! Rechenvorschrift daneben entstuende.
+//!
+//! **Welche Bereiche stehen, kommt in beiden Faellen aus den Unteransichten**
+//! und nie aus dem Modell. Der erste Fall schreibt den Wunsch des Modells
+//! vorher hinein und liest ihn dann von dort zurueck. Das ist ein Umweg von
+//! einer Zeile und der Preis dafuer, dass die Frage nur eine Antwort hat:
+//! [`steht_im`].
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -99,8 +105,7 @@ define_class!(
         #[unsafe(method(splitView:resizeSubviewsWithOldSize:))]
         fn neu_auslegen(&self, teiler: &NSSplitView, _alte_groesse: NSSize) {
             let breiten = gemessene_breiten(teiler);
-            let sichtbar = gemessene_sichtbarkeit(teiler);
-            auslegen(teiler, &breiten, &sichtbar);
+            auslegen(teiler, &breiten);
         }
     }
 );
@@ -179,13 +184,18 @@ impl Aufteilung {
     }
 
     /// Blendet die Bereiche ein und aus und legt sie neu aus.
+    ///
+    /// Die gewuenschte Sichtbarkeit wird hier **in die Ansichten geschrieben**
+    /// und nicht an [`auslegen`] weitergereicht. Das ist der Grund, aus dem
+    /// beide Wege in die Aufteilung dasselbe Bild ergeben; er steht bei
+    /// [`steht_im`] ausgeschrieben.
     pub fn anwenden(&self, breiten: &Breiten, sichtbar: &Sichtbarkeit) {
         for bereich in Bereich::ALLE {
             if let Some(ansicht) = bereichsansicht(&self.teiler, bereich.index()) {
                 ansicht.setHidden(!sichtbar_im(sichtbar, bereich));
             }
         }
-        auslegen(&self.teiler, breiten, sichtbar);
+        auslegen(&self.teiler, breiten);
     }
 
     /// Die Breiten, die gerade auf dem Schirm stehen.
@@ -276,11 +286,32 @@ fn bereichsansicht(teiler: &NSSplitView, stelle: usize) -> Option<Retained<NSVie
     (stelle < ansichten.len()).then(|| ansichten.objectAtIndex(stelle))
 }
 
-/// Ob der Bereich nach der genannten Sichtbarkeit steht.
+/// Ob die Aufteilung den Bereich traegt **und** zeigt.
+///
+/// **Die eine Stelle, an der dieses Modul beantwortet, welche Bereiche im
+/// Fenster stehen.** Vier Aufrufer haengen daran: [`gemessene_sichtbarkeit`],
+/// [`auslegen`] und die beiden Grenzen der Trennlinien. Bis zum 260809 stand
+/// derselbe Ausdruck dreimal ausgeschrieben da, und [`auslegen`] fragte als
+/// vierte statt der Ansichten das Modell — mit einer anderen Antwort, siehe den
+/// Kommentar dort.
+///
+/// Der `is_some`-Teil ist keine Vorsichtsmassnahme, sondern die Aussage selbst:
+/// ein Bereich, dessen Unteransicht die Aufteilung nicht traegt, steht nicht im
+/// Fenster, gleich was das Modell ueber ihn sagt. Das trifft bis Schritt 16
+/// den Editor.
+fn steht_im(teiler: &NSSplitView, bereich: Bereich) -> bool {
+    bereichsansicht(teiler, bereich.index()).is_some_and(|ansicht| !ansicht.isHidden())
+}
+
+/// Das Feld eines [`Bereich`]s in [`Sichtbarkeit`].
 ///
 /// Eine vollstaendige Fallunterscheidung ueber [`Bereich`]: ein neuer Bereich,
 /// der hier fehlte, waere dauerhaft unsichtbar, ohne dass der Uebersetzer etwas
 /// gesagt haette.
+///
+/// Eine Abbildung und sonst nichts. Ob ein Bereich im Fenster **steht**,
+/// beantwortet [`steht_im`] und nicht diese Funktion; wer sie ueber eine
+/// gemessene [`Sichtbarkeit`] fragt, bekommt dieselbe Antwort noch einmal.
 fn sichtbar_im(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
@@ -312,24 +343,38 @@ fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
     }
 }
 
-/// Welche Bereiche gerade sichtbar sind.
+/// Welche Bereiche gerade im Fenster stehen.
 fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
-    let steht =
-        |stelle: usize| bereichsansicht(teiler, stelle).is_some_and(|ansicht| !ansicht.isHidden());
     Sichtbarkeit {
-        lesezeichen: steht(Bereich::Lesezeichen.index()),
-        zweites_dateifenster: steht(Bereich::Rechts.index()),
-        vorschau: steht(Bereich::Vorschau.index()),
-        editor: steht(Bereich::Editor.index()),
+        lesezeichen: steht_im(teiler, Bereich::Lesezeichen),
+        zweites_dateifenster: steht_im(teiler, Bereich::Rechts),
+        vorschau: steht_im(teiler, Bereich::Vorschau),
+        editor: steht_im(teiler, Bereich::Editor),
     }
 }
 
 /// Setzt die Rahmen der Bereiche nach der einen Rechenvorschrift.
 ///
-/// Bereiche, deren Unteransicht die Aufteilung noch nicht traegt, ueberspringt
-/// die Schleife.
-fn auslegen(teiler: &NSSplitView, breiten: &Breiten, sichtbar: &Sichtbarkeit) {
+/// **Die Sichtbarkeit kommt aus den Ansichten und nicht aus dem Modell**, und
+/// zwar auf beiden Wegen hierher: [`Aufteilung::anwenden`] schreibt den Wunsch
+/// des Modells vorher in die Ansichten, AppKit ruft ueber `neu_auslegen` ohne
+/// Modell an. Vorher nahm der erste Weg die Modellsicht und der zweite die
+/// gemessene entgegen, und dieselbe Fensterzeile lag je nach Ausloeser anders.
+///
+/// Der Unterschied der beiden Antworten war genau ein Bereich: der Editor, den
+/// das Modell seit Schritt 13 fuehrt und die Aufteilung erst ab Schritt 16
+/// traegt. Ihn mitzuzaehlen zog einen Trenner zu viel ab und gab ihm seine
+/// Anfangsbreite von 460 Punkten, die anschliessend niemand setzte — die vier
+/// wirklichen Bereiche bekamen sie nicht. Solange keine fuenfte Unteransicht
+/// steht, ist "der Editor ist sichtbar" eine Aussage, die diese Funktion nicht
+/// einloesen kann, und [`steht_im`] fuehrt ihn deshalb als nicht stehend.
+///
+/// Damit sagen Zaehler, Zuteilung und Schleife dasselbe: die Schleife
+/// ueberspringt eine fehlende Unteransicht nicht mehr als Ausnahme, sondern
+/// findet dort ohnehin die Breite 0.
+fn auslegen(teiler: &NSSplitView, breiten: &Breiten) {
     let gesamt = teiler.frame().size;
+    let sichtbar = &gemessene_sichtbarkeit(teiler);
     let sichtbare = Bereich::ALLE
         .iter()
         .filter(|bereich| sichtbar_im(sichtbar, **bereich))
@@ -358,7 +403,7 @@ fn auslegen(teiler: &NSSplitView, breiten: &Breiten, sichtbar: &Sichtbarkeit) {
 fn grenze_links(teiler: &NSSplitView, trennlinie: usize) -> f64 {
     let mut lage = 0.0;
     for bereich in Bereich::ALLE.into_iter().take(trennlinie + 1) {
-        if bereichsansicht(teiler, bereich.index()).is_some_and(|a| !a.isHidden()) {
+        if steht_im(teiler, bereich) {
             lage += bereich.mindestbreite() + teiler.dividerThickness();
         }
     }
@@ -369,7 +414,7 @@ fn grenze_links(teiler: &NSSplitView, trennlinie: usize) -> f64 {
 fn grenze_rechts(teiler: &NSSplitView, trennlinie: usize) -> f64 {
     let mut noetig = 0.0;
     for bereich in Bereich::ALLE.into_iter().skip(trennlinie + 1) {
-        if bereichsansicht(teiler, bereich.index()).is_some_and(|a| !a.isHidden()) {
+        if steht_im(teiler, bereich) {
             noetig += bereich.mindestbreite() + teiler.dividerThickness();
         }
     }

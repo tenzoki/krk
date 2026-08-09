@@ -111,3 +111,33 @@ diesen Defekt.
 Der gegenseitige Ausschluss aus S18 löst den Befund **nicht** auf: er sorgt
 dafür, dass Editor und Vorschau nicht zugleich stehen, nicht dafür, dass ein
 sichtbarer Editor eine Ansicht hat.
+
+---
+Resolved: Am 260809 in `crates/krk-ui/src/appkit/aufteilung.rs` geschlossen. Die
+Sichtbarkeit, mit der `auslegen` rechnet, kommt jetzt auf **beiden** Wegen aus
+den Unteransichten: `auslegen` nimmt sie nicht mehr entgegen, sondern ruft
+`gemessene_sichtbarkeit(teiler)` selbst. `Aufteilung::anwenden` schreibt den
+Wunsch des Modells vorher mit `setHidden` in die Ansichten und liest ihn von
+dort zurueck; `neu_auslegen` hat ihn ohnehin nur von dort. Damit gibt es einen
+Erzeuger statt zweier, und Zaehler, Zuteilung und Schleife sagen dasselbe.
+
+Die dritte Wahl aus dem Abschnitt "Was zu tun ist" ist keine der beiden dort
+genannten, sondern die gemeinsame Wurzel: der Ausdruck
+`bereichsansicht(...).is_some_and(|a| !a.isHidden())` stand dreimal
+ausgeschrieben da (`gemessene_sichtbarkeit`, `grenze_links`, `grenze_rechts`)
+und steht jetzt einmal, als `steht_im(teiler, bereich)`. Der `is_some`-Teil ist
+die Aussage selbst und keine Vorsichtsmassnahme: ein Bereich ohne Unteransicht
+steht nicht im Fenster. Bis S16 wird der Editor deshalb als nicht stehend
+gefuehrt.
+
+Gegen die zweite Wahl (`Fenstermodell::aus_sitzung` stellt die Zusicherung her)
+sprach zweierlei: sie deckt den Weg ueber `fokus_holen` ab S5/S6 nicht ab, und
+"ein Editor ohne gehaltene Datei" ist eine Aussage, die `fenstermodell.rs` heute
+gar nicht treffen kann — es kennt keine Datei. Gegen eine leere fuenfte
+Unteransicht sprach, dass S16 die fuenfte Ansicht von aussen hereinreicht
+(`bauen` nimmt sie entgegen, gebaut wird sie in `anwendung.rs`); ein Platzhalter
+waere ein zweites Stueck zum Entfernen und naehme den Dateifenstern 460 Punkte,
+um nichts zu zeigen — also derselbe Verlust, nur absichtlich.
+
+`sichtbar_im` bleibt, ist aber nur noch die Abbildung `Bereich` -> Feld in
+`Sichtbarkeit` und beantwortet nicht mehr, ob ein Bereich steht.
