@@ -2,10 +2,10 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** active
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
-**Active session history:** (none yet)
+**Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md)
+**Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md
 
 ---
 

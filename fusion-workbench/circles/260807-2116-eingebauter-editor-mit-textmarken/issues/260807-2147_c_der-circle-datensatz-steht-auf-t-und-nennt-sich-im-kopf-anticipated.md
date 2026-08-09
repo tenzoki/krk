@@ -41,3 +41,6 @@ behoben: die Kopfzeilen eines Circle-Datensatzes gehören dem Orchestrator, und 
 schreibt außerhalb des portfolio-activation-Modus keine.
 
 **Aufgefallen bei:** Klärung und Spec-Schreibung für diese Runde am 260807-2147.
+
+---
+Resolved: Der Kopf des Circle-Datensatzes steht am 260809-1750 auf `**Status:** active`, passend zum Marker `_t_`. Zugleich sind die beiden Felder `Active spec/plan:` und `Active session history:` gefüllt, die noch "(none yet)" trugen; sie zeigen jetzt auf den Plan vom 260808-0140, den Spec vom 260807-2147 und die Sitzungshistorie vom 260807-2139.

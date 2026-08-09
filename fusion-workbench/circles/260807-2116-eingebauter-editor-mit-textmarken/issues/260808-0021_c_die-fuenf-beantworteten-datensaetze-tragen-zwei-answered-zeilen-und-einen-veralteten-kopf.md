@@ -32,3 +32,6 @@ Je Datei den leeren Vorlagenblock samt seinem `---` entfernen, so dass eine `Ans
 Der Shaper hat den Defekt beim Lesen der fünf Datensätze für die Spec-Überarbeitung gefunden und ihn nicht selbst behoben. Er hat die Datensätze angelegt, die Antworten hat der Orchestrator eingetragen, und der Shaper greift außerhalb des portfolio-activation-Modus in keinen fremden Eintrag ein.
 
 **Aufgefallen bei:** Spec-Überarbeitung nach den sechs Festlegungen der Spec-Runde am 260808-0021.
+
+---
+Resolved: Am 260808-0043 behoben, der Defekt war seither veraltet. Alle fünf Datensätze tragen genau eine `Answered:`-Zeile, der leere Vorlagenblock ist entfernt, und der Kopf steht auf `**Status:** answered`. Nachgemessen am 260809-1750: `grep -c '^Answered:'` liefert für jeden der fünf 1, und alle acht Datensätze des Circles melden `**Status:** answered`.
