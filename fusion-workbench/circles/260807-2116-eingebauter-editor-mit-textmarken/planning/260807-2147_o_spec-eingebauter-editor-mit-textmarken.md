@@ -1,13 +1,15 @@
 # Spec: Der eingebaute Editor mit Roh- und Formatansicht und Textmarken (Runde 2)
 
-**Datum:** 2026-08-08
+**Datum:** 2026-08-08, erweitert am 2026-08-09
 **Status:** Fertig zur Abnahme
 **Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken`
-**Quelle:** Circle-Directive im Datensatz `_t_circle.md`, Abschnitt `## Directive`, dazu die vier Festlegungen der Aktivierungsrunde vom 260807-2139 und die sechs Festlegungen der Spec-Runde vom 260808-0017, beide in `history/260807-2139-orchestrator-session.md`.
+**Quelle:** Circle-Directive im Datensatz `_t_circle.md`, Abschnitt `## Directive`, dazu die vier Festlegungen der Aktivierungsrunde vom 260807-2139 und die sechs Festlegungen der Spec-Runde vom 260808-0017, beide in `history/260807-2139-orchestrator-session.md`. Die Fähigkeiten C9 bis C11 sind am 260809-2035 auf Wunsch des Nutzers hinzugekommen, mitten in der Umsetzung; der Abschnitt `## Die vier später hinzugekommenen Fähigkeiten` hält fest, warum sie nicht im ursprünglichen Zuschnitt standen.
+
+> **Der Umfang ist am 260809-2035 gewachsen.** Der Nutzer hat vier Anzeigefähigkeiten nachgetragen: eine sichtbare Fokusanzeige für alle fünf Bereiche (C9), Zeilennummern im Editor und in der Vorschau (C10, zwei der vier) und den vollen Pfad im Fenstertitel (C11). Sie stehen unten neben C1 bis C8 und binden dieselbe Runde. Eine neue offene Frage kommt mit ihnen, und sie hält keinen Planschritt auf: was der Akzentrahmen künftig bedeutet, den Fokus oder das aktive Dateifenster (`decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md`).
 
 > **Gatehinweis für den Nutzer.** Die fünf Fragen, die die erste Fassung dieses Specs offen führte, sind beantwortet. Ihre Datensätze unter `decisions/` tragen den Marker `_a_` und je eine `Answered:`-Zeile. Zwei Antworten haben den Zuschnitt der Runde verändert: die einklappbaren Blöcke entfallen, und die Textmarke trägt eine Stelle statt eines Bereichs.
 >
-> **Zwei Punkte gehen mit der Abnahme mit.** Erstens eine Ableitung des Shapers, die der Nutzer umstoßen kann: der gegenseitige Ausschluss von Editor und Vorschau gilt in beide Richtungen (C1). Zweitens eine neue Frage, die aus der Größen- und Typgrenze entstanden ist und den Plan bindet, aber keinen Planschritt aufhält: was der Editor beim Sichern über den unveränderten Teil der Datei zusagt (`decisions/260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md`). Beide stehen unten unter `## Was die Abnahme mitentscheidet`.
+> **Drei Punkte gehen mit der Abnahme mit.** Erstens eine Ableitung des Shapers, die der Nutzer umstoßen kann: der gegenseitige Ausschluss von Editor und Vorschau gilt in beide Richtungen (C1). Zweitens eine Frage, die aus der Größen- und Typgrenze entstanden ist und den Plan bindet, aber keinen Planschritt aufhält: was der Editor beim Sichern über den unveränderten Teil der Datei zusagt (`decisions/260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md`). Drittens eine zweite Ableitung aus der Erweiterung vom 260809: der Fenstertitel folgt dem Fokus und nicht dem aktiven Dateifenster (C11). Alle drei stehen unten unter `## Was die Abnahme mitentscheidet`.
 >
 > **Ein Befund aus der Codedurchsicht ändert den Zuschnitt und steht deshalb hier oben.** Der Ereignisabgriff von KRK reicht jeden Tastendruck unverändert an AppKit weiter, sobald der Ersthelfer des Schlüsselfensters eine `NSTextView` ist (`crates/krk-ui/src/appkit/ereignisse.rs:386-395`). Ein Editor auf Grundlage von `NSTextView` fiele damit unter dieselbe Regel: mit dem Fokus im Editor würde **kein** Tastenbefehl von KRK mehr wirken, weder der Weg zurück in ein Dateifenster noch die Befehle des Editors selbst. Das ist in einer Anwendung, deren erste Maxime die Tastatursteuerung ist, kein Randfall, sondern die tragende Frage dieser Runde. Sie steht als eigene Fähigkeit C7.
 
@@ -15,11 +17,13 @@
 
 Nach dieser Runde öffnet der Nutzer eine Textdatei aus dem Dateifenster mit F4 im eingebauten Editor, bearbeitet sie in einer Rohansicht oder einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen, die in derselben Leiste und derselben Ablagedatei stehen wie seine Ordner-Lesezeichen. Der Editor ist der vierte Fokusbereich neben der Lesezeichenleiste, den beiden Dateifenstern und dem Vorschaufenster; er teilt sich die Fläche mit der Vorschau zeitlich, nicht räumlich.
 
+Er sieht dabei, wo er ist und woran er arbeitet: alle fünf Bereiche zeigen an, welcher von ihnen die Tasten annimmt, neben dem Text stehen im Editor wie in der Vorschau die Zeilennummern der Datei, und im Fenstertitel steht der volle Pfad dessen, was der Bereich mit dem Fokus hält.
+
 Suchen und Ersetzen über mehrere Dateien gehört nicht dazu. Die Git-Anbindung und die KI-Anbindung ebenfalls nicht.
 
 ## Aufbau dieser Runde
 
-Die Bezeichner C1 bis C8 verweisen auf die Fähigkeiten weiter unten. Sie zählen für diese Runde neu von eins an; wo dieser Spec eine Fähigkeit der Runde 1 meint, schreibt er das aus, etwa "C5 der Runde 1".
+Die Bezeichner C1 bis C11 verweisen auf die Fähigkeiten weiter unten. Sie zählen für diese Runde neu von eins an; wo dieser Spec eine Fähigkeit der Runde 1 meint, schreibt er das aus, etwa "C5 der Runde 1". C1 bis C8 tragen den Zuschnitt vom 260808, C9 bis C11 die Erweiterung vom 260809.
 
 ### Wie sich Vorschau und Editor die eine Fläche teilen
 
@@ -164,6 +168,37 @@ flowchart TD
 ```
 
 Zwei Knoten dieses Graphen sind der Gegenstand von C7 und C8. Bei `Nimmt der Ersthelfer Text entgegen?` scheitert heute jede Tastenbedienung eines Editors, der auf `NSTextView` steht. Bei `Zusatztastenmaske normalisiert` liegt der zweite der beiden Verdächtigen des offenen Defekts `shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md`; der erste Verdächtige liegt vor dem Graphen, beim Abgriff des Menüs.
+
+### Eine Quelle, zwei Anzeigen: der Fokus im Rahmen und im Titel
+
+C9 und C11 hängen an derselben Angabe und sind deshalb hier zusammen gezeichnet. Der Rahmen sagt, **wo** der Nutzer arbeitet, der Titel sagt, **woran**; beide lesen denselben Fokus, und keiner führt einen zweiten Begriff daneben:
+
+```mermaid
+flowchart TD
+  Q["Der Fokus des Fensters: einer von fünf Werten"]
+  R["C9: der farbige Rahmen um genau einen Bereich"]
+  T["C11: der absolute Pfad im Fenstertitel"]
+  A["Das aktive Dateifenster, Ziel jeder Dateioperation"]
+
+  subgraph W["Wessen Pfad in den Titel geht"]
+    direction TD
+    DF["Dateifenster: der angezeigte Ordner"]
+    V["Vorschau: die gezeigte Datei"]
+    ED["Editor: die gehaltene Datei"]
+    L["Lesezeichenleiste: kein eigener Pfad"]
+  end
+
+  Q -->|"markiert den Bereich"| R
+  Q -->|"wählt den Bereich aus"| W
+  DF --> T
+  V --> T
+  ED --> T
+  L -->|"nimmt den Ordner des aktiven Dateifensters"| A
+  A -->|"liefert den Pfad ersatzweise"| T
+  A -->|"bleibt neben dem Fokus erkennbar"| R
+```
+
+Der Knoten `Das aktive Dateifenster` steht mit zwei Kanten darin, und beide sind Zusagen. Er zeigt in den Rahmen, weil der Nutzer auch mit dem Fokus im Editor sehen muss, aus welchem Dateifenster F5 kopiert. Und er zeigt in den Titel, weil er die Antwort für die beiden Bereiche liefert, die selbst keinen Pfad halten: die Lesezeichenleiste, deren Auswahl genau jenes Fenster setzt, und ein Editor oder eine Vorschau ohne Datei.
 
 ## Fähigkeiten
 
@@ -349,6 +384,82 @@ Zwei Knoten dieses Graphen sind der Gegenstand von C7 und C8. Bei `Nimmt der Ers
 - **Der Defekt ist eine Vorbedingung und keine Nebenarbeit.** F4 allein trägt den Editor nicht: F4 öffnet ihn aus dem Dateifenster, und alles Übrige, nämlich der Weg zurück hinein, der Übergang aus der Vorschau und die Befehle des Editors, braucht Kombinationen. Der Plan sollte ihn deshalb vor die Befehle des Editors setzen.
 - **Was gemessen ist und was nicht.** Gemessen ist, dass `cmd+y` und `shift+cmd+y` am laufenden Bündel nichts auslösen und `f3` schon, festgestellt vom Nutzer am 260807-2112. Nicht gemessen ist die Ursache; die beiden Verdächtigen des Datensatzes sind nach Prüfaufwand geordnet und nicht nach Wahrscheinlichkeit.
 
+### C9: Der Fokus ist in allen fünf Bereichen zu sehen
+
+**Beschreibung:** Der Nutzer erkennt ohne Probieren, welcher der fünf Bereiche seine Tasten annimmt. Die Anzeige ist für alle fünf dieselbe, und sie ist der farbige Rahmen, den die Runde 1 bereits um das aktive Dateifenster zieht. Neben ihm bleibt sichtbar, welches der beiden Dateifenster das aktive ist, denn davon hängt jede Dateioperation ab.
+
+**Abnahmekriterien:**
+- [ ] Jeder der fünf Bereiche, also Lesezeichenleiste, linkes Dateifenster, rechtes Dateifenster, Vorschau und Editor, zeigt an, dass der Eingabefokus in ihm steht. Die Anzeige trägt bei allen fünf dieselbe Form und dieselbe Farbe.
+- [ ] Genau ein Bereich trägt die Anzeige. Zwei zugleich oder gar keiner ist über keinen Weg erreichbar, solange das Fenster im Vordergrund steht und kein Blatt offen ist.
+- [ ] Die Anzeige folgt dem Fokus, gleich auf welchem Weg er dorthin kam: über einen der vier Fokusbefehle, über F4 aus dem Dateifenster, über den Übergang aus der Vorschau, über den Sprung auf eine Textmarke oder über einen Mausklick in die Fläche.
+- [ ] Ein Klick in eine Unteransicht eines Randbereichs, etwa in die Bildlaufleiste der Vorschau oder der Lesezeichenleiste, zeigt den Bereich an, in den geklickt wurde, und nicht ein Dateifenster.
+- [ ] Das aktive Dateifenster bleibt erkennbar, während der Fokus in der Leiste, in der Vorschau oder im Editor steht. Der Nutzer sieht vor dem Drücken von F5, aus welchem Dateifenster kopiert wird.
+- [ ] Der Editor trägt die Anzeige, während der Nutzer im Text tippt. Die blinkende Schreibmarke ist der zweite Hinweis und nicht der einzige.
+- [ ] Steht ein Blatt am Fenster, etwa die Rückfrage vor dem endgültigen Löschen oder die Suche aus C5, bleibt die Anzeige stehen, wie sie davor stand. Ein Blatt nimmt keinem Bereich seine Anzeige.
+- [ ] Geht das Fenster in den Hintergrund, tritt die Anzeige zurück, wie es macOS für jede Auswahl tut, und steht beim Zurückkommen unverändert wieder da.
+
+**Getroffene Festlegungen:**
+- **Der Nutzer hat die Fähigkeit am 260809-2035 verlangt, nachdem der fünfte Bereich gebaut war.** Die Lücke betrifft alle fünf und ist nicht durch den Editor entstanden; er hat sie sichtbar gemacht. Der Vermerk über die Nachträglichkeit steht unten unter `## Die vier später hinzugekommenen Fähigkeiten`.
+- **Die Form ist gebaut und wird nicht erfunden.** `Aufteilung::aktives_markieren` in `crates/krk-ui/src/appkit/aufteilung.rs:229-238` setzt heute die Rahmenfarbe eines `NSBox` je Dateifenster: `NSColor::controlAccentColor()` für das aktive, `NSColor::separatorColor()` für das andere, bei einer Rahmenbreite von zwei Punkten. Geprüft am Code, nicht angenommen. Diese Anzeige bekommt drei weitere Bereiche und einen anderen Auslöser; eine zweite Anzeige daneben entsteht nicht.
+- **Warum der Rahmen und nicht die Auswahlfarbe.** macOS führt zwei Gewohnheiten: die hervorgehobene gegen die zurückgetretene Auswahlfarbe einer Liste, und den Rahmen um die tonangebende Fläche. Die erste trägt hier nicht, weil zwei der fünf Bereiche keine Auswahl haben: die Textanzeige der Vorschau lehnt sie ausdrücklich ab (`setSelectable(false)` in `crates/krk-ui/src/appkit/vorschau.rs:513`), und die Textfläche des Editors hat eine Schreibmarke statt einer ausgewählten Zeile. Eine Anzeige, die drei Bereiche bedient und zwei nicht, wäre keine Anzeige für alle fünf.
+- **Der Akzentrahmen bekommt eine zweite Bedeutung, und das ist die offene Frage dieser Fähigkeit.** Heute heißt er "dieses Dateifenster ist das aktive", künftig soll er "hier stehen deine Tasten" heißen. Beide Aussagen sind zu treffen, und der Vorschlag des Shapers sind drei Zustände statt zwei: der Bereich mit dem Fokus trägt die Akzentfarbe, das aktive Dateifenster ohne Fokus eine zurückgetretene Form davon, alles übrige die Trennfarbe wie bisher. Der Datensatz `decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md` führt die Frage samt zweier Gegenvorschläge. Er hält keinen Planschritt auf, weil der Vorschlag als Vorbelegung im Spec steht; wer ihn umstößt, ändert das vierte und das fünfte Abnahmekriterium oben.
+- **Die Anzeige macht einen bestehenden Defekt sichtbar, statt ihn zu erben.** `issues/260809-1738_o_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md` hält fest, dass `Anwendungsdelegierter::fokus` für jeden Ersthelfer, der zu keiner der fünf genannten Ansichten gehört, `Fokus::Dateifenster` antwortet. Bisher zeigt sich das nur darin, dass der falsche Befehl wirkt. Mit einer Fokusanzeige zeigt sich derselbe Fehler als falsch gesetzter Rahmen, und das vierte Abnahmekriterium oben verlangt die richtige Antwort. Der Defekt gehört damit vor den Schritt, der C9 baut.
+- **Kein neuer Tastenbefehl.** C9 fügt der Belegung nichts hinzu; die vier Fokusbefehle stehen bereits und die Anzeige hängt an ihrem Ergebnis. `Kommando::wirkungsbereich` und `bereich_des_kommandos` bleiben von dieser Fähigkeit unberührt.
+
+### C10: Zeilennummern neben dem Text, im Editor und in der Vorschau
+
+**Beschreibung:** Links neben dem Text stehen die Zeilennummern der Datei, im Editor und im Vorschaufenster. Der Zeilensprung aus C5 bekommt damit ein sichtbares Ziel und eine Textmarke aus C6 eine sichtbare Stelle. Beide Flächen teilen sich eine Anzeige, weil beide dieselbe Bauart tragen.
+
+**Abnahmekriterien:**
+- [ ] Der Editor zeigt links neben dem Text die Zeilennummern der Datei. Die erste Zeile trägt die 1.
+- [ ] Die Vorschau zeigt dieselben Nummern, wenn sie den rohen Inhalt einer Textdatei zeigt.
+- [ ] Zeigt die Vorschau ein Bild, Metadaten, den Inhalt der Zwischenablage aus C10 der Runde 1 oder einen Hinweis, stehen keine Nummern daneben.
+- [ ] Läuft eine Zeile der Datei über mehrere Bildschirmzeilen um, trägt sie genau eine Nummer, und die steht neben ihrer ersten Bildschirmzeile. Die Fortsetzungen bekommen keine eigene.
+- [ ] Die Nummern gelten in beiden Ansichten aus C3. Eine Markdown-Datei zeigt in der Formatansicht dieselben Nummern wie in der Rohansicht.
+- [ ] Wer tippt, sieht die Nummern mitwachsen. Eine neue Zeile bekommt ihre Nummer, ohne dass der Nutzer etwas anstößt, und eine gelöschte nimmt ihre mit.
+- [ ] Wer blättert, sieht neben jeder sichtbaren Zeile ihre Nummer. Die Spalte läuft mit dem Text und bleibt dabei stehen, wo sie steht.
+- [ ] Ein Zeilensprung aus C5 landet sichtbar auf der Zeile mit der eingegebenen Nummer.
+- [ ] Der Sprung auf eine Textmarke aus C6 landet sichtbar auf der Zeile mit der gemerkten Nummer. Ist die Stelle gewandert und wird sie im Fenster aus C6 wiedergefunden, zeigt die Spalte die Nummer der wiedergefundenen Zeile.
+- [ ] Die Spalte wächst mit der Zeilenzahl der Datei, so dass auch eine sechsstellige Nummer vollständig steht und den Text nicht überdeckt.
+- [ ] Die Nummern sind vom Text abgesetzt und in beiden Erscheinungsbildern des Systems lesbar, in Hell wie in Dunkel.
+- [ ] Die Nummern gehören nicht zum Text: sie lassen sich nicht mit ihm auswählen, sie werden beim Kopieren nicht mitgenommen, und ein Sichern schreibt sie nicht in die Datei.
+
+**Getroffene Festlegungen:**
+- **Der Nutzer hat die Fähigkeit am 260809-2035 verlangt, mit der Begründung, dass der Sprung aus C5 ohne sichtbare Nummern ein Blindflug ist.** Die Vorschau hat er ausdrücklich mit hereingenommen, obwohl sie C6 der abgeschlossenen Runde 1 berührt.
+- **Die Zählung ist gebaut und wird nicht zweimal geschrieben.** `krk_core::text::zeilen::Zeilenindex` (`crates/krk-core/src/text/zeilen.rs`) hält den Anfangsversatz jeder Zeile und beantwortet die Fragen `zeilenzahl`, `anfang_der_zeile`, `inhalt_der_zeile` und `zeile_am_versatz`. Sein Modulkopf hält bereits fest, dass Zeilennummern ab 1 zählen und dass ein Text, der auf einem Umbruch endet, eine leere letzte Zeile hat. Die Anzeige nimmt diese Zählung; eine zweite entsteht nicht.
+- **Was der Zeilenindex nicht liefert, ist die Stelle auf dem Schirm.** Er rechnet von der Zeilennummer auf den Byteversatz; wo dieser Versatz gezeichnet wird, weiß allein der Layoutverwalter der Textfläche, und beim Umlauf am Fensterrand ist das die einzige Stelle, die es weiß. `inference:` Die Anzeige fragt deshalb die Nummer beim Zeilenindex und die Höhe beim Layoutverwalter. Das ist keine zweite Rechnung, sondern zwei Fragen an die beiden, die je eine Hälfte kennen.
+- **Editor und Vorschau tragen dieselbe Bauart, und deshalb ist eine gemeinsame Anzeige möglich.** Geprüft am Code: beide setzen eine `NSTextView` in eine `NSScrollView` (`crates/krk-ui/src/appkit/editor.rs:344-382` und `crates/krk-ui/src/appkit/vorschau.rs:501-525`), beide mit `setHorizontallyResizable(false)`, also mit Umlauf an der Behälterbreite. Die Unterschiede zwischen beiden liegen woanders: die Vorschau lehnt Bearbeiten und Auswahl ab, der Editor nimmt beides an. Für eine Nummernspalte ist das ohne Belang. Wie die eine Anzeige gebaut wird, entscheidet der Planner; dass es eine ist und nicht zwei, sagt dieser Spec zu.
+- **Der Umlauf ist der Grund, warum das vierte Abnahmekriterium eigens dasteht.** Eine Bildschirmzeile ist in beiden Flächen nicht dasselbe wie eine Dateizeile, und eine Spalte, die je Bildschirmzeile zählte, gäbe für jede umgelaufene Zeile eine falsche Nummer aus. Der Zeilensprung aus C5 und die Textmarke aus C6 rechnen beide in Dateizeilen, und die Anzeige muss dieselbe Zählung zeigen wie sie.
+- **Bei Markdown decken sich Ansicht und Datei zeilenweise, und das ist entschieden und nicht angenommen.** Die Antwort vom 260808-0155 (`decisions/260808-0140_a_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md`) lautet, dass die Auszeichnungszeichen stehen bleiben und allein ihre Wirkung gezeigt wird. Damit steht in der Formatansicht Zeichen für Zeichen der Stand der Datei, und die Nummern gelten dort unverändert. Wäre die Gegenmöglichkeit gewählt worden, also eine Darstellung wie im Browser, trüge die Formatansicht keine Dateizeilen mehr und C10 hätte für sie keine Zusage.
+- **Die Nummern sind immer da, wo sie gelten, und lassen sich nicht abschalten.** Eine Umschaltung wäre ein Tastenbefehl, ein Eintrag in `resources/default-keymap.toml`, ein Feld in `session.toml` und ein Abnahmekriterium mehr, und niemand hat sie verlangt. Wer sie will, bekommt sie in einer späteren Runde.
+
+### C11: Der volle Pfad im Fenstertitel
+
+**Beschreibung:** Der Fenstertitel zeigt den absoluten Pfad dessen, was der Bereich mit dem Fokus gerade hält. Damit sagt der Rahmen aus C9, **wo** der Nutzer arbeitet, und der Titel, **woran**. Steht der Fokus im Editor, steht dessen Datei im Titel, auch wenn das aktive Dateifenster einen anderen Ordner zeigt.
+
+**Abnahmekriterien:**
+- [ ] Der Fenstertitel trägt einen absoluten Pfad und nicht mehr allein den Namen der Anwendung.
+- [ ] Steht der Fokus in einem der beiden Dateifenster, zeigt der Titel den Pfad des dort angezeigten Ordners.
+- [ ] Steht der Fokus im Editor und hält der Editor eine Datei, zeigt der Titel deren vollen Pfad, auch dann, wenn das aktive Dateifenster einen anderen Ordner zeigt.
+- [ ] Steht der Fokus in der Vorschau und zeigt sie eine Datei, steht deren voller Pfad im Titel.
+- [ ] Steht der Fokus in der Lesezeichenleiste, zeigt der Titel den Ordner des aktiven Dateifensters.
+- [ ] Hält der Bereich mit dem Fokus nichts, was einen Pfad hat, zeigt der Titel den Ordner des aktiven Dateifensters. Betroffen sind ein Editor ohne Datei und eine Vorschau, die den Inhalt der Zwischenablage oder nichts zeigt.
+- [ ] Ist der Editor nicht offen, kommt seine zuletzt gehaltene Datei im Titel nicht vor.
+- [ ] Steht ein Blatt am Fenster, bleibt der Titel stehen, wie er davor stand.
+- [ ] Der Pfad steht ungekürzt. KRK kürzt den Benutzerordner nicht auf eine Tilde und lässt keine Zwischenordner aus; was der Titelbalken nicht fasst, kürzt macOS selbst.
+- [ ] Der Titel zieht nach, sobald sich der genannte Pfad ändert: bei einem Ordnerwechsel, einem Tabwechsel, einem Dateiwechsel im Editor und einem Fokuswechsel. Eine Bewegung der Auswahl innerhalb eines Ordners ändert ihn nicht.
+- [ ] Zeigt ein Dateifenster einen Ordner, den es nicht mehr gibt, steht dieser Pfad weiter im Titel. Der Titel gibt wieder, was auf dem Schirm steht, und prüft nicht nach.
+
+**Getroffene Festlegungen:**
+- **Der Nutzer hat die Fähigkeit am 260809-2035 verlangt und die Regel dazu ausdrücklich offen gelassen.** Er hat zwei Fragen gestellt: welchen Pfad der Titel zeigt, wenn der Editor eine andere Datei hält als das aktive Dateifenster anzeigt, und was dort steht, wenn kein Editor offen ist. Der Shaper hat beide entschieden, statt sie in einen Datensatz zu legen; die Begründung steht in den nächsten drei Punkten.
+- **Der Fokus entscheidet, und das ist eine Regel und keine Fallsammlung.** KRK führt genau einen Fokus, und C9 macht ihn im selben Zug sichtbar. Ein Titel, der ihm folgt, braucht keinen zweiten Begriff neben dem, den die Anwendung ohnehin hat, und er beantwortet die Frage des Nutzers ohne Sonderregel: der Editor kommt in den Titel, wenn der Nutzer im Editor arbeitet, und das Dateifenster, wenn er dort arbeitet. Die Gegenmöglichkeit, den Titel an das aktive Dateifenster zu binden und den Editor nur dann zu nennen, wenn er offen ist, bräuchte zwei Begriffe und beantwortete die erste Frage des Nutzers falsch: sie zeigte den Ordner des Dateifensters, während der Nutzer im Editor tippt.
+- **Die Fallunterscheidung ist über die fünf Fokuswerte gestellt und trägt keinen Auffangzweig.** `Fokus` in `crates/krk-ui/src/kommandos/fokus.rs:55-90` führt fünf Werte, und jeder bekommt oben eine eigene Antwort: Dateifenster den angezeigten Ordner, Editor seine Datei, Vorschau ihre Datei, Leiste den Ordner des aktiven Dateifensters, und ein Blatt lässt den Titel stehen. Die beiden letzten sind Antworten mit einem Grund und kein Auffangen: die Auswahl in der Leiste setzt den Ordner des aktiven Dateifensters, ihr Zusammenhang ist also genau jenes Fenster, und ein Blatt ist vorübergehend und gehört dem Bereich dahinter.
+- **Warum die Auswahl den Titel nicht ändert.** Ein Titel, der dem ausgewählten Eintrag folgte, schriebe bei jedem Druck auf eine Pfeiltaste neu, und der Weg vom Tastendruck bis zum Bild im Dateifenster ist der Weg, den L1 aus C8 der Runde 1 misst. Der Ordner ist außerdem die Angabe, die der Nutzer sucht, wenn er in einem Fenster mit zwei Dateilisten wissen will, wo er ist.
+- **Der Titel steht heute einmal und wird nie nachgezogen.** `crates/krk-ui/src/appkit/fenster.rs:112` setzt ihn beim Aufbau auf "KRK". Es gibt damit keine bestehende Stelle, an der ein Pfad nachgezogen würde; C11 legt sie an. Geprüft am Code, nicht angenommen.
+- **Ungekürzt, weil der Zweck das Lesen und Weiterreichen des Pfades ist.** Eine Abkürzung des Benutzerordners auf eine Tilde wäre eine zweite Schreibweise neben der, die KRK sonst zeigt, und der Nutzer hat den absoluten Pfad verlangt.
+- **Ob der Titelbalken zusätzlich das Stellvertretersymbol der Datei trägt, entscheidet der Planner.** macOS bietet dafür `setTitleWithRepresentedFilename:`; die Methode setzt den Titel allerdings auf den letzten Pfadbestandteil und wäre damit allein keine Erfüllung der Kriterien oben. Ein Symbol neben dem vollen Pfad ist zulässig, ein Symbol statt seiner nicht.
+- **Der ungesicherte Stand aus C4 bekommt hier keine neue Zusage.** C4 verlangt, dass der Editor ungesicherte Änderungen erkennbar meldet, und lässt die Form offen. Setzt der Planner die übliche Mac-Form dafür ein, also den Punkt im Schließknopf über `setDocumentEdited:`, ist jenes Kriterium dort erfüllt. C11 verlangt es nicht und verbietet es nicht.
+
 ## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1
 
 **Diese Runde setzt keine eigene Zeitzusage. Eine elfte Zahl entsteht nicht.** Die Entscheidung ist hier getroffen und nicht offen gelassen, und sie steht auf drei Gründen.
@@ -368,6 +479,8 @@ Der dritte ist praktischer Art. Der Abnahmelauf verlangt KRK im Vordergrund und 
 
 **Ein vierter Gegenstand kommt für dieselbe Messrunde hinzu und ist keine der zehn Zusagen.** Die Syntaxhervorhebung aus C3 kommt aus einer fremden Kiste, deren Geschwindigkeit auf dem Referenzgerät ungemessen ist. Wer den ausgeklammerten Abnahmelauf wieder aufnimmt, misst sie mit; welche Zahl dabei herauskommen soll, sagt diese Runde nicht zu.
 
+**Die drei Fähigkeiten vom 260809 berühren dieselben gemessenen Wege noch einmal, und zwar stärker als der Rest der Runde.** Sie stehen hier, damit die spätere Messrunde sie nicht suchen muss. **L7** misst die Vorschau einer Textdatei, und C10 hängt eine Nummernspalte in genau diese Fläche; die Zusage wird damit nicht nur berührt, sondern auf einem Weg belastet, den sie misst. **L1** misst die Spanne vom Tastendruck bis zum Zeichendurchgang im Dateifenster, und C11 schreibt bei einem Ordnerwechsel den Fenstertitel neu; das zehnte Abnahmekriterium von C11 hält deshalb ausdrücklich fest, dass eine Bewegung der Auswahl den Titel nicht anfasst. **L4** misst den Kaltstart bis zur bedienbaren Oberfläche, und C9 und C11 setzen beim Aufbau je eine Anzeige. Keine der drei bekommt eine eigene Zahl; die Begründung dafür steht unverändert oben.
+
 ## Die drei vollständigen Fallunterscheidungen, und welche diese Runde berührt
 
 `CLAUDE.md` nennt drei Fallunterscheidungen ohne Auffangzweig. Sie sind mit Absicht so gebaut: eine neue Variante hält den Bau an und erzwingt eine bewusste Einordnung. Diese Runde berührt zwei von ihnen und die dritte nicht.
@@ -377,6 +490,8 @@ Der dritte ist praktischer Art. Der Abnahmelauf verlangt KRK im Vordergrund und 
 **`bereich_des_kommandos` in `crates/krk-ui/src/belegungsmodell.rs:144` ist berührt, und zwar auf zwei Weisen.** Erstens braucht jedes neue Kommando dort seinen Funktionsbereich. Zweitens, und das ist der wichtigere Teil: `Funktionsbereich::Editor` **gibt es bereits**, und die Funktion `bereich` in derselben Datei ordnet die Kennung `"bearbeiten"` heute über ihren **Namen** zu, in Zeile 131, weil es zu ihr noch kein Kommando gibt. Sobald `bearbeiten` ein Kommando bekommt, greift der Zweig darüber, und die Zeile mit dem Namen wird toter Text, der eine zweite Wahrheit behauptet. Sie gehört in derselben Änderung entfernt. Der Kommentar über der Funktion sagt es selbst: dort stehen "genau die, die nie eines bekommen".
 
 **`schiebt_auffrischung_auf` in `crates/krk-ui/src/auffrischung.rs` ist nicht berührt.** Die Fallunterscheidung geht über `krk_core::operation::Art`, und diese Aufzählung führt fünf Werte, die alle Aufträge der Operationsmaschine aus C4 der Runde 1 sind: kopieren, verschieben, in den Papierkorb, endgültig löschen, im Stapel umbenennen. Das Sichern einer Datei aus dem Editor ist keiner davon. Es ist ein Schreibvorgang auf eine einzelne Datei und gehört nicht in eine Maschine, die für Stapel gebaut ist; ein sechster Wert entstünde nur, wenn der Planner das Sichern durch sie hindurchführte, und dafür gibt es keinen Grund. Die Auffrischung des Dateifensters, das den Ordner der gesicherten Datei zeigt, geschieht über den bestehenden FSEvents-Weg und braucht nichts Neues.
+
+**Die drei Fähigkeiten vom 260809 berühren keine der drei.** C9, C10 und C11 bringen keinen einzigen neuen Tastenbefehl mit: die Fokusanzeige hängt am Ergebnis der vier bestehenden Fokusbefehle, die Zeilennummern sind ohne Umschaltung immer da, wo sie gelten, und der Fenstertitel wird geschrieben und nicht bedient. Damit bleiben `Kommando::wirkungsbereich` und `bereich_des_kommandos` von ihnen unberührt, und `resources/default-keymap.toml` wächst durch sie nicht. Das ist der Grund, aus dem drei zusätzliche Fähigkeiten die Belegung nicht belasten, und es ist keine Nebensache: die Konflikterkennung aus C3 der Runde 1 hat schon für die Befehle aus C1 bis C6 gegen 58 bestehende Funktionen zu prüfen.
 
 **Eine vierte Fallunterscheidung ist berührt, die `CLAUDE.md` nicht nennt.** `Bereich` in `crates/krk-ui/src/fenstermodell.rs:50-68` führt vier Varianten und die Konstante `ALLE: [Bereich; 4]`. Der Editor macht daraus fünf, und damit wachsen `index`, `mindestbreite`, `anfangsbreite`, `ist_beweglich`, `sichtbar`, `umschalten`, `breite` und `breite_setzen` sowie die Felder `Breiten` und `Sichtbarkeit` in `crates/krk-core/src/ablage/sitzung.rs` und die Rückgabe von `bereichsbreiten`, die heute `[f64; 4]` ist. Der Übersetzer erzwingt alle diese Stellen; das ist der Zweck der Bauart und nicht ihr Preis. Erwähnt ist es hier, weil ein Leser von `CLAUDE.md` sonst drei Stellen erwartet und fünf vorfindet.
 
@@ -393,6 +508,8 @@ Der dritte ist praktischer Art. Der Abnahmelauf verlangt KRK im Vordergrund und 
 - **Jede neue Belegung geht über `resources/default-keymap.toml`.** Es gibt genau einen Weg von einem Tastendruck zu einer Funktion, und das Hauptmenü holt seine Kürzel aus derselben Quelle. Ein Kürzel als Zeichenkette im Programmtext entsteht nicht.
 - **Die Konflikterkennung aus C3 der Runde 1 gilt für die neuen Belegungen.** Zwei Funktionen sind genau dann ein Konflikt, wenn sie dieselbe Kombination tragen und denselben Zusteller haben. Der Editor bringt Befehle mit, die naheliegenderweise auf Mac-übliche Kürzel fallen; der Plan hat sie gegen die 58 bestehenden Funktionen zu prüfen.
 - **Der Abnahmelauf der Runde 1 bleibt ausgeklammert**, samt der Frage, wie KRK dafür in den Vordergrund kommt.
+- **Die Fokusanzeige aus C9 gilt für alle fünf Bereiche und entsteht an einer Stelle.** Vier davon gehören der Runde 1; diese Runde fasst sie an, weil eine Anzeige für einen Bereich keine Anzeige wäre. Eine zweite Anzeige daneben, die nur für den Editor gilt, entsteht nicht, und ein sechster Bereich einer späteren Runde bekommt sie über dieselbe Stelle.
+- **Die Zeilennummern aus C10 entstehen ebenfalls an einer Stelle für beide Flächen.** Editor und Vorschau tragen dieselbe Bauart; zwei Nummernspalten wären zwei Zählungen für dieselbe Frage.
 
 ## Ausdrücklich außerhalb dieser Runde
 
@@ -406,6 +523,10 @@ Der dritte ist praktischer Art. Der Abnahmelauf verlangt KRK im Vordergrund und 
 - **Rückgängig über die Sitzungsgrenze hinaus.** Was ein Editor an Rückgängig innerhalb einer Sitzung mitbringt, ist Sache des gewählten Werkzeugs; ein über den Neustart hinweg erhaltener Änderungsverlauf ist nicht zugesagt.
 - **Der eingebaute Web-Betrachter.** Er ist ein eigener vorgesehener Circle (`260804-0933-eingebauter-web-betrachter-im-vorschaufenster`) und keine Abhängigkeit dieser Runde. Beide berühren die Fläche des Vorschaufensters, und die spätere Runde wird sie so vorfinden, wie diese sie hinterlässt.
 - **Die Ursache der L9-Verschlechterung.** Sie liegt im gemeinsamen Speicher und hält diese Runde nicht auf.
+- **Eine Umschaltung der Zeilennummern.** Sie wäre ein Tastenbefehl, ein Eintrag in `resources/default-keymap.toml`, ein Feld in `session.toml` und ein Abnahmekriterium mehr, und niemand hat sie verlangt. Die Nummern stehen dort, wo C10 sie zusagt, und sonst nirgends.
+- **Ein Sprung über die Nummernspalte.** Ein Klick auf eine Nummer, der die Schreibmarke dorthin setzt, ein Aufziehen über mehrere Nummern, das Zeilen auswählt: das sind Bedienelemente mit eigenen Abnahmekriterien. C10 sagt eine Anzeige zu und keine Bedienfläche.
+- **Ein Änderungsstreifen neben den Zeilennummern.** Was Git über geänderte Zeilen weiß, gehört in die Runde mit der Git-Anbindung. Die Spalte aus C10 trägt Nummern und sonst nichts.
+- **Der Titel als zweite Meldefläche.** C11 schreibt einen Pfad und keine Meldungen. Was KRK dem Nutzer zu sagen hat, geht unverändert in die Statuszeile aus C1 der Runde 1, auf einen ihrer fünf Ränge.
 - **Die beiden Fragen der Runde 1, die an der Lesestelle hängen.** `260807-0010_o_kann-der-auffrischungsaufschub-entfallen...` und `260807-0020_o_soll-die-markierung-eine-auffrischung-ueberleben...` betreffen das Dateifenster. Diese Runde fasst die Lesestelle nicht an: der Editor liest eine einzelne Datei und kein Verzeichnis, und die Auffrischung nach einer Sicherung geht über den bestehenden FSEvents-Weg. Sie binden diese Runde damit nicht.
 
 ## Offen für den Planner
@@ -424,6 +545,12 @@ Diese Punkte entscheidet der Planner beim Entwurf; der Spec sagt zu ihnen nichts
 - Wie `bookmarks.toml` die zweite Sorte aufnimmt, ohne eine bestehende Datei ungültig zu machen.
 - Welche Kombinationen die neuen Funktionen ab Werk tragen. Der Spec legt allein F4 fest, weil die Runde 1 die Taste dafür freigehalten hat. Für alles übrige gilt das Verfahren der Runde 1: der Planner schlägt vor, der Nutzer nimmt an oder belegt um.
 - Die Reihenfolge der Schritte, insbesondere ob C8 vor die Befehle des Editors gehört. Der Spec nennt den sachlichen Grund dafür in C8 und schreibt keine Reihenfolge vor.
+- Woher die Fokusanzeige aus C9 erfährt, dass sich der Ersthelfer geändert hat. Über einen Fokusbefehl geht KRK selbst durch `Anwendungsdelegierter::fokus_setzen`; ein Mausklick in eine Fläche ändert den Ersthelfer dagegen an KRK vorbei, und `Anwendungsdelegierter::fokus` ist eine Abfrage und keine Benachrichtigung. Der Fensterdelegierte trägt heute allein `windowWillClose:` (`crates/krk-ui/src/appkit/fenster.rs:66`). Zugesagt ist das Ergebnis aus dem dritten Abnahmekriterium von C9, nicht der Weg dorthin.
+- Wie die Anzeige aus C9 an die drei Bereiche kommt, die heute keinen Kasten tragen. `Aufteilung` hält zwei `NSBox` für die beiden Dateifenster (`crates/krk-ui/src/appkit/aufteilung.rs:134`); Lesezeichenleiste, Vorschau und Editor hängen ohne Kasten in der Aufteilung. Ob sie einen bekommen oder die Anzeige anders entsteht, entscheidet der Planner.
+- Wie die zurückgetretene Form des Rahmens aussieht, mit der das aktive Dateifenster ohne Fokus erkennbar bleibt. Zugesagt ist, dass er erkennbar bleibt, und nicht, in welcher Farbe.
+- Womit die Nummernspalte aus C10 gebaut wird und wie sie an beide Textflächen kommt. Der Spec sagt zu, dass es eine Anzeige für beide ist und dass sie die Zählung aus `Zeilenindex` nimmt; welches Mittel sie trägt, gehört zum Plan.
+- Wann die Nummernspalte neu gezeichnet wird, während der Nutzer tippt, ohne bei jedem Anschlag den ganzen Text zu zählen. `Zeilenindex::neu` läuft über den ganzen Text, und sein Doc-Kommentar hält fest, dass ein Index sich nicht selbst nachführt.
+- An welcher Stelle der Fenstertitel aus C11 geschrieben wird. Er steht heute einmal beim Aufbau (`crates/krk-ui/src/appkit/fenster.rs:112`), und es gibt keine bestehende Stelle, die ihn nachzieht.
 
 ## Beantwortete Nutzerentscheidungen
 
@@ -438,18 +565,42 @@ Die fünf Fragen, die die erste Fassung dieses Specs vor den ersten Planschritt 
 | Wie weit reicht die Suche in der Nähe einer Textmarke? | Ein festes Fenster von rund fünfzig Zeilen. Der Fehlschlag springt trotzdem an die gemerkte Zeilennummer und meldet es. Ungültig heißt allein, dass die Datei fehlt. | C6 |
 | Trägt eine Textmarke auch einen Textbereich? | Nein, nur eine Stelle. | C6 |
 
+## Die vier später hinzugekommenen Fähigkeiten
+
+**Vier Anzeigefähigkeiten sind am 260809-2035 auf Wunsch des Nutzers dazugekommen, mitten in der Umsetzung.** Zu diesem Zeitpunkt trugen 24 der 42 Planschritte das Kennzeichen erledigt, der Editor war über F4 erreichbar und zeigte eine Datei. Dieser Abschnitt hält fest, warum sie nicht im ursprünglichen Zuschnitt standen, damit später niemand darüber rätselt.
+
+Sie stehen in diesem Spec als C9, C10 und C11. Aus vier Wünschen sind drei Fähigkeiten geworden, weil die Zeilennummern im Editor und die Zeilennummern in der Vorschau eine Anzeige sind und nicht zwei; die Begründung dafür steht in C10 und ist am Code geprüft.
+
+**Warum sie nicht früher dastanden, in vier Fällen aus vier verschiedenen Gründen.**
+
+Die Fokusanzeige aus C9 fehlte, solange der Fokus drei Bereiche kannte, kaum jemandem: die Lesezeichenleiste und die beiden Dateifenster sind an ihrem Inhalt zu unterscheiden, und das aktive Dateifenster trug seinen Rahmen schon. Der fünfte Bereich hat die Lücke aufgedeckt, aber nicht verursacht. Der Nutzer hat das ausdrücklich gesagt, und der Spec nimmt es auf: C9 gilt für alle fünf und nicht für den Editor.
+
+Die Zeilennummern im Editor fehlten, weil C5 den Sprung zu einer Zeilennummer als Befehl beschreibt und nicht als Anzeige. Ein Sprung ohne sichtbare Nummern trifft trotzdem, und deshalb hielt der Zuschnitt der Prüfung stand; er blieb aber ein Blindflug, und das sieht man erst an der gebauten Fläche.
+
+Die Zeilennummern in der Vorschau fehlten, weil die Vorschau zur Runde 1 gehört und diese Runde deren Restarbeit ausklammert. Der Nutzer hat sie mit einer ausdrücklichen Weisung hereingeholt. Die Ausklammerung vom 260807-2116 gilt damit unverändert für die Messreihen und nicht für jede Berührung der Runde 1.
+
+Der Fenstertitel fehlte, weil kein Bestandteil der Directive ihn verlangt. Er ist der einzige der vier, der aus keiner der acht bestehenden Fähigkeiten folgt; er kommt aus der Bedienung und nicht aus dem Zuschnitt.
+
+**Was die Erweiterung den Zuschnitt kostet, ist benannt und nicht klein.** Zu acht Fähigkeiten mit sechsundsiebzig Abnahmekriterien kommen drei Fähigkeiten mit einunddreißig hinzu: acht für die Fokusanzeige, zwölf für die Zeilennummern, elf für den Fenstertitel. Zwei der drei fassen Flächen an, die seit der Runde 1 stehen. Der Gegenwert ist, dass die Runde nicht mit einer Anwendung endet, in der der Nutzer raten muss, wo seine Tasten ankommen.
+
 ## Was die Abnahme mitentscheidet
 
-Zwei Punkte gehören zur Abnahme dieses Specs und sind keine der sechs Antworten oben.
+Drei Punkte gehören zur Abnahme dieses Specs und sind keine der sechs Antworten oben.
 
 **Eine Ableitung des Shapers, die der Nutzer umstoßen kann.** Der gegenseitige Ausschluss von Editor und Vorschau gilt in beide Richtungen (C1). Der Nutzer hat nur die eine Richtung festgelegt, nämlich dass der Editor die Vorschau schließt. Die andere folgt daraus, dass beide sich eine Fläche teilen; ohne sie gäbe es einen Weg, auf dem beide zugleich sichtbar wären. Aus der Ableitung folgt außerdem, dass die Breitenregel unverändert bleibt und dass das Einblenden der Vorschau die Nachfrage aus C4 auslöst. Wer sie umstößt, ändert C1, C4 und das erste Diagramm.
 
 **Eine neue offene Frage, die den Plan bindet und keinen Planschritt aufhält.** `decisions/260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md` fragt, was beim Sichern mit Zeilenenden, dem abschließenden Zeilenumbruch und einer Bytefolgenmarke am Dateianfang geschieht. Sie entsteht aus der bindenden Zusage der Antwort vom 260808-0017: jene Zusage regelt das **Lesen** vollständig, und über das **Zurückschreiben** des Teils, den der Nutzer gar nicht angefasst hat, sagt sie nichts. Der Schaden, den die Frage abwendet, ist sichtbar: wer eine Zeile in einer Datei mit Windows-Zeilenenden ändert und ein normalisierendes Sichern bekommt, hat danach eine Änderung in jeder Zeile der Datei. Sie ist vor dem Schritt zu beantworten, der das Sichern baut.
 
+**Eine zweite Ableitung des Shapers, aus der Erweiterung vom 260809.** Der Fenstertitel folgt dem Fokus und nicht dem aktiven Dateifenster (C11). Der Nutzer hat die Regel ausdrücklich offen gelassen und zwei Fragen dazu gestellt; der Shaper hat beide entschieden, statt einen Datensatz anzulegen. Die Begründung steht in den Festlegungen von C11 und lautet in einem Satz: KRK führt genau einen Fokus, C9 macht ihn sichtbar, und ein Titel, der ihm folgt, braucht keinen zweiten Begriff daneben. Wer sie umstößt, ändert das zweite bis sechste Abnahmekriterium von C11 und das Diagramm unter `### Eine Quelle, zwei Anzeigen`.
+
 ## Abgleich mit der Circle-Directive
 
-Die Directive nennt zehn Bestandteile. Neun sind in diesem Spec einer Fähigkeit zugeordnet: der Editor als vierter Fokusbereich (C1), F4 als Einstieg (C2), Rohansicht und Formatansicht (C3), der Sprung zu einer Zeilennummer sowie Suchen und Ersetzen innerhalb der Datei (C5), Marken auf Textstellen (C6), ihre Ablage in `bookmarks.toml` neben den Ordner-Lesezeichen (C6), das zeitliche Teilen der Fläche mit der Vorschau (C1), die Breite von rund einem Drittel bei zusammenrückenden Dateifenstern (C1) und der Ausschluss von Suchen und Ersetzen über mehrere Dateien (`## Ausdrücklich außerhalb dieser Runde`).
+Die Directive nennt seit dem 260809-2035 zwölf Bestandteile, und jeder ist in diesem Spec einer Fähigkeit zugeordnet: der Editor als vierter Fokusbereich (C1), F4 als Einstieg (C2), Rohansicht und Formatansicht (C3), der Sprung zu einer Zeilennummer sowie Suchen und Ersetzen innerhalb der Datei (C5), Marken auf Textstellen (C6), ihre Ablage in `bookmarks.toml` neben den Ordner-Lesezeichen (C6), das zeitliche Teilen der Fläche mit der Vorschau (C1), die Breite von rund einem Drittel bei zusammenrückenden Dateifenstern (C1), die Fokusanzeige in allen fünf Bereichen (C9), die Zeilennummern im Editor und in der Vorschau (C10), der absolute Pfad im Fenstertitel (C11) und der Ausschluss von Suchen und Ersetzen über mehrere Dateien (`## Ausdrücklich außerhalb dieser Runde`).
 
-**Der zehnte Bestandteil ist überholt und im Circle-Datensatz zu streichen.** Die Directive in `_t_circle.md` sagt "und setzt Marken auf Textstellen und Textbereiche". Der Nutzer hat am 260808-0017 entschieden, dass eine Marke eine Stelle trägt und keinen Bereich. Zu streichen sind in Zeile 14, im Abschnitt `## Directive`, die drei Wörter **" und Textbereiche"**; der Satz lautet danach "…, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen." Der Shaper nimmt die Änderung nicht selbst vor: die Directive eines aktiven Circles gehört dem Nutzer und dem Orchestrator.
+**Der zehnte Bestandteil war überholt und ist nachgezogen.** Die Directive sagte bis zum 260808 "und setzt Marken auf Textstellen und Textbereiche"; der Nutzer hat an jenem Tag entschieden, dass eine Marke eine Stelle trägt und keinen Bereich, und die drei Wörter " und Textbereiche" stehen nicht mehr im Datensatz. Geprüft am 260809-2043 gegen den Dateibestand.
 
-Zwei weitere Stellen desselben Datensatzes sagen dasselbe und stehen im Abschnitt `## Grounding snapshot`, der den Kenntnisstand vom 260807-2116 festhält. Der Knoten `T["Textmarke: zeigt auf Stelle oder Bereich in einer Datei"]` im zweiten Diagramm (Zeile 85) und der Satz "Der Entwurf nennt Stellen und Bereiche." unter der vierten offenen Frage (Zeile 126) sind beide durch die Antwort vom 260808-0017 überholt. Ob sie mitgezogen oder als Kenntnisstand jenes Tages stehen gelassen werden, entscheidet der Nutzer; die Directive selbst ist der Ort, an dem der Widerspruch zählt, weil sie das Ziel dieser Runde bindet.
+Zwei Stellen im Abschnitt `## Grounding snapshot` desselben Datensatzes sagen weiterhin das Überholte, und zwar bewusst: der Knoten `T["Textmarke: zeigt auf Stelle oder Bereich in einer Datei"]` im zweiten Diagramm und der Satz "Der Entwurf nennt Stellen und Bereiche." unter der vierten offenen Frage. Der Abschnitt hält den Kenntnisstand vom 260807-2116 fest und trägt oben einen Vermerk, der beide Stellen als überholt benennt. Sie bleiben stehen.
+
+**Drei Bestandteile sind am 260809-2035 hinzugekommen und stehen seither in der Directive.** Der eingefügte Satz lautet: "Dazu sieht der Nutzer, wo er ist und woran er arbeitet: jeder der fünf Bereiche zeigt an, wenn er den Fokus hält, neben dem Text stehen im Editor wie im Vorschaufenster die Zeilennummern der Datei, und der Fenstertitel trägt den absoluten Pfad dessen, was der Bereich mit dem Fokus hält." Jeder der drei Teile ist einer Fähigkeit zugeordnet: die Fokusanzeige C9, die Zeilennummern in beiden Flächen C10, der Fenstertitel C11. Sie sind in der Aufzählung oben mitgezählt.
+
+**Der Shaper hat die Directive diesmal selbst geändert, und das ist eine Abweichung von seinem sonstigen Zuschnitt.** Beim Nachtrag vom 260808 hat er den zu streichenden Wortlaut genannt und die Änderung dem Orchestrator überlassen, mit der Begründung, die Directive eines aktiven Circles gehöre dem Nutzer. Der Auftrag vom 260809-2035 nennt den Datensatz und den Abschnitt ausdrücklich als Ziel. Der eingefügte Satz steht oben im Wortlaut, damit der Nutzer ihn prüfen kann; kein anderer Abschnitt des Datensatzes ist angefasst.
