@@ -109,6 +109,7 @@ struct BelegungZeile {
 fn beispielsitzung() -> Sitzung {
     Sitzung {
         aktiv: Fensterseite::Rechts,
+        editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
         breiten: Breiten {
             lesezeichen: Some(180.0),
             links: Some(520.5),
@@ -378,6 +379,7 @@ fn das_fenster_und_tabmodell_ueberlebt_schreiben_und_wiedereinlesen() {
     assert_eq!(nachher.aktiv, vorher.aktiv, "das aktive Dateifenster");
     assert_eq!(nachher.sichtbar, vorher.sichtbar, "die Sichtbarkeit");
     assert_eq!(nachher.breiten, vorher.breiten, "die Breiten");
+    assert_eq!(nachher.editor, vorher.editor, "die Datei des Editors");
     for seite in Fensterseite::ALLE {
         let da = nachher.fenster(seite);
         let war = vorher.fenster(seite);
@@ -494,6 +496,10 @@ aktiver_tab = 0
         geladen.wert.breiten.editor, None,
         "eine nie gesetzte Editorbreite bleibt ungesetzt"
     );
+    assert_eq!(
+        geladen.wert.editor, None,
+        "ohne das Feld haelt der Editor keine Datei"
+    );
     assert_eq!(geladen.wert.breiten.vorschau, Some(260.0));
     assert!(geladen.wert.sichtbar.vorschau);
     assert!(geladen.wert.sichtbar.lesezeichen);
@@ -550,6 +556,80 @@ fn eine_nicht_gesetzte_editorbreite_steht_nicht_in_der_datei() {
         .filter(|zeile| zeile.starts_with("editor ="))
         .collect();
     assert_eq!(editorzeilen, ["editor = false"], "{text}");
+}
+
+/// Die geoeffnete Datei des Editors uebersteht den Rundlauf byteweise (C7).
+///
+/// Der Rundlauf geht ueber zwei Schreibvorgaenge und nicht nur ueber einen
+/// Vergleich der Strukturen, aus demselben Grund wie bei der Editorbreite
+/// darueber: verlore das Schreiben das Feld, kaeme es beim Lesen als `None`
+/// zurueck, und die zweite Datei unterschiede sich von der ersten.
+#[test]
+fn die_geoeffnete_editordatei_ueberlebt_den_rundlauf_byteweise() {
+    let (_ordner, ablage) = ablage("editordatei");
+    let sitzung = Sitzung {
+        editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
+        ..Sitzung::default()
+    };
+
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("schreiben gescheitert");
+    let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    assert!(!geladen.ist_ersetzt());
+    assert_eq!(
+        geladen.wert.editor,
+        Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md"))
+    );
+
+    ablage
+        .sichern(Datei::Sitzung, &geladen.wert)
+        .expect("zweites Schreiben gescheitert");
+    let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
+}
+
+/// Ein gesetzter Editorpfad steht in der Datei, ein nicht gesetzter nicht (C7).
+///
+/// Dieselbe Zusage wie fuer die fuenf Breiten: `None` heisst "der Editor haelt
+/// keine Datei", und eine Zeile mit einem erfundenen Pfad waere in einer Datei,
+/// die der Nutzer nach C7 von Hand liest, eine Falschaussage.
+///
+/// Geprueft wird die **Zeile** und nicht nur der eingelesene Wert: der Name
+/// `editor` kommt in `session.toml` dreimal vor, als Breite, als Sichtbarkeit
+/// und hier, und allein die Stelle im Text unterscheidet die drei.
+#[test]
+fn der_editorpfad_steht_nur_dann_in_der_datei_wenn_eine_datei_offen_ist() {
+    let (_ordner, ablage) = ablage("editordatei-zeile");
+
+    ablage
+        .sichern(Datei::Sitzung, &Sitzung::default())
+        .expect("schreiben gescheitert");
+    let ohne = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        !ohne.lines().any(|zeile| zeile.starts_with("editor = \"")),
+        "ohne geoeffnete Datei steht ein Pfad in session.toml: {ohne}"
+    );
+
+    let sitzung = Sitzung {
+        editor: Some(PathBuf::from("/Users/pruefung/notiz.md")),
+        ..Sitzung::default()
+    };
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("zweites Schreiben gescheitert");
+    let mit = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    let pfadzeilen: Vec<&str> = mit
+        .lines()
+        .filter(|zeile| zeile.starts_with("editor = \""))
+        .collect();
+    assert_eq!(
+        pfadzeilen,
+        ["editor = \"/Users/pruefung/notiz.md\""],
+        "{mit}"
+    );
 }
 
 /// Ein Tab mehr im Fenster, und die Datei traegt ihn.

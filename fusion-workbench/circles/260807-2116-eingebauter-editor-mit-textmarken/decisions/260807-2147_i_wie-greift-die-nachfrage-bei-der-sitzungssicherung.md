@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md` §"3. Ungespeicherte Änderungen", `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C4), `crates/krk-core/src/ablage/sitzung.rs:33` (`SITZUNGSTAKT`)
 
@@ -47,3 +47,5 @@ Die Empfehlung ist eine Auslegung und keine geprüfte Aussage über die Absicht 
 
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"9. Nachfrage bei der Sitzungssicherung" — Möglichkeit 1 gewählt: der dritte Anlass fällt mit dem zweiten zusammen. Die Sitzung wird beim Beenden ein letztes Mal geschrieben, und dort steht die Nachfrage ohnehin; die getakteten Zwischenschreibvorgänge fragen nichts und tragen den ungesicherten Stand nicht mit. Der Preis ist angenommen: bei einem Absturz ist der ungesicherte Stand verloren, ohne Nachfrage. Eine Absturzsicherung, die den Pufferinhalt mitsichert (Möglichkeit 2), ist ein eigenes späteres Vorhaben. Zu beachten: anwendung.rs:1162 hält fest, dass heute kein applicationShouldTerminate: im Weg steht; die Nachfrage beim Beenden ändert das. Entschieden vom Nutzer am 260808-0017.
+
+Implemented: `crates/krk-core/src/ablage/sitzung.rs` (`Sitzung::editor`) und `crates/krk-ui/src/appkit/anwendung.rs` (`sitzung_bauen`, `editor_wiederherstellen`, `applicationShouldTerminate:`) — Möglichkeit 1 steht in beiden Hälften. Die Sitzung trägt allein den **Pfad** der geöffneten Datei und weder den bearbeiteten Stand noch die Abweichungsmarke; die getakteten Zwischenschreibvorgänge fragen deshalb nichts und halten die Anwendung nicht an. Die Nachfrage beim Beenden steht seit S29 in `applicationShouldTerminate:`, und `applicationWillTerminate:` schreibt den letzten Stand danach, nicht davor. Der angenommene Preis gilt unverändert: bei einem Absturz ist der ungesicherte Stand verloren. Gebaut mit S29 am 260810-0021 und S30 am 260810-0146.

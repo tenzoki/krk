@@ -16,6 +16,10 @@
 //! Felder in genau diese Strukturen. Die Bildlaufposition je Tab ist mit
 //! Schritt 12 dazugekommen, als [`Tab::bildlauf`].
 //!
+//! **Was der Editor beitraegt, ist der Pfad seiner Datei und nicht ihr Stand.**
+//! [`Sitzung::editor`] haelt fest, welche Datei offen ist, und sonst nichts;
+//! der ungesicherte Stand bleibt draussen, und der Grund steht am Feld.
+//!
 //! [`Sitzungsschreiber`] haelt die zweite Zusage aus `### Frage 4`: der
 //! Sitzungszustand wird gebuendelt geschrieben, hoechstens alle zwei Sekunden
 //! und einmal beim Beenden.
@@ -242,6 +246,27 @@ impl Default for Sichtbarkeit {
 pub struct Sitzung {
     /// Welches Dateifenster das aktive ist. Bei Dateioperationen die Quelle.
     pub aktiv: Fensterseite,
+    /// Die Datei, die der eingebaute Editor haelt; `None`, wenn er keine haelt.
+    ///
+    /// **Der Pfad und sonst nichts.** Weder der bearbeitete Stand noch die
+    /// Abweichungsmarke gehoeren hierher: die getaktete Sitzungssicherung fragt
+    /// nichts und traegt den ungesicherten Stand nicht mit (achtes
+    /// Abnahmekriterium von C4 der Editor-Runde, Datensatz
+    /// `260807-2147_*_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md`).
+    /// Der Preis steht dort und wird nicht verschwiegen: bei einem Absturz ist
+    /// der ungesicherte Stand verloren. Beim naechsten Start kommt die Datei so
+    /// herein, wie sie auf der Platte steht.
+    ///
+    /// **Das Feld steht vor den drei Tabellen und nicht hinter ihnen.** TOML
+    /// verlangt, dass die Werte einer Tabelle vor ihren Untertabellen stehen;
+    /// eine Zeile hinter `[breiten]` liesse das Schreiben scheitern. Die
+    /// Reihenfolge der Felder ist damit keine Geschmacksfrage.
+    ///
+    /// Es ist mit der Editor-Runde dazugekommen. Eine `session.toml` aus der
+    /// Zeit davor bleibt lesbar, weil diese Struktur `#[serde(default)]`
+    /// traegt; die Probe dazu steht in `tests/ablage.rs`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub editor: Option<PathBuf>,
     /// Die Breiten der fuenf Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
@@ -256,10 +281,11 @@ pub struct Sitzung {
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
-    /// ausgeblendet, links aktiv.
+    /// ausgeblendet und ohne Datei, links aktiv.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
+            editor: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
             fenster: [Dateifenster::default(), Dateifenster::default()],

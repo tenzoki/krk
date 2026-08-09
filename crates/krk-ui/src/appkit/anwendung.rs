@@ -436,6 +436,21 @@ pub struct AnwendungsIvars {
     /// waere weder bedienbar noch sinnvoll — der Nutzer koennte es nicht
     /// beantworten, und KRK bliebe stehen.
     beenden_ohne_nachfrage: Cell<bool>,
+    /// Ob das laufende Oeffnen des Editors aus der Sitzung kommt (C7).
+    ///
+    /// **Ein Feld, ein Schreiber, ein Leser, und der Leser verbraucht es.**
+    /// Geschrieben allein von [`Anwendungsdelegierter::editor_wiederherstellen`],
+    /// gelesen allein von [`Anwendungsdelegierter::editorausgang_behandeln`],
+    /// das es beim ersten Ausgang wieder loescht. Denselben Zuschnitt traegt
+    /// [`Self::beenden_ohne_nachfrage`] darueber.
+    ///
+    /// Der wiederhergestellte Editor unterscheidet sich in den beiden Ausgaengen,
+    /// die ihn erreichen koennen, von einem, den ein Befehl geoeffnet hat: er
+    /// bekommt den Fokus nicht — beim Start steht der im aktiven Dateifenster,
+    /// siehe `fokus::BEIM_START` —, und eine Abweisung ist beim Start die
+    /// Antwort auf keinen Tastendruck und geht deshalb einen Rang tiefer in die
+    /// Zeile. Ohne dieses Kennzeichen waere beides nicht zu unterscheiden.
+    editor_aus_sitzung: Cell<bool>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -612,6 +627,7 @@ impl Anwendungsdelegierter {
             vorgang: RefCell::new(None),
             offenes_blatt: RefCell::new(None),
             beenden_ohne_nachfrage: Cell::new(false),
+            editor_aus_sitzung: Cell::new(false),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -778,6 +794,10 @@ impl Anwendungsdelegierter {
         // Anwendung; diese Zeile ersetzt ihn durch den Pfad, den das aktive
         // Dateifenster zeigt.
         self.titel_nachziehen(self.fokus());
+        // **Nach dem Fokus und nach dem Titel**, weil die Wiederherstellung
+        // beide nicht anfassen darf; der Ruf steht deshalb hinter ihnen und
+        // nicht bei den uebrigen Einrichtungen weiter oben.
+        self.editor_wiederherstellen(&sitzung);
         // Die Startmeldungen betreffen die Anwendung und kein einzelnes
         // Dateifenster: die beschaedigte Belegungs- oder Sitzungsdatei, der
         // unerreichbare Ablageordner. Sie gehen deshalb in die Zeile des
@@ -1546,13 +1566,27 @@ impl Anwendungsdelegierter {
     // Dateisystem und Datentraeger (C9)
     // ------------------------------------------------------------------
 
-    /// Setzt die Beobachtung der sichtbaren Ordner neu auf (C9).
+    /// Setzt die Beobachtung der beobachteten Ordner neu auf (C9, C4).
     ///
-    /// Gerufen nach jeder Navigation und nach jedem Ein- oder Ausblenden des
-    /// zweiten Dateifensters. Der alte Strom faellt dabei; ein
-    /// `FSEventStream` aendert seine Pfadliste nach dem Anlegen nicht mehr,
-    /// und einen zweiten Strom danebenzustellen hiesse, denselben Ordner
-    /// doppelt zu beobachten.
+    /// Gerufen nach jeder Navigation, nach jedem Ein- oder Ausblenden des
+    /// zweiten Dateifensters und seit der Editor-Runde nach jedem Wechsel der
+    /// Datei, die der Editor haelt — also beim Oeffnen und beim Schliessen. Der
+    /// alte Strom faellt dabei; ein `FSEventStream` aendert seine Pfadliste nach
+    /// dem Anlegen nicht mehr, und einen zweiten Strom danebenzustellen hiesse,
+    /// denselben Ordner doppelt zu beobachten.
+    ///
+    /// **Der Editor bekommt keinen eigenen Strom, sondern einen Platz in
+    /// diesem.** Die Gueltigkeitsmarke der Lesezeichen hat sich an derselben
+    /// Frage anders entschieden, und der Vermerk dazu steht in
+    /// [`Self::vorgang_beenden`] („Warum hier und nicht in der
+    /// Dateisystembeobachtung"): dort gab es einen billigeren Anlass, naemlich
+    /// die eigene abgeschlossene Dateioperation, und der deckte den gemeldeten
+    /// Fall ab. Fuer C4 gibt es keinen: die fremde Aenderung, um die es geht,
+    /// hat in KRK keinen Anlass, und ein zweiter Strom beobachtete den Ordner
+    /// doppelt, sobald die Datei des Editors aus einem angezeigten Ordner kommt
+    /// — der Regelfall, weil F4 sie von dort nimmt. Welche Ordner die Liste
+    /// traegt, entscheidet [`auffrischung::sichtbare_ordner`] und nicht diese
+    /// Funktion.
     ///
     /// **Im Messmodus geschieht nichts.** Ein Messlauf misst die Zusagen aus
     /// C8 auf einem Pruefordner, den niemand nebenher aendert; ein Strom
@@ -1586,6 +1620,12 @@ impl Anwendungsdelegierter {
                 }
                 auffrischung::ordner_neu_lesen(&*selbst, pfad);
             }
+            // **Einmal je Stapel und nicht je Pfad**, und ausserhalb des
+            // Aufschubs darueber: der Aufschub beantwortet, ob eine Dateiliste
+            // neu zu lesen ist, und das ist eine andere Frage. Ein
+            // Stapel-Umbenennen, das die Datei des Editors erwischt, soll
+            // gemeldet werden, auch waehrend die Liste stehen bleibt.
+            selbst.editor_fremdaenderung_melden(gemeldet);
         });
         if wache.is_none() && !ordner.is_empty() {
             // Ohne Strom zeigt KRK fremde Aenderungen nicht mehr an. Das still
@@ -1597,6 +1637,39 @@ impl Anwendungsdelegierter {
                 );
         }
         *self.ivars().dateisystemwache.borrow_mut() = wache;
+    }
+
+    /// Meldet dem Nutzer, dass die Datei des Editors sich von aussen geaendert
+    /// hat (C4).
+    ///
+    /// **Der erste der beiden Momente aus dem neunten Abnahmekriterium von C4**;
+    /// der zweite steht unmittelbar vor dem Sichern. Beide stellen dieselbe
+    /// Frage an dasselbe Modell, und dieser hier stellt sie nur, wenn der
+    /// gemeldete Stapel den Ordner der Datei ueberhaupt nennt — die Entscheidung
+    /// darueber trifft [`auffrischung::betrifft_editordatei`], und diese
+    /// Funktion trifft sie nicht ein zweites Mal.
+    ///
+    /// **In die Fenstermeldung und nicht in die Befehlsantwort.** Die fremde
+    /// Aenderung ist ein Ereignis, das niemand angefordert hat, und steht damit
+    /// auf Rang 3 der Statuszeile; auf Rang 1 loeschte der naechste Tastendruck
+    /// sie weg, bevor der Nutzer sie gelesen hat. Denselben Rang nimmt die
+    /// Auswurfmeldung aus C9 der Runde 1.
+    ///
+    /// **In die Zeile des aktiven Dateifensters**, aus demselben Grund wie jede
+    /// andere Meldung des Editors: er steht neben beiden Fenstern und gehoert
+    /// keinem.
+    fn editor_fremdaenderung_melden(&self, gemeldet: &[PathBuf]) {
+        let Some(editor) = self.ivars().editor.get() else {
+            return;
+        };
+        if !auffrischung::betrifft_editordatei(gemeldet, self.editordatei().as_deref()) {
+            return;
+        }
+        let Some(satz) = editor.fremdaenderung_melden() else {
+            return;
+        };
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.dateifenster(aktiv).quelle().meldung_zeigen(&satz);
     }
 
     /// Die Ordner, deren Auffrischung ein laufender Vorgang gerade aufschiebt.
@@ -1865,6 +1938,12 @@ impl Anwendungsdelegierter {
             // ausgewaehlten Eintrag, fuellt damit aber einen anderen Bereich,
             // und ein einzelnes Dateifenster kommt an den Editor nicht heran.
             Kommando::Bearbeiten => self.im_editor_oeffnen(),
+            // Der zweite der beiden Einstiege in den Editor (C2). Er steht aus
+            // demselben Grund hier wie F4 darueber: er nimmt die Datei eines
+            // anderen Bereichs, naemlich der Vorschau, und fuellt damit den
+            // Editor; keiner der beiden kommt vom anderen aus an den Delegierten
+            // heran.
+            Kommando::EditorAusVorschau => self.editor_aus_vorschau(),
             // Das Sichern aus C4. Es traegt `Wirkungsbereich::Editor` und
             // steht trotzdem hier und nicht bei `bereichskommando`: der
             // Editorbereich haengt am Delegierten, und `bereichskommando`
@@ -3107,7 +3186,76 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Was auf einen Ladevorgang des Editors folgt (C2, C11).
+    /// `cmd+e` mit dem Fokus in der Vorschau: die dort angezeigte Datei im
+    /// eingebauten Editor oeffnen (C2).
+    ///
+    /// Der zweite der beiden Einstiegswege, festgelegt vom Nutzer am
+    /// 260807-2139.
+    ///
+    /// **Er nimmt die Datei aktiv mit.** Der Editor verdraengt die Vorschau
+    /// nach C1, sobald er die Flaeche bekommt; ein Uebergang, der die Datei nur
+    /// stehen liesse, verloere sie mit dem Verschwinden der Vorschau. Der Pfad
+    /// wird deshalb hier abgeschrieben, **bevor** irgendetwas an der
+    /// Sichtbarkeit geschieht.
+    ///
+    /// **Kein zweiter Weg und keine zweite Regel.** Geoeffnet wird ueber
+    /// [`Editorbereich::datei_oeffnen`] wie bei F4, und geprueft damit von
+    /// `krk_core::text::datei::oeffnen`, der einen Stelle, die entscheidet, ob
+    /// der Editor eine Datei annimmt. Was auf das Oeffnen folgt — Einblenden,
+    /// Fokus, Titel, Abweisungsmeldung und die Nachfrage aus C4 beim Wechsel auf
+    /// eine andere Datei — steht in [`Self::editorausgang_behandeln`] und im
+    /// Modell; dieser Weg erbt alles davon, ohne eine Zeile dafuer zu
+    /// schreiben, und stellt insbesondere **keine** zweite Abfrage des
+    /// ungesicherten Standes daneben. Sie stuende vor der Pruefung und
+    /// verletzte damit das elfte Abnahmekriterium von C2.
+    ///
+    /// **Dass der Befehl ausserhalb der Vorschau nicht wirkt, traegt der
+    /// Wirkungsbereich** `Wirkungsbereich::Vorschau` und keine Abfrage hier;
+    /// [`Self::kommando_ausfuehren`] hat sie schon gestellt. Was bleibt, ist der
+    /// Fall, den der Wirkungsbereich nicht abdeckt: die Vorschau steht im Fokus
+    /// und zeigt trotzdem keine Datei, naemlich den Inhalt der Zwischenablage
+    /// aus C10 der Runde 1 oder gar nichts. Dann liefert `angezeigter_pfad`
+    /// `None`, und der Grund geht in die Statuszeile — kommentarlos nichts zu
+    /// tun ist in keinem Fall zulaessig.
+    fn editor_aus_vorschau(&self) -> bool {
+        let Some(pfad) = self.vorschau().angezeigter_pfad() else {
+            // Derselbe Weg wie bei F4 auf leerer Auswahl: es gibt keine Datei,
+            // ueber die der Editor etwas zu melden haette, also `antwort_zeigen`
+            // und keine `Editormeldung`.
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, "die Vorschau zeigt keine Datei zum Bearbeiten");
+            return true;
+        };
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        editor.datei_oeffnen(&pfad);
+        true
+    }
+
+    /// Oeffnet beim Start die Datei wieder, die die Sitzung gemerkt hat (C7).
+    ///
+    /// **Derselbe eine Weg wie die beiden Einstiege aus C2**, also dieselbe
+    /// Pruefung aus `krk_core::text::datei::oeffnen`. Eine Datei, die inzwischen
+    /// verschwunden oder zu gross geworden ist, wird abgewiesen wie an jedem
+    /// anderen Tag; der Editor bleibt dann leer, wird ausgeblendet, und der
+    /// Grund steht in der Statuszeile.
+    ///
+    /// **Die Sichtbarkeit kommt aus der Sitzung und nicht von hier.**
+    /// `Fenstermodell::aus_sitzung` hat sie oben schon gesetzt; ein
+    /// ausgeblendeter Editor mit gehaltener Datei ist der Zustand, den der
+    /// Fokusbefehl aus C1 hervorholt, und ihn hier einzublenden hiesse, die
+    /// gemerkte Sichtbarkeit zu uebergehen.
+    fn editor_wiederherstellen(&self, sitzung: &Sitzung) {
+        let (Some(pfad), Some(editor)) = (sitzung.editor.as_ref(), self.ivars().editor.get())
+        else {
+            return;
+        };
+        self.ivars().editor_aus_sitzung.set(true);
+        editor.datei_oeffnen(pfad);
+    }
+
+    /// Was auf einen Ladevorgang des Editors folgt (C2, C7, C11).
     ///
     /// **Die eine Behandlung fuer beide Zeitpunkte.** Sie kommt aus dem
     /// Rueckruf, den [`Self::oberflaeche_aufbauen`] eingetragen hat, und sie
@@ -3118,7 +3266,15 @@ impl Anwendungsdelegierter {
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig; ein
     /// vierter Ausgang haelt den Bau an.
+    ///
+    /// **Zwei ihrer Zweige fragen, wer das Oeffnen angefordert hat**, und dafuer
+    /// steht [`AnwendungsIvars::editor_aus_sitzung`]; die Antwort wird hier
+    /// gelesen und dabei verbraucht. Die Wiederherstellung aus der Sitzung ist
+    /// kein Befehl: sie holt keinen Fokus, weil der beim Start in das aktive
+    /// Dateifenster gehoert, und ihre Abweisung ist die Antwort auf keinen
+    /// Tastendruck.
     fn editorausgang_behandeln(&self, ausgang: Ladeausgang) {
+        let aus_sitzung = self.ivars().editor_aus_sitzung.replace(false);
         match ausgang {
             // Einblenden und Fokus in einem Zug: `fokus_holen` holt den Bereich
             // hervor und setzt danach den Ersthelfer. Der gegenseitige
@@ -3135,13 +3291,28 @@ impl Anwendungsdelegierter {
             // Funktion fasst weder das eine noch die andere an; der Unterschied
             // steht in `Editorbereich::einziehen`.
             Ladeausgang::Geoeffnet | Ladeausgang::SchonOffen => {
-                self.fokus_holen(Fokus::Editor);
-                // Der zweite der vier Anlaesse aus C11: der Editor haelt eine
-                // andere Datei als eben noch. Der Fokusnachzug allein genuegt
-                // hier nicht in jedem Fall — steht der Fokus schon im Editor,
-                // meldet `makeFirstResponder:` keinen Wechsel, weil keiner
-                // stattfindet, und der Titel truege weiter die vorige Datei.
-                self.titel_nachziehen(self.fokus());
+                // Der Editor haelt jetzt moeglicherweise eine Datei in einem
+                // Ordner, den bisher niemand beobachtet hat; C4 will fremde
+                // Aenderungen daran gemeldet haben. `SchonOffen` steht mit im
+                // Zweig und aendert dabei nichts: die Liste kommt gleich
+                // heraus, und eine Abfrage daneben waere eine zweite Stelle mit
+                // einer Meinung darueber, wann sich der beobachtete Bestand
+                // aendert.
+                self.dateisystemwache_nachziehen();
+                // Beim Start bleibt beides, wie es ist: der Fokus steht im
+                // aktiven Dateifenster (`fokus::BEIM_START`), und der Titel
+                // folgt ihm. Ein wiederhergestellter Editor draengt sich nicht
+                // vor.
+                if !aus_sitzung {
+                    self.fokus_holen(Fokus::Editor);
+                    // Der zweite der vier Anlaesse aus C11: der Editor haelt
+                    // eine andere Datei als eben noch. Der Fokusnachzug allein
+                    // genuegt hier nicht in jedem Fall — steht der Fokus schon
+                    // im Editor, meldet `makeFirstResponder:` keinen Wechsel,
+                    // weil keiner stattfindet, und der Titel truege weiter die
+                    // vorige Datei.
+                    self.titel_nachziehen(self.fokus());
+                }
             }
             // **Der zweite Anlass der Nachfrage aus C4.** Die Datei ist an
             // dieser Stelle gelesen und geprueft, und der Editor hat sie noch
@@ -3156,8 +3327,25 @@ impl Anwendungsdelegierter {
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
             // Grund geht in die Statuszeile und unterscheidet dort zu gross von
             // nicht als Text lesbar (zehntes Abnahmekriterium von C2).
-            Ladeausgang::Abgewiesen(abweisung) => {
+            Ladeausgang::Abgewiesen(abweisung) if !aus_sitzung => {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
+            }
+            // Beim Start ist die Abweisung die Antwort auf keinen Tastendruck,
+            // sondern ein Ereignis am Fenster: die gemerkte Datei ist fort oder
+            // zu gross geworden, waehrend KRK nicht lief. Sie geht deshalb einen
+            // Rang tiefer als eine Befehlsantwort, sonst loeschte der erste
+            // Tastendruck sie weg, bevor der Nutzer sie gelesen hat.
+            //
+            // Der Editor wird dabei ausgeblendet und nicht bloss leer gelassen:
+            // hatte die Sitzung ihn sichtbar, naehme er den Dateifenstern sonst
+            // Platz fuer nichts — dieselbe Begruendung, aus der
+            // `Sichtbarkeit::default` ihn ausgeblendet ausliefert.
+            Ladeausgang::Abgewiesen(abweisung) => {
+                self.editor_ausblenden();
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .meldung_zeigen(&abweisung.meldung());
             }
         }
     }
@@ -3523,6 +3711,11 @@ impl Anwendungsdelegierter {
         if let Some(editor) = self.ivars().editor.get() {
             editor.schliessen();
         }
+        // Der Ordner der aufgegebenen Datei wird nicht laenger beobachtet, wenn
+        // ihn kein Dateifenster zeigt. Der Gegenruf steht beim Oeffnen, in
+        // `editorausgang_behandeln`; beide zusammen sind die Zusage, dass die
+        // beobachtete Liste und die gehaltene Datei nicht auseinanderlaufen.
+        self.dateisystemwache_nachziehen();
         if self.ivars().modell.borrow().sichtbar(Bereich::Editor) {
             self.bereich_umschalten(Bereich::Editor);
         }
@@ -3675,6 +3868,13 @@ impl Anwendungsdelegierter {
     // ------------------------------------------------------------------
 
     /// Der Sitzungszustand, wie er auf die Platte gehoert.
+    ///
+    /// **Die Datei des Editors kommt aus dem Editor** und nicht aus dem
+    /// Fenstermodell, das vom Editor allein Breite und Sichtbarkeit kennt.
+    /// Mitgeschrieben wird der Pfad und nicht der Stand; der Grund steht an
+    /// `krk_core::ablage::Sitzung::editor`. Solange kein Editor gebaut ist —
+    /// vor `oberflaeche_aufbauen` und im Messmodus — steht dort `None`, und das
+    /// ist dieselbe Aussage wie die eines Editors ohne Datei.
     fn sitzung_bauen(&self) -> Sitzung {
         if let Some(aufteilung) = self.ivars().aufteilung.get() {
             self.ivars()
@@ -3686,7 +3886,8 @@ impl Anwendungsdelegierter {
             self.dateifenster(Fensterseite::Links).quelle().zustand(),
             self.dateifenster(Fensterseite::Rechts).quelle().zustand(),
         ];
-        self.ivars().modell.borrow().sitzung(fenster)
+        let editor = self.editordatei();
+        self.ivars().modell.borrow().sitzung(fenster, editor)
     }
 
     /// Merkt den Sitzungszustand vor; geschrieben wird gebuendelt.
@@ -3956,6 +4157,15 @@ impl Dateifenstersicht for Anwendungsdelegierter {
             .modell
             .borrow()
             .sichtbar(Bereich::von_seite(seite))
+    }
+
+    /// **Die eine Stelle, die diese Frage an den Editorbereich stellt.** Drei
+    /// Aufrufer haben sie: die Sitzung aus C7 ([`Anwendungsdelegierter::sitzung_bauen`]),
+    /// die Liste der beobachteten Ordner und die Frage, ob ein gemeldeter Stapel
+    /// die gehaltene Datei betrifft. Drei `get`-Ketten nebeneinander waeren drei
+    /// Gelegenheiten, den fehlenden Editor verschieden zu behandeln.
+    fn editordatei(&self) -> Option<PathBuf> {
+        self.ivars().editor.get().and_then(|editor| editor.pfad())
     }
 
     fn neu_lesen(&self, seite: Fensterseite) {

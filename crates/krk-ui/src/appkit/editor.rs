@@ -731,6 +731,19 @@ impl Editorbereich {
         self.ivars().modell.borrow().pfad().map(Path::to_path_buf)
     }
 
+    /// Der Satz ueber eine fremde Aenderung, einmal je Aenderung (C4).
+    ///
+    /// **Verglichen wird im Modell und hier nicht ein zweites Mal.** Diese
+    /// Funktion reicht die Frage hinein und den Satz heraus; wann er kommt und
+    /// warum nur einmal, steht an [`Editormodell::fremdaenderung_melden`].
+    ///
+    /// Die Flaeche wird dabei nicht angefasst. Was der Nutzer getippt hat,
+    /// bleibt stehen: C4 sagt zu, ihn zu **unterrichten**, und nicht, ihm seinen
+    /// Stand wegzunehmen.
+    pub fn fremdaenderung_melden(&self) -> Option<String> {
+        self.ivars().modell.borrow_mut().fremdaenderung_melden()
+    }
+
     /// Nimmt die genannte Datei auf und zeigt ihren Stand (C2).
     ///
     /// **Der eine Weg, auf dem eine Datei in den Editor kommt.** Beide

@@ -42,6 +42,8 @@
 //! [`Bereich::Links`] trotzdem ausdruecklich ab, statt sich auf die fehlende
 //! Belegung zu verlassen: die Zusage gehoert an die Stelle, die sie einloest.
 
+use std::path::PathBuf;
+
 use krk_core::ablage::{
     Breiten, Dateifenster as Fensterzustand, Fensterseite, Sichtbarkeit, Sitzung,
 };
@@ -294,9 +296,16 @@ impl Fenstermodell {
     /// Die Tabs kommen von aussen dazu, weil sie in
     /// [`Tabliste`](crate::tabs::Tabliste) wohnen und nicht hier. Damit gibt es
     /// genau einen Ort je Angabe und keine zweite Wahrheit ueber die Tabs.
-    pub fn sitzung(&self, fenster: [Fensterzustand; 2]) -> Sitzung {
+    ///
+    /// **Die Datei des Editors kommt aus demselben Grund von aussen.** Sie
+    /// wohnt in [`Editormodell`](crate::editormodell::Editormodell), und dieses
+    /// Modell haelt vom Editor allein Breite und Sichtbarkeit. Sie hier aus
+    /// einer zweiten Quelle zu erfragen hiesse, zwei Orte darueber zu haben,
+    /// welche Datei offen ist.
+    pub fn sitzung(&self, fenster: [Fensterzustand; 2], editor: Option<PathBuf>) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
+            editor,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
             fenster,
@@ -1280,7 +1289,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),

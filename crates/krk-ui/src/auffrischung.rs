@@ -33,6 +33,24 @@
 //! `ordner_neu_lesen` nimmt einen. Beim Loeschen und beim Papierkorb gibt es
 //! nur den Quellordner, dann bleibt es bei einem Aufruf.
 //!
+//! # Der Editor haengt am selben Strom
+//!
+//! Seit der Editor-Runde beobachtet derselbe `FSEventStream` einen dritten
+//! Ordner, naemlich den der Datei, die der eingebaute Editor haelt (C4). Er
+//! kommt in [`sichtbare_ordner`] dazu, und [`betrifft_editordatei`] beantwortet
+//! danach, ob ein gemeldeter Stapel die Datei ueberhaupt angeht.
+//!
+//! **Ein Strom und kein zweiter daneben**, und der Grund steht im Programmtext
+//! schon einmal an der Stelle, an der die Lesezeichen sich anders entschieden
+//! haben: dort gab es einen billigeren Anlass, hier gibt es keinen. Ein zweiter
+//! Strom beobachtete zudem denselben Ordner doppelt, sobald die Datei des
+//! Editors aus einem angezeigten Ordner stammt, und das ist der Regelfall, weil
+//! F4 sie von dort nimmt.
+//!
+//! **Was der Editor daraus macht, steht nicht hier.** Dieses Modul entscheidet,
+//! ob die Frage zu stellen ist; ob die Datei sich geaendert hat, beantwortet der
+//! Stempelvergleich in [`crate::editormodell`].
+//!
 //! # Der Aufschub waehrend eines eigenen Vorgangs
 //!
 //! Der erste Ausloeser wird ausgesetzt, solange ein eigener Vorgang die
@@ -85,6 +103,23 @@ pub trait Dateifenstersicht {
     /// Ob dieses Dateifenster auf dem Schirm steht (C7).
     fn sichtbar(&self, seite: Fensterseite) -> bool;
 
+    /// Die Datei, die der eingebaute Editor haelt; `None`, wenn er keine haelt.
+    ///
+    /// **Die Datei und nicht ihr Ordner**, obwohl die Beobachtung Ordner nimmt.
+    /// Beide Fragen dieses Moduls haengen an ihr: welcher dritte Ordner zu
+    /// beobachten ist ([`sichtbare_ordner`]) und ob eine gemeldete Aenderung
+    /// die gehaltene Datei ueberhaupt betreffen kann
+    /// ([`betrifft_editordatei`]). Aus dem Pfad der Datei folgt ihr Ordner; aus
+    /// dem Ordner folgt die Datei nicht, und zwei Angaben nebeneinander waeren
+    /// zwei Wahrheiten darueber, was der Editor haelt.
+    ///
+    /// **Nach dem Halten gefragt und nicht nach der Sichtbarkeit.** Ein
+    /// ausgeblendeter Editor haelt seine Datei weiter — der Fokusbefehl aus C1
+    /// holt ihn damit zurueck —, und eine fremde Aenderung daran ist genauso zu
+    /// melden. Das unterscheidet ihn von den beiden Dateifenstern darueber,
+    /// deren Ordner mit ihrer Sichtbarkeit kommen und gehen.
+    fn editordatei(&self) -> Option<PathBuf>;
+
     /// Liest den sichtbaren Tab dieses Dateifensters noch einmal.
     ///
     /// Auswahl und Bildlaufposition ueberstehen den Vorgang, soweit die
@@ -101,25 +136,74 @@ pub trait Dateifenstersicht {
     fn melden(&self, seite: Fensterseite, text: &str);
 }
 
-/// Die Ordner, die gerade auf dem Schirm stehen. Hoechstens zwei.
+/// Die Ordner, die beobachtet werden. Hoechstens drei.
 ///
-/// Das ist die Liste, die der `FSEventStream` beobachtet. Ein ausgeblendetes
-/// Dateifenster kommt nicht vor: was niemand sieht, braucht keine
-/// Auffrischung, und C7 laesst das zweite Dateifenster ausblenden.
+/// Das ist die Liste, die der `FSEventStream` bekommt. Sie hat zwei Quellen und
+/// ist trotzdem eine Liste: **ein Strom und nicht zwei**, weil ein zweiter
+/// denselben Ordner ein zweites Mal beobachtete, sobald der Editor eine Datei
+/// aus einem angezeigten Ordner haelt — der gewoehnliche Fall, weil F4 die
+/// Datei aus dem Dateifenster nimmt.
+///
+/// - **Die beiden Dateifenster**, jedes mit dem Ordner seines sichtbaren Tabs.
+///   Ein ausgeblendetes kommt nicht vor: was niemand sieht, braucht keine
+///   Auffrischung, und C7 laesst das zweite Dateifenster ausblenden.
+/// - **Der Ordner der Datei, die der Editor haelt** (C4 der Editor-Runde). Er
+///   haengt an der gehaltenen Datei und nicht an der Sichtbarkeit des Editors;
+///   der Grund steht an [`Dateifenstersicht::editordatei`].
+///
 /// Doppelnennungen fallen weg, weil beide Dateifenster denselben Ordner zeigen
-/// duerfen.
+/// duerfen und die Datei des Editors in einem von ihnen liegen darf.
 pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
-    let mut ordner: Vec<PathBuf> = Vec::with_capacity(2);
+    let mut ordner: Vec<PathBuf> = Vec::with_capacity(3);
+    let mut aufnehmen = |dieser: PathBuf| {
+        if !ordner.iter().any(|schon| gleicher_ordner(schon, &dieser)) {
+            ordner.push(dieser);
+        }
+    };
     for seite in Fensterseite::ALLE {
         if !sicht.sichtbar(seite) {
             continue;
         }
-        let dieser = sicht.ordner(seite);
-        if !ordner.iter().any(|schon| gleicher_ordner(schon, &dieser)) {
-            ordner.push(dieser);
-        }
+        aufnehmen(sicht.ordner(seite));
+    }
+    if let Some(ordner_der_datei) = editorordner(sicht.editordatei().as_deref()) {
+        aufnehmen(ordner_der_datei);
     }
     ordner
+}
+
+/// Ob eine gemeldete Aenderung die Datei des Editors betreffen kann (C4).
+///
+/// **Sie kann es nur, wenn sie in ihrem Ordner liegt** — mehr sagt eine
+/// FSEvents-Meldung nicht. Das Kennzeichen `kFSEventStreamCreateFlagFileEvents`
+/// ist nicht gesetzt und bleibt es (`crate::appkit::fsevents`), also nennt der
+/// Strom Ordner und keine Dateien. Ob die Datei sich **wirklich** geaendert
+/// hat, beantwortet danach der Stempelvergleich im
+/// [`Editormodell`](crate::editormodell::Editormodell); diese Funktion
+/// entscheidet allein, ob er ueberhaupt zu stellen ist.
+///
+/// **Der ganze gemeldete Stapel auf einmal und nicht ein Pfad je Ruf.** Die
+/// Frage lautet "geht mich dieser Rueckruf etwas an", und sie einmal je Pfad zu
+/// stellen hiesse, denselben `stat(2)` in einem Stapel von tausend Meldungen
+/// tausendmal zu machen. Die Auffrischung der Dateifenster darueber geht
+/// dagegen Pfad fuer Pfad, weil sie je Pfad etwas anderes tut.
+pub fn betrifft_editordatei(gemeldet: &[PathBuf], editordatei: Option<&Path>) -> bool {
+    let Some(ordner) = editorordner(editordatei) else {
+        return false;
+    };
+    gemeldet
+        .iter()
+        .any(|pfad| gleicher_ordner(&ordner, pfad.as_path()))
+}
+
+/// Der Ordner, in dem die Datei des Editors liegt.
+///
+/// Die eine Stelle, die aus der gehaltenen Datei ihren Ordner macht; beide
+/// Fragen dieses Moduls gehen durch sie. `None` heisst: der Editor haelt keine
+/// Datei, oder ihr Pfad hat keinen Ordner ueber sich — das ist allein die
+/// Wurzel, und eine Datei ist sie nicht.
+fn editorordner(editordatei: Option<&Path>) -> Option<PathBuf> {
+    Some(editordatei?.parent()?.to_path_buf())
 }
 
 /// Liest jedes Dateifenster neu, das diesen Ordner zeigt.
@@ -371,6 +455,8 @@ mod tests {
         tabs: [Vec<PathBuf>; 2],
         sichtbarer_tab: [usize; 2],
         sichtbar: [bool; 2],
+        /// Die Datei, die der Editor haelt; ohne Editor `None`.
+        editordatei: Option<PathBuf>,
         /// Was die Probe erlebt hat, in der Reihenfolge des Geschehens.
         protokoll: RefCell<Vec<String>>,
     }
@@ -381,8 +467,15 @@ mod tests {
                 tabs: [vec![PathBuf::from(links)], vec![PathBuf::from(rechts)]],
                 sichtbarer_tab: [0, 0],
                 sichtbar: [true, true],
+                editordatei: None,
                 protokoll: RefCell::new(Vec::new()),
             }
+        }
+
+        /// Laesst den Editor die genannte Datei halten.
+        fn mit_editordatei(mut self, datei: &str) -> Self {
+            self.editordatei = Some(PathBuf::from(datei));
+            self
         }
 
         /// Gibt der linken Seite mehrere Tabs; `sichtbar` nennt den sichtbaren.
@@ -421,6 +514,10 @@ mod tests {
 
         fn sichtbar(&self, seite: Fensterseite) -> bool {
             self.sichtbar[seite.index()]
+        }
+
+        fn editordatei(&self) -> Option<PathBuf> {
+            self.editordatei.clone()
         }
 
         fn neu_lesen(&self, seite: Fensterseite) {
@@ -493,6 +590,72 @@ mod tests {
             sichtbare_ordner(&Probe::neu("/a", "/b").ohne_rechtes()),
             [PathBuf::from("/a")],
             "ein ausgeblendetes Dateifenster wird nicht beobachtet"
+        );
+    }
+
+    /// C4 der Editor-Runde: der Ordner der gehaltenen Datei ist der dritte
+    /// beobachtete, und er kommt nur dazu, wenn er noch nicht dabei ist.
+    #[test]
+    fn der_ordner_der_editordatei_ist_der_dritte_beobachtete() {
+        assert_eq!(
+            sichtbare_ordner(&Probe::neu("/a", "/b")),
+            [PathBuf::from("/a"), PathBuf::from("/b")],
+            "ohne Editordatei bleibt es bei den beiden Dateifenstern"
+        );
+        assert_eq!(
+            sichtbare_ordner(&Probe::neu("/a", "/b").mit_editordatei("/c/notiz.md")),
+            [
+                PathBuf::from("/a"),
+                PathBuf::from("/b"),
+                PathBuf::from("/c")
+            ],
+            "eine Datei ausserhalb beider Dateifenster bringt ihren Ordner mit"
+        );
+        assert_eq!(
+            sichtbare_ordner(&Probe::neu("/a", "/b").mit_editordatei("/a/notiz.md")),
+            [PathBuf::from("/a"), PathBuf::from("/b")],
+            "eine Datei aus einem angezeigten Ordner bringt keinen zweiten Eintrag"
+        );
+        assert_eq!(
+            sichtbare_ordner(
+                &Probe::neu("/a", "/b")
+                    .ohne_rechtes()
+                    .mit_editordatei("/b/x.txt")
+            ),
+            [PathBuf::from("/a"), PathBuf::from("/b")],
+            "der Ordner eines ausgeblendeten Dateifensters kommt ueber den Editor zurueck"
+        );
+    }
+
+    /// C4 der Editor-Runde: ein gemeldeter Ordner, in dem die Editordatei nicht
+    /// liegt, loest keinen Stempelvergleich aus.
+    #[test]
+    fn allein_der_ordner_der_editordatei_loest_den_stempelvergleich_aus() {
+        let gemeldet =
+            |pfade: &[&str]| -> Vec<PathBuf> { pfade.iter().map(PathBuf::from).collect() };
+
+        assert!(
+            !betrifft_editordatei(&gemeldet(&["/a"]), None),
+            "ohne gehaltene Datei gibt es nichts zu vergleichen"
+        );
+        assert!(
+            !betrifft_editordatei(&gemeldet(&["/a", "/b"]), Some(Path::new("/c/notiz.md"))),
+            "ein Ordner, in dem die Datei nicht liegt, geht den Editor nichts an"
+        );
+        assert!(
+            betrifft_editordatei(&gemeldet(&["/a", "/c"]), Some(Path::new("/c/notiz.md"))),
+            "der Ordner der Datei steht im Stapel"
+        );
+        assert!(
+            betrifft_editordatei(&gemeldet(&["/c/"]), Some(Path::new("/c/notiz.md"))),
+            "der Schlussstrich macht keinen anderen Ordner"
+        );
+        assert!(
+            !betrifft_editordatei(
+                &gemeldet(&["/c/unterordner"]),
+                Some(Path::new("/c/notiz.md"))
+            ),
+            "ein Unterordner ist nicht der Ordner der Datei"
         );
     }
 

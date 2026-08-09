@@ -114,6 +114,23 @@
 //! lautet "tippen oder ersetzen" und nicht "der Stand weicht ab"; die Marke
 //! bildet ihn genau ab.
 //!
+//! # Die fremde Aenderung: eine Frage, zwei Momente
+//!
+//! [`Editormodell::fremd_geaendert`] vergleicht den gemerkten Stempel gegen den
+//! der Platte. Zwei Stellen stellen die Frage, und beide dieselbe:
+//!
+//! ```text
+//!  FSEvents meldet den Ordner ──> fremdaenderung_melden ──> Satz, einmal
+//!  cmd+s                      ──> sichern               ──> nicht geschrieben
+//! ```
+//!
+//! Das ist **kein zweiter Mechanismus**, sondern eine Frage an zwei Momenten;
+//! das neunte Abnahmekriterium von C4 verlangt beides. Der erste meldet, der
+//! zweite verhindert das Ueberschreiben. Warum der erste sich merkt, dass er
+//! gemeldet hat, steht an [`Editormodell::fremdaenderung_melden`]; **ob** er
+//! ueberhaupt gefragt wird, entscheidet [`crate::auffrischung`] und nicht dieses
+//! Modul.
+//!
 //! # Der Arbeitsfaden
 //!
 //! [`Editormodell::oeffnen`] kehrt sofort zurueck: das Lesen laeuft je Anfrage
@@ -563,6 +580,16 @@ pub struct Editormodell {
     /// [`Ladeausgang::Zurueckgehalten`] und der Antwort des Nutzers. Der Grund
     /// steht im Modulkopf.
     zurueckgehalten: Option<Zurueckgehalten>,
+    /// Ob die laufende fremde Aenderung dem Nutzer schon gemeldet wurde (C4).
+    ///
+    /// Es beantwortet **nicht**, ob die Datei sich geaendert hat — das tut
+    /// [`Editormodell::fremd_geaendert`] mit einem `stat(2)` —, sondern allein,
+    /// ob dieselbe Aenderung schon einen Satz in der Statuszeile hatte. Ohne das
+    /// Feld truege jede weitere Meldung des Ordners denselben Satz noch einmal,
+    /// und ein fremdes Programm, das im Sekundentakt schreibt, verdraengte jede
+    /// andere Meldung. Gesetzt und geloescht wird es allein in
+    /// [`Editormodell::fremdaenderung_melden`]; siehe den Grund dort.
+    fremd_gemeldet: bool,
 }
 
 impl Editormodell {
@@ -621,11 +648,15 @@ impl Editormodell {
     }
 
     /// Der Stempel der Datei beim Oeffnen oder beim letzten Sichern (C4).
-    // **Diese Zeile faellt mit S31**, dem Melden einer Aenderung von aussen im
-    // laufenden Betrieb: dort vergleicht der Editor seinen gemerkten Stempel
-    // gegen den der Platte, sobald FSEvents seinen Ordner meldet. Das Sichern
-    // aus S25 fragt bereits, aber ueber `fremd_geaendert` und ohne den Stempel
-    // selbst in die Hand zu nehmen.
+    // **S31 hat diese Zeile nicht abgeloest, obwohl sie es angekuendigt hatte,
+    // und das ist die richtige Auflegung.** Angekuendigt war, das Melden einer
+    // fremden Aenderung vergleiche hier den Stempel. Gebaut ist es ueber
+    // `fremd_geaendert`, weil S25 dieselbe Frage schon so stellt und der
+    // Vergleich damit an einer Stelle steht statt an zweien; der Stempel selbst
+    // geht dafuer nicht nach aussen. Ohne Aufrufer bleiben damit vier Stuecke
+    // statt drei, und der Defekt
+    // `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`
+    // fuehrt sie; die Pruefungen am Dateiende fassen jedes von ihnen an.
     #[allow(dead_code)]
     pub fn stempel(&self) -> Option<Stempel> {
         self.stempel
@@ -954,6 +985,57 @@ impl Editormodell {
             return false;
         };
         Stempel::von_pfad(pfad) != Some(gemerkt)
+    }
+
+    /// Der Satz ueber eine fremde Aenderung, einmal je Aenderung (C4).
+    ///
+    /// **Der erste der beiden Momente aus dem neunten Abnahmekriterium von C4.**
+    /// Der zweite ist [`Self::sichern`], das unmittelbar vor dem Ueberschreiben
+    /// dieselbe Frage stellt. Es ist derselbe Vergleich an zwei Stellen und kein
+    /// zweiter Mechanismus: dieser meldet, jener verhindert das Ueberschreiben.
+    /// Gefragt wird deshalb auch hier ueber [`Self::fremd_geaendert`] und nicht
+    /// mit einer zweiten, enger geschnittenen Frage daneben; damit gilt eine
+    /// verschwundene Datei ebenfalls als geaendert, wie dort.
+    ///
+    /// **Gerufen wird sie, wenn die Dateisystemwache den Ordner der gehaltenen
+    /// Datei meldet.** Ob die Meldung den Ordner ueberhaupt betrifft, hat
+    /// [`crate::auffrischung::betrifft_editordatei`] vorher entschieden; diese
+    /// Funktion stellt keine zweite Vorbedingung daneben und kostet einen
+    /// `stat(2)`.
+    ///
+    /// # Warum sie sich merkt, dass sie gemeldet hat
+    ///
+    /// Ein fremdes Programm, das eine Protokolldatei fortschreibt, laesst
+    /// FSEvents im Sekundentakt melden. Ohne Gedaechtnis stuende derselbe Satz
+    /// bei jeder Meldung neu in der Zeile und verdraengte alles andere. Gemeldet
+    /// wird deshalb der **Uebergang**: das erste Mal, seit die Datei abweicht.
+    ///
+    /// Die Marke loescht sich selbst, sobald der Vergleich wieder aufgeht — und
+    /// er geht bei jedem Weg auf, der den Stempel neu setzt: nach einem Sichern,
+    /// nach dem Aufnehmen einer Datei, nach dem Schliessen. Deshalb steht an
+    /// keiner dieser drei Stellen eine Zeile dafuer.
+    ///
+    /// **Der Preis steht hier und wird nicht verschwiegen:** aendert ein fremdes
+    /// Programm die Datei ein zweites Mal, ohne dass KRK dazwischen gesichert
+    /// oder neu geoeffnet hat, kommt kein zweiter Satz. Das ist richtig herum
+    /// falsch: die Aussage "die Datei auf der Platte weicht ab" gilt weiter, und
+    /// das Sichern haelt sie ohnehin zurueck.
+    pub fn fremdaenderung_melden(&mut self) -> Option<String> {
+        if !self.fremd_geaendert() {
+            self.fremd_gemeldet = false;
+            return None;
+        }
+        if std::mem::replace(&mut self.fremd_gemeldet, true) {
+            return None;
+        }
+        let pfad = self
+            .pfad
+            .as_ref()
+            .expect("ohne gehaltene Datei meldet `fremd_geaendert` nichts");
+        Some(format!(
+            "{} hat sich außerhalb von KRK geändert",
+            pfad.display()
+        ))
     }
 
     /// Beginnt eine Suche im gehaltenen Stand und steuert den ersten Treffer an
@@ -1953,5 +2035,80 @@ mod tests {
     fn die_beiden_ansichten_sind_die_jeweils_andere() {
         assert_eq!(Ansicht::Roh.andere(), Ansicht::Format);
         assert_eq!(Ansicht::Format.andere(), Ansicht::Roh);
+    }
+
+    /// Der erste Moment aus dem neunten Abnahmekriterium von C4: eine fremde
+    /// Aenderung meldet sich, und zwar einmal.
+    ///
+    /// Die Aenderung wird ueber `set_len` und ein Neuschreiben erzeugt, damit
+    /// sich die Groesse **und** die Aenderungszeit bewegen; auf einem
+    /// Dateisystem mit grober Zeitaufloesung traegt sonst allein die Groesse den
+    /// Unterschied, und die Probe haenge an ihr.
+    #[test]
+    fn eine_fremde_aenderung_meldet_sich_und_meldet_sich_nur_einmal() {
+        let ordner = Pruefordner::neu("fremd-geaendert");
+        let pfad = ordner.datei("stand.txt", "der eigene Stand\n");
+        let mut modell = geoeffnet(&pfad);
+
+        assert_eq!(
+            modell.fremdaenderung_melden(),
+            None,
+            "eine unveraenderte Datei meldet nichts"
+        );
+
+        std::fs::write(&pfad, "von einem fremden Programm geschrieben\n")
+            .expect("die Pruefdatei laesst sich nicht neu schreiben");
+
+        let satz = modell
+            .fremdaenderung_melden()
+            .expect("die fremde Aenderung wurde nicht gemeldet");
+        assert!(
+            satz.contains("stand.txt") && satz.contains("außerhalb von KRK"),
+            "der Satz nennt die Datei und den Grund nicht: {satz}"
+        );
+        assert_eq!(
+            modell.fremdaenderung_melden(),
+            None,
+            "dieselbe Aenderung meldet sich kein zweites Mal"
+        );
+
+        // **Der Preis, den der Doc-Kommentar nennt**, hier festgehalten: eine
+        // zweite fremde Aenderung meldet sich nicht, solange der Stempel nicht
+        // neu gesetzt wurde. Die Aussage "die Datei auf der Platte weicht ab"
+        // gilt weiter, und `sichern` haelt das Ueberschreiben ohnehin zurueck.
+        std::fs::write(&pfad, "und noch einmal von aussen\n")
+            .expect("die Pruefdatei laesst sich nicht neu schreiben");
+        assert_eq!(modell.fremdaenderung_melden(), None);
+
+        // Das Sichern ist der Weg **nicht** zurueck: es unterbleibt, solange die
+        // Datei abweicht (S25). Zurueck fuehrt allein ein neuer Stempel, und den
+        // setzt das Aufnehmen einer Datei.
+        assert!(matches!(
+            modell.sichern(),
+            Sicherungsausgang::Gescheitert(_)
+        ));
+
+        modell.schliessen();
+        assert_eq!(modell.oeffnen(&pfad), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.fremdaenderung_melden(),
+            None,
+            "die eben gelesene Datei weicht nicht ab"
+        );
+
+        std::fs::write(&pfad, "ein drittes Mal von aussen\n")
+            .expect("die Pruefdatei laesst sich nicht neu schreiben");
+        assert!(
+            modell.fremdaenderung_melden().is_some(),
+            "nach einem neuen Stempel meldet sich die naechste fremde Aenderung wieder"
+        );
+    }
+
+    /// Ohne gehaltene Datei gibt es keine fremde Aenderung.
+    #[test]
+    fn ein_editor_ohne_datei_meldet_keine_fremde_aenderung() {
+        let mut modell = Editormodell::neu();
+        assert_eq!(modell.fremdaenderung_melden(), None);
     }
 }

@@ -58,3 +58,25 @@ baut:
 Bis zur Entscheidung bleiben sie mit ihrer einzelnen Ausnahme stehen. Der
 Arbeitsbereich ist grün, und die Proben am Dateiende fassen jedes der drei an —
 tot ist keines, unaufgerufen sind alle drei.
+
+---
+
+## Nachtrag vom 260810: es sind vier, nicht drei
+
+S31 ist gebaut, und `Editormodell::stempel` hat den angekündigten Aufrufer
+**nicht** bekommen. Der Grund ist kein Versäumnis, sondern dieselbe Regel, die
+S25 schon gezogen hat: das Melden einer fremden Änderung fragt über
+`Editormodell::fremd_geaendert` und nicht mit einer zweiten, enger geschnittenen
+Frage daneben. Damit steht der Vergleich an einer Stelle statt an zweien, und
+der Stempel selbst muss das Modell nicht verlassen. Der neue Aufrufer heißt
+`Editormodell::fremdaenderung_melden` und ruft `fremd_geaendert`.
+
+Die Zeile in der Tabelle oben ist damit überholt: `stempel` ist das vierte Stück
+ohne Aufrufer, und für ihn nennt der Plan seit S31 auch keinen mehr. Die beiden
+Wege unter „Was zu entscheiden ist" gelten für ihn wie für die drei anderen;
+`stempel` liegt dabei näher am Streichen als `haelt_zurueck`, weil seine einzige
+Verwendung eine Probe am Dateiende ist.
+
+Der Titel dieses Eintrags nennt weiter drei. Er bleibt, wie er ist: der
+Dateiname ist aus dem Programmtext heraus zitiert, und ein zweiter Eintrag für
+dieselbe Frage wäre die schlechtere Antwort als eine Zeile, die man lesen muss.
