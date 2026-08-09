@@ -102,3 +102,21 @@ nichts darüber; die vorgeschlagene Zeile ändert das Verhalten dort mit und ist
 insofern mehr als eine Editor-Frage.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: S17 am 260809-1738. Der Zweig `Eingabe::Zeichen` in
+`Anwendungsdelegierter::eingabe_ausfuehren` fragt jetzt den Fokus, in einer
+vollständigen Fallunterscheidung ohne Auffangzweig.
+
+Abweichend vom Vorschlag geht **allein** `Fokus::Dateifenster` an die
+Sprungmarke; `Fokus::Anderswo` liefert wie Leiste, Vorschau und Editor `false`.
+So schreibt es S17 vor ("gibt `false` zurück, wenn er nicht im Dateifenster
+steht"), und es beantwortet zugleich die offene Frage am Ende dieses Befundes:
+die Leiste und die Vorschau haben bis heute stillschweigend die Sprungmarke des
+Dateifensters bedient, und das endet mit derselben Zeile. `Anderswo` heißt, dass
+das Schlüsselfenster nicht das Hauptfenster ist; in eine Liste zu tippen, die
+der Nutzer gerade nicht bedient, ist dort so falsch wie in der Leiste.
+
+Vom Agenten abgenommen: die vier Abnahmekommandos. Nutzerarbeit bleibt der
+Nachweis am laufenden Bündel, dass ein Buchstabe mit der Schreibmarke im Editor
+im Text landet.

@@ -61,9 +61,12 @@
 //! entscheidet, wohin ein Tastendruck geht, entsteht nicht.
 //!
 //! Zwei Sorten von Eingabe kommen an. Ein [`Kommando`] ist eine nachgeschlagene
-//! Funktion; ein Zeichen gehoert der Sprungmarke aus C2 und damit immer dem
-//! aktiven Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer
-//! steht.
+//! Funktion; ein Zeichen gehoert der Sprungmarke aus C2 und damit dem aktiven
+//! Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer steht.
+//! **Beide gehen durch denselben Fokusvorbehalt**: das Zeichen erreicht die
+//! Sprungmarke nur mit dem Fokus im Dateifenster, sonst laeuft der Tastendruck
+//! unveraendert an AppKit weiter. Ohne diese Zeile tippte ein Buchstabe mit der
+//! Schreibmarke im Editor in den Suchpuffer der Dateiliste.
 //!
 //! **Laesst sich der Abgriff nicht einrichten, laeuft KRK nicht weiter.** Beide
 //! Stellen, die ihn aufsetzen — der Aufbau der Oberflaeche und das Nachziehen
@@ -74,7 +77,8 @@
 //!
 //! # Der eine Fokusvorbehalt (C5)
 //!
-//! Seit Schritt 18 gibt es zwei fokussierbare Bereiche, und
+//! Seit S17 der Editor-Runde gibt es vier fokussierbare Bereiche — die beiden
+//! Dateilisten, die Leiste, die Vorschau und die Textflaeche des Editors —, und
 //! [`Anwendungsdelegierter::kommando_ausfuehren`] fragt **einmal**, wo der
 //! Fokus steht:
 //!
@@ -84,6 +88,7 @@
 //!                                       │                    ▼
 //!                                       │            fensterweiter Befehl
 //!                                       └───Adresse──> Dateifenster / Leiste
+//!                                                       / Vorschau / Editor
 //! ```
 //!
 //! Der Wert wird zweimal gebraucht und einmal erhoben. Zuerst als
@@ -100,6 +105,12 @@
 //! eine zweite Wahrheit, die jeder Mausklick in eine der drei Listen
 //! nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
 //! Ersthelfer und nichts sonst.
+//!
+//! **Woran ein Bereich zu erkennen ist, steht an einer Stelle**, in
+//! [`Anwendungsdelegierter::fokusansicht`]: eine erschoepfende Zuordnung von
+//! einem Fokuswert auf die Ansicht, die seinen Ersthelferrang traegt. Lesen und
+//! Setzen gehen beide darueber, und ein sechster Fokuswert haelt dort den Bau
+//! an.
 //!
 //! **Wo er beim Start steht, sagt trotzdem KRK und nicht AppKit.** Ueberliesse
 //! [`Anwendungsdelegierter::oberflaeche_aufbauen`] die erste Vergabe der
@@ -1081,49 +1092,90 @@ impl Anwendungsdelegierter {
         eingeblendet || gesetzt
     }
 
-    /// Setzt den Eingabefokus in die Leiste, in die Vorschau oder in das
-    /// aktive Dateifenster (C5, C6).
+    /// Die Ansicht, an der ein Fokuswert haengt.
+    ///
+    /// **Die eine Zuordnung von einem Fokuswert auf sein Objekt**, und sie
+    /// bedient beide Richtungen: [`Self::fokus_setzen`] macht die genannte
+    /// Ansicht zum Ersthelfer des Fensters, [`Anwendungsdelegierter::fokus`]
+    /// erkennt den Ersthelfer daran wieder. Zwei getrennte Aufzaehlungen
+    /// waeren zwei Wahrheiten darueber, woran ein Bereich zu erkennen ist, und
+    /// genau die eine, die im Lesen fehlte, hat den Editor bis zum 260809
+    /// stumm zum Dateifenster gemacht: `fokus` fragte die Leiste und die
+    /// Vorschau und fiel sonst auf [`Fokus::Dateifenster`] zurueck, worauf
+    /// `delete` mit der Schreibmarke im Text die ausgewaehlte Datei in den
+    /// Papierkorb warf
+    /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
+    ///
+    /// **Die Fallunterscheidung ist erschoepfend und ohne Auffangzweig.** Ein
+    /// sechster Fokuswert haelt hier den Bau an, wie bei
+    /// [`Kommando::wirkungsbereich`] und
+    /// [`crate::kommandos::fokus::holt_hervor`]; genau diese Erzwingung fehlte
+    /// der `if`-Kette, die vorher las.
+    ///
+    /// Gefragt ist die **Naemlichkeit** und nicht die Art, aus dem Grund, der
+    /// an [`Self::ist_editorflaeche`] steht: die Textflaeche des Editors ist
+    /// dieselbe Art wie der Feldeditor eines Textfeldes.
+    ///
+    /// `None` heisst: dieser Wert haengt an keiner Ansicht. Fuer
+    /// [`Fokus::Anderswo`] ist das dauerhaft so — der Wert ist ein Befund und
+    /// kein Ziel, wie es an `holt_hervor` steht. Fuer die drei Randbereiche
+    /// gilt es, solange sie nicht gebaut sind; deshalb `get` und nicht
+    /// `expect`, denn die Reihenfolge im Aufbau der Oberflaeche ist keine
+    /// Zusage dieser Funktion.
+    fn fokusansicht(&self, ziel: Fokus) -> Option<&NSResponder> {
+        match ziel {
+            Fokus::Leiste => Some(self.ivars().leiste.get()?.quelle().liste()),
+            Fokus::Vorschau => Some(self.ivars().vorschau.get()?.fokusansicht()),
+            Fokus::Editor => Some(self.ivars().editor.get()?.textflaeche()),
+            // Das **aktive** Dateifenster: es gibt zwei Listen und einen
+            // Fokuswert, und welche der beiden gemeint ist, sagt das
+            // Fenstermodell.
+            Fokus::Dateifenster => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                Some(self.ivars().dateifenster.get()?[aktiv.index()].liste())
+            }
+            Fokus::Anderswo => None,
+        }
+    }
+
+    /// Setzt den Eingabefokus in einen der vier Bereiche (C5, C6, C1 der
+    /// Editor-Runde).
     ///
     /// Die eine Stelle, die den Fokus **setzt**, so wie
-    /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. In einen
-    /// ausgeblendeten Randbereich geht der Fokus nicht: dort saehe der Nutzer
-    /// weder seine Auswahl noch, dass seine Tasten irgendwo ankommen. Die
-    /// Sperre bleibt stehen, obwohl [`Self::fokus_holen`] den Bereich vorher
-    /// hervorholt — sie gilt fuer jeden Aufrufer und nicht nur fuer den einen,
-    /// der vorbaut.
+    /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. Welche
+    /// Ansicht der Ersthelfer wird, sagt [`Self::fokusansicht`] und sonst
+    /// nichts.
     ///
-    /// Drei Aufrufer: die drei Fokusbefehle ueber [`Self::fokus_holen`], das
+    /// In einen ausgeblendeten Randbereich geht der Fokus nicht: dort saehe
+    /// der Nutzer weder seine Auswahl noch, dass seine Tasten irgendwo
+    /// ankommen. Die Sperre bleibt stehen, obwohl [`Self::fokus_holen`] den
+    /// Bereich vorher hervorholt — sie gilt fuer jeden Aufrufer und nicht nur
+    /// fuer den einen, der vorbaut. **Welcher Bereich zu einem Fokusziel
+    /// gehoert, sagt [`crate::kommandos::fokus::holt_hervor`]**, dieselbe
+    /// Zuordnung, die die Fokusbefehle schon zum Hervorholen lesen; drei
+    /// handgeschriebene Sichtbarkeitsabfragen daneben waeren eine zweite
+    /// Wahrheit darueber, in welchem Bereich ein Fokuswert wohnt. Das aktive
+    /// Dateifenster ist nie ausgeblendet und liefert dort `None`.
+    ///
+    /// Drei Aufrufer: die Fokusbefehle ueber [`Self::fokus_holen`], das
     /// Ausblenden eines Randbereichs, und der Aufbau der Oberflaeche mit
     /// [`crate::kommandos::fokus::BEIM_START`].
     fn fokus_setzen(&self, ziel: Fokus) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
-        match ziel {
-            Fokus::Leiste => {
-                if !self.ivars().modell.borrow().sichtbar(Bereich::Lesezeichen) {
-                    return false;
-                }
-                fenster.makeFirstResponder(Some(self.leiste().quelle().liste()))
-            }
-            // In eine ausgeblendete Vorschau geht der Fokus nicht, aus
-            // demselben Grund wie bei der Leiste.
-            Fokus::Vorschau => {
-                if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
-                    return false;
-                }
-                fenster.makeFirstResponder(Some(self.vorschau().fokusansicht()))
-            }
-            // Bis der Editor gebaut ist, gibt es keine Textflaeche, auf die
-            // der Ersthelfer zu setzen waere; der Befehl scheitert und meldet
-            // nichts, wie jeder Fokusbefehl auf einen Bereich, der nicht da
-            // ist. **S17 loest diese Zeile ab** und setzt den Ersthelfer auf
-            // die Textflaeche des Editors.
-            Fokus::Editor => false,
-            Fokus::Dateifenster | Fokus::Anderswo => {
-                let aktiv = self.ivars().modell.borrow().aktiv();
-                fenster.makeFirstResponder(Some(self.dateifenster(aktiv).liste()))
-            }
+        let ausgeblendet = fokus::holt_hervor(ziel)
+            .is_some_and(|bereich| !self.ivars().modell.borrow().sichtbar(bereich));
+        if ausgeblendet {
+            return false;
+        }
+        match self.fokusansicht(ziel) {
+            Some(ansicht) => fenster.makeFirstResponder(Some(ansicht)),
+            // Kein Ziel, also kein Umzug: [`Fokus::Anderswo`] ist ein Befund,
+            // und ein noch nicht gebauter Bereich hat keine Ansicht. Beides
+            // scheitert still, wie jeder Fokusbefehl auf einen Bereich, der
+            // nicht da ist.
+            None => false,
         }
     }
 
@@ -1457,8 +1509,19 @@ impl Anwendungsdelegierter {
     /// Fuehrt aus, was der Ereignisabgriff geliefert hat.
     ///
     /// Die eine Stelle, die entscheidet, wohin ein Tastendruck geht. Ein
-    /// getipptes Zeichen gehoert immer dem aktiven Dateifenster, weil die
-    /// Sprungmarke aus C2 die Liste durchsucht, die vor dem Nutzer steht.
+    /// getipptes Zeichen gehoert der Sprungmarke aus C2, und die durchsucht
+    /// die Dateiliste; es geht deshalb an das aktive Dateifenster, **wenn der
+    /// Fokus dort steht**, und sonst nirgendwohin.
+    ///
+    /// **Der Vorbehalt ist derselbe, den jedes Kommando durchlaeuft, und keine
+    /// Sonderregel fuer den Editor.** Bis zum 260809 fehlte er hier: ein
+    /// Zeichen ist kein Kommando, traegt keinen
+    /// [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich), und der eine
+    /// Fokusvorbehalt in [`Self::kommando_ausfuehren`] sitzt im anderen Zweig.
+    /// Mit der Schreibmarke im Editor lief jeder Buchstabe in den Suchpuffer
+    /// der Sprungmarke, verschob dort die Auswahl und erreichte die
+    /// Textflaeche nie
+    /// (`issues/260809-1648_*_die-sprungmarke-geht-ohne-fokuspruefung-in-das-aktive-dateifenster.md`).
     fn eingabe_ausfuehren(&self, eingabe: Eingabe) -> bool {
         if self.ivars().dateifenster.get().is_none() {
             return false;
@@ -1472,10 +1535,23 @@ impl Anwendungsdelegierter {
                 if self.blatt_steht() {
                     return false;
                 }
-                let aktiv = self.ivars().modell.borrow().aktiv();
-                self.dateifenster(aktiv)
-                    .quelle()
-                    .sprungmarke_tippen(zeichen)
+                match self.fokus() {
+                    Fokus::Dateifenster => {
+                        let aktiv = self.ivars().modell.borrow().aktiv();
+                        self.dateifenster(aktiv)
+                            .quelle()
+                            .sprungmarke_tippen(zeichen)
+                    }
+                    // Keiner dieser vier Bereiche traegt eine Sprungmarke. Der
+                    // Rueckgabewert `false` ist die Zusage: nur ein nicht
+                    // ausgefuehrter Tastendruck laeuft unveraendert an AppKit
+                    // weiter, und nur dann tippt die Textflaeche des Editors
+                    // das Zeichen. Die Leiste und die Vorschau haben bis zum
+                    // 260809 stillschweigend die Sprungmarke des
+                    // Dateifensters bedient; das endet mit derselben Zeile,
+                    // wie S17 es vorsieht.
+                    Fokus::Leiste | Fokus::Vorschau | Fokus::Editor | Fokus::Anderswo => false,
+                }
             }
         }
     }
@@ -1601,13 +1677,18 @@ impl Anwendungsdelegierter {
             // (C6); alles andere fuehrt die Vorschau nicht aus, und der
             // Tastendruck laeuft wie ein unbelegter weiter.
             Fokus::Vorschau => self.vorschau().kommando_ausfuehren(kommando),
-            // Solange es keinen Editor gibt, liefert `Anwendungsdelegierter::
-            // fokus` diesen Wert nie, und der Zweig ist unerreichbar. Er
-            // fuehrt den Befehl deshalb nicht aus, statt ihn an das
-            // Dateifenster umzuleiten: dorthin gehoert er nicht, und ein
-            // Tastendruck, den niemand ausfuehrt, laeuft unveraendert an
-            // AppKit weiter. **S17 loest diese Zeile ab** und reicht das
-            // Kommando an den Editor.
+            // **Seit S17 erreichbar, und `false` ist die Antwort, die
+            // bleibt.** Der Editor bekommt hier keine Adresse, weil ihm hier
+            // nichts zugestellt wird: die neun Befehle mit
+            // [`Wirkungsbereich::Editor`] holen sich ihren eigenen Zweig in
+            // [`Self::kommando_ausfuehren`], so wie die Fokusbefehle es tun
+            // (S20, S22, S23, S25, S32, S34 und die folgenden). Was mit dem
+            // Fokus im Editor bis hierher durchkommt, ist ein Befehl mit
+            // [`Wirkungsbereich::Ueberall`], den das Fenster selbst nicht
+            // ausfuehrt — und der gehoert nicht ins Dateifenster umgeleitet.
+            // `false` heisst dann, was es ueberall heisst: der Tastendruck
+            // laeuft unveraendert an AppKit weiter und wird in der Textflaeche
+            // zu einem Zeichen oder zu einer Bewegung der Schreibmarke.
             Fokus::Editor => false,
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
@@ -2121,13 +2202,35 @@ impl Anwendungsdelegierter {
     /// nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
     /// Ersthelfer, statt ein Kennzeichen umzulegen.
     ///
-    /// Drei Faelle. Steht ein Blatt am Fenster, ist dessen Panel das
-    /// Schluesselfenster und nicht das Hauptfenster: [`Fokus::Anderswo`], und
-    /// ohne diese Antwort loeschte ein Delete vor der stehenden Rueckfrage in
-    /// dem Ordner dahinter. Ist der Ersthelfer die Liste der Leiste,
-    /// [`Fokus::Leiste`]. Sonst eine der beiden Dateilisten. Die Schreibmarke
-    /// in einem Textfeld kommt hier nicht vor: der Ereignisabgriff reicht den
-    /// Tastendruck dann weiter und erzeugt gar kein Kommando.
+    /// Zwei Vorabfragen und ein Durchgang durch [`Fokus::ALLE`]. Steht ein
+    /// Blatt am Fenster, ist dessen Panel das Schluesselfenster und nicht das
+    /// Hauptfenster: [`Fokus::Anderswo`], und ohne diese Antwort loeschte ein
+    /// Delete vor der stehenden Rueckfrage in dem Ordner dahinter. Sonst wird
+    /// der Ersthelfer gegen die Ansicht jedes Fokuswertes gehalten, die
+    /// [`Self::fokusansicht`] nennt, und der erste Treffer ist die Antwort.
+    ///
+    /// **Der Durchgang steht hier, weil die `if`-Kette davor einen Bereich
+    /// uebersehen hat.** Bis zum 260809 fragte diese Funktion die Leiste und
+    /// die Vorschau und fiel sonst auf [`Fokus::Dateifenster`] zurueck. Der
+    /// Editor kam darin nicht vor, obwohl der Ereignisabgriff seine Textflaeche
+    /// seit S4 durchlaesst: mit der Schreibmarke im Text warf `delete` die
+    /// ausgewaehlte Datei in den Papierkorb, und `up`, `down` und `tab`
+    /// bewegten die Dateiliste
+    /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
+    /// Ein vierter `if` haette denselben Fehler beim fuenften Bereich wieder
+    /// zugelassen; der Durchgang ueber die Aufzaehlung laesst ihn nicht mehr
+    /// zu, und die Ansicht dazu erzwingt der Uebersetzer in
+    /// [`Self::fokusansicht`].
+    ///
+    /// **Der Rueckfall auf [`Fokus::Dateifenster`] bleibt und ist keine
+    /// Nachlaessigkeit.** Er greift jetzt nur noch fuer einen Ersthelfer, der
+    /// zu **keinem** der fuenf Werte gehoert — vor der ersten Vergabe der
+    /// Schluesselansichtskette etwa, oder fuer eine Ansicht innerhalb eines
+    /// Bereichs, die den Rang an sich gezogen hat. `Anderswo` an dieser Stelle
+    /// hiesse, dass dann **kein** Befehl des Dateifensters mehr wirkt; genau
+    /// diesen Zustand hat der Defekt vom 260805-1845 schon einmal
+    /// hergestellt. Dass der Rueckfall fuer eine Unteransicht der Vorschau
+    /// oder der Leiste die falsche Antwort gibt, ist getrennt festgehalten.
     fn fokus(&self) -> Fokus {
         let (Some(schluessel), Some(haupt)) = (
             NSApplication::sharedApplication(self.mtm()).keyWindow(),
@@ -2138,24 +2241,18 @@ impl Anwendungsdelegierter {
         if !schluessel.isEqual(Some(haupt)) {
             return Fokus::Anderswo;
         }
-        let in_der_leiste = self.ivars().leiste.get().is_some_and(|leiste| {
-            haupt
-                .firstResponder()
-                .is_some_and(|ersthelfer| ersthelfer.isEqual(Some(leiste.quelle().liste())))
-        });
-        if in_der_leiste {
-            return Fokus::Leiste;
+        let Some(ersthelfer) = haupt.firstResponder() else {
+            return Fokus::Dateifenster;
+        };
+        for ziel in Fokus::ALLE {
+            let getroffen = self
+                .fokusansicht(ziel)
+                .is_some_and(|ansicht| ersthelfer.isEqual(Some(ansicht)));
+            if getroffen {
+                return ziel;
+            }
         }
-        let in_der_vorschau = self.ivars().vorschau.get().is_some_and(|vorschau| {
-            haupt
-                .firstResponder()
-                .is_some_and(|ersthelfer| ersthelfer.isEqual(Some(vorschau.fokusansicht())))
-        });
-        if in_der_vorschau {
-            Fokus::Vorschau
-        } else {
-            Fokus::Dateifenster
-        }
+        Fokus::Dateifenster
     }
 
     /// Baut den Auftrag aus der Auswahl des aktiven Dateifensters und startet

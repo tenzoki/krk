@@ -106,3 +106,26 @@ solange beides gilt, ist die Textfläche kein Editor, sondern eine zweite
 Bedienung des Dateifensters.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: S17 am 260809-1738. `Anwendungsdelegierter::fokus` liefert
+`Fokus::Editor`, sobald der Ersthelfer die Textfläche des Editors ist.
+
+Gebaut ist nicht der vorgeschlagene vierte `if`, sondern die Ursache darunter.
+`fokusansicht(ziel)` in `anwendung.rs` ordnet jedem Fokuswert die Ansicht zu,
+die seinen Ersthelferrang trägt — eine erschöpfende Fallunterscheidung ohne
+Auffangzweig, die der Übersetzer erzwingt. `fokus()` läuft `Fokus::ALLE` durch
+und hält den Ersthelfer gegen jede dieser Ansichten; `fokus_setzen()` geht
+dieselbe Zuordnung in der Gegenrichtung. Ein vierter `if` hätte denselben
+Fehler beim fünften Bereich wieder zugelassen.
+
+Der Rückfall auf `Fokus::Dateifenster` steht weiter, trägt aber nur noch den
+Fall "Ersthelfer gehört zu keinem der fünf Werte". Was er dort weiterhin falsch
+beantwortet, führt
+`260809-1738_o_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md`.
+
+Der irreführende Doc-Kommentar ("Die Schreibmarke in einem Textfeld kommt hier
+nicht vor") ist ersetzt. Vom Agenten abgenommen: die vier Abnahmekommandos und
+die Probe `im_editor_wirkt_kein_befehl_des_dateifensters_und_jeder_des_fensters`
+in `crates/krk-ui/src/kommandos/fokus.rs`. Nutzerarbeit bleibt der Nachweis am
+laufenden Bündel, dass der Ersthelferrang tatsächlich auf der Textfläche steht.

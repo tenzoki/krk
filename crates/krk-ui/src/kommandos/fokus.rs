@@ -88,6 +88,33 @@ pub enum Fokus {
     Anderswo,
 }
 
+impl Fokus {
+    /// Alle fuenf Fokuswerte, in einer festen Reihenfolge.
+    ///
+    /// **Die eine Aufzaehlung**, und sie ist der Grund, aus dem
+    /// `Anwendungsdelegierter::fokus` nach dem 260809 keinen Bereich mehr
+    /// uebersehen kann: die Fokusabfrage laeuft ueber diese Liste, statt drei
+    /// Vergleiche von Hand zu reihen und alles uebrige auf
+    /// [`Fokus::Dateifenster`] fallen zu lassen. Bis dahin fehlte darin der
+    /// Editor, und jeder Dateibefehl wirkte mit der Schreibmarke im Text
+    /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
+    ///
+    /// **Die Feldbreite steht in der Typangabe.** Ein sechster Wert haelt
+    /// damit den Bau an, wie die Feldbreite von
+    /// [`Kommando::KENNUNGEN`](krk_core::tasten::Kommando::KENNUNGEN) es fuer
+    /// die Befehle tut; die Aufzaehlung selbst erzwingt der Uebersetzer nicht.
+    /// [`Fokus::Anderswo`] steht darin wie die uebrigen: es haengt an keiner
+    /// Ansicht, und die Fokusabfrage laeuft an ihm vorbei, statt es
+    /// auszunehmen.
+    pub const ALLE: [Fokus; 5] = [
+        Fokus::Dateifenster,
+        Fokus::Leiste,
+        Fokus::Vorschau,
+        Fokus::Editor,
+        Fokus::Anderswo,
+    ];
+}
+
 /// Wo der Eingabefokus nach dem Aufbau der Oberflaeche steht.
 ///
 /// **Immer derselbe Wert, und er wird nicht gespeichert.** C7 zaehlt auf, was
@@ -184,13 +211,13 @@ mod tests {
 
     use super::*;
 
-    const JEDER_FOKUS: [Fokus; 5] = [
-        Fokus::Dateifenster,
-        Fokus::Leiste,
-        Fokus::Vorschau,
-        Fokus::Editor,
-        Fokus::Anderswo,
-    ];
+    /// Die Aufzaehlung der Pruefungen ist die des Programms.
+    ///
+    /// Bis zum 260809 stand hier eine zweite Liste derselben fuenf Werte.
+    /// Seit [`Fokus::ALLE`] die Fokusabfrage traegt, waere sie eine zweite
+    /// Wahrheit darueber, welche Werte es gibt, und die Tafel unten pruefte
+    /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
+    const JEDER_FOKUS: [Fokus; 5] = Fokus::ALLE;
 
     /// Die ganze Regel auf einen Blick: sieben Wirkungsbereiche mal fuenf
     /// Fokuswerte, fuenfunddreissig Paare.
@@ -446,6 +473,129 @@ mod tests {
                 "erst der sichtbare Bereich laesst den Fokus hinein"
             );
         }
+    }
+
+    /// [`Fokus::ALLE`] fuehrt jeden Wert genau einmal.
+    ///
+    /// Die Aufzaehlung traegt seit S17 die Fokusabfrage in
+    /// `Anwendungsdelegierter::fokus`, und die laeuft sie einmal durch. Ein
+    /// fehlender Wert machte den zugehoerigen Bereich wieder unsichtbar fuer
+    /// die Abfrage — genau der Zustand, aus dem der Defekt vom 260809-1640
+    /// bestand. Ein doppelter Wert kostete nur einen Vergleich, faellt hier
+    /// aber mit auf.
+    ///
+    /// Die Feldbreite `[Fokus; 5]` haelt den Bau an, wenn ein sechster Wert
+    /// dazukommt; diese Pruefung deckt die andere Haelfte ab, dass die fuenf
+    /// Plaetze mit fuenf **verschiedenen** Werten belegt sind.
+    #[test]
+    fn die_aufzaehlung_der_fokuswerte_ist_vollstaendig_und_doppelt_keinen() {
+        for wert in [
+            Fokus::Dateifenster,
+            Fokus::Leiste,
+            Fokus::Vorschau,
+            Fokus::Editor,
+            Fokus::Anderswo,
+        ] {
+            assert_eq!(
+                Fokus::ALLE.iter().filter(|&&x| x == wert).count(),
+                1,
+                "{wert:?} steht nicht genau einmal in Fokus::ALLE"
+            );
+        }
+    }
+
+    /// Das Abnahmekriterium von S17: mit dem Fokus im Editor wirkt kein
+    /// Befehl des Dateifensters, und die Befehle des Fensters wirken weiter.
+    ///
+    /// Die Regel selbst steht seit S3 in [`wirkt`]; was bis zum 260809 fehlte,
+    /// war die Gegenseite — `Anwendungsdelegierter::fokus` lieferte niemals
+    /// [`Fokus::Editor`], und deshalb kam diese Zeile der Tafel im laufenden
+    /// Programm nie zur Anwendung. Die Pruefung haelt fest, was S17 damit
+    /// erreicht.
+    ///
+    /// Zwei Durchgaenge. Der erste nennt die Befehle, die das
+    /// Abnahmekriterium namentlich fuehrt, mit ihrer Gegenprobe im
+    /// Dateifenster. Der zweite geht ueber [`Kommando::KENNUNGEN`] statt ueber
+    /// eine Liste und deckt damit auch jeden Befehl ab, der spaeter
+    /// dazukommt.
+    #[test]
+    fn im_editor_wirkt_kein_befehl_des_dateifensters_und_jeder_des_fensters() {
+        for kommando in [
+            // Die Dateioperationen aus C4.
+            Kommando::Kopieren,
+            Kommando::Verschieben,
+            Kommando::InPapierkorb,
+            Kommando::EndgueltigLoeschen,
+            Kommando::OrdnerAnlegen,
+            Kommando::DateiAnlegen,
+            Kommando::Umbenennen,
+            Kommando::UmbenennenStapel,
+            // Die Ordnernavigation aus C2.
+            Kommando::Oeffnen,
+            Kommando::OrdnerAufwaerts,
+            Kommando::Pfadeingabe,
+            Kommando::SeiteHoch,
+            Kommando::SeiteRunter,
+            Kommando::Listenanfang,
+            Kommando::Listenende,
+            // Die beiden Zwischenablage-Befehle aus C10.
+            Kommando::ZwischenablageAnsehen,
+            Kommando::ZwischenablageSpringen,
+        ] {
+            assert!(
+                !wirkt(kommando.wirkungsbereich(), Fokus::Editor),
+                "{kommando:?} wirkt mit der Schreibmarke im Editor"
+            );
+            assert!(
+                wirkt(kommando.wirkungsbereich(), Fokus::Dateifenster),
+                "{kommando:?} wirkt nicht einmal im Dateifenster; die Gegenprobe liefe leer"
+            );
+        }
+
+        let mut abgewiesen = 0;
+        let mut durchgelassen = 0;
+        for (kommando, kennung) in Kommando::KENNUNGEN {
+            match kommando.wirkungsbereich() {
+                // Die drei Bereichsbefehle und der Navigator enden am Editor.
+                Wirkungsbereich::Dateifenster => {
+                    abgewiesen += 1;
+                    assert!(
+                        !wirkt(Wirkungsbereich::Dateifenster, Fokus::Editor),
+                        "„{kennung}“ wirkt mit der Schreibmarke im Editor"
+                    );
+                }
+                // Was das Fenster als ganzes betrifft, wirkt im Editor wie
+                // ueberall sonst: das Umschalten der Bereiche, die Breiten,
+                // das Schliessen des Fensters, das Beenden.
+                Wirkungsbereich::Ueberall => {
+                    durchgelassen += 1;
+                    assert!(
+                        wirkt(Wirkungsbereich::Ueberall, Fokus::Editor),
+                        "„{kennung}“ wirkt im Editor nicht"
+                    );
+                }
+                Wirkungsbereich::Leiste
+                | Wirkungsbereich::Vorschau
+                | Wirkungsbereich::Tabbereich
+                | Wirkungsbereich::Navigator => {
+                    assert!(
+                        !wirkt(kommando.wirkungsbereich(), Fokus::Editor),
+                        "„{kennung}“ gehoert einem anderen Bereich und wirkt trotzdem im Editor"
+                    );
+                }
+                // Die neun Befehle des Editors sind der Sinn der Uebung.
+                Wirkungsbereich::Editor => {
+                    assert!(
+                        wirkt(Wirkungsbereich::Editor, Fokus::Editor),
+                        "„{kennung}“ wirkt in seinem eigenen Bereich nicht"
+                    );
+                }
+            }
+        }
+        assert!(
+            abgewiesen > 0 && durchgelassen > 0,
+            "keine Befehle in einer der beiden Gruppen; die Pruefung liefe leer"
+        );
     }
 
     /// Der Terminal-Befehl aus C11 braucht keinen eigenen Mechanismus.
