@@ -123,6 +123,35 @@ dispatch2 = { version = "0.3", default-features = false, features = ["std", "obj
 # geht nicht: `parsing = [regex-syntax, fnv, dump-create, dump-load]` zieht es
 # mit, gemessen an `syntect` 5.3.0. Der Satz im Plan ist damit ueberholt.
 #
+# **Was mitkommt, gezaehlt und nicht geschaetzt.** Beide Kisten zusammen ziehen
+# **21 weitere Pakete** in den Baum: `Cargo.lock` waechst von 72 auf 95
+# Eintraege, zwei davon sind die Kisten selbst (gezaehlt zwischen `4e86c02` und
+# dem Stand nach S32). Namentlich `adler2`, `aho-corasick`, `bincode`,
+# `bit-set`, `bit-vec`, `cfg-if`, `crc32fast`, `fancy-regex`, `flate2`, `fnv`,
+# `memchr`, `miniz_oxide`, `once_cell`, `regex-automata`, `regex-syntax`,
+# `same-file`, `simd-adler32`, `thiserror`, `thiserror-impl`, `walkdir` und
+# `winapi-util`. Das ist der groesste Zuwachs am Abhaengigkeitsbaum, den dieses
+# Projekt bisher aufgenommen hat; die Angabe steht hier, weil der Eintrag zu
+# `signal-hook` oben dieselbe Frage als tragend behandelt. Drei Aussagen dazu
+# sind gemessen:
+#
+# - **Auf dem Bauziel dieses Projekts kommen 20 davon an.** `winapi-util` haengt
+#   ueber `same-file` und `walkdir` allein am Windows-Ziel und wird auf macOS nie
+#   uebersetzt; `cargo tree --workspace -e normal` zaehlt es deshalb nicht mit.
+#   Es steht nur in `Cargo.lock`. Die beiden `windows-*`-Eintraege daneben, an
+#   denen es haengt, sind nicht neu: sie standen schon vor diesen Kisten da.
+# - **`walkdir`, `same-file` und `winapi-util` lassen sich nicht abwaehlen.**
+#   `walkdir` steht in `syntect`s eigener `Cargo.toml` (Fassung 5.3.0) als
+#   gewoehnliche Abhaengigkeit ohne `optional`, haengt also an keinem
+#   eingeschalteten Merkmal, und `same-file` samt `winapi-util` haengt an ihm.
+#   An dieser Stelle kuerzt keine Merkmalswahl den Baum, und der naechste Leser
+#   braucht es nicht neu zu messen.
+# - **Keines der 21 ist ein `-sys`-Paket, und keines bringt `cc` als
+#   Bauabhaengigkeit mit.** `cargo tree --workspace -e normal,build` findet im
+#   ganzen Baum weder `cc` noch `onig` noch einen Namen auf `-sys`. Damit haelt
+#   die Zusage aus der Technologiewahl: die Bauvoraussetzungen des Projekts
+#   aendern sich durch diese beiden Kisten nicht.
+#
 # `default-syntaxes` bleibt an, obwohl `two-face` unten einen Obermengensatz
 # mitbringt und die Anwendung den Vorgabesatz nie laedt. Gemessen kostet das
 # 1.360 Byte am Programm, weil der ungenutzte Abzug wegoptimiert wird. Dafuer
@@ -158,4 +187,8 @@ syntect = { version = "5.3.0", default-features = false, features = [
 # `syntect-onig` schaltet in `syntect` `regex-onig` ein und holte Oniguruma
 # durch die Hintertuer wieder herein. `syntect-fancy` haelt beide Kisten auf
 # demselben reinen Rust.
+#
+# Was beide Kisten zusammen an Paketen mitbringen, steht oben bei `syntect` und
+# wird hier nicht wiederholt: `two-face` haengt selbst an ihm, und zwei Zahlen
+# fuer einen Baum waeren zwei Wahrheiten.
 two-face = { version = "0.5.2", default-features = false, features = ["syntect-fancy"] }

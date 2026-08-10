@@ -84,15 +84,42 @@
 //! Operationsmaschine im Kern bekommt ihn ueber eine Schnittstelle
 //! hereingereicht, die AppKit nicht kennt.
 //!
-//! Acht Pfeile fuehren aus diesem Verzeichnis heraus, und alle acht tragen
-//! nur gewoehnliche Rust-Werte: [`bildtakt`] gibt `crate::messmodus` die
-//! Bildwiederholrate und die Zeitpunkte der Bildgrenzen, [`tabelle`] haelt das
-//! Tabmodell aus `crate::tabs` und rechnet mit `crate::kommandos`,
-//! [`aufteilung`] rechnet die Breiten mit `crate::fenstermodell`,
+//! **Jeder Weg aus diesem Verzeichnis heraus traegt nur gewoehnliche
+//! Rust-Werte; keines der Ziele nennt eine `objc2`-Kiste.** Das ist die
+//! Architekturgrenze, an der dieses Projekt haengt, und sie steht hier als
+//! Regel und **nicht als Zaehlung**. Bis zum 260810 stand hier eine Zahl
+//! ("acht Pfeile ... und alle acht"); sie war schon vor dem Editor falsch, hat
+//! `anwendung` mit seinen neun Zielen gar nicht gefuehrt und `fsevents` wie
+//! `volumes` Ziele zugeschrieben, die sie nicht nennen. Kein Bau und keine
+//! Probe faengt eine Zahl in Prosa, und wer die Grenze nachpruefen will, haelt
+//! ein Verzeichnis nach acht geprueften Stellen fuer durchgesehen. Der Befund
+//! ist `issues/260809-1655_*_acht-pfeile-aus-appkit-heraus-sind-es-nicht-....md`.
+//! Wer eine Zahl braucht, erhebt sie: `grep -rn 'use crate::'
+//! crates/krk-ui/src/appkit/` nennt die Zeilen, dann ist sie belegt und nicht
+//! behauptet.
+//!
+//! **Zwei Lesarten, die nicht zusammenfallen.** Der Ueberblick oben zeichnet,
+//! wohin Werte fliessen; ein `use crate::` dagegen sagt, welches Modul einen
+//! Nachbarn ausserhalb dieses Verzeichnisses **nennt**. Wer nur meldet, nennt
+//! niemanden: [`bildtakt`] gibt Rate und Zeitpunkte an eine gewoehnliche
+//! Rust-Senke, die es beim Einrichten entgegennimmt, und traegt keine
+//! `use crate::`-Zeile; ebenso [`fsevents`], dessen Pfade erst beim Aufrufer
+//! bei `crate::auffrischung` landen. Beide stehen im Ueberblick mit einem Pfeil
+//! und in der Aufstellung unten nicht.
+//!
+//! Die genannten Ziele, ohne den Anspruch, alle zu sein: [`anwendung`] nennt
+//! die meisten, naemlich `crate::auffrischung`, `crate::belegungsmodell`,
+//! `crate::editormodell`, `crate::fenstermodell`, `crate::fenstertitel`,
+//! `crate::kommandos` (`fokus` und `operationen` als zwei getrennte Wege),
+//! `crate::leistenmodell`, `crate::messmodus` und `crate::tabs`. Daneben:
+//! [`tabelle`] haelt das Tabmodell aus `crate::tabs` und rechnet mit
+//! `crate::kommandos`, [`leiste`] haelt die Zeilen aus `crate::leistenmodell`,
+//! [`vorschau`] und [`zwischenablage`] den Inhalt aus `crate::vorschaumodell`,
+//! [`editor`] den Stand aus `crate::editormodell` und die Einfaerbung aus
+//! `crate::hervorhebung`, [`aufteilung`] rechnet die Breiten mit
+//! `crate::fenstermodell` und die Rahmenrolle mit `crate::kommandos::fokus`,
 //! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
-//! `crate::belegungsmodell`, [`editor`] haelt den Stand aus
-//! `crate::editormodell`, und [`fsevents`] wie [`volumes`] reichen Pfade an
-//! `crate::auffrischung`. Keines der Ziele nennt eine `objc2`-Kiste.
+//! `crate::belegungsmodell`, und [`volumes`] zieht `crate::leistenmodell::Ort`.
 
 mod anwendung;
 mod aufteilung;

@@ -56,3 +56,39 @@ wie viele Pakete mitkommen, welche davon nicht abwählbar sind, und dass keines
 ein `-sys`-Paket ist oder `cc` als Bauabhängigkeit mitbringt — die drei Aussagen
 sind gemessen und tragen die Zusage aus der Technologiewahl, dass sich die
 Bauvoraussetzungen des Projekts nicht ändern.
+
+---
+Resolved: Die Begründung zu `syntect` in der Wurzel-`Cargo.toml` trägt den
+Fußabdruck jetzt, in der Form des `signal-hook`-Eintrags, und die Zahl ist
+selbst erhoben und nicht aus diesem Datensatz übernommen.
+
+**21 weitere Pakete**, bestätigt über den Namensvergleich der beiden
+`Cargo.lock`-Fassungen: 72 Einträge bei `4e86c02`, 95 heute, 23 neue Namen, zwei
+davon die Kisten selbst. Die 21 stehen namentlich im Kommentar.
+
+Drei gemessene Aussagen stehen dazu, jede mit dem Kommando, das sie erhebt:
+
+- **Auf dem Bauziel dieses Projekts kommen 20 davon an.** `winapi-util` hängt
+  über `same-file` und `walkdir` allein am Windows-Ziel; `cargo tree --workspace
+  -e normal` zählt es nicht mit, es steht nur in `Cargo.lock`. Die beiden
+  `windows-*`-Einträge, an denen es hängt, standen schon vor diesen Kisten in der
+  Datei und sind deshalb nicht als Zuwachs geführt. Diese Unterscheidung war in
+  diesem Datensatz nicht enthalten.
+- **`walkdir`, `same-file` und `winapi-util` lassen sich nicht abwählen.** In
+  `syntect`s eigener `Cargo.toml` (5.3.0) steht `[dependencies.walkdir]` ohne
+  `optional`, hängt also an keinem eingeschalteten Merkmal, und `same-file` samt
+  `winapi-util` hängt an ihm. Der Kommentar sagt ausdrücklich, dass an dieser
+  Stelle keine Merkmalswahl den Baum kürzt, damit die nächste Runde es nicht neu
+  messen muss.
+- **Keines der 21 ist ein `-sys`-Paket, keines bringt `cc` als Bauabhängigkeit
+  mit.** `cargo tree --workspace -e normal,build` findet im ganzen Baum weder
+  `cc` noch `onig` noch einen Namen auf `-sys`. Damit hält die Zusage aus der
+  Technologiewahl.
+
+Der Eintrag zu `two-face` wiederholt die Zahl nicht, sondern verweist auf den zu
+`syntect`: `two-face` hängt selbst an ihm, und zwei Zahlen für einen Baum wären
+zwei Wahrheiten.
+
+Kein Code ist angefasst. `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt --all --check` beenden
+mit 0.

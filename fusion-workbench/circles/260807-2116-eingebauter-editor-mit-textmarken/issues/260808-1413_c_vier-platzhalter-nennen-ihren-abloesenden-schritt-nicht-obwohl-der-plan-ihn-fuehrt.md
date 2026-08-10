@@ -55,3 +55,26 @@ Schleife, obwohl es der Zwischenstand bis S16 ist.
 
 Die vier Stellen um ihre Schrittnummer ergänzen, in der Form, die
 `anwendung.rs:1108` schon führt. Kein Verhalten ändert sich.
+
+---
+Resolved: Nichts zu ändern, der Befund ist von der Arbeit der Runde überholt.
+Alle vier Stellen sind am 260810-0918 am Code nachgesehen, und keine trägt mehr
+einen Vorwärtsverweis ohne Nummer:
+
+| Stelle laut Datensatz | Stand am 260810 |
+|---|---|
+| `fenstermodell.rs:19-21` | Der Modulkopf sagt jetzt, dass der gegenseitige Ausschluss in `Bereich::teilt_flaeche_mit` steht und über die eine Schreibstelle `Fenstermodell::sichtbar_setzen` wirkt, und nennt das erste Abnahmekriterium von C1 als eingelöst. Kein späterer Schritt ist mehr genannt, weil keiner mehr aussteht. |
+| `fenstermodell.rs:275-276` | Die Doku von `aus_sitzung` sagt „Vorschau und Editor stehen nie zugleich" als geltende Zusicherung und trägt die Begründung, warum der Editor weicht. Kein Vorwärtsverweis. |
+| `aufteilung.rs:296-298` | Der Satz steht heute an `steht_im` (`aufteilung.rs:404-408`) und nennt Schritt 16 in der Vergangenheit: der Fall „Unteransicht fehlt" traf bis dahin den Editor und trifft seit dessen fünfter Unteransicht keinen Bereich mehr. |
+| `aufteilung.rs:329-330` | Die Beschreibung des Überspringens steht an `gemessene_breiten` (`:434-437`) und an `auslegen` (`:478-486`), beide mit Schritt 16 und beide als Zwischenstand, der vorbei ist: die Schleife überspringt nichts mehr als Ausnahme, sondern findet dort die Breite 0. |
+
+Geprüft mit `grep -rn 'spaeter\|später\|noch nicht traegt' crates/krk-ui/src/fenstermodell.rs crates/krk-ui/src/appkit/aufteilung.rs`: ein Treffer, und der betrifft eine spätere Belegung in `fenstermodell.rs:419` und keinen Planschritt. Ein zweiter Lauf über `Schritt` liefert in `aufteilung.rs` vier Treffer, alle mit Nummer und alle über einen abgeschlossenen Schritt (13, 16, 18, 19); in `fenstermodell.rs` vier Treffer, die keinen Planschritt meinen, sondern den Breitenschritt der Trennlinie.
+
+Die Lehre des Datensatzes ist damit nicht verloren, sondern an zwei Stellen des
+Plans aufgehoben: `### Wie diese sechs Schritte geschnitten sind` zitiert ihn als
+einen von drei Anlässen dafür, die sechs Schritte des Nachtrags nach
+Übersetzbarkeit zu schneiden ("keiner hinterlässt eine Zeile, die auf ihren
+Ablöser wartet"), und seit dem 260810 trägt `### Was die Dateiliste eines
+Schrittes zusagt` die Schnittstellen-Regel aus `issues/260808-0930`.
+
+Kein Code und kein Plantext ist für diesen Datensatz angefasst.
