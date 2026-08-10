@@ -1545,6 +1545,38 @@ mod tests {
         assert!(!modell.haelt_zurueck());
     }
 
+    /// Warum das Sitzungsschreiben aus C7 am Ladeausgang haengt und nicht am
+    /// Befehl.
+    ///
+    /// **Die Zeitspanne, in der `pfad()` noch die vorige Datei nennt, ist die
+    /// Ursache des Defekts vom 260810-0240.** F4 merkt die Sitzung vor, sobald
+    /// der Befehl gelaufen ist; gelesen wird da noch, und mitgeschrieben wuerde
+    /// die vorige Datei. Diese Probe haelt die Spanne fest, damit sie auffaellt,
+    /// wenn jemand das Lesen wieder auf den Hauptfaden zieht: dann liefert
+    /// `oeffnen` sofort einen Ausgang, und `laedt_noch` ist hier falsch.
+    #[test]
+    fn der_gehaltene_pfad_wechselt_erst_mit_dem_eingezogenen_ausgang() {
+        let ordner = Pruefordner::neu("pfadwechsel");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+
+        assert_eq!(modell.oeffnen(&zweite), None);
+        assert!(modell.laedt_noch(), "der Arbeitsfaden liest noch");
+        assert_eq!(
+            modell.pfad(),
+            Some(erste.as_path()),
+            "waehrend des Lesens nennt der Editor unveraendert die vorige Datei"
+        );
+
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.pfad(),
+            Some(zweite.as_path()),
+            "erst der eingezogene Ausgang traegt die neue Datei"
+        );
+    }
+
     /// Das fuenfte Abnahmekriterium von C4: der Wechsel auf eine andere Datei
     /// wirft den ungesicherten Stand nicht mehr ohne Nachfrage weg.
     ///

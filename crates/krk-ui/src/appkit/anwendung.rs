@@ -3388,6 +3388,12 @@ impl Anwendungsdelegierter {
     /// der Editor hervorgeholt ist, damit die angesprungene Zeile auch im Bild
     /// steht. Die vorgemerkte Stelle wird oben herausgenommen und damit
     /// verbraucht; wer sie zurueckstellt, sagt es an seinem Zweig.
+    ///
+    /// **Und das Sitzungsschreiben aus C7 haengt hier**, aus demselben Grund
+    /// wie der Titel: erst mit diesem Ausgang haelt der Editor die neue Datei,
+    /// und vorher gefragt nennt [`Self::editordatei`] die vorige. Ein Aufruf je
+    /// Oeffnungsweg entsteht dafuer nicht — alle drei laufen durch diese eine
+    /// Stelle.
     fn editorausgang_behandeln(&self, ausgang: Ladeausgang) {
         let aus_sitzung = self.ivars().editor_aus_sitzung.replace(false);
         let marke = self.ivars().vorgemerkte_marke.borrow_mut().take();
@@ -3428,6 +3434,26 @@ impl Anwendungsdelegierter {
                     // weil keiner stattfindet, und der Titel truege weiter die
                     // vorige Datei.
                     self.titel_nachziehen(self.fokus());
+                    // **Der Anlass, an dem die gemerkte Datei aus C7 nachzieht,
+                    // und alle drei Oeffnungswege gehen ueber ihn.**
+                    // `kommando_ausfuehren` hat zwar auch schon vorgemerkt, als
+                    // F4 oder der Uebergang aus der Vorschau lief, aber zu
+                    // frueh: gelesen wird seit S24 auf dem Arbeitsfaden, und
+                    // `editordatei()` antwortet aus dem Modell, das erst mit
+                    // diesem Ausgang nachzieht — vorgemerkt wurde damals also
+                    // die vorige Datei. Ohne diese Zeile stand die neue in
+                    // keiner `session.toml`, bis irgendein spaeterer Anlass
+                    // zufaellig eine schrieb, und ein Absturz davor liess den
+                    // Editor beim naechsten Start leer
+                    // (`issues/260810-0240_*_ein-oeffnen-im-editor-stoesst-kein-sitzungsschreiben-an.md`).
+                    //
+                    // **Sie steht in diesem Zweig und nicht davor.** Die
+                    // Wiederherstellung aus der Sitzung schriebe zurueck, was
+                    // sie eben gelesen hat: derselbe Pfad, dieselbe
+                    // Sichtbarkeit. Der Schreibvorgang haette nichts zu
+                    // melden, faende beim Start `zuletzt == None` vor und ginge
+                    // deshalb sofort auf die Platte.
+                    self.sitzung_vormerken();
                 }
                 // Zuletzt, weil `scrollRangeToVisible:` einen Bereich ins Bild
                 // holt und der Editor dafuer auf dem Schirm stehen muss. Er ist
