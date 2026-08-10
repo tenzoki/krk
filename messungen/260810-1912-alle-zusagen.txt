@@ -1,0 +1,186 @@
+KRK — Abnahmebericht ueber die zehn Zusagen aus C8 (Schritt 21)
+===============================================================
+
+Bedingungen
+-----------
+Zeitpunkt             2026-08-10T19:12:22Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.7 24G720
+Bildwiederholrate     60 Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des gemessenen Fensters; eine Bildlaenge sind damit 16.667 ms
+Cache-Zustand         warm (purge braucht Rechte, die dieser Lauf nicht hat; L4 ist damit eine Untergrenze der Kaltstart-Zusage, siehe Einschraenkungen)
+Wiederholungen        20 je Zusage und Runde, 1 Runden
+Pruefordner A         /Users/k1/Library/Caches/krk-messplatz/pruefordner-a (Startwert 1, 10000 Eintraege laut Steckbrief)
+Pruefordner B         /Users/k1/Library/Caches/krk-messplatz/pruefordner-b (Startwert 2, 10000 Eintraege laut Steckbrief)
+Pruefordner 100k      /Users/k1/Library/Caches/krk-messplatz/pruefordner-gross (Startwert 3, 100000 Eintraege laut Steckbrief)
+Unterordner L6        /Users/k1/Library/Caches/krk-messplatz/pruefordner-a-l6 (Startwert 4, 1000 Eintraege laut Steckbrief)
+Kopierziel L8/L9      /Users/k1/Library/Caches/krk-messplatz/kopierziel (derselbe APFS-Datentraeger wie Pruefordner A, geprueft; Klonweg, keine Durchsatzmessung)
+Pruefsitzung          zwei Dateifenster mit je zwei Tabs: links Pruefordner A sichtbar und B dahinter, rechts umgekehrt; Auswahl in beiden sichtbaren Tabs auf dem ersten Eintrag, Lesezeichenleiste und Vorschau eingeblendet, Breiten im Auslieferungszustand. Hergestellt ueber session.toml, in derselben Serialisierung, die die Anwendung beim Beenden schreibt
+Systemlast            vor dem Lauf { 1.56 2.84 5.60 }, nach dem Lauf { 2.55 2.87 5.42 } (sysctl vm.loadavg)
+Gemessenes Buendel    /Users/k1/Projects/productive/krk/target/KRK.app/Contents/MacOS/krk
+Werkzeug              krk-bench 0.1.0, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+Zahlen
+------
+Zwei Abnahmemasse stehen nebeneinander, die Spalte "Abnahme nach" nennt je
+Zeile, welches gilt: das 95. Perzentil der Runde fuer die Dauerzusagen, der
+Anteil der Eingaben im naechsten Bild fuer L1 und L9. Seit dem 260807-0832
+fordern die beiden verschiedene Anteile, und L9 traegt daneben eine
+Obergrenze je Einzelwert; die Spalte "hoechstwert" nennt den groessten
+Einzelwert aller Runden in Bildlaengen und traegt damit die zweite Haelfte
+des Urteils. Das Perzentil steht je Runde einmal; Median, Minimum und
+Maximum laufen ueber alle Einzelwerte.
+
+Gemessene Groesse                                                  p95 bestes p95 schlecht      Median     Minimum     Maximum    im Bild   hoechstwert          Abnahme nach   Urteil
+L1 — Tastendruck bis Ende des Zeichendurchgangs                     13.919 ms    13.919 ms   10.690 ms    7.033 ms   15.379 ms    100.0 %   0.92 Bilder       >= 95 % im Bild   gehalten in allen 1 Runden
+L2 — Pruefordner A: erste Bildschirmseite (Kernanteil, kopflos)     14.530 ms    14.530 ms   12.633 ms   11.900 ms   15.179 ms          -             -         p95 <= 100 ms   gehalten in allen 1 Runden
+L3 — Pruefordner A: vollstaendig gelesen und sortiert (kopflos, warm)    55.276 ms    55.276 ms   49.128 ms   45.157 ms   55.586 ms          -             -         p95 <= 400 ms   gehalten in allen 1 Runden
+L4 — Prozessstart bis bedienbare Pruefsitzung (warm)               390.958 ms   390.958 ms  381.362 ms  375.480 ms  466.537 ms          -             -        p95 <= 1000 ms   gehalten in allen 1 Runden
+L5 — Wechsel auf den verdeckten Tab (Ordner bereits gelesen)        34.908 ms    34.908 ms   30.198 ms   23.161 ms   37.970 ms          -             -          p95 <= 50 ms   gehalten in allen 1 Runden
+L5 — Wechsel des aktiven Dateifensters                              16.581 ms    16.581 ms    8.987 ms    3.399 ms   16.602 ms          -             -          p95 <= 50 ms   gehalten in allen 1 Runden
+L6 — Einstieg in den Unterordner mit 1.000 Eintraegen               46.178 ms    46.178 ms   23.980 ms   21.434 ms   46.585 ms          -             -         p95 <= 100 ms   gehalten in allen 1 Runden
+L7 — Vorschau des ausgewaehlten Eintrags sichtbar                   33.993 ms    33.993 ms   27.551 ms   20.955 ms   35.472 ms          -             -         p95 <= 100 ms   gehalten in allen 1 Runden
+L8 — Kopie gestartet bis Fortschritt in der Statuszeile            167.330 ms   167.330 ms  159.181 ms  154.300 ms  168.519 ms          -             -         p95 <= 200 ms   gehalten in allen 1 Runden
+L9 — Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs    19.962 ms    19.962 ms   11.471 ms    0.868 ms   20.855 ms     85.0 %   1.25 Bilder  >= 65 %, <= 2 Bilder   gehalten in allen 1 Runden
+L10 — 100.000 Eintraege: erste Bildschirmseite (Kernanteil, kopflos)    13.122 ms    13.122 ms   12.884 ms   10.699 ms   16.405 ms          -             -         p95 <= 100 ms   gehalten in allen 1 Runden
+L10 — 100.000 Eintraege: vollstaendig gelesen (kopflos, warm)      499.685 ms   499.685 ms  486.616 ms  406.912 ms  500.638 ms          -             -        p95 <= 4000 ms   gehalten in allen 1 Runden
+
+Urteil: alle zehn Zusagen halten ihr Mass in jeder Runde.
+
+Der Anteil im naechsten Bild, Runde fuer Runde
+---------------------------------------------
+Eine Eingabe erreicht ihr naechstes Bild, wenn ihre Spanne hoechstens eine
+Bildlaenge betraegt, hier 16.667 ms. Wie viel Prozent das sein muessen und
+ob eine Obergrenze je Einzelwert danebensteht, nennt die Spalte
+"Abnahme nach". Die Zeile "hoechstwert" traegt den groessten Einzelwert
+der Runde in Bildlaengen; wo eine Obergrenze gilt, entscheidet sie mit.
+Gehalten heisst in jeder Runde gehalten, und zwar in beiden Haelften.
+L1      Anteil         100.0 % (20/20)
+L1      hoechstwert        0.92 Bilder
+L9      Anteil          85.0 % (17/20)
+L9      hoechstwert        1.25 Bilder
+
+Einzelwerte
+-----------
+L1 (Tastendruck bis Ende des Zeichendurchgangs):
+  Runde 1:
+    11.168 ms  10.823 ms  10.467 ms  13.520 ms  13.919 ms
+    10.609 ms  10.101 ms  12.232 ms  7.139 ms  12.918 ms
+    10.730 ms  15.379 ms  7.033 ms  10.650 ms  10.541 ms
+    9.788 ms  10.306 ms  13.750 ms  11.361 ms  10.608 ms
+L2 (Pruefordner A: erste Bildschirmseite (Kernanteil, kopflos)):
+  Runde 1:
+    15.179 ms  14.166 ms  13.753 ms  13.276 ms  13.019 ms
+    11.954 ms  12.035 ms  14.530 ms  13.801 ms  12.015 ms
+    14.384 ms  12.241 ms  12.248 ms  12.039 ms  11.900 ms
+    11.940 ms  11.953 ms  12.113 ms  13.985 ms  14.340 ms
+L3 (Pruefordner A: vollstaendig gelesen und sortiert (kopflos, warm)):
+  Runde 1:
+    55.276 ms  53.782 ms  49.243 ms  51.573 ms  46.637 ms
+    45.474 ms  49.373 ms  54.447 ms  49.012 ms  55.586 ms
+    49.676 ms  46.463 ms  46.245 ms  45.451 ms  45.157 ms
+    46.021 ms  45.559 ms  48.300 ms  52.159 ms  54.227 ms
+L4 (Prozessstart bis bedienbare Pruefsitzung (warm)):
+  Runde 1:
+    390.958 ms  380.401 ms  386.848 ms  386.561 ms  383.644 ms
+    379.700 ms  383.212 ms  381.168 ms  381.555 ms  378.337 ms
+    375.480 ms  377.333 ms  381.777 ms  381.142 ms  466.537 ms
+    377.907 ms  380.621 ms  387.109 ms  379.135 ms  382.915 ms
+L5 (Wechsel auf den verdeckten Tab (Ordner bereits gelesen)):
+  Runde 1:
+    37.970 ms  23.161 ms  28.396 ms  26.634 ms  29.313 ms
+    25.380 ms  30.578 ms  24.398 ms  26.245 ms  30.854 ms
+    32.616 ms  29.761 ms  34.908 ms  30.473 ms  33.692 ms
+    28.959 ms  33.624 ms  29.922 ms  33.934 ms  31.179 ms
+L5 (Wechsel des aktiven Dateifensters):
+  Runde 1:
+    12.614 ms  6.497 ms  14.618 ms  8.386 ms  7.773 ms
+    10.974 ms  13.437 ms  16.581 ms  3.685 ms  13.463 ms
+    6.867 ms  16.559 ms  9.588 ms  3.399 ms  13.342 ms
+    7.169 ms  16.602 ms  3.928 ms  4.471 ms  8.351 ms
+L6 (Einstieg in den Unterordner mit 1.000 Eintraegen):
+  Runde 1:
+    22.373 ms  45.263 ms  46.585 ms  22.920 ms  43.916 ms
+    44.108 ms  43.071 ms  21.769 ms  24.299 ms  22.719 ms
+    21.434 ms  46.178 ms  22.601 ms  23.169 ms  22.161 ms
+    44.992 ms  44.726 ms  43.938 ms  23.660 ms  21.821 ms
+L7 (Vorschau des ausgewaehlten Eintrags sichtbar):
+  Runde 1:
+    32.255 ms  26.809 ms  33.993 ms  27.258 ms  29.799 ms
+    28.197 ms  21.873 ms  31.298 ms  26.148 ms  35.472 ms
+    29.134 ms  24.381 ms  27.844 ms  20.955 ms  33.085 ms
+    26.155 ms  26.954 ms  30.731 ms  22.998 ms  24.741 ms
+L8 (Kopie gestartet bis Fortschritt in der Statuszeile):
+  Runde 1:
+    155.461 ms  154.300 ms  166.814 ms  156.848 ms  161.044 ms
+    155.429 ms  158.659 ms  163.587 ms  158.991 ms  167.133 ms
+    155.717 ms  168.519 ms  159.961 ms  155.268 ms  161.869 ms
+    157.817 ms  167.330 ms  163.025 ms  159.371 ms  157.376 ms
+L9 (Tastendruck waehrend laufender Kopie, bis Ende des Zeichendurchgangs):
+  Runde 1:
+    0.868 ms  10.389 ms  7.106 ms  13.275 ms  1.370 ms
+    12.553 ms  19.300 ms  3.914 ms  19.962 ms  5.885 ms
+    16.290 ms  8.917 ms  20.855 ms  16.157 ms  1.578 ms
+    13.806 ms  7.390 ms  3.370 ms  14.194 ms  14.389 ms
+L10 (100.000 Eintraege: erste Bildschirmseite (Kernanteil, kopflos)):
+  Runde 1:
+    16.405 ms  13.122 ms  12.908 ms  12.900 ms  12.934 ms
+    12.878 ms  12.890 ms  12.767 ms  13.088 ms  12.763 ms
+    12.902 ms  13.051 ms  12.909 ms  12.755 ms  11.867 ms
+    10.824 ms  10.699 ms  11.123 ms  10.931 ms  12.089 ms
+L10 (100.000 Eintraege: vollstaendig gelesen (kopflos, warm)):
+  Runde 1:
+    500.638 ms  489.726 ms  495.903 ms  499.685 ms  490.108 ms
+    492.212 ms  484.000 ms  488.859 ms  484.372 ms  488.905 ms
+    494.846 ms  484.195 ms  490.105 ms  440.667 ms  414.035 ms
+    417.379 ms  412.617 ms  409.030 ms  415.932 ms  406.912 ms
+
+Lesart und Einschraenkungen
+---------------------------
+**L1 ist die Spanne vom Zeitstempel des Tastenereignisses bis zum Ende des
+Zeichendurchgangs, der die Aenderung traegt — keine Bildschirmmessung.** Eine
+Bildgrenze ist der Zeitpunkt, an dem das System sein naechstes Bild
+vorbereitet, nicht der, an dem ein Pixel leuchtet; aus dem eigenen Prozess
+heraus ist der zweite nicht feststellbar. Dasselbe Ende gilt fuer L5, L6, L7,
+L8 und L9: ein Messweg, kein zweiter daneben.
+
+L1, L5, L6, L7, L8 und L9 sind auf der Pruefsitzung im laufenden Buendel
+gemessen, mit synthetischen Tastenereignissen ueber die eigene
+Ereignisschlange (postEvent:atStart:), die denselben Weg gehen wie ein
+koerperlicher Druck. Der Ausloeser haengt an einem Zeitgeber von 97 ms, keinem
+Vielfachen der Bildlaenge, damit der Druckzeitpunkt ueber die Wiederholungen
+durch das Bild wandert.
+
+**L2, L3 und L10 stammen aus der kopflosen Strecke aus Schritt 3** und sind
+mit diesem Bericht zusammengefuehrt. Fuer L2 und die erste Bildschirmseite von
+L10 ist das der Anteil des Kerns, ohne das Zeichnen; was das Zeichnen dazulegt,
+hat die Fruehmessung aus Schritt 8 am Durchstich gemessen. L3 und das
+vollstaendige Lesen von L10 enden im Kern, ihre Zahlen sind vollstaendig.
+
+**L4 ist warm gemessen, C8 sagt Kaltstart.** purge braucht Rechte, die dieser
+Lauf nicht hat; die Zahl ist eine Untergrenze der Zusage. Gemessen ist der
+Prozessstart bis zur bedienbaren Pruefsitzung: beide sichtbaren Tabs zeigen
+ihre erste Bildschirmseite, die Tastatur reagiert. Die Sitzung kommt aus
+session.toml, geschrieben vom Sitzungslauf davor.
+
+**L5 ist in beiden Faellen mit bereits gelesenen Zielordnern gemessen** (ein
+ungemessener Wechsel davor waermt sie): das ist der Regelfall, den C8 nennt,
+weil KRK nach dem Erreichen der bedienbaren Oberflaeche weiterliest. Ende ist
+die bedienbare erste Bildschirmseite des Ziels; das vollstaendige Lesen fiele
+unter L2, L3 beziehungsweise L10.
+
+**L8 misst den Weg wie L1, L5, L6 und L7**: vom F5-Ereignis bis zum Ende des
+Zeichendurchgangs, mit dem die Vorgangsanzeige in der Statuszeile steht. Die
+Kopie laeuft auf Pruefordner A mit allen Eintraegen markiert, auf demselben
+APFS-Datentraeger; nach der L9-Eingabe wird sie abgebrochen und das
+Kopierziel geleert, damit jede Wiederholung dasselbe misst. L9 zaehlt den
+Anteil der Eingaben im naechsten Bild, waehrend die Kopie laeuft. Den Messweg
+teilt es mit L1, die Schwelle seit dem 260807-0832 nicht mehr: L9 fordert 65
+statt 95 Prozent im ersten Bild und dazu, dass keine einzige Eingabe ueber
+zwei Bildlaengen liegt, also spaetestens das zweite Bild erreicht. Der Anteil
+ist an einem Tag zweimal gesenkt worden, am 260807-0832 von 95 auf 85 und am
+260807-1900 von 85 auf 65, beide Male auf den zuletzt gemessenen Boden. Warum
+die Anwendung seit dem 260805 langsamer geworden ist, beantwortet das nicht.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert: bei
+zwanzig Laeufen der neunzehnte der sortierten Reihe. Eine Zusage gilt nur als
+gehalten, wenn sie es in jeder Runde tut.
