@@ -773,7 +773,7 @@ impl Editorbereich {
 
     /// Ob der Editor Aenderungen haelt, die nicht in der Datei stehen (C4).
     ///
-    /// Die Frage der vier Anlaesse aus C4: der Anwendungsdelegierte stellt sie,
+    /// Die Frage der drei Anlaesse aus C4: der Anwendungsdelegierte stellt sie,
     /// bevor er einen Anlass ausfuehrt, der den Stand verloere. Sie geht an das
     /// Modell und wird hier nicht aus der Textflaeche beantwortet.
     pub fn hat_ungesicherten_stand(&self) -> bool {

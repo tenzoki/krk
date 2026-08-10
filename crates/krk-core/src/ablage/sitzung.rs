@@ -250,7 +250,7 @@ pub struct Sitzung {
     ///
     /// **Der Pfad und sonst nichts.** Weder der bearbeitete Stand noch die
     /// Abweichungsmarke gehoeren hierher: die getaktete Sitzungssicherung fragt
-    /// nichts und traegt den ungesicherten Stand nicht mit (achtes
+    /// nichts und traegt den ungesicherten Stand nicht mit (siebtes
     /// Abnahmekriterium von C4 der Editor-Runde, Datensatz
     /// `260807-2147_*_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md`).
     /// Der Preis steht dort und wird nicht verschwiegen: bei einem Absturz ist

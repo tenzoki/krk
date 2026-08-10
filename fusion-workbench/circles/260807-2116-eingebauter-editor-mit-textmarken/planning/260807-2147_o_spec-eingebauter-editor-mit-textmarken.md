@@ -35,20 +35,23 @@ stateDiagram-v2
   [*] --> Vorschau
   Vorschau --> Editor: F4 im Dateifenster, oder Übergang aus der Vorschau
   Nichts --> Editor: F4 im Dateifenster
-  Editor --> Vorschau: Editor schließen oder Vorschau einblenden, wenn nichts Ungesichertes offen ist
+  Editor --> Vorschau: Editor schließen, wenn nichts Ungesichertes offen ist
+  Editor --> Vorschau: Vorschau einblenden
   Editor --> Nichts: Editor schließen bei ausgeblendeter Vorschau, wenn nichts Ungesichertes offen ist
   Vorschau --> Nichts: Vorschau ausblenden
   Nichts --> Vorschau: Vorschau einblenden
 
   note right of Editor
-    Steht ungesicherter Stand offen, geht die Nachfrage aus C4 voran.
-    Antwortet der Nutzer mit abbrechen, unterbleibt der Übergang.
+    Vor dem Schließen geht die Nachfrage aus C4 voran, sobald
+    ungesicherter Stand offen steht. Antwortet der Nutzer mit
+    abbrechen, unterbleibt der Übergang. Das Einblenden der
+    Vorschau fragt nicht: der verdrängte Editor behält seinen Stand.
   end note
 ```
 
 Der Zustand `Nichts` ist die dritte Möglichkeit und keine Auslassung: C7 der Runde 1 sagt zu, dass sich jeder Randbereich ausblenden lässt, und die beiden Dateifenster nehmen den frei werdenden Platz.
 
-Die beiden Kanten aus dem Zustand `Editor` heraus tragen einen Vorbehalt, die übrigen fünf nicht. Der Grund ist, dass allein sie einen Stand verlieren können; die vollständige Regel dazu steht unten im Zustandsbild von C4.
+Die beiden Kanten, die den Editor schließen, tragen einen Vorbehalt, die übrigen sechs nicht. Der Grund ist, dass allein sie einen Stand verlieren können; die vollständige Regel dazu steht unten im Zustandsbild von C4. Das Einblenden der Vorschau steht seit dem 260810 als eigene Kante ohne Vorbehalt daneben, weil es den Editor zwar von der Fläche nimmt, seinen Stand aber nicht anfasst (`decisions/260810-0021_a_was-verwirft-verwerfen-wenn-die-vorschau-den-editor-nur-verdraengt.md`).
 
 ### Die eine Lesezeichenliste mit zwei Sorten
 
@@ -104,9 +107,9 @@ flowchart TD
 
 Zwei Ausgänge tragen verschiedene Namen für verschiedene Sachen. `Ungültig` heißt allein, dass die Datei fehlt, und wird in der Leiste angezeigt. `Abgewiesen` heißt, dass die Datei da ist, der Editor sie aber nach C2 nicht annimmt, etwa weil sie inzwischen über die Größengrenze gewachsen ist; die Marke bleibt dabei gültig, weil sich an ihr nichts geändert hat.
 
-### Der ungesicherte Stand und die vier Anlässe der Nachfrage
+### Der ungesicherte Stand und die drei Anlässe der Nachfrage
 
-Der Editor ist der einzige Bereich in KRK, der einen Zustand hält, den ein Schließen verlieren kann. C4 trägt dafür acht Abnahmekriterien; dieses Bild zeigt, wie sie zusammenhängen, und macht prüfbar, ob die Fallunterscheidung vollständig ist:
+Der Editor ist der einzige Bereich in KRK, der einen Zustand hält, den ein Schließen verlieren kann. C4 trägt dafür neun Abnahmekriterien; dieses Bild zeigt, wie sie zusammenhängen, und macht prüfbar, ob die Fallunterscheidung vollständig ist:
 
 ```mermaid
 stateDiagram-v2
@@ -120,8 +123,8 @@ stateDiagram-v2
   Rein --> Offen: tippen oder ersetzen
   Offen --> Rein: sichern gelingt
   Offen --> Offen: sichern scheitert, Grund in der Statuszeile, der Stand bleibt
-  Offen --> Frage: einer der vier Anlässe
-  Rein --> [*]: einer der vier Anlässe, ohne Nachfrage
+  Offen --> Frage: einer der drei Anlässe
+  Rein --> [*]: einer der drei Anlässe, ohne Nachfrage
   Frage --> Rein: sichern, und das Sichern gelingt
   Frage --> [*]: verwerfen, der Anlass wird ausgeführt
   Frage --> Offen: abbrechen, oder das Sichern scheitert
@@ -131,9 +134,10 @@ stateDiagram-v2
   Fremd --> Offen: den eigenen Stand behalten
 
   note right of Frage
-    Vier Anlässe: Editor schließen, Anwendung beenden,
-    andere Datei aufnehmen, Vorschau einblenden.
-    Die getaktete Sitzungssicherung ist keiner.
+    Drei Anlässe: Editor schließen, Anwendung beenden,
+    andere Datei aufnehmen. Das Einblenden der Vorschau
+    ist seit dem 260810 keiner, die getaktete
+    Sitzungssicherung war nie einer.
   end note
 ```
 
@@ -274,7 +278,7 @@ Der Knoten `Das aktive Dateifenster` steht mit zwei Kanten darin, und beide sind
 
 ### C4: Bearbeiten, Sichern und die Nachfrage bei ungesicherten Änderungen
 
-**Beschreibung:** Der Editor ist der erste Bereich in KRK, der einen Zustand hält, den ein Schließen verlieren kann. Ein Befehl sichert die Datei. Steht ungesicherter Stand offen, fragt KRK an vier Anlässen nach und lässt die Wahl zwischen sichern, verwerfen und abbrechen.
+**Beschreibung:** Der Editor ist der erste Bereich in KRK, der einen Zustand hält, den ein Schließen verlieren kann. Ein Befehl sichert die Datei. Steht ungesicherter Stand offen, fragt KRK an drei Anlässen nach und lässt die Wahl zwischen sichern, verwerfen und abbrechen.
 
 **Abnahmekriterien:**
 - [ ] Ein Tastenbefehl schreibt den Stand des Editors in die Datei. Danach meldet der Editor keine ungesicherten Änderungen mehr.
@@ -282,7 +286,6 @@ Der Knoten `Das aktive Dateifenster` steht mit zwei Kanten darin, und beide sind
 - [ ] Wird der Editor mit ungesicherten Änderungen geschlossen, erscheint eine Nachfrage mit drei Wahlmöglichkeiten: sichern, verwerfen, abbrechen. "Abbrechen" lässt den Editor offen und die Änderungen stehen.
 - [ ] Dieselbe Nachfrage erscheint, wenn die Anwendung mit ungesicherten Änderungen beendet wird. "Abbrechen" hält das Beenden an, und KRK läuft weiter.
 - [ ] Dieselbe Nachfrage erscheint, wenn der Editor über einen der beiden Einstiege aus C2 eine andere Datei aufnehmen soll.
-- [ ] Dieselbe Nachfrage erscheint, wenn die Vorschau eingeblendet wird und der Editor dadurch nach C1 verschwindet.
 - [ ] Die getaktete Sitzungssicherung fragt nichts und hält die Anwendung nicht an. Sie schreibt weiterhin höchstens einmal je zwei Sekunden und trägt den ungesicherten Stand des Editors nicht mit.
 - [ ] Die Sitzung hält fest, welche Datei der Editor offen hat, und stellt sie beim nächsten Start wieder her, so wie C7 der Runde 1 es für die Tabs der Dateifenster zusagt. Der ungesicherte Stand gehört nicht dazu.
 - [ ] Wird die geöffnete Datei außerhalb von KRK geändert, während der Editor sie hält, meldet KRK das und überschreibt die fremde Änderung nicht ohne Zutun des Nutzers.
@@ -290,9 +293,11 @@ Der Knoten `Das aktive Dateifenster` steht mit zwei Kanten darin, und beide sind
 
 **Getroffene Festlegungen:**
 - **Der Nutzer hat am 260807-2139 die Nachfrage gewählt und drei Anlässe genannt:** das Schließen des Editors, das Beenden der Anwendung und die Sitzungssicherung in `session.toml`.
-- **Der dritte Anlass fällt am 260808-0017 mit dem zweiten zusammen** (`decisions/260807-2147_a_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md`). Die Sitzung wird beim Beenden ein letztes Mal geschrieben, und dort steht die Nachfrage ohnehin. Die getakteten Zwischenschreibvorgänge von höchstens einem je zwei Sekunden (`SITZUNGSTAKT` in `crates/krk-core/src/ablage/sitzung.rs:33`) fragen nichts; sie halten allein fest, welche Datei offen ist. Aus drei genannten Anlässen werden damit zwei, und mit den beiden abgeleiteten unten sind es vier.
+- **Der dritte Anlass fällt am 260808-0017 mit dem zweiten zusammen** (`decisions/260807-2147_a_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md`). Die Sitzung wird beim Beenden ein letztes Mal geschrieben, und dort steht die Nachfrage ohnehin. Die getakteten Zwischenschreibvorgänge von höchstens einem je zwei Sekunden (`SITZUNGSTAKT` in `crates/krk-core/src/ablage/sitzung.rs:33`) fragen nichts; sie halten allein fest, welche Datei offen ist. Aus drei genannten Anlässen werden damit zwei, und mit dem einen abgeleiteten unten sind es drei.
 - **Der Preis dieser Antwort ist angenommen und benannt.** Bei einem Absturz oder einem erzwungenen Beenden ist der ungesicherte Stand verloren, ohne dass jemand gefragt hätte. Eine Absturzsicherung, die den Pufferinhalt mitsichert, steht unten unter `## Ausdrücklich außerhalb dieser Runde`.
-- **Zwei Anlässe sind hinzugekommen, die der Nutzer nicht genannt hat, und sie folgen aus seinen eigenen Festlegungen.** Der Wechsel auf eine andere Datei folgt daraus, dass der Editor eine Datei hält; das Verdrängen durch die Vorschau folgt aus dem gegenseitigen Ausschluss in C1. Beide verlieren denselben Stand wie das Schließen und tragen deshalb dieselbe Nachfrage. Ein dritter Fall daneben mit eigener Regel entstünde nur, wenn man sie ausließe.
+- **Ein Anlass ist hinzugekommen, den der Nutzer nicht genannt hat, und er folgt aus seiner eigenen Festlegung.** Der Wechsel auf eine andere Datei folgt daraus, dass der Editor eine Datei hält. Er verliert denselben Stand wie das Schließen und trägt deshalb dieselbe Nachfrage. Ein Fall daneben mit eigener Regel entstünde nur, wenn man ihn ausließe.
+- **Ein zweiter abgeleiteter Anlass stand hier bis zum 260810 und ist gefallen.** Das sechste Abnahmekriterium verlangte die Nachfrage auch vor dem Einblenden der Vorschau, mit der Begründung, das Verdrängen durch die Vorschau verliere denselben Stand wie das Schließen. Am gebauten Code stimmt diese Begründung nicht: ein Wechsel der Sichtbarkeit setzt `hidden` an den Ansichten und fasst das Editormodell nicht an. Der verdrängte Editor hält seinen Stand weiter, und "Verwerfen" verwarf an dieser einen Stelle nichts. Der Nutzer hat den Anlass am 260810-0250 fallen lassen; der Datensatz mit den drei geprüften Möglichkeiten ist `decisions/260810-0021_a_was-verwirft-verwerfen-wenn-die-vorschau-den-editor-nur-verdraengt.md`. Das sechste Abnahmekriterium ist mit ihm gestrichen, und die Nachfrage steht seither genau dort, wo etwas auf dem Spiel steht.
+- **Die Nummern der Abnahmekriterien haben sich dabei um eins verschoben.** C4 trägt seit dem 260810 neun statt zehn. Wer in einem Dokument von vor diesem Tag das siebte bis zehnte Abnahmekriterium von C4 zitiert findet, liest es hier als das sechste bis neunte. Der Code ist nachgezogen.
 - **Das Beenden hat heute keinen Ort für eine Nachfrage.** `crates/krk-ui/src/appkit/anwendung.rs:1162` hält fest, dass es kein `applicationShouldTerminate:` gibt und die Aufrufer von `beenden` nicht mit einer Rückkehr rechnen. Dass die Nachfrage beim Beenden greift, ist damit kein Nachziehen an einer bestehenden Stelle, sondern eine neue. Geprüft am Code, nicht angenommen. Weil die Antwort vom 260808-0017 den Anlass Sitzungssicherung in das Beenden hineinzieht, wird diese Stelle zur einzigen, an der ungesicherter Stand vor einem Programmende überhaupt bemerkt wird.
 - **Die Nachfrage ist ein Blatt am Fenster und keine Meldung in der Statuszeile.** Die Runde 1 führt fünf Blätter für Rückfragen, darunter die vor dem endgültigen Löschen, und die Statuszeile trägt Meldungen, auf die niemand antwortet. Vorbelegung nach der bestehenden Ordnung; ein Blatt ist der Ort, an dem KRK auf eine Antwort wartet.
 
@@ -581,13 +586,13 @@ Die Zeilennummern in der Vorschau fehlten, weil die Vorschau zur Runde 1 gehört
 
 Der Fenstertitel fehlte, weil kein Bestandteil der Directive ihn verlangt. Er ist der einzige der vier, der aus keiner der acht bestehenden Fähigkeiten folgt; er kommt aus der Bedienung und nicht aus dem Zuschnitt.
 
-**Was die Erweiterung den Zuschnitt kostet, ist benannt und nicht klein.** Zu acht Fähigkeiten mit sechsundsiebzig Abnahmekriterien kommen drei Fähigkeiten mit einunddreißig hinzu: acht für die Fokusanzeige, zwölf für die Zeilennummern, elf für den Fenstertitel. Zwei der drei fassen Flächen an, die seit der Runde 1 stehen. Der Gegenwert ist, dass die Runde nicht mit einer Anwendung endet, in der der Nutzer raten muss, wo seine Tasten ankommen.
+**Was die Erweiterung den Zuschnitt kostet, ist benannt und nicht klein.** Zu acht Fähigkeiten mit fünfundsiebzig Abnahmekriterien kommen drei Fähigkeiten mit einunddreißig hinzu: acht für die Fokusanzeige, zwölf für die Zeilennummern, elf für den Fenstertitel. Zwei der drei fassen Flächen an, die seit der Runde 1 stehen. Der Gegenwert ist, dass die Runde nicht mit einer Anwendung endet, in der der Nutzer raten muss, wo seine Tasten ankommen.
 
 ## Was die Abnahme mitentscheidet
 
 Drei Punkte gehören zur Abnahme dieses Specs und sind keine der sechs Antworten oben.
 
-**Eine Ableitung des Shapers, die der Nutzer umstoßen kann.** Der gegenseitige Ausschluss von Editor und Vorschau gilt in beide Richtungen (C1). Der Nutzer hat nur die eine Richtung festgelegt, nämlich dass der Editor die Vorschau schließt. Die andere folgt daraus, dass beide sich eine Fläche teilen; ohne sie gäbe es einen Weg, auf dem beide zugleich sichtbar wären. Aus der Ableitung folgt außerdem, dass die Breitenregel unverändert bleibt und dass das Einblenden der Vorschau die Nachfrage aus C4 auslöst. Wer sie umstößt, ändert C1, C4 und das erste Diagramm.
+**Eine Ableitung des Shapers, die der Nutzer umstoßen kann.** Der gegenseitige Ausschluss von Editor und Vorschau gilt in beide Richtungen (C1). Der Nutzer hat nur die eine Richtung festgelegt, nämlich dass der Editor die Vorschau schließt. Die andere folgt daraus, dass beide sich eine Fläche teilen; ohne sie gäbe es einen Weg, auf dem beide zugleich sichtbar wären. Aus der Ableitung folgt außerdem, dass die Breitenregel unverändert bleibt. Die Nachfrage aus C4 folgt nicht mit: sie stand bis zum 260810 auch vor dem Einblenden der Vorschau und ist dort gefallen, weil ein verdrängter Editor seinen Stand behält (siehe die Festlegungen von C4). Wer die Ableitung umstößt, ändert C1 und das erste Diagramm.
 
 **Eine neue offene Frage, die den Plan bindet und keinen Planschritt aufhält.** `decisions/260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md` fragt, was beim Sichern mit Zeilenenden, dem abschließenden Zeilenumbruch und einer Bytefolgenmarke am Dateianfang geschieht. Sie entsteht aus der bindenden Zusage der Antwort vom 260808-0017: jene Zusage regelt das **Lesen** vollständig, und über das **Zurückschreiben** des Teils, den der Nutzer gar nicht angefasst hat, sagt sie nichts. Der Schaden, den die Frage abwendet, ist sichtbar: wer eine Zeile in einer Datei mit Windows-Zeilenenden ändert und ein normalisierendes Sichern bekommt, hat danach eine Änderung in jeder Zeile der Datei. Sie ist vor dem Schritt zu beantworten, der das Sichern baut.
 

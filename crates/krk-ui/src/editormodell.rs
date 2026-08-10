@@ -113,7 +113,7 @@
 //!
 //! **Der Preis steht hier und wird nicht verschwiegen:** wer eine Aenderung
 //! tippt und sie wieder zuruecknimmt, meldet weiterhin ungesicherten Stand und
-//! bekommt an den vier Anlaessen aus C4 die Nachfrage. Der Gegenwert ist, dass
+//! bekommt an den drei Anlaessen aus C4 die Nachfrage. Der Gegenwert ist, dass
 //! die Frage "haelt der Editor ungesicherten Stand" ein Blick auf ein `bool`
 //! ist und kein Vergleich zweier Zeichenketten. Sie wird bei jedem Tastendruck
 //! gestellt, weil die Anzeige aus dem zweiten Abnahmekriterium von C4 an ihr
@@ -133,7 +133,7 @@
 //! ```
 //!
 //! Das ist **kein zweiter Mechanismus**, sondern eine Frage an zwei Momenten;
-//! das neunte Abnahmekriterium von C4 verlangt beides. Der erste meldet, der
+//! das achte Abnahmekriterium von C4 verlangt beides. Der erste meldet, der
 //! zweite verhindert das Ueberschreiben. Warum der erste sich merkt, dass er
 //! gemeldet hat, steht an [`Editormodell::fremdaenderung_melden`]; **ob** er
 //! ueberhaupt gefragt wird, entscheidet [`crate::auffrischung`] und nicht dieses
@@ -169,7 +169,7 @@
 //!
 //! # Was dieses Modul nicht tut
 //!
-//! Es **fragt nicht nach**. Die Nachfrage an den vier Anlaessen aus C4 ist ein
+//! Es **fragt nicht nach**. Die Nachfrage an den drei Anlaessen aus C4 ist ein
 //! Blatt am Fenster, und das Blatt wohnt in `crate::appkit`. Dieses Modul
 //! beantwortet allein, ob es etwas zu fragen gibt
 //! ([`Editormodell::hat_ungesicherten_stand`]), und fuehrt aus, was die
@@ -177,7 +177,7 @@
 //!
 //! # Die gelesene Datei wird zurueckgehalten, statt den Stand zu ueberschreiben
 //!
-//! Einer der vier Anlaesse gehoert diesem Modul trotzdem, und zwar nicht, weil
+//! Einer der drei Anlaesse gehoert diesem Modul trotzdem, und zwar nicht, weil
 //! es fragte, sondern weil allein hier die Reihenfolge einzuhalten ist, die das
 //! elfte Abnahmekriterium von C2 verlangt: **erst die Pruefung, dann die
 //! Nachfrage.** Gelesen und geprueft wird seit S24 auf dem Arbeitsfaden, und wer
@@ -534,7 +534,7 @@ struct Zurueckgehalten {
 ///
 /// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
 /// Das gescheiterte Sichern ist ein eigener Wert und kein Nichts, weil das
-/// zehnte Abnahmekriterium von C4 zwei Sachen zugleich verlangt: den Grund in
+/// neunte Abnahmekriterium von C4 zwei Sachen zugleich verlangt: den Grund in
 /// der Statuszeile und einen Stand, der stehen bleibt. Wer beides in "es hat
 /// nicht geklappt" zusammenzoege, koennte das erste nicht liefern.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -638,7 +638,7 @@ impl Editormodell {
 
     /// Ob der Editor Aenderungen haelt, die nicht in der Datei stehen (C4).
     ///
-    /// Das ist die Frage, die an den vier Anlaessen aus C4 gestellt wird und an
+    /// Das ist die Frage, die an den drei Anlaessen aus C4 gestellt wird und an
     /// der die Anzeige aus dem zweiten Abnahmekriterium haengt. Warum sie eine
     /// Marke liest und keinen Vergleich fuehrt, steht im Modulkopf.
     pub fn hat_ungesicherten_stand(&self) -> bool {
@@ -699,7 +699,7 @@ impl Editormodell {
     /// nichts laedt, und der Aufrufer hat ihn jetzt zu behandeln.
     ///
     /// **Fragt nicht nach, haelt aber zurueck.** Steht ungesicherter Stand
-    /// offen, ist das einer der vier Anlaesse aus C4. Die Nachfrage gehoert
+    /// offen, ist das einer der drei Anlaesse aus C4. Die Nachfrage gehoert
     /// nicht vor diesen Ruf, sondern hinter die Pruefung, die auf dem
     /// Arbeitsfaden laeuft: [`Self::einziehen`] liefert dann
     /// [`Ladeausgang::Zurueckgehalten`], und der Aufrufer fragt. Der Grund und
@@ -937,7 +937,7 @@ impl Editormodell {
     ///
     /// Hat die Datei sich seit dem Oeffnen oder dem letzten Sichern von aussen
     /// geaendert, unterbleibt das Schreiben, und der Grund geht in die
-    /// Statuszeile. Das ist die eine Haelfte des neunten Abnahmekriteriums von
+    /// Statuszeile. Das ist die eine Haelfte des achten Abnahmekriteriums von
     /// C4, die ohne Weiteres zuverlaessig ist: sie fragt in dem Augenblick, in
     /// dem es darauf ankommt, naemlich unmittelbar vor dem Ueberschreiben. Die
     /// andere Haelfte, das Melden im laufenden Betrieb, kommt mit S31.
@@ -1017,7 +1017,7 @@ impl Editormodell {
 
     /// Der Satz ueber eine fremde Aenderung, einmal je Aenderung (C4).
     ///
-    /// **Der erste der beiden Momente aus dem neunten Abnahmekriterium von C4.**
+    /// **Der erste der beiden Momente aus dem achten Abnahmekriterium von C4.**
     /// Der zweite ist [`Self::sichern`], das unmittelbar vor dem Ueberschreiben
     /// dieselbe Frage stellt. Es ist derselbe Vergleich an zwei Stellen und kein
     /// zweiter Mechanismus: dieser meldet, jener verhindert das Ueberschreiben.
@@ -1756,7 +1756,7 @@ mod tests {
         );
     }
 
-    /// Das neunte Abnahmekriterium von C4, an der Stelle, an der der Schaden
+    /// Das achte Abnahmekriterium von C4, an der Stelle, an der der Schaden
     /// entstuende: eine von aussen geaenderte Datei wird nicht ueberschrieben.
     #[test]
     fn eine_von_aussen_geaenderte_datei_wird_nicht_ueberschrieben() {
@@ -2130,7 +2130,7 @@ mod tests {
         assert_eq!(Ansicht::Format.andere(), Ansicht::Roh);
     }
 
-    /// Der erste Moment aus dem neunten Abnahmekriterium von C4: eine fremde
+    /// Der erste Moment aus dem achten Abnahmekriterium von C4: eine fremde
     /// Aenderung meldet sich, und zwar einmal.
     ///
     /// Die Aenderung wird ueber `set_len` und ein Neuschreiben erzeugt, damit

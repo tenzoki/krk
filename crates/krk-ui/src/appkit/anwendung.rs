@@ -221,16 +221,23 @@ const OHNE_BILDSCHIRM: i32 = 3;
 
 /// Ein Vorgang, der den ungesicherten Stand des Editors verlieren wuerde (C4).
 ///
-/// **Die Anlaesse aus C4, als Wert.** Der Spec zaehlt vier auf; fuenf Werte
-/// stehen hier, weil das Einblenden der Vorschau ueber zwei Befehle erreichbar
-/// ist und beide denselben Editor verdraengen.
+/// **Die drei Anlaesse aus C4, als Wert.** Jeder von ihnen verliert den Stand
+/// wirklich: das Schliessen gibt die Datei frei, der Wechsel ersetzt sie, das
+/// Beenden nimmt den ganzen Prozess mit.
+///
+/// **Ein vierter Anlass stand hier bis zum 260810**, das Einblenden der
+/// Vorschau, und er ist mit dem Nutzerentscheid vom 260810-0250 gefallen. Er
+/// verliert nichts: ein Wechsel der Sichtbarkeit setzt `hidden` an den
+/// Ansichten und fasst das [`crate::editormodell::Editormodell`] nicht an, und
+/// so verwarf "Verwerfen" an dieser einen Stelle nichts. Der Datensatz ist
+/// `decisions/260810-0021_*_was-verwirft-verwerfen-wenn-die-vorschau-den-editor-nur-verdraengt.md`.
 ///
 /// **Er steht in keinem Feld.** Der Wert wird in die Schliessung des Blattes
 /// hineinkopiert und faellt mit ihr; siehe
 /// [`Anwendungsdelegierter::nachfrage_zeigen`]. Was er dem Programm bringt, ist
 /// die Erzwingung: [`Anwendungsdelegierter::anlass_ausfuehren`] und
 /// [`Anwendungsdelegierter::anlass_unterbleibt`] sind zwei vollstaendige
-/// Fallunterscheidungen ohne Auffangzweig, und ein sechster Anlass haelt an
+/// Fallunterscheidungen ohne Auffangzweig, und ein vierter Anlass haelt an
 /// beiden den Bau an, statt still den Zweig des Nachbarn zu bekommen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Anlass {
@@ -239,12 +246,6 @@ enum Anlass {
     /// Der Editor nimmt eine andere Datei auf, die schon gelesen und geprueft
     /// ist und auf die Antwort wartet (C2).
     AndereDatei,
-    /// `f3` und `cmd+y`: die Vorschau wird eingeblendet und verdraengt den
-    /// Editor nach C1.
-    VorschauUmschalten,
-    /// `shift+cmd+y`: der Fokusbefehl holt die Vorschau hervor und verdraengt
-    /// den Editor nach C1.
-    VorschauFokus,
     /// KRK wird beendet.
     Beenden,
 }
@@ -571,7 +572,7 @@ define_class!(
         /// KRK soll beendet werden: haelt der Editor ungesicherten Stand,
         /// steht die Nachfrage aus C4 davor.
         ///
-        /// **Der vierte Anlass der Nachfrage, und der einzige, der eine Antwort
+        /// **Der dritte Anlass der Nachfrage, und der einzige, der eine Antwort
         /// an AppKit zurueckgeben muss.** Ein Blatt kehrt sofort zurueck, und
         /// `terminate:` darf nicht auf eine Rueckgabe warten; deshalb
         /// `TerminateLater` und die endgueltige Antwort aus dem Rueckruf ueber
@@ -596,7 +597,7 @@ define_class!(
         /// Rueckruf laeuft **nach** der Zustimmung aus
         /// `applicationShouldTerminate:` und nicht vor ihr. Ein abgebrochenes
         /// Beenden erreicht ihn nie, und die getaktete Sitzungssicherung traegt
-        /// den ungesicherten Stand weiterhin nicht mit; das siebte
+        /// den ungesicherten Stand weiterhin nicht mit; das sechste
         /// Abnahmekriterium von C4 verlangt beides.
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(applicationWillTerminate:))]
@@ -1751,7 +1752,7 @@ impl Anwendungsdelegierter {
     /// Meldet dem Nutzer, dass die Datei des Editors sich von aussen geaendert
     /// hat (C4).
     ///
-    /// **Der erste der beiden Momente aus dem neunten Abnahmekriterium von C4**;
+    /// **Der erste der beiden Momente aus dem achten Abnahmekriterium von C4**;
     /// der zweite steht unmittelbar vor dem Sichern. Beide stellen dieselbe
     /// Frage an dasselbe Modell, und dieser hier stellt sie nur, wenn der
     /// gemeldete Stapel den Ordner der Datei ueberhaupt nennt — die Entscheidung
@@ -2016,9 +2017,11 @@ impl Anwendungsdelegierter {
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
-            // Der dritte Anlass der Nachfrage aus C4 haengt an diesem Befehl:
-            // eine eingeblendete Vorschau nimmt dem Editor nach C1 die Flaeche.
-            Kommando::VorschauUmschalten => self.vorschau_umschalten(),
+            // Ohne Nachfrage, obwohl eine eingeblendete Vorschau dem Editor
+            // nach C1 die Flaeche nimmt: der verdraengte Editor behaelt seinen
+            // Stand. Bis zum 260810 hing hier der dritte Anlass aus C4; die
+            // Begruendung fuer seinen Wegfall steht bei `Anlass`.
+            Kommando::VorschauUmschalten => self.bereich_umschalten(Bereich::Vorschau),
             Kommando::FensterEinblenden => {
                 self.fenster_zeigen();
                 true
@@ -2038,8 +2041,9 @@ impl Anwendungsdelegierter {
             Kommando::FokusLeiste => self.fokus_holen(Fokus::Leiste),
             Kommando::FokusDateifenster => self.fokus_holen(Fokus::Dateifenster),
             // Wie `VorschauUmschalten` daneben: der Fokusbefehl holt seinen
-            // Bereich hervor und verdraengt damit den Editor.
-            Kommando::FokusVorschau => self.fokus_vorschau_holen(),
+            // Bereich hervor und verdraengt damit den Editor, ohne dessen Stand
+            // anzufassen.
+            Kommando::FokusVorschau => self.fokus_holen(Fokus::Vorschau),
             Kommando::FokusEditor => self.fokus_editor_holen(),
             // Der erste der beiden Einstiege in den Editor (C2). Er steht hier
             // und nicht bei `bereichskommando`, obwohl er
@@ -3551,7 +3555,7 @@ impl Anwendungsdelegierter {
     /// **Ein gelungenes Sichern nimmt der Statuszeile keinen anderen Rang
     /// weg**, und ein gescheitertes wirft nichts weg: der Stand bleibt im
     /// Modell stehen, das Abweichungszeichen am Kopf bleibt sichtbar, und der
-    /// Nutzer kann es nach dem Grund erneut versuchen. Das zehnte
+    /// Nutzer kann es nach dem Grund erneut versuchen. Das neunte
     /// Abnahmekriterium von C4 verlangt genau das.
     fn editor_sichern(&self) -> bool {
         if self.ivars().editor.get().is_none() {
@@ -3564,7 +3568,7 @@ impl Anwendungsdelegierter {
     /// Sichert und meldet; liefert, ob der Stand jetzt in der Datei steht.
     ///
     /// **Zwei Aufrufer, eine Fallunterscheidung.** `cmd+s` fragt nicht nach dem
-    /// Rueckgabewert, die Nachfrage aus C4 schon: das zehnte Abnahmekriterium
+    /// Rueckgabewert, die Nachfrage aus C4 schon: das neunte Abnahmekriterium
     /// von C4 verlangt, dass ein Anlass unterbleibt, wenn die Sicherung
     /// gescheitert ist, statt den Stand mitzunehmen. Genau das ist dieser `bool`
     /// — und er ist die eine Stelle, an der der Ausgang gelesen wird; eine
@@ -3719,7 +3723,7 @@ impl Anwendungsdelegierter {
     }
 
     // ------------------------------------------------------------------
-    // Die Nachfrage vor den vier Anlaessen (C4)
+    // Die Nachfrage vor den drei Anlaessen (C4)
     // ------------------------------------------------------------------
 
     /// Ob der Editor Aenderungen haelt, die nicht in seiner Datei stehen (C4).
@@ -3735,11 +3739,12 @@ impl Anwendungsdelegierter {
     /// Beginnt einen der Anlaesse aus C4 und stellt die Nachfrage, falls noetig.
     ///
     /// Der Weg der Anlaesse, deren Vorbedingung allein der ungesicherte Stand
-    /// ist. Zwei gehen an ihm vorbei und haben je einen Grund dafuer: das
-    /// Beenden muss AppKit eine Antwort zurueckgeben und faehrt seinen eigenen
-    /// Vorbehalt in [`Self::beenden_erlauben`]; der Wechsel auf eine andere
-    /// Datei hat seine Vorbedingung schon im Modell geprueft und kommt als
-    /// [`Ladeausgang::Zurueckgehalten`] herein. Beide nehmen danach dieselbe
+    /// ist. Von den dreien geht heute nur das Schliessen des Editors hier
+    /// durch; die beiden anderen gehen vorbei und haben je einen Grund dafuer:
+    /// das Beenden muss AppKit eine Antwort zurueckgeben und faehrt seinen
+    /// eigenen Vorbehalt in [`Self::beenden_erlauben`]; der Wechsel auf eine
+    /// andere Datei hat seine Vorbedingung schon im Modell geprueft und kommt
+    /// als [`Ladeausgang::Zurueckgehalten`] herein. Beide nehmen danach dieselbe
     /// [`Self::nachfrage_zeigen`].
     ///
     /// Liefert, ob der Tastendruck verbraucht ist — was er in beiden Faellen
@@ -3756,7 +3761,7 @@ impl Anwendungsdelegierter {
     /// Zeigt die Nachfrage aus C4 und laesst den Anlass in der Schliessung
     /// mitreisen.
     ///
-    /// **Die eine Aufrufstelle des Blattes**, fuer alle vier Anlaesse. Der
+    /// **Die eine Aufrufstelle des Blattes**, fuer alle drei Anlaesse. Der
     /// Anlass wird in die Schliessung **hineinkopiert** und steht in keinem
     /// Feld: ein Feld, das eine noch nicht ausgefuehrte Absicht ueber den
     /// Rueckruf hinaus haelt, waere die zweite Wahrheit darueber, was gerade
@@ -3798,7 +3803,7 @@ impl Anwendungsdelegierter {
     /// einmal und nicht je Anlass. Bei "sichern" entscheidet der Ausgang des
     /// Schreibens, ob der Anlass laeuft: ein gescheitertes Sichern hat seinen
     /// Grund schon gemeldet, und der Anlass unterbleibt, statt den Stand
-    /// mitzunehmen (zehntes Abnahmekriterium von C4).
+    /// mitzunehmen (neuntes Abnahmekriterium von C4).
     fn nachfrage_beantworten(&self, anlass: Anlass, antwort: Antwort) {
         match antwort {
             Antwort::Sichern => {
@@ -3816,7 +3821,7 @@ impl Anwendungsdelegierter {
     /// Fuehrt den Anlass aus, nachdem er zulaessig geworden ist (C4).
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig; ein
-    /// sechster Wert haelt hier und in [`Self::anlass_unterbleibt`] den Bau an
+    /// vierter Wert haelt hier und in [`Self::anlass_unterbleibt`] den Bau an
     /// und erzwingt beide Antworten.
     fn anlass_ausfuehren(&self, anlass: Anlass) {
         match anlass {
@@ -3825,12 +3830,6 @@ impl Anwendungsdelegierter {
                 if let Some(editor) = self.ivars().editor.get() {
                     editor.zurueckgehaltenes_uebernehmen();
                 }
-            }
-            Anlass::VorschauUmschalten => {
-                self.bereich_umschalten(Bereich::Vorschau);
-            }
-            Anlass::VorschauFokus => {
-                self.fokus_holen(Fokus::Vorschau);
             }
             // Der Nachzug unten geht diesen Anlass nichts an: nach der
             // Zustimmung legt niemand mehr eine Ansicht aus, und
@@ -3853,13 +3852,14 @@ impl Anwendungsdelegierter {
     ///
     /// "Abbrechen" und das gescheiterte Sichern gehen denselben Weg: der
     /// gehaltene Stand bleibt mit seiner Abweichungsmarke stehen, und der Editor
-    /// bleibt, wo er ist. Zwei Anlaesse haben darueber hinaus etwas abzulegen.
+    /// bleibt, wo er ist. Zwei der drei Anlaesse haben darueber hinaus etwas
+    /// abzulegen.
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
     fn anlass_unterbleibt(&self, anlass: Anlass) {
         match anlass {
             // Nichts zu tun: der Editor steht, wie er stand.
-            Anlass::EditorSchliessen | Anlass::VorschauUmschalten | Anlass::VorschauFokus => {}
+            Anlass::EditorSchliessen => {}
             // Die gelesene Datei wartet nicht weiter: sie kostete sonst bis zu
             // 16 MB Arbeitsspeicher fuer einen Wechsel, den der Nutzer eben
             // abgelehnt hat. Mit ihr faellt die vorgemerkte Stelle einer
@@ -3904,43 +3904,6 @@ impl Anwendungsdelegierter {
         self.titel_nachziehen(self.fokus());
     }
 
-    /// Ob ein Einblenden der Vorschau den Editor jetzt von der Flaeche naehme
-    /// (C1).
-    ///
-    /// Die Vorbedingung des dritten Anlasses, und sie ist eine Frage an die
-    /// Sichtbarkeit und nicht an den Befehl: verdraengt wird nur ein sichtbarer
-    /// Editor, und nur, wenn die Vorschau dabei sichtbar **wird**. Wer die
-    /// Vorschau ausblendet, verdraengt nichts.
-    fn vorschau_verdraengt_den_editor(&self) -> bool {
-        let modell = self.ivars().modell.borrow();
-        modell.sichtbar(Bereich::Editor) && !modell.sichtbar(Bereich::Vorschau)
-    }
-
-    /// `f3` und `cmd+y`: die Vorschau ein- oder ausblenden (C7).
-    ///
-    /// Der dritte Anlass der Nachfrage aus C4 haengt hier, weil das Einblenden
-    /// der Vorschau den Editor nach C1 von der Flaeche nimmt.
-    fn vorschau_umschalten(&self) -> bool {
-        if self.vorschau_verdraengt_den_editor() {
-            return self.anlass_beginnen(Anlass::VorschauUmschalten);
-        }
-        self.bereich_umschalten(Bereich::Vorschau)
-    }
-
-    /// `shift+cmd+y`: den Fokus in die Vorschau setzen (C5).
-    ///
-    /// **Derselbe Anlass wie `f3`, und deshalb steht die Nachfrage auch hier.**
-    /// Der Fokusbefehl holt seinen Bereich seit dem Nutzerentscheid vom 260807
-    /// hervor, und ein hervorgeholtes Vorschaufenster verdraengt den Editor
-    /// genauso wie ein umgeschaltetes. Ihn auszulassen hiesse, denselben Verlust
-    /// auf dem einen Weg abzufragen und auf dem anderen nicht.
-    fn fokus_vorschau_holen(&self) -> bool {
-        if self.vorschau_verdraengt_den_editor() {
-            return self.anlass_beginnen(Anlass::VorschauFokus);
-        }
-        self.fokus_holen(Fokus::Vorschau)
-    }
-
     /// `opt+cmd+e`: den Editor schliessen (C1, C4).
     ///
     /// Der erste Anlass der Nachfrage. Der Befehl traegt
@@ -3975,7 +3938,7 @@ impl Anwendungsdelegierter {
 
     /// Ob KRK sich jetzt beenden darf (C4).
     ///
-    /// Der vierte Anlass. Drei Wege enden mit `TerminateNow`, und keiner davon
+    /// Der dritte Anlass. Drei Wege enden mit `TerminateNow`, und keiner davon
     /// verliert etwas: das Beenden ohne Tastenabgriff, ein Editor ohne
     /// ungesicherten Stand und der Fall, dass sich kein Blatt zeigen laesst,
     /// weil Fenster oder Editor fehlen. Im letzten Fall gaebe es niemanden, der

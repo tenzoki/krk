@@ -5,7 +5,7 @@
 //! sichern, verwerfen, abbrechen. Das dritte Abnahmekriterium von C4 nennt sie
 //! namentlich und in dieser Reihenfolge.
 //!
-//! # Dieses Blatt rechnet nichts und kennt keinen der vier Anlaesse
+//! # Dieses Blatt rechnet nichts und kennt keinen der drei Anlaesse
 //!
 //! Es fragt und antwortet. Welche Handlung auf die Antwort folgt, traegt die
 //! Schliessung, die der Aufrufer mitgibt — dasselbe Muster, das jeder
@@ -14,9 +14,9 @@
 //! reist in der Schliessung mit und faellt mit ihr.
 //!
 //! Deshalb kommt die Antwort auch als [`Antwort`] heraus und nicht als die
-//! Stelle der gedrueckten Schaltflaeche. Ein `usize` zwaenge jeden der vier
-//! Aufrufer, die Reihenfolge der Schaltflaechen ein zweites Mal zu kennen, und
-//! die erste Abweichung zwischen zwei von ihnen faende keine Pruefung.
+//! Stelle der gedrueckten Schaltflaeche. Ein `usize` zwaenge jeden Aufrufer,
+//! die Reihenfolge der Schaltflaechen ein zweites Mal zu kennen, und die erste
+//! Abweichung zwischen zwei von ihnen faende keine Pruefung.
 //!
 //! # Warum die Eingabetaste auf "Sichern" liegt
 //!
@@ -46,7 +46,7 @@ use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
 pub enum Antwort {
     /// Zuerst schreiben, dann den Anlass ausfuehren.
     ///
-    /// Scheitert das Schreiben, unterbleibt der Anlass; das zehnte
+    /// Scheitert das Schreiben, unterbleibt der Anlass; das neunte
     /// Abnahmekriterium von C4 verlangt es, und der Aufrufer sieht es am
     /// Ausgang des Sicherns.
     Sichern,

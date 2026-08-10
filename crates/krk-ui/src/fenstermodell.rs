@@ -396,9 +396,12 @@ impl Fenstermodell {
     /// diese Funktion und erbt ihn damit, statt ihn ein zweites Mal
     /// aufzuschreiben. Welches Paar es ist, sagt [`Bereich::teilt_flaeche_mit`].
     ///
-    /// Die Nachfrage vor dem Verdraengen eines Editors mit ungesichertem Stand
-    /// gehoert dem Aufrufer und kommt mit ihrem eigenen Schritt; diese Funktion
-    /// baut die Sichtbarkeit.
+    /// **Ein verdraengter Editor verliert nichts.** Der Wechsel der
+    /// Sichtbarkeit setzt `hidden` an den Ansichten und fasst das
+    /// [`crate::editormodell::Editormodell`] nicht an; der gehaltene Stand steht
+    /// hinterher unveraendert da. Deshalb geht dem Einblenden der Vorschau seit
+    /// dem Nutzerentscheid vom 260810-0250 keine Nachfrage aus C4 mehr voraus
+    /// (`decisions/260810-0021_*_was-verwirft-verwerfen-wenn-die-vorschau-den-editor-nur-verdraengt.md`).
     pub fn umschalten(&mut self, bereich: Bereich) -> bool {
         let jetzt_sichtbar = !self.sichtbar(bereich);
         match bereich {
