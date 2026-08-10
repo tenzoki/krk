@@ -120,3 +120,54 @@ womit `versatz_nach_der_wandlung` ohne die Eingangskopie auskommt. Die drei
 weiteren Aufrufer, die dieser Datensatz nennt, sind dabei mitzuziehen; der erste
 (`datei::einlesen:333`) reicht die Funktion als Wert an `Option::map` und ist an
 ihre heutige Signatur gebunden.
+
+---
+Resolved: Der `&str`-Helfer darunter ist gebaut, nicht die geaenderte Signatur.
+`text::datei::gehaltene_form(&str) -> Cow<'_, str>` traegt jetzt die Regeln der
+Wandlung und gibt einen Text in gehaltener Form geliehen zurueck;
+`in_gehaltene_form(String) -> String` bleibt unveraendert in der Signatur und ist
+eine Fallunterscheidung darueber (`Cow::Borrowed` heisst "nichts zu wandeln",
+also geht die uebernommene Zeichenkette zurueck). Damit bleiben die drei weiteren
+Aufrufer unberuehrt, `datei::einlesen` voran, der die Funktion als Wert an
+`Option::map` reicht, und `krk-ui` musste nicht angefasst werden.
+`versatz_nach_der_wandlung` ruft jetzt `gehaltene_form(rest)` statt
+`in_gehaltene_form(rest.to_owned())`.
+
+**Nachgezaehlt mit einem eigenen zaehlenden Allokator**, Anlagen ab 1 MB, an
+einem Text von 16.777.198 Bytes mit einem `\r\n` vorn und der Schreibmarke
+dahinter. Die Probe steht dauerhaft in `crates/krk-core/tests/textkopien.rs` und
+fuehrt die Fassung von vorher als `versatz_mit_kopie` mit, damit die Zahl ein
+Vorher **und** ein Nachher hat; dass beide denselben Versatz liefern, prueft sie
+mit.
+
+```
+  Regelfall (der Rest hinter der Schreibmarke ist in gehaltener Form):
+    vorher    1 Anlage,  16.777.196 Bytes
+    nachher   0 Anlagen,          0 Bytes
+
+  Gegenfall (der Rest traegt selbst ein \r\n):
+    vorher    2 Anlagen, 33.554.396 Bytes
+    nachher   1 Anlage,  16.777.198 Bytes
+```
+
+**Der Gegenfall faellt besser aus, als die Messung vom 260810-1044 oben
+vorhergesagt hat.** Sie fuehrt dort fuer beide Fassungen zwei Kopien und
+schliesst mit "daran ist nichts zu holen"; gemessen an der gebauten Fassung sind
+es eine gegen zwei, denn die Eingangskopie `rest.to_owned()` faellt in **beiden**
+Faellen weg und nur die Anlage der Wandlung selbst bleibt. Vermutlich hat die
+Vorwegmessung eine Fassung geprueft, die den Text weiter uebernahm; welche, ist
+nicht mehr feststellbar. Die Zahl im Regelfall — eins gegen null — stimmt genau,
+wie sie dort steht.
+
+**Der Rest der Kette bleibt offen und liegt in `krk-ui`.** Die Summe der Kopien
+voller Laenge geht damit von fuenf auf vier, wie die Tabelle oben es fuehrt. Die
+drei verbleibenden Stellen in `krk-ui/src/appkit/editor.rs` —
+`text_zurueckschreiben`, `flaeche_richten` und `NSString::from_str` — sind nicht
+angefasst; der Abschnitt "Was in `editor.rs` allein nicht zu holen ist" oben sagt,
+was dafuer noetig waere. **In `krk-core` steckt kein Rest mehr:** die vierte
+Kopie ist die Wandlung in `bearbeiten` selbst, also die eine Anlage, die
+`gehaltene_form` bauen **muss**, wenn ein `\r\n` zu wandeln ist. Ein eigener
+Datensatz dafuer entsteht nicht, weil dort nichts zu holen ist.
+
+Abnahme gruen: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets`, `cargo fmt -p krk-core -- --check`.

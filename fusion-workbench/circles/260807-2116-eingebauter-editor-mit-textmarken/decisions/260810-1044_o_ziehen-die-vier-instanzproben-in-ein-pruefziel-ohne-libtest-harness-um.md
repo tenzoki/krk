@@ -90,3 +90,73 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+## Nachgeprüft am 260810-1139: die Messung hält, beide Optionen tragen nicht
+
+**Die Messung des Vorgängers ist bestätigt.** Ein `[[test]]`-Ziel mit
+`harness = false` unter `crates/krk-ui/tests/` bekommt den Hauptfaden, und
+`cargo test` fährt es mit, ohne zweites Prüfkommando. Nachgemessen am 260810-1057
+auf macOS 15.7.7, Rust 1.97.1, an einem Prüfziel in diesem Projekt:
+
+```
+  [[test]] mit harness = false        MainThreadMarker::new() ─> Some
+```
+
+Dieselbe Strecke hat die Messung zu `260809-2322` gefahren; sie stand und lieferte
+Zahlen.
+
+**Beide Optionen dieses Datensatzes ruhen trotzdem auf einer falschen Annahme:
+`krk-ui` hat kein Bibliotheksziel.** Die Kiste führt allein `[[bin]] name = "krk"`
+mit `src/main.rs`; ein `src/lib.rs` gibt es nicht. Eine Prüflaufdatei unter
+`tests/` ist eine eigene Kiste und kann deshalb **nichts** aus `krk-ui`
+ansprechen, ob `pub` oder nicht. Gemessen, nicht geschlossen:
+
+```
+  error[E0433]: cannot find module or crate `krk_ui` in this scope
+    --> crates/krk-ui/tests/probe_pruefziel.rs:3:13
+```
+
+Damit fällt Option 1 (sechs Stücke `pub` machen) genauso wie Option 2 (eine
+öffentliche Stelle, die die vier Proben fährt): beide setzen voraus, dass
+Sichtbarkeit reicht, und das tut sie ohne Bibliotheksziel nicht.
+`crates/krk-ui/tests/syntaxkiste.rs` läuft nur deshalb, weil es allein `syntect`
+und `two-face` anspricht und keine Zeile von `krk-ui`.
+
+## Was daraus folgt: die Frage hat eine vierte und eine fünfte Option
+
+Zwei Wege bleiben, und beide sind größer als das, was dieser Datensatz zur
+Entscheidung stellte:
+
+4. **`krk-ui` bekommt ein Bibliotheksziel.** `src/lib.rs` trägt den Modulbaum,
+   `src/main.rs` wird zur Hülle darüber. Das ist ein Umbau der ganzen Kiste, weil
+   jeder `crate::`-Pfad in zwölf Modulen und zweiundzwanzig AppKit-Untermodulen
+   dann durch die Bibliothek läuft. Er löst die Fadenfrage endgültig und
+   nebenbei jede künftige Prüfung von außen.
+   - Contra: der größte Eingriff, den diese Runde vorgeschlagen bekommt, und er
+     berührt jede Datei der Kiste.
+5. **Ein zweiter Kistenkopf unter `src/`.** `[[test]] path = "src/<name>.rs"` mit
+   `harness = false` und derselben `mod`-Liste wie `main.rs` übersetzt die Kiste
+   ein zweites Mal als Prüfziel. Ein neues Modul in `main.rs`, das `editor.rs`
+   braucht, hält den Bau an — das ist laut und nicht still.
+   - Contra: die ganze Oberfläche wird zweimal übersetzt, und `harness = false`
+     schaltet `cfg(test)` ab, also müssten die vier Proben samt `EINSTELLUNGEN`
+     aus `#[cfg(test)] mod tests` heraus in gewöhnlichen Programmtext. Damit
+     stünden sie im Bündel.
+
+**Empfehlung, geändert gegenüber der oben:** Option 4, und nicht in einem
+Bugfix-Durchgang. Sie ist die einzige, die die Notlüge ohne Nebenwirkung entfernt;
+Option 5 tauscht sie gegen zwei Übersetzungen und Prüfcode im Bündel, und das ist
+kein Fortschritt. Bis dahin gilt Weg 1 aus `260810-1001` als Lage und nicht als
+Wahl, so wie der Doc-Kommentar von `an_einer_flaeche` es schon sagt.
+
+**Der Datensatz bleibt offen**, und er stellt jetzt eine andere Frage als am
+260810-1044: nicht mehr „wie kommen die vier Proben an ihre Messstücke", sondern
+„bekommt `krk-ui` ein Bibliotheksziel". Wer sie beantwortet, hat damit auch
+`issues/260810-0212` in der Hand, das öffentliche Stücke ohne Aufrufer führt: mit
+einem Bibliotheksziel hätte „öffentlich" wieder eine Bedeutung.
+
+Die Dateigrenze dieses Durchgangs lief um `appkit/editor.rs`, `hervorhebung.rs`
+und `krk-ui/Cargo.toml`; ein `src/lib.rs` und ein Umbau von `main.rs` lagen
+außerhalb.

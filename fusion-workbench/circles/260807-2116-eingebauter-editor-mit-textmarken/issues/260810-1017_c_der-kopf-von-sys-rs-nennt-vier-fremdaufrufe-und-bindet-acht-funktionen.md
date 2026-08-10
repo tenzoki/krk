@@ -41,3 +41,35 @@ Die erste Möglichkeit hält den Kopf mit den beiden anderen wortgleich und ist 
 ## Warum es nicht mitgekommen ist
 
 `crates/krk-core/src/verzeichnis/sys.rs` lag außerhalb der Schreibgrenze des Arbeitspakets, das `260810-0955` behoben hat. Die Grenze war ausdrücklich gesetzt, weil parallel andere Agenten im Baum arbeiten.
+
+---
+Resolved: Die empfohlene Möglichkeit gewählt, und beides getan. Die erste Zeile
+des Modulkopfs heißt jetzt „die vier Schnittstellen, die KRK braucht, und die
+acht Funktionen, die sie binden"; das Diagramm trägt unter `copyfile(3)` eine
+eingerückte Zeile `copyfile_state_{alloc,free,set,get}`, sodass die vier Helfer
+sichtbar sind, ohne eine fünfte Schnittstelle zu behaupten. Darunter steht der
+Satz, der `lib.rs` und `verzeichnis/mod.rs` seit dem 260810 wortgleich tragen:
+„vier Schnittstellen und acht gebundene Funktionen, denn `copyfile(3)` braucht
+seine vier `copyfile_state_*`-Helfer." Dazu die Begründung aus diesem Datensatz —
+ohne die Helfer läßt sich der Fortschrittsrückruf nicht setzen und die Zahl der
+kopierten Bytes nicht abfragen, eine eigene Schnittstelle sind sie deshalb nicht,
+vier weitere Aufrufe über die Sprachgrenze schon — und der Verweis darauf, daß
+die dritte Stelle dieser Defekt nachgezogen hat. Ein Satz sagt außerdem, wo die
+acht stehen (die drei `unsafe extern "C"`-Blöcke des Moduls) und daß alle acht
+gerufen sind. `lib.rs` und `verzeichnis/mod.rs` blieben unangetastet; sie lagen
+außerhalb der Schreibgrenze und tragen die Zahl schon richtig.
+
+**Selbst nachgezählt, nicht übernommen, und die Tabelle oben stimmt in jeder
+Zeile.** Acht Bindungen in drei `unsafe extern "C"`-Blöcken, aus vier
+Schnittstellen; alle acht auch gerufen. Die Zeilennummern der Tabelle trafen vor
+dieser Änderung genau (109, 395, 403, 406, 409, 412, 415, 684) und sind durch die
+dreizehn neuen Kopfzeilen jetzt um dreizehn verschoben. Zwei Stellen zählen
+absichtlich **nicht** mit, und deshalb stehen sie hier: `type Statusrueckruf =
+extern "C" fn(…)` ist ein Typalias und keine Bindung, und `extern "C" fn
+statusrueckruf(…)` ist eine Funktion von KRK mit C-Aufrufweg, also ein Übergang
+in der anderen Richtung. Wer künftig nachzählt und auf zehn kommt, hat diese
+beiden mitgenommen.
+
+Kein Verhalten geändert, nur der Modulkopf. Abnahme grün: `cargo build
+--workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets`,
+`cargo fmt -p krk-core -- --check`.

@@ -55,3 +55,40 @@ begonnene** Öffnen, und höchstens dieses liefert einen Ladeausgang, weil
 `Editormodell::oeffnen` den laufenden Ladevorgang ersetzt und der Empfänger des
 überholten Fadens fällt. Die eine Ausnahme davon führt der Datensatz
 `260810-1029` daneben.
+
+---
+
+## Warum er am 260810-1139 offen geblieben ist
+
+**Der Weg, den dieser Datensatz nennt, ist der richtige, und er passt in keine
+Datei.** Sein zweiter Zuschnitt — die Herkunft an `Editorbereich::datei_oeffnen`,
+zurück über den `Ausgangsmelder` — verlangt drei Änderungen, und zwei von ihnen
+liegen in `crates/krk-ui/src/appkit/anwendung.rs`:
+
+1. `Editorbereich::datei_oeffnen` nimmt die Herkunft als Pflichtargument.
+   (`appkit/editor.rs`)
+2. `Ausgangsmelder` wechselt von `Box<dyn Fn(Ladeausgang)>` auf
+   `Box<dyn Fn(Ladeausgang, Oeffnungsherkunft)>`, und der Rückruf, den
+   `Anwendungsdelegierter` einträgt, muss die zweite Angabe annehmen.
+   (`appkit/anwendung.rs`)
+3. `Oeffnungsherkunft` ist heute ein privates `enum` in `anwendung.rs`
+   (Zeile 268) und müsste mindestens `pub(super)` werden oder nach `editor.rs`
+   umziehen — samt `editor_oeffnen_lassen`, das dann die Herkunft weiterreicht
+   statt sie in `editor_aus_sitzung` abzulegen. (`appkit/anwendung.rs`)
+
+**Eine halbe Fassung wäre schlechter als keine.** Nur Punkt 1 zu bauen bricht den
+Bau, weil `anwendung.rs` weiter mit einem Argument ruft; ein zweiter Eingang
+`datei_oeffnen_mit` daneben erzwingt gar nichts und wäre genau der Kommentar, den
+dieser Datensatz nicht will.
+
+Die Dateigrenze dieser Sitzung lief um `appkit/editor.rs`, `hervorhebung.rs` und
+`krk-ui/Cargo.toml`; an `anwendung.rs` arbeiteten parallel andere. Der Datensatz
+bleibt deshalb unverändert offen, und die Aufstellung oben ist alles, was ihm noch
+fehlt: keine Frage mehr, sondern drei benannte Änderungen in zwei Dateien.
+
+**Nachgetragen:** wer ihn baut, hat einen vierten Punkt. `Editorbereich` muss die
+Herkunft zum **laufenden** Ladevorgang merken, nicht zur letzten Anfrage, und
+`Editormodell::oeffnen` ersetzt den laufenden Vorgang bei einer neuen Anfrage. Ein
+`Cell<Oeffnungsherkunft>` am `Editorbereich` wäre damit dieselbe Bauart, die
+`260810-0418` als Fehler geführt hat, nur eine Ebene tiefer; die Herkunft gehört
+neben den Ladevorgang und nicht neben den Bereich.

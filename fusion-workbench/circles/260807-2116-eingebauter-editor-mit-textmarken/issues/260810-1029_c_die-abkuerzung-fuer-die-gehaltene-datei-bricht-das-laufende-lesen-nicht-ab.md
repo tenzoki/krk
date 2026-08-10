@@ -65,3 +65,38 @@ Der Fund fiel bei der Behebung von `260810-0418` an, und der dortige Fix hängt
 `Befehl`, und beim Start — der einzigen Spanne, in der eine Herkunft `Sitzung`
 lautet — ist die Abkürzung unerreichbar, weil der Editor dann noch keine Datei
 hält.
+
+---
+Resolved: Die Abkürzung gibt den laufenden Ladevorgang auf, bevor sie
+`SchonOffen` liefert — eine Zeile `self.ladevorgang = None;` in
+`Editormodell::oeffnen` (`crates/krk-ui/src/editormodell.rs`). Aufgegeben wird
+über den bestehenden Mechanismus und nicht über einen zweiten daneben: der
+Vorgang fällt, sein Empfänger mit ihm, und das `send` des überholten Fadens
+scheitert still. Damit gilt an beiden Ausgängen von `oeffnen` derselbe Satz,
+höchstens ein Lesen ist offen und es ist das zuletzt begonnene; der Satz steht
+jetzt im Modulkopf und am Doc-Kommentar der Funktion, mit dem Fall, der ihn bis
+zum 260810 brach.
+
+Die Durchsicht, die der Abschnitt "Der Weg dahin" verlangt, ist gefahren: keines
+der elf Abnahmekriterien von C2 und keines der elf von C4 hängt an dem
+stehengelassenen Lesen. C2 sagt über den Wechsel auf eine andere Datei allein
+zu, dass die Prüfung vor der Nachfrage steht (elftes Kriterium), und das
+entscheidet `uebernehmen_oder_zurueckhalten` unberührt weiter. C4 sagt über den
+Ladevorgang nichts.
+
+Belegt durch die Probe
+`editormodell::tests::die_abkuerzung_fuer_die_gehaltene_datei_bricht_das_laufende_lesen_ab`.
+Sie fährt den Ablauf des Befundes und prüft, dass genau ein Ladeausgang kommt.
+Gegengeprüft: mit zurückgenommener Fixzeile schlägt sie an zwei Stellen
+unabhängig fehl, an `laedt_noch` und an dem zweiten Ausgang `Geoeffnet`, der 300
+Millisekunden später aus dem Faden nachkommt.
+
+Ein zweiter Fall derselben Art ist dabei aufgefallen und liegt außerhalb der
+Dateigrenze dieser Behebung: die zurückgehaltene Datei überlebt einen zweiten
+Befehl ebenso, und die Nachfrage aus C4 hält Tastenbefehle nicht an. Der
+Datensatz ist
+`issues/260810-1102_o_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt -p krk-ui -- --check`
+je Rückgabewert 0, clippy ohne Warnung.

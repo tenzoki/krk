@@ -121,3 +121,32 @@ vier Messungen kostete. Weg 3 bleibt ausgeschlossen: er nimmt die Messungen aus
 dem Baum.
 
 Dieser Datensatz bleibt offen, bis das Pruefziel steht.
+
+---
+
+## Nachgeprüft am 260810-1139: Weg 2 ist nicht baubar, wie er beschrieben ist
+
+Die Messung, die Weg 2 zuschneidet, hält: ein `[[test]]`-Ziel mit
+`harness = false` bekommt den Hauptfaden (`MainThreadMarker::new()` liefert
+`Some`), und `cargo test` fährt es mit. Nachgemessen am 260810-1057 an einem
+Prüfziel in diesem Projekt.
+
+**Was der Abschnitt oben nicht wusste: `krk-ui` hat kein Bibliotheksziel.** Die
+Kiste führt allein `[[bin]] name = "krk"`. Eine Prüflaufdatei unter `tests/` ist
+eine eigene Kiste und erreicht deshalb nichts aus `krk-ui`, gleich ob
+`textflaeche_bauen` und die fünf übrigen Stücke `pub` sind oder nicht:
+
+```
+  error[E0433]: cannot find module or crate `krk_ui` in this scope
+```
+
+Damit ist der Satz „was ihm noch fehlt, ist keine Messung mehr, sondern eine
+Entscheidung über zwei Dateien" überholt: es fehlt ein Bibliotheksziel oder ein
+zweiter Kistenkopf, und beides ist ein Umbau der Kiste und keine zwei Dateien. Die
+beiden neuen Optionen und die geänderte Empfehlung stehen im Entscheidungsdatensatz
+`decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
+
+**Weg 1 bleibt damit die Lage und nicht die Wahl**, unverändert. Der Doc-Kommentar
+von `an_einer_flaeche` sagt das schon so; nachzutragen ist dort allein, dass die
+zwei genannten Dateien nicht genügen. Dieser Datensatz bleibt offen, bis das
+Prüfziel steht.

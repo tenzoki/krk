@@ -150,6 +150,13 @@
 //! hoechstens eine Datei, also hoechstens einen Ladevorgang; der Fall ist noch
 //! einfacher als bei der Vorschau mit ihren Tabs.
 //!
+//! **Hoechstens ein Lesen ist offen, und es ist das zuletzt begonnene.** Der
+//! Satz gilt an beiden Ausgaengen von [`Editormodell::oeffnen`]: die Abkuerzung
+//! fuer die schon gehaltene Datei gibt ein laufendes Lesen auf, statt es
+//! stehenzulassen. Bis zum 260810 tat sie es nicht, und dann gehoerten zwei
+//! Ladeausgaenge zu einer Folge von Oeffnungen; der Grund im Einzelnen steht
+//! dort.
+//!
 //! Bis die Meldung eintrifft, bleibt der bisherige Stand stehen. Eine
 //! Abweisung laesst ihn ebenfalls stehen: der Editor wirft nichts weg, weil
 //! eine andere Datei sich nicht oeffnen liess.
@@ -698,7 +705,7 @@ impl Editormodell {
     ///
     /// Haelt der Editor genau diesen Pfad, kehrt die Funktion mit
     /// [`Ladeausgang::SchonOffen`] zurueck, **bevor** sie einen Faden startet,
-    /// und ruehrt nichts an. Ohne diese Zeile ist ein zweites F4 auf dieselbe
+    /// und fasst am gehaltenen Stand nichts an. Ohne diese Zeile ist ein zweites F4 auf dieselbe
     /// Datei ein vollwertiges Oeffnen: der Faden laese die Datei neu,
     /// [`Self::uebernehmen`] setzte den Plattenstand ein, loeschte die
     /// Abweichungsmarke, und die Ansicht schriebe den Plattenstand ueber das,
@@ -709,6 +716,28 @@ impl Editormodell {
     /// Die Abkuerzung stand bis S24 in `jetzt_oeffnen` und ist mit dem Umstieg
     /// auf den Faden hierher gewandert, wie der Doc-Kommentar dort verlangte.
     ///
+    /// **Ein laufendes Lesen gibt die Abkuerzung trotzdem auf, und das ist das
+    /// eine, was sie anfasst.** Der Nutzer hat die gehaltene Datei verlangt,
+    /// also gehoert das Lesen der anderen niemandem mehr. Aufgegeben wird es
+    /// ueber denselben Mechanismus, den der gewoehnliche Weg eine Zeile weiter
+    /// unten in Anspruch nimmt: der Vorgang faellt, sein Empfaenger mit ihm, und
+    /// das `send` des ueberholten Fadens scheitert still.
+    ///
+    /// Damit gilt fuer beide Ausgaenge dieser Funktion derselbe Satz:
+    /// **hoechstens ein Lesen ist offen, und es ist das zuletzt begonnene.**
+    /// Gemeint ist das Lesen und nicht die gelesene Datei, die auf die Nachfrage
+    /// aus C4 wartet: die ist fertig gelesen, und ihr Ausgang steht beim
+    /// Aufrufer statt bei einem Faden. Bis zum 260810 galt der Satz nur fuer den
+    /// gewoehnlichen Weg, und die Abkuerzung war der eine Fall, in dem **zwei**
+    /// Ladeausgaenge zu einer Folge von Oeffnungen gehoerten: `SchonOffen` kam
+    /// unverzueglich, und danach lieferte der stehengelassene Faden noch einmal
+    /// fuer die andere Datei. Der letzte Befehl des Nutzers war damit still
+    /// ueberschrieben; verloren ging dabei kein Text, weil ein ungesicherter
+    /// Stand die andere Datei ueber [`Ladeausgang::Zurueckgehalten`] durch die
+    /// Nachfrage aus C4 gefuehrt haette, wohl aber die Wirkung des Befehls. Der
+    /// Datensatz ist
+    /// `issues/260810-1029_*_die-abkuerzung-fuer-die-gehaltene-datei-bricht-das-laufende-lesen-nicht-ab.md`.
+    ///
     /// **Der Preis steht hier und wird nicht verschwiegen:** F4 auf die schon
     /// gehaltene Datei liest sie damit auch dann nicht neu, wenn sie sich von
     /// aussen geaendert hat. Ein Befehl zum Neulesen gibt es nicht, und C2 sagt
@@ -717,6 +746,10 @@ impl Editormodell {
     /// nichts gelesen und nichts ersetzt, also ist auch nichts zu verlieren.
     pub fn oeffnen(&mut self, pfad: &Path) -> Option<Ladeausgang> {
         if self.haelt_bereits(pfad) {
+            // Der Nutzer hat die gehaltene Datei verlangt; ein Lesen, das noch
+            // laeuft, gehoert damit niemandem mehr. Ohne diese Zeile gehoerten
+            // zwei Ladeausgaenge zu einer Folge von Oeffnungen; siehe oben.
+            self.ladevorgang = None;
             return Some(Ladeausgang::SchonOffen);
         }
         self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
@@ -1555,6 +1588,68 @@ mod tests {
             Some(zweite.as_path()),
             "erst der eingezogene Ausgang traegt die neue Datei"
         );
+    }
+
+    /// Der Defekt vom 260810-1029: die Abkuerzung gibt das laufende Lesen auf.
+    ///
+    /// Der Ablauf ist der des Datensatzes und liegt in der Spanne, die die Probe
+    /// darueber festhaelt. Der Editor haelt die eine Datei, der Nutzer oeffnet
+    /// die andere, und waehrend die gelesen wird, holt er mit F4 die gehaltene
+    /// zurueck — der Weg, den `260809-2029` als den namentlich gegangenen
+    /// festhaelt, weil die Vorschau den Editor nach C1 verdraengt. Bis zum
+    /// 260810 kamen darauf **zwei** Ladeausgaenge: `SchonOffen` unverzueglich,
+    /// und danach `Geoeffnet` fuer die andere Datei, sobald der stehengelassene
+    /// Faden lieferte. Der Editor hielt am Ende die Datei, die der Nutzer
+    /// zuletzt gerade nicht verlangt hatte.
+    ///
+    /// **Die Probe haengt nicht an einer Wettlage**, aus demselben Grund wie
+    /// `ein_zweiter_ladevorgang_laesst_den_ersten_verfallen`: der Empfaenger
+    /// faellt in dem Augenblick, in dem `oeffnen` den Vorgang aufgibt, und
+    /// danach **kann** die Meldung nicht mehr ankommen, gleichgueltig wie
+    /// schnell der Faden war. Die Schleife am Ende wartet trotzdem eine Spanne
+    /// ab, in der der Faden bei diesen Dateigroessen laengst geliefert haette:
+    /// die Zusage lautet "genau ein Ausgang", und ein zweiter faellt nur auf,
+    /// wenn jemand auf ihn wartet.
+    #[test]
+    fn die_abkuerzung_fuer_die_gehaltene_datei_bricht_das_laufende_lesen_ab() {
+        let ordner = Pruefordner::neu("abkuerzung-bricht-ab");
+        let gehalten = ordner.datei("gehalten.txt", "Inhalt der gehaltenen Datei\n");
+        let andere = ordner.datei("andere.txt", "Inhalt der anderen Datei\n");
+        let mut modell = geoeffnet(&gehalten);
+
+        assert_eq!(
+            modell.oeffnen(&andere),
+            None,
+            "die andere Datei geht auf den Arbeitsfaden"
+        );
+        assert!(modell.laedt_noch(), "der Arbeitsfaden liest noch");
+
+        assert_eq!(
+            modell.oeffnen(&gehalten),
+            Some(Ladeausgang::SchonOffen),
+            "waehrend des Lesens nennt der Editor unveraendert die gehaltene Datei, \
+             und die Abkuerzung greift"
+        );
+        assert!(
+            !modell.laedt_noch(),
+            "260810-1029: das Lesen der anderen Datei gehoert nach diesem Befehl niemandem mehr"
+        );
+
+        for _ in 0..300 {
+            assert_eq!(
+                modell.einziehen(),
+                None,
+                "260810-1029: auf `SchonOffen` folgt kein zweiter Ladeausgang"
+            );
+            thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        assert_eq!(
+            modell.pfad(),
+            Some(gehalten.as_path()),
+            "der Editor haelt die Datei, die der letzte Befehl verlangt hat"
+        );
+        assert_eq!(modell.stand(), "Inhalt der gehaltenen Datei\n");
     }
 
     /// Das fuenfte Abnahmekriterium von C4: der Wechsel auf eine andere Datei
