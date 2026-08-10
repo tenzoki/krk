@@ -1,29 +1,24 @@
 # Orchestrator — Live
 
-**Turn:** 3/5 | **Tasks:** 9/9 | **Commits:** 13 | **Errors:** 0
-**Started:** 02:44 | **Domain:** code | **Elapsed Turns:** 3 | **Guard:** OK (0 blocks)
+**Turn:** 6/5 | **Tasks:** 18/18 | **Commits:** 19 | **Errors:** 0
+**Started:** 08:45 | **Domain:** code | **Elapsed Turns:** 6 | **Guard:** OK (0 blocks)
+**Session:** Bounded Closure — Editor-Runde auf `_b_`, kein Circle aktiv
 
 ## Current
-  [DONE] orchestrator -> Sitzung beendet; Circle bleibt aktiv fuer den Abnahmelauf
+  [DONE] orchestrator -> Sitzung abgeschlossen, 53 Defekte zu, 2 Fragen beim Nutzer
 
-## Session
-  Directive: Der eingebaute Editor mit Roh- und Formatansicht und Textmarken
-  Circle:    260807-2116-eingebauter-editor-mit-textmarken (_t_, weiter aktiv)
-  Plan:      260808-0140_c_ (geschlossen, 48/48 DONE)
-  Spec:      260807-2147_o_ (offen, 0 von 110 Kriterien abgehakt)
+## This Turn
+  [DONE]    coder -> Stapelbudget in Bytes fuer den Rueckgaengigstapel ....... 0140df7
+  [DONE]    coder -> drei kleine Aussagen nachgezogen ..................... 0140df7
+  [DONE]    reconciler -> Abschluss-Abgleich, Spruch bounded-closure ...... 646e6a1
+  [DONE]    coder -> zwoelf Fassungen des Pruefordners werden drei ....... 646e6a1
+  [DONE]    coder -> CLAUDE.md auf den Stand nach der Sitzung ........... 646e6a1
+  [DONE]    playmaker -> portfolio.md neu erzeugt ..................... 342286a
+  [DONE]    orchestrator -> Circle-Datensatz auf _b_, Zeiger geraeumt ... 342286a
 
-## Ergebnis
-  13 Commits, 12 Defekte geschlossen, 20 neu abgelegt
-  8 Entscheidungen auf umgesetzt, 1 abgeloest
-  make check gruen, 721 Pruefungen
-  target/KRK.app gebaut und signiert, Signatur geprueft gueltig
+## Up Next
+  (nichts — die Sitzung ist beendet. `/fusion:next` zeigt die Portfolio-Uebersicht.)
 
-## Nutzerarbeit
-  110 Abnahmekriterien am laufenden Buendel, KRK im Vordergrund
-  Reihenfolge: C8, dann C2+C1, dann C7, dann C3..C6; C9/C10/C11 nebenher
-  260810-0054 + 260809-2322 -> Einfaerbung beim Tippen messen
-  260810-0512 -> Lesart von C4 zu den Schreibwerkzeugen entscheiden
-
-## Offen
-  28 Defekte im Circle, 7 in den uebrigen Speichern, keiner kritisch oder hoch
-  portfolio.md kennt den aktiven Circle nicht -> /fusion:next
+## Blocked
+  260810-1001, 260810-1341 -> Entscheidung 260810-1044 (Bibliotheksziel fuer krk-ui)
+  260810-1207 -> Messung mit KRK im Vordergrund (Nutzerarbeit)

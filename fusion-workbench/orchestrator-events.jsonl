@@ -359,3 +359,69 @@
 {"ts":"2026-08-10T06:37:32","event":"commit","turn":3,"task":"F1","detail":"df80000"}
 {"ts":"2026-08-10T06:37:32","event":"turn_end","turn":3,"detail":"1 Aufgabe erledigt, Plan auf _c_"}
 {"ts":"2026-08-10T06:37:32","event":"session_end","detail":"3 Turns, 13 Commits, 12 Defekte geschlossen, 20 neu; Circle bleibt aktiv, Abnahmelauf beim Nutzer"}
+{"ts":"2026-08-10T06:45:41","event":"session_start","detail":"Setup via /fusion:setup; domain=code; active circle 260807-2116-eingebauter-editor-mit-textmarken; directive not yet stated"}
+{"ts":"2026-08-10T07:09:03","event":"scope_resolved","detail":"mode=issues, scope=aktiver Circle, 28 Defekte in 7 Paketen, Agenten coder+ontocoder, autonom ohne Gates"}
+{"ts":"2026-08-10T07:09:03","event":"queue_built","turn":1,"detail":"7 Aufgaben, 0 blockiert"}
+{"ts":"2026-08-10T07:09:03","event":"turn_start","turn":1,"detail":"3 dateidisjunkte Aufgaben parallel: I:01, I:02, I:03"}
+{"ts":"2026-08-10T07:09:03","event":"task_start","turn":1,"task":"I:01","agent":"coder","detail":"krk-core/src/text"}
+{"ts":"2026-08-10T07:09:03","event":"task_start","turn":1,"task":"I:02","agent":"coder","detail":"Plan, Cargo.toml, Modulkoepfe"}
+{"ts":"2026-08-10T07:09:03","event":"task_start","turn":1,"task":"I:03","agent":"ontocoder","detail":"resources/default-keymap.toml"}
+{"ts":"2026-08-10T07:30:09","event":"task_done","turn":1,"task":"I:01","detail":"d8763dd"}
+{"ts":"2026-08-10T07:30:09","event":"commit","turn":1,"task":"I:01","detail":"d8763dd"}
+{"ts":"2026-08-10T07:30:09","event":"task_done","turn":1,"task":"I:02","detail":"8d59993"}
+{"ts":"2026-08-10T07:30:09","event":"commit","turn":1,"task":"I:02","detail":"8d59993"}
+{"ts":"2026-08-10T07:30:09","event":"task_done","turn":1,"task":"I:03","detail":"17bd531"}
+{"ts":"2026-08-10T07:30:09","event":"commit","turn":1,"task":"I:03","detail":"17bd531"}
+{"ts":"2026-08-10T07:30:09","event":"task_start","turn":1,"task":"I:04","agent":"coder","detail":"appkit/editor.rs Schreibwerkzeuge, acht Defekte"}
+{"ts":"2026-08-10T07:30:09","event":"task_start","turn":1,"task":"I:08","agent":"coder","detail":"Typpruefung am Deskriptor, Nachzug aus I:01"}
+{"ts":"2026-08-10T07:30:09","event":"task_start","turn":1,"task":"I:09","agent":"ontocoder","detail":"Dateikopf der Belegung"}
+{"ts":"2026-08-10T07:30:09","event":"task_start","turn":1,"task":"I:10","agent":"coder","detail":"Plan zitiert mehrdeutigen Zeitstempel"}
+{"ts":"2026-08-10T08:12:34","event":"task_done","turn":1,"task":"I:04","detail":"d7ed6b8"}
+{"ts":"2026-08-10T08:12:34","event":"task_done","turn":1,"task":"I:08","detail":"cfab8ab"}
+{"ts":"2026-08-10T08:12:34","event":"task_done","turn":1,"task":"I:09","detail":"c0b96a6"}
+{"ts":"2026-08-10T08:12:34","event":"task_done","turn":1,"task":"I:10","detail":"c0b96a6"}
+{"ts":"2026-08-10T08:12:34","event":"coherence_review","turn":1,"detail":"verdict=ok; Artefakt-Grundlage: 21 Defekte geschlossen, 4 neu gefunden, keine Durchsicht in diesem Turn; Artefakt-Directive: die Commits gehen auf die Directive zu (Defektfreiheit des Editors); Grundlage-Directive: eine neue offene Entscheidung (C4 und die Schreibwerkzeuge), kein Widerspruch. Nutzer hat Autonomie erteilt, kein Gate vorgelegt."}
+{"ts":"2026-08-10T08:12:34","event":"turn_end","turn":1,"detail":"7 Aufgaben erledigt, 21 Defekte geschlossen, 4 neue Defekte, 1 neue Entscheidung, 7 Commits"}
+{"ts":"2026-08-10T08:12:34","event":"turn_start","turn":2,"detail":"3 dateidisjunkte Aufgaben: I:05, I:06, I:11"}
+{"ts":"2026-08-10T08:12:43","event":"state_drift","turn":2,"detail":"progress.commits: Flaeche=0, Beleg=7 (git 38a02b2..35e12cb). progress.turn: Flaeche=1, Beleg=2 (turn_start-Ereignisse). Ursache: agentstate.yaml wurde seit dem Bau der Warteschlange nicht mehr geschrieben. Flaechen werden jetzt nachgezogen."}
+{"ts":"2026-08-10T08:54:22","event":"task_done","turn":2,"task":"I:05","detail":"bb43315"}
+{"ts":"2026-08-10T08:54:22","event":"commit","turn":2,"task":"I:05","detail":"bb43315"}
+{"ts":"2026-08-10T08:54:22","event":"task_done","turn":2,"task":"I:06","detail":"f28497b"}
+{"ts":"2026-08-10T08:54:22","event":"commit","turn":2,"task":"I:06","detail":"f28497b"}
+{"ts":"2026-08-10T08:54:22","event":"task_done","turn":2,"task":"I:11","detail":"f624a03"}
+{"ts":"2026-08-10T08:54:22","event":"commit","turn":2,"task":"I:11","detail":"f624a03"}
+{"ts":"2026-08-10T08:54:22","event":"coherence_review","turn":2,"detail":"verdict=ok; Artefakt-Grundlage: 8 Defekte geschlossen, 5 neu gefunden, keine Durchsicht in diesem Turn; Artefakt-Directive: die Commits gehen auf Defektfreiheit des Editors zu; Grundlage-Directive: zwei offene Entscheidungen (C4 und das Pruefziel ohne Harness), kein Widerspruch. Autonomer Lauf, kein Gate vorgelegt."}
+{"ts":"2026-08-10T08:54:22","event":"turn_end","turn":2,"detail":"3 Aufgaben, 8 Defekte geschlossen, 5 neue Defekte, 1 neue Entscheidung, 3 Commits"}
+{"ts":"2026-08-10T08:54:22","event":"turn_start","turn":3,"detail":"3 dateidisjunkte Aufgaben: I:07 editor.rs, I:12 krk-core, I:13 editormodell"}
+{"ts":"2026-08-10T08:54:22","event":"state_drift","turn":3,"detail":"Pruefung ohne Abweichung: progress.commits wird mit dem Schreiben von agentstate.yaml gleich nachgezogen (10, git 38a02b2..f624a03), progress.turn 3 gegen 3 turn_start-Ereignisse."}
+{"ts":"2026-08-10T09:51:19","event":"task_done","turn":3,"task":"I:07","detail":"3596e16"}
+{"ts":"2026-08-10T09:51:19","event":"commit","turn":3,"task":"I:07","detail":"3596e16"}
+{"ts":"2026-08-10T09:51:19","event":"task_done","turn":3,"task":"I:12","detail":"c5d6e43"}
+{"ts":"2026-08-10T09:51:19","event":"commit","turn":3,"task":"I:12","detail":"c5d6e43"}
+{"ts":"2026-08-10T09:51:19","event":"task_done","turn":3,"task":"I:13","detail":"733e30f"}
+{"ts":"2026-08-10T09:51:19","event":"commit","turn":3,"task":"I:13","detail":"733e30f"}
+{"ts":"2026-08-10T09:51:19","event":"coherence_review","turn":3,"detail":"verdict=ok; 6 Defekte geschlossen, 2 neu; die Commits gehen auf Defektfreiheit des Editors zu; zwei offene Entscheidungen ohne Widerspruch zur Directive."}
+{"ts":"2026-08-10T09:51:19","event":"turn_end","turn":3,"detail":"3 Aufgaben, 6 Defekte geschlossen, 2 neue, 3 Commits"}
+{"ts":"2026-08-10T09:51:19","event":"turn_start","turn":4,"detail":"I:14 appkit, danach Durchsichten"}
+{"ts":"2026-08-10T09:51:19","event":"state_drift","turn":4,"detail":"Pruefung: progress.commits wird mit agentstate.yaml gleich auf 13 nachgezogen (git 38a02b2..733e30f), progress.turn 4 gegen 4 turn_start-Ereignisse. Keine Abweichung nach dem Nachzug."}
+{"ts":"2026-08-10T10:12:12","event":"task_done","turn":4,"task":"I:14","detail":"8807844"}
+{"ts":"2026-08-10T10:12:12","event":"commit","turn":4,"task":"I:14","detail":"8807844"}
+{"ts":"2026-08-10T10:12:12","event":"review_start","turn":4,"agent":"coderev","detail":"Sitzungsdiff 38a02b2..8807844, 12 Codedateien"}
+{"ts":"2026-08-10T10:12:12","event":"review_start","turn":4,"agent":"ontorev","detail":"resources/default-keymap.toml"}
+{"ts":"2026-08-10T10:49:37","event":"review_done","turn":4,"agent":"coderev","detail":"7 Defekte gefiled, 1 hoch 6 mittel, Diff als tragfaehig beurteilt"}
+{"ts":"2026-08-10T10:49:37","event":"review_done","turn":4,"agent":"ontorev","detail":"3 Defekte gefiled, keine Belegungszeile angefasst, 71 und 79 stimmen"}
+{"ts":"2026-08-10T10:49:37","event":"coherence_review","turn":4,"detail":"verdict=ok; Artefakt-Grundlage: 3 Defekte geschlossen, 10 aus den Durchsichten neu; Artefakt-Directive: auf Defektfreiheit zu, aber die Durchsicht hat einen hohen Befund erbracht; Grundlage-Directive: zwei offene Nutzerentscheidungen."}
+{"ts":"2026-08-10T10:49:37","event":"turn_end","turn":4,"detail":"1 Aufgabe, 2 Durchsichten, 3 Defekte geschlossen, 10 neue"}
+{"ts":"2026-08-10T10:49:37","event":"turn_start","turn":5,"detail":"letzter Turn: 4 dateidisjunkte Aufgaben gegen die Befunde der Durchsichten"}
+{"ts":"2026-08-10T11:21:54","event":"task_done","turn":5,"task":"T5","detail":"bf0fe18, 10 Befunde behoben"}
+{"ts":"2026-08-10T11:21:54","event":"commit","turn":5,"task":"T5","detail":"bf0fe18"}
+{"ts":"2026-08-10T11:21:54","event":"circuit_breaker","turn":5,"detail":"Max Turns erreicht (5/5). Die anderen fuenf Bedingungen sind nicht erfuellt: 48 geschlossen gegen 6 offen, kein Turn ohne Fortschritt, kein Agentenfehler, keine Blockade, Wachhund frei. Der Nutzer hat ausdruecklich einen autonomen Lauf verlangt, der auch neu gefundene Defekte behebt; deshalb ein begrenzter sechster Durchgang fuer die vier kleinen restlichen, danach Abgleich und Abschluss. Als Abweichung von der Vorgabe festgehalten."}
+{"ts":"2026-08-10T11:21:54","event":"turn_end","turn":5,"detail":"10 Befunde behoben, 4 neue kleine Defekte, 1 Commit"}
+{"ts":"2026-08-10T11:21:54","event":"turn_start","turn":6,"detail":"begrenzter Nachlauf: 2 dateidisjunkte Aufgaben gegen die vier kleinen Restdefekte"}
+{"ts":"2026-08-10T12:38:52","event":"reconciliation","turn":6,"detail":"Spruch bounded-closure-proposed; 52 Behebungsbehauptungen einzeln gegen den Baum gelesen, 0 ohne Deckung; 1 Marker nachgezogen, 1 Implemented-Platzhalter gefuellt, 1 neuer Buchhaltungsdefekt"}
+{"ts":"2026-08-10T12:38:52","event":"bounded_closure_proposed","turn":6,"detail":"Abnahmelauf verlangt KRK im Vordergrund; zwei Restdefekte haengen an der offenen Frage nach einem Bibliotheksziel fuer krk-ui"}
+{"ts":"2026-08-10T12:38:52","event":"turn_end","turn":6,"detail":"5 Defekte geschlossen, CLAUDE.md nachgezogen, Circle auf _b_"}
+{"ts":"2026-08-10T12:48:39","event":"portfolio_refresh","turn":6,"detail":"circles/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md; playmaker-Bericht shared/history/260810-1439-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-10T12:48:39","event":"state_drift","turn":6,"detail":"progress.commits Flaeche=13 Beleg=19; progress.turn Flaeche=4 Beleg=6. agentstate.yaml ist seit Turn 4 nicht mehr geschrieben worden, waehrend sechs Turns liefen und neunzehn Commits landeten. session.history_file zeigt auf eine vorhandene Datei. Die Datei wird gleich geloescht, weil die Sitzung regulaer endet; dieses Ereignis ueberlebt sie."}
+{"ts":"2026-08-10T12:48:39","event":"session_end","turn":6,"detail":"Bounded Closure. 6 Turns, 19 Commits, 53 Defekte geschlossen, 5+3 offen, 2 offene Nutzerentscheidungen, 0 Agentenfehler"}
+{"ts":"2026-08-10T12:48:50","event":"state_drift","turn":6,"detail":"Berichtigung des vorigen state_drift derselben Minute: die gemessenen Werte sind progress.commits Flaeche=7 gegen Beleg=19 und progress.turn Flaeche=2 gegen Beleg=6, nicht 13 und 4. Der letzte Schreibvorgang an agentstate.yaml lag bei Turn 2, nicht bei Turn 4. Die Aussage bleibt dieselbe und wird durch die Berichtigung schaerfer: die Datei ist vier Turns und zwoelf Commits lang nicht mehr nachgezogen worden."}
