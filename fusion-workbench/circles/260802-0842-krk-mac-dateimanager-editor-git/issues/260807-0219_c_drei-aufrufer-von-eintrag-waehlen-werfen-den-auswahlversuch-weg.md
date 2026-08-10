@@ -101,3 +101,27 @@ Begründung zu verwerfen (`let _ = …` mit Kommentar), damit der nächste Leser
 sieht, dass das Wegwerfen eine Entscheidung ist und kein Versehen.
 
 **Nachgeprüft von:** `coder`, Aufräumturn 26, ohne Codeänderung.
+
+---
+Resolved: Der Nutzer hat am 260810-1717 die zweite der beiden Moeglichkeiten gewaehlt: der
+Rueckgabewert wird an der verbliebenen Stelle ausdruecklich und begruendet verworfen, nicht
+gemeldet. In `vorgang_beenden`, Zweig `Art::UmbenennenImStapel`
+(`crates/krk-ui/src/appkit/anwendung.rs`), steht jetzt `let _ = ...` mit einem Kommentar, der
+drei Dinge nennt: dass `Unbekannt` hier als einziger der drei Stellen erreichbar ist, auf
+welchem Weg (Ordnerwechsel waehrend des im Hintergrund laufenden Vorgangs), und warum trotzdem
+nichts gemeldet wird. Eine Meldung traefe den Nutzer in einem Ordner, ueber den er gerade
+nichts wissen wollte.
+
+**Der Titel dieses Datensatzes ist in zwei Punkten ungenau, und beide sind nachgeprueft.**
+Erstens sind es nicht mehr drei Stellen, sondern eine: seit `5d7e299` fragt
+`Tabliste::auswahl_auf_namen` zuerst `tab.liest()` und merkt den Namen vor, womit `Unbekannt`
+in `anlegen_ausfuehren` und `umbenennen_ausfuehren` ausgeschlossen ist. Beide tragen jetzt
+einen Einzeiler im Doc-Kommentar, damit der Befund nicht ein drittes Mal erhoben wird.
+Zweitens gibt es einen **vierten** Aufrufer, den dieser Datensatz nie gefuehrt hat:
+`messhandlung`, Zweig `Handlung::Auswaehlen`. Der behandelt den Rueckgabewert bereits
+vollstaendig und meldet `Unbekannt` als Abbruchgrund an den Messlauf.
+
+Der urspruengliche Vorschlag "an jeder der drei Stellen melden" ist damit an zwei Stellen
+toter Code und ist bewusst nicht umgesetzt. Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.

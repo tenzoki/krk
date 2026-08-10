@@ -2658,7 +2658,8 @@ impl Anwendungsdelegierter {
     /// [`Dateifenster::quelle`]`.eintrag_waehlen`, die eine Stelle, die eine
     /// Zeile anhand ihres Namens waehlt. Der Lesevorgang laeuft zu diesem
     /// Zeitpunkt noch, also merkt sie den Namen vor und springt, sobald er
-    /// eintrifft.
+    /// eintrifft. Ihre Antwort ist damit `Vorgemerkt` und nie `Unbekannt`;
+    /// der Rueckgabewert traegt hier keine Auskunft.
     fn anlegen_ausfuehren(
         &self,
         seite: Fensterseite,
@@ -2693,7 +2694,8 @@ impl Anwendungsdelegierter {
     /// [`krk_core::operation::umbenennen`] aus S15, dann
     /// [`auffrischung::ordner_neu_lesen`], der eine Auffrischungspfad aus S14,
     /// dann die Auswahl auf den neuen Namen ueber die eine Stelle, die eine
-    /// Zeile anhand ihres Namens waehlt.
+    /// Zeile anhand ihres Namens waehlt. Auch hier steht deren Lesevorgang
+    /// noch aus, ihre Antwort ist also `Vorgemerkt` und nie `Unbekannt`.
     ///
     /// **Ob der Name schon vergeben ist, beantwortet das Dateisystem.**
     /// `umbenennen` scheitert dann mit [`io::ErrorKind::AlreadyExists`], und
@@ -3182,7 +3184,22 @@ impl Anwendungsdelegierter {
             // leer, wie C9 es zulaesst.
             Art::UmbenennenImStapel { neue_namen } => {
                 if let Some(erster) = neue_namen.first() {
-                    self.dateifenster(vorgang.seite)
+                    // **Der Rueckgabewert wird hier bewusst verworfen**, und
+                    // das ist die eine Stelle, an der das eine Entscheidung
+                    // ist: `Auswahlversuch::Unbekannt` ist von den drei
+                    // Aufrufern allein hier erreichbar. Der Vorgang laeuft im
+                    // Hintergrund, und wechselt der Nutzer waehrenddessen den
+                    // Ordner dieser Seite, frischt die Schleife darueber sie
+                    // nicht auf; dann laeuft kein Lesevorgang, und
+                    // `eintrag_waehlen` befragt das Modell des anderen
+                    // Ordners. Gemeldet wird trotzdem nichts: "«datei-1»
+                    // steht nicht in der Liste" traefe den Nutzer in einem
+                    // Ordner, ueber den er gerade nichts wissen wollte, und
+                    // waere eher Rauschen als Auskunft. So entschieden vom
+                    // Nutzer am 260810
+                    // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
+                    let _ = self
+                        .dateifenster(vorgang.seite)
                         .quelle()
                         .eintrag_waehlen(erster);
                 }
