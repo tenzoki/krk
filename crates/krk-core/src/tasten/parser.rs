@@ -451,8 +451,9 @@ impl fmt::Display for Schreibfehler {
                 zusatztasten_aufzaehlen()
             ),
             Schreibfehler::FnAlsZusatztaste => ausgabe.write_str(
-                "fn ist keine Zusatztaste einer Belegung; KRK belegt den Tastencode, \
-                 und F3 mit gehaltener fn erzeugt denselben wie ein nacktes F3",
+                "fn ist keine Zusatztaste einer Belegung; Funktionstasten schlaegt KRK \
+                 ueber den Tastencode nach, und F3 mit gehaltener fn erzeugt denselben \
+                 Tastencode wie ein nacktes F3",
             ),
             Schreibfehler::ZusatztasteDoppelt(text) => {
                 write!(ausgabe, "die Zusatztaste \"{text}\" steht zweimal")

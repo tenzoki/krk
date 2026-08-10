@@ -9,10 +9,13 @@
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
-//! `getattrlistbulk(2)` fuer das Lesen sowie, seit Schritt 15, `copyfile(3)`
-//! und `renamex_np(2)` fuer die Operationsmaschine. [`leser`] macht aus dem
-//! ersten der drei Aufrufe den gestueckelten Lesevorgang auf
-//! einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
+//! `getattrlistbulk(2)` fuer das Lesen, seit Schritt 15 `copyfile(3)` und
+//! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
+//! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den Eingang von
+//! `text::datei::oeffnen`. Das sind vier Schnittstellen und acht gebundene
+//! Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der vier
+//! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, [`sortierung`]
 //! liefert die acht Ordnungen, und [`sprungmarke`] findet einen Eintrag ueber

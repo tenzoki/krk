@@ -8,10 +8,13 @@
 //!
 //! Die Regel oben lautet `deny` und nicht `forbid`, und der Unterschied ist
 //! Absicht: das Modul `verzeichnis::sys` bindet die Systemaufrufe
-//! `getattrlistbulk`, `copyfile` und `renamex_np` und traegt dafuer
-//! `#[allow(unsafe_code)]`. `forbid` liesse sich an dieser Stelle nicht
+//! `getattrlistbulk`, `copyfile`, `renamex_np` und `fcntl` und traegt dafuer
+//! `#[allow(unsafe_code)]`. Das sind vier Schnittstellen und acht gebundene
+//! Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer. `forbid` liesse sich an dieser Stelle nicht
 //! oeffnen, das ist gerade sein Zweck. Es ist das einzige Modul mit dieser
-//! Ausnahme, und mit Schritt 15 ist es das geblieben.
+//! Ausnahme, und es ist das geblieben, als Schritt 15 `copyfile` und
+//! `renamex_np` und der Defekt `260809-1652` `fcntl` hinzugebracht haben.
 
 pub mod ablage;
 pub mod operation;
