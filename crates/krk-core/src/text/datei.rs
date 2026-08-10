@@ -118,7 +118,6 @@
 //! Wer die Bytes schon hat, hat die Grenze schon ueberschritten.
 
 use std::borrow::Cow;
-use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -192,7 +191,7 @@ pub enum Abweisung {
     ZuGross {
         /// Der Pfad, wie der Aufrufer ihn uebergeben hat.
         pfad: PathBuf,
-        /// Die Groesse in Bytes, wie `stat(2)` sie vor dem Lesen gemeldet hat.
+        /// Die Groesse in Bytes, wie `fstat(2)` sie vor dem Lesen gemeldet hat.
         groesse: u64,
     },
     /// Gelesen, aber kein gueltiges UTF-8.
@@ -249,71 +248,75 @@ impl Abweisung {
 ///
 /// # Die Reihenfolge ist bindend
 ///
-/// 1. **`metadata` und nicht `symlink_metadata`**, damit eine Verknuepfung nach
-///    dem behandelt wird, worauf sie zeigt. Eine Verknuepfung auf eine
-///    Textdatei ist als Ziel des Oeffnens dieselbe Textdatei; in der Dateiliste
+/// 1. **Geoeffnet wird zuerst, und zwar ohne zu warten**
+///    ([`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen)).
+///    Das ist der eine Aufruf, der den **Namen** anfasst; alles danach fragt den
+///    Deskriptor. Ein `File::open` auf eine benannte Roehre haengt, bis jemand
+///    hineinschreibt, und deshalb traegt dieser Aufruf `O_NONBLOCK`, das er vor
+///    der Rueckgabe wieder abnimmt. Warum das dort steht und nicht hier, sagt
+///    der Modulkopf jener Funktion.
+/// 2. **Gefragt wird der Deskriptor** (`fstat` ueber `File::metadata`) **und
+///    nicht der Name.** Geoeffnet wird ohne `O_NOFOLLOW`, eine Verknuepfung wird
+///    also nach dem behandelt, worauf sie zeigt: als Ziel des Oeffnens ist eine
+///    Verknuepfung auf eine Textdatei dieselbe Textdatei. In der Dateiliste
 ///    meldet der Leser sie weiter als Verknuepfung, und die beiden Fragen sind
-///    verschieden. Dieselbe Wahl und derselbe Grund wie in
-///    `krk-ui`s `kommandos::pfadeingabe::pruefen`.
-/// 2. **Alles, was keine gewoehnliche Datei ist, faellt hier heraus**, der
-///    Ordner voran. Diese Frage steht **vor** dem Oeffnen und nicht erst vor
-///    dem Lesen, weil ein `File::open` auf eine benannte Roehre so lange
-///    haengt, bis jemand hineinschreibt; das waere eine angehaltene Anwendung
-///    ohne Meldung. Wovor diese Lage schuetzt und wovor nicht, steht unten
-///    unter "Geprueft wird der Pfad und nicht der Deskriptor".
-/// 3. **Die Groesse wird vor dem Lesen geprueft**, so wie die Vorschau es fuer
+///    verschieden. Dieselbe Wahl und derselbe Grund wie in `krk-ui`s
+///    `kommandos::pfadeingabe::pruefen`.
+/// 3. **Alles, was keine gewoehnliche Datei ist, faellt hier heraus**, der
+///    Ordner voran. Ein Ordner und eine benannte Roehre lassen sich beide
+///    oeffnen; heraus fallen sie an ihrem Typ, und weil Schritt 1 nicht wartet,
+///    fallen sie heraus, statt die Anwendung ohne Meldung anzuhalten.
+/// 4. **Die Groesse wird vor dem Lesen geprueft**, so wie die Vorschau es fuer
 ///    ihre beiden Grenzen tut. Eine Protokolldatei von zwei Gigabyte darf nicht
 ///    erst eingelesen und dann abgewiesen werden; sie steht damit zu keinem
 ///    Zeitpunkt vollstaendig im Arbeitsspeicher.
-/// 4. **Erst danach werden die Bytes gelesen und gewandelt.** Scheitert die
+/// 5. **Erst danach werden die Bytes gelesen und gewandelt.** Scheitert die
 ///    Wandlung, wird abgewiesen und nicht mit Ersatzzeichen geoeffnet.
 ///
 /// # Die Grenze wird eingehalten und nicht nur vorhergesagt
 ///
-/// Schritt 3 fragt `stat(2)`, und zwischen `stat` und `read` kann eine Datei
-/// wachsen. Deshalb liest Schritt 4 hoechstens [`EDITORGRENZE`] `+ 1` Bytes und
+/// Schritt 4 fragt `fstat(2)`, und zwischen `fstat` und `read` kann eine Datei
+/// wachsen. Deshalb liest Schritt 5 hoechstens [`EDITORGRENZE`] `+ 1` Bytes und
 /// weist ab, sobald das eine Byte zuviel ankommt. Der Unterschied ist nicht
 /// akademisch: ohne diese Schranke waere "die Datei steht nie vollstaendig im
 /// Speicher" eine Vorhersage aus einer alten Auskunft, mit ihr ist es eine
 /// Eigenschaft der Bauart. Eine wachsende Protokolldatei ist genau der Fall,
 /// fuer den ein Nutzer den Editor aufmacht.
 ///
-/// # Geprueft wird der Pfad und nicht der Deskriptor
+/// # Geprueft wird der Deskriptor und nicht der Pfad
 ///
-/// Schritt 2 und 3 fragen `stat(2)` auf den **Pfad**, und Schritt 4 oeffnet
-/// denselben **Pfad** ein zweites Mal. Zwischen beiden Aufrufen liegt ein
-/// Fenster, in dem der Pfad auf etwas anderes zeigen kann. Die Reihenfolge oben
-/// ist damit eine Pruefung des gewoehnlichen Betriebs und **keine Eigenschaft
-/// der Bauart**; wer den vorigen Absatz gelesen hat, unterscheide beides:
+/// Bis zum 260810 stand es umgekehrt: `stat(2)` auf den Pfad, danach ein zweites
+/// Oeffnen desselben Pfades. Zwischen beiden Aufrufen lag ein Fenster, in dem der
+/// Pfad auf etwas anderes zeigen konnte, und ein Austausch gegen eine benannte
+/// Roehre hielt das zweite Oeffnen an: der Arbeitsfaden des Ladevorgangs endete
+/// nie, und der Editor oeffnete kommentarlos nichts. Der Defekt dazu ist
+/// `260809-1652`.
 ///
-/// - **Wachsen** faengt die Schranke, weil sie gelesene Bytes zaehlt und keine
-///   Auskunft. Das gilt auch, wenn der Pfad in der Spanne auf eine **groessere**
-///   Datei zeigt: gelesen wird hoechstens ein Byte ueber der Grenze, und dann
-///   steht `ZuGross` da.
-/// - **Ein Austausch gegen eine benannte Roehre** faengt sie nicht: dann haengt
-///   das `File::open` doch, der Arbeitsfaden des Ladevorgangs endet nie, und der
-///   Editor oeffnet kommentarlos nichts. Der Fall braucht ein Wettrennen und ist
-///   selten, aber nicht bloss theoretisch.
+/// **Das Fenster ist zu, und zwar weil es keinen zweiten Aufruf mehr gibt**, der
+/// den Namen aufloest. Zwei Aussagen gehoeren dazu, und die zweite ist die, die
+/// man leicht zu viel liest:
 ///
-/// Die Fassung, die auch das zu einer Eigenschaft der Bauart machte, prueft den
-/// **Deskriptor**: nicht blockierend oeffnen, dann `fstat` darauf, dann Typ und
-/// Groesse. Sie ist mit einem Merkmal an `OpenOptions` nicht getan, denn
-/// `O_NONBLOCK` gehoert vor dem Lesen wieder abgeschaltet — POSIX laesst seine
-/// Wirkung auf gewoehnliche Dateien offen, und `speculation:` auf einem
-/// Netzlaufwerk koennte ein Lesen sonst mit `EAGAIN` scheitern —, und das
-/// Abschalten ist ein `fcntl`, also eine vierte Bindung in `verzeichnis::sys`.
-/// Sie zieht ausserdem den Nachweis "ohne gelesen zu werden" in
-/// `tests/text.rs` mit, der heute an den Rechten haengt und dann am Oeffnen
-/// scheiterte. Ob der Aufwand die Seltenheit des Falls rechtfertigt, ist offen
-/// und steht in
-/// `issues/260809-1652_*_die-typpruefung-steht-auf-dem-pfad-und-nicht-auf-dem-deskriptor.md`.
+/// - **Typpruefung, Groessenpruefung und Lesen betreffen ein und dasselbe Ding.**
+///   Was der Editor annimmt oder abweist, ist der Gegenstand hinter dem
+///   Deskriptor, und der wechselt seine Art nicht mehr, gleichgueltig was mit dem
+///   Namen geschieht. **Wachsen** faengt weiterhin die Schranke aus dem Absatz
+///   darueber, denn sie zaehlt gelesene Bytes und keine Auskunft.
+/// - **Welche** Datei das ist, sagt diese Reihenfolge nicht zu. Wird der Pfad
+///   ausgetauscht, **bevor** Schritt 1 laeuft, oeffnet der Editor das neue Ding
+///   und beurteilt es richtig. Das ist keine Luecke, sondern die Grenze jeder
+///   Schnittstelle, die einen Namen annimmt: wer eine bestimmte Datei meint, muss
+///   einen Deskriptor uebergeben und keinen Pfad.
 pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
     let kein_ziel = |grund: String| Abweisung::KeinGueltigesZiel {
         pfad: pfad.to_path_buf(),
         grund,
     };
 
-    let angaben = std::fs::metadata(pfad).map_err(|fehler| kein_ziel(fehler.to_string()))?;
+    let mut datei = crate::verzeichnis::sys::ohne_warten_oeffnen(pfad)
+        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
+    let angaben = datei
+        .metadata()
+        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
 
     if !angaben.is_file() {
         return Err(kein_ziel(String::from(if angaben.is_dir() {
@@ -330,7 +333,6 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
         });
     }
 
-    let mut datei = File::open(pfad).map_err(|fehler| kein_ziel(fehler.to_string()))?;
     let mut bytes = Vec::with_capacity(angaben.len() as usize);
     datei
         .by_ref()
@@ -338,7 +340,7 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
         .read_to_end(&mut bytes)
         .map_err(|fehler| kein_ziel(fehler.to_string()))?;
     if bytes.len() as u64 > EDITORGRENZE {
-        // Die Datei ist zwischen `stat` und `read` gewachsen. Gemeldet wird die
+        // Die Datei ist zwischen `fstat` und `read` gewachsen. Gemeldet wird die
         // Groesse von jetzt und nicht die von vorhin, denn die alte war nie
         // wahr; laesst sie sich nicht mehr erheben, steht die untere Schranke
         // da, die wir sicher wissen.

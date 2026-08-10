@@ -36,10 +36,19 @@
 //! Bytes hereinkommen und hinausgehen, und brauchen dafuer einen Pruefordner.
 //! Er traegt Prozesskennung und Laufnummer und raeumt sich in `Drop` selbst
 //! ab, so wie in `tests/verzeichnis.rs`.
+//!
+//! **Fall 10 ist am 260810 auf drei Proben verteilt worden**, weil `oeffnen`
+//! seither zuerst oeffnet und danach am Deskriptor prueft (Defekt
+//! `260809-1652`). Der eine Byte Unterschied bleibt bei Fall 10 selbst, die
+//! benannte Roehre und der Wechsel des Pfades unter der Pruefung kommen daneben,
+//! und den Satz "ohne gelesen zu werden" traegt jetzt die Zeitmessung an zwei
+//! Gigabyte. Jede der Proben sagt in ihrem Kopf, welchen Teil sie haelt.
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
@@ -541,7 +550,8 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
 //  9  Eine Verknuepfung gilt nach ihrem Ziel: auf eine Textdatei angenommen,
 //     auf einen Ordner abgewiesen
 // 10  Eine Datei von EDITORGRENZE + 1 Bytes wird abgewiesen, und zwar
-//     nachweislich, ohne gelesen zu werden
+//     nachweislich, ohne gelesen zu werden — auf drei Proben verteilt, siehe
+//     den Modulkopf
 // 11  Eine Datei mit ungueltiger UTF-8-Folge wird abgewiesen und nicht mit
 //     Ersatzzeichen geliefert
 // 12  Die drei Abweisungsgruende liefern drei verschiedene Meldetexte
@@ -577,21 +587,44 @@ impl Pruefordner {
         std::os::unix::fs::symlink(ziel, &pfad).expect("Verknuepfung laesst sich nicht anlegen");
         pfad
     }
+
+    /// Legt eine benannte Roehre an und liefert ihren Pfad.
+    ///
+    /// Angelegt wird sie ueber `mkfifo(1)` und nicht ueber einen Fremdaufruf:
+    /// `mkfifo(2)` waere eine fuenfte Bindung in `verzeichnis::sys`, und dort
+    /// steht, was **KRK** braucht. KRK legt keine Roehren an; das tut nur die
+    /// Probe, und ein Werkzeug des Systems zu rufen ist dafuer der kleinere
+    /// Eingriff.
+    fn roehre(&self, name: &str) -> PathBuf {
+        let pfad = self.pfad.join(name);
+        let stand = std::process::Command::new("/usr/bin/mkfifo")
+            .arg(&pfad)
+            .status()
+            .expect("mkfifo laesst sich nicht starten");
+        assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
+        pfad
+    }
 }
 
-/// Nimmt der Datei jedes Recht, damit ein Lesevorgang an ihr scheitern **muss**.
-fn sperren(pfad: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(pfad, fs::Permissions::from_mode(0o000))
-        .expect("Rechte lassen sich nicht setzen");
-}
-
-/// Ob die Sperre auf dieser Kennung ueberhaupt wirkt.
+/// Ruft [`datei::oeffnen`] auf einem eigenen Faden und gibt die Antwort nur
+/// heraus, wenn sie innerhalb der Schranke kommt.
 ///
-/// Gefragt wird nicht die Benutzerkennung, sondern die Wirkung: root liest eine
-/// gesperrte Datei trotzdem, und unter root sagt der Nachweis unten nichts aus.
-fn sperre_wirkt(gesperrt: &Path) -> bool {
-    fs::read(gesperrt).is_err()
+/// **Der Grund ist die Art des Defekts, der hier geprueft wird:** ein
+/// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines. Ohne
+/// Schranke waere das ein stehender Probelauf, und `cargo test` haette nichts zu
+/// melden als Stillstand. Mit ihr gibt es einen Befund mit Namen.
+///
+/// Der Faden bleibt im Fehlerfall stehen, wo er steht. Er stirbt mit dem
+/// Probelauf, und ein Deskriptor, der nie aufgeht, haelt nichts fest.
+fn oeffnen_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Result<String, Abweisung> {
+    let (sender, empfaenger) = mpsc::channel();
+    let pfad = pfad.to_path_buf();
+    std::thread::spawn(move || {
+        let _ = sender.send(datei::oeffnen(&pfad));
+    });
+    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+        panic!("oeffnen ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+    })
 }
 
 /// Fall 8: ein Ordner wird abgewiesen.
@@ -654,35 +687,46 @@ fn eine_verknuepfung_gilt_nach_ihrem_ziel() {
 /// Fall 10: eine Datei ueber der Grenze wird abgewiesen, **ohne gelesen zu
 /// werden**.
 ///
-/// Der Nachweis steht nicht an der Laufzeit, sondern an den Rechten, und er ist
-/// damit deterministisch. Zwei Dateien, gleich angelegt, gleich gesperrt, und
-/// um genau ein Byte verschieden:
+/// # Der Nachweis ist am 260810 neu geschnitten worden
+///
+/// Bis dahin hing er an den Rechten: zwei Loecher, gleich angelegt, beide mit
+/// Rechten 000, um genau ein Byte verschieden. Das ueber der Grenze kam als
+/// `ZuGross` zurueck, das auf der Grenze als Lesefehler, und der Unterschied
+/// zeigte, dass die Groessenpruefung vor dem Oeffnen lag.
+///
+/// Genau davor liegt sie nicht mehr. Seit `oeffnen` **zuerst oeffnet** und danach
+/// am Deskriptor prueft, scheitern beide gesperrten Dateien schon am Oeffnen, und
+/// die Rechte trennen nichts mehr. Ein Recht, das ein Lesen ohne ein Oeffnen
+/// verbietet, gibt es auch nicht: POSIX prueft das Leserecht beim `open`. Der
+/// alte Schnitt war damit nicht ungenau, sondern gegenstandslos.
+///
+/// # Was diese Probe jetzt belegt, und was die Nachbarin belegt
+///
+/// Hier steht der deterministische Teil: **der eine Byte Unterschied
+/// entscheidet, und unterhalb der Grenze wird wirklich gelesen.**
 ///
 /// ```text
-///   EDITORGRENZE + 1 Bytes, Rechte 000  ──> ZuGross
-///   EDITORGRENZE     Bytes, Rechte 000  ──> KeinGueltigesZiel (Lesefehler)
+///   EDITORGRENZE + 1 Bytes  ──> ZuGross, und der Wert traegt die Groesse
+///   EDITORGRENZE     Bytes  ──> angenommen, 16 MB Stand, also gelesen
 /// ```
 ///
-/// Die zweite Zeile ist die tragende: sie zeigt, dass unterhalb der Grenze
-/// **wirklich** geoeffnet und gelesen wird. Kaeme die Groessenpruefung erst
-/// nach dem Lesen, muesste die erste Zeile denselben Lesefehler melden wie die
-/// zweite. Sie tut es nicht, also lag die Pruefung davor.
+/// Die zweite Zeile ist die tragende: ohne sie koennte die erste auch von einer
+/// Funktion kommen, die ueberhaupt nichts liest.
+///
+/// **Dass im Fall `ZuGross` keine Bytes flossen, belegt sie nicht**, und das ist
+/// keine Nachlaessigkeit, sondern eine Eigenschaft der Bauart: die Schranke
+/// `take(EDITORGRENZE + 1)` liefert auch dann `ZuGross`, wenn erst gelesen und
+/// dann geprueft wuerde. Im **Ergebnis** sind die beiden Reihenfolgen nicht zu
+/// unterscheiden, allein im **Aufwand**. Diesen Teil traegt
+/// `zwei_gigabyte_werden_ohne_arbeitsspeicher_abgewiesen` weiter unten. Die
+/// beiden Proben zusammen sind der Nachweis von S10, und keine von beiden ist es
+/// allein.
 #[test]
 fn eine_datei_ueber_der_grenze_wird_abgewiesen_ohne_gelesen_zu_werden() {
     let ordner = Pruefordner::neu("oeffnen-grenze");
 
     let ueber_der_grenze = ordner.luecke("zu-gross.log", datei::EDITORGRENZE + 1);
     let auf_der_grenze = ordner.luecke("gerade-noch.log", datei::EDITORGRENZE);
-    sperren(&ueber_der_grenze);
-    sperren(&auf_der_grenze);
-
-    if !sperre_wirkt(&auf_der_grenze) {
-        // Unter root liest sich auch eine gesperrte Datei. Dann sagt der
-        // Nachweis nichts aus, und eine Probe, die nichts aussagt, behauptet
-        // hier auch nichts.
-        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
-        return;
-    }
 
     assert_eq!(
         datei::oeffnen(&ueber_der_grenze),
@@ -692,12 +736,223 @@ fn eine_datei_ueber_der_grenze_wird_abgewiesen_ohne_gelesen_zu_werden() {
         }),
         "die zu grosse Datei kam nicht als zu gross zurueck"
     );
+
+    let stand = datei::oeffnen(&auf_der_grenze)
+        .expect("die Datei auf der Grenze gehoert gelesen, sonst belegt die Probe nichts");
+    assert_eq!(
+        stand.len() as u64,
+        datei::EDITORGRENZE,
+        "die Datei auf der Grenze wurde nicht vollstaendig gelesen"
+    );
+}
+
+/// Fall 10, zweiter Teil: eine benannte Roehre haelt das Oeffnen nicht an.
+///
+/// Die Roehre hat keinen Schreiber, und ein `File::open` darauf wartet, bis
+/// jemand hineinschreibt — hier also fuer immer. Dass die Probe mit einem Befund
+/// endet und nicht mit Stillstand, besorgt [`oeffnen_mit_zeitschranke`].
+///
+/// **Zwei Aussagen, und die zweite ist die kleinere.** Abgewiesen wird die Roehre
+/// mit dem Satz "das ist keine gewoehnliche Datei", und dass dieser Satz auf eine
+/// Roehre wirklich greift, war bis zum 260810 ungeprueft: `tests/text.rs` deckte
+/// den Ordner ab und die Verknuepfung, aber kein Ding, das sich oeffnen laesst
+/// und doch keine Datei ist. Dass die Antwort ueberhaupt kommt, ist die groessere
+/// Aussage, und sie haengt am `O_NONBLOCK` in
+/// `verzeichnis::sys::ohne_warten_oeffnen`. Wer es dort herausnimmt, sieht diese
+/// Probe stehen bleiben, statt einen Zweig weniger zu treffen.
+#[test]
+fn eine_benannte_roehre_wird_abgewiesen_und_haelt_das_oeffnen_nicht_an() {
+    let ordner = Pruefordner::neu("oeffnen-roehre");
+    let roehre = ordner.roehre("ohne-schreiber");
+
+    let ergebnis = oeffnen_mit_zeitschranke(&roehre, Duration::from_secs(5));
+
     assert!(
-        matches!(
-            datei::oeffnen(&auf_der_grenze),
-            Err(Abweisung::KeinGueltigesZiel { .. })
+        matches!(&ergebnis, Err(Abweisung::KeinGueltigesZiel { .. })),
+        "die Roehre kam nicht als kein gueltiges Ziel zurueck: {ergebnis:?}"
+    );
+    let meldung = ergebnis.unwrap_err().meldung();
+    assert!(
+        meldung.contains("keine gewöhnliche Datei"),
+        "die Meldung nennt den Grund nicht: {meldung}"
+    );
+}
+
+/// Eine gesperrte Datei scheitert am Oeffnen, und der Systemfehler kommt mit.
+///
+/// Diese Probe steht hier, weil der alte Schnitt von Fall 10 sie beilaeufig
+/// mitbelegt hat: dort waren beide Dateien mit Rechten 000 angelegt. Nach dem
+/// Umbau auf den Deskriptor liegt das fehlende Leserecht **vor** jeder Pruefung,
+/// und dass es dann als `KeinGueltigesZiel` mit dem Grund des Systems ankommt und
+/// nicht verschluckt wird, gehoert weiter geprueft.
+#[test]
+fn eine_gesperrte_datei_kommt_mit_dem_systemfehler_zurueck() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("oeffnen-gesperrt");
+    let gesperrt = ordner.datei("verschlossen.txt", b"eins\n");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht setzen");
+
+    if fs::read(&gesperrt).is_ok() {
+        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
+        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
+        // nichts.
+        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
+        return;
+    }
+
+    let ergebnis = datei::oeffnen(&gesperrt);
+    let Err(Abweisung::KeinGueltigesZiel { grund, .. }) = &ergebnis else {
+        panic!("die gesperrte Datei kam nicht als kein gueltiges Ziel zurueck: {ergebnis:?}");
+    };
+    assert!(
+        !grund.is_empty(),
+        "der Grund ist leer, der Systemfehler ist unterwegs verlorengegangen"
+    );
+}
+
+/// Fall 10, dritter Teil: der Pfad wechselt seine Art, waehrend geoeffnet wird.
+///
+/// Das ist der Defekt `260809-1652` in seiner eigentlichen Gestalt. Die alte
+/// Fassung fragte `stat(2)` auf den Pfad und oeffnete danach denselben Pfad ein
+/// zweites Mal; wurde er in dieser Spanne gegen eine benannte Roehre getauscht,
+/// hing das Oeffnen. Ein Faden tauscht hier genau das, waehrend ein zweiter
+/// [`datei::oeffnen`] ruft, und zwar tausendfach.
+///
+/// # Der Tausch ist nachgemessen und nicht nur gemeint
+///
+/// Die alte Fassung von `oeffnen` faellt an dieser Probe wirklich aus: mit der
+/// alten Reihenfolge eingesetzt bleibt der Lesefaden in `File::open` an der
+/// Roehre stehen und die Zeitschranke unten schlaegt zu (am 260810 gemessen, ein
+/// Lauf). Das ist der Grund, aus dem der Tauscher so aussieht, wie er aussieht,
+/// und nicht einfacher:
+///
+/// - **Der umkaempfte Pfad ist zu jedem Zeitpunkt vorhanden**, einmal als Datei
+///   und einmal als Roehre. Ein Tauscher, der wegbenennt und zuruecklegt, laesst
+///   den Pfad die meiste Zeit **fehlen**; der Lesefaden sieht dann grosse Teile
+///   der Zeit gar nichts, und das Fenster zwischen Pruefung und Oeffnen wird nie
+///   getroffen. So gebaut lief die Probe auch unter der alten Fassung durch und
+///   belegte nichts.
+/// - Gelegt wird ueber eine **harte Verknuepfung auf eine Vorlage** und ein
+///   `rename` darueber. `rename` ersetzt in einem Zug, und die Vorlage bleibt
+///   liegen, statt mitzuwandern.
+/// - **`rename` auf denselben Inode tut nichts und meldet Erfolg** (so schreibt
+///   POSIX es vor). Deshalb wechseln Datei und Roehre streng ab, und deshalb
+///   raeumt die Schleife ihre Zwischenverknuepfung vorher weg: bliebe sie
+///   liegen, scheiterte die naechste Verknuepfung, und der Tauscher hoerte nach
+///   einem Tausch auf.
+///
+/// Genau das faengt die Zaehlung unten ab. **Ein Tauscher, der still aufhoert,
+/// laesst die Probe nicht durchlaufen, sondern ausfallen** — sonst waere das die
+/// Sorte Probe, die gruen ist, weil sie nichts mehr tut.
+///
+/// # Der Lesefaden wartet auf den Tauscher und nicht auf eine Zahl
+///
+/// Die Schleife unten laeuft, bis **beides** erreicht ist: die Zahl der
+/// Durchlaeufe und die Zahl der Tausche. Eine feste Zahl von Durchlaeufen allein
+/// genuegt nicht, und das ist gemessen und nicht befuerchtet: im Profil `release`
+/// ist der Lesefaden so viel schneller, dass er seine 20.000 Durchlaeufe hinter
+/// sich hat, bevor der Tauscher tausend Tausche geschafft hat (am 260810
+/// beobachtet: 994). Die Probe waere dann im einen Profil aussagekraeftig und im
+/// anderen nicht. Mit der Kopplung an den Zaehler richtet sie sich nach dem
+/// langsameren der beiden, was auch immer das auf dem Geraet ist.
+///
+/// Die Obergrenze daneben ist die Notbremse: haelt der Tauscher an, laeuft der
+/// Lesefaden nicht ewig, sondern kommt zurueck und laesst die Zaehlung ausfallen.
+///
+/// # Was die Probe zusagt und was nicht
+///
+/// - **Unter der heutigen Bauart kann sie nicht ausfallen.** Es gibt nur noch
+///   einen Aufruf, der den Namen aufloest, also kein Fenster, in dem er sich
+///   aendern koennte. Jede Antwort ist entweder der Inhalt der Datei oder eine
+///   Abweisung mit Grund, und beides kommt sofort.
+/// - **Unter der alten Bauart faellt sie mit hoher Wahrscheinlichkeit aus, nicht
+///   mit Sicherheit.** Ob ein Tausch in das schmale Fenster faellt, entscheidet
+///   der Ablaufplaner; erzwingen laesst sich ein Wettrennen von aussen nicht.
+///   Deshalb stehen beide Zahlen hoch.
+///
+/// `NichtAlsTextLesbar` und `ZuGross` kommen nicht vor: die Vorlage traegt fuenf
+/// Bytes gueltiges UTF-8, und die Roehre faellt am Typ heraus, bevor irgendetwas
+/// gelesen wird.
+#[test]
+fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
+    // Wie oft mindestens geoeffnet und wie oft mindestens getauscht wird; die
+    // Schleife laeuft, bis beides erreicht ist. Die dritte Zahl ist die
+    // Notbremse fuer den Fall, dass der Tauscher stehen bleibt.
+    const DURCHLAEUFE: usize = 20_000;
+    const MINDESTENS_GETAUSCHT: u64 = 2_000;
+    const HOECHSTENS_DURCHLAEUFE: usize = 10 * DURCHLAEUFE;
+
+    let ordner = Pruefordner::neu("oeffnen-wechsel");
+    let vorlage_datei = ordner.datei("vorlage.txt", b"eins\n");
+    let vorlage_roehre = ordner.roehre("vorlage.roehre");
+    let zwischen = ordner.pfad.join("zwischen");
+    let umkaempft = ordner.pfad.join("umkaempft");
+    fs::hard_link(&vorlage_roehre, &umkaempft).expect("der Anfangsstand laesst sich nicht legen");
+
+    let schluss = Arc::new(AtomicBool::new(false));
+    let getauscht = Arc::new(AtomicU64::new(0));
+    let tauscher = {
+        let schluss = Arc::clone(&schluss);
+        let getauscht = Arc::clone(&getauscht);
+        let umkaempft = umkaempft.clone();
+        std::thread::spawn(move || {
+            while !schluss.load(Ordering::Relaxed) {
+                for vorlage in [&vorlage_datei, &vorlage_roehre] {
+                    let _ = fs::remove_file(&zwischen);
+                    if fs::hard_link(vorlage, &zwischen).is_err()
+                        || fs::rename(&zwischen, &umkaempft).is_err()
+                    {
+                        // Der Ordner ist abgeraeumt oder der Lesefaden fertig.
+                        // Wie weit es gekommen ist, steht im Zaehler.
+                        return;
+                    }
+                    getauscht.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+        })
+    };
+
+    let (sender, empfaenger) = mpsc::channel();
+    let leserpfad = umkaempft.clone();
+    let mitgezaehlt = Arc::clone(&getauscht);
+    std::thread::spawn(move || {
+        let mut unerwartet: Vec<String> = Vec::new();
+        let mut gelaufen = 0usize;
+        while gelaufen < DURCHLAEUFE
+            || (mitgezaehlt.load(Ordering::Relaxed) < MINDESTENS_GETAUSCHT
+                && gelaufen < HOECHSTENS_DURCHLAEUFE)
+        {
+            gelaufen += 1;
+            match datei::oeffnen(&leserpfad) {
+                Ok(_) | Err(Abweisung::KeinGueltigesZiel { .. }) => {}
+                andere => unerwartet.push(format!("{andere:?}")),
+            }
+        }
+        let _ = sender.send((gelaufen, unerwartet));
+    });
+
+    let ergebnis = empfaenger.recv_timeout(Duration::from_secs(15));
+    schluss.store(true, Ordering::Relaxed);
+    let _ = tauscher.join();
+    let gelaufene_tausche = getauscht.load(Ordering::Relaxed);
+
+    match ergebnis {
+        Ok((gelaufen, unerwartet)) => assert!(
+            unerwartet.is_empty(),
+            "{} von {gelaufen} Durchlaeufen kamen mit einer unerwarteten Antwort zurueck: {unerwartet:?}",
+            unerwartet.len()
         ),
-        "die Datei auf der Grenze wurde nicht gelesen, damit belegt die Probe nichts"
+        Err(_) => panic!(
+            "die Durchlaeufe sind nach 15 Sekunden nicht fertig geworden; \
+             das Oeffnen haengt an der benannten Roehre"
+        ),
+    }
+    assert!(
+        gelaufene_tausche >= MINDESTENS_GETAUSCHT,
+        "der Tauscher ist nach {gelaufene_tausche} Tauschen stehen geblieben; \
+         unter {MINDESTENS_GETAUSCHT} belegt die Probe kein Wettrennen mehr"
     );
 }
 
@@ -717,21 +972,47 @@ fn genau_auf_der_grenze_wird_angenommen() {
 
 /// Eine Datei weit ueber der Grenze kostet weder Zeit noch Speicher.
 ///
-/// Zwei Gigabyte als Loch: das ist die Protokolldatei aus dem Datensatz. Die
-/// Probe haelt fest, dass die Antwort aus einem `stat(2)` kommt und nicht aus
-/// zwei Gigabyte im Arbeitsspeicher — die Zeitschranke ist grosszuegig, weil
-/// sie nicht messen, sondern nur den Unterschied zwischen Mikrosekunden und
-/// Sekunden treffen soll.
+/// Zwei Gigabyte als Loch: das ist die Protokolldatei aus dem Datensatz.
+///
+/// **Diese Probe traegt seit dem 260810 den Nachweis "ohne gelesen zu werden".**
+/// Fall 10 hat ihn abgegeben, weil er dort an den Rechten hing und der Umbau auf
+/// den Deskriptor sie gegenstandslos gemacht hat; im **Ergebnis** liefern "vor
+/// dem Lesen geprueft" und "nach dem Lesen geprueft" beide `ZuGross`, denn die
+/// Schranke `take(EDITORGRENZE + 1)` faengt auch den zweiten Fall. Beobachtbar
+/// ist allein der **Aufwand**, und deshalb ist die Zeit hier kein Beiwerk,
+/// sondern der Beleg.
+///
+/// # Gemessen wird gegen die Maschine und nicht gegen eine Zahl
+///
+/// ```text
+///   16 MB Loch, vollstaendig gelesen  ──> die Messlatte
+///    2 GB Loch, abgewiesen            ──> muss darunter bleiben, mit Luft
+/// ```
+///
+/// Zwei Gigabyte sind das 128-fache von 16 MB. Wer sie liest, braucht mindestens
+/// das 128-fache der Messlatte, dazu zwei Gigabyte Arbeitsspeicher. Die Schranke
+/// unten laesst das Achtfache zu; ein gelesenes Gigabytepaar waere damit um den
+/// Faktor 16 ausgeschlossen, und die Rechnung lebt nicht von der Geschwindigkeit
+/// des Geraets. Die Fassung bis zum 260810 stand bei einer halben Sekunde
+/// absolut, also bei einer Zahl, die auf einem langsamen Geraet zu knapp und auf
+/// einem schnellen zu weit ist.
 #[test]
 fn zwei_gigabyte_werden_ohne_arbeitsspeicher_abgewiesen() {
     use std::time::Instant;
 
     let ordner = Pruefordner::neu("oeffnen-riesig");
+    let messlatte = ordner.luecke("messlatte.log", datei::EDITORGRENZE);
     let riesig = ordner.luecke("protokoll.log", 2 * 1024 * 1024 * 1024);
 
     let begonnen = Instant::now();
+    let stand = datei::oeffnen(&messlatte).expect("das Loch auf der Grenze gehoert gelesen");
+    let gelesen = begonnen.elapsed();
+    assert_eq!(stand.len() as u64, datei::EDITORGRENZE);
+    drop(stand);
+
+    let begonnen = Instant::now();
     let ergebnis = datei::oeffnen(&riesig);
-    let gedauert = begonnen.elapsed();
+    let abgewiesen = begonnen.elapsed();
 
     assert_eq!(
         ergebnis,
@@ -741,9 +1022,9 @@ fn zwei_gigabyte_werden_ohne_arbeitsspeicher_abgewiesen() {
         })
     );
     assert!(
-        gedauert.as_millis() < 500,
-        "die Abweisung hat {} ms gebraucht, das riecht nach gelesenen Bytes",
-        gedauert.as_millis()
+        abgewiesen < gelesen * 8,
+        "die Abweisung der zwei Gigabyte hat {abgewiesen:?} gebraucht, \
+         das vollstaendige Lesen von 16 MB nur {gelesen:?}; das riecht nach gelesenen Bytes"
     );
 }
 

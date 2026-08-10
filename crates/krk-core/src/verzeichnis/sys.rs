@@ -1,21 +1,24 @@
-//! Die Systemschicht des Kerns: die drei Fremdaufrufe, die KRK braucht.
+//! Die Systemschicht des Kerns: die vier Fremdaufrufe, die KRK braucht.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
 //! genau diese Oeffnung moeglich ist. Ein zweites Modul mit dieser Ausnahme
 //! entsteht nicht; mit Schritt 15 sind `copyfile(3)` und `renamex_np(2)`
-//! hierhergekommen statt daneben.
+//! hierhergekommen statt daneben, mit dem Defekt `260809-1652` `fcntl(2)`.
 //!
 //! ```text
 //! getattrlistbulk(2) ──> Schwungleser         ──> verzeichnis::leser
 //! copyfile(3)        ──> datei_kopieren       ──> operation::kopieren
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
+//! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::oeffnen
 //! ```
 //!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
-//! Kerns und nicht allein die des Lesers. Es liegt unter `verzeichnis/`, weil
-//! es dort entstanden ist und ein Umzug jede Fundstelle verschoebe, ohne eine
-//! Zeile besser zu machen.
+//! Kerns und nicht allein die des Lesers. Die vierte Zeile ist der erste
+//! Aufrufer von ausserhalb `verzeichnis/`, und sie ist der Grund, aus dem die
+//! Aussage jetzt nicht mehr nur behauptet ist. Das Modul liegt unter
+//! `verzeichnis/`, weil es dort entstanden ist und ein Umzug jede Fundstelle
+//! verschoebe, ohne eine Zeile besser zu machen.
 //!
 //! # Warum `getattrlistbulk` und nicht `readdir` plus `stat`
 //!
@@ -51,10 +54,11 @@
 
 use std::borrow::Cow;
 use std::ffi::{CString, c_char, c_int, c_uint, c_void};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::os::fd::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -656,6 +660,103 @@ pub fn im_datentraeger_verschieben(alt: &Path, neu: &Path, nur_wenn_frei: bool) 
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// fcntl(2): oeffnen, ohne auf einen Schreiber zu warten
+// ---------------------------------------------------------------------------
+
+/// `O_NONBLOCK` aus `sys/fcntl.h`: das Oeffnen wartet nicht.
+const O_NONBLOCK: c_int = 0x0000_0004;
+
+/// `F_GETFL` aus `sys/fcntl.h`: die Kennzeichen des Deskriptors lesen.
+const F_GETFL: c_int = 3;
+
+/// `F_SETFL` aus `sys/fcntl.h`: die Kennzeichen des Deskriptors setzen.
+const F_SETFL: c_int = 4;
+
+unsafe extern "C" {
+    /// `int fcntl(int fildes, int cmd, ...)`
+    ///
+    /// **Variadisch deklariert, so wie der Header es tut**, und das ist keine
+    /// Formsache: auf arm64 uebergibt Apples ABI variadische Argumente auf dem
+    /// Stapel, feste dagegen in Registern. Eine Deklaration mit drei festen
+    /// Argumenten waere derselbe Aufruf mit dem falschen Argumentweg, und der
+    /// Uebersetzer hat keine Gelegenheit, das zu bemerken.
+    fn fcntl(fd: c_int, befehl: c_int, ...) -> c_int;
+}
+
+/// Oeffnet einen Pfad zum Lesen, **ohne bei einer benannten Roehre zu warten**.
+///
+/// `File::open` auf eine benannte Roehre ohne Schreiber haengt, bis jemand
+/// hineinschreibt. Wer deshalb erst am **Namen** prueft, ob der Pfad eine
+/// gewoehnliche Datei ist, und danach denselben Namen oeffnet, hat zwischen
+/// beiden Aufrufen ein Fenster: zeigt der Pfad in dieser Spanne auf eine Roehre,
+/// haengt das Oeffnen doch, und der Aufrufer bekommt keine Meldung, sondern
+/// nichts.
+///
+/// Diese Funktion dreht die Reihenfolge um. Sie oeffnet zuerst, und zwar mit
+/// `O_NONBLOCK`, sodass der Aufruf auch an einer Roehre zurueckkommt; der
+/// Aufrufer fragt danach `fstat` am **Deskriptor** und entscheidet damit ueber
+/// genau das Ding, das er in der Hand haelt. Das Fenster verschwindet nicht,
+/// weil es bewacht wird, sondern weil nur noch **ein** Aufruf den Namen
+/// anfasst.
+///
+/// # `O_NONBLOCK` wird noch hier abgeschaltet und nicht spaeter
+///
+/// Die Gefahr steht allein am `open`; ein `fcntl(F_SETFL)` haelt nichts an, auch
+/// nicht an einer Roehre ohne Schreiber. Abgeschaltet gehoert das Kennzeichen,
+/// weil POSIX die Wirkung von `O_NONBLOCK` auf gewoehnliche Dateien offen
+/// laesst: `speculation:` auf einem Netzlaufwerk koennte ein Lesen sonst mit
+/// `EAGAIN` scheitern, und ein Dateimanager sieht Netzlaufwerke. Ungemessen ist,
+/// ob macOS auf einer SMB- oder FUSE-Flaeche wirklich `EAGAIN` liefert; das
+/// Abschalten kostet einen Systemaufruf und macht die Frage gegenstandslos,
+/// statt sie zu beantworten.
+///
+/// # Was der Deskriptor traegt
+///
+/// Geoeffnet wird **ohne** `O_NOFOLLOW`, also so wie `File::open`: bei einer
+/// Verknuepfung steht am Deskriptor ihr Ziel, und `metadata()` darauf sagt
+/// dasselbe wie `std::fs::metadata` auf den Pfad. Ein Ordner laesst sich auf
+/// macOS zum Lesen oeffnen und faellt deshalb nicht schon hier heraus, sondern
+/// erst am `fstat` des Aufrufers; das ist gewollt, denn was ein gueltiges Ziel
+/// ist, entscheidet der Aufrufer und nicht diese Stelle.
+///
+/// Der eine Aufrufer ist [`crate::text::datei::oeffnen`]. Der Defekt, der die
+/// Funktion verlangt hat, ist `260809-1652`.
+pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
+    let datei = OpenOptions::new()
+        .read(true)
+        .custom_flags(O_NONBLOCK)
+        .open(pfad)?;
+    blockierend_stellen(&datei)?;
+    Ok(datei)
+}
+
+/// Nimmt `O_NONBLOCK` von einem offenen Deskriptor wieder ab.
+///
+/// Gelesen und geschrieben werden die Kennzeichen und nicht ein einzelnes Bit:
+/// `F_SETFL` ersetzt den ganzen Satz, und wer die anderen Kennzeichen nicht
+/// vorher liest, loescht sie mit.
+fn blockierend_stellen(datei: &File) -> io::Result<()> {
+    let fd = datei.as_raw_fd();
+    // SICHERHEIT: `fd` gehoert dem `File` des Aufrufers und ist offen, solange
+    // dessen Bindung lebt. `F_GETFL` liest allein die Kennzeichen des
+    // Deskriptors, fasst keinen Speicher an und nimmt kein weiteres Argument;
+    // die 0 steht da, weil der Aufruf variadisch ist.
+    let kennzeichen = unsafe { fcntl(fd, F_GETFL, 0) };
+    if kennzeichen < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    if kennzeichen & O_NONBLOCK == 0 {
+        return Ok(());
+    }
+    // SICHERHEIT: derselbe offene Deskriptor. `F_SETFL` nimmt genau ein `int`
+    // mit den neuen Kennzeichen und fasst ebenfalls keinen Speicher an.
+    if unsafe { fcntl(fd, F_SETFL, kennzeichen & !O_NONBLOCK) } < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
 ///
 /// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
@@ -694,5 +795,30 @@ mod tests {
     #[test]
     fn kurzer_satz_liefert_keinen_eintrag() {
         assert!(satz_zerlegen(&[0u8; 8]).is_none());
+    }
+
+    /// Der Deskriptor kommt blockierend zurueck, nicht nichtblockierend.
+    ///
+    /// Das ist die eine Zusage von [`ohne_warten_oeffnen`], die der Aufrufer
+    /// nicht selbst nachsehen kann: `O_NONBLOCK` dient dem Oeffnen und darf das
+    /// Lesen nicht erreichen. Gefragt wird der Deskriptor selbst und nicht der
+    /// Quelltext daneben.
+    #[test]
+    fn ein_geoeffneter_deskriptor_traegt_o_nonblock_nicht_mehr() {
+        let pfad = std::env::temp_dir().join(format!("krk-sys-nonblock-{}", std::process::id()));
+        std::fs::write(&pfad, b"eins\n").expect("Pruefdatei laesst sich nicht schreiben");
+
+        let datei = ohne_warten_oeffnen(&pfad).expect("die Pruefdatei gehoert geoeffnet");
+        // SICHERHEIT: `datei` lebt bis zum Ende der Probe, der Deskriptor ist
+        // also offen. `F_GETFL` liest nur.
+        let kennzeichen = unsafe { fcntl(datei.as_raw_fd(), F_GETFL, 0) };
+        let _ = std::fs::remove_file(&pfad);
+
+        assert!(kennzeichen >= 0, "F_GETFL ist gescheitert");
+        assert_eq!(
+            kennzeichen & O_NONBLOCK,
+            0,
+            "der Deskriptor traegt O_NONBLOCK noch, das Lesen koennte mit EAGAIN scheitern"
+        );
     }
 }
