@@ -110,3 +110,29 @@ nicht im Gegenstand einer Runde, und `portfolio.md` gehört keinem Circle.
 
 ---
 Resolved:
+
+---
+
+## Reconciliation-Vermerk 260810-1907 (Abschluss-Abgleich der Sitzung 260810-1647)
+
+**Der Datensatz bleibt offen, und die Sache trägt.** Die Prüfung an den zwei genannten
+Stellen des Plugins ist nachvollzogen: `agents/playmaker.md` führt an der einzigen Stelle,
+die ein Pfadzitat des Portfolios ausformt, selbst einen ausgeschriebenen Marker vor, und
+`rules/circle-records.md` schweigt zur Zitierform. Der Beleg ist seit der Aufnahme stärker
+geworden: von den fünf gemeldeten Zitaten in `portfolio.md` zeigen jetzt **drei** ins Leere
+statt zwei. `260810-0805` und `260807-1022` tragen seit dieser Sitzung `_c_` statt `_p_`.
+
+**Eine Begründung im Datensatz trifft nicht.** Der Abschnitt `## Wo der Fix liegt` und die
+Zeile `**Zuständig:**` sagen, `$FUSION_PLUGIN_ROOT` sei aus diesem Projekt heraus „nur
+lesbar". Am Dateisystem geprüft am 260810-1907: `$FUSION_PLUGIN_ROOT` ist `/Users/k1/.fusion`,
+gehört dem Nutzer `k1` mit `drwxr-xr-x`, und `agents/playmaker.md` ist beschreibbar.
+
+Was stattdessen trägt: `/Users/k1/.fusion` ist kein Git-Arbeitsbaum (`git status` dort meldet
+`not a git repository`), sondern eine installierte Kopie der Plugin-Version 7.2.0; alle
+Dateien tragen den Installationszeitpunkt 260810-1645, und `fusion-workbench/.fusion-setup`
+nennt dieselbe Version. Eine Änderung dort überlebt die nächste Installation nicht, und die
+Quelle liegt im Repository des Plugins, nicht hier. Die Schlussfolgerung des Datensatzes —
+aus diesem Projekt heraus nicht behebbar — bleibt damit richtig; berichtigt ist allein ihre
+Begründung.
+
+Nachgetragen von `reconciler`, `shared/history/260810-1907-reconciliation.md`.

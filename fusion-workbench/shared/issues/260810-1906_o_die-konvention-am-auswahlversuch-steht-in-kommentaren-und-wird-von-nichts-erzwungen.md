@@ -49,3 +49,29 @@ sondern machte sie nur auffindbar.
 ## Dringlichkeit
 
 Gering. Heute ist nichts falsch; es geht um die sechste Aufrufstelle, die es noch nicht gibt.
+
+---
+
+## Reconciliation-Vermerk 260810-1907 (Abschluss-Abgleich der Sitzung 260810-1647)
+
+**Der Befund trägt in jedem geprüften Punkt.** `Auswahlversuch` trägt kein `#[must_use]`
+(`grep must_use` liefert in beiden beteiligten Dateien null Treffer). Der Doc-Kommentar von
+`eintrag_waehlen` nennt die Konvention nicht. Die fünf Aufrufstellen verteilen sich so, wie
+der Datensatz sie führt: auswertend `tabelle.rs:1057` (`eintrag_anspringen`) und
+`anwendung.rs:4274` (`messhandlung`, Zweig `Handlung::Auswaehlen`), begründet verworfen
+`anwendung.rs:2709` und `:3230`, nackt `anwendung.rs:2733`. Auch die Feststellung, dass
+`#[must_use]` und die Konvention „nackt heißt kann nicht eintreten" einander ausschließen,
+hält.
+
+**Eine Pfadangabe trifft nicht.** Die Zeile `**Betroffen:**` nennt
+`crates/krk-ui/src/appkit/tabelle.rs (Auswahlversuch, eintrag_waehlen)`. Dort steht allein
+`eintrag_waehlen`. Die Aufzählung `Auswahlversuch` ist in `crates/krk-ui/src/tabs.rs:249`
+deklariert, ihr Doc-Kommentar beginnt bei `:239`. Der vorgeschlagene Weg — `#[must_use]` an
+`Auswahlversuch` — gehörte damit nach `crates/krk-ui/src/tabs.rs:248`, nicht nach
+`tabelle.rs`. Wer den Datensatz anfasst, fasst zwei Dateien an und nicht eine.
+
+Nebenbei: die Zeilenangabe `tabelle.rs:1062-1074` für den Doc-Kommentar von
+`eintrag_waehlen` ist um eine Zeile abgewandert; er steht heute in `:1063-1075`, die Funktion
+in `:1076`.
+
+Nachgetragen von `reconciler`, `shared/history/260810-1907-reconciliation.md`.
