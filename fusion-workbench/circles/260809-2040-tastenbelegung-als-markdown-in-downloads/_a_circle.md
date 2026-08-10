@@ -56,7 +56,7 @@ Am Code geprüft am 260809-2040.
 
 **Zahlen des Auslieferungszustands, nachgezählt und nicht übernommen.** `resources/default-keymap.toml` führt 71 Funktionen mit zusammen 79 Kombinationen. Sechs davon stellt das Hauptmenü zu (`gehalten_von = "menue"`) und haben deshalb nie ein Kommando; 65 tragen eines (`Kommando::KENNUNGEN`). Ab Werk hat **keine** Funktion eine leere Tastenliste, und `reserviert_fuer` steht in keinem Eintrag mehr. Beides kann der Nutzer erzeugen: wer eine Kombination entfernt, hat die Funktion unbelegt gemacht, und wer eine Funktion in seiner Datei nicht nennt, bekommt sie unbelegt zurück. Die Ausgabe trifft also auf unbelegte Funktionen, auch wenn die Auslieferung keine kennt.
 
-**Wie KRK Fehler meldet, ist entschieden.** Die Statuszeile trägt fünf Ränge nach dem Alter der Aussage; der Datensatz ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_i_wie-zeigt-krk-dem-nutzer-fehler.md`. Eine Ausgabe, die gelingt oder scheitert, reiht sich dort ein und baut keine zweite Meldeform.
+**Wie KRK Fehler meldet, ist entschieden.** Die Statuszeile trägt fünf Ränge nach dem Alter der Aussage; der Datensatz ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md`. Eine Ausgabe, die gelingt oder scheitert, reiht sich dort ein und baut keine zweite Meldeform.
 
 **Atomares Schreiben gibt es schon.** `crates/krk-core/src/ablage/atomar.rs` schreibt erst vollständig in eine Nachbardatei und benennt dann um. Ob die Ausgabe das braucht, entscheidet der Planner; danebenbauen muss er es nicht.
 
@@ -78,17 +78,17 @@ Der aktive Circle `260807-2116-eingebauter-editor-mit-textmarken` ist **keine** 
 
 **Die Belegung ist um dreizehn Funktionen gewachsen.** Der neunte Funktionsbereich, `Editor`, und zwölf Kommandos von `Bearbeiten` bis `EditorAlleErsetzen` sind mit ihr entstanden. Eine Ausgabe darf deshalb keine Zahl fest verdrahten, weder die 71 Funktionen noch die 79 Kombinationen noch die neun Bereiche; sie zählt, was die Belegung führt.
 
-**Der Nachschlag geht seit dem 260809 für Buchstaben und Ziffern über das gemeldete Zeichen, für alles übrige weiter über den virtuellen Tastencode** (`crates/krk-core/src/tasten/parser.rs`, Nutzerentscheid vom 260808-0155 in `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_i_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`). Beide Arten stehen nebeneinander in derselben Belegung, und die Ausgabe muss beide zeigen. Für die Beschriftung ändert sich dabei nichts: `anzeige()` schreibt `F3` wie `Cmd+Y`, und die zweite Nachschlagart ist genau der Grund, warum `Cmd+Y` künftig auf jeder Tastaturbelegung unter der Aufschrift Y liegt. Ob die Ausgabe diesen Unterschied benennt oder ihn nur abbildet, ist eine Frage für den Aktivierungs-Spec.
+**Der Nachschlag geht seit dem 260809 für Buchstaben und Ziffern über das gemeldete Zeichen, für alles übrige weiter über den virtuellen Tastencode** (`crates/krk-core/src/tasten/parser.rs`, Nutzerentscheid vom 260808-0155 in `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`). Beide Arten stehen nebeneinander in derselben Belegung, und die Ausgabe muss beide zeigen. Für die Beschriftung ändert sich dabei nichts: `anzeige()` schreibt `F3` wie `Cmd+Y`, und die zweite Nachschlagart ist genau der Grund, warum `Cmd+Y` künftig auf jeder Tastaturbelegung unter der Aufschrift Y liegt. Ob die Ausgabe diesen Unterschied benennt oder ihn nur abbildet, ist eine Frage für den Aktivierungs-Spec.
 
 ### Was zu klären ist, bevor ein Plan entsteht
 
 Fünf Fragen liegen als Datensätze im `decisions/` dieses Circles, alle mit dem Marker `_o_`. Keine ist geraten; jede führt ihre Möglichkeiten und, wo der Shaper eine hat, seine Empfehlung.
 
-- `decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md` — Kommando in der Belegung, Menüeintrag, oder beides.
-- `decisions/260809-2040_o_wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen.md` — fester Name mit Überschreiben, Zeitstempel im Namen, oder Zählersuffix.
-- `decisions/260809-2040_o_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md` — Umfang und Ordnung des Inhalts.
-- `decisions/260809-2040_o_gehoert-der-wirkungsbereich-in-die-ausgabe.md` — ob die Ausgabe zeigt, wo ein Befehl wirkt.
-- `decisions/260809-2040_o_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md` — die geltende oder die noch nicht gesicherte Arbeitskopie. Hängt an der ersten Frage.
+- `decisions/260809-2040_*_wie-wird-die-ausgabe-der-belegung-ausgeloest.md` — Kommando in der Belegung, Menüeintrag, oder beides.
+- `decisions/260809-2040_*_wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen.md` — fester Name mit Überschreiben, Zeitstempel im Namen, oder Zählersuffix.
+- `decisions/260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md` — Umfang und Ordnung des Inhalts.
+- `decisions/260809-2040_*_gehoert-der-wirkungsbereich-in-die-ausgabe.md` — ob die Ausgabe zeigt, wo ein Befehl wirkt.
+- `decisions/260809-2040_*_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md` — die geltende oder die noch nicht gesicherte Arbeitskopie. Hängt an der ersten Frage.
 
 ### Was später danebentreten darf
 
@@ -140,7 +140,7 @@ zählt, was die Belegung führt.
 Der Abschluss der Editor-Runde ist aus zwei Gründen beschränkt: der Abnahmelauf über die
 110 Kriterien ihres Specs verlangt KRK im Vordergrund und ist Nutzerarbeit, und zwei
 Restdefekte hängen an der Frage, ob `krk-ui` ein Bibliotheksziel bekommt
-(`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-1044_o_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`).
+(`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`).
 
 Keiner der beiden trifft diese Ausgabe. Sie führt keine Zeitzusage, also erbt sie keinen
 offenen Messstand, und sie setzt auf `belegungsmodell.rs` auf, das ohne AppKit auskommt und
@@ -151,9 +151,9 @@ Aktivierungs-Spec und keine Abhängigkeit.
 
 ### 3. Ein offener Defekt sitzt in einem Datensatz dieses Circles
 
-`shared/issues/260810-0805_o_ein-verweis-nennt-den-falschen-circle-und-die-zustellerregel-liegt-woanders.md`
+`shared/issues/260810-0805_*_ein-verweis-nennt-den-falschen-circle-und-die-zustellerregel-liegt-woanders.md`
 hält fest, dass
-`decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md:7` die
+`decisions/260809-2040_*_wie-wird-die-ausgabe-der-belegung-ausgeloest.md:7` die
 Zustellerregel im Circle der Editor-Runde zitiert, während der Datensatz im Circle der
 Runde 1 liegt. Der Defekt bittet darum, alle fünf Datensätze dieses Circles zu prüfen, weil
 nur einer geprüft ist. Das ist eine kleine Vorarbeit zur Klärungsrunde, kein Hindernis.

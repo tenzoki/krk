@@ -1,0 +1,117 @@
+# Die vier Circle-Datensätze tragen die Sternform, `portfolio.md` bekommt einen eigenen Defekt (T2)
+
+**Agent:** ontocoder
+**Status:** Complete
+**Quellen:**
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md`
+- `tasklist.md`, Abschnitt `### 2. Circle-Datensätze und portfolio.md tragen überholte Zustandsmarker`
+
+**Zum Stilprofil:** `fusion-rules ontocoder` gab allein `fusion-workbench/stilwerk/chat-voice-de.yaml` aus, kein `default-voice-de.yaml`. Für diesen Bericht gilt deshalb kein Langform-Schreibprofil; das Fehlen ist hier vermerkt, wie `rules/agent-setup.md` es verlangt.
+
+---
+
+## Der erhobene Bestand
+
+Der Bestand im Defektdatensatz stammt vom 260807-1022 und ist überholt. Neu erhoben am 260810-1730, in beiden vom Nachtrag 260807-1045 verlangten Namensformen:
+
+```sh
+grep -rnoE '26[0-9]{4}-[0-9]{4}_[aoicdspb]_[a-z0-9-]+\.md' \
+  fusion-workbench/portfolio.md fusion-workbench/circles/*/_?_circle.md | sort -u
+grep -rnoE '_[aoicdspbt]_circle\.md' \
+  fusion-workbench/portfolio.md fusion-workbench/circles/*/_?_circle.md | sort -u
+```
+
+**61 Stellen in der Datumsform und 15 in der Circle-Form, zusammen 76, in allen vier Circles und in `portfolio.md`.** Der Datensatz führte 16 in zwei Circles; die Runde 2 ist seither durchgelaufen.
+
+| Datei | Datumsform | Circle-Form |
+|---|---|---|
+| `circles/260802-0842-…/_b_circle.md` | 19 | 2 |
+| `circles/260804-0933-…-web-betrachter…/_a_circle.md` | 7 | 6 |
+| `circles/260807-2116-…-editor…/_b_circle.md` | 20 | 2 |
+| `circles/260809-2040-…-tastenbelegung…/_a_circle.md` | 10 | 2 |
+| `portfolio.md` | 5 (Zeilen 87, 149, 177, 179, 204) | 3 |
+
+Ein Skript hat jedes der 61 Datumsform-Zitate gegen den Ist-Marker der gleichnamigen Datei gehalten: **31 waren falsch, 30 zufällig richtig**; in den Circle-Datensätzen allein 29 falsch und 27 richtig. Der Unterschied ist ohne Belang für die Behebung — ein richtiger ausgeschriebener Marker ist derselbe Defekt einen Tag vor seinem Eintreten — aber er zeigt, warum eine Zählung falscher Stellen kein Maß für diesen Befund ist.
+
+Die Drift, die der Auftrag als Beispiel nannte, ist bestätigt: der Datensatz zitiert `circles/260802-0842-…/_t_circle.md`, die Datei heißt seit dem Rundenabschluss `_b_circle.md`, und die Stellen in `portfolio.md` stehen in anderen Zeilen als 24, 40 und 41.
+
+## Was geändert ist
+
+**55 Stellen in den vier Circle-Datensätzen sind auf die Sternform gezogen**, 54 in der Datumsform und eine in der Circle-Form. Dazu zwei Textstellen, die durch die Umstellung falsch geworden wären.
+
+| Datei | Stellen |
+|---|---|
+| `circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md` | 19 |
+| `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md` | 6 |
+| `circles/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md` | 20 |
+| `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` | 10 |
+
+Ausgeführt mit einer Zeilenliste, nicht mit einer Suchen-und-Ersetzen-Fahrt über die Dateien: jede angefasste Zeile steht namentlich im Skript, damit die Ausnahmen unten nicht vom Zufall abhängen.
+
+**Zwei Prosastellen nachgezogen.** In `circles/260802-0842-…/_b_circle.md` sagte der Abschnitt `### Offene Entscheidungen` „Alle Pfade sind auf den Marker gezogen, den die Datei heute trägt"; das beschrieb genau die Gewohnheit, die dieser Defekt abstellt, und sagt jetzt, dass die Pfade die Sternform tragen. In `circles/260804-0933-…/_a_circle.md` hat der Abschnitt `### 3. Drei Pfadzitate sind mit der Umbenennung ins Leere gelaufen` einen Erledigungsvermerk bekommen, damit ein Leser den behobenen Befund nicht ein zweites Mal verfolgt.
+
+## Was ausdrücklich nicht geändert ist, und warum
+
+**Dreizehn Stellen behalten ihren ausgeschriebenen Marker, weil der Marker dort die Aussage ist**, zwei in der Datumsform und elf in der Circle-Form. Eine Sternform an diesen Stellen löscht den Inhalt, statt ihn haltbar zu machen:
+
+- Die Befundtabelle in `circles/260804-0933-…/_a_circle.md`, Zeilen 151 bis 153. Sie führt die falschen Zeichenketten als Befund, in einer Spalte, die „zitiert" heißt.
+- Der Satz in derselben Datei, Zeile 155: „sein Suchmuster … erfasst die Form `_t_circle.md` ohnehin nicht".
+- Der Satz „Die Umbenennung des Datensatzes von `_a_circle.md` auf `_t_circle.md`" am Ende jedes der vier Aktivierungsvorschläge.
+- Der Nachtrag in `circles/260807-2116-…/_b_circle.md`, Zeile 228: „die Frage selbst ist zurückgestellt (`decisions/260810-1044_d_…`)". Der Marker steht dort für das Wort davor.
+
+**`portfolio.md` ist nicht angefasst.** Die Begründung steht unten.
+
+## Der Befund zur Erzeugung von `portfolio.md`
+
+Der Auftrag verlangte, die Erzeugung zu prüfen statt sie anzunehmen. Geprüft an den zwei Stellen, die sie festlegen:
+
+- **`$FUSION_PLUGIN_ROOT/rules/circle-records.md`**, Portfolio-Vorlage ab „`$PORTFOLIO` is regenerated by playmaker on every run. Template:". Die Vorlage führt fünf Abschnitte mit Platzhaltern und sagt zur Zitierform **nichts**.
+- **`$FUSION_PLUGIN_ROOT/agents/playmaker.md`**, Prozessschritt 3, Zeile 115. Die einzige Stelle der ganzen Anweisung, die ein Pfadzitat des Portfolios ausformt, formt es mit ausgeschriebenem Marker: „one open decision `260510-0930_o_token-format.md` cited".
+
+Dazu die Gegenprobe, warum die Sternform-Regel nicht greift: `rules/rule-file-provenance.md` begründet sie ausführlich, bindet aber den Herkunftskopf von Regeldateien und nicht die Ausgabe eines Agenten — und `fusion-rules playmaker` gibt die Datei ohnehin nicht aus.
+
+**Die Erzeugung setzt die Sternform also nicht.** Damit greift die Bedingung, die der Defektdatensatz selbst formuliert, und der zweite Weg des Auftrags ist der richtige: `portfolio.md` bleibt unangetastet, und der Zusammenhang steht als eigener Defekt in `shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md`. Er nennt die fünf Fundstellen, die zwei Plugin-Dateien und die zwei Zeilen, die zu ändern wären. Behebbar ist er aus diesem Projekt heraus nicht: `$FUSION_PLUGIN_ROOT` ist nur lesbar.
+
+## Die Festlegung zu Aufzeichnungen eines Standes
+
+**Aufzeichnungen eines Standes behalten ihren damaligen Marker. Die Ausnahme gilt je Datei nach ihrem Ort, nicht je Absatz.** Ausgenommen bleibt damit alles unter `history/`, `reviews/`, `analyses/`, `issues/` und `decisions/` — die fünf, die der Defektdatensatz schon nennt — und dazu `messungen/` und `spikes/`, die er zur Entscheidung stellt.
+
+Zwei Gründe. Erstens der Zweck: diese Dateien werden gelesen, um zu erfahren, was an ihrem Tag galt, und ein nachgezogener Marker verfälscht genau das. Zweitens die Entscheidbarkeit: „liegt die Datei unter `spikes/`" beantwortet jeder in einem Blick, „ist dieser Absatz eine Momentaufnahme" nicht — und eine Regel, die bei jedem Absatz neu ausgelegt wird, erzeugt beim nächsten Durchgang einen anderen Bestand als bei diesem.
+
+Daraus folgt für die Circle-Datensätze, dass auch ihre datierten Abschnitte mitgezogen sind, die Aktivierungsvorschläge des `playmaker` eingeschlossen: ein Circle-Datensatz liegt nicht in einem der ausgenommenen Verzeichnisse und wird gelesen, um den Stand zu erfahren. Die dreizehn Stellen oben sind keine Ausnahme von dieser Regel, sondern von etwas anderem — dort ist der Marker der Gegenstand des Satzes und kein Zeiger auf eine Datei.
+
+**Was T5 daraus erbt.** `spikes/fn-tasten/README.md` ist ausgenommen und bleibt, wie es geschrieben wurde; CLAUDE.md trägt nach der Erhebung des `taskplanner` ohnehin null Treffer. T5 ist damit leer und schließt mit einer Begründung statt mit einer Änderung — das Ergebnis, das die Aufgabenliste dort ausdrücklich als zulässig führt.
+
+## Prüfung
+
+Ein Prüfskript über die vier Datensätze, das drei Fragen in einem Lauf stellt und mit **Rückgabewert 0** endet:
+
+```
+4 Datensaetze, 56 Zitate mit Pfad, 59 Nennungen des Dateinamens,
+13 ausgeschriebene Marker verblieben, davon 13 als Aussage zugelassen.
+```
+
+- **Kein unbeabsichtigt ausgeschriebener Marker mehr.** 13 Stellen sind übrig, und alle 13 stehen namentlich in der Ausnahmeliste des Skripts, mit Datei und Zeilennummer. Eine vierzehnte hätte den Lauf scheitern lassen.
+- **Alle 56 Zitate mit Verzeichnisangabe lösen auf**, workbench-relativ und circle-relativ geprüft, jedes auf genau eine Datei. Keines zeigt ins Leere, keines ist mehrdeutig.
+- **Alle 59 Nennungen eines Dateinamens ohne Verzeichnisangabe lösen auf**, jede auf genau eine Datei im ganzen Workbench.
+
+Dazu `git diff --numstat` der vier Datensätze: 46 Zeilen ersetzt und 2 hinzugefügt (der Erledigungsvermerk und seine Leerzeile). Keine Zeile gelöscht.
+
+## Nicht angefasst
+
+`portfolio.md` (Begründung oben), `CLAUDE.md` und `spikes/` (T5), `circles/260809-2040-…/decisions/260809-2040_*_wie-wird-die-ausgabe-der-belegung-ausgeloest.md` (T4), `circles/260802-0842-…/planning/260802-1428_*_plan-navigator-geruest-runde-1.md` (T1). Kein Code, keine Datei unter `crates/`. Der Defektdatensatz bleibt auf `_p_`: er gehört T2 und T5 gemeinsam und geht erst zu, wenn beide fertig sind. Nicht committet.
+
+## Ein Bestand, den weder T2 noch T5 führt
+
+Spec und Plan der **Runde 2** tragen sechs Stellen mit ausgeschriebenem Marker, und sie fallen in keine der beiden Hälften dieses Defekts:
+
+```
+planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md:6     _t_circle.md
+planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md:667   260802-1036_c_spec-navigator-geruest.md
+planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md:21    _t_circle.md
+planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md:162   260810-0822_i_wie-die-formatansicht-…
+planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md:1615  _t_circle.md
+planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md:1667  260810-0822_i_wie-die-formatansicht-…
+```
+
+Alle im Circle `260807-2116-eingebauter-editor-mit-textmarken`. Vier davon führt `portfolio.md` schon als Warnung 6; die zwei Datumsform-Stellen kennt sie nicht. Der Defektdatensatz vom 260807-1022 kennt keine davon, weil er vor der Runde 2 erhoben wurde. Plan und Spec der **Runde 1** sind sauber — sie führen die Sternform seit dem 260805-0000, und genau sie sind das Vorbild dieser Aufgabe. Das gehört in eine eigene Aufgabe; hier ist es nur gemeldet.

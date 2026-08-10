@@ -89,7 +89,7 @@ Die drei Möglichkeiten bauen aufeinander auf. Die dritte setzt die zweite nicht
 
 Womit KRK Web-Inhalt darstellt, ist offen und gehört in eine eigene Untersuchung vor dem Plan. Der Circle legt kein Mittel fest, weder eine Systemschnittstelle noch eine Kiste.
 
-`inference:` Die offene Entscheidung `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` dürfte diesen Circle binden. Sie fragt, wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt, und bindet die Runde 1 nicht. Ein Betrachter spricht eine Systemschnittstelle an, deren Umfang sich zwischen macOS 15 und macOS 26 unterscheidet; geprüft ist das nicht.
+`inference:` Die offene Entscheidung `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` dürfte diesen Circle binden. Sie fragt, wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt, und bindet die Runde 1 nicht. Ein Betrachter spricht eine Systemschnittstelle an, deren Umfang sich zwischen macOS 15 und macOS 26 unterscheidet; geprüft ist das nicht.
 
 ## Dependencies
 
@@ -97,13 +97,13 @@ Dieser Circle hängt an `260802-0842-krk-mac-dateimanager-editor-git`, dem aktiv
 
 Drei Stellen im aktiven Circle binden dieses Vorhaben:
 
-- `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md`, Fähigkeit **C10, "Die Zwischenablage als Quelle"**. Sie sagt zu: "Enthält die Zwischenablage eine Web-Adresse, übergibt KRK sie dem Systembrowser. KRK zeigt selbst keinen Web-Inhalt an." Dieser Circle ersetzt das Ziel dieser Übergabe. Das Abnahmekriterium aus C10 wird damit überholt, sobald der Betrachter steht, und der Aktivierungs-Spec muss sagen, wie es fortgeschrieben wird.
-- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260804-0830_a_was-die-zwischenablage-auswertung-liest.md`. Der Nutzerentscheid vom 260804 legt fest, dass die Auswertung Text und Dateiverweis liest. Die Web-Adresse, die der Betrachter anzeigt, kommt aus genau dieser Auswertung. Dieser Circle erbt sie und baut keine zweite.
-- `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, Abschnitt `## Ausdrücklich außerhalb dieses Circles`, erster Punkt: "Integrierter Browser zum Navigieren von Websites." Derselbe Ausschluss steht in `CLAUDE.md` und in `## Nicht in dieser Runde` des Specs. Dieser Circle hebt ihn für den Betrachter auf, ohne den Datensatz des aktiven Circles zu ändern; die Aufhebung wirkt erst mit seiner eigenen Aktivierung.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md`, Fähigkeit **C10, "Die Zwischenablage als Quelle"**. Sie sagt zu: "Enthält die Zwischenablage eine Web-Adresse, übergibt KRK sie dem Systembrowser. KRK zeigt selbst keinen Web-Inhalt an." Dieser Circle ersetzt das Ziel dieser Übergabe. Das Abnahmekriterium aus C10 wird damit überholt, sobald der Betrachter steht, und der Aktivierungs-Spec muss sagen, wie es fortgeschrieben wird.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`. Der Nutzerentscheid vom 260804 legt fest, dass die Auswertung Text und Dateiverweis liest. Die Web-Adresse, die der Betrachter anzeigt, kommt aus genau dieser Auswertung. Dieser Circle erbt sie und baut keine zweite.
+- `circles/260802-0842-krk-mac-dateimanager-editor-git/_*_circle.md`, Abschnitt `## Ausdrücklich außerhalb dieses Circles`, erster Punkt: "Integrierter Browser zum Navigieren von Websites." Derselbe Ausschluss steht in `CLAUDE.md` und in `## Nicht in dieser Runde` des Specs. Dieser Circle hebt ihn für den Betrachter auf, ohne den Datensatz des aktiven Circles zu ändern; die Aufhebung wirkt erst mit seiner eigenen Aktivierung.
 
 Zwei weitere Bindungen sind zeitlich und nicht inhaltlich: die Schritte S13 und S19 der Runde 1 bauen die Zwischenablage-Auswertung und das Vorschaufenster, auf denen dieses Vorhaben aufsetzt. Es kann erst geplant werden, wenn beide stehen.
 
-Der Plan der Runde 1 hält den Anlass dieses Circles selbst fest, unter seinen offenen Punkten: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md`, "Der eigene Browser, den der Nutzer für später angekündigt hat, ist nirgends festgehalten."
+Der Plan der Runde 1 hält den Anlass dieses Circles selbst fest, unter seinen offenen Punkten: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md`, "Der eigene Browser, den der Nutzer für später angekündigt hat, ist nirgends festgehalten."
 
 ## Turn log
 
@@ -152,9 +152,11 @@ Der Abschnitt `## Dependencies` zitiert drei Dateien unter ihrem damaligen Zusta
 | 102 | `260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` | `_b_circle.md` |
 | 106 | `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` | `_c_` |
 
-Der Abgleich `history/260807-1022-reconciliation.md` und der daraus entstandene Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` decken diese drei Stellen nicht ab: der Abgleich lief um 260807-1022 und damit vor der Umbenennung, und sein Suchmuster `YYMMDD-HHMM_x_name.md` erfasst die Form `_t_circle.md` ohnehin nicht. Zeile 101 desselben Abschnitts steht dort und ist die einzige Stelle dieses Circles, die der Defekt führt.
+Der Abgleich `history/260807-1022-reconciliation.md` und der daraus entstandene Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` decken diese drei Stellen nicht ab: der Abgleich lief um 260807-1022 und damit vor der Umbenennung, und sein Suchmuster `YYMMDD-HHMM_x_name.md` erfasst die Form `_t_circle.md` ohnehin nicht. Zeile 101 desselben Abschnitts steht dort und ist die einzige Stelle dieses Circles, die der Defekt führt.
 
 Der Playmaker berichtigt keine Zitate. Die Sternform `_*_`, die Plan und Spec seit dem 260805-0000 führen, ist der im Defekt beschriebene Weg.
+
+**Erledigt am 260810-1740.** Die drei Zeilen 100, 102 und 106 tragen die Sternform, ebenso die übrigen Zitate dieses Datensatzes. Die Tabelle darüber bleibt im damaligen Wortlaut stehen: sie führt die falschen Zeichenketten als Befund, und eine Sternform darin würde den Befund unlesbar machen.
 
 ## Activation proposal
 

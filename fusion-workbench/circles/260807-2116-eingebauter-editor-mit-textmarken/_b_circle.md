@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md)
+**Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md)
 **Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md
 
 ---
@@ -93,17 +93,17 @@ flowchart TD
 
 **Eine offene Frage gehört ihm direkt und gehört vor den ersten Planschritt, nicht vor diesen Circle.**
 
-`shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` fragt, was die Formatansicht bei Text, bei Code und bei Markdown zeigt. Der Datensatz führt drei Möglichkeiten und empfiehlt die dritte, die Formatansicht als schreibgeschützte Leseansicht für alle drei Dateitypen. Die Frage entscheidet den Zuschnitt: ob eine Formatansicht je Dateityp entsteht oder eine gemeinsame, und ob Markdown gerendert oder nur hervorgehoben wird. Ohne sie plant der Planner ins Ungefähre. Sie wird bei der Aktivierung geklärt, nicht jetzt.
+`shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` fragt, was die Formatansicht bei Text, bei Code und bei Markdown zeigt. Der Datensatz führt drei Möglichkeiten und empfiehlt die dritte, die Formatansicht als schreibgeschützte Leseansicht für alle drei Dateitypen. Die Frage entscheidet den Zuschnitt: ob eine Formatansicht je Dateityp entsteht oder eine gemeinsame, und ob Markdown gerendert oder nur hervorgehoben wird. Ohne sie plant der Planner ins Ungefähre. Sie wird bei der Aktivierung geklärt, nicht jetzt.
 
 **Eine zweite ist zu prüfen und nicht anzunehmen.**
 
-`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` fragt, wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt. `inference:` Ein Texteditor über `NSTextView` kommt vermutlich ohne solche Schnittstelle aus, denn `NSTextView` ist seit Langem verfügbar. Geprüft ist das nicht, und die Prüfung gehört in den Aktivierungs-Spec.
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md` fragt, wie KRK aus Rust eine Schnittstelle anspricht, die es erst ab macOS 26 gibt. `inference:` Ein Texteditor über `NSTextView` kommt vermutlich ohne solche Schnittstelle aus, denn `NSTextView` ist seit Langem verfügbar. Geprüft ist das nicht, und die Prüfung gehört in den Aktivierungs-Spec.
 
 **Ein offener Defekt trifft den Weg, über den der Editor erreicht wird.**
 
-`shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md`: am laufenden Bündel wirken `cmd+y` und `shift+cmd+y` nicht, `f3` wirkt. `shift+cmd+y` ist laut Übergabe der einzige Tastenweg in das Vorschaufenster, und der Editor fügt sich in dasselbe Fokusmuster ein. Der Defekt betrifft damit nicht nur die Vorschau: ein Fokusbefehl für den Editor, der eine Zusatztaste trägt, träfe denselben Weg vom Tastendruck zum Nachschlagen. Der Defekt nennt zwei ungeprüfte Verdächtige, den Abgriff des Menüs vor der Belegung und die Normalisierung der Zusatztasten in `crates/krk-core/src/tasten/normalisierung.rs`.
+`shared/issues/260807-2112_*_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md`: am laufenden Bündel wirken `cmd+y` und `shift+cmd+y` nicht, `f3` wirkt. `shift+cmd+y` ist laut Übergabe der einzige Tastenweg in das Vorschaufenster, und der Editor fügt sich in dasselbe Fokusmuster ein. Der Defekt betrifft damit nicht nur die Vorschau: ein Fokusbefehl für den Editor, der eine Zusatztaste trägt, träfe denselben Weg vom Tastendruck zum Nachschlagen. Der Defekt nennt zwei ungeprüfte Verdächtige, den Abgriff des Menüs vor der Belegung und die Normalisierung der Zusatztasten in `crates/krk-core/src/tasten/normalisierung.rs`.
 
-**Zwei Fragen der Runde 1 hängen an der Lesestelle** und sollten laut Übergabe vor größeren Eingriffen beantwortet sein: `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0010_o_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md` und `.../260807-0020_o_soll-die-markierung-eine-auffrischung-ueberleben.md`. `inference:` Beide betreffen das Dateifenster und nicht den Editor; ob sie ihn binden, hängt daran, ob der Editor die Lesestelle anfasst, und das entscheidet erst der Zuschnitt.
+**Zwei Fragen der Runde 1 hängen an der Lesestelle** und sollten laut Übergabe vor größeren Eingriffen beantwortet sein: `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0010_*_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md` und `.../260807-0020_*_soll-die-markierung-eine-auffrischung-ueberleben.md`. `inference:` Beide betreffen das Dateifenster und nicht den Editor; ob sie ihn binden, hängt daran, ob der Editor die Lesestelle anfasst, und das entscheidet erst der Zuschnitt.
 
 ### Was die Ausklammerung der Messreihen kostet
 
@@ -111,7 +111,7 @@ Der Nutzer hat die Restarbeit der Runde 1 vollständig ausgeklammert, und der Pr
 
 Daraus folgt: **eigene Zeitzusagen des Editors würden auf einem Sockel gemessen, dessen sieben Zusagen unbelegt sind.** Wer für den Editor eine elfte Zahl setzen will, etwa wie schnell eine große Datei bis zur bedienbaren ersten Bildschirmseite steht, hätte keinen belegten Ausgangswert, gegen den er sie setzt. Der Artefakt des beschränkten Abschlusses sagt dasselbe von der anderen Seite: "Eine Messreihe altert an jedem Commit, der einen gemessenen Pfad berührt, und sie sagt es nicht selbst."
 
-Der L9-Befund ist nicht Teil dieses Preises. Er ist am 260807 geschlossen (`shared/issues/260807-1748_c_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md`); der Nutzer hat die Einbuße angenommen und die Zusage auf 65 Prozent im ersten Bild bei höchstens zwei Bildlängen gesenkt.
+Der L9-Befund ist nicht Teil dieses Preises. Er ist am 260807 geschlossen (`shared/issues/260807-1748_*_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md`); der Nutzer hat die Einbuße angenommen und die Zusage auf 65 Prozent im ersten Bild bei höchstens zwei Bildlängen gesenkt.
 
 ### Offene Fragen für die Klärungsrunde bei der Aktivierung
 
@@ -121,7 +121,7 @@ Ein vorgesehener Circle darf offene Fragen tragen. Die vier unten sind Eingabe f
 >
 > Zwei Stellen dieses Abschnitts sind dadurch überholt: Frage 4 nennt "Stellen und Bereiche", und das Lesezeichen-Diagramm weiter oben zeigt die Textmarke als "Stelle oder Bereich". Eine Marke ist seit dem 260808-0017 eine Stelle; die Directive ist entsprechend nachgezogen.
 
-**1. Was zeigt die Formatansicht bei Text, bei Code und bei Markdown?** Der Datensatz `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md` führt die Frage samt drei Möglichkeiten. Sie gehört vor den ersten Planschritt.
+**1. Was zeigt die Formatansicht bei Text, bei Code und bei Markdown?** Der Datensatz `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` führt die Frage samt drei Möglichkeiten. Sie gehört vor den ersten Planschritt.
 
 **2. Woher bekommt der Editor seine Datei?** Aus der Auswahl im Dateifenster über F4 ist der naheliegende Weg. Ob auch die Vorschau einen Übergang in den Editor bekommt, und was mit einer Datei geschieht, die weder Text noch Code noch Markdown ist, ist offen.
 
@@ -131,7 +131,7 @@ Ein vorgesehener Circle darf offene Fragen tragen. Die vier unten sind Eingabe f
 
 ### Was dieser Circle nicht festlegt
 
-Womit KRK Text darstellt und bearbeitet, ist offen. Der Circle legt kein Mittel fest, weder eine Systemschnittstelle noch eine Kiste. Fest steht allein die Technologiewahl der Runde 1: Rust mit AppKit über `objc2`, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26 (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md`).
+Womit KRK Text darstellt und bearbeitet, ist offen. Der Circle legt kein Mittel fest, weder eine Systemschnittstelle noch eine Kiste. Fest steht allein die Technologiewahl der Runde 1: Rust mit AppKit über `objc2`, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26 (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_*_sprache-und-ui-werkzeugkasten.md`).
 
 Ebenfalls nicht festgelegt: ob der Editor eine eigene Zeitzusage bekommt. Die Frage ist ohne den ausgeklammerten Abnahmelauf nicht sinnvoll zu beantworten, und der Nutzer hat den Lauf ausdrücklich auf später verlagert.
 
@@ -151,7 +151,7 @@ Die Turns der Sitzungen vom 260807-2139 bis zum 260809 sind nicht einzeln vermer
 
 - Turn 1 (Sitzung 260810-0244): Commits `9bc0d9d..e6b76ab`; fünf Defekte geschlossen, eine beantwortete Entscheidung eingelöst, Durchsicht mit neun Befunden; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0244-orchestrator-session.md`
 - Turn 2 (Sitzung 260810-0244): Commits `d9fc2c8..b7d0d50`; zwei Defekte geschlossen und S42 ausgeführt, womit alle 48 Planschritte `[DONE]` tragen und `target/KRK.app` gebaut und signiert ist; Durchsicht mit sieben Befunden, keiner am ausgeführten Code; Coherence-Spruch `ok`
-- Turn 3 (Sitzung 260810-0244): Commit `df80000`; die beiden Abnahmekriterien von S6 und S33, die der Code nicht einlöste, sind richtiggestellt, der Markdown-Entscheid ist durch `decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md` abgelöst; ausgelöst durch den Rebalance-Entscheid des Nutzers nach dem Abgleichsspruch `review-needed`
+- Turn 3 (Sitzung 260810-0244): Commit `df80000`; die beiden Abnahmekriterien von S6 und S33, die der Code nicht einlöste, sind richtiggestellt, der Markdown-Entscheid ist durch `decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md` abgelöst; ausgelöst durch den Rebalance-Entscheid des Nutzers nach dem Abgleichsspruch `review-needed`
 - Turn 1 (Sitzung 260810-0845): Commits `d8763dd..35e12cb`; 21 Defekte geschlossen, vier neu gefunden, eine Nutzerentscheidung angelegt; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md`
 - Turn 2 (Sitzung 260810-0845): Commits `bb43315..f624a03`; acht Defekte geschlossen, fünf neu, eine zweite Nutzerentscheidung angelegt; Coherence-Spruch `ok`
 - Turn 3 (Sitzung 260810-0845): Commits `3596e16..733e30f`; sechs Defekte geschlossen, darunter die beiden gemessenen Preise — die Einfärbung rechnet den vorigen Durchgang fort, die Eingangskopie der Wandlung ist weg; Coherence-Spruch `ok`
@@ -167,7 +167,7 @@ Die Turns der Sitzungen vom 260807-2139 bis zum 260809 sind nicht einzeln vermer
 
 Dieser Circle ist der empfohlene nächste Kandidat, und die Empfehlung steht auf einer festgehaltenen Wahl des Nutzers, nicht auf der Rangheuristik. Die Übergabe `shared/history/260807-1930-uebergabe-an-die-editor-runde.md` schreibt in ihrer Anlasszeile: der Nutzer hat die Runde 1 abgeschlossen und als nächste Runde den Editor gewählt. Dasselbe Dokument sagt vom zweiten vorgesehenen Circle, dem Web-Betrachter, ausdrücklich, er sei "nicht der gewählte nächste Schritt". Der Nutzer hat die Wahl anschließend ausgeführt, indem er diesen Circle am 260807-2116 über `/fusion:direct` anlegen ließ.
 
-**Die Heuristik der Gewichtung `code` sagt das Gegenteil, und der Playmaker unterschlägt es nicht.** Sie bevorzugt vorgesehene Circles mit wenigen unbeantworteten Fragen. Dieser Circle zitiert in seinem `## Grounding snapshot` vier offene Entscheidungsdatensätze, der Web-Betrachter einen. Die vier sind `shared/decisions/260802-0842_o_editor-formatansicht-je-dateityp.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`, `.../260807-0010_o_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md` und `.../260807-0020_o_soll-die-markierung-eine-auffrischung-ueberleben.md`. Alle vier tragen den Marker `_o_` auf der Platte, geprüft am 260807-2125. Nur die erste bindet nach dem Grounding dieses Circles vor dem ersten Planschritt; die übrigen drei ordnet der Circle selbst als zu prüfen und nicht als angenommen ein.
+**Die Heuristik der Gewichtung `code` sagt das Gegenteil, und der Playmaker unterschlägt es nicht.** Sie bevorzugt vorgesehene Circles mit wenigen unbeantworteten Fragen. Dieser Circle zitiert in seinem `## Grounding snapshot` vier offene Entscheidungsdatensätze, der Web-Betrachter einen. Die vier sind `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`, `.../260807-0010_*_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md` und `.../260807-0020_*_soll-die-markierung-eine-auffrischung-ueberleben.md`. Alle vier tragen den Marker `_o_` auf der Platte, geprüft am 260807-2125. Nur die erste bindet nach dem Grounding dieses Circles vor dem ersten Planschritt; die übrigen drei ordnet der Circle selbst als zu prüfen und nicht als angenommen ein.
 
 Eine festgehaltene Nutzerwahl wiegt schwerer als ein Zählwert über Entscheidungsdatensätze. Der Zählwert ist ein Stellvertreter für die Frage, welcher Circle reif ist; die Wahl beantwortet die Frage, welcher Circle gewollt ist. Wo beide auseinandergehen, benennt der Playmaker den Unterschied und folgt der Wahl.
 
@@ -175,7 +175,7 @@ Eine festgehaltene Nutzerwahl wiegt schwerer als ein Zählwert über Entscheidun
 
 **Was gegen eine sofortige Aktivierung spricht, in absteigender Schärfe.**
 
-Der offene Defekt `shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md` trifft den Weg, über den dieser Circle seinen Editor erreichbar machen will. Am laufenden Bündel wirken `cmd+y` und `shift+cmd+y` nicht, `f3` wirkt. Der Defekt hält fest, dass Befehl und Empfänger belegt in Ordnung sind und der Fehlschlag auf dem Weg vom Tastendruck zum Nachschlagen liegt, und zwar nur für die Formen mit Zusatztaste. Ein Fokusbefehl für den Editor mit Zusatztaste träfe denselben Weg. Der Defekt nennt zwei ungeprüfte Verdächtige und ist nicht gemessen.
+Der offene Defekt `shared/issues/260807-2112_*_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md` trifft den Weg, über den dieser Circle seinen Editor erreichbar machen will. Am laufenden Bündel wirken `cmd+y` und `shift+cmd+y` nicht, `f3` wirkt. Der Defekt hält fest, dass Befehl und Empfänger belegt in Ordnung sind und der Fehlschlag auf dem Weg vom Tastendruck zum Nachschlagen liegt, und zwar nur für die Formen mit Zusatztaste. Ein Fokusbefehl für den Editor mit Zusatztaste träfe denselben Weg. Der Defekt nennt zwei ungeprüfte Verdächtige und ist nicht gemessen.
 
 Die einzige Abhängigkeit, `260802-0842-krk-mac-dateimanager-editor-git`, ist beschränkt abgeschlossen (`_b_`) und nicht kohärent (`_c_`). Nach der Rangheuristik zählt allein `_c_` als erfüllte Vorbedingung. Inhaltlich trägt das Kennzeichen hier weniger weit als beim Web-Betrachter, weil dieser Circle die Restarbeit der Runde 1 auf Weisung des Nutzers vollständig ausklammert und den Preis dafür selbst benennt, im Abschnitt `### Was die Ausklammerung der Messreihen kostet`.
 
@@ -195,11 +195,11 @@ Zeilennummern und der volle Pfad im Fenstertitel. Alle 48 Planschritte tragen
 **Beschränkt ist der Abschluss aus zwei Gründen, und beide liegen beim Nutzer.**
 Der Abnahmelauf über die 110 Kriterien des Spec verlangt KRK im Vordergrund und
 ist damit keine Agentenarbeit; die Frage dazu ist
-`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
-Und zwei Restdefekte hängen an `decisions/260810-1044_o_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`,
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
+Und zwei Restdefekte hängen an `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`,
 der Frage, ob `krk-ui` ein Bibliotheksziel bekommt — eine Antwort darauf berührt
 jede Datei der Kiste und gehört nicht in einen Nebenzug. Dazu offen die zweite
-Nutzerfrage `decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md`.
+Nutzerfrage `decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`.
 
 **Was diese Runde gelernt hat und die Directive nicht verlangte**, in drei
 Sätzen, weil es der Artefakt des beschränkten Abschlusses ist. Erstens: die
@@ -238,7 +238,7 @@ gemessen fällt `attachedSheet` erst 269 bis 272 ms **nach** dem Abschlussblock
 auf `nil`, also ist die vermutete Reihenfolge die Umkehrung der tatsächlichen,
 und kein Code war zu ändern. Und die Zusage C4 schließt die Schreibwerkzeuge aus
 macOS 15 ein: sie sind abgeschaltet
-(`decisions/260810-0959_i_schliesst-c4-die-schreibwerkzeuge-aus.md`). Dabei kam
+(`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`). Dabei kam
 heraus, dass zwei der vier Einstellungen gar keinen Wert „nichts zulassen"
 führen, sondern ab Werk schon dort stehen; die Entscheidung ist davon nicht
 berührt, die Umsetzung schon.
