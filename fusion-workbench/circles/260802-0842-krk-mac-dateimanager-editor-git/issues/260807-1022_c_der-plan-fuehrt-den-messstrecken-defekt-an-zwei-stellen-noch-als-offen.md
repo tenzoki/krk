@@ -55,3 +55,23 @@ Rundenabschluss abgelesen wird, und er widerspricht dort dem Code.
 
 ---
 Resolved:
+
+---
+Resolved: In `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` sind zwei Stellen
+berichtigt. Zeile 25 haelt weiter fest, dass der Nachzug vom 260807-0832 einen Defekt
+hinterliess — sonst erklaerte sich dieser Datensatz nicht mehr — und nennt im selben Satz seine
+Schliessung durch `d569f8a` vom 260807-0856. Zeile 1458, die dieser Datensatz nicht kannte,
+behauptete "Zwei Stellen dieses Plans sagen aber ..." und steht jetzt im Praeteritum mit dem
+Vermerk, dass beide Stellen berichtigt sind.
+
+Von den zwei gemeldeten Stellen stand nur eine offen: `### Frage 5` (heute Zeile 267) war mit
+`f11b36d` vom 260807-1923 bereits berichtigt und sagt selbst "ist damit geschlossen". Dafuer kam
+Zeile 1458 als dritte hinzu. Die Zeilennummern des Datensatzes (23 und 264) waren um zwei bis
+drei Zeilen abgewandert.
+
+Nachgeprueft: `ANTEIL_IM_BILD_PROZENT` liefert im Codebaum null Treffer, `Abnahmemass::AnteilImBild`
+traegt drei Felder (`crates/krk-bench/src/messen.rs:395-410`), `Zusage::gehalten_in` prueft beide
+Haelften mit `anteil_haelt && grenze_haelt` (ebd.:577-612). Der Plan behaelt den Marker `_c_`;
+berichtigt ist der Inhalt, nicht der Zustand.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.
