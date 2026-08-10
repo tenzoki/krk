@@ -219,3 +219,32 @@ mit dem Dreikanten-Spruch unter `## Coherence`; Abschluss-Abgleich
 `.../reviews/260810-1217-ontorev-…` und `.../reviews/260810-1248-coderev-…`.
 Vorbild für die Form dieses Abschlusses ist die Runde 1, geschlossen am
 260807-1035 mit derselben Begründung.
+
+### Nachtrag 260810-1520: einer der beiden Gründe ist entfallen
+
+Der Abschluss oben nannte zwei Gründe. **Der zweite ist weg.** Die zwei
+Restdefekte, die an der Frage nach einem Bibliotheksziel für `krk-ui` hingen,
+sind als Lage angenommen und geschlossen, und die Frage selbst ist
+zurückgestellt (`decisions/260810-1044_d_…`), mit dem Grund: sie betrifft
+Prüfgerüst und nicht KRK, und die einzige nebenwirkungsfreie Antwort wäre ein
+Umbau der ganzen Kiste. Wer `krk-ui` aus einem anderen Grund umbaut, nimmt sie
+mit.
+
+Bei derselben Gelegenheit sind die letzten vier offenen Datensätze der Runde
+erledigt. **Sie trägt jetzt null offene Defekte und null offene Entscheidungen.**
+Zwei davon waren Sachfragen und sind beantwortet: die Sorge, ein Kommando komme
+in der Spanne zwischen Blattschluss und Abschlussblock durch, **trägt nicht** —
+gemessen fällt `attachedSheet` erst 269 bis 272 ms **nach** dem Abschlussblock
+auf `nil`, also ist die vermutete Reihenfolge die Umkehrung der tatsächlichen,
+und kein Code war zu ändern. Und die Zusage C4 schließt die Schreibwerkzeuge aus
+macOS 15 ein: sie sind abgeschaltet
+(`decisions/260810-0959_i_schliesst-c4-die-schreibwerkzeuge-aus.md`). Dabei kam
+heraus, dass zwei der vier Einstellungen gar keinen Wert „nichts zulassen"
+führen, sondern ab Werk schon dort stehen; die Entscheidung ist davon nicht
+berührt, die Umsetzung schon.
+
+**Der erste Grund bleibt und trägt den beschränkten Abschluss allein:** der
+Abnahmelauf über die 110 Kriterien des Spec verlangt KRK im Vordergrund und ist
+Nutzerarbeit. `_b_` ist damit weiter der richtige Marker, aus demselben Grund wie
+in der Runde 1. Belege: `shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md`
+und `spikes/blatt-spanne/` als Messstrecke zur Blattspanne.

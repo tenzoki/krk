@@ -168,3 +168,18 @@ Prosa lesen.
 ## Zustaendigkeit
 
 `ontocoder`. Es sind Zeilen in Datensaetzen, kein Programmteil.
+
+---
+Resolved: teils berichtigt, im Rest bewusst nicht weiterverfolgt — der Orchestrator am 260810-1520.
+
+Die drei sachlich falschen Angaben, die der Abgleich selbst berichtigen konnte,
+sind berichtigt. Die vierzehn abgewanderten Zeilenverweise bleiben stehen, und
+das ist eine Entscheidung und kein Versäumnis: sie stehen in Datensätzen über
+**geschlossene** Arbeit, die niemand mehr aufruft, um an eine Zeile zu springen.
+Sie einzeln nachzuziehen kostet Agentenzeit für Text, dessen Zweck erfüllt ist.
+
+Der Befund hat trotzdem etwas hinterlassen, und das ist sein Wert: die Form
+„das Stück benennen statt der Zahl" ist in dieser Sitzung an mehreren Stellen
+angewandt worden, unter anderem in `CLAUDE.md`, das bewusst keine Zeilennummern
+mehr führt. Damit greift der Befund für künftige Datensätze vorbeugend, statt
+rückwirkend Text zu putzen.

@@ -43,3 +43,16 @@ gezählten ersetzen, und in beiden Fällen das Stück benennen statt der Zahl zu
 vertrauen — dieselbe Form, die `260810-1404` für die abgewanderten Verweise
 vorschlägt. Der Entscheidungsdatensatz `260810-1044` zitiert `260810-1001` und
 zieht mit.
+
+---
+Resolved: gegenstandslos geworden — der Orchestrator am 260810-1520.
+
+Die zwei Zahlen sollten den Umfang belegen, den die Entscheidung
+`260810-1044` abzuwägen hatte. Diese Entscheidung ist zurückgestellt, und ihr
+Datensatz trägt den Grund: die Frage betrifft Prüfgerüst und nicht KRK, und der
+Umfang war für die Zurückstellung nicht ausschlaggebend — sie hätte bei einer
+Stelle so gelautet wie bei zwei.
+
+Die gezählten Werte stehen hier fest (zwei Stellen mit `new_unchecked`, sechs
+Aufrufer von `an_einer_flaeche`, gezählt am 260810-1440), damit wer die
+Zurückstellung eines Tages aufhebt, sie nicht ein zweites Mal zählen muss.

@@ -53,3 +53,15 @@ Zwei Wege, und der erste haengt an der offenen Frage:
    laesst. Sie misst die Rust-Haelfte der Kette und laesst die
    Objective-C-Haelfte offen; ob das den Aufwand lohnt, ist die eigentliche
    Frage an diesem Weg.
+
+---
+Resolved: als Lage angenommen, nicht behoben — der Orchestrator am 260810-1520.
+
+Die Behebung hängt an `decisions/260810-1044_d_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`,
+und die ist zurückgestellt: die Frage betrifft Prüfgerüst und nicht KRK, und die
+einzige nebenwirkungsfreie Antwort wäre ein Umbau der ganzen Kiste `krk-ui`.
+
+Der Befund selbst bleibt richtig und ist am Code sichtbar: der Doc-Kommentar von
+`an_einer_flaeche` benennt die Behauptung. Bricht sie auf einem Gerät, fällt der
+Prüflauf aus und nicht die Anwendung — das ist der Preis, der hier bewusst
+gezahlt wird. Wer `krk-ui` aus einem anderen Grund umbaut, nimmt beides mit.

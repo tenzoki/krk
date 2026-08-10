@@ -1,0 +1,39 @@
+KRK — Messung: trägt die Spanne zwischen attachedSheet == nil und dem Abschlussblock?
+Datensatz: issues/260810-1207_*_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md
+Zeitpunkt: 2026-08-10T13:32:31Z
+macOS: 15.7.7
+Gerät: MacBookPro15,1
+Weg: griff — endSheet(_:returnCode:), wie Blattgriff::abbrechen und der Eingabewaechter
+
+## Protokoll
+
+  568.533 ms  Blatt begonnen, Weg griff
+  900.833 ms  Vor dem Schließbefehl: attachedSheet gesetzt
+  901.571 ms  40 Tastendrücke vorab in die Schlange gelegt
+  901.612 ms  Schließbefehl griff …
+  901.908 ms  Abschlussblock läuft. Antwort 1001, attachedSheet gesetzt
+ 1167.536 ms  Schließbefehl kehrt zurück. Abschlussblock schon gelaufen, attachedSheet nil
+ 1170.965 ms  attachedSheet erstmals nil
+
+## Messwerte
+
+attachedSheet vor dem Schließbefehl               gesetzt
+attachedSheet im Abschlussblock                   gesetzt
+Schließbefehl bei                                 901.610 ms
+Schließbefehl kehrte zurück bei                   1167.511 ms
+attachedSheet erstmals nil bei                    1170.960 ms
+Abschlussblock lief bei                           901.900 ms
+Spanne (erstes nil bis Abschlussblock)            -269.060 ms
+Takte nach dem Schließbefehl                      332
+Takte mit nil vor dem Abschlussblock              0
+Tastendrücke im Abgriff                           371
+davon mit stehendem Blatt (KRK sperrt)            0
+davon IN DER SPANNE (KRK sperrt nicht)            0
+davon nach dem Abschlussblock                     371
+davon in der Gegenspanne (Antwort ausgeführt, Blatt meldet weiter)  0
+
+## Befund
+
+DIE SPANNE TRÄGT NICHT. attachedSheet ist im Abschlussblock noch gesetzt, die Sperre aus `blatt_steht` greift also bis zur Antwort einschließlich.
+Kein Takt und kein Tastendruck fiel zwischen das erste nil und den Abschlussblock. Die Spanne ist in Ereignissen der Hauptschleife gemessen leer.
+DIE GEGENSPANNE TRÄGT NICHT: attachedSheet meldet zwar noch 269 ms nach der ausgeführten Antwort ein Blatt, aber in dieser Zeit nimmt der Hauptfaden kein Tastenereignis entgegen. Die 40 vorab in die Schlange gelegten Tastendrücke kamen alle erst danach an. Die Sperre weist dort nichts ab, weil dort nichts eintrifft.

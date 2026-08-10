@@ -65,3 +65,35 @@ ausdruecklich als Verwandte nannte.
 ## Zustaendigkeit
 
 `coder`.
+
+---
+Resolved: Gefahren, und in genau der Form, die dieser Datensatz vorzeichnet.
+`Planordner` (`crates/krk-ui/src/messmodus.rs`) hält jetzt einen
+`crate::pruefordner::Pruefordner` statt eines `PathBuf`. Weggefallen sind damit der
+eigene `AtomicU64`, der eigene `Drop` und der eigene Namensbau — die drei Stücke,
+die die dreizehnte Fassung zur Fassung machten. Der Ordner heißt seither
+`krk-ui-probe-<zweck>-<pid>-<lauf>` statt `krk-messmodus-…`; das ist die
+Vereinheitlichung und kein Verlust, denn Prozesskennung und Laufnummer trägt die
+gemeinsame Fassung selbst.
+
+**Geblieben ist, was der Datensatz als Fachlogik der Messstrecke ausweist:** die
+vier Namen `a`, `b`, `a-l6` und `ziel` und der `Messplan`, den `plan()` daraus baut.
+
+Zwei Ergänzungen über den vorgezeichneten Umbau hinaus:
+
+1. **`Pruefordner::ordner(name)` ist dazugekommen** (`crates/krk-ui/src/pruefordner.rs`),
+   wie es dieser Datensatz vorhersagt. Die Schwesterfassung in
+   `krk-core/tests/gemeinsam/mod.rs` führt es schon; in `krk-ui` fehlte es, weil vor
+   dem `Planordner` keine Probe dieser Kiste einen Unterordner über den Pruefordner
+   angelegt hatte.
+2. **Zwei Zugänge auf `Planordner` statt Zugriffe auf sein Feld.** Die Proben
+   griffen an rund zwanzig Stellen als `ordner.wurzel.join("a")` durch das Feld
+   hindurch. Das ginge jetzt nur noch als `ordner.wurzel.unter("a")` — dasselbe
+   Durchgreifen, eine Ebene tiefer. Statt dessen tragen `Planordner::unter(name)`
+   und `Planordner::pfad()` die beiden Formen, die die Proben brauchen, und das Feld
+   bleibt innen.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets`, `cargo fmt --all --check` — je Exit 0. Die
+Proben der Sitzungsstrecke, die den `Planordner` benutzen, laufen unverändert grün;
+keine von ihnen musste in ihrer Aussage angefasst werden.

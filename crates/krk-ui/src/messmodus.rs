@@ -1678,44 +1678,54 @@ mod tests {
     // Die Sitzungsstrecke (S21)
     // ------------------------------------------------------------------
 
+    use crate::pruefordner::Pruefordner;
     use krk_core::ablage::sitzung::{Dateifenster, Tab};
     use std::fs;
 
-    /// Ein Wegwerf-Wurzelordner mit den vier Ordnern eines Messplans.
+    /// Die vier Ordner eines Messplans, in einem Wegwerf-Wurzelordner.
+    ///
+    /// **Den Ordner darunter stellt [`Pruefordner`] und nicht mehr diese Datei.**
+    /// Bis zum 260810 baute `Planordner` ihn selbst — mit eigenem Zaehler, eigenem
+    /// Namensbau und eigenem `Drop` — und war damit die dreizehnte Fassung
+    /// derselben halben Seite; die zwoelf anderen sind bei `Pruefordner`
+    /// aufgefuehrt
+    /// (`issues/260810-1430_*_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md`).
+    ///
+    /// **Was hier bleibt, ist Fachlogik der Messstrecke** und gehoert nicht in den
+    /// gemeinsamen Pruefordner: die vier Namen `a`, `b`, `a-l6` und `ziel` und der
+    /// [`Messplan`], den [`Planordner::plan`] daraus baut.
     struct Planordner {
-        wurzel: PathBuf,
+        wurzel: Pruefordner,
     }
 
     impl Planordner {
         fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            let wurzel = std::env::temp_dir().join(format!(
-                "krk-messmodus-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = fs::remove_dir_all(&wurzel);
+            let wurzel = Pruefordner::neu(zweck);
             for unter in ["a", "b", "a-l6", "ziel"] {
-                fs::create_dir_all(wurzel.join(unter)).expect("Anlegen gescheitert");
+                wurzel.ordner(unter);
             }
             Self { wurzel }
         }
 
+        /// Ein Pfad im Wurzelordner. Der Weg, auf dem die Proben ihre Ordner und
+        /// Dateien benennen, ohne das Feld darunter zu kennen.
+        fn unter(&self, name: &str) -> PathBuf {
+            self.wurzel.unter(name)
+        }
+
+        /// Der Wurzelordner selbst.
+        fn pfad(&self) -> &Path {
+            self.wurzel.pfad()
+        }
+
         fn plan(&self) -> Messplan {
             Messplan {
-                kopierziel: self.wurzel.join("ziel"),
-                unterordner: self.wurzel.join("a-l6"),
-                sitzung: pruefsitzung(self.wurzel.join("a"), self.wurzel.join("b")),
+                kopierziel: self.unter("ziel"),
+                unterordner: self.unter("a-l6"),
+                sitzung: pruefsitzung(self.unter("a"), self.unter("b")),
             }
         }
     }
-
-    impl Drop for Planordner {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.wurzel);
-        }
-    }
-
-    static ZAEHLER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
     /// Die Pruefsitzung aus C8, wie das Messwerkzeug sie in den Plan schreibt.
     fn pruefsitzung(a: PathBuf, b: PathBuf) -> Sitzung {
@@ -1743,11 +1753,11 @@ mod tests {
             liest_aktiv: false,
             auswahl_aktiv: 0,
             tab_aktiv: 0,
-            ordner_aktiv: ordner.wurzel.join("a"),
-            auswahl_pfad: Some(ordner.wurzel.join("a/datei-1")),
+            ordner_aktiv: ordner.unter("a"),
+            auswahl_pfad: Some(ordner.unter("a/datei-1")),
             zeilen_rechts: 10_000,
             liest_rechts: false,
-            ordner_rechts: ordner.wurzel.join("b"),
+            ordner_rechts: ordner.unter("b"),
             vorschau_pfad: None,
             vorschau_laedt: false,
             vorgang_sichtbar: false,
@@ -1785,32 +1795,29 @@ mod tests {
         let mut wurzel = toml::Table::new();
         wurzel.insert(
             "kopierziel".to_owned(),
-            toml::Value::String(ordner.wurzel.join("ziel").display().to_string()),
+            toml::Value::String(ordner.unter("ziel").display().to_string()),
         );
         wurzel.insert(
             "unterordner".to_owned(),
-            toml::Value::String(ordner.wurzel.join("a-l6").display().to_string()),
+            toml::Value::String(ordner.unter("a-l6").display().to_string()),
         );
         wurzel.insert(
             "sitzung".to_owned(),
-            toml::Value::try_from(pruefsitzung(
-                ordner.wurzel.join("a"),
-                ordner.wurzel.join("b"),
-            ))
-            .expect("die Sitzung ist serialisierbar"),
+            toml::Value::try_from(pruefsitzung(ordner.unter("a"), ordner.unter("b")))
+                .expect("die Sitzung ist serialisierbar"),
         );
-        let pfad = ordner.wurzel.join("plan.toml");
+        let pfad = ordner.unter("plan.toml");
         fs::write(&pfad, toml::to_string(&wurzel).expect("schreibbar")).expect("schreibbar");
 
         let plan = Messplan::lesen(&pfad).expect("der Plan ist lesbar");
-        assert_eq!(plan.ordner_a(), ordner.wurzel.join("a"));
-        assert_eq!(plan.kopierziel, ordner.wurzel.join("ziel"));
+        assert_eq!(plan.ordner_a(), ordner.unter("a"));
+        assert_eq!(plan.kopierziel, ordner.unter("ziel"));
     }
 
     #[test]
     fn ein_gefuelltes_kopierziel_wird_abgewiesen() {
         let ordner = Planordner::neu("volles-ziel");
-        fs::write(ordner.wurzel.join("ziel/fremd.txt"), "fremd").expect("schreibbar");
+        fs::write(ordner.unter("ziel/fremd.txt"), "fremd").expect("schreibbar");
         let fehler = ordner
             .plan()
             .pruefen()
@@ -2109,7 +2116,7 @@ mod tests {
             tab: 0,
             aktiv_links: true,
         };
-        let pfad = ordner.wurzel.join("a/datei-2");
+        let pfad = ordner.unter("a/datei-2");
         let umgesprungen_ohne_vorschau = Sitzungslage {
             auswahl_aktiv: 1,
             auswahl_pfad: Some(pfad.clone()),
@@ -2169,7 +2176,7 @@ mod tests {
         );
 
         // Die Oberflaeche meldet den Fehlschlag zurueck.
-        let eltern = ordner.wurzel.clone();
+        let eltern = ordner.pfad().to_path_buf();
         lauf.vorbereitung_gescheitert(auswahl_ohne_eintrag(&name, &eltern, 3));
 
         // Der naechste Takt bricht ab. Ohne die Rueckmeldung stuende hier die

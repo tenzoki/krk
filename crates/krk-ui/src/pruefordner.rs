@@ -85,6 +85,19 @@ impl Pruefordner {
         std::fs::remove_dir_all(&self.pfad).expect("der Pruefordner laesst sich nicht loeschen");
     }
 
+    /// Legt einen Unterordner an und liefert seinen Pfad.
+    ///
+    /// **Die Schwesterfassung in `krk-core/tests/gemeinsam/mod.rs` fuehrt das
+    /// schon**; hier fehlte es bis zum 260810, weil vor dem `Planordner` der
+    /// Messstrecke keine Probe dieser Kiste einen Unterordner ueber den
+    /// Pruefordner angelegt hat
+    /// (`issues/260810-1430_*_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md`).
+    pub fn ordner(&self, name: &str) -> PathBuf {
+        let pfad = self.unter(name);
+        std::fs::create_dir_all(&pfad).expect("der Unterordner laesst sich nicht anlegen");
+        pfad
+    }
+
     /// Legt eine Datei an und liefert ihren Pfad.
     ///
     /// Der Inhalt ist `impl AsRef<[u8]>` und nicht `&str`, weil die Proben der

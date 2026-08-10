@@ -160,3 +160,31 @@ einem Bibliotheksziel hätte „öffentlich" wieder eine Bedeutung.
 Die Dateigrenze dieses Durchgangs lief um `appkit/editor.rs`, `hervorhebung.rs`
 und `krk-ui/Cargo.toml`; ein `src/lib.rs` und ein Umbau von `main.rs` lagen
 außerhalb.
+
+---
+Deferred: bis zu einer Runde, die `krk-ui` ohnehin umbaut — vom Nutzer über den Orchestrator am 260810-1520 zurückgestellt.
+
+## Grund der Zurückstellung
+
+**Diese Frage betrifft Prüfgerüst und nicht KRK.** Was auf dem Spiel steht, ist
+eine Behauptung über den Faden, auf dem vier Proben laufen. Sie steht
+ausschließlich in Prüfcode, sie trifft auf dem Referenzgerät zu, und bricht sie
+einmal, fällt der Prüflauf aus und nicht die Anwendung. Kein Nutzer von KRK
+merkt etwas davon, heute nicht und nach einem Bruch auch nicht.
+
+Die einzige Antwort ohne Nebenwirkung ist Option 4, ein Bibliotheksziel für
+`krk-ui`. Sie berührt jeden `crate::`-Pfad in zwölf Modulen und
+zweiundzwanzig AppKit-Untermodulen, also praktisch jede Datei einer Kiste, in
+der dieselbe Sitzung schon rund 4000 Zeilen bewegt hat. Dieser Aufwand und
+dieses Regressionsrisiko für einen Gewinn, den niemand außer dem Prüflauf sieht,
+ist die falsche Reihenfolge.
+
+**Wie es weitergeht.** Wer `krk-ui` aus einem anderen Grund umbaut, nimmt das
+Bibliotheksziel mit und löst die Frage dabei; dann bekommt auch
+`issues/260810-0212` (öffentliche Stücke ohne Aufrufer) wieder einen Sinn, weil
+„öffentlich" dann etwas bedeutet. Bis dahin gilt Weg 3 des Datensatzes als Lage
+und nicht als Wahl, und der Doc-Kommentar von `an_einer_flaeche` sagt es am Code.
+
+**Was diese Zurückstellung nicht ist:** eine Aussage darüber, dass die vier
+Messungen entbehrlich wären. Sie tragen drei Entscheidungen dieses Circles und
+bleiben im Baum.

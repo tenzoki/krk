@@ -92,7 +92,70 @@ der Nutzer hat sie in jedem Textfeld des Systems —, sie steht nur nicht an ein
 Fläche, deren Inhalt Zeichen für Zeichen in eine Datei zurückgeschrieben wird.
 
 ---
-Answered:
-Implemented:
+Answered: **Option 1, ausschließen.** Ein Editor für Code und Text darf Text nicht
+stillschweigend umschreiben lassen, und C4 verlangt dasselbe schon für die anderen
+textverändernden Automatiken. Die Zusage C4 wird also so gelesen, dass sie die
+Schreibwerkzeuge aus macOS 15 mit einschließt. Entschieden vom Nutzer über den
+Orchestrator am 260810.
+
+Implemented: `crates/krk-ui/src/appkit/editor.rs`, `textflaeche_bauen` — und die
+Umsetzung fällt anders aus, als die Option 1 sie beschrieb. Sie verlangte
+`setWritingToolsBehavior(None)` „dazu die drei übrigen auf den Wert, der nichts
+zulässt". **Diesen Wert führen zwei der vier nicht**, und das ist am 260810 auf
+macOS 15.7.7 gemessen, nicht der Dokumentation entnommen:
+
+| Einstellung | Werkswert | Aus-Wert | Zeile in `textflaeche_bauen` |
+|---|---|---|---|
+| `writingToolsBehavior` | `Default` (0) | `None` (**−1**) | ja, unmittelbar |
+| `allowsWritingToolsAffordance` | an (1) | 0 | ja, gehütet |
+| `allowedWritingToolsResultOptions` | 0 | **keiner** | nein |
+| `writingToolsAllowedInputOptions` | 0 | **keiner** | nein |
+
+Die beiden letzten sind Bitmasken, deren Null `NSWritingToolsResultDefault` heißt —
+„das System wählt" — und nicht „nichts". Einen Wert, der nichts zulässt, führt die
+Aufzählung nicht, und beide stehen ab Werk schon auf Null; eine Zeile wäre ein
+Aufruf ohne Wirkung gewesen. Sie stehen deshalb als neue, fünfte Antwort
+`Einordnung::Gegenstandslos("setWritingToolsBehavior:")` in `EINSTELLUNGEN`: sie
+beschreiben, **was** eine Fähigkeit dürfte, die an dieser Fläche abgeschaltet ist.
+**Dass sie dabei keine zweiten Türen sind, ist mitgemessen** —
+`setWritingToolsBehavior(None)` lässt beide unberührt stehen, legt sie also nicht um.
+
+Die Entscheidung selbst ist davon nicht berührt: die Schreibwerkzeuge sind
+ausgeschlossen, und was sie ausschließt, sind die beiden oberen Zeilen.
+
+**Die Untergrenze ist gewahrt.** `setWritingToolsBehavior:` steht seit macOS 15.0
+und wird unmittelbar gerufen. `setAllowsWritingToolsAffordance:` führt das SDK erst
+ab macOS 15.4 und nur an `NSTextField`; sie geht über die neue Funktion
+`setzen_falls_vorhanden`, die `respondsToSelector:` **vorher** fragt — dasselbe
+Muster, das `merkmal_falls_vorhanden` schon las, und kein zweites daneben. Beide
+bilden den Setzernamen jetzt über dieselbe Funktion `setzername`, die dafür aus
+`mod tests` in den Modulrumpf gewandert ist.
+
+**Vier Proben tragen es**, alle an einer echten `NSTextView`:
+- `die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus` (vorher
+  `die_sieben_…`) prüft jetzt **neun** statt sieben Einstellungen. Sie liest über
+  `merkmal_falls_vorhanden` statt `merkmal`, weil der Abbruch bei einer an macOS
+  15.0 bis 15.3 fehlenden Angebotsfläche das ganze Prüfprogramm beendet hätte;
+  fehlt sie, steht ein Hinweis und kein Fehlschlag.
+- `die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus` ist neu und
+  hält fest, dass KRK die beiden Bitmasken nicht setzt und sie auf ihrer Null stehen.
+- `jeder_verweis_zeigt_auf_beantwortete_einstellungen` (vorher `jede_tuer_…`) deckt
+  die neue Antwort mit ab: der genannte Träger muss selbst `Abgeschaltet` sein.
+- `der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl` misst jetzt
+  die **frische** Fläche statt KRKs, weil KRKs beide jetzt aus stehen. Die Aussage
+  ist damit: die beiden Zeilen ändern etwas und wiederholen keinen Werkswert.
+
+`aus_bedeutet` trägt zwei neue Formen (`Behavior:` → −1, `Affordance:` → 0);
+`Options:` bleibt mit Absicht im Abbruchzweig, denn dort wäre ein Aus-Wert zu
+erfinden, den Apple nicht führt. `Einordnung::NochOffen` steht heute leer und bleibt
+als Variante stehen, weil die nächste Lesart wieder eine braucht. Der Modulkopf ist
+nachgezogen: neun statt sieben, ein eigener Abschnitt zu den Schreibwerkzeugen, und
+die Verfügbarkeitsliste nennt jetzt fünf Methoden mit der einen gehüteten Berührung.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace` (16 Probenprogramme,
+334 davon in `krk-ui`), `cargo clippy --workspace --all-targets`,
+`cargo fmt --all --check` — je Exit 0. Mit einem Commit-Hash kann diese Sitzung
+nicht dienen.
+
 Deferred:
 Superseded by:

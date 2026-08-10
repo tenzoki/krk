@@ -171,12 +171,16 @@
 //! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
 //! "Der Editor bekommt keine eigene Meldezeile".
 //!
-//! **Reiner Text.** `setRichText(false)` und die sieben abgeschalteten
-//! Automatiken halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
+//! **Reiner Text.** `setRichText(false)` und die neun abgeschalteten
+//! Einstellungen halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
 //! Sichern Zeichen fuer Zeichen wieder in der Datei steht. Eine typografische
 //! Ersetzung von Anfuehrungszeichen oder Bindestrichen aendert Programmtext
 //! still, und die Zusage aus C4 lautet, dass der gesicherte Stand der getippte
 //! ist.
+//!
+//! **Sieben davon sind Automatiken, die achte und die neunte sind die
+//! Schreibwerkzeuge** — der Unterschied ist, wer sie auslaest, und der Abschnitt
+//! „Die Schreibwerkzeuge aus macOS 15" weiter unten fuehrt ihn aus.
 //!
 //! **Die sieben zerfallen in drei Gruppen, und jede folgende war ueber der
 //! vorigen uebersehen.** Vier greifen beim **Tippen**: Anfuehrungszeichen,
@@ -222,6 +226,9 @@
 //!   darueber, was abgeschaltet ist, und die einzelnen Zeilen sind die erste.
 //! - **Die Tuer ohne Zwilling.** Ohne jede zweite Tuer stehen die sechste und
 //!   die siebte oben sowie die vier Schreibwerkzeug-Einstellungen weiter unten.
+//!   Bei den letzteren ist auch das **gemessen** und nicht angenommen:
+//!   `setWritingToolsBehavior(None)` laesst die drei uebrigen unberuehrt stehen,
+//!   sie legen einander also nicht um.
 //!
 //! **Zwei Tueren zu einer Einstellung sind nicht derselbe Speicher**, und die
 //! schwaechere Aussage ist die gemessene: jede legt die andere um, und die
@@ -238,7 +245,7 @@
 //! genuegt die schwaechere Aussage: `NO` an der ersten Tuer nagelt die zweite
 //! auf `No` fest, und das ist an allen zehn gemessen.
 //!
-//! **Dass es bei sieben bleibt, haelt ein Stolperdraht aus zwei Quellen fest,
+//! **Dass es bei neun bleibt, haelt ein Stolperdraht aus zwei Quellen fest,
 //! und nur eine der beiden ist geschlossen.**
 //! `keine_unbekannte_einstellung_steht_an_der_textflaeche` zaehlt zur Laufzeit
 //! auf, was diese Fassung von macOS traegt, und verlangt, dass jeder Fund in
@@ -304,27 +311,51 @@
 //!   haengt — gemessen, nicht der Dokumentation entnommen
 //!   (`issues/260810-0747_*_der-hinweis-der-gegenrichtung-wird-von-libtest-verschluckt-und-erreicht-niemanden.md`).
 //!
-//! **Und die sieben Zeilen selbst haelt eine Probe.** Sie baut die Flaeche mit
-//! [`textflaeche_bauen`], liest jede der sieben zurueck und vergleicht sie mit
+//! **Und die neun Zeilen selbst haelt eine Probe.** Sie baut die Flaeche mit
+//! [`textflaeche_bauen`], liest jede der neun zurueck und vergleicht sie mit
 //! einer frisch gebauten `NSTextView`: an KRKs Flaeche steht jede aus, an der
 //! frischen jede anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
 //! laufenden Buendel — dass getippte Anfuehrungszeichen als getippte in der
 //! Datei stehen —, nicht mehr die Frage, ob die Zeilen stehen und greifen.
 //!
-//! **Vier Einstellungen stehen in der Aufstellung ohne Antwort, und das ist
-//! Absicht.** Die Schreibwerkzeuge aus macOS 15 schreiben markierten Text um und
-//! fuehren dazu vier Einstellungen: `writingToolsBehavior`,
-//! `allowedWritingToolsResultOptions`, `writingToolsAllowedInputOptions` und
-//! `allowsWritingToolsAffordance`. Der Vorgabewert des ersten ist
-//! `NSWritingToolsBehaviorDefault` und ueberlaesst dem System die Wahl; die
-//! Angebotsflaeche des vierten steht ab Werk **an**. Beides ist an der Flaeche
-//! aus [`textflaeche_bauen`] gemessen und nicht der Dokumentation entnommen. Sie
-//! unterscheiden sich von den sieben darin, dass der Nutzer sie eigens aufruft;
-//! ob C4 sie trotzdem ausschliesst, ist eine Lesart und keine Codefrage, und sie
-//! bindet ueber diese vier hinaus. Der Datensatz ist
-//! `decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`.
-//! `EINSTELLUNGEN` fuehrt alle vier als `NochOffen`, damit die Proben sie nicht
-//! uebersehen und die Antwort trotzdem beim Nutzer bleibt.
+//! # Die Schreibwerkzeuge aus macOS 15
+//!
+//! **Sie sind ausgeschlossen, und das war eine Lesart und keine Codefrage.** Sie
+//! schreiben markierten Text um, und das Korrekturlesen wirkt ueber eine ganze
+//! Datei; danach steht in `NSTextView::string` nicht mehr das Getippte, und ueber
+//! `Editormodell::stand` geht es beim Sichern in die Datei. Von den sieben
+//! Automatiken unterscheiden sie sich **in der Art und nicht im Grad**: die sieben
+//! greifen ohne Zutun, die Schreibwerkzeuge auf einen ausdruecklichen Aufruf aus
+//! dem Kontextmenue. Genau dieser Unterschied entschied die Frage nicht, sondern
+//! stellte sie.
+//!
+//! Entschieden hat sie der Nutzer am 260810 gegen die Schreibwerkzeuge
+//! (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`): ein
+//! Editor fuer Code und Text darf Text nicht stillschweigend umschreiben lassen,
+//! und der Gegenstand entscheidet — ein Umschreiben von Programmtext in
+//! fluessigere Prosa ist in keiner Lesart von C4 gemeint. Die Faehigkeit ist damit
+//! nicht verloren; sie steht in jedem anderen Textfeld des Systems.
+//!
+//! **Es sind vier Einstellungen und nicht eine**
+//! (`issues/260810-0745_*_der-stolperdraht-sieht-drei-der-vier-schreibwerkzeug-einstellungen-nicht.md`),
+//! und sie zerfallen in zwei Paare. Alle vier Werkswerte sind an der Flaeche aus
+//! [`textflaeche_bauen`] **gemessen** und nicht der Dokumentation entnommen.
+//!
+//! - **Zwei tragen einen Aus-Wert und je eine Zeile.** `writingToolsBehavior`
+//!   steht ab Werk auf `Default` und ueberlaesst dem System die Wahl; `None`
+//!   (`-1`, nicht `1`) ist die Absage. `allowsWritingToolsAffordance` — das
+//!   Sinnbild, mit dem sich die Werkzeuge selbst anbieten — steht ab Werk **an**.
+//!   Sie geht ueber [`setzen_falls_vorhanden`] und nicht ueber einen Aufruf, weil
+//!   das SDK sie erst ab macOS 15.4 und nur an `NSTextField` fuehrt.
+//! - **Zwei tragen keinen und bekommen keine Zeile.**
+//!   `allowedWritingToolsResultOptions` und `writingToolsAllowedInputOptions` sind
+//!   Bitmasken, deren Null `…ResultDefault` heisst — "das System waehlt" — und
+//!   nicht "nichts". Einen Wert, der nichts zulaesst, fuehrt die Aufzaehlung
+//!   nicht, und beide stehen ab Werk schon auf Null. Eine Zeile waere ein Aufruf
+//!   ohne Wirkung. In `EINSTELLUNGEN` stehen sie deshalb als
+//!   `Gegenstandslos` — sie beschreiben, **was** eine Faehigkeit duerfte, die
+//!   nicht laeuft. Dass sie dabei keine zweiten Tueren sind, ist gemessen: das
+//!   Abschalten des Verhaltens laesst beide unberuehrt.
 //!
 //! **Die Formatansicht aus C3 widerspricht dem nicht, und der Grund ist nicht,
 //! wo ihre Merkmale liegen.** Sie setzt Farbe und Unterstreichung als
@@ -344,13 +375,21 @@
 //! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
 //! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
 //!
-//! Drei **Methoden** sind juenger als ihre Klasse: `setInlinePredictionType:`
-//! steht seit macOS 14, `setMathExpressionCompletionType:` seit macOS 15, und
-//! `NSTextView.textLayoutManager` seit macOS 12 — die letzte fragt allein die
-//! Probe, die den Rueckfall auf TextKit 1 festhaelt, und `NSTextLayoutManager`
-//! selbst wird nirgends benannt. Alle drei liegen auf oder unter dem Zielsystem,
-//! und auch sie brauchen deshalb keine Pruefung. Wer eine Methode aus macOS 16
-//! oder spaeter anfasst, braucht eine.
+//! Fuenf **Methoden** sind juenger als ihre Klasse, und **vier von ihnen liegen
+//! auf oder unter dem Zielsystem** und brauchen deshalb keine Pruefung:
+//! `setInlinePredictionType:` steht seit macOS 14,
+//! `setMathExpressionCompletionType:` und `setWritingToolsBehavior:` seit macOS
+//! 15, und `NSTextView.textLayoutManager` seit macOS 12 — die letzte fragt allein
+//! die Probe, die den Rueckfall auf TextKit 1 festhaelt, und
+//! `NSTextLayoutManager` selbst wird nirgends benannt.
+//!
+//! **Die fuenfte liegt darueber und ist die einzige gehuetete Beruehrung dieser
+//! Datei.** `setAllowsWritingToolsAffordance:` fuehrt das SDK erst ab macOS 15.4
+//! und nur an `NSTextField`; die Laufzeit von 15.7.7 antwortet an `NSTextView`
+//! darauf, aber undokumentiert. Sie geht deshalb ueber
+//! [`setzen_falls_vorhanden`], das `respondsToSelector:` **vorher** fragt. Wer
+//! eine Methode aus macOS 15.1 oder spaeter anfasst, nimmt diesen einen Weg und
+//! baut keine Versionsabfrage daneben.
 //!
 //! **Die Proben unter `mod tests` sprechen daneben nichts an, was eine
 //! Verfuegbarkeitsfrage stellt.** Sie fragen die Laufzeit nach Namen: die Klasse
@@ -363,13 +402,14 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::rc::{Retained, Weak};
-use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
@@ -377,6 +417,7 @@ use objc2_app_kit::{
     NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
     NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView,
     NSTextViewDelegate, NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
+    NSWritingToolsBehavior,
 };
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
@@ -3296,6 +3337,37 @@ fn textflaeche_bauen(
     // derselben Flaeche, nicht der Dokumentation entnommen.
     text.setInlinePredictionType(NSTextInputTraitType::No);
     text.setMathExpressionCompletionType(NSTextInputTraitType::No);
+    // Die achte: die Schreibwerkzeuge aus macOS 15. Sie schreiben markierten Text
+    // um und wirken beim Korrekturlesen ueber eine ganze Datei; danach steht in
+    // `NSTextView::string` nicht mehr das Getippte, und ueber
+    // `Editormodell::stand` geht es beim Sichern in die Datei. Anders als die
+    // sieben darueber greifen sie erst auf einen ausdruecklichen Aufruf des
+    // Nutzers aus dem Kontextmenue — dass C4 sie trotzdem ausschliesst, ist eine
+    // Lesart und war eine Frage an den Nutzer; entschieden am 260810 fuer den
+    // Ausschluss (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`).
+    // `None` ist die Absage, `Default` (der Werkswert) ueberliesse dem System die
+    // Wahl. Die Faehigkeit ist damit nicht verloren: sie steht in jedem anderen
+    // Textfeld des Systems, nur nicht an einer Flaeche, deren Inhalt Zeichen fuer
+    // Zeichen in eine Datei zurueckgeschrieben wird.
+    text.setWritingToolsBehavior(NSWritingToolsBehavior::None);
+    // Und die neunte, die Angebotsflaeche derselben Sache: das Sinnbild, das die
+    // Schreibwerkzeuge von sich aus anbietet. Sie steht ab Werk **an** — gemessen,
+    // nicht der Dokumentation entnommen — und haengt nicht am Verhalten darueber:
+    // `setWritingToolsBehavior(None)` laesst sie unberuehrt, sie ist also keine
+    // zweite Tuer, sondern eine eigene Einstellung mit eigenem Aus-Wert.
+    //
+    // Sie geht ueber den gehueteten Weg und nicht ueber einen Aufruf, weil sie
+    // erst ab macOS 15.4 zugesagt ist; der Grund steht bei
+    // [`setzen_falls_vorhanden`].
+    setzen_falls_vorhanden(&text, "allowsWritingToolsAffordance", false);
+    // Die beiden uebrigen Schreibwerkzeug-Einstellungen bekommen **keine** Zeile,
+    // und das ist gemessen und nicht vergessen: `allowedWritingToolsResultOptions`
+    // und `writingToolsAllowedInputOptions` sind Bitmasken, deren Null
+    // `…ResultDefault` heisst — "das System waehlt" — und nicht "nichts". Einen
+    // Wert, der nichts zulaesst, fuehrt die Aufzaehlung nicht, und beide stehen ab
+    // Werk schon auf Null. Eine Zeile waere hier ein Aufruf ohne Wirkung; was die
+    // Schreibwerkzeuge abschaltet, sind die beiden Zeilen darueber. Die Einordnung
+    // und ihre Probe stehen unter `mod tests` als `Einordnung::Gegenstandslos`.
     // Ohne diese Zeile traegt die Textansicht keine einzige
     // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
     // Ende der Antwortkette einen leeren Verwalter vor. `allowsUndo` steht bei
@@ -3336,6 +3408,77 @@ fn textflaeche_bauen(
     // Editor zeigt ausschliesslich den Inhalt einer Datei.
     Nummernspalte::einhaengen(mtm, &rolle, &text);
     (rolle, text)
+}
+
+/// Setzt einen booleschen Schalter der Textflaeche, **falls diese Laufzeit ihn
+/// fuehrt**, und meldet, ob sie es tat.
+///
+/// # Warum gefragt und nicht gerufen wird
+///
+/// `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt
+/// die Untergrenze des Buendels deshalb nicht (`CLAUDE.md`, Technologiewahl). Ein
+/// Setzer, den das System nicht kennt, ist kein Fehler zur Uebersetzungszeit,
+/// sondern ein `doesNotRecognizeSelector:` zur Laufzeit — also ein Absturz auf
+/// dem Geraet des Nutzers.
+///
+/// Der eine Aufrufer ist [`textflaeche_bauen`] mit
+/// `setAllowsWritingToolsAffordance:`, und der braucht die Frage: das SDK fuehrt
+/// die Angebotsflaeche allein an `NSTextField` und erst ab **macOS 15.4**, das
+/// Buendel zielt auf **15.0**. Die Laufzeit von 15.7.7 antwortet an `NSTextView`
+/// darauf, aber undokumentiert; auf 15.0 bis 15.3 kann sie fehlen. `objc2` bildet
+/// den Setzer an `NSTextView` folgerichtig nicht ab, weshalb der Weg ueber
+/// `msg_send!` und nicht ueber eine erzeugte Methode laeuft.
+///
+/// **Fehlt der Setzer, ist nichts zu tun, und das ist keine Notluege.** Eine
+/// Einstellung, die es nicht gibt, aendert kein Zeichen — dieselbe Begruendung,
+/// mit der die Gegenrichtung des Stolperdrahts ein Hinweis und kein Fehlschlag
+/// ist (Defekt 260810-0417). Der Rueckgabewert ist fuer die Proben da, die
+/// zwischen "steht aus" und "gibt es nicht" unterscheiden muessen.
+///
+/// **Der gehuetete Weg ist einer und nicht zwei.** Die lesende Seite derselben
+/// Frage ist `merkmal_falls_vorhanden` unter `mod tests`; beide fragen
+/// `respondsToSelector:` nach demselben, von [`setzername`] gebildeten Setzer und
+/// sonst nichts. Wer eine dritte Beruehrung einer Methode ueber der Untergrenze
+/// braucht, nimmt diese Frage und baut keine Versionsabfrage daneben.
+///
+/// # Warum ueber `setValue:forKey:` und nicht ueber den Setzer selbst
+///
+/// Weil `objc2` den Setzer an `NSTextView` nicht abbildet, muesste ein
+/// unmittelbarer Ruf durch `msg_send!` — und dessen Selektor steht zur
+/// Uebersetzungszeit fest, waehrend die Frage davor zur Laufzeit faellt. Ein
+/// dynamischer Selektor mit einem `BOOL`-Argument ist in `objc2` nur ueber rohes
+/// `objc_msgSend` samt Umdeutung des Funktionszeigers zu haben, und
+/// `performSelector:withObject:` ist **keine** Ausweiche: es uebergibt einen
+/// Objektzeiger, wo der Setzer ein `BOOL` erwartet, und ein Zeiger ist nie
+/// `NO`. Die Schluesselwertkodierung nimmt dagegen die `NSNumber`, liest die
+/// Typkodierung des Merkmals und packt den Wahrheitswert selbst aus — derselbe
+/// Weg, den `merkmal_setzen` unter `mod tests` schon geht.
+fn setzen_falls_vorhanden(flaeche: &NSTextView, merkmal: &str, wert: bool) -> bool {
+    let setzer = CString::new(setzername(merkmal)).expect("ein Setzername traegt kein Nullbyte");
+    if !flaeche.respondsToSelector(Sel::register(&setzer)) {
+        return false;
+    }
+    let schluessel = NSString::from_str(merkmal);
+    let zahl = NSNumber::new_bool(wert);
+    // SAFETY: Das Merkmal traegt an dieser Flaeche einen Setzer — eben gefragt —,
+    // und damit ist es schluesselwertkodiert erreichbar; `setValue:forKey:` steht
+    // an `NSObject` seit macOS 10.0.
+    let _: () = unsafe { msg_send![flaeche, setValue: &*zahl, forKey: &*schluessel] };
+    true
+}
+
+/// `smartQuotesType` wird zu `setSmartQuotesType:` — die eine kanonische Form, in
+/// der dieses Modul eine Einstellung benennt.
+///
+/// Die Regel ist die, die Objective-C selbst anwendet, wenn eine Eigenschaft
+/// keinen eigenen Setzer nennt: `set`, erster Buchstabe gross, Doppelpunkt. Sie
+/// steht hier und nicht unter `mod tests`, weil [`setzen_falls_vorhanden`] und die
+/// lesende Seite dort **denselben** Namen bilden muessen — sonst fragte die eine
+/// nach einem anderen Selektor als die andere setzt.
+fn setzername(merkmal: &str) -> String {
+    let mut zeichen = merkmal.chars();
+    let erstes = zeichen.next().expect("ein Merkmalsname ist nicht leer");
+    format!("set{}{}:", erstes.to_uppercase(), zeichen.as_str())
 }
 
 /// Leert Rueckgaengig- und Wiederherstellungsstapel eines Verwalters.
@@ -4424,8 +4567,31 @@ mod tests {
         /// dieselben Bits sieht, misst
         /// [`die_sammeltuer_ist_eine_sicht_auf_dieselben_bits`].
         SammeltuerZu(&'static [&'static str]),
+        /// Sie beschreibt, **was** eine Faehigkeit duerfte, die an dieser Flaeche
+        /// abgeschaltet ist — und traegt selbst keinen Wert, der nichts zulaesst.
+        /// Genannt ist der Setzer, der die Faehigkeit abschaltet.
+        ///
+        /// **Der Unterschied zu [`Einordnung::ZweiteTuerZu`] ist gemessen.** Eine
+        /// zweite Tuer wird vom Genannten **umgelegt**; eine gegenstandslose
+        /// Einstellung bleibt stehen, wo sie stand, und verliert nur ihren
+        /// Gegenstand. Beides misst
+        /// [`die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus`].
+        ///
+        /// Zwei sind es, die beiden Bitmasken der Schreibwerkzeuge: ihre Null
+        /// heisst `…ResultDefault`, also "das System waehlt", und nicht "nichts".
+        /// [`textflaeche_bauen`] setzt sie deshalb **nicht** — eine Zeile waere ein
+        /// Aufruf ohne Wirkung, und [`aus_bedeutet`] kennt fuer die Form
+        /// `Options:` folgerichtig keinen Aus-Wert.
+        Gegenstandslos(&'static str),
         /// Bekannt, benannt, und die Einordnung haengt an einer Lesart von C4,
         /// die der Nutzer zu treffen hat. Der Datensatz steht dabei.
+        ///
+        /// **Heute steht keine Einstellung hier, und das ist der Zustand nach
+        /// einer getroffenen Entscheidung**, nicht ein leer gebliebener Platz. Die
+        /// vier Schreibwerkzeug-Einstellungen standen bis zum 260810 so; die
+        /// Variante bleibt, weil die naechste Lesart, die dem Nutzer gehoert,
+        /// wieder eine braucht.
+        #[allow(dead_code)]
         NochOffen(&'static str),
     }
 
@@ -4561,25 +4727,23 @@ mod tests {
                 "setGrammarCheckingEnabled:",
             ]),
         ),
-        // Die vier Schreibwerkzeug-Einstellungen, die auf eine Lesart von C4
-        // warten. Es sind vier und nicht eine: wer die Schreibwerkzeuge
-        // ausschliesst, schliesst sie ueber `writingToolsBehavior` allein nicht
-        // aus (Defekt 260810-0745).
-        (
-            "setWritingToolsBehavior:",
-            Einordnung::NochOffen(SCHREIBWERKZEUGE),
-        ),
+        // Die vier Schreibwerkzeug-Einstellungen. Es sind vier und nicht eine: wer
+        // die Schreibwerkzeuge ausschliesst, schliesst sie ueber
+        // `writingToolsBehavior` allein nicht aus (Defekt 260810-0745). Dass C4
+        // sie ausschliesst, ist am 260810 entschieden
+        // (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`);
+        // zwei tragen daraufhin einen Aus-Wert und je eine Zeile in
+        // `textflaeche_bauen`, zwei tragen keinen — der Grund steht bei
+        // `Einordnung::Gegenstandslos`.
+        ("setWritingToolsBehavior:", Einordnung::Abgeschaltet),
+        ("setAllowsWritingToolsAffordance:", Einordnung::Abgeschaltet),
         (
             "setAllowedWritingToolsResultOptions:",
-            Einordnung::NochOffen(SCHREIBWERKZEUGE),
+            Einordnung::Gegenstandslos("setWritingToolsBehavior:"),
         ),
         (
             "setWritingToolsAllowedInputOptions:",
-            Einordnung::NochOffen(SCHREIBWERKZEUGE),
-        ),
-        (
-            "setAllowsWritingToolsAffordance:",
-            Einordnung::NochOffen(SCHREIBWERKZEUGE),
+            Einordnung::Gegenstandslos("setWritingToolsBehavior:"),
         ),
         // Die sechs aus `NSView` und `NSResponder`, die die Aufzaehlung ueber die
         // Vererbungskette mitbringt. Keine fasst einen Textspeicher an.
@@ -4590,17 +4754,6 @@ mod tests {
         ("setAccessibilityEnabled:", Einordnung::Geduldet),
         ("setAccessibilityRulerMarkerType:", Einordnung::Geduldet),
     ];
-
-    /// Der Datensatz, an dem die Einordnung der vier Schreibwerkzeug-Einstellungen
-    /// haengt.
-    ///
-    /// **Eine Frage und nicht vier.** Alle vier stehen oder fallen mit derselben
-    /// Lesart von C4, und die bindet ueber sie hinaus; deshalb ist der Datensatz
-    /// eine Entscheidung und kein Defekt. Der Defekt, der die Frage aufgeworfen
-    /// hat, ist
-    /// `issues/260810-0512_*_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`.
-    const SCHREIBWERKZEUGE: &str =
-        "decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md";
 
     /// Die Antwort zu einem Selektornamen, oder `None`, wenn
     /// [`EINSTELLUNGEN`] ihn nicht kennt.
@@ -4652,15 +4805,9 @@ mod tests {
         setzer
     }
 
-    /// `smartQuotesType` wird zu `setSmartQuotesType:`.
-    fn setzername(merkmal: &str) -> String {
-        let mut zeichen = merkmal.chars();
-        let erstes = zeichen.next().expect("ein Merkmalsname ist nicht leer");
-        format!("set{}{}:", erstes.to_uppercase(), zeichen.as_str())
-    }
-
     /// `setSmartQuotesType:` wird zu `smartQuotesType` — der Weg zurueck, den
-    /// `valueForKey:` braucht.
+    /// `valueForKey:` braucht. Die Hinrichtung ist [`setzername`], und die steht
+    /// im Modul darueber, weil [`setzen_falls_vorhanden`] denselben Namen braucht.
     fn merkmalsname(setzer: &str) -> String {
         let kern = setzer
             .strip_prefix("set")
@@ -4764,15 +4911,19 @@ mod tests {
         }
     }
 
-    /// Die Aufstellung ist in sich stimmig: kein Name doppelt, und jede Tuer
+    /// Die Aufstellung ist in sich stimmig: kein Name doppelt, und jeder Verweis
     /// zeigt auf Eintraege, die selbst eine Antwort tragen.
     ///
-    /// Ohne diese Probe koennte eine Tuer auf eine Tuer zeigen oder ins Leere,
-    /// und die Aufstellung saehe vollstaendig aus, ohne es zu sein. Sie gilt fuer
-    /// beide Tuersorten: [`Einordnung::ZweiteTuerZu`] mit ihrem einen Ziel und
-    /// [`Einordnung::SammeltuerZu`] mit ihren mehreren.
+    /// Ohne diese Probe koennte ein Verweis auf einen Verweis zeigen oder ins
+    /// Leere, und die Aufstellung saehe vollstaendig aus, ohne es zu sein. Drei
+    /// Antworten nennen einen anderen Eintrag: [`Einordnung::ZweiteTuerZu`] mit
+    /// ihrem einen Ziel, [`Einordnung::SammeltuerZu`] mit ihren mehreren und
+    /// [`Einordnung::Gegenstandslos`] mit dem Traeger, dessen Abschaltung ihr den
+    /// Gegenstand nimmt. Fuer die dritte ist die Pruefung die tragende Haelfte
+    /// ihrer Begruendung: eine Einstellung ist nur dann gegenstandslos, wenn das
+    /// Genannte wirklich aus ist.
     #[test]
-    fn jede_tuer_zeigt_auf_beantwortete_einstellungen() {
+    fn jeder_verweis_zeigt_auf_beantwortete_einstellungen() {
         let mut gesehen = BTreeSet::new();
         for (name, _) in EINSTELLUNGEN {
             assert!(
@@ -4793,11 +4944,13 @@ mod tests {
         }
     }
 
-    /// Die Ziele einer Tuer, oder nichts, wenn die Antwort keine Tuer ist.
+    /// Die Eintraege, die eine Antwort namentlich nennt, oder nichts, wenn sie
+    /// keinen nennt.
     fn ziele_von(einordnung: &'static Einordnung) -> &'static [&'static str] {
         match einordnung {
             Einordnung::ZweiteTuerZu(ziel) => std::slice::from_ref(ziel),
             Einordnung::SammeltuerZu(ziele) => ziele,
+            Einordnung::Gegenstandslos(traeger) => std::slice::from_ref(traeger),
             Einordnung::Abgeschaltet | Einordnung::Geduldet | Einordnung::NochOffen(_) => &[],
         }
     }
@@ -4947,24 +5100,35 @@ mod tests {
     /// Der Wert, auf dem eine abgeschaltete Einstellung steht: `NO` an einer
     /// booleschen Tuer, `No` an einer dreiwertigen.
     ///
-    /// **Die Unterscheidung ist vollstaendig und hat keinen Auffangzweig.** Die
-    /// vier uebrigen Namensformen tragen je einen eigenen Aus-Wert —
-    /// `set…Behavior:` etwa `NSWritingToolsBehavior::None` mit `-1` und nicht `1`
-    /// —, und ein stiller Rueckfall auf `No` haette dort eine falsche Erwartung
-    /// gemessen und sie als Fehlschlag der Flaeche gemeldet. Heute erreicht keine
-    /// von ihnen diese Stelle: `Abgeschaltet` tragen fuenf `set…Enabled:` und
-    /// zwei `set…Type:`, und die Ziele der Tueren sind alle `set…Enabled:`.
+    /// **Die Unterscheidung ist vollstaendig und hat keinen Auffangzweig**, und
+    /// jede Form traegt einen **eigenen** Aus-Wert: ein stiller Rueckfall auf `No`
+    /// haette bei `set…Behavior:` eine falsche Erwartung gemessen und sie als
+    /// Fehlschlag der Flaeche gemeldet — dort ist das Aus die `-1` von
+    /// [`NSWritingToolsBehavior::None`] und nicht die `1`.
+    ///
+    /// Vier Formen stehen heute hier, und `Abgeschaltet` tragen neun
+    /// Einstellungen: fuenf `set…Enabled:`, zwei `set…Type:`, ein `set…Behavior:`
+    /// und ein `set…Affordance:`. Die Ziele der Tueren sind alle `set…Enabled:`.
+    ///
+    /// **`Options:` fehlt hier mit Absicht.** Die beiden Bitmasken der
+    /// Schreibwerkzeuge tragen keinen Wert, der nichts zulaesst — ihre Null heisst
+    /// "das System waehlt" —, und darum stehen sie als
+    /// [`Einordnung::Gegenstandslos`] und nicht als `Abgeschaltet`. Wer sie
+    /// umtruege, bekaeme hier den Abbruch, und das ist die richtige Antwort: es
+    /// waere ein Aus-Wert zu erfinden, den Apple nicht fuehrt.
     fn aus_bedeutet(setzer: &str) -> isize {
-        if setzer.ends_with("Enabled:") {
+        if setzer.ends_with("Enabled:") || setzer.ends_with("Affordance:") {
             0
         } else if setzer.ends_with("Type:") {
             NSTextInputTraitType::No.0
+        } else if setzer.ends_with("Behavior:") {
+            NSWritingToolsBehavior::None.0
         } else {
             panic!(
-                "{setzer} traegt keine der beiden Formen, deren Aus-Wert hier bekannt ist. \
-                 Wer eine Einstellung der Formen Types:, Behavior:, Options: oder \
-                 Affordance: auf Abgeschaltet setzt, traegt ihren Aus-Wert zuerst hier ein \
-                 — sie ist nicht `No`"
+                "{setzer} traegt keine der vier Formen, deren Aus-Wert hier bekannt ist. \
+                 Wer eine Einstellung der Formen Types: oder Options: auf Abgeschaltet \
+                 setzt, traegt ihren Aus-Wert zuerst hier ein — sie ist nicht `No`, und \
+                 bei den Bitmasken der Schreibwerkzeuge gibt es sie nicht"
             )
         }
     }
@@ -4978,12 +5142,27 @@ mod tests {
     /// Die zweite Haelfte ist die tragende: ohne sie liefe die Probe gruen durch,
     /// wenn eine Einstellung ab Werk schon aus waere und die Zeile fehlte.
     ///
-    /// Die Aufstellung liefert die Namen. Wer eine achte Einstellung als
+    /// Die Aufstellung liefert die Namen. Wer eine zehnte Einstellung als
     /// `Abgeschaltet` eintraegt, ohne die Zeile in [`textflaeche_bauen`] zu
     /// schreiben, bekommt hier den Fehlschlag — und nicht erst der Nutzer am
     /// laufenden Buendel.
+    ///
+    /// # Eine Einstellung, die diese Laufzeit nicht fuehrt, ist ein Hinweis
+    ///
+    /// Neun sind es seit dem 260810, und die neunte —
+    /// `setAllowsWritingToolsAffordance:` — ist die erste, die **oberhalb der
+    /// Untergrenze** des Buendels liegen kann: das SDK fuehrt sie erst ab macOS
+    /// 15.4 und nur an `NSTextField`, das Buendel zielt auf 15.0. Deshalb liest
+    /// diese Probe ueber [`merkmal_falls_vorhanden`] und nicht ueber [`merkmal`],
+    /// dessen Abbruch das **ganze** Pruefprogramm beendete.
+    ///
+    /// **Fehlt sie, faellt die Probe nicht.** Eine Einstellung, die es nicht gibt,
+    /// aendert kein Zeichen; C4 ist von ihr nicht beruehrt. Das ist derselbe
+    /// Zuschnitt, den `260810-0417` fuer die Gegenrichtung des Stolperdrahts
+    /// gewaehlt hat — Hinweis statt Fehlschlag —, und aus demselben Grund geht der
+    /// Hinweis ueber [`std::io::stderr`] und nicht ueber `eprintln!`.
     #[test]
-    fn die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus() {
+    fn die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus() {
         let abgeschaltet: Vec<&str> = EINSTELLUNGEN
             .iter()
             .filter(|(_, einordnung)| *einordnung == Einordnung::Abgeschaltet)
@@ -5000,9 +5179,18 @@ mod tests {
             for setzer in abgeschaltet {
                 let name = merkmalsname(setzer);
                 let aus = aus_bedeutet(setzer);
+                let Some(unser_wert) = merkmal_falls_vorhanden(&unsere, &name) else {
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Was es nicht \
+                         gibt, aendert kein Zeichen; C4 ist davon nicht beruehrt. Die \
+                         Untergrenze des Buendels ist macOS 15.0.",
+                        module_path!()
+                    );
+                    continue;
+                };
                 assert_eq!(
-                    merkmal(&unsere, &name),
-                    aus,
+                    unser_wert, aus,
                     "{setzer} steht an der Flaeche aus textflaeche_bauen nicht auf aus — \
                      C4 verlangt, dass der gesicherte Stand der getippte ist"
                 );
@@ -5012,6 +5200,71 @@ mod tests {
                     "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
                      Zeile in textflaeche_bauen nichts, und der Vergleich braucht einen \
                      anderen Zeugen"
+                );
+            }
+        });
+    }
+
+    /// Die beiden gegenstandslosen Einstellungen stehen an KRKs Flaeche
+    /// **unberuehrt**, und die Faehigkeit, die sie beschreiben, steht aus.
+    ///
+    /// **Das ist die Probe, die [`Einordnung::Gegenstandslos`] von
+    /// [`Einordnung::ZweiteTuerZu`] trennt.** Eine zweite Tuer wird vom Genannten
+    /// umgelegt — das misst [`jede_zweite_tuer_und_ihre_erste_legen_einander_um`].
+    /// Eine gegenstandslose Einstellung wird **nicht** umgelegt: gemessen am
+    /// 260810 auf macOS 15.7.7 laesst `setWritingToolsBehavior(None)` beide
+    /// Bitmasken auf ihrer Null stehen. Sie verliert nur ihren Gegenstand, weil
+    /// die Faehigkeit, deren Ergebnisformen sie beschreibt, nicht mehr laeuft.
+    ///
+    /// Zwei Behauptungen haelt sie fest:
+    ///
+    /// 1. KRKs Flaeche traegt denselben Wert wie eine frische: [`textflaeche_bauen`]
+    ///    setzt sie nicht, und das ist Absicht und kein Vergessen.
+    /// 2. Dieser Wert ist die Null, also der Vorgabewert "das System waehlt". Waere
+    ///    er es einmal nicht, waere die Begruendung "es gibt keinen Aus-Wert"
+    ///    nachzupruefen.
+    ///
+    /// Die dritte — dass der genannte Traeger wirklich aus ist — steht nicht hier,
+    /// sondern in [`jeder_verweis_zeigt_auf_beantwortete_einstellungen`], das sie
+    /// fuer alle drei verweisenden Antworten in einem Zug prueft.
+    #[test]
+    fn die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus() {
+        let gegenstandslos: Vec<&str> = EINSTELLUNGEN
+            .iter()
+            .filter(|(_, einordnung)| matches!(einordnung, Einordnung::Gegenstandslos(_)))
+            .map(|(name, _)| *name)
+            .collect();
+        assert!(
+            !gegenstandslos.is_empty(),
+            "ohne eine gegenstandslose Einstellung misst diese Probe nichts"
+        );
+
+        an_einer_flaeche(|mtm| {
+            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+            for setzer in gegenstandslos {
+                let name = merkmalsname(setzer);
+                let Some(unser_wert) = merkmal_falls_vorhanden(&unsere, &name) else {
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Eine \
+                         Einstellung, die es nicht gibt, laesst auch nichts zu.",
+                        module_path!()
+                    );
+                    continue;
+                };
+                assert_eq!(
+                    unser_wert,
+                    merkmal(&frische, &name),
+                    "{setzer} steht an KRKs Flaeche anders als an einer frischen — dann setzt \
+                     textflaeche_bauen sie doch, und sie gehoert nicht mehr auf \
+                     Gegenstandslos"
+                );
+                assert_eq!(
+                    unser_wert, 0,
+                    "{setzer} steht nicht mehr auf seinem Vorgabewert Null. Die Einordnung \
+                     Gegenstandslos haengt daran, dass die Null 'das System waehlt' heisst \
+                     und es keinen Wert gibt, der nichts zulaesst — das ist nachzupruefen"
                 );
             }
         });
@@ -5223,16 +5476,24 @@ mod tests {
     }
 
     /// Der Vorgabewert der Schreibwerkzeuge ueberlaesst dem System die Wahl, und
-    /// ihre Angebotsflaeche steht ab Werk an.
+    /// ihre Angebotsflaeche steht ab Werk an — **an einer frischen `NSTextView`**.
     ///
-    /// **Gemessen und nicht der Dokumentation entnommen** (Defekt 260810-0512,
-    /// der den Wert als `speculation:` gefuehrt hat). Beides ist der Grund, aus
-    /// dem die vier Einstellungen in [`EINSTELLUNGEN`] als
-    /// [`Einordnung::NochOffen`] stehen: waeren sie ab Werk aus, waere die Lesart
-    /// von C4 keine Frage mehr.
+    /// **Gemessen und nicht der Dokumentation entnommen** (Defekt 260810-0512, der
+    /// den Wert als `speculation:` gefuehrt hat). Das war der Grund, aus dem die
+    /// Lesart von C4 ueberhaupt eine Frage war: waeren die Schreibwerkzeuge ab Werk
+    /// aus, haette es nichts zu entscheiden gegeben.
     ///
-    /// Die Probe faerbt die Reihe **nicht** rot, wenn die Lesart noch offen ist —
-    /// sie haelt fest, dass die Frage eine ist.
+    /// **Seit dem 260810 misst diese Probe die frische Flaeche und nicht mehr
+    /// KRKs.** Die Frage ist gegen die Schreibwerkzeuge entschieden
+    /// (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`), und an
+    /// KRKs Flaeche stehen beide jetzt aus — das haelt
+    /// [`die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`] fest. Was hier
+    /// bleibt, ist die Aussage darunter: dass die beiden Zeilen in
+    /// [`textflaeche_bauen`] etwas **aendern** und nicht einen Werkswert
+    /// wiederholen. Dieselbe Aussage steckt in der zweiten Haelfte jener Probe;
+    /// hier steht sie mit den Namen der Werte statt als Ungleichheit, weil der
+    /// Werkswert die gemessene Groesse ist, auf die sich der Entscheidungsdatensatz
+    /// beruft.
     ///
     /// # Die beiden Merkmale sind nicht von einer Art, und die Probe behandelt sie
     /// verschieden
@@ -5262,19 +5523,20 @@ mod tests {
     #[test]
     fn der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl() {
         an_einer_flaeche(|mtm| {
-            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
             assert_eq!(
-                merkmal(&unsere, "writingToolsBehavior"),
+                merkmal(&frische, "writingToolsBehavior"),
                 NSWritingToolsBehavior::Default.0,
-                "die Schreibwerkzeuge stehen nicht mehr auf Default — wer sie gesetzt hat, \
-                 hat die Lesart von C4 entschieden, und dann gehoert der Eintrag in \
-                 EINSTELLUNGEN von NochOffen auf Abgeschaltet oder Geduldet"
+                "eine frische NSTextView steht nicht mehr auf Default. Stuende sie ab Werk \
+                 auf None, waere die Zeile in textflaeche_bauen ueberfluessig und die \
+                 Entscheidung aus dem Datensatz gegenstandslos geworden"
             );
-            match merkmal_falls_vorhanden(&unsere, "allowsWritingToolsAffordance") {
+            match merkmal_falls_vorhanden(&frische, "allowsWritingToolsAffordance") {
                 Some(angebotsflaeche) => assert_ne!(
                     angebotsflaeche, 0,
-                    "die Angebotsflaeche der Schreibwerkzeuge steht aus — dann ist der Grund, \
-                     aus dem der Datensatz sie fuehrt, ein anderer geworden"
+                    "die Angebotsflaeche steht an einer frischen Flaeche schon aus — dann \
+                     nimmt die Zeile in textflaeche_bauen nichts fort, und der Grund, aus dem \
+                     der Datensatz sie mitfuehrt, ist ein anderer geworden"
                 ),
                 None => {
                     let _ = writeln!(
