@@ -2656,10 +2656,28 @@ impl Anwendungsdelegierter {
     /// der eine Auffrischungspfad aus S14, damit beide Dateifenster den neuen
     /// Eintrag zeigen; dann die Auswahl ueber
     /// [`Dateifenster::quelle`]`.eintrag_waehlen`, die eine Stelle, die eine
-    /// Zeile anhand ihres Namens waehlt. Der Lesevorgang laeuft zu diesem
-    /// Zeitpunkt noch, also merkt sie den Namen vor und springt, sobald er
-    /// eintrifft. Ihre Antwort ist damit `Vorgemerkt` und nie `Unbekannt`;
-    /// der Rueckgabewert traegt hier keine Auskunft.
+    /// Zeile anhand ihres Namens waehlt. Im gewoehnlichen Fall laeuft deren
+    /// Lesevorgang zu diesem Zeitpunkt noch, also merkt sie den Namen vor und
+    /// springt, sobald er eintrifft: die Antwort ist `Vorgemerkt`.
+    ///
+    /// **`Unbekannt` ist hier trotzdem erreichbar, und der Rueckgabewert wird
+    /// verworfen.** `ordner` und `seite` stehen seit [`Self::anlegen`] fest,
+    /// also seit vor dem Blatt, und das Blatt haelt die Datentraegerwache
+    /// nicht an: sie ist kein Befehl, und
+    /// `beginSheetModalForWindow:completionHandler:` bringt keine eigene
+    /// Ereignisschleife mit. Wirft der Nutzer waehrend des stehenden Blattes
+    /// den Datentraeger aus, auf dem `ordner` liegt, schiebt
+    /// [`auffrischung::datentraeger_verloren`] jeden getroffenen Tab beider
+    /// Seiten auf das Benutzerverzeichnis — bei `willUnmount` ist `ordner`
+    /// dabei noch beschreibbar, siehe `datentraeger_gewechselt`. Das Anlegen
+    /// gelingt dann, [`auffrischung::ordner_neu_lesen`] findet keine Seite
+    /// mehr, die `ordner` zeigt, und `eintrag_waehlen` befragt das Modell des
+    /// Benutzerverzeichnisses.
+    ///
+    /// Das ist derselbe Weg, den der Zweig `Art::UmbenennenImStapel` in
+    /// `vorgang_beenden` fuer sich beschreibt, nur ausgeloest von der
+    /// Datentraegerwache statt von einem Befehl — und er wird auch gleich
+    /// behandelt: gemeldet wird nichts.
     fn anlegen_ausfuehren(
         &self,
         seite: Fensterseite,
@@ -2684,7 +2702,11 @@ impl Anwendungsdelegierter {
         }
 
         auffrischung::ordner_neu_lesen(self, ordner);
-        self.dateifenster(seite).quelle().eintrag_waehlen(&name);
+        // **Bewusst verworfen.** `Unbekannt` ist ueber die Datentraegerwache
+        // erreichbar, und gemeldet wird dann nichts; die Begruendung steht im
+        // Doc-Kommentar dieser Funktion. So entschieden vom Nutzer am 260810
+        // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
+        let _ = self.dateifenster(seite).quelle().eintrag_waehlen(&name);
         self.antwort_zeigen(seite, &operationen::angelegt_text(art, &name));
     }
 
@@ -3184,19 +3206,26 @@ impl Anwendungsdelegierter {
             // leer, wie C9 es zulaesst.
             Art::UmbenennenImStapel { neue_namen } => {
                 if let Some(erster) = neue_namen.first() {
-                    // **Der Rueckgabewert wird hier bewusst verworfen**, und
-                    // das ist die eine Stelle, an der das eine Entscheidung
-                    // ist: `Auswahlversuch::Unbekannt` ist von den drei
-                    // Aufrufern allein hier erreichbar. Der Vorgang laeuft im
+                    // **Der Rueckgabewert wird hier bewusst verworfen.**
+                    // `eintrag_waehlen` hat fuenf Aufrufer, und zwei von ihnen
+                    // werten `Auswahlversuch::Unbekannt` aus: `eintrag_anspringen`
+                    // (C10) meldet den fehlenden Namen, und die Messhandlung
+                    // `Auswaehlen` macht daraus einen Abbruchgrund des
+                    // Messlaufs. Die drei uebrigen verwerfen ihn, und
+                    // erreichbar ist er von ihnen hier und in
+                    // `anlegen_ausfuehren`; in `umbenennen_ausfuehren` nicht,
+                    // weil dort der Ordner unmittelbar vor der Auffrischung aus
+                    // derselben Seite kommt. Der Vorgang laeuft im
                     // Hintergrund, und wechselt der Nutzer waehrenddessen den
                     // Ordner dieser Seite, frischt die Schleife darueber sie
                     // nicht auf; dann laeuft kein Lesevorgang, und
                     // `eintrag_waehlen` befragt das Modell des anderen
-                    // Ordners. Gemeldet wird trotzdem nichts: "«datei-1»
-                    // steht nicht in der Liste" traefe den Nutzer in einem
-                    // Ordner, ueber den er gerade nichts wissen wollte, und
-                    // waere eher Rauschen als Auskunft. So entschieden vom
-                    // Nutzer am 260810
+                    // Ordners. Gemeldet wird trotzdem nichts, anders als in
+                    // `eintrag_anspringen`, wo der Nutzer eben nach diesem
+                    // Namen gefragt hat: "«datei-1» steht nicht in der Liste"
+                    // traefe ihn hier in einem Ordner, ueber den er gerade
+                    // nichts wissen wollte, und waere eher Rauschen als
+                    // Auskunft. So entschieden vom Nutzer am 260810
                     // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
                     let _ = self
                         .dateifenster(vorgang.seite)

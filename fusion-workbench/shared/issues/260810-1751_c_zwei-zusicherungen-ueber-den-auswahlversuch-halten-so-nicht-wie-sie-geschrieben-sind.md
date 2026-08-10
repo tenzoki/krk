@@ -106,3 +106,31 @@ Gering. Kein Abnahmekriterium, keine der zehn Zeitzusagen aus C8 und kein sichtb
 Verhalten sind berührt; der Weg in Teil 1 verlangt einen Auswurf bei stehendem Blatt. Der
 Schaden ist der einer falschen Zusicherung im Programmtext, und der fällt erst bei dem an,
 der als nächster auf sie baut.
+
+---
+Resolved: Der Weg der Durchsicht ist am Programmtext nachgeprueft und haelt. Belegkette:
+`anlegen` haelt `ordner` und `seite` bei `anwendung.rs:2635-2636` fest, `datentraeger_verloren`
+(`auffrischung.rs:370-372`) ruft `tab_wechseln` fuer jeden getroffenen Tab, und
+`tab_ordner_setzen` (`tabelle.rs:494-497`) schickt den sichtbaren Tab ueber `ordner_lesen` auf
+das Benutzerverzeichnis. Danach vergleicht `gleicher_ordner` das Benutzerverzeichnis gegen den
+Pfad auf dem Datentraeger, also frischt `ordner_neu_lesen` nichts auf.
+
+**Eine Verfeinerung gegenueber der Durchsicht:** die Antwort ist `Unbekannt` nur dann, wenn der
+Lesevorgang des Benutzerverzeichnisses zum Zeitpunkt der Bestaetigung schon fertig ist. Laeuft er
+noch, kommt `Vorgemerkt` zurueck, und der vorgemerkte Name wird im falschen Ordner nie gefunden.
+Der gewoehnliche Fall ist der erste, weil der Nutzer den Namen erst tippen und bestaetigen muss.
+Beide widerlegen die Zusicherung "nie `Unbekannt`", und behandelt werden beide gleich.
+
+Geaendert sind drei Dinge in `crates/krk-ui/src/appkit/anwendung.rs`:
+1. Der Doc-Einzeiler an `anlegen_ausfuehren` sichert nichts mehr zu, sondern beschreibt den
+   erreichbaren Weg und verweist auf dieselbe Abwaegung wie der Zweig `UmbenennenImStapel`.
+2. Der Aufruf ist ein begruendetes `let _ =` geworden. Damit traegt der Programmtext die
+   Unterscheidung selbst: ein nacktes `eintrag_waehlen(...)` heisst "`Unbekannt` kann hier nicht
+   eintreten" — so bleibt `umbenennen_ausfuehren`, dessen Zusicherung haelt —, ein `let _ =`
+   heisst "kann eintreten und wird bewusst verworfen".
+3. "von den drei Aufrufern" ist ersetzt. Der Satz nennt jetzt die fuenf Aufrufstellen, die zwei
+   auswertenden namentlich und die drei verwerfenden, und stimmt ohne den Datensatz 260807-0219.
+   Dazu ein Halbsatz, der die Meldung aus `eintrag_anspringen` gegen das Schweigen hier abgrenzt.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 2.
