@@ -1574,64 +1574,20 @@ fn die_auslieferungsbelegung_fuehrt_einundsiebzig_funktionen() {
     }
 }
 
-/// Keine Kombination, die **KRK selbst** zustellt, liegt auf `y` oder `z`,
-/// ausser den beiden Vorschau-Kuerzeln aus der Runde 1.
-///
-/// **Der Grund dieser Zusage ist mit S2 weggefallen, die Zusage selbst steht
-/// noch.** Sie ist in S6 entstanden, als der Ereignisabgriff auch Buchstaben
-/// ueber die **Stelle** nachschlug: `kVK_ANSI_Y` und `kVK_ANSI_Z` tauschen
-/// zwischen der deutschen und der amerikanischen Belegung den Platz, eine
-/// Funktion dort lag also nicht unter ihrer Aufschrift, und die elf
-/// Editor-Funktionen sind deshalb um beide Stellen herumgelegt worden. Seit S2
-/// gehen Buchstaben ueber das gemeldete Zeichen, und keine Stelle wandert mehr:
-/// `cmd+y` liegt auf jeder Tastaturbelegung unter der Aufschrift Y, so wie
-/// `cmd+z` es ueber das Hauptmenue schon tut
-/// (`auf_einer_deutschen_tastatur_findet_die_aufschrift_y_die_vorschau`).
-///
-/// Die Pruefung bleibt stehen, bis der Plan nachzieht. Der Satz aus Befund 4
-/// und das Abnahmekriterium von S6, aus denen sie stammt, haengen an einer
-/// offenen Entscheidung des Nutzers
-/// (`issues/260809-1527_*_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`);
-/// sie hier vorwegzunehmen hiesse, eine Zusage stillschweigend fallen zu
-/// lassen, ueber die noch entschieden wird. Dass sie ihre Begruendung verloren
-/// hat, haelt
-/// `issues/260809-1746_*_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md`
-/// fest.
-///
-/// Die vom Menue gehaltenen Funktionen zaehlen nicht mit: ihr Kuerzel steht als
-/// Zeichenkette am `NSMenuItem`, und sie kommen im Nachschlag des Abgriffs
-/// ohnehin nicht vor.
-#[test]
-fn keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen() {
-    let belegung = Belegung::auslieferung();
-    // Die beiden Stellen, aus der Tastentabelle statt hingeschrieben.
-    let stellen: Vec<u16> = ["y", "z"]
-        .into_iter()
-        .map(|name| {
-            parser::taste_mit_namen(name)
-                .unwrap_or_else(|| panic!("die Tabelle kennt die Taste \"{name}\" nicht"))
-                .code
-        })
-        .collect();
-    // Die beiden Kuerzel aus der Runde 1. Sie standen bis S2 hier als
-    // Altlasten, ueber die der Nutzer noch zu entscheiden hatte; er hat am
-    // 260808-0155 entschieden, und seither liegen sie unter ihrer Aufschrift.
-    let bekannt = ["vorschau_umschalten", "fokus_vorschau"];
-
-    for funktion in belegung.funktionen() {
-        if funktion.gehalten_von().is_some() || bekannt.contains(&funktion.kennung()) {
-            continue;
-        }
-        for kombination in funktion.tasten() {
-            assert!(
-                !stellen.contains(&kombination.taste().code),
-                "{} liegt mit {kombination} auf einer der beiden Stellen, um die \
-                 der Plan die neuen Kombinationen herumgelegt hat",
-                funktion.kennung()
-            );
-        }
-    }
-}
+// Hier stand bis zum 260810-0822 die Probe
+// `keine_neue_kombination_liegt_auf_den_beiden_wandernden_stellen`. Sie hielt
+// fest, dass keine vom Ereignisabgriff zugestellte Kombination auf `kVK_ANSI_Y`
+// oder `kVK_ANSI_Z` liegt. Ihr Grund ist mit S2 weggefallen: der Abgriff
+// schlaegt Buchstaben und Ziffern seither ueber das gemeldete Zeichen nach,
+// keine Stelle wandert mehr, und die Zusage verbot kuenftigen Runden zwei
+// Buchstaben ohne Grund. Was sie an Sache trug, tragen
+// `auf_einer_deutschen_tastatur_findet_die_aufschrift_y_die_vorschau` und
+// `jede_ausgelieferte_kombination_traegt_die_kennung_ihrer_tastensorte` oben,
+// und zwar an der Nachschlagart selbst statt an einer Vorsichtsregel.
+//
+// Der Datensatz ist
+// `issues/260809-1746_*_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md`,
+// das Abnahmekriterium von S6 im Plan ist in derselben Aenderung nachgezogen.
 
 /// Die sieben Funktionen aus C5 sind gebaut, und keine steht nur in der Datei.
 #[test]

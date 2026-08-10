@@ -5,7 +5,7 @@
 **Schwere:** Medium
 **Gefunden von:** coder, bei der Abnahme von S41
 **Betroffen:** `resources/default-keymap.toml`, Zeilen 484–492 und 617–628
-**Cross-references:** `crates/krk-core/src/tasten/parser.rs` (Modulkopf, `Tastenkennung`), `crates/krk-ui/src/appkit/ereignisse.rs:134-142` (dort schon gezogen), `issues/260809-1746_o_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md` (derselbe Anlass, anderer Ort), `decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`
+**Cross-references:** `crates/krk-core/src/tasten/parser.rs` (Modulkopf, `Tastenkennung`), `crates/krk-ui/src/appkit/ereignisse.rs:134-142` (dort schon gezogen), `issues/260809-1746_*_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md` (derselbe Anlass, anderer Ort), `decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`
 
 ---
 
@@ -60,9 +60,9 @@ Die Zeilen 490–492 verlieren dabei die Nennung als offene Frage; die Entscheid
 ist beantwortet.
 
 **Zusammen mit
-`issues/260809-1746_o_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md`
+`issues/260809-1746_*_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md`
 und
-`issues/260809-1527_o_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`
+`issues/260809-1527_*_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`
 erledigen.** Alle drei ziehen dieselbe gegenstandslos gewordene Begründung aus
 einem anderen Dokument; einzeln erledigt bleibt sie an den beiden übrigen Orten
 stehen. Ausführender ist `ontocoder`, weil `.toml` nicht dem `coder` gehört.

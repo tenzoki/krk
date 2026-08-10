@@ -13,7 +13,7 @@ weiterbaut, die so nicht gilt.
 ## Der Befund
 
 `### Frage 7` des Plans und der Datensatz
-`decisions/260808-0140_a_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md`
+`decisions/260808-0140_*_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md`
 nennen beide **eine** Mechanik für die ganze Formatansicht: vorübergehende
 Merkmale des Layoutverwalters, gesetzt über
 `NSLayoutManager::setTemporaryAttributes:forCharacterRange:`. Die Empfehlung des
@@ -92,6 +92,17 @@ SDK-Kopfes vor dem Setzen der ersten Merkmale.
 
 Cross-references:
 `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md` (`### Frage 7`, Schritt 33),
-`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_a_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md` (Möglichkeit 1, Empfehlung),
+`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_*_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md` (Möglichkeit 1, Empfehlung),
 `crates/krk-ui/src/hervorhebung.rs` (Modulkopf, Abschnitt „Zwei Listen, und warum es zwei sein müssen"),
 `crates/krk-ui/src/appkit/editor.rs` (`Editorbereich::formatierung_anwenden`)
+
+---
+Resolved: Am 260810-0822 geschlossen. Alle drei Korrekturen sind ausgeführt, und am Programm hat sich nichts geändert.
+
+Punkt 1: `### Frage 7` des Plans trägt jetzt die Fallunterscheidung "wirkt auf die Auslegung oder nicht", die Zeile aus `NSLayoutManager.h:351` als Beleg, und die Zusage an der Stelle, die sie wirklich trägt: der Sicherungsweg liest `NSTextView::string` und damit die Zeichen der Fläche, kein Merkmal.
+
+Punkt 2: die Änderungszeile und das Abnahmekriterium von S33 nennen beide Merkmalswege und die Grenze zwischen ihnen. Das Kriterium verlangt nicht mehr, dass die Einfärbung "über `setTemporaryAttributes` und nicht über `addAttributes`" laufe, sondern dass Farbe und Unterstreichung im Layoutverwalter und Schriftgröße, Schriftschnitt, feste Schrift und Einzug im `NSTextStorage` stehen. Der gebaute Code löst es ein.
+
+Punkt 3: der Datensatz von 260808-0140 stand auf umgesetzt und ist deshalb nicht zurückgedreht, sondern nach `rules/fusion-workbench-conventions.md`, `## State Markers — decisions`, auf überholt gezogen. Der ablösende Datensatz ist `decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`; er trägt die gemessene Eigenschaft von AppKit als Grundlage, hält die gebaute Mechanik fest und ist unmittelbar umgesetzt, mit `41309cc` in der Zeile `Implemented:`. Die Wahl des Nutzers vom 260808-0155 gilt unverändert weiter.
+
+Zwei weitere Stellen im Plan führten dieselbe Aussage und sind mitgezogen: die Begründung bei S36 zu Suchen und Ersetzen und der Punkt unter `## Wie dieser Plan die Maxime "supersimpel" einlöst`. Beide tragen jetzt den Grund, der wirklich trägt: S33 setzt Merkmale und keine Zeichen.

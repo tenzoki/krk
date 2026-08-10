@@ -5,7 +5,7 @@
 **Schwere:** High
 **Gefunden von:** coderev, Durchsicht Turn 2 der Editor-Runde
 **Betroffen:** `resources/default-keymap.toml:98-101`, `resources/default-keymap.toml:660-673`, `crates/krk-ui/src/appkit/menue.rs:209-223`
-**Cross-references:** `decisions/260808-0140_a_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`, `issues/260809-1527_o_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`, S2 (offen), S7 (erledigt)
+**Cross-references:** `decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`, `issues/260809-1527_*_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`, S2 (offen), S7 (erledigt)
 
 ---
 
@@ -35,7 +35,7 @@ Aufschrift Y, und die Taste mit der Aufschrift Z blendet die Vorschau um.
 
 ## Warum das zählt
 
-`decisions/260808-0140_a_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`
+`decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`
 beschreibt genau diesen Zusammenstoß und empfiehlt Weg 2 **ausdrücklich nicht**,
 mit der Begründung:
 
@@ -48,7 +48,7 @@ offen ist, gilt der Zustand, vor dem der Datensatz gewarnt hat — und S7 hat ih
 nicht abgewartet, sondern hergestellt.
 
 Das ist ein anderer Befund als
-`issues/260809-1527_o_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`:
+`issues/260809-1527_*_der-plan-verbietet-y-und-z-und-legt-rueckgaengig-selbst-auf-cmd-z.md`:
 jener hält fest, dass der Plan sich selbst widerspricht. Dieser hält fest, dass
 die Anwendung heute auf dem Gerät des Nutzers zwei Menüeinträge trägt, die nicht
 greifen.

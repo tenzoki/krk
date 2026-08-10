@@ -28,11 +28,11 @@
 //!
 //! Der Plan (`### Frage 7`) und der Datensatz
 //! `decisions/260808-0140_*_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md`
-//! nennen beide **eine** Mechanik, die voruebergehenden Merkmale des
-//! Layoutverwalters, und zaehlen darunter auch "Ueberschriften groesser und
-//! fett, Listen eingerueckt, Quelltextbloecke in fester Schrift" auf. Das geht
-//! so nicht, und der Grund steht nicht in einem Bericht, sondern im Kopf des
-//! Systems selbst:
+//! nannten bis zum 260810-0822 beide **eine** Mechanik, die voruebergehenden
+//! Merkmale des Layoutverwalters, und zaehlten darunter auch "Ueberschriften
+//! groesser und fett, Listen eingerueckt, Quelltextbloecke in fester Schrift"
+//! auf. Das geht so nicht, und der Grund steht nicht in einem Bericht, sondern
+//! im Kopf des Systems selbst:
 //!
 //! > Temporary attributes provide a way to override attributes for drawing on a
 //! > per-layout manager basis, without affecting the underlying stored text.
@@ -60,8 +60,11 @@
 //! Unbedenklichkeit wie der Layoutverwalter, und der Unterschied zwischen den
 //! beiden Listen ist allein der, ob AppKit das Merkmal beachtet.
 //!
-//! Der Befund ist als offener Eintrag festgehalten:
-//! `issues/260810-0053_o_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md`.
+//! Der Befund ist festgehalten als
+//! `issues/260810-0053_*_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md`
+//! und am 260810-0822 geschlossen: `### Frage 7` und S33 tragen jetzt den
+//! Schnitt dieses Modulkopfes, und die Grundlage steht als
+//! `decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`.
 //!
 //! # Ein Durchgang, zwei Verbraucher
 //!
