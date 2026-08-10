@@ -13,6 +13,7 @@
 //!   copyfile_state_{alloc,free,set,get}
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
 //! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::oeffnen
+//!                                             └─> krk-ui: vorschaumodell
 //! ```
 //!
 //! **Vier ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
@@ -27,9 +28,13 @@
 //! dieses Moduls, und gerufen sind sie ebenfalls alle acht.
 //!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
-//! Kerns und nicht allein die des Lesers. Die letzte Zeile ist der erste
-//! Aufrufer von ausserhalb `verzeichnis/`, und sie ist der Grund, aus dem die
-//! Aussage jetzt nicht mehr nur behauptet ist. Das Modul liegt unter
+//! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
+//! ersten Aufrufer von ausserhalb `verzeichnis/`, und sie sind der Grund, aus
+//! dem die Aussage nicht mehr nur behauptet ist. Es sind seit dem Defekt
+//! `260810-1247` zwei, und der zweite liegt ausserhalb der Kiste: die Vorschau
+//! in `krk-ui` liest ueber denselben Eingang wie der Editor. Warum die
+//! Zielpruefung trotzdem bei den Aufrufern bleibt, steht bei
+//! [`ohne_warten_oeffnen`]. Das Modul liegt unter
 //! `verzeichnis/`, weil es dort entstanden ist und ein Umzug jede Fundstelle
 //! verschoebe, ohne eine Zeile besser zu machen.
 //!
@@ -733,8 +738,31 @@ unsafe extern "C" {
 /// erst am `fstat` des Aufrufers; das ist gewollt, denn was ein gueltiges Ziel
 /// ist, entscheidet der Aufrufer und nicht diese Stelle.
 ///
-/// Der eine Aufrufer ist [`crate::text::datei::oeffnen`]. Der Defekt, der die
-/// Funktion verlangt hat, ist `260809-1652`.
+/// # Zwei Aufrufer, und die Zielpruefung bleibt bei beiden
+///
+/// Gerufen wird die Funktion von [`crate::text::datei::oeffnen`], dem Eingang
+/// des Editors, und von `vorschaumodell::bis_zur_grenze_lesen` in `krk-ui`, dem
+/// Leseweg der Vorschau. Der zweite steht ohne Doku-Verweis da, weil `krk-ui` an
+/// `krk-core` haengt und nicht umgekehrt.
+///
+/// **Gemeinsam ist beiden der Ablauf**: hier oeffnen, `fstat` am Deskriptor
+/// fragen, alles abweisen, was `is_file()` nicht bejaht, die Groesse gegen eine
+/// Grenze halten, erst danach lesen. **Verschieden sind die Antwort und die
+/// Grenze.** Der Editor weist mit [`crate::text::Abweisung::KeinGueltigesZiel`]
+/// ab und nennt dem Nutzer den Grund; die Vorschau faellt auf ihre
+/// Metadatenanzeige zurueck, die Groesse, Rechte und Datum zeigt. Der Editor
+/// haelt dabei `EDITORGRENZE`, die Vorschau `TEXTGRENZE` oder `BILDGRENZE`, je
+/// Endung des Pfades.
+///
+/// **Der zweite Aufrufer verschiebt die Pruefung damit nicht hierher, sondern
+/// begruendet sie erst richtig.** Eine Typpruefung in dieser Huelle muesste eine
+/// der beiden Antworten waehlen, und keine der drei Grenzen kennt sie. Sie
+/// oeffnet und nimmt `O_NONBLOCK` wieder ab; was ein gueltiges Ziel ist, bleibt
+/// die Frage des Aufrufers. Wer sie auf den Editorfall zuschneidet, nimmt der
+/// Vorschau den Schutz, den sie seit dem 260810 hat.
+///
+/// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
+/// Aufrufer ist mit `260810-1247` dazugekommen.
 pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
     let datei = OpenOptions::new()
         .read(true)

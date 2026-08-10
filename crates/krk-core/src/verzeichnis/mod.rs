@@ -11,8 +11,9 @@
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
 //! `getattrlistbulk(2)` fuer das Lesen, seit Schritt 15 `copyfile(3)` und
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
-//! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den Eingang von
-//! `text::datei::oeffnen`. Das sind vier Schnittstellen und acht gebundene
+//! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
+//! von `text::datei::oeffnen` und, seit dem Defekt `260810-1247`, vom Leseweg
+//! der Vorschau in `krk-ui`. Das sind vier Schnittstellen und acht gebundene
 //! Funktionen, denn `copyfile(3)` braucht seine vier
 //! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der vier
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und

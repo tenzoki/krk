@@ -130,9 +130,21 @@
 //! Der Stapel eines `NSUndoManager` hat keine Tiefengrenze; eine Handlung, die den
 //! ganzen Stand abschreibt, macht den gehaltenen Speicher deshalb zum Produkt aus
 //! Dateigroesse und Zahl der Handlungen. [`Umkehrpunkt`] traegt statt dessen
-//! Stelle, entfernte Zeichen und Zahl der eingefuegten Bytes; die Zahlen, der
-//! eine Fall, der davon nicht kleiner wird, und der Grund gegen `setLevelsOfUndo`
-//! stehen dort.
+//! Stelle, entfernte Zeichen und Zahl der eingefuegten Bytes; die Zahlen und der
+//! Grund gegen `setLevelsOfUndo` stehen dort.
+//!
+//! **Und der Stapel als Ganzes traegt ein Budget in Bytes.** Ein einzelner
+//! Bereich ist klein, solange die geaenderten Stellen beieinander liegen; deckt er
+//! die ganze Datei, hilft die Darstellung nicht mehr, und ein wiederholter Befehl
+//! legt je Ruf eine Dateigroesse ab
+//! (`issues/260810-1314_*_ein-wiederholtes-sammelersetzen-legt-je-ruf-einen-bereich-in-dateigroesse-in-den-stapel.md`).
+//! [`STAPELBUDGET`] deckelt die Summe, [`Stapellast`] zaehlt sie mit, und
+//! ueberschritten wird sie nicht: der Umbau, der darueber hinausginge, geht als
+//! [`Verlauf::TraegtNurDiese`] durch die eine Schreibstelle und steht danach
+//! allein im Stapel. **Das Tippen ist davon nicht beruehrt**, und der Grund ist
+//! nicht Sorgfalt, sondern der Zaehler: er zaehlt allein die Handlungen, die
+//! [`Editorbereich::umkehrung_anmelden`] anmeldet, und das Tippen meldet dort
+//! keine an.
 //!
 //! **Ein Rueckgaengig bildet den Suchlauf neu.** `Editormodell::bearbeiten`
 //! beendet ihn, weil die Byteversaetze der Treffer nach einer Aenderung ungueltig
@@ -353,6 +365,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
+use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::rc::{Retained, Weak};
@@ -653,9 +666,17 @@ impl Editormeldung {
 /// **`setLevelsOfUndo` steht bewusst nirgends.** Eine Tiefengrenze gaebe es nur
 /// fuer den ganzen Verwalter, und der traegt nach der Anmeldung in
 /// [`Editorbereich::umkehrung_anmelden`] die Handlungen der Flaeche mit — also
-/// das Tippen. Sie zu begrenzen aendert eine Zusage, die weder C4 noch C5 macht,
-/// und sie loeste den einen Fall nicht, der nach diesem Umbau bleibt: siehe
-/// [`Editorbereich::alle_treffer_ersetzen`].
+/// das Tippen. Sie zu begrenzen aendert eine Zusage, die weder C4 noch C5 macht.
+/// Und sie faengt den Preis nicht, um den es geht: eine Grenze in **Handlungen**
+/// laesst hundert Handlungen von je einer Dateigroesse zu, also genau die
+/// 1,6 GB, die `260810-1241` gefunden hat.
+///
+/// **Was der Bereich nicht deckelt, deckelt das Budget.** Der Bereich ist klein,
+/// solange die geaenderten Stellen beieinander liegen; deckt er die ganze Datei —
+/// ein Sammelersetzen, dessen Ersatztext den Suchtext enthaelt —, ist er so lang
+/// wie sie. Die Summe ueber alle angemeldeten Handlungen deckelt deshalb
+/// [`STAPELBUDGET`], gezaehlt von [`Stapellast`] und angewandt in
+/// [`Editorbereich::verlauf_fuer_umbau`].
 ///
 /// **Was der Umbau nicht abschafft, ist die voruebergehende Abschrift.** Wer
 /// einen Punkt bildet, hat beide Staende gleichzeitig zu halten, und einer von
@@ -727,13 +748,163 @@ impl Umkehrpunkt {
 
     /// Wie viele Bytes dieser Punkt im Stapel haelt.
     ///
-    /// Allein fuer die Messung aus
-    /// `issues/260810-1241_*_der-rueckgaengigstapel-haelt-je-eigener-handlung-eine-ganze-abschrift-und-ist-unbegrenzt.md`.
-    /// Die vier `usize` und der `NSRange` daneben sind eine feste Groesse und
+    /// Die drei `usize` und der `NSRange` daneben sind eine feste Groesse und
     /// haengen nicht an der Datei; gezaehlt wird deshalb, was am Halde haengt.
-    #[cfg(test)]
+    ///
+    /// **Zwei Leser und dieselbe Zahl.** [`Stapellast`] fuehrt die Summe
+    /// gegen [`STAPELBUDGET`], und die Messung aus
+    /// `issues/260810-1241_*_der-rueckgaengigstapel-haelt-je-eigener-handlung-eine-ganze-abschrift-und-ist-unbegrenzt.md`
+    /// liest sie einzeln. Eine zweite Rechnung neben dieser gaebe es nicht
+    /// umsonst: die Zahl, die der Zaehler fuehrt, waere dann eine andere als die,
+    /// die die Probe nachrechnet.
     fn getragene_bytes(&self) -> usize {
         self.entfernt.len()
+    }
+}
+
+/// Wie viele Bytes die angemeldeten Rueckgaengig-Handlungen zusammen halten
+/// duerfen.
+///
+/// # Die Zahl ist geliehen und nicht erfunden
+///
+/// Es ist `krk_core::text::datei::EDITORGRENZE`, also die Dateigrenze des Editors
+/// aus C2. Die Begruendung ist ein Verhaeltnis und keine Vorliebe: der Editor
+/// nimmt eine Datei bis zu dieser Groesse an und haelt sie danach zweimal, im
+/// Modell und in der Textflaeche. Ein Verlauf, der mehr haelt als die groesste
+/// Datei, die der Editor ueberhaupt oeffnet, kostet mehr als der Gegenstand, um
+/// den es geht. Eine Zahl daneben — 8 MB, 64 MB — waere eine zweite Meinung
+/// darueber, was dieser Editor an Text an sich heranlaesst, und die erste steht in
+/// `datei`.
+///
+/// **Was daraus folgt, in Zahlen.** Wie viele Sammelersetzen ueber den **ganzen**
+/// Text nebeneinander im Stapel stehen, ist das Budget geteilt durch die
+/// Dateigroesse:
+///
+/// ```text
+///   Datei    nebeneinander im Stapel   im Stapel
+///   16 MB    eines, dann geraeumt      ≤ 16 MB + eines   gemessen
+///    1 MB    16                        ≤ 16 MB + eines   dieselbe Teilung
+///  256 kB    64                        ≤ 16 MB + eines   dieselbe Teilung
+/// ```
+///
+/// Gemessen ist die erste Zeile, an der Editorgrenze und mit den Staenden, die
+/// `ctrl+cmd+r` herstellt:
+/// [`der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung`](tests::der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung).
+/// Die beiden darunter sind dieselbe Teilung und keine zweite Messung.
+///
+/// Die obere Schranke ist damit `STAPELBUDGET` **plus eine Handlung** und nicht
+/// `STAPELBUDGET`: die Handlung, die das Budget sprengt, wird nicht abgewiesen,
+/// sondern raeumt vor sich auf. Ein Ersetzen, das nicht ruecknehmbar waere, wuerde
+/// C5 widersprechen; ein Verlauf, der davor faellt, widerspricht ihm nicht.
+///
+/// **Das Tippen bleibt unbegrenzt.** Der Zaehler zaehlt allein, was
+/// [`Editorbereich::umkehrung_anmelden`] anmeldet, und das sind die vier Anlaesse
+/// aus [`Verlauf`] — nicht die Handlungen, die die `NSTextView` fuer jeden
+/// Anschlag selbst anmeldet. Deren Tiefe beschraenkt kein Abnahmekriterium, und
+/// dieses Budget beschraenkt sie auch nicht.
+const STAPELBUDGET: usize = datei::EDITORGRENZE as usize;
+
+/// Beide Mac-Architekturen sind 64-bittig, und die Umrechnung oben ist deshalb
+/// verlustfrei. Die Zusicherung faengt den Tag, an dem eine dritte dazukommt,
+/// beim Bauen und nicht im Betrieb — dieselbe Form wie
+/// `assert!(EDITORGRENZE > 1024 * 1024)` in `krk_core::text::datei`.
+const _: () = assert!(STAPELBUDGET as u64 == datei::EDITORGRENZE);
+
+/// Die Bytes, die eine angemeldete Handlung im Stapel haelt, solange sie darin
+/// steht.
+///
+/// # Warum das Zaehlen an der Handlung haengt und nicht am Anmelden
+///
+/// Ein `NSUndoManager` sagt nicht, wann er eine Handlung fallen laesst, und er
+/// laesst sie auf vier Wegen fallen: sie wird ausgefuehrt, der
+/// Wiederherstellungsstapel wird von einer neuen Anmeldung geraeumt, `removeAllActions`
+/// raeumt beide, oder das Objekt selbst geht fort. Ein Zaehler, der beim Anmelden
+/// hochgeht und den Rest raet, waere an allen vier Wegen falsch — und dabei nicht
+/// vorsichtig falsch, sondern in der Richtung, in der er dem Nutzer den Verlauf
+/// nimmt, den er noch haette haben koennen.
+///
+/// **Deshalb zaehlt der Wert selbst.** Diese Huelle wohnt im Block, den
+/// [`Editorbereich::umkehrung_anmelden`] anmeldet; hebt der Verwalter den Block
+/// auf, faellt sie mit ihm, und `Drop` traegt die Bytes ab. Der Zaehler stimmt
+/// damit auf jedem der vier Wege, ohne dass einer von ihnen hier genannt werden
+/// muesste.
+///
+/// # Die Freigabe des Blocks ist geschlossen und nicht gemessen
+///
+/// Dass der Verwalter den Block festhaelt und ihn mit der Handlung wieder
+/// freigibt, ist die Regel von Objective-C fuer einen Block, den ein Objekt
+/// aufbewahrt; nachgemessen ist sie hier **nicht**. Eine Messung braeuchte einen
+/// `NSUndoManager`, also einen `MainThreadMarker`, und darueber steht eine offene
+/// Nutzerentscheidung an den vier Proben, die ihn heute behaupten
+/// (`decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`).
+/// Eine fuenfte daneben zu stellen haette die Frage vergroessert, statt sie zu
+/// beantworten.
+///
+/// **Die Schranke haengt an der Annahme nicht.** Traefe sie nicht zu, ginge der
+/// Zaehler nur hoch und nie herunter; das Budget griffe dann bei **jedem**
+/// Umbau, und der Stapel hielte statt „Budget plus eine Handlung" genau eine
+/// Handlung. Was eine falsche Annahme kostet, ist also die Tiefe des Verlaufs und
+/// nicht die Schranke. Der Preis stuende in derselben Richtung wie der Fall
+/// darunter.
+///
+/// **Genauigkeit im Augenblick leistet die Huelle ohnehin nicht.** Gibt AppKit den
+/// Block an einen Freigabeverbund weiter, faellt sie einen Umlauf der Laufschleife
+/// spaeter, und der Zaehler steht bis dahin zu hoch. Die Richtung ist die
+/// vorsichtige: geraeumt wird dann eher als noetig, nie spaeter.
+/// [`Editorbereich::umkehren`] fragt den Zaehler ohnehin nicht — ein `cmd+z`
+/// raeumt keinen Verlauf.
+struct Stapellast {
+    /// Der Punkt, dessen Bytes gezaehlt sind.
+    punkt: Umkehrpunkt,
+    /// Der Zaehler des Editorbereichs, geteilt mit allen anderen Handlungen im
+    /// Stapel. Er ueberlebt den Editorbereich, weil eine Handlung es kann.
+    zaehler: Rc<Cell<usize>>,
+}
+
+impl Stapellast {
+    /// Traegt die Bytes des Punktes an und uebernimmt ihn.
+    fn angemeldet(punkt: Umkehrpunkt, zaehler: &Rc<Cell<usize>>) -> Self {
+        zaehler.set(zaehler.get() + punkt.getragene_bytes());
+        Self {
+            punkt,
+            zaehler: Rc::clone(zaehler),
+        }
+    }
+}
+
+impl Drop for Stapellast {
+    /// **Der Guertel ist die Saettigung und nicht die Rechnung**, wie an
+    /// [`Umkehrpunkt::angewandt_auf`]: abgetragen wird genau, was
+    /// [`Self::angemeldet`] an demselben Punkt angetragen hat, und `entfernt`
+    /// aendert sich dazwischen nicht. Ein Unterlauf ist damit ausgeschlossen; dass
+    /// er es ist, haelt die Zusicherung fest, und dass ein `Drop` notfalls nicht
+    /// mitten im Abbau in Panik geraet, die Saettigung.
+    fn drop(&mut self) {
+        let bytes = self.punkt.getragene_bytes();
+        debug_assert!(
+            self.zaehler.get() >= bytes,
+            "der Zaehler traegt weniger als diese Handlung angemeldet hat"
+        );
+        self.zaehler.set(self.zaehler.get().saturating_sub(bytes));
+    }
+}
+
+/// Die Regel des Budgets: passt der Punkt neben `gehalten`, tritt er dazu; passt
+/// er nicht, tritt er an die Stelle des ganzen Verlaufs.
+///
+/// **Sie steht als Funktion und nicht als Methode**, weil sie vom Editorbereich
+/// nichts braucht als eine Zahl. Damit ist sie ohne Fenster pruefbar, und
+/// [`Editorbereich::verlauf_fuer_umbau`] reicht ihr allein den Zaehler herein —
+/// dieselbe Aufteilung wie bei [`kopfzeile`], die entscheidet, was im Kopf steht,
+/// ohne den Kopf zu kennen.
+///
+/// Der Vergleich ist `>` und nicht `>=`: ein Punkt, der das Budget genau
+/// ausfuellt, passt hinein.
+fn verlauf_fuer_umbau(punkt: Umkehrpunkt, gehalten: usize) -> Verlauf {
+    if gehalten + punkt.getragene_bytes() > STAPELBUDGET {
+        Verlauf::TraegtNurDiese(punkt)
+    } else {
+        Verlauf::Traegt(punkt)
     }
 }
 
@@ -818,14 +989,25 @@ fn bis_zur_zeichengrenze(text: &str, versatz: usize) -> usize {
 ///   Ersetzen (S37)           ─> Traegt        der Nutzer nimmt das Ersetzen
 ///                                             zurueck, und was davor liegt
 ///                                             bleibt zuruecknehmbar
+///   Ersetzen ueber dem       ─> TraegtNurDiese  der Bereich allein ist so gross
+///   Stapelbudget                              wie das Budget; was davor liegt
+///                                             kann nicht bleiben, siehe
+///                                             `STAPELBUDGET`
 ///   CRLF-Richten             ─> TraegtNurDiese  der Nutzer nimmt das Einfuegen
 ///                                             zurueck; was davor liegt kann
 ///                                             nicht bleiben, siehe unten
 /// ```
 ///
 /// Die Aufzaehlung ist vollstaendig und hat keinen Auffangzweig, wie die
-/// uebrigen dieser Art im Programm: ein vierter Anlass haelt den Bau an und
+/// uebrigen dieser Art im Programm: ein fuenfter Anlass haelt den Bau an und
 /// erzwingt die Antwort.
+///
+/// **Vier Anlaesse und drei Antworten, und der Schnitt liegt richtig.** Das
+/// Ersetzen steht zweimal darin, weil es zwei verschiedene Fragen beantwortet:
+/// dass der Nutzer es zuruecknehmen kann, und was der Verlauf davor kostet. Die
+/// erste beantwortet C5, die zweite das Budget, und
+/// [`Editorbereich::verlauf_fuer_umbau`] ist die eine Stelle, die zwischen den
+/// beiden Antworten waehlt.
 ///
 /// # Warum es drei Antworten sind und nicht zwei
 ///
@@ -1140,6 +1322,19 @@ pub struct EditorIvars {
     /// ausdruecklich nichts eingetragen" verlangen dieselbe Handlung, und ein
     /// `Option` daneben unterschiede etwas, das dieselbe Antwort hat.
     ersatz: RefCell<String>,
+    /// Wie viele Bytes die angemeldeten Rueckgaengig-Handlungen zusammen halten.
+    ///
+    /// **Ein `Rc` und kein `Cell` fuer sich**, weil die Zaehlung nicht hier
+    /// wohnt, sondern in den Handlungen: jede haelt eine [`Stapellast`], die
+    /// beim Anmelden antraegt und in ihrem `Drop` abtraegt. Eine Handlung kann
+    /// den Editorbereich ueberleben — der Verwalter haelt sie, der Bereich haelt
+    /// den Verwalter nicht —, und deshalb gehoert der Zaehler beiden.
+    ///
+    /// Wer ihn liest, ist [`Editorbereich::verlauf_fuer_umbau`], und was er
+    /// daraus macht, steht an [`STAPELBUDGET`]. Geschrieben wird er allein von
+    /// [`Stapellast`]; eine zweite schreibende Stelle waere eine zweite Wahrheit
+    /// darueber, was im Stapel steht.
+    stapelbytes: Rc<Cell<usize>>,
 }
 
 define_class!(
@@ -1239,6 +1434,7 @@ impl Editorbereich {
             einfaerbung_erneut: Cell::new(false),
             tafel: Cell::new(tafel),
             ersatz: RefCell::new(String::new()),
+            stapelbytes: Rc::new(Cell::new(0)),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -1805,14 +2001,21 @@ impl Editorbereich {
     /// und der Block haelt den Editorbereich deshalb **schwach**: stark
     /// geschlossen liefe der Ring Flaeche → Verwalter → Block → Editorbereich →
     /// Flaeche. Ist der Bereich fort, tut die Handlung nichts.
+    ///
+    /// **Die Bytes des Punktes werden hier angetragen und nicht hier abgetragen.**
+    /// Angemeldet wird eine [`Stapellast`], und sie traegt ab, wenn der Verwalter
+    /// den Block aufhebt; warum das Zaehlen an der Handlung haengt und nicht an
+    /// dieser Zeile, steht dort. Ohne Verwalter geht der Punkt in der Zeile
+    /// darueber verloren, und dann ist auch nichts zu zaehlen.
     fn umkehrung_anmelden(&self, punkt: Umkehrpunkt) {
         let Some(verwalter) = self.ivars().text.undoManager() else {
             return;
         };
         let selbst = Weak::from_retained(&self.retain());
+        let last = Stapellast::angemeldet(punkt, &self.ivars().stapelbytes);
         let handlung = RcBlock::new(move |_ziel: NonNull<AnyObject>| {
             if let Some(editor) = selbst.load() {
-                editor.umkehren(&punkt);
+                editor.umkehren(&last.punkt);
             }
         });
         // SAFETY: `self` ist ein Objective-C-Objekt und wird vom Verwalter nur
@@ -1820,6 +2023,38 @@ impl Editorbereich {
         // angesprochen; der Block nimmt es nicht, sondern laedt seinen eigenen
         // schwachen Verweis.
         unsafe { verwalter.registerUndoWithTarget_handler(self, &handlung) };
+    }
+
+    /// Was aus dem Verlauf wird, wenn dieser Punkt in den Stapel geht: der Punkt
+    /// tritt dazu, oder er tritt an die Stelle des ganzen Verlaufs.
+    ///
+    /// **Die eine Stelle, die das Budget anwendet.** Beide Ersetzungsbefehle aus
+    /// C5 gehen durch sie, und was sie entscheidet, steht an [`STAPELBUDGET`]:
+    /// passt der Punkt neben das, was schon im Stapel steht, traegt der Verlauf
+    /// ihn zusaetzlich; passt er nicht, steht er danach allein darin. Der Nutzer
+    /// merkt das erste an nichts und das zweite daran, dass ein zweites `cmd+z`
+    /// nichts mehr tut.
+    ///
+    /// **Der gewoehnliche Weg ist der erste**, und das ist keine Hoffnung,
+    /// sondern die Rechnung: ein einzelnes `shift+cmd+r` haelt so viele Bytes wie
+    /// der ersetzte Treffer lang ist, also drei fuer ein `foo`. Bis das Budget
+    /// von 16 MB voll ist, braucht es Millionen davon. Getroffen wird der zweite
+    /// Weg von einem Sammelersetzen, dessen Bereich die ganze Datei deckt — genau
+    /// der Fall aus
+    /// `issues/260810-1314_*_ein-wiederholtes-sammelersetzen-legt-je-ruf-einen-bereich-in-dateigroesse-in-den-stapel.md`.
+    ///
+    /// **Ein `cmd+z` fragt hier nicht.** [`Self::umkehren`] meldet seinen Gegenweg
+    /// als [`Verlauf::Traegt`] an und geht an dieser Stelle vorbei, weil ein
+    /// Rueckgaengig keinen Verlauf raeumen darf: es nimmt eine Handlung vom
+    /// Stapel und legt eine von derselben Groesse auf den anderen, die Summe
+    /// bleibt also, wo sie war. Ein Budget, das auch dort zugriffe, koennte einen
+    /// Nutzer, der `cmd+z` und `shift+cmd+z` gegeneinander laufen laesst, um
+    /// seinen Verlauf bringen.
+    ///
+    /// Gerechnet wird in [`verlauf_fuer_umbau`], damit die Regel ohne Fenster
+    /// pruefbar ist; hier steht allein, woher der Zaehler kommt.
+    fn verlauf_fuer_umbau(&self, punkt: Umkehrpunkt) -> Verlauf {
+        verlauf_fuer_umbau(punkt, self.ivars().stapelbytes.get())
     }
 
     /// Stellt einen Umkehrpunkt her und meldet den Gegenweg an (C5).
@@ -2296,7 +2531,8 @@ impl Editorbereich {
             let punkt = Umkehrpunkt::zwischen(&vorher, modell.stand(), auswahl);
             (treffer, punkt)
         };
-        self.stand_erneuern(Verlauf::Traegt(punkt));
+        let verlauf = self.verlauf_fuer_umbau(punkt);
+        self.stand_erneuern(verlauf);
         self.treffer_zeigen(treffer);
         self.suchmeldung()
     }
@@ -2321,15 +2557,42 @@ impl Editorbereich {
     /// erste: `Editormodell` bildet die Liste nach jeder Aenderung im **neuen**
     /// Stand neu oder beendet den Lauf.
     ///
-    /// **Der eine Fall, in dem der Stapel weiter mit der Dateigroesse waechst**,
-    /// steht hier und nicht in einer Fussnote: enthaelt der Ersatztext den
-    /// Suchtext, findet der naechste Ruf wieder Treffer, und der Bereich zwischen
-    /// dem ersten und dem letzten deckt beinahe die ganze Datei. Wer `a` durch
-    /// `aa` ersetzt und den Befehl wiederholt, legt je Ruf einen Bereich in
-    /// Dateigroesse in den Stapel. Er ist damit nicht schlimmer als vor dem Umbau
-    /// und nicht besser; er ist der Grund, aus dem `Umkehrpunkt` keine
-    /// Tiefengrenze nebenherfuehrt, denn eine Grenze in **Handlungen** faengt
-    /// einen Preis in **Bytes** nicht.
+    /// # Der Fall, in dem ein Bereich so gross ist wie die Datei
+    ///
+    /// **Der geaenderte Bereich hilft hier nicht immer.** Enthaelt der Ersatztext
+    /// den Suchtext, findet der naechste Ruf wieder Treffer, und der Bereich
+    /// zwischen dem ersten und dem letzten deckt beinahe die ganze Datei. Wer `a`
+    /// durch `aa` ersetzt und den Befehl wiederholt, legt je Ruf eine
+    /// Dateigroesse ab
+    /// (`issues/260810-1314_*_ein-wiederholtes-sammelersetzen-legt-je-ruf-einen-bereich-in-dateigroesse-in-den-stapel.md`).
+    ///
+    /// **Der Bereich bleibt trotzdem einer und wird keine Liste.** Eine Liste der
+    /// einzelnen Stellen waere in der Groesse des **Ersetzten** statt in der des
+    /// Bereichs, und das klingt kleiner, als es an diesem Fall ist: sie kostet je
+    /// Stelle einen Versatz. Gerechnet an derselben Datei von 16 MB, Suchtext `a`,
+    /// Ersatztext `aa`:
+    ///
+    /// ```text
+    ///   Abstand der Treffer   Treffer     ein Bereich   eine Liste (8 B je Stelle)
+    ///           16 Bytes      1 048 576      16,0 MB       8,0 MB
+    ///            8 Bytes      2 097 152      16,0 MB      16,0 MB
+    ///            4 Bytes      4 194 304      16,0 MB      32,0 MB
+    /// ```
+    ///
+    /// Der Umschlag liegt bei einem Treffer je acht Bytes, und darunter ist die
+    /// Liste teurer als der Bereich. Die Liste ist dabei in ihrer guenstigsten
+    /// Form gerechnet — nur die Versaetze, Such- und Ersatztext einmal daneben —,
+    /// und nicht in der, die ein `Vec<Umkehrpunkt>` haette. Sie loeste den Fall also nicht, sondern
+    /// verschoebe ihn — und sie kostete dabei, was die Stellen von
+    /// `krk_core::text::suche` bis hierher zu tragen kostet, also eine zweite
+    /// Wahrheit darueber, was ein Ersetzen geaendert hat. Siehe [`Umkehrpunkt`].
+    ///
+    /// **Gedeckelt ist der Fall an der Summe und nicht am einzelnen Bereich**,
+    /// ueber [`Self::verlauf_fuer_umbau`] und [`STAPELBUDGET`]: der zweite Ruf
+    /// raeumt, was der erste hinterlassen hat, und der Stapel haelt danach eine
+    /// Dateigroesse statt so vieler, wie der Nutzer Rufe abgibt. Was der Nutzer
+    /// davon merkt: das erste `cmd+z` nimmt das letzte Sammelersetzen zurueck, ein
+    /// zweites tut nichts.
     pub fn alle_treffer_ersetzen(&self) -> Editormeldung {
         let Some(anstehend) = self.ivars().modell.borrow().suchlauf().map(Suchlauf::zahl) else {
             return Editormeldung::KeineSuche;
@@ -2359,7 +2622,8 @@ impl Editorbereich {
         // Handlung ohne Wirkung waere, und die nimmt der Nutzer mit einem `cmd+z`
         // ins Leere hin.
         if zahl > 0 {
-            self.stand_erneuern(Verlauf::Traegt(punkt));
+            let verlauf = self.verlauf_fuer_umbau(punkt);
+            self.stand_erneuern(verlauf);
         }
         Editormeldung::Ersetzt { zahl }
     }
@@ -3151,6 +3415,7 @@ mod tests {
     use std::sync::Mutex;
 
     use krk_core::text::marke::wiederfinden;
+    use krk_core::text::suche;
     use objc2::runtime::{AnyClass, AnyProtocol, Sel};
     use objc2_app_kit::NSWritingToolsBehavior;
 
@@ -3553,6 +3818,151 @@ mod tests {
             punkt.angewandt_auf(&nachher),
             vorher,
             "der Punkt stellt den Stand nicht zeichengleich wieder her"
+        );
+    }
+
+    /// Der Stapel haelt hoechstens das Budget und die letzte Handlung (Defekt
+    /// 260810-1314).
+    ///
+    /// # Der Fall, den sie faehrt
+    ///
+    /// Der des Datensatzes, und an der Editorgrenze gemessen statt an einem
+    /// kleinen Stellvertreter: eine Datei von `krk_core::text::datei::EDITORGRENZE`
+    /// Bytes, ein `a` nahe dem Anfang und ein `a` nahe dem Ende, Ersatztext `aa`.
+    /// Der Bereich zwischen dem ersten und dem letzten Treffer ist damit die ganze
+    /// Datei — genau der Fall, in dem die Darstellung des Umkehrpunkts aus
+    /// `260810-1241` nichts einspart —, und weil der Ersatztext den Suchtext
+    /// enthaelt, findet jeder weitere Ruf wieder Treffer.
+    ///
+    /// Ersetzt wird mit `krk_core::text::suche::alle_ersetzen`, also mit der
+    /// Funktion, die hinter `ctrl+cmd+r` steht. Die Staende sind deshalb die, die
+    /// der Befehl herstellt, und nicht von Hand gebaute daneben.
+    ///
+    /// # Was sie messt und was sie nicht schaetzt
+    ///
+    /// Zwei Durchgaenge ueber dieselbe Folge von Rufen. Der erste haelt die Punkte
+    /// nicht und summiert allein ihre Bytes: ohne Budget faellt keiner von ihnen,
+    /// also **ist** diese Summe, was der Stapel bis zum 260810-1314 hielt. Der
+    /// zweite haelt sie wirklich, in einem `Vec`, das [`Verlauf::TraegtNurDiese`]
+    /// leert, bevor es die Handlung darauf legt — dieselbe Reihenfolge wie in
+    /// [`Editorbereich::stand_einsetzen`] —, und liest den Zaehler ab, den
+    /// [`Stapellast`] fuehrt. Gemessen wird also die Zahl, die auch im Betrieb
+    /// entscheidet.
+    #[test]
+    fn der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung() {
+        /// So viele Rufe, wie die Rechnung braucht: mit dem zweiten greift das
+        /// Budget, der dritte zeigt, dass es weiter greift. Mehr kosteten hier
+        /// allein Laufzeit, denn jeder Ruf laeuft dreimal ueber 16 MB.
+        const RUFE: usize = 3;
+
+        let grenze = usize::try_from(datei::EDITORGRENZE).expect("16 MB passen in usize");
+        let anfangsstand = format!("a{}a", "b".repeat(grenze - 2));
+        let auswahl = NSRange::new(0, 0);
+
+        let mut je_ruf = Vec::new();
+        let mut stand = anfangsstand.clone();
+        for _ in 0..RUFE {
+            let neu = suche::alle_ersetzen(&stand, "a", "aa").stand;
+            je_ruf.push(Umkehrpunkt::zwischen(&stand, &neu, auswahl).getragene_bytes());
+            stand = neu;
+        }
+        let ohne_budget: usize = je_ruf.iter().sum();
+        let groesster = *je_ruf.iter().max().expect("mindestens ein Ruf");
+
+        let zaehler = Rc::new(Cell::new(0));
+        let mut stapel: Vec<Stapellast> = Vec::new();
+        let mut geraeumt = 0;
+        let mut stand = anfangsstand;
+        let mut voriger = String::new();
+        for _ in 0..RUFE {
+            let neu = suche::alle_ersetzen(&stand, "a", "aa").stand;
+            let punkt = Umkehrpunkt::zwischen(&stand, &neu, auswahl);
+            match verlauf_fuer_umbau(punkt, zaehler.get()) {
+                Verlauf::Traegt(punkt) => stapel.push(Stapellast::angemeldet(punkt, &zaehler)),
+                Verlauf::TraegtNurDiese(punkt) => {
+                    stapel.clear();
+                    stapel.push(Stapellast::angemeldet(punkt, &zaehler));
+                    geraeumt += 1;
+                }
+                Verlauf::Faellt => unreachable!("ein Ersetzen laesst den Verlauf nicht fallen"),
+            }
+            voriger = std::mem::replace(&mut stand, neu);
+        }
+        let mit_budget = zaehler.get();
+
+        println!(
+            "{RUFE} Rufe an einer Datei von {grenze} Bytes: je Ruf {je_ruf:?} Bytes, \
+             ohne Budget {ohne_budget} Bytes, mit Budget {mit_budget} Bytes, \
+             {geraeumt} mal geraeumt"
+        );
+        // Die Zahl je Ruf steht fest, und daran haengt die Hochrechnung im
+        // Datensatz: hundert Rufe halten ohne Budget hundertmal diese Zahl, mit
+        // Budget weiter eine. Waechst oder faellt sie zwischen den Rufen, ist die
+        // Hochrechnung keine Multiplikation mehr und der Datensatz zu berichtigen.
+        assert!(
+            je_ruf.iter().all(|bytes| *bytes == groesster),
+            "die Rufe halten verschieden viel: {je_ruf:?}"
+        );
+        assert!(
+            ohne_budget > STAPELBUDGET,
+            "die Probe misst den Fall nicht: {ohne_budget} Bytes bleiben unter dem Budget von \
+             {STAPELBUDGET}, also greift es nie"
+        );
+        assert!(
+            mit_budget <= STAPELBUDGET + groesster,
+            "der Stapel haelt {mit_budget} Bytes und damit mehr als das Budget von \
+             {STAPELBUDGET} samt der groessten Handlung von {groesster} (260810-1314)"
+        );
+        assert!(
+            mit_budget < ohne_budget,
+            "das Budget spart nichts: {mit_budget} gegen {ohne_budget} Bytes"
+        );
+
+        // Ruecknehmbar bleibt der letzte Ruf, und das ist die Zusage aus C5, die
+        // das Raeumen nicht antasten darf.
+        let letzter = stapel.last().expect("der letzte Ruf steht im Stapel");
+        assert_eq!(
+            letzter.punkt.angewandt_auf(&stand),
+            voriger,
+            "das letzte Sammelersetzen ist nicht mehr zuruecknehmbar"
+        );
+
+        drop(stapel);
+        assert_eq!(
+            zaehler.get(),
+            0,
+            "der Zaehler steht nicht wieder auf null, nachdem der Stapel fort ist"
+        );
+    }
+
+    /// Das Tippen bleibt unbegrenzt, und der Zaehler ist der Grund.
+    ///
+    /// **Sie messt eine Abwesenheit**, und deshalb steht sie hier: das Budget
+    /// greift ueber [`Stapellast`], und eine Handlung, die die `NSTextView` fuer
+    /// einen Anschlag selbst anmeldet, geht durch keine [`Stapellast`]. Ein
+    /// Zaehler, der bei null steht, kann keine Raeumung ausloesen — `0` plus ein
+    /// Punkt von drei Bytes liegt unter jedem Budget.
+    ///
+    /// Der Gegenweg dazu waere `setLevelsOfUndo`, und der Grund gegen ihn steht an
+    /// [`Umkehrpunkt`]: eine Tiefengrenze gilt fuer den ganzen Verwalter und traefe
+    /// das Tippen mit.
+    #[test]
+    fn ein_gewoehnlicher_umbau_bleibt_neben_dem_verlauf_und_erst_der_volle_stapel_wird_geraeumt() {
+        let punkt = Umkehrpunkt::zwischen("eins foo zwei", "eins bar zwei", NSRange::new(0, 0));
+        assert_eq!(punkt.getragene_bytes(), 3, "der Punkt haelt mehr als `foo`");
+        assert!(
+            matches!(verlauf_fuer_umbau(punkt, 0), Verlauf::Traegt(_)),
+            "ein Umbau von drei Bytes raeumt den Verlauf"
+        );
+
+        // Und die Gegenrichtung: voll ist voll, gleich wie klein der Umbau ist.
+        let punkt = Umkehrpunkt::zwischen("eins foo zwei", "eins bar zwei", NSRange::new(0, 0));
+        assert!(
+            matches!(
+                verlauf_fuer_umbau(punkt, STAPELBUDGET),
+                Verlauf::TraegtNurDiese(_)
+            ),
+            "ein voller Stapel nimmt noch eine Handlung dazu"
         );
     }
 

@@ -814,9 +814,8 @@ mod tests {
 
     #[test]
     fn eine_textdatei_erscheint_mit_ihrem_inhalt() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-text");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("notiz.md");
+        let ordner = Pruefordner::neu("text");
+        let pfad = ordner.pfad().join("notiz.md");
         std::fs::write(&pfad, "# Ueberschrift\nZeile").expect("Probendatei");
         assert_eq!(
             laden(&pfad),
@@ -826,22 +825,20 @@ mod tests {
 
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-ordner");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let Inhalt::Metadaten(metadaten) = laden(&ordner) else {
+        let ordner = Pruefordner::neu("ordner");
+        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad()) else {
             panic!("ein Ordner gehoert in die Metadatenanzeige");
         };
         assert_eq!(metadaten.typ, Typ::Ordner);
-        assert_eq!(metadaten.pfad, ordner);
+        assert_eq!(metadaten.pfad, ordner.pfad());
     }
 
     /// Die Abnahmelage des Schritts: eine grosse Textdatei blockiert nichts
     /// und faellt auf die Metadaten.
     #[test]
     fn eine_textdatei_ueber_der_grenze_faellt_auf_die_metadaten() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-gross");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("gross.txt");
+        let ordner = Pruefordner::neu("gross");
+        let pfad = ordner.pfad().join("gross.txt");
         std::fs::write(&pfad, "a".repeat((TEXTGRENZE + 1) as usize)).expect("Probendatei");
         let Inhalt::Metadaten(metadaten) = laden(&pfad) else {
             panic!("ueber der Grenze zeigen die Metadaten");
@@ -855,9 +852,8 @@ mod tests {
     /// Dekodierung ist Sache der Ansicht.
     #[test]
     fn ein_bild_unter_der_grenze_kommt_mit_seinen_bytes() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-bild-klein");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("bild.png");
+        let ordner = Pruefordner::neu("bild-klein");
+        let pfad = ordner.pfad().join("bild.png");
         std::fs::write(&pfad, [0x89, b'P', b'N', b'G']).expect("Probendatei");
         let Inhalt::Bild { daten, metadaten } = laden(&pfad) else {
             panic!("unter der Grenze zeigt das Bild");
@@ -877,9 +873,8 @@ mod tests {
     /// und der liefert die gesetzte Laenge.
     #[test]
     fn ein_bild_ueber_der_grenze_faellt_auf_die_metadaten() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-bild-gross");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("gross.tiff");
+        let ordner = Pruefordner::neu("bild-gross");
+        let pfad = ordner.pfad().join("gross.tiff");
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
@@ -892,9 +887,8 @@ mod tests {
 
     #[test]
     fn keine_utf8_datei_faellt_auf_die_metadaten() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-binaer");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("roh.bin");
+        let ordner = Pruefordner::neu("binaer");
+        let pfad = ordner.pfad().join("roh.bin");
         std::fs::write(&pfad, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
         assert!(matches!(laden(&pfad), Inhalt::Metadaten(_)));
     }
@@ -909,9 +903,13 @@ mod tests {
     ///
     /// Dieselbe Bauform wie `Pruefordner` in `krk-core/tests/verzeichnis.rs`:
     /// Prozesskennung und Laufnummer im Namen, damit zwei Laeufe sich nicht in
-    /// die Quere kommen, und `Drop` raeumt ab. Die aelteren Proben dieser Datei
-    /// legen ihre Ordner unter festen Namen an; der Defekt dazu ist
-    /// `260810-1256`.
+    /// die Quere kommen, und `Drop` raeumt ab.
+    ///
+    /// **Jede Probe dieser Datei, die einen Ordner braucht, nimmt diesen.** Die
+    /// aelteren sieben legten ihn bis zum 260810 unter einem festen Namen an,
+    /// etwa `krk-vorschau-probe-gross`, und liessen ihn stehen: zwei gleichzeitige
+    /// Laeufe trafen sich darin, und ein Ausfall daraus benannte nichts, was am
+    /// Code falsch waere. Der Defekt dazu ist `260810-1256`.
     struct Pruefordner {
         pfad: PathBuf,
     }
@@ -927,6 +925,11 @@ mod tests {
             let _ = std::fs::remove_dir_all(&pfad);
             std::fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
             Self { pfad }
+        }
+
+        /// Der Ordner selbst, fuer die Proben, die einen Pfad darin bilden.
+        fn pfad(&self) -> &Path {
+            &self.pfad
         }
 
         /// Legt eine benannte Roehre an und liefert ihren Pfad.
@@ -1030,9 +1033,8 @@ mod tests {
     /// richtigen Tab an, auch wenn der Nutzer inzwischen gewechselt hat.
     #[test]
     fn das_laden_erreicht_den_tab_der_es_bestellt_hat() {
-        let ordner = std::env::temp_dir().join("krk-vorschau-probe-faden");
-        std::fs::create_dir_all(&ordner).expect("Probenordner");
-        let pfad = ordner.join("inhalt.txt");
+        let ordner = Pruefordner::neu("faden");
+        let pfad = ordner.pfad().join("inhalt.txt");
         std::fs::write(&pfad, "aus dem Faden").expect("Probendatei");
 
         let mut modell = Vorschaumodell::neu();

@@ -91,6 +91,21 @@
 //! Rueckfall ist von diesem Plan bereits eingekauft: die Einfaerbung der
 //! Formatansicht legt ihre voruebergehenden Merkmale in denselben Verwalter.
 //! Beide sprechen denselben an; ein zweiter Textfluss entsteht nicht.
+//!
+//! **Das Rueckgaengig des Editors haengt nicht mehr mit daran.** Bis zum
+//! 260810-1243 tat es das, ohne dass eine Zeile es sagte: `textDidChange:` ist
+//! der eine Rueckweg aus der Textflaeche in das `Editormodell`, es feuert bei
+//! einem `undo` nur auf TextKit 1, und den Rueckfall dorthin loeste die
+//! Nummernspalte nebenbei mit aus. Seither stellt `textflaeche_bauen` in
+//! [`super::editor`] ihn mit einer eigenen Zeile und ihrem Grund selbst her, und
+//! die Probe `appkit::editor::tests::die_gebaute_flaeche_steht_auf_textkit_1`
+//! faellt aus, sobald jemand diese Zeile wegnimmt. Die Messung steht im
+//! Modulkopf von [`super::editor`] und hier absichtlich nicht ein zweites Mal.
+//!
+//! Wer diese Datei auf `NSTextLayoutManager` nachzieht, nimmt dem Editor damit
+//! also **nicht** mehr sein Rueckgaengig weg. Zu klaeren bleibt allein die
+//! Einfaerbung aus dem Absatz darueber, denn die legt ihre voruebergehenden
+//! Merkmale weiter in den aelteren Verwalter.
 
 use std::cell::{Cell, RefCell};
 
