@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** coder
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C4, sechstes Abnahmekriterium und die Festlegung „Zwei Anlässe sind hinzugekommen"), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md` §S28, `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-2029_c_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`, `crates/krk-ui/src/appkit/anwendung.rs` (`anlass_ausfuehren`, `vorschau_verdraengt_den_editor`)
 
@@ -52,6 +52,8 @@ Answered: Nutzerentscheid 260810-0250 in `history/260810-0244-orchestrator-sessi
 
 Die Umsetzung trägt zwei Teile. Im Code fällt der Zweig für das Verdrängen aus `anlass_ausfuehren` und `vorschau_verdraengt_den_editor` (`crates/krk-ui/src/appkit/anwendung.rs`); der Befehl blendet die Vorschau ohne Nachfrage ein, und der Stand des Editors bleibt unberührt wie heute. Am Spec fällt das sechste Abnahmekriterium von C4 samt der Begründung, das Verdrängen verliere denselben Stand wie das Schließen; die Festlegung „Zwei Anlässe sind hinzugekommen" wird auf den einen verbleibenden zurückgenommen. Beides gehört in diese Sitzung und ist als Aufgabe D6 geführt.
 
-Implemented:
+Implemented: c68f701 — `Anlass::VorschauUmschalten` und `Anlass::VorschauFokus` sind gefallen, mit ihrer Vorbedingung `vorschau_verdraengt_den_editor` und den beiden Hüllen; `f3`, `cmd+y` und `shift+cmd+y` rufen jetzt unmittelbar `bereich_umschalten` und `fokus_holen`. Am Spec ist das sechste Abnahmekriterium von C4 samt seiner Begründung gefallen.
+
+Eine Folge, die der Datensatz beim Beantworten nicht kannte: C4 trägt seither neun statt zehn Abnahmekriterien, und die Nummern ab dem siebten verschieben sich um eins. Zehn Zitate im Code und sechs im Plan sind mit demselben Commit nachgezogen; der Spec hält die Verschiebung als eigene Festlegung fest, damit ältere Zitate auflösbar bleiben. Die Sitzungsberichte sind bewusst unangetastet geblieben.
 Deferred:
 Superseded by:
