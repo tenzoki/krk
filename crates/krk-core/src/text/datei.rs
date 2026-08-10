@@ -55,6 +55,13 @@
 //! der beiden Stellen waere die zweite Normalisierungsstelle im Programm, und
 //! die erste ist diese hier.
 //!
+//! **Die Wandlung traegt zwei Namen und ist eine.** [`gehaltene_form`] nimmt
+//! einen geliehenen Text und gibt ihn geliehen zurueck, solange nichts zu
+//! wandeln ist; [`in_gehaltene_form`] nimmt ihn uebernommen und gibt ihn
+//! uebernommen zurueck. Die Regeln stehen in der ersten, die zweite ist eine
+//! Zeile darueber, und welche von beiden ein Aufrufer nimmt, entscheidet allein,
+//! ob er den Text ohnehin besitzt.
+//!
 //! # Wer aus einem Textbestand liest, muss ihn nachziehen
 //!
 //! Die Wandlung geschieht **auf dem Weg** in den Stand, und der Bestand, aus
@@ -400,13 +407,26 @@ pub fn ist_in_gehaltener_form(text: &str) -> bool {
 /// Text ist ein Leerzeichen ohne Breite und Umbruchverbot, also ein Zeichen
 /// des Nutzers, und bleibt stehen.
 ///
-/// Ein Text, der die Form schon hat, kommt ohne eine einzige Kopie zurueck.
-pub fn in_gehaltene_form(text: String) -> String {
-    if ist_in_gehaltener_form(&text) {
-        return text;
+/// # Zwei Formen, eine Regel
+///
+/// **Hier stehen die Regeln, und [`in_gehaltene_form`] ist die Fassung
+/// darueber, die einen Text uebernimmt.** Es sind zwei Namen und nicht zwei
+/// Wandlungen: die zweite ruft die erste und gibt in ihrem kurzen Weg die
+/// uebernommene Zeichenkette zurueck, statt sie noch einmal anzulegen. Wer eine
+/// Regel aendert, aendert sie an dieser Stelle und nirgends sonst.
+///
+/// Ein Text, der die Form schon hat, kommt hier **geliehen** zurueck und kostet
+/// keine Kopie. Genau das braucht [`versatz_nach_der_wandlung`], das den Rest
+/// hinter einer Stelle wandelt und ihn im Regelfall nur liest; bis zum 260810
+/// nahm es dafuer eine uebernommene Zeichenkette und legte den Rest eines
+/// 16-MB-Textes auch dann an, wenn die Wandlung ihn unveraendert zurueckgab.
+/// Der Defekt dazu ist `260810-0424`.
+pub fn gehaltene_form(text: &str) -> Cow<'_, str> {
+    if ist_in_gehaltener_form(text) {
+        return Cow::Borrowed(text);
     }
 
-    let ohne_marke = text.strip_prefix(BYTEFOLGENMARKE).unwrap_or(&text);
+    let ohne_marke = text.strip_prefix(BYTEFOLGENMARKE).unwrap_or(text);
     let mut gewandelt = String::with_capacity(ohne_marke.len());
     let mut rest = ohne_marke;
     while let Some(stelle) = rest.find('\r') {
@@ -418,7 +438,23 @@ pub fn in_gehaltene_form(text: String) -> String {
         rest = danach.strip_prefix('\n').unwrap_or(danach);
     }
     gewandelt.push_str(rest);
-    gewandelt
+    Cow::Owned(gewandelt)
+}
+
+/// Bringt einen uebernommenen Text in die gehaltene Form.
+///
+/// Die Regeln stehen in [`gehaltene_form`]; diese Fassung ist der Eingang fuer
+/// die Aufrufer, die den Text ohnehin besitzen und ihn hergeben.
+///
+/// Ein Text, der die Form schon hat, kommt unveraendert und ohne eine einzige
+/// Kopie zurueck. Die Fallunterscheidung unten ist genau dafuer da: eine
+/// geliehene Antwort heisst "nichts zu wandeln", und dann geht die uebernommene
+/// Zeichenkette zurueck, statt aus der Leihe abgeschrieben zu werden.
+pub fn in_gehaltene_form(text: String) -> String {
+    match gehaltene_form(&text) {
+        Cow::Borrowed(_) => text,
+        Cow::Owned(gewandelt) => gewandelt,
+    }
 }
 
 /// Wohin ein Byteversatz wandert, wenn sein Text durch [`in_gehaltene_form`]
@@ -440,8 +476,19 @@ pub fn in_gehaltene_form(text: String) -> String {
 /// allem davor; wer den Rest wandelt und seine Laenge von der des Ergebnisses
 /// abzieht, bekommt die gesuchte Stelle, ohne zu wissen, welche Zeichen
 /// unterwegs wegfallen. Eine Zaehlung der weggefallenen Zeichen muesste
-/// dagegen bei jeder kuenftigen Regel von [`in_gehaltene_form`] nachgezogen
+/// dagegen bei jeder kuenftigen Regel von [`gehaltene_form`] nachgezogen
 /// werden, und die erste vergessene Nachziehung faende keine Pruefung.
+///
+/// # Gewandelt wird geliehen, und im Regelfall kostet das keine Kopie
+///
+/// Der Rest hinter `versatz` geht durch [`gehaltene_form`] und damit **ohne**
+/// eine eigene Zeichenkette. Gebraucht wird von ihm allein die **Laenge** des
+/// Ergebnisses, und im Regelfall dieser Rechnung — ein eingefuegtes `\r\n` vorn,
+/// die Schreibmarke dahinter, der ganze Rest schon in gehaltener Form — ist das
+/// die Laenge des Restes selbst. Bis zum 260810 stand hier `rest.to_owned()`,
+/// also eine Kopie bis zur Groesse der ganzen Datei fuer eine Zahl, die
+/// unveraendert daneben lag. Der Defekt dazu ist `260810-0424`, die Zaehlung
+/// steht in `tests/textkopien.rs`.
 ///
 /// **Ein Fall geht dabei um ein Zeichen daneben, und er steht hier statt
 /// verschwiegen zu werden:** steht genau an `versatz` eine Bytefolgenmarke, so
@@ -457,9 +504,7 @@ pub fn versatz_nach_der_wandlung(vorher: &str, versatz: usize, nachher: &str) ->
     let Some(rest) = vorher.get(versatz..) else {
         return nachher.len();
     };
-    nachher
-        .len()
-        .saturating_sub(in_gehaltene_form(rest.to_owned()).len())
+    nachher.len().saturating_sub(gehaltene_form(rest).len())
 }
 
 /// Was von einem Stand auf die Platte geht.

@@ -1,4 +1,5 @@
-//! Die Systemschicht des Kerns: die vier Fremdaufrufe, die KRK braucht.
+//! Die Systemschicht des Kerns: die vier Schnittstellen, die KRK braucht, und
+//! die acht Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -9,12 +10,24 @@
 //! ```text
 //! getattrlistbulk(2) ──> Schwungleser         ──> verzeichnis::leser
 //! copyfile(3)        ──> datei_kopieren       ──> operation::kopieren
+//!   copyfile_state_{alloc,free,set,get}
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
 //! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::oeffnen
 //! ```
 //!
+//! **Vier ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! vier Schnittstellen und acht gebundene Funktionen, denn `copyfile(3)`
+//! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
+//! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
+//! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
+//! Aufrufe ueber die Sprachgrenze schon, und die Reichweite der Ausnahme oben
+//! liest ein Leser hier nach. Die Zeile steht wortgleich in `lib.rs` und in
+//! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
+//! nachgezogen. Gebunden sind alle acht in den drei `unsafe extern "C"`-Bloecken
+//! dieses Moduls, und gerufen sind sie ebenfalls alle acht.
+//!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
-//! Kerns und nicht allein die des Lesers. Die vierte Zeile ist der erste
+//! Kerns und nicht allein die des Lesers. Die letzte Zeile ist der erste
 //! Aufrufer von ausserhalb `verzeichnis/`, und sie ist der Grund, aus dem die
 //! Aussage jetzt nicht mehr nur behauptet ist. Das Modul liegt unter
 //! `verzeichnis/`, weil es dort entstanden ist und ein Umzug jede Fundstelle
