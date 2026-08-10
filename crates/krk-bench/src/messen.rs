@@ -1533,6 +1533,24 @@ struct Messplanwaechter {
 }
 
 impl Messplanwaechter {
+    /// Ein Pfad im Temporaerverzeichnis. Geschrieben wird hier nichts.
+    ///
+    /// **Der Name steht fest, bevor irgendetwas angelegt wird**, wie bei
+    /// [`crate::wegwerfordner::Wegwerfordner::neu`]. Damit deckt der Waechter
+    /// auch das Schreiben selbst ab: `std::fs::write` ist `File::create` und
+    /// `write_all`, und scheitert der zweite Teil nach dem ersten, steht die
+    /// angelegte Datei da. Wuerde der Waechter erst aus dem Ergebnis des
+    /// Schreibens entstehen, kehrte das `?` vorher zurueck und die Datei
+    /// bliebe liegen — genau die Luecke, die er schliessen soll
+    /// (`issues/260810-1752_*_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-…`).
+    /// Ein [`Drop`] auf eine nie angelegte Datei ist folgenlos: `remove_file`
+    /// liefert `NotFound`, und der Rueckgabewert wird ohnehin verworfen.
+    fn neu() -> Self {
+        Self {
+            pfad: std::env::temp_dir().join(format!("krk-messplan-{}.toml", std::process::id())),
+        }
+    }
+
     /// Der Pfad, den der Sitzungslauf der Anwendung mitbekommt.
     fn pfad(&self) -> &Path {
         &self.pfad
@@ -1591,9 +1609,9 @@ fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<Messplanw
     );
     let text = toml::to_string(&wurzel).map_err(io::Error::other)?;
 
-    let pfad = std::env::temp_dir().join(format!("krk-messplan-{}.toml", std::process::id()));
-    std::fs::write(&pfad, text)?;
-    Ok(Messplanwaechter { pfad })
+    let waechter = Messplanwaechter::neu();
+    std::fs::write(waechter.pfad(), text)?;
+    Ok(waechter)
 }
 
 /// Die Systemlast, wie `sysctl vm.loadavg` sie meldet.

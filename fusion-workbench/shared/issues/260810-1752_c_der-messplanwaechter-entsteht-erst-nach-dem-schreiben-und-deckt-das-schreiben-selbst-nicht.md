@@ -76,3 +76,15 @@ Gering. Der Fall verlangt ein Dateisystem, das beim Schreiben einer wenige Kilob
 Datei scheitert, nachdem es sie angelegt hat. Der Schaden ist eine liegengebliebene Datei im
 Temporärverzeichnis. Kein Abnahmekriterium und keine der zehn Zeitzusagen aus C8 sind
 berührt.
+
+---
+Resolved: `Messplanwaechter::neu()` legt jetzt allein den Namen fest, und `plan_schreiben`
+schreibt danach ueber `waechter.pfad()`. Damit deckt der Waechter das Schreiben selbst mit ab:
+scheitert es, nachdem die Datei angelegt ist, faellt der Waechter auf dem `?`-Weg und raeumt.
+
+Die Form ist die von `Wegwerfordner::neu` (`crates/krk-bench/src/wegwerfordner.rs`), es ist
+keine zweite entstanden. Der Zaehlerteil von `Wegwerfordner` ist bewusst nicht uebernommen: er
+ist die im Datensatz genannte ungeprueft-Kante und heute kein Defekt.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 2.
