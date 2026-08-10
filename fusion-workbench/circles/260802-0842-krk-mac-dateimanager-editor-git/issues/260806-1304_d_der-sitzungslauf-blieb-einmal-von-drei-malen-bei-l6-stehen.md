@@ -120,3 +120,35 @@ beiden Faelle der Abbruch vom 260806 war, und das entscheidet keine Codeaenderun
 Messung. Aus dem Hintergrund meldet die Messstrecke `NICHT_IM_VORDERGRUND` statt Zahlen; kein
 Agent kann den Lauf fahren. Die zugehoerige offene Frage ist
 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
+
+---
+
+## Nachtrag 260810-2130: der Messlauf ist gefahren, und L6 lief sauber durch
+
+Der Nutzer hat am 260810 zwei Abnahmelaeufe gefahren, aus einem Terminalfenster im Vordergrund:
+`messungen/260810-1912-alle-zusagen.txt` (eine Runde) und `messungen/260810-1918-alle-zusagen.txt`
+(fuenf Runden). **L6 hat in allen sechs Runden seine zwanzig Werte geliefert und gehalten**
+(p95 <= 100 ms).
+
+**Die beiden Diagnosen, die dieser Datensatz vorgesehen hatte, sind beide nicht eingetreten.**
+Er hatte formuliert: bricht der Lauf mit der neuen Meldung ab, war es die verworfene Auswahl;
+laeuft er wieder in die Zehn-Sekunden-Geduld ueber L6, richtet sich der Verdacht auf die Messung
+selbst. Es gab weder einen Abbruch noch eine Geduld. Die Frage, **welcher** der beiden Faelle der
+Abbruch vom 260806 war, ist damit nicht beantwortet, sondern gegenstandslos geworden: der Fall
+ist nicht wieder aufgetreten.
+
+**Wie stark die Evidenz ist, haengt daran, worauf sich die urspruengliche Haeufigkeit bezog, und
+das sagt dieser Datensatz nicht.** Beobachtet war am 260806 **ein Abbruch auf drei Laeufe**.
+Gegengehalten sind jetzt zwei saubere Laeufe — das ist schwach, denn bei einer Rate von einem
+Drittel je Lauf sind zwei saubere Laeufe in rund 44 von 100 Faellen reiner Zufall. Auf
+Rundenebene sind es sechs saubere von sechs, was bei derselben Rate je Runde nur noch in rund 9
+von 100 Faellen Zufall waere. Welche der beiden Zaehlungen gilt, ist aus der urspruenglichen
+Aufzeichnung nicht zu entscheiden.
+
+**Was dafuer spricht, dass die Ursache weg ist:** die codierbare Haelfte des Befunds ist am
+260807 gebaut worden — ein abgewiesener `Auswahlversuch` in der Vorbereitung der Messstrecke
+bricht den Lauf seither ab, statt verworfen zu werden und in die Geduld zu laufen. Genau dieser
+Abbruch ist nicht eingetreten, obwohl er jetzt sichtbar waere.
+
+Der Datensatz bleibt vorerst auf zurueckgestellt. Ob er schliesst, entscheidet der Nutzer; die
+Evidenz steht hier, damit die Entscheidung nicht aus dem Gedaechtnis getroffen werden muss.
