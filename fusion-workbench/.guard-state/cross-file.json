@@ -331,9 +331,9 @@
       "lastEditTimestamp": "2026-08-02T13:04:31.172Z"
     },
     "Cargo.toml": {
-      "pingBackCount": 7,
-      "totalEdits": 8,
-      "lastEditTimestamp": "2026-08-06T15:04:35.907Z"
+      "pingBackCount": 10,
+      "totalEdits": 12,
+      "lastEditTimestamp": "2026-08-08T07:47:39.079Z"
     },
     "rust-toolchain.toml": {
       "pingBackCount": 0,
@@ -356,19 +356,19 @@
       "lastEditTimestamp": "2026-08-06T15:04:42.281Z"
     },
     "crates/krk-core/src/lib.rs": {
-      "pingBackCount": 6,
-      "totalEdits": 8,
-      "lastEditTimestamp": "2026-08-04T18:12:55.986Z"
+      "pingBackCount": 7,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-08T07:20:51.780Z"
     },
     "crates/krk-ui/Cargo.toml": {
-      "pingBackCount": 6,
-      "totalEdits": 7,
-      "lastEditTimestamp": "2026-08-05T21:17:59.982Z"
+      "pingBackCount": 9,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-08T07:47:50.633Z"
     },
     "crates/krk-ui/src/main.rs": {
-      "pingBackCount": 13,
-      "totalEdits": 16,
-      "lastEditTimestamp": "2026-08-05T20:35:36.985Z"
+      "pingBackCount": 16,
+      "totalEdits": 20,
+      "lastEditTimestamp": "2026-08-09T22:44:27.787Z"
     },
     "crates/krk-bench/Cargo.toml": {
       "pingBackCount": 3,
@@ -616,14 +616,14 @@
       "lastEditTimestamp": "2026-08-03T10:13:20.597Z"
     },
     "crates/krk-ui/src/appkit/mod.rs": {
-      "pingBackCount": 12,
-      "totalEdits": 25,
-      "lastEditTimestamp": "2026-08-06T09:46:25.629Z"
+      "pingBackCount": 15,
+      "totalEdits": 36,
+      "lastEditTimestamp": "2026-08-09T23:09:32.473Z"
     },
     "crates/krk-ui/src/appkit/menue.rs": {
-      "pingBackCount": 9,
-      "totalEdits": 23,
-      "lastEditTimestamp": "2026-08-06T11:02:00.891Z"
+      "pingBackCount": 11,
+      "totalEdits": 29,
+      "lastEditTimestamp": "2026-08-09T15:19:44.528Z"
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
       "pingBackCount": 43,
@@ -631,14 +631,14 @@
       "lastEditTimestamp": "2026-08-07T07:48:35.384Z"
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
-      "pingBackCount": 1,
-      "totalEdits": 2,
-      "lastEditTimestamp": "2026-08-04T08:14:32.311Z"
+      "pingBackCount": 2,
+      "totalEdits": 8,
+      "lastEditTimestamp": "2026-08-09T19:24:54.435Z"
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "pingBackCount": 64,
-      "totalEdits": 281,
-      "lastEditTimestamp": "2026-08-07T14:29:14.957Z"
+      "pingBackCount": 95,
+      "totalEdits": 382,
+      "lastEditTimestamp": "2026-08-10T00:02:07.729Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "pingBackCount": 0,
@@ -651,9 +651,9 @@
       "lastEditTimestamp": "2026-08-03T21:10:26.724Z"
     },
     "crates/krk-core/src/tasten/mod.rs": {
-      "pingBackCount": 2,
-      "totalEdits": 3,
-      "lastEditTimestamp": "2026-08-05T14:52:53.746Z"
+      "pingBackCount": 3,
+      "totalEdits": 5,
+      "lastEditTimestamp": "2026-08-09T15:25:10.647Z"
     },
     "crates/krk-core/tests/tasten.rs": {
       "pingBackCount": 4,
@@ -661,9 +661,9 @@
       "lastEditTimestamp": "2026-08-03T21:17:02.996Z"
     },
     "crates/krk-ui/src/appkit/ereignisse.rs": {
-      "pingBackCount": 15,
-      "totalEdits": 32,
-      "lastEditTimestamp": "2026-08-05T21:18:35.344Z"
+      "pingBackCount": 20,
+      "totalEdits": 55,
+      "lastEditTimestamp": "2026-08-09T15:42:50.436Z"
     },
     "crates/krk-ui/src/appkit/probe.rs": {
       "pingBackCount": 0,
@@ -771,9 +771,9 @@
       "lastEditTimestamp": "2026-08-03T15:22:41.754Z"
     },
     "crates/krk-ui/src/messmodus.rs": {
-      "pingBackCount": 8,
-      "totalEdits": 44,
-      "lastEditTimestamp": "2026-08-07T06:12:50.494Z"
+      "pingBackCount": 9,
+      "totalEdits": 46,
+      "lastEditTimestamp": "2026-08-09T13:26:36.091Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-1755_o_l1-verfehlt-die-16-ms-zusage-am-bildrand.md": {
       "pingBackCount": 1,
@@ -881,24 +881,24 @@
       "lastEditTimestamp": "2026-08-03T18:43:15.866Z"
     },
     "resources/default-keymap.toml": {
-      "pingBackCount": 13,
-      "totalEdits": 38,
-      "lastEditTimestamp": "2026-08-07T07:29:23.269Z"
+      "pingBackCount": 16,
+      "totalEdits": 44,
+      "lastEditTimestamp": "2026-08-09T13:22:30.160Z"
     },
     "crates/krk-core/src/ablage/sitzung.rs": {
-      "pingBackCount": 2,
-      "totalEdits": 5,
-      "lastEditTimestamp": "2026-08-05T06:51:04.571Z"
+      "pingBackCount": 4,
+      "totalEdits": 12,
+      "lastEditTimestamp": "2026-08-09T23:33:56.281Z"
     },
     "crates/krk-core/src/ablage/lesezeichen.rs": {
-      "pingBackCount": 1,
-      "totalEdits": 4,
-      "lastEditTimestamp": "2026-08-05T14:53:43.189Z"
+      "pingBackCount": 3,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-08T07:19:23.881Z"
     },
     "crates/krk-core/src/ablage/mod.rs": {
-      "pingBackCount": 4,
-      "totalEdits": 11,
-      "lastEditTimestamp": "2026-08-05T16:22:41.033Z"
+      "pingBackCount": 5,
+      "totalEdits": 12,
+      "lastEditTimestamp": "2026-08-08T07:19:28.501Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2045_o_c3-nennt-f6-verschieben-und-umbenennen-die-belegungstabelle-nur-verschieben.md": {
       "pingBackCount": 1,
@@ -926,9 +926,9 @@
       "lastEditTimestamp": "2026-08-03T18:47:24.102Z"
     },
     "crates/krk-core/tests/ablage.rs": {
-      "pingBackCount": 3,
-      "totalEdits": 17,
-      "lastEditTimestamp": "2026-08-05T16:29:12.420Z"
+      "pingBackCount": 10,
+      "totalEdits": 31,
+      "lastEditTimestamp": "2026-08-09T23:44:22.949Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2051_o_ersetzt-in-frage-4-und-s10-laesst-offen-ob-die-kaputte-datei-ueberschrieben-wird.md": {
       "pingBackCount": 0,
@@ -961,9 +961,9 @@
       "lastEditTimestamp": "2026-08-03T21:07:35.748Z"
     },
     "crates/krk-core/src/tasten/parser.rs": {
-      "pingBackCount": 2,
-      "totalEdits": 7,
-      "lastEditTimestamp": "2026-08-04T10:07:46.022Z"
+      "pingBackCount": 7,
+      "totalEdits": 14,
+      "lastEditTimestamp": "2026-08-09T15:24:38.167Z"
     },
     "crates/krk-core/src/tasten/konflikt.rs": {
       "pingBackCount": 0,
@@ -971,14 +971,14 @@
       "lastEditTimestamp": "2026-08-03T21:07:59.498Z"
     },
     "crates/krk-core/src/tasten/belegung.rs": {
-      "pingBackCount": 13,
-      "totalEdits": 61,
-      "lastEditTimestamp": "2026-08-07T07:17:05.830Z"
+      "pingBackCount": 20,
+      "totalEdits": 74,
+      "lastEditTimestamp": "2026-08-09T15:26:05.116Z"
     },
     "crates/krk-core/tests/belegung.rs": {
-      "pingBackCount": 13,
-      "totalEdits": 23,
-      "lastEditTimestamp": "2026-08-05T20:14:42.453Z"
+      "pingBackCount": 20,
+      "totalEdits": 35,
+      "lastEditTimestamp": "2026-08-09T15:46:49.172Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_o_der-include-str-pfad-in-schritt-11-liegt-eine-ebene-zu-hoch.md": {
       "pingBackCount": 0,
@@ -1091,9 +1091,9 @@
       "lastEditTimestamp": "2026-08-07T06:14:08.269Z"
     },
     "crates/krk-ui/src/fenstermodell.rs": {
-      "pingBackCount": 6,
-      "totalEdits": 13,
-      "lastEditTimestamp": "2026-08-07T07:19:58.122Z"
+      "pingBackCount": 17,
+      "totalEdits": 46,
+      "lastEditTimestamp": "2026-08-09T23:34:27.046Z"
     },
     "crates/krk-ui/src/appkit/statuszeile.rs": {
       "pingBackCount": 5,
@@ -1106,9 +1106,9 @@
       "lastEditTimestamp": "2026-08-04T08:06:52.555Z"
     },
     "crates/krk-ui/src/appkit/aufteilung.rs": {
-      "pingBackCount": 4,
-      "totalEdits": 13,
-      "lastEditTimestamp": "2026-08-05T20:11:30.586Z"
+      "pingBackCount": 13,
+      "totalEdits": 40,
+      "lastEditTimestamp": "2026-08-09T19:23:33.078Z"
     },
     "crates/krk-ui/src/appkit/sonde.rs": {
       "pingBackCount": 1,
@@ -1221,9 +1221,9 @@
       "lastEditTimestamp": "2026-08-04T10:34:06.513Z"
     },
     "crates/krk-ui/src/appkit/blaetter/mod.rs": {
-      "pingBackCount": 8,
-      "totalEdits": 25,
-      "lastEditTimestamp": "2026-08-04T18:16:33.078Z"
+      "pingBackCount": 11,
+      "totalEdits": 31,
+      "lastEditTimestamp": "2026-08-09T23:11:35.487Z"
     },
     "crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs": {
       "pingBackCount": 3,
@@ -1256,14 +1256,14 @@
       "lastEditTimestamp": "2026-08-04T11:12:28.179Z"
     },
     "/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-04T11:16:12.538Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T17:05:27.859Z"
     },
     "crates/krk-ui/src/auffrischung.rs": {
-      "pingBackCount": 6,
-      "totalEdits": 14,
-      "lastEditTimestamp": "2026-08-06T23:51:17.095Z"
+      "pingBackCount": 7,
+      "totalEdits": 20,
+      "lastEditTimestamp": "2026-08-09T23:38:27.453Z"
     },
     "crates/krk-ui/src/appkit/fsevents.rs": {
       "pingBackCount": 3,
@@ -1351,9 +1351,9 @@
       "lastEditTimestamp": "2026-08-04T15:51:15.603Z"
     },
     "crates/krk-core/tests/operation.rs": {
-      "pingBackCount": 2,
-      "totalEdits": 3,
-      "lastEditTimestamp": "2026-08-05T10:40:39.387Z"
+      "pingBackCount": 3,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-09T20:17:20.060Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1649_o_das-appkit-abnahmekriterium-von-s15-ist-so-nicht-erfuellbar.md": {
       "pingBackCount": 0,
@@ -1761,19 +1761,19 @@
       "lastEditTimestamp": "2026-08-05T14:38:58.026Z"
     },
     "crates/krk-ui/src/kommandos/fokus.rs": {
-      "pingBackCount": 5,
-      "totalEdits": 15,
-      "lastEditTimestamp": "2026-08-07T07:20:44.900Z"
+      "pingBackCount": 12,
+      "totalEdits": 30,
+      "lastEditTimestamp": "2026-08-09T19:30:46.605Z"
     },
     "crates/krk-ui/src/leistenmodell.rs": {
-      "pingBackCount": 6,
-      "totalEdits": 13,
-      "lastEditTimestamp": "2026-08-07T07:57:09.872Z"
+      "pingBackCount": 9,
+      "totalEdits": 32,
+      "lastEditTimestamp": "2026-08-09T23:57:36.795Z"
     },
     "crates/krk-ui/src/appkit/leiste.rs": {
-      "pingBackCount": 4,
-      "totalEdits": 8,
-      "lastEditTimestamp": "2026-08-07T07:56:01.446Z"
+      "pingBackCount": 7,
+      "totalEdits": 17,
+      "lastEditTimestamp": "2026-08-09T22:42:14.682Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-1730_o_holt-der-fokusbefehl-eine-ausgeblendete-leiste-hervor.md": {
       "pingBackCount": 1,
@@ -1861,14 +1861,14 @@
       "lastEditTimestamp": "2026-08-06T09:37:14.309Z"
     },
     "crates/krk-ui/src/vorschaumodell.rs": {
-      "pingBackCount": 6,
-      "totalEdits": 23,
-      "lastEditTimestamp": "2026-08-06T11:45:15.875Z"
+      "pingBackCount": 8,
+      "totalEdits": 25,
+      "lastEditTimestamp": "2026-08-09T19:29:31.314Z"
     },
     "crates/krk-ui/src/appkit/vorschau.rs": {
-      "pingBackCount": 3,
-      "totalEdits": 5,
-      "lastEditTimestamp": "2026-08-06T10:07:52.236Z"
+      "pingBackCount": 5,
+      "totalEdits": 9,
+      "lastEditTimestamp": "2026-08-09T19:30:15.612Z"
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_o_tastenweg-des-fokus-in-das-vorschaufenster.md": {
       "pingBackCount": 2,
@@ -1881,9 +1881,9 @@
       "lastEditTimestamp": "2026-08-05T20:20:39.132Z"
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "pingBackCount": 4,
-      "totalEdits": 21,
-      "lastEditTimestamp": "2026-08-07T07:17:24.762Z"
+      "pingBackCount": 8,
+      "totalEdits": 30,
+      "lastEditTimestamp": "2026-08-09T22:09:43.062Z"
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
       "pingBackCount": 3,
@@ -2721,9 +2721,9 @@
       "lastEditTimestamp": "2026-08-07T18:19:40.086Z"
     },
     "fusion-workbench/shared/issues/260807-2112_o_cmd-y-und-shift-cmd-y-loesen-nichts-aus-f3-schon.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-07T19:12:42.028Z"
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-08T07:16:39.142Z"
     },
     "circles/260807-2116-eingebauter-editor-mit-textmarken/_a_circle.md": {
       "pingBackCount": 0,
@@ -2806,9 +2806,9 @@
       "lastEditTimestamp": "2026-08-07T22:19:21.199Z"
     },
     "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
-      "pingBackCount": 0,
-      "totalEdits": 1,
-      "lastEditTimestamp": "2026-08-07T22:29:52.012Z"
+      "pingBackCount": 5,
+      "totalEdits": 18,
+      "lastEditTimestamp": "2026-08-09T18:50:46.364Z"
     },
     "260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md": {
       "pingBackCount": 0,
@@ -2849,8 +2849,568 @@
       "pingBackCount": 0,
       "totalEdits": 1,
       "lastEditTimestamp": "2026-08-07T23:59:45.349Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 28,
+      "totalEdits": 75,
+      "lastEditTimestamp": "2026-08-10T00:05:53.075Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0916-coder-s1-ursache-der-y-tasten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:17:49.512Z"
+    },
+    "crates/krk-core/src/text/mod.rs": {
+      "pingBackCount": 5,
+      "totalEdits": 8,
+      "lastEditTimestamp": "2026-08-09T13:20:40.270Z"
+    },
+    "crates/krk-core/src/text/zeilen.rs": {
+      "pingBackCount": 2,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-09T08:59:24.803Z"
+    },
+    "crates/krk-core/src/text/suche.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-08T07:20:38.051Z"
+    },
+    "crates/krk-core/tests/text.rs": {
+      "pingBackCount": 6,
+      "totalEdits": 9,
+      "lastEditTimestamp": "2026-08-09T13:23:59.253Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0923-coder-s11-lesezeichen-zwei-sorten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:24:38.377Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0924-coder-s8-krk-core-text.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:24:46.907Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0929-coder-leistenmodell-auf-die-neue-lesezeichenschnittstelle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:29:43.914Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0930_o_s11-aendert-eine-kernschnittstelle-deren-aufrufstellen-der-plan-erst-s38-und-s39-zuweist.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:30:44.095Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0931_o_s13-laesst-sich-nicht-allein-uebersetzen-die-speicherstelle-des-editors-kommt-erst-in-s14.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:31:29.880Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0931-coder-s13-bereich-editor-im-fenstermodell.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:32:07.913Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0931_c_s13-laesst-sich-nicht-allein-uebersetzen-die-speicherstelle-des-editors-kommt-erst-in-s14.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:42:03.017Z"
+    },
+    "crates/krk-ui/tests/syntaxkiste.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-08T07:43:59.196Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0942-coder-s13-s14-s19-teilweise-ein-uebersetzungsstand.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-08T07:43:04.515Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-1015-coder-s3-fokusbereich-und-wirkungsbereiche.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:47:13.914Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0948_o_das-vierte-kriterium-von-s32-ist-in-s32-nicht-messbar.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:49:32.559Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0949_o_s32-nennt-dump-create-unter-den-abgeschalteten-merkmalen-es-laesst-sich-nicht-abschalten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T07:49:44.946Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0950-s32-wahl-der-syntaxkiste.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-08T07:50:50.547Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_ein-sichtbarer-bereich-editor-ohne-unteransicht-verliert-seine-breite-im-fenster.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:13:58.411Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_der-wert-navigator-ist-dokumentiert-als-truegen-ihn-schon-drei-befehle.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T13:27:46.980Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_breite-aendern-traegt-einen-auffangzweig-ueber-bereich-und-hat-den-fuenften-wert-geschluckt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:14:52.021Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_vier-platzhalter-nennen-ihren-abloesenden-schritt-nicht-obwohl-der-plan-ihn-fuehrt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:15:13.341Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_umlaufen-behauptet-die-eine-stelle-des-umlaufs-zu-sein-voriger-laeuft-daneben-um.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:15:34.662Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-1413_o_die-begruendung-zu-syntect-nennt-den-transitiven-fussabdruck-nicht.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:15:58.592Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260808-1413-coderev-turn-1-der-editor-runde.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-08T12:17:18.037Z"
+    },
+    "crates/krk-core/src/text/datei.rs": {
+      "pingBackCount": 4,
+      "totalEdits": 7,
+      "lastEditTimestamp": "2026-08-09T13:24:39.121Z"
+    },
+    "crates/krk-core/src/text/marke.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T09:01:38.404Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1102-coder-die-aufteilung-fragt-nur-noch-die-ansichten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T09:04:49.004Z"
+    },
+    "fusion-workbench/shared/issues/260809-1106_o_die-probenordner-der-vorschau-tragen-feste-namen-im-temporaerverzeichnis.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T09:07:16.395Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1106-coder-s12-suche-in-der-naehe-einer-textmarke.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T09:08:00.411Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1106-coder-s9-einlesen-und-sicherungsform.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T09:08:26.357Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1519-coder-s4-ersthelfer-des-editors-bricht-den-fokusvorbehalt.md": {
+      "pingBackCount": 2,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-09T13:23:19.078Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1610_o_die-zusicherung-editorgrenze-groesser-textgrenze-laesst-sich-in-krk-core-nur-halb-schreiben.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T13:24:31.785Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1525-coder-s10-die-eine-groessen-und-typpruefung-vor-dem-oeffnen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T13:26:53.630Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1527_o_der-plan-verbietet-y-und-z-und-legt-ruecgaengig-selbst-auf-cmd-z.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T13:28:25.612Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1527-s5-s6-kommandos-und-auslieferungsbelegung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T13:29:42.150Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1601-coder-s7-rueckgaengig-und-wiederholen-im-menue-bearbeiten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T13:35:14.231Z"
+    },
+    "crates/krk-ui/src/editormodell.rs": {
+      "pingBackCount": 15,
+      "totalEdits": 63,
+      "lastEditTimestamp": "2026-08-09T23:44:00.466Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1547-coder-s15-editormodell.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T13:48:53.990Z"
+    },
+    "crates/krk-ui/src/appkit/editor.rs": {
+      "pingBackCount": 23,
+      "totalEdits": 82,
+      "lastEditTimestamp": "2026-08-10T00:03:11.225Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1603-coder-s16-textflaeche-als-fuenfter-bereich.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T14:04:49.506Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1631_o_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:12:57.370Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1631-coder-s21-meldungen-des-editors-in-der-statuszeile.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:13:56.594Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1640_o_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:26:05.559Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1642_o_auf-einer-deutschen-tastatur-schluckt-cmd-y-das-rueckgaengig-des-editors.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:27:04.222Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1644_o_die-textflaeche-schaltet-allowsundo-nicht-ein-und-hat-damit-kein-rueckgaengig.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:27:33.249Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1646_o_die-zusage-ueber-den-gehaltenen-stand-hat-einen-zweiten-eingang-ohne-normalisierung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:28:09.253Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1648_o_die-sprungmarke-geht-ohne-fokuspruefung-in-das-aktive-dateifenster.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:28:51.785Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1650_o_die-fuenfte-textveraendernde-automatik-smart-insert-delete-bleibt-an.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:29:15.715Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1652_o_die-typpruefung-steht-auf-dem-pfad-und-nicht-auf-dem-deskriptor.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:29:48.167Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1655_o_acht-pfeile-aus-appkit-heraus-sind-es-nicht-und-waren-es-vor-dem-editor-schon-nicht.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:30:48.981Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1657_o_das-erste-abnahmekriterium-von-c2-beschreibt-einen-zustand-den-s6-aufgehoben-hat.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:31:05.268Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260809-1700-coderev-turn-2-der-editor-runde.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T14:32:50.065Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1727_o_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:27:58.457Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1728_o_der-modulkopf-von-datei-rs-nennt-den-groesseren-der-beiden-eingaenge-nicht.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:28:18.485Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1727-zwei-schwere-befunde-aus-turn-2-geschlossen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:29:41.283Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1738_o_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T19:35:14.997Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1738-s17-der-fokus-erkennt-den-editor.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:40:42.363Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1746_o_die-probe-auf-die-wandernden-stellen-hat-ihren-grund-verloren.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:46:45.049Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1746-coder-s2-y-frage-nachschlag-ueber-das-zeichen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T15:48:24.153Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/_t_circle.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T18:48:20.786Z"
+    },
+    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/fenstermodell.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 8,
+      "lastEditTimestamp": "2026-08-09T17:15:10.730Z"
+    },
+    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/anwendung.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-09T18:37:24.014Z"
+    },
+    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/editormodell.rs": {
+      "pingBackCount": 3,
+      "totalEdits": 9,
+      "lastEditTimestamp": "2026-08-09T18:38:54.246Z"
+    },
+    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 10,
+      "lastEditTimestamp": "2026-08-09T18:37:12.287Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md": {
+      "pingBackCount": 0,
+      "totalEdits": 7,
+      "lastEditTimestamp": "2026-08-09T17:23:16.264Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1921-coder-s18-s19-s20-s22-der-editor-wird-erreichbar.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T17:25:18.702Z"
+    },
+    "260809-2029_o_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T18:40:32.454Z"
+    },
+    "260809-2148_o_s25-sichern-schriebe-den-plattenstand-weil-die-rueckschreibung-erst-s26-baut.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:40:59.183Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2148-bugfix-ungesicherte-aenderung-fiel-beim-zweiten-f4.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:41:45.392Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:42:11.224Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:42:51.481Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:43:42.059Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:44:15.275Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_gehoert-der-wirkungsbereich-in-die-ausgabe.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:44:50.398Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:45:21.555Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2040-shaper-tastenbelegung-als-markdown-in-downloads.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:46:03.547Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:49:48.979Z"
+    },
+    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2043-shaper-vier-anzeigefaehigkeiten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T18:51:37.778Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2112-planner-nachtrag-c9-c10-c11.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T19:13:15.372Z"
+    },
+    "crates/krk-ui/src/fenstertitel.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T19:30:53.891Z"
+    },
+    "crates/krk-ui/src/appkit/nummernspalte.rs": {
+      "pingBackCount": 5,
+      "totalEdits": 8,
+      "lastEditTimestamp": "2026-08-09T23:09:08.419Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2134-coder-s46-s47-eine-nummernspalte-fuer-beide-flaechen.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T19:34:55.913Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2135-coder-s43-s44-s45-s48-der-fokus-wird-sichtbar.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T19:36:41.499Z"
+    },
+    "crates/krk-core/tests/zz_scratch_messung.rs": {
+      "pingBackCount": 2,
+      "totalEdits": 4,
+      "lastEditTimestamp": "2026-08-09T20:21:19.870Z"
+    },
+    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/050476dc-f610-4c9e-8fc9-078d537cf20e/scratchpad/last.sh": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T20:10:19.730Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2229-coder-die-abbruchmessung-wird-lastfest.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T20:30:08.044Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-2322_o_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T21:33:33.946Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2322-s24-und-s26-arbeitsfaden-und-rueckschreibung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T21:36:15.228Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2353-coder-s25-sichern.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T21:54:30.485Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0011_o_zwei-kommentarbloecke-der-belegungsdatei-behaupten-den-nachschlag-ueber-den-tastencode.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:11:54.539Z"
+    },
+    "crates/krk-ui/src/appkit/blaetter/ungesichert.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:12:09.633Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0011-coder-s41-die-belegungsansicht-fuehrt-die-neuen-befehle.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:13:29.832Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0021_o_was-verwirft-verwerfen-wenn-die-vorschau-den-editor-nur-verdraengt.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:23:50.756Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0021-s27-s28-s29-nachfrage-bei-ungesichertem-stand.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:24:37.376Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0036_o_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:39:35.232Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0036-coder-s40-und-die-haelfte-von-s38-die-leiste-zeigt-beide-sorten.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:41:13.011Z"
+    },
+    "crates/krk-ui/src/hervorhebung.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 5,
+      "lastEditTimestamp": "2026-08-09T22:55:06.920Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0053_o_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:54:17.658Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0054_o_die-einfaerbung-laeuft-mit-0-3-mb-s-und-haengt-beim-tippen-in-grossen-dateien-hinterher.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:54:50.428Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0056-coder-s33-s34-die-beiden-ansichten-und-die-farbtafeln.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T22:58:12.484Z"
+    },
+    "crates/krk-ui/src/appkit/koordinaten.rs": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T23:10:04.641Z"
+    },
+    "crates/krk-ui/src/appkit/blaetter/zeilennummer.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T23:10:32.302Z"
+    },
+    "crates/krk-ui/src/appkit/blaetter/suche.rs": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T23:11:12.662Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0215_o_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T23:20:05.465Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0212_o_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md": {
+      "pingBackCount": 1,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T23:39:47.638Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0225-coder-s35-s36-s37.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T23:25:26.436Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_a_wie-greift-die-nachfrage-bei-der-sitzungssicherung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-09T23:48:19.778Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0146-s23-s30-s31-uebergang-sitzung-fremdaenderung.md": {
+      "pingBackCount": 0,
+      "totalEdits": 2,
+      "lastEditTimestamp": "2026-08-09T23:49:38.546Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0204-coder-s38-zweite-haelfte-und-s39-die-textmarke.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-10T00:07:46.551Z"
+    },
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0240_o_ein-oeffnen-im-editor-stoesst-kein-sitzungsschreiben-an.md": {
+      "pingBackCount": 0,
+      "totalEdits": 1,
+      "lastEditTimestamp": "2026-08-10T00:10:18.257Z"
     }
   },
-  "lastEditFile": "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md",
-  "lastEditTimestamp": "2026-08-08T07:11:38.195Z"
+  "lastEditFile": "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0240_o_ein-oeffnen-im-editor-stoesst-kein-sitzungsschreiben-an.md",
+  "lastEditTimestamp": "2026-08-10T00:10:18.257Z"
 }

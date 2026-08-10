@@ -288,3 +288,74 @@
 {"ts":"2026-08-07T23:24:10","event":"gate_hit","detail":"Spec-Abnahme"}
 {"ts":"2026-08-07T23:24:10","event":"gate_response","detail":"approve — 79 Abnahmekriterien, C1-C8, 5 Diagramme"}
 {"ts":"2026-08-07T23:24:10","event":"planner_start","agent":"planner","detail":"Plan aus dem abgenommenen Spec 260807-2147"}
+{"ts":"2026-08-08T07:13:16","event":"planner_done","agent":"planner","detail":"42 Schritte in acht Phasen; 2 Entscheidungsdatensaetze angelegt"}
+{"ts":"2026-08-08T07:13:16","event":"queue_built","detail":"42 Aufgaben; 6 sofort startbereit; 23 mit Nutzeranteil an der Abnahme"}
+{"ts":"2026-08-08T07:13:16","event":"turn_start","turn":1,"detail":"6 startbereite Schritte ohne Abhaengigkeit"}
+{"ts":"2026-08-08T07:19:06","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"Ursache am Code belegt, Defekt geschlossen; keine Programmaenderung"}
+{"ts":"2026-08-08T07:19:06","event":"commit","turn":1,"task":"S1","detail":"50e1152 test(tasten): die y-Kuerzel liegen auf kVK_ANSI_Y"}
+{"ts":"2026-08-08T07:40:25","turn":1,"event":"task_done","task":"S8","agent":"coder","detail":"573b455 krk-core::text"}
+{"ts":"2026-08-08T07:40:25","turn":1,"event":"task_done","task":"S11","agent":"coder","detail":"65c8efa Lesezeichen zwei Sorten; Aufrufstellen nachgezogen, sonst haelt der Bau an"}
+{"ts":"2026-08-08T07:40:25","turn":1,"event":"task_error","task":"S13","agent":"coder","detail":"Ringschluss S13<->S14; nur der allein uebersetzbare Teil gelandet (fe022e7)"}
+{"ts":"2026-08-08T07:40:25","turn":1,"event":"gate_hit","detail":"Planschnitt: ad hoc zusammenlegen oder Plan neu schneiden"}
+{"ts":"2026-08-08T07:40:25","turn":1,"event":"gate_response","detail":"ad hoc zusammenlegen"}
+{"ts":"2026-08-09T08:54:26","turn":1,"event":"review_done","agent":"coderev","detail":"6 Befunde: 0 kritisch, 0 hoch, 3 mittel, 3 niedrig; kein Entscheidungsdatensatz verletzt"}
+{"ts":"2026-08-09T08:54:26","turn":1,"event":"coherence_review","verdict":"ok","detail":"Artefakt/Grundlage: 6 Befunde, keiner kritisch. Artefakt/Directive: 8 Commits, alle in Richtung Editor. Grundlage/Directive: 8 beantwortete Fragen, keine offene, kein Widerspruch"}
+{"ts":"2026-08-09T08:54:26","turn":1,"event":"turn_end","detail":"7 Planschritte, 8 Commits, 6 Befunde gefiled, 1 Defekt geschlossen"}
+{"ts":"2026-08-09T08:54:26","turn":2,"event":"turn_start","detail":"Breiten-Befund zuerst (Nutzerentscheid), dann S9, S12, S4, S5+S6, S10"}
+{"ts":"2026-08-09T13:50:10","turn":2,"event":"task_done","task":"S4","agent":"coder","detail":"1df0075"}
+{"ts":"2026-08-09T13:50:10","turn":2,"event":"task_done","task":"S10","agent":"coder","detail":"ff6dd25"}
+{"ts":"2026-08-09T13:50:10","turn":2,"event":"task_done","task":"S5+S6","agent":"coder","detail":"e1acc68"}
+{"ts":"2026-08-09T13:50:10","turn":2,"event":"task_done","task":"S7","agent":"coder","detail":"81fc650"}
+{"ts":"2026-08-09T13:50:10","turn":2,"event":"task_done","task":"S15","agent":"coder","detail":"9b299e3"}
+{"ts":"2026-08-09T15:14:38","turn":2,"event":"review_done","agent":"coderev","detail":"8 Befunde: 4 hoch, 2 mittel, 2 niedrig; zwei Entscheidungsdatensaetze im gebauten Stand verletzt"}
+{"ts":"2026-08-09T15:14:38","turn":2,"event":"coherence_review","verdict":"review-needed","detail":"Artefakt/Grundlage: 2 von 8 Entscheidungen verletzt (Sicherungsform latent, y/z im ausgelieferten Stand). Artefakt/Directive: 9 Commits, alle in Richtung Editor. Grundlage/Directive: 8 beantwortete Fragen, keine offene"}
+{"ts":"2026-08-09T15:14:38","turn":2,"event":"gate_hit","detail":"Stimmigkeit review-needed"}
+{"ts":"2026-08-09T15:14:38","turn":2,"event":"rebalance_artifact","detail":"Nutzer waehlt: die vier schweren Befunde zuerst (S2, S17, allowsUndo, Normalisierung am Eingang)"}
+{"ts":"2026-08-09T15:14:38","turn":2,"event":"turn_end","detail":"11 Planschritte, 9 Commits, 8 Befunde gefiled"}
+{"ts":"2026-08-09T15:14:38","turn":3,"event":"turn_start","detail":"vier schwere Befunde aus der Durchsicht Turn 2"}
+{"ts":"2026-08-10T00:45:02","event":"session_start","detail":"resume: editor mit textmarken, mode=plan, domain=code"}
+{"ts":"2026-08-10T00:50:44","event":"scope_resolved","detail":"mode=plan; 5 sichtbare Defekte, dann S42; agents=coder,ontocoder,coderev,reconciler"}
+{"ts":"2026-08-10T00:50:44","event":"gate_hit","detail":"zwei offene Entscheidungen im Circle: 260809-2043 Akzentrahmen, 260810-0021 Verwerfen"}
+{"ts":"2026-08-10T00:54:23","event":"gate_response","detail":"260809-2043 -> Moeglichkeit 1 (gebaut, _i_); 260810-0021 -> Moeglichkeit 2 (_a_, D6->D5 in Queue)"}
+{"ts":"2026-08-10T00:54:23","event":"commit","detail":"9bc0d9d chore(workbench): zwei offene Entscheidungen sind beantwortet"}
+{"ts":"2026-08-10T00:54:23","event":"queue_built","turn":1,"detail":"6 Aufgaben: D1-D5 Defekte, S42 Abschluss; 0 blockiert ausser S42"}
+{"ts":"2026-08-10T00:54:23","event":"turn_start","turn":1,"detail":"5 bereite Aufgaben, head 9bc0d9d"}
+{"ts":"2026-08-10T01:13:01","event":"task_done","turn":1,"task":"D1","agent":"coder","detail":"d5993f1 CRLF: Stand und Flaeche wieder gleich; 4 Proben"}
+{"ts":"2026-08-10T01:13:01","event":"commit","turn":1,"task":"D1","detail":"d5993f1"}
+{"ts":"2026-08-10T01:13:01","event":"task_start","turn":1,"task":"D2","agent":"coder","detail":"Rueckgaengigstapel beim Dateiwechsel; appkit/editor.rs"}
+{"ts":"2026-08-10T01:24:14","event":"task_done","turn":1,"task":"D2","agent":"coder","detail":"2123e52; neuer Defekt 260810-0303 gefiled"}
+{"ts":"2026-08-10T01:24:14","event":"commit","turn":1,"task":"D2","detail":"2123e52"}
+{"ts":"2026-08-10T01:24:14","event":"task_start","turn":1,"task":"D3","agent":"coder","detail":"Sitzungsschreiben beim Oeffnen; anwendung.rs"}
+{"ts":"2026-08-10T01:33:28","event":"task_done","turn":1,"task":"D3","agent":"coder","detail":"97891be; Ursache lag anders als gemeldet, zu frueh statt gar nicht"}
+{"ts":"2026-08-10T01:33:28","event":"commit","turn":1,"task":"D3","detail":"97891be"}
+{"ts":"2026-08-10T01:33:28","event":"task_start","turn":1,"task":"D4","agent":"coder","detail":"Smart Insert/Delete abschalten; appkit/editor.rs"}
+{"ts":"2026-08-10T01:47:06","event":"task_done","turn":1,"task":"D4","agent":"coder","detail":"f7ef6c5; neuer Defekt 260810-0512 Schreibwerkzeuge gefiled"}
+{"ts":"2026-08-10T01:47:06","event":"commit","turn":1,"task":"D4","detail":"f7ef6c5"}
+{"ts":"2026-08-10T01:47:06","event":"task_start","turn":1,"task":"D5","agent":"coder","detail":"Anlass Vorschau faellt aus der Nachfrage; anwendung.rs + Spec C4"}
+{"ts":"2026-08-10T02:03:25","event":"task_done","turn":1,"task":"D5","agent":"coder","detail":"c68f701 + 154ad67; Entscheid auf _i_; neuer Defekt 260810-0359"}
+{"ts":"2026-08-10T02:03:25","event":"review_start","turn":1,"agent":"coderev","detail":"8 Codedateien, 6 Commits seit 9bc0d9d"}
+{"ts":"2026-08-10T02:23:07","event":"review_done","turn":1,"agent":"coderev","detail":"9 Befunde: 0 kritisch, 0 hoch, 3 mittel, 6 gering; kein Reviewdokument geschrieben"}
+{"ts":"2026-08-10T02:23:07","event":"commit","turn":1,"detail":"e6b76ab Durchsicht Turn 1"}
+{"ts":"2026-08-10T04:55:41","event":"coherence_review","turn":1,"verdict":"ok","detail":"Artefakt-Grundlage: 5 geschlossen, 12 neu (3 mittel); Artefakt-Directive: 8 Commits bewegen sich zu, offen nur S42; Grundlage-Directive: 2 Entscheidungen auf _i_, kein Widerspruch"}
+{"ts":"2026-08-10T04:55:41","event":"turn_end","turn":1,"detail":"5 Aufgaben erledigt, 12 Defekte erzeugt, 8 Commits"}
+{"ts":"2026-08-10T04:55:41","event":"turn_start","turn":2,"detail":"E1 zwei Automatiken + Laufzeitprobe, dann S42; head e6b76ab"}
+{"ts":"2026-08-10T05:13:19","event":"task_done","turn":2,"task":"E1","agent":"coder","detail":"d9fc2c8; 0416 und 0417 geschlossen, sieben statt fuenf Automatiken abgeschaltet"}
+{"ts":"2026-08-10T05:13:19","event":"commit","turn":2,"task":"E1","detail":"d9fc2c8"}
+{"ts":"2026-08-10T05:13:19","event":"task_start","turn":2,"task":"S42","agent":"coder","detail":"Abgleich, Spec-Nachtraege, CLAUDE.md, make check, Buendel; dazu 4 Dokumentdefekte"}
+{"ts":"2026-08-10T05:38:16","event":"task_done","turn":2,"task":"S42","agent":"coder","detail":"e81a8a4; alle 48 Schritte DONE, Buendel signiert, 3 Defekte geschlossen 1 widerlegt"}
+{"ts":"2026-08-10T05:38:16","event":"commit","turn":2,"task":"S42","detail":"e81a8a4"}
+{"ts":"2026-08-10T05:38:16","event":"review_start","turn":2,"agent":"coderev","detail":"1 Codedatei (editor.rs), Diff e6b76ab..HEAD"}
+{"ts":"2026-08-10T05:53:23","event":"review_done","turn":2,"agent":"coderev","detail":"7 Befunde: 5 mittel, 2 gering; kein Freigabehindernis fuer den Abnahmelauf"}
+{"ts":"2026-08-10T05:53:23","event":"commit","turn":2,"detail":"b7d0d50"}
+{"ts":"2026-08-10T05:53:23","event":"coherence_review","turn":2,"verdict":"ok","detail":"Artefakt-Grundlage: 6 geschlossen 1 widerlegt, 7 neu; Artefakt-Directive: alle 48 Schritte DONE, Buendel signiert; Grundlage-Directive: keine Entscheidung diesen Turn beruehrt"}
+{"ts":"2026-08-10T05:53:23","event":"circuit_breaker","turn":2,"detail":"Netto-negativ: zwei Turns in Folge mehr Defekte erzeugt als Aufgaben geloest (12>5, 7>2). Warteschlange zugleich konvergiert, 8/8 erledigt."}
+{"ts":"2026-08-10T05:53:23","event":"turn_end","turn":2,"detail":"2 Aufgaben erledigt, 7 Defekte erzeugt, 3 Commits"}
+{"ts":"2026-08-10T06:15:13","event":"reconciliation","detail":"20 Abweichungen, 7 selbst behoben, 13 gemeldet; Spruch review-needed, Empfehlung revise Artifact"}
+{"ts":"2026-08-10T06:15:13","event":"gate_hit","detail":"Rebalance-Gate nach Spruch review-needed"}
+{"ts":"2026-08-10T06:17:33","event":"gate_response","detail":"Rebalance: Revise Artifact — S6 und S33 richtigstellen, dann Sitzungsende ohne Circle-Schliessung"}
+{"ts":"2026-08-10T06:17:33","event":"rebalance_artifact","detail":"Turn 3: 260809-1527 (S6 y/z), 260809-1746 (Probe), 260810-0053 (S33 Frage 7) + Ablösung des Markdown-Entscheids"}
+{"ts":"2026-08-10T06:17:33","event":"turn_start","turn":3,"detail":"head 1ddeb2f"}
+{"ts":"2026-08-10T06:37:32","event":"task_done","turn":3,"task":"F1","agent":"coder","detail":"df80000; S6 und S33 richtiggestellt, Markdown-Entscheid abgeloest"}
+{"ts":"2026-08-10T06:37:32","event":"commit","turn":3,"task":"F1","detail":"df80000"}
+{"ts":"2026-08-10T06:37:32","event":"turn_end","turn":3,"detail":"1 Aufgabe erledigt, Plan auf _c_"}
+{"ts":"2026-08-10T06:37:32","event":"session_end","detail":"3 Turns, 13 Commits, 12 Defekte geschlossen, 20 neu; Circle bleibt aktiv, Abnahmelauf beim Nutzer"}

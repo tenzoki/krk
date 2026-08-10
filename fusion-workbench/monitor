@@ -82,8 +82,8 @@ GUARD_EVENTS_JSONL = os.path.join(BASE_DIR, ".guard-state", "events.jsonl")
 # Guard events surfaced as sticky rows in the warnings panel. Three kinds
 # qualify, and the distinction is what the panel is for:
 #
-#   - Warnings and blocks (churn_*, cross_file_*, guard_block, guard_halt)
-#     report something the user did not ask for.
+#   - Warnings and blocks (churn_*, guard_block, guard_halt) report something
+#     the user did not ask for.
 #   - Advisories (guard_advisory) report something the user DID ask for: a
 #     write the guard would normally deny, let through because an override
 #     flag was set. The user turned the guard down, so the user is the one
@@ -102,7 +102,6 @@ GUARD_EVENTS_JSONL = os.path.join(BASE_DIR, ".guard-state", "events.jsonl")
 # about it, and it stays out of the panel.
 WARNING_EVENT_TYPES = {
     "churn_warning", "churn_critical",
-    "cross_file_warning", "cross_file_critical",
     "guard_block", "guard_halt",
     "guard_advisory",
     "guard_error",
@@ -121,8 +120,8 @@ ERROR_EVENT_TYPES = {"guard_error"}
 # per exempted write, so a curation session with FUSION_ALLOW_RULES_WRITE set —
 # the session the flag exists for — emits one per file it rewrites. Under a
 # single shared budget, thirty rewritten rule files are thirty advisory rows and
-# every guard_block, guard_halt, churn_critical and cross_file_critical older
-# than them is off the panel. That is the failure guard.ts already refuses to
+# every guard_block, guard_halt and churn_critical older than them is off the
+# panel. That is the failure guard.ts already refuses to
 # cause with guard_allow, arriving through a different door.
 #
 # So the warning class keeps its full 30 whatever the other classes do, and each
@@ -144,8 +143,8 @@ ERROR_EVENT_TYPES = {"guard_error"}
 # config, a corrupted escalation counter, a bug — emits one row per guarded tool
 # call for as long as it sits there. Charged to the warning class it behaves
 # exactly like the advisory burst: thirty ordinary tool calls with a broken
-# tracker push every guard_block, guard_halt, churn_critical and
-# cross_file_critical off the panel, which is a live combination because a
+# tracker push every guard_block, guard_halt and churn_critical off the panel,
+# which is a live combination because a
 # tracker failure does not stop the guard from blocking. The reverse is why the
 # class is not simply capped small and forgotten: a busy session's warnings must
 # not push the fail-open row off either, and only a separate budget prevents
@@ -508,10 +507,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       var w = visible[j];
       var levelClass = 'warning';
       var levelLabel = 'Warning';
-      if (w.event === 'churn_critical' || w.event === 'cross_file_critical') {
+      if (w.event === 'churn_critical') {
         levelClass = 'critical'; levelLabel = 'Critical';
-      } else if (w.event === 'cross_file_warning') {
-        levelClass = 'warning'; levelLabel = 'Cross-file';
       } else if (w.event === 'guard_block') { levelClass = 'block'; levelLabel = 'Blocked'; }
       else if (w.event === 'guard_halt')  { levelClass = 'halt'; levelLabel = 'Halt'; }
       // An advisory is not a warning: an override flag the user set let a
