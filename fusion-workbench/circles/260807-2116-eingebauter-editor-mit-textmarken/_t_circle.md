@@ -4,8 +4,8 @@
 **Domain:** code
 **Status:** active
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md)
-**Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md
+**Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md)
+**Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0244-orchestrator-session.md
 
 ---
 
@@ -147,7 +147,11 @@ Der zweite vorgesehene Circle, `260804-0933-eingebauter-web-betrachter-im-vorsch
 
 ## Turn log
 
-(noch keiner)
+Die Turns der Sitzungen vom 260807-2139 bis zum 260809 sind nicht einzeln vermerkt worden; ihre Belege stehen in den Sitzungsberichten unter `history/`. Ab der Sitzung vom 260810-0244 wird hier fortgeschrieben.
+
+- Turn 1 (Sitzung 260810-0244): Commits `9bc0d9d..e6b76ab`; fünf Defekte geschlossen, eine beantwortete Entscheidung eingelöst, Durchsicht mit neun Befunden; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0244-orchestrator-session.md`
+- Turn 2 (Sitzung 260810-0244): Commits `d9fc2c8..b7d0d50`; zwei Defekte geschlossen und S42 ausgeführt, womit alle 48 Planschritte `[DONE]` tragen und `target/KRK.app` gebaut und signiert ist; Durchsicht mit sieben Befunden, keiner am ausgeführten Code; Coherence-Spruch `ok`
+- Turn 3 (Sitzung 260810-0244): Commit `df80000`; die beiden Abnahmekriterien von S6 und S33, die der Code nicht einlöste, sind richtiggestellt, der Markdown-Entscheid ist durch `decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md` abgelöst; ausgelöst durch den Rebalance-Entscheid des Nutzers nach dem Abgleichsspruch `review-needed`
 
 ## Activation proposal
 
