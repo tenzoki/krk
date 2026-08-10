@@ -1038,12 +1038,11 @@ impl Gesamtlauf {
         let mut rate = None;
         for nummer in 1..=self.runden {
             eprintln!("krk-bench: Runde {nummer} von {}", self.runden);
-            let (gemeldete_rate, runde) = self.eine_gesamtrunde(&plan)?;
+            let (gemeldete_rate, runde) = self.eine_gesamtrunde(plan.pfad())?;
             rate = rate.or(gemeldete_rate);
             rohrunden.push(runde);
         }
         let systemlast_nachher = systemlast();
-        let _ = std::fs::remove_file(&plan);
 
         let sammeln = |waehlen: fn(&Gesamtrohrunde) -> &Vec<Duration>| -> Vec<Vec<Duration>> {
             rohrunden
@@ -1509,6 +1508,47 @@ fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
     }
 }
 
+/// Der geschriebene Messplan, solange der Lauf ihn braucht.
+///
+/// **Warum ein Waechter und keine Zeile am Ende von [`Gesamtlauf::fahren`].**
+/// Bis zum 260810 raeumte genau eine Zeile hinter der Rundenschleife ab, und
+/// jedes `?` in einer Runde kehrte vorher zurueck. Der Abbruch ist hier der
+/// gewoehnliche Fall und nicht der seltene: der Abnahmelauf verlangt KRK im
+/// Vordergrund und meldet aus dem Hintergrund `NICHT_IM_VORDERGRUND` statt
+/// Zahlen. Auf dem Referenzgeraet lagen deshalb neun Plaene im
+/// Temporaerverzeichnis, der aelteste fuenf Tage alt. Es ist dieselbe
+/// Ueberlegung, aus der [`Sitzungssicherung`] in [`Drop`] zurueckspielt, und
+/// dieselbe Bauform wie [`crate::wegwerfordner::Wegwerfordner`]: Erfolgsweg und
+/// Abbruchweg fallen zusammen, und eine Panik wickelt ueber dieselbe Bahn ab.
+///
+/// **Was ungedeckt bleibt: ein Signal.** SIGINT, SIGTERM und SIGHUP enden ueber
+/// [`signalwache_starten`] in `std::process::exit`, und dabei laeuft kein
+/// [`Drop`]. Die Sitzung des Nutzers kommt dort ueber [`SICHERUNG`] zurueck,
+/// der Messplan bleibt liegen. Er traegt die Prozesskennung im Namen und
+/// verwechselt sich deshalb mit keinem zweiten Lauf.
+#[must_use]
+struct Messplanwaechter {
+    /// Der geschriebene Plan im Temporaerverzeichnis.
+    pfad: PathBuf,
+}
+
+impl Messplanwaechter {
+    /// Der Pfad, den der Sitzungslauf der Anwendung mitbekommt.
+    fn pfad(&self) -> &Path {
+        &self.pfad
+    }
+}
+
+impl Drop for Messplanwaechter {
+    fn drop(&mut self) {
+        // Ungemeldet wie in [`crate::wegwerfordner::Wegwerfordner`]: bleibt der
+        // Plan liegen, kostet das eine Datei im Temporaerverzeichnis, und eine
+        // Meldung an dieser Stelle verdeckte den Fehler, der den Lauf gerade
+        // abbricht.
+        let _ = std::fs::remove_file(&self.pfad);
+    }
+}
+
 /// Schreibt den Messplan fuer den Sitzungslauf der Anwendung.
 ///
 /// Der Abschnitt `[sitzung]` ist die Pruefsitzung aus C8 **in der
@@ -1516,7 +1556,10 @@ fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
 /// links A sichtbar und B dahinter, rechts umgekehrt, alle Bereiche sichtbar,
 /// die Breiten im Auslieferungszustand. Serialisiert wird die Struktur aus
 /// `krk-core/src/ablage/sitzung.rs`; ein zweites Format entsteht nicht.
-fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<PathBuf> {
+///
+/// Der Plan faellt mit dem zurueckgegebenen [`Messplanwaechter`]; wer ihn
+/// laenger braucht, haelt den Waechter laenger.
+fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<Messplanwaechter> {
     use krk_core::ablage::sitzung::{Dateifenster, Sitzung, Tab};
 
     let sitzung = Sitzung {
@@ -1550,7 +1593,7 @@ fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<PathBuf> 
 
     let pfad = std::env::temp_dir().join(format!("krk-messplan-{}.toml", std::process::id()));
     std::fs::write(&pfad, text)?;
-    Ok(pfad)
+    Ok(Messplanwaechter { pfad })
 }
 
 /// Die Systemlast, wie `sysctl vm.loadavg` sie meldet.
@@ -2547,9 +2590,8 @@ mod tests {
             runden: 1,
         };
         let unterordner = wurzel.pfad().join("a-l6");
-        let pfad = plan_schreiben(&lauf, &unterordner).expect("der Plan ist schreibbar");
-        let text = fs::read_to_string(&pfad).expect("lesbar");
-        let _ = fs::remove_file(&pfad);
+        let plan = plan_schreiben(&lauf, &unterordner).expect("der Plan ist schreibbar");
+        let text = fs::read_to_string(plan.pfad()).expect("lesbar");
 
         // Der Abschnitt [sitzung] ist ueber dieselbe serde-Struktur lesbar,
         // die session.toml traegt: die eine Serialisierung, kein zweites

@@ -78,3 +78,21 @@ Waechter nach und wird dabei um eine Zeile kuerzer.
 ## Zustaendigkeit
 
 `coder`.
+
+---
+Resolved: `plan_schreiben` gibt seit dieser Sitzung einen `Messplanwaechter` zurueck statt eines
+`PathBuf`. Die Struktur haelt den Pfad und ruft in `Drop` `remove_file`; damit fallen Erfolgsweg,
+`?`-Abbruch und Panik-Abwicklung zusammen, und die Abraeumzeile hinter der Rundenschleife
+(vormals `messen.rs:1046`) ist entfallen. Kein neuer Mechanismus: es ist die Bauform, die
+`Sitzungswaechter` in derselben Datei und `Wegwerfordner` in `crates/krk-bench/src/wegwerfordner.rs`
+schon tragen. Der Name lautet `Messplanwaechter`, weil `krk_ui::messmodus::Messplan` bereits
+existiert. Die Probe `der_messplan_traegt_die_pruefsitzung_in_der_serialisierung_der_sitzung`
+raeumt nicht mehr selbst ab. Abgenommen mit `make check`, exit 0; nach dem Prueflauf lag keine
+neue Datei im Temporaerverzeichnis. Die neun Altbestandsdateien vom 260805 bis 260807 stehen
+noch dort und sind nicht angefasst.
+
+Ein Rest bleibt und ist eigens erfasst: `signalwache_starten` endet in `std::process::exit`,
+dabei laeuft kein `Drop`, also bleibt der Messplan bei Strg+C weiter liegen. Siehe
+`shared/issues/260810-1745_o_der-messplanwaechter-greift-bei-strg-c-nicht-weil-process-exit-kein-drop-laeuft.md`.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.

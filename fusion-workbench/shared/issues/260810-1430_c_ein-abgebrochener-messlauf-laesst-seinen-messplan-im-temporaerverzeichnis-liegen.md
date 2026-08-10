@@ -77,3 +77,14 @@ Mechanismus entsteht hier also nicht.
 ## Zustaendigkeit
 
 `coder`.
+
+---
+Resolved: Dublette. Dieser Datensatz beschreibt denselben Defekt wie
+`shared/issues/260810-1330_*_der-messplan-bleibt-liegen-wenn-eine-runde-abbricht.md` — derselbe
+Schreibort (`plan_schreiben`, `messen.rs`), dieselbe Abraeumzeile hinter der Rundenschleife,
+dieselben neun Restdateien als Beleg. Beide sind mit demselben Fix geschlossen, dem
+`Messplanwaechter` mit `remove_file` im `Drop`. Die Begruendung im Einzelnen steht im
+Datensatz vom 260810-1330; sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen
+auseinanderlaeuft.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.
