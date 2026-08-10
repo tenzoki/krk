@@ -202,26 +202,41 @@
 //! angenommener Eingang, und er hat genau zwei Ausgaenge, von denen jeder ihn
 //! aufbraucht.
 
-// **Die Zeile `#![allow(dead_code)]`, die hier bis zum 260810 stand, ist mit
-// S37 gefallen**, wie sie es angekuendigt hatte. Sie deckte vierzehn
-// Fundstellen ab, solange die Befehle des Editors fehlten; mit dem Lesen auf
-// dem Arbeitsfaden (S24), dem Sichern (S25), der Abweichungsmarke (S26), den
-// beiden Ansichten (S33), dem Suchlauf (S36) und dem Ersetzen (S37) haben zehn
-// davon ihren Aufrufer bekommen.
+// **Dieses Modul traegt keine Ausnahme von der Totpruefung, weder am Dateikopf
+// noch an einem einzelnen Stueck.** Die Zeile `#![allow(dead_code)]` stand hier
+// bis zum 260810 und deckte vierzehn Fundstellen ab, solange die Befehle des
+// Editors fehlten; mit dem Lesen auf dem Arbeitsfaden (S24), dem Sichern (S25),
+// der Abweichungsmarke (S26), den beiden Ansichten (S33), dem Suchlauf (S36) und
+// dem Ersetzen (S37) haben zehn davon ihren Aufrufer bekommen. Sie ist mit S37
+// gefallen, wie sie es angekuendigt hatte.
 //
-// **Vier haben ihn nicht**, und sie tragen die Ausnahme seither einzeln, mit
-// dem Grund daran. Das ist der Unterschied, um den es geht: eine Zeile am
-// Dateikopf verbirgt jede kuenftige tote Stelle mit, vier Zeilen an vier
-// Stellen nennen genau die vier. Gemessen am 260810 nach S37, ohne die
-// Ausnahmen: `cargo clippy --workspace --all-targets` meldet `Suchlauf::treffer`,
-// `Editormodell::stempel`, `Editormodell::haelt_zurueck` und
-// `Editormodell::suche_beenden`, und der Arbeitsbereich stuende rot, weil
-// `make lint` mit `-D warnings` faehrt. Tot ist auch dann nichts: die Pruefungen
-// am Dateiende fassen jedes Stueck dieses Moduls an.
+// **Die vier ohne Aufrufer sind danach gefallen, und zwar sie selbst und nicht
+// ihre Ausnahme.** Sie trugen bis zum 260810 je ein eigenes
+// `#[allow(dead_code)]` mit dem Grund daran — eine Ausnahme ohne Ablaufdatum,
+// weil kein Schritt des Plans einen Aufrufer nannte. Gefragt war nicht, wie sie
+// am Leben zu halten sind, sondern ob sie gebraucht werden, und die Antwort war
+// bei jedem der vier dieselbe:
 //
-// Von den vieren nennt allein `stempel` einen Schritt, der ihn ruft, naemlich
-// S31. Die drei uebrigen nennt kein Schritt des Plans; sie stehen als
-// `issues/260810-0212_o_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`.
+// - `Suchlauf::treffer` gab die ganze Trefferliste heraus. Die Oberflaeche kommt
+//   mit `zahl`, `nummer`, `angesteuert` und `meldung` aus; die ganze Liste
+//   braeuchte, wer alle Treffer zugleich zeichnete, und das sagt C5 nicht zu.
+// - `Editormodell::stempel` gab den Stempel nach aussen. Gefragt wird ueber
+//   `fremd_geaendert` (S25, S31), damit der Vergleich an einer Stelle steht statt
+//   an zweien; damit muss der Stempel das Modell nicht verlassen.
+// - `Editormodell::haelt_zurueck` fragte, ob eine gelesene Datei auf die
+//   Nachfrage aus C4 wartet. Die Oberflaeche erfaehrt das als `Ladeausgang` und
+//   beantwortet es im Rueckruf des Blattes, ohne zwischendurch nachzusehen.
+// - `Editormodell::suche_beenden` beendete den Suchlauf. Der Spec sagt keinen
+//   Befehl zu, der das tut; die Suche endet von selbst beim Tippen
+//   (`bearbeiten`), beim Dateiwechsel (`uebernehmen`) und beim Schliessen
+//   (`schliessen`), und jede dieser drei Stellen setzt das Feld unmittelbar.
+//
+// Jedes der vier hatte allein Pruefungen am Dateiende als Verwendung, und jede
+// dieser Pruefungen hat ihre Aussage entweder in der Zeile daneben schon
+// gestanden oder sie ueber das Verhalten statt ueber ein Feld gestellt; im
+// Einzelnen steht das am jeweiligen `#[test]`. Der Datensatz ist
+// `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`
+// samt seinem Nachtrag, der aus den drei des Titels vier macht.
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
@@ -354,7 +369,7 @@ impl Stempel {
 pub struct Suchlauf {
     gesucht: String,
     treffer: Vec<Treffer>,
-    /// Die Stelle des angesteuerten Treffers in [`Suchlauf::treffer`]; `None`,
+    /// Die Stelle des angesteuerten Treffers im Feld `treffer` darueber; `None`,
     /// wenn es keinen Treffer gibt oder der Durchgang eines Ersetzens zu Ende
     /// ist.
     angesteuert: Option<usize>,
@@ -364,17 +379,6 @@ impl Suchlauf {
     /// Wonach gesucht wird.
     pub fn gesucht(&self) -> &str {
         &self.gesucht
-    }
-
-    /// Alle Treffer im gehaltenen Stand, in Textreihenfolge.
-    // **Ohne Aufrufer, und der Plan nennt keinen.** Die Oberflaeche kommt mit
-    // `zahl`, `nummer`, `angesteuert` und `meldung` aus; wer die ganze Liste
-    // braeuchte, waere jemand, der die Treffer alle zugleich zeichnete, und das
-    // sagt C5 nicht zu. Gefuehrt als
-    // `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`.
-    #[allow(dead_code)]
-    pub fn treffer(&self) -> &[Treffer] {
-        &self.treffer
     }
 
     /// Wie viele Treffer die Datei enthaelt (C5).
@@ -655,21 +659,6 @@ impl Editormodell {
         self.typ
     }
 
-    /// Der Stempel der Datei beim Oeffnen oder beim letzten Sichern (C4).
-    // **S31 hat diese Zeile nicht abgeloest, obwohl sie es angekuendigt hatte,
-    // und das ist die richtige Auflegung.** Angekuendigt war, das Melden einer
-    // fremden Aenderung vergleiche hier den Stempel. Gebaut ist es ueber
-    // `fremd_geaendert`, weil S25 dieselbe Frage schon so stellt und der
-    // Vergleich damit an einer Stelle steht statt an zweien; der Stempel selbst
-    // geht dafuer nicht nach aussen. Ohne Aufrufer bleiben damit vier Stuecke
-    // statt drei, und der Defekt
-    // `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`
-    // fuehrt sie; die Pruefungen am Dateiende fassen jedes von ihnen an.
-    #[allow(dead_code)]
-    pub fn stempel(&self) -> Option<Stempel> {
-        self.stempel
-    }
-
     /// Der laufende Suchlauf (C5).
     pub fn suchlauf(&self) -> Option<&Suchlauf> {
         self.suchlauf.as_ref()
@@ -812,16 +801,6 @@ impl Editormodell {
         self.zurueckgehalten = None;
     }
 
-    /// Ob eine gelesene Datei auf die Antwort der Nachfrage wartet (C4).
-    // **Ohne Aufrufer, und der Plan nennt keinen.** Die Oberflaeche braucht die
-    // Frage nicht: sie erfaehrt das Zurueckhalten als `Ladeausgang` und
-    // beantwortet es im Rueckruf des Blattes, ohne zwischendurch nachzusehen.
-    // Gefuehrt im selben Defekt wie `Suchlauf::treffer`.
-    #[allow(dead_code)]
-    pub fn haelt_zurueck(&self) -> bool {
-        self.zurueckgehalten.is_some()
-    }
-
     /// Ob ein Ladevorgang laeuft.
     pub fn laedt_noch(&self) -> bool {
         self.ladevorgang.is_some()
@@ -913,6 +892,19 @@ impl Editormodell {
     /// Durchlauf ueber den Text neben dem der Wandlung; gemessen an dem
     /// Umschreiben aus UTF-16, das jedem Ruf hierher vorausgeht, ist er nicht zu
     /// bemerken.
+    ///
+    /// **Der Wert laesst sich nicht still fallenlassen**, und das ist eine
+    /// Erzwingung und keine Bitte. Er ist die **einzige** Meldung, dass Stand
+    /// und Textbestand auseinanderliefen; es gibt keine zweite Stelle, an der
+    /// ein Vergessen auffiele. Genau diese Lage war der Defekt `260810-0215`,
+    /// und der Bau war dabei gruen. Das `#[must_use]` macht daraus einen
+    /// Uebersetzerfehler, wie die vollstaendigen Fallunterscheidungen dieses
+    /// Programms es an anderen Stellen tun. Wer die Meldung wirklich nicht
+    /// braucht — die Pruefungen am Dateiende, die den Stand danach selbst
+    /// ansehen —, schreibt `let _ =` davor und sagt damit ausdruecklich, dass er
+    /// sie nicht braucht. Der Datensatz ist
+    /// `issues/260810-0423_*_der-rueckgabewert-von-bearbeiten-laesst-sich-still-fallenlassen.md`.
+    #[must_use = "wandelte das Bearbeiten, ist die Textflaeche nachzuziehen"]
     pub fn bearbeiten(&mut self, neuer_stand: String) -> bool {
         let war_gehalten = datei::ist_in_gehaltener_form(&neuer_stand);
         self.stand = datei::in_gehaltene_form(neuer_stand);
@@ -1121,17 +1113,6 @@ impl Editormodell {
         lauf.angesteuert()
     }
 
-    /// Beendet den Suchlauf (C5).
-    // **Ohne Aufrufer, und der Plan nennt keinen.** Der Spec sagt keinen Befehl
-    // zu, der eine Suche beendet; sie endet von selbst, wenn der Nutzer tippt
-    // (`bearbeiten`), eine andere Datei kommt (`uebernehmen`) oder der Editor
-    // schliesst (`schliessen`), und jede dieser drei Stellen setzt das Feld
-    // unmittelbar. Gefuehrt im selben Defekt wie `Suchlauf::treffer`.
-    #[allow(dead_code)]
-    pub fn suche_beenden(&mut self) {
-        self.suchlauf = None;
-    }
-
     /// Was beide Ersetzungswege brauchen, bevor sie `krk_core::text::suche`
     /// rufen: den Suchtext des laufenden Suchlaufs und den Ersatztext in der
     /// gehaltenen Form.
@@ -1310,7 +1291,7 @@ mod tests {
         );
         assert_eq!(modell.stand(), "erste Zeile\n");
 
-        modell.bearbeiten("erste Zeile\nzweite Zeile\n".to_owned());
+        let _ = modell.bearbeiten("erste Zeile\nzweite Zeile\n".to_owned());
         assert!(modell.hat_ungesicherten_stand());
 
         assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
@@ -1369,7 +1350,7 @@ mod tests {
         let pfad = ordner.datei("stand.md", "# Ueberschrift\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.bearbeiten("# Ueberschrift\n\nein ungesicherter Absatz\n".to_owned());
+        let _ = modell.bearbeiten("# Ueberschrift\n\nein ungesicherter Absatz\n".to_owned());
         let vorher = modell.stand().to_owned();
 
         assert_eq!(modell.ansicht_umschalten(), Ansicht::Roh);
@@ -1417,7 +1398,7 @@ mod tests {
         let ordner = Pruefordner::neu("abweisung");
         let gute = ordner.datei("gut.txt", "guter Inhalt\n");
         let mut modell = geoeffnet(&gute);
-        modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
 
         // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
         assert_eq!(modell.oeffnen(&ordner.pfad), None);
@@ -1488,8 +1469,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "auf der Platte\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.bearbeiten("auf der Platte\nund ungesichert getippt\n".to_owned());
-        let stempel_vorher = modell.stempel();
+        let _ = modell.bearbeiten("auf der Platte\nund ungesichert getippt\n".to_owned());
 
         let ausgang = modell.oeffnen(&pfad);
 
@@ -1510,11 +1490,9 @@ mod tests {
             "die Abweichungsmarke ueberlebt den zweiten Ruf"
         );
         assert_eq!(modell.pfad(), Some(pfad.as_path()));
-        assert_eq!(
-            modell.stempel(),
-            stempel_vorher,
-            "ohne Lesevorgang bewegt sich auch der Stempel nicht"
-        );
+        // Dass der Stempel dabei stehenbleibt, sagt die Zeile darunter mit: er
+        // bewegt sich allein in `uebernehmen` und in `sichern`, und ohne
+        // gestarteten Ladevorgang ist keines von beiden gelaufen.
         assert!(!modell.laedt_noch(), "es wurde kein Ladevorgang gestartet");
     }
 
@@ -1542,7 +1520,9 @@ mod tests {
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), "zweite\n");
         assert_eq!(modell.pfad(), Some(zweite.as_path()));
-        assert!(!modell.haelt_zurueck());
+        // Dass nichts zurueckgehalten wurde, steht im Ausgang oben: die vier
+        // Werte von `Ladeausgang` sind ueberschneidungsfrei, und `Geoeffnet` ist
+        // nicht `Zurueckgehalten`.
     }
 
     /// Warum das Sitzungsschreiben aus C7 am Ladeausgang haengt und nicht am
@@ -1591,12 +1571,14 @@ mod tests {
         let erste = ordner.datei("erste.txt", "erste\n");
         let zweite = ordner.datei("zweite.txt", "zweite\n");
         let mut modell = geoeffnet(&erste);
-        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
 
         assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
 
-        assert!(modell.haelt_zurueck(), "die gelesene Datei wartet");
+        // Dass die gelesene Datei wartet, sagt der Ausgang darueber; was hier
+        // folgt, ist die zweite Haelfte der Zusage, naemlich dass er dabei nichts
+        // bewegt hat.
         assert_eq!(
             modell.pfad(),
             Some(erste.as_path()),
@@ -1619,7 +1601,7 @@ mod tests {
         let erste = ordner.datei("erste.txt", "erste\n");
         let zweite = ordner.datei("zweite.txt", "zweite\n");
         let mut modell = geoeffnet(&erste);
-        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
 
         assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
@@ -1635,11 +1617,10 @@ mod tests {
             !modell.hat_ungesicherten_stand(),
             "die neue Datei kommt ohne Abweichung herein"
         );
-        assert!(!modell.haelt_zurueck(), "es wartet nichts mehr");
         assert_eq!(
             modell.zurueckgehaltenes_uebernehmen(),
             None,
-            "ein zweiter Ruf findet nichts und tut nichts"
+            "es wartet nichts mehr: ein zweiter Ruf findet nichts und tut nichts"
         );
     }
 
@@ -1650,13 +1631,19 @@ mod tests {
         let erste = ordner.datei("erste.txt", "erste\n");
         let zweite = ordner.datei("zweite.txt", "zweite\n");
         let mut modell = geoeffnet(&erste);
-        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
 
         assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
 
         modell.zurueckgehaltenes_fallenlassen();
-        assert!(!modell.haelt_zurueck());
+        // Gefragt wird ueber den Weg, der die wartende Datei aufnehmen wuerde,
+        // und nicht ueber ein Feld: findet er nichts, wartet nichts.
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            None,
+            "die gelesene Datei ist gefallen"
+        );
         assert_eq!(modell.pfad(), Some(erste.as_path()));
         assert_eq!(modell.stand(), "erste, bearbeitet\n");
         assert!(modell.hat_ungesicherten_stand());
@@ -1674,7 +1661,7 @@ mod tests {
         let ordner = Pruefordner::neu("abweisung-ohne-nachfrage");
         let gute = ordner.datei("gut.txt", "guter Inhalt\n");
         let mut modell = geoeffnet(&gute);
-        modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
 
         // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
         assert_eq!(modell.oeffnen(&ordner.pfad), None);
@@ -1683,8 +1670,9 @@ mod tests {
             matches!(ausgang, Ladeausgang::Abgewiesen(_)),
             "eine Abweisung geht unverzueglich durch, {ausgang:?}"
         );
-        assert!(
-            !modell.haelt_zurueck(),
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            None,
             "eine abgewiesene Datei wartet auf keine Antwort"
         );
         assert!(modell.hat_ungesicherten_stand());
@@ -1697,13 +1685,17 @@ mod tests {
         let erste = ordner.datei("erste.txt", "erste\n");
         let zweite = ordner.datei("zweite.txt", "zweite\n");
         let mut modell = geoeffnet(&erste);
-        modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
 
         assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
 
         modell.schliessen();
-        assert!(!modell.haelt_zurueck());
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            None,
+            "die wartende Datei ist mit dem Schliessen gefallen"
+        );
         assert!(!modell.haelt_datei());
         assert_eq!(modell.stand(), "");
         assert!(!modell.hat_ungesicherten_stand());
@@ -1729,7 +1721,7 @@ mod tests {
         std::fs::write(&pfad, "Inhalt\n").expect("die Pruefdatei laesst sich schreiben");
 
         let mut modell = geoeffnet(&pfad);
-        modell.bearbeiten("neuer Inhalt\n".to_owned());
+        let _ = modell.bearbeiten("neuer Inhalt\n".to_owned());
 
         std::fs::set_permissions(&unterordner, std::fs::Permissions::from_mode(0o500))
             .expect("die Rechte lassen sich setzen");
@@ -1763,7 +1755,7 @@ mod tests {
         let ordner = Pruefordner::neu("sichern-fremd");
         let pfad = ordner.datei("stand.txt", "Inhalt\n");
         let mut modell = geoeffnet(&pfad);
-        modell.bearbeiten("im Editor getippt\n".to_owned());
+        let _ = modell.bearbeiten("im Editor getippt\n".to_owned());
 
         std::fs::write(&pfad, "von jemand anderem geschrieben\n")
             .expect("die Datei laesst sich von aussen schreiben");
@@ -1794,7 +1786,7 @@ mod tests {
         let ordner = Pruefordner::neu("sichern-fort");
         let pfad = ordner.datei("stand.txt", "Inhalt\n");
         let mut modell = geoeffnet(&pfad);
-        modell.bearbeiten("im Editor getippt\n".to_owned());
+        let _ = modell.bearbeiten("im Editor getippt\n".to_owned());
 
         std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
 
@@ -1824,10 +1816,12 @@ mod tests {
         let ordner = Pruefordner::neu("stempel");
         let pfad = ordner.datei("stand.txt", "Inhalt\n");
         let mut modell = geoeffnet(&pfad);
-        assert!(modell.stempel().is_some());
+        // Dass ueberhaupt ein Stempel erhoben wurde, sagt die letzte Zusicherung
+        // dieser Probe mit: ohne gemerkten Stempel antwortet `fremd_geaendert`
+        // `false`, und dann faende die Aenderung von aussen dort keine Meldung.
         assert!(!modell.fremd_geaendert());
 
-        modell.bearbeiten("im Editor geändert\n".to_owned());
+        let _ = modell.bearbeiten("im Editor geändert\n".to_owned());
         assert!(
             !modell.fremd_geaendert(),
             "die eigene Bearbeitung ruehrt die Datei nicht an"
@@ -1859,7 +1853,7 @@ mod tests {
         let ordner = Pruefordner::neu("schliessen");
         let pfad = ordner.datei("stand.txt", "Inhalt\n");
         let mut modell = geoeffnet(&pfad);
-        modell.bearbeiten("bearbeitet\n".to_owned());
+        let _ = modell.bearbeiten("bearbeitet\n".to_owned());
 
         modell.schliessen();
         assert!(!modell.haelt_datei());
@@ -1877,7 +1871,7 @@ mod tests {
         let mut modell = geoeffnet(&pfad);
         // Was der Nutzer eben getippt und noch nicht gesichert hat, wird
         // gefunden: der dritte Treffer steht nur im gehaltenen Stand.
-        modell.bearbeiten("eins zwei eins drei eins\n".to_owned());
+        let _ = modell.bearbeiten("eins zwei eins drei eins\n".to_owned());
 
         let erster = modell
             .suche_starten("eins", 0)
@@ -1886,13 +1880,12 @@ mod tests {
         let lauf = modell.suchlauf().expect("der Suchlauf steht");
         assert_eq!(lauf.gesucht(), "eins");
         assert_eq!(lauf.zahl(), 3);
-        assert_eq!(
-            lauf.treffer().iter().map(|t| t.anfang).collect::<Vec<_>>(),
-            vec![0, 10, 20]
-        );
         assert_eq!(lauf.nummer(), Some(1));
         assert_eq!(lauf.meldung(), "Treffer 1 von 3");
 
+        // Wo die drei Treffer stehen, sagen die drei Zeilen hier und nicht die
+        // Liste im Suchlauf: sie nennen dieselben drei Versaetze in derselben
+        // Reihenfolge und dazu den Umlauf, den die Liste allein nicht zeigt.
         assert_eq!(modell.weitersuchen().map(|t| t.anfang), Some(10));
         assert_eq!(modell.weitersuchen().map(|t| t.anfang), Some(20));
         assert_eq!(
@@ -1905,10 +1898,9 @@ mod tests {
             Some(20),
             "C5: vor dem ersten geht es beim letzten weiter"
         );
-
-        modell.suche_beenden();
-        assert!(modell.suchlauf().is_none());
-        assert_eq!(modell.weitersuchen(), None);
+        // Dass ein beendeter Suchlauf nichts mehr ansteuert, steht in
+        // `eine_bearbeitung_beendet_den_suchlauf` weiter unten — dort endet er
+        // auf einem Weg, den das Programm wirklich geht.
     }
 
     #[test]
@@ -2000,7 +1992,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "erste Zeile\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.bearbeiten("aus Windows\r\neingefügt\r\nletzte".to_owned());
+        let _ = modell.bearbeiten("aus Windows\r\neingefügt\r\nletzte".to_owned());
         assert_eq!(
             modell.stand(),
             "aus Windows\neingefügt\nletzte",
@@ -2097,7 +2089,7 @@ mod tests {
 
         modell.suche_starten("eins", 0);
         assert!(modell.suchlauf().is_some());
-        modell.bearbeiten("kurz\n".to_owned());
+        let _ = modell.bearbeiten("kurz\n".to_owned());
         assert!(modell.suchlauf().is_none());
         assert_eq!(modell.weitersuchen(), None);
     }

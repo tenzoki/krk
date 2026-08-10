@@ -250,6 +250,28 @@ enum Anlass {
     Beenden,
 }
 
+/// Wer verlangt hat, dass der Editor eine Datei aufnimmt (C2, C7).
+///
+/// **Zwei Werte, ueberschneidungsfrei und vollstaendig.** Entweder ein Befehl
+/// des Nutzers hat geoeffnet, oder die Wiederherstellung der Sitzung beim Start;
+/// einen dritten Anlass gibt es nicht, und ein neuer haelt an
+/// [`Anwendungsdelegierter::editor_oeffnen_lassen`] den Bau an.
+///
+/// **Er ist ein Pflichtargument und kein Kennzeichen daneben.** Jedes Oeffnen im
+/// Delegierten geht durch die eine Stelle, die diesen Wert entgegennimmt, und ein
+/// Weg, der ihn nicht nennt, uebersetzt nicht. Der Defekt davor ist
+/// `issues/260810-0418_*_ein-f4-waehrend-der-wiederherstellung-erbt-die-marke-aus-sitzung.md`:
+/// die Herkunft lag als `Cell` neben der Kette, wurde allein von der
+/// Wiederherstellung gesetzt und erst beim Ladeausgang verbraucht, und ein
+/// Oeffnen in dieser Spanne erbte sie.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Oeffnungsherkunft {
+    /// F4, `cmd+e` aus der Vorschau oder der Sprung auf eine Textmarke aus C6.
+    Befehl,
+    /// Die Datei, die `session.toml` gemerkt hat, beim Start (C7).
+    Sitzung,
+}
+
 /// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
 ///
 /// **Es gibt hoechstens einen.** Bis S16 hielt die Tastensperre einen zweiten
@@ -437,12 +459,13 @@ pub struct AnwendungsIvars {
     /// waere weder bedienbar noch sinnvoll — der Nutzer koennte es nicht
     /// beantworten, und KRK bliebe stehen.
     beenden_ohne_nachfrage: Cell<bool>,
-    /// Ob das laufende Oeffnen des Editors aus der Sitzung kommt (C7).
+    /// Die Herkunft des **zuletzt begonnenen** Oeffnens im Editor (C2, C7).
     ///
     /// **Ein Feld, ein Schreiber, ein Leser, und der Leser verbraucht es.**
-    /// Geschrieben allein von [`Anwendungsdelegierter::editor_wiederherstellen`],
-    /// gelesen allein von [`Anwendungsdelegierter::editorausgang_behandeln`],
-    /// das es beim ersten Ausgang wieder loescht. Denselben Zuschnitt traegt
+    /// Geschrieben allein von
+    /// [`Anwendungsdelegierter::editor_oeffnen_lassen`], gelesen allein von
+    /// [`Anwendungsdelegierter::editorausgang_behandeln`], das es beim ersten
+    /// Ausgang wieder loescht. Denselben Zuschnitt traegt
     /// [`Self::beenden_ohne_nachfrage`] darueber.
     ///
     /// Der wiederhergestellte Editor unterscheidet sich in den beiden Ausgaengen,
@@ -451,6 +474,35 @@ pub struct AnwendungsIvars {
     /// siehe `fokus::BEIM_START` —, und eine Abweisung ist beim Start die
     /// Antwort auf keinen Tastendruck und geht deshalb einen Rang tiefer in die
     /// Zeile. Ohne dieses Kennzeichen waere beides nicht zu unterscheiden.
+    ///
+    /// # Warum "das zuletzt begonnene" und warum das genau die richtige Auskunft
+    /// ist
+    ///
+    /// Gelesen wird seit S24 auf einem Arbeitsfaden, und zwischen dem Beginn des
+    /// Oeffnens und seinem Ausgang laeuft die Ereignisschleife — ein Tastendruck
+    /// kommt durch, und mit ihm ein zweites Oeffnen. Bis zum 260810 sagte dieses
+    /// Feld "das laufende Oeffnen kommt aus der Sitzung", wurde allein von der
+    /// Wiederherstellung gesetzt, und ein F4 in dieser Spanne erbte den Wert:
+    /// der Ausgang gehoerte zur Datei des Nutzers und trug die Marke der
+    /// Wiederherstellung, also blieben Fokus, Titel und Sitzungsschreiben aus
+    /// (`issues/260810-0418_*_ein-f4-waehrend-der-wiederherstellung-erbt-die-marke-aus-sitzung.md`).
+    ///
+    /// Jetzt setzt **jedes** Oeffnen den Wert, und das Feld beantwortet damit
+    /// genau die Frage, die am Ausgang gestellt wird. Denn hoechstens das zuletzt
+    /// begonnene Oeffnen liefert einen Ausgang:
+    /// [`crate::editormodell::Editormodell::oeffnen`] ersetzt den laufenden
+    /// Ladevorgang, sein Empfaenger faellt, und das `send` des ueberholten Fadens
+    /// scheitert still. Es ist damit keine Marke mehr, die neben der Kette liegt
+    /// und auf ihren Verbrauch hofft, sondern eine Angabe, die mit jedem Glied
+    /// nachzieht.
+    ///
+    /// **Der eine Fall, in dem ein Ausgang eintrifft, waehrend ein aelteres
+    /// Lesen noch laeuft**, ist die Abkuerzung fuer die schon gehaltene Datei:
+    /// sie liefert [`Ladeausgang::SchonOffen`] unverzueglich und laesst den
+    /// laufenden Ladevorgang stehen. Beim Start ist er unerreichbar — der Editor
+    /// haelt dann noch keine Datei —, und ausserhalb des Starts ist jede Herkunft
+    /// `Befehl`, also gibt es nichts zu verwechseln. Gefuehrt als
+    /// `issues/260810-1029_*_die-abkuerzung-fuer-die-gehaltene-datei-bricht-das-laufende-lesen-nicht-ab.md`.
     editor_aus_sitzung: Cell<bool>,
     /// Die Stelle, auf die der laufende Ladevorgang des Editors springen soll
     /// (C6): gemerkte Zeilennummer und gemerkter Zeileninhalt.
@@ -1098,11 +1150,15 @@ impl Anwendungsdelegierter {
     /// [`AnwendungsIvars::vorgemerkte_marke`]: hier ist noch nicht gelesen, und
     /// wohin die Schreibmarke gehoert, entscheidet sich am Text.
     fn textmarke_anspringen(&self, datei: &Path, zeile: u32, zeileninhalt: &str) {
-        let Some(editor) = self.ivars().editor.get() else {
-            return;
-        };
         *self.ivars().vorgemerkte_marke.borrow_mut() = Some((zeile, zeileninhalt.to_owned()));
-        editor.datei_oeffnen(datei);
+        if !self.editor_oeffnen_lassen(datei, Oeffnungsherkunft::Befehl) {
+            // Ohne Editorbereich kommt kein Ladeausgang, und damit niemand, der
+            // die Stelle herausnimmt; sie bliebe liegen und griffe beim naechsten
+            // Oeffnen. Vorgemerkt wird trotzdem zuerst, weil das Oeffnen
+            // unverzueglich zurueckkehrt und der Ausgang die Stelle schon
+            // braucht.
+            *self.ivars().vorgemerkte_marke.borrow_mut() = None;
+        }
     }
 
     /// Schreibt die Lesezeichen nach `bookmarks.toml` (C5).
@@ -3260,6 +3316,49 @@ impl Anwendungsdelegierter {
             .befehlsantwort_zeigen(text);
     }
 
+    /// **Die eine Stelle, an der der Delegierte den Editor eine Datei aufnehmen
+    /// laesst**, und die eine Stelle, die
+    /// [`AnwendungsIvars::editor_aus_sitzung`] schreibt.
+    ///
+    /// Vier Wege fuehren hierher: F4 ([`Self::im_editor_oeffnen`]), `cmd+e` aus
+    /// der Vorschau ([`Self::editor_aus_vorschau`]), der Sprung auf eine
+    /// Textmarke aus C6 ([`Self::textmarke_anspringen`]) und die
+    /// Wiederherstellung der Sitzung beim Start
+    /// ([`Self::editor_wiederherstellen`]). Jeder von ihnen **nennt seine
+    /// Herkunft**, weil sie ein Pflichtargument ist; ein fuenfter Weg, der sie
+    /// nicht nennt, uebersetzt nicht.
+    ///
+    /// **Das ist der Gewinn gegenueber dem billigeren Weg**, die Marke an den
+    /// Befehlswegen zu loeschen: der haette eine Zusage auf drei Aufrufstellen
+    /// verteilt, und die erste vergessene faende keine Pruefung. Hier gibt es
+    /// nichts zu vergessen — wer nichts sagt, kommt nicht durch.
+    ///
+    /// **Der Rueckgabewert sagt, ob es den Editorbereich gibt** und nicht, ob die
+    /// Datei angenommen wurde: das entscheidet
+    /// `krk_core::text::datei::oeffnen` auf dem Arbeitsfaden, und der Ausgang
+    /// kommt in [`Self::editorausgang_behandeln`] an. `false` heisst allein, dass
+    /// die Oberflaeche noch nicht steht; die beiden Befehle darunter geben den
+    /// Tastendruck dann weiter, statt ihn zu verbrauchen.
+    ///
+    /// **Die Grenze dieser Stelle steht hier und wird nicht verschwiegen:** sie
+    /// gilt fuer den Delegierten und nicht fuer das Programm. Wer
+    /// [`Editorbereich::datei_oeffnen`] von woanders ruft, geht daran vorbei, und
+    /// der Uebersetzer sagt es ihm nicht. Zu erzwingen waere es mit einer
+    /// Herkunft an `datei_oeffnen` selbst, die durch das Modell laeuft und mit dem
+    /// Ladeausgang zurueckkommt; das liegt in `appkit/editor.rs` und ist als
+    /// `issues/260810-1028_*_die-herkunft-eines-oeffnens-ist-im-delegierten-erzwungen-und-nicht-am-editorbereich.md`
+    /// gefuehrt.
+    fn editor_oeffnen_lassen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        self.ivars()
+            .editor_aus_sitzung
+            .set(herkunft == Oeffnungsherkunft::Sitzung);
+        editor.datei_oeffnen(pfad);
+        true
+    }
+
     /// F4 oeffnet den ausgewaehlten Eintrag des aktiven Dateifensters im
     /// eingebauten Editor (C2).
     ///
@@ -3292,11 +3391,7 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
             return true;
         };
-        let Some(editor) = self.ivars().editor.get() else {
-            return false;
-        };
-        editor.datei_oeffnen(&pfad);
-        true
+        self.editor_oeffnen_lassen(&pfad, Oeffnungsherkunft::Befehl)
     }
 
     /// `cmd+e` mit dem Fokus in der Vorschau: die dort angezeigte Datei im
@@ -3339,11 +3434,7 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(aktiv, "die Vorschau zeigt keine Datei zum Bearbeiten");
             return true;
         };
-        let Some(editor) = self.ivars().editor.get() else {
-            return false;
-        };
-        editor.datei_oeffnen(&pfad);
-        true
+        self.editor_oeffnen_lassen(&pfad, Oeffnungsherkunft::Befehl)
     }
 
     /// Oeffnet beim Start die Datei wieder, die die Sitzung gemerkt hat (C7).
@@ -3360,12 +3451,10 @@ impl Anwendungsdelegierter {
     /// Fokusbefehl aus C1 hervorholt, und ihn hier einzublenden hiesse, die
     /// gemerkte Sichtbarkeit zu uebergehen.
     fn editor_wiederherstellen(&self, sitzung: &Sitzung) {
-        let (Some(pfad), Some(editor)) = (sitzung.editor.as_ref(), self.ivars().editor.get())
-        else {
+        let Some(pfad) = sitzung.editor.as_ref() else {
             return;
         };
-        self.ivars().editor_aus_sitzung.set(true);
-        editor.datei_oeffnen(pfad);
+        self.editor_oeffnen_lassen(pfad, Oeffnungsherkunft::Sitzung);
     }
 
     /// Was auf einen Ladevorgang des Editors folgt (C2, C7, C11).
@@ -3386,6 +3475,15 @@ impl Anwendungsdelegierter {
     /// kein Befehl: sie holt keinen Fokus, weil der beim Start in das aktive
     /// Dateifenster gehoert, und ihre Abweisung ist die Antwort auf keinen
     /// Tastendruck.
+    ///
+    /// **Die Antwort gehoert zu dem Oeffnen, dessen Ausgang hier ankommt**, und
+    /// das ist seit dem 260810 keine Annahme mehr: geschrieben wird das Feld von
+    /// [`Self::editor_oeffnen_lassen`], also von **jedem** Oeffnen, und
+    /// hoechstens das zuletzt begonnene liefert einen Ausgang. Vorher setzte
+    /// allein die Wiederherstellung, und ein F4 in der Spanne bis zum Ausgang
+    /// erbte ihre Marke — dann blieben Fokus, Titel und Sitzungsschreiben fuer
+    /// die Datei des Nutzers aus. Der Datensatz ist
+    /// `issues/260810-0418_*_ein-f4-waehrend-der-wiederherstellung-erbt-die-marke-aus-sitzung.md`.
     ///
     /// **Der Sprung auf eine Textmarke haengt hier an** (C6), und zwar an
     /// derselben Stelle wie der Fokus: nach dem gelungenen Oeffnen und nachdem
