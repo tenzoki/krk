@@ -34410,3 +34410,32 @@
 {"ts":"2026-08-10T18:10:51.357Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
 {"ts":"2026-08-10T18:11:07.934Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-10T18:11:37.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:11:59.143Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:12:30.203Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:57:31.653Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:57:33.160Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:57:41.239Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:58:43.618Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:58:59.431Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:59:14.567Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:59:33.906Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:22:37.786Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:23:10.927Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:23:39.500Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:24:18.541Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:28:40.382Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:28:52.465Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:29:14.221Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:29:58.626Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260810-2132_o_wird-die-zusage-l9-wieder-angehoben-nachdem-die-messung-sich-erholt-hat.md"}
+{"ts":"2026-08-10T19:29:58.748Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260810-2132_o_wird-die-zusage-l9-wieder-angehoben-nachdem-die-messung-sich-erholt-hat.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:30:18.140Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T19:30:18.256Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:30:41.109Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T19:30:41.235Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:30:44.775Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T19:30:44.887Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:30:52.871Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:31:11.573Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:31:25.089Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:31:58.993Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md"}
+{"ts":"2026-08-10T19:31:59.104Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md","detail":"File change recorded"}

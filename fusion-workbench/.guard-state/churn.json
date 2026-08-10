@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 87,
-      "changesThisSession": 7,
-      "lastChange": "2026-08-10T17:34:43.703Z",
-      "thrashingScore": 39
+      "totalChanges": 90,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-10T19:30:44.886Z",
+      "thrashingScore": 32
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -548,7 +548,7 @@
     },
     "crates/krk-bench/src/messen.rs": {
       "totalChanges": 90,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T17:26:43.994Z",
       "thrashingScore": 36
     },
@@ -4454,7 +4454,7 @@
     },
     "fusion-workbench/shared/history/260810-1647-orchestrator-session.md": {
       "totalChanges": 4,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T18:10:32.910Z",
       "thrashingScore": 1
     },
@@ -4574,17 +4574,29 @@
     },
     "fusion-workbench/shared/issues/260810-1925_o_eine-probe-schreibt-ins-echte-temporaerverzeichnis-und-raeumt-dort-jetzt-fremde-messplaene-ab.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T17:28:25.491Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260810-1945_o_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T18:08:57.652Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260810-2132_o_wird-die-zusage-l9-wieder-angehoben-nachdem-die-messung-sich-erholt-hat.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-10T19:29:58.747Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-10T19:31:59.103Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-10T17:24:47.938Z",
+  "sessionStart": "2026-08-10T19:29:58.747Z",
   "keyAnchor": "workbench-root"
 }
