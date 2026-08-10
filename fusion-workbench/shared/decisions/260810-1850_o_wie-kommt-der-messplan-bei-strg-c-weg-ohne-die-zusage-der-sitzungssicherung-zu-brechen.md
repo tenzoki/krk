@@ -50,6 +50,17 @@ dort einzutragen berührt diese Zusage. Deshalb ist es eine Entscheidung und kei
      gebaut werden, die Sofortigkeit des Abbruchs geht verloren, und der Hauptfaden hängt bei
      einem Messlauf oft in `warten_bis` am Kindprozess, kommt also nicht ohne Weiteres zurück.
 
+4. **Der nächste Lauf räumt auf** — `Messplanwaechter::neu` löscht beim Anlegen jede
+   `krk-messplan-*.toml` im Temporärverzeichnis, die nicht seine eigene ist. Nachgetragen am
+   260810-1905 von `coderev` bei der Durchsicht von Turn 2.
+   - Pro: Keine neue Bauform, sondern genau die Zeile, die `Wegwerfordner::neu`
+     (`wegwerfordner.rs:45`) schon trägt. `SICHERUNG` bleibt unberührt, die Signalwache bekommt
+     keine Zeile, die dokumentierte Zusage wird weder gebrochen noch neu gefasst. Deckt
+     zusätzlich `SIGKILL` und den Stromausfall ab, die keine der drei anderen Optionen erreicht.
+   - Contra: Der Plan liegt bis zum nächsten Lauf da, statt sofort wegzukommen. Schließt zwei
+     gleichzeitige Messläufe aus — was der Abnahmelauf ohnehin tut, weil er KRK im Vordergrund
+     verlangt, aber es ist eine Zusage, die heute nirgends steht.
+
 ## Randbedingungen
 
 - Kein zweiter Signalpfad neben dem bestehenden. Das ist keine Option, sondern Ausschluss.
@@ -67,10 +78,22 @@ nicht schließt.
 
 ## Empfehlung
 
-Keine. Die drei Optionen unterscheiden sich in dem, was sie an Entwurf kosten, und diese Abwägung
-gehört dem Nutzer. Anzumerken ist allein: Option 1 ist die einzige, die die vorhandene Zusage
-wörtlich stehen lässt, und zugleich die einzige, die einen Mechanismus verdoppelt. Zwischen
-diesen beiden Gütern ist zu wählen.
+**Option 4**, nachgetragen am 260810-1905. Die ursprüngliche Fassung dieses Datensatzes gab keine
+Empfehlung ab, weil die ersten drei Optionen sich allein darin unterschieden, was sie an Entwurf
+kosten: Option 1 lässt die vorhandene Zusage wörtlich stehen und verdoppelt dafür einen
+Mechanismus, Option 2 fasst die Zusage neu, Option 3 ändert das Abbruchverhalten. Zwischen diesen
+drei war die Abwägung eine Geschmacksfrage und gehörte dem Nutzer.
+
+Option 4 ändert die Lage, weil sie keinen dieser Preise zahlt. Sie berührt die Zusage nicht,
+verdoppelt nichts, ändert das Abbruchverhalten nicht, und sie benutzt eine Zeile, die im
+Nachbarmodul schon steht. Dazu deckt sie zwei Ausgänge ab, die keine der drei anderen erreicht:
+`SIGKILL` und den Stromausfall. Ihr einziger Preis ist, dass der Plan bis zum nächsten Lauf
+liegen bleibt — und das ist genau der Zustand, den dieser Defekt heute beschreibt, nur mit einer
+Obergrenze von einer Datei statt neun.
+
+Was dagegen spricht und mitentschieden gehört: Option 4 setzt voraus, dass nie zwei Messläufe
+gleichzeitig laufen. Das trifft heute zu, weil der Abnahmelauf KRK im Vordergrund verlangt, aber
+diese Zusage steht nirgends geschrieben. Wer Option 4 wählt, schreibt sie auf.
 
 ---
 Answered:
