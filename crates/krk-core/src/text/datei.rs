@@ -44,6 +44,20 @@
 //! hineinkopiert wurde. Eine eigene Wandlung an jener Stelle waere die zweite
 //! Normalisierungsstelle im Programm, und die erste ist diese hier.
 //!
+//! # Wer aus einem Textbestand liest, muss ihn nachziehen
+//!
+//! Die Wandlung geschieht **auf dem Weg** in den Stand, und der Bestand, aus
+//! dem sie las, bleibt dabei stehen, wie er war. Wer einen solchen Bestand
+//! fuehrt — die `NSTextView` des Editors ist der eine Fall —, hat danach zwei
+//! Texte, die sich um die gewandelten Zeichen unterscheiden, und jede Stelle
+//! hinter der ersten Wandlung zeigt in den beiden auf Verschiedenes.
+//!
+//! Zwei Stuecke stehen dafuer bereit, und beide halten sich an die eine
+//! Wandlung, statt ihre Regeln zu wiederholen: [`ist_in_gehaltener_form`] sagt
+//! im Voraus, ob ueberhaupt gewandelt wird, und [`versatz_nach_der_wandlung`]
+//! sagt, wohin eine Stelle dabei wandert. Der Defekt, der beides verlangt hat,
+//! ist `260810-0215`.
+//!
 //! # Der Preis dieser Wahl, ausgeschrieben
 //!
 //! KRK schreibt beim Sichern **immer** Unix-Zeilenenden, **immer** einen
@@ -319,6 +333,18 @@ pub fn einlesen(bytes: Vec<u8>) -> Option<String> {
     String::from_utf8(bytes).ok().map(in_gehaltene_form)
 }
 
+/// Ob ein Text die gehaltene Form schon hat.
+///
+/// **Die eine Stelle, die diese Frage beantwortet.** [`in_gehaltene_form`]
+/// nimmt an ihr ihren kurzen Weg, und der Editor fragt sie, um zu erfahren, ob
+/// seine Textflaeche Zeichen traegt, die der gehaltene Stand nicht traegt;
+/// siehe den Modulkopf. Zwei Formulierungen derselben Frage waeren die erste
+/// Gelegenheit, sie verschieden zu schreiben, und die Wandlung liefe dann gegen
+/// eine andere Bedingung als die Pruefung.
+pub fn ist_in_gehaltener_form(text: &str) -> bool {
+    !text.starts_with(BYTEFOLGENMARKE) && !text.contains('\r')
+}
+
 /// Die **eine** Stelle, die einen Text in die gehaltene Form bringt.
 ///
 /// Sie schneidet eine fuehrende Bytefolgenmarke ab und macht `\r\n` sowie
@@ -332,7 +358,7 @@ pub fn einlesen(bytes: Vec<u8>) -> Option<String> {
 ///
 /// Ein Text, der die Form schon hat, kommt ohne eine einzige Kopie zurueck.
 pub fn in_gehaltene_form(text: String) -> String {
-    if !text.starts_with(BYTEFOLGENMARKE) && !text.contains('\r') {
+    if ist_in_gehaltener_form(&text) {
         return text;
     }
 
@@ -349,6 +375,47 @@ pub fn in_gehaltene_form(text: String) -> String {
     }
     gewandelt.push_str(rest);
     gewandelt
+}
+
+/// Wohin ein Byteversatz wandert, wenn sein Text durch [`in_gehaltene_form`]
+/// geht.
+///
+/// `vorher` ist der ungewandelte Text, `versatz` eine Stelle darin auf einer
+/// Zeichengrenze, `nachher` das Ergebnis der Wandlung. Zurueck kommt die
+/// entsprechende Stelle in `nachher`, ebenfalls als Byteversatz.
+///
+/// Gebraucht wird sie an einer Stelle: der Editor richtet seine Textflaeche auf
+/// den gehaltenen Stand, nachdem ein eingefuegtes `\r\n` beide
+/// auseinandergebracht hat, und die Schreibmarke des Nutzers soll dabei stehen
+/// bleiben, wo sie stand.
+///
+/// # Gerechnet wird vom Ende her
+///
+/// Das ist der Grund, aus dem diese Rechnung **keine Regel der Wandlung
+/// wiederholt.** Was hinter `versatz` steht, wandelt sich unabhaengig von
+/// allem davor; wer den Rest wandelt und seine Laenge von der des Ergebnisses
+/// abzieht, bekommt die gesuchte Stelle, ohne zu wissen, welche Zeichen
+/// unterwegs wegfallen. Eine Zaehlung der weggefallenen Zeichen muesste
+/// dagegen bei jeder kuenftigen Regel von [`in_gehaltene_form`] nachgezogen
+/// werden, und die erste vergessene Nachziehung faende keine Pruefung.
+///
+/// **Ein Fall geht dabei um ein Zeichen daneben, und er steht hier statt
+/// verschwiegen zu werden:** steht genau an `versatz` eine Bytefolgenmarke, so
+/// schneidet die Wandlung des Restes sie als **seine** fuehrende ab, waehrend
+/// die des ganzen Textes sie als Zeichen des Nutzers stehen laesst. Die Stelle
+/// liegt dann um dieses eine Zeichen zu weit hinten. Erreichbar ist der Fall
+/// allein mit zwei Marken in einem Text, von denen die erste ganz vorn steht;
+/// ein Sonderfall dafuer waere genau die Regelwiederholung, die der Absatz
+/// darueber vermeidet.
+pub fn versatz_nach_der_wandlung(vorher: &str, versatz: usize, nachher: &str) -> usize {
+    // Ein Versatz hinter dem Text oder neben einer Zeichengrenze hat keinen
+    // Rest; die Antwort ist dann das Ende des gewandelten Textes.
+    let Some(rest) = vorher.get(versatz..) else {
+        return nachher.len();
+    };
+    nachher
+        .len()
+        .saturating_sub(in_gehaltene_form(rest.to_owned()).len())
 }
 
 /// Was von einem Stand auf die Platte geht.

@@ -409,6 +409,90 @@ fn ein_ersatztext_geht_durch_dieselbe_stelle_wie_das_eingelesene() {
     assert_eq!(unveraendert, "Äpfel 🍎\n");
 }
 
+/// Die Frage, an der die Wandlung ihren kurzen Weg nimmt, ist von aussen
+/// erreichbar und beantwortet dieselbe Sache wie die Wandlung selbst.
+///
+/// Der Editor fragt sie, um zu erfahren, ob seine Textflaeche nachzuziehen ist;
+/// die Zusicherung unten haelt beide aneinander, damit die Pruefung nicht gegen
+/// eine andere Bedingung laeuft als die Wandlung.
+#[test]
+fn die_frage_nach_der_gehaltenen_form_und_die_wandlung_sagen_dasselbe() {
+    for text in [
+        "",
+        "eins\nzwei\n",
+        "Äpfel 🍎\n",
+        "eins\r\nzwei",
+        "alter Mac\rmit einzelnem Ruecklauf",
+        "\u{feff}mit fuehrender Marke\n",
+        "ohne fuehrende\u{feff}Marke\n",
+    ] {
+        let gewandelt = datei::in_gehaltene_form(text.to_owned());
+        assert_eq!(
+            datei::ist_in_gehaltener_form(text),
+            gewandelt == text,
+            "die Frage und die Wandlung sind sich uneins ueber {text:?}"
+        );
+        assert!(
+            datei::ist_in_gehaltener_form(&gewandelt),
+            "das Ergebnis der Wandlung ist in gehaltener Form: {gewandelt:?}"
+        );
+    }
+}
+
+/// Der Defekt 260810-0215, an dem Stueck gemessen, das ihn behebt.
+///
+/// Die Textflaeche des Editors traegt ein eingefuegtes `\r\n` zeichengetreu,
+/// der gehaltene Stand traegt danach ein `\n`. Wer die Schreibmarke der Flaeche
+/// unbesehen in den Stand traegt, landet von der eingefuegten Stelle an je `\r`
+/// ein Zeichen zu weit hinten; diese Rechnung setzt sie dorthin, wo sie stand.
+#[test]
+fn eine_stelle_wandert_mit_der_wandlung_in_die_gehaltene_form() {
+    let flaeche = "erste\r\nzweite\r\ndritte";
+    let stand = datei::in_gehaltene_form(flaeche.to_owned());
+    assert_eq!(stand, "erste\nzweite\ndritte");
+
+    // Die Schreibmarke steht hinter „zweite“. Unverrechnet zeigte dieselbe Zahl
+    // im Stand schon in die dritte Zeile — das ist der Defekt.
+    let hinter_zweite = 13;
+    assert_eq!(&flaeche[..hinter_zweite], "erste\r\nzweite");
+    assert_eq!(&stand[..hinter_zweite], "erste\nzweite\n");
+
+    let gerechnet = datei::versatz_nach_der_wandlung(flaeche, hinter_zweite, &stand);
+    assert_eq!(&stand[..gerechnet], "erste\nzweite");
+
+    // Jede Zeichengrenze des ungewandelten Textes landet auf einer Grenze des
+    // gewandelten, keine ueberholt eine davor, und was hinter der Stelle steht,
+    // ist auf beiden Seiten dasselbe.
+    let mut vorige = 0;
+    for stelle in (0..=flaeche.len()).filter(|s| flaeche.is_char_boundary(*s)) {
+        let ziel = datei::versatz_nach_der_wandlung(flaeche, stelle, &stand);
+        assert!(
+            stand.is_char_boundary(ziel),
+            "die Stelle {stelle} landet neben einer Zeichengrenze"
+        );
+        assert!(ziel >= vorige, "die Stelle {stelle} ueberholt die davor");
+        vorige = ziel;
+        assert_eq!(
+            &stand[ziel..],
+            datei::in_gehaltene_form(flaeche[stelle..].to_owned()),
+            "hinter der Stelle {stelle} stehen zwei verschiedene Texte"
+        );
+    }
+
+    // Die fuehrende Bytefolgenmarke faellt weg und verschiebt alles dahinter.
+    let mit_marke = "\u{feff}Äpfel\r\n🍎";
+    let ohne_marke = datei::in_gehaltene_form(mit_marke.to_owned());
+    assert_eq!(ohne_marke, "Äpfel\n🍎");
+    assert_eq!(
+        datei::versatz_nach_der_wandlung(mit_marke, 0, &ohne_marke),
+        0
+    );
+    assert_eq!(
+        datei::versatz_nach_der_wandlung(mit_marke, mit_marke.len(), &ohne_marke),
+        ohne_marke.len()
+    );
+}
+
 /// Abgeschnitten wird allein die **fuehrende** Marke.
 ///
 /// Ein `U+FEFF` mitten im Text ist ein Zeichen des Nutzers und kein Rahmen.

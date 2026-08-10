@@ -62,6 +62,14 @@
 //! `\r\n` mit. Der zweite ist der kleinere und war der einzige, den der
 //! Modulkopf von `krk_core::text::datei` bis zum 260809 vorhersah.
 //!
+//! **Der groessere Eingang sagt, ob er gewandelt hat**, weil die `NSTextView`
+//! hinter ihm einen eigenen Textbestand fuehrt und den nicht selbst nachzieht.
+//! [`Editormodell::bearbeiten`] liefert deshalb ein `bool`: wandelte es, laufen
+//! Stand und Flaeche um die gewandelten Zeichen auseinander, und die Ansicht
+//! hat die Flaeche auf den Stand zu bringen. Der Ersatztext braucht das nicht,
+//! weil hinter ihm kein Bestand steht, der stehen bliebe. Der Defekt dazu ist
+//! `issues/260810-0215_*_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md`.
+//!
 //! **Die drei Zuweisungen an [`Editormodell::stand`] sind nicht die
 //! Eingaenge**, und daran haengt eine Messung. Wer statt der beiden Eingaenge
 //! die Zuweisungen wandelte, braeche [`Editormodell::treffer_ersetzen`]:
@@ -887,10 +895,30 @@ impl Editormodell {
     /// Programms, die das tut; siehe den Modulkopf. Ein Stand, der die Form
     /// schon hat, kommt ohne eine einzige Kopie zurueck und kostet einen
     /// Durchlauf.
-    pub fn bearbeiten(&mut self, neuer_stand: String) {
+    ///
+    /// # Der Rueckgabewert sagt, ob die Flaeche nachzuziehen ist
+    ///
+    /// `true` heisst: der hereingegebene Text war **nicht** in gehaltener Form,
+    /// und der Stand traegt jetzt andere Zeichen als der Textbestand, aus dem er
+    /// kam. Wer diesen Bestand fuehrt, hat ihn danach auf den Stand zu bringen;
+    /// tut er es nicht, zeigt dieselbe Stelle in den beiden Texten von der
+    /// Wandlung an auf Verschiedenes, und die Umrechnung zwischen den beiden
+    /// Koordinaten in `crate::appkit::koordinaten` rechnet gegen den falschen
+    /// Text (`260810-0215`).
+    ///
+    /// **Der Wert wird nicht aus einem Vergleich der beiden Zeichenketten
+    /// gewonnen**, der eine Kopie des ganzen Standes voraussetzte, sondern aus
+    /// `krk_core::text::datei::ist_in_gehaltener_form` — derselben Bedingung,
+    /// an der die Wandlung ihren kurzen Weg nimmt. Sie kostet einen zweiten
+    /// Durchlauf ueber den Text neben dem der Wandlung; gemessen an dem
+    /// Umschreiben aus UTF-16, das jedem Ruf hierher vorausgeht, ist er nicht zu
+    /// bemerken.
+    pub fn bearbeiten(&mut self, neuer_stand: String) -> bool {
+        let war_gehalten = datei::ist_in_gehaltener_form(&neuer_stand);
         self.stand = datei::in_gehaltene_form(neuer_stand);
         self.abweichung = true;
         self.suchlauf = None;
+        !war_gehalten
     }
 
     /// Schreibt den Stand in die gehaltene Datei (C4).
@@ -1955,6 +1983,39 @@ mod tests {
             "260808-0043: beim Sichern gehen Unix-Zeilenenden hinaus, {auf_der_platte:?}"
         );
         assert_eq!(auf_der_platte, "aus Windows\neingefügt\nletzte\n");
+    }
+
+    /// Der Defekt 260810-0215: das Bearbeiten sagt, ob es gewandelt hat.
+    ///
+    /// Die `NSTextView` hinter diesem Eingang fuehrt einen eigenen Textbestand
+    /// und zieht ihn nicht selbst nach. Ohne die Meldung hier bliebe ihr `\r\n`
+    /// stehen, waehrend der Stand ein `\n` traegt, und jede Stelle hinter der
+    /// eingefuegten zeigte in den beiden Texten auf Verschiedenes.
+    #[test]
+    fn ein_eingefuegtes_crlf_meldet_sich_und_ein_gewoehnlicher_anschlag_nicht() {
+        let ordner = Pruefordner::neu("crlf-meldung");
+        let pfad = ordner.datei("stand.txt", "erste Zeile\n");
+        let mut modell = geoeffnet(&pfad);
+
+        assert!(
+            !modell.bearbeiten("erste Zeile\nzweite Zeile\n".to_owned()),
+            "ein gewoehnlicher Anschlag laesst die Flaeche in Ruhe"
+        );
+        assert!(
+            modell.bearbeiten("aus Windows\r\neingefügt\n".to_owned()),
+            "ein eingefuegtes CRLF verlangt, die Flaeche nachzuziehen"
+        );
+        assert_eq!(modell.stand(), "aus Windows\neingefügt\n");
+        let gehalten = modell.stand().to_owned();
+        assert!(
+            !modell.bearbeiten(gehalten),
+            "der gewandelte Stand meldet sich nicht ein zweites Mal"
+        );
+
+        // Die fuehrende Bytefolgenmarke faellt unter dieselbe Meldung: sie
+        // verkuerzt den Stand gegenueber der Flaeche genauso.
+        assert!(modell.bearbeiten("\u{feff}mit Marke\n".to_owned()));
+        assert_eq!(modell.stand(), "mit Marke\n");
     }
 
     /// Der Ersatztext wird **vor** dem Ersetzen gewandelt, nicht der Stand

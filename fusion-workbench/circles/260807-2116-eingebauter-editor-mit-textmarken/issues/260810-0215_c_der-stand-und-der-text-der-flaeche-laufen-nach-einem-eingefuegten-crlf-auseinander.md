@@ -72,3 +72,41 @@ schon einen Delegierten.
 
 Ungemessen ist beides. Der Fall verlangt eine Entscheidung und nicht den
 nächstbesten Griff, deshalb steht er hier und nicht als Behebung im Schritt.
+
+---
+Resolved: Die Fläche wird nachgezogen, statt den `\r` am Eingang abzufangen.
+
+`Editormodell::bearbeiten` liefert seit 260810-0309 ein `bool` und sagt damit,
+ob die Wandlung zugegriffen hat; die Auskunft kommt aus
+`krk_core::text::datei::ist_in_gehaltener_form`, derselben Bedingung, an der
+`in_gehaltene_form` ihren kurzen Weg nimmt. Meldet sie sich,
+richtet `Editorbereich::flaeche_richten` die Textfläche auf den gehaltenen
+Stand und rechnet die Schreibmarke mit; wohin sie wandert, sagt
+`krk_core::text::datei::versatz_nach_der_wandlung`.
+
+**Die Wahl, die der Datensatz verlangt hat**, ist gegen den Eingangsfilter
+ausgefallen. `textView:shouldChangeTextInRanges:replacementStrings:` müsste die
+Regeln der Wandlung ein zweites Mal tragen, und es wären **nicht dieselben**:
+die Bytefolgenmarke fällt nach ihrer Stelle im ganzen Text, ein eingefügtes
+Stück kennt seine Stelle aber nur beim Einfügen. Ein Löschen, das eine Marke aus
+der Mitte an den Anfang rückt, ginge an einem solchen Filter vorbei und brächte
+die beiden erneut auseinander. Die Behebung vergleicht deshalb das Ergebnis
+statt die Eingabe und kommt ohne eine einzige Regel der Wandlung aus.
+
+**Der Preis ist der benannte und steht im Doc-Kommentar von
+`flaeche_richten`:** der Weg führt über `stand_erneuern` und damit über
+`setString:`, das am Rückgängigstapel vorbeischreibt. Ein `cmd+z` unmittelbar
+nach einem eingefügten `\r\n` wirkt gegen einen Stand, den die Fläche nicht mehr
+trägt. Es ist derselbe Preis, den das Ersetzen aus S37 schon zahlt, und
+`260809-1727` führt ihn; ein zweiter Schreibweg in die Fläche entsteht dafür
+nicht. Die Schreibmarke bleibt dagegen stehen, wo sie stand.
+
+Geändert: `crates/krk-core/src/text/datei.rs`,
+`crates/krk-ui/src/editormodell.rs`, `crates/krk-ui/src/appkit/editor.rs`.
+Proben: `eine_stelle_wandert_mit_der_wandlung_in_die_gehaltene_form` und
+`die_frage_nach_der_gehaltenen_form_und_die_wandlung_sagen_dasselbe` in
+`crates/krk-core/tests/text.rs`,
+`ein_eingefuegtes_crlf_meldet_sich_und_ein_gewoehnlicher_anschlag_nicht` in
+`editormodell.rs`,
+`nach_einem_eingefuegten_crlf_zeigt_dieselbe_stelle_in_beiden_texten_auf_dasselbe`
+in `appkit/editor.rs`. `make check` läuft mit Rückgabewert 0 durch.

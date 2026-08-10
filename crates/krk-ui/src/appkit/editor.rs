@@ -29,6 +29,8 @@
 //!   opt+cmd+e ──> Blatt ──> schliessen ──> stand_einsetzen, kopf_nachziehen
 //!
 //!   Tippen ──> textDidChange: ──> Editormodell::bearbeiten ──> kopf_nachziehen
+//!                                          │ gewandelt
+//!                                          └> flaeche_richten ──> NSTextView
 //!
 //!   cmd+s ──> sichern ──> Editormodell::sichern ──┬─ gelungen ─> kopf_nachziehen
 //!                                                 └─ jeder Ausgang ─> nach oben
@@ -140,7 +142,9 @@ use objc2_foundation::{
     NSTimer, ns_string,
 };
 
-use krk_core::text::{Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, marke};
+use krk_core::text::{
+    Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
+};
 
 use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
 use crate::hervorhebung::{
@@ -993,6 +997,13 @@ impl Editorbereich {
     /// Eine `NSTextView` bewahrt eingefuegten Text zeichengetreu auf, also
     /// kommt ein `\r\n` aus einer Windows-Quelle hier an und darf nicht weiter.
     ///
+    /// **Hat die Wandlung zugegriffen, wird die Flaeche nachgezogen.** Sie
+    /// behielte sonst ihre `\r`, waehrend der Stand sie nicht mehr traegt, und
+    /// von der eingefuegten Stelle an zeigte dieselbe Zahl in den beiden Texten
+    /// auf Verschiedenes; [`Self::flaeche_richten`] fuehrt aus, was daran
+    /// haengt. Der gewoehnliche Anschlag kommt an dieser Zeile vorbei, weil
+    /// [`Editormodell::bearbeiten`] dann `false` liefert.
+    ///
     /// **Der Kopf wird nur beim Uebergang nachgezogen.** Die Abweichungsmarke
     /// geht von falsch nach wahr und bleibt dort bis zum naechsten Sichern; sie
     /// bei jedem Anschlag neu in ein `NSTextField` zu schreiben hiesse, je
@@ -1002,12 +1013,14 @@ impl Editorbereich {
     /// dieser Datei.
     fn text_zurueckschreiben(&self) {
         let stand = self.ivars().text.string().to_string();
-        let war_abweichend = {
+        let (war_abweichend, gewandelt) = {
             let mut modell = self.ivars().modell.borrow_mut();
             let vorher = modell.hat_ungesicherten_stand();
-            modell.bearbeiten(stand);
-            vorher
+            (vorher, modell.bearbeiten(stand))
         };
+        if gewandelt {
+            self.flaeche_richten();
+        }
         if !war_abweichend {
             self.kopf_nachziehen();
         }
@@ -1098,6 +1111,63 @@ impl Editorbereich {
         self.darstellung_nachziehen();
     }
 
+    /// Bringt die Textflaeche auf den gehaltenen Stand, nachdem die Wandlung in
+    /// die gehaltene Form beide auseinandergebracht hat.
+    ///
+    /// **Der Anlass ist einer**, und [`Self::text_zurueckschreiben`] ist die
+    /// einzige Stelle, die ihn kennt: der Nutzer hat Text eingefuegt, den eine
+    /// `NSTextView` zeichengetreu aufbewahrt, `krk_core::text::datei` hat ihn
+    /// auf dem Weg in den Stand gewandelt, und die Flaeche traegt seither
+    /// Zeichen, die der Stand nicht traegt. Von der eingefuegten Stelle an
+    /// zeigte danach jede Stelle in den beiden Texten auf Verschiedenes, und
+    /// die vier Wege durch [`super::koordinaten`] — Zeilensprung, Suche,
+    /// Markensprung und die Auskunft ueber die Schreibmarkenzeile — rechneten
+    /// gegen den falschen Text. Der Defekt ist
+    /// `issues/260810-0215_*_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md`.
+    ///
+    /// # Zwei Wege standen zur Wahl, und dieser haelt die Zusage ohne zweite
+    ///
+    /// Der andere waere gewesen, das `\r` am Eingang der Flaeche abzufangen,
+    /// ueber `textView:shouldChangeTextInRanges:replacementStrings:`. Er ist
+    /// nicht genommen, weil er die Regeln der Wandlung ein zweites Mal tragen
+    /// muesste und dabei **nicht dieselben** waeren: die Bytefolgenmarke faellt
+    /// nach ihrer Stelle im ganzen Text, ein eingefuegtes Stueck kennt seine
+    /// Stelle aber nur beim Einfuegen. Ein Loeschen, das eine Marke aus der
+    /// Mitte an den Anfang rueckt, ginge an so einem Eingangsfilter vorbei und
+    /// braechte die beiden erneut auseinander. Diese Stelle hier vergleicht
+    /// stattdessen das Ergebnis und kommt deshalb ohne eine einzige Regel der
+    /// Wandlung aus.
+    ///
+    /// **Der Preis steht hier und wird nicht verschwiegen:** der Weg fuehrt
+    /// ueber [`Self::stand_erneuern`] und damit ueber `setString:`, das am
+    /// Rueckgaengigstapel vorbeischreibt. Ein `cmd+z` unmittelbar nach einem
+    /// eingefuegten `\r\n` wirkt deshalb gegen einen Stand, den die Flaeche
+    /// nicht mehr traegt. Es ist derselbe Preis, den das Ersetzen aus S37 schon
+    /// zahlt, und derselbe Defekt fuehrt ihn
+    /// (`issues/260809-1727_*_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`);
+    /// ein zweiter Schreibweg in die Flaeche neben [`Self::stand_einsetzen`]
+    /// entsteht dafuer nicht.
+    ///
+    /// **Die Schreibmarke bleibt, wo sie stand.** Sie waere sonst nach jedem
+    /// Einfuegen aus einer Windows-Quelle am Dateianfang, also genau in dem
+    /// Augenblick, in dem der Nutzer weiterschreiben will. Wohin sie wandert,
+    /// rechnet `krk_core::text::datei::versatz_nach_der_wandlung` und nicht
+    /// diese Zeile; gezeigt wird sie ueber [`Self::stelle_zeigen`], denselben
+    /// Weg, den Zeilensprung und Suche gehen.
+    fn flaeche_richten(&self) {
+        // Die Flaeche traegt in dieser Zeile noch den ungewandelten Text; das
+        // Umschreiben aus UTF-16 kostet einen zweiten Durchlauf und faellt
+        // allein auf diesen Weg, nicht auf jeden Tastendruck.
+        let vorher = self.ivars().text.string().to_string();
+        let schreibmarke = koordinaten::in_bytes(&vorher, self.schreibmarke_in_utf16());
+        let versatz = {
+            let modell = self.ivars().modell.borrow();
+            datei::versatz_nach_der_wandlung(&vorher, schreibmarke, modell.stand())
+        };
+        self.stand_erneuern();
+        self.stelle_zeigen(versatz, versatz);
+    }
+
     // ------------------------------------------------------------------
     // Der Zeilensprung, die Suche und das Ersetzen (C5)
     // ------------------------------------------------------------------
@@ -1158,16 +1228,16 @@ impl Editorbereich {
     ///
     /// Die Stelle zaehlt in den **Zeichen der Flaeche**, und umgerechnet wird
     /// sie gegen den **gehaltenen Stand**. Beide sind Zeichen fuer Zeichen
-    /// dieselben, solange nichts sie auseinanderbringt: `stand_einsetzen`
-    /// schreibt den Stand in die Flaeche, `text_zurueckschreiben` holt ihn
-    /// zurueck, und der Ansichtswechsel aus C3 fasst den Textspeicher nicht an.
+    /// dieselben, und vier Wege halten sie so: `stand_einsetzen` schreibt den
+    /// Stand in die Flaeche, `text_zurueckschreiben` holt ihn zurueck,
+    /// [`Self::flaeche_richten`] richtet die Flaeche nach, wenn die Wandlung in
+    /// die gehaltene Form dabei zugegriffen hat, und der Ansichtswechsel aus C3
+    /// fasst den Textspeicher gar nicht an.
     ///
-    /// **Ein Fall bricht die Annahme, und er ist benannt statt verschwiegen:**
-    /// wer Text mit `\r\n` aus einer Windows-Quelle einfuegt, hat danach in der
-    /// Flaeche zwei Zeichen, wo der Stand eines traegt —
-    /// `krk_core::text::datei::in_gehaltene_form` wandelt beim Zurueckschreiben,
-    /// und die Flaeche behaelt ihre Zeichen. Jede Stelle hinter der eingefuegten
-    /// ist dann um die Zahl der `\r` verschoben. Gefuehrt als
+    /// **Der vierte Weg ist der juengste**, und ohne ihn brach die Annahme: wer
+    /// Text mit `\r\n` aus einer Windows-Quelle einfuegte, hatte danach in der
+    /// Flaeche zwei Zeichen, wo der Stand eines trug, und jede Stelle hinter der
+    /// eingefuegten war um die Zahl der `\r` verschoben. Behoben mit
     /// `issues/260810-0215_*_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md`.
     fn schreibmarke_in_utf16(&self) -> usize {
         self.ivars().text.selectedRange().location
@@ -2234,5 +2304,66 @@ mod tests {
             "",
             "ohne Datei gibt es auch nichts, was abweichen könnte"
         );
+    }
+
+    /// Der Defekt 260810-0215, in der Rechnung nachgespielt, die
+    /// [`Editorbereich::flaeche_richten`] fuehrt.
+    ///
+    /// Das Fenster fehlt dieser Pruefung, die beiden Zeichenketten nicht: die
+    /// Textflaeche steht als gewoehnliches `String` da, und was `setString:`
+    /// spaeter tut, steht hier als Zuweisung. Gemessen wird, was der Defekt
+    /// benennt — dass dieselbe Stelle in beiden Texten auf dasselbe zeigt.
+    #[test]
+    fn nach_einem_eingefuegten_crlf_zeigt_dieselbe_stelle_in_beiden_texten_auf_dasselbe() {
+        // Was eine `NSTextView` nach dem Einfuegen aus einer Windows-Quelle
+        // traegt, und wo AppKit die Schreibmarke danach hat: hinter dem
+        // Eingefuegten.
+        let mut flaeche = String::from("erste\r\nzweite\r\ndritte");
+        let schreibmarke = koordinaten::in_utf16(&flaeche, &[13])[0];
+
+        let mut modell = Editormodell::neu();
+        assert!(
+            modell.bearbeiten(flaeche.clone()),
+            "das Modell verlangt, die Flaeche nachzuziehen"
+        );
+        assert_eq!(modell.stand(), "erste\nzweite\ndritte");
+
+        // Ungerichtet: die Schreibmarke steht in der Flaeche hinter „zweite“,
+        // dieselbe Zahl zeigt im Stand aber schon in die dritte Zeile.
+        let ungerichtet = koordinaten::in_bytes(modell.stand(), schreibmarke);
+        assert_eq!(&flaeche[..13], "erste\r\nzweite");
+        assert_eq!(
+            &modell.stand()[..ungerichtet],
+            "erste\nzweite\n",
+            "genau das ist die Abweichung, die 260810-0215 benennt"
+        );
+
+        // Gerichtet: die Stelle wird mitgerechnet, dann bekommt die Flaeche den
+        // Stand — dieselben zwei Schritte wie in `flaeche_richten`.
+        let versatz = datei::versatz_nach_der_wandlung(
+            &flaeche,
+            koordinaten::in_bytes(&flaeche, schreibmarke),
+            modell.stand(),
+        );
+        flaeche = modell.stand().to_owned();
+
+        assert_eq!(flaeche, modell.stand(), "beide tragen dieselben Zeichen");
+        assert_eq!(
+            &modell.stand()[..versatz],
+            "erste\nzweite",
+            "die Schreibmarke steht wieder, wo der Nutzer sie hatte"
+        );
+
+        // Und von jetzt an trifft jede Stelle des Standes in der Flaeche
+        // dieselbe: das ist die Zusage, auf der Zeilensprung, Suche,
+        // Markensprung und die Schreibmarkenzeile rechnen.
+        for stelle in (0..=modell.stand().len()).filter(|s| modell.stand().is_char_boundary(*s)) {
+            let in_der_flaeche = koordinaten::in_utf16(&flaeche, &[stelle])[0];
+            assert_eq!(
+                koordinaten::in_bytes(modell.stand(), in_der_flaeche),
+                stelle,
+                "die Stelle {stelle} kommt nicht zurueck"
+            );
+        }
     }
 }
