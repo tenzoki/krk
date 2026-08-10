@@ -36,3 +36,13 @@ Kanten-Knoten-Verhältnis: 1,09 im zweiten und 1,11 im dritten Diagramm. Unbesch
 **Was der Prüfung standhält, und zwar bemerkenswert.** Diagramm 3 bildet nach eigener Aussage den gebauten Weg ab und nicht einen gewünschten, und es hält diese Zusage: die Kette von `E` über `F`, `T`, `M`, `N` und `V` ist linear, jede Verzweigung ist zweiwertig und beschriftet, und die drei Wege nach `W` sind kein God-Node, sondern eine gemeinsame Senke mit der Bedeutung "unverändert an AppKit weiter". Der Eingangsgrad 3 auf `W` ist damit sachlich richtig und kein Strukturfehler. Der Spec benennt außerdem, dass der erste Verdächtige des Defekts aus C8 vor dem Graphen liegt, beim Abgriff des Menüs. Ein Diagramm, das seine eigene Grenze nennt, ist mehr wert als eines, das sie überzeichnet. Ebenso trägt Diagramm 2 die offene Frage an einem benannten Knoten: `S["Suche in der Nähe"]` und seine beiden Ausgänge hängen ausdrücklich am Datensatz `260807-2147_o_wie-weit-reicht-die-suche-in-der-naehe-einer-textmarke.md`. Der Graph zeigt damit, wo die Antwort ankommt, statt die Lücke zu glätten.
 
 **Kein Befund ist die fehlende Reihenfolge der Fähigkeiten.** C1 bis C8 ließen sich als Abhängigkeits-DAG zeichnen, und der Spec tut es nicht. Das ist Absicht: der Abschnitt "Offen für den Planner" überlässt die Reihenfolge dem Plan und nennt allein den sachlichen Grund, C8 vorzuziehen. Ein Diagramm an dieser Stelle behauptete eine Festlegung, die der Spec bewusst nicht trifft.
+
+---
+
+## Abgleichvermerk 260810-0805
+
+Der Spec, den dieser Bericht geprüft hat, ist seither zweimal gewachsen: am 260809-2043 um die drei Anzeigefähigkeiten C9, C10 und C11, und am 260810-0714 um die Nachträge aus S42. **Die Diagramme dieses Berichts sind damit nicht mehr der volle Diagrammbestand des Specs**, und der Bericht ist als Momentaufnahme vom 260807-2202 zu lesen, nicht als Aussage über den heutigen Stand.
+
+Der Anlass, aus dem der Bericht entstand, hat nebenbei einen Defekt hervorgebracht, der inzwischen geschlossen ist: `shared/issues/260808-0017_c_fusion-rules-gibt-conceptrev-die-stilprofile-nicht-aus.md`. Der `conceptrev` bekommt beide Stilprofile heute über `fusion-rules`, nachgemessen am 260810-0805 für alle sechzehn Agentennamen.
+
+Am Bericht selbst ist nichts geändert.

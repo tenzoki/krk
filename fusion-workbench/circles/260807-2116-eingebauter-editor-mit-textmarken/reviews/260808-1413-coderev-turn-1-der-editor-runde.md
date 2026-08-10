@@ -196,3 +196,15 @@ Nichts davon hält einen Schritt auf.
    gehört zu dem Schritt, der die Unteransicht einhängt.
 3. **Befund 3 mit S18**, wo `fenstermodell.rs` ohnehin angefasst wird.
 4. **Befunde 4, 5, 6** als Aufräumarbeit, jederzeit.
+
+---
+
+## Abgleichvermerk 260810-0805
+
+Stand der sechs Befunde im Defektspeicher, am Dateibestand abgelesen: **drei geschlossen, drei offen.**
+
+Geschlossen: `issues/260808-1413_c_breite-aendern-traegt-einen-auffangzweig-ueber-bereich-und-hat-den-fuenften-wert-geschluckt.md`, `..._c_der-wert-navigator-ist-dokumentiert-als-truegen-ihn-schon-drei-befehle.md`, `..._c_ein-sichtbarer-bereich-editor-ohne-unteransicht-verliert-seine-breite-im-fenster.md` — darunter der schwerste des Berichts.
+
+Offen: `..._o_die-begruendung-zu-syntect-nennt-den-transitiven-fussabdruck-nicht.md`, `..._o_umlaufen-behauptet-die-eine-stelle-des-umlaufs-zu-sein-voriger-laeuft-daneben-um.md`, `..._o_vier-platzhalter-nennen-ihren-abloesenden-schritt-nicht-obwohl-der-plan-ihn-fuehrt.md`. Alle drei tragen die Schwere niedrig.
+
+Am Bericht selbst ist nichts geändert.

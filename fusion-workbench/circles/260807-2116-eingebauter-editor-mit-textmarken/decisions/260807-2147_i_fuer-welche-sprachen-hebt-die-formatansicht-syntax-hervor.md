@@ -4,13 +4,13 @@
 **Domain:** code
 **Status:** answered
 **Filed by:** shaper
-**Cross-references:** `shared/decisions/260802-0842_a_editor-formatansicht-je-dateityp.md` (die beantwortete Vorfrage), `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md` §"1. Formatansicht", `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C3)
+**Cross-references:** `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` (die beantwortete Vorfrage), `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md` §"1. Formatansicht", `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C3)
 
 ---
 
 ## Question
 
-Der Nutzer hat am 260807-2139 die erste Möglichkeit aus `shared/decisions/260802-0842_a_editor-formatansicht-je-dateityp.md` gewählt: eine Formatansicht je Dateityp, und für Code heißt das Syntaxhervorhebung mit einklappbaren Blöcken. Damit ist entschieden, **was** die Formatansicht bei Code zeigt. Offen ist, **wofür**, und diese zweite Frage bestimmt den Umfang der Runde stärker als jede andere.
+Der Nutzer hat am 260807-2139 die erste Möglichkeit aus `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md` gewählt: eine Formatansicht je Dateityp, und für Code heißt das Syntaxhervorhebung mit einklappbaren Blöcken. Damit ist entschieden, **was** die Formatansicht bei Code zeigt. Offen ist, **wofür**, und diese zweite Frage bestimmt den Umfang der Runde stärker als jede andere.
 
 Der Grund ist, dass Syntaxhervorhebung keine Fähigkeit ist, die man einmal baut, sondern eine je Sprache. Jede Sprache braucht die Kenntnis ihrer Schlüsselwörter, ihrer Zeichenketten, ihrer Kommentare und ihrer Blockgrenzen. Zwischen "Rust und TOML" und "die vierzig Sprachen, die ein üblicher Editor kennt" liegt eine Größenordnung an Arbeit, und zwischen "von Hand geschriebene Regeln" und "eine fremde Kiste einbinden" eine Entscheidung über eine Abhängigkeit, die das Projekt bisher nur viermal getroffen hat.
 
@@ -49,3 +49,6 @@ Ein Hinweis zur Einklappbarkeit, unabhängig von der Wahl: sie ist eine eigene F
 
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"5. Sprachen der Syntaxhervorhebung" und §"6. Einklappbare Blöcke" — Möglichkeit 2 gewählt: eine fertige Rust-Kiste übernimmt Erkennung und Einfärbung; das Projekt schreibt keine Sprachregel selbst. Sie wird die fünfte fremde Kiste mit Wirkung auf die Anwendung und braucht eine Begründung in Cargo.toml. Zwei Preise sind angenommen: die Geschwindigkeit auf dem Referenzgerät ist ungemessen (der Abnahmelauf ist aus dieser Runde ausgeklammert), und die Kiste bringt die einklappbaren Blöcke nicht mit. Die einklappbaren Blöcke entfallen deshalb in dieser Runde und kommen als eigenes Vorhaben; die Festlegung vom 260807-2139 ("Syntaxhervorhebung mit einklappbaren Blöcken") ist damit zur Hälfte zurückgenommen. Entschieden vom Nutzer am 260808-0017.
+Implemented: `ef47206` und `41309cc` — `syntect` 5.3.0 trägt Erkennung und Einfärbung, `two-face` 0.5.2 bringt den erweiterten Sprachsatz mit TOML nach; beide stehen mit geschriebener Begründung in `Cargo.toml:103-161`, beide ohne Vorgabemerkmale. Der Sprachsatz wird in `crates/krk-ui/src/hervorhebung.rs:315` über `two_face::syntax::extra_newlines` geladen. Die vier zugesagten Sprachen sind in `crates/krk-ui/tests/syntaxkiste.rs:23` abgenommen. Der zweite angenommene Preis ist im Baum eingelöst: einklappbare Blöcke sind nicht gebaut, eine Suche nach `einklapp` und `klappbar` über `crates/` und `resources/` liefert null Treffer. Planschritte S32, S33 und S34 tragen `[DONE]`. Nachgeprüft im Abgleich am 260810.
+
+Der beim Entscheid angenommene Preis „Geschwindigkeit ungemessen" ist inzwischen gemessen und fällt schlecht aus: `issues/260810-0054_o_die-einfaerbung-laeuft-mit-0-3-mb-s-und-haengt-beim-tippen-in-grossen-dateien-hinterher.md` weist 0,3 MB/s nach. Das ist ein offener Defekt an der umgesetzten Antwort und kein Grund, die Antwort als nicht umgesetzt zu führen.

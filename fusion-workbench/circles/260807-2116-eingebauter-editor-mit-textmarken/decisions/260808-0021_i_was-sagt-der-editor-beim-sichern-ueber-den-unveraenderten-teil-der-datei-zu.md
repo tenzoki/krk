@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** implemented
 **Filed by:** shaper
-**Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_a_welche-dateien-oeffnet-der-editor-ueberhaupt.md` (die Vorfrage, aus deren Antwort diese entsteht), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C4), `crates/krk-ui/src/vorschaumodell.rs:522-527` (die bestehende Textregel der Vorschau)
+**Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_*_welche-dateien-oeffnet-der-editor-ueberhaupt.md` (die Vorfrage, aus deren Antwort diese entsteht), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C4), `crates/krk-ui/src/vorschaumodell.rs:522-527` (die bestehende Textregel der Vorschau)
 
 ---
 

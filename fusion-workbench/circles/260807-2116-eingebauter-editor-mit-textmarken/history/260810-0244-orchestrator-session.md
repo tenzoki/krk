@@ -39,3 +39,24 @@ Geprüft am 260810-0244, Arbeitsverzeichnis `/Users/k1/Projects/productive/krk`.
 ## Verlauf
 
 (wird während der Sitzung fortgeschrieben)
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: 48 von 48 Planschritten am Code belegt, aber zwei (S6, S33) tragen `[DONE]` über einem Abnahmekriterium, das der Code nicht einlöst (`resources/default-keymap.toml:663`/`:672` gegen das y-und-z-Verbot; `crates/krk-ui/src/appkit/editor.rs:1876` `addAttributes_range` statt `setTemporaryAttributes`), je mit offenem Defekt (`issues/260809-1527_*_...`, `issues/260810-0053_*_...`). Sechs Marker im Abgleich nachgezogen: fünf Entscheidungen `_a_`→`_i_`, ein Defekt `_o_`→`_c_`. 38 offene Defekte über vier Speicher, davon null kritisch und null hoch. `make check` = 0, 721 Proben, Bündel signiert.
+- Artifact↔Directive: Elf Commits in `bdecff6..HEAD` bewegen sich auf die Directive zu, keiner quer und keiner von ihr weg. Sechs fassen Code an (`d5993f1`, `2123e52`, `97891be`, `f7ef6c5`, `c68f701`, `d9fc2c8`) und liegen sämtlich auf dem Editor; fünf führen die Werkstatt nach (`9bc0d9d`, `154ad67`, `e6b76ab`, `e81a8a4`, `b7d0d50`).
+- Grounding↔Directive: Zehn aktive Entscheidungen im Circle, nach dem Abgleich alle auf `_i_`, keine offen und keine unerledigt beantwortet. Zwölf offene liegen sämtlich außerhalb dieses Circles (fünf Runde 1, fünf Tastenbelegung, zwei gemeinsam), keine widerspricht der Directive. Eine bindet den weiteren Weg: `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
+
+**Rebalance recommendation:** revise Artifact
+
+**Zwei Beurteilungen, die der Auftrag ausdrücklich verlangt hat:**
+
+**Der Netto-negativ-Schalter zeigt die erwartete Ausbeute zweier Durchsichten und keine Divergenz.** Netto dreizehn Defekte mehr, aber keiner der neunzehn neuen ist kritisch oder hoch; acht sind mittel, elf niedrig oder ohne Schwerefeld. Die Durchsicht des zweiten Turns sagt von ihren sieben ausdrücklich „keiner am ausgeführten Code". Divergenz sähe anders aus: neue Defekte in der Schwere der geschlossenen, im selben Code, bei nicht konvergierender Warteschlange. Die Warteschlange ist auf 8 von 8 gelaufen. Nicht wegzureden bleibt der Rückstand: 31 offene Defekte im aktiven Circle, drei davon an derselben ausstehenden Nutzerentscheidung hängend.
+
+**Der ausstehende Abnahmelauf ist eine benannte Grenze und verbietet dennoch den kohärenten Abschluss.** Die Sitzung selbst war stimmig. Die Runde ist es nur als „gebaut": 110 von 110 Abnahmekriterien stehen unabgehakt, und der Lauf verlangt KRK im Vordergrund. Wer den Circle jetzt schließt, schließt ihn beschränkt (`_b_`) wie Runde 1 und nicht kohärent (`_c_`). Es ist dieselbe Grenze zum zweiten Mal: die Frage nach dem Vordergrund steht seit dem 260806 offen, und eine dritte Runde endete ohne sie ebenso.
+
+**Belege im Einzelnen:** `history/260810-0810-reconciliation.md`.

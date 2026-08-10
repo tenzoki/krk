@@ -247,3 +247,13 @@ hat beides entfernt.
    „Rückgängig im Editor" abnimmt, muss wissen, unter welcher Taste es liegt.
 
 **Aufräumen, ohne Eile:** Befunde 7, 8, 9.
+
+---
+
+## Abgleichvermerk 260810-0805
+
+Die vier schweren Befunde dieses Berichts sind **alle vier geschlossen**: `issues/260809-1640_c_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`, `..._c_auf-einer-deutschen-tastatur-schluckt-cmd-y-das-rueckgaengig-des-editors.md` (260809-1642), `..._c_die-textflaeche-schaltet-allowsundo-nicht-ein-und-hat-damit-kein-rueckgaengig.md` (260809-1644), `..._c_die-zusage-ueber-den-gehaltenen-stand-hat-einen-zweiten-eingang-ohne-normalisierung.md` (260809-1646).
+
+Vom Rest des Durchgangs stehen im Speicher `260809-16xx`/`260809-17xx` fünfzehn Defekte: **zehn geschlossen, fünf offen.** Offen bleiben `260809-1610` (Zusicherung nur halb schreibbar), `260809-1652` (Typprüfung auf dem Pfad statt auf dem Deskriptor), `260809-1655` (acht Pfeile aus AppKit heraus), `260809-1728` (Modulkopf von `datei.rs`) und `260809-1746` (Probe auf die wandernden Stellen). Der letzte hängt an derselben ausstehenden Nutzerentscheidung wie `260809-1527`.
+
+Am Bericht selbst ist nichts geändert.

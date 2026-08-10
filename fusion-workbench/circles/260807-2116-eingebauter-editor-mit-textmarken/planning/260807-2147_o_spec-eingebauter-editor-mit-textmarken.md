@@ -639,3 +639,17 @@ Zwei Stellen im Abschnitt `## Grounding snapshot` desselben Datensatzes sagen we
 **Drei Bestandteile sind am 260809-2035 hinzugekommen und stehen seither in der Directive.** Der eingefügte Satz lautet: "Dazu sieht der Nutzer, wo er ist und woran er arbeitet: jeder der fünf Bereiche zeigt an, wenn er den Fokus hält, neben dem Text stehen im Editor wie im Vorschaufenster die Zeilennummern der Datei, und der Fenstertitel trägt den absoluten Pfad dessen, was der Bereich mit dem Fokus hält." Jeder der drei Teile ist einer Fähigkeit zugeordnet: die Fokusanzeige C9, die Zeilennummern in beiden Flächen C10, der Fenstertitel C11. Sie sind in der Aufzählung oben mitgezählt.
 
 **Der Shaper hat die Directive diesmal selbst geändert, und das ist eine Abweichung von seinem sonstigen Zuschnitt.** Beim Nachtrag vom 260808 hat er den zu streichenden Wortlaut genannt und die Änderung dem Orchestrator überlassen, mit der Begründung, die Directive eines aktiven Circles gehöre dem Nutzer. Der Auftrag vom 260809-2035 nennt den Datensatz und den Abschnitt ausdrücklich als Ziel. Der eingefügte Satz steht oben im Wortlaut, damit der Nutzer ihn prüfen kann; kein anderer Abschnitt des Datensatzes ist angefasst.
+
+## Reconciliation Log
+
+### 260810-0805 — Abschluss-Abgleich der Sitzung 260810-0244
+
+**Der Zustandsmarker dieser Datei bleibt auf offen, und der Grund steht in ihr selbst.** Der Spec führt 110 Abnahmekriterien über die elf Fähigkeiten C1 bis C11, dazu die beiden aus `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`. **Kein einziges davon ist abgehakt**: 110 Kästchen stehen auf `- [ ]`, null auf `- [x]`, gezählt am 260810-0805. Die Kopfzeile sagt es bereits richtig — „Gebaut, wartet auf den Abnahmelauf des Nutzers" —, und die Marke folgt ihr.
+
+Der Unterschied zum Plan daneben ist sachlich und nicht formal. Ein Plan ist geschlossen, wenn seine Schritte gebaut sind; ein Spec ist geschlossen, wenn seine Zusagen abgenommen sind. Der Abnahmelauf verlangt KRK im Vordergrund und ist damit Nutzerarbeit, die kein Agent leisten kann. Bis er gefahren ist, ist „gebaut" die richtige Aussage über diese Runde und „abgenommen" nicht.
+
+**Die Zahl der Abnahmekriterien ist 110 und nicht 111.** Nachgezählt je Fähigkeit: C1 sieben, C2 elf, C3 zwölf, C4 elf, C5 neun, C6 vierzehn, C7 acht, C8 fünf, C9 acht, C10 zwölf, C11 elf — zusammen 108 —, dazu die zwei aus dem Zeitzusagen-Abschnitt. Damit sind zwei Angaben im Umlauf bestätigt und eine widerlegt: die Erweiterungsnotiz dieses Specs rechnet für C9, C10 und C11 richtig einunddreißig, die Schlussnotiz des Defekts `issues/260810-0359_*_die-erweiterungsnotiz-zaehlt-elf-abnahmekriterien-fuer-c11-gebaut-sind-dreizehn.md` rechnet für C11 richtig elf, und `fusion-workbench/agentstate.yaml` führt mit 111 eine Zahl zu viel.
+
+**Die drei Punkte unter `## Was die Abnahme mitentscheidet` stehen unverändert offen.** Keiner von ihnen ist in dieser Sitzung entschieden worden; sie gehen mit dem Abnahmelauf an den Nutzer.
+
+**An diesem Spec ist im Abgleich nichts geändert worden außer diesem Abschnitt.** Die Verweise auf Datensätze tragen durchweg eine Sternstelle (26 Stück, null mit festem Marker) und sind von den fünf Umbenennungen dieses Abgleichs im Entscheidungsspeicher deshalb nicht betroffen.

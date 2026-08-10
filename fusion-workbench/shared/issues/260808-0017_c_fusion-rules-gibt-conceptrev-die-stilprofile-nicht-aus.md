@@ -54,3 +54,10 @@ gemeldet vom `conceptrev` selbst.
 
 Cross-references:
 `circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260807-2202-conceptrev-spec-eingebauter-editor-mit-textmarken.md`
+
+---
+Resolved: Am 260810 im Abgleich nachgemessen und erledigt. `"$FUSION_PLUGIN_ROOT/bin/fusion-rules" conceptrev` gibt beide Profile aus, `./fusion-workbench/stilwerk/chat-voice-de.yaml` an Position 7 und `./fusion-workbench/stilwerk/default-voice-de.yaml` an Position 8 seiner neun Zeilen.
+
+Der als `inference:` vermerkte ungeprüfte Punkt ist mitgeprüft und hält ebenfalls: `fusion-rules` ist für alle sechzehn Agentennamen aufgerufen worden (`analyst`, `bugfixer`, `coder`, `coderev`, `conceptrev`, `editor`, `ontocoder`, `ontorev`, `planner`, `playmaker`, `reconciler`, `shaper`, `taskplanner`, `orchestrator`, `consultant`, `investigator`), und **jeder** bekommt genau eine `chat-voice-`-Zeile. Neun davon bekommen zusätzlich das Schreibprofil; das entspricht der Festlegung in `rules/fusion-workbench-conventions.md`, Abschnitt `## Project language`, wonach der Schreibprofil-Pfad nur an Langform-Agenten geht.
+
+Behoben wurde im Plugin, nicht in KRK; dieser Speicher hat den Defekt nur geführt.

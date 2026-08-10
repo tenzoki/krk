@@ -251,3 +251,13 @@ int main(void) { @autoreleasepool {
     return 0;
 } }
 ```
+
+---
+
+## Abgleichvermerk 260810-0805
+
+**Alle sieben Befunde stehen offen**, als `issues/260810-0745` bis `260810-0751`: fünf mittlere, zwei niedrige, keiner am ausgeführten Code — so, wie der Bericht es sagt. Zwischen dem Bericht und diesem Abgleich hat sie niemand angefasst; sie sind die jüngste Fracht dieser Runde und gehen ungeteilt in die Zeit nach dem Abnahmelauf.
+
+Die tragende Messung des Berichts, die zehn Paare `set…Type:` gegen `set…Enabled:`, ist im Abgleich nicht nachgemessen worden. Der Bericht sagt, er habe sie unabhängig geprüft; ein zweiter Durchgang durch dieselbe Laufzeitprobe hätte nichts hinzugefügt, was der Bericht nicht schon trägt. `issues/260810-0748` hält dagegen fest, dass die Kopplung im Baum durch nichts gehalten wird.
+
+Am Bericht selbst ist nichts geändert.

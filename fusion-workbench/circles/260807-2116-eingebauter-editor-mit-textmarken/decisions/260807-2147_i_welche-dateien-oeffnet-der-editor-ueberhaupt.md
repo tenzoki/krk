@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** answered
 **Filed by:** shaper
-**Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C3), `shared/decisions/260802-0842_a_editor-formatansicht-je-dateityp.md`, `crates/krk-ui/src/vorschaumodell.rs:81` (die Textgrenze der Vorschau)
+**Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C3), `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md`, `crates/krk-ui/src/vorschaumodell.rs:81` (die Textgrenze der Vorschau)
 
 ---
 
@@ -47,3 +47,6 @@ Möglichkeit 3 empfehlen wir nicht. Sie erkauft einen Befehl, der nie ins Leere 
 
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md §"7. Welche Dateien der Editor öffnet" — Möglichkeit 2 gewählt: eigene höhere Grenze für den Editor, etwa 16 MB, gleiche Typregel wie die Vorschau. Alles Nichttextliche und alles Größere wird abgewiesen, mit Grund in der Statuszeile; der Übergang aus der Vorschau legt dieselbe Prüfung an wie F4. Zwei Zahlen für dieselbe Frage sind angenommen (Vorschau 1 MB, Editor 16 MB), beide tragen dieselbe Regel. speculation: die 16 MB sind ein Vorschlag und keine gemessene Größe. Bindend unabhängig von der Zahl: kein Weg darf eine Datei beim Sichern verändern, die der Editor nicht vollständig und verlustfrei als Text gelesen hat. Entschieden vom Nutzer am 260808-0017.
+Implemented: `ff6dd25` — `crates/krk-core/src/text/datei.rs:136` führt `EDITORGRENZE = 16 * 1024 * 1024`, `:153` sichert beim Übersetzen zu, dass sie über der Vorschaugrenze liegt. `:167` führt `Abweisung` mit drei Werten ohne Auffangzweig, darunter `NichtAlsTextLesbar`; das ist die bindende Zusage, dass keine Datei beim Sichern verändert wird, die nicht verlustfrei als Text gelesen wurde. Die Prüfung läuft vor dem Lesen und liest höchstens `EDITORGRENZE + 1` Bytes. Es gibt genau **eine** Aufrufstelle im Programm, `crates/krk-ui/src/editormodell.rs:456`; der Übergang aus der Vorschau geht denselben Weg (`crates/krk-ui/src/appkit/anwendung.rs:3333`). Planschritte S10 und S23 tragen `[DONE]`. Nachgeprüft im Abgleich am 260810.
+
+Zwei offene Defekte beschreiben Grenzen dieser Umsetzung und nicht eine fehlende Umsetzung: `issues/260809-1610_*_die-zusicherung-editorgrenze-groesser-textgrenze-laesst-sich-in-krk-core-nur-halb-schreiben.md` und `issues/260809-1652_*_die-typpruefung-steht-auf-dem-pfad-und-nicht-auf-dem-deskriptor.md`.
