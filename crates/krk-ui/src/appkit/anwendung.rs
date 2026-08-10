@@ -451,6 +451,26 @@ pub struct AnwendungsIvars {
     /// Antwort auf keinen Tastendruck und geht deshalb einen Rang tiefer in die
     /// Zeile. Ohne dieses Kennzeichen waere beides nicht zu unterscheiden.
     editor_aus_sitzung: Cell<bool>,
+    /// Die Stelle, auf die der laufende Ladevorgang des Editors springen soll
+    /// (C6): gemerkte Zeilennummer und gemerkter Zeileninhalt.
+    ///
+    /// **Warum die Auskunft warten muss.** Der Sprung auf eine Textmarke
+    /// oeffnet ihre Datei ueber [`Editorbereich::datei_oeffnen`], und das kehrt
+    /// seit S24 sofort zurueck, ohne gelesen zu haben. Wohin die Schreibmarke
+    /// gehoert, laesst sich erst am Text entscheiden, und der steht erst beim
+    /// Ausgang. Das Paar ist dieselbe Form, die
+    /// [`Editorbereich::schreibmarkenzeile`] beim Anlegen liefert.
+    ///
+    /// **Ein Schreiber je Anlass, ein Leser, und der Leser verbraucht es**, wie
+    /// bei [`Self::editor_aus_sitzung`] darueber:
+    /// [`Anwendungsdelegierter::editorausgang_behandeln`] nimmt es beim ersten
+    /// Ausgang heraus. Zwei Wege legen es zurueck oder ab, und beide gehoeren
+    /// zur Rueckhaltung aus C4: [`Ladeausgang::Zurueckgehalten`] legt es
+    /// zurueck, weil die zurueckgehaltene Datei genau die der Marke ist, und
+    /// bricht der Nutzer die Nachfrage ab, faellt es mit ihr. Eine abgewiesene
+    /// Datei laesst es ohne eine eigene Zeile fallen: es ist dann schon
+    /// herausgenommen.
+    vorgemerkte_marke: RefCell<Option<(u32, String)>>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -628,6 +648,7 @@ impl Anwendungsdelegierter {
             offenes_blatt: RefCell::new(None),
             beenden_ohne_nachfrage: Cell::new(false),
             editor_aus_sitzung: Cell::new(false),
+            vorgemerkte_marke: RefCell::new(None),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -1007,17 +1028,25 @@ impl Anwendungsdelegierter {
         }));
     }
 
-    /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5).
+    /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5, C6).
     ///
-    /// **Die Auswahl setzt den Ordner des aktiven Dateifensters, ohne den Tab
-    /// zu wechseln**: [`DateifensterQuelle::ordner_lesen`] liest in den
+    /// **Erst die Gueltigkeit, dann die Sorte.** Der erste Zweig gilt beiden
+    /// Sorten und stellt dieselbe Frage: ist das Ziel noch da. Ungueltig heisst
+    /// dabei allein, dass Ordner oder Datei fehlen; ob der gemerkte
+    /// Zeileninhalt einer Textmarke noch steht, entscheidet sich beim Sprung
+    /// und nur dort, und der Grund dafuer steht im Modulkopf von
+    /// [`krk_core::ablage::lesezeichen`]. Die Meldung ist eine
+    /// **Befehlsantwort**: der Nutzer hat die Auswahl eben selbst bewegt.
+    ///
+    /// **Eine Ordnermarke setzt den Ordner des aktiven Dateifensters, ohne den
+    /// Tab zu wechseln**: [`DateifensterQuelle::ordner_lesen`] liest in den
     /// sichtbaren Tab, denselben Weg, den jede Navigation aus C2 geht. Ein
     /// eigener Lesepfad fuer die Leiste entstuende sonst.
     ///
-    /// Zeigt ein Lesezeichen auf einen Ordner, den es nicht mehr gibt, nennt
-    /// die Statuszeile den Grund, und es wird nichts gelesen. Das ist die
-    /// Zusage aus C5, "statt kommentarlos nichts zu tun", und sie ist eine
-    /// **Befehlsantwort**: der Nutzer hat die Auswahl eben selbst bewegt.
+    /// **Eine Textmarke oeffnet ihre Datei im Editor und springt an die
+    /// gemerkte Stelle.** Die Fallunterscheidung ueber das [`Ziel`] ist
+    /// vollstaendig und hat keinen Auffangzweig; eine dritte Sorte haelt den Bau
+    /// an und erzwingt die Antwort, was ihre Auswahl tut.
     fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         if !auswahl.gueltig {
@@ -1029,15 +1058,50 @@ impl Anwendungsdelegierter {
                 &format!(
                     "„{}“ fehlt: {} gibt es nicht mehr",
                     auswahl.name,
-                    auswahl.ordner.display()
+                    auswahl.pfad().display()
                 ),
             );
             return;
         }
-        self.dateifenster(aktiv)
-            .quelle()
-            .ordner_lesen(&auswahl.ordner, None);
-        self.sitzung_vormerken();
+        match &auswahl.ziel {
+            Ziel::Ordner { ordner } => {
+                self.dateifenster(aktiv).quelle().ordner_lesen(ordner, None);
+                self.sitzung_vormerken();
+            }
+            Ziel::Textstelle {
+                datei,
+                zeile,
+                zeileninhalt,
+            } => self.textmarke_anspringen(datei, *zeile, zeileninhalt),
+        }
+    }
+
+    /// Oeffnet die Datei einer Textmarke im Editor und merkt vor, wohin die
+    /// Schreibmarke danach gehoert (C6).
+    ///
+    /// **Kein zweiter Weg und keine zweite Regel.** Geoeffnet wird ueber
+    /// [`Editorbereich::datei_oeffnen`] wie bei F4 und wie beim Uebergang aus
+    /// der Vorschau, und geprueft damit von `krk_core::text::datei::oeffnen`,
+    /// der einen Stelle, die entscheidet, ob der Editor eine Datei annimmt. Alles,
+    /// was auf das Oeffnen folgt, erbt dieser Weg von
+    /// [`Self::editorausgang_behandeln`], ohne eine Zeile dafuer zu schreiben:
+    /// das Hervorholen des ausgeblendeten Editors, den Fokus, den Titel, die
+    /// Abweisungsmeldung und die Nachfrage aus C4 beim Wechsel auf eine andere
+    /// Datei.
+    ///
+    /// **Die Marke bleibt gueltig, auch wenn der Editor die Datei abweist.** An
+    /// ihr hat sich nichts geaendert; gueltig heisst allein, dass die Datei da
+    /// ist, und das ist sie.
+    ///
+    /// **Gesprungen wird erst beim Ausgang**, und der Grund steht an
+    /// [`AnwendungsIvars::vorgemerkte_marke`]: hier ist noch nicht gelesen, und
+    /// wohin die Schreibmarke gehoert, entscheidet sich am Text.
+    fn textmarke_anspringen(&self, datei: &Path, zeile: u32, zeileninhalt: &str) {
+        let Some(editor) = self.ivars().editor.get() else {
+            return;
+        };
+        *self.ivars().vorgemerkte_marke.borrow_mut() = Some((zeile, zeileninhalt.to_owned()));
+        editor.datei_oeffnen(datei);
     }
 
     /// Schreibt die Lesezeichen nach `bookmarks.toml` (C5).
@@ -1061,37 +1125,34 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Legt den Ordner des aktiven Dateifensters als Lesezeichen an (C5).
+    /// `cmd+d` legt ein Lesezeichen an: einen Ordner oder eine Textstelle (C5,
+    /// C6).
     ///
-    /// Der Name kommt aus demselben Eingabeblatt, das C4 fuer das Anlegen
-    /// benutzt, vorbelegt mit dem Namen des Ordners: das ist in den meisten
-    /// Faellen der Name, den der Nutzer ohnehin vergeben haette.
+    /// **Ein Befehl fuer beide Sorten, und der Fokus waehlt.** Steht er im
+    /// Editor, merkt der Befehl die Zeile der Schreibmarke; sonst den Ordner
+    /// des aktiven Dateifensters. Ein zweiter Anlegebefehl daneben entsteht
+    /// nicht: es ist dieselbe Handlung an derselben Liste, und die eine Liste
+    /// mit zwei Sorten, die C6 zusagt, haette sonst zwei Tueren. Was der Fokus
+    /// hier entschieden hat, fragt von hier bis in `bookmarks.toml` niemand mehr
+    /// nach — die Kette nimmt seit S38 das fertige [`Ziel`] entgegen.
+    ///
+    /// Der Name kommt in beiden Faellen aus demselben Eingabeblatt, das C4 fuer
+    /// das Anlegen benutzt. Vorbelegt ist er mit dem, was der Nutzer ohnehin
+    /// vergeben haette: dem Namen des Ordners, oder dem Dateinamen mit der
+    /// Zeilennummer.
     ///
     /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
     /// verbraucht.
-    ///
-    /// **Der zweite Zweig aus S38 fehlt noch.** Mit dem Fokus im Editor soll
-    /// derselbe Befehl die Zeile der Schreibmarke merken und ein
-    /// [`Ziel::Textstelle`] anlegen; ein zweiter Anlegebefehl daneben entsteht
-    /// nicht. Von hier bis in `bookmarks.toml` ist der Weg dafuer gebaut — die
-    /// Kette nimmt seit S38 das fertige [`Ziel`] entgegen und fragt an keiner
-    /// Stelle nach der Sorte. Was fehlt, ist die **Auskunft des Editors ueber
-    /// die Zeile der Schreibmarke**: Nummer und Zeileninhalt. Sie gehoert in
-    /// `super::editor`, weil dort der Stand und die `NSTextView` beieinander
-    /// liegen und die Rechnung von AppKits UTF-16-Einheiten in Byteversaetze
-    /// schon einmal gebaut ist; sie hier ein zweites Mal zu schreiben waere der
-    /// zweite Rechenweg fuer dieselbe Umrechnung. Der Defekt fuehrt es:
-    /// `issues/260810-0036_o_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`.
     fn lesezeichen_anlegen(&self) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
-        let vorschlag = ordner
-            .file_name()
-            .map(|teil| teil.to_string_lossy().into_owned())
-            .unwrap_or_else(|| ordner.display().to_string());
+        let Some((ziel, vorschlag)) = self.anlegeziel(seite) else {
+            // Der Grund steht in der Statuszeile, und der Tastendruck ist
+            // verbraucht: der Befehl war zustaendig und hatte etwas zu melden.
+            return true;
+        };
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         namenseingabe::frei_zeigen(
@@ -1102,14 +1163,62 @@ impl Anwendungsdelegierter {
             &vorschlag,
             move |name| {
                 if let Some(selbst) = schwach.load() {
-                    let ziel = Ziel::Ordner {
-                        ordner: ordner.clone(),
-                    };
                     selbst.lesezeichen_anlegen_ausfuehren(seite, &ziel, &name);
                 }
             },
         );
         true
+    }
+
+    /// Worauf `cmd+d` gerade zeigt, und wie das Blatt es vorschlaegt (C5, C6).
+    ///
+    /// **Die eine Stelle, an der die Sorte entschieden wird.** Sie ist die
+    /// Frage nach dem Fokus und keine zweite Regel daneben: der Befehl traegt
+    /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+    /// erreicht damit auch die Leiste und die Vorschau, und dort ist der
+    /// gemeinte Ordner derselbe wie mit dem Fokus im Dateifenster, naemlich der
+    /// des aktiven.
+    ///
+    /// **Eine Marke bezeichnet genau eine Zeile.** Welche das bei mehrzeiliger
+    /// Auswahl ist, entscheidet
+    /// [`Editorbereich::schreibmarkenzeile`](super::editor::Editorbereich::schreibmarkenzeile)
+    /// und nicht diese Zeile.
+    ///
+    /// `None` heisst: der Fokus steht im Editor, und der haelt keine Datei. Es
+    /// gibt dann keine Stelle, die eine Marke bezeichnen koennte; gemeldet wird
+    /// derselbe Satz, den [`Self::editorblatt_moeglich`] fuer diesen Fall
+    /// fuehrt. Auf den Ordner des aktiven Dateifensters auszuweichen waere
+    /// falsch: der Nutzer bekaeme dann stillschweigend ein anderes Lesezeichen,
+    /// als er verlangt hat.
+    fn anlegeziel(&self, seite: Fensterseite) -> Option<(Ziel, String)> {
+        if self.fokus() == Fokus::Editor {
+            let editor = self.ivars().editor.get()?;
+            let (Some(datei), Some((zeile, zeileninhalt))) =
+                (editor.pfad(), editor.schreibmarkenzeile())
+            else {
+                self.antwort_zeigen(seite, "der Editor hält keine Datei");
+                return None;
+            };
+            let vorschlag = match datei.file_name() {
+                Some(name) => format!("{}:{zeile}", name.to_string_lossy()),
+                None => format!("{}:{zeile}", datei.display()),
+            };
+            return Some((
+                Ziel::Textstelle {
+                    datei,
+                    zeile,
+                    zeileninhalt,
+                },
+                vorschlag,
+            ));
+        }
+
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let vorschlag = ordner
+            .file_name()
+            .map(|teil| teil.to_string_lossy().into_owned())
+            .unwrap_or_else(|| ordner.display().to_string());
+        Some((Ziel::Ordner { ordner }, vorschlag))
     }
 
     /// Oeffnet den angezeigten Ordner in der eingestellten Anwendung (C11).
@@ -3273,8 +3382,15 @@ impl Anwendungsdelegierter {
     /// kein Befehl: sie holt keinen Fokus, weil der beim Start in das aktive
     /// Dateifenster gehoert, und ihre Abweisung ist die Antwort auf keinen
     /// Tastendruck.
+    ///
+    /// **Der Sprung auf eine Textmarke haengt hier an** (C6), und zwar an
+    /// derselben Stelle wie der Fokus: nach dem gelungenen Oeffnen und nachdem
+    /// der Editor hervorgeholt ist, damit die angesprungene Zeile auch im Bild
+    /// steht. Die vorgemerkte Stelle wird oben herausgenommen und damit
+    /// verbraucht; wer sie zurueckstellt, sagt es an seinem Zweig.
     fn editorausgang_behandeln(&self, ausgang: Ladeausgang) {
         let aus_sitzung = self.ivars().editor_aus_sitzung.replace(false);
+        let marke = self.ivars().vorgemerkte_marke.borrow_mut().take();
         match ausgang {
             // Einblenden und Fokus in einem Zug: `fokus_holen` holt den Bereich
             // hervor und setzt danach den Ersthelfer. Der gegenseitige
@@ -3313,6 +3429,14 @@ impl Anwendungsdelegierter {
                     // vorige Datei.
                     self.titel_nachziehen(self.fokus());
                 }
+                // Zuletzt, weil `scrollRangeToVisible:` einen Bereich ins Bild
+                // holt und der Editor dafuer auf dem Schirm stehen muss. Er ist
+                // es nach `fokus_holen` — und beim Start ohnehin, wenn die
+                // Sitzung ihn sichtbar hatte; von dort kommt allerdings nie eine
+                // vorgemerkte Marke.
+                if let Some((zeile, zeileninhalt)) = marke {
+                    self.textmarke_ausfuehren(zeile, &zeileninhalt);
+                }
             }
             // **Der zweite Anlass der Nachfrage aus C4.** Die Datei ist an
             // dieser Stelle gelesen und geprueft, und der Editor hat sie noch
@@ -3322,6 +3446,12 @@ impl Anwendungsdelegierter {
             // gleich darueber behandelt wird — dieser Zweig holt weder Fokus
             // noch Titel nach, weil beides dann von selbst hier ankommt.
             Ladeausgang::Zurueckgehalten => {
+                // Die vorgemerkte Stelle wartet mit der zurueckgehaltenen Datei:
+                // sie gehoert genau zu ihr, und der Weg zurueck aus der
+                // Nachfrage endet in `Geoeffnet`, wo sie gebraucht wird. Ihr
+                // Gegenstueck steht in `anlass_unterbleibt`, wo die
+                // zurueckgehaltene Datei fallengelassen wird.
+                *self.ivars().vorgemerkte_marke.borrow_mut() = marke;
                 self.nachfrage_zeigen(Anlass::AndereDatei);
             }
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
@@ -3347,6 +3477,26 @@ impl Anwendungsdelegierter {
                     .quelle()
                     .meldung_zeigen(&abweisung.meldung());
             }
+        }
+    }
+
+    /// Setzt die Schreibmarke auf die vorgemerkte Stelle und meldet, falls es
+    /// etwas zu melden gibt (C6).
+    ///
+    /// **Der Sprung, der kommentarlos nichts tut, entsteht nicht.** Wurde der
+    /// gemerkte Zeileninhalt weder auf seiner Nummer noch im Fenster daneben
+    /// gefunden, fuehrt die Marke trotzdem an die gemerkte Nummer, und der
+    /// Nutzer erfaehrt es in der Statuszeile; das achte Abnahmekriterium von C6
+    /// verlangt es, weil er erkennen koennen muss, dass er an einer ungeprueften
+    /// Stelle gelandet ist. Wohin gesprungen wird und wann gemeldet, entscheidet
+    /// `krk_core::text::marke` ueber
+    /// [`Editorbereich::marke_anspringen`](super::editor::Editorbereich::marke_anspringen).
+    fn textmarke_ausfuehren(&self, zeile: u32, zeileninhalt: &str) {
+        let Some(editor) = self.ivars().editor.get() else {
+            return;
+        };
+        if let Some(meldung) = editor.marke_anspringen(zeile, zeileninhalt) {
+            self.editormeldung_zeigen(&meldung);
         }
     }
 
@@ -3686,8 +3836,12 @@ impl Anwendungsdelegierter {
             Anlass::EditorSchliessen | Anlass::VorschauUmschalten | Anlass::VorschauFokus => {}
             // Die gelesene Datei wartet nicht weiter: sie kostete sonst bis zu
             // 16 MB Arbeitsspeicher fuer einen Wechsel, den der Nutzer eben
-            // abgelehnt hat.
+            // abgelehnt hat. Mit ihr faellt die vorgemerkte Stelle einer
+            // Textmarke (C6): sie gehoert zu dieser Datei, und bliebe sie
+            // stehen, spraenge das naechste F4 auf eine Stelle, die niemand
+            // verlangt hat.
             Anlass::AndereDatei => {
+                *self.ivars().vorgemerkte_marke.borrow_mut() = None;
                 if let Some(editor) = self.ivars().editor.get() {
                     editor.zurueckgehaltenes_fallenlassen();
                 }

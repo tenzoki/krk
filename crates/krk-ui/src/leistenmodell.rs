@@ -40,7 +40,7 @@
 //! werden nie abgelegt: was eingehaengt ist, weiss das System besser als eine
 //! Datei von gestern.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Verschiebung, Ziel};
 
@@ -141,17 +141,45 @@ pub enum Sinnbild {
 }
 
 /// Was hinter einer ausgewaehlten Zeile steht.
+///
+/// **Die Sorte steht im [`Ziel`] und nicht daneben** (C6). Ein zweiter
+/// Sortenwert hier waere die zweite Wahrheit darueber, was eine Zeile oeffnet,
+/// und liefe von dem weg, was in `bookmarks.toml` steht; [`Leistenmodell::sinnbild`]
+/// liest dieselbe Eigenschaft fuer die Anzeige. Ein Geraet und ein Standardort
+/// tragen [`Ziel::Ordner`], denn genau das oeffnen sie.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Auswahl {
     /// Der Name, wie er in der Leiste steht.
     pub name: String,
-    /// Der Ordner, den sie oeffnet.
-    pub ordner: PathBuf,
-    /// Ob dieser Ordner noch da ist (C5).
+    /// Was sie oeffnet: einen Ordner (C5) oder eine Stelle in einer Datei (C6).
+    pub ziel: Ziel,
+    /// Ob das Ziel noch da ist (C5, C6).
+    ///
+    /// **Ungueltig heisst allein, dass Ordner oder Datei fehlen.** Ob der
+    /// gemerkte Zeileninhalt einer Textmarke noch auf seiner Nummer steht,
+    /// entscheidet sich beim Sprung und nur dort; die Begruendung steht im
+    /// Modulkopf von [`krk_core::ablage::lesezeichen`].
     ///
     /// Immer `true` fuer ein Geraet: die Aufzaehlung nennt nur, was gerade
     /// eingehaengt ist.
     pub gueltig: bool,
+}
+
+impl Auswahl {
+    /// Der Pfad, an dem das Ziel liegt: der Ordner oder die Datei.
+    ///
+    /// **Die eine Stelle, die beide Sorten auf einen Pfad bringt.** Der
+    /// Aufrufer braucht ihn fuer den Satz ueber ein fehlendes Ziel, und der
+    /// lautet fuer beide Sorten gleich: was fehlt, ist ein Eintrag im
+    /// Dateisystem, und welcher Art er waere, sagt der Satz nicht. Wer die
+    /// Sorte braucht, sieht auf [`Self::ziel`] und bekommt dort eine
+    /// vollstaendige Fallunterscheidung.
+    pub fn pfad(&self) -> &Path {
+        match &self.ziel {
+            Ziel::Ordner { ordner } => ordner,
+            Ziel::Textstelle { datei, .. } => datei,
+        }
+    }
 }
 
 /// Ein Lesezeichen mit dem Zustand seines Ordners.
@@ -402,23 +430,26 @@ impl Leistenmodell {
 
     /// Was hinter der ausgewaehlten Zeile steht.
     ///
-    /// **Nur eine Ordnermarke liefert eine Auswahl.** [`Auswahl`] traegt einen
-    /// Ordner, und eine Textmarke hat keinen; sie liefert deshalb `None`, und
-    /// ihre Auswahl bleibt folgenlos. Das ist ein Platzhalter und keine
-    /// Festlegung: **S39** teilt die Auswahl nach der Sorte auf und laesst eine
-    /// Textmarke ihre Datei im Editor anspringen. Bis **S38** das Anlegen
-    /// bringt, entsteht in KRK ohnehin keine Textmarke.
+    /// **Beide Sorten liefern eine Auswahl** (C6). Die Fallunterscheidung
+    /// steht nicht hier, sondern beim Aufrufer: dieses Modell sagt, **was** die
+    /// Zeile bezeichnet, und `crate::appkit::anwendung` entscheidet, was daraus
+    /// folgt — ein Ordner im aktiven Dateifenster oder eine Datei im Editor.
+    ///
+    /// Bis S39 lieferte eine Textmarke hier `None`, weil [`Auswahl`] einen
+    /// Ordner trug und eine Textmarke keinen hat; ihre Auswahl blieb damit
+    /// folgenlos. Der Platzhalter ist gefallen, seit `Auswahl` das [`Ziel`]
+    /// selbst traegt.
+    ///
+    /// `None` bleibt fuer eine Ueberschrift: sie oeffnet nichts, wie das
+    /// fehlende Sinnbild in [`Self::sinnbild`] es schon sagt.
     pub fn gewaehlt(&self) -> Option<Auswahl> {
         match self.zeile(self.auswahl?)? {
             Zeile::Ueberschrift(_) => None,
             Zeile::Lesezeichen(stelle) => {
                 let gemerkt = self.lesezeichen.get(stelle)?;
-                let Ziel::Ordner { ordner } = &gemerkt.lesezeichen.ziel else {
-                    return None;
-                };
                 Some(Auswahl {
                     name: gemerkt.lesezeichen.name.clone(),
-                    ordner: ordner.clone(),
+                    ziel: gemerkt.lesezeichen.ziel.clone(),
                     gueltig: gemerkt.gueltig,
                 })
             }
@@ -426,7 +457,9 @@ impl Leistenmodell {
                 let ort = self.orte.get(stelle)?;
                 Some(Auswahl {
                     name: ort.name.clone(),
-                    ordner: ort.pfad.clone(),
+                    ziel: Ziel::Ordner {
+                        ordner: ort.pfad.clone(),
+                    },
                     gueltig: true,
                 })
             }
@@ -740,7 +773,9 @@ mod tests {
             modell.gewaehlt(),
             Some(Auswahl {
                 name: "Zwei".to_owned(),
-                ordner: PathBuf::from("/zwei"),
+                ziel: Ziel::Ordner {
+                    ordner: PathBuf::from("/zwei")
+                },
                 gueltig: false,
             }),
             "/zwei gibt es nicht, also ist das Lesezeichen ungueltig"
@@ -750,27 +785,69 @@ mod tests {
             modell.gewaehlt(),
             Some(Auswahl {
                 name: "Macintosh HD".to_owned(),
-                ordner: PathBuf::from("/"),
+                ziel: Ziel::Ordner {
+                    ordner: PathBuf::from("/")
+                },
                 gueltig: true,
             })
         );
     }
 
-    /// Der Platzhalter aus [`Leistenmodell::gewaehlt`], festgehalten, damit
-    /// niemand die Datei einer Textmarke versehentlich als Ordner ausgibt.
-    /// **S39 loest die Probe ab**: dort waehlt eine Textmarke ihre Datei im
-    /// Editor an, statt folgenlos zu bleiben.
+    /// Die Ablösung des Platzhalters aus [`Leistenmodell::gewaehlt`] (S39): eine
+    /// Textmarke liefert eine Auswahl, und die traegt ihr [`Ziel`] mitsamt
+    /// Zeilennummer und gemerktem Inhalt. Bis S39 lieferte sie `None` und blieb
+    /// damit folgenlos.
     #[test]
-    fn eine_textmarke_liefert_bis_s39_keine_auswahl() {
+    fn eine_textmarke_liefert_ihre_stelle_und_nicht_nichts() {
+        let ordner = Pruefordner::neu("markenauswahl");
+        ordner.anlegen();
+        let datei = ordner.datei("quelle.rs", "eine Zeile\n");
+
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::textstelle(
             "Stelle",
-            "/eins/datei.txt",
+            &datei,
             7,
             "eine Zeile",
         )]));
         assert!(modell.waehlen(1));
-        assert_eq!(modell.gewaehlt(), None);
+        assert_eq!(
+            modell.gewaehlt(),
+            Some(Auswahl {
+                name: "Stelle".to_owned(),
+                ziel: Ziel::Textstelle {
+                    datei: datei.clone(),
+                    zeile: 7,
+                    zeileninhalt: "eine Zeile".to_owned(),
+                },
+                gueltig: true,
+            })
+        );
+        assert_eq!(
+            modell.gewaehlt().as_ref().map(Auswahl::pfad),
+            Some(datei.as_path()),
+            "der Pfad einer Textmarke ist ihre Datei"
+        );
+    }
+
+    /// Das zehnte Abnahmekriterium von C6: fehlt die Datei, ist die Auswahl
+    /// ungueltig und nennt den Pfad, den der Aufrufer meldet — dieselbe Auskunft
+    /// wie bei einer Ordnermarke auf einen verschwundenen Ordner.
+    #[test]
+    fn eine_textmarke_auf_eine_fehlende_datei_liefert_eine_ungueltige_auswahl() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::textstelle(
+            "Fort",
+            "/gibt/es/nicht/datei.txt",
+            3,
+            "eine Zeile",
+        )]));
+        assert!(modell.waehlen(1));
+        let auswahl = modell
+            .gewaehlt()
+            .expect("die Textmarke liefert eine Auswahl");
+        assert!(!auswahl.gueltig);
+        assert_eq!(auswahl.pfad(), Path::new("/gibt/es/nicht/datei.txt"));
     }
 
     #[test]

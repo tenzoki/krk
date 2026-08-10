@@ -140,7 +140,7 @@ use objc2_foundation::{
     NSTimer, ns_string,
 };
 
-use krk_core::text::{Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage};
+use krk_core::text::{Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, marke};
 
 use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
 use crate::hervorhebung::{
@@ -186,13 +186,13 @@ use super::statuszeile;
 /// zehnten Abnahmekriterium von C2 und im achten von C6, und dieser Wert ist
 /// die Form, in der ein Befehl seinen Grund abgibt.
 ///
-/// **Der erste Ausloeser steht seit S22**: F4 weist eine Datei ab und gibt den
-/// Grund ueber [`Self::Abgewiesen`] nach oben. Bis dahin trugen dieser Wert und
-/// sein Rumpf je ein `#[allow(dead_code)]`; beide sind mit dem Ausloeser
-/// gefallen. Zwei Zeilen sind geblieben, an
-/// [`Self::MarkenstelleGeaendert`] und an [`Self::markenstelle`]: deren
-/// Ausloeser ist der Sprung auf eine Textmarke und nicht F4. Die Ankuendigung
-/// aus S21, S22 loese beide ab, war fuer die Haelfte richtig.
+/// **Seit S39 hat jeder Wert seinen Ausloeser, und keine Ausnahme steht mehr an
+/// dieser Aufzaehlung.** S22 brachte den ersten: F4 weist eine Datei ab und gibt
+/// den Grund ueber [`Self::Abgewiesen`] nach oben. Die beiden Zeilen
+/// `#[allow(dead_code)]`, die danach noch an [`Self::MarkenstelleGeaendert`] und
+/// [`Self::markenstelle`] standen, sind mit dem Sprung auf eine Textmarke
+/// gefallen; ihr Ausloeser war nie F4, und die Ankuendigung aus S21, S22 loese
+/// beide ab, war fuer die Haelfte richtig.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Editormeldung {
     /// Der Editor nimmt die Datei nicht an (C2).
@@ -209,18 +209,20 @@ pub enum Editormeldung {
     /// den `krk_core::text::marke::NAHFENSTER` Zeilen darum. Die Marke fuehrt
     /// **trotzdem** an die gemerkte Nummer; gemeldet wird, dass die Stelle
     /// sich geaendert hat, statt kommentarlos irgendwohin zu fuehren.
-    // **Diese Zeile faellt mit dem Sprung auf eine Textmarke**, dem Ausloeser
-    // dieser Variante. S21 hat S22 fuer beide Meldungen angekuendigt; das war
-    // fuer die Abweisung richtig und fuer die Marke zu frueh — F4 weist Dateien
-    // ab und laesst keine Marke springen. Bis dahin fasst die Pruefung
-    // `allein_die_nicht_wiedergefundene_markenstelle_meldet_sich` am Dateiende
-    // jeden Zweig an, tot ist also nichts. Ohne die Zeile stuende der
-    // Arbeitsbereich rot, weil `make lint` mit `-D warnings` faehrt.
-    #[allow(dead_code)]
+    ///
+    /// **Ein Wert fuer beide Auskuenfte des Sprungs**, und das ist die Antwort
+    /// auf `issues/260809-1631_*_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`.
+    /// Die Begruendung steht an [`Self::markenstelle`].
     MarkenstelleGeaendert {
         /// Die gemerkte Zeilennummer, ab 1 gezaehlt, an die die Marke gefuehrt
         /// hat.
         zeile: u32,
+        /// Wo jene Nummer im heutigen Text liegt.
+        ///
+        /// Sie sagt, **wohin** die Schreibmarke gekommen ist: auf die Zeile
+        /// selbst, an den Dateianfang oder an das Dateiende. Der Satz nennt
+        /// beides in einem Zug.
+        lage: Zeilenlage,
     },
     /// Der Stand steht in der Datei (C4).
     Gesichert {
@@ -299,22 +301,32 @@ impl Editormeldung {
     /// meldet. Ein vierter Fund haelt den Bau an und erzwingt die Antwort auf
     /// die Frage, ob er zu melden ist.
     ///
-    /// **Das beantwortet die eine Haelfte der Auskunft und nicht beide.**
-    /// `krk_core::text::Markensprung` traegt zwei verschiedene Auskuenfte: ob
-    /// der gemerkte Inhalt wiedergefunden wurde ([`Markensprung::fund`]) und ob
-    /// die angesteuerte Nummer im Text ueberhaupt vorkommt
-    /// (`Markensprung::sprung.lage`). Diese Funktion beantwortet die erste. Die
-    /// zweite ist die Meldung der Zeilenlage aus C5, die mit S35 kommt; wie die
-    /// beiden sich einen Rang teilen, wenn sie zusammentreffen, fuehrt
-    /// `issues/260809-1631_o_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`.
-    // Dieselbe Zeile und derselbe Grund wie an `MarkenstelleGeaendert`, deren
-    // einziger Erzeuger diese Funktion ist.
-    #[allow(dead_code)]
+    /// **Beide Auskuenfte des Sprungs gehen in einen Satz**, und keine
+    /// Vorrangregel entscheidet zwischen ihnen. Das ist die Antwort auf
+    /// `issues/260809-1631_*_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`,
+    /// und sie folgt aus dem Verhaeltnis der beiden: `Markensprung` traegt den
+    /// Fund und die Lage der angesteuerten Nummer, und die beiden sind **nicht
+    /// unabhaengig**. `krk_core::text::marke::wiederfinden` liefert
+    /// [`Fund::Getroffen`] und [`Fund::Verschoben`] nur fuer eine Nummer, deren
+    /// Zeile es gibt — `Zeilenindex::inhalt_der_zeile` beantwortet jede andere
+    /// mit `None`. Eine von [`Zeilenlage::Getroffen`] verschiedene Lage kommt
+    /// deshalb allein mit [`Fund::NichtGefunden`] vor.
+    ///
+    /// Daraus folgt der Zuschnitt: die erste Auskunft entscheidet **ob**
+    /// gemeldet wird, die zweite **wohin** die Schreibmarke gekommen ist. Ein
+    /// Vorrang zwischen zwei Saetzen waere falsch, denn er taete so, als koennte
+    /// jede der beiden Auskuenfte fuer sich stehen; die zweite tut es nicht.
+    /// Ein zusammengesetzter Fall neben den beiden einfachen waere ein dritter
+    /// Wert fuer denselben Sachverhalt.
+    ///
+    /// Die drei Saetze stehen in [`Self::text`]; die Fallunterscheidung ueber
+    /// die Lage ist dort vollstaendig und ohne Auffangzweig.
     pub fn markenstelle(sprung: &Markensprung) -> Option<Self> {
         match sprung.fund {
             Fund::Getroffen | Fund::Verschoben => None,
             Fund::NichtGefunden => Some(Self::MarkenstelleGeaendert {
                 zeile: sprung.zeile,
+                lage: sprung.sprung.lage,
             }),
         }
     }
@@ -326,8 +338,21 @@ impl Editormeldung {
     pub fn text(&self) -> String {
         match self {
             Self::Abgewiesen(abweisung) => abweisung.meldung(),
-            Self::MarkenstelleGeaendert { zeile } => {
-                format!("die gemerkte Stelle hat sich geändert; die Marke führt auf Zeile {zeile}")
+            // Ein Satzanfang fuer alle drei, weil alle drei dasselbe zuerst zu
+            // sagen haben; die Lage sagt danach, wohin die Schreibmarke gekommen
+            // ist. Vollstaendig und ohne Auffangzweig, wie die Fallunterscheidung
+            // im Zeilensprung darunter.
+            Self::MarkenstelleGeaendert { zeile, lage } => {
+                let wohin = match lage {
+                    Zeilenlage::Getroffen => format!("die Marke führt auf Zeile {zeile}"),
+                    Zeilenlage::VorDerErsten => {
+                        "Zeilen zählen ab 1; die Schreibmarke steht am Dateianfang".to_owned()
+                    }
+                    Zeilenlage::HinterDerLetzten => format!(
+                        "die Datei hat keine Zeile {zeile} mehr; die Schreibmarke steht am Dateiende"
+                    ),
+                };
+                format!("die gemerkte Stelle hat sich geändert; {wohin}")
             }
             Self::Gesichert { pfad } => format!("{} gesichert", pfad.display()),
             Self::SichernGescheitert { grund } => grund.clone(),
@@ -1103,15 +1128,10 @@ impl Editorbereich {
     ///   `Zeilenindex::inhalt_der_zeile` sie liefert;
     ///   `krk_core::text::marke::wiederfinden` vergleicht spaeter gegen genau
     ///   diese Form.
-    // **Diese Zeile faellt mit S38**, dem Anlegen einer Textmarke: `cmd+d` mit
-    // dem Fokus im Editor baut sein `krk_core::ablage::Ziel::Textstelle` aus
-    // dieser Auskunft und aus `Editorbereich::pfad`. Der Aufrufer ist der eine,
-    // der fehlt; die Kette dahinter bis `bookmarks.toml` steht. Tot ist nichts:
-    // die Auskunft ist der Gegenstand des Defekts
-    // `issues/260810-0036_*_dem-editor-fehlt-die-auskunft-ueber-die-zeile-der-schreibmarke.md`,
-    // und ohne die Zeile stuende der Arbeitsbereich rot, weil `make lint` mit
-    // `-D warnings` faehrt.
-    #[allow(dead_code)]
+    ///
+    /// Der Aufrufer steht seit S38: `cmd+d` mit dem Fokus im Editor baut sein
+    /// `krk_core::ablage::Ziel::Textstelle` aus dieser Auskunft und aus
+    /// [`Self::pfad`].
     pub fn schreibmarkenzeile(&self) -> Option<(u32, String)> {
         let stelle = self.schreibmarke_in_utf16();
         let modell = self.ivars().modell.borrow();
@@ -1221,6 +1241,40 @@ impl Editorbereich {
                 Some(Editormeldung::ZeileHinterDerLetzten { zeilenzahl })
             }
         }
+    }
+
+    /// Setzt die Schreibmarke auf die gemerkte Stelle einer Textmarke (C6).
+    ///
+    /// **Wohin gesprungen wird, entscheidet `krk_core::text::marke` und nicht
+    /// diese Zeile.** Dort steht die Regel: erst die gemerkte Nummer, dann der
+    /// Vergleich des gemerkten Inhalts, bei Abweichung die Suche im Fenster von
+    /// `marke::NAHFENSTER` Zeilen, und bleibt sie ohne Treffer, fuehrt die Marke
+    /// **trotzdem** an die gemerkte Nummer. Ein zweiter Rechenweg entsteht hier
+    /// nicht, und die Regel fuer eine Nummer ueber der Zeilenzahl kommt
+    /// ebenfalls von dort — sie ist dieselbe, die der Zeilensprung aus C5
+    /// darueber benutzt.
+    ///
+    /// **Gesucht wird im gehaltenen Stand und nicht in der Datei auf der
+    /// Platte**, wie bei der Suche aus C5: der Editor prueft gegen das, was er
+    /// zeigt.
+    ///
+    /// **Der Aufrufer ist `crate::appkit::anwendung` nach einem gelungenen
+    /// Ladevorgang**, also erst dann, wenn die Datei der Marke im Editor steht.
+    /// Vor dem Sprung wird sie deshalb hier weder geoeffnet noch geprueft; das
+    /// hat `krk_core::text::datei::oeffnen` auf dem einen Weg schon getan, den
+    /// [`Self::datei_oeffnen`] fuehrt.
+    ///
+    /// `None` heisst: es gibt nichts zu melden, weil der Sprung die gemerkte
+    /// Stelle wiedergefunden hat.
+    pub fn marke_anspringen(&self, zeile: u32, zeileninhalt: &str) -> Option<Editormeldung> {
+        let sprung = {
+            let modell = self.ivars().modell.borrow();
+            marke::wiederfinden(modell.stand(), zeile, zeileninhalt)
+        };
+        // Ohne Ausdehnung, wie beim Zeilensprung: eine Marke bezeichnet eine
+        // Stelle und keinen Bereich.
+        self.stelle_zeigen(sprung.sprung.versatz, sprung.sprung.versatz);
+        Editormeldung::markenstelle(&sprung)
     }
 
     /// Der Suchtext des laufenden Suchlaufs und der zuletzt eingetragene
@@ -1975,11 +2029,75 @@ mod tests {
         assert_eq!(sprung.fund, Fund::NichtGefunden);
         let meldung = Editormeldung::markenstelle(&sprung)
             .expect("ein nicht wiedergefundener Inhalt meldet sich");
-        assert_eq!(meldung, Editormeldung::MarkenstelleGeaendert { zeile: 2 });
+        assert_eq!(
+            meldung,
+            Editormeldung::MarkenstelleGeaendert {
+                zeile: 2,
+                lage: Zeilenlage::Getroffen,
+            }
+        );
         assert!(
             meldung.text().contains('2'),
             "die Meldung nennt die Zeile, an die sie geführt hat"
         );
+    }
+
+    /// Der zusammengesetzte Fall aus
+    /// `issues/260809-1631_*_ein-markensprung-kann-zwei-meldungen-zugleich-haben-und-die-zeile-traegt-eine.md`:
+    /// die gemerkte Stelle ist fort **und** die Datei ist kuerzer als die
+    /// gemerkte Nummer. Ein Satz sagt beides, und keine der beiden Auskuenfte
+    /// faellt weg.
+    #[test]
+    fn eine_marke_auf_eine_gekuerzte_datei_meldet_beide_auskuenfte_in_einem_satz() {
+        let text = "eins\nzwei\ndrei\n";
+        let sprung = wiederfinden(text, 500, "Zeile 500");
+        assert_eq!(sprung.fund, Fund::NichtGefunden);
+        assert_eq!(sprung.sprung.lage, Zeilenlage::HinterDerLetzten);
+
+        let satz = Editormeldung::markenstelle(&sprung)
+            .expect("der zusammengesetzte Fall meldet sich")
+            .text();
+        assert!(
+            satz.contains("geändert"),
+            "die erste Auskunft steht im Satz: {satz}"
+        );
+        assert!(
+            satz.contains("500") && satz.contains("Dateiende"),
+            "die zweite Auskunft steht im selben Satz: {satz}"
+        );
+    }
+
+    /// Die dritte Lage, erreichbar allein aus einer von Hand geaenderten
+    /// `bookmarks.toml` mit `zeile = 0`. Auch sie bekommt ihren eigenen Satz,
+    /// statt in einen der beiden anderen zu fallen.
+    #[test]
+    fn eine_gemerkte_nummer_null_meldet_den_dateianfang() {
+        let text = "eins\nzwei\ndrei\n";
+        let sprung = wiederfinden(text, 0, "kommt nicht vor");
+        assert_eq!(sprung.sprung.lage, Zeilenlage::VorDerErsten);
+
+        let satz = Editormeldung::markenstelle(&sprung)
+            .expect("auch die Nummer 0 meldet sich")
+            .text();
+        assert!(satz.contains("geändert"), "{satz}");
+        assert!(satz.contains("Dateianfang"), "{satz}");
+    }
+
+    /// Die drei Saetze des Markensprungs sind verschieden. Ohne diese Probe
+    /// koennte eine Lage still den Satz einer anderen bekommen.
+    #[test]
+    fn die_drei_lagen_des_markensprungs_tragen_drei_verschiedene_saetze() {
+        let saetze: Vec<String> = [
+            Zeilenlage::Getroffen,
+            Zeilenlage::VorDerErsten,
+            Zeilenlage::HinterDerLetzten,
+        ]
+        .into_iter()
+        .map(|lage| Editormeldung::MarkenstelleGeaendert { zeile: 7, lage }.text())
+        .collect();
+        assert_ne!(saetze[0], saetze[1]);
+        assert_ne!(saetze[1], saetze[2]);
+        assert_ne!(saetze[0], saetze[2]);
     }
 
     /// C4: beide Ausgaenge des Sicherns melden sich, und sie melden
