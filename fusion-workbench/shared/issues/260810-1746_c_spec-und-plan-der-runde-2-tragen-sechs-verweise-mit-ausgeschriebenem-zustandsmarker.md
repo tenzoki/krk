@@ -56,3 +56,29 @@ nach ihrem Ort, nicht je Absatz: ausgenommen sind `history/`, `reviews/`, `analy
 `issues/`, `decisions/`, `messungen/` und `spikes/`. Spec und Plan gehören nicht dazu, sie sind
 lebende Dokumente. Die Festlegung ist am 260810-1730 getroffen und in
 `shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md` begründet.
+
+---
+Resolved: Fuenf der sechs Stellen sind auf die Sternform gezogen: `spec:6`, `spec:667`,
+`plan:21`, `plan:162`, `plan:1615`. Der neu erhobene Bestand deckt sich Zeile fuer Zeile mit den
+sechs gemeldeten; drei davon waren bereits falsch, weil `_t_circle.md` seit dem Rundenabschluss
+`_b_circle.md` heisst.
+
+**Stehengelassen: `plan:1667`.** Der Satz fuehrt den festen Marker als Befund ("39 mit
+Sternstelle und einer mit festem Marker"). Eine Sternform machte den Satz selbstwidersprueflich.
+Das ist dieselbe Ausnahme, die Turn 1 fuer 13 von 76 Stellen angewandt hat: wo der Marker die
+Aussage selbst ist, bleibt er stehen. Bei `spec:667` ist nur der Pfad gezogen und das `_c_`
+daneben stehengeblieben, weil die Prosa dort behauptet, der Spec der Runde 1 trage `_c_`.
+
+Zwei Nachtraege im `## Reconciliation Log` des Plans halten fest, was durch die Umstellung
+falsch geworden waere, und berichtigen dabei einen Fehler, der schon vorher darin stand: die
+genannte Zeile 1013 traegt den Verweis nicht, er stand und steht in Zeile 162.
+
+Abgenommen mit einem Pruefskript ueber beide Dateien, exit 0: 90 Zitate geprueft, 89 mit
+Sternstelle, eines mit festem Marker an der einen zugelassenen Stelle, 0 Fehler. Die Dateimarker
+der beiden Planungsdateien sind unveraendert; berichtigt ist der Inhalt, nicht der Zustand.
+
+**Ein Rest ist eigens erfasst und nicht behoben:** acht Verweise derselben Art stehen in
+Kurzform ohne `.md` und entgehen jedem bisherigen Suchmuster dieses Projekts. Siehe
+`shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md`.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 2.

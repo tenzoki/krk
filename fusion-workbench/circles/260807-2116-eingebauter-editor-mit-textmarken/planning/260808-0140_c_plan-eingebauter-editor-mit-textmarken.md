@@ -18,7 +18,7 @@ Dieselbe Regel wie im Plan der Runde 1: ein Verweis trägt den Zustandsmarker ni
 
 ## Directive
 
-Nach dieser Runde öffnet der Nutzer eine Textdatei aus dem Dateifenster mit F4 im eingebauten Editor, bearbeitet sie in einer Rohansicht oder einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen, die in derselben Leiste und derselben Ablagedatei stehen wie seine Ordner-Lesezeichen. Der Wortlaut steht im Circle-Datensatz `_t_circle.md`, Abschnitt `## Directive`; der Spec zerlegt ihn in acht Fähigkeiten. Dieser Plan wiederholt ihn nicht, sondern baut ihn.
+Nach dieser Runde öffnet der Nutzer eine Textdatei aus dem Dateifenster mit F4 im eingebauten Editor, bearbeitet sie in einer Rohansicht oder einer Formatansicht, springt zu einer Zeilennummer, sucht und ersetzt innerhalb der geöffneten Datei und setzt Marken auf Textstellen, die in derselben Leiste und derselben Ablagedatei stehen wie seine Ordner-Lesezeichen. Der Wortlaut steht im Circle-Datensatz `_*_circle.md`, Abschnitt `## Directive`; der Spec zerlegt ihn in acht Fähigkeiten. Dieser Plan wiederholt ihn nicht, sondern baut ihn.
 
 ## Ausgangslage
 
@@ -159,7 +159,7 @@ Farbe und Unterstreichung ändern die Auslegung nicht und gehen deshalb als vor�
 
 Was sich beim Umschalten sonst noch ändert, sind drei Einstellungen an derselben `NSTextView`: die Schrift (fest gegen proportional bei einfachem Text), der Umbruch (`setWidthTracksTextView` aus gegen ein) und eben die Merkmale. Die Schreibmarke bleibt, wo sie ist, weil die Zeichen unberührt bleiben und ihre Stelle ein Zeichenindex ist; das elfte Abnahmekriterium von C3 fällt damit ohne eigenen Bau an.
 
-**Nachgezogen am 260810-0822.** Bis dahin nannte dieser Abschnitt die vorübergehenden Merkmale als **die eine** Mechanik der ganzen Formatansicht. Drei der vier zugesagten Wirkungen gehen darüber nicht, und der Bau von S33 hat es am SDK-Kopf gemessen. Der Datensatz dazu ist `issues/260810-0053_*_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md`; die Wahl des Nutzers vom 260808-0155 ist davon nicht berührt und steht jetzt in `decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`.
+**Nachgezogen am 260810-0822.** Bis dahin nannte dieser Abschnitt die vorübergehenden Merkmale als **die eine** Mechanik der ganzen Formatansicht. Drei der vier zugesagten Wirkungen gehen darüber nicht, und der Bau von S33 hat es am SDK-Kopf gemessen. Der Datensatz dazu ist `issues/260810-0053_*_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md`; die Wahl des Nutzers vom 260808-0155 ist davon nicht berührt und steht jetzt in `decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`.
 
 **Die drei Formatansichten sind eine Mechanik und nicht drei.** Einfacher Text bekommt Umbruch und eine lesbarere Schriftgröße; Code bekommt die Einfärbung der Kiste; Markdown bekommt dieselbe Einfärbung, weil die Kiste Markdown als Sprache führt, dazu eine Schriftvergrößerung für die als Überschrift erkannten Stellen. Ein Dateityp, den die Kiste nicht kennt, fällt auf die erste Form zurück und meldet keinen Fehler, wie das sechste Abnahmekriterium von C3 es verlangt. Drei Fälle, ein Weg, keine drei Sonderregeln.
 
@@ -1612,7 +1612,9 @@ Die Konvention (`rules/fusion-workbench-conventions.md`, `### Planning files`) v
 
 **Die Begründung des S42-Ausführenden ist damit im Ergebnis richtig und im Grund falsch.** Er hat auf die Handhabung der Runde 1 verwiesen, die Plan und Spec erst mit dem Schließen des Circles gezogen hat (`git:490869e`, 260807). Das ist als Beobachtung zutreffend, trägt aber nicht als Begründung: eine frühere Handhabung hebt eine geschriebene Regel nicht auf. Was trägt, sind S6 und S33.
 
-Sobald beide Defekte entschieden sind, gehört diese Datei auf `_c_`. Die Umbenennung zieht eine zweite nach sich: die Zeile `**Active spec/plan:**` im Circle-Datensatz `_t_circle.md:7` nennt beide Dateien mit festem Marker und liefe sonst ins Leere. Sie gehört dem Orchestrator.
+Sobald beide Defekte entschieden sind, gehört diese Datei auf `_c_`. Die Umbenennung zieht eine zweite nach sich: die Zeile `**Active spec/plan:**` im Circle-Datensatz `_*_circle.md:7` nennt beide Dateien mit festem Marker und liefe sonst ins Leere. Sie gehört dem Orchestrator.
+
+**Nachtrag vom 260810-1746:** beides ist eingetreten, und die zweite Umbenennung hat sich erübrigt. Diese Datei trägt seit `511e362` (260810-0837) den Marker `_c_`. Die Zeile `**Active spec/plan:**` im Circle-Datensatz ist am 260810-1730 auf die Sternstelle gezogen worden und nennt beide Dateien seither ohne festen Marker; sie läuft damit nicht mehr ins Leere, gleich wie diese hier heißt.
 
 #### Weitere Befunde, keiner davon am gebauten Verhalten
 
@@ -1665,6 +1667,8 @@ Nichts an diesem Plan außer den genannten Stellen und diesem Abschnitt. Über d
 **Die 48 Schritte tragen unverändert `[DONE]`, und der Kopfstatus ist unangetastet.** Am Plantext nachgemessen und nicht angenommen: die 48 Schrittmarken der Form `#### N. [DONE]` sind gegenüber dem Stand `38a02b2` unverändert, `[IN PROGRESS]` kommt nicht vor, und Zeile 4 mit `**Status:** Gebaut. …` ist byteweise dieselbe. Die Sitzung hat den Plantext in zwei Commits angefasst, `8d59993` und `c0b96a6`, und beide sind Prosa: die drei Berichtigungen des Abschnitts darüber und drei gekürzte Defektverweise, die jetzt ihren vollen Namen mit Sternstelle tragen (Zeile 1352). Eine `grep`-Zählung auf `[DONE]` steigt von 55 auf 56, und der Zuwachs ist der Satz „Kein `[DONE]` und kein Status im Kopf ist angefasst" selbst.
 
 **Alle Verweise dieses Plans lösen auf.** 40 Verweise auf Datensätze und Sitzungsberichte geprüft, davon 39 mit Sternstelle und einer mit festem Marker (`decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`, Zeile 1013); er trifft. Kein toter Verweis, auch nicht nach den 52 Markerumbenennungen dieser Sitzung im Defektspeicher.
+
+**Nachtrag vom 260810-1746:** dieser eine feste Marker ist auf die Sternstelle gezogen, der Plan trägt in der vollen Namensform damit keinen mehr. Die Klammer darüber behält ihren ausgeschriebenen Marker, weil er dort der Befund selbst ist und eine Sternstelle die Aussage löschte. Die Zeilenangabe 1013 traf schon damals nicht: der Verweis stand in Zeile 162 und steht dort weiter.
 
 **Eine Aussage im Kopf ist veraltet, und sie zu berichtigen gehört nicht dem `reconciler`.** Zeile 6 nennt „die sechs `_a_`-Datensätze unter `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/`". Im Bestand trägt kein Datensatz dieses Speichers mehr den Marker `_a_`: es sind zehn `_i_`, zwei `_o_` und ein `_s_`, gezählt am 260810-1404. Die Zeile ist damit in der Zahl und im Marker falsch. Sie steht im Kopf, wo der Marker nach der Regel aus `## Wie dieser Plan auf Datensätze verweist` ausdrücklich eine Aussage über den Stand ist und keine Sternstelle tragen darf — deshalb ist sie mit gewandert und nicht durch die Sternstellen-Regel geschützt. Der Nutzer oder der Orchestrator zieht sie nach; der `reconciler` schreibt keine Kopfzeilen um.
 
