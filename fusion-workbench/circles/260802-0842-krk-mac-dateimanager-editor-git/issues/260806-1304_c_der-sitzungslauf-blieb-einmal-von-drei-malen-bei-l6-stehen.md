@@ -152,3 +152,20 @@ Abbruch ist nicht eingetreten, obwohl er jetzt sichtbar waere.
 
 Der Datensatz bleibt vorerst auf zurueckgestellt. Ob er schliesst, entscheidet der Nutzer; die
 Evidenz steht hier, damit die Entscheidung nicht aus dem Gedaechtnis getroffen werden muss.
+
+---
+Resolved: Vom Nutzer am 260810-2140 geschlossen, nach dem Abnahmelauf vom selben Tag. L6 hat in
+allen sechs Runden beider Laeufe (`messungen/260810-1912-alle-zusagen.txt`,
+`messungen/260810-1918-alle-zusagen.txt`) seine zwanzig Werte geliefert und die Zusage gehalten.
+
+**Geschlossen wird er als nicht wieder aufgetreten, nicht als erklaert.** Welcher der beiden
+Faelle der Abbruch vom 260806 war, ist nach wie vor unbekannt und wird es bleiben: die Frage war
+allein aus dem naechsten Abbruch zu beantworten, und der ist ausgeblieben. Die Staerke der
+Evidenz steht im Nachtrag darueber und wird hier nicht schoengerechnet — zwei saubere Laeufe sind
+schwach, sechs saubere Runden sind es weniger, und welche Zaehlung gilt, sagt die urspruengliche
+Aufzeichnung nicht.
+
+Was fuer die Schliessung spricht: die codierbare Haelfte des Befunds ist am 260807 gebaut, und
+der Abbruch, den sie sichtbar machen wuerde, ist nicht eingetreten. Tritt der Aussetzer wieder
+auf, ist das ein neuer Datensatz mit einer neuen Messreihe und keine Wiedereroeffnung dieses
+einen.

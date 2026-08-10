@@ -102,3 +102,26 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Deferred: **Option 4, „erst messen"** — vom Nutzer am 260810-2140 gewaehlt, der Empfehlung dieses
+Datensatzes folgend. `mindestanteil_prozent: 65` (`crates/krk-bench/src/messen.rs:1147`) bleibt
+unveraendert; am Code ist nichts zu tun, und genau deshalb ist dieser Datensatz zurueckgestellt
+und nicht beantwortet.
+
+**Der Ausloeser, der ihn wieder aufmacht, ist Teil der Antwort und steht hier, damit er nicht
+vergessen wird: weitere Abnahmelaeufe an verschiedenen Tagen.** Fuenf sind im Optionstext
+genannt; die Zahl ist ein Vorschlag und keine Zusage. Entscheidbar wird die Frage, sobald sich
+aus mehreren Laeufen ablesen laesst, wo der Boden von L9 wirklich liegt — heute streuen die
+Runden eines einzigen Laufs um 20 Punkte, von 70 bis 90.
+
+**Die Falle, die dieser Datensatz oben selbst benennt, ist mit dieser Antwort scharf.** Option 1
+(„bei 65 bleiben") und Option 4 sind im Ergebnis dasselbe, solange niemand die weiteren Laeufe
+faehrt. Wird nicht gemessen, ist in der Sache Option 1 entschieden — nur ohne dass es jemand
+aufgeschrieben haette. Damit das auffaellt statt zu verschwinden, nennt `CLAUDE.md` diesen
+Datensatz samt seinem Ausloeser im Absatz ueber L9; die Datei wird in jeder Sitzung geladen und
+ist die einzige Flaeche hier, an der ein zurueckgestellter Datensatz nicht aus dem Blick faellt.
+
+Ein zurueckgestellter Datensatz zaehlt als Grounding-Historie und taucht in einer Suche nach
+aktiver Grundlage (`_o_` und `_a_`) nicht mehr auf. Das ist bei dieser Frage richtig — sie bindet
+keine laufende Arbeit — und zugleich der Grund fuer den Verweis aus `CLAUDE.md`.

@@ -86,3 +86,40 @@ angehoben wird.
 |---|---|
 | `c531e70` | Die zwei Messberichte, Duplikat entfernt |
 | `69d2156` | `CLAUDE.md` nachgezogen, L9-Entscheidung, L6-Evidenz |
+
+---
+
+## Nachtrag 260810-2140: die beiden Entscheidungen sind gefallen
+
+**L6 (`260806-1304`) ist geschlossen.** Der Nutzer hat entschieden, nachdem die Evidenz am
+Datensatz stand. Geschlossen wird er als *nicht wieder aufgetreten*, ausdrücklich nicht als
+*erklärt*: welcher der beiden Fälle der Abbruch vom 260806 war, war allein aus dem nächsten
+Abbruch zu beantworten, und der ist ausgeblieben. Tritt der Aussetzer wieder auf, ist das ein
+neuer Datensatz mit einer neuen Messreihe.
+
+**L9 (`260810-2132`) ist zurückgestellt, Option 4 „erst messen".** `mindestanteil_prozent: 65`
+bleibt unverändert; am Code ist nichts zu tun, und genau deshalb `_d_` und nicht `_a_` — die
+Zurückstellung ist hier die Antwort, nicht ein Warten auf Umsetzung.
+
+**Ein Nebeneffekt dieser Wahl ist bearbeitet worden, statt ihn eintreten zu lassen.** Ein
+zurückgestellter Datensatz zählt als Grounding-Historie und fällt aus jeder Suche nach aktiver
+Grundlage (`_o_` und `_a_`) heraus. Bei dieser Frage ist das richtig — sie bindet keine laufende
+Arbeit —, öffnet aber genau die Falle, die der Datensatz selbst benennt: Option 1 und Option 4
+sind im Ergebnis dasselbe, solange niemand die weiteren Läufe fährt, und wer nicht misst,
+entscheidet in Wahrheit Option 1, ohne es aufgeschrieben zu haben.
+
+Dagegen steht jetzt eine Stelle, die nicht aus dem Blick fällt: `CLAUDE.md` nennt im Absatz über
+L9 den zurückgestellten Datensatz **samt seinem Auslöser** — weitere Abnahmeläufe an
+verschiedenen Tagen. Die Datei wird in jeder Sitzung geladen und ist damit die einzige Fläche
+dieses Projekts, an der eine zurückgestellte Frage sichtbar bleibt. Das ist kein Mechanismus,
+sondern eine Gewohnheit; mehr steht hier nicht zur Verfügung, und es als Mechanismus zu
+bezeichnen wäre falsch.
+
+### Stand danach
+
+| Art | Zahl |
+|---|---|
+| Offene Defekte | 5 |
+| Zurückgestellte Defekte | 0 |
+| Offene Entscheidungen | 12 |
+| Zurückgestellte Entscheidungen | +1 (`260810-2132`) |
