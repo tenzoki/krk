@@ -2008,40 +2008,8 @@ wenn sie es in jeder Runde tut.
 mod tests {
     use super::*;
     use crate::fixture;
+    use crate::wegwerfordner::Wegwerfordner;
     use std::fs;
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-    struct Wegwerfordner {
-        pfad: PathBuf,
-    }
-
-    impl Wegwerfordner {
-        fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let mut pfad = std::env::temp_dir();
-            pfad.push(format!(
-                "krk-bench-messen-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = fs::remove_dir_all(&pfad);
-            Self { pfad }
-        }
-
-        fn pfad(&self) -> &Path {
-            &self.pfad
-        }
-    }
-
-    impl Drop for Wegwerfordner {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.pfad);
-            if let Ok(steckbrief) = fixture::steckbriefpfad(&self.pfad) {
-                let _ = fs::remove_file(steckbrief);
-            }
-        }
-    }
 
     fn ms(zahl: u64) -> Duration {
         Duration::from_millis(zahl)

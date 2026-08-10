@@ -112,36 +112,9 @@ fn gleicher_ordner(links: &Path, rechts: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::*;
-
-    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
-    struct Pruefordner {
-        pfad: PathBuf,
-    }
-
-    impl Pruefordner {
-        fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let mut pfad = std::env::temp_dir();
-            pfad.push(format!(
-                "krk-pfadeingabe-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = fs::remove_dir_all(&pfad);
-            fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-            Self { pfad }
-        }
-    }
-
-    impl Drop for Pruefordner {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.pfad);
-        }
-    }
+    use crate::pruefordner::Pruefordner;
 
     #[test]
     fn ein_relativer_pfad_meldet_und_navigiert_nicht() {
@@ -158,7 +131,7 @@ mod tests {
     #[test]
     fn ein_nicht_vorhandener_pfad_meldet_und_navigiert_nicht() {
         let ordner = Pruefordner::neu("fehlt");
-        let ergebnis = pruefen(&ordner.pfad.join("gibtsnicht"), &ordner.pfad);
+        let ergebnis = pruefen(&ordner.unter("gibtsnicht"), ordner.pfad());
         let Ergebnis::Meldung(text) = ergebnis else {
             panic!("ein fehlender Pfad fuehrte zu einer Navigation");
         };
@@ -171,11 +144,11 @@ mod tests {
     #[test]
     fn ein_ordner_fuehrt_zum_wechsel_ohne_auswahl() {
         let ordner = Pruefordner::neu("wechsel");
-        let unten = ordner.pfad.join("unten");
+        let unten = ordner.unter("unten");
         fs::create_dir(&unten).expect("Unterordner");
 
         assert_eq!(
-            pruefen(&unten, &ordner.pfad),
+            pruefen(&unten, ordner.pfad()),
             Ergebnis::Wechseln {
                 ordner: unten,
                 auswahl: None
@@ -186,13 +159,13 @@ mod tests {
     #[test]
     fn eine_datei_woanders_fuehrt_zum_wechsel_mit_auswahl() {
         let ordner = Pruefordner::neu("datei-woanders");
-        let unten = ordner.pfad.join("unten");
+        let unten = ordner.unter("unten");
         fs::create_dir(&unten).expect("Unterordner");
         let datei = unten.join("idee.txt");
         fs::write(&datei, b"x").expect("Datei");
 
         assert_eq!(
-            pruefen(&datei, &ordner.pfad),
+            pruefen(&datei, ordner.pfad()),
             Ergebnis::Wechseln {
                 ordner: unten,
                 auswahl: Some("idee.txt".to_owned())
@@ -204,11 +177,11 @@ mod tests {
     #[test]
     fn eine_datei_im_angezeigten_ordner_wechselt_den_ordner_nicht() {
         let ordner = Pruefordner::neu("datei-hier");
-        let datei = ordner.pfad.join("idee.txt");
+        let datei = ordner.unter("idee.txt");
         fs::write(&datei, b"x").expect("Datei");
 
         assert_eq!(
-            pruefen(&datei, &ordner.pfad),
+            pruefen(&datei, ordner.pfad()),
             Ergebnis::NurAuswahl {
                 name: "idee.txt".to_owned()
             }
@@ -219,9 +192,9 @@ mod tests {
     #[test]
     fn ein_abschliessender_schraegstrich_erzwingt_keinen_ordnerwechsel() {
         let ordner = Pruefordner::neu("schraegstrich");
-        let datei = ordner.pfad.join("idee.txt");
+        let datei = ordner.unter("idee.txt");
         fs::write(&datei, b"x").expect("Datei");
-        let mit_strich = format!("{}/", ordner.pfad.display());
+        let mit_strich = format!("{}/", ordner.pfad().display());
 
         assert_eq!(
             pruefen(&datei, Path::new(&mit_strich)),
@@ -236,12 +209,12 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let ordner = Pruefordner::neu("kein-leserecht");
-        let gesperrt = ordner.pfad.join("gesperrt");
+        let gesperrt = ordner.unter("gesperrt");
         fs::create_dir(&gesperrt).expect("Unterordner");
         fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
             .expect("Rechte lassen sich setzen");
 
-        let ergebnis = pruefen(&gesperrt, &ordner.pfad);
+        let ergebnis = pruefen(&gesperrt, ordner.pfad());
 
         // Aufraeumen, bevor die Probe fehlschlagen kann: sonst bleibt ein
         // Ordner liegen, den `remove_dir_all` nicht mehr betreten darf.

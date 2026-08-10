@@ -150,3 +150,32 @@ zeigt und ein zweites den Anschlag davor.
 Abnahme: `cargo build --workspace`, `cargo test --workspace`,
 `cargo clippy --workspace --all-targets`, `cargo fmt -p krk-ui --check` — alle
 exit 0.
+
+---
+
+## Abgleich am 260810: vier Angaben im Behebungsteil stimmen nicht mehr, eine stimmte nie
+
+Die Behebung selbst ist am Code belegt und bleibt geschlossen. Vier Angaben in
+ihrem Text sind nachzuziehen; drei sind durch spätere Behebungen derselben
+Sitzung überholt, eine war von Anfang an falsch.
+
+**Falsch, und zwar schon am behebenden Commit `bb43315`: „alle sieben
+Aufrufstellen nennen ihn".** Es sind acht. Am Stand von `bb43315` lagen sie auf
+den Zeilen 926, 1108, 1134, 1188, 1421, 1541, 1836 und 1870 von
+`crates/krk-ui/src/appkit/editor.rs`, heute auf 1460, 1652, 1678, 1732, 2114,
+2228, 2535 und 2626. Die Zahl ist damit keine Abwanderung, sondern ein
+Zählfehler; die Aussage „die Aufzählung ist vollständig und hat keinen
+Auffangzweig" ist davon unberührt und hält.
+
+**Überholt durch `issues/260810-1044_*_ein-eingefuegtes-crlf-bleibt-nicht-ruecknehmbar-und-der-grund-liegt-am-eingang-der-flaeche.md`:**
+`Verlauf` trägt nicht zwei Werte, sondern drei. `TraegtNurDiese(Umkehrpunkt)`
+steht neben `Faellt` und `Traegt(Umkehrpunkt)`
+(`crates/krk-ui/src/appkit/editor.rs:1027-1036`), und das CRLF-Richten geht
+seither nicht mehr als `Faellt`, sondern als `TraegtNurDiese` (`:2228`).
+
+**Überholt durch `issues/260810-1314_*_ein-wiederholtes-sammelersetzen-legt-je-ruf-einen-bereich-in-dateigroesse-in-den-stapel.md`:**
+der `Umkehrpunkt` trägt nicht mehr den ganzen gehaltenen Stand samt Auswahl,
+sondern nur den geänderten Bereich, also `anfang`, `entfernt`, `eingefuegt` und
+`auswahl` (`crates/krk-ui/src/appkit/editor.rs:687-700`).
+
+Geprüft im Abschluss-Abgleich der Sitzung 260810-0845.

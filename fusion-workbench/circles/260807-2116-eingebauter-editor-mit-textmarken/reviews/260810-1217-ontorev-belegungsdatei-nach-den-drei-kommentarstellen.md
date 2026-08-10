@@ -178,3 +178,17 @@ Alle drei sind unabhängig voneinander. Befund 1 und Befund 2 gehören `ontocode
 - **Ob die Kombinationen am laufenden Bündel auslösen.** Das verlangt KRK im Vordergrund und ist Nutzerarbeit; der Grund steht in `CLAUDE.md` unter „Was man nicht sieht".
 - **Die Belegung auf einer nicht-deutschen und nicht-amerikanischen Tastatur.** Der Zeichennachschlag macht die Aussage plausibel, dass keine Kombination wandert, aber gemessen ist sie an keinem anderen Layout. `inference:`, nicht geprüft.
 - **Die übrigen Kommentarblöcke der Datei außerhalb der drei genannten Stellen** sind auf Behauptungen über den Nachschlag durchsucht (`grep` auf „Tastencode", „Stelle", „Zeichen", „Aufschrift", „kVK") und tragen keine weitere. Sie sind nicht Satz für Satz gegen den Code gelesen.
+
+---
+
+## Anmerkung des Abgleichs, 260810-1404
+
+**Alle drei Befunde dieser Durchsicht sind geschlossen, alle drei mit Commit `bf0fe18`.** Am Dateibestand geprüft im Abschluss-Abgleich der Sitzung 260810-0845:
+
+| Befund | Datensatz, jetzt `_c_` | Beleg im Baum |
+|---|---|---|
+| 1 — Medium, fünf e-Tasten und vier vorhanden | `issues/260810-1217` | `resources/default-keymap.toml:482` sagt „Vier von ihnen", vier `e`-Kombinationen nachgezählt |
+| 2 — Low, `belegung_ansehen` als Funktion ohne Kommando | `issues/260810-1218` | `default-keymap.toml:26-29` trägt die historische Notiz, `Kommando::BelegungAnsehen` unverändert auf `crates/krk-core/src/tasten/belegung.rs:409` |
+| 3 — Low, die zwei Zahlen wachsen nicht mit | `issues/260810-1219` | die Probe `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` (`belegung.rs:1237`) liest die Kommentarzeile über `zahlen_aus_dem_dateikopf` (`:1273`) und bricht mit Meldung ab, wenn ihre Form fehlt; nachgezählt 71 Funktionen und 79 Kombinationen |
+
+Befund 3 ist der einzige der zehn Befunde dieser Sitzung, dessen Behebung eine Probe hinterlässt, die die Angabe künftig selbst hält, statt sie nur zu berichtigen.

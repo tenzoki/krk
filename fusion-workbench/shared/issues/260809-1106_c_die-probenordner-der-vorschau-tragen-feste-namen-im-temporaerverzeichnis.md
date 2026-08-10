@@ -76,3 +76,12 @@ und zur selben Zeit mehrere Agenten am Arbeitsbereich arbeiteten.
 
 Cross-references:
 `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1106-coder-s9-einlesen-und-sicherungsform.md`
+
+---
+Resolved: 0140df7 — behoben durch `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1256_*_die-proben-des-vorschaumodells-legen-ihre-ordner-unter-festen-namen-an.md`, das denselben Gegenstand im aktiven Circle führte. Die sieben festen Namen in `crates/krk-ui/src/vorschaumodell.rs` sind fort; alle sieben Rufe gehen über `Pruefordner::neu`, der Name trägt Prozesskennung und Laufnummer, und `Drop` räumt ab. Am Code geprüft im Abschluss-Abgleich der Sitzung 260810-0845: acht `Pruefordner::neu`-Rufe in der Datei, kein `temp_dir().join("krk-vorschau-probe-…")` mehr, `pfad(&self) -> &Path` an beiden Fassungen.
+
+**Der Weg weicht in einer Nebensache ab, die Wirkung nicht.** Dieser Datensatz schlug vor, die zwölf Zeilen aus `crates/krk-core/tests/verzeichnis.rs` zu übernehmen; genommen ist die Fassung, die bei der Behebung von `260810-1247` schon in `vorschaumodell.rs` stand.
+
+**Zwei Dinge bleiben und sind nicht mit geschlossen.** Erstens: die beiden Fehlschläge vom 260809 um 11:00 sind bis heute nur mit dem naheliegendsten Verdacht erklärt, dass `fs::write` die Zieldatei vor dem Schreiben kürzt, und nicht mit einer belegten Ursache. Dieser Datensatz sagt es selbst — bleibt der Fehler nach dem Umbau, war es etwas anderes. Zweitens: dass dieselbe Bauform zwölfmal getrennt im Baum steht, unter zwei Namen, ist ein anderer Gegenstand und läuft weiter als `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1330_o_derselbe-selbstabraeumende-pruefordner-steht-zwoelfmal-im-baum.md`.
+
+Geschlossen vom `reconciler` im Abschluss-Abgleich, nicht in der Sitzung, die den Code geändert hat: der Marker war der einzige im ganzen Bestand, der nach dieser Sitzung nicht mehr zum Code passte.

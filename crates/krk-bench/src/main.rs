@@ -29,6 +29,10 @@
 mod bericht;
 mod fixture;
 mod messen;
+/// Der Wegwerfordner der Proben. Nur im Probenbau uebersetzt, weil ihn kein
+/// ausgeliefertes Programm braucht.
+#[cfg(test)]
+mod wegwerfordner;
 
 use std::io;
 use std::path::{Path, PathBuf};

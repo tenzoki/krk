@@ -28,7 +28,6 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -39,83 +38,15 @@ use krk_core::operation::{
 };
 use krk_core::verzeichnis::sys::Uebertragungsart;
 
-// ---------------------------------------------------------------------------
-// Pruefordner und Hilfsmittel
-// ---------------------------------------------------------------------------
+mod gemeinsam;
+use gemeinsam::Pruefordner;
 
-static ZAEHLER: AtomicU64 = AtomicU64::new(0);
+// ---------------------------------------------------------------------------
+// Hilfsmittel
+// ---------------------------------------------------------------------------
 
 /// Die beiden Zeitmessungen laufen nacheinander, nicht nebeneinander.
 static ZEITMESSUNG: Mutex<()> = Mutex::new(());
-
-/// Ein Ordner unter `/tmp`, der sich selbst wieder abraeumt.
-struct Pruefordner {
-    pfad: PathBuf,
-}
-
-impl Pruefordner {
-    fn neu(zweck: &str) -> Self {
-        let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-        let mut pfad = std::env::temp_dir();
-        pfad.push(format!(
-            "krk-operation-{zweck}-{}-{laufnummer}",
-            std::process::id()
-        ));
-        let _ = entsperren_und_loeschen(&pfad);
-        fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-        Self { pfad }
-    }
-
-    fn pfad(&self) -> &Path {
-        &self.pfad
-    }
-
-    fn unter(&self, name: &str) -> PathBuf {
-        self.pfad.join(name)
-    }
-
-    fn ordner(&self, name: &str) -> PathBuf {
-        let pfad = self.unter(name);
-        fs::create_dir_all(&pfad).expect("Ordner laesst sich nicht anlegen");
-        pfad
-    }
-
-    fn datei(&self, name: &str, inhalt: &str) -> PathBuf {
-        let pfad = self.unter(name);
-        fs::write(&pfad, inhalt).expect("Datei laesst sich nicht schreiben");
-        pfad
-    }
-}
-
-impl Drop for Pruefordner {
-    fn drop(&mut self) {
-        let _ = entsperren_und_loeschen(&self.pfad);
-    }
-}
-
-/// Raeumt einen Baum ab und gibt vorher jedem Eintrag wieder Rechte.
-///
-/// Die Rechtepruefung legt einen Eintrag mit `0o000` an. Ohne dieses
-/// Zurueckdrehen bliebe er liegen, und `/tmp` fuellte sich mit Resten.
-fn entsperren_und_loeschen(pfad: &Path) -> std::io::Result<()> {
-    if let Ok(angaben) = fs::symlink_metadata(pfad) {
-        if !angaben.is_symlink() {
-            let _ = fs::set_permissions(pfad, fs::Permissions::from_mode(0o755));
-        }
-        if angaben.is_dir()
-            && let Ok(eintraege) = fs::read_dir(pfad)
-        {
-            for eintrag in eintraege.flatten() {
-                let _ = entsperren_und_loeschen(&eintrag.path());
-            }
-        }
-    }
-    match fs::symlink_metadata(pfad) {
-        Ok(angaben) if angaben.is_dir() => fs::remove_dir(pfad),
-        Ok(_) => fs::remove_file(pfad),
-        Err(fehler) => Err(fehler),
-    }
-}
 
 /// Ein Papierkorb, der nichts loescht, sondern nur mitschreibt.
 #[derive(Debug, Default)]

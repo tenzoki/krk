@@ -694,10 +694,10 @@ pub fn rechte_text(modus: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::Duration;
 
     use super::*;
+    use crate::pruefordner::Pruefordner;
 
     /// Fuellt den aktiven Tab ohne Arbeitsfaden.
     fn text_zeigen(modell: &mut Vorschaumodell, text: &str) {
@@ -897,62 +897,6 @@ mod tests {
     fn ein_fehlender_pfad_liefert_einen_hinweis() {
         let pfad = Path::new("/gibt/es/nicht/krk-probe");
         assert!(matches!(laden(pfad), Inhalt::Hinweis(_)));
-    }
-
-    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
-    ///
-    /// Dieselbe Bauform wie `Pruefordner` in `krk-core/tests/verzeichnis.rs`:
-    /// Prozesskennung und Laufnummer im Namen, damit zwei Laeufe sich nicht in
-    /// die Quere kommen, und `Drop` raeumt ab.
-    ///
-    /// **Jede Probe dieser Datei, die einen Ordner braucht, nimmt diesen.** Die
-    /// aelteren sieben legten ihn bis zum 260810 unter einem festen Namen an,
-    /// etwa `krk-vorschau-probe-gross`, und liessen ihn stehen: zwei gleichzeitige
-    /// Laeufe trafen sich darin, und ein Ausfall daraus benannte nichts, was am
-    /// Code falsch waere. Der Defekt dazu ist `260810-1256`.
-    struct Pruefordner {
-        pfad: PathBuf,
-    }
-
-    impl Pruefordner {
-        fn neu(zweck: &str) -> Self {
-            static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let pfad = std::env::temp_dir().join(format!(
-                "krk-vorschau-probe-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = std::fs::remove_dir_all(&pfad);
-            std::fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-            Self { pfad }
-        }
-
-        /// Der Ordner selbst, fuer die Proben, die einen Pfad darin bilden.
-        fn pfad(&self) -> &Path {
-            &self.pfad
-        }
-
-        /// Legt eine benannte Roehre an und liefert ihren Pfad.
-        ///
-        /// Angelegt wird sie ueber `mkfifo(1)` und nicht ueber einen
-        /// Fremdaufruf, aus demselben Grund wie in `krk-core/tests/text.rs`:
-        /// `krk-ui` traegt `#![deny(unsafe_code)]`, KRK legt keine Roehren an,
-        /// und ein Werkzeug des Systems zu rufen ist der kleinere Eingriff.
-        fn roehre(&self, name: &str) -> PathBuf {
-            let pfad = self.pfad.join(name);
-            let stand = std::process::Command::new("/usr/bin/mkfifo")
-                .arg(&pfad)
-                .status()
-                .expect("mkfifo laesst sich nicht starten");
-            assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
-            pfad
-        }
-    }
-
-    impl Drop for Pruefordner {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.pfad);
-        }
     }
 
     /// Ruft [`laden`] auf einem eigenen Faden und gibt die Antwort nur heraus,

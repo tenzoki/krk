@@ -11,65 +11,13 @@
 //! Eintraege als gleich, und die Reihenfolge, gegen die diese Pruefungen
 //! messen, waere beliebig.
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use krk_core::verzeichnis::sprungmarke::{self, PAUSE, Sprungmarke};
 use krk_core::verzeichnis::{Ordnermodell, aufwaerts, lesen};
 
-// ---------------------------------------------------------------------------
-// Pruefordner
-// ---------------------------------------------------------------------------
-
-static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-/// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst wieder abraeumt.
-struct Pruefordner {
-    pfad: PathBuf,
-}
-
-impl Pruefordner {
-    fn neu(zweck: &str) -> Self {
-        let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-        let mut pfad = std::env::temp_dir();
-        pfad.push(format!(
-            "krk-navigation-{zweck}-{}-{laufnummer}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&pfad);
-        fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-        Self { pfad }
-    }
-
-    fn pfad(&self) -> &Path {
-        &self.pfad
-    }
-
-    fn datei(&self, name: &str) {
-        self.datei_mit(name, 1);
-    }
-
-    /// Eine Datei mit genau dieser Zahl von Bytes.
-    ///
-    /// Die Groessensumme des Markierungsstandes wird gegen die Summe dieser
-    /// Zahlen geprueft, und dafuer muss sie bekannt sein.
-    fn datei_mit(&self, name: &str, bytes: usize) {
-        fs::write(self.pfad.join(name), vec![b'x'; bytes])
-            .expect("Datei laesst sich nicht anlegen");
-    }
-
-    fn unterordner(&self, name: &str) {
-        fs::create_dir(self.pfad.join(name)).expect("Unterordner laesst sich nicht anlegen");
-    }
-}
-
-impl Drop for Pruefordner {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.pfad);
-    }
-}
+mod gemeinsam;
+use gemeinsam::Pruefordner;
 
 /// Ein gelesenes und sortiertes Modell des Pruefordners.
 fn modell_von(ordner: &Pruefordner) -> Ordnermodell {
@@ -84,7 +32,7 @@ fn modell_von(ordner: &Pruefordner) -> Ordnermodell {
 fn tausend() -> (Pruefordner, Ordnermodell) {
     let ordner = Pruefordner::neu("tausend");
     for nummer in 0..1_000 {
-        ordner.datei(&format!("datei-{nummer:04}.txt"));
+        ordner.fuelldatei(&format!("datei-{nummer:04}.txt"), 1);
     }
     let modell = modell_von(&ordner);
     assert_eq!(
@@ -107,12 +55,12 @@ fn tausend_gemischt() -> (Pruefordner, Ordnermodell, u64) {
     for nummer in 0..1_000usize {
         let name = format!("eintrag-{nummer:04}");
         if nummer.is_multiple_of(10) {
-            ordner.unterordner(&name);
+            ordner.ordner(&name);
         } else {
             // Eine Datei ohne Bytes waere kein Beleg dafuer, dass die Summe
             // wirklich summiert; deshalb wenigstens ein Byte.
             let bytes = nummer % 97 + 1;
-            ordner.datei_mit(&name, bytes);
+            ordner.fuelldatei(&name, bytes);
             groessensumme += bytes as u64;
         }
     }
@@ -140,7 +88,7 @@ fn name_in_zeile(modell: &Ordnermodell, zeile: usize) -> &str {
 fn getippte_buchstaben_sammeln_sich_und_finden_den_ersten_treffer() {
     let ordner = Pruefordner::neu("sprungmarke");
     for name in ["Apfel.txt", "Banane.txt", "Bananenbrot.txt", "Birne.txt"] {
-        ordner.datei(name);
+        ordner.fuelldatei(name, 1);
     }
     let modell = modell_von(&ordner);
 
@@ -224,7 +172,7 @@ fn ein_zeichen_aus_dem_funktionstastenbereich_laesst_den_puffer_unveraendert() {
 #[test]
 fn ein_praefix_ohne_treffer_findet_nichts() {
     let ordner = Pruefordner::neu("kein-treffer");
-    ordner.datei("Apfel.txt");
+    ordner.fuelldatei("Apfel.txt", 1);
     let modell = modell_von(&ordner);
 
     assert_eq!(sprungmarke::erste_zeile_mit(&modell, "z"), None);
@@ -238,8 +186,8 @@ fn ein_praefix_ohne_treffer_findet_nichts() {
 #[test]
 fn der_aufstieg_stellt_die_auswahl_auf_den_verlassenen_ordner() {
     let ordner = Pruefordner::neu("aufstieg");
-    ordner.unterordner("Unterordner");
-    ordner.datei("nebenan.txt");
+    ordner.ordner("Unterordner");
+    ordner.fuelldatei("nebenan.txt", 1);
     let modell = modell_von(&ordner);
 
     let unten = ordner.pfad().join("Unterordner");
@@ -331,7 +279,7 @@ fn die_markierung_umkehren_tauscht_markierte_und_freie() {
 fn die_markierung_ueberlebt_einen_sortierwechsel() {
     let ordner = Pruefordner::neu("sortierwechsel");
     for name in ["aaa.txt", "zzz.txt"] {
-        ordner.datei(name);
+        ordner.fuelldatei(name, 1);
     }
     let mut modell = modell_von(&ordner);
     let index = modell
@@ -362,8 +310,8 @@ fn die_markierung_ueberlebt_einen_sortierwechsel() {
 #[test]
 fn alle_markieren_laesst_die_ausgeblendeten_aus_und_aufheben_erfasst_sie_doch() {
     let ordner = Pruefordner::neu("verstecke");
-    ordner.datei("sichtbar.txt");
-    ordner.datei(".versteckt.txt");
+    ordner.fuelldatei("sichtbar.txt", 1);
+    ordner.fuelldatei(".versteckt.txt", 1);
     let mut modell = modell_von(&ordner);
 
     // Zuerst sichtbar machen und markieren, dann ausblenden.
@@ -426,8 +374,8 @@ fn alle_markieren_zaehlt_ordner_gesondert_und_summiert_allein_die_dateien() {
 #[test]
 fn ein_markierter_ordner_erhoeht_die_groessensumme_nicht() {
     let ordner = Pruefordner::neu("markierter-ordner");
-    ordner.unterordner("Unterordner");
-    ordner.datei_mit("datei.txt", 42);
+    ordner.ordner("Unterordner");
+    ordner.fuelldatei("datei.txt", 42);
     let mut modell = modell_von(&ordner);
     let unterordner = modell
         .index_von_namen("Unterordner")

@@ -34,8 +34,8 @@
 //! **Die Faelle 1 bis 5 legen keine einzige Datei an**, weil die Textrechnung
 //! auf Zeichenketten steht; die Faelle ab 6 pruefen die beiden Enden, an denen
 //! Bytes hereinkommen und hinausgehen, und brauchen dafuer einen Pruefordner.
-//! Er traegt Prozesskennung und Laufnummer und raeumt sich in `Drop` selbst
-//! ab, so wie in `tests/verzeichnis.rs`.
+//! Er kommt aus `tests/gemeinsam/`, traegt Prozesskennung und Laufnummer und
+//! raeumt sich in `Drop` selbst ab.
 //!
 //! **Fall 10 ist am 260810 auf drei Proben verteilt worden**, weil `oeffnen`
 //! seither zuerst oeffnet und danach am Deskriptor prueft (Defekt
@@ -45,12 +45,15 @@
 //! Gigabyte. Jede der Proben sagt in ihrem Kopf, welchen Teil sie haelt.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
+
+mod gemeinsam;
+use gemeinsam::Pruefordner;
 
 /// Der Durchlauf von Hand: Byte fuer Byte, ohne die Rechnung des Index.
 ///
@@ -238,47 +241,6 @@ fn ein_leerer_suchtext_liefert_null_treffer_und_aendert_nichts() {
 // ---------------------------------------------------------------------------
 // Schritt 9: das Einlesen und die Sicherungsform
 // ---------------------------------------------------------------------------
-
-static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-/// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst wieder abraeumt.
-///
-/// Nicht der Messplatz unter `~/Library/Caches/krk-messplatz`: der gehoert der
-/// Messstrecke, nicht den Proben.
-struct Pruefordner {
-    pfad: PathBuf,
-}
-
-impl Pruefordner {
-    fn neu(zweck: &str) -> Self {
-        let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-        let mut pfad = std::env::temp_dir();
-        pfad.push(format!(
-            "krk-test-{zweck}-{}-{laufnummer}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&pfad);
-        fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-        Self { pfad }
-    }
-
-    /// Legt eine Datei aus rohen Bytes an und liefert ihren Pfad.
-    ///
-    /// Bewusst `&[u8]` und nicht `&str`: die Proben schreiben Bytefolgen, die
-    /// in Rust-Quelltext als Zeichenkette nicht mehr das waeren, was auf der
-    /// Platte stehen soll.
-    fn datei(&self, name: &str, bytes: &[u8]) -> PathBuf {
-        let pfad = self.pfad.join(name);
-        fs::write(&pfad, bytes).expect("Datei laesst sich nicht schreiben");
-        pfad
-    }
-}
-
-impl Drop for Pruefordner {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.pfad);
-    }
-}
 
 fn bytes_von(pfad: &Path) -> Vec<u8> {
     fs::read(pfad).expect("Datei laesst sich nicht lesen")
@@ -556,56 +518,6 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
 //     Ersatzzeichen geliefert
 // 12  Die drei Abweisungsgruende liefern drei verschiedene Meldetexte
 
-impl Pruefordner {
-    /// Legt eine Datei der genannten Groesse an, **ohne ein Byte zu
-    /// schreiben**.
-    ///
-    /// `set_len` zieht die Datei auf die Laenge und laesst dahinter ein Loch.
-    /// Auf APFS kostet das weder Platz noch Zeit, und genau deshalb kann eine
-    /// Probe hier von zwei Gigabyte reden, ohne zwei Gigabyte anzulegen. Wer
-    /// das Loch liest, bekommt Nullbytes; die sind gueltiges UTF-8, was den
-    /// Grenzfall unten erst brauchbar macht.
-    fn luecke(&self, name: &str, groesse: u64) -> PathBuf {
-        let pfad = self.pfad.join(name);
-        let datei = fs::File::create(&pfad).expect("Luecke laesst sich nicht anlegen");
-        datei
-            .set_len(groesse)
-            .expect("Luecke laesst sich nicht ziehen");
-        pfad
-    }
-
-    /// Legt einen Unterordner an und liefert seinen Pfad.
-    fn unterordner(&self, name: &str) -> PathBuf {
-        let pfad = self.pfad.join(name);
-        fs::create_dir(&pfad).expect("Unterordner laesst sich nicht anlegen");
-        pfad
-    }
-
-    /// Legt eine weiche Verknuepfung auf das genannte Ziel an.
-    fn verknuepfung(&self, name: &str, ziel: &Path) -> PathBuf {
-        let pfad = self.pfad.join(name);
-        std::os::unix::fs::symlink(ziel, &pfad).expect("Verknuepfung laesst sich nicht anlegen");
-        pfad
-    }
-
-    /// Legt eine benannte Roehre an und liefert ihren Pfad.
-    ///
-    /// Angelegt wird sie ueber `mkfifo(1)` und nicht ueber einen Fremdaufruf:
-    /// `mkfifo(2)` waere eine fuenfte Bindung in `verzeichnis::sys`, und dort
-    /// steht, was **KRK** braucht. KRK legt keine Roehren an; das tut nur die
-    /// Probe, und ein Werkzeug des Systems zu rufen ist dafuer der kleinere
-    /// Eingriff.
-    fn roehre(&self, name: &str) -> PathBuf {
-        let pfad = self.pfad.join(name);
-        let stand = std::process::Command::new("/usr/bin/mkfifo")
-            .arg(&pfad)
-            .status()
-            .expect("mkfifo laesst sich nicht starten");
-        assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
-        pfad
-    }
-}
-
 /// Ruft [`datei::oeffnen`] auf einem eigenen Faden und gibt die Antwort nur
 /// heraus, wenn sie innerhalb der Schranke kommt.
 ///
@@ -635,7 +547,7 @@ fn oeffnen_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Result<String, A
 #[test]
 fn ein_ordner_wird_abgewiesen() {
     let ordner = Pruefordner::neu("oeffnen-ordner");
-    let unterordner = ordner.unterordner("ein-ordner");
+    let unterordner = ordner.ordner("ein-ordner");
 
     let ergebnis = datei::oeffnen(&unterordner);
     assert!(
@@ -656,7 +568,7 @@ fn ein_ordner_wird_abgewiesen() {
 fn eine_verknuepfung_gilt_nach_ihrem_ziel() {
     let ordner = Pruefordner::neu("oeffnen-verknuepfung");
     let textdatei = ordner.datei("ziel.txt", b"eins\nzwei\n");
-    let unterordner = ordner.unterordner("ziel-ordner");
+    let unterordner = ordner.ordner("ziel-ordner");
 
     let auf_text = ordner.verknuepfung("auf-text", &textdatei);
     assert_eq!(
@@ -674,7 +586,7 @@ fn eine_verknuepfung_gilt_nach_ihrem_ziel() {
         "die Verknuepfung auf einen Ordner wurde nicht abgewiesen"
     );
 
-    let ins_leere = ordner.verknuepfung("ins-leere", &ordner.pfad.join("gibt-es-nicht"));
+    let ins_leere = ordner.verknuepfung("ins-leere", ordner.unter("gibt-es-nicht"));
     assert!(
         matches!(
             datei::oeffnen(&ins_leere),
@@ -887,8 +799,8 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
     let ordner = Pruefordner::neu("oeffnen-wechsel");
     let vorlage_datei = ordner.datei("vorlage.txt", b"eins\n");
     let vorlage_roehre = ordner.roehre("vorlage.roehre");
-    let zwischen = ordner.pfad.join("zwischen");
-    let umkaempft = ordner.pfad.join("umkaempft");
+    let zwischen = ordner.unter("zwischen");
+    let umkaempft = ordner.unter("umkaempft");
     fs::hard_link(&vorlage_roehre, &umkaempft).expect("der Anfangsstand laesst sich nicht legen");
 
     let schluss = Arc::new(AtomicBool::new(false));
@@ -1060,7 +972,7 @@ fn ungueltiges_utf8_wird_abgewiesen_und_nicht_ersetzt() {
 #[test]
 fn die_drei_gruende_liefern_drei_verschiedene_meldetexte() {
     let ordner = Pruefordner::neu("oeffnen-meldungen");
-    let unterordner = ordner.unterordner("ein-ordner");
+    let unterordner = ordner.ordner("ein-ordner");
     let zu_gross = ordner.luecke("zu-gross.log", datei::EDITORGRENZE + 1);
     let binaer = ordner.datei("binaer.bin", b"\xff\xfe");
 

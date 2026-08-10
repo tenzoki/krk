@@ -9,8 +9,6 @@
 //! `--test belegung` und filtert nicht ueber Pruefungsnamen.
 
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use krk_core::ablage::{Ablage, Ablageort, Datei};
 use krk_core::tasten::belegung::{self, Belegung, Belegungsfehler, Zuweisungsfehler};
@@ -18,48 +16,25 @@ use krk_core::tasten::normalisierung::roh;
 use krk_core::tasten::parser::{self, Herkunft};
 use krk_core::tasten::{Kombination, Kommando, ModMaske, Nachschlag, Tastendruck, Wirkungsbereich};
 
+mod gemeinsam;
+use gemeinsam::Pruefordner;
+
 // ---------------------------------------------------------------------------
-// Pruefordner
+// Hilfsmittel
 // ---------------------------------------------------------------------------
 
-static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-/// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst wieder abraeumt.
-struct Pruefordner {
-    pfad: PathBuf,
-}
-
-impl Pruefordner {
-    fn neu(zweck: &str) -> Self {
-        let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-        let mut pfad = std::env::temp_dir();
-        pfad.push(format!(
-            "krk-belegung-{zweck}-{}-{laufnummer}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&pfad);
-        fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-        Self { pfad }
-    }
-
-    fn pfad(&self) -> &Path {
-        &self.pfad
-    }
-
-    /// Eine Ablage in diesem Ordner, mit dem gegebenen Inhalt von
-    /// `keymap.toml`.
-    fn ablage_mit(&self, keymap: &str) -> Ablage {
-        let ablage =
-            Ablage::oeffnen(Ablageort::an(self.pfad())).expect("die Ablage laesst sich oeffnen");
-        fs::write(ablage.pfad(Datei::Belegung), keymap).expect("keymap.toml laesst sich schreiben");
-        ablage
-    }
-}
-
-impl Drop for Pruefordner {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.pfad);
-    }
+/// Eine Ablage im genannten Pruefordner, mit dem gegebenen Inhalt von
+/// `keymap.toml`.
+///
+/// Eine freie Funktion und keine Methode am [`Pruefordner`]: der gemeinsame
+/// Pruefordner unter `tests/gemeinsam/` haelt Ordner und Dateien, und eine
+/// [`Ablage`] ist keines von beiden, sondern ein Gegenstand des Kerns. Nur diese
+/// Datei braucht ihn, also steht er hier.
+fn ablage_mit(ordner: &Pruefordner, keymap: &str) -> Ablage {
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+    fs::write(ablage.pfad(Datei::Belegung), keymap).expect("keymap.toml laesst sich schreiben");
+    ablage
 }
 
 /// Die Kennungen einer Belegung, sortiert: ihr Wortschatz ohne die Reihenfolge.
@@ -340,7 +315,7 @@ gehalten_von = "menue"
 
     for (zweck, keymap, andere, bewerber) in faelle {
         let ordner = Pruefordner::neu(zweck);
-        let ablage = ordner.ablage_mit(keymap);
+        let ablage = ablage_mit(&ordner, keymap);
 
         let geladen = belegung::laden(&ablage);
 
@@ -395,7 +370,8 @@ fn eine_unbelegte_menuefunktion_nimmt_ihre_kombination_ohne_konflikt_an() {
     // Zuweisung wirklich etwas aendert: `text_alles_auswaehlen` steht ohne
     // Taste da, `alle_markieren` haelt cmd+a.
     let ordner = Pruefordner::neu("zuweisen-menue");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "alle_markieren"
@@ -433,7 +409,8 @@ fn der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege() {
     // Eintraege in der Datei des Nutzers, ob das Markieren aller Eintraege noch
     // wirkt. Diese Datei stellt den Textbefehl bewusst nach vorn.
     let ordner = Pruefordner::neu("reihenfolge");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "text_alles_auswaehlen"
@@ -1144,7 +1121,8 @@ fn eine_fehlende_keymap_liefert_die_auslieferungsbelegung_ohne_meldung() {
 #[test]
 fn die_nutzerdatei_ersetzt_die_auslieferungsbelegung_und_ergaenzt_sie_nicht() {
     let ordner = Pruefordner::neu("ersetzen");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "kopieren"
@@ -1227,7 +1205,8 @@ fn eine_geaenderte_belegung_ueberlebt_sichern_und_laden() {
 #[test]
 fn eine_unbekannte_funktion_in_der_nutzerdatei_fuehrt_zum_auslieferungszustand() {
     let ordner = Pruefordner::neu("unbekannt");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "kaffee_kochen"
@@ -1254,7 +1233,8 @@ tasten = ["ctrl+c"]
 #[test]
 fn eine_falsch_geschriebene_kombination_fuehrt_zum_auslieferungszustand() {
     let ordner = Pruefordner::neu("schreibweise");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "kopieren"
@@ -1278,7 +1258,8 @@ tasten = ["cmd+shift+k"]
 #[test]
 fn eine_widerspruechliche_nutzerdatei_fuehrt_zum_auslieferungszustand() {
     let ordner = Pruefordner::neu("konflikt");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "kopieren"
@@ -1310,7 +1291,7 @@ tasten = ["ctrl+c"]
 #[test]
 fn eine_syntaktisch_kaputte_keymap_fuehrt_zum_auslieferungszustand() {
     let ordner = Pruefordner::neu("kaputt");
-    let ablage = ordner.ablage_mit("[[funktion]\nid = \"kopieren\"\n");
+    let ablage = ablage_mit(&ordner, "[[funktion]\nid = \"kopieren\"\n");
 
     let geladen = belegung::laden(&ablage);
 
@@ -1323,7 +1304,8 @@ fn ein_unbekanntes_feld_in_der_nutzerdatei_bleibt_nicht_unbemerkt() {
     // Ein Tippfehler im Feldnamen wuerde sonst still ignoriert, und der Nutzer
     // suchte die Wirkung einer Zeile, die niemand liest.
     let ordner = Pruefordner::neu("feld");
-    let ablage = ordner.ablage_mit(
+    let ablage = ablage_mit(
+        &ordner,
         r#"
 [[funktion]]
 id = "kopieren"

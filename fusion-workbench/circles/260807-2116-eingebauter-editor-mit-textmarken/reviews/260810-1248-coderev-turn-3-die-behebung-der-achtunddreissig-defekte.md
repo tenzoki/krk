@@ -171,3 +171,25 @@ cargo test --workspace                     16 Ziele, 744 Proben, 0 Fehlschlaege,
 cargo clippy --workspace --all-targets     keine Meldung
 cargo fmt --all --check                    keine Ausgabe
 ```
+
+---
+
+## Anmerkung des Abgleichs, 260810-1404
+
+**Alle sieben Befunde dieser Durchsicht sind geschlossen.** Der Abschluss-Abgleich der Sitzung 260810-0845 hat jeden Datensatz gegen den Baum gelesen; keiner behauptet eine Behebung, die im Code fehlt. Die Reihenfolge, die diese Durchsicht unter „Danach, in dieser Reihenfolge" empfiehlt, ist eingehalten worden.
+
+| Befund | Datensatz, jetzt `_c_` | Commit |
+|---|---|---|
+| 1 — Hoch, Stapeltiefe und Abschrift | `issues/260810-1241` | `bf0fe18` (Bereich statt ganzer Stand), `0140df7` (Budget in Bytes) |
+| 2 — Suchlauf nach `cmd+z` | `issues/260810-1244` | `bf0fe18` |
+| 3 — TextKit 1 nirgends als tragend | `issues/260810-1243` | `bf0fe18` |
+| 4 — Haltepunkt nach gescheitertem `parse_line` | `issues/260810-1242` | `bf0fe18` |
+| 5 — stehengebliebene Merkmale | `issues/260810-1245` | `bf0fe18` |
+| 6 — Typprüfung im Vorschauweg | `issues/260810-1247` | `bf0fe18` |
+| 7 — Probe am undokumentierten Merkmal | `issues/260810-1246` | `bf0fe18` |
+
+**Die Befundtexte tragen die Datensätze mit dem Marker `_o_`, wie sie beim Schreiben standen; alle sieben tragen heute `_c_`.** Die Verweise sind nicht nachgezogen, weil eine Durchsicht ein Zeitstand ist und nicht fortgeschrieben wird.
+
+**Zwei Befunde haben einen eigenen Folgedatensatz hinterlassen, und der ist offen.** Befund 1 hat `issues/260810-1341_o_die-freigabe-des-angemeldeten-rueckgaengig-blocks-ist-geschlossen-und-nicht-gemessen.md` erzeugt, Befund 7 hängt über `issues/260810-1001_o_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md` an der offenen Nutzerfrage `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
+
+Der Satz „Nichts davon hält den Abschluss der Runde auf" ist nach dem Abgleich unverändert richtig, und jetzt aus einem stärkeren Grund: es hält nichts davon mehr offen.

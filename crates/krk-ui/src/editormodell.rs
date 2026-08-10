@@ -1232,46 +1232,8 @@ impl Editormodell {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicU64, Ordering};
-
     use super::*;
-
-    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
-    ///
-    /// Dieselbe Form wie `Pruefordner` in [`crate::leistenmodell`],
-    /// `krk-core/tests/verzeichnis.rs` und `krk-bench/src/fixture.rs`: Zweck,
-    /// Prozesskennung und Laufnummer im Namen, und das Abraeumen in `Drop`.
-    struct Pruefordner {
-        pfad: PathBuf,
-    }
-
-    impl Pruefordner {
-        fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let pfad = std::env::temp_dir().join(format!(
-                "krk-editor-test-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = std::fs::remove_dir_all(&pfad);
-            std::fs::create_dir_all(&pfad).expect("der Pruefordner laesst sich nicht anlegen");
-            Self { pfad }
-        }
-
-        /// Legt eine Datei mit dem genannten Inhalt an und liefert ihren Pfad.
-        fn datei(&self, name: &str, inhalt: &str) -> PathBuf {
-            let pfad = self.pfad.join(name);
-            std::fs::write(&pfad, inhalt).expect("die Pruefdatei laesst sich nicht schreiben");
-            pfad
-        }
-    }
-
-    impl Drop for Pruefordner {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.pfad);
-        }
-    }
+    use crate::pruefordner::Pruefordner;
 
     /// Wartet, bis der Arbeitsfaden geliefert hat.
     ///
@@ -1434,7 +1396,7 @@ mod tests {
         let _ = modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
 
         // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
-        assert_eq!(modell.oeffnen(&ordner.pfad), None);
+        assert_eq!(modell.oeffnen(ordner.pfad()), None);
         let ausgang = abwarten(&mut modell);
         assert!(
             matches!(ausgang, Ladeausgang::Abgewiesen(_)),
@@ -1460,7 +1422,7 @@ mod tests {
         let gute = ordner.datei("gut.txt", "guter Inhalt\n");
         let mut modell = geoeffnet(&gute);
 
-        let zu_gross = ordner.pfad.join("zu-gross.txt");
+        let zu_gross = ordner.unter("zu-gross.txt");
         std::fs::File::create(&zu_gross)
             .expect("die Pruefdatei laesst sich nicht anlegen")
             .set_len(datei::EDITORGRENZE + 1)
@@ -1759,7 +1721,7 @@ mod tests {
         let _ = modell.bearbeiten("guter Inhalt, bearbeitet\n".to_owned());
 
         // Ein Ordner ist der Fall, den die Pruefung namentlich abweist.
-        assert_eq!(modell.oeffnen(&ordner.pfad), None);
+        assert_eq!(modell.oeffnen(ordner.pfad()), None);
         let ausgang = abwarten(&mut modell);
         assert!(
             matches!(ausgang, Ladeausgang::Abgewiesen(_)),
@@ -1810,7 +1772,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let ordner = Pruefordner::neu("sichern-scheitert");
-        let unterordner = ordner.pfad.join("gesperrt");
+        let unterordner = ordner.unter("gesperrt");
         std::fs::create_dir(&unterordner).expect("der Unterordner laesst sich anlegen");
         let pfad = unterordner.join("stand.txt");
         std::fs::write(&pfad, "Inhalt\n").expect("die Pruefdatei laesst sich schreiben");

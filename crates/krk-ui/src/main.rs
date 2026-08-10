@@ -44,6 +44,10 @@ mod hervorhebung;
 mod kommandos;
 mod leistenmodell;
 mod messmodus;
+/// Der Pruefordner der Proben dieser Kiste. Nur im Probenbau uebersetzt, weil
+/// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.
+#[cfg(test)]
+mod pruefordner;
 mod tabs;
 mod vorschaumodell;
 

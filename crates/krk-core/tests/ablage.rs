@@ -26,7 +26,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -39,40 +38,12 @@ use krk_core::ablage::{
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
+mod gemeinsam;
+use gemeinsam::Pruefordner;
+
 // ---------------------------------------------------------------------------
-// Pruefordner und Stellvertreter
+// Stellvertreter
 // ---------------------------------------------------------------------------
-
-static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-/// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst wieder abraeumt.
-struct Pruefordner {
-    pfad: PathBuf,
-}
-
-impl Pruefordner {
-    fn neu(zweck: &str) -> Self {
-        let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-        let mut pfad = std::env::temp_dir();
-        pfad.push(format!(
-            "krk-ablage-{zweck}-{}-{laufnummer}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&pfad);
-        fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
-        Self { pfad }
-    }
-
-    fn pfad(&self) -> &Path {
-        &self.pfad
-    }
-}
-
-impl Drop for Pruefordner {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.pfad);
-    }
-}
 
 /// Eine Ablage in einem frischen Pruefordner.
 fn ablage(zweck: &str) -> (Pruefordner, Ablage) {

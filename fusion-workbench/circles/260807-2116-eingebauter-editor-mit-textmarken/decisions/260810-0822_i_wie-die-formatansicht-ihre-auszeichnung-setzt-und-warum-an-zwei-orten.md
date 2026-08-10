@@ -46,3 +46,18 @@ Der Grund, den der abgelöste Datensatz für seine Empfehlung angeführt hat, wa
 ---
 Answered: circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0053_*_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md — Möglichkeit 1: die Fallunterscheidung heißt "wirkt auf die Auslegung oder nicht", Farbe und Unterstreichung gehen in den Layoutverwalter, Schriftgröße, Schriftschnitt, feste Schrift und Einzug in den `NSTextStorage`. Gemessen am SDK-Kopf `MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSLayoutManager.h:351`.
 Implemented: 41309cc — `crates/krk-ui/src/appkit/editor.rs` (`Editorbereich::formatierung_anwenden`) setzt die Auszeichnungen über `addAttributes_range` im `NSTextStorage` und die Einfärbungen über `setTemporaryAttributes_forCharacterRange` und `addTemporaryAttribute_value_forCharacterRange` im Layoutverwalter; `crates/krk-ui/src/hervorhebung.rs` liefert dafür zwei Listen, und sein Modulkopf trägt den Schnitt samt der Zeile aus dem SDK-Kopf. Plan und Datensatz sind am 260810-0822 nachgezogen.
+
+---
+
+## Abgleich am 260810: die Antwort hält, die Belegzeile ist nachgezogen
+
+**Der Schnitt "wirkt auf die Auslegung oder nicht" ist unberührt.** Was sich verschoben hat, ist die Stelle, an der die Zeile oben ihn festmacht, und zwar durch die Behebung von `issues/260810-1245_*_die-formatansicht-nimmt-gesetzte-merkmale-des-textspeichers-nie-wieder-heraus.md` in dieser Runde. Der Marker `_i_` bleibt richtig, weil die Umsetzung besteht; nachzutragen sind zwei Pfade:
+
+- `formatierung_anwenden` setzt nicht mehr selbst zurück. `crates/krk-ui/src/appkit/editor.rs:2815` trägt dafür die neue Funktion `merkmale_zuruecksetzen`, und `setTemporaryAttributes_forCharacterRange` steht seither allein dort (`:2827`).
+- `formatierung_anwenden` liegt jetzt bei `crates/krk-ui/src/appkit/editor.rs:2968`; es ruft `merkmale_zuruecksetzen` und setzt danach (`:3018`, `:3035`, `:3041`).
+
+Die Zeile `crates/krk-ui/src/appkit/editor.rs:1099` in der Aufzählung oben, mit der der Sicherungsweg belegt ist, ist ebenfalls gewandert. Tragend an ihr ist nicht die Nummer, sondern dass gesichert wird, was `NSTextView::string` liefert; das gilt unverändert.
+
+**`issues/260810-1139_*` widerspricht diesem Datensatz nicht.** Es hat eine `SAFETY`-Begründung am Setzen der Auszeichnungen berichtigt, über die dieser Datensatz nichts behauptet.
+
+Geprüft am 260810 im Abschluss-Abgleich der Sitzung 260810-0845.

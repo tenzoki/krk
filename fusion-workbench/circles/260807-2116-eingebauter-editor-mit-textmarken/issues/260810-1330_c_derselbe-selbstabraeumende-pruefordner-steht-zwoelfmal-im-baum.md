@@ -87,3 +87,64 @@ Zusammenlegung ist die Gegenrichtung und braucht ihre eigene Dateigrenze.
 ## Zustaendigkeit
 
 `coder`.
+
+---
+Resolved: Zwoelf Fassungen sind zu **drei** geworden, eine je Kiste, und drei
+bleiben es aus Gruenden der Kistenstruktur: die zwoelf Stellen liegen in drei
+Kisten, die einander nichts einbinden koennen. Neu sind
+`crates/krk-core/tests/gemeinsam/mod.rs` (traegt `Pruefordner` fuer die sechs
+Testziele des Kerns, jedes zieht ihn per `mod gemeinsam;` ein),
+`crates/krk-ui/src/pruefordner.rs` (`#[cfg(test)] mod pruefordner;` in `main.rs`,
+fuer `vorschaumodell`, `editormodell`, `leistenmodell` und
+`kommandos::pfadeingabe`) und `crates/krk-bench/src/wegwerfordner.rs`
+(`#[cfg(test)] mod wegwerfordner;` in `main.rs`, fuer `fixture` und `messen`).
+
+**Warum drei und nicht eine.** Ein Testziel ist in Rust eine eigene Kiste, und
+`krk-ui` wie `krk-bench` haben je nur ein Binaerziel. Die sechs Fassungen des
+Kerns stehen in Testzielen, die vier von `krk-ui` und die zwei von `krk-bench` in
+Binaerzielen; keines dieser drei Ziele erreicht den Code eines anderen. Eine
+einzige Fassung verlangte einen Ort, den alle drei einbinden koennen, also ein
+Bibliotheksziel fuer `krk-ui` oder eine eigene Kiste im Workspace. Das erste ist
+Gegenstand der offenen Nutzerentscheidung
+`decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`
+und ausdruecklich kein Nebenzug; das zweite lag ausserhalb der Dateigrenze
+dieser Aufgabe. Die drei Modulkoepfe sagen das jeweils selbst, damit die naechste
+Lesung nicht wieder mit "eine genuegte" anfaengt.
+
+**Was die Zusammenlegung nebenbei geheilt hat.** Die vier Fassungen in `krk-ui`
+fuehrten vier eigene Zaehler, obwohl alle Einheitsproben der Kiste in **ein**
+Probenprogramm uebersetzen: zwei Proben mit demselben Zweck in verschiedenen
+Modulen konnten denselben Ordnernamen bekommen. Jetzt zaehlt ein Zaehler fuer die
+Kiste. Und das Abraeumen des Kerns raeumt seither in allen sechs Zielen gegen
+entzogene Rechte auf, nicht nur in `operation.rs`; der schnelle
+`remove_dir_all` bleibt der erste Weg, das Zurueckdrehen der Rechte kommt nur,
+wenn er scheitert.
+
+**Vereinheitlichte Unterschiede.** `datei` nimmt jetzt `impl AsRef<[u8]>` statt
+einmal `&str` und einmal `&[u8]`; die Fassung mit einer Byte-Anzahl heisst
+`fuelldatei`, `unterordner` heisst `ordner`, `verknuepfung` nimmt
+`impl AsRef<Path>`. `ablage_mit` ist eine freie Funktion in `tests/belegung.rs`
+geblieben: der gemeinsame Pruefordner haelt Ordner und Dateien, und eine
+`Ablage` ist ein Gegenstand des Kerns. In `krk-ui` legt `neu` den Ordner an und
+`nur_name` nur den Namen, weil die Gueltigkeitsproben des `leistenmodell`
+denselben Pfad einmal vorhanden und einmal fehlend brauchen.
+
+**Der ueberholte Satz ist nachgezogen.** Der Modulkopf von
+`tests/verzeichnis.rs` sagte, ein Pruefordner-Erzeuger sei "bewusst noch nicht"
+da und komme mit Schritt 3 der Runde 1; er sagt jetzt, woher der Pruefordner
+kommt. Dieselbe Berichtigung in `tests/text.rs`, dessen Kopf auf die Fassung in
+`verzeichnis.rs` verwies.
+
+**Abnahme:** `cargo build --workspace` exit 0, `cargo test --workspace` exit 0
+(alle 15 Testprogramme gruen, 0 Fehlschlaege), `cargo clippy --workspace
+--all-targets` exit 0 ohne eine Warnung, `cargo fmt --all --check` exit 0. Nach
+dem vollen Testlauf liegt kein Pruefordner mehr unter `$TMPDIR` oder `/tmp`; die
+neun `krk-messplan-*.toml` dort sind aelter als dieser Lauf und haben ihre eigene
+Ursache, siehe unten.
+
+**Zwei Defekte daneben gefunden**, beide neu abgelegt:
+`issues/260810-1430_*_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md`
+(eine dreizehnte Fassung, die dieser Datensatz nicht gezaehlt hat, und
+`messmodus.rs` lag ausserhalb der Dateigrenze) und
+`shared/issues/260810-1430_*_ein-abgebrochener-messlauf-laesst-seinen-messplan-im-temporaerverzeichnis-liegen.md`
+(die Abraeumzeile des Messplans steht auf dem Erfolgsweg statt in einem `Drop`).

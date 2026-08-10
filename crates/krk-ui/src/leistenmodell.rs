@@ -592,68 +592,9 @@ impl Leistenmodell {
 mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::*;
-
-    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
-    ///
-    /// Dieselbe Form wie `Pruefordner` in `krk-core/tests/verzeichnis.rs`,
-    /// `Wegwerfordner` in `krk-bench/src/fixture.rs` und `Planordner` in
-    /// `crate::messmodus`: Zweck, Prozesskennung und Laufnummer im Namen, und
-    /// das Abraeumen in `Drop`. Zwei Proben hier standen bis zum 260807 auf
-    /// festen Namen; zwei gleichzeitige Testlaeufe haetten denselben Ordner
-    /// getroffen, und ein Fehlschlag haette ihn stehen gelassen
-    /// (`issues/260807-0800_*_zwei-leistenmodell-proben-benutzen-feste-pruefordnernamen-unter-tmp.md`).
-    struct Pruefordner {
-        pfad: PathBuf,
-    }
-
-    impl Pruefordner {
-        /// Ein Name, unter dem noch nichts liegt. Angelegt wird er nicht: die
-        /// beiden Proben brauchen den Ordner mal vorhanden und mal fehlend.
-        fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let pfad = std::env::temp_dir().join(format!(
-                "krk-leiste-test-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = std::fs::remove_dir_all(&pfad);
-            Self { pfad }
-        }
-
-        fn pfad(&self) -> &Path {
-            &self.pfad
-        }
-
-        fn anlegen(&self) {
-            std::fs::create_dir_all(&self.pfad).expect("der Pruefordner laesst sich nicht anlegen");
-        }
-
-        fn loeschen(&self) {
-            std::fs::remove_dir_all(&self.pfad)
-                .expect("der Pruefordner laesst sich nicht loeschen");
-        }
-
-        /// Legt eine Datei im Pruefordner an und liefert ihren Pfad.
-        ///
-        /// Die Textmarken aus C6 zeigen auf Dateien und nicht auf Ordner; ohne
-        /// diesen Zusatz haette jede Probe dazu ihr eigenes `fs::write`
-        /// geschrieben.
-        fn datei(&self, name: &str, inhalt: &str) -> PathBuf {
-            let pfad = self.pfad.join(name);
-            std::fs::write(&pfad, inhalt).expect("die Pruefdatei laesst sich nicht schreiben");
-            pfad
-        }
-    }
-
-    impl Drop for Pruefordner {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.pfad);
-        }
-    }
-
-    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
+    use crate::pruefordner::Pruefordner;
 
     fn modell() -> Leistenmodell {
         let mut modell = Leistenmodell::neu();
@@ -799,7 +740,7 @@ mod tests {
     /// damit folgenlos.
     #[test]
     fn eine_textmarke_liefert_ihre_stelle_und_nicht_nichts() {
-        let ordner = Pruefordner::neu("markenauswahl");
+        let ordner = Pruefordner::nur_name("markenauswahl");
         ordner.anlegen();
         let datei = ordner.datei("quelle.rs", "eine Zeile\n");
 
@@ -953,7 +894,7 @@ mod tests {
     /// entscheidet sich beim Sprung und nur dort.
     #[test]
     fn eine_textmarke_ist_ungueltig_wenn_die_datei_fehlt_und_sonst_nie() {
-        let ordner = Pruefordner::neu("textmarke-gueltigkeit");
+        let ordner = Pruefordner::nur_name("textmarke-gueltigkeit");
         ordner.anlegen();
         let datei = ordner.datei("leser.rs", "fn eins() {}\nfn zwei() {}\n");
 
@@ -1022,7 +963,7 @@ mod tests {
     ///   sie deshalb nicht.
     #[test]
     fn zehn_textmarken_kosten_je_eine_frage_und_keinen_lesevorgang() {
-        let ordner = Pruefordner::neu("zehn-textmarken");
+        let ordner = Pruefordner::nur_name("zehn-textmarken");
         ordner.anlegen();
         let mut marken = Vec::new();
         let mut vorhandene = Vec::new();
@@ -1125,7 +1066,7 @@ mod tests {
 
     #[test]
     fn ein_eingehaengter_datentraeger_macht_sein_lesezeichen_gueltig() {
-        let ordner = Pruefordner::neu("gueltigkeit");
+        let ordner = Pruefordner::nur_name("gueltigkeit");
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
             "Kommt",
@@ -1153,7 +1094,7 @@ mod tests {
     /// schwarz, obwohl der Ordner fort ist.
     #[test]
     fn nach_einer_dateioperation_meldet_die_pruefung_den_geloeschten_ordner() {
-        let ordner = Pruefordner::neu("vorgang-beenden");
+        let ordner = Pruefordner::nur_name("vorgang-beenden");
         ordner.anlegen();
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
@@ -1185,9 +1126,9 @@ mod tests {
     /// ist es eine, und diese Probe haelt sie darauf fest.
     #[test]
     fn der_aufbau_und_das_nachziehen_kommen_zum_selben_ergebnis() {
-        let vorhanden = Pruefordner::neu("aufbau-vorhanden");
+        let vorhanden = Pruefordner::nur_name("aufbau-vorhanden");
         vorhanden.anlegen();
-        let fehlend = Pruefordner::neu("aufbau-fehlend");
+        let fehlend = Pruefordner::nur_name("aufbau-fehlend");
 
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
@@ -1209,7 +1150,7 @@ mod tests {
     /// diese Probe kommt ohne Fenster aus und haelt sie im Modell fest.
     #[test]
     fn eine_neue_ortsliste_zieht_die_gueltigkeit_nach() {
-        let ordner = Pruefordner::neu("orte-setzen");
+        let ordner = Pruefordner::nur_name("orte-setzen");
         ordner.anlegen();
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(

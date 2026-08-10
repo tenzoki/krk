@@ -584,40 +584,8 @@ pub fn steckbrief_lesen(ordner: &Path) -> Option<Steckbrief> {
 mod tests {
     use super::*;
     use std::collections::HashSet;
-    use std::sync::atomic::{AtomicU64, Ordering};
 
-    static ZAEHLER: AtomicU64 = AtomicU64::new(0);
-
-    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
-    struct Wegwerfordner {
-        pfad: PathBuf,
-    }
-
-    impl Wegwerfordner {
-        fn neu(zweck: &str) -> Self {
-            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
-            let mut pfad = std::env::temp_dir();
-            pfad.push(format!(
-                "krk-bench-test-{zweck}-{}-{laufnummer}",
-                std::process::id()
-            ));
-            let _ = fs::remove_dir_all(&pfad);
-            Self { pfad }
-        }
-
-        fn pfad(&self) -> &Path {
-            &self.pfad
-        }
-    }
-
-    impl Drop for Wegwerfordner {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.pfad);
-            if let Ok(steckbrief) = steckbriefpfad(&self.pfad) {
-                let _ = fs::remove_file(steckbrief);
-            }
-        }
-    }
+    use crate::wegwerfordner::Wegwerfordner;
 
     #[test]
     fn die_groessenklassen_gehen_auf_tausend_auf() {
