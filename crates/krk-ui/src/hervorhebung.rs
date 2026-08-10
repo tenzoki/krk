@@ -93,14 +93,54 @@
 //! `sync_channel(1)`, kein Generationszaehler, weil eine neue Anfrage den alten
 //! Empfaenger fallen laesst.
 //!
-//! **Der Preis, der damit bleibt, ist benannt und nicht verschwiegen:** die
-//! Einfaerbung haengt beim Tippen um einen ganzen Durchgang hinterher, in einer
-//! Datei von 1,5 MB also um rund 4,5 s. Der Ausweg — `ParseState` je Zeile
-//! fortschreiben und an der geaenderten Zeile wieder einsteigen — steht in
-//! `issues/260810-0054_o_die-einfaerbung-laeuft-mit-0-3-mb-s-und-haengt-beim-tippen-in-grossen-dateien-hinterher.md`,
-//! zusammen mit dem Grund, ihn mit
-//! `issues/260809-2322_*_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`
-//! zusammen zu bewerten: beide Stellen stellen dieselbe Frage.
+//! # Der zweite Durchgang faengt nicht am Dateianfang an
+//!
+//! Ein voller Durchgang je Tastendruck heisst bei 0,3 MB/s, dass die Einfaerbung
+//! beim Tippen um einen ganzen Durchgang hinterherhaengt — in einer Datei von
+//! 1,5 MB um rund 4,5 s, in einer von 16 MB um knapp eine Minute. Deshalb rechnet
+//! [`fortschreiben`] den vorigen Durchgang fort, statt ihn zu wiederholen:
+//!
+//! ```text
+//!   voriger Stand: Text + Haltepunkte + Formatierung
+//!            │
+//!            ├─ Zeilenvergleich   ──> erste abweichende Zeile p,
+//!            │                        Zahl der gleichen Endzeilen s
+//!            ├─ Wiedereinstieg    ──> am letzten Haltepunkt vor p
+//!            ├─ neu rechnen       ──> bis der Zustand am Zeilenanfang wieder
+//!            │                        mit einem aufgehobenen zusammenfaellt
+//!            └─ zusammensetzen    ──> Anfang uebernommen, Mitte neu,
+//!                                     Schwanz verschoben
+//! ```
+//!
+//! Gemessen am 260810 auf diesem Geraet, `--release`, an derselben Datei wie
+//! oben und Vielfachen davon:
+//!
+//! ```text
+//!   voller Durchgang            229 kB   864 ms    1,8 MB   7 074 ms
+//!   Zustaende mit aufheben      229 kB   912 ms    1,8 MB   7 692 ms   (+6 bis 9 %)
+//!   ein Anschlag in der Mitte   229 kB  0,39 ms    1,8 MB    0,22 ms
+//!   Zeilenvergleich dazu        229 kB  0,13 ms    1,8 MB    1,05 ms
+//! ```
+//!
+//! Der Wiedereinstieg kostet also drei bis vier Groessenordnungen weniger als
+//! der volle Durchgang, und er haengt nicht an der Dateigroesse, sondern an der
+//! Zahl der Zeilen bis zum Wiederanschluss. Der schlechteste gemessene Fall ist
+//! ein eingefuegtes Anfuehrungszeichen, das den Rest der Datei zur Zeichenkette
+//! macht: 2 318 Zeilen in 129 ms an der Datei von 229 kB, also die halbe Datei.
+//! Der Aufpreis auf den ersten Durchgang ist das Aufheben der Zustaende, und er
+//! liegt unter zehn Prozent.
+//!
+//! **Was das Fortschreiben nicht loest**, und die Aufteilung der beiden Preise
+//! gehoert hierher: der zweite Preis je Tastendruck steht nicht in dieser Datei,
+//! sondern in `crate::appkit::editor::text_zurueckschreiben`, und er ist
+//! gemessen (`issues/260809-2322`). Dort geht der ganze Text der Flaeche aus
+//! UTF-16 in eine Rust-Zeichenkette, auf dem **Hauptfaden**: 1,0 ms bei 229 kB,
+//! 7,9 ms bei 1,8 MB, 92 ms bei 19 MB. Die beiden Preise liegen an
+//! verschiedenen Faeden, wachsen verschieden und haben verschiedene Antworten;
+//! die Annahme der beiden Datensaetze, sie „lebten von derselben Antwort", ist
+//! damit widerlegt. Insbesondere braucht das Fortschreiben `editedRange` aus
+//! `NSTextStorage` **nicht**: der Zeilenvergleich findet die geaenderte Zeile
+//! selbst, in 0,13 bis 12 ms.
 //!
 //! # Zwei Koordinaten, ein Anfang
 //!
@@ -410,124 +450,763 @@ impl Wortarten {
     }
 }
 
-/// Berechnet die Darstellung des Textes (C3).
+/// Die Sprachdefinition, mit der gerechnet wird — die eine Stelle, die die
+/// beiden Rueckfaelle kennt.
+///
+/// Kennt die Kiste keine Sprache fuer den Pfad, wird Markdown genommen, und
+/// kennt sie auch das nicht, der reine Text. Der erste Rueckfall traegt die
+/// Markdown-Auszeichnung fuer eine Datei, deren Endung `Dateityp::Markdown`
+/// nennt, die Kiste aber nicht kennt; der zweite ist der Boden.
+///
+/// **Sie steht hier und nicht zweimal**, weil [`Schluessel`] denselben Namen
+/// braucht, den [`rechnen`] benutzt: waeren es zwei Ausdruecke, koennte der
+/// aufgehobene Stand einer anderen Sprache gehoeren als der Durchgang, der ihn
+/// fortschreibt.
+fn gewaehlte_sprache(pfad: Option<&Path>) -> &'static SyntaxReference {
+    let satz = sprachsatz();
+    sprache_fuer(pfad)
+        .or_else(|| satz.find_syntax_by_extension("md"))
+        .unwrap_or_else(|| satz.find_syntax_plain_text())
+}
+
+/// Wie viele Zeilen zwischen zwei aufgehobenen Zustaenden liegen (C3).
+///
+/// **Gewaehlt aus zwei Messungen vom 260810 und nicht geraten.** Je Zeile einen
+/// Zustand aufzuheben kostet auf diesem Geraet rund **780 Byte**: an einer Datei
+/// von 19 MB mit 394 060 Zeilen wuchs der Speicherbedarf des Prozesses von
+/// 23,3 MB auf 331,5 MB, also um das Sechzehnfache der Datei. Das ist kein
+/// Preis, den ein Editor an seiner Grenze von 16 MB zahlen darf. Umgekehrt
+/// kostet ein Wiedereinstieg, der bis zu `ZUSTANDSABSTAND` Zeilen **vor** der
+/// geaenderten Zeile ansetzt, genau diese Zeilen zusaetzlich, und eine Zeile
+/// kostet im Mittel 0,19 ms (4 636 Zeilen in 864 ms).
+///
+/// 32 ist der Schnitt zwischen den beiden: rund 10 MB statt 331 MB, und
+/// hoechstens etwa 6 ms Aufpreis je Anschlag.
+const ZUSTANDSABSTAND: usize = 32;
+
+/// Woran erkannt wird, dass ein aufgehobener Stand noch zu einer Anfrage passt.
+///
+/// **Drei Angaben, und jede von ihnen aendert jede Farbe.** Eine andere Tafel
+/// faerbt alles um (S34), eine andere Sprache zerlegt alles neu, und eine andere
+/// Besetzung setzt andere Auszeichnungen. Stimmt eine nicht, ist der aufgehobene
+/// Stand keine Vorlage, sondern Abfall, und [`fortschreiben`] rechnet von vorn.
+///
+/// Der Text steht **nicht** darin: er wird verglichen und nicht gleichgesetzt,
+/// und genau dieser Vergleich ist der Gewinn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Schluessel {
+    /// Die Besetzung der Formatansicht.
+    art: Darstellungsart,
+    /// Der Name der Sprachdefinition aus [`gewaehlte_sprache`].
+    sprache: &'static str,
+    /// Die Farbtafel.
+    tafel: Tafel,
+}
+
+/// Wo eine Zeile anfaengt, in beiden Koordinaten.
+///
+/// Ein Eintrag je Zeile, dazu ein abschliessender fuer das Textende; damit ist
+/// die Zeile `n` genau `text[zeilen[n].byte..zeilen[n + 1].byte]` und die Laenge
+/// des ganzen Textes in UTF-16 der letzte Eintrag.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Zeilenanfang {
+    /// Byteversatz im Text.
+    byte: usize,
+    /// Versatz in UTF-16-Einheiten.
+    utf16: usize,
+}
+
+/// Der aufgehobene Zustand der Kiste am Anfang einer Zeile.
+///
+/// **Das ist das eine Stueck, das `syntect` nicht selbst aufhebt**, und ohne das
+/// kein Durchgang mitten in einer Datei anfangen kann: [`ParseState`] traegt den
+/// Stapel der offenen Zusammenhaenge (eine offene Zeichenkette, ein offener
+/// Block), [`ScopeStack`] die Wortarten, die an dieser Stelle gelten.
+#[derive(Debug, Clone)]
+struct Haltepunkt {
+    /// Die Zeile, an deren Anfang der Zustand gilt; ab 0 gezaehlt.
+    zeile: usize,
+    /// Der Zustand des Zerlegers.
+    zustand: ParseState,
+    /// Der Stapel der Wortarten.
+    stapel: ScopeStack,
+}
+
+/// Was ein Durchgang aufhebt, damit der naechste ihn fortschreiben kann (C3).
+///
+/// **Er gehoert dem Hauptfaden und wandert mit jeder Anfrage in den
+/// Arbeitsfaden und zurueck.** `crate::appkit::editor` haelt ihn zwischen zwei
+/// Anfragen; [`Einfaerbungsvorgang::starten`] nimmt ihn und gibt ihn mit dem
+/// Ergebnis wieder heraus. Ein Vorgang, der ohne Meldung faellt, nimmt ihn mit,
+/// und der naechste Durchgang rechnet dann von vorn — langsam, aber richtig.
+///
+/// **Was er an Speicher kostet, steht hier und wird nicht verschwiegen.** Fuer
+/// eine Datei an der Grenze von 16 MB sind es die Abschrift des Textes, rund
+/// 10 MB Haltepunkte (siehe [`ZUSTANDSABSTAND`]), die Zeilentafel mit 16 Byte je
+/// Zeile und die Formatierung selbst. Alles waechst mit der Datei; fuer eine von
+/// 200 kB ist es unter einem Megabyte.
+#[derive(Debug)]
+pub struct Einfaerbungsstand {
+    /// Der Text, aus dem die Formatierung entstanden ist.
+    ///
+    /// Er steht hier, weil der Zeilenvergleich ihn braucht. Ein Abgleich ueber
+    /// Streuwerte je Zeile waere kuerzer und liesse bei einem Zusammenstoss
+    /// eine geaenderte Zeile als unveraendert durchgehen; eine Farbe, die still
+    /// falsch ist, ist der schlechtere Preis.
+    text: String,
+    /// Woran erkannt wird, dass dieser Stand noch passt.
+    schluessel: Schluessel,
+    /// Ein Eintrag je Zeile, dazu einer fuer das Textende.
+    zeilen: Vec<Zeilenanfang>,
+    /// Die aufgehobenen Zustaende, nach Zeile aufsteigend.
+    haltepunkte: Vec<Haltepunkt>,
+    /// Was die Flaeche daraus setzt.
+    formatierung: Formatierung,
+}
+
+impl Einfaerbungsstand {
+    /// Was die Flaeche daraus setzt.
+    pub fn formatierung(&self) -> &Formatierung {
+        &self.formatierung
+    }
+}
+
+/// Ein Stueck mit Anfang und Laenge in UTF-16-Einheiten.
+///
+/// Der gemeinsame Nenner von [`Einfaerbung`] und [`Auszeichnungsstelle`]. Er
+/// steht hier, damit das Teilen und Verschieben der beiden Listen einmal
+/// geschrieben ist und nicht zweimal; die beiden Listen werden an denselben zwei
+/// Naehten geteilt.
+trait Strecke {
+    /// Anfang in UTF-16-Einheiten.
+    fn anfang(&self) -> usize;
+    /// Laenge in UTF-16-Einheiten.
+    fn laenge(&self) -> usize;
+    /// Setzt beide neu.
+    fn setzen(&mut self, anfang: usize, laenge: usize);
+}
+
+impl Strecke for Einfaerbung {
+    fn anfang(&self) -> usize {
+        self.anfang
+    }
+    fn laenge(&self) -> usize {
+        self.laenge
+    }
+    fn setzen(&mut self, anfang: usize, laenge: usize) {
+        self.anfang = anfang;
+        self.laenge = laenge;
+    }
+}
+
+impl Strecke for Auszeichnungsstelle {
+    fn anfang(&self) -> usize {
+        self.anfang
+    }
+    fn laenge(&self) -> usize {
+        self.laenge
+    }
+    fn setzen(&mut self, anfang: usize, laenge: usize) {
+        self.anfang = anfang;
+        self.laenge = laenge;
+    }
+}
+
+/// Teilt eine Liste an einer Stelle: was davor liegt, was dahinter.
+///
+/// Ein Stueck, das ueber die Stelle hinausreicht, kommt **beschnitten** nach
+/// vorn und **unbeschnitten** nach hinten. Das ist Absicht: der vordere Teil
+/// wird uebernommen, der hintere bleibt liegen, bis die zweite Naht steht, und
+/// [`ab_der_stelle`] beschneidet ihn dann. Wuerde hier schon beschnitten, ginge
+/// ein Stueck verloren, das von vor der ersten Naht bis hinter die zweite reicht
+/// — ein Blockkommentar ueber die ganze geaenderte Stelle hinweg.
+///
+/// **Linear und nicht ueber eine Teilungssuche**, denn sortiert und
+/// ueberschneidungsfrei ist allein [`Formatierung::einfaerbungen`]. Die
+/// Auszeichnungen sind es nicht: eine Listenzeile wird nach den Stuecken ihrer
+/// Zeile angehaengt und beginnt vor ihnen.
+fn teilen<T: Strecke + Clone>(liste: Vec<T>, grenze: usize) -> (Vec<T>, Vec<T>) {
+    let mut vorn = Vec::new();
+    let mut hinten = Vec::new();
+    for stueck in liste {
+        let anfang = stueck.anfang();
+        let ende = anfang + stueck.laenge();
+        if ende <= grenze {
+            vorn.push(stueck);
+        } else if anfang >= grenze {
+            hinten.push(stueck);
+        } else {
+            let mut links = stueck.clone();
+            links.setzen(anfang, grenze - anfang);
+            vorn.push(links);
+            hinten.push(stueck);
+        }
+    }
+    (vorn, hinten)
+}
+
+/// Nimmt aus einer Liste, was hinter `grenze` liegt, und schiebt es auf
+/// `versatz`.
+///
+/// Ein Stueck, das die Grenze ueberschreitet, wird vorn beschnitten: sein
+/// vorderer Teil liegt in der neu gerechneten Mitte und ist dort schon
+/// entstanden.
+fn ab_der_stelle<T: Strecke>(liste: Vec<T>, grenze: usize, versatz: usize) -> Vec<T> {
+    let mut schwanz: Vec<T> = liste
+        .into_iter()
+        .filter(|stueck| stueck.anfang() + stueck.laenge() > grenze)
+        .collect();
+    for stueck in &mut schwanz {
+        let anfang = stueck.anfang().max(grenze);
+        let ende = stueck.anfang() + stueck.laenge();
+        stueck.setzen(anfang - grenze + versatz, ende - anfang);
+    }
+    schwanz
+}
+
+/// Der aufgehobene Stand, aus dem ein Durchgang fortschreibt.
+struct Vorlage<'a> {
+    /// Der Text des vorigen Durchgangs.
+    text: &'a str,
+    /// Seine Zeilentafel, mit dem Schlusseintrag.
+    zeilen: Vec<Zeilenanfang>,
+    /// Seine Haltepunkte.
+    haltepunkte: Vec<Haltepunkt>,
+    /// Seine Formatierung.
+    formatierung: Formatierung,
+}
+
+impl Vorlage<'_> {
+    /// Wie viele Zeilen die Vorlage hatte.
+    fn zeilenzahl(&self) -> usize {
+        self.zeilen.len() - 1
+    }
+
+    /// Die genannte Zeile der Vorlage, mit ihrem Zeilenende.
+    fn zeile(&self, nummer: usize) -> &str {
+        &self.text[self.zeilen[nummer].byte..self.zeilen[nummer + 1].byte]
+    }
+}
+
+/// Wo ein Durchgang wieder anfangen muss.
+struct Einstieg {
+    /// Die erste Zeile, die neu gerechnet wird. Ein Haltepunkt der Vorlage.
+    ab: usize,
+    /// Seine Stelle in [`Vorlage::haltepunkte`].
+    haltepunkt: usize,
+    /// Wie viele Zeilen am Dateiende in beiden Texten uebereinstimmen.
+    gleiche_endzeilen: usize,
+}
+
+/// Vergleicht die Zeilen und sagt, wo neu zu rechnen ist.
+///
+/// **Der Zeilenvergleich ist die ganze Suche nach der geaenderten Stelle**, und
+/// er kostet 0,13 ms bei 229 kB und 12 ms bei 19 MB (gemessen am 260810). Damit
+/// braucht das Fortschreiben `editedRange` aus `NSTextStorage` nicht, und der
+/// Schnitt zwischen dieser Datei und AppKit bleibt, wie er ist.
+///
+/// Zwei Zahlen kommen heraus: wie viele Zeilen am Anfang gleich sind und wie
+/// viele am Ende. Beide zusammen sind hoechstens so gross wie der kuerzere der
+/// beiden Texte, sonst zaehlte dieselbe Zeile zweimal.
+///
+/// `None` heisst: die Vorlage gibt keinen Einstieg her, es wird von vorn
+/// gerechnet. Der Fall trifft ein, wenn sie keine Haltepunkte fuehrt — nach
+/// einem Durchgang ohne Farbtafel etwa.
+fn einstieg_finden(vorlage: &Vorlage<'_>, neu: &[&str]) -> Option<Einstieg> {
+    if vorlage.haltepunkte.is_empty() {
+        return None;
+    }
+    let alte_zahl = vorlage.zeilenzahl();
+    let hoechstens = alte_zahl.min(neu.len());
+
+    let mut gleiche_anfangszeilen = 0;
+    while gleiche_anfangszeilen < hoechstens
+        && vorlage.zeile(gleiche_anfangszeilen) == neu[gleiche_anfangszeilen]
+    {
+        gleiche_anfangszeilen += 1;
+    }
+
+    let mut gleiche_endzeilen = 0;
+    while gleiche_endzeilen < hoechstens - gleiche_anfangszeilen
+        && vorlage.zeile(alte_zahl - 1 - gleiche_endzeilen)
+            == neu[neu.len() - 1 - gleiche_endzeilen]
+    {
+        gleiche_endzeilen += 1;
+    }
+
+    // Der letzte Haltepunkt, der noch vor der ersten Abweichung liegt. Der
+    // erste steht immer auf Zeile 0, also gibt es ihn.
+    let haltepunkt = vorlage
+        .haltepunkte
+        .partition_point(|punkt| punkt.zeile <= gleiche_anfangszeilen)
+        .checked_sub(1)?;
+    Some(Einstieg {
+        ab: vorlage.haltepunkte[haltepunkt].zeile,
+        haltepunkt,
+        gleiche_endzeilen,
+    })
+}
+
+/// Was von der Vorlage liegen bleibt, bis der Wiederanschluss gefunden ist.
+struct Rest {
+    /// Wie viele Zeilen die Vorlage hatte.
+    zeilenzahl: usize,
+    /// Wie viele Zeilen am Dateiende uebereinstimmen.
+    gleiche_endzeilen: usize,
+    /// Die Zeile, ab der die Eintraege in [`Self::zeilen`] zaehlen.
+    ab: usize,
+    /// Die Zeilentafel der Vorlage ab [`Self::ab`], mit dem Schlusseintrag.
+    zeilen: Vec<Zeilenanfang>,
+    /// Ihre Haltepunkte hinter der Einstiegszeile.
+    haltepunkte: Vec<Haltepunkt>,
+    /// Ihre Einfaerbungen hinter der Einstiegsstelle, unbeschnitten.
+    einfaerbungen: Vec<Einfaerbung>,
+    /// Ihre Auszeichnungen hinter der Einstiegsstelle, unbeschnitten.
+    auszeichnungen: Vec<Auszeichnungsstelle>,
+}
+
+/// Wo der Rest der Vorlage wieder angeschlossen wird.
+struct Anschluss {
+    /// Die Zeile der Vorlage, an der weitergemacht wird.
+    alte_zeile: usize,
+    /// Ihre Stelle in [`Rest::haltepunkte`].
+    haltepunkt: usize,
+}
+
+impl Rest {
+    /// Ob der Zustand am Anfang der neuen Zeile `nummer` mit einem
+    /// aufgehobenen zusammenfaellt.
+    ///
+    /// **Zwei Bedingungen, und beide muessen gelten.** Die Zeile muss im
+    /// gemeinsamen Ende liegen — dort tragen Vorlage und neuer Text Zeile fuer
+    /// Zeile dasselbe —, und der Zustand des Zerlegers muss derselbe sein. Ohne
+    /// die erste waere der Text dahinter ein anderer, ohne die zweite die
+    /// Einfaerbung.
+    ///
+    /// **Angeschlossen wird nur an einem Haltepunkt**, also hoechstens
+    /// [`ZUSTANDSABSTAND`] Zeilen hinter der Stelle, an der die Zustaende
+    /// tatsaechlich wieder zusammenfallen. Das ist der Preis der Sparsamkeit aus
+    /// [`ZUSTANDSABSTAND`] und dieselben Zeilen, die der Einstieg vorher zu viel
+    /// rechnet.
+    ///
+    /// Der Zeiger laeuft mit und nur vorwaerts: `alte_zeile` waechst mit
+    /// `nummer`.
+    fn anschluss(
+        &self,
+        nummer: usize,
+        neue_zahl: usize,
+        zustand: &ParseState,
+        stapel: &ScopeStack,
+        zeiger: &mut usize,
+    ) -> Option<Anschluss> {
+        if nummer + self.gleiche_endzeilen < neue_zahl {
+            return None;
+        }
+        // Die Zeile der Vorlage, die dieselbe ist. Kein Unterlauf: `nummer` ist
+        // mindestens `neue_zahl - gleiche_endzeilen`, und die Vorlage hat
+        // mindestens so viele Endzeilen.
+        let alte_zeile = nummer + self.zeilenzahl - neue_zahl;
+        while self
+            .haltepunkte
+            .get(*zeiger)
+            .is_some_and(|punkt| punkt.zeile < alte_zeile)
+        {
+            *zeiger += 1;
+        }
+        let punkt = self.haltepunkte.get(*zeiger)?;
+        if punkt.zeile != alte_zeile || punkt.zustand != *zustand || punkt.stapel != *stapel {
+            return None;
+        }
+        Some(Anschluss {
+            alte_zeile,
+            haltepunkt: *zeiger,
+        })
+    }
+}
+
+/// Was ein Durchgang liefert: die Formatierung und das, was der naechste
+/// braucht.
+struct Rechnung {
+    /// Die Zeilentafel des neuen Textes, mit dem Schlusseintrag.
+    zeilen: Vec<Zeilenanfang>,
+    /// Die aufgehobenen Zustaende.
+    haltepunkte: Vec<Haltepunkt>,
+    /// Was die Flaeche setzt.
+    formatierung: Formatierung,
+}
+
+/// Ein Durchgang ohne Einfaerbung, mit richtiger Laenge.
+///
+/// Der Rueckfall des einfachen Textes und jeder Stelle, an der die Kiste nichts
+/// liefert. Ohne Haltepunkte, also ohne Vorlage fuer den naechsten Durchgang:
+/// wo nichts eingefaerbt wird, ist auch nichts fortzuschreiben.
+fn leere_rechnung(text: &str, art: Darstellungsart) -> Rechnung {
+    Rechnung {
+        zeilen: Vec::new(),
+        haltepunkte: Vec::new(),
+        formatierung: Formatierung::leer(art, text.encode_utf16().count()),
+    }
+}
+
+/// Rechnet die Darstellung, so weit sie nicht aus der Vorlage kommt (C3).
+///
+/// Ohne Vorlage ist das der ganze Text; mit Vorlage der Abschnitt von der
+/// Einstiegszeile bis zum Wiederanschluss. Der Ablauf steht im Modulkopf unter
+/// „Der zweite Durchgang faengt nicht am Dateianfang an".
+///
+/// **Die Zeilenversaetze kommen nicht aus den Stuecken der Kiste.** Sie werden
+/// je Zeile aus deren eigener Laenge fortgeschrieben, und das ist der
+/// Unterschied zu der Fassung vor dem 260810: bricht der Zerleger mitten in
+/// einer Zeile ab, deckten die Stuecke die Zeile nicht mehr ab, und jede Stelle
+/// dahinter waere verschoben. Die Laenge der Formatierung ist deshalb der
+/// Schlusseintrag der Zeilentafel und keine getrennte Rechnung daneben.
+fn rechnen(
+    text: &str,
+    vorlage: Option<Vorlage<'_>>,
+    art: Darstellungsart,
+    sprache: &SyntaxReference,
+    tafel: Tafel,
+) -> Rechnung {
+    if art == Darstellungsart::EinfacherText {
+        // Einfacher Text bekommt Umbruch und eine lesbarere Schrift, und die
+        // beiden setzt die Flaeche; eine Einfaerbung gehoert nicht dazu.
+        return leere_rechnung(text, art);
+    }
+    let satz = sprachsatz();
+    // Der Pruefcode belegt beide Tafeln als vorhanden. Faellt eine spaeter aus
+    // dem Satz, faerbt KRK nicht ein, statt anzuhalten: eine fehlende Tafel ist
+    // kein Grund, dem Nutzer seine Datei vorzuenthalten.
+    let (Some(farbtafel), Some(wortarten)) =
+        (tafelsatz().themes.get(tafel.name()), Wortarten::neu())
+    else {
+        return leere_rechnung(text, art);
+    };
+    let faerber = Highlighter::new(farbtafel);
+    let grundfarbe = faerber.get_default().foreground;
+    let markdown = art == Darstellungsart::Markdown;
+
+    let neu: Vec<&str> = LinesWithEndings::from(text).collect();
+    let einstieg = vorlage
+        .as_ref()
+        .and_then(|vorlage| einstieg_finden(vorlage, &neu));
+
+    let ab;
+    let mut zustand;
+    let mut stapel;
+    let mut byte;
+    let mut stelle;
+    let mut zeilen;
+    let mut haltepunkte;
+    let mut einfaerbungen;
+    let mut auszeichnungen;
+    let mut rest = None;
+
+    match (vorlage, einstieg) {
+        (Some(vorlage), Some(einstieg)) => {
+            let zeilenzahl = vorlage.zeilenzahl();
+            let Vorlage {
+                text: _,
+                zeilen: mut alte_zeilen,
+                haltepunkte: mut alte_haltepunkte,
+                formatierung,
+            } = vorlage;
+            ab = einstieg.ab;
+            zustand = alte_haltepunkte[einstieg.haltepunkt].zustand.clone();
+            stapel = alte_haltepunkte[einstieg.haltepunkt].stapel.clone();
+            byte = alte_zeilen[ab].byte;
+            stelle = alte_zeilen[ab].utf16;
+
+            // Der Haltepunkt, von dem aus weitergerechnet wird, gilt fuer eine
+            // Zeile, die sich nicht geaendert hat, und bleibt deshalb stehen.
+            let rest_zeilen = alte_zeilen.split_off(ab);
+            let rest_haltepunkte = alte_haltepunkte.split_off(einstieg.haltepunkt + 1);
+            let (vordere_einfaerbungen, rest_einfaerbungen) =
+                teilen(formatierung.einfaerbungen, stelle);
+            let (vordere_auszeichnungen, rest_auszeichnungen) =
+                teilen(formatierung.auszeichnungen, stelle);
+
+            zeilen = alte_zeilen;
+            haltepunkte = alte_haltepunkte;
+            einfaerbungen = vordere_einfaerbungen;
+            auszeichnungen = vordere_auszeichnungen;
+            rest = Some(Rest {
+                zeilenzahl,
+                gleiche_endzeilen: einstieg.gleiche_endzeilen,
+                ab,
+                zeilen: rest_zeilen,
+                haltepunkte: rest_haltepunkte,
+                einfaerbungen: rest_einfaerbungen,
+                auszeichnungen: rest_auszeichnungen,
+            });
+        }
+        _ => {
+            ab = 0;
+            zustand = ParseState::new(sprache);
+            stapel = ScopeStack::new();
+            byte = 0;
+            stelle = 0;
+            zeilen = Vec::with_capacity(neu.len() + 1);
+            haltepunkte = Vec::with_capacity(neu.len() / ZUSTANDSABSTAND + 1);
+            einfaerbungen = Vec::new();
+            auszeichnungen = Vec::new();
+        }
+    }
+
+    let mut faerben = true;
+    let mut anschluss = None;
+    let mut zeiger = 0;
+    let mut nummer = ab;
+    while nummer < neu.len() {
+        let zeile = neu[nummer];
+        zeilen.push(Zeilenanfang {
+            byte,
+            utf16: stelle,
+        });
+        if haltepunkte
+            .last()
+            .is_none_or(|letzter| nummer - letzter.zeile >= ZUSTANDSABSTAND)
+        {
+            haltepunkte.push(Haltepunkt {
+                zeile: nummer,
+                zustand: zustand.clone(),
+                stapel: stapel.clone(),
+            });
+        }
+
+        if faerben {
+            match zustand.parse_line(zeile, satz) {
+                // Die Kiste ist mit dieser Zeile nicht fertiggeworden. Was bis
+                // hierher steht, bleibt stehen; der Rest bleibt ungefaerbt, und
+                // der Nutzer sieht seine Datei. Ein Abbruch waere die
+                // schlechtere Antwort, weil er die Datei mitnaehme. Die
+                // Zeilentafel laeuft trotzdem weiter, sonst waere die Laenge
+                // der Formatierung falsch und die Flaeche liesse die ganze
+                // Lieferung fallen.
+                Err(_) => faerben = false,
+                Ok(befehle) => {
+                    let mut innen = stelle;
+                    let mut ist_liste = false;
+                    for (stueck, befehl) in ScopeRegionIterator::new(&befehle, zeile) {
+                        if stapel.apply(befehl).is_err() {
+                            break;
+                        }
+                        let stuecklaenge = stueck.encode_utf16().count();
+                        if stuecklaenge == 0 {
+                            continue;
+                        }
+                        let arten = stapel.as_slice();
+                        let stil = faerber.style_for_stack(arten);
+                        let unterstrichen = stil.font_style.contains(FontStyle::UNDERLINE)
+                            || (markdown && Wortarten::traegt(wortarten.verweis, arten));
+
+                        // Ein Stueck in der Grundfarbe bekommt **kein** Merkmal
+                        // und behaelt damit die Systemfarbe der Flaeche. Nur die
+                        // Vordergrundfarben der Wortarten kommen aus der Tafel;
+                        // so stimmt der Kontrast in beiden Erscheinungsbildern
+                        // ohne Zutun, und die Tafel muss nur ihre eigenen Farben
+                        // liefern.
+                        if stil.foreground != grundfarbe || unterstrichen {
+                            anfuegen(
+                                &mut einfaerbungen,
+                                Einfaerbung {
+                                    anfang: innen,
+                                    laenge: stuecklaenge,
+                                    farbe: stil.foreground.into(),
+                                    unterstrichen,
+                                },
+                            );
+                        }
+
+                        if markdown {
+                            if let Some(stufe) = wortarten.stufe(arten) {
+                                auszeichnung_anfuegen(
+                                    &mut auszeichnungen,
+                                    innen,
+                                    stuecklaenge,
+                                    Auszeichnung::Ueberschrift { stufe },
+                                );
+                            } else if Wortarten::traegt(wortarten.quelltext, arten) {
+                                auszeichnung_anfuegen(
+                                    &mut auszeichnungen,
+                                    innen,
+                                    stuecklaenge,
+                                    Auszeichnung::FesteSchrift,
+                                );
+                            }
+                            ist_liste |= Wortarten::traegt(wortarten.liste, arten);
+                        }
+
+                        innen += stuecklaenge;
+                    }
+
+                    if ist_liste && innen > stelle {
+                        auszeichnungen.push(Auszeichnungsstelle {
+                            anfang: stelle,
+                            laenge: innen - stelle,
+                            art: Auszeichnung::Listenzeile,
+                        });
+                    }
+                }
+            }
+        }
+
+        byte += zeile.len();
+        stelle += zeile.encode_utf16().count();
+        nummer += 1;
+
+        if let Some(rest) = &rest
+            && let Some(gefunden) =
+                rest.anschluss(nummer, neu.len(), &zustand, &stapel, &mut zeiger)
+        {
+            anschluss = Some(gefunden);
+            break;
+        }
+    }
+
+    let laenge = match (anschluss, rest) {
+        (Some(anschluss), Some(rest)) => {
+            let Rest {
+                ab,
+                zeilen: rest_zeilen,
+                haltepunkte: rest_haltepunkte,
+                einfaerbungen: rest_einfaerbungen,
+                auszeichnungen: rest_auszeichnungen,
+                ..
+            } = rest;
+            let stelle_in_rest = anschluss.alte_zeile - ab;
+            let alter_byte = rest_zeilen[stelle_in_rest].byte;
+            let alte_stelle = rest_zeilen[stelle_in_rest].utf16;
+
+            zeilen.extend(
+                rest_zeilen[stelle_in_rest..]
+                    .iter()
+                    .map(|anfang| Zeilenanfang {
+                        byte: anfang.byte - alter_byte + byte,
+                        utf16: anfang.utf16 - alte_stelle + stelle,
+                    }),
+            );
+            haltepunkte.extend(rest_haltepunkte.into_iter().skip(anschluss.haltepunkt).map(
+                |mut punkt| {
+                    punkt.zeile = punkt.zeile - anschluss.alte_zeile + nummer;
+                    punkt
+                },
+            ));
+            for stueck in ab_der_stelle(rest_einfaerbungen, alte_stelle, stelle) {
+                anfuegen(&mut einfaerbungen, stueck);
+            }
+            for stueck in ab_der_stelle(rest_auszeichnungen, alte_stelle, stelle) {
+                auszeichnung_anfuegen(
+                    &mut auszeichnungen,
+                    stueck.anfang,
+                    stueck.laenge,
+                    stueck.art,
+                );
+            }
+            zeilen.last().map_or(stelle, |anfang| anfang.utf16)
+        }
+        _ => {
+            zeilen.push(Zeilenanfang {
+                byte,
+                utf16: stelle,
+            });
+            stelle
+        }
+    };
+
+    Rechnung {
+        zeilen,
+        haltepunkte,
+        formatierung: Formatierung {
+            art,
+            laenge,
+            einfaerbungen,
+            auszeichnungen,
+        },
+    }
+}
+
+/// Schreibt den vorigen Durchgang fort, statt ihn zu wiederholen (C3).
+///
+/// **Der Weg, den das laufende Programm geht.** [`formatieren`] daneben ist
+/// derselbe Durchgang ohne Vorlage; es steht fuer den Pruefcode und fuer den
+/// ersten Durchgang einer Datei.
 ///
 /// Der Text muss der gehaltene Stand sein, also gueltiges UTF-8 mit `\n` als
 /// einzigem Zeilenende; `krk_core::text::datei::in_gehaltene_form` stellt das
 /// her, und [`crate::editormodell`] haelt nichts anderes.
 ///
+/// **Drei Faelle, ueberschneidungsfrei und vollstaendig.** Passt der
+/// [`Schluessel`] nicht, wird von vorn gerechnet. Ist der Text derselbe, kommt
+/// der Stand unveraendert zurueck und es wird nichts gerechnet — das ist der
+/// Fall eines Ansichtswechsels ohne Textaenderung. Sonst wird fortgeschrieben.
+///
 /// **Laeuft auf einem Arbeitsfaden**, siehe [`Einfaerbungsvorgang`] und die
-/// Messung im Modulkopf. Sie unmittelbar zu rufen ist zulaessig und im Pruefcode
-/// der uebliche Weg; im laufenden Programm tut es niemand.
-pub fn formatieren(text: &str, pfad: Option<&Path>, typ: Dateityp, tafel: Tafel) -> Formatierung {
+/// Messungen im Modulkopf.
+pub fn fortschreiben(
+    vorher: Option<Einfaerbungsstand>,
+    text: String,
+    pfad: Option<&Path>,
+    typ: Dateityp,
+    tafel: Tafel,
+) -> Einfaerbungsstand {
     let art = art(pfad, typ);
-    let laenge = text.encode_utf16().count();
-    if art == Darstellungsart::EinfacherText {
-        // Einfacher Text bekommt Umbruch und eine lesbarere Schrift, und die
-        // beiden setzt die Flaeche; eine Einfaerbung gehoert nicht dazu.
-        return Formatierung::leer(art, laenge);
-    }
-
-    let satz = sprachsatz();
-    let sprache = sprache_fuer(pfad)
-        .or_else(|| satz.find_syntax_by_extension("md"))
-        .unwrap_or_else(|| satz.find_syntax_plain_text());
-    let Some(farbtafel) = tafelsatz().themes.get(tafel.name()) else {
-        // Der Pruefcode belegt beide Tafeln als vorhanden. Faellt eine spaeter
-        // aus dem Satz, faerbt KRK nicht ein, statt anzuhalten: eine fehlende
-        // Tafel ist kein Grund, dem Nutzer seine Datei vorzuenthalten.
-        return Formatierung::leer(art, laenge);
-    };
-    let Some(wortarten) = Wortarten::neu() else {
-        return Formatierung::leer(art, laenge);
-    };
-
-    let faerber = Highlighter::new(farbtafel);
-    let grundfarbe = faerber.get_default().foreground;
-    let markdown = art == Darstellungsart::Markdown;
-
-    let mut zustand = ParseState::new(sprache);
-    let mut stapel = ScopeStack::new();
-    let mut einfaerbungen: Vec<Einfaerbung> = Vec::new();
-    let mut auszeichnungen: Vec<Auszeichnungsstelle> = Vec::new();
-    let mut stelle = 0usize;
-
-    for zeile in LinesWithEndings::from(text) {
-        let Ok(ops) = zustand.parse_line(zeile, satz) else {
-            // Die Kiste ist mit dieser Zeile nicht fertiggeworden. Was bis
-            // hierher steht, bleibt stehen; der Rest bleibt ungefaerbt, und der
-            // Nutzer sieht seine Datei. Ein Abbruch waere die schlechtere
-            // Antwort, weil er die Datei mitnaehme.
-            break;
-        };
-        let zeilenanfang = stelle;
-        let mut zeile_ist_liste = false;
-
-        for (stueck, befehl) in ScopeRegionIterator::new(&ops, zeile) {
-            if stapel.apply(befehl).is_err() {
-                break;
-            }
-            let stuecklaenge = stueck.encode_utf16().count();
-            if stuecklaenge == 0 {
-                continue;
-            }
-            let arten = stapel.as_slice();
-            let stil = faerber.style_for_stack(arten);
-            let unterstrichen = stil.font_style.contains(FontStyle::UNDERLINE)
-                || (markdown && Wortarten::traegt(wortarten.verweis, arten));
-
-            // Ein Stueck in der Grundfarbe bekommt **kein** Merkmal und behaelt
-            // damit die Systemfarbe der Flaeche. Nur die Vordergrundfarben der
-            // Wortarten kommen aus der Tafel; so stimmt der Kontrast in beiden
-            // Erscheinungsbildern ohne Zutun, und die Tafel muss nur ihre
-            // eigenen Farben liefern.
-            if stil.foreground != grundfarbe || unterstrichen {
-                let neu = Einfaerbung {
-                    anfang: stelle,
-                    laenge: stuecklaenge,
-                    farbe: stil.foreground.into(),
-                    unterstrichen,
-                };
-                anfuegen(&mut einfaerbungen, neu);
-            }
-
-            if markdown {
-                if let Some(stufe) = wortarten.stufe(arten) {
-                    auszeichnung_anfuegen(
-                        &mut auszeichnungen,
-                        stelle,
-                        stuecklaenge,
-                        Auszeichnung::Ueberschrift { stufe },
-                    );
-                } else if Wortarten::traegt(wortarten.quelltext, arten) {
-                    auszeichnung_anfuegen(
-                        &mut auszeichnungen,
-                        stelle,
-                        stuecklaenge,
-                        Auszeichnung::FesteSchrift,
-                    );
-                }
-                zeile_ist_liste |= Wortarten::traegt(wortarten.liste, arten);
-            }
-
-            stelle += stuecklaenge;
-        }
-
-        if zeile_ist_liste && stelle > zeilenanfang {
-            auszeichnungen.push(Auszeichnungsstelle {
-                anfang: zeilenanfang,
-                laenge: stelle - zeilenanfang,
-                art: Auszeichnung::Listenzeile,
-            });
-        }
-    }
-
-    Formatierung {
+    let sprache = gewaehlte_sprache(pfad);
+    let schluessel = Schluessel {
         art,
-        laenge,
-        einfaerbungen,
-        auszeichnungen,
+        sprache: sprache.name.as_str(),
+        tafel,
+    };
+
+    let rechnung = match vorher.filter(|stand| stand.schluessel == schluessel) {
+        Some(basis) if basis.text == text => return basis,
+        Some(basis) => {
+            let Einfaerbungsstand {
+                text: alter_text,
+                zeilen,
+                haltepunkte,
+                formatierung,
+                ..
+            } = basis;
+            rechnen(
+                &text,
+                Some(Vorlage {
+                    text: &alter_text,
+                    zeilen,
+                    haltepunkte,
+                    formatierung,
+                }),
+                art,
+                sprache,
+                tafel,
+            )
+        }
+        None => rechnen(&text, None, art, sprache, tafel),
+    };
+
+    Einfaerbungsstand {
+        text,
+        schluessel,
+        zeilen: rechnung.zeilen,
+        haltepunkte: rechnung.haltepunkte,
+        formatierung: rechnung.formatierung,
     }
+}
+
+/// Berechnet die Darstellung des Textes von vorn (C3).
+///
+/// Dasselbe wie [`fortschreiben`] ohne Vorlage und ohne den aufgehobenen Stand.
+///
+/// **Sie steht unter `cfg(test)` und ist damit kein Stueck ohne Aufrufer.** Bis
+/// zum 260810 war sie der Weg des laufenden Programms; seit das Fortschreiben
+/// steht, geht es ueber [`fortschreiben`], und diese Funktion ist die eine Seite
+/// der Zusage, an der das Fortschreiben haengt: „von vorn" und
+/// „fortgeschrieben" liefern dasselbe. Sie im Programm stehen zu lassen waere
+/// oeffentliche Schnittstelle ohne Aufrufer — genau das Muster, das
+/// `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`
+/// in diesem Circle fuehrt.
+#[cfg(test)]
+fn formatieren(text: &str, pfad: Option<&Path>, typ: Dateityp, tafel: Tafel) -> Formatierung {
+    rechnen(text, None, art(pfad, typ), gewaehlte_sprache(pfad), tafel).formatierung
 }
 
 /// Haengt eine Einfaerbung an und zieht sie mit der vorigen zusammen, wenn
@@ -585,7 +1264,7 @@ fn auszeichnung_anfuegen(
 /// nicht; der Modulkopf von [`crate::editormodell`] schreibt den Satz aus.
 #[derive(Debug)]
 pub struct Einfaerbungsvorgang {
-    empfaenger: Receiver<Formatierung>,
+    empfaenger: Receiver<Einfaerbungsstand>,
 }
 
 /// Was ein [`Einfaerbungsvorgang`] beim Nachfragen sagt.
@@ -595,8 +1274,9 @@ pub struct Einfaerbungsvorgang {
 /// keinen Sinn mehr, auf ihn zu warten.
 #[derive(Debug)]
 pub enum Abholung {
-    /// Die Formatierung steht.
-    Fertig(Box<Formatierung>),
+    /// Die Formatierung steht, und mit ihr der Stand fuer den naechsten
+    /// Durchgang.
+    Fertig(Box<Einfaerbungsstand>),
     /// Der Faden rechnet noch.
     Laeuft,
     /// Der Faden ist ohne Meldung gefallen.
@@ -610,14 +1290,28 @@ impl Einfaerbungsvorgang {
     /// Modell auf dem Hauptfaden, und der Faden ueberlebt jede Ausleihe. Die
     /// Abschrift kostet einen Durchlauf ueber die Datei, das Einfaerben kostet
     /// drei Groessenordnungen mehr.
-    pub fn starten(stand: String, pfad: Option<PathBuf>, typ: Dateityp, tafel: Tafel) -> Self {
+    ///
+    /// **`vorher` wandert mit hinein und mit dem Ergebnis wieder heraus.** Der
+    /// aufgehobene Stand des vorigen Durchgangs ist die Vorlage, aus der
+    /// [`fortschreiben`] den Anfang und den Schwanz uebernimmt. Faellt der Faden
+    /// ohne Meldung, faellt die Vorlage mit ihm, und der naechste Durchgang
+    /// rechnet von vorn: langsamer, aber nicht falsch. Ein zweiter Halter der
+    /// Vorlage daneben waere eine zweite Wahrheit darueber, welcher Text
+    /// aufgehoben ist.
+    pub fn starten(
+        vorher: Option<Einfaerbungsstand>,
+        stand: String,
+        pfad: Option<PathBuf>,
+        typ: Dateityp,
+        tafel: Tafel,
+    ) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let ergebnis = thread::Builder::new()
             .name("krk-einfaerbung".to_owned())
             .spawn(move || {
-                let formatierung = formatieren(&stand, pfad.as_deref(), typ, tafel);
-                let _ = SyncSender::send(&sender, formatierung);
+                let stand = fortschreiben(vorher, stand, pfad.as_deref(), typ, tafel);
+                let _ = SyncSender::send(&sender, stand);
             });
         if let Err(fehler) = ergebnis {
             // Ohne Faden kommt nie eine Meldung; der Kanal ist zu diesem
@@ -632,7 +1326,7 @@ impl Einfaerbungsvorgang {
     /// Fragt nach, ohne zu warten.
     pub fn abholen(&self) -> Abholung {
         match self.empfaenger.try_recv() {
-            Ok(formatierung) => Abholung::Fertig(Box::new(formatierung)),
+            Ok(stand) => Abholung::Fertig(Box::new(stand)),
             Err(TryRecvError::Empty) => Abholung::Laeuft,
             Err(TryRecvError::Disconnected) => Abholung::Weggefallen,
         }
@@ -883,6 +1577,7 @@ mod tests {
         let unmittelbar = formatieren(quelle, Some(&datei), Dateityp::Sonstiges, Tafel::Dunkel);
 
         let vorgang = Einfaerbungsvorgang::starten(
+            None,
             quelle.to_owned(),
             Some(datei),
             Dateityp::Sonstiges,
@@ -890,11 +1585,303 @@ mod tests {
         );
         let vom_faden = loop {
             match vorgang.abholen() {
-                Abholung::Fertig(formatierung) => break *formatierung,
+                Abholung::Fertig(stand) => break stand.formatierung().clone(),
                 Abholung::Laeuft => std::thread::yield_now(),
                 Abholung::Weggefallen => panic!("der Faden ist ohne Meldung gefallen"),
             }
         };
         assert_eq!(unmittelbar, vom_faden);
+    }
+
+    // ------------------------------------------------------------------
+    // Das Fortschreiben (C3)
+    // ------------------------------------------------------------------
+
+    /// Was an einer Stelle gilt: die Farbe samt Unterstreichung, falls eine
+    /// gesetzt ist, und die Auszeichnungen, die dort liegen.
+    type Feldwirkung = (Option<(Farbe, bool)>, Vec<Auszeichnung>);
+
+    /// Was an einer Stelle des Textes gilt, Zeichen fuer Zeichen.
+    ///
+    /// **Verglichen wird die Wirkung und nicht die Buchfuehrung.** Zwei
+    /// Formatierungen, die dieselbe Farbe an derselben Stelle setzen, sind
+    /// gleichwertig, auch wenn die eine dafuer zwei aneinanderliegende Stuecke
+    /// fuehrt und die andere ein zusammengezogenes. Genau das unterscheidet den
+    /// fortgeschriebenen Durchgang vom vollen: an den beiden Naehten trifft das
+    /// Zusammenziehen aus [`anfuegen`] auf ein Stueck, das schon liegt. Ein
+    /// Vergleich der Listen wuerde dort einen Unterschied melden, den der Nutzer
+    /// nicht sehen kann.
+    fn wirkung(formatierung: &Formatierung) -> Vec<Feldwirkung> {
+        let mut felder: Vec<Feldwirkung> = vec![(None, Vec::new()); formatierung.laenge];
+        for stueck in &formatierung.einfaerbungen {
+            for feld in &mut felder[stueck.anfang..stueck.anfang + stueck.laenge] {
+                feld.0 = Some((stueck.farbe, stueck.unterstrichen));
+            }
+        }
+        for stelle in &formatierung.auszeichnungen {
+            for feld in &mut felder[stelle.anfang..stelle.anfang + stelle.laenge] {
+                feld.1.push(stelle.art);
+            }
+        }
+        felder
+    }
+
+    /// Prueft, dass ein fortgeschriebener Durchgang dasselbe liefert wie ein
+    /// voller.
+    ///
+    /// Das ist die eine Zusage, an der das Fortschreiben haengt. Sie wird an
+    /// jeder Aenderung gemessen, die die Probe darunter aufzaehlt, und nicht an
+    /// einer.
+    fn fortschreiben_gleicht_vollem_durchgang(
+        vorher: &str,
+        nachher: &str,
+        name: &str,
+        typ: Dateityp,
+    ) {
+        let datei = pfad(name);
+        let erster = fortschreiben(None, vorher.to_owned(), Some(&datei), typ, Tafel::Dunkel);
+        let fortgeschrieben = fortschreiben(
+            Some(erster),
+            nachher.to_owned(),
+            Some(&datei),
+            typ,
+            Tafel::Dunkel,
+        );
+        let voll = formatieren(nachher, Some(&datei), typ, Tafel::Dunkel);
+
+        assert_eq!(
+            fortgeschrieben.formatierung().laenge,
+            voll.laenge,
+            "die Laenge weicht ab, {name}: {vorher:?} -> {nachher:?}"
+        );
+        assert_eq!(
+            wirkung(fortgeschrieben.formatierung()),
+            wirkung(&voll),
+            "die Wirkung weicht ab, {name}: {vorher:?} -> {nachher:?}"
+        );
+        assert_eq!(
+            fortgeschrieben.formatierung().art,
+            voll.art,
+            "die Besetzung weicht ab, {name}"
+        );
+    }
+
+    /// Die Zusage des Fortschreibens, an vierzehn Aenderungen gemessen.
+    ///
+    /// Die Aufzaehlung deckt die Faelle ab, die der Zeilenvergleich
+    /// unterscheiden muss: eine Aenderung mitten in einer Zeile, am Anfang, am
+    /// Ende, eine Zeile mehr, eine Zeile weniger, ein Wechsel von und zu leer,
+    /// und die Aenderung, die den Zustand des Zerlegers ueber viele Zeilen
+    /// weitertraegt — ein Anfuehrungszeichen und ein geoeffneter Blockkommentar.
+    #[test]
+    fn ein_fortgeschriebener_durchgang_gleicht_dem_vollen() {
+        let quelle = "fn eins() {\n    let a = 1;\n}\n\nfn zwei() {\n    // ein Kommentar\n    let b = \"Text\";\n}\n\nfn drei() {\n    let c = 3;\n}\n";
+        let faelle: [(&str, String); 14] = [
+            ("nichts geaendert", quelle.to_owned()),
+            ("ein Zeichen in der Mitte", quelle.replace("let b", "let x")),
+            (
+                "erste Zeile geaendert",
+                quelle.replace("fn eins", "fn EINS"),
+            ),
+            (
+                "letzte Zeile geaendert",
+                quelle.replace("let c = 3;", "let c = 4;"),
+            ),
+            (
+                "eine Zeile mehr",
+                quelle.replace("fn zwei", "fn eineinhalb() {}\n\nfn zwei"),
+            ),
+            ("eine Zeile weniger", quelle.replace("    let a = 1;\n", "")),
+            ("angehaengt", format!("{quelle}\nfn vier() {{}}\n")),
+            ("vorangestellt", format!("//! Kopf\n\n{quelle}")),
+            (
+                "ein Anfuehrungszeichen in der Mitte",
+                quelle.replace("let b = \"Text\"", "let b = \"\"\"Text\""),
+            ),
+            (
+                "ein geoeffneter Blockkommentar",
+                quelle.replace("    let a = 1;", "    /* auf"),
+            ),
+            ("alles fort", String::new()),
+            ("ganz anderer Text", "fn nichts() {}\n".to_owned()),
+            ("ohne Schlussumbruch", quelle.trim_end().to_owned()),
+            (
+                "zwei Aenderungen an beiden Enden",
+                quelle
+                    .replace("fn eins", "fn null")
+                    .replace("let c", "let z"),
+            ),
+        ];
+
+        for (name, nachher) in faelle {
+            fortschreiben_gleicht_vollem_durchgang(quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+            // Und die Gegenrichtung: aus der Aenderung zurueck in die Quelle.
+            fortschreiben_gleicht_vollem_durchgang(&nachher, quelle, "a.rs", Dateityp::Sonstiges);
+            let _ = name;
+        }
+    }
+
+    /// Dieselbe Zusage fuer Markdown, weil dort neben der Farbe die
+    /// Auszeichnungen des Textspeichers entstehen und die Listenzeile eine ganze
+    /// Zeile deckt.
+    #[test]
+    fn das_fortschreiben_traegt_auch_die_markdown_auszeichnungen() {
+        let quelle = "# Kopf\n\nText mit [Wort](http://x)\n\n- Punkt eins\n- Punkt zwei\n\n```rust\nfn a() {}\n```\n\n## Zweiter Kopf\n\nSchluss\n";
+        let faelle = [
+            quelle.replace("Punkt eins", "Punkt EINS"),
+            quelle.replace("# Kopf", "### Kopf"),
+            quelle.replace("- Punkt zwei\n", ""),
+            quelle.replace("```rust", "```rust\nfn b() {}"),
+            quelle.replace("```rust\nfn a() {}\n```\n\n", ""),
+            format!("{quelle}\n- noch ein Punkt\n"),
+            quelle.replace("Schluss", "Schluss mit `Code`"),
+        ];
+        for nachher in faelle {
+            fortschreiben_gleicht_vollem_durchgang(quelle, &nachher, "lies.md", Dateityp::Markdown);
+            fortschreiben_gleicht_vollem_durchgang(&nachher, quelle, "lies.md", Dateityp::Markdown);
+        }
+    }
+
+    /// Der Wiedereinstieg muss auch dann stimmen, wenn die Aenderung weit hinter
+    /// dem letzten Haltepunkt liegt: [`ZUSTANDSABSTAND`] Zeilen liegen zwischen
+    /// zweien, und die Probe braucht mehr Zeilen als das.
+    #[test]
+    fn das_fortschreiben_traegt_ueber_viele_haltepunkte() {
+        let mut zeilen: Vec<String> = (0..10 * ZUSTANDSABSTAND)
+            .map(|nummer| format!("let zeile{nummer} = {nummer};"))
+            .collect();
+        let quelle = format!("{}\n", zeilen.join("\n"));
+        for stelle in [
+            0,
+            1,
+            ZUSTANDSABSTAND,
+            5 * ZUSTANDSABSTAND + 7,
+            zeilen.len() - 1,
+        ] {
+            let mut geaendert = zeilen.clone();
+            geaendert[stelle] = format!("let x = \"{}\";", stelle);
+            let nachher = format!("{}\n", geaendert.join("\n"));
+            fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+        }
+        // Und eine Zeile mitten heraus, damit die Zeilen dahinter sich
+        // verschieben und der Wiederanschluss die Verschiebung mitrechnen muss.
+        zeilen.remove(3 * ZUSTANDSABSTAND);
+        let nachher = format!("{}\n", zeilen.join("\n"));
+        fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+    }
+
+    /// Ein unveraenderter Text kostet keinen Durchgang: der aufgehobene Stand
+    /// kommt unveraendert zurueck.
+    ///
+    /// Daran haengt, dass ein Wechsel des Erscheinungsbildes ohne Textaenderung
+    /// und ein Ruf aus [`crate::appkit::editor`] nach einer Auswahl nichts
+    /// kosten.
+    #[test]
+    fn derselbe_text_kommt_ohne_rechnung_zurueck() {
+        let quelle = "fn a() {}\n";
+        let datei = pfad("a.rs");
+        let erster = fortschreiben(
+            None,
+            quelle.to_owned(),
+            Some(&datei),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        let haltepunkte = erster.haltepunkte.len();
+        let zweiter = fortschreiben(
+            Some(erster),
+            quelle.to_owned(),
+            Some(&datei),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        assert_eq!(zweiter.haltepunkte.len(), haltepunkte);
+        assert_eq!(zweiter.text, quelle);
+    }
+
+    /// Eine gewechselte Farbtafel wirft die Vorlage fort, statt die alten Farben
+    /// weiterzutragen (S34).
+    #[test]
+    fn eine_andere_tafel_laesst_die_vorlage_fallen() {
+        let quelle = "fn a() { let x = \"Text\"; }\n";
+        let datei = pfad("a.rs");
+        let hell = fortschreiben(
+            None,
+            quelle.to_owned(),
+            Some(&datei),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        let dunkel = fortschreiben(
+            Some(hell),
+            quelle.to_owned(),
+            Some(&datei),
+            Dateityp::Sonstiges,
+            Tafel::Dunkel,
+        );
+        let voll = formatieren(quelle, Some(&datei), Dateityp::Sonstiges, Tafel::Dunkel);
+        assert_eq!(dunkel.formatierung(), &voll);
+    }
+
+    /// Eine andere Datei hinter demselben Stand: der Zeilenvergleich findet
+    /// nichts Gemeinsames, und das Ergebnis ist trotzdem richtig.
+    #[test]
+    fn eine_andere_sprache_laesst_die_vorlage_fallen() {
+        let ruhe = fortschreiben(
+            None,
+            "fn a() {}\n".to_owned(),
+            Some(&pfad("a.rs")),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        let toml = "[abschnitt]\nwert = 1\n";
+        let danach = fortschreiben(
+            Some(ruhe),
+            toml.to_owned(),
+            Some(&pfad("a.toml")),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        let voll = formatieren(
+            toml,
+            Some(&pfad("a.toml")),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        assert_eq!(danach.formatierung(), &voll);
+    }
+
+    /// Die Haltepunkte bleiben duenn: einer je [`ZUSTANDSABSTAND`] Zeilen und
+    /// nicht einer je Zeile. Daran haengt die Speichermessung an
+    /// [`ZUSTANDSABSTAND`].
+    #[test]
+    fn die_haltepunkte_stehen_im_gemessenen_abstand() {
+        let quelle = format!("{}\n", vec!["let a = 1;"; 500].join("\n"));
+        let stand = fortschreiben(
+            None,
+            quelle,
+            Some(&pfad("a.rs")),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        assert_eq!(stand.haltepunkte.len(), 500 / ZUSTANDSABSTAND + 1);
+        for (stelle, punkt) in stand.haltepunkte.iter().enumerate() {
+            assert_eq!(punkt.zeile, stelle * ZUSTANDSABSTAND);
+        }
+    }
+
+    /// Einfacher Text hebt nichts auf: es gibt nichts fortzuschreiben, und ein
+    /// Haltepunkt waere Speicher fuer nichts.
+    #[test]
+    fn einfacher_text_hebt_nichts_auf() {
+        let stand = fortschreiben(
+            None,
+            "nur Text\n".to_owned(),
+            Some(&pfad("etwas.krk-gibt-es-nicht")),
+            Dateityp::Sonstiges,
+            Tafel::Hell,
+        );
+        assert!(stand.haltepunkte.is_empty());
+        assert_eq!(stand.formatierung().laenge, "nur Text\n".len());
     }
 }

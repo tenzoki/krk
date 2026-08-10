@@ -87,11 +87,12 @@
 //!
 //! **Was danach im Stapel steht, sagt der Anlass und nicht die Schreibstelle.**
 //! [`Verlauf`] ist der Wert, in dem der Aufrufer es sagt, und die Aufzaehlung
-//! seiner Anlaesse steht dort. Ein Dateiwechsel laesst den Verlauf fallen, ein
-//! Ersetzen aus S37 traegt ihn als eine Handlung weiter, und das Nachrichten
-//! der Flaeche nach einem eingefuegten `\r\n` kann ihn nicht tragen — warum
-//! nicht, steht an [`Editorbereich::flaeche_richten`], und es ist eine
-//! Eigenschaft der Sache und nicht der Sorgfalt.
+//! seiner drei Anlaesse steht dort. Ein Dateiwechsel laesst den Verlauf fallen,
+//! ein Ersetzen aus S37 traegt ihn als eine Handlung weiter, und das Nachrichten
+//! der Flaeche nach einem eingefuegten `\r\n` traegt genau eine Handlung und
+//! laesst alles davor fallen — warum es nicht mehr sein kann, steht an
+//! [`Editorbereich::flaeche_richten`], und es ist eine Eigenschaft der Sache und
+//! nicht der Sorgfalt.
 //!
 //! **Der Kopf ist die zweite Anzeige neben der Statuszeile, und er ist eine
 //! andere Art von Aussage.** Die Statuszeile traegt Antworten auf Befehle; der
@@ -328,7 +329,8 @@ use krk_core::text::{
 
 use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
 use crate::hervorhebung::{
-    Abholung, Auszeichnung, Darstellungsart, Einfaerbungsvorgang, Farbe, Formatierung, Tafel,
+    Abholung, Auszeichnung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Farbe,
+    Formatierung, Tafel,
 };
 
 use super::koordinaten;
@@ -601,15 +603,35 @@ struct Umkehrpunkt {
 ///
 /// ```text
 ///   Anlass                     Verlauf danach
-///   Dateiwechsel, Schliessen ─> Faellt   der Verlauf gehoerte einer anderen Datei
-///   Ersetzen (S37)           ─> Traegt   der Nutzer nimmt das Ersetzen zurueck
-///   CRLF-Richten             ─> Faellt   der vorige Text der Flaeche ist kein
-///                                        gueltiger Stand; siehe flaeche_richten
+///   Dateiwechsel, Schliessen ─> Faellt        der Verlauf gehoerte einer
+///                                             anderen Datei
+///   Ersetzen (S37)           ─> Traegt        der Nutzer nimmt das Ersetzen
+///                                             zurueck, und was davor liegt
+///                                             bleibt zuruecknehmbar
+///   CRLF-Richten             ─> TraegtNurDiese  der Nutzer nimmt das Einfuegen
+///                                             zurueck; was davor liegt kann
+///                                             nicht bleiben, siehe unten
 /// ```
 ///
 /// Die Aufzaehlung ist vollstaendig und hat keinen Auffangzweig, wie die
-/// uebrigen dieser Art im Programm: ein dritter Anlass haelt den Bau an und
+/// uebrigen dieser Art im Programm: ein vierter Anlass haelt den Bau an und
 /// erzwingt die Antwort.
+///
+/// # Warum es drei Antworten sind und nicht zwei
+///
+/// Bis zum 260810-1044 gab es die dritte nicht, und das CRLF-Richten nahm die
+/// erste: ein `cmd+z` unmittelbar nach einem eingefuegten `\r\n` tat nichts
+/// (`issues/260810-1044_*_ein-eingefuegtes-crlf-bleibt-nicht-ruecknehmbar-und-der-grund-liegt-am-eingang-der-flaeche.md`).
+/// [`Verlauf::Traegt`] konnte es nicht sein, und der Grund steht an
+/// [`Editorbereich::flaeche_richten`]: die Handlung, die die Flaeche fuer das
+/// Einfuegen selbst angemeldet hat, zeigt auf einen Bereich, der um die Zahl der
+/// weggefallenen `\r` zu lang ist. Bliebe sie stehen, loeschte ein zweites
+/// `cmd+z` Zeichen hinter dem Eingefuegten mit.
+///
+/// **Der Stapel laesst kein einzelnes Herausnehmen zu**, und deshalb wird er
+/// geleert und die eine gueltige Handlung danach neu angemeldet. Der Preis ist
+/// benannt: der Verlauf **vor** dem Einfuegen faellt mit. Er fiel vorher auch,
+/// nur ohne Gegenwert; was hinzukommt, ist das Einfuegen selbst.
 enum Verlauf {
     /// Der Verlauf faellt: er zeigte auf einen Text, den die Flaeche nach dem
     /// Schreiben nicht mehr traegt.
@@ -617,6 +639,9 @@ enum Verlauf {
     /// Der Verlauf traegt den Umbau als eine Handlung, und der genannte
     /// Umkehrpunkt ist der Stand, den sie wiederherstellt.
     Traegt(Umkehrpunkt),
+    /// Der Verlauf faellt, und die genannte Handlung ist danach die einzige, die
+    /// darin steht.
+    TraegtNurDiese(Umkehrpunkt),
 }
 
 /// Die Groesse, mit der die Flaeche entsteht, bevor die Aufteilung sie auslegt.
@@ -773,6 +798,27 @@ pub struct EditorIvars {
     /// Rohansicht und beim Schliessen: sein Empfaenger faellt mit, und das
     /// `send` des ueberholten Fadens scheitert still.
     einfaerbung: RefCell<Option<Einfaerbungsvorgang>>,
+    /// Der aufgehobene Stand des letzten fertigen Einfaerbungslaufs (C3).
+    ///
+    /// **Er ist die Vorlage, aus der der naechste Lauf fortschreibt**, und ohne
+    /// ihn kostete jeder Anschlag einen vollen Durchgang: 0,3 MB/s, gemessen,
+    /// also 4,5 s bei 1,5 MB. Wie das Fortschreiben rechnet und was es an
+    /// Speicher kostet, steht an
+    /// [`crate::hervorhebung::Einfaerbungsstand`].
+    ///
+    /// **Er wohnt hier und nicht im Vorgang**, weil er den Vorgang ueberleben
+    /// muss: der Vorgang endet mit seiner Lieferung, die Vorlage gilt bis zur
+    /// naechsten. Waehrend ein Lauf laeuft, steht hier `None` — die Vorlage ist
+    /// dann im Arbeitsfaden und kommt mit dem Ergebnis zurueck. Ein zweiter
+    /// Halter daneben waere eine zweite Wahrheit darueber, welcher Text
+    /// aufgehoben ist.
+    ///
+    /// Fallengelassen wird sie, wo es nichts mehr fortzuschreiben gibt: beim
+    /// Wechsel in die Rohansicht und ohne gehaltene Datei. Ein Wechsel der
+    /// Farbtafel oder der Sprache braucht das **nicht** —
+    /// [`crate::hervorhebung::fortschreiben`] erkennt es am Schluessel und
+    /// rechnet von vorn.
+    einfaerbungsstand: RefCell<Option<Einfaerbungsstand>>,
     /// Ob der laufende Lauf ueberholt ist und nach seiner Rueckkehr sofort ein
     /// neuer zu starten ist (C3).
     ///
@@ -898,6 +944,7 @@ impl Editorbereich {
             takt: RefCell::new(None),
             melden: RefCell::new(None),
             einfaerbung: RefCell::new(None),
+            einfaerbungsstand: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
             tafel: Cell::new(tafel),
             ersatz: RefCell::new(String::new()),
@@ -1250,6 +1297,23 @@ impl Editorbereich {
     /// haengt. Der gewoehnliche Anschlag kommt an dieser Zeile vorbei, weil
     /// [`Editormodell::bearbeiten`] dann `false` liefert.
     ///
+    /// **Der Umkehrpunkt entsteht vor der Wandlung, und nur dann, wenn sie
+    /// bevorsteht.** Er haelt den Stand, den das Modell **vor** dem Einfuegen
+    /// hielt; danach ist der fort, und `260810-1044` fuehrte genau das als den
+    /// Grund, aus dem ein eingefuegtes `\r\n` nicht zuruecknehmbar war. Gefragt
+    /// wird mit `krk_core::text::datei::ist_in_gehaltener_form`, derselben
+    /// Bedingung, an der [`Editormodell::bearbeiten`] seine Wandlung
+    /// entscheidet, und die Abschrift des Standes entsteht deshalb **nicht** je
+    /// Tastendruck, sondern nur auf dem Weg, der die Flaeche ohnehin neu
+    /// beschreibt. Das ist der Unterschied zu der Kette, die `260810-0424` als
+    /// zu teuer fuehrt.
+    ///
+    /// **Was der zusaetzliche Durchlauf kostet, ist gemessen** (260810, dieses
+    /// Geraet, `--release`): 0,017 ms bei 229 kB, 0,13 ms bei 1,8 MB, 1,8 ms bei
+    /// 19 MB. Daneben stehen 0,98 / 7,6 / 88 ms fuer das Umschreiben des Textes
+    /// aus UTF-16, das jedem Ruf hierher vorausgeht; der Aufpreis liegt bei zwei
+    /// Prozent.
+    ///
     /// **Der Kopf wird nur beim Uebergang nachgezogen.** Die Abweichungsmarke
     /// geht von falsch nach wahr und bleibt dort bis zum naechsten Sichern; sie
     /// bei jedem Anschlag neu in ein `NSTextField` zu schreiben hiesse, je
@@ -1259,13 +1323,24 @@ impl Editorbereich {
     /// dieser Datei.
     fn text_zurueckschreiben(&self) {
         let stand = self.ivars().text.string().to_string();
-        let (war_abweichend, gewandelt) = {
+        let auswahl = self.ivars().text.selectedRange();
+        let (war_abweichend, umkehrpunkt) = {
             let mut modell = self.ivars().modell.borrow_mut();
             let vorher = modell.hat_ungesicherten_stand();
-            (vorher, modell.bearbeiten(stand))
+            let umkehrpunkt = (!datei::ist_in_gehaltener_form(&stand)).then(|| Umkehrpunkt {
+                stand: modell.stand().to_owned(),
+                auswahl,
+            });
+            let gewandelt = modell.bearbeiten(stand);
+            debug_assert_eq!(
+                gewandelt,
+                umkehrpunkt.is_some(),
+                "die Frage vor der Wandlung und ihr Ausgang muessen dieselbe sein"
+            );
+            (vorher, umkehrpunkt)
         };
-        if gewandelt {
-            self.flaeche_richten();
+        if let Some(punkt) = umkehrpunkt {
+            self.flaeche_richten(punkt);
         }
         if !war_abweichend {
             self.kopf_nachziehen();
@@ -1324,10 +1399,27 @@ impl Editorbereich {
     /// Handlung auch dann tragen, wenn `setString:` unten am Text nichts mehr
     /// aendert; und der Umkehrpunkt kommt ohnehin vom Aufrufer, der ihn vor der
     /// Aenderung des Modells genommen hat.
+    ///
+    /// **Bei [`Verlauf::TraegtNurDiese`] wird zuerst geleert und dann
+    /// angemeldet**, und die Reihenfolge ist die ganze Aussage dieses Wertes: was
+    /// vorher im Stapel stand, zeigt auf einen Text, den es nicht mehr gibt, und
+    /// die eine Handlung, die danach darin steht, ist die gueltige. Dass eine
+    /// Anmeldung nach `removeAllActions` stehen bleibt und wirkt, ist
+    /// **gemessen** und nicht angenommen:
+    /// [`eine_anmeldung_nach_dem_leeren_steht_im_stapel`](tests::eine_anmeldung_nach_dem_leeren_steht_im_stapel).
+    ///
+    /// Die beiden aelteren Anlaesse behalten ihre Reihenfolge Zeile fuer Zeile:
+    /// [`Verlauf::Faellt`] leert **nach** dem Schreiben, [`Verlauf::Traegt`]
+    /// meldet **vor** ihm an und leert nicht.
     fn stand_einsetzen(&self, verlauf: Verlauf) {
-        let faellt = match verlauf {
+        let leeren_danach = match verlauf {
             Verlauf::Faellt => true,
             Verlauf::Traegt(punkt) => {
+                self.umkehrung_anmelden(punkt);
+                false
+            }
+            Verlauf::TraegtNurDiese(punkt) => {
+                rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
                 self.umkehrung_anmelden(punkt);
                 false
             }
@@ -1337,7 +1429,7 @@ impl Editorbereich {
             NSString::from_str(modell.stand())
         };
         self.ivars().text.setString(&stand);
-        if faellt {
+        if leeren_danach {
             rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
         }
     }
@@ -1492,35 +1584,30 @@ impl Editorbereich {
     /// stattdessen das Ergebnis und kommt deshalb ohne eine einzige Regel der
     /// Wandlung aus.
     ///
-    /// # Warum der Verlauf hier faellt und beim Ersetzen nicht
+    /// # Warum hier eine Handlung steht und der Verlauf davor trotzdem faellt
     ///
-    /// Das Ersetzen aus S37 traegt seinen Umbau seit dem 260810 als Handlung im
-    /// Stapel ([`Verlauf::Traegt`]); dieser Weg kann das **nicht**, und der
-    /// Grund liegt nicht an der Sorgfalt, sondern an der Sache. Zwei Stuecke
-    /// fehlen, und jedes fuer sich genuegt:
+    /// Seit dem 260810-1044 ist das Einfuegen zuruecknehmbar: der Umbau geht als
+    /// [`Verlauf::TraegtNurDiese`] durch die eine Schreibstelle und meldet dort
+    /// eine Handlung an, die den Stand **vor** dem Einfuegen wiederherstellt. Der
+    /// Umkehrpunkt entsteht in [`Self::text_zurueckschreiben`], vor dem Ruf an
+    /// [`Editormodell::bearbeiten`], und nur auf diesem Weg; der Preis steht
+    /// dort.
     ///
-    /// - **Der Text, den die Flaeche vor dem Richten trug, ist kein gueltiger
-    ///   Stand.** Er traegt das `\r`, das der Stand nach dem Modulkopf von
-    ///   `krk_core::text` nie traegt. Ein Umkehrpunkt darauf liesse sich
-    ///   herstellen, aber nur an der Flaeche und nicht im Modell, und damit
-    ///   liefen die beiden genau so auseinander, wie `260810-0215` es beschreibt.
-    /// - **Der Stand vor dem Einfuegen ist an dieser Stelle schon fort.**
-    ///   [`Editormodell::bearbeiten`] hat ihn ueberschrieben, bevor
-    ///   [`Self::text_zurueckschreiben`] hierher kommt. Ihn vorher abzuschreiben
-    ///   hiesse, den ganzen Stand **je Tastendruck** zu kopieren, und das ist
-    ///   genau der Preis, den `260810-0424` an dieser Kette bemaengelt.
+    /// **Der Verlauf davor kann trotzdem nicht bleiben**, und das ist eine
+    /// Eigenschaft der Sache und nicht der Sorgfalt. Die Handlung, die die
+    /// Flaeche fuer das Einfuegen selbst angemeldet hat, zeigt auf einen Bereich,
+    /// der um die Zahl der weggefallenen `\r` zu lang ist; bliebe sie stehen,
+    /// loeschte ein zweites `cmd+z` Zeichen hinter dem Eingefuegten mit. Ein
+    /// `NSUndoManager` laesst keine einzelne Handlung herausnehmen, also faellt
+    /// der Stapel und die eine gueltige Handlung wird danach neu angemeldet.
+    /// **Was der Nutzer davon merkt:** das erste `cmd+z` nimmt das Einfuegen
+    /// zurueck, ein zweites tut nichts. Vor dem 260810-1044 tat schon das erste
+    /// nichts (`issues/260810-1044_*_ein-eingefuegtes-crlf-bleibt-nicht-ruecknehmbar-und-der-grund-liegt-am-eingang-der-flaeche.md`),
+    /// und der Verlauf davor fiel ebenso.
     ///
-    /// Was der Nutzer zurueckhaben will, ist ohnehin nicht die Wandlung, sondern
-    /// das Einfuegen; das aufzuzeichnen ist Sache des Eingangs der Flaeche, und
-    /// der Eingangsfilter ueber `textView:shouldChangeTextInRanges:` ist oben
-    /// mit Gruenden nicht genommen. **Der Preis steht damit hier und wird nicht
-    /// verschwiegen:** ein `cmd+z` unmittelbar nach einem eingefuegten `\r\n`
-    /// tut nichts, statt das Einfuegen zurueckzunehmen. Er ist die kleinere der
-    /// beiden Fehlwirkungen — vor der Behebung von `260809-1727` wirkte das
-    /// `cmd+z` gegen falsche Stellen — und der offene Rest von
-    /// `issues/260810-0303_*_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`.
-    /// Ein zweiter Schreibweg in die Flaeche neben [`Self::stand_einsetzen`]
-    /// entsteht dafuer nicht.
+    /// **Der Eingangsfilter bleibt ungenommen**, aus den Gruenden zwei Abschnitte
+    /// weiter oben. Er waere der Weg, den Verlauf davor mitzuretten, und kostete
+    /// die Wandlungsregeln ein zweites Mal.
     ///
     /// **Die Schreibmarke bleibt, wo sie stand.** Sie waere sonst nach jedem
     /// Einfuegen aus einer Windows-Quelle am Dateianfang, also genau in dem
@@ -1528,7 +1615,7 @@ impl Editorbereich {
     /// rechnet `krk_core::text::datei::versatz_nach_der_wandlung` und nicht
     /// diese Zeile; gezeigt wird sie ueber [`Self::stelle_zeigen`], denselben
     /// Weg, den Zeilensprung und Suche gehen.
-    fn flaeche_richten(&self) {
+    fn flaeche_richten(&self, punkt: Umkehrpunkt) {
         // Die Flaeche traegt in dieser Zeile noch den ungewandelten Text; das
         // Umschreiben aus UTF-16 kostet einen zweiten Durchlauf und faellt
         // allein auf diesen Weg, nicht auf jeden Tastendruck.
@@ -1538,7 +1625,7 @@ impl Editorbereich {
             let modell = self.ivars().modell.borrow();
             datei::versatz_nach_der_wandlung(&vorher, schreibmarke, modell.stand())
         };
-        self.stand_erneuern(Verlauf::Faellt);
+        self.stand_erneuern(Verlauf::TraegtNurDiese(punkt));
         self.stelle_zeigen(versatz, versatz);
     }
 
@@ -1959,6 +2046,7 @@ impl Editorbereich {
             // Empfaenger.
             Ansicht::Roh => {
                 *self.ivars().einfaerbung.borrow_mut() = None;
+                *self.ivars().einfaerbungsstand.borrow_mut() = None;
                 self.ivars().einfaerbung_erneut.set(false);
             }
         }
@@ -2076,24 +2164,41 @@ impl Editorbereich {
     /// dass sich der Text geaendert hat.
     ///
     /// Ohne gehaltene Datei geschieht ebenso nichts: es gibt keinen Pfad, an dem
-    /// die Kiste eine Sprache erkennen koennte, und nichts einzufaerben.
+    /// die Kiste eine Sprache erkennen koennte, und nichts einzufaerben. Der
+    /// aufgehobene Stand faellt dann mit, weil er zu einer Datei gehoerte, die
+    /// der Editor nicht mehr haelt.
+    ///
+    /// **Der aufgehobene Stand wandert in den Lauf hinein.** Er ist die Vorlage,
+    /// aus der [`crate::hervorhebung::fortschreiben`] den unveraenderten Anfang
+    /// und den unveraenderten Schwanz uebernimmt; ohne ihn kostete jeder
+    /// Anschlag einen vollen Durchgang. Wo er zwischen zwei Laeufen wohnt und
+    /// wann er faellt, steht an [`EditorIvars::einfaerbungsstand`].
     fn einfaerbung_anfordern(&self) {
         if self.ivars().einfaerbung.borrow().is_some() {
             self.ivars().einfaerbung_erneut.set(true);
             return;
         }
-        let (stand, pfad, typ) = {
+        let angaben = {
             let modell = self.ivars().modell.borrow();
             if !modell.haelt_datei() || modell.ansicht() != Ansicht::Format {
-                return;
+                None
+            } else {
+                Some((
+                    modell.stand().to_owned(),
+                    modell.pfad().map(Path::to_path_buf),
+                    modell.typ(),
+                ))
             }
-            (
-                modell.stand().to_owned(),
-                modell.pfad().map(Path::to_path_buf),
-                modell.typ(),
-            )
         };
-        let vorgang = Einfaerbungsvorgang::starten(stand, pfad, typ, self.ivars().tafel.get());
+        let Some((stand, pfad, typ)) = angaben else {
+            if !self.ivars().modell.borrow().haelt_datei() {
+                *self.ivars().einfaerbungsstand.borrow_mut() = None;
+            }
+            return;
+        };
+        let vorlage = self.ivars().einfaerbungsstand.borrow_mut().take();
+        let vorgang =
+            Einfaerbungsvorgang::starten(vorlage, stand, pfad, typ, self.ivars().tafel.get());
         *self.ivars().einfaerbung.borrow_mut() = Some(vorgang);
         self.ivars().einfaerbung_erneut.set(false);
         self.takt_starten();
@@ -2107,6 +2212,18 @@ impl Editorbereich {
     /// `NSRange` hinter dem Text beantwortet AppKit mit einer
     /// Objective-C-Ausnahme. Die ist in Rust nicht zu fangen und beendet das
     /// Programm.
+    ///
+    /// **Fallen laesst es allein seine Formatierung, nicht seinen aufgehobenen
+    /// Stand.** Der Stand beschreibt einen Text, der wirklich gerechnet worden
+    /// ist, und ist damit auch fuer den ueberholten Fall die richtige Vorlage:
+    /// der naechste Lauf schreibt von ihm auf den heutigen Text fort. Ihn
+    /// zusammen mit der Formatierung wegzuwerfen kostete jeden zweiten Anschlag
+    /// einen vollen Durchgang.
+    ///
+    /// **Angewendet wird aus einer eigenen Bindung und nicht aus der Zelle
+    /// heraus.** [`Self::formatierung_anwenden`] ruft in das Textsystem, und ein
+    /// Weg von dort hierher zurueck nahme eine zweite Ausleihe derselben Zelle;
+    /// dieselbe Regel wie bei jeder anderen Ausleihe in dieser Datei.
     fn einfaerbung_einziehen(&self) {
         let abholung = {
             let vorgang = self.ivars().einfaerbung.borrow();
@@ -2119,16 +2236,22 @@ impl Editorbereich {
             Abholung::Laeuft => {}
             // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
             // Sinn mehr. Derselbe Zweig und derselbe Grund wie beim Lesevorgang.
+            // Der Faden ist mit der Vorlage gefallen; der naechste Lauf rechnet
+            // deshalb von vorn.
             Abholung::Weggefallen => {
                 *self.ivars().einfaerbung.borrow_mut() = None;
                 self.ivars().einfaerbung_erneut.set(false);
             }
-            Abholung::Fertig(formatierung) => {
+            Abholung::Fertig(stand) => {
                 *self.ivars().einfaerbung.borrow_mut() = None;
-                if self.ivars().einfaerbung_erneut.replace(false) {
+                let stand = *stand;
+                let ueberholt = self.ivars().einfaerbung_erneut.replace(false);
+                if !ueberholt {
+                    self.formatierung_anwenden(stand.formatierung());
+                }
+                *self.ivars().einfaerbungsstand.borrow_mut() = Some(stand);
+                if ueberholt {
                     self.einfaerbung_anfordern();
-                } else {
-                    self.formatierung_anwenden(&formatierung);
                 }
             }
         }
@@ -2176,9 +2299,24 @@ impl Editorbereich {
                 Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
                 Auszeichnung::Listenzeile => einzugsmerkmal(),
             };
-            // SAFETY: Der Bereich liegt im Text; die Laenge ist oben geprueft,
-            // und die Stellen der Formatierung sind aufsteigend und
-            // ueberschneidungsfrei.
+            // SAFETY: Der Bereich liegt im Text, und das ist die ganze
+            // Bedingung: die Laenge ist oben geprueft, und jede Stelle der
+            // Formatierung liegt nach dem Modulkopf von `crate::hervorhebung`
+            // innerhalb dieser Laenge.
+            //
+            // **Aufsteigend und ueberschneidungsfrei sind die Auszeichnungen
+            // nicht**, anders als bis zum 260810 hier stand: eine Listenzeile
+            // wird nach den Stuecken ihrer Zeile angehaengt und beginnt vor
+            // ihnen. In `- Punkt mit `Code`` liefert die Formatierung
+            // `FesteSchrift` bei 12 und danach `Listenzeile` bei 0 (gemessen).
+            // Fuer `addAttributes:range:` ist das ohne Belang, und zwar aus
+            // einem Grund und nicht aus Glueck: die beiden ueberlappenden
+            // Auszeichnungen setzen verschiedene Merkmalsnamen — Schrift gegen
+            // Absatzstil —, und `addAttributes:` legt zusammen, statt zu
+            // ersetzen. `Ueberschrift` und `FesteSchrift` setzen beide die
+            // Schrift und ueberlappen einander deshalb nie: die
+            // Fallunterscheidung in `crate::hervorhebung` fragt die
+            // Ueberschriftsstufe zuerst und die feste Schrift nur sonst.
             unsafe { speicher.addAttributes_range(&merkmale, bereich) };
         }
         speicher.endEditing();
@@ -3041,6 +3179,76 @@ mod tests {
         rueckgaengigstapel_leeren(None);
     }
 
+    /// Die Mechanik, auf der [`Verlauf::TraegtNurDiese`] ruht: eine Anmeldung
+    /// **nach** `removeAllActions` steht im Stapel, wirkt, und die Handlungen
+    /// davor sind fort.
+    ///
+    /// **Die Frage ist eine eigene und nicht schon beantwortet.**
+    /// `removeAllActions` raeumt bei `groupsByEvent = true` auch die Gruppe ab,
+    /// die der Verwalter mitten in der Behandlung eines Tastendrucks selbst
+    /// geoeffnet hat (gemessen von
+    /// [`ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung`]). Ob er
+    /// danach im **selben** Ereignis eine neue Gruppe oeffnet und die Anmeldung
+    /// annimmt, folgt daraus nicht — genau davon haengt aber ab, ob ein `cmd+z`
+    /// nach einem eingefuegten `\r\n` etwas tut
+    /// (`issues/260810-1044_*_ein-eingefuegtes-crlf-bleibt-nicht-ruecknehmbar-und-der-grund-liegt-am-eingang-der-flaeche.md`).
+    ///
+    /// Die Probe faehrt die Betriebsart der Laufzeit, samt Umlauf der
+    /// Laufschleife danach: der Beobachter, der die Gruppe schliesst, kommt damit
+    /// zum Zug.
+    #[test]
+    fn eine_anmeldung_nach_dem_leeren_steht_im_stapel() {
+        let verwalter = verwalter_ohne_fenster();
+        assert!(
+            verwalter.groupsByEvent(),
+            "diese Probe misst die Betriebsart der Laufzeit"
+        );
+        let ziel = NSObject::new();
+        let wert = Rc::new(Cell::new(2u8));
+
+        // Was die Flaeche fuer das Einfuegen selbst angemeldet hat, und was ein
+        // zweites `cmd+z` erreichen wuerde: der Stapel traegt eine Handlung, die
+        // auf den ungewandelten Text zeigt.
+        handlung_anmelden(&verwalter, &ziel);
+        assert!(verwalter.canUndo());
+
+        // Die Reihenfolge aus `stand_einsetzen` fuer `TraegtNurDiese`.
+        rueckgaengigstapel_leeren(Some(&verwalter));
+        wert_anmelden(&verwalter, &ziel, Rc::clone(&wert), 1);
+
+        assert!(
+            verwalter.canUndo(),
+            "die Anmeldung nach dem Leeren steht im Stapel — ohne das taete ein cmd+z nach \
+             einem eingefuegten \\r\\n weiter nichts"
+        );
+
+        // Der Umlauf, in dem der Beobachter die Gruppe schliesst, die es beim
+        // Leeren nicht mehr gab.
+        //
+        // SAFETY: `NSDefaultRunLoopMode` ist ein Fremdsymbol von Foundation,
+        // dieselbe Form wie beim Einzugstakt.
+        let _ = NSRunLoop::currentRunLoop().runMode_beforeDate(
+            unsafe { NSDefaultRunLoopMode },
+            &NSDate::dateWithTimeIntervalSinceNow(0.05),
+        );
+        assert!(
+            verwalter.canUndo(),
+            "und der Umlauf hat sie nicht wieder fortgenommen"
+        );
+
+        verwalter.undo();
+        assert_eq!(wert.get(), 1, "das Rueckgaengig hat gewirkt");
+        assert!(
+            !verwalter.canUndo(),
+            "und ein zweites cmd+z tut nichts: die Handlung der Flaeche ist mit dem Leeren \
+             gefallen, und genau das ist der benannte Preis"
+        );
+        assert!(
+            verwalter.canRedo(),
+            "der Weg zurueck steht offen, wie beim Ersetzen aus S37"
+        );
+    }
+
     /// Meldet eine Handlung an, die einen Wert herstellt und dabei den Gegenweg
     /// anmeldet — die Bauart von [`Editorbereich::umkehren`], ohne Flaeche und
     /// ohne Modell.
@@ -3609,13 +3817,18 @@ mod tests {
     /// **`libtest` gibt den Hauptfaden auch bei einem Prueffaden nicht her** —
     /// die naheliegende Abhilfe ist gemessen und traegt nicht. **Ein Pruefziel
     /// mit `harness = false` traegt**, und zwar ohne ein zweites Pruefkommando:
-    /// `cargo test` fuehrt es mit, `make check` bleibt unveraendert. Damit ist
-    /// der zweite der drei Wege der richtige, und was ihm noch fehlt, ist keine
-    /// Messung mehr, sondern eine Entscheidung ueber zwei Dateien ausserhalb
-    /// dieser: ein `[[test]]`-Abschnitt in `crates/krk-ui/Cargo.toml` und die
-    /// Prueflaufdatei darunter. Die vier Proben brauchen dann zusaetzlich einen
-    /// Weg zu [`textflaeche_bauen`] und zu [`EINSTELLUNGEN`], die heute beide
-    /// modulintern sind. Der Datensatz ist
+    /// `cargo test` fuehrt es mit, `make check` bleibt unveraendert. Beides ist
+    /// am 260810-1139 in diesem Projekt nachgemessen und nicht uebernommen.
+    ///
+    /// **Und doch fehlt dem zweiten Weg mehr als zwei Dateien**, wie es hier bis
+    /// zum 260810-1139 stand: `krk-ui` hat **kein Bibliotheksziel**. Die Kiste
+    /// fuehrt allein `[[bin]] name = "krk"`, und eine Prueflaufdatei unter
+    /// `tests/` ist eine eigene Kiste — sie erreicht nichts aus `krk-ui`, gleich
+    /// ob [`textflaeche_bauen`] und [`EINSTELLUNGEN`] `pub` sind oder nicht.
+    /// Gemessen als Uebersetzungsfehler `E0433`. Es fehlt also ein `src/lib.rs`
+    /// samt Umbau von `main.rs`, oder ein zweiter Kistenkopf unter `src/`, der
+    /// die Oberflaeche ein zweites Mal uebersetzt und `cfg(test)` verliert. Beide
+    /// Wege und die geaenderte Empfehlung stehen im Datensatz
     /// `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
     ///
     /// Bis dahin steht die Notluege hier — nicht weil sie zulaessig waere,
