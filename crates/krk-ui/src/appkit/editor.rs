@@ -126,62 +126,135 @@
 //! der Flaeche, die [`textflaeche_bauen`] liefert, nicht der Dokumentation
 //! entnommen.
 //!
-//! **Die zweite Namensform ist zum groessten Teil keine zweite Menge von
-//! Einstellungen, sondern eine zweite Tuer zu denselben.** `NSTextView` traegt
-//! sechsundzwanzig Einstellungen der Formen `set…Enabled:`, `set…Type:` und
-//! `set…Behavior:`. Zehn der dreizehn `set…Type:` sind derselbe Speicher wie
-//! ein `set…Enabled:` daneben: `smartQuotesType` und
-//! `automaticQuoteSubstitutionEnabled` legen einander um, und dasselbe gilt
-//! fuer neun weitere Paare. Das ist gemessen, je Paar einzeln und in beiden
-//! Richtungen. Wer die zweite Tuer noch einmal zuschliesst, schaltet zehnmal
-//! ab, was schon aus ist. Ohne Zwilling stehen genau drei: die sechste und die
-//! siebte oben und `writingToolsBehavior`.
+//! **Zu einer Einstellung fuehren mehrere Tueren, und es sind drei Sorten.**
+//! Die Vererbungskette von `NSTextView` traegt sechsunddreissig Selektoren der
+//! sechs Namensformen aus `FORMEN` — auf macOS 15.7.7, dem Geraet, auf dem
+//! gemessen wurde; jede Zahl in diesem Abschnitt ist von dort. `EINSTELLUNGEN`
+//! unter `mod tests` ordnet jeden einzeln ein, und die Probe darunter haelt fest,
+//! dass keiner fehlt. Drei Sorten Tuer stehen darunter:
 //!
-//! **Dass es bei sieben bleibt, haelt eine Probe fest — und sie sagt weniger
-//! zu, als sie aussieht.** `keine_unbekannte_einstellung_steht_an_der_textflaeche`
-//! zaehlt zur Laufzeit auf, was `NSTextView` in den drei Formen traegt, und
-//! verlangt, dass jeder Fund in `EINSTELLUNGEN` unter `mod tests` eine Antwort
-//! hat. Drei Grenzen gehoeren zu dieser Zusage, und keine davon ist zu
-//! schliessen:
+//! - **Die zehn Paare.** Zehn der `set…Type:` haben je einen `set…Enabled:`
+//!   daneben, und die beiden legen einander um: `automaticQuoteSubstitutionEnabled`
+//!   auf `NO` setzt `smartQuotesType` auf `No`, und umgekehrt. Gemessen, je Paar
+//!   einzeln und in beiden Richtungen, von der Probe
+//!   `jede_zweite_tuer_und_ihre_erste_legen_einander_um` an einer eigens
+//!   gebauten Flaeche — nicht mehr von einem Programm, das der Baum nicht
+//!   fuehrt (`issues/260810-0748_*_die-kopplung-der-zehn-paare-traegt-den-commit-und-ist-im-baum-durch-nichts-gehalten.md`).
+//! - **Die eine Sammeltuer.** `setEnabledTextCheckingTypes:` ist eine
+//!   Bitmaske ueber mehrere Automatiken auf einmal. Setzt man sie an KRKs
+//!   Flaeche auf den Werkswert zurueck, kommen **vier** der sieben
+//!   abgeschalteten wieder an — Anfuehrungszeichen, Bindestriche,
+//!   Textersetzung, Rechtschreibkorrektur — und die Grammatikpruefung geht
+//!   dabei aus. Deshalb steht sie in `EINSTELLUNGEN` als eigene Antwort
+//!   `SammeltuerZu` und nicht als eine der zehn Paare
+//!   (`issues/260810-0746_*_es-gibt-eine-dritte-tuer-und-sie-liegt-ausserhalb-aller-drei-namensformen.md`).
+//!   **Gesetzt wird sie nicht**: sie waere eine zweite Stelle mit einer Meinung
+//!   darueber, was abgeschaltet ist, und die einzelnen Zeilen sind die erste.
+//! - **Die Tuer ohne Zwilling.** Ohne jede zweite Tuer stehen die sechste und
+//!   die siebte oben sowie die vier Schreibwerkzeug-Einstellungen weiter unten.
 //!
-//! - **Sie misst das Geraet, auf dem sie laeuft, und nicht das Zielsystem.**
-//!   Das Buendel zielt auf macOS 15 und wird bis macOS 26 unterstuetzt; die
-//!   Aufzaehlung kommt aus der Laufzeit von `cargo test`. Eine Einstellung, die
-//!   Apple in macOS 26 dazulegt, faellt erst dem auf, der auf macOS 26 prueft.
-//!   Zur Uebersetzungszeit ist das nicht zu erzwingen: Rust sieht die
-//!   Kopfdateien des SDK nicht, `objc2` bildet keine Verfuegbarkeitsgrenze ab,
-//!   und `AnyProtocol` fuehrt in `objc2` 0.6 keine Mitgliederliste — sonst
-//!   waere `NSTextInputTraits` der sachliche statt des namensbasierten
-//!   Schnitts.
-//! - **Die Namensform ist nicht der Schnitt, den die Sache verlangt.** "Alles,
-//!   was den Textspeicher anfassen kann" ist an einem Selektornamen nicht
-//!   entscheidbar, und die zehn Paare oben zeigen es von der anderen Seite: da
-//!   sind zwei Namen eine Sache. Die Probe ist ein Stolperdraht ueber drei
-//!   bekannten Formen und kein Vollstaendigkeitsbeweis.
-//! - **Nur eine Richtung haelt den Bau an.** Was `NSTextView` traegt und
+//! **Zwei Tueren zu einer Einstellung sind nicht derselbe Speicher**, und die
+//! schwaechere Aussage ist die gemessene: jede legt die andere um, und die
+//! erste kann `Default` weder herstellen noch anzeigen. `NSTextInputTraitType`
+//! hat drei Werte, der Wahrheitswert zwei. Wer die zweite Tuer auf `Default`
+//! stellt und den Wahrheitswert der ersten liest, bekommt eine Systemvorgabe,
+//! die je Einstellung anders ausfaellt — an acht Paaren `YES`, an
+//! `linkDetectionType` und `dataDetectionType` `NO`; und wer diesen gelesenen
+//! Wahrheitswert unveraendert zurueckschreibt, steht danach auf `Yes` oder `No`
+//! und nie wieder auf `Default`. Beides misst
+//! `die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen`
+//! (`issues/260810-0750_*_derselbe-speicher-ist-eine-stufe-staerker-als-die-messung-hergibt.md`).
+//! Fuer den Schluss, dass zehn Paare keine zehn eigenen Zeilen brauchen,
+//! genuegt die schwaechere Aussage: `NO` an der ersten Tuer nagelt die zweite
+//! auf `No` fest, und das ist an allen zehn gemessen.
+//!
+//! **Dass es bei sieben bleibt, haelt ein Stolperdraht aus zwei Quellen fest,
+//! und nur eine der beiden ist geschlossen.**
+//! `keine_unbekannte_einstellung_steht_an_der_textflaeche` zaehlt zur Laufzeit
+//! auf, was diese Fassung von macOS traegt, und verlangt, dass jeder Fund in
+//! `EINSTELLUNGEN` unter `mod tests` eine Antwort hat. Die Aufzaehlung kommt aus
+//! zwei Quellen, die einander die Luecken deckeln:
+//!
+//! - **Das Protokoll `NSTextInputTraits` — der sachliche Schnitt, und er
+//!   braucht keine Namensform.** Wer Mitglied dieses Protokolls ist, ist eine
+//!   Texteingabe-Einstellung, gleich wie der Selektor endet. Vierzehn
+//!   Pflichtmerkmale fuehrt es auf diesem Geraet, und `protocol_copyPropertyList`
+//!   liefert sie vollstaendig. Diese Quelle ist der Grund, aus dem
+//!   `allowedWritingToolsResultOptions` nicht mehr durchfaellt
+//!   (`issues/260810-0745_*_der-stolperdraht-sieht-drei-der-vier-schreibwerkzeug-einstellungen-nicht.md`).
+//!   Sie laeuft ueber `objc2::ffi` und damit ueber rohes FFI; das ist in diesem
+//!   Teilbaum zulaessig, denn `super`s `mod.rs` traegt die eine Ausnahme von
+//!   `#![deny(unsafe_code)]` und Lint-Regeln schlagen in die eingebetteten
+//!   Module durch. Die Gegenbehauptung in der Nachricht zu `d9fc2c8` ist falsch
+//!   und mit ihr der Schluss, der Schnitt sei unerreichbar
+//!   (`issues/260810-0749_*_die-begruendung-unsafe-verbiete-den-sachlichen-schnitt-ist-falsch.md`).
+//! - **Die sechs Namensformen ueber der ganzen Vererbungskette — die
+//!   Heuristik.** Sie faengt die sechzehn, die `NSTextView` neben den vierzehn
+//!   des Protokolls fuehrt: zwoelf `set…Enabled:`, die Sammeltuer, die
+//!   Inhaltsart und die beiden Schreibwerkzeug-Einstellungen, die das Protokoll
+//!   nicht kennt. Vierzehn und sechzehn sind die dreissig, die an `NSTextView`
+//!   selbst stehen; sechs weitere bringt die Kette. Die Kette
+//!   laeuft von `NSTextView` bis `NSObject` und nicht nur ueber die Klasse
+//!   selbst: `class_copyMethodList` liefert die ererbten Methoden **nicht**, und
+//!   `NSView` und `NSResponder` tragen zusammen sechs Selektoren dieser Formen
+//!   (`issues/260810-0751_*_die-aufzaehlung-sieht-nur-die-klasse-selbst-und-nicht-ihre-oberklassen.md`).
+//!
+//! Drei Grenzen bleiben, und keine davon ist zu schliessen:
+//!
+//! - **Die Proben messen das Geraet, auf dem sie laufen, und nicht das
+//!   Zielsystem.** Das Buendel zielt auf macOS 15 und wird bis macOS 26
+//!   unterstuetzt; die Aufzaehlung kommt aus der Laufzeit von `cargo test`. Eine
+//!   Einstellung, die Apple in macOS 26 dazulegt, faellt erst dem auf, der auf
+//!   macOS 26 prueft. Zur Uebersetzungszeit ist das nicht zu erzwingen: Rust
+//!   sieht die Kopfdateien des SDK nicht, und `objc2` bildet keine
+//!   Verfuegbarkeitsgrenze ab, sondern schaltet die beiden neuen Setzer ueber
+//!   ein Cargo-Merkmal.
+//! - **Die Namensform ist nicht der Schnitt, den die Sache verlangt** — fuer die
+//!   zweite Quelle. "Alles, was den Textspeicher anfassen kann" ist an einem
+//!   Selektornamen nicht entscheidbar, und die zehn Paare oben zeigen es von der
+//!   anderen Seite: da sind zwei Namen eine Sache. Sechs Formen sind ein
+//!   breiterer Stolperdraht als drei und kein Vollstaendigkeitsbeweis. Die erste
+//!   Quelle hat diese Grenze nicht; sie hat statt ihrer die eigene, dass
+//!   `protocol_copyPropertyList` die Pflichtmerkmale liefert und ein
+//!   nachtraeglich als `@optional` erklaertes Merkmal nicht. Genau darin deckeln
+//!   sich die beiden: was aus dem Protokoll faellt, faengt die Kette, solange
+//!   die Form bekannt ist, und umgekehrt.
+//! - **Nur eine Richtung haelt den Bau an.** Was die Laufzeit traegt und
 //!   `EINSTELLUNGEN` nicht kennt, ist der gefaehrliche Fall und wird eine
-//!   Zusicherung, die die Namen nennt. Was `EINSTELLUNGEN` kennt und
-//!   `NSTextView` nicht mehr traegt, ist der harmlose — eine Einstellung, die
-//!   es nicht gibt, aendert keine Zeichen — und wird ein Hinweis auf der
-//!   Standardfehlerausgabe. Eine gruene Reihe auf einem unterstuetzten System
-//!   faerbt er nicht rot
+//!   Zusicherung, die die Namen nennt. Was `EINSTELLUNGEN` kennt und die
+//!   Laufzeit nicht mehr traegt, ist der harmlose — eine Einstellung, die es
+//!   nicht gibt, aendert keine Zeichen — und wird ein Hinweis. Eine gruene Reihe
+//!   auf einem unterstuetzten System faerbt er nicht rot
 //!   (`issues/260810-0417_*_die-laufzeitprobe-bindet-den-bau-an-die-macos-version-des-pruefenden-geraets.md`).
+//!   Der Hinweis geht **nicht** ueber `eprintln!`: `libtest` faengt die
+//!   Standardausgabe eines Tests ab und gibt sie nur bei einem Fehlschlag oder
+//!   unter `--nocapture` aus, und dieser Zweig laeuft genau dann, wenn der Test
+//!   nicht fehlschlaegt. Er geht deshalb ueber [`std::io::stderr`] unmittelbar
+//!   an den Fehlerkanal des Prozesses, an dem die Abfangvorrichtung nicht
+//!   haengt — gemessen, nicht der Dokumentation entnommen
+//!   (`issues/260810-0747_*_der-hinweis-der-gegenrichtung-wird-von-libtest-verschluckt-und-erreicht-niemanden.md`).
 //!
-//! **Was die Zusage traegt, sind deshalb nicht die Proben, sondern die Zeilen
-//! in [`textflaeche_bauen`] und die Pruefung am laufenden Buendel.** Ob die
-//! sieben Zeilen stehen und was sie bewirken, misst hier keine Probe: Klasse
-//! und Selektoren stehen fuer sich, und deshalb braucht die Probe weder Flaeche
-//! noch Fenster. Das ist Nutzerarbeit.
+//! **Und die sieben Zeilen selbst haelt eine Probe.** Sie baut die Flaeche mit
+//! [`textflaeche_bauen`], liest jede der sieben zurueck und vergleicht sie mit
+//! einer frisch gebauten `NSTextView`: an KRKs Flaeche steht jede aus, an der
+//! frischen jede anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
+//! laufenden Buendel — dass getippte Anfuehrungszeichen als getippte in der
+//! Datei stehen —, nicht mehr die Frage, ob die Zeilen stehen und greifen.
 //!
-//! **Eine Einstellung steht in der Aufstellung ohne Antwort, und das ist
-//! Absicht.** Die Schreibwerkzeuge aus macOS 15 (`writingToolsBehavior`)
-//! schreiben markierten Text um, und ihr Vorgabewert ueberlaesst dem System die
-//! Wahl. Sie unterscheiden sich von den sieben darin, dass der Nutzer sie
-//! eigens aufruft; ob C4 sie trotzdem ausschliesst, ist eine Lesart und keine
-//! Codefrage. Der Datensatz ist
-//! `issues/260810-0512_o_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`.
-//! `EINSTELLUNGEN` fuehrt sie als `NochOffen`, damit die Probe sie nicht
-//! uebersieht und die Antwort trotzdem beim Nutzer bleibt.
+//! **Vier Einstellungen stehen in der Aufstellung ohne Antwort, und das ist
+//! Absicht.** Die Schreibwerkzeuge aus macOS 15 schreiben markierten Text um und
+//! fuehren dazu vier Einstellungen: `writingToolsBehavior`,
+//! `allowedWritingToolsResultOptions`, `writingToolsAllowedInputOptions` und
+//! `allowsWritingToolsAffordance`. Der Vorgabewert des ersten ist
+//! `NSWritingToolsBehaviorDefault` und ueberlaesst dem System die Wahl; die
+//! Angebotsflaeche des vierten steht ab Werk **an**. Beides ist an der Flaeche
+//! aus [`textflaeche_bauen`] gemessen und nicht der Dokumentation entnommen. Sie
+//! unterscheiden sich von den sieben darin, dass der Nutzer sie eigens aufruft;
+//! ob C4 sie trotzdem ausschliesst, ist eine Lesart und keine Codefrage, und sie
+//! bindet ueber diese vier hinaus. Der Datensatz ist
+//! `decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`.
+//! `EINSTELLUNGEN` fuehrt alle vier als `NochOffen`, damit die Proben sie nicht
+//! uebersehen und die Antwort trotzdem beim Nutzer bleibt.
 //!
 //! **Die Formatansicht aus C3 widerspricht dem nicht, und der Grund ist nicht,
 //! wo ihre Merkmale liegen.** Sie setzt Farbe und Unterstreichung als
@@ -205,6 +278,15 @@
 //! steht seit macOS 14, `setMathExpressionCompletionType:` seit macOS 15. Beide
 //! liegen auf oder unter dem Zielsystem, und auch sie brauchen deshalb keine
 //! Pruefung. Wer eine Methode aus macOS 16 oder spaeter anfasst, braucht eine.
+//!
+//! **Die Proben unter `mod tests` sprechen daneben nichts an, was eine
+//! Verfuegbarkeitsfrage stellt.** Sie fragen die Laufzeit nach Namen: die Klasse
+//! ueber `AnyClass::get`, das Protokoll `NSTextInputTraits` ueber
+//! `AnyProtocol::get`, die Werte ueber `valueForKey:` und `setValue:forKey:` aus
+//! `NSObject` (macOS 10.0). Ein Name, den diese Fassung von macOS nicht fuehrt,
+//! ist deshalb kein Absturz, sondern ein Fund der Probe — und darin liegt ihr
+//! Zweck. Eine Zahl fuer die Untergrenze von `NSTextInputTraits` steht hier
+//! bewusst nicht: sie wird nirgends gebunden, sondern nachgefragt.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -2178,12 +2260,16 @@ fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
+    use std::ffi::{CStr, c_uint};
+    use std::io::Write;
     use std::path::PathBuf;
     use std::ptr::NonNull;
+    use std::sync::Mutex;
 
     use block2::RcBlock;
     use krk_core::text::marke::wiederfinden;
-    use objc2::runtime::AnyClass;
+    use objc2::runtime::{AnyClass, AnyProtocol};
+    use objc2_app_kit::NSWritingToolsBehavior;
 
     use super::*;
 
@@ -2606,38 +2692,89 @@ mod tests {
         rueckgaengigstapel_leeren(None);
     }
 
-    /// Die Namensformen, in denen `NSTextView` seine Texteingabe-Einstellungen
-    /// fuehrt.
+    /// Die Namensformen, in denen `NSTextView` seine Einstellungen fuehrt — die
+    /// **heuristische** Haelfte des Schnitts.
     ///
-    /// Drei sind es heute: die alte boolesche `set…Enabled:`, die dreiwertige
-    /// `set…Type:` aus macOS 14 und die eine `set…Behavior:`. Der Modulkopf
-    /// sagt unter „Die Namensform ist nicht der Schnitt", warum diese
-    /// Aufzaehlung ein Stolperdraht ist und kein Beweis.
-    const FORMEN: [&str; 3] = ["Enabled:", "Type:", "Behavior:"];
+    /// Sechs sind es heute: die alte boolesche `set…Enabled:`, die dreiwertige
+    /// `set…Type:` aus macOS 14, ihre Sammelform `set…Types:`, die eine
+    /// `set…Behavior:` und die beiden Formen der Schreibwerkzeuge `set…Options:`
+    /// und `set…Affordance:`. Der Modulkopf sagt unter „Die Namensform ist nicht
+    /// der Schnitt", warum diese Aufzaehlung ein Stolperdraht ist und kein
+    /// Beweis, und welche zweite Quelle daneben steht.
+    ///
+    /// **Drei Formen waren es bis zum 260810**, und die drei fehlenden haben je
+    /// einen belegten Fall gekostet: `Types:` die Sammeltuer
+    /// `setEnabledTextCheckingTypes:`, `Options:` zwei
+    /// Schreibwerkzeug-Einstellungen und `Affordance:` die dritte. Wer eine
+    /// siebte Form braucht, hat einen Fall dafuer — sonst waechst hier eine
+    /// Liste, die immer breiter und nie vollstaendiger wird.
+    const FORMEN: [&str; 6] = [
+        "Enabled:",
+        "Type:",
+        "Types:",
+        "Behavior:",
+        "Options:",
+        "Affordance:",
+    ];
+
+    /// Das Protokoll, dessen Mitgliedschaft ohne Namensform entscheidet — die
+    /// **geschlossene** Haelfte des Schnitts.
+    ///
+    /// Wer hier Mitglied ist, ist eine Texteingabe-Einstellung, gleich wie der
+    /// Selektor endet. Vierzehn Pflichtmerkmale fuehrt es auf diesem Geraet.
+    const MERKMALSPROTOKOLL: &CStr = c"NSTextInputTraits";
 
     /// Wie eine Einstellung der Textflaeche zur Zusage aus C4 steht.
     ///
-    /// Vier Antworten. Die dritte ist der Fund vom 260810: die Form
-    /// `set…Type:` ist zum groessten Teil keine zweite Menge von Einstellungen,
-    /// sondern eine zweite **Tuer** zu denselben.
+    /// **Fuenf Antworten, und die Aufzaehlung hat keinen Auffangzweig.** Die
+    /// dritte und die vierte trennen zwei Sorten Tuer, die vor dem 260810 eine
+    /// waren: eine Tuer auf **eine** Einstellung und eine Tuer auf **mehrere**.
+    /// Die beiden werden verschieden nachgemessen und lassen sich deshalb nicht
+    /// in einer Variante fuehren
+    /// (`issues/260810-0746_*_es-gibt-eine-dritte-tuer-und-sie-liegt-ausserhalb-aller-drei-namensformen.md`).
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Einordnung {
         /// [`textflaeche_bauen`] schaltet sie ab, weil sie Zeichen in den Text
         /// bringt oder aus ihm nimmt, die der Nutzer nicht getippt hat.
+        ///
+        /// Dass sie an der gebauten Flaeche wirklich aus steht, misst
+        /// [`die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
         Abgeschaltet,
         /// Sie darf anbleiben, weil sie den Textspeicher nicht anfasst.
         Geduldet,
-        /// Zweite Tuer zu der genannten Einstellung: beide legen einander um,
-        /// je Paar einzeln und in beiden Richtungen gemessen. Sie eigens zu
-        /// setzen schaltete ab, was schon aus ist.
+        /// Zweite Tuer zu **einer** genannten Einstellung: beide legen einander
+        /// um. Sie eigens zu setzen schaltete ab, was schon aus ist.
+        ///
+        /// Die Kopplung misst [`jede_zweite_tuer_und_ihre_erste_legen_einander_um`],
+        /// je Paar einzeln und in beiden Richtungen. „Derselbe Speicher" waere
+        /// eine Stufe zu stark: was die erste Tuer nicht kann, ist `Default`
+        /// herstellen oder anzeigen, und das misst
+        /// [`die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen`].
         ZweiteTuerZu(&'static str),
+        /// Eine Tuer auf **mehrere** genannte Einstellungen zugleich, naemlich
+        /// die Bitmaske `setEnabledTextCheckingTypes:`.
+        ///
+        /// Sie wird in KRK **nicht gesetzt**: sie waere eine zweite Stelle mit
+        /// einer Meinung darueber, was abgeschaltet ist, und die einzelnen
+        /// Zeilen in [`textflaeche_bauen`] sind die erste. Dass sie auf
+        /// dieselben Bits sieht, misst
+        /// [`die_sammeltuer_ist_eine_sicht_auf_dieselben_bits`].
+        SammeltuerZu(&'static [&'static str]),
         /// Bekannt, benannt, und die Einordnung haengt an einer Lesart von C4,
         /// die der Nutzer zu treffen hat. Der Datensatz steht dabei.
         NochOffen(&'static str),
     }
 
-    /// Jede Einstellung, die `NSTextView` in einer der [`FORMEN`] traegt, mit
-    /// ihrer Antwort auf die Frage aus C4.
+    /// Jede Einstellung, die diese Laufzeit in einer der [`FORMEN`] oder als
+    /// Mitglied von [`MERKMALSPROTOKOLL`] traegt, mit ihrer Antwort auf die
+    /// Frage aus C4.
+    ///
+    /// **Sechsunddreissig sind es, und die Aufstellung ist die Vorlage der
+    /// Messungen und nicht ihr Nachtrag.** Was hier als `Abgeschaltet`,
+    /// `ZweiteTuerZu` oder `SammeltuerZu` steht, fahren die Proben weiter unten
+    /// an einer eigens gebauten `NSTextView` nach. Eine Zeile, die etwas
+    /// Falsches behauptet, haelt damit den Bau an, statt eine Behauptung zu
+    /// bleiben.
     ///
     /// **Abgeschaltet sind sieben.** Vier greifen beim Tippen, die fuenfte beim
     /// Einfuegen und Ausschneiden (Defekt 260809-1650), die sechste und die
@@ -2662,6 +2799,13 @@ mod tests {
     ///   gedacht ist, damit es Ausfuellvorschlaege machen kann. An KRKs Flaeche
     ///   steht sie ab Werk auf `nil`, es gibt also nichts vorzuschlagen; und
     ///   auch mit Wert traegt erst die Wahl des Nutzers Zeichen ein.
+    /// - Die sechs aus `NSView` und `NSResponder` gehoeren keiner Textklasse und
+    ///   kennen keinen Textspeicher: welche Beruehrungsarten eine Ansicht
+    ///   annimmt, wie ihr Fokusring aussieht, ob Gestenerkenner anspringen, und
+    ///   drei Angaben fuer die Bedienungshilfen. Sie stehen hier, weil die
+    ///   Aufzaehlung ueber die ganze Vererbungskette laeuft und nicht, weil sie
+    ///   je zur Frage aus C4 gehoert haetten
+    ///   (Defekt 260810-0751).
     const EINSTELLUNGEN: &[(&str, Einordnung)] = &[
         // Die vier, die beim Tippen greifen.
         (
@@ -2740,14 +2884,59 @@ mod tests {
         ),
         // Die Inhaltsart, ohne Zwilling und ohne Wert.
         ("setContentType:", Einordnung::Geduldet),
-        // Und die eine, die auf eine Lesart von C4 wartet.
+        // Die eine Sammeltuer: eine Bitmaske ueber fuenf der geführten
+        // Einstellungen. Der Werkswert setzt die vier tippenden Automatiken und
+        // nimmt die Grammatikpruefung fort — beides gemessen.
+        (
+            "setEnabledTextCheckingTypes:",
+            Einordnung::SammeltuerZu(&[
+                "setAutomaticQuoteSubstitutionEnabled:",
+                "setAutomaticDashSubstitutionEnabled:",
+                "setAutomaticTextReplacementEnabled:",
+                "setAutomaticSpellingCorrectionEnabled:",
+                "setGrammarCheckingEnabled:",
+            ]),
+        ),
+        // Die vier Schreibwerkzeug-Einstellungen, die auf eine Lesart von C4
+        // warten. Es sind vier und nicht eine: wer die Schreibwerkzeuge
+        // ausschliesst, schliesst sie ueber `writingToolsBehavior` allein nicht
+        // aus (Defekt 260810-0745).
         (
             "setWritingToolsBehavior:",
-            Einordnung::NochOffen(
-                "issues/260810-0512_*_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md",
-            ),
+            Einordnung::NochOffen(SCHREIBWERKZEUGE),
         ),
+        (
+            "setAllowedWritingToolsResultOptions:",
+            Einordnung::NochOffen(SCHREIBWERKZEUGE),
+        ),
+        (
+            "setWritingToolsAllowedInputOptions:",
+            Einordnung::NochOffen(SCHREIBWERKZEUGE),
+        ),
+        (
+            "setAllowsWritingToolsAffordance:",
+            Einordnung::NochOffen(SCHREIBWERKZEUGE),
+        ),
+        // Die sechs aus `NSView` und `NSResponder`, die die Aufzaehlung ueber die
+        // Vererbungskette mitbringt. Keine fasst einen Textspeicher an.
+        ("setAllowedTouchTypes:", Einordnung::Geduldet),
+        ("setFocusRingType:", Einordnung::Geduldet),
+        ("setGesturesEnabled:", Einordnung::Geduldet),
+        ("setAccessibilityContainerType:", Einordnung::Geduldet),
+        ("setAccessibilityEnabled:", Einordnung::Geduldet),
+        ("setAccessibilityRulerMarkerType:", Einordnung::Geduldet),
     ];
+
+    /// Der Datensatz, an dem die Einordnung der vier Schreibwerkzeug-Einstellungen
+    /// haengt.
+    ///
+    /// **Eine Frage und nicht vier.** Alle vier stehen oder fallen mit derselben
+    /// Lesart von C4, und die bindet ueber sie hinaus; deshalb ist der Datensatz
+    /// eine Entscheidung und kein Defekt. Der Defekt, der die Frage aufgeworfen
+    /// hat, ist
+    /// `issues/260810-0512_*_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`.
+    const SCHREIBWERKZEUGE: &str =
+        "decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md";
 
     /// Die Antwort zu einem Selektornamen, oder `None`, wenn
     /// [`EINSTELLUNGEN`] ihn nicht kennt.
@@ -2758,38 +2947,126 @@ mod tests {
             .map(|(_, einordnung)| *einordnung)
     }
 
+    /// Die Setzer der Merkmale aus [`MERKMALSPROTOKOLL`], aus der Laufzeit.
+    ///
+    /// **Das ist der sachliche Schnitt, und er kommt ohne Namensform aus.**
+    /// `protocol_copyPropertyList` liefert die Pflichtmerkmale des Protokolls;
+    /// aus jedem Merkmalsnamen wird der Setzer nach der Regel, die Objective-C
+    /// selbst anwendet, wenn eine Eigenschaft keinen eigenen Setzer nennt: `set`
+    /// davor, der erste Buchstabe gross, ein Doppelpunkt dahinter. Dass keines
+    /// der vierzehn einen eigenen Setzernamen fuehrt, ist nachgesehen (kein
+    /// Merkmal traegt das Attribut `S`), und wenn eines es tuete, kaeme hier ein
+    /// Name heraus, den die Klasse nicht traegt — die Probe nennt ihn dann als
+    /// unbekannt, statt ihn zu verschweigen.
+    ///
+    /// **Rohes FFI, und das ist hier zulaessig.** `objc2` fuehrt die
+    /// Protokoll-Aufzaehlung nur in seinem `ffi`-Modul; die sichere
+    /// Schnittstelle hat sie nicht. Der Modulkopf sagt unter „Das Protokoll
+    /// `NSTextInputTraits`", warum das keine Grenze verletzt.
+    fn setzer_des_protokolls() -> BTreeSet<String> {
+        let protokoll = AnyProtocol::get(MERKMALSPROTOKOLL).unwrap_or_else(|| {
+            panic!(
+                "das Protokoll {MERKMALSPROTOKOLL:?} steht auf diesem System nicht — \
+                 dann ist die eine geschlossene Haelfte des Schnitts fort und die \
+                 Aufzaehlung haengt allein an FORMEN"
+            )
+        });
+        let mut anzahl: c_uint = 0;
+        let liste =
+            unsafe { objc2::ffi::protocol_copyPropertyList(protokoll as *const _, &mut anzahl) };
+        assert!(
+            !liste.is_null() && anzahl > 0,
+            "{MERKMALSPROTOKOLL:?} fuehrt kein einziges Pflichtmerkmal"
+        );
+        let mut setzer = BTreeSet::new();
+        for stelle in 0..anzahl as usize {
+            let merkmal = unsafe { *liste.add(stelle) };
+            let name = unsafe { CStr::from_ptr(objc2::ffi::property_getName(merkmal)) };
+            setzer.insert(setzername(&name.to_string_lossy()));
+        }
+        unsafe { objc2::ffi::free(liste.cast()) };
+        setzer
+    }
+
+    /// `smartQuotesType` wird zu `setSmartQuotesType:`.
+    fn setzername(merkmal: &str) -> String {
+        let mut zeichen = merkmal.chars();
+        let erstes = zeichen.next().expect("ein Merkmalsname ist nicht leer");
+        format!("set{}{}:", erstes.to_uppercase(), zeichen.as_str())
+    }
+
+    /// `setSmartQuotesType:` wird zu `smartQuotesType` — der Weg zurueck, den
+    /// `valueForKey:` braucht.
+    fn merkmalsname(setzer: &str) -> String {
+        let kern = setzer
+            .strip_prefix("set")
+            .and_then(|rest| rest.strip_suffix(':'))
+            .unwrap_or_else(|| panic!("{setzer} ist kein Setzer der Form set…:"));
+        let mut zeichen = kern.chars();
+        let erstes = zeichen.next().expect("ein Setzername hat einen Kern");
+        format!("{}{}", erstes.to_lowercase(), zeichen.as_str())
+    }
+
+    /// Was diese Laufzeit an Einstellungen traegt, aus beiden Quellen.
+    ///
+    /// **Die Kette laeuft bis `NSObject`.** `class_copyMethodList`, das hinter
+    /// `instance_methods` steht, liefert die Methoden der Klasse selbst und
+    /// **keine** ererbten; eine Einstellung, die Apple statt an `NSTextView` an
+    /// `NSText`, `NSView` oder `NSResponder` legt, fiele sonst stumm aus der
+    /// Aufzaehlung (Defekt 260810-0751).
+    fn getragene_einstellungen() -> BTreeSet<String> {
+        let mut getragen = setzer_des_protokolls();
+        let mut klasse =
+            Some(AnyClass::get(c"NSTextView").expect("die Klasse NSTextView steht im Programm"));
+        while let Some(stufe) = klasse {
+            getragen.extend(
+                stufe
+                    .instance_methods()
+                    .iter()
+                    .map(|methode| methode.name().name().to_string_lossy().into_owned())
+                    .filter(|name| {
+                        name.starts_with("set") && FORMEN.iter().any(|form| name.ends_with(form))
+                    }),
+            );
+            klasse = stufe.superclass();
+        }
+        getragen
+    }
+
     /// Die Zusage aus C4 ist entweder vollstaendig oder sie traegt nicht: eine
     /// achte Automatik, die durchrutscht, machte die sieben abgeschalteten zu
     /// einer halben Massnahme.
     ///
     /// Die Probe fragt deshalb nicht die sieben ab, die sie kennt, sondern die
-    /// Klasse selbst: sie zaehlt zur Laufzeit auf, was `NSTextView` in den
-    /// [`FORMEN`] traegt, und verlangt, dass jeder Fund in [`EINSTELLUNGEN`]
-    /// eine Antwort hat.
+    /// Laufzeit: [`getragene_einstellungen`] zaehlt auf, was das Protokoll fuehrt
+    /// und was die Vererbungskette in den [`FORMEN`] traegt, und die Probe
+    /// verlangt, dass jeder Fund in [`EINSTELLUNGEN`] eine Antwort hat.
     ///
     /// **Die beiden Richtungen sind verschiedene Fragen und bekommen
-    /// verschiedene Antworten** (Defekt 260810-0417). Was die Klasse traegt und
+    /// verschiedene Antworten** (Defekt 260810-0417). Was die Laufzeit traegt und
     /// die Aufstellung nicht kennt, haelt den Bau an: dort ist C4 offen. Was
-    /// die Aufstellung kennt und die Klasse nicht mehr traegt, ist ein Hinweis
+    /// die Aufstellung kennt und die Laufzeit nicht mehr traegt, ist ein Hinweis
     /// und kein Fehlschlag — eine Einstellung, die es nicht gibt, aendert keine
     /// Zeichen, und KRK wird auf macOS 15 bis 26 unterstuetzt, waehrend diese
     /// Aufzaehlung allein das Geraet sieht, auf dem sie laeuft.
     ///
-    /// **Weder Flaeche noch Fenster.** Klasse und Selektoren stehen fuer sich,
-    /// und die Aufzaehlung braucht keine Instanz; deshalb steht die Probe hier
-    /// und nicht unter `Nutzerarbeit`. Dass die sieben Zeilen in
-    /// [`textflaeche_bauen`] stehen und wirken, misst sie nicht.
+    /// **Der Hinweis geht nicht ueber `eprintln!`.** `libtest` faengt die
+    /// Standardausgabe eines Tests ab und gibt sie nur bei einem Fehlschlag oder
+    /// unter `--nocapture` aus; dieser Zweig laeuft genau dann, wenn der Test
+    /// **nicht** fehlschlaegt, und ging deshalb auf allen begangenen Wegen ins
+    /// Leere (Defekt 260810-0747). Ein Schreiben auf [`std::io::stderr`] geht am
+    /// Abfang vorbei, weil der an den Druckmakros haengt und nicht am
+    /// Fehlerkanal des Prozesses. Nachzustellen: eine erfundene Zeile in
+    /// [`EINSTELLUNGEN`] eintragen und `cargo test` **ohne** weitere Schalter
+    /// fahren; der Hinweis steht in der Ausgabe, die Reihe bleibt gruen.
+    ///
+    /// **Weder Flaeche noch Fenster.** Klasse, Protokoll und Selektoren stehen
+    /// fuer sich, und die Aufzaehlung braucht keine Instanz. Dass die sieben
+    /// Zeilen in [`textflaeche_bauen`] wirken, misst sie nicht — das misst
+    /// [`die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
     #[test]
     fn keine_unbekannte_einstellung_steht_an_der_textflaeche() {
-        let klasse = AnyClass::get(c"NSTextView").expect("die Klasse NSTextView steht im Programm");
-        let getragen: BTreeSet<String> = klasse
-            .instance_methods()
-            .iter()
-            .map(|methode| methode.name().name().to_string_lossy().into_owned())
-            .filter(|name| {
-                name.starts_with("set") && FORMEN.iter().any(|form| name.ends_with(form))
-            })
-            .collect();
+        let getragen = getragene_einstellungen();
         let eingeordnet: BTreeSet<String> = EINSTELLUNGEN
             .iter()
             .map(|(name, _)| (*name).to_owned())
@@ -2801,9 +3078,9 @@ mod tests {
             .collect();
         assert!(
             unbekannt.is_empty(),
-            "NSTextView traegt {} Einstellung(en), die EINSTELLUNGEN nicht kennt: {unbekannt:?} — \
-             wer sie ergaenzt, beantwortet zuerst, ob sie Zeichen aendert (C4), und prueft, ob sie \
-             nicht bloss eine zweite Tuer zu einer bekannten ist",
+            "diese Laufzeit traegt {} Einstellung(en), die EINSTELLUNGEN nicht kennt: \
+             {unbekannt:?} — wer sie ergaenzt, beantwortet zuerst, ob sie Zeichen aendert (C4), \
+             und prueft, ob sie nicht bloss eine weitere Tuer zu einer bekannten ist",
             unbekannt.len()
         );
 
@@ -2812,22 +3089,26 @@ mod tests {
             .map(String::as_str)
             .collect();
         if !verschwunden.is_empty() {
-            eprintln!(
-                "Hinweis: {verschwunden:?} steht in EINSTELLUNGEN, aber nicht mehr an NSTextView \
-                 dieses Systems. C4 ist davon nicht beruehrt — was es nicht gibt, aendert keine \
-                 Zeichen. Wer aufraeumt, streicht den Eintrag."
+            let _ = writeln!(
+                std::io::stderr(),
+                "Hinweis aus {}: {verschwunden:?} steht in EINSTELLUNGEN, aber weder an der \
+                 Vererbungskette von NSTextView noch in {MERKMALSPROTOKOLL:?} dieses Systems. \
+                 C4 ist davon nicht beruehrt — was es nicht gibt, aendert keine Zeichen. Wer \
+                 aufraeumt, streicht den Eintrag.",
+                module_path!()
             );
         }
     }
 
-    /// Die Aufstellung ist in sich stimmig: kein Name doppelt, und jede zweite
-    /// Tuer zeigt auf einen Eintrag, der selbst eine Antwort traegt.
+    /// Die Aufstellung ist in sich stimmig: kein Name doppelt, und jede Tuer
+    /// zeigt auf Eintraege, die selbst eine Antwort tragen.
     ///
-    /// Ohne diese Probe koennte eine zweite Tuer auf eine zweite Tuer zeigen
-    /// oder ins Leere, und die Aufstellung saehe vollstaendig aus, ohne es zu
-    /// sein.
+    /// Ohne diese Probe koennte eine Tuer auf eine Tuer zeigen oder ins Leere,
+    /// und die Aufstellung saehe vollstaendig aus, ohne es zu sein. Sie gilt fuer
+    /// beide Tuersorten: [`Einordnung::ZweiteTuerZu`] mit ihrem einen Ziel und
+    /// [`Einordnung::SammeltuerZu`] mit ihren mehreren.
     #[test]
-    fn jede_zweite_tuer_zeigt_auf_eine_beantwortete_einstellung() {
+    fn jede_tuer_zeigt_auf_beantwortete_einstellungen() {
         let mut gesehen = BTreeSet::new();
         for (name, _) in EINSTELLUNGEN {
             assert!(
@@ -2837,7 +3118,7 @@ mod tests {
         }
 
         for (name, einordnung) in EINSTELLUNGEN {
-            if let Einordnung::ZweiteTuerZu(ziel) = einordnung {
+            for ziel in ziele_von(einordnung) {
                 match einordnung_von(ziel) {
                     Some(Einordnung::Abgeschaltet | Einordnung::Geduldet) => {}
                     andere => panic!(
@@ -2846,6 +3127,346 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Die Ziele einer Tuer, oder nichts, wenn die Antwort keine Tuer ist.
+    fn ziele_von(einordnung: &'static Einordnung) -> &'static [&'static str] {
+        match einordnung {
+            Einordnung::ZweiteTuerZu(ziel) => std::slice::from_ref(ziel),
+            Einordnung::SammeltuerZu(ziele) => ziele,
+            Einordnung::Abgeschaltet | Einordnung::Geduldet | Einordnung::NochOffen(_) => &[],
+        }
+    }
+
+    /// Der eine Ort, an dem eine Probe eine AppKit-Ansicht baut.
+    ///
+    /// **Hier steht eine Notluege, und sie steht genau hier.**
+    /// `MainThreadMarker::new_unchecked` behauptet den Hauptfaden, und `libtest`
+    /// fuehrt seine Proben auf eigenen Faeden. Was die Proben darunter tun,
+    /// traegt die Behauptung: sie bauen eine `NSTextView`, lesen und setzen
+    /// Merkmale und lassen sie fallen. Kein Fenster, keine Zeichnung, keine
+    /// Ereignisschlange, kein Ersthelfer — nichts, was AppKit an den Hauptfaden
+    /// bindet. Nachgemessen: sechs vollstaendige Laeufe von
+    /// `cargo test --workspace` nach dem Umbau, ohne Absturz und ohne Meldung.
+    /// Was das **nicht** belegt, gehoert dazu: Apple sagt fuer eine `NSView`
+    /// den Hauptfaden zu, und diese Zusage nimmt die Probe nicht in Anspruch,
+    /// sondern umgeht sie. Wer hier eine Probe dazulegt, die zeichnet, ein
+    /// Fenster anfasst oder einen Ersthelfer setzt, verlaesst den gemessenen
+    /// Bereich.
+    ///
+    /// **Die Sperre serialisiert sie.** Mehrere Proben, die gleichzeitig auf
+    /// verschiedenen Faeden AppKit-Objekte bauen, waeren eine zweite Behauptung
+    /// ueber AppKit, die niemand geprueft hat; unter der Sperre baut zu jeder
+    /// Zeit hoechstens eine. Ein Fehlschlag vergiftet die Sperre, und die
+    /// naechste Probe nimmt sie trotzdem: der Fehlschlag steht schon in der
+    /// Reihe, und ein zweiter Name daneben verdeckte ihn nur.
+    fn an_einer_flaeche<T>(arbeit: impl FnOnce(MainThreadMarker) -> T) -> T {
+        static SPERRE: Mutex<()> = Mutex::new(());
+        let _wache = SPERRE
+            .lock()
+            .unwrap_or_else(|vergiftet| vergiftet.into_inner());
+        arbeit(unsafe { MainThreadMarker::new_unchecked() })
+    }
+
+    /// Der Rahmen, in dem die Proben ihre Flaechen bauen. Die Groesse spielt
+    /// keine Rolle: gelesen werden Merkmale und nicht Masse.
+    fn probenrahmen() -> NSRect {
+        NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(100.0, 100.0))
+    }
+
+    /// Liest ein Merkmal der Flaeche ueber seinen Namen.
+    ///
+    /// **Ueber `valueForKey:` und nicht ueber den Lesernamen.** Die Lesernamen
+    /// sind nicht einheitlich — `isAutomaticQuoteSubstitutionEnabled` traegt das
+    /// `is`, `smartInsertDeleteEnabled` nicht —, der Merkmalsname dagegen ist
+    /// genau der Setzername ohne `set` und ohne Doppelpunkt. Ein Weg statt einer
+    /// Ausnahmeliste.
+    fn merkmal(flaeche: &NSTextView, merkmal: &str) -> isize {
+        let schluessel = NSString::from_str(merkmal);
+        let wert: Option<Retained<NSNumber>> =
+            unsafe { msg_send![flaeche, valueForKey: &*schluessel] };
+        wert.unwrap_or_else(|| panic!("die Flaeche fuehrt kein Merkmal {merkmal}"))
+            .integerValue()
+    }
+
+    /// Setzt ein Merkmal der Flaeche ueber seinen Namen. Gegenstueck zu
+    /// [`merkmal`].
+    fn merkmal_setzen(flaeche: &NSTextView, merkmal: &str, wert: isize) {
+        let schluessel = NSString::from_str(merkmal);
+        let zahl = NSNumber::new_isize(wert);
+        let _: () = unsafe { msg_send![flaeche, setValue: &*zahl, forKey: &*schluessel] };
+    }
+
+    /// Der Wert, auf dem eine abgeschaltete Einstellung steht: `NO` an einer
+    /// booleschen Tuer, `No` an einer dreiwertigen.
+    ///
+    /// **Die Unterscheidung ist vollstaendig und hat keinen Auffangzweig.** Die
+    /// vier uebrigen Namensformen tragen je einen eigenen Aus-Wert —
+    /// `set…Behavior:` etwa `NSWritingToolsBehavior::None` mit `-1` und nicht `1`
+    /// —, und ein stiller Rueckfall auf `No` haette dort eine falsche Erwartung
+    /// gemessen und sie als Fehlschlag der Flaeche gemeldet. Heute erreicht keine
+    /// von ihnen diese Stelle: `Abgeschaltet` tragen fuenf `set…Enabled:` und
+    /// zwei `set…Type:`, und die Ziele der Tueren sind alle `set…Enabled:`.
+    fn aus_bedeutet(setzer: &str) -> isize {
+        if setzer.ends_with("Enabled:") {
+            0
+        } else if setzer.ends_with("Type:") {
+            NSTextInputTraitType::No.0
+        } else {
+            panic!(
+                "{setzer} traegt keine der beiden Formen, deren Aus-Wert hier bekannt ist. \
+                 Wer eine Einstellung der Formen Types:, Behavior:, Options: oder \
+                 Affordance: auf Abgeschaltet setzt, traegt ihren Aus-Wert zuerst hier ein \
+                 — sie ist nicht `No`"
+            )
+        }
+    }
+
+    /// Die sieben Zeilen in [`textflaeche_bauen`] wirken, und das steht nicht
+    /// mehr allein in der Prosa.
+    ///
+    /// **Zwei Flaechen, ein Vergleich.** Die eine kommt aus
+    /// [`textflaeche_bauen`], die andere ist eine frisch gebaute `NSTextView`. An
+    /// der ersten steht jede der sieben aus; an der zweiten steht jede **anders**.
+    /// Die zweite Haelfte ist die tragende: ohne sie liefe die Probe gruen durch,
+    /// wenn eine Einstellung ab Werk schon aus waere und die Zeile fehlte.
+    ///
+    /// Die Aufstellung liefert die Namen. Wer eine achte Einstellung als
+    /// `Abgeschaltet` eintraegt, ohne die Zeile in [`textflaeche_bauen`] zu
+    /// schreiben, bekommt hier den Fehlschlag — und nicht erst der Nutzer am
+    /// laufenden Buendel.
+    #[test]
+    fn die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus() {
+        let abgeschaltet: Vec<&str> = EINSTELLUNGEN
+            .iter()
+            .filter(|(_, einordnung)| *einordnung == Einordnung::Abgeschaltet)
+            .map(|(name, _)| *name)
+            .collect();
+        assert!(
+            !abgeschaltet.is_empty(),
+            "ohne eine abgeschaltete Einstellung misst diese Probe nichts"
+        );
+
+        an_einer_flaeche(|mtm| {
+            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+            for setzer in abgeschaltet {
+                let name = merkmalsname(setzer);
+                let aus = aus_bedeutet(setzer);
+                assert_eq!(
+                    merkmal(&unsere, &name),
+                    aus,
+                    "{setzer} steht an der Flaeche aus textflaeche_bauen nicht auf aus — \
+                     C4 verlangt, dass der gesicherte Stand der getippte ist"
+                );
+                assert_ne!(
+                    merkmal(&frische, &name),
+                    aus,
+                    "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
+                     Zeile in textflaeche_bauen nichts, und der Vergleich braucht einen \
+                     anderen Zeugen"
+                );
+            }
+        });
+    }
+
+    /// Die Kopplung der zehn Paare, nachgemessen statt behauptet.
+    ///
+    /// **Daran haengt die Entscheidung, `textflaeche_bauen` nicht um zehn Zeilen
+    /// zu ergaenzen**, und im Baum hielt sie vorher nichts: das Messprogramm war
+    /// nirgends abgelegt, und die beiden Aufstellungsproben pruefen die
+    /// Aufstellung gegen sich selbst
+    /// (`issues/260810-0748_*_die-kopplung-der-zehn-paare-traegt-den-commit-und-ist-im-baum-durch-nichts-gehalten.md`).
+    /// Entkoppelt eine spaetere Fassung von macOS ein Paar, haelt diese Probe den
+    /// Bau an, statt gruen zu bleiben.
+    ///
+    /// Je Paar zwei Richtungen und je Richtung eine eigene Flaeche, damit die
+    /// zweite Messung nicht auf dem Ergebnis der ersten sitzt.
+    #[test]
+    fn jede_zweite_tuer_und_ihre_erste_legen_einander_um() {
+        let paare: Vec<(&str, &str)> = EINSTELLUNGEN
+            .iter()
+            .filter_map(|(name, einordnung)| match einordnung {
+                Einordnung::ZweiteTuerZu(erste) => Some((*name, *erste)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(paare.len(), 10, "die Aufstellung fuehrt zehn Paare");
+
+        an_einer_flaeche(|mtm| {
+            for (zweite, erste) in paare {
+                let zweite_tuer = merkmalsname(zweite);
+                let erste_tuer = merkmalsname(erste);
+
+                let hin = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+                merkmal_setzen(&hin, &erste_tuer, aus_bedeutet(erste));
+                assert_eq!(
+                    merkmal(&hin, &zweite_tuer),
+                    NSTextInputTraitType::No.0,
+                    "{erste} auf aus laesst {zweite} nicht auf No stehen — die beiden sind \
+                     entkoppelt, und dann braucht {zweite} eine eigene Zeile in \
+                     textflaeche_bauen"
+                );
+
+                let her = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+                merkmal_setzen(&her, &zweite_tuer, NSTextInputTraitType::No.0);
+                assert_eq!(
+                    merkmal(&her, &erste_tuer),
+                    aus_bedeutet(erste),
+                    "{zweite} auf No laesst {erste} nicht auf aus stehen — die Kopplung \
+                     traegt nur in eine Richtung, und die Aufstellung behauptet beide"
+                );
+            }
+        });
+    }
+
+    /// Zwei Tueren zu einer Einstellung sind nicht derselbe Speicher, und diese
+    /// Probe haelt den Unterschied fest.
+    ///
+    /// **„Derselbe Speicher" war eine Stufe zu stark** (Defekt 260810-0750).
+    /// `NSTextInputTraitType` hat drei Werte, der Wahrheitswert zwei, und zwei
+    /// Messungen zeigen, dass die erste Tuer den dritten nicht fuehrt:
+    ///
+    /// 1. **Sie zeigt ihn nicht.** Steht die zweite Tuer auf `Default`, liest die
+    ///    erste eine Systemvorgabe, und die faellt je Einstellung anders aus.
+    ///    Waeren es dieselben Bits, gaebe es diesen Auflösungsschritt nicht.
+    /// 2. **Sie stellt ihn nicht her.** Schreibt man den eben gelesenen
+    ///    Wahrheitswert unveraendert zurueck, steht die zweite Tuer danach auf
+    ///    `Yes` oder `No` und nie wieder auf `Default`.
+    ///
+    /// Die erste Messung prueft die Probe daran, dass die Vorgabe **nicht bei
+    /// allen Paaren gleich** ausfaellt; welche zwei aus der Reihe fallen, ist
+    /// eine Systemeigenschaft und nicht Gegenstand einer Zusicherung.
+    #[test]
+    fn die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen() {
+        let paare: Vec<(&str, &str)> = EINSTELLUNGEN
+            .iter()
+            .filter_map(|(name, einordnung)| match einordnung {
+                Einordnung::ZweiteTuerZu(erste) => Some((*name, *erste)),
+                _ => None,
+            })
+            .collect();
+
+        let vorgaben = an_einer_flaeche(|mtm| {
+            let mut vorgaben = Vec::new();
+            for (zweite, erste) in paare {
+                let zweite_tuer = merkmalsname(zweite);
+                let erste_tuer = merkmalsname(erste);
+
+                let flaeche = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+                merkmal_setzen(&flaeche, &zweite_tuer, NSTextInputTraitType::Default.0);
+                let gelesen = merkmal(&flaeche, &erste_tuer);
+                merkmal_setzen(&flaeche, &erste_tuer, gelesen);
+                assert_ne!(
+                    merkmal(&flaeche, &zweite_tuer),
+                    NSTextInputTraitType::Default.0,
+                    "{erste} hat {zweite} auf Default zurueckgestellt — dann waere die erste \
+                     Tuer doch dieselbe Sache wie die zweite, und der Modulkopf sagt das \
+                     Gegenteil"
+                );
+                vorgaben.push(gelesen);
+            }
+            vorgaben
+        });
+
+        assert!(
+            vorgaben.iter().any(|wert| *wert != vorgaben[0]),
+            "alle Paare loesen Default zum selben Wahrheitswert auf ({vorgaben:?}) — dann \
+             traegt die Messung die Aussage nicht mehr, dass die Vorgabe je Einstellung \
+             verschieden ausfaellt"
+        );
+    }
+
+    /// Die Sammeltuer sieht auf dieselben Bits, die die einzelnen Zeilen legen.
+    ///
+    /// **Das ist die dritte Tuer** und die einzige, die mehrere Automatiken auf
+    /// einmal umlegt (Defekt 260810-0746). Zwei Messungen halten sie:
+    ///
+    /// 1. Die Maske an der Flaeche aus [`textflaeche_bauen`] hat gegenueber einer
+    ///    frischen Flaeche **nur Bits verloren** und keines dazugewonnen. Die
+    ///    sieben Zeilen legen also dieselben Bits, die die Maske fuehrt.
+    /// 2. Setzt man die Maske an unserer Flaeche auf den Werkswert zurueck, so
+    ///    aendert das jede Einstellung, die die Aufstellung als Ziel der
+    ///    Sammeltuer nennt. Deshalb wird sie in KRK nicht gesetzt.
+    ///
+    /// Die Zahlenwerte der Maske stehen bewusst nirgends: gemessen wird der
+    /// Unterschied zwischen zwei Flaechen und nicht eine Konstante von Apple.
+    #[test]
+    fn die_sammeltuer_ist_eine_sicht_auf_dieselben_bits() {
+        let (sammeltuer, ziele) = EINSTELLUNGEN
+            .iter()
+            .find_map(|(name, einordnung)| match einordnung {
+                Einordnung::SammeltuerZu(ziele) => Some((*name, *ziele)),
+                _ => None,
+            })
+            .expect("die Aufstellung fuehrt eine Sammeltuer");
+        assert_eq!(
+            sammeltuer, "setEnabledTextCheckingTypes:",
+            "diese Probe kennt die Maske dieser einen Sammeltuer"
+        );
+
+        an_einer_flaeche(|mtm| {
+            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+            let werkswert = frische.enabledTextCheckingTypes();
+            let unsere_maske = unsere.enabledTextCheckingTypes();
+            assert_ne!(
+                unsere_maske, werkswert,
+                "die sieben Zeilen lassen die Maske unberuehrt — dann fuehrt sie andere \
+                 Bits als die Einstellungen, die die Aufstellung ihr zuschreibt"
+            );
+            assert_eq!(
+                unsere_maske & !werkswert,
+                0,
+                "unsere Maske traegt ein Bit, das die frische nicht hat — die sieben Zeilen \
+                 schalten dann etwas ein"
+            );
+
+            let vorher: Vec<isize> = ziele
+                .iter()
+                .map(|ziel| merkmal(&unsere, &merkmalsname(ziel)))
+                .collect();
+            unsere.setEnabledTextCheckingTypes(werkswert);
+            for (ziel, alt) in ziele.iter().zip(vorher) {
+                assert_ne!(
+                    merkmal(&unsere, &merkmalsname(ziel)),
+                    alt,
+                    "der Werkswert der Maske laesst {ziel} unberuehrt — dann ist {ziel} kein \
+                     Ziel der Sammeltuer und die Aufstellung nennt es zu Unrecht"
+                );
+            }
+        });
+    }
+
+    /// Der Vorgabewert der Schreibwerkzeuge ueberlaesst dem System die Wahl, und
+    /// ihre Angebotsflaeche steht ab Werk an.
+    ///
+    /// **Gemessen und nicht der Dokumentation entnommen** (Defekt 260810-0512,
+    /// der den Wert als `speculation:` gefuehrt hat). Beides ist der Grund, aus
+    /// dem die vier Einstellungen in [`EINSTELLUNGEN`] als
+    /// [`Einordnung::NochOffen`] stehen: waeren sie ab Werk aus, waere die Lesart
+    /// von C4 keine Frage mehr.
+    ///
+    /// Die Probe faerbt die Reihe **nicht** rot, wenn die Lesart noch offen ist —
+    /// sie haelt fest, dass die Frage eine ist.
+    #[test]
+    fn der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl() {
+        an_einer_flaeche(|mtm| {
+            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            assert_eq!(
+                merkmal(&unsere, "writingToolsBehavior"),
+                NSWritingToolsBehavior::Default.0,
+                "die Schreibwerkzeuge stehen nicht mehr auf Default — wer sie gesetzt hat, \
+                 hat die Lesart von C4 entschieden, und dann gehoert der Eintrag in \
+                 EINSTELLUNGEN von NochOffen auf Abgeschaltet oder Geduldet"
+            );
+            assert_ne!(
+                merkmal(&unsere, "allowsWritingToolsAffordance"),
+                0,
+                "die Angebotsflaeche der Schreibwerkzeuge steht aus — dann ist der Grund, \
+                 aus dem der Datensatz sie fuehrt, ein anderer geworden"
+            );
+        });
     }
 
     /// Die beiden Defekte, an der Stelle festgehalten, an der sie entstanden

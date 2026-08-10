@@ -1,0 +1,79 @@
+# Die neuen Proben behaupten den Hauptfaden, den libtest ihnen nicht gibt
+
+---
+**Domain:** code
+**Schwere:** Medium
+**Gefunden von:** coder, beim Beheben von 260810-0748 und 260810-0750
+**Betroffen:** `crates/krk-ui/src/appkit/editor.rs` (`an_einer_flaeche` und die vier Proben, die es rufen)
+**Cross-references:** `issues/260810-0748_*_die-kopplung-der-zehn-paare-traegt-den-commit-und-ist-im-baum-durch-nichts-gehalten.md`, `issues/260810-0750_*_derselbe-speicher-ist-eine-stufe-staerker-als-die-messung-hergibt.md`, `issues/260810-0512_*_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`
+
+---
+
+## Der Befund
+
+Vier neue Proben bauen eine `NSTextView`, um zu messen statt zu behaupten: die
+Kopplung der zehn Paare, die Nicht-Darstellbarkeit von `Default`, die Sammeltür
+und die sieben abgeschalteten Automatiken. Alle vier gehen durch
+`an_einer_flaeche`, und dort steht:
+
+```rust
+arbeit(unsafe { MainThreadMarker::new_unchecked() })
+```
+
+**Das ist eine Behauptung und keine Tatsache.** `libtest` fährt seine Proben auf
+eigenen Fäden, und Apple sagt für eine `NSView` den Hauptfaden zu. Vor diesem
+Durchgang stand `new_unchecked` in dieser Datei genau einmal, für einen
+`NSUndoManager` — ein Foundation-Objekt ohne Fadenbindung. Auf eine
+AppKit-Ansicht ist das eine Stufe weiter, und im ganzen Projekt gibt es keine
+zweite Stelle, die es täte.
+
+## Was dafür sprach
+
+Der Gegenwert ist erheblich, und er stand vorher nirgends im Baum: die Kopplung
+der zehn Paare trug die Entscheidung, `textflaeche_bauen` **nicht** um zehn
+Zeilen zu ergänzen, und wurde von keiner Probe gehalten (`260810-0748`). Ebenso
+der Vorgabewert der Schreibwerkzeuge, der als `speculation:` geführt war
+(`260810-0512`), und die Aussage über `Default` (`260810-0750`). Alle drei sind
+jetzt nachgemessen, auf jedem Gerät, das `cargo test` fährt, und damit auch auf
+macOS 26.
+
+Der Bereich ist eng gehalten: die Proben bauen eine Fläche, lesen und setzen
+Merkmale und lassen sie fallen. Kein Fenster, keine Zeichnung, keine
+Ereignisschlange, kein Ersthelfer. Eine Sperre serialisiert sie, damit nicht
+zwei Fäden gleichzeitig AppKit-Objekte bauen.
+
+**Gemessen:** sechs vollständige Läufe von `cargo test --workspace` nach dem
+Umbau, alle exit 0, ohne Absturz und ohne Meldung, auf macOS 15.7.7 (Build
+24G720). Davor fünf Läufe mit einer Vorform der Proben, in denen das Prüfziel
+von `krk-ui` jedes Mal durchlief; der Arbeitsbaum war dabei aus einem anderen
+Grund nicht grün (ein paralleler Agent änderte `krk-core/src/text/datei.rs`), und
+diese fünf sind deshalb kein Beleg über den Arbeitsbaum, sondern nur über die
+AppKit-Instanzen.
+
+## Was das nicht belegt
+
+Sechs saubere Läufe auf einem Gerät sind kein Nachweis, dass der Aufruf zulässig
+ist. Sie belegen, dass er heute nicht auffällt. Der Unterschied ist genau der,
+den `260810-0748` an der Kopplungsmessung bemängelt hat, eine Ebene höher: eine
+Aussage, die niemand widerlegt hat, ist keine Aussage, die etwas hält.
+
+Der Datensatz steht deshalb hier und nicht nur als Doc-Kommentar: wer die
+Abwägung anders trifft, findet ihn und kann die vier Proben zurücknehmen, ohne
+den Rest des Umbaus anzufassen.
+
+## Vorschlag
+
+Drei Wege, in der Reihenfolge, in der ich sie für tragfähig halte:
+
+1. **Stehen lassen und beobachten.** Bricht eine Reihe auf einem anderen Gerät
+   oder unter einer anderen Fassung von macOS, ist die Ursache am Namen der
+   Probe sofort erkennbar, und der Rückbau kostet vier Proben.
+2. **Die Proben auf den Hauptfaden bringen.** `libtest` gibt ihn nicht her;
+   ein eigenes Prüfziel neben `cargo test` täte es, etwa unter `xtask`, das
+   seinen Hauptfaden selbst hält. Kostet ein zweites Prüfkommando, das
+   `make check` mitfahren müsste.
+3. **Zurücknehmen und stattdessen ablegen**, wie `260810-0748` es vorschlug: das
+   Messprogramm unter `spikes/`, ein Bericht unter `messungen/`. Hält weniger,
+   behauptet aber nichts über Fäden.
+
+Gemeldet von: `coder`, im Durchgang zu den acht Datensätzen vom 260810.
