@@ -62,3 +62,19 @@ Abnahmelauf, nicht in eine Behauptung hier.
 
 Gering. Nichts ist heute kaputt. Der Wert liegt darin, ein Abnahmekriterium, das derzeit nur
 ein Mensch prüfen kann, in `make check` zu ziehen.
+
+---
+Resolved: Zwei Proben in der Form der 22 Nachbarn, am Ende desselben `mod tests` in
+`crates/krk-ui/src/kommandos/operationen.rs`:
+
+- `die_meldung_zur_buendelkennung_nennt_die_eingestellte_kennung` prueft, dass die uebergebene
+  Kennung im Text steht (das ist es, was das fuenfte Abnahmekriterium der Faehigkeit C11
+  verlangt), dass `settings.toml` genannt ist und dass der Neustart-Halbsatz aus Turn 1 dasteht.
+- `ein_fehlender_terminalordner_nennt_den_pfad` fasst alle drei Zweige von `terminalordner_fehlt`
+  an, ueber `Pruefordner` aus `krk-ui/src/pruefordner.rs`, also ohne AppKit und ohne die
+  Hauptfadenfrage.
+
+Damit haengt das fuenfte Abnahmekriterium von C11 nicht mehr allein am ausstehenden Abnahmelauf.
+Abgenommen mit `make check`, exit 0; beide Proben laufen gruen.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 2.

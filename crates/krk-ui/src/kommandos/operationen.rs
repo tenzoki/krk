@@ -765,6 +765,8 @@ mod tests {
 
     use krk_core::verzeichnis::{Eintrag, Typ};
 
+    use crate::pruefordner::Pruefordner;
+
     fn eintrag(name: &str, typ: Typ) -> Eintrag {
         Eintrag::mit_versteckt(
             name.to_owned(),
@@ -1149,5 +1151,64 @@ mod tests {
         assert_eq!(menge(1_500), "1,5 kB");
         assert_eq!(menge(200_000_000), "200,0 MB");
         assert_eq!(menge(1_200_000_000), "1,2 GB");
+    }
+
+    /// Das fuenfte Abnahmekriterium von C11 als Probe: die Meldung nennt die
+    /// **eingestellte** Kennung, nicht die Vorbelegung.
+    ///
+    /// Bis zum 260810 hielt diese Zusage allein der Abnahmelauf, und der ist
+    /// Nutzerarbeit; wer den Satz umformulierte, konnte die Kennung
+    /// herausnehmen, ohne dass `make check` etwas sagte
+    /// (`issues/260810-1753_*_die-beiden-meldungen-des-terminal-befehls-sind-als-einzige-ihres-moduls-ungeprueft.md`).
+    /// Der Halbsatz zum Neustart steht mit in der Probe: er ist die Antwort auf
+    /// `issues/260807-0930_*_die-meldung-zur-buendelkennung-sagt-nicht-dass-settings-toml-erst-beim-start-gelesen-wird.md`
+    /// und stuende sonst genauso ungedeckt da.
+    #[test]
+    fn die_meldung_zur_buendelkennung_nennt_die_eingestellte_kennung() {
+        let text = kein_terminal("com.beispiel.KeinTerminal");
+        assert!(
+            text.contains("com.beispiel.KeinTerminal"),
+            "die Meldung nennt die eingestellte Kennung nicht: {text}"
+        );
+        assert!(
+            text.contains("settings.toml"),
+            "die Meldung sagt nicht, wo die Kennung steht: {text}"
+        );
+        assert!(
+            text.contains("Neustart"),
+            "die Meldung sagt nicht, dass eine Aenderung erst nach einem Neustart wirkt: {text}"
+        );
+    }
+
+    /// Alle drei Zweige von [`terminalordner_fehlt`].
+    ///
+    /// Der Fall, den C11 meint, ist der dritte: der sichtbare Tab traegt den
+    /// Pfad noch, der Datentraeger ist weg. Geprueft wird jeweils, dass der
+    /// Pfad in der Meldung steht — er ist die Angabe, mit der der Nutzer etwas
+    /// anfangen kann.
+    #[test]
+    fn ein_fehlender_terminalordner_nennt_den_pfad() {
+        let ordner = Pruefordner::neu("terminalordner");
+        assert_eq!(
+            terminalordner_fehlt(ordner.pfad()),
+            None,
+            "ein vorhandener Ordner laesst sich uebergeben"
+        );
+
+        let datei = ordner.datei("keine-mappe.txt", b"x");
+        let text = terminalordner_fehlt(&datei).expect("eine Datei ist kein Ordner");
+        assert!(
+            text.contains(&datei.display().to_string()),
+            "die Meldung nennt den Pfad nicht: {text}"
+        );
+        assert!(text.contains("kein Ordner mehr"), "{text}");
+
+        let fehlt = ordner.unter("ausgeworfen");
+        let text = terminalordner_fehlt(&fehlt).expect("ein fehlender Eintrag ist kein Ordner");
+        assert!(
+            text.contains(&fehlt.display().to_string()),
+            "die Meldung nennt den Pfad nicht: {text}"
+        );
+        assert!(text.contains("nicht mehr erreichbar"), "{text}");
     }
 }
