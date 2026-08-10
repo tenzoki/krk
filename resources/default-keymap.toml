@@ -481,14 +481,22 @@ tasten = ["ctrl+o"]
 # faehrt: die blanke Cmd-Ebene traegt die Handlung selbst, shift+cmd den
 # Fokusbefehl, opt+cmd das Ein- und Ausblenden, ctrl+cmd die Zweitform.
 #
-# Keine dieser elf Kombinationen liegt auf y oder z. KRK belegt nach C3 der
-# Runde 1 den virtuellen Tastencode, also die **Stelle** auf der Tastatur, und
-# genau diese beiden Stellen tauschen zwischen der deutschen und der
-# amerikanischen Belegung den Platz. Die elf benutzen e, s, f, g, j und r und
-# sind davon nicht beruehrt. Die offene Frage dazu ist
+# Ein einbuchstabiger Tastenname in dieser Datei benennt die **Aufschrift** und
+# keine Stelle auf der Tastatur: Buchstaben und Ziffern werden ueber das
+# gemeldete Zeichen nachgeschlagen, alles uebrige ueber den virtuellen
+# Tastencode. Warum es zwei Nachschlagarten sind, steht genau einmal
+# ausgeschrieben, im Modulkopf von `crates/krk-core/src/tasten/parser.rs`,
+# Abschnitt "Zwei Nachschlagarten, und warum es zwei sein muessen".
+# Nutzerentscheid vom 260808-0155,
 # `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/
-# 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`;
-# sie haelt keinen dieser Eintraege auf.
+# 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
+#
+# Fuer die Eintraege hier folgt daraus: kein Eintrag wandert mit der
+# Tastaturbelegung, und keiner meidet einen Buchstaben. Die elf benutzen e, s,
+# f, g, j und r; das folgt der Systematik oben und keiner Einschraenkung auf
+# bestimmte Buchstaben. Bis zum 260810 stand an dieser Stelle eine Meidung von
+# y und z. Sie hatte ihren Grund darin, dass der Ereignisabgriff auch
+# Buchstaben ueber die Stelle nachschlug, und ist seit S2 gegenstandslos.
 
 [[funktion]]
 id = "editor_aus_vorschau"
@@ -614,17 +622,22 @@ tasten = ["f1"]
 # Eintraege "text_rueckgaengig" und "text_wiederholen" unten haette der Editor
 # kein Rueckgaengig, und das waere ein Editor, den niemand benutzt.
 #
-# Die beiden sind die einzigen Kombinationen dieser Runde auf der Stelle
-# kVK_ANSI_Z, und das ist kein Widerspruch zu der Regel, die die elf
-# Editor-Funktionen um y und z herumlegt. Die Regel gilt dem, was **KRK selbst**
-# zustellt: der Ereignisabgriff schlaegt ueber den virtuellen Tastencode nach,
-# also ueber die Stelle auf der Tastatur, und die tauscht zwischen der deutschen
-# und der amerikanischen Belegung den Platz. Ein Menuekuerzel schlaegt ueber das
-# **Zeichen** nach — `NSMenuItem.keyEquivalent` nimmt eine Zeichenkette
-# entgegen —, und genau deshalb wirken cmd+c und cmd+v auf jeder
-# Tastaturbelegung an der beschrifteten Stelle. Cmd+Z tut es aus demselben
-# Grund. Was hier steht, ist die Anzeige- und Konfliktseite dieser Kuerzel und
-# nicht der Nachschlag, der sie ausloest.
+# Die beiden sind die einzigen Kombinationen dieser Runde auf dem Buchstaben z,
+# und das ist unauffaellig: einen Buchstaben schlagen **beide** Zusteller ueber
+# das **Zeichen** nach. Das Menue tut es ueber `NSMenuItem.keyEquivalent`, das
+# eine Zeichenkette entgegennimmt (`crates/krk-ui/src/appkit/menue.rs`,
+# `zeichen_der_taste`), der Ereignisabgriff seit S2 ueber das Zeichen, das das
+# Ereignis meldet (`Kombination::aus_tastendruck` in
+# `crates/krk-core/src/tasten/parser.rs`). Cmd+Z wirkt deshalb auf jeder
+# Tastaturbelegung an der beschrifteten Stelle, und cmd+c und cmd+v tun es aus
+# demselben Grund.
+#
+# Bis zum 260810 leitete dieser Block die Wirkung aus dem Zusteller ab: nur das
+# Menue schlage ueber das Zeichen nach, der Ereignisabgriff ueber die Stelle.
+# Seit S2 gilt es fuer beide, und die Ableitung ist weggefallen; das Ergebnis
+# bleibt.
+# Was hier steht, ist die Anzeige- und Konfliktseite dieser Kuerzel und nicht
+# der Nachschlag, der sie ausloest.
 
 [[funktion]]
 id = "text_ausschneiden"
