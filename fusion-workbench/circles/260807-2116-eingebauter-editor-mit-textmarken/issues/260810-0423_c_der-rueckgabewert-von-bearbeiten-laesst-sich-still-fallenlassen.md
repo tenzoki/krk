@@ -44,3 +44,34 @@ dieselbe Absicht ohne die Erzwingung aufgeschrieben.
 die Funktion. Die siebzehn Stellen brauchen dann ein `let _ =` — und das ist
 der Gegenwert, nicht der Preis: an jeder dieser Zeilen steht dann ausdrücklich,
 dass die Prüfung die Meldung nicht braucht.
+
+---
+Resolved: `Editormodell::bearbeiten` trägt
+
+```rust
+#[must_use = "wandelte das Bearbeiten, ist die Textflaeche nachzuziehen"]
+```
+
+Damit ist das Fallenlassen ein Übersetzerfehler und keine Stilfrage mehr — die
+Erzwingung, die dieselbe Absicht an den vollständigen Fallunterscheidungen des
+Projekts schon trägt.
+
+Die siebzehn Aufrufe unter `mod tests`, die den Wert nicht lesen, stehen jetzt
+als `let _ = modell.bearbeiten(…);` da. Das ist der Gegenwert und nicht der
+Preis: an jeder dieser Zeilen steht ausdrücklich, dass die Prüfung die Meldung
+nicht braucht. Die vier Aufrufe in
+`ein_eingefuegtes_crlf_meldet_sich_und_ein_gewoehnlicher_anschlag_nicht`, der
+einzige Aufruf in der Anwendung (`Editorbereich::text_zurueckschreiben`,
+`appkit/editor.rs`) und der Aufruf in
+`nach_einem_eingefuegten_crlf_zeigt_dieselbe_stelle_in_beiden_texten_auf_dasselbe`
+(ebenfalls `appkit/editor.rs`, in einem `assert!`) lesen ihn und blieben
+unverändert; `appkit/editor.rs` musste dafür nicht angefasst werden.
+
+Der Doc-Kommentar nennt jetzt auch den Grund für die Erzwingung, nicht nur die
+Pflicht: das `bool` ist die einzige Meldung über das Auseinanderlaufen, es gibt
+keine zweite Stelle, an der ein Vergessen auffiele, und genau diese Lage war
+`260810-0215` bei grünem Bau.
+
+Abnahme am 260810-1030: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt --all --check` jeweils
+`exit 0`.

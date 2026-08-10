@@ -58,3 +58,45 @@ enger zu ziehen. `NSTextView` gibt über `undoManagerForTextView:` am
 Delegierten die Möglichkeit, dem Editor einen **eigenen** Verwalter zu geben,
 der nichts sonst im Fenster mitnimmt; das wäre die Bauart, die die Aussage „der
 Aufrufer ist einer" auch für die Wirkung hielte und nicht nur für den Aufruf.
+
+---
+Resolved: Die Wirkung ist gemessen, und sie tritt nicht ein; der Doc-Kommentar
+nennt jetzt die richtige Flaeche und die Messung statt der Vermutung.
+
+**Die Messung, die dieser Datensatz als Nutzerarbeit ausgewiesen hat, ist
+gefahren** — am 260810 auf macOS 15.7.7 (Build 24G720), an einem Fenster mit
+einer `NSTextView` und einer beschreibbaren `NSTextField` darin, also der Lage,
+die `tabelle.rs:1858` mit `feld.setEditable(true)` herstellt:
+
+```
+  Verwalter des Feldeditors      NSCellUndoManager   ─┐ zwei Objekte,
+  Verwalter des Fensters         NSUndoManager       ─┘ nicht dasselbe
+  removeAllActions am Fenster ─> Feldeditor: canUndo bleibt wahr
+  undo im Feld danach         ─> der getippte Name ist zurueckgenommen
+```
+
+Der Feldeditor ist eine `NSTextView` — soweit war die Beschreibung richtig —,
+**bekommt seinen Rueckgaengigverwalter aber von der `NSTextField`, die ihn
+ausleiht, und nicht aus der Antwortkette.** `NSTextField` liefert ihm einen
+eigenen `NSCellUndoManager`. Ein `rueckgaengigstapel_leeren` am Verwalter des
+Fensters nimmt ihm deshalb nichts fort, und der Fall "F4 auf eine grosse Datei,
+Umbenennung in der Lesespanne, `cmd+z` im Feld" hat die vermutete Wirkung nicht.
+
+**Behoben ist damit der Satz und nicht der Code.** Der Doc-Kommentar von
+`rueckgaengigstapel_leeren` in `crates/krk-ui/src/appkit/editor.rs` redete ueber
+ein Suchfeld und fuehrte den Ausschluss damit ueber die falsche Flaeche; er nennt
+jetzt das beschreibbare Namensfeld der Umbenennung aus C4 der Runde 1, zitiert
+die Messung samt Datum und Systemfassung und sagt, was daraus folgt: die
+Textflaeche des Editors ist die einzige in KRK, die diesen Verwalter benutzt.
+
+**Der zweite Vorschlag dieses Datensatzes ist mitgemessen und nicht genommen.**
+`undoManagerForTextView:` gaebe der Flaeche einen eigenen Verwalter, und dass er
+vom Menueeintrag aus erreichbar blieb, war die offene Frage daran: gemessen
+beantwortet `undo:` in der ganzen Antwortkette allein `NSWindow` — nicht
+`NSTextView`, nicht `NSApplication`, nicht `NSResponder` —, und `NSWindow` nimmt
+dabei den Verwalter des **Ersthelfers** und nicht seinen eigenen. Der Weg steht
+also offen. Er wird nicht genommen, weil es keinen zweiten Anmelder gibt und ein
+Verwalter mehr ein Mechanismus ohne Fall waere; ausserdem truege er den Umbau
+des Ersetzens (`260810-0303`) in einen anderen Stapel als das Tippen der
+Flaeche. Beides steht im Doc-Kommentar, damit ein spaeterer Leser den Vorschlag
+nicht fuer ungeprueft haelt.

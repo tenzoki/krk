@@ -80,3 +80,57 @@ Verwendung eine Probe am Dateiende ist.
 Der Titel dieses Eintrags nennt weiter drei. Er bleibt, wie er ist: der
 Dateiname ist aus dem Programmtext heraus zitiert, und ein zweiter Eintrag für
 dieselbe Frage wäre die schlechtere Antwort als eine Zeile, die man lesen muss.
+
+---
+Resolved: **Weg 1, Streichen** — und zwar für alle vier Stücke, die der Nachtrag
+zählt, nicht nur für die drei des Titels. `Suchlauf::treffer`,
+`Editormodell::stempel`, `Editormodell::haelt_zurueck` und
+`Editormodell::suche_beenden` sind aus `crates/krk-ui/src/editormodell.rs`
+entfernt; die Datei trägt danach **kein** `#[allow(dead_code)]` mehr, weder am
+Kopf noch an einem einzelnen Stück.
+
+Geprüft wurde für jedes einzeln, ob in der Oberfläche eine Stelle steht, die es
+rufen müsste — also ob der Befund ein fehlender Aufruf ist. Bei keinem der vier
+gibt es sie:
+
+- `Suchlauf::treffer`: die Oberfläche kommt mit `zahl`, `nummer`, `angesteuert`
+  und `meldung` aus, und C5 sagt kein Zeichnen aller Treffer zugleich zu.
+- `Editormodell::stempel`: gefragt wird über `fremd_geaendert`, damit der
+  Vergleich an einer Stelle steht statt an zweien (S25, S31). Der Stempel muss
+  das Modell dafür nicht verlassen.
+- `Editormodell::haelt_zurueck`: die Oberfläche erfährt das Zurückhalten als
+  `Ladeausgang` und antwortet im Rückruf des Blattes
+  (`anwendung.rs::editorausgang_behandeln`, `anlass_ausfuehren`,
+  `anlass_unterbleibt`); dazwischen sieht niemand nach.
+- `Editormodell::suche_beenden`: der Spec sagt keinen Befehl zu, der eine Suche
+  beendet. Sie endet in `bearbeiten`, `uebernehmen` und `schliessen`, und jede
+  der drei Stellen setzt das Feld unmittelbar; eine `pub fn` daneben behauptete
+  einen Befehl, den es nicht gibt.
+
+Belegt mit `grep -rn` über `crates/`: außer den Proben am Dateiende rief keines
+der vier je etwas.
+
+**Die zehn Zusicherungen, die an den vier hingen, sind nicht gefallen, sondern
+umgestellt.** Sechs von ihnen standen in der Zeile daneben schon; die übrigen
+vier fragen jetzt über das Verhalten statt über ein Feld:
+
+- Sechs waren mit einer benachbarten Zusicherung deckungsgleich und sind mit
+  einem Kommentar an ihrer Stelle ersetzt, der sagt, welche Zeile die Aussage
+  trägt. Beispiele: `lauf.treffer()` nannte die Versätze `[0, 10, 20]`, die die
+  drei `weitersuchen`-Zeilen darunter ohnehin einzeln nennen, dazu noch den
+  Umlauf; `!haelt_zurueck()` nach `Ladeausgang::Geoeffnet` folgt daraus, dass
+  die vier Werte von `Ladeausgang` überschneidungsfrei sind.
+- Vier fragen jetzt über `zurueckgehaltenes_uebernehmen() == None`, also über den
+  Weg, der eine wartende Datei aufnehmen würde: findet er nichts, wartet nichts.
+  Das ist die stärkere Probe, weil sie das Verhalten misst und nicht ein Feld.
+- Die Zusicherung `modell.suche_beenden(); …` in `die_suche_zaehlt_und_laeuft_um`
+  ist ganz gefallen: `eine_bearbeitung_beendet_den_suchlauf` prüft dieselbe
+  Aussage auf einem Weg, den das Programm wirklich geht.
+
+Der Modulkopf von `editormodell.rs` führt die vier weiter namentlich, aber im
+Perfekt: er sagt, was sie waren, warum keines gebraucht wurde und dass die Datei
+jetzt ohne Ausnahme von der Totprüfung auskommt.
+
+Abnahme am 260810-1030: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt --all --check` jeweils
+`exit 0`.

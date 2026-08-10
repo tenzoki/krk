@@ -77,3 +77,47 @@ Drei Wege, in der Reihenfolge, in der ich sie für tragfähig halte:
    behauptet aber nichts über Fäden.
 
 Gemeldet von: `coder`, im Durchgang zu den acht Datensätzen vom 260810.
+
+---
+## Die Abwaegung ist getroffen: Weg 2, und er ist gemessen
+
+**Weg 2 ist der richtige, und er kostet weniger als dieser Datensatz annimmt.**
+Die Annahme "Kostet ein zweites Pruefkommando, das `make check` mitfahren
+muesste" ist falsch: ein `[[test]]`-Ziel mit `harness = false` wird von `cargo
+test` mitgefahren, also auch von `make check`. Gemessen am 260810-1044 auf macOS
+15.7.7 (Build 24G720), Rust 1.97.1, an einer eigenen Kiste:
+
+```
+  cargo test                          MainThreadMarker::new() ─> None
+  cargo test -- --test-threads=1      MainThreadMarker::new() ─> None
+  [[test]] mit harness = false        MainThreadMarker::new() ─> Some
+```
+
+Die naheliegende Abhilfe traegt also **nicht**: `libtest` gibt den Hauptfaden auch
+bei einem einzigen Prueffaden nicht her, es legt jede Probe auf einen eigenen
+Faden. Ein Ziel ohne `libtest`-Harness bekommt ihn, weil es sein `main` selbst
+haelt.
+
+**Gebaut ist der Weg nicht**, und der Grund ist die Dateigrenze dieses
+Durchgangs: er hatte ausschliesslich `crates/krk-ui/src/appkit/editor.rs` in der
+Hand, und Weg 2 braucht zwei weitere Dateien —
+einen `[[test]]`-Abschnitt in `crates/krk-ui/Cargo.toml` und die Prueflaufdatei
+darunter. Dazu kommt eine Entscheidung, die nicht mechanisch ist: die vier Proben
+rufen `textflaeche_bauen`, `EINSTELLUNGEN`, `merkmal`, `merkmal_setzen`,
+`merkmalsname` und `probenrahmen`, und alle sechs sind heute modulintern. Ein
+Pruefziel ausserhalb der Kiste erreicht sie nicht. Sie dafuer oeffentlich zu
+machen, waere oeffentliche Schnittstelle ohne Aufrufer im Programm — genau das
+Muster, das `260810-0212` in diesem Circle schon fuehrt.
+
+Der Datensatz zu dieser Entscheidung ist
+`decisions/260810-1044_o_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
+
+**Weg 1 ist nicht gewaehlt, sondern die Lage bis zur Entscheidung**, und der
+Doc-Kommentar von `an_einer_flaeche` sagt das jetzt so: er fuehrt die drei
+Zeilen der Messung, nennt Weg 2 als den richtigen, benennt die zwei Dateien und
+die sechs modulinternen Stuecke, die ihm noch fehlen, und sagt, dass die
+Notluege nicht steht, weil sie zulaessig waere, sondern weil ihr Rueckbau die
+vier Messungen kostete. Weg 3 bleibt ausgeschlossen: er nimmt die Messungen aus
+dem Baum.
+
+Dieser Datensatz bleibt offen, bis das Pruefziel steht.

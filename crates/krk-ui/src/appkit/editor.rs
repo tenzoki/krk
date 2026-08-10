@@ -78,11 +78,20 @@
 //! selbst mit; KRK baut keinen davon von Hand und haelt daneben keine zweite
 //! Zeichenkette. Der Stand steht im Modell, die Darstellung in der Flaeche, und
 //! [`Editorbereich::stand_einsetzen`] ist die eine Stelle, die den Text der
-//! Flaeche ersetzt — und damit auch die eine, die den Rueckgaengigstapel leert.
-//! Beides gehoert zusammen: `setString:` schreibt an der
-//! Rueckgaengigverwaltung vorbei, und ein stehengebliebener Stapel zeigte
-//! danach auf einen Text, den die Flaeche nicht mehr traegt. Beim Dateiwechsel
-//! war das sogar der Text einer **anderen** Datei.
+//! Flaeche ersetzt — und damit auch die eine, die den Rueckgaengigverlauf
+//! regelt. Beides gehoert zusammen: `setString:` schreibt an der
+//! Rueckgaengigverwaltung vorbei (gemessen, siehe [`Verlauf`]), und ein
+//! stehengebliebener Stapel zeigte danach auf einen Text, den die Flaeche nicht
+//! mehr traegt. Beim Dateiwechsel war das sogar der Text einer **anderen**
+//! Datei.
+//!
+//! **Was danach im Stapel steht, sagt der Anlass und nicht die Schreibstelle.**
+//! [`Verlauf`] ist der Wert, in dem der Aufrufer es sagt, und die Aufzaehlung
+//! seiner Anlaesse steht dort. Ein Dateiwechsel laesst den Verlauf fallen, ein
+//! Ersetzen aus S37 traegt ihn als eine Handlung weiter, und das Nachrichten
+//! der Flaeche nach einem eingefuegten `\r\n` kann ihn nicht tragen — warum
+//! nicht, steht an [`Editorbereich::flaeche_richten`], und es ist eine
+//! Eigenschaft der Sache und nicht der Sorgfalt.
 //!
 //! **Der Kopf ist die zweite Anzeige neben der Statuszeile, und er ist eine
 //! andere Art von Aussage.** Die Statuszeile traegt Antworten auf Befehle; der
@@ -291,7 +300,9 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::ptr::NonNull;
 
+use block2::RcBlock;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -307,6 +318,9 @@ use objc2_foundation::{
     NSPoint, NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval,
     NSTimer, NSUndoManager, ns_string,
 };
+
+#[cfg(test)]
+use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
@@ -544,6 +558,65 @@ impl Editormeldung {
             },
         }
     }
+}
+
+/// Der Stand, den ein `cmd+z` wiederherstellt (C5).
+///
+/// **Die Zeichen und die Auswahl gehoeren zusammen.** Ein Rueckgaengig, das den
+/// Text wiederherstellt und die Schreibmarke am Dateianfang liegen laesst, ist
+/// die halbe Handlung: derselbe Grund, aus dem
+/// [`Editorbereich::flaeche_richten`] die Schreibmarke mitrechnet, statt sie
+/// wandern zu lassen.
+///
+/// **Der Stand steht hier als Abschrift und nicht als Verweis.** Ein Verweis
+/// in das Modell zeigte auf den Stand, den das Modell **jetzt** haelt, und das
+/// ist gerade der, von dem weg umgekehrt werden soll. Der Preis ist eine Kopie
+/// des Standes je Umbau, also bis zu 16 MB; er steht an
+/// [`Editorbereich::umkehrung_anmelden`] und wird nicht verschwiegen.
+struct Umkehrpunkt {
+    /// Die Zeichen, die das Modell vor dem Umbau hielt. In gehaltener Form,
+    /// weil sie aus dem Modell kommen.
+    stand: String,
+    /// Die Auswahl der Flaeche vor dem Umbau, in AppKits Koordinate.
+    auswahl: NSRange,
+}
+
+/// Was aus dem Rueckgaengigverlauf wird, wenn der Text der Flaeche ersetzt wird.
+///
+/// **`setString:` schreibt an der Rueckgaengigverwaltung vorbei** — gemessen am
+/// 260810 auf macOS 15.7.7 (Build 24G720): eine `NSTextView` mit `allowsUndo`
+/// meldet nach einem `setString:` keine Handlung an, `canUndo` bleibt `false`.
+/// Damit hat jeder Weg, der den Text der Flaeche ersetzt, die Frage zu
+/// beantworten, was danach im Stapel steht, und **kann sie nicht offenlassen**:
+/// ein stehengebliebener Stapel zeigte auf einen Text, den die Flaeche nicht
+/// mehr traegt, und ein `cmd+z` darauf wirkte gegen falsche Stellen
+/// (`issues/260809-1727_c_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`).
+///
+/// **Den Anlass kennt allein der Aufrufer**, und deshalb kommt die Antwort als
+/// Wert herein, statt in [`Editorbereich::stand_einsetzen`] geraten zu werden.
+/// Das ist die Behebung von
+/// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`:
+/// bis dahin leerte die eine Schreibstelle den Stapel bei jedem Anlass, weil
+/// sie keinen von ihnen unterscheiden konnte.
+///
+/// ```text
+///   Anlass                     Verlauf danach
+///   Dateiwechsel, Schliessen ─> Faellt   der Verlauf gehoerte einer anderen Datei
+///   Ersetzen (S37)           ─> Traegt   der Nutzer nimmt das Ersetzen zurueck
+///   CRLF-Richten             ─> Faellt   der vorige Text der Flaeche ist kein
+///                                        gueltiger Stand; siehe flaeche_richten
+/// ```
+///
+/// Die Aufzaehlung ist vollstaendig und hat keinen Auffangzweig, wie die
+/// uebrigen dieser Art im Programm: ein dritter Anlass haelt den Bau an und
+/// erzwingt die Antwort.
+enum Verlauf {
+    /// Der Verlauf faellt: er zeigte auf einen Text, den die Flaeche nach dem
+    /// Schreiben nicht mehr traegt.
+    Faellt,
+    /// Der Verlauf traegt den Umbau als eine Handlung, und der genannte
+    /// Umkehrpunkt ist der Stand, den sie wiederherstellt.
+    Traegt(Umkehrpunkt),
 }
 
 /// Die Groesse, mit der die Flaeche entsteht, bevor die Aufteilung sie auslegt.
@@ -846,7 +919,11 @@ impl Editorbereich {
         // Datei haelt; die Zeile steht trotzdem hier, damit es genau einen Weg
         // vom Modell in die Flaeche gibt und keinen Anfangszustand daneben. Der
         // Kopf und die Ansicht folgen derselben Regel.
-        this.stand_einsetzen();
+        //
+        // `Faellt` ist hier ohne Wirkung und trotzdem die richtige Antwort: die
+        // Flaeche haengt noch in keinem Fenster, hat also keinen Verwalter, und
+        // es gibt keinen Umbau, den ein `cmd+z` zuruecknehmen koennte.
+        this.stand_einsetzen(Verlauf::Faellt);
         this.kopf_nachziehen();
         this.darstellung_nachziehen();
         this
@@ -1027,7 +1104,8 @@ impl Editorbereich {
             return;
         };
         if ausgang == Ladeausgang::Geoeffnet {
-            self.stand_erneuern();
+            // Ein Dateiwechsel: der Verlauf gehoerte der vorigen Datei.
+            self.stand_erneuern(Verlauf::Faellt);
         }
         self.melden(ausgang);
     }
@@ -1052,7 +1130,8 @@ impl Editorbereich {
     /// jedem anderen Wechsel des Gehaltenen.
     pub fn schliessen(&self) {
         self.ivars().modell.borrow_mut().schliessen();
-        self.stand_einsetzen();
+        // Die Datei ist aufgegeben, und mit ihr ihr Verlauf.
+        self.stand_einsetzen(Verlauf::Faellt);
         self.kopf_nachziehen();
         // Ohne Datei gibt es keine Sprache und nichts einzufaerben; der Ruf
         // raeumt die gesetzten Merkmale ab und laesst einen laufenden
@@ -1105,7 +1184,8 @@ impl Editorbereich {
             // Die neue Datei kann eine andere Besetzung der Formatansicht
             // verlangen als die vorige: Schrift, Umbruch und Einfaerbung
             // haengen am Dateityp und an der Sprache, die die Kiste kennt.
-            self.stand_erneuern();
+            // `Faellt`, weil der Verlauf auf den Text der vorigen Datei zeigte.
+            self.stand_erneuern(Verlauf::Faellt);
         }
         self.melden(ausgang);
     }
@@ -1231,32 +1311,133 @@ impl Editorbereich {
     /// moeglicherweise KRK selbst erreicht. Den Stand stattdessen zu klonen
     /// hiesse, eine Datei von 16 MB zweimal zu kopieren statt einmal.
     ///
-    /// **Und die eine Stelle, die den Rueckgaengigstapel leert.** `setString:`
-    /// schreibt an der Rueckgaengigverwaltung vorbei: der Stapel bliebe stehen
-    /// und zeigte auf einen Text, den die Flaeche nicht mehr traegt. Seit
-    /// `textflaeche_bauen` `allowsUndo` einschaltet, kann so ein Stapel
-    /// entstehen, und drei Wege erreichen den Fall — ein Dateiwechsel seit S22,
-    /// ein Ersetzen seit S37 und das Nachrichten der Flaeche in
-    /// [`Self::flaeche_richten`]. Beim Dateiwechsel zeigte der Stapel sogar auf
-    /// eine **andere** Datei: ein `cmd+z` danach nahm eine Aenderung an einem
-    /// Text zurueck, der nicht mehr im Fenster stand. Der Defekt ist
-    /// `issues/260809-1727_c_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`.
+    /// **Und die eine Stelle, die den Rueckgaengigverlauf regelt.** `setString:`
+    /// schreibt an der Rueckgaengigverwaltung vorbei, und deshalb hat jeder Ruf
+    /// hierher zu sagen, was danach im Stapel steht; was die drei Anlaesse
+    /// verlangen und warum, steht an [`Verlauf`]. Bis zum 260810 stand hier eine
+    /// Antwort fuer alle drei — der Stapel wurde immer geleert —, und das kostete
+    /// dem Nutzer den Verlauf an zwei Anlaessen, an denen die Datei dieselbe
+    /// blieb
+    /// (`issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`).
     ///
-    /// **Der Preis dafuer ist, dass die drei Wege ihren Verlauf verlieren**,
-    /// statt ihn rueckgaengigfaehig zu machen: ein `cmd+z` nach einem Ersetzen
-    /// tut jetzt nichts, statt das Falsche zu tun. Das ist die kleinere der
-    /// beiden Fehlwirkungen und ein eigener Defekt,
-    /// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`;
-    /// er zu beheben hiesse, hier statt `setString:` einen
-    /// rueckgaengigfaehigen Schreibweg zu nehmen, und der loeste am Dateiwechsel
-    /// den Stapel gerade nicht ab.
-    fn stand_einsetzen(&self) {
+    /// **Die Anmeldung geht dem Schreiben voraus.** Der Verwalter soll die
+    /// Handlung auch dann tragen, wenn `setString:` unten am Text nichts mehr
+    /// aendert; und der Umkehrpunkt kommt ohnehin vom Aufrufer, der ihn vor der
+    /// Aenderung des Modells genommen hat.
+    fn stand_einsetzen(&self, verlauf: Verlauf) {
+        let faellt = match verlauf {
+            Verlauf::Faellt => true,
+            Verlauf::Traegt(punkt) => {
+                self.umkehrung_anmelden(punkt);
+                false
+            }
+        };
         let stand = {
             let modell = self.ivars().modell.borrow();
             NSString::from_str(modell.stand())
         };
         self.ivars().text.setString(&stand);
-        rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
+        if faellt {
+            rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
+        }
+    }
+
+    /// Der Umkehrpunkt, den Modell und Flaeche in diesem Augenblick bilden.
+    ///
+    /// **Vor der Aenderung zu nehmen**, sonst beschreibt er den Stand, von dem
+    /// weg umgekehrt werden soll. Die Kopie des Standes ist der Preis; siehe
+    /// [`Umkehrpunkt`].
+    fn umkehrpunkt(&self) -> Umkehrpunkt {
+        Umkehrpunkt {
+            stand: self.ivars().modell.borrow().stand().to_owned(),
+            auswahl: self.ivars().text.selectedRange(),
+        }
+    }
+
+    /// Meldet beim Rueckgaengigverwalter der Flaeche eine Handlung an, die den
+    /// genannten Umkehrpunkt wiederherstellt (C5).
+    ///
+    /// **Die Handlung geht in denselben Verwalter, in dem die Flaeche ihr
+    /// Tippen fuehrt**, und das ist die Voraussetzung dafuer, dass beides
+    /// nebeneinander bestehen kann: [`Self::umkehren`] stellt genau die Zeichen
+    /// wieder her, die die Flaeche vor dem Umbau trug, und damit passen die
+    /// aelteren Handlungen der Flaeche wieder auf den Text, gegen den sie
+    /// aufgezeichnet wurden. Ein zweiter, eigener Verwalter neben dem der
+    /// Flaeche truege den Umbau in einen anderen Stapel als das Tippen, und ein
+    /// `cmd+z` nahme die beiden dann in der falschen Reihenfolge zurueck.
+    ///
+    /// **`None` ist kein Fehler.** `NSResponder::undoManager` findet den
+    /// Verwalter erst, wenn die Flaeche in einem Fenster steht; vor dem
+    /// Einhaengen gibt es keinen, und dann gibt es auch keinen Verlauf, in dem
+    /// eine Handlung stehen koennte. Die Anlaesse dieser Funktion — die beiden
+    /// Ersetzen aus S37 — kommen lange danach.
+    ///
+    /// **Der Verwalter haelt das Ziel nicht fest** ("this does not strongly
+    /// retain target", `objc2-foundation-0.3.2/src/generated/NSUndoManager.rs`),
+    /// und der Block haelt den Editorbereich deshalb **schwach**: stark
+    /// geschlossen liefe der Ring Flaeche → Verwalter → Block → Editorbereich →
+    /// Flaeche. Ist der Bereich fort, tut die Handlung nichts.
+    fn umkehrung_anmelden(&self, punkt: Umkehrpunkt) {
+        let Some(verwalter) = self.ivars().text.undoManager() else {
+            return;
+        };
+        let selbst = Weak::from_retained(&self.retain());
+        let handlung = RcBlock::new(move |_ziel: NonNull<AnyObject>| {
+            if let Some(editor) = selbst.load() {
+                editor.umkehren(&punkt);
+            }
+        });
+        // SAFETY: `self` ist ein Objective-C-Objekt und wird vom Verwalter nur
+        // als Kennung gehalten und an den Block zurueckgereicht, nicht
+        // angesprochen; der Block nimmt es nicht, sondern laedt seinen eigenen
+        // schwachen Verweis.
+        unsafe { verwalter.registerUndoWithTarget_handler(self, &handlung) };
+    }
+
+    /// Stellt einen Umkehrpunkt her und meldet den Gegenweg an (C5).
+    ///
+    /// **Der Gegenweg zuerst.** Waehrend eines Rueckgaengig legt
+    /// `NSUndoManager` jede Anmeldung auf den Wiederherstellungsstapel; die
+    /// Reihenfolge hier ist deshalb die, die `cmd+z` und `shift+cmd+z`
+    /// gegeneinander laufen laesst. Genommen wird er vor dem Ruf an
+    /// [`Editormodell::bearbeiten`], weil das Modell danach den anderen Stand
+    /// haelt.
+    ///
+    /// **Der Stand kommt aus dem Modell und ist deshalb in gehaltener Form.**
+    /// [`Editormodell::bearbeiten`] wandelt nichts an ihm und meldet keine
+    /// Nachrichtung der Flaeche; die Zusicherung haelt das fest, statt den Wert
+    /// still fallenzulassen.
+    fn umkehren(&self, punkt: &Umkehrpunkt) {
+        let gegenweg = self.umkehrpunkt();
+        let gewandelt = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .bearbeiten(punkt.stand.clone());
+        debug_assert!(
+            !gewandelt,
+            "der Stand kam aus dem Modell und traegt keine Zeichen, die die Wandlung anfasst"
+        );
+        self.stand_erneuern(Verlauf::Traegt(gegenweg));
+        self.auswahl_setzen(punkt.auswahl);
+    }
+
+    /// Setzt die Auswahl der Flaeche, auf die Laenge des heutigen Textes
+    /// beschnitten, und blaettert sie ins Bild.
+    ///
+    /// **Der Schnitt ist der Guertel und nicht die Rechnung.** Der Bereich
+    /// kommt aus einem [`Umkehrpunkt`] und ist gegen genau den Text
+    /// aufgezeichnet, den die Zeile darueber wiederhergestellt hat; er passt
+    /// also. Ein `NSRange` hinter dem Text beantwortet AppKit mit einer
+    /// Objective-C-Ausnahme, und die ist in Rust nicht zu fangen und beendet das
+    /// Programm — derselbe Grund, aus dem
+    /// [`Self::formatierung_anwenden`] die Laenge vorweg prueft.
+    fn auswahl_setzen(&self, auswahl: NSRange) {
+        let laenge = self.ivars().text.string().length();
+        let anfang = auswahl.location.min(laenge);
+        let bereich = NSRange::new(anfang, auswahl.length.min(laenge - anfang));
+        self.ivars().text.setSelectedRange(bereich);
+        self.ivars().text.scrollRangeToVisible(bereich);
     }
 
     /// Traegt einen von aussen gewechselten Stand in die Flaeche und zieht die
@@ -1274,8 +1455,12 @@ impl Editorbereich {
     /// [`Self::text_zurueckschreiben`] holt ihn ab. `setString:` von hier aus
     /// setzte ihm die Schreibmarke an den Anfang und leerte den
     /// Rueckgaengigstapel bei jedem Anschlag.
-    fn stand_erneuern(&self) {
-        self.stand_einsetzen();
+    ///
+    /// Was aus dem Rueckgaengigverlauf wird, entscheidet der Aufrufer; die
+    /// Antwort geht unveraendert an [`Self::stand_einsetzen`] weiter, und
+    /// welchen Anlass welche Antwort verlangt, steht an [`Verlauf`].
+    fn stand_erneuern(&self, verlauf: Verlauf) {
+        self.stand_einsetzen(verlauf);
         self.kopf_nachziehen();
         self.darstellung_nachziehen();
     }
@@ -1307,15 +1492,33 @@ impl Editorbereich {
     /// stattdessen das Ergebnis und kommt deshalb ohne eine einzige Regel der
     /// Wandlung aus.
     ///
-    /// **Der Preis steht hier und wird nicht verschwiegen**, und er ist seit
-    /// der Behebung von `260809-1727` ein kleinerer: der Weg fuehrt ueber
-    /// [`Self::stand_erneuern`] und damit ueber `setString:`, das am
-    /// Rueckgaengigstapel vorbeischreibt. Der Stapel bleibt danach nicht mehr
-    /// falsch stehen — [`Self::stand_einsetzen`] leert ihn —, aber er ist eben
-    /// **leer**: ein `cmd+z` unmittelbar nach einem eingefuegten `\r\n` tut
-    /// nichts, statt das Einfuegen zurueckzunehmen. Denselben Preis zahlt das
-    /// Ersetzen aus S37, und derselbe Defekt fuehrt beide,
-    /// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`.
+    /// # Warum der Verlauf hier faellt und beim Ersetzen nicht
+    ///
+    /// Das Ersetzen aus S37 traegt seinen Umbau seit dem 260810 als Handlung im
+    /// Stapel ([`Verlauf::Traegt`]); dieser Weg kann das **nicht**, und der
+    /// Grund liegt nicht an der Sorgfalt, sondern an der Sache. Zwei Stuecke
+    /// fehlen, und jedes fuer sich genuegt:
+    ///
+    /// - **Der Text, den die Flaeche vor dem Richten trug, ist kein gueltiger
+    ///   Stand.** Er traegt das `\r`, das der Stand nach dem Modulkopf von
+    ///   `krk_core::text` nie traegt. Ein Umkehrpunkt darauf liesse sich
+    ///   herstellen, aber nur an der Flaeche und nicht im Modell, und damit
+    ///   liefen die beiden genau so auseinander, wie `260810-0215` es beschreibt.
+    /// - **Der Stand vor dem Einfuegen ist an dieser Stelle schon fort.**
+    ///   [`Editormodell::bearbeiten`] hat ihn ueberschrieben, bevor
+    ///   [`Self::text_zurueckschreiben`] hierher kommt. Ihn vorher abzuschreiben
+    ///   hiesse, den ganzen Stand **je Tastendruck** zu kopieren, und das ist
+    ///   genau der Preis, den `260810-0424` an dieser Kette bemaengelt.
+    ///
+    /// Was der Nutzer zurueckhaben will, ist ohnehin nicht die Wandlung, sondern
+    /// das Einfuegen; das aufzuzeichnen ist Sache des Eingangs der Flaeche, und
+    /// der Eingangsfilter ueber `textView:shouldChangeTextInRanges:` ist oben
+    /// mit Gruenden nicht genommen. **Der Preis steht damit hier und wird nicht
+    /// verschwiegen:** ein `cmd+z` unmittelbar nach einem eingefuegten `\r\n`
+    /// tut nichts, statt das Einfuegen zurueckzunehmen. Er ist die kleinere der
+    /// beiden Fehlwirkungen — vor der Behebung von `260809-1727` wirkte das
+    /// `cmd+z` gegen falsche Stellen — und der offene Rest von
+    /// `issues/260810-0303_*_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`.
     /// Ein zweiter Schreibweg in die Flaeche neben [`Self::stand_einsetzen`]
     /// entsteht dafuer nicht.
     ///
@@ -1335,7 +1538,7 @@ impl Editorbereich {
             let modell = self.ivars().modell.borrow();
             datei::versatz_nach_der_wandlung(&vorher, schreibmarke, modell.stand())
         };
-        self.stand_erneuern();
+        self.stand_erneuern(Verlauf::Faellt);
         self.stelle_zeigen(versatz, versatz);
     }
 
@@ -1604,6 +1807,17 @@ impl Editorbereich {
     /// **Steht kein Treffer an, wird nichts angefasst.** Der Stand geht dann
     /// nicht durch [`Self::stand_erneuern`], und der Rueckgaengigstapel bleibt
     /// stehen; gemeldet wird, warum nichts geschah.
+    ///
+    /// **Ein `cmd+z` nimmt das Ersetzen zurueck**, seit dem 260810: der Umbau
+    /// geht als [`Verlauf::Traegt`] durch die eine Schreibstelle und meldet dort
+    /// eine Handlung an, statt den Verlauf zu leeren
+    /// (`issues/260810-0303_*_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`).
+    /// Der Umkehrpunkt entsteht **vor** dem Ruf ins Modell; danach haelt das
+    /// Modell den neuen Stand, und es gaebe nichts mehr abzuschreiben. Was daran
+    /// Nutzerarbeit bleibt, ist die Wirkung im laufenden Buendel — dass ein
+    /// `cmd+z` nach einem Ersetzen den vorigen Stand samt Schreibmarke zeigt und
+    /// ein zweites den Anschlag davor —, nicht mehr die Frage, ob die Handlung
+    /// angemeldet wird.
     pub fn treffer_ersetzen(&self) -> Editormeldung {
         let steht_an = self
             .ivars()
@@ -1617,8 +1831,9 @@ impl Editorbereich {
         }
 
         let ersatz = self.ivars().ersatz.borrow().clone();
+        let punkt = self.umkehrpunkt();
         let treffer = self.ivars().modell.borrow_mut().treffer_ersetzen(&ersatz);
-        self.stand_erneuern();
+        self.stand_erneuern(Verlauf::Traegt(punkt));
         self.treffer_zeigen(treffer);
         self.suchmeldung()
     }
@@ -1629,21 +1844,30 @@ impl Editorbereich {
     /// Danach steht kein Treffer mehr an; der Suchlauf bleibt mit seinem
     /// Suchtext stehen, damit `cmd+f` ihn wieder anbietet. Ohne laufende Suche
     /// geschieht nichts.
+    ///
+    /// **Ein `cmd+z` nimmt das Sammelersetzen in einem Zug zurueck**, denselben
+    /// Weg wie das einzelne darueber. Hier wiegt es am schwersten: der Befehl
+    /// aendert eine ganze Datei auf einen Tastendruck, und genau dort erwartet
+    /// ein Nutzer, es zuruecknehmen zu koennen.
     pub fn alle_treffer_ersetzen(&self) -> Editormeldung {
         if self.ivars().modell.borrow().suchlauf().is_none() {
             return Editormeldung::KeineSuche;
         }
 
         let ersatz = self.ivars().ersatz.borrow().clone();
+        // Der Umkehrpunkt entsteht vor der Aenderung, also auch dann, wenn kein
+        // Treffer ersetzt wird; danach haelt das Modell schon den neuen Stand.
+        // Ohne Treffer wird er hier fallengelassen.
+        let punkt = self.umkehrpunkt();
         let zahl = self
             .ivars()
             .modell
             .borrow_mut()
             .alle_treffer_ersetzen(&ersatz);
         // Ohne Treffer hat sich der Stand nicht bewegt, und die Flaeche neu zu
-        // beschreiben kostete den Rueckgaengigstapel fuer nichts.
+        // beschreiben kostete den Rueckgaengigverlauf fuer nichts.
         if zahl > 0 {
-            self.stand_erneuern();
+            self.stand_erneuern(Verlauf::Traegt(punkt));
         }
         Editormeldung::Ersetzt { zahl }
     }
@@ -2240,15 +2464,49 @@ fn textflaeche_bauen(
 /// Ereignisbehandlung, und `NSUndoManager` gruppiert ab Werk je Ereignis: zur
 /// Aufrufzeit kann eine Gruppe offen stehen. `removeAllActions` raeumt beide
 /// Stapel **und** die offene Gruppe ab; `endUndoGrouping` an derselben Stelle
-/// wuerde ohne offene Gruppe eine Ausnahme werfen. Die Pruefung
-/// `ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr` misst genau
-/// das.
+/// wuerde ohne offene Gruppe eine Ausnahme werfen. **Drei Pruefungen messen
+/// das, und die Arbeitsteilung unter ihnen gehoert dazu**, weil sie bis zum
+/// 260810 eine Luecke hatte
+/// (`issues/260810-0420_*_die-beiden-rueckgaengigproben-schalten-die-betriebsart-ab-die-sie-messen-sollen.md`):
+/// die beiden `…_traegt_keine_rueckgaengig_handlung_mehr` und
+/// `…_traegt_auch_eine_offene_gruppe_nicht_mehr` messen eine **von Hand**
+/// geoeffnete Gruppe bei abgeschalteter Ereignisgruppierung, und
+/// `ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung` misst die
+/// Betriebsart der Laufzeit, also `groupsByEvent = true` samt einem Umlauf der
+/// Laufschleife danach.
 ///
 /// **Der Verwalter gehoert dem Fenster und nicht der Textflaeche.** Wer sonst
 /// noch in demselben Fenster Rueckgaengig-Handlungen anmeldet, verliert sie
-/// hier mit. Heute ist das niemand: der Editor ist die einzige Flaeche in KRK,
-/// die `allowsUndo` einschaltet, und der Feldeditor eines Suchfeldes fuehrt
-/// seinen Verlauf je Bearbeitung und nicht ueber diesen Verwalter.
+/// hier mit. **Heute ist das niemand, und das ist gemessen und nicht
+/// geschlossen** — am 260810 auf macOS 15.7.7 (Build 24G720), nachdem die
+/// Begruendung an dieser Stelle ueber die falsche Flaeche gefuehrt worden war
+/// (`issues/260810-0419_*_der-rueckgaengigverwalter-des-fensters-traegt-auch-den-feldeditor-der-umbenennung.md`).
+/// Die Flaeche, um die es geht, ist nicht das Suchfeld, sondern das
+/// beschreibbare Namensfeld der Umbenennung aus C4 der Runde 1
+/// (`super::tabelle`, `feld.setEditable(true)`); ein `NSTextField` bekommt beim
+/// Bearbeiten den Feldeditor des **Fensters**, und der ist selbst eine
+/// `NSTextView`. Gemessen wurde an einem Fenster mit beidem darin:
+///
+/// ```text
+///   Verwalter des Feldeditors      NSCellUndoManager   ─┐ zwei Objekte,
+///   Verwalter des Fensters         NSUndoManager       ─┘ nicht dasselbe
+///   removeAllActions am Fenster ─> Feldeditor: canUndo bleibt wahr
+///   undo im Feld danach         ─> der getippte Name ist zurueckgenommen
+/// ```
+///
+/// Der Feldeditor bekommt seinen Verwalter also von der `NSTextField`, die ihn
+/// ausleiht, und nicht aus der Antwortkette. Damit ist die Textflaeche des
+/// Editors die einzige in KRK, die diesen Verwalter benutzt, und dieser Ruf
+/// nimmt niemandem etwas fort.
+///
+/// **Die Grenze liesse sich enger ziehen, und sie ist es nicht.**
+/// `undoManagerForTextView:` am Delegierten gaebe der Flaeche einen **eigenen**
+/// Verwalter, und dass er vom Menue aus erreichbar bliebe, ist mitgemessen:
+/// `undo:` beantwortet in der ganzen Antwortkette allein `NSWindow` — nicht
+/// `NSTextView`, nicht `NSApplication`, nicht `NSResponder` —, und `NSWindow`
+/// nimmt dabei den Verwalter des **Ersthelfers** und nicht seinen eigenen. Der
+/// Weg steht damit offen, wird aber nicht genommen: es gibt keinen zweiten
+/// Anmelder, und ein Verwalter mehr waere ein Mechanismus ohne Fall.
 fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
     if let Some(verwalter) = verwalter {
         verwalter.removeAllActions();
@@ -2263,10 +2521,9 @@ mod tests {
     use std::ffi::{CStr, c_uint};
     use std::io::Write;
     use std::path::PathBuf;
-    use std::ptr::NonNull;
+    use std::rc::Rc;
     use std::sync::Mutex;
 
-    use block2::RcBlock;
     use krk_core::text::marke::wiederfinden;
     use objc2::runtime::{AnyClass, AnyProtocol};
     use objc2_app_kit::NSWritingToolsBehavior;
@@ -2608,17 +2865,34 @@ mod tests {
     }
 
     /// Meldet eine Rueckgaengig-Handlung an, wie eine `NSTextView` es beim
-    /// Tippen tut, und schliesst ihre Gruppe.
+    /// Tippen tut.
     ///
-    /// Die Gruppierung je Ereignis ist abgeschaltet: sie schloesse die Gruppe
-    /// erst am Ende eines Umlaufs der Ereignisschleife, und in einer Pruefung
-    /// laeuft keine. Die Handlung selbst tut nichts — gemessen wird, ob der
-    /// Verwalter sie **hat**, nicht was sie taete.
+    /// Die Handlung selbst tut nichts — gemessen wird, ob der Verwalter sie
+    /// **hat**, nicht was sie taete.
+    fn handlung_anmelden(verwalter: &NSUndoManager, ziel: &NSObject) {
+        let handlung = RcBlock::new(|_ziel: NonNull<AnyObject>| {});
+        // SAFETY: `ziel` ist ein NSObject und wird vom Verwalter nur als
+        // Kennung gehalten; der Block spricht es nicht an.
+        unsafe { verwalter.registerUndoWithTarget_handler(ziel, &handlung) };
+    }
+
+    /// Meldet eine Handlung an und schliesst ihre Gruppe **von Hand**, bei
+    /// abgeschalteter Ereignisgruppierung.
+    ///
+    /// **Das ist nicht die Betriebsart der Laufzeit**, und der Unterschied stand
+    /// bis zum 260810 nicht dabei
+    /// (`issues/260810-0420_*_die-beiden-rueckgaengigproben-schalten-die-betriebsart-ab-die-sie-messen-sollen.md`).
+    /// `groupsByEvent` steht ab Werk auf `true` und schliesst die Gruppe erst am
+    /// Ende eines Umlaufs der Laufschleife; in einer Pruefung laeuft keine, also
+    /// gaebe es hier ohne die Abschaltung nie eine geschlossene Gruppe. Die
+    /// beiden Pruefungen darunter messen deshalb den **Mechanismus**
+    /// `removeAllActions` an einer geschlossenen und an einer offenen Gruppe, und
+    /// nicht die Betriebsart. Die Betriebsart hat ihre eigene Pruefung:
+    /// [`ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung`].
     fn stapel_fuellen(verwalter: &NSUndoManager, ziel: &NSObject) {
         verwalter.setGroupsByEvent(false);
         verwalter.beginUndoGrouping();
-        let handlung = RcBlock::new(|_ziel: NonNull<AnyObject>| {});
-        unsafe { verwalter.registerUndoWithTarget_handler(ziel, &handlung) };
+        handlung_anmelden(verwalter, ziel);
         verwalter.endUndoGrouping();
         assert!(
             verwalter.canUndo(),
@@ -2652,25 +2926,27 @@ mod tests {
         );
     }
 
-    /// `setString:` faellt mitten in die Ereignisbehandlung, und dort kann eine
-    /// Rueckgaengig-Gruppe offen stehen. Auch dann bleibt nichts stehen, und
-    /// nichts wirft.
+    /// Eine **offene** Gruppe haelt `removeAllActions` ebenso wenig auf wie eine
+    /// geschlossene, und nichts wirft.
     ///
     /// Das ist der Grund, aus dem
     /// [`rueckgaengigstapel_leeren`] `removeAllActions` nimmt und nicht
     /// `endUndoGrouping`: das zweite verlangt eine offene Gruppe und wirft ohne
     /// eine.
+    ///
+    /// **Die Gruppe ist hier von Hand geoeffnet**, und das ist nicht dasselbe
+    /// wie die Gruppe, die der Verwalter in der Betriebsart der Laufzeit selbst
+    /// oeffnet; siehe [`stapel_fuellen`] und
+    /// [`ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung`].
     #[test]
     fn ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr() {
         let verwalter = verwalter_ohne_fenster();
         let ziel = NSObject::new();
         stapel_fuellen(&verwalter, &ziel);
 
-        // Eine zweite Handlung, deren Gruppe offen bleibt — der Zustand
-        // mitten in einem Ereignis.
+        // Eine zweite Handlung, deren Gruppe offen bleibt.
         verwalter.beginUndoGrouping();
-        let handlung = RcBlock::new(|_ziel: NonNull<AnyObject>| {});
-        unsafe { verwalter.registerUndoWithTarget_handler(&ziel, &handlung) };
+        handlung_anmelden(&verwalter, &ziel);
 
         rueckgaengigstapel_leeren(Some(&verwalter));
 
@@ -2685,11 +2961,166 @@ mod tests {
         );
     }
 
+    /// Dieselbe Frage in der Betriebsart, in der [`Editorbereich::stand_einsetzen`]
+    /// zur Laufzeit steht: `groupsByEvent` auf dem Werkswert `true`.
+    ///
+    /// **Die Betriebsart ist ein anderer Mechanismus und keine Einstellung
+    /// daneben.** Bei `groupsByEvent = true` oeffnet der Verwalter die Gruppe
+    /// selbst bei der ersten Anmeldung und schliesst sie ueber einen Beobachter
+    /// der Laufschleife am Ende des Umlaufs. Die Frage, die die beiden Pruefungen
+    /// darueber nicht beantworten: findet dieser Beobachter eine Gruppe vor, die
+    /// `removeAllActions` inzwischen abgeraeumt hat, und wirft er dann? Der
+    /// Defekt ist
+    /// `issues/260810-0420_*_die-beiden-rueckgaengigproben-schalten-die-betriebsart-ab-die-sie-messen-sollen.md`;
+    /// die Antwort stand bis zum 260810 in einem Wegwerf-Programm im
+    /// Sitzungsverzeichnis und steht seither hier.
+    ///
+    /// **Der Umlauf der Laufschleife ist der Kern dieser Pruefung.** Ohne ihn
+    /// kommt der Beobachter nicht zum Zug, und dann misst sie nichts, was die
+    /// beiden anderen nicht schon messen. `libtest` fuehrt seine Proben auf
+    /// eigenen Faeden ohne laufende Schleife; `NSRunLoop::currentRunLoop` legt
+    /// dem Faden eine an, und der Verwalter haengt seinen Beobachter beim
+    /// Anmelden in genau diese ein. Ein Umlauf ohne Quelle kehrt sofort zurueck,
+    /// die Zeitgrenze ist deshalb keine Wartezeit, sondern eine Obergrenze.
+    #[test]
+    fn ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung() {
+        let verwalter = verwalter_ohne_fenster();
+        assert!(
+            verwalter.groupsByEvent(),
+            "der Werkswert von groupsByEvent ist true; steht er auf false, misst diese \
+             Pruefung dieselbe Betriebsart wie die beiden darueber"
+        );
+
+        let ziel = NSObject::new();
+        handlung_anmelden(&verwalter, &ziel);
+        assert_eq!(
+            verwalter.groupingLevel(),
+            1,
+            "der Verwalter hat die Gruppe selbst geoeffnet — genau das tut er zur Laufzeit \
+             mitten in der Behandlung eines Tastendrucks"
+        );
+        assert!(
+            verwalter.canUndo(),
+            "die Voraussetzung der Pruefung: der Stapel traegt eine Handlung"
+        );
+
+        rueckgaengigstapel_leeren(Some(&verwalter));
+        assert!(!verwalter.canUndo(), "die Handlung ist fort");
+        assert_eq!(
+            verwalter.groupingLevel(),
+            0,
+            "und mit ihr die Gruppe, die der Verwalter selbst geoeffnet hatte"
+        );
+
+        // Der Umlauf, in dem der Beobachter die Gruppe schliessen wollte, die es
+        // nicht mehr gibt. Wirft er, faellt die Pruefung mit dem Programm.
+        //
+        // SAFETY: `NSDefaultRunLoopMode` ist ein Fremdsymbol von Foundation,
+        // dieselbe Form wie `NSRunLoopCommonModes` beim Einzugstakt.
+        let umlauf = NSRunLoop::currentRunLoop().runMode_beforeDate(
+            unsafe { NSDefaultRunLoopMode },
+            &NSDate::dateWithTimeIntervalSinceNow(0.05),
+        );
+        let _ = umlauf;
+
+        assert_eq!(
+            verwalter.groupingLevel(),
+            0,
+            "nach dem Umlauf steht der Verwalter ausserhalb jeder Gruppe"
+        );
+        assert!(
+            !verwalter.canUndo(),
+            "und der Umlauf hat keine Handlung zurueckgebracht"
+        );
+    }
+
     /// Ohne Verwalter geschieht nichts. Der Fall ist der Regelfall vor dem
     /// Einhaengen der Flaeche in ein Fenster, nicht ein Fehler.
     #[test]
     fn ohne_verwalter_geschieht_nichts() {
         rueckgaengigstapel_leeren(None);
+    }
+
+    /// Meldet eine Handlung an, die einen Wert herstellt und dabei den Gegenweg
+    /// anmeldet — die Bauart von [`Editorbereich::umkehren`], ohne Flaeche und
+    /// ohne Modell.
+    ///
+    /// Der Zaehler steht fuer den gehaltenen Stand, den das Ersetzen aus S37 hin
+    /// und her traegt; gemessen wird die Mechanik und nicht der Text.
+    fn wert_anmelden(verwalter: &NSUndoManager, ziel: &NSObject, wert: Rc<Cell<u8>>, ziffer: u8) {
+        let verwalter_hier = verwalter.retain();
+        let ziel_hier = ziel.retain();
+        let handlung = RcBlock::new(move |_ziel: NonNull<AnyObject>| {
+            // Der Gegenweg zuerst, in genau der Reihenfolge, die
+            // `Editorbereich::umkehren` haelt.
+            let vorher = wert.get();
+            wert_anmelden(&verwalter_hier, &ziel_hier, Rc::clone(&wert), vorher);
+            wert.set(ziffer);
+        });
+        // SAFETY: `ziel` ist ein NSObject und wird vom Verwalter nur als Kennung
+        // gehalten; der Block spricht es nicht an.
+        unsafe { verwalter.registerUndoWithTarget_handler(ziel, &handlung) };
+    }
+
+    /// Die Mechanik, auf der das rueckgaengigfaehige Ersetzen aus S37 ruht: eine
+    /// Anmeldung **waehrend** eines Rueckgaengig landet im
+    /// Wiederherstellungsstapel und nicht wieder im Rueckgaengigstapel.
+    ///
+    /// **Ohne diese Eigenschaft gaebe es kein Wiederherstellen und moeglicherweise
+    /// einen Ring.** [`Editorbereich::umkehren`] meldet den Gegenweg an, bevor es
+    /// den Stand herstellt, und verlaesst sich darauf, dass `NSUndoManager` die
+    /// Anmeldung in diesem Augenblick anders einordnet als sonst. Die Probe haelt
+    /// die Eigenschaft fest, statt sie der Dokumentation zu entnehmen; sie
+    /// braucht dafuer weder Flaeche noch Fenster, weil `NSUndoManager` fuer sich
+    /// steht.
+    ///
+    /// **Die Ereignisgruppierung bleibt auf dem Werkswert.** `undo` schliesst
+    /// eine offene Gruppe der obersten Ebene selbst, also braucht diese Probe
+    /// keinen Umlauf der Laufschleife und keine Abschaltung — sie laeuft in
+    /// derselben Betriebsart wie der Editor.
+    #[test]
+    fn eine_anmeldung_waehrend_eines_rueckgaengig_landet_im_wiederherstellungsstapel() {
+        let verwalter = verwalter_ohne_fenster();
+        let ziel = NSObject::new();
+        // 2 ist der Stand nach dem Ersetzen, 1 der davor.
+        let wert = Rc::new(Cell::new(2u8));
+        wert_anmelden(&verwalter, &ziel, Rc::clone(&wert), 1);
+
+        assert!(
+            verwalter.canUndo(),
+            "die angemeldete Handlung steht im Stapel"
+        );
+        assert!(
+            !verwalter.canRedo(),
+            "und der Wiederherstellungsstapel ist leer"
+        );
+
+        verwalter.undo();
+        assert_eq!(
+            wert.get(),
+            1,
+            "das Rueckgaengig hat den vorigen Stand hergestellt"
+        );
+        assert!(
+            verwalter.canRedo(),
+            "die Anmeldung aus der Handlung steht im Wiederherstellungsstapel — ohne das \
+             waere ein Ersetzen einmal zurueckzunehmen und nie wiederherzustellen"
+        );
+        assert!(
+            !verwalter.canUndo(),
+            "und sie steht nicht wieder im Rueckgaengigstapel; sonst liefe cmd+z im Kreis"
+        );
+
+        verwalter.redo();
+        assert_eq!(
+            wert.get(),
+            2,
+            "das Wiederherstellen hat den neuen Stand zurueckgebracht"
+        );
+        assert!(
+            verwalter.canUndo(),
+            "und der Weg zurueck steht wieder offen: die beiden wechseln sich ab"
+        );
     }
 
     /// Die Namensformen, in denen `NSTextView` seine Einstellungen fuehrt — die
@@ -3160,6 +3591,37 @@ mod tests {
     /// Zeit hoechstens eine. Ein Fehlschlag vergiftet die Sperre, und die
     /// naechste Probe nimmt sie trotzdem: der Fehlschlag steht schon in der
     /// Reihe, und ein zweiter Name daneben verdeckte ihn nur.
+    ///
+    /// # Der Ausweg ist gemessen und noch nicht gebaut
+    ///
+    /// Die Notluege ist zu ersetzen, nicht zu rechtfertigen, und drei Wege
+    /// stehen dafuer im Datensatz
+    /// `issues/260810-1001_*_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md`.
+    /// Zwei Messungen vom 260810 schneiden die Wahl unter ihnen zu, beide auf
+    /// macOS 15.7.7 (Build 24G720) mit Rust 1.97.1:
+    ///
+    /// ```text
+    ///   cargo test                          MainThreadMarker::new() ─> None
+    ///   cargo test -- --test-threads=1      MainThreadMarker::new() ─> None
+    ///   [[test]] mit harness = false        MainThreadMarker::new() ─> Some
+    /// ```
+    ///
+    /// **`libtest` gibt den Hauptfaden auch bei einem Prueffaden nicht her** —
+    /// die naheliegende Abhilfe ist gemessen und traegt nicht. **Ein Pruefziel
+    /// mit `harness = false` traegt**, und zwar ohne ein zweites Pruefkommando:
+    /// `cargo test` fuehrt es mit, `make check` bleibt unveraendert. Damit ist
+    /// der zweite der drei Wege der richtige, und was ihm noch fehlt, ist keine
+    /// Messung mehr, sondern eine Entscheidung ueber zwei Dateien ausserhalb
+    /// dieser: ein `[[test]]`-Abschnitt in `crates/krk-ui/Cargo.toml` und die
+    /// Prueflaufdatei darunter. Die vier Proben brauchen dann zusaetzlich einen
+    /// Weg zu [`textflaeche_bauen`] und zu [`EINSTELLUNGEN`], die heute beide
+    /// modulintern sind. Der Datensatz ist
+    /// `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
+    ///
+    /// Bis dahin steht die Notluege hier — nicht weil sie zulaessig waere,
+    /// sondern weil der Rueckbau die vier Messungen kostete, die
+    /// `260810-0748`, `260810-0750`, `260810-0746` und `260810-0512` in den Baum
+    /// gebracht haben.
     fn an_einer_flaeche<T>(arbeit: impl FnOnce(MainThreadMarker) -> T) -> T {
         static SPERRE: Mutex<()> = Mutex::new(());
         let _wache = SPERRE
