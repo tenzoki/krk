@@ -91,3 +91,51 @@ Schaden trägt. Der Fund oben sagt allein, dass Befehle sie erreichen.
 Die Behebung von `260810-1029` war auf `crates/krk-ui/src/editormodell.rs`
 begrenzt. Beide Möglichkeiten oben liegen in `crates/krk-ui/src/appkit/`, an dem
 zur selben Zeit ein anderer Agent arbeitete.
+
+---
+Resolved: Nachgeprüft am 260810-1207, und **der Befund hält nicht.** Der Ablauf,
+den dieser Datensatz beschreibt, ist nicht erreichbar: sein Schritt 2 setzt voraus,
+dass ein F4 während des stehenden Blattes einen Öffnungsbefehl ausführt, und genau
+das lässt der Anwendungsdelegierte nicht zu.
+
+**Die Stelle, die der Datensatz übersehen hat**, ist
+`Anwendungsdelegierter::kommando_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:2035`):
+
+```rust
+if self.blatt_steht() && !operationen::waehrend_blatt_erlaubt(kommando) {
+    return false;
+}
+```
+
+`blatt_steht` fragt `NSWindow::attachedSheet` und deckt damit jedes der neun
+Blätter ab, das aus C4 eingeschlossen. `waehrend_blatt_erlaubt`
+(`crates/krk-ui/src/kommandos/operationen.rs:208-210`) lässt **genau den
+Abbruchbefehl** durch. `Kommando::Bearbeiten` (F4), `Kommando::FokusEditor`,
+`Kommando::TextmarkeAnspringen` und der Übergang aus der Vorschau laufen alle durch
+diese Abfrage, bevor sie `editor_oeffnen_lassen` erreichen; ein getipptes Zeichen
+hält `eingabe_ausfuehren` an derselben Frage an (`anwendung.rs:1983`). Ein zweiter
+Weg an `kommando_ausfuehren` vorbei besteht nicht: die Menüleiste führt nur
+`beenden`, die vier Standardbefehle der Textbearbeitung und die beiden
+Fensterbefehle, und keinen davon, der eine Datei in den Editor bringt.
+
+**Die Beobachtung über `ersthelfer_gehoert_appkit` war für sich richtig und die
+Folgerung daraus falsch.** Der Fokusvorbehalt im Abgriff hält ein Blatt ohne
+Textfeld tatsächlich nicht an — er fragt aber auch die andere Frage, nämlich wem die
+Taste gehört, und nicht, welcher Befehl gerade zulässig ist. Die zweite Frage stellt
+die Senke. Der Modulkopf von `appkit/ereignisse.rs` hat das verschwiegen und den
+Vorbehalt als Erben aller fünf Blätter beschrieben; **das war der eigentliche
+Defekt**, und er ist behoben: der Kopf trennt jetzt die beiden Fragen, nennt beide
+Stellen namentlich und nennt diesen Datensatz als den Fehlschluss, der daraus
+entstanden ist.
+
+Nichts geändert ist damit an der Ereignisbehandlung selbst, und keine der beiden
+Möglichkeiten aus "Der Weg dahin, ungeprüft" ist gebaut — Möglichkeit 1 ist bereits
+gebaut und stand nur nicht in diesem Datensatz, Möglichkeit 2 wäre die zweite Regel
+für einen Fall, den die erste schon trägt.
+
+**Was offen bleibt, ist eine engere Spanne als die hier beschriebene**, und sie ist
+als eigener Datensatz abgelegt:
+`issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md`.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets`, `cargo fmt --all --check` — jedes exit 0.

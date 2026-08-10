@@ -26,13 +26,16 @@
 //!    │
 //!    ├─ Fokusvorbehalt
 //!    │    ├─ Ersthelfer = Textflaeche des Editors? ──ja──> weiter zum Nachschlag
-//!    │    └─ sonst Textfeld, Feldeditor, Blatt? ────ja──> unveraendert an AppKit
+//!    │    └─ sonst Textfeld oder Feldeditor? ───────ja──> unveraendert an AppKit
 //!    │
 //!    └─ Belegung::nachschlag
-//!         ├─ Kommando ─────> Senke des Aufrufers
-//!         ├─ Sprungmarke ──> Zeichen ──> Senke des Aufrufers
+//!         ├─ Kommando ─────> Senke des Aufrufers ─┐
+//!         ├─ Sprungmarke ──> Zeichen ──> Senke ───┤ steht ein Blatt?
 //!         └─ unbelegt ─────> unveraendert an AppKit
 //! ```
+//!
+//! Die letzte Frage stellt die Senke und nicht dieser Abgriff; siehe den
+//! Abschnitt "Der Fokusvorbehalt" unten.
 //!
 //! Die Normalisierung steht **vor** dem Vorbehalt, weil der Faenger den rohen
 //! [`Tastendruck`] braucht und vor beidem sitzt; bis zum 260808 zeigte das Bild
@@ -60,8 +63,8 @@
 //!
 //! # Der Fokusvorbehalt
 //!
-//! **Tastenbefehle wirken im Dateifenster; Textfelder und Blaetter behalten
-//! ihre AppKit-Bedeutung.** Der Abgriff sieht jeden Tastendruck der Anwendung,
+//! **Tastenbefehle wirken im Dateifenster; Textfelder behalten ihre
+//! AppKit-Bedeutung.** Der Abgriff sieht jeden Tastendruck der Anwendung,
 //! gleich wo der Eingabefokus steht. C2 verlangt fuer jedes Textfeld die
 //! gewohnte Mac-Bedeutung: Return bestaetigt, Cmd+Links und Cmd+Rechts bewegen
 //! die Schreibmarke an Zeilenanfang und Zeilenende. Seit S11c liegt der Auf-
@@ -71,10 +74,26 @@
 //!
 //! Der Abgriff fragt deshalb **vor** dem Nachschlag, ob der Ersthelfer des
 //! Schluesselfensters ein Textfeld ist, und reicht den Tastendruck in diesem
-//! Fall unveraendert weiter. Der Vorbehalt sitzt hier und nicht je Blatt: die
-//! fuenf Blaetter aus S16 und S17 erben ihn dadurch, ohne ihn zu wiederholen.
+//! Fall unveraendert weiter. Der Vorbehalt sitzt hier und nicht je Feld: jedes
+//! Textfeld des Programms erbt ihn dadurch, ohne ihn zu wiederholen — das Feld
+//! eines Blattes so gut wie der Feldeditor einer Umbenennung in der Liste.
 //! Gemeldet war das als
 //! `issues/260804-1122_*_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
+//!
+//! **Ein stehendes Blatt haelt dieser Vorbehalt nicht an, und er ist auch nicht
+//! die Stelle, die es tun soll.** Er fragt nach dem Ersthelfer, und ein Blatt
+//! ohne Textfeld hat als Ersthelfer eine Schaltflaeche; sein Tastendruck laeuft
+//! also in den Nachschlag und erreicht die Senke. Angehalten wird er dort, beim
+//! Anwendungsdelegierten: `Anwendungsdelegierter::kommando_ausfuehren` weist
+//! jedes Kommando ausser dem Abbruch ab, solange ein Blatt am Fenster haengt
+//! (`kommandos::operationen::waehrend_blatt_erlaubt`), und
+//! `Anwendungsdelegierter::eingabe_ausfuehren` haelt daneben das getippte
+//! Zeichen an. Zwei Stellen mit zwei verschiedenen Fragen und keine doppelte
+//! Regel: hier geht es darum, **wem die Taste gehoert**, dort darum, **welcher
+//! Befehl jetzt zulaessig ist**. Wer nur diese Datei liest, haelt den Vorbehalt
+//! sonst fuer die einzige Sperre und schliesst daraus auf einen Defekt, den es
+//! nicht gibt — genau so entstand
+//! `issues/260810-1102_*_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`.
 //!
 //! **Die eine Ausnahme ist die Textflaeche des Editors.** Sie ist selbst eine
 //! `NSTextView` und fiele damit unter den Vorbehalt; der Editor haette mit dem

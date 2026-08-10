@@ -16,12 +16,12 @@
 //! # Der Kreis, den diese Datei schliesst
 //!
 //! ```text
-//!   F4 ──> datei_oeffnen ──> Editormodell::oeffnen ──┐
-//!                                                    │ Arbeitsfaden
-//!   Einzugstakt (1/60 s) ──> Editormodell::einziehen <┘
+//!   F4 ──> datei_oeffnen(Pfad, Herkunft) ──> Editormodell::oeffnen ──┐
+//!                                                    │ Arbeitsfaden  │
+//!   Einzugstakt (1/60 s) ──> Editormodell::einziehen <───────────────┘
 //!            │
 //!            ├─ Geoeffnet ──> stand_einsetzen ──> NSTextView
-//!            └─ jeder Ausgang ──> melden ──> Anwendungsdelegierter
+//!            └─ jeder Ausgang ──> melden(Ausgang, Herkunft) ──> Anwendungsdelegierter
 //!                                                 │ Zurueckgehalten: Blatt
 //!   zurueckgehaltenes_uebernehmen  <───────────────┤ (sichern / verwerfen)
 //!   zurueckgehaltenes_fallenlassen <───────────────┘ (abbrechen)
@@ -35,6 +35,18 @@
 //!   cmd+s ──> sichern ──> Editormodell::sichern ──┬─ gelungen ─> kopf_nachziehen
 //!                                                 └─ jeder Ausgang ─> nach oben
 //! ```
+//!
+//! **Die Herkunft reist in der Kette und liegt nicht daneben.**
+//! [`Oeffnungsherkunft`] ist ein Pflichtargument von
+//! [`Editorbereich::datei_oeffnen`] und kommt mit jedem Ausgang durch den
+//! [`Ausgangsmelder`] zurueck. Wer den Editor eine Datei aufnehmen laesst, sagt
+//! damit, wer sie verlangt hat — ein Aufruf, der es nicht sagt, uebersetzt
+//! nicht, und zwar von jeder Stelle des Programms aus und nicht nur aus dem
+//! Anwendungsdelegierten. Bis zum 260810 stand die Angabe als Feld beim
+//! Delegierten und war allein dort erzwungen; die beiden Datensaetze dazu sind
+//! `issues/260810-0418_*_ein-f4-waehrend-der-wiederherstellung-erbt-die-marke-aus-sitzung.md`
+//! und
+//! `issues/260810-1028_*_die-herkunft-eines-oeffnens-ist-im-delegierten-erzwungen-und-nicht-am-editorbereich.md`.
 //!
 //! **Der untere Pfeil ist der Rueckweg, und ohne ihn ist das Modell blind.**
 //! Bis S26 hatte [`Editormodell::bearbeiten`] keinen Aufrufer: das Getippte
@@ -753,11 +765,64 @@ impl Editorsicht {
     }
 }
 
-/// Die Senke, an die jeder [`Ladeausgang`] geht.
+/// Wer verlangt hat, dass der Editor eine Datei aufnimmt (C2, C7).
+///
+/// **Zwei Werte, ueberschneidungsfrei und vollstaendig.** Entweder ein Befehl
+/// des Nutzers hat geoeffnet, oder die Wiederherstellung der Sitzung beim Start;
+/// einen dritten Anlass gibt es nicht, und ein neuer haelt an jeder Stelle den
+/// Bau an, die die beiden Werte unterscheidet.
+///
+/// **Er ist ein Pflichtargument und kein Kennzeichen daneben.** Jedes Oeffnen
+/// geht durch [`Editorbereich::datei_oeffnen`], das diesen Wert entgegennimmt,
+/// und ein Aufruf, der ihn nicht nennt, uebersetzt nicht — gleich von welcher
+/// Stelle des Programms aus. Zwei Datensaetze stehen dahinter, und der zweite
+/// hat den ersten zu Ende gebaut:
+/// `issues/260810-0418_*_ein-f4-waehrend-der-wiederherstellung-erbt-die-marke-aus-sitzung.md`
+/// (die Herkunft lag als `Cell` neben der Kette, wurde allein von der
+/// Wiederherstellung gesetzt und erst beim Ladeausgang verbraucht, und ein
+/// Oeffnen in dieser Spanne erbte sie) und
+/// `issues/260810-1028_*_die-herkunft-eines-oeffnens-ist-im-delegierten-erzwungen-und-nicht-am-editorbereich.md`
+/// (die Erzwingung endete an der Grenze des Anwendungsdelegierten).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Oeffnungsherkunft {
+    /// F4, `cmd+e` aus der Vorschau oder der Sprung auf eine Textmarke aus C6.
+    Befehl,
+    /// Die Datei, die `session.toml` gemerkt hat, beim Start (C7).
+    Sitzung,
+}
+
+impl Oeffnungsherkunft {
+    /// Ob die Wiederherstellung der Sitzung geoeffnet hat und nicht ein Befehl
+    /// des Nutzers.
+    ///
+    /// **Die eine Stelle, die die beiden Werte unterscheidet**, und sie tut es
+    /// mit einer vollstaendigen Fallunterscheidung ohne Auffangzweig: ein dritter
+    /// Anlass haelt hier den Bau an, statt still den Zweig des Befehls zu
+    /// bekommen. Ein Vergleich mit `==` an der Aufrufstelle taete das nicht, und
+    /// die Zusage im Kopf dieser Aufzaehlung haengt daran.
+    #[allow(
+        clippy::match_like_matches_macro,
+        reason = "`matches!` prueft die Vollstaendigkeit nicht, und genau die ist hier der Zweck"
+    )]
+    pub fn ist_aus_sitzung(self) -> bool {
+        match self {
+            Oeffnungsherkunft::Sitzung => true,
+            Oeffnungsherkunft::Befehl => false,
+        }
+    }
+}
+
+/// Die Senke, an die jeder [`Ladeausgang`] samt seiner [`Oeffnungsherkunft`]
+/// geht.
 ///
 /// Ein eigener Name, weil der Typ an drei Stellen steht — Feld, Setzer und
 /// Aufrufstelle — und ausgeschrieben an jeder von ihnen dieselbe Zeile waere.
-pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang)>;
+///
+/// **Die Herkunft kommt hier zurueck und wird nicht beim Empfaenger gemerkt.**
+/// Ein Feld beim Anwendungsdelegierten, das auf seinen Verbrauch am naechsten
+/// Ausgang wartet, war genau die Bauart aus `260810-0418`; ein zweites Argument
+/// kann kein Ausgang verlieren und kein zweiter ueberschreiben.
+pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang, Oeffnungsherkunft)>;
 
 /// Was der Editorbereich haelt.
 pub struct EditorIvars {
@@ -790,6 +855,33 @@ pub struct EditorIvars {
     /// an [`Editorbereich::melder_setzen`]. `None` heisst: der Aufbau ist noch
     /// nicht so weit, und dann gibt es auch niemanden, der etwas anfinge.
     melden: RefCell<Option<Ausgangsmelder>>,
+    /// Wer das **zuletzt begonnene** Oeffnen verlangt hat (C2, C7).
+    ///
+    /// **Warum "das zuletzt begonnene" genau die richtige Auskunft ist.**
+    /// Gelesen wird seit S24 auf einem Arbeitsfaden, und zwischen dem Beginn des
+    /// Oeffnens und seinem Ausgang laeuft die Ereignisschleife. Hoechstens das
+    /// zuletzt begonnene Oeffnen liefert trotzdem einen Ausgang:
+    /// [`Editormodell::oeffnen`] ersetzt den laufenden Ladevorgang, sein
+    /// Empfaenger faellt, und das `send` des ueberholten Fadens scheitert still.
+    /// Geschrieben wird das Feld von **jedem** [`Editorbereich::datei_oeffnen`],
+    /// also von jedem Oeffnen, und gelesen von [`Editorbereich::melden`], also
+    /// von jedem Ausgang.
+    ///
+    /// **Auch die zurueckgehaltene Datei aus C4 gehoert zum zuletzt begonnenen
+    /// Oeffnen**, und deshalb braucht sie keine zweite Angabe daneben. Solange
+    /// das Blatt aus C4 steht, kommt kein weiterer Oeffnungsbefehl durch: der
+    /// Anwendungsdelegierte weist jedes Kommando ausser dem Abbruch ab, solange
+    /// ein Blatt am Fenster haengt. Ein zweites Feld fuer die zurueckgehaltene
+    /// Datei unterschiede damit etwas, das nicht auseinanderlaufen kann.
+    ///
+    /// **Der Aufbau setzt [`Oeffnungsherkunft::Befehl`], und niemand liest ihn.**
+    /// Alle drei Aufrufer von [`Editorbereich::melden`] setzen einen Wert voraus,
+    /// den es nur nach einem `datei_oeffnen` gibt: dieses selbst schreibt vor dem
+    /// Melden, [`Editorbereich::ladeausgang_einziehen`] laeuft allein zu einem
+    /// gestarteten Ladevorgang, und
+    /// [`Editorbereich::zurueckgehaltenes_uebernehmen`] kehrt ohne
+    /// zurueckgehaltene Datei um.
+    herkunft: Cell<Oeffnungsherkunft>,
     /// Das laufende Einfaerben, falls eines laeuft (C3).
     ///
     /// Hoechstens eines. Der Editor haelt hoechstens eine Datei und zeigt
@@ -943,6 +1035,7 @@ impl Editorbereich {
             modell: RefCell::new(Editormodell::neu()),
             takt: RefCell::new(None),
             melden: RefCell::new(None),
+            herkunft: Cell::new(Oeffnungsherkunft::Befehl),
             einfaerbung: RefCell::new(None),
             einfaerbungsstand: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
@@ -1089,7 +1182,17 @@ impl Editorbereich {
     /// erreichbar. Bei [`Ladeausgang::Abgewiesen`] bleibt der bisherige Stand
     /// vollstaendig stehen, und der Grund geht als Wert nach oben; wohin er
     /// dort kommt, weiss diese Datei nicht (siehe den Modulkopf).
-    pub fn datei_oeffnen(&self, pfad: &Path) {
+    ///
+    /// **Die Herkunft ist Pflicht und kommt mit dem Ausgang zurueck.** Wer
+    /// oeffnet, sagt, ob ein Befehl des Nutzers oder die Wiederherstellung der
+    /// Sitzung es verlangt hat; der Wert geht unveraendert durch den
+    /// [`Ausgangsmelder`] an den Empfaenger des Ausgangs. Damit gibt es keinen
+    /// Weg in den Editor, der die Angabe schuldig bleibt — auch keinen von
+    /// ausserhalb des Anwendungsdelegierten, und das ist der Unterschied zum
+    /// Stand vom 260810-1028. Wo sie bis zum Ausgang liegt und warum das keine
+    /// Marke neben der Kette ist, steht an [`EditorIvars::herkunft`].
+    pub fn datei_oeffnen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) {
+        self.ivars().herkunft.set(herkunft);
         let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
@@ -1237,17 +1340,23 @@ impl Editorbereich {
         self.melden(ausgang);
     }
 
-    /// Gibt den Ausgang an die Senke weiter, falls jemand zuhoert.
+    /// Gibt den Ausgang samt seiner Herkunft an die Senke weiter, falls jemand
+    /// zuhoert.
     ///
     /// Die Ausleihe steht waehrend des Rufs, wie bei `Hauptfenster::melden`.
     /// Sie ist lesend, und der einzige schreibende Zugriff auf dieselbe Zelle
     /// ist [`Self::melder_setzen`] beim Aufbau; ein Ruf, der ueber AppKit
     /// hierher zuruecklaeuft, nimmt eine zweite Leseausleihe und keine
     /// schreibende.
+    ///
+    /// **Die Herkunft wird hier gelesen und nicht verbraucht.** Sie gehoert dem
+    /// zuletzt begonnenen Oeffnen und gilt bis zum naechsten; der Grund und die
+    /// drei Aufrufer dieser Funktion stehen an [`EditorIvars::herkunft`].
     fn melden(&self, ausgang: Ladeausgang) {
+        let herkunft = self.ivars().herkunft.get();
         let melden = self.ivars().melden.borrow();
         if let Some(melden) = melden.as_ref() {
-            melden(ausgang);
+            melden(ausgang, herkunft);
         }
     }
 
@@ -1313,6 +1422,38 @@ impl Editorbereich {
     /// 19 MB. Daneben stehen 0,98 / 7,6 / 88 ms fuer das Umschreiben des Textes
     /// aus UTF-16, das jedem Ruf hierher vorausgeht; der Aufpreis liegt bei zwei
     /// Prozent.
+    ///
+    /// # Der ganze Anschlag kostet, und der Preis ist angenommen
+    ///
+    /// Gemessen in derselben Reihe, je Anschlag und auf dem Hauptfaden:
+    ///
+    /// ```text
+    ///        Byte   Summe je Anschlag   davon in `string().to_string()`
+    ///     229 029             1,02 ms                            96 %
+    ///   1 832 232             7,87 ms                            97 %
+    ///  19 467 465            91,96 ms                            96 %
+    /// ```
+    ///
+    /// **Der Preis liegt in der ersten Zeile dieser Funktion und nicht in der
+    /// Wandlung.** Bei 229 kB ist eine Millisekunde je Anschlag nicht zu
+    /// bemerken, bei 1,8 MB bleiben 7,9 ms unter einer Bildlaenge von 16,7 ms,
+    /// und an der Editorgrenze von 16 MB stehen rund 75 ms je Anschlag, also
+    /// gute vier Bildlaengen: **von einigen Megabyte an stockt das Tippen
+    /// sichtbar.**
+    ///
+    /// **Angenommen, nicht verschwiegen.** Billiger wird es nur mit dem
+    /// geaenderten Bereich, den `NSTextStorage` mit jeder Aenderung meldet
+    /// (`editedRange`, `changeInLength`), und der verlangt einen Stand, der sich
+    /// fortschreibt, statt neu gelesen zu werden — also eine Aenderung an
+    /// [`Editormodell::bearbeiten`] und an der einen Normalisierungsstelle in
+    /// `krk_core::text::datei`. Der Rueckweg aus der Flaeche haette dann einen
+    /// zweiten Eingang und eine zweite Wahrheit darueber, was der gehaltene
+    /// Stand ist; genau das schliesst der Modulkopf von
+    /// [`crate::editormodell`] aus. Ein billigeres Umschreiben an dieser Stelle
+    /// gibt es nicht: `to_string` geht ueber `UTF8String`, und jeder schnellere
+    /// Zugriff auf die Zeichen braucht `unsafe`, das in dieser Kiste allein
+    /// [`super`] traegt. Der Datensatz mit den vollen Zahlen ist
+    /// `issues/260809-2322_*_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`.
     ///
     /// **Der Kopf wird nur beim Uebergang nachgezogen.** Die Abweichungsmarke
     /// geht von falsch nach wahr und bleibt dort bis zum naechsten Sichern; sie

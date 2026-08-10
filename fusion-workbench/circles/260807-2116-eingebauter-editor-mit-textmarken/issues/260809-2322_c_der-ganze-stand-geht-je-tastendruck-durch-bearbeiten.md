@@ -118,3 +118,45 @@ Stand, der nicht als `String` gehalten wird.
 
 **Aufgefallen bei:** der Messung am 260810-1057, im Durchgang zu den fünf
 Datensätzen um die Textfläche.
+
+---
+Resolved: **Gemessen und angenommen**, entschieden am 260810-1207. Der Preis bleibt,
+wie er ist, und er steht jetzt am Code statt nur in diesem Datensatz.
+
+**Die Zahl, die Stelle, die Grenze.** 92 ms je Anschlag bei 19 MB, davon 96 Prozent
+in der ersten Zeile von `Editorbereich::text_zurueckschreiben`
+(`crates/krk-ui/src/appkit/editor.rs`), nämlich `self.ivars().text.string().to_string()`
+— dem Umschreiben des Textes aus UTF-16. Bei 229 kB sind 1,0 ms nicht zu bemerken,
+bei 1,8 MB bleiben 7,9 ms unter einer Bildlänge von 16,7 ms, und an der
+Editorgrenze von 16 MB stehen rund 75 ms, also gute vier Bildlängen: **von einigen
+Megabyte an stockt das Tippen sichtbar.** Diese Aufstellung samt der
+Prozentspalte steht seit dem 260810 im Doc-Kommentar von `text_zurueckschreiben`
+unter der Überschrift "Der ganze Anschlag kostet, und der Preis ist angenommen".
+
+**Warum nicht gesenkt.** Der Weg, der die 96 Prozent senkt, ist der einzige, den
+dieser Datensatz selbst benennt: der geänderte Bereich aus `NSTextStorage`
+(`editedRange`, `changeInLength`) und ein Stand, der sich daran fortschreibt statt
+neu gelesen zu werden. Er verlangt eine Änderung an `Editormodell::bearbeiten` und
+an der einen Normalisierungsstelle in `krk-core/src/text/datei.rs` und damit einen
+zweiten Eingang für fremden Text — genau das, was der Modulkopf von
+`editormodell.rs` ausschließt, weil es eine zweite Wahrheit über den gehaltenen
+Stand wäre. Beide Dateien lagen ausserhalb der Dateigrenze dieser Sitzung, und der
+halbe Umbau kam nicht in Frage.
+
+**Ein billigeres Umschreiben an derselben Stelle gibt es nicht**, und das ist keine
+Vermutung über die Laufzeit, sondern eine über die Kiste: `NSString::to_string`
+geht in `objc2-foundation` 0.3.2 über `UTF8String`
+(`objc2-foundation-0.3.2/src/util.rs:33-46` → `objc2::runtime::__nsstring::nsstring_to_str`),
+und jeder Zugriff, der die Zeichen selbst liest, braucht `unsafe`. `krk-ui` trägt
+`#![deny(unsafe_code)]`, und die eine Ausnahme steht in `appkit/mod.rs`, nicht in
+`appkit/editor.rs`. Eine Senkung an dieser Stelle wäre also nicht nur ein anderer
+Aufruf, sondern eine Verschiebung der Grenze, die die Kiste zieht.
+
+Der Vorwurf des Datensatzes an sich selbst — "ein benannter Preis, der ungemessen
+ist" — ist damit beantwortet: er ist gemessen, die Zahl steht am Code, die
+Grössenordnung, ab der es fühlbar wird, steht dabei, und wer ihn senken will, findet
+oben den einen Weg und seinen Preis. Die Messung selbst ist nicht wiederholt; sie
+steht unverändert im Abschnitt "Der Preis ist gemessen" darüber.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets`, `cargo fmt --all --check` — jedes exit 0.

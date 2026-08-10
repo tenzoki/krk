@@ -92,3 +92,40 @@ Herkunft zum **laufenden** Ladevorgang merken, nicht zur letzten Anfrage, und
 `Cell<Oeffnungsherkunft>` am `Editorbereich` wäre damit dieselbe Bauart, die
 `260810-0418` als Fehler geführt hat, nur eine Ebene tiefer; die Herkunft gehört
 neben den Ladevorgang und nicht neben den Bereich.
+
+---
+Resolved: Alle vier Punkte gebaut, am 260810-1207. Die `Oeffnungsherkunft` ist von
+`anwendung.rs` nach `crates/krk-ui/src/appkit/editor.rs` umgezogen und dort `pub`;
+`Editorbereich::datei_oeffnen(&self, pfad: &Path, herkunft: Oeffnungsherkunft)`
+nimmt sie als Pflichtargument, und `Ausgangsmelder` ist jetzt
+`Box<dyn Fn(Ladeausgang, Oeffnungsherkunft)>`. Damit hält der Übersetzer den
+vergessenen Fall an, und zwar von jeder Stelle des Programms aus: ein Aufruf von
+`datei_oeffnen` ohne Herkunft übersetzt nicht, gleich wer ihn schreibt. Das Feld
+`AnwendungsIvars::editor_aus_sitzung` ist samt seinem Doc-Kommentar **entfallen**;
+`editorausgang_behandeln(&self, ausgang, herkunft)` bekommt die Angabe als
+Argument, und `editor_oeffnen_lassen` bündelt nur noch, statt zu erzwingen.
+
+**Punkt 4 ist beantwortet und nicht umgangen.** Die Herkunft liegt als
+`Cell<Oeffnungsherkunft>` in `EditorIvars` und ist trotzdem nicht die Bauart aus
+`260810-0418`: dort schrieb sie **ein** Aufrufer und jeder Ausgang las sie, hier
+schreibt sie **jedes** `datei_oeffnen` und jedes `melden` liest sie. Sie bezeichnet
+das zuletzt begonnene Öffnen, und höchstens dieses liefert einen Ladeausgang, weil
+`Editormodell::oeffnen` den laufenden Vorgang ersetzt und die Abkürzung
+`SchonOffen` ihn seit `260810-1029` aufgibt.
+
+Die zurückgehaltene Datei aus C4 braucht damit **keine zweite Angabe daneben**, und
+das ist am Code geprüft und nicht angenommen: solange ein Blatt am Fenster hängt,
+weist `Anwendungsdelegierter::kommando_ausfuehren` (`anwendung.rs:2035`) jedes
+Kommando ausser dem Abbruch ab (`kommandos::operationen::waehrend_blatt_erlaubt`),
+also kann kein weiterer Öffnungsbefehl zwischen die Rückhaltung und die Antwort
+treten. Der Nachbardatensatz `260810-1102`, der genau das Gegenteil annahm, ist
+damit widerlegt.
+
+Der zweite Zuschnitt des Datensatzes ist gebaut, der erste nicht: `krk-core` und
+`editormodell.rs` sind nicht angefasst, der Schnitt zwischen Modell und `appkit`
+steht unverändert. Zusätzlich trägt `Oeffnungsherkunft::ist_aus_sitzung` die eine
+Fallunterscheidung über die beiden Werte, vollständig und ohne Auffangzweig; ein
+`==` an der Aufrufstelle hätte einen dritten Anlass still als `Befehl` behandelt.
+
+Abnahme: `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets`, `cargo fmt --all --check` — jedes exit 0.
