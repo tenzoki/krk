@@ -123,3 +123,34 @@ bezeichnen wäre falsch.
 | Zurückgestellte Defekte | 0 |
 | Offene Entscheidungen | 12 |
 | Zurückgestellte Entscheidungen | +1 (`260810-2132`) |
+
+### Berichtigung 260810-2145: zwei Zahlen in diesem Protokoll waren falsch
+
+Die Tabellen unter `## Offen` und unter `### Stand danach` haben beide zu niedrig gezählt.
+Nachgezählt am Dateibestand:
+
+| Art | stand hier | ist |
+|---|---|---|
+| Offene Defekte | 5 | **6** |
+| Zurückgestellte Defekte | 1 bzw. 0 | **1** |
+| Offene Entscheidungen | 12 | 12 (richtig) |
+
+**Der sechste offene Defekt** ist `shared/issues/260810-1945_*_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md`.
+Er ist in der Abschlussphase der vorigen Sitzung entstanden, also nach dem Zeitpunkt, an dem die
+Fünf einmal richtig war, und beim Übertragen in dieses Protokoll nicht mitgezählt worden.
+
+**Der zurückgestellte Defekt** ist nicht L6, sondern
+`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0000_d_ein-toter-netzpfad-laesst-den-lesefaden-haengen.md`
+— ein Bestand vom 260805, der in dieser Sitzung nie berührt wurde. Der Nachtrag oben hat nach
+dem Schließen von L6 auf null geschlossen, als wäre L6 der einzige gewesen. Das war eine
+Ableitung aus dem Gedächtnis statt eine Zählung am Bestand.
+
+**Beide Fehler haben dieselbe Form wie die, die diese Sitzung mehrfach an anderen Stellen
+gefunden hat**, und es ist dieselbe, gegen die `CLAUDE.md` seine Aufstellungen abgeschafft hat:
+eine Zahl, die einmal stimmte, wird weitergereicht, statt neu erhoben zu werden. Die Zählungen
+oben sind jetzt am Bestand erhoben; wer sie später liest, erhebt sie wieder, statt sie zu
+übernehmen:
+
+```sh
+find fusion-workbench/shared/issues fusion-workbench/circles/*/issues -maxdepth 1 \( -name '*_o_*.md' -o -name '*_p_*.md' \) | wc -l
+```
