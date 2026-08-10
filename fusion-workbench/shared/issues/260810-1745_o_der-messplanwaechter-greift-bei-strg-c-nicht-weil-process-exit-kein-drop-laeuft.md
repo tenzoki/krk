@@ -49,3 +49,18 @@ sie heute ebenfalls nicht.
 Gering. Der Schaden ist eine liegengebliebene Datei je Strg+C, mit Prozesskennung im Namen,
 also ohne Kollision zwischen zwei Läufen. Kein Abnahmekriterium und keine der zehn Zeitzusagen
 aus C8 sind berührt.
+
+---
+Nachtrag 260810-1850, Turn 2: Der Weg ist untersucht und **nicht** umgesetzt, weil er die
+dokumentierte Zusage der Sitzungssicherung beruehrt. `SICHERUNG` ist ein
+`Mutex<Option<Sitzungssicherung>>`, also auf genau eine Nutzlast typisiert, und traegt den Satz
+"genau einer von beiden spielt zurueck: wer zuerst kommt". Drei Wege stehen zur Wahl, und die
+Wahl gehoert dem Nutzer; sie ist als Entscheidungsdatensatz abgelegt:
+`shared/decisions/260810-1850_*_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md`.
+
+Dabei ist ein Nebenbefund aufgefallen, der jede der drei Optionen betrifft: `signalwache_starten`
+laeuft erst mit `Sitzungssicherung::anlegen()` bei `messen.rs:1034`, `plan_schreiben` schon bei
+`messen.rs:1029`. In dieser Spanne faengt heute gar nichts ein Strg+C ab. Wer die Frage
+beantwortet, zieht die Reihenfolge dieser beiden Aufrufe mit.
+
+Dieser Defekt bleibt offen und wartet auf die Antwort.
