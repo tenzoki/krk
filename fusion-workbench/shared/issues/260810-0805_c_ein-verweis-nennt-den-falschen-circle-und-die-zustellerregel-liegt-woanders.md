@@ -41,3 +41,16 @@ Der Datensatz führt in derselben Zeile einen zweiten Verweis auf denselben Spei
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` (die verwandte, aber andere Sorte)
 
 Warum im gemeinsamen Speicher und nicht im aktiven Circle: der Defekt sitzt in einem vorgesehenen Circle, den die Directive dieser Sitzung nicht berührt. Die Herkunftsregel nennt genau diesen Fall — ein Fund neben der Arbeit, nicht aus ihr.
+
+---
+Resolved: In `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_*_wie-wird-die-ausgabe-der-belegung-ausgeloest.md`
+Zeile 7 ist allein das Verzeichnis ersetzt: der Verweis auf
+`260805-0713_i_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md` nennt jetzt den Circle
+der Runde 1 statt der Editor-Runde. Marker, Dateiname und die Klammer stehen unveraendert, die
+drei uebrigen Verweise der Zeile ebenso.
+
+Die vom Datensatz verlangte Pruefung aller fuenf Datensaetze dieses Circles ist gelaufen und
+weiter gefuehrt worden als verlangt: jeder Backtick-Pfad der Cross-references-Zeilen wurde
+gegen den Dateibestand gehalten, 14 Verweise, 14 vorhanden. Es blieb bei der einen Fundstelle.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.
