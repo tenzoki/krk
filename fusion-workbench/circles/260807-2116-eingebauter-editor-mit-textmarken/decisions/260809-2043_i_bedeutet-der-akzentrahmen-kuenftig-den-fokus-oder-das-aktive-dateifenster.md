@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C9), `crates/krk-ui/src/appkit/aufteilung.rs:229-238` (`Aufteilung::aktives_markieren`, die gebaute Anzeige), `crates/krk-ui/src/kommandos/fokus.rs:55-90` (die fünf Fokuswerte), `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-1738_o_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md`
 
@@ -51,3 +51,9 @@ Wir empfehlen Möglichkeit 1. Sie hält an einer Anzeige fest und trifft beide A
 Die benannte Einbuße ist real und wir verkleinern sie nicht: das aktive Dateifenster ist mit dem Fokus im Editor schwächer markiert als heute. Sie wiegt weniger als der Preis der zweiten Möglichkeit, die zwei Anzeigen um dieselbe Fläche legt, und weniger als der Preis der dritten, die die Angabe aus dem Blickfeld nimmt, von der jede Dateioperation abhängt.
 
 `inference:` Ob zwei Abstufungen derselben Akzentfarbe auf dem Referenzgerät und in beiden Erscheinungsbildern gut genug zu unterscheiden sind, ist nicht gemessen. Wer Möglichkeit 1 wählt und die Abstufung später als zu schwach empfindet, ändert eine Farbe und keine Regel.
+
+---
+Answered: Nutzerentscheid 260810-0250 in `history/260810-0244-orchestrator-session.md` — Möglichkeit 1, drei Zustände auf einem Kanal, der Fokus gewinnt; die Empfehlung des Datensatzes bestätigt.
+Implemented: 442a539 — S44 baut `Rahmenrolle` mit den drei Zuständen und `rahmenrolle` als die eine entscheidende Stelle (`crates/krk-ui/src/kommandos/fokus.rs`); `aufteilung.rs` trägt die volle und die zurückgetretene Akzentfarbe, `aktives_markieren` ist abgelöst. Die Antwort war bei der Umsetzung die Vorbelegung des Specs und ist mit diesem Entscheid bestätigt worden.
+
+Die benannte ungemessene Größe bleibt offen: ob die beiden Abstufungen auf dem Referenzgerät in Hell und Dunkel zu unterscheiden sind, zeigt erst der Abnahmelauf der Fähigkeit C9 am laufenden Bündel. Fällt er negativ aus, ändert das eine Farbe und nicht diesen Entscheid.

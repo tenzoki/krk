@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** coder
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C4, sechstes Abnahmekriterium und die Festlegung „Zwei Anlässe sind hinzugekommen"), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md` §S28, `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260809-2029_c_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`, `crates/krk-ui/src/appkit/anwendung.rs` (`anlass_ausfuehren`, `vorschau_verdraengt_den_editor`)
 
@@ -48,7 +48,10 @@ Möglichkeit 3 empfehlen wir ausdrücklich nicht: sie macht aus einem Umschaltbe
 Die Empfehlung ist eine Auslegung und keine geprüfte Aussage über die Absicht des Nutzers; sie ist ihm vorzulegen. Bis dahin bleibt der gebaute Zustand stehen, weil er nichts verlieren kann.
 
 ---
-Answered:
+Answered: Nutzerentscheid 260810-0250 in `history/260810-0244-orchestrator-session.md` — Möglichkeit 2, den Anlass fallen lassen; die Empfehlung des Datensatzes bestätigt. Aus vier Anlässen werden drei: das Schließen des Editors, der Wechsel auf eine andere Datei und das Beenden. Die eingeblendete Vorschau fragt nicht mehr, weil sie nichts verliert.
+
+Die Umsetzung trägt zwei Teile. Im Code fällt der Zweig für das Verdrängen aus `anlass_ausfuehren` und `vorschau_verdraengt_den_editor` (`crates/krk-ui/src/appkit/anwendung.rs`); der Befehl blendet die Vorschau ohne Nachfrage ein, und der Stand des Editors bleibt unberührt wie heute. Am Spec fällt das sechste Abnahmekriterium von C4 samt der Begründung, das Verdrängen verliere denselben Stand wie das Schließen; die Festlegung „Zwei Anlässe sind hinzugekommen" wird auf den einen verbleibenden zurückgenommen. Beides gehört in diese Sitzung und ist als Aufgabe D6 geführt.
+
 Implemented:
 Deferred:
 Superseded by:
