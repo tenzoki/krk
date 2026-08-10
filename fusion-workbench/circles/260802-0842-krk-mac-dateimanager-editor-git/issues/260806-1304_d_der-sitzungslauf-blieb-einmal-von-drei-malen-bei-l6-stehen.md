@@ -109,3 +109,14 @@ Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab.
 `vorbereitungsfehler`, `vorbereitung_gescheitert`, Prüfung am Kopf von
 `naechster_schritt`, Prüfmodul-Test
 `eine_abgewiesene_auswahl_bricht_den_lauf_ab`). `make check` grün.
+
+---
+Deferred: der naechste vollstaendige Sitzungslauf mit KRK im Vordergrund — Nutzerarbeit.
+Zurueckgestellt am 260810-1717 auf ausdrueckliche Wahl des Nutzers, in der Sitzung
+`shared/history/260810-1647-orchestrator-session.md`. Die codierbare Haelfte des Befunds ist
+am 260807 gebaut: ein abgewiesener `Auswahlversuch` in der Vorbereitung der Messstrecke bricht
+den Lauf ab, statt in die Zehn-Sekunden-Geduld zu laufen. Offen bleibt allein, welcher der
+beiden Faelle der Abbruch vom 260806 war, und das entscheidet keine Codeaenderung, sondern eine
+Messung. Aus dem Hintergrund meldet die Messstrecke `NICHT_IM_VORDERGRUND` statt Zahlen; kein
+Agent kann den Lauf fahren. Die zugehoerige offene Frage ist
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.

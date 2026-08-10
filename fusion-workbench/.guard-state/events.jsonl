@@ -33598,3 +33598,815 @@
 {"ts":"2026-08-10T12:48:50.550Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-10T12:49:06.342Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
 {"ts":"2026-08-10T12:49:06.478Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T12:49:20.936Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T12:49:30.469Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:10:47.612Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:10:49.009Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:10:53.140Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:10:53.675Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:11:09.876Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:11:45.682Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:11:52.149Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:11:57.584Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:12:44.611Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:13:19.764Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:14:23.496Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:15:32.865Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:15:33.252Z","event":"tracker_record","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:15:40.448Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/starten.sh"}
+{"ts":"2026-08-10T13:15:40.687Z","event":"tracker_record","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/starten.sh","detail":"File change recorded"}
+{"ts":"2026-08-10T13:15:45.302Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/starten.sh"}
+{"ts":"2026-08-10T13:15:45.470Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/starten.sh","detail":"File change recorded"}
+{"ts":"2026-08-10T13:15:52.260Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:15:59.626Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:16:21.839Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:16:22.701Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:16:49.036Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:17:18.902Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:20.637Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:17:29.440Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:30.107Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:17:37.678Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:38.256Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:38.256Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:17:46.421Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:46.814Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:17:46.814Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:17:59.695Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:18:30.410Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:18:30.642Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:18:30.643Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:18:38.688Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:18:38.922Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:18:38.922Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:18:51.732Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:19:09.538Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:19:09.738Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:19:09.739Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift","detail":"File change recorded"}
+{"ts":"2026-08-10T13:19:38.094Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:20:17.686Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/README.md"}
+{"ts":"2026-08-10T13:20:18.067Z","event":"churn_warning","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/README.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:20:18.068Z","event":"tracker_record","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/README.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:20:29.444Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:20:38.061Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:20:44.039Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/.gitignore"}
+{"ts":"2026-08-10T13:20:44.802Z","event":"churn_warning","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/.gitignore","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:20:44.804Z","event":"tracker_record","tool":"Write","file":"/Users/k1/Projects/productive/krk/spikes/blatt-spanne/.gitignore","detail":"File change recorded"}
+{"ts":"2026-08-10T13:21:10.430Z","event":"guard_allow","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md"}
+{"ts":"2026-08-10T13:21:11.391Z","event":"churn_warning","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:21:11.394Z","event":"tracker_record","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:31:29.777Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:31:31.906Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:31:37.342Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:31:45.956Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:31:56.681Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:31:57.869Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:32:09.040Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:32:26.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:32:27.672Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:32:33.663Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:32:44.125Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:33:39.670Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:33:41.783Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:33:52.642Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:33:55.111Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:35:00.599Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:35:00.767Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:35:31.515Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:35:31.989Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:35:31.990Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:36:13.515Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:36:54.755Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:37:10.475Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:37:10.645Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:37:10.645Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:37:33.026Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:37:33.151Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:37:33.151Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:37:53.787Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:37:53.948Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:37:53.948Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:38:31.740Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:38:31.876Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs, /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:38:31.877Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:38:38.838Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:38:38.958Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs, /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:38:38.958Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:38:41.930Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:38:42.051Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs, /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:38:42.051Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:38:49.277Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:38:49.384Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs, /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:38:49.384Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:38:51.691Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:38:51.803Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs, /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:38:51.803Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:39:03.032Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:39:10.792Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:10.912Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:10.912Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:39:10.913Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:39:30.208Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:30.332Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:30.332Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:39:30.333Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:39:41.786Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:41.905Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:39:41.905Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:39:41.906Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:40:01.662Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:40:01.819Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:40:01.819Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:40:01.820Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:40:45.310Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:40:45.438Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:40:45.439Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:40:45.439Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:41:01.018Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:01.149Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:01.149Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:41:01.149Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:41:09.272Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:09.410Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:09.410Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:41:09.410Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:41:26.557Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:26.709Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:26.710Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:41:26.710Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:41:42.061Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:42.183Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:41:42.183Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:41:42.184Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:41:52.669Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:42:02.465Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:42:31.060Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:31.189Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:31.189Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:42:31.189Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:42:33.875Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:34.002Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:34.002Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:42:34.003Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:42:49.481Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:49.609Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:49.610Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:42:49.610Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:42:55.693Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:55.823Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:42:55.823Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:42:55.823Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:43:24.097Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:43:51.909Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:44:10.249Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:44:21.362Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:44:30.718Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:44:48.955Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:44:49.085Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:44:49.085Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:44:49.085Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:45:03.072Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:03.196Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:03.196Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:45:03.197Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:45:04.642Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:04.761Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:04.762Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:45:04.762Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:45:38.773Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:38.916Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:38.916Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:45:38.917Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:45:59.460Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:59.590Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:45:59.590Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:45:59.590Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:46:35.076Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:46:53.877Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:47:01.706Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:47:15.844Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:47:28.123Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:47:38.011Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/pruefordner.rs"}
+{"ts":"2026-08-10T13:47:38.130Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/pruefordner.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:47:38.130Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/pruefordner.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:47:38.131Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/pruefordner.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:47:55.323Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs"}
+{"ts":"2026-08-10T13:47:55.439Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:47:55.439Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:47:55.439Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:48:01.540Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:48:11.988Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:48:18.636Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs"}
+{"ts":"2026-08-10T13:48:18.749Z","event":"churn_critical","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:48:18.749Z","event":"churn_warning","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:48:18.749Z","event":"tracker_record","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/messmodus.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T13:48:28.739Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:50:00.727Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:50:30.540Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:51:04.622Z","event":"guard_allow","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md"}
+{"ts":"2026-08-10T13:51:04.746Z","event":"churn_critical","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:51:04.746Z","event":"churn_warning","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:51:04.747Z","event":"tracker_record","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:51:37.340Z","event":"guard_allow","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md"}
+{"ts":"2026-08-10T13:51:37.462Z","event":"churn_critical","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:51:37.462Z","event":"churn_warning","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:51:37.463Z","event":"tracker_record","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:51:53.289Z","event":"guard_allow","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md"}
+{"ts":"2026-08-10T13:51:53.396Z","event":"churn_critical","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:51:53.397Z","event":"churn_warning","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:51:53.397Z","event":"tracker_record","tool":"Edit","file":"circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:51:57.933Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:52:42.055Z","event":"guard_allow","tool":"Write","file":"shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md"}
+{"ts":"2026-08-10T13:52:42.164Z","event":"churn_critical","tool":"Write","file":"shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: /Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T13:52:42.165Z","event":"churn_warning","tool":"Write","file":"shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md","detail":"Elevated file churn: 1 file(s) with multiple changes: /Users/k1/Projects/productive/krk/spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T13:52:42.165Z","event":"tracker_record","tool":"Write","file":"shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md","detail":"File change recorded"}
+{"ts":"2026-08-10T13:52:52.290Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:54:20.858Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:54:55.254Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:55:14.621Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T13:55:57.795Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:45:54.399Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:45:59.636Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:06.966Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:08.204Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:12.780Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-10T14:46:12.899Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T14:46:13.238Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:18.105Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:23.693Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:29.688Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:46:36.611Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:03.204Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:22.090Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:31.956Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:35.353Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:46.688Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:47:47.529Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:48:19.599Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md"}
+{"ts":"2026-08-10T14:48:19.753Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T14:48:19.753Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"Elevated file churn: 1 file(s) with multiple changes: spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T14:48:19.753Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-10T14:48:28.710Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T14:48:33.616Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-10T14:48:33.719Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T15:03:44.582Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:03:45.670Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:06:28.975Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:06:39.330Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/agentstate.yaml"}
+{"ts":"2026-08-10T15:06:39.445Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/agentstate.yaml","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T15:06:49.828Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-10T15:06:49.935Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T15:07:26.451Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:07:26.754Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:07:30.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:07:40.543Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:08:20.418Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:08:29.066Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:08:51.679Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:09:31.654Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:12:42.906Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/tasklist.md"}
+{"ts":"2026-08-10T15:12:43.011Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/tasklist.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T15:12:43.011Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/tasklist.md","detail":"Elevated file churn: 1 file(s) with multiple changes: spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T15:12:43.012Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/tasklist.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:13:25.768Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1707-tasklist-update.md"}
+{"ts":"2026-08-10T15:13:25.895Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/shared/history/260810-1707-tasklist-update.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/editor.rs"}
+{"ts":"2026-08-10T15:13:25.895Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/history/260810-1707-tasklist-update.md","detail":"Elevated file churn: 1 file(s) with multiple changes: spikes/blatt-spanne/spanne.swift"}
+{"ts":"2026-08-10T15:13:25.895Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1707-tasklist-update.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:14:31.045Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:17:46.966Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:17:54.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:18:09.805Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:18:11.526Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md"}
+{"ts":"2026-08-10T15:18:11.642Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:18:26.488Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:18:33.890Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:14.151Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:15.077Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:18.179Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:18.809Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:23.084Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:23.362Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:29.264Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:30.671Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:37.493Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:38.907Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:41.370Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:42.533Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:45.720Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:46.483Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:55.350Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:19:55.994Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:00.051Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:02.684Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:03.802Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:05.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:05.626Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:06.441Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:15.040Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:16.833Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:17.394Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:17.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:20.061Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:23.976Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:25.580Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:27.456Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:31.540Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:32.118Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:34.179Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:34.179Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:34.645Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:37.235Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md"}
+{"ts":"2026-08-10T15:20:37.368Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:20:39.398Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:39.403Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:39.622Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:40.277Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:41.203Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:45.947Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:46.837Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:47.671Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md"}
+{"ts":"2026-08-10T15:20:47.801Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:20:51.712Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:53.093Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:54.097Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:20:57.762Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:05.655Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:06.626Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:07.918Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md"}
+{"ts":"2026-08-10T15:21:08.057Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:21:11.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:15.599Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:15.839Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:16.763Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:21.415Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:27.431Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:28.992Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:30.789Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:38.155Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:49.199Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:21:58.143Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1720-ontocoder-plan-messstrecken-defekt-berichtigt.md"}
+{"ts":"2026-08-10T15:21:58.264Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1720-ontocoder-plan-messstrecken-defekt-berichtigt.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:22:07.640Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:22:09.075Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:22:10.537Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1721-ontocoder-der-verweis-auf-die-zustellerregel.md"}
+{"ts":"2026-08-10T15:22:10.655Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1721-ontocoder-der-verweis-auf-die-zustellerregel.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:22:16.879Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:22:38.434Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T15:22:38.556Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:22:40.730Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:22:43.159Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T15:22:43.282Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:22:50.859Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T15:22:50.987Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:22:58.193Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T15:22:58.328Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:23:23.382Z","event":"guard_allow","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/sternform.py"}
+{"ts":"2026-08-10T15:23:23.505Z","event":"tracker_record","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/sternform.py","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-10T15:23:28.044Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:23:34.486Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md"}
+{"ts":"2026-08-10T15:23:34.599Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:23:37.162Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:23:42.987Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md"}
+{"ts":"2026-08-10T15:23:43.099Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:23:50.044Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:23:56.756Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:04.226Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:04.889Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:12.292Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:13.300Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:22.439Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:24.727Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:33.452Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:41.837Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:56.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:24:59.993Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:25:05.340Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:25:53.833Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md"}
+{"ts":"2026-08-10T15:25:53.951Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:25:59.344Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:26:10.340Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:26:24.224Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md"}
+{"ts":"2026-08-10T15:26:24.336Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:26:30.022Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md"}
+{"ts":"2026-08-10T15:26:30.127Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:27:35.820Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:27:35.939Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:27:56.735Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:28:19.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:28:27.206Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:27.321Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:28:36.359Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:36.466Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:28:41.661Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:41.772Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:28:46.865Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:46.980Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:46.980Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:28:52.960Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:53.075Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:53.075Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:28:57.848Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:57.958Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:28:57.958Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:29:10.486Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:29:36.649Z","event":"guard_allow","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/pruefung.py"}
+{"ts":"2026-08-10T15:29:36.755Z","event":"tracker_record","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/pruefung.py","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-10T15:29:40.132Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:29:45.669Z","event":"guard_allow","tool":"Edit","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/pruefung.py"}
+{"ts":"2026-08-10T15:29:45.771Z","event":"tracker_record","tool":"Edit","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/pruefung.py","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-10T15:29:51.268Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:30:10.273Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:30:10.392Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:30:10.392Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:31:05.080Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:31:24.720Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:32:04.222Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:32:44.013Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:33:08.139Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1745_o_der-messplanwaechter-greift-bei-strg-c-nicht-weil-process-exit-kein-drop-laeuft.md"}
+{"ts":"2026-08-10T15:33:08.266Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1745_o_der-messplanwaechter-greift-bei-strg-c-nicht-weil-process-exit-kein-drop-laeuft.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:33:08.267Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1745_o_der-messplanwaechter-greift-bei-strg-c-nicht-weil-process-exit-kein-drop-laeuft.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:33:25.925Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1746_o_spec-und-plan-der-runde-2-tragen-sechs-verweise-mit-ausgeschriebenem-zustandsmarker.md"}
+{"ts":"2026-08-10T15:33:26.055Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1746_o_spec-und-plan-der-runde-2-tragen-sechs-verweise-mit-ausgeschriebenem-zustandsmarker.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:33:26.055Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1746_o_spec-und-plan-der-runde-2-tragen-sechs-verweise-mit-ausgeschriebenem-zustandsmarker.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:33:54.914Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:34:07.511Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:34:19.023Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:34:36.959Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:34:55.610Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:18.084Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:19.259Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:26.479Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:27.031Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:31.914Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:33.463Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:36.584Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:44.097Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:54.790Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:35:59.164Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:36:10.820Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:36:13.783Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:36:43.244Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-10T15:36:43.357Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:36:43.358Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:37:12.944Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:37:39.106Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:38:32.195Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:01.070Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:02.497Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:06.803Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:07.263Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:27.122Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:39:38.698Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:40:19.719Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T15:40:19.838Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:40:19.838Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:40:25.236Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T15:40:25.365Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:40:25.365Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:40:27.811Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T15:40:27.928Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:40:27.928Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T15:40:57.394Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:41:24.167Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:41:33.782Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:42:30.249Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:42:57.038Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:11.312Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:42.965Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:44.034Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:51.591Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:52.748Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:56.597Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:43:57.223Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:03.993Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:04.185Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:24.603Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:24.965Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:43.030Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:44.311Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:48.516Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:48.574Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:44:54.489Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:05.480Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:14.365Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:17.122Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:23.112Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:26.043Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:45:34.871Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:46:09.270Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:46:09.754Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:46:22.682Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:46:23.063Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:46:51.993Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:07.038Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:25.465Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:29.451Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:34.702Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:41.794Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:47:52.730Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:48:07.723Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:48:25.064Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:48:39.215Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:49:03.345Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:49:29.278Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:49:35.026Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:49:35.813Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:50:04.913Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:50:12.860Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:50:27.986Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:50:52.664Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:51:35.996Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1751_o_zwei-zusicherungen-ueber-den-auswahlversuch-halten-so-nicht-wie-sie-geschrieben-sind.md"}
+{"ts":"2026-08-10T15:51:36.113Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1751_o_zwei-zusicherungen-ueber-den-auswahlversuch-halten-so-nicht-wie-sie-geschrieben-sind.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:51:36.113Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1751_o_zwei-zusicherungen-ueber-den-auswahlversuch-halten-so-nicht-wie-sie-geschrieben-sind.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:52:06.080Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1752_o_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-und-deckt-das-schreiben-selbst-nicht.md"}
+{"ts":"2026-08-10T15:52:06.453Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1752_o_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-und-deckt-das-schreiben-selbst-nicht.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:52:06.455Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1752_o_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-und-deckt-das-schreiben-selbst-nicht.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:52:35.425Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1753_o_die-beiden-meldungen-des-terminal-befehls-sind-als-einzige-ihres-moduls-ungeprueft.md"}
+{"ts":"2026-08-10T15:52:36.449Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1753_o_die-beiden-meldungen-des-terminal-befehls-sind-als-einzige-ihres-moduls-ungeprueft.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:52:36.450Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1753_o_die-beiden-meldungen-des-terminal-befehls-sind-als-einzige-ihres-moduls-ungeprueft.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:53:29.431Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/reviews/260810-1755-coderev-codeanteil-turn-1-messplanwaechter-auswahlversuch-terminalmeldung.md"}
+{"ts":"2026-08-10T15:53:29.856Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/reviews/260810-1755-coderev-codeanteil-turn-1-messplanwaechter-auswahlversuch-terminalmeldung.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T15:53:29.857Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/reviews/260810-1755-coderev-codeanteil-turn-1-messplanwaechter-auswahlversuch-terminalmeldung.md","detail":"File change recorded"}
+{"ts":"2026-08-10T15:54:26.805Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T15:54:51.303Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/agentstate.yaml"}
+{"ts":"2026-08-10T15:54:51.631Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/agentstate.yaml","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T15:54:57.629Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-10T15:54:57.973Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T16:38:13.989Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:38:57.621Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:38:58.592Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:05.689Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:16.167Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:22.401Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:23.234Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:27.982Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:35.323Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:36.784Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:39.972Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:41.829Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:42.882Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:50.712Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:52.104Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:39:53.188Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:05.658Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:12.577Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:16.639Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:27.679Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:33.075Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:35.028Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:40:59.660Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:41:29.664Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:41:31.129Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:41:33.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:41:48.045Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T16:41:48.174Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:41:48.187Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:41:55.124Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T16:41:55.268Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:41:55.268Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:05.388Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T16:42:05.502Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:05.502Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:23.115Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T16:42:23.237Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:23.238Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:25.783Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:42:28.214Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:42:45.477Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:42:45.586Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:45.586Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:47.196Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:42:47.300Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:47.301Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:52.218Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:42:52.333Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:52.333Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:42:54.354Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:42:54.475Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:42:54.475Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:43:05.516Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:43:15.869Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:43:15.993Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:43:15.993Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:43:29.063Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:43:35.550Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:43:46.838Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-10T16:43:46.963Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:43:46.963Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:43:52.986Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:08.015Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T16:44:08.132Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:44:08.132Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:44:11.086Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:12.256Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T16:44:12.363Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:44:12.363Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:44:16.936Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:23.043Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:28.454Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:28.813Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:38.303Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:44:42.117Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:45:06.488Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-10T16:45:06.606Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:45:06.606Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:45:20.233Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1844-ontocoder-sternform-in-spec-und-plan-der-runde-2.md"}
+{"ts":"2026-08-10T16:45:20.339Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/history/260810-1844-ontocoder-sternform-in-spec-und-plan-der-runde-2.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:45:20.339Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1844-ontocoder-sternform-in-spec-und-plan-der-runde-2.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:45:25.923Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-10T16:45:26.050Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:45:26.050Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/kommandos/operationen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:45:26.192Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:46:01.583Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:46:28.068Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:46:34.878Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:46:44.640Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:46:50.396Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:47:00.418Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-10T16:47:00.537Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:47:00.538Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T16:47:31.667Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:48:52.693Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:49:30.187Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md"}
+{"ts":"2026-08-10T16:49:30.304Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:49:30.305Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:49:51.165Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1851_o_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md"}
+{"ts":"2026-08-10T16:49:51.291Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1851_o_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:49:51.291Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1851_o_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:50:40.930Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:51:06.638Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:51:28.032Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:51:43.123Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:14.692Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:15.509Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:18.845Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:19.980Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:23.394Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:24.326Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:28.148Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:29.402Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:34.986Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:35.376Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:38.732Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:52:58.176Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:53:20.714Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:53:21.073Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:53:41.995Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:54:31.900Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:54:32.803Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:54:39.651Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:54:39.729Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:54:56.377Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:55:00.173Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:55:24.934Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:55:24.984Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:55:45.906Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:55:49.872Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:11.091Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:12.440Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:21.368Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:22.015Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:27.248Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:35.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:41.252Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:41.821Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:46.024Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:48.860Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:56:53.291Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:57:36.042Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:57:41.610Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:58:28.514Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:58:34.208Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T16:59:35.747Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md"}
+{"ts":"2026-08-10T16:59:35.855Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:59:35.855Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T16:59:55.096Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1906_o_die-konvention-am-auswahlversuch-steht-in-kommentaren-und-wird-von-nichts-erzwungen.md"}
+{"ts":"2026-08-10T16:59:55.220Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1906_o_die-konvention-am-auswahlversuch-steht-in-kommentaren-und-wird-von-nichts-erzwungen.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T16:59:55.220Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1906_o_die-konvention-am-auswahlversuch-steht-in-kommentaren-und-wird-von-nichts-erzwungen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:00:10.993Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md"}
+{"ts":"2026-08-10T17:00:11.112Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T17:00:11.112Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:00:28.930Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:12.833Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:13.983Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:18.245Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:19.899Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:34.424Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:35.936Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:01:49.754Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:00.155Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:03.687Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:13.670Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:15.011Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:31.667Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:51.428Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:02:54.061Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:03:06.249Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:03:08.880Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:03:29.319Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:03:38.858Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:03:40.227Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:00.609Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:02.893Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:15.341Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:16.109Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:27.641Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:53.651Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:04:54.872Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:05:11.437Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:05:33.354Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:06:08.753Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:06:19.902Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:06:32.303Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:06:50.058Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:07:31.168Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:07:37.265Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:09:45.762Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md"}
+{"ts":"2026-08-10T17:09:45.871Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T17:09:45.871Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:10:00.219Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md"}
+{"ts":"2026-08-10T17:10:00.325Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T17:10:00.325Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1907-reconciliation.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:10:15.004Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:10:25.120Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:10:52.233Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1907_o_die-durchsicht-von-turn-2-hat-kein-durchsichtsdokument-hinterlassen.md"}
+{"ts":"2026-08-10T17:10:52.347Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1907_o_die-durchsicht-von-turn-2-hat-kein-durchsichtsdokument-hinterlassen.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, crates/krk-ui/src/appkit/anwendung.rs, fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md"}
+{"ts":"2026-08-10T17:10:52.347Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1907_o_die-durchsicht-von-turn-2-hat-kein-durchsichtsdokument-hinterlassen.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:11:32.613Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:12:52.465Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:23:04.624Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:23:37.230Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:23:38.338Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:23:47.618Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:24:08.231Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:24:08.717Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:24:22.779Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:24:26.719Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:24:47.819Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:24:47.939Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T17:25:02.083Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:25:02.197Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T17:25:15.064Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:25:15.182Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T17:25:27.673Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:25:27.783Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T17:25:53.378Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:26:19.725Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:26:24.368Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:26:43.879Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:26:43.994Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:26:43.995Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-10T17:27:11.729Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:28:25.360Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1925_o_eine-probe-schreibt-ins-echte-temporaerverzeichnis-und-raeumt-dort-jetzt-fremde-messplaene-ab.md"}
+{"ts":"2026-08-10T17:28:25.492Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1925_o_eine-probe-schreibt-ins-echte-temporaerverzeichnis-und-raeumt-dort-jetzt-fremde-messplaene-ab.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:28:25.492Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1925_o_eine-probe-schreibt-ins-echte-temporaerverzeichnis-und-raeumt-dort-jetzt-fremde-messplaene-ab.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:29:11.412Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:29:42.532Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:30:05.497Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:30:16.694Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:30:23.189Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:30:39.987Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:30:44.278Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:31:14.140Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:31:19.286Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:33:12.738Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:33:47.857Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:33:47.986Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:33:47.986Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:33:50.506Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:33:50.616Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:33:50.616Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:02.154Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:34:02.276Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:34:02.276Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:10.386Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:34:10.531Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:34:10.531Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:15.310Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:34:15.434Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:34:15.435Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:30.743Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:34:30.854Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:34:30.854Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:43.593Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T17:34:43.703Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T17:34:43.703Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T17:34:53.179Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T17:35:08.176Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:07:47.150Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:07:54.310Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:08:13.078Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:08:57.511Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260810-1945_o_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md"}
+{"ts":"2026-08-10T18:08:57.653Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260810-1945_o_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T18:08:57.653Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260810-1945_o_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md","detail":"File change recorded"}
+{"ts":"2026-08-10T18:09:52.764Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:10:05.689Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md"}
+{"ts":"2026-08-10T18:10:05.808Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T18:10:05.809Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-10T18:10:32.750Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md"}
+{"ts":"2026-08-10T18:10:32.911Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"Elevated file churn: 2 file(s) with multiple changes: CLAUDE.md, crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-10T18:10:32.911Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/shared/history/260810-1647-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-10T18:10:51.236Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-10T18:10:51.357Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-10T18:11:07.934Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T18:11:37.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}

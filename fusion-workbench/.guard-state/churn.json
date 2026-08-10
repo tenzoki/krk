@@ -24,7 +24,7 @@
       "lastChange": "2026-08-02T15:37:15.229Z",
       "thrashingScore": 1
     },
-    "shared/history/260802-0755-orchestrator-session.md": {
+    "fusion-workbench/shared/history/260802-0755-orchestrator-session.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T05:55:26.586Z",
@@ -84,35 +84,35 @@
       "lastChange": "2026-08-02T06:53:23.914Z",
       "thrashingScore": 0
     },
-    "portfolio.md": {
-      "totalChanges": 1,
+    "fusion-workbench/portfolio.md": {
+      "totalChanges": 5,
       "changesThisSession": 0,
-      "lastChange": "2026-08-02T06:53:57.674Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-10T12:46:56.233Z",
+      "thrashingScore": 1
     },
-    "shared/history/260802-0853-playmaker-direct-dispatch.md": {
+    "fusion-workbench/shared/history/260802-0853-playmaker-direct-dispatch.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T06:54:23.381Z",
       "thrashingScore": 0
     },
-    "orchestrator-live.md": {
-      "totalChanges": 4,
+    "fusion-workbench/orchestrator-live.md": {
+      "totalChanges": 9,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T19:31:37.737Z",
-      "thrashingScore": 1
+      "lastChange": "2026-08-10T04:55:58.995Z",
+      "thrashingScore": 3
     },
-    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1014-orchestrator-session.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T08:14:46.616Z",
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 80,
-      "changesThisSession": 37,
-      "lastChange": "2026-08-10T12:27:35.426Z",
-      "thrashingScore": 96
+      "totalChanges": 87,
+      "changesThisSession": 7,
+      "lastChange": "2026-08-10T17:34:43.703Z",
+      "thrashingScore": 39
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -168,18 +168,6 @@
       "lastChange": "2026-08-02T09:41:02.834Z",
       "thrashingScore": 3
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/validate.mjs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T09:16:56.404Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/metrics.mjs": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T09:17:19.827Z",
-      "thrashingScore": 0
-    },
     "reviews/260802-1118-conceptrev-spec-navigator-geruest.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
@@ -190,12 +178,6 @@
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T09:30:50.327Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/mmv/check.mjs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T09:32:28.389Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1127-shaper-directive-korrektur-und-referenzgeraet.md": {
@@ -256,18 +238,6 @@
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T12:18:52.574Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-nackt.txt": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T12:15:33.812Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/probe-uebersprungen.txt": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T12:15:39.553Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1416-bugfix-fn-tasten-auswertung.md": {
@@ -338,7 +308,7 @@
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_o_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:02:51.180Z",
       "thrashingScore": 0
     },
@@ -382,12 +352,6 @@
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-02T13:03:21.987Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/check.mjs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T13:02:02.112Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1501-planner-nachzug-konzeptpruefung-und-veraltete-verweise.md": {
@@ -440,7 +404,7 @@
     },
     "crates/krk-ui/src/main.rs": {
       "totalChanges": 21,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:21:24.882Z",
       "thrashingScore": 7
     },
@@ -452,7 +416,7 @@
     },
     "crates/krk-bench/src/main.rs": {
       "totalChanges": 16,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:19:47.930Z",
       "thrashingScore": 5
     },
@@ -506,7 +470,7 @@
     },
     "crates/krk-core/src/verzeichnis/sys.rs": {
       "totalChanges": 20,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:28:22.796Z",
       "thrashingScore": 12
     },
@@ -530,7 +494,7 @@
     },
     "crates/krk-core/src/verzeichnis/mod.rs": {
       "totalChanges": 10,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:25:36.521Z",
       "thrashingScore": 3
     },
@@ -539,18 +503,6 @@
       "changesThisSession": 0,
       "lastChange": "2026-08-06T15:19:42.451Z",
       "thrashingScore": 2
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T15:57:25.261Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/178a889e-f215-4db1-b284-7e9eb7355b6f/scratchpad/diag2.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-02T16:00:54.590Z",
-      "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1803-verzeichnisleser-und-ordnermodell.md": {
       "totalChanges": 1,
@@ -590,15 +542,15 @@
     },
     "crates/krk-bench/src/fixture.rs": {
       "totalChanges": 3,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:20:01.304Z",
       "thrashingScore": 1
     },
     "crates/krk-bench/src/messen.rs": {
-      "totalChanges": 79,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:20:21.276Z",
-      "thrashingScore": 26
+      "totalChanges": 90,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-10T17:26:43.994Z",
+      "thrashingScore": 36
     },
     "crates/krk-bench/src/bericht.rs": {
       "totalChanges": 25,
@@ -679,9 +631,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-2253-signaturidentitaet-eindeutige-lage-und-zertifikatskette.md": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-02T21:00:08.779Z",
+      "lastChange": "2026-08-03T09:56:49.850Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1038-orchestrator-session.md": {
@@ -694,12 +646,6 @@
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-03T09:56:24.342Z",
-      "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-2253-signaturidentitaet-eindeutige-lage-und-zertifikatskette.md": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-03T09:56:49.850Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1159-hilfetext-xtask-dritte-suchstufe.md": {
@@ -763,10 +709,10 @@
       "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 405,
+      "totalChanges": 438,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:27:24.872Z",
-      "thrashingScore": 153
+      "lastChange": "2026-08-10T16:47:00.537Z",
+      "thrashingScore": 158
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -793,10 +739,10 @@
       "thrashingScore": 6
     },
     "crates/krk-ui/src/appkit/ereignisse.rs": {
-      "totalChanges": 55,
+      "totalChanges": 59,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T15:42:50.433Z",
-      "thrashingScore": 44
+      "lastChange": "2026-08-10T10:04:55.384Z",
+      "thrashingScore": 19
     },
     "crates/krk-ui/src/appkit/probe.rs": {
       "totalChanges": 1,
@@ -925,10 +871,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/messmodus.rs": {
-      "totalChanges": 46,
+      "totalChanges": 48,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T13:26:36.089Z",
-      "thrashingScore": 15
+      "lastChange": "2026-08-10T13:48:18.748Z",
+      "thrashingScore": 16
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-1755_o_l1-verfehlt-die-16-ms-zusage-am-bildrand.md": {
       "totalChanges": 3,
@@ -1112,7 +1058,7 @@
     },
     "crates/krk-core/tests/ablage.rs": {
       "totalChanges": 32,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:25:15.801Z",
       "thrashingScore": 10
     },
@@ -1165,16 +1111,16 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/tasten/belegung.rs": {
-      "totalChanges": 76,
+      "totalChanges": 78,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T11:04:02.742Z",
-      "thrashingScore": 25
+      "thrashingScore": 26
     },
     "crates/krk-core/tests/belegung.rs": {
-      "totalChanges": 35,
+      "totalChanges": 39,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T15:46:49.170Z",
-      "thrashingScore": 17
+      "lastChange": "2026-08-10T06:24:16.376Z",
+      "thrashingScore": 13
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_o_der-include-str-pfad-in-schritt-11-liegt-eine-ebene-zu-hoch.md": {
       "totalChanges": 1,
@@ -1260,18 +1206,6 @@
       "lastChange": "2026-08-04T07:11:20.159Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/crates/krk-core/tests/belegung.rs": {
-      "totalChanges": 4,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:24:16.376Z",
-      "thrashingScore": 1
-    },
-    "/Users/k1/Projects/productive/krk/crates/krk-core/src/tasten/belegung.rs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-04T07:15:12.892Z",
-      "thrashingScore": 0
-    },
     "260804-0907_o_drei-fest-verdrahtete-zahlen-im-code-brechen-mit-den-neuen-eintraegen-aus-s9b.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
@@ -1284,17 +1218,17 @@
       "lastChange": "2026-08-04T07:18:33.398Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260804-1015-zaehlpruefungen-ohne-literale.md": {
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260804-1015-zaehlpruefungen-ohne-literale.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-04T07:19:37.783Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md": {
-      "totalChanges": 2,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T08:43:49.556Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-10T15:23:43.098Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260804-0933-shaper-eingebauter-web-betrachter.md": {
       "totalChanges": 1,
@@ -1309,10 +1243,10 @@
       "thrashingScore": 14
     },
     "crates/krk-ui/src/fenstermodell.rs": {
-      "totalChanges": 47,
+      "totalChanges": 55,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T01:52:50.298Z",
-      "thrashingScore": 15
+      "thrashingScore": 18
     },
     "crates/krk-ui/src/appkit/statuszeile.rs": {
       "totalChanges": 20,
@@ -1506,12 +1440,6 @@
       "lastChange": "2026-08-04T11:12:28.177Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md": {
-      "totalChanges": 5,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T04:55:58.995Z",
-      "thrashingScore": 1
-    },
     "crates/krk-ui/src/auffrischung.rs": {
       "totalChanges": 20,
       "changesThisSession": 0,
@@ -1529,12 +1457,6 @@
       "changesThisSession": 0,
       "lastChange": "2026-08-05T14:59:35.091Z",
       "thrashingScore": 1
-    },
-    "/tmp/krk-c9-session.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-04T12:39:05.866Z",
-      "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1451_o_die-dateiliste-von-s14-nennt-tabs-rs-nicht-obwohl-der-bildlauf-dort-wohnt.md": {
       "totalChanges": 1,
@@ -1651,10 +1573,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/operationen.rs": {
-      "totalChanges": 33,
+      "totalChanges": 36,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T23:51:21.918Z",
-      "thrashingScore": 11
+      "lastChange": "2026-08-10T16:45:26.050Z",
+      "thrashingScore": 14
     },
     "crates/krk-ui/src/appkit/blaetter/fortschritt.rs": {
       "totalChanges": 5,
@@ -2058,12 +1980,6 @@
       "lastChange": "2026-08-05T12:01:18.863Z",
       "thrashingScore": 0
     },
-    "/tmp/krk-probe/resources/default-keymap.toml": {
-      "totalChanges": 3,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T12:11:16.948Z",
-      "thrashingScore": 3
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-1411_o_ordnernavigation-mit-oder-ohne-zusatztaste.md": {
       "totalChanges": 3,
       "changesThisSession": 0,
@@ -2208,12 +2124,6 @@
       "lastChange": "2026-08-05T16:49:00.769Z",
       "thrashingScore": 0
     },
-    "/tmp/krk-pruef-session.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T16:58:25.863Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-1901-fokus-beim-start-in-das-dateifenster.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
@@ -2234,7 +2144,7 @@
     },
     "crates/krk-ui/src/vorschaumodell.rs": {
       "totalChanges": 43,
-      "changesThisSession": 10,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:23:12.922Z",
       "thrashingScore": 30
     },
@@ -2436,64 +2346,10 @@
       "lastChange": "2026-08-06T09:54:37.400Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/zero2.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:04:37.180Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/Probe.app/Contents/Info.plist": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:04:53.416Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/zero3.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:05:23.287Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1215_o_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-06T10:15:33.090Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-vorschau-aus.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:23:21.523Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-vorschau-an.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:23:27.596Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe.sh": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:23:35.586Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/spannen.sh": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:26:39.331Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/session-riesig.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:28:33.519Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe2.sh": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:29:09.529Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1235_o_der-sitzungslauf-der-abnahmestrecke-bricht-bei-l5-tab-ab-und-gibt-keine-zahl-mehr-aus.md": {
@@ -2506,30 +2362,6 @@
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-06T10:33:55.724Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/messplan.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:41:21.027Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/lauf-terminal.command": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:49:32.561Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/menue-terminal.command": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:00:29.169Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/alle-terminal.command": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:02:34.205Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md": {
@@ -2548,12 +2380,6 @@
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-06T11:05:45.147Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/marker.py": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:11:02.266Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1312-coder-cfrunloop-merkmal-und-markerzitate.md": {
@@ -2616,18 +2442,6 @@
       "lastChange": "2026-08-06T14:45:58.718Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/strg-c-nachweis.sh": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:53:08.787Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/probe-session.toml": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:54:29.821Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1357-coder-signalgriff-vorgangsabbruch-zwischenablagegrenze.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
@@ -2644,12 +2458,6 @@
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-06T12:16:26.993Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/715554cc-ded3-474a-bec0-e2ad5ed113e1/scratchpad/leserwache.sh": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T12:25:09.937Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-1440-coder-auffrischungsaufschub-nur-fuer-schnelle-vorgaenge.md": {
@@ -2730,11 +2538,11 @@
       "lastChange": "2026-08-06T15:35:53.291Z",
       "thrashingScore": 0
     },
-    "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md": {
-      "totalChanges": 1,
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md": {
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T20:58:16.412Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-07T08:47:04.569Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_p_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md": {
       "totalChanges": 1,
@@ -2796,24 +2604,6 @@
       "lastChange": "2026-08-06T22:13:06.563Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/messreihe.sh": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T23:58:26.972Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3466a17af5/scratchpad/x": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T23:57:55.671Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3684a17af5/scratchpad/dummy.txt": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T23:58:02.134Z",
-      "thrashingScore": 0
-    },
     "messungen/260807-0002-MacBookPro15-1-ersatz-beim-ersten-stapel-l2-l3-l10.txt": {
       "totalChanges": 1,
       "changesThisSession": 0,
@@ -2862,18 +2652,6 @@
       "lastChange": "2026-08-07T08:01:36.017Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/mess.swift": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T05:40:04.423Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/mess2.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T05:43:20.581Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-0743-ontocoder-die-sprache-des-buendels-und-die-pfadzitate.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
@@ -2897,24 +2675,6 @@
       "changesThisSession": 0,
       "lastChange": "2026-08-07T07:54:15.937Z",
       "thrashingScore": 1
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/noreg.app/Contents/Info.plist": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T05:53:22.115Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/withreg.app/Contents/Info.plist": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T05:53:24.627Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/main.m": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T05:53:36.991Z",
-      "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0754_o_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md": {
       "totalChanges": 1,
@@ -3054,12 +2814,6 @@
       "lastChange": "2026-08-07T07:46:28.501Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/3bdb2063-d50a-407c-a28c-8a3664a17af5/scratchpad/messung.m": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T07:50:50.389Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-0952-ontocoder-entwicklungsregion-auswahlregel-und-das-letzte-pfadzitat.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
@@ -3162,23 +2916,11 @@
       "lastChange": "2026-08-07T08:28:29.468Z",
       "thrashingScore": 0
     },
-    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md": {
-      "totalChanges": 3,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-07T08:47:04.569Z",
-      "thrashingScore": 3
-    },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-1022-reconciliation.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T08:27:00.945Z",
       "thrashingScore": 0
-    },
-    "fusion-workbench/portfolio.md": {
-      "totalChanges": 4,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:46:56.233Z",
-      "thrashingScore": 1
     },
     "fusion-workbench/shared/history/260807-1042-playmaker-orchestrator-phase4.md": {
       "totalChanges": 1,
@@ -3235,10 +2977,10 @@
       "thrashingScore": 12
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md": {
-      "totalChanges": 6,
+      "totalChanges": 8,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T17:19:01.407Z",
-      "thrashingScore": 10
+      "lastChange": "2026-08-10T15:20:47.801Z",
+      "thrashingScore": 2
     },
     "fusion-workbench/shared/history/260807-1914-planner-l9-auf-65-prozent-in-spec-und-plan.md": {
       "totalChanges": 1,
@@ -3276,7 +3018,7 @@
       "lastChange": "2026-08-07T19:18:10.179Z",
       "thrashingScore": 0
     },
-    "shared/history/260807-2116-shaper-eingebauter-editor-mit-textmarken.md": {
+    "fusion-workbench/shared/history/260807-2116-shaper-eingebauter-editor-mit-textmarken.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T19:18:45.268Z",
@@ -3295,10 +3037,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md": {
-      "totalChanges": 1,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T19:39:54.118Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-08T07:11:38.193Z",
+      "thrashingScore": 1
     },
     "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_welche-dateien-oeffnet-der-editor-ueberhaupt.md": {
       "totalChanges": 1,
@@ -3330,11 +3072,11 @@
       "lastChange": "2026-08-07T19:51:08.263Z",
       "thrashingScore": 0
     },
-    "circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 5,
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
+      "totalChanges": 54,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T19:57:40.427Z",
-      "thrashingScore": 7
+      "lastChange": "2026-08-10T16:42:47.300Z",
+      "thrashingScore": 18
     },
     "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_traegt-eine-textmarke-auch-einen-bereich-oder-nur-eine-stelle.md": {
       "totalChanges": 2,
@@ -3342,35 +3084,23 @@
       "lastChange": "2026-08-07T19:57:47.484Z",
       "thrashingScore": 0
     },
-    "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2147-shaper-spec-editor.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2147-shaper-spec-editor.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T19:58:25.640Z",
       "thrashingScore": 0
     },
-    "circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260807-2202-conceptrev-spec-eingebauter-editor-mit-textmarken.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260807-2202-conceptrev-spec-eingebauter-editor-mit-textmarken.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T20:03:04.778Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260807-2139-orchestrator-session.md": {
-      "totalChanges": 3,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-08T07:11:38.193Z",
-      "thrashingScore": 1
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/shared/issues/260808-0017_o_fusion-rules-gibt-conceptrev-die-stilprofile-nicht-aus.md": {
+    "fusion-workbench/shared/issues/260808-0017_o_fusion-rules-gibt-conceptrev-die-stilprofile-nicht-aus.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T22:19:21.196Z",
       "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 18,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T18:50:46.362Z",
-      "thrashingScore": 36
     },
     "260808-0021_o_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md": {
       "totalChanges": 1,
@@ -3378,13 +3108,13 @@
       "lastChange": "2026-08-07T22:30:57.735Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0021_o_die-fuenf-beantworteten-datensaetze-tragen-zwei-answered-zeilen-und-einen-veralteten-kopf.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260808-0021_o_die-fuenf-beantworteten-datensaetze-tragen-zwei-answered-zeilen-und-einen-veralteten-kopf.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T22:31:41.276Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0021-shaper-spec-ueberarbeitung.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0021-shaper-spec-ueberarbeitung.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T22:32:16.408Z",
@@ -3414,17 +3144,17 @@
       "lastChange": "2026-08-07T23:57:18.398Z",
       "thrashingScore": 0
     },
-    "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0159-planner-plan-editor.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0159-planner-plan-editor.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-07T23:59:45.347Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 92,
+      "totalChanges": 112,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:08:08.123Z",
-      "thrashingScore": 56
+      "lastChange": "2026-08-10T06:31:03.831Z",
+      "thrashingScore": 37
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0916-coder-s1-ursache-der-y-tasten.md": {
       "totalChanges": 1,
@@ -3451,10 +3181,10 @@
       "thrashingScore": 2
     },
     "crates/krk-core/tests/text.rs": {
-      "totalChanges": 19,
+      "totalChanges": 21,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T07:53:30.793Z",
-      "thrashingScore": 22
+      "thrashingScore": 7
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260808-0923-coder-s11-lesezeichen-zwei-sorten.md": {
       "totalChanges": 1,
@@ -3577,10 +3307,10 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/text/datei.rs": {
-      "totalChanges": 22,
+      "totalChanges": 25,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T09:17:27.757Z",
-      "thrashingScore": 7
+      "thrashingScore": 8
     },
     "crates/krk-core/src/text/marke.rs": {
       "totalChanges": 2,
@@ -3596,7 +3326,7 @@
     },
     "fusion-workbench/shared/issues/260809-1106_o_die-probenordner-der-vorschau-tragen-feste-namen-im-temporaerverzeichnis.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:03:16.190Z",
       "thrashingScore": 0
     },
@@ -3649,10 +3379,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/editormodell.rs": {
-      "totalChanges": 89,
+      "totalChanges": 103,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T08:59:21.965Z",
-      "thrashingScore": 75
+      "thrashingScore": 34
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1547-coder-s15-editormodell.md": {
       "totalChanges": 2,
@@ -3661,10 +3391,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/editor.rs": {
-      "totalChanges": 187,
-      "changesThisSession": 28,
-      "lastChange": "2026-08-10T11:40:59.277Z",
-      "thrashingScore": 114
+      "totalChanges": 261,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:45:59.589Z",
+      "thrashingScore": 137
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1603-coder-s16-textflaeche-als-fuenfter-bereich.md": {
       "totalChanges": 2,
@@ -3786,43 +3516,13 @@
       "lastChange": "2026-08-09T15:48:24.151Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/_t_circle.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/_t_circle.md": {
       "totalChanges": 4,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T06:35:30.566Z",
       "thrashingScore": 1
     },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/fenstermodell.rs": {
-      "totalChanges": 8,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T17:15:10.728Z",
-      "thrashingScore": 14
-    },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 25,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T10:06:57.537Z",
-      "thrashingScore": 30
-    },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/editormodell.rs": {
-      "totalChanges": 14,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T01:29:55.157Z",
-      "thrashingScore": 4
-    },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/editor.rs": {
-      "totalChanges": 47,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T10:06:50.888Z",
-      "thrashingScore": 29
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 20,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:31:03.831Z",
-      "thrashingScore": 28
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1921-coder-s18-s19-s20-s22-der-editor-wird-erreichbar.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1921-coder-s18-s19-s20-s22-der-editor-wird-erreichbar.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T17:25:18.697Z",
@@ -3840,61 +3540,61 @@
       "lastChange": "2026-08-09T18:40:59.181Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2148-bugfix-ungesicherte-aenderung-fiel-beim-zweiten-f4.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2148-bugfix-ungesicherte-aenderung-fiel-beim-zweiten-f4.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:41:45.389Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md": {
-      "totalChanges": 1,
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md": {
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T18:42:11.222Z",
+      "lastChange": "2026-08-10T12:45:14.703Z",
+      "thrashingScore": 1
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:21:08.056Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T18:42:51.478Z",
-      "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen.md": {
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:43:42.056Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md": {
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:44:15.273Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_gehoert-der-wirkungsbereich-in-die-ausgabe.md": {
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_gehoert-der-wirkungsbereich-in-die-ausgabe.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:44:50.395Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md": {
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:45:21.553Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2040-shaper-tastenbelegung-als-markdown-in-downloads.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2040-shaper-tastenbelegung-als-markdown-in-downloads.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:46:03.544Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md": {
-      "totalChanges": 1,
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md": {
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T18:49:48.975Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-10T00:53:01.268Z",
+      "thrashingScore": 1
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2043-shaper-vier-anzeigefaehigkeiten.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2043-shaper-vier-anzeigefaehigkeiten.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-09T18:51:37.776Z",
@@ -3914,7 +3614,7 @@
     },
     "crates/krk-ui/src/appkit/nummernspalte.rs": {
       "totalChanges": 11,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:28:41.895Z",
       "thrashingScore": 5
     },
@@ -3935,12 +3635,6 @@
       "changesThisSession": 0,
       "lastChange": "2026-08-09T20:21:19.825Z",
       "thrashingScore": 5
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/050476dc-f610-4c9e-8fc9-078d537cf20e/scratchpad/last.sh": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T20:10:19.727Z",
-      "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-2229-coder-die-abbruchmessung-wird-lastfest.md": {
       "totalChanges": 1,
@@ -4009,10 +3703,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/hervorhebung.rs": {
-      "totalChanges": 30,
+      "totalChanges": 32,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T10:59:28.502Z",
-      "thrashingScore": 56
+      "thrashingScore": 10
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0053_o_der-plan-legt-die-markdown-auszeichnung-in-voruebergehende-merkmale-und-die-tragen-sie-nicht.md": {
       "totalChanges": 1,
@@ -4098,31 +3792,13 @@
       "lastChange": "2026-08-10T06:36:18.629Z",
       "thrashingScore": 1
     },
-    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260809-2043_o_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T00:53:01.268Z",
-      "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/agentstate.yaml": {
+    "fusion-workbench/agentstate.yaml": {
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T07:08:50.927Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/crates/krk-core/src/text/datei.rs": {
-      "totalChanges": 3,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T01:04:07.523Z",
-      "thrashingScore": 3
-    },
-    "/Users/k1/Projects/productive/krk/crates/krk-core/tests/text.rs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T01:06:52.435Z",
-      "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0309-crlf-stand-und-flaeche.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0309-crlf-stand-und-flaeche.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T01:11:27.472Z",
@@ -4140,7 +3816,7 @@
       "lastChange": "2026-08-10T01:21:40.059Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0315-rueckgaengigstapel-beim-schreiben-in-die-flaeche.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0315-rueckgaengigstapel-beim-schreiben-in-die-flaeche.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T01:23:07.318Z",
@@ -4152,7 +3828,7 @@
       "lastChange": "2026-08-10T01:31:32.120Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0331-sitzungsschreiben-nach-dem-oeffnen.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0331-sitzungsschreiben-nach-dem-oeffnen.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T01:32:18.483Z",
@@ -4164,17 +3840,11 @@
       "lastChange": "2026-08-10T01:44:34.538Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0512-smart-insert-delete-und-die-suche-nach-der-sechsten.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0512-smart-insert-delete-und-die-suche-nach-der-sechsten.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T01:45:53.491Z",
       "thrashingScore": 0
-    },
-    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 29,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:05:34.914Z",
-      "thrashingScore": 9
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0359_o_die-erweiterungsnotiz-zaehlt-elf-abnahmekriterien-fuer-c11-gebaut-sind-dreizehn.md": {
       "totalChanges": 1,
@@ -4248,7 +3918,7 @@
       "lastChange": "2026-08-10T09:04:33.049Z",
       "thrashingScore": 1
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0710-zwei-tueren-zu-einer-einstellung.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0710-zwei-tueren-zu-einer-einstellung.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T05:11:22.683Z",
@@ -4258,18 +3928,6 @@
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T05:36:07.865Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/e5c299f6-5dfb-4488-9223-a5fabefd787c/scratchpad/probe.m": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T05:41:47.412Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/e5c299f6-5dfb-4488-9223-a5fabefd787c/scratchpad/probe2.m": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T05:43:17.875Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0745_o_der-stolperdraht-sieht-drei-der-vier-schreibwerkzeug-einstellungen-nicht.md": {
@@ -4338,13 +3996,13 @@
       "lastChange": "2026-08-10T06:12:48.313Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md": {
-      "totalChanges": 2,
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md": {
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:26:40.842Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-10T12:02:34.284Z",
+      "thrashingScore": 1
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_i_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_i_was-heisst-gerendert-bei-markdown-wenn-zugleich-bearbeitet-wird.md": {
       "totalChanges": 2,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T06:27:00.008Z",
@@ -4356,13 +4014,7 @@
       "lastChange": "2026-08-10T06:29:46.447Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/hervorhebung.rs": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:31:54.555Z",
-      "thrashingScore": 0
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0822-coder-s6-und-s33-die-beiden-falschen-abnahmekriterien.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0822-coder-s6-und-s33-die-beiden-falschen-abnahmekriterien.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T06:33:29.797Z",
@@ -4370,7 +4022,7 @@
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md": {
       "totalChanges": 2,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:37:17.634Z",
       "thrashingScore": 0
     },
@@ -4381,10 +4033,10 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 16,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:04:58.095Z",
-      "thrashingScore": 5
+      "totalChanges": 20,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T16:43:46.963Z",
+      "thrashingScore": 10
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0914-ontocoder-belegungsdatei-zwei-kommentarbloecke.md": {
       "totalChanges": 1,
@@ -4476,36 +4128,6 @@
       "lastChange": "2026-08-10T08:21:12.069Z",
       "thrashingScore": 0
     },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/54817e4d-f2d6-491b-bbb7-f77526c7118b/scratchpad/undopfad.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:25:33.395Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/54817e4d-f2d6-491b-bbb7-f77526c7118b/scratchpad/undoweg.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:26:29.014Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/54817e4d-f2d6-491b-bbb7-f77526c7118b/scratchpad/undoweg2.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:26:53.891Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/54817e4d-f2d6-491b-bbb7-f77526c7118b/scratchpad/undoweg3.swift": {
-      "totalChanges": 1,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:27:19.282Z",
-      "thrashingScore": 0
-    },
-    "/private/tmp/claude-502/-Users-k1-Projects-productive-krk/54817e4d-f2d6-491b-bbb7-f77526c7118b/scratchpad/undoapp.swift": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T08:29:46.668Z",
-      "thrashingScore": 0
-    },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1028_o_die-herkunft-eines-oeffnens-ist-im-delegierten-erzwungen-und-nicht-am-editorbereich.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
@@ -4584,19 +4206,13 @@
       "lastChange": "2026-08-10T09:44:31.303Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/ereignisse.rs": {
-      "totalChanges": 4,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T10:04:55.384Z",
-      "thrashingScore": 5
-    },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T10:09:32.651Z",
       "thrashingScore": 0
     },
-    "/Users/k1/Projects/productive/krk/fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1207-drei-defekte-um-oeffnungsherkunft-blattsperre-und-rueckweg.md": {
+    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1207-drei-defekte-um-oeffnungsherkunft-blattsperre-und-rueckweg.md": {
       "totalChanges": 1,
       "changesThisSession": 0,
       "lastChange": "2026-08-10T10:10:14.604Z",
@@ -4670,136 +4286,305 @@
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1314_o_ein-wiederholtes-sammelersetzen-legt-je-ruf-einen-bereich-in-dateigroesse-in-den-stapel.md": {
       "totalChanges": 3,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:43:16.681Z",
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1314_o_der-verweis-in-die-gegenrichtung-fehlt-der-nummernspalte-noch.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:17:43.109Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1314-coder-fuenf-befunde-um-den-rueckgaengigverlauf.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:19:19.199Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1330_o_derselbe-selbstabraeumende-pruefordner-steht-zwoelfmal-im-baum.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:32:39.526Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260810-1330_o_der-messplan-bleibt-liegen-wenn-eine-runde-abbricht.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:32:39.813Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1330-drei-kleine-defekte-doku-und-pruefordner.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:35:15.939Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1341_o_die-freigabe-des-angemeldeten-rueckgaengig-blocks-ist-geschlossen-und-nicht-gemessen.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:43:49.457Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1341-stapelbudget-fuer-den-rueckgaengigstapel.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T11:44:22.921Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_i_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:02:11.796Z",
-      "thrashingScore": 0
-    },
-    "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:02:34.284Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0303_c_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:04:12.553Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1404_o_vierzehn-geschlossene-datensaetze-zeigen-auf-zeilen-die-ihre-eigene-sitzung-verschoben-hat.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:07:43.664Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1404-reconciliation.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:11:00.495Z",
       "thrashingScore": 0
     },
     "crates/krk-bench/src/wegwerfordner.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:19:36.598Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/src/pruefordner.rs": {
-      "totalChanges": 1,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-10T12:21:17.375Z",
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:47:38.129Z",
       "thrashingScore": 0
     },
     "crates/krk-core/tests/gemeinsam/mod.rs": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:24:43.088Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:31:21.797Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260810-1430_o_ein-abgebrochener-messlauf-laesst-seinen-messplan-im-temporaerverzeichnis-liegen.md": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:31:55.133Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-1430-pruefordner-zusammengelegt.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:33:44.084Z",
       "thrashingScore": 0
     },
     "260810-1440_o_zwei-zahlen-im-datensatz-1001-und-im-abgleich-stimmen-nicht-mit-dem-baum.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:36:07.574Z",
-      "thrashingScore": 0
-    },
-    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md": {
-      "totalChanges": 2,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-10T12:45:14.703Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/history/260810-1439-playmaker-direct-dispatch.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T12:47:28.029Z",
+      "thrashingScore": 0
+    },
+    "spikes/blatt-spanne/spanne.swift": {
+      "totalChanges": 9,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:19:09.737Z",
+      "thrashingScore": 17
+    },
+    "spikes/blatt-spanne/starten.sh": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:15:45.469Z",
+      "thrashingScore": 0
+    },
+    "spikes/blatt-spanne/README.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:20:18.064Z",
+      "thrashingScore": 0
+    },
+    "spikes/blatt-spanne/.gitignore": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:20:44.793Z",
+      "thrashingScore": 0
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1207_o_die-spanne-zwischen-dem-schliessen-des-blattes-und-seiner-antwort-ist-ungemessen.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:51:53.396Z",
+      "thrashingScore": 0
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:51:04.745Z",
+      "thrashingScore": 0
+    },
+    "circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1430_o_planordner-in-messmodus-ist-die-dreizehnte-fassung-und-kann-jetzt-auf-die-gemeinsame-aufsetzen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:51:37.461Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1520-coder-schreibwerkzeuge-blattspanne-planordner.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T13:52:42.164Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1647-orchestrator-session.md": {
+      "totalChanges": 4,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-10T18:10:32.910Z",
+      "thrashingScore": 1
+    },
+    "fusion-workbench/tasklist.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:12:43.011Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1707-tasklist-update.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:13:25.894Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1720-ontocoder-plan-messstrecken-defekt-berichtigt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:21:58.263Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1721-ontocoder-der-verweis-auf-die-zustellerregel.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:22:10.654Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:23:34.598Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md": {
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:26:30.126Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/shared/history/260810-1730-ontocoder-sternform-in-den-circle-datensaetzen.md": {
+      "totalChanges": 8,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:30:10.391Z",
+      "thrashingScore": 14
+    },
+    "fusion-workbench/shared/issues/260810-1745_o_der-messplanwaechter-greift-bei-strg-c-nicht-weil-process-exit-kein-drop-laeuft.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:33:08.266Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1746_o_spec-und-plan-der-runde-2-tragen-sechs-verweise-mit-ausgeschriebenem-zustandsmarker.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:33:26.054Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1751_o_zwei-zusicherungen-ueber-den-auswahlversuch-halten-so-nicht-wie-sie-geschrieben-sind.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:51:36.112Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1752_o_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-und-deckt-das-schreiben-selbst-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:52:06.450Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1753_o_die-beiden-meldungen-des-terminal-befehls-sind-als-einzige-ihres-moduls-ungeprueft.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:52:36.443Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/reviews/260810-1755-coderev-codeanteil-turn-1-messplanwaechter-auswahlversuch-terminalmeldung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T15:53:29.854Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1844-ontocoder-sternform-in-spec-und-plan-der-runde-2.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T16:45:20.338Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/decisions/260810-1850_o_wie-kommt-der-messplan-bei-strg-c-weg-ohne-die-zusage-der-sitzungssicherung-zu-brechen.md": {
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T17:00:11.111Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/shared/issues/260810-1851_o_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T16:49:51.290Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1906_o_die-konvention-am-auswahlversuch-steht-in-kommentaren-und-wird-von-nichts-erzwungen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T16:59:55.219Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260810-1907-reconciliation.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T17:10:00.324Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1907_o_die-durchsicht-von-turn-2-hat-kein-durchsichtsdokument-hinterlassen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T17:10:52.346Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1925_o_eine-probe-schreibt-ins-echte-temporaerverzeichnis-und-raeumt-dort-jetzt-fremde-messplaene-ab.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-10T17:28:25.491Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260810-1945_o_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-10T18:08:57.652Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-10T11:09:51.106Z"
+  "sessionStart": "2026-08-10T17:24:47.938Z",
+  "keyAnchor": "workbench-root"
 }

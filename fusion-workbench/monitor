@@ -24,6 +24,13 @@ if [[ $# -lt 2 ]]; then
   echo "" >&2
   echo "  Env: MONITOR_BIND sets the bind address (default 0.0.0.0 = LAN-reachable;" >&2
   echo "  set MONITOR_BIND=127.0.0.1 for loopback-only)." >&2
+  echo "" >&2
+  echo "  Env: MONITOR_NO_BROWSER, set to any non-empty value, starts the server" >&2
+  echo "  without opening a browser tab on it." >&2
+  echo "" >&2
+  echo "  The tab only ever opens when stdout is a terminal. A monitor started" >&2
+  echo "  from a script, a test, a CI job or any redirected stdout serves the" >&2
+  echo "  dashboard and opens nothing." >&2
   exit 1
 fi
 
@@ -1192,6 +1199,25 @@ SERVER_PID=$!
 
 trap 'kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; exit 0' INT TERM
 
-sleep 0.5
-open "http://localhost:${PORT}"
+# Hand the dashboard to a person, and only to a person.
+#
+# `open` exists to put the dashboard in front of a human who just started the
+# monitor at a terminal. Everything else that starts this script (the harness
+# in hooks/lib/__tests__/monitor-warnings-panel.test.ts, a CI job, a
+# background job, nohup) wants a server and nothing else, and got a browser
+# tab anyway. One `npm test` run
+# spawns the monitor eleven times on eleven throwaway ports, each killed
+# seconds later, so eleven tabs open on eleven ports that answer nothing; run
+# by several agents in parallel that is hundreds of focus-stealing tabs on
+# dead ports. `[ -t 1 ]` is the honest discriminator, and it makes every
+# non-interactive caller silent by construction, with no caller change
+# anywhere: a spawn with stdio ignored, piped or redirected has no terminal on
+# stdout, and a person at a terminal does.
+#
+# MONITOR_NO_BROWSER is the second, independent gate: a person at a terminal
+# who wants the server without the tab. Any non-empty value suppresses.
+if [[ -t 1 && -z "${MONITOR_NO_BROWSER:-}" ]]; then
+  sleep 0.5
+  open "http://localhost:${PORT}"
+fi
 wait $SERVER_PID
