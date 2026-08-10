@@ -39,12 +39,12 @@
 # home, end, return, tab, esc, space sowie Buchstaben und Ziffern.
 #
 # Die fn-Taste ist keine Zusatztaste dieser Schreibweise und kommt in keiner
-# Kombination vor. KRK belegt den Tastencode, und F3 mit gehaltener fn-Taste
-# erzeugt denselben Tastencode wie ein nacktes F3 (C3; gemessen ist allein der
-# Fall mit gehaltener fn-Taste, `spikes/fn-tasten/messung-A.txt` Ereignisse #03
-# bis #05; der Gleichlauf beider Faelle ist daraus abgeleitet und am
-# Referenzgeraet nicht messbar, weil dessen Touch Bar ohne gehaltenes fn
-# ueberhaupt keine F3 liefert).
+# Kombination vor. Funktionstasten schlaegt KRK ueber den Tastencode nach, und
+# F3 mit gehaltener fn-Taste erzeugt denselben Tastencode wie ein nacktes F3
+# (C3; gemessen ist allein der Fall mit gehaltener fn-Taste,
+# `spikes/fn-tasten/messung-A.txt` Ereignisse #03 bis #05; der Gleichlauf
+# beider Faelle ist daraus abgeleitet und am Referenzgeraet nicht messbar, weil
+# dessen Touch Bar ohne gehaltenes fn ueberhaupt keine F3 liefert).
 #
 # Zwei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
 # keiner Tastenliste: Umschalt+Entf und die Eingabetaste. Die Eingabetaste trug
