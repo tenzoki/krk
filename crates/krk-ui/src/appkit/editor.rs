@@ -101,12 +101,43 @@
 //! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
 //! "Der Editor bekommt keine eigene Meldezeile".
 //!
-//! **Reiner Text.** `setRichText(false)` und die vier abgeschalteten
-//! Ersetzungen halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
+//! **Reiner Text.** `setRichText(false)` und die fuenf abgeschalteten
+//! Automatiken halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
 //! Sichern Zeichen fuer Zeichen wieder in der Datei steht. Eine typografische
 //! Ersetzung von Anfuehrungszeichen oder Bindestrichen aendert Programmtext
 //! still, und die Zusage aus C4 lautet, dass der gesicherte Stand der getippte
 //! ist.
+//!
+//! **Die fuenf zerfallen in zwei Gruppen, und ueber der ersten war die zweite
+//! uebersehen.** Vier greifen beim **Tippen**: Anfuehrungszeichen, Bindestriche,
+//! Textersetzung, Rechtschreibkorrektur. Die fuenfte, `smartInsertDeleteEnabled`,
+//! greift beim **Einfuegen und Ausschneiden** — sie setzt ein Leerzeichen vor
+//! oder hinter ein eingefuegtes Wort und nimmt beim Ausschneiden ein
+//! ueberzaehliges fort. In Prosa ist das gemeint, in Programmtext ist es eine
+//! Aenderung, die niemand getippt hat, und damit dieselbe Sorte, gegen die die
+//! vier anderen stehen. Sie blieb an, weil die Aufzaehlung nach den vier
+//! tippenden aufhoerte
+//! (`issues/260809-1650_*_die-fuenfte-textveraendernde-automatik-smart-insert-delete-bleibt-an.md`).
+//! Ihr Vorgabewert ist `true`, und das ist **gemessen** an der Flaeche, die
+//! [`textflaeche_bauen`] liefert, nicht der Dokumentation entnommen.
+//!
+//! **Dass es bei fuenf bleibt, haelt eine Probe fest und nicht die Aufmerksamkeit
+//! des naechsten Lesers.** `keine_unbekannte_automatik_steht_an_der_textflaeche`
+//! zaehlt zur Laufzeit die Schalter der Form `set…Enabled:` an der Klasse
+//! `NSTextView` auf und haelt sie gegen die Einordnung unter `mod tests`; ein
+//! dreizehnter haelt den Bau an, bis jemand ihn eingeordnet hat. Klasse und
+//! Selektoren stehen fuer sich, und deshalb braucht die Probe weder Flaeche noch
+//! Fenster. Sie misst dafuer **nicht**, ob die fuenf Zeilen in
+//! [`textflaeche_bauen`] noch stehen und was sie bewirken; das ist Nutzerarbeit
+//! am laufenden Buendel.
+//!
+//! **Was ausserhalb dieser Form liegt, faengt die Probe nicht**, und ein Fund
+//! steht dort: die Schreibwerkzeuge aus macOS 15 (`writingToolsBehavior`)
+//! schreiben markierten Text um, ihr Vorgabewert ueberlaesst dem System die
+//! Wahl, und sie sind kein Schalter der Form `set…Enabled:`. Sie unterscheiden
+//! sich von den fuenf darin, dass der Nutzer sie eigens aufruft; ob C4 sie
+//! trotzdem ausschliesst, ist ein eigener Datensatz,
+//! `issues/260810-0512_o_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`.
 //!
 //! **Die Formatansicht aus C3 widerspricht dem nicht, und der Grund ist nicht,
 //! wo ihre Merkmale liegen.** Sie setzt Farbe und Unterstreichung als
@@ -2017,13 +2048,18 @@ fn textflaeche_bauen(
     let text = NSTextView::initWithFrame(NSTextView::alloc(mtm), rahmen);
     text.setEditable(true);
     text.setSelectable(true);
-    // Reiner Text, und die vier Ersetzungen aus: der gesicherte Stand ist der
+    // Reiner Text, und die fuenf Automatiken aus: der gesicherte Stand ist der
     // getippte. Der Grund steht im Modulkopf.
     text.setRichText(false);
+    // Die vier, die beim Tippen greifen.
     text.setAutomaticQuoteSubstitutionEnabled(false);
     text.setAutomaticDashSubstitutionEnabled(false);
     text.setAutomaticTextReplacementEnabled(false);
     text.setAutomaticSpellingCorrectionEnabled(false);
+    // Die fuenfte greift beim Einfuegen und Ausschneiden statt beim Tippen und
+    // steht deshalb fuer sich. Ab Werk ist sie **an**; ohne diese Zeile setzte
+    // ein Einfuegen ein Leerzeichen dazu, das niemand getippt hat.
+    text.setSmartInsertDeleteEnabled(false);
     // Ohne diese Zeile traegt die Textansicht keine einzige
     // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
     // Ende der Antwortkette einen leeren Verwalter vor. `allowsUndo` steht bei
@@ -2081,11 +2117,13 @@ fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
 /// Pruefungen hier und nicht unter `Nutzerarbeit`.
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
     use std::path::PathBuf;
     use std::ptr::NonNull;
 
     use block2::RcBlock;
     use krk_core::text::marke::wiederfinden;
+    use objc2::runtime::AnyClass;
 
     use super::*;
 
@@ -2506,5 +2544,103 @@ mod tests {
     #[test]
     fn ohne_verwalter_geschieht_nichts() {
         rueckgaengigstapel_leeren(None);
+    }
+
+    /// Die Automatiken, die [`textflaeche_bauen`] abschaltet, weil sie Zeichen
+    /// in den Text bringen oder aus ihm nehmen, die der Nutzer nicht getippt
+    /// hat (C4).
+    ///
+    /// Die ersten vier greifen beim Tippen, die fuenfte beim Einfuegen und
+    /// Ausschneiden. Sie stand bis 260810 an, weil die Aufzaehlung nach den vier
+    /// tippenden aufhoerte; das ist der Defekt 260809-1650.
+    const ABGESCHALTET: [&str; 5] = [
+        "setAutomaticQuoteSubstitutionEnabled:",
+        "setAutomaticDashSubstitutionEnabled:",
+        "setAutomaticTextReplacementEnabled:",
+        "setAutomaticSpellingCorrectionEnabled:",
+        "setSmartInsertDeleteEnabled:",
+    ];
+
+    /// Die Schalter derselben Form, die anbleiben duerfen, weil keiner von
+    /// ihnen den Textspeicher anfasst.
+    ///
+    /// - Die beiden Erkennungen zeichnen einen Fund als Verknuepfung aus und
+    ///   aendern kein Zeichen; `setRichText(false)` nimmt ihnen ohnehin die
+    ///   Wirkung.
+    /// - Rechtschreib- und Grammatikpruefung setzen voruebergehende Merkmale
+    ///   des Layoutverwalters — derselbe Schnitt, aus dem die Einfaerbung der
+    ///   Formatansicht aus C3 nicht in die Datei geraet.
+    /// - Die Spracherkennung waehlt, **woran** die beiden vorigen messen, und
+    ///   nicht den gemessenen Text.
+    /// - Die Textvervollstaendigung legt im Vorschlagsstreifen der Touch Bar
+    ///   Kandidaten vor; ein Zeichen kommt erst in den Text, wenn der Nutzer
+    ///   einen davon waehlt, und das ist eine Eingabe und keine Automatik.
+    /// - Die Schrittsuche waehlt einen Fund aus und schreibt nicht; das
+    ///   Ersetzen aus C5 laeuft nicht ueber diesen Schalter.
+    const GEDULDET: [&str; 7] = [
+        "setAutomaticLinkDetectionEnabled:",
+        "setAutomaticDataDetectionEnabled:",
+        "setContinuousSpellCheckingEnabled:",
+        "setGrammarCheckingEnabled:",
+        "setAutomaticLanguageIdentificationEnabled:",
+        "setAutomaticTextCompletionEnabled:",
+        "setIncrementalSearchingEnabled:",
+    ];
+
+    /// Die Zusage aus C4 ist entweder vollstaendig oder sie traegt nicht: ein
+    /// sechster Schalter, der durchrutscht, machte die fuenf abgeschalteten zu
+    /// einer halben Massnahme.
+    ///
+    /// Die Probe fragt deshalb nicht die fuenf ab, die sie kennt, sondern die
+    /// Klasse selbst: sie zaehlt zur Laufzeit auf, was `NSTextView` an Schaltern
+    /// der Form `set…Enabled:` traegt, und verlangt, dass jeder davon in
+    /// [`ABGESCHALTET`] oder [`GEDULDET`] eingeordnet ist. Ein neuer aus einem
+    /// spaeteren macOS haelt damit den Bau an, statt still anzubleiben — genau
+    /// der Weg, auf dem `smartInsertDeleteEnabled` bis 260810 durchgekommen ist.
+    ///
+    /// **Weder Flaeche noch Fenster.** Klasse und Selektoren stehen fuer sich,
+    /// und die Aufzaehlung braucht keine Instanz; deshalb steht die Probe hier
+    /// und nicht unter `Nutzerarbeit`. Dass die fuenf Zeilen in
+    /// [`textflaeche_bauen`] stehen und wirken, misst sie nicht.
+    #[test]
+    fn keine_unbekannte_automatik_steht_an_der_textflaeche() {
+        let klasse = AnyClass::get(c"NSTextView").expect("die Klasse NSTextView steht im Programm");
+        let getragen: BTreeSet<String> = klasse
+            .instance_methods()
+            .iter()
+            .map(|methode| methode.name().name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with("set") && name.ends_with("Enabled:"))
+            .collect();
+        let eingeordnet: BTreeSet<String> = ABGESCHALTET
+            .iter()
+            .chain(GEDULDET.iter())
+            .map(|name| (*name).to_owned())
+            .collect();
+
+        assert_eq!(
+            getragen, eingeordnet,
+            "NSTextView traegt einen Schalter, den weder ABGESCHALTET noch GEDULDET kennt, oder \
+             umgekehrt — wer ihn ergaenzt, beantwortet zuerst, ob er Zeichen aendert (C4)"
+        );
+    }
+
+    /// Der Defekt 260809-1650, an der Stelle festgehalten, an der er entstanden
+    /// ist: die Aufzaehlung hoerte nach den vier tippenden Automatiken auf.
+    ///
+    /// Kein Schalter steht in beiden Aufstellungen: abgeschaltet und geduldet
+    /// sind einander ausschliessende Antworten auf dieselbe Frage, und die Probe
+    /// oben faende einen doppelt gefuehrten nicht, weil sie Mengen vergleicht.
+    #[test]
+    fn die_fuenfte_automatik_steht_unter_den_abgeschalteten() {
+        assert!(
+            ABGESCHALTET.contains(&"setSmartInsertDeleteEnabled:"),
+            "die fuenfte greift beim Einfuegen und Ausschneiden und gehoert dazu"
+        );
+        for schalter in ABGESCHALTET {
+            assert!(
+                !GEDULDET.contains(&schalter),
+                "{schalter} ist zugleich abgeschaltet und geduldet"
+            );
+        }
     }
 }
