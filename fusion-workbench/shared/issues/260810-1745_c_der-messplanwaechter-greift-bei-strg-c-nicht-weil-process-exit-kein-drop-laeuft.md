@@ -64,3 +64,33 @@ laeuft erst mit `Sitzungssicherung::anlegen()` bei `messen.rs:1034`, `plan_schre
 beantwortet, zieht die Reihenfolge dieser beiden Aufrufe mit.
 
 Dieser Defekt bleibt offen und wartet auf die Antwort.
+
+---
+Resolved: Der Nutzer hat am 260810-1915 Option 4 des Entscheidungsdatensatzes
+`shared/decisions/260810-1850_*_wie-kommt-der-messplan-bei-strg-c-weg-…` gewaehlt, und sie ist
+umgesetzt: nicht der abbrechende Lauf raeumt seinen Plan ab, sondern der naechste.
+`Messplanwaechter::neu` loescht beim Anlegen jede `krk-messplan-*.toml` im Temporaerverzeichnis,
+die nicht die eigene ist.
+
+Vier Stuecke in `crates/krk-bench/src/messen.rs`: die Konstante `PLANRUMPF` haelt den Namensrumpf
+an einer Stelle, weil ihn jetzt zwei tragen; `fremde_plaene_raeumen` laeuft das Verzeichnis ab
+und ueberspringt den eigenen Namen; `Messplanwaechter::in_verzeichnis` ist die Naht, ueber die
+`neu` das Temporaerverzeichnis uebergibt und die Probe ein eigenes; dazu eine Probe
+`ein_neuer_waechter_raeumt_fremde_plaene_ab_und_laesst_den_eigenen_stehen`, die das echte
+Temporaerverzeichnis nicht anfasst.
+
+`SICHERUNG`, die Signalwache und die Reihenfolge von `plan_schreiben` und `signalwache_starten`
+sind unberuehrt. Die Bauform ist die von `Wegwerfordner::neu`, mit der einen Abweichung, dass
+hier ein Verzeichnis abzulaufen ist statt eines vorhersagbaren Namens — fremde Plaene tragen
+fremde Prozesskennungen.
+
+**Der Kommentar behauptet nicht, das Problem sei weg.** Er sagt beides: der eigene Prozess raeumt
+bei einem Signal nicht ab, der naechste Lauf tut es, und zwischen einem Strg+C und dem naechsten
+Lauf steht die Datei weiterhin da. Neu ist allein, dass es bei einer bleibt statt bei neun.
+
+**Beleg:** die neun Altbestandsdateien vom 260805 bis 260807 sind weg. Abgeraeumt hat sie
+allerdings `make check` und kein Messlauf, und daraus ist ein eigener Defekt geworden:
+`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 3.

@@ -100,3 +100,39 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: Der Nutzer hat am 260810-1915 **Option 4** gewaehlt, der Empfehlung dieses Datensatzes
+folgend: der naechste Lauf raeumt auf. `Messplanwaechter::neu` loescht beim Anlegen jede
+`krk-messplan-*.toml` im Temporaerverzeichnis, die nicht seine eigene ist — dieselbe Zeile, die
+`Wegwerfordner::neu` (`crates/krk-bench/src/wegwerfordner.rs:45`) schon traegt. `SICHERUNG`
+bleibt unberuehrt, die Signalwache bekommt keine Zeile, die dokumentierte Zusage "wer zuerst
+kommt" wird weder gebrochen noch neu gefasst.
+
+Mitentschieden ist damit die Zusage, die Option 4 voraussetzt und die bisher nirgends stand:
+**es laufen nie zwei Messlaeufe gleichzeitig.** Sie trifft heute zu, weil der Abnahmelauf KRK im
+Vordergrund verlangt, und sie gehoert bei der Umsetzung aufgeschrieben.
+
+Der Nebenbefund aus dem Abschnitt darueber gilt weiter und wird mitgezogen: `signalwache_starten`
+laeuft erst bei `messen.rs:1034`, `plan_schreiben` schon bei `messen.rs:1029`. Unter Option 4
+verliert das Fenster seine Wirkung, weil nicht mehr der Abbruch abraeumt, sondern der naechste
+Lauf — die Reihenfolge ist damit gegenstandslos statt zu berichtigen.
+
+Antwort festgehalten in `shared/history/260810-1647-orchestrator-session.md`, Turn 3.
+
+---
+Implemented: `crates/krk-bench/src/messen.rs` — `Messplanwaechter::neu` raeumt beim Anlegen jeden
+fremden Messplan ab, ueber `fremde_plaene_raeumen` und die Naht `in_verzeichnis`. Die
+vorausgesetzte Zusage steht im Doc-Kommentar von `neu`, wie dieser Datensatz es verlangt hat.
+
+**Die Zusage ist bei der Umsetzung breiter geworden, als dieser Datensatz sie gefasst hat.** Er
+nannte als Voraussetzung "es laufen nie zwei Messlaeufe gleichzeitig". Es ist ein zweiter
+Beteiligter dazugekommen: die bestehende Probe `der_messplan_traegt_die_pruefsitzung_…` ruft
+`plan_schreiben` und damit denselben Weg, also raeumt auch ein `cargo test` das
+Temporaerverzeichnis ab. Der Doc-Kommentar nennt beide. Der Entwurf ist deswegen nicht geaendert
+worden; die Sache ist als eigener Defekt erfasst,
+`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`, und dort auch
+der Weg dorthin, denn die Naht `in_verzeichnis` steht seit dieser Umsetzung bereit.
+
+Der Nebenbefund zur Reihenfolge von `plan_schreiben` und `signalwache_starten` ist wie
+angekuendigt gegenstandslos und nicht angefasst.

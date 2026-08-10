@@ -1521,15 +1521,53 @@ fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
 /// dieselbe Bauform wie [`crate::wegwerfordner::Wegwerfordner`]: Erfolgsweg und
 /// Abbruchweg fallen zusammen, und eine Panik wickelt ueber dieselbe Bahn ab.
 ///
-/// **Was ungedeckt bleibt: ein Signal.** SIGINT, SIGTERM und SIGHUP enden ueber
-/// [`signalwache_starten`] in `std::process::exit`, und dabei laeuft kein
-/// [`Drop`]. Die Sitzung des Nutzers kommt dort ueber [`SICHERUNG`] zurueck,
-/// der Messplan bleibt liegen. Er traegt die Prozesskennung im Namen und
-/// verwechselt sich deshalb mit keinem zweiten Lauf.
+/// **Was der eigene Lauf bei einem Signal nicht mehr schafft.** SIGINT, SIGTERM
+/// und SIGHUP enden ueber [`signalwache_starten`] in `std::process::exit`, und
+/// dabei laeuft kein [`Drop`]. Die Sitzung des Nutzers kommt dort ueber
+/// [`SICHERUNG`] zurueck, der Messplan **dieses** Laufs bleibt liegen. Weg
+/// kommt er trotzdem, nur nicht durch den eigenen Prozess: [`Messplanwaechter::neu`]
+/// raeumt beim Anlegen jeden fremden Plan ab, der naechste Lauf also den
+/// dieses. Zwischen einem Strg+C und dem naechsten Lauf steht die Datei
+/// weiterhin im Temporaerverzeichnis — neu ist allein, dass es dabei bei einer
+/// bleibt statt bei den neun, die sich bis zum 260810 angesammelt hatten.
 #[must_use]
 struct Messplanwaechter {
     /// Der geschriebene Plan im Temporaerverzeichnis.
     pfad: PathBuf,
+}
+
+/// Der Namensrumpf jedes Messplans; Prozesskennung und `.toml` schliessen an.
+///
+/// Er steht an einer Stelle, weil zwei ihn tragen: der eigene Name in
+/// [`Messplanwaechter::in_verzeichnis`] und die Erkennung fremder Plaene in
+/// [`fremde_plaene_raeumen`]. Liefen die auseinander, raeumte der Waechter die
+/// Plaene der vorigen Fassung nicht mehr ab und meldete es auch nicht.
+const PLANRUMPF: &str = "krk-messplan-";
+
+/// Loescht jeden Messplan im Verzeichnis ausser dem eigenen.
+///
+/// Ungemeldet wie das [`Drop`] des Waechters: ein nicht geloeschter fremder
+/// Plan kostet eine Datei im Temporaerverzeichnis, und eine Meldung an dieser
+/// Stelle stuende vor dem Messlauf, um den es geht. Ein unlesbares Verzeichnis
+/// ist derselbe Fall — dann gibt es hier nichts zu tun, was der Lauf nicht
+/// ueberleben wuerde.
+fn fremde_plaene_raeumen(verzeichnis: &Path, eigener: &Path) {
+    let eigener_name = eigener.file_name();
+    let Ok(eintraege) = std::fs::read_dir(verzeichnis) else {
+        return;
+    };
+    for eintrag in eintraege.flatten() {
+        let name = eintrag.file_name();
+        if Some(name.as_os_str()) == eigener_name {
+            continue;
+        }
+        let Some(text) = name.to_str() else {
+            continue;
+        };
+        if text.starts_with(PLANRUMPF) && text.ends_with(".toml") {
+            let _ = std::fs::remove_file(eintrag.path());
+        }
+    }
 }
 
 impl Messplanwaechter {
@@ -1545,10 +1583,34 @@ impl Messplanwaechter {
     /// (`issues/260810-1752_*_der-messplanwaechter-entsteht-erst-nach-dem-schreiben-…`).
     /// Ein [`Drop`] auf eine nie angelegte Datei ist folgenlos: `remove_file`
     /// liefert `NotFound`, und der Rueckgabewert wird ohnehin verworfen.
+    ///
+    /// **Beim Anlegen faellt jeder fremde Plan mit**, also jede
+    /// `krk-messplan-*.toml` im Temporaerverzeichnis, die nicht die eigene ist.
+    /// Es ist dieselbe Zeile, die [`crate::wegwerfordner::Wegwerfordner::neu`]
+    /// schon traegt, nur ueber das Verzeichnis statt ueber den einen Namen. Sie
+    /// deckt die Ausgaenge ab, an die kein [`Drop`] heranreicht: das
+    /// `std::process::exit` der Signalwache, SIGKILL, den Stromausfall. Nicht
+    /// der abbrechende Lauf raeumt seinen Plan ab, sondern der naechste.
+    ///
+    /// **Vorausgesetzt ist dabei, dass nie zwei Messlaeufe gleichzeitig
+    /// laufen** — sonst loeschte der spaeter startende dem frueheren den Plan
+    /// unter den Fuessen weg. Die Zusage haelt heute, weil der Abnahmelauf KRK
+    /// im Vordergrund verlangt und zwei Laeufe sich den Vordergrund nicht
+    /// teilen koennen. Sie ist eine Voraussetzung dieser Bauform und keine
+    /// Beobachtung: wer nebenlaeufige Laeufe einfuehrt, aendert zuerst diese
+    /// Stelle. Ein zweiter Beteiligter steht schon da und ist mitgemeint: die
+    /// Proben dieser Kiste rufen [`plan_schreiben`] und damit diesen Weg, also
+    /// raeumt auch ein `cargo test` das Temporaerverzeichnis ab. Wer waehrend
+    /// eines Messlaufs die Proben fahren laesst, nimmt ihm den Plan weg.
     fn neu() -> Self {
-        Self {
-            pfad: std::env::temp_dir().join(format!("krk-messplan-{}.toml", std::process::id())),
-        }
+        Self::in_verzeichnis(&std::env::temp_dir())
+    }
+
+    /// Derselbe Waechter unter einem gegebenen Verzeichnis, fuer die Proben.
+    fn in_verzeichnis(verzeichnis: &Path) -> Self {
+        let pfad = verzeichnis.join(format!("{PLANRUMPF}{}.toml", std::process::id()));
+        fremde_plaene_raeumen(verzeichnis, &pfad);
+        Self { pfad }
     }
 
     /// Der Pfad, den der Sitzungslauf der Anwendung mitbekommt.
@@ -2633,6 +2695,42 @@ mod tests {
             tabelle["unterordner"].as_str(),
             Some(unterordner.display().to_string().as_str())
         );
+    }
+
+    /// Der naechste Lauf raeumt den Plan ab, den ein Strg+C hat liegen lassen.
+    ///
+    /// Das Verzeichnis ist der Wegwerfordner und nicht das Temporaerverzeichnis
+    /// des Prozesses: die Probe soll die Plaene eines nebenher laufenden
+    /// Messlaufs nicht anfassen. Deshalb geht sie ueber
+    /// `Messplanwaechter::in_verzeichnis` statt ueber `neu`.
+    #[test]
+    fn ein_neuer_waechter_raeumt_fremde_plaene_ab_und_laesst_den_eigenen_stehen() {
+        let ordner = Wegwerfordner::neu("fremde-plaene");
+        fs::create_dir_all(ordner.pfad()).expect("anlegbar");
+
+        let eigener = ordner
+            .pfad()
+            .join(format!("{PLANRUMPF}{}.toml", std::process::id()));
+        let fremder = ordner.pfad().join(format!("{PLANRUMPF}999999.toml"));
+        // Kein Messplan, sondern eine gleichnamig beginnende Nachbardatei.
+        let unbeteiligt = ordner.pfad().join(format!("{PLANRUMPF}999999.txt"));
+        for pfad in [&eigener, &fremder, &unbeteiligt] {
+            fs::write(pfad, b"plan").expect("schreibbar");
+        }
+
+        let waechter = Messplanwaechter::in_verzeichnis(ordner.pfad());
+
+        assert_eq!(waechter.pfad(), eigener);
+        assert!(eigener.exists(), "der eigene Plan darf nicht fallen");
+        assert!(!fremder.exists(), "der fremde Plan bleibt liegen");
+        assert!(
+            unbeteiligt.exists(),
+            "eine Datei ohne .toml ist kein Messplan"
+        );
+
+        // Der Waechter raeumt seinen eigenen Plan im Drop ab.
+        drop(waechter);
+        assert!(!eigener.exists());
     }
 
     /// Ein vorhandener Sitzungsstand steht nach dem Lauf wieder da.
