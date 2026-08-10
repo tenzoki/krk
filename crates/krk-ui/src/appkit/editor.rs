@@ -78,7 +78,11 @@
 //! selbst mit; KRK baut keinen davon von Hand und haelt daneben keine zweite
 //! Zeichenkette. Der Stand steht im Modell, die Darstellung in der Flaeche, und
 //! [`Editorbereich::stand_einsetzen`] ist die eine Stelle, die den Text der
-//! Flaeche ersetzt.
+//! Flaeche ersetzt — und damit auch die eine, die den Rueckgaengigstapel leert.
+//! Beides gehoert zusammen: `setString:` schreibt an der
+//! Rueckgaengigverwaltung vorbei, und ein stehengebliebener Stapel zeigte
+//! danach auf einen Text, den die Flaeche nicht mehr traegt. Beim Dateiwechsel
+//! war das sogar der Text einer **anderen** Datei.
 //!
 //! **Der Kopf ist die zweite Anzeige neben der Statuszeile, und er ist eine
 //! andere Art von Aussage.** Die Statuszeile traegt Antworten auf Befehle; der
@@ -139,7 +143,7 @@ use objc2_app_kit::{
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
     NSPoint, NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval,
-    NSTimer, ns_string,
+    NSTimer, NSUndoManager, ns_string,
 };
 
 use krk_core::text::{
@@ -1065,29 +1069,32 @@ impl Editorbereich {
     /// moeglicherweise KRK selbst erreicht. Den Stand stattdessen zu klonen
     /// hiesse, eine Datei von 16 MB zweimal zu kopieren statt einmal.
     ///
-    /// **Hier fehlt noch das Leeren des Rueckgaengigstapels.** `setString:`
-    /// schreibt an der Rueckgaengigverwaltung vorbei und laesst einen bereits
-    /// gefuellten Stapel stehen, der auf den Text der vorigen Datei zeigt;
-    /// seit `textflaeche_bauen` `allowsUndo` einschaltet, kann so ein Stapel
-    /// entstehen. **Der Fall ist erreichbar**, seit ein Dateiwechsel im Editor
-    /// steht; der offene Defekt dazu ist
-    /// `issues/260809-1727_o_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`.
-    /// Bis S26 stand hier, der Fall sei unerreichbar, weil der einzige Aufrufer
-    /// [`Self::bauen`] sei; das war schon seit S22 nicht mehr wahr, denn das
-    /// Oeffnen ruft ebenfalls hierher.
+    /// **Und die eine Stelle, die den Rueckgaengigstapel leert.** `setString:`
+    /// schreibt an der Rueckgaengigverwaltung vorbei: der Stapel bliebe stehen
+    /// und zeigte auf einen Text, den die Flaeche nicht mehr traegt. Seit
+    /// `textflaeche_bauen` `allowsUndo` einschaltet, kann so ein Stapel
+    /// entstehen, und drei Wege erreichen den Fall — ein Dateiwechsel seit S22,
+    /// ein Ersetzen seit S37 und das Nachrichten der Flaeche in
+    /// [`Self::flaeche_richten`]. Beim Dateiwechsel zeigte der Stapel sogar auf
+    /// eine **andere** Datei: ein `cmd+z` danach nahm eine Aenderung an einem
+    /// Text zurueck, der nicht mehr im Fenster stand. Der Defekt ist
+    /// `issues/260809-1727_c_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`.
     ///
-    /// **Seit S37 kommt ein zweiter Weg dazu, und er trifft dieselbe Datei.**
-    /// Ein Ersetzen schreibt den geaenderten Stand ueber
-    /// [`Self::stand_erneuern`] zurueck; der Rueckgaengigstapel zeigt danach auf
-    /// den Text vor diesem `setString:`, und ein `cmd+z` gleich darauf wirkt
-    /// gegen einen Stand, den die Flaeche nicht mehr traegt. Der Defekt ist
-    /// derselbe und dort mit vermerkt.
+    /// **Der Preis dafuer ist, dass die drei Wege ihren Verlauf verlieren**,
+    /// statt ihn rueckgaengigfaehig zu machen: ein `cmd+z` nach einem Ersetzen
+    /// tut jetzt nichts, statt das Falsche zu tun. Das ist die kleinere der
+    /// beiden Fehlwirkungen und ein eigener Defekt,
+    /// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`;
+    /// er zu beheben hiesse, hier statt `setString:` einen
+    /// rueckgaengigfaehigen Schreibweg zu nehmen, und der loeste am Dateiwechsel
+    /// den Stapel gerade nicht ab.
     fn stand_einsetzen(&self) {
         let stand = {
             let modell = self.ivars().modell.borrow();
             NSString::from_str(modell.stand())
         };
         self.ivars().text.setString(&stand);
+        rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
     }
 
     /// Traegt einen von aussen gewechselten Stand in die Flaeche und zieht die
@@ -1138,14 +1145,16 @@ impl Editorbereich {
     /// stattdessen das Ergebnis und kommt deshalb ohne eine einzige Regel der
     /// Wandlung aus.
     ///
-    /// **Der Preis steht hier und wird nicht verschwiegen:** der Weg fuehrt
-    /// ueber [`Self::stand_erneuern`] und damit ueber `setString:`, das am
-    /// Rueckgaengigstapel vorbeischreibt. Ein `cmd+z` unmittelbar nach einem
-    /// eingefuegten `\r\n` wirkt deshalb gegen einen Stand, den die Flaeche
-    /// nicht mehr traegt. Es ist derselbe Preis, den das Ersetzen aus S37 schon
-    /// zahlt, und derselbe Defekt fuehrt ihn
-    /// (`issues/260809-1727_*_ein-dateiwechsel-laesst-den-rueckgaengigstapel-der-vorigen-datei-stehen.md`);
-    /// ein zweiter Schreibweg in die Flaeche neben [`Self::stand_einsetzen`]
+    /// **Der Preis steht hier und wird nicht verschwiegen**, und er ist seit
+    /// der Behebung von `260809-1727` ein kleinerer: der Weg fuehrt ueber
+    /// [`Self::stand_erneuern`] und damit ueber `setString:`, das am
+    /// Rueckgaengigstapel vorbeischreibt. Der Stapel bleibt danach nicht mehr
+    /// falsch stehen — [`Self::stand_einsetzen`] leert ihn —, aber er ist eben
+    /// **leer**: ein `cmd+z` unmittelbar nach einem eingefuegten `\r\n` tut
+    /// nichts, statt das Einfuegen zurueckzunehmen. Denselben Preis zahlt das
+    /// Ersetzen aus S37, und derselbe Defekt fuehrt beide,
+    /// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`.
+    /// Ein zweiter Schreibweg in die Flaeche neben [`Self::stand_einsetzen`]
     /// entsteht dafuer nicht.
     ///
     /// **Die Schreibmarke bleibt, wo sie stand.** Sie waere sonst nach jedem
@@ -2037,12 +2046,45 @@ fn textflaeche_bauen(
     (rolle, text)
 }
 
+/// Leert Rueckgaengig- und Wiederherstellungsstapel eines Verwalters.
+///
+/// **Der Aufrufer ist einer**, [`Editorbereich::stand_einsetzen`], und der Grund
+/// steht dort. Hier steht, was die Funktion vom Verwalter annimmt und was sie
+/// von ihm nicht annimmt.
+///
+/// **`None` ist keine Ausnahme, sondern der Normalfall vor dem Einhaengen.**
+/// `NSResponder::undoManager` geht die Antwortkette hinauf und findet den
+/// Verwalter erst, wenn die Flaeche in einem Fenster steht; der erste Aufruf
+/// aus [`Editorbereich::bauen`] kommt davor. Dort ist nichts zu leeren, weil die
+/// Flaeche noch leer ist.
+///
+/// **Eine offene Gruppe haelt sie nicht auf.** `setString:` faellt mitten in die
+/// Ereignisbehandlung, und `NSUndoManager` gruppiert ab Werk je Ereignis: zur
+/// Aufrufzeit kann eine Gruppe offen stehen. `removeAllActions` raeumt beide
+/// Stapel **und** die offene Gruppe ab; `endUndoGrouping` an derselben Stelle
+/// wuerde ohne offene Gruppe eine Ausnahme werfen. Die Pruefung
+/// `ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr` misst genau
+/// das.
+///
+/// **Der Verwalter gehoert dem Fenster und nicht der Textflaeche.** Wer sonst
+/// noch in demselben Fenster Rueckgaengig-Handlungen anmeldet, verliert sie
+/// hier mit. Heute ist das niemand: der Editor ist die einzige Flaeche in KRK,
+/// die `allowsUndo` einschaltet, und der Feldeditor eines Suchfeldes fuehrt
+/// seinen Verlauf je Bearbeitung und nicht ueber diesen Verwalter.
+fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
+    if let Some(verwalter) = verwalter {
+        verwalter.removeAllActions();
+    }
+}
+
 /// Die Meldungen sind reine Werte und brauchen kein Fenster; deshalb stehen die
 /// Pruefungen hier und nicht unter `Nutzerarbeit`.
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::ptr::NonNull;
 
+    use block2::RcBlock;
     use krk_core::text::marke::wiederfinden;
 
     use super::*;
@@ -2365,5 +2407,104 @@ mod tests {
                 "die Stelle {stelle} kommt nicht zurueck"
             );
         }
+    }
+
+    /// Ein Verwalter fuer sich, ohne Flaeche und ohne Fenster.
+    ///
+    /// **Das `new_unchecked` ist hier vertretbar und sonst nirgends.** Der
+    /// Pruefstand von Rust laesst jede Pruefung auf einem eigenen Faden laufen,
+    /// und `MainThreadMarker::new()` gaebe dort `None`. Was der Marker
+    /// absichert, ist die Fadenbindung von AppKits Fensterwerkzeug; ein
+    /// `NSUndoManager` haengt an keinem Fenster, sondern an der
+    /// Ereignisschleife seines Fadens, und die ist hier mit
+    /// `setGroupsByEvent(false)` abgewaehlt. Der Verwalter dieser Pruefung
+    /// wird ausserdem auf demselben Faden erzeugt, benutzt und fallengelassen.
+    fn verwalter_ohne_fenster() -> Retained<NSUndoManager> {
+        NSUndoManager::new(unsafe { MainThreadMarker::new_unchecked() })
+    }
+
+    /// Meldet eine Rueckgaengig-Handlung an, wie eine `NSTextView` es beim
+    /// Tippen tut, und schliesst ihre Gruppe.
+    ///
+    /// Die Gruppierung je Ereignis ist abgeschaltet: sie schloesse die Gruppe
+    /// erst am Ende eines Umlaufs der Ereignisschleife, und in einer Pruefung
+    /// laeuft keine. Die Handlung selbst tut nichts — gemessen wird, ob der
+    /// Verwalter sie **hat**, nicht was sie taete.
+    fn stapel_fuellen(verwalter: &NSUndoManager, ziel: &NSObject) {
+        verwalter.setGroupsByEvent(false);
+        verwalter.beginUndoGrouping();
+        let handlung = RcBlock::new(|_ziel: NonNull<AnyObject>| {});
+        unsafe { verwalter.registerUndoWithTarget_handler(ziel, &handlung) };
+        verwalter.endUndoGrouping();
+        assert!(
+            verwalter.canUndo(),
+            "die Voraussetzung der Pruefung: der Stapel traegt eine Handlung"
+        );
+    }
+
+    /// Der Defekt 260809-1727: nach einem Schreiben ueber `setString:` darf
+    /// kein Rueckgaengig-Verlauf stehenbleiben, der auf den Text der vorigen
+    /// Datei zeigt.
+    ///
+    /// Das Fenster fehlt dieser Pruefung, der Verwalter nicht: `NSUndoManager`
+    /// steht fuer sich und braucht weder Flaeche noch Fenster. Gemessen wird
+    /// der Schritt, den [`Editorbereich::stand_einsetzen`] seit diesem Defekt
+    /// hinter `setString:` setzt.
+    #[test]
+    fn ein_geleerter_stapel_traegt_keine_rueckgaengig_handlung_mehr() {
+        let verwalter = verwalter_ohne_fenster();
+        let ziel = NSObject::new();
+        stapel_fuellen(&verwalter, &ziel);
+
+        rueckgaengigstapel_leeren(Some(&verwalter));
+
+        assert!(
+            !verwalter.canUndo(),
+            "nach dem Leeren zeigt keine Handlung mehr auf den vorigen Text"
+        );
+        assert!(
+            !verwalter.canRedo(),
+            "der Wiederherstellungsstapel gehoert zum selben Verlauf und faellt mit"
+        );
+    }
+
+    /// `setString:` faellt mitten in die Ereignisbehandlung, und dort kann eine
+    /// Rueckgaengig-Gruppe offen stehen. Auch dann bleibt nichts stehen, und
+    /// nichts wirft.
+    ///
+    /// Das ist der Grund, aus dem
+    /// [`rueckgaengigstapel_leeren`] `removeAllActions` nimmt und nicht
+    /// `endUndoGrouping`: das zweite verlangt eine offene Gruppe und wirft ohne
+    /// eine.
+    #[test]
+    fn ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr() {
+        let verwalter = verwalter_ohne_fenster();
+        let ziel = NSObject::new();
+        stapel_fuellen(&verwalter, &ziel);
+
+        // Eine zweite Handlung, deren Gruppe offen bleibt — der Zustand
+        // mitten in einem Ereignis.
+        verwalter.beginUndoGrouping();
+        let handlung = RcBlock::new(|_ziel: NonNull<AnyObject>| {});
+        unsafe { verwalter.registerUndoWithTarget_handler(&ziel, &handlung) };
+
+        rueckgaengigstapel_leeren(Some(&verwalter));
+
+        assert!(
+            !verwalter.canUndo(),
+            "auch die offene Gruppe ist weg, nicht nur die geschlossene"
+        );
+        assert_eq!(
+            verwalter.groupingLevel(),
+            0,
+            "und der Verwalter steht wieder ausserhalb jeder Gruppe"
+        );
+    }
+
+    /// Ohne Verwalter geschieht nichts. Der Fall ist der Regelfall vor dem
+    /// Einhaengen der Flaeche in ein Fenster, nicht ein Fehler.
+    #[test]
+    fn ohne_verwalter_geschieht_nichts() {
+        rueckgaengigstapel_leeren(None);
     }
 }

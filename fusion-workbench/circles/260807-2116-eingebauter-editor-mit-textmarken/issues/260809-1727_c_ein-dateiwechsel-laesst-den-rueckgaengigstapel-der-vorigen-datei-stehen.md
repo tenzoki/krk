@@ -66,3 +66,47 @@ Die Behebung ist unverändert dieselbe und gehört nach wie vor an
 Stelle, die den Text der Fläche ersetzt, und dort ist der Stapel zu leeren
 (`NSUndoManager::removeAllActions`) oder das Schreiben rückgängigfähig zu
 machen.
+
+---
+
+Resolved: 260810-0310, `coder`. `Editorbereich::stand_einsetzen` ruft hinter
+`setString:` die neue Funktion `rueckgaengigstapel_leeren`, und die ruft
+`NSUndoManager::removeAllActions`. Der Verwalter kommt über
+`NSResponder::undoManager`; vor dem Einhängen der Fläche in ein Fenster liefert
+er `None`, und dort ist auch nichts zu leeren.
+
+**Die Vorprüfung aus dem Abschnitt „Vorschlag" ist gefahren:**
+`NSUndoManager` steht in `objc2-foundation` bereits zur Verfügung, weil
+`objc2-app-kit` das Merkmal `objc2-foundation/NSUndoManager` selbst einschaltet
+(`cargo tree -p krk-ui -i objc2-foundation -e features`). `crates/krk-ui/Cargo.toml`
+brauchte keine Zeile.
+
+**Zwei Dinge, die die Umsetzung gegenüber dem Vorschlag geklärt hat:**
+
+- **Der Verwalter gehört dem Fenster, nicht der Textfläche.**
+  `NSResponder::undoManager` geht die Antwortkette hinauf. Wer sonst noch in
+  demselben Fenster Rückgängig-Handlungen anmeldete, verlöre sie mit. Heute ist
+  das niemand: der Editor ist die einzige Fläche in KRK, die `allowsUndo`
+  einschaltet.
+- **Eine offene Gruppe hält `removeAllActions` nicht auf.** `setString:` fällt
+  mitten in die Ereignisbehandlung, und `NSUndoManager` gruppiert ab Werk je
+  Ereignis; zur Aufrufzeit kann eine Gruppe offen stehen. Gemessen, nicht
+  angenommen: die Probe
+  `ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr` lässt eine
+  Gruppe offen und prüft danach `canUndo() == false` und `groupingLevel() == 0`.
+
+**Drei Proben halten die Zusage fest**, alle in `crates/krk-ui/src/appkit/editor.rs`
+unter `mod tests`, alle ohne Fenster: `NSUndoManager` steht für sich.
+
+- `ein_geleerter_stapel_traegt_keine_rueckgaengig_handlung_mehr`
+- `ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr`
+- `ohne_verwalter_geschieht_nichts`
+
+**Der Preis ist abgetrennt und nicht stillschweigend erledigt.** Der Stapel ist
+nach einem Ersetzen und nach dem Nachrichten der Fläche jetzt **leer** statt
+falsch: `cmd+z` tut dort nichts, statt gegen einen Stand zu wirken, den die
+Fläche nicht mehr trägt. Das ist die kleinere Fehlwirkung und ein eigener
+Defekt,
+`issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`.
+Er ist nicht mit behoben, weil Dateiwechsel und Ersetzen an derselben einen
+Schreibstelle entgegengesetzte Behandlungen verlangen.
