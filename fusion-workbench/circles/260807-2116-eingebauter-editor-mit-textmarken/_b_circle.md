@@ -2,10 +2,10 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md)
-**Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0244-orchestrator-session.md
+**Active session history:** circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md
 
 ---
 
@@ -152,6 +152,12 @@ Die Turns der Sitzungen vom 260807-2139 bis zum 260809 sind nicht einzeln vermer
 - Turn 1 (Sitzung 260810-0244): Commits `9bc0d9d..e6b76ab`; fünf Defekte geschlossen, eine beantwortete Entscheidung eingelöst, Durchsicht mit neun Befunden; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0244-orchestrator-session.md`
 - Turn 2 (Sitzung 260810-0244): Commits `d9fc2c8..b7d0d50`; zwei Defekte geschlossen und S42 ausgeführt, womit alle 48 Planschritte `[DONE]` tragen und `target/KRK.app` gebaut und signiert ist; Durchsicht mit sieben Befunden, keiner am ausgeführten Code; Coherence-Spruch `ok`
 - Turn 3 (Sitzung 260810-0244): Commit `df80000`; die beiden Abnahmekriterien von S6 und S33, die der Code nicht einlöste, sind richtiggestellt, der Markdown-Entscheid ist durch `decisions/260810-0822_i_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md` abgelöst; ausgelöst durch den Rebalance-Entscheid des Nutzers nach dem Abgleichsspruch `review-needed`
+- Turn 1 (Sitzung 260810-0845): Commits `d8763dd..35e12cb`; 21 Defekte geschlossen, vier neu gefunden, eine Nutzerentscheidung angelegt; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md`
+- Turn 2 (Sitzung 260810-0845): Commits `bb43315..f624a03`; acht Defekte geschlossen, fünf neu, eine zweite Nutzerentscheidung angelegt; Coherence-Spruch `ok`
+- Turn 3 (Sitzung 260810-0845): Commits `3596e16..733e30f`; sechs Defekte geschlossen, darunter die beiden gemessenen Preise — die Einfärbung rechnet den vorigen Durchgang fort, die Eingangskopie der Wandlung ist weg; Coherence-Spruch `ok`
+- Turn 4 (Sitzung 260810-0845): Commits `8807844..1472846`; drei Defekte geschlossen, dann zwei Durchsichten über den ganzen Sitzungsdiff mit zehn Befunden, einer davon Schwere Hoch; Coherence-Spruch `ok`
+- Turn 5 (Sitzung 260810-0845): Commit `bf0fe18`; alle zehn Befunde der Durchsichten behoben, darunter der hohe: ein Umkehrpunkt trägt den geänderten Bereich statt des ganzen Standes, 1,68 GB auf 300 Byte bei hundert Handlungen; Coherence-Spruch `ok`. Danach war die Abbruchbedingung „Max Turns" erfüllt.
+- Turn 6 (Sitzung 260810-0845, begrenzter Nachlauf): Commits `0140df7..646e6a1`; fünf Defekte geschlossen, `CLAUDE.md` nachgezogen, Abschluss-Abgleich mit dem Spruch `bounded-closure-proposed`. Der Nachlauf ist eine festgehaltene Abweichung von der Turn-Vorgabe; die Begründung steht im Sitzungsbericht unter `## Die Abweichung von der Turn-Vorgabe`.
 
 ## Activation proposal
 
@@ -176,3 +182,40 @@ Die einzige Abhängigkeit, `260802-0842-krk-mac-dateimanager-editor-git`, ist be
 Die erste offene Frage, was die Formatansicht bei Text, bei Code und bei Markdown zeigt, gehört nach dem Grounding vor den ersten Planschritt. Der Datensatz führt drei Möglichkeiten und empfiehlt die dritte, die Formatansicht als schreibgeschützte Leseansicht für alle drei Dateitypen. Die vier offenen Fragen des Grounding-Abschnitts bleiben die erste Arbeit nach dem Übergang auf aktiv; der Shaper im portfolio-activation-Modus klärt sie mit dem Nutzer, bevor ein Plan entsteht.
 
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Geschlossen am 260810-1445 als beschränkter Abschluss (`_b_`).** Die Directive
+ist gebaut: der Editor steht als fünfter Fokusbereich, mit Roh- und
+Formatansicht, Zeilensprung, Suchen, Ersetzen und Textmarken in derselben Leiste
+und derselben Ablagedatei wie die Ordner-Lesezeichen, dazu Fokusrahmen,
+Zeilennummern und der volle Pfad im Fenstertitel. Alle 48 Planschritte tragen
+`[DONE]`, und die 53 Defekte der Runde sind abgearbeitet.
+
+**Beschränkt ist der Abschluss aus zwei Gründen, und beide liegen beim Nutzer.**
+Der Abnahmelauf über die 110 Kriterien des Spec verlangt KRK im Vordergrund und
+ist damit keine Agentenarbeit; die Frage dazu ist
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
+Und zwei Restdefekte hängen an `decisions/260810-1044_o_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`,
+der Frage, ob `krk-ui` ein Bibliotheksziel bekommt — eine Antwort darauf berührt
+jede Datei der Kiste und gehört nicht in einen Nebenzug. Dazu offen die zweite
+Nutzerfrage `decisions/260810-0959_o_schliesst-c4-die-schreibwerkzeuge-aus.md`.
+
+**Was diese Runde gelernt hat und die Directive nicht verlangte**, in drei
+Sätzen, weil es der Artefakt des beschränkten Abschlusses ist. Erstens: die
+Textfläche stand am Ende von `textflaeche_bauen` auf TextKit 2 und fiel nur
+zufällig auf TextKit 1 zurück — dass sie auf 1 steht, ist für das Rückgängig
+tragend und wird seit `bf0fe18` selbst hergestellt und von einer Probe gehalten.
+Zweitens: ein stehendes Blatt hält Tastenbefehle beim Anwendungsdelegierten an
+und nicht über den Fokusvorbehalt; die andere Lesart hat in dieser Sitzung einen
+Fehlbefund erzeugt. Drittens: eine Aufzählung über AppKit-Namensformen deckt
+ihren Gegenstand nur, wenn sie die Vererbungskette liest und einen sachlichen
+Schnitt daneben stellt — die Namensform allein sah 26 von 36 Einstellungen.
+
+**Belege:** Sitzungsbericht
+`circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md`
+mit dem Dreikanten-Spruch unter `## Coherence`; Abschluss-Abgleich
+`.../history/260810-1404-reconciliation.md`; die beiden Durchsichten unter
+`.../reviews/260810-1217-ontorev-…` und `.../reviews/260810-1248-coderev-…`.
+Vorbild für die Form dieses Abschlusses ist die Runde 1, geschlossen am
+260807-1035 mit derselben Begründung.

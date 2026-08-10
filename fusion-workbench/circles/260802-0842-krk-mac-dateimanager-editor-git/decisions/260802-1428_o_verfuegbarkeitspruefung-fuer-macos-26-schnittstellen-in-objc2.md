@@ -60,3 +60,15 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+## Abgleich am 260810: bleibt offen, ist aber nicht mehr auf dem Stand des Bestands
+
+**Die Frage nach dem ausgelieferten Code ist unbeantwortet, und der Marker `_o_` steht deshalb zu Recht.** Die Runde 2 hat einen Fall derselben Art gelöst, aber nur im Prüfcode, und der Datensatz kennt drei Belegstellen nicht, die eine spätere Runde brauchen wird. Nachgetragen aus dem Abschluss-Abgleich der Sitzung 260810-0845:
+
+- **Die halbe Möglichkeit 1 ist einmal gebaut und begründet.** `crates/krk-ui/src/appkit/editor.rs:4924` (`merkmal_falls_vorhanden`) fragt über `respondsToSelector` nach dem Setzernamen, bevor es ein Merkmal anspricht, und `:4893-4903` schreibt die Regel aus, wer den Namen führt und was daraus folgt. Es ist der **einzige** `respondsToSelector`-Aufruf im ganzen Baum, und er steht in einer Prüfhilfe. Der ausgelieferte Code setzt keinen Schalter über der Untergrenze; das hält der Abschluss von `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1246_*_eine-probe-liest-ein-merkmal-das-die-untergrenze-macos-15-0-nicht-fuehrt.md` fest.
+- **Ein fünfter Mechanismus steht im Baum, den die vier Möglichkeiten dieses Datensatzes nicht führen.** `crates/krk-ui/src/appkit/editor.rs:277-280`: `objc2` bildet keine Verfügbarkeitsgrenze ab, schaltet die beiden neuen Setzer aber über ein Cargo-Merkmal.
+- **`objc2` 0.6 führt an `AnyProtocol` keine Mitgliederliste.** Geprüft an `objc2-0.6/src/runtime/mod.rs:1045-1090`, zitiert im Abschluss von `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0417_*_die-laufzeitprobe-bindet-den-bau-an-die-macos-version-des-pruefenden-geraets.md`.
+
+Möglichkeit 2, das schwache Binden für C-Funktionen, ist unberührt: kein `-weak_framework` im Baum.

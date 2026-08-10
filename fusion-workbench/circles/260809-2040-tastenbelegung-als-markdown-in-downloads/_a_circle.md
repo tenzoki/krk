@@ -103,3 +103,138 @@ Der aktive Circle `260807-2116-eingebauter-editor-mit-textmarken` ist **keine** 
 ## Turn log
 
 (noch keiner)
+
+## Parent grounding stale
+
+**Festgestellt am:** 260810-1439
+**Playmaker-Lauf:** 260810-1439-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:** `260807-2116-eingebauter-editor-mit-textmarken`, geschlossen am 260810-1445
+
+Die Editor-Runde, deren Änderungen an der Belegung dieser Circle in seinem Grounding
+führt, ist geschlossen. Der Abschnitt `### Was die laufende Editor-Runde an der Belegung
+gerade ändert` beschreibt sie als laufend, und zwei Zeilen nennen sie ausdrücklich aktiv:
+
+> Zeile 77: „Der aktive Circle `260807-2116-eingebauter-editor-mit-textmarken` ist **keine**
+> Abhängigkeit, berührt aber genau die Struktur, aus der diese Ausgabe schöpft."
+
+> Zeile 101: „Der aktive Circle `260807-2116-eingebauter-editor-mit-textmarken` ist
+> **keine** Abhängigkeit. Er erweitert die Belegung gerade um dreizehn Funktionen [...]"
+
+Der Vermerk hält die Aktivierung nicht auf. Er hält drei Punkte für die Klärungsrunde
+fest, und der wichtigste ist ein Vorteil und kein Mangel.
+
+### 1. Die Grundlage steht jetzt still, und die drei Zahlen sind nachgeprüft
+
+Das Grounding warnte davor, eine der drei bewegten Zahlen fest zu verdrahten, weil die
+Editor-Runde sie noch bewegte. Sie bewegt sie nicht mehr. Am 260810-1439 nachgezählt:
+`resources/default-keymap.toml` trägt 71 Blöcke `[[funktion]]`, und
+`crates/krk-ui/src/belegungsmodell.rs:73` führt `Funktionsbereich` mit dem neunten Wert
+`Editor`. Beide Zahlen des Grounding-Abschnitts halten also am gebauten Stand.
+
+Die Warnung selbst bleibt richtig. Sie stützt sich nicht auf das Wachstum dieser einen
+Runde, sondern darauf, dass jede spätere Runde die Belegung erweitern kann; die Ausgabe
+zählt, was die Belegung führt.
+
+### 2. Die Beschränkung des Abschlusses reicht nicht in diesen Circle
+
+Der Abschluss der Editor-Runde ist aus zwei Gründen beschränkt: der Abnahmelauf über die
+110 Kriterien ihres Specs verlangt KRK im Vordergrund und ist Nutzerarbeit, und zwei
+Restdefekte hängen an der Frage, ob `krk-ui` ein Bibliotheksziel bekommt
+(`circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-1044_o_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`).
+
+Keiner der beiden trifft diese Ausgabe. Sie führt keine Zeitzusage, also erbt sie keinen
+offenen Messstand, und sie setzt auf `belegungsmodell.rs` auf, das ohne AppKit auskommt und
+damit ohne die Probenfrage prüfbar ist. `inference:` Sollte die Bibliotheksziel-Frage
+später mit ja beantwortet werden, berührt sie jede Datei der Kiste `krk-ui` und damit auch
+eine dort neu angelegte Ausgabefunktion; das ist eine Reihenfolgefrage für den
+Aktivierungs-Spec und keine Abhängigkeit.
+
+### 3. Ein offener Defekt sitzt in einem Datensatz dieses Circles
+
+`shared/issues/260810-0805_o_ein-verweis-nennt-den-falschen-circle-und-die-zustellerregel-liegt-woanders.md`
+hält fest, dass
+`decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md:7` die
+Zustellerregel im Circle der Editor-Runde zitiert, während der Datensatz im Circle der
+Runde 1 liegt. Der Defekt bittet darum, alle fünf Datensätze dieses Circles zu prüfen, weil
+nur einer geprüft ist. Das ist eine kleine Vorarbeit zur Klärungsrunde, kein Hindernis.
+
+Der Playmaker berichtigt keine Zitate und ändert keinen Defekt.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260810-1439
+**Playmaker-Lauf:** 260810-1439-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+
+Dieser Circle ist der empfohlene nächste Kandidat, und die Empfehlung steht auf dem
+Dateibestand und nicht auf einer Nutzerwahl. Eine Wahl über die Reihenfolge liegt nach dem
+Abschluss der Editor-Runde nicht vor: die festgehaltene Wahl vom 260807-1930
+(`shared/history/260807-1930-uebergabe-an-die-editor-runde.md`) hat den Editor gegen den
+Web-Betrachter gestellt, der Editor hat sie gewonnen und ist geschlossen. Dieser Circle
+entstand erst am 260809-2040 und stand in jenem Vergleich nicht zur Wahl. Eine Aussage über
+ein Feld aus zwei Elementen ordnet kein Feld aus drei, und ihr Sieger hat das Feld
+verlassen.
+
+**Die Gewichtung `code` zählt in die andere Richtung, und der Playmaker unterschlägt es
+nicht.** Sie bevorzugt vorgesehene Circles mit wenigen unbeantworteten Fragen. Nach diesem
+Maß liegt der Web-Betrachter vorn, mit einem zitierten offenen Entscheidungsdatensatz gegen
+fünf hier. Alle fünf liegen in `decisions/` dieses Circles und tragen `_o_`, geprüft am
+260810-1439.
+
+Der Zählwert misst hier die falsche Größe. Die fünf Datensätze sind die eigenen
+Aktivierungsfragen dieses Circles, jede mit Möglichkeiten und einer Empfehlung des Shapers,
+und jede aus dem Dateibestand beantwortbar: wie die Ausgabe ausgelöst wird, wie die Datei
+heißt, was in ihr steht, ob der Wirkungsbereich mitkommt, und welche Belegung bei offener
+Belegungsansicht gilt. Sie brauchen eine Klärungsrunde mit dem Nutzer und keine
+Untersuchung. Der eine Datensatz des Web-Betrachters ist von anderer Art: die
+Verfügbarkeitsprüfung für macOS-26-Schnittstellen ist eine ungemessene technische Frage,
+und derselbe Circle hält in seinem Grounding fest, dass das Mittel der Darstellung von
+Web-Inhalt offen ist und „in eine eigene Untersuchung vor dem Plan" gehört. Ein Zählwert von
+eins verdeckt dort mehr ungeöffnete Arbeit als ein Zählwert von fünf hier.
+
+**Die geerbten Bauteile liegen auf der Platte, am Code geprüft.** Die Belegung führt jede
+Funktion genau einmal mit allen ihren Kombinationen (`crates/krk-core/src/tasten/belegung.rs`,
+`Belegung::funktionen()`), die Gliederung nach neun Funktionsbereichen steht an einer Stelle
+(`crates/krk-ui/src/belegungsmodell.rs:73`, `Funktionsbereich` samt dem Wert `Editor`), die
+Beschriftung einer Kombination hat eine einzige Quelle (`belegungsmodell.rs:517`,
+`anzeige()`), und `resources/default-keymap.toml` trägt 71 Blöcke `[[funktion]]`. Das Modul
+`belegungsmodell.rs` spricht keine AppKit-Schnittstelle an; eine Ausgabefunktion daneben ist
+ohne Fenster prüfbar.
+
+**Die Grundlage dieses Circles ist einen Tag alt und kennt den Stand nach dem Editor.** Sie
+wurde am 260809-2040 geschrieben, während die Editor-Runde lief, und rechnet deren
+Änderungen ein: dreizehn neue Funktionen, der neunte Funktionsbereich, und der Nachschlag
+für Buchstaben und Ziffern über das gemeldete Zeichen statt über den Tastencode. Die
+Grundlage des Web-Betrachters stammt vom 260804 und beschreibt das Vorschaufenster so, wie
+die Runde 1 es hinterließ; die Editor-Runde hat genau diese Fläche zu einem von fünf
+Fokusbereichen gemacht, ihr Zeilennummern gegeben und den Editor sie zeitlich verdrängen
+lassen. Sie trägt außerdem drei ins Leere laufende Pfadzitate und einen Vermerk
+`## Parent grounding stale` vom 260807-1042.
+
+**Der Zuschnitt ist der kleinere von beiden.** Diese Runde baut eine zweite Ausgabeform an
+einer bestehenden Aufbereitung. Der Web-Betrachter hebt einen ausdrücklichen Ausschluss der
+Runde 1 auf („Integrierter Browser zum Navigieren von Websites") und überholt dabei ein
+abgenommenes Abnahmekriterium der Fähigkeit C10.
+
+**Was gegen eine sofortige Aktivierung spricht, in absteigender Schärfe.**
+
+Die einzige Abhängigkeit `260802-0842-krk-mac-dateimanager-editor-git` ist beschränkt
+abgeschlossen (`_b_`) und nicht kohärent (`_c_`). Nach der Rangheuristik zählt allein `_c_`
+als erfüllte Vorbedingung, also trägt dieser Circle das Kennzeichen. Inhaltlich trägt es
+hier wenig: aus der Runde 1 stammen die Belegungsmaschine, die Auslieferungsbelegung und die
+Belegungsansicht, und die Beschränkung jener Runde betrifft ihre Zeitzusagen, die diese
+Ausgabe nicht berührt. Der Web-Betrachter trägt dasselbe Kennzeichen, und dort reicht die
+Beschränkung über seine dritte offene Frage nachweislich hinein.
+
+Nicht gemessen ist, ob macOS bei einem Schreibvorgang nach `~/Downloads`, den KRK selbst
+anstößt, eine Rückfrage zeigt und wie ein abgelehnter Zugriff aussieht. Der Grounding-Abschnitt
+führt den Punkt als `speculation:` und verlangt einen Prüflauf am gebauten Bündel im
+Aktivierungs-Spec. Das ist die einzige echte Unbekannte dieses Circles.
+
+Der Defekt aus Punkt 3 des Vermerks `## Parent grounding stale` sitzt in einem der fünf
+Entscheidungsdatensätze und sollte vor der Klärungsrunde berichtigt sein, damit der Nutzer
+einem Verweis folgen kann, der trägt.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes
+von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim
+Nutzer über `/fusion:next` oder beim Orchestrator.
