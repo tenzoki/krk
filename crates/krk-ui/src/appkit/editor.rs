@@ -101,43 +101,87 @@
 //! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
 //! "Der Editor bekommt keine eigene Meldezeile".
 //!
-//! **Reiner Text.** `setRichText(false)` und die fuenf abgeschalteten
+//! **Reiner Text.** `setRichText(false)` und die sieben abgeschalteten
 //! Automatiken halten fest, was der Nutzer tippt: eine Zeichenkette, die beim
 //! Sichern Zeichen fuer Zeichen wieder in der Datei steht. Eine typografische
 //! Ersetzung von Anfuehrungszeichen oder Bindestrichen aendert Programmtext
 //! still, und die Zusage aus C4 lautet, dass der gesicherte Stand der getippte
 //! ist.
 //!
-//! **Die fuenf zerfallen in zwei Gruppen, und ueber der ersten war die zweite
-//! uebersehen.** Vier greifen beim **Tippen**: Anfuehrungszeichen, Bindestriche,
-//! Textersetzung, Rechtschreibkorrektur. Die fuenfte, `smartInsertDeleteEnabled`,
-//! greift beim **Einfuegen und Ausschneiden** — sie setzt ein Leerzeichen vor
-//! oder hinter ein eingefuegtes Wort und nimmt beim Ausschneiden ein
-//! ueberzaehliges fort. In Prosa ist das gemeint, in Programmtext ist es eine
-//! Aenderung, die niemand getippt hat, und damit dieselbe Sorte, gegen die die
-//! vier anderen stehen. Sie blieb an, weil die Aufzaehlung nach den vier
-//! tippenden aufhoerte
+//! **Die sieben zerfallen in drei Gruppen, und jede folgende war ueber der
+//! vorigen uebersehen.** Vier greifen beim **Tippen**: Anfuehrungszeichen,
+//! Bindestriche, Textersetzung, Rechtschreibkorrektur. Die fuenfte,
+//! `smartInsertDeleteEnabled`, greift beim **Einfuegen und Ausschneiden** — sie
+//! setzt ein Leerzeichen vor oder hinter ein eingefuegtes Wort und nimmt beim
+//! Ausschneiden ein ueberzaehliges fort; sie blieb an, weil die Aufzaehlung
+//! nach den vier tippenden aufhoerte
 //! (`issues/260809-1650_*_die-fuenfte-textveraendernde-automatik-smart-insert-delete-bleibt-an.md`).
-//! Ihr Vorgabewert ist `true`, und das ist **gemessen** an der Flaeche, die
-//! [`textflaeche_bauen`] liefert, nicht der Dokumentation entnommen.
+//! Die sechste und die siebte, `inlinePredictionType` (macOS 14) und
+//! `mathExpressionCompletionType` (macOS 15), blieben an, weil die Aufzaehlung
+//! **und die Probe darunter** nach der Namensform `set…Enabled:` fragten und
+//! diese beiden `set…Type:` heissen
+//! (`issues/260810-0416_*_zwei-weitere-textveraendernde-automatiken-stehen-an-und-die-probe-sieht-sie-nicht.md`).
+//! In Prosa ist jede der sieben gemeint; in Programmtext ist jede eine
+//! Aenderung, die niemand getippt hat. Die Vorgabewerte sind **gemessen** an
+//! der Flaeche, die [`textflaeche_bauen`] liefert, nicht der Dokumentation
+//! entnommen.
 //!
-//! **Dass es bei fuenf bleibt, haelt eine Probe fest und nicht die Aufmerksamkeit
-//! des naechsten Lesers.** `keine_unbekannte_automatik_steht_an_der_textflaeche`
-//! zaehlt zur Laufzeit die Schalter der Form `set…Enabled:` an der Klasse
-//! `NSTextView` auf und haelt sie gegen die Einordnung unter `mod tests`; ein
-//! dreizehnter haelt den Bau an, bis jemand ihn eingeordnet hat. Klasse und
-//! Selektoren stehen fuer sich, und deshalb braucht die Probe weder Flaeche noch
-//! Fenster. Sie misst dafuer **nicht**, ob die fuenf Zeilen in
-//! [`textflaeche_bauen`] noch stehen und was sie bewirken; das ist Nutzerarbeit
-//! am laufenden Buendel.
+//! **Die zweite Namensform ist zum groessten Teil keine zweite Menge von
+//! Einstellungen, sondern eine zweite Tuer zu denselben.** `NSTextView` traegt
+//! sechsundzwanzig Einstellungen der Formen `set…Enabled:`, `set…Type:` und
+//! `set…Behavior:`. Zehn der dreizehn `set…Type:` sind derselbe Speicher wie
+//! ein `set…Enabled:` daneben: `smartQuotesType` und
+//! `automaticQuoteSubstitutionEnabled` legen einander um, und dasselbe gilt
+//! fuer neun weitere Paare. Das ist gemessen, je Paar einzeln und in beiden
+//! Richtungen. Wer die zweite Tuer noch einmal zuschliesst, schaltet zehnmal
+//! ab, was schon aus ist. Ohne Zwilling stehen genau drei: die sechste und die
+//! siebte oben und `writingToolsBehavior`.
 //!
-//! **Was ausserhalb dieser Form liegt, faengt die Probe nicht**, und ein Fund
-//! steht dort: die Schreibwerkzeuge aus macOS 15 (`writingToolsBehavior`)
-//! schreiben markierten Text um, ihr Vorgabewert ueberlaesst dem System die
-//! Wahl, und sie sind kein Schalter der Form `set…Enabled:`. Sie unterscheiden
-//! sich von den fuenf darin, dass der Nutzer sie eigens aufruft; ob C4 sie
-//! trotzdem ausschliesst, ist ein eigener Datensatz,
+//! **Dass es bei sieben bleibt, haelt eine Probe fest — und sie sagt weniger
+//! zu, als sie aussieht.** `keine_unbekannte_einstellung_steht_an_der_textflaeche`
+//! zaehlt zur Laufzeit auf, was `NSTextView` in den drei Formen traegt, und
+//! verlangt, dass jeder Fund in `EINSTELLUNGEN` unter `mod tests` eine Antwort
+//! hat. Drei Grenzen gehoeren zu dieser Zusage, und keine davon ist zu
+//! schliessen:
+//!
+//! - **Sie misst das Geraet, auf dem sie laeuft, und nicht das Zielsystem.**
+//!   Das Buendel zielt auf macOS 15 und wird bis macOS 26 unterstuetzt; die
+//!   Aufzaehlung kommt aus der Laufzeit von `cargo test`. Eine Einstellung, die
+//!   Apple in macOS 26 dazulegt, faellt erst dem auf, der auf macOS 26 prueft.
+//!   Zur Uebersetzungszeit ist das nicht zu erzwingen: Rust sieht die
+//!   Kopfdateien des SDK nicht, `objc2` bildet keine Verfuegbarkeitsgrenze ab,
+//!   und `AnyProtocol` fuehrt in `objc2` 0.6 keine Mitgliederliste — sonst
+//!   waere `NSTextInputTraits` der sachliche statt des namensbasierten
+//!   Schnitts.
+//! - **Die Namensform ist nicht der Schnitt, den die Sache verlangt.** "Alles,
+//!   was den Textspeicher anfassen kann" ist an einem Selektornamen nicht
+//!   entscheidbar, und die zehn Paare oben zeigen es von der anderen Seite: da
+//!   sind zwei Namen eine Sache. Die Probe ist ein Stolperdraht ueber drei
+//!   bekannten Formen und kein Vollstaendigkeitsbeweis.
+//! - **Nur eine Richtung haelt den Bau an.** Was `NSTextView` traegt und
+//!   `EINSTELLUNGEN` nicht kennt, ist der gefaehrliche Fall und wird eine
+//!   Zusicherung, die die Namen nennt. Was `EINSTELLUNGEN` kennt und
+//!   `NSTextView` nicht mehr traegt, ist der harmlose — eine Einstellung, die
+//!   es nicht gibt, aendert keine Zeichen — und wird ein Hinweis auf der
+//!   Standardfehlerausgabe. Eine gruene Reihe auf einem unterstuetzten System
+//!   faerbt er nicht rot
+//!   (`issues/260810-0417_*_die-laufzeitprobe-bindet-den-bau-an-die-macos-version-des-pruefenden-geraets.md`).
+//!
+//! **Was die Zusage traegt, sind deshalb nicht die Proben, sondern die Zeilen
+//! in [`textflaeche_bauen`] und die Pruefung am laufenden Buendel.** Ob die
+//! sieben Zeilen stehen und was sie bewirken, misst hier keine Probe: Klasse
+//! und Selektoren stehen fuer sich, und deshalb braucht die Probe weder Flaeche
+//! noch Fenster. Das ist Nutzerarbeit.
+//!
+//! **Eine Einstellung steht in der Aufstellung ohne Antwort, und das ist
+//! Absicht.** Die Schreibwerkzeuge aus macOS 15 (`writingToolsBehavior`)
+//! schreiben markierten Text um, und ihr Vorgabewert ueberlaesst dem System die
+//! Wahl. Sie unterscheiden sich von den sieben darin, dass der Nutzer sie
+//! eigens aufruft; ob C4 sie trotzdem ausschliesst, ist eine Lesart und keine
+//! Codefrage. Der Datensatz ist
 //! `issues/260810-0512_o_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md`.
+//! `EINSTELLUNGEN` fuehrt sie als `NochOffen`, damit die Probe sie nicht
+//! uebersieht und die Antwort trotzdem beim Nutzer bleibt.
 //!
 //! **Die Formatansicht aus C3 widerspricht dem nicht, und der Grund ist nicht,
 //! wo ihre Merkmale liegen.** Sie setzt Farbe und Unterstreichung als
@@ -156,6 +200,11 @@
 //! Verfuegung; das Buendel zielt auf 15.0 (`.cargo/config.toml`). Keine von
 //! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
 //! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
+//!
+//! Zwei **Methoden** sind juenger als ihre Klasse: `setInlinePredictionType:`
+//! steht seit macOS 14, `setMathExpressionCompletionType:` seit macOS 15. Beide
+//! liegen auf oder unter dem Zielsystem, und auch sie brauchen deshalb keine
+//! Pruefung. Wer eine Methode aus macOS 16 oder spaeter anfasst, braucht eine.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -168,8 +217,8 @@ use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     NSAutoresizingMaskOptions, NSColor, NSFont, NSFontAttributeName,
     NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
-    NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextView, NSTextViewDelegate,
-    NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
+    NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView,
+    NSTextViewDelegate, NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
@@ -2048,7 +2097,7 @@ fn textflaeche_bauen(
     let text = NSTextView::initWithFrame(NSTextView::alloc(mtm), rahmen);
     text.setEditable(true);
     text.setSelectable(true);
-    // Reiner Text, und die fuenf Automatiken aus: der gesicherte Stand ist der
+    // Reiner Text, und die sieben Automatiken aus: der gesicherte Stand ist der
     // getippte. Der Grund steht im Modulkopf.
     text.setRichText(false);
     // Die vier, die beim Tippen greifen.
@@ -2060,6 +2109,17 @@ fn textflaeche_bauen(
     // steht deshalb fuer sich. Ab Werk ist sie **an**; ohne diese Zeile setzte
     // ein Einfuegen ein Leerzeichen dazu, das niemand getippt hat.
     text.setSmartInsertDeleteEnabled(false);
+    // Die sechste und die siebte tragen keinen Schalter der Form `set…Enabled:`
+    // und waeren deshalb beinahe stehen geblieben. Die Vorhersage im Textfluss
+    // schlaegt die Fortsetzung eines Wortes grau vor und traegt sie ein, sobald
+    // der Nutzer die Leer- oder die Tabulatortaste drueckt; die Auswertung von
+    // Rechenausdruecken ersetzt beim Tippen von `=` den Ausdruck davor durch
+    // sein Ergebnis, und in `wert=1+2` einer Konfigurationsdatei ist das eine
+    // Aenderung, die niemand getippt hat. Beide stehen ab Werk auf `Default`,
+    // ueberlassen die Wahl also dem System; `No` ist die Absage. Gemessen an
+    // derselben Flaeche, nicht der Dokumentation entnommen.
+    text.setInlinePredictionType(NSTextInputTraitType::No);
+    text.setMathExpressionCompletionType(NSTextInputTraitType::No);
     // Ohne diese Zeile traegt die Textansicht keine einzige
     // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
     // Ende der Antwortkette einen leeren Verwalter vor. `allowsUndo` steht bei
@@ -2546,24 +2606,45 @@ mod tests {
         rueckgaengigstapel_leeren(None);
     }
 
-    /// Die Automatiken, die [`textflaeche_bauen`] abschaltet, weil sie Zeichen
-    /// in den Text bringen oder aus ihm nehmen, die der Nutzer nicht getippt
-    /// hat (C4).
+    /// Die Namensformen, in denen `NSTextView` seine Texteingabe-Einstellungen
+    /// fuehrt.
     ///
-    /// Die ersten vier greifen beim Tippen, die fuenfte beim Einfuegen und
-    /// Ausschneiden. Sie stand bis 260810 an, weil die Aufzaehlung nach den vier
-    /// tippenden aufhoerte; das ist der Defekt 260809-1650.
-    const ABGESCHALTET: [&str; 5] = [
-        "setAutomaticQuoteSubstitutionEnabled:",
-        "setAutomaticDashSubstitutionEnabled:",
-        "setAutomaticTextReplacementEnabled:",
-        "setAutomaticSpellingCorrectionEnabled:",
-        "setSmartInsertDeleteEnabled:",
-    ];
+    /// Drei sind es heute: die alte boolesche `set…Enabled:`, die dreiwertige
+    /// `set…Type:` aus macOS 14 und die eine `set…Behavior:`. Der Modulkopf
+    /// sagt unter „Die Namensform ist nicht der Schnitt", warum diese
+    /// Aufzaehlung ein Stolperdraht ist und kein Beweis.
+    const FORMEN: [&str; 3] = ["Enabled:", "Type:", "Behavior:"];
 
-    /// Die Schalter derselben Form, die anbleiben duerfen, weil keiner von
-    /// ihnen den Textspeicher anfasst.
+    /// Wie eine Einstellung der Textflaeche zur Zusage aus C4 steht.
     ///
+    /// Vier Antworten. Die dritte ist der Fund vom 260810: die Form
+    /// `set…Type:` ist zum groessten Teil keine zweite Menge von Einstellungen,
+    /// sondern eine zweite **Tuer** zu denselben.
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Einordnung {
+        /// [`textflaeche_bauen`] schaltet sie ab, weil sie Zeichen in den Text
+        /// bringt oder aus ihm nimmt, die der Nutzer nicht getippt hat.
+        Abgeschaltet,
+        /// Sie darf anbleiben, weil sie den Textspeicher nicht anfasst.
+        Geduldet,
+        /// Zweite Tuer zu der genannten Einstellung: beide legen einander um,
+        /// je Paar einzeln und in beiden Richtungen gemessen. Sie eigens zu
+        /// setzen schaltete ab, was schon aus ist.
+        ZweiteTuerZu(&'static str),
+        /// Bekannt, benannt, und die Einordnung haengt an einer Lesart von C4,
+        /// die der Nutzer zu treffen hat. Der Datensatz steht dabei.
+        NochOffen(&'static str),
+    }
+
+    /// Jede Einstellung, die `NSTextView` in einer der [`FORMEN`] traegt, mit
+    /// ihrer Antwort auf die Frage aus C4.
+    ///
+    /// **Abgeschaltet sind sieben.** Vier greifen beim Tippen, die fuenfte beim
+    /// Einfuegen und Ausschneiden (Defekt 260809-1650), die sechste und die
+    /// siebte tragen keinen booleschen Schalter und rutschten deshalb durch die
+    /// Vorform dieser Probe (Defekt 260810-0416).
+    ///
+    /// **Geduldet sind die uebrigen**, und je Sorte aus einem eigenen Grund:
     /// - Die beiden Erkennungen zeichnen einen Fund als Verknuepfung aus und
     ///   aendern kein Zeichen; `setRichText(false)` nimmt ihnen ohnehin die
     ///   Wirkung.
@@ -2577,69 +2658,211 @@ mod tests {
     ///   einen davon waehlt, und das ist eine Eingabe und keine Automatik.
     /// - Die Schrittsuche waehlt einen Fund aus und schreibt nicht; das
     ///   Ersetzen aus C5 laeuft nicht ueber diesen Schalter.
-    const GEDULDET: [&str; 7] = [
-        "setAutomaticLinkDetectionEnabled:",
-        "setAutomaticDataDetectionEnabled:",
-        "setContinuousSpellCheckingEnabled:",
-        "setGrammarCheckingEnabled:",
-        "setAutomaticLanguageIdentificationEnabled:",
-        "setAutomaticTextCompletionEnabled:",
-        "setIncrementalSearchingEnabled:",
+    /// - Die Inhaltsart (`contentType`) sagt dem System, wofuer ein Feld
+    ///   gedacht ist, damit es Ausfuellvorschlaege machen kann. An KRKs Flaeche
+    ///   steht sie ab Werk auf `nil`, es gibt also nichts vorzuschlagen; und
+    ///   auch mit Wert traegt erst die Wahl des Nutzers Zeichen ein.
+    const EINSTELLUNGEN: &[(&str, Einordnung)] = &[
+        // Die vier, die beim Tippen greifen.
+        (
+            "setAutomaticQuoteSubstitutionEnabled:",
+            Einordnung::Abgeschaltet,
+        ),
+        (
+            "setAutomaticDashSubstitutionEnabled:",
+            Einordnung::Abgeschaltet,
+        ),
+        (
+            "setAutomaticTextReplacementEnabled:",
+            Einordnung::Abgeschaltet,
+        ),
+        (
+            "setAutomaticSpellingCorrectionEnabled:",
+            Einordnung::Abgeschaltet,
+        ),
+        // Die fuenfte, beim Einfuegen und Ausschneiden.
+        ("setSmartInsertDeleteEnabled:", Einordnung::Abgeschaltet),
+        // Die sechste und die siebte, ohne booleschen Zwilling.
+        ("setInlinePredictionType:", Einordnung::Abgeschaltet),
+        ("setMathExpressionCompletionType:", Einordnung::Abgeschaltet),
+        // Die geduldeten der alten Form.
+        ("setAutomaticLinkDetectionEnabled:", Einordnung::Geduldet),
+        ("setAutomaticDataDetectionEnabled:", Einordnung::Geduldet),
+        ("setContinuousSpellCheckingEnabled:", Einordnung::Geduldet),
+        ("setGrammarCheckingEnabled:", Einordnung::Geduldet),
+        (
+            "setAutomaticLanguageIdentificationEnabled:",
+            Einordnung::Geduldet,
+        ),
+        ("setAutomaticTextCompletionEnabled:", Einordnung::Geduldet),
+        ("setIncrementalSearchingEnabled:", Einordnung::Geduldet),
+        // Die zehn zweiten Tueren. Keine braucht eine eigene Zeile in
+        // `textflaeche_bauen`.
+        (
+            "setSmartQuotesType:",
+            Einordnung::ZweiteTuerZu("setAutomaticQuoteSubstitutionEnabled:"),
+        ),
+        (
+            "setSmartDashesType:",
+            Einordnung::ZweiteTuerZu("setAutomaticDashSubstitutionEnabled:"),
+        ),
+        (
+            "setTextReplacementType:",
+            Einordnung::ZweiteTuerZu("setAutomaticTextReplacementEnabled:"),
+        ),
+        (
+            "setAutocorrectionType:",
+            Einordnung::ZweiteTuerZu("setAutomaticSpellingCorrectionEnabled:"),
+        ),
+        (
+            "setSmartInsertDeleteType:",
+            Einordnung::ZweiteTuerZu("setSmartInsertDeleteEnabled:"),
+        ),
+        (
+            "setSpellCheckingType:",
+            Einordnung::ZweiteTuerZu("setContinuousSpellCheckingEnabled:"),
+        ),
+        (
+            "setGrammarCheckingType:",
+            Einordnung::ZweiteTuerZu("setGrammarCheckingEnabled:"),
+        ),
+        (
+            "setLinkDetectionType:",
+            Einordnung::ZweiteTuerZu("setAutomaticLinkDetectionEnabled:"),
+        ),
+        (
+            "setDataDetectionType:",
+            Einordnung::ZweiteTuerZu("setAutomaticDataDetectionEnabled:"),
+        ),
+        (
+            "setTextCompletionType:",
+            Einordnung::ZweiteTuerZu("setAutomaticTextCompletionEnabled:"),
+        ),
+        // Die Inhaltsart, ohne Zwilling und ohne Wert.
+        ("setContentType:", Einordnung::Geduldet),
+        // Und die eine, die auf eine Lesart von C4 wartet.
+        (
+            "setWritingToolsBehavior:",
+            Einordnung::NochOffen(
+                "issues/260810-0512_*_die-schreibwerkzeuge-aus-macos-15-schreiben-den-text-um-und-sind-nicht-abgewaehlt.md",
+            ),
+        ),
     ];
 
-    /// Die Zusage aus C4 ist entweder vollstaendig oder sie traegt nicht: ein
-    /// sechster Schalter, der durchrutscht, machte die fuenf abgeschalteten zu
+    /// Die Antwort zu einem Selektornamen, oder `None`, wenn
+    /// [`EINSTELLUNGEN`] ihn nicht kennt.
+    fn einordnung_von(name: &str) -> Option<Einordnung> {
+        EINSTELLUNGEN
+            .iter()
+            .find(|(eintrag, _)| *eintrag == name)
+            .map(|(_, einordnung)| *einordnung)
+    }
+
+    /// Die Zusage aus C4 ist entweder vollstaendig oder sie traegt nicht: eine
+    /// achte Automatik, die durchrutscht, machte die sieben abgeschalteten zu
     /// einer halben Massnahme.
     ///
-    /// Die Probe fragt deshalb nicht die fuenf ab, die sie kennt, sondern die
-    /// Klasse selbst: sie zaehlt zur Laufzeit auf, was `NSTextView` an Schaltern
-    /// der Form `set…Enabled:` traegt, und verlangt, dass jeder davon in
-    /// [`ABGESCHALTET`] oder [`GEDULDET`] eingeordnet ist. Ein neuer aus einem
-    /// spaeteren macOS haelt damit den Bau an, statt still anzubleiben — genau
-    /// der Weg, auf dem `smartInsertDeleteEnabled` bis 260810 durchgekommen ist.
+    /// Die Probe fragt deshalb nicht die sieben ab, die sie kennt, sondern die
+    /// Klasse selbst: sie zaehlt zur Laufzeit auf, was `NSTextView` in den
+    /// [`FORMEN`] traegt, und verlangt, dass jeder Fund in [`EINSTELLUNGEN`]
+    /// eine Antwort hat.
+    ///
+    /// **Die beiden Richtungen sind verschiedene Fragen und bekommen
+    /// verschiedene Antworten** (Defekt 260810-0417). Was die Klasse traegt und
+    /// die Aufstellung nicht kennt, haelt den Bau an: dort ist C4 offen. Was
+    /// die Aufstellung kennt und die Klasse nicht mehr traegt, ist ein Hinweis
+    /// und kein Fehlschlag — eine Einstellung, die es nicht gibt, aendert keine
+    /// Zeichen, und KRK wird auf macOS 15 bis 26 unterstuetzt, waehrend diese
+    /// Aufzaehlung allein das Geraet sieht, auf dem sie laeuft.
     ///
     /// **Weder Flaeche noch Fenster.** Klasse und Selektoren stehen fuer sich,
     /// und die Aufzaehlung braucht keine Instanz; deshalb steht die Probe hier
-    /// und nicht unter `Nutzerarbeit`. Dass die fuenf Zeilen in
+    /// und nicht unter `Nutzerarbeit`. Dass die sieben Zeilen in
     /// [`textflaeche_bauen`] stehen und wirken, misst sie nicht.
     #[test]
-    fn keine_unbekannte_automatik_steht_an_der_textflaeche() {
+    fn keine_unbekannte_einstellung_steht_an_der_textflaeche() {
         let klasse = AnyClass::get(c"NSTextView").expect("die Klasse NSTextView steht im Programm");
         let getragen: BTreeSet<String> = klasse
             .instance_methods()
             .iter()
             .map(|methode| methode.name().name().to_string_lossy().into_owned())
-            .filter(|name| name.starts_with("set") && name.ends_with("Enabled:"))
+            .filter(|name| {
+                name.starts_with("set") && FORMEN.iter().any(|form| name.ends_with(form))
+            })
             .collect();
-        let eingeordnet: BTreeSet<String> = ABGESCHALTET
+        let eingeordnet: BTreeSet<String> = EINSTELLUNGEN
             .iter()
-            .chain(GEDULDET.iter())
-            .map(|name| (*name).to_owned())
+            .map(|(name, _)| (*name).to_owned())
             .collect();
 
-        assert_eq!(
-            getragen, eingeordnet,
-            "NSTextView traegt einen Schalter, den weder ABGESCHALTET noch GEDULDET kennt, oder \
-             umgekehrt — wer ihn ergaenzt, beantwortet zuerst, ob er Zeichen aendert (C4)"
+        let unbekannt: Vec<&str> = getragen
+            .difference(&eingeordnet)
+            .map(String::as_str)
+            .collect();
+        assert!(
+            unbekannt.is_empty(),
+            "NSTextView traegt {} Einstellung(en), die EINSTELLUNGEN nicht kennt: {unbekannt:?} — \
+             wer sie ergaenzt, beantwortet zuerst, ob sie Zeichen aendert (C4), und prueft, ob sie \
+             nicht bloss eine zweite Tuer zu einer bekannten ist",
+            unbekannt.len()
         );
+
+        let verschwunden: Vec<&str> = eingeordnet
+            .difference(&getragen)
+            .map(String::as_str)
+            .collect();
+        if !verschwunden.is_empty() {
+            eprintln!(
+                "Hinweis: {verschwunden:?} steht in EINSTELLUNGEN, aber nicht mehr an NSTextView \
+                 dieses Systems. C4 ist davon nicht beruehrt — was es nicht gibt, aendert keine \
+                 Zeichen. Wer aufraeumt, streicht den Eintrag."
+            );
+        }
     }
 
-    /// Der Defekt 260809-1650, an der Stelle festgehalten, an der er entstanden
-    /// ist: die Aufzaehlung hoerte nach den vier tippenden Automatiken auf.
+    /// Die Aufstellung ist in sich stimmig: kein Name doppelt, und jede zweite
+    /// Tuer zeigt auf einen Eintrag, der selbst eine Antwort traegt.
     ///
-    /// Kein Schalter steht in beiden Aufstellungen: abgeschaltet und geduldet
-    /// sind einander ausschliessende Antworten auf dieselbe Frage, und die Probe
-    /// oben faende einen doppelt gefuehrten nicht, weil sie Mengen vergleicht.
+    /// Ohne diese Probe koennte eine zweite Tuer auf eine zweite Tuer zeigen
+    /// oder ins Leere, und die Aufstellung saehe vollstaendig aus, ohne es zu
+    /// sein.
     #[test]
-    fn die_fuenfte_automatik_steht_unter_den_abgeschalteten() {
-        assert!(
-            ABGESCHALTET.contains(&"setSmartInsertDeleteEnabled:"),
-            "die fuenfte greift beim Einfuegen und Ausschneiden und gehoert dazu"
-        );
-        for schalter in ABGESCHALTET {
+    fn jede_zweite_tuer_zeigt_auf_eine_beantwortete_einstellung() {
+        let mut gesehen = BTreeSet::new();
+        for (name, _) in EINSTELLUNGEN {
             assert!(
-                !GEDULDET.contains(&schalter),
-                "{schalter} ist zugleich abgeschaltet und geduldet"
+                gesehen.insert(name),
+                "{name} steht zweimal in EINSTELLUNGEN"
+            );
+        }
+
+        for (name, einordnung) in EINSTELLUNGEN {
+            if let Einordnung::ZweiteTuerZu(ziel) = einordnung {
+                match einordnung_von(ziel) {
+                    Some(Einordnung::Abgeschaltet | Einordnung::Geduldet) => {}
+                    andere => panic!(
+                        "{name} zeigt auf {ziel}, und das traegt keine eigene Antwort: {andere:?}"
+                    ),
+                }
+            }
+        }
+    }
+
+    /// Die beiden Defekte, an der Stelle festgehalten, an der sie entstanden
+    /// sind: die Aufzaehlung hoerte erst nach den vier tippenden Automatiken auf
+    /// (260809-1650) und fragte danach nach einer Namensform, die zwei weitere
+    /// nicht tragen (260810-0416).
+    #[test]
+    fn die_drei_nachgereichten_automatiken_stehen_unter_den_abgeschalteten() {
+        for name in [
+            "setSmartInsertDeleteEnabled:",
+            "setInlinePredictionType:",
+            "setMathExpressionCompletionType:",
+        ] {
+            assert_eq!(
+                einordnung_von(name),
+                Some(Einordnung::Abgeschaltet),
+                "{name} bringt Zeichen in den Text, die niemand getippt hat"
             );
         }
     }

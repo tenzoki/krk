@@ -79,3 +79,82 @@ Zwei Fragen hängen daran, und dieser Defekt beantwortet keine:
 
 Kein gemessener Textverlust. Der Befund ist eine offene Flanke gegen die Zusage
 aus C4 und keine beobachtete Fehlwirkung.
+
+---
+Resolved: `textflaeche_bauen` setzt beide auf `No`, die Aufstellung unter
+`mod tests` ordnet sie als abgeschaltet ein, und die Probe erreicht jetzt die
+Namensform, in der sie stehen. Modulkopf und Proben ziehen mit.
+
+**Beide Zeilen stehen.** `crates/krk-ui/src/appkit/editor.rs`,
+`textflaeche_bauen`:
+
+```rust
+text.setInlinePredictionType(NSTextInputTraitType::No);
+text.setMathExpressionCompletionType(NSTextInputTraitType::No);
+```
+
+`NSTextInputTraitType::No` ist die Absage; der Vorgabewert `Default` überließ die
+Wahl dem System. Aus fünf abgeschalteten Automatiken sind damit sieben geworden.
+
+**Die zweite Frage des Datensatzes ist beantwortet, und die Antwort fiel anders
+aus als die Frage sie stellte.** Der Datensatz fragte, ob die Probe künftig eine
+zweite Namensform trägt. Sie trägt jetzt drei — `Enabled:`, `Type:`, `Behavior:`
+—, aber der tragende Fund liegt daneben: **die Form `set…Type:` ist zum größten
+Teil keine zweite Menge von Einstellungen, sondern eine zweite Tür zu denselben.**
+
+`NSTextView` trägt auf macOS 15.7.7 sechsundzwanzig Einstellungen der drei
+Formen. Zehn der dreizehn `set…Type:` sind derselbe Speicher wie ein
+`set…Enabled:` daneben:
+
+| zweite Tür | erste Tür |
+|---|---|
+| `smartQuotesType` | `automaticQuoteSubstitutionEnabled` |
+| `smartDashesType` | `automaticDashSubstitutionEnabled` |
+| `textReplacementType` | `automaticTextReplacementEnabled` |
+| `autocorrectionType` | `automaticSpellingCorrectionEnabled` |
+| `smartInsertDeleteType` | `smartInsertDeleteEnabled` |
+| `spellCheckingType` | `continuousSpellCheckingEnabled` |
+| `grammarCheckingType` | `grammarCheckingEnabled` |
+| `linkDetectionType` | `automaticLinkDetectionEnabled` |
+| `dataDetectionType` | `automaticDataDetectionEnabled` |
+| `textCompletionType` | `automaticTextCompletionEnabled` |
+
+Gemessen, nicht der Dokumentation entnommen: ein Swift-Programm auf demselben
+Gerät (macOS 15.7.7, Build 24G720) legt je Paar die eine Tür um und liest die
+andere, in beiden Richtungen und für jedes Paar einzeln. Alle zwanzig Messungen
+sind gekoppelt. Wer die zweite Tür noch einmal zuschließt, schaltet zehnmal ab,
+was schon aus ist — deshalb hat `textflaeche_bauen` zwei neue Zeilen bekommen
+und nicht zwölf.
+
+Ohne Zwilling stehen genau drei: die beiden dieses Datensatzes und
+`writingToolsBehavior`.
+
+**Ein Fund kommt hinzu, den dieser Datensatz nicht führte.** `setContentType:`
+(`NSTextContentType`, der Hinweis für Ausfüllvorschläge) stand in keiner
+Aufstellung. Er ist als geduldet eingeordnet: an KRKs Fläche steht er ab Werk auf
+`nil`, es gibt also nichts vorzuschlagen, und auch mit Wert trägt erst die Wahl
+des Nutzers Zeichen ein — derselbe Schnitt wie bei der Textvervollständigung.
+
+**Die erste Frage des Datensatzes bleibt offen und ist Nutzerarbeit.** Ob die
+beiden an KRKs Fläche überhaupt gegriffen hätten, ist am laufenden Bündel zu
+messen. Das Abschalten macht die Frage in der sicheren Richtung gegenstandslos:
+sie greifen jetzt nicht, ob sie es vorher taten oder nicht.
+
+**Die Proben tragen neue Namen und eine neue Aufstellung**, alle in
+`crates/krk-ui/src/appkit/editor.rs` unter `mod tests`:
+
+- `EINSTELLUNGEN` — jede der sechsundzwanzig mit ihrer Antwort auf C4:
+  abgeschaltet, geduldet, zweite Tür zu, oder noch offen.
+- `keine_unbekannte_einstellung_steht_an_der_textflaeche` — Nachfolgerin von
+  `keine_unbekannte_automatik_steht_an_der_textflaeche`.
+- `jede_zweite_tuer_zeigt_auf_eine_beantwortete_einstellung` — neu, damit keine
+  zweite Tür auf eine zweite Tür oder ins Leere zeigt.
+- `die_drei_nachgereichten_automatiken_stehen_unter_den_abgeschalteten` —
+  Nachfolgerin von `die_fuenfte_automatik_steht_unter_den_abgeschalteten`, jetzt
+  mit allen dreien, die nachträglich hereinkamen.
+
+Die Zusicherung wurde gegengeprüft: ein aus der Aufstellung entfernter Eintrag
+bricht die Probe und nennt den Selektor beim Namen.
+
+**Was die Probe nicht kann, steht jetzt im Modulkopf** statt zwischen den Zeilen;
+die drei Grenzen sind mit `260810-0417` zusammen beantwortet und dort ausgeführt.
