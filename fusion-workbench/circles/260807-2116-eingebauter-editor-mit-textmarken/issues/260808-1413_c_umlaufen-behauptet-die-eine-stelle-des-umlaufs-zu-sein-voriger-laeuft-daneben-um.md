@@ -70,3 +70,51 @@ Eines von beiden:
    weil er dort mit derselben Rechnung die leere Liste erledigt.
 
 Der erste Weg ist der, den das Modul sonst wählt.
+
+---
+
+Resolved: Am 260810-0919 auf dem ersten der beiden Wege geschlossen — `voriger`
+läuft jetzt über `umlaufen` —, aber mit einer anderen Rechnung als der im Befund
+vorgeschlagenen.
+
+**Warum nicht die vorgeschlagene Zeile.** Der Befund schlug vor
+
+```rust
+davor.checked_sub(1).or_else(|| umlaufen(treffer, treffer.len().saturating_sub(1)))
+```
+
+Damit stünde der Satz an `umlaufen` weiterhin nur halb: der Umlauf nach hinten
+zielt in dieser Fassung auf `treffer.len() - 1`, und diese Zahl ist die
+Umlaufregel selbst. Sie stünde also wieder in `voriger`, und `umlaufen` bliebe
+darin auf die Leerlistenprüfung beschränkt. Der Satz behauptet mehr als das.
+
+**Was stattdessen steht.** `umlaufen` rechnet die Stelle im Ring:
+
+```rust
+fn umlaufen(treffer: &[Treffer], stelle: usize) -> Option<usize> {
+    if treffer.is_empty() {
+        return None;
+    }
+    Some(stelle % treffer.len())
+}
+```
+
+und `voriger` ist der Schritt zurück, als Schritt um `len - 1` nach vorn:
+
+```rust
+umlaufen(treffer, davor + treffer.len().saturating_sub(1))
+```
+
+Für `erster_ab` und `naechster` ist die Restrechnung dasselbe wie vorher, weil
+ihre Stelle höchstens `len` ist und `len % len` gleich `0`. Alle drei
+Richtungen und die leere Liste kommen jetzt aus derselben Funktion, und der Satz
+an `umlaufen` trägt: er nennt den Ring ausdrücklich und warnt davor, ihn auf
+`if stelle < len` zurückzukürzen, weil das `voriger` seinen Umlauf nähme.
+
+Kein Verhalten geändert. Die bestehende Probe
+`die_auswahl_laeuft_in_beide_richtungen_um` läuft unverändert grün; dazu ist
+`ein_einziger_treffer_wird_aus_jeder_richtung_wieder_erreicht` neu, der scharfe
+Fall der Ringrechnung mit dem Summanden 0.
+
+Geändert: ausschließlich `crates/krk-core/src/text/suche.rs`. Abgenommen mit
+`cargo build/test/clippy/fmt --workspace`, alle vier auf 0.

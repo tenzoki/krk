@@ -118,23 +118,29 @@ pub fn naechster(treffer: &[Treffer], versatz: usize) -> Option<usize> {
 /// Vor dem ersten geht es beim letzten weiter. Ohne Treffer `None`.
 pub fn voriger(treffer: &[Treffer], versatz: usize) -> Option<usize> {
     let davor = treffer.partition_point(|kandidat| kandidat.anfang < versatz);
-    // Der Umlauf nach hinten fuehrt auf den letzten; die leere Liste hat
-    // keinen, und `checked_sub` beantwortet beides in einem.
-    davor
-        .checked_sub(1)
-        .or_else(|| treffer.len().checked_sub(1))
+    // Einen zurueck, im Ring gerechnet: `umlaufen` nimmt keine Stelle vor der
+    // ersten, deshalb steht der Schritt zurueck als Schritt um `len - 1` nach
+    // vorn. Auf der leeren Liste ist der Summand 0 und `umlaufen` antwortet
+    // `None`, wie es das fuer alle drei tut.
+    umlaufen(treffer, davor + treffer.len().saturating_sub(1))
 }
 
 /// Die drei Auswahlfunktionen laufen um, und das ist die eine Stelle, an der
-/// sie es tun.
+/// sie es tun: die Stelle wird im **Ring** der Trefferliste gerechnet, und die
+/// leere Liste hat keine.
 ///
 /// Umlaufen statt anhalten, weil die Zaehlung, die C5 zusagt ("der wievielte
 /// gerade angesteuert ist"), eine Runde durch die Trefferliste beschreibt.
+///
+/// Der Ring und nicht ein "sonst der erste": beide Richtungen laufen um, und
+/// nur die Restrechnung traegt beide. Wer sie zu `if stelle < len` verkuerzt,
+/// nimmt [`voriger`] seinen Umlauf und zwingt ihn, sich einen eigenen zu
+/// schreiben — genau das war der Defekt `260808-1413`.
 fn umlaufen(treffer: &[Treffer], stelle: usize) -> Option<usize> {
     if treffer.is_empty() {
         return None;
     }
-    Some(if stelle < treffer.len() { stelle } else { 0 })
+    Some(stelle % treffer.len())
 }
 
 /// Ersetzt den angesteuerten Treffer und nennt den naechsten.
@@ -226,6 +232,17 @@ mod tests {
         assert_eq!(naechster(&liste, 6), Some(0), "hinter dem letzten");
         assert_eq!(voriger(&liste, 0), Some(2), "vor dem ersten");
         assert_eq!(voriger(&liste, 6), Some(1));
+    }
+
+    /// Der einzige Treffer ist der scharfe Fall der Ringrechnung: jede der drei
+    /// Richtungen kommt auf ihn zurueck, und `voriger` rechnet dabei mit dem
+    /// Summanden 0.
+    #[test]
+    fn ein_einziger_treffer_wird_aus_jeder_richtung_wieder_erreicht() {
+        let liste = alle("ab", "ab");
+        assert_eq!(erster_ab(&liste, 0), Some(0));
+        assert_eq!(naechster(&liste, 0), Some(0), "hinter dem einzigen");
+        assert_eq!(voriger(&liste, 0), Some(0), "vor dem einzigen");
     }
 
     #[test]

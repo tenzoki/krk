@@ -11,8 +11,8 @@
 //!         einlesen ──> in_gehaltene_form ──> der Stand des Editors
 //!                              ^                      │
 //!                              │                      │
-//!                jeder andere Text, der in            │
-//!                den Stand geraet (S37)               │
+//!                der Stand aus der Textflaeche        │
+//!                und der Ersatztext aus C5            │
 //!                                                     v
 //!                                       sicherungsform ──> sichern
 //!                                                             │
@@ -38,11 +38,22 @@
 //!
 //! **Wer Text in den Stand bringt, der nicht aus [`einlesen`] kommt, fuehrt
 //! ihn durch [`in_gehaltene_form`].** Das ist keine Hoeflichkeit, sondern die
-//! Bedingung, unter der die drei Stellen oben rechnen duerfen. Der Fall, der
-//! ansteht, ist der Ersatztext des Suchen-und-Ersetzens aus C5 (Schritt 37):
-//! er kommt aus einem Eingabefeld und kann ein `\r` tragen, wenn er
-//! hineinkopiert wurde. Eine eigene Wandlung an jener Stelle waere die zweite
-//! Normalisierungsstelle im Programm, und die erste ist diese hier.
+//! Bedingung, unter der die drei Stellen oben rechnen duerfen. Es sind **zwei**
+//! Faelle, und beide sind gebaut:
+//!
+//! - **Der Stand, den die `NSTextView` des Editors zurueckgibt** (Schritt 9).
+//!   Das ist der groessere der beiden: eine `NSTextView` bewahrt eingefuegten
+//!   Text zeichengetreu auf, also bringt ein Einfuegen aus einer Windows-Quelle
+//!   `\r\n` mit.
+//! - **Der Ersatztext des Suchen-und-Ersetzens aus C5** (Schritt 37). Er kommt
+//!   aus einem Eingabefeld und kann ein `\r` tragen, wenn er hineinkopiert
+//!   wurde.
+//!
+//! Beide liegen in `krk-ui/src/editormodell.rs`, der erste in `bearbeiten`, der
+//! zweite in `ersetzung_vorbereiten`; dessen Modulkopf fuehrt sie aus, statt
+//! dass dieser sie ein zweites Mal beschreibt. Eine eigene Wandlung an einer
+//! der beiden Stellen waere die zweite Normalisierungsstelle im Programm, und
+//! die erste ist diese hier.
 //!
 //! # Wer aus einem Textbestand liest, muss ihn nachziehen
 //!
@@ -143,13 +154,13 @@ pub const EDITORGRENZE: u64 = 16 * 1024 * 1024;
 /// Bezug**: `krk-core` kennt `krk-ui` nicht, und die Abhaengigkeit laeuft nur
 /// in die andere Richtung.
 ///
-/// **Was diese Zusicherung deshalb haelt und was nicht.** Sie faengt ein
-/// Absenken von [`EDITORGRENZE`] unter die Vorschaugrenze. Ein **Anheben** der
-/// Vorschaugrenze ueber 16 MB faengt sie nicht, weil jene Zahl in der anderen
-/// Kiste steht. Die vollstaendige Zusicherung gehoert dorthin, wo beide Zahlen
-/// sichtbar sind, also nach `krk-ui`; der Uebergang aus der Vorschau (Schritt
-/// 23) ist die Stelle dafuer. Festgehalten in
-/// `issues/260809-1610_*_die-zusicherung-editorgrenze-groesser-textgrenze-laesst-sich-in-krk-core-nur-halb-schreiben.md`.
+/// **Diese Zusicherung ist die eine Haelfte, und die andere steht drueben.**
+/// Sie faengt ein Absenken von [`EDITORGRENZE`] unter die Vorschaugrenze. Ein
+/// **Anheben** der Vorschaugrenze ueber 16 MB faengt sie nicht, weil jene Zahl
+/// in der anderen Kiste steht; das faengt die Gegenrichtung an `TEXTGRENZE`
+/// selbst (`krk-ui/src/vorschaumodell.rs`, wo beide Zahlen benennbar sind).
+/// Zusammen sind es beide Richtungen. Der Defekt, der die fehlende Haelfte
+/// gemeldet hat, ist `260809-1610`.
 const _: () = assert!(EDITORGRENZE > 1024 * 1024);
 
 /// Warum der Editor eine Datei nicht oeffnet (C2).
@@ -248,7 +259,8 @@ impl Abweisung {
 ///    Ordner voran. Diese Frage steht **vor** dem Oeffnen und nicht erst vor
 ///    dem Lesen, weil ein `File::open` auf eine benannte Roehre so lange
 ///    haengt, bis jemand hineinschreibt; das waere eine angehaltene Anwendung
-///    ohne Meldung.
+///    ohne Meldung. Wovor diese Lage schuetzt und wovor nicht, steht unten
+///    unter "Geprueft wird der Pfad und nicht der Deskriptor".
 /// 3. **Die Groesse wird vor dem Lesen geprueft**, so wie die Vorschau es fuer
 ///    ihre beiden Grenzen tut. Eine Protokolldatei von zwei Gigabyte darf nicht
 ///    erst eingelesen und dann abgewiesen werden; sie steht damit zu keinem
@@ -265,6 +277,36 @@ impl Abweisung {
 /// Speicher" eine Vorhersage aus einer alten Auskunft, mit ihr ist es eine
 /// Eigenschaft der Bauart. Eine wachsende Protokolldatei ist genau der Fall,
 /// fuer den ein Nutzer den Editor aufmacht.
+///
+/// # Geprueft wird der Pfad und nicht der Deskriptor
+///
+/// Schritt 2 und 3 fragen `stat(2)` auf den **Pfad**, und Schritt 4 oeffnet
+/// denselben **Pfad** ein zweites Mal. Zwischen beiden Aufrufen liegt ein
+/// Fenster, in dem der Pfad auf etwas anderes zeigen kann. Die Reihenfolge oben
+/// ist damit eine Pruefung des gewoehnlichen Betriebs und **keine Eigenschaft
+/// der Bauart**; wer den vorigen Absatz gelesen hat, unterscheide beides:
+///
+/// - **Wachsen** faengt die Schranke, weil sie gelesene Bytes zaehlt und keine
+///   Auskunft. Das gilt auch, wenn der Pfad in der Spanne auf eine **groessere**
+///   Datei zeigt: gelesen wird hoechstens ein Byte ueber der Grenze, und dann
+///   steht `ZuGross` da.
+/// - **Ein Austausch gegen eine benannte Roehre** faengt sie nicht: dann haengt
+///   das `File::open` doch, der Arbeitsfaden des Ladevorgangs endet nie, und der
+///   Editor oeffnet kommentarlos nichts. Der Fall braucht ein Wettrennen und ist
+///   selten, aber nicht bloss theoretisch.
+///
+/// Die Fassung, die auch das zu einer Eigenschaft der Bauart machte, prueft den
+/// **Deskriptor**: nicht blockierend oeffnen, dann `fstat` darauf, dann Typ und
+/// Groesse. Sie ist mit einem Merkmal an `OpenOptions` nicht getan, denn
+/// `O_NONBLOCK` gehoert vor dem Lesen wieder abgeschaltet — POSIX laesst seine
+/// Wirkung auf gewoehnliche Dateien offen, und `speculation:` auf einem
+/// Netzlaufwerk koennte ein Lesen sonst mit `EAGAIN` scheitern —, und das
+/// Abschalten ist ein `fcntl`, also eine vierte Bindung in `verzeichnis::sys`.
+/// Sie zieht ausserdem den Nachweis "ohne gelesen zu werden" in
+/// `tests/text.rs` mit, der heute an den Rechten haengt und dann am Oeffnen
+/// scheiterte. Ob der Aufwand die Seltenheit des Falls rechtfertigt, ist offen
+/// und steht in
+/// `issues/260809-1652_*_die-typpruefung-steht-auf-dem-pfad-und-nicht-auf-dem-deskriptor.md`.
 pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
     let kein_ziel = |grund: String| Abweisung::KeinGueltigesZiel {
         pfad: pfad.to_path_buf(),

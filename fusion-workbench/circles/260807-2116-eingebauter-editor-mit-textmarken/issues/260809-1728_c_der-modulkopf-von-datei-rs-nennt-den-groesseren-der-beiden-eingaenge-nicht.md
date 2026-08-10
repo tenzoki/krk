@@ -47,3 +47,30 @@ ausdrücklich nicht anzufassen. Die Berichtigung ist eine Zeile Prosa in
 
 Im Modulkopf beide Fälle nennen, den Stand aus der Textfläche zuerst, und im
 Bild den Pfeil entsprechend beschriften.
+
+---
+
+Resolved: Am 260810-0919 wie vorgeschlagen geschlossen, in Prosa und ohne eine
+Zeile Code.
+
+Der Modulkopf von `krk_core::text::datei` nennt beide Eingänge, den Stand aus
+der `NSTextView` zuerst, als Aufzählung mit zwei Punkten: der größere mit dem
+Grund, aus dem er der größere ist (eine `NSTextView` bewahrt eingefügten Text
+zeichengetreu auf), der kleinere unverändert mit dem Eingabefeld und dem
+kopierten `\r`. Beide sind ausdrücklich als **gebaut** bezeichnet, nicht als
+anstehend, und der Absatz nennt ihre Fundstellen (`bearbeiten` und
+`ersetzung_vorbereiten` in `krk-ui/src/editormodell.rs`).
+
+Der Pfeil im ASCII-Bild trägt jetzt "der Stand aus der Textflaeche und der
+Ersatztext aus C5" statt "jeder andere Text, der in den Stand geraet (S37)".
+
+**Ein Punkt geht über den Vorschlag hinaus.** Der Modulkopf von
+`editormodell.rs` führt beide Eingänge schon vollständig aus, mit eigenem Bild
+und mit der Begründung, warum der größere ein `bool` zurückgibt. Der Absatz in
+`datei.rs` verweist deshalb dorthin, statt die Erklärung ein zweites Mal zu
+schreiben: zwei Fassungen derselben Erklärung wären genau die Sorte Doppelung,
+die dieses Modul sonst vermeidet.
+
+Geändert: ausschließlich `crates/krk-core/src/text/datei.rs`, darin
+ausschließlich der Modulkopf. Abgenommen mit `cargo build/test/clippy/fmt
+--workspace`, alle vier auf 0.

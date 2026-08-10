@@ -99,6 +99,19 @@ pub const BILDGRENZE: u64 = 64 * 1024 * 1024;
 /// erst beim Pruefen: die Aussage haengt allein an den beiden Zahlen darueber.
 const _: () = assert!(BILDGRENZE > TEXTGRENZE);
 
+/// Der Editor nimmt mehr an als die Vorschau, und genau das war der Grund fuer
+/// seine eigene Zahl (`krk_core::text::datei::EDITORGRENZE`, 16 MB).
+///
+/// **Die Zusicherung steht hier, weil nur hier beide Zahlen benennbar sind.**
+/// `krk-core` kennt `krk-ui` nicht — die Abhaengigkeit laeuft allein in die
+/// andere Richtung —, und die Zusicherung dort vergleicht deshalb gegen die
+/// 1 MB als Zahl statt als Bezug. Sie faengt damit ein **Absenken** von
+/// `EDITORGRENZE`; ein **Anheben** von [`TEXTGRENZE`] ueber 16 MB faengt allein
+/// diese hier. Zusammen sind es beide Richtungen, und die halbe drueben bleibt
+/// stehen: sie schuetzt `krk-core` fuer sich genommen und kostet nichts. Der
+/// Defekt, der die fehlende Haelfte gemeldet hat, ist `260809-1610`.
+const _: () = assert!(krk_core::text::datei::EDITORGRENZE > TEXTGRENZE);
+
 /// Die Dateiendungen, die als gaengige Bildformate gelten (C6).
 ///
 /// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung. Die Liste nennt,
