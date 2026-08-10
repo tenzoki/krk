@@ -56,3 +56,12 @@ Den Halbsatz `wie es "belegung_ansehen" unten ist` streichen und den Satz auf di
 **Schwere:** Low
 **Betroffen:** `resources/default-keymap.toml:25-26`
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260810-1217-ontorev-belegungsdatei-nach-den-drei-kommentarstellen.md` (der Bericht, aus dem dieser Defekt stammt)
+
+---
+Resolved: Der Halbsatz `wie es "belegung_ansehen" unten ist` ist aus `resources/default-keymap.toml:26` gestrichen. Der Satz steht jetzt auf der Begründung allein und sagt dazu, dass die Datei derzeit keinen Eintrag dieser Sorte trägt; das alte Beispiel ist als historische Notiz mit Datum 260810 erhalten, in derselben Form, die der Editor-Block und der Rückgängig-Block für ihre überholten Stände führen. Ein Ersatzbeispiel ist nicht erfunden.
+
+Die Leere der zweiten Sorte ist vor der Änderung selbst nachgezählt, nicht aus dem Datensatz übernommen: über alle 71 Einträge der Datei gegen `Kommando::KENNUNGEN` tragen 65 ein Kommando und 6 `gehalten_von = "menue"`; die Menge der Einträge ohne Kommando ist genau die Menge der sechs vom Menü zugestellten, `reserviert_fuer` ist nirgends gesetzt, und die 65 Kennungen entsprechen den 65 Einträgen in beide Richtungen ohne Rest. `belegung_ansehen` trägt sein Kommando unverändert an den beiden Stellen, die dieser Datensatz nennt (`crates/krk-core/src/tasten/belegung.rs:409` und `:493`).
+
+Keine Belegungszeile geändert (290 Nutzzeilen, Byte für Byte dieselben), keine Zahl im Dateikopf angefasst. `cargo test -p krk-core --lib tasten` und `cargo test --workspace` laufen grün.
+
+Offen bleibt eine Lücke, die dieser Datensatz nicht schließt: der neue Satz behauptet den Bestand der Datei, und keine Probe hält ihn. Das ist dieselbe Lücke wie in `260810-1219_o_die-zwei-zahlen-im-kopf-der-belegungsdatei-wachsen-nicht-mit-ihr.md`, und die dort vorgeschlagene Probe deckt sie mit, wenn sie die Entsprechung zwischen den Kennungen und den Einträgen in beide Richtungen prüft statt nur die Zählstände.

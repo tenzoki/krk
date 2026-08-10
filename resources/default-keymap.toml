@@ -23,7 +23,10 @@
 #                    beantwortet. Eine solche Funktion bekommt nie ein
 #                    Kommando. Ohne das Feld waere sie von einer Funktion
 #                    nicht zu unterscheiden, deren Kommando ein spaeterer
-#                    Schritt erst baut, wie es "belegung_ansehen" unten ist.
+#                    Schritt erst baut. Einen Eintrag dieser zweiten Sorte
+#                    liefert die Datei derzeit nicht; bis zum 260810 stand
+#                    hier "belegung_ansehen" als Beispiel, und es traegt
+#                    inzwischen selbst ein Kommando.
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
@@ -476,7 +479,7 @@ tasten = ["ctrl+o"]
 # Elf Funktionen der Editor-Runde. Der Einstieg ueber F4 steht oben in der
 # Norton-Reihe, wo er seit der Runde 1 reserviert war.
 #
-# Fuenf von ihnen teilen sich den Buchstaben e und unterscheiden sich in der
+# Vier von ihnen teilen sich den Buchstaben e und unterscheiden sich in der
 # Zusatztaste. Das ist die Systematik, die diese Belegung schon bei l und d
 # faehrt: die blanke Cmd-Ebene traegt die Handlung selbst, shift+cmd den
 # Fokusbefehl, opt+cmd das Ein- und Ausblenden, ctrl+cmd die Zweitform.
@@ -636,6 +639,7 @@ tasten = ["f1"]
 # Menue schlage ueber das Zeichen nach, der Ereignisabgriff ueber die Stelle.
 # Seit S2 gilt es fuer beide, und die Ableitung ist weggefallen; das Ergebnis
 # bleibt.
+#
 # Was hier steht, ist die Anzeige- und Konfliktseite dieser Kuerzel und nicht
 # der Nachschlag, der sie ausloest.
 

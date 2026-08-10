@@ -85,3 +85,16 @@ Das Fortschreiben ist im Uebrigen gleichwertig zum vollen Durchgang. Gemessen an
 - 940 gezielte Faelle rings um jede Haltepunktgrenze in einer Datei mit zwoelf Haltepunkten — Anfuehrungszeichen, geoeffneter und geschlossener Blockkommentar, offene Rohkette, Zeile von 20 000 Zeichen, leere Zeile, Zeile entfernt, Zeile eingefuegt, je an `k*32-2` bis `k*32+2`; Blockkommentare ueber 1, 31, 32, 33, 96 und 167 Zeilen, an einem Ende geoeffnet und geschlossen; Markdown-Zaeune an Haltepunktgrenzen; Schlussumbruch dazu und fort; leerer Text in beide Richtungen: 0 Abweichungen.
 
 Verglichen wurde die Wirkung Zeichen fuer Zeichen, also mit demselben Maßstab wie `wirkung` in den Proben des Moduls.
+
+---
+Resolved: Der Stand des Zerlegers liegt in `rechnen` jetzt in einem `Option` und wird nach einem gescheiterten Ruf **fallen gelassen**, statt eingefroren weitergetragen zu werden — der falsche Zustand ist damit nicht verboten, sondern nicht vorhanden. Neuer Typ `Zerlegerstand { zustand, stapel }`, weil das Paar an drei Stellen als Paar gebraucht wird; `Haltepunkt` traegt ihn als ein Feld, `Rest::anschluss` nimmt einen Verweis darauf, und die Marke `faerben` ist fort.
+
+Der Befund reichte dabei eine Stelle weiter, als er geschrieben war: **nicht nur die Haltepunkte** lasen den eingefrorenen Stand, sondern auch `Rest::anschluss`. Ein Treffer dort haengte den eingefaerbten Schwanz der Vorlage an, den ein voller Durchgang nach dem Abbruch nicht mehr einfaerbt — dieselbe gebrochene Gleichheit auf einem zweiten Weg. Der vorgeschlagene `if faerben && …` haette den ersten Weg geschlossen und den zweiten offen gelassen; das `Option` schliesst beide, weil beide einen Stand brauchen, den es nicht mehr gibt.
+
+Der Haltepunkt der Abbruchzeile selbst bleibt stehen: er entsteht vor dem Ruf und traegt den Stand am Anfang dieser Zeile, und ein Durchgang, der dort einsteigt, bricht an derselben Zeile ebenso ab.
+
+Probe wie verlangt, mit eingesetztem Abbruch statt Warten darauf: `das_fortschreiben_haelt_nach_einem_abbruch_der_kiste` (Abbruch an Zeile 40 von 192 ueber `ABBRUCHZEILE` unter `cfg(test)`, eingesetzt in der Huelle `zerlegen`). Sie misst die Haltepunktliste (`[0, 32]` statt sechs Eintraege) und die Zusage an vier Aenderungsstellen in beiden Richtungen. **Beide Haelften fallen gegen die alte Fassung**, gemessen durch vorübergehendes Wiederherstellen der alten Semantik: `left: [0, 32, 64, 96, 128, 160]` und „die Wirkung weicht ab".
+
+Abnahme in einem Pruefbaum auf `HEAD` mit allein dieser Datei geaendert: `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets`, `cargo fmt -p krk-ui -- --check` je exit 0. Bericht: `history/260810-1305-coder-der-zerlegerstand-faellt-nach-einem-abbruch.md`.
+
+Nicht angefasst und ausdruecklich geprueft: der zweite Fehlerausgang `stapel.apply(befehl).is_err() => break` laesst den Wortartenstapel teilangewandt stehen, bricht die Gleichheit aber nicht — derselbe Eingang liefert denselben teilangewandten Stapel, und ein voller Durchgang erreicht an derselben Zeile dasselbe Paar.

@@ -1203,6 +1203,99 @@ mod tests {
         }
     }
 
+    /// Die zwei Zahlen im Kopf von `resources/default-keymap.toml` stimmen noch.
+    ///
+    /// Der Kopf der Datei sagt in einer Zeile, wie viele Funktionen und wie
+    /// viele Kombinationen ausgeliefert werden. Die Zahlen stehen in einem
+    /// Kommentar, ein Kommentar haelt keinen Bau an, und deshalb sind sie bisher
+    /// still mit der Datei auseinandergelaufen, die sie beschreiben: zwei andere
+    /// Kommentarstellen derselben Datei hatten es am 260810 schon getan
+    /// (Defekte `260810-1217` und `260810-1218`). Der Defekt dazu ist
+    /// `260810-1219`.
+    ///
+    /// # Wer diese Probe fehlschlagen sieht, zieht den Dateikopf nach
+    ///
+    /// Nachzuziehen ist die eine Zeile im Kopf von
+    /// `resources/default-keymap.toml`, die mit `# Ausgeliefert sind` beginnt,
+    /// und nichts hier. Gesucht wird sie an diesem Anfang und nicht an ihrer
+    /// Zeilennummer: der Kopf der Datei waechst, und am 260810 hat die Zeile
+    /// binnen eines Tages von 30 auf 33 gewechselt.
+    ///
+    /// Das ist die Absicht: **die Probe traegt keine eigene Zahl.** Sie liest
+    /// beide aus dem Kommentar und zaehlt die Datei dagegen, und damit gibt es
+    /// die Zaehlstaende weiterhin an genau einer Stelle.
+    ///
+    /// # Der Unterschied zur Nachbarin darunter
+    ///
+    /// `beim_bauen_der_auslieferungsbelegung_geht_kein_eintrag_verloren` hatte
+    /// eine Vorgaengerin, die beide Zahlen als Literal im Quelltext trug; die
+    /// musste weichen, weil ihr Fehlschlag nichts belegte — die Belegung war in
+    /// Ordnung, allein die Zahl im Quelltext war alt. Hier ist der Fehlschlag
+    /// selbst die Aussage, denn geprueft wird nicht die Groesse der Datei,
+    /// sondern die Uebereinstimmung zweier Stellen **derselben** Datei.
+    #[test]
+    fn die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch() {
+        let (funktionen_im_kopf, kombinationen_im_kopf) = zahlen_aus_dem_dateikopf();
+        let datei: Belegungsdatei = toml::from_str(AUSLIEFERUNGSTEXT)
+            .expect("die eingebettete Auslieferungsbelegung ist gueltiges TOML");
+        let kombinationen: usize = datei
+            .funktionen
+            .iter()
+            .map(|eintrag| eintrag.tasten.len())
+            .sum();
+
+        assert_eq!(
+            datei.funktionen.len(),
+            funktionen_im_kopf,
+            "der Kopf von resources/default-keymap.toml nennt {funktionen_im_kopf} Funktionen, \
+             die Datei traegt {}; die Zeile \"# Ausgeliefert sind ...\" gehoert nachgezogen",
+            datei.funktionen.len()
+        );
+        assert_eq!(
+            kombinationen, kombinationen_im_kopf,
+            "der Kopf von resources/default-keymap.toml nennt {kombinationen_im_kopf} \
+             Kombinationen, die Datei traegt {kombinationen}; die Zeile \
+             \"# Ausgeliefert sind ...\" gehoert nachgezogen"
+        );
+    }
+
+    /// Die beiden Zaehlstaende aus der Kommentarzeile im Kopf der
+    /// Auslieferungsbelegung, in der Reihenfolge Funktionen, Kombinationen.
+    ///
+    /// Gelesen wird aus [`AUSLIEFERUNGSTEXT`], also aus derselben eingebetteten
+    /// Datei, aus der auch die Belegung entsteht; ein zweiter Dateizugriff im
+    /// Pruefcode entsteht nicht.
+    ///
+    /// **Verschwindet die Zeile oder wechselt ihre Form, ist das ein Fehlschlag
+    /// und kein uebersprungener Fall.** Eine Probe, die ihren Gegenstand nicht
+    /// mehr findet und deshalb bejaht, wuerde genau die Luecke wieder aufmachen,
+    /// die sie schliessen soll.
+    fn zahlen_aus_dem_dateikopf() -> (usize, usize) {
+        let anfang = "# Ausgeliefert sind ";
+        let zeile = AUSLIEFERUNGSTEXT
+            .lines()
+            .find(|zeile| zeile.starts_with(anfang))
+            .unwrap_or_else(|| {
+                panic!(
+                    "der Kopf von resources/default-keymap.toml hat keine Zeile, die mit \
+                     {anfang:?} beginnt; sie nannte bis zum 260810 die Zahl der Funktionen und \
+                     die der Kombinationen, und diese Probe haelt genau die beiden fest"
+                )
+            });
+        let zahlen: Vec<usize> = zeile
+            .split_whitespace()
+            .filter_map(|wort| wort.parse().ok())
+            .collect();
+        assert_eq!(
+            zahlen.len(),
+            2,
+            "die Zeile {zeile:?} nennt nicht genau zwei Zahlen; erwartet ist die Form \
+             \"# Ausgeliefert sind <Funktionen> Funktionen mit zusammen <Kombinationen> \
+             Kombinationen.\""
+        );
+        (zahlen[0], zahlen[1])
+    }
+
     /// Was beim Bauen aus der Datei verschwinden koennte, verschwindet nicht.
     ///
     /// Die Vorgaengerin dieser Pruefung schrieb die Zahl der Funktionen und die

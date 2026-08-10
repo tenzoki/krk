@@ -43,3 +43,12 @@ Die vorhandene Probe `jede_kennung_der_kommandos_steht_in_der_auslieferungsbeleg
 **Schwere:** Low
 **Betroffen:** `crates/krk-core/src/tasten/belegung.rs` (die fehlende Probe), `resources/default-keymap.toml:30` (die ungesicherte Zahl)
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260810-1217-ontorev-belegungsdatei-nach-den-drei-kommentarstellen.md` (der Bericht, aus dem dieser Defekt stammt)
+
+---
+Resolved: Die Probe `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` steht in `crates/krk-core/src/tasten/belegung.rs`, unmittelbar neben `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung`. `resources/default-keymap.toml` ist unangetastet geblieben, die beiden Zahlen 71 und 79 ebenso.
+
+**Sie traegt die Zahlen nicht als Literal, sondern liest sie aus der Kommentarzeile selbst.** Der Helfer `zahlen_aus_dem_dateikopf` sucht in `AUSLIEFERUNGSTEXT` die Zeile, die mit `# Ausgeliefert sind ` beginnt, und zieht die zwei Zahlen daraus; die Probe zaehlt dann die `[[funktion]]`-Eintraege und die Summe ueber alle `tasten`-Listen und vergleicht. Damit stehen die Zaehlstaende weiterhin an genau einer Stelle, und ein Nachtrag hat genau eine Stelle nachzuziehen: die Kommentarzeile. Waere die Zahl im Quelltext wiederholt, waere sie die zweite Stelle, die auseinanderlaufen kann, und das ist der Grund, aus dem die Vorgaengerin von `beim_bauen_der_auslieferungsbelegung_geht_kein_eintrag_verloren` weichen musste; der Kommentar der neuen Probe fuehrt diesen Unterschied aus.
+
+Verschwindet die Zeile oder wechselt ihre Form, ist das ein Fehlschlag mit Namen und kein uebersprungener Fall: der Helfer bricht mit der erwarteten Form im Text ab.
+
+Beide Richtungen sind gemessen (260810, je ein Lauf). Unveraendert laeuft die Probe durch. Mit einem im Pruefcode angehaengten `[[funktion]]`-Block meldet sie: "der Kopf von resources/default-keymap.toml nennt 71 Funktionen, die Datei traegt 72; die Zeile \"# Ausgeliefert sind ...\" gehoert nachgezogen".

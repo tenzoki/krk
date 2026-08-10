@@ -54,3 +54,6 @@ Der Vergleich mit `l` und `d` bleibt tragfähig: `cmd+d` trägt `lesezeichen_anl
 **Schwere:** Medium
 **Betroffen:** `resources/default-keymap.toml:479`
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/reviews/260810-1217-ontorev-belegungsdatei-nach-den-drei-kommentarstellen.md` (der Bericht, aus dem dieser Defekt stammt)
+
+---
+Resolved: `Fuenf` in `resources/default-keymap.toml:479` durch `Vier` ersetzt. Vor der Änderung selbst nachgezählt: `grep` über alle `tasten`-Listen der Datei findet den Buchstaben `e` in genau vier Kombinationen (Zeilen 504, 513, 521, 530), und die vier belegen die vier Ebenen der Systematik, die der Absatz nennt. Die drei Folgesätze und der Vergleich mit `l` und `d` bleiben unangetastet, ebenso jede Belegungszeile: die Datei ohne Kommentar- und Leerzeilen ist vor und nach der Änderung Byte für Byte dieselbe, 290 Nutzzeilen. `cargo test -p krk-core --lib tasten` läuft mit 21 Proben grün, `cargo test --workspace` ebenfalls.

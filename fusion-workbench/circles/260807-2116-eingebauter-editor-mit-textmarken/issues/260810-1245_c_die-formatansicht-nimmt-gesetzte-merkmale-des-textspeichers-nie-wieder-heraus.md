@@ -62,3 +62,63 @@ Die Wirkung, die `formatierung_anwenden` haben soll, ist **setzen**, nicht **hin
 Weg 2 ist der empfohlene: er macht aus zwei Halbwahrheiten eine Stelle. Die Grundschrift ist dort ohnehin schon ausgerechnet (`grundschrift_setzen` kennt sie aus Ansicht und Darstellungsart).
 
 Dazu eine Probe. Sie braucht kein Fenster: `NSTextStorage`, Merkmale setzen, Text aendern, Merkmale lesen. Der Rest der Formatansicht ist in `crate::hervorhebung` ohne AppKit geprueft; diese eine Zusage ist die, die nur in AppKit messbar ist.
+
+---
+Resolved: Weg 2, der empfohlene, in der Fassung mit einer dritten Zusammenlegung
+dazu. `merkmale_zuruecksetzen` ist die eine Stelle, die zuruecknimmt, und
+`formatierung_anwenden` ruft sie, statt vorweg selbst zu leeren.
+
+Drei Aenderungen, und die dritte macht die zweite ueberhaupt moeglich:
+
+1. **Die Grundschrift steht jetzt an einer Stelle.** Die Fallunterscheidung aus
+   `grundschrift_setzen` ist als freie Funktion `grundschrift(ansicht, art)`
+   herausgezogen. Sie hat zwei Aufrufer: `grundschrift_setzen` setzt sie ueber
+   `setFont:` an der Flaeche und damit auch fuer den naechsten Anschlag,
+   `merkmale_zuruecksetzen` setzt sie als Merkmal ueber den ganzen Textspeicher.
+   Zwei Rechnungen waeren die erste Gelegenheit, dass eine geloeschte
+   Ueberschrift in einer anderen Schrift landete als der, in der ihre Zeile
+   getippt wird.
+2. **`merkmale_zuruecksetzen(ansicht, art)` nimmt jetzt beides heraus**, den
+   Absatzstil wie bisher und die Schrift dazu: `removeAttribute:range:` fuer
+   `NSParagraphStyleAttributeName` und `addAttributes:range:` mit der
+   Grundschrift, beides ueber den ganzen Text, dazu wie bisher das Leeren der
+   voruebergehenden Merkmale. Der Satz „`setFont:` erledigt die Schrift" ist
+   damit gefallen; er galt nur fuer die vier Anlaesse von
+   `darstellung_nachziehen` und nicht fuer den fuenften, das Tippen.
+3. **`formatierung_anwenden` faengt nicht mehr bei `addAttributes:range:` an.**
+   Es holt Ansicht und Darstellungsart aus dem Modell (die Ausleihe endet vor dem
+   Ruf ins Textsystem, wie ueberall in dieser Datei), ruft
+   `merkmale_zuruecksetzen` hinter der Laengenpruefung und setzt danach. Das
+   eigene `setTemporaryAttributes:` mit dem leeren Verzeichnis ist **fort**: es
+   waere die zweite Stelle mit einer Meinung darueber, was zurueckzunehmen ist,
+   und `merkmale_zuruecksetzen` deckt dieselbe Liste mit ab.
+
+Damit ist die Wirkung **setzen** und nicht hinzufuegen: nach dem Ruf traegt der
+Textspeicher genau die Merkmale der uebergebenen Formatierung. Ein geloeschtes
+`#` laesst keine 25,6 pt stehen, ein entferntes `-` keinen Einzug und ein
+entfernter Zaun keine feste Schrift — und zwar auf dem Weg, der beim Tippen
+laeuft (`textDidChange:` → `text_zurueckschreiben` → `einfaerbung_anfordern` →
+`einfaerbung_einziehen` → `formatierung_anwenden`), nicht erst beim
+Ansichtswechsel.
+
+**`crate::hervorhebung` ist nicht angefasst.** Die Behebung sitzt an der Stelle
+in `appkit/editor.rs`, an der die Merkmale auf den Textspeicher gehen; das
+Fortschreiben der Einfaerbung mit seinem aufgehobenen Zerlegerzustand alle 32
+Zeilen bleibt unberuehrt, weil es die **voruebergehenden** Merkmale liefert und
+diese Behebung die des Textspeichers betrifft.
+
+**Die Probe aus dem Vorschlag ist nicht gebaut, und der Grund gehoert dazu.** Sie
+braucht kein Fenster, wohl aber eine Instanz: entweder einen `Editorbereich`
+(dann Fenster, Takt, Aufteilung) oder eine `NSTextStorage` samt dem
+`NSLayoutManager` einer Flaeche. Das erste liegt ausserhalb dessen, was
+`an_einer_flaeche` gemessen hat, das zweite waere eine fuenfte Instanzprobe unter
+der offenen Frage aus `decisions/260810-1044_o_…`, die ausdruecklich nicht in
+einem Nebenzug beantwortet werden soll. Was die Behebung heute haelt, ist die
+Zusammenlegung selbst: es gibt nur noch **eine** Stelle, die zuruecknimmt, und
+`formatierung_anwenden` kann sie nicht uebergehen, ohne dass die Grundschrift
+sichtbar falsch waere. Der Abnahmelauf am laufenden Buendel prueft es an
+`# Kopf` in einer Markdown-Datei.
+
+Verification: `cargo build --workspace` exit 0, `cargo test --workspace` exit 0,
+`cargo clippy --workspace --all-targets` exit 0,
+`cargo fmt -p krk-ui -- --check` exit 0.

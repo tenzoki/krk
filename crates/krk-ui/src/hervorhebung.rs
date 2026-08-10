@@ -165,7 +165,9 @@ use std::thread;
 
 use syntect::easy::ScopeRegionIterator;
 use syntect::highlighting::{Color, FontStyle, Highlighter, ThemeSet};
-use syntect::parsing::{ParseState, Scope, ScopeStack, SyntaxReference, SyntaxSet};
+use syntect::parsing::{
+    ParseState, ParsingError, Scope, ScopeStack, ScopeStackOp, SyntaxReference, SyntaxSet,
+};
 use syntect::util::LinesWithEndings;
 
 use crate::editormodell::Dateityp;
@@ -516,20 +518,41 @@ struct Zeilenanfang {
     utf16: usize,
 }
 
-/// Der aufgehobene Zustand der Kiste am Anfang einer Zeile.
+/// Der Stand der Kiste am Anfang einer Zeile.
 ///
 /// **Das ist das eine Stueck, das `syntect` nicht selbst aufhebt**, und ohne das
 /// kein Durchgang mitten in einer Datei anfangen kann: [`ParseState`] traegt den
 /// Stapel der offenen Zusammenhaenge (eine offene Zeichenkette, ein offener
 /// Block), [`ScopeStack`] die Wortarten, die an dieser Stelle gelten.
-#[derive(Debug, Clone)]
-struct Haltepunkt {
-    /// Die Zeile, an deren Anfang der Zustand gilt; ab 0 gezaehlt.
-    zeile: usize,
+///
+/// **Die beiden stehen in einem Typ, weil sie nur zusammen etwas bedeuten.** Ein
+/// [`Haltepunkt`] hebt dieses Paar auf, [`Rest::anschluss`] vergleicht dieses
+/// Paar, und [`rechnen`] traegt dieses Paar von Zeile zu Zeile. Getrennt gefuehrt
+/// waere dieselbe Verabredung dreimal geschrieben, und ein Durchgang koennte
+/// einen Zustand ohne den zugehoerigen Stapel weitergeben.
+#[derive(Debug, Clone, PartialEq)]
+struct Zerlegerstand {
     /// Der Zustand des Zerlegers.
     zustand: ParseState,
     /// Der Stapel der Wortarten.
     stapel: ScopeStack,
+}
+
+/// Der aufgehobene [`Zerlegerstand`] am Anfang einer Zeile.
+///
+/// **Aufgehoben wird nur ein Stand, den ein voller Durchgang an dieser Zeile
+/// auch erreicht.** Bricht die Kiste an einer Zeile ab, gibt es dahinter keinen
+/// solchen Stand mehr — dann entsteht auch kein Haltepunkt mehr, und zwar nicht
+/// weil [`rechnen`] den Fall abfragt, sondern weil es den Stand fallen laesst und
+/// ihn danach nicht mehr hat. Der gemessene Fehler, der zu dieser Form gefuehrt
+/// hat, steht in
+/// `issues/260810-1242_*_nach-einem-gescheiterten-parse-line-hebt-das-fortschreiben-zustaende-auf-die-nicht-zu-ihrer-zeile-gehoeren.md`.
+#[derive(Debug, Clone)]
+struct Haltepunkt {
+    /// Die Zeile, an deren Anfang der Stand gilt; ab 0 gezaehlt.
+    zeile: usize,
+    /// Der Stand des Zerlegers an ihrem Anfang.
+    stand: Zerlegerstand,
 }
 
 /// Was ein Durchgang aufhebt, damit der naechste ihn fortschreiben kann (C3).
@@ -774,14 +797,20 @@ struct Anschluss {
 }
 
 impl Rest {
-    /// Ob der Zustand am Anfang der neuen Zeile `nummer` mit einem
-    /// aufgehobenen zusammenfaellt.
+    /// Ob der Stand am Anfang der neuen Zeile `nummer` mit einem aufgehobenen
+    /// zusammenfaellt.
     ///
     /// **Zwei Bedingungen, und beide muessen gelten.** Die Zeile muss im
     /// gemeinsamen Ende liegen — dort tragen Vorlage und neuer Text Zeile fuer
-    /// Zeile dasselbe —, und der Zustand des Zerlegers muss derselbe sein. Ohne
+    /// Zeile dasselbe —, und der Stand des Zerlegers muss derselbe sein. Ohne
     /// die erste waere der Text dahinter ein anderer, ohne die zweite die
     /// Einfaerbung.
+    ///
+    /// **Gefragt wird nur, solange die Kiste noch einen Stand hat.** Nach einem
+    /// Abbruch gibt es keinen, den man hier einsetzen koennte, und deshalb auch
+    /// keinen Wiederanschluss: der Schwanz der Vorlage ist eingefaerbt, ein
+    /// voller Durchgang faerbt ihn nach dem Abbruch nicht mehr ein, und ihn
+    /// anzuhaengen brueche die Gleichheit der beiden Wege.
     ///
     /// **Angeschlossen wird nur an einem Haltepunkt**, also hoechstens
     /// [`ZUSTANDSABSTAND`] Zeilen hinter der Stelle, an der die Zustaende
@@ -795,8 +824,7 @@ impl Rest {
         &self,
         nummer: usize,
         neue_zahl: usize,
-        zustand: &ParseState,
-        stapel: &ScopeStack,
+        stand: &Zerlegerstand,
         zeiger: &mut usize,
     ) -> Option<Anschluss> {
         if nummer + self.gleiche_endzeilen < neue_zahl {
@@ -814,7 +842,7 @@ impl Rest {
             *zeiger += 1;
         }
         let punkt = self.haltepunkte.get(*zeiger)?;
-        if punkt.zeile != alte_zeile || punkt.zustand != *zustand || punkt.stapel != *stapel {
+        if punkt.zeile != alte_zeile || punkt.stand != *stand {
             return None;
         }
         Some(Anschluss {
@@ -848,6 +876,36 @@ fn leere_rechnung(text: &str, art: Darstellungsart) -> Rechnung {
     }
 }
 
+/// Die Zeile, an der der Pruefcode einen Abbruch der Kiste einsetzt.
+///
+/// **Sie steht hier, weil der eingebundene Sprachsatz keinen Abbruch liefert.**
+/// Zwei Messreihen ueber alle 213 Sprachdefinitionen aus
+/// `two_face::syntax::extra_newlines()` haben keinen Weg gefunden,
+/// [`ParseState::parse_line`] zum Abbruch zu bringen; sie stehen in
+/// `issues/260810-1242_*_nach-einem-gescheiterten-parse-line-hebt-das-fortschreiben-zustaende-auf-die-nicht-zu-ihrer-zeile-gehoeren.md`.
+/// Ein Zweig, den keine Probe betritt, ist aber eine Behauptung und keine
+/// gemessene Zusage, und ob er erreichbar wird, entscheidet die naechste Fassung
+/// von `two-face` und nicht KRK.
+#[cfg(test)]
+const ABBRUCHZEILE: &str = "// KRK-PRUEFABBRUCH\n";
+
+/// Fuehrt die Kiste ueber eine Zeile.
+///
+/// **Eine Huelle um [`ParseState::parse_line`] und sonst nichts.** Sie ist die
+/// eine Stelle, an der der Pruefcode einen Abbruch einsetzen kann; im gebauten
+/// Programm bleibt nach `cfg(test)` allein der Ruf stehen.
+fn zerlegen(
+    zustand: &mut ParseState,
+    zeile: &str,
+    satz: &SyntaxSet,
+) -> Result<Vec<(usize, ScopeStackOp)>, ParsingError> {
+    #[cfg(test)]
+    if zeile == ABBRUCHZEILE {
+        return Err(ParsingError::MissingMainContext);
+    }
+    zustand.parse_line(zeile, satz)
+}
+
 /// Rechnet die Darstellung, so weit sie nicht aus der Vorlage kommt (C3).
 ///
 /// Ohne Vorlage ist das der ganze Text; mit Vorlage der Abschnitt von der
@@ -860,6 +918,16 @@ fn leere_rechnung(text: &str, art: Darstellungsart) -> Rechnung {
 /// einer Zeile ab, deckten die Stuecke die Zeile nicht mehr ab, und jede Stelle
 /// dahinter waere verschoben. Die Laenge der Formatierung ist deshalb der
 /// Schlusseintrag der Zeilentafel und keine getrennte Rechnung daneben.
+///
+/// **Bricht die Kiste an einer Zeile ab, endet damit auch das Aufheben.** Der
+/// [`Zerlegerstand`] wird je Zeile aus [`Option`] herausgenommen und nur nach
+/// einem gelungenen [`zerlegen`] wieder eingesetzt; danach gibt es keinen, also
+/// entsteht kein [`Haltepunkt`] mehr und [`Rest::anschluss`] wird nicht mehr
+/// gefragt. Beides ist Voraussetzung dafuer, dass „von vorn" und
+/// „fortgeschrieben" dasselbe liefern: ein Haltepunkt mit dem eingefrorenen Stand
+/// liesse den naechsten Durchgang hinter dem Abbruch weiterfaerben, und ein
+/// Wiederanschluss haengte den eingefaerbten Schwanz der Vorlage an — beides
+/// Farben, die ein voller Durchgang nicht setzt.
 fn rechnen(
     text: &str,
     vorlage: Option<Vorlage<'_>>,
@@ -891,8 +959,7 @@ fn rechnen(
         .and_then(|vorlage| einstieg_finden(vorlage, &neu));
 
     let ab;
-    let mut zustand;
-    let mut stapel;
+    let mut zerleger;
     let mut byte;
     let mut stelle;
     let mut zeilen;
@@ -911,8 +978,7 @@ fn rechnen(
                 formatierung,
             } = vorlage;
             ab = einstieg.ab;
-            zustand = alte_haltepunkte[einstieg.haltepunkt].zustand.clone();
-            stapel = alte_haltepunkte[einstieg.haltepunkt].stapel.clone();
+            zerleger = Some(alte_haltepunkte[einstieg.haltepunkt].stand.clone());
             byte = alte_zeilen[ab].byte;
             stelle = alte_zeilen[ab].utf16;
 
@@ -941,8 +1007,10 @@ fn rechnen(
         }
         _ => {
             ab = 0;
-            zustand = ParseState::new(sprache);
-            stapel = ScopeStack::new();
+            zerleger = Some(Zerlegerstand {
+                zustand: ParseState::new(sprache),
+                stapel: ScopeStack::new(),
+            });
             byte = 0;
             stelle = 0;
             zeilen = Vec::with_capacity(neu.len() + 1);
@@ -952,7 +1020,6 @@ fn rechnen(
         }
     }
 
-    let mut faerben = true;
     let mut anschluss = None;
     let mut zeiger = 0;
     let mut nummer = ab;
@@ -962,19 +1029,25 @@ fn rechnen(
             byte,
             utf16: stelle,
         });
-        if haltepunkte
-            .last()
-            .is_none_or(|letzter| nummer - letzter.zeile >= ZUSTANDSABSTAND)
+        if let Some(stand) = &zerleger
+            && haltepunkte
+                .last()
+                .is_none_or(|letzter| nummer - letzter.zeile >= ZUSTANDSABSTAND)
         {
             haltepunkte.push(Haltepunkt {
                 zeile: nummer,
-                zustand: zustand.clone(),
-                stapel: stapel.clone(),
+                stand: stand.clone(),
             });
         }
 
-        if faerben {
-            match zustand.parse_line(zeile, satz) {
+        // Der Stand wird **herausgenommen** und nur im Erfolgsfall wieder
+        // eingesetzt. Daran haengt die Gleichheit der beiden Wege: nach einem
+        // Abbruch gibt es keinen Stand, also entsteht kein Haltepunkt mehr und
+        // es wird kein Wiederanschluss gesucht. Beides zu **verbieten** waere
+        // eine Abfrage, die man vergessen kann; beides nicht mehr zu **koennen**
+        // ist eine Eigenschaft des Typs.
+        if let Some(mut stand) = zerleger.take() {
+            match zerlegen(&mut stand.zustand, zeile, satz) {
                 // Die Kiste ist mit dieser Zeile nicht fertiggeworden. Was bis
                 // hierher steht, bleibt stehen; der Rest bleibt ungefaerbt, und
                 // der Nutzer sieht seine Datei. Ein Abbruch waere die
@@ -982,19 +1055,25 @@ fn rechnen(
                 // Zeilentafel laeuft trotzdem weiter, sonst waere die Laenge
                 // der Formatierung falsch und die Flaeche liesse die ganze
                 // Lieferung fallen.
-                Err(_) => faerben = false,
+                //
+                // `stand` faellt hier, und das ist der ganze Fehlerzweig. Er
+                // ist auf dem Weg zum `Err` schon veraendert worden
+                // (`syntect-5.3.0/src/parsing/parser.rs:229` setzt
+                // `first_line` vor dem ersten `?`), gehoert also zu keiner
+                // Zeile mehr — auch nicht zu dieser.
+                Err(_) => {}
                 Ok(befehle) => {
                     let mut innen = stelle;
                     let mut ist_liste = false;
                     for (stueck, befehl) in ScopeRegionIterator::new(&befehle, zeile) {
-                        if stapel.apply(befehl).is_err() {
+                        if stand.stapel.apply(befehl).is_err() {
                             break;
                         }
                         let stuecklaenge = stueck.encode_utf16().count();
                         if stuecklaenge == 0 {
                             continue;
                         }
-                        let arten = stapel.as_slice();
+                        let arten = stand.stapel.as_slice();
                         let stil = faerber.style_for_stack(arten);
                         let unterstrichen = stil.font_style.contains(FontStyle::UNDERLINE)
                             || (markdown && Wortarten::traegt(wortarten.verweis, arten));
@@ -1046,6 +1125,7 @@ fn rechnen(
                             art: Auszeichnung::Listenzeile,
                         });
                     }
+                    zerleger = Some(stand);
                 }
             }
         }
@@ -1055,8 +1135,8 @@ fn rechnen(
         nummer += 1;
 
         if let Some(rest) = &rest
-            && let Some(gefunden) =
-                rest.anschluss(nummer, neu.len(), &zustand, &stapel, &mut zeiger)
+            && let Some(stand) = &zerleger
+            && let Some(gefunden) = rest.anschluss(nummer, neu.len(), stand, &mut zeiger)
         {
             anschluss = Some(gefunden);
             break;
@@ -1768,6 +1848,47 @@ mod tests {
         zeilen.remove(3 * ZUSTANDSABSTAND);
         let nachher = format!("{}\n", zeilen.join("\n"));
         fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+    }
+
+    /// Die Zusage haelt auch, wenn die Kiste an einer Zeile abbricht.
+    ///
+    /// **Der Abbruch wird eingesetzt und nicht abgewartet**, weil der
+    /// eingebundene Sprachsatz keinen liefert; die beiden Messreihen dazu stehen
+    /// an [`ABBRUCHZEILE`]. Gemessen wird beides, was hinter dem Abbruch nicht
+    /// mehr entstehen darf: ein weiterer Haltepunkt, und die Farben eines
+    /// Wiederanschlusses. Der Fall, der den Fehler aus
+    /// `issues/260810-1242_*_nach-einem-gescheiterten-parse-line-hebt-das-fortschreiben-zustaende-auf-die-nicht-zu-ihrer-zeile-gehoeren.md`
+    /// gezeigt hat, ist die Aenderung **hinter** der Abbruchzeile: dort faerbte
+    /// der fortgeschriebene Durchgang 64 Stuecke ein, die der volle nicht setzt.
+    #[test]
+    fn das_fortschreiben_haelt_nach_einem_abbruch_der_kiste() {
+        let abbruch_bei = ZUSTANDSABSTAND + 8;
+        let mut zeilen: Vec<String> = (0..6 * ZUSTANDSABSTAND)
+            .map(|nummer| format!("let zeile{nummer} = {nummer};"))
+            .collect();
+        zeilen[abbruch_bei] = ABBRUCHZEILE.trim_end_matches('\n').to_owned();
+        let quelle = format!("{}\n", zeilen.join("\n"));
+
+        // Zwei Haltepunkte und nicht sechs: hinter dem Abbruch entsteht keiner
+        // mehr, obwohl die Datei fuer sechs lang genug ist.
+        let stand = fortschreiben(
+            None,
+            quelle.clone(),
+            Some(&pfad("a.rs")),
+            Dateityp::Sonstiges,
+            Tafel::Dunkel,
+        );
+        let stellen: Vec<usize> = stand.haltepunkte.iter().map(|punkt| punkt.zeile).collect();
+        assert_eq!(stellen, [0, ZUSTANDSABSTAND]);
+
+        // Und die Zusage selbst, vor und hinter der Abbruchzeile.
+        for stelle in [1, abbruch_bei - 1, abbruch_bei + 1, 4 * ZUSTANDSABSTAND] {
+            let mut geaendert = zeilen.clone();
+            geaendert[stelle] = format!("let x = \"{stelle}\";");
+            let nachher = format!("{}\n", geaendert.join("\n"));
+            fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+            fortschreiben_gleicht_vollem_durchgang(&nachher, &quelle, "a.rs", Dateityp::Sonstiges);
+        }
     }
 
     /// Ein unveraenderter Text kostet keinen Durchgang: der aufgehobene Stand

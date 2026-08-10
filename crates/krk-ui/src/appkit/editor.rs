@@ -55,6 +55,26 @@
 //! (`issues/260809-2148_*_s25-sichern-schriebe-den-plattenstand-weil-die-rueckschreibung-erst-s26-baut.md`).
 //! `textDidChange:` ist die eine Stelle, die AppKit dafuer vorsieht.
 //!
+//! **Und diese eine Stelle deckt Rueckgaengig und Wiederherstellen nur auf
+//! TextKit 1.** Gemessen am 260810 auf macOS 15.7.7 (Build 24G720), dreimal
+//! reproduziert: eine `NSTextView` auf TextKit 2 aendert bei einem `undo` ihren
+//! Text, **ohne** `textDidChange:` zu verschicken; auf TextKit 1 verschickt sie
+//! genau eines, mit dem schon zurueckgenommenen Text. Einziger Unterschied ist der
+//! Zugriff auf `layoutManager`, und der laesst AppKit auf den aelteren
+//! `NSLayoutManager` zurueckfallen. KRKs Flaeche ist deshalb TextKit 1, und das
+//! ist seit dem 260810-1243 **Absicht mit ihrem Grund**: [`textflaeche_bauen`]
+//! fasst den Verwalter eigens an, und
+//! [`die_gebaute_flaeche_steht_auf_textkit_1`](tests::die_gebaute_flaeche_steht_auf_textkit_1)
+//! haelt den Bau an, wenn jemand den Rueckfall wegnimmt. Vorher entstand er als
+//! Nebenwirkung von `merkmale_zuruecksetzen` und von [`super::nummernspalte`], die
+//! den Verwalter aus einem anderen Grund anfassen, und ein Nachziehen der
+//! Nummernspalte auf `NSTextLayoutManager` haette bei gruenem Bau und gruenen
+//! Proben ein `cmd+s` hinterlassen, das den zurueckgenommenen Text sichert
+//! (`issues/260810-1243_*_dass-ein-cmd-z-ueberhaupt-im-modell-ankommt-haengt-an-textkit-1-und-das-steht-nirgends-als-tragend.md`).
+//! **Dass `undo` auf TextKit 1 ein `textDidChange:` verschickt, ist gemessen und
+//! nicht von Apple zugesagt**; was hier verlangt ist, ist die benannte
+//! Abhaengigkeit und nicht ihre Beseitigung.
+//!
 //! **`setString:` loest den Rueckweg nicht aus.** Eine `NSTextView` meldet ihrem
 //! Delegierten allein die Aenderungen des Nutzers; ein programmatisch gesetzter
 //! Text laeuft an `didChangeText` vorbei. Darauf ruht, dass eine frisch
@@ -105,6 +125,22 @@
 //! laesst alles davor fallen — warum es nicht mehr sein kann, steht an
 //! [`Editorbereich::flaeche_richten`], und es ist eine Eigenschaft der Sache und
 //! nicht der Sorgfalt.
+//!
+//! **Eine Handlung im Stapel haelt den geaenderten Bereich und nicht die Datei.**
+//! Der Stapel eines `NSUndoManager` hat keine Tiefengrenze; eine Handlung, die den
+//! ganzen Stand abschreibt, macht den gehaltenen Speicher deshalb zum Produkt aus
+//! Dateigroesse und Zahl der Handlungen. [`Umkehrpunkt`] traegt statt dessen
+//! Stelle, entfernte Zeichen und Zahl der eingefuegten Bytes; die Zahlen, der
+//! eine Fall, der davon nicht kleiner wird, und der Grund gegen `setLevelsOfUndo`
+//! stehen dort.
+//!
+//! **Ein Rueckgaengig bildet den Suchlauf neu.** `Editormodell::bearbeiten`
+//! beendet ihn, weil die Byteversaetze der Treffer nach einer Aenderung ungueltig
+//! sind; nach einem zurueckgenommenen Ersetzen ist der Text aber der von vorher,
+//! also ist die Trefferliste ausrechenbar. [`Editorbereich::umkehren`] rechnet sie
+//! ueber denselben Weg nach, den `cmd+f` geht, und der Nutzer bezahlt ein `cmd+z`
+//! nicht mehr mit seiner laufenden Suche
+//! (`issues/260810-1244_*_ein-cmd-z-nach-einem-ersetzen-loescht-den-suchlauf-den-das-ersetzen-eigens-aufgebaut-hat.md`).
 //!
 //! **Der Kopf ist die zweite Anzeige neben der Statuszeile, und er ist eine
 //! andere Art von Aussage.** Die Statuszeile traegt Antworten auf Befehle; der
@@ -296,10 +332,13 @@
 //! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
 //! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
 //!
-//! Zwei **Methoden** sind juenger als ihre Klasse: `setInlinePredictionType:`
-//! steht seit macOS 14, `setMathExpressionCompletionType:` seit macOS 15. Beide
-//! liegen auf oder unter dem Zielsystem, und auch sie brauchen deshalb keine
-//! Pruefung. Wer eine Methode aus macOS 16 oder spaeter anfasst, braucht eine.
+//! Drei **Methoden** sind juenger als ihre Klasse: `setInlinePredictionType:`
+//! steht seit macOS 14, `setMathExpressionCompletionType:` seit macOS 15, und
+//! `NSTextView.textLayoutManager` seit macOS 12 — die letzte fragt allein die
+//! Probe, die den Rueckfall auf TextKit 1 festhaelt, und `NSTextLayoutManager`
+//! selbst wird nirgends benannt. Alle drei liegen auf oder unter dem Zielsystem,
+//! und auch sie brauchen deshalb keine Pruefung. Wer eine Methode aus macOS 16
+//! oder spaeter anfasst, braucht eine.
 //!
 //! **Die Proben unter `mod tests` sprechen daneben nichts an, was eine
 //! Verfuegbarkeitsfrage stellt.** Sie fragen die Laufzeit nach Namen: die Klasse
@@ -582,17 +621,176 @@ impl Editormeldung {
 /// [`Editorbereich::flaeche_richten`] die Schreibmarke mitrechnet, statt sie
 /// wandern zu lassen.
 ///
-/// **Der Stand steht hier als Abschrift und nicht als Verweis.** Ein Verweis
-/// in das Modell zeigte auf den Stand, den das Modell **jetzt** haelt, und das
-/// ist gerade der, von dem weg umgekehrt werden soll. Der Preis ist eine Kopie
-/// des Standes je Umbau, also bis zu 16 MB; er steht an
-/// [`Editorbereich::umkehrung_anmelden`] und wird nicht verschwiegen.
+/// # Der Punkt traegt den geaenderten Bereich und nicht den ganzen Stand
+///
+/// Bis zum 260810-1241 stand hier der **ganze** Stand vor dem Umbau als
+/// `String`, und der Stapel des `NSUndoManager` hat keine Tiefengrenze. Damit
+/// war der gehaltene Speicher das Produkt aus Dateigroesse und Zahl der
+/// Handlungen: an der Editorgrenze von 16 MB und den hundert Ersetzungen, die C5
+/// mit „der wievielte gerade angesteuert ist" selbst anbietet, rund 1,6 GB, frei
+/// erst mit dem naechsten Dateiwechsel
+/// (`issues/260810-1241_*_der-rueckgaengigstapel-haelt-je-eigener-handlung-eine-ganze-abschrift-und-ist-unbegrenzt.md`).
+///
+/// **Die Abschrift war nicht unvermeidlich, und deshalb steht hier keine
+/// Tiefengrenze, sondern eine andere Darstellung.** Ein Umbau des Textes ist der
+/// Austausch **eines** Bereichs: `entfernt` an der Stelle `anfang` gegen
+/// `eingefuegt` Bytes. Alles davor und alles danach ist in beiden Staenden
+/// dasselbe und braucht nicht aufgehoben zu werden. Gemessen an einem Stand von
+/// 16 MB mit einer Ersetzung darin:
+///
+/// ```text
+///   Darstellung                 je Handlung      100 Handlungen
+///   ganzer Stand (bis 1241)     16 777 219 B     1 677 721 900 B
+///   geaenderter Bereich         3 B              300 B
+/// ```
+///
+/// Die Zahlen stehen nicht hier, weil sie hier geglaubt werden sollen, sondern
+/// weil
+/// [`ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand`](tests::ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand)
+/// sie an derselben Grenze nachrechnet und den Bau anhaelt, wenn eine spaetere
+/// Fassung wieder den ganzen Stand aufhebt.
+///
+/// **`setLevelsOfUndo` steht bewusst nirgends.** Eine Tiefengrenze gaebe es nur
+/// fuer den ganzen Verwalter, und der traegt nach der Anmeldung in
+/// [`Editorbereich::umkehrung_anmelden`] die Handlungen der Flaeche mit — also
+/// das Tippen. Sie zu begrenzen aendert eine Zusage, die weder C4 noch C5 macht,
+/// und sie loeste den einen Fall nicht, der nach diesem Umbau bleibt: siehe
+/// [`Editorbereich::alle_treffer_ersetzen`].
+///
+/// **Was der Umbau nicht abschafft, ist die voruebergehende Abschrift.** Wer
+/// einen Punkt bildet, hat beide Staende gleichzeitig zu halten, und einer von
+/// beiden kommt bei drei der vier Anlaesse als Kopie aus dem Modell. Sie faellt
+/// am Ende des Blocks, in dem sie entstand, und geht deshalb in keinen Stapel
+/// ein; der Preis ist ein `memcpy` je Handlung neben den beiden Durchgaengen, die
+/// `krk_core::text::suche` fuer dieselbe Handlung ohnehin faehrt.
 struct Umkehrpunkt {
-    /// Die Zeichen, die das Modell vor dem Umbau hielt. In gehaltener Form,
-    /// weil sie aus dem Modell kommen.
-    stand: String,
+    /// Der Byteversatz **im Stand nach dem Umbau**, ab dem sich die beiden
+    /// Staende unterscheiden. Eine Zeichengrenze, siehe
+    /// [`gemeinsamer_anfang`].
+    anfang: usize,
+    /// Die Zeichen, die der Stand **vor** dem Umbau ab [`Self::anfang`] trug. In
+    /// gehaltener Form, weil sie aus dem Modell kommen.
+    entfernt: String,
+    /// Wie viele Bytes der Stand **nach** dem Umbau ab [`Self::anfang`] traegt.
+    /// Sie treten fuer [`Self::entfernt`] zurueck.
+    eingefuegt: usize,
     /// Die Auswahl der Flaeche vor dem Umbau, in AppKits Koordinate.
     auswahl: NSRange,
+}
+
+impl Umkehrpunkt {
+    /// Der Punkt, der `nachher` wieder zu `vorher` macht.
+    ///
+    /// **Ein Bereich und nicht mehrere.** Ein Sammelersetzen aendert viele
+    /// Stellen; dieser Punkt fasst sie in **einen** Bereich von der ersten bis
+    /// zur letzten zusammen. Das ist mehr als das Notwendige und trotzdem
+    /// richtig: die Wiederherstellung ist zeichengleich, und die Zahl der
+    /// Bereiche zu fuehren hiesse, die Regeln des Ersetzens hier ein zweites Mal
+    /// zu tragen. Was ein Ersetzen geaendert hat, weiss `krk_core::text::suche`
+    /// und nicht diese Datei.
+    ///
+    /// Die beiden Staende werden geliehen und nicht genommen: der Punkt haelt
+    /// danach allein den Unterschied.
+    fn zwischen(vorher: &str, nachher: &str, auswahl: NSRange) -> Self {
+        let anfang = gemeinsamer_anfang(vorher, nachher);
+        let schwanz = gemeinsamer_schwanz(vorher, nachher, anfang);
+        Self {
+            anfang,
+            entfernt: vorher[anfang..vorher.len() - schwanz].to_owned(),
+            eingefuegt: nachher.len() - schwanz - anfang,
+            auswahl,
+        }
+    }
+
+    /// Der Stand, der aus `stand` entsteht, wenn dieser Punkt darauf wirkt.
+    ///
+    /// **Der Guertel ist der Schnitt auf eine Zeichengrenze**, und er steht hier
+    /// aus demselben Grund wie der in [`Editorbereich::auswahl_setzen`]: die
+    /// beiden Versaetze sind gegen genau den Stand gebildet, der hier
+    /// hereinkommt, und passen deshalb. Ein Versatz, der es doch nicht taete,
+    /// waere in Rust keine falsche Anzeige, sondern eine Panik mitten in der
+    /// Ereignisbehandlung. Dass er passt, haelt die Zusicherung fest; dass er
+    /// notfalls nicht abstuerzt, der Schnitt.
+    fn angewandt_auf(&self, stand: &str) -> String {
+        let anfang = bis_zur_zeichengrenze(stand, self.anfang);
+        let bis = bis_zur_zeichengrenze(stand, self.anfang + self.eingefuegt);
+        debug_assert!(
+            anfang == self.anfang && bis == self.anfang + self.eingefuegt,
+            "der Umkehrpunkt gehoert zu einem anderen Stand als dem, auf den er wirkt"
+        );
+        let mut neu = String::with_capacity(stand.len() - (bis - anfang) + self.entfernt.len());
+        neu.push_str(&stand[..anfang]);
+        neu.push_str(&self.entfernt);
+        neu.push_str(&stand[bis..]);
+        neu
+    }
+
+    /// Wie viele Bytes dieser Punkt im Stapel haelt.
+    ///
+    /// Allein fuer die Messung aus
+    /// `issues/260810-1241_*_der-rueckgaengigstapel-haelt-je-eigener-handlung-eine-ganze-abschrift-und-ist-unbegrenzt.md`.
+    /// Die vier `usize` und der `NSRange` daneben sind eine feste Groesse und
+    /// haengen nicht an der Datei; gezaehlt wird deshalb, was am Halde haengt.
+    #[cfg(test)]
+    fn getragene_bytes(&self) -> usize {
+        self.entfernt.len()
+    }
+}
+
+/// Der erste Byteversatz, an dem sich zwei Texte unterscheiden, auf eine
+/// Zeichengrenze abgerundet.
+///
+/// **Die Grenze wird in beiden Texten verlangt und nicht nur in einem.** Vor der
+/// ersten Abweichung sind die Bytes gleich, also ist dort auch die Grenze
+/// dieselbe; **an** ihr kann der eine Text eine Zeichengrenze tragen und der
+/// andere ein Folgebyte. Ein Schnitt dort waere eine Panik beim Zerschneiden,
+/// und die Abrundung endet spaetestens bei 0, weil dort jeder Text eine Grenze
+/// hat.
+fn gemeinsamer_anfang(vorher: &str, nachher: &str) -> usize {
+    let mut anfang = vorher
+        .as_bytes()
+        .iter()
+        .zip(nachher.as_bytes())
+        .take_while(|(links, rechts)| links == rechts)
+        .count();
+    while anfang > 0 && !(vorher.is_char_boundary(anfang) && nachher.is_char_boundary(anfang)) {
+        anfang -= 1;
+    }
+    anfang
+}
+
+/// Wie viele Bytes am Ende zweier Texte uebereinstimmen, ohne hinter `ab`
+/// zurueckzugreifen und auf eine Zeichengrenze abgerundet.
+///
+/// `ab` ist der gemeinsame Anfang aus [`gemeinsamer_anfang`]; ohne diese Schranke
+/// koennten sich Anfang und Schwanz ueberlappen und der herausgeschnittene
+/// Bereich haette eine negative Laenge.
+fn gemeinsamer_schwanz(vorher: &str, nachher: &str, ab: usize) -> usize {
+    let mut schwanz = vorher.as_bytes()[ab..]
+        .iter()
+        .rev()
+        .zip(nachher.as_bytes()[ab..].iter().rev())
+        .take_while(|(links, rechts)| links == rechts)
+        .count();
+    while schwanz > 0
+        && !(vorher.is_char_boundary(vorher.len() - schwanz)
+            && nachher.is_char_boundary(nachher.len() - schwanz))
+    {
+        schwanz -= 1;
+    }
+    schwanz
+}
+
+/// Der naechste Byteversatz bei oder vor `versatz`, an dem `text` ein Zeichen
+/// beginnt.
+///
+/// `is_char_boundary(0)` ist an jedem Text wahr, also endet die Schleife.
+fn bis_zur_zeichengrenze(text: &str, versatz: usize) -> usize {
+    let mut versatz = versatz.min(text.len());
+    while !text.is_char_boundary(versatz) {
+        versatz -= 1;
+    }
+    versatz
 }
 
 /// Was aus dem Rueckgaengigverlauf wird, wenn der Text der Flaeche ersetzt wird.
@@ -1406,16 +1604,22 @@ impl Editorbereich {
     /// haengt. Der gewoehnliche Anschlag kommt an dieser Zeile vorbei, weil
     /// [`Editormodell::bearbeiten`] dann `false` liefert.
     ///
-    /// **Der Umkehrpunkt entsteht vor der Wandlung, und nur dann, wenn sie
-    /// bevorsteht.** Er haelt den Stand, den das Modell **vor** dem Einfuegen
-    /// hielt; danach ist der fort, und `260810-1044` fuehrte genau das als den
-    /// Grund, aus dem ein eingefuegtes `\r\n` nicht zuruecknehmbar war. Gefragt
-    /// wird mit `krk_core::text::datei::ist_in_gehaltener_form`, derselben
-    /// Bedingung, an der [`Editormodell::bearbeiten`] seine Wandlung
-    /// entscheidet, und die Abschrift des Standes entsteht deshalb **nicht** je
-    /// Tastendruck, sondern nur auf dem Weg, der die Flaeche ohnehin neu
-    /// beschreibt. Das ist der Unterschied zu der Kette, die `260810-0424` als
-    /// zu teuer fuehrt.
+    /// **Die Abschrift des alten Standes entsteht vor der Wandlung, und nur dann,
+    /// wenn sie bevorsteht.** Der Umkehrpunkt braucht den Stand, den das Modell
+    /// **vor** dem Einfuegen hielt; danach ist der fort, und `260810-1044` fuehrte
+    /// genau das als den Grund, aus dem ein eingefuegtes `\r\n` nicht
+    /// zuruecknehmbar war. Gefragt wird mit
+    /// `krk_core::text::datei::ist_in_gehaltener_form`, derselben Bedingung, an
+    /// der [`Editormodell::bearbeiten`] seine Wandlung entscheidet, und die
+    /// Abschrift entsteht deshalb **nicht** je Tastendruck, sondern nur auf dem
+    /// Weg, der die Flaeche ohnehin neu beschreibt. Das ist der Unterschied zu der
+    /// Kette, die `260810-0424` als zu teuer fuehrt.
+    ///
+    /// **Der Punkt selbst entsteht danach und haelt die Abschrift nicht.** Er
+    /// braucht beide Staende, um den geaenderten Bereich zu finden, und faengt
+    /// deshalb den Augenblick ab, in dem beide vorliegen: der alte als Abschrift,
+    /// der neue im Modell. Die Abschrift faellt mit dem Block, der Bereich geht in
+    /// den Stapel. Warum nicht der ganze Stand, steht an [`Umkehrpunkt`].
     ///
     /// **Was der zusaetzliche Durchlauf kostet, ist gemessen** (260810, dieses
     /// Geraet, `--release`): 0,017 ms bei 229 kB, 0,13 ms bei 1,8 MB, 1,8 ms bei
@@ -1468,16 +1672,19 @@ impl Editorbereich {
         let (war_abweichend, umkehrpunkt) = {
             let mut modell = self.ivars().modell.borrow_mut();
             let vorher = modell.hat_ungesicherten_stand();
-            let umkehrpunkt = (!datei::ist_in_gehaltener_form(&stand)).then(|| Umkehrpunkt {
-                stand: modell.stand().to_owned(),
-                auswahl,
-            });
+            // Die Abschrift entsteht allein auf dem Wandlungsweg und faellt am
+            // Ende dieses Blocks; in den Stapel geht nur der Unterschied, den
+            // `Umkehrpunkt::zwischen` daraus bildet.
+            let alter_stand =
+                (!datei::ist_in_gehaltener_form(&stand)).then(|| modell.stand().to_owned());
             let gewandelt = modell.bearbeiten(stand);
             debug_assert_eq!(
                 gewandelt,
-                umkehrpunkt.is_some(),
+                alter_stand.is_some(),
                 "die Frage vor der Wandlung und ihr Ausgang muessen dieselbe sein"
             );
+            let umkehrpunkt = alter_stand
+                .map(|alter_stand| Umkehrpunkt::zwischen(&alter_stand, modell.stand(), auswahl));
             (vorher, umkehrpunkt)
         };
         if let Some(punkt) = umkehrpunkt {
@@ -1575,18 +1782,6 @@ impl Editorbereich {
         }
     }
 
-    /// Der Umkehrpunkt, den Modell und Flaeche in diesem Augenblick bilden.
-    ///
-    /// **Vor der Aenderung zu nehmen**, sonst beschreibt er den Stand, von dem
-    /// weg umgekehrt werden soll. Die Kopie des Standes ist der Preis; siehe
-    /// [`Umkehrpunkt`].
-    fn umkehrpunkt(&self) -> Umkehrpunkt {
-        Umkehrpunkt {
-            stand: self.ivars().modell.borrow().stand().to_owned(),
-            auswahl: self.ivars().text.selectedRange(),
-        }
-    }
-
     /// Meldet beim Rueckgaengigverwalter der Flaeche eine Handlung an, die den
     /// genannten Umkehrpunkt wiederherstellt (C5).
     ///
@@ -1636,21 +1831,51 @@ impl Editorbereich {
     /// [`Editormodell::bearbeiten`], weil das Modell danach den anderen Stand
     /// haelt.
     ///
-    /// **Der Stand kommt aus dem Modell und ist deshalb in gehaltener Form.**
-    /// [`Editormodell::bearbeiten`] wandelt nichts an ihm und meldet keine
-    /// Nachrichtung der Flaeche; die Zusicherung haelt das fest, statt den Wert
-    /// still fallenzulassen.
+    /// **Der Stand kommt aus dem Modell und ist deshalb in gehaltener Form.** Der
+    /// wiederhergestellte Stand entsteht aus dem gehaltenen und dem Bereich, den
+    /// der Punkt traegt, und beide sind gehalten; [`Editormodell::bearbeiten`]
+    /// wandelt daran nichts und meldet keine Nachrichtung der Flaeche. Die
+    /// Zusicherung haelt das fest, statt den Wert still fallenzulassen.
+    ///
+    /// # Der Suchlauf wird neu gebildet und nicht mitgeschleppt
+    ///
+    /// [`Editormodell::bearbeiten`] beendet den Suchlauf, und das ist beim Tippen
+    /// richtig: dort sind die Byteversaetze der Treffer nach der Aenderung
+    /// ungueltig. Beide Ersetzungswege bauen ihn deshalb eigens neu auf, damit
+    /// `cmd+g` und `shift+cmd+r` weiterlaufen — und ein `cmd+z` warf ihn bis zum
+    /// 260810-1244 wieder fort. Der Nutzer bezahlte eine zurueckgenommene
+    /// Ersetzung mit seiner laufenden Suche, und das zweite `shift+cmd+r`
+    /// antwortete `Editormeldung::KeineSuche`
+    /// (`issues/260810-1244_*_ein-cmd-z-nach-einem-ersetzen-loescht-den-suchlauf-den-das-ersetzen-eigens-aufgebaut-hat.md`).
+    ///
+    /// **Genau hier ist die Trefferliste ausrechenbar**, denn der Text ist der von
+    /// vorher. Gerechnet wird sie ueber
+    /// [`Editormodell::suche_starten`](crate::editormodell::Editormodell::suche_starten)
+    /// — denselben Weg, den `cmd+f` und die beiden Ersetzungswege gehen — und ab
+    /// derselben Stelle, an die dieser Ruf die Schreibmarke setzt. Damit steuert
+    /// der wiederhergestellte Suchlauf den Treffer an, an dem der Nutzer steht.
+    ///
+    /// **`bearbeiten` bleibt dabei, wie es ist.** Es kann Tippen und Rueckgaengig
+    /// nicht unterscheiden; den Anlass kennt allein der Aufrufer, genau wie bei
+    /// [`Verlauf`].
     fn umkehren(&self, punkt: &Umkehrpunkt) {
-        let gegenweg = self.umkehrpunkt();
-        let gewandelt = self
-            .ivars()
-            .modell
-            .borrow_mut()
-            .bearbeiten(punkt.stand.clone());
-        debug_assert!(
-            !gewandelt,
-            "der Stand kam aus dem Modell und traegt keine Zeichen, die die Wandlung anfasst"
-        );
+        let auswahl = self.ivars().text.selectedRange();
+        let gegenweg = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            let wiederhergestellt = punkt.angewandt_auf(modell.stand());
+            let gegenweg = Umkehrpunkt::zwischen(modell.stand(), &wiederhergestellt, auswahl);
+            let gesucht = modell.suchlauf().map(|lauf| lauf.gesucht().to_owned());
+            let gewandelt = modell.bearbeiten(wiederhergestellt);
+            debug_assert!(
+                !gewandelt,
+                "der Stand kam aus dem Modell und traegt keine Zeichen, die die Wandlung anfasst"
+            );
+            if let Some(gesucht) = gesucht {
+                let ab_versatz = koordinaten::in_bytes(modell.stand(), punkt.auswahl.location);
+                let _ = modell.suche_starten(&gesucht, ab_versatz);
+            }
+            gegenweg
+        };
         self.stand_erneuern(Verlauf::Traegt(gegenweg));
         self.auswahl_setzen(punkt.auswahl);
     }
@@ -1730,9 +1955,8 @@ impl Editorbereich {
     /// Seit dem 260810-1044 ist das Einfuegen zuruecknehmbar: der Umbau geht als
     /// [`Verlauf::TraegtNurDiese`] durch die eine Schreibstelle und meldet dort
     /// eine Handlung an, die den Stand **vor** dem Einfuegen wiederherstellt. Der
-    /// Umkehrpunkt entsteht in [`Self::text_zurueckschreiben`], vor dem Ruf an
-    /// [`Editormodell::bearbeiten`], und nur auf diesem Weg; der Preis steht
-    /// dort.
+    /// Umkehrpunkt entsteht in [`Self::text_zurueckschreiben`] und nur auf diesem
+    /// Weg; der Preis steht dort.
     ///
     /// **Der Verlauf davor kann trotzdem nicht bleiben**, und das ist eine
     /// Eigenschaft der Sache und nicht der Sorgfalt. Die Handlung, die die
@@ -2040,12 +2264,14 @@ impl Editorbereich {
     /// geht als [`Verlauf::Traegt`] durch die eine Schreibstelle und meldet dort
     /// eine Handlung an, statt den Verlauf zu leeren
     /// (`issues/260810-0303_*_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`).
-    /// Der Umkehrpunkt entsteht **vor** dem Ruf ins Modell; danach haelt das
-    /// Modell den neuen Stand, und es gaebe nichts mehr abzuschreiben. Was daran
+    /// Die Abschrift des alten Standes entsteht **vor** dem Ruf ins Modell; danach
+    /// haelt das Modell den neuen Stand, und es gaebe nichts mehr abzuschreiben.
+    /// Der Umkehrpunkt selbst entsteht **danach**, weil er beide Staende braucht,
+    /// und haelt allein den ersetzten Bereich; siehe [`Umkehrpunkt`]. Was daran
     /// Nutzerarbeit bleibt, ist die Wirkung im laufenden Buendel — dass ein
-    /// `cmd+z` nach einem Ersetzen den vorigen Stand samt Schreibmarke zeigt und
-    /// ein zweites den Anschlag davor —, nicht mehr die Frage, ob die Handlung
-    /// angemeldet wird.
+    /// `cmd+z` nach einem Ersetzen den vorigen Stand samt Schreibmarke **und den
+    /// Suchlauf** zeigt und ein zweites den Anschlag davor —, nicht mehr die
+    /// Frage, ob die Handlung angemeldet wird.
     pub fn treffer_ersetzen(&self) -> Editormeldung {
         let steht_an = self
             .ivars()
@@ -2059,8 +2285,17 @@ impl Editorbereich {
         }
 
         let ersatz = self.ivars().ersatz.borrow().clone();
-        let punkt = self.umkehrpunkt();
-        let treffer = self.ivars().modell.borrow_mut().treffer_ersetzen(&ersatz);
+        let auswahl = self.ivars().text.selectedRange();
+        let (treffer, punkt) = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            // Die Abschrift steht vor der Aenderung und faellt am Ende dieses
+            // Blocks; in den Stapel geht allein der ersetzte Bereich, und der ist
+            // so lang wie der eine Treffer. Siehe [`Umkehrpunkt`].
+            let vorher = modell.stand().to_owned();
+            let treffer = modell.treffer_ersetzen(&ersatz);
+            let punkt = Umkehrpunkt::zwischen(&vorher, modell.stand(), auswahl);
+            (treffer, punkt)
+        };
         self.stand_erneuern(Verlauf::Traegt(punkt));
         self.treffer_zeigen(treffer);
         self.suchmeldung()
@@ -2077,23 +2312,52 @@ impl Editorbereich {
     /// Weg wie das einzelne darueber. Hier wiegt es am schwersten: der Befehl
     /// aendert eine ganze Datei auf einen Tastendruck, und genau dort erwartet
     /// ein Nutzer, es zuruecknehmen zu koennen.
+    ///
+    /// **Ohne Treffer wird nichts abgeschrieben.** Die Trefferzahl steht im
+    /// Suchlauf und ist damit vor der Aenderung bekannt; bis zum 260810-1241
+    /// entstand die Abschrift trotzdem, und ein `ctrl+cmd+r` auf einen Suchlauf
+    /// ohne Treffer kopierte an einer Datei von 16 MB 16 MB und warf sie fort. Die
+    /// Zahl im Suchlauf ist keine zweite Wahrheit ueber die Treffer, sondern die
+    /// erste: `Editormodell` bildet die Liste nach jeder Aenderung im **neuen**
+    /// Stand neu oder beendet den Lauf.
+    ///
+    /// **Der eine Fall, in dem der Stapel weiter mit der Dateigroesse waechst**,
+    /// steht hier und nicht in einer Fussnote: enthaelt der Ersatztext den
+    /// Suchtext, findet der naechste Ruf wieder Treffer, und der Bereich zwischen
+    /// dem ersten und dem letzten deckt beinahe die ganze Datei. Wer `a` durch
+    /// `aa` ersetzt und den Befehl wiederholt, legt je Ruf einen Bereich in
+    /// Dateigroesse in den Stapel. Er ist damit nicht schlimmer als vor dem Umbau
+    /// und nicht besser; er ist der Grund, aus dem `Umkehrpunkt` keine
+    /// Tiefengrenze nebenherfuehrt, denn eine Grenze in **Handlungen** faengt
+    /// einen Preis in **Bytes** nicht.
     pub fn alle_treffer_ersetzen(&self) -> Editormeldung {
-        if self.ivars().modell.borrow().suchlauf().is_none() {
+        let Some(anstehend) = self.ivars().modell.borrow().suchlauf().map(Suchlauf::zahl) else {
             return Editormeldung::KeineSuche;
+        };
+        if anstehend == 0 {
+            return Editormeldung::Ersetzt { zahl: 0 };
         }
 
         let ersatz = self.ivars().ersatz.borrow().clone();
-        // Der Umkehrpunkt entsteht vor der Aenderung, also auch dann, wenn kein
-        // Treffer ersetzt wird; danach haelt das Modell schon den neuen Stand.
-        // Ohne Treffer wird er hier fallengelassen.
-        let punkt = self.umkehrpunkt();
-        let zahl = self
-            .ivars()
-            .modell
-            .borrow_mut()
-            .alle_treffer_ersetzen(&ersatz);
+        let auswahl = self.ivars().text.selectedRange();
+        let (zahl, punkt) = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            // Die Abschrift steht vor der Aenderung und faellt am Ende dieses
+            // Blocks; in den Stapel geht der Bereich vom ersten bis zum letzten
+            // ersetzten Treffer. Siehe [`Umkehrpunkt`].
+            let vorher = modell.stand().to_owned();
+            let zahl = modell.alle_treffer_ersetzen(&ersatz);
+            let punkt = Umkehrpunkt::zwischen(&vorher, modell.stand(), auswahl);
+            (zahl, punkt)
+        };
         // Ohne Treffer hat sich der Stand nicht bewegt, und die Flaeche neu zu
-        // beschreiben kostete den Rueckgaengigverlauf fuer nichts.
+        // beschreiben kostete den Rueckgaengigverlauf fuer nichts. Erreichbar ist
+        // der Zweig nach der Abfrage oben nicht mehr: `Suchlauf::zahl` und
+        // `suche::alle_ersetzen` zaehlen mit **derselben** Funktion
+        // (`suche::alle`) im **selben** Stand, also ist `zahl` gleich
+        // `anstehend`. Er bleibt stehen, weil sein Preis eine angemeldete
+        // Handlung ohne Wirkung waere, und die nimmt der Nutzer mit einem `cmd+z`
+        // ins Leere hin.
         if zahl > 0 {
             self.stand_erneuern(Verlauf::Traegt(punkt));
         }
@@ -2178,7 +2442,7 @@ impl Editorbereich {
 
         self.grundschrift_setzen(ansicht, art);
         self.umbruch_setzen(ansicht == Ansicht::Format);
-        self.merkmale_zuruecksetzen();
+        self.merkmale_zuruecksetzen(ansicht, art);
 
         match ansicht {
             Ansicht::Format => self.einfaerbung_anfordern(),
@@ -2209,20 +2473,7 @@ impl Editorbereich {
     /// Merkmale des naechsten Anschlags. Beides ist gewollt: ohne das zweite
     /// truege ein neu getipptes Zeichen die Schrift der vorigen Ansicht.
     fn grundschrift_setzen(&self, ansicht: Ansicht, art: Darstellungsart) {
-        let (fest, groesse) = match (ansicht, art) {
-            (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
-                (true, NSFont::systemFontSize())
-            }
-            (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
-                (false, NSFont::systemFontSize() + LESEZUSCHLAG)
-            }
-        };
-        let schrift = if fest {
-            feste_schrift(groesse)
-        } else {
-            NSFont::systemFontOfSize(groesse)
-        };
-        self.ivars().text.setFont(Some(&schrift));
+        self.ivars().text.setFont(Some(&grundschrift(ansicht, art)));
         // Die Systemfarbe und nicht die der Tafel: sie loest sich in Hell wie in
         // Dunkel gegen den Grund der Flaeche auf, und der Grund bleibt nach S34
         // die Systemfarbe. Aus der Tafel kommen allein die Vordergrundfarben
@@ -2265,21 +2516,48 @@ impl Editorbereich {
         }
     }
 
-    /// Nimmt jede gesetzte Auszeichnung wieder heraus.
+    /// Nimmt jede gesetzte Auszeichnung wieder heraus und stellt die Grundschrift
+    /// ueber den ganzen Text her.
     ///
-    /// **Beide Listen**, denn beide werden gesetzt: die voruebergehenden
-    /// Merkmale im Layoutverwalter und der Absatzeinzug im Textspeicher. Schrift
-    /// und Farbe brauchen hier nichts, weil `setFont:` und `setTextColor:` in
-    /// [`Self::grundschrift_setzen`] den ganzen Speicher ueberschreiben; der
-    /// Einzug ist das einzige gesetzte Merkmal, das keines von beiden erreicht.
-    fn merkmale_zuruecksetzen(&self) {
+    /// **Beide Listen**, denn beide werden gesetzt: die voruebergehenden Merkmale
+    /// im Layoutverwalter und Schrift wie Absatzeinzug im Textspeicher.
+    ///
+    /// # Warum die Schrift hier steht und nicht dem `setFont:` ueberlassen bleibt
+    ///
+    /// Bis zum 260810-1245 stand hier allein der Absatzeinzug, mit der Begruendung,
+    /// `setFont:` und `setTextColor:` in [`Self::grundschrift_setzen`]
+    /// ueberschrieben den ganzen Speicher ohnehin. Der Satz stimmt, gilt aber nur
+    /// fuer die vier Anlaesse von [`Self::darstellung_nachziehen`] — Aufbau,
+    /// gelungenes Oeffnen, Schliessen, Ansichtswechsel — und **nicht** fuer den
+    /// fuenften, das Tippen. Dort geht der Weg `textDidChange:` →
+    /// [`Self::text_zurueckschreiben`] → [`Self::einfaerbung_anfordern`] →
+    /// [`Self::einfaerbung_einziehen`] → [`Self::formatierung_anwenden`], und der
+    /// setzte Merkmale, ohne je eines herauszunehmen: wer in der Formatansicht das
+    /// `#` einer Markdown-Ueberschrift loeschte, sah die Zeile weiter gross und
+    /// fett, bis er die Ansicht umschaltete oder die Datei neu oeffnete. Dasselbe
+    /// fuer den Einzug einer entfernten Listenzeile und die feste Schrift eines
+    /// entfernten Zauns
+    /// (`issues/260810-1245_*_die-formatansicht-nimmt-gesetzte-merkmale-des-textspeichers-nie-wieder-heraus.md`).
+    ///
+    /// **Deshalb ist dies die eine Stelle, die zuruecknimmt**, und
+    /// [`Self::formatierung_anwenden`] ruft sie, statt eine zweite halbe
+    /// Ruecknahme daneben zu tragen. Die Wirkung, die das Setzen der Merkmale
+    /// haben soll, ist **setzen** und nicht hinzufuegen: nach dem Ruf traegt der
+    /// Textspeicher genau die Merkmale der uebergebenen Formatierung.
+    ///
+    /// Was hier **nicht** steht, ist die Farbe. Sie ist ein voruebergehendes
+    /// Merkmal des Layoutverwalters, und die werden vollstaendig geleert; der
+    /// Textspeicher traegt keine.
+    fn merkmale_zuruecksetzen(&self, ansicht: Ansicht, art: Darstellungsart) {
         let text = &self.ivars().text;
+        let grundmerkmal = schriftmerkmal(&grundschrift(ansicht, art));
         // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit und wird
         // hier nur beschrieben; die Bereiche decken genau den vorhandenen Text.
         unsafe {
             if let Some(speicher) = text.textStorage() {
                 let ganz = NSRange::new(0, speicher.length());
                 speicher.removeAttribute_range(NSParagraphStyleAttributeName, ganz);
+                speicher.addAttributes_range(&grundmerkmal, ganz);
                 if let Some(verwalter) = text.layoutManager() {
                     let leer: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
                     verwalter.setTemporaryAttributes_forCharacterRange(&leer, ganz);
@@ -2415,7 +2693,22 @@ impl Editorbereich {
     /// nicht, weil ein ueberholtes Ergebnis schon in
     /// [`Self::einfaerbung_einziehen`] fallengelassen wird; er steht hier, weil
     /// der Preis eines Irrtums an dieser Stelle das Programm ist.
+    ///
+    /// **Erst zuruecknehmen, dann setzen** (Defekt 260810-1245). Bis zum
+    /// 260810-1245 fing diese Funktion bei `addAttributes:range:` an und nahm
+    /// nichts heraus; eine Auszeichnung, die die neue Formatierung nicht mehr
+    /// fuehrt, blieb damit stehen. Zurueckgenommen wird ueber
+    /// [`Self::merkmale_zuruecksetzen`], der einen Stelle, die das tut — und die
+    /// deckt die voruebergehenden Merkmale mit ab, weshalb hier kein zweites
+    /// Leeren daneben steht.
     fn formatierung_anwenden(&self, formatierung: &Formatierung) {
+        let (ansicht, art) = {
+            let modell = self.ivars().modell.borrow();
+            (
+                modell.ansicht(),
+                crate::hervorhebung::art(modell.pfad(), modell.typ()),
+            )
+        };
         let text = &self.ivars().text;
         // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit.
         let (speicher, verwalter) = unsafe { (text.textStorage(), text.layoutManager()) };
@@ -2425,7 +2718,7 @@ impl Editorbereich {
         if speicher.length() != formatierung.laenge {
             return;
         }
-        let ganz = NSRange::new(0, formatierung.laenge);
+        self.merkmale_zuruecksetzen(ansicht, art);
 
         // Die Merkmale des Textspeichers: was auf die Auslegung wirkt.
         let grundgroesse = NSFont::systemFontSize() + LESEZUSCHLAG;
@@ -2466,9 +2759,10 @@ impl Editorbereich {
         let strich = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
         let mut farben: HashMap<Farbe, Retained<NSColor>> = HashMap::new();
         // SAFETY: Dieselbe Pruefung deckt beide Schleifen; der Verwalter gehoert
-        // dieser Flaeche.
+        // dieser Flaeche. Geleert ist die Liste schon: das tut
+        // `merkmale_zuruecksetzen` weiter oben, und ein zweites Leeren hier waere
+        // die zweite Stelle mit einer Meinung darueber, was zurueckzunehmen ist.
         unsafe {
-            verwalter.setTemporaryAttributes_forCharacterRange(&NSDictionary::new(), ganz);
             for stueck in &formatierung.einfaerbungen {
                 let bereich = NSRange::new(stueck.anfang, stueck.laenge);
                 let farbe = farben
@@ -2548,6 +2842,39 @@ fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
     {
         Some(name) if *name == *dunkel => Tafel::Dunkel,
         _ => Tafel::Hell,
+    }
+}
+
+/// Die Grundschrift einer Ansicht: die Schrift, in der jede Stelle steht, die
+/// keine eigene Auszeichnung traegt (C3).
+///
+/// **Eine Regel und keine drei.** Fest geschrieben wird, was Zeichen fuer Zeichen
+/// gelesen wird: die Rohansicht immer, und die Formatansicht bei Code. Alles
+/// Uebrige — einfacher Text und Markdown — bekommt die Systemschrift mit dem
+/// [`LESEZUSCHLAG`]. Das ist die "lesbare Schriftgroesse", die C3 fuer einfachen
+/// Text zusagt, und zugleich die Grundschrift, ueber der die
+/// Markdown-Ueberschriften ihre Stufen haben.
+///
+/// **Sie steht hier und nicht bei ihren beiden Aufrufern.**
+/// [`Editorbereich::grundschrift_setzen`] setzt sie an der Flaeche und damit auch
+/// fuer den naechsten Anschlag; [`Editorbereich::merkmale_zuruecksetzen`] setzt
+/// sie als Merkmal ueber den ganzen Textspeicher, um eine weggefallene
+/// Auszeichnung zurueckzunehmen. Zwei Rechnungen daneben waeren die erste
+/// Gelegenheit, dass eine geloeschte Ueberschrift in einer anderen Schrift
+/// landete als der, in der ihre Zeile getippt wird.
+fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> {
+    let (fest, groesse) = match (ansicht, art) {
+        (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
+            (true, NSFont::systemFontSize())
+        }
+        (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
+            (false, NSFont::systemFontSize() + LESEZUSCHLAG)
+        }
+    };
+    if fest {
+        feste_schrift(groesse)
+    } else {
+        NSFont::systemFontOfSize(groesse)
     }
 }
 
@@ -2711,6 +3038,26 @@ fn textflaeche_bauen(
     // einer programmatisch erzeugten `NSTextView` ab Werk auf `NO`; die
     // Menueseite derselben Sache steht in `super::menue`.
     text.setAllowsUndo(true);
+    // Und ohne diese Zeile kommt keine dieser Handlungen im Modell an. Der
+    // Rueckweg aus der Flaeche ist `textDidChange:`, und eine `NSTextView` auf
+    // TextKit 2 verschickt es bei einem `undo` **nicht**; auf TextKit 1 verschickt
+    // sie genau eines, mit dem schon zurueckgenommenen Text. Gemessen am 260810 auf
+    // macOS 15.7.7 (Build 24G720), dreimal reproduziert, einziger Unterschied der
+    // Zugriff auf `layoutManager`. Der Zugriff ist der Umschalter: er laesst AppKit
+    // auf den aelteren `NSLayoutManager` zurueckfallen.
+    //
+    // Bis zum 260810-1243 stand hier keine Zeile, und der Rueckfall entstand als
+    // **Nebenwirkung** von `merkmale_zuruecksetzen` und der Nummernspalte, die den
+    // Verwalter aus einem anderen Grund anfassen. Wer die Nummernspalte auf
+    // `NSTextLayoutManager` nachzieht — der Weg, den Apple fuer neue Arbeit
+    // vorsieht —, bekaeme einen gruenen Bau, gruene Proben und ein `cmd+s`, das
+    // den zurueckgenommenen Text sichert. Deshalb steht der Rueckfall hier als
+    // Absicht mit ihrem Grund und nicht dort als Folge
+    // (`issues/260810-1243_*_dass-ein-cmd-z-ueberhaupt-im-modell-ankommt-haengt-an-textkit-1-und-das-steht-nirgends-als-tragend.md`).
+    //
+    // SAFETY: Der Verwalter gehoert der Flaeche, die ihn hier selbst anlegt; er
+    // wird nur erfragt und nicht gehalten.
+    let _ = unsafe { text.layoutManager() };
     text.setVerticallyResizable(true);
     text.setHorizontallyResizable(false);
     text.setMinSize(NSSize::ZERO);
@@ -2797,14 +3144,14 @@ fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
-    use std::ffi::{CStr, c_uint};
+    use std::ffi::{CStr, CString, c_uint};
     use std::io::Write;
     use std::path::PathBuf;
     use std::rc::Rc;
     use std::sync::Mutex;
 
     use krk_core::text::marke::wiederfinden;
-    use objc2::runtime::{AnyClass, AnyProtocol};
+    use objc2::runtime::{AnyClass, AnyProtocol, Sel};
     use objc2_app_kit::NSWritingToolsBehavior;
 
     use super::*;
@@ -3125,6 +3472,133 @@ mod tests {
                 koordinaten::in_bytes(modell.stand(), in_der_flaeche),
                 stelle,
                 "die Stelle {stelle} kommt nicht zurueck"
+            );
+        }
+    }
+
+    /// Die Staende, an denen der Umkehrpunkt geprueft wird: je ein Paar aus
+    /// `vorher` und `nachher` samt einem Wort, das sagt, was dazwischen geschah.
+    ///
+    /// Die Liste deckt die Faelle, in denen ein Schnitt auf Byteebene falsch
+    /// laege: mehrbytige Zeichen unmittelbar an der Aenderung, ein Zeichen, das
+    /// durch ein anderes derselben Bytelaenge ersetzt wird, eine Aenderung am
+    /// Anfang, eine am Ende, der leere Text in beide Richtungen und ein Austausch
+    /// des ganzen Textes.
+    const UMKEHRFAELLE: &[(&str, &str, &str)] = &[
+        ("ein Treffer in der Mitte", "eins foo zwei", "eins bar zwei"),
+        ("laenger geworden", "eins foo zwei", "eins barbar zwei"),
+        ("kuerzer geworden", "eins foobar zwei", "eins f zwei"),
+        ("am Anfang eingefuegt", "zwei", "eins zwei"),
+        ("am Ende angehaengt", "eins", "eins zwei"),
+        ("ganz ersetzt", "eins", "zwei"),
+        ("aus nichts", "", "eins"),
+        ("zu nichts", "eins", ""),
+        ("unveraendert", "eins", "eins"),
+        (
+            "Umlaute rings um die Stelle",
+            "gröÖßer foo ächz",
+            "gröÖßer bar ächz",
+        ),
+        ("ein Zeichen gegen ein gleich langes", "ä", "ö"),
+        ("Bildzeichen ausserhalb der BMP", "a🌍b", "a🌦b"),
+        (
+            "mehrere Stellen auf einmal, wie beim Sammelersetzen",
+            "a foo b foo c foo d",
+            "a bar b bar c bar d",
+        ),
+        ("nur Zeilenenden", "eins\nzwei\n", "eins\n\nzwei\n"),
+    ];
+
+    /// Der Umkehrpunkt haelt den geaenderten Bereich und nicht den ganzen Stand
+    /// (Defekt 260810-1241).
+    ///
+    /// **Gemessen an der Editorgrenze und nicht geschaetzt.** Gerechnet wird an
+    /// einem Stand von `krk_core::text::datei::EDITORGRENZE` Bytes mit **einer**
+    /// Ersetzung darin — dem Weg, den C5 mit `shift+cmd+r` selbst anbietet — und
+    /// verglichen wird gegen das, was die Darstellung bis zum 260810-1241 hielt:
+    /// eine Abschrift des ganzen Standes je Handlung.
+    ///
+    /// Die Probe haelt den Bau an, sobald der Punkt wieder mit der Dateigroesse
+    /// waechst. Die Schranke ist der Kilobyte-Sprung: sie faellt aus, wenn ein
+    /// Punkt an einer Datei von 16 MB mehr als 1 kB haelt, und laesst offen, wie
+    /// genau der Bereich zugeschnitten ist.
+    #[test]
+    fn ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand() {
+        let haelfte = usize::try_from(datei::EDITORGRENZE / 2).expect("16 MB passen in usize");
+        let vorher = format!("{}foo{}", "a".repeat(haelfte), "b".repeat(haelfte));
+        let nachher = vorher.replacen("foo", "quux", 1);
+
+        let punkt = Umkehrpunkt::zwischen(&vorher, &nachher, NSRange::new(0, 0));
+        let vorher_je_handlung = vorher.len();
+        let jetzt_je_handlung = punkt.getragene_bytes();
+
+        assert_eq!(
+            jetzt_je_handlung, 3,
+            "der Punkt haelt mehr als das ersetzte `foo`: {jetzt_je_handlung} Bytes"
+        );
+        assert!(
+            jetzt_je_handlung < 1024,
+            "eine Handlung haelt an einer Datei von {vorher_je_handlung} Bytes wieder \
+             {jetzt_je_handlung} Bytes — der Stapel des NSUndoManager hat keine Tiefengrenze, \
+             also ist das die Dateigroesse mal der Zahl der Handlungen (260810-1241)"
+        );
+        // Der Fall des Datensatzes: hundert Ersetzungen hintereinander.
+        assert!(
+            jetzt_je_handlung * 100 < vorher_je_handlung / 1024,
+            "hundert Handlungen halten {} Bytes; vor dem Umbau waren es {} Bytes",
+            jetzt_je_handlung * 100,
+            vorher_je_handlung * 100
+        );
+        assert_eq!(
+            punkt.angewandt_auf(&nachher),
+            vorher,
+            "der Punkt stellt den Stand nicht zeichengleich wieder her"
+        );
+    }
+
+    /// Der Punkt stellt jeden Stand zeichengleich wieder her, und sein Gegenweg
+    /// fuehrt zurueck.
+    ///
+    /// **Beide Richtungen in einer Probe**, weil sie in [`Editorbereich::umkehren`]
+    /// dieselbe Zeile sind: der Gegenweg entsteht dort aus dem gehaltenen und dem
+    /// wiederhergestellten Stand, und ein `shift+cmd+z` wendet ihn an. Faellt eine
+    /// der beiden Richtungen aus, ist `cmd+z` und `shift+cmd+z` nicht mehr
+    /// gegeneinander lauffaehig.
+    #[test]
+    fn ein_umkehrpunkt_und_sein_gegenweg_stellen_beide_staende_zeichengleich_her() {
+        for (was, vorher, nachher) in UMKEHRFAELLE {
+            let auswahl = NSRange::new(0, 0);
+            let punkt = Umkehrpunkt::zwischen(vorher, nachher, auswahl);
+            let zurueck = punkt.angewandt_auf(nachher);
+            assert_eq!(&zurueck, vorher, "{was}: das Rueckgaengig trifft nicht");
+
+            let gegenweg = Umkehrpunkt::zwischen(nachher, &zurueck, auswahl);
+            assert_eq!(
+                &gegenweg.angewandt_auf(&zurueck),
+                nachher,
+                "{was}: das Wiederherstellen trifft nicht"
+            );
+        }
+    }
+
+    /// Der Punkt bleibt in der gehaltenen Form, und deshalb meldet
+    /// [`Editormodell::bearbeiten`] beim Umkehren keine Nachrichtung der Flaeche.
+    ///
+    /// **Daran haengt die Zusicherung in [`Editorbereich::umkehren`].** Waere der
+    /// wiederhergestellte Stand nicht in gehaltener Form, wandelte das Modell ihn,
+    /// und Flaeche und Stand liefen auseinander — genau der Defekt `260810-0215`,
+    /// nur aus der anderen Richtung.
+    #[test]
+    fn ein_wiederhergestellter_stand_ist_in_gehaltener_form() {
+        for (was, vorher, nachher) in UMKEHRFAELLE {
+            assert!(
+                datei::ist_in_gehaltener_form(vorher) && datei::ist_in_gehaltener_form(nachher),
+                "{was}: die Probe misst nur Staende, die selbst gehalten sind"
+            );
+            let punkt = Umkehrpunkt::zwischen(vorher, nachher, NSRange::new(0, 0));
+            assert!(
+                datei::ist_in_gehaltener_form(&punkt.angewandt_auf(nachher)),
+                "{was}: der wiederhergestellte Stand ist nicht in gehaltener Form"
             );
         }
     }
@@ -3998,11 +4472,58 @@ mod tests {
     /// genau der Setzername ohne `set` und ohne Doppelpunkt. Ein Weg statt einer
     /// Ausnahmeliste.
     fn merkmal(flaeche: &NSTextView, merkmal: &str) -> isize {
+        merkmal_falls_vorhanden(flaeche, merkmal).unwrap_or_else(|| {
+            panic!(
+                "die Flaeche fuehrt kein Merkmal {merkmal} — sie kennt {} nicht",
+                setzername(merkmal)
+            )
+        })
+    }
+
+    /// Dasselbe wie [`merkmal`], aber ohne Abbruch: `None`, wenn diese Laufzeit
+    /// den Namen nicht fuehrt.
+    ///
+    /// **Der Unterschied ist, wer den Namen fuehrt** (Defekt 260810-1246). Kommt
+    /// er aus [`EINSTELLUNGEN`], ist ein fehlender Name die Meldung, dass KRKs
+    /// Aufstellung nachzuziehen ist, und der Abbruch ist die richtige Antwort.
+    /// Kommt er von Apple und steht nicht auf der Untergrenze, die das Projekt
+    /// zusagt, faerbte er `cargo test` auf einem unterstuetzten System rot, ohne
+    /// dass am ausgelieferten Code etwas falsch waere — dort gilt der Zuschnitt,
+    /// den `260810-0417` fuer die Nachbarprobe gewaehlt hat: Hinweis statt
+    /// Fehlschlag.
+    ///
+    /// # Gefragt wird vorher und nicht am Ergebnis
+    ///
+    /// **`valueForKey:` liefert fuer einen unbekannten Schluessel nicht `nil`**,
+    /// sondern laeuft in `valueForUndefinedKey:` und wirft
+    /// `NSUnknownKeyException`. Gemessen am 260810 auf macOS 15.7.7 (Build 24G720),
+    /// an einer `NSTextView` in Swift: der Prozess endet mit Signal 6 und der
+    /// Meldung "this class is not key value coding-compliant for the key …". Eine
+    /// Objective-C-Ausnahme ist in Rust nicht zu fangen; sie beendet das **ganze**
+    /// Pruefprogramm und nicht die eine Probe. Ein `Option` am Rueckgabewert
+    /// allein haette den Defekt deshalb nicht behoben, und der Datensatz nennt den
+    /// Abbruch eine Panik, was ihn zu harmlos beschreibt.
+    ///
+    /// **Gefragt wird nach dem Setzer und nicht nach dem Leser.** Die Lesernamen
+    /// sind nicht einheitlich — `automaticQuoteSubstitutionEnabled` liest sich
+    /// `isAutomaticQuoteSubstitutionEnabled` —, und `valueForKey:` sucht der Reihe
+    /// nach mehrere Formen ab; eine Frage nach dem blossen Merkmalsnamen meldete
+    /// die Haelfte der Aufstellung als fehlend. Der Setzer ist die eine Form, die
+    /// dieses Modul ohnehin als kanonisch fuehrt, und ein Merkmal ohne Setzer gibt
+    /// es an keiner dieser Klassen.
+    fn merkmal_falls_vorhanden(flaeche: &NSTextView, merkmal: &str) -> Option<isize> {
+        let setzer =
+            CString::new(setzername(merkmal)).expect("ein Setzername traegt kein Nullbyte");
+        if !flaeche.respondsToSelector(Sel::register(&setzer)) {
+            return None;
+        }
         let schluessel = NSString::from_str(merkmal);
         let wert: Option<Retained<NSNumber>> =
             unsafe { msg_send![flaeche, valueForKey: &*schluessel] };
-        wert.unwrap_or_else(|| panic!("die Flaeche fuehrt kein Merkmal {merkmal}"))
-            .integerValue()
+        Some(
+            wert.expect("ein Merkmal mit Setzer antwortet auf valueForKey:")
+                .integerValue(),
+        )
     }
 
     /// Setzt ein Merkmal der Flaeche ueber seinen Namen. Gegenstueck zu
@@ -4083,6 +4604,43 @@ mod tests {
                      anderen Zeugen"
                 );
             }
+        });
+    }
+
+    /// Die gebaute Flaeche steht auf TextKit 1, und daran haengt der Rueckweg des
+    /// Rueckgaengig (Defekt 260810-1243).
+    ///
+    /// **Die Reihenfolge der beiden Fragen ist die ganze Probe.** Ein Zugriff auf
+    /// `layoutManager` **loest** den Rueckfall aus; wer ihn zuerst fragte, machte
+    /// seine eigene Antwort wahr und misst nichts. Gefragt wird deshalb zuerst
+    /// `textLayoutManager`: steht der noch, ist die Flaeche auf TextKit 2 und
+    /// `textDidChange:` feuert bei einem `undo` nicht.
+    ///
+    /// **Was ausfaellt, wenn jemand die Zeile in [`textflaeche_bauen`] wegnimmt:**
+    /// diese Probe, und sonst nichts. Der Bau bliebe gruen, alle uebrigen Proben
+    /// blieben gruen — keine von ihnen faehrt ein `undo` an einer Flaeche in einem
+    /// Fenster —, und der Nutzer bekaeme ein `cmd+s`, das den zurueckgenommenen
+    /// Text sichert, weil `Editormodell::sichern` den nie nachgezogenen Stand
+    /// schreibt.
+    ///
+    /// Sie liest zwei Merkmale und baut kein Fenster; damit bleibt sie in dem
+    /// Bereich, den [`an_einer_flaeche`] gemessen hat.
+    #[test]
+    fn die_gebaute_flaeche_steht_auf_textkit_1() {
+        an_einer_flaeche(|mtm| {
+            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            assert!(
+                unsere.textLayoutManager().is_none(),
+                "die Flaeche aus textflaeche_bauen steht auf TextKit 2. Dann verschickt ein \
+                 `undo` kein textDidChange:, der Rueckweg ins Editormodell faellt aus, und ein \
+                 cmd+s sichert den zurueckgenommenen Text (260810-1243). Der Rueckfall auf \
+                 TextKit 1 gehoert in textflaeche_bauen und ist dort begruendet"
+            );
+            // SAFETY: Der Verwalter gehoert der Flaeche; er wird nur erfragt.
+            assert!(
+                unsafe { unsere.layoutManager() }.is_some(),
+                "die Flaeche fuehrt weder den einen noch den anderen Layoutverwalter"
+            );
         });
     }
 
@@ -4265,6 +4823,32 @@ mod tests {
     ///
     /// Die Probe faerbt die Reihe **nicht** rot, wenn die Lesart noch offen ist —
     /// sie haelt fest, dass die Frage eine ist.
+    ///
+    /// # Die beiden Merkmale sind nicht von einer Art, und die Probe behandelt sie
+    /// verschieden
+    ///
+    /// Der Defekt 260810-1246 hat den Unterschied an den Kopfdateien belegt:
+    ///
+    /// ```text
+    ///   writingToolsBehavior            NSTextView.h:434   macos(15.0)
+    ///   allowedWritingToolsResultOptions NSTextView.h:435  macos(15.0)
+    ///   writingToolsAllowedInputOptions  in keiner Kopfdatei
+    ///   allowsWritingToolsAffordance     nur an NSTextField, macos(15.4)
+    /// ```
+    ///
+    /// **Nur das erste steht auf der Untergrenze, die das Projekt zusagt**, und nur
+    /// es ist deshalb eine Zusicherung. Die Angebotsflaeche fuehrt das SDK allein
+    /// an `NSTextField` und erst ab macOS 15.4; an `NSTextView` antwortet die
+    /// Laufzeit von 15.7.7, aber undokumentiert. Sie unbedingt zu lesen band den
+    /// Bau wieder an die Fassung des pruefenden Geraets — auf 15.0 bis 15.3, die
+    /// KRK unterstuetzt, oder sobald Apple den Zugang fortnimmt —, und zwar nicht
+    /// mit einem Fehlschlag, sondern mit dem Abbruch des ganzen Pruefprogramms;
+    /// siehe [`merkmal_falls_vorhanden`].
+    ///
+    /// **Fehlt sie, steht ein Hinweis und kein Fehlschlag.** Er geht ueber
+    /// [`std::io::stderr`] und nicht ueber `eprintln!`, aus demselben Grund wie bei
+    /// [`keine_unbekannte_einstellung_steht_an_der_textflaeche`]: `libtest` faengt
+    /// die Druckmakros ab und gibt sie bei einer gruenen Probe nicht aus.
     #[test]
     fn der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl() {
         an_einer_flaeche(|mtm| {
@@ -4276,12 +4860,24 @@ mod tests {
                  hat die Lesart von C4 entschieden, und dann gehoert der Eintrag in \
                  EINSTELLUNGEN von NochOffen auf Abgeschaltet oder Geduldet"
             );
-            assert_ne!(
-                merkmal(&unsere, "allowsWritingToolsAffordance"),
-                0,
-                "die Angebotsflaeche der Schreibwerkzeuge steht aus — dann ist der Grund, \
-                 aus dem der Datensatz sie fuehrt, ein anderer geworden"
-            );
+            match merkmal_falls_vorhanden(&unsere, "allowsWritingToolsAffordance") {
+                Some(angebotsflaeche) => assert_ne!(
+                    angebotsflaeche, 0,
+                    "die Angebotsflaeche der Schreibwerkzeuge steht aus — dann ist der Grund, \
+                     aus dem der Datensatz sie fuehrt, ein anderer geworden"
+                ),
+                None => {
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "Hinweis aus {}: diese Laufzeit fuehrt allowsWritingToolsAffordance an \
+                         NSTextView nicht. Das SDK fuehrt sie nur an NSTextField und erst ab \
+                         macOS 15.4; die Untergrenze des Buendels ist 15.0. C4 ist davon nicht \
+                         beruehrt — was es nicht gibt, bietet nichts an. Wer aufraeumt, streicht \
+                         den Eintrag aus EINSTELLUNGEN.",
+                        module_path!()
+                    );
+                }
+            }
         });
     }
 

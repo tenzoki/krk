@@ -55,3 +55,52 @@ Zwei Zeilen und keine Mechanik:
 2. Eine Probe, die es haelt. `assert!(flaeche.layoutManager().is_some() && flaeche.textLayoutManager().is_none())` unmittelbar nach `textflaeche_bauen` ist eine Zeile und faellt aus, sobald jemand den Rueckfall wegnimmt. Sie gehoert zu den vier Instanzproben und traegt deren offene Frage aus `decisions/260810-1044_o_…` mit.
 
 Was **nicht** hilft: sich auf die Messung zu verlassen. Dass `undo` auf TextKit 1 `textDidChange:` verschickt, ist eine gemessene Eigenschaft und keine zugesagte; sie kann sich mit einer macOS-Fassung aendern. Was der Befund verlangt, ist, dass die Abhaengigkeit benannt ist — nicht, dass sie beseitigt wird.
+
+---
+Resolved: Der Rueckfall auf TextKit 1 ist von einer Nebenwirkung zu einer
+benannten Voraussetzung geworden, und eine Probe haelt sie.
+
+**Die Aufschreibung steht jetzt am Ort, der sie herstellt.** `textflaeche_bauen`
+fasst `layoutManager` eigens an, unmittelbar hinter `setAllowsUndo(true)`, und
+der Kommentar daneben nennt den Grund: ohne die Zeile kommt keine der Handlungen,
+die die vorige Zeile ermoeglicht, im Modell an. Der Modulkopf traegt denselben
+Satz an der Stelle, an der `textDidChange:` als „die eine Stelle, die AppKit
+dafuer vorsieht" steht, samt der Messung und samt dem Hinweis, dass sie eine
+gemessene und keine zugesagte Eigenschaft ist. Vorher entstand der Rueckfall aus
+`merkmale_zuruecksetzen` und aus `super::nummernspalte`, die den Verwalter aus
+einem anderen Grund anfassen — die Bauart, die die Durchsicht als „Modul A
+verlaesst sich stillschweigend darauf, dass Modul B einen Nebeneffekt hat"
+beschreibt.
+
+**Die Probe ist `die_gebaute_flaeche_steht_auf_textkit_1`**, und die Reihenfolge
+ihrer beiden Fragen ist ihre ganze Aussage: gefragt wird zuerst
+`textLayoutManager`, denn ein Zugriff auf `layoutManager` **loest** den Rueckfall
+aus, und wer ihn zuerst fragte, machte seine eigene Antwort wahr. Die Zusicherung
+aus dem Vorschlag ist deshalb umgedreht: `assert!(textLayoutManager().is_none())`
+zuerst, `assert!(layoutManager().is_some())` danach.
+
+**Die Gegenprobe ist gefahren, und sie hat mehr gezeigt als erwartet.** Mit
+entfernter Zeile meldet die Probe „die Flaeche aus textflaeche_bauen steht auf
+TextKit 2" und faellt aus. Das heisst: **vor** dieser Behebung war die Flaeche am
+Ende von `textflaeche_bauen` tatsaechlich noch TextKit 2, und der Rueckfall
+geschah erst Augenblicke spaeter im `darstellung_nachziehen` aus
+`Editorbereich::bauen`. Die Zusage hing damit an der Reihenfolge zweier
+Aufrufe in einer anderen Funktion, nicht nur an einem Nebeneffekt.
+
+**Zwei Punkte bleiben offen, und beide sind Grenzen und keine Versehen:**
+
+- **Der Verweis in der Gegenrichtung fehlt.** Der Datensatz verlangt, dass auch
+  `nummernspalte.rs:89-90` weiss, dass an seinem Zugriff mehr haengt als die
+  Nummern. Die Datei liegt ausserhalb der Dateigrenze dieser Aufgabe; der Verweis
+  ist als eigener Datensatz abgelegt
+  (`260810-1314_o_der-verweis-in-die-gegenrichtung-…`). Tragend ist er nach dieser
+  Behebung nicht mehr: der Rueckfall haengt nicht an der Nummernspalte, sondern an
+  der Zeile in `textflaeche_bauen`, und die Probe faellt aus, wenn sie fehlt.
+- **`NSTextView.textLayoutManager` steht seit macOS 12**, also unter der
+  Untergrenze 15.0; der Modulkopf fuehrt sie jetzt als dritte Methode, die
+  juenger ist als ihre Klasse. `NSTextLayoutManager` selbst wird nirgends
+  benannt.
+
+Verification: `cargo build --workspace` exit 0, `cargo test --workspace` exit 0,
+`cargo clippy --workspace --all-targets` exit 0,
+`cargo fmt -p krk-ui -- --check` exit 0.

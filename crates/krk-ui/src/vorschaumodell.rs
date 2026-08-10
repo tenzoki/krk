@@ -60,6 +60,39 @@
 //! es verlangt; das ist Weg 2 aus `issues/260803-2007_*_die-metadatenvorschau-
 //! aus-c6-verlangt-rechte-die-der-eintrag-nicht-traegt.md`.
 //!
+//! # Gelesen wird ueber den Deskriptor und nicht ueber den Pfad
+//!
+//! Der eine Weg von einem Pfad zu den Bytes ist [`bis_zur_grenze_lesen`], und
+//! er oeffnet ueber
+//! [`krk_core::verzeichnis::sys::ohne_warten_oeffnen`](krk_core::verzeichnis::sys::ohne_warten_oeffnen)
+//! — dasselbe Stueck, das
+//! [`krk_core::text::datei::oeffnen`](krk_core::text::datei::oeffnen) fuer den
+//! Editor nimmt. Ein eigener Oeffnungsweg der Vorschau entsteht damit nicht:
+//! es ist derselbe Eingang mit einer anderen Grenze, und die beiden Grenzen
+//! sind der eine Unterschied zwischen Ansehen und Bearbeiten (siehe
+//! [`TEXTGRENZE`]).
+//!
+//! **Zwei Fragen stehen hier nebeneinander, und sie sind verschieden.** Wer sie
+//! zusammenzieht, hat entweder eine Verknuepfung, die als ihr Ziel erscheint,
+//! oder eine Roehre, die gelesen wird:
+//!
+//! - **Was die Vorschau anzeigt**, entscheidet [`typ_von`] am `lstat(2)` des
+//!   Pfades. Drei Zweige, denn eine Verknuepfung erscheint als sie selbst und
+//!   nicht als das, worauf sie zeigt.
+//! - **Ob sich etwas lesen laesst**, entscheidet `fstat(2)` am Deskriptor in
+//!   [`bis_zur_grenze_lesen`]. Eine benannte Roehre, ein Zeichengeraet, ein
+//!   Blockgeraet und ein Socket sind fuer [`typ_von`] `Typ::Datei`, melden alle
+//!   `st_size == 0` und kaemen damit durch jede Groessenschranke; heraus fallen
+//!   sie am Typ des Deskriptors.
+//!
+//! Bis zum 260810 stand an beiden Lesestellen `std::fs::read(pfad)`, also
+//! `File::open` plus `read_to_end`. Auf einer benannten Roehre ohne Schreiber
+//! blieb der Faden `krk-vorschau` fuer die Lebensdauer des Programms im `open`
+//! stehen, einer je beruehrter Roehre, und auf `/dev/zero` wuchs der Puffer
+//! ohne Grenze. Der Defekt dazu ist `260810-1247`; sein Gegenstueck am Editor
+//! ist `260809-1652`, und dort steht die ausfuehrliche Begruendung der
+//! Reihenfolge.
+//!
 //! # Der Arbeitsfaden
 //!
 //! [`Vorschaumodell::datei_anzeigen`] kehrt sofort zurueck: das Lesen der
@@ -71,6 +104,7 @@
 //! scheitert still, und eine Generationspruefung braucht es nicht. Die
 //! Zwischenablage liegt im Arbeitsspeicher und braucht keinen Faden.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
@@ -505,8 +539,15 @@ fn zu_gross_text(groesse: u64) -> String {
 
 /// Liest den Eintrag und ordnet ihn in die Dreiteilung aus C6 ein.
 ///
-/// Laeuft auf dem Arbeitsfaden. Der `stat(2)` hier ist die eine Stelle, die
+/// Laeuft auf dem Arbeitsfaden. Der `lstat(2)` hier ist die eine Stelle, die
 /// die Rechte erhebt; siehe den Modulkopf.
+///
+/// **Jeder Grund, aus dem sich der Inhalt nicht zeigen laesst, endet in den
+/// Metadaten.** Zu gross, keine gewoehnliche Datei, nicht lesbar, kein UTF-8:
+/// die Metadaten sind fuer alle vier die Antwort, und sie waren es schon fuer
+/// die letzten drei. Deshalb steht die Groessenschranke nicht mehr als eigener
+/// Zweig hier, sondern in [`bis_zur_grenze_lesen`] neben den anderen Gruenden;
+/// vier Wege zu derselben Antwort brauchen keine vier Verzweigungen.
 fn laden(pfad: &Path) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
@@ -532,34 +573,70 @@ fn laden(pfad: &Path) -> Inhalt {
         return Inhalt::Metadaten(metadaten);
     }
     if ist_bildpfad(pfad) {
-        // Ueber der Grenze wird nicht gelesen, sondern beschrieben; dieselbe
-        // Antwort wie beim Text und aus demselben Grund. Die Pruefung steht
-        // **vor** dem Lesen: danach waere die Datei schon im Speicher, und
-        // genau das ist der Fall, den die Grenze verhindert.
-        if metadaten.groesse > BILDGRENZE {
-            return Inhalt::Metadaten(metadaten);
-        }
-        return match std::fs::read(pfad) {
-            Ok(daten) => Inhalt::Bild {
+        // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben; dieselbe
+        // Antwort wie beim Text und aus demselben Grund.
+        return match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
+            Some(daten) => Inhalt::Bild {
                 daten: Arc::new(daten),
                 metadaten: Some(metadaten),
             },
-            Err(_) => Inhalt::Metadaten(metadaten),
+            None => Inhalt::Metadaten(metadaten),
         };
     }
-    if metadaten.groesse > TEXTGRENZE {
-        // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den
-        // Modulkopf.
-        return Inhalt::Metadaten(metadaten);
+    // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
+    match bis_zur_grenze_lesen(pfad, TEXTGRENZE).and_then(|bytes| String::from_utf8(bytes).ok()) {
+        Some(text) => Inhalt::Text(text),
+        // Zu gross, nicht lesbar, keine gewoehnliche Datei oder kein UTF-8, also
+        // keine Textdatei im Sinne von C6.
+        None => Inhalt::Metadaten(metadaten),
     }
-    match std::fs::read(pfad) {
-        Ok(bytes) => match String::from_utf8(bytes) {
-            Ok(text) => Inhalt::Text(text),
-            // Kein UTF-8, also keine Textdatei im Sinne von C6.
-            Err(_) => Inhalt::Metadaten(metadaten),
-        },
-        Err(_) => Inhalt::Metadaten(metadaten),
+}
+
+/// Liest den Pfad, **ohne bei einer benannten Roehre zu warten**, und
+/// hoechstens `grenze` Bytes weit.
+///
+/// `None` heisst: hier gibt es nichts, was die Vorschau zeigen kann. Welcher der
+/// vier Gruende es war, sagt diese Stelle nicht, denn die Antwort ist fuer alle
+/// vier dieselbe (siehe [`laden`]).
+///
+/// # Die Reihenfolge ist dieselbe wie im Editor
+///
+/// Sie steht ausfuehrlich bei
+/// [`krk_core::text::datei::oeffnen`](krk_core::text::datei::oeffnen) und wird
+/// hier nicht ein zweites Mal begruendet:
+///
+/// 1. **Geoeffnet wird zuerst, und zwar ohne zu warten.** Das ist der eine
+///    Aufruf, der den **Namen** anfasst; alles danach fragt den Deskriptor. Ein
+///    `File::open` auf eine benannte Roehre ohne Schreiber haengt fuer immer,
+///    und der Faden `krk-vorschau` haengt mit ihm.
+/// 2. **Gefragt wird der Deskriptor** (`fstat(2)` ueber `File::metadata`), und
+///    heraus faellt alles, was keine gewoehnliche Datei ist. Geoeffnet wird ohne
+///    `O_NOFOLLOW`, eine Verknuepfung wird hier also nach ihrem Ziel beurteilt;
+///    dass die **Anzeige** sie als Verknuepfung fuehrt, entscheidet [`typ_von`]
+///    und nicht diese Stelle. `laden` kommt fuer eine Verknuepfung ohnehin nicht
+///    bis hierher.
+/// 3. **Die Groesse wird vor dem Lesen geprueft**, damit eine Datei ueber der
+///    Grenze zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher steht.
+///
+/// # Die Grenze wird eingehalten und nicht nur vorhergesagt
+///
+/// Zwischen `fstat` und `read` kann eine Datei wachsen, und `/dev/zero` liefert
+/// ohne Ende, ohne je eine Groesse zu melden. Gelesen werden deshalb hoechstens
+/// `grenze + 1` Bytes, und das eine Byte zuviel entscheidet: kommt es an, ist
+/// die Datei ueber der Grenze und die Antwort sind die Metadaten. Ohne diese
+/// Schranke waere "die Vorschau liest nie mehr als ihre Grenze" eine Vorhersage
+/// aus einer alten Auskunft, mit ihr ist es eine Eigenschaft der Bauart.
+fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Option<Vec<u8>> {
+    let datei = krk_core::verzeichnis::sys::ohne_warten_oeffnen(pfad).ok()?;
+    let angaben = datei.metadata().ok()?;
+    if !angaben.is_file() || angaben.len() > grenze {
+        return None;
     }
+
+    let mut bytes = Vec::with_capacity(angaben.len() as usize);
+    datei.take(grenze + 1).read_to_end(&mut bytes).ok()?;
+    // Die Datei ist zwischen `fstat` und `read` gewachsen.
+    (bytes.len() as u64 <= grenze).then_some(bytes)
 }
 
 /// Ob der Pfad auf eines der gaengigen Bildformate endet.
@@ -617,6 +694,9 @@ pub fn rechte_text(modus: u32) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::Duration;
+
     use super::*;
 
     /// Fuellt den aktiven Tab ohne Arbeitsfaden.
@@ -823,6 +903,108 @@ mod tests {
     fn ein_fehlender_pfad_liefert_einen_hinweis() {
         let pfad = Path::new("/gibt/es/nicht/krk-probe");
         assert!(matches!(laden(pfad), Inhalt::Hinweis(_)));
+    }
+
+    /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
+    ///
+    /// Dieselbe Bauform wie `Pruefordner` in `krk-core/tests/verzeichnis.rs`:
+    /// Prozesskennung und Laufnummer im Namen, damit zwei Laeufe sich nicht in
+    /// die Quere kommen, und `Drop` raeumt ab. Die aelteren Proben dieser Datei
+    /// legen ihre Ordner unter festen Namen an; der Defekt dazu ist
+    /// `260810-1256`.
+    struct Pruefordner {
+        pfad: PathBuf,
+    }
+
+    impl Pruefordner {
+        fn neu(zweck: &str) -> Self {
+            static ZAEHLER: AtomicU64 = AtomicU64::new(0);
+            let laufnummer = ZAEHLER.fetch_add(1, Ordering::Relaxed);
+            let pfad = std::env::temp_dir().join(format!(
+                "krk-vorschau-probe-{zweck}-{}-{laufnummer}",
+                std::process::id()
+            ));
+            let _ = std::fs::remove_dir_all(&pfad);
+            std::fs::create_dir_all(&pfad).expect("Pruefordner laesst sich nicht anlegen");
+            Self { pfad }
+        }
+
+        /// Legt eine benannte Roehre an und liefert ihren Pfad.
+        ///
+        /// Angelegt wird sie ueber `mkfifo(1)` und nicht ueber einen
+        /// Fremdaufruf, aus demselben Grund wie in `krk-core/tests/text.rs`:
+        /// `krk-ui` traegt `#![deny(unsafe_code)]`, KRK legt keine Roehren an,
+        /// und ein Werkzeug des Systems zu rufen ist der kleinere Eingriff.
+        fn roehre(&self, name: &str) -> PathBuf {
+            let pfad = self.pfad.join(name);
+            let stand = std::process::Command::new("/usr/bin/mkfifo")
+                .arg(&pfad)
+                .status()
+                .expect("mkfifo laesst sich nicht starten");
+            assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
+            pfad
+        }
+    }
+
+    impl Drop for Pruefordner {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.pfad);
+        }
+    }
+
+    /// Ruft [`laden`] auf einem eigenen Faden und gibt die Antwort nur heraus,
+    /// wenn sie innerhalb der Schranke kommt.
+    ///
+    /// **Der Grund ist die Art des Defekts, der hier geprueft wird:** ein
+    /// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines.
+    /// Ohne Schranke waere das ein stehender Probelauf, und `cargo test` haette
+    /// nichts zu melden als Stillstand. Mit ihr gibt es einen Befund mit Namen.
+    /// Dieselbe Bauform wie `oeffnen_mit_zeitschranke` in
+    /// `krk-core/tests/text.rs`, wo das Gegenstueck am Editor geprueft wird.
+    ///
+    /// Der Faden bleibt im Fehlerfall stehen, wo er steht. Er stirbt mit dem
+    /// Probelauf, und ein Deskriptor, der nie aufgeht, haelt nichts fest.
+    fn laden_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Inhalt {
+        let (sender, empfaenger) = std::sync::mpsc::channel();
+        let pfad = pfad.to_path_buf();
+        thread::spawn(move || {
+            let _ = sender.send(laden(&pfad));
+        });
+        empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+            panic!("laden ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+        })
+    }
+
+    /// Eine benannte Roehre haelt den Arbeitsfaden der Vorschau nicht an.
+    ///
+    /// Die Roehre hat keinen Schreiber, und ein `File::open` darauf wartet, bis
+    /// jemand hineinschreibt — hier also fuer immer. Genau das tat die Vorschau
+    /// bis zum 260810 mit ihrem `std::fs::read(pfad)`, und der Faden
+    /// `krk-vorschau` blieb fuer die Lebensdauer des Programms stehen, einer je
+    /// beruehrter Roehre. Der Defekt dazu ist `260810-1247`.
+    ///
+    /// Die groessere der beiden Aussagen ist, dass ueberhaupt eine Antwort
+    /// kommt; sie haengt am `O_NONBLOCK` in
+    /// `krk_core::verzeichnis::sys::ohne_warten_oeffnen`. Die kleinere ist, dass
+    /// die Antwort die Metadaten sind: eine Roehre traegt keinen Inhalt, den die
+    /// Vorschau zeigen koennte.
+    ///
+    /// **Das Zeichengeraet aus demselben Defekt faellt an derselben Zeile
+    /// heraus** (`!angaben.is_file()`), und dafuer steht hier absichtlich keine
+    /// zweite Probe: `/dev/zero` liefert ohne Ende, ein `read_to_end` darauf
+    /// waere vor der Behebung kein Befund, sondern ein volllaufender
+    /// Arbeitsspeicher auf dem Geraet dessen, der die Behebung zuruecknimmt.
+    #[test]
+    fn eine_benannte_roehre_haelt_die_vorschau_nicht_an() {
+        let ordner = Pruefordner::neu("roehre");
+        let roehre = ordner.roehre("ohne-schreiber");
+
+        let inhalt = laden_mit_zeitschranke(&roehre, Duration::from_secs(5));
+
+        let Inhalt::Metadaten(metadaten) = &inhalt else {
+            panic!("die Roehre gehoert in die Metadatenanzeige: {inhalt:?}");
+        };
+        assert_eq!(metadaten.pfad, roehre);
     }
 
     #[test]
