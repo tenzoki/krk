@@ -51,3 +51,22 @@ sie die Frage nach dem Ladezeitpunkt neu, und dieser Defekt fällt mit ihr weg.
 
 ---
 Resolved:
+
+---
+Resolved: Der Nutzer hat am 260810-1717 die erste der beiden Moeglichkeiten gewaehlt: die
+Meldung nennt den Ladezeitpunkt. `kein_terminal` (`crates/krk-ui/src/kommandos/operationen.rs`)
+meldet jetzt "keine Anwendung mit der Buendelkennung ... installiert; settings.toml nennt sie
+unter terminal, eine Aenderung wirkt erst nach einem Neustart".
+
+Der Halbsatz ist gegenueber dem Vorschlag des Datensatzes gekuerzt. "settings.toml wird beim
+Start gelesen, eine Aenderung wirkt nach einem Neustart" sagt zwei Dinge, von denen der Nutzer
+nur eines braucht; die gewaehlte Form traegt den Ladezeitpunkt implizit und die Handlung
+ausdruecklich. Die eingestellte Kennung steht weiterhin an erster Stelle, das fuenfte
+Abnahmekriterium von C11 haelt.
+
+Kein zweiter Lesepfad entstanden: die Entscheidung zum einmaligen Laden bleibt unberuehrt, und
+der Doc-Kommentar der Funktion haelt das ausdruecklich fest. Keine Probe erwartete den alten
+Wortlaut; `kein_terminal` hat genau einen Aufrufer (`appkit/anwendung.rs:1246`).
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.

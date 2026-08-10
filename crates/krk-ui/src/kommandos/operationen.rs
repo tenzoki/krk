@@ -740,10 +740,19 @@ pub fn terminalordner_fehlt(ordner: &Path) -> Option<String> {
 /// Nutzer `settings.toml` berichtigen kann. Auf die Vorbelegung weicht KRK
 /// nicht aus: dann oeffnete sich ein Terminal, das er nicht gewaehlt hat, und
 /// sein Tippfehler bliebe unbemerkt in der Datei stehen.
+///
+/// **Sie nennt daneben den Neustart**, denn `settings.toml` wird einmal beim
+/// Start gelesen (Entscheid des Nutzers vom 260807,
+/// `decisions/260805-1845_*_wann-eine-von-hand-geaenderte-settings-toml-wirkt.md`).
+/// Ohne den Halbsatz fuehrt die Meldung das fuenfte Abnahmekriterium von C11
+/// nicht zu Ende: der Nutzer behebt den Tippfehler, drueckt erneut Ctrl+O und
+/// bekommt dieselbe Meldung, ohne dass etwas auf den fehlenden Neustart deutet.
+/// Ein zweiter Lesepfad entsteht daraus ausdruecklich nicht.
 pub fn kein_terminal(kennung: &str) -> String {
     format!(
         "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; \
-         settings.toml nennt sie unter terminal"
+         settings.toml nennt sie unter terminal, eine Änderung wirkt erst \
+         nach einem Neustart"
     )
 }
 
