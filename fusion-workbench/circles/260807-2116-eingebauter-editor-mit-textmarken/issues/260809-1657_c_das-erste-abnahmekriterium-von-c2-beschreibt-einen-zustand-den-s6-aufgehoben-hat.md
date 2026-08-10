@@ -47,3 +47,21 @@ S9). Dieser Satz gehört in denselben Nachtrag, damit der Spec nicht zweimal
 angefasst wird.
 
 Gemeldet von: `coderev`, Durchsicht Turn 2.
+
+---
+Resolved: Der zweite Satz des ersten Abnahmekriteriums von C2 ist am 260810-0714
+auf die eingelöste Form gezogen, im selben Nachtrag wie die übrigen. Er lautet
+jetzt: "Die Taste war dafür seit der Runde 1 freigehalten; seit dieser Runde trägt
+die Funktion `bearbeiten` in `resources/default-keymap.toml` die Tastenliste
+`["f4"]` und das zugehörige Kommando, und das Feld `reserviert_fuer = "editor"`
+steht nicht mehr dort."
+
+Ein Satz mehr als vorgeschlagen steht dahinter, und er ist der eigentliche Zweck
+des Nachtrags: "Wer beim Abnahmelauf nach dem Feld sucht, sucht den eingelösten
+Zustand und nicht den Befund." Die festen Zeilennummern `130-137` sind ersatzlos
+entfallen; sie zeigten schon auf anderen Text und wären beim nächsten Einschub
+wieder falsch.
+
+Der Zweig für `reserviert_fuer` in `belegungsmodell.rs` bleibt unberührt, und der
+Grund steht dort weiter im Doc-Kommentar: eine `keymap.toml` aus einer älteren
+Fassung kann das Feld weiterhin tragen.

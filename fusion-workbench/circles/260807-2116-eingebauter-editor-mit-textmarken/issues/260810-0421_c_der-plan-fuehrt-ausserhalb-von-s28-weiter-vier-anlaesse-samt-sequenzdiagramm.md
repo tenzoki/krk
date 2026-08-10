@@ -51,3 +51,36 @@ Die sieben Stellen auf drei Anlässe ziehen, das Sequenzdiagramm mit, und die
 beiden Markerangaben auf `_i_`. Die Schrittüberschrift 883 gehört auf „Zwei der
 drei Anlässe: schließen, andere Datei" — sie ist die Zeile, die eine spätere
 Abgleichsrunde als erstes liest.
+
+---
+Resolved: Alle acht Stellen sind am 260810-0714 in S42 nachgezogen, dazu zwei, die
+dieser Datensatz nicht führte.
+
+Auf drei Anlässe gezogen: die Abschnittsüberschrift (315), die Kante des
+Sequenzdiagramms (326), der Absatz unter dem Diagramm, der "vier Anlässe heißen
+vier Aufrufstellen" sagte, der Satz im Schritt zum Editormodell (693) und der im
+Schritt zum Blatt (874). Die Abschnittsüberschrift trägt jetzt zusätzlich einen
+Absatz, der den gefallenen Anlass und seinen Datensatz nennt, damit ein späterer
+Leser den Unterschied zwischen "war nie da" und "ist gefallen" sieht.
+
+Die Schrittüberschrift 883 lautet "Zwei der drei Anlässe: schließen, andere
+Datei". Der dritte Aufzählungspunkt in den Änderungen von S28, der das Einblenden
+der Vorschau als Anlass beschrieb, ist durch einen Verweis auf den Nachtrag
+ersetzt; der Vermerk 900 sagt jetzt, dass der Anlass drei Befehle trug und alle
+drei ihn wieder los sind. Der Vermerk 897 nennt keine Zahl mehr, sondern "ein
+weiterer Anlass".
+
+**Zwei Stellen kommen dazu, die dieser Datensatz nicht führte.** Erstens die
+Schrittüberschrift von S29, "Der vierte Anlass: das Beenden"; sie lautet jetzt
+"Der dritte Anlass". Zweitens das gezählte Abnahmekriterium von S28, das vier
+Aufrufstellen des Blattes verlangte: gebaut ist eine, der erste Vermerk des
+Schrittes rechnet vor, warum das strenger hält, und eine Zahl, die den gebauten
+Stand für falsch erklärt, ist kein Abnahmekriterium. Sie ist gestrichen statt auf
+drei gezogen.
+
+**Der zweite, kleinere Punkt ist weiter gefasst gelöst als vorgeschlagen.** Statt
+die beiden Markerangaben von `_a_` auf `_i_` zu ziehen, tragen alle Verweise auf
+Datensätze in Plan und Spec jetzt eine Sternstelle. Der Plan hatte die Regel im
+Kopf stehen und fünfzehn Verweise, die ihr nicht folgten; im Spec waren vierzehn
+Verweise mit festem Marker eingetragen und acht davon veraltet. Ein Marker, der
+mitwandert, veraltet nicht ein zweites Mal.

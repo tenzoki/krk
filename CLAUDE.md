@@ -8,28 +8,33 @@ KRK ist eine native macOS-Anwendung zum Navigieren, Bearbeiten und Versionieren 
 
 Die vollständige Directive steht im Circle-Datensatz `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/_*_circle.md`, Abschnitt `## Directive`. Dieser Abschnitt hier ist die Kurzfassung, nicht die verbindliche Formulierung.
 
-Pfade der Form `planning/…`, `decisions/…`, `analyses/…` und `issues/…` sind in dieser Datei relativ zu diesem Circle-Verzeichnis zu lesen.
+Pfade der Form `planning/…`, `decisions/…`, `analyses/…` und `issues/…` sind in dieser Datei relativ zum Verzeichnis des **jeweils genannten** Circles zu lesen. Ohne Nennung gilt der aktive: `fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/`. Die Runde 1 liegt daneben unter `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/`, und wo diese Datei einen ihrer Datensätze meint, sagt sie es dazu.
 
 ## Maximen
 
 Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zusätzlicher Maus- und Trackpad-Unterstützung.
 
-"Superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec übersetzt die Maxime in Abschnitt `### C8: Messbare Geschwindigkeit` in zehn Zeitzusagen; das Referenzgerät, auf dem sie gemessen werden, steht im Datensatz `decisions/260802-1036_a_leistungszusagen-navigator.md`.
+"Superschnell" trägt in dieser Form keine Abnahmekriterien. Der Spec der Runde 1 übersetzt die Maxime in Abschnitt `### C8: Messbare Geschwindigkeit` in zehn Zeitzusagen; das Referenzgerät, auf dem sie gemessen werden, steht im Datensatz `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1036_*_leistungszusagen-navigator.md`.
+
+**Die Runde 2 hat keine elfte Zahl gesetzt und keine der zehn angefasst.** Sie hat den Abnahmelauf ausgeklammert, und eine Zusage, die eine Runde nicht messen kann, wäre ein Wunsch. An ihre Stelle treten zwei ohne Messstrecke prüfbare Kriterien, und beide stehen im Spec jener Runde unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`. Dort steht auch, welche vier Gegenstände die spätere Messrunde zusätzlich anzusehen hat: die Zusagen L1, L4 und L7 und die Geschwindigkeit der Syntaxhervorhebung.
 
 ## Projektstand
 
-Geprüft am 260807-1011. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
+Geprüft am 260810-0714. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut und signiert, und die Anwendung trägt den Navigator der Runde 1 und den eingebauten Editor der Runde 2: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Editor, Dateioperationen mit Fortschritt und Abbruch, Terminalaufruf im angezeigten Ordner, Belegungsansicht und ein Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
 
 ```
 krk/
 ├── Cargo.toml            # Workspace mit vier Mitgliedern, Version an einer Stelle
 ├── rust-toolchain.toml   # Rust 1.97.1, beide Mac-Architekturen
 ├── .cargo/config.toml    # MACOSX_DEPLOYMENT_TARGET=15.0, Alias `cargo xtask`
-├── crates/krk-core/      # Kern ohne AppKit: Verzeichnisleser, Ordnermodell, Tastennormalisierung
-├── crates/krk-ui/        # Binärziel `krk`, AppKit-Anteil unter src/appkit/
+├── crates/krk-core/      # Kern ohne AppKit: Verzeichnisleser, Ordnermodell,
+│                         #   Tastennormalisierung, Ablage, seit Runde 2 `text/`
+├── crates/krk-ui/        # Binärziel `krk`, AppKit-Anteil unter src/appkit/,
+│                         #   die Modelle ohne AppKit daneben in src/
 ├── crates/krk-bench/     # Prüfordner-Erzeuger und kopflose Messstrecke
 ├── xtask/                # Bauwerkzeug: Bündel, Versionsersetzung, Signierung
 ├── resources/Info.plist  # Bündelbeschreibung mit Versionsplatzhalter
+├── resources/default-keymap.toml  # die eine Quelle jeder Tastenbelegung
 ├── Makefile              # Hülle um dieselben Kommandos, setzt den PATH zu cargo selbst
 ├── messungen/            # Messberichte: kopflose Strecke, Durchstich, Abnahmereihen
 ├── spikes/fn-tasten/     # Wegwerf-Prüfcode zur Fn-Tastenfrage, nicht weitergepflegt
@@ -38,11 +43,23 @@ krk/
 └── fusion-workbench/     # Circles, Entscheidungen, Issues, Historie
 ```
 
-**Die Runde 1 ist am 260807-1035 als beschränkter Abschluss geschlossen**, Plan und Spec auf `_c_`, der Circle-Datensatz auf `_b_`. Alle 38 Planschritte tragen `[DONE]`, am Code belegt durch den Abgleich `history/260807-1022-reconciliation.md`.
+**Die Runde 1 ist am 260807-1035 als beschränkter Abschluss geschlossen**, Plan und Spec auf `_c_`, der Circle-Datensatz auf `_b_`. Alle 38 Planschritte tragen `[DONE]`, am Code belegt durch den Abgleich `circles/260802-0842-krk-mac-dateimanager-editor-git/history/260807-1022-reconciliation.md`.
 
-**Der Abnahmelauf ist inzwischen gefahren** (`messungen/260807-1538-alle-zusagen.txt`, der erste vollständige nach der Runde). Neun der zehn Zusagen halten in allen fünf Runden. L9 fiel gegenüber dem 260805 von im Mittel 90 auf 76 Prozent; der Nutzer hat die Zusage daraufhin am 260807-1900 auf **65 Prozent im ersten Bild bei höchstens zwei Bildlängen** gesenkt, zum zweiten Mal an diesem Tag und gegen die Empfehlung des Datensatzes. **Die Ursache der Verschlechterung ist offen**, und der Spec sieht deshalb grüner aus, als die Anwendung ist: `shared/issues/260807-1748_o_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md` führt beide Messreihen, drei ausgeschlossene Erklärungen und drei geordnete Verdächtige, angeführt von `16e4558`.
+**Die Runde 2 hat den Editor gebaut; alle 48 Planschritte tragen seit dem 260810-0714 `[DONE]`.** Der Editor ist der fünfte Bereich der Fensterzeile und teilt sich die Fläche zeitlich mit der Vorschau. Er nimmt Textdateien bis rund 16 MB an, trägt Rohansicht und Formatansicht mit Syntaxhervorhebung, sichert, fragt an drei Anlässen nach, bevor ein ungesicherter Stand verlorengeht, springt zu Zeilen, sucht, ersetzt und trägt Textmarken in derselben Liste und derselben Ablagedatei wie die Ordner-Lesezeichen. Drei Anzeigen sind mitgekommen, und sie gelten allen fünf Bereichen: der Fokusrahmen (`appkit/aufteilung.rs`, fünf `NSBox` statt der zwei der Runde 1), die Zeilennummern in Editor und Vorschau (`appkit/nummernspalte.rs`, **eine** Klasse für beide Flächen, ihre Zählung kommt aus `krk_core::text::zeilen`) und der volle Pfad im Fenstertitel (`krk-ui/src/fenstertitel.rs`). Neu daneben: das Kernmodul `krk-core/src/text/` mit Zeilenindex, Suche, Ersetzen, Einlesen und Sicherungsform, dazu `krk-ui/src/editormodell.rs` und `krk-ui/src/hervorhebung.rs` als die Teile des Editors, die ohne AppKit prüfbar sind.
 
-Offene Defekte führt `issues/` in beiden Speichern (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile.
+**Der Abnahmelauf der Runde 2 steht noch aus und ist Nutzerarbeit.** Der Spec führt 110 Abnahmekriterien, 108 in elf Fähigkeiten und zwei unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`. Kein Agent kann sie am laufenden Bündel prüfen, weil KRK dafür im Vordergrund stehen muss; der Grund steht unten unter "Was man nicht sieht". Solange der Lauf nicht gefahren ist, ist "gebaut" die richtige Aussage über diese Runde und "abgenommen" nicht.
+
+**Vier Aufzählungen sind in der Runde 2 gewachsen, und jede von ihnen hält den Bau an, wenn eine Stelle fehlt.** `Wirkungsbereich` (`krk-core/src/tasten/belegung.rs`) trägt sieben Werte statt vier, `Kommando` in derselben Datei 65 Varianten statt 53, `Bereich` (`krk-ui/src/fenstermodell.rs`) fünf statt vier und `Fokus` (`krk-ui/src/kommandos/fokus.rs`) fünf statt vier. Wer eine davon erweitert, bekommt vom Übersetzer die Liste der Stellen, die nachzuziehen sind.
+
+**Zwei fremde Kisten sind dazugekommen, `syntect` und `two-face`**, beide für die Syntaxhervorhebung und beide ohne ihre Vorgabemerkmale eingebunden: der Vorgabesatz beider zöge eine Bibliothek in C herein und änderte die Bauvoraussetzungen. Es sind zwei und nicht eine, weil `syntect` kein TOML kennt und der Spec TOML ausdrücklich verlangt. Die Begründungen stehen in der Wurzel-`Cargo.toml`, wie bei den vier bestehenden.
+
+**Der Abnahmelauf der Runde 1 ist gefahren** (`messungen/260807-1538-alle-zusagen.txt`, der erste vollständige nach der Runde). Neun der zehn Zusagen halten in allen fünf Runden. L9 fiel gegenüber dem 260805 von im Mittel 90 auf 76 Prozent; der Nutzer hat die Zusage daraufhin am 260807-1900 auf **65 Prozent im ersten Bild bei höchstens zwei Bildlängen** gesenkt, zum zweiten Mal an diesem Tag und gegen die Empfehlung des Datensatzes. **Die Ursache ist ungemessen und wird nicht weiter verfolgt**, ausdrücklich angenommen vom Nutzer am 260807-1935. Der Defekt `shared/issues/260807-1748_*_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md` ist damit geschlossen, führt aber weiter beide Messreihen, drei ausgeschlossene Erklärungen und drei ungemessene Verdächtige, angeführt von `16e4558`. Wer die Ursache findet, hebt die Zahl wieder an, statt sie ein drittes Mal nachzuziehen.
+
+Offene Defekte führt `issues/` in beiden Speichern und in beiden Circles (Marker `_o_`); verbindlich ist der Dateibestand, nicht diese Zeile:
+
+```sh
+find fusion-workbench/shared/issues fusion-workbench/circles/*/issues -maxdepth 1 -name '*_o_*.md'
+```
 
 `krk-core` und `krk-ui` tragen beide `#![deny(unsafe_code)]`; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs` und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze.
 
@@ -64,13 +81,17 @@ Das `Makefile` im Projektwurzelverzeichnis nimmt einem genau das ab und ist eine
 
 ## Was man nicht sieht, wenn man es nicht weiß
 
-Fünf Eigenschaften, die jede von ihnen schon einmal eine Sitzung gekostet haben.
+Sieben Eigenschaften, die jede von ihnen schon einmal eine Sitzung gekostet haben.
 
-**Der Abnahmelauf verlangt KRK im Vordergrund.** Aus dem Hintergrund gestartet weist die Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab, und die Messstrecke meldet `NICHT_IM_VORDERGRUND` statt Zahlen. Aus einem Terminalfenster im Vordergrund läuft sie durch. Kein Agent kann sie deshalb fahren; das ist Nutzerarbeit. Die Frage dazu ist offen (`decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`). Synthetische Tastendrücke gehören in KRKs eigene Ereignisschlange über `postEvent:atStart:` und nicht über `osascript`.
+**Der Abnahmelauf verlangt KRK im Vordergrund.** Aus dem Hintergrund gestartet weist die Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab, und die Messstrecke meldet `NICHT_IM_VORDERGRUND` statt Zahlen. Aus einem Terminalfenster im Vordergrund läuft sie durch. Kein Agent kann sie deshalb fahren; das ist Nutzerarbeit. Die Frage dazu ist offen (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`). Synthetische Tastendrücke gehören in KRKs eigene Ereignisschlange über `postEvent:atStart:` und nicht über `osascript`.
 
 **Der Messplatz liegt unter `~/Library/Caches/krk-messplatz`**, nicht unter `/tmp`. Prüfordner einzelner Testläufe gehören dagegen nicht dorthin: sie tragen Prozesskennung und Laufnummer und räumen sich in `Drop` selbst auf, siehe `Pruefordner` in `krk-core/tests/verzeichnis.rs`.
 
-**Drei Fallunterscheidungen sind vollständig und haben keinen Auffangzweig.** Das ist Absicht: eine neue Variante hält den Bau an und erzwingt eine bewusste Einordnung. Jedes neue Kommando braucht eine Zeile in `Kommando::wirkungsbereich` (`krk-core/src/tasten/belegung.rs`) und in `bereich_des_kommandos` (`krk-ui/src/belegungsmodell.rs`); jede neue Operationsart eine in `schiebt_auffrischung_auf` (`krk-ui/src/auffrischung.rs`).
+**Etliche Fallunterscheidungen sind vollständig und haben keinen Auffangzweig.** Das ist Absicht: eine neue Variante hält den Bau an und erzwingt eine bewusste Einordnung. Jedes neue Kommando braucht eine Zeile in `Kommando::wirkungsbereich` (`krk-core/src/tasten/belegung.rs`) und in `bereich_des_kommandos` (`krk-ui/src/belegungsmodell.rs`); jede neue Operationsart eine in `schiebt_auffrischung_auf` (`krk-ui/src/auffrischung.rs`). Die Runde 2 hat weitere angelegt, unter anderem über `Fokus`, über `Bereich`, über das Ziel eines Lesezeichens und über den Inhalt der Vorschau. **Eine Zahl steht hier nicht mehr**: sie stand bis zum 260810 bei drei, war schon damals unvollständig, und der Übersetzer nennt die Stellen ohnehin genauer als jede Aufzählung. Wer eine Aufzählung erweitert, baut und liest die Fehlerliste.
+
+**Der Ereignisabgriff fragt nach der Nämlichkeit des Ersthelfers und nicht nach seiner Klasse.** `ersthelfer_gehoert_appkit` (`krk-ui/src/appkit/ereignisse.rs`) reicht jeden Tastendruck unverändert an AppKit weiter, sobald der Ersthelfer eine `NSTextView`, ein `NSTextField` oder ein `NSText` **ist**; die Textfläche des Editors ist die eine Ausnahme davon, und sie wird über die Objektgleichheit erkannt, nicht über die Klasse. Eine Frage nach der Klasse könnte sie vom Feldeditor eines Textfeldes nicht trennen, denn der ist dieselbe Klasse. **Wer eine zweite bedienbare Textfläche baut, meldet sie dort an**, sonst gehören ihre Tasten AppKit und kein Befehl von KRK wirkt darin. Der Vergleich selbst steht beim Anwendungsdelegierten, der die Fläche hält; `appkit/ereignisse.rs` kennt den Editor nicht und soll ihn nicht kennenlernen.
+
+**Jeder Wechsel des Ersthelfers geht durch die Überschreibung von `makeFirstResponder:` in `appkit/fenster.rs`.** Die Klasse `Hauptfenster` ist der eine Auslösepunkt, und sie trägt daneben `becomeKeyWindow` und `resignKeyWindow`, also auch den Vorder- und Hintergrundwechsel. **Wer eine Anzeige an den Fokus hängt, hängt sie dort an und baut keinen zweiten Beobachter**: `NSWindow` verschickt keine Benachrichtigung über den Ersthelfer, und die Beobachtung der Eigenschaft ist von Apple nicht zugesagt. Empfänger ist `Anwendungsdelegierter::fokusanzeige_nachziehen`; es schreibt ausschließlich die fünf Rahmenfarben der Aufteilung (`appkit/aufteilung.rs`, ein `NSBox` je Bereich) und den Fenstertitel (`krk-ui/src/fenstertitel.rs`, eine reine Funktion über die fünf Fokuswerte). **Es ruft weder `anwenden` noch `setHidden`**, und der Grund gehört dazu: eine ausgeblendete Ansicht, die den Ersthelfer hält, lässt AppKit den Rang neu vergeben und diese Meldung ein zweites Mal auslösen.
 
 **Der Sortierschlüssel entsteht einmal beim Lesen** und trägt die Kollation als Bytefolge. Das ist die Voraussetzung dafür, dass L3 und L10 halten, und darf nicht in einen paarweisen Vergleich zurückfallen.
 
@@ -78,14 +99,17 @@ Fünf Eigenschaften, die jede von ihnen schon einmal eine Sitzung gekostet haben
 
 ## Technologiewahl
 
-Getroffen am 260802-1150: **Rust mit AppKit über `objc2`**, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26. Der Datensatz ist `decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md`, die Gegenüberstellung der Kandidaten `analyses/260802-1134-sprache-und-ui-werkzeugkasten.md`, beide im aktiven Circle.
+Getroffen am 260802-1150: **Rust mit AppKit über `objc2`**, außerhalb der App-Sandbox, Mindest-Zielsystem macOS 15 bei Unterstützung bis macOS 26. Der Datensatz ist `decisions/260802-1134_*_sprache-und-ui-werkzeugkasten.md`, die Gegenüberstellung der Kandidaten `analyses/260802-1134-sprache-und-ui-werkzeugkasten.md`, beide im Circle der Runde 1.
+
+**`objc2` führt keine Verfügbarkeitsangaben mit sich, und der Übersetzer hält die Untergrenze deshalb nicht.** Wer eine Methode anspricht, die nach macOS 15 hinzugekommen ist, bekommt keine Warnung, sondern einen Absturz auf dem Referenzgerät. Die Gegenmaßnahme ist eine Gewohnheit und kein Werkzeug: jedes AppKit-Modul dieses Projekts nennt in seinem Modulkopf die Untergrenze jeder Klasse, die es anspricht.
 
 ## Bindende Grundlage: die Entscheidungsdatensätze
 
 Die Entscheidungsdatensätze sind die bindende Grundlage für jede Planung und jede Implementierung. **Verbindlich ist der Dateibestand, nicht diese Aufstellung.** Den Stand trägt der Marker im Dateinamen: `_o_` offen, `_a_` beantwortet aber noch nicht in Code umgesetzt, `_i_` umgesetzt, `_d_` zurückgestellt, `_s_` überholt. Wer den aktuellen Stand braucht, listet beide Speicher auf, nicht nur einen:
 
 - `fusion-workbench/shared/decisions/` — projektweite Fragen
-- `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/` — Fragen des aktiven Circles
+- `fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/` — Fragen des aktiven Circles, der Editor-Runde
+- `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/` — Fragen der Runde 1, die weiterbinden
 
 Die Antwort steht jeweils in der Zeile `Answered:` ihres Datensatzes und ausformuliert im Spec oder im Plan; sie wird hier nicht wiederholt, damit sie nicht an zwei Stellen auseinanderläuft. Die Aufstellung der offenen Fragen stand hier bis zum 260807 namentlich und ist zweimal in vier Tagen veraltet — deshalb steht sie nicht mehr hier. Wer den Stand braucht, listet beide Speicher auf:
 

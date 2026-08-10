@@ -44,3 +44,17 @@ Das Kriterium auf „über einen der Wege, die eine Datei in den Editor bringen"
 umstellen oder den Sprung aus C6 namentlich dazunehmen, so wie C2 es an seiner
 Stelle tut. Der Befund ist älter als diese Sitzung und fällt hier auf, weil
 D5 die Aufzählung der Anlässe ohnehin durchgezählt hat.
+
+---
+Resolved: Das fünfte Abnahmekriterium von C4 nennt seit dem 260810-0714 alle drei
+Wege. Es lautet jetzt: "Dieselbe Nachfrage erscheint, wenn der Editor eine andere
+Datei aufnehmen soll, gleich auf welchem der drei Wege sie kommt: über F4, über
+den Übergang aus der Vorschau oder über den Sprung auf eine Textmarke aus C6."
+Der Zusatz "und der Abnahmelauf prüft alle drei" steht dabei, weil genau daran der
+Befund hing.
+
+Der Vermerk bei S28, der das Kriterium mit seinem alten Wortlaut zitierte, ist
+mitgezogen und hält den Befund fest: der Bau war nie enger als die drei Wege,
+weil die Regel im Editormodell sitzt und nicht bei den Einstiegen.
+
+Am Code ist nichts geändert; der Befund war ein Zählfehler im Spec.
