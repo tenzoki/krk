@@ -100,3 +100,37 @@ allein die Abschlussnotiz des eigenen Circles.
 
 ---
 Resolved:
+
+---
+Resolved: Beide Haelften sind abgearbeitet.
+
+**Erste Haelfte (Circle-Datensaetze und portfolio.md).** Der Bestand war erheblich groesser als
+dieser Datensatz fuehrt: 76 Stellen statt 16, in allen vier Circles statt in zweien, weil die
+Runde 2 seit der Aufnahme durchgelaufen ist. Geaendert sind 55 Stellen in den vier
+Circle-Datensaetzen, dazu zwei Prosastellen, die durch die Umstellung falsch geworden waeren.
+Stehen bleiben 13 Stellen, an denen der Marker die Aussage selbst ist: die Befundtabelle mit
+ihren Spalten "zitiert" und "ist", der Satz ueber das Suchmuster, das die Form `_t_circle.md`
+nicht erfasst, und die Umbenennung am Ende jedes Aktivierungsvorschlags. Eine Sternform loeschte
+dort den Inhalt.
+
+**`portfolio.md` ist nicht angefasst, und das ist die Antwort auf die Frage, die dieser
+Datensatz selbst stellt.** Geprueft wurde, ob die Erzeugung die Sternform setzt: sie tut es
+nicht. `agents/playmaker.md` fuehrt an der einzigen Stelle, die ein Pfadzitat des Portfolios
+ausformt, selbst einen ausgeschriebenen Marker vor. Eine Handkorrektur waere damit nur ein
+Aufschub, und der Befund kaeme ein fuenftes Mal wieder. Der Zusammenhang steht als eigener
+Defekt `shared/issues/260810-1730_*_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md`.
+
+**Zweite Haelfte (CLAUDE.md und spikes/): leer, und mit Begruendung geschlossen statt mit einer
+Aenderung.** `CLAUDE.md` traegt null Treffer; die Datei ist seit Aufnahme dieses Datensatzes neu
+geschrieben und fuehrt die Sternform bereits. Die drei Stellen in `spikes/fn-tasten/README.md`
+(Zeilen 17, 25 und 54) fallen unter die Festlegung, die die erste Haelfte getroffen hat:
+Aufzeichnungen eines Standes behalten ihren damaligen Marker, und die Ausnahme gilt je Datei
+nach ihrem Ort, nicht je Absatz. Ausgenommen sind `history/`, `reviews/`, `analyses/`,
+`issues/`, `decisions/`, `messungen/` und `spikes/`. Die Ortsregel ist entscheidbar, die
+Absatzregel waere es nicht.
+
+**Ein Bestand faellt zwischen die beiden Haelften und ist eigens erfasst:** Spec und Plan der
+Runde 2 tragen sechs Stellen, die dieser Datensatz nie gefuehrt hat, weil er von vor jener Runde
+stammt. Siehe `shared/issues/260810-1746_*_spec-und-plan-der-runde-2-tragen-sechs-verweise-mit-ausgeschriebenem-zustandsmarker.md`.
+
+Geschlossen in der Sitzung `shared/history/260810-1647-orchestrator-session.md`, Turn 1.
