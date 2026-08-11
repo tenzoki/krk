@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 91,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T19:41:19.526Z",
-      "thrashingScore": 34
+      "totalChanges": 106,
+      "changesThisSession": 15,
+      "lastChange": "2026-08-11T21:51:42.603Z",
+      "thrashingScore": 61
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,

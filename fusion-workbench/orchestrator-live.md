@@ -1,22 +1,24 @@
 # Orchestrator — Live
 
-**Turn:** --/5 | **Tasks:** --/-- | **Commits:** 0 | **Errors:** 0
-**Started:** 14:53 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
-**Circle:** 260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen (aktiv)
+**Turn:** 2/5 | **Tasks:** 5/5 | **Commits:** 16 | **Errors:** 0
+**Started:** 14:54 | **Domain:** code | **Elapsed Turns:** 2 | **Guard:** OK (0 blocks)
+**Session:** Complete — Runde 4 als beschränkter Abschluss geschlossen
 
 ## Current
-  [SETUP] orchestrator -> Setup fertig; vier Nutzerfragen stehen vor der Planung
+  [DONE] orchestrator -> Sitzung abgeschlossen, Circle auf _b_, Portfolio neu gebaut
 
 ## This Turn
-  (kein Turn begonnen)
+  [DONE]    coder -> Iconset ins Bündel, Symbol über iconutil ......... 8695b77
+  [DONE]    coder -> Festbreite Ziffern, Datum ohne Komma ............. 3d2c613
+  [DONE]    coder -> 26 Modulköpfe, macOS-Untergrenzen ................ 9b17ff1
+  [DONE]    coder -> Vorschaubreite, Bruchstelle 1 .................... 1ea5a3d
+  [DONE]    coder -> must_use an Auswahlversuch und Einzug ............ b2a6c2e
+  [DONE]    reconciler -> Abschluss-Abgleich, alles trägt
+  [DONE]    playmaker -> portfolio.md neu gebaut
+  [DONE]    orchestrator -> Circle auf _b_, Zeiger geräumt ............ 485d891
 
 ## Up Next
-  [GATE]    user -> Wie weit soll Cmd+W reichen?
-  [GATE]    user -> Was kopiert der Pfadkopierer bei stehender Markierung?
-  [GATE]    user -> Was tut ein Doppelklick auf einen Ordner?
-  [GATE]    user -> Welche vier Kombinationen gelten ab Werk?
-  [QUEUED]  shaper -> Spec aus Directive und den vier Antworten
-  [QUEUED]  planner -> Plan aus dem Spec
+  (keine — der Abnahmelauf der Runden 1 bis 4 ist Nutzerarbeit)
 
 ## Blocked
-  7 offene Defekte, davon 5 ueber fusion selbst — keiner haelt diese Runde auf
+  (keine)

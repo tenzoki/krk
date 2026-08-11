@@ -37075,3 +37075,58 @@
 {"ts":"2026-08-11T20:27:13.115Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-11T20:27:54.678Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md"}
 {"ts":"2026-08-11T20:27:54.805Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:28:27.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:28:32.130Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:47:37.355Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:47:49.354Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:47:56.351Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:48:29.018Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:48:29.157Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:48:40.012Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:48:40.133Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:48:50.449Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:48:50.569Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:49:04.291Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:49:04.413Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:49:29.329Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:49:29.482Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-11T21:49:29.483Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:49:52.126Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:49:52.301Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-11T21:49:52.301Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:05.988Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:06.138Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:06.139Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:17.496Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:17.621Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:17.621Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:28.009Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:28.128Z","event":"churn_warning","tool":"Edit","file":"CLAUDE.md","detail":"Elevated file churn: 1 file(s) with multiple changes: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:28.129Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:39.351Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:39.471Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:39.472Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:49.581Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:49.712Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:49.712Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:55.089Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:50:55.215Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:50:55.215Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:50:59.888Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:51:26.227Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:51:26.359Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:51:26.359Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:51:33.810Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:51:33.935Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:51:33.935Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:51:42.481Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-11T21:51:42.604Z","event":"churn_critical","tool":"Edit","file":"CLAUDE.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: CLAUDE.md"}
+{"ts":"2026-08-11T21:51:42.604Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-11T21:51:46.246Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T21:51:53.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T22:04:54.803Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T22:05:03.725Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T22:05:16.057Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T22:05:29.477Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-11T22:05:29.623Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-11T22:05:40.729Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
