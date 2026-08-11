@@ -1,8 +1,10 @@
 //! Das Fenster und sein Delegierter.
 //!
 //! Die Inhaltsansicht des Fensters ist seit Schritt 12 die Aufteilung aus
-//! [`super::aufteilung`] mit ihren vier Bereichen und nicht mehr die eine
-//! Tabelle aus Schritt 6.
+//! [`super::aufteilung`] und nicht mehr die eine Tabelle aus Schritt 6. Sie
+//! traegt seit Schritt 16 der Editor-Runde **fuenf** Bereiche und nicht mehr
+//! die vier der Runde 1; zugleich zu sehen sind hoechstens vier, weil C1 jener
+//! Runde zusagt, dass die Vorschau und der Editor sich dieselbe Flaeche teilen.
 //!
 //! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
 //! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
@@ -94,10 +96,23 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 
 /// Die Groesse, unter die sich das Fenster nicht ziehen laesst.
 ///
-/// Die Summe der vier Mindestbreiten aus [`crate::fenstermodell::Bereich`] plus
-/// Luft fuer die Trennlinien. Darunter faenden die Bereiche keinen Platz mehr,
-/// und die Zusage aus C7, dass jeder von ihnen bedienbar bleibt, waere nicht zu
-/// halten.
+/// **Die Zahl stammt aus der Runde 1 und deckt deren vier Bereiche.** Ihre
+/// Mindestbreiten aus [`crate::fenstermodell::Bereich`] summieren sich auf 760
+/// Punkte (Lesezeichen 120, beide Dateifenster je 240, Vorschau 160); die
+/// uebrigen 20 sind Luft fuer die Trennlinien. Darunter faende keiner von ihnen
+/// mehr Platz, und die Zusage aus C7, dass jeder bedienbar bleibt, waere nicht
+/// zu halten.
+///
+/// **Der Editor der Runde 2 geht in diese Rechnung nicht ein**, und die Zahl
+/// ist seither nicht nachgezogen worden. Er steht nie zugleich mit der
+/// Vorschau (C1 der Editor-Runde), tritt aber an ihre Stelle mit 320 statt 160
+/// Punkten Mindestbreite; die Summe seines Vierersatzes ist 920. Zwischen 780
+/// und 920 Punkten Fensterbreite unterschreitet der Editor damit sein
+/// Mindestmass — [`crate::fenstermodell::bereichsbreiten`] gibt den festen
+/// Bereichen hoechstens so viel, dass den Dateifenstern ihres bleibt, und
+/// kuerzt ihn entsprechend. Ob die Untergrenze deshalb auf 940 steigen soll
+/// oder der Editor in diesem Band gedrueckt bleiben darf, ist eine Frage an den
+/// Nutzer und keine, die hier still beantwortet wird.
 const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0);
 
 /// Was das Hauptfenster haelt.

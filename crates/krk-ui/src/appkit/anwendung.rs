@@ -2038,6 +2038,15 @@ impl Anwendungsdelegierter {
             self.dateifenster(seite).quelle().befehlsantwort_loeschen();
         }
 
+        // **Zuerst nachlesen, was auf dem Schirm steht, dann erst das Modell
+        // anfassen.** Der Nutzer kann jede Trennlinie mit der Maus verschoben
+        // haben, und im Fenstermodell steht davon nichts, solange niemand
+        // nachmisst. Ohne diese Zeile rechnet der Nachzug unten mit einer
+        // ueberholten Zahl und setzt die Ziehbewegung zurueck — auch bei einem
+        // Befehl, der weder eine Breite noch eine Sichtbarkeit aendert, etwa
+        // dem Ab-Pfeil in der Dateiliste (Defekt vom 260811-1245).
+        self.bildschirmbreiten_uebernehmen();
+
         let ausgefuehrt = match kommando {
             Kommando::Kopieren => self.uebertragen(kommando),
             Kommando::Verschieben => self.uebertragen(kommando),
@@ -2454,16 +2463,15 @@ impl Anwendungsdelegierter {
     /// stehen, weil `Anderswo` ein Blatt bedeutet und das siebte
     /// Abnahmekriterium von C9 verlangt, dass ein Blatt keinem Bereich seine
     /// Anzeige nimmt.
+    ///
+    /// **Was auf dem Schirm steht, ist hier schon nachgelesen.** Bis zum
+    /// 260811 begann diese Funktion mit einem eigenen
+    /// [`Self::bildschirmbreiten_uebernehmen`], damit ein Schritt nicht auf
+    /// eine ueberholte Zahl spraenge. Seit derselbe Ruf am Kopf von
+    /// [`Self::kommando_ausfuehren`] fuer **jeden** Befehl steht, waere er hier
+    /// eine zweite Messung derselben Zahl; der einzige Weg hierher fuehrt
+    /// ohnehin ueber jenen Kopf.
     fn breite_aendern(&self, betrag: f64) -> bool {
-        // Zuerst nachlesen, was wirklich auf dem Schirm steht: der Nutzer kann
-        // die Trennlinie zwischendurch mit der Maus verschoben haben, und ein
-        // Schritt auf eine ueberholte Zahl spraenge zurueck.
-        if let Some(aufteilung) = self.ivars().aufteilung.get() {
-            self.ivars()
-                .modell
-                .borrow_mut()
-                .breiten_uebernehmen(aufteilung.gemessene_breiten());
-        }
         // Vor der Ausleihe: `fokus` liest das Fenstermodell selbst.
         let fokus = self.fokus();
         let mut modell = self.ivars().modell.borrow_mut();
@@ -2535,6 +2543,47 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Uebernimmt in das Fenstermodell, was gerade wirklich auf dem Schirm
+    /// steht.
+    ///
+    /// **Die eine Stelle, an der eine mit der Maus verschobene Trennlinie in
+    /// das Fenstermodell kommt.** Sie steht in den Rahmen der Ansichten und
+    /// nirgends sonst, und der Delegierte der Aufteilung meldet sie nicht
+    /// zurueck: er haelt nichts und hat bewusst keinen Rueckweg in das Modell
+    /// (siehe den Modulkopf von [`super::aufteilung`]). Das Modell erfaehrt von
+    /// ihr also nur, wenn jemand nachmisst. Zwei Anlaesse tun das: jeder
+    /// Tastenbefehl, bevor er das Modell anfasst
+    /// ([`Self::kommando_ausfuehren`]), und jedes Schreiben der Sitzung
+    /// ([`Self::sitzung_bauen`]), das auch ohne Befehl faellig wird.
+    ///
+    /// **Der Zeitpunkt ist tragend und nicht beliebig: gemessen wird, solange
+    /// Modell und Schirm noch dieselbe Sichtbarkeit meinen.**
+    /// [`Fenstermodell::breiten_uebernehmen`](crate::fenstermodell::Fenstermodell::breiten_uebernehmen)
+    /// entscheidet an der Sichtbarkeit des **Modells**, welche gemessene Zahl
+    /// es annimmt. Nach einem Umschaltbefehl sagt das Modell bereits "beide
+    /// Dateifenster stehen", waehrend der Schirm noch eines mit der vollen
+    /// Breite zeigt; diese Zahl uebernommen, kaeme das wiedereingeblendete
+    /// Fenster auf einer falschen Breite zurueck. Genau das ist der am 260804
+    /// im laufenden Buendel gemessene Fehler, den der Kommentar an
+    /// `breiten_uebernehmen` fuehrt.
+    ///
+    /// **Die beiden uebrigen Aufrufer von [`Self::aufteilung_nachziehen`]
+    /// brauchen keine Messung davor.** Beim Aufbau der Oberflaeche gibt es noch
+    /// keine Ziehbewegung, die verlorenginge, und die Fortsetzung nach einer
+    /// Rueckfrage aus C4 laeuft hinter einem Blatt: solange eines steht, nimmt
+    /// das Fenster keine Maus in seinem Inhalt an, und der Befehl, der das
+    /// Blatt aufgezogen hat, ist ueber den Kopf von
+    /// [`Self::kommando_ausfuehren`] gekommen.
+    fn bildschirmbreiten_uebernehmen(&self) {
+        let Some(aufteilung) = self.ivars().aufteilung.get() else {
+            return;
+        };
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .breiten_uebernehmen(aufteilung.gemessene_breiten());
+    }
+
     /// Schreibt Sichtbarkeit und Breiten in die Ansicht und zieht danach die
     /// Anzeige nach.
     ///
@@ -2542,6 +2591,12 @@ impl Anwendungsdelegierter {
     /// ausgeblendete Ansicht, die den Ersthelfer haelt, laesst AppKit den Rang
     /// neu vergeben. Der Fokus danach ist deshalb ein anderer als der davor,
     /// und [`Self::fokusanzeige_nachziehen`] liest ihn frisch.
+    ///
+    /// **Das Modell ist hier die Quelle, und deshalb muss es aktuell sein.**
+    /// Wer diese Funktion ruft, hat vorher entweder das Modell geaendert oder
+    /// [`Self::bildschirmbreiten_uebernehmen`] gerufen; sonst schreibt sie eine
+    /// ueberholte Breite auf den Schirm und nimmt dem Nutzer seine
+    /// Ziehbewegung.
     fn aufteilung_nachziehen(&self) {
         let Some(aufteilung) = self.ivars().aufteilung.get() else {
             return;
@@ -4222,12 +4277,11 @@ impl Anwendungsdelegierter {
     /// vor `oberflaeche_aufbauen` und im Messmodus — steht dort `None`, und das
     /// ist dieselbe Aussage wie die eines Editors ohne Datei.
     fn sitzung_bauen(&self) -> Sitzung {
-        if let Some(aufteilung) = self.ivars().aufteilung.get() {
-            self.ivars()
-                .modell
-                .borrow_mut()
-                .breiten_uebernehmen(aufteilung.gemessene_breiten());
-        }
+        // Der zweite der beiden Anlaesse, an denen der Schirm in das Modell
+        // zurueckgelesen wird. Er faellt auch ohne Befehl an, naemlich ueber
+        // den Takt der Sitzungssicherung und beim Beenden, und deshalb bleibt
+        // er neben dem am Kopf von `kommando_ausfuehren` stehen.
+        self.bildschirmbreiten_uebernehmen();
         let fenster = [
             self.dateifenster(Fensterseite::Links).quelle().zustand(),
             self.dateifenster(Fensterseite::Rechts).quelle().zustand(),

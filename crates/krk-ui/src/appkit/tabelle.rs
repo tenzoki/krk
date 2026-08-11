@@ -2304,8 +2304,18 @@ impl Dateifenster {
         // Gegenprobe am Kopf des Systems sagt dasselbe und nennt die Bedingung:
         // `@property (nullable, weak) id target;` mit dem Zusatz "Target is
         // weak for zeroing-weak compatible objects in apps linked on 10.10 or
-        // later" (`AppKit.framework/Headers/NSControl.h:24`). KRK bindet gegen
-        // 15.0 und faellt damit auf keinen Fall in das alte `assign`.
+        // later"
+        // (`MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSControl.h:24`).
+        // KRK bindet gegen 15.0 und faellt damit auf keinen Fall in das alte
+        // `assign`.
+        //
+        // **Die Wurzel dieses Pfades ist der SDK-Kopf und nicht das laufende
+        // System.** `xcrun --show-sdk-path` nennt sie; unter
+        // `/System/Library/Frameworks/` liegt auf diesem Geraet kein
+        // `Headers`-Ordner, und wer den Beleg dort sucht, findet ihn nicht.
+        // Dieselbe Schreibweise nimmt [`crate::hervorhebung`] fuer seinen
+        // Beleg aus `NSLayoutManager.h`; die uebrigen Fundstellen dieses
+        // Moduls nennen nur den Dateinamen und meinen denselben Ordner.
         //
         // Der Ring Quelle → Tabelle → Ziel → Delegierter → Quelle bleibt also
         // an der Kante Tabelle → Ziel offen; ein schwach haltendes
