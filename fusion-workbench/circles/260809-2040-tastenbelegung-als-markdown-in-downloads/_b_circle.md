@@ -102,7 +102,9 @@ Der aktive Circle `260807-2116-eingebauter-editor-mit-textmarken` ist **keine** 
 
 ## Turn log
 
-(noch keiner)
+- Turn 1 (Sitzung 260811-0107): Commits `e43f21a..83e056e`; Coherence-Spruch `ok`; Sitzungsbericht: `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`
+
+Der Turn hat die Planschritte S1 bis S3 gebaut; KRK schreibt die geltende Belegung seither als `KRK-Tastenbelegung.md` in den Downloads-Ordner. Sein Ertrag ist die Messung aus S1: sie hat eine Annahme des Specs **widerlegt**, bevor diese als falsche Zusicherung in die erzeugte Datei geriet. `NSTableView` beantwortet `selectAll:` selbst, und deshalb bleibt die Zelle für „Alles auswählen" leer, statt „Textfelder und Editor" zu behaupten. S4, der Abnahmelauf am gebauten Bündel, ist am 260811-1215 vom Nutzer gestrichen worden; die 41 Abnahmekriterien des Specs bleiben damit sämtlich offen.
 
 ## Parent grounding stale
 
@@ -238,3 +240,55 @@ einem Verweis folgen kann, der trägt.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes
 von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim
 Nutzer über `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Beschränkter Abschluss am 260811-1415.** Der Marker geht auf `_b_`, wie bei den Runden 1 und 2,
+und aus demselben Grund.
+
+**Was gebaut ist.** KRK schreibt die geltende Tastenbelegung als Markdown nach
+`~/Downloads/KRK-Tastenbelegung.md`, ausgelöst über einen Menüeintrag ohne Tastenkürzel unter
+„KRK". Die Datei trägt drei Spalten, gegliedert nach den neun Funktionsbereichen, nur die
+belegten Funktionen, und die Schreibweise der Kombinationen kommt aus `anzeige()` — keine zweite
+Aufbereitung, wie die Directive es verlangt. Die drei Planschritte S1 bis S3 tragen `[DONE]`, der
+Plan steht auf `_c_`, der Bau ist grün.
+
+**Warum der Abschluss beschränkt ist.** Der Abnahmelauf S4 ist am 260811-1215 vom Nutzer
+gestrichen worden. Die 41 Abnahmekriterien des Specs stehen damit sämtlich auf `- [ ]`, und der
+Spec bleibt auf `_o_`. Der Grund ist derselbe, der schon die Runden 1 und 2 beschränkt hat: der
+Lauf verlangt KRK im Vordergrund und ist Nutzerarbeit, die kein Agent leisten kann
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+
+**Was das heißt, ungeschönt:** niemand hat KRK die Datei je schreiben sehen. „Gebaut" ist die
+richtige Aussage über diese Runde, „abgenommen" nicht.
+
+**Der Bounded-Closure-Artefakt — was diese Runde gelernt hat und die Directive nicht hergab.**
+
+Die Runde hat einen Fehler verhindert, bevor er entstand. Der Spec hat eine Vermutung als
+Vermutung gekennzeichnet („Textfelder und Editor" für die sechs vom Menü zugestellten
+Textbefehle) und ihre Prüfung zum Abnahmekriterium gemacht. Schritt S1 hat sie am
+Objective-C-Laufzeitsystem gemessen — ohne Instanz, ohne Hauptfaden, ohne Vordergrund — und sie
+**widerlegt**: `NSTableView` beantwortet `selectAll:` aus einer eigenen Methode, und die
+Lesezeichenleiste ist eine. Ohne dieses Kriterium stünde heute eine falsche Angabe in der
+erzeugten Datei. Der Befund ist als `issues/260811-0930_*_…` festgehalten und von drei Proben
+gehalten.
+
+Daneben ein Fund, der nicht den Code betrifft, sondern eine Zusage an den Nutzer: der Text zu
+`NSDownloadsFolderUsageDescription` nannte das Schreiben nicht. Eine TCC-Zusage gilt **je Paar
+aus Programm und Dienst**, nicht je Vorgang, und KRK löst die Rückfrage schon beim Anzeigen des
+Downloads-Ordners aus. Der Satz beschaffte damit Zustimmung für eine Handlung, die er nicht
+nannte.
+
+**Und ein Verfahrensbefund, der über diese Runde hinausreicht:** dreimal in dieser Sitzung stand
+eine Zusicherung im Text stärker da als im Code, und jedes Mal hat erst die Durchsicht sie
+zurückgezogen. Der Spec hat für diese Fehlerform inzwischen eine Gewohnheit — `inference:`
+kennzeichnen und die Prüfung zum Kriterium machen —, aber keinen Mechanismus.
+
+**Was offen bleibt:** ein zurückgestellter Defekt (`issues/260811-0955_*_…`, die Ungleichheit
+zwischen `bereich` und `wirkung`, vom Nutzer so gewählt) und eine offene Frage
+(`decisions/260811-1230_*_…`, ob ein Kommentar den Rang der Statuszeile als Zahl nennen soll).
+Die Abnahmeanleitung `planning/260811-1130_*_abnahmeanleitung-*.md` bleibt auf `_o_` und ist die
+Grundlage, falls der Lauf später automatisiert wird.
+
+**Sitzungshistorie:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`
+**Abgleich:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1403-reconciliation.md`

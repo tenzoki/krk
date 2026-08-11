@@ -43,3 +43,74 @@ Die bindende Entscheidung zu Menükürzeln ist `circles/260802-0842-krk-mac-date
 Außerhalb dieser Runde und ausdrücklich nicht Teil davon: die Statusleiste mit Bereichsschaltern und die proportionale Neuaufteilung. Dafür ist ein eigener Circle vorgesehen, der am 260811-1257 noch nicht angelegt war.
 
 ## Turn log
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260811-1326
+**Playmaker-Lauf:** 260811-1326-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach dem Abschluss der laufenden Runde 3
+(`260809-2040-tastenbelegung-als-markdown-in-downloads`), nicht davor.
+
+Dieser Circle ist der empfohlene nächste Kandidat, und er steht auf Rang 1 von drei. Die
+beiden anderen vorgesehenen Circles sind
+`260811-1304-statusleiste-mit-bereichsschaltern` auf Rang 2 und
+`260804-0933-eingebauter-web-betrachter-im-vorschaufenster` auf Rang 3.
+
+**Der Ausschlag ist, dass dieser Circle als einziger der drei keine unbeantwortete
+technische Größe trägt.** Seine Grundlage ist am 260811-1257 am Baum erhoben, mit
+Zeilenverweisen auf jede tragende Feststellung. Der Bau besteht aus vier Zeilen in
+`resources/default-keymap.toml`, vier Werten in `Kommando` und je vier Zeilen in
+`Kommando::wirkungsbereich` (`crates/krk-core/src/tasten/belegung.rs`) und
+`bereich_des_kommandos` (`crates/krk-ui/src/belegungsmodell.rs`). Keine dieser vier
+Fallunterscheidungen hat einen Auffangzweig; der Übersetzer nennt die Stellen von selbst.
+Die vier Bauteile, die dieser Circle erbt, liegen auf der Platte: die eine Hülle um
+`NSPasteboard` in `crates/krk-ui/src/appkit/zwischenablage.rs`, die Regel "worauf wirkt
+dieser Befehl" in `betroffene()` (`crates/krk-ui/src/kommandos/operationen.rs:157`), die
+aktive Fensterseite in `Fenstermodell::aktiv()` (`crates/krk-ui/src/fenstermodell.rs:318`)
+und `NSWorkspace`, das über drei Module schon im Haus ist.
+
+**Die vier offenen Entscheidungsdatensätze sind Zuschnittfragen und keine Untersuchungen.**
+Sie liegen in `decisions/` dieses Circles und tragen alle `_o_`: die Reichweite von Cmd+W,
+was der Pfadkopierer bei stehender Markierung nimmt, was ein Doppelklick auf einen Ordner
+tut, und welche vier Kombinationen ab Werk gelten. Jede führt ihre Möglichkeiten samt
+Folgen. Für die Gewichtung `code` ist ein Zählwert von vier kein guter Wert, und der
+Playmaker unterschlägt es nicht: der Web-Betrachter zitiert nur einen offenen Datensatz.
+Der Zählwert misst hier die falsche Größe. Der eine Datensatz dort ist eine ungemessene
+technische Frage zur Verfügbarkeitsprüfung für macOS-26-Schnittstellen, und derselbe Circle
+hält fest, dass auch das Mittel der Darstellung von Web-Inhalt offen ist und "in eine eigene
+Untersuchung vor dem Plan" gehört. Die vier Fragen hier sind in einer Klärungsrunde mit dem
+Nutzer zu beantworten.
+
+**Ein Befund dieses Circles nimmt der Runde Arbeit ab, bevor sie beginnt.** Dass Cmd+W bei
+stehender Belegungsansicht nicht durchkommt, hat eine andere Ursache als die fehlende
+Reichweite im Editor und in der Leiste: `waehrend_blatt_erlaubt`
+(`crates/krk-ui/src/kommandos/operationen.rs:208`) lässt bei stehendem Blatt allein
+`Kommando::Abbrechen` durch, und das ist eine bewusste Sperre. Die Runde schließt damit
+möglicherweise nur eine der zwei Lücken; welche, ist Frage F1.
+
+**Was gegen eine sofortige Aktivierung spricht, in absteigender Schärfe.**
+
+Die Runde 3 ist nicht geschlossen. Ein zweiter aktiver Circle wäre die Lage
+`MULTIPLE-ACTIVE`, und `.active-circle` trägt genau einen Namen. Nach dem Dateibestand am
+260811-1326 tragen die Schritte S1 bis S3 ihres Plans `[DONE]`, S4 ist am 260811-1215 vom
+Nutzer gestrichen; die Runde läuft damit auf einen beschränkten Abschluss zu, und der
+Abschluss ist die Bedingung dieser Aktivierung.
+
+Beide Abhängigkeiten dieses Circles sind nicht kohärent geschlossen. Nach der Rangheuristik
+zählt allein `_c_` als erfüllte Vorbedingung, also trägt der Circle das Kennzeichen. Die
+Bindung an die Runde 3 ist inhaltlich schwach: die Belegungsausgabe zählt, was die Belegung
+führt, und vier neue Funktionen erscheinen dort ohne Zutun. Die Bindung an
+`260802-0842-krk-mac-dateimanager-editor-git` (`_b_`) betrifft die Kommando-Maschinerie, die
+Konflikterkennung aus C3 und den Wirkungsbereich; die Beschränkung jener Runde liegt bei
+ihren Zeitzusagen, und diese vier Befehle führen keine.
+
+Die Runde bricht eine schriftliche Zusicherung. Der Modulkopf von
+`crates/krk-ui/src/appkit/zwischenablage.rs` sagt in zwei Sätzen zu, dass KRK die
+Zwischenablage in keinem Fall schreibt. Die beiden Kopierbefehle brechen genau das, also
+gehört der Modulkopf mit derselben Änderung umgeschrieben. Eine zweite Hülle daneben wäre
+der Fehler, den die Datei ausdrücklich vermeidet.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes
+von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim
+Nutzer über `/fusion:next` oder beim Orchestrator.

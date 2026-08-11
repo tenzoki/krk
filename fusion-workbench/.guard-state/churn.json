@@ -85,10 +85,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/portfolio.md": {
-      "totalChanges": 5,
+      "totalChanges": 6,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T12:46:56.233Z",
-      "thrashingScore": 1
+      "lastChange": "2026-08-11T11:28:30.029Z",
+      "thrashingScore": 2
     },
     "fusion-workbench/shared/history/260802-0853-playmaker-direct-dispatch.md": {
       "totalChanges": 1,
@@ -109,10 +109,10 @@
       "thrashingScore": 0
     },
     "CLAUDE.md": {
-      "totalChanges": 90,
-      "changesThisSession": 3,
-      "lastChange": "2026-08-10T19:30:44.886Z",
-      "thrashingScore": 32
+      "totalChanges": 91,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-10T19:41:19.526Z",
+      "thrashingScore": 34
     },
     "fusion-workbench/shared/history/260802-1030-claude-md-sprachdeklaration.md": {
       "totalChanges": 1,
@@ -403,10 +403,10 @@
       "thrashingScore": 4
     },
     "crates/krk-ui/src/main.rs": {
-      "totalChanges": 21,
+      "totalChanges": 26,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T12:21:24.882Z",
-      "thrashingScore": 7
+      "lastChange": "2026-08-11T08:29:53.303Z",
+      "thrashingScore": 10
     },
     "crates/krk-bench/Cargo.toml": {
       "totalChanges": 4,
@@ -523,10 +523,10 @@
       "thrashingScore": 0
     },
     "resources/Info.plist": {
-      "totalChanges": 10,
+      "totalChanges": 11,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T07:49:35.657Z",
-      "thrashingScore": 5
+      "lastChange": "2026-08-11T08:27:16.797Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1829-buendelbeschreibung-info-plist.md": {
       "totalChanges": 1,
@@ -547,10 +547,10 @@
       "thrashingScore": 1
     },
     "crates/krk-bench/src/messen.rs": {
-      "totalChanges": 90,
+      "totalChanges": 100,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T17:26:43.994Z",
-      "thrashingScore": 36
+      "lastChange": "2026-08-11T09:59:35.618Z",
+      "thrashingScore": 39
     },
     "crates/krk-bench/src/bericht.rs": {
       "totalChanges": 25,
@@ -691,15 +691,15 @@
       "thrashingScore": 12
     },
     "crates/krk-ui/src/appkit/menue.rs": {
-      "totalChanges": 29,
+      "totalChanges": 35,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T15:19:44.526Z",
-      "thrashingScore": 9
+      "lastChange": "2026-08-11T07:41:24.214Z",
+      "thrashingScore": 19
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "totalChanges": 135,
+      "totalChanges": 136,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T07:48:35.377Z",
+      "lastChange": "2026-08-11T10:11:29.599Z",
       "thrashingScore": 45
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
@@ -709,10 +709,10 @@
       "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 438,
+      "totalChanges": 443,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T16:47:00.537Z",
-      "thrashingScore": 158
+      "lastChange": "2026-08-11T10:10:34.377Z",
+      "thrashingScore": 147
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -991,10 +991,10 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/ablage/pfade.rs": {
-      "totalChanges": 1,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-03T18:42:52.220Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-11T07:35:00.867Z",
+      "thrashingScore": 1
     },
     "crates/krk-core/src/ablage/atomar.rs": {
       "totalChanges": 1,
@@ -1057,10 +1057,10 @@
       "thrashingScore": 0
     },
     "crates/krk-core/tests/ablage.rs": {
-      "totalChanges": 32,
+      "totalChanges": 33,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T12:25:15.801Z",
-      "thrashingScore": 10
+      "lastChange": "2026-08-11T07:35:20.388Z",
+      "thrashingScore": 11
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2051_o_ersetzt-in-frage-4-und-s10-laesst-offen-ob-die-kaputte-datei-ueberschrieben-wird.md": {
       "totalChanges": 1,
@@ -1111,15 +1111,15 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/tasten/belegung.rs": {
-      "totalChanges": 78,
+      "totalChanges": 80,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T11:04:02.742Z",
+      "lastChange": "2026-08-11T07:13:36.380Z",
       "thrashingScore": 26
     },
     "crates/krk-core/tests/belegung.rs": {
-      "totalChanges": 39,
+      "totalChanges": 40,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T06:24:16.376Z",
+      "lastChange": "2026-08-11T07:14:17.168Z",
       "thrashingScore": 13
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_o_der-include-str-pfad-in-schritt-11-liegt-eine-ebene-zu-hoch.md": {
@@ -2167,10 +2167,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "totalChanges": 30,
+      "totalChanges": 33,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T22:09:43.058Z",
-      "thrashingScore": 12
+      "lastChange": "2026-08-11T07:35:56.049Z",
+      "thrashingScore": 13
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
       "totalChanges": 13,
@@ -3073,9 +3073,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 54,
+      "totalChanges": 55,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T16:42:47.300Z",
+      "lastChange": "2026-08-11T09:55:32.068Z",
       "thrashingScore": 18
     },
     "circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260807-2147_o_traegt-eine-textmarke-auch-einen-bereich-oder-nur-eine-stelle.md": {
@@ -4033,10 +4033,10 @@
       "thrashingScore": 3
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md": {
-      "totalChanges": 20,
+      "totalChanges": 29,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T16:43:46.963Z",
-      "thrashingScore": 10
+      "lastChange": "2026-08-11T09:57:20.266Z",
+      "thrashingScore": 23
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0914-ontocoder-belegungsdatei-zwei-kommentarbloecke.md": {
       "totalChanges": 1,
@@ -4586,17 +4586,305 @@
     },
     "fusion-workbench/shared/decisions/260810-2132_o_wird-die-zusage-l9-wieder-angehoben-nachdem-die-messung-sich-erholt-hat.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T19:29:58.747Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-10T19:31:59.103Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_a_wie-wird-die-ausgabe-der-belegung-ausgeloest.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T02:41:42.639Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T02:46:53.176Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md": {
+      "totalChanges": 12,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T08:38:34.468Z",
+      "thrashingScore": 18
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0753-shaper-spec-tastenbelegung-als-markdown.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T05:58:35.387Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0803-conceptrev-spec-tastenbelegung-als-markdown-in-downloads.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:04:12.567Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0826-shaper-diagrammnachzug-spec-tastenbelegung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:26:41.980Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md": {
+      "totalChanges": 23,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:04:06.759Z",
+      "thrashingScore": 7
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_o_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:48:57.966Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0838_o_antwort-zeigen-nennt-vier-raenge-die-statuszeile-fuehrt-fuenf.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:46:23.723Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0838-planner-plan-tastenbelegung-als-markdown.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:47:38.108Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0853-conceptrev-plan-tastenbelegung-als-markdown-in-downloads.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T06:55:01.680Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0905-planner-nacharbeit-plan-tastenbelegung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:07:07.777Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md": {
+      "totalChanges": 2,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:00:42.121Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0930_o_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-die-leiste-beantwortet-selectall-selbst.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:20:12.157Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260811-0932_o_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:20:43.627Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/belegungsausgabe.rs": {
+      "totalChanges": 22,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T09:56:23.633Z",
+      "thrashingScore": 33
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:56:29.995Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0956_o_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:56:54.637Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0957_o_gemessen-reicht-fuer-textfelder-weiter-als-die-messung-und-die-lagen-sind-verschieden-gezaehlt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:57:24.535Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0958_o_elf-module-neben-appkit-sind-zwoelf-hervorhebung-fehlt-in-der-aufzaehlung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:57:44.015Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0959_o_zu-s1-bis-s3-gibt-es-keinen-sitzungsbericht-den-s1-als-abnahmekriterium-verlangt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:58:06.185Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1000_o_die-begruendung-fuer-den-downloads-ordner-nennt-das-schreiben-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T07:58:26.015Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-1000-coderev-codeanteil-turn-1-tastenbelegung-als-markdown.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T08:00:48.760Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1010_a_was-traegt-die-dritte-spalte-bei-rueckgaengig-und-wiederholen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T08:20:12.866Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1038-shaper-berichtigung-c3-dritte-spalte.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T08:39:07.239Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T09:43:07.892Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1155-ontocoder-acht-kurzverweise-in-spec-und-plan-der-runde-2.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T09:58:14.763Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1210_o_eine-dritte-stelle-nennt-den-rang-der-fenstermeldung-falsch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:04:02.114Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1230_o_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:14:13.997Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:49:36.774Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:29:02.982Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1257_o_wie-weit-soll-cmd-w-reichen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:58:38.775Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1258_o_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:59:01.187Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1259_o_was-tut-ein-doppelklick-auf-einen-ordner.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:59:25.083Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1300_o_welche-vier-kombinationen-gelten-ab-werk.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T10:59:51.448Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1257-shaper-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:00:25.488Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md": {
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:10:02.821Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:06:37.844Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_traegt-das-linke-dateifenster-einen-schalter.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:07:09.086Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:07:36.361Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:08:08.006Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:08:34.490Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:09:10.587Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:09:40.026Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1305-shaper-statusleiste-mit-bereichsschaltern.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:10:29.062Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1326-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T11:29:36.206Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1403-reconciliation.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:07:04.081Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:11:10.195Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-10T19:29:58.747Z",
+  "sessionStart": "2026-08-11T12:00:42.121Z",
   "keyAnchor": "workbench-root"
 }

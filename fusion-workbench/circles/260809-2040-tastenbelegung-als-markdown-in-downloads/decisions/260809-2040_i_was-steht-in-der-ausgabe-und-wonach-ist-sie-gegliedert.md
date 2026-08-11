@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` (Directive und Grounding), `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1054_c_belegungsansicht-gruppiert-nach-funktionsbereich.md` (der Nutzerauftrag, der die Bildschirmansicht gegliedert hat), `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_gehoert-der-wirkungsbereich-in-die-ausgabe.md` (eine dritte Spalte, getrennt gefragt)
 
@@ -75,3 +75,11 @@ Suchen einer Taste. Eine zweite Tabelle nach Taste ist nicht zugesagt.
 lautet "als dritte Spalte". Die Ordnung folgt damit dem Schirm, der Spaltensatz nicht. Der Nutzer
 hat beides gewaehlt, nachdem die Spannung benannt war; die Begruendung steht im dortigen
 Datensatz.
+
+---
+Implemented: `fd863e3` — `belegungsausgabe::markdown` schreibt je besetztem Funktionsbereich einen
+Abschnitt mit Pipe-Tabelle, in der Reihenfolge von `Funktionsbereich::ALLE` und innerhalb eines
+Abschnitts in der Reihenfolge der Belegungsdatei; die Gliederung kommt aus
+`belegungsmodell::nach_bereichen` (`belegungsmodell.rs:512`), also aus derselben Stelle wie
+die Bildschirmansicht. Aufgenommen wird nur, was mindestens eine Kombination traegt. Am Baum
+geprueft am 260811-1403.

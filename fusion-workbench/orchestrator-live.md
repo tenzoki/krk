@@ -1,20 +1,25 @@
 # Orchestrator — Live
 
-**Turn:** 3/5 | **Tasks:** 12/13 | **Commits:** 17 | **Errors:** 0
-**Started:** 16:47 | **Domain:** code | **Elapsed Turns:** 3 | **Guard:** OK (0 blocks)
-**Session:** Complete
+**Turn:** 1/5 | **Tasks:** 3/4 | **Commits:** 9 | **Errors:** 0
+**Started:** 01:07 | **Domain:** code | **Elapsed Turns:** 1 | **Guard:** OK (0 blocks)
+**Circle:** 260809-2040-tastenbelegung-als-markdown-in-downloads (aktiv)
 
 ## Current
-  [DONE] orchestrator -> Sitzung abgeschlossen, nichts zu tun
+  [GATE]    user -> S4: Abnahme am gebauten Buendel, verlangt KRK im Vordergrund
 
 ## This Turn
-  [DONE]    coder -> Option 4 fuer den Messplan bei Strg+C (I:260810-1745) ...... b9c358f
-  [DONE]    orchestrator -> CLAUDE.md revidiert, 5 Berichtigungen, 4 Ergaenzungen a6bf59b
-  [DONE]    reconciler -> 11 von 11 Schliessungen halten .................... bf69f82
+  [DONE]    shaper -> Spec, vier Faehigkeiten, 40 Kriterien ................ 1415a03
+  [DONE]    planner -> Plan, vier Schritte, Decidability getrennt .......... 5e369bb
+  [DONE]    coder -> S1 Messung am Laufzeitsystem, Ableitung gebrochen ..... 39687f3
+  [DONE]    coder -> S2 Beschriftung der sieben Wirkungsbereiche .......... 33cc083
+  [DONE]    ontocoder -> Circle-Datensatz nennt Spec, Plan, Sitzung ....... f1ce0f5
+  [DONE]    coder -> S3 Ausgabemodul, Menueeintrag, Meldung .............. fd863e3
+  [DONE]    coderev -> Durchsicht, sechs Befunde ........................ d8fbad7
+  [DONE]    coder -> vier Befunde behoben, Info.plist ergaenzt ........... d8fbad7
+  [DONE]    shaper -> C3 auf den gemessenen Stand berichtigt ............ d8fbad7
 
 ## Up Next
-  (keine — Warteschlange leer)
+  [QUEUED]  user -> S4 am Buendel: make bundle, dann Menue KRK, Eintrag pruefen
 
 ## Blocked
-  [DEFER]   user -> L6-Aussetzer (260806-1304) — verlangt Messlauf im Vordergrund
-  8 offene Defekte erfasst, keiner haelt einen Planschritt auf
+  4 offene Defekte im Circle, keiner haelt S4 auf

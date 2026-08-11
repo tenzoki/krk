@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` (Directive und Grounding), `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md` (Umfang und Ordnung, getrennt gefragt), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_welcher-bereich-den-fokus-fuer-die-zwischenablage-befehle-haben-muss.md`
 
@@ -68,3 +68,11 @@ nachdem dieser Preis ausgesprochen war.
 Belegungsansicht am Bildschirm die Spalte ebenfalls bekommen soll. Das waere der andere Weg, die
 Abweichung aufzuloesen, liegt aber ausserhalb der Directive dieses Circles — sie sagt eine
 Ausgabedatei zu und keine Aenderung der Ansicht. Wer es will, fuehrt es als eigenen Vorschlag.
+
+---
+Implemented: `33cc083` und `fd863e3` — die dritte Spalte steht als `belegungsausgabe::wirkung`
+(`crates/krk-ui/src/belegungsausgabe.rs:256`), gespeist aus
+`Kommando::wirkungsbereich().beschriftung()` fuer die 65 Funktionen mit Kommando
+(`crates/krk-core/src/tasten/belegung.rs:269`, vollstaendige Fallunterscheidung ohne
+Auffangzweig) und aus den in S1 gemessenen Werten fuer die sechs zugestellten Textbefehle.
+Am Baum geprueft am 260811-1403.

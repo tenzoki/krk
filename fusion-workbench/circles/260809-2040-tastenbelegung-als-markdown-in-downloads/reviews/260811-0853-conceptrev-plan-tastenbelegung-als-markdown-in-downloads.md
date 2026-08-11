@@ -58,3 +58,15 @@ Der Spruch lautet **acceptable**, deshalb steht hier keine Umgestaltung des Entw
 Das erste Schaubild bekommt einen Quellknoten für den gemessenen Wert, etwa `MESS["S1: gemessener Text der sechs zugestellten Befehle"]`, mit einer Kante nach `AUS`, beschriftet als "Spalte 3, ohne Kommando". Damit hat die dritte Spalte im Bild zwei Lieferanten, und die Aussage der `Decidability:`-Zeile ist im Aufbau ablesbar statt nur im Fließtext. In derselben Beschriftung ersetzt `wirkung` das `meldung`, denn `meldung` hängt an `Ausgang` und ist schon dort genannt.
 
 Im zweiten Schaubild wandert die Entscheidung `P` von der Gruppe auf den einzelnen Befehl. Der Knoten `M` heißt dann "einer der sechs vom Menue zugestellten Textbefehle", und der Zweig "die Ableitung bricht" liest sich als "die Ableitung bricht für diesen Befehl". Der Rest des Bildes bleibt, wie er ist.
+
+---
+
+## Abgleich 260811-1403
+
+Beide substanziellen Befunde sind eingelöst, am Plan gelesen. Das Aufbaubild führt jetzt den
+Knoten `MESS` für den in S1 gemessenen Wert außerhalb der drei Kisten, mit der Kante
+`MESS -->|"Spalte 3, ohne Kommando, 6 von 71"| AUS` neben
+`AUS -->|"Spalte 3, mit Kommando, 65 von 71"| KMD`; die Beschriftung von `AUS` nennt `wirkung`
+statt `meldung`. Das zweite Schaubild entscheidet an `P` je Befehl und nicht über die Gruppe, und
+der Absatz darunter schreibt es aus. Der Weg dorthin steht in
+`history/260811-0905-planner-nacharbeit-plan-tastenbelegung.md`.

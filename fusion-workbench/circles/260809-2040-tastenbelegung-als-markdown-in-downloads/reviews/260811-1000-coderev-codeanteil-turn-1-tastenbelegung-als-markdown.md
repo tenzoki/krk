@@ -320,3 +320,23 @@ Kein Befund hält S4 auf, und keiner ist ein Freigabehindernis für den Bau als 
 entsteht, sie trägt, was C3 verlangt, und die Fehlerfälle sind unterscheidbar. Was offen bleibt,
 ist an zwei Stellen die Übereinstimmung zwischen dem, was der Text zusagt, und dem, was der Code
 hergibt.
+
+---
+
+## Abgleich 260811-1403
+
+Die sechs Befunde dieser Durchsicht liegen als sechs Datensätze unter `issues/` dieses Circles.
+Stand am 260811-1403, jeder einzeln gegen den Baum gelesen (`history/260811-1403-reconciliation.md`):
+
+| Datensatz | Stand | Beleg im Baum |
+|---|---|---|
+| `260811-0955_*_der-auffangzweig-in-wirkung-ist-erreichbar-…` | zurückgestellt | `belegungsausgabe.rs:237` `NICHT_EINGEORDNET`, Probe `:822`; die Ungleichheit zwischen `bereich` und `wirkung` besteht fort und ist der Grund der Zurückstellung |
+| `260811-0956_*_der-nutzerentscheid-vom-260811-0935-…` | geschlossen | `decisions/260811-1010_i_was-traegt-die-dritte-spalte-…md` |
+| `260811-0957_*_gemessen-reicht-fuer-textfelder-weiter-…` | geschlossen | vier `inference:`-Stellen in `belegungsausgabe.rs` (`:57`, `:65`, `:275`, `:719`), Probe `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander` (`:684`) |
+| `260811-0958_*_elf-module-neben-appkit-sind-zwoelf-…` | geschlossen | `crates/krk-ui/src/main.rs:17` "Zwoelf Module", `hervorhebung` in der Aufzählung |
+| `260811-0959_*_zu-s1-bis-s3-gibt-es-keinen-sitzungsbericht-…` | geschlossen | Abschnitt `## Turn 1` in `history/260811-0107-orchestrator-session.md` |
+| `260811-1000_*_die-begruendung-fuer-den-downloads-ordner-…` | geschlossen | `resources/Info.plist:179` nennt das Schreiben |
+
+Der Maßstab dieser Durchsicht nennt "38 Kriterien in C1 bis C4, zwei unter
+`## Verhältnis zu den zehn Zeitzusagen`". Der Spec führt seit der Berichtigung von C3 am
+260811-1038 deren 41. Die Bewertung ist davon nicht berührt, die Zahl ist es.

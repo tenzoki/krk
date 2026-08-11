@@ -1,7 +1,8 @@
 # Umsetzungsplan: Die geltende Tastenbelegung als Markdown-Datei im Downloads-Ordner (Runde 3)
 
 **Datum:** 2026-08-11, 08:38
-**Status:** Vom Nutzer abgenommen am 260811-0900, mit zwei Auflagen, die am 260811-0905 nachgezogen sind: die Pfadfrage ist mit Tilde entschieden und in S3 eingearbeitet, und zwei Diagrammbefunde der Bewertung `reviews/260811-0853-conceptrev-plan-*.md` sind berichtigt. Bereit zur Umsetzung.
+**Status:** Complete — S1 bis S3 tragen `[DONE]` und sind am 260811-1403 einzeln gegen den Baum gelesen, S4 ist vom Nutzer am 260811-1215 gestrichen. Kein Schritt steht mehr offen. Der Abgleich steht unten unter `## Reconciliation Log`.
+**Abnahme des Plans:** Vom Nutzer abgenommen am 260811-0900, mit zwei Auflagen, die am 260811-0905 nachgezogen sind: die Pfadfrage ist mit Tilde entschieden und in S3 eingearbeitet, und zwei Diagrammbefunde der Bewertung `reviews/260811-0853-conceptrev-plan-*.md` sind berichtigt. Bereit zur Umsetzung.
 **Spec:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md`, vier Fähigkeiten C1 bis C4 mit 38 Abnahmekriterien, dazu zwei unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`; vom Nutzer am 260811 abgenommen
 **Bindende Entscheidungsdatensätze:** die sechs `_a_`-Datensätze unter `decisions/` dieses Circles, darunter seit dem 260811-0900 `260811-0838_a_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md`; dazu aus der Runde 1 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md` (ein Kürzel wäre zwingend ein Belegungseintrag), `.../260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (die Statuszeile mit ihren Rängen) und `.../260802-1134_*_sprache-und-ui-werkzeugkasten.md` (Rust mit AppKit über `objc2`)
 **Ausführender Agent:** `coder`, für jeden Schritt. Die Begründung steht unten im Abschnitt "Warum jeder Schritt coder trägt".
@@ -447,3 +448,67 @@ Die Kriterien stehen in der Reihenfolge des Specs, mit einem Kurzzitat statt ein
 
 - [x] Schreibt KRK einen Pfad für den Nutzer je gekürzt? **Am 260811-0900 beantwortet: mit Tilde**, gegen die Empfehlung dieses Plans. Der Datensatz `decisions/260811-0838_*_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md` trägt die Antwort und ihre Folgen; Frage 8 baut sie, S3 zieht sie nach. Der Fenstertitel bleibt unberührt, und die Ungleichheit zwischen beiden Flächen ist angenommen.
 - [ ] Sechs Vorbelegungen des Specs stehen weiterhin am Gate: der Menütitel, die Einordnung unter "KRK" und die vier Beschriftungen für `Dateifenster`, `Leiste`, `Vorschau` und `Editor`. Dieser Plan legt zwei eigene daneben: die Überschrift der Datei ("Tastenbelegung von KRK") und die Stellung des Eintrags **vor** dem Beenden. Jede davon ist eine Zeichenkette oder eine Zeile.
+
+## Reconciliation Log
+
+**Datum:** 260811-1403
+**Abgleich:** `history/260811-1403-reconciliation.md`
+**Umfang:** die drei gebauten Schritte einzeln gegen den Baum, dazu die acht geschlossenen und
+den einen zurückgestellten Defektdatensatz dieses Circles und die sieben beantworteten
+Entscheidungen.
+
+### Die drei Schritte, am Baum belegt
+
+**S1 — die Messung am Objective-C-Laufzeitsystem.** Gebaut. `crates/krk-ui/src/appkit/menue.rs`
+trägt die Messung über `AnyClass::responds_to` (`:770`, `:776`, `:845`, `:881`, `:886`) in drei
+Proben und im Modulkopf (`:91`, `:127`) die Einschränkung, dass ein `false` bei einem
+weitergeleiteten Selektor nichts belegt. Der Sitzungsbericht, den das Abnahmekriterium verlangt,
+steht als Abschnitt `## Turn 1` in `history/260811-0107-orchestrator-session.md`, mit der Tabelle
+je Selektor.
+
+**S2 — die Beschriftung der sieben Wirkungsbereiche.** Gebaut.
+`crates/krk-core/src/tasten/belegung.rs:269` trägt
+`pub const fn beschriftung(self) -> &'static str` als vollständige Fallunterscheidung; ein
+`_`-Zweig steht nicht darin. Der Modulkopf nennt die zweite Verwendung (`:110`), die Probe in
+`crates/krk-core/tests/belegung.rs` hält die sieben Texte und ihre Verschiedenheit fest
+(`keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung`).
+
+**S3 — Ausgabemodul, Menüeintrag, Meldung.** Gebaut, alle vier Teile.
+`crates/krk-ui/src/belegungsausgabe.rs` steht mit 1065 Zeilen und ist in
+`crates/krk-ui/src/main.rs:45` als `mod belegungsausgabe;` eingehängt;
+`belegungsmodell::nach_bereichen` (`:512`) und `belegungsmodell::tastenliste` (`:550`) sind
+herausgezogen; `krk_core::ablage::pfade::gekuerzt_fuer_anzeige` (`pfade.rs:124`) steht neben
+`benutzerverzeichnis`; der Menüeintrag steht in `appkit/menue.rs:288` über `ohne_kuerzel` mit
+`sel!(tastenbelegungSichern:)` und einem Trenner davor; der Selektor am Delegierten steht in
+`appkit/anwendung.rs:544` und ruft `tastenbelegung_sichern` (`:2255`).
+
+**Die Verbotsseite von S3 hält.** `git diff --stat e43f21a~1..caf6375 --
+resources/default-keymap.toml crates/krk-ui/src/fenstertitel.rs` liefert eine leere Ausgabe:
+keine der beiden Dateien ist angefasst. `grep -c '^\[\[funktion\]\]' resources/default-keymap.toml`
+liefert unverändert 71.
+
+**S4 ist gestrichen und nicht vergessen.** Der Schritt trägt den Vermerk `[GESTRICHEN]` samt
+Preis. Damit stehen die 41 Abnahmekriterien des Specs sämtlich auf `- [ ]`; der Abgleich hat sie
+nicht abgehakt und darf es nicht.
+
+### Was der Abgleich als Abweichung gefunden hat
+
+**Die Zahl im Kopf dieses Plans ist stehengeblieben.** Die Zeile `**Spec:**` oben nennt "38
+Abnahmekriterien, dazu zwei", also 40. Der Spec führt heute 41 (`grep -c '^- \[ \]'`), weil die
+Berichtigung von C3 am 260811-1038 aus der einheitlichen Aussage über die sechs Textbefehle eine
+Dreiteilung gemacht hat. Der gestrichene Schritt S4 nennt weiter unten in demselben Plan bereits
+die 41. Die Kopfzeile ist damit die einzige Stelle im Plan, die noch die alte Zahl trägt; sie
+bleibt hier unverändert stehen, weil ein Abgleich Zustandsmarker berichtigt und keine
+Beschreibungen umschreibt.
+
+**Zwei Zeilenangaben sind durch spätere Einfügungen verrutscht.** Befund 2 nennt die Arbeitskopie
+der Belegungsansicht bei `anwendung.rs:2159`; sie steht heute in Zeile 2174. Das Abnahmekriterium
+von S3 nennt `belegungsmodell.rs:530` für `anzeige()`, die Zeile stimmt. Kein Defekt, nur Drift
+nach dem Zuwachs in `anwendung.rs`.
+
+**Eine Datei außerhalb dieses Plans ist im Commit `ffb702c` mitgeändert worden.**
+`crates/krk-bench/src/messen.rs` hat 80 Zeilen bekommen, und keiner der vier Planschritte nennt
+sie. Es ist keine unbemerkte Änderung: sie behebt den gemeinsamen Defekt
+`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`, der jetzt
+geschlossen ist, und die Commit-Nachricht schreibt sie aus. Festgehalten, weil `CLAUDE.md` diesen
+Zustand noch als bestehend beschreibt, siehe den Abgleich.

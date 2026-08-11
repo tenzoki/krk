@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_*_plan-tastenbelegung-als-markdown-in-downloads.md` (Frage 8 unter `## Antworten auf die acht Punkte`), `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md` (`## Offen für den Planner`, letzter Punkt, und C4), `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md` (C11, der Fenstertitel)
 
@@ -76,3 +76,14 @@ dieser Runde nicht angefasst.
 
 Der Plan `260811-0838_*_plan-tastenbelegung-als-markdown-in-downloads.md` zieht die Kuerzung in
 Schritt S3 nach.
+
+---
+Implemented: `fd863e3` — `krk_core::ablage::pfade::gekuerzt_fuer_anzeige`
+(`crates/krk-core/src/ablage/pfade.rs:124`) kuerzt ueber `Path::strip_prefix` und kennt die
+vier Faelle des Plans; `Ausgang::meldung` (`belegungsausgabe.rs:404`) schickt **jeden** Pfad
+durch sie, nicht nur den der Erfolgsmeldung. Die Erfolgsmeldung lautet woertlich
+"Tastenbelegung geschrieben: ~/Downloads/KRK-Tastenbelegung.md", von einer Probe gehalten
+(`belegungsausgabe.rs:1038`); die fuenf Faelle der Kuerzung stehen in
+`crates/krk-core/tests/ablage.rs:195-230`, `/Users/kai-alt` gegen `/Users/kai`
+eingeschlossen. `crates/krk-ui/src/fenstertitel.rs` ist unberuehrt, die Ungleichheit der
+beiden Flaechen besteht wie angenommen fort. Am Baum geprueft am 260811-1403.

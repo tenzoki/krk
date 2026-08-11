@@ -461,3 +461,5 @@
 {"ts":"2026-08-11T08:43:04","event":"task_done","turn":1,"task":"S3","agent":"coder","detail":"output module, menu entry, path shortening; commit fd863e3, fixes d8fbad7"}
 {"ts":"2026-08-11T08:43:04","event":"coherence_review","turn":1,"detail":"verdict=ok | Artefakt<->Grundlage: 6 Befunde, 4 geschlossen, 2 bewusst offen | Artefakt<->Directive: S1-S3 gebaut, die Ausgabe steht; S4 ist Nutzerarbeit | Grundlage<->Directive: 1 Entscheidung nachgetragen (260811-1010), C3 auf den gemessenen Stand berichtigt"}
 {"ts":"2026-08-11T08:43:04","event":"turn_end","turn":1,"detail":"3 of 4 plan steps done, 6 commits, 6 issues created (4 closed), 1 decision recorded, 0 errors; S4 remains and is user work"}
+{"ts":"2026-08-11T12:11:31","event":"reconciliation","detail":"9 of 9 closures hold; 7 decisions moved _a_ -> _i_; plan closed to _c_; spec stays _o_ because all 41 criteria are unmet"}
+{"ts":"2026-08-11T12:11:31","event":"bounded_closure_proposed","detail":"reconciler verdict bounded-closure-proposed: the Directive is unreachable inside this Circle because S4 was struck; coherent would claim the Directive was reached and nobody has seen KRK write the file"}

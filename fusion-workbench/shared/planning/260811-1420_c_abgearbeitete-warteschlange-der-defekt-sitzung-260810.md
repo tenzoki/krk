@@ -1,3 +1,16 @@
+> **Zurückgezogen am 260811-1420, weil abgearbeitet.** Alle acht Aufgaben dieser Schlange
+> tragen heute den Marker `_c_`; sie waren der Gegenstand der Defekt-Sitzung vom 260810
+> (`shared/history/260810-1647-orchestrator-session.md`). Die Datei lag danach acht
+> Stunden am Wurzelort und beschrieb erledigte Arbeit.
+>
+> **Sie war kein veralteter Rückstand.** Ihre Kopfzeile sagt ausdrücklich "Active Circle:
+> keiner" — sie ist über `shared/` gebaut, mit fünf ausdrücklich vom Nutzer benannten
+> Aufgaben aus dem Circle der Runde 1. Zurückgezogen ist sie, weil sie erschöpft ist, nicht
+> weil ihr Boden sich bewegt hätte.
+>
+> Der Text bleibt erhalten: er trägt die Begründung der Reihenfolge und die
+> Abnahmeformulierungen, und die sind aus den Datensätzen nicht wiederherstellbar.
+
 # Tasklist
 
 **Generated:** 2026-08-10 17:07

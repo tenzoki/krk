@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` (Directive und Grounding), `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht.md` (hängt an dieser Antwort), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_i_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md` (die Zustellerregel, zitiert wo sie liegt)
 
@@ -69,3 +69,11 @@ diese eine Funktion ist die Ausnahme davon. Sie ist dafuer auch keine, die im Ar
 **Die Bauform steht bereits.** `ohne_kuerzel` (`crates/krk-ui/src/appkit/menue.rs:335`) legt
 einen Menuebefehl ohne Tastenentsprechung an; ein neuer Mechanismus entsteht nicht. Geprueft am
 260811-0110.
+
+---
+Implemented: `fd863e3` — der Eintrag "Tastenbelegung als Markdown sichern" steht ueber `ohne_kuerzel` unter
+dem Menuetitel "KRK" (`crates/krk-ui/src/appkit/menue.rs:288`), traegt den Selektor
+`sel!(tastenbelegungSichern:)` und kein Ziel; der Trenner davor ist
+`NSMenuItem::separatorItem` (`menue.rs:293`). `resources/default-keymap.toml` ist im ganzen
+Commit-Bereich `e43f21a..caf6375` unberuehrt und fuehrt weiter 71 Bloecke `[[funktion]]`.
+Am Baum geprueft am 260811-1403 (Abgleich `history/260811-1403-reconciliation.md`).

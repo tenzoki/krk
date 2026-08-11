@@ -142,3 +142,18 @@ Der `coder` hat am System belegt, dass der Schlüssel wirkt (`TCC.framework`), u
 dass TCC **einmal je Programm und Dienst** fragt: KRK löst die Rückfrage schon beim Anzeigen des
 Downloads-Ordners aus, seit Runde 1. Der Satz beschaffte damit Zustimmung für eine Handlung, die
 er nicht nannte. Er ist ergänzt.
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** bounded-closure-proposed
+
+**Edges:**
+- Artifact↔Grounding: 3 von 3 gebauten Planschritten am Baum belegt, 8 geschlossene und 1 zurückgestellter Defektdatensatz einzeln gegen den Code gelesen und alle 9 halten, 7 beantwortete Entscheidungen im Code umgesetzt und auf `_i_` gezogen, 0 offene Befunde der Durchsicht in diesem Circle; drei Abweichungen, alle in Beschreibungen und keine im Programmtext (Kopfzahl des Plans 40 gegen 41 im Spec, zwei verrutschte Zeilenangaben, `crates/krk-bench/src/messen.rs` in `ffb702c` außerhalb der Planschritte mitgeändert und in der Commit-Nachricht ausgeschrieben), dazu sechs veraltete Stellen in `CLAUDE.md`, deren Revision ein eigener Schritt ist — Beleg: `history/260811-1403-reconciliation.md`.
+- Artifact↔Directive: Die elf Commits `e43f21a..caf6375` bewegen sich auf die Directive zu, aber es ist nicht belegt, dass sie ankommen — `39687f3`, `33cc083` und `fd863e3` bauen die Ausgabe aus derselben Aufbereitung, aus der die Belegungsansicht schöpft (`belegungsmodell::nach_bereichen` hat zwei Abnehmer, eine zweite Aufbereitung entsteht nicht), `d8fbad7`, `ffb702c` und `83e056e` ziehen die Befunde nach, und `caf6375` ist Portfolio-Buchführung ohne Codeanteil; **niemand hat KRK die Datei je schreiben sehen**, weil der einzige Schritt, der es hätte zeigen können, S4, am 260811-1215 vom Nutzer gestrichen ist, und damit stehen die 41 Abnahmekriterien des Specs sämtlich auf `- [ ]` (41 zu 0, gezählt am 260811-1403).
+- Grounding↔Directive: 19 offene Entscheidungen über alle Speicher, 0 beantwortete, davon 0 im Widerspruch zur Directive dieser Runde; die eine, die hineinreicht, ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`, und sie widerspricht der Directive nicht, sondern ist der Grund, aus dem deren Abnahme unerreichbar bleibt — sie hält jetzt zwei Abnahmeläufe auf, die 110 Kriterien der Runde 2 und die 41 dieser Runde.
+
+**Rebalance recommendation:** accept Bounded Closure
+
+**Warum nicht `coherent`, und warum nicht `review-needed`.** `coherent` behauptete, die Directive sei erreicht. Sie sagt zu, dass KRK die Tastenbelegung in den Downloads-Ordner schreibt, und diese Zusage ist am laufenden Bündel zu prüfen und nirgends sonst; geprüft ist sie nicht. `review-needed` behauptete, es gebe etwas zu berichtigen, das ein weiterer Turn berichtigen kann. Das gibt es nicht: der Bau ist grün, die Befunde sind abgearbeitet, und was fehlt, kann kein Agent nachliefern, weil der Abnahmelauf KRK im Vordergrund verlangt. Die Directive ist innerhalb dieses Circles unerreichbar, und zwar durch eine Nutzerentscheidung mit benanntem Preis. Das ist ein beschränkter Abschluss, wie bei der Runde 1 und der Runde 2 und aus demselben Grund.

@@ -64,3 +64,14 @@ Die Belegungsansicht kommt als Knoten hinzu, mit einer Kante von `MOD` zu ihr. D
 ## Nebenbefund außerhalb der Diagrammbewertung
 
 Der Spec nennt `anzeige()` unter `crates/krk-ui/src/belegungsmodell.rs:527`; die Signatur steht in Zeile 530, der Kommentarblock beginnt bei 523. Der Verweis führt an die richtige Stelle, die Zahl ist um drei daneben. `pfade.rs:71` für `benutzerverzeichnis()` stimmt genau. Beides am Code geprüft am 260811-0803.
+
+---
+
+## Abgleich 260811-1403
+
+Alle drei Befunde sind eingelöst, am Spec gelesen. Die Belegungsansicht steht als eigener Knoten
+`ANS` in einer Schicht "Zwei Abnehmer derselben Belegung"; die Kante
+`AUS -->|"liest, ändert nicht"| B` ist ersatzlos gestrichen, der Zyklus `AUS → B → MOD → AUS`
+damit weg; `anzeige()` steht in der Beschriftung des Modellknotens statt als eigene Quelle. Der
+Weg dorthin und ein Befund darüber hinaus stehen in
+`history/260811-0826-shaper-diagrammnachzug-spec-tastenbelegung.md`.

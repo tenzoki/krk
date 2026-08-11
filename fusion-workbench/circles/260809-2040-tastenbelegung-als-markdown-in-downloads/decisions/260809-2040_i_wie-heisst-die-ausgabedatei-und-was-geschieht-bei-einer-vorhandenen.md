@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` (Directive und Grounding, Abschnitt `### Befund zum Downloads-Ordner`), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_i_wie-zeigt-krk-dem-nutzer-fehler.md` (die Statuszeile als Meldeweg)
 
@@ -62,3 +62,10 @@ unter `~/Library/Application Support/KRK/`, wo KRK seine vier Dateien selbst ben
 allein beschreibt. Der Nutzer hat das gewaehlt, nachdem der Preis benannt war.
 
 Ob die Ueberschreibung gemeldet wird, ist damit nicht entschieden und gehoert in den Spec.
+
+---
+Implemented: `fd863e3` — `belegungsausgabe::ausgeben` (`crates/krk-ui/src/belegungsausgabe.rs`) haengt
+`Downloads/KRK-Tastenbelegung.md` an `krk_core::ablage::pfade::benutzerverzeichnis()` und
+schreibt ueber `krk_core::ablage::atomar::schreiben`, also erst in eine Nachbardatei und dann
+mit `rename`. Eine vorhandene Datei wird ohne Rueckfrage ersetzt; eine Probe des Moduls misst
+das in einem Pruefordner. Am Baum geprueft am 260811-1403.

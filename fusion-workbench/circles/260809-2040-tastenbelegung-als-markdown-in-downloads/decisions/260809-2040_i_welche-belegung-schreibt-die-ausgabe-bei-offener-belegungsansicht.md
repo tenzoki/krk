@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md` (diese Frage hängt an jener Antwort), `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_a_circle.md` (Directive und Grounding)
 
@@ -65,3 +65,12 @@ was "im Augenblick des Aufrufs gilt", und es gilt, was ausloest.
 **Der Preis ist benannt:** waehrend die Ansicht offen steht, kann die Datei sichtbar von dem
 abweichen, was auf dem Schirm zu sehen ist. Ob dieser Fall dem Nutzer gemeldet wird, ist hier
 nicht entschieden und gehoert in den Spec.
+
+---
+Implemented: `fd863e3` — `Anwendungsdelegierter::tastenbelegung_sichern`
+(`crates/krk-ui/src/appkit/anwendung.rs:2255`) leiht die Belegung aus
+`self.ivars().belegung.borrow()` und ruft `fuer_den_betrieb()` kein zweites Mal. Die
+Belegungsansicht arbeitet auf einer Kopie (`Belegungsmodell::neu(… .clone())`,
+`anwendung.rs:2174`), also liest die Ausgabe ohne eine einzige Abfrage den gesicherten Stand.
+**Der Bau ist belegt, die Abnahme nicht:** dass es am laufenden Buendel so aussieht, war Sache
+des gestrichenen Schrittes S4 und bleibt ungeprueft. Am Baum geprueft am 260811-1403.

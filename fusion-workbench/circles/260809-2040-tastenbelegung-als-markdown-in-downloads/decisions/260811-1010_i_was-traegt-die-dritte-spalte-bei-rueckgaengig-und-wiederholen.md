@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (nachgetragen — die Antwort fiel am 260811-0935, der Datensatz entstand am 260811-1010)
 **Cross-references:** `issues/260811-0930_*_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-*.md`,
 `issues/260811-0956_*_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext-*.md`,
@@ -60,3 +60,9 @@ hier nichts entschieden hat und der Beleg stattdessen `setAllowsUndo(true)` ist.
 
 Die Durchsicht von Turn 1 hat den Zweig geprüft und bestätigt, dass er genau das beansprucht,
 was der Beleg hergibt: er sagt „Editor" und nicht „Textfelder und Editor".
+
+---
+Implemented: `fd863e3` — `crates/krk-ui/src/belegungsausgabe.rs:314` traegt
+`"text_rueckgaengig" | "text_wiederholen" => "Editor"`, mit dem Kommentar darueber, der
+ausdruecklich sagt, dass S1 hier nichts entschieden hat und der Beleg `setAllowsUndo(true)`
+in `appkit/editor.rs` ist. Am Baum geprueft am 260811-1403.

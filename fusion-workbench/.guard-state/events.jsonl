@@ -34439,3 +34439,1052 @@
 {"ts":"2026-08-10T19:31:25.089Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-10T19:31:58.993Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md"}
 {"ts":"2026-08-10T19:31:59.104Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260810-2128-orchestrator-nacharbeit-abnahmelauf.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:32:25.024Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:40:48.341Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:41:08.132Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:41:19.356Z","event":"guard_allow","tool":"Edit","file":"CLAUDE.md"}
+{"ts":"2026-08-10T19:41:19.527Z","event":"tracker_record","tool":"Edit","file":"CLAUDE.md","detail":"File change recorded"}
+{"ts":"2026-08-10T19:41:46.297Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:42:18.014Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:42:32.291Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T19:43:02.439Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:02:58.993Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:03:05.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:06:56.591Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:07:03.180Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:07:13.039Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:07:14.714Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:07:40.788Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:07:43.599Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:08:17.541Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-10T23:10:06.170Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:40:21.020Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:40:24.078Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:40:56.356Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:41:31.274Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:41:36.860Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:41:42.503Z","event":"guard_allow","tool":"Edit","file":"260809-2040_a_wie-wird-die-ausgabe-der-belegung-ausgeloest.md"}
+{"ts":"2026-08-11T02:41:42.640Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_a_wie-wird-die-ausgabe-der-belegung-ausgeloest.md","detail":"File change recorded"}
+{"ts":"2026-08-11T02:42:00.073Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:42:17.614Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-11T02:42:17.747Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-11T02:42:59.335Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:00.489Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:21.734Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:22.477Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:32.708Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:33.017Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:38.476Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:38.996Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:45.350Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:45.828Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:50.024Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:51.158Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:54.763Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:43:56.859Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:44:02.890Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:44:05.730Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:44:06.436Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:44:28.095Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:44:28.517Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:45:23.483Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:46:12.290Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T02:46:53.069Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md"}
+{"ts":"2026-08-11T02:46:53.177Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md","detail":"File change recorded"}
+{"ts":"2026-08-11T05:50:35.940Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:04.021Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:05.038Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:19.861Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:24.674Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:34.934Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:35.349Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:51:44.523Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:01.042Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:01.924Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:07.642Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:09.108Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:17.866Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:27.467Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:52:47.290Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:53:53.463Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:57:48.173Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T05:57:48.291Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T05:57:55.457Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:58:35.282Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0753-shaper-spec-tastenbelegung-als-markdown.md"}
+{"ts":"2026-08-11T05:58:35.387Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0753-shaper-spec-tastenbelegung-als-markdown.md","detail":"File change recorded"}
+{"ts":"2026-08-11T05:59:16.012Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:59:41.437Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T05:59:42.131Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:00:36.559Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:00:40.729Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:00:47.185Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:03.241Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:09.174Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:19.007Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:28.856Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:38.807Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:48.738Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:01:55.952Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:02:45.952Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:03:06.420Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:04:12.448Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0803-conceptrev-spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:04:12.567Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0803-conceptrev-spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:04:33.013Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:22:40.249Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:22:45.809Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:22:50.729Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:22:52.311Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:22:59.096Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:23:40.529Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:23:41.308Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:25:39.940Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:25:40.047Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:25:44.197Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:25:44.301Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:25:52.397Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:25:57.176Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:26:14.373Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:26:41.864Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0826-shaper-diagrammnachzug-spec-tastenbelegung.md"}
+{"ts":"2026-08-11T06:26:41.981Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0826-shaper-diagrammnachzug-spec-tastenbelegung.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:26:48.192Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:27:43.428Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:25.745Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:26.548Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:29.948Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:31.128Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:45.841Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:28:46.955Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:01.388Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:02.776Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:06.909Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:07.758Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:15.069Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:15.889Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:27.183Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:29:28.669Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:30:56.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:30:58.048Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:00.315Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:01.497Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:10.142Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:10.623Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:20.065Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:20.643Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:30.028Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:32.125Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:36.563Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:41.794Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:58.897Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:32:59.607Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:33:05.665Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:31.462Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:32.089Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:38.268Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:38.921Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:47.824Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:35:51.165Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:36:33.201Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:36:40.253Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:38:12.951Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:38:13.228Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:44:08.357Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:44:08.477Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:44:23.906Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:44:29.961Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:45:16.011Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_o_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md"}
+{"ts":"2026-08-11T06:45:16.133Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_o_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:45:32.867Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:45:54.242Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0838_o_antwort-zeigen-nennt-vier-raenge-die-statuszeile-fuehrt-fuenf.md"}
+{"ts":"2026-08-11T06:45:54.358Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0838_o_antwort-zeigen-nennt-vier-raenge-die-statuszeile-fuehrt-fuenf.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:46:02.177Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:46:15.620Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:46:23.614Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0838_o_antwort-zeigen-nennt-vier-raenge-die-statuszeile-fuehrt-fuenf.md"}
+{"ts":"2026-08-11T06:46:23.724Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0838_o_antwort-zeigen-nennt-vier-raenge-die-statuszeile-fuehrt-fuenf.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:46:28.006Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:46:28.114Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:46:33.626Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:46:33.732Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:46:53.014Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:47:37.998Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0838-planner-plan-tastenbelegung-als-markdown.md"}
+{"ts":"2026-08-11T06:47:38.109Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0838-planner-plan-tastenbelegung-als-markdown.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:47:46.251Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:48:04.841Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:48:07.992Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:48:41.457Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:48:41.578Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:48:49.930Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:48:57.860Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_o_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md"}
+{"ts":"2026-08-11T06:48:57.967Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_o_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:49:06.860Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:06.967Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:06.967Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:49:15.225Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:15.331Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:15.331Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:49:19.833Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:49:38.304Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:38.443Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:38.444Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:49:43.623Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:43.730Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:49:43.731Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:50:31.800Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:50:53.495Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:50:53.804Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:50:57.867Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:50:58.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:51:14.108Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:51:19.868Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:51:24.480Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:51:31.458Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:51:39.883Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:52:37.310Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:52:44.267Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:53:26.443Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:53:39.079Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:54:00.723Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:55:01.555Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0853-conceptrev-plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:55:01.681Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0853-conceptrev-plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T06:55:01.681Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-0853-conceptrev-plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T06:55:17.945Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:59:11.599Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:59:46.380Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:59:47.616Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:59:51.533Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T06:59:51.993Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:00:51.855Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:00:52.965Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:01:04.724Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:01:56.407Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:02:03.218Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:03.336Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:03.336Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:02:36.830Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:36.952Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:36.953Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:02:52.627Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:52.737Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:02:52.737Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:03:07.811Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:07.933Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:07.933Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:03:35.657Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:35.767Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:35.768Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:03:53.679Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:53.792Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:03:53.793Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:15.693Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:15.833Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:15.834Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:26.939Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:27.048Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:27.049Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:40.431Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:40.542Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:40.542Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:45.570Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:45.686Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:45.686Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:53.726Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:53.834Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:04:53.834Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:04:57.594Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:05:03.444Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:05:10.886Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:05:20.199Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:05:30.281Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:05:54.969Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:06:00.000Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:06:04.667Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:06:11.909Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:06:22.153Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:06:27.842Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:06:27.964Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:06:27.964Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:07:07.668Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0905-planner-nacharbeit-plan-tastenbelegung.md"}
+{"ts":"2026-08-11T07:07:07.777Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0905-planner-nacharbeit-plan-tastenbelegung.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:07:07.778Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0905-planner-nacharbeit-plan-tastenbelegung.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:07:48.518Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:07:56.564Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:07:56.706Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:07:56.706Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:08:13.137Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:08:30.755Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:08:36.847Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-11T07:08:36.969Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-11T07:09:15.697Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:17.106Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:21.969Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:29.346Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:30.934Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:33.349Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:35.246Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:38.353Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:39.914Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:40.333Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:40.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:45.687Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:46.804Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:52.744Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:55.645Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:58.698Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:09:59.430Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:02.762Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md"}
+{"ts":"2026-08-11T07:10:02.880Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:10:02.880Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:10:03.446Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:09.952Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:11.130Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:17.036Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:17.621Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:33.048Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:33.545Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:41.907Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:42.533Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:10:46.405Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:11:12.796Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:11:12.913Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:11:12.913Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:12:16.750Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:13:05.905Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:13:19.982Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs"}
+{"ts":"2026-08-11T07:13:20.104Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:13:20.105Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:13:36.265Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs"}
+{"ts":"2026-08-11T07:13:36.381Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:13:36.381Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/src/tasten/belegung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:14:17.043Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/tests/belegung.rs"}
+{"ts":"2026-08-11T07:14:17.169Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/tests/belegung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:14:17.169Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/tests/belegung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:15:34.330Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:15:34.456Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:15:34.456Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:15:47.468Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:15:47.578Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:15:47.578Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:16:15.590Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:16:15.707Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:16:15.707Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:16:53.583Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:16:59.088Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:17:31.089Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:17:53.034Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:17:57.121Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:18:05.063Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:19:44.171Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:20:12.025Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0930_o_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-die-leiste-beantwortet-selectall-selbst.md"}
+{"ts":"2026-08-11T07:20:12.158Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0930_o_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-die-leiste-beantwortet-selectall-selbst.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:20:12.158Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0930_o_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-die-leiste-beantwortet-selectall-selbst.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:20:43.491Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260811-0932_o_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md"}
+{"ts":"2026-08-11T07:20:43.628Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/shared/issues/260811-0932_o_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:20:43.628Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260811-0932_o_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:21:11.654Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:21:30.034Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:29:49.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:30:31.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:30:32.412Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:30:37.070Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:30:38.108Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:00.922Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:02.982Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:07.642Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:10.364Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:28.117Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:48.105Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:48.979Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:53.411Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:56.568Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:31:59.948Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:00.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:04.637Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:09.334Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:13.022Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:18.624Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:19.327Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:23.724Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:28.513Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:32:32.387Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:33:03.373Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:04.811Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:10.094Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:17.010Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:22.515Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:27.363Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:30.463Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:34:43.900Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs"}
+{"ts":"2026-08-11T07:34:44.015Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:34:44.015Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:35:00.760Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs"}
+{"ts":"2026-08-11T07:35:00.868Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:35:00.868Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/src/ablage/pfade.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:35:04.319Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:35:07.207Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:35:20.179Z","event":"guard_allow","tool":"Edit","file":"crates/krk-core/tests/ablage.rs"}
+{"ts":"2026-08-11T07:35:20.389Z","event":"churn_critical","tool":"Edit","file":"crates/krk-core/tests/ablage.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:35:20.390Z","event":"tracker_record","tool":"Edit","file":"crates/krk-core/tests/ablage.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:35:25.139Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs"}
+{"ts":"2026-08-11T07:35:25.278Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:35:25.279Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:35:46.078Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs"}
+{"ts":"2026-08-11T07:35:46.224Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:35:46.224Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:35:55.929Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs"}
+{"ts":"2026-08-11T07:35:56.049Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:35:56.050Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsmodell.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:36:27.801Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:39:37.451Z","event":"guard_allow","tool":"Write","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:39:37.566Z","event":"churn_critical","tool":"Write","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:39:37.566Z","event":"tracker_record","tool":"Write","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:14.273Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:40:19.426Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:19.551Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:19.551Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:25.548Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:25.660Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:25.661Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:31.462Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:31.569Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:31.570Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:37.934Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:38.040Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:38.041Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:38.041Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:42.690Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:42.797Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:42.797Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:42.798Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:50.370Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:50.478Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:50.478Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:50.479Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:40:55.967Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/main.rs"}
+{"ts":"2026-08-11T07:40:56.074Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:40:56.074Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:40:56.074Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:05.225Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/main.rs"}
+{"ts":"2026-08-11T07:41:05.332Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:05.332Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:05.332Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:12.925Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:41:13.045Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:13.045Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:13.045Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:24.099Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs"}
+{"ts":"2026-08-11T07:41:24.215Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:24.215Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:24.216Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/menue.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:34.917Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T07:41:35.042Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:35.042Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:35.043Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:49.277Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T07:41:49.408Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:49.408Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:49.409Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:41:53.486Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T07:41:53.613Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:41:53.613Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:41:53.613Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T07:42:02.526Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:42:31.266Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:42:49.645Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:43:11.020Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:43:14.862Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:43:43.247Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:44:05.898Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:44:13.291Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:44:30.195Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:44:52.152Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:44:57.176Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:45:04.749Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:45:34.133Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:45:42.798Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:47:03.823Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:47:22.919Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:02.541Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:04.346Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:09.608Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:11.182Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:27.404Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:39.846Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:43.977Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:54.937Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:48:58.817Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:49:10.629Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:49:15.588Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:49:20.676Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:49:37.890Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:50:10.253Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:50:17.231Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:50:22.035Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:50:26.768Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:50:59.820Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:51:18.260Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:51:23.540Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:51:32.223Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:51:42.684Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:52:12.039Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:52:39.078Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:53:00.272Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:53:20.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:53:31.845Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:54:30.123Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:54:44.645Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:55:03.775Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:55:08.839Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:55:21.542Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:55:41.474Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T07:56:29.856Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md"}
+{"ts":"2026-08-11T07:56:29.996Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:56:29.997Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:56:29.997Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:56:54.526Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0956_o_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext.md"}
+{"ts":"2026-08-11T07:56:54.637Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0956_o_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:56:54.638Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0956_o_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:56:54.638Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0956_o_der-nutzerentscheid-vom-260811-0935-steht-allein-im-programmtext.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:57:24.412Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0957_o_gemessen-reicht-fuer-textfelder-weiter-als-die-messung-und-die-lagen-sind-verschieden-gezaehlt.md"}
+{"ts":"2026-08-11T07:57:24.536Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0957_o_gemessen-reicht-fuer-textfelder-weiter-als-die-messung-und-die-lagen-sind-verschieden-gezaehlt.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:57:24.536Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0957_o_gemessen-reicht-fuer-textfelder-weiter-als-die-messung-und-die-lagen-sind-verschieden-gezaehlt.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:57:24.537Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0957_o_gemessen-reicht-fuer-textfelder-weiter-als-die-messung-und-die-lagen-sind-verschieden-gezaehlt.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:57:43.894Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0958_o_elf-module-neben-appkit-sind-zwoelf-hervorhebung-fehlt-in-der-aufzaehlung.md"}
+{"ts":"2026-08-11T07:57:44.016Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0958_o_elf-module-neben-appkit-sind-zwoelf-hervorhebung-fehlt-in-der-aufzaehlung.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T07:57:44.016Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0958_o_elf-module-neben-appkit-sind-zwoelf-hervorhebung-fehlt-in-der-aufzaehlung.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/menue.rs, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T07:57:44.016Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0958_o_elf-module-neben-appkit-sind-zwoelf-hervorhebung-fehlt-in-der-aufzaehlung.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:58:06.076Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0959_o_zu-s1-bis-s3-gibt-es-keinen-sitzungsbericht-den-s1-als-abnahmekriterium-verlangt.md"}
+{"ts":"2026-08-11T07:58:06.186Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0959_o_zu-s1-bis-s3-gibt-es-keinen-sitzungsbericht-den-s1-als-abnahmekriterium-verlangt.md","detail":"File change recorded"}
+{"ts":"2026-08-11T07:58:25.905Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1000_o_die-begruendung-fuer-den-downloads-ordner-nennt-das-schreiben-nicht.md"}
+{"ts":"2026-08-11T07:58:26.015Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1000_o_die-begruendung-fuer-den-downloads-ordner-nennt-das-schreiben-nicht.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:00:48.647Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-1000-coderev-codeanteil-turn-1-tastenbelegung-als-markdown.md"}
+{"ts":"2026-08-11T08:00:48.760Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/reviews/260811-1000-coderev-codeanteil-turn-1-tastenbelegung-als-markdown.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:00:56.602Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:01:47.000Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:01:52.293Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:02:03.714Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:02:23.543Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:20:12.748Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1010_a_was-traegt-die-dritte-spalte-bei-rueckgaengig-und-wiederholen.md"}
+{"ts":"2026-08-11T08:20:12.867Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1010_a_was-traegt-die-dritte-spalte-bei-rueckgaengig-und-wiederholen.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:20:42.981Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:20:44.061Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:20:47.090Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:20:48.628Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:20:55.003Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:21:12.696Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:21:49.954Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:21:50.549Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:21:56.264Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:22:00.572Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:22:05.618Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:23:45.766Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:23:45.824Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:23:51.891Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:23:52.579Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:24:01.775Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:24:06.264Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:24:13.770Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:24:44.656Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:24:46.105Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:25:30.079Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:25:30.199Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:25:43.580Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:25:43.696Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:26:05.172Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:26:05.281Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:26:18.412Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:26:18.521Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:26:39.455Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:26:56.498Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:26:56.629Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:26:56.629Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:27:01.732Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/main.rs"}
+{"ts":"2026-08-11T08:27:01.842Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:27:01.842Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:27:11.656Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/main.rs"}
+{"ts":"2026-08-11T08:27:11.769Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:27:11.769Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:27:16.684Z","event":"guard_allow","tool":"Edit","file":"resources/Info.plist"}
+{"ts":"2026-08-11T08:27:16.797Z","event":"churn_warning","tool":"Edit","file":"resources/Info.plist","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:27:16.798Z","event":"tracker_record","tool":"Edit","file":"resources/Info.plist","detail":"File change recorded"}
+{"ts":"2026-08-11T08:27:50.308Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:28:14.556Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:28:21.238Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:29:25.954Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:29:41.926Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:29:47.034Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:29:53.160Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/main.rs"}
+{"ts":"2026-08-11T08:29:53.304Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:29:53.305Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/main.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T08:30:48.653Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:30:56.860Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:32:46.323Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:32:50.896Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:32:51.865Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:33:02.310Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:33:25.182Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:35:05.051Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:36:02.530Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:36:02.638Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:36:02.638Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:36:25.308Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:36:25.415Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:36:25.415Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:36:43.374Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:36:43.484Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:36:43.484Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:37:12.230Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:37:12.354Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:37:12.354Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:37:42.635Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:37:42.752Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:37:42.752Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:37:51.805Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:37:51.915Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:37:51.915Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:37:57.093Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:37:57.215Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:37:57.215Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:38:03.433Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:38:03.545Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:38:03.545Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:38:10.847Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:38:18.779Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:38:34.341Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T08:38:34.468Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:38:34.469Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:38:38.865Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:39:07.128Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1038-shaper-berichtigung-c3-dritte-spalte.md"}
+{"ts":"2026-08-11T08:39:07.239Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1038-shaper-berichtigung-c3-dritte-spalte.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T08:39:07.240Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1038-shaper-berichtigung-c3-dritte-spalte.md","detail":"File change recorded"}
+{"ts":"2026-08-11T08:39:56.755Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:40:43.783Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:41:43.116Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:42:03.338Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:42:13.697Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:42:20.928Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:42:32.463Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:42:47.446Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:43:04.807Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T08:43:23.795Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-11T08:43:23.926Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/orchestrator-live.md","detail":"File change recorded (noise file, not tracked)"}
+{"ts":"2026-08-11T09:05:38.179Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:05:52.411Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:39:14.464Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md"}
+{"ts":"2026-08-11T09:39:14.590Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:39:14.590Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:43:07.747Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md"}
+{"ts":"2026-08-11T09:43:07.893Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:43:07.893Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-1130_o_abnahmeanleitung-tastenbelegung-als-markdown.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:46:29.774Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:03.664Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:04.715Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:09.912Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:10.608Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:16.792Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:24.233Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:25.162Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:29.998Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:30.365Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:31.004Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:35.585Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:36.732Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:37.721Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:38.720Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:40.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:43.577Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:44.218Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:46.614Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:48.187Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:48.355Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:52.160Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:52:56.171Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:05.100Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:05.834Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:16.842Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:18.276Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:23.628Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:32.363Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:35.964Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:37.233Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:39.015Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:43.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:53:49.522Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:03.692Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:04.746Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:23.588Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:28.452Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:29.075Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:54:50.300Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T09:54:50.409Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:54:50.409Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:04.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:55:08.897Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:09.010Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:09.010Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:13.599Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:13.718Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:13.718Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:13.804Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:13.928Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:13.928Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:17.755Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:17.866Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:17.866Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:21.820Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:21.931Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:21.931Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:22.717Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:22.822Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:22.822Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:31.961Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:32.068Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:32.069Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:32.792Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:32.897Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:32.897Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:38.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:55:45.265Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:45.370Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md, crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:45.370Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:49.411Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:49.519Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:49.519Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:55:49.520Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:55:51.033Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:55:51.147Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:55:51.147Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:55:51.148Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:04.680Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:04.804Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:04.804Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:04.805Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:10.644Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:10.738Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:10.738Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:10.739Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:16.710Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:16.817Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:16.817Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:16.817Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:18.822Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:56:18.949Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:18.949Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:18.949Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:20.141Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:20.245Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:20.245Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:20.246Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:23.531Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:23.634Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:23.634Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:23.634Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/belegungsausgabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:28.183Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:28.959Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:34.752Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:56:34.880Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:56:34.880Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:56:34.881Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:56:35.938Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:38.905Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:40.024Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:43.641Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:50.931Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:56:55.319Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:57:02.448Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:57:15.962Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:57:16.078Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:16.079Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:16.079Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:20.157Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md"}
+{"ts":"2026-08-11T09:57:20.266Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:20.266Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:20.267Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:21.412Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:57:21.524Z","event":"churn_critical","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:21.525Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:21.525Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:28.548Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:57:28.668Z","event":"churn_critical","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:28.668Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:28.668Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:29.740Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:57:41.692Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:57:41.807Z","event":"churn_critical","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:41.807Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:41.807Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:51.714Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:57:51.826Z","event":"churn_critical","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:51.826Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:51.827Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:57:55.806Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:57:55.914Z","event":"churn_critical","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/belegungsausgabe.rs"}
+{"ts":"2026-08-11T09:57:55.914Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-bench/src/messen.rs, fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md, fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T09:57:55.914Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:58:14.657Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1155-ontocoder-acht-kurzverweise-in-spec-und-plan-der-runde-2.md"}
+{"ts":"2026-08-11T09:58:14.763Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1155-ontocoder-acht-kurzverweise-in-spec-und-plan-der-runde-2.md","detail":"File change recorded"}
+{"ts":"2026-08-11T09:58:25.996Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:58:27.436Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:58:51.500Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:58:51.616Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:58:57.672Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:58:57.777Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:59:09.726Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:59:09.839Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:59:16.188Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:59:19.027Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T09:59:23.891Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:59:23.997Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:59:35.502Z","event":"guard_allow","tool":"Edit","file":"crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:59:35.619Z","event":"churn_warning","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T09:59:35.619Z","event":"tracker_record","tool":"Edit","file":"crates/krk-bench/src/messen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T09:59:57.971Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:00:37.670Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:01:06.041Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:01:15.459Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:02:43.846Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:03:32.697Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:04:01.980Z","event":"guard_allow","tool":"Write","file":"circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1210_o_eine-dritte-stelle-nennt-den-rang-der-fenstermeldung-falsch.md"}
+{"ts":"2026-08-11T10:04:02.115Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1210_o_eine-dritte-stelle-nennt-den-rang-der-fenstermeldung-falsch.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:04:02.115Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-1210_o_eine-dritte-stelle-nennt-den-rang-der-fenstermeldung-falsch.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:04:34.558Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:04:44.527Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:05:03.238Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T10:05:03.390Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:05:03.390Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:05:23.099Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:09:25.887Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:09:27.069Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:09:40.093Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:10:07.823Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:10:16.767Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:10:34.258Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T10:10:34.378Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:10:34.378Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T10:10:35.597Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:10:39.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:11:19.396Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:11:20.297Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:11:29.486Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T10:11:29.600Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:11:29.600Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T10:11:55.360Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:12:15.044Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:12:36.956Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:13:42.331Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:14:13.856Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1230_o_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md"}
+{"ts":"2026-08-11T10:14:13.998Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1230_o_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:14:13.998Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1230_o_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:14:36.489Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:20:39.331Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:20:46.580Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:48:40.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:48:41.352Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:49:04.091Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:49:36.649Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md"}
+{"ts":"2026-08-11T10:49:36.775Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:49:36.775Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:52:50.041Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:52:55.533Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:18.658Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:19.570Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:22.575Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:31.594Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:53.041Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:58.917Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:53:59.875Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:03.068Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:04.035Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:08.672Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:09.885Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:15.008Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:16.113Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:23.605Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:24.213Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:31.564Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:31.916Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:42.786Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:43.863Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:54:47.534Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:26.057Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:27.887Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:34.210Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:45.728Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:47.377Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:55:51.570Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:56:15.919Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:57:06.362Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:57:07.970Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:57:13.760Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:57:22.207Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:58:06.199Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md"}
+{"ts":"2026-08-11T10:58:06.338Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:58:06.338Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:58:10.540Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T10:58:38.655Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1257_o_wie-weit-soll-cmd-w-reichen.md"}
+{"ts":"2026-08-11T10:58:38.776Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1257_o_wie-weit-soll-cmd-w-reichen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:58:38.776Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1257_o_wie-weit-soll-cmd-w-reichen.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:59:01.066Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1258_o_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md"}
+{"ts":"2026-08-11T10:59:01.188Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1258_o_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:59:01.188Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1258_o_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:59:24.693Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1259_o_was-tut-ein-doppelklick-auf-einen-ordner.md"}
+{"ts":"2026-08-11T10:59:25.085Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1259_o_was-tut-ein-doppelklick-auf-einen-ordner.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:59:25.086Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1259_o_was-tut-ein-doppelklick-auf-einen-ordner.md","detail":"File change recorded"}
+{"ts":"2026-08-11T10:59:51.199Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1300_o_welche-vier-kombinationen-gelten-ab-werk.md"}
+{"ts":"2026-08-11T10:59:51.450Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1300_o_welche-vier-kombinationen-gelten-ab-werk.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T10:59:51.450Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1300_o_welche-vier-kombinationen-gelten-ab-werk.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:00:25.327Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1257-shaper-vier-tastenbefehle-pfade-kopieren-oeffnen.md"}
+{"ts":"2026-08-11T11:00:25.490Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1257-shaper-vier-tastenbefehle-pfade-kopieren-oeffnen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:00:25.490Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1257-shaper-vier-tastenbefehle-pfade-kopieren-oeffnen.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:00:29.337Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:01:40.576Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:01:40.878Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:01:44.363Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:01:44.673Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:03.481Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:04.337Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:10.183Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:11.607Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:31.468Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:32.490Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:43.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:44.236Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:52.773Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:02:53.972Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:03:05.159Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:03:07.068Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:03:15.216Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:03:15.638Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:04:33.594Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:04:39.029Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:05:46.381Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md"}
+{"ts":"2026-08-11T11:05:46.498Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:05:46.498Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:06:00.092Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:06:37.721Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md"}
+{"ts":"2026-08-11T11:06:37.844Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:06:37.845Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:07:08.975Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_traegt-das-linke-dateifenster-einen-schalter.md"}
+{"ts":"2026-08-11T11:07:09.087Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_traegt-das-linke-dateifenster-einen-schalter.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:07:09.087Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_traegt-das-linke-dateifenster-einen-schalter.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:07:36.234Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md"}
+{"ts":"2026-08-11T11:07:36.362Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:07:36.362Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:08:07.895Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md"}
+{"ts":"2026-08-11T11:08:08.007Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:08:08.007Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:08:34.386Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md"}
+{"ts":"2026-08-11T11:08:34.491Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:08:34.492Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:09:10.465Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md"}
+{"ts":"2026-08-11T11:09:10.587Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:09:10.588Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:09:39.914Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md"}
+{"ts":"2026-08-11T11:09:40.027Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:09:40.027Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:09:57.584Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md"}
+{"ts":"2026-08-11T11:09:57.706Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:09:57.706Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:10:02.712Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md"}
+{"ts":"2026-08-11T11:10:02.821Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:10:02.822Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:10:28.938Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1305-shaper-statusleiste-mit-bereichsschaltern.md"}
+{"ts":"2026-08-11T11:10:29.063Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1305-shaper-statusleiste-mit-bereichsschaltern.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:10:29.063Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1305-shaper-statusleiste-mit-bereichsschaltern.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:11:12.111Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:11:34.587Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:22:44.182Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:22:54.076Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:22:54.326Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:22:57.459Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:23:21.704Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:23:29.736Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:23:37.574Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:24:14.305Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:24:42.459Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:24:44.208Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:24:55.742Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:25:02.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:25:03.020Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:25:10.705Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:25:11.095Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:25:52.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:26:35.812Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:26:37.409Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:28:29.732Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/portfolio.md"}
+{"ts":"2026-08-11T11:28:30.031Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/portfolio.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:28:30.031Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/portfolio.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:29:02.848Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md"}
+{"ts":"2026-08-11T11:29:02.983Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:29:02.984Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:29:36.091Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1326-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-11T11:29:36.206Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1326-playmaker-direct-dispatch.md","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-bench/src/messen.rs"}
+{"ts":"2026-08-11T11:29:36.207Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1326-playmaker-direct-dispatch.md","detail":"File change recorded"}
+{"ts":"2026-08-11T11:30:00.432Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:30:12.193Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:42.450Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:42.918Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:47.134Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:47.501Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:50.610Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:51.925Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:58:59.677Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:00.949Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:03.989Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:06.435Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:08.363Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:09.123Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:15.778Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:16.522Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:23.160Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:24.747Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:26.991Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:29.903Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:32.972Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:34.242Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:35.165Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:40.632Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:47.127Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:53.381Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T11:59:56.307Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:03.059Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:06.143Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:07.514Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:17.718Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:19.462Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:20.156Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:26.596Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:42.008Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md"}
+{"ts":"2026-08-11T12:00:42.122Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_t_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:00:42.740Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:45.381Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:47.238Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:51.848Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:56.296Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:00:56.791Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:01:16.000Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:01:18.499Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:01:26.508Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:01:37.316Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:01:50.039Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:02:09.475Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:02:23.339Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:02:52.144Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:03:01.759Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:03:11.760Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:03:19.897Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:03:21.607Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:03:55.543Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:04:06.652Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md"}
+{"ts":"2026-08-11T12:04:06.760Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:04:38.760Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:05:04.280Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:07:03.964Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1403-reconciliation.md"}
+{"ts":"2026-08-11T12:07:04.082Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-1403-reconciliation.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:07:34.393Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:07:38.949Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:09:23.386Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:09:31.851Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:09:46.484Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:10:06.437Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:10:32.393Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:11:10.068Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md"}
+{"ts":"2026-08-11T12:11:10.196Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md","detail":"File change recorded"}
