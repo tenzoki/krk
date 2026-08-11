@@ -404,15 +404,7 @@ impl Belegungsmodell {
     /// Alle Kombinationen der Funktion an dieser Stelle, in der Anzeigeform,
     /// fuer die Spalte "Belegung".
     pub fn tastentext(&self, stelle: usize) -> Option<String> {
-        let funktion = self.funktion(stelle)?;
-        Some(
-            funktion
-                .tasten()
-                .iter()
-                .map(anzeige)
-                .collect::<Vec<String>>()
-                .join(", "),
-        )
+        Some(tastenliste(self.funktion(stelle)?))
     }
 
     /// Der blosse Name der Funktion an dieser Stelle, fuer die Aufforderung
@@ -483,13 +475,41 @@ impl Default for Belegungsmodell {
 /// darunter seine Funktionen in der Reihenfolge der Datei.
 ///
 /// Ein Bereich ohne Funktion bekommt keine Ueberschrift; in der
-/// Auslieferungsbelegung ist jeder Bereich besetzt. Eine Funktion ohne
-/// Bereich waere ein Programmierfehler — eine neue Funktion ist erst
-/// vollstaendig, wenn [`bereich`] sie einordnet, und die Pruefung
-/// `jede_kennung_hat_einen_funktionsbereich` haelt das fest. Sie still
-/// auszulassen hiesse, eine Funktion aus der Ansicht verschwinden zu lassen,
-/// die C3 vollstaendig verlangt; deshalb bricht der Bau hier laut ab.
+/// Auslieferungsbelegung ist jeder Bereich besetzt. Die Gruppierung selbst
+/// steht seit der Runde 3 in [`nach_bereichen`] darunter, weil die
+/// Tastenbelegung als Markdown dieselbe braucht; hier bleibt allein das
+/// Umschreiben in Zeilen. Der laute Abbruch bei einer Funktion ohne Bereich ist
+/// mitgewandert und steht dort.
 fn gliederung(belegung: &Belegung) -> Vec<Zeile> {
+    let gruppen = nach_bereichen(belegung);
+    let mut zeilen = Vec::with_capacity(belegung.funktionen().len() + gruppen.len());
+    for (gruppe, stellen) in gruppen {
+        zeilen.push(Zeile::Ueberschrift(gruppe));
+        zeilen.extend(stellen.into_iter().map(Zeile::Funktion));
+    }
+    zeilen
+}
+
+/// Die Funktionen einer Belegung nach Funktionsbereich, in der Reihenfolge von
+/// [`Funktionsbereich::ALLE`], je Bereich die Stellen in
+/// [`Belegung::funktionen`] in der Reihenfolge der Datei.
+///
+/// **Die eine Gliederung, zwei Abnehmer.** Die Belegungsansicht baut daraus
+/// ihre Zeilen ([`gliederung`] darueber), die Tastenbelegung als Markdown ihre
+/// Abschnitte ([`crate::belegungsausgabe::markdown`]). Eine zweite Gruppierung
+/// entsteht nicht; die Directive der Runde 3 schliesst eine zweite Aufbereitung
+/// ausdruecklich aus.
+///
+/// Ein Bereich ohne Funktion erscheint nicht in der Liste; in der
+/// Auslieferungsbelegung ist jeder Bereich besetzt.
+///
+/// Eine Funktion ohne Bereich waere ein Programmierfehler — eine neue Funktion
+/// ist erst vollstaendig, wenn [`bereich`] sie einordnet, und die Pruefung
+/// `jede_kennung_hat_einen_funktionsbereich` haelt das fest. Sie still
+/// auszulassen hiesse, eine Funktion aus der Ansicht **und** aus der Datei
+/// verschwinden zu lassen, die beide vollstaendig sein sollen; deshalb bricht
+/// der Bau hier laut ab.
+pub fn nach_bereichen(belegung: &Belegung) -> Vec<(Funktionsbereich, Vec<usize>)> {
     let bereiche: Vec<Funktionsbereich> = belegung
         .funktionen()
         .iter()
@@ -504,20 +524,36 @@ fn gliederung(belegung: &Belegung) -> Vec<Zeile> {
         })
         .collect();
 
-    let mut zeilen = Vec::with_capacity(bereiche.len() + Funktionsbereich::ALLE.len());
+    let mut gruppen = Vec::with_capacity(Funktionsbereich::ALLE.len());
     for gruppe in Funktionsbereich::ALLE {
-        let mut mit_ueberschrift = false;
-        for (stelle, eingeordnet) in bereiche.iter().enumerate() {
-            if *eingeordnet == gruppe {
-                if !mit_ueberschrift {
-                    zeilen.push(Zeile::Ueberschrift(gruppe));
-                    mit_ueberschrift = true;
-                }
-                zeilen.push(Zeile::Funktion(stelle));
-            }
+        let stellen: Vec<usize> = bereiche
+            .iter()
+            .enumerate()
+            .filter(|(_, eingeordnet)| **eingeordnet == gruppe)
+            .map(|(stelle, _)| stelle)
+            .collect();
+        if !stellen.is_empty() {
+            gruppen.push((gruppe, stellen));
         }
     }
-    zeilen
+    gruppen
+}
+
+/// Alle Kombinationen einer Funktion in der Anzeigeform, durch Komma und
+/// Leerzeichen getrennt.
+///
+/// **Die eine Schreibweise, zwei Abnehmer**, wie [`nach_bereichen`] darueber:
+/// die Spalte "Belegung" der Bildschirmansicht ([`Belegungsmodell::tastentext`])
+/// und die Spalte "Kombinationen" der Markdown-Datei. Die Ein-Zeilen-Regel aus
+/// C3 der Runde 1 gilt damit in der Datei wie am Schirm, ohne dass sie zweimal
+/// gebaut waere.
+pub fn tastenliste(funktion: &Funktion) -> String {
+    funktion
+        .tasten()
+        .iter()
+        .map(anzeige)
+        .collect::<Vec<String>>()
+        .join(", ")
 }
 
 /// Die Anzeigeform einer Kombination: die Schreibweise mit grossem

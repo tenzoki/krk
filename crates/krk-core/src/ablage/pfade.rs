@@ -9,6 +9,23 @@
 //! einen beliebigen Ordner setzen laesst, ist keine Testhintertuer, sondern die
 //! Bedingung dafuer, dass die Ablage ueberhaupt ohne Zugriff auf das echte
 //! Benutzerverzeichnis pruefbar ist.
+//!
+//! # Wie KRK dem Nutzer einen Pfad hinschreibt
+//!
+//! [`gekuerzt_fuer_anzeige`] ist **KRKs Form fuer Meldungen**: das
+//! Benutzerverzeichnis erscheint als `~`. Sie steht neben
+//! [`benutzerverzeichnis`], weil sie genau dieses eine Verzeichnis abzieht und
+//! diese Datei nach ihrem eigenen Modulkopf die einzige Stelle im Kern ist, die
+//! danach fragt.
+//!
+//! **Der Fenstertitel benutzt sie bewusst nicht.** `krk-ui/src/fenstertitel.rs`
+//! schreibt den Pfad aus, auf Verlangen des Nutzers vom 260809. KRK traegt
+//! damit zwei Formen fuer denselben Pfad an zwei Flaechen desselben Fensters,
+//! und das ist gesehen und angenommen: der Nutzer hat die Kuerzung am
+//! 260811-0900 gegen die Empfehlung des Plans gewaehlt
+//! (`circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-0838_*_schreibt-krk-einen-pfad-fuer-den-nutzer-je-gekuerzt.md`).
+//! Wer die Ungleichheit aufloesen will, hebt eine der beiden Entscheidungen
+//! auf; eine Angleichung im Vorbeigehen ist keine.
 
 use std::fs;
 use std::io;
@@ -70,6 +87,49 @@ const UNTERPFAD: [&str; 3] = ["Library", "Application Support", "KRK"];
 /// weil ein Dateifenster einen Ordner zeigen muss.
 pub fn benutzerverzeichnis() -> Option<PathBuf> {
     std::env::home_dir()
+}
+
+/// Der Pfad in der Form, in der KRK ihn dem Nutzer meldet: `~` statt des
+/// Benutzerverzeichnisses.
+///
+/// **Das Benutzerverzeichnis kommt als Argument herein** und wird hier nicht
+/// erfragt. Damit ist die Funktion ohne Zugriff auf das echte
+/// Benutzerverzeichnis pruefbar — dieselbe Erwaegung, aus der sich
+/// [`Ablageort`] auf einen beliebigen Ordner setzen laesst.
+///
+/// Vier Faelle, und die Funktion ist ueber sie total:
+///
+/// - Der Pfad liegt unter dem Benutzerverzeichnis: `~/` und der Rest.
+/// - Der Pfad **ist** das Benutzerverzeichnis: `~`.
+/// - Der Pfad liegt nicht darunter: ausgeschrieben, unveraendert.
+/// - Es wird kein Benutzerverzeichnis uebergeben: ausgeschrieben. Kein Fehler
+///   und kein `Option` im Rueckgabewert — ein Pfad ohne etwas zu kuerzen ist
+///   kein Scheitern, sondern ein Pfad.
+///
+/// **Der Vergleich laeuft ueber [`Path::strip_prefix`] und nicht ueber eine
+/// Zeichenkette.** `strip_prefix` vergleicht Pfadbestandteile; ein Vergleich
+/// auf Bytes machte aus `/Users/kai-alt/Downloads` gegen das
+/// Benutzerverzeichnis `/Users/kai` die Antwort `~-alt/Downloads`. Dieser Fall
+/// steht als eigene Zusicherung in `krk-core/tests/ablage.rs`.
+///
+/// Die dritte und die vierte Zeile koennen in der Runde 3 nicht eintreten: das
+/// Ziel der Tastenbelegung ist fest der Downloads-Ordner. Gebaut sind sie
+/// trotzdem jetzt, weil eine Funktion, die einen Fall nicht kennt, ihn beim
+/// ersten Auftreten falsch beantwortet — und der erste Auftritt waere die
+/// Runde, die den Zielordner einstellbar macht.
+///
+/// Ausgeschrieben wird ueber `display()`, also in derselben Form, die
+/// `fenstertitel::titel` fuer den Titelbalken erzeugt. Die beiden Flaechen
+/// unterscheiden sich damit in genau einer Sache, der Kuerzung.
+pub fn gekuerzt_fuer_anzeige(pfad: &Path, benutzerverzeichnis: Option<&Path>) -> String {
+    let Some(zuhause) = benutzerverzeichnis else {
+        return pfad.display().to_string();
+    };
+    match pfad.strip_prefix(zuhause) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".to_owned(),
+        Ok(rest) => format!("~/{}", rest.display()),
+        Err(_) => pfad.display().to_string(),
+    }
 }
 
 /// Der Ordner, in dem die vier Dateien liegen.

@@ -186,6 +186,7 @@ use krk_core::tasten::belegung;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck};
 
 use crate::auffrischung::{self, Dateifenstersicht};
+use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
 use crate::editormodell::{Ladeausgang, Sicherungsausgang};
 use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, sichtbar_in};
@@ -529,6 +530,20 @@ define_class!(
         #[unsafe(method(beenden:))]
         fn beenden_aktion(&self, _absender: Option<&AnyObject>) {
             self.beenden();
+        }
+
+        /// Der Menueeintrag "Tastenbelegung als Markdown sichern" (C1 der
+        /// Runde 3).
+        ///
+        /// Wie die drei Eintraege darueber ohne festes Ziel und ueber die
+        /// Antwortkette. Hier zaehlt der Grund doppelt: der Eintrag soll auch
+        /// dann auswaehlbar sein, wenn kein Dateifenster den Fokus haelt, und
+        /// die Kette endet bei `NSApplication` und ihrem Delegierten.
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(tastenbelegungSichern:))]
+        fn tastenbelegung_sichern_aktion(&self, _absender: Option<&AnyObject>) {
+            self.tastenbelegung_sichern();
         }
     }
 
@@ -2212,6 +2227,35 @@ impl Anwendungsdelegierter {
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
+    }
+
+    /// Schreibt die geltende Tastenbelegung als Markdown in den
+    /// Downloads-Ordner und meldet das Ergebnis (Runde 3).
+    ///
+    /// **Hier steht keine Blattabfrage, und das ist Absicht.** `blatt_steht`
+    /// gilt fuer Kommandos, die der Delegierte aus einem Tastendruck erhaelt;
+    /// dieser Eintrag ist keines. C1 verlangt ausdruecklich, dass er auch bei
+    /// stehender Belegungsansicht wirkt und dann den **gesicherten** Stand
+    /// schreibt. Wer ihn aus Gruenden der Gleichfoermigkeit an `blatt_steht`
+    /// haengte, braeche das Kriterium.
+    ///
+    /// Die Belegung kommt aus den Ivars, also aus dem Wert, der im Betrieb
+    /// gilt. Die offene Belegungsansicht arbeitet auf einer Kopie und beruehrt
+    /// ihn bis zum Verlassen nicht; der gesicherte Stand faellt damit ohne
+    /// einen einzigen Zweig an. Ein Aufruf von `belegung::fuer_den_betrieb()`
+    /// an dieser Stelle waere ein zweiter Ladeweg und in einem Fall
+    /// nachweislich falsch, siehe den Modulkopf von
+    /// [`crate::belegungsausgabe`].
+    ///
+    /// Die Meldung geht ueber [`Self::antwort_zeigen`] an das **aktive**
+    /// Dateifenster. Das ist keine Frage nach dem Fokus, sondern ein Wert des
+    /// Fenstermodells, und es liegt immer auf einem sichtbaren Bereich —
+    /// derselbe Weg, den [`Self::belegungsansicht_verlassen`] fuer sein
+    /// gescheitertes Sichern geht.
+    fn tastenbelegung_sichern(&self) {
+        let ausgang = belegungsausgabe::ausgeben(&self.ivars().belegung.borrow());
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.antwort_zeigen(aktiv, &ausgang.meldung());
     }
 
     /// Blendet einen Bereich aus oder wieder ein (C7).

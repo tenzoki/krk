@@ -18,6 +18,20 @@
 //!
 //! # Eine Quelle, zwei sichtbare Wege
 //!
+//! **Ein Eintrag traegt bewusst gar keine Kennung**, und er ist der einzige:
+//! "Tastenbelegung als Markdown sichern" unter "KRK" (Runde 3). Er entsteht
+//! deshalb unmittelbar ueber [`ohne_kuerzel`] und nicht ueber [`befehl`] —
+//! `befehl` schlaegt eine Kennung in der Belegung nach und meldet einen
+//! Programmfehler auf der Standardfehlerausgabe, wenn es keine findet. Ein
+//! Kuerzel waere nach dem Nutzerentscheid vom 260805-0000 zwingend ein
+//! Belegungseintrag mit `gehalten_von = "menue"` geworden und haette damit die
+//! Bauform geaendert, nicht nur die Bequemlichkeit; der Nutzer hat den Eintrag
+//! am 260811-0110 ausdruecklich ohne Kuerzel bestellt. Er steht **vor** dem
+//! Beenden, durch einen Trenner davon geschieden, weil das Beenden auf dem Mac
+//! unten steht. Beantwortet wird er am Anwendungsdelegierten
+//! (`tastenbelegungSichern:`), der die Ausgabe an [`crate::belegungsausgabe`]
+//! weiterreicht.
+//!
 //! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** [`hauptmenue`]
 //! bekommt die Belegung gereicht und holt das Kuerzel jedes Eintrags unter
 //! dessen Kennung aus ihr. Damit ist `resources/default-keymap.toml` auch fuer
@@ -265,13 +279,26 @@ pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu
     hauptmenue.addItem(&untermenue(
         mtm,
         ns_string!("KRK"),
-        &[befehl(
-            mtm,
-            belegung,
-            ns_string!("KRK beenden"),
-            sel!(beenden:),
-            "beenden",
-        )],
+        &[
+            // Der einzige Eintrag des Hauptmenues, der nicht ueber `befehl`
+            // entsteht, und der Grund steht im Modulkopf: er traegt bewusst
+            // keine Kennung in der Belegung.
+            ohne_kuerzel(
+                mtm,
+                ns_string!("Tastenbelegung als Markdown sichern"),
+                sel!(tastenbelegungSichern:),
+            ),
+            // Das Beenden steht auf dem Mac unten; der Trenner haelt die
+            // Ausgabe davon getrennt.
+            NSMenuItem::separatorItem(mtm),
+            befehl(
+                mtm,
+                belegung,
+                ns_string!("KRK beenden"),
+                sel!(beenden:),
+                "beenden",
+            ),
+        ],
     ));
     hauptmenue.addItem(&untermenue(
         mtm,

@@ -1,0 +1,905 @@
+//! Die geltende Tastenbelegung als Markdown-Datei im Downloads-Ordner
+//! (Runde 3).
+//!
+//! **Dieses Modul spricht keine AppKit-Schnittstelle an**, und das ist der
+//! Grund, aus dem es neben `appkit` liegt und nicht darin: alles, was die Datei
+//! ausmacht — ihr Inhalt, die Reihenfolge, die drei Spalten, das Ueberschreiben
+//! und die beiden Fehlerfaelle — ist damit ohne Fenster und ohne Hauptfaden
+//! pruefbar. Unter `appkit/` bleiben zwei kurze Stuecke: der Menueeintrag in
+//! `appkit::menue` und die Methode am Anwendungsdelegierten, die ihn
+//! beantwortet.
+//!
+//! ```text
+//!  Menueeintrag "Tastenbelegung als Markdown sichern" (ohne Kuerzel)
+//!        │  Antwortkette, kein Ziel gesetzt
+//!        ▼
+//!  Anwendungsdelegierter::tastenbelegungSichern:
+//!        │  leiht ivars().belegung — die Belegung des Betriebs
+//!        ▼
+//!  ausgeben ──> markdown ──> atomar::schreiben ──> ~/Downloads/KRK-Tastenbelegung.md
+//!        │
+//!        └────> Ausgang::meldung ──> Statuszeile, oberster Rang
+//! ```
+//!
+//! # Die Belegung kommt aus dem Delegierten und nicht von der Platte
+//!
+//! [`ausgeben`] nimmt die Belegung als Argument. Der eine Aufrufer reicht ihm
+//! `ivars().belegung`, den Wert, der im Betrieb gilt. **Ein Aufruf von
+//! `belegung::fuer_den_betrieb()` in dieser Datei waere ein Defekt**: er laese
+//! `keymap.toml` erneut von der Platte, waere ein zweiter Ladeweg neben dem
+//! einen, und er antwortete in einem Fall nachweislich falsch — scheitert das
+//! Sichern beim Verlassen der Belegungsansicht, gilt die neue Belegung im
+//! Programm, waehrend die Datei die alte traegt, und KRK sagt es dem Nutzer in
+//! dieser Lage ausdruecklich.
+//!
+//! Daraus faellt zugleich der Fall "offene Belegungsansicht" ohne einen
+//! einzigen Zweig an: die Ansicht arbeitet auf einer Kopie, der Wert in den
+//! Ivars bleibt bis zum Verlassen unberuehrt, und die Ausgabe schreibt deshalb
+//! den **gesicherten** Stand, ohne zu fragen, ob ein Blatt steht. Dass die
+//! Datei dann sichtbar vom Schirm abweichen kann, ist der Preis, den der Nutzer
+//! am 260811-0110 angenommen hat; eine zusaetzliche Meldung darueber verlangt
+//! C4 ausdruecklich nicht.
+//!
+//! # Die drei Begruendungslagen der dritten Spalte
+//!
+//! Die Spalte "Wirkt in" hat **drei verschiedene Quellen**, und [`wirkung`]
+//! haelt sie auseinander, statt sie zu mitteln:
+//!
+//! | Funktionen | Zelle | woher die Aussage kommt |
+//! |---|---|---|
+//! | die 65 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
+//! | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen** |
+//! | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
+//! | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
+//!
+//! Die Einzelheiten stehen an den Zweigen von [`wirkung`]. Was sie gemeinsam
+//! haben: keine Zelle behauptet mehr, als ihre Quelle hergibt. Eine leere Zelle
+//! ist eine ehrliche Auskunft, eine falsche ist es nicht.
+//!
+//! # Warum die Datei unteilbar geschrieben wird
+//!
+//! Ueber [`atomar::schreiben`], denselben Weg, den `krk_core::text::datei`
+//! beim Sichern des Editors und die vier Ablagedateien gehen. Ein zweiter
+//! Schreibweg im Programm entsteht damit nicht, und C2 bekommt, was es
+//! verlangt: eine halb geschriebene Datei bleibt in keinem Fall zurueck. Der
+//! Preis ist eine kurzlebige Nachbardatei `KRK-Tastenbelegung.md.neu` im
+//! Downloads-Ordner; sie traegt einen festen Namen ohne Laufnummer, sodass ein
+//! Absturz hoechstens eine einzige liegenlaesst, und der naechste Aufruf
+//! ueberschreibt sie.
+//!
+//! # Warum der Fehlerfall am Ergebnis haengt und nicht an einer Vorabpruefung
+//!
+//! Eine Pruefung des Zielordners **vor** dem Schreiben waere die falsche
+//! Bauform: zwischen Pruefung und Schreiben liegt ein Fenster, in dem sich die
+//! Antwort aendert. Dieses Projekt hat die Lehre schon gezogen — die Typfrage
+//! vor dem Oeffnen einer Textdatei steht am Deskriptor und nicht am Pfad. Hier
+//! steht sie am Rueckgabewert: `fs::File::create` liefert fuer einen fehlenden
+//! Ordner `NotFound` und fuer einen verwehrten Zugriff `PermissionDenied`, und
+//! [`ausgeben`] liest die beiden ab, statt sie vorherzusagen. Ein vom
+//! Mechanismus fuer Transparenz, Zustimmung und Kontrolle abgelehnter Zugriff
+//! kommt als `EPERM` und damit ebenfalls als `PermissionDenied` an; die
+//! Gegenprobe am gebauten Buendel steht in S4 und ist Nutzerarbeit.
+//!
+//! **KRK legt den Zielordner nicht an.** Ein fehlender Downloads-Ordner ist
+//! eine Auskunft ueber das Geraet und keine Aufgabe fuer einen Dateimanager,
+//! der dorthin nur schreiben soll.
+
+use std::io;
+use std::path::{Path, PathBuf};
+
+use krk_core::ablage::{atomar, pfade};
+use krk_core::tasten::{Belegung, Funktion};
+
+use crate::belegungsmodell::{nach_bereichen, tastenliste};
+
+/// Der Name der Ausgabedatei. Fest, nicht einstellbar.
+pub const DATEINAME: &str = "KRK-Tastenbelegung.md";
+
+/// Der Ordner unter dem Benutzerverzeichnis, in den geschrieben wird. Fest,
+/// nicht einstellbar.
+pub const ZIELORDNER: &str = "Downloads";
+
+/// Die Ueberschrift, mit der die Datei beginnt.
+///
+/// **Genau eine, und kein Vorspann.** Kein Erzeugungszeitpunkt und keine
+/// Versionsangabe: eine Datei ohne Zeitstempel ist zwischen zwei Laeufen
+/// byteweise vergleichbar, und wer sie versioniert, bekommt einen leeren Diff,
+/// wenn sich an der Belegung nichts geaendert hat (Nutzerentscheid vom
+/// 260811-0115).
+const UEBERSCHRIFT: &str = "# Tastenbelegung von KRK";
+
+/// Die Kopfzeile jeder Tabelle.
+const TABELLENKOPF: &str = "| Funktion | Kombinationen | Wirkt in |";
+
+/// Die Trennzeile unter der Kopfzeile.
+const TABELLENTRENNER: &str = "|---|---|---|";
+
+/// Die Tastenbelegung als Markdown-Text.
+///
+/// Eine Ueberschrift, danach je besetztem [`Funktionsbereich`] ein Abschnitt
+/// mit einer Pipe-Tabelle aus drei Spalten. Der Text endet mit `\n`;
+/// geschrieben wird er als UTF-8 ohne Bytefolgenmarke, also in derselben Form,
+/// die der Editor beim Sichern schreibt.
+///
+/// **Keine Zahl ist verdrahtet**, weder die der Funktionen noch die der
+/// Bereiche: gezaehlt wird, was die Belegung fuehrt. Eine spaetere Runde, die
+/// die Belegung erweitert, aendert diese Funktion nicht.
+///
+/// Aufgenommen wird eine Funktion nur, wenn sie mindestens eine Kombination
+/// traegt; ein Abschnitt, dessen Funktionen saemtlich unbelegt sind, entfaellt
+/// ganz statt mit einer leeren Tabelle zu erscheinen. Der Umfang ist der
+/// Nutzerentscheid vom 260811-0110, gegen die Empfehlung des Datensatzes, und
+/// sein Preis steht dort: eine versehentlich unbelegte Funktion verschwindet
+/// aus der Datei, statt darin als unbelegt zu erscheinen.
+///
+/// Gliederung und Reihenfolge kommen aus
+/// [`nach_bereichen`](crate::belegungsmodell::nach_bereichen), die
+/// Schreibweise der Kombinationen aus
+/// [`tastenliste`](crate::belegungsmodell::tastenliste) und damit aus
+/// `anzeige`. Beide sind mit der Bildschirmansicht geteilt und nicht
+/// abgeschrieben; eine zweite Aufbereitung schliesst die Directive aus.
+///
+/// [`Funktionsbereich`]: crate::belegungsmodell::Funktionsbereich
+pub fn markdown(belegung: &Belegung) -> String {
+    let mut text = String::from(UEBERSCHRIFT);
+    text.push('\n');
+
+    for (bereich, stellen) in nach_bereichen(belegung) {
+        let belegte: Vec<&Funktion> = stellen
+            .iter()
+            .filter_map(|stelle| belegung.funktionen().get(*stelle))
+            .filter(|funktion| !funktion.tasten().is_empty())
+            .collect();
+        if belegte.is_empty() {
+            continue;
+        }
+
+        text.push('\n');
+        text.push_str("## ");
+        text.push_str(bereich.name());
+        text.push_str("\n\n");
+        text.push_str(TABELLENKOPF);
+        text.push('\n');
+        text.push_str(TABELLENTRENNER);
+        text.push('\n');
+        for funktion in belegte {
+            text.push_str(&zeile(funktion));
+            text.push('\n');
+        }
+    }
+    text
+}
+
+/// Eine Tabellenzeile: Name, Kombinationen, Wirkungsangabe.
+fn zeile(funktion: &Funktion) -> String {
+    format!(
+        "| {} | {} | {} |",
+        maskiert(funktion.name()),
+        maskiert(&tastenliste(funktion)),
+        maskiert(wirkung(funktion))
+    )
+}
+
+/// Der Text einer Zelle, mit maskiertem senkrechten Strich.
+///
+/// Der Name einer Funktion kommt aus der Belegungsdatei und damit
+/// moeglicherweise aus der `keymap.toml` des Nutzers. Ein Name mit einem
+/// senkrechten Strich zerbraeche die Tabelle; die Maskierung ist eine Zeile und
+/// eine Probe.
+fn maskiert(text: &str) -> String {
+    text.replace('|', "\\|")
+}
+
+/// Die dritte Spalte einer Zeile: wo der Befehl wirkt.
+///
+/// **Die Fallunterscheidung ist ueberschneidungsfrei und vollstaendig**: eine
+/// Funktion traegt entweder ein [`Kommando`](krk_core::tasten::Kommando) oder
+/// nicht, und beide Zweige liefern eine Antwort. Gefragt wird ueber
+/// [`Funktion::kommando`] und nicht ueber `Kommando::aus_kennung`, weil das die
+/// Zustellerregel mitfuehrt: was das Hauptmenue zustellt, hat nie ein Kommando,
+/// und die Zusage haengt damit nicht daran, dass `Kommando::KENNUNGEN` die
+/// sechs Textbefehle zufaellig nicht nennt.
+///
+/// **Der rechte Zweig entscheidet je Befehl und nicht fuer die Gruppe.** Das
+/// ist der Kern dieser Funktion: die sechs zugestellten Textbefehle tragen
+/// **drei** verschiedene Begruendungslagen, und ein Alles-oder-nichts waere in
+/// zwei von drei Faellen falsch. Der Modulkopf stellt sie als Tabelle daneben.
+fn wirkung(funktion: &Funktion) -> &'static str {
+    // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 65 der 71
+    // Funktionen tragen ein Kommando, `Kommando::wirkungsbereich` ist eine
+    // totale Funktion darueber, und `Wirkungsbereich::beschriftung` ist eine
+    // zweite, deren Vollstaendigkeit der Uebersetzer erzwingt. Hier ist nichts
+    // gemessen und nichts entschieden — hier wird abgelesen.
+    if let Some(kommando) = funktion.kommando() {
+        return kommando.wirkungsbereich().beschriftung();
+    }
+
+    match funktion.kennung() {
+        // Zweite Lage: **gemessen**. S1 hat am Objective-C-Laufzeitsystem
+        // gefragt, welche Klasse diese drei Selektoren beantwortet, und die
+        // Antwort ist `NSText` — nicht `NSTextView`, und `NSTextField`
+        // beantwortet keinen von ihnen. Erreicht wird also der **Feldeditor**
+        // des Textfeldes, der eine `NSTextView` ist und `NSText` mitbringt,
+        // und im Editor die Textflaeche. Die Tabelle der Messung steht im
+        // Modulkopf von `super::appkit::menue`, die Probe daneben unter
+        // `mod tests`.
+        "text_ausschneiden" | "text_kopieren" | "text_einfuegen" => "Textfelder und Editor",
+
+        // Dritte Lage: **die Messung hat die Ableitung gebrochen, und die
+        // Zelle bleibt deshalb leer.** `NSTableView` beantwortet `selectAll:`
+        // aus einer eigenen Methode, und die Lesezeichen- und Geraeteleiste
+        // ist eine `NSTableView`: mit dem Fokus dort weist der stumme
+        // Fokusvorbehalt `alle_markieren` ab, der Tastendruck geht unveraendert
+        // an AppKit und erreicht diesen Menueeintrag. "Textfelder und Editor"
+        // waere fuer diesen einen der sechs eine falsche Zusicherung.
+        //
+        // **Die leere Zelle ist ein Ergebnis und kein Versaeumnis.** Der
+        // Datensatz
+        // `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0930_*_die-ableitung-textfelder-und-editor-bricht-fuer-alles-auswaehlen-die-leiste-beantwortet-selectall-selbst.md`
+        // haelt die Messung fest, damit sie hier nicht spaeter
+        // "vervollstaendigt" wird. Was sie ausdruecklich **nicht** entschieden
+        // hat: ob der in der Leiste bedienbare Eintrag dort auch etwas
+        // bewirkt. Das braucht eine Instanz und damit den Hauptfaden. Wer die
+        // Zelle fuellen will, misst das zuerst.
+        "text_alles_auswaehlen" => "",
+
+        // Vierte Zeile, dritte Lage: **ein Nutzerentscheid, am Code belegt und
+        // ausdruecklich nicht aus S1 abgeleitet.** S1 konnte hier nichts
+        // entscheiden: `undo:` und `redo:` stehen an `NSWindow` und nicht an
+        // der Textklasse, `responds_to` liefert `false` fuer einen
+        // weitergeleiteten Selektor, und ein `false` an dieser Stelle belegt
+        // nicht, dass niemand antwortet. Der Beleg kommt von woanders — die
+        // `NSTextView` des Editors bringt ihren Rueckgaengigverwalter mit und
+        // benutzt ihn, sobald `setAllowsUndo(true)` gesetzt ist, und genau das
+        // geschieht in `super::appkit::editor`. Der Nutzer hat daraufhin am
+        // 260811-0935 "Editor" gesetzt.
+        "text_rueckgaengig" | "text_wiederholen" => "Editor",
+
+        // Unerreichbar, und das ist nicht behauptet, sondern erzwungen:
+        // [`markdown`] laeuft zuvor durch `nach_bereichen`, und das bricht
+        // laut ab, sobald `belegungsmodell::bereich` eine Kennung nicht
+        // einordnen kann — also fuer jede Kennung, die weder ein Kommando
+        // traegt noch eine der sechs oben ist. Eine Belegung des Nutzers kann
+        // ohnehin keine unbekannte Kennung fuehren: `Belegung::vom_nutzer`
+        // misst sie am Wortschatz der Auslieferungsbelegung. Die leere Zelle
+        // hier ist die stillste vertretbare Antwort und nicht die erwartete.
+        _ => "",
+    }
+}
+
+/// Was aus einem Aufruf der Ausgabe geworden ist.
+///
+/// **Die Werte tragen den ungekuerzten Pfad**; gekuerzt wird erst beim Melden.
+/// Ein Wert, der einen Pfad haelt, haelt ihn brauchbar, nicht huebsch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Ausgang {
+    /// Die Datei steht unter diesem Pfad. Neu entstanden oder eine vorhandene
+    /// ersetzt — beides derselbe Wert, und beides dieselbe Meldung.
+    Geschrieben(PathBuf),
+    /// Das System nennt kein Benutzerverzeichnis; es gibt keinen Zielordner.
+    KeinBenutzerverzeichnis,
+    /// Der Zielordner fehlt. KRK legt ihn nicht an.
+    OrdnerFehlt(PathBuf),
+    /// Der Zugriff auf den Zielordner ist abgelehnt. Auch der Fall, in dem der
+    /// Nutzer die Rueckfrage des Systems nach dem Downloads-Ordner verneint.
+    ZugriffAbgelehnt(PathBuf),
+    /// Ein anderer Fehler beim Schreiben, mit seinem Wortlaut.
+    Fehlgeschlagen(PathBuf, String),
+}
+
+impl Ausgang {
+    /// Die Meldung fuer die Statuszeile, mit dem Benutzerverzeichnis des
+    /// Systems.
+    ///
+    /// Der Weg des Alltags; die eine Aufrufstelle ist der Anwendungsdelegierte.
+    /// [`Ausgang::meldung_mit`] daneben ist dieselbe Rechnung mit einem
+    /// uebergebenen Benutzerverzeichnis und damit die pruefbare Form.
+    pub fn meldung(&self) -> String {
+        self.meldung_mit(pfade::benutzerverzeichnis().as_deref())
+    }
+
+    /// Die Meldung, gegen ein uebergebenes Benutzerverzeichnis.
+    ///
+    /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**: ein sechster
+    /// Ausgang braucht hier eine Zeile, bevor er uebersetzt.
+    ///
+    /// **Jeden Pfad, den diese Funktion schreibt, schickt sie zuvor durch
+    /// [`pfade::gekuerzt_fuer_anzeige`]** — nicht nur den der Erfolgsmeldung.
+    /// Eine Form je Meldung waere die dritte Form fuer denselben Pfad im selben
+    /// Programm. Am Ziel der Runde 3 lautet die Erfolgsmeldung damit
+    /// "Tastenbelegung geschrieben: ~/Downloads/KRK-Tastenbelegung.md"
+    /// (Nutzerentscheid vom 260811-0900, gegen die Empfehlung des Plans).
+    pub fn meldung_mit(&self, benutzerverzeichnis: Option<&Path>) -> String {
+        let kurz = |pfad: &PathBuf| pfade::gekuerzt_fuer_anzeige(pfad, benutzerverzeichnis);
+        match self {
+            Ausgang::Geschrieben(pfad) => {
+                format!("Tastenbelegung geschrieben: {}", kurz(pfad))
+            }
+            Ausgang::KeinBenutzerverzeichnis => {
+                "die Tastenbelegung ließ sich nicht schreiben: das System nennt kein \
+                 Benutzerverzeichnis"
+                    .to_owned()
+            }
+            Ausgang::OrdnerFehlt(pfad) => format!(
+                "die Tastenbelegung ließ sich nicht schreiben: der Ordner zu {} fehlt",
+                kurz(pfad)
+            ),
+            Ausgang::ZugriffAbgelehnt(pfad) => format!(
+                "die Tastenbelegung ließ sich nicht schreiben: der Zugriff auf {} ist abgelehnt",
+                kurz(pfad)
+            ),
+            Ausgang::Fehlgeschlagen(pfad, grund) => format!(
+                "die Tastenbelegung ließ sich nicht nach {} schreiben: {grund}",
+                kurz(pfad)
+            ),
+        }
+    }
+}
+
+/// Schreibt die Belegung nach `~/Downloads/KRK-Tastenbelegung.md`.
+///
+/// Der eine Aufrufer ist der Anwendungsdelegierte, und er reicht die Belegung
+/// des Betriebs herein; siehe den Modulkopf, warum sie nicht hier geholt wird.
+///
+/// Eine vorhandene Datei desselben Namens wird ueberschrieben, ohne Rueckfrage
+/// und ohne gesonderten Hinweis, auch wenn sie nicht von KRK stammt. Der
+/// Downloads-Ordner gehoert dem Nutzer, und KRK ist dort nicht der einzige
+/// Schreiber; der Preis ist benannt und am 260811-0110 angenommen. Der
+/// Gegenwert ist der stabile Pfad, den ein Git-Repository wiedersehen will.
+pub fn ausgeben(belegung: &Belegung) -> Ausgang {
+    let Some(zuhause) = pfade::benutzerverzeichnis() else {
+        return Ausgang::KeinBenutzerverzeichnis;
+    };
+    in_ordner_schreiben(belegung, &zuhause.join(ZIELORDNER))
+}
+
+/// Dieselbe Arbeit gegen einen genannten Zielordner.
+///
+/// Der Zielordner kommt als Argument herein, damit die Proben das Schreiben
+/// pruefen koennen, ohne im echten Downloads-Ordner des Nutzers eine Datei
+/// anzulegen. Dieselbe Erwaegung, aus der sich `Ablageort` auf einen beliebigen
+/// Ordner setzen laesst: keine Testhintertuer, sondern die Bedingung der
+/// Pruefbarkeit.
+fn in_ordner_schreiben(belegung: &Belegung, zielordner: &Path) -> Ausgang {
+    let ziel = zielordner.join(DATEINAME);
+    match atomar::schreiben(&ziel, &markdown(belegung)) {
+        Ok(()) => Ausgang::Geschrieben(ziel),
+        // Am Rueckgabewert unterschieden und nicht an einer Vorabpruefung,
+        // siehe den Modulkopf. `io::ErrorKind` ist `#[non_exhaustive]` und
+        // laesst keine vollstaendige Fallunterscheidung zu; der Auffangzweig
+        // steht hier deshalb an einer fremden Aufzaehlung und nicht an einer
+        // dieses Projekts, und er verliert nichts: `Fehlgeschlagen` traegt den
+        // Wortlaut des Fehlers mit.
+        Err(fehler) => match fehler.kind() {
+            io::ErrorKind::NotFound => Ausgang::OrdnerFehlt(ziel),
+            io::ErrorKind::PermissionDenied => Ausgang::ZugriffAbgelehnt(ziel),
+            _ => Ausgang::Fehlgeschlagen(ziel, fehler.to_string()),
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use krk_core::tasten::{Belegungsdatei, Kommando, Wirkungsbereich};
+
+    use crate::belegungsmodell::Funktionsbereich;
+    use crate::pruefordner::Pruefordner;
+
+    use super::*;
+
+    /// Eine Belegung aus einem Stueck `keymap.toml`.
+    ///
+    /// Jede Funktion, die der Text nicht nennt, tritt unbelegt hinzu — das tut
+    /// `Belegung::vom_nutzer` von sich aus, und genau darauf beruhen die Proben
+    /// des Umfangs: was hier nicht steht, traegt keine Kombination und gehoert
+    /// deshalb nicht in die Datei.
+    fn belegung_aus(keymap: &str) -> Belegung {
+        let datei: Belegungsdatei =
+            toml::from_str(keymap).expect("die Pruefbelegung laesst sich nicht lesen");
+        Belegung::vom_nutzer(&datei).expect("die Pruefbelegung ist widerspruechlich")
+    }
+
+    /// Die Zeilen der Datei, die eine Funktion tragen: alles, was mit `| `
+    /// beginnt und nicht die Kopf- oder die Trennzeile ist.
+    fn funktionszeilen(text: &str) -> Vec<&str> {
+        text.lines()
+            .filter(|zeile| zeile.starts_with("| "))
+            .filter(|zeile| **zeile != *TABELLENKOPF)
+            .collect()
+    }
+
+    /// Der Inhalt der Zellen einer Funktionszeile.
+    fn zellen(zeile: &str) -> Vec<&str> {
+        let innen = zeile
+            .strip_prefix('|')
+            .and_then(|rest| rest.strip_suffix('|'))
+            .expect("eine Funktionszeile steht zwischen zwei Strichen");
+        innen.split(" | ").map(str::trim).collect()
+    }
+
+    // -----------------------------------------------------------------------
+    // Umfang und Gliederung
+    // -----------------------------------------------------------------------
+
+    /// Jede belegte Funktion der Auslieferungsbelegung steht in der Datei, und
+    /// keine unbelegte. Ab Werk ist keine unbelegt, also stehen alle darin.
+    #[test]
+    fn jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte() {
+        let belegung = Belegung::auslieferung();
+        let text = markdown(&belegung);
+
+        let erwartet: Vec<&str> = belegung
+            .funktionen()
+            .iter()
+            .filter(|funktion| !funktion.tasten().is_empty())
+            .map(|funktion| funktion.name())
+            .collect();
+        let gefunden: Vec<String> = funktionszeilen(&text)
+            .iter()
+            .map(|zeile| zellen(zeile)[0].to_owned())
+            .collect();
+
+        assert_eq!(
+            gefunden.len(),
+            erwartet.len(),
+            "die Datei fuehrt nicht genau die belegten Funktionen"
+        );
+        for name in &erwartet {
+            assert!(
+                gefunden.iter().any(|zeile| zeile == name),
+                "die Funktion {name} fehlt in der Datei"
+            );
+        }
+
+        // Ab Werk ist keine Funktion unbelegt: die Datei fuehrt alle 71.
+        assert_eq!(
+            gefunden.len(),
+            belegung.funktionen().len(),
+            "ab Werk ist keine Funktion unbelegt, die Datei muss jede fuehren"
+        );
+    }
+
+    /// Eine unbelegte Funktion faellt aus der Datei, ohne leere Zelle.
+    #[test]
+    fn eine_funktion_ohne_kombination_erscheint_nicht() {
+        // `kopieren` traegt eine Kombination, `verschieben` nennt die Datei
+        // nicht und tritt damit unbelegt hinzu.
+        let belegung = belegung_aus(
+            r#"
+            [[funktion]]
+            id = "kopieren"
+            name = "In das andere Fenster kopieren"
+            tasten = ["f5"]
+            "#,
+        );
+        let text = markdown(&belegung);
+
+        assert!(text.contains("In das andere Fenster kopieren"));
+        assert!(
+            !text.contains("verschieben"),
+            "eine unbelegte Funktion steht in der Datei"
+        );
+        assert_eq!(funktionszeilen(&text).len(), 1);
+    }
+
+    /// Die Abschnitte stehen in der Reihenfolge von `Funktionsbereich::ALLE`
+    /// und tragen den Text aus `Funktionsbereich::name()`.
+    #[test]
+    fn die_abschnitte_stehen_in_der_reihenfolge_der_funktionsbereiche() {
+        let text = markdown(&Belegung::auslieferung());
+        let ueberschriften: Vec<&str> = text
+            .lines()
+            .filter_map(|zeile| zeile.strip_prefix("## "))
+            .collect();
+        let erwartet: Vec<&str> = Funktionsbereich::ALLE
+            .iter()
+            .map(|bereich| bereich.name())
+            .collect();
+        assert_eq!(
+            ueberschriften, erwartet,
+            "ab Werk ist jeder Bereich besetzt, also stehen alle neun in ihrer Reihenfolge"
+        );
+    }
+
+    /// Innerhalb eines Abschnitts bleibt die Reihenfolge der Belegungsdatei
+    /// erhalten; eine eigene Sortierung entsteht nicht.
+    #[test]
+    fn innerhalb_eines_abschnitts_bleibt_die_reihenfolge_der_datei() {
+        let belegung = Belegung::auslieferung();
+        let text = markdown(&belegung);
+        let gefunden: Vec<String> = funktionszeilen(&text)
+            .iter()
+            .map(|zeile| zellen(zeile)[0].to_owned())
+            .collect();
+
+        let erwartet: Vec<&str> = nach_bereichen(&belegung)
+            .into_iter()
+            .flat_map(|(_, stellen)| stellen)
+            .map(|stelle| belegung.funktionen()[stelle].name())
+            .collect();
+
+        assert_eq!(gefunden, erwartet);
+    }
+
+    /// Ein Bereich, dessen Funktionen saemtlich unbelegt sind, erzeugt keinen
+    /// Abschnitt mit leerer Tabelle — er entfaellt ganz.
+    #[test]
+    fn ein_unbelegter_bereich_erzeugt_keinen_abschnitt() {
+        let belegung = belegung_aus(
+            r#"
+            [[funktion]]
+            id = "kopieren"
+            name = "In das andere Fenster kopieren"
+            tasten = ["f5"]
+            "#,
+        );
+        let text = markdown(&belegung);
+        let ueberschriften: Vec<&str> = text
+            .lines()
+            .filter_map(|zeile| zeile.strip_prefix("## "))
+            .collect();
+        assert_eq!(
+            ueberschriften,
+            [Funktionsbereich::Dateioperationen.name()],
+            "nur der eine besetzte Bereich bekommt einen Abschnitt"
+        );
+        assert_eq!(
+            text.matches(TABELLENKOPF).count(),
+            1,
+            "es steht genau eine Tabelle da, und keine leere daneben"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Die drei Spalten
+    // -----------------------------------------------------------------------
+
+    /// Jede Zeile traegt drei Spalten, und eine Funktion mit zwei
+    /// Kombinationen steht in **einer** Zeile mit beiden darin, getrennt durch
+    /// Komma und Leerzeichen.
+    #[test]
+    fn eine_funktion_mit_zwei_kombinationen_steht_in_einer_zeile() {
+        let text = markdown(&Belegung::auslieferung());
+
+        for zeile in funktionszeilen(&text) {
+            assert_eq!(
+                zellen(zeile).len(),
+                3,
+                "die Zeile {zeile} traegt nicht drei Spalten"
+            );
+        }
+
+        let treffer: Vec<&str> = funktionszeilen(&text)
+            .into_iter()
+            .filter(|zeile| zellen(zeile)[0] == "In das andere Fenster kopieren")
+            .collect();
+        assert_eq!(treffer.len(), 1, "die Funktion steht in genau einer Zeile");
+        assert_eq!(
+            zellen(treffer[0])[1],
+            "F5, Shift+Cmd+K",
+            "beide Kombinationen stehen in derselben Zelle, in der Schreibweise von anzeige()"
+        );
+    }
+
+    /// **Die dritte Spalte, ueber ihre drei Begruendungslagen.**
+    ///
+    /// Die Probe haelt jede der drei einzeln fest, weil ein Alles-oder-nichts
+    /// ueber die sechs zugestellten Textbefehle in zwei von drei Faellen falsch
+    /// waere. Aendert eine der drei Quellen ihre Antwort, schlaegt genau der
+    /// betroffene Zweig fehl.
+    #[test]
+    fn die_dritte_spalte_haelt_die_drei_begruendungslagen_auseinander() {
+        let belegung = Belegung::auslieferung();
+
+        // Erste Lage, aus der Belegung entscheidbar: jede Funktion mit
+        // Kommando traegt die Beschriftung ihres Wirkungsbereichs, und keine
+        // andere Quelle mischt sich ein.
+        let mut mit_kommando = 0;
+        for funktion in belegung.funktionen() {
+            let Some(kommando) = funktion.kommando() else {
+                continue;
+            };
+            mit_kommando += 1;
+            assert_eq!(
+                wirkung(funktion),
+                kommando.wirkungsbereich().beschriftung(),
+                "{} traegt nicht die Beschriftung ihres Wirkungsbereichs",
+                funktion.kennung()
+            );
+        }
+        assert_eq!(
+            mit_kommando,
+            Kommando::KENNUNGEN.len(),
+            "jedes Kommando der Aufzaehlung steht in der Auslieferungsbelegung"
+        );
+
+        let wirkung_von = |kennung: &str| {
+            wirkung(
+                belegung
+                    .funktion(kennung)
+                    .unwrap_or_else(|| panic!("{kennung} steht nicht in der Belegung")),
+            )
+        };
+
+        // Zweite Lage, in S1 gemessen: die drei Zwischenablage-Befehle haengen
+        // an `NSText`, erreicht wird der Feldeditor des Textfeldes und die
+        // Textflaeche des Editors.
+        for kennung in ["text_ausschneiden", "text_kopieren", "text_einfuegen"] {
+            assert_eq!(
+                wirkung_von(kennung),
+                "Textfelder und Editor",
+                "{kennung} traegt nicht die in S1 gemessene Beschriftung"
+            );
+        }
+
+        // Dritte Lage, erste Haelfte: S1 hat die Ableitung gebrochen, weil
+        // `NSTableView` `selectAll:` selbst beantwortet und die Leiste eine
+        // ist. Die Zelle bleibt **leer**, und das ist ein Ergebnis und kein
+        // Versaeumnis; der Datensatz steht am Zweig von `wirkung`.
+        assert_eq!(
+            wirkung_von("text_alles_auswaehlen"),
+            "",
+            "die Zelle ist absichtlich leer — wer sie fuellt, misst zuerst, \
+             ob der Eintrag in der Leiste etwas bewirkt"
+        );
+
+        // Dritte Lage, zweite Haelfte: ein Nutzerentscheid vom 260811-0935,
+        // am Code ueber `setAllowsUndo(true)` belegt und ausdruecklich nicht
+        // aus S1 abgeleitet — `responds_to` kann fuer `undo:` und `redo:`
+        // nichts entscheiden.
+        for kennung in ["text_rueckgaengig", "text_wiederholen"] {
+            assert_eq!(
+                wirkung_von(kennung),
+                Wirkungsbereich::Editor.beschriftung(),
+                "{kennung} traegt nicht die vom Nutzer gesetzte Beschriftung"
+            );
+        }
+    }
+
+    /// Die Zelle von `text_alles_auswaehlen` steht auch in der fertigen Datei
+    /// leer da, und die Tabelle bleibt dabei heil.
+    #[test]
+    fn die_leere_zelle_zerbricht_die_tabelle_nicht() {
+        let text = markdown(&Belegung::auslieferung());
+        let zeile = funktionszeilen(&text)
+            .into_iter()
+            .find(|zeile| zellen(zeile)[0] == "Alles auswählen")
+            .expect("die Zeile steht in der Datei");
+        assert_eq!(zellen(zeile), ["Alles auswählen", "Cmd+A", ""]);
+    }
+
+    /// **Die Vollstaendigkeitszusage der dritten Spalte:** jede Kennung ohne
+    /// Kommando wird vom Menue zugestellt.
+    ///
+    /// Damit ist die Fallunterscheidung in [`wirkung`] wirklich vollstaendig
+    /// und nicht nur ueberschneidungsfrei: ohne Kommando heisst zugestellt, und
+    /// die sechs Zweige darunter decken die Zugestellten ab. Eine Funktion, die
+    /// weder das eine noch das andere traegt, faengt diese Probe, bevor sie
+    /// eine leere Zelle in der Datei erzeugt. Nach dem Vorbild von
+    /// `jede_kennung_hat_einen_funktionsbereich`.
+    #[test]
+    fn jede_kennung_ohne_kommando_wird_vom_menue_zugestellt() {
+        for funktion in Belegung::auslieferung().funktionen() {
+            if funktion.kommando().is_some() {
+                continue;
+            }
+            assert_eq!(
+                funktion.gehalten_von(),
+                Some("menue"),
+                "{} traegt weder ein Kommando noch einen Zusteller",
+                funktion.kennung()
+            );
+            assert!(
+                matches!(
+                    funktion.kennung(),
+                    "text_ausschneiden"
+                        | "text_kopieren"
+                        | "text_einfuegen"
+                        | "text_alles_auswaehlen"
+                        | "text_rueckgaengig"
+                        | "text_wiederholen"
+                ),
+                "{} ist zugestellt, aber wirkung() kennt sie nicht",
+                funktion.kennung()
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Form der Datei
+    // -----------------------------------------------------------------------
+
+    /// Ein Name mit einem senkrechten Strich zerbricht die Tabelle nicht.
+    #[test]
+    fn ein_name_mit_senkrechtem_strich_zerbricht_die_tabelle_nicht() {
+        let belegung = belegung_aus(
+            r#"
+            [[funktion]]
+            id = "kopieren"
+            name = "Kopieren | mit Strich"
+            tasten = ["f5"]
+            "#,
+        );
+        let text = markdown(&belegung);
+        let zeilen = funktionszeilen(&text);
+        assert_eq!(zeilen.len(), 1);
+        assert!(
+            zeilen[0].contains("Kopieren \\| mit Strich"),
+            "der Strich ist nicht maskiert: {}",
+            zeilen[0]
+        );
+        assert_eq!(
+            zellen(zeilen[0]).len(),
+            3,
+            "die Zeile traegt trotz des Strichs drei Spalten: {}",
+            zeilen[0]
+        );
+    }
+
+    /// Genau eine Ueberschrift, kein Zeitstempel, keine Versionsangabe — und
+    /// deshalb sind zwei Laeufe ueber dieselbe Belegung byteweise gleich.
+    #[test]
+    fn der_kopf_traegt_keinen_zeitstempel_und_zwei_laeufe_sind_gleich() {
+        let belegung = Belegung::auslieferung();
+        let erster = markdown(&belegung);
+        let zweiter = markdown(&belegung);
+        assert_eq!(erster, zweiter, "zwei Laeufe liefern verschiedene Bytes");
+
+        let ueberschriften: Vec<&str> = erster
+            .lines()
+            .filter(|zeile| zeile.starts_with("# "))
+            .collect();
+        assert_eq!(ueberschriften, [UEBERSCHRIFT]);
+        assert!(erster.starts_with("# Tastenbelegung von KRK\n"));
+        assert!(
+            erster.ends_with('\n'),
+            "der Text endet mit einem Zeilenende"
+        );
+
+        // Kein Vorspann: unter der Ueberschrift folgt sofort der erste
+        // Abschnitt, und zwischen beiden steht allein eine Leerzeile.
+        let mut zeilen = erster.lines();
+        assert_eq!(zeilen.next(), Some(UEBERSCHRIFT));
+        assert_eq!(zeilen.next(), Some(""));
+        assert!(
+            zeilen.next().is_some_and(|zeile| zeile.starts_with("## ")),
+            "zwischen Ueberschrift und erstem Abschnitt steht ein Vorspann"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Das Schreiben
+    // -----------------------------------------------------------------------
+
+    /// Ein zweiter Aufruf ersetzt die vorhandene Datei; danach liegt genau eine
+    /// Datei dieses Namens im Ordner, mit dem Inhalt des zweiten Aufrufs. Eine
+    /// fremde Datei desselben Namens wird ohne Rueckfrage ueberschrieben.
+    #[test]
+    fn ein_zweiter_aufruf_ersetzt_die_vorhandene_datei() {
+        let ordner = Pruefordner::neu("belegungsausgabe-ersetzen");
+        let ziel = ordner.datei(DATEINAME, "etwas Fremdes, das nicht von KRK stammt\n");
+
+        let belegung = Belegung::auslieferung();
+        assert_eq!(
+            in_ordner_schreiben(&belegung, ordner.pfad()),
+            Ausgang::Geschrieben(ziel.clone())
+        );
+        assert_eq!(
+            in_ordner_schreiben(&belegung, ordner.pfad()),
+            Ausgang::Geschrieben(ziel.clone())
+        );
+
+        assert_eq!(
+            std::fs::read_to_string(&ziel).expect("die Datei steht nicht da"),
+            markdown(&belegung)
+        );
+
+        let mit_diesem_namen = std::fs::read_dir(ordner.pfad())
+            .expect("der Pruefordner laesst sich nicht lesen")
+            .filter_map(Result::ok)
+            .filter(|eintrag| eintrag.file_name() == DATEINAME)
+            .count();
+        assert_eq!(mit_diesem_namen, 1);
+
+        // Die Nachbardatei des atomaren Schreibens bleibt nicht liegen.
+        assert!(
+            !ordner.unter(&format!("{DATEINAME}.neu")).exists(),
+            "die Nachbardatei ist nach dem Umbenennen fort"
+        );
+    }
+
+    /// Ein fehlender Ordner und ein Ordner ohne Schreibrecht sind
+    /// unterscheidbar, keiner von beiden laesst eine Datei zurueck, und ihre
+    /// Meldungen sind zwei verschiedene.
+    #[test]
+    fn ein_fehlender_ordner_und_ein_abgelehnter_zugriff_sind_unterscheidbar() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let belegung = Belegung::auslieferung();
+
+        let fehlt = Pruefordner::nur_name("belegungsausgabe-ohne-ordner");
+        let ausgang_fehlt = in_ordner_schreiben(&belegung, fehlt.pfad());
+        assert_eq!(
+            ausgang_fehlt,
+            Ausgang::OrdnerFehlt(fehlt.unter(DATEINAME)),
+            "ein fehlender Ordner kommt als NotFound zurueck"
+        );
+        assert!(!fehlt.pfad().exists(), "KRK legt den Zielordner nicht an");
+
+        let verschlossen = Pruefordner::neu("belegungsausgabe-ohne-recht");
+        std::fs::set_permissions(verschlossen.pfad(), std::fs::Permissions::from_mode(0o500))
+            .expect("die Rechte lassen sich nicht entziehen");
+        let ausgang_abgelehnt = in_ordner_schreiben(&belegung, verschlossen.pfad());
+        // Unter root greifen Zugriffsrechte nicht; die Probe belegt dann
+        // nichts und bricht erkennbar ab, statt still durchzugehen.
+        std::fs::set_permissions(verschlossen.pfad(), std::fs::Permissions::from_mode(0o700))
+            .expect("die Rechte lassen sich nicht zuruecksetzen");
+        assert_eq!(
+            ausgang_abgelehnt,
+            Ausgang::ZugriffAbgelehnt(verschlossen.unter(DATEINAME)),
+            "ein Ordner ohne Schreibrecht kommt als PermissionDenied zurueck — \
+             laeuft der Lauf unter root?"
+        );
+        assert!(
+            !verschlossen.unter(DATEINAME).exists(),
+            "es ist keine Datei entstanden"
+        );
+        assert!(
+            !verschlossen.unter(&format!("{DATEINAME}.neu")).exists(),
+            "es ist auch keine halbe Datei entstanden"
+        );
+
+        let zuhause = Path::new("/Users/kai");
+        assert_ne!(
+            ausgang_fehlt.meldung_mit(Some(zuhause)),
+            ausgang_abgelehnt.meldung_mit(Some(zuhause)),
+            "die beiden Faelle melden dasselbe"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Die Meldung
+    // -----------------------------------------------------------------------
+
+    /// Die Erfolgsmeldung traegt den Pfad mit Tilde, und die drei Meldungen mit
+    /// Pfad aus den Fehlerfaellen tragen ihn in derselben Form.
+    ///
+    /// Der Wortlaut ist der Nutzerentscheid vom 260811-0900, gegen die
+    /// Empfehlung des Plans. Eine Meldung fuer beide Faelle: ob die Datei neu
+    /// entstanden ist oder eine vorhandene ersetzt hat, unterscheidet sie
+    /// nicht — `Ausgang::Geschrieben` kennt den Unterschied gar nicht.
+    #[test]
+    fn die_meldungen_tragen_den_pfad_mit_tilde() {
+        let zuhause = Path::new("/Users/kai");
+        let ziel = zuhause.join(ZIELORDNER).join(DATEINAME);
+
+        assert_eq!(
+            Ausgang::Geschrieben(ziel.clone()).meldung_mit(Some(zuhause)),
+            "Tastenbelegung geschrieben: ~/Downloads/KRK-Tastenbelegung.md"
+        );
+
+        for ausgang in [
+            Ausgang::OrdnerFehlt(ziel.clone()),
+            Ausgang::ZugriffAbgelehnt(ziel.clone()),
+            Ausgang::Fehlgeschlagen(ziel.clone(), "die Platte ist voll".to_owned()),
+        ] {
+            let meldung = ausgang.meldung_mit(Some(zuhause));
+            assert!(
+                meldung.contains("~/Downloads/KRK-Tastenbelegung.md"),
+                "die Meldung traegt den Pfad nicht in der gekuerzten Form: {meldung}"
+            );
+            assert!(
+                !meldung.contains("/Users/kai/"),
+                "die Meldung traegt den Pfad zusaetzlich ausgeschrieben: {meldung}"
+            );
+        }
+
+        // Der eine Ausgang ohne Pfad meldet trotzdem einen Grund; kommentarlos
+        // nichts zu tun ist in keinem Fall zulaessig.
+        assert!(
+            Ausgang::KeinBenutzerverzeichnis
+                .meldung_mit(Some(zuhause))
+                .contains("Benutzerverzeichnis")
+        );
+    }
+}

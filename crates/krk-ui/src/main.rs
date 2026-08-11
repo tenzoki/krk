@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Zehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Elf Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -32,10 +32,15 @@
 //! angeht und was mit ihnen geschieht. `belegungsmodell` haelt die
 //! Arbeitskopie der Belegung, solange die Belegungsansicht aus C3 offen ist.
 //! `fenstertitel` rechnet aus dem Fokus und drei Pfaden aus, was im
-//! Fenstertitel steht (C11 der Runde 2).
+//! Fenstertitel steht (C11 der Runde 2). `belegungsausgabe` erzeugt die
+//! Tastenbelegung als Markdown, loest den Zielpfad im Downloads-Ordner auf,
+//! schreibt sie unteilbar und formuliert die Meldung fuer die Statuszeile
+//! (Runde 3); dass es keine `objc2`-Kiste nennt, ist der Grund, aus dem der
+//! ganze Inhalt der Datei ohne Fenster pruefbar ist.
 
 mod appkit;
 mod auffrischung;
+mod belegungsausgabe;
 mod belegungsmodell;
 mod editormodell;
 mod fenstermodell;

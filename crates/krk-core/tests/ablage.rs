@@ -187,6 +187,49 @@ fn der_ablageordner_liegt_unter_application_support() {
     );
 }
 
+/// Die Kuerzung fuer Meldungen, ueber ihre vier Faelle und den einen, den ein
+/// Vergleich auf Zeichenketten falsch beantwortet.
+///
+/// Kein Fall fasst das echte Benutzerverzeichnis an: die Funktion nimmt es als
+/// Argument, und genau dafuer nimmt sie es.
+#[test]
+fn die_kuerzung_fuer_meldungen_zieht_nur_ganze_pfadbestandteile_ab() {
+    let zuhause = Path::new("/Users/kai");
+
+    // Unter dem Benutzerverzeichnis: `~/` und der Rest.
+    assert_eq!(
+        pfade::gekuerzt_fuer_anzeige(
+            Path::new("/Users/kai/Downloads/KRK-Tastenbelegung.md"),
+            Some(zuhause)
+        ),
+        "~/Downloads/KRK-Tastenbelegung.md"
+    );
+
+    // Das Benutzerverzeichnis selbst wird zu `~`, ohne angehaengten Schraegstrich.
+    assert_eq!(pfade::gekuerzt_fuer_anzeige(zuhause, Some(zuhause)), "~");
+
+    // Ausserhalb: ausgeschrieben, Zeichen fuer Zeichen der Eingabe.
+    assert_eq!(
+        pfade::gekuerzt_fuer_anzeige(Path::new("/Volumes/Sicherung/Belegung.md"), Some(zuhause)),
+        "/Volumes/Sicherung/Belegung.md"
+    );
+
+    // Ohne uebergebenes Benutzerverzeichnis: ausgeschrieben. Kein Fehler.
+    assert_eq!(
+        pfade::gekuerzt_fuer_anzeige(Path::new("/Users/kai/Downloads"), None),
+        "/Users/kai/Downloads"
+    );
+
+    // Der Fall, den ein Vergleich auf Zeichenketten falsch beantwortet:
+    // `/Users/kai` ist ein Praefix der Bytes von `/Users/kai-alt`, aber kein
+    // Praefix seiner Pfadbestandteile. `~-alt/Downloads` waere die falsche
+    // Antwort, und sie waere ein Pfad, den es nicht gibt.
+    assert_eq!(
+        pfade::gekuerzt_fuer_anzeige(Path::new("/Users/kai-alt/Downloads"), Some(zuhause)),
+        "/Users/kai-alt/Downloads"
+    );
+}
+
 #[test]
 fn der_erste_start_legt_den_ordner_an_und_liefert_den_auslieferungszustand() {
     let ordner = Pruefordner::neu("erststart");
