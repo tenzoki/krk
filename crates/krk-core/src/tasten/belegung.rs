@@ -102,6 +102,16 @@
 //! Befehl und kein AppKit-Wissen; sie ist deshalb hier ohne Fenster pruefbar.
 //! Welcher Bereich den Fokus gerade hat, weiss allein `krk-ui`. Die
 //! Aufrufrichtung bleibt von oben nach unten.
+//!
+//! **Der Wirkungsbereich hat seit der Runde 3 eine zweite Verwendung, und sie
+//! ist keine Sperre, sondern eine Auskunft.** Neben dem stummen Fokusvorbehalt
+//! liest ihn die Tastenbelegung als Markdown-Datei: ihre dritte Spalte sagt dem
+//! Nutzer, wo ein Befehl wirkt, und nimmt den Text dafuer aus
+//! [`Wirkungsbereich::beschriftung`]. Damit ist die Datei die einzige Stelle in
+//! KRK, an der der stumme Vorbehalt ueberhaupt erklaert wird — wer sonst
+//! `cmd+backspace` im Editor drueckt und nichts geschehen sieht, hat keinen Weg
+//! zum Grund ausser dem Quelltext. Wer die Aufzaehlung erweitert, zieht deshalb
+//! zwei Fallunterscheidungen nach und nicht eine.
 
 use std::fmt;
 use std::io;
@@ -232,6 +242,41 @@ pub enum Wirkungsbereich {
     /// seither [`Wirkungsbereich::Navigator`]: im Editor bewegen dieselben
     /// beiden Tasten die Schreibmarke.
     Ueberall,
+}
+
+impl Wirkungsbereich {
+    /// Die Beschriftung dieses Bereichs fuer den Nutzer.
+    ///
+    /// **Fuer den Nutzer bestimmt und nicht fuer den Programmtext.** Der Name
+    /// der Variante ist die Auskunft an den Leser dieser Datei; die
+    /// Beschriftung ist die an den Leser der Tastenbelegung als Markdown.
+    /// Deshalb steht hier "Dateifenster, Leiste und Vorschau" und nicht
+    /// "Navigator": eine Datei, die ihre Spalte erst ueber eine Legende
+    /// verstaendlich macht, verlangt vom Leser genau das Wissen, das sie ihm
+    /// geben soll. Ausgeschrieben, ohne Legende, Nutzerentscheid vom
+    /// 260811-0115.
+    ///
+    /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**, nach dem Vorbild
+    /// von [`Kommando::wirkungsbereich`] darueber. Ein achter Wert der
+    /// Aufzaehlung braucht hier eine Zeile, bevor er uebersetzt; ein `_`-Zweig
+    /// gaebe ihm stillschweigend die Beschriftung eines Nachbarn und damit eine
+    /// falsche Zusicherung in einer Datei, die der Nutzer liest.
+    ///
+    /// Keine zwei Werte tragen dieselbe Beschriftung. Zwei gleiche Texte waeren
+    /// eine Spalte, die zwei verschiedene Regeln gleich benennt; die Probe
+    /// `keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung` haelt es
+    /// fest.
+    pub const fn beschriftung(self) -> &'static str {
+        match self {
+            Wirkungsbereich::Dateifenster => "Dateifenster",
+            Wirkungsbereich::Leiste => "Lesezeichen- und Geräteleiste",
+            Wirkungsbereich::Vorschau => "Vorschau",
+            Wirkungsbereich::Editor => "Editor",
+            Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
+            Wirkungsbereich::Navigator => "Dateifenster, Leiste und Vorschau",
+            Wirkungsbereich::Ueberall => "überall",
+        }
+    }
 }
 
 /// Was ein Tastendruck im Dateifenster ausloest.

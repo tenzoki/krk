@@ -1517,6 +1517,112 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Die Beschriftung der sieben Wirkungsbereiche (Runde 3, S2, C3)
+// ---------------------------------------------------------------------------
+
+/// Die sieben Bereiche mit dem Text, den die Tastenbelegung als Markdown fuehrt.
+///
+/// Der Nutzer hat am 260811-0115 drei davon genannt, naemlich die drei, deren
+/// Variantenname als Beschriftung unverstaendlich waere; die vier uebrigen
+/// tragen den Namen aus dem Modulkopf von `belegung.rs`.
+const SIEBEN_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 7] = [
+    (Wirkungsbereich::Dateifenster, "Dateifenster"),
+    (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
+    (Wirkungsbereich::Vorschau, "Vorschau"),
+    (Wirkungsbereich::Editor, "Editor"),
+    (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
+    (
+        Wirkungsbereich::Navigator,
+        "Dateifenster, Leiste und Vorschau",
+    ),
+    (Wirkungsbereich::Ueberall, "überall"),
+];
+
+/// Die Stelle eines Bereichs in [`SIEBEN_BESCHRIFTUNGEN`].
+///
+/// **Der Grund fuer diese zweite Fallunterscheidung ist die erste.** Eine
+/// Aufzaehlung in einer Probe waechst nicht von selbst mit der Aufzaehlung im
+/// Kern: ein achter Wert bekaeme in `Wirkungsbereich::beschriftung` seine Zeile
+/// vom Uebersetzer abverlangt, in einem Feld darueber aber nicht. Diese
+/// Funktion stellt das her — sie ist ebenfalls ohne Auffangzweig, also
+/// uebersetzt ein achter Wert erst, wenn er auch hier und damit im Feld steht.
+fn stelle_in_den_sieben(bereich: Wirkungsbereich) -> usize {
+    match bereich {
+        Wirkungsbereich::Dateifenster => 0,
+        Wirkungsbereich::Leiste => 1,
+        Wirkungsbereich::Vorschau => 2,
+        Wirkungsbereich::Editor => 3,
+        Wirkungsbereich::Tabbereich => 4,
+        Wirkungsbereich::Navigator => 5,
+        Wirkungsbereich::Ueberall => 6,
+    }
+}
+
+/// Jeder der sieben Bereiche traegt die Beschriftung, die C3 ihm gibt.
+///
+/// Ausgeschrieben und ohne Legende: die Datei nennt "Dateifenster, Leiste und
+/// Vorschau" und nicht "Navigator". Wer einen dieser Texte aendert, aendert
+/// den Text, den der Nutzer in `~/Downloads/KRK-Tastenbelegung.md` liest, und
+/// diese Probe ist die Stelle, an der er es merkt.
+#[test]
+fn jeder_wirkungsbereich_traegt_seine_beschriftung() {
+    for (bereich, erwartet) in SIEBEN_BESCHRIFTUNGEN {
+        assert_eq!(
+            stelle_in_den_sieben(bereich),
+            SIEBEN_BESCHRIFTUNGEN
+                .iter()
+                .position(|(anderer, _)| *anderer == bereich)
+                .expect("der Bereich steht nicht im Feld"),
+            "{bereich:?} steht im Feld an einer anderen Stelle als in der Fallunterscheidung"
+        );
+        assert_eq!(
+            bereich.beschriftung(),
+            erwartet,
+            "{bereich:?} traegt eine andere Beschriftung, als C3 sie nennt"
+        );
+    }
+}
+
+/// Keine zwei Bereiche tragen dieselbe Beschriftung.
+///
+/// Zwei gleiche Texte waeren eine Spalte, die zwei verschiedene Regeln gleich
+/// benennt: wer "Dateifenster" liest, koennte nicht mehr sagen, ob der Befehl
+/// den Fokus dort braucht oder ueberall wirkt. Der Uebersetzer sieht das nicht,
+/// denn zwei Zweige duerfen dieselbe Zeichenkette liefern.
+#[test]
+fn keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung() {
+    for (stelle, (bereich, beschriftung)) in SIEBEN_BESCHRIFTUNGEN.into_iter().enumerate() {
+        for (anderer, weitere) in SIEBEN_BESCHRIFTUNGEN.into_iter().skip(stelle + 1) {
+            assert_ne!(bereich, anderer, "{bereich:?} steht zweimal im Feld");
+            assert_ne!(
+                beschriftung, weitere,
+                "{bereich:?} und {anderer:?} tragen beide die Beschriftung {beschriftung:?}"
+            );
+        }
+    }
+}
+
+/// Keine Beschriftung ist leer, und keine traegt einen senkrechten Strich.
+///
+/// Beides sind Zusagen an die Ausgabe und nicht an die Aufzaehlung: eine leere
+/// dritte Zelle ist in der Datei die Auskunft "hier ist nichts entschieden",
+/// und ein `|` in einer Zelle zerbraeche die Pipe-Tabelle. Ein Bereich, der
+/// eines von beiden mitbraechte, machte aus einer Zusage einen Zufall.
+#[test]
+fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
+    for (bereich, beschriftung) in SIEBEN_BESCHRIFTUNGEN {
+        assert!(
+            !beschriftung.is_empty(),
+            "{bereich:?} traegt eine leere Beschriftung"
+        );
+        assert!(
+            !beschriftung.contains('|'),
+            "{bereich:?} traegt einen senkrechten Strich und zerbraeche die Tabelle"
+        );
+    }
+}
+
 /// Die Auslieferungsbelegung fuehrt 71 Funktionen, und die dreizehn neuen der
 /// Editor-Runde stehen darin.
 ///
