@@ -4937,6 +4937,60 @@
       "changesThisSession": 1,
       "lastChange": "2026-08-11T14:15:17.659Z",
       "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1648_o_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
+      "totalChanges": 8,
+      "changesThisSession": 8,
+      "lastChange": "2026-08-11T15:24:52.390Z",
+      "thrashingScore": 14
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1648_o_fragt-krk-nach-bevor-return-viele-eintraege-oeffnet.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T14:56:17.582Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1648_o_fuenf-entscheidungsdatensaetze-tragen-im-rumpf-noch-den-stand-offen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T14:56:28.750Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260811-1648_o_die-untergrenzen-angabe-im-modulkopf-steht-in-sieben-von-32-appkit-modulen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T14:56:49.132Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1648-planner-plan-vier-tastenbefehle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T14:57:29.569Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1704-conceptrev-plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T15:07:49.715Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1721-planner-nacharbeit-zwei-auflagen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T15:22:05.989Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260811-1730_o_ziffern-in-dateiliste-und-leiste-laufen-auseinander-und-das-datum-traegt-ein-komma.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T15:24:04.115Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260811-1732_o_die-leiste-soll-auch-die-spalten-groesse-datum-und-typ-wegschalten.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T15:24:33.124Z",
+      "thrashingScore": 0
     }
   },
   "sessionStart": "2026-08-11T14:05:37.576Z",

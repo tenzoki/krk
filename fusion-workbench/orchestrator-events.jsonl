@@ -469,3 +469,5 @@
 {"ts":"2026-08-11T13:29:47","event":"gate_response","detail":"four circle decisions answered, all on the recommendation; three new key combinations, not four, because Cmd+W is a scope widening of an existing binding"}
 {"ts":"2026-08-11T14:17:00","event":"shaper_done","detail":"spec 260811-1552: 5 capabilities, 62 criteria; diagram corrected after conceptrev acceptable"}
 {"ts":"2026-08-11T14:17:00","event":"conceptrev_done","detail":"acceptable; 16 nodes, 23 edges after fix, no cycles, no orphans"}
+{"ts":"2026-08-11T15:25:12","event":"planner_done","detail":"plan 260811-1648 approved with one condition, incorporated; 5 steps, S2->S3 edge added"}
+{"ts":"2026-08-11T15:25:12","event":"conceptrev_done","detail":"acceptable; missing S2->S3 dependency was a real defect, not a drawing one"}
