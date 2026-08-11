@@ -92,6 +92,7 @@ use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::blaetter;
+use super::standardprogramm;
 use super::statuszeile::{self, Statuszeile};
 use super::tableiste::Tableiste;
 
@@ -795,6 +796,9 @@ impl DateifensterQuelle {
             Kommando::TabVoriger => self.tab_voriger(),
             Kommando::OrdnerpfadKopieren => self.ordnerpfad_kopieren(),
             Kommando::EintragspfadKopieren => self.eintragspfad_kopieren(),
+            Kommando::MitStandardprogrammOeffnen => {
+                self.mit_standardprogramm_oeffnen(&self.betroffene_eintraege().pfade)
+            }
             Kommando::Umbenennen => return self.umbenennung_beginnen(),
             // Nicht Sache eines einzelnen Dateifensters.
             _ => return false,
@@ -859,6 +863,47 @@ impl DateifensterQuelle {
         } else {
             self.befehlsantwort_zeigen(&operationen::ablage_weist_ab());
         }
+    }
+
+    /// Gibt die Eintraege an das Standardprogramm des Systems (C3).
+    ///
+    /// **Die eine Umsetzung des Oeffnens.** Sie nimmt die Menge, auf die sie
+    /// wirken soll, statt sie selbst zu bestimmen: die Taste uebergibt ihr
+    /// [`Self::betroffene_eintraege`], und damit wird der Oeffner der sechste
+    /// Abnehmer von [`operationen::betroffene`] — dieselbe Regel wie bei den
+    /// vier Dateioperationen und beim Pfadkopierer, ohne Ausnahme
+    /// (Nutzerantwort vom 260811-1610).
+    ///
+    /// **Der Typ des Eintrags wird nicht geprueft.** Die Taste verzweigt nach
+    /// der Nutzerantwort vom 260811-1505 ausdruecklich nicht; ein Ordner geht
+    /// damit an das System und oeffnet sich im Finder.
+    ///
+    /// **Eine Rueckfrage entsteht in keinem Fall**, auch nicht bei fuenfzig
+    /// markierten Eintraegen. Der Nutzer hat am 260811-1710 gegen eine Schwelle
+    /// entschieden: eine Regel statt einer Zahl, die niemand gemessen hat. Der
+    /// Preis ist benannt und angenommen — fuenfzig markierte Dateien starten
+    /// fuenfzig Programme, und Rueckgaengig gibt es dafuer nicht.
+    ///
+    /// **Was die Meldung sagt, ist die Uebergabe und nicht das Oeffnen.**
+    /// [`standardprogramm::oeffnen`] liefert, ob das System die Adresse
+    /// angenommen hat; ob ein Programm danach startet, weiss KRK nicht. Der
+    /// Unterschied steht im Kopf jenes Moduls, und
+    /// [`operationen::oeffnungsmeldung`] haelt ihn im Wortlaut ein.
+    fn mit_standardprogramm_oeffnen(&self, pfade: &[PathBuf]) {
+        if pfade.is_empty() {
+            self.befehlsantwort_zeigen(&operationen::nichts_betroffen());
+            return;
+        }
+        let mut uebergeben: Vec<PathBuf> = Vec::new();
+        let mut abgewiesen: Vec<PathBuf> = Vec::new();
+        for pfad in pfade {
+            if standardprogramm::oeffnen(pfad) {
+                uebergeben.push(pfad.clone());
+            } else {
+                abgewiesen.push(pfad.clone());
+            }
+        }
+        self.befehlsantwort_zeigen(&operationen::oeffnungsmeldung(&uebergeben, &abgewiesen));
     }
 
     /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.

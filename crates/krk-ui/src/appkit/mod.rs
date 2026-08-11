@@ -136,6 +136,7 @@ mod leiste;
 mod menue;
 mod nummernspalte;
 mod papierkorb;
+mod standardprogramm;
 mod statuszeile;
 mod tabelle;
 mod tableiste;

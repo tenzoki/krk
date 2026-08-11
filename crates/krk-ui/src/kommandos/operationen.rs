@@ -841,6 +841,73 @@ pub fn ablage_weist_ab() -> String {
     "die Zwischenablage hat den Pfad nicht angenommen".to_owned()
 }
 
+// ----------------------------------------------------------------------
+// Die Uebergabe an das Standardprogramm (C3 der Runde 4)
+// ----------------------------------------------------------------------
+
+/// Der Name eines Eintrags fuer eine Meldung, ersatzweise sein Pfad.
+///
+/// Ein Pfad ohne letzten Bestandteil ist das Wurzelverzeichnis oder endet auf
+/// `..`; dann steht der Pfad in der Meldung, denn ein leerer Name benennte
+/// nichts.
+fn eintragsname(pfad: &Path) -> String {
+    match pfad.file_name() {
+        Some(name) => name.to_string_lossy().into_owned(),
+        None => pfadtext(pfad),
+    }
+}
+
+/// Die Meldung nach der Uebergabe an das Standardprogramm (C3).
+///
+/// **Sie sagt "an das System uebergeben" und nicht "geoeffnet", und das ist
+/// keine Umstaendlichkeit.** `NSWorkspace::openURL:` meldet synchron allein, ob
+/// das System die Adresse angenommen hat; ob das aufgeloeste Programm danach
+/// startet, erfuehre KRK nur ueber einen Rueckruf, den es nicht fuehrt (siehe
+/// [`crate::appkit::standardprogramm`]). Die Meldung behauptet deshalb genau
+/// das, was die Rueckgabe hergibt, und keinen Schritt mehr.
+///
+/// Bei einem Eintrag nennt sie seinen **Namen** und nicht seinen Pfad — anders
+/// als [`kopiermeldung`], und aus einem Grund: der Kopierer meldet, was in der
+/// Zwischenablage steht und gleich eingefuegt wird, der Oeffner meldet, womit
+/// der Nutzer gerade etwas getan hat. Bei mehreren nennt sie ihre Zahl.
+///
+/// Der abgewiesene Teil haengt hinten an, sofern es einen gibt; **warum** ein
+/// Eintrag abgewiesen wurde, steht nicht darin, denn `openURL:` nennt es nicht.
+/// Sind beide Mengen leer, faellt die Meldung auf [`nichts_betroffen`] zurueck;
+/// der Aufrufer faengt den Fall schon vorher ab, weil dann auch nichts
+/// uebergeben wird.
+pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> String {
+    let angenommen = match uebergeben {
+        [] => None,
+        [einziger] => Some(format!(
+            "an das System übergeben: {}",
+            eintragsname(einziger)
+        )),
+        mehrere => Some(format!(
+            "{} Einträge an das System übergeben",
+            mehrere.len()
+        )),
+    };
+    let zurueck = match abgewiesen {
+        [] => None,
+        [einziger] => Some(format!(
+            "das System hat {} nicht angenommen",
+            eintragsname(einziger)
+        )),
+        mehrere => Some(format!(
+            "das System hat {} von {} Einträgen nicht angenommen",
+            mehrere.len(),
+            uebergeben.len() + mehrere.len()
+        )),
+    };
+    match (angenommen, zurueck) {
+        (Some(genommen), Some(abgelehnt)) => format!("{genommen}; {abgelehnt}"),
+        (Some(genommen), None) => genommen,
+        (None, Some(abgelehnt)) => abgelehnt,
+        (None, None) => nichts_betroffen(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1372,5 +1439,96 @@ mod tests {
         assert!(!satz.contains("kopier"), "{satz}");
         assert!(!satz.contains("öffn"), "{satz}");
         assert!(!satz.is_empty());
+    }
+
+    // ------------------------------------------------------------------
+    // Die Uebergabe an das Standardprogramm (C3 der Runde 4)
+    // ------------------------------------------------------------------
+
+    /// Die vier Faelle der Meldung aus C3.
+    ///
+    /// Einer angenommen nennt seinen Namen, mehrere ihre Zahl; einer abgewiesen
+    /// nennt seinen Namen, ein abgewiesener Teil nennt seine Zahl und die
+    /// Gesamtzahl.
+    #[test]
+    fn die_oeffnungsmeldung_nennt_einen_namen_und_sonst_die_zahl() {
+        let einer = [PathBuf::from("/tmp/x/Bericht.pdf")];
+        let zwei = [
+            PathBuf::from("/tmp/x/Bericht.pdf"),
+            PathBuf::from("/tmp/x/Notiz.txt"),
+        ];
+        let keiner: [PathBuf; 0] = [];
+
+        assert_eq!(
+            oeffnungsmeldung(&einer, &keiner),
+            "an das System übergeben: Bericht.pdf"
+        );
+        assert_eq!(
+            oeffnungsmeldung(&zwei, &keiner),
+            "2 Einträge an das System übergeben"
+        );
+        assert_eq!(
+            oeffnungsmeldung(&keiner, &einer),
+            "das System hat Bericht.pdf nicht angenommen"
+        );
+        assert_eq!(
+            oeffnungsmeldung(&einer, &zwei),
+            "an das System übergeben: Bericht.pdf; \
+             das System hat 2 von 3 Einträgen nicht angenommen"
+        );
+    }
+
+    /// Die Meldung behauptet nicht, ein Programm habe den Eintrag geoeffnet.
+    ///
+    /// Das ist die Zusage aus dem Kopf des Umsetzungsplans und aus
+    /// [`crate::appkit::standardprogramm`]: `openURL:` meldet die Annahme und
+    /// nicht den Start. Die Probe haelt den Wortlaut daran fest, damit ein
+    /// spaeteres Umformulieren nicht unbemerkt mehr zusagt, als KRK weiss.
+    #[test]
+    fn die_oeffnungsmeldung_behauptet_kein_geoeffnet() {
+        let einer = [PathBuf::from("/tmp/x/Bericht.pdf")];
+        let drei = [
+            PathBuf::from("/tmp/x/a.txt"),
+            PathBuf::from("/tmp/x/b.txt"),
+            PathBuf::from("/tmp/x/c.txt"),
+        ];
+        let keiner: [PathBuf; 0] = [];
+
+        for meldung in [
+            oeffnungsmeldung(&einer, &keiner),
+            oeffnungsmeldung(&drei, &keiner),
+            oeffnungsmeldung(&keiner, &einer),
+            oeffnungsmeldung(&einer, &drei),
+        ] {
+            // "öffn" faengt "öffnet" und "geöffnet" zugleich.
+            assert!(!meldung.contains("öffn"), "{meldung}");
+            assert!(!meldung.contains("gestartet"), "{meldung}");
+            assert!(meldung.contains("System"), "{meldung}");
+        }
+    }
+
+    /// Ein Pfad ohne letzten Bestandteil steht mit seinem Pfad in der Meldung.
+    ///
+    /// Das Wurzelverzeichnis ist der Fall, den es wirklich gibt: er entsteht,
+    /// wenn die Auswahl auf `/` steht.
+    #[test]
+    fn ein_eintrag_ohne_namen_erscheint_mit_seinem_pfad() {
+        let wurzel = [PathBuf::from("/")];
+        let keiner: [PathBuf; 0] = [];
+        assert_eq!(
+            oeffnungsmeldung(&wurzel, &keiner),
+            "an das System übergeben: /"
+        );
+    }
+
+    /// Zwei leere Mengen ergeben den Satz der leeren Menge und keinen Unsinn.
+    ///
+    /// Der Aufrufer faengt den Fall vorher ab; die Probe haelt fest, dass die
+    /// Funktion ihn trotzdem beantwortet, statt eine Meldung ohne Gegenstand zu
+    /// bauen.
+    #[test]
+    fn zwei_leere_mengen_ergeben_den_satz_der_leeren_menge() {
+        let keiner: [PathBuf; 0] = [];
+        assert_eq!(oeffnungsmeldung(&keiner, &keiner), nichts_betroffen());
     }
 }

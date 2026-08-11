@@ -222,9 +222,24 @@ impl Eingabewaechter {
 /// Antwort einen eigenen Griff; **das Blatt schreibt sie in seinen
 /// erlaeuternden Text**, sonst waeren sie unauffindbar.
 ///
-/// Sie kollidieren mit nichts: `resources/default-keymap.toml` belegt weder die
-/// Eingabetaste noch eine ihrer Kombinationen, der Ereignisabgriff findet
-/// nichts und reicht den Tastendruck an AppKit weiter.
+/// **Seit dem 260811 belegt `resources/default-keymap.toml` die nackte
+/// Eingabetaste**, naemlich mit `mit_standardprogramm_oeffnen` aus C3 der
+/// Runde 4. Bis dahin war sie ab Werk frei, und dieser Absatz sagte deshalb zu,
+/// die Tastenentsprechungen kollidierten mit nichts. Die Zusage ist gebrochen,
+/// das Verhalten nicht: die Schaltflaechen loesen weiterhin aus, und der Grund
+/// ist ein anderer geworden.
+///
+/// Er lautet: bei stehendem Blatt weist
+/// `Anwendungsdelegierter::kommando_ausfuehren` jeden Befehl ausser dem Abbruch
+/// ab (`crate::kommandos::operationen::waehrend_blatt_erlaubt`), und ein
+/// abgewiesener Tastendruck laeuft unveraendert an AppKit weiter, wo die
+/// Vorgabeschaltflaeche ihn beantwortet. Die Sperre steht **vor** dem
+/// Fokusvorbehalt, also greift sie auch dann, wenn der Fokus in einem
+/// Dateifenster steht und der Befehl dort wirken wuerde.
+///
+/// Die beiden Kombinationen mit Zusatztaste sind ab Werk unbelegt geblieben;
+/// fuer sie findet der Ereignisabgriff weiterhin nichts und reicht den
+/// Tastendruck unveraendert an AppKit weiter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Taste {
     /// Die Eingabetaste. Hoechstens eine Schaltflaeche je Blatt traegt sie.

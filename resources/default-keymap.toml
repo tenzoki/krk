@@ -49,11 +49,17 @@
 # beider Faelle ist daraus abgeleitet und am Referenzgeraet nicht messbar, weil
 # dessen Touch Bar ohne gehaltenes fn ueberhaupt keine F3 liefert).
 #
-# Zwei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
-# keiner Tastenliste: Umschalt+Entf und die Eingabetaste. Die Eingabetaste trug
-# bis zum 260804 den Einstieg in einen Ordner; der liegt seither auf einem
-# Rechtspfeil, bis zum 260805 auf cmd+right und seither auf dem nackten right,
-# und der Nutzer hat die Eingabetaste ausdruecklich freigegeben (C2).
+# Eine Kombination bleibt ab Werk ausdruecklich frei und steht deshalb in keiner
+# Tastenliste: Umschalt+Entf.
+#
+# Die Eingabetaste stand bis zum 260811 daneben. Sie trug bis zum 260804 den
+# Einstieg in einen Ordner; der liegt seither auf einem Rechtspfeil, bis zum
+# 260805 auf cmd+right und seither auf dem nackten right, und der Nutzer hat die
+# Eingabetaste damals ausdruecklich freigegeben (C2 der Runde 1). Seit dem
+# 260811 traegt sie "mit_standardprogramm_oeffnen" (C3 der Runde 4,
+# Nutzerantwort vom 260811-1505); der Eintrag steht weiter unten und nennt den
+# Grund. Ein stehendes Blatt faengt sie weiterhin ab, bevor sie hier
+# nachgeschlagen wird, und die Vorgabeschaltflaeche beantwortet sie wie zuvor.
 #
 # Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
 # seither die Textbefehle des Menues "Bearbeiten" und sonst nichts, und genau
