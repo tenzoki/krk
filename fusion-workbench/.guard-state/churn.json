@@ -85,9 +85,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/portfolio.md": {
-      "totalChanges": 6,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T11:28:30.029Z",
+      "totalChanges": 7,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:17:36.716Z",
       "thrashingScore": 2
     },
     "fusion-workbench/shared/history/260802-0853-playmaker-direct-dispatch.md": {
@@ -4777,10 +4777,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md": {
-      "totalChanges": 2,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T11:29:02.982Z",
-      "thrashingScore": 0
+      "totalChanges": 3,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:15:58.598Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1257_o_wie-weit-soll-cmd-w-reichen.md": {
       "totalChanges": 1,
@@ -4882,6 +4882,12 @@
       "totalChanges": 1,
       "changesThisSession": 1,
       "lastChange": "2026-08-11T12:11:10.195Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260811-1415-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T12:18:32.688Z",
       "thrashingScore": 0
     }
   },

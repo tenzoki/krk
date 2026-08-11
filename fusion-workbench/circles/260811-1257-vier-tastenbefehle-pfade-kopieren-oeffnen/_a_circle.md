@@ -114,3 +114,103 @@ der Fehler, den die Datei ausdrücklich vermeidet.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes
 von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim
 Nutzer über `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260811-1415
+**Playmaker-Lauf:** 260811-1415-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:** `260809-2040-tastenbelegung-als-markdown-in-downloads`,
+geschlossen am 260811-1415
+
+Die Runde 3 ist geschlossen, und zwar beschränkt. Drei Stellen dieses Datensatzes stehen
+seither auf einer Grundlage, die sich bewegt hat. Keine davon hält die Aktivierung auf; alle
+drei gehören in die Klärungsrunde.
+
+**Zur Auslösebedingung, offen benannt.** Die Regel verlangt eine Nennung des
+abgeschlossenen Kindes im Abschnitt `## Grounding snapshot`. Hier steht der
+Verzeichnisname stattdessen in `## Dependencies` (Zeile 41), und der Abschluss-Artefakt des
+Kindes ist inhaltlich berührt statt namentlich zitiert. Der Vermerk steht trotzdem, weil die
+Sache trägt; wer anders entscheidet, sieht an dieser Stelle, worauf.
+
+### 1. Die Abhängigkeit nennt die Runde 3 als laufend
+
+Zeile 41 schreibt: "`260809-2040-tastenbelegung-als-markdown-in-downloads` — die laufende
+Runde." Seit dem 260811-1415 trifft das nicht mehr zu, und der Datensatz jener Runde trägt
+`_b_`.
+
+### 2. Die geerbte Zusage steht auf einer Ausgabe, die niemand hat laufen sehen
+
+Dieselbe Zeile schließt: "jede der vier neuen Funktionen erscheint dort und in der
+Belegungsansicht, sobald sie existiert." Die Ausgabe ist gebaut, ihre 41 Abnahmekriterien
+stehen sämtlich auf `- [ ]`, und der Spec
+`circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md`
+bleibt auf `_o_`. Die `## Closure note` des Kindes sagt es unumwunden: gebaut ist die richtige
+Aussage über jene Runde, abgenommen nicht. Vier neue Funktionen erscheinen in der erzeugten
+Datei ohne Zutun, und ob die Datei stimmt, ist ungeprüft. Der Preis ist klein und er ist
+benannt.
+
+### 3. Der Abschluss-Artefakt des Kindes berührt eine tragende Feststellung dieser Grundlage
+
+Der Abschnitt `## Grounding snapshot` stützt sich an einer Stelle auf einen Präzedenzfall:
+"Der Vorgang von Cmd+A zeigt, dass eine Kombination mit zwei Zustellern kein Konflikt im
+Sinne von C3 ist, solange der Fokusvorbehalt die beiden nie zusammenbringt." Genau dieser
+Vorgang ist der Gegenstand des Abschluss-Artefakts der Runde 3. Ihr Schritt S1 hat am
+Objective-C-Laufzeitsystem gemessen, dass `NSTableView` `selectAll:` aus einer eigenen
+Methode beantwortet, und damit eine Annahme des Specs widerlegt, bevor sie als falsche
+Zusicherung in die erzeugte Datei geriet.
+
+`inference:` Für diesen Circle dreht der Befund den Präzedenzfall nicht um, er verschiebt
+seine Art. Wer bei Cmd+A antwortet, ist gemessen und nicht mehr angenommen. Cmd+C und Cmd+V
+liegen als `text_kopieren` und `text_einfuegen` mit `gehalten_von = "menue"` in der
+Auslieferungsbelegung, und dieser Datensatz schließt bislang von Cmd+A auf sie. Ob dieselbe
+Messung für die beiden Textbefehle dasselbe ergibt, ist nicht geprüft. Die Frage F4 (welche
+vier Kombinationen ab Werk gelten,
+`decisions/260811-1300_*_welche-vier-kombinationen-gelten-ab-werk.md`) ist der Ort, an dem
+sie hingehört, und die Messung aus S1 ist die Vorlage dafür.
+
+Der Playmaker ändert keine Zitate und keine Abhängigkeit. Zeile 41 bleibt, wie sie steht.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260811-1415
+**Playmaker-Lauf:** 260811-1415-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** sofort
+
+Dieser Vorschlag ersetzt den vom 260811-1326 in einem Punkt und bestätigt ihn im Übrigen.
+**Die Bedingung ist erfüllt.** Jener Vorschlag hat als schärfstes Argument gegen eine
+sofortige Aktivierung genannt, dass die Runde 3 nicht geschlossen sei und ein zweiter aktiver
+Circle die Lage `MULTIPLE-ACTIVE` wäre. Die Runde 3 ist am 260811-1415 als beschränkter
+Abschluss geschlossen, `fusion-workbench/.active-circle` ist gelöscht, und kein Circle-Datensatz
+trägt `_t_`. Der Weg ist frei.
+
+Der Circle steht weiterhin auf Rang 1 von drei. Die Begründung des Vorschlags vom 260811-1326
+gilt unverändert: seine Grundlage ist am 260811-1257 am Baum erhoben, mit Zeilenverweisen auf
+jede tragende Feststellung, und er trägt als einziger der drei keine unbeantwortete technische
+Größe. Der Bau besteht aus vier Zeilen in `resources/default-keymap.toml`, vier Werten in
+`Kommando` und je vier Zeilen in `Kommando::wirkungsbereich` und `bereich_des_kommandos`; keine
+dieser Fallunterscheidungen hat einen Auffangzweig, der Übersetzer nennt die Stellen von selbst.
+
+**Was seit dem 260811-1326 hinzugekommen ist.** Eine offene Frage der Runde 1 bindet die
+zweite Frage dieses Circles, und sie steht in keinem der beiden Abschnitte oben:
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0020_*_soll-die-markierung-eine-auffrischung-ueberleben.md`
+fragt, ob die Markierung einen Lesevorgang übersteht. Heute fällt sie mit jedem, weil sie eine
+Menge von Eintragsindizes ist, während die Auswahl über den Namen getragen wird. Die Frage F2
+dieses Circles (was der Pfadkopierer bei stehender Markierung nimmt,
+`decisions/260811-1258_*_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md`) baut auf
+derselben Markierung auf. Wer F2 beantwortet, sollte wissen, dass ihr Gegenstand heute
+flüchtig ist.
+
+**Was gegen eine sofortige Aktivierung spricht.** Beide Abhängigkeiten sind beschränkt und
+nicht kohärent geschlossen; nach der Rangheuristik zählt allein `_c_` als erfüllte
+Vorbedingung, also trägt der Circle das Kennzeichen. Inhaltlich ist die Bindung an die Runde 3
+schwach und im Abschnitt `## Parent grounding stale` oben aufgeschlüsselt, die an die Runde 1
+betrifft die Kommando-Maschinerie und den Wirkungsbereich, deren Beschränkung bei den
+Zeitzusagen liegt; diese vier Befehle führen keine. Und die Runde bricht eine schriftliche
+Zusicherung: der Modulkopf von `crates/krk-ui/src/appkit/zwischenablage.rs` sagt in zwei Sätzen
+zu, dass KRK die Zwischenablage in keinem Fall schreibt. Die beiden Kopierbefehle brechen genau
+das, also gehört der Modulkopf mit derselben Änderung umgeschrieben.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer
+über `/fusion:next` oder beim Orchestrator.

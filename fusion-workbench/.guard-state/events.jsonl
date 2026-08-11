@@ -35488,3 +35488,23 @@
 {"ts":"2026-08-11T12:10:32.393Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-11T12:11:10.068Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/issues/260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md"}
 {"ts":"2026-08-11T12:11:10.196Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/issues/260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:11:31.740Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:11:45.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:11:45.862Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:11:49.184Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:12:07.783Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:12:13.255Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:12:18.072Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:12:34.207Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:12:56.219Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:13:03.961Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:13:13.465Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:14:15.001Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:14:41.263Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:15:10.657Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T12:15:58.485Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md"}
+{"ts":"2026-08-11T12:15:58.599Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:17:36.583Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/portfolio.md"}
+{"ts":"2026-08-11T12:17:36.717Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/portfolio.md","detail":"File change recorded"}
+{"ts":"2026-08-11T12:18:32.568Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260811-1415-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-11T12:18:32.688Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260811-1415-playmaker-direct-dispatch.md","detail":"File change recorded"}

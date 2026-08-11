@@ -463,3 +463,5 @@
 {"ts":"2026-08-11T08:43:04","event":"turn_end","turn":1,"detail":"3 of 4 plan steps done, 6 commits, 6 issues created (4 closed), 1 decision recorded, 0 errors; S4 remains and is user work"}
 {"ts":"2026-08-11T12:11:31","event":"reconciliation","detail":"9 of 9 closures hold; 7 decisions moved _a_ -> _i_; plan closed to _c_; spec stays _o_ because all 41 criteria are unmet"}
 {"ts":"2026-08-11T12:11:31","event":"bounded_closure_proposed","detail":"reconciler verdict bounded-closure-proposed: the Directive is unreachable inside this Circle because S4 was struck; coherent would claim the Directive was reached and nobody has seen KRK write the file"}
+{"ts":"2026-08-11T12:19:11","event":"portfolio_refresh","detail":"circle 260809-2040 closed as _b_; portfolio regenerated; parent-grounding-stale propagated to 260811-1257"}
+{"ts":"2026-08-11T12:19:11","event":"session_end","detail":"circle 260809-2040-tastenbelegung-als-markdown-in-downloads closed bounded; 1 Turn, 11 commits, 9 defects closed, 1 deferred, 7 decisions implemented, 0 errors"}
