@@ -43,3 +43,20 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1, nur die Fokusluecke.** Nutzerantwort am 260811-1505, der Empfehlung
+folgend. Cmd+W wirkt zusaetzlich mit dem Fokus in der Leiste und im Editor und schliesst dort den
+aktiven Tab der aktiven Fensterseite. **Die Blattsperre bleibt unberuehrt:** bei stehendem Blatt
+kommt weiterhin allein der Abbruch durch, und `esc` bleibt der Weg dorthin.
+
+Die Sperre ist damit ausdruecklich als Regel bestaetigt und nicht als Luecke. Sie war in der
+Editor-Runde schon einmal faelschlich fuer einen Defekt gehalten worden
+(`circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1102_*_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`);
+diese Antwort haelt fest, dass sie keiner ist.
+
+Die urspruengliche Formulierung des Nutzers, "Cmd+W fuer alle Fenster", ist damit praezisiert:
+es geht um den Wirkungsbereich und nicht um eine Umbelegung. `cmd+w` bleibt auf dem Tab,
+`fenster_schliessen` bleibt auf `shift+cmd+w`, und die Entscheidung
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`
+ist nicht angetastet.

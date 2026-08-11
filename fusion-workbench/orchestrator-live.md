@@ -1,25 +1,22 @@
 # Orchestrator — Live
 
-**Turn:** 1/5 | **Tasks:** 3/4 | **Commits:** 9 | **Errors:** 0
-**Started:** 01:07 | **Domain:** code | **Elapsed Turns:** 1 | **Guard:** OK (0 blocks)
-**Circle:** 260809-2040-tastenbelegung-als-markdown-in-downloads (aktiv)
+**Turn:** --/5 | **Tasks:** --/-- | **Commits:** 0 | **Errors:** 0
+**Started:** 14:53 | **Domain:** code | **Elapsed Turns:** 0 | **Guard:** OK (0 blocks)
+**Circle:** 260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen (aktiv)
 
 ## Current
-  [GATE]    user -> S4: Abnahme am gebauten Buendel, verlangt KRK im Vordergrund
+  [SETUP] orchestrator -> Setup fertig; vier Nutzerfragen stehen vor der Planung
 
 ## This Turn
-  [DONE]    shaper -> Spec, vier Faehigkeiten, 40 Kriterien ................ 1415a03
-  [DONE]    planner -> Plan, vier Schritte, Decidability getrennt .......... 5e369bb
-  [DONE]    coder -> S1 Messung am Laufzeitsystem, Ableitung gebrochen ..... 39687f3
-  [DONE]    coder -> S2 Beschriftung der sieben Wirkungsbereiche .......... 33cc083
-  [DONE]    ontocoder -> Circle-Datensatz nennt Spec, Plan, Sitzung ....... f1ce0f5
-  [DONE]    coder -> S3 Ausgabemodul, Menueeintrag, Meldung .............. fd863e3
-  [DONE]    coderev -> Durchsicht, sechs Befunde ........................ d8fbad7
-  [DONE]    coder -> vier Befunde behoben, Info.plist ergaenzt ........... d8fbad7
-  [DONE]    shaper -> C3 auf den gemessenen Stand berichtigt ............ d8fbad7
+  (kein Turn begonnen)
 
 ## Up Next
-  [QUEUED]  user -> S4 am Buendel: make bundle, dann Menue KRK, Eintrag pruefen
+  [GATE]    user -> Wie weit soll Cmd+W reichen?
+  [GATE]    user -> Was kopiert der Pfadkopierer bei stehender Markierung?
+  [GATE]    user -> Was tut ein Doppelklick auf einen Ordner?
+  [GATE]    user -> Welche vier Kombinationen gelten ab Werk?
+  [QUEUED]  shaper -> Spec aus Directive und den vier Antworten
+  [QUEUED]  planner -> Plan aus dem Spec
 
 ## Blocked
-  4 offene Defekte im Circle, keiner haelt S4 auf
+  7 offene Defekte, davon 5 ueber fusion selbst — keiner haelt diese Runde auf

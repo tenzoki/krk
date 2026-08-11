@@ -40,3 +40,23 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1, `betroffene()` erben**, samt der empfohlenen Rueckmeldung in der
+Statuszeile: bei einer Zeile der Pfad, bei mehreren die Zahl der kopierten Pfade. Nutzerantwort
+am 260811-1505.
+
+Damit gilt fuer den Pfadkopierer dieselbe Regel wie fuer die vier Dateioperationen — eine Regel
+und keine zweite daneben.
+
+**Ein Befund haengt unmittelbar daran und gehoert vor dem Bau geprueft.** Der Playmaker-Lauf vom
+260811-1415 hat festgehalten: **die Markierung faellt heute mit jedem Lesevorgang**, weil sie eine
+Menge von Eintragsindizes ist und ein Lesevorgang die Indizes neu vergibt. Der Pfadkopierer setzt
+genau auf dieser Markierung auf.
+
+Was das fuer diese Antwort heisst, ist **nicht** entschieden und gehoert in den Spec: ob es
+genuegt, dass der Kopierer die Markierung nimmt, wie er sie vorfindet — dann kopiert er nach
+einem Lesevorgang die Auswahl statt der vorher markierten Zeilen, und der Nutzer merkt es an der
+Rueckmeldung —, oder ob die Fluechtigkeit der Markierung ein eigener Gegenstand ist. Das zweite
+waere ein anderer Circle. Der Spec sagt, welcher der beiden Faelle gilt, und behauptet nichts
+ueber den anderen.

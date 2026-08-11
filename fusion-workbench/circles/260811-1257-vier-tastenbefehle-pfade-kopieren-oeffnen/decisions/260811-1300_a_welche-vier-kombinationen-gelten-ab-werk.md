@@ -43,3 +43,22 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1.** Nutzerantwort am 260811-1505.
+
+| Funktion | Kombination |
+|---|---|
+| mit dem Standardprogramm oeffnen | `return` |
+| Pfad des betroffenen Eintrags kopieren | `shift+cmd+c` |
+| Pfad des angezeigten Ordners kopieren | `opt+cmd+c` |
+
+`cmd+w` bekommt keine neue Kombination — die vierte Funktion dieser Runde ist eine Erweiterung
+des Wirkungsbereichs einer bestehenden Belegung, siehe
+`260811-1257_*_wie-weit-soll-cmd-w-reichen.md`. Ab Werk kommen damit **drei** neue Kombinationen
+hinzu, nicht vier.
+
+`return` ist die Taste, die C2 der Runde 1 eigens freigehalten hat, und sie bekommt die Handlung,
+fuer die der Nutzer sie erwartet. **`cmd+c` bleibt unangetastet**, solange nicht gemessen ist, ob
+der Fokusvorbehalt es sauber vom Kopieren in Textfeldern und im Editor trennt; die dritte
+Moeglichkeit haette genau diese ungemessene Groesse eingefuehrt.

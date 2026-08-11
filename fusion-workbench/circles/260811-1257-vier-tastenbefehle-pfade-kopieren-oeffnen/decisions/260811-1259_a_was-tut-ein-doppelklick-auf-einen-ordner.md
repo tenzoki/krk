@@ -42,3 +42,15 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1, der Doppelklick verzweigt und die Taste nicht.** Nutzerantwort am
+260811-1505.
+
+Doppelklick auf einen Ordner steigt in ihn ein, Doppelklick auf eine Datei gibt sie an das
+Standardprogramm des Systems. Die Tastenkombination uebergibt **immer** ans System; ein Ordner
+geht damit an den Finder.
+
+Damit hat der Nutzer beide Wege: den Einstieg mit der Maus, wie ein Doppelklick auf dem Mac
+gelesen wird, und das Oeffnen eines Ordners im Finder ueber die Taste. Der Rechts-Pfeil bleibt
+als Einstieg unberuehrt.
