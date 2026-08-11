@@ -1,0 +1,28 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dual-pane file manager icon, simplified">
+  <defs>
+    <linearGradient id="bgs" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1A1AB4"/>
+      <stop offset="0.55" stop-color="#0A0A8C"/>
+      <stop offset="1" stop-color="#04044F"/>
+    </linearGradient>
+    <clipPath id="squircle-s">
+      <rect x="0" y="0" width="1024" height="1024" rx="232" ry="232"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#squircle-s)">
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#bgs)"/>
+
+    <rect x="128" y="192" width="368" height="640" fill="none" stroke="#6FF2F2" stroke-width="24"/>
+    <rect x="156" y="380" width="312" height="120" fill="#55FFFF"/>
+    <rect x="188" y="272" width="228" height="56" fill="#C9DDFF"/>
+    <rect x="188" y="556" width="188" height="56" fill="#FFD24A"/>
+    <rect x="188" y="700" width="236" height="56" fill="#C9DDFF"/>
+
+    <rect x="528" y="192" width="368" height="640" fill="none" stroke="#2FA9BE" stroke-width="18"/>
+    <rect x="580" y="272" width="212" height="56" fill="#9EBCE8"/>
+    <rect x="580" y="416" width="256" height="56" fill="#9EBCE8"/>
+    <rect x="580" y="560" width="180" height="56" fill="#FFD24A"/>
+    <rect x="580" y="704" width="240" height="56" fill="#9EBCE8"/>
+  </g>
+</svg>
