@@ -29,6 +29,24 @@
 //! zweites Mal drueckt, findet seinen Suchtext ausgewaehlt vor und tippt
 //! entweder einen neuen oder bestaetigt den alten. Dieselbe Wahl und derselbe
 //! Grund wie beim Startwert der Pfadeingabe.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTextField`, `NSView`, `NSWindow` und `NSString` stehen seit macOS 10.0
+//! zur Verfuegung, ebenso die Aufzaehlung `NSTextAlignment` und die Zugriffe
+//! `selectText:`, `setNextKeyView:`, `alignment`, `stringValue` und `frame`.
+//!
+//! **Eine einzige Beruehrung ist juenger als 10.0**, und sie liegt unter dem
+//! Zielsystem: `labelWithString:` steht seit 10.12 (`NSTextField.h`). Alles
+//! Weitere, was dieses Blatt braucht — das Aufgehen am Fenster, der
+//! Eingabewaechter, die Schaltflaechen —, geht durch [`super::Blatt`]; die
+//! Untergrenzen dazu nennt der Modulkopf von [`super`] und nicht dieser.
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use objc2::MainThreadOnly;
 use objc2::rc::Retained;

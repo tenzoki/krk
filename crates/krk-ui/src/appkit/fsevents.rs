@@ -81,6 +81,42 @@
 //! blaettert oder ein Menue offen haelt; eine Warteschlange kennt diese
 //! Unterscheidung nicht und wird in beiden Faellen abgearbeitet. Die Ueberlegung
 //! zu den Modi entfaellt damit, statt uebergangen zu werden.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! **Dieses Modul spricht keine Klasse an.** Es ist damit die eine Ausnahme
+//! unter den Modulen dieses Verzeichnisses: die Gewohnheit, jede Untergrenze im
+//! Modulkopf zu nennen, gilt trotzdem, sie zaehlt hier nur C-Funktionen und
+//! CoreFoundation-Typen statt Objective-C-Klassen. Der Grund, aus dem `objc2`
+//! hier nicht hilft, ist derselbe wie ueberall — es fuehrt keine
+//! Verfuegbarkeitsangaben mit sich —, und an einer von Hand geschriebenen
+//! Bindung sieht der Uebersetzer ohnehin keine.
+//!
+//! Die sechs gebundenen Funktionen stehen laut `FSEvents.h` im SDK seit macOS
+//! 10.5: `FSEventStreamCreate`, `FSEventStreamStart`, `FSEventStreamStop`,
+//! `FSEventStreamInvalidate` und `FSEventStreamRelease` tragen
+//! `__OSX_AVAILABLE_STARTING(__MAC_10_5, …)`; allein
+//! `FSEventStreamSetDispatchQueue` steht seit 10.6
+//! (`__OSX_AVAILABLE_STARTING(__MAC_10_6, …)`). Die beiden benannten
+//! Konstanten [`KENNZEICHEN_CF_TYPEN`] und [`SEIT_JETZT`] tragen im Kopf keine
+//! eigene Angabe. Was der Kopf zum abgeloesten
+//! `FSEventStreamScheduleWithRunLoop` vermerkt, steht oben unter
+//! "Warteschlange statt Laufschleife" und wird hier nicht wiederholt.
+//!
+//! Die angesprochenen CoreFoundation-Typen sind `CFArray`, `CFString` und der
+//! Ganzzahltyp `CFIndex`; sie und die dahinterliegenden Aufrufe
+//! (`CFArrayCreate`, `CFArrayGetCount`, `CFArrayGetValueAtIndex`,
+//! `CFStringCreateWithBytes`, `CFStringGetBytes`) tragen in den
+//! CoreFoundation-Koepfen keine Verfuegbarkeitsangabe und stehen damit seit
+//! macOS 10.0. `CFRetained` ist **kein** Systemtyp, sondern der zaehlende
+//! Zeiger der Kiste `objc2-core-foundation`, und stellt keine
+//! Verfuegbarkeitsfrage. Die Hauptwarteschlange kommt ueber
+//! `DispatchQueue::main()` aus `dispatch2`, also ueber das Symbol
+//! `_dispatch_main_q` von libdispatch (seit 10.6).
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); nichts davon ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit.
 
 use std::ffi::c_void;
 use std::path::PathBuf;

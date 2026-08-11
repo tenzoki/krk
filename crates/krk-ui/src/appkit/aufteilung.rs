@@ -53,6 +53,22 @@
 //! vorher hinein und liest ihn dann von dort zurueck. Das ist ein Umweg von
 //! einer Zeile und der Preis dafuer, dass die Frage nur eine Antwort hat:
 //! [`steht_im`].
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSSplitView`, `NSBox`, `NSView`, `NSColor` und `NSObject` stehen seit macOS
+//! 10.0 zur Verfuegung, ebenso das Protokoll `NSSplitViewDelegate` mit den drei
+//! hier bedienten Methoden `splitView:constrainMinCoordinate:ofSubviewAt:`,
+//! `splitView:constrainMaxCoordinate:ofSubviewAt:` und
+//! `splitView:resizeSubviewsWithOldSize:`. Sechs Beruehrungen sind juenger als
+//! ihre Klasse: die Sorte `NSBoxCustom` und die drei Merkmale, die allein sie
+//! zeichnen laesst — `borderWidth`, `borderColor` und `fillColor` — seit 10.5,
+//! und die beiden Semantikfarben `controlAccentColor` und `separatorColor` seit
+//! 10.14. Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen
+//! ist nach macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei
+//! braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt
+//! keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
+//! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;

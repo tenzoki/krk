@@ -51,6 +51,25 @@
 //! wie bei jedem Rueckruf dieses Projekts: der Ring Delegierter → Fenster →
 //! Rueckruf → Delegierter schloesse sich sonst, und das Fenster lebt ueber sein
 //! Schliessen hinaus.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSWindow`, `NSResponder`, `NSView` und `NSObject` stehen seit macOS 10.0
+//! zur Verfuegung, ebenso das Protokoll `NSWindowDelegate` mit
+//! `windowWillClose:` und jede hier gerufene oder ueberschriebene Methode:
+//! `initWithContentRect:styleMask:backing:defer:`, `makeFirstResponder:`,
+//! `becomeKeyWindow`, `resignKeyWindow`, `setReleasedWhenClosed:`, `setTitle:`,
+//! `setContentMinSize:`, `setContentView:`, `setDelegate:` und `center`. Das
+//! Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! Dass die drei Ueberschreibungen selbst seit 10.0 stehen, ist hier die
+//! tragende Angabe und nicht eine unter mehreren: eine Methode, die es auf dem
+//! Zielsystem nicht gaebe, ueberschriebe nichts, und der Ausloesepunkt der
+//! Fokusanzeige bliebe stumm, statt abzustuerzen.
 
 use std::cell::RefCell;
 

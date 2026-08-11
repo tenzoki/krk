@@ -151,6 +151,34 @@
 //! [`Sitzungsschreiber`], also denselben Weg wie beim Beenden; einen
 //! laufenden Sitzungsschreiber gibt es im Messmodus weiterhin nicht, und die
 //! beiden Wachen aus C9 bleiben aus.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSApplication`, `NSWindow`, `NSResponder`, `NSView`, `NSNotification`,
+//! `NSObject`, `NSRunLoop`, `NSString` und `NSTimer` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso die beiden angenommenen Protokolle `NSObjectProtocol`
+//! und `NSApplicationDelegate` samt den vier Rueckrufen, die diese Datei aus
+//! dem zweiten bedient. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen.
+//! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
+//! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Drei Beruehrungen sind juenger als ihre Klasse, und alle drei liegen unter
+//! dem Zielsystem**; keine von ihnen braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `NSApplication::activate` steht seit
+//! macOS 14 (`NSApplication.h:231`) — die aeltere `activateIgnoringOtherApps:`
+//! traegt `API_DEPRECATED(..., macos(10.0, API_TO_BE_DEPRECATED))`, ist also
+//! angekuendigt und nicht abgekuendigt, und wird hier nicht angesprochen;
+//! `setActivationPolicy:` steht seit 10.6 (`NSApplication.h:301`) und
+//! `NSRunLoopCommonModes` seit 10.5 (`NSRunLoop.h:14`). Die Aufzaehlung
+//! `NSApplicationActivationPolicy` traegt selbst keine Angabe; sie steht in
+//! `NSRunningApplication.h` und gehoert zu `setActivationPolicy:`.
+//!
+//! **Nichts in dieser Datei liegt ueber 15.0.** Alles Uebrige — darunter
+//! `attachedSheet`, `makeFirstResponder:`, `firstResponder`, `performClose:`,
+//! `replyToApplicationShouldTerminate:` und
+//! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
+//! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};

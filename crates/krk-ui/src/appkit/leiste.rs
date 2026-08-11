@@ -35,6 +35,40 @@
 //! jede Bewegung der Auswahl navigiert — mit der Maus wie mit der Tastatur,
 //! ueber dieselbe Senke. Zeigt ein Lesezeichen ins Leere, geht statt des
 //! Ordners der Grund an den Aufrufer.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSTextField`,
+//! `NSImageView`, `NSImage`, `NSFont`, `NSColor`, `NSIndexSet`,
+//! `NSNotification` und `NSString` stehen seit macOS 10.0 zur Verfuegung,
+//! ebenso die drei bedienten Protokolle `NSTableViewDataSource`,
+//! `NSTableViewDelegate` und `NSControlTextEditingDelegate`. Das Buendel zielt
+//! auf 15.0 (`.cargo/config.toml`).
+//!
+//! **Etliche Beruehrungen sind juenger als ihre Klasse, und alle liegen unter
+//! dem Zielsystem:**
+//!
+//! - `tableView:isGroupRow:` seit 10.5 (`NSTableView.h:685`)
+//! - `tableView:viewForTableColumn:row:` seit 10.7 (`NSTableView.h:593`)
+//! - `secondaryLabelColor` und `tertiaryLabelColor` seit 10.10
+//!   (`NSColor.h:202` und `:203`)
+//! - `NSFontWeightRegular` und `monospacedDigitSystemFontOfSize:weight:` seit
+//!   10.11 (`NSFontDescriptor.h:170`, `NSFont.h:62`). Dieselben beiden Stellen
+//!   nennt die SAFETY-Begruendung an der Lesestelle des Fremdsymbols; sie
+//!   bleibt dort, weil sie den `unsafe`-Block traegt.
+//! - `NSTextField::labelWithString:` und `NSImageView::imageViewWithImage:`
+//!   seit 10.12 (`NSTextField.h:93`, `NSImageView.h:40`)
+//! - `setUsesAutomaticRowHeights:` seit 10.13 (`NSTableView.h:574`)
+//! - `setContentTintColor:` seit 10.14 (`NSImageView.h:58`)
+//! - `NSTableViewStyle` samt `setStyle:` und
+//!   `imageWithSystemSymbolName:accessibilityDescription:` seit 11.0
+//!   (`NSTableView.h:77` und `:377`, `NSImage.h:82`) — die hoechste
+//!   Untergrenze dieser Datei
+//!
+//! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
+//! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
+//! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
+//! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::cell::RefCell;
 

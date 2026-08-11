@@ -39,6 +39,24 @@
 //! den Hauptfaden waere der zweite asynchrone Weg neben dem Vermittlerfaden aus
 //! Schritt 16, und der traegt dort einen laufenden Vorgang und nicht eine
 //! einzelne Meldung.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSWorkspace`, `NSArray`, `NSString` und `NSURL` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso `sharedWorkspace` und `fileURLWithPath:`.
+//! **`NSWorkspaceOpenConfiguration` ist die juengste Klasse dieser Datei und
+//! steht seit macOS 10.15** (`NSWorkspace.h`, `API_AVAILABLE(macos(10.15))`
+//! ueber dem `@interface`); ihre Bauform `configuration` traegt keine eigene
+//! Angabe und steht damit ebenfalls ab 10.15. Zwei Methoden sind juenger als
+//! `NSWorkspace`: `URLForApplicationWithBundleIdentifier:` seit 10.6 und
+//! `openURLs:withApplicationAtURL:configuration:completionHandler:` seit 10.15
+//! — letztere ist genau der Weg, der die im Abschnitt "Warum `NSWorkspace` und
+//! nicht `open -a`" genannten, mit `#[deprecated]` verworfenen Namensformen
+//! ersetzt. Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen
+//! ist nach macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht
+//! deshalb eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::path::Path;
 

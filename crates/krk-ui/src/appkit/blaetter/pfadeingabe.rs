@@ -8,6 +8,22 @@
 //! Der Startwert ist der Ordner, den das Dateifenster gerade zeigt. Der Finder
 //! macht es bei "Gehe zum Ordner" ebenso, und es spart dem Nutzer den
 //! haeufigsten Fall, einen Nachbarordner zu erreichen.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTextField` (ueber `NSControl`, `NSView` und `NSResponder`), `NSWindow`
+//! und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso `alloc`,
+//! `initWithFrame:`, `setStringValue:`, `stringValue` und das hier eigens
+//! aufgerufene `selectText:` — es steht ohne Verfuegbarkeitsangabe in
+//! `NSTextField.h` und damit seit 10.0. `NSPoint`, `NSRect` und `NSSize` sind
+//! blosse Strukturen und tragen keine Angabe; `MainThreadMarker` gehoert
+//! `objc2` und nicht AppKit. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme. Was `NSAlert` betrifft,
+//! steht im Kopf von [`Blatt`].
 
 use objc2::MainThreadOnly;
 use objc2::rc::Retained;

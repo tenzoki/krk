@@ -20,6 +20,24 @@
 //! es das, gaebe der Ereignisabgriff jede Taste an AppKit weiter, und die
 //! Schaltflaechen waeren ohne Maus nicht mehr erreichbar. Wer den Namen aendern
 //! will, tabuliert hinein.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTextField` (ueber `NSControl`, `NSView` und `NSResponder`), `NSWindow`
+//! und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso `alloc`,
+//! `initWithFrame:`, `setStringValue:` und `stringValue`. `NSPoint`, `NSRect`
+//! und `NSSize` sind blosse Strukturen und tragen keine Verfuegbarkeitsangabe;
+//! `MainThreadMarker` gehoert `objc2` und nicht AppKit. Das Buendel zielt auf
+//! 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS 15
+//! hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! Was `NSAlert` selbst betrifft — die Schaltflaechen, ihre
+//! Tastenentsprechungen und das Kaestchen —, steht im Kopf von [`Blatt`]:
+//! diese Datei spricht es nicht an, sondern reicht Texte und die Beigabe
+//! hinein.
 
 use std::path::Path;
 

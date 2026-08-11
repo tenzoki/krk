@@ -40,6 +40,21 @@
 //! AppKit stellt den Tastendruck der hervorgehobenen Schaltflaeche weiterhin
 //! selbst zu, und die Eingabetaste bestaetigt. Ein Hinweis, den nur die Maus
 //! wegklicken kann, waere sonst die zweite Haelfte desselben Defekts.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSAlert`, `NSApplication` und `NSString` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso `sharedApplication`, `setMessageText:`,
+//! `setInformativeText:`, `setAlertStyle:`, `addButtonWithTitle:`, `runModal`
+//! und die gesetzte Konstante `NSAlertStyleCritical`. Eine Methode ist juenger
+//! als ihre Klasse: **`NSApplication.activate` steht seit macOS 14**
+//! (`NSApplication.h`, `API_AVAILABLE(macos(14.0))`); es ist die Beruehrung, die
+//! den Hinweis nach vorn holt, und die einzige dieser Datei ueber 10.0. Das
+//! Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS
+//! 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use objc2_app_kit::{NSAlert, NSAlertStyle, NSApplication};
 use objc2_foundation::{MainThreadMarker, NSString, ns_string};

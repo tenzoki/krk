@@ -38,6 +38,42 @@
 //! blaettern die Pfeiltasten, sobald sie den Fokus hat. Die Eingabetaste
 //! benennt um, die Escape-Taste bricht ab, und beide wirken auch aus einem
 //! Eingabefeld heraus: dafuer sorgt der Eingabewaechter der Huelle.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTableView`, `NSTableColumn`, `NSScrollView`, `NSTextField`, `NSColor`,
+//! `NSView`, `NSWindow`, `NSObject` und `NSString` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso die Aufzaehlungen `NSAutoresizingMaskOptions`,
+//! `NSBorderType` und `NSTextAlignment` und die Zugriffe `rowHeight`,
+//! `usesAlternatingRowBackgroundColors`, `addTableColumn:`, `reloadData`,
+//! `dataSource`, `delegate`, `documentView`, `borderType`,
+//! `hasVerticalScroller`, `autohidesScrollers`, `autoresizingMask` und
+//! `setNextKeyView:`.
+//!
+//! **Acht Beruehrungen sind juenger als 10.0**, und alle acht liegen unter dem
+//! Zielsystem:
+//!
+//! - `NSUserInterfaceItemIdentification` und damit `setIdentifier:` an der
+//!   Zellenansicht sowie `NSTableColumn.identifier` seit 10.7
+//!   (`NSUserInterfaceItemIdentification.h` sagt es im Kommentar statt im
+//!   Makro);
+//! - `makeViewWithIdentifier:owner:` seit 10.7 (`NSTableView.h`);
+//! - `tableView:viewForTableColumn:row:` seit 10.7 (`NSTableView.h`) — die eine
+//!   Methode von `NSTableViewDelegate`, die diese Datei beantwortet; das
+//!   Protokoll selbst und `NSTableViewDataSource` tragen keine Angabe;
+//! - `labelColor` und `systemRedColor` seit 10.10 (`NSColor.h`);
+//! - `maximumNumberOfLines` seit 10.11 (`NSTextField.h`);
+//! - `labelWithString:` seit 10.12 (`NSTextField.h`);
+//! - `usesAutomaticRowHeights` seit 10.13 (`NSTableView.h`);
+//! - `NSTableView.style` seit **11.0** (`NSTableView.h:377`) — die juengste
+//!   Beruehrung dieser Datei. Die Aufzaehlung `NSTableViewStyle` daneben traegt
+//!   dieselbe Angabe an ihrer schliessenden Klammer (`NSTableView.h:96`).
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::cell::RefCell;
 

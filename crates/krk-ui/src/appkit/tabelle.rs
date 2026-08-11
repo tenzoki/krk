@@ -58,6 +58,54 @@
 //! liesse: `reloadData` ruft die Datenquelle, und die will dasselbe Modell
 //! lesen. Jede Ausleihe unten steht deshalb in einer eigenen Anweisung, und
 //! keine ueberlebt eine Zeile mit einem Objective-C-Aufruf.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! Aus AppKit spricht diese Datei `NSTableView`, `NSTableColumn`,
+//! `NSScrollView`, `NSClipView` (ueber `contentView`), `NSTextField`, `NSView`
+//! und `NSControl` (die Herkunft von `setTarget:` und `setAction:`) an, dazu
+//! `NSColor` und `NSFont`; aus Foundation `NSObject`, `NSString`, `NSDate`,
+//! `NSDateFormatter`, `NSIndexSet`, `NSNotification`, `NSRunLoop`, `NSTimer`
+//! und `NSByteCountFormatter`. **Alle stehen seit macOS 10.0 zur Verfuegung**,
+//! `NSByteCountFormatter` als einzige Ausnahme seit 10.8
+//! (`NSByteCountFormatter.h:38`). Dasselbe gilt fuer die vier angenommenen
+//! Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
+//! `NSTableViewDelegate` und `NSControlTextEditingDelegate`
+//! (`NSTableView.h:580` und `:737`, `NSControl.h:97`). `NSWindow` kommt allein
+//! aus `NSView::window` heraus und geht unangetastet an [`super::blaetter`];
+//! dieses Modul ruft nichts daran auf. Die reinen Werttypen `NSPoint`,
+//! `NSRect`, `NSSize`, `NSInteger` und `NSTimeInterval` stellen die Frage
+//! nicht. Das Buendel zielt auf 15.0 (`.cargo/config.toml`).
+//!
+//! **Einzelne Beruehrungen sind juenger als ihre Klasse, und keine von ihnen
+//! liegt ueber dem Zielsystem**; eine Verfuegbarkeitspruefung zur Laufzeit
+//! braucht deshalb keine:
+//!
+//! - 10.5: die Modenkonstante `NSRunLoopCommonModes` (`NSRunLoop.h:14`).
+//! - 10.6: `reloadDataForRowIndexes:columnIndexes:` (`NSTableView.h:266`).
+//! - 10.7: `rowForView:` und `makeViewWithIdentifier:owner:`
+//!   (`NSTableView.h:477` und `:482`), die Delegiertenmethode
+//!   `tableView:viewForTableColumn:row:` (`:593`) und das Protokoll
+//!   `NSUserInterfaceItemIdentification`
+//!   (`NSUserInterfaceItemIdentification.h:17`), aus dem die Kennung der
+//!   Spalte gelesen und die der Zelle gesetzt wird.
+//! - 10.10: `labelColor` und `systemOrangeColor` (`NSColor.h:201` und `:253`).
+//! - 10.11: `monospacedDigitSystemFontOfSize:weight:` samt
+//!   `NSFontWeightRegular` und `NSFontWeightBold` — die drei Stellen im Kopf
+//!   des Systems nennt der Block bei der Schriftwahl weiter unten — sowie
+//!   `maximumNumberOfLines` (`NSTextField.h:49`).
+//! - 10.12: `labelWithString:` (`NSTextField.h:93`).
+//! - 10.13: `usesAutomaticRowHeights` (`NSTableView.h:574`).
+//! - 11.0: `style` und die Aufzaehlung `NSTableViewStyle`
+//!   (`NSTableView.h:377` und `:77-96`). **Die juengste Beruehrung dieser
+//!   Datei**, und damit vier Hauptfassungen unter der Untergrenze.
+//!
+//! Alle uebrigen Setzer und Abfragen der genannten Klassen tragen im Kopf des
+//! Systems keine Angabe und stehen damit seit 10.0; der Block beim Doppelklick
+//! weiter unten fuehrt das fuer `setTarget:`, `setDoubleAction:` und
+//! `clickedRow` einzeln aus. `objc2` fuehrt keine Verfuegbarkeitsangaben mit
+//! sich, und der Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist
+//! die Gegenmassnahme.
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};

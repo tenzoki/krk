@@ -26,6 +26,29 @@
 //! Bildgrenze, an der die Aenderung im Modell steht — die erreichbare Naeherung
 //! an L1s Formulierung "bis die Auswahl sichtbar umspringt", und der Bericht
 //! schreibt sie als solche aus.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! **Dieses Modul haelt die juengste Klasse des Verzeichnisses.**
+//! `CADisplayLink` fuehrt QuartzCore auf dem Mac erst ab macOS 14
+//! (`CADisplayLink.h`, `API_AVAILABLE(macos(14.0))` ueber dem `@interface`); auf
+//! iOS steht sie seit 3.1, und diese Zahl gilt hier ausdruecklich nicht. Ihre
+//! beiden angesprochenen Methoden `addToRunLoop:forMode:` und `invalidate`
+//! tragen keine eigene Angabe und stehen damit ebenfalls ab 14.
+//!
+//! `NSView`, `NSWindow`, `NSScreen`, `NSRunLoop` und `NSObject` stehen seit
+//! macOS 10.0 zur Verfuegung, ebenso `NSWindow.screen` und
+//! `NSRunLoop.currentRunLoop`. Drei Beruehrungen sind juenger:
+//! `NSView.displayLinkWithTarget:selector:` seit macOS 14 (die ganze Kategorie
+//! `NSView (NSDisplayLink)` traegt die Angabe),
+//! `NSScreen.maximumFramesPerSecond` seit 12.0 und das Fremdsymbol
+//! `NSRunLoopCommonModes` seit 10.5.
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::time::Instant;
 

@@ -36,6 +36,26 @@
 //! neben den Datentraegern das Benutzerverzeichnis, und das ist kein
 //! Datentraeger und kommt aus `krk_core::ablage::pfade`. Zusammengesetzt wird
 //! beides in [`crate::leistenmodell`], das auch die Reihenfolge fuehrt.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSWorkspace`, `NSNotificationCenter`, `NSNotification`, `NSFileManager`,
+//! `NSArray`, `NSDictionary`, `NSString` und `NSURL` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso die drei beobachteten Meldungsnamen
+//! (`NSWorkspaceDidMountNotification`, `NSWorkspaceWillUnmountNotification`,
+//! `NSWorkspaceDidUnmountNotification`) und die Beruehrungen `sharedWorkspace`,
+//! `notificationCenter`, `addObserver:selector:name:object:`, `removeObserver:`,
+//! `userInfo`, `objectForKey:` und `NSURL.path`. Sechs Beruehrungen sind
+//! juenger: `NSWorkspaceVolumeURLKey`, `NSWorkspaceVolumeLocalizedNameKey`,
+//! `mountedVolumeURLsIncludingResourceValuesForKeys:options:`,
+//! `resourceValuesForKeys:error:` und die Aufzaehlung
+//! `NSVolumeEnumerationOptions` stehen seit 10.6,
+//! `NSURLVolumeLocalizedNameKey` seit 10.7. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine Verfuegbarkeitspruefung
+//! zur Laufzeit. `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der
+//! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
+//! Gegenmassnahme.
 
 use std::path::PathBuf;
 

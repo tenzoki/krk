@@ -20,6 +20,20 @@
 //! Naemlichkeitsfrage aus S4 antwortet mit `false`, und die Befehle des Editors
 //! wirken hier nicht. Das siebte Abnahmekriterium von C7 faellt daraus an und
 //! ist nicht eigens gebaut.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTextField` (ueber `NSControl`, `NSView` und `NSResponder`) und
+//! `NSWindow` stehen seit macOS 10.0 zur Verfuegung, ebenso `alloc`,
+//! `initWithFrame:` und `stringValue`. `NSPoint`, `NSRect` und `NSSize` sind
+//! blosse Strukturen und tragen keine Verfuegbarkeitsangabe;
+//! `MainThreadMarker` gehoert `objc2` und nicht AppKit. Das Buendel zielt auf
+//! 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS 15
+//! hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme. Was `NSAlert` betrifft,
+//! steht im Kopf von [`Blatt`].
 
 use objc2::MainThreadOnly;
 use objc2::rc::Retained;

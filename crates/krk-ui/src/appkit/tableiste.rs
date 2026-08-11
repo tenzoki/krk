@@ -13,6 +13,24 @@
 //! muesste Beschriftung, Auswahl, Anfassbarkeit und das Erscheinungsbild von
 //! Hell und Dunkel nachbauen, und keine Zusage dieser Runde verlangt etwas, das
 //! das Steuerelement nicht kann.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSSegmentedControl`, seine Oberklassen `NSControl` und `NSView`, dazu
+//! `NSObject` und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso
+//! `initWithFrame:`, `setSegmentCount:`, `setLabel:forSegment:`,
+//! `setSelectedSegment:`, `selectedSegment`, `setTarget:`, `setAction:` und
+//! `setAutoresizingMask:`; keine der vier gesetzten Aufzaehlungskonstanten
+//! (`NSSegmentStyleAutomatic`, `NSSegmentSwitchTrackingSelectOne`,
+//! `NSSegmentDistributionFill`, `NSControlSizeSmall`) traegt eine eigene Angabe.
+//! Vier **Methoden** sind juenger als ihre Klasse: `setSegmentStyle:` seit 10.5,
+//! `setControlSize:` seit 10.10, `setTrackingMode:` seit 10.10.3 und
+//! `setSegmentDistribution:` seit 10.13. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine Verfuegbarkeitspruefung
+//! zur Laufzeit. `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der
+//! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
+//! Gegenmassnahme.
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;

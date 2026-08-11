@@ -41,6 +41,20 @@
 //! C2 wird bei jedem Schreiben der Zeile aus dem Ordnermodell des sichtbaren
 //! Tabs gerechnet, statt gesetzt und geloescht zu werden; die Begruendung
 //! steht bei `DateifensterQuelle::markierungsstand_text`.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSTextField`, `NSColor`, `NSFont`, `NSView` und `NSString` stehen seit
+//! macOS 10.0 zur Verfuegung, ebenso `systemFontOfSize:`, `smallSystemFontSize`
+//! und die Ausrichtung `NSTextAlignmentLeft`. Fuenf Beruehrungen sind juenger
+//! als ihre Klasse: die drei Semantikfarben `labelColor`, `secondaryLabelColor`
+//! und `systemRedColor` seit 10.10, `maximumNumberOfLines` seit 10.11 und
+//! `labelWithString:` seit 10.12. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 use objc2::rc::Retained;
 use objc2_app_kit::{

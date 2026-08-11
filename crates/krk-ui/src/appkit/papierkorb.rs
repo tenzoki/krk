@@ -25,6 +25,18 @@
 //! Operationsmaschine ruft ihn von ihrem Arbeitsfaden. Der Hauptfaden bleibt
 //! damit auch beim Loeschen frei, was L9 verlangt. Eine Ruecknahme fuehrt KRK
 //! nicht selbst: der Rueckweg ist der Papierkorb des Systems (C4).
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSFileManager`, `NSString`, `NSURL` und `NSError` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso `defaultManager`, `fileURLWithPath:`, `NSURL.path` und
+//! `localizedDescription`. Eine Methode ist juenger als ihre Klasse:
+//! `trashItemAtURL:resultingItemURL:error:` steht seit 10.8
+//! (`NSFileManager.h`). Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine
+//! von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in dieser
+//! Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit. `objc2`
+//! fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
+//! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::io;
 use std::path::{Path, PathBuf};

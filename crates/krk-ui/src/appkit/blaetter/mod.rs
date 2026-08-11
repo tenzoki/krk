@@ -78,6 +78,38 @@
 //! laeuft die Meldung, dass sich ein Text geaendert hat
 //! ([`Blatt::textaenderung_melden`]): daran haengt die Vorschau des
 //! Stapel-Umbenennens, die mit jedem getippten Zeichen neu rechnet.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSAlert`, `NSButton`, `NSControl`, `NSTextField`, `NSTextView`, `NSView`,
+//! `NSWindow`, `NSObject`, `NSString` und `NSNotification` stehen seit macOS
+//! 10.0 zur Verfuegung, ebenso die Protokolle `NSControlTextEditingDelegate`
+//! und `NSTextFieldDelegate` samt der beiden hier beantworteten Methoden
+//! `control:textView:doCommandBySelector:` und `controlTextDidChange:`, dazu
+//! die Aufzaehlungen `NSAlertStyle` und `NSEventModifierFlags` und die
+//! Zugriffe `setInitialFirstResponder:`, `setNextKeyView:` und
+//! `NSTextField.delegate`.
+//!
+//! **Fuenf Beruehrungen sind juenger als 10.0**, und alle fuenf liegen unter
+//! dem Zielsystem: `setAccessoryView:`, `setShowsSuppressionButton:` und
+//! `suppressionButton` seit 10.5 (`NSAlert.h`), und die beiden, ueber die jedes
+//! Blatt dieser Datei aufgeht und wieder zugeht, seit 10.9 —
+//! `beginSheetModalForWindow:completionHandler:` (`NSAlert.h`) und
+//! `endSheet:returnCode:` (`NSWindow.h`). Der Abschlussblock aus `block2` ist
+//! kein eigener Gegenstand der Frage: er ist das Argument der ersten von
+//! beiden, und seine Untergrenze ist deren.
+//!
+//! `NSModalResponse` ist ein `typedef` auf `NSInteger` ohne
+//! Verfuegbarkeitsangabe; `NSAlertFirstButtonReturn`,
+//! `NSAlertSecondButtonReturn` und `NSControlStateValueOff` sind
+//! Uebersetzungszeitkonstanten ohne eigenes Laufzeitsymbol. Keiner der vier
+//! stellt die Frage ueberhaupt.
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 
 pub mod konflikt;
 pub mod loeschbestaetigung;

@@ -168,6 +168,26 @@
 //! stuende, samt Grossschreibung; nachgeschlagen wird die Taste. Ein
 //! gemeinsames Zeichen fuer beides waere fuer eine der beiden Fragen die
 //! falsche Antwort.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSEvent`, `NSApplication`, `NSWindow`, `NSResponder`, `NSText`,
+//! `NSTextField` und `NSTextView` stehen seit macOS 10.0 zur Verfuegung, ebenso
+//! `NSString` und `NSProcessInfo`. Vier Beruehrungen sind juenger als ihre
+//! Klasse: `addLocalMonitorForEventsMatchingMask:handler:`, `removeMonitor:`
+//! und `NSProcessInfo.systemUptime` seit 10.6,
+//! `charactersByApplyingModifiers:` seit 10.15. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Der Rueckfall auf `charactersIgnoringModifiers` in
+//! [`gemeldetes_zeichen`] ist keine Verfuegbarkeitspruefung.** 10.15 liegt
+//! unter der Untergrenze, und `charactersByApplyingModifiers:` antwortet auf
+//! jedem Zielsystem; der Rueckfall gilt den selbst gebauten Ereignissen aus
+//! [`ereignis_senden`], und der Grund dafuer steht dort.
 
 use std::ptr::NonNull;
 

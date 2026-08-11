@@ -58,6 +58,33 @@
 //! weiter, statt die Tabbefehle auszufuehren. Einen Tastenbefehl, der den
 //! Fokus hierher setzt, gibt es in dieser Runde nicht; die offene Frage dazu
 //! liegt im Entscheidungsspeicher.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSView`, `NSScrollView`, `NSTextView`, `NSImageView`, `NSImage`, `NSFont`,
+//! `NSEvent`, `NSTimer`, `NSRunLoop`, `NSDate`, `NSDateFormatter`, `NSData`
+//! und `NSString` stehen seit macOS 10.0 zur Verfuegung; einzig
+//! `NSByteCountFormatter` ist juenger als seine Nachbarn und steht seit 10.8
+//! (`NSByteCountFormatter.h:38`). Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`).
+//!
+//! **Eine einzige Beruehrung traegt daneben eine eigene Angabe**:
+//! `NSRunLoopCommonModes` steht seit 10.5 (`NSRunLoop.h:14`). Alles uebrige —
+//! `setRulersVisible:`, `setImageScaling:`, `initWithData:`,
+//! `userFixedPitchFontOfSize:`, `smallSystemFontSize`, `addTimer:forMode:`,
+//! `dateWithTimeIntervalSince1970:` und der fuenfteilige Zeitgeberaufruf
+//! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im Kopf
+//! des Systems keine Verfuegbarkeitsangabe und steht damit seit 10.0; ebenso
+//! drei der vier angesprochenen Aufzaehlungen — `NSAutoresizingMaskOptions`,
+//! `NSDateFormatterStyle` und `NSByteCountFormatterCountStyle` —, deren Werte
+//! ebenfalls keine eigene Angabe tragen. Die vierte, `NSImageScaling`, traegt
+//! an ihrer schliessenden Klammer `API_AVAILABLE(macos(10.5))`
+//! (`NSCell.h`); ihre Werte tragen keine.
+//!
+//! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
+//! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
+//! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
+//! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::cell::RefCell;
 use std::path::Path;
