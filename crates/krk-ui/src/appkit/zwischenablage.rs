@@ -50,8 +50,12 @@
 //! keinem Fall.** Die Zusage ist gebrochen und durch die Lage ersetzt, die C1
 //! und C2 jener Runde bestellt haben: [`text_schreiben`] legt den Pfad des
 //! angezeigten Ordners (`opt+cmd+c`) und die Pfade der betroffenen Eintraege
-//! (`shift+cmd+c`) ab. Cmd+C und Cmd+V bleiben ab Werk unbelegt, wie es C3 der
-//! Runde 1 zugesagt hat; die beiden Kopierer liegen daneben.
+//! (`shift+cmd+c`) ab. **Cmd+C und Cmd+V tragen keinen der beiden.** Sie
+//! tragen seit dem 260805 die Textbefehle des Menues „Bearbeiten" und sonst
+//! nichts, und genau das haelt sie fuer eine Dateizwischenablage einer
+//! spaeteren Runde frei; der Kopf von `resources/default-keymap.toml` schreibt
+//! den Wechsel aus, und die Reservierung aus C3 der Runde 1 ist damit
+//! eingeloest und nicht gebrochen.
 //!
 //! **Geschrieben wird eine einzige Sorte, `NSPasteboardTypeString`.** Kein
 //! Dateiverweis und kein `writeObjects:` — die Nutzerantwort vom 260811-1610

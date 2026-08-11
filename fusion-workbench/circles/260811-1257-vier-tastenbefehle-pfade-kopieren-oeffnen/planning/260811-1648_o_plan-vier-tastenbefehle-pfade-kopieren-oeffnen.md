@@ -246,7 +246,7 @@ Die Prüfkommandos lauten `make check`, ersatzweise `make build`, `make test`, `
 
 Eine Datei, die ein Schritt **lesend** nennt, wird nicht geändert; eine mit dem Vermerk **nicht anfassen** trägt eine Zusage, die der Schritt einhält.
 
-### 1. Drei Funktionen in der Belegung, an vier Stellen nachgetragen
+### 1. [DONE] Drei Funktionen in der Belegung, an vier Stellen nachgetragen
 
 - Ausführender: `coder`
 - Dateien:
@@ -264,7 +264,7 @@ Eine Datei, die ein Schritt **lesend** nennt, wird nicht geändert; eine mit dem
 - Abhängigkeiten: keine
 - Abnahmekriterium: `make check` ist grün. `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` läuft durch, was belegt, dass Kopf und Datei 74 Funktionen und 82 Kombinationen führen. `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` läuft durch, was die Brücke zwischen den drei neuen Varianten und den drei neuen Einträgen belegt. `make tasten` meldet für `return`, `shift+cmd+c` und `opt+cmd+c` keinen Konflikt. Die Belegungsansicht führt die drei unter "Dateioperationen"; `grep -c '_ =>'` über die beiden geänderten Fallunterscheidungen liefert 0.
 
-### 2. Die beiden Pfadkopierer und die Schreibseite der Zwischenablage
+### 2. [DONE] Die beiden Pfadkopierer und die Schreibseite der Zwischenablage
 
 - Ausführender: `coder`
 - Dateien:
@@ -281,7 +281,7 @@ Eine Datei, die ein Schritt **lesend** nennt, wird nicht geändert; eine mit dem
 - Abhängigkeiten: S1
 - Abnahmekriterium: `make check` ist grün. Die neuen Proben in `operationen.rs` halten die sechs Fälle aus b) fest. `grep -n "setString\|writeObjects\|clearContents" crates/krk-ui/src/appkit/zwischenablage.rs` findet `setString` und `clearContents` und **nicht** `writeObjects`. `grep -rn "gekuerzt_fuer_anzeige" crates/krk-ui/src/appkit/tabelle.rs crates/krk-ui/src/kommandos/operationen.rs` liefert nichts. Der Modulkopf von `zwischenablage.rs` enthält den Satz über das Schreiben nicht mehr. Was am gebauten Bündel zu sehen ist, steht unten unter `## Was am gebauten Bündel zu prüfen ist`.
 
-### 3. Öffnen mit dem Standardprogramm auf der Eingabetaste
+### 3. [DONE] Öffnen mit dem Standardprogramm auf der Eingabetaste
 
 - Ausführender: `coder`
 - Dateien:
@@ -304,7 +304,7 @@ Eine Datei, die ein Schritt **lesend** nennt, wird nicht geändert; eine mit dem
 - Abhängigkeiten: S1 und S2. S1 legt die drei Kommandos an, ohne die dieser Schritt keinen Zweig hat. S2 legt `nichts_betroffen` an, und `mit_standardprogramm_oeffnen` ruft es bei leerer Menge; im Baum gibt es die Funktion heute nicht. Eine Reihenfolge, die S3 vor S2 zieht, endet deshalb mit einem roten `make check` und verletzt die Zusage über den Schritten.
 - Abnahmekriterium: `make check` ist grün. `grep -rn "NSWorkspace" crates/krk-ui/src` findet vier Stellen: `volumes.rs`, `terminal.rs`, `zwischenablage.rs` und das neue Modul. Die Proben zu `oeffnungsmeldung` halten die vier Fälle fest. Weder `blaetter/mod.rs` noch der Kopf von `default-keymap.toml` behauptet noch, die Eingabetaste sei unbelegt. `waehrend_blatt_erlaubt` ist unverändert eine Zeile. Was am gebauten Bündel zu prüfen ist, steht unten.
 
-### 4. Der Doppelklick auf eine Zeile des Dateifensters
+### 4. [DONE] Der Doppelklick auf eine Zeile des Dateifensters
 
 - Ausführender: `coder`
 - Dateien:
@@ -321,7 +321,7 @@ Eine Datei, die ein Schritt **lesend** nennt, wird nicht geändert; eine mit dem
 - Abhängigkeiten: S3, weil `mit_standardprogramm_oeffnen` dort entsteht
 - Abnahmekriterium: `make check` ist grün. `grep -n "setDoubleAction\|clickedRow" crates/krk-ui/src/appkit/tabelle.rs` findet je eine Stelle, `grep -rn "setDoubleAction" crates/krk-ui/src/appkit/leiste.rs crates/krk-ui/src/appkit/vorschau.rs` findet keine. `resources/default-keymap.toml` führt unverändert 74 Funktionen, die Aufzählung `Kommando` unverändert 68 Varianten. Der Rumpf des Einstiegs steht genau einmal im Baum, und `NSWorkspace::openURL` wird von genau einer Methode dieser Datei gerufen. Was am gebauten Bündel zu prüfen ist, steht unten.
 
-### 5. Cmd+W schließt den aktiven Tab aus jedem Fokus
+### 5. [DONE] Cmd+W schließt den aktiven Tab aus jedem Fokus
 
 - Ausführender: `coder`
 - Dateien:

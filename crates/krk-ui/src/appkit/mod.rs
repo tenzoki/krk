@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Zweiundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Dreiundzwanzig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
 //! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
@@ -19,7 +19,7 @@
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
-//!           ──> hinweis
+//!           ──> hinweis                                 standardprogramm
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!           │             ──> nummernspalte
 //!           ──> editor   ──> crate::editormodell
@@ -67,11 +67,19 @@
 //! kein Blatt, keine Antwort, sondern die letzte Ausgabe vor dem Beenden, wenn
 //! sich der Tastenabgriff nicht einrichten laesst. Die Abgrenzung zu den
 //! Blaettern steht in seinem Modulkopf.
-//! [`zwischenablage`] haelt die beiden Beruehrungen aus C10, das Lesen von
-//! `NSPasteboard` und die Uebergabe einer Web-Adresse an den Systembrowser.
+//! [`zwischenablage`] haelt die Beruehrungen, die seine eine Frage braucht:
+//! das Lesen von `NSPasteboard` und die Uebergabe einer Web-Adresse an den
+//! Systembrowser aus C10, das Lesen des Inhalts fuer die Vorschau und seit der
+//! Runde 4 die Gegenrichtung, mit der die beiden Pfadkopierer aus C1 und C2
+//! ihren Text ablegen.
 //! [`terminal`] haelt die eine aus C11: die Aufloesung der eingestellten
 //! Buendelkennung und die Uebergabe des angezeigten Ordners an die so gefundene
 //! Anwendung, beides ueber `NSWorkspace`.
+//! [`standardprogramm`] haelt die eine aus C3 der Runde 4: die Uebergabe eines
+//! Eintrags an das Programm, das das System fuer ihn fuehrt, ueber
+//! `NSWorkspace::openURL:`. Ein eigenes Modul neben den beiden davor, weil
+//! keines von ihnen diese Frage stellt; die Abgrenzung steht in seinem
+//! Modulkopf.
 //! [`belegungsansicht`] haelt die Belegungsansicht aus C3 als Blatt am
 //! Fenster: die Tabelle der Funktionen, die Schaltflaechen und die
 //! Meldungszeile, waehrend die Arbeitskopie der Belegung in

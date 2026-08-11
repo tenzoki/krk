@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:**
 `crates/krk-ui/src/appkit/zwischenablage.rs` (Modulkopf, `lesen`),

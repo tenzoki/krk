@@ -685,22 +685,22 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/mod.rs": {
-      "totalChanges": 38,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T07:21:10.084Z",
-      "thrashingScore": 12
+      "totalChanges": 42,
+      "changesThisSession": 4,
+      "lastChange": "2026-08-11T17:24:33.292Z",
+      "thrashingScore": 18
     },
     "crates/krk-ui/src/appkit/menue.rs": {
-      "totalChanges": 35,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T07:41:24.214Z",
-      "thrashingScore": 19
+      "totalChanges": 38,
+      "changesThisSession": 3,
+      "lastChange": "2026-08-11T16:24:20.268Z",
+      "thrashingScore": 14
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "totalChanges": 136,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T10:11:29.599Z",
-      "thrashingScore": 45
+      "totalChanges": 150,
+      "changesThisSession": 14,
+      "lastChange": "2026-08-11T17:29:13.129Z",
+      "thrashingScore": 74
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
       "totalChanges": 8,
@@ -709,10 +709,10 @@
       "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 443,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T10:10:34.377Z",
-      "thrashingScore": 147
+      "totalChanges": 445,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-11T16:23:34.209Z",
+      "thrashingScore": 148
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -1003,9 +1003,9 @@
       "thrashingScore": 0
     },
     "resources/default-keymap.toml": {
-      "totalChanges": 53,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T10:53:29.340Z",
+      "totalChanges": 58,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-11T16:46:30.162Z",
       "thrashingScore": 19
     },
     "crates/krk-core/src/ablage/sitzung.rs": {
@@ -1111,16 +1111,16 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/tasten/belegung.rs": {
-      "totalChanges": 80,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T07:13:36.380Z",
-      "thrashingScore": 26
+      "totalChanges": 90,
+      "changesThisSession": 5,
+      "lastChange": "2026-08-11T16:23:08.776Z",
+      "thrashingScore": 36
     },
     "crates/krk-core/tests/belegung.rs": {
-      "totalChanges": 40,
+      "totalChanges": 46,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T07:14:17.168Z",
-      "thrashingScore": 13
+      "lastChange": "2026-08-11T15:33:47.388Z",
+      "thrashingScore": 23
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_o_der-include-str-pfad-in-schritt-11-liegt-eine-ebene-zu-hoch.md": {
       "totalChanges": 1,
@@ -1375,9 +1375,9 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/mod.rs": {
-      "totalChanges": 6,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-05T16:25:08.379Z",
+      "totalChanges": 7,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:25:14.595Z",
       "thrashingScore": 2
     },
     "crates/krk-ui/src/kommandos/navigation.rs": {
@@ -1399,10 +1399,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/mod.rs": {
-      "totalChanges": 31,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T23:11:35.485Z",
-      "thrashingScore": 18
+      "totalChanges": 33,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-11T16:46:20.199Z",
+      "thrashingScore": 11
     },
     "crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs": {
       "totalChanges": 4,
@@ -1411,10 +1411,10 @@
       "thrashingScore": 5
     },
     "crates/krk-ui/src/appkit/zwischenablage.rs": {
-      "totalChanges": 7,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-06T11:44:34.965Z",
-      "thrashingScore": 2
+      "totalChanges": 11,
+      "changesThisSession": 4,
+      "lastChange": "2026-08-11T17:22:50.432Z",
+      "thrashingScore": 7
     },
     "crates/krk-ui/src/sonde.rs": {
       "totalChanges": 9,
@@ -1573,10 +1573,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/operationen.rs": {
-      "totalChanges": 36,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-10T16:45:26.050Z",
-      "thrashingScore": 14
+      "totalChanges": 51,
+      "changesThisSession": 15,
+      "lastChange": "2026-08-11T17:31:43.389Z",
+      "thrashingScore": 43
     },
     "crates/krk-ui/src/appkit/blaetter/fortschritt.rs": {
       "totalChanges": 5,
@@ -2029,10 +2029,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/fokus.rs": {
-      "totalChanges": 30,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T19:30:46.564Z",
-      "thrashingScore": 16
+      "totalChanges": 36,
+      "changesThisSession": 6,
+      "lastChange": "2026-08-11T16:26:43.211Z",
+      "thrashingScore": 20
     },
     "crates/krk-ui/src/leistenmodell.rs": {
       "totalChanges": 32,
@@ -2149,10 +2149,10 @@
       "thrashingScore": 30
     },
     "crates/krk-ui/src/appkit/vorschau.rs": {
-      "totalChanges": 9,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-09T19:30:15.610Z",
-      "thrashingScore": 7
+      "totalChanges": 11,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-11T16:38:15.164Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_o_tastenweg-des-fokus-in-das-vorschaufenster.md": {
       "totalChanges": 5,
@@ -2167,10 +2167,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "totalChanges": 33,
+      "totalChanges": 35,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T07:35:56.049Z",
-      "thrashingScore": 13
+      "lastChange": "2026-08-11T15:31:25.368Z",
+      "thrashingScore": 11
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
       "totalChanges": 13,
@@ -4687,10 +4687,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsausgabe.rs": {
-      "totalChanges": 22,
+      "totalChanges": 27,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T09:56:23.633Z",
-      "thrashingScore": 33
+      "lastChange": "2026-08-11T15:31:47.358Z",
+      "thrashingScore": 15
     },
     "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md": {
       "totalChanges": 1,
@@ -4910,7 +4910,7 @@
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
       "totalChanges": 15,
-      "changesThisSession": 13,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:16:34.732Z",
       "thrashingScore": 27
     },
@@ -4922,77 +4922,125 @@
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1604-conceptrev-spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:05:37.576Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1612_a_oeffnet-return-alle-betroffenen-eintraege-oder-nur-den-unter-der-auswahl.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:09:43.475Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1614-shaper-spec-nachzug-diagramm.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:15:17.659Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1648_o_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
       "totalChanges": 8,
-      "changesThisSession": 8,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T15:24:52.390Z",
       "thrashingScore": 14
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1648_o_fragt-krk-nach-bevor-return-viele-eintraege-oeffnet.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:56:17.582Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1648_o_fuenf-entscheidungsdatensaetze-tragen-im-rumpf-noch-den-stand-offen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:56:28.750Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260811-1648_o_die-untergrenzen-angabe-im-modulkopf-steht-in-sieben-von-32-appkit-modulen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:56:49.132Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1648-planner-plan-vier-tastenbefehle.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T14:57:29.569Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1704-conceptrev-plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T15:07:49.715Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1721-planner-nacharbeit-zwei-auflagen.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T15:22:05.989Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260811-1730_o_ziffern-in-dateiliste-und-leiste-laufen-auseinander-und-das-datum-traegt-ein-komma.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T15:24:04.115Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260811-1732_o_die-leiste-soll-auch-die-spalten-groesse-datum-und-typ-wegschalten.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T15:24:33.124Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/standardprogramm.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 2,
+      "lastChange": "2026-08-11T16:49:04.569Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-neu-gefasste-modulkopf-der-zwischenablage-sagt-cmd-c-und-cmd-v-seien-ab-werk-unbelegt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:17:14.819Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_drei-modulkoepfe-zaehlen-auf-was-sie-tragen-und-fuehren-die-drei-neuen-befehle-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:17:33.806Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-doppelklick-raeumt-die-befehlsantwort-nur-an-seiner-eigenen-fensterseite-weg.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:17:54.112Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-wachposten-gegen-geoeffnet-faengt-ein-grossgeschriebenes-oeffn-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:18:09.012Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_die-abweisungsmeldung-der-zwischenablage-nennt-den-pfad-im-singular-und-steht-auch-bei-mehreren.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:18:26.308Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-satz-fuer-die-leere-menge-sagt-nicht-dass-nichts-zu-kopieren-war.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:18:41.390Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1916-coderev-vier-tastenbefehle-turn-1.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T17:20:40.476Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-11T14:05:37.576Z",
+  "sessionStart": "2026-08-11T16:22:25.044Z",
   "keyAnchor": "workbench-root"
 }

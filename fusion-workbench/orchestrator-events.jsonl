@@ -471,3 +471,6 @@
 {"ts":"2026-08-11T14:17:00","event":"conceptrev_done","detail":"acceptable; 16 nodes, 23 edges after fix, no cycles, no orphans"}
 {"ts":"2026-08-11T15:25:12","event":"planner_done","detail":"plan 260811-1648 approved with one condition, incorporated; 5 steps, S2->S3 edge added"}
 {"ts":"2026-08-11T15:25:12","event":"conceptrev_done","detail":"acceptable; missing S2->S3 dependency was a real defect, not a drawing one"}
+{"ts":"2026-08-11T15:26:46","event":"turn_start","turn":1,"detail":"5 plan steps; S1 and S5 share belegung.rs and default-keymap.toml, so they run sequentially, not in parallel"}
+{"ts":"2026-08-11T17:35:39","event":"review_done","turn":1,"agent":"coderev","detail":"6 findings, all at the text-next-to-code edge; the reviewer independently re-measured all four coder measurements and they held"}
+{"ts":"2026-08-11T17:35:39","event":"turn_end","turn":1,"detail":"all 5 plan steps DONE, 7 defects closed, 62 acceptance criteria unmet because the acceptance run is user work"}

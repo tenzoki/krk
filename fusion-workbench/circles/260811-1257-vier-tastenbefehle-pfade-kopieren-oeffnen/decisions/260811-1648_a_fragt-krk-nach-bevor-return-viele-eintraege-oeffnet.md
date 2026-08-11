@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** planner
 **Cross-references:**
 `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1612_a_oeffnet-return-alle-betroffenen-eintraege-oder-nur-den-unter-der-auswahl.md` (Abschnitt "Was mit dieser Antwort nicht entschieden ist"),

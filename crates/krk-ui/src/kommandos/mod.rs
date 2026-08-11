@@ -12,8 +12,9 @@
 //! navigation   Auswahl bewegen: Zeile, Bildschirmseite, Anfang, Ende (C2)
 //! auswahl      Mehrfachauswahl: markieren und weiterruecken (C2)
 //! pfadeingabe  Einen Pfad pruefen und sagen, wohin KRK geht (C2 und C10)
-//! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4)
-//!              und die Antworten des Terminal-Befehls (C11)
+//! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4),
+//!              die Antworten des Terminal-Befehls (C11) und die Texte der
+//!              beiden Pfadkopierer und des Oeffners (C1 bis C3 der Runde 4)
 //! ```
 //!
 //! **`fokus` steht vor den vier anderen, und das ist die Reihenfolge des

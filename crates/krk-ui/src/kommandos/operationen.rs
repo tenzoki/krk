@@ -1,11 +1,16 @@
 //! Der Ablauf der Dateioperationen aus C4, ohne AppKit.
 //!
-//! **Seit Schritt 18c stehen auch die beiden Antworten des Terminal-Befehls
-//! aus C11 hier**, am Fuss der Datei. Sie sind keine Dateioperation, teilen
-//! aber deren Zuschnitt vollstaendig: ein Befehl, der auf den sichtbaren Tab
-//! des aktiven Dateifensters wirkt und seine Antwort als Befehlsantwort in die
-//! Statuszeile schreibt. Ein eigenes Modul fuer zwei Saetze waere ein
-//! sechstes unter [`crate::kommandos`] mit einer einzigen Frage.
+//! **Am Fuss der Datei stehen daneben die Texte zweier Befehlsgruppen, die
+//! keine Dateioperation sind.** Seit Schritt 18c die beiden Antworten des
+//! Terminal-Befehls aus C11, seit dem 260811 die Form und die Saetze der drei
+//! Befehle der Runde 4: [`pfadtext`], [`pfadzeilen`], [`kopiermeldung`],
+//! [`nichts_zu_kopieren`] und [`ablage_weist_ab`] fuer die beiden Pfadkopierer
+//! aus C1 und C2, [`nichts_zu_oeffnen`] und [`oeffnungsmeldung`] fuer die
+//! Uebergabe an das Standardprogramm aus C3. Sie alle teilen den Zuschnitt der
+//! Dateioperationen vollstaendig: ein Befehl, der auf den sichtbaren Tab des
+//! aktiven Dateifensters wirkt und seine Antwort als Befehlsantwort in die
+//! Statuszeile schreibt. Ein eigenes Modul fuer ihre Saetze waere ein sechstes
+//! unter [`crate::kommandos`] mit einer einzigen Frage.
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Die Ansichten dazu sind die vier Blaetter unter
@@ -812,7 +817,7 @@ pub fn pfadzeilen(pfade: &[PathBuf]) -> String {
 /// etwas anderes an, als der Nutzer gleich einfuegt.
 ///
 /// Eine leere Menge erreicht diese Funktion nicht: beide Aufrufer fangen sie
-/// vorher mit [`nichts_betroffen`] ab, weil dann auch nichts geschrieben wird.
+/// vorher mit [`nichts_zu_kopieren`] ab, weil dann auch nichts geschrieben wird.
 pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
     match pfade {
         [einziger] => format!("Pfad kopiert: {}", pfadtext(einziger)),
@@ -820,16 +825,38 @@ pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
     }
 }
 
-/// Der Satz, wenn kein Eintrag betroffen ist (C2, C3).
+/// Der Satz, wenn beim Kopierer kein Eintrag betroffen ist (C2).
 ///
-/// **Gemeinsam fuer den Kopierer und den Oeffner**, deshalb nennt er weder das
-/// Kopieren noch das Oeffnen, sondern die Lage. Er sagt aus demselben Grund
-/// nicht "der Ordner ist leer": eine leere Menge entsteht auch in einem vollen
-/// Ordner, naemlich waehrend eines Lesevorgangs, nachdem
+/// C2 verlangt den Wortlaut: die Statuszeile sagt, **dass nichts zu kopieren
+/// war**, und nicht bloss, wie die Lage ist. Der Satz nennt deshalb die Folge
+/// zuerst und die Lage danach.
+pub fn nichts_zu_kopieren() -> String {
+    nichts_betroffen("kopieren")
+}
+
+/// Der Satz, wenn beim Oeffner kein Eintrag betroffen ist (C3).
+///
+/// Dasselbe fuer die andere Folge. C3 verlangt keinen Wortlaut fuer die leere
+/// Menge; der Satz folgt trotzdem dem des Kopierers, weil derselbe Anlass zwei
+/// verschieden gebaute Saetze sonst wie zwei verschiedene Lagen aussaehe.
+pub fn nichts_zu_oeffnen() -> String {
+    nichts_betroffen("öffnen")
+}
+
+/// Die gemeinsame Haelfte der beiden Saetze darueber.
+///
+/// **Zwei Eingaenge und ein Rumpf, und die Aufteilung hat einen Grund.** Bis
+/// zum 260811 war es ein einziger Satz ohne Verb, gemeinsam fuer beide
+/// Befehle; er nannte die Lage und traf damit den Wortlaut von C2 nicht.
+/// Getrennt wird nur, was sich zwischen den Befehlen unterscheidet, naemlich
+/// das Verb; die Lage dahinter steht weiter an einer Stelle.
+///
+/// Sie sagt **nicht** "der Ordner ist leer": eine leere Menge entsteht auch in
+/// einem vollen Ordner, naemlich waehrend eines Lesevorgangs, nachdem
 /// `Ordnermodell::ersatz_einloesen` Markierung und Auswahl geleert hat und
 /// bevor die Auswahl wieder steht.
-pub fn nichts_betroffen() -> String {
-    "nichts markiert und nichts ausgewählt".to_owned()
+fn nichts_betroffen(verb: &str) -> String {
+    format!("nichts zu {verb}: nichts markiert und nichts ausgewählt")
 }
 
 /// Die Meldung, wenn die Zwischenablage den Text nicht annimmt (C1, C2).
@@ -837,8 +864,16 @@ pub fn nichts_betroffen() -> String {
 /// Der Fall ist selten und wird trotzdem gemeldet: `setString:forType:` liefert
 /// ein `bool`, und ein Kopierer, der still nichts kopiert haette, liesse den
 /// Nutzer einen alten Inhalt einfuegen, den er fuer den neuen haelt.
+///
+/// **Sie nennt den Text und nicht den Pfad**, und das ist keine Wortklauberei:
+/// `ordnerpfad_kopieren` legt einen Pfad ab, `eintragspfad_kopieren` bei
+/// dreissig markierten Eintraegen dreissig, und beide legen dabei **einen**
+/// Text ab, denn genau einen nimmt `setString:forType:`. Der Satz braucht so
+/// keine Fallunterscheidung nach der Zahl, waehrend [`kopiermeldung`] und
+/// [`oeffnungsmeldung`] sie tragen: die beiden melden, was abgelegt wurde,
+/// dieser meldet, dass die Ablage selbst nicht stattgefunden hat.
 pub fn ablage_weist_ab() -> String {
-    "die Zwischenablage hat den Pfad nicht angenommen".to_owned()
+    "die Zwischenablage hat den Text nicht angenommen".to_owned()
 }
 
 // ----------------------------------------------------------------------
@@ -873,7 +908,7 @@ fn eintragsname(pfad: &Path) -> String {
 ///
 /// Der abgewiesene Teil haengt hinten an, sofern es einen gibt; **warum** ein
 /// Eintrag abgewiesen wurde, steht nicht darin, denn `openURL:` nennt es nicht.
-/// Sind beide Mengen leer, faellt die Meldung auf [`nichts_betroffen`] zurueck;
+/// Sind beide Mengen leer, faellt die Meldung auf [`nichts_zu_oeffnen`] zurueck;
 /// der Aufrufer faengt den Fall schon vorher ab, weil dann auch nichts
 /// uebergeben wird.
 pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> String {
@@ -904,7 +939,7 @@ pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> Strin
         (Some(genommen), Some(abgelehnt)) => format!("{genommen}; {abgelehnt}"),
         (Some(genommen), None) => genommen,
         (None, Some(abgelehnt)) => abgelehnt,
-        (None, None) => nichts_betroffen(),
+        (None, None) => nichts_zu_oeffnen(),
     }
 }
 
@@ -1429,16 +1464,30 @@ mod tests {
         assert_eq!(kopiermeldung(&zwei), "2 Pfade kopiert");
     }
 
-    /// Der Satz fuer die leere Menge nennt keinen der beiden Befehle.
+    /// Jeder der beiden Saetze fuer die leere Menge nennt seine eigene Folge.
     ///
-    /// Er gehoert dem Kopierer aus C2 und dem Oeffner aus C3 gemeinsam; ein
-    /// Verb darin machte ihn fuer einen der beiden falsch.
+    /// C2 verlangt den Wortlaut: die Statuszeile sagt, dass nichts zu
+    /// **kopieren** war. Der Satz des Oeffners sagt dasselbe fuer sein Verb,
+    /// und keiner der beiden nennt das des anderen. Die Lage dahinter ist
+    /// dieselbe und steht an einer Stelle.
     #[test]
-    fn der_satz_fuer_die_leere_menge_gilt_beiden_befehlen() {
-        let satz = nichts_betroffen();
-        assert!(!satz.contains("kopier"), "{satz}");
-        assert!(!satz.contains("öffn"), "{satz}");
-        assert!(!satz.is_empty());
+    fn jeder_satz_fuer_die_leere_menge_nennt_seine_eigene_folge() {
+        // Kleingeschrieben verglichen: `str::contains` vergleicht
+        // buchstabengenau, und ein "Kopier..." oder "Öffn..." am Satzanfang
+        // entginge einer Zusicherung gegen die Kleinschreibung.
+        let kopieren = nichts_zu_kopieren();
+        let klein = kopieren.to_lowercase();
+        assert!(klein.contains("kopieren"), "{kopieren}");
+        assert!(!klein.contains("öffn"), "{kopieren}");
+
+        let oeffnen = nichts_zu_oeffnen();
+        let klein = oeffnen.to_lowercase();
+        assert!(klein.contains("öffnen"), "{oeffnen}");
+        assert!(!klein.contains("kopier"), "{oeffnen}");
+
+        let lage = "nichts markiert und nichts ausgewählt";
+        assert!(kopieren.ends_with(lage), "{kopieren}");
+        assert!(oeffnen.ends_with(lage), "{oeffnen}");
     }
 
     // ------------------------------------------------------------------
@@ -1500,9 +1549,13 @@ mod tests {
             oeffnungsmeldung(&keiner, &einer),
             oeffnungsmeldung(&einer, &drei),
         ] {
-            // "öffn" faengt "öffnet" und "geöffnet" zugleich.
-            assert!(!meldung.contains("öffn"), "{meldung}");
-            assert!(!meldung.contains("gestartet"), "{meldung}");
+            // "öffn" faengt "öffnet" und "geöffnet" zugleich, und die
+            // Kleinschreibung des Vergleichs faengt daneben ein "Öffnet ..."
+            // am Satzanfang: `str::contains` vergleicht buchstabengenau, und
+            // "Ö" ist ein anderes Zeichen als "ö".
+            let klein = meldung.to_lowercase();
+            assert!(!klein.contains("öffn"), "{meldung}");
+            assert!(!klein.contains("gestartet"), "{meldung}");
             assert!(meldung.contains("System"), "{meldung}");
         }
     }
@@ -1529,6 +1582,6 @@ mod tests {
     #[test]
     fn zwei_leere_mengen_ergeben_den_satz_der_leeren_menge() {
         let keiner: [PathBuf; 0] = [];
-        assert_eq!(oeffnungsmeldung(&keiner, &keiner), nichts_betroffen());
+        assert_eq!(oeffnungsmeldung(&keiner, &keiner), nichts_zu_oeffnen());
     }
 }

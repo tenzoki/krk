@@ -19,3 +19,22 @@ Gefunden vom `planner` beim Lesen der Grundlage für den Umsetzungsplan vom 2608
 Dieselben fünf Dateien tragen daneben zweimal den Block `Answered:` / `Implemented:` / `Deferred:` / `Superseded by:` — einmal leer aus der Vorlage und einmal darunter ausgefüllt. Auch das ist Lesbarkeit und keine falsche Aussage; wer den Stand aufräumt, räumt beides in einem Zug auf.
 
 Die Behebung ist eine Zeile je Datei: `**Status:** open` wird zu `**Status:** answered`, und der leere Vorlagenblock entfällt. Sie gehört in denselben Zug, in dem die fünf Datensätze nach der Umsetzung auf `_i_` wandern, dann steht dort `**Status:** implemented`.
+
+---
+Resolved: Alle Rumpf-Staende sind auf `answered` gezogen. Es waren **sechs** und nicht fuenf —
+der Datensatz zaehlte, bevor `260811-1552` und `260811-1612` dazukamen, und der `planner` hat die
+Abweichung bei seiner Nacharbeit am 260811-1721 selbst gemeldet.
+
+**Die Zaehlung im Titel bleibt stehen**, obwohl sie falsch ist: sie hielt den Stand fest, den der
+Finder vorfand, und ein nachtraeglich berichtigter Titel verwischte, dass die Menge zwischen
+Fund und Behebung gewachsen ist.
+
+**Der Befund ist derselbe wie bei den Circle-Kopffeldern** — der Marker im Dateinamen und das
+Feld im Rumpf sagen dasselbe zweimal, und nur eines von beiden wird beim Uebergang nachgezogen.
+Fuer Circle-Datensaetze ist das als fusion-Defekt erfasst
+(`shared/issues/260811-0932_*_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md`);
+fuer Entscheidungsdatensaetze faellt es demjenigen zu, der die Antwort eintraegt, und in dieser
+Runde war das der Orchestrator. Das naechste Mal gehoert das Feld mit der `Answered:`-Zeile in
+denselben Handgriff.
+
+Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1.

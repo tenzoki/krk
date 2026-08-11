@@ -854,7 +854,7 @@ impl DateifensterQuelle {
     fn eintragspfad_kopieren(&self) {
         let betroffen = self.betroffene_eintraege();
         if betroffen.ist_leer() {
-            self.befehlsantwort_zeigen(&operationen::nichts_betroffen());
+            self.befehlsantwort_zeigen(&operationen::nichts_zu_kopieren());
             return;
         }
         let text = operationen::pfadzeilen(&betroffen.pfade);
@@ -891,7 +891,7 @@ impl DateifensterQuelle {
     /// [`operationen::oeffnungsmeldung`] haelt ihn im Wortlaut ein.
     fn mit_standardprogramm_oeffnen(&self, pfade: &[PathBuf]) {
         if pfade.is_empty() {
-            self.befehlsantwort_zeigen(&operationen::nichts_betroffen());
+            self.befehlsantwort_zeigen(&operationen::nichts_zu_oeffnen());
             return;
         }
         let mut uebergeben: Vec<PathBuf> = Vec::new();
@@ -930,12 +930,27 @@ impl DateifensterQuelle {
     /// ruft. Der Unterschied liegt allein in der Zeile und in der Menge, die
     /// dieser Weg uebergibt.
     ///
-    /// **Warum hier geloescht wird.** Ein Doppelklick ist kein Kommando und
-    /// laeuft deshalb nicht durch `Anwendungsdelegierter::kommando_ausfuehren`,
-    /// das die Antwort auf den vorigen Befehl sonst wegraeumt. Ohne diese Zeile
-    /// stuende "7 Pfade kopiert" ueber dem Ordner, in den der Nutzer eben
-    /// hineingeklickt hat. Es ist dieselbe Regel und keine zweite: was KRK auf
-    /// die letzte Handlung geantwortet hat, gilt bis zur naechsten.
+    /// **Warum hier geloescht wird, und nur an dieser Seite.** Ein Doppelklick
+    /// ist kein Kommando und laeuft deshalb nicht durch
+    /// `Anwendungsdelegierter::kommando_ausfuehren`, das die Antwort auf den
+    /// vorigen Befehl sonst wegraeumt. Ohne diese Zeile stuende "7 Pfade
+    /// kopiert" ueber dem Ordner, in den der Nutzer eben hineingeklickt hat.
+    ///
+    /// Es ist dieselbe Regel und keine zweite, angewandt auf eine Handlung mit
+    /// engerer Reichweite: **geraeumt wird so weit, wie die Handlung reicht.**
+    /// Ein Kommando reicht ueber beide Dateifenster — `Kopieren` schreibt in
+    /// das unbeteiligte —, und der Delegierte raeumt darum beide Seiten
+    /// (`for seite in Fensterseite::ALLE`, `appkit/anwendung.rs`). Der
+    /// Doppelklick reicht ueber die eine angeklickte Zeile, und er raeumt darum
+    /// die eine Statuszeile, an der er sitzt. Eine Befehlsantwort im anderen
+    /// Dateifenster bleibt stehen, bis der naechste Tastenbefehl sie mitnimmt;
+    /// sie ist dort weiterhin wahr, und kein Abnahmekriterium verlangt mehr.
+    ///
+    /// Der Fall ist geprueft und ausdruecklich so entschieden: der breitere Weg
+    /// braeuchte einen dritten Rueckruf von der Quelle zum
+    /// Anwendungsdelegierten, den es heute nicht gibt, also einen neuen
+    /// Mechanismus fuer eine Zeile Anzeige
+    /// (`issues/260811-1916_*_der-doppelklick-raeumt-die-befehlsantwort-nur-an-seiner-eigenen-fensterseite-weg.md`).
     ///
     /// Eine Zeile kleiner als null ist der Klick unter die letzte Zeile, also
     /// auf die leere Flaeche der Liste; er fuehrt zu nichts.
@@ -1672,7 +1687,10 @@ impl DateifensterQuelle {
     /// Befehl und [`DateifensterQuelle::doppelklick`] an seinem einen Eingang.
     /// Der zweite Aufruf ist keine zweite Regel, sondern dieselbe an der
     /// Stelle, die der erste nicht erreicht: ein Doppelklick ist kein Kommando
-    /// und laeuft an `kommando_ausfuehren` vorbei. Stand
+    /// und laeuft an `kommando_ausfuehren` vorbei. Er raeumt dabei **nur diese
+    /// eine** Statuszeile, waehrend `kommando_ausfuehren` ueber beide Seiten
+    /// laeuft; der Grund fuer den Unterschied steht bei
+    /// [`DateifensterQuelle::doppelklick`]. Stand
     /// keine Antwort, geschieht nichts: sonst schriebe jeder Pfeiltastendruck
     /// die Zeile neu, die sich nicht geaendert hat. Stand eine, kommt zum
     /// Vorschein, was darunter liegt — der Fortschritt der laufenden Operation
