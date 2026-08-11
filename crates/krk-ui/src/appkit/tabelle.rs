@@ -906,6 +906,53 @@ impl DateifensterQuelle {
         self.befehlsantwort_zeigen(&operationen::oeffnungsmeldung(&uebergeben, &abgewiesen));
     }
 
+    /// Der Doppelklick auf eine Zeile des Dateifensters (C3).
+    ///
+    /// **Der Doppelklick verzweigt, die Taste nicht.** Das ist die
+    /// Nutzerantwort vom 260811-1505
+    /// (`decisions/260811-1259_*_was-tut-ein-doppelklick-auf-einen-ordner.md`)
+    /// und der einzige Unterschied im Verhalten: auf einem Ordner steigt der
+    /// Doppelklick in ihn ein, wie es ein Doppelklick auf dem Mac tut, und auf
+    /// allem uebrigen gibt er den Eintrag an das Standardprogramm.
+    /// [`Kommando::MitStandardprogrammOeffnen`] gibt auch einen Ordner an das
+    /// System, und der Nutzer hat damit beide Wege.
+    ///
+    /// **Die zweite Ungleichheit ist die Menge.** Die Taste erbt
+    /// [`Self::betroffene_eintraege`] und oeffnet alle betroffenen Eintraege;
+    /// der Doppelklick nimmt genau die angeklickte Zeile. Eine Markierung
+    /// anderswo geht ihn nichts an — wer bei dreissig markierten Eintraegen auf
+    /// einen davon doppelklickt, bekommt diesen einen.
+    ///
+    /// **Eine zweite Umsetzung entsteht in keiner der beiden Richtungen.** Der
+    /// Einstieg laeuft ueber [`Self::in_zeile_einsteigen`], denselben Rumpf,
+    /// den der Rechts-Pfeil nimmt; das Oeffnen ueber
+    /// [`Self::mit_standardprogramm_oeffnen`], dieselbe Methode, die die Taste
+    /// ruft. Der Unterschied liegt allein in der Zeile und in der Menge, die
+    /// dieser Weg uebergibt.
+    ///
+    /// **Warum hier geloescht wird.** Ein Doppelklick ist kein Kommando und
+    /// laeuft deshalb nicht durch `Anwendungsdelegierter::kommando_ausfuehren`,
+    /// das die Antwort auf den vorigen Befehl sonst wegraeumt. Ohne diese Zeile
+    /// stuende "7 Pfade kopiert" ueber dem Ordner, in den der Nutzer eben
+    /// hineingeklickt hat. Es ist dieselbe Regel und keine zweite: was KRK auf
+    /// die letzte Handlung geantwortet hat, gilt bis zur naechsten.
+    ///
+    /// Eine Zeile kleiner als null ist der Klick unter die letzte Zeile, also
+    /// auf die leere Flaeche der Liste; er fuehrt zu nichts.
+    fn doppelklick(&self, zeile: NSInteger) {
+        self.befehlsantwort_loeschen();
+        let Ok(zeile) = usize::try_from(zeile) else {
+            return;
+        };
+        if self.in_zeile_einsteigen(zeile) {
+            return;
+        }
+        let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
+            return;
+        };
+        self.mit_standardprogramm_oeffnen(std::slice::from_ref(&pfad));
+    }
+
     /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.
     ///
     /// Liefert, ob KRK es verbraucht hat. Ein Zeichen, das kein Dateiname
@@ -1047,21 +1094,59 @@ impl DateifensterQuelle {
     /// Funktionen und kommen mit dem Editor, nicht mit diesem Schritt. Einer
     /// symbolischen Verknuepfung folgt KRK hier ebenfalls nicht, weil der Leser
     /// sie als Verknuepfung meldet und nicht als das, worauf sie zeigt.
+    ///
+    /// Der Rechts-Pfeil ist seit C3 der Runde 4 nicht mehr der einzige
+    /// Einstieg; der Doppelklick nimmt denselben Weg. Was diese Funktion
+    /// beisteuert, ist deshalb allein die **Zeile**: sie fragt die Auswahl,
+    /// [`Self::doppelklick`] fragt die angeklickte Zeile, und der Rumpf steht
+    /// beiden Wegen in [`Self::in_zeile_einsteigen`] gemeinsam zur Verfuegung.
     fn auswahl_oeffnen(&self) {
         let Ok(zeile) = usize::try_from(self.ivars().tabelle.selectedRow()) else {
             return;
         };
-        let ziel: Option<PathBuf> = {
-            let tabs = self.ivars().tabs.borrow();
-            let tab = tabs.aktiver();
-            tab.modell()
-                .zeile(zeile)
-                .filter(|eintrag| eintrag.ist_ordner())
-                .map(|eintrag| tab.ordner().join(&eintrag.name))
+        // Der Rueckgabewert interessiert hier nicht: auf einer Datei loest der
+        // Rechts-Pfeil unveraendert nichts aus.
+        self.in_zeile_einsteigen(zeile);
+    }
+
+    /// Steigt in den Ordner dieser Zeile hinein und meldet, ob es einer war.
+    ///
+    /// **Der eine Absteiger im Baum**, und der Grund, aus dem es ihn getrennt
+    /// von [`Self::auswahl_oeffnen`] gibt: seine beiden Aufrufer beantworten
+    /// die Frage "welche Zeile" verschieden. Der Rechts-Pfeil nimmt
+    /// `selectedRow`, der Doppelklick `clickedRow`. Alles danach ist dasselbe,
+    /// und deshalb steht es hier und nicht zweimal.
+    ///
+    /// `false` heisst "diese Zeile war kein Ordner" **und** "diese Zeile gibt
+    /// es nicht"; beides fuehrt zu keinem Einstieg, und ein Aufrufer, der die
+    /// Faelle trennen wollte, fragte danach ohnehin
+    /// [`Self::eintrag_in_zeile`].
+    fn in_zeile_einsteigen(&self, zeile: usize) -> bool {
+        let Some((ziel, ist_ordner)) = self.eintrag_in_zeile(zeile) else {
+            return false;
         };
-        if let Some(ziel) = ziel {
-            self.ordner_lesen(&ziel, None);
+        if !ist_ordner {
+            return false;
         }
+        self.ordner_lesen(&ziel, None);
+        true
+    }
+
+    /// Der volle Pfad des Eintrags in dieser Zeile und ob er ein Ordner ist.
+    ///
+    /// Die eine Stelle dieses Weges, die eine Zeilennummer in einen Pfad
+    /// uebersetzt. Die Pfadarithmetik `ordner.join(name)` steht daneben nur
+    /// noch in [`operationen::betroffene`], und die beantwortet eine andere
+    /// Frage: nicht "welche Zeile", sondern "welche Eintraege sind betroffen".
+    ///
+    /// Die Ausleihe des Tabmodells endet mit der Rueckgabe: der Pfad ist
+    /// eigener Besitz, und der Aufrufer darf danach AppKit rufen.
+    fn eintrag_in_zeile(&self, zeile: usize) -> Option<(PathBuf, bool)> {
+        let tabs = self.ivars().tabs.borrow();
+        let tab = tabs.aktiver();
+        tab.modell()
+            .zeile(zeile)
+            .map(|eintrag| (tab.ordner().join(&eintrag.name), eintrag.ist_ordner()))
     }
 
     /// Steigt in den uebergeordneten Ordner auf (C2).
@@ -1582,8 +1667,12 @@ impl DateifensterQuelle {
 
     /// Raeumt die Antwort auf den vorigen Tastenbefehl weg.
     ///
-    /// Die einzige Loeschregel dieses Feldes, gerufen von
-    /// `Anwendungsdelegierter::kommando_ausfuehren` vor jedem Befehl. Stand
+    /// Die einzige Loeschregel dieses Feldes, gerufen von ihren zwei
+    /// Aufrufern: `Anwendungsdelegierter::kommando_ausfuehren` vor jedem
+    /// Befehl und [`DateifensterQuelle::doppelklick`] an seinem einen Eingang.
+    /// Der zweite Aufruf ist keine zweite Regel, sondern dieselbe an der
+    /// Stelle, die der erste nicht erreicht: ein Doppelklick ist kein Kommando
+    /// und laeuft an `kommando_ausfuehren` vorbei. Stand
     /// keine Antwort, geschieht nichts: sonst schriebe jeder Pfeiltastendruck
     /// die Zeile neu, die sich nicht geaendert hat. Stand eine, kommt zum
     /// Vorschein, was darunter liegt — der Fortschritt der laufenden Operation
@@ -1764,6 +1853,21 @@ define_class!(
         #[unsafe(method(umbenennungBeendet:))]
         fn umbenennung_beendet(&self, absender: &NSTextField) {
             self.ivars().quelle.umbenennung_beenden(absender);
+        }
+
+        /// Der Doppelklick auf eine Zeile der Tabelle (C3).
+        ///
+        /// AppKit schickt sie an das Ziel der Tabelle, wenn ein Doppelklick
+        /// niedergeht; welche Zeile gemeint ist, steht danach in `clickedRow`
+        /// des Absenders und nicht in der Auswahl. Der Delegierte entscheidet
+        /// hier nichts, sondern reicht die Zeile weiter, wie es
+        /// `umbenennungBeendet:` daneben tut.
+        // SAFETY: Die Signatur passt zu der, die NSControl an sein Ziel
+        // schickt: ein Argument, der Absender. Er ist die Tabelle, an der die
+        // Aktion gesetzt wurde.
+        #[unsafe(method(doppelklick:))]
+        fn doppelklick(&self, absender: &NSTableView) {
+            self.ivars().quelle.doppelklick(absender.clickedRow());
         }
     }
 
@@ -2029,6 +2133,43 @@ impl Dateifenster {
         unsafe {
             tabelle.setDataSource(Some(ProtocolObject::from_ref(delegierter.quelle())));
             tabelle.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
+        }
+
+        // Der Doppelklick aus C3 der Runde 4. Er steht hier und nicht bei den
+        // Kommandos, weil er keines ist: er bekommt keinen Eintrag in
+        // `resources/default-keymap.toml` und keine Variante in `Kommando`.
+        //
+        // SAFETY: Ziel ist der Delegierte, den `Dateifenster` festhaelt; die
+        // Aktion ist die Methode, die er oben ausdruecklich fuer diesen Zweck
+        // traegt. Ueber die Lebensdauer verlangt die Bindung nichts.
+        //
+        // **Es entsteht kein Haltering, und das ist gemessen und nicht
+        // angenommen.** `NSTableView` erklaert `target` nicht selbst, sondern
+        // erbt es von `NSControl` (`NSTableView : NSControl`,
+        // `objc2-app-kit-0.3.2/src/generated/NSTableView.rs:242`), und dort
+        // steht ueber dem Setzer dieselbe Art, die den Block oben fuer
+        // `dataSource` und `delegate` traegt: "This is a weak property"
+        // (`objc2-app-kit-0.3.2/src/generated/NSControl.rs:91-93`). Die
+        // Gegenprobe am Kopf des Systems sagt dasselbe und nennt die Bedingung:
+        // `@property (nullable, weak) id target;` mit dem Zusatz "Target is
+        // weak for zeroing-weak compatible objects in apps linked on 10.10 or
+        // later" (`AppKit.framework/Headers/NSControl.h:24`). KRK bindet gegen
+        // 15.0 und faellt damit auf keinen Fall in das alte `assign`.
+        //
+        // Der Ring Quelle → Tabelle → Ziel → Delegierter → Quelle bleibt also
+        // an der Kante Tabelle → Ziel offen; ein schwach haltendes
+        // Zwischenobjekt nach dem Vorbild des Rueckrufs der Tableiste weiter
+        // unten braucht dieser Weg nicht. Der Halter des Ziels ist
+        // `Dateifenster::delegierter`, wie fuer das Namensfeld auch.
+        //
+        // Alle drei angesprochenen Stellen stehen seit macOS 10.0 zur
+        // Verfuegung und tragen im Kopf des Systems kein `API_AVAILABLE`:
+        // `NSControl::setTarget:` (`NSControl.h:24`), `NSTableView`s
+        // `setDoubleAction:` und `clickedRow` (`NSTableView.h:275-278`). Die
+        // Untergrenze des Buendels ist 15.0.
+        unsafe {
+            tabelle.setTarget(Some(&*delegierter));
+            tabelle.setDoubleAction(Some(sel!(doppelklick:)));
         }
 
         // Die Leiste zuletzt: ihr Rueckruf braucht die Quelle. Er haelt sie
