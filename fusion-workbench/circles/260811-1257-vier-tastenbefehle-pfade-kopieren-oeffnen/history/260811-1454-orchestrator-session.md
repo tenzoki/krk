@@ -78,3 +78,31 @@ hängt daran. Das gehört vor der Antwort geprüft und nicht angenommen.
 ## Verlauf
 
 - 260811-1454 — Setup abgeschlossen. Vier Nutzerfragen stehen vor der Planung.
+
+## Drei Defektdatensätze über fusion sind gelöscht, weil übertragen
+
+Am 260811-1950 auf Weisung des Nutzers: die drei Befunde über das fusion-Plugin sind in dessen
+eigenen Arbeitsbereich übertragen und hier gelöscht.
+
+| Gelöscht | Gegenstand |
+|---|---|
+| `260811-0932_o_die-circle-aktivierung-zieht-die-kopffelder-des-datensatzes-nicht-nach.md` | Beim `_a_`→`_t_` bleiben `Status:`, `Active spec/plan:` und `Active session history:` stehen; niemandes Prompt beauftragt sie |
+| `260811-1425_o_die-pruefung-der-warteschlange-liest-einen-circle-pfad-aus-der-prosa-ihrer-kopfzeile.md` | „Reading a queue" nimmt den ersten `circles/`-Treffer der Zeile, auch aus einem Nebensatz, und meldete `STALE` für eine Warteschlange, die keinen Circle nennt |
+| `260810-1730_o_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md` | Weder die Vorlage noch die Anweisung des `playmaker` verlangen die Sternform; jede Handkorrektur an `portfolio.md` ist ein Aufschub |
+
+**Die Wahl war Löschen und nicht Schließen**, und der Unterschied ist folgenreich genug, um ihn
+festzuhalten. Ein geschlossener Datensatz bliebe hier auffindbar und zeigte auf den Ort der
+Behebung; ein gelöschter tut das nicht. Wer in diesem Projekt später auf dieselbe Lage stößt —
+etwa auf ein Kopffeld, das dem Marker widerspricht —, findet im Arbeitsbereich keinen Hinweis
+darauf, dass der Befund schon erhoben und weitergegeben wurde.
+
+**Der volle Text der drei bleibt in der Git-Historie** und ist über
+`git log --diff-filter=D --name-only` oder `git show <commit>^:<pfad>` erreichbar; dieser
+Abschnitt nennt die drei Dateinamen, damit die Suche danach möglich ist.
+
+**Zwei weitere Datensätze betreffen fusion und sind ausdrücklich geblieben**, weil sie eine
+andere Sorte sind: `shared/issues/260810-1907_*_die-durchsicht-von-turn-2-hat-kein-durchsichtsdokument-hinterlassen.md`
+und `shared/issues/260810-1945_*_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md`
+sind Befunde über das **Verhalten des Orchestrators in dieser Sitzung** und keine Fehler im
+Prompt-Text des Plugins. Sie halten fest, was hier geschehen ist, und gehören deshalb hierher.
+Wer sie ebenfalls für übertragbar hält, sagt es.
