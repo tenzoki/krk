@@ -4,8 +4,8 @@
 **Domain:** code
 **Status:** anticipated
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
-**Active session history:** (none yet)
+**Active spec/plan:** circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md (Abnahmekriterien) und circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md (Ausführungsstand)
+**Active session history:** circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md
 
 ---
 
