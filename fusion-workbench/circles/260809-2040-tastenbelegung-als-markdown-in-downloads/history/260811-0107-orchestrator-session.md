@@ -37,3 +37,40 @@ der Ereignisabgriff bei stehendem Blatt allein `abbrechen` durchlässt.
 ## Verlauf
 
 - 260811-0107 — Circle aktiviert, Pfade neu aufgelöst, fünf offene Fragen dem Nutzer vorgelegt.
+
+## Die sieben Klärungsfragen des Spec, beantwortet am 260811-0115
+
+Der `shaper` hat sie zurückgegeben, statt sie selbst zu stellen: als Unteragent hat er kein
+`AskUserQuestion` und hat das benannt, statt ein Werkzeug zu behaupten. Seine Vorarbeit liegt in
+`history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md`.
+
+| # | Frage | Antwort |
+|---|---|---|
+| 1 | Dateiname | `KRK-Tastenbelegung.md` |
+| 2 | Kopfzeile | nur eine Überschrift, kein Zeitstempel |
+| 3 | Beschriftung der dritten Spalte | ausgeschrieben, ohne Legende |
+| 4 | dritte Spalte bei den sechs Textbefehlen | „Textfelder und Editor" |
+| 5 | Erfolgsmeldung | mit vollem Pfad |
+| 6 | Überschreiben melden? | nein, eine Meldung für beide Fälle |
+| 7 | gesicherten Stand melden? | **nein** |
+
+**Zwei Antworten tragen einen Vorbehalt, und der gehört in den Spec statt in die Erinnerung.**
+
+Antwort 4 steht auf einer Ableitung. Dass die sechs Textbefehle „in Textfeldern und im Editor"
+wirken, ist aus dem Aufbau der Antwortkette geschlossen und **nicht gemessen**. Der Spec
+kennzeichnet es als Annahme, und wer den Planschritt baut, prüft es zuerst — eine Spalte, die
+eine falsche Zusicherung gibt, ist schlimmer als eine leere. Dieselbe Fehlerform hat die
+Durchsicht in der vorigen Sitzung zweimal gefunden.
+
+Antwort 7 weicht von der Empfehlung ab, und der Preis ist damit angenommen: **wer bei offener
+Belegungsansicht ausgibt, bekommt eine Datei, die dem Schirm widerspricht, ohne es zu
+erfahren.** Die Abweichung besteht nur bis zum Sichern und entsteht allein durch eine eigene
+Handlung des Nutzers. Der Spec schreibt den Fall aus, statt ihn wegzulassen.
+
+**Was der Spec ohne Rückfrage festhält**, vom `shaper` am Code erhoben: die Schreibweise der
+Kombinationen kommt aus `anzeige()` (`crates/krk-ui/src/belegungsmodell.rs:527`), also
+`Shift+Cmd+K` und `F3` — eine abweichende Schreibweise wäre die zweite Aufbereitung, die die
+Directive ausschließt. Keine der vier bestehenden vollständigen Fallunterscheidungen wächst; die
+Belegung bleibt bei 71 Funktionen, weil der Menüeintrag kein Kommando mitbringt. Neu hinzu kommt
+dagegen **eine** vollständige Fallunterscheidung: die Beschriftung der sieben Wirkungsbereiche,
+zu bauen ohne Auffangzweig, wie `Funktionsbereich::name()` es vormacht.
