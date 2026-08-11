@@ -56,6 +56,15 @@
 //! haben: keine Zelle behauptet mehr, als ihre Quelle hergibt. Eine leere Zelle
 //! ist eine ehrliche Auskunft, eine falsche ist es nicht.
 //!
+//! **Daneben steht eine Zelle, die keine Begruendungslage ist**, sondern das
+//! Eingestaendnis, dass keine der obigen greift: [`NICHT_EINGEORDNET`]. Sie
+//! trifft eine Kennung, die ein Kommando traegt und der eine von Hand
+//! geschriebene `keymap.toml` trotzdem einen Zusteller gibt; der Weg dorthin
+//! steht am Auffangzweig von [`wirkung`] ausgeschrieben. Sie ist ausdruecklich
+//! **nicht** leer, weil die leere Zelle in dieser Datei schon vergeben ist:
+//! "hier ist nichts entschieden" und "hier hat niemand nachgesehen" duerfen
+//! nicht in derselben Zelle zusammenfallen.
+//!
 //! # Warum die Datei unteilbar geschrieben wird
 //!
 //! Ueber [`atomar::schreiben`], denselben Weg, den `krk_core::text::datei`
@@ -190,6 +199,25 @@ fn maskiert(text: &str) -> String {
     text.replace('|', "\\|")
 }
 
+/// Die dritte Zelle einer Funktion, ueber die [`wirkung`] nichts weiss.
+///
+/// **Der Zweck dieses Wertes ist, nicht die leere Zeichenkette zu sein.** Die
+/// leere Zelle ist in dieser Datei bereits vergeben: `text_alles_auswaehlen`
+/// bleibt leer, weil die Messung aus S1 die Ableitung gebrochen hat, und das
+/// ist ein Ergebnis. Faellt der Auffangzweig von [`wirkung`] auf denselben
+/// Ausgang, sind zwei verschiedene Aussagen in der Ausgabe nicht mehr
+/// unterscheidbar, und der Leser der Datei hat keinen Weg, das zu merken.
+///
+/// **Der Wortlaut ist mit Bedacht keine Ortsangabe.** Die uebrigen Zellen
+/// dieser Spalte nennen Orte — "Editor", "Textfelder und Editor", die sieben
+/// Beschriftungen von [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich).
+/// Dieser hier nennt stattdessen KRK selbst und steht in Klammern, damit ihn
+/// niemand fuer eine Aussage darueber haelt, **wo** der Befehl wirkt: er sagt
+/// allein, dass KRK die Funktion nicht einordnen konnte. "Eingeordnet" ist
+/// dabei dasselbe Wort, das `belegungsmodell::bereich` fuer diese Rechnung
+/// fuehrt.
+const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
+
 /// Die dritte Spalte einer Zeile: wo der Befehl wirkt.
 ///
 /// **Die Fallunterscheidung ist ueberschneidungsfrei und vollstaendig**: eine
@@ -255,15 +283,48 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // 260811-0935 "Editor" gesetzt.
         "text_rueckgaengig" | "text_wiederholen" => "Editor",
 
-        // Unerreichbar, und das ist nicht behauptet, sondern erzwungen:
-        // [`markdown`] laeuft zuvor durch `nach_bereichen`, und das bricht
-        // laut ab, sobald `belegungsmodell::bereich` eine Kennung nicht
-        // einordnen kann — also fuer jede Kennung, die weder ein Kommando
-        // traegt noch eine der sechs oben ist. Eine Belegung des Nutzers kann
-        // ohnehin keine unbekannte Kennung fuehren: `Belegung::vom_nutzer`
-        // misst sie am Wortschatz der Auslieferungsbelegung. Die leere Zelle
-        // hier ist die stillste vertretbare Antwort und nicht die erwartete.
-        _ => "",
+        // **Erreichbar, und deshalb traegt der Zweig eine eigene Auskunft.**
+        //
+        // Bis zum 260811 stand hier die Begruendung, der Zweig sei
+        // unerreichbar, weil [`markdown`] zuvor durch `nach_bereichen` laufe
+        // und das laut abbreche, sobald `belegungsmodell::bereich` eine
+        // Kennung nicht einordnen koenne. **Die Begruendung traegt nicht**:
+        // die beiden Stellen stellen zwei verschiedene Fragen. `bereich`
+        // (`belegungsmodell.rs`) fragt ueber `Kommando::aus_kennung` und sieht
+        // `gehalten_von` **nicht**; diese Funktion fragt drei Zeilen weiter
+        // oben ueber `Funktion::kommando` und sieht es.
+        //
+        // Der Weg hierher, am 260811-0955 gegen `krk-core` gemessen: eine von
+        // Hand geschriebene `keymap.toml` gibt einer Kennung **mit** Kommando
+        // einen Zusteller, etwa `kopieren` ein `gehalten_von = "menue"`.
+        // `Belegung::vom_nutzer` nimmt sie an — `Belegung::bauen` prueft
+        // allein die Kennung gegen den Wortschatz der Auslieferungsbelegung
+        // und uebernimmt `gehalten_von` unveraendert, und `konflikte`
+        // vergleicht nur innerhalb desselben Zustellers. `bereich("kopieren")`
+        // ordnet die Funktion dann ueber ihr Kommando ein, `nach_bereichen`
+        // bricht **nicht** ab, und `funktion.kommando()` steht hier auf `None`:
+        // `kommando()=None gehalten_von=Some("menue")
+        // aus_kennung=Some(Kopieren)`. Die Probe
+        // `eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig`
+        // haelt genau diesen Fall fest.
+        //
+        // **Was hier nicht steht und nicht stehen darf: ein `panic!`.** Es
+        // braechte KRK an einer vom Nutzer von Hand geschriebenen, formal
+        // zulaessigen `keymap.toml` zum Absturz. Der `match` laeuft ueber
+        // `&str`; ein Auffangzweig ist hier ohnehin unvermeidlich, und die
+        // Projektregel "vollstaendig ohne Auffangzweig" greift auf ihn nicht.
+        // Es zaehlt allein, was er tut — und das ist: eine Auskunft geben, die
+        // von der bewusst leeren Zelle darueber unterscheidbar ist.
+        //
+        // **Die Ungleichheit der beiden Fallunterscheidungen bleibt bestehen.**
+        // Sie zu schliessen — `wirkung` fragte dieselbe Frage wie `bereich` —
+        // haenge die Zusage des Doc-Kommentars oben wieder daran, dass
+        // `Kommando::KENNUNGEN` die sechs Textbefehle nicht nennt. Der
+        // Datensatz
+        // `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_*_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md`
+        // legt beide Wege vor; gebaut ist der zweite, und die Ungleichheit
+        // bleibt dort erfasst.
+        _ => NICHT_EINGEORDNET,
     }
 }
 
@@ -668,15 +729,23 @@ mod tests {
         assert_eq!(zellen(zeile), ["Alles auswählen", "Cmd+A", ""]);
     }
 
-    /// **Die Vollstaendigkeitszusage der dritten Spalte:** jede Kennung ohne
-    /// Kommando wird vom Menue zugestellt.
+    /// **In der Auslieferungsbelegung** wird jede Kennung ohne Kommando vom
+    /// Menue zugestellt und steht in einem der sechs Zweige von [`wirkung`].
     ///
-    /// Damit ist die Fallunterscheidung in [`wirkung`] wirklich vollstaendig
-    /// und nicht nur ueberschneidungsfrei: ohne Kommando heisst zugestellt, und
-    /// die sechs Zweige darunter decken die Zugestellten ab. Eine Funktion, die
-    /// weder das eine noch das andere traegt, faengt diese Probe, bevor sie
-    /// eine leere Zelle in der Datei erzeugt. Nach dem Vorbild von
-    /// `jede_kennung_hat_einen_funktionsbereich`.
+    /// **Der Umfang dieser Probe ist die ausgelieferte Datei und nichts
+    /// sonst.** Sie laeuft ueber `Belegung::auslieferung()`; fuer diese eine
+    /// Belegung faengt sie eine Funktion, die weder ein Kommando noch einen der
+    /// sechs Zweige traegt, bevor sie in der Markdown-Datei eine Zelle ohne
+    /// Auskunft erzeugt. Ein neuer `[[funktion]]`-Block in
+    /// `resources/default-keymap.toml` schlaegt hier also fehl, solange
+    /// `wirkung` ihn nicht kennt.
+    ///
+    /// **Ueber eine Belegung des Nutzers sagt sie nichts.** Eine von Hand
+    /// geschriebene `keymap.toml` kann einer Kennung mit Kommando einen
+    /// Zusteller geben und damit den Auffangzweig von [`wirkung`] erreichen;
+    /// der Kommentar dort schreibt den Weg aus, und
+    /// `eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig` misst
+    /// ihn. Nach dem Vorbild von `jede_kennung_hat_einen_funktionsbereich`.
     #[test]
     fn jede_kennung_ohne_kommando_wird_vom_menue_zugestellt() {
         for funktion in Belegung::auslieferung().funktionen() {
@@ -703,6 +772,63 @@ mod tests {
                 funktion.kennung()
             );
         }
+    }
+
+    /// **Der Auffangzweig von [`wirkung`] ist erreichbar, und seine Zelle ist
+    /// von der bewusst leeren unterscheidbar.**
+    ///
+    /// Der Fall, den der Kommentar am Zweig ausschreibt, hier gemessen statt
+    /// behauptet: eine `keymap.toml` des Nutzers gibt `kopieren` einen
+    /// Zusteller. `Belegung::vom_nutzer` nimmt sie an, `bereich` ordnet die
+    /// Funktion ueber ihr Kommando ein — [`markdown`] bricht also **nicht** ab
+    /// —, und `Funktion::kommando` liefert hier trotzdem `None`. Die Probe
+    /// haelt beide Haelften fest: dass der Zweig greift, und dass die fertige
+    /// Datei danach zwei verschiedene Sachverhalte auseinanderhaelt.
+    #[test]
+    fn eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig() {
+        let belegung = belegung_aus(
+            r#"
+            [[funktion]]
+            id = "kopieren"
+            name = "In das andere Fenster kopieren"
+            tasten = ["f5"]
+            gehalten_von = "menue"
+            "#,
+        );
+        let funktion = belegung
+            .funktion("kopieren")
+            .expect("die Pruefbelegung fuehrt die Funktion");
+
+        // Die beiden Fragen, und dass sie auseinanderfallen: daran haengt der
+        // ganze Fall.
+        assert_eq!(
+            funktion.kommando(),
+            None,
+            "der Zusteller nimmt der Funktion ihr Kommando"
+        );
+        assert_eq!(
+            Kommando::aus_kennung(funktion.kennung()),
+            Some(Kommando::Kopieren),
+            "ueber diesen Weg fragt `bereich`, und deshalb ordnet es die Funktion ein"
+        );
+
+        assert_eq!(wirkung(funktion), NICHT_EINGEORDNET);
+        assert_ne!(
+            wirkung(funktion),
+            "",
+            "die leere Zelle gehoert `text_alles_auswaehlen`; \
+             die beiden Sachverhalte duerfen in der Datei nicht zusammenfallen"
+        );
+
+        let text = markdown(&belegung);
+        let zeile = funktionszeilen(&text)
+            .into_iter()
+            .find(|zeile| zellen(zeile)[0] == "In das andere Fenster kopieren")
+            .expect("die Zeile steht in der Datei");
+        assert_eq!(
+            zellen(zeile),
+            ["In das andere Fenster kopieren", "F5", NICHT_EINGEORDNET]
+        );
     }
 
     // -----------------------------------------------------------------------

@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Elf Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Zwoelf Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -23,9 +23,11 @@
 //! Halteverhalten und dem Lesen der Vorschaudatei auf dem Arbeitsfaden.
 //! `editormodell` haelt, was der eingebaute Editor der Runde 2 ueber die
 //! geoeffnete Datei weiss: ihren Pfad, ihren Stand, ob der Stand von der Datei
-//! abweicht, die gewaehlte Ansicht und den laufenden Suchlauf.
-//! `leistenmodell` haelt, was in der Lesezeichen- und Geraeteleiste aus C5
-//! steht und welche Zeile darin ausgewaehlt ist.
+//! abweicht, die gewaehlte Ansicht und den laufenden Suchlauf. `hervorhebung`
+//! haelt daneben, was die Formatansicht des Editors ueber einen Text weiss:
+//! welche Stelle welche Farbe traegt, welche unterstrichen ist und welche eine
+//! Markdown-Auszeichnung ist. `leistenmodell` haelt, was in der Lesezeichen-
+//! und Geraeteleiste aus C5 steht und welche Zeile darin ausgewaehlt ist.
 //! `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
 //! C10, darunter die eine Stelle, die einen Pfad prueft. `auffrischung` haelt
 //! den einen Auffrischungspfad aus C9: welche Dateifenster ein gemeldeter Pfad

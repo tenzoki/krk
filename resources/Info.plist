@@ -176,7 +176,7 @@
 	<string>KRK zeigt deinen Dokumentenordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.</string>
 
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>KRK zeigt deinen Download-Ordner an, damit du geladene Dateien von dort öffnen, kopieren, verschieben und umbenennen kannst.</string>
+	<string>KRK zeigt deinen Download-Ordner an, damit du geladene Dateien von dort öffnen, kopieren, verschieben und umbenennen kannst; auf deinen Befehl hin sichert KRK außerdem die Tastenbelegung als Markdown-Datei in diesen Ordner.</string>
 
 	<key>NSRemovableVolumesUsageDescription</key>
 	<string>KRK zeigt angeschlossene Wechselmedien wie USB-Sticks und externe Festplatten an, damit du Dateien zwischen ihnen und deinem Mac kopieren und verschieben kannst.</string>
