@@ -42,9 +42,10 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSImage,
-    NSImageScaling, NSImageView, NSScrollView, NSTableColumn, NSTableColumnResizingOptions,
-    NSTableView, NSTableViewDataSource, NSTableViewDelegate, NSTableViewStyle, NSTextField, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightRegular,
+    NSImage, NSImageScaling, NSImageView, NSScrollView, NSTableColumn,
+    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
+    NSTableViewStyle, NSTextField, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
@@ -130,7 +131,7 @@ define_class!(
     /// Die Datenquelle und der Delegierte der Leiste in einem Objekt.
     ///
     /// Anders als beim Dateifenster, wo Quelle und Delegierter getrennt sind:
-    /// dort haelt der Delegierte drei Formatierer und zwei Schriften fuer die
+    /// dort haelt der Delegierte zwei Formatierer und zwei Schriften fuer die
     /// vier Spalten, hier gibt es eine Spalte mit einer Beschriftung. Zwei
     /// Objekte dafuer waeren zwei Halter fuer denselben Zustand.
     // SAFETY:
@@ -435,8 +436,25 @@ impl Leistenquelle {
         };
 
         let beschriftung = NSTextField::labelWithString(&NSString::from_str(&text), mtm);
-        beschriftung.setFont(Some(&NSFont::systemFontOfSize(
+        // Festbreite Ziffern bei proportionalen Buchstaben, dieselbe Wahl wie
+        // in der Dateiliste und aus demselben Grund: der Vorschlag fuer den
+        // Namen einer Textmarke ist `Dateiname:Zeilennummer`
+        // (`Anwendungsdelegierter::anlegeziel`), und untereinander gelesen
+        // ergeben diese Nummern in der Proportionalschrift keine Spalte. Die
+        // Buchstaben der Namen ruehrt der Wechsel nicht an; die Messung dazu
+        // steht bei `DateifensterDelegierter::neu` in [`super::tabelle`].
+        //
+        // SAFETY: `NSFontWeightRegular` ist ein Fremdsymbol von AppKit, ein
+        // `CGFloat`. Es wird gelesen und nicht geschrieben. Die Konstante und
+        // `monospacedDigitSystemFontOfSize:weight:` tragen im Kopf des Systems
+        // beide `API_AVAILABLE(macos(10.11))` (`NSFontDescriptor.h:170`,
+        // `NSFont.h:62`); die Untergrenze des Buendels ist 15.0
+        // (`.cargo/config.toml`), eine Verfuegbarkeitspruefung zur Laufzeit
+        // braucht keine der beiden Stellen.
+        let gewoehnlich = unsafe { NSFontWeightRegular };
+        beschriftung.setFont(Some(&NSFont::monospacedDigitSystemFontOfSize_weight(
             NSFont::smallSystemFontSize(),
+            gewoehnlich,
         )));
         if ungueltig {
             beschriftung.setTextColor(Some(&NSColor::tertiaryLabelColor()));

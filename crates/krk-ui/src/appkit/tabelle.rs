@@ -67,10 +67,10 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSScrollView,
-    NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSTextAlignment, NSTextField,
-    NSUserInterfaceItemIdentification, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightBold,
+    NSFontWeightRegular, NSScrollView, NSTableColumn, NSTableView,
+    NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
+    NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSDate,
@@ -1831,16 +1831,31 @@ impl DateifensterQuelle {
 pub struct DelegiertenIvars {
     /// Die Quelle, aus der der Delegierte die Zeilen liest.
     quelle: Retained<DateifensterQuelle>,
-    /// Der Formatierer fuer die Spalte mit dem Aenderungsdatum.
+    /// Der Formatierer fuer den Datumsteil der Spalte mit dem
+    /// Aenderungsdatum.
     ///
-    /// Er entsteht einmal und nicht je Zelle: ein `NSDateFormatter` baut beim
-    /// Anlegen die Kalender- und Sprachtabellen auf und ist damit das teuerste
-    /// Objekt im Zeichenweg.
+    /// **Zwei Formatierer und nicht einer**, der Datum und Zeit zusammen
+    /// setzt: den Trenner zwischen beiden Teilen waehlt `NSDateFormatter`
+    /// sonst nach der Sprachregion, und im deutschen Raum ist das ein Komma.
+    /// Die Begruendung im Einzelnen steht bei [`DateifensterDelegierter::neu`],
+    /// zusammengesetzt wird in
+    /// [`DateifensterDelegierter::datum_beschriften`].
+    ///
+    /// Beide entstehen einmal und nicht je Zelle: ein `NSDateFormatter` baut
+    /// beim Anlegen die Kalender- und Sprachtabellen auf und ist damit das
+    /// teuerste Objekt im Zeichenweg. Zwei feste Formatierer sind dasselbe
+    /// Argument und kein Widerspruch dazu: gezaehlt wird, was je gezeichneter
+    /// Zelle entsteht, und das bleibt nichts.
     datumsformat: Retained<NSDateFormatter>,
+    /// Der Formatierer fuer den Zeitteil derselben Spalte.
+    ///
+    /// Sein Gegenstueck ist [`DelegiertenIvars::datumsformat`]; die
+    /// Begruendung steht dort.
+    zeitformat: Retained<NSDateFormatter>,
     /// Die Schrift einer unmarkierten Zelle.
     ///
     /// Die beiden Schriften entstehen einmal und nicht je Zelle, aus demselben
-    /// Grund wie der Datumsformatierer: sie liegen im Zeichenweg, den ein
+    /// Grund wie die Datumsformatierer: sie liegen im Zeichenweg, den ein
     /// Ordner mit 100.000 Eintraegen oft genug durchlaeuft.
     schrift: Retained<NSFont>,
     /// Die Schrift einer markierten Zelle: dieselbe Groesse, fett.
@@ -1990,19 +2005,69 @@ impl DateifensterDelegierter {
     }
 
     /// Einen Delegierten fuer die genannte Quelle.
+    ///
+    /// # Warum der Datumsteil und der Zeitteil zwei Formatierer haben
+    ///
+    /// Ein einzelner `NSDateFormatter` mit beiden Stilen setzt zwischen Datum
+    /// und Zeit den Trenner, den die Sprachregion dafuer vorsieht; im
+    /// deutschen Raum ist das ein Komma, und KRK schreibt es nirgends hin.
+    /// Zwei Formatierer nebeneinander, jeder mit genau einem der beiden
+    /// Stile, machen den Trenner zu KRKs Sache und lassen beiden Teilen ihre
+    /// Sprachregion. Die beiden anderen Wege sind verworfen: ein eigenes
+    /// `setDateFormat:` entfernte das Komma und hoebe zugleich die Anpassung
+    /// an die Sprachregion des Nutzers auf, und das Komma nachtraeglich aus
+    /// der fertigen Zeichenkette zu schneiden waere eine Regel ueber einen
+    /// Aufbau, den KRK nicht kennt. Die Abwaegung im Einzelnen steht in
+    /// `shared/issues/260811-1730_*_ziffern-in-dateiliste-und-leiste-laufen-auseinander-und-das-datum-traegt-ein-komma.md`.
     fn neu(mtm: MainThreadMarker, quelle: Retained<DateifensterQuelle>) -> Retained<Self> {
         let datumsformat = NSDateFormatter::new();
         datumsformat.setDateStyle(NSDateFormatterStyle::ShortStyle);
-        datumsformat.setTimeStyle(NSDateFormatterStyle::ShortStyle);
+        datumsformat.setTimeStyle(NSDateFormatterStyle::NoStyle);
+        let zeitformat = NSDateFormatter::new();
+        zeitformat.setDateStyle(NSDateFormatterStyle::NoStyle);
+        zeitformat.setTimeStyle(NSDateFormatterStyle::ShortStyle);
         // Die Systemschriftgroesse und nicht eine Zahl im Programmtext: sie
         // haengt an der Einstellung des Nutzers. Beide Schriften nehmen
         // dieselbe, damit eine markierte Zeile fett wird und nicht groesser.
+        //
+        // **Festbreite Ziffern bei proportionalen Buchstaben**, und nicht eine
+        // durchgehende Festbreitenschrift: die Spalten `Groesse` und
+        // `Geaendert` sollen untereinander stehen, waehrend die Dateinamen der
+        // Namensspalte ihre Proportionalschrift behalten. Gemessen am 260811
+        // auf macOS 15.7.7 mit `NSAttributedString::size` bei 13 Punkt:
+        // „11.11.11 11:11“ und „08.08.88 08:88“ sind in `systemFontOfSize:`
+        // 73,07 und 95,01 Punkt breit, also 22 Punkt auseinander, und in
+        // dieser Schrift beide 96,05 Punkt. Der Name „Ablage.rs“ misst in
+        // beiden Schriften dieselben 57,36 Punkt: die Buchstaben ruehrt der
+        // Wechsel nicht an.
+        //
+        // **Das Gewicht der fetten Fassung ist `NSFontWeightBold`**, und die
+        // Wahl ist gemessen und nicht angenommen: `boldSystemFontOfSize:` und
+        // `monospacedDigitSystemFontOfSize:weight:` mit diesem Gewicht setzen
+        // „Ablage.rs“ beide auf 62,38 Punkt und tragen denselben Auf- und
+        // Abstrich (12,568 / -2,742). Die markierte Zeile wird damit fett und
+        // nicht breiter, gerade so, wie sie oben nicht groesser wird — und die
+        // Ziffernbreite springt beim Markieren nicht, weil beide Schriften sie
+        // festhalten.
         let groesse = NSFont::systemFontSize();
-        let schrift = NSFont::systemFontOfSize(groesse);
-        let fettschrift = NSFont::boldSystemFontOfSize(groesse);
+        // SAFETY: `NSFontWeightRegular` und `NSFontWeightBold` sind zwei
+        // Fremdsymbole von AppKit, beide `CGFloat`. Sie werden gelesen und
+        // nicht geschrieben, wie die Merkmalsnamen in `nummernspalte.rs`.
+        //
+        // `monospacedDigitSystemFontOfSize:weight:` und die beiden
+        // Gewichtskonstanten tragen im Kopf des Systems dasselbe
+        // `API_AVAILABLE(macos(10.11))`: `NSFont.h:62` fuer die Methode,
+        // `NSFontDescriptor.h:170` und `:173` fuer die Konstanten. Die
+        // Untergrenze des Buendels ist 15.0 (`.cargo/config.toml`), und keine
+        // der drei Stellen braucht deshalb eine Verfuegbarkeitspruefung zur
+        // Laufzeit.
+        let (gewoehnlich, fett) = unsafe { (NSFontWeightRegular, NSFontWeightBold) };
+        let schrift = NSFont::monospacedDigitSystemFontOfSize_weight(groesse, gewoehnlich);
+        let fettschrift = NSFont::monospacedDigitSystemFontOfSize_weight(groesse, fett);
         let this = Self::alloc(mtm).set_ivars(DelegiertenIvars {
             quelle,
             datumsformat,
+            zeitformat,
             schrift,
             fettschrift,
         });
@@ -2038,6 +2103,10 @@ impl DateifensterDelegierter {
     }
 
     /// Ein Zeitpunkt in der Schreibweise, die der Nutzer eingestellt hat.
+    ///
+    /// Datum und Zeit kommen aus zwei Formatierern und werden hier mit einem
+    /// Leerzeichen verbunden; warum der Trenner KRKs Sache ist, steht bei
+    /// [`Self::neu`].
     fn datum_beschriften(&self, zeitpunkt: SystemTime) -> String {
         let Ok(seit_epoche) = zeitpunkt.duration_since(UNIX_EPOCH) else {
             // Ein Zeitpunkt vor 1970 ist auf einem Dateisystem moeglich, aber
@@ -2045,7 +2114,9 @@ impl DateifensterDelegierter {
             return String::new();
         };
         let datum = NSDate::dateWithTimeIntervalSince1970(seit_epoche.as_secs_f64());
-        self.ivars().datumsformat.stringFromDate(&datum).to_string()
+        let tag = self.ivars().datumsformat.stringFromDate(&datum);
+        let zeit = self.ivars().zeitformat.stringFromDate(&datum);
+        format!("{tag} {zeit}")
     }
 
     /// Holt eine Zellenansicht aus dem Vorrat der Tabelle oder baut eine neue.
@@ -2053,6 +2124,20 @@ impl DateifensterDelegierter {
     /// Die Wiederverwendung ist der Grund, aus dem ein Ordner mit 100.000
     /// Eintraegen ohne Ruckeln blaettert: AppKit haelt nur die sichtbaren
     /// Ansichten und reicht die aus dem Bild gelaufenen zurueck.
+    ///
+    /// **Alle vier Spalten ruecken gleich weit ein, und das ist gemessen.** Am
+    /// 260811 auf macOS 15.7.7, an vier Feldern aus dieser Methode: die
+    /// Zeichenflaeche der Zelle beginnt in jeder Spalte bei 0 und nimmt die
+    /// volle Breite, die Randabstaende sind ueberall 2 Punkt links wie rechts,
+    /// die Grundlinie liegt ueberall 13 Punkt unter der Oberkante. Das
+    /// `setEditable(true)` der Namensspalte aendert daran nichts. Die Tabelle
+    /// legt die Spalten mit demselben Zwischenraum von 17 Punkt aus, den sie
+    /// je zur Haelfte auf beide Seiten verteilt, und die Ueberschriften
+    /// beginnen ebenso in jeder Spalte bei 0. Wer also den Verdacht hat, Name
+    /// und Aenderungsdatum stuenden verschieden weit eingerueckt, sucht an
+    /// dieser Stelle vergeblich: was die Spalten frueher zerrissen aussehen
+    /// liess, war allein die Breite der Ziffern, und die haelt jetzt die
+    /// Schrift aus [`Self::neu`] fest.
     fn feld(&self, tabelle: &NSTableView, spalte: Spalte) -> Retained<NSTextField> {
         let kennung = spalte.kennung();
         // SAFETY: `self` ist der Eigentuemer, den AppKit an eine neu geladene

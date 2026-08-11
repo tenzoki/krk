@@ -82,3 +82,43 @@ Kontrolle über den Trenner.
 Es ist dieselbe Fläche, dieselbe Datei und derselbe Handgriff: wer die Schrift der Tabelle
 anfasst, steht drei Zeilen vom Formatierer entfernt. Getrennt abgelegt würden sie zweimal
 denselben Kontext aufbauen.
+
+---
+Resolved: Beide Befunde behoben, beide mit einer Messung statt einer Annahme.
+
+**Befund 1, die Ziffern.** Zellschrift und Fettschrift kommen jetzt aus
+`monospacedDigitSystemFontOfSize_weight` — festbreite Ziffern bei proportionalen Buchstaben, in
+`tabelle.rs` und in `leiste.rs`. Nicht die durchgehende Festbreitenschrift, die der Nutzer
+woertlich genannt hatte: sie haette auch die Dateinamen gesetzt, und die sind der Hauptinhalt der
+Spalte.
+
+**Die Wirkung ist gemessen** (`NSAttributedString::size`, 13 Punkt, macOS 15.7.7): "11.11.11
+11:11" und "08.08.88 08:88" waren 73,07 und 95,01 Punkt breit, also 22 Punkt auseinander; jetzt
+sind beide 96,05 Punkt. "Ablage.rs" misst in beiden Schriften 57,357 Punkt — die Namen sind
+unangetastet.
+
+**Das Gewicht der fetten Fassung ist `NSFontWeightBold`, und auch das ist gemessen:**
+`boldSystemFontOfSize(13)` und die neue Schrift mit diesem Gewicht setzen dieselbe Zeichenkette
+auf denselben Punktwert und tragen denselben Auf- und Abstrich. Die markierte Zeile wird damit
+fett und weder breiter noch hoeher, und die Zahlenspalte springt beim Markieren nicht.
+
+**Der zweite, ungeprueft gemeldete Teil ist gemessen und war gegenstandslos:** die Spalten ruecken
+schon heute gleich weit ein. Zeichenflaeche ab x=0 in jeder Spalte, Randabstaende ueberall 2
+Punkt, Grundlinie ueberall 13 Punkt unter der Oberkante, und das `setEditable(true)` der
+Namensspalte aendert daran nichts. **Die Schriftwahl allein reicht**, an der Zellensetzung fehlte
+nichts. Das Ergebnis steht bei `tabelle.rs:2128`, damit die Frage nicht ein zweites Mal gestellt
+wird.
+
+**Befund 2, das Komma.** Zwei `NSDateFormatter` stehen jetzt nebeneinander, einer fuer das Datum
+und einer fuer die Zeit, und KRK setzt das Leerzeichen selbst. Aus `06.08.26, 09:06` wird
+`06.08.26 09:06`. Das ist der dritte der drei Wege dieses Datensatzes und der einzige, der beides
+haelt: jeder Teil behaelt seine Sprachregion, und der Trenner ist KRKs Sache. Der Kommentar, der
+begruendet warum es *einen* Formatierer gab, ist mitgezogen.
+
+**`nummernspalte.rs` traegt dieselbe Frage nur in ihrem Rueckfallzweig** und ist nicht angefasst:
+sie nimmt `userFixedPitchFontOfSize`, eine echte Festbreitenschrift, und faellt erst auf einem
+System ohne Festbreiten-Benutzerschrift auf die Proportionalschrift zurueck.
+
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md`.
