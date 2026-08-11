@@ -319,7 +319,7 @@ pub struct QuelleIvars {
     umbenennung: RefCell<Option<Umbenennungsmelder>>,
     /// Was KRK auf den letzten Tastenbefehl des Nutzers zu sagen hat.
     ///
-    /// Der oberste der vier Raenge und der einzige, der ueber der
+    /// Der oberste der fuenf Raenge und der einzige, der ueber der
     /// Vorgangsanzeige steht: "es laeuft bereits eine Operation", "es ist
     /// nichts ausgewaehlt", "die Zwischenablage ist leer", der Abschlusstext
     /// eines Vorgangs. Der Nutzer hat eben eine Taste gedrueckt und sieht auf

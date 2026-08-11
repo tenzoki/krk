@@ -3616,9 +3616,9 @@ impl Anwendungsdelegierter {
             }
             // Beim Start ist die Abweisung die Antwort auf keinen Tastendruck,
             // sondern ein Ereignis am Fenster: die gemerkte Datei ist fort oder
-            // zu gross geworden, waehrend KRK nicht lief. Sie geht deshalb einen
-            // Rang tiefer als eine Befehlsantwort, sonst loeschte der erste
-            // Tastendruck sie weg, bevor der Nutzer sie gelesen hat.
+            // zu gross geworden, waehrend KRK nicht lief. Sie geht deshalb als
+            // Fenstermeldung auf Rang 3 der Statuszeile; auf Rang 1 loeschte
+            // der erste Tastendruck sie weg, bevor der Nutzer sie gelesen hat.
             //
             // Der Editor wird dabei ausgeblendet und nicht bloss leer gelassen:
             // hatte die Sitzung ihn sichtbar, naehme er den Dateifenstern sonst
