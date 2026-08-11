@@ -256,7 +256,7 @@ Jeder Schritt nennt seinen Ausführer, seine Dateien, seine Änderungen, seine A
 
 Die Prüfkommandos lauten `make check`, ersatzweise `make build`, `make test`, `make lint`. Wer `cargo` unmittelbar ruft, stellt `export PATH="$HOME/.cargo/bin:$PATH"` voran: `cargo` liegt auf diesem Gerät nicht auf dem Standard-PATH.
 
-### 1. Wer die sechs zugestellten Textbefehle wirklich beantwortet
+### 1. [DONE] Wer die sechs zugestellten Textbefehle wirklich beantwortet
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/appkit/menue.rs` (erweitert: eine neue Probe im `#[cfg(test)]`-Modul, dazu der Modulkopf, falls die Messung ihn widerlegt), `crates/krk-ui/src/appkit/leiste.rs` (lesend: die `NSTableView` der Leiste und ihre Auswahleinstellung), `crates/krk-ui/src/appkit/tabelle.rs` (lesend: die Tabellen der Dateifenster), `crates/krk-ui/src/appkit/belegungsansicht.rs` (lesend: die dritte Tabelle des Programms), `crates/krk-ui/src/appkit/editor.rs` (lesend: die Textfläche und `allowsUndo`), `crates/krk-ui/src/appkit/vorschau.rs` (lesend: die Textanzeige der Vorschau, `setSelectable(false)`)
@@ -274,7 +274,7 @@ Die Prüfkommandos lauten `make check`, ersatzweise `make build`, `make test`, `
 - Abhängigkeiten: keine
 - Abnahmekriterium: `make check` ist grün. Die neue Probe in `crates/krk-ui/src/appkit/menue.rs` nennt für jeden der sechs Selektoren, welche der geprüften Klassen ihn beantwortet, und schlägt fehl, sobald sich die Antwort ändert. Der Sitzungsbericht trägt die sechs Antworten ausgeschrieben und beantwortet die eine Frage, auf die es ankommt: gilt "Textfelder und Editor" für alle sechs, oder für welchen nicht. Das ist das Abnahmekriterium von C3, das die Prüfung vor dem Schreiben der Spalte verlangt.
 
-### 2. Die Beschriftung der sieben Wirkungsbereiche
+### 2. [DONE] Die Beschriftung der sieben Wirkungsbereiche
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-core/src/tasten/belegung.rs` (erweitert: ein `impl`-Block an `Wirkungsbereich`, dazu zwei Sätze im Modulkopf), `crates/krk-core/tests/belegung.rs` (erweitert: die Probe)
@@ -286,7 +286,7 @@ Die Prüfkommandos lauten `make check`, ersatzweise `make build`, `make test`, `
 - Abhängigkeiten: keine
 - Abnahmekriterium: `make check` ist grün; `cargo build -p krk-core` übersetzt, was belegt, dass die Fallunterscheidung vollständig ist. Eine Probe in `crates/krk-core/tests/belegung.rs` hält für alle sieben Werte den erwarteten Text fest und stellt sicher, dass keine zwei Werte dieselbe Beschriftung tragen; eine doppelte Beschriftung wäre eine Spalte, die zwei verschiedene Regeln gleich benennt. `grep -c '_ =>' ` über den neuen Block liefert 0.
 
-### 3. Das Ausgabemodul, der Menüeintrag und die Meldung
+### 3. [DONE] Das Ausgabemodul, der Menüeintrag und die Meldung
 
 - Ausführender: `coder`
 - Dateien: `crates/krk-ui/src/belegungsausgabe.rs` (neu: das ganze Modul samt Prüfmodul), `crates/krk-ui/src/main.rs` (erweitert: `mod belegungsausgabe;` und der Modulkopf, der zehn Module aufzählt und künftig elf nennt), `crates/krk-ui/src/belegungsmodell.rs` (erweitert: `nach_bereichen` aus `gliederung` und `tastenliste` aus `tastentext` herausgezogen, beide `pub`), `crates/krk-core/src/ablage/pfade.rs` (erweitert: `gekuerzt_fuer_anzeige` neben `benutzerverzeichnis`, dazu zwei Sätze im Modulkopf), `crates/krk-core/tests/ablage.rs` (erweitert: die Probe der Kürzung mit ihren fünf Fällen), `crates/krk-ui/src/appkit/menue.rs` (erweitert: der Eintrag unter "KRK" samt Trenner, dazu der Modulkopf), `crates/krk-ui/src/appkit/anwendung.rs` (erweitert: der Selektor `tastenbelegungSichern:` im `define_class!`-Block und die Ausführung daneben), `crates/krk-ui/src/pruefordner.rs` (lesend: der Prüfordner der Kiste, für die Proben des Schreibens), `crates/krk-ui/src/fenstertitel.rs` (lesend, **nicht anfassen**: der Titelbalken schreibt den Pfad weiter aus, siehe Frage 8 und das Abnahmekriterium), `resources/default-keymap.toml` (**nicht anfassen**, siehe das Abnahmekriterium), `crates/krk-core/src/tasten/belegung.rs` (**nicht anfassen**, dieselbe Zusage für die Aufzählung `Kommando`)

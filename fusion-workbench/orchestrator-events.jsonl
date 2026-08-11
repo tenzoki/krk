@@ -448,3 +448,16 @@
 {"ts":"2026-08-10T18:11:58","event":"session_end","detail":"3 Turns, 12 defects closed, 1 deferred, 17 commits (ed5c896..a6bf59b), 8 defects created, 1 decision answered and implemented, 0 agent errors, 4 human gates, no circuit breaker"}
 {"ts":"2026-08-10T19:28:40","event":"session_start","detail":"follow-up session after the user ran the C8 acceptance measurement; goal: bring the record to a complete and correct state"}
 {"ts":"2026-08-10T19:32:24","event":"session_end","detail":"follow-up complete: 2 measurement reports filed, 1 duplicate removed, L6 evidence appended, L9 decision filed, CLAUDE.md corrected in 3 places; 2 commits (c531e70, 69d2156); no agentstate written this session, nothing to delete"}
+{"ts":"2026-08-10T23:08:17","event":"session_start","detail":"circle 260809-2040-tastenbelegung-als-markdown-in-downloads activated (_a_ -> _t_) on user request; 5 open decisions to resolve before planning"}
+{"ts":"2026-08-10T23:08:17","event":"gate_hit","detail":"5 open decisions of the activated circle; asked in two rounds because the trigger question decides whether the fifth applies"}
+{"ts":"2026-08-11T07:08:30","event":"planner_done","detail":"plan 260811-0838 approved by user with two conditions, both incorporated; 4 steps"}
+{"ts":"2026-08-11T07:08:30","event":"queue_built","detail":"mode=plan, 4 steps read directly from the approved plan; S1 and S2 independent, S3 depends on both, S4 is user acceptance at the bundle"}
+{"ts":"2026-08-11T07:08:30","event":"turn_start","turn":1,"detail":"S1 (runtime measurement of the six text commands) and S2 (Wirkungsbereich labels in the core), dispatched together"}
+{"ts":"2026-08-11T07:29:49","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"runtime measurement; inference confirmed for cut/copy/paste, broken for selectAll (NSTableView answers it itself), undecidable for undo/redo; commit 39687f3"}
+{"ts":"2026-08-11T07:29:49","event":"task_done","turn":1,"task":"S2","agent":"coder","detail":"Wirkungsbereich::beschriftung, seven values, no catch-all; commit 33cc083"}
+{"ts":"2026-08-11T07:29:49","event":"gate_response","turn":1,"detail":"user chose 'Editor' for the undo/redo cell — code-evidenced via setAllowsUndo, narrower than the original inference"}
+{"ts":"2026-08-11T07:29:49","event":"task_start","turn":1,"task":"S3","agent":"coder","detail":"output module, menu entry, status message, path shortening"}
+{"ts":"2026-08-11T08:43:04","event":"review_done","turn":1,"agent":"coderev","detail":"6 issues filed; 2 medium needed user decisions; the catch-all justification was disproven by measurement"}
+{"ts":"2026-08-11T08:43:04","event":"task_done","turn":1,"task":"S3","agent":"coder","detail":"output module, menu entry, path shortening; commit fd863e3, fixes d8fbad7"}
+{"ts":"2026-08-11T08:43:04","event":"coherence_review","turn":1,"detail":"verdict=ok | Artefakt<->Grundlage: 6 Befunde, 4 geschlossen, 2 bewusst offen | Artefakt<->Directive: S1-S3 gebaut, die Ausgabe steht; S4 ist Nutzerarbeit | Grundlage<->Directive: 1 Entscheidung nachgetragen (260811-1010), C3 auf den gemessenen Stand berichtigt"}
+{"ts":"2026-08-11T08:43:04","event":"turn_end","turn":1,"detail":"3 of 4 plan steps done, 6 commits, 6 issues created (4 closed), 1 decision recorded, 0 errors; S4 remains and is user work"}
