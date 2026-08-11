@@ -47,3 +47,24 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 2, als dritte Spalte je Funktion.** Nutzerantwort am 260811-0110,
+festgehalten in `history/260811-0107-orchestrator-session.md`.
+
+Neben Funktion und Belegung steht, wo der Befehl wirkt. Die Ausgabe wird damit die **einzige
+Stelle in KRK, an der die stumme Regel des Wirkungsbereichs ueberhaupt erklaert wird** — genau
+das Argument, das dieser Datensatz oben fuehrt: wer `Cmd+Backspace` im Editor drueckt und nichts
+geschieht, hat sonst keinen Weg, den Grund zu erfahren, ausser im Quelltext nachzusehen.
+
+**Die Spannung, die dieser Datensatz oben benennt, ist gesehen und angenommen.** Die
+Bildschirmansicht hat zwei Spalten; die Datei bekommt drei und zeigt damit mehr als der Schirm.
+Der Nutzer hat sich zugleich fuer die Gliederung **nach Funktionsbereich wie am Schirm**
+entschieden (`260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md`). Die
+Ordnung folgt dem Schirm, der Spaltensatz geht darueber hinaus. Beide Antworten sind gefallen,
+nachdem dieser Preis ausgesprochen war.
+
+**Was daraus folgen koennte und hier ausdruecklich nicht entschieden ist:** ob die
+Belegungsansicht am Bildschirm die Spalte ebenfalls bekommen soll. Das waere der andere Weg, die
+Abweichung aufzuloesen, liegt aber ausserhalb der Directive dieses Circles — sie sagt eine
+Ausgabedatei zu und keine Aenderung der Ansicht. Wer es will, fuehrt es als eigenen Vorschlag.

@@ -45,3 +45,27 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 2, ein Eintrag im Hauptmenue — und zwar ohne Tastenkuerzel.**
+Nutzerantwort am 260811-0110, festgehalten in `history/260811-0107-orchestrator-session.md`.
+
+**Die Zusatzwahl "ohne Kuerzel" gehoert zur Antwort und ist nicht beilaeufig.** Ein Menuekuerzel
+waere durch die umgesetzte Entscheidung der Runde 1
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`
+(umgesetzt in `58465bf`) zwingend ein Belegungseintrag mit `gehalten_von = "menue"` geworden,
+also Moeglichkeit 3 dieses Datensatzes. Der Nutzer hat damals entschieden, dass kein Kuerzel
+ausserhalb der Konflikterkennung stehen darf, weil sonst ein blinder Fleck waechst und die
+Zusage aus C3 fuer diese Kombinationen nicht gaelte. Ein Kuerzel hier haette also nicht die
+Wahl, sondern die Bauform veraendert.
+
+**Was daraus folgt.** Kein Eintrag in `resources/default-keymap.toml`; die Zahl bleibt bei 71
+Funktionen. Die Ausgabe ist nicht umbelegbar und steht in keiner Konflikterkennung — sie hat
+nichts, womit sie kollidieren koennte. Erreichbar ist sie allein ueber das Menue.
+
+**Der Preis ist benannt und angenommen:** KRKs Maxime ist die Steuerung ueber die Tastatur, und
+diese eine Funktion ist die Ausnahme davon. Sie ist dafuer auch keine, die im Arbeitsfluss liegt.
+
+**Die Bauform steht bereits.** `ohne_kuerzel` (`crates/krk-ui/src/appkit/menue.rs:335`) legt
+einen Menuebefehl ohne Tastenentsprechung an; ein neuer Mechanismus entsteht nicht. Geprueft am
+260811-0110.

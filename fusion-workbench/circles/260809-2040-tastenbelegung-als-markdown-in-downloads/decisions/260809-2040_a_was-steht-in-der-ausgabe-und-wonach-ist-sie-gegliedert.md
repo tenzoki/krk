@@ -54,3 +54,24 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Umfang: Moeglichkeit 1, nur die belegten Funktionen. Ordnung: Moeglichkeit 1, nach
+Funktionsbereich wie die Bildschirmansicht.** Nutzerantwort am 260811-0110, festgehalten in
+`history/260811-0107-orchestrator-session.md`.
+
+**Zum Umfang.** Ab Werk aendert die Wahl nichts: keine der 71 Funktionen hat eine leere
+Tastenliste, also fuehrt die Ausgabe ab Werk alle. Sichtbar wird sie erst, wenn der Nutzer eine
+Kombination entfernt oder eine Funktion in seiner `keymap.toml` nicht nennt — dann faellt sie aus
+der Datei. Der Preis ist, dass die Datei die Faehigkeit dann nicht mehr nennt; der Nutzer sieht
+nicht, dass es sie gibt und dass sie gerade keine Taste hat.
+
+**Zur Ordnung.** Neun Ueberschriften nach Funktionsbereich, darunter die Funktionen in der
+Reihenfolge der Datei — dieselbe Gliederung, die die Belegungsansicht seit dem Nutzerauftrag vom
+260806 traegt. Die Ausgabe ist damit zum Nachsehen gebaut, was eine Funktion kann, und nicht zum
+Suchen einer Taste. Eine zweite Tabelle nach Taste ist nicht zugesagt.
+
+**Anzumerken:** die Antwort auf `260809-2040_*_gehoert-der-wirkungsbereich-in-die-ausgabe.md`
+lautet "als dritte Spalte". Die Ordnung folgt damit dem Schirm, der Spaltensatz nicht. Der Nutzer
+hat beides gewaehlt, nachdem die Spannung benannt war; die Begruendung steht im dortigen
+Datensatz.

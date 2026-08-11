@@ -46,3 +46,19 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1, fester Name und eine vorhandene Datei wird ueberschrieben.**
+Nutzerantwort am 260811-0110, festgehalten in `history/260811-0107-orchestrator-session.md`.
+
+Der Name ist damit stabil und verlinkbar, und es gibt zu jedem Zeitpunkt genau eine Datei. Der
+konkrete Name ist in dieser Antwort nicht festgelegt; der Datensatz nennt `KRK-Tastenbelegung.md`
+als Beispiel, und der Spec legt ihn fest.
+
+**Der Preis steht ausdruecklich dabei:** ein zweiter Aufruf zerstoert kommentarlos, was vorher
+unter diesem Namen lag — auch dann, wenn es nicht von KRK stammte. Der Downloads-Ordner gehoert
+dem Nutzer, und KRK ist dort nicht der einzige Schreiber; das unterscheidet ihn von der Ablage
+unter `~/Library/Application Support/KRK/`, wo KRK seine vier Dateien selbst benannt hat und
+allein beschreibt. Der Nutzer hat das gewaehlt, nachdem der Preis benannt war.
+
+Ob die Ueberschreibung gemeldet wird, ist damit nicht entschieden und gehoert in den Spec.

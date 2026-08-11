@@ -44,3 +44,24 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: **Moeglichkeit 1, den gesicherten Stand schreiben.** Nutzerantwort am 260811-0110,
+festgehalten in `history/260811-0107-orchestrator-session.md`.
+
+**Die Frage ist scharf und nicht gegenstandslos**, weil der Nutzer den Menueweg gewaehlt hat.
+Der Datensatz hatte das oben als `inference:` offengelassen und verlangt, es vor der Antwort
+nachzusehen. Nachgesehen am 260811-0107: die Belegungsansicht wird ueber
+`beginSheetModalForWindow_completionHandler` gezeigt (`crates/krk-ui/src/appkit/blaetter/mod.rs:508`),
+ist also **dokumentmodal** und bringt keine eigene Ereignisschleife mit; eine eigene
+`validateMenuItem`-Ueberschreibung gibt es im Baum nicht. `inference:`, nicht gemessen: ein
+dokumentmodales Blatt laesst die Menueleiste bedienbar, und der Eintrag schlaegt an. Der
+Belegungsweg haette die Frage erledigt, der Menueweg tut es nicht.
+
+**Geschrieben wird die Belegung des Betriebs**, also der Wert, den `belegung::fuer_den_betrieb()`
+haelt — nicht die Arbeitskopie des Blattes. Das deckt sich mit der Directive: die Ausgabe zeigt,
+was "im Augenblick des Aufrufs gilt", und es gilt, was ausloest.
+
+**Der Preis ist benannt:** waehrend die Ansicht offen steht, kann die Datei sichtbar von dem
+abweichen, was auf dem Schirm zu sehen ist. Ob dieser Fall dem Nutzer gemeldet wird, ist hier
+nicht entschieden und gehoert in den Spec.
