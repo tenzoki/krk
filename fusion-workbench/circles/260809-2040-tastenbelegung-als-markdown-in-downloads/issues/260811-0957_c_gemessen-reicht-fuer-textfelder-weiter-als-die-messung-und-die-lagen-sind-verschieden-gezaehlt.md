@@ -81,3 +81,25 @@ von `belegungsausgabe.rs` reicht fuer die Textfeld-Kette weiter als die Messung,
 Begruendungslagen sind an drei Stellen verschieden gezaehlt. Der `coder` hat sie unter der
 Grenze "nur diese vier Befunde" nicht angefasst und das gemeldet, statt sie stillschweigend
 mitzunehmen.
+
+---
+Resolved: Beide Punkte in `crates/krk-ui/src/belegungsausgabe.rs`.
+
+**(a)** Der erschlossene Anteil ist an drei Stellen mit `inference:` gekennzeichnet, wie C3 im
+Spec es tut: Modulkopf, Zweigkommentar in `wirkung`, Probenkommentar. Gemessen ist, dass `cut:`,
+`copy:` und `paste:` an `NSText` haengen und `NSTextField` sie selbst nicht beantwortet;
+erschlossen ist daraus, dass der Feldeditor erreicht wird. Getrennt gehalten ist, dass die
+Haelfte "Editor" derselben Zelle diesen zweiten Schritt **nicht** braucht — die Textflaeche des
+Editors ist selbst eine `NSTextView`. Die Zusicherungsmeldung der Probe sagt jetzt "aus der
+Messung von S1 hergeleitete Beschriftung" statt "in S1 gemessene".
+
+**(b)** Eine Zaehlweise: **vier** Lagen ueber alle 71 Funktionen. Das war die Zaehlung, der die
+Zweigkommentare und die Modulkopf-Tabelle schon folgten; die drei Abweichler ziehen nach. Der
+Modulkopf legt sie ausdruecklich fest, und die Probe heisst
+`die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`.
+
+Punkt (c) des Datensatzes, die Randnotiz zu `menue.rs`, lag ausserhalb des Auftrags und ist
+unberuehrt; er war die kleinste der drei Sachen und haelt nichts auf.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`.

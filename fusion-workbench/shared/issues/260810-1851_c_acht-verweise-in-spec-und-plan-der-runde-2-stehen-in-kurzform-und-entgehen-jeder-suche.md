@@ -49,3 +49,31 @@ sonst zählt er wieder an derselben Stelle vorbei.
 Zusammenhang: `shared/issues/260810-1730_*_die-erzeugung-von-portfolio-md-schreibt-den-zustandsmarker-aus-und-macht-jede-handkorrektur-zunichte.md`
 beschreibt dieselbe Ursache an einer dritten Stelle. Wer diese Datensätze anfasst, prüft zuerst,
 ob eine gemeinsame Antwort trägt.
+
+---
+Resolved: **Neun Stellen ausgeschrieben, nicht acht.** Das Suchmuster dieses Datensatzes fand
+sie nicht: die Stellen tragen **drei ASCII-Punkte**, nicht das Zeichen `…`. Mit
+`…-]*(\.\.\.|…)` erhoben ergaben sich neun Treffer. Die acht gemeldeten stimmen in Datei und
+Zeile; der neunte ist `plan:1587`, der die Sternstelle schon trug und allein im Namen gekuerzt
+war — deshalb konnte ihn auch keine Erhebung nach *festen* Markern finden.
+
+Jeder volle Name ist gegen den Dateibestand aufgeloest, keiner geraten. Vorbild war `c0b96a6`:
+Verzeichnisanteil bleibt, Marker wird Sternstelle, Name wird vollstaendig, Endung kommt dazu.
+
+**Eine Abweichung vom reinen Ausschreiben, und sie war noetig:** bei `spec:556` ist der
+Circle-Pfad ergaenzt. Die zwei Kurzformen standen ohne Verzeichnisanteil, und ein blosser
+Dateiname wird relativ zum eigenen Circle gelesen — die zwei Datensaetze liegen im Circle der
+Runde 1, der ausgeschriebene Name ohne Pfad liefe ins Leere.
+
+**Zwei Absaetze im Reconciliation Log des Plans sind als Nachtrag berichtigt**, in der Handhabung
+jener Datei. Der Eintrag vom 260810-0805 zaehlte "sieben Verweise", zaehlte aber Zeilen — es
+waren neun Verweise —, und behauptete "der Spec traegt null", waehrend er zwei trug. Der Eintrag
+vom 260810-1404 sagte "alle Verweise dieses Plans loesen auf"; die 40 geprueften waren nicht
+alle, sieben standen in der Kurzform und fielen aus dem Muster, darunter ein toter Verweis.
+
+**Die Lehre dieses Datensatzes bleibt ausserhalb dieses einen Ordners unumgesetzt:** jedes
+Suchmuster des Projekts, das `\.md` verlangt, hat denselben blinden Fleck. Sie ist in den zweiten
+Nachtrag aufgenommen. Der genannte Zusammenhang mit
+`260810-1730_*_die-erzeugung-von-portfolio-md-…` bleibt offen.
+
+Geschlossen in der Sitzung `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`.

@@ -3331,11 +3331,11 @@ impl Anwendungsdelegierter {
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
     /// genannten Dateifensters.
     ///
-    /// Der oberste der vier Raenge, siehe
+    /// Rang 1, der oberste der fuenf Raenge, siehe
     /// [`crate::appkit::statuszeile::zeile`]. Nicht zu verwechseln mit
     /// [`Dateifenstersicht::melden`] weiter unten: das ist der Weg der
-    /// Ereignisse, die niemand angefordert hat, und der steht einen Rang
-    /// tiefer.
+    /// Ereignisse, die niemand angefordert hat, und der schreibt die
+    /// Fenstermeldung auf Rang 3.
     fn antwort_zeigen(&self, seite: Fensterseite, text: &str) {
         self.dateifenster(seite)
             .quelle()

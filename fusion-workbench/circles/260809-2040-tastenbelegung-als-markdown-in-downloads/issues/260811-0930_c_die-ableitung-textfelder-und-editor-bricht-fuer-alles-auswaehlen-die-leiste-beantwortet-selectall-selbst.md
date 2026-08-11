@@ -72,3 +72,18 @@ später als Versäumnis gelesen wird und jemand sie „vervollständigt".
 Drei Proben halten die Messung im Baum: die vollständige Tabelle (schlägt fehl, sobald sich eine
 Antwort ändert), der Verdachtsfall als eigene Zusicherung, und eine für `undo:`/`redo:`, die
 festhält, was das `false` **nicht** bedeutet.
+
+---
+Resolved: Nichts zu beheben — dieser Datensatz **ist** das Ergebnis und keine ausstehende
+Arbeit. Er haelt fest, dass gemessen wurde und was dabei herauskam, damit die leere Zelle bei
+`text_alles_auswaehlen` nicht spaeter als Versaeumnis gelesen und "vervollstaendigt" wird.
+
+Der Befund ist an drei Stellen im Baum verankert: die Messung liegt als Probe in
+`crates/krk-ui/src/appkit/menue.rs` und schlaegt fehl, sobald sich eine Antwort aendert; der
+Zweig in `belegungsausgabe.rs` zitiert diesen Datensatz; und C3 des Specs traegt seit dem
+260811-1038 die Dreiteilung statt der widerlegten einheitlichen Ableitung.
+
+Was die Messung **nicht** entschieden hat, steht oben und bleibt gueltig: ob der in der Leiste
+bedienbare Eintrag dort auch etwas bewirkt. Das braucht eine Instanz und damit den Hauptfaden.
+
+Geschlossen in der Sitzung `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`.

@@ -1525,9 +1525,9 @@ fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
 /// und SIGHUP enden ueber [`signalwache_starten`] in `std::process::exit`, und
 /// dabei laeuft kein [`Drop`]. Die Sitzung des Nutzers kommt dort ueber
 /// [`SICHERUNG`] zurueck, der Messplan **dieses** Laufs bleibt liegen. Weg
-/// kommt er trotzdem, nur nicht durch den eigenen Prozess: [`Messplanwaechter::neu`]
-/// raeumt beim Anlegen jeden fremden Plan ab, der naechste Lauf also den
-/// dieses. Zwischen einem Strg+C und dem naechsten Lauf steht die Datei
+/// kommt er trotzdem, nur nicht durch den eigenen Prozess:
+/// [`Messplanwaechter::in_verzeichnis`] raeumt beim Anlegen jeden fremden Plan
+/// ab, der naechste Lauf also den dieses. Zwischen einem Strg+C und dem naechsten Lauf steht die Datei
 /// weiterhin im Temporaerverzeichnis — neu ist allein, dass es dabei bei einer
 /// bleibt statt bei den neun, die sich bis zum 260810 angesammelt hatten.
 #[must_use]
@@ -1571,7 +1571,15 @@ fn fremde_plaene_raeumen(verzeichnis: &Path, eigener: &Path) {
 }
 
 impl Messplanwaechter {
-    /// Ein Pfad im Temporaerverzeichnis. Geschrieben wird hier nichts.
+    /// Ein Pfad im genannten Verzeichnis. Geschrieben wird hier nichts.
+    ///
+    /// **Das Verzeichnis ist ein Argument und keine feste Groesse.** Der
+    /// Messlauf reicht ueber [`plan_schreiben`] das Temporaerverzeichnis
+    /// herein, die Proben einen [`crate::wegwerfordner::Wegwerfordner`]. Ein
+    /// zweiter Einstieg, der `std::env::temp_dir` selbst nennt, gehoert nicht
+    /// hierher: bis zum 260811 gab es ihn, und die Probe zum Messplan raeumte
+    /// darueber das echte Temporaerverzeichnis ab
+    /// (`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`).
     ///
     /// **Der Name steht fest, bevor irgendetwas angelegt wird**, wie bei
     /// [`crate::wegwerfordner::Wegwerfordner::neu`]. Damit deckt der Waechter
@@ -1585,7 +1593,7 @@ impl Messplanwaechter {
     /// liefert `NotFound`, und der Rueckgabewert wird ohnehin verworfen.
     ///
     /// **Beim Anlegen faellt jeder fremde Plan mit**, also jede
-    /// `krk-messplan-*.toml` im Temporaerverzeichnis, die nicht die eigene ist.
+    /// `krk-messplan-*.toml` im Verzeichnis, die nicht die eigene ist.
     /// Es ist dieselbe Zeile, die [`crate::wegwerfordner::Wegwerfordner::neu`]
     /// schon traegt, nur ueber das Verzeichnis statt ueber den einen Namen. Sie
     /// deckt die Ausgaenge ab, an die kein [`Drop`] heranreicht: das
@@ -1598,15 +1606,17 @@ impl Messplanwaechter {
     /// im Vordergrund verlangt und zwei Laeufe sich den Vordergrund nicht
     /// teilen koennen. Sie ist eine Voraussetzung dieser Bauform und keine
     /// Beobachtung: wer nebenlaeufige Laeufe einfuehrt, aendert zuerst diese
-    /// Stelle. Ein zweiter Beteiligter steht schon da und ist mitgemeint: die
-    /// Proben dieser Kiste rufen [`plan_schreiben`] und damit diesen Weg, also
-    /// raeumt auch ein `cargo test` das Temporaerverzeichnis ab. Wer waehrend
-    /// eines Messlaufs die Proben fahren laesst, nimmt ihm den Plan weg.
-    fn neu() -> Self {
-        Self::in_verzeichnis(&std::env::temp_dir())
-    }
-
-    /// Derselbe Waechter unter einem gegebenen Verzeichnis, fuer die Proben.
+    /// Stelle.
+    ///
+    /// **Der Testlauf war bis zum 260811 der zweite Beteiligte und ist es
+    /// nicht mehr.** Er war von der Zusage nie gedeckt: er verlangt keinen
+    /// Vordergrund und laeuft in jeder Sitzung mehrfach. Die Probe zum
+    /// Messplan traf das Temporaerverzeichnis trotzdem, weil sie
+    /// [`plan_schreiben`] rief; ein `cargo test` nahm damit einem nebenher
+    /// laufenden Messlauf den Plan weg. Seither geht jede Probe ueber diese
+    /// Funktion und einen [`crate::wegwerfordner::Wegwerfordner`], und das
+    /// Temporaerverzeichnis steht an einer einzigen Stelle im Baum, naemlich
+    /// in [`plan_schreiben`].
     fn in_verzeichnis(verzeichnis: &Path) -> Self {
         let pfad = verzeichnis.join(format!("{PLANRUMPF}{}.toml", std::process::id()));
         fremde_plaene_raeumen(verzeichnis, &pfad);
@@ -1639,7 +1649,30 @@ impl Drop for Messplanwaechter {
 ///
 /// Der Plan faellt mit dem zurueckgegebenen [`Messplanwaechter`]; wer ihn
 /// laenger braucht, haelt den Waechter laenger.
+///
+/// **Das ist die einzige Stelle im Baum, die `std::env::temp_dir` fuer den
+/// Messplan nennt**, und alles darunter nimmt das Verzeichnis als Argument.
+/// Die Trennung ist keine Bequemlichkeit fuer die Proben, sondern deren
+/// einziger zulaessiger Weg: eine Probe, die diesen Aufruf hier nimmt, raeumt
+/// ueber [`fremde_plaene_raeumen`] das echte Temporaerverzeichnis ab und nimmt
+/// einem nebenher laufenden Messlauf den Plan weg
+/// (`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`).
+/// Proben gehen deshalb ueber [`plan_in_verzeichnis_schreiben`].
 fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<Messplanwaechter> {
+    plan_in_verzeichnis_schreiben(lauf, unterordner, &std::env::temp_dir())
+}
+
+/// Derselbe Plan unter einem gegebenen Verzeichnis, fuer die Proben.
+///
+/// Traegt den ganzen Inhalt und das Schreiben; [`plan_schreiben`] setzt allein
+/// das Verzeichnis darauf. Eine Probe geht deshalb hier herein und prueft
+/// dabei dieselbe Serialisierung wie der Betrieb — ungeprueft bleibt ihr
+/// allein die eine Zeile darueber, die `std::env::temp_dir` waehlt.
+fn plan_in_verzeichnis_schreiben(
+    lauf: &Gesamtlauf,
+    unterordner: &Path,
+    verzeichnis: &Path,
+) -> io::Result<Messplanwaechter> {
     use krk_core::ablage::sitzung::{Dateifenster, Sitzung, Tab};
 
     let sitzung = Sitzung {
@@ -1671,7 +1704,7 @@ fn plan_schreiben(lauf: &Gesamtlauf, unterordner: &Path) -> io::Result<Messplanw
     );
     let text = toml::to_string(&wurzel).map_err(io::Error::other)?;
 
-    let waechter = Messplanwaechter::neu();
+    let waechter = Messplanwaechter::in_verzeichnis(verzeichnis);
     std::fs::write(waechter.pfad(), text)?;
     Ok(waechter)
 }
@@ -2655,11 +2688,25 @@ mod tests {
         );
     }
 
+    /// **Geschrieben wird in den Wegwerfordner und nicht ins
+    /// Temporaerverzeichnis.** Ueber `plan_schreiben` raeumte diese Probe beim
+    /// Anlegen des Waechters jeden fremden Messplan im echten
+    /// Temporaerverzeichnis ab und nahm damit einem nebenher laufenden
+    /// Messlauf den Plan weg; sie geht deshalb ueber
+    /// `plan_in_verzeichnis_schreiben`, wie
+    /// `ein_neuer_waechter_raeumt_fremde_plaene_ab_und_laesst_den_eigenen_stehen`
+    /// ueber `Messplanwaechter::in_verzeichnis` geht.
+    ///
+    /// **Geprueft wird dabei dasselbe wie vorher**: der ganze Inhalt und das
+    /// Schreiben stehen in `plan_in_verzeichnis_schreiben`, und
+    /// `plan_schreiben` setzt allein `std::env::temp_dir` darauf. Diese eine
+    /// Zeile ist das einzige, was die Probe nicht mehr mit ausfuehrt.
     #[test]
     fn der_messplan_traegt_die_pruefsitzung_in_der_serialisierung_der_sitzung() {
         use krk_core::ablage::sitzung::Sitzung;
 
         let wurzel = Wegwerfordner::neu("messplan");
+        fs::create_dir_all(wurzel.pfad()).expect("anlegbar");
         let lauf = Gesamtlauf {
             programm: PathBuf::from("/egal/krk"),
             ordner_a: wurzel.pfad().join("a"),
@@ -2670,7 +2717,8 @@ mod tests {
             runden: 1,
         };
         let unterordner = wurzel.pfad().join("a-l6");
-        let plan = plan_schreiben(&lauf, &unterordner).expect("der Plan ist schreibbar");
+        let plan = plan_in_verzeichnis_schreiben(&lauf, &unterordner, wurzel.pfad())
+            .expect("der Plan ist schreibbar");
         let text = fs::read_to_string(plan.pfad()).expect("lesbar");
 
         // Der Abschnitt [sitzung] ist ueber dieselbe serde-Struktur lesbar,

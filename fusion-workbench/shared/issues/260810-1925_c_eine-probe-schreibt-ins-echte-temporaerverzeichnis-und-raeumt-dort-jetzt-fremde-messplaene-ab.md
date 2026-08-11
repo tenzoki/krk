@@ -63,3 +63,29 @@ selbst aufräumen. Diese Probe ist der verbliebene Gegenfall.
 Gering, aber nicht null. Der Schaden tritt nur ein, wenn jemand während eines Messlaufs die
 Proben fährt — was in einer Agentensitzung durchaus vorkommt, weil `make check` der übliche
 Abnahmeschritt ist.
+
+---
+Resolved: `plan_schreiben` reicht das Verzeichnis jetzt durch.
+`plan_in_verzeichnis_schreiben(lauf, unterordner, verzeichnis)` traegt Inhalt und Schreiben,
+`plan_schreiben` setzt allein `std::env::temp_dir()` darauf. Die Probe
+`der_messplan_traegt_die_pruefsitzung_in_der_serialisierung_der_sitzung` geht ueber die
+durchgereichte Fassung und fasst das echte Temporaerverzeichnis nicht mehr an.
+
+**Die Frage dieses Datensatzes ist beantwortet und nicht umgangen.** Er fragte, ob
+`plan_schreiben` das Verzeichnis durchreichen muss oder die Probe direkt auf `in_verzeichnis`
+gehen kann, und ob sie im zweiten Fall noch dasselbe prueft. Direkt auf `in_verzeichnis` haette
+geheissen, dass die Probe den TOML-Inhalt selbst baut — dann prueft sie die Serialisierung nicht
+mehr, um die es ihr geht. Deshalb die Durchreichung. Die Probe prueft danach jede Zusicherung,
+die sie vorher prueft; ungeprueft bleibt ihr genau eine Zeile, die Wahl des
+Temporaerverzeichnisses.
+
+**Ein Nebeneffekt, bewusst so aufgeloest:** `Messplanwaechter::neu` fiel dabei als unbenutzt
+heraus und ist entfernt statt mit `allow(dead_code)` stehengelassen worden. Sonst truegen zwei
+Ebenen dieselbe `temp_dir`-Zeile. `std::env::temp_dir` steht fuer den Messplan jetzt an einer
+einzigen Stelle im Baum.
+
+**Unabhaengig gegengeprueft:** eine fremde `krk-messplan-999999.toml` im echten
+Temporaerverzeichnis ueberlebt ein volles `make check`. Vor der Aenderung waere sie weg gewesen.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`.

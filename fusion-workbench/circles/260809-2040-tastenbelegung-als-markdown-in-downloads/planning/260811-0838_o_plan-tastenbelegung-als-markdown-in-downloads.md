@@ -325,7 +325,24 @@ Die Prüfkommandos lauten `make check`, ersatzweise `make build`, `make test`, `
 
   Dazu am Diff und an der Ablage: `git diff --stat` nennt weder `resources/default-keymap.toml` noch `crates/krk-ui/src/fenstertitel.rs`, und `grep -c '^\[\[funktion\]\]' resources/default-keymap.toml` liefert unverändert 71. `Kommando::KENNUNGEN` führt unverändert 65 Paare. `make menue` gibt eine Zeile mehr aus, `eintrag="Tastenbelegung als Markdown sichern"` mit `kombination=(keines)` und `selektor=tastenbelegungSichern:`, dazu die Trennerzeile; der Aufruf braucht ein gebautes Bündel, aber kein Fenster und keinen Vordergrund und ist damit von einem Agenten abnehmbar. **Dass der Klick die Datei schreibt, prüft S4 und ist `Nutzerarbeit`.**
 
-### 4. Abnahme am gebauten Bündel
+### 4. [GESTRICHEN] Abnahme am gebauten Bündel
+
+> **Vom Nutzer am 260811-1215 gestrichen.** Der Schritt wird nicht gefahren.
+>
+> **Was das kostet, ungeschönt:** die 41 Abnahmekriterien des Specs bleiben sämtlich auf `- [ ]`.
+> Vier Fragen, die allein am laufenden Bündel zu beantworten sind, bleiben unbeantwortet — sie
+> stehen unten unverändert und sind der Grund, aus dem dieser Schritt existierte. Der Circle kann
+> damit nicht als kohärent abgeschlossen werden; „gebaut" ist die richtige Aussage über diese
+> Runde und „abgenommen" nicht. Es ist dieselbe Lage wie bei der Runde 2, die aus demselben
+> Grund als beschränkter Abschluss geschlossen hat.
+>
+> **Was an die Stelle tritt:** die Frage, wie sich ein solcher Lauf automatisieren lässt, statt
+> ihn jedes Mal von Hand zu fahren. Die Abnahmeanleitung
+> `planning/260811-1130_*_abnahmeanleitung-tastenbelegung-als-markdown.md` bleibt als Grundlage
+> dafür stehen — sie führt zu jedem Kriterium Handlung, Beobachtungsort und Bestehensbedingung,
+> und ein Teil davon ist schon heute ohne Oberfläche prüfbar (`make menue`, die erzeugte Datei).
+> Die offene Frage dazu ist
+> `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`.
 
 - Ausführender: die Messung ist **`Nutzerarbeit`**; `coder` schreibt danach den Bericht und zieht den Spec nach, falls die zweite Messung es verlangt
 - Dateien: `messungen/` (neu: ein Bericht der Abnahme, Dateiname nach dem Muster der bestehenden Berichte), `fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-*.md` (erweitert: allein der Nachtrag, den der Spec selbst vorsieht, falls die Sperrfrage mit ja ausgeht)

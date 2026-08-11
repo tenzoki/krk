@@ -40,17 +40,35 @@
 //! am 260811-0110 angenommen hat; eine zusaetzliche Meldung darueber verlangt
 //! C4 ausdruecklich nicht.
 //!
-//! # Die drei Begruendungslagen der dritten Spalte
+//! # Die vier Begruendungslagen der dritten Spalte
 //!
-//! Die Spalte "Wirkt in" hat **drei verschiedene Quellen**, und [`wirkung`]
-//! haelt sie auseinander, statt sie zu mitteln:
+//! **Gezaehlt wird ueber alle 71 Funktionen, und die Ziffer einer Lage heisst
+//! ueberall dasselbe**: im Modulkopf, an den Zweigen von [`wirkung`] und in der
+//! Probe `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`. Die
+//! erste Lage traegt die 65 Funktionen mit [`Kommando`], die zweite bis vierte
+//! verteilen die sechs zugestellten Textbefehle unter sich.
 //!
-//! | Funktionen | Zelle | woher die Aussage kommt |
-//! |---|---|---|
-//! | die 65 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
-//! | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen** |
-//! | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
-//! | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
+//! Die Spalte "Wirkt in" hat damit **vier verschiedene Quellen**, und
+//! [`wirkung`] haelt sie auseinander, statt sie zu mitteln:
+//!
+//! | Lage | Funktionen | Zelle | woher die Aussage kommt |
+//! |---|---|---|---|
+//! | 1 | die 65 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
+//! | 2 | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen**, zuzueglich eines `inference:`-Schrittes ueber den Feldeditor (siehe unten) |
+//! | 3 | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
+//! | 4 | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
+//!
+//! **Die zweite Lage ist zur Haelfte gemessen und zur Haelfte erschlossen.**
+//! Gemessen hat S1 eine Aussage ueber Klassen: `cut:`, `copy:` und `paste:`
+//! haengen an `NSText`, und `NSTextField` beantwortet keinen von ihnen. Der
+//! Schritt von dort zu "Textfelder" ist ein zweiter und **nicht** gemessen —
+//! `inference:` der Feldeditor eines `NSTextField` ist eine `NSTextView` und
+//! bringt `NSText` mit. Das ist eine zugesagte Eigenschaft von AppKit, aber
+//! `AnyClass::responds_to` hat sie nicht geprueft, denn es legt keine Instanz
+//! an und fragt nichts ueber den Ersthelfer. Die Haelfte "Editor" derselben
+//! Zelle braucht diesen zweiten Schritt nicht: gemessen ist, dass
+//! `NSTextView` die drei beantwortet, und die Textflaeche des Editors **ist**
+//! eine `NSTextView` (`super::appkit::editor`).
 //!
 //! Die Einzelheiten stehen an den Zweigen von [`wirkung`]. Was sie gemeinsam
 //! haben: keine Zelle behauptet mehr, als ihre Quelle hergibt. Eine leere Zelle
@@ -229,9 +247,11 @@ const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
 /// sechs Textbefehle zufaellig nicht nennt.
 ///
 /// **Der rechte Zweig entscheidet je Befehl und nicht fuer die Gruppe.** Das
-/// ist der Kern dieser Funktion: die sechs zugestellten Textbefehle tragen
-/// **drei** verschiedene Begruendungslagen, und ein Alles-oder-nichts waere in
-/// zwei von drei Faellen falsch. Der Modulkopf stellt sie als Tabelle daneben.
+/// ist der Kern dieser Funktion: die sechs zugestellten Textbefehle verteilen
+/// sich auf die **zweite bis vierte** der vier Begruendungslagen, und ein
+/// Alles-oder-nichts ueber die sechs waere fuer zwei dieser drei Lagen falsch.
+/// Der Modulkopf stellt alle vier als Tabelle daneben und legt dort die
+/// Zaehlung fest, der die Zweige hier folgen.
 fn wirkung(funktion: &Funktion) -> &'static str {
     // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 65 der 71
     // Funktionen tragen ein Kommando, `Kommando::wirkungsbereich` ist eine
@@ -243,14 +263,24 @@ fn wirkung(funktion: &Funktion) -> &'static str {
     }
 
     match funktion.kennung() {
-        // Zweite Lage: **gemessen**. S1 hat am Objective-C-Laufzeitsystem
-        // gefragt, welche Klasse diese drei Selektoren beantwortet, und die
-        // Antwort ist `NSText` — nicht `NSTextView`, und `NSTextField`
-        // beantwortet keinen von ihnen. Erreicht wird also der **Feldeditor**
-        // des Textfeldes, der eine `NSTextView` ist und `NSText` mitbringt,
-        // und im Editor die Textflaeche. Die Tabelle der Messung steht im
-        // Modulkopf von `super::appkit::menue`, die Probe daneben unter
-        // `mod tests`.
+        // Zweite Lage: **gemessen, und der Schritt zu "Textfelder" daraus
+        // erschlossen.** Gemessen hat S1 am Objective-C-Laufzeitsystem, welche
+        // Klasse diese drei Selektoren beantwortet, und die Antwort ist
+        // `NSText` — nicht `NSTextView`, und `NSTextField` beantwortet keinen
+        // von ihnen. Das ist eine Aussage ueber Klassen. Fuer den Editor
+        // reicht sie aus: seine Textflaeche ist eine `NSTextView`
+        // (`super::appkit::editor`).
+        //
+        // Fuer "Textfelder" kommt ein zweiter Schritt hinzu, und der ist
+        // **nicht** gemessen: `inference:` erreicht wird der **Feldeditor**
+        // des Textfeldes, der eine `NSTextView` ist und `NSText` mitbringt.
+        // Das ist eine zugesagte Eigenschaft von AppKit, aber
+        // `AnyClass::responds_to` hat sie nicht geprueft — es legt keine
+        // Instanz an und fragt nichts ueber den Ersthelfer. Wer die Kette
+        // messen will, braucht eine Instanz und damit den Hauptfaden.
+        //
+        // Die Tabelle der Messung steht im Modulkopf von
+        // `super::appkit::menue`, die Probe daneben unter `mod tests`.
         "text_ausschneiden" | "text_kopieren" | "text_einfuegen" => "Textfelder und Editor",
 
         // Dritte Lage: **die Messung hat die Ableitung gebrochen, und die
@@ -271,7 +301,7 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // Zelle fuellen will, misst das zuerst.
         "text_alles_auswaehlen" => "",
 
-        // Vierte Zeile, dritte Lage: **ein Nutzerentscheid, am Code belegt und
+        // Vierte Lage: **ein Nutzerentscheid, am Code belegt und
         // ausdruecklich nicht aus S1 abgeleitet.** S1 konnte hier nichts
         // entscheiden: `undo:` und `redo:` stehen an `NSWindow` und nicht an
         // der Textklasse, `responds_to` liefert `false` fuer einen
@@ -642,14 +672,16 @@ mod tests {
         );
     }
 
-    /// **Die dritte Spalte, ueber ihre drei Begruendungslagen.**
+    /// **Die dritte Spalte, ueber ihre vier Begruendungslagen.**
     ///
-    /// Die Probe haelt jede der drei einzeln fest, weil ein Alles-oder-nichts
-    /// ueber die sechs zugestellten Textbefehle in zwei von drei Faellen falsch
-    /// waere. Aendert eine der drei Quellen ihre Antwort, schlaegt genau der
-    /// betroffene Zweig fehl.
+    /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle 71
+    /// Funktionen: die erste Lage traegt die 65 mit Kommando, die zweite bis
+    /// vierte die sechs zugestellten Textbefehle. Die Probe haelt jede der
+    /// vier einzeln fest, weil ein Alles-oder-nichts ueber die sechs fuer zwei
+    /// der drei sie betreffenden Lagen falsch waere. Aendert eine der vier
+    /// Quellen ihre Antwort, schlaegt genau der betroffene Abschnitt fehl.
     #[test]
-    fn die_dritte_spalte_haelt_die_drei_begruendungslagen_auseinander() {
+    fn die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander() {
         let belegung = Belegung::auslieferung();
 
         // Erste Lage, aus der Belegung entscheidbar: jede Funktion mit
@@ -683,17 +715,19 @@ mod tests {
         };
 
         // Zweite Lage, in S1 gemessen: die drei Zwischenablage-Befehle haengen
-        // an `NSText`, erreicht wird der Feldeditor des Textfeldes und die
-        // Textflaeche des Editors.
+        // an `NSText`, und die Textflaeche des Editors ist eine `NSTextView`.
+        // `inference:` Der Weg zu den Textfeldern fuehrt ueber deren
+        // Feldeditor, der ebenfalls eine `NSTextView` ist; gemessen ist dieser
+        // Schritt nicht, siehe den Zweig von `wirkung`.
         for kennung in ["text_ausschneiden", "text_kopieren", "text_einfuegen"] {
             assert_eq!(
                 wirkung_von(kennung),
                 "Textfelder und Editor",
-                "{kennung} traegt nicht die in S1 gemessene Beschriftung"
+                "{kennung} traegt nicht die aus der Messung von S1 hergeleitete Beschriftung"
             );
         }
 
-        // Dritte Lage, erste Haelfte: S1 hat die Ableitung gebrochen, weil
+        // Dritte Lage: S1 hat die Ableitung gebrochen, weil
         // `NSTableView` `selectAll:` selbst beantwortet und die Leiste eine
         // ist. Die Zelle bleibt **leer**, und das ist ein Ergebnis und kein
         // Versaeumnis; der Datensatz steht am Zweig von `wirkung`.
@@ -704,7 +738,7 @@ mod tests {
              ob der Eintrag in der Leiste etwas bewirkt"
         );
 
-        // Dritte Lage, zweite Haelfte: ein Nutzerentscheid vom 260811-0935,
+        // Vierte Lage: ein Nutzerentscheid vom 260811-0935,
         // am Code ueber `setAllowsUndo(true)` belegt und ausdruecklich nicht
         // aus S1 abgeleitet — `responds_to` kann fuer `undo:` und `redo:`
         // nichts entscheiden.

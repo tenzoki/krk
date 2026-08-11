@@ -160,3 +160,21 @@ nur die Verwechslung zu beheben.
 
 Kein `panic!` gebaut: es stuerzte an einer formal zulaessigen, von Hand geschriebenen
 `keymap.toml` ab.
+
+---
+Deferred: **auf eine spaetere Runde, und zwar durch Wahl und nicht durch Versaeumnis.**
+
+Der Nutzer hat am 260811-1005 Weg b) gewaehlt und die beiden anderen ausdruecklich abgelehnt:
+die Lesestellen deckungsgleich zu machen (was die Kopplung an `KENNUNGEN` zurueckbraechte) und
+eine Abweisung an der Eingangsstelle ueber einen vierten `Belegungsfehler`. Was Weg b) leistet,
+ist gebaut und im Nachtrag oben belegt: die Verwechslung zwischen "hier ist nichts entschieden"
+und "hier hat niemand nachgesehen" gibt es in der Datei nicht mehr.
+
+**Was bleibt, ist die Ungleichheit selbst:** `bereich` fragt ueber `Kommando::aus_kennung` und
+sieht `gehalten_von` nicht, `wirkung` fragt ueber `Funktion::kommando()` und sieht es. Eine von
+Hand geschriebene `keymap.toml` kann beide auseinanderlaufen lassen. Der Schaden daraus ist heute
+eine Zelle, die "(von KRK nicht eingeordnet)" sagt — also eine ehrliche Auskunft.
+
+Wer die Frage aufnimmt, entscheidet zwischen den beiden abgelehnten Wegen; beide stehen oben
+unter `## Behebungsrichtungen` mit ihrem Preis. Ein `panic!` bleibt in jedem Fall falsch: es
+stuerzte an einer formal zulaessigen Nutzerdatei ab.

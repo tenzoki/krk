@@ -24,3 +24,21 @@ Die Aussage des Kommentars über den **obersten** Rang bleibt richtig. Falsch is
 Eine Zeile in `crates/krk-ui/src/appkit/anwendung.rs`: „Der oberste der fünf Ränge". Der Verweis auf `statuszeile::zeile` bleibt, wie er ist. Wer den Fehler behebt, prüft im selben Zug die Nachbarstelle `Dateifenstersicht::melden`, deren Kommentar „einen Rang tiefer" sagt und damit von derselben Aufzählung ausgeht.
 
 Der Plan der Runde 3 fasst die Datei in S3 an und könnte die Zeile mitnehmen. Er tut es ausdrücklich **nicht**: die Änderung gehört nicht zur Ausgabe der Tastenbelegung, und ein Schritt, der nebenbei fremde Kommentare berichtigt, macht seinen eigenen Diff unlesbar.
+
+---
+Resolved: `anwendung.rs:3334` sagt jetzt "Rang 1, der oberste der fuenf Raenge". Die fuenf sind
+nachgezaehlt an `crates/krk-ui/src/appkit/statuszeile.rs:75-83`: Befehlsantwort,
+Vorgangsanzeige, Fenstermeldung, Tabmeldung, Markierungsstand.
+
+**Die Nachbarpruefung hat einen zweiten Fehler im selben Kommentarblock ergeben**, den dieser
+Datensatz nicht kannte: `Dateifenstersicht::melden` schrieb "einen Rang tiefer", schreibt aber
+ueber `meldung_zeigen` die Fenstermeldung, und die steht auf Rang 3 — zwei Raenge tiefer. Steht
+jetzt als "auf Rang 3" da.
+
+**Eine dritte Stelle bleibt offen und ist eigens erfasst:** `anwendung.rs:3620` traegt dieselbe
+Ungenauigkeit ("einen Rang tiefer als eine Befehlsantwort"), und auch dort geht die Meldung ueber
+`meldung_zeigen` auf Rang 3. Der `coder` hat sie unter der Auftragsgrenze gemeldet statt
+stillschweigend mitgenommen. Siehe `260811-1210_o_eine-dritte-stelle-nennt-den-rang-der-fenstermeldung-falsch.md`.
+Abgenommen mit `make check`, exit 0.
+
+Geschlossen in der Sitzung `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md`.
