@@ -5,11 +5,16 @@
 //! ```text
 //! target/KRK.app/
 //! └── Contents/
-//!     ├── Info.plist      Kopie von resources/Info.plist, Version eingesetzt
-//!     ├── PkgInfo         die acht Bytes APPL????
-//!     ├── MacOS/krk       das uebersetzte Binaerziel
-//!     └── Resources/      noch leer, spaetere Schritte legen hier ab
+//!     ├── Info.plist            Kopie von resources/Info.plist, Version eingesetzt
+//!     ├── PkgInfo               die acht Bytes APPL????
+//!     ├── MacOS/krk             das uebersetzte Binaerziel
+//!     └── Resources/KRK.icns    das Symbol, aus iconset/ erzeugt
 //! ```
+//!
+//! **Das Symbol liegt nicht im Baum, es entsteht beim Bau.** Die Quelle sind
+//! die sieben PNGs unter `iconset/`; `iconutil` macht daraus die `.icns`, und
+//! der Dateiname kommt aus `CFBundleIconFile` der `resources/Info.plist`.
+//! Warum erzeugt und nicht eingecheckt, steht bei [`SYMBOLGROESSEN`].
 //!
 //! **Die Reihenfolge ist Absicht.** Alles, was scheitern kann, scheitert bevor
 //! ein Verzeichnis entsteht: erst die Versionsersetzung, dann der Name des
@@ -54,6 +59,55 @@ const PROFIL: &str = "release";
 /// Dieselben vier Zeichen wie `CFBundlePackageType` in der `Info.plist`; die
 /// Erzeugerkennung ist unbelegt, dafuer stehen die vier Fragezeichen.
 const PKGINFO: &str = "APPL????";
+
+/// Das Verzeichnis mit den PNG-Quellen des Symbols, relativ zur Projektwurzel.
+const SYMBOLQUELLE: &str = "iconset";
+
+/// Das Iconset-Verzeichnis, das der Bau unter `target/` anlegt und wieder
+/// abraeumt.
+///
+/// `iconutil` nimmt kein loses Verzeichnis, sondern eines mit der Endung
+/// `.iconset` und den von Apple festgelegten Dateinamen darin. Die Werkstatt
+/// steht unter `target/`, weil sie ein Bauergebnis ist: `.gitignore` haelt
+/// `/target/` heraus, und der Baum traegt die Grafik weiterhin genau einmal.
+const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
+
+/// Die zehn Eintraege des `.icns`: der von `iconutil` erwartete Name und die
+/// Quelldatei unter [`SYMBOLQUELLE`].
+///
+/// **Warum erzeugt und nicht eingecheckt.** Eine eingecheckte `.icns` waere
+/// dieselbe Grafik ein zweites Mal im Baum, und die zweite Fassung veraltet
+/// still, sobald jemand ein PNG austauscht. `iconutil` gehoert zum Basissystem
+/// von macOS und liegt unter `/usr/bin/iconutil`, wie `codesign`, ohne das der
+/// Buendelbau ohnehin nicht durchlaeuft; es kommt also keine Voraussetzung
+/// hinzu, die dieses Projekt nicht schon haette.
+///
+/// **Die Zuordnung der Kantenlaengen.** Apple erwartet je Punktgroesse eine
+/// einfache und eine `@2x`-Fassung, und `@2x` heisst die doppelte Kantenlaenge
+/// derselben Punktgroesse. Aus den sieben PNGs 16/32/64/128/256/512/1024
+/// bilden sich daraus fuenf Paare, und drei Kantenlaengen treten in zweien von
+/// ihnen auf: 32 ist das `@2x` von 16 **und** die einfache Fassung von 32, 256
+/// und 512 ebenso. `iconutil` prueft die Kantenlaenge gegen den Namen und
+/// nimmt eine falsch zugeordnete Datei nicht an. Jedes der sieben PNGs kommt
+/// vor; die Probe `jede_png_quelle_wird_gebraucht` haelt das fest.
+///
+/// **`iconset/commander.ico` steht bewusst nicht in dieser Liste.** Sie ist das
+/// Symbolformat von Windows. macOS liest sie weder als Buendelsymbol noch als
+/// Quelle fuer `iconutil`; sie liegt im Baum, ohne am Bau teilzunehmen. Ebenso
+/// die beiden SVGs: sie sind die Zeichenquelle, aus der die PNGs entstanden
+/// sind, und kein Format, das ein Buendel traegt.
+const SYMBOLGROESSEN: [(&str, &str); 10] = [
+    ("icon_16x16.png", "icon-16.png"),
+    ("icon_16x16@2x.png", "icon-32.png"),
+    ("icon_32x32.png", "icon-32.png"),
+    ("icon_32x32@2x.png", "icon-64.png"),
+    ("icon_128x128.png", "icon-128.png"),
+    ("icon_128x128@2x.png", "icon-256.png"),
+    ("icon_256x256.png", "icon-256.png"),
+    ("icon_256x256@2x.png", "icon-512.png"),
+    ("icon_512x512.png", "icon-512.png"),
+    ("icon_512x512@2x.png", "icon-1024.png"),
+];
 
 /// Was ein Buendelbau hinterlaesst.
 ///
@@ -101,13 +155,18 @@ pub(crate) struct Vorlage {
     plist: String,
     /// Der Name des Binaerprogramms aus `CFBundleExecutable`.
     pub(crate) binaername: String,
+    /// Der Dateiname des Symbols aus `CFBundleIconFile`, mit Endung `.icns`.
+    symbolname: String,
 }
 
 /// Liest und prueft die Buendelbeschreibung, bevor irgendetwas entsteht.
 ///
-/// Traegt die Abbruchreihenfolge aus dem Modulkopf: Versionsersetzung und
-/// Binaername scheitern hier, vor dem ersten Uebersetzungslauf und vor dem
-/// ersten angelegten Verzeichnis.
+/// Traegt die Abbruchreihenfolge aus dem Modulkopf: Versionsersetzung,
+/// Binaername, Symbolname und die Symbolquellen scheitern hier, vor dem ersten
+/// Uebersetzungslauf und vor dem ersten angelegten Verzeichnis. Dass die zehn
+/// PNG-Quellen schon hier geprueft werden und nicht erst bei der Montage, ist
+/// derselbe Gedanke: ein fehlendes `iconset/` soll vor und nicht nach einem
+/// vollstaendigen Uebersetzungslauf auffallen.
 pub(crate) fn vorbereiten() -> Result<Vorlage, Abbruch> {
     let wurzel = wurzel();
     let vorlage_pfad = wurzel.join("resources").join("Info.plist");
@@ -120,10 +179,13 @@ pub(crate) fn vorbereiten() -> Result<Vorlage, Abbruch> {
 
     let plist = version_einsetzen(&vorlage)?;
     let binaername = binaername(&vorlage)?;
+    let symbolname = symbolname(&vorlage)?;
+    symbolquellen_pruefen(&wurzel)?;
     Ok(Vorlage {
         wurzel,
         plist,
         binaername,
+        symbolname,
     })
 }
 
@@ -162,6 +224,14 @@ impl Vorlage {
         let pkginfo_pfad = contents.join("PkgInfo");
         fs::write(&pkginfo_pfad, PKGINFO)
             .map_err(|fehler| schreibfehler("schreiben", &pkginfo_pfad, &fehler))?;
+
+        // Das Symbol entsteht hier und nicht nach der Rueckkehr: beide
+        // Unterbefehle signieren am Ergebnis dieser Funktion, `bundle` lokal
+        // und `release` mit gehaerteter Laufzeitumgebung. Eine `.icns`, die
+        // danach ins Buendel kaeme, laege ausserhalb der Signatur, und die
+        // Beglaubigung nimmt ein so veraendertes Buendel nicht an.
+        let symbol_pfad = resources.join(&self.symbolname);
+        symbol_bauen(&self.wurzel, &symbol_pfad)?;
 
         println!("Version {VERSION} in {} eingesetzt.", plist_pfad.display());
         Ok(buendel)
@@ -229,6 +299,113 @@ fn binaername(vorlage: &str) -> Result<String, Abbruch> {
         ));
     }
     Ok(name)
+}
+
+/// Liest den Dateinamen des Symbols aus der Buendelbeschreibung.
+///
+/// Dieselbe Vorschrift wie bei [`binaername`]: der Name steht in der
+/// `Info.plist` und wird von dort gelesen, statt in `bundle.rs` ein zweites Mal
+/// zu stehen. macOS sucht das Symbol unter genau dem Namen, den
+/// `CFBundleIconFile` nennt; eine Abweichung zwischen beiden waere ein Buendel,
+/// das eine `.icns` traegt und trotzdem das Standardsymbol zeigt.
+///
+/// Die Endung `.icns` darf im Wert fehlen — macOS ergaenzt sie. Diese Funktion
+/// ergaenzt sie ebenfalls, damit die geschriebene Datei in beiden Schreibweisen
+/// dort landet, wo gesucht wird.
+fn symbolname(vorlage: &str) -> Result<String, Abbruch> {
+    let name = plist_zeichenkette(vorlage, "CFBundleIconFile").ok_or_else(|| {
+        Abbruch::Lauf(
+            "resources/Info.plist nennt keinen Schluessel CFBundleIconFile mit einer \
+             Zeichenkette. Ohne ihn ist nicht bestimmt, unter welchem Namen das Symbol in \
+             Contents/Resources liegen soll, und das Buendel traegt das Standardsymbol einer \
+             Anwendung ohne eigenes."
+                .to_owned(),
+        )
+    })?;
+    if name.is_empty() {
+        return Err(Abbruch::Lauf(
+            "CFBundleIconFile in resources/Info.plist ist leer.".to_owned(),
+        ));
+    }
+    if name.ends_with(".icns") {
+        Ok(name)
+    } else {
+        Ok(format!("{name}.icns"))
+    }
+}
+
+/// Prueft, dass jede Quelldatei aus [`SYMBOLGROESSEN`] im Baum liegt.
+///
+/// Ohne diese Pruefung faende ein geloeschtes oder umbenanntes PNG erst bei der
+/// Montage auf, also nach einem vollstaendigen Uebersetzungslauf.
+fn symbolquellen_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
+    for (_, quelldatei) in SYMBOLGROESSEN {
+        let quelle = wurzel.join(SYMBOLQUELLE).join(quelldatei);
+        if !quelle.is_file() {
+            return Err(Abbruch::Lauf(format!(
+                "{} fehlt. Aus den PNGs unter {SYMBOLQUELLE}/ entsteht das Symbol des Buendels; \
+                 ohne sie zeigten Finder und Dock das Standardsymbol einer Anwendung ohne \
+                 eigenes. Es wird kein Buendel gebaut.",
+                quelle.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Erzeugt die `.icns` aus den PNGs unter `iconset/` und legt sie unter `ziel`
+/// ab.
+///
+/// Der Weg ist der von Apple vorgesehene: ein Verzeichnis mit der Endung
+/// `.iconset` und den festgelegten Dateinamen darin, danach
+/// `iconutil --convert icns`. Die Werkstatt entsteht unter `target/` und wird
+/// nach dem Umwandeln abgeraeumt; ein gescheiterter Lauf laesst sie zum
+/// Nachsehen stehen, und der naechste Lauf entfernt sie zu Beginn.
+fn symbol_bauen(wurzel: &Path, ziel: &Path) -> Result<(), Abbruch> {
+    let werkstatt = wurzel.join("target").join(SYMBOLWERKSTATT);
+    if werkstatt.exists() {
+        fs::remove_dir_all(&werkstatt)
+            .map_err(|fehler| schreibfehler("entfernen", &werkstatt, &fehler))?;
+    }
+    fs::create_dir_all(&werkstatt)
+        .map_err(|fehler| schreibfehler("anlegen", &werkstatt, &fehler))?;
+
+    for (im_iconset, quelldatei) in SYMBOLGROESSEN {
+        let quelle = wurzel.join(SYMBOLQUELLE).join(quelldatei);
+        let hin = werkstatt.join(im_iconset);
+        fs::copy(&quelle, &hin).map_err(|fehler| {
+            Abbruch::Lauf(format!(
+                "{} laesst sich nicht nach {} kopieren: {fehler}",
+                quelle.display(),
+                hin.display()
+            ))
+        })?;
+    }
+
+    let status = Command::new("iconutil")
+        .args(["--convert", "icns", "--output"])
+        .arg(ziel)
+        .arg(&werkstatt)
+        .status()
+        .map_err(|fehler| {
+            Abbruch::Lauf(format!(
+                "iconutil laesst sich nicht starten: {fehler}. Es gehoert zum Basissystem von \
+                 macOS und liegt unter /usr/bin/iconutil."
+            ))
+        })?;
+    if !status.success() {
+        return Err(Abbruch::Lauf(format!(
+            "iconutil ist an {} gescheitert ({status}). Das Werkzeug prueft die Kantenlaenge \
+             jeder PNG-Datei gegen ihren Namen im Iconset; die Zuordnung steht bei \
+             SYMBOLGROESSEN in xtask/src/bundle.rs.",
+            werkstatt.display()
+        )));
+    }
+
+    fs::remove_dir_all(&werkstatt)
+        .map_err(|fehler| schreibfehler("entfernen", &werkstatt, &fehler))?;
+    println!("Symbol aus {SYMBOLQUELLE}/ erzeugt: {}", ziel.display());
+    Ok(())
 }
 
 /// Liest den Wert eines Schluessels aus einer Property-Liste im XML-Format.
@@ -331,6 +508,65 @@ mod tests {
     #[test]
     fn die_ausgelieferte_plist_nennt_das_binaerprogramm() {
         assert_eq!(binaername(AUSGELIEFERTE_PLIST).unwrap(), "krk");
+    }
+
+    #[test]
+    fn die_ausgelieferte_plist_nennt_die_symboldatei() {
+        assert_eq!(symbolname(AUSGELIEFERTE_PLIST).unwrap(), "KRK.icns");
+    }
+
+    #[test]
+    fn ein_symbolname_ohne_endung_bekommt_sie() {
+        let plist = "<key>CFBundleIconFile</key><string>KRK</string>";
+        assert_eq!(symbolname(plist).unwrap(), "KRK.icns");
+    }
+
+    #[test]
+    fn ohne_cfbundleiconfile_entsteht_kein_buendel() {
+        let plist = "<key>CFBundleName</key><string>KRK</string>";
+        assert!(symbolname(plist).is_err());
+    }
+
+    #[test]
+    fn jede_symbolquelle_liegt_im_baum() {
+        symbolquellen_pruefen(&wurzel()).unwrap();
+    }
+
+    #[test]
+    fn kein_eintrag_des_iconsets_kommt_zweimal_vor() {
+        // Zwei Eintraege gleichen Namens hiessen, dass eine Kantenlaenge
+        // stillschweigend die andere ueberschreibt und `iconutil` die zweite
+        // nie sieht.
+        let mut namen: Vec<&str> = SYMBOLGROESSEN.iter().map(|(name, _)| *name).collect();
+        namen.sort_unstable();
+        let anzahl = namen.len();
+        namen.dedup();
+        assert_eq!(namen.len(), anzahl);
+    }
+
+    /// Jede PNG-Datei unter `iconset/` wird gebraucht.
+    ///
+    /// Die Probe schlaegt an, wenn jemand eine Kantenlaenge dazulegt, ohne sie
+    /// zuzuordnen: das PNG laege dann im Baum und kaeme nicht ins Buendel.
+    /// Dieselbe Absicht wie bei den Fallunterscheidungen ohne Auffangzweig —
+    /// die Ergaenzung soll eine bewusste sein.
+    #[test]
+    fn jede_png_quelle_wird_gebraucht() {
+        let quellen = wurzel().join(SYMBOLQUELLE);
+        for eintrag in fs::read_dir(&quellen).unwrap() {
+            let pfad = eintrag.unwrap().path();
+            if pfad.extension().is_none_or(|endung| endung != "png") {
+                continue;
+            }
+            let name = pfad.file_name().unwrap().to_str().unwrap().to_owned();
+            assert!(
+                SYMBOLGROESSEN
+                    .iter()
+                    .any(|(_, quelldatei)| *quelldatei == name),
+                "{name} liegt unter {SYMBOLQUELLE}/ und steht in keinem Eintrag von \
+                 SYMBOLGROESSEN; es kaeme nicht ins Buendel."
+            );
+        }
     }
 
     #[test]

@@ -65,3 +65,39 @@ Der Bündelbau signiert seit der Runde 1 (`cargo xtask bundle`). **Eine Änderun
 ändert die Signatur**, was hier folgenlos ist, aber beim Auslieferungspaket
 (`cargo xtask release`, mit Beglaubigung) mitgedacht gehört: die `.icns` muss vor dem Signieren
 im Bündel liegen, nicht danach.
+
+---
+Resolved: Das Buendel traegt sein Symbol. `resources/Info.plist` fuehrt
+`CFBundleIconFile = KRK.icns`, und `xtask/src/bundle.rs` baut die Datei beim Buendeln aus den
+sieben PNGs.
+
+**Erzeugen statt einchecken**, und der Grund ist gemessen: `iconutil` liegt unter
+`/usr/bin/iconutil` als Programm des Basissystems, nicht als Xcode-Shim. Der Buendelbau verlangt
+`codesign` ohnehin unbedingt, es kommt also keine Voraussetzung hinzu, die das Projekt nicht
+schon haette. Eine eingecheckte `.icns` waere dieselbe Grafik ein zweites Mal im Baum und
+veraltete still, sobald jemand ein PNG austauscht.
+
+**`CFBundleIconFile` und nicht `CFBundleIconName`.** Der zweite verlangt einen Asset-Katalog und
+damit `actool` als zweites Bauwerkzeug fuer eine einzige Grafik. Der Dateiname wird aus der Plist
+gelesen und steht nicht ein zweites Mal in `bundle.rs` — dieselbe Vorschrift wie bei
+`CFBundleExecutable`.
+
+**Die zehn Eintraege aus sieben PNGs**, jede Quelle genau einmal gebraucht und von der Probe
+`jede_png_quelle_wird_gebraucht` gehalten: 32, 256 und 512 treten je zweimal auf, einmal als
+einfache und einmal als `@2x`-Fassung.
+
+**Beide Signaturwege sind geprueft.** `symbol_bauen` laeuft in `Vorlage::zusammensetzen`, und
+`bundle` wie `release` signieren am Rueckgabewert genau dieser Funktion. Die `.icns` liegt damit
+in beiden Wegen **vor** dem Signieren im Buendel; `KRK.icns` steht in `CodeResources` und ist
+versiegelt.
+
+`commander.ico` bleibt liegen und ist im Doc-Kommentar von `SYMBOLGROESSEN` als Windows-Format
+begruendet; dasselbe gilt fuer die beiden SVGs, die Zeichenquelle der PNGs.
+
+**Nachgeprueft am gebauten Buendel:** `Contents/Resources/KRK.icns` mit 298.129 Bytes,
+`CFBundleIconFile` in der Plist, der Rueckweg ueber `iconutil --convert iconset` liefert genau
+die zehn erwarteten Namen, `codesign --verify --strict` meldet gueltig, und das
+Zwischenverzeichnis ist abgeraeumt. **Ob der Finder das Symbol anzeigt, ist nicht geprueft und
+wird nicht behauptet.**
+
+Geschlossen in der Sitzung `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md`.

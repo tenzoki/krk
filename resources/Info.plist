@@ -94,6 +94,27 @@
 	<string>APPL</string>
 
 	<!--
+	  Das Symbol des Buendels, als Dateiname in `Contents/Resources/`. Die Datei
+	  liegt **nicht** im Baum: `cargo xtask bundle` erzeugt sie beim Montieren
+	  aus den PNGs unter `iconset/` und legt sie unter genau diesem Namen ab.
+	  Der Name steht deshalb hier und nicht ein zweites Mal in `bundle.rs` —
+	  dieselbe Vorschrift wie bei `CFBundleExecutable`, und aus demselben Grund:
+	  ein hier geaenderter Name haette sonst ein Buendel gebaut, dessen Symbol
+	  an einer Stelle liegt, an der macOS es nicht sucht.
+
+	  `CFBundleIconFile` und nicht `CFBundleIconName`: der zweite Schluessel
+	  liest das Symbol aus einem Asset-Katalog, den `actool` aus den
+	  Xcode-Werkzeugen uebersetzt. Dieses Projekt baut mit `cargo` und den
+	  Werkzeugen des Basissystems, und ein Asset-Katalog waere ein zweites
+	  Bauwerkzeug fuer eine einzige Grafik.
+
+	  Die Endung darf fehlen; sie steht hier, damit der Wert den Dateinamen im
+	  Buendel woertlich nennt.
+	-->
+	<key>CFBundleIconFile</key>
+	<string>KRK.icns</string>
+
+	<!--
 	  Platzhalter, keine Zahl. Die Version wohnt allein im Feld `version` unter
 	  `[workspace.package]` der `Cargo.toml`. `cargo xtask bundle` (Schritt 5)
 	  setzt sie beim Kopieren an diese Stelle und bricht ab, wenn es den
