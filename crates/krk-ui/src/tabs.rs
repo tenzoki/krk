@@ -245,7 +245,29 @@ impl Tabinhalt {
 /// Wert sie beschriebe, sondern weil die Ansicht sie braucht, um die
 /// `NSTableView` nachzuziehen; sie ein zweites Mal auszurechnen hiesse,
 /// dieselbe Frage zweimal zu stellen. Wer sie nicht braucht, uebergeht sie.
+///
+/// **Der Wert laesst sich nicht still fallenlassen**, und das ist eine
+/// Erzwingung und keine Bitte. Das `#[must_use]` unten macht jeden Aufruf,
+/// dessen Ergebnis wortlos faellt, zum Uebersetzerfehler, wie die
+/// vollstaendigen Fallunterscheidungen dieses Programms es an anderen Stellen
+/// tun. Wer die Auskunft wirklich nicht braucht, schreibt `let _ =` davor und
+/// sagt damit ausdruecklich, dass er sie nicht braucht. Dieselbe Erzwingung
+/// aus demselben Grund traegt
+/// [`crate::editormodell::EditorModell::bearbeiten`] seit dem Defekt
+/// `260810-0423`.
+///
+/// **Die fruehere Konvention gilt nicht mehr.** Bis zum Defekt `260810-1906`
+/// hiess ein nackter Aufruf „`Unbekannt` kann hier nicht eintreten" und ein
+/// begruendetes `let _ =` „kann eintreten und wird bewusst verworfen". Damit
+/// standen zwei entgegengesetzte Bedeutungen von `let _ =` in derselben Kiste:
+/// am `bearbeiten` hiess es „ich brauche den Wert nicht", hier hiess es „der
+/// Wert kann `Unbekannt` sein und wird bewusst verworfen". Ein nackter Aufruf
+/// baut jetzt gar nicht mehr, die Unterscheidung steht also vollstaendig im
+/// Kommentar der Aufrufstelle, und `let _ =` heisst ueberall dasselbe. Der
+/// Datensatz ist
+/// `shared/issues/260810-1906_*_die-konvention-am-auswahlversuch-steht-in-kommentaren-und-wird-von-nichts-erzwungen.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "war der Versuch Unbekannt, steht der Name nicht in der gelesenen Liste"]
 pub enum Auswahlversuch {
     /// Der Eintrag stand sichtbar in der gelesenen Liste, in dieser Zeile.
     Gewaehlt(usize),
@@ -261,7 +283,18 @@ pub enum Auswahlversuch {
 /// Die Ansicht liest daran ab, was sie AppKit melden muss. Ein Stapel, der in
 /// einem verdeckten Tab angekommen ist, taucht hier nicht auf: er aendert
 /// nichts an dem, was auf dem Schirm steht.
+///
+/// **Der Wert laesst sich nicht still fallenlassen**, aus demselben Grund und
+/// in derselben Form wie beim [`Auswahlversuch`], wo die Begruendung
+/// ausfuehrlich steht. Eigen ist hier die Folge des Versaeumnisses: faellt der
+/// Wert wortlos, bleibt die Meldung an AppKit aus, und die `NSTableView` steht
+/// weiter mit dem Bestand von vorhin da, waehrend das Modell laengst den neuen
+/// fuehrt. Kein zweiter Weg meldet das nach, und der Bau waere dabei gruen.
+/// Heute bindet der eine Aufrufer den Wert und wertet alle vier Felder aus
+/// (`Dateitabelle::einziehen` in `crate::appkit::tabelle`); das `#[must_use]`
+/// haelt das fuer den zweiten fest.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[must_use = "hat sich am sichtbaren Tab etwas geaendert, ist die NSTableView nachzuziehen"]
 pub struct Einzug {
     /// Der sichtbare Tab hat Zeilen dazubekommen.
     pub angehaengt: bool,
@@ -977,7 +1010,9 @@ mod tests {
         liste.aktiver_mut().modell_mut().auswahl_setzen(Some(index));
 
         liste.aktiven_neu_lesen();
-        liste.auswahl_auf_namen("neu.txt");
+        // Bewusst verworfen: geprueft wird der vorgemerkte Name nach der
+        // zweiten Auffrischung, nicht die Antwort des Vormerkens selbst.
+        let _ = liste.auswahl_auf_namen("neu.txt");
         liste.aktiven_neu_lesen();
 
         assert_eq!(

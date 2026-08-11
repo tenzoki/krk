@@ -2908,7 +2908,10 @@ impl Anwendungsdelegierter {
             return;
         }
         auffrischung::ordner_neu_lesen(self, &ordner);
-        self.dateifenster(seite).quelle().eintrag_waehlen(neu);
+        // **Bewusst verworfen.** Der Lesevorgang der Auffrischung eine Zeile
+        // darueber steht noch aus, die Antwort ist also `Vorgemerkt` und nie
+        // `Unbekannt`; die Begruendung steht im Doc-Kommentar dieser Funktion.
+        let _ = self.dateifenster(seite).quelle().eintrag_waehlen(neu);
     }
 
     /// Oeffnet das Blatt fuer das Umbenennen im Stapel (C4).

@@ -1315,6 +1315,10 @@ impl DateifensterQuelle {
     /// Der Rueckgabewert sagt, welcher der drei Faelle eingetreten ist. Allein
     /// [`Auswahlversuch::Unbekannt`] ist eine Auskunft an den Nutzer wert: der
     /// Name steht in einer fertig gelesenen Liste nicht.
+    ///
+    /// **Fallenlassen geht nur ausdruecklich.** [`Auswahlversuch`] traegt ein
+    /// `#[must_use]`; wer die Auskunft nicht braucht, schreibt `let _ =` davor
+    /// und begruendet es. Die Regel steht am Doc-Kommentar der Aufzaehlung.
     pub fn eintrag_waehlen(&self, name: &str) -> Auswahlversuch {
         let versuch = self.ivars().tabs.borrow_mut().auswahl_auf_namen(name);
         if let Auswahlversuch::Gewaehlt(zeile) = versuch {
