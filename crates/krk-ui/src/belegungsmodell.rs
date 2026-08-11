@@ -191,6 +191,13 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
         // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
         // wie sie auf dem angezeigten Ordner arbeitet.
+        //
+        // Die drei Befehle der Runde 4 stehen aus derselben Regel hier: diese
+        // Gliederung fragt nach der Gegend der Anwendung und nicht nach dem
+        // Mechanismus, und ein Befehl, der den Ordner oder einen Eintrag an
+        // etwas ausserhalb der Liste uebergibt, steht dort, wo der
+        // Terminal-Befehl steht. `Dateilisting` traegt Bewegung, Markierung
+        // und Sortierung; keiner der drei tut davon etwas.
         Kommando::Kopieren
         | Kommando::Verschieben
         | Kommando::InPapierkorb
@@ -200,7 +207,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::DateiAnlegen
         | Kommando::UmbenennenStapel
         | Kommando::Umbenennen
-        | Kommando::TerminalOeffnen => Funktionsbereich::Dateioperationen,
+        | Kommando::TerminalOeffnen
+        | Kommando::OrdnerpfadKopieren
+        | Kommando::EintragspfadKopieren
+        | Kommando::MitStandardprogrammOeffnen => Funktionsbereich::Dateioperationen,
         Kommando::TabNeu
         | Kommando::TabSchliessen
         | Kommando::TabNaechster

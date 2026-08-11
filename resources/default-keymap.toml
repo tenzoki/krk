@@ -30,7 +30,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 71 Funktionen mit zusammen 79 Kombinationen.
+# Ausgeliefert sind 74 Funktionen mit zusammen 82 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -474,6 +474,53 @@ tasten = ["ctrl+o"]
 # Ein Cmd-Kuerzel daneben traegt die Funktion nicht. Die Zwei-Wege-Regel aus C3
 # gilt fuer die sechs Funktionen der Norton-Reihe ganz oben und nicht fuer jede
 # Funktion; die vier Funktionen vom 260804 tragen aus demselben Grund je eine.
+
+# ── Pfade kopieren und mit dem Standardprogramm öffnen ───────────────────────
+# Drei Funktionen der Runde 4. Sie stehen neben C11, weil sie dieselbe Sorte
+# Handlung sind: KRK gibt den angezeigten Ordner oder die betroffenen Eintraege
+# an etwas ausserhalb der Liste weiter und zeigt selbst nichts davon. Die drei
+# Kombinationen sind der Nutzerentscheid vom 260811-1505 (`decisions/
+# 260811-1300_*_welche-vier-kombinationen-gelten-ab-werk.md`, Moeglichkeit 1).
+# Cmd+W steht nicht hier: es ist eine bestehende Belegung, deren Wirkungsbereich
+# dieselbe Runde erweitert, und keine neue Kombination.
+
+[[funktion]]
+id = "ordnerpfad_kopieren"
+name = "Pfad des angezeigten Ordners kopieren"
+tasten = ["opt+cmd+c"]
+# Der Preis dieser Kombination ist benannt und angenommen: der Finder legt
+# Opt+Cmd+C als "Pfadname kopieren" auf den **Eintrag**, hier meint sie den
+# angezeigten Ordner. Wer beides nebeneinander benutzt, vertauscht sie leicht.
+# Der Nutzer hat sie am 260811-1505 trotzdem gewaehlt, weil die Verwandtschaft
+# zu shift+cmd+c darunter schwerer wiegt als die Naehe zum Finder: beide
+# kopieren einen Pfad, und die Zusatztaste unterscheidet, welchen.
+
+[[funktion]]
+id = "eintragspfad_kopieren"
+name = "Pfad des Eintrags kopieren"
+tasten = ["shift+cmd+c"]
+# Das Vorbild ist ForkLift, wo Shift+Cmd+C den Pfad des Eintrags kopiert. Es ist
+# damit die einzige Kombination dieser Datei, die einem Vorbild aus ForkLift
+# folgt, so wie ctrl+o oben dem aus Total Commander folgt.
+#
+# Cmd+C bleibt unangetastet und traegt weiter allein den Textbefehl des Menues
+# "Bearbeiten". Die dritte Moeglichkeit des Datensatzes haette es nach dem
+# Vorbild von Cmd+A mit einem zweiten Zusteller belegt; sie ist verworfen,
+# solange nicht gemessen ist, ob der Fokusvorbehalt dort so trennt wie bei
+# Cmd+A.
+
+[[funktion]]
+id = "mit_standardprogramm_oeffnen"
+name = "Mit dem Standardprogramm öffnen"
+tasten = ["return"]
+# Die Gewohnheit aus Norton Commander und dem Finder. Die Eingabetaste war seit
+# der Runde 1 ab Werk frei gehalten und vom Nutzer in C2 ausdruecklich fuer
+# diesen Zweck freigegeben. Frei bleibt ab Werk damit allein Umschalt+Entf.
+#
+# Ein Blatt faengt die Taste weiterhin ab, bevor sie hier ankommt: bei stehender
+# Nachfrage weist der Anwendungsdelegierte jeden Befehl ausser dem Abbruch ab,
+# und der Tastendruck laeuft unveraendert an AppKit weiter, wo ihn die
+# Vorgabeschaltflaeche beantwortet.
 
 # ── Der eingebaute Editor ────────────────────────────────────────────────────
 # Elf Funktionen der Editor-Runde. Der Einstieg ueber F4 steht oben in der

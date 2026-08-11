@@ -182,18 +182,34 @@ fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
 fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // Die Zusage: eine Kombination, die ein Leser belegt erwartete und die
     // ausdruecklich frei bleibt, steht in keiner Tastenliste. Der Name nennt
-    // ihre Zahl nicht, denn die Liste waechst; eine Zahl im Namen bindet die
-    // Pruefung an ihre Groesse statt an ihre Zusage und muesste bei jedem
-    // Zuwachs mit umbenannt werden.
+    // ihre Zahl nicht, denn die Liste waechst und schrumpft; eine Zahl im Namen
+    // bindet die Pruefung an ihre Groesse statt an ihre Zusage und muesste bei
+    // jeder Aenderung mit umbenannt werden.
+    //
+    // **Seit dem 260811 ist es eine einzige Kombination, und die Schleife
+    // darueber ist deshalb weg.** Clippy weist eine Schleife ueber ein Element
+    // ab (`single_element_loop`), und ein `#[allow]` daneben waere teurer als
+    // die geradeaus geschriebene Pruefung. Kommt eine zweite frei gehaltene
+    // Kombination dazu, kommt die Schleife mit ihr zurueck.
     //
     // Umschalt+Entf loescht nach `shared/decisions/
-    // 260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig,
-    // und die Eingabetaste hat der Nutzer am 260804 freigegeben, als der
-    // Einstieg in den Ordner von ihr weggewandert ist (C2). Wohin er gewandert
-    // ist, steht hier bewusst nicht: er ist seither zweimal weitergezogen, und
-    // die Zusage dieser Pruefung haengt nicht daran, sondern allein daran, dass
-    // die Eingabetaste frei bleibt. Beide fuehrt der Kopfkommentar von
-    // `resources/default-keymap.toml` auf.
+    // 260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig.
+    // Es ist seit dem 260811 die einzige Kombination dieser Liste, und der
+    // Kopfkommentar von `resources/default-keymap.toml` fuehrt es ebenso.
+    //
+    // **Die Eingabetaste stand bis zum 260811 hier und steht es nicht mehr.**
+    // Der Nutzer hatte sie am 260804 freigegeben, als der Einstieg in den
+    // Ordner von ihr weggewandert ist (C2), und am 260811-1505 hat er sie fuer
+    // `mit_standardprogramm_oeffnen` vergeben (`decisions/
+    // 260811-1300_*_welche-vier-kombinationen-gelten-ab-werk.md`,
+    // Moeglichkeit 1). Freihalten war nie das Ziel, sondern der Zwischenstand:
+    // die Taste war fuer die Handlung reserviert, die sie jetzt traegt.
+    //
+    // Dass ein Blatt die Taste weiterhin an seine Vorgabeschaltflaeche
+    // durchlaesst, ist keine Zusage dieser Pruefung und wird anderswo gehalten:
+    // der Anwendungsdelegierte weist bei stehendem Blatt jeden Befehl ausser
+    // dem Abbruch ab, und der Tastendruck laeuft danach unveraendert an AppKit
+    // weiter.
     //
     // **Cmd+C und Cmd+V standen bis zum 260805 hier und stehen es nicht mehr.**
     // Seit S13b tragen sie die Textbefehle des Menues "Bearbeiten", und die
@@ -214,16 +230,15 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // bleiben, und wuerde ausgerechnet ctrl+s dem Editor spaeterer Runden
     // verstellen.
     let belegung = Belegung::auslieferung();
-    for text in ["shift+delete", "return"] {
-        let druck = kombi(text).tastendruck();
-        assert!(
-            matches!(
-                belegung.nachschlag(druck),
-                Nachschlag::Sprungmarke | Nachschlag::Unbelegt
-            ),
-            "{text} ist ab Werk belegt"
-        );
-    }
+    let text = "shift+delete";
+    let druck = kombi(text).tastendruck();
+    assert!(
+        matches!(
+            belegung.nachschlag(druck),
+            Nachschlag::Sprungmarke | Nachschlag::Unbelegt
+        ),
+        "{text} ist ab Werk belegt"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1623,7 +1638,7 @@ fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
     }
 }
 
-/// Die Auslieferungsbelegung fuehrt 71 Funktionen, und die dreizehn neuen der
+/// Die Auslieferungsbelegung fuehrt 74 Funktionen, und die dreizehn neuen der
 /// Editor-Runde stehen darin.
 ///
 /// **Die Zahl steht hier ausnahmsweise hingeschrieben.** Die uebrigen
@@ -1633,12 +1648,12 @@ fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
 /// und eine Kopfzeile, die von ihrer eigenen Datei abweicht, faellt sonst
 /// niemandem auf. Wer eine Funktion nachtraegt, zieht beide Stellen mit.
 #[test]
-fn die_auslieferungsbelegung_fuehrt_einundsiebzig_funktionen() {
+fn die_auslieferungsbelegung_fuehrt_vierundsiebzig_funktionen() {
     let belegung = Belegung::auslieferung();
     assert_eq!(
         belegung.funktionen().len(),
-        71,
-        "die Kopfzeile von default-keymap.toml nennt 71 Funktionen"
+        74,
+        "die Kopfzeile von default-keymap.toml nennt 74 Funktionen"
     );
     for kennung in [
         "editor_aus_vorschau",

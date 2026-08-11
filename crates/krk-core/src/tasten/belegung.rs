@@ -377,6 +377,19 @@ pub enum Kommando {
     /// Den angezeigten Ordner in der eingestellten Terminal-Anwendung
     /// oeffnen (C11).
     TerminalOeffnen,
+    /// Den Pfad des angezeigten Ordners in die Zwischenablage legen (C1 der
+    /// Runde 4).
+    OrdnerpfadKopieren,
+    /// Die Pfade der betroffenen Eintraege in die Zwischenablage legen (C2 der
+    /// Runde 4).
+    ///
+    /// "Betroffen" ist dieselbe Menge, auf der die Dateioperationen aus C4
+    /// arbeiten: die Markierung, falls es eine gibt, sonst der ausgewaehlte
+    /// Eintrag. Der Befehl hat damit keine eigene Auswahlregel.
+    EintragspfadKopieren,
+    /// Die betroffenen Eintraege an das Standardprogramm des Systems
+    /// uebergeben (C3 der Runde 4).
+    MitStandardprogrammOeffnen,
     /// Den Ordner des aktiven Dateifensters als Lesezeichen anlegen (C5).
     LesezeichenAnlegen,
     /// Das ausgewaehlte Lesezeichen umbenennen (C5).
@@ -459,7 +472,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 65] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 68] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -509,6 +522,12 @@ impl Kommando {
         (Kommando::UmbenennenStapel, "umbenennen_stapel"),
         (Kommando::Umbenennen, "umbenennen"),
         (Kommando::TerminalOeffnen, "terminal_oeffnen"),
+        (Kommando::OrdnerpfadKopieren, "ordnerpfad_kopieren"),
+        (Kommando::EintragspfadKopieren, "eintragspfad_kopieren"),
+        (
+            Kommando::MitStandardprogrammOeffnen,
+            "mit_standardprogramm_oeffnen",
+        ),
         (Kommando::LesezeichenAnlegen, "lesezeichen_anlegen"),
         (Kommando::LesezeichenUmbenennen, "lesezeichen_umbenennen"),
         (Kommando::LesezeichenLoeschen, "lesezeichen_loeschen"),
@@ -659,6 +678,14 @@ impl Kommando {
             // der den Ordner des sichtbaren Tabs uebergibt, und F4 aus C1 der
             // Editor-Runde, das den **ausgewaehlten Eintrag** des
             // Dateifensters im Editor oeffnet.
+            //
+            // Die drei Befehle der Runde 4 stehen aus demselben Grund hier: sie
+            // brauchen den angezeigten Ordner oder die betroffenen Eintraege,
+            // und beides gibt es nur mit dem Fokus im Dateifenster. Die Folge
+            // ist benannt und gewollt: mit dem Fokus im Editor kopiert
+            // `shift+cmd+c` keinen Pfad und tut nichts. Der Editor haelt eine
+            // Datei, und deren Pfad steht im Fenstertitel; ein Kopierbefehl
+            // dafuer waere eine eigene Funktion.
             Kommando::Bearbeiten
             | Kommando::SeiteHoch
             | Kommando::SeiteRunter
@@ -687,7 +714,10 @@ impl Kommando {
             | Kommando::DateiAnlegen
             | Kommando::UmbenennenStapel
             | Kommando::Umbenennen
-            | Kommando::TerminalOeffnen => Wirkungsbereich::Dateifenster,
+            | Kommando::TerminalOeffnen
+            | Kommando::OrdnerpfadKopieren
+            | Kommando::EintragspfadKopieren
+            | Kommando::MitStandardprogrammOeffnen => Wirkungsbereich::Dateifenster,
         }
     }
 
