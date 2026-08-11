@@ -756,6 +756,91 @@ pub fn kein_terminal(kennung: &str) -> String {
     )
 }
 
+// ----------------------------------------------------------------------
+// Die Pfade in der Zwischenablage (C1 und C2 der Runde 4)
+// ----------------------------------------------------------------------
+
+/// Ein Pfad in der Form, die C1 zusagt.
+///
+/// Ausgeschrieben und absolut, mit einem abschliessenden Trenner allein beim
+/// Wurzelverzeichnis, dessen Pfad aus ihm besteht.
+///
+/// **Die Form entsteht hier und nicht an der Quelle.**
+/// [`super::pfadeingabe::pruefen`] uebernimmt den eingegebenen Text woertlich,
+/// also traegt der Ordner eines Tabs den abschliessenden Schraegstrich, den der
+/// Nutzer getippt hat. Ihn dort abzuschneiden aenderte die Identitaet des
+/// angezeigten Ordners, an der `gleicher_ordner`, die Dateisystembeobachtung
+/// und die Lesezeichen haengen, und loeste ein Formproblem an einer Stelle, die
+/// keine Form zusagt.
+///
+/// **Aufgeloest wird nichts.** `canonicalize` kommt nicht vor: C1 verlangt, dass
+/// ein zwischenzeitlich verschwundener Ordner trotzdem kopiert wird, und ein
+/// Aufruf, der das Dateisystem fragt, braeche das Kriterium und die Zusage,
+/// dass der Befehl kopiert, was auf dem Schirm steht. Ebenso wenig gerufen wird
+/// die Anzeigenfunktion aus `krk_core::ablage::pfade`, die aus dem
+/// Benutzerverzeichnis eine Tilde macht: eine Tilde gehoert nicht in die
+/// Zwischenablage, und die Meldung nennt denselben Text, der abgelegt wurde.
+pub fn pfadtext(pfad: &Path) -> String {
+    let text = pfad.display().to_string();
+    let ohne_trenner = text.trim_end_matches(std::path::MAIN_SEPARATOR);
+    if ohne_trenner.is_empty() {
+        // Der Pfad bestand aus Trennern; das ist das Wurzelverzeichnis, und
+        // sein Pfad ist der Trenner selbst.
+        return std::path::MAIN_SEPARATOR.to_string();
+    }
+    ohne_trenner.to_owned()
+}
+
+/// Mehrere Pfade als ein Text, einen je Zeile (C2).
+///
+/// Getrennt durch `\n`, **ohne** Schlusszeilenumbruch: die letzte Zeile endet
+/// mit dem Pfad, damit ein Einfuegen in ein Terminal nicht von sich aus die
+/// Eingabetaste mitbringt. Die Reihenfolge ist die der uebergebenen Pfade, also
+/// die Sichtreihenfolge aus [`betroffene`].
+pub fn pfadzeilen(pfade: &[PathBuf]) -> String {
+    pfade
+        .iter()
+        .map(|pfad| pfadtext(pfad))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Die Meldung nach einem geglueckten Kopieren (C1, C2).
+///
+/// Bei einem Pfad nennt sie den Pfad, bei mehreren ihre Zahl. Der genannte Pfad
+/// ist derselbe Text, der in der Zwischenablage steht; ein gekuerzter zeigte
+/// etwas anderes an, als der Nutzer gleich einfuegt.
+///
+/// Eine leere Menge erreicht diese Funktion nicht: beide Aufrufer fangen sie
+/// vorher mit [`nichts_betroffen`] ab, weil dann auch nichts geschrieben wird.
+pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
+    match pfade {
+        [einziger] => format!("Pfad kopiert: {}", pfadtext(einziger)),
+        mehrere => format!("{} Pfade kopiert", mehrere.len()),
+    }
+}
+
+/// Der Satz, wenn kein Eintrag betroffen ist (C2, C3).
+///
+/// **Gemeinsam fuer den Kopierer und den Oeffner**, deshalb nennt er weder das
+/// Kopieren noch das Oeffnen, sondern die Lage. Er sagt aus demselben Grund
+/// nicht "der Ordner ist leer": eine leere Menge entsteht auch in einem vollen
+/// Ordner, naemlich waehrend eines Lesevorgangs, nachdem
+/// `Ordnermodell::ersatz_einloesen` Markierung und Auswahl geleert hat und
+/// bevor die Auswahl wieder steht.
+pub fn nichts_betroffen() -> String {
+    "nichts markiert und nichts ausgewählt".to_owned()
+}
+
+/// Die Meldung, wenn die Zwischenablage den Text nicht annimmt (C1, C2).
+///
+/// Der Fall ist selten und wird trotzdem gemeldet: `setString:forType:` liefert
+/// ein `bool`, und ein Kopierer, der still nichts kopiert haette, liesse den
+/// Nutzer einen alten Inhalt einfuegen, den er fuer den neuen haelt.
+pub fn ablage_weist_ab() -> String {
+    "die Zwischenablage hat den Pfad nicht angenommen".to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1210,5 +1295,82 @@ mod tests {
             "die Meldung nennt den Pfad nicht: {text}"
         );
         assert!(text.contains("nicht mehr erreichbar"), "{text}");
+    }
+
+    // ------------------------------------------------------------------
+    // Die Pfade in der Zwischenablage (C1 und C2 der Runde 4)
+    // ------------------------------------------------------------------
+
+    /// Die Form aus C1 an den drei Faellen, die sie unterscheidet.
+    ///
+    /// Der abschliessende Schraegstrich ist keine Erfindung der Probe: die
+    /// Pfadeingabe uebernimmt den getippten Text woertlich, also traegt ein Tab
+    /// den Ordner `/tmp/x/`, wenn der Nutzer ihn so eingegeben hat.
+    #[test]
+    fn ein_abschliessender_trenner_faellt_ueberall_ausser_an_der_wurzel() {
+        assert_eq!(
+            pfadtext(Path::new("/Users/kai/Projekte")),
+            "/Users/kai/Projekte"
+        );
+        assert_eq!(
+            pfadtext(Path::new("/Users/kai/Projekte/")),
+            "/Users/kai/Projekte"
+        );
+        assert_eq!(pfadtext(Path::new("/")), "/");
+    }
+
+    /// Eine Tilde entsteht auf diesem Weg nicht.
+    ///
+    /// [`pfadtext`] ruft die Anzeigenfunktion aus `krk_core::ablage::pfade`
+    /// nicht; die Probe haelt fest, dass der Pfad ausgeschrieben bleibt, auch
+    /// wenn er unter dem Benutzerverzeichnis liegt.
+    #[test]
+    fn der_pfadtext_bleibt_ausgeschrieben() {
+        let heim = std::env::var("HOME").expect("HOME steht in der Umgebung");
+        let pfad = PathBuf::from(&heim).join("Schreibtisch");
+        let text = pfadtext(&pfad);
+        assert!(text.starts_with(&heim), "{text}");
+        assert!(!text.contains('~'), "{text}");
+    }
+
+    /// Ein Pfad je Zeile, und nach der letzten Zeile kein Umbruch (C2).
+    #[test]
+    fn pfadzeilen_trennt_mit_umbruechen_und_endet_ohne_einen() {
+        let einer = [PathBuf::from("/tmp/x/a.txt")];
+        assert_eq!(pfadzeilen(&einer), "/tmp/x/a.txt");
+        assert_eq!(pfadzeilen(&einer).matches('\n').count(), 0);
+
+        let drei = [
+            PathBuf::from("/tmp/x/a.txt"),
+            PathBuf::from("/tmp/x/b.txt"),
+            PathBuf::from("/tmp/x/Unterordner/"),
+        ];
+        assert_eq!(
+            pfadzeilen(&drei),
+            "/tmp/x/a.txt\n/tmp/x/b.txt\n/tmp/x/Unterordner"
+        );
+        assert_eq!(pfadzeilen(&drei).matches('\n').count(), 2);
+    }
+
+    /// Die Meldung wechselt bei zwei Pfaden vom Pfad auf die Zahl (C1, C2).
+    #[test]
+    fn die_kopiermeldung_nennt_einen_pfad_und_sonst_die_zahl() {
+        let einer = [PathBuf::from("/Users/kai/Projekte/")];
+        assert_eq!(kopiermeldung(&einer), "Pfad kopiert: /Users/kai/Projekte");
+
+        let zwei = [PathBuf::from("/tmp/x/a.txt"), PathBuf::from("/tmp/x/b.txt")];
+        assert_eq!(kopiermeldung(&zwei), "2 Pfade kopiert");
+    }
+
+    /// Der Satz fuer die leere Menge nennt keinen der beiden Befehle.
+    ///
+    /// Er gehoert dem Kopierer aus C2 und dem Oeffner aus C3 gemeinsam; ein
+    /// Verb darin machte ihn fuer einen der beiden falsch.
+    #[test]
+    fn der_satz_fuer_die_leere_menge_gilt_beiden_befehlen() {
+        let satz = nichts_betroffen();
+        assert!(!satz.contains("kopier"), "{satz}");
+        assert!(!satz.contains("öffn"), "{satz}");
+        assert!(!satz.is_empty());
     }
 }

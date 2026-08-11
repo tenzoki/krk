@@ -46,7 +46,13 @@
 //!
 //! **Die Inhaltsflaeche nimmt den Eingabefokus.** Ein Klick in den Inhalt
 //! macht sie zum Ersthelfer, und damit bedienen die vier Tabbefehle aus C1 die
-//! Vorschau-Tabs ([`Wirkungsbereich::Tabbereich`](krk_core::tasten::Wirkungsbereich)).
+//! Vorschau-Tabs. Drei von ihnen tragen dafuer
+//! [`Wirkungsbereich::Tabbereich`](krk_core::tasten::Wirkungsbereich); der
+//! vierte, `tab_schliessen`, traegt seit C4 der Runde 4
+//! [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+//! erreicht diese Tabs ueber die Verzweigung nach dem Fokus im
+//! Anwendungsdelegierten.
+//!
 //! Die Textanzeige ist dafuer nicht auswaehlbar: eine auswaehlbare naehme den
 //! Fokus als Textsystem, und der Ereignisabgriff reichte jede Taste an AppKit
 //! weiter, statt die Tabbefehle auszufuehren. Einen Tastenbefehl, der den

@@ -793,6 +793,8 @@ impl DateifensterQuelle {
             Kommando::TabSchliessen => self.tab_schliessen(),
             Kommando::TabNaechster => self.tab_naechster(),
             Kommando::TabVoriger => self.tab_voriger(),
+            Kommando::OrdnerpfadKopieren => self.ordnerpfad_kopieren(),
+            Kommando::EintragspfadKopieren => self.eintragspfad_kopieren(),
             Kommando::Umbenennen => return self.umbenennung_beginnen(),
             // Nicht Sache eines einzelnen Dateifensters.
             _ => return false,
@@ -809,6 +811,54 @@ impl DateifensterQuelle {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
         operationen::betroffene(tab.modell(), tab.ordner())
+    }
+
+    /// Legt den Pfad des angezeigten Ordners in die Zwischenablage (C1).
+    ///
+    /// **Markierung und Auswahl gehen nicht ein.** Der Befehl fragt nach dem
+    /// Ordner und nicht nach dem, was darin steht; das Ergebnis ist dasselbe,
+    /// ob nichts oder dreissig Eintraege markiert sind.
+    ///
+    /// Dass der Ordner der des **aktiven** Dateifensters ist, kostet hier keine
+    /// Zeile: der Wirkungsbereich `Dateifenster` fuehrt das Kommando ueber
+    /// `bereichskommando` an die aktive Fensterseite, und diese Quelle gehoert
+    /// ihr.
+    fn ordnerpfad_kopieren(&self) {
+        let ordner = self.angezeigter_ordner();
+        let text = operationen::pfadtext(&ordner);
+        if super::zwischenablage::text_schreiben(&text) {
+            self.befehlsantwort_zeigen(&operationen::kopiermeldung(std::slice::from_ref(&ordner)));
+        } else {
+            self.befehlsantwort_zeigen(&operationen::ablage_weist_ab());
+        }
+    }
+
+    /// Legt die Pfade der betroffenen Eintraege in die Zwischenablage (C2).
+    ///
+    /// Der fuenfte Abnehmer von [`operationen::betroffene`]: die Markierung hat
+    /// den Vorrang, sonst gilt der Eintrag unter der Auswahl, und gezaehlt
+    /// werden allein die sichtbaren, in Sichtreihenfolge. Eine zweite Regel
+    /// daneben entsteht nicht.
+    ///
+    /// **Bei leerer Menge bleibt die Zwischenablage unberuehrt**, und die
+    /// Statuszeile sagt es: wortlos nichts zu tun ist nach C2 nicht zulaessig.
+    ///
+    /// Eine Rueckfrage entsteht in keinem Fall, auch nicht bei dreissig
+    /// markierten Eintraegen. Der Befehl zerstoert nichts, und die Meldung mit
+    /// der Zahl ist die Antwort darauf, dass der Nutzer der Zwischenablage
+    /// nicht ansieht, wie viele Zeilen er erzeugt hat.
+    fn eintragspfad_kopieren(&self) {
+        let betroffen = self.betroffene_eintraege();
+        if betroffen.ist_leer() {
+            self.befehlsantwort_zeigen(&operationen::nichts_betroffen());
+            return;
+        }
+        let text = operationen::pfadzeilen(&betroffen.pfade);
+        if super::zwischenablage::text_schreiben(&text) {
+            self.befehlsantwort_zeigen(&operationen::kopiermeldung(&betroffen.pfade));
+        } else {
+            self.befehlsantwort_zeigen(&operationen::ablage_weist_ab());
+        }
     }
 
     /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.

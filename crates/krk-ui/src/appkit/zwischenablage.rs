@@ -1,18 +1,23 @@
-//! Die Beruehrungen mit dem System, die C10 braucht, und die **eine** Huelle
-//! um `NSPasteboard`.
+//! Die Beruehrungen mit dem System, die C10 der Runde 1 und die beiden
+//! Pfadkopierer aus C1 und C2 der Runde 4 brauchen, und die **eine** Huelle um
+//! `NSPasteboard`.
 //!
 //! ```text
 //! NSPasteboard ──> lesen ────────> krk_core::zwischenablage::deuten
 //!              │                            │
 //!              │                    Ziel::Web ──> im_browser_oeffnen ──> NSWorkspace
-//!              └─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
+//!              ├─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
+//!              │
+//!              └<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
 //! ```
 //!
 //! [`lesen`] traegt seit S13 den Sprung, [`inhalt_lesen`] seit S19 die
-//! Vorschau der Zwischenablage; eine zweite Huelle um `NSPasteboard` entsteht
-//! dabei nicht. Alles in einem Modul, weil es die eine Frage beantwortet: was
-//! steht in der Zwischenablage, und wohin geht KRK damit. Denselben Zuschnitt
-//! zieht
+//! Vorschau der Zwischenablage, [`text_schreiben`] seit dem 260811 die
+//! Gegenrichtung; eine zweite Huelle um `NSPasteboard` entsteht dabei nicht.
+//! Alles in einem Modul, weil es die eine Frage beantwortet: was steht in der
+//! Zwischenablage, und wohin geht KRK damit. Die Frage ist mit der Runde 4 um
+//! eine Richtung breiter geworden und geblieben, was sie war: eine. Denselben
+//! Zuschnitt zieht
 //! `appkit/volumes.rs`, wo die `NSWorkspace`-Beobachtung und die Aufzaehlung
 //! ueber `NSFileManager` zusammen die eine Frage nach den Datentraegern
 //! beantworten.
@@ -39,9 +44,46 @@
 //! Beide muenden in dieselbe Auswertung, denn ein Dateiverweis kommt als
 //! `file:`-Zeichenkette an.
 //!
-//! **KRK schreibt die Zwischenablage in keinem Fall.** In dieser Datei steht
-//! kein Aufruf, der das koennte; `setString:forType:` und `writeObjects:`
-//! kommen nicht vor. Cmd+C und Cmd+V bleiben ab Werk unbelegt (C3).
+//! # Seit dem 260811 ist die Zwischenablage auch Ziel
+//!
+//! **Bis zur Runde 4 sagte dieser Kopf zu, KRK schreibe die Zwischenablage in
+//! keinem Fall.** Die Zusage ist gebrochen und durch die Lage ersetzt, die C1
+//! und C2 jener Runde bestellt haben: [`text_schreiben`] legt den Pfad des
+//! angezeigten Ordners (`opt+cmd+c`) und die Pfade der betroffenen Eintraege
+//! (`shift+cmd+c`) ab. Cmd+C und Cmd+V bleiben ab Werk unbelegt, wie es C3 der
+//! Runde 1 zugesagt hat; die beiden Kopierer liegen daneben.
+//!
+//! **Geschrieben wird eine einzige Sorte, `NSPasteboardTypeString`.** Kein
+//! Dateiverweis und kein `writeObjects:` — die Nutzerantwort vom 260811-1610
+//! (`decisions/260811-1552_*_welche-sorten-legt-der-pfadkopierer-in-die-zwischenablage.md`).
+//! Der Grund steht in einem Satz: ein Cmd+V, das im Finder eine Datei ablegt
+//! und in einem Textfeld einen Pfad schreibt, waeren zwei Bedeutungen desselben
+//! Befehls, und die zerstoererische von beiden sieht der Nutzer erst, nachdem
+//! sie eingetreten ist. Eine Sorte heisst: eine Bedeutung. Sie ist zugleich die
+//! Sorte, die [`lesen`] als zweite abfragt, und der Sprung aus der
+//! Zwischenablage nimmt damit genau den Text, den KRK abgelegt hat.
+//!
+//! **[`text_schreiben`] traegt keine Probe, und das ist Absicht.**
+//! `generalPasteboard` ist die Zwischenablage des angemeldeten Nutzers; eine
+//! Probe, die sie beschriebe, wuerfe bei jedem `make check` weg, was der
+//! Entwickler gerade kopiert hat. Geprueft wird stattdessen, was ohne AppKit
+//! pruefbar ist: die Form der Pfade, der zusammengesetzte Text und die
+//! Meldungen, alle in [`crate::kommandos::operationen`]. Dass
+//! `setString:forType:` den Text wirklich ablegt, sieht der Nutzer am gebauten
+//! Buendel mit einem Einfuegen.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSPasteboard`, `NSWorkspace`, `NSString`, `NSURL` und `NSData` stehen seit
+//! macOS 10.0 zur Verfuegung, ebenso `setString:forType:` und `openURL:`;
+//! `clearContents` und die vier abgefragten Sortenkonstanten
+//! (`NSPasteboardTypeString`, `NSPasteboardTypeFileURL`, `NSPasteboardTypePNG`,
+//! `NSPasteboardTypeTIFF`) seit 10.6. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
+//! keine Beruehrung in dieser Datei braucht deshalb eine Verfuegbarkeitspruefung
+//! zur Laufzeit. `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der
+//! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
+//! Gegenmassnahme.
 
 use objc2_app_kit::{
     NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeString,
@@ -113,6 +155,26 @@ pub fn inhalt_lesen() -> Zwischenablageinhalt {
         Some(text) => Zwischenablageinhalt::Text(text),
         None => Zwischenablageinhalt::Leer,
     }
+}
+
+/// Legt einen Text als einzige Sorte in die Zwischenablage (C1, C2).
+///
+/// Liefert, ob das System ihn angenommen hat. Der Aufrufer meldet das in der
+/// Statuszeile; wortlos nichts zu tun ist in keinem der beiden Faelle zulaessig.
+///
+/// **`clearContents` ist keine Vorsichtsmassnahme, sondern Bedingung.** Ohne
+/// den Aufruf nimmt `setString:forType:` den Text nicht an, weil die Ablage
+/// noch dem vorigen Besitzer gehoert. Er ist zugleich die Zusage aus C1, dass
+/// ein zweiter Aufruf den Inhalt **ersetzt** und nichts anhaengt: das Leeren
+/// nimmt jede Sorte weg, die vorher darin stand, auch den Dateiverweis eines im
+/// Finder kopierten Eintrags.
+///
+/// Warum allein `NSPasteboardTypeString` geschrieben wird und warum diese
+/// Funktion keine Probe traegt, steht im Modulkopf.
+pub fn text_schreiben(text: &str) -> bool {
+    let ablage = NSPasteboard::generalPasteboard();
+    ablage.clearContents();
+    ablage.setString_forType(&NSString::from_str(text), unsafe { NSPasteboardTypeString })
 }
 
 /// Uebergibt eine Web-Adresse an den Systembrowser (C10).
