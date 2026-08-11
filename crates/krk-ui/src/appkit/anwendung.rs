@@ -2093,6 +2093,13 @@ impl Anwendungsdelegierter {
             Kommando::EditorErsetzen => self.editorbefehl(Editorbereich::treffer_ersetzen),
             Kommando::EditorAlleErsetzen => self.editorbefehl(Editorbereich::alle_treffer_ersetzen),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
+            // Cmd+W aus jedem Fokus (C4 der Runde 4). Der einzige Befehl
+            // dieser Runde, der ueber die Bereiche hinweg entscheidet, und
+            // deshalb der einzige, der hier einen Zweig bekommt: er traegt
+            // seit C4 `Wirkungsbereich::Ueberall` und kommt damit auch mit dem
+            // Fokus in der Leiste und im Editor an, wo `bereichskommando`
+            // keinen Tab zu schliessen wuesste.
+            Kommando::TabSchliessen => self.tab_schliessen(fokus),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -2152,6 +2159,50 @@ impl Anwendungsdelegierter {
                 self.dateifenster(aktiv)
                     .quelle()
                     .kommando_ausfuehren(kommando)
+            }
+        }
+    }
+
+    /// Schliesst den aktiven Tab, aus jedem Fokus heraus (C4 der Runde 4).
+    ///
+    /// **Die eine Verzweigung des Befehls, und sie hat zwei Ausgaenge.** Ueber
+    /// die fuenf Fokuswerte ist sie vollstaendig und ueberschneidungsfrei:
+    ///
+    /// - [`Fokus::Dateifenster`] und [`Fokus::Vorschau`] gehen an
+    ///   [`Self::bereichskommando`], also an den Bereich vor dem Nutzer. Das
+    ///   ist die Zuordnung aus C6 der Runde 1, und C4 sagt ausdruecklich zu,
+    ///   dass sie fuer diese beiden gueltig bleibt: an diesen Tastendruck
+    ///   aendert die Runde 4 nichts.
+    /// - [`Fokus::Leiste`], [`Fokus::Editor`] und [`Fokus::Anderswo`] gehen an
+    ///   den sichtbaren Tab der aktiven Fensterseite. Fuer die ersten beiden
+    ///   ist das die bestellte Luecke (Nutzerantwort vom 260811-1505);
+    ///   `Anderswo` steht bei ihnen, weil es kein Bereich mit Tabs ist und
+    ///   "der Bereich vor dem Nutzer" dort keine Antwort hat, waehrend die
+    ///   aktive Fensterseite immer eine ist.
+    ///
+    /// **Der Editor wird auf keinem der beiden Wege angefasst.** Er behaelt
+    /// seine Datei und seinen Stand; `cmd+w` schliesst dort einen Tab des
+    /// Dateifensters und nicht das Dokument, und ein vierter Anlass der
+    /// Nachfrage aus C4 der Editor-Runde entsteht nicht. Die dritte
+    /// Moeglichkeit des Datensatzes `260811-1257_*` ist ausdruecklich nicht
+    /// gewaehlt worden.
+    ///
+    /// [`Fokus::Anderswo`] ist nach Lage der Dinge nicht erreichbar: ein
+    /// stehendes Blatt haelt das Kommando schon in
+    /// [`Self::kommando_ausfuehren`] an, und mit der Schreibmarke in einem
+    /// Textfeld reicht der Ereignisabgriff den Tastendruck an AppKit weiter,
+    /// bevor er nachschlaegt. Der Zweig steht trotzdem ausgeschrieben: eine
+    /// Fallunterscheidung, die einen Fall nicht kennt, beantwortet ihn beim
+    /// ersten Auftreten falsch.
+    fn tab_schliessen(&self, fokus: Fokus) -> bool {
+        match fokus {
+            Fokus::Dateifenster | Fokus::Vorschau => {
+                self.bereichskommando(fokus, Kommando::TabSchliessen)
+            }
+            Fokus::Leiste | Fokus::Editor | Fokus::Anderswo => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(aktiv).quelle().tab_schliessen();
+                true
             }
         }
     }

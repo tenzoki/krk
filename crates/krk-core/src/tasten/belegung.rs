@@ -150,7 +150,10 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// oder keinem. [`Wirkungsbereich::Tabbereich`] ist mit dem Vorschaufenster aus
 /// C6 entstanden: die vier Tabbefehle aus C1 bedienen nach C6 auch dessen Tabs,
 /// und zwar in dem Bereich, der den Fokus gerade hat — so fuehrt es
-/// `resources/default-keymap.toml` seit S9.
+/// `resources/default-keymap.toml` seit S9. **Drei von ihnen tragen den Wert
+/// noch**; `tab_schliessen` ist mit C4 der Runde 4 zu
+/// [`Wirkungsbereich::Ueberall`] gewechselt, und die Begruendung steht bei
+/// [`Kommando::wirkungsbereich`] an seinem Zweig.
 ///
 /// **Die drei uebrigen kommen mit dem eingebauten Editor.** Bis dahin stand
 /// hier der Satz, ein eigener Vorschau-Wert entstehe nicht, weil kein Befehl
@@ -203,11 +206,21 @@ pub enum Wirkungsbereich {
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
-    /// Der Wert der vier Tabbefehle. C6 verlangt fuer die Vorschau-Tabs
-    /// "dieselben Befehle zum Oeffnen, Schliessen und Wechseln wie in C1",
-    /// und dieselben Befehle heisst: dieselben vier Kommandos, gerichtet an
-    /// den Bereich vor dem Nutzer. Die Leiste traegt keine Tabs und bleibt
-    /// aussen vor.
+    /// Der Wert von drei der vier Tabbefehle: [`Kommando::TabNeu`],
+    /// [`Kommando::TabNaechster`] und [`Kommando::TabVoriger`]. C6 verlangt
+    /// fuer die Vorschau-Tabs "dieselben Befehle zum Oeffnen, Schliessen und
+    /// Wechseln wie in C1", und dieselben Befehle heisst: dieselben vier
+    /// Kommandos, gerichtet an den Bereich vor dem Nutzer. Die Leiste traegt
+    /// keine Tabs und bleibt aussen vor.
+    ///
+    /// **Der vierte ist seit C4 der Runde 4 keiner mehr.**
+    /// [`Kommando::TabSchliessen`] traegt [`Wirkungsbereich::Ueberall`]: es
+    /// schliesst einen Tab und setzt deshalb keinen Bereich mit Tabs im Fokus
+    /// voraus, sondern eine aktive Fensterseite, und die gibt es immer. Die
+    /// Zuordnung "der Bereich vor dem Nutzer" gilt fuer ihn unveraendert
+    /// weiter, sobald der Fokus in einem Dateifenster oder in der Vorschau
+    /// steht; sie entsteht dann aber beim Aufrufer und nicht mehr hier. Die
+    /// Begruendung im Langen steht bei [`Kommando::wirkungsbereich`].
     Tabbereich,
     /// Wirkt in den Bereichen des Navigators aus der Runde 1, also im
     /// Dateifenster, in der Leiste und im Vorschaufenster, aber nicht im
@@ -583,7 +596,7 @@ impl Kommando {
     /// Sechs Gruppen, und die Grenze zwischen ihnen ist die Frage, **wer den
     /// Befehl ausfuehrt**. Was das Fenstermodell traegt, wirkt ueberall; was
     /// ein Dateifenster traegt, braucht dessen Fokus; was die Leiste traegt,
-    /// den ihren; was der Editor traegt, den seinen; die vier Tabbefehle
+    /// den ihren; was der Editor traegt, den seinen; drei der vier Tabbefehle
     /// bedienen den Bereich mit Tabs, der den Fokus hat (C1 wie C6); und drei
     /// Befehle bedienen den Navigator als ganzen, ohne den Editor. Zwei
     /// Befehle folgen keiner der sechs Regeln und stehen deshalb hier:
@@ -591,6 +604,11 @@ impl Kommando {
     /// Dateifensters oder die Zeile der Schreibmarke im Editor und schreibt
     /// beides in die Leiste, braucht also keinen Bereich im Fokus; und die
     /// vier Fokusbefehle koennen nicht voraussetzen, wo der Fokus steht.
+    ///
+    /// **Ein dritter ist mit C4 der Runde 4 dazugekommen:**
+    /// [`Kommando::TabSchliessen`] hat den Zweig der Tabbefehle verlassen und
+    /// traegt seither [`Wirkungsbereich::Ueberall`]. Der Grund steht als
+    /// Kommentar an seinem Zweig.
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
@@ -664,13 +682,32 @@ impl Kommando {
             | Kommando::LesezeichenLoeschen
             | Kommando::LesezeichenHoch
             | Kommando::LesezeichenRunter => Wirkungsbereich::Leiste,
-            // Die vier Tabbefehle aus C1. Sie bedienen nach C6 auch die Tabs
-            // des Vorschaufensters und wirken auf den Bereich mit Tabs, der
-            // den Fokus hat; so fuehrt es die Auslieferungsbelegung seit S9.
-            Kommando::TabNeu
-            | Kommando::TabSchliessen
-            | Kommando::TabNaechster
-            | Kommando::TabVoriger => Wirkungsbereich::Tabbereich,
+            // Drei der vier Tabbefehle aus C1. Sie bedienen nach C6 auch die
+            // Tabs des Vorschaufensters und wirken auf den Bereich mit Tabs,
+            // der den Fokus hat; so fuehrt es die Auslieferungsbelegung seit
+            // S9.
+            Kommando::TabNeu | Kommando::TabNaechster | Kommando::TabVoriger => {
+                Wirkungsbereich::Tabbereich
+            }
+            // Der vierte, seit C4 der Runde 4 allein (Nutzerantwort vom
+            // 260811-1505).
+            //
+            // Der Befehl schliesst einen Tab und setzt deshalb keinen Bereich
+            // mit Tabs im Fokus voraus, sondern eine aktive Fensterseite — und
+            // die gibt es immer. Mit dem Fokus in der Leiste oder im Editor
+            // schliesst `cmd+w` seither den aktiven Tab des aktiven
+            // Dateifensters; mit dem Fokus in einem Dateifenster oder in der
+            // Vorschau bleibt es bei dem Bereich vor dem Nutzer. Welcher der
+            // beiden Wege gilt, entscheidet die eine Verzweigung in
+            // `Anwendungsdelegierter::tab_schliessen`, und der Editor wird auf
+            // keinem von beiden angefasst.
+            //
+            // **Der Preis ist benannt und angenommen:** bei stehendem Blatt
+            // kommt `cmd+w` weiterhin nicht durch, denn `waehrend_blatt_erlaubt`
+            // laesst allein den Abbruch durch. In der Belegungsansicht — sie
+            // ist ein Blatt und kein Fenster — bleibt `cmd+w` damit
+            // wirkungslos, und `esc` bleibt der Weg heraus.
+            Kommando::TabSchliessen => Wirkungsbereich::Ueberall,
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
             // hinaus, Navigation, Markierung, Sortierung, die Dateioperationen
             // aus C4, die beiden Zwischenablage-Befehle aus C10

@@ -82,9 +82,11 @@ pub enum Fokus {
     /// Hierhin kommt der Fokus per Mausklick in die Inhaltsflaeche der
     /// Vorschau und seit dem Nutzerentscheid vom 260807 ueber den Tastenbefehl
     /// `fokus_vorschau`. Mit dem Fokus hier bedienen die vier Tabbefehle aus
-    /// C1 die Vorschau-Tabs ([`Wirkungsbereich::Tabbereich`]), und die beiden
-    /// Zwischenablage-Befehle aus C10 loesen nichts aus, wie ihr
-    /// Abnahmekriterium es verlangt.
+    /// C1 die Vorschau-Tabs — drei von ihnen ueber
+    /// [`Wirkungsbereich::Tabbereich`], `tab_schliessen` seit C4 der Runde 4
+    /// ueber [`Wirkungsbereich::Ueberall`] und die Verzweigung beim
+    /// Anwendungsdelegierten —, und die beiden Zwischenablage-Befehle aus C10
+    /// loesen nichts aus, wie ihr Abnahmekriterium es verlangt.
     Vorschau,
     /// Im eingebauten Editor (C1 der Editor-Runde), dem fuenften
     /// fokussierbaren Bereich.
@@ -449,16 +451,20 @@ mod tests {
         }
     }
 
-    /// Die vier Tabbefehle bedienen nach C6 auch die Vorschau-Tabs.
+    /// Drei der vier Tabbefehle bedienen nach C6 auch die Vorschau-Tabs.
     ///
     /// Sie wirken in beiden Bereichen mit Tabs und nirgends sonst: nicht in
     /// der Leiste, die keine Tabs traegt, und nicht in einem Blatt oder
     /// Textfeld.
+    ///
+    /// **`tab_schliessen` steht seit C4 der Runde 4 nicht mehr bei ihnen.**
+    /// Die vier sind damit keine Gruppe eines Wirkungsbereichs mehr; die Probe
+    /// darunter haelt seinen getrennt fest, und diese hier haelt fest, dass
+    /// die drei uebrigen den ihren behalten haben.
     #[test]
     fn ein_tabbefehl_wirkt_in_beiden_bereichen_mit_tabs() {
         for kommando in [
             Kommando::TabNeu,
-            Kommando::TabSchliessen,
             Kommando::TabNaechster,
             Kommando::TabVoriger,
         ] {
@@ -472,6 +478,35 @@ mod tests {
             assert_eq!(
                 wirkt(Wirkungsbereich::Tabbereich, fokus),
                 matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
+            );
+        }
+    }
+
+    /// `tab_schliessen` wirkt aus jedem Fokus (C4 der Runde 4).
+    ///
+    /// Die Zusage, die den Befehl aus dem Zweig der vier Tabbefehle geholt
+    /// hat: er schliesst einen Tab und setzt deshalb keinen Bereich mit Tabs
+    /// im Fokus voraus, sondern eine aktive Fensterseite, und die gibt es
+    /// immer. [`Fokus::Leiste`] und [`Fokus::Editor`] sind die beiden Werte,
+    /// um derentwillen der Umzug geschehen ist (Nutzerantwort vom
+    /// 260811-1505); die Schleife ueber [`JEDER_FOKUS`] deckt sie mit ab und
+    /// sagt daneben zu, dass keiner der uebrigen drei verlorengegangen ist.
+    ///
+    /// **Was diese Probe nicht zusagt, ist das stehende Blatt.** Der
+    /// Fokusvorbehalt ist nicht die Stelle, die es anhaelt — das tut
+    /// `Anwendungsdelegierter::kommando_ausfuehren` ueber
+    /// `waehrend_blatt_erlaubt`, und dort bleibt `cmd+w` aussen vor.
+    #[test]
+    fn das_tab_schliessen_wirkt_aus_jedem_fokus() {
+        assert_eq!(
+            Kommando::TabSchliessen.wirkungsbereich(),
+            Wirkungsbereich::Ueberall,
+            "cmd+w soll den aktiven Tab aus jedem Fokus schliessen"
+        );
+        for fokus in JEDER_FOKUS {
+            assert!(
+                wirkt(Kommando::TabSchliessen.wirkungsbereich(), fokus),
+                "cmd+w wirkt in {fokus:?} nicht"
             );
         }
     }
@@ -711,7 +746,9 @@ mod tests {
                 }
                 // Was das Fenster als ganzes betrifft, wirkt im Editor wie
                 // ueberall sonst: das Umschalten der Bereiche, die Breiten,
-                // das Schliessen des Fensters, das Beenden.
+                // das Schliessen des Fensters, das Beenden — und seit C4 der
+                // Runde 4 das Schliessen des aktiven Tabs, das dabei die Datei
+                // des Editors nicht anfasst.
                 Wirkungsbereich::Ueberall => {
                     durchgelassen += 1;
                     assert!(

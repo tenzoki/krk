@@ -148,7 +148,14 @@ tasten = ["f4"]
 
 # ── C1: Dateifenster und Tabs ────────────────────────────────────────────────
 # Dieselben vier Tabbefehle bedienen nach C6 auch die Tabs des
-# Vorschaufensters; sie wirken auf den Bereich, der den Eingabefokus hat.
+# Vorschaufensters. Drei von ihnen wirken auf den Bereich mit Tabs, der den
+# Eingabefokus hat. "tab_schliessen" wirkt seit C4 der Runde 4 aus jedem Fokus
+# (Nutzerantwort vom 260811-1505): mit dem Fokus in einem Dateifenster oder in
+# der Vorschau schliesst es deren aktiven Tab wie bisher, mit dem Fokus in der
+# Leiste oder im Editor den des aktiven Dateifensters. Der Editor bleibt dabei
+# offen und behaelt seinen Stand. Bei stehendem Blatt kommt es weiterhin nicht
+# durch, und damit auch nicht in der Belegungsansicht: dort bleibt "esc" der
+# Weg heraus.
 
 [[funktion]]
 id = "tab_neu"
