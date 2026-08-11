@@ -2,10 +2,10 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** bounded closure (260811-2210) — gebaut, nicht abgenommen
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
-**Active session history:** circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1257-shaper-vier-tastenbefehle-pfade-kopieren-oeffnen.md
+**Active spec/plan:** planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md, planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md
+**Active session history:** circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md
 
 ---
 
@@ -43,6 +43,19 @@ Die bindende Entscheidung zu Menükürzeln ist `circles/260802-0842-krk-mac-date
 Außerhalb dieser Runde und ausdrücklich nicht Teil davon: die Statusleiste mit Bereichsschaltern und die proportionale Neuaufteilung. Dafür ist ein eigener Circle vorgesehen, der am 260811-1257 noch nicht angelegt war.
 
 ## Turn log
+
+**Turn 1 — die Runde bauen** (260811-1454 bis 260811-1735). Vier Zuschnittfragen beantwortet, eine
+fünfte vom `shaper` beim Schreiben des Specs gefunden und ausgewiesen statt als Zusage geführt.
+Spec mit fünf Fähigkeiten und 62 Kriterien, Plan mit fünf Schritten, beide vom Nutzer abgenommen.
+Alle fünf Schritte umgesetzt. Die Durchsicht lieferte sechs Befunde, sämtlich an derselben Kante —
+Text, der mehr zusagt, als der Code trägt —, und alle sechs sind behoben. Zwei Tickets kamen
+mitten im Turn dazu und fielen in denselben Turn: festbreite Ziffern samt Datum ohne Komma, und
+das Iconset im Bündel. Commits `f9ebbdc` bis `814c8bc`.
+
+**Turn 2 — die offenen Defekte** (260811-1735 bis 260811-2200). Fünf Defekte aus dem gemeinsamen
+Speicher, keiner aus dieser Directive: das Symbol im Bündel, die festbreiten Ziffern, die
+macOS-Untergrenzen in 26 Modulköpfen, die Vorschaubreite, die Konvention am `Auswahlversuch`.
+Commits `8695b77` bis `b2a6c2e`. Coherence-Verdikt `bounded-closure-proposed`.
 
 ## Activation proposal
 
@@ -214,3 +227,48 @@ das, also gehört der Modulkopf mit derselben Änderung umgeschrieben.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer
 über `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Geschlossen am 260811-2210 als beschränkter Abschluss (`_b_`).** Wie die Runden 1, 2 und 3, und
+aus demselben Grund: **die Runde ist gebaut, nicht abgenommen.** Alle 62 Abnahmekriterien des
+Specs stehen auf `- [ ]`, weil der Abnahmelauf KRK im Vordergrund verlangt — aus dem Hintergrund
+weist die Wirkungsbereichs-Prüfung jeden fokusgebundenen Befehl ab. Kein Agent kann ihn fahren.
+Der Abgleich hat die 62 sortiert: **23 trägt der Baum heute schon** (Zahlen, Verbotsseite,
+Programmtext, alle 23 halten), **32 kann nur ein Mensch am laufenden Bündel sehen**, **7 brauchen
+einen Prüfaufbau**.
+
+**Die Directive ist im Code erfüllt.** Alle fünf Planschritte tragen `[DONE]`, jeder vom
+`reconciler` einzeln am Baum nachgelesen statt aus dem Plan übernommen; `make check` grün mit 795
+Proben und null Warnungen unter `-D warnings`. Die vier Befehle laufen über die vorhandene
+Kommando-Maschinerie und über keine zweite daneben: 74 Funktionen in der Belegungsdatei, 82
+Kombinationen, 68 `Kommando`-Varianten, sieben Wirkungsbereiche, null Auffangzweige. Die
+Zwischenablage ist zum ersten Mal auch Ziel, und der Modulkopf, der das Gegenteil zusagte, ist mit
+derselben Änderung umgeschrieben.
+
+**Die offene Frage des Plans ist beantwortet, nicht vertagt.** Ob `NSTableView` `target` schwach
+führt, steht im `SAFETY`-Block bei `tabelle.rs` mit Zeilenbeleg aus der objc2-Bindung **und** aus
+dem SDK-Kopf. Ein schwach haltendes Zwischenobjekt braucht der Weg nicht.
+
+**Was der Abgleich gefunden hat.** Ein einziger Fund in zwölf geprüften Behebungen: der Datensatz
+`issues/260811-1648_c_…` beschreibt seine Behebung als zwei Handgriffe, gelaufen war nur der
+erste. Nachgezogen. Daneben fünf veraltete Stellen in `CLAUDE.md`, ungeändert gemeldet — der Datei
+fehlen zwei ganze Runden.
+
+**Ein Kriterium verspricht mehr, als der Mechanismus beantworten kann.** C5 verlangt
+Konfliktfreiheit „auch gegen ein Menükürzel", aber `Belegung::konflikte` vergleicht nur innerhalb
+desselben `gehalten_von` — so entschieden am 260805. Das ist keine Lücke dieser Runde, aber wer C5
+abnimmt, sollte es wissen.
+
+**Für die Nachfolger.** Der Defekt der Vorschaubreite ist in dieser Runde behoben (`1ea5a3d`);
+damit ist die harte Vorbedingung des vorgesehenen Circles
+`260811-1304-statusleiste-mit-bereichsschaltern` weg. Der zugehörige Datensatz jenes Circles steht
+auf beantwortet; ob umgesetzt oder überholt, entscheidet sich bei seiner Aktivierung. Ein Befund
+nebenbei gehört demselben Circle: `MINDESTGROESSE` deckt mit 780 Punkten die vier Bereiche der
+Runde 1, der Editor braucht 320 statt 160, und zwischen 780 und 920 Punkten Fensterbreite wird er
+unter sein Mindestmaß gedrückt.
+
+**Belege.** Abgleich `history/260811-2157-reconciliation.md`, Sitzungshistorie
+`history/260811-1454-orchestrator-session.md` mit dem Coherence-Verdikt, dem Turn-Protokoll und dem
+Sitzungsverlauf. Die Abnahmeanleitung für die Markdown-Ausgabe der Tastenbelegung liegt beim
+Circle der Runde 3.

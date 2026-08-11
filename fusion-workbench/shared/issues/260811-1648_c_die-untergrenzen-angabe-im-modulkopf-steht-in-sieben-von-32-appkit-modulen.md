@@ -57,3 +57,17 @@ sind es fuenf.
 Abgenommen mit `make check`, exit 0.
 
 Geschlossen in der Sitzung `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md`.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Zahl der Behebungsnotiz ist nachgezaehlt und
+stimmt.** Unter `crates/krk-ui/src/appkit/` liegen 33 Rust-Dateien (23 unmittelbar, 10 unter
+`blaetter/`). Die Ueberschrift `//! # Ab welchem macOS` steht in 21 der 23 und in allen 10, also in
+31 von 33. Ohne sie sind genau die zwei genannten: `koordinaten.rs` und `mod.rs`.
+
+**Was daraus fuer `CLAUDE.md` folgt und dort nicht steht:** die Datei sagt unter „Technologiewahl"
+weiterhin „jedes AppKit-Modul dieses Projekts nennt in seinem Modulkopf die Untergrenze jeder
+Klasse, die es anspricht". Der Satz ist seit `9b17ff1` nahe an der Wahrheit und in seinem Wortlaut
+weiterhin falsch: zwei Module tragen ihn nicht, aus genannten Gruenden. `CLAUDE.md` ist in dieser
+Sitzung nicht nachgezogen worden; der Abgleich
+`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md`
+fuehrt die Stelle unter den fuenf Abweichungen.

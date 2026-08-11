@@ -74,3 +74,25 @@ Erkannt hat ihn der Abgleich an der letzten Stelle, an der die Zahlen noch vergl
 Dass er ueberhaupt lief, liegt daran, dass er im Orchestrator-Prompt an die Emission von
 `session_end` gehaengt ist statt danebenzustehen. Das ist genau der Weg, den der Abschnitt
 "Denkbarer Weg" oben fuer die Aufgabenereignisse vorschlaegt, und er hat hier funktioniert.
+
+---
+## Abgleichsvermerk 260811-2157 (`reconciler`): der Befund steht zu Recht offen, und er hat sich in der naechsten Sitzung wiederholt
+
+**Nachgezaehlt in `fusion-workbench/orchestrator-events.jsonl`, ab dem letzten `session_start`
+(2026-08-11T12:55:10, Circle `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`):** neun
+Ereignisse insgesamt, davon **kein einziges** `task_start`, `task_done` oder `commit`. Git zaehlt
+fuer dieselbe Spanne (`55a4afa..HEAD`) **16 Commits**. Der Befund gilt damit unveraendert; er ist
+kein Einzelfall der Sitzung 260810-1647.
+
+Die neun: `session_start`, `gate_response`, `shaper_done`, `conceptrev_done` (zweimal),
+`planner_done`, `turn_start`, `review_done`, `turn_end`.
+
+**Zwei Grenzereignisse fehlen daneben**, und das widerspricht der Diagnose dieses Datensatzes:
+`scope_resolved` und `queue_built` sind nicht emittiert, obwohl das Sitzungsprotokoll beides
+ausschreibt (Abschnitte `## Momentaufnahme` und `## Aufgeloeste Pfade`). Der Satz oben, die
+Grenzereignisse haengen an Schritten, an denen die Sitzung ohnehin anhaelt, traegt also nur fuer
+einen Teil von ihnen.
+
+**Der schwerere Teil ist als eigener Datensatz abgelegt:** fuenf der 16 Commits sind **nach** dem
+`turn_end` von Turn 1 entstanden, ohne dass ein zweiter `turn_start` emittiert worden waere
+(`shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md`).

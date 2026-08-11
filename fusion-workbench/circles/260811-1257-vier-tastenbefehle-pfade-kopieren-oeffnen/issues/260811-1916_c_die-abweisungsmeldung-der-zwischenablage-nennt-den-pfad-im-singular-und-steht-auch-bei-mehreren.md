@@ -20,3 +20,9 @@ Kopierer legt in beiden Faellen genau einen Text ab — einer je Zeile, aber ein
 braucht der Satz keine Fallunterscheidung nach der Zahl.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt.** `ablage_weist_ab()`
+(`crates/krk-ui/src/kommandos/operationen.rs`) liefert „die Zwischenablage hat den Text nicht
+angenommen". Beide Aufrufer stehen in `appkit/tabelle.rs` bei `:884` und `:913` und sind damit
+beide richtig bedient.

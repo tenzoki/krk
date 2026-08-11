@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** crates/krk-ui/src/kommandos/operationen.rs:157
 
@@ -36,12 +36,6 @@ Für die vier Dateioperationen ist die Frage längst beantwortet. `betroffene()`
 Option 1, zusammen mit einer kurzen Rückmeldung in der Statuszeile, die bei einer Zeile den Pfad nennt und bei mehreren die Zahl der kopierten Pfade. Das hält die eine Regel und beantwortet zugleich den Einwand gegen sie, ohne eine Rückfrage einzuführen.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Moeglichkeit 1, `betroffene()` erben**, samt der empfohlenen Rueckmeldung in der
 Statuszeile: bei einer Zeile der Pfad, bei mehreren die Zahl der kopierten Pfade. Nutzerantwort
 am 260811-1505.
@@ -60,3 +54,10 @@ einem Lesevorgang die Auswahl statt der vorher markierten Zeilen, und der Nutzer
 Rueckmeldung —, oder ob die Fluechtigkeit der Markierung ein eigener Gegenstand ist. Das zweite
 waere ein anderer Circle. Der Spec sagt, welcher der beiden Faelle gilt, und behauptet nichts
 ueber den anderen.
+
+---
+Implemented: `d23bfdb` — `DateifensterQuelle::eintragspfad_kopieren`
+(`crates/krk-ui/src/appkit/tabelle.rs:904`) ruft `betroffene_eintraege()` und damit
+`operationen::betroffene`; eine zweite Regel daneben entsteht nicht. Bei leerer Menge bleibt die
+Zwischenablage unberuehrt und die Statuszeile traegt `nichts_zu_kopieren()`.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

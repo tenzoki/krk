@@ -36367,3 +36367,711 @@
 {"ts":"2026-08-11T17:49:57.575Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-11T18:14:04.943Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
 {"ts":"2026-08-11T18:14:26.284Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:14:39.937Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:16:53.383Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:00.504Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:01.487Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:06.520Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:09.611Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:17.160Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:18.268Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:20.609Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:22.085Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:26.212Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:37.905Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:43.503Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:44.796Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:17:55.076Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:16.557Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:20.751Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:30.048Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:32.690Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:36.307Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:44.329Z","event":"guard_allow","tool":"Edit","file":"resources/Info.plist"}
+{"ts":"2026-08-11T18:18:44.438Z","event":"churn_critical","tool":"Edit","file":"resources/Info.plist","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:18:44.438Z","event":"churn_warning","tool":"Edit","file":"resources/Info.plist","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:18:44.438Z","event":"tracker_record","tool":"Edit","file":"resources/Info.plist","detail":"File change recorded"}
+{"ts":"2026-08-11T18:18:47.879Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:18:58.858Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:19:05.534Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:19:08.460Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:19:12.228Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:19:17.871Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:19:18.970Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:19:19.078Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:19:19.079Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:19:19.079Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:19:38.608Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:19:38.719Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:19:38.719Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:19:38.720Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:19:43.452Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:19:43.558Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:19:43.558Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:19:43.559Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:19:58.512Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:19:58.621Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:19:58.621Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:19:58.622Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:20:07.761Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:20:07.865Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:20:07.865Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:20:07.866Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:20:29.406Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:20:34.676Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:20:34.783Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:20:34.783Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:20:34.784Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:20:45.405Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:20:49.703Z","event":"guard_allow","tool":"Edit","file":"xtask/src/bundle.rs"}
+{"ts":"2026-08-11T18:20:49.810Z","event":"churn_critical","tool":"Edit","file":"xtask/src/bundle.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:20:49.810Z","event":"churn_warning","tool":"Edit","file":"xtask/src/bundle.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:20:49.811Z","event":"tracker_record","tool":"Edit","file":"xtask/src/bundle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:01.077Z","event":"guard_allow","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:01.200Z","event":"churn_critical","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:21:01.201Z","event":"churn_warning","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:21:01.201Z","event":"tracker_record","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:12.018Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:12.615Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:16.122Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:16.228Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:21:16.228Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:21:16.229Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:19.426Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:19.529Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:21:19.530Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:21:19.530Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:19.818Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:23.210Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:27.183Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:27.286Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:21:27.286Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs"}
+{"ts":"2026-08-11T18:21:27.287Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:30.486Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:34.027Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:34.128Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:21:34.128Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 4 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs, crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:21:34.128Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:21:38.258Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:39.059Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:39.609Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:21:53.889Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:04.713Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:16.570Z","event":"guard_allow","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:22:16.784Z","event":"churn_critical","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"High file churn detected: 2 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs, crates/krk-ui/src/kommandos/operationen.rs"}
+{"ts":"2026-08-11T18:22:16.784Z","event":"churn_warning","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"Elevated file churn: 4 file(s) with multiple changes: xtask/src/bundle.rs, crates/krk-core/src/tasten/belegung.rs, crates/krk-ui/src/kommandos/fokus.rs, crates/krk-ui/tests/schriftmessung.rs"}
+{"ts":"2026-08-11T18:22:16.784Z","event":"tracker_record","tool":"Write","file":"crates/krk-ui/tests/schriftmessung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:22:19.694Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:23.012Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:30.304Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:35.908Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:22:41.713Z","event":"guard_allow","tool":"Write","file":"crates/krk-ui/examples/einrueckung.rs"}
+{"ts":"2026-08-11T18:22:41.834Z","event":"tracker_record","tool":"Write","file":"crates/krk-ui/examples/einrueckung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:22:45.961Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:01.806Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:11.453Z","event":"guard_allow","tool":"Write","file":"crates/krk-ui/examples/einrueckung.rs"}
+{"ts":"2026-08-11T18:23:11.570Z","event":"tracker_record","tool":"Write","file":"crates/krk-ui/examples/einrueckung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:23:13.288Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:15.144Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:19.103Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/examples/einrueckung.rs"}
+{"ts":"2026-08-11T18:23:19.209Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/examples/einrueckung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:23:23.036Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:37.339Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/examples/einrueckung.rs"}
+{"ts":"2026-08-11T18:23:37.439Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/examples/einrueckung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:23:40.246Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:23:41.652Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:24:02.068Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:24:08.817Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:24:08.927Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:24:24.019Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:24:24.132Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:24:53.169Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:24:53.287Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:24:59.156Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:25:06.888Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:25:06.995Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:25:16.895Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:25:17.023Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:25:17.023Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:25:23.598Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T18:25:23.704Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:25:23.704Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:25:35.626Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T18:25:35.730Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:25:35.730Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:26:04.560Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:26:09.152Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:26:24.683Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T18:26:24.783Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:26:24.784Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:26:55.342Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:27:20.917Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:27:24.311Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:27:34.257Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:27:38.475Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:27:53.597Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T18:27:53.710Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:27:53.710Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:28:02.771Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:02.880Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:02.880Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:28:11.073Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:11.190Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:11.190Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:28:15.525Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:15.630Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:15.631Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:28:33.544Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:33.682Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:33.682Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:28:38.905Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:39.017Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T18:28:39.017Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T18:29:06.961Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:29:23.848Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:29:28.355Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:30:23.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:30:44.031Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:31:21.564Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:31:46.307Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:57:52.011Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:57:53.012Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:57:56.780Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:01.907Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:02.546Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:08.148Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:14.325Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:18.811Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:24.781Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:41.600Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:44.425Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:51.051Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:58:52.545Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:59:01.675Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:59:21.882Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T18:59:50.890Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:00:20.631Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:00:31.098Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:00:54.392Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:01:45.382Z","event":"guard_allow","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/briefing.md"}
+{"ts":"2026-08-11T19:01:45.488Z","event":"tracker_record","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/briefing.md","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-11T19:03:00.206Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:00.818Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:05.046Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:12.419Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:16.817Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:18.779Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:23.778Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:24.111Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:26.414Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:27.567Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:31.627Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:34.881Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:35.583Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:40.558Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:45.871Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:47.174Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:47.447Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:47.827Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:49.097Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:52.259Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:52.866Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:53.097Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:53.559Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:54.854Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:58.527Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:03:59.121Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:00.002Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:02.983Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:03.778Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:04.319Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:05.089Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:05.975Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:06.096Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:07.149Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:09.038Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:10.267Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:11.213Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:12.552Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:14.450Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:15.233Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:15.825Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:16.844Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:17.387Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:18.874Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:20.441Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:21.723Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:21.834Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:22.606Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:22.749Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:23.345Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:25.947Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:26.990Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:31.794Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:33.602Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:33.710Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:33.939Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:34.112Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:34.855Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:37.748Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:38.248Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:39.921Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:41.529Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:41.687Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:41.971Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:43.149Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:43.663Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:47.115Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:48.227Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:54.492Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:54.535Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:54.576Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:55.356Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:57.672Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:59.438Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:04:59.746Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:00.794Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:01.284Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:03.491Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:03.914Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:06.606Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/konflikt.rs"}
+{"ts":"2026-08-11T19:05:06.656Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:06.718Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/konflikt.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:06.718Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/konflikt.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:06.779Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:07.641Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:07.800Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:08.688Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:12.600Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:15.528Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:17.507Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs"}
+{"ts":"2026-08-11T19:05:17.644Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:17.645Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:20.854Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:20.933Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:25.923Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/namenseingabe.rs"}
+{"ts":"2026-08-11T19:05:26.032Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/namenseingabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:26.032Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/namenseingabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:27.153Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:27.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:28.714Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:29.811Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:32.100Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs"}
+{"ts":"2026-08-11T19:05:32.218Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:32.218Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:34.533Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:38.447Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:05:38.579Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:38.579Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:38.722Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/uebersprungen.rs"}
+{"ts":"2026-08-11T19:05:38.834Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/uebersprungen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:38.834Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/uebersprungen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:39.767Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:41.288Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:42.251Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/ungesichert.rs"}
+{"ts":"2026-08-11T19:05:42.357Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/ungesichert.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:42.358Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/ungesichert.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:42.757Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:43.450Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:45.403Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs"}
+{"ts":"2026-08-11T19:05:45.517Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:45.517Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:47.469Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/zeilennummer.rs"}
+{"ts":"2026-08-11T19:05:47.575Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/zeilennummer.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:47.575Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/zeilennummer.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:51.510Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs"}
+{"ts":"2026-08-11T19:05:51.510Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:05:51.627Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:51.627Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/mod.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:51.628Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:51.628Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:52.818Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:53.085Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/aufteilung.rs"}
+{"ts":"2026-08-11T19:05:53.193Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/aufteilung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:05:53.193Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/aufteilung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:05:53.983Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:05:59.661Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:01.320Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:03.544Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs"}
+{"ts":"2026-08-11T19:06:03.664Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:03.664Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:06.823Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:08.059Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs"}
+{"ts":"2026-08-11T19:06:08.168Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:08.168Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:10.637Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:14.243Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/ereignisse.rs"}
+{"ts":"2026-08-11T19:06:14.349Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/ereignisse.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:14.350Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/ereignisse.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:20.610Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/suche.rs"}
+{"ts":"2026-08-11T19:06:20.727Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/suche.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:20.727Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/suche.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:21.589Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs"}
+{"ts":"2026-08-11T19:06:21.707Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:21.708Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:22.734Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/statuszeile.rs"}
+{"ts":"2026-08-11T19:06:22.839Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/statuszeile.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:22.839Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/statuszeile.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:26.114Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:27.898Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:32.253Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:32.470Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tableiste.rs"}
+{"ts":"2026-08-11T19:06:32.578Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/tableiste.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:32.578Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tableiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:38.500Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:45.162Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:45.802Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs"}
+{"ts":"2026-08-11T19:06:46.125Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:46.125Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:47.160Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:06:47.539Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:47.540Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:06:55.526Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:06:58.226Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/terminal.rs"}
+{"ts":"2026-08-11T19:06:58.579Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/terminal.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:06:58.579Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/terminal.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:01.630Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:07.176Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs"}
+{"ts":"2026-08-11T19:07:07.330Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:07.330Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:07.535Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/papierkorb.rs"}
+{"ts":"2026-08-11T19:07:07.677Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/papierkorb.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:07.677Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/papierkorb.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:08.587Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:08.722Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:08.722Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:12.927Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:14.152Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:17.416Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:19.565Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/hinweis.rs"}
+{"ts":"2026-08-11T19:07:19.675Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/hinweis.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:19.675Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/hinweis.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:21.452Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:07:21.577Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:21.577Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:07:21.578Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/leiste.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:35.584Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/belegungsansicht.rs"}
+{"ts":"2026-08-11T19:07:35.736Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/belegungsansicht.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:35.736Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/belegungsansicht.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:07:35.737Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/belegungsansicht.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:36.052Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:39.139Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:07:39.251Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:39.251Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:07:39.251Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:40.823Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:42.289Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:44.055Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:49.235Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:49.554Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:53.362Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:07:58.111Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs"}
+{"ts":"2026-08-11T19:07:58.339Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:07:58.339Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:07:58.340Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/bildtakt.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:07:59.799Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:08:00.010Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:08:00.010Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:08:00.011Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:08:05.599Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:08:05.974Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:08:05.975Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:08:05.975Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:08:06.406Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:11.033Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:08:11.262Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:08:11.262Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 1 file(s) with multiple changes: crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:08:11.262Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:08:14.493Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:08:14.737Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:08:14.737Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:08:14.738Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:08:15.927Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:19.940Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs"}
+{"ts":"2026-08-11T19:08:20.101Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:08:20.102Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:08:20.102Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fsevents.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:08:23.526Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:24.858Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:27.551Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:33.156Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:37.648Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:41.067Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:53.137Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:08:57.318Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:10:39.243Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:11:14.411Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:11:29.756Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:11:54.125Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:12:10.148Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:12:21.276Z","event":"guard_allow","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/enums.sh"}
+{"ts":"2026-08-11T19:12:21.372Z","event":"tracker_record","tool":"Write","file":"/private/tmp/claude-502/-Users-k1-Projects-productive-krk/cb367e47-6233-4a0c-98a9-76ad1ecbea03/scratchpad/enums.sh","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-11T19:12:24.484Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:12:33.264Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:12:42.695Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:12:49.067Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:13:07.389Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:13:24.627Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:13:40.426Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:13:51.830Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs"}
+{"ts":"2026-08-11T19:13:51.935Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:13:51.935Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:13:51.935Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:13:58.233Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs"}
+{"ts":"2026-08-11T19:13:58.334Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:13:58.334Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:13:58.334Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/vorschau.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:14:04.966Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs"}
+{"ts":"2026-08-11T19:14:05.069Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:14:05.069Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:14:05.070Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:14:10.565Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:14:23.438Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs"}
+{"ts":"2026-08-11T19:14:23.540Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:14:23.540Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:14:23.540Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/volumes.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:14:52.535Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:16:20.992Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:16:57.017Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:17:23.304Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:17:55.217Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md"}
+{"ts":"2026-08-11T19:17:55.368Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:17:55.368Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:17:55.368Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md","detail":"File change recorded"}
+{"ts":"2026-08-11T19:18:12.962Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:17.999Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:21.530Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:25.631Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:26.038Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:31.278Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:38.988Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:41.352Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:44.701Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:45.122Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:51.230Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:51.782Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:25:56.150Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:26:19.571Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:26:20.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:26:25.809Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:26:29.739Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:27:45.514Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:27:55.454Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:28:29.660Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:28:37.438Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:28:38.027Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:28:38.028Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 2 file(s) with multiple changes: crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:28:38.028Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:28:47.700Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:28:48.057Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:28:48.057Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:28:48.058Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:29:10.557Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:29:10.698Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:29:10.698Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:29:10.698Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:29:17.653Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:29:17.799Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:29:17.800Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:29:17.800Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:29:23.045Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:29:23.856Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:29:27.261Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:29:31.927Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:29:43.426Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:29:52.931Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:30:23.774Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:30:23.902Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:30:23.903Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:30:23.903Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:30:36.468Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:30:58.958Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs"}
+{"ts":"2026-08-11T19:30:59.075Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:30:59.076Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:30:59.076Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:31:15.916Z","event":"guard_allow","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs"}
+{"ts":"2026-08-11T19:31:16.023Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:31:16.024Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:31:16.024Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/fenster.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:31:43.599Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:32:09.606Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:33:02.125Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:33:09.182Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:33:18.136Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:33:22.811Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:36:36.452Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:36:36.712Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:36:39.972Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:37:13.774Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:37:37.319Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:37:38.186Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:37:42.797Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:37:57.506Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:38:01.662Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:38:06.311Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:38:41.136Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:47:41.470Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:47:43.029Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:47:52.682Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:48:03.956Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:48:51.153Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:49:09.497Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/tabs.rs"}
+{"ts":"2026-08-11T19:49:09.617Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:49:09.618Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:49:09.618Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:49:17.744Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:49:17.853Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:49:17.854Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:49:17.854Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/tabelle.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:49:20.620Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-11T19:49:20.735Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:49:20.736Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:49:20.736Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/appkit/anwendung.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:49:48.462Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:49:59.314Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:50:08.598Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/tabs.rs"}
+{"ts":"2026-08-11T19:50:08.709Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:50:08.709Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:50:08.710Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:50:33.840Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:50:57.322Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:50:57.601Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:51:05.702Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:51:23.900Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:30.932Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:31.904Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:34.047Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:35.166Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:39.361Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:39.917Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:47.646Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:52:56.480Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:53:10.399Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:53:17.095Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:53:17.510Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:53:45.739Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/crates/krk-ui/src/tabs.rs"}
+{"ts":"2026-08-11T19:53:45.850Z","event":"churn_critical","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T19:53:45.851Z","event":"churn_warning","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T19:53:45.851Z","event":"tracker_record","tool":"Edit","file":"crates/krk-ui/src/tabs.rs","detail":"File change recorded"}
+{"ts":"2026-08-11T19:54:13.468Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:54:39.617Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:07.427Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:27.564Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:35.244Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:40.677Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:45.496Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:55:54.252Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:17.496Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:18.156Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:22.269Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:25.093Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:27.755Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:57:44.812Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:15.776Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:18.703Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:32.183Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:41.087Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:46.397Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:58:55.088Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:01.895Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:08.720Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:20.616Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:31.808Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:40.205Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T19:59:48.572Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:00:00.565Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:00:17.259Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:00:23.488Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:00:36.192Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:02.135Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:12.028Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:24.626Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:33.245Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:41.948Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:53.343Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:01:55.408Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:02:13.564Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:02:26.801Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:02:58.231Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:03:13.383Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:03:24.081Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:03:50.932Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:03:51.377Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:06:27.156Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:06:36.805Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:06:45.968Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:06:52.151Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:07:00.033Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:07:13.468Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:07:22.905Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:08:20.582Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:08:43.071Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:09:11.145Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:09:21.119Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:09:27.544Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:09:51.314Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:09:59.135Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:10:42.390Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:11:25.344Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:12:18.323Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:12:40.808Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:13:33.072Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:13:45.297Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:14:30.140Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:14:49.007Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:15:01.481Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:16:58.643Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md"}
+{"ts":"2026-08-11T20:16:58.761Z","event":"churn_critical","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T20:16:58.762Z","event":"churn_warning","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T20:16:58.762Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:17:20.386Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:17:35.245Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:17:49.658Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:17:54.609Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:18:10.562Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:18:54.513Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:19:00.557Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:19:07.819Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:19:15.239Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:20:03.139Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:20:09.029Z","event":"guard_allow","tool":"Edit","file":"260811-1454-orchestrator-session.md"}
+{"ts":"2026-08-11T20:20:09.147Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T20:20:09.148Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T20:20:09.148Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:20:16.404Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md"}
+{"ts":"2026-08-11T20:20:16.527Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T20:20:16.527Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T20:20:16.527Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:20:32.057Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md"}
+{"ts":"2026-08-11T20:20:32.230Z","event":"churn_critical","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"High file churn detected: 1 file(s) showing thrashing pattern: crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-11T20:20:32.230Z","event":"churn_warning","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"Elevated file churn: 3 file(s) with multiple changes: crates/krk-ui/src/appkit/anwendung.rs, crates/krk-ui/src/appkit/fsevents.rs, crates/krk-ui/src/appkit/leiste.rs"}
+{"ts":"2026-08-11T20:20:32.230Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:20:56.546Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:03.337Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:21.875Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:22.142Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:25.232Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:25.652Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:29.007Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:30.984Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:35.910Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:36.665Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:50.866Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:52.213Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:21:58.167Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:22:06.073Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:22:06.838Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:22:12.512Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:22:18.100Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:22:28.577Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:23:22.580Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:23:33.664Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:23:40.785Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:23:47.359Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:24:52.818Z","event":"guard_allow","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md"}
+{"ts":"2026-08-11T20:24:52.953Z","event":"tracker_record","tool":"Edit","file":"fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:27:07.559Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/portfolio.md"}
+{"ts":"2026-08-11T20:27:08.173Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/portfolio.md","detail":"File change recorded"}
+{"ts":"2026-08-11T20:27:13.115Z","event":"tracker_record","tool":"Bash","detail":"Bash command observed"}
+{"ts":"2026-08-11T20:27:54.678Z","event":"guard_allow","tool":"Write","file":"fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-11T20:27:54.805Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md","detail":"File change recorded"}

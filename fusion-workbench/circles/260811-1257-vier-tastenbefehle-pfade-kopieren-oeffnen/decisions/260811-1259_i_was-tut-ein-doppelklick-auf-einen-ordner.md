@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** crates/krk-ui/src/appkit/tabelle.rs:955
 
@@ -38,12 +38,6 @@ Gefragt ist, ob der Doppelklick und die Tastenkombination dasselbe tun. Tun sie 
 Option 1. Sie ist die einzige, die dem Nutzer beide Wege lässt, den Einstieg mit der Maus und das Öffnen eines Ordners im Finder, und sie folgt dem, was ein Doppelklick auf dem Mac heißt.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Moeglichkeit 1, der Doppelklick verzweigt und die Taste nicht.** Nutzerantwort am
 260811-1505.
 
@@ -54,3 +48,10 @@ geht damit an den Finder.
 Damit hat der Nutzer beide Wege: den Einstieg mit der Maus, wie ein Doppelklick auf dem Mac
 gelesen wird, und das Oeffnen eines Ordners im Finder ueber die Taste. Der Rechts-Pfeil bleibt
 als Einstieg unberuehrt.
+
+---
+Implemented: `5487695` — `DateifensterQuelle::doppelklick`
+(`crates/krk-ui/src/appkit/tabelle.rs:1005`) ruft zuerst `in_zeile_einsteigen(zeile)` und gibt die
+Zeile nur dann an `mit_standardprogramm_oeffnen`, wenn sie kein Ordner war. Die Taste verzweigt
+nicht: der Zweig `Kommando::MitStandardprogrammOeffnen` (`tabelle.rs:847`) prueft keinen Typ.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

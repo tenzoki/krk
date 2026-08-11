@@ -33,3 +33,13 @@ eine Zahl verzichtet, weil sie auf demselben Weg veraltet — dieselbe Ueberlegu
 offenen Frage `circles/260809-2040-…/decisions/260811-1230_*_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md`.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt in allen vier Punkten, die
+Zahl eingeschlossen.** `crates/krk-ui/src/appkit/mod.rs` nennt `standardprogramm` im Uebersichtsbild
+(Zeile 22) und in der Prosa (Zeile 78); der Satz ueber `zwischenablage` nennt die Schreibseite
+(Zeile 77-80). `crates/krk-ui/src/kommandos/mod.rs:15-17` fuehrt die Texte der drei neuen Befehle
+neben denen des Terminal-Befehls, `kommandos/operationen.rs:3-13` ebenso und namentlich.
+
+**Die berichtigte Zahl ist nachgezaehlt:** `appkit/mod.rs:10` sagt „Dreiundzwanzig Module", und die
+Datei deklariert 23 (`grep -cE "^(pub )?mod " = 23`, Zeilen 132-154).

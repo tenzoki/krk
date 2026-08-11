@@ -147,3 +147,32 @@ Jede trägt ihre Begründung, und jede ist am Baum nachgelesen.
 **Aufräumen, jederzeit:** der Wachposten, die Abweisungsmeldung und der Doppelklick-Löschweg. Keiner hält den Abschluss auf.
 
 **Nicht Sache dieser Durchsicht:** die sieben Abnahmekriterien am laufenden Bündel, die der Plan unter `## Was am gebauten Bündel zu prüfen ist` führt. Sie verlangen KRK im Vordergrund und sind Nutzerarbeit; keiner der sechs Befunde ändert daran etwas.
+
+---
+
+## Abgleichsvermerk 260811-2157 (`reconciler`)
+
+**Alle sechs Befunde sind geschlossen, und jede Behebung ist einzeln gegen den Baum gelesen.** Die
+Datensaetze liegen unter `issues/` dieses Circles, saemtlich mit dem Marker geschlossen; jeder traegt
+den Vermerk mit Datei und Zeile.
+
+| Befund | Stand am 260811-2157 |
+|---|---|
+| falsche Zusage im Kopf der Zwischenablage | behoben, `zwischenablage.rs:53-58` |
+| drei unvollstaendig gewordene Modulkoepfe | behoben, `appkit/mod.rs:10,22,77-80`, `kommandos/mod.rs:15-17`, `operationen.rs:3-13` |
+| halbierter Doppelklick-Loeschweg | Kommentar geaendert statt Verhalten, `tabelle.rs:995-1003` |
+| buchstabengenauer Wachposten | behoben, `operationen.rs:1479-1486` und `:1556-1559` |
+| Abweisungsmeldung im Singular | behoben, `ablage_weist_ab()` sagt „Text" |
+| Satz fuer die leere Menge gegen C2 | behoben, `nichts_zu_kopieren()` und `nichts_zu_oeffnen()` |
+
+**Die vier nachgemessenen Behauptungen und die Verbotsseite haelt der Abgleich unabhaengig fest.**
+Nachgezaehlt: 74 Bloecke `[[funktion]]` und 82 Eintraege in den `tasten`-Listen von
+`resources/default-keymap.toml`, 68 Varianten in `Kommando`, 68 als Laenge im Typ von
+`KENNUNGEN` (`belegung.rs:488`), sieben Werte in `Wirkungsbereich`, null `_ =>` in
+`Kommando::wirkungsbereich` und in `bereich_des_kommandos`. Der `SAFETY`-Block zu `setTarget:`
+steht bei `tabelle.rs:2300-2340`.
+
+**Eine Zahl dieser Durchsicht ist inzwischen groesser:** die Zusammenfassung nennt „654 Proben in 16
+Zielen". Ein eigener Lauf am 260811-2157 zaehlt **795 bestandene Proben in 16 Zielen**, null
+gescheitert, eine uebersprungen, Ausgang 0. Der Unterschied stammt aus den fuenf Commits nach dieser
+Durchsicht und ist kein Widerspruch.

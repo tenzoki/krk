@@ -75,3 +75,62 @@ Nebenbei: die Zeilenangabe `tabelle.rs:1062-1074` für den Doc-Kommentar von
 in `:1076`.
 
 Nachgetragen von `reconciler`, `shared/history/260810-1907-reconciliation.md`.
+
+---
+
+## Behebung 260811-2155 (Commit `b2a6c2e`)
+
+**Entschieden vom Nutzer am 260811-2140: `#[must_use]`.** Der Übersetzer erzwingt die Behandlung;
+die Unterscheidung „nackt heißt, `Unbekannt` kann hier nicht eintreten" wandert vollständig in die
+Kommentare — ein nackter Aufruf baut nicht mehr.
+
+**Der Datensatz legt das als offene Abwägung ohne Empfehlung vor. Sie war keine mehr.** Dieses
+Projekt hat dieselbe Frage bereits am Defekt `260810-0423` beantwortet: `EditorModell::bearbeiten`
+(`crates/krk-ui/src/editormodell.rs:940`) trägt seither ein `#[must_use]`, und sein Doc-Kommentar
+schreibt genau diese Abwägung aus, bis hin zu dem Satz, dass ein `let _ =` davor ausdrücklich
+sagt, man brauche die Meldung nicht.
+
+**Damit standen zwei entgegengesetzte Bedeutungen von `let _ =` im selben Crate** — beim Editor
+„ich brauche den Wert nicht", am `Auswahlversuch` „`Unbekannt` kann eintreten und wird bewusst
+verworfen". Diese Unstimmigkeit aufzulösen war der eigentliche Gewinn, und sie fehlt in der
+Abwägung des Datensatzes.
+
+**Das Attribut hat sofort eine sechste Aufrufstelle gefunden, die kein Datensatz führte:** eine
+Probe in `crates/krk-ui/src/tabs.rs` (`eine_zweite_auffrischung_laesst_den_vorgemerkten_namen_stehen`),
+die über `Tabliste::auswahl_auf_namen` geht statt über `eintrag_waehlen`. Der Datensatz zählt nur
+die Aufrufer von `eintrag_waehlen`; das Attribut sitzt am **Typ** und trifft damit beide Wege. Die
+Probe verwirft den Wert zu Recht und sagt es jetzt. `cargo build` und `cargo test` liefen dabei
+grün — `unused_must_use` ist erst unter `-D warnings` ein Fehler.
+
+Die fünf im Reconciliation-Vermerk geführten Aufrufstellen lagen so, wie er sie führt; nur die
+Zeilennummern sind abgewandert.
+
+**Ein zweiter Fall derselben Form ist mitgekommen:** `Einzug` (`tabs.rs`, geliefert von
+`Tabliste::einziehen`). Fällt der Wert still, bleibt die `NSTableView` mit dem alten Bestand
+stehen, während das Modell den neuen führt, und kein zweiter Weg meldet das nach. Er hat dasselbe
+Attribut bekommen. Hier fand der Bau nichts — `einziehen` hat genau einen Aufrufer
+(`appkit/tabelle.rs:1784`), und der bindet den Wert.
+
+**Nicht angefasst und ausdrücklich als harmloser eingeordnet:** die `-> bool`-Rückgaben von
+`Fensteraufteilung::umschalten`, `einblenden` und `aktiv_setzen`. Sie melden bloß, ob sich etwas
+geändert hat.
+
+`Verification: make check — exit 0`
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behebung traegt in jedem geprueften Punkt.**
+`#[must_use]` steht an `Auswahlversuch` (`crates/krk-ui/src/tabs.rs:270`) mit der Begruendung „war
+der Versuch Unbekannt, steht der Name nicht in der gelesenen Liste", und der Doc-Kommentar darueber
+(`:250`) schreibt aus, dass es Erzwingung und keine Bitte ist. Der zweite Fall ist ebenfalls da:
+`Einzug` traegt es bei `tabs.rs:297`. Die Pfadangabe, die der vorige Abgleich als falsch gemeldet
+hatte, ist damit auch praktisch berichtigt — das Attribut sitzt in `tabs.rs` und nicht in
+`tabelle.rs`, wie die Zeile `**Betroffen:**` behauptet hatte.
+
+`make check` laeuft gruen (Ausgang 0, 795 Proben in 16 Zielen, 0 gescheitert), und `clippy` faehrt
+mit `-D warnings`, womit `unused_must_use` ein Fehler ist. Die Erzwingung ist also gemessen und
+nicht behauptet.
+
+**Was `CLAUDE.md` dazu weiterhin sagt, und was nicht mehr stimmt:** der Absatz „Am `Auswahlversuch`
+unterscheidet die Schreibweise des Aufrufs, und nichts erzwingt sie" (`CLAUDE.md:98`) beschreibt die
+Lage vor `b2a6c2e`, samt dem Satz „`Auswahlversuch` traegt kein `#[must_use]`". Er ist seit dem
+260811-2155 falsch. `CLAUDE.md` ist in dieser Sitzung nicht nachgezogen worden.

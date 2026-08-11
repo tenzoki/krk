@@ -36,3 +36,11 @@ die eine angeklickte Zeile und raeumt die eine Statuszeile, an der er sitzt. Die
 die Reichweite ist der Grund und nicht der Preis.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt.** Der Doc-Kommentar von
+`DateifensterQuelle::doppelklick` (`crates/krk-ui/src/appkit/tabelle.rs:995-1003`) traegt jetzt den
+Absatz „geraeumt wird so weit, wie die Handlung reicht" samt der Begruendung ueber die zwei
+Reichweiten und dem Verweis auf diesen Datensatz. Das Verhalten ist unveraendert: der Aufruf von
+`befehlsantwort_loeschen()` steht bei `tabelle.rs:1006` an der eigenen Quelle, der Delegierte
+raeumt bei `appkit/anwendung.rs:2037-2039` weiter beide Seiten.

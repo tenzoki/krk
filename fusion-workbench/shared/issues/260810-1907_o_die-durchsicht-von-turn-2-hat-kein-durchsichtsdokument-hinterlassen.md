@@ -97,3 +97,24 @@ dazu der vierte Weg im Entscheidungsdatensatz `260810-1850` und der Defekt `2608
 einen pruefenden Agenten nennt den Ablageort des Berichts ausdruecklich, auch und gerade wenn
 mit einem leeren Befund zu rechnen ist. Ein leerer Befund ist ein Ergebnis und gehoert
 abgelegt.
+
+---
+## Abgleichsvermerk 260811-2157 (`reconciler`): der Befund steht zu Recht offen, und die Lehre daraus ist in der naechsten Sitzung angewandt worden
+
+**Der Bestand ist unveraendert.** `fusion-workbench/shared/reviews/` traegt am 260811-2157 weiterhin
+genau eine Datei, die Durchsicht ueber den Codeanteil von Turn 1
+(`260810-1755-coderev-codeanteil-turn-1-…`). Fuer Turn 2 der Sitzung 260810-1647 gibt es kein
+Gegenstueck, und keines ist nachtraeglich erzeugt worden — richtig so, aus dem Grund, den der
+Nachtrag des Orchestrators nennt.
+
+**Die Lehre, wegen der dieser Datensatz offen bleibt, hat in der Runde 4 gegriffen.** Die Durchsicht
+von Turn 1 des Circles `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen` liegt als eigenes
+Dokument vor
+(`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1916-coderev-vier-tastenbefehle-turn-1.md`,
+sechs Befunde, dazu ein ausgeschriebener Abschnitt ueber das, was ohne Befund geblieben ist). Das ist
+genau die Zwischenstufe, deren Fehlen dieser Datensatz beklagt.
+
+**Offen bleibt er trotzdem**, denn was er festhaelt, ist nicht die eine fehlende Datei, sondern die
+Regel: eine Aufgabenstellung an einen pruefenden Agenten nennt den Ablageort des Berichts
+ausdruecklich. Ein einzelner Fall, in dem es geklappt hat, loest die Regel nicht ein. Wer ihn
+schliessen will, schliesst ihn als Lage angenommen und nicht als behoben.

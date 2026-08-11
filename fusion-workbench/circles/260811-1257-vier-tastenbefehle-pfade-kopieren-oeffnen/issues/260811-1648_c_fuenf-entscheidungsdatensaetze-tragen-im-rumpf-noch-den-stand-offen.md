@@ -38,3 +38,20 @@ Runde war das der Orchestrator. Das naechste Mal gehoert das Feld mit der `Answe
 denselben Handgriff.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behebung traegt in dem, was sie behauptet, und
+die zweite Haelfte des eigenen Behebungsvorschlags blieb liegen.**
+
+Der Rumpf-Stand war gezogen: alle sieben Datensaetze trugen `**Status:** answered`. Der
+Behebungsvorschlag des Datensatzes nennt aber zwei Handgriffe — „`**Status:** open` wird zu
+`**Status:** answered`, **und der leere Vorlagenblock entfaellt**". Der zweite ist nicht gelaufen:
+sechs der sieben Datensaetze trugen am 260811-2157 weiterhin den leeren Block
+`Answered:` / `Implemented:` / `Deferred:` / `Superseded by:` **und** darunter den ausgefuellten.
+Allein `260811-1612` war sauber.
+
+Die Resolved-Notiz behauptet den zweiten Handgriff nicht, ist also nicht falsch; sie ist
+unvollstaendig gegenueber dem, was der Datensatz selbst als Behebung beschreibt. Der Abgleich hat
+die sechs leeren Bloecke jetzt entfernt, im selben Zug, in dem die sieben Datensaetze von
+beantwortet auf umgesetzt gewandert sind. Damit ist auch der Satz eingeloest, den die Notiz
+angekuendigt hat: „dann steht dort `**Status:** implemented`".

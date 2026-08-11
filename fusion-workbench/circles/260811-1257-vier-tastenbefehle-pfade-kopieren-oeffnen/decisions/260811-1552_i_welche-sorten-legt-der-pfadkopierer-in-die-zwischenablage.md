@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:**
 `crates/krk-ui/src/appkit/zwischenablage.rs` (Modulkopf, `lesen`),
@@ -73,12 +73,6 @@ trägt diese Möglichkeit als Vorbelegung, damit er nicht an der Frage hängt.
 Wer sie umstößt, ändert ein Abnahmekriterium von C2 und eines von C1.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Nur Text.** Nutzerantwort am 260811-1610, der Empfehlung und der Vorbelegung des
 Specs folgend.
 
@@ -90,3 +84,9 @@ gerade schreibt.
 Dateiverweis daneben taete derselbe Befehl je nach Ziel etwas anderes, und KRKs eigener Sprung
 aus der Zwischenablage naehme den Verweis **vor** dem Text — der kopierte Pfad waere dann nicht
 mehr das, was ankommt. Eine Sorte in der Zwischenablage heisst: eine Bedeutung.
+
+---
+Implemented: `d23bfdb` — `zwischenablage::text_schreiben`
+(`crates/krk-ui/src/appkit/zwischenablage.rs:178`) ruft `clearContents()` und danach
+`setString_forType` mit `NSPasteboardTypeString`. `writeObjects:` kommt in der Datei nicht vor.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

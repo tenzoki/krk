@@ -34,3 +34,11 @@ Resolved: Beide Pruefungen vergleichen jetzt kleingeschrieben, damit ein "Oeffne
 Satzanfang auffaellt. Der Wachposten haelt damit, wofuer er gebaut ist.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt, und beide Stellen sind
+nachgezogen.** `crates/krk-ui/src/kommandos/operationen.rs:1479-1486` schreibt in
+`der_satz_fuer_die_leere_menge_gilt_beiden_befehlen` beide Meldungen ueber `to_lowercase()` klein,
+bevor es auf „oeffn" und „kopier" prueft; `:1556-1559` tut dasselbe in
+`die_oeffnungsmeldung_behauptet_kein_geoeffnet`. Der Vergleich auf „System" steht unveraendert am
+ungewandelten Text, was richtig ist: er sucht ein grossgeschriebenes Wort.

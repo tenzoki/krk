@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md
 
@@ -39,12 +39,6 @@ Die zweite Ursache ist die Blattsperre. Die Belegungsansicht ist kein eigenes Fe
 Option 1. Die Blattsperre ist keine Lücke, sondern die Regel, die einen Befehl hinter einer stehenden Rückfrage verhindert; sie wurde in der Editor-Runde einmal für einen Defekt gehalten und war keiner (`circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-1102_*`). Option 1 schließt die Lücke, die der Entwurf benennt, ohne diese Regel anzufassen.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Moeglichkeit 1, nur die Fokusluecke.** Nutzerantwort am 260811-1505, der Empfehlung
 folgend. Cmd+W wirkt zusaetzlich mit dem Fokus in der Leiste und im Editor und schliesst dort den
 aktiven Tab der aktiven Fensterseite. **Die Blattsperre bleibt unberuehrt:** bei stehendem Blatt
@@ -60,3 +54,12 @@ es geht um den Wirkungsbereich und nicht um eine Umbelegung. `cmd+w` bleibt auf 
 `fenster_schliessen` bleibt auf `shift+cmd+w`, und die Entscheidung
 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`
 ist nicht angetastet.
+
+---
+Implemented: `3d48f34` — `Kommando::TabSchliessen` traegt `Wirkungsbereich::Ueberall`
+(`crates/krk-core/src/tasten/belegung.rs:710`), und `Anwendungsdelegierter::tab_schliessen(fokus)`
+(`crates/krk-ui/src/appkit/anwendung.rs:2234`) verzweigt ueber die fuenf Fokuswerte: Dateifenster
+und Vorschau gehen an `bereichskommando`, Leiste, Editor und Anderswo an den sichtbaren Tab der
+aktiven Fensterseite. Der Zweig steht in `kommando_ausfuehren` bei `anwendung.rs:2139`. Die
+Blattsperre ist unangetastet: `waehrend_blatt_erlaubt` bleibt eine Zeile.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

@@ -101,3 +101,15 @@ Zwischenverzeichnis ist abgeraeumt. **Ob der Finder das Symbol anzeigt, ist nich
 wird nicht behauptet.**
 
 Geschlossen in der Sitzung `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md`.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt, und der Buendelbau ist
+nachgefahren.** `resources/Info.plist:114-115` fuehrt `CFBundleIconFile` mit `KRK.icns`,
+`xtask/src/bundle.rs:99` fuehrt `SYMBOLGROESSEN` mit zehn Eintraegen aus sieben PNGs, `symbol_bauen`
+steht bei `:364` und wird aus `Vorlage::zusammensetzen` bei `:234` gerufen. Ein eigener Lauf von
+`make tasten` hat das Buendel neu gebaut und dabei gemeldet: „Symbol aus iconset/ erzeugt:
+target/KRK.app/Contents/Resources/KRK.icns", danach signiert mit der Entwicklungsidentitaet. Die
+Datei liegt mit 298.129 Bytes im Buendel, wie die Notiz sagt.
+
+**Der Verzicht der Notiz gilt unveraendert:** ob der Finder das Symbol anzeigt, ist auch in diesem
+Abgleich nicht geprueft.

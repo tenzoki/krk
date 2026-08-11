@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:**
 `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1612_a_oeffnet-return-alle-betroffenen-eintraege-oder-nur-den-unter-der-auswahl.md` (Abschnitt "Was mit dieser Antwort nicht entschieden ist"),
@@ -45,12 +45,6 @@ Keine Empfehlung. Die Frage ist eine Verhaltensfrage und gehört dem Nutzer; der
 Wer sie später aufgreift, sollte zwei Dinge dazunehmen: dass der Öffner der erste Abnehmer von `betroffene()` ist, der ohne Rückfrage etwas außerhalb von KRK auslöst, und dass die Flüchtigkeit der Markierung (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0020_*_soll-die-markierung-eine-auffrischung-ueberleben.md`) den Fall in beide Richtungen berührt: eine gefallene Markierung öffnet zu wenig, eine stehende womöglich zu viel.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Keine Nachfrage.** Nutzerantwort am 260811-1710. `return` gibt die betroffenen
 Eintraege ohne Zwischenschritt an das System, wie Finder und ForkLift es tun. Eine Regel, keine
 Schwelle.
@@ -69,3 +63,10 @@ ob sie wieder angehoben wird, liegt bis heute zurueckgestellt
 **Der Weg zurueck steht offen und braucht dann keine geratene Zahl.** Faellt im Betrieb auf, dass
 ein versehentliches `return` stoert, ist die Schwelle danach eine gemessene Groesse: man weiss
 dann, bei welcher Zahl es zum ersten Mal weh tat.
+
+---
+Implemented: `cee5276` — auf der Verbotsseite belegt. `mit_standardprogramm_oeffnen`
+(`crates/krk-ui/src/appkit/tabelle.rs:940`) traegt keine Schwelle, keinen Zaehlvergleich und keinen
+Blattaufruf; der einzige Sonderfall ist die leere Menge. Der Doc-Kommentar darueber schreibt die
+Nutzerantwort vom 260811-1710 und den angenommenen Preis aus.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

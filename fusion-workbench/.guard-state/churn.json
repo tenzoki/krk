@@ -85,9 +85,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/portfolio.md": {
-      "totalChanges": 7,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T12:17:36.716Z",
+      "totalChanges": 8,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T20:27:08.170Z",
       "thrashingScore": 2
     },
     "fusion-workbench/shared/history/260802-0853-playmaker-direct-dispatch.md": {
@@ -523,10 +523,10 @@
       "thrashingScore": 0
     },
     "resources/Info.plist": {
-      "totalChanges": 11,
+      "totalChanges": 12,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T08:27:16.797Z",
-      "thrashingScore": 3
+      "lastChange": "2026-08-11T18:18:44.437Z",
+      "thrashingScore": 4
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1829-buendelbeschreibung-info-plist.md": {
       "totalChanges": 1,
@@ -595,10 +595,10 @@
       "thrashingScore": 0
     },
     "xtask/src/bundle.rs": {
-      "totalChanges": 7,
+      "totalChanges": 14,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T21:40:53.833Z",
-      "thrashingScore": 2
+      "lastChange": "2026-08-11T18:20:49.809Z",
+      "thrashingScore": 14
     },
     "xtask/src/sign.rs": {
       "totalChanges": 14,
@@ -686,33 +686,33 @@
     },
     "crates/krk-ui/src/appkit/mod.rs": {
       "totalChanges": 42,
-      "changesThisSession": 4,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:24:33.292Z",
       "thrashingScore": 18
     },
     "crates/krk-ui/src/appkit/menue.rs": {
       "totalChanges": 38,
-      "changesThisSession": 3,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T16:24:20.268Z",
       "thrashingScore": 14
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "totalChanges": 150,
-      "changesThisSession": 14,
-      "lastChange": "2026-08-11T17:29:13.129Z",
-      "thrashingScore": 74
+      "totalChanges": 163,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T19:49:17.853Z",
+      "thrashingScore": 76
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
-      "totalChanges": 8,
+      "totalChanges": 11,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T19:24:54.432Z",
-      "thrashingScore": 10
+      "lastChange": "2026-08-11T19:31:16.022Z",
+      "thrashingScore": 5
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 445,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-11T16:23:34.209Z",
-      "thrashingScore": 148
+      "totalChanges": 453,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T19:49:20.735Z",
+      "thrashingScore": 163
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -739,10 +739,10 @@
       "thrashingScore": 6
     },
     "crates/krk-ui/src/appkit/ereignisse.rs": {
-      "totalChanges": 59,
+      "totalChanges": 60,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T10:04:55.384Z",
-      "thrashingScore": 19
+      "lastChange": "2026-08-11T19:06:14.349Z",
+      "thrashingScore": 20
     },
     "crates/krk-ui/src/appkit/probe.rs": {
       "totalChanges": 1,
@@ -865,10 +865,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/bildtakt.rs": {
-      "totalChanges": 2,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-03T15:22:41.751Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-11T19:07:58.337Z",
+      "thrashingScore": 1
     },
     "crates/krk-ui/src/messmodus.rs": {
       "totalChanges": 48,
@@ -1004,7 +1004,7 @@
     },
     "resources/default-keymap.toml": {
       "totalChanges": 58,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T16:46:30.162Z",
       "thrashingScore": 19
     },
@@ -1112,7 +1112,7 @@
     },
     "crates/krk-core/src/tasten/belegung.rs": {
       "totalChanges": 90,
-      "changesThisSession": 5,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T16:23:08.776Z",
       "thrashingScore": 36
     },
@@ -1237,10 +1237,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/tabs.rs": {
-      "totalChanges": 26,
+      "totalChanges": 29,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T06:14:08.266Z",
-      "thrashingScore": 14
+      "lastChange": "2026-08-11T19:53:45.850Z",
+      "thrashingScore": 11
     },
     "crates/krk-ui/src/fenstermodell.rs": {
       "totalChanges": 55,
@@ -1249,22 +1249,22 @@
       "thrashingScore": 18
     },
     "crates/krk-ui/src/appkit/statuszeile.rs": {
-      "totalChanges": 20,
+      "totalChanges": 21,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T09:15:00.032Z",
-      "thrashingScore": 22
+      "lastChange": "2026-08-11T19:06:22.838Z",
+      "thrashingScore": 7
     },
     "crates/krk-ui/src/appkit/tableiste.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T08:06:52.554Z",
+      "lastChange": "2026-08-11T19:06:32.577Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/aufteilung.rs": {
-      "totalChanges": 40,
+      "totalChanges": 41,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T19:23:33.076Z",
-      "thrashingScore": 23
+      "lastChange": "2026-08-11T19:05:53.192Z",
+      "thrashingScore": 13
     },
     "crates/krk-ui/src/appkit/sonde.rs": {
       "totalChanges": 2,
@@ -1376,7 +1376,7 @@
     },
     "crates/krk-ui/src/kommandos/mod.rs": {
       "totalChanges": 7,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:25:14.595Z",
       "thrashingScore": 2
     },
@@ -1399,20 +1399,20 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/mod.rs": {
-      "totalChanges": 33,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-11T16:46:20.199Z",
+      "totalChanges": 34,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T19:05:45.516Z",
       "thrashingScore": 11
     },
     "crates/krk-ui/src/appkit/blaetter/pfadeingabe.rs": {
-      "totalChanges": 4,
+      "totalChanges": 5,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T10:57:16.720Z",
-      "thrashingScore": 5
+      "lastChange": "2026-08-11T19:05:32.217Z",
+      "thrashingScore": 1
     },
     "crates/krk-ui/src/appkit/zwischenablage.rs": {
       "totalChanges": 11,
-      "changesThisSession": 4,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:22:50.432Z",
       "thrashingScore": 7
     },
@@ -1447,16 +1447,16 @@
       "thrashingScore": 14
     },
     "crates/krk-ui/src/appkit/fsevents.rs": {
-      "totalChanges": 7,
+      "totalChanges": 13,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T06:59:34.811Z",
-      "thrashingScore": 4
+      "lastChange": "2026-08-11T19:08:20.100Z",
+      "thrashingScore": 12
     },
     "crates/krk-ui/src/appkit/volumes.rs": {
-      "totalChanges": 5,
+      "totalChanges": 8,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T14:59:35.091Z",
-      "thrashingScore": 1
+      "lastChange": "2026-08-11T19:14:23.539Z",
+      "thrashingScore": 4
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1451_o_die-dateiliste-von-s14-nennt-tabs-rs-nicht-obwohl-der-bildlauf-dort-wohnt.md": {
       "totalChanges": 1,
@@ -1537,10 +1537,10 @@
       "thrashingScore": 2
     },
     "crates/krk-ui/src/appkit/papierkorb.rs": {
-      "totalChanges": 3,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T15:51:15.601Z",
-      "thrashingScore": 3
+      "lastChange": "2026-08-11T19:07:07.676Z",
+      "thrashingScore": 1
     },
     "crates/krk-core/tests/operation.rs": {
       "totalChanges": 4,
@@ -1574,7 +1574,7 @@
     },
     "crates/krk-ui/src/kommandos/operationen.rs": {
       "totalChanges": 51,
-      "changesThisSession": 15,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:31:43.389Z",
       "thrashingScore": 43
     },
@@ -1585,21 +1585,21 @@
       "thrashingScore": 7
     },
     "crates/krk-ui/src/appkit/blaetter/konflikt.rs": {
-      "totalChanges": 3,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T16:03:42.887Z",
-      "thrashingScore": 3
+      "lastChange": "2026-08-11T19:05:06.717Z",
+      "thrashingScore": 1
     },
     "crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs": {
-      "totalChanges": 2,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T16:03:34.330Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-11T19:05:17.644Z",
+      "thrashingScore": 1
     },
     "crates/krk-ui/src/appkit/blaetter/uebersprungen.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T15:44:50.492Z",
+      "lastChange": "2026-08-11T19:05:38.833Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1813_o_die-dateiliste-von-s16-nennt-drei-dateien-nicht-ohne-die-der-schritt-nicht-laeuft.md": {
@@ -1723,16 +1723,16 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/namenseingabe.rs": {
-      "totalChanges": 4,
+      "totalChanges": 5,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T15:07:06.497Z",
+      "lastChange": "2026-08-11T19:05:26.031Z",
       "thrashingScore": 1
     },
     "crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs": {
-      "totalChanges": 8,
+      "totalChanges": 10,
       "changesThisSession": 0,
-      "lastChange": "2026-08-04T18:35:36.502Z",
-      "thrashingScore": 14
+      "lastChange": "2026-08-11T19:13:51.934Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-2040_o_das-stapel-umbenennen-laeuft-ohne-fortschritt-und-ohne-abbruch-auf-dem-hauptfaden.md": {
       "totalChanges": 1,
@@ -2030,7 +2030,7 @@
     },
     "crates/krk-ui/src/kommandos/fokus.rs": {
       "totalChanges": 36,
-      "changesThisSession": 6,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T16:26:43.211Z",
       "thrashingScore": 20
     },
@@ -2041,10 +2041,10 @@
       "thrashingScore": 16
     },
     "crates/krk-ui/src/appkit/leiste.rs": {
-      "totalChanges": 17,
+      "totalChanges": 22,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T22:42:14.680Z",
-      "thrashingScore": 19
+      "lastChange": "2026-08-11T19:07:21.576Z",
+      "thrashingScore": 13
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-1730_o_holt-der-fokusbefehl-eine-ausgeblendete-leiste-hervor.md": {
       "totalChanges": 3,
@@ -2083,9 +2083,9 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/terminal.rs": {
-      "totalChanges": 3,
+      "totalChanges": 4,
       "changesThisSession": 0,
-      "lastChange": "2026-08-05T16:43:59.216Z",
+      "lastChange": "2026-08-11T19:06:58.576Z",
       "thrashingScore": 1
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1845_o_beim-start-liegt-der-fokus-in-der-leiste-und-nicht-im-dateifenster.md": {
@@ -2149,10 +2149,10 @@
       "thrashingScore": 30
     },
     "crates/krk-ui/src/appkit/vorschau.rs": {
-      "totalChanges": 11,
-      "changesThisSession": 2,
-      "lastChange": "2026-08-11T16:38:15.164Z",
-      "thrashingScore": 3
+      "totalChanges": 13,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T19:13:58.333Z",
+      "thrashingScore": 4
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_o_tastenweg-des-fokus-in-das-vorschaufenster.md": {
       "totalChanges": 5,
@@ -2173,9 +2173,9 @@
       "thrashingScore": 11
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
-      "totalChanges": 13,
+      "totalChanges": 14,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T07:48:44.767Z",
+      "lastChange": "2026-08-11T19:07:35.735Z",
       "thrashingScore": 4
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2250-coder-s20-belegungsansicht.md": {
@@ -2329,9 +2329,9 @@
       "thrashingScore": 5
     },
     "crates/krk-ui/src/appkit/hinweis.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T09:46:07.257Z",
+      "lastChange": "2026-08-11T19:07:19.674Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1150_o_abnahmekriterium-von-s6b-ist-an-zwei-stellen-ueberholt.md": {
@@ -3667,10 +3667,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/ungesichert.rs": {
-      "totalChanges": 2,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T01:59:56.802Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-11T19:05:42.357Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0011-coder-s41-die-belegungsansicht-fuehrt-die-neuen-befehle.md": {
       "totalChanges": 1,
@@ -3733,15 +3733,15 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/zeilennummer.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T23:10:32.299Z",
+      "lastChange": "2026-08-11T19:05:47.574Z",
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/blaetter/suche.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T23:11:12.659Z",
+      "lastChange": "2026-08-11T19:06:20.727Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0215_o_der-stand-und-der-text-der-flaeche-laufen-nach-einem-eingefuegten-crlf-auseinander.md": {
@@ -4813,10 +4813,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md": {
-      "totalChanges": 3,
-      "changesThisSession": 0,
-      "lastChange": "2026-08-11T11:10:02.821Z",
-      "thrashingScore": 3
+      "totalChanges": 4,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T20:24:52.952Z",
+      "thrashingScore": 1
     },
     "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md": {
       "totalChanges": 1,
@@ -4891,9 +4891,9 @@
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T12:55:04.277Z",
+      "lastChange": "2026-08-11T20:20:09.147Z",
       "thrashingScore": 0
     },
     "fusion-workbench/shared/issues/260811-1500_o_iconset-liegt-im-baum-und-krk-traegt-kein-icon.md": {
@@ -4994,53 +4994,89 @@
     },
     "crates/krk-ui/src/appkit/standardprogramm.rs": {
       "totalChanges": 2,
-      "changesThisSession": 2,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T16:49:04.569Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-neu-gefasste-modulkopf-der-zwischenablage-sagt-cmd-c-und-cmd-v-seien-ab-werk-unbelegt.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:17:14.819Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_drei-modulkoepfe-zaehlen-auf-was-sie-tragen-und-fuehren-die-drei-neuen-befehle-nicht.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:17:33.806Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-doppelklick-raeumt-die-befehlsantwort-nur-an-seiner-eigenen-fensterseite-weg.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:17:54.112Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-wachposten-gegen-geoeffnet-faengt-ein-grossgeschriebenes-oeffn-nicht.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:18:09.012Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_die-abweisungsmeldung-der-zwischenablage-nennt-den-pfad-im-singular-und-steht-auch-bei-mehreren.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:18:26.308Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/issues/260811-1916_o_der-satz-fuer-die-leere-menge-sagt-nicht-dass-nichts-zu-kopieren-war.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:18:41.390Z",
       "thrashingScore": 0
     },
     "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/reviews/260811-1916-coderev-vier-tastenbefehle-turn-1.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T17:20:40.476Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/tests/schriftmessung.rs": {
+      "totalChanges": 6,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T18:22:16.783Z",
+      "thrashingScore": 10
+    },
+    "crates/krk-ui/examples/einrueckung.rs": {
+      "totalChanges": 4,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T18:23:37.438Z",
+      "thrashingScore": 5
+    },
+    "fusion-workbench/shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T19:17:55.367Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T20:16:58.760Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_t_circle.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-11T20:20:32.229Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-11T20:27:54.804Z",
       "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-11T16:22:25.044Z",
+  "sessionStart": "2026-08-11T20:24:52.952Z",
   "keyAnchor": "workbench-root"
 }

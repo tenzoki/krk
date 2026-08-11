@@ -93,3 +93,134 @@ Womit die Schalter gezeichnet werden, ist offen und gehört in den Plan. Der Cir
 ## Turn log
 
 (noch keiner)
+
+## Parent grounding stale
+
+**Festgestellt am:** 260811-2223
+**Playmaker-Lauf:** 260811-2223-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`,
+geschlossen am 260811-2210
+
+Die Runde 4 hat eine harte Vorbedingung dieses Circles aufgelöst, und drei Stellen des Datensatzes
+stehen seither auf einer Grundlage, die sich bewegt hat. Keine davon hält die Aktivierung auf; im
+Gegenteil, der Wegfall der Vorbedingung ist der Grund, warum dieser Circle in diesem Lauf auf
+Rang 1 steht. Alle drei gehören in die Klärungsrunde.
+
+**Zur Auslösebedingung, offen benannt.** Die Regel verlangt, dass der Abschnitt
+`## Grounding snapshot` des Elterndatensatzes den Verzeichnisnamen des abgeschlossenen Kindes oder
+den in seiner `## Closure note` genannten Artefakt zitiert. Dieser Datensatz nennt weder das eine
+noch das andere. Er zitiert den Defekt `shared/issues/260811-1245_*_…`, und die Runde 4 hat genau
+diesen Defekt behoben; ihre `## Closure note` adressiert den Befund unter der Überschrift „Für die
+Nachfolger" ausdrücklich an diesen Circle. Der Vermerk steht deshalb hier, obwohl die wörtliche
+Bedingung nicht greift. Wer anders entscheidet, sieht an dieser Stelle, worauf.
+
+### 1. Die Directive sagt eine Behebung zu, die bereits anderswo gefallen ist
+
+Zeile 14 schließt mit: „der gemeldete Rückfall der Vorschaubreite beim Navigieren in der Dateiliste
+ist mit dieser Runde behoben." Die Behebung liegt seit dem 260811-2130 im Baum, gefahren in der
+Runde 4 unter dem Commit `1ea5a3d`. Gemessen war es die erste der beiden im Defektdatensatz
+genannten Bruchstellen: `kommando_ausfuehren` rief `aufteilung_nachziehen()` nach jedem Befehl,
+bevor jemand die gezogene Breite nachmaß. Die Behebung ist `bildschirmbreiten_uebernehmen()` am
+Kopf von `kommando_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:2048`, Funktion bei
+`:2577`), am Baum gelesen im Abgleich
+`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md`.
+Bruchstelle 2 trifft nicht zu, C7 der Runde 1 war also nie gebrochen.
+
+Für diese Runde ist das eine Entlastung und keine Korrektur: die proportionale Regel entsteht auf
+einer Grundlage, die die Ziehbewegung des Nutzers hält. Der Satz in der Directive beschreibt danach
+einen Zustand, der schon eingetreten ist, und nicht mehr eine Leistung dieser Runde. Wer den Spec
+schreibt, formuliert ihn um.
+
+### 2. Die siebte offene Frage ist gegenstandslos geworden
+
+Der Datensatz
+`decisions/260811-1305_*_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md` steht seit dem
+260811 auf beantwortet, und geantwortet hat die Lage und nicht der Nutzer: der Defekt ist in einer
+eigenen Runde vor diesem Circle gefallen, im Ergebnis Möglichkeit 2 seiner drei Möglichkeiten. Zwei
+Stellen dieses Datensatzes kennen das noch nicht. Zeile 68 zählt sieben offene Fragen, offen sind
+sechs. Zeile 77 führt die Frage in der Tabelle unter ihrem damaligen Marker `_o_`. Der Playmaker
+ändert keine Zitate und keine Zählung; beide Zeilen bleiben, wie sie stehen.
+
+Ob der beantwortete Datensatz bei der Aktivierung auf umgesetzt (`_i_`) geht oder als überholt
+(`_s_`) gilt, entscheidet, wer den Circle aktiviert. Er selbst hält das ausdrücklich offen.
+
+### 3. Ein Beifund der Runde 4 trifft die Bereichsschalter unmittelbar
+
+`MINDESTGROESSE` (`crates/krk-ui/src/appkit/fenster.rs`) steht auf 780 Punkten und deckt damit die
+vier Bereiche der Runde 1. Der Editor braucht 320 statt der 160 Punkte der Vorschau, der Fünfersatz
+summiert sich auf 920. Zwischen 780 und 920 Punkten Fensterbreite wird der Editor unter sein
+Mindestmaß gedrückt.
+
+Der Befund fällt mit der sechsten offenen Frage dieses Circles zusammen, was geschieht, wenn die
+Mindestbreiten nicht mehr hineinpassen
+(`decisions/260811-1305_*_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md`). Der
+Datensatz jener Frage kennt die Zahl 920 nicht; sie ist erst am 260811-2130 bei der Behebung
+aufgefallen. Wer die Frage beantwortet, rechnet mit ihr.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260811-2223
+**Playmaker-Lauf:** 260811-2223-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** sofort, nach einer Klärungsrunde über den Zuschnitt
+
+Dieser Circle ist der empfohlene nächste Kandidat und steht auf Rang 1 von zwei. Der zweite ist
+`260804-0933-eingebauter-web-betrachter-im-vorschaufenster`. Die Rangfolge kehrt die der beiden
+Läufe vom 260811-1326 und 260811-1415 um, in denen dieser Circle hinter der Runde 4 auf Rang 2
+stand; die Runde 4 ist geschlossen, und damit ist das Feld auf zwei geschrumpft.
+
+**Der Ausschlag ist der Wegfall der harten Vorbedingung.** Der Defekt der Vorschaubreite ist am
+260811 in der Runde 4 gemessen und behoben worden, und der Abschnitt `## Parent grounding stale`
+oben schlüsselt auf, was das für diesen Datensatz heißt. Damit entfällt der Grund, aus dem dieser
+Circle in beiden früheren Läufen hinter einem anderen stand. Die proportionale Regel entsteht auf
+einer Grundlage, die die Ziehbewegung des Nutzers hält, und der Messschritt, den der Defektdatensatz
+verlangte, ist gefahren.
+
+**Die Grundlage ist am Baum erhoben, und die tragende Stelle ist eine einzige Funktion.**
+`bereichsbreiten(verfuegbar, breiten, sichtbar)` (`crates/krk-ui/src/fenstermodell.rs:609`) ist die
+eine Breitenregel. Sie ist reines Rust ohne AppKit und damit ohne Fenster prüfbar; `aufteilung.rs`
+setzt nur um, was dort herauskommt. Eine Runde, die die Regel neu fasst, kann ihre Arbeit an dieser
+Funktion und ihren Proben abnehmen, ohne KRK im Vordergrund zu brauchen. Das unterscheidet sie von
+den vier gefahrenen Runden, deren Abnahmelauf sämtlich am Vordergrund hängt, und es ist das
+stärkste Einzelsignal für diesen Circle.
+
+**Gegen die Empfehlung spricht der Zuschnitt, und er ist seit dem Anlegen gewachsen.** Sechs
+Entscheidungsdatensätze in `decisions/` dieses Circles tragen `_o_`, und die erste von ihnen,
+`260811-1305_*_was-heisst-proportional-zur-letzten-aufteilung.md`, bestimmt den Umfang der ganzen
+Runde: sie fragt, ob die eine Breitenregel neu geschrieben wird und was aus der Vorrangordnung vom
+260808 wird, nach der die Lesezeichenleiste vor dem Editor nicht weicht. Dazu kommt seit dem
+260811-1732 eine Erweiterung, die kein Defekt ist, sondern ein Nachtrag des Nutzers:
+`issues/260811-1732_*_die-leiste-soll-auch-die-spalten-groesse-datum-und-typ-wegschalten.md` verlangt
+neben den fünf Bereichsschaltern drei Schalter für die Spalten Größe, Datum und Typ. Der Nachtrag
+selbst hält fest, warum er mehr ist als eine längere Liste: ein Bereichsschalter ändert die
+Aufteilung und löst die proportionale Neuverteilung aus, ein Spaltenschalter ändert den Inhalt
+beider Dateifenster und die Aufteilung gar nicht. Er wirft vier eigene Fragen auf, darunter die
+einzige mit Folgen über das Verbergen hinaus: was mit der Sortierung geschieht, wenn die Spalte
+weggeschaltet wird, nach der sortiert ist. Ob beide Sorten in eine Runde gehören, ist selbst eine
+Frage und gehört an den Anfang der Klärungsrunde.
+
+**Der Zählwert der offenen Entscheidungen spricht gegen diesen Circle, und er misst hier wie schon
+zweimal zuvor die falsche Größe.** Sechs offene Datensätze gegen einen beim Web-Betrachter ist für
+die Gewichtung `code` ein schlechter Wert. Die sechs sind Zuschnittfragen: jede führt ihre
+Möglichkeiten samt Folgen, jede ist in einer Klärungsrunde mit dem Nutzer beantwortbar, und keine
+verlangt eine Messung oder eine Untersuchung. Der eine Datensatz beim Web-Betrachter ist eine
+ungemessene technische Frage zur Verfügbarkeitsprüfung für macOS-26-Schnittstellen, und derselbe
+Circle hält daneben fest, dass auch das Mittel der Darstellung von Web-Inhalt offen ist und „in eine
+eigene Untersuchung vor dem Plan" gehört. Eine Untersuchung vor dem Plan ist teurer als sechs
+Fragen an den Nutzer.
+
+**Zur Abhängigkeitslage, die bei diesem Projekt nichts mehr unterscheidet.** Beide Abhängigkeiten
+dieses Circles sind beschränkt abgeschlossen (`_b_`) und nicht kohärent (`_c_`), also trägt er nach
+der Rangheuristik das Kennzeichen der unerfüllten Vorbedingung. Der andere Kandidat trägt es
+ebenso, und die vier gefahrenen Runden sind sämtlich `_b_`, sämtlich aus demselben Grund: der
+Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+Das Kennzeichen unterscheidet in diesem Projekt keine zwei Kandidaten mehr; die Rangfolge entsteht
+aus den übrigen Signalen. Inhaltlich tragen beide Bindungen hier leicht: die Runde 1 stellt C7 mit
+den gesicherten Breiten, C1 mit der Statuszeile und C8 mit den zehn Zeitzusagen, die Editor-Runde
+den fünften Bereich und den gegenseitigen Ausschluss von Vorschau und Editor. Keine der beiden
+Beschränkungen liegt auf einem Bauteil, das diese Runde anfasst.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.

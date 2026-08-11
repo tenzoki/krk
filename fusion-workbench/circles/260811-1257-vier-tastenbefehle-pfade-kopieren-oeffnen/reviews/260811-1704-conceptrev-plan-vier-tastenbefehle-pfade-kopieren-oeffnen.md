@@ -101,3 +101,12 @@ Die sechs Datenflusskanten des ersten Bildes bekommen entweder eine eigene Form,
 Das zweite Bild bekommt die Kante `S2 -->|"nichts_betroffen"| S3`. Ebenso gültig wäre, `nichts_betroffen` in die Dateiliste von S3 zu ziehen und in S2 nur den Aufruf zu lassen; dann fällt die Kante fort, und der Text der beiden Schritte muss es sagen. Welcher der beiden Wege gewählt wird, ist eine Frage an den Planner und nicht an diese Bewertung. Ungeklärt darf sie nicht bleiben, weil ein Ausführer die zulässige Reihenfolge aus dem Bild nimmt.
 
 Das erste Bild bekommt einen fünften Kasten für `appkit/anwendung.rs` mit dem einen neuen Zweig, oder seine Vorbemerkung und die Aufschrift "Die vier Zugänge" sagen, dass es die drei neuen Befehle zeigt und Cmd+W im zweiten Bild steht. Beide Wege lösen zugleich Befund 4.
+
+---
+
+Abgleichsvermerk 260811-2157 (`reconciler`): die Auflage dieser Durchsicht ist eingeloest. Der Kopf
+des betroffenen Dokuments nennt die Nachbesserung mit Datum, und die Diagramme im Baum tragen sie.
+Der Befund des Plan-Durchgangs, die fehlende Kante `S2 → S3` sei ein echter und kein zeichnerischer
+Mangel, ist am Code bestaetigt: `mit_standardprogramm_oeffnen` (`crates/krk-ui/src/appkit/tabelle.rs:940`)
+ruft `operationen::nichts_zu_oeffnen`, das im selben Zug wie `nichts_zu_kopieren` aus S2 entstanden
+ist. Eine Reihenfolge S3 vor S2 haette den Baum rot stehen lassen.

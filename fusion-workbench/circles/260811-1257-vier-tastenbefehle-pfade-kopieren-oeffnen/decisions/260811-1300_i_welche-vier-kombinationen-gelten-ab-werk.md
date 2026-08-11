@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_i_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md
 
@@ -39,12 +39,6 @@ Cmd+C und Cmd+V sind ein Sonderfall. Beide liegen als `text_kopieren` und `text_
 Option 1. Sie nimmt die einzige Taste, die eigens freigehalten wurde, für die Handlung, für die Nutzer sie erwarten, und sie lässt Cmd+C unangetastet, solange nicht gemessen ist, ob der Fokusvorbehalt dort so trennt wie bei Cmd+A.
 
 ---
-Answered:
-Implemented:
-Deferred:
-Superseded by:
-
----
 Answered: **Moeglichkeit 1.** Nutzerantwort am 260811-1505.
 
 | Funktion | Kombination |
@@ -62,3 +56,11 @@ hinzu, nicht vier.
 fuer die der Nutzer sie erwartet. **`cmd+c` bleibt unangetastet**, solange nicht gemessen ist, ob
 der Fokusvorbehalt es sauber vom Kopieren in Textfeldern und im Editor trennt; die dritte
 Moeglichkeit haette genau diese ungemessene Groesse eingefuehrt.
+
+---
+Implemented: `a358d86` — `resources/default-keymap.toml` fuehrt `ordnerpfad_kopieren` auf
+`opt+cmd+c` (Zeile 501), `eintragspfad_kopieren` auf `shift+cmd+c` (Zeile 512) und
+`mit_standardprogramm_oeffnen` auf `return` (Zeile 526). `cmd+w` bleibt unveraendert auf
+`tab_schliessen`, `cmd+c` und `cmd+v` bleiben `text_kopieren` und `text_einfuegen` mit
+`gehalten_von = "menue"`. Nachgezaehlt: 74 Funktionen, 82 Kombinationen, wie die Kopfzeile sagt.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

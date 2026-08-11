@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (nach einem Befund des shaper beim Schreiben des Specs)
 **Cross-references:** `260811-1258_a_was-kopiert-der-pfadkopierer-bei-stehender-markierung.md`,
 `planning/260811-1552_*_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md` (C3),
@@ -52,3 +52,10 @@ Einträge nachfragt, bevor es öffnet. Der Spec sagt dazu heute nichts, und dies
 es nicht. Wer es will, führt es als eigenen Vorschlag; eine Schwelle wäre eine Zahl, die
 irgendwer setzen müsste, und dieses Projekt hat mit gesetzten Zahlen ohne Messung schlechte
 Erfahrungen gemacht.
+
+---
+Implemented: `cee5276` — der Zweig `Kommando::MitStandardprogrammOeffnen`
+(`crates/krk-ui/src/appkit/tabelle.rs:847`) uebergibt `self.betroffene_eintraege().pfade`, also die
+ganze betroffene Menge, und `mit_standardprogramm_oeffnen` (`tabelle.rs:940`) laeuft ueber sie in
+einer Schleife.
+Gegen den Baum gelesen im Abgleich `history/260811-2157-reconciliation.md`.

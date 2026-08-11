@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
-**Cross-references:** `shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`, `crates/krk-ui/src/fenstermodell.rs:519` (`breiten_uebernehmen`), `crates/krk-ui/src/appkit/aufteilung.rs`
+**Cross-references:** `shared/issues/260811-1245_*_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`, `crates/krk-ui/src/fenstermodell.rs:519` (`breiten_uebernehmen`), `crates/krk-ui/src/appkit/aufteilung.rs`
 
 ---
 
@@ -44,7 +44,27 @@ Zu klären ist nicht das Ob, sondern das Wo: eine eigene kleine Runde vor dieser
 Eine Empfehlung vor der Messung wäre eine Vermutung über den Umfang und keine Antwort.
 
 ---
-Answered:
+Answered: `shared/issues/260811-1245_c_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`,
+Abschnitt `## Behebung 260811-2130 (Commit 1ea5a3d)` — **die Lage hat geantwortet, nicht der
+Nutzer.** Der Defekt ist am 260811 in der Runde 4 gemessen und behoben worden, also in einer
+eigenen Runde vor diesem Circle; das ist im Ergebnis Moeglichkeit 2. Gemessen war es Bruchstelle 1:
+`kommando_ausfuehren` rief `aufteilung_nachziehen()` nach jedem Befehl, bevor jemand die gezogene
+Breite nachmass. Die Behebung ist `bildschirmbreiten_uebernehmen()` am Kopf von
+`kommando_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:2048`, Funktion bei `:2577`), am Baum
+gelesen im Abgleich
+`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-2157-reconciliation.md`.
+Bruchstelle 2 trifft nicht zu, C7 war also nie gebrochen.
+
+**Was das fuer die Aktivierung dieses Circles heisst:** die harte Vorbedingung ist weg, die
+siebte Frage des Circles ist gegenstandslos, und die proportionale Regel entsteht auf einer
+Grundlage, die die Ziehbewegung des Nutzers haelt. Ob dieser Datensatz damit auf `_i_` geht oder
+als ueberholt gilt, entscheidet, wer den Circle aktiviert; der Marker steht deshalb auf
+beantwortet und nicht auf umgesetzt.
+
+**Ein Beifund aus der Behebung, der diesen Circle angeht:** `MINDESTGROESSE` (`fenster.rs`) steht
+auf 780 Punkten, der Vierersatz mit dem Editor summiert sich auf 920. Zwischen 780 und 920 Punkten
+Fensterbreite wird der Editor unter sein Mindestmass gedrueckt. Wer die Bereichsschalter baut,
+trifft diese Zahl.
 Implemented:
 Deferred:
 Superseded by:

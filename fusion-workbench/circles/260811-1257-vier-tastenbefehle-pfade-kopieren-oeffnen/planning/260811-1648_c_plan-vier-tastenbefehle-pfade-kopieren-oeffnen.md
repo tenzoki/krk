@@ -1,9 +1,10 @@
 # Umsetzungsplan: Vier Tastenbefehle für Pfade, das Öffnen und Cmd+W (Runde 4)
 
 **Datum:** 2026-08-11, 16:48
-**Status:** Vom Nutzer abgenommen am 260811-1710, mit einer Auflage, die am 260811-1721 nachgezogen ist: die fehlende Kante `S2 → S3` im Schrittgraphen samt der Prosastellen, die sie nennen, und sechs Datenflusskanten des Aufbaubildes, die eine vom Plan ausgeschlossene Abhängigkeit behaupteten. Die Frage nach einer Nachfrage vor dem Öffnen vieler Einträge ist mit `decisions/260811-1648_*` beantwortet: keine Nachfrage. Bereit zur Umsetzung.
+**Status:** Complete — alle fuenf Schritte tragen `[DONE]`, am Baum belegt durch den Abgleich `history/260811-2157-reconciliation.md` vom 260811-2157. **Abgenommen ist die Runde damit nicht:** die 62 Abnahmekriterien des Specs stehen saemtlich offen, weil der Abnahmelauf KRK im Vordergrund verlangt und Nutzerarbeit ist.
+**Abnahme des Plans:** Vom Nutzer abgenommen am 260811-1710, mit einer Auflage, die am 260811-1721 nachgezogen ist: die fehlende Kante `S2 → S3` im Schrittgraphen samt der Prosastellen, die sie nennen, und sechs Datenflusskanten des Aufbaubildes, die eine vom Plan ausgeschlossene Abhängigkeit behaupteten. Die Frage nach einer Nachfrage vor dem Öffnen vieler Einträge ist mit `decisions/260811-1648_*` beantwortet: keine Nachfrage. Bereit zur Umsetzung.
 **Spec:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md`, fünf Fähigkeiten C1 bis C5 mit 60 Abnahmekriterien, dazu zwei unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`; vom Nutzer am 260811-1610 abgenommen, Diagramm am 260811-1614 nachgezogen
-**Bindende Entscheidungsdatensätze:** die sieben `_a_`-Datensätze unter `decisions/` dieses Circles, der siebte seit der Nutzerantwort vom 260811-1710 gegen eine Schwelle vor dem Öffnen; dazu aus der Runde 1 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (die Statuszeile mit ihren fünf Rängen), `.../260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md` (ein Menükürzel wäre zwingend ein Belegungseintrag), `.../260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md` und `.../260802-1134_*_sprache-und-ui-werkzeugkasten.md` (Rust mit AppKit über `objc2`, Untergrenze macOS 15)
+**Bindende Entscheidungsdatensätze:** die sieben Datensätze unter `decisions/` dieses Circles, seit dem Abgleich vom 260811-2157 sämtlich auf umgesetzt (`_i_`), der siebte seit der Nutzerantwort vom 260811-1710 gegen eine Schwelle vor dem Öffnen; dazu aus der Runde 1 `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (die Statuszeile mit ihren fünf Rängen), `.../260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md` (ein Menükürzel wäre zwingend ein Belegungseintrag), `.../260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md` und `.../260802-1134_*_sprache-und-ui-werkzeugkasten.md` (Rust mit AppKit über `objc2`, Untergrenze macOS 15)
 **Ausführender Agent:** `coder`, für jeden der fünf Schritte. Die Begründung steht unten unter `## Warum jeder Schritt coder trägt`.
 
 **Decidability:** Die tragende Frage dieser Runde lautet: **worauf wirkt ein Befehl, und ist diese Menge aus den Eingaben entscheidbar, die der Befehl hat?** Sie ist entscheidbar, und zwar ohne eine neue Regel. Die Menge liefert `betroffene()` (`crates/krk-ui/src/kommandos/operationen.rs:157`) aus dem Modell des sichtbaren Tabs, also aus einem Wert, der im Speicher steht; ob der Befehl hier überhaupt wirkt, beantwortet `fokus::wirkt` aus dem Wirkungsbereich und dem Fokus (`crates/krk-ui/src/kommandos/fokus.rs:329`); welche Zeile ein Doppelklick meint, beantwortet `clickedRow` aus dem Ereignis selbst. Keine dieser drei Antworten wird geschätzt.
@@ -472,3 +473,106 @@ Beim Schreiben dieses Plans sind drei Datensätze entstanden. Keiner von ihnen h
 ## Offene Fragen
 
 - [ ] Trägt `NSTableView` die Eigenschaft `target` schwach? S4 beantwortet es an der erzeugten Zeile der Bindung; beide Ausgänge sind im Schritt vorgesehen, also hält die Frage nichts auf.
+
+## Reconciliation Log
+
+**260811-2157, `reconciler`, Abschluss-Abgleich der Runde 4.** Jede der fünf Behauptungen `[DONE]`
+ist gegen den Baum gelesen und nicht aus dem Plan übernommen. Alle fünf tragen.
+
+`make check` läuft grün: Ausgang 0, **795 bestandene Proben in 16 Zielen**, null gescheitert, eine
+übersprungen, null Warnungen. `clippy` fährt dabei mit `-D warnings`.
+
+### S1 — Drei Funktionen in der Belegung
+
+- `resources/default-keymap.toml` führt **74 Blöcke `[[funktion]]`** und **82 Einträge in den
+  `tasten`-Listen**, beides maschinell nachgezählt. Die Kopfzeile bei `:33` sagt „74 Funktionen mit
+  zusammen 82 Kombinationen" und stimmt damit; die Probe
+  `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` hält es fest.
+- Die drei Einträge stehen bei `:501` (`ordnerpfad_kopieren`, `opt+cmd+c`), `:512`
+  (`eintragspfad_kopieren`, `shift+cmd+c`) und `:526` (`mit_standardprogramm_oeffnen`, `return`),
+  unter einer eigenen Abschnittsüberschrift, ohne `reserviert_fuer` und ohne `gehalten_von`.
+- `Kommando` (`crates/krk-core/src/tasten/belegung.rs`) trägt **68 Varianten**, `KENNUNGEN` trägt
+  die 68 als Länge im Typ (`:488`). Die drei neuen Paare stehen bei `:538-542`.
+- Der Zweig `Wirkungsbereich::Dateifenster` nennt alle drei (`:755-757`), `bereich_des_kommandos`
+  ebenso (`crates/krk-ui/src/belegungsmodell.rs:211-213`). **Kein `_`-Zweig** in beiden
+  Fallunterscheidungen (`grep -c '_ =>'` liefert je 0). `Kommando::kennung` ist keine
+  Fallunterscheidung, sondern eine `const fn` über `KENNUNGEN` (`:580`); die Zusage „eine Zeile in
+  `Kommando::kennung`" ist über den Array-Eintrag erfüllt.
+- `Wirkungsbereich` trägt unverändert **sieben Werte**.
+- Die Konfliktfreiheit hält die Probe `die_auslieferungsbelegung_ist_konfliktfrei`
+  (`crates/krk-core/tests/belegung.rs:122`), die im grünen Lauf mitläuft. `crates/krk-ui/src/appkit/menue.rs`
+  trägt `setKeyEquivalent` an genau einer Stelle (`:461`) und hat kein neues Kürzel bekommen.
+
+### S2 — Die beiden Pfadkopierer und die Schreibseite der Zwischenablage
+
+- `zwischenablage::text_schreiben` steht bei `crates/krk-ui/src/appkit/zwischenablage.rs:178`,
+  ruft `clearContents()` und `setString_forType` mit `NSPasteboardTypeString`. **`writeObjects:`
+  kommt in der Datei nicht vor.** Der Modulkopf trägt den Abschnitt über die Untergrenze (`:79-89`)
+  und die Begründung, warum die Funktion keine Probe trägt (`:70`).
+- `operationen.rs` führt `pfadtext` (`:788`), `pfadzeilen` (`:805`), `kopiermeldung` (`:821`) und
+  `oeffnungsmeldung` (`:914`), jeweils mit Proben im `#[cfg(test)]`-Modul.
+- Die beiden Befehlszweige stehen bei `tabelle.rs:845-846`, die Methoden bei `:877`
+  (`ordnerpfad_kopieren`) und `:904` (`eintragspfad_kopieren`).
+- `gekuerzt_fuer_anzeige` wird auf diesem Weg **nicht** gerufen: `grep -rn` über `tabelle.rs` und
+  `operationen.rs` liefert null Treffer, wie das Abnahmekriterium verlangt.
+
+### S3 — Öffnen mit dem Standardprogramm
+
+- `crates/krk-ui/src/appkit/standardprogramm.rs` liegt neu im Baum (5157 Bytes),
+  `NSWorkspace::sharedWorkspace().openURL(&ziel)` bei `:92`, `mod standardprogramm;` bei
+  `appkit/mod.rs:147`.
+- **Eine Abweichung von der wörtlichen Fassung des Abnahmekriteriums, ohne Folge in der Sache.**
+  Der Schritt sagt zu, `grep -rn "NSWorkspace" crates/krk-ui/src` finde vier Stellen. Er findet
+  Treffer in **sieben** Dateien. Drei davon sind Prosa: `kommandos/operationen.rs:898`,
+  `appkit/mod.rs:77-88` und `appkit/anwendung.rs:21` nennen die Klasse in einem Kommentar. Aufrufe
+  stehen weiterhin in genau vier Dateien: `volumes.rs`, `terminal.rs`, `zwischenablage.rs` und dem
+  neuen Modul. Das Kriterium ist in der Sache erfüllt und in seinem Wortlaut zu eng gefasst.
+- `blaetter/mod.rs:257-259` sagt jetzt, die Datei belege die Eingabetaste seit dem 260811;
+  `resources/default-keymap.toml:53-60` schreibt den Wechsel aus und nennt Umschalt+Entf als einzige
+  ab Werk frei gehaltene Kombination.
+
+### S4 — Der Doppelklick
+
+- `setTarget` und `setDoubleAction` stehen bei `tabelle.rs:2336-2337`, die Aktionsmethode
+  `doppelklick:` im `define_class!`-Block bei `:1954`, `DateifensterQuelle::doppelklick` bei `:1005`,
+  `in_zeile_einsteigen` bei `:1187`, gerufen aus `auswahl_oeffnen` bei `:1172`.
+- **Die offene Frage dieses Plans ist beantwortet, und zwar mit einem Beleg statt einer Annahme.**
+  Der `SAFETY`-Block bei `:2300-2340` zitiert die Bindung
+  (`objc2-app-kit-0.3.2/…/NSControl.rs:91-93`, „This is a weak property") und den SDK-Kopf
+  (`NSControl.h:24`, `@property (nullable, weak) id target;`). Das schwach haltende Zwischenobjekt,
+  den zweiten Ausgang des Schrittes, braucht der Weg nicht. Der Abschnitt `## Offene Fragen` unten
+  ist damit erledigt.
+- `leiste.rs` und `vorschau.rs` tragen kein `setDoubleAction`.
+
+### S5 — Cmd+W aus jedem Fokus
+
+- `Kommando::TabSchliessen => Wirkungsbereich::Ueberall` steht bei `belegung.rs:710`, allein und
+  mit dem Grund als Kommentar bei `:609` und `:217`.
+- Der Zweig steht bei `appkit/anwendung.rs:2139`, `tab_schliessen(fokus) -> bool` bei `:2234`.
+- Die Probe `ein_tabbefehl_wirkt_in_beiden_bereichen_mit_tabs`
+  (`crates/krk-ui/src/kommandos/fokus.rs:465`) sichert `TabSchliessen` getrennt zu (`:502`, `:508`).
+- `resources/default-keymap.toml:156-163` schreibt die neue Lage aus; `cmd+w` steht unverändert bei
+  `tab_schliessen`.
+
+### Zwei Abweichungen zwischen Plan und Baum, beide begründet und beide unschädlich
+
+1. **`nichts_betroffen`.** Die Tabelle unter `## Frage 6` führt eine gemeinsame öffentliche Funktion
+   `nichts_betroffen() -> String`. Der Baum trägt zwei öffentliche Funktionen, `nichts_zu_kopieren()`
+   und `nichts_zu_oeffnen()`, über einem privaten Rumpf `nichts_betroffen(verb)`
+   (`operationen.rs:858`). Ursache ist der Durchsichtsbefund
+   `issues/260811-1916_*_der-satz-fuer-die-leere-menge-sagt-nicht-dass-nichts-zu-kopieren-war.md`:
+   der Wortlaut von C2 verlangt, dass die Meldung sagt, **dass nichts zu kopieren war**. Der Plan ist
+   an dieser Zeile überholt; die Änderung ist die richtige.
+2. **Die Signatur von `mit_standardprogramm_oeffnen`.** S3 und S4 nennen sie `-> bool`. Im Baum
+   liefert sie nichts (`tabelle.rs:940`). Kein Aufrufer braucht den Wert: der Zweig in
+   `kommando_ausfuehren` läuft ohnehin in den gemeinsamen Rückgabewert `true`, und der Doppelklick
+   ist kein Kommando. Eine Abweichung in der Form, keine in der Sache.
+
+### Was der Abgleich **nicht** behauptet
+
+**Kein einziges der 62 Abnahmekriterien des Specs ist abgenommen.** Sie stehen sämtlich auf `- [ ]`,
+und das ist richtig: der Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit. Was am Baum
+belegbar ist und was nur ein Mensch am gebauten Bündel sehen kann, trennt der Reconciliation Log des
+Specs.
+
+Vollständiger Bericht: `history/260811-2157-reconciliation.md`.

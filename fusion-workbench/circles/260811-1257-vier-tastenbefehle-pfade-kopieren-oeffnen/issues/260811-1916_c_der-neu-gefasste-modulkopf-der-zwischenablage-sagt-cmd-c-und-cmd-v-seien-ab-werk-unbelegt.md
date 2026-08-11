@@ -27,3 +27,10 @@ stehen auf `opt+cmd+c` und `shift+cmd+c`.
 Runde selbst hinzugefuegt hat. Genau dafuer ist die Durchsicht da.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt.**
+`crates/krk-ui/src/appkit/zwischenablage.rs:53-58` sagt jetzt, Cmd+C und Cmd+V trugen seit dem
+260805 die Textbefehle des Menues „Bearbeiten" und die Reservierung aus C3 der Runde 1 sei damit
+eingeloest. Am Bestand nachgesehen: `resources/default-keymap.toml:712-722` fuehrt `text_kopieren`
+auf `cmd+c` und `text_einfuegen` auf `cmd+v`, beide mit `gehalten_von = "menue"`.

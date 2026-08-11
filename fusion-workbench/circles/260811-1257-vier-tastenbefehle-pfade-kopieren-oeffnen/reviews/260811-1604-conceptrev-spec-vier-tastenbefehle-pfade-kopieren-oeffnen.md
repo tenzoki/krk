@@ -80,3 +80,12 @@ Zwei Kanten kommen an `K3` hinzu: eine zu `BE` und eine zu `ST`. Läuft die Kant
 `K4` bekommt in seiner Beschriftung das Wort, das `EIN` schon trägt. Damit steht im Bild, was C5 beziffert, und die drei neuen Kombinationen bleiben drei. Wenn `EIN` dabei in die Erbschicht wandert, stimmt auch die Aufschrift des Kastens wieder mit seinem Inhalt überein.
 
 Die vier Kombinationen wandern von den Kanten `T --> W` auf die Kanten `W --> K1` bis `W --> K4`. Der eine Vorbehalt bleibt sichtbar, die Zuordnung kommt zurück.
+
+---
+
+Abgleichsvermerk 260811-2157 (`reconciler`): die Auflage dieser Durchsicht ist eingeloest. Der Kopf
+des betroffenen Dokuments nennt die Nachbesserung mit Datum, und die Diagramme im Baum tragen sie.
+Der Befund des Plan-Durchgangs, die fehlende Kante `S2 → S3` sei ein echter und kein zeichnerischer
+Mangel, ist am Code bestaetigt: `mit_standardprogramm_oeffnen` (`crates/krk-ui/src/appkit/tabelle.rs:940`)
+ruft `operationen::nichts_zu_oeffnen`, das im selben Zug wie `nichts_zu_kopieren` aus S2 entstanden
+ist. Eine Reihenfolge S3 vor S2 haette den Baum rot stehen lassen.

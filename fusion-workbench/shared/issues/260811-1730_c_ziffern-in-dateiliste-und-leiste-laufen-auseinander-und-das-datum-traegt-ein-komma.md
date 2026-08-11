@@ -122,3 +122,14 @@ System ohne Festbreiten-Benutzerschrift auf die Proportionalschrift zurueck.
 Abgenommen mit `make check`, exit 0.
 
 Geschlossen in der Sitzung `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md`.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt am Baum.**
+`NSFont::monospacedDigitSystemFontOfSize_weight` steht in
+`crates/krk-ui/src/appkit/tabelle.rs:2117-2118` fuer die gewoehnliche und die fette Fassung und in
+`crates/krk-ui/src/appkit/leiste.rs:489`. Beide Modulkoepfe nennen die Untergrenze der Methode
+(`tabelle.rs:93`, `leiste.rs:55`). `nummernspalte.rs` ist unangetastet.
+
+**Die Messungen selbst sind nicht nachgemessen** und werden vom Abgleich auch nicht bestaetigt: die
+Punktwerte in der Notiz stammen aus einem Lauf gegen `NSAttributedString::size` und liegen als
+Zahlen nur dort. Nachgesehen ist, dass der Programmtext das tut, was die Notiz beschreibt.

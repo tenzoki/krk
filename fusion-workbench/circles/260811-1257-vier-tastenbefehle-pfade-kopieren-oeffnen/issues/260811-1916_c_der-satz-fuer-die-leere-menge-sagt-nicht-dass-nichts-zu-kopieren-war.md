@@ -29,3 +29,15 @@ gemeinsame Haelfte an einer Stelle haelt. Kein neuer Typ, keine neue Aufzaehlung
 Auffangzweig — also Weg 2 dieses Datensatzes ohne den dort befuerchteten Preis.
 
 Geschlossen in der Sitzung `history/260811-1454-orchestrator-session.md`, Turn 1. Abgenommen mit `make check`, exit 0.
+
+---
+Abgleichsvermerk 260811-2157 (`reconciler`): **die Behauptung traegt.**
+`crates/krk-ui/src/kommandos/operationen.rs` fuehrt `nichts_zu_kopieren()`, `nichts_zu_oeffnen()`
+und den privaten Rumpf `nichts_betroffen(verb)` bei Zeile 858. Beide Aufrufer stehen in
+`appkit/tabelle.rs`: `eintragspfad_kopieren` bei `:907`, `mit_standardprogramm_oeffnen` bei `:942`.
+Kein neuer Typ, keine Aufzaehlung, kein Auffangzweig.
+
+**Eine Folge fuer den Plan, die kein Defekt ist:** die Tabelle unter `## Frage 6` des Umsetzungsplans
+fuehrt noch `nichts_betroffen() -> String` als eine gemeinsame oeffentliche Funktion. Der Baum
+traegt zwei oeffentliche und einen privaten Rumpf. Der Plan ist damit an dieser Zeile ueberholt,
+und die Ursache ist genau dieser Datensatz. Vermerkt im Reconciliation Log des Plans.

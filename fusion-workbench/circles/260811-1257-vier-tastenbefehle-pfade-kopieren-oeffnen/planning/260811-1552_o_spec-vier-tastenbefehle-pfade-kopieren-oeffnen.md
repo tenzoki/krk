@@ -329,3 +329,95 @@ Die Directive nennt sechs Bestandteile, und jeder ist einer Fähigkeit zugeordne
 **Ein Bestandteil ist gegenüber der Directive geschärft und nicht geändert.** Die Directive sagt "je eine Zeile in `resources/default-keymap.toml`, ein Wert in `Kommando`, je eine Zeile in `Kommando::wirkungsbereich` und in `bereich_des_kommandos`" für alle vier Befehle. Es sind drei und nicht vier: Cmd+W bekommt keine neue Zeile, weil es eine bestehende Funktion mit einem weiteren Wirkungsbereich ist. Der Nutzer hat das am 260811-1505 ausdrücklich festgehalten.
 
 **Ein Bestandteil ist über die Directive hinausgewachsen.** Die Rückmeldung in der Statuszeile steht in der Directive nicht. Sie ist Teil der Antwort auf `decisions/260811-1258_*` und der Grund, aus dem der Kopierer ohne Rückfrage auskommt.
+
+---
+
+## Reconciliation Log
+
+**260811-2157, `reconciler`, Abschluss-Abgleich der Runde 4.**
+
+**Der Marker bleibt `_o_`, und kein Kästchen ist abgehakt.** Der Kopf dieses Specs sagt, er bleibe
+`_o_`, bis die Abnahmekriterien eingelöst sind; der Abgleich löst keines ein. Abhaken ist die
+Handlung der Abnahme, und die Abnahme ist nicht gefahren.
+
+Was der Abgleich stattdessen tut: er trennt die 62 Kriterien in drei Gruppen danach, **woran** sie
+sich prüfen lassen. Die Trennung ist am Baum gemessen und nicht geschätzt.
+
+### Gruppe A — 23 Kriterien, die der Baum trägt
+
+Diese Kriterien sagen etwas über den Programmtext, über Zahlen in Dateien oder über etwas, das
+ausdrücklich **nicht** geschehen soll. Der Abgleich hat jedes einzeln nachgesehen; alle 23 halten.
+Die Belege stehen im Reconciliation Log des Plans
+(`planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md`) mit Datei und Zeile.
+
+| Fähigkeit | Kriterium, verkürzt | Beleg |
+|---|---|---|
+| C1 | ein zweiter Aufruf ersetzt den Inhalt | `clearContents()`, `zwischenablage.rs:180` |
+| C2 | „betroffen" ist genau `betroffene()`, der Befehl ihr fünfter Abnehmer | `tabelle.rs:904` |
+| C2 | `\n` als Trenner, kein Schlusszeilenumbruch | `pfadzeilen`, `operationen.rs:805`, mit Probe |
+| C2 | keine Rückfrage, in keinem Fall | kein Blattaufruf im Zweig, `tabelle.rs:904-918` |
+| C2 | leerer Ordner: Zwischenablage unverändert, Meldung | `tabelle.rs:906-909` |
+| C3 | ein Ordner geht ebenfalls an das System, kein Typtest | `tabelle.rs:847`, `:940` |
+| C3 | der Rechts-Pfeil bleibt unverändert | `in_zeile_einsteigen` geteilt, `tabelle.rs:1172`, `:1187` |
+| C3 | der Doppelklick wirkt auf die angeklickte Zeile | `clickedRow`, `tabelle.rs:1955` |
+| C3 | unterhalb der letzten Zeile geschieht nichts | `usize::try_from`, `tabelle.rs:1007` |
+| C3 | dieselbe Umsetzung wie die Taste | ein Aufrufer von `standardprogramm::oeffnen`, `tabelle.rs:952` |
+| C3 | kein Belegungseintrag, kein Kommando für den Doppelklick | keine neue Zeile in `default-keymap.toml` |
+| C3 | Leiste und Vorschau ohne Doppelklick-Behandlung | kein `setDoubleAction` in `leiste.rs`, `vorschau.rs` |
+| C3 | der Kommentar in `blaetter/mod.rs` ist umgeschrieben | `blaetter/mod.rs:257-259` |
+| C4 | `waehrend_blatt_erlaubt` bleibt die Ein-Zeilen-Regel | `operationen.rs:208-210` |
+| C4 | `cmd+w` und `shift+cmd+w` bleiben, wo sie sind | `default-keymap.toml`, unverändert |
+| C4 | `TabSchliessen` steht allein, mit dem Grund als Kommentar | `belegung.rs:710`, `:609` |
+| C5 | 74 Funktionen mit 82 Kombinationen, Kopfzeile mitgezogen | maschinell nachgezählt; `default-keymap.toml:33` |
+| C5 | 68 Varianten in `Kommando` | `belegung.rs`, dazu die Länge im Typ bei `:488` |
+| C5 | je eine Zeile in den drei Fallunterscheidungen, kein `_`-Zweig | `belegung.rs:755-757`, `belegungsmodell.rs:211-213`, `grep -c '_ =>'` je 0 |
+| C5 | `Wirkungsbereich` wächst nicht, `beschriftung` unverändert | sieben Werte |
+| C5 | die Konflikterkennung meldet für die drei nichts | Probe `die_auslieferungsbelegung_ist_konfliktfrei`, grün |
+| C5 | `cmd+c` und `cmd+v` bleiben unverändert | `default-keymap.toml:712-722`, beide `gehalten_von = "menue"` |
+| Zeitzusagen | keine der zehn Zahlen wird geändert, gelockert oder umgedeutet | `git diff 55a4afa..HEAD -- crates/krk-bench/` ist leer; die zehn Schwellen liegen dort |
+
+**Wer diese 23 bei der Abnahme abhakt, hakt etwas ab, das schon steht.** Der Abgleich tut es nicht
+an seiner Stelle, weil das Abhaken die Abnahme bezeugt und nicht die Prüfung.
+
+### Gruppe B — 32 Kriterien, die nur das laufende Bündel beantwortet
+
+Alles, was das **Verhalten** einer Taste, eines Klicks oder der Statuszeile betrifft. Der Abgleich
+kann belegen, dass der Programmtext es vorsieht, und nicht, dass es geschieht. Dazu gehören
+sämtliche Kriterien über den Inhalt der Zwischenablage nach einem `cmd+v`, alle Meldungen der
+Statuszeile im Wortlaut und in ihrem Rang, das Verhalten der Vorgabeschaltfläche eines Blattes bei
+`return`, der einfache Klick, das Verhalten von `cmd+w` mit dem Fokus in der Leiste, im Editor und in
+einem Textfeld, und die Wirkung des Wirkungsbereichs `Dateifenster` („in der Leiste tut `opt+cmd+c`
+nichts").
+
+**Sieben davon führt der Plan bereits namentlich** unter `## Was am gebauten Bündel zu prüfen ist`.
+Die übrigen 25 sind von derselben Art.
+
+### Gruppe C — 7 Kriterien, die einen Prüfaufbau brauchen
+
+Sie sind am Bündel prüfbar, aber nicht durch bloßes Hinsehen: eine symbolische Verknüpfung auf einen
+Ordner, ein Ordner, der zwischen dem Lesen und dem Tastendruck verschwindet, das Wurzelverzeichnis
+als angezeigter Ordner, ausgeblendete Einträge, dreißig markierte Einträge, der letzte Tab eines
+Bereichs, und die Zusage, dass keiner der vier Befehle die Oberfläche sichtbar anhält.
+
+### Zwei Kriterien, deren Text der Baum nicht wörtlich einlöst
+
+1. **C2, „die Statuszeile sagt, dass nichts zu kopieren war".** Der Baum sagt es seit `814c8bc`
+   wörtlich (`nichts_zu_kopieren()`), nachdem die Durchsicht den Befund erhoben hatte
+   (`issues/260811-1916_*_der-satz-fuer-die-leere-menge-sagt-nicht-dass-nichts-zu-kopieren-war.md`).
+   Das Kriterium ist erfüllt; erwähnt wird es hier, weil der Plan an dieser Zeile überholt ist.
+2. **C5, „die Konflikterkennung meldet nichts, weder gegen eine andere Funktion noch gegen ein
+   Menükürzel".** `Belegung::konflikte` (`crates/krk-core/src/tasten/belegung.rs:1014`) vergleicht
+   nur innerhalb desselben `gehalten_von`. Ein Menükürzel und eine Belegung ohne Zusteller sind
+   danach nie ein Konflikt — so entschieden in
+   `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+   Der zweite Halbsatz des Kriteriums ist damit nicht prüfbar, sondern durch die Bauart
+   ausgeschlossen. Kein Defekt, aber ein Kriterium, das mehr zusagt, als der Mechanismus beantworten
+   kann.
+
+### Der Stand der Fähigkeiten in einem Satz
+
+Alle fünf Fähigkeiten sind **gebaut** und keine ist **abgenommen**. Das ist derselbe Stand, in dem
+die Runden 1 bis 3 geschlossen worden sind, und er ist der Grund, aus dem diese Runde als
+beschränkter Abschluss schließt.
+
+Vollständiger Bericht: `history/260811-2157-reconciliation.md`.
