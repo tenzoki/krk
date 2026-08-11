@@ -5,13 +5,16 @@
 //! deshalb hier im Programmtext.
 //!
 //! Drei Untermenues: KRK, Bearbeiten, Fenster. Jeder Eintrag bekommt als Ziel
-//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:`, `paste:`,
-//! `selectAll:`, `undo:` und `redo:` erreichen den Feldeditor des Textfeldes
-//! mit dem Fokus beziehungsweise die Textflaeche des Editors, und `beenden:`,
-//! `fensterEinblenden:` wie `fensterSchliessen:` erreichen den
-//! Anwendungsdelegierten, an dem die Kette endet. Ein fest gesetztes Ziel
-//! wuerde die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn
-//! niemand ihn beantworten kann.
+//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:` und `paste:`
+//! erreichen den Feldeditor des Textfeldes mit dem Fokus beziehungsweise die
+//! Textflaeche des Editors, und `beenden:`, `fensterEinblenden:` wie
+//! `fensterSchliessen:` erreichen den Anwendungsdelegierten, an dem die Kette
+//! endet. Ein fest gesetztes Ziel wuerde die Kette umgehen und einen Eintrag
+//! auch dann aktiv lassen, wenn niemand ihn beantworten kann.
+//!
+//! **Fuer `selectAll:`, `undo:` und `redo:` stand hier bis zum 260811 derselbe
+//! Satz, und fuer alle drei war er zu stark.** Was wirklich antwortet, ist
+//! gemessen und steht unten unter `# Wer die sechs Textbefehle beantwortet`.
 //!
 //! # Eine Quelle, zwei sichtbare Wege
 //!
@@ -61,6 +64,71 @@
 //! Rueckgaengig, und ohne `allowsUndo` blieben die Eintraege grau. Sie stehen
 //! an der Mac-ueblichen Stelle ganz oben im Untermenue, durch einen Trenner
 //! von den vier Zwischenablage-Befehlen getrennt.
+//!
+//! # Wer die sechs Textbefehle beantwortet
+//!
+//! Die sechs sind die einzigen der 71 Funktionen ohne
+//! [`krk_core::tasten::Kommando`] und damit ohne Wirkungsbereich. Wo sie wirken,
+//! entscheidet zur Laufzeit die Antwortkette, in die die Belegung keine Eingabe
+//! hat. Die Tastenbelegung als Markdown-Datei aus der Runde 3 muss es dem Nutzer
+//! trotzdem in ihre dritte Spalte schreiben, und **statt zu naehern, ist
+//! gemessen worden**: `die_sechs_zugestellten_textbefehle_werden_von_diesen_klassen_beantwortet`
+//! unter `mod tests` fragt das Objective-C-Laufzeitsystem ueber
+//! `AnyClass::responds_to`, welche der sechs moeglichen Ersthelferklassen
+//! welchen Selektor beantwortet. Die Antwort braucht keine Instanz, keinen
+//! Hauptfaden und keinen Vordergrund, und sie laeuft von jetzt an mit.
+//!
+//! ```text
+//! Selektor      antwortet an        traegt die Methode
+//! cut:          NSTextView          NSText
+//! copy:         NSTextView          NSText
+//! paste:        NSTextView          NSText
+//! selectAll:    NSTableView         NSTableView
+//!               NSTextView          NSText
+//! undo:         NSWindow            NSWindow
+//! redo:         NSWindow            NSWindow
+//! ```
+//!
+//! Gemessen am 260811 auf macOS 15.7.7, gegen `NSTableView`, `NSTextView`,
+//! `NSTextField`, `NSScrollView`, `NSWindow` und `NSApplication`. Drei Befunde
+//! stehen darin, und zwei davon widersprechen dem, was oben stand.
+//!
+//! **Erstens: die vier Zwischenablage-Befehle haengen an `NSText`.** Nicht an
+//! `NSTextView`, und `NSTextField` beantwortet keinen von ihnen. Das ist der
+//! Beleg fuer den Satz oben, das Menue erreiche den **Feldeditor** des
+//! Textfeldes: der Feldeditor ist eine `NSTextView` und bringt `NSText` mit, das
+//! Textfeld selbst nicht.
+//!
+//! **Zweitens: `NSTableView` beantwortet `selectAll:` von sich aus.** Die
+//! Lesezeichen- und Geraeteleiste ist eine `NSTableView`, und mit dem Fokus dort
+//! weist der stumme Fokusvorbehalt `alle_markieren` ab, sodass der Tastendruck
+//! unveraendert an AppKit geht und den Menueeintrag erreicht. Der Eintrag ist in
+//! der Leiste also **bedienbar**, und "Textfelder und Editor" ist fuer diesen
+//! einen der sechs keine gemessene Aussage mehr. Ob er dort auch etwas
+//! **bewirkt**, ist eine zweite Frage; sie braucht eine Instanz und ist hier
+//! nicht entschieden. Die Auswahleinstellung der drei Tabellen steht in
+//! [`super::leiste`], [`super::belegungsansicht`] und [`super::tabelle`].
+//!
+//! **Drittens: `undo:` und `redo:` stehen an `NSWindow` und nicht an
+//! `NSTextView`.** `responds_to` liefert `false` fuer einen Selektor, den eine
+//! Klasse ueber Weiterleitung beantwortet, und genau das ist hier der Fall: das
+//! Fenster traegt beide Methoden und reicht sie an den Rueckgaengigverwalter des
+//! Ersthelfers weiter. Ein `false` an der Textklasse belegt deshalb **nicht**,
+//! dass im Editor niemand antwortet. Was dort antwortet, steht zwei Abschnitte
+//! weiter oben: die `NSTextView` bringt ihren Verwalter mit und benutzt ihn,
+//! sobald [`super::editor`] `allowsUndo` setzt.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSMenu`, `NSMenuItem`, `NSString`, `NSNumber`, `NSDictionary` und
+//! `NSUserDefaults` stehen seit macOS 10.0 zur Verfuegung, ebenso die sechs
+//! Klassen, die die Messung oben abfragt: `NSTableView`, `NSTextView`,
+//! `NSTextField`, `NSScrollView`, `NSWindow` und `NSApplication`. Das Buendel
+//! zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS 15
+//! hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
+//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
+//! nicht; die Nennung hier ist die Gegenmassnahme.
 //!
 //! # Zwei Eintraege tragen einen eigenen Selektor
 //!
@@ -594,6 +662,206 @@ fn ja_nein(wahr: bool) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use objc2::ClassType;
+    use objc2::runtime::AnyClass;
+    use objc2_app_kit::{
+        NSApplication, NSScrollView, NSTableView, NSTextField, NSTextView, NSWindow,
+    };
+
+    /// Die sechs Klassen, die in KRK einen Ersthelfer stellen koennen.
+    ///
+    /// `NSTableView` steht dreimal im Programm — die Leiste, die beiden
+    /// Dateifenster und die Belegungsansicht —, `NSTextView` zweimal, naemlich
+    /// als Textflaeche des Editors und als Feldeditor eines Textfeldes;
+    /// `NSTextField` traegt die Blaetter. `NSScrollView`, `NSWindow` und
+    /// `NSApplication` stehen dazwischen und am Ende der Antwortkette.
+    fn ersthelferklassen() -> [(&'static str, &'static AnyClass); 6] {
+        [
+            ("NSTableView", <NSTableView as ClassType>::class()),
+            ("NSTextView", <NSTextView as ClassType>::class()),
+            ("NSTextField", <NSTextField as ClassType>::class()),
+            ("NSScrollView", <NSScrollView as ClassType>::class()),
+            ("NSWindow", <NSWindow as ClassType>::class()),
+            ("NSApplication", <NSApplication as ClassType>::class()),
+        ]
+    }
+
+    /// Die sechs Selektoren der vom Menue zugestellten Textbefehle.
+    ///
+    /// Dieselben sechs, die [`hauptmenue`] unter "Bearbeiten" eintraegt, und
+    /// dieselben sechs, die `resources/default-keymap.toml` mit
+    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige der 71
+    /// Funktionen kein [`krk_core::tasten::Kommando`] und damit keinen
+    /// Wirkungsbereich.
+    fn die_sechs_zugestellten() -> [(&'static str, Sel); 6] {
+        [
+            ("cut:", sel!(cut:)),
+            ("copy:", sel!(copy:)),
+            ("paste:", sel!(paste:)),
+            ("selectAll:", sel!(selectAll:)),
+            ("undo:", sel!(undo:)),
+            ("redo:", sel!(redo:)),
+        ]
+    }
+
+    /// Was die Laufzeit auf die sechs antwortet, am 260811 gemessen.
+    ///
+    /// Je Selektor stehen die Klassen aus [`ersthelferklassen`], die ihn
+    /// beantworten, in deren Reihenfolge, und zu jeder die Klasse ihrer
+    /// Vererbungskette, die die Methode traegt. Eine Klasse, die hier nicht
+    /// steht, antwortet nicht.
+    ///
+    /// Die Angabe der tragenden Klasse ist nicht Beiwerk: sie sagt, dass die
+    /// vier Zwischenablage-Befehle nicht an `NSTextView` haengen, sondern an
+    /// `NSText` — also an dem Teil der Kette, den auch der Feldeditor eines
+    /// `NSTextField` mitbringt. Genau darauf ruht der Satz im Modulkopf, das
+    /// Menue erreiche "den Feldeditor des Textfeldes beziehungsweise die
+    /// Textflaeche des Editors".
+    const GEMESSEN: [(&str, &[(&str, &str)]); 6] = [
+        ("cut:", &[("NSTextView", "NSText")]),
+        ("copy:", &[("NSTextView", "NSText")]),
+        ("paste:", &[("NSTextView", "NSText")]),
+        (
+            "selectAll:",
+            &[("NSTableView", "NSTableView"), ("NSTextView", "NSText")],
+        ),
+        ("undo:", &[("NSWindow", "NSWindow")]),
+        ("redo:", &[("NSWindow", "NSWindow")]),
+    ];
+
+    /// Welche der sechs Klassen den Selektor beantworten, und woher.
+    ///
+    /// Gefragt wird das Objective-C-Laufzeitsystem ueber
+    /// [`AnyClass::responds_to`], nicht eine Instanz: die Antwort braucht kein
+    /// Fenster, keinen Hauptfaden und keinen Vordergrund. Die tragende Klasse
+    /// ist die oberste der Vererbungskette, die noch antwortet;
+    /// `class_respondsToSelector` sieht die Kette mit, und wer sie hinauflaeuft,
+    /// findet die Stelle, an der die Methode wirklich steht.
+    fn wer_antwortet(sel: Sel) -> Vec<(String, String)> {
+        let mut gefunden = Vec::new();
+        for (name, klasse) in ersthelferklassen() {
+            if !klasse.responds_to(sel) {
+                continue;
+            }
+            let mut traegerin = name.to_owned();
+            let mut lauf = klasse.superclass();
+            while let Some(oberklasse) = lauf {
+                if oberklasse.responds_to(sel) {
+                    traegerin = oberklasse.name().to_string_lossy().into_owned();
+                }
+                lauf = oberklasse.superclass();
+            }
+            gefunden.push((name.to_owned(), traegerin));
+        }
+        gefunden
+    }
+
+    /// Die Messung aus S1 der Runde 3, als mitlaufende Zusicherung.
+    ///
+    /// **Sie misst, statt zu naehern.** Fuer 65 der 71 Funktionen ist der
+    /// Wirkungsbereich aus der Belegung entscheidbar; fuer diese sechs ist er es
+    /// nicht, weil sie kein Kommando tragen und die Antwortkette von AppKit zur
+    /// Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre
+    /// dritte Spalte schreibt, ruht deshalb auf dieser Zahlenreihe und nicht auf
+    /// einer Ableitung aus der Zugehoerigkeit zum Menue "Bearbeiten".
+    ///
+    /// Schlaegt sie fehl, hat sich die Laufzeit geaendert und mit ihr die
+    /// Auskunft, die KRK dem Nutzer ueber diese sechs Befehle gibt. Der Befund
+    /// gehoert dann in die dritte Spalte und nicht in eine angepasste Erwartung.
+    ///
+    /// **Was sie nicht entscheidet, steht in
+    /// [`ein_false_an_der_textklasse_entscheidet_fuer_undo_und_redo_nichts`] und
+    /// in [`die_leiste_beantwortet_alles_auswaehlen_von_sich_aus`].**
+    #[test]
+    fn die_sechs_zugestellten_textbefehle_werden_von_diesen_klassen_beantwortet() {
+        for (name, sel) in die_sechs_zugestellten() {
+            let Some((_, erwartet)) = GEMESSEN.iter().find(|(gemessen, _)| *gemessen == name)
+            else {
+                panic!("fuer {name} steht keine Messung in GEMESSEN");
+            };
+            let gefunden = wer_antwortet(sel);
+            let erwartet: Vec<(String, String)> = erwartet
+                .iter()
+                .map(|(klasse, traegerin)| ((*klasse).to_owned(), (*traegerin).to_owned()))
+                .collect();
+            assert_eq!(
+                gefunden, erwartet,
+                "{name} wird von anderen Klassen beantwortet als am 260811 gemessen"
+            );
+        }
+    }
+
+    /// Der Verdachtsfall aus dem Plan, und er trifft zu.
+    ///
+    /// `text_alles_auswaehlen` liegt auf `selectAll:`, und die Lesezeichen- und
+    /// Geraeteleiste ist eine `NSTableView`. Sie beantwortet den Selektor **von
+    /// sich aus**, aus einer Methode an `NSTableView` selbst und nicht aus einer
+    /// geerbten. Mit dem Fokus in der Leiste weist der stumme Fokusvorbehalt das
+    /// Kommando `alle_markieren` ab, der Tastendruck geht unveraendert an
+    /// AppKit, und von dort erreicht er den Menueeintrag und die Antwortkette:
+    /// der Eintrag ist dort also **bedienbar**. Im Dateifenster kommt der Druck
+    /// nie so weit, weil `alle_markieren` ihn dort verbraucht.
+    ///
+    /// **Damit ist "Textfelder und Editor" fuer diesen einen der sechs keine
+    /// gemessene Aussage mehr.** Ob der bedienbare Eintrag in der Leiste auch
+    /// etwas **bewirkt**, entscheidet diese Probe nicht: dazu braucht es eine
+    /// Instanz und damit den Hauptfaden. Was der Baum dazu haelt, ist die
+    /// Auswahleinstellung — `super::super::leiste` und
+    /// `super::super::belegungsansicht` setzen beide
+    /// `setAllowsMultipleSelection(false)`, die Tabellen der Dateifenster setzen
+    /// sie nicht und tragen die Vorgabe von `NSTableView`. Das ist eine
+    /// Vermutung ueber die Wirkung und keine Messung.
+    #[test]
+    fn die_leiste_beantwortet_alles_auswaehlen_von_sich_aus() {
+        let tabelle = <NSTableView as ClassType>::class();
+        assert!(
+            tabelle.responds_to(sel!(selectAll:)),
+            "NSTableView beantwortet selectAll: nicht mehr — die dritte Spalte der \
+             Tastenbelegung ist daraufhin neu zu entscheiden"
+        );
+        let traegerin = wer_antwortet(sel!(selectAll:))
+            .into_iter()
+            .find(|(klasse, _)| klasse == "NSTableView")
+            .map(|(_, traegerin)| traegerin);
+        assert_eq!(
+            traegerin.as_deref(),
+            Some("NSTableView"),
+            "selectAll: kommt an der Tabelle nicht mehr aus NSTableView selbst"
+        );
+    }
+
+    /// Fuer `undo:` und `redo:` sagt die Messung ausdruecklich weniger, als sie
+    /// zu sagen scheint.
+    ///
+    /// [`AnyClass::responds_to`] liefert `false` fuer einen Selektor, den eine
+    /// Klasse ueber Weiterleitung statt ueber eine eigene Methode beantwortet;
+    /// die Schnittstelle nennt genau diesen Fall. Dass `NSTextView` auf `undo:`
+    /// und `redo:` mit `false` antwortet, ist deshalb **kein** Beleg dafuer, dass
+    /// im Editor niemand antwortet — und die Messung zeigt daneben, wer es tut:
+    /// `NSWindow` traegt beide Methoden selbst und reicht sie an den
+    /// Rueckgaengigverwalter des Ersthelfers weiter.
+    ///
+    /// Was der Baum dazu schon weiss, steht im Modulkopf: die `NSTextView` des
+    /// Editors bringt ihren Verwalter mit und benutzt ihn, sobald `allowsUndo`
+    /// gesetzt ist, und das geschieht in `super::super::editor`. Die Aussage
+    /// "wirkt im Editor" ruht also auf dieser Zeile und nicht auf `responds_to`.
+    #[test]
+    fn ein_false_an_der_textklasse_entscheidet_fuer_undo_und_redo_nichts() {
+        let textflaeche = <NSTextView as ClassType>::class();
+        let fenster = <NSWindow as ClassType>::class();
+        for sel in [sel!(undo:), sel!(redo:)] {
+            assert!(
+                !textflaeche.responds_to(sel),
+                "NSTextView traegt {sel} nun selbst — der Weg ueber NSWindow ist \
+                 damit nicht mehr die ganze Geschichte"
+            );
+            assert!(
+                fenster.responds_to(sel),
+                "NSWindow beantwortet {sel} nicht mehr — dann erreicht Cmd+Z den \
+                 Rueckgaengigverwalter des Editors auf keinem gemessenen Weg"
+            );
+        }
+    }
 
     /// Ohne diese Zusage verloere ein umbelegter Menueeintrag still sein
     /// Kuerzel.
