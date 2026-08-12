@@ -246,6 +246,7 @@ use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
+use super::statuszeile::{self, Statuszeile};
 use super::tabelle::Dateifenster;
 use super::teilen;
 use super::terminal;
@@ -392,6 +393,14 @@ pub struct AnwendungsIvars {
     /// Fensterzeile, sondern deren Schwester unter der Inhaltsflaeche, und ihre
     /// acht Zustaende kommen aus dem Fenstermodell, das ebenfalls hier haengt.
     bereichsleiste: OnceCell<Bereichsleiste>,
+    /// Die **eine** Statuszeile ueber die volle Fensterbreite (C5 der Runde 6).
+    ///
+    /// Sie steht hier aus demselben Grund wie die Bereichsleiste darueber, und
+    /// aus einem zweiten: was in ihr steht, haengt an den Meldungsquellen
+    /// **beider** Dateifenster und an der aktiven Seite, und der
+    /// Anwendungsdelegierte ist der einzige, der alle drei sieht. Bis zur Runde
+    /// 6 hielt jedes Dateifenster seine eigene Zeile und schrieb sie selbst.
+    statuszeile: OnceCell<Statuszeile>,
     /// Die beiden Dateifenster, links zuerst.
     dateifenster: OnceCell<[Dateifenster; 2]>,
     /// Die Lesezeichen- und Geraeteleiste (C5), der zweite fokussierbare
@@ -675,6 +684,7 @@ impl Anwendungsdelegierter {
             fenster_delegierter: OnceCell::new(),
             aufteilung: OnceCell::new(),
             bereichsleiste: OnceCell::new(),
+            statuszeile: OnceCell::new(),
             dateifenster: OnceCell::new(),
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
@@ -744,12 +754,19 @@ impl Anwendungsdelegierter {
                 dateifenster[1].quelle().retain(),
             ],
         );
-        // **Die Leiste am Fensterfuss, und darueber die Fensterzeile.** Beide
-        // liegen in derselben Traegerflaeche; die Leiste ist ausdruecklich
-        // keine Unteransicht der Aufteilung, weil `ersthelferbereich` deren
-        // fuenf Bereiche durchgeht und eine Leiste darin ein sechster waere.
+        // **Die Leiste am Fensterfuss, darueber die eine Statuszeile, darueber
+        // die Fensterzeile.** Alle drei liegen in derselben Traegerflaeche;
+        // weder Leiste noch Zeile sind eine Unteransicht der Aufteilung, weil
+        // `ersthelferbereich` deren fuenf Bereiche durchgeht und eine Ansicht
+        // darin ein sechster Bereich waere.
         let bereichsleiste = Bereichsleiste::bauen(mtm);
-        let inhalt = fenster::fensterinhalt(mtm, aufteilung.sicht(), bereichsleiste.sicht());
+        let statuszeile = Statuszeile::bauen(mtm);
+        let inhalt = fenster::fensterinhalt(
+            mtm,
+            aufteilung.sicht(),
+            statuszeile.sicht(),
+            bereichsleiste.sicht(),
+        );
         let fenster = fenster::hauptfenster(mtm, &inhalt, &fenster_delegierter);
 
         // **Der eine Ausloesepunkt der Fokusanzeige aus C9.** Das Fenster
@@ -795,6 +812,7 @@ impl Anwendungsdelegierter {
         let _ = ivars.editor.set(editor);
         let _ = ivars.aufteilung.set(aufteilung);
         let _ = ivars.bereichsleiste.set(bereichsleiste);
+        let _ = ivars.statuszeile.set(statuszeile);
         let _ = ivars.fenster_delegierter.set(fenster_delegierter);
         let _ = ivars.fenster.set(fenster);
 
@@ -847,6 +865,22 @@ impl Anwendungsdelegierter {
                 .umbenennung_setzen(Box::new(move |alt, neu| {
                     if let Some(selbst) = schwach.load() {
                         selbst.umbenennen_ausfuehren(seite, alt, neu);
+                    }
+                }));
+            // **Die eine Statuszeile gehoert beiden Dateifenstern** (C5 der
+            // Runde 6). Jedes meldet, dass eine seiner fuenf Quellen sich
+            // geaendert hat; welche der zehn Aussagen dann in der Zeile steht,
+            // entscheidet `statuszeile_nachziehen` mit beiden Quellensaetzen
+            // und der aktiven Seite. Der Rueckruf traegt die Seite nicht mit,
+            // weil der Nachzug ohnehin beide fragt. Auch er haelt den
+            // Delegierten **schwach**, aus demselben Grund wie die drei
+            // darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .meldungswechsel_setzen(Box::new(move || {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.statuszeile_nachziehen();
                     }
                 }));
         }
@@ -2969,6 +3003,12 @@ impl Anwendungsdelegierter {
         aufteilung.anwenden(&breiten, &sichtbar);
         self.fokusanzeige_nachziehen();
         self.bereichsleiste_nachziehen();
+        // **Auch die Statuszeile**, und nicht wegen der Sichtbarkeit: das
+        // aktive Dateifenster kann sich mit demselben Anlass geaendert haben,
+        // und daran haengen die zweite Stelle der Rangordnung und der
+        // Namenszusatz. Der Grund im Langen steht an
+        // [`Self::statuszeile_nachziehen`].
+        self.statuszeile_nachziehen();
     }
 
     /// Schreibt die acht Schalterzustaende der Bereichsleiste aus dem Modell
@@ -3002,6 +3042,60 @@ impl Anwendungsdelegierter {
             (modell.sichtbarkeit(), modell.spaltensichtbarkeit())
         };
         leiste.zustaende_setzen(&sichtbar, &spalten);
+    }
+
+    /// Schreibt die eine Statuszeile ueber die volle Fensterbreite (C5 der
+    /// Runde 6).
+    ///
+    /// **Der eine Schreiber, mit zwei Anlaessen.** Der erste ist der
+    /// Meldungswechsel eines der beiden Dateifenster: eine seiner fuenf Quellen
+    /// hat sich geaendert, und es sagt es ueber den Rueckruf aus dem Aufbau.
+    /// Der zweite ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
+    /// von den zehn Quellen abhaengt, sondern auch davon, **welches**
+    /// Dateifenster das aktive ist: der Rang der aktiven Seite entscheidet
+    /// jeden Gleichstand, und der Namenszusatz haengt an derselben Frage. Ein
+    /// Wechsel des aktiven Dateifensters geht auf beiden Wegen — Mausklick ueber
+    /// [`Self::aktives_setzen`], Tastenbefehl ueber `Kommando::FensterWechseln`
+    /// — durch jenen Nachzug.
+    ///
+    /// **Sie entscheidet selbst nichts.** Die Auswahl unter den zehn Bewerbern
+    /// trifft [`statuszeile::zeile`], den Satz formt
+    /// [`statuszeile::zeilentext`]; beide sind reines Rust ohne AppKit und ohne
+    /// Fenster pruefbar. Diese Funktion holt die drei Eingaben und schreibt das
+    /// Ergebnis.
+    ///
+    /// **Sie steht neben [`Self::bereichsleiste_nachziehen`] und nicht darin.**
+    /// Die Leiste zeigt Schalterzustaende, die Zeile zeigt Meldungen; ein
+    /// gemeinsamer Nachzug haette zwei Anlaesse in einer Funktion, und der
+    /// Meldungswechsel eines Dateifensters ginge die Leiste nichts an.
+    fn statuszeile_nachziehen(&self) {
+        // Steht die Zeile, stehen auch die Dateifenster: `oberflaeche_aufbauen`
+        // haengt sie in derselben Folge ein und die Dateifenster zuerst. Eine
+        // zweite Abfrage daneben taeuschte eine Lage vor, die es nicht gibt.
+        let Some(zeile) = self.ivars().statuszeile.get() else {
+            return;
+        };
+        // Beide Quellensaetze und die aktive Seite. `meldungsquellen` leiht
+        // dabei das Tabmodell seines Dateifensters aus und liefert eigene
+        // Zeichenketten; die Ausleihe endet damit in ihm und ueberlebt den
+        // Aufruf von AppKit unten nicht.
+        let links = self
+            .dateifenster(Fensterseite::Links)
+            .quelle()
+            .meldungsquellen();
+        let rechts = self
+            .dateifenster(Fensterseite::Rechts)
+            .quelle()
+            .meldungsquellen();
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let meldung = statuszeile::zeile(&links, &rechts, aktiv);
+        // Der Satz bekommt eine eigene Bindung, weil `zeilentext` eine
+        // Zeichenkette **baut** und `zeigen` eine ausleiht: ohne die Bindung
+        // gaebe es nichts, woraus die Ausleihe genommen werden koennte.
+        let satz = meldung
+            .as_ref()
+            .map(|meldung| (statuszeile::zeilentext(meldung, aktiv), meldung.art));
+        zeile.zeigen(satz.as_ref().map(|(text, art)| (text.as_str(), *art)));
     }
 
     /// Schreibt die Rahmenfarben der fuenf Bereiche und den Fenstertitel (C9,

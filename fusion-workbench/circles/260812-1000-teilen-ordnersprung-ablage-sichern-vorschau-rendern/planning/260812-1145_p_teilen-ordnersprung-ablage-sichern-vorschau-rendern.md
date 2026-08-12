@@ -421,7 +421,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check` für die Proben; die Kriterien C4.1 (zweite Hälfte), C4.7, C4.8 (zweite Hälfte) und C4.11 (zweite Hälfte) sind am Bündel zu sehen.
    - Dependencies: Schritt 8.
 
-10. **Die eine Statuszeile über die volle Fensterbreite**
+10. [DONE] **Die eine Statuszeile über die volle Fensterbreite**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/aufteilung.rs`, `crates/krk-ui/src/appkit/fenster.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes:

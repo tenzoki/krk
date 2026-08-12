@@ -1,13 +1,25 @@
 //! Das Fenster und sein Delegierter.
 //!
 //! Die Inhaltsansicht des Fensters ist seit dem 260812 eine Traegerflaeche aus
-//! [`fensterinhalt`], und darin liegen zwei Ansichten uebereinander: die
-//! Aufteilung aus [`super::aufteilung`] und darunter die Bereichsleiste aus
-//! [`super::bereichsleiste`]. Bis dahin war die Aufteilung selbst die
-//! Inhaltsansicht. Sie traegt seit Schritt 16 der Editor-Runde **fuenf**
-//! Bereiche und nicht mehr die vier der Runde 1; zugleich zu sehen sind
-//! hoechstens vier, weil C1 jener Runde zusagt, dass die Vorschau und der
-//! Editor sich dieselbe Flaeche teilen.
+//! [`fensterinhalt`], und darin liegen drei Ansichten uebereinander: die
+//! Aufteilung aus [`super::aufteilung`], darunter die eine Statuszeile aus
+//! [`super::statuszeile`] und ganz unten die Bereichsleiste aus
+//! [`super::bereichsleiste`]. Bis zum 260812 war die Aufteilung selbst die
+//! Inhaltsansicht; die Bereichsleiste kam mit der Runde 5 dazu, die
+//! Statuszeile mit der Runde 6. Die Aufteilung traegt seit Schritt 16 der
+//! Editor-Runde **fuenf** Bereiche und nicht mehr die vier der Runde 1;
+//! zugleich zu sehen sind hoechstens vier, weil C1 jener Runde zusagt, dass
+//! die Vorschau und der Editor sich dieselbe Flaeche teilen.
+//!
+//! ```text
+//! ┌──────────────────────────────────────────────┐
+//! │ Fensterzeile (NSSplitView, fuenf Bereiche)   │  nimmt, was uebrig bleibt
+//! ├──────────────────────────────────────────────┤
+//! │ Statuszeile                                  │  18 pt, volle Breite
+//! ├──────────────────────────────────────────────┤
+//! │ Bereichsleiste                               │  18 pt, am unteren Rand
+//! └──────────────────────────────────────────────┘
+//! ```
 //!
 //! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
 //! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
@@ -66,9 +78,11 @@
 //! `becomeKeyWindow`, `resignKeyWindow`, `setReleasedWhenClosed:`, `setTitle:`,
 //! `setContentMinSize:`, `setContentView:`, `setDelegate:` und `center`.
 //! [`fensterinhalt`] kommt mit `initWithFrame:`, `setFrame:`, `addSubview:`
-//! und `setAutoresizingMask:` dazu; auch sie stehen seit 10.0, und keine der
-//! beiden gesetzten Masken (`NSViewWidthSizable`, `NSViewHeightSizable`,
-//! `NSViewMaxYMargin`) traegt eine eigene Angabe. Das
+//! und `setAutoresizingMask:` dazu; auch sie stehen seit 10.0. Die Eigenschaft
+//! `autoresizingMask` (`NSView.h:125`) und die drei gesetzten Werte
+//! `NSViewWidthSizable`, `NSViewHeightSizable` und `NSViewMaxYMargin`
+//! (`NSView.h:33-41`) tragen im Kopf des Systems keine eigene Angabe und stehen
+//! damit ebenfalls seit 10.0. Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
 //! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
 //! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -95,6 +109,7 @@ use objc2_foundation::{
 };
 
 use super::bereichsleiste;
+use super::statuszeile;
 use super::tabelle::DateifensterQuelle;
 
 /// Die Groesse, mit der das Fenster beim ersten Start aufgeht.
@@ -125,13 +140,44 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 /// bleiben duerfen, ist eine Frage an den Nutzer und keine, die hier still
 /// beantwortet wird. Am 260812-0430 hat er die Breite bei 780 belassen.
 ///
-/// **Die Hoehe ist am 260812 von 300 auf 318 gestiegen**, und zwar um genau
-/// [`bereichsleiste::HOEHE`]: die Leiste am Fensterfuss nimmt der Fensterzeile
-/// diese Punkte ab, und ohne den Nachtrag haetten die fuenf Bereiche darueber
-/// weniger Hoehe zur Verfuegung als vor der Runde. Kriterium C1.3 verlangt,
-/// dass sie ihre bisherige Mindesthoehe behalten; die Zahl ist deshalb die
-/// Summe und keine neu gewaehlte.
-const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0 + bereichsleiste::HOEHE);
+/// **Die Hoehe ist eine Summe aus drei Zahlen und keine gewaehlte.** Sie ist am
+/// 260812 zweimal gestiegen, beide Male um genau die Hoehe der Ansicht, die
+/// hinzukam: erst von 300 auf 318 fuer die Bereichsleiste der Runde 5, dann von
+/// 318 auf 336 fuer die eine Statuszeile der Runde 6. Wer sie senken will,
+/// senkt einen der drei Summanden und nicht die Summe.
+///
+/// **Die Dateiliste verliert bei der Zusammenlegung der Statuszeilen keine
+/// Hoehe** (C5.4 der Runde 6). Sie mass vorher
+/// `H − Bereichsleiste − Tableiste − eigene Statuszeile` und misst danach
+/// `H − Bereichsleiste − Statuszeile − Tableiste`, also denselben Ausdruck: was
+/// die neue Zeile der Fensterzeile nimmt, gibt jedes Dateifenster mit dem
+/// Wegfall seiner eigenen zurueck. Die drei Bereiche **ohne** eigene Zeile —
+/// Lesezeichenleiste, Vorschau und Editor — verlieren dagegen 18 Punkte, und
+/// genau die holt dieser Summand ihnen zurueck (C5.3). Dieselbe Begruendung,
+/// die die Runde 5 fuer den Schritt von 300 auf 318 gegeben hat.
+const MINDESTGROESSE: NSSize = NSSize::new(
+    780.0,
+    FENSTERZEILE_MINDESTHOEHE + bereichsleiste::HOEHE + statuszeile::HOEHE,
+);
+
+/// Die Mindesthoehe, die die Runde 1 den Bereichen der Fensterzeile zugesagt
+/// hat.
+///
+/// Sie steht seither unveraendert; was seit der Runde 5 unter der Zeile
+/// hinzukommt, wird in [`MINDESTGROESSE`] daraufgerechnet und nicht von ihr
+/// abgezogen.
+const FENSTERZEILE_MINDESTHOEHE: f64 = 300.0;
+
+/// Die Rechnung an [`MINDESTGROESSE`], nachgehalten beim Uebersetzen.
+///
+/// Sie haelt keine Wahrheit fest, die der Ausdruck darueber nicht schon
+/// enthielte, sondern die **Zahl**, die dabei herauskommen soll. Aendert jemand
+/// eine der beiden Leistenhoehen, faellt der Bau hier aus, und die Begruendung
+/// an [`MINDESTGROESSE`] wird gelesen, statt still zu veralten.
+const _: () = assert!(
+    MINDESTGROESSE.height == 336.0,
+    "die Mindesthoehe ist 300 (Runde 1) + 18 (Bereichsleiste) + 18 (Statuszeile)"
+);
 
 /// Was das Hauptfenster haelt.
 pub struct HauptfensterIvars {
@@ -267,28 +313,40 @@ impl FensterDelegierter {
     }
 }
 
-/// Legt die Fensterzeile und die Bereichsleiste uebereinander.
+/// Legt Fensterzeile, Statuszeile und Bereichsleiste uebereinander.
 ///
 /// Die Inhaltsansicht des Fensters war bis zum 260812 die Fensterzeile selbst;
 /// seit der Bereichsleisten-Runde steht unter ihr eine Leiste ueber die volle
-/// Breite, und beide brauchen deshalb eine Traegerflaeche. Dasselbe Muster wie
-/// `aufteilung::dateifensterinhalt`, das Tableiste, Liste und Statuszeile eines
-/// Dateifensters uebereinanderlegt.
+/// Breite, seit der Runde 6 dazwischen die eine Statuszeile, und alle drei
+/// brauchen deshalb eine Traegerflaeche. **Die Zeile ist derselbe Handgriff ein
+/// zweites Mal**, nicht ein neuer: Rahmen und Autogroesse in denselben zwei
+/// Zeilen wie fuer die Leiste, nur um deren Hoehe versetzt.
 ///
-/// **Die beiden Autogroessen tragen die Aufteilung ueber jede
-/// Groessenaenderung.** Die Leiste haengt unten und behaelt ihre Hoehe
-/// ([`NSAutoresizingMaskOptions::ViewMaxYMargin`] laesst allein den Abstand
-/// nach oben wachsen), die Fensterzeile nimmt, was darueber frei wird. Ohne
-/// die Hoehenaenderung an [`MINDESTGROESSE`] verloeren die fuenf Bereiche
-/// dabei die 18 Punkte, die die Leiste bekommt.
+/// **Die Lesereihenfolge von unten nach oben ist Schalter, Meldung, Inhalt.**
+/// Die Leiste behaelt den unteren Rand, weil ihre Schalter dort seit der Runde
+/// 5 stehen und ein Tausch sie ohne Not verschoebe; die Meldung steht darueber,
+/// naeher an dem, worueber sie etwas sagt.
 ///
-/// **Die Leiste ist keine Unteransicht der Fensterzeile, sondern ihre
-/// Schwester**, und das ist keine Geschmacksfrage: `ersthelferbereich` sucht
-/// den Ersthelfer in den fuenf Bereichen der `NSSplitView`, und eine Leiste
-/// darin waere entweder ein sechster Bereich oder ein blinder Fleck.
+/// **Die drei Autogroessen tragen die Aufteilung ueber jede
+/// Groessenaenderung.** Leiste und Zeile behalten ihre Hoehe und ihren Abstand
+/// zum unteren Rand ([`NSAutoresizingMaskOptions::ViewMaxYMargin`] laesst
+/// allein den Abstand nach oben wachsen), die Fensterzeile nimmt, was darueber
+/// frei wird. Ohne die Hoehenaenderung an [`MINDESTGROESSE`] verloeren die
+/// fuenf Bereiche dabei die 36 Punkte, die Leiste und Zeile bekommen.
+///
+/// **Beide sind keine Unteransicht der Fensterzeile, sondern ihre
+/// Schwestern**, und das ist keine Geschmacksfrage: `ersthelferbereich` sucht
+/// den Ersthelfer in den fuenf Bereichen der `NSSplitView`, und eine Ansicht
+/// darin waere entweder ein sechster Bereich oder ein blinder Fleck. Aus
+/// demselben Grund bekommt `Fokus` keinen sechsten Wert.
+///
+/// **Die Zeile beginnt beim Einzug und nicht am Rand.** Denselben Abstand hielt
+/// sie am Fuss eines Dateifensters, und die Leiste haelt ihn ebenso; sie steht
+/// damit senkrecht unter dem ersten Schalter.
 pub fn fensterinhalt(
     mtm: MainThreadMarker,
     fensterzeile: &NSView,
+    zeile: &NSView,
     leiste: &NSView,
 ) -> Retained<NSView> {
     let inhalt = NSView::initWithFrame(
@@ -305,12 +363,22 @@ pub fn fensterinhalt(
     );
     inhalt.addSubview(leiste);
 
-    fensterzeile.setFrame(NSRect::new(
-        NSPoint::new(0.0, bereichsleiste::HOEHE),
+    zeile.setFrame(NSRect::new(
+        NSPoint::new(statuszeile::EINZUG, bereichsleiste::HOEHE),
         NSSize::new(
-            ANFANGSGROESSE.width,
-            ANFANGSGROESSE.height - bereichsleiste::HOEHE,
+            ANFANGSGROESSE.width - statuszeile::EINZUG,
+            statuszeile::HOEHE,
         ),
+    ));
+    zeile.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMaxYMargin,
+    );
+    inhalt.addSubview(zeile);
+
+    let unterbau = bereichsleiste::HOEHE + statuszeile::HOEHE;
+    fensterzeile.setFrame(NSRect::new(
+        NSPoint::new(0.0, unterbau),
+        NSSize::new(ANFANGSGROESSE.width, ANFANGSGROESSE.height - unterbau),
     ));
     fensterzeile.setAutoresizingMask(
         NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,

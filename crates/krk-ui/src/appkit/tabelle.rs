@@ -1,5 +1,5 @@
-//! Das Dateifenster: Tableiste, `NSTableView` in einer `NSScrollView` und
-//! Statuszeile, angebunden an das Tabmodell aus [`crate::tabs`].
+//! Das Dateifenster: Tableiste und `NSTableView` in einer `NSScrollView`,
+//! angebunden an das Tabmodell aus [`crate::tabs`].
 //!
 //! ```text
 //! ┌──────────────────────────────┐
@@ -7,10 +7,16 @@
 //! ├──────────────────────────────┤
 //! │ NSScrollView                 │  der Inhalt des sichtbaren Tabs
 //! │   NSTableView, vier Spalten  │
-//! ├──────────────────────────────┤
-//! │ Statuszeile                  │  Meldungen zu diesem Dateifenster
 //! └──────────────────────────────┘
 //! ```
+//!
+//! **Die Statuszeile stand bis zur Runde 6 als dritte Ansicht am Fuss und
+//! steht seither nicht mehr hier.** Es gibt eine Zeile ueber die volle
+//! Fensterbreite, gehalten vom Anwendungsdelegierten; dieses Dateifenster
+//! haelt weiter seine vier Meldungsfelder mit ihren je einer Loeschregel,
+//! reicht sie ueber [`DateifensterQuelle::meldungsquellen`] heraus und meldet
+//! ueber [`QuelleIvars::meldungswechsel`], dass sich etwas geaendert hat. Die
+//! Auswahl unter den zehn Bewerbern trifft [`super::statuszeile::zeile`].
 //!
 //! Zwei Objective-C-Klassen teilen sich die Arbeit, weil AppKit sie an zwei
 //! Protokollen entgegennimmt. [`DateifensterQuelle`] ist die Datenquelle: sie
@@ -172,7 +178,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::blaetter;
 use super::standardprogramm;
-use super::statuszeile::{self, Statuszeile};
+use super::statuszeile::Quellen;
 use super::tableiste::Tableiste;
 use super::teilen;
 
@@ -322,8 +328,19 @@ pub struct QuelleIvars {
     tabelle: Retained<NSTableView>,
     /// Die Bildlaufansicht um die Tabelle. Sie traegt die Bildlaufposition.
     sicht: Retained<NSScrollView>,
-    /// Die Zeile am Fuss, in der die Meldungen dieses Dateifensters stehen.
-    statuszeile: Statuszeile,
+    /// Was gerufen wird, wenn eine der fuenf Meldungsquellen dieses
+    /// Dateifensters sich geaendert hat.
+    ///
+    /// **Der Ersatz fuer die eigene Statuszeile am Fuss** (C5 der Runde 6).
+    /// Dieses Dateifenster haelt seine Quellen weiter und entscheidet weiter
+    /// nichts darueber, was in der Zeile steht; es sagt nur, dass sich etwas
+    /// geaendert hat. Wer die Zeile schreibt, holt danach beide Quellensaetze
+    /// und die aktive Seite: das ist `Anwendungsdelegierter::
+    /// statuszeile_nachziehen` und niemand sonst.
+    ///
+    /// Wahlfrei, im Zuschnitt der vier Rueckrufe darunter und aus demselben
+    /// Grund: die Quelle kommt vor dem Anwendungsdelegierten zur Welt.
+    meldungswechsel: RefCell<Option<Box<dyn Fn()>>>,
     /// Die Leiste am Kopf. Sie kommt nach der Quelle zur Welt, weil ihr
     /// Rueckruf die Quelle braucht; siehe [`Dateifenster::bauen`].
     tableiste: RefCell<Option<Tableiste>>,
@@ -395,7 +412,7 @@ pub struct QuelleIvars {
     /// Die beschaedigte Belegungsdatei beim Start und der ausgeworfene
     /// Datentraeger aus C9: ein Ereignis, das der Nutzer nicht angefordert hat.
     /// Sie hat Vorrang vor der Tabmeldung und faellt beim naechsten Ordner-
-    /// oder Tabwechsel; siehe [`DateifensterQuelle::meldung_anzeigen`].
+    /// oder Tabwechsel; siehe [`DateifensterQuelle::meldung_gewechselt`].
     ///
     /// **Eine Antwort auf einen Tastenbefehl gehoert nicht hierher**, sondern
     /// in `befehlsantwort`. Bis zum 260804-1915 lagen beide in diesem Feld, und
@@ -518,7 +535,6 @@ impl DateifensterQuelle {
         mtm: MainThreadMarker,
         tabelle: Retained<NSTableView>,
         sicht: Retained<NSScrollView>,
-        statuszeile: Statuszeile,
         tabs: Tabliste,
     ) -> Retained<Self> {
         let groessenformat = NSByteCountFormatter::new();
@@ -526,7 +542,7 @@ impl DateifensterQuelle {
         let this = Self::alloc(mtm).set_ivars(QuelleIvars {
             tabelle,
             sicht,
-            statuszeile,
+            meldungswechsel: RefCell::new(None),
             tableiste: RefCell::new(None),
             tabs: RefCell::new(tabs),
             einzug: RefCell::new(None),
@@ -568,6 +584,12 @@ impl DateifensterQuelle {
     /// Hinterlegt, was bei einer neuen Auswahl zu tun ist (C6).
     pub fn auswahlmelder_setzen(&self, melden: Auswahlmelder) {
         *self.ivars().auswahlmelder.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was zu tun ist, wenn eine Meldungsquelle sich geaendert hat
+    /// (C5 der Runde 6).
+    pub fn meldungswechsel_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().meldungswechsel.borrow_mut() = Some(melden);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -755,7 +777,7 @@ impl DateifensterQuelle {
         // zurueck, also ueber dieselbe Huelle, die sie nach einem Umsortieren
         // wiederherstellt.
         self.auswahl_anzeigen();
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
         self.einzug_starten();
         self.tableiste_nachziehen();
     }
@@ -768,7 +790,7 @@ impl DateifensterQuelle {
         self.auswahl_anzeigen();
         let bildlauf = self.ivars().tabs.borrow().aktiver().bildlauf();
         self.bildlauf_herstellen(bildlauf);
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
         self.tableiste_nachziehen();
         // Der Wechsel kann einen ungelesenen Tab getroffen haben; dann laeuft
         // seit `waehlen` ein Lesevorgang, den der Takt einziehen muss.
@@ -1461,7 +1483,7 @@ impl DateifensterQuelle {
             // Die letzte Zeile: die Markierung steht, die Auswahl bleibt.
             None => self.auswahl_anzeigen(),
         }
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     // ------------------------------------------------------------------
@@ -1571,7 +1593,7 @@ impl DateifensterQuelle {
         }
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     /// Sortiert nach diesem Schluessel und schaltet bei Wiederholung die
@@ -1695,31 +1717,53 @@ impl DateifensterQuelle {
         self.ivars().sicht.reflectScrolledClipView(&inhalt);
     }
 
-    /// Schreibt in die Statuszeile, was gerade dort stehen soll.
+    /// Meldet, dass eine der fuenf Quellen dieses Dateifensters sich geaendert
+    /// hat.
     ///
-    /// **Die eine Stelle, die entscheidet, was in der Zeile steht.** Fuenf
-    /// Quellen, ein Rang; die Regel und ihre Begruendung stehen bei
-    /// [`statuszeile::zeile`], die Lebensdauern bei den Feldern in
-    /// [`QuelleIvars`]. Diese Methode liest die vier Felder, rechnet den
-    /// fuenften Rang und uebergibt alles; sie entscheidet selbst nichts, damit
-    /// die Entscheidung an genau einer Stelle steht und ohne AppKit pruefbar
-    /// ist.
-    fn meldung_anzeigen(&self) {
+    /// **Sie schreibt nichts und entscheidet nichts.** Bis zur Runde 6 hiess
+    /// diese Methode `meldung_anzeigen` und setzte die eigene Zeile am Fuss
+    /// dieses Dateifensters; seit es eine Zeile fuer beide gibt, kann ein
+    /// einzelnes Dateifenster die Frage gar nicht mehr beantworten — was in
+    /// der Zeile steht, haengt an den Quellen **beider** Seiten und an der
+    /// aktiven. Der Ruf geht deshalb an den einen, der beides sieht.
+    ///
+    /// Die Ausleihe steht waehrend des Rufs, wie bei
+    /// [`Self::ordnerwechsel_melden`]. Sie ist lesend, und der einzige
+    /// schreibende Zugriff auf dieselbe Zelle ist
+    /// [`Self::meldungswechsel_setzen`] beim Aufbau; der Rueckruf holt sich
+    /// gleich darauf [`Self::meldungsquellen`], und das leiht andere Felder
+    /// aus.
+    fn meldung_gewechselt(&self) {
+        let melden = self.ivars().meldungswechsel.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden();
+        }
+    }
+
+    /// Was dieses Dateifenster der Statuszeile anzubieten hat.
+    ///
+    /// Die vier Felder abgeschrieben, der fuenfte Rang gerechnet; die Regel
+    /// darueber, welche der zehn Aussagen gewinnt, steht bei
+    /// [`super::statuszeile::zeile`] und nicht hier. Diese Methode entscheidet
+    /// nichts, damit die Entscheidung an genau einer Stelle steht und ohne
+    /// AppKit pruefbar ist.
+    ///
+    /// **Eigene Zeichenketten und keine Ausleihen**, weil der Aufrufer
+    /// unmittelbar danach das zweite Dateifenster fragt und dann AppKit ruft;
+    /// eine Ausleihe des Tabmodells, die einen Objective-C-Aufruf ueberlebt,
+    /// schliesst der Modulkopf aus.
+    pub fn meldungsquellen(&self) -> Quellen {
         // Vor jeder Ausleihe: die Rechnung leiht das Tabmodell selbst aus und
         // ruft dabei den Groessenformatierer.
         let markierungsstand = self.markierungsstand_text();
         let ivars = self.ivars();
-        let befehlsantwort = ivars.befehlsantwort.borrow();
-        let vorgangsanzeige = ivars.vorgangsanzeige.borrow();
-        let fenstermeldung = ivars.fenstermeldung.borrow();
-        let tabs = ivars.tabs.borrow();
-        ivars.statuszeile.zeigen(statuszeile::zeile(
-            befehlsantwort.as_deref(),
-            vorgangsanzeige.as_deref(),
-            fenstermeldung.as_deref(),
-            tabs.aktiver().meldung(),
-            markierungsstand.as_deref(),
-        ));
+        Quellen {
+            befehlsantwort: ivars.befehlsantwort.borrow().clone(),
+            vorgangsanzeige: ivars.vorgangsanzeige.borrow().clone(),
+            fenstermeldung: ivars.fenstermeldung.borrow().clone(),
+            tabmeldung: ivars.tabs.borrow().aktiver().meldung().map(str::to_owned),
+            markierungsstand,
+        }
     }
 
     /// Der fuenfte Rang der Statuszeile: was im sichtbaren Tab markiert ist
@@ -1735,12 +1779,12 @@ impl DateifensterQuelle {
     ///
     /// **Gezeichnet werden muss trotzdem.** Die beiden Markierungsmethoden
     /// [`Self::markieren_und_weiter`] und [`Self::markierung_aendern`] rufen
-    /// dafuer [`Self::meldung_anzeigen`], so wie sie die Tabelle neu laden.
+    /// dafuer [`Self::meldung_gewechselt`], so wie sie die Tabelle neu laden.
     /// Das ist etwas anderes als ein Feld mit vier Schreibern: verpasst einer
     /// den Aufruf, steht ein alter Text in der Zeile, bis der naechste
     /// Zeichenanlass kommt, und nirgends ein falscher Zustand. Die beiden
     /// uebrigen Anlaesse zeichnen ohnehin: [`Self::tab_gewechselt`] und
-    /// [`Self::nach_lesebeginn`] rufen [`Self::meldung_anzeigen`] seit S12 und
+    /// [`Self::nach_lesebeginn`] rufen [`Self::meldung_gewechselt`] seit S12 und
     /// S14, und der Lesebeginn deckt die Auffrischung mit ab, die die
     /// Markierung leert. Das Umsortieren und das Ein- und Ausblenden brauchen
     /// es nicht, weil sie die Markierung nicht anfassen und der Stand ueber
@@ -1795,12 +1839,12 @@ impl DateifensterQuelle {
     /// ist richtig: sie betrifft nicht den Ordner, den der Nutzer dann ansieht.
     ///
     /// Geschrieben wird das Feld, gezeichnet wird ueber
-    /// [`DateifensterQuelle::meldung_anzeigen`]. Diese Methode setzt die Zeile
+    /// [`DateifensterQuelle::meldung_gewechselt`]. Diese Methode setzt die Zeile
     /// **nicht** selbst: sie kaeme sonst an der Rangfolge vorbei und
     /// ueberschriebe eine laufende Vorgangsanzeige.
     pub fn meldung_zeigen(&self, meldung: &str) {
         *self.ivars().fenstermeldung.borrow_mut() = Some(meldung.to_owned());
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile.
@@ -1815,7 +1859,7 @@ impl DateifensterQuelle {
     /// weiter ueber [`DateifensterQuelle::meldung_zeigen`].
     pub fn befehlsantwort_zeigen(&self, antwort: &str) {
         *self.ivars().befehlsantwort.borrow_mut() = Some(antwort.to_owned());
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     /// Raeumt die Antwort auf den vorigen Tastenbefehl weg.
@@ -1835,7 +1879,7 @@ impl DateifensterQuelle {
     /// oder die verdraengte Auswurfmeldung.
     pub fn befehlsantwort_loeschen(&self) {
         if self.ivars().befehlsantwort.borrow_mut().take().is_some() {
-            self.meldung_anzeigen();
+            self.meldung_gewechselt();
         }
     }
 
@@ -1848,7 +1892,7 @@ impl DateifensterQuelle {
     /// gehoert.
     pub fn vorgang_zeigen(&self, stand: &str) {
         *self.ivars().vorgangsanzeige.borrow_mut() = Some(stand.to_owned());
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     /// Nimmt die Vorgangsanzeige weg (C4).
@@ -1862,7 +1906,7 @@ impl DateifensterQuelle {
     /// Feldern mit zwei Lebensdauern.
     pub fn vorgang_beenden(&self) {
         *self.ivars().vorgangsanzeige.borrow_mut() = None;
-        self.meldung_anzeigen();
+        self.meldung_gewechselt();
     }
 
     /// Ein Takt des Zeitgebers: Stapel uebernehmen, Tabelle benachrichtigen.
@@ -1889,7 +1933,7 @@ impl DateifensterQuelle {
             self.ivars().tabelle.noteNumberOfRowsChanged();
         }
         if einzug.meldung_neu {
-            self.meldung_anzeigen();
+            self.meldung_gewechselt();
         }
 
         // Die zweite Stufe der Lesereihenfolge: der sichtbare Tab steht, jetzt
@@ -2322,8 +2366,10 @@ pub struct Dateifenster {
 }
 
 impl Dateifenster {
-    /// Baut Tableiste, Tabelle, Bildlaufansicht, Statuszeile, Datenquelle und
-    /// Delegierten.
+    /// Baut Tableiste, Tabelle, Bildlaufansicht, Datenquelle und Delegierten.
+    ///
+    /// **Ohne Statuszeile seit der Runde 6**: es gibt eine ueber die volle
+    /// Fensterbreite, und die baut der Anwendungsdelegierte.
     ///
     /// Die Ansichten entstehen ohne Groesse. Sie bekommen ihre erste beim
     /// Einhaengen in die Aufteilung und jede weitere ueber ihre Autogroesse.
@@ -2357,9 +2403,7 @@ impl Dateifenster {
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
 
-        let statuszeile = Statuszeile::bauen(mtm);
-        let quelle =
-            DateifensterQuelle::neu(mtm, tabelle.clone(), sicht.clone(), statuszeile, tabs);
+        let quelle = DateifensterQuelle::neu(mtm, tabelle.clone(), sicht.clone(), tabs);
         let delegierter = DateifensterDelegierter::neu(mtm, quelle);
         // SAFETY: Beide Objekte beantworten die Protokolle, die sie oben
         // implementieren. Ueber ihre Lebensdauer verlangt die Bindung nichts,
@@ -2465,11 +2509,6 @@ impl Dateifenster {
             .as_ref()
             .expect("die Tableiste steht seit `Dateifenster::bauen`");
         leiste.sicht().retain()
-    }
-
-    /// Die Zeile am Fuss mit den Meldungen dieses Dateifensters.
-    pub fn statuszeile_sicht(&self) -> &NSView {
-        self.quelle().ivars().statuszeile.sicht()
     }
 
     /// Die Datenquelle, ueber die ein Ordner gelesen wird.

@@ -94,7 +94,6 @@ use krk_core::ablage::{Breiten, Fensterseite, Sichtbarkeit};
 use crate::fenstermodell::{Bereich, Zeilenmass, sichtbar_in, wuensche_nachfuehren};
 use crate::kommandos::fokus::{Fokus, Rahmenrolle, rahmenrolle};
 
-use super::statuszeile;
 use super::tabelle::Dateifenster;
 use super::tableiste;
 
@@ -446,12 +445,21 @@ fn gerahmt(mtm: MainThreadMarker, inhalt: &NSView) -> Retained<NSBox> {
     kasten
 }
 
-/// Legt Tableiste, Dateiliste und Statuszeile eines Dateifensters uebereinander.
+/// Legt Tableiste und Dateiliste eines Dateifensters uebereinander.
 ///
-/// Von oben nach unten: die Leiste am Kopf, die Liste dazwischen, die Zeile am
-/// Fuss. Die drei Autogroessen halten die Aufteilung fest, wenn der Nutzer die
-/// Trennlinie verschiebt: die Leiste haengt oben, die Zeile unten, und die
-/// Liste nimmt, was dazwischen frei wird.
+/// Von oben nach unten: die Leiste am Kopf, die Liste darunter bis zum Fuss.
+/// Die Autogroessen halten die Aufteilung fest, wenn der Nutzer die Trennlinie
+/// verschiebt: die Leiste haengt oben, und die Liste nimmt, was darunter frei
+/// wird.
+///
+/// **Die Statuszeile steht seit der Runde 6 nicht mehr darin**, und die
+/// Dateiliste verliert dabei keine Hoehe (C5.4). Vorher mass sie
+/// `H − Bereichsleiste − Tableiste − eigene Statuszeile`, jetzt misst sie
+/// `H − Bereichsleiste − Statuszeile − Tableiste`: die Zeile ist eine Ansicht
+/// weiter oben eingehaengt, in `super::fenster::fensterinhalt`, und was sie der
+/// Fensterzeile nimmt, gibt sie diesem Dateifenster zurueck. Was die drei
+/// Bereiche ohne eigene Zeile dabei verlieren, holt `MINDESTGROESSE` dort
+/// nach.
 ///
 /// **Das Einrahmen steht nicht mehr darin.** Bis zum 260809 hiess diese
 /// Funktion `gerahmtes_dateifenster` und tat beides; seit alle fuenf Bereiche
@@ -478,17 +486,10 @@ fn dateifensterinhalt(mtm: MainThreadMarker, dateifenster: &Dateifenster) -> Ret
 
     let liste = dateifenster.sicht();
     liste.setFrame(NSRect::new(
-        NSPoint::new(0.0, statuszeile::HOEHE),
-        NSSize::new(breite, hoehe - tableiste::HOEHE - statuszeile::HOEHE),
+        NSPoint::ZERO,
+        NSSize::new(breite, hoehe - tableiste::HOEHE),
     ));
     inhalt.addSubview(liste);
-
-    let zeile = dateifenster.statuszeile_sicht();
-    zeile.setFrame(NSRect::new(
-        NSPoint::new(statuszeile::EINZUG, 0.0),
-        NSSize::new(breite - statuszeile::EINZUG, statuszeile::HOEHE),
-    ));
-    inhalt.addSubview(zeile);
 
     inhalt
 }
