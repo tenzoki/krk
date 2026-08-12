@@ -6,11 +6,16 @@
 //! Befehle der Runde 4: [`pfadtext`], [`pfadzeilen`], [`kopiermeldung`],
 //! [`nichts_zu_kopieren`] und [`ablage_weist_ab`] fuer die beiden Pfadkopierer
 //! aus C1 und C2, [`nichts_zu_oeffnen`] und [`oeffnungsmeldung`] fuer die
-//! Uebergabe an das Standardprogramm aus C3. Sie alle teilen den Zuschnitt der
-//! Dateioperationen vollstaendig: ein Befehl, der auf den sichtbaren Tab des
-//! aktiven Dateifensters wirkt und seine Antwort als Befehlsantwort in die
-//! Statuszeile schreibt. Ein eigenes Modul fuer ihre Saetze waere ein sechstes
-//! unter [`crate::kommandos`] mit einer einzigen Frage.
+//! Uebergabe an das Standardprogramm aus C3, und seit dem 260812
+//! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6. Die Texte der
+//! Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
+//! der auf den sichtbaren Tab des aktiven Dateifensters wirkt und seine
+//! Antwort als Befehlsantwort in die Statuszeile schreibt. **Das Teilen weicht
+//! in der ersten Haelfte ab und nicht in der zweiten**: es wirkt aus jedem
+//! Fokus und damit auch auf die angezeigte Datei, schreibt seine Antwort aber
+//! in dieselbe Statuszeile wie jeder Befehl davor. Ein eigenes Modul fuer
+//! diese Saetze waere ein sechstes unter [`crate::kommandos`] mit einer
+//! einzigen Frage.
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Die Ansichten dazu sind die vier Blaetter unter
@@ -843,6 +848,25 @@ pub fn nichts_zu_oeffnen() -> String {
     nichts_betroffen("öffnen")
 }
 
+/// Der Satz, wenn beim Teilen nichts zu uebergeben ist (C1 der Runde 6).
+///
+/// **Er geht nicht durch [`nichts_betroffen`], und das ist der Unterschied
+/// zwischen einem Befehl und dreien.** Die beiden Saetze darueber gelten je
+/// einem Befehl im Dateifenster, und "nichts markiert und nichts ausgewaehlt"
+/// ist dort die Lage. Das Teilen wirkt aus jedem Fokus und findet auf drei
+/// verschiedene Weisen nichts: kein betroffener Eintrag im Dateifenster, keine
+/// angezeigte Datei in Vorschau und Editor, und in der Leiste nichts, was ein
+/// Freigabedienst annaehme. Ein Satz, der von Markierung und Auswahl spraeche,
+/// waere in zwei der drei Lagen falsch — in der Leiste hat der Nutzer ein
+/// Lesezeichen ausgewaehlt vor sich und laese, es sei nichts ausgewaehlt.
+///
+/// Der Satz nennt deshalb das **Ergebnis** und keine Ursache, wie es der
+/// Ordnersprung aus C2 derselben Runde tut. Er stimmt in allen drei Lagen und
+/// bleibt einzeilig.
+pub fn nichts_zu_teilen() -> String {
+    "nichts zu teilen: hier steht nichts, was an die Freigabedienste ginge".to_owned()
+}
+
 /// Die gemeinsame Haelfte der beiden Saetze darueber.
 ///
 /// **Zwei Eingaenge und ein Rumpf, und die Aufteilung hat einen Grund.** Bis
@@ -1488,6 +1512,27 @@ mod tests {
         let lage = "nichts markiert und nichts ausgewählt";
         assert!(kopieren.ends_with(lage), "{kopieren}");
         assert!(oeffnen.ends_with(lage), "{oeffnen}");
+    }
+
+    /// Der Satz des Teilens nennt seine Folge und **keine** Ursache.
+    ///
+    /// Er steht neben den beiden darueber und geht bewusst nicht durch
+    /// [`nichts_betroffen`]: das Teilen wirkt aus jedem Fokus und findet auf
+    /// drei Weisen nichts, und ein Satz ueber Markierung und Auswahl waere in
+    /// zweien davon falsch. In der Leiste hat der Nutzer ein Lesezeichen
+    /// ausgewaehlt vor sich und laese, es sei nichts ausgewaehlt.
+    ///
+    /// Einzeilig wie jede Antwort der Statuszeile.
+    #[test]
+    fn der_satz_des_teilens_nennt_die_folge_und_keine_ursache() {
+        let teilen = nichts_zu_teilen();
+        assert!(teilen.to_lowercase().contains("teilen"), "{teilen}");
+        assert!(!teilen.contains("markiert"), "{teilen}");
+        assert!(!teilen.contains("ausgewählt"), "{teilen}");
+        assert!(
+            !teilen.contains('\n'),
+            "die Statuszeile ist einzeilig: {teilen}"
+        );
     }
 
     // ------------------------------------------------------------------

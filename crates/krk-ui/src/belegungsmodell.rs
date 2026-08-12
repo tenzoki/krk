@@ -224,7 +224,15 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::TerminalOeffnen
         | Kommando::OrdnerpfadKopieren
         | Kommando::EintragspfadKopieren
-        | Kommando::MitStandardprogrammOeffnen => Funktionsbereich::Dateioperationen,
+        | Kommando::MitStandardprogrammOeffnen
+        // Das Teilen aus C1 der Runde 6 faellt unter denselben Satz: es
+        // uebergibt einen Eintrag an etwas ausserhalb der Liste, wie der
+        // Terminal-Befehl den Ordner und der Oeffner den Eintrag. Dass seine
+        // Quelle je nach Fokus aus der Vorschau oder dem Editor kommt, macht
+        // keinen zweiten Ort auf — diese Gliederung fragt nach der Gegend der
+        // Anwendung, und wer teilen will, sucht bei den Befehlen, die etwas
+        // aus KRK herausgeben.
+        | Kommando::Teilen => Funktionsbereich::Dateioperationen,
         Kommando::TabNeu
         | Kommando::TabSchliessen
         | Kommando::TabNaechster

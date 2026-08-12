@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/kommandos/operationen.rs:162` (`betroffene`, zählt Ordner mit); `crates/krk-ui/src/appkit/standardprogramm.rs` (C3 der Runde 4, der nächstliegende Vorgänger)
 
@@ -62,6 +62,6 @@ Am laufenden Buendel geprueft ist das nicht.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/teilen.rs:192-204` (`anbieten` nimmt die Pfade unveraendert entgegen, prueft keinen Typ und filtert nichts; ein Ordner geht als `NSURL` an den Freigabedienst wie jede Datei) — Schritt 5 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

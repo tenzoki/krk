@@ -445,6 +445,16 @@ pub enum Kommando {
     /// Die betroffenen Eintraege an das Standardprogramm des Systems
     /// uebergeben (C3 der Runde 4).
     MitStandardprogrammOeffnen,
+    /// Die betroffenen Eintraege oder die angezeigte Datei an die
+    /// Freigabedienste des Systems uebergeben (C1 der Runde 6).
+    ///
+    /// **Worauf der Befehl wirkt, entscheidet der Fokus**, und zwar in drei
+    /// Antworten ueber fuenf Werte: in einem Dateifenster die betroffenen
+    /// Eintraege, in Vorschau und Editor die angezeigte Datei, in der Leiste
+    /// nichts. Die Verzweigung steht in `krk-ui` unter `appkit::teilen::worauf`
+    /// und nicht hier, weil sie die Bereiche der Oberflaeche braucht, die der
+    /// Kern nicht kennt.
+    Teilen,
     /// Den Ordner des aktiven Dateifensters als Lesezeichen anlegen (C5).
     LesezeichenAnlegen,
     /// Das ausgewaehlte Lesezeichen umbenennen (C5).
@@ -551,7 +561,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 74] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 75] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -618,6 +628,7 @@ impl Kommando {
             Kommando::MitStandardprogrammOeffnen,
             "mit_standardprogramm_oeffnen",
         ),
+        (Kommando::Teilen, "teilen"),
         (Kommando::LesezeichenAnlegen, "lesezeichen_anlegen"),
         (Kommando::LesezeichenUmbenennen, "lesezeichen_umbenennen"),
         (Kommando::LesezeichenLoeschen, "lesezeichen_loeschen"),
@@ -692,6 +703,12 @@ impl Kommando {
     /// [`Kommando::OrdnerDerDatei`] traegt [`Wirkungsbereich::Ueberall`], weil
     /// seine Quelle die angezeigte Datei ist und nicht der Fokus. Der Grund
     /// steht ebenfalls als Kommentar an seinem Zweig.
+    ///
+    /// **Ein fuenfter mit C1 derselben Runde:** [`Kommando::Teilen`] traegt
+    /// ihn aus einer anderen Erwaegung als die vier davor. Bei ihnen haengt
+    /// die Quelle nicht am Fokus; bei ihm haengt sie daran, und gerade deshalb
+    /// muss er ueberall durchkommen. Der Grund steht als Kommentar an seinem
+    /// Zweig.
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
@@ -831,6 +848,21 @@ impl Kommando {
             // entscheidet, ob eine Taste durchkommt, und nicht, ob sie etwas
             // findet.
             Kommando::OrdnerDerDatei => Wirkungsbereich::Ueberall,
+            // Das Teilen aus C1 der Runde 6, und die Erwaegung ist hier eine
+            // andere als bei den vier Befehlen darueber: **der Fokus
+            // entscheidet nicht, ob dieser Befehl wirkt, sondern worauf.** Er
+            // bedeutet in drei Bereichen etwas — im Dateifenster die
+            // betroffenen Eintraege, in der Vorschau und im Editor die
+            // angezeigte Datei —, und ein Wirkungsbereich, der einen davon
+            // nennte, schnitte die beiden anderen ab. Die Verzweigung selbst
+            // wohnt in `krk-ui` unter `appkit::teilen::worauf`, weil sie
+            // Bereiche der Oberflaeche kennt und der Kern sie nicht kennt.
+            //
+            // Mit dem Fokus in der Leiste findet der Befehl nichts und meldet
+            // es. Auch das ist kein Fall fuer den Wirkungsbereich: der
+            // entscheidet, ob eine Taste durchkommt, und nicht, ob sie etwas
+            // findet — derselbe Satz wie beim Ordnersprung darueber.
+            Kommando::Teilen => Wirkungsbereich::Ueberall,
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
             // hinaus, Navigation, Markierung, Sortierung, die Dateioperationen
             // aus C4, die beiden Zwischenablage-Befehle aus C10

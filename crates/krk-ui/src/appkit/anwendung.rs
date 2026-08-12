@@ -109,8 +109,9 @@
 //! **Woran ein Bereich zu erkennen ist, steht an einer Stelle**, in
 //! [`Anwendungsdelegierter::fokusansicht`]: eine erschoepfende Zuordnung von
 //! einem Fokuswert auf die Ansicht, die seinen Ersthelferrang traegt. Lesen und
-//! Setzen gehen beide darueber, und ein sechster Fokuswert haelt dort den Bau
-//! an.
+//! Setzen gehen beide darueber, seit C1 der Runde 6 auch das Teilen, das
+//! dieselbe Ansicht als **Anker** seines Freigabedialogs nimmt; ein sechster
+//! Fokuswert haelt dort den Bau an.
 //!
 //! **Wo er beim Start steht, sagt trotzdem KRK und nicht AppKit.** Ueberliesse
 //! [`Anwendungsdelegierter::oberflaeche_aufbauen`] die erste Vergabe der
@@ -246,6 +247,7 @@ use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::Systempapierkorb;
 use super::tabelle::Dateifenster;
+use super::teilen;
 use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
@@ -1526,7 +1528,16 @@ impl Anwendungsdelegierter {
     /// gilt es, solange sie nicht gebaut sind; deshalb `get` und nicht
     /// `expect`, denn die Reihenfolge im Aufbau der Oberflaeche ist keine
     /// Zusage dieser Funktion.
-    fn fokusansicht(&self, ziel: Fokus) -> Option<&NSResponder> {
+    ///
+    /// **Die Antwort ist eine `NSView` und kein `NSResponder`**, seit das
+    /// Teilen aus C1 der Runde 6 sie als **Anker** braucht und nicht nur als
+    /// Ersthelfer: ein Freigabedialog haengt sich an eine Flaeche und an deren
+    /// Rechteck. Alle vier Zweige liefern ohnehin eine Ansicht, und
+    /// [`Self::fokus_setzen`] kommt mit ihr aus, weil eine `NSView` ein
+    /// `NSResponder` ist. Der engere Typ ist der Preis dafuer, dass es bei
+    /// **einer** Zuordnung bleibt; eine zweite daneben waeren wieder zwei
+    /// Wahrheiten darueber, welche Flaeche zu einem Fokuswert gehoert.
+    fn fokusansicht(&self, ziel: Fokus) -> Option<&NSView> {
         match ziel {
             Fokus::Leiste => Some(self.ivars().leiste.get()?.quelle().liste()),
             Fokus::Vorschau => Some(self.ivars().vorschau.get()?.fokusansicht()),
@@ -2222,6 +2233,14 @@ impl Anwendungsdelegierter {
             // Dateifenster. Ein einzelnes Dateifenster kommt an beide Quellen
             // nicht heran.
             Kommando::OrdnerDerDatei => self.ordner_der_datei_zeigen(),
+            // Das Teilen aus C1 der Runde 6. Es steht hier und nicht bei
+            // `bereichskommando`, aus demselben Grund wie die beiden Befehle
+            // darueber: es traegt `Wirkungsbereich::Ueberall` und kommt damit
+            // aus jedem Fokus an, auch aus der Leiste und dem Editor, wo ein
+            // einzelnes Dateifenster nichts beizutragen haette. Der Fokuswert
+            // geht mit, weil er hier keinen Vorbehalt mehr traegt, sondern die
+            // Adresse ist — wie bei `tab_schliessen` darueber.
+            Kommando::Teilen => self.teilen(fokus),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -2354,26 +2373,8 @@ impl Anwendungsdelegierter {
     /// Liefert immer `true`, wie [`Self::terminal_oeffnen`]: der Befehl war
     /// zustaendig, auch wenn er nur etwas zu melden hatte.
     fn ordner_der_datei_zeigen(&self) -> bool {
-        let (aktiv, vorschau_sichtbar, editor_sichtbar) = {
-            let modell = self.ivars().modell.borrow();
-            (
-                modell.aktiv(),
-                modell.sichtbar(Bereich::Vorschau),
-                modell.sichtbar(Bereich::Editor),
-            )
-        };
-        let vorschau_pfad = self
-            .ivars()
-            .vorschau
-            .get()
-            .and_then(|vorschau| vorschau.angezeigter_pfad());
-        let editor_pfad = self.ivars().editor.get().and_then(|editor| editor.pfad());
-        let Some(datei) = angezeigtedatei::welche(
-            vorschau_sichtbar,
-            vorschau_pfad,
-            editor_sichtbar,
-            editor_pfad,
-        ) else {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let Some(datei) = self.angezeigte_datei() else {
             // Der Satz nennt das Ergebnis und nicht die Ursache: er stimmt
             // ebenso fuer den Nutzer, der den Editor abgeschaltet hat, wie
             // fuer den, dessen Vorschau nichts zeigt (C2, fuenftes
@@ -2401,6 +2402,100 @@ impl Anwendungsdelegierter {
         self.dateifenster(aktiv)
             .quelle()
             .ordner_lesen(&ordner, auswahl);
+        true
+    }
+
+    /// Der Pfad der angezeigten Datei, oder `None`, wenn keine angezeigt wird
+    /// (C1 und C2 der Runde 6).
+    ///
+    /// **Die eine Stelle, die die vier Eingaben abliest.** Welche Datei daraus
+    /// folgt, entscheidet [`angezeigtedatei::welche`] ohne AppKit und damit
+    /// ohne Fenster pruefbar; hier bleibt allein das Ablesen: die Sichtbarkeit
+    /// der beiden Bereiche aus dem Fenstermodell, die beiden Pfade aus den
+    /// Bereichen, die sie halten.
+    ///
+    /// **Zwei Befehle fragen sie**, der Ordnersprung aus C2 und das Teilen aus
+    /// C1, sobald dessen Fokus in der Vorschau oder im Editor steht. Zwei
+    /// Ablesungen nebeneinander waeren zwei Antworten auf eine Frage, und die
+    /// zweite fiele erst am Buendel auf (C2, viertes Kriterium).
+    fn angezeigte_datei(&self) -> Option<PathBuf> {
+        let (vorschau_sichtbar, editor_sichtbar) = {
+            let modell = self.ivars().modell.borrow();
+            (
+                modell.sichtbar(Bereich::Vorschau),
+                modell.sichtbar(Bereich::Editor),
+            )
+        };
+        let vorschau_pfad = self
+            .ivars()
+            .vorschau
+            .get()
+            .and_then(|vorschau| vorschau.angezeigter_pfad());
+        let editor_pfad = self.ivars().editor.get().and_then(|editor| editor.pfad());
+        angezeigtedatei::welche(
+            vorschau_sichtbar,
+            vorschau_pfad,
+            editor_sichtbar,
+            editor_pfad,
+        )
+    }
+
+    /// Gibt die betroffenen Eintraege an die Freigabedienste des Systems
+    /// (C1 der Runde 6).
+    ///
+    /// **Worauf der Befehl wirkt, entscheidet der Fokus, und die Verzweigung
+    /// steht nicht hier.** [`teilen::worauf`] beantwortet sie als reine
+    /// Rechnung ueber alle fuenf Fokuswerte und ist damit ohne Fenster
+    /// pruefbar; diese Stelle verzweigt nur noch ueber die drei Werte, die
+    /// dabei herauskommen, und holt zu jedem seine Pfade. Es ist **keine
+    /// zweite Fokusabfrage**: der Wert kommt aus der einen in
+    /// [`Self::kommando_ausfuehren`] und ist hier eine Adresse und kein
+    /// Vorbehalt, wie bei [`Self::bereichskommando`] und
+    /// [`Self::tab_schliessen`].
+    ///
+    /// **Die Eintraege kommen aus [`operationen::betroffene`]** und aus keiner
+    /// zweiten Auswahlregel; Teilen wird deren siebter Abnehmer (C1, drittes
+    /// Kriterium). Ordner gehen mit, und der Typ wird nicht geprueft.
+    ///
+    /// **Der Anker ist die Ansicht des Bereichs, der den Fokus hat, und ihr
+    /// `bounds`.** Eine Zeile der Liste oder die Schreibmarke im Text zu nehmen
+    /// waere eine zweite Regel je Bereich; die eine Regel ist statthaft, und
+    /// wie sie aussieht, ist am Buendel zu beurteilen. Die Ansicht kommt aus
+    /// [`Self::fokusansicht`], derselben Zuordnung, die den Ersthelfer setzt —
+    /// fuer [`Fokus::Anderswo`] aus der des Dateifensters, denn dieser Wert
+    /// haengt an keiner Ansicht und der Befehl nimmt dort dieselbe Menge wie
+    /// im Dateifenster.
+    ///
+    /// **Bleibt der Dialog aus, sagt es die Statuszeile** (C1, fuenftes
+    /// Kriterium). Der Satz nennt das Ergebnis und keine Ursache und stimmt
+    /// deshalb auch fuer die Lage, in der der Bereich noch gar nicht gebaut
+    /// ist.
+    ///
+    /// Liefert immer `true`, wie [`Self::ordner_der_datei_zeigen`]: der Befehl
+    /// war zustaendig, auch wenn er nur etwas zu melden hatte.
+    fn teilen(&self, fokus: Fokus) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let (pfade, anker) = match teilen::worauf(fokus) {
+            teilen::Quelle::BetroffeneEintraege => (
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .betroffene_eintraege()
+                    .pfade,
+                self.fokusansicht(Fokus::Dateifenster),
+            ),
+            teilen::Quelle::AngezeigteDatei => (
+                self.angezeigte_datei().into_iter().collect(),
+                self.fokusansicht(fokus),
+            ),
+            teilen::Quelle::Nichts => (Vec::new(), None),
+        };
+        let gezeigt = match anker {
+            Some(flaeche) => teilen::anbieten(&pfade, flaeche, flaeche.bounds()),
+            None => false,
+        };
+        if !gezeigt {
+            self.antwort_zeigen(aktiv, &operationen::nichts_zu_teilen());
+        }
         true
     }
 

@@ -337,7 +337,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: **nicht `make check`**, aus demselben Grund und mit demselben Teilsatz wie in Schritt 2; jede rote Meldung nennt `teilen`. Schritt 5 macht sie wieder grün. Kein Vordergrund.
    - Dependencies: keine.
 
-5. **Teilen über die Tastatur**
+5. [DONE] **Teilen über die Tastatur**
    - Executor: `coder`
    - Files: neu `crates/krk-ui/src/appkit/teilen.rs`, `crates/krk-ui/src/appkit/mod.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `resources/default-keymap.toml`; `crates/krk-core/src/tasten/belegung.rs:546` (`Kommando::KENNUNGEN`, 73 Kennungen); `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_*_circle.md` (die Runde, die `opt+cmd+c` und `shift+cmd+c` vergeben hat)
 
@@ -68,6 +68,6 @@ ist nicht gewaehlt worden.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `resources/default-keymap.toml:608` (`teilen` auf `shift+cmd+s`) und `crates/krk-core/src/tasten/belegung.rs:865` (`Kommando::Teilen`, Wirkungsbereich `Ueberall`); `opt+cmd+o` stand mit Schritt 3. Beide Befehle sind damit in Code — Schritte 2 bis 5 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

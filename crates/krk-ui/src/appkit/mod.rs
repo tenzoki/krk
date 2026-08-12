@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Vierundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Fuenfundzwanzig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
 //! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
@@ -21,6 +21,7 @@
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
 //!           ──> hinweis                                 standardprogramm
+//!           ──> teilen
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!           │             ──> nummernspalte
 //!           ──> editor   ──> crate::editormodell
@@ -88,6 +89,15 @@
 //! `NSWorkspace::openURL:`. Ein eigenes Modul neben den beiden davor, weil
 //! keines von ihnen diese Frage stellt; die Abgrenzung steht in seinem
 //! Modulkopf.
+//! [`teilen`] haelt die eine aus C1 der Runde 6: die Uebergabe von Eintraegen
+//! an die Freigabedienste des Systems ueber `NSSharingServicePicker`, dazu den
+//! **einen** Menuebauer, den die drei Flaechen mit Kontextmenue rufen. Ein
+//! viertes eigenes Modul in dieser Reihe, nach derselben Regel wie die drei
+//! davor: ein Modul je Frage. Das Teilen legt nichts in die Zwischenablage,
+//! und es gibt weiterhin genau eine Huelle um `NSPasteboard`. Es traegt daneben mit
+//! `worauf` die Fokusverzweigung des Befehls, eine reine Rechnung ohne
+//! AppKit; sie steht dort, weil sie zur Sache gehoert und ohne Fenster
+//! pruefbar ist.
 //! [`belegungsansicht`] haelt die Belegungsansicht aus C3 als Blatt am
 //! Fenster: die Tabelle der Funktionen, die Schaltflaechen und die
 //! Meldungszeile, waehrend die Arbeitskopie der Belegung in
@@ -135,7 +145,9 @@
 //! `crate::hervorhebung`, [`aufteilung`] rechnet die Breiten mit
 //! `crate::fenstermodell` und die Rahmenrolle mit `crate::kommandos::fokus`,
 //! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
-//! `crate::belegungsmodell`, und [`volumes`] zieht `crate::leistenmodell::Ort`.
+//! `crate::belegungsmodell`, [`teilen`] verzweigt ueber
+//! `crate::kommandos::fokus`, und [`volumes`] zieht
+//! `crate::leistenmodell::Ort`.
 
 mod anwendung;
 mod aufteilung;
@@ -157,6 +169,7 @@ mod standardprogramm;
 mod statuszeile;
 mod tabelle;
 mod tableiste;
+mod teilen;
 mod terminal;
 mod volumes;
 mod vorschau;
