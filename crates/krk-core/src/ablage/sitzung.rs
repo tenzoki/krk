@@ -201,14 +201,31 @@ pub struct Breiten {
     pub editor: Option<f64>,
 }
 
-/// Welche der Bereiche sichtbar sind.
+/// Welche der fuenf Bereiche sichtbar sind.
 ///
-/// Das linke Dateifenster fehlt mit Absicht: C7 laesst immer mindestens ein
-/// Dateifenster stehen, und ein Feld, das nie `false` werden darf, waere eine
-/// Zusage, die niemand einhaelt.
+/// **Alle fuenf tragen ein Feld, die beiden Dateifenster eingeschlossen.** Bis
+/// zur Bereichsleisten-Runde fehlte das linke mit Absicht, weil es sich nicht
+/// ausblenden liess; seit dem Nutzerentscheid vom 260812-0306
+/// (`decisions/260811-1305_*_traegt-das-linke-dateifenster-einen-schalter.md`)
+/// laesst es sich, solange das rechte steht.
+///
+/// **Die Regel heisst danach "eines bleibt" und nicht "das linke ist
+/// besonders", und sie steht nicht hier.** Diese Struktur traegt die Angabe und
+/// haelt keine Zusage darueber; eingeloest wird die Regel im Fenstermodell von
+/// `krk-ui`: `Fenstermodell::umschalten` weist zur Laufzeit jeden Befehl ab,
+/// der das letzte sichtbare Dateifenster ausblenden wuerde, und
+/// `Fenstermodell::aus_sitzung` macht das linke sichtbar, wenn eine von Hand
+/// geschriebene Datei beide ausblendet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Sichtbarkeit {
+    /// Das erste, linke Dateifenster.
+    ///
+    /// Mit der Bereichsleisten-Runde dazugekommen; eine `session.toml` aus der
+    /// Zeit davor bleibt lesbar und nimmt hier den Vorgabewert `true` an, das
+    /// fehlende Feld heisst also "sichtbar". Die Probe dazu steht in
+    /// `tests/ablage.rs`.
+    pub erstes_dateifenster: bool,
     /// Die Lesezeichen- und Geraeteleiste.
     pub lesezeichen: bool,
     /// Das zweite, rechte Dateifenster.
@@ -232,6 +249,7 @@ impl Default for Sichtbarkeit {
     /// kommt hervor, wenn ihn jemand verlangt.
     fn default() -> Self {
         Self {
+            erstes_dateifenster: true,
             lesezeichen: true,
             zweites_dateifenster: true,
             vorschau: true,

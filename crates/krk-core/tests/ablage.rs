@@ -89,6 +89,7 @@ fn beispielsitzung() -> Sitzung {
             editor: Some(480.0),
         },
         sichtbar: Sichtbarkeit {
+            erstes_dateifenster: false,
             lesezeichen: false,
             zweites_dateifenster: true,
             vorschau: false,
@@ -280,6 +281,10 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
         );
     }
     assert!(sitzung.sichtbar.lesezeichen);
+    assert!(
+        sitzung.sichtbar.erstes_dateifenster,
+        "ab Werk stehen beide Dateifenster; C1 verlangt zwei"
+    );
     assert!(sitzung.sichtbar.zweites_dateifenster);
     assert!(sitzung.sichtbar.vorschau);
     assert!(
@@ -517,6 +522,92 @@ aktiver_tab = 0
     assert_eq!(geladen.wert.breiten.vorschau, Some(260.0));
     assert!(geladen.wert.sichtbar.vorschau);
     assert!(geladen.wert.sichtbar.lesezeichen);
+    assert!(
+        geladen.wert.sichtbar.erstes_dateifenster,
+        "ohne eigenes Feld steht das linke Dateifenster"
+    );
+}
+
+/// Eine `session.toml` aus der Zeit vor der Bereichsleisten-Runde bleibt
+/// lesbar, und das fehlende Feld heisst "sichtbar".
+///
+/// Bis zu dieser Runde liess sich das linke Dateifenster nicht ausblenden, und
+/// `[sichtbar]` trug gar keine Zeile dafuer. Eine Datei aus jener Zeit darf
+/// weder als beschaedigt gelten noch mit einem ausgeblendeten linken
+/// Dateifenster aufgehen; der Vorgabewert des neuen Feldes ist `true`.
+#[test]
+fn eine_sitzung_ohne_das_erste_dateifenster_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-der-bereichsleiste");
+    let alt = "\
+aktiv = \"rechts\"
+
+[breiten]
+lesezeichen = 180.0
+links = 420.0
+rechts = 420.0
+
+[sichtbar]
+lesezeichen = true
+zweites_dateifenster = false
+vorschau = true
+editor = false
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei vor der Bereichsleisten-Runde gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        geladen.wert.sichtbar.erstes_dateifenster,
+        "das fehlende Feld heisst sichtbar und nicht ausgeblendet"
+    );
+    assert!(
+        !geladen.wert.sichtbar.zweites_dateifenster,
+        "das rechte war ausgeblendet und bleibt es"
+    );
+}
+
+/// Das ausgeblendete linke Dateifenster uebersteht den Rundlauf byteweise.
+///
+/// Derselbe Weg wie bei den Editorfeldern: zwei Schreibvorgaenge statt eines
+/// Strukturvergleichs. Verlore das Schreiben das neue Feld, kaeme es beim Lesen
+/// als `true` zurueck, und die zweite Datei unterschiede sich von der ersten.
+#[test]
+fn das_ausgeblendete_erste_dateifenster_ueberlebt_den_rundlauf_byteweise() {
+    let (_ordner, ablage) = ablage("erstes-dateifenster");
+    let mut sitzung = Sitzung::default();
+    sitzung.sichtbar.erstes_dateifenster = false;
+    sitzung.aktiv = Fensterseite::Rechts;
+
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("schreiben gescheitert");
+    let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        zuerst.contains("erstes_dateifenster = false"),
+        "das Feld steht nicht in der Datei, die der Nutzer nach C7 von Hand liest: {zuerst}"
+    );
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    assert!(!geladen.ist_ersetzt());
+    assert!(!geladen.wert.sichtbar.erstes_dateifenster);
+    assert!(geladen.wert.sichtbar.zweites_dateifenster);
+
+    ablage
+        .sichern(Datei::Sitzung, &geladen.wert)
+        .expect("zweites Schreiben gescheitert");
+    let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
 }
 
 /// Breite und Sichtbarkeit des Editors ueberstehen den Rundlauf byteweise.

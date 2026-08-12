@@ -454,7 +454,7 @@ fn steht_im(teiler: &NSSplitView, bereich: Bereich) -> bool {
 fn sichtbar_im(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
-        Bereich::Links => true,
+        Bereich::Links => sichtbar.erstes_dateifenster,
         Bereich::Rechts => sichtbar.zweites_dateifenster,
         Bereich::Vorschau => sichtbar.vorschau,
         Bereich::Editor => sichtbar.editor,
@@ -486,6 +486,7 @@ fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
 /// Welche Bereiche gerade im Fenster stehen.
 fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
     Sichtbarkeit {
+        erstes_dateifenster: steht_im(teiler, Bereich::Links),
         lesezeichen: steht_im(teiler, Bereich::Lesezeichen),
         zweites_dateifenster: steht_im(teiler, Bereich::Rechts),
         vorschau: steht_im(teiler, Bereich::Vorschau),

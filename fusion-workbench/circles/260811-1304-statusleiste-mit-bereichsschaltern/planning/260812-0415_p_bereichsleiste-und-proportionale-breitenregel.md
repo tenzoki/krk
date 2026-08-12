@@ -208,7 +208,7 @@ flowchart TD
    - Abnahme: `make check`. Kein Vordergrund.
    - Dependencies: Schritt 1 (`Zeilenmass`).
 
-3. **Das linke Dateifenster wird ausblendbar**
+3. [DONE] **Das linke Dateifenster wird ausblendbar**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/aufteilung.rs`, `crates/krk-core/tests/ablage.rs`
    - Changes:

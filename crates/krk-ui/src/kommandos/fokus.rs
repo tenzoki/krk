@@ -194,9 +194,12 @@ pub const BEIM_START: Fokus = Fokus::Dateifenster;
 /// hier, sondern beim Aufrufer: [`holt_hervor`] ist eine reine Zuordnung von
 /// einem Fokusziel auf einen Bereich und kennt keinen Zustand.
 ///
-/// Das aktive Dateifenster ist nie ausgeblendet: das linke laesst C7 gar nicht
-/// ausblenden, und mit dem rechten wandert die Aktivitaet auf das linke
+/// Das aktive Dateifenster ist nie ausgeblendet: eines der beiden bleibt
+/// stehen, und wird das aktive ausgeblendet, wandert die Aktivitaet auf das
+/// andere
 /// ([`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)).
+/// Beides gilt seit der Bereichsleisten-Runde fuer beide Dateifenster; bis
+/// dahin liess sich das linke gar nicht ausblenden.
 /// Fuer [`Fokus::Dateifenster`] ist deshalb nichts hervorzuholen, und
 /// [`Fokus::Anderswo`] ist kein Ziel eines Befehls, sondern ein Befund.
 pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {

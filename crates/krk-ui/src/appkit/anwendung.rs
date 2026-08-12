@@ -1380,11 +1380,11 @@ impl Anwendungsdelegierter {
     /// **Das aktive Dateifenster kommt hier ohne Ausnahme mit durch.**
     /// `bereich_mit_fokus` nennt es fuer [`Fokus::Dateifenster`], und
     /// [`Fenstermodell::einblenden`](crate::fenstermodell::Fenstermodell::einblenden)
-    /// liefert dafuer `false`, weil es nie ausgeblendet ist: das linke laesst
-    /// C7 gar nicht ausblenden, und mit dem rechten wandert die Aktivitaet auf
-    /// das linke. Bis zum 260809 stand hier `holt_hervor`, das genau deshalb
-    /// `None` lieferte; die Antwort ist dieselbe, und die Zuordnung steht jetzt
-    /// einmal statt zweimal.
+    /// liefert dafuer `false`, weil es nie ausgeblendet ist: eines der beiden
+    /// Dateifenster bleibt stehen, und wird das aktive ausgeblendet, wandert
+    /// die Aktivitaet auf das andere. Bis zum 260809 stand hier `holt_hervor`,
+    /// das genau deshalb `None` lieferte; die Antwort ist dieselbe, und die
+    /// Zuordnung steht jetzt einmal statt zweimal.
     ///
     /// "Ausgefuehrt" heisst hier: **irgendetwas** ist geschehen. Der Befehl auf
     /// eine ausgeblendete Leiste blendet sie ein, auch wenn der Fokus danach

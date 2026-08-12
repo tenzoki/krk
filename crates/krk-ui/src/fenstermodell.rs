@@ -44,13 +44,28 @@
 //! weicht — sie fiel allein daraus an, in welcher Reihenfolge die festen
 //! Bereiche bedient wurden.
 //!
-//! # Was das linke Dateifenster von den anderen unterscheidet
+//! # Eines bleibt: die Regel ueber die beiden Dateifenster
 //!
-//! Es laesst sich nicht ausblenden. C7 sichert zu, dass mindestens ein
-//! Dateifenster sichtbar bleibt, und [`Sichtbarkeit`] traegt deshalb gar kein
-//! Feld dafuer. [`Fenstermodell::umschalten`] weist einen Befehl auf
-//! [`Bereich::Links`] trotzdem ausdruecklich ab, statt sich auf die fehlende
-//! Belegung zu verlassen: die Zusage gehoert an die Stelle, die sie einloest.
+//! C7 sichert zu, dass mindestens ein Dateifenster sichtbar bleibt. **Welches
+//! von beiden, sagt die Zusage nicht**, und seit der Bereichsleisten-Runde tut
+//! es auch dieses Modell nicht mehr: beide gehen durch denselben Zweig von
+//! [`Fenstermodell::umschalten`], und abgewiesen wird der Befehl, der das
+//! **letzte sichtbare** ausblenden wuerde. Welcher Bereich ein Dateifenster
+//! ist, beantwortet [`Bereich::seite`] und keine zweite Aufzaehlung.
+//!
+//! Bis dahin war das linke besonders: es liess sich gar nicht ausblenden,
+//! [`Sichtbarkeit`] trug kein Feld dafuer, und `umschalten` wies jeden Befehl
+//! auf [`Bereich::Links`] ab. Der Nutzerentscheid vom 260812-0306
+//! (`decisions/260811-1305_*_traegt-das-linke-dateifenster-einen-schalter.md`)
+//! hat das aufgehoben, damit alle fuenf Schalter der Bereichsleiste dieselbe
+//! Bedeutung tragen; das fuenfte Feld ist der Preis.
+//!
+//! Die Regel steht an zwei Stellen, weil es zwei Wege zu ihr gibt: zur Laufzeit
+//! in [`Fenstermodell::umschalten`], und beim Start in
+//! [`Fenstermodell::aus_sitzung`] fuer eine von Hand geschriebene
+//! `session.toml`, die beide ausblendet. Die Abweisung gehoert dabei in dieses
+//! Modell und nicht in die Belegungsdatei: ein Klick in der Bereichsleiste ist
+//! ein Weg wie ein Tastenbefehl, und beide gehen hier hindurch.
 
 use std::path::PathBuf;
 
@@ -223,9 +238,7 @@ impl Bereich {
 pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
-        // C7 laesst das letzte Dateifenster nicht ausblenden, und
-        // `Sichtbarkeit` traegt deshalb kein Feld dafuer; siehe den Modulkopf.
-        Bereich::Links => true,
+        Bereich::Links => sichtbar.erstes_dateifenster,
         Bereich::Rechts => sichtbar.zweites_dateifenster,
         Bereich::Vorschau => sichtbar.vorschau,
         Bereich::Editor => sichtbar.editor,
@@ -247,11 +260,17 @@ pub struct Fenstermodell {
 impl Fenstermodell {
     /// Das Modell aus einer geladenen Sitzung.
     ///
-    /// **Zwei Zusicherungen werden hier hergestellt und nicht nur
+    /// **Drei Zusicherungen werden hier hergestellt und nicht nur
     /// unterstellt**, weil `session.toml` nach C7 zum Lesen und Aendern von
     /// Hand gedacht ist und `serde` jede Feldkombination anstandslos einliest.
-    /// Zur Laufzeit haelt [`Fenstermodell::umschalten`] beide; die Datei kommt
-    /// nicht von dort.
+    /// Zur Laufzeit haelt [`Fenstermodell::umschalten`] alle drei; die Datei
+    /// kommt nicht von dort.
+    ///
+    /// **Ein Dateifenster bleibt sichtbar.** Sind beide ausgeblendet, kommt das
+    /// linke hervor. Es ist die Regel "eines bleibt" aus dem Modulkopf, an dem
+    /// einen Weg, der nicht durch `umschalten` fuehrt; welches der beiden
+    /// hervorkommt, sagt die Zusage nicht, und die Wahl faellt auf das linke,
+    /// weil `Fensterseite::default` es ebenfalls waehlt.
     ///
     /// **Ein ausgeblendetes Dateifenster kann nicht das aktive sein.**
     /// `aktiv = "rechts"` neben `zweites_dateifenster = false` faende der
@@ -265,15 +284,25 @@ impl Fenstermodell {
     /// Dateifenstern Platz fuer nichts — dieselbe Wahl und dieselbe
     /// Begruendung, die `Sichtbarkeit::default` fuer den Auslieferungszustand
     /// trifft.
+    ///
+    /// **Die Reihenfolge der ersten beiden zaehlt.** Erst stehen die
+    /// Dateifenster fest, dann das aktive: die zweite Zusicherung schickt die
+    /// Aktivitaet auf das andere Dateifenster und braucht dafuer eines, das
+    /// sichtbar ist. Umgekehrt gerechnet koennte sie auf ein Fenster zeigen,
+    /// das die erste erst danach hervorholt — oder auf keines.
     pub fn aus_sitzung(sitzung: &Sitzung) -> Self {
         let mut modell = Self {
             aktiv: sitzung.aktiv,
             breiten: sitzung.breiten,
             sichtbar: sitzung.sichtbar,
         };
+        if !modell.sichtbar(Bereich::Links) && !modell.sichtbar(Bereich::Rechts) {
+            modell.sichtbar_setzen(Bereich::Links, true);
+        }
         if !modell.sichtbar(Bereich::von_seite(modell.aktiv)) {
-            // Das linke ist immer sichtbar, siehe den Modulkopf.
-            modell.aktiv = Fensterseite::Links;
+            // Das andere steht, weil die Zusicherung darueber eines
+            // hergestellt hat.
+            modell.aktiv = modell.aktiv.andere();
         }
         if modell.sichtbar(Bereich::Vorschau) {
             modell.gegenueber_raeumen(Bereich::Vorschau);
@@ -354,15 +383,14 @@ impl Fenstermodell {
     /// sie und nicht neben ihr; wer sie umgeht, hat eine zweite Wahrheit
     /// darueber, welche Bereiche stehen.
     ///
-    /// Fuer [`Bereich::Links`] geschieht nichts, und das ist kein
-    /// Auffangzweig: [`Sichtbarkeit`] traegt gar kein Feld fuer das linke
-    /// Dateifenster, weil C7 zusagt, dass mindestens eines sichtbar bleibt
-    /// (siehe den Modulkopf). Der Weg hierher ist ohnehin versperrt, weil
-    /// [`Self::umschalten`] den Bereich vorher abweist.
+    /// **Sie schreibt, was ihr gesagt wird, und prueft nichts.** Die Regel
+    /// "eines bleibt" haelt [`Self::umschalten`] vor dem Aufruf; hier stuende
+    /// sie ein zweites Mal, und [`Self::aus_sitzung`] koennte das letzte
+    /// Dateifenster dann nicht mehr hervorholen.
     fn sichtbar_setzen(&mut self, bereich: Bereich, sichtbar: bool) {
         match bereich {
             Bereich::Lesezeichen => self.sichtbar.lesezeichen = sichtbar,
-            Bereich::Links => {}
+            Bereich::Links => self.sichtbar.erstes_dateifenster = sichtbar,
             Bereich::Rechts => self.sichtbar.zweites_dateifenster = sichtbar,
             Bereich::Vorschau => self.sichtbar.vorschau = sichtbar,
             Bereich::Editor => self.sichtbar.editor = sichtbar,
@@ -391,7 +419,12 @@ impl Fenstermodell {
     /// ignoriert"), und zwei verschiedene Antworten auf zwei unmoegliche
     /// Sichtbarkeitsanforderungen waeren eine Fallunterscheidung ohne Grund:
     ///
-    /// 1. **Das letzte sichtbare Dateifenster bleibt stehen.**
+    /// 1. **Das letzte sichtbare Dateifenster bleibt stehen**, gleich welches
+    ///    der beiden es ist. Die Frage lautet nicht "ist es das linke", sondern
+    ///    "ist es ein Dateifenster, und steht das andere"; das erste
+    ///    beantwortet [`Bereich::seite`], das zweite die Sichtbarkeit des
+    ///    Gegenuebers. Seit der Bereichsleisten-Runde laesst sich auch das
+    ///    linke ausblenden, siehe den Modulkopf.
     /// 2. **Die Mindestbreiten muessen hineinpassen.** Wuerde die Summe der
     ///    Mindestbreiten der nach dem Umschalten sichtbaren Bereiche die dann
     ///    verfuegbare Breite uebersteigen, geschieht nichts; die Rechnung steht
@@ -431,21 +464,26 @@ impl Fenstermodell {
         if jetzt_sichtbar && !self.mindestbreiten_passen(bereich, mass) {
             return false;
         }
-        match bereich {
-            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => {
-                self.sichtbar_setzen(bereich, jetzt_sichtbar);
-            }
-            Bereich::Rechts => {
-                self.sichtbar_setzen(bereich, jetzt_sichtbar);
-                if !jetzt_sichtbar && self.aktiv == Fensterseite::Rechts {
-                    self.aktiv = Fensterseite::Links;
+        match bereich.seite() {
+            // Ein Dateifenster geht nur aus, solange das andere steht, und gibt
+            // die Aktivitaet an dieses ab. Beide gehen durch diesen einen
+            // Zweig; welcher Bereich ein Dateifenster ist, sagt
+            // `Bereich::seite`.
+            Some(seite) if !jetzt_sichtbar => {
+                if !self.sichtbar(Bereich::von_seite(seite.andere())) {
+                    return false;
+                }
+                self.sichtbar_setzen(bereich, false);
+                if self.aktiv == seite {
+                    self.aktiv = seite.andere();
                 }
             }
-            // Das letzte sichtbare Dateifenster. Kein ausgeliefertes Kuerzel
-            // fuehrt heute hierher; die Abweisung steht trotzdem hier und nicht
-            // in der Belegungsdatei, weil eine spaetere Belegung sie sonst
-            // umgehen koennte.
-            Bereich::Links => return false,
+            // Alles uebrige ist ein blosser Wechsel der Sichtbarkeit: ein
+            // Dateifenster, das eingeblendet wird, und jeder Bereich, der
+            // keines ist. Der Auffangzweig steht ueber `Option` und nicht ueber
+            // `Bereich`; die vollstaendige Fallunterscheidung darueber ist
+            // `Bereich::seite` und bleibt es.
+            _ => self.sichtbar_setzen(bereich, jetzt_sichtbar),
         }
         if jetzt_sichtbar {
             self.gegenueber_raeumen(bereich);
@@ -1017,6 +1055,16 @@ mod tests {
             "das aktive Dateifenster waere unsichtbar"
         );
 
+        // Dieselbe Zusicherung in der anderen Richtung, seit auch das linke
+        // Dateifenster sich ausblenden laesst.
+        let mut sitzung = Sitzung::default();
+        sitzung.sichtbar.erstes_dateifenster = false;
+        assert_eq!(
+            Fenstermodell::aus_sitzung(&sitzung).aktiv(),
+            Fensterseite::Rechts,
+            "das aktive Dateifenster waere unsichtbar"
+        );
+
         // Die Gegenprobe: ist es sichtbar, bleibt es das aktive.
         let sitzung = Sitzung {
             aktiv: Fensterseite::Rechts,
@@ -1028,23 +1076,117 @@ mod tests {
         );
     }
 
+    /// Eine von Hand geschriebene `session.toml`, die beide Dateifenster
+    /// ausblendet, geht mit einem sichtbaren linken auf.
+    ///
+    /// Die dritte hergestellte Zusicherung aus [`Fenstermodell::aus_sitzung`].
+    /// Sie ist der eine Weg zur Regel "eines bleibt", der nicht durch
+    /// [`Fenstermodell::umschalten`] fuehrt: `serde` liest jede Feldkombination
+    /// anstandslos ein, und ohne diese Zeile fuende der Nutzer ein Fenster ohne
+    /// Dateiliste vor.
+    ///
+    /// **Die Probe laeuft ueber beide Werte von `aktiv`**, weil daran die
+    /// Reihenfolge der Zusicherungen haengt: erst stehen die Dateifenster fest,
+    /// dann das aktive. Umgekehrt gerechnet bliebe `aktiv = "rechts"` auf einem
+    /// Dateifenster stehen, das niemand sieht.
     #[test]
-    fn das_letzte_dateifenster_laesst_sich_nicht_ausblenden() {
-        let mut modell = modell();
-        assert!(
-            !modell.umschalten(Bereich::Links, weit()),
-            "C7 verwirft diesen Befehl"
-        );
-        assert!(modell.sichtbar(Bereich::Links));
+    fn eine_sitzung_ohne_sichtbares_dateifenster_holt_das_linke_hervor() {
+        for aktiv in Fensterseite::ALLE {
+            let mut sitzung = Sitzung {
+                aktiv,
+                ..Sitzung::default()
+            };
+            sitzung.sichtbar.erstes_dateifenster = false;
+            sitzung.sichtbar.zweites_dateifenster = false;
+
+            let modell = Fenstermodell::aus_sitzung(&sitzung);
+
+            assert!(
+                modell.sichtbar(Bereich::Links),
+                "bei aktivem {aktiv:?} steht kein Dateifenster"
+            );
+            assert!(
+                !modell.sichtbar(Bereich::Rechts),
+                "hervorgeholt wird eines und nicht beide"
+            );
+            assert_eq!(
+                modell.aktiv(),
+                Fensterseite::Links,
+                "das aktive Dateifenster ist das hervorgeholte"
+            );
+        }
     }
 
+    /// Das letzte sichtbare Dateifenster bleibt stehen, gleich welches der
+    /// beiden es ist.
+    ///
+    /// **Beide Richtungen, weil die Regel seit der Bereichsleisten-Runde
+    /// "eines bleibt" heisst und nicht mehr "das linke ist besonders."** Bis
+    /// dahin wies `umschalten` jeden Befehl auf das linke ab; heute geht es
+    /// aus, solange das rechte steht, und dann ist das rechte das
+    /// unantastbare.
     #[test]
-    fn das_zweite_dateifenster_geht_aus_und_wieder_ein() {
-        let mut modell = modell();
-        assert!(modell.umschalten(Bereich::Rechts, weit()));
-        assert!(!modell.sichtbar(Bereich::Rechts));
-        assert!(modell.umschalten(Bereich::Rechts, weit()));
-        assert!(modell.sichtbar(Bereich::Rechts));
+    fn das_letzte_dateifenster_laesst_sich_nicht_ausblenden() {
+        for zuerst in [Bereich::Links, Bereich::Rechts] {
+            let zuletzt = if zuerst == Bereich::Links {
+                Bereich::Rechts
+            } else {
+                Bereich::Links
+            };
+            let mut modell = modell();
+            schalten(&mut modell, zuerst);
+            assert!(
+                !modell.sichtbar(zuerst),
+                "{zuerst:?} laesst sich ausblenden, solange {zuletzt:?} steht"
+            );
+            assert!(
+                !modell.umschalten(zuletzt, weit()),
+                "C7 verwirft den Befehl auf das letzte sichtbare Dateifenster"
+            );
+            assert!(modell.sichtbar(zuletzt), "{zuletzt:?} steht weiter");
+        }
+    }
+
+    /// Keine Folge von Umschaltbefehlen blendet beide Dateifenster aus.
+    ///
+    /// Die Gegenprobe zur Regel "eines bleibt" ueber alle Folgen bis zur Laenge
+    /// drei. Sie steht an der Stelle, an der bis zur Bereichsleisten-Runde
+    /// `das_letzte_dateifenster_ist_immer_schon_eingeblendet` stand: die alte
+    /// Zusage war "das linke steht immer", die neue ist diese.
+    #[test]
+    fn keine_folge_von_befehlen_blendet_beide_dateifenster_aus() {
+        let dateifenster = [Bereich::Links, Bereich::Rechts];
+        for erster in dateifenster {
+            for zweiter in dateifenster {
+                for dritter in dateifenster {
+                    let mut modell = modell();
+                    for bereich in [erster, zweiter, dritter] {
+                        let _ = modell.umschalten(bereich, weit());
+                        assert!(
+                            modell.sichtbar(Bereich::Links) || modell.sichtbar(Bereich::Rechts),
+                            "nach {erster:?}, {zweiter:?}, {dritter:?} steht kein Dateifenster mehr"
+                        );
+                        assert!(
+                            modell.sichtbar(Bereich::von_seite(modell.aktiv())),
+                            "das aktive Dateifenster ist ausgeblendet"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// Jedes der beiden Dateifenster geht aus und wieder ein, solange das
+    /// andere steht.
+    #[test]
+    fn jedes_dateifenster_geht_aus_und_wieder_ein() {
+        for bereich in [Bereich::Links, Bereich::Rechts] {
+            let mut modell = modell();
+            assert!(modell.umschalten(bereich, weit()));
+            assert!(!modell.sichtbar(bereich));
+            assert!(modell.umschalten(bereich, weit()));
+            assert!(modell.sichtbar(bereich));
+        }
     }
 
     /// Bei 780 Punkten Fensterbreite laesst sich der Editor nicht
@@ -1116,7 +1258,12 @@ mod tests {
     /// widersprechendes ueber denselben Bereich.
     #[test]
     fn das_einblenden_holt_hervor_und_blendet_nie_aus() {
-        for bereich in [Bereich::Lesezeichen, Bereich::Vorschau, Bereich::Rechts] {
+        for bereich in [
+            Bereich::Lesezeichen,
+            Bereich::Vorschau,
+            Bereich::Links,
+            Bereich::Rechts,
+        ] {
             let mut modell = modell();
             assert!(
                 modell.sichtbar(bereich),
@@ -1138,31 +1285,31 @@ mod tests {
         }
     }
 
-    /// Das linke Dateifenster ist nie ausgeblendet, und deshalb hat der
-    /// Fokusbefehl dorthin nichts hervorzuholen.
+    /// Wird das aktive Dateifenster ausgeblendet, wandert die Aktivitaet auf
+    /// das andere — in beide Richtungen.
+    ///
+    /// Bis zur Bereichsleisten-Runde stand hier nur die eine Richtung, weil
+    /// das linke Dateifenster sich nicht ausblenden liess.
     #[test]
-    fn das_letzte_dateifenster_ist_immer_schon_eingeblendet() {
-        let mut modell = modell();
-        assert!(modell.sichtbar(Bereich::Links));
-        assert!(!modell.einblenden(Bereich::Links, weit()));
-        assert!(modell.sichtbar(Bereich::Links));
-    }
+    fn das_ausblenden_gibt_die_aktivitaet_an_das_andere_dateifenster() {
+        for seite in Fensterseite::ALLE {
+            let mut modell = modell();
+            if modell.aktiv() != seite {
+                assert!(modell.fenster_wechseln());
+            }
+            assert_eq!(modell.aktiv(), seite);
 
-    #[test]
-    fn das_ausblenden_holt_die_aktivitaet_zurueck_nach_links() {
-        let mut modell = modell();
-        assert!(modell.fenster_wechseln());
-        assert_eq!(modell.aktiv(), Fensterseite::Rechts);
-        schalten(&mut modell, Bereich::Rechts);
-        assert_eq!(
-            modell.aktiv(),
-            Fensterseite::Links,
-            "ein ausgeblendetes Dateifenster kann nicht das aktive sein"
-        );
-        assert!(
-            !modell.fenster_wechseln(),
-            "und der Wechsel dorthin geschieht nicht"
-        );
+            schalten(&mut modell, Bereich::von_seite(seite));
+            assert_eq!(
+                modell.aktiv(),
+                seite.andere(),
+                "ein ausgeblendetes Dateifenster kann nicht das aktive sein"
+            );
+            assert!(
+                !modell.fenster_wechseln(),
+                "und der Wechsel dorthin geschieht nicht"
+            );
+        }
     }
 
     /// Eine gespeicherte Breite ueberlebt das Ausblenden, und das
