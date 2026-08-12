@@ -85,3 +85,63 @@ verschiedene Merkzeichen nebeneinander. Kein Absturz und keine falsche
 Auskunft über den Inhalt.
 
 **Herkunft:** Circle der Runde 6, Turn 4, `c35f8b1`.
+
+---
+
+**Resolved 260812** — der wörtliche Zweig in `Zerlegung::schliessen` greift
+jetzt nur noch, wenn der Quellbereich des Punktes **mehr** trägt als sein
+Merkzeichen. Trägt er nichts weiter, wird der Wunsch eingelöst, und alle drei
+Dinge des Datensatzes fallen mit einem Griff weg.
+
+**Der Zuschnitt ist der, den der Datensatz nicht gewählt hat, und er ist
+mechanisch entscheidbar.** Der Datensatz hielt offen, „ob diese Frage
+mechanisch entscheidbar ist, ohne die Merkzeichenlängen der Quelle zu
+vermessen". Sie ist es, und ohne zu messen: der Quellbereich eines Punktes
+fängt bei seinem Merkzeichen an, und CommonMark lässt darauf Leerraum oder das
+Zeilenende folgen. Das erste durch Leerraum abgetrennte Stück ist deshalb
+**immer** das Merkzeichen und nie etwas anderes. Gefragt ist allein, ob
+dahinter noch eines kommt — eine Frage und keine Aufzählung der
+Merkzeichenformen, und `-`, `*`, `+`, `1.`, `1)` müssen nirgends aufgezählt
+werden. Die Funktion heißt `traegt_nur_sein_merkzeichen` und ist eine Zeile.
+
+**Alle sechs gemessenen Fälle, am Baum nachgemessen:**
+
+```
+"- \n"            -> "• "              Listenzeile{1} ueber "• "
+"-\n"             -> "• "              Listenzeile{1} ueber "• "
+"- eins\n- \n"    -> "• eins\n• "      zwei Listenzeilen, ein Merkzeichen
+"- \n- zwei\n"    -> "• \n• zwei"
+"- \n\nAbsatz\n"  -> "• \n\nAbsatz"
+"- -\n"           -> "• • "            Listenzeile{1} "• • ", Listenzeile{2} "• "
+```
+
+Alle drei Punkte des Datensatzes sind damit erledigt: das rohe Zeichen ist weg,
+der Zeilenumbruch der Quelle kommt nicht mehr mit (der Abstand ist wieder der
+aus `absetzen`), und die `Listenzeile` steht da, also rückt die Zeile ein.
+
+**Die Gegenseite bleibt unangetastet.** Ein Punkt, der eine Verweisdefinition
+trägt, steht weiterhin wörtlich da — so, wie es
+`260812-1920_c_die-deckungszusage-gilt-nicht-innerhalb-eines-elements-das-zeichen-geliefert-hat.md`
+entschieden hat, und die Probe
+`ein_punkt_ohne_ein_einziges_zeichen_bleibt_als_sein_quelltext_stehen` läuft
+unverändert durch. Die Grenze zwischen beiden Seiten ist jetzt selbst gemessen.
+
+**Vier neue Proben in `crates/krk-ui/src/markdown.rs`**, gegen den Zustand vor
+der Behebung gegengeprüft (der Zweig wurde probeweise abgeschaltet, drei davon
+schlugen fehl):
+
+- `ein_punkt_ohne_jeden_inhalt_zeigt_sein_gerendertes_merkzeichen`
+  (`- `, `-`, `*`, `+` und die Nummer, je mit Bereich der Listenzeile),
+- `ein_leerer_punkt_traegt_dasselbe_merkzeichen_wie_seine_nachbarn`
+  (die drei Listen-Fälle samt dem Abstand zum Absatz danach),
+- `zwei_leere_punkte_uebereinander_tragen_beide_ihr_merkzeichen`
+  (die Staffelung der Bereiche wie bei einem Punkt mit Text),
+- `der_leere_punkt_und_der_woertliche_zweig_trennen_sich_am_inhalt`
+  (die Grenze selbst, von beiden Seiten, samt der Gegenseite aus 260812-1920).
+
+Der Modulkopf trägt die Regel unter „Wo die Deckung endet"; der frühere Satz,
+ein Punkt ohne jeden Inhalt gebe sein `- ` heraus, ist berichtigt.
+
+Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+— alle vier Exit 0. Das Binärziel `krk` steht bei 478 Proben statt 466.

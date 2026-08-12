@@ -172,6 +172,8 @@ Was diese Runde ihm **nicht** vorwegnimmt: sie zeigt keinen Web-Inhalt, öffnet 
 
 - Turn 3 (Sitzung 260812-1055): Commits 94a81bd..f401dcc, vier davon in diesem Turn (a9e1149, 23e7311, df4ec00, f401dcc). Ein Reparatur-Turn ohne Planschritte: der Inhaltsverlust der Markdown-Zerlegung, die Listen ohne Merkzeichen und Tiefe, die Statuszeile mit dem ausgeblendeten Dateifenster, und die Ruecknahme von Schritt 11 zugunsten eines Kurzhinweises. Coherence-Urteil: ok. Durchsicht: reviews/260812-1920-coderev-turn-3-der-runde-6.md, Bereich 94a81bd..df4ec00, sechs Defekte, darunter eine Verschlechterung dieses Turns. Grundlage: der Umfang der Vorschau ist um verschachtelte Listen erweitert (260812-1000 auf _s_, 260812-1851 auf _i_), der Kurzhinweis umgesetzt (260812-1809 auf _i_). Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
 
+- Turn 4 (Sitzung 260812-1055): Commits f401dcc..1e4e01f, drei davon in diesem Turn (c6bf13d, c35f8b1, 1e4e01f). Reparatur-Turn: die lose Liste, die Deckung im Container, und die Buchfuehrung (Sternform in den Rueckverweisen, doppelte Fuehrung derselben Restarbeit). Coherence-Urteil: ok. Durchsicht: reviews/260812-2019-coderev-turn-4-der-runde-6.md, Bereich f401dcc..c35f8b1, sechs Defekte, darunter erneut eine Verschlechterung dieses Turns: das Merkzeichen liegt im Bereich des ersten Kindes. Der Nutzer hat entschieden, das Turn-Budget zu erhoehen und reparieren zu lassen. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
+
 ## Activation proposal
 
 **Vorgeschlagen am:** 260812-1027

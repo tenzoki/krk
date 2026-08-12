@@ -155,3 +155,35 @@ mechanisch zu haben.
 Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
 `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
 — alle vier Exit 0. Das Binaerziel `krk` steht bei 466 Proben statt 457.
+
+---
+
+**Nachtrag 260812-2140 zur Abschlussnotiz: die Aufzählung heißt `Inhaltsart`
+und nicht `Inhalt`.** Die Notiz darüber nennt sie an sechs Stellen `Inhalt`
+und ihre Werte `Inhalt::Bloecke` und `Inhalt::Zeichen`. Im Baum heißt sie seit
+`c35f8b1` `Inhaltsart`, und der Name trägt sein `-art` aus einem genannten
+Grund: `crate::vorschaumodell::Inhalt` bezeichnet in derselben Kiste etwas
+anderes, nämlich die Art dessen, was die Vorschau anzeigt. Wer im Text oben
+nach `Inhalt` greift, landet beim falschen Typ. Zu lesen ist überall
+`Inhaltsart`, `Inhaltsart::Bloecke` und `Inhaltsart::Zeichen`.
+
+Der Text der Notiz bleibt stehen, wie er geschrieben wurde: dieser Datensatz
+ist die Aufzeichnung eines Standes, und `CLAUDE.md` hält solche Aufzeichnungen
+unverändert. Berichtigt wird deshalb hier und nicht dort.
+
+**Zwei Sätze der Notiz haben sich seither überholt**, und zwar durch die
+Behebung von `260812-2019_c_ein-leerer-listenpunkt-zeigt-sein-rohes-bindestrich-zeichen-und-verliert-seinen-einzug.md`:
+
+- „Der erste kommt nicht aus der neuen Regel, sondern aus dem aufgeschobenen
+  Merkzeichen … Ein noch ausstehendes Merkzeichen fällt mit dem Punkt weg" —
+  das gilt weiterhin für einen Punkt, dessen Quellbereich mehr trägt als sein
+  Merkzeichen. Trägt er nichts weiter, wird der Wunsch jetzt doch eingelöst,
+  und ein leerer Punkt steht als `• ` da statt als rohes `- `.
+- „wer die Grenze verschieben will, braucht eine Regel, die das Merkzeichen
+  des Containers vom Quelltext davor trennt, und die ist nicht mechanisch zu
+  haben" — für den Fall, dass hinter dem Merkzeichen **nichts** steht, ist sie
+  mechanisch zu haben und steht als `traegt_nur_sein_merkzeichen` im Baum. Für
+  einen Punkt mit Inhalt gilt der Satz unverändert.
+
+Die beiden oben gemessenen Ausgaben dieses Datensatzes sind davon nicht
+betroffen und stehen unverändert.

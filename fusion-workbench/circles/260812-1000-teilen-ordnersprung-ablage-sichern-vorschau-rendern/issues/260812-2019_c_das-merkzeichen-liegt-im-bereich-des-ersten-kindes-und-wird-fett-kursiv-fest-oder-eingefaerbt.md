@@ -113,3 +113,72 @@ Schleife läuft ohnehin über `self.offen`.
 **Herkunft:** Circle der Runde 6, Turn 4, `c35f8b1` (Behebung von
 `260812-1920_c_in-einer-losen-liste-steht-das-merkzeichen-allein-auf-seiner-zeile.md`,
 Zuschnitt 2).
+
+---
+
+**Resolved 260812** — `Zerlegung::merkzeichen_einloesen` zieht den `Offen::anfang`
+jetzt nach, und zwar für die **inneren** Einträge und nur für sie.
+
+**Die Behebung an einer Stelle.** Das Einlösen läuft nicht mehr über eine
+gesammelte Zeichenkette, sondern Punkt für Punkt: wird das Merkzeichen des
+Eintrags auf Stufe `n` geschrieben, so rücken alle Einträge hinter `n` nach,
+deren `anfang` noch auf der Stelle davor steht. Der Punkt selbst und alles
+außerhalb von ihm behalten ihren Anfang, denn das Merkzeichen gehört ihm und
+der Einzug seiner Listenzeile soll es mitnehmen. Genau darin unterscheidet
+sich der Nachzug von dem in `absetzen`, wo der Abstand keinem der offenen
+Elemente gehört und deshalb **alle** nachrücken — der Datensatz hat das
+vorhergesagt, und es hat sich beim Bauen bestätigt.
+
+**Alle acht gemessenen Fälle, am Baum nachgemessen** (dieselbe Auflösung in
+UTF-16 wie in der Messung oben):
+
+```
+"- **fett**\n"                  StarkeBetonung  -> "fett"     Listenzeile{1} -> "• fett"
+"- *kursiv*\n"                  Betonung        -> "kursiv"   Listenzeile{1} -> "• kursiv"
+"- `code`\n"                    FesteSchrift    -> "code"     Listenzeile{1} -> "• code"
+"- [Link](http://a.example)\n"  Einfaerbung     -> "Link"     Listenzeile{1} -> "• Link"
+"- # Titel\n"                   Ueberschrift{1} -> "Titel"    Listenzeile{1} -> "• Titel"
+"- ```\n  code\n  ```\n"        FesteSchrift    -> "code\n"   Listenzeile{1} -> "• code\n"
+"1. **fett**\n"                 StarkeBetonung  -> "fett"     Listenzeile{1} -> "1. fett"
+"- - **fett**\n"                StarkeBetonung  -> "fett"     Listenzeile{1} -> "• • fett"
+                                                              Listenzeile{2} -> "• fett"
+```
+
+Der Ausgabetext ist in allen acht unverändert; falsch war allein der Bereich.
+Das ist der Grund, aus dem der Defekt durch 38 Proben hindurchging, und der
+Grund, aus dem die neuen Proben **Bereiche** festschreiben und nicht Text.
+
+**Sechs neue Proben in `crates/krk-ui/src/markdown.rs`**, alle gegen den
+Zustand vor der Behebung gegengeprüft — der Nachzug wurde probeweise wieder
+herausgenommen, und genau diese sieben Proben schlugen fehl:
+
+- `eine_auszeichnung_am_anfang_eines_punktes_deckt_das_merkzeichen_nicht`
+  (fünf Auszeichnungsarten in einer Tabelle, je Bereich **und** Listenzeile),
+- `ein_verweis_am_anfang_eines_punktes_faerbt_das_merkzeichen_nicht`
+  (die Einfärbung, die als einzige keine `Auszeichnung` ist),
+- `eine_nummer_am_anfang_eines_punktes_wird_nicht_mit_ausgezeichnet`,
+- `zwei_merkzeichen_liegen_gestaffelt_ausserhalb_der_auszeichnung`
+  (`- - **fett**`: der äußere Punkt nimmt beide mit, der innere seines, die
+  starke Betonung keines),
+- `eine_lose_liste_haelt_ihre_auszeichnung_hinter_dem_merkzeichen`
+  (die lose Liste ist die Form, die Turn 3 übersehen hat, die Auszeichnung am
+  Anfang die, die Turn 4 übersehen hat — beide zusammen in einer Probe),
+- `kein_merkzeichen_liegt_im_bereich_eines_stueckes`.
+
+**Die letzte ist der Gurt um die ganze Klasse und nicht ein weiterer Fall.**
+Sie läuft über dreizehn Quellen und verlangt, dass **kein** Bereich, der kein
+Absatzmerkmal ist, mit einem gerenderten Merkzeichen beginnt — weder mit dem
+`• ` noch mit einer Nummer samt Punkt und Leerzeichen. Nur
+`Auszeichnung::Listenzeile` darf es, denn ihr gilt der Einzug. Diese Probe
+hätte den Defekt gefangen, ohne dass jemand den einzelnen Fall hätte nennen
+müssen; das ist die Lehre aus zwei Turns, die je eine Verschlechterung
+eingeschleppt haben, weil keine Probe den betroffenen Fall maß.
+
+**Der Modulkopf sagt die Regel jetzt in Worten** („Das Merkzeichen gehört
+seinem Punkt und nicht seinem ersten Kind"), samt dem Unterschied zum Nachzug
+in `absetzen`; derselbe Text steht am Doc-Kommentar von
+`merkzeichen_einloesen`.
+
+Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+— alle vier Exit 0. Das Binärziel `krk` steht bei 478 Proben statt 466.

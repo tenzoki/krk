@@ -59,3 +59,34 @@ Verweis und den Quelltext in der Zeile, alles Übrige geht über
 fehlende Sperre für die nächste Variante.
 
 **Herkunft:** Circle der Runde 6, Turn 4, `c35f8b1`.
+
+---
+
+**Resolved 260812** — die beiden `matches!` sind weg. An ihre Stelle tritt
+`Inhaltsart::deckt_luecken`, eine Methode mit erschöpfendem `match` und ohne
+Auffangzweig; das ist der Zuschnitt, den der Datensatz vorgeschlagen hat.
+
+```rust
+fn deckt_luecken(&self) -> bool {
+    match self {
+        Inhaltsart::Bloecke => true,
+        Inhaltsart::Zeichen => false,
+    }
+}
+```
+
+`luecke_bis` und `schliessen` rufen sie. Aus zwei Lesestellen ist damit eine
+Entscheidung geworden, und eine dritte Variante hält den Bau an, statt still
+als „nicht gedeckt" durchzulaufen — der Mechanismus, den `CLAUDE.md` unter
+„Was man nicht sieht" für die gewachsenen Aufzählungen beschreibt und den
+`Auszeichnung` in `hervorhebung.rs` zusagt.
+
+**Belegt ist es vom Bau und nicht von einer Probe**, und das ist hier die
+richtige Prüfung: eine Probe kann nicht messen, dass eine Variante, die es
+nicht gibt, den Übersetzer anhielte. Der Doc-Kommentar der Methode nennt den
+Grund und den Anlass — die Fußnotendefinition und die Definitionsliste, die
+`Options::empty()` heute abschaltet.
+
+Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+— alle vier Exit 0.

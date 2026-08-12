@@ -52,3 +52,32 @@ fehlgeschlagenen `grep` und führt ihn auf `vorschaumodell::Inhalt`.
 
 **Herkunft:** Circle der Runde 6, Turn 4; aufgefallen beim Abgleich der
 geschlossenen Datensätze gegen den Baum.
+
+---
+
+**Resolved 260812** — berichtigt, aber nicht so, wie der Datensatz es unter
+„Was zu tun ist" vorschlug.
+
+Der Vorschlag lautete, „die sechs Stellen der Abschlussnotiz auf `Inhaltsart`
+zu ziehen", also den Text zu ändern. Das ist nicht getan. Ein Defektdatensatz
+ist die Aufzeichnung eines Standes, und `CLAUDE.md` hält fest, dass solche
+Aufzeichnungen stehen bleiben — die Ortsregel nennt `issues/` ausdrücklich.
+Sie gilt der ganzen Datei nach ihrem Ort und nicht dem einzelnen Absatz; wer
+in einer Abschlussnotiz sechs Namen austauscht, macht aus einer Aufzeichnung
+eine Fassung und nimmt dem nächsten Leser die Möglichkeit zu sehen, was
+damals dastand.
+
+Statt dessen trägt
+`260812-1920_c_die-deckungszusage-gilt-nicht-innerhalb-eines-elements-das-zeichen-geliefert-hat.md`
+jetzt einen datierten Nachtrag am Ende: er nennt den richtigen Namen, den
+Grund für das `-art`, den Typ, mit dem `Inhalt` zu verwechseln wäre, und sagt,
+dass überall `Inhaltsart` zu lesen ist. Der Nachtrag hält daneben fest, welche
+zwei Sätze jener Notiz sich durch die Behebungen dieses Turns überholt haben —
+das war nicht Gegenstand dieses Datensatzes, fiel aber beim Abgleich derselben
+Notiz gegen den Baum an und wäre sonst der nächste Fehlbefund.
+
+**Am Baum ist nichts zu ändern.** `Inhaltsart` heißt schon so, und ihr
+Doc-Kommentar nennt die Verwechslungsgefahr; die Aufzählung hat mit diesem
+Turn eine Methode `deckt_luecken` bekommen
+(`260812-2019_c_die-aufzaehlung-inhaltsart-wird-nur-ueber-matches-gelesen-und-haelt-den-bau-nicht-an.md`),
+die den Namen ein weiteres Mal trägt.
