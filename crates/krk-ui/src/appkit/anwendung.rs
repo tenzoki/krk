@@ -213,6 +213,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck};
 
+use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
@@ -2214,6 +2215,13 @@ impl Anwendungsdelegierter {
             // Fokus in der Leiste und im Editor an, wo `bereichskommando`
             // keinen Tab zu schliessen wuesste.
             Kommando::TabSchliessen => self.tab_schliessen(fokus),
+            // Der Ordnersprung aus C2 der Runde 6. Er steht hier und nicht bei
+            // `bereichskommando`, aus demselben Grund wie `cmd+w` darueber: er
+            // traegt `Wirkungsbereich::Ueberall` und nimmt seine Quelle aus
+            // der Vorschau oder dem Editor, sein Ziel aber aus dem aktiven
+            // Dateifenster. Ein einzelnes Dateifenster kommt an beide Quellen
+            // nicht heran.
+            Kommando::OrdnerDerDatei => self.ordner_der_datei_zeigen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -2319,6 +2327,81 @@ impl Anwendungsdelegierter {
                 true
             }
         }
+    }
+
+    /// Zeigt den Ordner der angezeigten Datei im aktiven Dateifenster, mit der
+    /// Auswahl auf dieser Datei (C2 der Runde 6).
+    ///
+    /// **Die vier Eingaben stehen hier, die Rechnung darueber nicht.** Welche
+    /// Datei "die angezeigte" ist, beantwortet [`angezeigtedatei::welche`]
+    /// ohne AppKit und damit ohne Fenster pruefbar; diese Stelle liest die
+    /// Sichtbarkeit aus dem Fenstermodell und die beiden Pfade aus den
+    /// Bereichen, die sie halten. Das Teilen aus C1 fragt dieselbe Funktion,
+    /// und eine zweite Rechnung daneben gaebe zwei Antworten auf eine Frage.
+    ///
+    /// **Der Sprung geht durch `DateifensterQuelle::ordner_lesen`** und wird deren
+    /// dritter Aufrufer neben dem Aufstieg aus C2 der Runde 1 und dem Sprung
+    /// aus der Zwischenablage aus C10. Er wechselt den Ordner des **aktiven
+    /// Tabs** und oeffnet keinen neuen; die Navigation dieses Programms behaelt
+    /// damit ihre eine Regel.
+    ///
+    /// **Ob die Datei im Zielordner noch steht, wird nicht geprueft.** Der
+    /// Wunschname geht an den Lesevorgang; findet der ihn nicht, bleibt die
+    /// Auswahl, wo sie ohne Wunschnamen bliebe. Eine Pruefung davor waere ein
+    /// zweiter Zugriff auf die Platte fuer eine Frage, die der Lesevorgang
+    /// ohnehin beantwortet (C2, sechstes Kriterium).
+    ///
+    /// Liefert immer `true`, wie [`Self::terminal_oeffnen`]: der Befehl war
+    /// zustaendig, auch wenn er nur etwas zu melden hatte.
+    fn ordner_der_datei_zeigen(&self) -> bool {
+        let (aktiv, vorschau_sichtbar, editor_sichtbar) = {
+            let modell = self.ivars().modell.borrow();
+            (
+                modell.aktiv(),
+                modell.sichtbar(Bereich::Vorschau),
+                modell.sichtbar(Bereich::Editor),
+            )
+        };
+        let vorschau_pfad = self
+            .ivars()
+            .vorschau
+            .get()
+            .and_then(|vorschau| vorschau.angezeigter_pfad());
+        let editor_pfad = self.ivars().editor.get().and_then(|editor| editor.pfad());
+        let Some(datei) = angezeigtedatei::welche(
+            vorschau_sichtbar,
+            vorschau_pfad,
+            editor_sichtbar,
+            editor_pfad,
+        ) else {
+            // Der Satz nennt das Ergebnis und nicht die Ursache: er stimmt
+            // ebenso fuer den Nutzer, der den Editor abgeschaltet hat, wie
+            // fuer den, dessen Vorschau nichts zeigt (C2, fuenftes
+            // Kriterium).
+            self.antwort_zeigen(
+                aktiv,
+                "keine angezeigte Datei, zu der gesprungen werden könnte",
+            );
+            return true;
+        };
+        // Ein Pfad ohne Elternteil ist die Wurzel selbst: der Ordner der Datei
+        // `/x` ist `/`. `Path::parent` liefert dafuer `None`, und das ist kein
+        // Fehler, sondern das Ende des Aufstiegs — eine Meldung waere hier
+        // falsch. Der Wunschname faellt in diesem Fall weg, weil es keinen
+        // Eintrag gibt, auf den die Auswahl springen koennte.
+        let (ordner, auswahl) = match datei.parent() {
+            Some(eltern) => (
+                eltern.to_path_buf(),
+                datei
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned()),
+            ),
+            None => (datei.clone(), None),
+        };
+        self.dateifenster(aktiv)
+            .quelle()
+            .ordner_lesen(&ordner, auswahl);
+        true
     }
 
     // ------------------------------------------------------------------

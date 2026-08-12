@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/tabs.rs:508` (`ordner_setzen`, zweiter Parameter `auswahl`); `crates/krk-ui/src/appkit/tabelle.rs:628` (`ordner_lesen`); C2 der Runde 1 (Aufstieg) und C10 der Runde 1 (Sprung aus der Zwischenablage), die beide denselben Parameter benutzen
 
@@ -59,6 +59,6 @@ Buendel, ist es ein eigener kleiner Nachtrag.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/anwendung.rs:2392-2403` (der Dateiname geht als Wunschauswahl an `ordner_lesen`, wie beim Aufstieg aus C2 und beim Sprung aus der Zwischenablage; kein Blaettern in den sichtbaren Bereich) — Schritt 3 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

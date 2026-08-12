@@ -318,6 +318,14 @@ pub enum Kommando {
     Oeffnen,
     /// In den uebergeordneten Ordner aufsteigen (C2).
     OrdnerAufwaerts,
+    /// Den Ordner der angezeigten Datei im aktiven Dateifenster zeigen, mit
+    /// der Auswahl auf dieser Datei (C2 der Runde 6).
+    ///
+    /// "Die angezeigte Datei" ist die der sichtbaren Vorschau, sonst die des
+    /// sichtbaren Editors; die Rechnung dazu steht in `krk-ui` unter
+    /// `angezeigtedatei::welche` und nicht hier, weil sie die Sichtbarkeit von
+    /// Bereichen braucht, die der Kern nicht kennt.
+    OrdnerDerDatei,
     /// Einen Pfad eingeben und dorthin springen (C2).
     Pfadeingabe,
     /// Den Eintrag unter der Auswahl markieren und weiterruecken (C2).
@@ -543,7 +551,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 73] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 74] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -552,6 +560,7 @@ impl Kommando {
         (Kommando::Listenende, "listenende"),
         (Kommando::Oeffnen, "oeffnen"),
         (Kommando::OrdnerAufwaerts, "ordner_aufwaerts"),
+        (Kommando::OrdnerDerDatei, "ordner_der_datei"),
         (Kommando::Pfadeingabe, "pfadeingabe"),
         (Kommando::MarkierungUmschalten, "markierung_umschalten"),
         (Kommando::AlleMarkieren, "alle_markieren"),
@@ -678,6 +687,11 @@ impl Kommando {
     /// [`Kommando::TabSchliessen`] hat den Zweig der Tabbefehle verlassen und
     /// traegt seither [`Wirkungsbereich::Ueberall`]. Der Grund steht als
     /// Kommentar an seinem Zweig.
+    ///
+    /// **Ein vierter kommt mit C2 der Runde 6 dazu:**
+    /// [`Kommando::OrdnerDerDatei`] traegt [`Wirkungsbereich::Ueberall`], weil
+    /// seine Quelle die angezeigte Datei ist und nicht der Fokus. Der Grund
+    /// steht ebenfalls als Kommentar an seinem Zweig.
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
@@ -802,6 +816,21 @@ impl Kommando {
             // ist ein Blatt und kein Fenster — bleibt `cmd+w` damit
             // wirkungslos, und `esc` bleibt der Weg heraus.
             Kommando::TabSchliessen => Wirkungsbereich::Ueberall,
+            // Der Ordnersprung aus C2 der Runde 6, aus derselben Erwaegung
+            // wie `tab_schliessen` darueber: **seine Quelle haengt nicht am
+            // Fokus, und sein Ziel gibt es immer.** Woher der Pfad kommt,
+            // beantwortet `angezeigtedatei::welche` aus der Sichtbarkeit von
+            // Vorschau und Editor, und wo der Ordner erscheint, ist das aktive
+            // Dateifenster. Mit `Wirkungsbereich::Dateifenster` waere der
+            // Befehl genau dort abgewiesen, wo er am meisten taugt: mit dem
+            // Fokus in der Vorschau oder im Editor, also vor der Datei, um
+            // deren Ordner es geht.
+            //
+            // Gibt es keine angezeigte Datei, wirkt der Befehl trotzdem und
+            // meldet es (C2, fuenftes Kriterium); der Wirkungsbereich
+            // entscheidet, ob eine Taste durchkommt, und nicht, ob sie etwas
+            // findet.
+            Kommando::OrdnerDerDatei => Wirkungsbereich::Ueberall,
             // Alles, was ein Dateifenster ausfuehrt: Bewegung ueber die Liste
             // hinaus, Navigation, Markierung, Sortierung, die Dateioperationen
             // aus C4, die beiden Zwischenablage-Befehle aus C10

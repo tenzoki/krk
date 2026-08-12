@@ -309,7 +309,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: **nicht `make check`.** Grün sein müssen `cargo build --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` und `cargo test -p krk-core`. Rot ist `cargo test -p krk-ui`, und zwar an `jede_kennung_hat_einen_funktionsbereich` und an den Proben der Belegungsansicht und der Markdown-Ausgabe, die über alle Kennungen laufen; jede Fehlermeldung nennt `ordner_der_datei`. Schritt 3 macht sie wieder grün. Kein Vordergrund.
    - Dependencies: keine.
 
-3. **Der Sprung in den Ordner der angezeigten Datei**
+3. [DONE] **Der Sprung in den Ordner der angezeigten Datei**
    - Executor: `coder`
    - Files: neu `crates/krk-ui/src/angezeigtedatei.rs`, `crates/krk-ui/src/main.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

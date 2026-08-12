@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/tabs.rs:508` (`ordner_setzen`, wechselt den sichtbaren Tab); `crates/krk-ui/src/tabs.rs:463` (`oeffnen`, legt einen Tab an); `crates/krk-ui/src/appkit/tabelle.rs:628` (`ordner_lesen`, die Hülle darum)
 
@@ -60,6 +60,6 @@ loest ein Problem, das der Nutzer nicht gemeldet hat.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/anwendung.rs:2403` (`ordner_der_datei_zeigen` ruft `DateifensterQuelle::ordner_lesen` am aktiven Dateifenster und damit im sichtbaren Tab; kein `tab_neu` auf dem Weg) — Schritt 3 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

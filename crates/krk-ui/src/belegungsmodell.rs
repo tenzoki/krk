@@ -177,6 +177,12 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::Listenende
         | Kommando::Oeffnen
         | Kommando::OrdnerAufwaerts
+        // Der Ordnersprung aus C2 der Runde 6 steht neben dem Aufstieg und dem
+        // Sprung aus der Zwischenablage: alle drei setzen den Ordner, den eine
+        // Dateiliste zeigt. Dass seine Quelle aus einem anderen Bereich kommt,
+        // macht keinen zweiten Ort auf — diese Gliederung fragt nach der
+        // Gegend der Anwendung, und die ist die Dateiliste, die sich bewegt.
+        | Kommando::OrdnerDerDatei
         | Kommando::Pfadeingabe
         | Kommando::MarkierungUmschalten
         | Kommando::AlleMarkieren
@@ -1029,6 +1035,30 @@ mod tests {
                 "{kennung} steht im falschen Abschnitt"
             );
         }
+    }
+
+    /// Der Ordnersprung aus C2 der Runde 6 steht unter "Dateilisting".
+    ///
+    /// Die Zuordnung ist eine Wahl und keine Ableitung: der Befehl traegt
+    /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+    /// nimmt seine Quelle aus der Vorschau oder dem Editor, koennte nach dem
+    /// Fokus also ebensogut dort stehen. Die Gliederung fragt nach der Gegend
+    /// der Anwendung, und bewegt wird eine Dateiliste.
+    #[test]
+    fn der_ordnersprung_steht_unter_dateilisting() {
+        assert_eq!(
+            bereich("ordner_der_datei"),
+            Some(Funktionsbereich::Dateilisting),
+            "der Ordnersprung steht nicht beim Dateilisting"
+        );
+        let belegung = Belegung::auslieferung();
+        let funktion = belegung
+            .funktion("ordner_der_datei")
+            .expect("die Auslieferungsbelegung kennt ordner_der_datei");
+        assert!(
+            !funktion.tasten().is_empty(),
+            "der Ordnersprung traegt ab Werk keine Kombination und erschiene damit in keiner Zeile"
+        );
     }
 
     /// Jede der dreizehn Kennungen, die S6 der Belegungsdatei hinzugefuegt
