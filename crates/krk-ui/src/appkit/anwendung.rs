@@ -3003,9 +3003,10 @@ impl Anwendungsdelegierter {
         aufteilung.anwenden(&breiten, &sichtbar);
         self.fokusanzeige_nachziehen();
         self.bereichsleiste_nachziehen();
-        // **Auch die Statuszeile**, und nicht wegen der Sichtbarkeit: das
-        // aktive Dateifenster kann sich mit demselben Anlass geaendert haben,
-        // und daran haengen die zweite Stelle der Rangordnung und der
+        // **Auch die Statuszeile**, und seit dem 260812 aus zwei Gruenden:
+        // die Sichtbarkeit entscheidet mit, wer sich um die Zeile bewirbt, und
+        // das aktive Dateifenster kann sich mit demselben Anlass geaendert
+        // haben — daran haengen die zweite Stelle der Rangordnung und der
         // Namenszusatz. Der Grund im Langen steht an
         // [`Self::statuszeile_nachziehen`].
         self.statuszeile_nachziehen();
@@ -3052,17 +3053,25 @@ impl Anwendungsdelegierter {
     /// hat sich geaendert, und es sagt es ueber den Rueckruf aus dem Aufbau.
     /// Der zweite ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
     /// von den zehn Quellen abhaengt, sondern auch davon, **welches**
-    /// Dateifenster das aktive ist: der Rang der aktiven Seite entscheidet
-    /// jeden Gleichstand, und der Namenszusatz haengt an derselben Frage. Ein
-    /// Wechsel des aktiven Dateifensters geht auf beiden Wegen — Mausklick ueber
-    /// [`Self::aktives_setzen`], Tastenbefehl ueber `Kommando::FensterWechseln`
-    /// — durch jenen Nachzug.
+    /// Dateifenster das aktive und **welches sichtbar** ist: der Rang der
+    /// aktiven Seite entscheidet jeden Gleichstand, der Namenszusatz haengt an
+    /// derselben Frage, und ein ausgeblendetes Dateifenster bewirbt sich gar
+    /// nicht erst. Beides wechselt an demselben Nachzug — der Sichtbarkeit
+    /// wegen ist er sogar der einzige Weg —, und ein Wechsel des aktiven
+    /// Dateifensters geht auf beiden Wegen durch ihn: Mausklick ueber
+    /// [`Self::aktives_setzen`], Tastenbefehl ueber `Kommando::FensterWechseln`.
     ///
     /// **Sie entscheidet selbst nichts.** Die Auswahl unter den zehn Bewerbern
     /// trifft [`statuszeile::zeile`], den Satz formt
     /// [`statuszeile::zeilentext`]; beide sind reines Rust ohne AppKit und ohne
-    /// Fenster pruefbar. Diese Funktion holt die drei Eingaben und schreibt das
+    /// Fenster pruefbar. Diese Funktion holt die vier Eingaben und schreibt das
     /// Ergebnis.
+    ///
+    /// **Auch das ausgeblendete Dateifenster wird gefragt**, und seine Antwort
+    /// verwirft [`statuszeile::zeile`]. Die Bedingung hier zu ziehen waere
+    /// zwei Zeilen kuerzer und von keiner Probe zu erreichen; genau daran ist
+    /// die Zusage aus C5.8 einmal vorbeigelaufen
+    /// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
     ///
     /// **Sie steht neben [`Self::bereichsleiste_nachziehen`] und nicht darin.**
     /// Die Leiste zeigt Schalterzustaende, die Zeile zeigt Meldungen; ein
@@ -3087,8 +3096,13 @@ impl Anwendungsdelegierter {
             .dateifenster(Fensterseite::Rechts)
             .quelle()
             .meldungsquellen();
-        let aktiv = self.ivars().modell.borrow().aktiv();
-        let meldung = statuszeile::zeile(&links, &rechts, aktiv);
+        // Aktive Seite und Sichtbarkeit in **einer** Ausleihe, wie es
+        // [`Self::bereichsleiste_nachziehen`] daneben ebenso haelt.
+        let (aktiv, sichtbar) = {
+            let modell = self.ivars().modell.borrow();
+            (modell.aktiv(), modell.sichtbarkeit())
+        };
+        let meldung = statuszeile::zeile(&links, &rechts, aktiv, &sichtbar);
         // Der Satz bekommt eine eigene Bindung, weil `zeilentext` eine
         // Zeichenkette **baut** und `zeigen` eine ausleiht: ohne die Bindung
         // gaebe es nichts, woraus die Ausleihe genommen werden koennte.

@@ -15,8 +15,7 @@
 //! ┌──────────────────────────────────────────────┐
 //! │ Fensterzeile (NSSplitView, fuenf Bereiche)   │  nimmt, was uebrig bleibt
 //! ├──────────────────────────────────────────────┤
-//! │ Statuszeile                                  │  18 pt, volle Breite,
-//! │                                              │  nach rechts blaetterbar
+//! │ Statuszeile                                  │  18 pt, volle Breite
 //! ├──────────────────────────────────────────────┤
 //! │ Bereichsleiste                               │  18 pt, am unteren Rand
 //! └──────────────────────────────────────────────┘
@@ -343,17 +342,16 @@ impl FensterDelegierter {
 ///
 /// **Die Zeile beginnt beim Einzug und nicht am Rand.** Denselben Abstand hielt
 /// sie am Fuss eines Dateifensters, und die Leiste haelt ihn ebenso; sie steht
-/// damit senkrecht unter dem ersten Schalter. Der Einzug rueckt seit Schritt 11
-/// die **Bildlaufansicht** ein und nicht mehr das Textfeld selbst; weil das
-/// Feld darin bei null beginnt, faengt der Text weiterhin dieselben sechs
-/// Punkte vom Fensterrand entfernt an.
+/// damit senkrecht unter dem ersten Schalter.
 ///
 /// **Was `zeile` ist, geht diese Funktion nichts an**, und das ist der Grund
 /// fuer den Parametertyp `&NSView`: sie setzt Rahmen und Autogroesse, mehr
-/// nicht. Seit Schritt 11 der Runde 6 ist es eine `NSScrollView` und war vorher
-/// ein `NSTextField`; die Breite der Dokumentansicht darin zieht
-/// [`super::statuszeile::Statuszeile::zeigen`] bei jedem neuen Text nach, und
-/// nicht die Autogroesse hier.
+/// nicht. Schritt 11 der Runde 6 hatte hier eine `NSScrollView` eingehaengt und
+/// diese Funktion dafuer nicht anfassen muessen; seit seiner Ruecknahme am
+/// 260812 ist es wieder das `NSTextField` selbst. Die Breite, die es dabei
+/// bekommt, ist zugleich die, gegen die
+/// [`super::statuszeile::Statuszeile::zeigen`] misst, ob eine Meldung einen
+/// Kurzhinweis braucht.
 pub fn fensterinhalt(
     mtm: MainThreadMarker,
     fensterzeile: &NSView,

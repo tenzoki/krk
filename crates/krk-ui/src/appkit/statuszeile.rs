@@ -48,27 +48,28 @@
 //! der `NSSplitView` durch, und eine Zeile darin waere ein sechster Bereich
 //! oder ein blinder Fleck.
 //!
-//! **Den Ersthelferrang nimmt sie nicht an** (C5.11). Beim Textfeld getragen
-//! wird das allein davon, was `labelWithString:` baut: der Kopf des Systems
-//! nennt es "a non-wrapping, non-editable, non-selectable text field"
+//! **Den Ersthelferrang nimmt sie nicht an** (C5.11), und getragen wird das
+//! allein davon, was `labelWithString:` baut: der Kopf des Systems nennt es
+//! "a non-wrapping, non-editable, non-selectable text field"
 //! (`NSTextField.h:87-93`). Ein `setRefusesFirstResponder(true)` steht deshalb
 //! nicht daneben; die Schalter der Bereichsleiste brauchen es, weil ein
-//! `NSButton` den Rang von sich aus annimmt.
+//! `NSButton` den Rang von sich aus annimmt. **Ob das bei eingeschalteter
+//! vollstaendiger Tastaturbedienung haelt, ist nicht gemessen.** Die
+//! Abschlussnotiz der Runde 5 hat die Frage fuer die Schalter offen gelassen,
+//! und sie steht fuer diese Zeile ebenso offen; C5.11 ist ein Kriterium am
+//! laufenden Buendel und keine Zusage im Baum.
 //!
-//! **Seit Schritt 11 sind es zwei Ansichten und nicht mehr eine.** Das Feld
-//! sitzt als Dokumentansicht in einer `NSScrollView`, und die Rolle steht damit
-//! zwischen ihm und der Traegerflaeche des Fensters. `NSScrollView` erbt
-//! `acceptsFirstResponder` von `NSView` und antwortet von sich aus mit `NO`;
-//! ihre Rollbalken sind dagegen `NSControl`, also von derselben Art wie die
-//! Schalter der Bereichsleiste, und sichtbar sind sie nur, solange der Text
-//! breiter ist als die Zeile (`setAutohidesScrollers(true)`).
-//!
-//! **Ob das bei eingeschalteter vollstaendiger Tastaturbedienung haelt, ist
-//! nicht gemessen, und diese Datei behauptet es nicht.** Die Abschlussnotiz der
-//! Runde 5 hat die Frage fuer die Schalter der Bereichsleiste offen gelassen;
-//! sie steht fuer diese Zeile ebenso offen und betrifft seit Schritt 11 eine
-//! Ansicht mehr als vorher. C5.11 ist ein Kriterium am laufenden Buendel und
-//! keine Zusage im Baum.
+//! **Es ist wieder eine Ansicht und nicht zwei, und C5.11 damit wieder so eng
+//! wie in der Runde 5.** Schritt 11 der Runde 6 hatte das Feld als
+//! Dokumentansicht in eine `NSScrollView` gesetzt und die Frage damit auf deren
+//! `NSScroller` ausgeweitet, also auf Steuerelemente derselben Art wie die
+//! Schalter der Bereichsleiste. Der Nutzer hat den Schritt am 260812
+//! zurueckgenommen
+//! (`decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md`);
+//! ohne Bildlaufansicht gibt es keine `NSScroller`, und die Frage betrifft
+//! wieder allein dieses eine Textfeld. **Beantwortet ist sie dadurch nicht** —
+//! abzunehmen bleibt sie am laufenden Buendel, mit eingeschalteter
+//! vollstaendiger Tastaturbedienung.
 //!
 //! # Wer die Zeile bekommt, wenn mehrere zugleich etwas zu sagen haben
 //!
@@ -81,26 +82,56 @@
 //! Tabs gerechnet, statt gesetzt und geloescht zu werden; die Begruendung
 //! steht bei `DateifensterQuelle::markierungsstand_text`.
 //!
-//! # Warum die Zeile blaettert und nicht kuerzt
+//! **Ein ausgeblendetes Dateifenster bewirbt sich nicht.** Es sind zehn
+//! Quellen zweier Dateifenster, aber nur die des sichtbaren treten an; die
+//! Begruendung steht bei [`zeile`].
 //!
-//! Seit Schritt 11 der Runde 6 sitzt der Text in einer Bildlaufansicht und
-//! laesst sich nach rechts blaettern, statt am rechten Rand mit drei Punkten
-//! abzubrechen (C5.10). Der Grund ist der Inhalt dieser Runde: die Meldungen
-//! zur beschaedigten Ablagedatei nennen **zwei** Pfade, und ein abgeschnittener
-//! Pfad ist keine Auskunft. Er sieht aus wie eine und ist keine, denn welche
-//! Datei gemeint ist, steht am Ende und nicht am Anfang. Eine kuerzende Zeile
-//! verlangte vom Nutzer, das Fenster breiter zu ziehen, um zu erfahren, was KRK
-//! ihm sagen wollte.
+//! # Wie eine Meldung lesbar wird, die breiter ist als das Fenster
 //!
-//! **Der Preis ist benannt: mit dem Zeiger ueber der Zeile bewegt ein
-//! Zweifingerstrich die Zeile und nicht die Liste darueber.** Achtzehn Punkte
-//! am Fensterfuss antworten seither auf das Rollrad. Sie liegen unter der
-//! Dateiliste und nicht in ihr, wer also die Liste rollen will, haelt den
-//! Zeiger in der Liste.
+//! Die Zeile kuerzt am rechten Rand, und **genau dann, wenn sie kuerzt**, traegt
+//! sie einen Kurzhinweis, der den ganzen Satz zeigt (`setToolTip:`). Der Anlass
+//! ist der Inhalt dieser Runde: die Meldungen zur beschaedigten Ablagedatei
+//! nennen zwei Pfade, und ein abgeschnittener Pfad sieht aus wie eine Auskunft
+//! und ist keine, denn welche Datei gemeint ist, steht am Ende und nicht am
+//! Anfang.
 //!
-//! **Einzeilig bleibt sie.** `setMaximumNumberOfLines(1)` steht weiter am Feld:
-//! eine lange Meldung wird lang und nicht hoch, weil die Zeile [`HOEHE`] misst
-//! und das Fenster darunter keinen Punkt frei hat.
+//! **"Genau dann" ist eine Messung und keine Redewendung.** Ein Hinweis, der
+//! den sichtbaren Text wiederholt, waere Rauschen, deshalb haengt er nicht am
+//! Vorhandensein eines Textes, sondern an [`Statuszeile::abgeschnitten`]: dort
+//! wird verglichen, was `sizeToFit` am Feld misst, mit der Breite, die das Feld
+//! im Fenster hat.
+//!
+//! **Geblaettert wird dafuer nicht.** Schritt 11 der Runde 6 hatte das gebaut
+//! und dabei zwei Kosten erzeugt, die der Nutzer am 260812 nicht angenommen hat
+//! (`decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md`):
+//! mit dem Zeiger ueber den achtzehn Punkten am Fensterfuss bewegte ein
+//! Zweifingerstrich die Zeile und nicht die Liste darueber, und die
+//! `NSScrollView` brachte `NSScroller` mit, also genau die Art Steuerelement,
+//! fuer die C5.11 offen ist. Der Kurzhinweis kostet keine von beiden: keine
+//! zweite Ansicht, keine Ereignisbehandlung, kein Griff nach der Geste. **Das
+//! Mittel liegt im Baum** — [`super::bereichsleiste`] setzt es an den Schaltern
+//! der Leiste, und dieser Zuschnitt ist von dort uebernommen.
+//!
+//! **Der Preis ist benannt und vom Nutzer angenommen: der Text ist nicht
+//! markierbar und nicht kopierbar.** Der Hinweis erscheint erst nach einer
+//! Verweildauer, die das System bestimmt, und verschwindet, sobald der Zeiger
+//! weggeht. Wer eine Meldung weitergeben will, tippt sie ab; Kopierbarkeit war
+//! in keiner Fassung von C5 zugesagt.
+//!
+//! **Gemessen wird beim Setzen des Textes, nicht beim Zeigen des Hinweises.**
+//! Zieht der Nutzer das Fenster danach breiter oder schmaler, ohne dass eine
+//! neue Meldung kommt, steht der Hinweis oder fehlt er nach der alten Breite;
+//! die naechste Meldung zieht ihn nach
+//! (`issues/260812-1854_*_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md`).
+//! Der eine Ausloesepunkt einer Breitenaenderung waere `setFrameSize:` am Feld,
+//! und ihn zu ueberschreiben verlangte eine eigene Klasse ueber `NSTextField`.
+//! Die liesse sich nicht mehr ueber `labelWithString:` bauen — und genau dieser
+//! Erzeuger ist die ganze Grundlage, auf der C5.11 heute ruht. Der Nachzug
+//! kostete also die Zusage, die er begleiten soll.
+//!
+//! **Einzeilig bleibt sie.** `setMaximumNumberOfLines(1)` steht am Feld: eine
+//! lange Meldung wird lang und nicht hoch, weil die Zeile [`HOEHE`] misst und
+//! das Fenster darunter keinen Punkt frei hat.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -111,17 +142,13 @@
 //! und `systemRedColor` seit 10.10, `maximumNumberOfLines` seit 10.11 und
 //! `labelWithString:` seit 10.12 — die hoechste Untergrenze dieser Datei.
 //!
-//! **Die Bildlaufansicht aus Schritt 11 hebt sie nicht an.** `NSScrollView`
-//! (`NSScrollView.h:25`), `NSClipView` (`NSClipView.h:18`) und die Oberklasse
-//! `NSControl` mit `sizeToFit` (`NSControl.h:44`) stehen seit 10.0. Die
-//! angesprochenen Eigenschaften `contentSize` (`NSScrollView.h:47`),
-//! `documentView` (`:48`), `contentView` (`:49`), `borderType` (`:51`),
-//! `drawsBackground` (`:53`), `hasVerticalScroller` (`:54`),
-//! `hasHorizontalScroller` (`:55`) und `autohidesScrollers` (`:58`) tragen im
-//! Kopf des Systems ebenso wenig eine eigene Angabe wie
-//! `reflectScrolledClipView:` (`:67`), `scrollToPoint:` (`NSClipView.h:29`),
-//! `frame` (`NSView.h:129`) und die Aufzaehlung `NSBorderType` mit `NSNoBorder`
-//! (`NSView.h:43-48`); ohne Angabe heisst 10.0. Alle Zahlen am SDK gelesen.
+//! **Der Kurzhinweis und seine Messung heben sie nicht an.** `toolTip`
+//! (`NSView.h:310`), `stringValue` (`NSControl.h:36`), `sizeToFit`
+//! (`NSControl.h:44`) und `frame` (`NSView.h:129`) tragen im Kopf des Systems
+//! keine eigene Angabe; ohne Angabe heisst 10.0. Alle Zahlen am SDK gelesen.
+//! **Die Angaben zu `NSScrollView`, `NSClipView` und `NSBorderType` stehen hier
+//! nicht mehr**, weil mit der Ruecknahme von Schritt 11 auch die Klassen wieder
+//! abgegangen sind.
 //!
 //! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
 //! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
@@ -133,18 +160,17 @@
 //! [`super::fenster::fensterinhalt`], das die Zeile einhaengt und ihr Rahmen
 //! und Maske in denselben zwei Zeilen gibt wie der Bereichsleiste daneben.
 //! `setAutoresizingMask:` und `setFrame:` stehen seit 10.0 und tragen keine
-//! eigene Angabe; `setAutoresizingMask:` ruft diese Datei nicht mehr, und
-//! `setFrame:` ruft sie beim Aufbau und seit Schritt 11 bei jedem neuen Text,
-//! um die Dokumentansicht auf die Breite ihres Textes zu bringen.
+//! eigene Angabe; `setAutoresizingMask:` ruft diese Datei nicht, und `setFrame:`
+//! ruft sie beim Aufbau und um jede Messung herum, die sie unmittelbar danach
+//! wieder zuruecknimmt.
 
-use objc2::MainThreadOnly;
 use objc2::rc::Retained;
-use objc2_app_kit::{
-    NSBorderType, NSColor, NSFont, NSScrollView, NSTextAlignment, NSTextField, NSView,
-};
+use objc2_app_kit::{NSColor, NSFont, NSTextAlignment, NSTextField, NSView};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, ns_string};
 
-use krk_core::ablage::Fensterseite;
+use krk_core::ablage::{Fensterseite, Sichtbarkeit};
+
+use crate::fenstermodell::{Bereich, sichtbar_in};
 
 /// Die Hoehe der Zeile in Punkten.
 ///
@@ -341,10 +367,46 @@ pub struct Meldung<'a> {
 /// Zeile einen von beiden. Die Gegenrechnung dazu ist die Zuordnung im Satz:
 /// welches Dateifenster gemeint ist, sagt seit dieser Runde [`zeilentext`],
 /// nicht mehr die Lage der Zeile.
+///
+/// # Ein ausgeblendetes Dateifenster bewirbt sich nicht
+///
+/// Angetreten wird nur mit den Quellen der **sichtbaren** Dateifenster. Bis zum
+/// 260812 traten beide an, und dann konnte in der Zeile dauerhaft eine Meldung
+/// ueber einen Bereich stehen, den der Nutzer nicht sieht — mit dem Zusatz
+/// "rechtes Dateifenster: …" davor, obwohl nur eines dasteht
+/// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
+/// Der zweite Satz von C5.8 sagt das Gegenteil zu.
+///
+/// **Bis zur Runde 6 trug die Lage der Zeile diese Zusage.** Jede Zeile sass am
+/// Fuss ihres Dateifensters und ging mit ihm; die Zusammenlegung hat die
+/// Kopplung geloest, und diese Bedingung nimmt sie wieder auf.
+///
+/// **Verloren geht dabei nichts** (C5.7). Die vier Felder der ausgeblendeten
+/// Seite bleiben unangetastet stehen, und ihre Meldung ist wieder da, sobald
+/// der Nutzer den Bereich einblendet.
+///
+/// **Die Sichtbarkeit steht in der Signatur und nicht beim Aufrufer.** Eine
+/// Bedingung, die `Anwendungsdelegierter::statuszeile_nachziehen` vor dem
+/// Aufruf zoege, waere von keiner Probe dieser Datei zu erreichen; hier ist die
+/// Regel ohne Fenster pruefbar. Welches Feld von [`Sichtbarkeit`] zu einer
+/// [`Fensterseite`] gehoert, sagt [`sichtbar_in`] ueber [`Bereich::von_seite`] —
+/// eine zweite Zuordnung daneben waere genau die, die
+/// [`sichtbar_in`] als die eine abgeloest hat.
+///
+/// **Das aktive Dateifenster ist immer sichtbar**, und deshalb liefert diese
+/// Funktion nie eine Meldung, der [`zeilentext`] einen Zusatz voranstellen
+/// muesste, waehrend nur ein Dateifenster dasteht. Hergestellt wird die Zusage
+/// im Modell, an beiden Wegen dorthin:
+/// [`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)
+/// gibt die Aktivitaet ab, wenn das aktive ausgeblendet wird, und
+/// [`Fenstermodell::aus_sitzung`](crate::fenstermodell::Fenstermodell::aus_sitzung)
+/// zieht sie nach, wenn eine von Hand geschriebene `session.toml` sie auf ein
+/// ausgeblendetes zeigen laesst.
 pub fn zeile<'a>(
     links: &'a Quellen,
     rechts: &'a Quellen,
     aktiv: Fensterseite,
+    sichtbar: &Sichtbarkeit,
 ) -> Option<Meldung<'a>> {
     let quellen = |seite: Fensterseite| match seite {
         Fensterseite::Links => links,
@@ -353,6 +415,11 @@ pub fn zeile<'a>(
     for rang in Rang::ALLE {
         // Die aktive Seite zuerst: die zweite Stelle der Ordnung.
         for seite in [aktiv, aktiv.andere()] {
+            // Wer nicht dasteht, sagt nichts. Die Begruendung steht im Kopf
+            // dieser Funktion.
+            if !sichtbar_in(sichtbar, Bereich::von_seite(seite)) {
+                continue;
+            }
             if let Some(text) = quellen(seite).text(rang) {
                 return Some(Meldung {
                     seite,
@@ -377,9 +444,16 @@ pub fn zeile<'a>(
 /// **Genannt wird die Seite genau dann, wenn sie nicht die aktive ist**, und
 /// das ist eine Regel und keine zwei. Die Meldung des Dateifensters, mit dem
 /// der Nutzer gerade arbeitet, ist der Normalfall und traegt keinen Zusatz;
-/// jede andere sagt, woher sie kommt. Der Fall "es steht nur ein Dateifenster"
-/// braucht dafuer keinen eigenen Zweig: ist eines ausgeblendet, ist das andere
-/// das aktive, und kein Satz bekommt einen Zusatz.
+/// jede andere sagt, woher sie kommt.
+///
+/// **Der Fall "es steht nur ein Dateifenster" braucht hier keinen eigenen
+/// Zweig, aber er wird auch nicht hier eingeloest**, sondern in [`zeile`]: dort
+/// bewirbt sich ein ausgeblendetes Dateifenster nicht, und das aktive ist immer
+/// sichtbar. Zusammen heisst das, dass diese Funktion nie eine Meldung von
+/// einer Seite bekommt, die der Nutzer nicht sieht. Bis zum 260812 stand hier
+/// die Behauptung, der Fall folge schon aus der einen Bedingung; er folgte
+/// nicht
+/// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
 ///
 /// Die beiden Namen stehen hier und nicht im Kern: es sind Anzeigetexte, und
 /// [`Fensterseite`] ist ein Wert der Ablage, der von Anzeige nichts weiss.
@@ -401,15 +475,13 @@ const fn seitenname(seite: Fensterseite) -> &'static str {
     }
 }
 
-/// Die eine Textzeile am Fensterfuss, blaetterbar nach rechts.
+/// Die eine Textzeile am Fensterfuss.
 ///
-/// **Zwei Ansichten, eine Rolle.** Das Feld traegt den Text, die
-/// Bildlaufansicht traegt das Feld; nach aussen gibt [`Statuszeile::sicht`]
-/// allein die Rolle heraus, damit niemand das Feld einhaengt und die
-/// Blaetterbarkeit dabei verliert. Warum geblaettert und nicht gekuerzt wird,
-/// steht im Modulkopf.
+/// **Eine Ansicht und nicht zwei.** Schritt 11 der Runde 6 hatte das Feld in
+/// eine `NSScrollView` gesetzt; der Nutzerentscheid vom 260812 hat den Schritt
+/// zurueckgenommen. Wie eine Meldung lesbar wird, die breiter ist als das
+/// Fenster, steht im Modulkopf.
 pub struct Statuszeile {
-    rolle: Retained<NSScrollView>,
     feld: Retained<NSTextField>,
 }
 
@@ -422,12 +494,6 @@ impl Statuszeile {
     /// Runde 6 setzte diese Methode die Maske selbst, weil sie die Zeile an den
     /// Fuss eines Dateifensters band; jetzt haengt die Zeile am Fenster, und
     /// die Wahl gehoert dorthin, wo eingehaengt wird.
-    ///
-    /// **Die Rolle bleibt unsichtbar, solange nichts zu blaettern ist.** Sie
-    /// zeichnet keinen Hintergrund und keinen Rahmen, hat keinen senkrechten
-    /// Rollbalken — die Zeile ist einzeilig — und blendet den waagerechten aus,
-    /// sobald der Text hineinpasst. Der Nutzer sieht damit dasselbe wie vor
-    /// Schritt 11, bis eine Meldung zu lang wird.
     pub fn bauen(mtm: MainThreadMarker) -> Self {
         let feld = NSTextField::labelWithString(ns_string!(""), mtm);
         feld.setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(0.0, HOEHE)));
@@ -437,27 +503,12 @@ impl Statuszeile {
         feld.setTextColor(Some(&NSColor::secondaryLabelColor()));
         feld.setAlignment(NSTextAlignment::Left);
         feld.setMaximumNumberOfLines(1);
-
-        let rolle = NSScrollView::initWithFrame(
-            NSScrollView::alloc(mtm),
-            NSRect::new(NSPoint::ZERO, NSSize::new(0.0, HOEHE)),
-        );
-        rolle.setHasHorizontalScroller(true);
-        rolle.setHasVerticalScroller(false);
-        rolle.setAutohidesScrollers(true);
-        rolle.setDrawsBackground(false);
-        rolle.setBorderType(NSBorderType::NoBorder);
-        rolle.setDocumentView(Some(&feld));
-
-        Self { rolle, feld }
+        Self { feld }
     }
 
     /// Die Ansicht, die in die Inhaltsflaeche des Fensters gehaengt wird.
-    ///
-    /// Seit Schritt 11 die Bildlaufansicht und nicht mehr das Feld. Wer das
-    /// Feld einhaengte, bekaeme eine Zeile, die wieder kuerzt.
     pub fn sicht(&self) -> &NSView {
-        &self.rolle
+        &self.feld
     }
 
     /// Zeigt eine Meldung der genannten Art an, oder leert die Zeile bei
@@ -470,10 +521,10 @@ impl Statuszeile {
     /// gewoehnliche Textfarbe; auffindbar ist der Abbruch bei ihm nicht ueber
     /// die Farbe, sondern weil die Zeile ihn benennt ("Esc bricht ab").
     ///
-    /// **Jeder neue Text zieht die Breite nach und setzt die Zeile an ihren
-    /// Anfang**, und zwar in dieser Reihenfolge: erst steht fest, wie breit die
-    /// Dokumentansicht ist, danach laesst sich sagen, wohin `NSClipView` den
-    /// Anfang legt.
+    /// **Jeder neue Text zieht den Kurzhinweis nach**, und der Ruf steht hinter
+    /// beiden Zweigen und nicht in ihnen: eine geleerte Zeile hat nichts
+    /// abzuschneiden, also nimmt derselbe Nachzug den Hinweis dort weg, ohne
+    /// dass er einen eigenen Zweig braucht.
     pub fn zeigen(&self, meldung: Option<(&str, Art)>) {
         match meldung {
             Some((text, art)) => {
@@ -490,50 +541,76 @@ impl Statuszeile {
                     .setTextColor(Some(&NSColor::secondaryLabelColor()));
             }
         }
-        self.breite_nachziehen();
-        self.an_den_anfang();
+        self.kurzhinweis_nachziehen();
     }
 
-    /// Bringt die Dokumentansicht auf die Breite ihres Textes.
+    /// Setzt den Kurzhinweis, wenn der Text nicht ganz in die Zeile passt, und
+    /// nimmt ihn sonst wieder weg.
     ///
-    /// **Ohne diesen Schritt gaebe es nichts zu blaettern.** Eine
-    /// Dokumentansicht, die so breit ist wie die Rolle, hat keinen Ueberhang,
-    /// und `NSScrollView` blendet den Rollbalken aus, obwohl der Text
-    /// abgeschnitten dasteht. `sizeToFit` misst am Feld, was der Text braucht;
-    /// das Groessere von Textbreite und Sichtbreite ist die neue Breite, damit
-    /// die Zeile bei kurzen Meldungen nicht schmaler wird als ihre Rolle.
+    /// **Der Hinweis kommt aus dem Feld und nicht aus dem Aufrufer.** Was er
+    /// zeigt, ist damit der Bauart nach genau das, was in der Zeile steht,
+    /// statt ein zweites Argument, das damit uebereinstimmen muesste.
     ///
-    /// **Die Hoehe bleibt [`HOEHE`] und kommt nicht aus `sizeToFit`.** Die
-    /// Schrifthoehe der kleinen Systemschrift liegt darunter; ein Feld in
-    /// dieser Hoehe saesse in der Rolle, die 18 Punkte misst, nicht dort, wo es
-    /// vor Schritt 11 sass.
-    fn breite_nachziehen(&self) {
+    /// **Der Zweig `None` ist keine Zierde.** Ohne ihn bliebe der Hinweis einer
+    /// laengeren Vorgaengermeldung stehen und zeigte beim Verweilen einen Satz,
+    /// den die Zeile nicht mehr traegt.
+    fn kurzhinweis_nachziehen(&self) {
+        let voll = self.feld.stringValue();
+        self.feld.setToolTip(self.abgeschnitten().then_some(&*voll));
+    }
+
+    /// Ob der Text breiter ist als die Zeile, die ihn zeigen soll.
+    ///
+    /// **Die Messung aus Schritt 11, weitergenutzt statt neu geschrieben.**
+    /// Dort brachte `sizeToFit` die Dokumentansicht auf die Breite ihres
+    /// Textes; hier fragt derselbe Ruf nur noch, wie breit der Text **waere**.
+    /// Der Umweg ueber den Rahmen gehoert dazu: `sizeToFit` ist die eine
+    /// Stelle, an der AppKit diese Breite herausgibt, und sie arbeitet
+    /// schreibend. Der Rahmen von vorher kommt deshalb unmittelbar danach
+    /// zurueck, und zwar ganz — `sizeToFit` schreibt auch die Hoehe, und die
+    /// Schrifthoehe der kleinen Systemschrift liegt unter [`HOEHE`].
+    ///
+    /// **Verglichen wird gegen die Breite, die das Feld im Fenster hat**, und
+    /// die steht in seinem Rahmen: [`super::fenster::fensterinhalt`] setzt sie
+    /// beim Aufbau, die Autogroesse zieht sie bei jeder Fensteraenderung nach.
+    /// Beide Zahlen kommen aus derselben Zelle, also entscheidet der Vergleich
+    /// dieselbe Frage, die AppKit beim Kuerzen entscheidet.
+    fn abgeschnitten(&self) -> bool {
+        let rahmen = self.feld.frame();
         self.feld.sizeToFit();
         let textbreite = self.feld.frame().size.width;
-        let sichtbreite = self.rolle.contentSize().width;
-        self.feld.setFrame(NSRect::new(
-            NSPoint::ZERO,
-            NSSize::new(textbreite.max(sichtbreite), HOEHE),
-        ));
-    }
-
-    /// Stellt die Zeile an den Anfang des neuen Textes.
-    ///
-    /// Eine Meldung, die in der Mitte anfaengt, weil die vorige weiter rechts
-    /// gelesen wurde, waere keine Meldung. `scrollToPoint:` setzt den
-    /// Ausschnitt, `reflectScrolledClipView:` bringt den Rollbalken auf
-    /// denselben Stand; ohne den zweiten Ruf zeigte er weiter die alte Stelle.
-    fn an_den_anfang(&self) {
-        let ausschnitt = self.rolle.contentView();
-        ausschnitt.scrollToPoint(NSPoint::ZERO);
-        self.rolle.reflectScrolledClipView(&ausschnitt);
+        self.feld.setFrame(rahmen);
+        textbreite > rahmen.size.width
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Art, Meldung, Quellen, Rang, zeile, zeilentext};
-    use krk_core::ablage::Fensterseite;
+    use super::{Art, Bereich, Meldung, Quellen, Rang, sichtbar_in, zeile, zeilentext};
+    use krk_core::ablage::{Fensterseite, Sichtbarkeit};
+
+    /// Beide Dateifenster stehen: die Lage, in der die Zeile fast immer
+    /// schreibt, und der Auslieferungszustand der Ablage.
+    fn beide() -> Sichtbarkeit {
+        Sichtbarkeit::default()
+    }
+
+    /// Nur das genannte Dateifenster steht, das andere ist ausgeblendet.
+    ///
+    /// **Die beiden Zusicherungen darunter binden den Helfer an die eine
+    /// Zuordnung**, ueber die auch [`zeile`] fragt. Ohne sie schriebe die Probe
+    /// die Zuordnung von einer [`Fensterseite`] auf ihr Feld ein zweites Mal
+    /// auf und koennte gegen eine falsche pruefen.
+    fn steht_nur(seite: Fensterseite) -> Sichtbarkeit {
+        let mut sichtbar = Sichtbarkeit::default();
+        match seite.andere() {
+            Fensterseite::Links => sichtbar.erstes_dateifenster = false,
+            Fensterseite::Rechts => sichtbar.zweites_dateifenster = false,
+        }
+        assert!(sichtbar_in(&sichtbar, Bereich::von_seite(seite)));
+        assert!(!sichtbar_in(&sichtbar, Bereich::von_seite(seite.andere())));
+        sichtbar
+    }
 
     /// Ein Quellensatz mit genau einem gesetzten Rang.
     fn nur(rang: Rang, text: &str) -> Quellen {
@@ -567,13 +644,24 @@ mod tests {
             markierungsstand: markierungsstand.map(str::to_owned),
         };
         let rechts = Quellen::default();
-        zeile(&links, &rechts, Fensterseite::Links)
+        zeile(&links, &rechts, Fensterseite::Links, &beide())
             .map(|meldung| (meldung.text.to_owned(), meldung.art))
     }
 
     /// Wie `allein`, nur mit dem Satz, wie er wirklich in der Zeile steht.
     fn text_von(links: &Quellen, rechts: &Quellen, aktiv: Fensterseite) -> Option<String> {
-        zeile(links, rechts, aktiv).map(|meldung| zeilentext(&meldung, aktiv))
+        text_von_bei(links, rechts, aktiv, &beide())
+    }
+
+    /// Wie `text_von`, nur fuer eine Lage, in der nicht beide Dateifenster
+    /// stehen.
+    fn text_von_bei(
+        links: &Quellen,
+        rechts: &Quellen,
+        aktiv: Fensterseite,
+        sichtbar: &Sichtbarkeit,
+    ) -> Option<String> {
+        zeile(links, rechts, aktiv, sichtbar).map(|meldung| zeilentext(&meldung, aktiv))
     }
 
     fn erwartet(meldung: Option<(String, Art)>, text: &str, art: Art) {
@@ -591,7 +679,8 @@ mod tests {
             zeile(
                 &Quellen::default(),
                 &Quellen::default(),
-                Fensterseite::Rechts
+                Fensterseite::Rechts,
+                &beide()
             ),
             None
         );
@@ -755,7 +844,8 @@ mod tests {
             (Fensterseite::Links, "Kopieren links"),
             (Fensterseite::Rechts, "Kopieren rechts"),
         ] {
-            let meldung = zeile(&links, &rechts, aktiv).expect("beide Seiten melden etwas");
+            let meldung =
+                zeile(&links, &rechts, aktiv, &beide()).expect("beide Seiten melden etwas");
             assert_eq!(meldung.seite, aktiv);
             assert_eq!(meldung.text, text);
         }
@@ -771,8 +861,8 @@ mod tests {
             "12 markiert, davon 3 Ordner, 4,2 MB",
         );
         let rechts = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
-        let meldung =
-            zeile(&links, &rechts, Fensterseite::Links).expect("beide Seiten melden etwas");
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+            .expect("beide Seiten melden etwas");
         assert_eq!(meldung.seite, Fensterseite::Rechts);
         assert_eq!(meldung.rang, Rang::Fenstermeldung);
     }
@@ -784,8 +874,8 @@ mod tests {
     fn meldet_nur_die_inaktive_seite_steht_ihre_meldung_in_der_zeile() {
         let links = Quellen::default();
         let rechts = nur(Rang::Tabmeldung, "Ordner nicht lesbar");
-        let meldung =
-            zeile(&links, &rechts, Fensterseite::Links).expect("die inaktive Seite meldet etwas");
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+            .expect("die inaktive Seite meldet etwas");
         assert_eq!(meldung.seite, Fensterseite::Rechts);
         assert_eq!(meldung.text, "Ordner nicht lesbar");
     }
@@ -794,7 +884,10 @@ mod tests {
     #[test]
     fn schweigen_beide_seiten_bleibt_die_zeile_leer() {
         for aktiv in Fensterseite::ALLE {
-            assert_eq!(zeile(&Quellen::default(), &Quellen::default(), aktiv), None);
+            assert_eq!(
+                zeile(&Quellen::default(), &Quellen::default(), aktiv, &beide()),
+                None
+            );
         }
     }
 
@@ -817,7 +910,8 @@ mod tests {
             (Fensterseite::Links, "Antwort links"),
             (Fensterseite::Rechts, "Antwort rechts"),
         ] {
-            let meldung = zeile(&links, &rechts, aktiv).expect("zehn Bewerber, einer gewinnt");
+            let meldung =
+                zeile(&links, &rechts, aktiv, &beide()).expect("zehn Bewerber, einer gewinnt");
             assert_eq!(meldung.rang, Rang::Befehlsantwort);
             assert_eq!(meldung.seite, aktiv);
             assert_eq!(meldung.text, text);
@@ -832,13 +926,14 @@ mod tests {
     fn die_verdraengte_meldung_der_inaktiven_seite_erscheint_danach() {
         let mut links = nur(Rang::Befehlsantwort, "es ist nichts ausgewählt");
         let rechts = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
-        let meldung = zeile(&links, &rechts, Fensterseite::Links).expect("die Antwort gewinnt");
+        let meldung =
+            zeile(&links, &rechts, Fensterseite::Links, &beide()).expect("die Antwort gewinnt");
         assert_eq!(meldung.seite, Fensterseite::Links);
         // Der naechste Tastenbefehl raeumt die Befehlsantwort weg. Am
         // Quellensatz der rechten Seite hat sich nichts geaendert.
         links.befehlsantwort = None;
-        let meldung =
-            zeile(&links, &rechts, Fensterseite::Links).expect("die Auswurfmeldung steht noch");
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+            .expect("die Auswurfmeldung steht noch");
         assert_eq!(meldung.seite, Fensterseite::Rechts);
         assert_eq!(meldung.text, "Datenträger ausgeworfen");
     }
@@ -851,8 +946,10 @@ mod tests {
             for aktiv in Fensterseite::ALLE {
                 let quellen = nur(rang, "Text");
                 let leer = Quellen::default();
-                let links = zeile(&quellen, &leer, aktiv).expect("die linke Seite meldet etwas");
-                let rechts = zeile(&leer, &quellen, aktiv).expect("die rechte Seite meldet etwas");
+                let links =
+                    zeile(&quellen, &leer, aktiv, &beide()).expect("die linke Seite meldet etwas");
+                let rechts =
+                    zeile(&leer, &quellen, aktiv, &beide()).expect("die rechte Seite meldet etwas");
                 assert_eq!(links.art, rang.art());
                 assert_eq!(rechts.art, rang.art());
             }
@@ -903,22 +1000,90 @@ mod tests {
         }
     }
 
-    /// Steht nur ein Dateifenster, ist es das aktive, und kein Satz traegt
-    /// einen Zusatz. Die Regel deckt den Fall ohne eigenen Zweig ab: das
-    /// ausgeblendete Dateifenster meldet nichts, und der Rest folgt aus der
-    /// einen Bedingung.
+    /// Steht nur ein Dateifenster, traegt kein Satz einen Zusatz — auch dann
+    /// nicht, wenn das ausgeblendete etwas zu sagen haette, und selbst dann
+    /// nicht, wenn es den hoeheren Rang haelt.
+    ///
+    /// **Die Probe setzt die Voraussetzung nicht mehr, sondern misst sie.** Bis
+    /// zum 260812 uebergab sie fuer das ausgeblendete Dateifenster
+    /// `Quellen::default()` und begruendete das im Doc-Kommentar mit "es meldet
+    /// nichts". Genau diese Voraussetzung stellte
+    /// `Anwendungsdelegierter::statuszeile_nachziehen` nicht her, und die Probe
+    /// waere gruen geblieben, wenn jemand den Fall behoebe oder verschlimmerte
+    /// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
     #[test]
     fn steht_nur_ein_dateifenster_traegt_kein_satz_einen_zusatz() {
         for aktiv in Fensterseite::ALLE {
-            let quellen = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
+            let sichtbares = nur(Rang::Markierungsstand, "3 markiert, davon 0 Ordner, 6 KB");
+            let ausgeblendetes = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
             let (links, rechts) = match aktiv {
-                Fensterseite::Links => (quellen, Quellen::default()),
-                Fensterseite::Rechts => (Quellen::default(), quellen),
+                Fensterseite::Links => (sichtbares, ausgeblendetes),
+                Fensterseite::Rechts => (ausgeblendetes, sichtbares),
             };
             assert_eq!(
-                text_von(&links, &rechts, aktiv).as_deref(),
-                Some("Datenträger ausgeworfen")
+                text_von_bei(&links, &rechts, aktiv, &steht_nur(aktiv)).as_deref(),
+                Some("3 markiert, davon 0 Ordner, 6 KB"),
+                "das ausgeblendete Dateifenster haelt den hoeheren Rang und bleibt trotzdem stumm"
             );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Ein ausgeblendetes Dateifenster bewirbt sich nicht (C5.8, Runde 6)
+    // ------------------------------------------------------------------
+
+    /// Der Weg aus dem Defekt vom 260812-1805, Schritt fuer Schritt: im rechten
+    /// Dateifenster steht ein Ordner, der sich nicht lesen laesst, und der
+    /// Nutzer blendet das rechte aus. Danach ist die Zeile leer statt dauerhaft
+    /// rot.
+    #[test]
+    fn die_meldung_eines_ausgeblendeten_dateifensters_steht_nicht_in_der_zeile() {
+        let links = Quellen::default();
+        let rechts = nur(Rang::Tabmeldung, "Ordner nicht lesbar");
+        assert_eq!(
+            zeile(
+                &links,
+                &rechts,
+                Fensterseite::Links,
+                &steht_nur(Fensterseite::Links)
+            ),
+            None,
+            "das ausgeblendete rechte Dateifenster bewirbt sich nicht"
+        );
+    }
+
+    /// **Verdraengt wird nichts geloescht** (C5.7), und ausgeblendet ebenso
+    /// wenig: derselbe Quellensatz steht wieder in der Zeile, sobald der
+    /// Bereich zurueckkommt. Niemand muss die Meldung neu setzen.
+    #[test]
+    fn die_meldung_kommt_mit_dem_eingeblendeten_dateifenster_zurueck() {
+        let links = Quellen::default();
+        let rechts = nur(Rang::Tabmeldung, "Ordner nicht lesbar");
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+            .expect("mit beiden Dateifenstern steht die Meldung wieder da");
+        assert_eq!(meldung.seite, Fensterseite::Rechts);
+        assert_eq!(meldung.text, "Ordner nicht lesbar");
+    }
+
+    /// Die Bedingung haengt an der Seite und nicht am Rang: sie gilt auf allen
+    /// fuenf und in beide Richtungen.
+    #[test]
+    fn auf_jedem_rang_bewirbt_sich_allein_das_sichtbare_dateifenster() {
+        for rang in Rang::ALLE {
+            for sichtbare in Fensterseite::ALLE {
+                let quellen = nur(rang, "Text");
+                let leer = Quellen::default();
+                // Der Satz gehoert jeweils dem ausgeblendeten Dateifenster.
+                let (links, rechts) = match sichtbare {
+                    Fensterseite::Links => (leer, quellen),
+                    Fensterseite::Rechts => (quellen, leer),
+                };
+                assert_eq!(
+                    zeile(&links, &rechts, sichtbare, &steht_nur(sichtbare)),
+                    None,
+                    "{rang:?} des ausgeblendeten Dateifensters steht in der Zeile"
+                );
+            }
         }
     }
 

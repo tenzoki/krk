@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (auf Nachfrage des Nutzers)
 **Cross-references:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1105_*_die-statuszeile-zieht-ueber-die-volle-fensterbreite-und-laesst-sich-blaettern.md` (von diesem Datensatz überholt); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_c_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md` (C5.10, C5.11, Schritt 11); `crates/krk-ui/src/appkit/statuszeile.rs`; `crates/krk-ui/src/appkit/bereichsleiste.rs:474` (der eine vorhandene Kurzhinweis)
 
@@ -80,6 +80,12 @@ bleibt stehen.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812` — Nutzerentscheid vom 260812, vorgelegt mit vier Möglichkeiten und ihren Folgen.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/statuszeile.rs`. Die `NSScrollView` samt `breite_nachziehen` und `an_den_anfang` ist weg, `Statuszeile` hält wieder allein ihr `NSTextField`, und `sicht` gibt es heraus. An ihre Stelle treten zwei Methoden: `Statuszeile::abgeschnitten` misst mit demselben `sizeToFit`, das Schritt 11 zum Setzen der Breite benutzte, wie breit der Text wäre, nimmt den Rahmen unmittelbar danach wieder zurück und vergleicht mit der Breite, die das Feld im Fenster hat; `Statuszeile::kurzhinweis_nachziehen` setzt `setToolTip:` genau dann und nimmt ihn sonst weg. Gerufen wird es einmal in `Statuszeile::zeigen`, hinter beiden Zweigen: eine geleerte Zeile hat nichts abzuschneiden, also räumt derselbe Ruf den Hinweis dort ab. Der Zuschnitt ist von `crates/krk-ui/src/appkit/bereichsleiste.rs:474` übernommen, dem einen vorhandenen Kurzhinweis des Baums; eine zweite Art, einen Hinweis zu setzen, entsteht nicht. `crates/krk-ui/src/appkit/fenster.rs` ist auf seinen Stand vor Schritt 11 zurückgenommen (Skizze im Modulkopf, zwei Doc-Absätze an `fensterinhalt`); Code stand dort ohnehin keiner.
+
+Der Modulkopf von `statuszeile.rs` sagt beides aus: dass C5.11 ohne Bildlaufansicht wieder allein das nicht auswählbare Textfeld aus `labelWithString:` betrifft und **offen** bleibt, abzunehmen am Bündel mit eingeschalteter vollständiger Tastaturbedienung, und dass der Text nicht kopierbar ist. Die Angaben zu `NSScrollView`, `NSClipView` und `NSBorderType` sind aus dem Untergrenzen-Abschnitt heraus; an ihrer Stelle stehen `toolTip` (`NSView.h:310`), `stringValue` (`NSControl.h:36`), `sizeToFit` (`NSControl.h:44`) und `frame` (`NSView.h:129`), alle vier am SDK gegengelesen und ohne eigene Angabe, also seit 10.0. Die höchste Untergrenze der Datei ist wieder `labelWithString:` mit 10.12.
+
+**Ein Preis ist beim Bauen sichtbar geworden, den der Datensatz nicht nennt.** Gemessen wird beim Setzen des Textes; zieht der Nutzer das Fenster danach breiter oder schmaler, ohne dass eine neue Meldung kommt, steht der Hinweis oder fehlt er nach der alten Breite. Er ist als `issues/260812-1854_*_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md` aufgeschrieben, samt dem Grund, warum der Nachzug hier nicht gebaut ist: der eine Auslösepunkt wäre `setFrameSize:` am Feld, und ihn zu überschreiben verlangte eine eigene Klasse über `NSTextField`, die sich nicht mehr über `labelWithString:` bauen ließe — also genau die Grundlage kostete, auf der C5.11 heute ruht.
+
+Abnahme am 260812: `cargo build --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` und `cargo test --workspace` je Exit 0. 457 Proben im Binärziel `krk` gegenüber 454 vorher; die drei neuen gehören zur zweiten Aufgabe desselben Laufs, diese hier ist am Bündel abzunehmen und trägt keine. Noch nicht committet, der Nutzer committet nach der Aufgabe.
 Deferred:
 Superseded by:
