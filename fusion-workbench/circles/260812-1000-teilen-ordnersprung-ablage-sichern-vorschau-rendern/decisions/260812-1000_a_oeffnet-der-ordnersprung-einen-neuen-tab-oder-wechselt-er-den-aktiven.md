@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/tabs.rs:508` (`ordner_setzen`, wechselt den sichtbaren Tab); `crates/krk-ui/src/tabs.rs:463` (`oeffnen`, legt einen Tab an); `crates/krk-ui/src/appkit/tabelle.rs:628` (`ordner_lesen`, die Hülle darum)
 
@@ -44,8 +44,22 @@ Die Frage hält keinen Planschritt auf und bindet einen.
 
 Möglichkeit 3 empfehlen wir nicht, obwohl sie technisch sauber wäre. Sie kostet eine Kombination aus einem Vorrat, der laut dem Datensatz `260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md` ohnehin knapp ist, und sie löst ein Problem, das der Nutzer nicht gemeldet hat.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Der Ordnersprung wechselt den Ordner des aktiven Tabs, er oeffnet keinen neuen.
+
+Sie ist die einzige Moeglichkeit ohne Ausnahme, und die Ausnahme woege hier schwer: die Navigation
+dieses Programms hat genau eine Regel, und ein Befehl, der sich wie Navigation anfuehlt und sich
+anders verhaelt, ist an nichts zu erkennen.
+
+Eine eigene Kombination fuer die Tab-Form ist abgelehnt: sie kostet aus einem knappen Vorrat und
+loest ein Problem, das der Nutzer nicht gemeldet hat.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

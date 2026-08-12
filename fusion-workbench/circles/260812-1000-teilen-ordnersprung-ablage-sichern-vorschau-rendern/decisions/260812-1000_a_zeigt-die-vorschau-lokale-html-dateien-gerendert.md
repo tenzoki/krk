@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `### Offene Fragen`, Frage 2; `crates/krk-ui/src/vorschaumodell.rs:29` und `:182` (die Dreiteilung aus C6 und der `Inhalt`); Festlegung A dieser Runde (keine Web-Ansicht)
 
@@ -44,8 +44,24 @@ Die Frage hält keinen Planschritt auf und bindet einen.
 
 Der Nebengewinn von Möglichkeit 1 ist echt und kostet nichts: `hervorhebung.rs` und `syntect` färben HTML bereits ein, sobald die Vorschau Quelltext überhaupt einfärbt. Eine `.html`-Datei sieht nach dieser Runde besser aus als vorher, auch ohne gerendert zu werden.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Lokale HTML-Dateien bleiben Quelltext. Die Frage bleibt beim Web-Betrachter-Circle, und der Spec
+sagt das **ausdruecklich** statt es durch Schweigen offenzulassen.
+
+Der Grund ist die Ungleichheit der beiden Formate: Markdown ist ohne Web-Mittel vollstaendig
+zerlegbar, HTML ist es nicht, und eine Anzeige, die bei einfachem HTML stimmt und bei anderem
+nicht, gibt dem Nutzer keine Regel an die Hand.
+
+**Der Nebengewinn ist echt und kostet nichts:** `hervorhebung.rs` und `syntect` faerben HTML
+bereits ein, sobald die Vorschau Quelltext ueberhaupt einfaerbt. Eine `.html`-Datei sieht nach
+dieser Runde besser aus als vorher, auch ohne gerendert zu werden.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

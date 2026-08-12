@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/vorschaumodell.rs:434` (`aktiver_pfad`, liefert `Option<PathBuf>`); `crates/krk-ui/src/editormodell.rs:621` (`pfad`, liefert `Option<&Path>`); `crates/krk-ui/src/fenstermodell.rs:191` (`Bereich::teilt_flaeche_mit`); `crates/krk-ui/src/kommandos/operationen.rs:858` (`nichts_betroffen`, die Meldungsvorlage der Runde 4)
 
@@ -51,8 +51,24 @@ Fall 3 sollte springen und nicht abbrechen. Der Nutzer hat den Befehl gedrückt,
 
 Möglichkeit 3 empfehlen wir nicht: sie führt einen Mechanismus ein, den dieses Programm nirgends benutzt, und löst den Tastenweg nicht.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1 mit Ergaenzung.**
+
+Ein Satz in der Statuszeile, **vom Ergebnis her formuliert und nicht von der Ursache**: „keine
+angezeigte Datei, zu der gesprungen werden koennte". So gelesen ist er auch fuer den richtig, der
+den Editor abgeschaltet hat, statt ihm eine falsche Auskunft zu geben.
+
+**Fall 3 springt und bricht nicht ab.** Ist der Ordner da und die Datei darin verschwunden, zeigt
+KRK den Ordner. Der Nutzer hat den Befehl gedrueckt, weil er den Ordner sehen will; dass die Datei
+fehlt, ist eine Auskunft und kein Grund, ihm den Ordner vorzuenthalten.
+
+Ein eigener Mechanismus fuer die Abweisung ist abgelehnt: das Programm benutzt nirgends einen, und
+er loest den Tastenweg nicht.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

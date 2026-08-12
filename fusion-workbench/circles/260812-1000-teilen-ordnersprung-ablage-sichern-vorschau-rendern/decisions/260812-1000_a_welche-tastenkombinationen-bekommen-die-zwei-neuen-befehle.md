@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `resources/default-keymap.toml`; `crates/krk-core/src/tasten/belegung.rs:546` (`Kommando::KENNUNGEN`, 73 Kennungen); `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_*_circle.md` (die Runde, die `opt+cmd+c` und `shift+cmd+c` vergeben hat)
 
@@ -48,8 +48,26 @@ Die Frage hält keinen Planschritt auf und bindet zwei.
 
 Zum Konflikt bei `shift+cmd+s`: er ist real, aber schwächer, als er aussieht. „Sichern unter" ist in KRK an keiner Stelle belegt und in keiner Runde vorgesehen, weil der Editor eine geöffnete Datei sichert und keine unter neuem Namen anlegt. Der Nutzer entscheidet, ob ihm die Nähe zu `cmd+s` genügt, um auf `shift+cmd+f` auszuweichen.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1, Nutzerentscheid.**
+
+**Nutzerentscheid vom 260812-1105:** `shift+cmd+s` fuer Teilen, `opt+cmd+o` fuer den Ordnersprung.
+
+Der Nutzer hat die drei Moeglichkeiten samt ihrer Konflikte vorgelegt bekommen und die
+Reihenordnung gewaehlt: Teilen wirkt auf die betroffenen Eintraege und gehoert in die
+`shift+cmd`-Reihe neben `shift+cmd+c`; der Ordnersprung liefert einen Ordner und steht in der
+`opt+cmd`-Reihe unmittelbar neben `opt+cmd+c`, das den Pfad desselben Ordners kopiert.
+
+**Der Konflikt ist benannt und angenommen:** `shift+cmd+s` heisst auf dem Mac ueblicherweise
+„Sichern unter", und der Editor belegt `cmd+s` mit „Sichern". „Sichern unter" gibt es in KRK
+nirgends und ist in keiner Runde vorgesehen, weil der Editor eine geoeffnete Datei sichert und
+keine unter neuem Namen anlegt. `shift+cmd+f` fuer „Freigeben" war die Ausweichmoeglichkeit und
+ist nicht gewaehlt worden.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

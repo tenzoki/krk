@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** implemented
+**Status:** superseded
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/aufteilung.rs:374`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C1), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md`
 
@@ -71,3 +71,5 @@ Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet v
 Implemented: 0342445 — `crates/krk-ui/src/appkit/bereichsleiste.rs`, eine eigene Flaeche ueber die Fensterbreite, nur Schalter. Die beiden Statuszeilen sind unberuehrt.
 Deferred:
 Superseded by:
+Superseded by: `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1105_a_die-statuszeile-zieht-ueber-die-volle-fensterbreite-und-laesst-sich-blaettern.md` — der Nutzer hat am 260812-1105 entschieden, die Statuszeile ueber die volle Fensterbreite zu ziehen und blaetterbar zu machen. Das ist Moeglichkeit 2 dieses Datensatzes, die hier ausdruecklich als eigene Runde vertagt worden war; sie laeuft jetzt als fuenfte Faehigkeit der Runde 6. Was dieser Datensatz entschieden hat, bleibt fuer die Bereichsleiste gueltig und ist mit 0342445 umgesetzt: sie traegt nur Schalter und keine Meldung. Ueberholt ist allein die Aussage, die beiden Statuszeilen der Dateifenster blieben, wo sie sind.
+

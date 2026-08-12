@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/mod.rs:220-260` (`Ablage::laden`); `crates/krk-core/src/ablage/atomar.rs:22-40` (`NACHBARENDUNG`, `nachbarpfad`, und die Begründung gegen eine Laufnummer); `crates/krk-core/src/ablage/pfade.rs:70` (die vier Dateinamen); `crates/krk-core/tests/ablage.rs:159`
 
@@ -47,8 +47,25 @@ Der Preis von Möglichkeit 1, dass eine zweite Beschädigung ungesichert bleibt,
 
 `inference:` Wir schließen aus dem Wortlaut des Wunsches, „sicherstellen, dass lesezeichen erhalten bleiben", dass der Nutzer die Wiederherstellbarkeit meint und nicht die lückenlose Aufzeichnung jeder Beschädigung. Geprüft ist das nicht.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Die zur Seite gelegte Datei bekommt einen festen Namen, und eine schon dastehende wird **nicht**
+ueberschrieben.
+
+Sie ist die einzige Moeglichkeit, die den Zweck der Festlegung einloest: der Nutzer soll seine
+Lesezeichen zurueckbekommen koennen, und was sie traegt, ist die **erste** zur Seite gelegte
+Fassung, nicht die letzte. Ein Ueberschreiben verschoebe den Verlust um einen Start; eine
+durchnummerierte Reihe legt einen Bestand an, den niemand abraeumt.
+
+Der Preis, dass eine zweite Beschaedigung ungesichert bleibt, ist gering: nach der ersten arbeitet
+KRK auf dem Auslieferungszustand, und was danach kaputtgeht, ist Inhalt, den KRK selbst geschrieben
+hat.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

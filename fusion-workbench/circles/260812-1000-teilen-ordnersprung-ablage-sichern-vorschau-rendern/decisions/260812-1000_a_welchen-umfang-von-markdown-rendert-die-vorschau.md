@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/hervorhebung.rs` (Modulkopf: zwei Merkmalslisten, der Schnitt „wirkt auf die Auslegung oder nicht"); `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`; `crates/krk-ui/src/vorschaumodell.rs:117` (`TEXTGRENZE`, 1 MB)
 
@@ -45,8 +45,25 @@ Die Frage hält keinen Planschritt auf und bindet einen.
 
 **Möglichkeit 3 empfehlen wir nicht.** Sie stellt drei Fragen neu, die C6 für Bilder bereits beantwortet hat, und sie ist die einzige der drei, die L7 wirklich gefährdet. Wenn der Nutzer Bilder will, ist das eine eigene Runde und keine Zutat zu dieser.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Der Grundumfang, mit einem ausdruecklichen Nachtrag im Spec: **Tabellen erscheinen als
+Quelltextraster** und nicht ausgerichtet.
+
+Der Grund ist die Reihenfolge. Eine Tabellenausrichtung haengt an der Breitenfrage, und die haengt
+an der Rechnung der Runde 5, nach der die Vorschau bei 780 Punkten Fensterbreite rund 17 Punkte
+Luft hat. Solange diese Zahl ungemessen ist, waere eine Ausrichtung eine Zusage auf ungepruefter
+Grundlage.
+
+Eingebettete Bilder sind abgelehnt: sie stellen drei Fragen neu, die C6 fuer Bilder bereits
+beantwortet hat, und sie sind der einzige der drei Umfaenge, der L7 wirklich gefaehrdet. Wenn der
+Nutzer Bilder will, ist das eine eigene Runde und keine Zutat zu dieser.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

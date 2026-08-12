@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/kommandos/operationen.rs:162` (`betroffene`, zählt Ordner mit); `crates/krk-ui/src/appkit/standardprogramm.rs` (C3 der Runde 4, der nächstliegende Vorgänger)
 
@@ -44,8 +44,24 @@ Sie hält keinen Planschritt auf und bindet einen.
 
 `inference:` Wir schließen aus dem Wortlaut des Wunsches, „Share (zB mit airdrop)", dass AirDrop der gemeinte Hauptfall ist, und AirDrop nimmt Ordner an. Geprüft ist das an keinem laufenden Bündel.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+KRK reicht weiter, was markiert ist, Ordner eingeschlossen, und laesst den Freigabedienst
+entscheiden, was er damit kann.
+
+Die einzige Moeglichkeit ohne Sonderregel, und sie beantwortet die Frage dort, wo sie hingehoert:
+der Dienst weiss, was er mit einem Ordner kann, KRK weiss es nicht. Eine Auswahl auf Dateien zu
+beschraenken naehme dem Nutzer einen Fall weg, den das System beherrscht; das Verhalten von der
+Zusammensetzung der Auswahl abhaengig zu machen waere an der Oberflaeche nicht erkennbar.
+
+`inference:` Der Wortlaut des Wunsches nennt AirDrop als Hauptfall, und AirDrop nimmt Ordner an.
+Am laufenden Buendel geprueft ist das nicht.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

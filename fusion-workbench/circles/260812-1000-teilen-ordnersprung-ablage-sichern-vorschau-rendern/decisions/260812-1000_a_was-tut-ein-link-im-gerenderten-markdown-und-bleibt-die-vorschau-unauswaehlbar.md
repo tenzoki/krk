@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/vorschau.rs:574-575` (`setEditable(false)`, `setSelectable(false)` und die Begründung im Modulkopf); `crates/krk-ui/src/appkit/ereignisse.rs` (`ersthelfer_gehoert_appkit`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md` (der Betrachter, der Verweisen folgen soll); C9 der Runde 1, „Nur lokale Laufwerke"
 
@@ -49,8 +49,27 @@ Der Preis, ein Verweis, der nicht klickt, lässt sich mildern, ohne die Frage zu
 
 **Möglichkeit 3 empfehlen wir nicht.** Sie kostet die Tastenbedienung der Vorschau-Tabs, und die ist eine abgenommene Zusage aus C1.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Ein Link im gerenderten Markdown wird **angezeigt und nicht angeklickt**, und die Vorschauflaeche
+bleibt unauswaehlbar.
+
+Der Grund ist die Reihenfolge, nicht der Aufwand: welche Quellen eine Adresse setzen duerfen, ist
+die erste offene Frage des Web-Betrachter-Circles und dort mit drei aufeinander aufbauenden
+Moeglichkeiten ausgearbeitet. Sie hier nebenbei zu beantworten hiesse, jenen Circle um seine
+Klaerungsrunde zu bringen.
+
+**Der Spec legt fest, dass ein Link die Farbe bekommt, aber nicht den Zeigefinger-Mauszeiger** —
+so verspricht er nicht mehr, als er haelt.
+
+Die Vorschauflaeche auswaehlbar zu machen ist abgelehnt: das kostet die Tastenbedienung der
+Vorschau-Tabs, und die ist eine abgenommene Zusage aus C1 der Runde 2.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

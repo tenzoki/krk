@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/nummernspalte.rs` (eine Klasse für Editor und Vorschau); `crates/krk-ui/src/vorschaumodell.rs:451` (`zeigt_dateitext`, vollständige Fallunterscheidung); `circles/260807-2116-eingebauter-editor-mit-textmarken/_*_circle.md` (C10 der Runde 2, die Zusage einer Anzeige für beide Flächen)
 
@@ -44,8 +44,23 @@ Sie hält keinen Planschritt auf und bindet einen.
 
 Der Preis von Möglichkeit 1 ist gering. Wer Zeilennummern zu einer Markdown-Datei braucht, öffnet sie mit `f4` im Editor; dort stehen sie und stimmen.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Die Zeilennummernspalte bleibt bei gerendertem Markdown leer.
+
+Die einzige Moeglichkeit, die keine falsche Auskunft erzeugt und die geteilte Klasse nicht
+anfasst. Zahlen neben gerendertem Text zaehlen etwas anderes, als daneben steht; das Umnummerieren
+saehe zwar besser aus, kostet aber die Eindeutigkeit der Anzeige ueber zwei Flaechen hinweg, und
+fuer genau diesen Fehler hat dieses Projekt schon einen Defekt bezahlt.
+
+Der Preis ist gering: wer Zeilennummern zu einer Markdown-Datei braucht, oeffnet sie mit `f4` im
+Editor; dort stehen sie und stimmen.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

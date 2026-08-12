@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/fenstermodell.rs:213` (`Bereich::mindestbreite`); `crates/krk-ui/src/appkit/fenster.rs:134` (`MINDESTGROESSE`, 780 Punkte); `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5, `## Closure note`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `## Parent grounding stale` vom 260812-0816
 
@@ -49,8 +49,25 @@ Der Auslöser, der die Frage wieder aufmacht, ist derselbe wie bei L9: ein Lauf 
 
 `inference:` Wir vermuten, dass 160 Punkte für gerenderten Fließtext zu schmal sind, weil der Editor mit derselben Begründung 320 trägt. Der Editor zeigt allerdings feste Schrift und die Vorschau proportionale, die mehr Zeichen in dieselbe Breite bringt. Geprüft ist keines von beidem.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Die Mindestbreite der Vorschau bleibt in dieser Runde bei 160 Punkten.
+
+Nicht, weil 160 genuegen, sondern weil niemand weiss, ob sie es tun: die Obergrenze von 177 ist
+gerechnet, die Schalterbreite von 540 ist gerechnet, und die Enge des gerenderten Markdown ist
+ungemessen. Drei ungemessene Zahlen gegeneinander zu verrechnen und daraus eine Zusage abzuleiten,
+ist der Weg, auf dem dieses Projekt bei L9 zweimal eine Zahl gesenkt und danach nicht mehr gewusst
+hat, warum.
+
+**Der Ausloeser, der die Frage wieder aufmacht, ist ein Lauf am laufenden Buendel.** Wer die
+Vorschau nach dieser Runde mit gerendertem Markdown bei 160 Punkten ansieht, weiss in einer
+Minute, was drei Rechnungen nicht beantworten. Der Spec nennt das als Beobachtungspunkt.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

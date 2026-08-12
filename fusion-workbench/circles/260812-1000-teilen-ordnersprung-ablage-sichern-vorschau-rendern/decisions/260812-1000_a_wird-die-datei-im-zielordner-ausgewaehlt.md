@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/tabs.rs:508` (`ordner_setzen`, zweiter Parameter `auswahl`); `crates/krk-ui/src/appkit/tabelle.rs:628` (`ordner_lesen`); C2 der Runde 1 (Aufstieg) und C10 der Runde 1 (Sprung aus der Zwischenablage), die beide denselben Parameter benutzen
 
@@ -42,8 +42,23 @@ Sie hält keinen Planschritt auf und bindet einen.
 
 **Wir empfehlen Möglichkeit 1.** Sie kostet ein Argument, das ohnehin in der Signatur steht, und sie folgt der Vorlage zweier Befehle, die diese Frage bereits gleich beantwortet haben. Möglichkeit 3 empfehlen wir nicht in dieser Runde: sie berührt die Bildlaufposition, und der Nutzen ist ungemessen. Wenn sich der Bedarf am laufenden Bündel zeigt, ist sie ein eigener kleiner Nachtrag.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Nach dem Ordnersprung steht die Auswahl auf der Datei.
+
+Sie kostet ein Argument, das ohnehin in der Signatur von `Dateifenster::ordner_lesen` steht, und
+sie folgt der Vorlage zweier Befehle, die diese Frage bereits gleich beantwortet haben: der
+Aufstieg aus C2 und der Sprung aus der Zwischenablage.
+
+Die Datei zusaetzlich in den sichtbaren Bereich zu blaettern ist fuer diese Runde abgelehnt: das
+beruehrt die Bildlaufposition, und der Nutzen ist ungemessen. Zeigt sich der Bedarf am laufenden
+Buendel, ist es ein eigener kleiner Nachtrag.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

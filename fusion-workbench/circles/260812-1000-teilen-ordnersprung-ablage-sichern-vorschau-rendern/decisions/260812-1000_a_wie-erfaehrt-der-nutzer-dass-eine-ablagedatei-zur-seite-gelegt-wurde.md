@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/mod.rs:126-160` (`Ersetzung`, `melden`); `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (Möglichkeit 1 gewählt: Statuszeile); `crates/krk-ui/src/appkit/anwendung.rs:917` (`sitzung_laden`, sammelt die Meldungen)
 
@@ -45,8 +45,31 @@ Sie hält keinen Planschritt auf und bindet einen.
 
 Wir halten allerdings fest, dass Möglichkeit 1 die Nachricht nicht sicher zustellt. Wenn dem Nutzer die sichere Zustellung wichtiger ist als die Ruhe beim Start, ist Möglichkeit 3 die bessere Wahl; ihre Sonderregel für eine von vier Dateien ist der ehrlichere Preis als ein Blatt, das jedes Mal aufgeht.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1, Nutzerentscheid, mit Folge.**
+
+**Nutzerentscheid vom 260812-1105: die Statuszeile beim Start**, mit einem Satz, der zuerst sagt,
+was der Nutzer tun kann, und danach, was geschehen ist. Der Satz nennt beide Pfade.
+
+Kein Blatt. Eine Fassung, die eine alte Datei nicht mehr liest, erzeugt den Fall bei jedem Start,
+und ein Blatt, das bei jedem Start kommt, wird nach dem dritten Mal weggeklickt, ohne gelesen zu
+werden. Dazu haelt ein stehendes Blatt jeden Tastenbefehl ausser dem Abbruch an und beruehrt damit
+die Startzusage L4.
+
+**Der Nutzer hat die Wahl an eine Bedingung geknuepft, und die vergroessert diese Runde.** Er
+weist darauf hin, dass die Statuszeile heute nur unter einem Dateifenster steht und damit fuer die
+meisten Meldungen zu schmal ist. Seine Vorgabe: die Statusmeldung muss die volle Fensterbreite
+nutzen, und es muss moeglich sein, nach rechts zu blaettern. Das ist als fuenfte Faehigkeit dieser
+Runde aufgenommen und ueberholt eine Entscheidung der Runde 5; der Datensatz dazu ist
+`260812-1105_a_die-statuszeile-zieht-ueber-die-volle-fensterbreite-und-laesst-sich-blaettern.md`.
+
+Die im Datensatz benannte Schwaeche von Moeglichkeit 1 bleibt bestehen: die Meldung stellt sich
+nicht sicher zu, sie ist nach der ersten Ordneraenderung weg.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:

@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs` (die `NSTableView` des Dateifensters); `crates/krk-ui/src/appkit/vorschau.rs:574-575` (die Inhaltsfläche, weder bearbeitbar noch auswählbar); `crates/krk-ui/src/appkit/editor.rs` (die Textfläche); `crates/krk-ui/src/appkit/ereignisse.rs` (`ersthelfer_gehoert_appkit`)
 
@@ -44,8 +44,25 @@ Die Frage hält keinen Planschritt auf und bindet einen.
 
 Der Zuschnitt sollte dabei dem folgen, was `appkit/standardprogramm.rs` vormacht: eine Stelle, die das Menü baut, für alle drei Flächen dieselbe, und die drei Flächen fragen nur, welche Einträge betroffen sind. Drei Menübauer nebeneinander wären die Wiederholung, die dieses Projekt an `appkit/nummernspalte.rs` und `appkit/tableiste.rs` bereits zweimal vermieden hat.
 
+
+## Antwort 260812-1105
+
+**Moeglichkeit 1.**
+
+Das Kontextmenue haengt an allen drei Flaechen: Dateiliste, Editor und Vorschau. Im Editor tritt
+es neben das, was AppKit der `NSTextView` von sich aus gibt.
+
+Der Nutzer hat den Mausweg fuer alle drei Bereiche verlangt, und ein Bereich, in dem die rechte
+Maustaste stillschweigend nichts tut, waere die schlechtere Auskunft als eine zusaetzliche Bauart
+im Editor.
+
+**Der Zuschnitt folgt `appkit/standardprogramm.rs`:** eine Stelle baut das Menue, fuer alle drei
+Flaechen dieselbe, und die Flaechen fragen nur, welche Eintraege betroffen sind. Drei Menuebauer
+nebeneinander waeren die Wiederholung, die dieses Projekt an `nummernspalte.rs` und `tableiste.rs`
+bereits zweimal vermieden hat.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
 Superseded by:
