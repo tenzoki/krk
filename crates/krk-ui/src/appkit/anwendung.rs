@@ -2456,8 +2456,8 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Schreibt die Sichtbarkeit der Spalten in beide Dateilisten (C3 der
-    /// Bereichsleisten-Runde).
+    /// Schreibt die Sichtbarkeit der Spalten in beide Dateilisten und verteilt
+    /// danach ihre Breiten neu (C3 der Bereichsleisten-Runde).
     ///
     /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`]: der Aufbau der Oberflaeche, damit die
@@ -2470,6 +2470,14 @@ impl Anwendungsdelegierter {
     /// nehmen; eine Liste der drei schaltbaren daneben waere eine zweite
     /// Aufzaehlung, und [`spalte_sichtbar_in`] beantwortet die Namensspalte
     /// ohnehin mit `true`.
+    ///
+    /// **Die Breiten stehen erst nach dem zweiten Aufruf richtig.**
+    /// `setHidden:` allein schlaegt die frei werdenden Punkte der Namensspalte
+    /// zu und laesst die Tabelle so breit, wie sie war; der Gewinn erreicht die
+    /// Sichtflaeche nie, und eine Tabelle, die vorher schon breiter war als ihr
+    /// Bildlauf, bleibt es. Was [`Dateifenster::spaltenbreiten_verteilen`]
+    /// dagegen setzt, welche Regel der Nutzer dafuer gewaehlt hat und woran das
+    /// gemessen ist, steht dort.
     fn spaltenanzeige_nachziehen(&self) {
         if self.ivars().dateifenster.get().is_none() {
             return;
@@ -2480,6 +2488,11 @@ impl Anwendungsdelegierter {
                 self.dateifenster(seite)
                     .spalte_verbergen(spalte, !spalte_sichtbar_in(&spalten, spalte));
             }
+            // **Einmal je Dateifenster und nicht einmal je Spalte.** Die
+            // Verteilung misst den rechten Rand der letzten sichtbaren Spalte;
+            // mitten im Durchgang darueber gemessen waere er der Rand eines
+            // Zwischenstandes, und die vier Rechnungen ueberschrieben einander.
+            self.dateifenster(seite).spaltenbreiten_verteilen();
         }
     }
 

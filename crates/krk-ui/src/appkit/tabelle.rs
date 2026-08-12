@@ -105,7 +105,10 @@
 //! Alle uebrigen Setzer und Abfragen der genannten Klassen tragen im Kopf des
 //! Systems keine Angabe und stehen damit seit 10.0; der Block beim Doppelklick
 //! weiter unten fuehrt das fuer `setTarget:`, `setDoubleAction:` und
-//! `clickedRow` einzeln aus. `objc2` fuehrt keine Verfuegbarkeitsangaben mit
+//! `clickedRow` einzeln aus. Dasselbe gilt fuer die drei Abfragen, an denen die
+//! Spaltenverteilung haengt: `rectOfColumn:` (`NSTableView.h:393`),
+//! `columnWithIdentifier:` (`:238`) und `NSTableColumn`s Breitenpaar `width`
+//! und `minWidth` (`NSTableColumn.h:42` und `:48`). `objc2` fuehrt keine Verfuegbarkeitsangaben mit
 //! sich, und der Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist
 //! die Gegenmassnahme.
 
@@ -2367,6 +2370,10 @@ impl Dateifenster {
 
     /// Blendet eine Spalte aus oder wieder ein (C3 der Bereichsleisten-Runde).
     ///
+    /// **Die Breiten bleiben dabei ungerechnet.** Wer schaltet, ruft danach
+    /// [`Dateifenster::spaltenbreiten_verteilen`]; warum das noetig ist, steht
+    /// dort.
+    ///
     /// **Eine verborgene Spalte bleibt eine Spalte.** `setHidden:` nimmt sie
     /// weder aus `tableColumns` noch aus `numberOfColumns` — der Kopf des
     /// Systems sagt es ausdruecklich (`NSTableColumn.h:78`) —, und das traegt
@@ -2387,6 +2394,98 @@ impl Dateifenster {
         };
         kopf.setHidden(verborgen);
     }
+
+    /// Setzt die sichtbaren Spalten auf ihre natuerliche Breite und gibt der
+    /// Namensspalte, was bis zur Sichtflaeche fehlt.
+    ///
+    /// **Die Regel stammt vom Nutzer**, Moeglichkeit 1 seines Entscheids vom
+    /// 260812-0910:
+    /// `shared/decisions/260812-0910_*_wie-werden-die-spaltenbreiten-nach-dem-wegschalten-verteilt.md`.
+    /// Groesse 80, Datum 130 und Typ 90 Punkte stehen bei **jeder**
+    /// Schalterstellung gleich, damit dieselbe Spalte immer an derselben Stelle
+    /// und in derselben Breite steht; Name nimmt den Rest und faellt dabei nicht
+    /// unter seine Mindestbreite. Eine Verhaeltnisrechnung ueber alle Spalten
+    /// und eine Deckelung der schmalen sind ausdruecklich abgelehnt worden.
+    ///
+    /// **Was AppKit von sich aus tut, und warum das zu wenig ist.** Gemessen am
+    /// 260812 an einer Tabelle ohne Fenster, mit denselben Breiten und derselben
+    /// Betriebsart wie hier:
+    ///
+    /// - Aendert sich die **Sichtflaeche**, trifft
+    ///   `FirstColumnOnlyAutoresizingStyle` diese Regel schon von selbst: bei 900
+    ///   Punkten steht Name auf 537, bei 500 auf 137, bei 400 auf seiner
+    ///   Mindestbreite 100, und die drei schmalen ruehrt AppKit nicht an.
+    /// - Wird dagegen eine Spalte **verborgen**, haelt AppKit die Gesamtbreite
+    ///   der Tabelle fest und schlaegt die frei werdenden Punkte samt einem
+    ///   Zellenabstand der Namensspalte zu: bei 700 Punkten Sichtflaeche waechst
+    ///   Name von 337 auf 434 (Groesse weg) und auf 541 (Typ zusaetzlich weg).
+    ///   Der Gewinn erreicht die Sichtflaeche also nie. Steht die Tabelle
+    ///   vorher schon breiter als ihre Sichtflaeche — vier Spalten brauchen
+    ///   rund 603 Punkte, zwei Dateifenster nebeneinander sind schmaler —, dann
+    ///   bleibt sie es auch nach dem Wegschalten, und die letzte sichtbare
+    ///   Spalte steht weiter ausserhalb des Bildes. Genau das war der Defekt
+    ///   `shared/issues/260812-0907_*`.
+    ///
+    /// **Gemessen wird ueber `rectOfColumn:` und nicht gerechnet.** Zwischen der
+    /// Summe der Spaltenbreiten und der Breite der Tabelle liegen der
+    /// Zellenabstand je Spalte und die Randpolsterung, die `NSTableViewStyle`
+    /// zusetzt (`NSTableView.h:81`: "content padding ... independent of
+    /// intercellSpacing"); beide sind nirgends zugesagt. Das Feld der letzten
+    /// sichtbaren Spalte traegt sie fertig, und sein rechter Rand ist damit die
+    /// eine Zahl, die zaehlt. Eine verborgene Spalte liefert ein leeres Feld,
+    /// deshalb fragt der Durchgang vorher nach `isHidden`.
+    ///
+    /// Erst danach steht die Namensspalte fest, denn ihr Zuwachs verschiebt den
+    /// Rand, an dem er gemessen wird: der erste Durchgang setzt sie auf ihre
+    /// natuerliche Breite, der zweite misst, der dritte legt sie fest.
+    pub fn spaltenbreiten_verteilen(&self) {
+        let liste = self.liste();
+        for spalte in Spalte::ALLE {
+            let Some(kopf) = liste.tableColumnWithIdentifier(kennung(spalte)) else {
+                continue;
+            };
+            if kopf.isHidden() {
+                continue;
+            }
+            kopf.setWidth(breiten(spalte).0);
+        }
+
+        let mut rand: f64 = 0.0;
+        for spalte in Spalte::ALLE {
+            let Some(kopf) = liste.tableColumnWithIdentifier(kennung(spalte)) else {
+                continue;
+            };
+            if kopf.isHidden() {
+                continue;
+            }
+            let feld = liste.rectOfColumn(liste.columnWithIdentifier(kennung(spalte)));
+            rand = rand.max(feld.origin.x + feld.size.width);
+        }
+
+        let Some(kopf) = liste.tableColumnWithIdentifier(kennung(Spalte::Name)) else {
+            return;
+        };
+        let (natuerlich, mindestens) = breiten(Spalte::Name);
+        let sichtflaeche = self.sicht.contentView().bounds().size.width;
+        kopf.setWidth(namensbreite(natuerlich, mindestens, rand, sichtflaeche));
+    }
+}
+
+/// Die Breite der Namensspalte: ihre natuerliche Breite zuzueglich dessen, was
+/// vom rechten Rand der letzten sichtbaren Spalte bis zur Sichtflaeche fehlt.
+///
+/// Rein und ohne AppKit, damit die Rechnung ohne Fenster zu pruefen ist; die
+/// vier Zahlen liest [`Dateifenster::spaltenbreiten_verteilen`] ab.
+///
+/// **Der Fehlbetrag darf negativ sein.** Passen die sichtbaren Spalten in ihrer
+/// natuerlichen Breite nicht mehr in die Sichtflaeche, schrumpft Name bis auf
+/// `mindestens` und keinen Punkt weiter; darunter bleibt die Tabelle breiter
+/// als ihre Sichtflaeche und `NSScrollView` blendet seinen waagerechten
+/// Schieber ein. Die Mindestbreite gewinnt gegen die Verteilung, so steht es im
+/// Entscheid.
+#[must_use]
+fn namensbreite(natuerlich: f64, mindestens: f64, rechter_rand: f64, sichtflaeche: f64) -> f64 {
+    (natuerlich + (sichtflaeche - rechter_rand)).max(mindestens)
 }
 
 /// Eine Spalte mit Kennung, Ueberschrift und Breiten.
@@ -2422,6 +2521,36 @@ mod tests {
             assert_eq!(aus_kennung(kennung(spalte)), Some(spalte));
         }
         assert_eq!(aus_kennung(ns_string!("unbekannt")), None);
+    }
+
+    #[test]
+    fn die_namensspalte_nimmt_auf_was_bis_zur_sichtflaeche_fehlt() {
+        let (natuerlich, mindestens) = breiten(Spalte::Name);
+        // Vier Spalten in ihrer natuerlichen Breite enden bei 603 Punkten
+        // (gemessen am 260812); in einer Sichtflaeche von 700 fehlen 97.
+        assert_eq!(namensbreite(natuerlich, mindestens, 603.0, 700.0), 337.0);
+        // Ohne Groesse und Typ endet dieselbe Reihe bei 399 Punkten.
+        assert_eq!(namensbreite(natuerlich, mindestens, 399.0, 500.0), 341.0);
+        // Passt die Reihe genau, bleibt es bei der natuerlichen Breite.
+        assert_eq!(
+            namensbreite(natuerlich, mindestens, 603.0, 603.0),
+            natuerlich
+        );
+    }
+
+    #[test]
+    fn die_mindestbreite_gewinnt_gegen_die_verteilung() {
+        let (natuerlich, mindestens) = breiten(Spalte::Name);
+        // Eine Sichtflaeche, die schmaler ist als die Reihe: Name schrumpft bis
+        // auf seine Mindestbreite und keinen Punkt weiter.
+        assert_eq!(
+            namensbreite(natuerlich, mindestens, 603.0, 400.0),
+            mindestens
+        );
+        // Auch die Flaeche 0, die beim Aufbau vor der ersten Aufteilung steht,
+        // liefert eine gueltige Breite und keine negative.
+        assert_eq!(namensbreite(natuerlich, mindestens, 0.0, 0.0), natuerlich);
+        assert_eq!(namensbreite(natuerlich, mindestens, 603.0, 0.0), mindestens);
     }
 
     #[test]
