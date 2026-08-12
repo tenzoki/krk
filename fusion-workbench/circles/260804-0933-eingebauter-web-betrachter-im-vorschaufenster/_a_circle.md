@@ -175,3 +175,179 @@ Dieser Circle ist der empfohlene nächste Kandidat, und zwar ohne Vergleichswert
 Die drei offenen Fragen des Grounding-Abschnitts bleiben die erste Arbeit nach dem Übergang auf aktiv. Der Shaper im portfolio-activation-Modus klärt sie mit dem Nutzer, bevor ein Plan entsteht.
 
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260812-0816
+**Playmaker-Lauf:** 260812-0816-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:** `260811-1304-statusleiste-mit-bereichsschaltern`,
+geschlossen am 260812-0820
+
+Die Runde 5 hat die eine Breitenregel des Programms neu gefasst, und die Mindestbreite der
+Vorschau ist damit von einer Zahl zu einem Hebel geworden. Dieser Circle lebt in einem Tab des
+Vorschaufensters, und sein Bedarf an Breite ist die eine Berührung, die der Datensatz der Runde 5
+zwischen beiden Vorhaben benennt. Die Berührung ist mit dem Abschluss größer geworden. Keiner der
+vier Punkte unten hält die Aktivierung auf; alle vier gehören in die Klärungsrunde.
+
+**Zur Auslösebedingung, offen benannt.** Die Regel verlangt, dass der Abschnitt
+`## Grounding snapshot` dieses Datensatzes den Verzeichnisnamen des abgeschlossenen Kindes oder
+den in seiner `## Closure note` genannten Artefakt zitiert. Er zitiert weder das eine noch das
+andere; die Wörter Statusleiste, Bereichsleiste und Mindestbreite kommen darin nicht vor. Die
+Kante läuft in die andere Richtung: der Abschnitt `## Dependencies` des Datensatzes der Runde 5
+nennt diesen Circle beim Namen, stellt fest, er binde jene Runde nicht, und benennt die
+Berührung ausdrücklich mit der Zahl 160. Der Vermerk steht deshalb hier, obwohl die wörtliche
+Bedingung nicht greift. Wer anders entscheidet, sieht an dieser Stelle, worauf.
+
+### 1. Die 160 Punkte der Vorschau tragen seit der Runde 5 zwei Entscheidungen statt keiner
+
+Der Datensatz der Runde 5 sagte über die Berührung: „ein gerenderter Web-Inhalt braucht plausibel
+mehr als die 160 Punkte Mindestbreite, die die Vorschau heute trägt. Wer jenen Circle aktiviert,
+prüft die Zahl." Die Zahl steht unverändert bei 160 (`crates/krk-ui/src/fenstermodell.rs:213`).
+Was sich geändert hat, ist, woran sie hängt. Am Baum gelesen am 260812-0816:
+
+**Sie entscheidet, ob die Vorschau überhaupt aufgeht.** `Fenstermodell::umschalten`
+(`crates/krk-ui/src/fenstermodell.rs:639`) weist seit der Runde 5 jeden Einschaltbefehl ab, dessen
+Bereichssatz nicht mehr in die Fensterzeile passt; die Rechnung steht in `mindestbreiten_passen`
+(`:685`) und summiert die Mindestbreiten der Bereiche, die nach dem Befehl stünden. Die Abweisung
+ist stumm, das ist die Form aus C7 der Runde 1, und der Rückgabewert trägt `#[must_use]`. Ein
+Schalter, dessen Bereich nicht hineinpasst, springt zurück, ohne dem Nutzer zu sagen, warum.
+
+**Sie entscheidet, wer beim Schrumpfen weicht.** `bereichsbreiten` (`:1044`) verteilt Anteile
+statt Punktzahlen. Wessen Anteil unter sein Mindestmaß fiele, bekommt genau das Mindestmaß und
+scheidet aus der Verteilung aus (`:1096`); die übrigen teilen den kleineren Rest weiter. Je höher
+die Zahl der Vorschau, desto häufiger nimmt die Vorschau ihr Mindestmaß und desto häufiger geben
+die anderen nach. Vor der Runde 5 entschied darüber die Reihenfolge in `Bereich::ALLE` und nicht
+die Mindestbreite.
+
+**Damit gibt es eine Obergrenze, und sie ist nah.** `MINDESTGROESSE`
+(`crates/krk-ui/src/appkit/fenster.rs:134`) hält die Fensterbreite bei 780 Punkten. Stehen
+Lesezeichenleiste, beide Dateifenster und die Vorschau zugleich, verlangen die drei ersten
+zusammen 600 Punkte, es bleiben 180 abzüglich dreier Trennlinien. Die Breite einer Trennlinie
+liest KRK zur Laufzeit von AppKit (`dividerThickness()`, `crates/krk-ui/src/appkit/aufteilung.rs:616`)
+und steht nirgends im Baum; bei einer dünnen Linie von einem Punkt liegt die Obergrenze bei rund
+177. `inference:` gerechnet und nicht am laufenden Bündel gemessen. Über dieser Grenze geht die
+Vorschau am schmalsten zulässigen Fenster gar nicht mehr auf, gleich welchen Inhalt ihr Tab trägt.
+Zwischen der heutigen 160 und dieser Grenze liegen rund 17 Punkte.
+
+**Und die Zahl gehört dem Bereich, nicht dem Tab.** `Bereich::mindestbreite` ist eine
+`const fn` über die fünf Bereiche und kennt keinen Tabinhalt (`:209`). Der Betrachter lebt nach
+der Directive dieses Circles in einem gewöhnlichen Tab des Vorschaufensters. Wer die Zahl für ihn
+anhebt, hebt sie für jeden Vorschau-Tab an, auch für die Metadatenansicht und die Bildvorschau,
+und verschiebt damit für alle Tabs, ab welcher Fensterbreite die Vorschau aufgeht. Eine
+Mindestbreite je Tabinhalt wäre ein neuer Schnitt an einer Stelle, an der die Runde 5 gerade eine
+zweite Rechenvorschrift ausgeschlossen hat.
+
+**Die Ausweichbewegung ist bereits einmal abgelehnt worden.** `MINDESTGROESSE` in der Breite von
+780 auf 940 zu heben stand am 260812-0430 als Möglichkeit 3 zur Wahl und ist verworfen worden,
+mit zwei benannten Gründen: sie nähme dem Nutzer die Fensterbreiten zwischen 780 und 940, und sie
+machte die Abweisung am Schalter wieder zu einer Vorsichtsmaßnahme
+(`decisions/260812-0415_*_was-geschieht-wenn-das-fenster-unter-die-summe-der-mindestbreiten-faellt.md`
+im Circle der Runde 5). Wer für den Betrachter mehr Breite will, argumentiert also gegen eine
+Antwort, die schon steht, und nicht in eine offene Frage hinein.
+
+### 2. Eine Nutzerfestlegung vom 260808 ist von einem Agenten überstimmt worden
+
+Das ist der schwerste Punkt des Bounded-Closure-Artefakts der Runde 5, und er trifft diesen
+Circle nicht dort, wo man ihn zuerst sucht.
+
+Die Festlegung lautete: die Lesezeichenleiste weicht dem Editor nicht. Sie stand nirgends als
+Datensatz, sondern allein im Dokumentationskommentar an `bereichsbreiten`, und sie ist unter der
+Anteilsregel ersatzlos gefallen
+(`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_*_was-heisst-proportional-zur-letzten-aufteilung.md`).
+Der Orchestrator hat sie in der Klärungsrunde autonom fallen lassen, gedeckt durch die Weisung
+„mache autonom", und mit zwei Gründen begründet. Den zweiten hat der Abgleich am 260812-0815
+widerlegt und der Datensatz ihn zurückgenommen: die Frage „wer weicht, wenn es eng wird" löst
+sich nicht auf, sie wird nur anders beantwortet. Tragfähig bleibt der erste Grund allein, und die
+Entscheidung ist als Überstimmung zu lesen und nicht als Folgerung. Der Nutzer kann sie umstoßen;
+es kostet `bereichsbreiten` samt Proben ein zweites Mal.
+
+**Dieser Circle baut nicht auf der Festlegung vom 260808 auf, sondern auf dem Mechanismus, der
+sie ersetzt hat.** Sein Datensatz nennt weder die Vorrangordnung noch die Breitenregel; geprüft
+durch Suche im ganzen Datensatz. Genau darin liegt die Bindung: die Mindestbreite ist erst
+dadurch zum Hebel geworden, dass die Vorrangordnung gefallen ist, und Punkt 1 oben steht
+vollständig auf diesem Mechanismus. Stößt der Nutzer die Überstimmung um, wechselt der Hebel
+zurück auf die Reihenfolge in `Bereich::ALLE`, und die Rechnung aus Punkt 1 gilt nicht mehr in
+dieser Form. Wer diesen Circle aktiviert, klärt deshalb zuerst, ob die Anteilsregel steht.
+
+### 3. Was sich nicht bewegt hat, damit niemand danach sucht
+
+Zwei Annahmen des Abschnitts `## Grounding snapshot` sind geprüft und halten.
+
+C1 der Runde 1 ist unberührt. Die neue Fläche am Fensterfuß heißt `Bereichsleiste`, trägt
+ausschließlich Schalter und keine Meldung; die beiden Statuszeilen an den Füßen der Dateifenster
+stehen mit allen fünf Rängen
+(`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_*_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md`).
+Die Zusage dieses Circles, eine nicht erreichbare Adresse gehöre in die Statuszeile und nicht in
+ein eigenes Meldewesen, gilt unverändert.
+
+Der gegenseitige Ausschluss von Vorschau und Editor aus C1 der Editor-Runde steht ebenfalls
+unverändert; die Runde 5 hat ihn geerbt statt ihn anzufassen. Das Halteverhalten der
+Vorschau-Tabs aus C6, auf dem die Directive dieses Circles aufsetzt, hat die Runde 5 nicht
+berührt.
+
+### 4. Die Messreihe altert weiter, und L9 kommt hinzu
+
+Der Abschnitt `## Parent grounding stale` vom 260807-1042 hält fest, dass die dritte offene Frage
+dieses Circles auf einem gealterten Messstand steht: L5 und L7 sind die naheliegenden
+Bezugsgrößen für eine eigene Zeitzusage des Betrachters, und beide gehören zum ungemessenen Teil.
+Der Befund gilt weiter und ist um eine Zusage reicher geworden. Die `Bereichsleiste` nimmt der
+Fensterzeile 18 Punkte Höhe (`statuszeile::HOEHE`, `crates/krk-ui/src/appkit/statuszeile.rs:68`),
+und die `## Closure note` der Runde 5 benennt L9 aus C8 ausdrücklich als nachzumessen, ohne eine
+neue Zahl zu setzen. Fällt die Antwort auf die dritte Frage dieses Circles auf ja, ist der
+Artefakt der Runde 1 eine bindende Eingabe: die Runde braucht dann eine Regel, die das Altern der
+Messung anzeigt, und nicht erst einen Abgleich am Ende, der danach fragt.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260812-0816
+**Playmaker-Lauf:** 260812-0816-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Klärungsrunde und einer Untersuchung des
+Darstellungsmittels, nicht davor
+
+Dieser Circle ist der empfohlene nächste Kandidat, und zwar ohne Vergleichswert: mit dem
+Abschluss der Runde 5 am 260812-0820 ist er der einzige nicht abgeschlossene Circle im
+Portfolio. Eine Rangfolge mit einem Element trägt keine Auskunft über relative Reife. Der
+Vorschlag stützt sich deshalb auf die absoluten Signale, und drei davon sind seit dem Vorschlag
+vom 260807-1042 neu.
+
+**Die geerbten Bauteile stehen unverändert und sind um eines reicher geworden.** Die vier
+Bauteile, die der Abschnitt `## Grounding snapshot` nennt, liegen auf der Platte, geprüft im
+Vorschlag vom 260807-1042 und seither nicht angefasst: die Auswertung der Zwischenablage, das
+Vorschaufenster mit seiner Tableiste, die Statuszeile und der Befehl `zwischenablage_springen`
+auf `opt+cmd+g`. Dazu kommt die `Bereichsleiste` aus der Runde 5, die der Vorschau einen
+Schalter am Fensterfuß gibt. Für den Betrachter ist das eine Bequemlichkeit und keine Bindung.
+
+**Der Zuschnitt ist unverändert und bleibt das stärkste Gegenargument.** Der Datensatz hält
+selbst fest, dass das Mittel der Darstellung von Web-Inhalt offen ist und „in eine eigene
+Untersuchung vor dem Plan" gehört. Daneben steht die ungemessene Verfügbarkeitsfrage für
+macOS-26-Schnittstellen
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`),
+die dieser Datensatz selbst als `inference:` einordnet, und die projektweit offene Frage, ob die
+Untergrenzen-Angabe prüfbar gemacht wird
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`). Eine
+Untersuchung vor dem Plan ist teurer als eine Klärungsrunde, und dieser Circle braucht beides.
+
+**Die Klärungsrunde trägt jetzt eine vierte Frage.** Zu den drei offenen Fragen des Abschnitts
+`## Grounding snapshot` kommt die Mindestbreite der Vorschau. Der Abschnitt
+`## Parent grounding stale` oben schlüsselt auf, warum die Frage nicht mehr lautet „reichen 160
+Punkte für gerenderten Web-Inhalt", sondern: welche Zahl trägt die Vorschau, wenn dieselbe Zahl
+darüber entscheidet, ab welcher Fensterbreite die Vorschau überhaupt aufgeht und wer beim
+Schrumpfen weicht, und wenn sie für jeden Vorschau-Tab gilt und nicht nur für den des
+Betrachters. Die Frage gehört vor die Untersuchung des Darstellungsmittels, weil ihre Antwort
+mitbestimmt, wie viel Fläche das Mittel voraussetzen darf.
+
+**Zur Abhängigkeitslage, die in diesem Projekt nichts mehr unterscheidet.** Die einzige
+Circle-Abhängigkeit dieses Datensatzes, die Runde 1, ist beschränkt abgeschlossen (`_b_`) und
+nicht kohärent (`_c_`), also trägt er nach der Rangheuristik das Kennzeichen der unerfüllten
+Vorbedingung. Alle fünf gefahrenen Runden tragen `_b_`, und alle fünf aus demselben Grund: der
+Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+Das Kennzeichen steht damit an jedem denkbaren Kandidaten und ist keine Auskunft über diesen. Für
+diesen Circle bindet es inhaltlich dennoch, und darin unterscheidet er sich von der Runde 5: die
+Beschränkung der Runde 1 ist der offene Beleg der Zeitzusagen, und der reicht über die dritte
+offene Frage in diesen Circle hinein.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
