@@ -354,7 +354,7 @@ mod tests {
     use krk_core::ablage::Sitzung;
     use krk_core::tasten::Kommando;
 
-    use crate::fenstermodell::Fenstermodell;
+    use crate::fenstermodell::{Fenstermodell, Zeilenmass};
 
     use super::*;
 
@@ -638,14 +638,24 @@ mod tests {
             (Fokus::Leiste, Bereich::Lesezeichen),
             (Fokus::Vorschau, Bereich::Vorschau),
         ] {
+            // Eine Zeile, in die jede Menge sichtbarer Bereiche passt: die
+            // Abweisung an den Mindestbreiten ist hier nicht der Gegenstand,
+            // sie steht in `fenstermodell.rs` unter Probe.
+            let weit = Zeilenmass {
+                gesamt: 4000.0,
+                trennerbreite: 0.0,
+            };
             let mut modell = Fenstermodell::aus_sitzung(&Sitzung::default());
-            modell.umschalten(bereich);
+            assert!(
+                modell.umschalten(bereich, weit),
+                "{bereich:?} liess sich nicht ausblenden"
+            );
             assert!(!modell.sichtbar(bereich), "die Probe beginnt ausgeblendet");
 
             let hervorzuholen = holt_hervor(ziel).expect("dieser Befehl holt einen Bereich hervor");
             assert_eq!(hervorzuholen, bereich);
             assert!(
-                modell.einblenden(hervorzuholen),
+                modell.einblenden(hervorzuholen, weit),
                 "{ziel:?} weist den ausgeblendeten Bereich stumm ab, statt ihn hervorzuholen"
             );
             assert!(

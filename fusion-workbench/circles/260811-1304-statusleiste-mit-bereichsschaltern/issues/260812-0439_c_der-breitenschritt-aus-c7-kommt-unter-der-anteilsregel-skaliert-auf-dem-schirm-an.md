@@ -83,3 +83,28 @@ Der Plan führt unter `## Risiken und Gegenmaßnahmen` bereits einen benachbarte
 gedeckelte Breite eines Bereichs wird beim nächsten Nachlesen sein neuer Wunsch") und nimmt ihn
 an. Dieser hier ist ein anderer: dort geht es um den Wunsch, der sich ändert, hier um den Maßstab,
 in dem ein Befehl rechnet.
+
+---
+Resolved: Weg 1 der beiden benannten, gebaut in Schritt 2 des Plans, wie es der Datensatz
+empfohlen hat. `Fenstermodell::breite_aendern` nimmt jetzt das `Zeilenmass` als dritten Parameter
+und rechnet den Schritt ueber die neue Funktion `Fenstermodell::massstab` (`gespeicherte Summe der
+sichtbaren / verfuegbare Breite`) in gespeicherte Punkte um; **dieselbe Umrechnung gilt fuer die
+beiden Mindestbreiten**, gegen die der Schritt deckelt, denn auch sie standen im falschen Massstab.
+Der Weg des Masses ist der, den Schritt 2 fuer `umschalten` ohnehin gebaut hat:
+`Aufteilung::zeilenmass` liest die beiden Zahlen aus der `NSSplitView`,
+`Anwendungsdelegierter::zeilenmass` reicht sie durch. Die Behebung kostete damit keinen eigenen
+Durchgang durch die Aufrufer.
+
+Die Probe `der_tastenbefehl_verschiebt_die_trennlinie_um_genau_einen_schritt` misst wieder ueber
+mehrere Fensterbreiten, naemlich ueber die drei aus der Messtabelle oben (1280, 1400, 1920), und
+verlangt an jeder genau 40 Punkte auf dem Schirm — hin und zurueck. Gegengeprobt: mit einem fest auf
+1 gesetzten Massstab faellt sie bei 1400 mit 43,75 Punkten, also mit genau der Zahl, die oben steht.
+
+Der Massstab gilt genau, solange kein sichtbarer Bereich an seinem Mindestmass haengt; dort ist die
+Abbildung zwischen gespeicherten Punkten und Punkten auf dem Schirm nicht linear. Das ist am
+Kommentar von `massstab` benannt und nicht behandelt: eine Sonderregel dafuer waere ein zweiter
+Rechenweg neben `bereichsbreiten`.
+
+Abgenommen mit `make check`, exit 0. Behoben in Schritt 2 des Plans
+`planning/260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md`, Protokoll
+`history/260812-0512-coder-schritt-2-abweisung-an-den-mindestbreiten.md`.

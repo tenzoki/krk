@@ -175,7 +175,7 @@ flowchart TD
 
 ## Implementierungsschritte
 
-1. **Die Breitenregel wird proportional**
+1. [DONE] **Die Breitenregel wird proportional**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/aufteilung.rs`
    - Changes:
@@ -194,7 +194,7 @@ flowchart TD
    - Abnahme: `make check`. Kein Vordergrund.
    - Dependencies: keine.
 
-2. **Die zweite Abweisung: die Mindestbreiten müssen hineinpassen**
+2. [DONE] **Die zweite Abweisung: die Mindestbreiten müssen hineinpassen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/aufteilung.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

@@ -255,6 +255,22 @@ impl Aufteilung {
         auslegen(&self.teiler, breiten);
     }
 
+    /// Das Mass der Fensterzeile: ihre Breite und die einer Trennlinie.
+    ///
+    /// **Der Weg, auf dem die Geometrie der Zeile in das Fenstermodell kommt.**
+    /// Es kennt AppKit nicht und kann die beiden Zahlen nicht erfragen; jeder
+    /// Aufruf, dessen Antwort an ihnen haengt, bekommt sie deshalb als Wert
+    /// mitgegeben — die Abweisung an den Mindestbreiten in
+    /// [`Fenstermodell::umschalten`](crate::fenstermodell::Fenstermodell::umschalten)
+    /// und der Massstab in
+    /// [`Fenstermodell::breite_aendern`](crate::fenstermodell::Fenstermodell::breite_aendern).
+    ///
+    /// Gelesen wird ueber [`zeilenmass`], also durch dieselbe eine Stelle, aus
+    /// der auch [`auslegen`] die beiden Zahlen nimmt.
+    pub fn zeilenmass(&self) -> Zeilenmass {
+        zeilenmass(&self.teiler)
+    }
+
     /// Die Breiten, die gerade auf dem Schirm stehen.
     ///
     /// Der Weg, auf dem eine mit der Maus verschobene Trennlinie in die Sitzung
@@ -512,11 +528,7 @@ fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
 fn auslegen(teiler: &NSSplitView, breiten: &Breiten) {
     let gesamt = teiler.frame().size;
     let sichtbar = &gemessene_sichtbarkeit(teiler);
-    let mass = Zeilenmass {
-        gesamt: gesamt.width,
-        trennerbreite: teiler.dividerThickness(),
-    };
-    let zugeteilt = crate::fenstermodell::bereichsbreiten(mass, breiten, sichtbar);
+    let zugeteilt = crate::fenstermodell::bereichsbreiten(zeilenmass(teiler), breiten, sichtbar);
 
     let mut links = 0.0;
     for bereich in Bereich::ALLE {
@@ -531,6 +543,20 @@ fn auslegen(teiler: &NSSplitView, breiten: &Breiten) {
         if breite > 0.0 {
             links += breite + teiler.dividerThickness();
         }
+    }
+}
+
+/// Die beiden Zahlen der Fensterzeile, die nur AppKit kennt.
+///
+/// **Die eine Stelle, an der sie gelesen werden.** Zwei Aufrufer haengen daran:
+/// [`auslegen`], das die Zeile auslegt, und [`Aufteilung::zeilenmass`], das das
+/// Mass nach aussen gibt, damit das Fenstermodell mit derselben Geometrie
+/// rechnet wie die Anzeige. Zweimal ausgeschrieben koennten die beiden Wege
+/// verschiedene Zeilen meinen.
+fn zeilenmass(teiler: &NSSplitView) -> Zeilenmass {
+    Zeilenmass {
+        gesamt: teiler.frame().size.width,
+        trennerbreite: teiler.dividerThickness(),
     }
 }
 

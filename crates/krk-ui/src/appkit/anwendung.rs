@@ -217,7 +217,7 @@ use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
 use crate::editormodell::{Ladeausgang, Sicherungsausgang};
-use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, sichtbar_in};
+use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in};
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
@@ -2347,8 +2347,14 @@ impl Anwendungsdelegierter {
     }
 
     /// Blendet einen Bereich aus oder wieder ein (C7).
+    ///
+    /// Das [`Zeilenmass`] kommt aus der Aufteilung; warum das Fenstermodell es
+    /// braucht, steht bei [`Self::zeilenmass`].
     fn bereich_umschalten(&self, bereich: Bereich) -> bool {
-        self.sichtbarkeit_aendern(|modell| modell.umschalten(bereich))
+        let Some(mass) = self.zeilenmass() else {
+            return false;
+        };
+        self.sichtbarkeit_aendern(|modell| modell.umschalten(bereich, mass))
     }
 
     /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
@@ -2360,7 +2366,29 @@ impl Anwendungsdelegierter {
     /// kommen allein die Nachzuege dazu, die jeder Sichtbarkeitswechsel
     /// braucht.
     fn bereich_einblenden(&self, bereich: Bereich) -> bool {
-        self.sichtbarkeit_aendern(|modell| modell.einblenden(bereich))
+        let Some(mass) = self.zeilenmass() else {
+            return false;
+        };
+        self.sichtbarkeit_aendern(|modell| modell.einblenden(bereich, mass))
+    }
+
+    /// Das Mass der Fensterzeile, falls sie schon steht.
+    ///
+    /// **Die eine Stelle, an der die Geometrie der Zeile aus AppKit an das
+    /// Fenstermodell geht.** Drei Aufrufe brauchen sie, weil ihre Antwort an
+    /// der Fensterbreite haengt und das Fenstermodell sie nicht selbst erfragen
+    /// kann: [`Self::bereich_umschalten`], [`Self::bereich_einblenden`] und
+    /// [`Self::breite_aendern`].
+    ///
+    /// `None` heisst: die Aufteilung steht noch nicht, also laeuft der Aufbau.
+    /// Dann geschieht nichts — dieselbe Antwort, die
+    /// [`Self::aufteilung_nachziehen`] und
+    /// [`Self::bildschirmbreiten_uebernehmen`] in dieser Lage geben.
+    fn zeilenmass(&self) -> Option<Zeilenmass> {
+        self.ivars()
+            .aufteilung
+            .get()
+            .map(super::aufteilung::Aufteilung::zeilenmass)
     }
 
     /// Fuehrt eine Aenderung der Sichtbarkeit aus und zieht fuer **jeden**
@@ -2464,6 +2492,12 @@ impl Anwendungsdelegierter {
     /// Abnahmekriterium von C9 verlangt, dass ein Blatt keinem Bereich seine
     /// Anzeige nimmt.
     ///
+    /// **Der Schritt von 40 Punkten gilt auf dem Schirm**, und das Modell
+    /// rechnet ihn mit dem [`Zeilenmass`] in gespeicherte Punkte um. Ohne diese
+    /// Umrechnung sprang die Trennlinie bei einem breiten Fenster weiter als
+    /// bei einem schmalen; die Begruendung steht an
+    /// [`Fenstermodell::breite_aendern`](crate::fenstermodell::Fenstermodell::breite_aendern).
+    ///
     /// **Was auf dem Schirm steht, ist hier schon nachgelesen.** Bis zum
     /// 260811 begann diese Funktion mit einem eigenen
     /// [`Self::bildschirmbreiten_uebernehmen`], damit ein Schritt nicht auf
@@ -2474,11 +2508,14 @@ impl Anwendungsdelegierter {
     fn breite_aendern(&self, betrag: f64) -> bool {
         // Vor der Ausleihe: `fokus` liest das Fenstermodell selbst.
         let fokus = self.fokus();
+        let Some(mass) = self.zeilenmass() else {
+            return false;
+        };
         let mut modell = self.ivars().modell.borrow_mut();
         let aktiv = modell.aktiv();
         let bereich =
             fokus::bereich_mit_fokus(fokus, aktiv).unwrap_or_else(|| Bereich::von_seite(aktiv));
-        modell.breite_aendern(bereich, betrag);
+        modell.breite_aendern(bereich, betrag, mass);
         true
     }
 
