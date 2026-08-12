@@ -66,8 +66,9 @@
 //! fasst den Verwalter eigens an, und
 //! [`die_gebaute_flaeche_steht_auf_textkit_1`](tests::die_gebaute_flaeche_steht_auf_textkit_1)
 //! haelt den Bau an, wenn jemand den Rueckfall wegnimmt. Vorher entstand er als
-//! Nebenwirkung von `merkmale_zuruecksetzen` und von [`super::nummernspalte`], die
-//! den Verwalter aus einem anderen Grund anfassen, und ein Nachziehen der
+//! Nebenwirkung von `textmerkmale::zuruecksetzen` und von
+//! [`super::nummernspalte`], die den Verwalter aus einem anderen Grund
+//! anfassen, und ein Nachziehen der
 //! Nummernspalte auf `NSTextLayoutManager` haette bei gruenem Bau und gruenen
 //! Proben ein `cmd+s` hinterlassen, das den zurueckgenommenen Text sichert
 //! (`issues/260810-1243_*_dass-ein-cmd-z-ueberhaupt-im-modell-ankommt-haengt-an-textkit-1-und-das-steht-nirgends-als-tragend.md`).
@@ -369,13 +370,22 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSScrollView`, `NSTextView`, `NSTextStorage`, `NSLayoutManager`,
-//! `NSTextContainer`, `NSTextField` und `NSTimer` stehen seit macOS 10.0 zur
+//! `NSScrollView`, `NSTextView`, `NSLayoutManager`, `NSTextContainer`,
+//! `NSTextField`, `NSFont`, `NSColor` und `NSTimer` stehen seit macOS 10.0 zur
 //! Verfuegung, seit C1 der Runde 6 ebenso `NSMenu` und `NSEvent`, die der
 //! Menuehaken entgegennimmt. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15 hinzugekommen,
 //! und deshalb braucht keine der Beruehrungen in dieser Datei eine
-//! Verfuegbarkeitspruefung zur Laufzeit.
+//! Verfuegbarkeitspruefung zur Laufzeit. `NSFont` und `NSColor` fehlten in
+//! dieser Aufzaehlung, obwohl Kopf und Grundschrift sie ansprechen; beide sind
+//! am SDK nachgelesen und tragen dort keine Angabe (`NSFont.h:24`,
+//! `NSColor.h:77`).
+//!
+//! **`NSTextStorage` und `NSMutableParagraphStyle` fasst diese Datei seit dem
+//! Umzug der Merkmalsumsetzung nicht mehr an**; ihre Angaben stehen im Kopf von
+//! [`super::textmerkmale`]. Den Layoutverwalter fragt sie weiter, an zwei
+//! Stellen: dem Zugriff in [`textflaeche_bauen`], der den Rueckfall auf
+//! TextKit 1 herstellt, und der Probe, die diesen Rueckfall festhaelt.
 //!
 //! **Eine Beruehrung an einem Protokoll ist juenger als ihre Klasse und liegt
 //! weit unter dem Zielsystem**: die Delegiertenmethode
@@ -410,7 +420,6 @@
 //! bewusst nicht: sie wird nirgends gebunden, sondern nachgefragt.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
 use std::ffi::CString;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
@@ -422,16 +431,14 @@ use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSMenu, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
-    NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView,
-    NSTextViewDelegate, NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSMenu, NSScrollView, NSTextAlignment,
+    NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView, NSTextViewDelegate, NSView,
     NSWritingToolsBehavior,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
-    NSPoint, NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval,
-    NSTimer, NSUInteger, NSUndoManager, ns_string,
+    MainThreadMarker, NSArray, NSNotification, NSNumber, NSObject, NSObjectProtocol, NSPoint,
+    NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer,
+    NSUInteger, NSUndoManager, ns_string,
 };
 
 #[cfg(test)]
@@ -443,14 +450,14 @@ use krk_core::text::{
 
 use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
 use crate::hervorhebung::{
-    Abholung, Auszeichnung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Farbe,
-    Formatierung, Tafel,
+    Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
 
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
 use super::teilen;
+use super::textmerkmale;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
@@ -1109,34 +1116,6 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// mit. Vorn steht es an einer festen Stelle und bleibt in jeder Breite
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
-
-/// Um wie viele Punkte die Formatansicht ihre Grundschrift ueber die der
-/// Rohansicht hebt (C3).
-///
-/// C3 verlangt fuer einfachen Text "eine lesbare Schriftgroesse" und der Plan
-/// "eine gegenueber der Rohansicht lesbarere". Beides nennt keine Zahl, und
-/// diese ist gewaehlt und nicht abgeleitet: zwei Punkte sind der kleinste
-/// Schritt, den man nebeneinandergehalten sieht, und der groesste, der die Zahl
-/// der Zeilen im Bild nicht spuerbar aendert.
-///
-/// **Code bekommt den Zuschlag nicht.** Quelltext wird in der Groesse gelesen,
-/// in der er geschrieben wurde, und der sichtbare Unterschied zur Rohansicht ist
-/// bei ihm die Einfaerbung und der Umbruch.
-const LESEZUSCHLAG: f64 = 2.0;
-
-/// Um welchen Faktor eine Markdown-Ueberschrift ihre Grundschrift ueberschreitet,
-/// nach Stufen von 1 bis 6.
-///
-/// Absteigend, weil `#` mehr wiegt als `######`. Die Zahlen sind gewaehlt und
-/// nicht abgeleitet; sie halten die sechste Stufe noch merklich ueber dem
-/// Fliesstext, damit keine Ueberschrift aussieht wie keine.
-const UEBERSCHRIFTSFAKTOREN: [f64; 6] = [1.7, 1.5, 1.3, 1.2, 1.1, 1.05];
-
-/// Der Einzug einer Markdown-Listenzeile in Punkten (C3).
-///
-/// Er rueckt den ganzen Absatz ein, das Aufzaehlungszeichen eingeschlossen; das
-/// Zeichen selbst bleibt stehen, wie der Datensatz vom 260808-0140 es verlangt.
-const LISTENEINZUG: f64 = 20.0;
 
 define_class!(
     /// Die Ansicht, in der Kopf und Textflaeche haengen — und die Stelle, an
@@ -2210,7 +2189,7 @@ impl Editorbereich {
     /// also. Ein `NSRange` hinter dem Text beantwortet AppKit mit einer
     /// Objective-C-Ausnahme, und die ist in Rust nicht zu fangen und beendet das
     /// Programm — derselbe Grund, aus dem
-    /// [`Self::formatierung_anwenden`] die Laenge vorweg prueft.
+    /// [`super::textmerkmale::anwenden`] die Laenge vorweg prueft.
     fn auswahl_setzen(&self, auswahl: NSRange) {
         let laenge = self.ivars().text.string().length();
         let anfang = auswahl.location.min(laenge);
@@ -2792,7 +2771,7 @@ impl Editorbereich {
 
         self.grundschrift_setzen(ansicht, art);
         self.umbruch_setzen(ansicht == Ansicht::Format);
-        self.merkmale_zuruecksetzen(ansicht, art);
+        textmerkmale::zuruecksetzen(&self.ivars().text, ansicht, art);
 
         match ansicht {
             Ansicht::Format => self.einfaerbung_anfordern(),
@@ -2815,15 +2794,18 @@ impl Editorbereich {
     /// **Eine Regel und keine drei.** Fest geschrieben wird, was Zeichen fuer
     /// Zeichen gelesen wird: die Rohansicht immer, und die Formatansicht bei
     /// Code. Alles Uebrige — einfacher Text und Markdown — bekommt die
-    /// Systemschrift mit dem [`LESEZUSCHLAG`]. Das ist die "lesbare
-    /// Schriftgroesse", die C3 fuer einfachen Text zusagt, und zugleich die
-    /// Grundschrift, ueber der die Markdown-Ueberschriften ihre Stufen haben.
+    /// Systemschrift mit dem Lesezuschlag aus [`super::textmerkmale`]. Das ist
+    /// die "lesbare Schriftgroesse", die C3 fuer einfachen Text zusagt, und
+    /// zugleich die Grundschrift, ueber der die Markdown-Ueberschriften ihre
+    /// Stufen haben.
     ///
     /// `setFont:` schreibt ueber den ganzen Textspeicher **und** setzt die
     /// Merkmale des naechsten Anschlags. Beides ist gewollt: ohne das zweite
     /// truege ein neu getipptes Zeichen die Schrift der vorigen Ansicht.
     fn grundschrift_setzen(&self, ansicht: Ansicht, art: Darstellungsart) {
-        self.ivars().text.setFont(Some(&grundschrift(ansicht, art)));
+        self.ivars()
+            .text
+            .setFont(Some(&textmerkmale::grundschrift(ansicht, art)));
         // Die Systemfarbe und nicht die der Tafel: sie loest sich in Hell wie in
         // Dunkel gegen den Grund der Flaeche auf, und der Grund bleibt nach S34
         // die Systemfarbe. Aus der Tafel kommen allein die Vordergrundfarben
@@ -2863,56 +2845,6 @@ impl Editorbereich {
         if umbruch {
             let hoehe = text.frame().size.height;
             text.setFrameSize(NSSize::new(breite, hoehe));
-        }
-    }
-
-    /// Nimmt jede gesetzte Auszeichnung wieder heraus und stellt die Grundschrift
-    /// ueber den ganzen Text her.
-    ///
-    /// **Beide Listen**, denn beide werden gesetzt: die voruebergehenden Merkmale
-    /// im Layoutverwalter und Schrift wie Absatzeinzug im Textspeicher.
-    ///
-    /// # Warum die Schrift hier steht und nicht dem `setFont:` ueberlassen bleibt
-    ///
-    /// Bis zum 260810-1245 stand hier allein der Absatzeinzug, mit der Begruendung,
-    /// `setFont:` und `setTextColor:` in [`Self::grundschrift_setzen`]
-    /// ueberschrieben den ganzen Speicher ohnehin. Der Satz stimmt, gilt aber nur
-    /// fuer die vier Anlaesse von [`Self::darstellung_nachziehen`] — Aufbau,
-    /// gelungenes Oeffnen, Schliessen, Ansichtswechsel — und **nicht** fuer den
-    /// fuenften, das Tippen. Dort geht der Weg `textDidChange:` →
-    /// [`Self::text_zurueckschreiben`] → [`Self::einfaerbung_anfordern`] →
-    /// [`Self::einfaerbung_einziehen`] → [`Self::formatierung_anwenden`], und der
-    /// setzte Merkmale, ohne je eines herauszunehmen: wer in der Formatansicht das
-    /// `#` einer Markdown-Ueberschrift loeschte, sah die Zeile weiter gross und
-    /// fett, bis er die Ansicht umschaltete oder die Datei neu oeffnete. Dasselbe
-    /// fuer den Einzug einer entfernten Listenzeile und die feste Schrift eines
-    /// entfernten Zauns
-    /// (`issues/260810-1245_*_die-formatansicht-nimmt-gesetzte-merkmale-des-textspeichers-nie-wieder-heraus.md`).
-    ///
-    /// **Deshalb ist dies die eine Stelle, die zuruecknimmt**, und
-    /// [`Self::formatierung_anwenden`] ruft sie, statt eine zweite halbe
-    /// Ruecknahme daneben zu tragen. Die Wirkung, die das Setzen der Merkmale
-    /// haben soll, ist **setzen** und nicht hinzufuegen: nach dem Ruf traegt der
-    /// Textspeicher genau die Merkmale der uebergebenen Formatierung.
-    ///
-    /// Was hier **nicht** steht, ist die Farbe. Sie ist ein voruebergehendes
-    /// Merkmal des Layoutverwalters, und die werden vollstaendig geleert; der
-    /// Textspeicher traegt keine.
-    fn merkmale_zuruecksetzen(&self, ansicht: Ansicht, art: Darstellungsart) {
-        let text = &self.ivars().text;
-        let grundmerkmal = schriftmerkmal(&grundschrift(ansicht, art));
-        // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit und wird
-        // hier nur beschrieben; die Bereiche decken genau den vorhandenen Text.
-        unsafe {
-            if let Some(speicher) = text.textStorage() {
-                let ganz = NSRange::new(0, speicher.length());
-                speicher.removeAttribute_range(NSParagraphStyleAttributeName, ganz);
-                speicher.addAttributes_range(&grundmerkmal, ganz);
-                if let Some(verwalter) = text.layoutManager() {
-                    let leer: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
-                    verwalter.setTemporaryAttributes_forCharacterRange(&leer, ganz);
-                }
-            }
         }
     }
 
@@ -3028,29 +2960,19 @@ impl Editorbereich {
 
     /// Traegt eine fertige Formatierung in die Flaeche (C3).
     ///
-    /// **Zwei Listen und zwei Orte**, und der Grund steht im Modulkopf von
-    /// `crate::hervorhebung`: der Layoutverwalter beachtet als voruebergehendes
-    /// Merkmal allein, was die Auslegung nicht aendert. Farbe und
-    /// Unterstreichung gehen deshalb dorthin, Schriftgroesse, Schriftschnitt,
-    /// feste Schrift und Einzug in den Textspeicher. In die **Datei** geraet
-    /// weder das eine noch das andere: gesichert wird
-    /// [`Editormodell::stand`], und der kommt aus den Zeichen der Flaeche und
-    /// nicht aus ihren Merkmalen.
+    /// **Drei Schritte und kein vierter.** Die Umsetzung selbst wohnt in
+    /// [`super::textmerkmale`], weil Editor und Vorschau dieselbe brauchen und
+    /// zwei davon zwei Wahrheiten waeren; hier steht allein, was diese Flaeche
+    /// beisteuert. Erst die beiden Angaben aus dem Modell, und die Ausleihe
+    /// endet **vor** dem Ruf: die Umsetzung ruft in das Textsystem, und ein
+    /// gehaltener `RefCell`-Ausleihschein waere die erste Gelegenheit fuer einen
+    /// Programmabbruch, wenn AppKit auf dem Weg zurueckmeldet.
     ///
-    /// **Der Guertel vorweg.** Stimmt die Laenge nicht mehr, gehoert die
-    /// Lieferung zu einem anderen Stand, und jeder Bereich dahinter waere ein
-    /// Programmabbruch statt eines falschen Bildes. Erreichbar ist der Fall
-    /// nicht, weil ein ueberholtes Ergebnis schon in
-    /// [`Self::einfaerbung_einziehen`] fallengelassen wird; er steht hier, weil
-    /// der Preis eines Irrtums an dieser Stelle das Programm ist.
-    ///
-    /// **Erst zuruecknehmen, dann setzen** (Defekt 260810-1245). Bis zum
-    /// 260810-1245 fing diese Funktion bei `addAttributes:range:` an und nahm
-    /// nichts heraus; eine Auszeichnung, die die neue Formatierung nicht mehr
-    /// fuehrt, blieb damit stehen. Zurueckgenommen wird ueber
-    /// [`Self::merkmale_zuruecksetzen`], der einen Stelle, die das tut — und die
-    /// deckt die voruebergehenden Merkmale mit ab, weshalb hier kein zweites
-    /// Leeren daneben steht.
+    /// **Nachgezogen wird nur, wenn gesetzt wurde.** Die Auszeichnungen aendern
+    /// die Zeilenkaesten, und die Nummern stuenden sonst neben dem zuletzt
+    /// gezeichneten Umbruch. Hat der Guertel in
+    /// [`super::textmerkmale::anwenden`] die Lieferung abgewiesen, ist an der
+    /// Flaeche nichts geschehen und nichts nachzuziehen.
     fn formatierung_anwenden(&self, formatierung: &Formatierung) {
         let (ansicht, art) = {
             let modell = self.ivars().modell.borrow();
@@ -3059,83 +2981,9 @@ impl Editorbereich {
                 crate::hervorhebung::art(modell.pfad(), modell.typ()),
             )
         };
-        let text = &self.ivars().text;
-        // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit.
-        let (speicher, verwalter) = unsafe { (text.textStorage(), text.layoutManager()) };
-        let (Some(speicher), Some(verwalter)) = (speicher, verwalter) else {
-            return;
-        };
-        if speicher.length() != formatierung.laenge {
-            return;
+        if textmerkmale::anwenden(&self.ivars().text, formatierung, art, ansicht) {
+            self.nummernspalte_nachziehen();
         }
-        self.merkmale_zuruecksetzen(ansicht, art);
-
-        // Die Merkmale des Textspeichers: was auf die Auslegung wirkt.
-        let grundgroesse = NSFont::systemFontSize() + LESEZUSCHLAG;
-        speicher.beginEditing();
-        for stelle in &formatierung.auszeichnungen {
-            let bereich = NSRange::new(stelle.anfang, stelle.laenge);
-            let merkmale = match stelle.art {
-                Auszeichnung::Ueberschrift { stufe } => {
-                    let faktor = UEBERSCHRIFTSFAKTOREN[usize::from(stufe.clamp(1, 6)) - 1];
-                    schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse * faktor))
-                }
-                Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
-                Auszeichnung::Listenzeile => einzugsmerkmal(),
-            };
-            // SAFETY: Der Bereich liegt im Text, und das ist die ganze
-            // Bedingung: die Laenge ist oben geprueft, und jede Stelle der
-            // Formatierung liegt nach dem Modulkopf von `crate::hervorhebung`
-            // innerhalb dieser Laenge.
-            //
-            // **Aufsteigend und ueberschneidungsfrei sind die Auszeichnungen
-            // nicht**, anders als bis zum 260810 hier stand: eine Listenzeile
-            // wird nach den Stuecken ihrer Zeile angehaengt und beginnt vor
-            // ihnen. In `- Punkt mit `Code`` liefert die Formatierung
-            // `FesteSchrift` bei 12 und danach `Listenzeile` bei 0 (gemessen).
-            // Fuer `addAttributes:range:` ist das ohne Belang, und zwar aus
-            // einem Grund und nicht aus Glueck: die beiden ueberlappenden
-            // Auszeichnungen setzen verschiedene Merkmalsnamen — Schrift gegen
-            // Absatzstil —, und `addAttributes:` legt zusammen, statt zu
-            // ersetzen. `Ueberschrift` und `FesteSchrift` setzen beide die
-            // Schrift und ueberlappen einander deshalb nie: die
-            // Fallunterscheidung in `crate::hervorhebung` fragt die
-            // Ueberschriftsstufe zuerst und die feste Schrift nur sonst.
-            unsafe { speicher.addAttributes_range(&merkmale, bereich) };
-        }
-        speicher.endEditing();
-
-        // Die voruebergehenden Merkmale: was die Auslegung nicht anfasst.
-        let strich = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
-        let mut farben: HashMap<Farbe, Retained<NSColor>> = HashMap::new();
-        // SAFETY: Dieselbe Pruefung deckt beide Schleifen; der Verwalter gehoert
-        // dieser Flaeche. Geleert ist die Liste schon: das tut
-        // `merkmale_zuruecksetzen` weiter oben, und ein zweites Leeren hier waere
-        // die zweite Stelle mit einer Meinung darueber, was zurueckzunehmen ist.
-        unsafe {
-            for stueck in &formatierung.einfaerbungen {
-                let bereich = NSRange::new(stueck.anfang, stueck.laenge);
-                let farbe = farben
-                    .entry(stueck.farbe)
-                    .or_insert_with(|| nsfarbe(stueck.farbe));
-                verwalter.addTemporaryAttribute_value_forCharacterRange(
-                    NSForegroundColorAttributeName,
-                    farbe,
-                    bereich,
-                );
-                if stueck.unterstrichen {
-                    verwalter.addTemporaryAttribute_value_forCharacterRange(
-                        NSUnderlineStyleAttributeName,
-                        &strich,
-                        bereich,
-                    );
-                }
-            }
-        }
-
-        // Die Auszeichnungen haben die Zeilenkaesten geaendert; die Nummern
-        // stehen sonst neben dem zuletzt gezeichneten Umbruch.
-        self.nummernspalte_nachziehen();
     }
 
     /// Zieht die Farbtafel auf das gewechselte Erscheinungsbild nach (S34).
@@ -3193,85 +3041,6 @@ fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
         Some(name) if *name == *dunkel => Tafel::Dunkel,
         _ => Tafel::Hell,
     }
-}
-
-/// Die Grundschrift einer Ansicht: die Schrift, in der jede Stelle steht, die
-/// keine eigene Auszeichnung traegt (C3).
-///
-/// **Eine Regel und keine drei.** Fest geschrieben wird, was Zeichen fuer Zeichen
-/// gelesen wird: die Rohansicht immer, und die Formatansicht bei Code. Alles
-/// Uebrige — einfacher Text und Markdown — bekommt die Systemschrift mit dem
-/// [`LESEZUSCHLAG`]. Das ist die "lesbare Schriftgroesse", die C3 fuer einfachen
-/// Text zusagt, und zugleich die Grundschrift, ueber der die
-/// Markdown-Ueberschriften ihre Stufen haben.
-///
-/// **Sie steht hier und nicht bei ihren beiden Aufrufern.**
-/// [`Editorbereich::grundschrift_setzen`] setzt sie an der Flaeche und damit auch
-/// fuer den naechsten Anschlag; [`Editorbereich::merkmale_zuruecksetzen`] setzt
-/// sie als Merkmal ueber den ganzen Textspeicher, um eine weggefallene
-/// Auszeichnung zurueckzunehmen. Zwei Rechnungen daneben waeren die erste
-/// Gelegenheit, dass eine geloeschte Ueberschrift in einer anderen Schrift
-/// landete als der, in der ihre Zeile getippt wird.
-fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> {
-    let (fest, groesse) = match (ansicht, art) {
-        (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
-            (true, NSFont::systemFontSize())
-        }
-        (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
-            (false, NSFont::systemFontSize() + LESEZUSCHLAG)
-        }
-    };
-    if fest {
-        feste_schrift(groesse)
-    } else {
-        NSFont::systemFontOfSize(groesse)
-    }
-}
-
-/// Die feste Schreibmaschinenschrift des Nutzers, hilfsweise die Systemschrift.
-///
-/// Dieselbe Wahl und derselbe Rueckfall wie in `super::nummernspalte`. Ein
-/// System ohne feste Schrift gibt es nicht; der Rueckfall steht da, weil die
-/// Schnittstelle ihn zulaesst und ein Editor ohne Schrift keine Antwort ist.
-fn feste_schrift(groesse: f64) -> Retained<NSFont> {
-    NSFont::userFixedPitchFontOfSize(groesse).unwrap_or_else(|| NSFont::systemFontOfSize(groesse))
-}
-
-/// Ein Merkmalsverzeichnis mit genau einer Schrift darin.
-fn schriftmerkmal(schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject>> {
-    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname der Schrift. Es wird
-    // gelesen und nicht geschrieben.
-    let schluessel = unsafe { [NSFontAttributeName] };
-    let werte: [&AnyObject; 1] = [schrift];
-    NSDictionary::from_slices(&schluessel, &werte)
-}
-
-/// Ein Merkmalsverzeichnis mit dem Einzug einer Listenzeile darin (C3).
-fn einzugsmerkmal() -> Retained<NSDictionary<NSString, AnyObject>> {
-    let stil = NSMutableParagraphStyle::new();
-    // Beide, damit die erste Zeile mit dem Aufzaehlungszeichen genauso weit
-    // einrueckt wie ihre Fortsetzung nach einem Umbruch; sonst haengt das
-    // Zeichen als einziges am linken Rand.
-    stil.setFirstLineHeadIndent(LISTENEINZUG);
-    stil.setHeadIndent(LISTENEINZUG);
-    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
-    let schluessel = unsafe { [NSParagraphStyleAttributeName] };
-    let werte: [&AnyObject; 1] = [&stil];
-    NSDictionary::from_slices(&schluessel, &werte)
-}
-
-/// Eine Farbe der Tafel als `NSColor`.
-///
-/// Im sRGB-Farbraum, weil die Tafeln ihre Werte darin angeben. Ohne Angabe des
-/// Farbraums nimmt AppKit den kalibrierten, und dieselbe Zahl saehe dann anders
-/// aus als in jedem anderen Programm, das dieselbe Tafel zeigt.
-fn nsfarbe(farbe: Farbe) -> Retained<NSColor> {
-    NSColor::colorWithSRGBRed_green_blue_alpha(
-        f64::from(farbe.rot) / 255.0,
-        f64::from(farbe.gruen) / 255.0,
-        f64::from(farbe.blau) / 255.0,
-        1.0,
-    )
 }
 
 /// Was am Kopf des Editorbereichs steht (C4).
@@ -3428,7 +3197,7 @@ fn textflaeche_bauen(
     // auf den aelteren `NSLayoutManager` zurueckfallen.
     //
     // Bis zum 260810-1243 stand hier keine Zeile, und der Rueckfall entstand als
-    // **Nebenwirkung** von `merkmale_zuruecksetzen` und der Nummernspalte, die den
+    // **Nebenwirkung** von `textmerkmale::zuruecksetzen` und der Nummernspalte, die den
     // Verwalter aus einem anderen Grund anfassen. Wer die Nummernspalte auf
     // `NSTextLayoutManager` nachzieht — der Weg, den Apple fuer neue Arbeit
     // vorsieht —, bekaeme einen gruenen Bau, gruene Proben und ein `cmd+s`, das

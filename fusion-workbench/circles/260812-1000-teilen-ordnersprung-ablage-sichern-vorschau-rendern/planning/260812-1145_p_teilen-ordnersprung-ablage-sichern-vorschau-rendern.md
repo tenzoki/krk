@@ -371,7 +371,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check` für die Zählproben. Die vier Kriterien C1.1, C1.4 (zweite Hälfte), C1.5 (zweite Hälfte) und C1.6 sind am Bündel zu sehen.
    - Dependencies: Schritt 5.
 
-7. **Die Umsetzung einer Formatierung wird ein eigenes Modul**
+7. [DONE] **Die Umsetzung einer Formatierung wird ein eigenes Modul**
    - Executor: `coder`
    - Files: neu `crates/krk-ui/src/appkit/textmerkmale.rs`, `crates/krk-ui/src/appkit/mod.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes:

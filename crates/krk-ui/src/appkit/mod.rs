@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Fuenfundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Sechsundzwanzig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
 //! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
@@ -26,6 +26,7 @@
 //!           │             ──> nummernspalte
 //!           ──> editor   ──> crate::editormodell
 //!           │             ──> nummernspalte ──> krk-core::text::zeilen
+//!           │             ──> textmerkmale  ──> crate::hervorhebung
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
@@ -43,6 +44,13 @@
 //! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
 //! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
 //! und die Vorschau teilen sich denselben Platz in der Fensterzeile.
+//! [`textmerkmale`] haelt die eine Umsetzung einer `crate::hervorhebung`-
+//! `Formatierung` in die Merkmale einer `NSTextView`: Schrift, Einzug, Farbe
+//! und Unterstreichung. Ein eigenes Modul aus demselben Grund wie die
+//! Nummernspalte darunter — eine Ueberschrift sieht im Editor und in der
+//! Vorschau gleich aus, und zwei Umsetzungen waeren zwei Wahrheiten darueber.
+//! Heute ruft allein [`editor`] hier herein; die Vorschau kommt mit dem
+//! Schritt dazu, der ihr gerendertes Markdown traegt.
 //! [`nummernspalte`] haelt die Zeilennummern aus C10, und zwar als **eine**
 //! Klasse fuer beide Textflaechen: Editor und Vorschau haengen dieselbe
 //! `NSRulerView`-Unterklasse in die senkrechte Linealstelle ihrer
@@ -142,7 +150,8 @@
 //! `crate::kommandos`, [`leiste`] haelt die Zeilen aus `crate::leistenmodell`,
 //! [`vorschau`] und [`zwischenablage`] den Inhalt aus `crate::vorschaumodell`,
 //! [`editor`] den Stand aus `crate::editormodell` und die Einfaerbung aus
-//! `crate::hervorhebung`, [`aufteilung`] rechnet die Breiten mit
+//! `crate::hervorhebung`, [`textmerkmale`] setzt dieselbe Einfaerbung und die
+//! Ansichtswahl aus `crate::editormodell` in Merkmale um, [`aufteilung`] rechnet die Breiten mit
 //! `crate::fenstermodell` und die Rahmenrolle mit `crate::kommandos::fokus`,
 //! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
 //! `crate::belegungsmodell`, [`teilen`] verzweigt ueber
@@ -171,6 +180,7 @@ mod tabelle;
 mod tableiste;
 mod teilen;
 mod terminal;
+mod textmerkmale;
 mod volumes;
 mod vorschau;
 mod zwischenablage;
