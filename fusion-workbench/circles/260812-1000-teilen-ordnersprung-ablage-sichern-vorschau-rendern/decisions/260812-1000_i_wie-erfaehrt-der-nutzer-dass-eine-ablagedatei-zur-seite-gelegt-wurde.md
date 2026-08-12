@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/mod.rs:126-160` (`Ersetzung`, `melden`); `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (Möglichkeit 1 gewählt: Statuszeile); `crates/krk-ui/src/appkit/anwendung.rs:917` (`sitzung_laden`, sammelt die Meldungen)
 
@@ -70,6 +70,6 @@ nicht sicher zu, sie ist nach der ersten Ordneraenderung weg.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-core/src/ablage/mod.rs:191` (`impl fmt::Display for Ersetzung`, der Satz nennt beide Pfade), `:248` (`melden` als der eine Weg des Kerns, ein Rueckgabewert und keine Ausgabe) und `:273` (`mit_meldung`); verbraucht in `crates/krk-ui/src/appkit/anwendung.rs:1007-1021` und ausgegeben ueber die Startmeldungen bei `:931-940`. Kein Blatt im Weg — Schritt 1 des Plans, Commit `755571a`. Abgeglichen am 260812-2253. Am laufenden Buendel bleibt C3.10 zu sehen.
 Deferred:
 Superseded by:

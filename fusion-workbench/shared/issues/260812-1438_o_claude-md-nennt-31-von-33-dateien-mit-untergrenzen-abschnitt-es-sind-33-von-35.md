@@ -22,3 +22,6 @@ selten ändern. Der zweite Weg wäre eine Änderung an `CLAUDE.md` und keine Zä
 Herkunft: gemeinsamer Speicher, weil die Aussage das ganze Projekt betrifft und nicht die
 Directive dieser Runde. Gefunden wurde sie beim Ausführen der Runde 6, verursacht hat sie
 diese Runde nicht.
+
+---
+Abgleich 260812-2253 (reconciler): Der Defekt besteht, und die im Datensatz genannte Gegenzahl ist inzwischen selbst veraltet. Am 260812-2253 nachgezählt über `find crates/krk-ui/src/appkit -name '*.rs'`: **34 von 36**. Ohne den Abschnitt sind weiterhin allein `koordinaten.rs` und `mod.rs`. Die Kiste ist seit dem Ablegen dieses Datensatzes um eine weitere Datei gewachsen (`appkit/textmerkmale.rs`, Schritt 7 der Runde 6, Commit `9e089c0`), und die Zählung über das Wurzelverzeichnis allein liefert eine dritte Zahl, weil `appkit/blaetter/` ein Unterverzeichnis ist. Wer die Zahl in `CLAUDE.md` nach diesem Datensatz nachzieht, schreibt „33 von 35" und ist wieder falsch. Das ist das Argument für die zweite der beiden hier genannten Möglichkeiten: die zwei Ausnahmen nennen statt der Quote.

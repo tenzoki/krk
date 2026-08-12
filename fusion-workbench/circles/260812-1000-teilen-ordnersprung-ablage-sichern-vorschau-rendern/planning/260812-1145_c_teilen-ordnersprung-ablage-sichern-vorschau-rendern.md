@@ -86,6 +86,7 @@ Jedes Kriterium trägt, wie es nachzuweisen ist. **(Probe)** heißt: eine Prüfu
 8. **Die Meldung nennt ihr Dateifenster genau dann im Text, wenn sie nicht vom aktiven kommt.** Steht nur ein Dateifenster, ist es das aktive, und kein Satz trägt einen Zusatz. **(Probe)**
 9. Es gibt weiterhin genau **eine** Meldefläche. KRK gibt keine Meldung über die Standardfehlerausgabe; C1 der Runde 1 bleibt in diesem Punkt eingelöst. **(Probe)**
 10. Die Zeile lässt sich nach rechts blättern, so dass eine lange Meldung vollständig zu lesen ist. **(Bündel)**
+    **Überholt am 260812-1809 durch Nutzerentscheid** (`decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md`): an die Stelle des Blätterns tritt ein Kurzhinweis, der genau dann erscheint, wenn die Zeile kürzt. Am Bündel abzunehmen ist seither dieser Kurzhinweis und nicht das Blättern. Beleg am Baum: `crates/krk-ui/src/appkit/statuszeile.rs:559` (`setToolTip`), keine `NSScrollView` in der Datei; Commit `df4ec00`. Nachgetragen vom reconciler am 260812-2253.
 11. Die Zeile nimmt den Ersthelferrang nicht an. Der Fokusrahmen aus C9 bleibt beim Bereich, in dem er stand, und `ersthelferbereich` gibt weiter dieselbe Auskunft. **(Bündel)**
 12. `Fokus` bekommt keinen sechsten Wert. Die Zeile ist kein Bereich der Fensterzeile, sondern deren Schwester unter der Inhaltsfläche, wie die Bereichsleiste. **(Probe)**
 
@@ -441,7 +442,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
     - Abnahme: `make check`, Exit 0. Die Kriterien C5.1 (zweite Hälfte), C5.2, C5.4 (zweite Hälfte), C5.10 und C5.11 sind am Bündel zu sehen.
     - Dependencies: keine. Der Schritt lässt sich vor oder nach den Schritten 1 bis 9 fahren; er steht hier hinten, weil er das größte Risiko trägt.
 
-11. [DONE] **Die Zeile lässt sich nach rechts blättern**
+11. [DONE] **Die Zeile lässt sich nach rechts blättern** — **am 260812 zurückgenommen; der Schritt steht als Aufzeichnung eines Standes hier, sein Ergebnis ist nicht mehr im Baum.** Siehe den Abgleich am Ende dieses Plans.
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/fenster.rs`
     - Changes:
@@ -506,7 +507,7 @@ Diese Kriterien sind nur am laufenden `KRK.app` im Vordergrund zu sehen. Kein Ag
 | C4.11 | der Text steht sofort, die Farben ziehen sichtbar nach |
 | C4.14 | ob 160 Punkte für gerendertes Markdown genügen — der Beobachtungspunkt aus dem Datensatz vom 260812-1105 |
 | C5.1, C5.2, C5.4 | eine Zeile über die volle Breite, über der Bereichsleiste, ohne Höhenverlust der Liste |
-| C5.10, C5.11 | die Zeile blättert nach rechts und nimmt den Ersthelferrang nicht an |
+| C5.10, C5.11 | ~~die Zeile blättert nach rechts~~ **überholt: der Kurzhinweis erscheint genau dann, wenn die Zeile kürzt** (Entscheid vom 260812-1809), und die Zeile nimmt den Ersthelferrang nicht an |
 
 **Zwei der zehn Zeitzusagen aus C8 der Runde 1 liegen auf dem Weg dieser Runde. Diese Runde setzt keine neue Zahl und fasst keine der zehn an.** Sie gehören in den nächsten Abnahmelauf:
 
@@ -543,3 +544,28 @@ Diese Kriterien sind nur am laufenden `KRK.app` im Vordergrund zu sehen. Kein Ag
 ## Was dieser Plan ausdrücklich nicht tut
 
 Er setzt keine elfte Zeitzusage und fasst keine der zehn an. Er ändert die Mindestbreite der Vorschau nicht. Er zeigt keinen Web-Inhalt, öffnet keine Adresse und rührt die Grenze aus C9 der Runde 1 nicht an. Er beantwortet die erste offene Frage des Web-Betrachter-Circles nicht, welche Quellen eine Adresse setzen dürfen; ein Verweis in der Vorschau bekommt deshalb Farbe und keine Wirkung. Er lädt keine eingebetteten Bilder. Er richtet Tabellen nicht aus. Er baut kein Blatt beim Start. Und er vermehrt die Proben nicht, die den Hauptfaden über `MainThreadMarker::new_unchecked` behaupten.
+
+---
+
+## Reconciliation Log
+
+**260812-2253 — reconciler, Domäne `code`, Bereich `4d4402d..dc5e137` (25 Commits).**
+
+Geprüft wurde jeder der elf Schritte gegen den Baum, jede `Resolved:`-Zeile der fünfzehn geschlossenen Defekte und jede `Implemented:`-Zeile der Entscheidungsdatensätze dieses Circles. Die vier Abnahmekommandos sind neu gefahren: `cargo build --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` und `cargo test --workspace`, je Exit 0, 478 Proben im Binärziel `krk`. Die Zahl im Sitzungsprotokoll stimmt.
+
+**Status bleibt `Complete`.** Alle elf Schritte tragen zu Recht `[DONE]`; keiner behauptet etwas, das der Baum nicht trägt.
+
+**Schritt 11 ist die eine Ausnahme, und sie ist jetzt benannt.** Der Schritt ist am 260812 vom Nutzer zurückgenommen worden (`decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md`, Commit `df4ec00`), und sein Ergebnis steht nicht mehr im Baum: `crates/krk-ui/src/appkit/statuszeile.rs` hält wieder allein ein `NSTextField`, `NSScrollView` kommt dort nur noch in der Prosa vor, die die Rücknahme erklärt. Dass der Schritt `[DONE]` trägt, ist richtig — ein Plan ist die Aufzeichnung eines Standes. Unkommentiert führte er an **zwei** Stellen in die Irre, und beide sind mit diesem Abgleich beschriftet:
+
+1. **C5.10** unter `## Fähigkeiten und Abnahmekriterien` sagte weiter „Die Zeile lässt sich nach rechts blättern" zu.
+2. Die Zeile `C5.10, C5.11` in `## Abnahme am laufenden Bündel` schickte den Nutzer los, ein Blättern zu prüfen, das es nicht gibt. Von den beiden ist diese die teurere: sie ist eine Handlungsanweisung an genau dem Lauf, an dem die Runde abgenommen wird.
+
+**Belege je Schritt, stichprobenartig gegen den Baum gelesen.** Schritt 1: `crates/krk-core/src/ablage/atomar.rs:25,61-62` (`BESCHAEDIGTENDUNG`, `beiseitepfad`) und `ablage/mod.rs:154,399` (`enum Beiseite`, `beiseite_legen`). Schritte 2 und 4: `resources/default-keymap.toml:245,610` und die Zählzeile `:34` mit 81 Funktionen und 87 Kombinationen — C6.2 hält wörtlich. Schritte 3 und 5: `crates/krk-ui/src/appkit/anwendung.rs:2409` (`ordner_der_datei_zeigen`), `appkit/teilen.rs:217,253` (`anbieten`, `eintrag_anfuegen`), `crates/krk-core/src/tasten/belegung.rs:457,631` (`Kommando::Teilen`). Schritt 6: vier Aufrufer eines Menübauers (`tabelle.rs:527`, `editor.rs:1448`, `vorschau.rs:413,437`), C1.7 hält. Schritte 7 bis 9: `crates/krk-ui/src/markdown.rs`, `hervorhebung.rs:422-431` (`art` als die eine Stelle), `appkit/textmerkmale.rs`. Schritt 10: `appkit/statuszeile.rs`, eine Zeile über die volle Breite.
+
+**Die Aufzählungen aus C6.1 sind nachgezählt und halten:** `Kommando` 75 Varianten (von 73), `Wirkungsbereich` 7, `Bereich` 5, `Fokus` 5 — die drei letzten unverändert, wie C6.1 es als Ergebnis und nicht als Zufall verlangt. C6.5 hält: `#![allow(unsafe_code)]` steht allein in `krk-core/src/verzeichnis/sys.rs:71` und `krk-ui/src/appkit/mod.rs:1`. C6.6 hält: drei Prüfordner-Fassungen (`krk-core/tests/gemeinsam/mod.rs`, `krk-ui/src/pruefordner.rs`, `krk-bench/src/wegwerfordner.rs`). C4.5 hält: kein einziges `WKWebView` im Baum. C1.8 hält: eine Hülle um `NSPasteboard` in `krk-ui/src/appkit/zwischenablage.rs`, die übrigen Nennungen sind Prosa und eine SAFETY-Begründung.
+
+**Drei dieser sechs Eigenschaften sind wahr und nicht abgenommen.** C4.5, C1.8 und C6.6 tragen im Plan **(Probe)**, und die Probe fehlt; abgelegt als `issues/260812-1805_*_drei-der-fuenf-zaehlproben-der-pruefstrategie-sind-nicht-gebaut.md`. Der Abgleich bestätigt den Datensatz: die Eigenschaften halten heute, gemessen sind sie von Hand und nicht vom Bau.
+
+**Ein Befund gegen die Zusage des Plans, keine der zehn Zeitzusagen anzufassen.** `issues/260812-2133_*_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-das-zweieinhalbfache-und-verfehlt-l7-frueher.md` misst, dass L7 bei tief verschachtelten Listen jetzt ab rund 12 kB verfehlt wird statt ab rund 19 kB. Der Plan sagt unter `## Was dieser Plan ausdrücklich nicht tut` zu, keine der zehn anzufassen; die Zahl ist nicht geändert worden, aber der Abstand zu ihr ist es. Auf dem Referenzgerät ist nichts davon gemessen, und die Messstrecke fährt kein solches Dokument.
+
+**Ein Verweis in diesem Plan ist gestorben.** Zeile 366 nennt `decisions/260812-1145_o_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`; der Datensatz steht seit dem 260812 auf umgesetzt. Der Plan ist kein Speicher, für den `CLAUDE.md` die Ausnahme „Aufzeichnungen eines Standes behalten ihren damaligen Marker" zieht — jene gilt für `history/`, `reviews/`, `analyses/`, `issues/`, `decisions/`, `messungen/` und `spikes/`. Abgelegt als eigener Datensatz, zusammen mit der zweiten Fundstelle im Circle-Datensatz.

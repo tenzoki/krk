@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_p_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md
 **Active session history:** circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md
@@ -11,9 +11,11 @@
 
 ## Directive
 
-KRK gibt nach dieser Runde vier Dinge her, die es heute nicht hat. Erstens **teilt es Dateien** über die Freigabedienste des Systems, also auch über AirDrop, und zwar über einen Tastenbefehl und über ein Kontextmenü auf der rechten Maustaste. Das Teilen wirkt in der Dateiliste auf den betroffenen Einträgen nach der Regel der Runde 4 und in Editor und Vorschau auf der Datei, die dort angezeigt wird; das neue Kontextmenü trägt zunächst genau diesen einen Eintrag. Zweitens **springt ein Tastenbefehl in den Ordner der angezeigten Datei**: das aktive der beiden Dateifenster zeigt danach den Ordner, in dem die Datei liegt, die die Vorschau oder der Editor gerade hält. Beide Befehle teilen sich den Begriff „die angezeigte Datei", und sie tun es über einen Mechanismus und nicht über zwei. Drittens **legt KRK eine beschädigte Ablagedatei zur Seite, statt sie zu überschreiben**, und das gilt für alle vier Dateien unter `~/Library/Application Support/KRK/` und nicht allein für die Lesezeichen; dazu tritt die Probe, dass eine `bookmarks.toml` in alter Form von der heutigen Fassung gelesen wird und die Lesezeichen den Lesevorgang überstehen. Viertens **zeigt die Vorschau Markdown vollständig gerendert**, mit verschwundenen Auszeichnungszeichen und ohne jede Web-Ansicht, und **Quelltext eingefärbt über die vorhandene `hervorhebung.rs` samt `syntect`**. Der Text erscheint dabei sofort und die Farben kurz danach, damit die Zusage L7 aus C8 der Runde 1 unangetastet bleibt; hervorgehoben wird jede Datei, unabhängig von ihrer Größe. **Fünftens zieht die Statuszeile über die volle Fensterbreite und lässt sich nach rechts blättern.** Heute sitzt sie je Dateifenster und ist damit für die meisten Meldungen zu schmal; künftig gibt es eine statt zweier, und wo die Herkunft einer Meldung nicht ohnehin klar ist, nennt sie ihr Dateifenster im Text. Diese fünfte Fähigkeit ist am 260812-1105 auf Vorgabe des Nutzers hinzugekommen, nachdem er die Enge beim Beantworten der Meldungsfrage benannt hat. Sie überholt eine Entscheidung der Runde 5, die genau diesen Umbau als eigene Runde vertagt hatte, und sie fasst damit C1 der Runde 1 an — eine abgenommene Fähigkeit. Der Preis ist benannt und angenommen: die Rangfolge in `statuszeile::zeile` wird neu gefasst, und die Zuordnung des Vorgangsfortschritts zu seinem Dateifenster wird von einer räumlichen zu einer sprachlichen.
+KRK gibt nach dieser Runde fünf Dinge her, die es heute nicht hat. Erstens **teilt es Dateien** über die Freigabedienste des Systems, also auch über AirDrop, und zwar über einen Tastenbefehl und über ein Kontextmenü auf der rechten Maustaste. Das Teilen wirkt in der Dateiliste auf den betroffenen Einträgen nach der Regel der Runde 4 und in Editor und Vorschau auf der Datei, die dort angezeigt wird; das neue Kontextmenü trägt zunächst genau diesen einen Eintrag. Zweitens **springt ein Tastenbefehl in den Ordner der angezeigten Datei**: das aktive der beiden Dateifenster zeigt danach den Ordner, in dem die Datei liegt, die die Vorschau oder der Editor gerade hält. Beide Befehle teilen sich den Begriff „die angezeigte Datei", und sie tun es über einen Mechanismus und nicht über zwei. Drittens **legt KRK eine beschädigte Ablagedatei zur Seite, statt sie zu überschreiben**, und das gilt für alle vier Dateien unter `~/Library/Application Support/KRK/` und nicht allein für die Lesezeichen; dazu tritt die Probe, dass eine `bookmarks.toml` in alter Form von der heutigen Fassung gelesen wird und die Lesezeichen den Lesevorgang überstehen. Viertens **zeigt die Vorschau Markdown vollständig gerendert**, mit verschwundenen Auszeichnungszeichen und ohne jede Web-Ansicht, und **Quelltext eingefärbt über die vorhandene `hervorhebung.rs` samt `syntect`**. Der Text erscheint dabei sofort und die Farben kurz danach, damit die Zusage L7 aus C8 der Runde 1 unangetastet bleibt; hervorgehoben wird jede Datei, unabhängig von ihrer Größe. **Fünftens zieht die Statuszeile über die volle Fensterbreite, und eine Meldung, die breiter ist als das Fenster, wird über einen Kurzhinweis beim Verweilen vollständig lesbar.** Heute sitzt sie je Dateifenster und ist damit für die meisten Meldungen zu schmal; künftig gibt es eine statt zweier, und wo die Herkunft einer Meldung nicht ohnehin klar ist, nennt sie ihr Dateifenster im Text. Diese fünfte Fähigkeit ist am 260812-1105 auf Vorgabe des Nutzers hinzugekommen, nachdem er die Enge beim Beantworten der Meldungsfrage benannt hat. Sie überholt eine Entscheidung der Runde 5, die genau diesen Umbau als eigene Runde vertagt hatte, und sie fasst damit C1 der Runde 1 an — eine abgenommene Fähigkeit. Der Preis ist benannt und angenommen: die Rangfolge in `statuszeile::zeile` wird neu gefasst, und die Zuordnung des Vorgangsfortschritts zu seinem Dateifenster wird von einer räumlichen zu einer sprachlichen.
 
 Diese Runde setzt keine elfte Zeitzusage und fasst keine der zehn an.
+
+**Zwei Stellen dieser Directive sind am 260812 auf Nutzerentscheid nachgezogen worden**, nachdem der Abgleich sie als abweichend gemeldet hatte. Die fünfte Fähigkeit sagte ursprünglich eine *blätterbare* Statuszeile zu; der Nutzer hat das Blättern am 260812-1809 gegen einen Kurzhinweis beim Verweilen getauscht, weil die Bildlaufansicht am Fensterfuß den Zweifingerstrich von der Dateiliste wegnahm und ihre Rollbalken die offene Frage C5.11 verbreiterten. Der Entscheid steht in `decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md`, sein Vorgänger in `decisions/260812-1105_*_die-statuszeile-zieht-ueber-die-volle-fensterbreite-und-laesst-sich-blaettern.md` auf überholt. Und der Zählsatz sagte „vier Dinge" und zählte fünf auf, seit die fünfte Fähigkeit am 260812-1105 hinzugekommen war. Beide Änderungen ändern nichts am Ziel der Runde; sie holen den Wortlaut zu Entscheidungen nach, die der Nutzer bereits getroffen hatte.
 
 ## Grounding snapshot
 
@@ -174,6 +176,8 @@ Was diese Runde ihm **nicht** vorwegnimmt: sie zeigt keinen Web-Inhalt, öffnet 
 
 - Turn 4 (Sitzung 260812-1055): Commits f401dcc..1e4e01f, drei davon in diesem Turn (c6bf13d, c35f8b1, 1e4e01f). Reparatur-Turn: die lose Liste, die Deckung im Container, und die Buchfuehrung (Sternform in den Rueckverweisen, doppelte Fuehrung derselben Restarbeit). Coherence-Urteil: ok. Durchsicht: reviews/260812-2019-coderev-turn-4-der-runde-6.md, Bereich f401dcc..c35f8b1, sechs Defekte, darunter erneut eine Verschlechterung dieses Turns: das Merkzeichen liegt im Bereich des ersten Kindes. Der Nutzer hat entschieden, das Turn-Budget zu erhoehen und reparieren zu lassen. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
 
+- Turn 5 (Sitzung 260812-1055): Commits 1e4e01f..dc5e137, zwei davon in diesem Turn (2c0b2a6, dc5e137). Der dritte Reparatur-Turn an markdown.rs und der erste ohne eigene Verschlechterung: das Merkzeichen gehoert seinem Punkt und nicht seinem ersten Kind, dazu fuenf Nachbarbefunde. Coherence-Urteil: ok. Durchsicht: reviews/260812-2137-coderev-turn-5-der-runde-6.md, Bereich 1e4e01f..2c0b2a6. Sie hat den Hauptbefund fuer die ganze Klasse nachgemessen: 648 systematische Quellen, 400000 Zufallsquellen, alle 773 Markdown-Dateien des Baums, null Verstoesse gegen 480 in der Vorfassung. Vier neue Defekte, einer mittel, drei niedrig. Abbruchbedingung Max Turns erreicht; der Nutzer hat den Abschluss gewaehlt. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
+
 ## Activation proposal
 
 **Vorgeschlagen am:** 260812-1027
@@ -252,3 +256,61 @@ Nutzer durch, bevor ein Plan entsteht.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Beschränkter Abschluss am 260812.** Alle elf Planschritte sind gebaut, alle fünf Fähigkeiten
+stehen im Baum, und die Runde ist trotzdem nicht abgenommen. Der Grund ist derselbe wie bei den
+fünf Runden davor und keine Häufung von Fehlschlägen: **der Abnahmelauf verlangt KRK im
+Vordergrund und ist damit Nutzerarbeit.** Aus dem Hintergrund weist die Wirkungsbereichs-Prüfung
+jeden fokusgebundenen Befehl ab. Solange er nicht gefahren ist, ist „gebaut" die richtige Aussage
+über diese Runde und „abgenommen" nicht.
+
+**Was der Artefakt trägt.** Teilen über die Freigabedienste per `shift+cmd+s` und über ein
+Kontextmenü an fünf Ansichten; der Sprung in den Ordner der angezeigten Datei per `opt+cmd+o`;
+eine beschädigte Ablagedatei wird zur Seite gelegt statt überschrieben; die Vorschau zeigt
+Markdown gerendert und färbt Quelltext nach; und eine Statuszeile über die volle Fensterbreite
+statt zweier. 25 Commits, 478 Proben, `build`, `fmt`, `clippy -D warnings` und
+`cargo test --workspace` je Exit 0.
+
+**Was am Bündel aussteht**, und damit bei dir: C1.1 und C1.4 bis C1.7, C2.1, C2.5, C3.10, C4.1,
+C4.7, C4.11, C4.14, C5.1, C5.2, C5.4, C5.10 in seiner überholten Fassung und C5.11. Drei
+Kriterien tragen **(Probe)**, sind wahr, aber ungemessen: C4.5, C1.8, C6.6. Die vollständige
+Aufstellung steht im Abgleich `history/260812-2253-reconciliation.md`.
+
+**Der schwerste offene Punkt gehört zu C1.1.** `NSSharingService.h:270` verlangt für
+`showRelativeToRect:ofView:preferredEdge:` ausdrücklich einen Mausdruck, und KRK ruft es aus
+einem Tastendruck. Ob der Dialog trotzdem aufgeht, ist allein am laufenden Bündel zu sehen. Der
+Ausweichweg ist gebaut: `teilen::eintrag_anfuegen` in ein eigenes `NSMenu` und dieses aufklappen.
+Der Rechtsklickweg über `standardShareMenuItem` ist nicht betroffen, ein Lauf, der nur ihn prüft,
+beantwortet die Frage also nicht.
+
+**Was diese Runde über sich selbst gelernt hat.** Drei Reparatur-Turns an `markdown.rs`
+hintereinander, und die ersten zwei haben je eine Verschlechterung eingeschleppt — beide Male,
+weil der Ausgabetext richtig war und der **Bereich** falsch, und weil keine Probe Bereiche maß.
+In AppKit ist der Bereich das, was die Schrift setzt. Turn 5 hat die Kette gebrochen, indem er
+eine Probe über die **Klasse** gebaut hat statt über den Einzelfall; die Durchsicht hat sie über
+648 systematische Quellen, 400000 Zufallsquellen und alle 773 Markdown-Dateien des Baums
+nachgemessen. Das ist der übertragbare Teil und gehört in die nächste Runde, die eine
+Zerlegungsregel anfasst.
+
+**Die Directive ist zweimal nachgezogen worden**, beide Male auf Nutzerentscheid und beide Male
+als Nachvollzug einer bereits getroffenen Wahl: die fünfte Fähigkeit ist am 260812-1105
+hinzugekommen, und am 260812 ist das Blättern der Statuszeile gegen einen Kurzhinweis getauscht
+worden. Der Nachtrag am Ende der Directive hält beides fest.
+
+**Ein Befund gegen eine Zusage des Plans, benannt statt verschwiegen:** L7 wird bei tief
+verschachtelten Listen jetzt ab rund 12 kB verfehlt statt ab 19 kB
+(`issues/260812-2133_*_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-…`). Die Zahl der
+Zusage ist unverändert, der Abstand zu ihr nicht, und der Plan sagt zu, keine der zehn
+Zeitzusagen anzufassen.
+
+**Bilanz der Grundlage:** 26 offene Defekte im Circle, 6 im gemeinsamen Speicher, 12 offene
+Fragen über beide. Drei Fragen binden die nächste Runde unmittelbar: der Rechtsklick bei
+Markierung anderswo, die Schriftgröße der Vorschau, und ob der Vorspann eines Containers die
+eine Lücke in der Deckungszusage von C4.3 bleibt.
+
+**Sitzungsprotokoll:** `history/260812-1055-orchestrator-session.md`.
+**Abgleich:** `history/260812-2253-reconciliation.md`.
+**Durchsichten:** `reviews/260812-1526-ontorev-…`, `260812-1529-coderev-…`, `260812-1805-coderev-…`,
+`260812-1920-coderev-…`, `260812-2137-coderev-…`.

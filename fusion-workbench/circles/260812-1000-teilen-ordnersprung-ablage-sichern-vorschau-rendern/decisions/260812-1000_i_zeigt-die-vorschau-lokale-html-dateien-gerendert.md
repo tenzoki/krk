@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `### Offene Fragen`, Frage 2; `crates/krk-ui/src/vorschaumodell.rs:29` und `:182` (die Dreiteilung aus C6 und der `Inhalt`); Festlegung A dieser Runde (keine Web-Ansicht)
 
@@ -62,6 +62,6 @@ dieser Runde besser aus als vorher, auch ohne gerendert zu werden.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/hervorhebung.rs:422-431` (`art` gibt nur fuer `Dateityp::Markdown` `Darstellungsart::Markdown`; HTML faellt unter `Dateityp::Sonstiges` und bekommt ueber `sprache_fuer` `Darstellungsart::Code`, also Quelltext mit Einfaerbung) — Schritt 8 des Plans, Commit `b4d9de2`. Eine zweite Endungsliste ist nicht entstanden. Abgeglichen am 260812-2253.
 Deferred:
 Superseded by:

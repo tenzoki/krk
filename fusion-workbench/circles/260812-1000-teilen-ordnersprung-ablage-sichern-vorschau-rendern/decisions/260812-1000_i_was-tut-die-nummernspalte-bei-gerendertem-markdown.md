@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/nummernspalte.rs` (eine Klasse für Editor und Vorschau); `crates/krk-ui/src/vorschaumodell.rs:451` (`zeigt_dateitext`, vollständige Fallunterscheidung); `circles/260807-2116-eingebauter-editor-mit-textmarken/_*_circle.md` (C10 der Runde 2, die Zusage einer Anzeige für beide Flächen)
 
@@ -61,6 +61,6 @@ Editor; dort stehen sie und stimmen.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/vorschaumodell.rs:478-486` (`zeigt_dateitext` gibt fuer `Inhalt::Markdown` `false`, vollstaendige Fallunterscheidung ohne Auffangzweig; `nummernspalte.rs` ist unveraendert) — Schritt 8 des Plans, Commit `b4d9de2`. Abgeglichen am 260812-2253: die Zuordnung steht an der einen Stelle, die der Datensatz verlangt.
 Deferred:
 Superseded by:

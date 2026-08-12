@@ -53,3 +53,18 @@ Directive abgeschlossen, und ein Abschluss gegen eine zurückgenommene Zusage
 liest sich später wie ein verfehltes Kriterium.
 
 **Herkunft:** Circle der Runde 6, Turn 3, Rücknahme von Schritt 11 (C5.10).
+
+---
+Resolved: Die Directive traegt die Aenderung jetzt selbst. Auf Nutzerentscheid vom 260812 sind
+zwei Stellen nachgezogen worden: die fuenfte Faehigkeit sagt statt der blaetterbaren Statuszeile
+den Kurzhinweis beim Verweilen zu, und der Zaehlsatz nennt fuenf Dinge statt vier. Ein Nachtrag
+am Ende der Directive haelt fest, was geaendert wurde und warum, und verweist auf den Entscheid
+`decisions/260812-1809_*_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md` sowie
+auf seinen ueberholten Vorgaenger.
+
+Eine Notiz allein in der Abschlussnotiz haette nicht genuegt, und das Argument stammt aus dem
+Abgleich `history/260812-2253-reconciliation.md`: `portfolio.md` zitiert die Directive-Zeile ohne
+die Notiz, und der Abnahmelauf geht von der Kriterienliste aus, nicht vom Dateiende. Die Regel,
+die den Weg oeffnet, steht in `rules/circle-records.md`, wo die Directive ausdruecklich als
+ueber das Rebalance revidierbar gefuehrt wird: eigenmaechtig darf der Orchestrator sie nicht
+umschreiben, mit Zustimmung des Nutzers schon.
