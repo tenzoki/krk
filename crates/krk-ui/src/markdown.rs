@@ -28,8 +28,8 @@
 //!       v
 //!   ┌───────────────────────────────────────────────────────────────┐
 //!   │ Ueberschrift   ──> Auszeichnung::Ueberschrift { stufe }       │
-//!   │ Listenpunkt    ──> Auszeichnung::Listenzeile                  │
-//!   │ Zitatblock     ──> Auszeichnung::Listenzeile                  │
+//!   │ Listenpunkt    ──> Merkzeichen + Listenzeile { tiefe }        │
+//!   │ Zitatblock     ──> Auszeichnung::Listenzeile { tiefe }        │
 //!   │ Quelltext      ──> Auszeichnung::FesteSchrift                 │
 //!   │ Betonung       ──> Auszeichnung::Betonung                     │
 //!   │ starke Bet.    ──> Auszeichnung::StarkeBetonung               │
@@ -41,17 +41,49 @@
 //! ```
 //!
 //! **Die letzte Zeile ist die eine Auffangregel, und sie macht die
-//! Fallunterscheidung total.** Was ausserhalb des Grundumfangs liegt,
-//! erscheint als der Text, der dasteht, und wird bis zum Ende seines Elements
-//! uebersprungen: eingebettetes HTML, Bilder und Trennlinien. Das dritte
-//! Abnahmekriterium von C4 verlangt genau eine Regel dafuer und nicht eine je
-//! Fall.
+//! Fallunterscheidung ueber [`Tag`] total.** Was ausserhalb des Grundumfangs
+//! liegt, erscheint als der Text, der dasteht, und wird bis zum Ende seines
+//! Elements uebersprungen: eingebettetes HTML, Bilder und Trennlinien. Das
+//! dritte Abnahmekriterium von C4 verlangt genau eine Regel dafuer und nicht
+//! eine je Fall.
 //!
 //! **Eine Tabelle faellt nicht unter die Auffangregel, sondern kommt von
 //! selbst richtig heraus.** Ohne das Merkmal `ENABLE_TABLES` sieht die Kiste in
 //! den drei Zeilen einer Tabelle einen gewoehnlichen Absatz mit weichen
 //! Umbruechen; die Zwischenraeume bleiben stehen, und das Quelltextraster aus
 //! dem Datensatz vom 260812-1105 entsteht ohne Sonderregel.
+//!
+//! # Die Deckung: kein Quellbyte faellt heraus
+//!
+//! Die Auffangregel ueber [`Tag`] deckt die **Ereignisse** ab und damit noch
+//! nicht die **Zeichen** der Datei. Bis zum 260812 fiel deshalb Quelltext
+//! spurlos heraus, zu dem die Kiste gar kein Ereignis liefert — eine
+//! Verweisdefinition `[ref]: https://…` wird beim Aufloesen verbraucht und
+//! nicht gemeldet, und eine Datei aus lauter Definitionen zeigte eine leere
+//! Flaeche (Defekt `260812-1805`, zwei gemessene Faelle).
+//!
+//! **Gedeckt wird deshalb ueber die Quellbereiche und nicht ueber die
+//! Ereignisarten.** [`Zerlegung::gelesen`] ist der Stand, bis zu dem die Quelle
+//! abgetragen ist, und daran haengen zwei Saetze, die zusammen jedes Byte
+//! treffen:
+//!
+//! 1. **Auf Dokumentebene**, also wenn kein Element offen ist, wird die Luecke
+//!    vor dem naechsten Ereignis woertlich ausgegeben ([`Zerlegung::luecke_bis`]);
+//!    am Ende des Durchgangs ebenso bis [`str::len`]. Eine Luecke, in der nur
+//!    Leerraum steht, faellt weg: die Abstaende zwischen den Bloecken rechnet
+//!    [`Zerlegung::absetzen`], und sie ein zweites Mal zu schreiben ergaebe
+//!    Leerzeilen.
+//! 2. **Innerhalb eines Elements** deckt das Element seinen ganzen
+//!    Quellbereich: hat es Zeichen geliefert, sind die Luecken darin seine
+//!    Auszeichnungszeichen und gehoeren weg — das `[` und das `][ref]` eines
+//!    Verweises. Hat es **kein** Zeichen geliefert, gibt es beim Schliessen
+//!    seinen Quellbereich woertlich heraus ([`Zerlegung::schliessen`]); so
+//!    bleibt `[](https://example.com)` stehen, statt zu verschwinden.
+//!
+//! Beides ist mechanisch und zaehlt keine Faelle auf: der erste Satz fragt
+//! allein, ob [`Zerlegung::offen`] leer ist, der zweite allein, ob die Laenge
+//! null ist. Eine kuenftige Fassung der Kiste, die ein Element anders meldet,
+//! aendert daran nichts.
 //!
 //! # Die Abstaende zwischen den Bloecken
 //!
@@ -63,6 +95,21 @@
 //! schon mit einem Umbruch endet, hinterher keine Leerzeile zuviel, und zwei
 //! Wuensche hintereinander werden nicht zu vier Zeilen.
 //!
+//! # Die Einrueckebenen einer Liste
+//!
+//! Ein Listenpunkt traegt sein Merkzeichen im Text — `• ` oder die Nummer
+//! seiner geordneten Liste — und seine Tiefe in der Auszeichnung
+//! ([`Auszeichnung::Listenzeile`]). Bis zum 260812 trug er einen festen Einzug
+//! und sonst nichts; eine dreistufige Liste stand danach flach und ohne
+//! Merkzeichen da, und eine geordnete war von einer ungeordneten nicht zu
+//! unterscheiden (Defekt `260812-1805`).
+//!
+//! Die Tiefe zaehlt [`Zerlegung::tiefe`] aus den offenen Elementen und haelt
+//! keinen zweiten Zaehler daneben: jedes Element, das einrueckt, traegt eine
+//! [`Ebene`], und die Tiefe ist ihre Zahl. Ein Zitatblock zaehlt mit, weil er
+//! genauso einrueckt; die Nummer einer geordneten Liste steht in der [`Ebene`]
+//! der Liste und wird vom Punkt verbraucht.
+//!
 //! # Die Stellen sind UTF-16-Einheiten
 //!
 //! Wie in [`crate::hervorhebung`], und aus demselben Grund: ein `NSRange` zaehlt
@@ -70,6 +117,8 @@
 //! dahinter. Gezaehlt wird **im Durchgang** und nicht in einem zweiten danach;
 //! [`Formatierung::laenge`] ist der Endstand dieses Zaehlers und traegt damit
 //! denselben Guertel gegen einen Programmabbruch, den der Editor schon hat.
+
+use std::ops::Range;
 
 use pulldown_cmark::{Event, Options, Parser, Tag};
 
@@ -101,39 +150,64 @@ pub struct Gerendert {
 /// aussen herein, weil dieses Modul keine Farbe kennt und die Wahl zwischen
 /// Hell und Dunkel am Erscheinungsbild des Fensters haengt.
 pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
-    let mut zerlegung = Zerlegung::neu(linkfarbe(tafel));
+    let mut zerlegung = Zerlegung::neu(quelle, linkfarbe(tafel));
     let mut ereignisse = Parser::new_ext(quelle, Options::empty()).into_offset_iter();
     while let Some((ereignis, bereich)) = ereignisse.next() {
+        // Der erste Satz der Deckung, vor jedem Ereignis und ohne seine Art zu
+        // kennen: was seit dem letzten Stand ungelesen blieb, steht da.
+        zerlegung.luecke_bis(bereich.start);
         match ereignis {
             Event::Start(tag) => match behandlung(&tag) {
                 Behandlung::Block { umbrueche, art } => {
                     zerlegung.trennen(umbrueche);
-                    zerlegung.oeffnen(Abschluss::von(art), umbrueche);
+                    zerlegung.oeffnen(bereich, Abschluss::von(art), umbrueche, None);
                 }
+                Behandlung::Zitat => zerlegung.zitat_oeffnen(bereich),
+                Behandlung::Liste { erste } => {
+                    zerlegung.trennen(PUNKTABSTAND);
+                    zerlegung.oeffnen(
+                        bereich,
+                        Abschluss::Nichts,
+                        PUNKTABSTAND,
+                        Some(Ebene::Liste(erste)),
+                    );
+                }
+                Behandlung::Punkt => zerlegung.punkt_oeffnen(bereich),
                 Behandlung::Stueck(art) => {
-                    zerlegung.oeffnen(Abschluss::Auszeichnung(art), 0);
+                    zerlegung.oeffnen(bereich, Abschluss::Auszeichnung(art), 0, None);
                 }
-                Behandlung::Verweis => zerlegung.oeffnen(Abschluss::Verweis, 0),
+                Behandlung::Verweis => zerlegung.oeffnen(bereich, Abschluss::Verweis, 0, None),
                 // Die eine Auffangregel: der Quelltext, woertlich, und das
                 // Element danach uebersprungen. Ein Bild, das hier
                 // hindurchgeht, wird damit auch nicht geladen — das sechste
                 // Abnahmekriterium von C4.
                 Behandlung::Woertlich => {
-                    zerlegung.schreiben(&quelle[bereich]);
+                    zerlegung.woertlich(bereich);
                     bis_zum_ende_ueberspringen(&mut ereignisse);
                 }
             },
             Event::End(_) => zerlegung.schliessen(),
-            Event::Text(inhalt) => zerlegung.schreiben(&inhalt),
+            Event::Text(inhalt) => {
+                zerlegung.schreiben(&inhalt);
+                zerlegung.gelesen_bis(bereich.end);
+            }
             Event::Code(inhalt) => {
-                zerlegung.oeffnen(Abschluss::Auszeichnung(Auszeichnung::FesteSchrift), 0);
+                zerlegung.oeffnen(
+                    bereich,
+                    Abschluss::Auszeichnung(Auszeichnung::FesteSchrift),
+                    0,
+                    None,
+                );
                 zerlegung.schreiben(&inhalt);
                 zerlegung.schliessen();
             }
             // Die Zeile, an der das Quelltextraster einer Tabelle haengt: die
             // drei Zeilen einer Tabelle sind ein Absatz mit weichen
             // Umbruechen, und der Umbruch bleibt einer.
-            Event::SoftBreak | Event::HardBreak => zerlegung.schreiben("\n"),
+            Event::SoftBreak | Event::HardBreak => {
+                zerlegung.schreiben("\n");
+                zerlegung.gelesen_bis(bereich.end);
+            }
             // Dieselbe Auffangregel fuer die Ereignisse, die kein Ende haben:
             // eine Trennlinie, eingebettetes HTML in der Zeile, alles Uebrige.
             Event::Rule
@@ -142,7 +216,7 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
             | Event::FootnoteReference(_)
             | Event::InlineMath(_)
             | Event::DisplayMath(_)
-            | Event::TaskListMarker(_) => zerlegung.schreiben(&quelle[bereich]),
+            | Event::TaskListMarker(_) => zerlegung.woertlich(bereich),
         }
     }
     zerlegung.abschliessen()
@@ -164,6 +238,21 @@ enum Behandlung {
         /// Was seine Zeilen tragen; `None` fuer einen Block, der nur abtrennt.
         art: Option<Auszeichnung>,
     },
+    /// Ein Zitatblock: er legt eine Einrueckebene an und rueckt sich selbst ein.
+    ///
+    /// Er bekommt den Einzug der Listen, weil sein Merkzeichen sonst spurlos
+    /// verschwaende (C4, zweites Kriterium).
+    Zitat,
+    /// Eine Liste: sie legt eine Einrueckebene an und traegt selbst nichts.
+    ///
+    /// Der Einzug haengt am Punkt, denn er ist die Zeile, die eingerueckt wird.
+    Liste {
+        /// Die erste Nummer einer geordneten Liste; `None` bei einer
+        /// ungeordneten.
+        erste: Option<u64>,
+    },
+    /// Ein Listenpunkt: sein Merkzeichen und der Einzug seiner Ebene.
+    Punkt,
     /// Ein Stueck in der Zeile, das eine Auszeichnung traegt.
     Stueck(Auszeichnung),
     /// Ein Verweis: Farbe und Unterstreichung statt einer Auszeichnung.
@@ -188,6 +277,12 @@ const ABSATZABSTAND: usize = 2;
 /// Liste optisch in lauter Absaetze.
 const PUNKTABSTAND: usize = 1;
 
+/// Das Merkzeichen eines Punktes in einer ungeordneten Liste.
+///
+/// Mit dem Leerzeichen dahinter, weil es zum Zeichen gehoert und nicht zum
+/// Text. Der Punkt `U+2022` ist derselbe, den jeder Betrachter setzt.
+const AUFZAEHLUNGSZEICHEN: &str = "• ";
+
 /// Was aus dem Element mit diesem Anfangszeichen wird.
 fn behandlung(tag: &Tag<'_>) -> Behandlung {
     match tag {
@@ -201,27 +296,13 @@ fn behandlung(tag: &Tag<'_>) -> Behandlung {
                 stufe: *level as u8,
             }),
         },
-        // Der Zitatblock bekommt den Einzug der Listen, weil sein Merkzeichen
-        // sonst spurlos verschwaende (C4, zweites Kriterium).
-        Tag::BlockQuote(_) => Behandlung::Block {
-            umbrueche: ABSATZABSTAND,
-            art: Some(Auszeichnung::Listenzeile),
-        },
+        Tag::BlockQuote(_) => Behandlung::Zitat,
         Tag::CodeBlock(_) => Behandlung::Block {
             umbrueche: ABSATZABSTAND,
             art: Some(Auszeichnung::FesteSchrift),
         },
-        // Die Liste selbst traegt nichts: sie trennt ihre Punkte von dem, was
-        // vor und nach ihr steht. Der Einzug haengt am Punkt, denn er ist die
-        // Zeile, die eingerueckt wird.
-        Tag::List(_) => Behandlung::Block {
-            umbrueche: PUNKTABSTAND,
-            art: None,
-        },
-        Tag::Item => Behandlung::Block {
-            umbrueche: PUNKTABSTAND,
-            art: Some(Auszeichnung::Listenzeile),
-        },
+        Tag::List(erste) => Behandlung::Liste { erste: *erste },
+        Tag::Item => Behandlung::Punkt,
         Tag::Emphasis => Behandlung::Stueck(Auszeichnung::Betonung),
         Tag::Strong => Behandlung::Stueck(Auszeichnung::StarkeBetonung),
         Tag::Link { .. } => Behandlung::Verweis,
@@ -272,6 +353,19 @@ impl Abschluss {
     }
 }
 
+/// Eine Einrueckebene: was die Tiefe einer Listenzeile ausmacht.
+///
+/// Die offenen Ebenen stehen in [`Zerlegung::offen`] und nicht in einem
+/// zweiten Stapel daneben; ihre Zahl ist die Tiefe, und mit dem Element
+/// verschwindet auch seine Ebene.
+enum Ebene {
+    /// Ein Zitatblock: er rueckt ein und zaehlt keine Nummern.
+    Zitat,
+    /// Eine Liste: `None` ungeordnet, `Some(n)` die naechste zu vergebende
+    /// Nummer.
+    Liste(Option<u64>),
+}
+
 /// Ein Element, dessen Ende noch aussteht.
 struct Offen {
     /// Die Stelle in UTF-16-Einheiten, an der es begonnen hat.
@@ -280,10 +374,30 @@ struct Offen {
     was: Abschluss,
     /// Wie viele Umbrueche nach ihm stehen.
     nach: usize,
+    /// Sein Bereich in der Quelle, in Bytes.
+    ///
+    /// Der zweite Satz der Deckung haengt daran: ein Element ohne ein einziges
+    /// Zeichen gibt genau diesen Bereich woertlich heraus.
+    quelle: Range<usize>,
+    /// Der wievielte geoeffnete Bereich dieser ist.
+    ///
+    /// Die Reihenfolge des Oeffnens laeuft von aussen nach innen und ist damit
+    /// die Reihenfolge, in der [`Zerlegung::abschliessen`] bei gleichem Anfang
+    /// und gleicher Laenge sortiert.
+    rang: usize,
+    /// Die Einrueckebene, die dieses Element anlegt.
+    ebene: Option<Ebene>,
 }
 
 /// Der Ausgabetext im Aufbau, mit seinen Stellen und den offenen Elementen.
-struct Zerlegung {
+struct Zerlegung<'q> {
+    /// Die Quelle, aus der gerendert wird.
+    ///
+    /// Sie steht hier, weil beide Saetze der Deckung sie brauchen und keiner
+    /// von beiden in [`rendern`] steht.
+    quelle: &'q str,
+    /// Bis wohin die Quelle abgetragen ist, in Bytes.
+    gelesen: usize,
     /// Die Farbe eines Verweises; `None`, wenn die Tafel keine hergibt.
     linkfarbe: Option<Farbe>,
     text: String,
@@ -296,18 +410,24 @@ struct Zerlegung {
     /// [`Zerlegung::absetzen`], und dort wird aufgefuellt statt angehaengt.
     trennung: usize,
     offen: Vec<Offen>,
+    /// Wie viele Bereiche bisher geoeffnet wurden; die Quelle der Raenge.
+    raenge: usize,
     einfaerbungen: Vec<Einfaerbung>,
-    auszeichnungen: Vec<Auszeichnungsstelle>,
+    /// Die Auszeichnungen mit dem Rang ihres Elements.
+    auszeichnungen: Vec<(usize, Auszeichnungsstelle)>,
 }
 
-impl Zerlegung {
-    fn neu(linkfarbe: Option<Farbe>) -> Self {
+impl<'q> Zerlegung<'q> {
+    fn neu(quelle: &'q str, linkfarbe: Option<Farbe>) -> Self {
         Self {
+            quelle,
+            gelesen: 0,
             linkfarbe,
             text: String::new(),
             stelle: 0,
             trennung: 0,
             offen: Vec::new(),
+            raenge: 0,
             einfaerbungen: Vec::new(),
             auszeichnungen: Vec::new(),
         }
@@ -364,20 +484,132 @@ impl Zerlegung {
         self.stelle += stueck.encode_utf16().count();
     }
 
+    /// Traegt die Quelle bis hierhin als gelesen ab.
+    fn gelesen_bis(&mut self, bis: usize) {
+        self.gelesen = self.gelesen.max(bis);
+    }
+
+    /// Schreibt einen Quellbereich woertlich und traegt ihn ab.
+    ///
+    /// Die Auffangregel und die Deckung treffen sich hier: was woertlich
+    /// dasteht, ist gelesen.
+    fn woertlich(&mut self, bereich: Range<usize>) {
+        let quelle = self.quelle;
+        self.schreiben(&quelle[bereich.clone()]);
+        self.gelesen_bis(bereich.end);
+    }
+
+    /// Der erste Satz der Deckung: gibt heraus, was auf Dokumentebene bis
+    /// hierhin ungelesen blieb.
+    ///
+    /// **Nur wenn kein Element offen ist.** Innerhalb eines Elements sind die
+    /// Luecken zwischen den Ereignissen seine Auszeichnungszeichen, und die
+    /// gehoeren weg; gedeckt ist das Element dort ueber seinen eigenen
+    /// Quellbereich, siehe [`Zerlegung::schliessen`].
+    ///
+    /// **Leerraum faellt weg.** Die Abstaende zwischen den Bloecken rechnet
+    /// [`Zerlegung::absetzen`] aus dem Wunsch des Blocks; der Leerraum der
+    /// Quelle daneben ergaebe Leerzeilen. Was uebrig bleibt, ist ein Block und
+    /// wird wie einer abgesetzt.
+    fn luecke_bis(&mut self, bis: usize) {
+        if !self.offen.is_empty() || self.gelesen >= bis {
+            return;
+        }
+        let quelle = self.quelle;
+        let uebergangen = quelle[self.gelesen..bis].trim();
+        self.gelesen = bis;
+        if uebergangen.is_empty() {
+            return;
+        }
+        self.trennen(ABSATZABSTAND);
+        self.schreiben(uebergangen);
+        self.trennen(ABSATZABSTAND);
+    }
+
     /// Beginnt ein Element an der aktuellen Stelle.
-    fn oeffnen(&mut self, was: Abschluss, nach: usize) {
+    fn oeffnen(&mut self, quelle: Range<usize>, was: Abschluss, nach: usize, ebene: Option<Ebene>) {
         self.absetzen();
+        self.raenge += 1;
         self.offen.push(Offen {
             anfang: self.stelle,
             was,
             nach,
+            quelle,
+            rang: self.raenge,
+            ebene,
         });
+    }
+
+    /// Wie viele Einrueckebenen gerade offen stehen.
+    ///
+    /// Gezaehlt und nicht mitgefuehrt: ein zweiter Zaehler neben
+    /// [`Zerlegung::offen`] waere die zweite Wahrheit ueber dieselbe Sache und
+    /// liefe beim ersten uebersprungenen Element auseinander.
+    fn tiefe(&self) -> u8 {
+        let ebenen = self.offen.iter().filter(|e| e.ebene.is_some()).count();
+        u8::try_from(ebenen).unwrap_or(u8::MAX)
+    }
+
+    /// Nimmt das Merkzeichen des naechsten Punktes und zaehlt die Nummer weiter.
+    ///
+    /// Die Nummer steht in der [`Ebene`] der umgebenden Liste; eine
+    /// ungeordnete Liste gibt das [`AUFZAEHLUNGSZEICHEN`]. Steht keine Liste
+    /// offen — die Kiste liefert einen Punkt nur innerhalb einer —, gilt
+    /// dasselbe Zeichen.
+    fn merkzeichen(&mut self) -> String {
+        for eintrag in self.offen.iter_mut().rev() {
+            if let Some(Ebene::Liste(nummer)) = &mut eintrag.ebene {
+                let Some(zahl) = *nummer else {
+                    return AUFZAEHLUNGSZEICHEN.to_owned();
+                };
+                *nummer = Some(zahl.saturating_add(1));
+                return format!("{zahl}. ");
+            }
+        }
+        AUFZAEHLUNGSZEICHEN.to_owned()
+    }
+
+    /// Beginnt einen Listenpunkt: Merkzeichen im Text, Tiefe in der
+    /// Auszeichnung.
+    ///
+    /// Das Merkzeichen steht **innerhalb** des Bereichs der Listenzeile, denn
+    /// der Einzug soll es mitnehmen; genau das sagt der Kommentar an
+    /// `einzugsmerkmal` in `crate::appkit::textmerkmale` zu.
+    fn punkt_oeffnen(&mut self, quelle: Range<usize>) {
+        let tiefe = self.tiefe();
+        let merkzeichen = self.merkzeichen();
+        self.trennen(PUNKTABSTAND);
+        self.oeffnen(
+            quelle,
+            Abschluss::Auszeichnung(Auszeichnung::Listenzeile { tiefe }),
+            PUNKTABSTAND,
+            None,
+        );
+        self.schreiben(&merkzeichen);
+    }
+
+    /// Beginnt einen Zitatblock: er legt seine Ebene an und rueckt sich selbst
+    /// um sie ein.
+    fn zitat_oeffnen(&mut self, quelle: Range<usize>) {
+        self.trennen(ABSATZABSTAND);
+        let tiefe = self.tiefe().saturating_add(1);
+        self.oeffnen(
+            quelle,
+            Abschluss::Auszeichnung(Auszeichnung::Listenzeile { tiefe }),
+            ABSATZABSTAND,
+            Some(Ebene::Zitat),
+        );
     }
 
     /// Beendet das zuletzt begonnene Element und traegt seine Stelle ein.
     ///
-    /// Ein Element ohne ein einziges Zeichen traegt nichts ein: ein Bereich der
-    /// Laenge null saehe man nicht und stuende doch in der Liste.
+    /// **Der zweite Satz der Deckung steht hier.** Ein Element ohne ein
+    /// einziges Zeichen traegt keine Stelle ein — ein Bereich der Laenge null
+    /// saehe man nicht und stuende doch in der Liste — und gibt statt dessen
+    /// seinen Quellbereich woertlich heraus. Sonst verschwaende er spurlos:
+    /// `[](https://example.com)` liefert ein Ereignis, aber kein Zeichen.
+    /// Doppelt geschrieben wird dabei nichts, denn haette ein Kind etwas
+    /// geliefert, waere die Laenge nicht null.
     fn schliessen(&mut self) {
         let Some(eintrag) = self.offen.pop() else {
             return;
@@ -386,11 +618,14 @@ impl Zerlegung {
         if laenge > 0 {
             match eintrag.was {
                 Abschluss::Nichts => {}
-                Abschluss::Auszeichnung(art) => self.auszeichnungen.push(Auszeichnungsstelle {
-                    anfang: eintrag.anfang,
-                    laenge,
-                    art,
-                }),
+                Abschluss::Auszeichnung(art) => self.auszeichnungen.push((
+                    eintrag.rang,
+                    Auszeichnungsstelle {
+                        anfang: eintrag.anfang,
+                        laenge,
+                        art,
+                    },
+                )),
                 Abschluss::Verweis => {
                     if let Some(farbe) = self.linkfarbe {
                         self.einfaerbungen.push(Einfaerbung {
@@ -402,28 +637,48 @@ impl Zerlegung {
                     }
                 }
             }
+            self.gelesen_bis(eintrag.quelle.end);
+        } else {
+            self.woertlich(eintrag.quelle);
         }
         self.trennen(eintrag.nach);
     }
 
     /// Gibt den fertigen Text mit seiner Formatierung heraus.
     ///
-    /// **Sortiert wird nach Anfang, bei gleichem Anfang das laengere zuerst.**
-    /// Damit steht das aeussere Element vor dem inneren, und weil
-    /// `addAttributes:range:` in dieser Reihenfolge setzt, gewinnt innen das
-    /// innere: der Quelltext in einer Ueberschrift bekommt seine feste Schrift
-    /// und nicht die der Ueberschrift. Ohne die Sortierung entschiede die
-    /// Reihenfolge der Endereignisse, und die laeuft von innen nach aussen.
+    /// **Sortiert wird nach Anfang, bei gleichem Anfang das laengere zuerst,
+    /// bei gleicher Laenge das zuerst geoeffnete.** Damit steht das aeussere
+    /// Element vor dem inneren, und weil `addAttributes:range:` in dieser
+    /// Reihenfolge setzt, gewinnt innen das innere: der Quelltext in einer
+    /// Ueberschrift bekommt seine feste Schrift und nicht die der Ueberschrift,
+    /// und der tiefere von zwei Listenpunkten seinen groesseren Einzug.
+    ///
+    /// **Der dritte Schluessel ist nicht schmueckendes Beiwerk.** Ohne ihn
+    /// entschiede bei gleichem Anfang **und** gleicher Laenge die stabile
+    /// Sortierung, also die Reihenfolge der Endereignisse, und die laeuft von
+    /// innen nach aussen — genau verkehrt. Gemessen an `` **`code`** ``, wo
+    /// starke Betonung und feste Schrift denselben Bereich decken (Defekt
+    /// `260812-1805` zum Ueberschneidungssatz). Mit dem Rang ist die Ordnung
+    /// total und haengt an nichts, was die Kiste sonst noch tut.
     fn abschliessen(mut self) -> Gerendert {
-        self.auszeichnungen
-            .sort_by(|a, b| a.anfang.cmp(&b.anfang).then(b.laenge.cmp(&a.laenge)));
+        self.luecke_bis(self.quelle.len());
+        self.auszeichnungen.sort_by(|(rang_a, a), (rang_b, b)| {
+            a.anfang
+                .cmp(&b.anfang)
+                .then(b.laenge.cmp(&a.laenge))
+                .then(rang_a.cmp(rang_b))
+        });
         self.einfaerbungen.sort_by_key(|stueck| stueck.anfang);
         Gerendert {
             formatierung: Formatierung {
                 art: Darstellungsart::Markdown,
                 laenge: self.stelle,
                 einfaerbungen: self.einfaerbungen,
-                auszeichnungen: self.auszeichnungen,
+                auszeichnungen: self
+                    .auszeichnungen
+                    .into_iter()
+                    .map(|(_, stelle)| stelle)
+                    .collect(),
             },
             text: self.text,
         }
@@ -553,11 +808,80 @@ mod tests {
     #[test]
     fn ein_listenpunkt_traegt_den_einzug_und_behaelt_sein_zeichen() {
         let ergebnis = gerendert("- eins\n- zwei\n");
-        assert_eq!(ergebnis.text, "eins\nzwei");
-        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile);
+        assert_eq!(ergebnis.text, "• eins\n• zwei");
+        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 });
         assert_eq!(punkte.len(), 2, "je Punkt eine Zeile");
-        assert_eq!(stueck(&ergebnis.text, punkte[0].0, punkte[0].1), "eins");
-        assert_eq!(stueck(&ergebnis.text, punkte[1].0, punkte[1].1), "zwei");
+        assert_eq!(
+            stueck(&ergebnis.text, punkte[0].0, punkte[0].1),
+            "• eins",
+            "das Merkzeichen liegt im Bereich der Zeile und rueckt mit ein"
+        );
+        assert_eq!(stueck(&ergebnis.text, punkte[1].0, punkte[1].1), "• zwei");
+    }
+
+    /// Defekt `260812-1805`, erster gemessener Fall: eine geordnete Liste war
+    /// von einer ungeordneten nicht zu unterscheiden.
+    #[test]
+    fn eine_geordnete_liste_behaelt_ihre_nummern() {
+        let ergebnis = gerendert("1. eins\n2. zwei\n3. drei\n");
+        assert_eq!(ergebnis.text, "1. eins\n2. zwei\n3. drei");
+        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 });
+        assert_eq!(punkte.len(), 3);
+        assert_eq!(stueck(&ergebnis.text, punkte[2].0, punkte[2].1), "3. drei");
+    }
+
+    /// Die Nummer kommt aus der Liste und ist kein Zaehler bei eins: eine
+    /// Liste, die bei 3 anfaengt, faengt bei 3 an.
+    #[test]
+    fn eine_geordnete_liste_beginnt_bei_ihrer_eigenen_zahl() {
+        assert_eq!(gerendert("3. drei\n4. vier\n").text, "3. drei\n4. vier");
+    }
+
+    /// Defekt `260812-1805`, zweiter gemessener Fall: eine dreistufige Liste
+    /// stand flach da, alle vier Bereiche mit demselben Einzug.
+    #[test]
+    fn eine_verschachtelte_liste_traegt_ihre_tiefe() {
+        let ergebnis = gerendert("- eins\n- zwei\n  - drunter\n    - noch tiefer\n");
+        assert_eq!(ergebnis.text, "• eins\n• zwei\n• drunter\n• noch tiefer");
+        let tiefen: Vec<u8> = ergebnis
+            .formatierung
+            .auszeichnungen
+            .iter()
+            .filter_map(|stelle| match stelle.art {
+                Auszeichnung::Listenzeile { tiefe } => Some(tiefe),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            tiefen,
+            vec![1, 1, 2, 3],
+            "die vier Punkte liegen auf drei Ebenen"
+        );
+    }
+
+    /// Ein Zitatblock zaehlt als Einrueckebene: der Punkt darin liegt eine
+    /// Ebene tiefer als das Zitat.
+    ///
+    /// Beide Bereiche sind hier **gleich lang**, und damit haengt die Antwort
+    /// allein am dritten Sortierschluessel: das zuerst geoeffnete Zitat steht
+    /// vorn, der Punkt setzt danach und gewinnt.
+    #[test]
+    fn ein_punkt_im_zitat_liegt_eine_ebene_tiefer() {
+        let ergebnis = gerendert("> - Punkt im Zitat\n");
+        assert_eq!(ergebnis.text, "• Punkt im Zitat");
+        let arten: Vec<Auszeichnung> = ergebnis
+            .formatierung
+            .auszeichnungen
+            .iter()
+            .map(|stelle| stelle.art)
+            .collect();
+        assert_eq!(
+            arten,
+            vec![
+                Auszeichnung::Listenzeile { tiefe: 1 },
+                Auszeichnung::Listenzeile { tiefe: 2 }
+            ]
+        );
     }
 
     /// Das zweite Abnahmekriterium von C4: der Zitatblock bekommt den Einzug
@@ -567,7 +891,7 @@ mod tests {
         let ergebnis = gerendert("> Zitat\n");
         assert_eq!(ergebnis.text, "Zitat");
         assert!(
-            !stellen(&ergebnis, Auszeichnung::Listenzeile).is_empty(),
+            !stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 }).is_empty(),
             "ohne Einzug bliebe vom Zitat nichts uebrig"
         );
     }
@@ -608,6 +932,62 @@ mod tests {
     fn eine_trennlinie_erscheint_als_ihre_zeichen() {
         let ergebnis = gerendert("davor\n\n---\n\ndanach\n");
         assert_eq!(ergebnis.text, "davor\n\n---\n\ndanach");
+    }
+
+    /// Vierter Fall, und der erste, den nicht die Auffangregel ueber [`Tag`]
+    /// traegt: eine Verweisdefinition erzeugt **kein einziges Ereignis**.
+    ///
+    /// Die Kiste verbraucht sie beim Aufloesen des Verweises und meldet sie
+    /// nicht; bis zum 260812 verschwand sie damit spurlos aus der Anzeige
+    /// (Defekt `260812-1805`, gemessen). Gedeckt ist sie jetzt ueber die
+    /// Luecke zwischen den Quellbereichen, siehe Modulkopf.
+    #[test]
+    fn eine_verweisdefinition_bleibt_als_ihr_quelltext_stehen() {
+        let ergebnis = gerendert(
+            "Text davor.\n\nSiehe [den Text][ref] hier.\n\n[ref]: https://example.com \"Titel\"\n",
+        );
+        assert_eq!(
+            ergebnis.text,
+            "Text davor.\n\nSiehe den Text hier.\n\n[ref]: https://example.com \"Titel\""
+        );
+    }
+
+    /// Der schaerfste Fall derselben Luecke: eine Datei, die nur aus
+    /// Definitionen besteht, zeigte eine leere Flaeche.
+    #[test]
+    fn eine_datei_aus_lauter_verweisdefinitionen_bleibt_sichtbar() {
+        let ergebnis = gerendert("[ref]: https://example.com\n[zwei]: https://b.example\n");
+        assert_eq!(
+            ergebnis.text, "[ref]: https://example.com\n[zwei]: https://b.example",
+            "eine Datei mit Inhalt darf keine leere Flaeche zeigen"
+        );
+    }
+
+    /// Die andere Haelfte desselben Defekts: ein Ereignis **ohne Zeichen**.
+    ///
+    /// Ein Verweis ohne Text schrieb nichts, und weil die Laenge null war,
+    /// trug auch das Schliessen nichts ein; die 23 Zeichen waren weg. Jetzt
+    /// gibt ein Element ohne ein einziges Zeichen seinen Quellbereich heraus.
+    #[test]
+    fn ein_verweis_ohne_text_erscheint_als_sein_quelltext() {
+        let ergebnis = gerendert("Siehe [](https://example.com) dort.\n");
+        assert_eq!(ergebnis.text, "Siehe [](https://example.com) dort.");
+    }
+
+    /// Die Kehrseite der Deckung: die Auszeichnungszeichen eines Elements, das
+    /// Zeichen geliefert hat, bleiben verschwunden.
+    ///
+    /// Ohne diese Grenze truege die Luecken-Regel das `[` und das `][ref]`
+    /// eines Verweises in Kurzform wieder in den Text und machte aus der
+    /// Behebung eine Verschlimmerung.
+    #[test]
+    fn die_zeichen_eines_gerenderten_elements_bleiben_weg() {
+        let ergebnis = gerendert("Siehe [den Text][ref] hier.\n\n[ref]: https://example.com\n");
+        assert!(
+            ergebnis.text.starts_with("Siehe den Text hier."),
+            "die Klammern des Verweises gehoeren nicht in den Text: {:?}",
+            ergebnis.text
+        );
     }
 
     /// Der Guertel: jede Stelle liegt innerhalb der gemeldeten Laenge, und die
@@ -672,12 +1052,12 @@ mod tests {
     #[test]
     fn ein_block_beginnt_hinter_seiner_trennung() {
         let ergebnis = gerendert("Absatz davor.\n\n- Punkt\n");
-        assert_eq!(ergebnis.text, "Absatz davor.\n\nPunkt");
-        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile);
+        assert_eq!(ergebnis.text, "Absatz davor.\n\n• Punkt");
+        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 });
         assert_eq!(punkte.len(), 1);
         assert_eq!(
             stueck(&ergebnis.text, punkte[0].0, punkte[0].1),
-            "Punkt",
+            "• Punkt",
             "der Einzug darf den Absatz davor nicht mitnehmen"
         );
     }
@@ -687,7 +1067,7 @@ mod tests {
     #[test]
     fn eine_verschachtelte_liste_haengt_nicht_aneinander() {
         let ergebnis = gerendert("- eins\n- zwei\n  - drunter\n");
-        assert_eq!(ergebnis.text, "eins\nzwei\ndrunter");
+        assert_eq!(ergebnis.text, "• eins\n• zwei\n• drunter");
     }
 
     /// Leerer Text ergibt leeren Text und keine Stelle.
@@ -724,6 +1104,30 @@ mod tests {
                 Auszeichnung::FesteSchrift
             ],
             "die Ueberschrift umschliesst den Quelltext und steht deshalb vor ihm"
+        );
+    }
+
+    /// Bei gleichem Anfang **und** gleicher Laenge entscheidet der Rang und
+    /// nicht die stabile Sortierung.
+    ///
+    /// Gemessen an `` **`code`** `` (Defekt `260812-1805` zum
+    /// Ueberschneidungssatz): dort deckten starke Betonung und feste Schrift
+    /// denselben Bereich, und die Reihenfolge der Endereignisse stellte das
+    /// innere Stueck nach vorn — genau verkehrt herum.
+    #[test]
+    fn bei_gleichem_bereich_steht_das_zuerst_geoeffnete_vorn() {
+        let ergebnis = gerendert("**`code`**");
+        assert_eq!(ergebnis.text, "code");
+        let arten: Vec<Auszeichnung> = ergebnis
+            .formatierung
+            .auszeichnungen
+            .iter()
+            .map(|stelle| stelle.art)
+            .collect();
+        assert_eq!(
+            arten,
+            vec![Auszeichnung::StarkeBetonung, Auszeichnung::FesteSchrift],
+            "die starke Betonung umschliesst den Quelltext und steht deshalb vor ihm"
         );
     }
 

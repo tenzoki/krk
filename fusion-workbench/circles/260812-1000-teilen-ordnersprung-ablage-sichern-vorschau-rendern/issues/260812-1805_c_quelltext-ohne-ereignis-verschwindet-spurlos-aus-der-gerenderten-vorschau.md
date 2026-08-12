@@ -74,3 +74,49 @@ verschwinden. Beide gehören in eine Antwort, sonst wird die halbe gebaut.
 Verweisdefinitionen kommt in jeder README vor, die Verweise in Kurzform führt.
 
 **Herkunft:** Circle der Runde 6, Planschritt 8 (C4.3).
+
+---
+
+**Resolved 260812** — beide gemessenen Faelle nachgeprueft und behoben, mit
+**einem** Mechanismus statt zweier Sonderregeln.
+
+**Nachgemessen.** Alle drei Ausgaben des Datensatzes stimmen am Baum genau so,
+wie er sie nennt: `"Text davor.\n\nSiehe den Text hier."`, `""` und
+`"Siehe  dort."`.
+
+**Der Mechanismus ist ein Stand in der Quelle und keine Liste von
+Ereignisarten.** `Zerlegung::gelesen` (`crates/krk-ui/src/markdown.rs`) haelt,
+bis wohin die Quelle abgetragen ist. Daran haengen zwei Saetze, die zusammen
+jedes Byte treffen, und keiner von beiden fragt nach der Art eines Ereignisses:
+
+1. **Auf Dokumentebene** — also wenn `Zerlegung::offen` leer ist — gibt
+   `luecke_bis` vor jedem Ereignis heraus, was seit dem letzten Stand
+   ungelesen blieb; nach dem Durchgang ebenso bis `str::len`. Eine Luecke aus
+   reinem Leerraum faellt weg, weil die Abstaende zwischen den Bloecken schon
+   `absetzen` rechnet.
+2. **Innerhalb eines Elements** deckt das Element seinen ganzen Quellbereich.
+   Hat es Zeichen geliefert, sind die Luecken darin seine
+   Auszeichnungszeichen und gehoeren weg. Hat es **kein** Zeichen geliefert,
+   gibt `schliessen` seinen Quellbereich woertlich heraus.
+
+Der erste Satz fragt allein, ob ein Element offen ist, der zweite allein, ob
+die Laenge null ist. Fall 1 des Datensatzes faellt unter den ersten, Fall 2
+unter den zweiten; eine kuenftige Fassung von `pulldown-cmark`, die ein Element
+anders meldet, aendert daran nichts.
+
+**Die Kehrseite ist mitgeprueft.** Ohne die Grenze „nur auf Dokumentebene"
+truege die Regel das `[` und das `][ref]` eines Verweises in Kurzform wieder in
+den Text. Die Probe `die_zeichen_eines_gerenderten_elements_bleiben_weg` haelt
+das fest.
+
+**Neue Proben in `crates/krk-ui/src/markdown.rs`**, je eine fuer jeden
+gemessenen Fall: `eine_verweisdefinition_bleibt_als_ihr_quelltext_stehen`,
+`eine_datei_aus_lauter_verweisdefinitionen_bleibt_sichtbar`,
+`ein_verweis_ohne_text_erscheint_als_sein_quelltext`, dazu die Gegenprobe
+oben. Der Abschnitt `# Die Deckung: kein Quellbyte faellt heraus` im Modulkopf
+schreibt die Zusage auf und benennt die Luecke, die die Totalitaetszusage ueber
+`Event` und `Tag` offenliess.
+
+Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+— alle vier Exit 0.

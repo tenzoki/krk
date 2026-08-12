@@ -76,3 +76,57 @@ die Datei sie ihm zusagt.
 Anzeige, die nur Auszeichnungen betrifft, die einander enthalten.
 
 **Herkunft:** Circle der Runde 6, Planschritte 7 und 8.
+
+---
+
+**Teilweise behoben 260812 — der Datensatz bleibt offen.** Von den drei
+Punkten sind der erste und der dritte erledigt, der zweite nicht.
+
+**Nachgemessen.** Alle drei Ausgaben des Datensatzes stimmen am Baum genau so.
+
+**Punkt 1, der Kommentar: berichtigt.** Der SAFETY-Kommentar in
+`crates/krk-ui/src/appkit/textmerkmale.rs` sagt jetzt, was gilt: vier der fuenf
+Auszeichnungen setzen `NSFontAttributeName`, verschachtelte Listenzeilen setzen
+einander ueberlappend denselben Absatzstil, `addAttributes:` ersetzt bei
+gleichem Namen, und was gilt, entscheidet allein die Reihenfolge der Schleife.
+Die behauptete Unmoeglichkeit steht nicht mehr da.
+
+**Punkt 3, die Reihenfolge bei gleicher Laenge: festgelegt.** `Offen` traegt
+einen `rang`, den Zaehler der geoeffneten Bereiche, und
+`Zerlegung::abschliessen` (`crates/krk-ui/src/markdown.rs`) sortiert nach
+Anfang, dann nach absteigender Laenge, dann nach dem Rang. Die Ordnung ist
+damit total und haengt nicht mehr an der Stabilitaet der Sortierung. Weil der
+Rang beim Oeffnen vergeben wird, steht das aeussere Element vorn — die
+Richtung, die die Regel schon vorher behauptete.
+
+Sichtbar geaendert hat das genau einen der drei gemessenen Faelle:
+`` **`code`** `` liefert jetzt `StarkeBetonung(0,4), FesteSchrift(0,4)` statt
+umgekehrt, `code` steht also in fester Schrift und nicht mehr fett in der
+Systemschrift. Verloren geht weiterhin eine der beiden, nur jetzt nach der
+Regel und nicht nach einem Nebenprodukt. Die Probe
+`bei_gleichem_bereich_steht_das_zuerst_geoeffnete_vorn` haelt es fest.
+
+**Der neue Zuschnitt hat die Ueberschneidungen vermehrt.** Seit
+`Auszeichnung::Listenzeile { tiefe }` ueberlappen sich auch die Absatzstile
+verschachtelter Listenpunkte, und in `> - Punkt im Zitat` decken zwei
+Listenzeilen verschiedener Tiefe **denselben** Bereich. Fuer diesen Fall
+liefert der dritte Sortierschluessel die richtige Antwort (die tiefere
+gewinnt), und die Probe `ein_punkt_im_zitat_liegt_eine_ebene_tiefer` prueft
+genau ihn.
+
+**Was fehlt: Punkt 2, das Zusammenlegen der Schrift.** Wo zwei
+schriftsetzende Auszeichnungen einander enthalten, geht die aeussere fuer den
+ueberlappten Bereich weiterhin vollstaendig verloren: in
+`*kursiv **fett** wieder kursiv*` ist „fett" fett und nicht mehr kursiv. Fett
+**und** kursiv oder feste Schrift **und** fett brauchten einen Schriftzustand
+je Stelle statt eines Ersetzens — etwa `applyFontTraits:range:` fuer die beiden
+Betonungen und zwei Durchgaenge in `anwenden`, erst Schrift setzen, dann Schnitt
+zulegen.
+
+**Warum das hier nicht gebaut ist.** Es ist eine Verhaltensaenderung an AppKit
+in einer Datei, die keine einzige Probe traegt (Datensatz
+`260812-1805_*_textmerkmale-rs-traegt-keine-einzige-probe.md`), und die
+Wirkung laesst sich ohne Vordergrundlauf nicht sehen. Ein ungeprueftes
+Umschreiben von `anwenden` neben zwei gemessenen Behebungen waere die
+schlechtere Wahl gewesen. Der Kommentar an Ort und Stelle nennt die fehlende
+Faehigkeit und verweist auf diesen Datensatz.

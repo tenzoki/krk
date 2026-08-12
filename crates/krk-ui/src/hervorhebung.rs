@@ -294,7 +294,16 @@ pub enum Auszeichnung {
     /// des Absatzes; AppKit dehnt ein Absatzmerkmal ohnehin auf den ganzen
     /// Absatz aus, und ein Bereich, der mitten in einer Zeile begaenne, sagte
     /// etwas anderes, als er bewirkt.
-    Listenzeile,
+    Listenzeile {
+        /// Die Verschachtelungstiefe, von 1 an gezaehlt.
+        ///
+        /// **Sie steht hier und nicht in einem festen Einzug**, seit der
+        /// Defekt `260812-1805` gemessen hat, dass eine dreistufige Liste in
+        /// der Vorschau flach dasteht: `crate::appkit::textmerkmale`
+        /// vervielfacht den Einzug mit ihr. Die Formatansicht des Editors gibt
+        /// immer 1, denn dort steht die Einrueckung noch im Text.
+        tiefe: u8,
+    },
     /// Betonung, `*so*` geschrieben: kursiv in der Grundgroesse.
     ///
     /// **Sie entsteht allein in [`crate::markdown`]** und nicht in
@@ -1184,7 +1193,11 @@ fn rechnen(
                         auszeichnungen.push(Auszeichnungsstelle {
                             anfang: stelle,
                             laenge: innen - stelle,
-                            art: Auszeichnung::Listenzeile,
+                            // Immer die erste Ebene: die Formatansicht zeigt
+                            // den Quelltext mit seiner Einrueckung, und ein
+                            // zweiter Einzug darueber verschoebe die Zeile
+                            // gegen ihre eigenen Zeichen.
+                            art: Auszeichnung::Listenzeile { tiefe: 1 },
                         });
                     }
                     zerleger = Some(stand);
@@ -1638,7 +1651,7 @@ mod tests {
             formatierung
                 .auszeichnungen
                 .iter()
-                .any(|stelle| stelle.art == Auszeichnung::Listenzeile),
+                .any(|stelle| stelle.art == Auszeichnung::Listenzeile { tiefe: 1 }),
             "keine Listenzeile erkannt"
         );
         assert!(
@@ -1664,7 +1677,7 @@ mod tests {
         let liste = formatierung
             .auszeichnungen
             .iter()
-            .find(|stelle| stelle.art == Auszeichnung::Listenzeile)
+            .find(|stelle| stelle.art == Auszeichnung::Listenzeile { tiefe: 1 })
             .expect("eine Listenzeile");
         // "Vorspann\n" sind neun Einheiten, die Leerzeile eine.
         assert_eq!(liste.anfang, 10);

@@ -133,11 +133,20 @@ const LESEZUSCHLAG: f64 = 2.0;
 /// Fliesstext, damit keine Ueberschrift aussieht wie keine.
 const UEBERSCHRIFTSFAKTOREN: [f64; 6] = [1.7, 1.5, 1.3, 1.2, 1.1, 1.05];
 
-/// Der Einzug einer Markdown-Listenzeile in Punkten (C3).
+/// Der Einzug einer Markdown-Listenzeile **je Ebene**, in Punkten (C3).
 ///
 /// Er rueckt den ganzen Absatz ein, das Aufzaehlungszeichen eingeschlossen; das
 /// Zeichen selbst bleibt stehen, wie der Datensatz vom 260808-0140 es verlangt.
 const LISTENEINZUG: f64 = 20.0;
+
+/// Ab welcher Verschachtelungstiefe der Einzug nicht weiter waechst.
+///
+/// Acht Ebenen sind 160 Punkte, und das ist die Mindestbreite eines Bereichs
+/// der Fensterzeile: waechst der Einzug darueber hinaus, steht die Zeile ganz
+/// ausserhalb der Vorschau. Eine Markdown-Datei kann beliebig tief
+/// verschachteln, und eine Grenze ist deshalb keine Vorsicht, sondern die
+/// Bedingung dafuer, dass die Zeile sichtbar bleibt.
+const EINZUGSGRENZE: u8 = 8;
 
 /// Traegt eine fertige Formatierung in eine Textflaeche und meldet, ob sie
 /// gesetzt hat (C3).
@@ -200,7 +209,7 @@ pub fn anwenden(
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse * faktor))
             }
             Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
-            Auszeichnung::Listenzeile => einzugsmerkmal(),
+            Auszeichnung::Listenzeile { tiefe } => einzugsmerkmal(tiefe),
             Auszeichnung::Betonung => schriftmerkmal(&kursive_schrift(grundgroesse)),
             Auszeichnung::StarkeBetonung => {
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse))
@@ -216,14 +225,33 @@ pub fn anwenden(
         // wird nach den Stuecken ihrer Zeile angehaengt und beginnt vor
         // ihnen. In `- Punkt mit `Code`` liefert die Formatierung
         // `FesteSchrift` bei 12 und danach `Listenzeile` bei 0 (gemessen).
-        // Fuer `addAttributes:range:` ist das ohne Belang, und zwar aus
-        // einem Grund und nicht aus Glueck: die beiden ueberlappenden
-        // Auszeichnungen setzen verschiedene Merkmalsnamen — Schrift gegen
-        // Absatzstil —, und `addAttributes:` legt zusammen, statt zu
-        // ersetzen. `Ueberschrift` und `FesteSchrift` setzen beide die
-        // Schrift und ueberlappen einander deshalb nie: die
-        // Fallunterscheidung in `crate::hervorhebung` fragt die
-        // Ueberschriftsstufe zuerst und die feste Schrift nur sonst.
+        //
+        // **Ueberschneidungen gleichen Merkmalsnamens kommen vor, und was
+        // dann gilt, entscheidet allein die Reihenfolge dieser Schleife.**
+        // Bis zum 260812 stand hier, `Ueberschrift` und `FesteSchrift`
+        // ueberlappten einander nie und die uebrigen setzten verschiedene
+        // Namen. Beides gilt nicht mehr: `crate::markdown` ist ein zweiter
+        // Erzeuger von `Formatierung`, vier der fuenf Auszeichnungen setzen
+        // `NSFontAttributeName` — `Ueberschrift`, `FesteSchrift`, `Betonung`,
+        // `StarkeBetonung` —, und verschachtelte Listenzeilen setzen
+        // einander ueberlappend denselben Absatzstil. `addAttributes:`
+        // ersetzt bei gleichem Namen, statt zusammenzulegen.
+        //
+        // Getragen wird das von der Sortierung in
+        // `crate::markdown::Zerlegung::abschliessen`: aussen vor innen, bei
+        // gleichem Bereich das zuerst geoeffnete zuerst. Das innere Stueck
+        // kommt damit zuletzt und gewinnt — der Quelltext in einer
+        // Ueberschrift bekommt seine feste Schrift, der tiefere Listenpunkt
+        // seinen groesseren Einzug.
+        //
+        // **Was diese Reihenfolge nicht kann, ist zusammenlegen.** Wo zwei
+        // schriftsetzende Auszeichnungen einander enthalten, geht die
+        // aeussere fuer den ueberlappten Bereich verloren, statt sich mit der
+        // inneren zu verbinden: in `*kursiv **fett** wieder kursiv*` ist
+        // "fett" fett und nicht mehr kursiv (gemessen). Fett **und** kursiv
+        // brauchte einen Schriftzustand je Stelle statt eines Ersetzens; der
+        // offene Datensatz dazu ist
+        // `issues/260812-1805_*_der-ueberschneidungssatz-in-textmerkmale-anwenden-gilt-seit-markdown-rs-nicht-mehr.md`.
         unsafe { speicher.addAttributes_range(&merkmale, bereich) };
     }
     speicher.endEditing();
@@ -408,13 +436,18 @@ fn schriftmerkmal(schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject
 }
 
 /// Ein Merkmalsverzeichnis mit dem Einzug einer Listenzeile darin (C3).
-fn einzugsmerkmal() -> Retained<NSDictionary<NSString, AnyObject>> {
+///
+/// **Der Einzug waechst mit der Tiefe**, gedeckelt bei [`EINZUGSGRENZE`]. Bis
+/// zum 260812 war er fest, und damit stand eine dreistufige Liste flach da
+/// (Defekt `260812-1805`).
+fn einzugsmerkmal(tiefe: u8) -> Retained<NSDictionary<NSString, AnyObject>> {
+    let einzug = LISTENEINZUG * f64::from(tiefe.clamp(1, EINZUGSGRENZE));
     let stil = NSMutableParagraphStyle::new();
     // Beide, damit die erste Zeile mit dem Aufzaehlungszeichen genauso weit
     // einrueckt wie ihre Fortsetzung nach einem Umbruch; sonst haengt das
     // Zeichen als einziges am linken Rand.
-    stil.setFirstLineHeadIndent(LISTENEINZUG);
-    stil.setHeadIndent(LISTENEINZUG);
+    stil.setFirstLineHeadIndent(einzug);
+    stil.setHeadIndent(einzug);
     // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
     let schluessel = unsafe { [NSParagraphStyleAttributeName] };
     let werte: [&AnyObject; 1] = [&stil];
