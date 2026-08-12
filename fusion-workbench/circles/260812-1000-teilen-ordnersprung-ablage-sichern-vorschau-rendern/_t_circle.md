@@ -166,7 +166,7 @@ Was diese Runde ihm **nicht** vorwegnimmt: sie zeigt keinen Web-Inhalt, öffnet 
 
 ## Turn log
 
-(noch keiner)
+- Turn 1 (Sitzung 260812-1055): Commits 4d4402d..d6eff4b, fuenf davon in diesem Turn (755571a, 95b2dfa, 8bc84ce, 90b60d8, d6eff4b); Planschritte 1 bis 6 auf [DONE], sechs von elf. Coherence-Urteil: ok (Nutzerentscheid am Turn-Ende, weitermachen). Durchsichten: reviews/260812-1526-ontorev-belegungsdatei-ordner-der-datei-und-teilen.md und reviews/260812-1529-coderev-turn-1-der-runde-6.md, Bereich 4d4402d..d6eff4b, acht Defekte abgelegt, einer geschlossen. Grundlage: acht Entscheidungen umgesetzt, eine neue Frage offen. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
 
 ## Activation proposal
 
