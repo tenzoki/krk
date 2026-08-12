@@ -62,3 +62,24 @@ Nutzerfrage beantworten, dann bauen.
 Der Fall entsteht mit Schritt 2 und ist keine Altlast. Er trifft nur den Editor, weil er der einzige
 Bereich ist, der eine Datei hält; die Lesezeichenleiste und die Vorschau bleiben nach einer
 Abweisung ohne Rest zurück.
+
+---
+
+## Abgleich 260812-0801
+
+**Zu Recht offen, und einer der drei Wege ist inzwischen versperrt.** Am Baum nachgelesen:
+`im_editor_oeffnen` (`crates/krk-ui/src/appkit/anwendung.rs:3747`) fragt das Fenstermodell
+weiterhin nicht, ob der Editor überhaupt aufgehen könnte; es reicht den Pfad unverändert an
+`editor_oeffnen_lassen`. Der Fall besteht also unverändert fort.
+
+**Weg 2 ist entschieden und abgelehnt.** Der Datensatz
+`decisions/260812-0415_i_was-geschieht-wenn-das-fenster-unter-die-summe-der-mindestbreiten-faellt.md`
+steht seit dem 260812-0430 auf umgesetzt: `MINDESTGROESSE` bleibt in der Breite bei 780 Punkten,
+mit zwei ausgeschriebenen Gründen. Damit ist die Reihenfolge, die dieser Datensatz nennt („erst die
+Nutzerfrage beantworten, dann bauen"), erfüllt, und die Antwort lautet: der Fall bleibt erreichbar.
+Übrig bleiben Weg 1 (das Fenstermodell vorher fragen) und Weg 3 (eine Meldung, die gegen C2.5
+stünde).
+
+**Weg 1 ist damit der einzige tragbare**, und er ist seit dieser Runde billiger als am 260812-0512:
+`Fenstermodell::mindestbreiten_passen` (`crates/krk-ui/src/fenstermodell.rs:685`) beantwortet die
+Frage bereits, ist aber privat. Was fehlt, ist die öffentliche Frage und ihr Aufrufer.

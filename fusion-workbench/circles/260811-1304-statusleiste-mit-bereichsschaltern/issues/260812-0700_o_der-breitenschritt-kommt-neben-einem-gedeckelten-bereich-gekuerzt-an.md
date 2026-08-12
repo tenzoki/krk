@@ -55,3 +55,22 @@ Wirkung. Gekürzt ist nicht umgekehrt.
 
 Der Weg entscheidet sich am Spec und nicht am Code; der Datensatz gehört deshalb vor die nächste
 Abnahme von C4.9 und nicht in einen Behebungsschritt.
+
+---
+
+## Abgleich 260812-0801
+
+**Zu Recht offen.** `massstab` (`crates/krk-ui/src/fenstermodell.rs:850`) ist unverändert **ein**
+Faktor für die ganze Zeile, und sein Doc-Kommentar trägt die Grenze ausdrücklich: „Er gilt genau,
+solange kein sichtbarer Bereich an seinem Mindestmass haengt … Der Schritt wird dadurch ungenau,
+und das bleibt so." Die Probe `ein_gedeckelter_dritter_bereich_sperrt_den_breitenbefehl_nicht`
+(`fenstermodell.rs:2006`) schreibt die gekürzte Zahl aus.
+
+**Was der Abgleich hinzufügt: die Zusage steht noch ungekürzt im Plan.** Kriterium C4.9 lautet
+unverändert „verschieben die Trennlinie weiterhin um genau einen Schritt von 40 Punkten", ohne die
+Bedingung, die dieser Datensatz nennt, und es ist als **(Probe)** gekennzeichnet. Die Probe, die es
+abnimmt (`der_tastenbefehl_verschiebt_die_trennlinie_um_genau_einen_schritt`), misst drei
+Fensterbreiten, in denen kein Bereich gedeckelt ist. **Weg 1 dieses Datensatzes ist damit nicht nur
+eine Ergänzung im Spec, sondern eine Berichtigung an einem geltenden Kriterium**, und er ist die
+letzte offene Stelle, an der eine Zusage dieser Runde weiter reicht als der Baum. Der Plan trägt den
+Befund seit dem 260812-0801 in seinem Abgleichsprotokoll.

@@ -410,3 +410,28 @@ ohne dass etwas meldet. Betroffen wären zuerst die drei Spaltenschalter.
 **Kein Freigabehindernis** unter den vieren. Keiner ist ein Absturz, ein Datenverlust oder
 eine Sicherheitslücke, und keiner hält die Abnahme am laufenden Bündel auf. Die acht
 Planschritte liefern, was der Plan verlangt, mit der einen Ausnahme, die Befund 1 ist.
+
+---
+
+## Abgleich 260812-0801 (reconciler)
+
+Alle vier Befunde sind erledigt und ihre Datensätze geschlossen; am Baum nachgelesen:
+
+- **Befund 1** (Markdown-Ausgabe): berichtigt worden sind die drei Zusagen, nicht der Code.
+  `belegungsausgabe::markdown` filtert unverändert auf Funktionen mit mindestens einer Kombination
+  (`crates/krk-ui/src/belegungsausgabe.rs:178`); Kriterium C3.5 des Plans, der Kommentarblock in
+  `resources/default-keymap.toml:307-317` und die Zeile `Implemented:` in
+  `decisions/260812-0306_i_bekommen-die-spaltenschalter-tastenbefehle.md` sagen jetzt dasselbe wie
+  der Code. **Die Empfehlung „Befund 1 vor dem Abschluss der Runde vorlegen" ist damit gegenstandslos:**
+  der Datensatz trägt kein `Implemented:` mehr für etwas Nichtumgesetztes.
+- **Befund 2** (`beschreibbar`): ausgeschriebenes `match` über alle vier Werte
+  (`crates/krk-ui/src/spalten.rs:106`).
+- **Befund 3** (doppelte Erreichbarkeitsprüfung): `editor_ist_ansprechbar`
+  (`crates/krk-ui/src/appkit/anwendung.rs:1488`) ist die eine Fassung; beide Aufrufer fragen sie.
+- **Befund 4** (doppelter Nachzug): `Leistenquelle::geklickt`
+  (`crates/krk-ui/src/appkit/bereichsleiste.rs:282`) nimmt die Selbstkippung zurück, bevor es
+  meldet; `bereichsleiste_nachziehen` hat genau einen Aufrufer (`anwendung.rs:2780`).
+
+Die beiden Hinweise unter `## Für die Abnahme am laufenden Bündel` bleiben offen und sind
+Nutzerarbeit: der Klick während einer laufenden Umbenennung in der Zeile, und ob die acht Schalter
+bei 780 Punkten nebeneinander passen.

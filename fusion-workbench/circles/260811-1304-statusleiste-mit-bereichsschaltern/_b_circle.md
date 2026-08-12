@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md
+**Active spec/plan:** circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_c_bereichsleiste-und-proportionale-breitenregel.md
 **Active session history:** shared/history/260812-0306-orchestrator-session.md
 
 ---
@@ -97,6 +97,20 @@ Womit die Schalter gezeichnet werden, ist offen und gehört in den Plan. Der Cir
   Dateifenster). Ein Defekt der Runde selbst behoben (260812-0439), zwei neue abgelegt
   (260812-0512 sowie der Beifund 260812-0415 des Planers). Coherence-Urteil: Durchsicht lief
   noch. Sitzungsprotokoll: shared/history/260812-0306-orchestrator-session.md
+- Turn 2 (Sitzung 260812-0306): Commit 90b02d4 — Schritte 4 bis 7 in **einem** Commit, weil der
+  Baum zwischen ihnen nicht grün wird: Schritt 4 trägt fünf Funktionen in die Belegung ein, deren
+  Kommandos erst Schritt 7 baut. Belegung auf 79 Funktionen, `Kommando` auf 73 Kennungen, `Spalte`
+  als reine Aufzählung umgezogen, Spaltensichtbarkeit in Modell und Ablage. Zwei Defekte
+  geschlossen (260812-0533, 260812-0548). Erste Durchsicht über 5aa22df..8ffaac2: vier Befunde,
+  zwei mittel. Coherence-Urteil: offen bis Phase 3.
+- Turn 3 (Sitzung 260812-0306): Commits 026c665, 0342445, 15d7bbe — die vier Befunde der ersten
+  Durchsicht behoben (die zwei mittleren durch einen neuen Schnitt an der Rückrechnung, nicht
+  durch Flicken), Schritt 8 gebaut, vierzehn Entscheidungen auf umgesetzt. `make bundle` läuft,
+  `target/KRK.app` ist gebaut und signiert. Coherence-Urteil: offen bis Phase 3.
+- Turn 4 (Sitzung 260812-0306): Commit caeaa18 — die vier Befunde der zweiten Durchsicht über
+  8ffaac2..0342445. Drei im Code, einer im Text: drei Stellen sagten zu, die Spaltenbefehle
+  stünden in der Markdown-Ausgabe, und das stand gegen den Nutzerentscheid vom 260811-0110.
+  Berichtigt sind die Zusagen, nicht der Code. Coherence-Urteil: offen bis Phase 3.
 
 ## Parent grounding stale
 
@@ -228,3 +242,68 @@ Beschränkungen liegt auf einem Bauteil, das diese Runde anfasst.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Geschlossen am:** 260812-0820 als **beschränkter Abschluss** (`_b_`)
+**Sitzungsprotokoll:** `shared/history/260812-0306-orchestrator-session.md`
+**Abgleich:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0801-reconciliation.md`
+**Urteil der drei Kanten:** `bounded-closure-proposed`, Abschnitt `## Coherence` des Sitzungsprotokolls
+
+### Warum beschränkt und nicht kohärent
+
+Aus demselben Grund wie die vier Runden davor, und es ist eine Eigenschaft dieses Projekts und
+keine Häufung von Fehlschlägen: dreizehn Abnahmekriterien dieser Runde (C1.1, C1.2, C1.4, C2.1
+bis C2.5, C3.1, C3.2, C3.4, C5.1, C6.3) sind nur am laufenden `KRK.app` im Vordergrund zu sehen,
+und kein Agent kann ihn fahren
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+Was ein Agent abnehmen kann, ist abgenommen: 27 Kriterien einzeln gegen den Baum gelesen,
+`make check` mit Exit 0 über vierzehn Prüfziele, `make bundle` gebaut und signiert. „Gebaut" ist
+damit die richtige Aussage über diese Runde und „abgenommen" nicht.
+
+### Was die Runde gebaut hat
+
+Elf Commits zwischen `6b6ea3c` und dem Abschluss. Die Breitenregel verteilt Anteile statt
+Punktzahlen an alle fünf Bereiche; das linke Dateifenster ist ausblendbar, solange eines bleibt;
+ein Bereich, dessen Mindestbreite nicht mehr hineinpasst, geht nicht auf; am Fensterfuß steht die
+`Bereichsleiste` mit acht Ankreuzfeldern, fünf für die Bereiche und drei für die Spalten Größe,
+Datum und Typ. `Kommando` ist von 68 auf 73 Kennungen gewachsen, die Auslieferungsbelegung von
+74 auf 79 Funktionen.
+
+Vierzehn Entscheidungsfragen sind beantwortet und umgesetzt, zwölf Defekte geschlossen, davon
+acht in dieser Runde selbst gefunden. Zwei Durchsichten decken den Codebereich
+`5aa22df..0342445` lückenlos.
+
+### Der Bounded-Closure-Artefakt: was gelernt wurde, das die Directive nicht erreicht hat
+
+**Die Anteilsregel hat eine Nutzerfestlegung überstimmt, und das ist die wichtigste Einzelfolge
+dieser Runde.** Die Regel vom 260808 — die Lesezeichenleiste weicht dem Editor nicht — trägt
+unter der Anteilsregel nicht mehr. Der Orchestrator hat sie in der Klärungsrunde autonom fallen
+lassen, gedeckt durch die Weisung „mache autonom", und hat das zunächst mit zwei Gründen
+begründet, von denen der Abgleich einen widerlegt hat: die Frage „wer weicht, wenn es eng wird"
+löst sich **nicht** auf, sie wird nur anders beantwortet (die Mindestbreite entscheidet statt der
+Reihenfolge in `Bereich::ALLE`). Tragfähig bleibt der erste Grund allein. Der Nutzer kann das
+umstoßen; es kostet `bereichsbreiten` samt Proben ein zweites Mal.
+
+**Die Naht zwischen gespeicherter Zahl und Bildschirmpunkt ist die verletzlichste Stelle dieser
+Runde.** Drei der acht in ihr gefundenen Defekte sitzen dort, und die erste Durchsicht hat zwei
+davon gefunden, die niemand vermutet hatte. Der tragende Schnitt heißt jetzt: vom Schirm wird nur
+zurückgelesen, was die Regel nicht selbst ausgelegt hat. Ob AppKit die Rahmen nach dem Auslegen
+unverändert stehen lässt, ist ohne Fenster nicht prüfbar und bleibt die eine ungemessene Annahme
+darunter.
+
+**Vier Defekte bleiben offen**, jeder mit einem benannten Weg: der Breitenschritt neben einem
+gedeckelten Bereich (`260812-0700`), F4 am schmalen Fenster (`260812-0512`), `Spalte` und
+`Schluessel` als zwei Aufzählungen derselben vier Dinge (`260812-0415`), die Zahl 39 im Kopf der
+Belegungsdatei (`260812-0810`), dazu zwei Modulköpfe mit einem toten Verweis (`260812-0801`).
+Keiner hält den Abschluss auf, keiner ist ein Betriebsfehler.
+
+### Für die Nachfolger
+
+Wer den Abnahmelauf fährt, sieht als Erstes nach, ob die acht Schalter bei 780 Punkten
+Fensterbreite nebeneinander passen — überschlagen sind es rund 540 Punkte, gerechnet und nicht
+gemessen. Danach, ob `refusesFirstResponder` den Ersthelferrang bei eingeschalteter vollständiger
+Tastaturbedienung wirklich fernhält; steht das nicht, gibt `ersthelferbereich` eine falsche
+Auskunft über den Fokus. Und L9 aus C8 ist nachzumessen: die Leiste nimmt der Fensterzeile 18
+Punkte Höhe, und L9 liegt auf dem Weg des Bildaufbaus. Diese Runde setzt keine neue Zahl.
+

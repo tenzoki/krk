@@ -55,7 +55,7 @@ Jedes Kriterium trägt, wie es nachzuweisen ist. **(Probe)** heißt: eine Prüfu
 6. Ein ausgeblendeter Bereich bekommt die Breite 0 und behält seine gespeicherte Breite unangetastet. **(Probe)**
 7. Das Vergrößern des Fensters ändert keine gespeicherte Breite. Der Nachzug rechnet die gemessenen Breiten auf die gespeicherte Summe zurück, bevor er sie übernimmt. **(Probe)**
 8. Das Wiedereinblenden eines Bereichs stellt seinen Anteil wieder her. Hat sich an der übrigen Aufteilung nichts geändert, ist es dieselbe Punktzahl wie vor dem Ausblenden. Das ist das dritte Abnahmekriterium von C7 der Runde 1, in der neuen Währung gelesen. **(Probe)**
-9. Die beiden Breitenbefehle aus C7 verschieben die Trennlinie weiterhin um genau einen Schritt von 40 Punkten. **(Probe)**
+9. Die beiden Breitenbefehle aus C7 verschieben die Trennlinie um genau einen Schritt von 40 Punkten, **solange kein sichtbarer Bereich auf seinem Mindestmaß steht**. Steht einer dort, nimmt er an der Verteilung nicht mehr teil, und der Schritt kommt gekürzt auf dem Schirm an — gemessen 20,36 statt 40 Punkte bei 800 Punkten Fensterbreite. **(Probe)** Die Grenze ist am 260812-0801 im Abgleich festgestellt und hier nachgetragen; der ursprüngliche Wortlaut sagte die 40 Punkte ohne Bedingung zu. Der Defekt `issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md` führt die Wahl: die Grenze ans Kriterium schreiben, wie hier geschehen, oder die eine Breitenregel ändern.
 
 ### C5: Das linke Dateifenster ist ausblendbar
 
@@ -425,3 +425,86 @@ Diese vierte Frage bleibt in diesem Abschnitt, weil sie allein diesen Plan betri
 Nach Schritt 8 sind am laufenden `KRK.app` zu prüfen: C1.1, C1.2, C1.4, C2.1 bis C2.5, C3.1, C3.2, C3.4, C5.1 und C6.3. Die Liste ist der Bündel-Anteil der Abnahmekriterien oben und keine zweite Aufstellung daneben.
 
 **Für den nächsten Abnahmelauf der zehn Zeitzusagen aus C8** gilt: die Leiste nimmt der Fensterzeile 18 Punkte Höhe, und L9 misst den Anteil der Eingaben, deren Zeichendurchgang im nächsten Bild liegt, während eine Kopie läuft. Der Lauf ist zu wiederholen, und L9 ist das Kriterium, auf das dabei zu sehen ist. **Dieser Plan setzt keine neue Zahl und fasst keine der zehn an.** Die Zusage steht bei 65 Prozent, und der Nutzer hat am 260810-2140 "erst messen" gewählt; weitere Läufe an verschiedenen Tagen sind der Auslöser, der die Frage nach einer Anhebung wieder aufmacht.
+
+---
+
+## Reconciliation Log
+
+### 260812-0801 — Abgleich vor dem Abschluss der Runde
+
+**Abgenommen am Baum:** `make check`, Exit 0. Vierzehn Prüfziele, 0 Fehlschläge, davon 392 Proben
+im Binärziel `krk` und 142 im Kern; `cargo fmt --all --check` und
+`cargo clippy --workspace --all-targets -- -D warnings` beide ohne Befund. KRK ist dabei nicht
+gestartet worden.
+
+**Marker nachgezogen:** die Datei hieß bis zu diesem Abgleich `260812-0415_p_…` und trug im Kopf
+`**Status:** Complete` bei acht Schritten auf `[DONE]`. Nach
+`rules/fusion-workbench-conventions.md` `## State Markers — issues and planning` gehört sie damit
+auf `_c_`; umbenannt am 260812-0801. Zwei Zeiger nennen weiterhin den alten Namen und gehören
+nicht dem Abgleich: `**Active spec/plan:**` im Circle-Datensatz `_t_circle.md` und
+`plan_context.plan_file` in `fusion-workbench/agentstate.yaml`.
+
+#### Die acht Schritte, einzeln gegen den Baum gelesen
+
+| Schritt | Befund | Beleg |
+|---|---|---|
+| 1 Breitenregel proportional | trifft zu | `Zeilenmass` (`fenstermodell.rs:989`), `verfuegbar` (`:1001`), `bereichsbreiten` mit den zwei Zweigen (`:1044`), `anteilig` mit dem Rest am letzten Bereich (`:1125`), `breiten_uebernehmen` mit Rückrechnung statt Sonderregel (`:908`), `aufteilung::zeilenmass` (`aufteilung.rs:613`) |
+| 2 Abweisung an den Mindestbreiten | trifft zu | `mindestbreiten_passen` (`fenstermodell.rs:685`), `umschalten` nimmt das Maß (`:639`), `einblenden` reicht es durch (`:723`), `Aufteilung::zeilenmass` (`aufteilung.rs:345`), `Anwendungsdelegierter::zeilenmass` (`anwendung.rs:2513`) |
+| 3 Linkes Dateifenster ausblendbar | trifft zu | `Sichtbarkeit::erstes_dateifenster` (`krk-core/src/ablage/sitzung.rs:236`) mit `#[serde(default)]`, `sichtbar_in` ohne Sonderzweig (`fenstermodell.rs:305`), `aus_sitzung` mit der dritten Zusicherung |
+| 4 Fünf Funktionen in der Belegung | trifft zu | `resources/default-keymap.toml:334/339/344/443/662`, `zweites_fenster_umschalten` mit zwei Kombinationen (`:456`) |
+| 5 Zwei Umschaltbefehle | trifft zu | `ErstesFensterUmschalten` und `EditorUmschalten` in `Kommando`, `editor_umschalten` (`anwendung.rs:4411`), `editor_schliessen` unverändert daneben (`:4383`) |
+| 6 `Spalte` als reine Aufzählung | trifft zu | `crates/krk-ui/src/spalten.rs` ohne eine `use objc2`-Zeile, `kennung`/`titel`/`breiten`/`ausrichtung`/`aus_kennung` als freie Funktionen in `tabelle.rs`; die angekündigte Abweichung an `titel` (`Retained<NSString>` statt `&'static NSString`) steht am Baum wie im Protokoll (`tabelle.rs:218`) |
+| 7 Spaltensichtbarkeit | trifft zu | `Spaltensichtbarkeit` (`sitzung.rs:292`), `Sitzung::spalten` **vor** `fenster` (`:357`), `spalte_sichtbar_in` (`fenstermodell.rs:350`), `spalte_umschalten` mit `#[must_use]` (`:573`), `spaltenanzeige_nachziehen` (`anwendung.rs:2473`) |
+| 8 Bereichsleiste | trifft zu | `crates/krk-ui/src/appkit/bereichsleiste.rs` (616 Zeilen), `HOEHE = statuszeile::HOEHE` (`:105`), `setRefusesFirstResponder(true)` (`:478`), `fenster::fensterinhalt` (`fenster.rs:289`), `bereichsleiste_nachziehen` mit genau einem Aufrufer (`anwendung.rs:2780`) |
+
+Die drei im Protokoll zu Schritt 8 benannten Abweichungen von der Änderungsliste stehen am Baum,
+wie sie dort beschrieben sind: `controlSize` ist im Modulkopf als eigene Untergrenze geführt,
+`NSColor` fehlt dort, und die Aufbautabelle ist zwei vollständige Fallunterscheidungen
+(`kommando_des_bereichs`, `kommando_der_spalte`) statt einer Feldtabelle.
+
+#### Die 27 (Probe)-Kriterien
+
+Geprüft sind allein die (Probe)-Kriterien. Die 13 (Bündel)-Kriterien verlangen KRK im Vordergrund
+und sind Nutzerarbeit; sie sind kein Befund dieses Abgleichs.
+
+| Kriterium | Befund | Beleg |
+|---|---|---|
+| C1.3 (Konstante) | trifft zu | `MINDESTGROESSE = NSSize::new(780.0, 300.0 + bereichsleiste::HOEHE)` (`fenster.rs:134`); die Breite ist unverändert |
+| C2.2 (Zuordnung) | trifft zu | `kommando_des_bereichs` (`bereichsleiste.rs:135`), `kommando_der_spalte` (`:152`), Probe `jeder_schalter_nennt_genau_ein_eigenes_kommando` |
+| C2.3 (Modell) | trifft zu | `Bereich::teilt_flaeche_mit` (`fenstermodell.rs:191`) mit zwei Lesern (`:527`, `:686`); Proben `der_ausschluss_ist_gegenseitig`, `der_editor_schliesst_die_vorschau_und_die_vorschau_den_editor`, `keine_folge_aus_zwei_aufrufen_zeigt_editor_und_vorschau_zugleich` |
+| C2.6 | trifft zu | Probe `jeder_schalter_wirkt_aus_jedem_fokus` (`bereichsleiste.rs`) über alle acht Schalter |
+| C3.3 (Modell) | trifft zu | Probe `das_wegschalten_der_sortierspalte_laesst_die_sortierung_stehen` (`fenstermodell.rs:2729`) |
+| C3.5 | trifft zu | `belegungsausgabe::markdown` nimmt nur Funktionen mit mindestens einer Kombination (`belegungsausgabe.rs:178`); `OHNE_KOMBINATION_AB_WERK` (`krk-core/tests/belegung.rs:75`) nennt genau die drei Spaltenkennungen. Der Wortlaut des Kriteriums ist am 260812-0735 berichtigt worden und stimmt jetzt mit dem Code |
+| C4.1 | trifft zu | Proben `jeder_sichtbare_bereich_bekommt_seinen_anteil_ohne_zweite_aufzaehlung`, `der_eingeblendete_editor_bekommt_seinen_anteil` |
+| C4.2 | trifft zu | Proben `das_verhaeltnis_zweier_bereiche_ueberlebt_das_einblenden_eines_dritten`, `die_leiste_schrumpft_mit_dem_editor` |
+| C4.3 | trifft zu | Proben `am_engen_fenster_gewinnt_das_mindestmass_gegen_den_anteil`, `kein_bereich_faellt_unter_sein_mindestmass` |
+| C4.4 | trifft zu | Probe `unter_der_summe_der_mindestbreiten_schrumpfen_alle_mit_demselben_faktor` |
+| C4.5 | trifft zu | Probe `die_summe_ist_immer_die_verfuegbare_breite`; `anteilig` gibt dem letzten Bereich den Rest |
+| C4.6 | trifft zu | Proben `der_ausgeblendete_editor_behaelt_seine_gespeicherte_breite`, `eine_ausgeblendete_breite_bleibt_erhalten` |
+| C4.7 | trifft zu | Proben `das_vergroessern_des_fensters_laesst_die_gespeicherten_breiten_stehen`, `ein_zusammengezogenes_fenster_laesst_die_gespeicherten_breiten_stehen` |
+| C4.8 | trifft zu | Proben `das_wiedereingeblendete_dateifenster_hat_wieder_seine_alte_breite`, `ein_hin_und_her_am_fensterrand_stellt_die_aufteilung_wieder_her` |
+| C4.9 | **trifft eingeschränkt zu** | Probe `der_tastenbefehl_verschiebt_die_trennlinie_um_genau_einen_schritt` misst 1280, 1400 und 1920 Punkte, also drei Lagen ohne gedeckelten Bereich. Hängt ein anderer sichtbarer Bereich an seinem Mindestmaß, kommt weniger als ein Schritt an; der Datensatz ist `issues/260812-0700_o_…`, die Zahl steht in der Probe `ein_gedeckelter_dritter_bereich_sperrt_den_breitenbefehl_nicht`. **Der Wortlaut des Kriteriums trägt diese Grenze nicht**, und das ist der eine Punkt, an dem eine Zusage dieses Plans weiter reicht als der Baum |
+| C5.1 (Modell) | trifft zu | Probe `jedes_dateifenster_geht_aus_und_wieder_ein` |
+| C5.2 | trifft zu | Proben `das_letzte_dateifenster_laesst_sich_nicht_ausblenden`, `keine_folge_von_befehlen_blendet_beide_dateifenster_aus` |
+| C5.3 | trifft zu | Probe `das_ausblenden_gibt_die_aktivitaet_an_das_andere_dateifenster` |
+| C5.4 | trifft zu | Probe `eine_sitzung_ohne_sichtbares_dateifenster_holt_das_linke_hervor` |
+| C5.5 | trifft zu | Probe `eine_sitzung_ohne_das_erste_dateifenster_bleibt_lesbar` (`krk-core/tests/ablage.rs:545`) |
+| C6.1 | trifft zu | beide Kennungen in `resources/default-keymap.toml` mit Kombination, beide in `Kommando::wirkungsbereich` unter `Ueberall` |
+| C6.2 (Wege) | trifft zu | `editor_umschalten` geht durch `bereich_umschalten` (`anwendung.rs:4411`), `editor_schliessen` durch `anlass_beginnen(Anlass::EditorSchliessen)` (`:4383`); beide Doc-Kommentare verweisen aufeinander |
+| C6.4 | trifft zu | nachgezählt: `grep -c '^\[\[funktion\]\]'` liefert 79, die Tastenlisten zusammen 85; der Kopf sagt „79 Funktionen mit zusammen 85 Kombinationen" (`default-keymap.toml:34`). Probe `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` |
+| C7.1 | trifft zu | Probe `das_ausgeblendete_erste_dateifenster_ueberlebt_den_rundlauf_byteweise` (`tests/ablage.rs:592`) |
+| C7.2 | trifft zu | Proben `die_spaltensichtbarkeit_ueberlebt_den_rundlauf_byteweise` (`tests/ablage.rs:677`), `der_auslieferungszustand_zeigt_alle_vier_spalten` |
+| C7.3 | trifft zu | `Breiten` führt weiter fünf `Option<f64>` in Punkten (`sitzung.rs:181`); die Anteile entstehen beim Rechnen |
+| C7.4 | trifft zu | Probe `eine_sitzung_ohne_den_spaltenabschnitt_bleibt_lesbar` (`tests/ablage.rs:628`) |
+
+#### Was der Abgleich sonst gefunden hat
+
+**Ein neuer Befund, abgelegt als eigener Datensatz.** Zwei Modulköpfe nennen im Präsens
+`aufteilung::sichtbar_im` als Vorbild, und die Funktion ist mit `026c665` entfallen
+(`issues/260812-0801_o_zwei-modulkoepfe-nennen-aufteilung-sichtbar-im-das-es-nicht-mehr-gibt.md`).
+
+**Keine Abweichung zwischen Plan und Baum darüber hinaus.** Die vierzehn Entscheidungsdatensätze
+mit `_i_` nennen Commits, die die behauptete Änderung wirklich tragen; die zwölf geschlossenen
+Defektdatensätze sind einzeln am Baum nachgelesen und keiner ist vorschnell geschlossen. Die vier
+offenen sind zu Recht offen; die Belege stehen in
+`history/260812-0801-reconciliation.md`.

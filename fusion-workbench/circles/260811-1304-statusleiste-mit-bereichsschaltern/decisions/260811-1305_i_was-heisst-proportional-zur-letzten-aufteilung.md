@@ -63,9 +63,21 @@ lassen:
    weiterhin in diesem Verhaeltnis". Das gilt fuer Bereiche und nicht fuer Dateifenster. Eine
    benannte Ausnahme fuer die Lesezeichenleiste risse genau in dieses Beispiel ein Loch: fuer
    jedes Paar mit der Leiste gaelte es nicht.
-2. **Die Frage vom 260808 loest sich auf, statt ueberstimmt zu werden.** Sie lautete: wer weicht,
+2. ~~**Die Frage vom 260808 loest sich auf, statt ueberstimmt zu werden.** Sie lautete: wer weicht,
    wenn es eng wird? Unter einer Anteilsregel weicht niemand einzeln, sondern alle mit demselben
-   Faktor. Die Frage hat unter der neuen Regel keinen Gegenstand mehr.
+   Faktor. Die Frage hat unter der neuen Regel keinen Gegenstand mehr.~~
+
+   **Zurueckgenommen am 260812-0815.** Der Abgleich hat diesen Grund widerlegt, und er hat recht.
+   Die Wasserstandsrechnung nimmt einen Bereich, der unter sein Mindestmass fiele, aus der
+   Verteilung heraus; danach weichen nur noch die uebrigen. Es weicht also sehr wohl jemand
+   einzeln, und wer es ist, bestimmt jetzt die Mindestbreite statt der Platz in `Bereich::ALLE`.
+   Die Lesezeichenleiste schrumpft beim Aufgehen des Editors, und genau dagegen hat der Nutzer am
+   260808 entschieden. **Die Festlegung ist ueberstimmt worden und hat sich nicht aufgeloest.**
+
+   Grund 1 traegt unveraendert und ist allein tragfaehig: die Directive vom 260811 spricht von
+   Bereichen, und eine Ausnahme fuer die Lesezeichenleiste risse in ihr Beispiel ein Loch. Aber
+   die Entscheidung ist damit eine Ueberstimmung einer Nutzerfestlegung durch einen Agenten unter
+   der Weisung „mache autonom", und sie ist als solche zu lesen und nicht als Folgerung.
 
 Moeglichkeit 3 ist abgelehnt: sie traegt zwei Regeln in einer Funktion mit einem Schwellwert
 dazwischen, und das Beispiel des Nutzers gaelte gerade dann nicht, wenn er es bemerkt

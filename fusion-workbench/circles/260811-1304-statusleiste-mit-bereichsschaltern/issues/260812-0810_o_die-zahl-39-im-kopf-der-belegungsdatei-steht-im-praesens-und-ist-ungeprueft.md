@@ -39,3 +39,13 @@ still veralten kann — und in dieser Runde vermutlich veraltet ist.
 
 Der zweite Weg ist billiger und für den Leser genauso brauchbar; der erste ist der einzige, der
 die Zahl auch künftig stimmen lässt.
+
+---
+
+## Abgleich 260812-0801
+
+**Zu Recht offen.** `resources/default-keymap.toml:319` sagt unverändert im Präsens „die
+Auslieferung fuehrt 39 frei gewaehlte Kombinationen". Die Zeile darüber (`:34`) ist dagegen am Baum
+nachgezählt und stimmt: 79 `[[funktion]]`-Blöcke, 85 Einträge in den Tastenlisten. Der Unterschied,
+den der Datensatz beschreibt, besteht also genau so — die eine Zahl trägt eine Probe, die andere
+nicht.

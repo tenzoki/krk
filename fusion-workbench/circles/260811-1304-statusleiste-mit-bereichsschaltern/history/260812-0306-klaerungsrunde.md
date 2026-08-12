@@ -36,9 +36,16 @@ Der Grund ist die Directive selbst: der Nutzer hat am 260811 „zwei Bereiche, d
 diktiert, und das gilt für Bereiche und nicht für Dateifenster. Eine benannte Ausnahme für die
 Lesezeichenleiste risse in genau dieses Beispiel ein Loch.
 
-Die Frage vom 260808 lautete: wer weicht, wenn es eng wird? Unter einer Anteilsregel weicht
+Die Frage vom 260808 lautete: wer weicht, wenn es eng wird? ~~Unter einer Anteilsregel weicht
 niemand einzeln, sondern alle mit demselben Faktor — die Frage hat unter der neuen Regel keinen
-Gegenstand mehr. Sie wird also nicht überstimmt, sie löst sich auf.
+Gegenstand mehr. Sie wird also nicht überstimmt, sie löst sich auf.~~
+
+**Zurückgenommen am 260812-0815, nach dem Abgleich.** Der Satz war falsch. Die
+Wasserstandsrechnung nimmt einen Bereich am Mindestmaß aus der Verteilung heraus, danach weichen
+nur noch die übrigen — es weicht also jemand einzeln, und wer es ist, bestimmt die Mindestbreite
+statt der Reihenfolge in `Bereich::ALLE`. Die Lesezeichenleiste schrumpft beim Aufgehen des
+Editors. **Die Festlegung ist überstimmt worden, nicht aufgelöst.** Tragfähig bleibt der erste
+Grund allein: die Directive vom 260811 spricht von Bereichen.
 
 **Der Nutzer kann das umstoßen, und es ist ihm im Abschlussbericht vorgelegt.** Die Kosten der
 Umkehr sind benannt: `bereichsbreiten` und seine Proben wären ein zweites Mal zu fassen.

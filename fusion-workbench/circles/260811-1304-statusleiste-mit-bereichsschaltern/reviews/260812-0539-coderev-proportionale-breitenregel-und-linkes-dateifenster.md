@@ -233,3 +233,23 @@ Fenster abzunehmen, und `make check` fährt bei jedem Zwischenstand durch.
 
 **Kein Freigabehindernis** unter den vieren. Die Runde hat noch fünf Schritte vor sich, und keiner
 der Befunde ist ein Absturz, ein Datenverlust oder eine Sicherheitslücke.
+
+---
+
+## Abgleich 260812-0801 (reconciler)
+
+Alle vier Befunde sind behoben und ihre Datensätze geschlossen; am Baum nachgelesen:
+
+- **Befund 1** (Breitenbefehle unter der Mindestsumme): `breite_aendern` rechnet Ober- und
+  Untergrenze einzeln aus und bleibt ohne Wirkung, wenn sie nicht zueinander passen
+  (`crates/krk-ui/src/fenstermodell.rs:812-818`). Probe
+  `unter_der_mindestsumme_bleibt_der_breitenbefehl_ohne_wirkung`.
+- **Befund 2** (zusammengezogenes Fenster): `breiten_uebernehmen` fragt zuerst
+  `traegt_eine_ziehbewegung` und liest nur zurück, was die Regel nicht selbst ausgelegt hat
+  (`fenstermodell.rs:909`).
+- **Befund 3** (doppelte Zuordnung): `aufteilung::sichtbar_im` ist entfallen; `Aufteilung::anwenden`
+  ruft `fenstermodell::sichtbar_in`. **Ein Rest ist dabei stehen geblieben** — zwei Modulköpfe
+  nennen die entfallene Funktion weiter im Präsens, abgelegt als
+  `issues/260812-0801_o_zwei-modulkoepfe-nennen-aufteilung-sichtbar-im-das-es-nicht-mehr-gibt.md`.
+- **Befund 4** (Probenname): heißt jetzt
+  `ein_bereich_ohne_fensterseite_aendert_nur_seine_eigene_breite` (`fenstermodell.rs:1922`).

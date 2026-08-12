@@ -46,3 +46,24 @@ Spalte gehört zu welcher Ordnung" hat eine Antwort statt einer Gewohnheit.
 Die teure Antwort wäre, `Spalte` durch `Schluessel` zu ersetzen. Sie hat einen eigenen
 Preis: eine Spalte, die nach nichts sortiert, ließe sich danach nicht mehr anlegen, ohne
 den Sortierschlüssel zu verbiegen.
+
+---
+
+## Abgleich 260812-0801
+
+**Zu Recht offen.** Beide Aufzählungen stehen weiter nebeneinander, und nichts hält sie zusammen:
+`Schluessel` trägt vier Werte (`crates/krk-core/src/verzeichnis/sortierung.rs:29`), `Spalte`
+ebenfalls vier. Es gibt keine Zuordnung von der einen auf die andere und keine Probe, die beide
+gegeneinander zählt.
+
+**Ein Ort hat sich geändert und der Datensatz nennt noch den alten.** Schritt 6 dieser Runde hat
+`Spalte` aus `crates/krk-ui/src/appkit/tabelle.rs:179` nach `crates/krk-ui/src/spalten.rs:33`
+gezogen; die Aufzählung ist dabei von privat auf `pub` gegangen und trägt seither zwei weitere
+vollständige Fallunterscheidungen (`beschriftung`, `beschreibbar`) sowie eine dritte im
+Fenstermodell (`spalte_sichtbar_in`, `fenstermodell.rs:350`). Der Umzug macht den vorgeschlagenen
+billigen Weg **einfacher**, nicht schwerer: eine Zuordnung `Spalte::schluessel` läge jetzt in einer
+Datei ohne AppKit, in der schon zwei solche Fallunterscheidungen stehen.
+
+Die Zeile „Betroffen" ist damit zu lesen als `crates/krk-ui/src/spalten.rs` und
+`crates/krk-core/src/verzeichnis/sortierung.rs`. Der Datensatz selbst bleibt unverändert; er hält
+den Stand vom 260812-0415 fest.
