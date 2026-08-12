@@ -4,6 +4,7 @@
 **Domain:** code
 **Status:** open
 **Filed by:** shaper
+**Nachgezogen:** 260813-0130, nach der Diagrammprüfung `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0109-conceptrev-…`. Möglichkeit 1 nannte zwei verschiedene Mechanismen unter einem Wort; sie heißen jetzt Schreibsperre und Sitzungsrecht. Die Frage selbst ist unverändert.
 **Cross-references:** `shared/planning/260813-0053_o_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md` (C3), `crates/krk-core/src/ablage/mod.rs`, `crates/krk-core/src/ablage/atomar.rs:39`, `crates/krk-core/src/ablage/sitzung.rs:407-460`
 
 ---
@@ -23,9 +24,12 @@ Sobald KRK ein zweites Mal läuft, greifen zwei Prozesse ohne jede Absprache auf
 
 ## Möglichkeiten
 
-1. **Eine Sperre über der Ablage; wer schreibt, liest vorher neu; die Sitzung gehört dem Sperrhalter.** Jeder Schreibvorgang nimmt eine Sperre auf den Ablageordner. Lesezeichen werden vor dem Schreiben frisch von der Platte gelesen und die eine Änderung darauf angewandt statt auf den Stand vom Programmstart. Die Sitzung schreibt genau die Instanz, die die Sperre beim Start bekommen hat; jede weitere startet aus derselben gespeicherten Sitzung und schreibt sie nicht zurück. Sie sagt das einmal beim Start in der Statuszeile.
-   - Dafür: Kein Gemisch, keine verlorene Änderung an Lesezeichen und Belegung, und die Frage „welche Sitzung gehört welcher Instanz" wird nicht geschätzt, sondern durch eine entscheidbare Tatsache beantwortet, nämlich wer die Sperre hält.
-   - Dagegen: Der Kern bekommt eine Sperre, also einen neuen Mechanismus in einem Modul, das bisher ohne auskam. Die zweite Instanz merkt sich ihre Fensteraufteilung nicht.
+1. **Eine Schreibsperre über der Ablage, ein Sitzungsrecht daneben; wer schreibt, liest vorher neu.** Zwei Mechanismen mit zwei Lebensdauern, und sie sind auseinanderzuhalten:
+   - Die **Schreibsperre** wird für einen vollständigen Durchgang aus Lesen, Ändern und Schreiben auf den Ablageordner genommen und gleich wieder abgegeben. Lesezeichen werden unter ihr frisch von der Platte gelesen und die eine Änderung darauf angewandt statt auf den Stand vom Programmstart. Läge das Lesen außerhalb, wäre die verlorene Änderung nur seltener und nicht fort.
+   - Das **Sitzungsrecht** wird beim Start genommen und bis zum Ende des Prozesses gehalten. Die Sitzung schreibt genau seine Halterin; jede weitere Instanz startet aus derselben gespeicherten Sitzung und schreibt sie nicht zurück. Sie sagt das einmal beim Start in der Statuszeile.
+   - Dafür: Kein Gemisch, keine verlorene Änderung an Lesezeichen und Belegung, und die Frage „welche Sitzung gehört welcher Instanz" wird nicht geschätzt, sondern durch eine entscheidbare Tatsache beantwortet, nämlich wer das Sitzungsrecht hält.
+   - Dagegen: Der Kern bekommt zwei Absprachen, wo er bisher ohne auskam. Die zweite Instanz merkt sich ihre Fensteraufteilung nicht.
+   - **Warum zwei und nicht eine:** ein einziger Mechanismus kann beides nicht leisten. Hielte Instanz 1 ihn vom Start bis zum Ende, käme keine zweite je zum Schreiben. Gäbe jeder Schreibvorgang ihn wieder ab, hielte ihn nach dem ersten Schreiben niemand, und „wer ihn hält" beantwortete die Frage nach der Sitzung nicht mehr. Bis zum 260813-0130 stand hier ein Wort für beides; die Diagrammprüfung hat es sichtbar gemacht.
 2. **Letzter Schreiber gewinnt, und KRK sagt es.** Keine Sperre; die zweite Instanz meldet beim Start, dass Lesezeichen und Aufteilung verlorengehen können.
    - Dafür: Kostet fast nichts.
    - Dagegen: Der Verlust von Lesezeichen ist der Verlust von Nutzerarbeit, und das Gemisch in der Nachbardatei bleibt möglich. Ein wissentlich ausgeliefertes Verlustrisiko steht gegen die Runde 6, die den Bestand des Nutzers gerade erst geschützt hat.
@@ -39,11 +43,12 @@ Sobald KRK ein zweites Mal läuft, greifen zwei Prozesse ohne jede Absprache auf
 ## Randbedingungen
 
 - Die Sitzung ist ihrer Natur nach nicht teilbar: sie beschreibt, wie *ein* Fenster aussah. Welche gespeicherte Sitzung zu welcher Instanz gehört, ist aus den Eingaben, die ein Prozess hat, nicht zu beantworten — ein Prozess trägt über einen Neustart hinweg keine Nämlichkeit. Eine Näherung darüber wäre keine Lösung; entscheidbar ist stattdessen die andere Frage, wer die Sperre hält.
-- Der Vorgang liegt auf dem Startpfad. Die Zusage L4 aus C8 der Runde 1 gibt dem Kaltstart bis zur bedienbaren Oberfläche 1000 ms; eine Sperre ist ein Systemaufruf und fällt darin nicht auf, gehört aber in den nächsten Abnahmelauf.
+- Der Vorgang liegt auf dem Startpfad. Die Zusage L4 aus C8 der Runde 1 gibt dem Kaltstart bis zur bedienbaren Oberfläche 1000 ms; die Vergabe des Sitzungsrechts ist ein Systemaufruf und fällt darin nicht auf, gehört aber in den nächsten Abnahmelauf.
+- **Beides muss ein Prozess auch beim Absturz freigeben.** Ein Mechanismus, der eine Marke im Dateisystem hinterlässt, die niemand aufhebt, sperrt nach einem Absturz jede weitere Instanz für immer aus dem Sitzungsschreiben aus. Wer einen solchen wählt, braucht eine Aufräumregel dazu. Das Kriterium steht als C3.13 im Spec.
 
 ## Empfehlung
 
-Möglichkeit 1. Sie ist die einzige, die weder Nutzerarbeit verliert noch die Bedienung je Instanz verschieden macht, und sie beantwortet die unentscheidbare Frage nicht, sondern ersetzt sie durch eine entscheidbare. Der Preis, den sie kostet, ist benannt und klein: die zweite Instanz merkt sich ihre Aufteilung nicht, und sie sagt es.
+Möglichkeit 1, mit den zwei getrennten Mechanismen. Sie ist die einzige, die weder Nutzerarbeit verliert noch die Bedienung je Instanz verschieden macht, und sie beantwortet die unentscheidbare Frage nicht, sondern ersetzt sie durch eine entscheidbare: nicht „welche Sitzung gehört diesem Prozess", sondern „hält dieser Prozess das Sitzungsrecht". Der Preis, den sie kostet, ist benannt und klein: die zweite Instanz merkt sich ihre Aufteilung nicht, und sie sagt es.
 
 Die Runde fährt bis zu einer Antwort auf Möglichkeit 1.
 
