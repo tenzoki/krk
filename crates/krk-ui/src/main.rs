@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Vierzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Fuenfzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -26,7 +26,11 @@
 //! abweicht, die gewaehlte Ansicht und den laufenden Suchlauf. `hervorhebung`
 //! haelt daneben, was die Formatansicht des Editors ueber einen Text weiss:
 //! welche Stelle welche Farbe traegt, welche unterstrichen ist und welche eine
-//! Markdown-Auszeichnung ist. `leistenmodell` haelt, was in der Lesezeichen-
+//! Markdown-Auszeichnung ist. `markdown` zerlegt daneben eine Markdown-Datei
+//! fuer die Vorschau der Runde 6: heraus kommen der Text ohne die
+//! Auszeichnungszeichen und dieselbe `Formatierung`, die `hervorhebung`
+//! liefert, damit es eine Umsetzung in AppKit-Merkmale gibt und nicht zwei.
+//! `leistenmodell` haelt, was in der Lesezeichen-
 //! und Geraeteleiste aus C5 steht und welche Zeile darin ausgewaehlt ist.
 //! `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
 //! C10, darunter die eine Stelle, die einen Pfad prueft. `auffrischung` haelt
@@ -60,6 +64,7 @@ mod fenstertitel;
 mod hervorhebung;
 mod kommandos;
 mod leistenmodell;
+mod markdown;
 mod messmodus;
 /// Der Pruefordner der Proben dieser Kiste. Nur im Probenbau uebersetzt, weil
 /// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.

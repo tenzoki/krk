@@ -385,7 +385,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check`, Exit 0. Der Schritt ändert kein Verhalten, und das ist seine Zusage.
    - Dependencies: keine.
 
-8. **Markdown wird zerlegt, und das Vorschaumodell kennt den dritten Weg**
+8. [DONE] **Markdown wird zerlegt, und das Vorschaumodell kennt den dritten Weg**
    - Executor: `coder`
    - Files: `Cargo.toml`, `crates/krk-ui/Cargo.toml`, neu `crates/krk-ui/src/markdown.rs`, `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/hervorhebung.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`
    - Changes:

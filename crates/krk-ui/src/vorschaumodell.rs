@@ -26,7 +26,7 @@
 //!
 //! # Die Dreiteilung der Anzeige (C6)
 //!
-//! Textdateien bis 1 MB und Markdown erscheinen als reiner Inhalt, die
+//! Textdateien bis 1 MB erscheinen als reiner Inhalt, die
 //! gaengigen Bildformate bis 64 MB als Bild, alles andere, einschliesslich
 //! Ordner, als Metadaten mit Name, vollstaendigem Pfad, Groesse,
 //! Aenderungsdatum, Rechten und Typ. Eine Textdatei ueber 1 MB faellt auf die
@@ -113,6 +113,10 @@ use std::time::SystemTime;
 
 use krk_core::verzeichnis::Typ;
 
+use crate::editormodell::Dateityp;
+use crate::hervorhebung::{self, Darstellungsart, Tafel};
+use crate::markdown::{self, Gerendert};
+
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
 pub const TEXTGRENZE: u64 = 1024 * 1024;
 
@@ -186,9 +190,23 @@ pub enum Inhalt {
     /// demselben Grund, aus dem C10 das fuer die leere Zwischenablage
     /// verlangt.
     Leer,
-    /// Reiner Text: eine Textdatei bis 1 MB, Markdown, oder Text aus der
-    /// Zwischenablage.
+    /// Reiner Text: eine Textdatei bis 1 MB oder Text aus der Zwischenablage.
+    ///
+    /// Markdown aus einer **Datei** steht seit der Runde 6 nicht mehr hier,
+    /// sondern in [`Inhalt::Markdown`]. Aus der Zwischenablage kommt es
+    /// weiterhin als Text: dort gibt es keinen Pfad, an dem eine Endung
+    /// haengt, und `hervorhebung::art` entscheidet die Darstellung nach dem
+    /// Pfad.
     Text(String),
+    /// Gerendertes Markdown aus einer Datei: der Text ohne seine
+    /// Auszeichnungszeichen und die Stellen, die eine Auszeichnung tragen
+    /// (C4 der Runde 6).
+    ///
+    /// **In einem `Box`, weil dieser Wert die uebrigen sonst aufbliese.** Ein
+    /// [`Gerendert`] traegt eine `String` und drei Listen; [`Inhalt`] wird bei
+    /// jedem Neuzeichnen des aktiven Tabs geklont, und jeder Wert der
+    /// Aufzaehlung ist so gross wie der groesste.
+    Markdown(Box<Gerendert>),
     /// Ein Bild, als rohe Daten eines Formats, das `NSImage` liest.
     ///
     /// Die Metadaten fahren mit, damit die Ansicht bei einer Datei, deren
@@ -234,7 +252,10 @@ pub struct Ladevorgang {
 
 impl Ladevorgang {
     /// Startet den Arbeitsfaden fuer den genannten Pfad.
-    fn starten(pfad: PathBuf) -> Self {
+    ///
+    /// Die Tafel faehrt mit, weil das Rendern von Markdown auf diesem Faden
+    /// laeuft und die Farbe eines Verweises aus ihr kommt; siehe [`laden`].
+    fn starten(pfad: PathBuf, tafel: Tafel) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let fuer_faden = pfad.clone();
@@ -244,7 +265,7 @@ impl Ladevorgang {
                 let _ = SyncSender::send(
                     &sender,
                     Geladen {
-                        inhalt: laden(&fuer_faden),
+                        inhalt: laden(&fuer_faden, tafel),
                     },
                 );
             });
@@ -394,10 +415,10 @@ impl Vorschaumodell {
     /// Modulkopf. Bis die Meldung eintrifft, steht der bisherige Inhalt, der
     /// Titel wechselt sofort: der Nutzer sieht damit, dass seine Auswahl
     /// angekommen ist, ohne dass eine halbgelesene Anzeige aufblitzt.
-    pub fn datei_anzeigen(&mut self, pfad: &Path) {
+    pub fn datei_anzeigen(&mut self, pfad: &Path, tafel: Tafel) {
         let tab = &mut self.tabs[self.aktiv];
         tab.titel = titel_von(pfad);
-        tab.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf()));
+        tab.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), tafel));
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -444,14 +465,24 @@ impl Vorschaumodell {
     /// Abnahmekriterium von C10 nimmt ihn ausdruecklich aus. Ein Text ohne
     /// Datei hat keine Dateizeilen, die zu nummerieren waeren.
     ///
+    /// **Gerendertes Markdown traegt keine Nummern** (C4, neuntes Kriterium
+    /// der Runde 6), und der Grund ist nicht Platz, sondern Wahrheit: die
+    /// Zahlen zaehlten die Zeilen des gerenderten Textes, und das sind andere
+    /// als die der Datei, die danebensteht. Eine Zahl, die etwas anderes zaehlt
+    /// als das, was neben ihr steht, ist eine falsche Auskunft.
+    ///
     /// **Die Fallunterscheidung ist vollstaendig und hat keinen
-    /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein sechster
+    /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein siebter
     /// Inhalt haelt den Bau an und erzwingt die Antwort auf die Frage, ob
     /// neben ihm Zeilennummern stehen.
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
             Inhalt::Text(_) => self.aktiver_pfad().is_some(),
-            Inhalt::Leer | Inhalt::Bild { .. } | Inhalt::Metadaten(_) | Inhalt::Hinweis(_) => false,
+            Inhalt::Leer
+            | Inhalt::Markdown(_)
+            | Inhalt::Bild { .. }
+            | Inhalt::Metadaten(_)
+            | Inhalt::Hinweis(_) => false,
         }
     }
 
@@ -539,6 +570,10 @@ fn zu_gross_text(groesse: u64) -> String {
 
 /// Liest den Eintrag und ordnet ihn in die Dreiteilung aus C6 ein.
 ///
+/// Innerhalb des Textes entscheidet danach `hervorhebung::art` ueber die drei
+/// Wege der Anzeige aus C4 der Runde 6; die Tafel geht dabei allein in die
+/// Farbe eines Verweises.
+///
 /// Laeuft auf dem Arbeitsfaden. Der `lstat(2)` hier ist die eine Stelle, die
 /// die Rechte erhebt; siehe den Modulkopf.
 ///
@@ -548,7 +583,7 @@ fn zu_gross_text(groesse: u64) -> String {
 /// die letzten drei. Deshalb steht die Groessenschranke nicht mehr als eigener
 /// Zweig hier, sondern in [`bis_zur_grenze_lesen`] neben den anderen Gruenden;
 /// vier Wege zu derselben Antwort brauchen keine vier Verzweigungen.
-fn laden(pfad: &Path) -> Inhalt {
+fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
     let roh = match std::fs::symlink_metadata(pfad) {
@@ -585,7 +620,21 @@ fn laden(pfad: &Path) -> Inhalt {
     }
     // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
     match bis_zur_grenze_lesen(pfad, TEXTGRENZE).and_then(|bytes| String::from_utf8(bytes).ok()) {
-        Some(text) => Inhalt::Text(text),
+        // Die drei Wege der Anzeige entscheidet die **eine** vorhandene Stelle
+        // (C4, fuenfzehntes Kriterium der Runde 6): Markdown wird gerendert,
+        // was die Syntaxkiste als Sprache kennt und alles Uebrige bleibt der
+        // Text, der dasteht. Eine zweite Endungsliste neben `Dateityp` und
+        // `hervorhebung::art` entsteht hier nicht.
+        //
+        // Eingefaerbt wird der Quelltext **nicht** hier: das gehoert hinter die
+        // Endbedingung von L7 und damit in die Ansicht, denn `syntect` ist mit
+        // 0,3 MB/s zu langsam, um darauf zu warten.
+        Some(text) => match hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad)) {
+            Darstellungsart::Markdown => {
+                Inhalt::Markdown(Box::new(markdown::rendern(&text, tafel)))
+            }
+            Darstellungsart::Code | Darstellungsart::EinfacherText => Inhalt::Text(text),
+        },
         // Zu gross, nicht lesbar, keine gewoehnliche Datei oder kein UTF-8, also
         // keine Textdatei im Sinne von C6.
         None => Inhalt::Metadaten(metadaten),
@@ -815,18 +864,56 @@ mod tests {
     #[test]
     fn eine_textdatei_erscheint_mit_ihrem_inhalt() {
         let ordner = Pruefordner::neu("text");
-        let pfad = ordner.pfad().join("notiz.md");
-        std::fs::write(&pfad, "# Ueberschrift\nZeile").expect("Probendatei");
+        let pfad = ordner.pfad().join("notiz.txt");
+        std::fs::write(&pfad, "Erste Zeile\nZweite").expect("Probendatei");
         assert_eq!(
-            laden(&pfad),
-            Inhalt::Text("# Ueberschrift\nZeile".to_owned())
+            laden(&pfad, Tafel::Hell),
+            Inhalt::Text("Erste Zeile\nZweite".to_owned())
+        );
+    }
+
+    /// Die drei Wege der Anzeige aus C4 der Runde 6, an drei Dateien.
+    ///
+    /// Entschieden werden sie von der **einen** vorhandenen Stelle,
+    /// `hervorhebung::art`; die Probe misst, dass `laden` sie fragt und keine
+    /// zweite Endungsliste fuehrt.
+    #[test]
+    fn die_drei_wege_der_anzeige_haengen_an_der_endung() {
+        let ordner = Pruefordner::neu("wege");
+
+        let markdown = ordner.pfad().join("notiz.md");
+        std::fs::write(&markdown, "# Ueberschrift\n").expect("Probendatei");
+        let Inhalt::Markdown(gerendert) = laden(&markdown, Tafel::Hell) else {
+            panic!("eine .md-Datei wird gerendert");
+        };
+        assert_eq!(
+            gerendert.text, "Ueberschrift",
+            "das Doppelkreuz ist verschwunden"
+        );
+
+        // Quelltext bleibt der Text, der dasteht; eingefaerbt wird er erst in
+        // der Ansicht, hinter der Endbedingung von L7.
+        let quelltext = ordner.pfad().join("quelle.rs");
+        std::fs::write(&quelltext, "fn main() {}\n").expect("Probendatei");
+        assert_eq!(
+            laden(&quelltext, Tafel::Hell),
+            Inhalt::Text("fn main() {}\n".to_owned())
+        );
+
+        // Das dreizehnte Abnahmekriterium von C4: lokale HTML-Dateien bleiben
+        // Quelltext und werden nicht gerendert.
+        let html = ordner.pfad().join("seite.html");
+        std::fs::write(&html, "<p>Hallo</p>\n").expect("Probendatei");
+        assert_eq!(
+            laden(&html, Tafel::Hell),
+            Inhalt::Text("<p>Hallo</p>\n".to_owned())
         );
     }
 
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
-        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad()) else {
+        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell) else {
             panic!("ein Ordner gehoert in die Metadatenanzeige");
         };
         assert_eq!(metadaten.typ, Typ::Ordner);
@@ -840,7 +927,7 @@ mod tests {
         let ordner = Pruefordner::neu("gross");
         let pfad = ordner.pfad().join("gross.txt");
         std::fs::write(&pfad, "a".repeat((TEXTGRENZE + 1) as usize)).expect("Probendatei");
-        let Inhalt::Metadaten(metadaten) = laden(&pfad) else {
+        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell) else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, TEXTGRENZE + 1);
@@ -855,7 +942,7 @@ mod tests {
         let ordner = Pruefordner::neu("bild-klein");
         let pfad = ordner.pfad().join("bild.png");
         std::fs::write(&pfad, [0x89, b'P', b'N', b'G']).expect("Probendatei");
-        let Inhalt::Bild { daten, metadaten } = laden(&pfad) else {
+        let Inhalt::Bild { daten, metadaten } = laden(&pfad, Tafel::Hell) else {
             panic!("unter der Grenze zeigt das Bild");
         };
         assert_eq!(*daten, vec![0x89, b'P', b'N', b'G']);
@@ -878,7 +965,7 @@ mod tests {
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
-        let Inhalt::Metadaten(metadaten) = laden(&pfad) else {
+        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell) else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, BILDGRENZE + 1);
@@ -890,13 +977,13 @@ mod tests {
         let ordner = Pruefordner::neu("binaer");
         let pfad = ordner.pfad().join("roh.bin");
         std::fs::write(&pfad, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
-        assert!(matches!(laden(&pfad), Inhalt::Metadaten(_)));
+        assert!(matches!(laden(&pfad, Tafel::Hell), Inhalt::Metadaten(_)));
     }
 
     #[test]
     fn ein_fehlender_pfad_liefert_einen_hinweis() {
         let pfad = Path::new("/gibt/es/nicht/krk-probe");
-        assert!(matches!(laden(pfad), Inhalt::Hinweis(_)));
+        assert!(matches!(laden(pfad, Tafel::Hell), Inhalt::Hinweis(_)));
     }
 
     /// Ruft [`laden`] auf einem eigenen Faden und gibt die Antwort nur heraus,
@@ -915,7 +1002,7 @@ mod tests {
         let (sender, empfaenger) = std::sync::mpsc::channel();
         let pfad = pfad.to_path_buf();
         thread::spawn(move || {
-            let _ = sender.send(laden(&pfad));
+            let _ = sender.send(laden(&pfad, Tafel::Hell));
         });
         empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
             panic!("laden ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
@@ -982,7 +1069,7 @@ mod tests {
         std::fs::write(&pfad, "aus dem Faden").expect("Probendatei");
 
         let mut modell = Vorschaumodell::neu();
-        modell.datei_anzeigen(&pfad);
+        modell.datei_anzeigen(&pfad, Tafel::Hell);
         modell.oeffnen();
         // Der bestellende Tab ist jetzt inaktiv; die Meldung gehoert trotzdem
         // ihm.
@@ -1006,7 +1093,7 @@ mod tests {
     ///
     /// Die beiden gewoehnlichen Wege dorthin, [`Vorschaumodell::datei_anzeigen`]
     /// und [`Vorschaumodell::zwischenablage_anzeigen`], erreichen zusammen nicht
-    /// alle fuenf Werte von [`Inhalt`]: die Metadaten entstehen nur aus einer
+    /// alle sechs Werte von [`Inhalt`]: die Metadaten entstehen nur aus einer
     /// Datei, die keine Textdatei ist, das Bild nur aus einer lesbaren
     /// Bilddatei. Die Probe unten deckt die Fallunterscheidung vollstaendig ab
     /// und setzt deshalb hier an.
@@ -1045,6 +1132,14 @@ mod tests {
             "Text ohne Datei: die Zwischenablage aus C10 der Runde 1"
         );
         assert!(!tab_setzen(Inhalt::Leer, None).zeigt_dateitext());
+        assert!(
+            !tab_setzen(
+                Inhalt::Markdown(Box::new(crate::markdown::rendern("# Titel\n", Tafel::Hell))),
+                Some("/tmp/probe.md"),
+            )
+            .zeigt_dateitext(),
+            "C4 der Runde 6: neben gerendertem Markdown steht keine Zahl"
+        );
         assert!(
             !tab_setzen(Inhalt::Hinweis("leer".to_owned()), None).zeigt_dateitext(),
             "ein Hinweis hat keine Dateizeilen"

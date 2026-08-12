@@ -295,6 +295,19 @@ pub enum Auszeichnung {
     /// Absatz aus, und ein Bereich, der mitten in einer Zeile begaenne, sagte
     /// etwas anderes, als er bewirkt.
     Listenzeile,
+    /// Betonung, `*so*` geschrieben: kursiv in der Grundgroesse.
+    ///
+    /// **Sie entsteht allein in [`crate::markdown`]** und nicht in
+    /// [`formatieren`]: die Formatansicht des Editors zeigt den Quelltext mit
+    /// seinen Sternchen und faerbt sie ein, die Vorschau der Runde 6 nimmt sie
+    /// weg und traegt die Betonung stattdessen als Merkmal. Beide Wege enden
+    /// in derselben Umsetzung in `crate::appkit::textmerkmale`.
+    Betonung,
+    /// Starke Betonung, `**so**` geschrieben: fett in der Grundgroesse.
+    ///
+    /// Fett und nicht groesser: die Groesse gehoert den Ueberschriften, und
+    /// eine starke Betonung, die eine Zeile hoeher machte, saehe aus wie eine.
+    StarkeBetonung,
 }
 
 /// Wo eine [`Auszeichnung`] steht.
@@ -405,6 +418,55 @@ pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
             None => Darstellungsart::EinfacherText,
         },
     }
+}
+
+/// Der Wortartenstapel, den der Text eines Verweises in Markdown traegt.
+///
+/// **Der volle Stapel und nicht die eine Wortart, und das ist gemessen und
+/// nicht gewaehlt.** Am 260812 an den eingebundenen Sprachdefinitionen
+/// abgelesen: der Text von `[die Seite](https://example.com)` traegt genau
+/// diese drei Wortarten, und die Farbe, die die Tafel ihm gibt, kommt von
+/// `meta.link` und nicht von `markup.underline.link` — letzteres fuehrt in
+/// beiden Tafeln des Vorgabesatzes **keinen** eigenen Eintrag und faellt auf
+/// die Grundfarbe zurueck. Wer hier allein danach fragte, bekaeme die Farbe des
+/// gewoehnlichen Textes und haette einen Verweis ohne Farbe.
+///
+/// Der Stapel ist derselbe, den [`rechnen`] fuer dieselben Zeichen sieht.
+/// Damit traegt ein Verweis in der Vorschau die Farbe, die er im Editor hat,
+/// und KRK fuehrt keine zweite.
+const VERWEISSTAPEL: [&str; 3] = [
+    "text.html.markdown",
+    "meta.paragraph.markdown",
+    "meta.link.inline.description.markdown",
+];
+
+/// Welche Farbe die Tafel einem Verweis gibt (C4 der Runde 6).
+///
+/// **Ein Nachschlag in derselben Tafel und keine Farbe von KRK.** Der Modulkopf
+/// sagt zu, dass diese Datei keine eigene Farbe kennt; ein Blau, das hier
+/// stuende, waere die erste. Gefragt wird deshalb dieselbe Tafel, aus der die
+/// Einfaerbung des Quelltextes kommt, mit dem Wortartenstapel, den der Text
+/// eines Verweises im Editor traegt ([`VERWEISSTAPEL`]).
+///
+/// **`None` heisst: es gibt hier keine Farbe zu holen.** Zwei Wege fuehren
+/// dorthin, und beide sind dieselbe Antwort, die [`rechnen`] auf eine fehlende
+/// Tafel gibt: ein Verweis bleibt dann ohne Farbe und ohne Unterstreichung,
+/// statt dass dem Nutzer sein Text vorenthalten wuerde. Der Pruefcode
+/// `crates/krk-ui/tests/syntaxkiste.rs` belegt beide Tafeln als vorhanden, und
+/// die Probe `die_tafel_faerbt_einen_verweis` weiter unten belegt, dass die
+/// gelieferte Farbe nicht die Grundfarbe ist.
+pub fn linkfarbe(tafel: Tafel) -> Option<Farbe> {
+    let farbtafel = tafelsatz().themes.get(tafel.name())?;
+    let mut stapel = Vec::with_capacity(VERWEISSTAPEL.len());
+    for name in VERWEISSTAPEL {
+        stapel.push(Scope::new(name).ok()?);
+    }
+    Some(
+        Highlighter::new(farbtafel)
+            .style_for_stack(&stapel)
+            .foreground
+            .into(),
+    )
 }
 
 /// Der Wortartenstapel, gegen den die Markdown-Auszeichnungen gefragt werden.
@@ -1424,6 +1486,26 @@ mod tests {
 
     fn pfad(name: &str) -> PathBuf {
         PathBuf::from("/tmp").join(name)
+    }
+
+    /// Die Farbe eines Verweises ist wirklich eine Farbe und nicht die des
+    /// gewoehnlichen Textes (C4, erstes und siebtes Kriterium der Runde 6).
+    ///
+    /// **Die Probe, die den Nachschlag festhaelt.** `markup.underline.link`
+    /// allein liefert in beiden Tafeln die Grundfarbe; erst der volle Stapel
+    /// aus [`VERWEISSTAPEL`] trifft `meta.link`. Wer den Stapel kuerzt oder
+    /// eine Wortart umbenennt, sieht es hier und nicht erst am Bild.
+    #[test]
+    fn die_tafel_faerbt_einen_verweis() {
+        for tafel in [Tafel::Hell, Tafel::Dunkel] {
+            let farbe = linkfarbe(tafel).expect("beide Tafeln stehen im Vorgabesatz");
+            let farbtafel = tafelsatz().themes.get(tafel.name()).expect("die Tafel");
+            let grundfarbe: Farbe = Highlighter::new(farbtafel).get_default().foreground.into();
+            assert_ne!(
+                farbe, grundfarbe,
+                "{tafel:?}: ein Verweis in der Farbe des Fliesstextes ist kein eingefaerbter Verweis"
+            );
+        }
     }
 
     /// Das sechste Abnahmekriterium von C3: eine Sprache, die die Kiste nicht

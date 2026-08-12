@@ -33,7 +33,8 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSTextView` (`NSTextView.h:76`), `NSTextStorage` (`NSTextStorage.h:37`),
-//! `NSFont` (`NSFont.h:24`), `NSColor` (`NSColor.h:77`) und
+//! `NSFont` (`NSFont.h:24`), `NSColor` (`NSColor.h:77`),
+//! `NSFontDescriptor` (`NSFontDescriptor.h:61`) und
 //! `NSMutableParagraphStyle` (`NSParagraphStyle.h:112`) stehen seit macOS 10.0
 //! zur Verfuegung. `NSLayoutManager` traegt im SDK `macos(10.7)`
 //! (`NSLayoutManager.h:65`) und nicht die 10.0, die zwei andere Modulkoepfe
@@ -51,7 +52,11 @@
 //! `setTemporaryAttributes:forCharacterRange:` (`NSLayoutManager.h:353`),
 //! `systemFontSize` (`NSFont.h:75`), `systemFontOfSize:` (`:47`),
 //! `boldSystemFontOfSize:` (`:48`), `userFixedPitchFontOfSize:` (`:41`),
-//! `firstLineHeadIndent` und `headIndent` (`NSParagraphStyle.h:116`, `:117`)
+//! `firstLineHeadIndent` und `headIndent` (`NSParagraphStyle.h:116`, `:117`),
+//! die drei Stuecke der kursiven Schrift — `fontDescriptor` an `NSFont`
+//! (`NSFont.h:87`), `fontDescriptorWithSymbolicTraits:`
+//! (`NSFontDescriptor.h:92`) und `fontWithDescriptor:size:` (`NSFont.h:31`),
+//! dazu der Wert `NSFontDescriptorTraitItalic` (`NSFontDescriptor.h:22`) —
 //! sowie `beginEditing`, `endEditing`, `addAttributes:range:` und
 //! `removeAttribute:range:` an `NSMutableAttributedString`
 //! (`NSAttributedString.h:85`, `:86`, `:76`, `:77`). Die vier Merkmalsnamen
@@ -63,8 +68,9 @@ use std::collections::HashMap;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSColor, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSMutableParagraphStyle,
-    NSParagraphStyleAttributeName, NSTextView, NSUnderlineStyle, NSUnderlineStyleAttributeName,
+    NSColor, NSFont, NSFontAttributeName, NSFontDescriptorSymbolicTraits,
+    NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
+    NSTextView, NSUnderlineStyle, NSUnderlineStyleAttributeName,
 };
 use objc2_foundation::{NSDictionary, NSNumber, NSRange, NSString};
 
@@ -161,6 +167,10 @@ pub fn anwenden(
             }
             Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
             Auszeichnung::Listenzeile => einzugsmerkmal(),
+            Auszeichnung::Betonung => schriftmerkmal(&kursive_schrift(grundgroesse)),
+            Auszeichnung::StarkeBetonung => {
+                schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse))
+            }
         };
         // SAFETY: Der Bereich liegt im Text, und das ist die ganze
         // Bedingung: die Laenge ist oben geprueft, und jede Stelle der
@@ -301,6 +311,27 @@ pub fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> 
 /// Schnittstelle ihn zulaesst und ein Editor ohne Schrift keine Antwort ist.
 fn feste_schrift(groesse: f64) -> Retained<NSFont> {
     NSFont::userFixedPitchFontOfSize(groesse).unwrap_or_else(|| NSFont::systemFontOfSize(groesse))
+}
+
+/// Die kursive Systemschrift, hilfsweise die aufrechte (C4 der Runde 6).
+///
+/// **Ueber die Beschreibung der Schrift und nicht ueber `NSFontManager`.** Der
+/// Verwalter ist die Maschinerie hinter dem Schriftfenster; er baut beim ersten
+/// Zugriff einen gemeinsamen Zustand auf, den KRK nirgends sonst braucht.
+/// [`NSFontDescriptor`] beantwortet dieselbe Frage ohne diesen Anhang: er nimmt
+/// die Beschreibung der Grundschrift, setzt das Merkmal `TraitItalic` und laesst
+/// das System die passende Schnittfassung suchen.
+///
+/// **Der Rueckfall ist die aufrechte Schrift und kein Fehler.** Findet das
+/// System keine kursive Fassung, ist eine aufrechte Betonung die schlechtere
+/// Anzeige und eine fehlende Zeile die schlechteste; dieselbe Erwaegung wie bei
+/// [`feste_schrift`] daneben.
+fn kursive_schrift(groesse: f64) -> Retained<NSFont> {
+    let aufrecht = NSFont::systemFontOfSize(groesse);
+    let beschreibung = aufrecht
+        .fontDescriptor()
+        .fontDescriptorWithSymbolicTraits(NSFontDescriptorSymbolicTraits::TraitItalic);
+    NSFont::fontWithDescriptor_size(&beschreibung, groesse).unwrap_or(aufrecht)
 }
 
 /// Ein Merkmalsverzeichnis mit genau einer Schrift darin.

@@ -52,3 +52,10 @@ syntect = { workspace = true }
 # Die Sprachdefinitionen, die `syntect` nicht mitbringt, TOML voran. Ohne sie
 # verfehlt die Formatansicht das fuenfte Abnahmekriterium von C3.
 two-face = { workspace = true }
+# Der CommonMark-Zerleger der Vorschau (C4 der Runde 6). Er steht in `krk-ui`
+# und nicht im Kern, aus demselben Grund wie `syntect` daneben: was er liefert,
+# ist eine Darstellung, und die gehoert in KRK zur Oberflaeche. Die
+# ausfuehrliche Begruendung, die drei geprueften Mittel und die vier erhobenen
+# Zahlen stehen an der Versionsangabe in der Wurzel-`Cargo.toml`; dort steht
+# auch, warum das Merkmal fuer Tabellen ausbleibt.
+pulldown-cmark = { workspace = true }

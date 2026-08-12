@@ -119,6 +119,7 @@ use objc2_foundation::{
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
+use crate::hervorhebung::Tafel;
 use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
 
 use super::nummernspalte::Nummernspalte;
@@ -424,7 +425,16 @@ impl Vorschaufenster {
     /// Kehrt sofort zurueck; gelesen wird auf dem Arbeitsfaden des Modells,
     /// und der Zeitgeber holt die Meldung ab.
     pub fn datei_anzeigen(&self, pfad: &Path) {
-        self.ivars().modell.borrow_mut().datei_anzeigen(pfad);
+        // Die Tafel geht allein in die Farbe eines Verweises im gerenderten
+        // Markdown. Hier steht die Vorgabe und **keine zweite Abfrage des
+        // Erscheinungsbildes** neben der in [`super::editor`]: solange die
+        // Vorschau ihre Auszeichnungen nicht in die Flaeche traegt, ist keine
+        // dieser Farben zu sehen. Der Schritt, der sie traegt, zieht auch die
+        // Tafel des Erscheinungsbildes nach.
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .datei_anzeigen(pfad, Tafel::default());
         self.anzeigen();
         self.takt_starten();
     }
@@ -557,6 +567,10 @@ impl Vorschaufenster {
         match inhalt {
             Inhalt::Leer => self.text_zeigen(LEERTEXT),
             Inhalt::Text(text) => self.text_zeigen(&text),
+            // Der gerenderte Text steht; seine Auszeichnungen folgen mit dem
+            // naechsten Schritt ueber `super::textmerkmale`, der einen
+            // Umsetzung, die auch der Editor benutzt.
+            Inhalt::Markdown(gerendert) => self.text_zeigen(&gerendert.text),
             Inhalt::Hinweis(hinweis) => self.text_zeigen(&hinweis),
             Inhalt::Metadaten(metadaten) => {
                 let zeilen = self.metadaten_text(&metadaten);

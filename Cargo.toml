@@ -192,3 +192,68 @@ syntect = { version = "5.3.0", default-features = false, features = [
 # wird hier nicht wiederholt: `two-face` haengt selbst an ihm, und zwei Zahlen
 # fuer einen Baum waeren zwei Wahrheiten.
 two-face = { version = "0.5.2", default-features = false, features = ["syntect-fancy"] }
+# Der CommonMark-Zerleger, mit dem die Vorschau Markdown rendert (C4 der
+# Runde 6), Antwort auf
+# `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1105_*`
+# und auf die Frage, die der Circle dem Plan uebergeben hat: womit wird
+# Markdown zerlegt.
+#
+# Drei Mittel lagen zur Wahl, und die beiden naheliegenden scheitern an je einer
+# messbaren Eigenschaft:
+#
+# - **Apples eigenes Mittel**, `NSAttributedString` mit
+#   `initWithMarkdown:options:baseURL:error:` (`NSAttributedString.h:203`, seit
+#   macOS 12 und damit unter dem Bauziel), liefert keine Darstellung, sondern
+#   Absichten: `NSPresentationIntent` und `NSInlinePresentationIntent`
+#   (`:97-111`). Die Uebersetzung in Schriftgroesse, Schnitt und Einzug bliebe
+#   bei KRK, der teure Teil waere also nicht abgenommen. Dazu zieht der volle
+#   Umfang aufeinanderfolgende Leerzeichen zu einem zusammen (`:147`), und damit
+#   fiele genau das Quelltextraster in sich zusammen, das der Nutzer am
+#   260812-1105 fuer Tabellen festgelegt hat. Und das Ergebnis waere ein
+#   Objective-C-Objekt: die Zerlegung wanderte unter `appkit/` und waere ohne
+#   Fenster nicht mehr pruefbar.
+# - **Die vorhandene `syntect`-Kiste** ueber `hervorhebung.rs` findet
+#   Ueberschriften, Listen, Verweise und Quelltext bereits, ist aber mit
+#   **0,3 MB/s** gemessen (Modulkopf von `crates/krk-ui/src/hervorhebung.rs`,
+#   260810); der gerenderte Text einer Datei an der Grenze `TEXTGRENZE` stuende
+#   erst nach rund 3,3 s da, und die Vorschau sagt ihn sofort zu. Dazu
+#   entschieden fremde Sprachdefinitionen darueber, welche Zeichen als
+#   `punctuation.definition.*` gelten und damit verschwinden; ein faelschlich
+#   ausgeblendetes Zeichen ist eine falsche Auskunft ueber den Inhalt einer
+#   Datei.
+#
+# Keine bestehende Abhaengigkeit leistet die Zerlegung: `icu_collator`
+# sortiert, `signal-hook` faengt Signale, die `objc2`-Kisten reichen AppKit
+# durch, und `syntect` faerbt ein, statt Auszeichnungszeichen zu entfernen.
+#
+# **Vier Zahlen, am 260812 auf diesem Geraet erhoben und nicht uebernommen.**
+#
+# - **Drei Abhaengigkeiten, davon zwei schon im Baum.** Ohne Vorgabemerkmale
+#   fuehrt die Kiste `bitflags`, `memchr` und `unicase`; `bitflags 2.13.1` und
+#   `memchr 2.8.3` stehen in genau diesen Fassungen bereits in `Cargo.lock`.
+#   Neu sind damit zwei Eintraege, die Kiste selbst und `unicase 2.9.0`.
+# - **Kein C-Code.** Weder `pulldown-cmark` noch `unicase` fuehrt eine `.c`-
+#   oder `.h`-Datei. `unicase` hat kein `build.rs` (`build = false`);
+#   `pulldown-cmark` hat eines, dessen Rumpf ohne das Merkmal `gen-tests` zu
+#   nichts uebersetzt, und `gen-tests` ist kein Vorgabemerkmal. Die Zusage der
+#   Technologiewahl haelt damit: die Bauvoraussetzungen aendern sich nicht.
+# - **Die Mindestfassung passt.** `rust-version = "1.71.1"`, das Projekt faehrt
+#   1.97.1.
+# - **Die Geschwindigkeit traegt L7.** Ueber eine aus einem realistischen Muster
+#   auf 1,05 MB vervielfachte Markdown-Datei kostet `markdown::rendern` im
+#   Profil `release` in drei Laeufen 29,5 ms, 20,5 ms und 19,2 ms, also 36 bis
+#   55 MB/s. Das ist rund das Hundertfache der Geschwindigkeit von `syntect`
+#   und liegt an der Grenze `TEXTGRENZE` mit deutlichem Abstand unter den
+#   100 ms, die L7 zusagt. Der Wert ist auf diesem Geraet gemessen; ob das
+#   Referenzgeraet ihn haelt, sagt erst der Abnahmelauf.
+#
+# `default-features = false` laesst `html`, `getopts` und
+# `pulldown-cmark-escape` weg, die KRK nicht nennt: die Kiste soll zerlegen und
+# keine Seite bauen.
+#
+# **Das Merkmal fuer Tabellen bleibt aus, und das ist keine Sparsamkeit.** Es
+# ist die Umsetzung des Nutzerentscheids vom 260812-1105: ohne
+# `ENABLE_TABLES` liefert die Kiste die drei Zeilen einer Tabelle als drei
+# `Text`-Ereignisse mit ihren Zwischenraeumen, getrennt durch weiche Umbrueche,
+# und das Quelltextraster entsteht von selbst statt ueber eine Sonderregel.
+pulldown-cmark = { version = "0.13", default-features = false }
