@@ -2,10 +2,10 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** active
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** (none yet)
-**Active session history:** (none yet)
+**Active session history:** shared/history/260812-0306-orchestrator-session.md
 
 ---
 

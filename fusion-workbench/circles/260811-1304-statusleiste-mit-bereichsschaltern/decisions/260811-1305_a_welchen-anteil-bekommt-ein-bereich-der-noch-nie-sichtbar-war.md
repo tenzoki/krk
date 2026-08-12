@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/sitzung.rs:181` (`Breiten`), `crates/krk-ui/src/fenstermodell.rs:191` (`Bereich::anfangsbreite`), `.../decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md`
 
@@ -41,8 +41,30 @@ Die heutige Regel beantwortet den Fall mit `unwrap_or_else(|| bereich.anfangsbre
 
 **Möglichkeit 1.** Der Rückfall auf die Anfangsbreite steht bereits im Code und trägt die Begründung, aus der die Zahlen entstanden sind. Eine Umrechnung beim ersten Aufgehen ändert daran nichts, sondern übersetzt eine vorhandene Antwort in die neue Währung.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 1: die Anfangsbreite in Punkten, beim ersten Aufgehen in einen Anteil
+umgerechnet.**
+
+Der Rueckfall steht bereits im Code (`unwrap_or_else(|| bereich.anfangsbreite())`) und traegt
+die Begruendung, aus der die Zahlen entstanden sind: die 460 des Editors folgen aus C1 der
+Editor-Runde, "rund ein Drittel der Fensterbreite". Da die Antwort auf die erste Frage die
+Anteile ohnehin beim Lesen aus den gespeicherten Punktzahlen entstehen laesst, ist hier gar
+nichts Eigenes zu bauen: ein unbelegtes Feld faellt auf `anfangsbreite()` zurueck und geht mit
+dieser Zahl in dieselbe Verhaeltnisrechnung wie jeder andere Bereich.
+
+Moeglichkeit 2 (Mindestbreite) liesse den Editor mit 320 statt 460 Punkten aufgehen und
+verfehlte die Zusage aus C1 der Editor-Runde. Moeglichkeit 3 (gleicher Anteil) gaebe der
+Lesezeichenleiste denselben Platz wie einem Dateifenster und liesse `anfangsbreite` bedeutungslos
+werden.
+
+**Die im Datensatz genannte Schwaeche bleibt und ist klein:** der erste Anteil haengt an der
+Fensterbreite im Moment des ersten Aufgehens. Das ist bereits heute so und aendert sich durch
+die Anteilsregel nicht.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:

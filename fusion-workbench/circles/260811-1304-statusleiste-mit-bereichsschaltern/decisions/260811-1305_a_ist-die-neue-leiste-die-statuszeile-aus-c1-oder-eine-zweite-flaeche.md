@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/aufteilung.rs:374`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C1), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md`
 
@@ -43,8 +43,31 @@ C1 der Runde 1 legt diese Zeile als den einen Weg fest, auf dem KRK dem Nutzer e
 
 Der Name der neuen Fläche sollte im Aktivierungs-Spec nicht "Statuszeile" lauten, damit zwei verschiedene Sachen nicht denselben Namen tragen.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 1: eine neue Leiste ueber die Fensterbreite, die ausschliesslich Schalter
+traegt.** Die beiden bestehenden Statuszeilen an den Fuessen der Dateifenster bleiben, wo sie
+sind, und behalten alle fuenf Raenge. C1 der Runde 1 bleibt damit unberuehrt, weil keine zweite
+Meldeflaeche entsteht.
+
+**Die Flaeche heisst `Bereichsleiste` und nicht "Statusleiste".** Zwei verschiedene Sachen
+duerfen nicht denselben Namen tragen: `statuszeile.rs` beschreibt die bestehende Zeile als "die
+Statuszeile am Fuss eines Dateifensters", und die neue Flaeche traegt keine Meldung. Der Name
+aus dem Entwurf des Nutzers wird deshalb im Plan ersetzt; die Sache bleibt dieselbe.
+
+Moeglichkeit 2 ist abgelehnt und als eigene Runde denkbar: sie fasst die Rangfolge in
+`statuszeile::zeile` und die Zuordnung des Vorgangsfortschritts zu seinem Dateifenster neu an,
+und beides hat der Nutzer am 260804-1832 entschieden. Moeglichkeit 3 haengt den Ort der Schalter
+an die Sichtbarkeit eines Bereichs, den sie selbst schalten.
+
+**Zur Hoehe, gegen L9 gerechnet:** die neue Leiste nimmt der Fensterzeile Hoehe, und L9 aus C8
+misst, wie viel einer Dateiliste im ersten Bild steht. Der Plan haelt die Leiste auf der Hoehe
+der bestehenden Statuszeile (`statuszeile::HOEHE = 18.0`, eine Zeile in der kleinen
+Systemschrift) und nennt L9 als das Kriterium, das der naechste Abnahmelauf nachmisst.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:

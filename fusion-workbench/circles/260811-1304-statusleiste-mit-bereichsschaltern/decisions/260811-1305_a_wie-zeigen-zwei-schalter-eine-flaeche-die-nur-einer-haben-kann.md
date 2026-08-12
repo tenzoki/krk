@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/fenstermodell.rs:151` (`Bereich::teilt_flaeche_mit`), `circles/260807-2116-eingebauter-editor-mit-textmarken/` (C1 der Editor-Runde)
 
@@ -41,8 +41,24 @@ Fünf gleich aussehende Schalter suggerieren fünf unabhängige Ja-Nein-Entschei
 
 **Möglichkeit 1.** Sie braucht kein neues Bedienelement, hält den Ausschluss an seiner einen Stelle und zeigt ihn dort, wo der Nutzer ihn ohnehin bemerkt: im Moment des Umschaltens springen beide Schalter. Möglichkeit 2 ist die einzige, die die Regel vorab anzeigt, und kostet dafür ein zweites Bedienmodell neben der Tastatur.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 1: zwei gewoehnliche Schalter; das Einschalten des einen schaltet den anderen
+sichtbar aus.**
+
+Der gegenseitige Ausschluss bleibt an seiner einen Stelle, `Bereich::teilt_flaeche_mit`, und die
+Leiste zeigt ihn im Moment des Umschaltens: beide Schalter springen zugleich. Genau das tun die
+Tastenbefehle heute schon; die Leiste bildet es ab und fuehrt kein zweites Modell daneben.
+
+Moeglichkeit 2, ein dreiwertiger Schalter, ist abgelehnt: die Tastenbefehle bilden ihn nicht ab
+(`vorschau_umschalten` ist zweiwertig, der Editor hat zwei Einstiege und ein Schliessen), und es
+entstuenden zwei Wahrheiten ueber den rechten Platz. Moeglichkeit 3, den jeweils anderen
+auszugrauen, kostet zwei Klicks fuer einen Wechsel, den die Tastatur mit einem Anschlag macht,
+und widerspricht der Maxime "supersimpel".
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:

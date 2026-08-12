@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md` (Abschnitt `## Grounding snapshot`), `crates/krk-ui/src/fenstermodell.rs:609` (`bereichsbreiten`), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -45,8 +45,42 @@ Die Frage muss vor dem Plan beantwortet sein: sie entscheidet, ob die eine Breit
 
 Wer Möglichkeit 1 wählt, beantwortet mit: soll die Lesezeichenleiste beim Aufgehen des Editors mitschrumpfen, oder soll sie ihre Breite als einzige behalten? Die zweite Antwort wäre eine benannte Ausnahme von der proportionalen Regel und keine zweite Regel daneben.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 1: alle sichtbaren Bereiche proportional.** Jeder Bereich traegt einen Anteil
+an der Fensterzeile statt einer Punktzahl; Ein- und Ausblenden skaliert die uebrigen mit einem
+Faktor. Die Mindestbreiten gewinnen weiter gegen jeden Anteil.
+
+**Die Festlegung vom 260808 faellt, und zwar ausdruecklich.** Sie steht nirgends als
+Datensatz, sondern allein im Dokumentationskommentar an `bereichsbreiten`
+(`crates/krk-ui/src/fenstermodell.rs:596-602`): die Lesezeichenleiste steht in `Bereich::ALLE`
+vor dem Editor, also weicht sie nicht, wenn beide zugleich stehen. Zwei Gruende, sie fallen zu
+lassen:
+
+1. **Die Directive ist juenger und ausdruecklicher.** Der Nutzer hat am 260811 diktiert: "zwei
+   Bereiche, die im Verhaeltnis 2:1 zueinander standen, stehen nach dem Einblenden eines dritten
+   weiterhin in diesem Verhaeltnis". Das gilt fuer Bereiche und nicht fuer Dateifenster. Eine
+   benannte Ausnahme fuer die Lesezeichenleiste risse genau in dieses Beispiel ein Loch: fuer
+   jedes Paar mit der Leiste gaelte es nicht.
+2. **Die Frage vom 260808 loest sich auf, statt ueberstimmt zu werden.** Sie lautete: wer weicht,
+   wenn es eng wird? Unter einer Anteilsregel weicht niemand einzeln, sondern alle mit demselben
+   Faktor. Die Frage hat unter der neuen Regel keinen Gegenstand mehr.
+
+Moeglichkeit 3 ist abgelehnt: sie traegt zwei Regeln in einer Funktion mit einem Schwellwert
+dazwischen, und das Beispiel des Nutzers gaelte gerade dann nicht, wenn er es bemerkt
+(`rules/critical-stance.md` §2). Moeglichkeit 2 ist ehrlich, liefert aber die Neuaufteilung nicht,
+um die es der Directive geht.
+
+**Was daraus folgt:** `bereichsbreiten` wird neu gefasst, samt seinen Proben. `Breiten` in
+`session.toml` behaelt Punktzahlen als Speicherform; die Anteile entstehen beim Lesen aus dem
+Verhaeltnis der gespeicherten Punktzahlen der sichtbaren Bereiche. Damit bleibt `session.toml`
+von Hand les- und schreibbar (C7) und es entsteht keine zweite Waehrung auf der Platte. Das
+dritte Abnahmekriterium von C7, "beim Wiedereinblenden stellt KRK die vorherige Breite wieder
+her", gilt danach als Anteil und nicht als Punktzahl; der Plan fasst es neu.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:

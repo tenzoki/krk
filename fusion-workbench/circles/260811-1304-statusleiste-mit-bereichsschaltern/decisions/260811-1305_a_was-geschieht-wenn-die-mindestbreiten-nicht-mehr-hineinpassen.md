@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/fenstermodell.rs:169` (`Bereich::mindestbreite`), `crates/krk-ui/src/fenstermodell.rs:639` (die Deckelung der festen Bereiche), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -41,8 +41,33 @@ Heute steht die Antwort im Code und nirgends als Regel. `bereichsbreiten` deckel
 
 **Möglichkeit 1**, und vor der Antwort ist die Mindestgröße des Fensters zu messen. Trifft der Fall bei der heutigen Mindestgröße gar nicht ein, ist die Abweisung eine Vorsichtsmaßnahme und keine Fähigkeit, und der Aktivierungs-Spec kann sie klein halten. Trifft er ein, ist Möglichkeit 1 die einzige, in der die Mindestbreite eine Bedeutung behält und der Schalter nicht lügt.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 1: der Schalter, der die Grenze ueberschritte, wird ohne Meldung verworfen.**
+Der Bereich geht nicht auf, und der Schalter springt zurueck.
+
+**Der Fall tritt ein, gemessen und nicht vermutet.** Der Datensatz verlangte, vor der Antwort die
+Mindestgroesse des Fensters zu messen. `MINDESTGROESSE` steht auf `NSSize::new(780.0, 300.0)`
+(`crates/krk-ui/src/appkit/fenster.rs:116`), gesetzt ueber `setContentMinSize` bei `:289`. Der
+groesste zugleich moegliche Satz ist Lesezeichen 120 + Links 240 + Rechts 240 + Editor 320 = 920,
+weil Vorschau und Editor sich ausschliessen. Zwischen 780 und 920 Punkten Fensterbreite passt er
+nicht. Die Abweisung ist damit eine Faehigkeit und keine Vorsichtsmassnahme.
+
+**Die Form ist die, die C7 fuer den bestehenden Fall schon festlegt:** ohne Fehlermeldung
+verwerfen, und die Abweisung steht im Modell und nicht in der Belegungsdatei.
+`Fenstermodell::umschalten` bekommt damit eine zweite Abweisungsbedingung neben der fuer das
+letzte Dateifenster, und beide tragen dieselbe Form. Keine Meldung in der Statuszeile: C7
+verlangt fuer den bestehenden Fall ausdruecklich, dass keine erscheint, und zwei verschiedene
+Antworten auf zwei unmoegliche Sichtbarkeitsanforderungen waeren eine Fallunterscheidung ohne
+Grund.
+
+Moeglichkeit 2 gaebe der Mindestbreite zwei Bedeutungen (`rules/critical-stance.md` §4).
+Moeglichkeit 3 liesse einen eingeschalteten Bereich mit der Breite null stehen: der Schalter
+sagt an, die Fensterzeile zeigt nichts.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:

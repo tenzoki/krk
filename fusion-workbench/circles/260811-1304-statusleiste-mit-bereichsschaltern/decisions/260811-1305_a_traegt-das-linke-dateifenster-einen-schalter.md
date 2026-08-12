@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/sitzung.rs:204` (`Sichtbarkeit`), `crates/krk-ui/src/fenstermodell.rs:405` (`Fenstermodell::umschalten`), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -41,8 +41,29 @@ Eine Reihe von fünf gleich aussehenden Schaltern, von denen einer nie wirkt, is
 
 **Möglichkeit 3.** Sie ist die einzige, in der alle fünf Schalter dieselbe Bedeutung tragen, und sie verschiebt die Regel dorthin, wo sie hingehört: nicht "das linke ist unantastbar", sondern "eines bleibt". Der Preis ist ein fünftes Feld in `Sichtbarkeit` samt der Zusicherung beim Laden, und dafür wird ein Abnahmekriterium der Runde 1 vom Modellnachweis auf den echten Nachweis gehoben.
 
+
+## Antwort 260812-0306
+
+**Moeglichkeit 3: fuenf Schalter, jedes Dateifenster ausblendbar, solange eines bleibt.**
+
+Alle fuenf Schalter tragen damit dieselbe Bedeutung, und die eine Ausnahme ist die, die C7
+ohnehin traegt: ein Klick, der das letzte sichtbare Dateifenster ausblenden wuerde, wird ohne
+Meldung verworfen. Die Regel heisst danach "eines bleibt" und nicht "das linke ist besonders".
+
+**Der Preis ist benannt:** `Sichtbarkeit` (`crates/krk-core/src/ablage/sitzung.rs:208`) bekommt
+ein fuenftes Feld, `sichtbar_in` verliert seinen festen `Bereich::Links => true`-Zweig,
+`Fenstermodell::umschalten` ersetzt `Bereich::Links => return false` durch dieselbe Pruefung, die
+heute fuer das rechte gilt, und `Fenstermodell::aus_sitzung` braucht eine dritte hergestellte
+Zusicherung, damit eine von Hand geschriebene `session.toml` nicht beide Dateifenster ausblendet.
+Der Kommentar an `Sichtbarkeit`, der die Luecke begruendet, wird mit derselben Aenderung
+umgeschrieben; er sagt sonst das Gegenteil des Codes.
+
+**Der Gewinn ist ein Abnahmekriterium, das vom Modellnachweis auf den echten Nachweis steigt.**
+Der vierte Abnahmepunkt von C7 wird heute ausdruecklich nur am Modell gefuehrt, weil die
+ausgelieferte Belegung keinen Weg dorthin kennt. Mit der Leiste gibt es einen.
+
 ---
-Answered:
+Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
 Implemented:
 Deferred:
 Superseded by:
