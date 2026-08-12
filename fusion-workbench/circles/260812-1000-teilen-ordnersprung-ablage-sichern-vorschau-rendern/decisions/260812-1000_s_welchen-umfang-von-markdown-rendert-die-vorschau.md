@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** superseded
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/hervorhebung.rs` (Modulkopf: zwei Merkmalslisten, der Schnitt „wirkt auf die Auslegung oder nicht"); `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-0822_*_wie-die-formatansicht-ihre-auszeichnung-setzt-und-warum-an-zwei-orten.md`; `crates/krk-ui/src/vorschaumodell.rs:117` (`TEXTGRENZE`, 1 MB)
 
@@ -66,4 +66,4 @@ Nutzer Bilder will, ist das eine eigene Runde und keine Zutat zu dieser.
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
-Superseded by:
+Superseded by: `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1851_i_welchen-umfang-von-markdown-rendert-die-vorschau-mit-verschachtelten-listen.md` — nur der Ausschluss verschachtelter Listen ist gefallen, und zwar weil seine Begruendung weggefallen ist: die Einruecktiefe, die die Auszeichnungsmechanik angeblich nicht kennt, hat sie seit `a9e1149`, und sie hat zwei Zeilen gekostet. Tabellen und Bilder bleiben ausgeschlossen, ihre Begruendungen tragen unveraendert. Alles Uebrige dieses Datensatzes gilt fort.

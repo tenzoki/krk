@@ -168,6 +168,8 @@ Was diese Runde ihm **nicht** vorwegnimmt: sie zeigt keinen Web-Inhalt, öffnet 
 
 - Turn 1 (Sitzung 260812-1055): Commits 4d4402d..d6eff4b, fuenf davon in diesem Turn (755571a, 95b2dfa, 8bc84ce, 90b60d8, d6eff4b); Planschritte 1 bis 6 auf [DONE], sechs von elf. Coherence-Urteil: ok (Nutzerentscheid am Turn-Ende, weitermachen). Durchsichten: reviews/260812-1526-ontorev-belegungsdatei-ordner-der-datei-und-teilen.md und reviews/260812-1529-coderev-turn-1-der-runde-6.md, Bereich 4d4402d..d6eff4b, acht Defekte abgelegt, einer geschlossen. Grundlage: acht Entscheidungen umgesetzt, eine neue Frage offen. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
 
+- Turn 2 (Sitzung 260812-1055): Commits 34ab5b5..94a81bd, neun davon in diesem Turn; Planschritte 7 bis 11 auf [DONE], damit alle elf, und der Plan auf _c_. Coherence-Urteil: siehe Turn-Ende. Durchsicht: reviews/260812-1805-coderev-turn-2-der-runde-6.md, Bereich 34ab5b5..05797d7, zehn Defekte abgelegt. Grundlage: der Nutzer hat waehrend des Turns C5.10 ueberholt (Kurzhinweis statt Blaettern), der Datensatz 260812-1105 steht auf _s_, 260812-1809_a_ traegt die neue Antwort. Schritt 11 ist damit zurueckzunehmen. Sitzungsprotokoll: history/260812-1055-orchestrator-session.md
+
 ## Activation proposal
 
 **Vorgeschlagen am:** 260812-1027
