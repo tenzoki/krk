@@ -107,12 +107,14 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 /// ist seither nicht nachgezogen worden. Er steht nie zugleich mit der
 /// Vorschau (C1 der Editor-Runde), tritt aber an ihre Stelle mit 320 statt 160
 /// Punkten Mindestbreite; die Summe seines Vierersatzes ist 920. Zwischen 780
-/// und 920 Punkten Fensterbreite unterschreitet der Editor damit sein
-/// Mindestmass — [`crate::fenstermodell::bereichsbreiten`] gibt den festen
-/// Bereichen hoechstens so viel, dass den Dateifenstern ihres bleibt, und
-/// kuerzt ihn entsprechend. Ob die Untergrenze deshalb auf 940 steigen soll
-/// oder der Editor in diesem Band gedrueckt bleiben darf, ist eine Frage an den
-/// Nutzer und keine, die hier still beantwortet wird.
+/// und 920 Punkten Fensterbreite passen diese vier Mindestbreiten nicht mehr
+/// nebeneinander, und [`crate::fenstermodell::bereichsbreiten`] schickt dann
+/// **alle vier** mit demselben Faktor unter ihr Mindestmass. Bis zur
+/// Bereichsleisten-Runde traf es allein den Editor, weil die festen Bereiche
+/// der Reihe nach bedient wurden und er hinten stand. Ob die Untergrenze
+/// deshalb auf 940 steigen soll oder die Bereiche in diesem Band gedrueckt
+/// bleiben duerfen, ist eine Frage an den Nutzer und keine, die hier still
+/// beantwortet wird.
 const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0);
 
 /// Was das Hauptfenster haelt.

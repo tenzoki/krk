@@ -13,7 +13,7 @@
 //! │ Lesezei-  │ linkes           │ rechtes          │ Vorschau  │ Editor    │
 //! │ chen (C5) │ Dateifenster     │ Dateifenster     │ (C6)      │ (C1)      │
 //! └───────────┴──────────────────┴──────────────────┴───────────┴───────────┘
-//!    fest          beweglich          beweglich         fest        fest
+//!  min 120         min 240            min 240          min 160     min 320
 //! ```
 //!
 //! Vorschau und Editor teilen sich dieselbe Stelle am rechten Rand und sind
@@ -26,13 +26,23 @@
 //! Editor-Runde eingeloest, einschliesslich seines dritten Satzes: beide
 //! zugleich sichtbar zu haben ist ueber keinen Weg erreichbar.
 //!
-//! "Fest" und "beweglich" beziehen sich auf das Verteilen des Platzes: die
-//! beiden Randbereiche behalten ihre Breite, die beiden Dateifenster teilen
-//! sich, was uebrig bleibt. Das ist die Aufteilung, die C7 verlangt ("Die
-//! verbleibenden Bereiche nutzen den frei gewordenen Platz"), und sie macht
-//! zugleich die Zusage darunter einfach: eine gespeicherte Breite gilt auch
-//! fuer einen ausgeblendeten Bereich, also steht sie beim Wiedereinblenden
-//! wieder da.
+//! **Alle fuenf teilen sich die Zeile im Verhaeltnis ihrer gespeicherten
+//! Breiten**; die Regel steht in [`bereichsbreiten`], und die Zahl unter der
+//! Skizze ist das Mindestmass, das gegen den Anteil gewinnt. Eine gespeicherte
+//! Breite ist damit ein Wunsch und keine Zusage in Punkten: was ein Bereich
+//! bekommt, haengt daran, wer sonst noch steht und wie breit das Fenster ist.
+//! Das ist die Aufteilung, die C7 der Runde 1 verlangt ("Die verbleibenden
+//! Bereiche nutzen den frei gewordenen Platz"), und sie macht zugleich die
+//! Zusage darunter einfach: eine gespeicherte Breite gilt auch fuer einen
+//! ausgeblendeten Bereich, also steht sein Anteil beim Wiedereinblenden wieder
+//! da.
+//!
+//! Bis zur Bereichsleisten-Runde waren die drei Randbereiche "fest" und die
+//! beiden Dateifenster "beweglich": jene behielten ihre Punktzahl, diese
+//! teilten sich, was uebrig blieb. Die Zweiteilung ist weg, und mit ihr die
+//! Festlegung vom 260808, nach der die Lesezeichenleiste dem Editor nicht
+//! weicht — sie fiel allein daraus an, in welcher Reihenfolge die festen
+//! Bereiche bedient wurden.
 //!
 //! # Was das linke Dateifenster von den anderen unterscheidet
 //!
@@ -108,10 +118,10 @@ impl Bereich {
     /// Das Dateifenster dieses Bereichs, falls er eines ist.
     ///
     /// Die Umkehrung von [`Bereich::von_seite`] und **die eine Stelle, die
-    /// aufzaehlt, welche Bereiche Dateifenster sind**. [`Bereich::ist_beweglich`]
-    /// leitet sich daraus ab, statt die Liste ein zweites Mal zu fuehren: ein
-    /// Bereich teilt sich den frei werdenden Platz genau dann, wenn er ein
-    /// Dateifenster ist, und das ist der Grund und nicht nur die Beobachtung.
+    /// aufzaehlt, welche Bereiche Dateifenster sind**. Wer wissen will, welcher
+    /// Bereich das Gegenueber eines Dateifensters ist, fragt hier und fuehrt
+    /// die Liste nicht ein zweites Mal; [`Fenstermodell::breite_aendern`] tut
+    /// genau das.
     ///
     /// **Eine vollstaendige Fallunterscheidung und kein `matches!`.** Ein
     /// sechster Bereich haelt hier den Bau an und erzwingt die Einordnung, wie
@@ -136,10 +146,9 @@ impl Bereich {
     /// beanspruchen. Der Spec fuehrt sie unter `## Was die Abnahme
     /// mitentscheidet` als Ableitung, die der Nutzer am Gate umstossen kann.
     ///
-    /// Aus dem Ausschluss folgt, dass [`bereichsbreiten`] unveraendert bleibt:
-    /// hoechstens zwei feste Bereiche sind zugleich zu bedienen, wie vor der
-    /// Editor-Runde. Der Editor bekommt einen fuenften Platz in den Feldern und
-    /// keinen zweiten Rechenweg daneben.
+    /// Der Editor bekommt einen fuenften Platz in den Feldern und keinen
+    /// zweiten Rechenweg daneben: [`bereichsbreiten`] behandelt ihn wie jeden
+    /// anderen sichtbaren Bereich.
     ///
     /// Die Beziehung ist symmetrisch; die Probe `der_ausschluss_ist_gegenseitig`
     /// haelt es fest, damit ein einseitiger Eintrag nicht eine Richtung stumm
@@ -177,17 +186,18 @@ impl Bereich {
 
     /// Die Breite, mit der der Bereich beim allerersten Start aufgeht.
     ///
-    /// **Als Punktzahl gesetzt und nicht als Anteil gerechnet.** C1 der
-    /// Editor-Runde verlangt fuer den Editor "rund ein Drittel der
-    /// Fensterbreite"; ein Anteil an dieser Stelle waere ein zweiter Rechenweg
-    /// neben [`bereichsbreiten`], und die Runde 1 traegt fuer alle vier
-    /// bestehenden Bereiche ebenfalls Zahlen.
+    /// **Als Punktzahl gesetzt und nicht als Anteil geschrieben.** Sie ist der
+    /// Wunsch, mit dem ein Bereich in [`bereichsbreiten`] eingeht, solange
+    /// niemand eine Breite fuer ihn gespeichert hat; als Anteil geschrieben
+    /// waere sie eine zweite Waehrung neben den Punktzahlen in `session.toml`.
     ///
     /// Die 460 des Editors folgen aus den bestehenden vier: sie summieren sich
-    /// zu 1280, ein Drittel davon sind rund 427. Mit ausgeblendeter Vorschau
-    /// bleiben fuer die beiden Dateifenster 1280 minus 180 minus 460 gleich
-    /// 640, also 320 je Fenster gegen ihre Mindestbreite von 240. Die Zahl gilt
-    /// nur beim allerersten Start; danach gilt die Breite des Nutzers.
+    /// zu 1280, ein Drittel davon sind rund 427. C1 der Editor-Runde verlangt
+    /// "rund ein Drittel der Fensterbreite", und die Anteilsregel haelt das
+    /// ueber jede Fensterbreite hinweg: mit ausgeblendeter Vorschau wuenschen
+    /// die vier sichtbaren Bereiche zusammen 1480, der Editor bekommt also
+    /// 460/1480 der Zeile, knapp 31 Prozent. Die Zahl gilt nur beim
+    /// allerersten Start; danach gilt die Breite des Nutzers.
     pub const fn anfangsbreite(self) -> f64 {
         match self {
             Bereich::Lesezeichen => 180.0,
@@ -195,26 +205,6 @@ impl Bereich {
             Bereich::Vorschau => 260.0,
             Bereich::Editor => 460.0,
         }
-    }
-
-    /// Ob dieser Bereich sich den frei werdenden Platz teilt.
-    ///
-    /// Die beiden Dateifenster tun es, die festen Bereiche nicht.
-    ///
-    /// **Abgeleitet und nicht aufgezaehlt.** Bis zur Editor-Runde stand hier
-    /// `matches!(self, Links | Rechts)`, und ein neuer Bereich waere still als
-    /// unbeweglich durchgegangen — mit der richtigen Antwort, aber aus dem
-    /// falschen Grund. Danach stand hier eine eigene vollstaendige
-    /// Fallunterscheidung, die dieselbe Zweiteilung ein zweites Mal aufschrieb.
-    /// Seit dem 260809 fragt sie [`Bereich::seite`], und die Aufzaehlung steht
-    /// nur noch dort; die Antwort kommt weiterhin aus einer Zeile, die jemand
-    /// geschrieben hat, und der Uebersetzer haelt einen sechsten Bereich
-    /// weiterhin an.
-    ///
-    /// [`bereichsbreiten`] fragt hier nach, statt die Liste ein drittes Mal zu
-    /// fuehren.
-    const fn ist_beweglich(self) -> bool {
-        self.seite().is_some()
     }
 }
 
@@ -472,6 +462,16 @@ impl Fenstermodell {
     ///
     /// Am Mindestmass hoert der Schritt auf, statt es zu unterschreiten.
     ///
+    /// **Der Schritt gilt in gespeicherten Punkten und nicht in Punkten auf dem
+    /// Schirm.** Beide sind dieselbe Zahl, solange die Summe der gespeicherten
+    /// Breiten der sichtbaren Bereiche die verfuegbare Breite trifft; steht das
+    /// Fenster breiter, kommt der Schritt um denselben Faktor vergroessert an.
+    /// Seit die Breiten Anteile sind, faellt dieser Faktor nicht mehr von
+    /// selbst auf 1 zurueck, weil
+    /// [`Fenstermodell::breiten_uebernehmen`](Self::breiten_uebernehmen) die
+    /// gespeicherte Summe festhaelt. Der Datensatz dazu ist
+    /// `issues/260812-0439_*_der-breitenschritt-aus-c7-kommt-unter-der-anteilsregel-skaliert-auf-dem-schirm-an.md`.
+    ///
     /// **Das Gegenueber kommt aus [`Fensterseite::andere`]** und nicht aus einer
     /// eigenen Fallunterscheidung ueber [`Bereich`]. Bis zum 260809 stand hier
     /// ein `match` mit dem Auffangzweig `_ => Bereich::Links`; er gab die
@@ -506,25 +506,54 @@ impl Fenstermodell {
     /// Gerufen, bevor die Sitzung geschrieben wird und bevor ein Tastenbefehl
     /// eine Breite aendert: eine mit der Maus verschobene Trennlinie steht in
     /// den Rahmen der Ansichten und nirgends sonst. Ein ausgeblendeter Bereich
-    /// behaelt seine gespeicherte Breite, weil C7 verlangt, dass das
-    /// Wiedereinblenden sie herstellt.
+    /// bleibt unangetastet, weil C7 verlangt, dass das Wiedereinblenden seinen
+    /// Anteil herstellt.
     ///
-    /// **Die beiden Dateifenster bleiben unangetastet, solange nur eines von
-    /// ihnen sichtbar ist.** Das sichtbare traegt dann den Platz des anderen
-    /// mit, und diese Zahl zu uebernehmen hiesse, das Verhaeltnis der beiden
-    /// zueinander mit einem Wert zu ueberschreiben, in dem das andere gar nicht
-    /// vorkommt. Am 260804 im laufenden Buendel gemessen: das zweite
-    /// Dateifenster kam nach dem Wiedereinblenden auf 269 Punkten statt auf
-    /// seinen 406 zurueck, und das verfehlte die Zusage aus C7.
+    /// **Die gemessenen Punktzahlen werden auf die gespeicherte Summe
+    /// zurueckgerechnet und nicht roh uebernommen.** Eine gespeicherte Breite
+    /// ist ein Anteil (siehe [`bereichsbreiten`]), und ein Anteil gilt nur im
+    /// Verhaeltnis zu den uebrigen — auch zu denen, die gerade nicht stehen und
+    /// deren Zahl niemand nachfuehrt. Roh uebernommen wuechse die Summe der
+    /// sichtbaren mit jedem Ausblenden und mit jedem Groesserziehen des
+    /// Fensters, und die Zahl eines ausgeblendeten Bereichs schrumpfte gegen
+    /// sie zusammen. Der Faktor haelt beides: das Vergroessern des Fensters
+    /// aendert keine gespeicherte Breite, und ein wiedereingeblendeter Bereich
+    /// kommt auf seinem Anteil zurueck.
+    ///
+    /// **Der am 260804 im laufenden Buendel gemessene Fehler faellt damit aus
+    /// der Regel an und ist keine Sonderregel mehr.** Bis zur
+    /// Bereichsleisten-Runde stand hier eine Ausnahme fuer die beiden
+    /// Dateifenster: solange nur eines von ihnen sichtbar war, blieben beide
+    /// unangetastet, weil das sichtbare den Platz des anderen mittrug und
+    /// dieses sonst nach dem Wiedereinblenden auf 269 Punkten statt auf seinen
+    /// 406 zurueckkam. Unter der Anteilsregel gilt derselbe Fehler fuer jedes
+    /// Paar von Bereichen, weil jedes Ausblenden alle uebrigen aufblaeht; die
+    /// Ausnahme waere damit zu wenig, und der Faktor ist die allgemeine
+    /// Antwort.
+    ///
+    /// **Ein sichtbarer Bereich ohne gemessene Breite bleibt aussen vor**, in
+    /// beiden Summen und beim Setzen. Er steht im Modell schon und auf dem
+    /// Schirm noch nicht; seine 0 als Wunsch zu uebernehmen liesse ihn beim
+    /// naechsten Auslegen zusammenfallen.
     pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 5]) {
-        let beide_dateifenster = self.sichtbar(Bereich::Links) && self.sichtbar(Bereich::Rechts);
-        for bereich in Bereich::ALLE {
-            if bereich.ist_beweglich() && !beide_dateifenster {
-                continue;
-            }
-            if self.sichtbar(bereich) && gemessen[bereich.index()] > 0.0 {
-                self.breite_setzen(bereich, gemessen[bereich.index()]);
-            }
+        let nachzufuehren: Vec<Bereich> = Bereich::ALLE
+            .into_iter()
+            .filter(|bereich| self.sichtbar(*bereich) && gemessen[bereich.index()] > 0.0)
+            .collect();
+        let gespeichert: f64 = nachzufuehren
+            .iter()
+            .map(|bereich| self.breite_oder_anfang(*bereich))
+            .sum();
+        let gemessene_summe: f64 = nachzufuehren
+            .iter()
+            .map(|bereich| gemessen[bereich.index()])
+            .sum();
+        if gespeichert <= 0.0 || gemessene_summe <= 0.0 {
+            return;
+        }
+        let faktor = gespeichert / gemessene_summe;
+        for bereich in nachzufuehren {
+            self.breite_setzen(bereich, gemessen[bereich.index()] * faktor);
         }
     }
 
@@ -579,7 +608,35 @@ impl Fenstermodell {
     }
 }
 
-/// Verteilt den verfuegbaren Platz auf die fuenf Bereiche.
+/// Das Mass der Fensterzeile: ihre Breite und die einer Trennlinie.
+///
+/// **Die eine Stelle, an der "n sichtbare Bereiche brauchen n minus eine
+/// Trennlinie" gerechnet wird.** Bis zur Bereichsleisten-Runde stand die
+/// Rechnung in [`crate::appkit::aufteilung`], also dort, wo die beiden Zahlen
+/// aus AppKit kommen, und [`bereichsbreiten`] bekam allein das Ergebnis. Damit
+/// konnte das Modell nicht beantworten, was eine **andere** Anzahl sichtbarer
+/// Bereiche kosten wuerde — genau die Frage, die eine Abweisung an den
+/// Mindestbreiten stellen muss. Die Geometrie reist deshalb als Wert.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Zeilenmass {
+    /// Die volle Breite der Fensterzeile, die Trennlinien eingeschlossen.
+    pub gesamt: f64,
+    /// Die Breite einer Trennlinie zwischen zwei Bereichen.
+    pub trennerbreite: f64,
+}
+
+impl Zeilenmass {
+    /// Was den Bereichen bleibt, wenn `anzahl_sichtbar` von ihnen stehen.
+    ///
+    /// Zwischen n sichtbaren Bereichen liegen n minus eine Trennlinie; bei
+    /// keinem und bei einem liegt keine. Nie weniger als nichts.
+    pub fn verfuegbar(&self, anzahl_sichtbar: usize) -> f64 {
+        let trenner = self.trennerbreite * anzahl_sichtbar.saturating_sub(1) as f64;
+        (self.gesamt - trenner).max(0.0)
+    }
+}
+
+/// Verteilt den Platz der Fensterzeile auf die fuenf Bereiche.
 ///
 /// **Die eine Breitenregel des Programms.** Sie steht hier und nirgends sonst;
 /// [`crate::appkit::aufteilung`] setzt nur um, was hier herauskommt.
@@ -587,26 +644,36 @@ impl Fenstermodell {
 /// Ein ausgeblendeter Bereich bekommt `0.0`; seine gespeicherte Breite bleibt
 /// unangetastet und steht beim Wiedereinblenden wieder zur Verfuegung.
 ///
-/// Die Regel in drei Saetzen. Die festen Bereiche bekommen der Reihe nach ihre
-/// gespeicherte Breite, hoechstens aber so viel, dass fuer die Dateifenster
-/// deren Mindestbreite bleibt. Was danach uebrig ist, teilen die sichtbaren
-/// Dateifenster im Verhaeltnis ihrer gespeicherten Breiten. Ist nur eines
-/// sichtbar, bekommt es alles.
+/// # Ein Anteil je sichtbarem Bereich
 ///
-/// **Die Reihenfolge von [`Bereich::ALLE`] ist dabei eine Zusage und kein
-/// Zufall.** Die festen Bereiche werden in dieser Folge bedient, und wer vorn
-/// steht, behaelt seine Wunschbreite, wenn es eng wird. Daraus faellt die
-/// Festlegung des Nutzers vom 260808 ohne eine zweite Regel an: die
-/// Lesezeichenleiste steht vor dem Editor, also weicht sie nicht, wenn beide
-/// zugleich stehen, und die beiden Dateifenster ruecken zusammen. Erst wenn ihr
-/// Mindestmass erreicht ist, gibt der Editor nach.
+/// Jeder sichtbare Bereich geht mit einem **Wunsch** in die Rechnung: mit
+/// seiner gespeicherten Breite, ersatzweise mit seiner
+/// [`Bereich::anfangsbreite`]. Die verfuegbare Breite verteilt sich im
+/// Verhaeltnis dieser Wuensche. Eine gespeicherte Breite ist damit keine Zusage
+/// in Punkten, sondern ein Anteil: zwei Bereiche im Verhaeltnis 2:1 stehen auch
+/// dann noch so zueinander, wenn ein dritter dazukommt, und zwar gleich welche
+/// drei es sind.
 ///
-/// Dass die Dateifenster ueber ein **Verhaeltnis** und nicht ueber ihre
-/// absolute Zahl gehen, ist die Antwort auf zwei Fragen zugleich: eine
-/// Fenstervergroesserung kommt dort an, wo der Nutzer sie braucht, und die
-/// beiden Tastenbefehle aus C7 verschieben die Trennlinie, statt eine Breite zu
-/// setzen, die der naechste Bildaufbau wieder einkassiert.
-pub fn bereichsbreiten(verfuegbar: f64, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 5] {
+/// Zwei Zweige, und sie schliessen einander aus:
+///
+/// 1. **Die Mindestbreiten passen in die Zeile.** Dann gilt das Verhaeltnis,
+///    aber das Mindestmass gewinnt gegen den Anteil: wer unter sein Mindestmass
+///    gedrueckt wuerde, bekommt es, scheidet aus der Verteilung aus, und die
+///    uebrigen teilen den Rest weiter im Verhaeltnis ihrer Wuensche. Diese
+///    Wasserstandsrechnung endet nach hoechstens so vielen Durchgaengen, wie es
+///    sichtbare Bereiche gibt, weil jeder Durchgang mindestens einen
+///    herausnimmt.
+/// 2. **Sie passen nicht mehr hinein.** Dann bekommt jeder sichtbare Bereich
+///    sein Mindestmass mal dem Verhaeltnis von verfuegbarer Breite zu
+///    Mindestsumme, schrumpft also mit demselben Faktor wie alle anderen unter
+///    sein Mindestmass. Dieser Fall entsteht nicht durch einen Umschaltbefehl,
+///    sondern allein dadurch, dass der Nutzer das Fenster schmaler zieht, als
+///    die Mindestbreiten erlauben.
+///
+/// Die Summe der fuenf Werte ist in beiden Zweigen genau die verfuegbare
+/// Breite; dafuer bekommt der jeweils letzte Bereich den Rest und nicht seinen
+/// gerundeten Anteil (siehe [`anteilig`]).
+pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 5] {
     let modell = Fenstermodell {
         aktiv: Fensterseite::Links,
         breiten: *breiten,
@@ -614,66 +681,89 @@ pub fn bereichsbreiten(verfuegbar: f64, breiten: &Breiten, sichtbar: &Sichtbarke
     };
     let mut ergebnis = [0.0_f64; 5];
 
-    // Was die sichtbaren Dateifenster mindestens brauchen.
-    let mindestens_dateifenster: f64 = Bereich::ALLE
+    // Welche Bereiche etwas bekommen, sagt allein die Sichtbarkeit. Bis zur
+    // Editor-Runde stand hier die Literalliste der festen Bereiche als zweite
+    // Aufzaehlung daneben; seit der Anteilsregel gibt es keine festen Bereiche
+    // mehr, an denen eine solche Liste ansetzen koennte.
+    let sichtbare: Vec<Bereich> = Bereich::ALLE
+        .into_iter()
+        .filter(|bereich| modell.sichtbar(*bereich))
+        .collect();
+    if sichtbare.is_empty() {
+        // Ohne sichtbaren Bereich gibt es nichts zu verteilen. Der Fall tritt
+        // nicht ein: `Fenstermodell::umschalten` haelt ein Dateifenster.
+        return ergebnis;
+    }
+
+    let verfuegbar = mass.verfuegbar(sichtbare.len());
+    let mindestsumme: f64 = sichtbare
         .iter()
-        .filter(|bereich| bereich.ist_beweglich() && modell.sichtbar(**bereich))
         .map(|bereich| bereich.mindestbreite())
         .sum();
 
-    // Welche Bereiche fest stehen, sagt `ist_beweglich` und sonst niemand. Bis
-    // zur Editor-Runde stand hier die Literalliste
-    // `[Bereich::Lesezeichen, Bereich::Vorschau]` als zweite Aufzaehlung
-    // daneben: ein fuenfter fester Bereich, der dort fehlte, haette dauerhaft
-    // die Breite 0 bekommen, ohne dass der Uebersetzer etwas gesagt haette.
-    let mut rest = verfuegbar;
-    for bereich in Bereich::ALLE
-        .into_iter()
-        .filter(|bereich| !bereich.ist_beweglich() && modell.sichtbar(*bereich))
-    {
-        let gewuenscht = modell
-            .breite(bereich)
-            .unwrap_or_else(|| bereich.anfangsbreite())
-            .max(bereich.mindestbreite());
-        // Nie so viel, dass die Dateifenster unter ihr Mindestmass fallen.
-        let hoechstens = (rest - mindestens_dateifenster).max(0.0);
-        let breite = gewuenscht.min(hoechstens);
-        ergebnis[bereich.index()] = breite;
-        rest -= breite;
+    if verfuegbar < mindestsumme {
+        // Zweiter Zweig: alle schrumpfen mit demselben Faktor. `mindestsumme`
+        // ist dabei groesser als `verfuegbar` und damit groesser als 0.
+        let anteile: Vec<(Bereich, f64)> = sichtbare
+            .iter()
+            .map(|bereich| (*bereich, bereich.mindestbreite()))
+            .collect();
+        anteilig(&mut ergebnis, &anteile, verfuegbar);
+        return ergebnis;
     }
 
-    let beweglich: Vec<Bereich> = Bereich::ALLE
-        .into_iter()
-        .filter(|bereich| bereich.ist_beweglich() && modell.sichtbar(*bereich))
-        .collect();
-    let rest = rest.max(0.0);
-    match beweglich.as_slice() {
-        [eines] => ergebnis[eines.index()] = rest,
-        [links, rechts] => {
-            let wunsch_links = modell
-                .breite(*links)
-                .unwrap_or_else(|| links.anfangsbreite())
-                .max(1.0);
-            let wunsch_rechts = modell
-                .breite(*rechts)
-                .unwrap_or_else(|| rechts.anfangsbreite())
-                .max(1.0);
-            let anteil = wunsch_links / (wunsch_links + wunsch_rechts);
-            let mut breite_links = rest * anteil;
-            // Das Mindestmass gewinnt gegen das Verhaeltnis. Beide zugleich
-            // sind nur zu halten, solange das Fenster breit genug ist, und
-            // dafuer sorgt seine eigene Mindestgroesse.
-            breite_links = breite_links
-                .max(links.mindestbreite())
-                .min((rest - rechts.mindestbreite()).max(links.mindestbreite()));
-            ergebnis[links.index()] = breite_links;
-            ergebnis[rechts.index()] = (rest - breite_links).max(0.0);
+    // Der Wunsch eines Bereichs, nie kleiner als 1: ein Wunsch von 0 bekaeme
+    // keinen Anteil und nur ueber sein Mindestmass wieder Breite.
+    let wunsch = |bereich: Bereich| modell.breite_oder_anfang(bereich).max(1.0);
+
+    let mut offen = sichtbare;
+    let mut rest = verfuegbar;
+    loop {
+        let wunschsumme: f64 = offen.iter().map(|bereich| wunsch(*bereich)).sum();
+        let zu_klein: Vec<Bereich> = offen
+            .iter()
+            .copied()
+            .filter(|bereich| rest * wunsch(*bereich) / wunschsumme < bereich.mindestbreite())
+            .collect();
+        if zu_klein.is_empty() {
+            let anteile: Vec<(Bereich, f64)> = offen
+                .iter()
+                .map(|bereich| (*bereich, wunsch(*bereich)))
+                .collect();
+            anteilig(&mut ergebnis, &anteile, rest);
+            return ergebnis;
         }
-        // Ohne sichtbares Dateifenster gibt es nichts zu verteilen. Der Fall
-        // tritt nicht ein: `Fenstermodell::umschalten` weist ihn ab.
-        _ => {}
+        for bereich in &zu_klein {
+            ergebnis[bereich.index()] = bereich.mindestbreite();
+            rest -= bereich.mindestbreite();
+        }
+        // Jeder Durchgang nimmt mindestens einen Bereich heraus, also endet die
+        // Schleife. Dass nie alle zugleich herausfallen, folgt aus dem Zweig
+        // darueber: die Summe der Anteile ist der Rest, und der reicht fuer die
+        // Mindestbreiten der offenen Bereiche. Faellt der letzte doch heraus,
+        // trifft der naechste Durchgang auf eine leere Liste und bricht ab.
+        offen.retain(|bereich| !zu_klein.contains(bereich));
     }
-    ergebnis
+}
+
+/// Verteilt `gesamt` auf die genannten Bereiche im Verhaeltnis ihrer Gewichte.
+///
+/// **Der letzte bekommt den Rest und nicht seinen gerundeten Anteil.** Damit
+/// ist die Summe der ausgegebenen Breiten genau `gesamt` und nicht `gesamt`
+/// plus n Rundungsfehler. Die Aufteilung rechnet aus diesen Breiten die Lage
+/// jeder Trennlinie, und ein halber Punkt am rechten Rand waere dort zu sehen.
+fn anteilig(ergebnis: &mut [f64; 5], anteile: &[(Bereich, f64)], gesamt: f64) {
+    let Some(((letzter, _), vordere)) = anteile.split_last() else {
+        return;
+    };
+    let summe: f64 = anteile.iter().map(|(_, gewicht)| gewicht).sum();
+    let mut vergeben = 0.0;
+    for (bereich, gewicht) in vordere {
+        let breite = gesamt * gewicht / summe;
+        ergebnis[bereich.index()] = breite;
+        vergeben += breite;
+    }
+    ergebnis[letzter.index()] = gesamt - vergeben;
 }
 
 #[cfg(test)]
@@ -682,6 +772,55 @@ mod tests {
 
     fn modell() -> Fenstermodell {
         Fenstermodell::aus_sitzung(&Sitzung::default())
+    }
+
+    /// Ein Zeilenmass ohne Trennlinien.
+    ///
+    /// Die verfuegbare Breite ist dann die Fensterbreite, und die Zahlen dieser
+    /// Proben sind ohne Umrechnung zu lesen. Dass die Trennlinien abgezogen
+    /// werden, prueft `das_zeilenmass_zieht_je_trennlinie_ab`, und dass die
+    /// Summe auch mit ihnen aufgeht,
+    /// `die_summe_ist_immer_die_verfuegbare_breite`.
+    fn mass(gesamt: f64) -> Zeilenmass {
+        Zeilenmass {
+            gesamt,
+            trennerbreite: 0.0,
+        }
+    }
+
+    /// Vergleicht fuenf Breiten mit den erwarteten, auf einen tausendstel
+    /// Punkt genau.
+    ///
+    /// Die Anteilsregel liefert Bruchzahlen; ein `assert_eq!` auf die volle
+    /// Genauigkeit haenge an der letzten Stelle der Gleitkommarechnung.
+    #[track_caller]
+    fn breiten_gleich(ist: [f64; 5], soll: [f64; 5]) {
+        for bereich in Bereich::ALLE {
+            let a = ist[bereich.index()];
+            let b = soll[bereich.index()];
+            assert!(
+                (a - b).abs() < 0.001,
+                "{bereich:?}: {a} statt {b} (ist {ist:?}, soll {soll:?})"
+            );
+        }
+    }
+
+    /// Ein paar Lagen der Sichtbarkeit, ueber die eine Probe laufen kann.
+    fn bereichslagen() -> Vec<Fenstermodell> {
+        let mut mit_editor = modell();
+        mit_editor.umschalten(Bereich::Vorschau);
+        mit_editor.umschalten(Bereich::Editor);
+
+        let mut nur_dateifenster = modell();
+        nur_dateifenster.umschalten(Bereich::Lesezeichen);
+        nur_dateifenster.umschalten(Bereich::Vorschau);
+
+        let mut ein_dateifenster = modell();
+        ein_dateifenster.umschalten(Bereich::Rechts);
+        ein_dateifenster.umschalten(Bereich::Lesezeichen);
+        ein_dateifenster.umschalten(Bereich::Vorschau);
+
+        vec![modell(), mit_editor, nur_dateifenster, ein_dateifenster]
     }
 
     /// Der Auslieferungszustand zeigt die vier Bereiche der Runde 1 und
@@ -808,12 +947,22 @@ mod tests {
         );
     }
 
+    /// Eine gespeicherte Breite ueberlebt das Ausblenden, und das
+    /// Wiedereinblenden stellt denselben Anteil wieder her.
+    ///
+    /// Die Zusage aus C7, in der Waehrung der Anteilsregel gelesen: dieselbe
+    /// Punktzahl kommt zurueck, solange sich an der uebrigen Aufteilung nichts
+    /// geaendert hat. Die gespeicherte 200 selbst steht dabei nie auf dem
+    /// Schirm; sie ist ein Wunsch unter vieren.
     #[test]
     fn eine_ausgeblendete_breite_bleibt_erhalten() {
         let mut modell = modell();
         modell.breite_setzen(Bereich::Lesezeichen, 200.0);
+        let vorher = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
+        assert!(vorher[Bereich::Lesezeichen.index()] > 0.0, "{vorher:?}");
+
         modell.umschalten(Bereich::Lesezeichen);
-        let breiten = bereichsbreiten(1200.0, &modell.breiten(), &modell.sichtbarkeit());
+        let breiten = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
         assert_eq!(breiten[Bereich::Lesezeichen.index()], 0.0);
         assert_eq!(
             modell.breiten().lesezeichen,
@@ -822,30 +971,38 @@ mod tests {
         );
 
         modell.umschalten(Bereich::Lesezeichen);
-        let breiten = bereichsbreiten(1200.0, &modell.breiten(), &modell.sichtbarkeit());
-        assert_eq!(breiten[Bereich::Lesezeichen.index()], 200.0);
+        let nachher = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(nachher, vorher);
     }
 
+    /// Der Platz eines ausgeblendeten Bereichs geht an alle uebrigen
+    /// sichtbaren, im Verhaeltnis ihrer Wuensche.
+    ///
+    /// Bis zur Bereichsleisten-Runde bekamen ihn allein die beiden
+    /// Dateifenster, weil die festen Bereiche ihre Punktzahl behielten. Unter
+    /// der Anteilsregel waechst jeder sichtbare Bereich, und die Dateifenster
+    /// sind darunter.
     #[test]
-    fn der_frei_gewordene_platz_geht_an_die_dateifenster() {
+    fn der_frei_gewordene_platz_geht_an_die_uebrigen_bereiche() {
         let modell = modell();
-        let voll = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let voll = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
         let summe_voll: f64 = voll.iter().sum();
         assert!((summe_voll - 1400.0).abs() < 0.001, "{voll:?}");
 
         let mut ohne_vorschau = modell;
         ohne_vorschau.umschalten(Bereich::Vorschau);
         let jetzt = bereichsbreiten(
-            1400.0,
+            mass(1400.0),
             &ohne_vorschau.breiten(),
             &ohne_vorschau.sichtbarkeit(),
         );
         assert_eq!(jetzt[Bereich::Vorschau.index()], 0.0);
-        assert!(
-            jetzt[Bereich::Links.index()] > voll[Bereich::Links.index()],
-            "das linke Dateifenster hat nichts vom frei gewordenen Platz bekommen"
-        );
-        assert!(jetzt[Bereich::Rechts.index()] > voll[Bereich::Rechts.index()]);
+        for bereich in [Bereich::Lesezeichen, Bereich::Links, Bereich::Rechts] {
+            assert!(
+                jetzt[bereich.index()] > voll[bereich.index()],
+                "{bereich:?} hat nichts vom frei gewordenen Platz bekommen: voll {voll:?}, jetzt {jetzt:?}"
+            );
+        }
         let summe: f64 = jetzt.iter().sum();
         assert!((summe - 1400.0).abs() < 0.001, "{jetzt:?}");
     }
@@ -856,139 +1013,142 @@ mod tests {
         modell.umschalten(Bereich::Rechts);
         modell.umschalten(Bereich::Lesezeichen);
         modell.umschalten(Bereich::Vorschau);
-        let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let breiten = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
         assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0, 0.0]);
     }
 
-    /// Der eingeblendete Editor bekommt seine Breite, und die Dateifenster
-    /// teilen sich den Rest.
+    /// Der eingeblendete Editor bekommt seinen Anteil, und die uebrigen
+    /// bekommen ihren.
     ///
     /// Der Fall aus C1 der Editor-Runde: Editor sichtbar, Vorschau
-    /// ausgeblendet. Die Zahlen sind die des Auslieferungszustands.
+    /// ausgeblendet. Die vier sichtbaren Bereiche wuenschen zusammen 1480
+    /// Punkte (180, 420, 420, 460); bei 1280 Punkten Fensterbreite bekommt
+    /// jeder 32/37 seines Wunsches, und keiner faellt dabei unter sein
+    /// Mindestmass. Bis zur Bereichsleisten-Runde bekam der Editor seine
+    /// vollen 460 und die Dateifenster teilten sich, was uebrig blieb.
     #[test]
-    fn der_eingeblendete_editor_bekommt_seine_breite_und_die_dateifenster_den_rest() {
+    fn der_eingeblendete_editor_bekommt_seinen_anteil() {
         let mut modell = modell();
         modell.umschalten(Bereich::Vorschau);
         assert!(modell.umschalten(Bereich::Editor));
         assert!(modell.sichtbar(Bereich::Editor));
 
-        let breiten = bereichsbreiten(1280.0, &modell.breiten(), &modell.sichtbarkeit());
-        assert_eq!(breiten[Bereich::Vorschau.index()], 0.0);
-        assert_eq!(
-            breiten[Bereich::Editor.index()],
-            Bereich::Editor.anfangsbreite(),
-            "{breiten:?}"
-        );
-        assert_eq!(
-            breiten[Bereich::Lesezeichen.index()],
-            Bereich::Lesezeichen.anfangsbreite(),
-            "die Leiste steht vor dem Editor und weicht ihm nicht"
-        );
-        // Was Leiste und Editor uebrig lassen, teilen die beiden Dateifenster
-        // im Verhaeltnis ihrer gleichen Wunschbreiten, also je zur Haelfte.
-        assert!(
-            (breiten[Bereich::Links.index()] - 320.0).abs() < 0.001,
-            "{breiten:?}"
-        );
-        assert!(
-            (breiten[Bereich::Rechts.index()] - 320.0).abs() < 0.001,
-            "{breiten:?}"
-        );
+        let breiten = bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(breiten, [155.676, 363.243, 363.243, 0.0, 397.838]);
+        for bereich in Bereich::ALLE {
+            if !modell.sichtbar(bereich) {
+                continue;
+            }
+            assert!(
+                breiten[bereich.index()] >= bereich.mindestbreite(),
+                "{bereich:?} faellt unter sein Mindestmass: {breiten:?}"
+            );
+        }
         let summe: f64 = breiten.iter().sum();
         assert!((summe - 1280.0).abs() < 0.001, "{breiten:?}");
     }
 
-    /// Am engen Fenster gewinnt das Mindestmass der Dateifenster gegen die
-    /// Wunschbreite des Editors.
+    /// Am engen Fenster gewinnt das Mindestmass gegen den Anteil, und die
+    /// uebrigen teilen den Rest weiter im Verhaeltnis ihrer Wuensche.
     ///
-    /// Die Reihenfolge von `Bereich::ALLE` entscheidet, wer nachgibt: die
-    /// Leiste steht vorn und behaelt ihre Breite, der Editor steht hinten und
-    /// bekommt, was uebrig bleibt.
+    /// Die Wasserstandsrechnung, an dem Bereich gemessen, den sie zuerst
+    /// trifft: der Editor hat unter den fuenf das groesste Verhaeltnis von
+    /// Mindestmass zu Wunsch (320 zu 460) und faellt deshalb als erster auf
+    /// sein Mindestmass. Die restlichen 700 Punkte teilen Leiste und
+    /// Dateifenster im Verhaeltnis 180 zu 420 zu 420.
+    ///
+    /// **Wer nachgibt, entscheidet nicht mehr die Reihenfolge von
+    /// `Bereich::ALLE`.** Bis zur Bereichsleisten-Runde wurden die festen
+    /// Bereiche in dieser Folge bedient, und der Editor stand hinten.
     #[test]
-    fn am_engen_fenster_gewinnt_das_mindestmass_der_dateifenster() {
+    fn am_engen_fenster_gewinnt_das_mindestmass_gegen_den_anteil() {
         let mut modell = modell();
         modell.umschalten(Bereich::Vorschau);
         modell.umschalten(Bereich::Editor);
 
-        let breiten = bereichsbreiten(900.0, &modell.breiten(), &modell.sichtbarkeit());
+        let breiten = bereichsbreiten(mass(1020.0), &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(breiten, [123.529, 288.235, 288.235, 0.0, 320.0]);
         assert_eq!(
-            breiten,
-            [180.0, 240.0, 240.0, 0.0, 240.0],
-            "der Editor gibt nach, die Leiste und die Dateifenster nicht"
+            breiten[Bereich::Editor.index()],
+            Bereich::Editor.mindestbreite(),
+            "der Editor steht auf seinem Mindestmass: {breiten:?}"
         );
-        assert_eq!(
-            breiten[Bereich::Lesezeichen.index()],
-            Bereich::Lesezeichen.anfangsbreite(),
-            "{breiten:?}"
-        );
-        assert!(
-            breiten[Bereich::Links.index()] >= Bereich::Links.mindestbreite(),
-            "{breiten:?}"
-        );
-        assert!(
-            breiten[Bereich::Rechts.index()] >= Bereich::Rechts.mindestbreite(),
-            "{breiten:?}"
-        );
-        assert!(
-            breiten[Bereich::Editor.index()] < Bereich::Editor.anfangsbreite(),
-            "der Editor haette seine Wunschbreite auf Kosten der Dateifenster behalten: {breiten:?}"
-        );
+        for bereich in [Bereich::Lesezeichen, Bereich::Links, Bereich::Rechts] {
+            assert!(
+                breiten[bereich.index()] > bereich.mindestbreite(),
+                "{bereich:?} sollte ueber seinem Mindestmass stehen: {breiten:?}"
+            );
+        }
         let summe: f64 = breiten.iter().sum();
-        assert!((summe - 900.0).abs() < 0.001, "{breiten:?}");
+        assert!((summe - 1020.0).abs() < 0.001, "{breiten:?}");
     }
 
     /// Der ausgeblendete Editor bekommt 0 und behaelt seine gespeicherte
     /// Breite.
     ///
     /// Dieselbe Zusage aus C7, die schon fuer Leiste und Vorschau gilt: das
-    /// Wiedereinblenden stellt die vorherige Breite her.
+    /// Wiedereinblenden stellt den vorherigen Anteil her. Die gespeicherten 500
+    /// stehen dabei nie auf dem Schirm; sie sind der Wunsch, mit dem der Editor
+    /// in die Verteilung geht.
     #[test]
     fn der_ausgeblendete_editor_behaelt_seine_gespeicherte_breite() {
         let mut modell = modell();
         modell.umschalten(Bereich::Vorschau);
         modell.umschalten(Bereich::Editor);
         modell.breite_setzen(Bereich::Editor, 500.0);
+        let vorher = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
 
         modell.umschalten(Bereich::Editor);
         assert!(!modell.sichtbar(Bereich::Editor));
-        let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let breiten = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
         assert_eq!(breiten[Bereich::Editor.index()], 0.0, "{breiten:?}");
         assert_eq!(modell.breiten().editor, Some(500.0));
 
         modell.umschalten(Bereich::Editor);
-        let breiten = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
-        assert_eq!(breiten[Bereich::Editor.index()], 500.0, "{breiten:?}");
+        let nachher = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(nachher, vorher);
     }
 
-    /// Die Lesezeichenleiste weicht dem Editor nicht; die Dateifenster ruecken
-    /// zusammen.
+    /// Die Lesezeichenleiste teilt sich die Zeile mit dem Editor, statt ihm
+    /// vorzugehen.
     ///
-    /// Die Festlegung des Nutzers vom 260808. Sie faellt aus der bestehenden
-    /// Regel an, weil `Bereich::ALLE` die Leiste vor den Editor stellt; eine
-    /// zweite Breitenregel entsteht dafuer nicht.
+    /// **Die Festlegung des Nutzers vom 260808 gilt nicht mehr.** Sie fiel
+    /// allein daraus an, dass `Bereich::ALLE` die Leiste vor den Editor stellte
+    /// und die festen Bereiche in dieser Folge bedient wurden. Unter der
+    /// Anteilsregel gibt es keine Folge mehr: die offene Leiste kostet jeden
+    /// anderen sichtbaren Bereich seinen Anteil daran, den Editor
+    /// eingeschlossen.
     #[test]
-    fn die_leiste_weicht_dem_editor_nicht() {
+    fn die_leiste_schrumpft_mit_dem_editor() {
         let mut mit_leiste = modell();
         mit_leiste.umschalten(Bereich::Vorschau);
         mit_leiste.umschalten(Bereich::Editor);
-        let offen = bereichsbreiten(1280.0, &mit_leiste.breiten(), &mit_leiste.sichtbarkeit());
+        let offen = bereichsbreiten(
+            mass(1280.0),
+            &mit_leiste.breiten(),
+            &mit_leiste.sichtbarkeit(),
+        );
 
         let mut ohne_leiste = modell();
         ohne_leiste.umschalten(Bereich::Vorschau);
         ohne_leiste.umschalten(Bereich::Editor);
         ohne_leiste.umschalten(Bereich::Lesezeichen);
-        let zu = bereichsbreiten(1280.0, &ohne_leiste.breiten(), &ohne_leiste.sichtbarkeit());
+        let zu = bereichsbreiten(
+            mass(1280.0),
+            &ohne_leiste.breiten(),
+            &ohne_leiste.sichtbarkeit(),
+        );
 
-        // Die Zahlen ausgeschrieben, damit die Zusage nachlesbar ist und nicht
-        // nur als Ungleichung dasteht. 1280 ist die Summe der vier
-        // Anfangsbreiten der Runde 1.
-        assert_eq!(offen, [180.0, 320.0, 320.0, 0.0, 460.0], "Leiste offen");
-        assert_eq!(zu, [0.0, 410.0, 410.0, 0.0, 460.0], "Leiste geschlossen");
+        // Die Zahlen ausgeschrieben, damit die Regel nachlesbar ist und nicht
+        // nur als Ungleichung dasteht. Offen: 1280 Punkte auf die Wuensche
+        // 180 + 420 + 420 + 460 = 1480. Zu: 1280 Punkte auf 420 + 420 + 460 =
+        // 1300.
+        breiten_gleich(offen, [155.676, 363.243, 363.243, 0.0, 397.838]);
+        breiten_gleich(zu, [0.0, 413.538, 413.538, 0.0, 452.923]);
 
-        assert_eq!(
-            offen[Bereich::Editor.index()],
-            zu[Bereich::Editor.index()],
-            "die Leiste ist zu Lasten des Editors gegangen: offen {offen:?}, zu {zu:?}"
+        assert!(
+            zu[Bereich::Editor.index()] > offen[Bereich::Editor.index()],
+            "der Editor hat vom Platz der Leiste nichts bekommen: offen {offen:?}, zu {zu:?}"
         );
         assert!(
             zu[Bereich::Links.index()] > offen[Bereich::Links.index()],
@@ -997,32 +1157,42 @@ mod tests {
         assert!(zu[Bereich::Rechts.index()] > offen[Bereich::Rechts.index()]);
     }
 
-    /// Welche Bereiche fest stehen, sagt `ist_beweglich` und sonst niemand.
+    /// Welche Bereiche etwas bekommen, sagt die Sichtbarkeit und sonst
+    /// niemand.
     ///
     /// Die Probe zu Befund 6 des Editor-Plans: bis dahin fuehrte
     /// `bereichsbreiten` die festen Bereiche als Literalliste ein zweites Mal,
     /// und ein weiterer fester Bereich haette dort still gefehlt und dauerhaft
-    /// die Breite 0 bekommen. Solange das Fenster breit genug ist, bekommt
-    /// jeder feste, sichtbare Bereich seine Breite — hergeleitet aus
-    /// `ist_beweglich` und nicht aus einer Aufzaehlung im Rechenweg.
+    /// die Breite 0 bekommen. Seit der Anteilsregel gibt es keine festen
+    /// Bereiche mehr, an denen eine solche Liste ansetzen koennte: jeder
+    /// sichtbare geht mit seinem Wunsch in dieselbe Rechnung, jeder
+    /// ausgeblendete bekommt 0.
     #[test]
-    fn jeder_feste_bereich_bekommt_seine_breite_ohne_zweite_aufzaehlung() {
+    fn jeder_sichtbare_bereich_bekommt_seinen_anteil_ohne_zweite_aufzaehlung() {
         let modell = modell();
-        let breiten = bereichsbreiten(1600.0, &modell.breiten(), &modell.sichtbarkeit());
+        let breiten = bereichsbreiten(mass(1600.0), &modell.breiten(), &modell.sichtbarkeit());
         for bereich in Bereich::ALLE {
-            if bereich.ist_beweglich() || !modell.sichtbar(bereich) {
-                continue;
+            if modell.sichtbar(bereich) {
+                assert!(
+                    breiten[bereich.index()] >= bereich.mindestbreite(),
+                    "{bereich:?} ist sichtbar, bekommt aber nur {}: {breiten:?}",
+                    breiten[bereich.index()]
+                );
+            } else {
+                assert_eq!(
+                    breiten[bereich.index()],
+                    0.0,
+                    "{bereich:?} ist ausgeblendet: {breiten:?}"
+                );
             }
-            assert_eq!(
-                breiten[bereich.index()],
-                bereich.anfangsbreite(),
-                "{bereich:?} ist fest und sichtbar, bekommt aber nicht seine Breite"
-            );
         }
+        // 1600 Punkte auf die Wuensche 180 + 420 + 420 + 260 = 1280, also das
+        // 1,25-Fache jedes Wunsches.
+        breiten_gleich(breiten, [225.0, 525.0, 525.0, 325.0, 0.0]);
     }
 
-    /// Beweglich ist ein Bereich genau dann, wenn er ein Dateifenster ist, und
-    /// sein Gegenueber kommt aus [`Fensterseite::andere`].
+    /// Die Zuordnung von Bereich und Fensterseite laeuft in beide Richtungen,
+    /// und es gibt genau so viele Dateifenster wie Seiten.
     ///
     /// Die Probe zum Befund vom 260808: `breite_aendern` fuehrte den Partner
     /// ueber einen `match` mit `_ => Bereich::Links` und hat den fuenften
@@ -1030,13 +1200,8 @@ mod tests {
     /// `Bereich::seite`, und diese Probe haelt fest, dass sie mit
     /// `Bereich::von_seite` zusammenpasst.
     #[test]
-    fn beweglich_ist_genau_ein_dateifenster_und_die_zuordnung_laeuft_in_beide_richtungen() {
+    fn die_zuordnung_von_bereich_und_fensterseite_laeuft_in_beide_richtungen() {
         for bereich in Bereich::ALLE {
-            assert_eq!(
-                bereich.ist_beweglich(),
-                bereich.seite().is_some(),
-                "{bereich:?}"
-            );
             if let Some(seite) = bereich.seite() {
                 assert_eq!(Bereich::von_seite(seite), bereich, "{bereich:?}");
             }
@@ -1047,10 +1212,10 @@ mod tests {
         assert_eq!(
             Bereich::ALLE
                 .iter()
-                .filter(|bereich| bereich.ist_beweglich())
+                .filter(|bereich| bereich.seite().is_some())
                 .count(),
             Fensterseite::ALLE.len(),
-            "es gibt genau so viele bewegliche Bereiche wie Dateifenster"
+            "es gibt genau so viele Dateifenster wie Fensterseiten"
         );
     }
 
@@ -1081,19 +1246,30 @@ mod tests {
         );
     }
 
+    /// Kein sichtbarer Bereich faellt unter sein Mindestmass, solange die
+    /// Mindestbreiten zusammen noch hineinpassen.
+    ///
+    /// 800 Punkte sind eng, aber nicht zu eng: die vier Bereiche der Runde 1
+    /// brauchen mindestens 760. Der Anteil der Leiste faellt unter ihre 120,
+    /// sie bekommt ihr Mindestmass, und die uebrigen teilen die restlichen 680
+    /// weiter. Wird es noch enger, greift der zweite Zweig; den prueft
+    /// `unter_der_summe_der_mindestbreiten_schrumpfen_alle_mit_demselben_faktor`.
     #[test]
     fn kein_bereich_faellt_unter_sein_mindestmass() {
         let modell = modell();
-        // Enger, als die vier Mindestbreiten zusammen erlauben.
-        let breiten = bereichsbreiten(500.0, &modell.breiten(), &modell.sichtbarkeit());
-        assert!(
-            breiten[Bereich::Links.index()] >= Bereich::Links.mindestbreite(),
-            "{breiten:?}"
-        );
-        assert!(
-            breiten[Bereich::Rechts.index()] >= Bereich::Rechts.mindestbreite(),
-            "{breiten:?}"
-        );
+        let breiten = bereichsbreiten(mass(800.0), &modell.breiten(), &modell.sichtbarkeit());
+        for bereich in Bereich::ALLE {
+            if !modell.sichtbar(bereich) {
+                continue;
+            }
+            assert!(
+                breiten[bereich.index()] >= bereich.mindestbreite(),
+                "{bereich:?}: {breiten:?}"
+            );
+        }
+        breiten_gleich(breiten, [120.0, 259.636, 259.636, 160.727, 0.0]);
+        let summe: f64 = breiten.iter().sum();
+        assert!((summe - 800.0).abs() < 0.001, "{breiten:?}");
     }
 
     /// Der Tastenbefehl bewegt die Trennlinie um genau einen Schritt.
@@ -1101,18 +1277,26 @@ mod tests {
     /// Die Zahl im Modell und die Zahl auf dem Schirm muessen dieselbe sein.
     /// Bevor `breite_aendern` das andere Dateifenster mitzog, waren es 13
     /// Punkte statt 40, gemessen am 260804 im laufenden Buendel.
+    ///
+    /// **Gemessen wird bei 1280 Punkten, und das ist keine beliebige Zahl:**
+    /// dort trifft die Summe der gespeicherten Breiten die verfuegbare Breite,
+    /// und ein gespeicherter Punkt ist ein Punkt auf dem Schirm. Steht das
+    /// Fenster breiter, kommt der Schritt um den Faktor der Anteilsregel
+    /// vergroessert an; der Datensatz dazu ist
+    /// `issues/260812-0439_*_der-breitenschritt-aus-c7-kommt-unter-der-anteilsregel-skaliert-auf-dem-schirm-an.md`,
+    /// und der Kommentar an `breite_aendern` fuehrt ihn.
     #[test]
     fn der_tastenbefehl_verschiebt_die_trennlinie_um_genau_einen_schritt() {
         let mut modell = modell();
         modell.breiten_uebernehmen(bereichsbreiten(
-            1400.0,
+            mass(1280.0),
             &modell.breiten(),
             &modell.sichtbarkeit(),
         ));
-        let vorher = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let vorher = bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit());
 
         modell.breite_aendern(Bereich::Links, BREITENSCHRITT);
-        let nachher = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let nachher = bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit());
         assert!(
             (nachher[Bereich::Links.index()] - vorher[Bereich::Links.index()] - BREITENSCHRITT)
                 .abs()
@@ -1127,7 +1311,7 @@ mod tests {
         );
 
         modell.breite_aendern(Bereich::Links, -BREITENSCHRITT);
-        let zurueck = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let zurueck = bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit());
         assert!((zurueck[Bereich::Links.index()] - vorher[Bereich::Links.index()]).abs() < 0.001);
     }
 
@@ -1137,20 +1321,22 @@ mod tests {
     /// Der Fall, der die Zusage aus C7 am 260804 im laufenden Buendel verfehlt
     /// hat: das sichtbare Dateifenster traegt den Platz des ausgeblendeten mit,
     /// und diese Zahl darf nicht als sein Wunsch in das Modell zurueckfliessen.
+    /// Seit der Anteilsregel haelt das nicht mehr eine Ausnahme fuer die beiden
+    /// Dateifenster, sondern die Rueckrechnung in `breiten_uebernehmen`.
     #[test]
     fn das_wiedereingeblendete_dateifenster_hat_wieder_seine_alte_breite() {
         let mut modell = modell();
         modell.breiten_uebernehmen(bereichsbreiten(
-            1400.0,
+            mass(1400.0),
             &modell.breiten(),
             &modell.sichtbarkeit(),
         ));
-        let vorher = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let vorher = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
 
         modell.umschalten(Bereich::Rechts);
         // Der Bildaufbau schreibt die gemessenen Breiten zurueck, so wie es der
         // Sitzungsabgleich und jeder Breitenbefehl tun.
-        let alleine = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let alleine = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
         modell.breiten_uebernehmen(alleine);
         assert!(
             alleine[Bereich::Links.index()] > vorher[Bereich::Links.index()],
@@ -1158,12 +1344,181 @@ mod tests {
         );
 
         modell.umschalten(Bereich::Rechts);
-        let nachher = bereichsbreiten(1400.0, &modell.breiten(), &modell.sichtbarkeit());
+        let nachher = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
         assert!(
             (nachher[Bereich::Rechts.index()] - vorher[Bereich::Rechts.index()]).abs() < 0.001,
             "vorher {vorher:?}, nachher {nachher:?}"
         );
         assert!((nachher[Bereich::Links.index()] - vorher[Bereich::Links.index()]).abs() < 0.001);
+    }
+
+    /// Zwischen n sichtbaren Bereichen liegen n minus eine Trennlinie.
+    ///
+    /// Die Rechnung stand bis zur Bereichsleisten-Runde in
+    /// `appkit::aufteilung::auslegen` und damit an einer Stelle, die keine
+    /// Probe ohne Fenster erreicht.
+    #[test]
+    fn das_zeilenmass_zieht_je_trennlinie_ab() {
+        let mass = Zeilenmass {
+            gesamt: 1000.0,
+            trennerbreite: 8.0,
+        };
+        assert_eq!(mass.verfuegbar(0), 1000.0, "kein Bereich, keine Trennlinie");
+        assert_eq!(mass.verfuegbar(1), 1000.0, "ein Bereich, keine Trennlinie");
+        assert_eq!(mass.verfuegbar(2), 992.0);
+        assert_eq!(mass.verfuegbar(5), 968.0);
+        assert_eq!(
+            Zeilenmass {
+                gesamt: 10.0,
+                trennerbreite: 8.0,
+            }
+            .verfuegbar(5),
+            0.0,
+            "nie weniger als nichts"
+        );
+    }
+
+    /// Zwei Bereiche im Verhaeltnis 2:1 stehen nach dem Einblenden eines
+    /// dritten weiterhin im Verhaeltnis 2:1.
+    ///
+    /// Die Zusage, um die es der Directive dieser Runde geht. Sie gilt fuer
+    /// jedes Paar und nicht nur fuer die beiden Dateifenster: hier sind es die
+    /// Lesezeichenleiste und das linke Dateifenster, die bis zur
+    /// Bereichsleisten-Runde in verschiedenen Zweigen der Rechnung lagen.
+    #[test]
+    fn das_verhaeltnis_zweier_bereiche_ueberlebt_das_einblenden_eines_dritten() {
+        let mut modell = modell();
+        modell.umschalten(Bereich::Rechts);
+        modell.umschalten(Bereich::Vorschau);
+        modell.breite_setzen(Bereich::Lesezeichen, 400.0);
+        modell.breite_setzen(Bereich::Links, 200.0);
+
+        let verhaeltnis = |breiten: [f64; 5]| {
+            breiten[Bereich::Lesezeichen.index()] / breiten[Bereich::Links.index()]
+        };
+
+        let zwei = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(zwei, [800.0, 400.0, 0.0, 0.0, 0.0]);
+        assert!((verhaeltnis(zwei) - 2.0).abs() < 0.001, "{zwei:?}");
+
+        modell.umschalten(Bereich::Vorschau);
+        let drei = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
+        assert!(drei[Bereich::Vorschau.index()] > 0.0, "{drei:?}");
+        assert!(
+            (verhaeltnis(drei) - 2.0).abs() < 0.001,
+            "das Verhaeltnis hat sich verschoben: zu zweit {zwei:?}, zu dritt {drei:?}"
+        );
+        assert!(
+            drei[Bereich::Lesezeichen.index()] < zwei[Bereich::Lesezeichen.index()],
+            "der dritte Bereich hat nichts gekostet: {drei:?}"
+        );
+    }
+
+    /// Die Summe der fuenf Breiten ist immer genau die verfuegbare Breite.
+    ///
+    /// Ueber vier Lagen der Sichtbarkeit, fuenf Fensterbreiten und drei
+    /// Trennlinienbreiten, also auch weit unter der Summe der Mindestbreiten.
+    /// Die Aufteilung rechnet aus diesen Breiten die Lage jeder Trennlinie; ein
+    /// halber Punkt zu viel oder zu wenig waere am rechten Rand zu sehen.
+    #[test]
+    fn die_summe_ist_immer_die_verfuegbare_breite() {
+        for gesamt in [500.0, 780.0, 1000.0, 1280.0, 2400.0] {
+            for trennerbreite in [0.0, 1.0, 8.0] {
+                let mass = Zeilenmass {
+                    gesamt,
+                    trennerbreite,
+                };
+                for lage in bereichslagen() {
+                    let breiten = bereichsbreiten(mass, &lage.breiten(), &lage.sichtbarkeit());
+                    let sichtbare = Bereich::ALLE
+                        .iter()
+                        .filter(|bereich| lage.sichtbar(**bereich))
+                        .count();
+                    let summe: f64 = breiten.iter().sum();
+                    let verfuegbar = mass.verfuegbar(sichtbare);
+                    assert!(
+                        (summe - verfuegbar).abs() < 0.001,
+                        "{summe} statt {verfuegbar} bei {mass:?}, {sichtbare} sichtbaren: {breiten:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Passt die Summe der Mindestbreiten nicht mehr in die Zeile, schrumpfen
+    /// alle sichtbaren Bereiche mit demselben Faktor unter ihr Mindestmass.
+    ///
+    /// Der zweite Zweig der Regel. Er entsteht nicht durch einen
+    /// Umschaltbefehl, sondern allein dadurch, dass der Nutzer das Fenster
+    /// schmaler zieht als die Mindestbreiten erlauben; bei den vier Bereichen
+    /// der Runde 1 sind das 760 Punkte.
+    #[test]
+    fn unter_der_summe_der_mindestbreiten_schrumpfen_alle_mit_demselben_faktor() {
+        let modell = modell();
+        let breiten = bereichsbreiten(mass(600.0), &modell.breiten(), &modell.sichtbarkeit());
+        let faktor = 600.0 / 760.0;
+        breiten_gleich(
+            breiten,
+            [
+                120.0 * faktor,
+                240.0 * faktor,
+                240.0 * faktor,
+                160.0 * faktor,
+                0.0,
+            ],
+        );
+        for bereich in Bereich::ALLE {
+            if !modell.sichtbar(bereich) {
+                continue;
+            }
+            assert!(
+                breiten[bereich.index()] < bereich.mindestbreite(),
+                "{bereich:?} steht noch auf seinem Mindestmass: {breiten:?}"
+            );
+        }
+        let summe: f64 = breiten.iter().sum();
+        assert!((summe - 600.0).abs() < 0.001, "{breiten:?}");
+    }
+
+    /// Das Vergroessern des Fensters aendert keine gespeicherte Breite.
+    ///
+    /// Der Nachzug rechnet die gemessenen Breiten auf die gespeicherte Summe
+    /// zurueck. Ohne diese Rueckrechnung wuechse die Zahl jedes sichtbaren
+    /// Bereichs mit dem Fenster, und die des ausgeblendeten Editors schrumpfte
+    /// gegen sie zusammen: sein Anteil beim naechsten Einblenden waere ein
+    /// anderer, obwohl niemand ihn angefasst hat.
+    #[test]
+    fn das_vergroessern_des_fensters_laesst_die_gespeicherten_breiten_stehen() {
+        let mut modell = modell();
+        modell.breite_setzen(Bereich::Editor, 500.0);
+        modell.breiten_uebernehmen(bereichsbreiten(
+            mass(1280.0),
+            &modell.breiten(),
+            &modell.sichtbarkeit(),
+        ));
+        let vorher: Vec<f64> = Bereich::ALLE
+            .iter()
+            .map(|bereich| modell.breite_oder_anfang(*bereich))
+            .collect();
+
+        // Der Nutzer zieht das Fenster von 1280 auf 2000 Punkte auf, und der
+        // naechste Befehl misst nach, bevor er das Modell anfasst.
+        let gemessen = bereichsbreiten(mass(2000.0), &modell.breiten(), &modell.sichtbarkeit());
+        modell.breiten_uebernehmen(gemessen);
+
+        for bereich in Bereich::ALLE {
+            let jetzt = modell.breite_oder_anfang(bereich);
+            let damals = vorher[bereich.index()];
+            assert!(
+                (jetzt - damals).abs() < 0.001,
+                "{bereich:?}: {jetzt} statt {damals}"
+            );
+        }
+        assert_eq!(
+            modell.breiten().editor,
+            Some(500.0),
+            "der ausgeblendete Editor bleibt unangetastet"
+        );
     }
 
     /// Der Ausschluss aus C1 ist gegenseitig, und die Zuordnung sagt es in

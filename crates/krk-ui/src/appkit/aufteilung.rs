@@ -83,7 +83,7 @@ use objc2_foundation::{
 
 use krk_core::ablage::{Breiten, Fensterseite, Sichtbarkeit};
 
-use crate::fenstermodell::Bereich;
+use crate::fenstermodell::{Bereich, Zeilenmass};
 use crate::kommandos::fokus::{Fokus, Rahmenrolle, rahmenrolle};
 
 use super::statuszeile;
@@ -500,16 +500,23 @@ fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
 /// Damit sagen Zaehler, Zuteilung und Schleife dasselbe: die Schleife
 /// ueberspringt eine fehlende Unteransicht nicht mehr als Ausnahme, sondern
 /// findet dort ohnehin die Breite 0.
+///
+/// **Gezaehlt wird seit der Bereichsleisten-Runde nicht mehr hier.** Diese
+/// Funktion reicht mit [`Zeilenmass`] allein die Geometrie der Zeile weiter,
+/// also die beiden Zahlen, die nur AppKit kennt; wie viele Trennlinien zwischen
+/// den sichtbaren Bereichen liegen, rechnet
+/// [`bereichsbreiten`](crate::fenstermodell::bereichsbreiten) aus derselben
+/// [`Sichtbarkeit`], aus der es auch die Zuteilung rechnet. Vorher stand die
+/// Rechnung hier und die Zuteilung dort, und beide mussten dieselbe Menge
+/// meinen.
 fn auslegen(teiler: &NSSplitView, breiten: &Breiten) {
     let gesamt = teiler.frame().size;
     let sichtbar = &gemessene_sichtbarkeit(teiler);
-    let sichtbare = Bereich::ALLE
-        .iter()
-        .filter(|bereich| sichtbar_im(sichtbar, **bereich))
-        .count();
-    let trenner = teiler.dividerThickness() * (sichtbare.saturating_sub(1)) as f64;
-    let verfuegbar = (gesamt.width - trenner).max(0.0);
-    let zugeteilt = crate::fenstermodell::bereichsbreiten(verfuegbar, breiten, sichtbar);
+    let mass = Zeilenmass {
+        gesamt: gesamt.width,
+        trennerbreite: teiler.dividerThickness(),
+    };
+    let zugeteilt = crate::fenstermodell::bereichsbreiten(mass, breiten, sichtbar);
 
     let mut links = 0.0;
     for bereich in Bereich::ALLE {
