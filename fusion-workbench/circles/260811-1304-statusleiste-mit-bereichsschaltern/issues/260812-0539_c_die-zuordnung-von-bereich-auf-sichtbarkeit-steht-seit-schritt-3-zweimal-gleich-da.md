@@ -56,3 +56,27 @@ fängt es zwar ab, aber der Kommentar hat dann bereits in die falsche Richtung g
 `steht_im` (`aufteilung.rs:441`) bleibt, wovon dieser Datensatz nicht handelt: es fragt die
 Unteransichten und nicht eine `Sichtbarkeit`, beantwortet also eine andere Frage. Sein Kommentar
 sagt das schon heute richtig.
+
+---
+
+Resolved: 260812-0700, coder. `aufteilung::sichtbar_im` ist ersatzlos entfallen, samt seinem
+Dokumentationskommentar; der eine Aufrufer in `Aufteilung::anwenden` ruft jetzt
+`fenstermodell::sichtbar_in`, das der `use`-Zeile hinzugefügt ist. Damit stimmt der Satz „Die eine
+Zuordnung" an jener Funktion wieder wörtlich, und er sagt seit dieser Änderung auch, dass es
+einmal zwei waren und warum.
+
+`steht_im` bleibt, wie der Datensatz es abgrenzt: es fragt die Unteransichten und nicht eine
+`Sichtbarkeit`.
+
+**Eine Probe hält es fest:**
+`fenstermodell::tests::die_zuordnung_von_bereich_auf_sichtbarkeit_trifft_jedes_feld` setzt der
+Reihe nach genau ein Feld und verlangt, dass `sichtbar_in` für alle fünf Bereiche antwortet und
+keine zwei auf dasselbe Feld zeigen. Ein sechster Bereich hält weiterhin den Bau an, jetzt aber an
+einer Stelle statt an zweien.
+
+**Bei der Gelegenheit ist eine zweite Zuordnung derselben Art zusammengelegt worden**, die noch
+niemand gemeldet hatte: `Fenstermodell::breite` schrieb die Abbildung von einem `Bereich` auf sein
+Feld in `Breiten` aus, und `wuensche_nachfuehren` hätte sie ein zweites Mal gebraucht. Sie steht
+jetzt als freie Funktion `breite_in` neben `sichtbar_in`, und die Methode ruft sie.
+
+Abgenommen mit `make check`, exit 0.

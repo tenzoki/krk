@@ -87,3 +87,80 @@ nicht:
 
 Weg 1 und Weg 2 schließen einander nicht aus, und Weg 1 ist bereits eine offene Nutzerfrage. Die
 Reihenfolge ist deshalb: erst die Nutzerfrage beantworten, dann bauen.
+
+---
+
+Resolved: 260812-0700, coder. **Ein vierter Weg, und er ist keiner der drei benannten.** Die drei
+lauteten: den zweiten Zweig unerreichbar machen (vom Nutzer am 260812-0430 abgelehnt), den Rückweg
+abschneiden (kostet die Zusage, dass eine Ziehbewegung die Größenänderung übersteht), oder nichts
+tun. Der gegangene Weg schneidet den Rückweg nicht ab, sondern **fragt vorher, ob überhaupt etwas
+zurückzulesen ist**.
+
+## Die Regel, in einem Satz
+
+*Vom Schirm wird nur zurückgelesen, was die Regel nicht selbst ausgelegt hat.*
+
+Der Grund, aus dem das die richtige Frage ist: die Rückrechnung gibt es allein deshalb, weil eine
+mit der Maus verschobene Trennlinie in den Rahmen der Ansichten steht und nirgends sonst. Alles
+andere auf dem Schirm ist die Ausgabe von `bereichsbreiten` selbst, und die als deren Eingabe
+wieder einzuspeisen ist genau die Stelle, an der die Schleife ihre Neutralität verliert, sobald
+gedeckelt wird.
+
+**Die Frage ist damit entscheidbar, und die naheliegende wäre es nicht.** „Ist die Abbildung
+zwischen Wunsch und Bildschirmpunkt umkehrbar?" lässt sich aus den Rahmen allein nicht beantworten:
+ein Bereich, der genau auf seinem Mindestmaß steht, kann dort gedeckelt worden sein oder vom Nutzer
+hingezogen. Die engere Frage „steht dort etwas anderes, als das Auslegen hingeschrieben hat?" kennt
+diesen Zweifel nicht.
+
+## Was gebaut ist
+
+- `fenstermodell::traegt_eine_ziehbewegung` (neu, privat) rechnet die Zeile aus den gehaltenen
+  Breiten aus und vergleicht sie mit der gemessenen. Der Spielraum ist ein Viertelpunkt
+  (`ZIEHSPIELRAUM`): unter dem kleinsten Schritt, mit dem sich eine Trennlinie ziehen lässt, und
+  über dem, was ein Runden der Rahmen hinterließe.
+- `Fenstermodell::breiten_uebernehmen` nimmt jetzt das `Zeilenmass` als zweiten Parameter und kehrt
+  ohne Wirkung zurück, wenn die gemessene Zeile keine Ziehbewegung trägt. Das schließt den **Weg
+  über das Modell**.
+- `fenstermodell::wuensche_nachfuehren` (neu, öffentlich) beantwortet dieselbe Frage für das
+  Auslegen und steht im Fenstermodell, damit sie ohne Fenster prüfbar ist.
+- `appkit::aufteilung`: der Delegierte hält die Wünsche jetzt selbst
+  (`AufteilungsIvars::wuensche`), statt sie aus den Rahmen der Unteransichten zurückzulesen.
+  `neu_auslegen` fragt `wuensche_nachfuehren` und benutzt dafür endlich `alte_groesse` — die
+  gemessenen Breiten sind unter der **alten** Zeilenbreite entstanden, und nur an ihr gemessen
+  lässt sich sagen, ob sie von der Regel stammen. Das schließt den **Weg über den Schirm**.
+  `Aufteilung::anwenden` trägt den Wunsch des Fenstermodells in dasselbe Feld ein.
+
+**Der Rahmen war der falsche Speicher, und das ist die Ursache hinter beiden Wegen.** Er trägt
+unter einer Deckelung die Deckelung und nicht mehr den Wunsch. Es entsteht dadurch kein Rückweg vom
+Delegierten in das Fenstermodell und kein Ring: er hält einen Wert, keine Sicht auf das Modell.
+
+**Die Zusage aus dem Modulkopf bleibt.** Eine mit der Maus verschobene Trennlinie steht anders im
+Rahmen, als die Regel sie hingeschrieben hat, gilt also als Ziehbewegung und wird übernommen —
+auch dann, wenn sie an einem Mindestmaß endet.
+
+## Nachgerechnet und geprobt
+
+Die Zahlen des Datensatzes sind vor der Änderung mit einem eigenen Nachbau außerhalb des Baums
+nachgerechnet und gehen auf: 1280 → 780 → 1280 liefert `[166.57, 333.13, 333.13, 0.00, 444.17]`
+statt `[155.31, 362.39, 362.39, 0.00, 396.91]`, die Dateifenster also 8,1 Prozent schmaler und der
+Editor 11,9 Prozent breiter.
+
+Drei Proben in `crates/krk-ui/src/fenstermodell.rs`:
+
+- `ein_zusammengezogenes_fenster_laesst_die_gespeicherten_breiten_stehen` — bei 600 Punkten steht
+  das 600/760-Fache der Mindestbreiten auf dem Schirm; das Nachlesen lässt das Modell unangetastet.
+  Gegengeprobt: ohne die Frage schreibt es `[202.11, 404.21, 404.21, 269.47]`.
+- `ein_hin_und_her_am_fensterrand_stellt_die_aufteilung_wieder_her` — 1280 → 600 → 1280 über
+  dieselbe Folge von Aufrufen, die die Aufteilung fährt, nur ohne Fenster. Es kommt
+  `[180, 420, 420, 260]` zurück. Gegengeprobt: ohne die Frage `[202.11, 404.21, 404.21, 269.47]`.
+- `eine_mit_der_maus_verschobene_trennlinie_gilt_als_neuer_wunsch` — die Gegenprobe zur
+  Über-Vorsicht: eine um 60 Punkte verschobene Linie überlebt den Sprung auf 1600 Punkte
+  (`[225, 600, 450, 325]`).
+
+**Was ohne Fenster nicht zu prüfen ist**, steht hier ausdrücklich: ob AppKit die Rahmen der
+Unteransichten unverändert stehen lässt, nachdem `auslegen` sie gesetzt hat. Tut es das nicht,
+sieht jede Größenänderung wie eine Ziehbewegung aus, und das Verhalten fällt auf das von vor dem
+260812 zurück — also auf diesen Defekt, nicht auf einen schlimmeren. Die Wahl des Spielraums fällt
+damit auf die sichere Seite.
+
+Abgenommen mit `make check`, exit 0.

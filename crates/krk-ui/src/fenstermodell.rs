@@ -251,6 +251,13 @@ impl Bereich {
 /// vergleicht die Sichtbarkeit vor und nach einem Aufruf, um zu erfahren,
 /// **welche** Bereiche er bewegt hat. Seit dem gegenseitigen Ausschluss aus C1
 /// koennen es zwei sein.
+///
+/// **"Die eine" gilt seit dem 260812 wieder wortwoertlich.**
+/// [`crate::appkit::aufteilung`] fuehrte bis dahin eine zweite Fassung
+/// (`sichtbar_im`), die sich anfangs in einem Zweig unterschied; als Schritt 3
+/// der Bereichsleisten-Runde diesen Unterschied beseitigte, standen beide Zeile
+/// fuer Zeile gleich da. Die Aufteilung ruft jetzt diese hier
+/// (`issues/260812-0539_*_die-zuordnung-von-bereich-auf-sichtbarkeit-steht-seit-schritt-3-zweimal-gleich-da.md`).
 pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
@@ -258,6 +265,25 @@ pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
         Bereich::Rechts => sichtbar.zweites_dateifenster,
         Bereich::Vorschau => sichtbar.vorschau,
         Bereich::Editor => sichtbar.editor,
+    }
+}
+
+/// Die Breite, die diese [`Breiten`] fuer den Bereich tragen.
+///
+/// **Die eine Zuordnung von einem [`Bereich`] auf sein Feld in [`Breiten`]**,
+/// die Leseseite zu [`Fenstermodell::breite_setzen`] und die Schwester von
+/// [`sichtbar_in`] daneben. [`Fenstermodell::breite`] fragt hier nach, statt
+/// die Zuordnung ein zweites Mal aufzuschreiben.
+///
+/// `None` heisst "noch nie gesetzt"; wer stattdessen die Anfangsbreite will,
+/// nimmt [`Fenstermodell::breite_oder_anfang`].
+fn breite_in(breiten: &Breiten, bereich: Bereich) -> Option<f64> {
+    match bereich {
+        Bereich::Lesezeichen => breiten.lesezeichen,
+        Bereich::Links => breiten.links,
+        Bereich::Rechts => breiten.rechts,
+        Bereich::Vorschau => breiten.vorschau,
+        Bereich::Editor => breiten.editor,
     }
 }
 
@@ -674,6 +700,19 @@ impl Fenstermodell {
     /// 260804 im laufenden Buendel: 40 Punkte Zuwachs bewegten die Linie um 13.
     ///
     /// Am Mindestmass hoert der Schritt auf, statt es zu unterschreiten.
+    /// **Passen die beiden Mindestmasse gar nicht mehr nebeneinander, bleibt
+    /// der Befehl ohne Wirkung** — es gibt dann keine Lage der Trennlinie, die
+    /// beide haelt, und dieselbe Antwort gibt der Schirm ohnehin. Das ist
+    /// dieselbe Antwort wie bei einem einzigen sichtbaren Dateifenster.
+    ///
+    /// Bis zum 260812 fehlte diese Feststellung, und die Deckelungskette
+    /// unterstellte sie stillschweigend: liegt die untere Schranke ueber der
+    /// oberen, gewinnt `.max()` ueber `.min()`, und das Vorzeichen des Betrags
+    /// spielt keine Rolle mehr. `opt+cmd+links` und `opt+cmd+rechts` taten dann
+    /// dasselbe und beide das Gegenteil ihres Namens; bei 780 Punkten
+    /// Fensterbreite mit sichtbarem Editor waren es 71,05 Punkte statt der 40,
+    /// die C4.9 zusagt. Der Datensatz ist
+    /// `issues/260812-0539_*_die-breitenbefehle-aus-c7-wirken-unter-der-mindestsumme-in-die-falsche-richtung.md`.
     ///
     /// **Der Schritt gilt in Punkten auf dem Schirm und wird hier in
     /// gespeicherte Punkte umgerechnet**, ueber [`Self::massstab`] und mit ihm
@@ -719,9 +758,18 @@ impl Fenstermodell {
             }
             let hier = self.breite_oder_anfang(bereich);
             let dort = self.breite_oder_anfang(anderer);
-            let betrag = betrag
-                .min(dort - mindestmass(anderer))
-                .max(mindestmass(bereich) - hier);
+            // So viel kann das andere Dateifenster hoechstens abgeben, und so
+            // viel muss dieses mindestens bekommen. Liegt die untere Schranke
+            // ueber der oberen, passen die beiden Mindestmasse nicht
+            // nebeneinander: keine Lage der Trennlinie haelt beide, und der
+            // Befehl bleibt ohne Wirkung. Ohne diese Feststellung gewaenne
+            // `.max()` ueber `.min()`, und beide Richtungen taeten dasselbe.
+            let obergrenze = dort - mindestmass(anderer);
+            let untergrenze = mindestmass(bereich) - hier;
+            if untergrenze > obergrenze {
+                return;
+            }
+            let betrag = betrag.min(obergrenze).max(untergrenze);
             self.breite_setzen(bereich, hier + betrag);
             self.breite_setzen(anderer, dort - betrag);
             return;
@@ -741,10 +789,16 @@ impl Fenstermodell {
     ///
     /// Er gilt genau, solange kein sichtbarer Bereich an seinem Mindestmass
     /// haengt; dort ist die Abbildung nicht mehr linear, weil ein gedeckelter
-    /// Bereich seinen Anteil nicht mehr mitbewegt. Der Fall ist benannt und
-    /// nicht behandelt: eine Sonderregel dafuer waere ein zweiter Rechenweg
-    /// neben [`bereichsbreiten`], und die eine Regel ist mehr wert als ein
-    /// genauer Sonderfall.
+    /// Bereich seinen Anteil nicht mehr mitbewegt. **Der Schritt wird dadurch
+    /// ungenau, und das bleibt so**: eine Sonderregel dafuer waere ein zweiter
+    /// Rechenweg neben [`bereichsbreiten`], und die eine Regel ist mehr wert
+    /// als ein genauer Sonderfall.
+    ///
+    /// **Ungenau ist nicht dasselbe wie falsch herum**, und der zweite Fall ist
+    /// seit dem 260812 behandelt: dass die Deckelung in
+    /// [`Self::breite_aendern`] das Vorzeichen des Betrags verschluckt, faengt
+    /// dort die Feststellung ab, ob die beiden Mindestmasse ueberhaupt
+    /// nebeneinander passen. Dieser Faktor bleibt davon unberuehrt.
     ///
     /// Ohne verfuegbare Breite oder ohne gespeicherte Summe ist er 1. Es gibt
     /// dann keinen Schirm, auf dem ein Unterschied zu sehen waere, und ein
@@ -796,7 +850,21 @@ impl Fenstermodell {
     /// beiden Summen und beim Setzen. Er steht im Modell schon und auf dem
     /// Schirm noch nicht; seine 0 als Wunsch zu uebernehmen liesse ihn beim
     /// naechsten Auslegen zusammenfallen.
-    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 5]) {
+    ///
+    /// **Uebernommen wird nur, was die Regel nicht selbst ausgelegt hat.**
+    /// Steht auf dem Schirm genau das, was [`bereichsbreiten`] aus den
+    /// gespeicherten Breiten rechnet, dann traegt keine gemessene Zahl einen
+    /// Wunsch, den das Modell nicht schon haette, und dieser Aufruf bleibt
+    /// ohne Wirkung; die Frage stellt [`traegt_eine_ziehbewegung`]. Der
+    /// Unterschied faellt genau dort an, wo ein Bereich an seinem Mindestmass
+    /// haengt: dann ist die Abbildung vom Wunsch auf den Schirm kein Faktor
+    /// mehr, und die Rueckrechnung machte die gedeckelte Breite zum neuen
+    /// Wunsch. Das ist der Datensatz
+    /// `issues/260812-0539_*_ein-zusammengezogenes-fenster-ersetzt-die-aufteilung-des-nutzers-dauerhaft.md`.
+    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 5], mass: Zeilenmass) {
+        if !traegt_eine_ziehbewegung(mass, &self.breiten, &self.sichtbar, &gemessen) {
+            return;
+        }
         let nachzufuehren: Vec<Bereich> = self
             .sichtbare()
             .into_iter()
@@ -849,13 +917,7 @@ impl Fenstermodell {
 
     /// Die gespeicherte Breite eines Bereichs, falls es eine gibt.
     fn breite(&self, bereich: Bereich) -> Option<f64> {
-        match bereich {
-            Bereich::Lesezeichen => self.breiten.lesezeichen,
-            Bereich::Links => self.breiten.links,
-            Bereich::Rechts => self.breiten.rechts,
-            Bereich::Vorschau => self.breiten.vorschau,
-            Bereich::Editor => self.breiten.editor,
-        }
+        breite_in(&self.breiten, bereich)
     }
 
     fn breite_setzen(&mut self, bereich: Bereich, breite: f64) {
@@ -1030,6 +1092,90 @@ fn anteilig(ergebnis: &mut [f64; 5], anteile: &[(Bereich, f64)], gesamt: f64) {
     ergebnis[letzter.index()] = gesamt - vergeben;
 }
 
+/// Wie weit eine gemessene Breite von der ausgelegten abweichen darf, ohne als
+/// Ziehbewegung zu gelten.
+///
+/// Ein Viertelpunkt. Er liegt unter dem kleinsten Schritt, mit dem sich eine
+/// Trennlinie ziehen laesst — ein halber Punkt auf einem Schirm mit doppelter
+/// Aufloesung —, und ueber dem, was ein Runden der Rahmen auf ganze
+/// Bildpunkte an Unterschied hinterliesse. Faellt die Wahl doch einmal falsch,
+/// faellt sie auf die sichere Seite: eine Abweichung, die faelschlich als
+/// Ziehbewegung gilt, wird uebernommen, und das ist das Verhalten von vor dem
+/// 260812.
+const ZIEHSPIELRAUM: f64 = 0.25;
+
+/// Ob die gemessene Zeile etwas traegt, was die Regel nicht selbst ausgelegt
+/// hat.
+///
+/// **Die eine Frage vor jeder Rueckrechnung vom Schirm in einen Wunsch**, und
+/// zwei Stellen stellen sie: [`Fenstermodell::breiten_uebernehmen`], das den
+/// Schirm in das Modell traegt, und [`wuensche_nachfuehren`], das ihn beim
+/// naechsten Auslegen wieder einspeist.
+///
+/// Der Grund, aus dem es sie braucht: die Abbildung vom gespeicherten Wunsch
+/// auf den Bildschirmpunkt ist **nur so lange umkehrbar, wie kein sichtbarer
+/// Bereich an seinem Mindestmass haengt** (siehe [`Fenstermodell::massstab`]).
+/// Wo sie es nicht ist, traegt die gemessene Zahl nicht mehr den Wunsch,
+/// sondern die Deckelung, und wer sie zurueckrechnet, ersetzt den Wunsch des
+/// Nutzers durch das Verhaeltnis der Mindestbreiten. Ein Hin und Her am
+/// Fensterrand genuegte dafuer.
+///
+/// **Gefragt wird deshalb nicht, ob die Abbildung umkehrbar ist, sondern ob
+/// ueberhaupt etwas zurueckzulesen ist.** Das ist die engere und die
+/// entscheidbare Frage: was die Regel selbst ausgelegt hat, kann keinen neuen
+/// Wunsch tragen, gleich ob gedeckelt oder nicht. Nur eine Trennlinie, die
+/// jemand mit der Maus verschoben hat, steht anders im Rahmen, als die Regel
+/// sie hingeschrieben hat — und genau dafuer gibt es die Rueckrechnung.
+#[must_use]
+fn traegt_eine_ziehbewegung(
+    mass: Zeilenmass,
+    breiten: &Breiten,
+    sichtbar: &Sichtbarkeit,
+    gemessen: &[f64; 5],
+) -> bool {
+    let ausgelegt = bereichsbreiten(mass, breiten, sichtbar);
+    Bereich::ALLE.into_iter().any(|bereich| {
+        (ausgelegt[bereich.index()] - gemessen[bereich.index()]).abs() > ZIEHSPIELRAUM
+    })
+}
+
+/// Die Wuensche, aus denen die Fensterzeile nach einer Groessenaenderung
+/// auszulegen ist.
+///
+/// **Die Entscheidung hinter `splitView:resizeSubviewsWithOldSize:`**, und sie
+/// steht hier statt in [`crate::appkit::aufteilung`], weil sie zur Breitenregel
+/// gehoert und ohne Fenster pruefbar sein soll.
+///
+/// `gehalten` sind die Wuensche, aus denen die Zeile zuletzt ausgelegt wurde,
+/// `gemessen` die Breiten, die gerade in den Rahmen stehen, und `mass` die
+/// Geometrie der Zeile **vor** der Aenderung, also die, unter der die
+/// gemessenen Breiten entstanden sind. Hat jemand eine Trennlinie mit der Maus
+/// verschoben, gelten die gemessenen Breiten als der neue Wunsch; sonst bleiben
+/// die gehaltenen stehen.
+///
+/// **Ohne diese Unterscheidung ist das Wiedereinspeisen nicht neutral.** Bis
+/// zum 260812 speiste die Aufteilung bei jedem Bild die gemessenen Breiten
+/// wieder als Wuensche ein. Das ist unschaedlich, solange nichts gedeckelt ist,
+/// weil die Abbildung dann ein einheitlicher Faktor ist; sobald gedeckelt wird,
+/// ist es das nicht mehr. Ein Zug am Fensterrand von 1280 auf 780 Punkte und
+/// zurueck ersetzte damit die Aufteilung des Nutzers durch das Verhaeltnis der
+/// Mindestbreiten — die Dateifenster verloren 8,1 Prozent, der Editor gewann
+/// 11,9 —, und kein Tastenbefehl war dafuer noetig.
+#[must_use]
+pub fn wuensche_nachfuehren(
+    gehalten: Breiten,
+    gemessen: Breiten,
+    mass: Zeilenmass,
+    sichtbar: &Sichtbarkeit,
+) -> Breiten {
+    let punkte = Bereich::ALLE.map(|bereich| breite_in(&gemessen, bereich).unwrap_or(0.0));
+    if traegt_eine_ziehbewegung(mass, &gehalten, sichtbar, &punkte) {
+        gemessen
+    } else {
+        gehalten
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
@@ -1094,6 +1240,26 @@ mod tests {
             modell.umschalten(bereich, weit()),
             "{bereich:?} liess sich nicht umschalten"
         );
+    }
+
+    /// Die ausgelegte Zeile so, wie die Aufteilung sie misst.
+    ///
+    /// Dieselbe Umsetzung wie `appkit::aufteilung::gemessene_breiten`: eine
+    /// Breite von 0 heisst "steht nicht im Fenster" und liefert `None`. Proben
+    /// ueber `wuensche_nachfuehren` brauchen sie, weil jene Funktion in der
+    /// Anwendung eine gemessene Zeile bekommt und keine gerechnete.
+    fn gemessen(breiten: [f64; 5]) -> Breiten {
+        let feld = |bereich: Bereich| {
+            let breite = breiten[bereich.index()];
+            (breite > 0.0).then_some(breite)
+        };
+        Breiten {
+            lesezeichen: feld(Bereich::Lesezeichen),
+            links: feld(Bereich::Links),
+            rechts: feld(Bereich::Rechts),
+            vorschau: feld(Bereich::Vorschau),
+            editor: feld(Bereich::Editor),
+        }
     }
 
     /// Vergleicht fuenf Breiten mit den erwarteten, auf einen tausendstel
@@ -1698,11 +1864,18 @@ mod tests {
         );
     }
 
-    /// Ein fester Bereich waechst unmittelbar und zieht kein Dateifenster mit.
+    /// Ein Bereich ohne Fensterseite waechst unmittelbar und zieht kein
+    /// Dateifenster mit.
     ///
     /// Der Editor ist der Fall, den der Auffangzweig stumm aufgenommen hatte.
+    ///
+    /// **Die Unterscheidung heisst [`Bereich::seite`]** und nicht mehr
+    /// `ist_beweglich`: die Zweiteilung in feste und bewegliche Bereiche ist
+    /// mit Schritt 1 der Bereichsleisten-Runde weggefallen, der Probenname
+    /// trug sie bis zum 260812 weiter
+    /// (`issues/260812-0539_*_eine-probe-heisst-noch-nach-der-abgeschafften-zweiteilung-in-feste-und-bewegliche-bereiche.md`).
     #[test]
-    fn ein_fester_bereich_aendert_nur_seine_eigene_breite() {
+    fn ein_bereich_ohne_fensterseite_aendert_nur_seine_eigene_breite() {
         let mut modell = modell();
         schalten(&mut modell, Bereich::Vorschau);
         schalten(&mut modell, Bereich::Editor);
@@ -1726,6 +1899,210 @@ mod tests {
             modell.breiten().editor,
             Some(Bereich::Editor.mindestbreite())
         );
+    }
+
+    /// Passen die Mindestbreiten der beiden Dateifenster nicht mehr
+    /// nebeneinander, bleibt der Breitenbefehl ohne Wirkung — in beiden
+    /// Richtungen.
+    ///
+    /// **Die Probe zum Befund 1 der Durchsicht vom 260812-0539.** Bis dahin
+    /// taten `opt+cmd+links` und `opt+cmd+rechts` dort dasselbe, und beide das
+    /// Gegenteil ihres Namens: die Deckelungskette setzte voraus, dass ihre
+    /// untere Schranke nicht ueber der oberen liegt, und wo sie es tat, gewann
+    /// `.max()` und das Vorzeichen des Betrags fiel weg.
+    ///
+    /// Die Zahlen sind gerechnet. Vier sichtbare Bereiche der Runde 1
+    /// wuenschen zusammen 1280 Punkte und brauchen mindestens 760; bei 600
+    /// Punkten greift der zweite Zweig. Der Massstab ist 1280/600 = 2,1333, das
+    /// skalierte Mindestmass eines Dateifensters also 240 × 2,1333 = 512, und
+    /// beide Dateifenster stehen mit ihren 420 gespeicherten Punkten darunter.
+    /// Vor der Behebung kamen beide Richtungen auf 512 zu 328, also eine
+    /// Verschiebung um 92 gespeicherte Punkte, wo der Schritt 40 × 2,1333 =
+    /// 85,33 verlangt und die eine Richtung das Gegenteil.
+    #[test]
+    fn unter_der_mindestsumme_bleibt_der_breitenbefehl_ohne_wirkung() {
+        let zeile = mass(600.0);
+        let vergleich = modell();
+        assert!(
+            bereichsbreiten(zeile, &vergleich.breiten(), &vergleich.sichtbarkeit())
+                [Bereich::Links.index()]
+                < Bereich::Links.mindestbreite(),
+            "die Lage der Probe ist nicht der zweite Zweig"
+        );
+
+        for betrag in [BREITENSCHRITT, -BREITENSCHRITT] {
+            let mut modell = modell();
+            modell.breite_aendern(Bereich::Links, betrag, zeile);
+            assert_eq!(
+                modell.breiten(),
+                vergleich.breiten(),
+                "der Befehl mit {betrag} hat gespeicherte Breiten gesetzt, wo keine Lage der \
+                 Trennlinie beide Mindestmasse haelt"
+            );
+        }
+    }
+
+    /// Ein gedeckelter dritter Bereich sperrt den Breitenbefehl nicht.
+    ///
+    /// Die Gegenprobe zu `unter_der_mindestsumme_bleibt_der_breitenbefehl_ohne_wirkung`:
+    /// die Feststellung gilt dem **Paar**, dessen Trennlinie der Befehl
+    /// verschiebt, und nicht der ganzen Zeile. Haengt allein die Leiste an
+    /// ihrem Mindestmass, wirkt der Befehl weiter.
+    ///
+    /// Die Zahlen sind gerechnet. Bei 800 Punkten steht auf dem Schirm
+    /// [120; 259,64; 259,64; 160,73]: die Leiste ist gedeckelt, die beiden
+    /// Dateifenster nicht. Der Massstab ist 1280/800 = 1,6, das skalierte
+    /// Mindestmass eines Dateifensters 384, und der Schritt von 40 × 1,6 = 64
+    /// gespeicherten Punkten wird auf 36 gekuerzt, weil das rechte
+    /// Dateifenster nicht mehr abgeben kann: 456 zu 384. Auf dem Schirm sind
+    /// das 280 zu 240. **Gekuerzt ist nicht dasselbe wie umgekehrt** — die
+    /// Ungenauigkeit unter einer Deckelung ist an `Fenstermodell::massstab`
+    /// benannt und bleibt.
+    #[test]
+    fn ein_gedeckelter_dritter_bereich_sperrt_den_breitenbefehl_nicht() {
+        let zeile = mass(800.0);
+        let mut modell = modell();
+        let vorher = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(vorher, [120.0, 259.636, 259.636, 160.727, 0.0]);
+
+        modell.breite_aendern(Bereich::Links, BREITENSCHRITT, zeile);
+        assert_eq!(modell.breiten().links, Some(456.0));
+        assert_eq!(modell.breiten().rechts, Some(384.0));
+        breiten_gleich(
+            bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit()),
+            [120.0, 280.0, 240.0, 160.0, 0.0],
+        );
+    }
+
+    /// Ein zusammengezogenes Fenster laesst die gespeicherten Breiten stehen.
+    ///
+    /// **Die Probe zum Befund 2 der Durchsicht vom 260812-0539, Weg ueber das
+    /// Modell.** Unter der Mindestsumme traegt keine gemessene Zahl mehr einen
+    /// Wunsch: die Zeile steht dann im Verhaeltnis der Mindestbreiten, gleich
+    /// was der Nutzer eingestellt hat. Sie zurueckzurechnen machte dieses
+    /// Verhaeltnis zu seinem neuen Wunsch.
+    ///
+    /// Die Zahlen sind gerechnet. Bei 600 Punkten steht auf dem Schirm das
+    /// 600/760-Fache der Mindestbreiten, also [94,74; 189,47; 189,47; 126,32].
+    /// Vor der Behebung wurde daraus mit dem Faktor 1280/600 die gespeicherte
+    /// Aufteilung [202,11; 404,21; 404,21; 269,47] — aus 180/420/420/260, die
+    /// niemand angefasst hatte.
+    #[test]
+    fn ein_zusammengezogenes_fenster_laesst_die_gespeicherten_breiten_stehen() {
+        let zeile = mass(600.0);
+        let mut modell = modell();
+        let vorher = modell.breiten();
+        let gemessen = bereichsbreiten(zeile, &vorher, &modell.sichtbarkeit());
+        breiten_gleich(gemessen, [94.737, 189.474, 189.474, 126.316, 0.0]);
+
+        modell.breiten_uebernehmen(gemessen, zeile);
+        assert_eq!(
+            modell.breiten(),
+            vorher,
+            "die gedeckelte Zeile ist als Wunsch in das Modell gewandert"
+        );
+    }
+
+    /// Ein Hin und Her am Fensterrand stellt die Aufteilung des Nutzers wieder
+    /// her.
+    ///
+    /// **Die Probe zum Befund 2 der Durchsicht vom 260812-0539, Weg ueber den
+    /// Schirm.** Er braucht keinen Tastenbefehl: `neu_auslegen` speiste bei
+    /// jedem Bild die gemessenen Breiten wieder als Wuensche ein, und das ist
+    /// nur ohne Deckelung neutral. Gemessen wird hier dieselbe Folge von
+    /// Aufrufen, die die Aufteilung fuehrt — nachfuehren, dann auslegen —, nur
+    /// ohne Fenster.
+    ///
+    /// Die Zahlen sind gerechnet. Bei 1280 Punkten treffen die Wuensche die
+    /// Zeile genau: 180/420/420/260. Auf 600 gezogen steht das 600/760-Fache
+    /// der Mindestbreiten. Vor der Behebung kam die Zeile mit
+    /// [202,11; 404,21; 404,21; 269,47] zurueck, die Dateifenster also 3,8
+    /// Prozent schmaler und die Vorschau 3,6 Prozent breiter als eingestellt.
+    #[test]
+    fn ein_hin_und_her_am_fensterrand_stellt_die_aufteilung_wieder_her() {
+        let modell = modell();
+        let sichtbar = modell.sichtbarkeit();
+        let weit = mass(1280.0);
+        let eng = mass(600.0);
+
+        let gehalten = modell.breiten();
+        let bei_1280 = bereichsbreiten(weit, &gehalten, &sichtbar);
+        breiten_gleich(bei_1280, [180.0, 420.0, 420.0, 260.0, 0.0]);
+
+        // Der Nutzer zieht das Fenster auf 600 Punkte zusammen.
+        let gehalten = wuensche_nachfuehren(gehalten, gemessen(bei_1280), weit, &sichtbar);
+        let bei_600 = bereichsbreiten(eng, &gehalten, &sichtbar);
+        breiten_gleich(bei_600, [94.737, 189.474, 189.474, 126.316, 0.0]);
+
+        // Und wieder auf 1280 auf.
+        let gehalten = wuensche_nachfuehren(gehalten, gemessen(bei_600), eng, &sichtbar);
+        breiten_gleich(
+            bereichsbreiten(weit, &gehalten, &sichtbar),
+            [180.0, 420.0, 420.0, 260.0, 0.0],
+        );
+    }
+
+    /// Eine mit der Maus verschobene Trennlinie gilt als neuer Wunsch.
+    ///
+    /// Die Gegenprobe zu `ein_hin_und_her_am_fensterrand_stellt_die_aufteilung_wieder_her`:
+    /// die gemessenen Breiten werden nicht verworfen, sondern nur dort, wo sie
+    /// nichts tragen, was die Regel nicht selbst ausgelegt hat. Das ist die
+    /// Zusage aus dem Modulkopf von `appkit::aufteilung`, dass eine
+    /// Ziehbewegung die naechste Fenstergroessenaenderung uebersteht.
+    ///
+    /// Die Zahlen sind gerechnet. Bei 1280 Punkten steht 180/420/420/260; die
+    /// Linie zwischen den Dateifenstern wandert um 60 Punkte nach rechts, also
+    /// 480 zu 360. Bei 1600 Punkten ist jeder Wunsch das 1,25-Fache wert:
+    /// 225/600/450/325.
+    #[test]
+    fn eine_mit_der_maus_verschobene_trennlinie_gilt_als_neuer_wunsch() {
+        let modell = modell();
+        let sichtbar = modell.sichtbarkeit();
+        let weit = mass(1280.0);
+
+        let mut gezogen = bereichsbreiten(weit, &modell.breiten(), &sichtbar);
+        gezogen[Bereich::Links.index()] += 60.0;
+        gezogen[Bereich::Rechts.index()] -= 60.0;
+
+        let gehalten = wuensche_nachfuehren(modell.breiten(), gemessen(gezogen), weit, &sichtbar);
+        breiten_gleich(
+            bereichsbreiten(mass(1600.0), &gehalten, &sichtbar),
+            [225.0, 600.0, 450.0, 325.0, 0.0],
+        );
+    }
+
+    /// Die Zuordnung von einem Bereich auf sein Feld in der Sichtbarkeit steht
+    /// einmal.
+    ///
+    /// **Die Probe zum Befund 3 der Durchsicht vom 260812-0539.**
+    /// `appkit::aufteilung` fuehrte bis dahin eine zweite, gleichlautende
+    /// Fassung; sie ist weg, und diese Probe haelt fest, dass die verbliebene
+    /// jedes der fuenf Felder trifft und keine zwei Bereiche auf dasselbe zeigt.
+    #[test]
+    fn die_zuordnung_von_bereich_auf_sichtbarkeit_trifft_jedes_feld() {
+        for bereich in Bereich::ALLE {
+            let mut sichtbar = Sichtbarkeit {
+                lesezeichen: false,
+                erstes_dateifenster: false,
+                zweites_dateifenster: false,
+                vorschau: false,
+                editor: false,
+            };
+            match bereich {
+                Bereich::Lesezeichen => sichtbar.lesezeichen = true,
+                Bereich::Links => sichtbar.erstes_dateifenster = true,
+                Bereich::Rechts => sichtbar.zweites_dateifenster = true,
+                Bereich::Vorschau => sichtbar.vorschau = true,
+                Bereich::Editor => sichtbar.editor = true,
+            }
+            for anderer in Bereich::ALLE {
+                assert_eq!(
+                    sichtbar_in(&sichtbar, anderer),
+                    anderer == bereich,
+                    "{anderer:?} bei gesetztem Feld von {bereich:?}"
+                );
+            }
+        }
     }
 
     /// Kein sichtbarer Bereich faellt unter sein Mindestmass, solange die
@@ -1774,11 +2151,14 @@ mod tests {
             let zeile = mass(gesamt);
             let mut modell = modell();
             // Wie vor jedem Befehl: erst nachlesen, was auf dem Schirm steht.
-            modell.breiten_uebernehmen(bereichsbreiten(
+            // Seit dem 260812 bleibt der Ruf hier ohne Wirkung, weil auf dem
+            // Schirm genau das steht, was die Regel selbst ausgelegt hat; der
+            // Grund steht an `traegt_eine_ziehbewegung`. Er steht trotzdem da,
+            // weil er in der Anwendung an dieser Stelle faellt.
+            modell.breiten_uebernehmen(
+                bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit()),
                 zeile,
-                &modell.breiten(),
-                &modell.sichtbarkeit(),
-            ));
+            );
             let vorher = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
 
             modell.breite_aendern(Bereich::Links, BREITENSCHRITT, zeile);
@@ -1818,18 +2198,17 @@ mod tests {
     #[test]
     fn das_wiedereingeblendete_dateifenster_hat_wieder_seine_alte_breite() {
         let mut modell = modell();
-        modell.breiten_uebernehmen(bereichsbreiten(
+        modell.breiten_uebernehmen(
+            bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit()),
             mass(1400.0),
-            &modell.breiten(),
-            &modell.sichtbarkeit(),
-        ));
+        );
         let vorher = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
 
         schalten(&mut modell, Bereich::Rechts);
         // Der Bildaufbau schreibt die gemessenen Breiten zurueck, so wie es der
         // Sitzungsabgleich und jeder Breitenbefehl tun.
         let alleine = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
-        modell.breiten_uebernehmen(alleine);
+        modell.breiten_uebernehmen(alleine, mass(1400.0));
         assert!(
             alleine[Bereich::Links.index()] > vorher[Bereich::Links.index()],
             "das linke Dateifenster hat den Platz nicht uebernommen"
@@ -1983,11 +2362,10 @@ mod tests {
     fn das_vergroessern_des_fensters_laesst_die_gespeicherten_breiten_stehen() {
         let mut modell = modell();
         modell.breite_setzen(Bereich::Editor, 500.0);
-        modell.breiten_uebernehmen(bereichsbreiten(
+        modell.breiten_uebernehmen(
+            bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit()),
             mass(1280.0),
-            &modell.breiten(),
-            &modell.sichtbarkeit(),
-        ));
+        );
         let vorher: Vec<f64> = Bereich::ALLE
             .iter()
             .map(|bereich| modell.breite_oder_anfang(*bereich))
@@ -1996,7 +2374,7 @@ mod tests {
         // Der Nutzer zieht das Fenster von 1280 auf 2000 Punkte auf, und der
         // naechste Befehl misst nach, bevor er das Modell anfasst.
         let gemessen = bereichsbreiten(mass(2000.0), &modell.breiten(), &modell.sichtbarkeit());
-        modell.breiten_uebernehmen(gemessen);
+        modell.breiten_uebernehmen(gemessen, mass(2000.0));
 
         for bereich in Bereich::ALLE {
             let jetzt = modell.breite_oder_anfang(bereich);

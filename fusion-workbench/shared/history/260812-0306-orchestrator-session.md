@@ -72,3 +72,17 @@ nichts fortzusetzen.
 - Defekte: 260812-0439 behoben (von S1 erzeugt, in S2 gefallen); 260812-0512 neu abgelegt
 - Circuit breaker: OK
 - Coherence: Durchsicht zum Turn-Ende gestartet
+
+### Turn 2
+- Versuchte Aufgaben: S4, S5, S6, S7
+- Erledigt: alle vier, aber in **einem** Commit (90b02d4) statt in vieren
+- Grund: der Baum wird zwischen S4 und S7 nicht grün. S4 trägt fünf Funktionen in die
+  Belegung ein, deren Kommandos erst S7 baut; 28 Proben der Belegungsansicht brechen
+  dazwischen ab. Ein Commit je Schritt hätte drei rote Stände in die Historie geschrieben.
+- Abnahme: `make check` exit 0 nach S7 (nach S4, S5 und S6 je exit 2, jeweils gemessen und
+  im Protokoll des Schrittes festgehalten)
+- Defekte geschlossen: 260812-0533, 260812-0548
+- Durchsicht (coderev, Bereich 5aa22df..8ffaac2): vier Befunde, zwei mittel. Bestätigt hat
+  sie die Terminierung der Wasserstandsrechnung, die Summentreue über 200.000 zufällige
+  Eingaben und die Reihenfolge der drei Zusicherungen in `aus_sitzung`.
+- Circuit breaker: OK

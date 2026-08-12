@@ -2667,6 +2667,13 @@ impl Anwendungsdelegierter {
     /// ([`Self::kommando_ausfuehren`]), und jedes Schreiben der Sitzung
     /// ([`Self::sitzung_bauen`]), das auch ohne Befehl faellig wird.
     ///
+    /// **Uebernommen wird dabei nur eine wirkliche Ziehbewegung.** Steht auf
+    /// dem Schirm genau das, was die Breitenregel selbst ausgelegt hat, bleibt
+    /// der Aufruf ohne Wirkung. Das Mass der Zeile geht allein deshalb mit,
+    /// weil
+    /// [`Fenstermodell::breiten_uebernehmen`](crate::fenstermodell::Fenstermodell::breiten_uebernehmen)
+    /// diese Frage nicht ohne die Fensterbreite beantworten kann.
+    ///
     /// **Der Zeitpunkt ist tragend und nicht beliebig: gemessen wird, solange
     /// Modell und Schirm noch dieselbe Sichtbarkeit meinen.**
     /// [`Fenstermodell::breiten_uebernehmen`](crate::fenstermodell::Fenstermodell::breiten_uebernehmen)
@@ -2692,7 +2699,7 @@ impl Anwendungsdelegierter {
         self.ivars()
             .modell
             .borrow_mut()
-            .breiten_uebernehmen(aufteilung.gemessene_breiten());
+            .breiten_uebernehmen(aufteilung.gemessene_breiten(), aufteilung.zeilenmass());
     }
 
     /// Schreibt Sichtbarkeit und Breiten in die Ansicht und zieht danach die

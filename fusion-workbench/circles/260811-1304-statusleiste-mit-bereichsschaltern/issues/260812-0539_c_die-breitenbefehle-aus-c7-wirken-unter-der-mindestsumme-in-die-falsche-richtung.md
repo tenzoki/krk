@@ -106,3 +106,66 @@ Der Fall entsteht mit `a2ea876` (der Maßstab in `breite_aendern`) auf der Grund
 (die Rückrechnung in `breiten_uebernehmen`) und ist keine Altlast. Vor der Runde übernahm
 `breiten_uebernehmen` die gemessenen Punktzahlen roh, und die liegen für einen sichtbaren Bereich
 nie unter seinem Mindestmaß; die Kette konnte deshalb nicht kippen.
+
+---
+
+Resolved: 260812-0700, coder. **Weg 1 der beiden benannten** — die Deckelungskette bekommt die
+Voraussetzung, die sie stillschweigend gemacht hat. `Fenstermodell::breite_aendern`
+(`crates/krk-ui/src/fenstermodell.rs`) rechnet die beiden Schranken jetzt einzeln aus und stellt
+fest, ob sie überhaupt zueinander passen:
+
+```rust
+let obergrenze = dort - mindestmass(anderer);
+let untergrenze = mindestmass(bereich) - hier;
+if untergrenze > obergrenze {
+    return;
+}
+let betrag = betrag.min(obergrenze).max(untergrenze);
+```
+
+Liegt die untere Schranke über der oberen, hält **keine** Lage der Trennlinie beide Mindestmaße,
+und der Befehl bleibt ohne Wirkung. Das ist dieselbe Antwort, die die Funktion schon bei einem
+einzigen sichtbaren Dateifenster gibt, und dieselbe, die der Schirm ohnehin gibt: unter der
+Mindestsumme liest der zweite Zweig von `bereichsbreiten` die Wünsche nicht.
+
+**Weg 2 (`MINDESTGROESSE` auf 940) ist nicht gegangen worden**, und zwar nicht aus Bequemlichkeit:
+die Nutzerfrage
+`decisions/260812-0415_a_was-geschieht-wenn-das-fenster-unter-die-summe-der-mindestbreiten-faellt.md`
+ist am 260812-0430 gegen ihn entschieden. Die Zahl bleibt bei 780.
+
+**Der fehlende Boden bei 0 fällt mit derselben Zeile weg.** Eine negative gespeicherte Breite
+verlangt `dort < mindestmass(bereich) - hier`, also `obergrenze = dort - mindestmass(anderer) <
+untergrenze`; das ist genau die Bedingung, unter der die neue Feststellung greift. Eine von Hand
+geschriebene `session.toml` mit weit auseinanderliegenden Breiten erreicht sie nicht mehr.
+
+## Nachgerechnet und geprobt
+
+Die Zahlen des Datensatzes sind vor der Änderung mit einem eigenen Nachbau außerhalb des Baums
+nachgerechnet und gehen auf: bei 780 Punkten Fensterbreite, sichtbarem Editor und einer Trennlinie
+von einem Punkt liefern beide Richtungen `[193.04, 457.14, 315.03, 260.00, 514.78]`, also 71,05
+Punkte statt 40.
+
+**Der Fall braucht das Nachlesen nicht**, das der Datensatz als Ursachenkette führt. Aus den
+ausgelieferten Anfangsbreiten heraus, ohne jedes `breiten_uebernehmen`, liefern beide Richtungen
+bei 780 Punkten `[-, 457.14, 382.86, -, -]`. Das Nachlesen verschärft die Lage, es stellt sie nicht
+her: die Bedingung ist `gespeicherte Breite < Mindestmaß × Maßstab`, und die gilt im zweiten Zweig
+für jeden sichtbaren Bereich, gleich woher seine Zahl kommt.
+
+Zwei Proben stehen dafür in `crates/krk-ui/src/fenstermodell.rs`:
+
+- `unter_der_mindestsumme_bleibt_der_breitenbefehl_ohne_wirkung` — vier sichtbare Bereiche, 600
+  Punkte, Maßstab 1280/600 = 2,1333, skaliertes Mindestmaß eines Dateifensters 512 gegen 420
+  gespeicherte Punkte. Beide Richtungen lassen die gespeicherten Breiten unangetastet.
+  Gegengeprobt: ohne die neue Feststellung fällt sie mit `links: Some(512.0), rechts: Some(328.0)`
+  in **beiden** Richtungen.
+- `ein_gedeckelter_dritter_bereich_sperrt_den_breitenbefehl_nicht` — bei 800 Punkten hängt allein
+  die Lesezeichenleiste an ihrem Mindestmaß, und der Befehl wirkt weiter: gespeichert 456 zu 384,
+  auf dem Schirm 280 zu 240. Die Feststellung gilt dem **Paar**, dessen Trennlinie der Befehl
+  verschiebt, und nicht der ganzen Zeile.
+
+**Ein Rest bleibt und ist abgelegt.** Der Schritt kommt unter einer Deckelung gekürzt an — in der
+zweiten Probe 20,36 statt 40 Punkte auf dem Schirm. Das ist die an `Fenstermodell::massstab`
+benannte Ungenauigkeit, keine Umkehrung, und sie hat jetzt einen eigenen Datensatz:
+`260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md`.
+
+Abgenommen mit `make check`, exit 0.

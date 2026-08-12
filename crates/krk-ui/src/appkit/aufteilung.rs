@@ -43,10 +43,16 @@
 //! und sie ist reines Rust ohne AppKit. Dieses Modul ruft sie an zwei Stellen:
 //! wenn das Fenstermodell eine Breite oder eine Sichtbarkeit geaendert hat, und
 //! wenn AppKit die Bereiche neu auslegen laesst, etwa weil der Nutzer das
-//! Fenster groesser zieht. Im zweiten Fall speist es die Breiten ein, die
-//! gerade auf dem Schirm stehen; damit ueberlebt eine mit der Maus verschobene
-//! Trennlinie die naechste Fenstergroessenaenderung, ohne dass eine zweite
-//! Rechenvorschrift daneben entstuende.
+//! Fenster groesser zieht.
+//!
+//! **Womit gerechnet wird, steht im Delegierten und nicht in den Rahmen der
+//! Unteransichten**; der Grund steht an [`AufteilungsIvars::wuensche`]. Der
+//! erste Fall traegt den Wunsch des Fenstermodells dort ein, der zweite
+//! uebernimmt eine mit der Maus verschobene Trennlinie. Damit ueberlebt eine
+//! solche Ziehbewegung die naechste Fenstergroessenaenderung, ohne dass eine
+//! zweite Rechenvorschrift daneben entstuende — und ohne dass ein Zug am
+//! Fensterrand die Aufteilung des Nutzers durch das Verhaeltnis der
+//! Mindestbreiten ersetzte.
 //!
 //! **Welche Bereiche stehen, kommt in beiden Faellen aus den Unteransichten**
 //! und nie aus dem Modell. Der erste Fall schreibt den Wunsch des Modells
@@ -70,9 +76,11 @@
 //! keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
 //! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
+use std::cell::Cell;
+
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{MainThreadOnly, define_class, msg_send};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSBox, NSBoxType, NSColor, NSSplitView, NSSplitViewDelegate,
     NSTitlePosition, NSView,
@@ -83,7 +91,7 @@ use objc2_foundation::{
 
 use krk_core::ablage::{Breiten, Fensterseite, Sichtbarkeit};
 
-use crate::fenstermodell::{Bereich, Zeilenmass};
+use crate::fenstermodell::{Bereich, Zeilenmass, sichtbar_in, wuensche_nachfuehren};
 use crate::kommandos::fokus::{Fokus, Rahmenrolle, rahmenrolle};
 
 use super::statuszeile;
@@ -105,19 +113,45 @@ const ZURUECKGETRETEN: f64 = 0.4;
 /// Die Groesse, mit der ein Bereich entsteht, bevor die Aufteilung ihn auslegt.
 const AUFBAUGROESSE: NSSize = NSSize::new(400.0, 400.0);
 
+/// Was der Delegierte der Aufteilung haelt.
+pub struct AufteilungsIvars {
+    /// Die Wuensche, aus denen die Zeile zuletzt ausgelegt wurde.
+    ///
+    /// **Die eine Stelle, an der die Wuensche auf der AppKit-Seite stehen.**
+    /// Bis zum 260812 standen sie in den Rahmen der Unteransichten selbst: das
+    /// Auslegen las sie von dort und schrieb sie dorthin zurueck. Der Rahmen
+    /// ist dafuer aber kein verlustfreier Speicher — haengt ein Bereich an
+    /// seinem Mindestmass, traegt sein Rahmen die Deckelung und nicht mehr den
+    /// Wunsch —, und ein Zug am Fensterrand und zurueck loeschte damit die
+    /// Aufteilung des Nutzers.
+    ///
+    /// Geschrieben wird das Feld an genau zwei Stellen, und beide sind eine
+    /// Antwort auf "wer hat den Wunsch geaendert": [`Aufteilung::anwenden`]
+    /// traegt den des Fenstermodells ein, und das Auslegen nach einer
+    /// Groessenaenderung uebernimmt eine mit der Maus verschobene Trennlinie.
+    /// Welche der beiden Zahlen gilt, entscheidet
+    /// [`wuensche_nachfuehren`](crate::fenstermodell::wuensche_nachfuehren) und
+    /// nicht diese Datei.
+    ///
+    /// **Kein Rueckweg in das Fenstermodell und kein Ring.** Der Delegierte
+    /// haelt einen Wert und keine Sicht auf das Modell; das Modell erfaehrt von
+    /// einer Ziehbewegung weiterhin nur, wenn jemand nachmisst.
+    pub wuensche: Cell<Breiten>,
+}
+
 define_class!(
     /// Der Delegierte der Aufteilung: Mindestbreiten und das Auslegen.
     ///
-    /// Er haelt nichts. Alles, was er braucht, steht in der `NSSplitView`, die
-    /// AppKit ihm bei jedem Aufruf mitgibt: die Rahmen der vier Bereiche und
-    /// ihre Sichtbarkeit. Damit gibt es keinen Rueckweg von hier in das
-    /// Fenstermodell und keinen Ring.
+    /// Er haelt die Wuensche, aus denen die Zeile ausgelegt wird (siehe
+    /// [`AufteilungsIvars::wuensche`]). Alles uebrige steht in der
+    /// `NSSplitView`, die AppKit ihm bei jedem Aufruf mitgibt: die Rahmen der
+    /// fuenf Bereiche und ihre Sichtbarkeit.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
     #[unsafe(super = NSObject)]
     #[thread_kind = MainThreadOnly]
-    #[ivars = ()]
+    #[ivars = AufteilungsIvars]
     pub struct AufteilungsDelegierter;
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
@@ -146,20 +180,52 @@ define_class!(
         }
 
         /// AppKit laesst die Bereiche neu auslegen.
+        ///
+        /// **Die gemessenen Breiten werden nicht mehr blind als Wuensche
+        /// eingespeist.** Sie tragen einen Wunsch nur dann, wenn jemand eine
+        /// Trennlinie mit der Maus verschoben hat; sonst stehen dort die Zahlen,
+        /// die das letzte Auslegen selbst hingeschrieben hat, und die
+        /// zurueckzulesen ist nur ohne Deckelung neutral. Die Entscheidung
+        /// faellt in
+        /// [`wuensche_nachfuehren`](crate::fenstermodell::wuensche_nachfuehren).
+        ///
+        /// **`alte_groesse` ist dafuer tragend**: die gemessenen Breiten sind
+        /// unter der **alten** Zeilenbreite entstanden, und nur an ihr gemessen
+        /// laesst sich sagen, ob sie von der Regel stammen. Die Trennerbreite
+        /// aendert sich dabei nicht und kommt wie immer aus [`zeilenmass`].
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(splitView:resizeSubviewsWithOldSize:))]
-        fn neu_auslegen(&self, teiler: &NSSplitView, _alte_groesse: NSSize) {
-            let breiten = gemessene_breiten(teiler);
-            auslegen(teiler, &breiten);
+        fn neu_auslegen(&self, teiler: &NSSplitView, alte_groesse: NSSize) {
+            let altes_mass = Zeilenmass {
+                gesamt: alte_groesse.width,
+                trennerbreite: zeilenmass(teiler).trennerbreite,
+            };
+            let wuensche = wuensche_nachfuehren(
+                self.ivars().wuensche.get(),
+                gemessene_breiten(teiler),
+                altes_mass,
+                &gemessene_sichtbarkeit(teiler),
+            );
+            self.ivars().wuensche.set(wuensche);
+            auslegen(teiler, &wuensche);
         }
     }
 );
 
 impl AufteilungsDelegierter {
     fn neu(mtm: MainThreadMarker) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(());
+        // Ohne gesetzte Breite: bis das Fenstermodell seine erste sagt, gelten
+        // die Anfangsbreiten aus `Bereich::anfangsbreite`.
+        let this = Self::alloc(mtm).set_ivars(AufteilungsIvars {
+            wuensche: Cell::new(Breiten::default()),
+        });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
+    }
+
+    /// Merkt sich die Wuensche, aus denen gerade ausgelegt wird.
+    fn wuensche_merken(&self, breiten: &Breiten) {
+        self.ivars().wuensche.set(*breiten);
     }
 }
 
@@ -167,7 +233,10 @@ impl AufteilungsDelegierter {
 pub struct Aufteilung {
     teiler: Retained<NSSplitView>,
     /// `NSSplitView` haelt seinen Delegierten schwach; hier steht er stark.
-    _delegierter: Retained<AufteilungsDelegierter>,
+    ///
+    /// Er haelt daneben die Wuensche, aus denen ausgelegt wird, und deshalb
+    /// spricht [`Aufteilung::anwenden`] ihn an.
+    delegierter: Retained<AufteilungsDelegierter>,
     /// Die Kaesten aller fuenf Bereiche, in der Reihenfolge von
     /// [`Bereich::ALLE`].
     ///
@@ -230,7 +299,7 @@ impl Aufteilung {
 
         Self {
             teiler,
-            _delegierter: delegierter,
+            delegierter,
             rahmen,
         }
     }
@@ -246,12 +315,18 @@ impl Aufteilung {
     /// und nicht an [`auslegen`] weitergereicht. Das ist der Grund, aus dem
     /// beide Wege in die Aufteilung dasselbe Bild ergeben; er steht bei
     /// [`steht_im`] ausgeschrieben.
+    ///
+    /// **Die Breiten des Modells werden dabei zum gehaltenen Wunsch.** Das
+    /// naechste Auslegen nach einer Groessenaenderung rechnet aus ihnen weiter,
+    /// statt die Zahlen zurueckzulesen, die diese Zeile eben in die Rahmen
+    /// geschrieben hat; der Grund steht an [`AufteilungsIvars::wuensche`].
     pub fn anwenden(&self, breiten: &Breiten, sichtbar: &Sichtbarkeit) {
         for bereich in Bereich::ALLE {
             if let Some(ansicht) = bereichsansicht(&self.teiler, bereich.index()) {
-                ansicht.setHidden(!sichtbar_im(sichtbar, bereich));
+                ansicht.setHidden(!sichtbar_in(sichtbar, bereich));
             }
         }
+        self.delegierter.wuensche_merken(breiten);
         auslegen(&self.teiler, breiten);
     }
 
@@ -440,25 +515,6 @@ fn bereichsansicht(teiler: &NSSplitView, stelle: usize) -> Option<Retained<NSVie
 /// Bereich mehr, und die Antwort haengt fuer alle fuenf allein an `isHidden`.
 fn steht_im(teiler: &NSSplitView, bereich: Bereich) -> bool {
     bereichsansicht(teiler, bereich.index()).is_some_and(|ansicht| !ansicht.isHidden())
-}
-
-/// Das Feld eines [`Bereich`]s in [`Sichtbarkeit`].
-///
-/// Eine vollstaendige Fallunterscheidung ueber [`Bereich`]: ein neuer Bereich,
-/// der hier fehlte, waere dauerhaft unsichtbar, ohne dass der Uebersetzer etwas
-/// gesagt haette.
-///
-/// Eine Abbildung und sonst nichts. Ob ein Bereich im Fenster **steht**,
-/// beantwortet [`steht_im`] und nicht diese Funktion; wer sie ueber eine
-/// gemessene [`Sichtbarkeit`] fragt, bekommt dieselbe Antwort noch einmal.
-fn sichtbar_im(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
-    match bereich {
-        Bereich::Lesezeichen => sichtbar.lesezeichen,
-        Bereich::Links => sichtbar.erstes_dateifenster,
-        Bereich::Rechts => sichtbar.zweites_dateifenster,
-        Bereich::Vorschau => sichtbar.vorschau,
-        Bereich::Editor => sichtbar.editor,
-    }
 }
 
 /// Die Breiten, die gerade auf dem Schirm stehen.

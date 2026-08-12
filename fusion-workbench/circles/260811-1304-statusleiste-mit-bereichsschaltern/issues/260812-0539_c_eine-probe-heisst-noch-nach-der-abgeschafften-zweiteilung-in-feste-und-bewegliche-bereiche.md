@@ -28,3 +28,18 @@ ein Dateifenster die Trennlinie verschiebt —, und die Unterscheidung dafür is
 
 Ein Name in dieser Richtung wäre `ein_bereich_ohne_fensterseite_aendert_nur_seine_eigene_breite`.
 Der Kommentar darunter nennt dann `Bereich::seite` als die Unterscheidung, die es noch gibt.
+
+---
+
+Resolved: 260812-0700, coder. Die Probe heißt jetzt
+`ein_bereich_ohne_fensterseite_aendert_nur_seine_eigene_breite`, und ihr Dokumentationskommentar
+nennt `Bereich::seite` als die Unterscheidung, die es noch gibt — beides so, wie der Datensatz es
+vorschlägt. Der Begriff „fester Bereich" kommt in ihr nicht mehr vor.
+
+Gegengesucht: `grep -rn "fester Bereich\|feste Bereiche\|festen Bereich\|ist_beweglich" crates/
+xtask/` liefert acht Treffer, und alle acht sind Rückblicke — „Bis zur Bereichsleisten-Runde …",
+„bis dahin …", „seit der Anteilsregel gibt es keine festen Bereiche mehr". Sie stehen in
+`fenstermodell.rs` (sieben, davon vier in Probenkommentaren) und in `appkit/fenster.rs` (einer).
+Keine Stelle führt den Begriff mehr als geltend, und keine trägt ihn im Namen.
+
+Abgenommen mit `make check`, exit 0.
