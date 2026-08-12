@@ -114,6 +114,6 @@ gebaut.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1200` — Nutzerentscheid vom 260812-1200, vorgelegt mit drei Moeglichkeiten und ihren Folgen.
-Implemented:
+Implemented: `crates/krk-ui/src/kommandos/operationen.rs` (`rechtsklick_zielzeile`, die Entscheidungsregel als reine Funktion neben `betroffene`, mit fuenf Pruefungen) und `crates/krk-ui/src/appkit/tabelle.rs` (`DateifensterQuelle::rechtsklick_auswahl_nachziehen`, gerufen in `menuNeedsUpdate:` **vor** `betroffene_eintraege`; die angeklickte Zeile kommt aus `NSTableView::clickedRow`, gesetzt wird sie ueber `zeile_setzen` und damit ueber `auswahl_merken`, den einen Weg, den auch die Tastatur nimmt). `betroffene` selbst ist nicht angefasst: geaendert wird die Auswahl vor ihr. Moeglichkeit 1 war in Schritt 6 des Plans vom 260812-1145 gebaut, weil der Plan vor dieser Antwort geschrieben ist; der Widerspruch stand als `issues/260812-1500_*_der-rechtsklick-bewegt-die-auswahl-nicht-obwohl-der-nutzerentscheid-es-verlangt.md` und ist damit erledigt. Abnahme am 260812: `cargo build --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` und `cargo test --workspace` je Exit 0, 410 Proben im Binaerziel `krk` gegenueber 405 vorher. Noch nicht committet, der Nutzer committet nach der Aufgabe.
 Deferred:
 Superseded by:

@@ -59,6 +59,22 @@
 //! lesen. Jede Ausleihe unten steht deshalb in einer eigenen Anweisung, und
 //! keine ueberlebt eine Zeile mit einem Objective-C-Aufruf.
 //!
+//! **Das Kontextmenue der Liste baut diese Datei nicht.** Die Tabelle traegt
+//! seit C1 der Runde 6 ein `NSMenu`, dessen Delegierter die Quelle ist; sie
+//! beantwortet in `menuNeedsUpdate:` allein, welche Eintraege betroffen sind,
+//! und laesst [`super::teilen::eintrag_anfuegen`] den Eintrag setzen. Ein
+//! zweiter Menuebauer hier waere die Wiederholung, die jener Kopf ausschliesst.
+//!
+//! **Der Rechtsklick rueckt dabei die Auswahl auf die angeklickte Zeile, es
+//! sei denn, sie ist markiert** (Nutzerentscheid vom 260812-1200,
+//! `decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
+//! der Runde 6). Die Zeile liefert `clickedRow`, die Entscheidung
+//! [`crate::kommandos::operationen::rechtsklick_zielzeile`] ohne Fenster, und
+//! gesetzt wird sie ueber `zeile_setzen` wie jede Auswahl der Tastatur.
+//! **Worauf ein Befehl danach wirkt, sagt weiterhin allein
+//! [`crate::kommandos::operationen::betroffene`]**; die Auswahl aendert sich
+//! vor ihr, nicht sie selbst.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! Aus AppKit spricht diese Datei `NSTableView`, `NSTableColumn`,
@@ -66,12 +82,15 @@
 //! und `NSControl` (die Herkunft von `setTarget:` und `setAction:`) an, dazu
 //! `NSColor` und `NSFont`; aus Foundation `NSObject`, `NSString`, `NSDate`,
 //! `NSDateFormatter`, `NSIndexSet`, `NSNotification`, `NSRunLoop`, `NSTimer`
-//! und `NSByteCountFormatter`. **Alle stehen seit macOS 10.0 zur Verfuegung**,
-//! `NSByteCountFormatter` als einzige Ausnahme seit 10.8
-//! (`NSByteCountFormatter.h:38`). Dasselbe gilt fuer die vier angenommenen
-//! Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
-//! `NSTableViewDelegate` und `NSControlTextEditingDelegate`
-//! (`NSTableView.h:580` und `:737`, `NSControl.h:97`). `NSWindow` kommt allein
+//! und `NSByteCountFormatter`, seit C1 der Runde 6 dazu `NSMenu` und die
+//! Eigenschaft `menu` von `NSResponder` (`NSResponder.h:111`). **Alle stehen
+//! seit macOS 10.0 zur Verfuegung**, `NSByteCountFormatter` als einzige
+//! Ausnahme seit 10.8 (`NSByteCountFormatter.h:38`). Dasselbe gilt fuer die
+//! fuenf angenommenen Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
+//! `NSTableViewDelegate`, `NSControlTextEditingDelegate` und `NSMenuDelegate`
+//! (`NSTableView.h:580` und `:737`, `NSControl.h:97`, `NSMenu.h:269`), und
+//! ebenso fuer `menuNeedsUpdate:` (`NSMenu.h:271`) und `NSMenu`s Setzer
+//! `delegate` (`NSMenu.h:156`). `NSWindow` kommt allein
 //! aus `NSView::window` heraus und geht unangetastet an [`super::blaetter`];
 //! dieses Modul ruft nichts daran auf. Die reinen Werttypen `NSPoint`,
 //! `NSRect`, `NSSize`, `NSInteger` und `NSTimeInterval` stellen die Frage
@@ -84,7 +103,8 @@
 //! - 10.5: die Modenkonstante `NSRunLoopCommonModes` (`NSRunLoop.h:14`) und
 //!   `NSTableColumn`s Eigenschaft `hidden` (`NSTableColumn.h:80`), ueber die
 //!   die Bereichsleisten-Runde eine Spalte verbirgt.
-//! - 10.6: `reloadDataForRowIndexes:columnIndexes:` (`NSTableView.h:266`).
+//! - 10.6: `reloadDataForRowIndexes:columnIndexes:` (`NSTableView.h:266`) und
+//!   `NSMenu`s `removeAllItems` (`NSMenu.h:112`).
 //! - 10.7: `rowForView:` und `makeViewWithIdentifier:owner:`
 //!   (`NSTableView.h:477` und `:482`), die Delegiertenmethode
 //!   `tableView:viewForTableColumn:row:` (`:593`) und das Protokoll
@@ -101,6 +121,11 @@
 //! - 11.0: `style` und die Aufzaehlung `NSTableViewStyle`
 //!   (`NSTableView.h:377` und `:77-96`). **Die juengste Beruehrung dieser
 //!   Datei**, und damit vier Hauptfassungen unter der Untergrenze.
+//!
+//! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
+//! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260812 zwei
+//! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
+//! vor dem Rechtsklick aus C1 der Runde 6.
 //!
 //! Alle uebrigen Setzer und Abfragen der genannten Klassen tragen im Kopf des
 //! Systems keine Angabe und stehen damit seit 10.0; der Block beim Doppelklick
@@ -121,7 +146,7 @@ use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightBold,
-    NSFontWeightRegular, NSScrollView, NSTableColumn, NSTableView,
+    NSFontWeightRegular, NSMenu, NSMenuDelegate, NSScrollView, NSTableColumn, NSTableView,
     NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
     NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
 };
@@ -149,6 +174,7 @@ use super::blaetter;
 use super::standardprogramm;
 use super::statuszeile::{self, Statuszeile};
 use super::tableiste::Tableiste;
+use super::teilen;
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -435,6 +461,53 @@ define_class!(
         #[unsafe(method(numberOfRowsInTableView:))]
         fn zeilenzahl(&self, _tabelle: &NSTableView) -> NSInteger {
             self.zeilen() as NSInteger
+        }
+    }
+
+    // SAFETY: `NSMenuDelegate` stellt keine Bedingungen. Das Menue haelt
+    // seinen Delegierten **schwach** ("This is a weak property",
+    // `objc2-app-kit-0.3.2/src/generated/NSMenu.rs:356-361`, und der Kopf des
+    // Systems sagt dasselbe: `@property (nullable, weak) id<NSMenuDelegate>
+    // delegate;`, `NSMenu.h:156`); die Tabelle haelt das Menue stark und
+    // `Dateifenster` die Quelle. Der Ring Quelle → Tabelle → Menue →
+    // Delegierter → Quelle bleibt damit an der letzten Kante offen.
+    unsafe impl NSMenuDelegate for DateifensterQuelle {
+        /// Baut das Kontextmenue der Dateiliste, bei jedem Rechtsklick neu
+        /// (C1 der Runde 6, sechstes Kriterium).
+        ///
+        /// **Neu und nicht ergaenzt.** Die betroffenen Eintraege aendern sich
+        /// zwischen zwei Klicks, und ein Menue, das vom vorigen Mal
+        /// stehenbliebe, teilte etwas anderes als das, was der Eintrag
+        /// verspricht. Eine Tabelle bringt kein eigenes Kontextmenue mit, es
+        /// geht deshalb nichts verloren; die `NSTextView` des Editors, die
+        /// eines mitbringt, haengt sich aus genau diesem Grund anders an
+        /// (siehe den Kopf von [`super::teilen`]).
+        ///
+        /// **Der Rechtsklick rueckt die Auswahl nach, bevor die betroffenen
+        /// Eintraege nachgeschlagen werden** — es sei denn, die angeklickte
+        /// Zeile ist markiert. So hat der Nutzer es am 260812-1200 entschieden
+        /// (`decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
+        /// dieser Runde), und deshalb steht
+        /// [`Self::rechtsklick_auswahl_nachziehen`] hier **vor**
+        /// [`Self::betroffene_eintraege`] und nicht in ihm.
+        ///
+        /// **Eine zweite Auswahlregel entsteht dabei nicht.**
+        /// [`crate::kommandos::operationen::betroffene`] bleibt unangetastet
+        /// und beantwortet weiterhin allein, worauf ein Befehl wirkt; geaendert
+        /// wird die Auswahl vor ihr. Wer die Ausnahme hier sucht, findet sie
+        /// nicht: sie steht als reine Funktion in
+        /// [`crate::kommandos::operationen::rechtsklick_zielzeile`], samt der
+        /// Begruendung und der Ablehnung der beiden anderen Moeglichkeiten.
+        ///
+        /// Die Ausleihe des Tabmodells endet in jeder der beiden ersten
+        /// Zeilen, vor dem ersten Objective-C-Aufruf; siehe den Modulkopf.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(menuNeedsUpdate:))]
+        fn menue_auffrischen(&self, menue: &NSMenu) {
+            self.rechtsklick_auswahl_nachziehen();
+            let betroffen = self.betroffene_eintraege();
+            menue.removeAllItems();
+            teilen::eintrag_anfuegen(menue, &betroffen.pfade, self.mtm());
         }
     }
 );
@@ -835,6 +908,36 @@ impl DateifensterQuelle {
             _ => return false,
         }
         true
+    }
+
+    /// Rueckt die Auswahl vor einem Rechtsklick auf die angeklickte Zeile.
+    ///
+    /// Der eine Aufrufer ist `menuNeedsUpdate:` oben, und der Zeitpunkt ist
+    /// die halbe Regel: gerufen wird **vor** [`Self::betroffene_eintraege`].
+    /// Ob ueberhaupt gerueckt wird, entscheidet
+    /// [`operationen::rechtsklick_zielzeile`] ohne Fenster; hier bleibt allein,
+    /// was AppKit betrifft, die angeklickte Zeile zu erfragen und die neue zu
+    /// setzen.
+    ///
+    /// **Gesetzt wird ueber [`Self::zeile_setzen`]**, also ueber denselben Weg,
+    /// den die Tastatur nimmt. Der Datensatz verlangt das ausdruecklich: nur
+    /// dort laeuft [`Self::auswahl_merken`] mit, und ohne das erfuehre die
+    /// Vorschau aus C6 nichts von der neuen Auswahl. Ein zweiter Weg an
+    /// `auswahl_merken` vorbei waere der Fehler, den diese Datei sonst
+    /// ueberall vermeidet.
+    fn rechtsklick_auswahl_nachziehen(&self) {
+        // `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel;
+        // `rechtsklick_zielzeile` faengt das ab und antwortet `None`.
+        let angeklickt = self.ivars().tabelle.clickedRow();
+        let ziel = {
+            let tabs = self.ivars().tabs.borrow();
+            operationen::rechtsklick_zielzeile(tabs.aktiver().modell(), angeklickt)
+        };
+        // Nach dem Ende der Ausleihe: `zeile_setzen` ruft in AppKit und ueber
+        // den Auswahlrueckruf in dieselbe Quelle zurueck.
+        if let Some(zeile) = ziel {
+            self.zeile_setzen(zeile);
+        }
     }
 
     /// Worauf ein Dateioperations-Befehl in diesem Dateifenster wirkt (C4).
@@ -2319,6 +2422,21 @@ impl Dateifenster {
             tabelle.setTarget(Some(&*delegierter));
             tabelle.setDoubleAction(Some(sel!(doppelklick:)));
         }
+
+        // Das Kontextmenue aus C1 der Runde 6. Es entsteht hier leer und
+        // bekommt seinen einen Eintrag erst beim Rechtsklick, in
+        // `menuNeedsUpdate:` oben; ein Menue mit festem Bestand koennte die
+        // betroffenen Eintraege nicht nennen, weil die sich zwischen zwei
+        // Klicks aendern.
+        //
+        // SAFETY: `setMenu:` ist als Setzer einer `strong`-Eigenschaft
+        // unsicher gebunden und verlangt nichts weiter, als dass das Menue
+        // eines ist. Die Tabelle haelt es danach; das `Retained` hier darf
+        // fallen. Der Delegierte wird schwach gehalten, siehe den Block an
+        // `unsafe impl NSMenuDelegate` oben.
+        let kontextmenue = NSMenu::new(mtm);
+        kontextmenue.setDelegate(Some(ProtocolObject::from_ref(delegierter.quelle())));
+        unsafe { tabelle.setMenu(Some(&kontextmenue)) };
 
         // Die Leiste zuletzt: ihr Rueckruf braucht die Quelle. Er haelt sie
         // **schwach**, sonst schloesse sich der Ring Quelle → Leiste → Ziel →

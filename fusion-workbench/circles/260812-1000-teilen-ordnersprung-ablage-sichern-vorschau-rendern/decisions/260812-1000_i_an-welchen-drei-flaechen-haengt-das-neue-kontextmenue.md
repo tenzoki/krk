@@ -63,6 +63,6 @@ bereits zweimal vermieden hat.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/tabelle.rs` (`DateifensterQuelle` als `NSMenuDelegate`, Menue an der `NSTableView`), `crates/krk-ui/src/appkit/editor.rs` (`Editorbereich` beantwortet `textView:menu:forEvent:atIndex:`), `crates/krk-ui/src/appkit/vorschau.rs` (`Vorschaufenster` als `NSTextViewDelegate` seiner Textanzeige und als `NSMenuDelegate` des Menues von Bildansicht und Inhaltsflaeche) — alle drei rufen den einen Bauer `teilen::eintrag_anfuegen`, keine baut ein eigenes Menue; die Zaehlproben in `crates/krk-ui/src/appkit/teilen.rs` halten das fest. Schritt 6 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

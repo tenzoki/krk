@@ -59,17 +59,31 @@
 //! Fokus hierher setzt, gibt es in dieser Runde nicht; die offene Frage dazu
 //! liegt im Entscheidungsspeicher.
 //!
+//! **Das Kontextmenue haengt an allen drei Ansichten, und diese Datei baut es
+//! nicht.** Seit C1 der Runde 6 ist das Vorschaufenster der Delegierte seiner
+//! Textanzeige und der seines Menues; es beantwortet allein, welche Datei der
+//! aktive Tab zeigt, und laesst [`super::teilen::eintrag_anfuegen`] den
+//! Eintrag setzen. Warum drei und nicht eine, und warum auf zwei
+//! Anschlussarten, steht am Aufbau weiter unten und im Kopf jenes Moduls.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTextView`, `NSImageView`, `NSImage`, `NSFont`,
 //! `NSEvent`, `NSTimer`, `NSRunLoop`, `NSDate`, `NSDateFormatter`, `NSData`
-//! und `NSString` stehen seit macOS 10.0 zur Verfuegung; einzig
-//! `NSByteCountFormatter` ist juenger als seine Nachbarn und steht seit 10.8
-//! (`NSByteCountFormatter.h:38`). Das Buendel zielt auf 15.0
-//! (`.cargo/config.toml`).
+//! und `NSString` stehen seit macOS 10.0 zur Verfuegung, seit C1 der Runde 6
+//! ebenso `NSMenu`, die Eigenschaft `menu` von `NSResponder`
+//! (`NSResponder.h:111`), `NSMenu`s Setzer `delegate` (`NSMenu.h:156`) und die
+//! drei angenommenen Protokolle `NSMenuDelegate` (`NSMenu.h:269`) samt
+//! `menuNeedsUpdate:` (`:271`), `NSTextDelegate` (`NSText.h:200`) und
+//! `NSTextViewDelegate` (`NSTextView.h:576`). Einzig `NSByteCountFormatter` ist juenger
+//! als seine Nachbarn und steht seit 10.8 (`NSByteCountFormatter.h:38`). Das
+//! Buendel zielt auf 15.0 (`.cargo/config.toml`).
 //!
-//! **Eine einzige Beruehrung traegt daneben eine eigene Angabe**:
-//! `NSRunLoopCommonModes` steht seit 10.5 (`NSRunLoop.h:14`). Alles uebrige —
+//! **Drei Beruehrungen tragen daneben eine eigene Angabe**:
+//! `NSRunLoopCommonModes` steht seit 10.5 (`NSRunLoop.h:14`) und die
+//! Delegiertenmethode `textView:menu:forEvent:atIndex:` ebenfalls seit 10.5
+//! (`NSTextView.h:628`); `NSMenu`s `removeAllItems` steht seit 10.6
+//! (`NSMenu.h:112`). Alles uebrige —
 //! `setRulersVisible:`, `setImageScaling:`, `initWithData:`,
 //! `userFixedPitchFontOfSize:`, `smallSystemFontSize`, `addTimer:forMode:`,
 //! `dateWithTimeIntervalSince1970:` und der fuenfteilige Zeitgeberaufruf
@@ -87,18 +101,19 @@
 //! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
 use std::cell::RefCell;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
+use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSEvent, NSFont, NSImage, NSImageScaling, NSImageView, NSScrollView,
-    NSTextView, NSView,
+    NSAutoresizingMaskOptions, NSEvent, NSFont, NSImage, NSImageScaling, NSImageView, NSMenu,
+    NSMenuDelegate, NSScrollView, NSTextDelegate, NSTextView, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSData, NSDate,
     NSDateFormatter, NSDateFormatterStyle, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
-    NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer,
+    NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
 };
 
 use krk_core::tasten::Kommando;
@@ -109,6 +124,7 @@ use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinh
 use super::nummernspalte::Nummernspalte;
 use super::tabelle::typ_beschriften;
 use super::tableiste::{self, Tableiste};
+use super::teilen;
 
 /// Die Groesse, mit der die Ansichten entstehen, bevor die Aufteilung sie
 /// auslegt.
@@ -211,6 +227,66 @@ define_class!(
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
     unsafe impl NSObjectProtocol for Vorschaufenster {}
 
+    // SAFETY: `NSTextDelegate` stellt keine Bedingungen. Er steht hier allein,
+    // weil `NSTextViewDelegate` ihn voraussetzt; keine seiner Methoden wird
+    // beantwortet. Die Textanzeige der Vorschau ist nicht bearbeitbar, es gibt
+    // also keine Aenderung zu melden.
+    unsafe impl NSTextDelegate for Vorschaufenster {}
+
+    // SAFETY: `NSTextViewDelegate` stellt keine Bedingungen. Die Textflaeche
+    // haelt ihren Delegierten schwach ("This is a weak property",
+    // `objc2-app-kit-0.3.2/src/generated/NSTextView.rs:1258-1263`), und das
+    // Vorschaufenster haelt die Flaeche stark; ein Ring entsteht deshalb nicht.
+    // Dieselbe Anbindung wie im Editor.
+    unsafe impl NSTextViewDelegate for Vorschaufenster {
+        /// Haengt den Teilen-Eintrag in das Kontextmenue der Textanzeige
+        /// (C1 der Runde 6, sechstes Kriterium).
+        ///
+        /// **Derselbe Weg wie im Editor, und aus demselben Grund**: eine
+        /// `NSTextView` baut ihr Kontextmenue selbst, und dieser Haken
+        /// **ergaenzt** es, statt es zu ersetzen. Was AppKit einer nicht
+        /// auswaehlbaren Anzeige gibt, ist wenig bis nichts; es bleibt
+        /// trotzdem stehen. Die zweite Anschlussart, `setMenu:`, nehmen die
+        /// Bildansicht und die Inhaltsflaeche, weil sie kein eigenes Menue
+        /// bauen — beide stehen im Kopf von [`super::teilen`] nebeneinander.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTextView.h:628`).
+        #[unsafe(method_id(textView:menu:forEvent:atIndex:))]
+        fn kontextmenue(
+            &self,
+            _flaeche: &NSTextView,
+            menue: &NSMenu,
+            _ereignis: &NSEvent,
+            _stelle: NSUInteger,
+        ) -> Option<Retained<NSMenu>> {
+            teilen::eintrag_anfuegen(menue, &self.teilbare_pfade(), self.mtm());
+            Some(menue.retain())
+        }
+    }
+
+    // SAFETY: `NSMenuDelegate` stellt keine Bedingungen. Das Menue haelt seinen
+    // Delegierten **schwach** (`NSMenu.h:156`, "This is a weak property" in
+    // `objc2-app-kit-0.3.2/src/generated/NSMenu.rs:356-361`), die beiden
+    // Ansichten halten das Menue stark, und das Vorschaufenster haelt die
+    // Ansichten. Der Ring bleibt an der Kante Menue → Delegierter offen.
+    unsafe impl NSMenuDelegate for Vorschaufenster {
+        /// Baut das Kontextmenue der Bildansicht und der Inhaltsflaeche, bei
+        /// jedem Rechtsklick neu (C1 der Runde 6, sechstes Kriterium).
+        ///
+        /// **Ein Menue fuer beide Ansichten, und eine Methode fuer beide.**
+        /// Welche der beiden angeklickt wurde, aendert nichts an der Antwort:
+        /// geteilt wird die Datei des aktiven Tabs, ob sie gerade als Bild
+        /// oder als Text dasteht. Eine Verzweigung nach der Ansicht waere eine
+        /// zweite Regel ohne zweite Frage.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(menuNeedsUpdate:))]
+        fn menue_auffrischen(&self, menue: &NSMenu) {
+            let pfade = self.teilbare_pfade();
+            menue.removeAllItems();
+            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+        }
+    }
+
     impl Vorschaufenster {
         /// Der Rueckruf des Zeitgebers.
         // SAFETY: Die Signatur passt zu der, die NSTimer aufruft.
@@ -294,6 +370,38 @@ impl Vorschaufenster {
         this.ivars().bereich.addSubview(&leistensicht);
         *this.ivars().tableiste.borrow_mut() = Some(leiste);
 
+        // Das Kontextmenue aus C1 der Runde 6, an allen drei Ansichten. Es
+        // steht hier und nicht in `bauen`s erster Haelfte, weil es das Objekt
+        // erst ab dem `init` weiter oben gibt; dieselbe Reihenfolge wie beim
+        // Rueckruf der Tableiste darueber und beim Delegierten des Editors.
+        //
+        // **Alle drei bekommen es, und nicht die eine, auf der der Klick nach
+        // unserer Vermutung landet.** Wo ein Rechtsklick in der Vorschau
+        // ankommt, haengt am Inhalt: auf der Textanzeige, auf der Bildansicht
+        // oder auf der Inhaltsflaeche dahinter. Ob eine Ansicht ohne eigenes
+        // Menue die rechte Maustaste an ihre Uebergeordnete weiterreicht, ist
+        // eine Zusage von AppKit, die wir nicht gelesen haben, und eine
+        // Flaeche ohne Menue waere der stille Fehlschlag, den C1 ausschliesst.
+        //
+        // Die Textanzeige geht ihren eigenen Weg, `textView:menu:forEvent:atIndex:`
+        // weiter oben; die beiden anderen teilen sich **ein** Menue. Ein
+        // zweites daneben traege denselben einen Eintrag und braeuchte
+        // denselben Delegierten, waere also eine Wiederholung ohne Unterschied.
+        this.ivars()
+            .text
+            .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+        let kontextmenue = NSMenu::new(mtm);
+        kontextmenue.setDelegate(Some(ProtocolObject::from_ref(&*this)));
+        // SAFETY: `setMenu:` ist als Setzer einer `strong`-Eigenschaft unsicher
+        // gebunden und verlangt nichts weiter, als dass das Menue eines ist.
+        // Beide Ansichten halten es danach; dasselbe Objekt zweimal zu setzen
+        // ist zulaessig, weil ein Kontextmenue kein Untermenue ist und keinen
+        // Elternteil hat.
+        unsafe {
+            this.ivars().inhaltsflaeche.setMenu(Some(&kontextmenue));
+            this.ivars().bild.setMenu(Some(&kontextmenue));
+        }
+
         this.anzeigen();
         this
     }
@@ -323,9 +431,28 @@ impl Vorschaufenster {
 
     /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
     ///
-    /// Nur zum Ablesen, fuer die Endbedingung von L7 im Messmodus.
+    /// Nur zum Ablesen. Drei fragen danach: die Endbedingung von L7 im
+    /// Messmodus, [`crate::angezeigtedatei::welche`] ueber den
+    /// Anwendungsdelegierten, und das Kontextmenue dieser Datei ueber
+    /// [`Self::teilbare_pfade`].
     pub fn angezeigter_pfad(&self) -> Option<std::path::PathBuf> {
         self.ivars().modell.borrow().aktiver_pfad()
+    }
+
+    /// Was ein Rechtsklick in der Vorschau zu teilen findet (C1 der Runde 6).
+    ///
+    /// Keine oder eine Datei, nie mehr: die Vorschau zeigt einen Tab, und der
+    /// zeigt hoechstens eine Datei. Zeigt er etwas anderes — Metadaten, einen
+    /// Hinweis, den Inhalt der Zwischenablage, gar nichts —, bleibt die Liste
+    /// leer, und [`teilen::eintrag_anfuegen`] setzt dann keinen Eintrag.
+    ///
+    /// **Die Sichtbarkeit der Vorschau wird hier nicht gefragt.** Das Menue
+    /// geht nur auf, wo der Nutzer hinklickt, und geklickt hat er in die
+    /// sichtbare Vorschau; [`crate::angezeigtedatei::welche`] beantwortete
+    /// eine Frage, die der Klick schon beantwortet hat. Die Ausleihe des
+    /// Modells endet mit dieser Zeile, vor jedem Objective-C-Aufruf.
+    fn teilbare_pfade(&self) -> Vec<PathBuf> {
+        self.angezeigter_pfad().into_iter().collect()
     }
 
     /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet.

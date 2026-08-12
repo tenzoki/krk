@@ -356,7 +356,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check`, Exit 0. Dass der Dialog aufgeht und AirDrop darin steht, sieht man am Bündel (C1.1).
    - Dependencies: Schritt 3 (`angezeigtedatei.rs`), Schritt 4 (Belegungseintrag).
 
-6. **Das Kontextmenü an den drei Flächen**
+6. [DONE] **Das Kontextmenü an den drei Flächen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/teilen.rs`
    - Changes:

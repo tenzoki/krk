@@ -371,9 +371,18 @@
 //!
 //! `NSScrollView`, `NSTextView`, `NSTextStorage`, `NSLayoutManager`,
 //! `NSTextContainer`, `NSTextField` und `NSTimer` stehen seit macOS 10.0 zur
-//! Verfuegung; das Buendel zielt auf 15.0 (`.cargo/config.toml`). Keine von
-//! ihnen ist nach macOS 15 hinzugekommen, und deshalb braucht keine der
-//! Beruehrungen in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
+//! Verfuegung, seit C1 der Runde 6 ebenso `NSMenu` und `NSEvent`, die der
+//! Menuehaken entgegennimmt. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15 hinzugekommen,
+//! und deshalb braucht keine der Beruehrungen in dieser Datei eine
+//! Verfuegbarkeitspruefung zur Laufzeit.
+//!
+//! **Eine Beruehrung an einem Protokoll ist juenger als ihre Klasse und liegt
+//! weit unter dem Zielsystem**: die Delegiertenmethode
+//! `textView:menu:forEvent:atIndex:` steht seit macOS 10.5
+//! (`NSTextView.h:628`). Der Rest des Menueweges — `NSMenu` selbst und das
+//! Zurueckgeben eines Menues — traegt im Kopf des Systems keine Angabe und
+//! steht damit seit 10.0.
 //!
 //! Fuenf **Methoden** sind juenger als ihre Klasse, und **vier von ihnen liegen
 //! auf oder unter dem Zielsystem** und brauchen deshalb keine Pruefung:
@@ -413,8 +422,8 @@ use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAutoresizingMaskOptions, NSColor, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
+    NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSMenu, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
     NSScrollView, NSTextAlignment, NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView,
     NSTextViewDelegate, NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
     NSWritingToolsBehavior,
@@ -422,7 +431,7 @@ use objc2_app_kit::{
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSDictionary, NSNotification, NSNumber, NSObject, NSObjectProtocol,
     NSPoint, NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval,
-    NSTimer, NSUndoManager, ns_string,
+    NSTimer, NSUInteger, NSUndoManager, ns_string,
 };
 
 #[cfg(test)]
@@ -441,6 +450,7 @@ use crate::hervorhebung::{
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
+use super::teilen;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
@@ -1410,9 +1420,44 @@ define_class!(
 
     // SAFETY: `NSTextViewDelegate` stellt keine Bedingungen. Er steht hier,
     // weil `NSTextView::setDelegate:` genau diesen Protokolltyp verlangt; die
-    // eine benutzte Methode, `textDidChange:`, kommt aus dem Obertyp
-    // `NSTextDelegate`.
-    unsafe impl NSTextViewDelegate for Editorbereich {}
+    // Aenderungsmeldung `textDidChange:` kommt aus dem Obertyp
+    // `NSTextDelegate`, der Menuehaken darunter aus diesem Protokoll selbst.
+    unsafe impl NSTextViewDelegate for Editorbereich {
+        /// Haengt den Teilen-Eintrag in das Kontextmenue der Textflaeche
+        /// (C1 der Runde 6, sechstes Kriterium).
+        ///
+        /// **KRKs Eintrag tritt neben das, was AppKit gibt, und nimmt nichts
+        /// weg.** Dieser Haken bekommt das fertig gebaute Menue der
+        /// `NSTextView` — Ausschneiden, Kopieren, Rechtschreibung, die
+        /// Schreibwerkzeuge — und gibt es **ergaenzt** zurueck. Deshalb geht
+        /// der Editor diesen Weg und nicht den ueber `setMenu:`, den die
+        /// Dateiliste nimmt: eine Tabelle bringt kein eigenes Menue mit, eine
+        /// Textflaeche schon, und ein gesetztes Menue traete an dessen Stelle.
+        /// Die beiden Anschlussarten stehen im Kopf von [`super::teilen`]
+        /// nebeneinander.
+        ///
+        /// Geteilt wird die Datei, die der Editor haelt. Sie ist die
+        /// angezeigte, denn das Menue geht nur dort auf, wo der Nutzer
+        /// hinklickt, und geklickt hat er in den sichtbaren Editor; eine
+        /// Abfrage der Sichtbarkeit ueber [`crate::angezeigtedatei::welche`]
+        /// beantwortete hier eine Frage, die der Klick schon beantwortet hat.
+        /// Haelt der Editor keine Datei, geschieht nichts und das Menue bleibt,
+        /// wie AppKit es gebaut hat.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTextView.h:628`).
+        #[unsafe(method_id(textView:menu:forEvent:atIndex:))]
+        fn kontextmenue(
+            &self,
+            _flaeche: &NSTextView,
+            menue: &NSMenu,
+            _ereignis: &NSEvent,
+            _stelle: NSUInteger,
+        ) -> Option<Retained<NSMenu>> {
+            let pfade: Vec<PathBuf> = self.pfad().into_iter().collect();
+            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+            Some(menue.retain())
+        }
+    }
 
     impl Editorbereich {
         /// Der Rueckruf des Zeitgebers.

@@ -33,8 +33,33 @@
 //! sind; sie bauen kein Menue. Drei Menuebauer nebeneinander waeren die
 //! Wiederholung, die dieses Projekt an `appkit/nummernspalte.rs` und
 //! `appkit/tableiste.rs` bereits zweimal vermieden hat (C1, siebtes
-//! Kriterium). **Die Flaechen selbst haengt erst der naechste Schritt an;**
-//! diese Datei stellt den Bauer bereit und kennt keine von ihnen.
+//! Kriterium). **Diese Datei kennt keine der drei Flaechen**; sie stellt den
+//! Bauer bereit, und angehaengt haben sich die Flaechen selbst.
+//!
+//! **Zwei Anschlussarten, ein Bauer**, und der Unterschied ist nicht
+//! Geschmack, sondern die Bauart der Flaeche:
+//!
+//! ```text
+//!   baut ihr Kontextmenue selbst und bietet einen Delegiertenhaken
+//!     Textflaeche des Editors  ─┐
+//!     Textanzeige der Vorschau ─┴─> textView:menu:forEvent:atIndex: ─┐
+//!                                                                    ├─> eintrag_anfuegen
+//!   baut keines und nimmt das Menue der Ansicht                      │
+//!     Dateiliste               ─┐                                    │
+//!     Bildansicht              ─┼─> setMenu: + menuNeedsUpdate: ─────┘
+//!     Inhaltsflaeche           ─┘
+//! ```
+//!
+//! Der Haken der `NSTextView` bekommt das Menue, das AppKit gebaut hat, und
+//! gibt es **ergaenzt** zurueck; damit tritt KRKs Eintrag neben das, was
+//! AppKit von sich aus gibt, statt es zu ersetzen. Die andere Art leert das
+//! Menue und baut es bei **jedem** Rechtsklick neu, weil die betroffenen
+//! Eintraege sich zwischen zwei Klicks aendern.
+//!
+//! **Dass es bei einem Bauer bleibt, misst diese Datei selbst**: die beiden
+//! Zaehlproben unter `mod tests` lesen den Quellbaum von `krk-ui` und halten
+//! an, sobald ein zweiter `NSSharingServicePicker` oder ein zweiter Bauer
+//! danebentritt.
 //!
 //! # Die drei Werte von [`Quelle`] sind die ganze Fokusverzweigung
 //!
@@ -219,10 +244,12 @@ pub fn anbieten(pfade: &[PathBuf], flaeche: &NSView, rechteck: NSRect) -> bool {
 /// rueckt nach unten; KRKs Eintrag tritt daneben und nimmt nichts weg. Der
 /// Trenner entsteht nur, wenn es einen Bestand gibt: in einem leeren Menue
 /// waere er eine Linie ohne zwei Seiten.
-#[expect(
-    dead_code,
-    reason = "Schritt 6 der Runde 6 haengt den Bauer an die drei Flaechen; bis dahin ruft ihn niemand. `expect` und nicht `allow`, damit der Uebersetzer die Zeile meldet, sobald sie ueberfluessig ist, und der naechste Schritt sie wegnimmt."
-)]
+///
+/// **Fuenf Ansichten rufen ihn, auf zwei Wegen.** Ueber den Delegiertenhaken
+/// der `NSTextView` die Textflaeche des Editors und die der Vorschau; ueber
+/// `menuNeedsUpdate:` die Dateiliste, die Bildansicht der Vorschau und deren
+/// Inhaltsflaeche. Auf dem zweiten Weg leert der Aufrufer das Menue vorher,
+/// auf dem ersten nicht — dort ist der Bestand das, was AppKit gebaut hat.
 pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker) {
     if pfade.is_empty() {
         return;
@@ -327,5 +354,118 @@ mod tests {
             .filter(|fokus| worauf(*fokus) == Quelle::Nichts)
             .collect();
         assert_eq!(ohne_quelle, vec![Fokus::Leiste]);
+    }
+
+    /// Jede `.rs`-Datei unter `crates/krk-ui/src/`, mit ihrem Pfad unterhalb
+    /// von `src/` und ihrem Inhalt, in fester Reihenfolge.
+    ///
+    /// **Die Grundlage der beiden Zaehlproben darunter.** Sie lesen den
+    /// Quellbaum, weil die Zusagen, die sie halten, Aussagen ueber den Baum
+    /// sind und nicht ueber ein Ergebnis: "es gibt genau einen Aufrufer" und
+    /// "es gibt genau einen Bauer" lassen sich an keinem Rueckgabewert
+    /// ablesen. Dieselbe Art der Abnahme, mit der S16 die Kistengrenze von
+    /// [`crate::hervorhebung`] misst — dort von Hand, hier bei jedem
+    /// `make check`.
+    ///
+    /// `CARGO_MANIFEST_DIR` steht beim Uebersetzen fest und zeigt auf
+    /// `crates/krk-ui`; die Probe braucht deshalb den Baum zur Laufzeit an
+    /// derselben Stelle. Fehlt er, schlaegt sie fehl statt still nichts zu
+    /// zaehlen — eine leere Liste waere eine Probe, die alles bestaetigt.
+    fn quelldateien() -> Vec<(String, String)> {
+        let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut gefunden = Vec::new();
+        einsammeln(&wurzel, &wurzel, &mut gefunden);
+        assert!(
+            gefunden.len() > 1,
+            "unter {} steht kein Quellbaum; die Zaehlproben haetten nichts zu zaehlen",
+            wurzel.display()
+        );
+        gefunden.sort();
+        gefunden
+    }
+
+    /// Haengt alle `.rs`-Dateien unter `ordner` an `gefunden`, in die Tiefe.
+    fn einsammeln(
+        wurzel: &std::path::Path,
+        ordner: &std::path::Path,
+        gefunden: &mut Vec<(String, String)>,
+    ) {
+        let eintraege = std::fs::read_dir(ordner)
+            .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", ordner.display()));
+        for eintrag in eintraege {
+            let pfad = eintrag
+                .expect("Eintrag des Quellordners nicht lesbar")
+                .path();
+            if pfad.is_dir() {
+                einsammeln(wurzel, &pfad, gefunden);
+            } else if pfad.extension().is_some_and(|endung| endung == "rs") {
+                let name = pfad
+                    .strip_prefix(wurzel)
+                    .expect("der Pfad kommt aus der Wurzel")
+                    .to_string_lossy()
+                    .into_owned();
+                let inhalt = std::fs::read_to_string(&pfad)
+                    .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", pfad.display()));
+                gefunden.push((name, inhalt));
+            }
+        }
+    }
+
+    /// Diese Datei ist die einzige, die den Freigabewaehler baut (C1, siebtes
+    /// und achtes Kriterium).
+    ///
+    /// Gezaehlt werden Dateien und nicht Fundstellen: in dieser hier steht der
+    /// Name mehrfach, im Kopf, im Rumpf und in dieser Probe.
+    ///
+    /// **Die Nadel traegt die beiden Doppelpunkte, und das ist der ganze
+    /// Unterschied zwischen Nennen und Bauen.** Der Kopf von
+    /// [`super`] nennt die Klasse in Prosa, und das ist keine Beruehrung. Wer
+    /// einen Waehler baut, kommt an
+    /// `NSSharingServicePicker::alloc` und `::initWithItems` nicht vorbei, und
+    /// an einen fertigen kommt er nicht heran: aus dieser Datei kommt keiner
+    /// heraus. Die Schreibweise mit Doppelpunkten trennt damit genau die
+    /// beiden Faelle, um die es geht.
+    #[test]
+    fn allein_diese_datei_baut_den_freigabewaehler() {
+        let bauer: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(_, inhalt)| inhalt.contains("NSSharingServicePicker::"))
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(bauer, vec!["appkit/teilen.rs".to_owned()]);
+    }
+
+    /// Es gibt genau einen Menuebauer (C1, siebtes Kriterium).
+    ///
+    /// Zwei Zaehlungen, weil der Bauer zwei Haelften hat, die einzeln
+    /// abwandern koennten: die Funktion selbst und der Eintrag des Systems,
+    /// den sie holt. Gezaehlt werden hier Fundstellen und nicht Dateien; eine
+    /// zweite Erklaerung in dieser Datei waere genauso ein zweiter Bauer wie
+    /// eine in einer anderen.
+    #[test]
+    fn es_gibt_genau_einen_menuebauer() {
+        // **Beide Nadeln stehen zusammengesetzt da, und das ist kein
+        // Schnoerkel.** Die Probe liegt in dem Baum, den sie liest; als ein
+        // Stueck geschrieben faende jede Nadel sich selbst und zaehlte eine
+        // Fundstelle zu viel.
+        let bauer = concat!("fn ", "eintrag_anfuegen");
+        let systemeintrag = concat!(".standardShare", "MenuItem(");
+        let dateien = quelldateien();
+        let zaehlen = |nadel: &str| -> usize {
+            dateien
+                .iter()
+                .map(|(_, inhalt)| inhalt.matches(nadel).count())
+                .sum()
+        };
+        assert_eq!(
+            zaehlen(bauer),
+            1,
+            "`eintrag_anfuegen` ist nicht genau einmal erklaert"
+        );
+        assert_eq!(
+            zaehlen(systemeintrag),
+            1,
+            "der Teilen-Eintrag des Systems wird nicht genau einmal geholt"
+        );
     }
 }

@@ -192,6 +192,54 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
     auswahl
 }
 
+/// Auf welche Zeile ein Rechtsklick die Auswahl setzt, **bevor**
+/// [`betroffene`] gefragt wird (Nutzerentscheid vom 260812-1200).
+///
+/// `None` heisst: die Auswahl bleibt stehen. `Some(zeile)` heisst: der
+/// Aufrufer setzt sie auf diese Zeile, und zwar auf demselben Weg wie ein
+/// Tastenbefehl, damit die Vorschau davon erfaehrt.
+///
+/// **Eine zweite Auswahlregel entsteht hier nicht.** [`betroffene`] bleibt
+/// unangetastet und beantwortet weiterhin allein, worauf ein Befehl wirkt;
+/// geaendert wird die Auswahl vor ihr. Der Datensatz dieser Runde,
+/// `decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`,
+/// entscheidet genau so und lehnt die beiden anderen Moeglichkeiten
+/// ausdruecklich ab: den Rechtsklick ohne jede Wirkung, weil ein Menue, das
+/// auf A zeigt und auf B wirkt, bei einem spaeteren Eintrag mit
+/// zerstoerender Wirkung der teuerste Fehler einer Oberflaeche ist; und das
+/// Setzen ohne Ausnahme, weil es die Markierung des Nutzers wegnaehme.
+///
+/// **Die Ausnahme traegt die Antwort.** Ist die angeklickte Zeile markiert,
+/// bleiben Auswahl und Markierung stehen: wer dreissig Eintraege markiert hat
+/// und mit rechts auf einen davon klickt, verliert nichts. Ist sie es nicht,
+/// rueckt die Auswahl auf sie, und der Klick zeigt auf dasselbe, worauf er
+/// wirkt.
+///
+/// **Was die Ausnahme nicht deckt**, und der Preis gehoert genannt: ein Klick
+/// auf eine **un**markierte Zeile, waehrend anderswo in der Liste etwas
+/// markiert ist, rueckt die Auswahl zwar nach, aendert aber nichts am
+/// Ergebnis, weil die Markierung in [`betroffene`] den Vorrang behaelt. Das
+/// Aufheben der Markierung waere die abgelehnte dritte Moeglichkeit.
+///
+/// `angeklickt` ist der Wert von `NSTableView.clickedRow`. Drei Faelle fuehren
+/// zu `None` und einer zu `Some`:
+///
+/// - **negativ** — der Klick fiel auf keine Zeile, also unter die letzte oder
+///   auf die leere Flaeche der Liste. Er darf in keine Auswahl laufen.
+/// - **ausserhalb der Sichtreihenfolge** — [`Ordnermodell::eintragsindex`]
+///   findet keinen Eintrag, etwa in einer leeren Liste.
+/// - **markiert** — die Ausnahme oben.
+/// - sonst die angeklickte Zeile.
+#[must_use]
+pub fn rechtsklick_zielzeile(modell: &Ordnermodell, angeklickt: isize) -> Option<usize> {
+    let zeile = usize::try_from(angeklickt).ok()?;
+    let eintrag = modell.eintragsindex(zeile)?;
+    if modell.ist_markiert(eintrag) {
+        return None;
+    }
+    Some(zeile)
+}
+
 // ----------------------------------------------------------------------
 // Was durchkommt, solange ein Blatt steht
 // ----------------------------------------------------------------------
@@ -1035,6 +1083,82 @@ mod tests {
     fn ohne_auswahl_und_ohne_markierung_ist_nichts_betroffen() {
         let modell = modell_mit(&[("a.txt", Typ::Datei)]);
         assert!(betroffene(&modell, Path::new("/tmp/x")).ist_leer());
+    }
+
+    // ------------------------------------------------------------------
+    // Die Auswahl vor dem Rechtsklick (Nutzerentscheid vom 260812-1200)
+    // ------------------------------------------------------------------
+
+    /// Der Regelfall: die angeklickte Zeile ist nicht markiert, die Auswahl
+    /// rueckt auf sie.
+    #[test]
+    fn der_rechtsklick_setzt_die_auswahl_auf_die_angeklickte_zeile() {
+        let mut modell = modell_mit(&[("a.txt", Typ::Datei), ("b.txt", Typ::Datei)]);
+        let index = modell.index_von_namen("a.txt").expect("a.txt steht da");
+        modell.auswahl_setzen(Some(index));
+
+        assert_eq!(
+            rechtsklick_zielzeile(&modell, 1),
+            Some(1),
+            "b.txt steht in Zeile 1 und ist nicht markiert"
+        );
+    }
+
+    /// Die tragende Ausnahme: auf einer markierten Zeile bleibt alles stehen.
+    ///
+    /// Sie ist der Grund, aus dem die dritte Moeglichkeit des Datensatzes
+    /// abgelehnt ist. Geprueft wird sie mit einer Markierung ueber mehrere
+    /// Zeilen, weil genau das der Fall ist, den der Nutzer verlieren wuerde.
+    #[test]
+    fn auf_einer_markierten_zeile_bewegt_der_rechtsklick_nichts() {
+        let mut modell = modell_mit(&[
+            ("a.txt", Typ::Datei),
+            ("b.txt", Typ::Datei),
+            ("c.txt", Typ::Datei),
+        ]);
+        for name in ["a.txt", "b.txt", "c.txt"] {
+            let index = modell.index_von_namen(name).expect("steht da");
+            modell.markierung_umschalten(index);
+        }
+
+        assert_eq!(rechtsklick_zielzeile(&modell, 0), None);
+        assert_eq!(rechtsklick_zielzeile(&modell, 1), None);
+        assert_eq!(rechtsklick_zielzeile(&modell, 2), None);
+    }
+
+    /// Eine Markierung anderswo haelt den Rechtsklick auf einer unmarkierten
+    /// Zeile nicht auf.
+    ///
+    /// Die Ausnahme fragt nach der angeklickten Zeile und nicht danach, ob
+    /// ueberhaupt etwas markiert ist. Was danach betroffen ist, entscheidet
+    /// [`betroffene`] unveraendert weiter, und dort behaelt die Markierung
+    /// den Vorrang.
+    #[test]
+    fn eine_markierung_anderswo_haelt_den_rechtsklick_nicht_auf() {
+        let mut modell = modell_mit(&[("a.txt", Typ::Datei), ("b.txt", Typ::Datei)]);
+        let index = modell.index_von_namen("a.txt").expect("a.txt steht da");
+        modell.markierung_umschalten(index);
+
+        assert_eq!(rechtsklick_zielzeile(&modell, 1), Some(1));
+    }
+
+    /// `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel.
+    #[test]
+    fn ein_klick_auf_keine_zeile_setzt_keine_auswahl() {
+        let modell = modell_mit(&[("a.txt", Typ::Datei)]);
+        assert_eq!(rechtsklick_zielzeile(&modell, -1), None);
+    }
+
+    /// Eine Zeilennummer jenseits der Liste faellt in dieselbe Antwort.
+    #[test]
+    fn eine_zeile_jenseits_der_liste_setzt_keine_auswahl() {
+        let modell = modell_mit(&[("a.txt", Typ::Datei)]);
+        assert_eq!(rechtsklick_zielzeile(&modell, 1), None);
+        assert_eq!(
+            rechtsklick_zielzeile(&modell_mit(&[]), 0),
+            None,
+            "die leere Liste hat keine Zeile 0"
+        );
     }
 
     /// Der Beleg zur Wahl "kein Takt": viele Meldungen, wenige Weckrufe.
