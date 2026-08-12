@@ -44,3 +44,20 @@ Entscheidungsdatensätze nach `CLAUDE.md` die bindende Grundlage sind und ein
 Verweis zwischen ihnen auflösen sollte.
 
 **Herkunft:** Circle der Runde 6, Turn 3, `df4ec00`.
+
+---
+Resolved: Beide Zeigerstellen tragen jetzt die Sternform. `decisions/260812-1105_s_…` nennt den
+Nachfolger als `260812-1809_*_…`, `decisions/260812-1000_s_…` als `260812-1851_*_…`, und der
+Turn-2-Eintrag im Circle-Datensatz ebenso. Die Sternform ist die Regel aus
+`rules/circle-records.md`, Abschnitt `### Citation form in the portfolio`, und ihr Grund gilt
+hier genauso: ein ausgeschriebener Marker ist ein Zeiger, der beim ersten Zustandswechsel seines
+Ziels stirbt. Genau das ist mit `df4ec00` geschehen, als der Nachfolger von beantwortet auf
+umgesetzt ging.
+
+Die Nennungen in diesem Datensatz selbst und in
+`issues/260812-1816_*_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md`
+bleiben ausgeschrieben. Dort ist der Marker die Aussage und kein Zeiger: sie halten fest, welcher
+Name damals dastand. Die Sternform loeschte den Inhalt.
+
+Der Fehler stammt vom Orchestrator, der beide `Superseded by:`-Zeilen geschrieben hat.
+

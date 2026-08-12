@@ -130,3 +130,18 @@ Wirkung laesst sich ohne Vordergrundlauf nicht sehen. Ein ungeprueftes
 Umschreiben von `anwenden` neben zwei gemessenen Behebungen waere die
 schlechtere Wahl gewesen. Der Kommentar an Ort und Stelle nennt die fehlende
 Faehigkeit und verweist auf diesen Datensatz.
+
+---
+Resolved: Punkt 1 (Kommentar berichtigt) und Punkt 3 (Reihenfolge über einen Rang statt über
+die stabile Sortierung) sind mit `a9e1149` erledigt. Punkt 2, das Zusammenlegen der
+Schriftschnitte, ist kein verbleibender Teil dieses Datensatzes mehr: er steht seit dem
+260812-1851 als eigener, vom Nutzer zurückgestellter Datensatz
+`issues/260812-1851_*_zwei-schriftschnitte-legen-sich-nicht-zusammen-fett-in-kursiv-bleibt-aufrecht.md`,
+mit dem Auslöser, der die Frage wieder aufmacht. Dieser Datensatz hatte danach nichts Eigenes
+mehr offen und blieb nur stehen, weil keiner der beiden den anderen nannte; ein `find` über
+offene Punkte lieferte damit Arbeit, die der Nutzer vertagt hat. Gefunden von der Durchsicht
+`reviews/260812-1920-coderev-turn-3-der-runde-6.md`, abgelegt als
+`issues/260812-1920_*_dieselbe-verbleibende-arbeit-steht-zweimal-einmal-offen-und-einmal-zurueckgestellt.md`.
+Der Fall der Überschrift, die ihre Schriftgröße verliert, ist ebenfalls ausgezogen und steht als
+`issues/260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md`.
+

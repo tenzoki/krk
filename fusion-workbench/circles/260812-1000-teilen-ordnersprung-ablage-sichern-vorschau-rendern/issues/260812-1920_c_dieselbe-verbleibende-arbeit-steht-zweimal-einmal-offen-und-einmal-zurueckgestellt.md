@@ -56,3 +56,15 @@ entschieden, während sie im Bestand der offenen Punkte weiterläuft.
 zwei von ihnen über denselben Gegenstand.
 
 **Herkunft:** Circle der Runde 6, Turn 3.
+
+---
+Resolved: Der offene Datensatz hatte nichts Eigenes mehr und ist geschlossen. Seine beiden
+erledigten Punkte nennt seine `Resolved:`-Zeile, sein verbliebener Punkt 2 steht seit dem
+260812-1851 als eigener, zurückgestellter Datensatz, und beide nennen einander jetzt
+namentlich. Ein `find` über offene Punkte liefert damit nicht mehr, was der Nutzer vertagt hat.
+
+Geschlossen wurde `issues/260812-1805_*_der-ueberschneidungssatz-in-textmerkmale-anwenden-gilt-seit-markdown-rs-nicht-mehr.md`;
+er zeigt auf `issues/260812-1851_*_zwei-schriftschnitte-legen-sich-nicht-zusammen-fett-in-kursiv-bleibt-aufrecht.md`
+und auf `issues/260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md`,
+den dritten Fall, den er nicht vollständig beschrieben hatte.
+
