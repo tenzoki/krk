@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** superseded
 **Filed by:** orchestrator (Klärungsrunde, auf Vorgabe des Nutzers)
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_*_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md` (überholt durch diesen Datensatz), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md` (C1), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260804-1832_*_traegt-der-fortschritt-ein-blatt-oder-die-statuszeile.md`, `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/aufteilung.rs:486`
 
@@ -72,4 +72,4 @@ haben. Der Plan entscheidet es an der bestehenden Rangfolge, statt eine zweite d
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Nutzerentscheid vom 260812-1105, vorgelegt mit drei Möglichkeiten und ihren Folgen; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented:
 Deferred:
-Superseded by:
+Superseded by: `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1809_a_wie-wird-eine-meldung-lesbar-die-breiter-ist-als-das-fenster.md` — nur die Blätter-Hälfte ist ersetzt. Eine zu lange Meldung wird künftig über einen Kurzhinweis beim Verweilen lesbar statt über eine Bildlaufansicht, weil das Blättern zwei Kosten erzeugt hat, die hier niemand vorhergesehen hatte: den Gestenklau am Fensterfuß und die `NSScroller`, die C5.11 breiter machen. Alles Übrige dieses Datensatzes gilt fort und ist mit `baf8660` gebaut — eine Zeile statt zweier, über die volle Fensterbreite, mit der Zuordnung zum Dateifenster im Satz und der zweistelligen Ordnung aus Rang und aktiver Seite. Der Nachfolger nennt beides ausdrücklich, damit die fortgeltende Hälfte nicht mit der ersetzten verlorengeht.
