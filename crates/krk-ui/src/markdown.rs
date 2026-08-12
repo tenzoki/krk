@@ -53,7 +53,7 @@
 //! Umbruechen; die Zwischenraeume bleiben stehen, und das Quelltextraster aus
 //! dem Datensatz vom 260812-1105 entsteht ohne Sonderregel.
 //!
-//! # Die Deckung: kein Quellbyte faellt heraus
+//! # Die Deckung: was aus der Quelle herausfaellt, und was nicht
 //!
 //! Die Auffangregel ueber [`Tag`] deckt die **Ereignisse** ab und damit noch
 //! nicht die **Zeichen** der Datei. Bis zum 260812 fiel deshalb Quelltext
@@ -64,26 +64,45 @@
 //!
 //! **Gedeckt wird deshalb ueber die Quellbereiche und nicht ueber die
 //! Ereignisarten.** [`Zerlegung::gelesen`] ist der Stand, bis zu dem die Quelle
-//! abgetragen ist, und daran haengen zwei Saetze, die zusammen jedes Byte
-//! treffen:
+//! abgetragen ist, und daran haengen drei Saetze:
 //!
 //! 1. **Auf Dokumentebene**, also wenn kein Element offen ist, wird die Luecke
-//!    vor dem naechsten Ereignis woertlich ausgegeben ([`Zerlegung::luecke_bis`]);
-//!    am Ende des Durchgangs ebenso bis [`str::len`]. Eine Luecke, in der nur
+//!    vor dem naechsten Ereignis ausgegeben ([`Zerlegung::luecke_bis`]); am
+//!    Ende des Durchgangs ebenso bis [`str::len`]. Eine Luecke, in der nur
 //!    Leerraum steht, faellt weg: die Abstaende zwischen den Bloecken rechnet
 //!    [`Zerlegung::absetzen`], und sie ein zweites Mal zu schreiben ergaebe
 //!    Leerzeilen.
-//! 2. **Innerhalb eines Elements** deckt das Element seinen ganzen
-//!    Quellbereich: hat es Zeichen geliefert, sind die Luecken darin seine
-//!    Auszeichnungszeichen und gehoeren weg — das `[` und das `][ref]` eines
+//! 2. **Innerhalb eines Elements, das Bloecke enthaelt** — Zitatblock, Liste,
+//!    Listenpunkt, also [`Inhaltsart::Bloecke`] —, gilt derselbe Satz: zwischen
+//!    zwei Kindern und hinter dem letzten kann Quelltext stehen, den die Kiste
+//!    nicht meldet, und er wird ausgegeben. Beim naechsten Ereignis erledigt
+//!    das [`Zerlegung::luecke_bis`], am Ende des Elements
+//!    [`Zerlegung::schliessen`]. Was die Umgebung auf jeder Zeile wiederholt,
+//!    faellt dabei weg: der Einzug eines Punktes und das `>` eines Zitats
+//!    ([`ohne_umgebungszeichen`]).
+//! 3. **Innerhalb eines Elements, das seine eigenen Zeichen traegt** — Absatz,
+//!    Ueberschrift, Quelltextblock, Betonung, Verweis, also
+//!    [`Inhaltsart::Zeichen`] —, sind die Luecken darin seine
+//!    Auszeichnungszeichen und gehoeren weg: das `[` und das `][ref]` eines
 //!    Verweises. Hat es **kein** Zeichen geliefert, gibt es beim Schliessen
-//!    seinen Quellbereich woertlich heraus ([`Zerlegung::schliessen`]); so
-//!    bleibt `[](https://example.com)` stehen, statt zu verschwinden.
+//!    seinen Quellbereich woertlich heraus; so bleibt
+//!    `[](https://example.com)` stehen, statt zu verschwinden.
 //!
-//! Beides ist mechanisch und zaehlt keine Faelle auf: der erste Satz fragt
-//! allein, ob [`Zerlegung::offen`] leer ist, der zweite allein, ob die Laenge
+//! Die drei Saetze zaehlen keine Faelle auf: der erste fragt allein, ob
+//! [`Zerlegung::offen`] leer ist, der zweite und der dritte allein nach
+//! [`Offen::inhalt`], und der letzte Halbsatz allein danach, ob die Laenge
 //! null ist. Eine kuenftige Fassung der Kiste, die ein Element anders meldet,
 //! aendert daran nichts.
+//!
+//! **Wo die Deckung endet, und das ist genau eine Stelle:** der **Vorspann**
+//! eines Elements aus Satz 2, also alles von seinem Anfang bis zu dem Byte,
+//! das als erstes darin gelesen wird. Dort steht sein eigenes Merkzeichen —
+//! `- `, `1. `, `> ` —, und das gehoert weg. Steht dort daneben Quelltext, den
+//! die Kiste nicht meldet, so faellt er heraus: eine Verweisdefinition **vor**
+//! dem ersten Absatz eines Punktes ist weg, eine dahinter steht da. Ein Punkt
+//! ohne jeden Inhalt faellt nicht darunter — er hat kein Zeichen geliefert und
+//! gibt nach Satz 3 seinen Quellbereich woertlich heraus, sein `- `
+//! eingeschlossen.
 //!
 //! # Die Abstaende zwischen den Bloecken
 //!
@@ -103,6 +122,17 @@
 //! und sonst nichts; eine dreistufige Liste stand danach flach und ohne
 //! Merkzeichen da, und eine geordnete war von einer ungeordneten nicht zu
 //! unterscheiden (Defekt `260812-1805`).
+//!
+//! **Das Merkzeichen ist ein Wunsch und kein Text**, genau wie die Trennung
+//! daneben: geschrieben wird es erst vor dem ersten Zeichen des Punktes
+//! ([`Zerlegung::merkzeichen_einloesen`]). In einer **losen** Liste — einer
+//! mit Leerzeilen zwischen den Punkten, und das ist jede, deren Punkte mehr
+//! als eine Zeile tragen — schiebt die Kiste zwischen Punkt und Text einen
+//! Absatz, und der verlangt zwei Umbrueche. Sofort geschrieben, stuende das
+//! Merkzeichen danach allein auf seiner Zeile (Defekt `260812-1920`). Ein
+//! Punkt, der ueberhaupt kein Zeichen liefert, loest seinen Wunsch nie ein:
+//! an seine Stelle tritt sein Quellbereich, und darin steht das Merkzeichen
+//! der Quelle schon.
 //!
 //! Die Tiefe zaehlt [`Zerlegung::tiefe`] aus den offenen Elementen und haelt
 //! keinen zweiten Zaehler daneben: jedes Element, das einrueckt, traegt eine
@@ -160,7 +190,13 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
             Event::Start(tag) => match behandlung(&tag) {
                 Behandlung::Block { umbrueche, art } => {
                     zerlegung.trennen(umbrueche);
-                    zerlegung.oeffnen(bereich, Abschluss::von(art), umbrueche, None);
+                    zerlegung.oeffnen(
+                        bereich,
+                        Abschluss::von(art),
+                        umbrueche,
+                        None,
+                        Inhaltsart::Zeichen,
+                    );
                 }
                 Behandlung::Zitat => zerlegung.zitat_oeffnen(bereich),
                 Behandlung::Liste { erste } => {
@@ -170,13 +206,22 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
                         Abschluss::Nichts,
                         PUNKTABSTAND,
                         Some(Ebene::Liste(erste)),
+                        Inhaltsart::Bloecke,
                     );
                 }
                 Behandlung::Punkt => zerlegung.punkt_oeffnen(bereich),
                 Behandlung::Stueck(art) => {
-                    zerlegung.oeffnen(bereich, Abschluss::Auszeichnung(art), 0, None);
+                    zerlegung.oeffnen(
+                        bereich,
+                        Abschluss::Auszeichnung(art),
+                        0,
+                        None,
+                        Inhaltsart::Zeichen,
+                    );
                 }
-                Behandlung::Verweis => zerlegung.oeffnen(bereich, Abschluss::Verweis, 0, None),
+                Behandlung::Verweis => {
+                    zerlegung.oeffnen(bereich, Abschluss::Verweis, 0, None, Inhaltsart::Zeichen);
+                }
                 // Die eine Auffangregel: der Quelltext, woertlich, und das
                 // Element danach uebersprungen. Ein Bild, das hier
                 // hindurchgeht, wird damit auch nicht geladen — das sechste
@@ -197,6 +242,7 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
                     Abschluss::Auszeichnung(Auszeichnung::FesteSchrift),
                     0,
                     None,
+                    Inhaltsart::Zeichen,
                 );
                 zerlegung.schreiben(&inhalt);
                 zerlegung.schliessen();
@@ -333,6 +379,26 @@ fn bis_zum_ende_ueberspringen(ereignisse: &mut pulldown_cmark::OffsetIter<'_>) {
     }
 }
 
+/// Nimmt einer Luecke, was ihre Umgebung auf jeder ihrer Zeilen wiederholt.
+///
+/// Zeilenweise faellt vorn weg, was ein Zitatblock und ein Einzug dort
+/// ohnehin stehen haben — `>` und Leerraum. Was uebrig bleibt, ist der
+/// Quelltext, zu dem die Kiste kein Ereignis geliefert hat; bleibt nichts
+/// uebrig, war die Luecke die Auszeichnung ihrer Umgebung und keine Zeile
+/// Inhalt. Ohne diesen Griff stuende zwischen zwei Absaetzen eines Zitats das
+/// nackte `>` seiner Leerzeile.
+///
+/// Das Merkzeichen einer Liste steht **nicht** in dieser Menge: `-` und `1.`
+/// koennen der Anfang einer Zeile sein, die dasteht. Der Vorspann eines
+/// Punktes faellt statt dessen ueber [`Zerlegung::luecke_bis`] weg.
+fn ohne_umgebungszeichen(luecke: &str) -> String {
+    let zeilen: Vec<&str> = luecke
+        .lines()
+        .map(|zeile| zeile.trim_start_matches([' ', '\t', '>']))
+        .collect();
+    zeilen.join("\n").trim().to_owned()
+}
+
 /// Was beim Ende eines Elements einzutragen ist.
 enum Abschluss {
     /// Nichts: der Block hat nur abgetrennt.
@@ -366,6 +432,32 @@ enum Ebene {
     Liste(Option<u64>),
 }
 
+/// Was ein Element enthaelt: andere Bloecke oder seine eigenen Zeichen.
+///
+/// Der Name traegt sein `-art`, weil `crate::vorschaumodell::Inhalt` in
+/// derselben Kiste etwas anderes heisst — die Art dessen, was die Vorschau
+/// anzeigt.
+///
+/// Daran haengt der zweite und der dritte Satz der Deckung, siehe Modulkopf.
+/// Die Unterscheidung ist die von CommonMark zwischen einem Containerblock
+/// und einem Blattblock, und sie ist die einzige, die traegt: gefragt ist
+/// nicht, ob ein Element Zeichen geliefert hat, sondern ob zwischen seinen
+/// Kindern ueberhaupt Quelltext stehen kann, den die Kiste nicht meldet.
+enum Inhaltsart {
+    /// Andere Bloecke: Zitatblock, Liste, Listenpunkt.
+    ///
+    /// Zwischen zwei Kindern und hinter dem letzten kann eine
+    /// Verweisdefinition stehen; das Element deckt sie.
+    Bloecke,
+    /// Die eigenen Zeichen: Absatz, Ueberschrift, Quelltextblock und jedes
+    /// Stueck in der Zeile.
+    ///
+    /// Sein Quellbereich gehoert ihm allein, und die Luecken darin sind seine
+    /// Auszeichnungszeichen. Sie auszugeben truege das `[` und das `][ref]`
+    /// eines Verweises wieder in den Text.
+    Zeichen,
+}
+
 /// Ein Element, dessen Ende noch aussteht.
 struct Offen {
     /// Die Stelle in UTF-16-Einheiten, an der es begonnen hat.
@@ -387,6 +479,16 @@ struct Offen {
     rang: usize,
     /// Die Einrueckebene, die dieses Element anlegt.
     ebene: Option<Ebene>,
+    /// Ob dieses Element andere Bloecke enthaelt oder seine eigenen Zeichen.
+    inhalt: Inhaltsart,
+    /// Das Merkzeichen eines Listenpunktes, solange es aussteht.
+    ///
+    /// Ein Wunsch wie [`Zerlegung::trennung`] und kein geschriebener Text;
+    /// eingeloest wird er vor dem ersten Zeichen des Punktes. Wird der Punkt
+    /// geschlossen, ohne dass ein Zeichen kam, faellt der Wunsch mit ihm weg
+    /// — an seine Stelle tritt sein Quellbereich, in dem das Merkzeichen der
+    /// Quelle schon steht.
+    merkzeichen: Option<String>,
 }
 
 /// Der Ausgabetext im Aufbau, mit seinen Stellen und den offenen Elementen.
@@ -475,13 +577,42 @@ impl<'q> Zerlegung<'q> {
     }
 
     /// Schreibt ein Stueck Text und zaehlt seine UTF-16-Einheiten mit.
+    ///
+    /// **Erst der Abstand, dann das Merkzeichen, dann der Text.** Nur in
+    /// dieser Reihenfolge steht das Merkzeichen vor dem Zeichen, zu dem es
+    /// gehoert, und innerhalb des Bereichs seiner Listenzeile.
     fn schreiben(&mut self, stueck: &str) {
         if stueck.is_empty() {
             return;
         }
         self.absetzen();
+        self.merkzeichen_einloesen();
         self.text.push_str(stueck);
         self.stelle += stueck.encode_utf16().count();
+    }
+
+    /// Loest die vorgemerkten Merkzeichen der offenen Punkte ein.
+    ///
+    /// Von aussen nach innen, denn so stehen sie in der Quelle: `- - tief`
+    /// traegt zwei. Ein Punkt, der zwischendurch geschlossen wird, ohne dass
+    /// ein Zeichen kam, nimmt seinen Wunsch mit — siehe
+    /// [`Zerlegung::schliessen`].
+    fn merkzeichen_einloesen(&mut self) {
+        if !self
+            .offen
+            .iter()
+            .any(|eintrag| eintrag.merkzeichen.is_some())
+        {
+            return;
+        }
+        let mut zeichen = String::new();
+        for eintrag in &mut self.offen {
+            if let Some(merkzeichen) = eintrag.merkzeichen.take() {
+                zeichen.push_str(&merkzeichen);
+            }
+        }
+        self.text.push_str(&zeichen);
+        self.stelle += zeichen.encode_utf16().count();
     }
 
     /// Traegt die Quelle bis hierhin als gelesen ab.
@@ -499,35 +630,66 @@ impl<'q> Zerlegung<'q> {
         self.gelesen_bis(bereich.end);
     }
 
-    /// Der erste Satz der Deckung: gibt heraus, was auf Dokumentebene bis
-    /// hierhin ungelesen blieb.
+    /// Der erste und der zweite Satz der Deckung: gibt heraus, was bis hierhin
+    /// ungelesen blieb.
     ///
-    /// **Nur wenn kein Element offen ist.** Innerhalb eines Elements sind die
-    /// Luecken zwischen den Ereignissen seine Auszeichnungszeichen, und die
-    /// gehoeren weg; gedeckt ist das Element dort ueber seinen eigenen
-    /// Quellbereich, siehe [`Zerlegung::schliessen`].
+    /// **Auf Dokumentebene immer, innerhalb eines Elements nur, wenn es
+    /// Bloecke enthaelt** ([`Inhaltsart::Bloecke`]). In einem Element, das seine
+    /// eigenen Zeichen traegt, sind die Luecken zwischen den Ereignissen seine
+    /// Auszeichnungszeichen, und die gehoeren weg; gedeckt ist es dort ueber
+    /// seinen eigenen Quellbereich, siehe [`Zerlegung::schliessen`].
     ///
-    /// **Leerraum faellt weg.** Die Abstaende zwischen den Bloecken rechnet
-    /// [`Zerlegung::absetzen`] aus dem Wunsch des Blocks; der Leerraum der
-    /// Quelle daneben ergaebe Leerzeilen. Was uebrig bleibt, ist ein Block und
-    /// wird wie einer abgesetzt.
+    /// **Der Vorspann eines Elements faellt weg.** Solange darin noch kein
+    /// Byte gelesen wurde, steht dort sein eigenes Merkzeichen — `- `, `1. `,
+    /// `> ` —, und das ist Auszeichnung. Hier endet die Deckung, und der
+    /// Modulkopf sagt es an derselben Stelle.
+    ///
+    /// **Leerraum faellt weg**, und mit ihm, was die Umgebung auf jeder Zeile
+    /// wiederholt ([`ohne_umgebungszeichen`]). Die Abstaende zwischen den
+    /// Bloecken rechnet [`Zerlegung::absetzen`] aus dem Wunsch des Blocks; der
+    /// Leerraum der Quelle daneben ergaebe Leerzeilen. Was uebrig bleibt, ist
+    /// ein Block und wird wie einer abgesetzt.
     fn luecke_bis(&mut self, bis: usize) {
-        if !self.offen.is_empty() || self.gelesen >= bis {
+        if self.gelesen >= bis {
             return;
         }
+        if let Some((deckt, anfang)) = self.offen.last().map(|eintrag| {
+            (
+                matches!(eintrag.inhalt, Inhaltsart::Bloecke),
+                eintrag.quelle.start,
+            )
+        }) {
+            if !deckt {
+                return;
+            }
+            // Der Vorspann: in diesem Element ist noch kein Byte gelesen,
+            // also steht hier sein eigenes Merkzeichen. Hier endet die
+            // Deckung, und der Modulkopf sagt es an derselben Stelle.
+            if self.gelesen <= anfang {
+                self.gelesen = bis;
+                return;
+            }
+        }
         let quelle = self.quelle;
-        let uebergangen = quelle[self.gelesen..bis].trim();
+        let uebergangen = ohne_umgebungszeichen(&quelle[self.gelesen..bis]);
         self.gelesen = bis;
         if uebergangen.is_empty() {
             return;
         }
         self.trennen(ABSATZABSTAND);
-        self.schreiben(uebergangen);
+        self.schreiben(&uebergangen);
         self.trennen(ABSATZABSTAND);
     }
 
     /// Beginnt ein Element an der aktuellen Stelle.
-    fn oeffnen(&mut self, quelle: Range<usize>, was: Abschluss, nach: usize, ebene: Option<Ebene>) {
+    fn oeffnen(
+        &mut self,
+        quelle: Range<usize>,
+        was: Abschluss,
+        nach: usize,
+        ebene: Option<Ebene>,
+        inhalt: Inhaltsart,
+    ) {
         self.absetzen();
         self.raenge += 1;
         self.offen.push(Offen {
@@ -537,6 +699,8 @@ impl<'q> Zerlegung<'q> {
             quelle,
             rang: self.raenge,
             ebene,
+            inhalt,
+            merkzeichen: None,
         });
     }
 
@@ -569,12 +733,17 @@ impl<'q> Zerlegung<'q> {
         AUFZAEHLUNGSZEICHEN.to_owned()
     }
 
-    /// Beginnt einen Listenpunkt: Merkzeichen im Text, Tiefe in der
+    /// Beginnt einen Listenpunkt: Merkzeichen vorgemerkt, Tiefe in der
     /// Auszeichnung.
     ///
     /// Das Merkzeichen steht **innerhalb** des Bereichs der Listenzeile, denn
     /// der Einzug soll es mitnehmen; genau das sagt der Kommentar an
     /// `einzugsmerkmal` in `crate::appkit::textmerkmale` zu.
+    ///
+    /// **Geschrieben wird es hier nicht.** Es wird am Punkt vorgemerkt und
+    /// vor seinem ersten Zeichen eingeloest; sonst draengte sich in einer
+    /// losen Liste der Absatz des Punktes mit zwei Umbruechen dazwischen, und
+    /// das Merkzeichen stuende allein auf seiner Zeile (Defekt `260812-1920`).
     fn punkt_oeffnen(&mut self, quelle: Range<usize>) {
         let tiefe = self.tiefe();
         let merkzeichen = self.merkzeichen();
@@ -584,8 +753,11 @@ impl<'q> Zerlegung<'q> {
             Abschluss::Auszeichnung(Auszeichnung::Listenzeile { tiefe }),
             PUNKTABSTAND,
             None,
+            Inhaltsart::Bloecke,
         );
-        self.schreiben(&merkzeichen);
+        if let Some(punkt) = self.offen.last_mut() {
+            punkt.merkzeichen = Some(merkzeichen);
+        }
     }
 
     /// Beginnt einen Zitatblock: er legt seine Ebene an und rueckt sich selbst
@@ -598,6 +770,7 @@ impl<'q> Zerlegung<'q> {
             Abschluss::Auszeichnung(Auszeichnung::Listenzeile { tiefe }),
             ABSATZABSTAND,
             Some(Ebene::Zitat),
+            Inhaltsart::Bloecke,
         );
     }
 
@@ -609,8 +782,21 @@ impl<'q> Zerlegung<'q> {
     /// seinen Quellbereich woertlich heraus. Sonst verschwaende er spurlos:
     /// `[](https://example.com)` liefert ein Ereignis, aber kein Zeichen.
     /// Doppelt geschrieben wird dabei nichts, denn haette ein Kind etwas
-    /// geliefert, waere die Laenge nicht null.
+    /// geliefert, waere die Laenge nicht null. Ein Punkt, dessen Merkzeichen
+    /// noch aussteht, nimmt es dabei mit: sein Quellbereich traegt das
+    /// Merkzeichen der Quelle schon, und `• - [ref]: …` stuende doppelt da.
+    ///
+    /// **Die zweite Haelfte des zweiten Satzes steht ebenfalls hier.** Was
+    /// zwischen dem letzten Kind und dem Ende eines Elements aus Bloecken
+    /// ungelesen blieb, gibt es heraus, bevor es sich schliesst. Beim
+    /// Endereignis greift [`Zerlegung::luecke_bis`] dafuer nicht: dessen
+    /// Quellbereich beginnt am Anfang des Elements und nicht an dieser Luecke.
     fn schliessen(&mut self) {
+        if let Some(ende) = self.offen.last().and_then(|eintrag| {
+            matches!(eintrag.inhalt, Inhaltsart::Bloecke).then_some(eintrag.quelle.end)
+        }) {
+            self.luecke_bis(ende);
+        }
         let Some(eintrag) = self.offen.pop() else {
             return;
         };
@@ -859,6 +1045,54 @@ mod tests {
         );
     }
 
+    /// Defekt `260812-1920`, erster gemessener Fall: in einer **losen** Liste
+    /// stand das Merkzeichen allein auf seiner Zeile.
+    ///
+    /// Lose heisst: eine Leerzeile zwischen den Punkten. Die Kiste schiebt
+    /// dann zwischen Punkt und Text einen Absatz, und der verlangt zwei
+    /// Umbrueche; das sofort geschriebene Merkzeichen bekam sie zwischen sich
+    /// und seinen Text (`"• \n\neins\n\n• \n\nzwei"`). Die Leerzeile
+    /// zwischen den Punkten bleibt, denn die Quelle traegt sie.
+    #[test]
+    fn eine_lose_liste_haelt_ihr_merkzeichen_bei_seinem_text() {
+        let ergebnis = gerendert("- eins\n\n- zwei\n");
+        assert_eq!(ergebnis.text, "• eins\n\n• zwei");
+        let punkte = stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 });
+        assert_eq!(punkte.len(), 2, "je Punkt eine Zeile");
+        assert_eq!(
+            stueck(&ergebnis.text, punkte[0].0, punkte[0].1),
+            "• eins",
+            "der Bereich der Zeile faengt beim Merkzeichen an und hoert beim Text auf"
+        );
+        assert_eq!(stueck(&ergebnis.text, punkte[1].0, punkte[1].1), "• zwei");
+    }
+
+    /// Dasselbe fuer die Nummer einer geordneten Liste: sie ist derselbe
+    /// Wunsch und wird an derselben Stelle eingeloest.
+    #[test]
+    fn eine_lose_geordnete_liste_haelt_ihre_nummer_bei_ihrem_text() {
+        assert_eq!(gerendert("1. eins\n\n2. zwei\n").text, "1. eins\n\n2. zwei");
+    }
+
+    /// Derselbe Defekt bei jedem Punkt mit mehr als einem Block, zweiter
+    /// gemessener Fall: ein Zitat unter dem Absatz des Punktes.
+    ///
+    /// Der Absatz des Punktes ist auch hier der, der sich dazwischendraengte
+    /// (`"• \n\nPunkt\n\nZitat"`).
+    #[test]
+    fn ein_punkt_aus_zwei_bloecken_haelt_sein_merkzeichen() {
+        let ergebnis = gerendert("- Punkt\n\n  > Zitat\n");
+        assert_eq!(ergebnis.text, "• Punkt\n\nZitat");
+    }
+
+    /// Zwei Merkzeichen uebereinander bleiben zwei: `- - tief` traegt beide,
+    /// und beide werden vor demselben Zeichen eingeloest, von aussen nach
+    /// innen.
+    #[test]
+    fn zwei_punkte_uebereinander_tragen_beide_ihr_merkzeichen() {
+        assert_eq!(gerendert("- - tief\n").text, "• • tief");
+    }
+
     /// Ein Zitatblock zaehlt als Einrueckebene: der Punkt darin liegt eine
     /// Ebene tiefer als das Zitat.
     ///
@@ -987,6 +1221,78 @@ mod tests {
             ergebnis.text.starts_with("Siehe den Text hier."),
             "die Klammern des Verweises gehoeren nicht in den Text: {:?}",
             ergebnis.text
+        );
+    }
+
+    /// Defekt `260812-1920`, dritter gemessener Fall des Merkzeichen-Defekts
+    /// und zugleich die Luecke, die der zweite Satz der Deckung schliesst:
+    /// eine Verweisdefinition **hinter** dem Absatz eines Punktes.
+    ///
+    /// Sie steht in keinem Ereignis, und beim Endereignis des Punktes greift
+    /// [`Zerlegung::luecke_bis`] nicht — dessen Quellbereich beginnt am Anfang
+    /// des Punktes. Herausgegeben wird sie deshalb beim Schliessen.
+    #[test]
+    fn eine_verweisdefinition_hinter_dem_absatz_eines_punktes_bleibt_stehen() {
+        let ergebnis = gerendert("- Punkt\n\n  [ref]: http://a.example\n");
+        assert_eq!(ergebnis.text, "• Punkt\n\n[ref]: http://a.example");
+    }
+
+    /// Defekt `260812-1920`, erster gemessener Fall der zu engen
+    /// Deckungszusage: ein Punkt, der nichts als eine Verweisdefinition
+    /// enthaelt, gab nur sein Merkzeichen her (`"• "`).
+    ///
+    /// Er liefert kein einziges Zeichen, also tritt nach dem dritten Satz der
+    /// Deckung sein Quellbereich an seine Stelle — mit dem `- ` der Quelle
+    /// und ohne das Merkzeichen, das nie geschrieben wurde. Ein doppeltes
+    /// `• - ` waere das Ergebnis, wenn der Wunsch den Punkt ueberlebte.
+    #[test]
+    fn ein_punkt_ohne_ein_einziges_zeichen_bleibt_als_sein_quelltext_stehen() {
+        let ergebnis = gerendert("- [ref]: http://a.example\n");
+        assert_eq!(ergebnis.text, "- [ref]: http://a.example\n");
+    }
+
+    /// Zweiter gemessener Fall derselben Zusage: eine Verweisdefinition am
+    /// Ende eines Zitatblocks.
+    ///
+    /// Das `>` jeder Zeile faellt weg, denn es steht auf jeder Zeile des
+    /// Zitats und ist seine Auszeichnung.
+    #[test]
+    fn eine_verweisdefinition_am_ende_eines_zitats_bleibt_stehen() {
+        let ergebnis = gerendert("> Zitat\n>\n> [ref]: http://a.example\n");
+        assert_eq!(ergebnis.text, "Zitat\n\n[ref]: http://a.example");
+    }
+
+    /// Die Gegenprobe dazu: die Zeichen des Zitats selbst kommen nicht in den
+    /// Text.
+    ///
+    /// Zwischen zwei Absaetzen eines Zitats steht in der Quelle eine Zeile aus
+    /// einem einzigen `>`. Sie ist die Luecke, die der zweite Satz der Deckung
+    /// jetzt sieht; ohne [`ohne_umgebungszeichen`] stuende sie als nacktes
+    /// `>` zwischen den Absaetzen.
+    #[test]
+    fn ein_zitat_aus_zwei_absaetzen_traegt_seine_zeichen_nicht_in_den_text() {
+        assert_eq!(gerendert("> eins\n>\n> zwei\n").text, "eins\n\nzwei");
+    }
+
+    /// **Hier endet die Deckung, und sie endet mit Absicht:** der Vorspann
+    /// eines Elements, also alles vor dem ersten Byte, das darin gelesen wird.
+    ///
+    /// Dort steht sein Merkzeichen — `- `, `> ` —, und das gehoert weg. Eine
+    /// Verweisdefinition, die sich dorthin verirrt, faellt mit heraus. Diese
+    /// Probe haelt die Grenze fest, damit der naechste Leser sie gemessen
+    /// vorfindet und nicht nachrechnen muss; der Modulkopf sagt dieselbe
+    /// Grenze in Worten.
+    #[test]
+    fn im_vorspann_eines_elements_endet_die_deckung() {
+        assert_eq!(
+            gerendert("- [ref]: http://a.example\n\n  Text\n").text,
+            "• Text",
+            "vor dem ersten Absatz des Punktes steht sein Merkzeichen, und dort wird nicht gedeckt"
+        );
+        assert_eq!(
+            gerendert("> [ref]: http://a.example\n>\n> Zitat\n").text,
+            "Zitat",
+            "dasselbe im Zitatblock"
         );
     }
 

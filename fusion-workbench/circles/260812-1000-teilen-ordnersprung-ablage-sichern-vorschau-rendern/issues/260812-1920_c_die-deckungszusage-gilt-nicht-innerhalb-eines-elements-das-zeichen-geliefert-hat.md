@@ -84,3 +84,74 @@ Listenpunkt —, aber die falsche Zusage wiegt unabhängig von der Häufigkeit.
 
 **Herkunft:** Circle der Runde 6, Turn 3, Behebung von
 `260812-1805_c_quelltext-ohne-ereignis-verschwindet-spurlos-aus-der-gerenderten-vorschau.md`.
+
+---
+
+**Resolved 260812** — beides ist getan: die Luecke ist geschlossen, soweit sie
+mechanisch zu schliessen war, und der Modulkopf sagt jetzt genau, wo die
+Deckung endet.
+
+**Die Unterscheidung, die traegt, ist die von CommonMark** zwischen einem
+Containerblock und einem Blattblock. Sie steht als `Inhalt` an jedem `Offen`:
+`Inhalt::Bloecke` fuer Zitatblock, Liste und Listenpunkt, `Inhalt::Zeichen`
+fuer Absatz, Ueberschrift, Quelltextblock, Betonung und Verweis. `luecke_bis`
+fragt nicht mehr, ob `offen` leer ist, sondern nach dem `Inhalt` des innersten
+Elements; `schliessen` gibt bei `Inhalt::Bloecke` zusaetzlich heraus, was
+zwischen dem letzten Kind und dem Ende ungelesen blieb. Letzteres braucht es,
+weil beim Endereignis `luecke_bis` nicht greift: der Quellbereich eines
+Endereignisses beginnt am **Anfang** des Elements.
+
+**Die Gegenprobe haelt.** `die_zeichen_eines_gerenderten_elements_bleiben_weg`
+laeuft unveraendert durch, denn ein Verweis traegt `Inhalt::Zeichen`.
+
+**Beide gemessenen Faelle, am Baum nachgemessen:**
+
+```
+"- [ref]: http://a.example\n"            -> "- [ref]: http://a.example\n"
+"> Zitat\n>\n> [ref]: http://a.example\n" -> "Zitat\n\n[ref]: http://a.example"
+```
+
+Der erste kommt nicht aus der neuen Regel, sondern aus dem aufgeschobenen
+Merkzeichen (Datensatz
+`260812-1920_c_in-einer-losen-liste-steht-das-merkzeichen-allein-auf-seiner-zeile.md`): der Punkt
+liefert kein Zeichen, also tritt nach dem dritten Satz der Deckung sein
+Quellbereich an seine Stelle, mit dem `- ` der Quelle. Ein noch ausstehendes
+Merkzeichen faellt mit dem Punkt weg, sonst stuende `• - [ref]: …` da.
+
+**Das `>` eines Zitats faellt zeilenweise weg** (`ohne_umgebungszeichen`).
+Ohne diesen Griff stuende zwischen zwei Absaetzen eines Zitats das nackte `>`
+seiner Leerzeile; die Probe
+`ein_zitat_aus_zwei_absaetzen_traegt_seine_zeichen_nicht_in_den_text` haelt
+das fest. Das Merkzeichen einer Liste steht **nicht** in dieser Menge, denn
+`-` und `1.` koennen der Anfang einer Zeile sein, die dasteht.
+
+**Wo die Deckung jetzt endet, und das ist genau eine Stelle:** der Vorspann
+eines Containerblocks, also alles von seinem Anfang bis zum ersten Byte, das
+darin gelesen wird. Dort steht sein Merkzeichen, und es gehoert weg — aber
+eine Verweisdefinition **vor** dem ersten Absatz eines Punktes faellt mit
+heraus:
+
+```
+"- [ref]: http://a.example\n\n  Text\n"   -> "• Text"
+"> [ref]: http://a.example\n>\n> Zitat\n" -> "Zitat"
+```
+
+Das ist keine Verschlechterung gegenueber `a9e1149` — dort war der ganze
+Container ungedeckt —, sondern der Rest, und er ist an drei Stellen benannt:
+im Modulkopf unter „Wo die Deckung endet", am Doc-Kommentar von `luecke_bis`
+und in der Probe `im_vorspann_eines_elements_endet_die_deckung`, die beide
+Ausgaben oben festschreibt. Eine Zusage, die weiter reicht als der Code, gibt
+es damit nicht mehr; wer die Grenze verschieben will, braucht eine Regel, die
+das Merkzeichen des Containers vom Quelltext davor trennt, und die ist nicht
+mechanisch zu haben.
+
+**Neue Proben in `crates/krk-ui/src/markdown.rs`**:
+`ein_punkt_ohne_ein_einziges_zeichen_bleibt_als_sein_quelltext_stehen`,
+`eine_verweisdefinition_am_ende_eines_zitats_bleibt_stehen`,
+`ein_zitat_aus_zwei_absaetzen_traegt_seine_zeichen_nicht_in_den_text`,
+`im_vorspann_eines_elements_endet_die_deckung` und
+`eine_verweisdefinition_hinter_dem_absatz_eines_punktes_bleibt_stehen`.
+
+Abnahme: `cargo build --workspace`, `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+— alle vier Exit 0. Das Binaerziel `krk` steht bei 466 Proben statt 457.
