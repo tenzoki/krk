@@ -766,18 +766,17 @@ impl Anwendungsdelegierter {
         // **Der Klick auf einen Schalter der Bereichsleiste geht denselben Weg
         // wie der Tastenbefehl** (C2.2): die Leiste kennt nur ihr Kommando,
         // ausgefuehrt wird es in `kommando_ausfuehren` samt Blattpruefung,
-        // Fokusvorbehalt und Abweisung im Modell. Der Nachzug danach steht
-        // **ausserhalb** der Bedingung und laeuft auch nach einem abgewiesenen
-        // Klick, weil ein Ankreuzfeld seinen Zustand selbst kippt, bevor die
-        // Aktion laeuft; ohne diese Zeile bliebe der Schalter stehen, wo der
-        // Nutzer ihn hingeklickt hat (C2.4). Der Rueckruf haelt den
-        // Delegierten **schwach**, aus demselben Grund wie die uebrigen Melder
-        // hier.
+        // Fokusvorbehalt und Abweisung im Modell. **Kein Nachzug daneben**: die
+        // Selbstkippung des Ankreuzfelds nimmt `Leistenquelle::geklickt` schon
+        // zurueck, bevor das Kommando hier ankommt, und den Rest schreibt
+        // `bereichsleiste_nachziehen` als der eine Schreiber. Eine zweite Zeile
+        // hier liefe nach einem angenommenen Klick zusaetzlich zu jenem. Der
+        // Rueckruf haelt den Delegierten **schwach**, aus demselben Grund wie
+        // die uebrigen Melder hier.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         bereichsleiste.melder_setzen(Box::new(move |kommando| {
             if let Some(selbst) = schwach.load() {
                 selbst.kommando_ausfuehren(kommando);
-                selbst.bereichsleiste_nachziehen();
             }
         }));
 
@@ -1464,16 +1463,36 @@ impl Anwendungsdelegierter {
     /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
     /// wirkt im Editor.
     fn fokus_editor_holen(&self) -> bool {
-        let ausgeblendet = !self.ivars().modell.borrow().sichtbar(Bereich::Editor);
-        let haelt_datei = self
-            .ivars()
-            .editor
-            .get()
-            .is_some_and(|editor| editor.haelt_datei());
-        if ausgeblendet && !haelt_datei {
+        if !self.editor_ist_ansprechbar() {
             return false;
         }
         self.fokus_holen(Fokus::Editor)
+    }
+
+    /// Ob ein Befehl den Editor ueberhaupt ansprechen darf: **er steht, oder
+    /// er haelt eine Datei.**
+    ///
+    /// **Die eine Fassung dieser Bedingung**, gelesen von
+    /// [`Self::fokus_editor_holen`] (sechstes Abnahmekriterium von C1 der
+    /// Editor-Runde) und von [`Self::editor_umschalten`] (C6 der
+    /// Bereichsleisten-Runde). Beide beantworten dieselbe Frage, und bis zum
+    /// 260812 stand sie zweimal wortgleich da
+    /// (`issues/260812-0727_*_editor-umschalten-schreibt-die-erreichbarkeitspruefung-von-fokus-editor-holen-wortgleich-ab.md`).
+    ///
+    /// **Sie steht hier und nicht im Fenstermodell**, weil das Fenstermodell
+    /// von Dateien nichts weiss; die Sichtbarkeit kommt aus ihm, das Halten
+    /// einer Datei aus dem Editorbereich. Ein leerer Editor, den niemand
+    /// verlangt hat, naehme den Dateifenstern Platz fuer nichts und
+    /// verdraengte dabei die Vorschau — dieselbe Begruendung traegt
+    /// `Sichtbarkeit::default` fuer den Auslieferungszustand.
+    fn editor_ist_ansprechbar(&self) -> bool {
+        let sichtbar = self.ivars().modell.borrow().sichtbar(Bereich::Editor);
+        sichtbar
+            || self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.haelt_datei())
     }
 
     /// Die Ansicht, an der ein Fokuswert haengt.
@@ -2764,13 +2783,19 @@ impl Anwendungsdelegierter {
     /// Schreibt die acht Schalterzustaende der Bereichsleiste aus dem Modell
     /// (C2.1, C3.1).
     ///
-    /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
+    /// **Der eine Schreiber, mit einem Anlass**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`]:
-    /// [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten Kommando folgt,
-    /// und der Melder der Leiste, der auch nach einem **abgewiesenen** Klick
-    /// ruft. Der zweite Anlass ist keine Verdopplung des ersten: ein
-    /// abgewiesener Klick erreicht `aufteilung_nachziehen` nie, hat den
-    /// angeklickten Schalter aber schon gekippt (C2.4).
+    /// [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten Kommando folgt.
+    /// **Auf jedem Weg genau einmal**, fuer den Tastendruck wie fuer den Klick.
+    ///
+    /// **Der abgewiesene Klick braucht keinen zweiten Anlass daneben** (C2.4),
+    /// und bis zum 260812 hatte er einen: der Melder der Leiste zog unbedingt
+    /// nach, weil ein Ankreuzfeld seinen Zustand selbst kippt, bevor die
+    /// Aktion laeuft — nach einem **angenommenen** Klick lief der Nachzug damit
+    /// zweimal. Zurueckgenommen wird die Selbstkippung jetzt in
+    /// `Leistenquelle::geklickt` ([`super::bereichsleiste`]), also dort, wo sie
+    /// entsteht; danach ist das Modell wieder die einzige Quelle jedes
+    /// Schalterzustands.
     ///
     /// **Sie schreibt nichts als Schalterzustaende.** Sie ruft weder `anwenden`
     /// noch `setHidden` und fasst den Ersthelfer nicht an, aus demselben Grund,
@@ -4373,12 +4398,9 @@ impl Anwendungsdelegierter {
     /// wer ihn aufgeben will, nimmt das Schliessen.
     ///
     /// **Ist der Editor ausgeblendet und haelt keine Datei, geschieht nichts,
-    /// ohne Meldung.** Dieselbe Bedingung traegt [`Self::fokus_editor_holen`],
-    /// und sie steht aus demselben Grund hier und nicht im Fenstermodell: das
-    /// Fenstermodell weiss von Dateien nichts. Ein leerer Editor, den niemand
-    /// verlangt hat, naehme den Dateifenstern Platz fuer nichts und
-    /// verdraengte dabei die Vorschau; dieselbe Begruendung traegt
-    /// `Sichtbarkeit::default` fuer den Auslieferungszustand. Nutzerantwort
+    /// ohne Meldung.** Gefragt ist [`Self::editor_ist_ansprechbar`], dieselbe
+    /// Funktion, die [`Self::fokus_editor_holen`] fragt; dort steht auch,
+    /// warum die Bedingung nicht im Fenstermodell wohnt. Nutzerantwort
     /// vom 260812-0430, Datensatz
     /// `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
     /// 260812-0415_*_was-tut-der-editorschalter-ohne-datei-im-editor.md`.
@@ -4387,13 +4409,7 @@ impl Anwendungsdelegierter {
     /// ohne Datei: die leere Flaeche loszuwerden ist genau das, was der Nutzer
     /// dann will.
     fn editor_umschalten(&self) -> bool {
-        let ausgeblendet = !self.ivars().modell.borrow().sichtbar(Bereich::Editor);
-        let haelt_datei = self
-            .ivars()
-            .editor
-            .get()
-            .is_some_and(|editor| editor.haelt_datei());
-        if ausgeblendet && !haelt_datei {
+        if !self.editor_ist_ansprechbar() {
             return false;
         }
         self.bereich_umschalten(Bereich::Editor)

@@ -307,7 +307,14 @@ tasten = ["shift+cmd+h"]
 # leerer Tastenliste und nicht mit `reserviert_fuer`: dieses Feld heisst
 # "benannt, aber einer spaeteren Runde vorbehalten", und diese drei Funktionen
 # gibt es. Sie schalten in beiden Dateifenstern zugleich und stehen wie jede
-# andere in der Belegungsansicht und in der Markdown-Ausgabe.
+# andere Funktion in der Belegungsansicht am Schirm.
+#
+# In der Markdown-Ausgabe der Runde 3 stehen sie dagegen nicht: die nimmt eine
+# Funktion nur auf, wenn sie mindestens eine Kombination traegt (Umfang
+# Moeglichkeit 1, Nutzerantwort vom 260811-0110, `circles/
+# 260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/
+# 260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md`).
+# Wer einer der drei eine Kombination zuweist, findet sie danach auch dort.
 #
 # Der Grund fuer die leere Liste ist die Knappheit: die Auslieferung fuehrt 39
 # frei gewaehlte Kombinationen (`circles/

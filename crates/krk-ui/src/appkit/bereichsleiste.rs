@@ -9,8 +9,9 @@
 //!
 //! ```text
 //!  Klick ──> Leistenquelle ──Kommando──> Anwendungsdelegierter
-//!                                           kommando_ausfuehren
-//!                                           bereichsleiste_nachziehen
+//!              Selbstkippung                 kommando_ausfuehren
+//!              zuruecknehmen                 aufteilung_nachziehen
+//!                                            bereichsleiste_nachziehen
 //!            Schalterzustaende <──────────────────┘
 //! ```
 //!
@@ -18,11 +19,18 @@
 //!
 //! Ein Ankreuzfeld kippt seinen Zustand selbst, **bevor** seine Aktion laeuft.
 //! Was danach auf dem Schalter steht, ist deshalb nicht die Antwort des
-//! Modells, sondern die Vermutung von AppKit. Der Anwendungsdelegierte
-//! schreibt die acht Zustaende nach jedem Klick neu — auch nach einem
-//! abgewiesenen, denn genau dann muss der Schalter zurueckspringen (C2.4).
-//! [`Bereichsleiste::zustaende_setzen`] ist der eine Schreiber dafuer; gelesen
-//! wird aus der Leiste nie.
+//! Modells, sondern die Vermutung von AppKit. `Leistenquelle::geklickt` nimmt
+//! diese eine fremde Schreibung sofort zurueck, noch bevor das Kommando
+//! gemeldet ist; damit bleibt das Modell die einzige Quelle jedes angezeigten
+//! Zustands. Was der Befehl daran aendert, schreibt der Anwendungsdelegierte
+//! ueber [`Bereichsleiste::zustaende_setzen`], den einen Schreiber — **einmal,
+//! auf jedem Weg**. Ein abgewiesener Klick braucht dafuer keinen eigenen
+//! Anlass mehr: er hat nichts hinterlassen, das zurueckspringen muesste, und
+//! der Schalter steht schon wieder auf dem Stand des Modells (C2.4).
+//!
+//! Gelesen wird aus der Leiste allein in `selbstkippung_zuruecknehmen`, und
+//! dort nicht der angezeigte Stand, sondern nur, was der Klick gerade
+//! umgestellt hat.
 //!
 //! # Kein Schalter nimmt den Ersthelferrang an
 //!
@@ -212,12 +220,10 @@ define_class!(
         // Argument, der Absender.
         #[unsafe(method(bereichGedrueckt:))]
         fn bereich_gedrueckt(&self, absender: &NSButton) {
-            let Some(bereich) = stelle_des_absenders(absender)
+            let kommando = stelle_des_absenders(absender)
                 .and_then(|stelle| Bereich::ALLE.get(stelle).copied())
-            else {
-                return;
-            };
-            self.melden(kommando_des_bereichs(bereich));
+                .map(kommando_des_bereichs);
+            self.geklickt(absender, kommando);
         }
 
         /// Der Nutzer hat einen der drei Spaltenschalter angeklickt.
@@ -230,13 +236,10 @@ define_class!(
         // Argument, der Absender.
         #[unsafe(method(spalteGedrueckt:))]
         fn spalte_gedrueckt(&self, absender: &NSButton) {
-            let Some(kommando) = stelle_des_absenders(absender)
+            let kommando = stelle_des_absenders(absender)
                 .and_then(|stelle| Spalte::ALLE.get(stelle).copied())
-                .and_then(kommando_der_spalte)
-            else {
-                return;
-            };
-            self.melden(kommando);
+                .and_then(kommando_der_spalte);
+            self.geklickt(absender, kommando);
         }
     }
 );
@@ -249,6 +252,38 @@ impl Leistenquelle {
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
+    }
+
+    /// Was bei jedem Klick geschieht, gleich auf welchen der acht Schalter und
+    /// gleich, ob daraus ein Kommando wird.
+    ///
+    /// **Zuerst die Selbstkippung zuruecknehmen, dann melden.** Ein
+    /// Ankreuzfeld kippt seinen Zustand selbst, bevor seine Aktion laeuft; das
+    /// ist der einzige Schreibzugriff auf einen Schalterzustand, der nicht aus
+    /// dem Modell kommt, und er wird hier sofort wieder abgetragen. Danach
+    /// zeigt die Leiste wieder genau den Stand des Modells, und was der Befehl
+    /// daran aendert, schreibt der eine Schreiber
+    /// `Anwendungsdelegierter::bereichsleiste_nachziehen` — einmal, auf jedem
+    /// Weg.
+    ///
+    /// **Deshalb braucht der abgewiesene Klick keinen eigenen Nachzug** (C2.4):
+    /// er hat nach dieser Zeile nichts mehr hinterlassen, das zurueckspringen
+    /// muesste. Bis zum 260812 zog der Melder des Delegierten stattdessen
+    /// unbedingt nach, und nach einem **angenommenen** Klick liefen deshalb
+    /// zwei Nachzuege hintereinander
+    /// (`issues/260812-0727_*_der-nachzug-der-bereichsleiste-laeuft-nach-einem-angenommenen-klick-zweimal.md`).
+    /// Die Alternative, den Nachzug an das Ergebnis des Befehls zu binden,
+    /// waere eine Fallunterscheidung "war der Klick angenommen?" gewesen; hier
+    /// entfaellt die Frage, statt beantwortet zu werden.
+    ///
+    /// **Ein Kommando ohne Absender gibt es hier nicht**: die Kippung wird auch
+    /// dann zurueckgenommen, wenn die `tag` zu keinem Schalter dieser Leiste
+    /// gehoert und nichts zu melden ist.
+    fn geklickt(&self, absender: &NSButton, kommando: Option<Kommando>) {
+        selbstkippung_zuruecknehmen(absender);
+        if let Some(kommando) = kommando {
+            self.melden(kommando);
+        }
     }
 
     /// Gibt das Kommando weiter, falls jemand zuhoert.
@@ -379,11 +414,12 @@ impl Bereichsleiste {
     /// eine ausgeblendete Ansicht, die den Rang haelt, laesst AppKit ihn neu
     /// vergeben und die Meldung ein zweites Mal ausloesen.
     ///
-    /// **Immer alle acht und nie nur der geaenderte.** Ein Klick kann zwei
+    /// **Immer alle acht und nie nur der geaenderte.** Ein Befehl kann zwei
     /// Schalter bewegen (Vorschau und Editor teilen sich die Flaeche, C2.3),
-    /// und ein abgewiesener Klick bewegt keinen, hat aber den angeklickten
-    /// schon gekippt. Die Frage "welcher hat sich geaendert" waere hier also
-    /// eine Fallunterscheidung, die die Antwort schon voraussetzt.
+    /// und der erste Ruf ueberhaupt schreibt die ganze geladene Sitzung in die
+    /// Leiste, ohne dass jemand geklickt haette. Die Frage "welcher hat sich
+    /// geaendert" waere hier also eine Fallunterscheidung, die die Antwort
+    /// schon voraussetzt.
     pub fn zustaende_setzen(&self, sichtbar: &Sichtbarkeit, spalten: &Spaltensichtbarkeit) {
         for bereich in Bereich::ALLE {
             zustand_setzen(
@@ -457,6 +493,22 @@ fn einhaengen(sicht: &NSView, schalter: &NSButton, links: &mut f64) {
     ));
     sicht.addSubview(schalter);
     *links += groesse.width + ABSTAND;
+}
+
+/// Nimmt zurueck, was das Ankreuzfeld beim Klick an sich selbst geschrieben
+/// hat.
+///
+/// Der Zustand, den `state` jetzt meldet, ist die Vermutung von AppKit und
+/// nicht die Antwort des Modells; das Gegenteil davon ist der Zustand von vor
+/// dem Klick. Gelesen wird dabei ausnahmsweise aus der Leiste, und nur diese
+/// eine Frage: was hat der Klick gerade umgestellt. Der angezeigte Stand
+/// selbst kommt weiterhin allein aus dem Modell.
+///
+/// **Sichtbar wird die Zwischenstellung nicht.** Aktion und Nachzug laufen im
+/// selben Durchgang der Ereignisschlange, gezeichnet wird danach; auf dem
+/// Schirm steht nur das Ergebnis.
+fn selbstkippung_zuruecknehmen(schalter: &NSButton) {
+    zustand_setzen(schalter, schalter.state() != NSControlStateValueOn);
 }
 
 /// Setzt einen Schalter auf an oder aus.

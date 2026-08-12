@@ -43,7 +43,7 @@ Jedes Kriterium trägt, wie es nachzuweisen ist. **(Probe)** heißt: eine Prüfu
 2. Ein Spaltenschalter wirkt auf **beide** Dateilisten zugleich. **(Bündel)**
 3. Das Wegschalten einer Spalte ändert die Sortierung nicht. Wer nach Größe sortiert und die Spalte Größe wegschaltet, sieht dieselbe Reihenfolge wie zuvor. **(Probe** für das Modell, **Bündel** für die Anzeige**)**
 4. Ein Spaltenschalter ändert die Aufteilung der Fensterzeile nicht. Die Breiten der Bereiche stehen vorher und nachher gleich. **(Bündel)**
-5. Die drei Spaltenbefehle stehen in der Belegungsansicht und in der Markdown-Ausgabe der Runde 3, tragen ab Werk aber keine Kombination. Wer eine will, weist sie in der Belegungsansicht zu oder trägt sie in `default-keymap.toml` ein. **(Probe)**
+5. Die drei Spaltenbefehle stehen in der Belegungsansicht, tragen ab Werk aber keine Kombination. In der Markdown-Ausgabe der Runde 3 stehen sie **nicht**, weil jene nur belegte Funktionen aufnimmt (Nutzerentscheid vom 260811-0110). Korrigiert am 260812-0735; der ursprüngliche Wortlaut sagte die Ausgabe zu und stand damit gegen einen bestehenden Entscheid. Wer eine will, weist sie in der Belegungsansicht zu oder trägt sie in `default-keymap.toml` ein. **(Probe)**
 
 ### C4: Die proportionale Breitenregel
 
@@ -123,6 +123,7 @@ flowchart TD
 flowchart TD
     taste["Tastendruck<br/>Ereignisabgriff und Belegung"]
     klick["Klick auf einen Schalter<br/>Leistenquelle, ein Kommando je Schalter"]
+    kippung["Selbstkippung zurücknehmen<br/>Leistenquelle::geklickt"]
     kommando["kommando_ausfuehren(Kommando)<br/>Fokusvorbehalt, Blattprüfung,<br/>Bildschirmbreiten nachlesen"]
     modell["Fenstermodell<br/>umschalten / spalte_umschalten"]
     nachzug["aufteilung_nachziehen"]
@@ -131,7 +132,8 @@ flowchart TD
     stand["bereichsleiste_nachziehen<br/>acht Schalterzustände aus dem Modell"]
 
     taste --> kommando
-    klick --> kommando
+    klick --> kippung
+    kippung --> kommando
     kommando -->|"wirkt nicht"| ende["nichts geschieht"]
     kommando -->|"wirkt"| modell
     modell -->|"abgewiesen"| ende
@@ -139,10 +141,9 @@ flowchart TD
     nachzug --> anwenden
     nachzug --> fokusanzeige
     nachzug --> stand
-    klick -.->|"danach, in jedem Fall"| stand
 ```
 
-Die gestrichelte Kante trägt eine Fähigkeit und keine Bequemlichkeit: ein Ankreuzfeld kippt seinen Zustand selbst, bevor seine Aktion läuft. Ohne den unbedingten Nachzug bliebe ein abgewiesener Klick als falscher Schalterzustand stehen (C2.4).
+Der Zwischenschritt auf dem Klickweg trägt eine Fähigkeit und keine Bequemlichkeit: ein Ankreuzfeld kippt seinen Zustand selbst, bevor seine Aktion läuft. `Leistenquelle::geklickt` nimmt diese eine fremde Schreibung sofort zurück, noch bevor das Kommando gemeldet ist; danach ist das Modell wieder die einzige Quelle jedes Schalterzustands, und ein abgewiesener Klick hat nichts hinterlassen, das zurückspringen müsste (C2.4). **Korrigiert am 260812-0745**; der ursprüngliche Wortlaut ließ den Klick nach dem Kommando *in jedem Fall* nachziehen, und nach einem angenommenen Klick lief der Nachzug damit zweimal (`issues/260812-0727_c_der-nachzug-der-bereichsleiste-laeuft-nach-einem-angenommenen-klick-zweimal.md`). Auf jedem Weg zieht jetzt genau `bereichsleiste_nachziehen` nach, und genau einmal.
 
 ---
 
@@ -303,7 +304,7 @@ flowchart TD
      - Welches Kommando ein Schalter sendet, steht in der Aufbautabelle der Leiste, je Schalter eine Zeile. Der Anwendungsdelegierte bekommt damit einen Eingang und keine achtfache Fallunterscheidung.
      - `fenster.rs`: neue freie Funktion `fensterinhalt(mtm, fensterzeile: &NSView, leiste: &NSView) -> Retained<NSView>`, die beide übereinanderlegt; die Leiste am unteren Rand mit `ViewWidthSizable | ViewMaxYMargin`, wie es die Statuszeile hält, die Fensterzeile darüber mit `ViewWidthSizable | ViewHeightSizable`. `hauptfenster` behält seine Signatur und bekommt das Ergebnis.
      - `MINDESTGROESSE` (`fenster.rs:116`) steigt in der **Höhe** von 300 auf 318 Punkte, damit die Bereiche über der Leiste ihre bisherige Mindesthöhe behalten. Der Kommentar nennt den Grund. Die Breite von 780 bleibt unverändert; dazu die offene Frage unten.
-     - `anwendung.rs`: die Leiste wird gebaut, festgehalten und ihr Melder eingetragen. `bereichsleiste_nachziehen` schreibt die acht Schalterzustände aus dem Modell, gerufen aus `aufteilung_nachziehen` und aus dem Melder, dort in jedem Fall, auch nach einem abgewiesenen Klick.
+     - `anwendung.rs`: die Leiste wird gebaut, festgehalten und ihr Melder eingetragen. `bereichsleiste_nachziehen` schreibt die acht Schalterzustände aus dem Modell, gerufen aus `aufteilung_nachziehen` und nur von dort. Den abgewiesenen Klick trägt nicht ein zweiter Ruf, sondern `Leistenquelle::geklickt`, das die Selbstkippung des Ankreuzfelds zurücknimmt (korrigiert am 260812-0745, siehe die Anmerkung unter `### Der eine Weg vom Eingang bis zur Anzeige`).
      - **Der Nachzug schreibt nur Schalterzustände.** Er ruft weder `anwenden` noch `setHidden` und fasst den Ersthelfer nicht an, aus demselben Grund, aus dem `fokusanzeige_nachziehen` es nicht tut: eine ausgeblendete Ansicht, die den Ersthelferrang hält, lässt AppKit den Rang neu vergeben und die Meldung ein zweites Mal auslösen.
      - Prüfungen ohne Fenster: `Bereich::beschriftung` ist für alle fünf verschieden und nicht leer; die Aufbautabelle nennt für jeden der acht Schalter genau ein Kommando, und alle acht tragen `Wirkungsbereich::Ueberall`. Prüfungen mit einer Ansicht stehen als `#[cfg(test)]`-Modul neben dem Code, nicht unter `tests/`: `krk-ui` hat kein Bibliotheksziel.
    - Aufzählungen: keine der vier wächst. **`Fokus` bekommt ausdrücklich keinen sechsten Wert**; die Begründung steht unten unter `## Warum die Leiste keinen sechsten Fokuswert bekommt`. `Bereich` bekommt mit `beschriftung` und `langname` zwei weitere vollständige Fallunterscheidungen, die ein sechster Bereich anhalten würde.

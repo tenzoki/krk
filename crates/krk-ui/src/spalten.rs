@@ -95,8 +95,19 @@ impl Spalte {
     /// Allein der Name: die drei uebrigen Spalten zeigen, was das Dateisystem
     /// ueber den Eintrag sagt, und keine davon laesst sich durch Hinschreiben
     /// aendern.
+    ///
+    /// **Ausgeschrieben und nicht `matches!`**, wie
+    /// `appkit::tabelle::ausrichtung` es haelt: ein `matches!` ist ein `match`
+    /// mit einem `_ => false` darunter und gaebe einer fuenften Spalte still
+    /// "nicht beschreibbar", statt den Bau anzuhalten. Genau das schliesst der
+    /// Modulkopf aus, und die Probe daneben faengt es nicht ab — eine
+    /// fuenfte, still unbeschreibbare Spalte laesst ihre Gleichheit
+    /// unberuehrt.
     pub const fn beschreibbar(self) -> bool {
-        matches!(self, Spalte::Name)
+        match self {
+            Spalte::Name => true,
+            Spalte::Groesse | Spalte::Geaendert | Spalte::Typ => false,
+        }
     }
 }
 
@@ -114,6 +125,13 @@ mod tests {
         }
     }
 
+    /// Welche der vier Spalten beschreibbar ist — und nur das.
+    ///
+    /// **Dass eine fuenfte Spalte hier eine Antwort erzwingt, haelt der
+    /// Uebersetzer und nicht diese Probe.** [`Spalte::beschreibbar`] ist ein
+    /// ausgeschriebenes `match`; eine neue Variante haelt den Bau an. Diese
+    /// Probe liefe auch mit einem `_ => false` gruen, und genau daran hing der
+    /// Befund vom 260812-0727.
     #[test]
     fn genau_die_namensspalte_ist_beschreibbar() {
         let beschreibbare: Vec<Spalte> = Spalte::ALLE
