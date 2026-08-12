@@ -280,7 +280,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
 
 ## Implementierungsschritte
 
-1. **Eine beschädigte Ablagedatei wird zur Seite gelegt**
+1. [DONE] **Eine beschädigte Ablagedatei wird zur Seite gelegt**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/atomar.rs`, `crates/krk-core/src/ablage/mod.rs`, `crates/krk-core/tests/ablage.rs`
    - Changes:

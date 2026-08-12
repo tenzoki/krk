@@ -32,9 +32,9 @@ use serde::{Deserialize, Serialize};
 
 use krk_core::ablage::sitzung::SITZUNGSTAKT;
 use krk_core::ablage::{
-    Ablage, Ablageort, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung, Fensterseite,
-    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Spaltensichtbarkeit, Tab,
-    Verschiebung, Ziel, atomar, einstellungen, pfade,
+    Ablage, Ablageort, Beiseite, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung,
+    Fensterseite, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung,
+    Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar, einstellungen, pfade,
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
@@ -967,6 +967,313 @@ fn pruefe_meldung(ablage: &Ablage, welche: Datei, ersetzung: Option<Ersetzung>, 
 }
 
 // ---------------------------------------------------------------------------
+// Eine beschaedigte Datei wird zur Seite gelegt (C3 der Runde 6)
+// ---------------------------------------------------------------------------
+
+/// Ein zweiter kaputter Inhalt, der sich vom ersten unterscheiden laesst.
+const KAPUTT_ZWEITER: &str = "auch = dies [ist kein gueltiges TOML\n";
+
+/// Der Pfad, unter dem die Sicherung einer der vier Dateien zu erwarten ist.
+fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
+    atomar::beiseitepfad(&ablage.pfad(welche)).expect("kein Beiseitepfad")
+}
+
+/// Laedt alle vier Dateien und liefert die vier Ersetzungen in der Reihenfolge
+/// von [`Datei::ALLE`].
+///
+/// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
+/// `einstellungen::laden`; damit laufen alle vier durch denselben
+/// `Ablage::laden` wie im Betrieb.
+fn vier_ersetzungen(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
+    let belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
+    let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let eingestellt = einstellungen::laden(ablage);
+    vec![
+        belegung.ersetzung,
+        lesezeichen.ersetzung,
+        sitzung.ersetzung,
+        eingestellt.ersetzung,
+    ]
+}
+
+/// Alle vier Dateien werden gesichert, und das Original bleibt liegen (C3.1,
+/// C3.3, C3.4).
+///
+/// Die Regel hat in `Ablage::laden` keinen Zweig je Datei, und diese Probe
+/// laeuft deshalb ueber `Datei::ALLE`: eine fuenfte Ablagedatei koennte sie
+/// nicht vergessen.
+#[test]
+fn jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt() {
+    let (_ordner, ablage) = ablage("beiseite-alle-vier");
+    for welche in Datei::ALLE {
+        fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
+    }
+
+    for (welche, ersetzung) in Datei::ALLE.into_iter().zip(vier_ersetzungen(&ablage)) {
+        let ersetzung = ersetzung
+            .unwrap_or_else(|| panic!("{} wurde ohne Meldung ersetzt", welche.dateiname()));
+        let erwartet = beiseitepfad(&ablage, welche);
+        assert_eq!(
+            ersetzung.beiseite,
+            Beiseite::Gesichert(erwartet.clone()),
+            "{} wurde nicht zur Seite gelegt",
+            welche.dateiname()
+        );
+        assert_eq!(
+            fs::read_to_string(&erwartet).expect("die Sicherung fehlt"),
+            KAPUTT,
+            "die Sicherung von {} traegt einen anderen Inhalt",
+            welche.dateiname()
+        );
+
+        // Kopiert und nicht verschoben: `keymap.toml` und `settings.toml` sind
+        // von Hand aenderbar, und ein Tippfehler darf dem Nutzer die Datei nicht
+        // unter der Hand wegnehmen.
+        assert_eq!(
+            fs::read_to_string(ablage.pfad(welche)).expect("das Original fehlt"),
+            KAPUTT,
+            "{} wurde verschoben statt kopiert",
+            welche.dateiname()
+        );
+    }
+}
+
+/// Der abgeleitete Name haengt die Endung an und ist selbst keine Ablagedatei
+/// (C3.1).
+///
+/// Die zweite Haelfte ist die Zusage aus dem Datensatz vom 260812-1105: KRK
+/// darf eine Sicherung nicht selbst wieder als Ablagedatei lesen.
+#[test]
+fn der_name_der_sicherung_haengt_die_endung_an_und_ist_keine_ablagedatei() {
+    let (_ordner, ablage) = ablage("beiseite-name");
+    let namen_der_ablage: Vec<&str> = Datei::ALLE.iter().map(|w| w.dateiname()).collect();
+
+    for welche in Datei::ALLE {
+        let pfad = beiseitepfad(&ablage, welche);
+        assert_eq!(
+            pfad,
+            ablage.ort().wurzel().join(format!(
+                "{}.{}",
+                welche.dateiname(),
+                atomar::BESCHAEDIGTENDUNG
+            )),
+            "der abgeleitete Name stimmt nicht"
+        );
+
+        let name = pfad
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("der abgeleitete Pfad traegt keinen Dateinamen");
+        assert!(
+            !namen_der_ablage.contains(&name),
+            "{name} wuerde von KRK als Ablagedatei gelesen"
+        );
+    }
+}
+
+/// Eine zweite Beschaedigung laesst die erste Sicherung unangetastet (C3.2).
+///
+/// Was zaehlt, ist die **erste** zur Seite gelegte Fassung: sie traegt die
+/// Arbeit des Nutzers, waehrend die zweite aus dem Auslieferungszustand
+/// entstanden ist, den KRK selbst geschrieben hat.
+#[test]
+fn eine_zweite_beschaedigung_laesst_die_erste_sicherung_unangetastet() {
+    let (_ordner, ablage) = ablage("beiseite-zweimal");
+    let pfad = ablage.pfad(Datei::Lesezeichen);
+    let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
+
+    fs::write(&pfad, KAPUTT).expect("schreiben gescheitert");
+    let erst: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    assert_eq!(
+        erst.ersetzung.expect("keine Meldung").beiseite,
+        Beiseite::Gesichert(sicherung.clone())
+    );
+
+    fs::write(&pfad, KAPUTT_ZWEITER).expect("schreiben gescheitert");
+    let wieder: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    assert_eq!(
+        wieder.ersetzung.expect("keine Meldung").beiseite,
+        Beiseite::SchonVorhanden(sicherung.clone()),
+        "die zweite Beschaedigung hat die Sicherung angefasst"
+    );
+    assert_eq!(
+        fs::read_to_string(&sicherung).expect("die Sicherung fehlt"),
+        KAPUTT,
+        "die erste Sicherung wurde ueberschrieben"
+    );
+
+    // Keine durchnummerierte Reihe: neben der einen Sicherung entsteht keine
+    // zweite.
+    let sicherungen: Vec<String> = fs::read_dir(ablage.ort().wurzel())
+        .expect("der Ablageordner laesst sich nicht lesen")
+        .map(|eintrag| {
+            eintrag
+                .expect("Eintrag")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|name| name.contains(atomar::BESCHAEDIGTENDUNG))
+        .collect();
+    assert_eq!(
+        sicherungen.len(),
+        1,
+        "es steht mehr als eine Sicherung da: {sicherungen:?}"
+    );
+}
+
+/// Eine fehlende und eine nicht lesbare Datei werden nicht zur Seite gelegt
+/// (C3.5).
+///
+/// Eine fehlende Datei ist der erste Start, und von einer, die sich nicht lesen
+/// liess, gibt es keinen Inhalt zu sichern.
+#[test]
+fn eine_fehlende_und_eine_nicht_lesbare_datei_werden_nicht_zur_seite_gelegt() {
+    let (_ordner, ablage) = ablage("beiseite-nichts-zu-sichern");
+
+    let fehlt: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    assert!(fehlt.ersetzung.is_none(), "eine fehlende Datei meldet sich");
+    assert!(
+        !beiseitepfad(&ablage, Datei::Lesezeichen)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "eine fehlende Datei wurde zur Seite gelegt"
+    );
+
+    // Ein Ordner an der Stelle der Datei: das Lesen scheitert mit einem anderen
+    // Fehler als "nicht vorhanden", und zwar unter jedem Benutzer.
+    fs::create_dir(ablage.pfad(Datei::Sitzung)).expect("Ordner laesst sich nicht anlegen");
+    let nicht_lesbar: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let ersetzung = nicht_lesbar.ersetzung.expect("keine Meldung");
+    assert!(
+        matches!(ersetzung.grund, Grund::NichtLesbar(_)),
+        "{ersetzung:?}"
+    );
+    assert_eq!(ersetzung.beiseite, Beiseite::Nicht);
+    assert!(
+        !beiseitepfad(&ablage, Datei::Sitzung)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "eine nicht lesbare Datei wurde zur Seite gelegt"
+    );
+}
+
+/// Scheitert das Zur-Seite-Legen, sagt die Meldung es und verspricht keine
+/// Datei (C3.6, C3.8).
+///
+/// Der Weg wird an der Nachbardatei des atomaren Schreibens versperrt, und das
+/// ist zugleich der Nachweis, dass er ueber `atomar::schreiben` fuehrt: laege
+/// ein zweiter Schreibweg daneben, kaeme die Sicherung trotzdem zustande.
+#[test]
+fn ein_gescheitertes_zur_seite_legen_wird_gemeldet_und_verspricht_keine_datei() {
+    let (_ordner, ablage) = ablage("beiseite-gescheitert");
+    fs::write(ablage.pfad(Datei::Lesezeichen), KAPUTT).expect("schreiben gescheitert");
+
+    let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
+    let nachbar = atomar::nachbarpfad(&sicherung).expect("kein Nachbarpfad");
+    fs::create_dir(&nachbar).expect("der Sperrordner laesst sich nicht anlegen");
+
+    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let ersetzung = geladen.ersetzung.expect("keine Meldung");
+    let Beiseite::Gescheitert(ref grund) = ersetzung.beiseite else {
+        panic!("das Zur-Seite-Legen ist nicht gescheitert: {ersetzung:?}");
+    };
+    assert!(!grund.is_empty(), "die Meldung nennt keinen Grund");
+
+    assert!(
+        !sicherung.try_exists().expect("try_exists gescheitert"),
+        "es steht doch eine Sicherung da"
+    );
+    let text = ersetzung.to_string();
+    assert!(
+        !text.contains(&sicherung.display().to_string()),
+        "die Meldung verspricht eine Datei, die es nicht gibt: {text}"
+    );
+    assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
+}
+
+/// Jede der vier Lagen traegt ihren eigenen Satz, und keiner ist mehrzeilig
+/// (C3.7, C3.8).
+///
+/// Die Saetze werden an gebauten Werten geprueft und nicht an einem Ablauf:
+/// die Fallunterscheidung ist ueber `Beiseite` vollstaendig, und eine Probe
+/// ueber die vier Werte prueft sie ebenso vollstaendig.
+#[test]
+fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
+    let datei = PathBuf::from("/Users/pruefung/Library/Application Support/KRK/bookmarks.toml");
+    let sicherung = atomar::beiseitepfad(&datei).expect("kein Beiseitepfad");
+    let bau = |beiseite: Beiseite| Ersetzung {
+        datei: datei.clone(),
+        grund: Grund::Beschaedigt("Zeile 3, Spalte 7".to_owned()),
+        beiseite,
+    };
+
+    // Ohne Sicherung bleibt der Satz Wort fuer Wort der von vor der Runde 6.
+    assert_eq!(
+        bau(Beiseite::Nicht).to_string(),
+        format!(
+            "{} ist beschaedigt und wird durch den Auslieferungszustand ersetzt: \
+             Zeile 3, Spalte 7",
+            datei.display()
+        )
+    );
+
+    for (lage, beiseite) in [
+        ("gesichert", Beiseite::Gesichert(sicherung.clone())),
+        (
+            "schon vorhanden",
+            Beiseite::SchonVorhanden(sicherung.clone()),
+        ),
+    ] {
+        let text = bau(beiseite).to_string();
+        assert!(
+            text.starts_with("Die bisherige Fassung liegt"),
+            "der Satz sagt nicht zuerst, was der Nutzer tun kann ({lage}): {text}"
+        );
+        assert!(
+            text.contains(&sicherung.display().to_string()),
+            "der Satz nennt die Sicherung nicht ({lage}): {text}"
+        );
+        assert!(
+            text.contains(&datei.display().to_string()),
+            "der Satz nennt die beschaedigte Datei nicht ({lage}): {text}"
+        );
+    }
+
+    // Die beiden Saetze sind verschieden: der zweite sagt, dass die Sicherung
+    // von einem frueheren Start stammt und dort bleibt.
+    assert_ne!(
+        bau(Beiseite::Gesichert(sicherung.clone())).to_string(),
+        bau(Beiseite::SchonVorhanden(sicherung.clone())).to_string()
+    );
+
+    let gescheitert = bau(Beiseite::Gescheitert("kein Platz mehr".to_owned())).to_string();
+    assert!(
+        gescheitert.contains("kein Platz mehr"),
+        "der Satz nennt den Grund nicht: {gescheitert}"
+    );
+    assert!(
+        !gescheitert.contains(&sicherung.display().to_string()),
+        "der Satz verspricht eine Datei, die es nicht gibt: {gescheitert}"
+    );
+
+    for beiseite in [
+        Beiseite::Nicht,
+        Beiseite::Gesichert(sicherung.clone()),
+        Beiseite::SchonVorhanden(sicherung.clone()),
+        Beiseite::Gescheitert("kein Platz mehr".to_owned()),
+    ] {
+        let text = bau(beiseite).to_string();
+        assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
+        assert!(
+            text.contains("Auslieferungszustand"),
+            "die Meldung nennt die Ersetzung nicht: {text}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Die von Hand gepflegten Einstellungen (C11, Schritt 18c)
 // ---------------------------------------------------------------------------
 
@@ -1528,12 +1835,20 @@ fn gemischte_liste() -> Lesezeichenliste {
     ])
 }
 
-/// Eine `bookmarks.toml` aus der Zeit vor dieser Runde wird unveraendert
-/// eingelesen (C6, dreizehntes Abnahmekriterium).
+/// Eine `bookmarks.toml` aus der Zeit vor den Textmarken wird unveraendert
+/// eingelesen (C6, dreizehntes Abnahmekriterium — und C3.9 der Runde 6).
 ///
 /// Die Datei traegt allein `name` und `ordner` und kein weiteres Feld — genau
 /// die Gestalt, die das laufende Programm bis zum 260807 geschrieben hat. Der
 /// Nutzer verliert seine Lesezeichen nicht.
+///
+/// **Die Runde 6 haengt eine zweite Zusage an dieselbe Datei**, statt eine
+/// zweite Probe daneben zu stellen: die alte Form gilt nicht als beschaedigt,
+/// und deshalb wird auch nichts zur Seite gelegt. Beide Zusagen reden ueber
+/// denselben Lesevorgang derselben Datei; zwei Proben davon waeren zweimal
+/// dasselbe Ereignis. Der Nachweis, dass eine wirklich beschaedigte Datei
+/// gesichert wird, steht weiter oben bei
+/// [`jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt`].
 #[test]
 fn eine_bookmarks_toml_aus_der_zeit_vor_den_textmarken_bleibt_lesbar() {
     let (_ordner, ablage) = ablage("lesezeichen-altbestand");
@@ -1568,6 +1883,16 @@ ordner = \"/\"
             Lesezeichen::neu("Wurzel", "/"),
         ]),
         "drei Ordnermarken, in der Reihenfolge der Datei"
+    );
+
+    // Die Zusage der Runde 6: eine Datei, die gelesen werden kann, wird nicht
+    // zur Seite gelegt. Ein `bookmarks.toml.beschaedigt` neben einer heilen
+    // Datei waere eine Warnung ueber einen Schaden, den es nicht gibt.
+    assert!(
+        !beiseitepfad(&ablage, Datei::Lesezeichen)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "die alte Form wurde zur Seite gelegt"
     );
 }
 

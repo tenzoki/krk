@@ -37,6 +37,32 @@
 //! loeschen. Ueberschrieben wird sie erst beim naechsten gewoehnlichen
 //! Schreibvorgang.
 //!
+//! # Eine beschaedigte Datei wird zur Seite gelegt
+//!
+//! Dass sie liegen bleibt, hat den Nutzer bis zur Runde 6 nicht davor bewahrt,
+//! seinen Bestand zu verlieren: **der naechste gewoehnliche Schreibvorgang ist
+//! genau der Schaden**. Eine Fassung von KRK, die eine aeltere Datei nicht mehr
+//! versteht, liest sie als beschaedigt, arbeitet auf dem Auslieferungszustand
+//! weiter und schreibt ihn beim Beenden darueber.
+//!
+//! [`Ablage::laden`] legt den gelesenen Text deshalb unter
+//! [`atomar::beiseitepfad`] daneben, bevor der Auslieferungszustand einspringt,
+//! und [`Ersetzung::beiseite`] sagt, was dabei herauskam. Vier Regeln tragen
+//! den Vorgang, und jede beantwortet eine Frage, die sonst geraten wuerde:
+//!
+//! - **Nur eine beschaedigte Datei wird gesichert.** Von einer, die sich nicht
+//!   lesen liess, gibt es keinen Inhalt, und eine fehlende ist der erste Start.
+//! - **Der Text wird kopiert und die Datei nicht verschoben.** Ein `rename`
+//!   waere kuerzer und naehme dem Nutzer die Datei unter der Hand weg, an der er
+//!   gerade tippt; siehe den Abschnitt darueber.
+//! - **Eine schon dastehende Sicherung bleibt unangetastet.** Was zaehlt, ist
+//!   die erste zur Seite gelegte Fassung, nicht die letzte.
+//! - **Der Weg dorthin ist [`atomar::schreiben`]**, also derselbe wie fuer jede
+//!   andere Datei dieses Moduls. Ein zweiter Schreibweg entsteht nicht.
+//!
+//! Alle vier Dateien gehen durch [`Ablage::laden`] und haben dort keinen
+//! eigenen Zweig; die Regel gilt deshalb fuer alle vier gleich.
+//!
 //! # Der Kern gibt nichts aus
 //!
 //! [`melden`] ist die einzige Stelle im Kern, die aus einer [`Ersetzung`] einen
@@ -65,7 +91,7 @@ pub mod sitzung;
 use std::fmt;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -118,6 +144,36 @@ impl Grund {
     }
 }
 
+/// Was mit dem Inhalt der ersetzten Datei geschehen ist.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: der Uebersetzer
+/// haelt an jeder Stelle an, die sie auseinandernimmt. Die vier Werte sind
+/// paarweise verschieden und decken jeden Ausgang ab, und genau darauf beruht
+/// die Zusage, dass keine Meldung eine Datei verspricht, die es nicht gibt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Beiseite {
+    /// Es wurde nichts zur Seite gelegt, und das ist richtig so.
+    ///
+    /// Der Wert jeder Ersetzung ausser der beschaedigten: von einer Datei, die
+    /// sich nicht lesen liess, gibt es keinen Inhalt zu sichern, und eine
+    /// fehlende Datei ist der erste Start.
+    Nicht,
+    /// Der Inhalt liegt jetzt unter diesem Pfad.
+    Gesichert(PathBuf),
+    /// Unter diesem Pfad stand schon eine Sicherung, und sie ist unangetastet
+    /// geblieben.
+    ///
+    /// Der Fall tritt vom zweiten Start an ein, wenn KRK dieselbe Datei erneut
+    /// nicht versteht. Die dastehende Fassung ist die aeltere und damit die
+    /// wertvollere; siehe [`atomar::beiseitepfad`].
+    SchonVorhanden(PathBuf),
+    /// Das Zur-Seite-Legen ist selbst gescheitert. Traegt die Meldung des
+    /// Dateisystems.
+    ///
+    /// Der Wert nennt **keinen** Pfad, denn unter ihm liegt nichts.
+    Gescheitert(String),
+}
+
 /// Eine Datei wurde durch den Auslieferungszustand ersetzt.
 ///
 /// Ein Wert und keine Ausgabe: wer laedt, entscheidet, ob und wie er ihn
@@ -128,17 +184,53 @@ pub struct Ersetzung {
     pub datei: PathBuf,
     /// Warum sie ersetzt wurde.
     pub grund: Grund,
+    /// Was mit ihrem Inhalt geschehen ist.
+    pub beiseite: Beiseite,
 }
 
 impl fmt::Display for Ersetzung {
+    /// Der Satz sagt zuerst, was der Nutzer tun kann, und danach, was geschehen
+    /// ist.
+    ///
+    /// Die Reihenfolge ist die Antwort vom 260812-1105
+    /// (`decisions/260812-1000_*_wie-erfaehrt-der-nutzer-dass-eine-ablagedatei-zur-seite-gelegt-wurde.md`):
+    /// die Meldung steht in der Statuszeile und nicht in einem Blatt, sie
+    /// erscheint beim Start, und der Nutzer liest ihren Anfang. Die
+    /// Wiederherstellbarkeit seines Bestands ist die eigentliche Nachricht; die
+    /// Ersetzung ist der Nebensatz.
+    ///
+    /// Beide Pfade stehen im Satz, sobald es beide gibt. Fuer
+    /// [`Beiseite::Nicht`] bleibt der Satz Wort fuer Wort der von vor der
+    /// Runde 6, denn dort gibt es keinen zweiten Pfad und nichts hinzuzufuegen.
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            ausgabe,
-            "{} {} und wird durch den Auslieferungszustand ersetzt: {}",
-            self.datei.display(),
-            self.grund.beschreibung(),
-            self.grund.einzelheit()
-        )
+        let datei = self.datei.display();
+        let beschreibung = self.grund.beschreibung();
+        let einzelheit = self.grund.einzelheit();
+        match &self.beiseite {
+            Beiseite::Nicht => write!(
+                ausgabe,
+                "{datei} {beschreibung} und wird durch den Auslieferungszustand ersetzt: \
+                 {einzelheit}"
+            ),
+            Beiseite::Gesichert(pfad) => write!(
+                ausgabe,
+                "Die bisherige Fassung liegt unter {}; {datei} {beschreibung} und wird durch den \
+                 Auslieferungszustand ersetzt: {einzelheit}",
+                pfad.display()
+            ),
+            Beiseite::SchonVorhanden(pfad) => write!(
+                ausgabe,
+                "Die bisherige Fassung liegt seit einem frueheren Start unter {} und bleibt dort; \
+                 {datei} {beschreibung} und wird durch den Auslieferungszustand ersetzt: \
+                 {einzelheit}",
+                pfad.display()
+            ),
+            Beiseite::Gescheitert(fehler) => write!(
+                ausgabe,
+                "Der Inhalt liess sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} \
+                 und wird durch den Auslieferungszustand ersetzt: {einzelheit}"
+            ),
+        }
     }
 }
 
@@ -219,6 +311,10 @@ impl Ablage {
     /// Scheitert nie: eine fehlende, nicht lesbare oder beschaedigte Datei
     /// fuehrt zum Auslieferungszustand. Nur die letzten beiden Faelle tragen
     /// eine [`Ersetzung`]; eine fehlende Datei ist der erste Start.
+    ///
+    /// **Zur Seite gelegt wird allein im Zweig [`Grund::Beschaedigt`]**, denn
+    /// nur dort gibt es einen gelesenen Text zu sichern. Die beiden uebrigen
+    /// Zweige tragen [`Beiseite::Nicht`]; siehe den Modulkopf.
     pub fn laden<T>(&self, welche: Datei) -> Geladen<T>
     where
         T: DeserializeOwned + Default,
@@ -238,6 +334,7 @@ impl Ablage {
                     ersetzung: Some(Ersetzung {
                         datei: pfad,
                         grund: Grund::NichtLesbar(fehler.to_string()),
+                        beiseite: Beiseite::Nicht,
                     }),
                 };
             }
@@ -247,13 +344,17 @@ impl Ablage {
                 wert,
                 ersetzung: None,
             },
-            Err(fehler) => Geladen {
-                wert: T::default(),
-                ersetzung: Some(Ersetzung {
-                    datei: pfad,
-                    grund: Grund::Beschaedigt(einzeilig(&fehler.to_string())),
-                }),
-            },
+            Err(fehler) => {
+                let beiseite = beiseite_legen(&pfad, &text);
+                Geladen {
+                    wert: T::default(),
+                    ersetzung: Some(Ersetzung {
+                        datei: pfad,
+                        grund: Grund::Beschaedigt(einzeilig(&fehler.to_string())),
+                        beiseite,
+                    }),
+                }
+            }
         }
     }
 
@@ -274,6 +375,40 @@ impl Ablage {
     /// Der Schreiber fuer den gebuendelten Sitzungszustand.
     pub fn sitzungsschreiber(&self) -> Sitzungsschreiber {
         Sitzungsschreiber::neu(self.pfad(Datei::Sitzung))
+    }
+}
+
+/// Legt den gelesenen Text einer beschaedigten Datei unter festem Namen daneben.
+///
+/// Die Reihenfolge ist ausgeschrieben, damit sie nicht geraten wird: den Pfad
+/// bilden, fragen, ob dort schon etwas steht, und nur dann schreiben. Steht
+/// schon etwas, bleibt es unangetastet — die aeltere Fassung ist die
+/// wertvollere, siehe [`atomar::beiseitepfad`].
+///
+/// **Der Text wird kopiert, die Datei nicht verschoben.** Ein `rename` waere
+/// kuerzer und ist falsch: `keymap.toml` und `settings.toml` sind von Hand
+/// aenderbar, und ein Tippfehler darin darf dem Nutzer nicht die Datei unter der
+/// Hand wegnehmen, an der er gerade tippt. Der Modulkopf sagt diese Zusage seit
+/// Schritt 10 der Runde 1 zu.
+///
+/// **Das Wettrennen zwischen der Frage und dem Schreiben ist benannt und nicht
+/// erreichbar**: der Vorgang laeuft einmal je Start in einem Prozess. Ein
+/// `File::create_new` an dieser Stelle waere der zweite Schreibweg, den der
+/// Datensatz vom 260812-1105 ausschliesst.
+#[must_use]
+fn beiseite_legen(datei: &Path, inhalt: &str) -> Beiseite {
+    let pfad = match atomar::beiseitepfad(datei) {
+        Ok(pfad) => pfad,
+        Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+    };
+    match pfad.try_exists() {
+        Ok(true) => return Beiseite::SchonVorhanden(pfad),
+        Ok(false) => {}
+        Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+    }
+    match atomar::schreiben(&pfad, inhalt) {
+        Ok(()) => Beiseite::Gesichert(pfad),
+        Err(fehler) => Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
     }
 }
 

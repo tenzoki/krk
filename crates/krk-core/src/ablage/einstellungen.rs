@@ -48,7 +48,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use super::{Ablage, Datei, Ersetzung, Geladen, Grund, atomar};
+use super::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, atomar};
 
 /// Die Auslieferungsfassung der Einstellungen, in das Programm einkompiliert.
 ///
@@ -165,6 +165,8 @@ pub fn laden(ablage: &Ablage) -> Geladen<Einstellungen> {
             ersetzung: Some(Ersetzung {
                 datei: ablage.pfad(Datei::Einstellungen),
                 grund: Grund::NichtAnlegbar(fehler.to_string()),
+                // Eine Datei, die es nicht gibt, hat keinen Inhalt zu sichern.
+                beiseite: Beiseite::Nicht,
             }),
         },
     }

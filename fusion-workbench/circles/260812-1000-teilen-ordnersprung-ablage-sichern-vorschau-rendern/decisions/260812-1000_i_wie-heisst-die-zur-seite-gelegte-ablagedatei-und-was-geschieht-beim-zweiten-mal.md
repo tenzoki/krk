@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/mod.rs:220-260` (`Ablage::laden`); `crates/krk-core/src/ablage/atomar.rs:22-40` (`NACHBARENDUNG`, `nachbarpfad`, und die Begründung gegen eine Laufnummer); `crates/krk-core/src/ablage/pfade.rs:70` (die vier Dateinamen); `crates/krk-core/tests/ablage.rs:159`
 
@@ -66,6 +66,6 @@ hat.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
-Implemented:
+Implemented: `crates/krk-core/src/ablage/atomar.rs:61` (`beiseitepfad`, fester Name ohne Laufnummer) und `crates/krk-core/src/ablage/mod.rs:399` (`beiseite_legen`, eine dastehende Sicherung bleibt unangetastet) — Schritt 1 des Plans vom 260812-1145; noch nicht committet, der Orchestrator committet nach der Aufgabe.
 Deferred:
 Superseded by:

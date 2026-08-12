@@ -120,7 +120,7 @@ use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ablage::{Ablage, Datei, Ersetzung, Geladen, Grund, melden};
+use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, melden};
 
 use super::Tastendruck;
 use super::konflikt::{Funktionsname, Konflikt};
@@ -1227,6 +1227,12 @@ pub fn laden(ablage: &Ablage) -> Geladen<Belegung> {
             ersetzung: Some(Ersetzung {
                 datei: ablage.pfad(Datei::Belegung),
                 grund: Grund::Beschaedigt(fehler.to_string()),
+                // Nichts zur Seite gelegt: die Datei war gueltiges TOML und ist
+                // erst hier, eine Ebene hoeher, als widerspruechlich
+                // aufgefallen. Das Zur-Seite-Legen wohnt in `Ablage::laden` und
+                // sieht diesen Fall nicht; der Datensatz dazu ist
+                // `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md`.
+                beiseite: Beiseite::Nicht,
             }),
         },
     }
@@ -1248,6 +1254,9 @@ pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
             Some(melden(&Ersetzung {
                 datei: PathBuf::from(Datei::Belegung.dateiname()),
                 grund: Grund::NichtLesbar(fehler.to_string()),
+                // Ohne Ablageordner gibt es keinen Ort, an den etwas zur Seite
+                // zu legen waere, und es ist auch nichts gelesen worden.
+                beiseite: Beiseite::Nicht,
             })),
         ),
     }

@@ -21,13 +21,53 @@ use std::path::{Path, PathBuf};
 /// Die Endung, die die Nachbardatei vom Ziel unterscheidet.
 pub const NACHBARENDUNG: &str = "neu";
 
+/// Die Endung, unter der eine beschaedigte Datei zur Seite gelegt wird.
+pub const BESCHAEDIGTENDUNG: &str = "beschaedigt";
+
 /// Der Pfad der Nachbardatei zu einem Ziel.
 ///
 /// Der Name ist fest abgeleitet und traegt keine Laufnummer. Ein Absturz
 /// hinterlaesst damit hoechstens eine einzige liegengebliebene Datei statt
 /// einer wachsenden Reihe, und der naechste Schreibvorgang ueberschreibt sie.
 /// Gelesen wird sie von niemandem.
+///
+/// **Der Nachbar [`beiseitepfad`] traegt ebenfalls keine Laufnummer, aber aus
+/// dem umgekehrten Grund**, und wer die beiden Begruendungen fuer dieselbe
+/// Regel haelt, verwechselt sie beim naechsten Umbau: die Nachbardatei darf
+/// ueberschrieben werden, weil niemand sie liest; die zur Seite gelegte Datei
+/// darf es gerade nicht, weil sie genau dafuer dasteht.
 pub fn nachbarpfad(ziel: &Path) -> io::Result<PathBuf> {
+    mit_endung(ziel, NACHBARENDUNG)
+}
+
+/// Der Pfad, unter dem der Inhalt einer beschaedigten Datei liegen bleibt.
+///
+/// Der Name ist fest abgeleitet und traegt **keine Laufnummer**, und der Grund
+/// ist der umgekehrte zu dem bei [`nachbarpfad`]: diese Datei wird gelesen, und
+/// was sie wert macht, ist die **erste** zur Seite gelegte Fassung, nicht die
+/// letzte. Eine Laufnummer legte eine wachsende Reihe in einem Ordner an, den
+/// KRK selbst verwaltet und niemand aufraeumt; ein Ueberschreiben verschoebe
+/// den Datenverlust um einen Start. So entschieden am 260812-1105
+/// (`decisions/260812-1000_*_wie-heisst-die-zur-seite-gelegte-ablagedatei-und-was-geschieht-beim-zweiten-mal.md`,
+/// Moeglichkeit 1). Wer hier hinschreibt, fragt deshalb vorher, ob schon etwas
+/// dasteht.
+///
+/// Die Endung wird **angehaengt** und ersetzt nichts: aus `bookmarks.toml` wird
+/// `bookmarks.toml.beschaedigt`. Ein vorangestelltes Praefix waere gefaehrlich,
+/// und ein Ersetzen der Endung ergaebe `bookmarks.beschaedigt`, was den
+/// urspruenglichen Namen nicht mehr nennt. [`super::Ablageort::datei`] fragt
+/// nach [`super::Datei`] und liest damit keinen der abgeleiteten Namen als
+/// Ablagedatei.
+pub fn beiseitepfad(ziel: &Path) -> io::Result<PathBuf> {
+    mit_endung(ziel, BESCHAEDIGTENDUNG)
+}
+
+/// Haengt eine Endung an den Dateinamen eines Ziels.
+///
+/// Die eine Ableitung fuer beide Nachbarnamen. Zwei Kopien derselben vier
+/// Zeilen waeren zwei Stellen, an denen der Umgang mit einem Pfad ohne
+/// Dateinamen auseinanderlaufen koennte.
+fn mit_endung(ziel: &Path, endung: &str) -> io::Result<PathBuf> {
     let Some(name) = ziel.file_name() else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -36,7 +76,7 @@ pub fn nachbarpfad(ziel: &Path) -> io::Result<PathBuf> {
     };
     let mut nachbarname = name.to_os_string();
     nachbarname.push(".");
-    nachbarname.push(NACHBARENDUNG);
+    nachbarname.push(endung);
     Ok(ziel.with_file_name(nachbarname))
 }
 
