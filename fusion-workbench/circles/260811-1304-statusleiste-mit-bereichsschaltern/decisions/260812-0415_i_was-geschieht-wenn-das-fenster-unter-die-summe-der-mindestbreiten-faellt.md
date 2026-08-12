@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_a_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md`, `circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_o_bereichsleiste-und-proportionale-breitenregel.md` (C4.4, Schritt 1 und 2), `crates/krk-ui/src/appkit/fenster.rs:116` (`MINDESTGROESSE`), `crates/krk-ui/src/fenstermodell.rs:169` (`Bereich::mindestbreite`)
 
@@ -73,6 +73,6 @@ Umsetzung: Schritt 1 des Plans `circles/260811-1304-statusleiste-mit-bereichssch
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0430` — beantwortet vom Orchestrator, autonom auf Weisung des Nutzers; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 5e17c9e (zweiter Zweig der Regel), 0342445 (`MINDESTGROESSE` in der Breite unveraendert bei 780).
 Deferred:
 Superseded by:

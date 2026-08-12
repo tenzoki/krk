@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/sitzung.rs:204` (`Sichtbarkeit`), `crates/krk-ui/src/fenstermodell.rs:405` (`Fenstermodell::umschalten`), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -64,6 +64,6 @@ ausgelieferte Belegung keinen Weg dorthin kennt. Mit der Leiste gibt es einen.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 8ffaac2 (Modell und Ablage), 0342445 (der fuenfte Schalter in der Leiste) — `Sichtbarkeit` traegt das fuenfte Feld, die Regel heisst 'eines bleibt'.
 Deferred:
 Superseded by:

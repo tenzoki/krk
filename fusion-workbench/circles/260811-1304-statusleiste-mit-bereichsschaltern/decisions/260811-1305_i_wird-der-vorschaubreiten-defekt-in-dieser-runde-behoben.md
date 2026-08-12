@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `shared/issues/260811-1245_*_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`, `crates/krk-ui/src/fenstermodell.rs:519` (`breiten_uebernehmen`), `crates/krk-ui/src/appkit/aufteilung.rs`
 
@@ -65,6 +65,6 @@ beantwortet und nicht auf umgesetzt.
 auf 780 Punkten, der Vierersatz mit dem Editor summiert sich auf 920. Zwischen 780 und 920 Punkten
 Fensterbreite wird der Editor unter sein Mindestmass gedrueckt. Wer die Bereichsschalter baut,
 trifft diese Zahl.
-Implemented:
+Implemented: 1ea5a3d (Runde 4, vor dieser Runde) — die Lage hat geantwortet. Dieser Circle hat die Behebung vorgefunden und nicht gebaut.
 Deferred:
 Superseded by:

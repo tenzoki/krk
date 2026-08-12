@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (Klaerungsrunde bei der Aktivierung)
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260811-1732_*_die-leiste-soll-auch-die-spalten-groesse-datum-und-typ-wegschalten.md`, `crates/krk-ui/src/appkit/tabelle.rs:180` (`Spalte`)
 
@@ -37,6 +37,6 @@ nicht vier.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 90b02d4 — `Sitzung::spalten` mit drei `bool`, Vorgabe dreimal `true`, `#[serde(default)]`.
 Deferred:
 Superseded by:

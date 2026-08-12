@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md` (Abschnitt `## Grounding snapshot`), `crates/krk-ui/src/fenstermodell.rs:609` (`bereichsbreiten`), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -81,6 +81,6 @@ her", gilt danach als Anteil und nicht als Punktzahl; der Plan fasst es neu.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 5e17c9e, nachgezogen in 026c665 — `bereichsbreiten` verteilt Anteile statt Punktzahlen; die Vorrangordnung vom 260808 ist ersatzlos gefallen, samt ihrer Zusage im Dokumentationskommentar.
 Deferred:
 Superseded by:

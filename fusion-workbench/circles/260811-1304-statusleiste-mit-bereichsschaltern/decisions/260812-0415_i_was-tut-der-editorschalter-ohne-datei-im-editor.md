@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_o_bereichsleiste-und-proportionale-breitenregel.md` (Schritt 5, C2.4 und C6.3), `crates/krk-core/src/ablage/sitzung.rs` (`Sichtbarkeit::default`), `crates/krk-ui/src/kommandos/fokus.rs` (`holt_hervor`), `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_a_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md`
 
@@ -62,6 +62,6 @@ Umsetzung: Schritt 5 des Plans `circles/260811-1304-statusleiste-mit-bereichssch
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0430` — beantwortet vom Orchestrator, autonom auf Weisung des Nutzers; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 90b02d4 — `editor_umschalten` beim Anwendungsdelegierten verwirft ohne Meldung, solange der Editor ausgeblendet ist und keine Datei haelt.
 Deferred:
 Superseded by:

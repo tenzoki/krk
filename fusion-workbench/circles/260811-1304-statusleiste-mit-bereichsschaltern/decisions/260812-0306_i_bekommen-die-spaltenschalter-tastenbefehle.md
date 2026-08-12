@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (Klaerungsrunde bei der Aktivierung)
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260811-1732_*_die-leiste-soll-auch-die-spalten-groesse-datum-und-typ-wegschalten.md`, `crates/krk-ui/src/appkit/tabelle.rs:180` (`Spalte`)
 
@@ -44,6 +44,6 @@ Dateifenster.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 90b02d4 — drei Kommandos in `Kommando`, alle `Wirkungsbereich::Ueberall`, in der Belegung mit `tasten = []`.
 Deferred:
 Superseded by:

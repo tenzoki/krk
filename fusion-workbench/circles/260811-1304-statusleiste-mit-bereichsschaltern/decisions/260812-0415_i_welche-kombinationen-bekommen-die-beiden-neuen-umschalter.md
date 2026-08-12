@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_o_bereichsleiste-und-proportionale-breitenregel.md` (Schritt 4), `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260812-0306_a_bekommen-die-spaltenschalter-tastenbefehle.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`, `resources/default-keymap.toml`
 
@@ -67,6 +67,6 @@ Umsetzung: Schritt 4 des Plans `circles/260811-1304-statusleiste-mit-bereichssch
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0430` — beantwortet vom Orchestrator, autonom auf Weisung des Nutzers; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 90b02d4 — `opt+cmd+left`, `opt+cmd+b`, `opt+cmd+right` als zweite Kombination am rechten Dateifenster; `editor_schliessen` bleibt auf `opt+cmd+e`.
 Deferred:
 Superseded by:

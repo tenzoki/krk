@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/fenstermodell.rs:169` (`Bereich::mindestbreite`), `crates/krk-ui/src/fenstermodell.rs:639` (die Deckelung der festen Bereiche), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C7)
 
@@ -68,6 +68,6 @@ sagt an, die Fensterzeile zeigt nichts.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: a2ea876 — zweite Abweisung in `Fenstermodell::umschalten`, nur beim Einschalten, ohne Meldung.
 Deferred:
 Superseded by:

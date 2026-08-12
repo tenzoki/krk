@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-core/src/ablage/sitzung.rs:181` (`Breiten`), `crates/krk-ui/src/fenstermodell.rs:191` (`Bereich::anfangsbreite`), `.../decisions/260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md`
 
@@ -65,6 +65,6 @@ die Anteilsregel nicht.
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 5e17c9e — ein unbelegtes Feld faellt auf `anfangsbreite()` zurueck und geht mit dieser Zahl in dieselbe Verhaeltnisrechnung wie jeder andere Bereich.
 Deferred:
 Superseded by:

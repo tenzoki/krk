@@ -59,3 +59,12 @@ Aufteilung anfasst. Ob beides in eine Runde gehört, ist selbst eine Frage.
 Daneben liegt der gemeldete Defekt
 `shared/issues/260811-1245_*_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`,
 den die siebte Frage dieses Circles ohnehin führt.
+
+---
+Resolved: 90b02d4 (Modell, Ablage, drei Kommandos, beide Tabellen) und 0342445 (die drei
+Schalter in der Bereichsleiste). Die vier Fragen des Nachtrags sind am 260812-0306 als eigene
+Entscheidungsdatensätze beantwortet worden: gemeinsam für beide Dateifenster, überleben den
+Neustart, die Sortierung bleibt beim Wegschalten unangetastet, Kommandos ja und ausgelieferte
+Kombination nein. Die Spalte Name trägt keinen Schalter — der Nachtrag hatte offengelassen, ob
+das gilt, und der Datensatz zum Neustart entscheidet es.
+

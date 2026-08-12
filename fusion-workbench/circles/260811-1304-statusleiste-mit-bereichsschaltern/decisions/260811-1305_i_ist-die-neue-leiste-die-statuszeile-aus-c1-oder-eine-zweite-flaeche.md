@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/aufteilung.rs:374`, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` (C1), `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2025_*_wie-zeigt-krk-dem-nutzer-fehler.md`
 
@@ -68,6 +68,6 @@ Systemschrift) und nennt L9 als das Kriterium, das der naechste Abnahmelauf nach
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-0306` — beantwortet vom Orchestrator in der Klaerungsrunde bei der Aktivierung des Circles; Sitzungsprotokoll `circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0306-klaerungsrunde.md`.
-Implemented:
+Implemented: 0342445 — `crates/krk-ui/src/appkit/bereichsleiste.rs`, eine eigene Flaeche ueber die Fensterbreite, nur Schalter. Die beiden Statuszeilen sind unberuehrt.
 Deferred:
 Superseded by:
