@@ -48,16 +48,27 @@
 //! der `NSSplitView` durch, und eine Zeile darin waere ein sechster Bereich
 //! oder ein blinder Fleck.
 //!
-//! **Den Ersthelferrang nimmt sie nicht an** (C5.11), und getragen wird das
-//! allein davon, was `labelWithString:` baut: der Kopf des Systems nennt es
-//! "a non-wrapping, non-editable, non-selectable text field"
+//! **Den Ersthelferrang nimmt sie nicht an** (C5.11). Beim Textfeld getragen
+//! wird das allein davon, was `labelWithString:` baut: der Kopf des Systems
+//! nennt es "a non-wrapping, non-editable, non-selectable text field"
 //! (`NSTextField.h:87-93`). Ein `setRefusesFirstResponder(true)` steht deshalb
 //! nicht daneben; die Schalter der Bereichsleiste brauchen es, weil ein
-//! `NSButton` den Rang von sich aus annimmt. **Ob das bei eingeschalteter
-//! vollstaendiger Tastaturbedienung haelt, ist nicht gemessen.** Die
-//! Abschlussnotiz der Runde 5 hat die Frage fuer die Schalter offen gelassen,
-//! und sie steht fuer diese Zeile ebenso offen; C5.11 ist ein Kriterium am
-//! laufenden Buendel und keine Zusage im Baum.
+//! `NSButton` den Rang von sich aus annimmt.
+//!
+//! **Seit Schritt 11 sind es zwei Ansichten und nicht mehr eine.** Das Feld
+//! sitzt als Dokumentansicht in einer `NSScrollView`, und die Rolle steht damit
+//! zwischen ihm und der Traegerflaeche des Fensters. `NSScrollView` erbt
+//! `acceptsFirstResponder` von `NSView` und antwortet von sich aus mit `NO`;
+//! ihre Rollbalken sind dagegen `NSControl`, also von derselben Art wie die
+//! Schalter der Bereichsleiste, und sichtbar sind sie nur, solange der Text
+//! breiter ist als die Zeile (`setAutohidesScrollers(true)`).
+//!
+//! **Ob das bei eingeschalteter vollstaendiger Tastaturbedienung haelt, ist
+//! nicht gemessen, und diese Datei behauptet es nicht.** Die Abschlussnotiz der
+//! Runde 5 hat die Frage fuer die Schalter der Bereichsleiste offen gelassen;
+//! sie steht fuer diese Zeile ebenso offen und betrifft seit Schritt 11 eine
+//! Ansicht mehr als vorher. C5.11 ist ein Kriterium am laufenden Buendel und
+//! keine Zusage im Baum.
 //!
 //! # Wer die Zeile bekommt, wenn mehrere zugleich etwas zu sagen haben
 //!
@@ -70,6 +81,27 @@
 //! Tabs gerechnet, statt gesetzt und geloescht zu werden; die Begruendung
 //! steht bei `DateifensterQuelle::markierungsstand_text`.
 //!
+//! # Warum die Zeile blaettert und nicht kuerzt
+//!
+//! Seit Schritt 11 der Runde 6 sitzt der Text in einer Bildlaufansicht und
+//! laesst sich nach rechts blaettern, statt am rechten Rand mit drei Punkten
+//! abzubrechen (C5.10). Der Grund ist der Inhalt dieser Runde: die Meldungen
+//! zur beschaedigten Ablagedatei nennen **zwei** Pfade, und ein abgeschnittener
+//! Pfad ist keine Auskunft. Er sieht aus wie eine und ist keine, denn welche
+//! Datei gemeint ist, steht am Ende und nicht am Anfang. Eine kuerzende Zeile
+//! verlangte vom Nutzer, das Fenster breiter zu ziehen, um zu erfahren, was KRK
+//! ihm sagen wollte.
+//!
+//! **Der Preis ist benannt: mit dem Zeiger ueber der Zeile bewegt ein
+//! Zweifingerstrich die Zeile und nicht die Liste darueber.** Achtzehn Punkte
+//! am Fensterfuss antworten seither auf das Rollrad. Sie liegen unter der
+//! Dateiliste und nicht in ihr, wer also die Liste rollen will, haelt den
+//! Zeiger in der Liste.
+//!
+//! **Einzeilig bleibt sie.** `setMaximumNumberOfLines(1)` steht weiter am Feld:
+//! eine lange Meldung wird lang und nicht hoch, weil die Zeile [`HOEHE`] misst
+//! und das Fenster darunter keinen Punkt frei hat.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSTextField`, `NSColor`, `NSFont`, `NSView` und `NSString` stehen seit
@@ -77,10 +109,23 @@
 //! und die Ausrichtung `NSTextAlignmentLeft`. Fuenf Beruehrungen sind juenger
 //! als ihre Klasse: die drei Semantikfarben `labelColor`, `secondaryLabelColor`
 //! und `systemRedColor` seit 10.10, `maximumNumberOfLines` seit 10.11 und
-//! `labelWithString:` seit 10.12. Das Buendel zielt auf 15.0
-//! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
-//! keine Beruehrung in dieser Datei braucht deshalb eine
-//! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
+//! `labelWithString:` seit 10.12 — die hoechste Untergrenze dieser Datei.
+//!
+//! **Die Bildlaufansicht aus Schritt 11 hebt sie nicht an.** `NSScrollView`
+//! (`NSScrollView.h:25`), `NSClipView` (`NSClipView.h:18`) und die Oberklasse
+//! `NSControl` mit `sizeToFit` (`NSControl.h:44`) stehen seit 10.0. Die
+//! angesprochenen Eigenschaften `contentSize` (`NSScrollView.h:47`),
+//! `documentView` (`:48`), `contentView` (`:49`), `borderType` (`:51`),
+//! `drawsBackground` (`:53`), `hasVerticalScroller` (`:54`),
+//! `hasHorizontalScroller` (`:55`) und `autohidesScrollers` (`:58`) tragen im
+//! Kopf des Systems ebenso wenig eine eigene Angabe wie
+//! `reflectScrolledClipView:` (`:67`), `scrollToPoint:` (`NSClipView.h:29`),
+//! `frame` (`NSView.h:129`) und die Aufzaehlung `NSBorderType` mit `NSNoBorder`
+//! (`NSView.h:43-48`); ohne Angabe heisst 10.0. Alle Zahlen am SDK gelesen.
+//!
+//! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
+//! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
+//! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 //!
@@ -88,10 +133,15 @@
 //! [`super::fenster::fensterinhalt`], das die Zeile einhaengt und ihr Rahmen
 //! und Maske in denselben zwei Zeilen gibt wie der Bereichsleiste daneben.
 //! `setAutoresizingMask:` und `setFrame:` stehen seit 10.0 und tragen keine
-//! eigene Angabe; diese Datei ruft von beiden nur noch `setFrame:` beim Aufbau.
+//! eigene Angabe; `setAutoresizingMask:` ruft diese Datei nicht mehr, und
+//! `setFrame:` ruft sie beim Aufbau und seit Schritt 11 bei jedem neuen Text,
+//! um die Dokumentansicht auf die Breite ihres Textes zu bringen.
 
+use objc2::MainThreadOnly;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSColor, NSFont, NSTextAlignment, NSTextField, NSView};
+use objc2_app_kit::{
+    NSBorderType, NSColor, NSFont, NSScrollView, NSTextAlignment, NSTextField, NSView,
+};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, ns_string};
 
 use krk_core::ablage::Fensterseite;
@@ -351,8 +401,15 @@ const fn seitenname(seite: Fensterseite) -> &'static str {
     }
 }
 
-/// Die eine Textzeile am Fensterfuss.
+/// Die eine Textzeile am Fensterfuss, blaetterbar nach rechts.
+///
+/// **Zwei Ansichten, eine Rolle.** Das Feld traegt den Text, die
+/// Bildlaufansicht traegt das Feld; nach aussen gibt [`Statuszeile::sicht`]
+/// allein die Rolle heraus, damit niemand das Feld einhaengt und die
+/// Blaetterbarkeit dabei verliert. Warum geblaettert und nicht gekuerzt wird,
+/// steht im Modulkopf.
 pub struct Statuszeile {
+    rolle: Retained<NSScrollView>,
     feld: Retained<NSTextField>,
 }
 
@@ -365,6 +422,12 @@ impl Statuszeile {
     /// Runde 6 setzte diese Methode die Maske selbst, weil sie die Zeile an den
     /// Fuss eines Dateifensters band; jetzt haengt die Zeile am Fenster, und
     /// die Wahl gehoert dorthin, wo eingehaengt wird.
+    ///
+    /// **Die Rolle bleibt unsichtbar, solange nichts zu blaettern ist.** Sie
+    /// zeichnet keinen Hintergrund und keinen Rahmen, hat keinen senkrechten
+    /// Rollbalken — die Zeile ist einzeilig — und blendet den waagerechten aus,
+    /// sobald der Text hineinpasst. Der Nutzer sieht damit dasselbe wie vor
+    /// Schritt 11, bis eine Meldung zu lang wird.
     pub fn bauen(mtm: MainThreadMarker) -> Self {
         let feld = NSTextField::labelWithString(ns_string!(""), mtm);
         feld.setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(0.0, HOEHE)));
@@ -374,12 +437,27 @@ impl Statuszeile {
         feld.setTextColor(Some(&NSColor::secondaryLabelColor()));
         feld.setAlignment(NSTextAlignment::Left);
         feld.setMaximumNumberOfLines(1);
-        Self { feld }
+
+        let rolle = NSScrollView::initWithFrame(
+            NSScrollView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, NSSize::new(0.0, HOEHE)),
+        );
+        rolle.setHasHorizontalScroller(true);
+        rolle.setHasVerticalScroller(false);
+        rolle.setAutohidesScrollers(true);
+        rolle.setDrawsBackground(false);
+        rolle.setBorderType(NSBorderType::NoBorder);
+        rolle.setDocumentView(Some(&feld));
+
+        Self { rolle, feld }
     }
 
     /// Die Ansicht, die in die Inhaltsflaeche des Fensters gehaengt wird.
+    ///
+    /// Seit Schritt 11 die Bildlaufansicht und nicht mehr das Feld. Wer das
+    /// Feld einhaengte, bekaeme eine Zeile, die wieder kuerzt.
     pub fn sicht(&self) -> &NSView {
-        &self.feld
+        &self.rolle
     }
 
     /// Zeigt eine Meldung der genannten Art an, oder leert die Zeile bei
@@ -391,6 +469,11 @@ impl Statuszeile {
     /// Standardfehlerausgabe uebersehen hat. Ein Fortschritt bekommt die
     /// gewoehnliche Textfarbe; auffindbar ist der Abbruch bei ihm nicht ueber
     /// die Farbe, sondern weil die Zeile ihn benennt ("Esc bricht ab").
+    ///
+    /// **Jeder neue Text zieht die Breite nach und setzt die Zeile an ihren
+    /// Anfang**, und zwar in dieser Reihenfolge: erst steht fest, wie breit die
+    /// Dokumentansicht ist, danach laesst sich sagen, wohin `NSClipView` den
+    /// Anfang legt.
     pub fn zeigen(&self, meldung: Option<(&str, Art)>) {
         match meldung {
             Some((text, art)) => {
@@ -407,6 +490,43 @@ impl Statuszeile {
                     .setTextColor(Some(&NSColor::secondaryLabelColor()));
             }
         }
+        self.breite_nachziehen();
+        self.an_den_anfang();
+    }
+
+    /// Bringt die Dokumentansicht auf die Breite ihres Textes.
+    ///
+    /// **Ohne diesen Schritt gaebe es nichts zu blaettern.** Eine
+    /// Dokumentansicht, die so breit ist wie die Rolle, hat keinen Ueberhang,
+    /// und `NSScrollView` blendet den Rollbalken aus, obwohl der Text
+    /// abgeschnitten dasteht. `sizeToFit` misst am Feld, was der Text braucht;
+    /// das Groessere von Textbreite und Sichtbreite ist die neue Breite, damit
+    /// die Zeile bei kurzen Meldungen nicht schmaler wird als ihre Rolle.
+    ///
+    /// **Die Hoehe bleibt [`HOEHE`] und kommt nicht aus `sizeToFit`.** Die
+    /// Schrifthoehe der kleinen Systemschrift liegt darunter; ein Feld in
+    /// dieser Hoehe saesse in der Rolle, die 18 Punkte misst, nicht dort, wo es
+    /// vor Schritt 11 sass.
+    fn breite_nachziehen(&self) {
+        self.feld.sizeToFit();
+        let textbreite = self.feld.frame().size.width;
+        let sichtbreite = self.rolle.contentSize().width;
+        self.feld.setFrame(NSRect::new(
+            NSPoint::ZERO,
+            NSSize::new(textbreite.max(sichtbreite), HOEHE),
+        ));
+    }
+
+    /// Stellt die Zeile an den Anfang des neuen Textes.
+    ///
+    /// Eine Meldung, die in der Mitte anfaengt, weil die vorige weiter rechts
+    /// gelesen wurde, waere keine Meldung. `scrollToPoint:` setzt den
+    /// Ausschnitt, `reflectScrolledClipView:` bringt den Rollbalken auf
+    /// denselben Stand; ohne den zweiten Ruf zeigte er weiter die alte Stelle.
+    fn an_den_anfang(&self) {
+        let ausschnitt = self.rolle.contentView();
+        ausschnitt.scrollToPoint(NSPoint::ZERO);
+        self.rolle.reflectScrolledClipView(&ausschnitt);
     }
 }
 

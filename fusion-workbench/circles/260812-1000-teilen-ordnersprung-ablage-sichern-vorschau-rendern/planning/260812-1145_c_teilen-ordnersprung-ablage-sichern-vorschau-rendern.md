@@ -1,7 +1,7 @@
 # Implementierungsplan: Teilen, Ordnersprung, Ablagesicherung, gerenderte Vorschau, eine Statuszeile
 
 **Date:** 2026-08-12
-**Status:** Draft
+**Status:** Complete
 **Spec:** keiner. Geplant aus dem Circle-Datensatz `_t_circle.md` und den vierzehn Datensätzen unter `decisions/` dieses Circles, sämtlich am 260812-1105 beantwortet; die Fähigkeiten stehen deshalb in diesem Plan (Abschnitt `## Fähigkeiten und Abnahmekriterien`) und nicht in einem eigenen Dokument.
 **Decidability:** Die tragende Frage dieser Runde lautet: **welche von bis zu zehn Meldungen steht in der einen Statuszeile?** Sie ist heute nicht entscheidbar, und zwar nicht aus Ungenauigkeit, sondern weil der Mechanismus die Eingaben nicht hat: `statuszeile::zeile` sieht fünf Quellen **eines** Dateifensters und wird zweimal aufgerufen, einmal je Zeile. Der Plan ändert deshalb den **Mechanismus** und nicht die Genauigkeit: die Funktion bekommt die Quellen **beider** Dateifenster und die aktive Seite als Wert und entscheidet danach über eine zweistellige Ordnung, erst der Rang, dann die aktive Seite. Über einer endlichen Menge von zehn Paaren ist diese Ordnung vollständig und überschneidungsfrei; ein Gleichstand ist ausgeschlossen, weil zwei Meldungen desselben Ranges immer verschiedenen Seiten gehören. Zwei weitere Fragen liegen daneben und sind an anderer Stelle entscheidbar. **„Welche Datei ist die angezeigte?"** ist aus der Frage „wer hält eine Datei?" nicht zu beantworten — Vorschau und Editor können beide eine halten, weil ein verdrängter Editor seinen Stand behält —, wohl aber aus der Frage „wer ist **sichtbar**, und was zeigt der?"; `Bereich::teilt_flaeche_mit` sagt zu, dass höchstens einer von beiden sichtbar ist, und damit hat die Frage genau eine Antwort. **„Welche Zeichen einer Markdown-Datei erscheinen und welche nicht?"** wäre aus den Wortartennamen von `syntect` nur zu schätzen: welche Zeichen als `punctuation.definition.*` gelten, ist eine Eigenschaft fremder Sprachdefinitionen und keine Zusage an KRK. Der Plan stellt die Frage deshalb an einen CommonMark-Zerleger mit Quellversätzen und macht die Fallunterscheidung total, indem alles außerhalb des gewählten Umfangs als **sein Quelltext** erscheint.
 
@@ -441,7 +441,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
     - Abnahme: `make check`, Exit 0. Die Kriterien C5.1 (zweite Hälfte), C5.2, C5.4 (zweite Hälfte), C5.10 und C5.11 sind am Bündel zu sehen.
     - Dependencies: keine. Der Schritt lässt sich vor oder nach den Schritten 1 bis 9 fahren; er steht hier hinten, weil er das größte Risiko trägt.
 
-11. **Die Zeile lässt sich nach rechts blättern**
+11. [DONE] **Die Zeile lässt sich nach rechts blättern**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/fenster.rs`
     - Changes:
