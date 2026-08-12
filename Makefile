@@ -93,10 +93,45 @@ tasten: bundle ## Tastencodes protokollieren, Beenden mit Cmd+Q
 menue: bundle ## Das gebaute Hauptmenue mit allen Kuerzeln ausgeben
 	$(BINAER) --menue-protokoll
 
+# ── Ausliefern ───────────────────────────────────────────────────────────────
+
+# Die Beglaubigung braucht ein hinterlegtes notarytool-Schluesselbundprofil;
+# xtask liest seinen Namen aus KRK_NOTARY_PROFILE. Der Name steht hier als
+# Vorgabe und nicht fest im Rezept: `make release NOTARPROFIL=anderes` waehlt
+# ein anderes, und ein bereits gesetztes KRK_NOTARY_PROFILE gilt weiter.
+#
+# KRK_SIGN_IDENTITY steht hier bewusst nicht. Es war bis zum 260813 die
+# Umgehung eines Defekts der Identitaetssuche
+# (`shared/issues/260812-2357_*_die-identitaetssuche-zaehlt-jede-identitaet-doppelt…`);
+# der ist behoben, und xtask findet die Developer-ID selbst. Eine Umgehung im
+# Makefile waere ein Dauerzustand geworden.
+NOTARPROFIL := $(or $(KRK_NOTARY_PROFILE),krk-notar)
+
+.PHONY: release
+release: ## Universelles Buendel bauen, mit Developer-ID signieren, beglaubigen
+	KRK_NOTARY_PROFILE=$(NOTARPROFIL) $(CARGO) xtask release
+
+# Die zwei Beglaubigungspruefungen duerfen das Ziel nicht scheitern lassen, und
+# der Grund ist kein Nachlassen: ein mit `make bundle` gebautes Buendel traegt
+# eine Entwicklungsidentitaet und **muss** bei spctl durchfallen. Das ist der
+# richtige Befund und kein Fehler. Ein Ziel, das danach mit Exit 1 abbricht,
+# waere nach jedem Entwicklungsbau unbrauchbar — und `frisch` ruft es. Beide
+# Auskuenfte stehen deshalb im Klartext da, und die Legende darueber sagt, wie
+# der Leser die zwei Faelle auseinanderhaelt.
+#
+# Die erste Pruefung, codesign --verify, bleibt hart: sie gilt fuer jedes
+# Buendel gleich, ob entwickelt oder ausgeliefert.
 .PHONY: signatur
-signatur: ## Signatur des gebauten Buendels pruefen
+signatur: ## Signatur und Beglaubigung des gebauten Buendels pruefen
 	codesign --verify --deep --strict $(BUENDEL)
 	codesign -dvv $(BUENDEL) 2>&1 | grep -E 'Authority|flags'
+	@echo
+	@echo "Beglaubigung — zwei erwartbare Befunde, beide richtig:"
+	@echo "  rejected / origin=Apple Development       aus 'make bundle', nur lokal"
+	@echo "  accepted / source=Notarized Developer ID  aus 'make release', ausliefbar"
+	@echo
+	xcrun stapler validate $(BUENDEL) || true
+	spctl -a -vvv -t exec $(BUENDEL) || true
 
 # ── Messen ───────────────────────────────────────────────────────────────────
 

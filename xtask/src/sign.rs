@@ -87,7 +87,9 @@ pub fn bestimmen_fuer_release() -> Result<Identitaet, Abbruch> {
     }
     // Wie bei der Entwicklungsidentitaet ohne `-v`: wer eine Developer-ID
     // angelegt hat, hat sich fuer sie entschieden, und die Suche hat sie nicht
-    // an der Vertrauensbewertung auszusortieren.
+    // an der Vertrauensbewertung auszusortieren. Gezaehlt wird trotzdem ueber
+    // genau einen Abschnitt der Ausgabe; warum das noetig ist, steht bei
+    // [`abschnitt_der_treffer`].
     let developer_ids = developer_id_namen(&gueltige_namen(&auflisten()?));
     match developer_ids.as_slice() {
         [einzige] => {
@@ -198,8 +200,55 @@ fn aus_umgebung() -> Option<String> {
 /// keine. Mit `-v` wuerde diese Stufe eine Identitaet ablehnen, die
 /// nachweislich traegt, und den Nutzer durch einen Vertrauensdialog schicken,
 /// der fuer die Entwicklung nichts aendert.
+///
+/// Ausgewertet wird davon allein der Abschnitt der Treffer: ohne `-v` gibt
+/// `find-identity` die gueltigen Identitaeten ein zweites Mal aus, und wer
+/// ueber die ganze Ausgabe zaehlt, zaehlt sie doppelt. Die Beschraenkung steht
+/// hier und nicht bei den Aufrufern, damit keiner von ihnen sie vergessen
+/// kann; die Begruendung steht bei [`abschnitt_der_treffer`].
 fn auflisten() -> Result<String, Abbruch> {
-    security_fragen(&["find-identity", "-p", "codesigning"])
+    let ausgabe = security_fragen(&["find-identity", "-p", "codesigning"])?;
+    Ok(abschnitt_der_treffer(&ausgabe).to_owned())
+}
+
+/// Die Ueberschrift des Abschnitts, den [`auflisten`] auswertet.
+const ABSCHNITT_TREFFER: &str = "Matching identities";
+
+/// Die Ueberschrift des Abschnitts darunter, der Eintraege wiederholt.
+const ABSCHNITT_GUELTIGE: &str = "Valid identities only";
+
+/// Beschraenkt die Ausgabe von `security find-identity` auf einen Abschnitt.
+///
+/// Ohne `-v` gibt `find-identity` **zwei** Abschnitte aus:
+/// `Matching identities` mit allen Identitaeten und darunter
+/// `Valid identities only` mit denen, die die Vertrauensbewertung bestehen.
+/// Eine gueltige Identitaet steht damit in beiden. Wer ueber die ganze Ausgabe
+/// zaehlt, zaehlt sie zweimal, und genau daran brach die Release-Suche bei
+/// einer einzigen Developer-ID immer ab: sie traf den Zweig `mehrere`, und der
+/// Zweig `[einzige]` war nur erreichbar, wenn die Identitaet **nicht** gueltig
+/// war, also gerade nicht signieren konnte
+/// (`shared/issues/260812-2357_*_die-identitaetssuche-zaehlt-jede-identitaet-doppelt…`).
+///
+/// **Gelesen wird der erste Abschnitt und nicht der zweite**, denn er fuehrt
+/// auch die ungueltigen. Das ist dieselbe Wahl, aus der [`auflisten`] `-v`
+/// weglaesst: wer eine Identitaet angelegt hat, hat sich fuer sie entschieden,
+/// und die Suche hat sie nicht an der Vertrauensbewertung auszusortieren. Zu
+/// `-v` zu greifen haette den Defekt ebenfalls behoben und dabei die Absicht
+/// geaendert.
+///
+/// Fehlt eine der beiden Ueberschriften, bleibt der jeweilige Schnitt aus.
+/// Sollte Apple die Form eines Tages aendern, ist zu viel zu lesen das kleinere
+/// Uebel: es fuehrt auf denselben benennenden Abbruch wie bisher, waehrend eine
+/// leer gelesene Liste die Suche in die falsche Stufe schickte.
+fn abschnitt_der_treffer(liste: &str) -> &str {
+    let ab_treffern = match liste.find(ABSCHNITT_TREFFER) {
+        Some(stelle) => &liste[stelle + ABSCHNITT_TREFFER.len()..],
+        None => liste,
+    };
+    match ab_treffern.find(ABSCHNITT_GUELTIGE) {
+        Some(stelle) => &ab_treffern[..stelle],
+        None => ab_treffern,
+    }
 }
 
 /// Fragt den Schluesselbund nach den als gueltig bewerteten Identitaeten.
@@ -368,6 +417,36 @@ Policy: Code Signing
      2 valid identities found
 "#;
 
+    /// Die volle Ausgabe von `security find-identity -p codesigning`, am
+    /// 260813 auf dem Referenzgeraet abgenommen. **Beide Abschnitte gehoeren
+    /// dazu:** ohne den zweiten misst keine Probe den Defekt 260812-2357.
+    const BEIDE_ABSCHNITTE: &str = r#"Policy: Code Signing
+  Matching identities
+  1) 4B30A8F73354FC4A6B200FCB2F2F5C6F22586D0D "Apple Development: Kai Stalmann (FJ8U4B3QAC)"
+  2) B2CA1443DCFE16C610D45DA616D744D762270145 "Developer ID Application: Kai Stalmann (QYMPYB7MWM)"
+     2 identities found
+
+  Valid identities only
+  1) 4B30A8F73354FC4A6B200FCB2F2F5C6F22586D0D "Apple Development: Kai Stalmann (FJ8U4B3QAC)"
+  2) B2CA1443DCFE16C610D45DA616D744D762270145 "Developer ID Application: Kai Stalmann (QYMPYB7MWM)"
+     2 valid identities found
+"#;
+
+    /// Dieselbe Form mit einer selbstsignierten Identitaet, die die
+    /// Vertrauensbewertung nicht besteht: sie steht im ersten Abschnitt und
+    /// fehlt im zweiten. Die Zeilenform stammt aus `BEIDE_ABSCHNITTE`, die
+    /// Zeile der Entwicklungsidentitaet aus `AUSGABE`.
+    const BEIDE_ABSCHNITTE_MIT_UNGUELTIGER: &str = r#"Policy: Code Signing
+  Matching identities
+  1) F5F3F985C14F947E88D3BF9DB713C738D88A5728 "KRK Entwicklung" (CSSMERR_TP_NOT_TRUSTED)
+  2) B2CA1443DCFE16C610D45DA616D744D762270145 "Developer ID Application: Kai Stalmann (QYMPYB7MWM)"
+     2 identities found
+
+  Valid identities only
+  1) B2CA1443DCFE16C610D45DA616D744D762270145 "Developer ID Application: Kai Stalmann (QYMPYB7MWM)"
+     1 valid identities found
+"#;
+
     #[test]
     fn die_entwicklungsidentitaet_wird_in_der_liste_gefunden() {
         assert!(enthaelt_identitaet(AUSGABE, ENTWICKLUNGSIDENTITAET));
@@ -466,5 +545,55 @@ Policy: Code Signing
         // Der Hinweis auf die Zertifikatskette gehoert nur in den Fall ohne
         // gueltige Identitaet; hier gibt es welche.
         assert!(!text.contains("Abgelaufene Zertifikatskette"));
+    }
+
+    #[test]
+    fn ueber_die_ganze_ausgabe_zaehlt_jede_identitaet_doppelt() {
+        // Der Defekt selbst, festgehalten: zwei Identitaeten im
+        // Schluesselbund, vier Eintraege in der Ausgabe. Schlaegt diese Probe
+        // eines Tages fehl, weil `security` nur noch einen Abschnitt ausgibt,
+        // ist die Beschraenkung entbehrlich geworden und nicht etwa kaputt.
+        assert_eq!(gueltige_namen(BEIDE_ABSCHNITTE).len(), 4);
+    }
+
+    #[test]
+    fn im_abschnitt_der_treffer_steht_jede_identitaet_genau_einmal() {
+        assert_eq!(
+            gueltige_namen(abschnitt_der_treffer(BEIDE_ABSCHNITTE)),
+            vec![
+                "Apple Development: Kai Stalmann (FJ8U4B3QAC)".to_owned(),
+                "Developer ID Application: Kai Stalmann (QYMPYB7MWM)".to_owned(),
+            ]
+        );
+    }
+
+    #[test]
+    fn die_release_suche_findet_die_einzige_developer_id_eindeutig() {
+        // Die Probe zum Defekt 260812-2357: ueber die ganze Ausgabe stuende
+        // hier zweimal derselbe Name, und `bestimmen_fuer_release` braeche mit
+        // "Mehrere Developer-ID-Identitaeten gefunden" ab.
+        let namen = gueltige_namen(abschnitt_der_treffer(BEIDE_ABSCHNITTE));
+        assert_eq!(
+            developer_id_namen(&namen),
+            vec!["Developer ID Application: Kai Stalmann (QYMPYB7MWM)".to_owned()]
+        );
+    }
+
+    #[test]
+    fn der_abschnitt_der_treffer_behaelt_die_ungueltige_identitaet() {
+        // Der Grund, den ersten Abschnitt zu lesen und nicht den zweiten: die
+        // selbstsignierte Entwicklungsidentitaet steht nur dort. Mit `-v` oder
+        // mit dem Abschnitt der Gueltigen faende `bestimmen` sie nicht mehr.
+        let treffer = abschnitt_der_treffer(BEIDE_ABSCHNITTE_MIT_UNGUELTIGER);
+        assert!(enthaelt_identitaet(treffer, ENTWICKLUNGSIDENTITAET));
+        assert_eq!(gueltige_namen(treffer).len(), 2);
+    }
+
+    #[test]
+    fn eine_ausgabe_ohne_zweiten_abschnitt_bleibt_unveraendert() {
+        // Mit `-v` gibt `find-identity` weder eine Zeile `Policy:` noch zwei
+        // Abschnitte aus; die Beschraenkung darf dort nichts wegnehmen.
+        assert_eq!(abschnitt_der_treffer(GUELTIGE_EINE), GUELTIGE_EINE);
+        assert_eq!(abschnitt_der_treffer(GUELTIGE_KEINE), GUELTIGE_KEINE);
     }
 }
