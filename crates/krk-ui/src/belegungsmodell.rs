@@ -188,6 +188,14 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::SortierungTyp
         | Kommando::SortierrichtungUmkehren
         | Kommando::VersteckteUmschalten
+        // Die drei Spaltenschalter stehen neben dem Ein- und Ausblenden der
+        // versteckten Eintraege: beides bestimmt, was die Liste zeigt. Dass
+        // sie beide Listen zugleich treffen, macht keinen zweiten Ort auf —
+        // diese Gliederung fragt nach der Gegend der Anwendung, und die
+        // Dateiliste ist eine, gleich wie viele es davon gibt.
+        | Kommando::SpalteGroesseUmschalten
+        | Kommando::SpalteDatumUmschalten
+        | Kommando::SpalteTypUmschalten
         | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
         // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
         // wie sie auf dem angezeigten Ordner arbeitet.
@@ -241,6 +249,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::LeisteUmschalten => Funktionsbereich::LeisteUndFokus,
         // Das Anwendungsfenster und seine Bereiche (C1, C7).
         Kommando::FensterWechseln
+        | Kommando::ErstesFensterUmschalten
         | Kommando::ZweitesFensterUmschalten
         | Kommando::FensterEinblenden
         | Kommando::FensterSchliessen
@@ -259,10 +268,20 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Uebergang aus der Vorschau hierher und nicht zu "Vorschau": beide
         // sind Einstiegswege in den Editor, und der Nutzer findet unter
         // "Editor" alle Befehle, die ihn angehen.
+        //
+        // Das Ein- und Ausblenden des Editors steht hier und nicht unter
+        // "Fenster", wo sein Gegenstueck fuer die beiden Dateifenster steht.
+        // Derselbe Satz wie beim Ein- und Ausblenden der Vorschau weiter oben:
+        // die Gliederung fragt nach der Gegend der Anwendung, und wer den
+        // Editor sucht, sucht unter "Editor". Dass die beiden Dateifenster
+        // unter "Fenster" stehen, ist kein Widerspruch, sondern dieselbe
+        // Regel: ein Dateifenster ist keine eigene Gegend der Belegung, es
+        // gibt keinen Abschnitt dafuer.
         Kommando::Bearbeiten
         | Kommando::EditorAusVorschau
         | Kommando::FokusEditor
         | Kommando::EditorSchliessen
+        | Kommando::EditorUmschalten
         | Kommando::EditorAnsichtUmschalten
         | Kommando::EditorSichern
         | Kommando::EditorZeileSpringen
@@ -896,28 +915,38 @@ mod tests {
         );
     }
 
-    /// Die Ansicht fuehrt die zwoelf Befehle der Editor-Runde unter der
-    /// Ueberschrift "Editor", jeden mit mindestens einer Kombination.
+    /// Die Ansicht fuehrt genau die Befehle des Editors unter der Ueberschrift
+    /// "Editor", jeden mit mindestens einer Kombination.
     ///
-    /// Das achte Abnahmekriterium von C7 sagt zu, dass jeder neue Befehl
-    /// dieser Runde in der Belegungsansicht **aufgefuehrt** ist. Die
+    /// Das achte Abnahmekriterium von C7 sagt zu, dass jeder neue Befehl der
+    /// Editor-Runde in der Belegungsansicht **aufgefuehrt** ist. Die
     /// Vollstaendigkeit der Zuordnung prueft
     /// [`jede_kennung_hat_einen_funktionsbereich`](jede_kennung_hat_einen_funktionsbereich)
-    /// bereits; hier steht die andere Haelfte, naemlich dass die zwoelf im
-    /// **richtigen** Abschnitt landen und dass keine dreizehnte Funktion sich
+    /// bereits; hier steht die andere Haelfte, naemlich dass die benannten im
+    /// **richtigen** Abschnitt landen und dass keine weitere Funktion sich
     /// dazwischenschiebt.
+    ///
+    /// **Der Name nennt die Zahl der Befehle nicht**, und die Liste ist die
+    /// Zusage. Bis zum 260812 hiess die Probe
+    /// `der_bereich_editor_fuehrt_die_zwoelf_befehle_der_runde`; mit
+    /// `editor_umschalten` aus der Bereichsleisten-Runde sind es dreizehn, und
+    /// eine Zahl im Namen bindet die Probe an die Groesse der Liste statt an
+    /// ihre Zusage. Denselben Grund nennt
+    /// `die_ab_werk_freien_kombinationen_kommen_nicht_vor` in
+    /// `crates/krk-core/tests/belegung.rs`.
     ///
     /// Die Kennungen stehen ausgeschrieben und nicht aus
     /// [`bereich_des_kommandos`] abgeleitet: eine Ableitung pruefte die
     /// Zuordnung gegen sich selbst und liefe mit jedem Umzug stillschweigend
     /// mit.
     #[test]
-    fn der_bereich_editor_fuehrt_die_zwoelf_befehle_der_runde() {
-        const EDITORBEFEHLE: [&str; 12] = [
+    fn der_bereich_editor_fuehrt_genau_die_befehle_des_editors() {
+        const EDITORBEFEHLE: [&str; 13] = [
             "bearbeiten",
             "editor_aus_vorschau",
             "fokus_editor",
             "editor_schliessen",
+            "editor_umschalten",
             "editor_ansicht_umschalten",
             "editor_sichern",
             "editor_zeile_springen",
@@ -949,7 +978,31 @@ mod tests {
         assert_eq!(
             gefuehrt.len(),
             EDITORBEFEHLE.len(),
-            "unter Editor stehen andere Funktionen als die zwoelf Befehle: {gefuehrt:?}"
+            "unter Editor stehen andere Funktionen als die benannten: {gefuehrt:?}"
+        );
+    }
+
+    /// Die beiden Umschalter der Bereichsleisten-Runde stehen in ihrem
+    /// Funktionsbereich, und es sind zwei verschiedene.
+    ///
+    /// Das linke Dateifenster steht bei den Fensterbefehlen, neben dem
+    /// rechten; der Editor bei seinen eigenen, neben dem Schliessen, von dem
+    /// er sich unterscheidet. Beide Zuordnungen sind eine Wahl und keine
+    /// Ableitung: `editor_umschalten` traegt
+    /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
+    /// koennte damit ebensogut unter "Fenster" stehen. Die Gliederung fragt
+    /// nach der Gegend der Anwendung, nicht nach dem Fokus.
+    #[test]
+    fn die_beiden_neuen_umschalter_stehen_in_ihrem_bereich() {
+        assert_eq!(
+            bereich("erstes_fenster_umschalten"),
+            Some(Funktionsbereich::Fenster),
+            "das linke Dateifenster steht nicht bei den Fensterbefehlen"
+        );
+        assert_eq!(
+            bereich("editor_umschalten"),
+            Some(Funktionsbereich::Editor),
+            "der Editorschalter steht nicht beim Editor"
         );
     }
 

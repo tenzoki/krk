@@ -340,6 +340,32 @@ pub enum Kommando {
     SortierrichtungUmkehren,
     /// Versteckte Dateien ein- und ausblenden (C2).
     VersteckteUmschalten,
+    /// Die Spalte Groesse in beiden Dateilisten ein- und ausblenden (C3 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// **Die drei Spaltenschalter treffen beide Dateilisten zugleich** und
+    /// setzen deshalb kein Dateifenster im Fokus voraus; Nutzerentscheid vom
+    /// 260812-0306. Ab Werk tragen sie keine Kombination, ebenfalls nach
+    /// Entscheid vom 260812-0306: die freien Kombinationen sind knapp, und eine
+    /// Spaltensichtbarkeit ist eine Einstellung, die man einmal trifft. Wer eine
+    /// Taste dafuer will, weist sie in der Belegungsansicht zu oder traegt sie
+    /// in `resources/default-keymap.toml` ein.
+    ///
+    /// **Die Spalte Name hat kein Gegenstueck hier**, und das ist Absicht: eine
+    /// Dateiliste ohne sie zeigt nichts, was den Eintrag benennt.
+    SpalteGroesseUmschalten,
+    /// Die Spalte Aenderungsdatum in beiden Dateilisten ein- und ausblenden
+    /// (C3 der Bereichsleisten-Runde).
+    ///
+    /// Der Befehl heisst nach dem Namen, den der Nutzer dem Schalter gegeben
+    /// hat; die Spaltenueberschrift lautet weiterhin "Änderungsdatum". Alles
+    /// Weitere steht an [`Kommando::SpalteGroesseUmschalten`].
+    SpalteDatumUmschalten,
+    /// Die Spalte Typ in beiden Dateilisten ein- und ausblenden (C3 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// Siehe [`Kommando::SpalteGroesseUmschalten`].
+    SpalteTypUmschalten,
     /// Zu dem springen, was in der Zwischenablage steht (C10).
     ZwischenablageSpringen,
     /// Den Inhalt der Zwischenablage im Vorschaufenster ansehen (C10).
@@ -356,6 +382,14 @@ pub enum Kommando {
     FensterWechseln,
     /// Die Lesezeichen- und Geraeteleiste ein- und ausblenden (C7).
     LeisteUmschalten,
+    /// Das erste, linke Dateifenster ein- und ausblenden (C5 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// Bis zu jener Runde war das linke Dateifenster der eine Bereich, der
+    /// immer stand; seither unterscheidet es sich von den anderen nicht mehr,
+    /// und die Regel heisst "eines der beiden Dateifenster bleibt". Sie steht
+    /// im Fenstermodell und nicht hier.
+    ErstesFensterUmschalten,
     /// Das zweite Dateifenster ein- und ausblenden (C7).
     ZweitesFensterUmschalten,
     /// Das Vorschaufenster ein- und ausblenden (C7, dieselbe Funktion wie
@@ -454,8 +488,32 @@ pub enum Kommando {
     /// sofern dieser eine Datei haelt; die Bedingung steht beim Aufrufer, die
     /// Zuordnung von einem Fokusziel auf einen Bereich in `krk_ui`.
     FokusEditor,
-    /// Den Editor ausblenden (C1 der Editor-Runde).
+    /// Den Editor schliessen: die Datei freigeben und ihn ausblenden (C1 der
+    /// Editor-Runde).
+    ///
+    /// **Nicht dasselbe wie [`Kommando::EditorUmschalten`] darunter**, und die
+    /// beiden bestehen nebeneinander: dieser Befehl gibt die gehaltene Datei
+    /// auf und loest damit die Nachfrage nach einem ungesicherten Stand aus
+    /// (C4 der Editor-Runde). Er traegt deshalb
+    /// [`Wirkungsbereich::Editor`] — ohne Fokus im Text gibt es keine Datei,
+    /// die er aufgaebe.
     EditorSchliessen,
+    /// Den Editor ein- und ausblenden, ohne seine Datei anzufassen (C6 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// **Nicht dasselbe wie [`Kommando::EditorSchliessen`] darueber.** Dieser
+    /// Befehl behaelt die Datei samt Stand und fragt nichts nach; er blendet
+    /// allein die Flaeche aus und wieder ein, wie es
+    /// [`Kommando::VorschauUmschalten`] fuer die Vorschau tut. Er traegt
+    /// deshalb [`Wirkungsbereich::Ueberall`] und nicht
+    /// [`Wirkungsbereich::Editor`]: ein Schalter in der Bereichsleiste muss
+    /// aus jedem Fokus wirken.
+    ///
+    /// Haelt der Editor keine Datei und ist er ausgeblendet, geschieht nichts.
+    /// Die Bedingung steht beim Aufrufer in `krk_ui`, wie die gleichlautende
+    /// an [`Kommando::FokusEditor`]: das Fenstermodell weiss von Dateien
+    /// nichts.
+    EditorUmschalten,
     /// Zwischen Rohansicht und Formatansicht wechseln (C3 der Editor-Runde).
     EditorAnsichtUmschalten,
     /// Die im Editor geoeffnete Datei sichern (C4 der Editor-Runde).
@@ -485,7 +543,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 68] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 73] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -508,6 +566,12 @@ impl Kommando {
             "sortierrichtung_umkehren",
         ),
         (Kommando::VersteckteUmschalten, "versteckte_umschalten"),
+        (
+            Kommando::SpalteGroesseUmschalten,
+            "spalte_groesse_umschalten",
+        ),
+        (Kommando::SpalteDatumUmschalten, "spalte_datum_umschalten"),
+        (Kommando::SpalteTypUmschalten, "spalte_typ_umschalten"),
         (Kommando::ZwischenablageSpringen, "zwischenablage_springen"),
         (Kommando::ZwischenablageAnsehen, "zwischenablage_ansehen"),
         (Kommando::TabNeu, "tab_neu"),
@@ -516,6 +580,10 @@ impl Kommando {
         (Kommando::TabVoriger, "tab_voriger"),
         (Kommando::FensterWechseln, "fenster_wechseln"),
         (Kommando::LeisteUmschalten, "leiste_umschalten"),
+        (
+            Kommando::ErstesFensterUmschalten,
+            "erstes_fenster_umschalten",
+        ),
         (
             Kommando::ZweitesFensterUmschalten,
             "zweites_fenster_umschalten",
@@ -553,6 +621,7 @@ impl Kommando {
         (Kommando::EditorAusVorschau, "editor_aus_vorschau"),
         (Kommando::FokusEditor, "fokus_editor"),
         (Kommando::EditorSchliessen, "editor_schliessen"),
+        (Kommando::EditorUmschalten, "editor_umschalten"),
         (
             Kommando::EditorAnsichtUmschalten,
             "editor_ansicht_umschalten",
@@ -615,9 +684,34 @@ impl Kommando {
             // weil sie aus jedem Fokus heraus erreichbar sein muss: sie zeigt
             // die Belegung der ganzen Anwendung und gehoert keinem Bereich,
             // so wenig wie das Ein- und Ausblenden der Bereiche auf F3.
+            //
+            // **Die beiden Umschalter der Bereichsleisten-Runde stehen mit
+            // hier, und `editor_umschalten` faellt dabei auf**: jeder andere
+            // Befehl mit `editor_` im Namen traegt weiter unten
+            // `Wirkungsbereich::Editor`. Der Unterschied ist derselbe wie
+            // zwischen `vorschau_umschalten` und den Befehlen, die in der
+            // Vorschau arbeiten: ein Umschalter braucht seinen Bereich nicht,
+            // er stellt ihn her. Ein Schalter in der Bereichsleiste muss
+            // daneben aus jedem Fokus wirken, auch mit der Schreibmarke im
+            // Text; mit `Wirkungsbereich::Editor` waere genau der Klick
+            // abgewiesen, der den Editor wieder loswerden will.
+            // **Die drei Spaltenschalter stehen mit hier, obwohl sie in den
+            // Dateilisten wirken**, und der Grund ist nicht derselbe wie bei
+            // den Umschaltern darueber: sie stellen keinen Bereich her, sie
+            // treffen **beide** Listen zugleich (Nutzerentscheid vom
+            // 260812-0306). Ein Befehl, der beide angeht, kann nicht eine von
+            // ihnen im Fokus voraussetzen; mit `Wirkungsbereich::Dateifenster`
+            // waere er von der Bereichsleiste aus, mit der Schreibmarke im
+            // Editor oder mit dem Fokus in der Leiste abgewiesen, obwohl es
+            // keine Seite gibt, auf die er sich bezoege.
             Kommando::LeisteUmschalten
+            | Kommando::ErstesFensterUmschalten
             | Kommando::ZweitesFensterUmschalten
             | Kommando::VorschauUmschalten
+            | Kommando::EditorUmschalten
+            | Kommando::SpalteGroesseUmschalten
+            | Kommando::SpalteDatumUmschalten
+            | Kommando::SpalteTypUmschalten
             | Kommando::FensterEinblenden
             | Kommando::FensterSchliessen
             | Kommando::BereichVerbreitern

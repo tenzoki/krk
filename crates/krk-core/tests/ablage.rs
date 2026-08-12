@@ -33,8 +33,8 @@ use serde::{Deserialize, Serialize};
 use krk_core::ablage::sitzung::SITZUNGSTAKT;
 use krk_core::ablage::{
     Ablage, Ablageort, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung, Fensterseite,
-    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Tab, Verschiebung, Ziel,
-    atomar, einstellungen, pfade,
+    Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung, Spaltensichtbarkeit, Tab,
+    Verschiebung, Ziel, atomar, einstellungen, pfade,
 };
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
@@ -89,11 +89,16 @@ fn beispielsitzung() -> Sitzung {
             editor: Some(480.0),
         },
         sichtbar: Sichtbarkeit {
-            erstes_dateifenster: false,
             lesezeichen: false,
+            erstes_dateifenster: false,
             zweites_dateifenster: true,
             vorschau: false,
             editor: true,
+        },
+        spalten: Spaltensichtbarkeit {
+            groesse: false,
+            geaendert: true,
+            typ: false,
         },
         fenster: [
             Dateifenster {
@@ -398,6 +403,7 @@ fn das_fenster_und_tabmodell_ueberlebt_schreiben_und_wiedereinlesen() {
     assert_eq!(nachher.aktiv, vorher.aktiv, "das aktive Dateifenster");
     assert_eq!(nachher.sichtbar, vorher.sichtbar, "die Sichtbarkeit");
     assert_eq!(nachher.breiten, vorher.breiten, "die Breiten");
+    assert_eq!(nachher.spalten, vorher.spalten, "die Spaltensichtbarkeit");
     assert_eq!(nachher.editor, vorher.editor, "die Datei des Editors");
     for seite in Fensterseite::ALLE {
         let da = nachher.fenster(seite);
@@ -602,6 +608,93 @@ fn das_ausgeblendete_erste_dateifenster_ueberlebt_den_rundlauf_byteweise() {
     assert!(!geladen.ist_ersetzt());
     assert!(!geladen.wert.sichtbar.erstes_dateifenster);
     assert!(geladen.wert.sichtbar.zweites_dateifenster);
+
+    ablage
+        .sichern(Datei::Sitzung, &geladen.wert)
+        .expect("zweites Schreiben gescheitert");
+    let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
+}
+
+/// Eine `session.toml` ohne den Abschnitt `[spalten]` bleibt lesbar, und die
+/// fehlenden Felder heissen "sichtbar".
+///
+/// Bis zur Bereichsleisten-Runde liessen sich die Spalten nicht schalten, und
+/// die Datei trug den Abschnitt gar nicht. Eine Datei aus jener Zeit darf weder
+/// als beschaedigt gelten noch mit einer weggeschalteten Spalte aufgehen; der
+/// Vorgabewert aller drei Felder ist `true`, also der bisherige Zustand
+/// (Kriterium C7.4).
+#[test]
+fn eine_sitzung_ohne_den_spaltenabschnitt_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-den-spaltenschaltern");
+    let alt = "\
+aktiv = \"links\"
+
+[breiten]
+lesezeichen = 180.0
+links = 420.0
+rechts = 420.0
+
+[sichtbar]
+lesezeichen = true
+erstes_dateifenster = true
+zweites_dateifenster = true
+vorschau = true
+editor = false
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei vor den Spaltenschaltern gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(
+        geladen.wert.spalten,
+        Spaltensichtbarkeit::default(),
+        "der fehlende Abschnitt heisst: alle drei stehen"
+    );
+    assert!(geladen.wert.spalten.groesse);
+    assert!(geladen.wert.spalten.geaendert);
+    assert!(geladen.wert.spalten.typ);
+}
+
+/// Die Spaltensichtbarkeit uebersteht den Rundlauf byteweise (Kriterium C7.2).
+///
+/// Derselbe Weg wie beim ausgeblendeten linken Dateifenster: zwei
+/// Schreibvorgaenge statt eines Strukturvergleichs. Verlore das Schreiben ein
+/// Feld, kaeme es beim Lesen als `true` zurueck, und die zweite Datei
+/// unterschiede sich von der ersten.
+#[test]
+fn die_spaltensichtbarkeit_ueberlebt_den_rundlauf_byteweise() {
+    let (_ordner, ablage) = ablage("spaltensichtbarkeit");
+    let mut sitzung = Sitzung::default();
+    sitzung.spalten.groesse = false;
+    sitzung.spalten.typ = false;
+
+    ablage
+        .sichern(Datei::Sitzung, &sitzung)
+        .expect("schreiben gescheitert");
+    let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        zuerst.contains("[spalten]"),
+        "der Abschnitt steht nicht in der Datei, die der Nutzer nach C7 von Hand liest: {zuerst}"
+    );
+    assert!(zuerst.contains("groesse = false"), "{zuerst}");
+    assert!(zuerst.contains("geaendert = true"), "{zuerst}");
+    assert!(zuerst.contains("typ = false"), "{zuerst}");
+
+    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    assert!(!geladen.ist_ersetzt());
+    assert_eq!(geladen.wert.spalten, sitzung.spalten);
 
     ablage
         .sichern(Datei::Sitzung, &geladen.wert)

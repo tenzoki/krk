@@ -81,7 +81,9 @@
 //! liegt ueber dem Zielsystem**; eine Verfuegbarkeitspruefung zur Laufzeit
 //! braucht deshalb keine:
 //!
-//! - 10.5: die Modenkonstante `NSRunLoopCommonModes` (`NSRunLoop.h:14`).
+//! - 10.5: die Modenkonstante `NSRunLoopCommonModes` (`NSRunLoop.h:14`) und
+//!   `NSTableColumn`s Eigenschaft `hidden` (`NSTableColumn.h:80`), ueber die
+//!   die Bereichsleisten-Runde eine Spalte verbirgt.
 //! - 10.6: `reloadDataForRowIndexes:columnIndexes:` (`NSTableView.h:266`).
 //! - 10.7: `rowForView:` und `makeViewWithIdentifier:owner:`
 //!   (`NSTableView.h:477` und `:482`), die Delegiertenmethode
@@ -137,6 +139,7 @@ use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::navigation::{Bewegung, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
+use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::blaetter;
@@ -174,104 +177,81 @@ const ZEILENHOEHE: f64 = 20.0;
 /// ausschliesst.
 const EINZUGSTAKT: NSTimeInterval = 1.0 / 60.0;
 
-/// Eine der vier Spalten des Dateifensters.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Spalte {
-    /// Der Name des Eintrags.
-    Name,
-    /// Die Groesse der Daten.
-    Groesse,
-    /// Der Zeitpunkt der letzten Aenderung.
-    Geaendert,
-    /// Die Dateiendung.
-    ///
-    /// "Typ" heisst in KRK die Dateiendung: die Spalte zeigt sie, die
-    /// Sortierung nach Typ ordnet nach ihr ([`Schluessel::Typ`]), und die
-    /// Tastenfunktion "Nach Typ sortieren" loest dieselbe Ordnung aus. Die
-    /// Eintragsart selbst (Ordner, Datei, Verknuepfung) steht in der
-    /// Metadatenanzeige der Vorschau, nicht in der Tabelle.
-    ///
-    /// Zwei Entscheide tragen das, und sie tragen verschiedene Haelften.
-    /// Ueber den **Schluessel der Sortierung** entscheidet
-    /// `decisions/260802-1810_*_sortierung-ohne-sprachsensitive-kollation.md`
-    /// (Nutzerentscheid vom 260806): nach Typ zu ordnen heisst, nach der
-    /// Endung zu ordnen. Ueber den **Inhalt dieser Zelle** sagt er nichts;
-    /// den entscheidet der Nutzer am 260806-2300 in
-    /// `issues/260806-1723_*_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md`,
-    /// Abschnitt "ein fuenfter Weg": die Ueberschrift bleibt "Typ", die Zelle
-    /// zeigt die Endung.
-    Typ,
+/// Was AppKit ueber eine [`Spalte`] wissen muss: Kennung, Ueberschrift,
+/// Breiten, Ausrichtung und der Weg von einer Kennung zurueck zur Spalte.
+///
+/// Die Aufzaehlung selbst steht in [`crate::spalten`] und nennt keine
+/// `objc2`-Kiste; hier stehen die fuenf Funktionen, die eine nennen. Dasselbe
+/// Muster tragen `aufteilung::sichtbar_im` und `aufteilung::rahmenfarbe` ueber
+/// [`crate::fenstermodell::Bereich`]. Freie Funktionen und keine Methoden:
+/// eine Methode zoege `NSString`, `NSTextAlignment` und damit AppKit an eine
+/// Aufzaehlung, die seit der Bereichsleisten-Runde zwei Leser hat und deren
+/// zweiter die Tabelle nicht braucht.
+///
+/// Die Kennung dient zugleich als Kennung der wiederverwendeten Zellenansicht:
+/// eine Ansicht, die aus der Namensspalte zurueckkommt, landet nur wieder in
+/// der Namensspalte und behaelt damit ihre Ausrichtung.
+fn kennung(spalte: Spalte) -> &'static NSString {
+    match spalte {
+        Spalte::Name => ns_string!("name"),
+        Spalte::Groesse => ns_string!("groesse"),
+        Spalte::Geaendert => ns_string!("geaendert"),
+        Spalte::Typ => ns_string!("typ"),
+    }
 }
 
-impl Spalte {
-    /// Alle vier Spalten in der Reihenfolge, in der sie im Fenster stehen.
-    const ALLE: [Spalte; 4] = [
-        Spalte::Name,
-        Spalte::Groesse,
-        Spalte::Geaendert,
-        Spalte::Typ,
-    ];
+/// Die Ueberschrift der Spalte ueber der Tabelle.
+///
+/// **Abgeleitet aus [`Spalte::beschriftung`], wo beide denselben Text
+/// tragen**, damit eine Umbenennung nicht an zwei Stellen zu erledigen ist.
+/// [`Spalte::Geaendert`] weicht ab, und das ist gewollt: ueber der Spalte
+/// steht "Änderungsdatum", der Schalter der Bereichsleiste heisst "Datum". Die
+/// Ueberschrift hat die Breite dafuer und die Zelle darunter zeigt neben dem
+/// Datum die Uhrzeit; die Leiste ist 18 Punkte hoch, traegt acht Schalter
+/// nebeneinander, und "Datum" ist der Name, den der Nutzer dem Schalter
+/// gegeben hat.
+///
+/// Der Rueckgabewert ist deshalb kein `&'static NSString` aus `ns_string!`:
+/// dieses Makro verlangt ein Literal an Ort und Stelle, und damit stuenden die
+/// drei uebernommenen Texte ein zweites Mal da. Gebaut wird die Zeichenkette
+/// achtmal, beim Aufbau der vier Spalten der beiden Dateifenster.
+fn titel(spalte: Spalte) -> Retained<NSString> {
+    let text = match spalte {
+        Spalte::Geaendert => "Änderungsdatum",
+        Spalte::Name | Spalte::Groesse | Spalte::Typ => spalte.beschriftung(),
+    };
+    NSString::from_str(text)
+}
 
-    /// Die Kennung, unter der AppKit die Spalte fuehrt.
-    ///
-    /// Sie dient zugleich als Kennung der wiederverwendeten Zellenansicht: eine
-    /// Ansicht, die aus der Namensspalte zurueckkommt, landet nur wieder in der
-    /// Namensspalte und behaelt damit ihre Ausrichtung.
-    fn kennung(self) -> &'static NSString {
-        match self {
-            Spalte::Name => ns_string!("name"),
-            Spalte::Groesse => ns_string!("groesse"),
-            Spalte::Geaendert => ns_string!("geaendert"),
-            Spalte::Typ => ns_string!("typ"),
-        }
+/// Anfangsbreite und Mindestbreite in Punkten.
+fn breiten(spalte: Spalte) -> (f64, f64) {
+    match spalte {
+        Spalte::Name => (240.0, 100.0),
+        Spalte::Groesse => (80.0, 60.0),
+        Spalte::Geaendert => (130.0, 100.0),
+        Spalte::Typ => (90.0, 60.0),
     }
+}
 
-    /// Die Ueberschrift der Spalte.
-    fn titel(self) -> &'static NSString {
-        match self {
-            Spalte::Name => ns_string!("Name"),
-            Spalte::Groesse => ns_string!("Größe"),
-            Spalte::Geaendert => ns_string!("Änderungsdatum"),
-            Spalte::Typ => ns_string!("Typ"),
-        }
+/// Wie der Text in der Zelle ausgerichtet wird.
+///
+/// Groessen stehen rechtsbuendig, damit die Ziffern untereinander liegen
+/// und zwei Zahlen sich der Laenge nach vergleichen lassen.
+fn ausrichtung(spalte: Spalte) -> NSTextAlignment {
+    match spalte {
+        Spalte::Groesse => NSTextAlignment::Right,
+        Spalte::Name | Spalte::Geaendert | Spalte::Typ => NSTextAlignment::Left,
     }
+}
 
-    /// Anfangsbreite und Mindestbreite in Punkten.
-    fn breiten(self) -> (f64, f64) {
-        match self {
-            Spalte::Name => (240.0, 100.0),
-            Spalte::Groesse => (80.0, 60.0),
-            Spalte::Geaendert => (130.0, 100.0),
-            Spalte::Typ => (90.0, 60.0),
-        }
-    }
-
-    /// Wie der Text in der Zelle ausgerichtet wird.
-    ///
-    /// Groessen stehen rechtsbuendig, damit die Ziffern untereinander liegen
-    /// und zwei Zahlen sich der Laenge nach vergleichen lassen.
-    fn ausrichtung(self) -> NSTextAlignment {
-        match self {
-            Spalte::Groesse => NSTextAlignment::Right,
-            _ => NSTextAlignment::Left,
-        }
-    }
-
-    /// Die Spalte zu einer Kennung, falls es sie gibt.
-    fn aus_kennung(kennung: &NSString) -> Option<Spalte> {
-        Spalte::ALLE
-            .into_iter()
-            .find(|spalte| spalte.kennung() == kennung)
-    }
-
-    /// Ob der Nutzer in dieser Spalte schreiben darf (C4).
-    ///
-    /// Allein der Name: die drei uebrigen Spalten zeigen, was das Dateisystem
-    /// ueber den Eintrag sagt, und keine davon laesst sich durch Hinschreiben
-    /// aendern.
-    const fn beschreibbar(self) -> bool {
-        matches!(self, Spalte::Name)
-    }
+/// Die Spalte zu einer Kennung, falls es sie gibt.
+///
+/// Der Parameter heisst `gesucht` und nicht `kennung`: der Name der Funktion
+/// darueber waere sonst in diesem Rumpf verdeckt.
+fn aus_kennung(gesucht: &NSString) -> Option<Spalte> {
+    Spalte::ALLE
+        .into_iter()
+        .find(|spalte| kennung(*spalte) == gesucht)
 }
 
 /// Die Stelle der Namensspalte, wie `editColumn:row:withEvent:select:` sie
@@ -2020,7 +2000,7 @@ impl DateifensterDelegierter {
         spalte: Option<&NSTableColumn>,
         zeile: NSInteger,
     ) -> Option<Retained<NSView>> {
-        let spalte = Spalte::aus_kennung(&spalte?.identifier())?;
+        let spalte = aus_kennung(&spalte?.identifier())?;
         let zeile = usize::try_from(zeile).ok()?;
         let text = self
             .ivars()
@@ -2191,7 +2171,7 @@ impl DateifensterDelegierter {
     /// liess, war allein die Breite der Ziffern, und die haelt jetzt die
     /// Schrift aus [`Self::neu`] fest.
     fn feld(&self, tabelle: &NSTableView, spalte: Spalte) -> Retained<NSTextField> {
-        let kennung = spalte.kennung();
+        let kennung = kennung(spalte);
         // SAFETY: `self` ist der Eigentuemer, den AppKit an eine neu geladene
         // Ansicht weiterreicht; die Kennung ist eine gueltige Zeichenkette.
         let vorrat = unsafe { tabelle.makeViewWithIdentifier_owner(kennung, Some(self)) };
@@ -2201,7 +2181,7 @@ impl DateifensterDelegierter {
         let mtm = self.mtm();
         let feld = NSTextField::labelWithString(ns_string!(""), mtm);
         feld.setIdentifier(Some(kennung));
-        feld.setAlignment(spalte.ausrichtung());
+        feld.setAlignment(ausrichtung(spalte));
         feld.setMaximumNumberOfLines(1);
         if spalte.beschreibbar() {
             // Das Umbenennen "direkt in der Liste" aus C4. Gesetzt wird es
@@ -2384,13 +2364,36 @@ impl Dateifenster {
     pub fn liste(&self) -> &NSTableView {
         &self.quelle().ivars().tabelle
     }
+
+    /// Blendet eine Spalte aus oder wieder ein (C3 der Bereichsleisten-Runde).
+    ///
+    /// **Eine verborgene Spalte bleibt eine Spalte.** `setHidden:` nimmt sie
+    /// weder aus `tableColumns` noch aus `numberOfColumns` — der Kopf des
+    /// Systems sagt es ausdruecklich (`NSTableColumn.h:78`) —, und das traegt
+    /// zwei Zusagen der Runde ohne einen einzigen Zweig: der Sortierschluessel
+    /// bleibt stehen, auch wenn seine Spalte verborgen ist (Kriterium C3.3),
+    /// und die Datenquelle liefert weiter dieselben Zellen. Ein `removeTableColumn:`
+    /// taete beides nicht.
+    ///
+    /// Gesucht wird ueber die Kennung, weil sie das eine ist, was diese Klasse
+    /// und die Aufzaehlung [`Spalte`] gemeinsam haben; der Weg dorthin ist
+    /// dieselbe Funktion [`kennung`], die den Kopf beim Aufbau benannt hat.
+    /// Findet sich keine Spalte, geschieht nichts: dann hat der Aufbau sie nicht
+    /// angelegt, und das waere ein Fehler dort und keiner hier.
+    pub fn spalte_verbergen(&self, spalte: Spalte, verborgen: bool) {
+        let liste = self.liste();
+        let Some(kopf) = liste.tableColumnWithIdentifier(kennung(spalte)) else {
+            return;
+        };
+        kopf.setHidden(verborgen);
+    }
 }
 
 /// Eine Spalte mit Kennung, Ueberschrift und Breiten.
 fn spaltenkopf(mtm: MainThreadMarker, spalte: Spalte) -> Retained<NSTableColumn> {
-    let (breite, mindestbreite) = spalte.breiten();
-    let kopf = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), spalte.kennung());
-    kopf.setTitle(spalte.titel());
+    let (breite, mindestbreite) = breiten(spalte);
+    let kopf = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), kennung(spalte));
+    kopf.setTitle(&titel(spalte));
     kopf.setWidth(breite);
     kopf.setMinWidth(mindestbreite);
     kopf
@@ -2416,17 +2419,17 @@ mod tests {
     #[test]
     fn jede_spalte_findet_sich_ueber_ihre_kennung_wieder() {
         for spalte in Spalte::ALLE {
-            assert_eq!(Spalte::aus_kennung(spalte.kennung()), Some(spalte));
+            assert_eq!(aus_kennung(kennung(spalte)), Some(spalte));
         }
-        assert_eq!(Spalte::aus_kennung(ns_string!("unbekannt")), None);
+        assert_eq!(aus_kennung(ns_string!("unbekannt")), None);
     }
 
     #[test]
     fn jede_spalte_hat_eine_eigene_kennung_und_ueberschrift() {
         for (stelle, spalte) in Spalte::ALLE.into_iter().enumerate() {
             for andere in Spalte::ALLE.into_iter().skip(stelle + 1) {
-                assert_ne!(spalte.kennung(), andere.kennung());
-                assert_ne!(spalte.titel(), andere.titel());
+                assert_ne!(kennung(spalte), kennung(andere));
+                assert_ne!(titel(spalte), titel(andere));
             }
         }
     }

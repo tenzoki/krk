@@ -74,7 +74,8 @@ pub use einstellungen::Einstellungen;
 pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel};
 pub use pfade::{Ablageort, Datei};
 pub use sitzung::{
-    Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber, Tab,
+    Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber,
+    Spaltensichtbarkeit, Tab,
 };
 
 /// Warum eine Datei durch den Auslieferungszustand ersetzt wurde.

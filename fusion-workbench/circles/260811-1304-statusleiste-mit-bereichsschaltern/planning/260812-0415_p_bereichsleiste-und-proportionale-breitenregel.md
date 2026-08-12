@@ -224,7 +224,7 @@ flowchart TD
    - Abnahme: `make check`. Kein Vordergrund. Am laufenden Bündel sichtbar wird die Fähigkeit erst mit Schritt 5 oder 8, weil bis dahin kein Weg zu ihr führt.
    - Dependencies: Schritt 2.
 
-4. **Fünf neue Funktionen in der Auslieferungsbelegung**
+4. [DONE] **Fünf neue Funktionen in der Auslieferungsbelegung**
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes:
@@ -240,9 +240,10 @@ flowchart TD
    - Aufzählungen: keine. Für die Dauer eines Schrittes tragen die fünf Einträge kein Kommando; das ist der dokumentierte Zustand "belegt, aber noch nicht gebaut", und `Funktion::kommando` liefert dafür `None`.
    - Abnahme: `make check`, insbesondere die beiden Prüfungen in `crates/krk-core/src/tasten/belegung.rs`. Kein Vordergrund.
    - Dependencies: keine.
-   - Anmerkung: die gewählten Kombinationen sind eine Empfehlung und eine Nutzerfrage; siehe `## Offene Fragen` und den Datensatz `decisions/260812-0415_o_welche-kombinationen-bekommen-die-beiden-neuen-umschalter.md`. Eine andere Antwort kostet in diesem Schritt je eine Zeile.
+   - Anmerkung: die gewählten Kombinationen sind eine Empfehlung und eine Nutzerfrage; siehe `## Offene Fragen` und den Datensatz `decisions/260812-0415_a_welche-kombinationen-bekommen-die-beiden-neuen-umschalter.md`. Eine andere Antwort kostet in diesem Schritt je eine Zeile. **Am 260812-0430 beantwortet: die Empfehlung wird übernommen**, der Schritt setzt sie unverändert um.
+   - Befund bei der Ausführung: `make check` läuft nach diesem Schritt **nicht** durch, und das ist kein Fehlschlag des Schrittes. Grün sind die beiden hier genannten Prüfungen in `crates/krk-core/src/tasten/belegung.rs`. Rot sind achtundzwanzig Proben in `krk-ui`, die den vom Plan benannten Zwischenstand messen (fünf Kennungen ohne Kommando, aufgelöst durch die Schritte 5 und 7), und drei weitere, die **kein** Schritt dieses Plans wieder grün macht; sie stehen in `issues/260812-0533_o_drei-proben-stehen-gegen-die-neuen-belegungseintraege-und-keine-gehoert-zu-einem-planschritt.md` samt Vorschlag.
 
-5. **Zwei neue Umschaltbefehle: Editor und linkes Dateifenster**
+5. [DONE] **Zwei neue Umschaltbefehle: Editor und linkes Dateifenster**
    - Executor: `coder`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:
@@ -257,8 +258,10 @@ flowchart TD
    - Aufzählungen: **`Kommando` wächst um zwei** (68 auf 70 Kennungen). Der Übersetzer hält an drei Stellen an: `Kommando::KENNUNGEN` (Feldbreite), `Kommando::wirkungsbereich` (vollständig ohne Auffangzweig) und `belegungsmodell::bereich_des_kommandos` (ebenso). `Wirkungsbereich`, `Bereich` und `Fokus` bleiben unverändert.
    - Abnahme: `make check`. Kein Vordergrund für die Prüfungen; die Wirkung der beiden Tasten sieht man am Bündel.
    - Dependencies: Schritt 3 (ohne das fünfte Feld in `Sichtbarkeit` tut `bereich_umschalten(Bereich::Links)` nichts), Schritt 4 (ohne die Belegungseinträge scheitert die Kennungsprüfung).
+   - Befund bei der Ausführung: `make check` läuft auch nach diesem Schritt **nicht** durch (Exit 2), und der Grund ist derselbe wie nach Schritt 4: die Belegungsdatei führt seit Schritt 4 fünf Kennungen ohne Kommando, dieser Schritt baut zwei davon, die drei Spaltenschalter bekommen ihre erst in Schritt 7. Grün sind `cargo build`, `cargo fmt --check` und `cargo clippy -- -D warnings`; grün ist daneben `krk-core` vollständig, einschließlich der beiden Proben, die Schritt 4 rot zurückgelassen hatte. Rot bleiben 28 Proben im Binärziel `krk`, und jede einzelne nennt `spalte_groesse_umschalten`; keine nennt `erstes_fenster_umschalten` oder `editor_umschalten`. Der Datensatz dazu ist `issues/260812-0548_o_make-check-bleibt-auch-nach-schritt-5-rot-die-drei-spaltenkennungen-warten-auf-schritt-7.md`; er schlägt daneben vor, die Abnahme der Schritte 4, 5 und 6 im Plan nachzuziehen, weil `make check` für keinen der drei erreichbar ist.
+   - Nachtrag bei der Ausführung: die drei Proben aus `issues/260812-0533_*` sind mit diesem Schritt nachgezogen (Streichung der Zählprobe, benannte Ausnahme für die drei Spaltenkennungen, der letzte `assert_eq!` der Ausgabeprobe). Dazu kam eine vierte, die dieser Schritt selbst verschiebt: `der_bereich_editor_fuehrt_die_zwoelf_befehle_der_runde` heißt jetzt `der_bereich_editor_fuehrt_genau_die_befehle_des_editors` und führt dreizehn, weil `editor_umschalten` unter "Editor" tritt.
 
-6. **`Spalte` wird eine reine Aufzählung**
+6. [DONE] **`Spalte` wird eine reine Aufzählung**
    - Executor: `coder`
    - Files: neu `crates/krk-ui/src/spalten.rs`, `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/appkit/tabelle.rs`
    - Changes:
@@ -268,9 +271,10 @@ flowchart TD
      - Die beiden bestehenden Prüfungen am Ende von `tabelle.rs` ziehen mit um oder bleiben, je nachdem, ob sie AppKit nennen.
    - Aufzählungen: keine der vier. `Spalte` selbst ist eine fünfte vollständige Aufzählung dieses Projekts, die keinen Auffangzweig trägt; sie behält alle vier Werte.
    - Abnahme: `make check`. Kein Vordergrund. Der Schritt ändert kein Verhalten, und das ist seine Zusage.
+   - Befund bei der Ausführung: `make check` ist für diesen Schritt nicht erreichbar, aus demselben Grund wie für die Schritte 4 und 5 (`issues/260812-0548_o_…`); die Abnahme lief deshalb als `cargo build --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` und `cargo test -p krk-core` — alle vier Exit 0. `cargo test -p krk-ui` steht unverändert bei 28 Fehlschlägen, alle mit `spalte_groesse_umschalten` in der Meldung; keiner nennt `Spalte`, `spalten.rs` oder `tabelle.rs`. **Eine Abweichung vom Plan:** `titel` liefert `Retained<NSString>` statt `&'static NSString`. Beides zugleich ging nicht — `ns_string!` verlangt ein Literal an Ort und Stelle, und damit stünden die drei aus `beschriftung` übernommenen Texte ein zweites Mal da. Die Ableitung wiegt schwerer als die Lebensdauer; einziger Aufrufer ist `spaltenkopf`, achtmal beim Aufbau.
    - Dependencies: keine.
 
-7. **Spaltensichtbarkeit: Ablage, Modell, drei Befehle, beide Tabellen**
+7. [DONE] **Spaltensichtbarkeit: Ablage, Modell, drei Befehle, beide Tabellen**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-core/tests/ablage.rs`
    - Changes:
@@ -284,6 +288,7 @@ flowchart TD
    - Aufzählungen: **`Kommando` wächst um drei** (70 auf 73). Der Übersetzer hält wieder an `KENNUNGEN`, `wirkungsbereich` und `bereich_des_kommandos` an. `Wirkungsbereich`, `Bereich` und `Fokus` bleiben unverändert. `Spalte` bekommt mit `spalte_sichtbar_in` eine zweite vollständige Fallunterscheidung.
    - Abnahme: `make check`. Kein Vordergrund für die Prüfungen; dass die Spalten wirklich verschwinden, sieht man am Bündel.
    - Dependencies: Schritt 4 (Belegungseinträge), Schritt 6 (reine Aufzählung `Spalte`).
+   - **Erledigt am 260812-0618, `make check` Exit 0.** Der Schritt hat den Baum wieder grün gemacht: die 28 Proben, die seit Schritt 4 an `belegungsmodell::bereich` scheiterten, laufen mit den drei Kommandos wieder. Zwei weitere Proben fielen dabei an, beide aus derselben Wurzel wie die drei aus `issues/260812-0533_*` — eine Auslieferungsbelegung darf seit dem 260812 eine Funktion ohne Kombination führen: `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`crates/krk-core/tests/belegung.rs`) verlangte von jedem gebauten Kommando eine Kombination, und `innerhalb_eines_abschnitts_bleibt_die_reihenfolge_der_datei` (`crates/krk-ui/src/belegungsausgabe.rs`) verglich die Markdown-Ausgabe mit **allen** Funktionen statt mit den belegten. Die Liste `OHNE_KOMBINATION_AB_WERK` steht dafür jetzt am Kopf von `tests/belegung.rs` statt in einem Prüfrumpf; zwei Proben lesen sie. Drei Nachträge außerhalb der Änderungsliste sind mitgelaufen: die Feldreihenfolge in `Sichtbarkeit` (`erstes_dateifenster` steht jetzt hinter `lesezeichen`, also in der Reihenfolge der Fensterzeile), Punkt 4 des Datensatzes `issues/260812-0533_*` (neun Prosastellen tragen jetzt 79 und 73 statt 74 und 68, beide Zahlen nachgezählt), und der Abschluss von `issues/260812-0548_*`.
 
 8. **Die Bereichsleiste: Fläche, acht Schalter, Nachzug**
    - Executor: `coder`

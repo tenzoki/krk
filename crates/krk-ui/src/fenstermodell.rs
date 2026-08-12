@@ -1,6 +1,6 @@
 //! Das Fenstermodell: welches Dateifenster das aktive ist, welche Bereiche
-//! sichtbar sind, wie breit sie stehen und in welcher Reihenfolge beim Start
-//! gelesen wird.
+//! sichtbar sind, wie breit sie stehen, welche Spalten die beiden Dateilisten
+//! zeigen und in welcher Reihenfolge beim Start gelesen wird.
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die
 //! Ansicht dazu ist [`crate::appkit::aufteilung`], die aus den Zahlen hier
@@ -66,13 +66,29 @@
 //! `session.toml`, die beide ausblendet. Die Abweisung gehoert dabei in dieses
 //! Modell und nicht in die Belegungsdatei: ein Klick in der Bereichsleiste ist
 //! ein Weg wie ein Tastenbefehl, und beide gehen hier hindurch.
+//!
+//! # Die Spalten der beiden Dateilisten
+//!
+//! Neben den fuenf Bereichen haelt dieses Modell seit der Bereichsleisten-Runde
+//! auch, welche Spalten die Dateilisten zeigen: [`Spaltensichtbarkeit`] mit drei
+//! Feldern, geschaltet ueber [`Fenstermodell::spalte_umschalten`], gelesen ueber
+//! [`spalte_sichtbar_in`]. **Eine Angabe fuer beide Listen** (Nutzerentscheid
+//! vom 260812-0306), und **die Sortierung bleibt davon unberuehrt**: ein
+//! Spaltenschalter verbirgt eine Spalte und tut sonst nichts.
+//!
+//! Sie stehen hier und nicht in [`crate::tabs`], weil sie keinem Tab und keiner
+//! Seite gehoeren. Was in der Anzeige daraus wird, setzt der
+//! Anwendungsdelegierte ueber `NSTableColumn::setHidden`; dieses Modell nennt
+//! auch dafuer keine Zeile AppKit.
 
 use std::path::PathBuf;
 
 use krk_core::ablage::{
     Breiten, Dateifenster as Fensterzustand, Fensterseite, Sichtbarkeit, Sitzung,
+    Spaltensichtbarkeit,
 };
 
+use crate::spalten::Spalte;
 use crate::tabs::Tabuebersicht;
 
 /// Um wie viele Punkte ein Tastenbefehl einen Bereich breiter oder schmaler
@@ -245,16 +261,47 @@ pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     }
 }
 
+/// Ob die Spalte in dieser Spaltensichtbarkeit steht.
+///
+/// **Die eine Zuordnung von einer [`Spalte`] auf ihr Feld in
+/// [`Spaltensichtbarkeit`]**, die Schwester von [`sichtbar_in`] daneben und die
+/// Leseseite zu [`Fenstermodell::spalte_umschalten`].
+///
+/// **Vollstaendig und mit [`Spalte::Name`] darin, obwohl jene kein Feld hat.**
+/// Die Aufzaehlung traegt vier Werte, die Ablage drei; ohne diesen Zweig
+/// braeuchte jeder Aufrufer einen eigenen, oder die Fallunterscheidung bekaeme
+/// einen Auffangzweig und eine fuenfte Spalte fiele still unter den Tisch. Die
+/// Namensspalte steht immer, und der Grund steht an [`Spaltensichtbarkeit`]:
+/// eine Dateiliste ohne sie zeigt nichts, was den Eintrag benennt.
+///
+/// Frei und nicht an [`Fenstermodell`] gebunden, aus demselben Grund wie
+/// [`sichtbar_in`]: ein Aufrufer braucht sie fuer einen Stand, der nicht der
+/// gehaltene ist.
+pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool {
+    match spalte {
+        Spalte::Name => true,
+        Spalte::Groesse => spalten.groesse,
+        Spalte::Geaendert => spalten.geaendert,
+        Spalte::Typ => spalten.typ,
+    }
+}
+
 /// Das gehaltene Fenstermodell.
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
-/// Sichtbarkeit der fuenf Bereiche und ihre Breiten. Die Tabs selbst haelt
-/// [`Tabliste`], je eine Liste je Dateifenster.
+/// Sichtbarkeit der fuenf Bereiche, ihre Breiten und die Sichtbarkeit der
+/// Spalten beider Dateilisten. Die Tabs selbst haelt [`Tabliste`], je eine
+/// Liste je Dateifenster.
+///
+/// **Die Spalten stehen hier und nicht bei den Tabs**, weil ein Spaltenschalter
+/// nach dem Nutzerentscheid vom 260812-0306 beide Dateilisten zugleich trifft;
+/// je Tab gefuehrt waeren sie zwei mal n Wahrheiten ueber eine Angabe.
 #[derive(Debug)]
 pub struct Fenstermodell {
     aktiv: Fensterseite,
     breiten: Breiten,
     sichtbar: Sichtbarkeit,
+    spalten: Spaltensichtbarkeit,
 }
 
 impl Fenstermodell {
@@ -295,6 +342,10 @@ impl Fenstermodell {
             aktiv: sitzung.aktiv,
             breiten: sitzung.breiten,
             sichtbar: sitzung.sichtbar,
+            // Ohne Zusicherung uebernommen: jede der acht Kombinationen der
+            // drei Felder ist eine Lage, die der Nutzer auch ueber die
+            // Schalter herstellen kann, und die Namensspalte steht ohnehin.
+            spalten: sitzung.spalten,
         };
         if !modell.sichtbar(Bereich::Links) && !modell.sichtbar(Bereich::Rechts) {
             modell.sichtbar_setzen(Bereich::Links, true);
@@ -327,6 +378,7 @@ impl Fenstermodell {
             editor,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
+            spalten: self.spalten,
             fenster,
         }
     }
@@ -410,6 +462,61 @@ impl Fenstermodell {
     /// Die Sichtbarkeit aller fuenf Bereiche, von links nach rechts.
     pub fn sichtbarkeit(&self) -> Sichtbarkeit {
         self.sichtbar
+    }
+
+    /// Die Sichtbarkeit der drei schaltbaren Spalten.
+    ///
+    /// Sie gilt fuer **beide** Dateilisten; die Begruendung steht an
+    /// [`Spaltensichtbarkeit`]. Wer eine einzelne Spalte fragt, nimmt
+    /// [`spalte_sichtbar_in`] und bekommt auch fuer [`Spalte::Name`] eine
+    /// Antwort.
+    pub fn spaltensichtbarkeit(&self) -> Spaltensichtbarkeit {
+        self.spalten
+    }
+
+    /// Blendet eine Spalte beider Dateilisten aus oder wieder ein (C3 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// Liefert, ob sich dadurch etwas geaendert hat. **Fuer [`Spalte::Name`]
+    /// ist die Antwort `false`**, und sie bleibt stumm wie jede Abweisung in
+    /// diesem Modell: die Namensspalte traegt keinen Schalter, weil eine
+    /// Dateiliste ohne sie nichts zeigt, was den Eintrag benennt. Sie hier
+    /// abzuweisen statt sie gar nicht erst anzubieten ist der Preis dafuer,
+    /// dass die Aufzaehlung vier Werte hat und die Ablage drei; die Alternative
+    /// waere eine zweite Aufzaehlung der schaltbaren Spalten neben
+    /// [`Spalte::ALLE`].
+    ///
+    /// **Die Sortierung wird nicht angefasst.** Das ist Kriterium C3.3 und der
+    /// Nutzerentscheid vom 260812-0306
+    /// (`decisions/260812-0306_*_was-geschieht-mit-der-sortierung-wenn-die-sortierspalte-weggeschaltet-wird.md`):
+    /// ein Spaltenschalter verbirgt eine Spalte und tut sonst nichts. Wer nach
+    /// Groesse sortiert und die Spalte Groesse wegschaltet, sieht dieselbe
+    /// Reihenfolge wie zuvor. Der Sortierschluessel wohnt ohnehin in
+    /// [`Tabliste`](crate::tabs::Tabliste) und nicht hier; diese Funktion
+    /// **kann** ihn nicht anfassen, und das ist die billigste Form, die Zusage
+    /// zu halten.
+    ///
+    /// **Kein [`Zeilenmass`]**, anders als bei [`Self::umschalten`]: eine
+    /// Spalte liegt in der Dateiliste und nicht in der Fensterzeile. Die
+    /// Breiten der fuenf Bereiche stehen vorher und nachher gleich (C3.4), und
+    /// deshalb gibt es hier auch keine Abweisung an den Mindestbreiten.
+    #[must_use = "die Abweisung an der Namensspalte bleibt stumm; wer sie nicht liest, haelt eine Spalte fuer geschaltet, die das Modell nicht angefasst hat"]
+    pub fn spalte_umschalten(&mut self, spalte: Spalte) -> bool {
+        match spalte {
+            Spalte::Name => false,
+            Spalte::Groesse => {
+                self.spalten.groesse = !self.spalten.groesse;
+                true
+            }
+            Spalte::Geaendert => {
+                self.spalten.geaendert = !self.spalten.geaendert;
+                true
+            }
+            Spalte::Typ => {
+                self.spalten.typ = !self.spalten.typ;
+                true
+            }
+        }
     }
 
     /// Blendet einen Bereich aus oder wieder ein (C7).
@@ -829,10 +936,15 @@ impl Zeilenmass {
 /// Breite; dafuer bekommt der jeweils letzte Bereich den Rest und nicht seinen
 /// gerundeten Anteil (siehe [`anteilig`]).
 pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 5] {
+    // Ein Modell allein, um an `sichtbare()` heranzukommen. Die beiden Felder,
+    // die die Breitenrechnung nicht liest, stehen auf ihrem Vorgabewert: die
+    // Spalten liegen in der Dateiliste und nicht in der Fensterzeile, und
+    // welches Dateifenster das aktive ist, aendert an keiner Breite etwas.
     let modell = Fenstermodell {
         aktiv: Fensterseite::Links,
         breiten: *breiten,
         sichtbar: *sichtbar,
+        spalten: Spaltensichtbarkeit::default(),
     };
     let mut ergebnis = [0.0_f64; 5];
 
@@ -920,6 +1032,8 @@ fn anteilig(ergebnis: &mut [f64; 5], anteile: &[(Bereich, f64)], gesamt: f64) {
 
 #[cfg(test)]
 mod tests {
+    use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
+
     use super::*;
 
     fn modell() -> Fenstermodell {
@@ -2080,5 +2194,134 @@ mod tests {
             modell.lesereihenfolge([eines, eines]),
             [(Fensterseite::Links, 0), (Fensterseite::Rechts, 0)]
         );
+    }
+
+    // -------------------------------------------------------------------
+    // Die Spalten der beiden Dateilisten (C3 der Bereichsleisten-Runde)
+    // -------------------------------------------------------------------
+
+    /// Ab Werk stehen alle vier Spalten (Kriterium C7.2, zweiter Halbsatz).
+    #[test]
+    fn der_auslieferungszustand_zeigt_alle_vier_spalten() {
+        let modell = modell();
+        for spalte in Spalte::ALLE {
+            assert!(
+                spalte_sichtbar_in(&modell.spaltensichtbarkeit(), spalte),
+                "{spalte:?} steht ab Werk nicht"
+            );
+        }
+    }
+
+    /// Jede der drei schaltbaren Spalten kippt und kommt zurueck, und keine
+    /// nimmt eine andere mit.
+    #[test]
+    fn jede_schaltbare_spalte_kippt_fuer_sich() {
+        for geschaltet in [Spalte::Groesse, Spalte::Geaendert, Spalte::Typ] {
+            let mut modell = modell();
+            assert!(
+                modell.spalte_umschalten(geschaltet),
+                "{geschaltet:?} liess sich nicht schalten"
+            );
+
+            for spalte in Spalte::ALLE {
+                let steht = spalte_sichtbar_in(&modell.spaltensichtbarkeit(), spalte);
+                assert_eq!(
+                    steht,
+                    spalte != geschaltet,
+                    "nach dem Schalten von {geschaltet:?} steht {spalte:?} falsch"
+                );
+            }
+
+            assert!(modell.spalte_umschalten(geschaltet));
+            assert!(
+                spalte_sichtbar_in(&modell.spaltensichtbarkeit(), geschaltet),
+                "{geschaltet:?} kommt nicht zurueck"
+            );
+        }
+    }
+
+    /// Die Namensspalte traegt keinen Schalter: der Befehl wird abgewiesen und
+    /// die Spalte bleibt stehen.
+    ///
+    /// Eine Dateiliste ohne sie zeigt nichts, was den Eintrag benennt; die
+    /// Abweisung bleibt stumm wie jede in diesem Modell.
+    #[test]
+    fn die_namensspalte_laesst_sich_nicht_wegschalten() {
+        let mut modell = modell();
+        assert!(
+            !modell.spalte_umschalten(Spalte::Name),
+            "die Namensspalte hat sich schalten lassen"
+        );
+        assert!(spalte_sichtbar_in(
+            &modell.spaltensichtbarkeit(),
+            Spalte::Name
+        ));
+        assert_eq!(
+            modell.spaltensichtbarkeit(),
+            Spaltensichtbarkeit::default(),
+            "die abgewiesene Namensspalte hat ein anderes Feld angefasst"
+        );
+    }
+
+    /// Das Wegschalten der Sortierspalte laesst die Sortierung stehen
+    /// (Kriterium C3.3).
+    ///
+    /// **Gemessen wird an dem, was in `session.toml` landet**, denn dort steht
+    /// der Sortierschluessel: die Tabs reisen als [`Fensterzustand`] durch
+    /// `sitzung()`, und wenn das Schalten einer Spalte an ihnen etwas aenderte,
+    /// muesste es hier zu sehen sein. Dass es das nicht kann, ist die Zusage —
+    /// `spalte_umschalten` kommt an die Tabs gar nicht heran, und diese Probe
+    /// haelt es fest, bevor eine spaetere Runde die beiden zusammenlegt.
+    #[test]
+    fn das_wegschalten_der_sortierspalte_laesst_die_sortierung_stehen() {
+        let nach_groesse = Sortierung::neu(Schluessel::Groesse, Richtung::Absteigend);
+        let mut fenster = Sitzung::default().fenster;
+        for seite in &mut fenster {
+            seite.tabs[0].sortierung = nach_groesse;
+        }
+
+        let mut modell = modell();
+        assert!(modell.spalte_umschalten(Spalte::Groesse));
+
+        let sitzung = modell.sitzung(fenster, None);
+        assert!(
+            !sitzung.spalten.groesse,
+            "die Spalte Groesse ist nicht weggeschaltet"
+        );
+        for seite in Fensterseite::ALLE {
+            assert_eq!(
+                sitzung.fenster(seite).tabs[0].sortierung,
+                nach_groesse,
+                "{seite:?} hat seine Sortierung verloren"
+            );
+        }
+    }
+
+    /// Die Spaltensichtbarkeit uebersteht den Weg durch `session.toml`
+    /// (Kriterium C7.2).
+    #[test]
+    fn die_spaltensichtbarkeit_uebersteht_die_sitzung() {
+        let mut modell = modell();
+        assert!(modell.spalte_umschalten(Spalte::Groesse));
+        assert!(modell.spalte_umschalten(Spalte::Typ));
+
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None);
+        let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
+        let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
+        let wieder = Fenstermodell::aus_sitzung(&gelesen);
+
+        assert_eq!(wieder.spaltensichtbarkeit(), modell.spaltensichtbarkeit());
+        assert!(!spalte_sichtbar_in(
+            &wieder.spaltensichtbarkeit(),
+            Spalte::Groesse
+        ));
+        assert!(spalte_sichtbar_in(
+            &wieder.spaltensichtbarkeit(),
+            Spalte::Geaendert
+        ));
+        assert!(!spalte_sichtbar_in(
+            &wieder.spaltensichtbarkeit(),
+            Spalte::Typ
+        ));
     }
 }

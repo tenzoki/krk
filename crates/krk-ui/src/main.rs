@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Zwoelf Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Dreizehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -39,6 +39,11 @@
 //! schreibt sie unteilbar und formuliert die Meldung fuer die Statuszeile
 //! (Runde 3); dass es keine `objc2`-Kiste nennt, ist der Grund, aus dem der
 //! ganze Inhalt der Datei ohne Fenster pruefbar ist.
+//! `spalten` nennt zuletzt die vier Spalten des Dateifensters: welche es gibt,
+//! in welcher Reihenfolge sie stehen, wie ihr kurzer Name lautet und in welcher
+//! der Nutzer schreiben darf. Die Aufzaehlung liegt hier und nicht unter
+//! `appkit`, weil zwei Leser an ihr haengen, die Tabelle und die
+//! Bereichsleiste, und der zweite die Tabelle nicht braucht.
 
 mod appkit;
 mod auffrischung;
@@ -55,6 +60,7 @@ mod messmodus;
 /// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.
 #[cfg(test)]
 mod pruefordner;
+mod spalten;
 mod tabs;
 mod vorschaumodell;
 

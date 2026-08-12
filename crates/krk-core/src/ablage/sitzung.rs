@@ -216,9 +216,17 @@ pub struct Breiten {
 /// der das letzte sichtbare Dateifenster ausblenden wuerde, und
 /// `Fenstermodell::aus_sitzung` macht das linke sichtbar, wenn eine von Hand
 /// geschriebene Datei beide ausblendet.
+///
+/// Die Reihenfolge der Felder ist die der Fensterzeile von links nach rechts,
+/// dieselbe wie bei [`Breiten`] darueber und damit die von
+/// `krk_ui::fenstermodell::Bereich::ALLE`. Sie ist keine Geschmacksfrage: `serde`
+/// schreibt die Zeilen in dieser Reihenfolge, und `session.toml` ist nach C7
+/// zum Lesen von Hand gedacht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Sichtbarkeit {
+    /// Die Lesezeichen- und Geraeteleiste.
+    pub lesezeichen: bool,
     /// Das erste, linke Dateifenster.
     ///
     /// Mit der Bereichsleisten-Runde dazugekommen; eine `session.toml` aus der
@@ -226,8 +234,6 @@ pub struct Sichtbarkeit {
     /// fehlende Feld heisst also "sichtbar". Die Probe dazu steht in
     /// `tests/ablage.rs`.
     pub erstes_dateifenster: bool,
-    /// Die Lesezeichen- und Geraeteleiste.
-    pub lesezeichen: bool,
     /// Das zweite, rechte Dateifenster.
     pub zweites_dateifenster: bool,
     /// Das Vorschaufenster.
@@ -249,11 +255,61 @@ impl Default for Sichtbarkeit {
     /// kommt hervor, wenn ihn jemand verlangt.
     fn default() -> Self {
         Self {
-            erstes_dateifenster: true,
             lesezeichen: true,
+            erstes_dateifenster: true,
             zweites_dateifenster: true,
             vorschau: true,
             editor: false,
+        }
+    }
+}
+
+/// Welche der schaltbaren Spalten der beiden Dateilisten stehen.
+///
+/// **Drei Felder und nicht vier: die Spalte Name traegt keinen Schalter.** Eine
+/// Dateiliste ohne sie zeigt nichts, was den Eintrag benennt, und ein Wert, den
+/// niemand aendern kann, gehoert nicht in eine Datei, die der Nutzer nach C7
+/// von Hand liest. **Das ist etwas anderes als die Luecke, die
+/// [`Sichtbarkeit::erstes_dateifenster`] gerade geschlossen hat**: dort gab es
+/// einen Wert, der wechseln kann, und er wurde nur nicht gespeichert; hier gibt
+/// es keinen Schalter und damit keinen Wert. Die Zuordnung von einer Spalte auf
+/// ihr Feld — die Namensspalte eingeschlossen, die immer steht — trifft
+/// `krk_ui::fenstermodell::spalte_sichtbar_in`.
+///
+/// **Ein Feld gilt fuer beide Dateilisten.** Nutzerentscheid vom 260812-0306
+/// (`decisions/260812-0306_*_gelten-die-spaltenschalter-fuer-beide-dateifenster-gemeinsam.md`):
+/// die Bereichsleiste steht einmal ueber die volle Fensterbreite, und ein
+/// Schalter darin, der nur eine Seite traefe, muesste anzeigen, welche. Eine
+/// spaetere Runde, die es je Seite fuehren will, macht aus jedem Feld zwei.
+///
+/// **Das Wegschalten einer Spalte ruehrt die Sortierung nicht an** (Kriterium
+/// C3.3 der Bereichsleisten-Runde, Nutzerentscheid vom 260812-0306). Der
+/// Sortierschluessel steht in [`Tab::sortierung`] und bleibt, wo er steht; wer
+/// nach Groesse sortiert und die Spalte Groesse wegschaltet, sieht dieselbe
+/// Reihenfolge wie zuvor, nur ihren Schluessel nicht mehr.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Spaltensichtbarkeit {
+    /// Die Spalte mit der Groesse der Daten.
+    pub groesse: bool,
+    /// Die Spalte mit dem Zeitpunkt der letzten Aenderung.
+    pub geaendert: bool,
+    /// Die Spalte mit der Dateiendung.
+    pub typ: bool,
+}
+
+impl Default for Spaltensichtbarkeit {
+    /// Der Auslieferungszustand: alle drei stehen, also die Lage vor der
+    /// Bereichsleisten-Runde.
+    ///
+    /// Damit heisst ein fehlender Abschnitt `[spalten]` dasselbe wie der
+    /// bisherige Zustand, und eine `session.toml` aus der Zeit davor geht
+    /// unveraendert auf.
+    fn default() -> Self {
+        Self {
+            groesse: true,
+            geaendert: true,
+            typ: true,
         }
     }
 }
@@ -289,6 +345,17 @@ pub struct Sitzung {
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
     pub sichtbar: Sichtbarkeit,
+    /// Welche der schaltbaren Spalten beide Dateilisten zeigen.
+    ///
+    /// **Vor `fenster` und nicht dahinter**, aus demselben Grund, den
+    /// [`Sitzung::editor`] weiter oben ausschreibt: TOML verlangt, dass eine
+    /// Tabelle vor einer Tabellenfolge steht, und `[spalten]` hinter den beiden
+    /// `[[fenster]]` liesse das Schreiben scheitern.
+    ///
+    /// Mit der Bereichsleisten-Runde dazugekommen. Eine `session.toml` aus der
+    /// Zeit davor bleibt lesbar, weil diese Struktur `#[serde(default)]`
+    /// traegt; die Probe dazu steht in `tests/ablage.rs`.
+    pub spalten: Spaltensichtbarkeit,
     /// Die beiden Dateifenster, links zuerst.
     ///
     /// Zwei, weil C1 zwei verlangt. Ein `session.toml` mit einer anderen Zahl
@@ -299,13 +366,14 @@ pub struct Sitzung {
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
-    /// ausgeblendet und ohne Datei, links aktiv.
+    /// ausgeblendet und ohne Datei, alle vier Spalten sichtbar, links aktiv.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
+            spalten: Spaltensichtbarkeit::default(),
             fenster: [Dateifenster::default(), Dateifenster::default()],
         }
     }

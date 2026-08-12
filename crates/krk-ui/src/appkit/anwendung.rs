@@ -217,12 +217,15 @@ use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
 use crate::editormodell::{Ladeausgang, Sicherungsausgang};
-use crate::fenstermodell::{BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in};
+use crate::fenstermodell::{
+    BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
+};
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
+use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::aufteilung::Aufteilung;
@@ -814,6 +817,11 @@ impl Anwendungsdelegierter {
         }
 
         self.aufteilung_nachziehen();
+        // **Einmal beim Aufbau, damit die geladene Sitzung ankommt** (C7.2 der
+        // Bereichsleisten-Runde). Die Tabelle baut ihre vier Spalten immer
+        // sichtbar; welche davon der Nutzer weggeschaltet hatte, steht im
+        // Modell und erreicht die Anzeige allein ueber diese Zeile.
+        self.spaltenanzeige_nachziehen();
         self.leiste_einrichten(&mut meldungen);
         self.tastenabgriff_einrichten(&mut meldungen);
         self.datentraegerwache_einrichten();
@@ -2060,12 +2068,24 @@ impl Anwendungsdelegierter {
             Kommando::ZwischenablageAnsehen => self.zwischenablage_ansehen(),
             Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
+            // Die beiden Dateifenster gehen durch dieselbe Stelle, seit das
+            // linke ausblendbar ist. Dass eines von beiden stehen bleibt,
+            // entscheidet das Fenstermodell und nicht dieser Zweig.
+            Kommando::ErstesFensterUmschalten => self.bereich_umschalten(Bereich::Links),
             Kommando::ZweitesFensterUmschalten => self.bereich_umschalten(Bereich::Rechts),
             // Ohne Nachfrage, obwohl eine eingeblendete Vorschau dem Editor
             // nach C1 die Flaeche nimmt: der verdraengte Editor behaelt seinen
             // Stand. Bis zum 260810 hing hier der dritte Anlass aus C4; die
             // Begruendung fuer seinen Wegfall steht bei `Anlass`.
             Kommando::VorschauUmschalten => self.bereich_umschalten(Bereich::Vorschau),
+            // Die drei Spaltenschalter aus C3 der Bereichsleisten-Runde. Sie
+            // stehen hier und nicht bei `bereichskommando`, obwohl sie eine
+            // Dateiliste betreffen: sie betreffen **beide**, und ein einzelnes
+            // Dateifenster kommt an das andere nicht heran. Denselben Weg geht
+            // das Umbenennen in der Liste, aus demselben Grund.
+            Kommando::SpalteGroesseUmschalten => self.spalte_umschalten(Spalte::Groesse),
+            Kommando::SpalteDatumUmschalten => self.spalte_umschalten(Spalte::Geaendert),
+            Kommando::SpalteTypUmschalten => self.spalte_umschalten(Spalte::Typ),
             Kommando::FensterEinblenden => {
                 self.fenster_zeigen();
                 true
@@ -2110,6 +2130,11 @@ impl Anwendungsdelegierter {
             // bei `bereichskommando`, aus demselben Grund wie das Sichern
             // darueber: der Editorbereich haengt am Delegierten.
             Kommando::EditorSchliessen => self.editor_schliessen(),
+            // Der Umschalter aus C6 der Bereichsleisten-Runde. Er steht neben
+            // dem Schliessen darueber und ist nicht dasselbe: er blendet aus
+            // und behaelt die Datei, loest also keine Nachfrage aus. Der
+            // Unterschied im Einzelnen steht an `editor_umschalten`.
+            Kommando::EditorUmschalten => self.editor_umschalten(),
             // Der Wechsel zwischen den beiden Ansichten aus C3. Er steht hier
             // und nicht bei `bereichskommando`, aus demselben Grund wie das
             // Sichern und das Schliessen darueber: der Editorbereich haengt am
@@ -2355,6 +2380,55 @@ impl Anwendungsdelegierter {
             return false;
         };
         self.sichtbarkeit_aendern(|modell| modell.umschalten(bereich, mass))
+    }
+
+    /// Blendet eine Spalte beider Dateilisten aus oder wieder ein (C3 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// **Die eine Stelle, durch die alle drei Spaltenbefehle gehen.** Der Klick
+    /// auf einen Schalter der Bereichsleiste geht durch dasselbe Kommando und
+    /// damit durch dieselbe Zeile; einen zweiten Weg an der Abweisung des
+    /// Modells vorbei gibt es nicht.
+    ///
+    /// **Kein [`Zeilenmass`] und kein `aufteilung_nachziehen` von hier aus.**
+    /// Eine Spalte liegt in der Dateiliste und nicht in der Fensterzeile, die
+    /// Breiten der fuenf Bereiche stehen vorher und nachher gleich (Kriterium
+    /// C3.4). Den Nachzug der Aufteilung ruft [`Self::kommando_ausfuehren`]
+    /// ohnehin fuer jedes ausgefuehrte Kommando; er findet dann eine
+    /// unveraenderte Sichtbarkeit vor.
+    fn spalte_umschalten(&self, spalte: Spalte) -> bool {
+        if !self.ivars().modell.borrow_mut().spalte_umschalten(spalte) {
+            return false;
+        }
+        self.spaltenanzeige_nachziehen();
+        true
+    }
+
+    /// Schreibt die Sichtbarkeit der Spalten in beide Dateilisten (C3 der
+    /// Bereichsleisten-Runde).
+    ///
+    /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
+    /// [`Self::fokusanzeige_nachziehen`]: der Aufbau der Oberflaeche, damit die
+    /// geladene Sitzung ankommt, und [`Self::spalte_umschalten`] fuer jede
+    /// spaetere Aenderung. Das Modell ist die Quelle, die Anzeige folgt ihm.
+    ///
+    /// **Sie schreibt alle vier Spalten und nicht nur die geaenderte**, obwohl
+    /// die Namensspalte nie verborgen wird. Der Durchgang laeuft ueber
+    /// [`Spalte::ALLE`], damit der Aufbau und der Schalter dieselbe Zeile
+    /// nehmen; eine Liste der drei schaltbaren daneben waere eine zweite
+    /// Aufzaehlung, und [`spalte_sichtbar_in`] beantwortet die Namensspalte
+    /// ohnehin mit `true`.
+    fn spaltenanzeige_nachziehen(&self) {
+        if self.ivars().dateifenster.get().is_none() {
+            return;
+        }
+        let spalten = self.ivars().modell.borrow().spaltensichtbarkeit();
+        for seite in Fensterseite::ALLE {
+            for spalte in Spalte::ALLE {
+                self.dateifenster(seite)
+                    .spalte_verbergen(spalte, !spalte_sichtbar_in(&spalten, spalte));
+            }
+        }
     }
 
     /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
@@ -4207,11 +4281,54 @@ impl Anwendungsdelegierter {
     /// Der erste Anlass der Nachfrage. Der Befehl traegt
     /// [`Wirkungsbereich::Editor`](krk_core::tasten::Wirkungsbereich) und
     /// erreicht diese Stelle deshalb nur mit dem Fokus in der Textflaeche.
+    ///
+    /// **Nicht dasselbe wie [`Self::editor_umschalten`] darunter, und die
+    /// beiden bestehen nebeneinander.** Dieser Befehl **gibt die Datei auf**:
+    /// er fragt nach einem ungesicherten Stand, gibt danach ueber
+    /// [`Self::editor_ausblenden`] die Datei frei und blendet die Flaeche aus.
+    /// Der Umschalter darunter laesst die Datei, wo sie ist.
     fn editor_schliessen(&self) -> bool {
         if self.ivars().editor.get().is_none() {
             return false;
         }
         self.anlass_beginnen(Anlass::EditorSchliessen)
+    }
+
+    /// `opt+cmd+b`: den Editor ein- und ausblenden, ohne seine Datei
+    /// anzufassen (C6 der Bereichsleisten-Runde).
+    ///
+    /// **Nicht dasselbe wie [`Self::editor_schliessen`] darueber.** Der Weg
+    /// geht durch [`Self::bereich_umschalten`] und damit durch dieselbe Stelle
+    /// wie die vier anderen Bereiche: die Flaeche verschwindet, der Editor
+    /// behaelt seine Datei samt Stand, und keine Nachfrage erscheint. Ein
+    /// ungesicherter Stand ist danach nicht verloren, sondern nur unsichtbar;
+    /// wer ihn aufgeben will, nimmt das Schliessen.
+    ///
+    /// **Ist der Editor ausgeblendet und haelt keine Datei, geschieht nichts,
+    /// ohne Meldung.** Dieselbe Bedingung traegt [`Self::fokus_editor_holen`],
+    /// und sie steht aus demselben Grund hier und nicht im Fenstermodell: das
+    /// Fenstermodell weiss von Dateien nichts. Ein leerer Editor, den niemand
+    /// verlangt hat, naehme den Dateifenstern Platz fuer nichts und
+    /// verdraengte dabei die Vorschau; dieselbe Begruendung traegt
+    /// `Sichtbarkeit::default` fuer den Auslieferungszustand. Nutzerantwort
+    /// vom 260812-0430, Datensatz
+    /// `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
+    /// 260812-0415_*_was-tut-der-editorschalter-ohne-datei-im-editor.md`.
+    ///
+    /// Steht der Editor schon auf dem Schirm, blendet der Befehl ihn aus, auch
+    /// ohne Datei: die leere Flaeche loszuwerden ist genau das, was der Nutzer
+    /// dann will.
+    fn editor_umschalten(&self) -> bool {
+        let ausgeblendet = !self.ivars().modell.borrow().sichtbar(Bereich::Editor);
+        let haelt_datei = self
+            .ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.haelt_datei());
+        if ausgeblendet && !haelt_datei {
+            return false;
+        }
+        self.bereich_umschalten(Bereich::Editor)
     }
 
     /// Wechselt zwischen Rohansicht und Formatansicht (C3).

@@ -92,7 +92,11 @@ Womit die Schalter gezeichnet werden, ist offen und gehört in den Plan. Der Cir
 
 ## Turn log
 
-(noch keiner)
+- Turn 1 (Sitzung 260812-0306): Commits 5e17c9e..8ffaac2 — Schritte 1 bis 3 des Plans
+  (proportionale Breitenregel, Abweisung an den Mindestbreiten, ausblendbares linkes
+  Dateifenster). Ein Defekt der Runde selbst behoben (260812-0439), zwei neue abgelegt
+  (260812-0512 sowie der Beifund 260812-0415 des Planers). Coherence-Urteil: Durchsicht lief
+  noch. Sitzungsprotokoll: shared/history/260812-0306-orchestrator-session.md
 
 ## Parent grounding stale
 

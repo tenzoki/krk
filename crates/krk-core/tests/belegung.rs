@@ -51,6 +51,33 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
     gefunden
 }
 
+/// Die Funktionen, die ab Werk ohne Kombination ausgeliefert werden, ohne
+/// `reserviert_fuer` zu tragen.
+///
+/// Die drei Spaltenschalter der Bereichsleisten-Runde. Die Wahl ist eine
+/// Nutzerantwort und keine Auslassung
+/// (`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
+/// 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`, Moeglichkeit 2:
+/// in der Belegung gefuehrt, ohne ausgelieferte Kombination). Der Grund ist die
+/// Knappheit der 39 frei gewaehlten Kombinationen; eine Spaltensichtbarkeit ist
+/// eine Einstellung, die man einmal trifft, und kein Handgriff im Arbeitsfluss.
+///
+/// **Sie steht hier und nicht in `resources/default-keymap.toml`.** Das Feld
+/// `reserviert_fuer` der Datei heisst "benannt, aber einer spaeteren Runde
+/// vorbehalten", und diese drei Funktionen gibt es; es passt also nicht. Die
+/// Ausnahme ist damit eine Aussage der Pruefungen ueber die Auslieferung, und
+/// **zwei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
+/// zweimal in je einem Rumpf: `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
+/// liest sie von der Seite der Belegungsdatei her,
+/// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` von der Seite
+/// der gebauten Kommandos. Wer eine vierte Funktion ohne Kombination
+/// ausliefert, traegt sie mit ihrem Datensatz hier nach.
+const OHNE_KOMBINATION_AB_WERK: [&str; 3] = [
+    "spalte_groesse_umschalten",
+    "spalte_datum_umschalten",
+    "spalte_typ_umschalten",
+];
+
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
 ///
 /// **Nur fuer Kombinationen, an denen die Zusage selbst haengt**, etwa die ab
@@ -143,6 +170,11 @@ fn die_auslieferungsbelegung_ist_konfliktfrei() {
 /// `reserviert_fuer` ist damit nicht weg: es ist ein Feld der Belegungsdatei,
 /// eine `keymap.toml` aus einer aelteren Fassung kann es tragen, und die Regel
 /// "reserviert heisst ohne Kombination" gilt fuer sie weiter.
+///
+/// **Seit dem 260812 gibt es eine zweite Ausnahme, und sie haengt nicht an
+/// `reserviert_fuer`.** Sie steht als [`OHNE_KOMBINATION_AB_WERK`] am Kopf
+/// dieser Datei, samt ihrer Begruendung und dem Datensatz dazu; eine zweite
+/// Pruefung liest dieselbe Liste.
 #[test]
 fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
     let belegung = Belegung::auslieferung();
@@ -161,14 +193,15 @@ fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
             "{} ohne Beschriftung",
             funktion.kennung()
         );
-        // C3: jede Funktion ausser einer reservierten traegt mindestens eine
-        // Kombination.
+        // C3: jede Funktion ausser einer reservierten und den benannten
+        // traegt mindestens eine Kombination.
         match funktion.reserviert_fuer() {
             Some(_) => assert!(
                 funktion.tasten().is_empty(),
                 "{} ist reserviert und traegt trotzdem eine Taste",
                 funktion.kennung()
             ),
+            None if OHNE_KOMBINATION_AB_WERK.contains(&funktion.kennung()) => {}
             None => assert!(
                 !funktion.tasten().is_empty(),
                 "{} traegt keine Kombination",
@@ -801,8 +834,12 @@ fn jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste() {
         let Some(funktion) = belegung.funktion(kennung) else {
             panic!("die Auslieferungsbelegung kennt die Funktion {kennung} nicht");
         };
+        // Die Ausnahme aus [`OHNE_KOMBINATION_AB_WERK`]: ein gebautes Kommando
+        // ohne ausgelieferte Kombination ist ab dem 260812 moeglich, und dann
+        // gibt es nichts nachzuschlagen. Die Zusage darunter bleibt fuer jede
+        // Kombination, die eine solche Funktion spaeter doch traegt.
         assert!(
-            !funktion.tasten().is_empty(),
+            !funktion.tasten().is_empty() || OHNE_KOMBINATION_AB_WERK.contains(&kennung),
             "{kommando:?} ist gebaut, und {kennung} traegt ab Werk keine Kombination"
         );
         for kombination in funktion.tasten() {
@@ -1638,23 +1675,28 @@ fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
     }
 }
 
-/// Die Auslieferungsbelegung fuehrt 74 Funktionen, und die dreizehn neuen der
-/// Editor-Runde stehen darin.
+/// Die Kennungen, die die Editor-Runde der Belegungsdatei hinzugefuegt hat,
+/// stehen darin.
 ///
-/// **Die Zahl steht hier ausnahmsweise hingeschrieben.** Die uebrigen
-/// Pruefungen dieser Datei vermeiden das mit gutem Grund: eine Zahl bindet die
-/// Pruefung an die Groesse der Datei statt an ihre Zusage. Hier ist die Zahl
-/// die Zusage — die Kopfzeile von `resources/default-keymap.toml` nennt sie,
-/// und eine Kopfzeile, die von ihrer eigenen Datei abweicht, faellt sonst
-/// niemandem auf. Wer eine Funktion nachtraegt, zieht beide Stellen mit.
+/// **Der Name nennt keine Zahl, und die Probe zaehlt nicht.** Bis zum 260812
+/// hiess sie `die_auslieferungsbelegung_fuehrt_vierundsiebzig_funktionen` und
+/// verglich die Laenge der Belegung mit einem hingeschriebenen 74. Die Zusage
+/// dahinter — die Kopfzeile von `resources/default-keymap.toml` stimmt mit dem
+/// Inhalt der Datei ueberein — traegt
+/// `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` in
+/// `crates/krk-core/src/tasten/belegung.rs` vollstaendig und ohne Literal: sie
+/// liest die Kopfzeile und zaehlt selbst nach. Zwei Proben fuer eine Zusage
+/// hiessen, dass jeder neue Eintrag in der Belegungsdatei eine davon umbenennt
+/// (`circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/
+/// 260812-0533_*_drei-proben-stehen-gegen-die-neuen-belegungseintraege-….md`).
+///
+/// **Was hier bleibt, ist die Anwesenheit der Kennungen**, und sie steht
+/// nirgends sonst in dieser Kiste: `jede_kennung_der_kommandos_steht_in_der_
+/// auslieferungsbelegung` erreicht elf der dreizehn, denn `text_rueckgaengig`
+/// und `text_wiederholen` tragen kein Kommando — das Menue stellt sie zu.
 #[test]
-fn die_auslieferungsbelegung_fuehrt_vierundsiebzig_funktionen() {
+fn die_kennungen_der_editor_runde_stehen_in_der_auslieferungsbelegung() {
     let belegung = Belegung::auslieferung();
-    assert_eq!(
-        belegung.funktionen().len(),
-        74,
-        "die Kopfzeile von default-keymap.toml nennt 74 Funktionen"
-    );
     for kennung in [
         "editor_aus_vorschau",
         "fokus_editor",

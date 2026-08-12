@@ -42,10 +42,10 @@
 //!
 //! # Die vier Begruendungslagen der dritten Spalte
 //!
-//! **Gezaehlt wird ueber alle 74 Funktionen, und die Ziffer einer Lage heisst
+//! **Gezaehlt wird ueber alle 79 Funktionen, und die Ziffer einer Lage heisst
 //! ueberall dasselbe**: im Modulkopf, an den Zweigen von [`wirkung`] und in der
 //! Probe `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`. Die
-//! erste Lage traegt die 68 Funktionen mit [`Kommando`], die zweite bis vierte
+//! erste Lage traegt die 73 Funktionen mit [`Kommando`], die zweite bis vierte
 //! verteilen die sechs zugestellten Textbefehle unter sich.
 //!
 //! Die Spalte "Wirkt in" hat damit **vier verschiedene Quellen**, und
@@ -53,7 +53,7 @@
 //!
 //! | Lage | Funktionen | Zelle | woher die Aussage kommt |
 //! |---|---|---|---|
-//! | 1 | die 68 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
+//! | 1 | die 73 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
 //! | 2 | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen**, zuzueglich eines `inference:`-Schrittes ueber den Feldeditor (siehe unten) |
 //! | 3 | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
 //! | 4 | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
@@ -253,7 +253,7 @@ const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
 /// Der Modulkopf stellt alle vier als Tabelle daneben und legt dort die
 /// Zaehlung fest, der die Zweige hier folgen.
 fn wirkung(funktion: &Funktion) -> &'static str {
-    // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 68 der 74
+    // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 73 der 79
     // Funktionen tragen ein Kommando, `Kommando::wirkungsbereich` ist eine
     // totale Funktion darueber, und `Wirkungsbereich::beschriftung` ist eine
     // zweite, deren Vollstaendigkeit der Uebersetzer erzwingt. Hier ist nichts
@@ -513,7 +513,19 @@ mod tests {
     // -----------------------------------------------------------------------
 
     /// Jede belegte Funktion der Auslieferungsbelegung steht in der Datei, und
-    /// keine unbelegte. Ab Werk ist keine unbelegt, also stehen alle darin.
+    /// keine unbelegte.
+    ///
+    /// **Die Zusage steht in den beiden ersten Teilen**: die Datei fuehrt so
+    /// viele Zeilen, wie es belegte Funktionen gibt, und jede belegte findet
+    /// sich darin. Der dritte Teil sagt daneben, welche Funktionen ab Werk
+    /// unbelegt sind, und nennt sie beim Namen. Bis zum 260812 war die Antwort
+    /// darauf "keine"; seither sind es die drei Spaltenschalter, die nach der
+    /// Nutzerantwort vom 260812-0306 ohne Kombination ausgeliefert werden
+    /// (`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
+    /// 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`). Die
+    /// Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine Zahl sagte
+    /// nicht, **welche** Funktion aus der Datei faellt, und genau das ist die
+    /// Auskunft, die ein Leser dieser Probe braucht.
     #[test]
     fn jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte() {
         let belegung = Belegung::auslieferung();
@@ -542,11 +554,22 @@ mod tests {
             );
         }
 
-        // Ab Werk ist keine Funktion unbelegt: die Datei fuehrt alle 74.
+        // Ab Werk sind genau die drei Spaltenschalter unbelegt; jede andere
+        // Funktion steht in der Datei.
+        let unbelegt: Vec<&str> = belegung
+            .funktionen()
+            .iter()
+            .filter(|funktion| funktion.tasten().is_empty())
+            .map(Funktion::kennung)
+            .collect();
         assert_eq!(
-            gefunden.len(),
-            belegung.funktionen().len(),
-            "ab Werk ist keine Funktion unbelegt, die Datei muss jede fuehren"
+            unbelegt,
+            [
+                "spalte_groesse_umschalten",
+                "spalte_datum_umschalten",
+                "spalte_typ_umschalten",
+            ],
+            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter"
         );
     }
 
@@ -603,10 +626,18 @@ mod tests {
             .map(|zeile| zellen(zeile)[0].to_owned())
             .collect();
 
+        // Die unbelegten fallen aus der Erwartung, wie sie aus der Datei
+        // fallen: `nach_bereichen` ordnet **jede** Funktion einem Abschnitt zu,
+        // die Ausgabe schreibt nur die mit einer Kombination. Ab Werk sind das
+        // seit dem 260812 die drei Spaltenschalter; welche es genau sind, sagt
+        // `jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`, diese
+        // Probe misst allein die Reihenfolge.
         let erwartet: Vec<&str> = nach_bereichen(&belegung)
             .into_iter()
             .flat_map(|(_, stellen)| stellen)
-            .map(|stelle| belegung.funktionen()[stelle].name())
+            .map(|stelle| &belegung.funktionen()[stelle])
+            .filter(|funktion| !funktion.tasten().is_empty())
+            .map(Funktion::name)
             .collect();
 
         assert_eq!(gefunden, erwartet);
@@ -674,8 +705,8 @@ mod tests {
 
     /// **Die dritte Spalte, ueber ihre vier Begruendungslagen.**
     ///
-    /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle 74
-    /// Funktionen: die erste Lage traegt die 68 mit Kommando, die zweite bis
+    /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle 79
+    /// Funktionen: die erste Lage traegt die 73 mit Kommando, die zweite bis
     /// vierte die sechs zugestellten Textbefehle. Die Probe haelt jede der
     /// vier einzeln fest, weil ein Alles-oder-nichts ueber die sechs fuer zwei
     /// der drei sie betreffenden Lagen falsch waere. Aendert eine der vier

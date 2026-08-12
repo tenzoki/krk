@@ -1,7 +1,7 @@
 # Orchestrator Session — 260812-0306
 
-**Directive:** (noch nicht gesetzt — Setup gelaufen, Arbeitsauftrag steht aus)
-**Mode:** (noch nicht aufgelöst)
+**Directive:** Den Circle der Statusleiste (`260811-1304-statusleiste-mit-bereichsschaltern`) autonom fahren und den darin abgelegten Nachtrag zu den Spaltenschaltern mit erledigen.
+**Mode:** plan — der Plan `260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md` ist die Quelle der Warteschlange.
 **Status:** In Arbeit
 
 ## Snapshot bei Sitzungsbeginn
@@ -50,3 +50,25 @@ nichts fortzusetzen.
 ## Verlauf
 
 - 260812-0306 — Setup abgeschlossen. Kein unterbrochener Lauf gefunden.
+
+## Vor der Turn-Schleife
+
+- 260812-0306 — Circle `260811-1304-statusleiste-mit-bereichsschaltern` aktiviert (`_a_` → `_t_`),
+  Zeiger `.active-circle` geschrieben, Kopffelder nachgezogen.
+- 260812-0306 — Klärungsrunde: sechs offene Fragen des Circles beantwortet, vier neue aus dem
+  Nachtrag gestellt und beantwortet. Bericht: `circles/…/history/260812-0306-klaerungsrunde.md`.
+- 260812-0415 — Planer gefahren. Plan mit sieben Fähigkeiten und acht Schritten; drei neue
+  Wahlpunkte, alle drei im selben Zug beantwortet. Ein Beifund als offener Defekt abgelegt.
+- Plane-Spiegel: nicht eingerichtet (`plane.config.yaml` trägt noch die Vorlagenwerte). Kein Push
+  in dieser Sitzung.
+
+## Per-Turn Log
+
+### Turn 1
+- Versuchte Aufgaben: S1, S2, S3
+- Erledigt: alle drei
+- Commits: 5e17c9e, a2ea876, 8ffaac2
+- Abnahme je Aufgabe: `make check` exit 0 (build, test, fmt, clippy mit `-D warnings`)
+- Defekte: 260812-0439 behoben (von S1 erzeugt, in S2 gefallen); 260812-0512 neu abgelegt
+- Circuit breaker: OK
+- Coherence: Durchsicht zum Turn-Ende gestartet

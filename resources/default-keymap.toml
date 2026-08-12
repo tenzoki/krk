@@ -23,14 +23,15 @@
 #                    beantwortet. Eine solche Funktion bekommt nie ein
 #                    Kommando. Ohne das Feld waere sie von einer Funktion
 #                    nicht zu unterscheiden, deren Kommando ein spaeterer
-#                    Schritt erst baut. Einen Eintrag dieser zweiten Sorte
-#                    liefert die Datei derzeit nicht; bis zum 260810 stand
-#                    hier "belegung_ansehen" als Beispiel, und es traegt
-#                    inzwischen selbst ein Kommando.
+#                    Schritt erst baut. Eintraege dieser zweiten Sorte fuehrt
+#                    die Datei, sooft eine Runde ihre Funktionen vor ihren
+#                    Kommandos eintraegt; bis zum 260810 stand hier
+#                    "belegung_ansehen" als Beispiel, und es traegt inzwischen
+#                    selbst ein Kommando.
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 74 Funktionen mit zusammen 82 Kombinationen.
+# Ausgeliefert sind 79 Funktionen mit zusammen 85 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -302,6 +303,41 @@ tasten = ["shift+cmd+h"]
 # Der Finder legt das auf cmd+shift+Punkt. Die Schreibweise dieser Datei kennt
 # keinen Namen fuer die Punkt-Taste, deshalb steht hier h wie "hidden".
 
+# Die drei Spaltenschalter bleiben ab Werk ohne Kombination, und zwar mit
+# leerer Tastenliste und nicht mit `reserviert_fuer`: dieses Feld heisst
+# "benannt, aber einer spaeteren Runde vorbehalten", und diese drei Funktionen
+# gibt es. Sie schalten in beiden Dateifenstern zugleich und stehen wie jede
+# andere in der Belegungsansicht und in der Markdown-Ausgabe.
+#
+# Der Grund fuer die leere Liste ist die Knappheit: die Auslieferung fuehrt 39
+# frei gewaehlte Kombinationen (`circles/
+# 260802-0842-krk-mac-dateimanager-editor-git/decisions/
+# 260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`),
+# und eine Spaltensichtbarkeit ist eine Einstellung, die man einmal trifft,
+# kein Handgriff im Arbeitsfluss. Wer eine Taste dafuer will,
+# traegt sie in seine eigene keymap.toml ein; die Datei ist nach C3 die eine
+# Quelle jeder Belegung und von Hand aenderbar. Nutzerantwort vom 260812-0306,
+# `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
+# 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`.
+#
+# Die Spalte Name traegt keinen Schalter und deshalb auch keinen Eintrag: sie
+# bleibt immer sichtbar.
+
+[[funktion]]
+id = "spalte_groesse_umschalten"
+name = "Spalte Größe ein- und ausblenden"
+tasten = []
+
+[[funktion]]
+id = "spalte_datum_umschalten"
+name = "Spalte Änderungsdatum ein- und ausblenden"
+tasten = []
+
+[[funktion]]
+id = "spalte_typ_umschalten"
+name = "Spalte Typ ein- und ausblenden"
+tasten = []
+
 # ── C4: Dateioperationen ausserhalb der Norton-Reihe ─────────────────────────
 
 [[funktion]]
@@ -397,9 +433,31 @@ name = "Lesezeichen- und Geräteleiste ein- und ausblenden"
 tasten = ["opt+cmd+l"]
 
 [[funktion]]
+id = "erstes_fenster_umschalten"
+name = "Linkes Dateifenster ein- und ausblenden"
+tasten = ["opt+cmd+left"]
+# Eine Richtungstaste statt eines Buchstabens, als einziger Bruch mit der
+# Umschaltfamilie auf opt+cmd+<Buchstabe>: beide Dateifenster heissen
+# "Dateifenster", und kein Wort benennt das linke so kurz und eindeutig wie der
+# Pfeil nach links. opt+cmd+left und opt+cmd+right waren ab Werk frei; ctrl+left
+# und ctrl+right tragen weiter das Verschmaelern und Verbreitern des aktiven
+# Bereichs. Nutzerantwort vom 260812-0430, `circles/
+# 260811-1304-statusleiste-mit-bereichsschaltern/decisions/
+# 260812-0415_*_welche-kombinationen-bekommen-die-beiden-neuen-umschalter.md`.
+
+[[funktion]]
 id = "zweites_fenster_umschalten"
 name = "Zweites Dateifenster ein- und ausblenden"
-tasten = ["opt+cmd+d"]
+tasten = ["opt+cmd+d", "opt+cmd+right"]
+# opt+cmd+d bleibt und wechselt seinen Besitzer nicht; opt+cmd+right tritt
+# daneben, damit beide Dateifenster dasselbe Muster tragen. Das d ist hier eher
+# Zaehlung als Bezeichnung, der Pfeil benennt die Sache. Dieselbe Nutzerantwort
+# wie beim Eintrag darueber.
+#
+# Die Kennung heisst weiter "zweites" und nicht "rechtes", obwohl der schoenere
+# Name der zweite waere: eine keymap.toml des Nutzers, die eine unbekannte
+# Kennung nennt, wird als Ganzes abgewiesen, und er stuende ohne seine Belegung
+# da.
 
 [[funktion]]
 id = "fenster_einblenden"
@@ -583,9 +641,25 @@ id = "editor_schliessen"
 name = "Editor schließen"
 tasten = ["opt+cmd+e"]
 # Die Umschaltfamilie steht auf opt+cmd+<Buchstabe>: opt+cmd+l fuer die Leiste,
-# opt+cmd+d fuer das zweite Dateifenster. Das Schliessen des Editors ist die
-# Ausblendhaelfte dieser Familie; die Einblendhaelfte tragen F4 und der
-# Uebergang aus der Vorschau, weil beide zugleich eine Datei mitbringen.
+# opt+cmd+d fuer das zweite Dateifenster, opt+cmd+b fuer den Editor. Seit dem
+# 260812 treten zwei Richtungstasten daneben, opt+cmd+left und opt+cmd+right
+# fuer das linke und das rechte Dateifenster; die Begruendung steht dort.
+#
+# opt+cmd+e bleibt beim Schliessen und wandert nicht auf den Umschalter
+# darunter. Die beiden tun Verschiedenes: das Schliessen gibt die Datei frei und
+# loest die Nachfrage aus C4 aus, das Umschalten blendet aus und behaelt den
+# Stand. Die Einblendhaelfte des Schliessens tragen weiter F4 und der Uebergang
+# aus der Vorschau, weil beide zugleich eine Datei mitbringen.
+
+[[funktion]]
+id = "editor_umschalten"
+name = "Editor ein- und ausblenden"
+tasten = ["opt+cmd+b"]
+# b wie "bearbeiten", die Norton-Bedeutung von F4: der Buchstabe e des Editors
+# ist an "editor_schliessen" darueber vergeben, und eine ausgelieferte
+# Kombination einer abgenommenen Runde wechselt ihre Bedeutung nicht. Der
+# Unterschied der beiden steht im Kommentar darueber. Nutzerantwort vom
+# 260812-0430, Datensatz wie beim linken Dateifenster in C7.
 
 [[funktion]]
 id = "editor_ansicht_umschalten"
