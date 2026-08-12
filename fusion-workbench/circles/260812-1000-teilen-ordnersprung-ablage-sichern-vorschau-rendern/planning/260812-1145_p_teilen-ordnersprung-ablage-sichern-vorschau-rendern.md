@@ -297,7 +297,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check`. Kein Vordergrund. Neun der zehn Kriterien von C3 sind damit abgenommen; offen bleibt C3.10, die Meldung am laufenden Bündel.
    - Dependencies: keine.
 
-2. **Die Auslieferungsbelegung kennt `ordner_der_datei`**
+2. [DONE] **Die Auslieferungsbelegung kennt `ordner_der_datei`**
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes:
@@ -326,7 +326,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check`, Exit 0. Kein Vordergrund für die Proben; dass das Dateifenster danach wirklich den Ordner zeigt, sieht man am Bündel (C2.1, zweite Hälfte).
    - Dependencies: Schritt 2.
 
-4. **Die Auslieferungsbelegung kennt `teilen`**
+4. [DONE] **Die Auslieferungsbelegung kennt `teilen`**
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes:
