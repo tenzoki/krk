@@ -351,3 +351,158 @@ offene Frage in diesen Circle hinein.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260812-2307
+**Playmaker-Lauf:** 260812-2307-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:** `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
+(Runde 6), geschlossen am 260812
+
+Die Runde 6 hat die Vorschau angefasst und dabei zwei Fragen entschieden, die diesem Circle
+gehören. Beide Antworten fallen zu seinen Gunsten aus, und das ist die Auskunft dieses Vermerks:
+sein Zuschnitt ist erhalten geblieben, statt beschnitten zu werden. Ein dritter Punkt geht in die
+andere Richtung. Keiner der vier Punkte hält die Aktivierung auf; alle vier gehören in die
+Klärungsrunde.
+
+**Zur Auslösebedingung, offen benannt.** Die Regel verlangt, dass der Abschnitt
+`## Grounding snapshot` dieses Datensatzes den Verzeichnisnamen des abgeschlossenen Kindes oder
+den in seiner `## Closure note` genannten Artefakt zitiert. Er zitiert weder das eine noch das
+andere; die Runde 6 gab es beim Anlegen dieses Circles noch nicht. Die Kante läuft in die andere
+Richtung: der Abschnitt `## Dependencies` der Runde 6 nennt diesen Circle beim Namen, führt zwei
+gerichtete Kanten hierher und sagt ausdrücklich, jener Circle habe heute keine Gegenkante. Der
+Vermerk steht deshalb hier, obwohl die wörtliche Bedingung nicht greift. Wer anders entscheidet,
+sieht an dieser Stelle, worauf.
+
+### 1. Die zweite offene Frage ist geprüft und diesem Circle gelassen worden
+
+Frage 2 des Abschnitts `## Grounding snapshot` lautet: „Zeigt der Betrachter auch lokale
+HTML-Dateien?" Die Runde 6 hat sie aufgenommen, weil sie die Dreiteilung der Anzeige aus C6 der
+Runde 1 für Markdown ohnehin anfasste, und sie hat sie mit Möglichkeit 1 beantwortet: lokale
+HTML-Dateien bleiben Quelltext, und die Frage bleibt bei diesem Circle. Der Datensatz sagt das
+ausdrücklich, statt es durch Schweigen offenzulassen
+(`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_zeigt-die-vorschau-lokale-html-dateien-gerendert.md`,
+umgesetzt in `crates/krk-ui/src/hervorhebung.rs:422-431`, Commit `b4d9de2`).
+
+**Was sich für diese Frage dennoch geändert hat, ist ihre Ausgangslage.** Die Dreiteilung aus C6
+ist mit der Runde 6 einmal geändert worden, für Markdown, und die Vorschau zeigt seither
+gerenderten Fließtext. Ein gerendertes HTML wäre danach nicht mehr der erste Bruch mit C6,
+sondern der zweite. Der Grund, aus dem die Runde 6 HTML nicht mitgenommen hat, ist die
+Ungleichheit der beiden Formate: Markdown lässt sich ohne Web-Mittel vollständig zerlegen, HTML
+im Allgemeinen nicht. Wer diese Frage hier beantwortet, argumentiert gegen diese Begründung und
+nicht in eine offene Lage hinein.
+
+Als Nebengewinn färbt `hervorhebung.rs` samt `syntect` eine `.html`-Datei in der Vorschau
+inzwischen ein. Sie sieht besser aus als vor der Runde 6, ohne gerendert zu sein.
+
+### 2. Die 17 Punkte Luft in der Vorschaubreite sind nicht verbraucht worden
+
+Der Vermerk vom 260812-0816 hielt fest, dass die Mindestbreite der Vorschau von 160 Punkten seit
+der Runde 5 zwei Entscheidungen trägt und dass oberhalb davon rund 17 Punkte bis zur gerechneten
+Obergrenze bleiben. Die Runde 6 hatte den ersten Vorschauinhalt, für den 160 Punkte knapp werden
+könnten, und stand damit vor der Wahl, diese Luft zu verbrauchen.
+
+**Sie hat sie stehen lassen.** Der Datensatz
+`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md`
+ist mit Möglichkeit 1 beantwortet: die Zahl bleibt bei 160
+(`crates/krk-ui/src/fenstermodell.rs:213`, unverändert über die ganze Runde). Die Begründung ist
+nicht, dass 160 Punkte genügen, sondern dass drei ungemessene Zahlen gegeneinander verrechnet
+worden wären: die Obergrenze von 177 ist gerechnet, die Breite der acht Schalter von 540 ist
+gerechnet, und die Enge des gerenderten Markdown ist an keinem laufenden Bündel gemessen.
+
+**Der Datensatz steht bewusst auf beantwortet und nicht auf umgesetzt**, weil kein Commit die
+Antwort einlöst: sie besteht darin, nichts zu ändern. Der Abgleich vom 260812-2253 begründet das
+ausdrücklich damit, dass ein Marker auf umgesetzt den Datensatz aus der Suche nach aktiver
+Grundlage nähme und der Auslöser mit ihm herausfiele. Der Auslöser ist ein Blick auf die Vorschau
+am laufenden Bündel, und er steht als C4.14 im Plan der Runde 6.
+
+Für diesen Circle heißt das: die Luft ist da, und die Frage nach ihr ist offen geblieben statt
+still entschieden zu werden. Die vierte Frage der Klärungsrunde, die der Vermerk vom 260812-0816
+aufgemacht hat, gilt unverändert in ihrer dortigen Fassung.
+
+### 3. Eine fünfte Frage kommt hinzu, und sie hängt an derselben Zahl
+
+Offen geblieben ist in der Runde 6, ob die Vorschau bei der kleinen Systemschriftgröße bleibt
+oder auf die des Editors wächst
+(`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1707_*_bleibt-die-vorschau-bei-der-kleinen-systemschriftgroesse-oder-waechst-sie-auf-die-des-editors.md`).
+Die Frage entscheidet, wie viele Zeichen in eine Vorschau von 160 Punkten passen, und hängt damit
+an derselben Zahl wie Punkt 2. Sie gehört vor die Untersuchung des Darstellungsmittels, weil ihre
+Antwort mitbestimmt, wie viel Fläche das Mittel voraussetzen darf.
+
+### 4. Die Messreihe hinter der dritten offenen Frage ist schlechter geworden
+
+Die dritte Frage dieses Circles leitet eine mögliche elfte Zeitzusage aus L5 und L7 ab. Der
+Vermerk vom 260807-1042 hielt fest, dass beide zum ungemessenen Teil der Abnahmereihe gehören.
+Der Befund gilt weiter, und die Runde 6 hat ihn verschärft: L7 wird bei tief verschachtelten
+Listen jetzt ab rund 12 kB verfehlt statt ab 19 kB
+(`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2133_*_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-mehr-als-der-rest-der-zerlegung.md`,
+offen). Die Zahl der Zusage ist unverändert, der Abstand zu ihr nicht.
+
+Der Betrachter ist nach der Directive dieses Circles eine weitere Quelle für den aktiven
+Vorschau-Tab und teilt sich den Weg von L7 mit den bestehenden. Fällt die Antwort auf die dritte
+Frage auf ja, erbt eine elfte Zusage nicht mehr nur den offenen Beleg von L7, sondern auch einen
+gemessenen Verlust an Abstand. Dazu steht L9 aus zwei Runden zum Nachmessen an: die Bereichsleiste
+der Runde 5 nimmt der Fensterzeile 18 Punkte Höhe, die zusammengelegte Statuszeile der Runde 6
+gibt jedem Dateifenster 18 zurück, und gemessen ist keine der beiden Rechnungen.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260812-2307
+**Playmaker-Lauf:** 260812-2307-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Klärungsrunde über fünf Fragen und einer
+Untersuchung des Darstellungsmittels, nicht davor
+
+Dieser Circle ist der empfohlene nächste Kandidat, und zwar ohne Vergleichswert: mit dem
+Abschluss der Runde 6 ist er der einzige nicht abgeschlossene Circle im Portfolio. Eine Rangfolge
+mit einem Element trägt keine Auskunft über relative Reife. Der Vorschlag stützt sich deshalb auf
+die absoluten Signale, und zwei davon sind seit dem Vorschlag vom 260812-0816 neu.
+
+**Das tragende neue Signal ist, was die Runde 6 diesem Circle *nicht* genommen hat.** Sie hat die
+Vorschau angefasst, gerendertes Markdown gebaut und die Dreiteilung aus C6 geändert, also genau
+die Bauteile berührt, auf denen dieser Circle sitzt. Sie hätte dabei zwei seiner Fragen
+stillschweigend entscheiden können. Beide sind stattdessen als eigene Datensätze abgelegt und
+zugunsten dieses Circles beantwortet worden: die Mindestbreite bleibt bei 160 Punkten, die 17
+Punkte Luft sind unverbraucht, und die Frage nach lokalem HTML bleibt hier. Der Abschnitt
+`## Parent grounding stale` oben schlüsselt beides auf. Der Zuschnitt dieses Circles ist damit
+vollständig erhalten, und das ist bei einer Runde, die dieselbe Fläche umgebaut hat, kein
+Selbstverständnis.
+
+**Die geerbten Bauteile stehen und sind um zwei reicher geworden.** Die vier Bauteile aus dem
+Abschnitt `## Grounding snapshot` liegen unverändert auf der Platte: die Auswertung der
+Zwischenablage, das Vorschaufenster mit seiner Tableiste, die Statuszeile und der Befehl
+`zwischenablage_springen` auf `opt+cmd+g`. Dazu kommt aus der Runde 5 die Bereichsleiste mit
+einem Schalter für die Vorschau, und aus der Runde 6 zweierlei: eine Statuszeile über die volle
+Fensterbreite statt zweier schmaler, und ein Kontextmenü an fünf Ansichten, das an genau einer
+Stelle gebaut wird. Für einen Betrachter, dessen Meldungen über eine nicht erreichbare Adresse in
+die Statuszeile gehören, ist die breitere Zeile eine unmittelbare Entlastung.
+
+**Der Zuschnitt bleibt das stärkste Gegenargument, und er ist unverändert.** Der Datensatz hält
+selbst fest, dass das Mittel der Darstellung von Web-Inhalt offen ist und in eine eigene
+Untersuchung vor dem Plan gehört. Daneben steht die ungemessene Verfügbarkeitsfrage für
+macOS-26-Schnittstellen
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`),
+die dieser Datensatz selbst als erschlossen und nicht als geprüft einordnet, und die projektweit
+offene Frage, ob die Untergrenzen-Angabe prüfbar gemacht wird
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`). Eine
+Untersuchung vor dem Plan ist teurer als eine Klärungsrunde, und dieser Circle braucht beides.
+
+**Die Klärungsrunde trägt jetzt fünf Fragen.** Die drei des Abschnitts `## Grounding snapshot`,
+die Mindestbreite der Vorschau aus dem Vermerk vom 260812-0816, und seit der Runde 6 die
+Schriftgröße der Vorschau. Die letzten beiden hängen an derselben Zahl und gehören vor die
+Untersuchung des Darstellungsmittels, weil ihre Antworten mitbestimmen, wie viel Fläche das
+Mittel voraussetzen darf.
+
+**Zur Abhängigkeitslage, die in diesem Projekt nichts unterscheidet.** Die einzige
+Circle-Abhängigkeit dieses Datensatzes, die Runde 1, ist beschränkt abgeschlossen (`_b_`) und
+nicht kohärent (`_c_`), also trägt er nach der Rangheuristik das Kennzeichen der unerfüllten
+Vorbedingung. Alle sechs gefahrenen Runden tragen `_b_`, und alle sechs aus demselben Grund: der
+Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+Das Kennzeichen steht an jedem denkbaren Kandidaten dieses Projekts und ist keine Auskunft über
+diesen. Inhaltlich bindet die Beschränkung hier dennoch, und der Punkt 4 des Vermerks oben zeigt,
+dass die Bindung seit der Runde 6 fester geworden ist statt loser.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.

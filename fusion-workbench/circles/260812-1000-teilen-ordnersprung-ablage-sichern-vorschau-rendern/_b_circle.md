@@ -305,8 +305,11 @@ verschachtelten Listen jetzt ab rund 12 kB verfehlt statt ab 19 kB
 Zusage ist unverändert, der Abstand zu ihr nicht, und der Plan sagt zu, keine der zehn
 Zeitzusagen anzufassen.
 
-**Bilanz der Grundlage:** 26 offene Defekte im Circle, 6 im gemeinsamen Speicher, 12 offene
-Fragen über beide. Drei Fragen binden die nächste Runde unmittelbar: der Rechtsklick bei
+**Bilanz der Grundlage, am 260812 gezählt und nicht geschätzt:** 39 offene Defekte über alle
+Speicher — 26 in diesem Circle, 8 im gemeinsamen, 5 im Circle der Runde 5. Dazu 12 offene
+Fragen über beide Speicher. Eine erste Fassung dieser Notiz nannte 32; sie hatte den
+gemeinsamen Speicher mit 6 statt 8 gezählt und die 5 der Runde 5 ganz übersehen. Der
+Playmaker hat es beim Erzeugen des Portfolios gemeldet, nachgezählt ist es am Dateibestand. Drei Fragen binden die nächste Runde unmittelbar: der Rechtsklick bei
 Markierung anderswo, die Schriftgröße der Vorschau, und ob der Vorspann eines Containers die
 eine Lücke in der Deckungszusage von C4.3 bleibt.
 
