@@ -2,7 +2,7 @@
 
 **Directive:** Den Circle der Statusleiste (`260811-1304-statusleiste-mit-bereichsschaltern`) autonom fahren und den darin abgelegten Nachtrag zu den Spaltenschaltern mit erledigen.
 **Mode:** plan — der Plan `260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md` ist die Quelle der Warteschlange.
-**Status:** In Arbeit
+**Status:** Bounded Closure: dreizehn Abnahmekriterien verlangen KRK im Vordergrund
 
 ## Snapshot bei Sitzungsbeginn
 
@@ -183,3 +183,106 @@ die richtige Aussage über diese Runde und „abgenommen" nicht.
    Platz in `Bereich::ALLE`. Im gewöhnlichen Fall schrumpft die Lesezeichenleiste beim Aufgehen des
    Editors, und genau dagegen hatte der Nutzer am 260808 entschieden. Die Festlegung ist
    **überstimmt und nicht aufgelöst**, und so sollte sie im Datensatz stehen.
+
+---
+
+## Budget
+
+| Kennzahl | Zahl |
+|---|---|
+| Turns | 4 |
+| Aufgaben erledigt | 9 Planschritte plus 2 Befundläufe |
+| Aufgaben übersprungen/zurückgestellt | 0 |
+| Defekte gefiled | 16 |
+| Defekte geschlossen | 12 |
+| Fragen beantwortet (`_o_`→`_a_`) | 7 neu gefiled und im selben Zug beantwortet |
+| Fragen umgesetzt (`_a_`→`_i_`) | 14 |
+| Commits | 12 |
+| Agentenfehler | 0 |
+| Menschliche Gates getroffen | 0 (auf Weisung des Nutzers autonom gefahren) |
+
+Die Zahlen sind am Dateibestand gemessen, nicht mitgezählt: `filed` vergleicht den Zeitstempel
+im Dateinamen mit dem Sitzungsbeginn, `now_<marker>` fragt, ob der heutige Name beim Anker
+`6b6ea3c` schon existierte. Fünf Defekte stehen am Ende offen.
+
+## Review coverage
+
+**Range:** `6b6ea3c..76ac9c0` — 12 Commits
+**Covered by:**
+- `circles/…/reviews/260812-0539-coderev-…` — `5aa22df..8ffaac2`, 3 Commits, `not-opened=none`
+- `circles/…/reviews/260812-0727-coderev-…` — `8ffaac2..0342445`, 3 Commits, `not-opened=none`
+
+**Not covered:** vier Commits.
+- `caeaa18` fix(ui): vier Befunde der zweiten Durchsicht — Code, **die einzige ungedeckte
+  Codeänderung**. Sie behebt Befunde der zweiten Durchsicht und ist selbst nicht mehr
+  durchgesehen worden.
+- `15d7bbe`, `5aa22df`, `42c1f43` — reine Workbench-Commits (Marker, Plan, Aktivierung), kein
+  Code.
+
+**Carried out-of-scope files:** `none`.
+
+## Status
+
+**Bounded Closure:** dreizehn Abnahmekriterien verlangen KRK im Vordergrund und sind Nutzerarbeit.
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant O as Orchestrator
+    participant P as Planner
+    participant C as Coder
+    participant OC as Ontocoder
+    participant CR as Coderev
+    participant R as Reconciler
+    participant PM as Playmaker
+
+    U->>O: mache autonom den Statuszeilen-Circle
+    Note over O: Aktivierung + Klärungsrunde
+    O->>O: _a_ → _t_, zehn Fragen beantwortet (42c1f43)
+    O->>P: Plan für die Bereichsleiste
+    P-->>O: 8 Schritte, 7 Fähigkeiten, 3 neue Fragen (5aa22df)
+
+    Note over O: Turn 1
+    O->>C: S1 proportionale Breitenregel
+    C-->>O: done (5e17c9e), 1 Defekt abgelegt
+    O->>C: S2 Abweisung + Defekt aus S1
+    C-->>O: done (a2ea876)
+    O->>C: S3 linkes Dateifenster ausblendbar
+    C-->>O: done (8ffaac2)
+    O->>CR: Durchsicht 5aa22df..8ffaac2
+
+    Note over O: Turn 2
+    O->>OC: S4 fünf Funktionen in die Belegung
+    OC-->>O: blocked — make check exit 2
+    O->>C: S5 zwei Umschaltbefehle + drei Proben
+    C-->>O: blocked — die Spaltenkommandos fehlen noch
+    O->>C: S6 Spalte wird reine Aufzählung
+    C-->>O: done, Fehlerzahl unverändert
+    O->>C: S7 Spaltensichtbarkeit
+    C-->>O: done — make check wieder grün (90b02d4)
+    CR-->>O: 4 Befunde, 2 mittel
+
+    Note over O: Turn 3
+    O->>C: die vier Befunde
+    C-->>O: done (026c665), Naht neu geschnitten
+    O->>C: S8 die Bereichsleiste
+    C-->>O: done (0342445), make bundle läuft
+    O->>O: 14 Entscheidungen auf umgesetzt (15d7bbe)
+    O->>CR: Durchsicht 8ffaac2..0342445
+
+    Note over O: Turn 4
+    CR-->>O: 1 mittel, 3 niedrig
+    O->>C: drei kleine Befunde
+    O->>OC: der falsche Kopfkommentar
+    C-->>O: done
+    OC-->>O: done (caeaa18)
+    O->>R: Abgleich gegen den Baum
+    R-->>O: bounded-closure-proposed, 1 Zusage zu weit
+    Note over O: Bounded Closure autonom angenommen
+    O->>O: _t_ → _b_, Abschlussnotiz (1cb5430)
+    O->>PM: Portfolio nach der Schließung
+    PM-->>O: ein Kandidat bleibt (76ac9c0)
+    O->>U: gebaut, nicht abgenommen
+```
