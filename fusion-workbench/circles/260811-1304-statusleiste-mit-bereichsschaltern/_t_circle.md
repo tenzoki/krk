@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** active
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md
 **Active session history:** shared/history/260812-0306-orchestrator-session.md
 
 ---
