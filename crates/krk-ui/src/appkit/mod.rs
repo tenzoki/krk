@@ -7,13 +7,14 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Dreiundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Vierundzwanzig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
 //! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
 //! ```text
 //! anwendung ──> menue
 //!           ──> fenster ──> aufteilung ──> tabelle ──> krk-core::verzeichnis
+//!           │            ──> bereichsleiste            crate::fenstermodell
 //!           ──> ereignisse            ──> tableiste     crate::tabs
 //!           ──> bildtakt ──> crate::messmodus           crate::kommandos
 //!           ──> fsevents ──> crate::auffrischung        blaetter
@@ -53,7 +54,14 @@
 //! ein zweites Mal tragen.
 //! [`aufteilung`] haelt
 //! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
-//! Markierung des aktiven Dateifensters. [`tabelle`] haelt das Dateifenster:
+//! Markierung des aktiven Dateifensters.
+//! [`bereichsleiste`] haelt die Leiste am Fensterfuss aus C1 bis C3 der
+//! Bereichsleisten-Runde: acht Ankreuzfelder, fuenf fuer die Bereiche und drei
+//! fuer die schaltbaren Spalten. Sie liegt **neben** der Aufteilung und nicht
+//! darin — beide sind Unteransichten der Traegerflaeche, die
+//! `fenster::fensterinhalt` baut —, und keiner ihrer Schalter nimmt den
+//! Ersthelferrang an; die Begruendung steht in ihrem Modulkopf.
+//! [`tabelle`] haelt das Dateifenster:
 //! `NSTableView` in einer `NSScrollView`, Datenquelle und Delegierter, und die
 //! Anbindung an das Tabmodell. [`tableiste`] ist die Leiste an seinem Kopf,
 //! [`statuszeile`] die Zeile an seinem Fuss. [`ereignisse`] haelt den lokalen
@@ -132,6 +140,7 @@
 mod anwendung;
 mod aufteilung;
 mod belegungsansicht;
+mod bereichsleiste;
 mod bildtakt;
 mod blaetter;
 mod editor;

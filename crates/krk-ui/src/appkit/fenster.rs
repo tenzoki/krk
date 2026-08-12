@@ -1,10 +1,13 @@
 //! Das Fenster und sein Delegierter.
 //!
-//! Die Inhaltsansicht des Fensters ist seit Schritt 12 die Aufteilung aus
-//! [`super::aufteilung`] und nicht mehr die eine Tabelle aus Schritt 6. Sie
-//! traegt seit Schritt 16 der Editor-Runde **fuenf** Bereiche und nicht mehr
-//! die vier der Runde 1; zugleich zu sehen sind hoechstens vier, weil C1 jener
-//! Runde zusagt, dass die Vorschau und der Editor sich dieselbe Flaeche teilen.
+//! Die Inhaltsansicht des Fensters ist seit dem 260812 eine Traegerflaeche aus
+//! [`fensterinhalt`], und darin liegen zwei Ansichten uebereinander: die
+//! Aufteilung aus [`super::aufteilung`] und darunter die Bereichsleiste aus
+//! [`super::bereichsleiste`]. Bis dahin war die Aufteilung selbst die
+//! Inhaltsansicht. Sie traegt seit Schritt 16 der Editor-Runde **fuenf**
+//! Bereiche und nicht mehr die vier der Runde 1; zugleich zu sehen sind
+//! hoechstens vier, weil C1 jener Runde zusagt, dass die Vorschau und der
+//! Editor sich dieselbe Flaeche teilen.
 //!
 //! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
 //! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
@@ -61,7 +64,11 @@
 //! `windowWillClose:` und jede hier gerufene oder ueberschriebene Methode:
 //! `initWithContentRect:styleMask:backing:defer:`, `makeFirstResponder:`,
 //! `becomeKeyWindow`, `resignKeyWindow`, `setReleasedWhenClosed:`, `setTitle:`,
-//! `setContentMinSize:`, `setContentView:`, `setDelegate:` und `center`. Das
+//! `setContentMinSize:`, `setContentView:`, `setDelegate:` und `center`.
+//! [`fensterinhalt`] kommt mit `initWithFrame:`, `setFrame:`, `addSubview:`
+//! und `setAutoresizingMask:` dazu; auch sie stehen seit 10.0, und keine der
+//! beiden gesetzten Masken (`NSViewWidthSizable`, `NSViewHeightSizable`,
+//! `NSViewMaxYMargin`) traegt eine eigene Angabe. Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
 //! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
 //! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -79,13 +86,15 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSBackingStoreType, NSResponder, NSView, NSWindow, NSWindowDelegate, NSWindowStyleMask,
+    NSAutoresizingMaskOptions, NSBackingStoreType, NSResponder, NSView, NSWindow, NSWindowDelegate,
+    NSWindowStyleMask,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
     ns_string,
 };
 
+use super::bereichsleiste;
 use super::tabelle::DateifensterQuelle;
 
 /// Die Groesse, mit der das Fenster beim ersten Start aufgeht.
@@ -114,8 +123,15 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 /// der Reihe nach bedient wurden und er hinten stand. Ob die Untergrenze
 /// deshalb auf 940 steigen soll oder die Bereiche in diesem Band gedrueckt
 /// bleiben duerfen, ist eine Frage an den Nutzer und keine, die hier still
-/// beantwortet wird.
-const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0);
+/// beantwortet wird. Am 260812-0430 hat er die Breite bei 780 belassen.
+///
+/// **Die Hoehe ist am 260812 von 300 auf 318 gestiegen**, und zwar um genau
+/// [`bereichsleiste::HOEHE`]: die Leiste am Fensterfuss nimmt der Fensterzeile
+/// diese Punkte ab, und ohne den Nachtrag haetten die fuenf Bereiche darueber
+/// weniger Hoehe zur Verfuegung als vor der Runde. Kriterium C1.3 verlangt,
+/// dass sie ihre bisherige Mindesthoehe behalten; die Zahl ist deshalb die
+/// Summe und keine neu gewaehlte.
+const MINDESTGROESSE: NSSize = NSSize::new(780.0, 300.0 + bereichsleiste::HOEHE);
 
 /// Was das Hauptfenster haelt.
 pub struct HauptfensterIvars {
@@ -249,6 +265,59 @@ impl FensterDelegierter {
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
     }
+}
+
+/// Legt die Fensterzeile und die Bereichsleiste uebereinander.
+///
+/// Die Inhaltsansicht des Fensters war bis zum 260812 die Fensterzeile selbst;
+/// seit der Bereichsleisten-Runde steht unter ihr eine Leiste ueber die volle
+/// Breite, und beide brauchen deshalb eine Traegerflaeche. Dasselbe Muster wie
+/// `aufteilung::dateifensterinhalt`, das Tableiste, Liste und Statuszeile eines
+/// Dateifensters uebereinanderlegt.
+///
+/// **Die beiden Autogroessen tragen die Aufteilung ueber jede
+/// Groessenaenderung.** Die Leiste haengt unten und behaelt ihre Hoehe
+/// ([`NSAutoresizingMaskOptions::ViewMaxYMargin`] laesst allein den Abstand
+/// nach oben wachsen), die Fensterzeile nimmt, was darueber frei wird. Ohne
+/// die Hoehenaenderung an [`MINDESTGROESSE`] verloeren die fuenf Bereiche
+/// dabei die 18 Punkte, die die Leiste bekommt.
+///
+/// **Die Leiste ist keine Unteransicht der Fensterzeile, sondern ihre
+/// Schwester**, und das ist keine Geschmacksfrage: `ersthelferbereich` sucht
+/// den Ersthelfer in den fuenf Bereichen der `NSSplitView`, und eine Leiste
+/// darin waere entweder ein sechster Bereich oder ein blinder Fleck.
+pub fn fensterinhalt(
+    mtm: MainThreadMarker,
+    fensterzeile: &NSView,
+    leiste: &NSView,
+) -> Retained<NSView> {
+    let inhalt = NSView::initWithFrame(
+        NSView::alloc(mtm),
+        NSRect::new(NSPoint::ZERO, ANFANGSGROESSE),
+    );
+
+    leiste.setFrame(NSRect::new(
+        NSPoint::ZERO,
+        NSSize::new(ANFANGSGROESSE.width, bereichsleiste::HOEHE),
+    ));
+    leiste.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMaxYMargin,
+    );
+    inhalt.addSubview(leiste);
+
+    fensterzeile.setFrame(NSRect::new(
+        NSPoint::new(0.0, bereichsleiste::HOEHE),
+        NSSize::new(
+            ANFANGSGROESSE.width,
+            ANFANGSGROESSE.height - bereichsleiste::HOEHE,
+        ),
+    ));
+    fensterzeile.setAutoresizingMask(
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
+    );
+    inhalt.addSubview(fensterzeile);
+
+    inhalt
 }
 
 /// Baut das Hauptfenster um die genannte Ansicht.

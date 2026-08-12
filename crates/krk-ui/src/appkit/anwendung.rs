@@ -230,6 +230,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
+use super::bereichsleiste::Bereichsleiste;
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
@@ -382,6 +383,12 @@ pub struct AnwendungsIvars {
     fenster: OnceCell<Retained<NSWindow>>,
     fenster_delegierter: OnceCell<Retained<FensterDelegierter>>,
     aufteilung: OnceCell<Aufteilung>,
+    /// Die Bereichsleiste am Fensterfuss (C1 bis C3 der Bereichsleisten-Runde).
+    ///
+    /// Sie steht hier und nicht in der Aufteilung: sie ist kein Bereich der
+    /// Fensterzeile, sondern deren Schwester unter der Inhaltsflaeche, und ihre
+    /// acht Zustaende kommen aus dem Fenstermodell, das ebenfalls hier haengt.
+    bereichsleiste: OnceCell<Bereichsleiste>,
     /// Die beiden Dateifenster, links zuerst.
     dateifenster: OnceCell<[Dateifenster; 2]>,
     /// Die Lesezeichen- und Geraeteleiste (C5), der zweite fokussierbare
@@ -664,6 +671,7 @@ impl Anwendungsdelegierter {
             fenster: OnceCell::new(),
             fenster_delegierter: OnceCell::new(),
             aufteilung: OnceCell::new(),
+            bereichsleiste: OnceCell::new(),
             dateifenster: OnceCell::new(),
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
@@ -733,7 +741,13 @@ impl Anwendungsdelegierter {
                 dateifenster[1].quelle().retain(),
             ],
         );
-        let fenster = fenster::hauptfenster(mtm, aufteilung.sicht(), &fenster_delegierter);
+        // **Die Leiste am Fensterfuss, und darueber die Fensterzeile.** Beide
+        // liegen in derselben Traegerflaeche; die Leiste ist ausdruecklich
+        // keine Unteransicht der Aufteilung, weil `ersthelferbereich` deren
+        // fuenf Bereiche durchgeht und eine Leiste darin ein sechster waere.
+        let bereichsleiste = Bereichsleiste::bauen(mtm);
+        let inhalt = fenster::fensterinhalt(mtm, aufteilung.sicht(), bereichsleiste.sicht());
+        let fenster = fenster::hauptfenster(mtm, &inhalt, &fenster_delegierter);
 
         // **Der eine Ausloesepunkt der Fokusanzeige aus C9.** Das Fenster
         // meldet jeden erfolgreichen Wechsel des Ersthelfers und jeden Wechsel
@@ -749,6 +763,24 @@ impl Anwendungsdelegierter {
                 selbst.fokusanzeige_nachziehen();
             }
         }));
+        // **Der Klick auf einen Schalter der Bereichsleiste geht denselben Weg
+        // wie der Tastenbefehl** (C2.2): die Leiste kennt nur ihr Kommando,
+        // ausgefuehrt wird es in `kommando_ausfuehren` samt Blattpruefung,
+        // Fokusvorbehalt und Abweisung im Modell. Der Nachzug danach steht
+        // **ausserhalb** der Bedingung und laeuft auch nach einem abgewiesenen
+        // Klick, weil ein Ankreuzfeld seinen Zustand selbst kippt, bevor die
+        // Aktion laeuft; ohne diese Zeile bliebe der Schalter stehen, wo der
+        // Nutzer ihn hingeklickt hat (C2.4). Der Rueckruf haelt den
+        // Delegierten **schwach**, aus demselben Grund wie die uebrigen Melder
+        // hier.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        bereichsleiste.melder_setzen(Box::new(move |kommando| {
+            if let Some(selbst) = schwach.load() {
+                selbst.kommando_ausfuehren(kommando);
+                selbst.bereichsleiste_nachziehen();
+            }
+        }));
+
         // Ab hier nur noch als `NSWindow`: jede uebrige Fensterberuehrung ruft
         // ohnehin nur Methoden der Oberklasse.
         let fenster = Retained::into_super(fenster);
@@ -760,6 +792,7 @@ impl Anwendungsdelegierter {
         let _ = ivars.vorschau.set(vorschau);
         let _ = ivars.editor.set(editor);
         let _ = ivars.aufteilung.set(aufteilung);
+        let _ = ivars.bereichsleiste.set(bereichsleiste);
         let _ = ivars.fenster_delegierter.set(fenster_delegierter);
         let _ = ivars.fenster.set(fenster);
 
@@ -2725,6 +2758,34 @@ impl Anwendungsdelegierter {
         };
         aufteilung.anwenden(&breiten, &sichtbar);
         self.fokusanzeige_nachziehen();
+        self.bereichsleiste_nachziehen();
+    }
+
+    /// Schreibt die acht Schalterzustaende der Bereichsleiste aus dem Modell
+    /// (C2.1, C3.1).
+    ///
+    /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
+    /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`]:
+    /// [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten Kommando folgt,
+    /// und der Melder der Leiste, der auch nach einem **abgewiesenen** Klick
+    /// ruft. Der zweite Anlass ist keine Verdopplung des ersten: ein
+    /// abgewiesener Klick erreicht `aufteilung_nachziehen` nie, hat den
+    /// angeklickten Schalter aber schon gekippt (C2.4).
+    ///
+    /// **Sie schreibt nichts als Schalterzustaende.** Sie ruft weder `anwenden`
+    /// noch `setHidden` und fasst den Ersthelfer nicht an, aus demselben Grund,
+    /// aus dem [`Self::fokusanzeige_nachziehen`] es nicht tut: eine
+    /// ausgeblendete Ansicht, die den Rang haelt, laesst AppKit ihn neu
+    /// vergeben und die Meldung ein zweites Mal ausloesen.
+    fn bereichsleiste_nachziehen(&self) {
+        let Some(leiste) = self.ivars().bereichsleiste.get() else {
+            return;
+        };
+        let (sichtbar, spalten) = {
+            let modell = self.ivars().modell.borrow();
+            (modell.sichtbarkeit(), modell.spaltensichtbarkeit())
+        };
+        leiste.zustaende_setzen(&sichtbar, &spalten);
     }
 
     /// Schreibt die Rahmenfarben der fuenf Bereiche und den Fenstertitel (C9,

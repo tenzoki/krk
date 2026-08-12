@@ -237,6 +237,50 @@ impl Bereich {
             Bereich::Editor => 460.0,
         }
     }
+
+    /// Der kurze Name des Bereichs, wie ihn ein Schalter der Bereichsleiste
+    /// traegt.
+    ///
+    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und acht Schalter
+    /// nebeneinander traegt; ausgeschriebene Namen passten bei der
+    /// Mindestbreite des Fensters nicht mehr in eine Zeile. Was der Schalter
+    /// meint, sagt der Hinweistext aus [`Bereich::langname`], der beim
+    /// Verweilen erscheint.
+    ///
+    /// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
+    /// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt den
+    /// Bau an und erzwingt einen Namen fuer seinen Schalter, statt ihn still
+    /// namenlos zu lassen.
+    pub const fn beschriftung(self) -> &'static str {
+        match self {
+            Bereich::Lesezeichen => "Lesezeichen",
+            Bereich::Links => "Links",
+            Bereich::Rechts => "Rechts",
+            Bereich::Vorschau => "Vorschau",
+            Bereich::Editor => "Editor",
+        }
+    }
+
+    /// Der ausgeschriebene Name des Bereichs, fuer den Hinweistext am
+    /// Schalter.
+    ///
+    /// Die Gegenstuecke zu [`Bereich::beschriftung`]: dort steht, was auf dem
+    /// Schalter Platz hat, hier, was er bedeutet. Beide nennen denselben
+    /// Bereich, und keiner der beiden Texte laesst sich aus dem anderen
+    /// ableiten — "Links" ist nicht die Abkuerzung von "Linkes Dateifenster",
+    /// sondern ein anderer Name fuer dieselbe Sache.
+    ///
+    /// **Vollstaendig und ohne Auffangzweig**, aus demselben Grund wie
+    /// [`Bereich::beschriftung`].
+    pub const fn langname(self) -> &'static str {
+        match self {
+            Bereich::Lesezeichen => "Lesezeichen- und Geräteleiste",
+            Bereich::Links => "Linkes Dateifenster",
+            Bereich::Rechts => "Rechtes Dateifenster",
+            Bereich::Vorschau => "Vorschaufenster",
+            Bereich::Editor => "Eingebauter Editor",
+        }
+    }
 }
 
 /// Ob der Bereich in dieser Sichtbarkeit steht.
@@ -2409,6 +2453,37 @@ mod tests {
                 Some(bereich),
                 "{bereich:?} teilt sich die Flaeche mit {gegenueber:?}, aber nicht umgekehrt"
             );
+        }
+    }
+
+    /// Kriterium C2.1 der Bereichsleisten-Runde: fuenf Schalter, und jeder
+    /// nennt seinen Bereich.
+    ///
+    /// Zwei Schalter mit derselben Aufschrift waeren fuer den Nutzer nicht zu
+    /// unterscheiden, und ein leerer traege gar keine Auskunft.
+    #[test]
+    fn jeder_bereich_hat_eine_eigene_beschriftung() {
+        for (stelle, bereich) in Bereich::ALLE.into_iter().enumerate() {
+            assert!(
+                !bereich.beschriftung().is_empty(),
+                "{bereich:?} traegt keine Aufschrift"
+            );
+            assert!(
+                !bereich.langname().is_empty(),
+                "{bereich:?} traegt keinen Hinweistext"
+            );
+            for andere in Bereich::ALLE.into_iter().skip(stelle + 1) {
+                assert_ne!(
+                    bereich.beschriftung(),
+                    andere.beschriftung(),
+                    "{bereich:?} und {andere:?} tragen dieselbe Aufschrift"
+                );
+                assert_ne!(
+                    bereich.langname(),
+                    andere.langname(),
+                    "{bereich:?} und {andere:?} tragen denselben Hinweistext"
+                );
+            }
         }
     }
 
