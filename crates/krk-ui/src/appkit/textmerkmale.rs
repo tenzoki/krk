@@ -3,9 +3,11 @@
 //!
 //! ```text
 //!   crate::hervorhebung ──> Formatierung ──> textmerkmale::anwenden ──> NSTextView
-//!        (rein, ohne AppKit)                  │                         ├─ NSTextStorage
-//!                                             │                         └─ NSLayoutManager
-//!                                             └─ zuruecksetzen (dieselbe Datei)
+//!        (rein, ohne AppKit)   ^              │                         ├─ NSTextStorage
+//!                              │              │                         └─ NSLayoutManager
+//!                              │              └─ zuruecksetzen (dieselbe Datei)
+//!                              │
+//!   NSView::effectiveAppearance┴─ tafel_der_erscheinung ──> Tafel
 //! ```
 //!
 //! # Ein Modul fuer zwei Verbraucher, und darum ist es eines
@@ -18,11 +20,11 @@
 //! Dieselbe Erwaegung laesst [`super::nummernspalte`] **eine** Klasse fuer beide
 //! Textflaechen sein.
 //!
-//! **Heute ruft allein [`super::editor`] hier herein.** Die Vorschau bekommt
-//! ihre Auszeichnungen mit dem Schritt, der das gerenderte Markdown in ihre
-//! Textflaeche traegt; bis dahin ist der zweite Verbraucher der Grund fuer den
-//! Schnitt und noch nicht sein Nutzer. Wer die Umsetzung hier veraendert,
-//! aendert sie deshalb schon jetzt fuer beide Flaechen.
+//! **Beide rufen hier herein**, seit die Vorschau ihre Auszeichnungen traegt:
+//! [`super::editor`] mit der Formatierung seiner Formatansicht,
+//! [`super::vorschau`] mit der des gerenderten Markdown und mit den
+//! eingefaerbten Stellen einer Quelltextdatei. Wer die Umsetzung hier
+//! veraendert, aendert sie fuer beide Flaechen.
 //!
 //! **Was hier nicht wohnt.** Welche Stellen welche Auszeichnung tragen, rechnet
 //! [`crate::hervorhebung`] ohne AppKit aus; diese Datei setzt das Ergebnis um
@@ -30,11 +32,34 @@
 //! Zeilenkaesten eine neue Nummernspalte brauchen, sagt der Rueckgabewert von
 //! [`anwenden`] dem Aufrufer, der seine Flaeche kennt.
 //!
+//! # Warum auch die Wahl der Farbtafel hier wohnt
+//!
+//! [`tafel_der_erscheinung`] beantwortet eine andere Frage als [`anwenden`]:
+//! nicht, welches Merkmal eine Stelle traegt, sondern welche der beiden Tafeln
+//! ueberhaupt gilt. Sie steht trotzdem in dieser Datei, und die Begruendung
+//! sind die beiden Orte, an denen sie **nicht** stehen kann.
+//!
+//! - **Nicht in [`crate::hervorhebung`].** Die Antwort haengt am wirksamen
+//!   Erscheinungsbild einer `NSView`, und jene Datei traegt keine Zeile
+//!   AppKit; ihr Modulkopf sagt es zu, und S16 misst es, indem es die
+//!   Kistennamen zaehlt. Sie nimmt die [`Tafel`] als Angabe herein und waehlt
+//!   sie nicht aus.
+//! - **Nicht privat in [`super::editor`].** Dort stand sie bis zum 260812, und
+//!   solange der Editor der einzige Verbraucher war, war das der richtige Ort.
+//!   Die Vorschau braucht dieselbe Antwort gleich zweimal — die Farbe eines
+//!   Verweises im gerenderten Markdown kommt aus der Tafel, und die
+//!   Einfaerbung des Quelltextes ebenso. Eine zweite Abfrage neben dieser
+//!   waere die zweite Wahrheit darueber, was "dunkel" heisst.
+//!
+//! Diese Datei ist die AppKit-Seite derselben Naht: nebenan wird mit einer
+//! Tafel gerechnet, hier steht, woher sie kommt und was aus dem Ergebnis wird.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSTextView` (`NSTextView.h:76`), `NSTextStorage` (`NSTextStorage.h:37`),
 //! `NSFont` (`NSFont.h:24`), `NSColor` (`NSColor.h:77`),
-//! `NSFontDescriptor` (`NSFontDescriptor.h:61`) und
+//! `NSFontDescriptor` (`NSFontDescriptor.h:61`), `NSView` (`NSView.h:81`),
+//! `NSArray` und
 //! `NSMutableParagraphStyle` (`NSParagraphStyle.h:112`) stehen seit macOS 10.0
 //! zur Verfuegung. `NSLayoutManager` traegt im SDK `macos(10.7)`
 //! (`NSLayoutManager.h:65`) und nicht die 10.0, die zwei andere Modulkoepfe
@@ -62,20 +87,29 @@
 //! (`NSAttributedString.h:85`, `:86`, `:76`, `:77`). Die vier Merkmalsnamen
 //! tragen `macos(10.0)` (`NSAttributedString.h:26`, `:27`, `:28`, `:34`),
 //! `NSUnderlineStyleSingle` keine Angabe (`:64`). Alle Zahlen am SDK gelesen.
+//!
+//! **Die Wahl der Farbtafel ist die juengste Beruehrung dieser Datei und liegt
+//! immer noch weit unter dem Zielsystem.** `NSAppearance` steht seit macOS 10.9
+//! (`NSAppearance.h:19`), ebenso seine Eigenschaft `name` (`:22`), die
+//! Eigenschaft `effectiveAppearance` des Protokolls `NSAppearanceCustomization`
+//! (`:90`) und der Name `NSAppearanceNameAqua` (`:63`). Seit macOS 10.14 stehen
+//! `bestMatchFromAppearancesWithNames:` (`:56`) und `NSAppearanceNameDarkAqua`
+//! (`:64`) — die beiden juengsten Angaben im Kopf dieser Datei.
 
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
-    NSColor, NSFont, NSFontAttributeName, NSFontDescriptorSymbolicTraits,
-    NSForegroundColorAttributeName, NSMutableParagraphStyle, NSParagraphStyleAttributeName,
-    NSTextView, NSUnderlineStyle, NSUnderlineStyleAttributeName,
+    NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSColor, NSFont,
+    NSFontAttributeName, NSFontDescriptorSymbolicTraits, NSForegroundColorAttributeName,
+    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSTextView, NSUnderlineStyle,
+    NSUnderlineStyleAttributeName, NSView,
 };
-use objc2_foundation::{NSDictionary, NSNumber, NSRange, NSString};
+use objc2_foundation::{NSArray, NSDictionary, NSNumber, NSRange, NSString};
 
 use crate::editormodell::Ansicht;
-use crate::hervorhebung::{Auszeichnung, Darstellungsart, Farbe, Formatierung};
+use crate::hervorhebung::{Auszeichnung, Darstellungsart, Farbe, Formatierung, Tafel};
 
 /// Um wie viele Punkte die Formatansicht ihre Grundschrift ueber die der
 /// Rohansicht hebt (C3).
@@ -301,6 +335,36 @@ pub fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> 
         feste_schrift(groesse)
     } else {
         NSFont::systemFontOfSize(groesse)
+    }
+}
+
+/// Welche Farbtafel zum wirksamen Erscheinungsbild dieser Ansicht passt (S34).
+///
+/// **Die eine Zuordnung**, und sie ist eine Zeile und keine Tabelle:
+/// `bestMatchFromAppearancesWithNames:` ist die Stelle, die AppKit fuer diese
+/// Frage vorsieht, und sie beantwortet auch die Erscheinungsbilder mit erhoehtem
+/// Kontrast, indem sie sie auf eines der beiden genannten abbildet.
+///
+/// Alles, was nicht das dunkle Erscheinungsbild ist, bekommt die helle Tafel.
+/// Die Fallunterscheidung ist damit trennscharf und vollstaendig, ohne dass KRK
+/// eine Liste der Erscheinungsbilder fuehrte, die das System kennt.
+///
+/// **Zwei Aufrufer, und warum die Frage hier steht und nicht bei ihnen**, sagt
+/// der Abschnitt "Warum auch die Wahl der Farbtafel hier wohnt" im Modulkopf.
+/// Gefragt wird nach der **Ansicht** und nicht nach der Anwendung: das
+/// Erscheinungsbild ist eine Eigenschaft der Ansichtenkette, und ein Fenster
+/// kann eines tragen, das von dem der Anwendung abweicht.
+pub fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
+    // SAFETY: Zwei Fremdsymbole von AppKit, die Namen der beiden
+    // Erscheinungsbilder. Sie werden gelesen und nicht geschrieben.
+    let (hell, dunkel) = unsafe { (NSAppearanceNameAqua, NSAppearanceNameDarkAqua) };
+    let namen = NSArray::from_slice(&[hell, dunkel]);
+    match sicht
+        .effectiveAppearance()
+        .bestMatchFromAppearancesWithNames(&namen)
+    {
+        Some(name) if *name == *dunkel => Tafel::Dunkel,
+        _ => Tafel::Hell,
     }
 }
 

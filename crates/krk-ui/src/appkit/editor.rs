@@ -370,7 +370,7 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSScrollView`, `NSTextView`, `NSLayoutManager`, `NSTextContainer`,
+//! `NSScrollView`, `NSTextView`, `NSTextContainer`,
 //! `NSTextField`, `NSFont`, `NSColor` und `NSTimer` stehen seit macOS 10.0 zur
 //! Verfuegung, seit C1 der Runde 6 ebenso `NSMenu` und `NSEvent`, die der
 //! Menuehaken entgegennimmt. Das Buendel zielt auf 15.0
@@ -381,11 +381,24 @@
 //! am SDK nachgelesen und tragen dort keine Angabe (`NSFont.h:24`,
 //! `NSColor.h:77`).
 //!
+//! **`NSLayoutManager` steht nicht in dieser Aufzaehlung, sondern seit macOS
+//! 10.7** (`NSLayoutManager.h:65`, am SDK gelesen). Bis zum 260812 fuehrte
+//! dieser Kopf ihn ohne eigene Angabe und damit als 10.0; der Datensatz dazu
+//! ist `shared/issues/260812-1558_*_zwei-modulkoepfe-nennen-fuer-nslayoutmanager-macos-10-0-das-sdk-sagt-10-7.md`.
+//! Die Zahl ist folgenlos fuer das Buendel und trotzdem zu berichtigen: die
+//! Angabe ist die einzige Gegenmassnahme dieses Projekts gegen den Absturz, den
+//! `objc2` nicht abfaengt, und eine falsche wird geglaubt.
+//!
 //! **`NSTextStorage` und `NSMutableParagraphStyle` fasst diese Datei seit dem
-//! Umzug der Merkmalsumsetzung nicht mehr an**; ihre Angaben stehen im Kopf von
-//! [`super::textmerkmale`]. Den Layoutverwalter fragt sie weiter, an zwei
+//! Umzug der Merkmalsumsetzung nicht mehr an, und seit dem 260812 ebenso wenig
+//! `NSAppearance` samt den beiden Erscheinungsnamen**; ihre Angaben stehen im
+//! Kopf von [`super::textmerkmale`], wo seither auch die Wahl der Farbtafel
+//! wohnt. Den Layoutverwalter fragt diese Datei weiter, an zwei
 //! Stellen: dem Zugriff in [`textflaeche_bauen`], der den Rueckfall auf
-//! TextKit 1 herstellt, und der Probe, die diesen Rueckfall festhaelt.
+//! TextKit 1 herstellt, und der Probe, die diesen Rueckfall festhaelt. Die
+//! Meldung ueber den Wechsel des Erscheinungsbildes nimmt sie ebenfalls weiter
+//! entgegen: `viewDidChangeEffectiveAppearance` steht seit macOS 10.14
+//! (`NSView.h:378`).
 //!
 //! **Eine Beruehrung an einem Protokoll ist juenger als ihre Klasse und liegt
 //! weit unter dem Zielsystem**: die Delegiertenmethode
@@ -430,15 +443,14 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSMenu, NSScrollView, NSTextAlignment,
     NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView, NSTextViewDelegate, NSView,
     NSWritingToolsBehavior,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSArray, NSNotification, NSNumber, NSObject, NSObjectProtocol, NSPoint,
-    NSRange, NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer,
-    NSUInteger, NSUndoManager, ns_string,
+    MainThreadMarker, NSNotification, NSNumber, NSObject, NSObjectProtocol, NSPoint, NSRange,
+    NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
+    NSUndoManager, ns_string,
 };
 
 #[cfg(test)]
@@ -1485,7 +1497,7 @@ impl Editorbereich {
         ));
         bereich.addSubview(&kopf);
 
-        let tafel = tafel_der_erscheinung(&bereich);
+        let tafel = textmerkmale::tafel_der_erscheinung(&bereich);
         let this = Self::alloc(mtm).set_ivars(EditorIvars {
             bereich,
             kopf,
@@ -2997,7 +3009,7 @@ impl Editorbereich {
     /// [`Self::einfaerbung_anfordern`] und nicht diese Stelle; die Antwort
     /// steht dort einmal.
     fn erscheinung_nachziehen(&self) {
-        let neue = tafel_der_erscheinung(&self.ivars().bereich);
+        let neue = textmerkmale::tafel_der_erscheinung(&self.ivars().bereich);
         if neue == self.ivars().tafel.get() {
             return;
         }
@@ -3016,30 +3028,6 @@ impl Editorbereich {
         if let Some(rolle) = self.ivars().text.enclosingScrollView() {
             nummernspalte::spalte_neu_zeichnen(&rolle);
         }
-    }
-}
-
-/// Welche Farbtafel zum wirksamen Erscheinungsbild dieser Ansicht passt (S34).
-///
-/// **Die eine Zuordnung**, und sie ist eine Zeile und keine Tabelle:
-/// `bestMatchFromAppearancesWithNames:` ist die Stelle, die AppKit fuer diese
-/// Frage vorsieht, und sie beantwortet auch die Erscheinungsbilder mit erhoehtem
-/// Kontrast, indem sie sie auf eines der beiden genannten abbildet.
-///
-/// Alles, was nicht das dunkle Erscheinungsbild ist, bekommt die helle Tafel.
-/// Die Fallunterscheidung ist damit trennscharf und vollstaendig, ohne dass KRK
-/// eine Liste der Erscheinungsbilder fuehrte, die das System kennt.
-fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
-    // SAFETY: Zwei Fremdsymbole von AppKit, die Namen der beiden
-    // Erscheinungsbilder. Sie werden gelesen und nicht geschrieben.
-    let (hell, dunkel) = unsafe { (NSAppearanceNameAqua, NSAppearanceNameDarkAqua) };
-    let namen = NSArray::from_slice(&[hell, dunkel]);
-    match sicht
-        .effectiveAppearance()
-        .bestMatchFromAppearancesWithNames(&namen)
-    {
-        Some(name) if *name == *dunkel => Tafel::Dunkel,
-        _ => Tafel::Hell,
     }
 }
 

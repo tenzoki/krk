@@ -403,7 +403,7 @@ Schritt 1 hängt an nichts, Schritt 7 hängt an nichts, Schritt 10 hängt an nic
    - Abnahme: `make check`, Exit 0, samt `cargo tree` als Beleg, dass `Cargo.lock` weiterhin kein `cc` und außer `windows-sys` kein `-sys`-Paket führt. Kein Vordergrund.
    - Dependencies: Schritt 7 (`textmerkmale.rs` muss die zwei neuen Auszeichnungen aufnehmen können, ohne dass `editor.rs` ein zweites Mal aufgemacht wird).
 
-9. **Die Vorschau zeigt die Auszeichnungen und färbt Quelltext nach**
+9. [DONE] **Die Vorschau zeigt die Auszeichnungen und färbt Quelltext nach**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/vorschau.rs`
    - Changes:

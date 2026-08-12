@@ -40,9 +40,58 @@
 //! Entscheidung darueber, was ein Tab zeigt.
 //!
 //! **Wie eine Meldung des Arbeitsfadens den Hauptfaden erreicht.** Wie beim
-//! Dateifenster: ein Zeitgeber auf dem Hauptfaden raeumt die Kanaele leer,
-//! solange ein Tab laedt, und endet, sobald keiner mehr laedt. Derselbe Takt
-//! wie der Einzugstakt aus [`super::tabelle`].
+//! Dateifenster: ein Zeitgeber auf dem Hauptfaden raeumt die Kanaele leer und
+//! endet, sobald keiner von ihnen mehr etwas zu liefern hat. Derselbe Takt
+//! wie der Einzugstakt aus [`super::tabelle`]. Seit C4 der Runde 6 sind es
+//! **zwei** Kanaele — das Laden und die Einfaerbung — und weiterhin **ein**
+//! Zeitgeber.
+//!
+//! # Der Einfaerbungsvorgang wohnt hier und nicht im Modell
+//!
+//! ```text
+//!   Arbeitsfaden krk-vorschau        │  Arbeitsfaden krk-einfaerbung
+//!   lesen, Markdown rendern          │  syntect, 0,3 MB/s (gemessen)
+//!            │                       │           │
+//!            v                       │           v
+//!   Vorschaumodell::laedt_noch  ──> Text steht ──> Farben ziehen nach
+//!            ^                       │
+//!            └── Endbedingung L7 ────┘
+//! ```
+//!
+//! **[`Vorschaumodell::laedt_noch`] weiss von der Einfaerbung nichts, und das
+//! ist die tragende Zusage dieses Schnitts.** Es beantwortet weiter allein
+//! "wartet ein Tab auf seinen Text", und daran haengt die Endbedingung von
+//! **L7**, einer der zehn Zeitzusagen aus C8 der Runde 1. Ein
+//! Einfaerbungsvorgang im Modell liesse L7 auf `syntect` warten und machte aus
+//! rund 100 ms bei 1 MB ueber drei Sekunden. Deshalb halten
+//! [`VorschaufensterIvars::einfaerbung`] und
+//! [`VorschaufensterIvars::einfaerbungsstand`] den Vorgang hier, in der
+//! Ansicht, und `crate::vorschaumodell` nennt weder das eine noch das andere.
+//!
+//! **Der Text erscheint sofort, die Farben ziehen sichtbar nach** (C4, elftes
+//! Kriterium der Runde 6). Das ist keine Einschraenkung, sondern die Form, in
+//! der die Zusage einzuhalten ist.
+//!
+//! **Ein Verweis bekommt Farbe und Unterstreichung, aber keine Klickwirkung
+//! und keinen Zeigefinger** (C4, siebtes Kriterium). Beides kaeme von
+//! `NSLinkAttributeName`, und dieses Merkmal wird ausdruecklich **nicht**
+//! gesetzt: welche Quellen eine Adresse setzen duerfen, ist die erste offene
+//! Frage des Circles `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`,
+//! und sie hier nebenbei zu beantworten naehme jenem Circle seine
+//! Klaerungsrunde. Farbe und Unterstreichung kommen als voruebergehende
+//! Merkmale des Layoutverwalters, und die tragen keine Wirkung.
+//!
+//! # Warum die Vorschau beide Werte von `Ansicht` benutzt
+//!
+//! Sie kennt keinen Ansichtswechsel — es gibt keinen Befehl dafuer und keine
+//! Wahl des Nutzers. Sie uebergibt [`Ansicht`] trotzdem in beiden Werten, und
+//! zwar als Aussage ueber den **Inhalt**: was dasteht, wie es gelesen wurde,
+//! bekommt die Besetzung der Rohansicht ([`Vorschaufenster::text_zeigen`]);
+//! was ausgezeichnet oder eingefaerbt wird, die der Formatansicht
+//! ([`Vorschaufenster::formatierung_anwenden`]). Fuer Quelltext sind beide
+//! dieselbe Schrift, weil [`textmerkmale::grundschrift`] dort nicht
+//! unterscheidet — deshalb springt die Anzeige nicht, wenn die Farben
+//! nachziehen.
 //!
 //! **Die Inhaltsflaeche nimmt den Eingabefokus.** Ein Klick in den Inhalt
 //! macht sie zum Ersthelfer, und damit bedienen die vier Tabbefehle aus C1 die
@@ -68,7 +117,7 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSView`, `NSScrollView`, `NSTextView`, `NSImageView`, `NSImage`, `NSFont`,
+//! `NSView`, `NSScrollView`, `NSTextView`, `NSImageView`, `NSImage`,
 //! `NSEvent`, `NSTimer`, `NSRunLoop`, `NSDate`, `NSDateFormatter`, `NSData`
 //! und `NSString` stehen seit macOS 10.0 zur Verfuegung, seit C1 der Runde 6
 //! ebenso `NSMenu`, die Eigenschaft `menu` von `NSResponder`
@@ -79,13 +128,25 @@
 //! als seine Nachbarn und steht seit 10.8 (`NSByteCountFormatter.h:38`). Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`).
 //!
-//! **Drei Beruehrungen tragen daneben eine eigene Angabe**:
+//! **Textspeicher und Layoutverwalter fasst diese Datei nicht selbst an.** Sie
+//! kommen ueber [`super::textmerkmale`], und die Angaben stehen im Kopf jener
+//! Datei; genannt seien sie hier trotzdem, weil die Beruehrung ueber den
+//! Aufruf von [`textmerkmale::anwenden`], [`textmerkmale::zuruecksetzen`] und
+//! [`textmerkmale::grundschrift`] wirklich stattfindet: `NSFont` steht seit
+//! macOS 10.0 (`NSFont.h:24`), `NSTextStorage` seit macOS 10.0
+//! (`NSTextStorage.h:37`), **`NSLayoutManager` seit macOS 10.7**
+//! (`NSLayoutManager.h:65`, am SDK gelesen — nicht seit 10.0, wie zwei aeltere
+//! Modulkoepfe dieses Verzeichnisses es nannten).
+//!
+//! **Vier Beruehrungen tragen daneben eine eigene Angabe**:
 //! `NSRunLoopCommonModes` steht seit 10.5 (`NSRunLoop.h:14`) und die
 //! Delegiertenmethode `textView:menu:forEvent:atIndex:` ebenfalls seit 10.5
 //! (`NSTextView.h:628`); `NSMenu`s `removeAllItems` steht seit 10.6
-//! (`NSMenu.h:112`). Alles uebrige —
-//! `setRulersVisible:`, `setImageScaling:`, `initWithData:`,
-//! `userFixedPitchFontOfSize:`, `smallSystemFontSize`, `addTimer:forMode:`,
+//! (`NSMenu.h:112`), und `viewDidChangeEffectiveAppearance` — die Meldung, an
+//! der seit C4 der Runde 6 die Farbtafel haengt — seit 10.14
+//! (`NSView.h:378`). Alles uebrige —
+//! `setRulersVisible:`, `setImageScaling:`, `initWithData:`, `setFont:`,
+//! `addTimer:forMode:`,
 //! `dateWithTimeIntervalSince1970:` und der fuenfteilige Zeitgeberaufruf
 //! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im Kopf
 //! des Systems keine Verfuegbarkeitsangabe und steht damit seit 10.0; ebenso
@@ -100,14 +161,14 @@
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
 //! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 
-use objc2::rc::Retained;
+use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSEvent, NSFont, NSImage, NSImageScaling, NSImageView, NSMenu,
+    NSAutoresizingMaskOptions, NSEvent, NSImage, NSImageScaling, NSImageView, NSMenu,
     NSMenuDelegate, NSScrollView, NSTextDelegate, NSTextView, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
@@ -119,13 +180,17 @@ use objc2_foundation::{
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
-use crate::hervorhebung::Tafel;
+use crate::editormodell::{Ansicht, Dateityp};
+use crate::hervorhebung::{
+    self, Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
+};
 use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
 
-use super::nummernspalte::Nummernspalte;
+use super::nummernspalte::{self, Nummernspalte};
 use super::tabelle::typ_beschriften;
 use super::tableiste::{self, Tableiste};
 use super::teilen;
+use super::textmerkmale;
 
 /// Die Groesse, mit der die Ansichten entstehen, bevor die Aufteilung sie
 /// auslegt.
@@ -141,18 +206,32 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 const LEERTEXT: &str = "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.";
 
 define_class!(
-    /// Die Flaeche unter der Tableiste: sie nimmt Klick und Fokus entgegen.
+    /// Die Flaeche unter der Tableiste: sie nimmt Klick und Fokus entgegen —
+    /// und die Meldung ueber den Wechsel des Erscheinungsbildes (C4 der
+    /// Runde 6).
     ///
     /// Ein eigener Ersthelfer, damit [`Fokus::Vorschau`](crate::kommandos::fokus::Fokus)
     /// ueberhaupt eintreten kann: die Textanzeige darin ist nicht auswaehlbar
     /// und lehnt den Fokus ab, die Bildanzeige ebenso. Ihr Klick faellt durch
     /// die Antwortkette hierher.
+    ///
+    /// **Die zweite Aufgabe kam mit der Einfaerbung.**
+    /// `viewDidChangeEffectiveAppearance` ist die eine Stelle, die AppKit fuer
+    /// die Frage "hat das System auf Dunkel umgestellt" vorsieht, und sie ist
+    /// eine Methode einer Ansicht; das [`Vorschaufenster`] ist keine, sondern
+    /// ein `NSObject`. Genommen wird diese Flaeche und keine zweite daneben:
+    /// sie ist ohnehin da, und das wirksame Erscheinungsbild ist fuer jede
+    /// Ansicht derselben Kette dasselbe. Dieselbe Bauart traegt
+    /// [`Editorsicht`](super::editor) im Editor.
+    ///
+    /// Die Rueckverbindung ist **schwach**, sonst schloesse sich der Ring
+    /// Vorschaufenster → Flaeche → Rueckverweis → Vorschaufenster.
     // SAFETY:
     // - Die Oberklasse NSView stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
     #[unsafe(super = NSView)]
     #[thread_kind = MainThreadOnly]
-    #[ivars = ()]
+    #[ivars = RefCell<Option<Weak<Vorschaufenster>>>]
     pub struct Inhaltsflaeche;
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
@@ -174,16 +253,36 @@ define_class!(
                 fenster.makeFirstResponder(Some(self));
             }
         }
+
+        /// Das System hat auf Hell oder Dunkel umgestellt (C4 der Runde 6).
+        // SAFETY: Die Signatur entspricht der von NSView.
+        #[unsafe(method(viewDidChangeEffectiveAppearance))]
+        fn erscheinung_gewechselt(&self) {
+            // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht ohne
+            // Argument und ohne Rueckgabe. Sie zuerst, weil AppKit hinter
+            // dieser Methode die Erscheinung der Unteransichten nachzieht und
+            // KRK danach eine bereits umgestellte Flaeche vorfindet.
+            let _: () = unsafe { msg_send![super(self), viewDidChangeEffectiveAppearance] };
+            let vorschau = self.ivars().borrow().as_ref().and_then(Weak::load);
+            if let Some(vorschau) = vorschau {
+                vorschau.erscheinung_nachziehen();
+            }
+        }
     }
 );
 
 impl Inhaltsflaeche {
-    /// Eine Flaeche mit dem genannten Rahmen.
+    /// Eine Flaeche mit dem genannten Rahmen, noch ohne Rueckverweis.
     fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(());
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
         // SAFETY: `initWithFrame:` von NSView hat die hier angenommene
         // Signatur.
         unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Traegt den Rueckverweis nach, sobald es das Vorschaufenster gibt.
+    fn ziel_setzen(&self, vorschau: &Vorschaufenster) {
+        *self.ivars().borrow_mut() = Some(Weak::from_retained(&vorschau.retain()));
     }
 }
 
@@ -204,11 +303,62 @@ pub struct VorschaufensterIvars {
     tableiste: RefCell<Option<Tableiste>>,
     /// Die Tabs mit ihrem Inhalt und dem Halteverhalten.
     modell: RefCell<Vorschaumodell>,
-    /// Der Zeitgeber, der die Meldungen der Arbeitsfaeden abholt.
+    /// Der Zeitgeber, der die Meldungen **beider** Arbeitsfaeden abholt: die
+    /// des Ladens aus dem Modell und die der Einfaerbung.
     ///
     /// Er haelt das Objekt als Ziel fest, und das Objekt haelt ihn; der Ring
-    /// bricht mit `invalidate`, wie beim Einzugstakt des Dateifensters.
+    /// bricht mit `invalidate`, wie beim Einzugstakt des Dateifensters. Ein
+    /// zweiter Zeitgeber neben ihm entsteht nicht: beide Kanaele werden im
+    /// selben Takt gefragt, und geendet wird, wenn keiner von beiden mehr
+    /// etwas zu liefern hat.
     takt: RefCell<Option<Retained<NSTimer>>>,
+    /// Das laufende Einfaerben des angezeigten Quelltextes (C4 der Runde 6).
+    ///
+    /// **Er wohnt hier und nicht im [`Vorschaumodell`]**, und daran haengt die
+    /// Endbedingung von L7; der Modulkopf schreibt es aus.
+    ///
+    /// **Hoechstens einer**: die Vorschau zeigt einen aktiven Tab, und ein
+    /// zweiter Lauf faerbte denselben Text ein zweites Mal ein. Ein Tabwechsel
+    /// oder ein neuer Inhalt waehrend eines Laufs startet deshalb keinen
+    /// zweiten, sondern setzt [`Self::einfaerbung_erneut`]; was der
+    /// ueberholte Lauf liefert, wird verworfen.
+    einfaerbung: RefCell<Option<Einfaerbungsvorgang>>,
+    /// Der aufgehobene Stand des letzten fertigen Einfaerbungslaufs.
+    ///
+    /// Die Vorlage, aus der [`crate::hervorhebung::fortschreiben`] den naechsten
+    /// Lauf fortschreibt. Waehrend ein Lauf laeuft, steht hier `None`: die
+    /// Vorlage ist dann im Arbeitsfaden und kommt mit dem Ergebnis zurueck.
+    ///
+    /// **Er wird ueber den Tabwechsel hinweg gehalten und nicht geleert.** Ein
+    /// Stand, der zu einem anderen Text gehoert, ist keine falsche Vorlage,
+    /// sondern nur eine schlechtere: `fortschreiben` vergleicht Schluessel und
+    /// Text und rechnet dann von vorn. Zeigt der Nutzer denselben Tab wieder
+    /// an, ist der Text derselbe, und der Lauf kostet nichts.
+    einfaerbungsstand: RefCell<Option<Einfaerbungsstand>>,
+    /// Ob der laufende Lauf ueberholt ist und nach seiner Rueckkehr sofort ein
+    /// neuer zu starten ist.
+    ///
+    /// **Das ist die Schranke gegen den Faedenstau**, und sie ist derselbe
+    /// Handgriff wie im Editor. Wer mit den Pfeiltasten durch einen Ordner
+    /// geht, loest je Eintrag eine Anfrage aus; ohne die Marke stuende je
+    /// Anfrage ein Faden, und ein fallengelassener Faden hoert nicht auf zu
+    /// rechnen — er rechnet zu Ende und scheitert erst am `send`. Bei
+    /// Dateien nahe der Textgrenze sind das Sekunden Rechenzeit je Schritt,
+    /// und sie liefen gegen das Lesen des naechsten Eintrags, also gegen L7.
+    ///
+    /// Mit der Marke lebt zu jedem Zeitpunkt hoechstens ein Faden, und
+    /// eingefaerbt wird der letzte Stand statt jedes Zwischenstandes. Sie
+    /// traegt beide Anlaesse — einen neuen Inhalt und eine gewechselte
+    /// Farbtafel —, denn beide verlangen dasselbe.
+    einfaerbung_erneut: Cell<bool>,
+    /// Welche der beiden Farbtafeln gerade gilt.
+    ///
+    /// Sie geht an zwei Stellen ein: in das Rendern von Markdown auf dem
+    /// Arbeitsfaden des Modells (die Farbe eines Verweises) und in jeden
+    /// Einfaerbungslauf. Gewaehlt wird sie von
+    /// [`textmerkmale::tafel_der_erscheinung`], der einen Zuordnung im
+    /// Programm; nachgezogen wird sie von [`Vorschaufenster::erscheinung_nachziehen`].
+    tafel: Cell<Tafel>,
     /// Der Formatierer fuer das Aenderungsdatum der Metadaten.
     datumsformat: Retained<NSDateFormatter>,
     /// Der Formatierer fuer die Groesse der Metadaten.
@@ -339,6 +489,10 @@ impl Vorschaufenster {
         let groessenformat = NSByteCountFormatter::new();
         groessenformat.setCountStyle(NSByteCountFormatterCountStyle::File);
 
+        // Die Tafel steht vor dem ersten Anzeigen fest: schon der erste
+        // gerenderte Markdown-Text faerbt seine Verweise mit ihr.
+        let tafel = textmerkmale::tafel_der_erscheinung(&bereich);
+
         let this = Self::alloc(mtm).set_ivars(VorschaufensterIvars {
             bereich,
             inhaltsflaeche,
@@ -348,6 +502,10 @@ impl Vorschaufenster {
             tableiste: RefCell::new(None),
             modell: RefCell::new(Vorschaumodell::neu()),
             takt: RefCell::new(None),
+            einfaerbung: RefCell::new(None),
+            einfaerbungsstand: RefCell::new(None),
+            einfaerbung_erneut: Cell::new(false),
+            tafel: Cell::new(tafel),
             datumsformat,
             groessenformat,
         });
@@ -370,6 +528,12 @@ impl Vorschaufenster {
         ));
         this.ivars().bereich.addSubview(&leistensicht);
         *this.ivars().tableiste.borrow_mut() = Some(leiste);
+
+        // Der Rueckverweis fuer die Meldung ueber den Wechsel des
+        // Erscheinungsbildes, aus demselben Grund an dieser Stelle wie der
+        // Rueckruf der Tableiste darueber: es gibt das Objekt erst ab dem
+        // `init`.
+        this.ivars().inhaltsflaeche.ziel_setzen(&this);
 
         // Das Kontextmenue aus C1 der Runde 6, an allen drei Ansichten. Es
         // steht hier und nicht in `bauen`s erster Haelfte, weil es das Objekt
@@ -426,16 +590,22 @@ impl Vorschaufenster {
     /// und der Zeitgeber holt die Meldung ab.
     pub fn datei_anzeigen(&self, pfad: &Path) {
         // Die Tafel geht allein in die Farbe eines Verweises im gerenderten
-        // Markdown. Hier steht die Vorgabe und **keine zweite Abfrage des
-        // Erscheinungsbildes** neben der in [`super::editor`]: solange die
-        // Vorschau ihre Auszeichnungen nicht in die Flaeche traegt, ist keine
-        // dieser Farben zu sehen. Der Schritt, der sie traegt, zieht auch die
-        // Tafel des Erscheinungsbildes nach.
+        // Markdown; das Rendern laeuft auf dem Arbeitsfaden des Modells und
+        // braucht sie deshalb jetzt. Gefragt wird nicht hier, sondern beim
+        // Aufbau und bei jedem Wechsel des Erscheinungsbildes — die eine
+        // Zuordnung dazu steht in [`textmerkmale::tafel_der_erscheinung`].
         self.ivars()
             .modell
             .borrow_mut()
-            .datei_anzeigen(pfad, Tafel::default());
-        self.anzeigen();
+            .datei_anzeigen(pfad, self.ivars().tafel.get());
+        // **Nur die Leiste und nicht die ganze Anzeige.** Geaendert hat sich
+        // allein die Beschriftung des Tabs; Inhalt und Pfad wechseln erst,
+        // wenn der Arbeitsfaden geliefert hat, und bis dahin steht der
+        // bisherige Text da. Ein voller Durchgang durch [`Self::anzeigen`]
+        // setzte ihn ein zweites Mal, naehme ihm dabei seine Farben und
+        // forderte sie sofort wieder an — bei jedem Schritt durch eine
+        // Dateiliste ein sichtbares Flackern und ein Faden fuer nichts.
+        self.tableiste_nachziehen();
         self.takt_starten();
     }
 
@@ -521,14 +691,26 @@ impl Vorschaufenster {
         }
     }
 
-    /// Holt die Meldungen der Arbeitsfaeden ab.
+    /// Holt die Meldungen **beider** Arbeitsfaeden ab.
+    ///
+    /// Erst das Laden, dann die Einfaerbung, und die Reihenfolge ist keine
+    /// Wahl: ein eben eingezogener Inhalt geht durch [`Self::anzeigen`] und
+    /// vermerkt dabei, dass ein laufender Einfaerbungsvorgang ueberholt ist.
+    /// Andersherum truege die Flaeche fuer einen Augenblick die Farben des
+    /// vorigen Textes.
+    ///
+    /// Der Takt endet, wenn keiner der beiden Kanaele mehr etwas zu liefern
+    /// hat. Eine Einfaerbung haelt ihn also am Leben, ohne dass
+    /// [`Vorschaumodell::laedt_noch`] davon etwas wuesste — genau die
+    /// Trennung, an der die Endbedingung von L7 haengt.
     fn einziehen(&self) {
         let aktiver_geaendert = self.ivars().modell.borrow_mut().einziehen();
         if aktiver_geaendert {
             self.anzeigen();
         }
+        self.einfaerbung_einziehen();
         let laedt_noch = self.ivars().modell.borrow().laedt_noch();
-        if !laedt_noch {
+        if !laedt_noch && self.ivars().einfaerbung.borrow().is_none() {
             self.takt_beenden();
         }
     }
@@ -567,10 +749,13 @@ impl Vorschaufenster {
         match inhalt {
             Inhalt::Leer => self.text_zeigen(LEERTEXT),
             Inhalt::Text(text) => self.text_zeigen(&text),
-            // Der gerenderte Text steht; seine Auszeichnungen folgen mit dem
-            // naechsten Schritt ueber `super::textmerkmale`, der einen
-            // Umsetzung, die auch der Editor benutzt.
-            Inhalt::Markdown(gerendert) => self.text_zeigen(&gerendert.text),
+            // Der gerenderte Text und seine Auszeichnungen in einem Zug: die
+            // Umsetzung ist die des Editors, und eine zweite daneben entsteht
+            // nicht (C4, erstes und zweites Kriterium der Runde 6).
+            Inhalt::Markdown(gerendert) => {
+                self.text_zeigen(&gerendert.text);
+                self.formatierung_anwenden(&gerendert.formatierung);
+            }
             Inhalt::Hinweis(hinweis) => self.text_zeigen(&hinweis),
             Inhalt::Metadaten(metadaten) => {
                 let zeilen = self.metadaten_text(&metadaten);
@@ -578,6 +763,11 @@ impl Vorschaufenster {
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
         }
+
+        // Erst nachdem der Text steht: der Vorgang faerbt genau diese Zeichen
+        // ein, und was hier eben gesetzt worden ist, hat den Text davor
+        // ersetzt.
+        self.einfaerbung_nachfuehren();
 
         let leiste = self.ivars().tableiste.borrow();
         if let Some(leiste) = leiste.as_ref() {
@@ -598,11 +788,177 @@ impl Vorschaufenster {
     }
 
     /// Stellt Text in die Textanzeige und blendet die Bildanzeige aus.
+    ///
+    /// **Und nimmt die Merkmale des vorigen Inhalts wieder heraus.** Was hier
+    /// hereinkommt, steht so da, wie es gelesen wurde; ohne die Ruecknahme
+    /// truege ein Hinweis nach einer Markdown-Datei deren Ueberschriften. Die
+    /// Ruecknahme ist [`textmerkmale::zuruecksetzen`], die eine Stelle im
+    /// Programm, die das tut — ein zweites Leeren daneben waere die zweite
+    /// Meinung darueber, was zurueckzunehmen ist.
+    ///
+    /// Die Besetzung ist die der **Rohansicht**, und der Grund steht im
+    /// Modulkopf unter "Warum die Vorschau beide Werte von `Ansicht`
+    /// benutzt". Die [`Darstellungsart`] geht dabei in nichts ein: die
+    /// Rohansicht bekommt ihre feste Schrift unabhaengig von ihr.
     fn text_zeigen(&self, text: &str) {
         let ivars = self.ivars();
         ivars.text.setString(&NSString::from_str(text));
+        textmerkmale::zuruecksetzen(&ivars.text, Ansicht::Roh, Darstellungsart::EinfacherText);
         ivars.textrolle.setHidden(false);
         ivars.bild.setHidden(true);
+    }
+
+    /// Traegt eine fertige Formatierung in die Textanzeige (C4 der Runde 6).
+    ///
+    /// **Dieselbe Umsetzung wie im Editor**, und der Aufruf ist die ganze
+    /// Beteiligung dieser Datei daran: welche Stelle welches Merkmal traegt,
+    /// rechnet [`crate::hervorhebung`] und [`crate::markdown`] aus, und
+    /// [`textmerkmale::anwenden`] setzt es. Zwei Wege dorthin fuehren hier
+    /// zusammen — das gerenderte Markdown und die eingefaerbte Quelltextdatei.
+    ///
+    /// **Die Darstellungsart kommt aus der Lieferung und wird nicht ein
+    /// zweites Mal gefragt.** Eine [`Formatierung`] nennt die Besetzung, aus
+    /// der sie entstanden ist; eine zweite Frage an
+    /// [`crate::hervorhebung::art`] koennte anders
+    /// ausfallen als die, die diese Listen erzeugt hat.
+    ///
+    /// **Nachgezogen wird nur, wenn gesetzt wurde**, wie im Editor: hat der
+    /// Guertel in [`textmerkmale::anwenden`] die Lieferung abgewiesen, ist an
+    /// der Flaeche nichts geschehen. Die Nummernspalte steht in der Vorschau
+    /// allein neben dem rohen Text einer Datei — also genau im
+    /// Quelltextfall —, und die Auszeichnungen aendern die Zeilenkaesten.
+    fn formatierung_anwenden(&self, formatierung: &Formatierung) {
+        if textmerkmale::anwenden(
+            &self.ivars().text,
+            formatierung,
+            formatierung.art,
+            Ansicht::Format,
+        ) {
+            nummernspalte::spalte_neu_zeichnen(&self.ivars().textrolle);
+        }
+    }
+
+    /// Fordert die Einfaerbung des Textes an, der jetzt dasteht (C4 der
+    /// Runde 6).
+    ///
+    /// **Die eine Stelle, die einen Vorgang startet**, und sie hat zwei
+    /// Anlaesse: ein neuer Inhalt in der Flaeche und ein gewechseltes
+    /// Erscheinungsbild. Beide verlangen dasselbe, naemlich den Lauf ueber den
+    /// Text, der jetzt dasteht. Ob ueberhaupt anzufordern ist, beantwortet
+    /// [`einzufaerben`] und sonst nichts.
+    ///
+    /// **Hoechstens ein Faden zur Zeit**, dieselbe Bauart wie im Editor und
+    /// ohne Anfragenummer. Laeuft schon einer, wird kein zweiter gestartet,
+    /// sondern nur vermerkt, dass sein Ergebnis ueberholt sein wird; er wird
+    /// nach seiner Rueckkehr verworfen und sofort wiederholt. Der Plan sagt an
+    /// dieser Stelle "laesst einen laufenden Vorgang fallen"; fallengelassen
+    /// wird hier das **Ergebnis** und nicht der Empfaenger, und der Grund
+    /// steht an [`VorschaufensterIvars::einfaerbung_erneut`]: ein
+    /// fallengelassener Faden hoert nicht auf zu rechnen.
+    fn einfaerbung_nachfuehren(&self) {
+        if self.ivars().einfaerbung.borrow().is_some() {
+            self.ivars().einfaerbung_erneut.set(true);
+            return;
+        }
+        let angaben = {
+            let modell = self.ivars().modell.borrow();
+            let pfad = modell.aktiver_pfad();
+            einzufaerben(modell.aktiver_inhalt(), pfad.as_deref())
+                .map(|(text, pfad)| (text.to_owned(), pfad.to_path_buf()))
+        };
+        let Some((stand, pfad)) = angaben else {
+            // Nichts einzufaerben: ein etwaiger Vermerk gehoerte zu einem
+            // Inhalt, den die Flaeche nicht mehr zeigt.
+            self.ivars().einfaerbung_erneut.set(false);
+            return;
+        };
+        // Die Vorlage wandert in den Lauf hinein und kommt mit dem Ergebnis
+        // zurueck; waehrenddessen haelt sie niemand hier.
+        let vorlage = self.ivars().einfaerbungsstand.borrow_mut().take();
+        let typ = Dateityp::von_pfad(&pfad);
+        let vorgang =
+            Einfaerbungsvorgang::starten(vorlage, stand, Some(pfad), typ, self.ivars().tafel.get());
+        *self.ivars().einfaerbung.borrow_mut() = Some(vorgang);
+        self.ivars().einfaerbung_erneut.set(false);
+        self.takt_starten();
+    }
+
+    /// Holt die Meldung des Einfaerbungsfadens ab (C4 der Runde 6).
+    ///
+    /// **Ein ueberholtes Ergebnis wird nicht angewendet, sondern verworfen und
+    /// sofort neu angefordert.** Es waere nicht nur veraltet: seine Bereiche
+    /// zeigten in einen Text, der inzwischen kuerzer sein kann, und ein
+    /// `NSRange` hinter dem Text beantwortet AppKit mit einer
+    /// Objective-C-Ausnahme, die in Rust nicht zu fangen ist. Der Guertel in
+    /// [`textmerkmale::anwenden`] faengt denselben Fall ein zweites Mal ab.
+    ///
+    /// **Verworfen wird allein die Formatierung, nicht der aufgehobene
+    /// Stand.** Der Stand beschreibt einen Text, der wirklich gerechnet worden
+    /// ist, und ist damit auch fuer den ueberholten Fall die bessere Vorlage
+    /// als keine: der naechste Lauf schreibt von ihm fort oder erkennt am
+    /// Schluessel, dass er von vorn rechnen muss.
+    ///
+    /// **Angewendet wird aus einer eigenen Bindung und nicht aus der Zelle
+    /// heraus**, wie bei jeder anderen Ausleihe in dieser Datei: der Weg
+    /// fuehrt in das Textsystem, und ein Rueckweg von dort naehme eine zweite
+    /// Ausleihe derselben Zelle.
+    fn einfaerbung_einziehen(&self) {
+        let abholung = {
+            let vorgang = self.ivars().einfaerbung.borrow();
+            match vorgang.as_ref() {
+                Some(vorgang) => vorgang.abholen(),
+                None => return,
+            }
+        };
+        match abholung {
+            Abholung::Laeuft => {}
+            // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
+            // Sinn mehr. Mit ihm faellt die Vorlage, und der naechste Lauf
+            // rechnet von vorn: langsamer, aber nicht falsch.
+            Abholung::Weggefallen => {
+                *self.ivars().einfaerbung.borrow_mut() = None;
+                self.ivars().einfaerbung_erneut.set(false);
+            }
+            Abholung::Fertig(stand) => {
+                *self.ivars().einfaerbung.borrow_mut() = None;
+                let stand = *stand;
+                let ueberholt = self.ivars().einfaerbung_erneut.replace(false);
+                if !ueberholt {
+                    self.formatierung_anwenden(stand.formatierung());
+                }
+                *self.ivars().einfaerbungsstand.borrow_mut() = Some(stand);
+                if ueberholt {
+                    self.einfaerbung_nachfuehren();
+                }
+            }
+        }
+    }
+
+    /// Zieht die Farbtafel auf das gewechselte Erscheinungsbild nach (C4 der
+    /// Runde 6).
+    ///
+    /// Gerufen von [`Inhaltsflaeche`], der einen Stelle, an der AppKit den
+    /// Wechsel meldet. Hat sich die Tafel nicht geaendert, geschieht nichts:
+    /// die Meldung kommt auch bei Wechseln, die Hell und Dunkel nicht
+    /// betreffen.
+    ///
+    /// **Gerendertes Markdown zieht damit noch nicht nach.** Die Farbe eines
+    /// Verweises entsteht beim Rendern auf dem Arbeitsfaden des Modells und
+    /// steht im Inhalt des Tabs; sie neu zu setzen hiesse, die Datei ein
+    /// zweites Mal zu lesen, und zwar in jedem Tab. Ein Markdown-Tab traegt
+    /// bis zu seiner naechsten Anzeige also die Verweisfarbe der Tafel, mit
+    /// der er gerendert wurde. Alles Uebrige an ihm — Schrift, Einzug,
+    /// Fliesstextfarbe — kommt aus dem System und wechselt mit.
+    fn erscheinung_nachziehen(&self) {
+        let neue = textmerkmale::tafel_der_erscheinung(&self.ivars().inhaltsflaeche);
+        if neue == self.ivars().tafel.get() {
+            return;
+        }
+        self.ivars().tafel.set(neue);
+        // Der aufgehobene Stand traegt die alte Tafel in seinem Schluessel;
+        // `fortschreiben` erkennt das und rechnet von vorn. Ihn hier
+        // wegzuwerfen waere dieselbe Entscheidung an einer zweiten Stelle.
+        self.einfaerbung_nachfuehren();
     }
 
     /// Stellt ein Bild in die Bildanzeige, oder faellt auf die Metadaten
@@ -693,13 +1049,62 @@ impl Vorschaufenster {
     }
 }
 
+/// Was der aktive Tab dem Einfaerbungsfaden gibt; `None`, wenn nichts
+/// einzufaerben ist (C4, zehntes Kriterium der Runde 6).
+///
+/// **Die eine Bedingung, und sie ist genau [`Darstellungsart::Code`].** Fuer
+/// [`Darstellungsart::EinfacherText`] gaebe es nichts einzufaerben — die Kiste
+/// kennt keine Sprache dazu und lieferte einen Lauf ohne ein einziges Stueck.
+/// Fuer [`Darstellungsart::Markdown`] ist der Weg ein anderer: dort steht die
+/// Formatierung schon im [`Inhalt`], gerechnet auf dem Arbeitsfaden des
+/// Modells.
+///
+/// **Ohne Pfad wird nicht eingefaerbt.** [`Inhalt::Text`] traegt auch den Text
+/// aus der Zwischenablage, und an dem haengt keine Endung, an der eine Sprache
+/// zu erkennen waere. Dieselbe Unterscheidung, die
+/// [`Vorschaumodell::zeigt_dateitext`] fuer die Nummernspalte trifft.
+///
+/// **Eine reine Fallunterscheidung ohne Auffangzweig**, wie die uebrigen dieser
+/// Art im Programm: ein siebter [`Inhalt`] haelt den Bau an und erzwingt die
+/// Antwort auf die Frage, ob er eingefaerbt wird.
+///
+/// Keine Groessenschranke: eingefaerbt wird jede Datei, die die Vorschau
+/// ueberhaupt als Text zeigt, und was sie als Text zeigt, entscheidet
+/// `TEXTGRENZE` und sonst nichts (C4, zwoelftes Kriterium).
+fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a str, &'a Path)> {
+    match inhalt {
+        Inhalt::Text(text) => match pfad {
+            Some(pfad)
+                if hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad))
+                    == Darstellungsart::Code =>
+            {
+                Some((text.as_str(), pfad))
+            }
+            Some(_) | None => None,
+        },
+        Inhalt::Leer
+        | Inhalt::Markdown(_)
+        | Inhalt::Bild { .. }
+        | Inhalt::Metadaten(_)
+        | Inhalt::Hinweis(_) => None,
+    }
+}
+
 /// Baut die Textanzeige: eine nicht auswaehlbare `NSTextView` in einer
 /// Bildlaufansicht.
 ///
 /// Nicht auswaehlbar aus dem Grund im Modulkopf: eine auswaehlbare naehme als
 /// Textsystem den Fokus, und der Ereignisabgriff reichte jede Taste weiter.
-/// Die Schrift ist die feste Schreibmaschinenschrift des Nutzers, weil C6 die
-/// Anzeige als **rohen** Inhalt ohne Formatierung zusagt.
+/// **Die beiden Schalter bleiben, wo sie stehen** (C4, achtes Kriterium der
+/// Runde 6): die Merkmale gehen ueber Textspeicher und Layoutverwalter in die
+/// Flaeche und brauchen keine Auswahl.
+///
+/// Die Schrift ist die der Rohansicht, also die feste Schreibmaschinenschrift
+/// des Nutzers, weil C6 die Anzeige als **rohen** Inhalt zusagt. Sie kommt
+/// dabei aus [`textmerkmale::grundschrift`] und nicht aus einer eigenen Wahl:
+/// [`Vorschaufenster::text_zeigen`] setzt dieselbe ueber den ganzen
+/// Textspeicher, und zwei Rechnungen daneben waeren die erste Gelegenheit, dass
+/// die Flaeche in einer anderen Schrift dasteht als ihr Inhalt.
 fn textanzeige(
     mtm: MainThreadMarker,
     rahmen: NSRect,
@@ -719,13 +1124,142 @@ fn textanzeige(
     text.setMinSize(NSSize::ZERO);
     text.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
     text.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
-    if let Some(schrift) = NSFont::userFixedPitchFontOfSize(NSFont::smallSystemFontSize()) {
-        text.setFont(Some(&schrift));
-    }
+    text.setFont(Some(&textmerkmale::grundschrift(
+        Ansicht::Roh,
+        Darstellungsart::EinfacherText,
+    )));
     rolle.setDocumentView(Some(&text));
     // **Dieselbe Klasse, die der Editor einhaengt** (C10), und keine zweite
     // Spalte daneben. Ob sie steht, entscheidet `Vorschaufenster::anzeigen`
     // ueber `setRulersVisible`; hier entsteht sie nur.
     Nummernspalte::einhaengen(mtm, &rolle, &text);
     (rolle, text)
+}
+
+/// Was ohne Fenster zu pruefen ist: die Bedingung, unter der eingefaerbt wird,
+/// und der Ort, an dem der Vorgang wohnt.
+///
+/// Alles Uebrige an dieser Datei haengt an einer Instanz und steht deshalb als
+/// Kriterium am Buendel; diese Runde baut keine neue Probe, die den Hauptfaden
+/// behauptet.
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::time::SystemTime;
+
+    use super::*;
+
+    /// Metadaten mit dem genannten Pfad, sonst nichtssagend.
+    fn metadaten(pfad: &Path) -> Metadaten {
+        Metadaten {
+            name: "beispiel".to_owned(),
+            pfad: pfad.to_path_buf(),
+            groesse: 0,
+            geaendert: SystemTime::UNIX_EPOCH,
+            rechte: 0o644,
+            typ: Typ::Datei,
+        }
+    }
+
+    /// Eingefaerbt wird genau [`Darstellungsart::Code`] und sonst nichts
+    /// (C4, zehntes und zwoelftes Kriterium der Runde 6).
+    ///
+    /// **Die Probe zur Anforderungsbedingung, als reine Fallunterscheidung.**
+    /// Sie misst die eine Frage, die [`einzufaerben`] beantwortet: aus welchem
+    /// Zustand der Vorschau ein Einfaerbungsfaden entsteht. Alle sechs Werte
+    /// von [`Inhalt`] kommen vor, damit ein siebter hier auffaellt und nicht
+    /// erst am Bild.
+    #[test]
+    fn eingefaerbt_wird_genau_darstellungsart_code() {
+        let quelltext = PathBuf::from("/tmp/beispiel.rs");
+        let unbekannt = PathBuf::from("/tmp/beispiel.krk-gibt-es-nicht");
+        let markdown = PathBuf::from("/tmp/beispiel.md");
+
+        // Der eine Fall: eine Datei, deren Sprache die Kiste kennt. Text und
+        // Pfad gehen an den Faden, wie sie dastehen.
+        let quelle = Inhalt::Text("fn main() {}\n".to_owned());
+        let (text, pfad) = einzufaerben(&quelle, Some(&quelltext))
+            .expect("eine .rs-Datei ist Quelltext und wird eingefaerbt");
+        assert_eq!(text, "fn main() {}\n");
+        assert_eq!(pfad, quelltext);
+
+        // Einfacher Text: die Kiste kennt keine Sprache, es gaebe nichts
+        // einzufaerben.
+        assert!(
+            einzufaerben(&Inhalt::Text("nur Text\n".to_owned()), Some(&unbekannt)).is_none(),
+            "eine unbekannte Endung ist einfacher Text und kein Quelltext"
+        );
+
+        // Eine Markdown-Endung, deren Inhalt als roher Text dasteht: der Weg
+        // fuer Markdown ist ein anderer, und `art` sagt es.
+        assert!(
+            einzufaerben(&Inhalt::Text("# Titel\n".to_owned()), Some(&markdown)).is_none(),
+            "Markdown geht ueber Inhalt::Markdown und nicht ueber die Einfaerbung"
+        );
+
+        // Text ohne Pfad: die Zwischenablage. Keine Endung, keine Sprache.
+        assert!(
+            einzufaerben(&Inhalt::Text("aus der Ablage".to_owned()), None).is_none(),
+            "der Text der Zwischenablage traegt keinen Pfad und wird nicht eingefaerbt"
+        );
+
+        // Die uebrigen fuenf Werte von `Inhalt`, jeder mit dem Pfad einer
+        // Quelltextdatei daneben: an ihnen liegt es und nicht am Pfad.
+        let uebrige = [
+            Inhalt::Leer,
+            Inhalt::Markdown(Box::new(crate::markdown::rendern("# Titel\n", Tafel::Hell))),
+            Inhalt::Bild {
+                daten: Arc::new(Vec::new()),
+                metadaten: Some(metadaten(&quelltext)),
+            },
+            Inhalt::Metadaten(metadaten(&quelltext)),
+            Inhalt::Hinweis("etwas ging nicht".to_owned()),
+        ];
+        for inhalt in &uebrige {
+            assert!(
+                einzufaerben(inhalt, Some(&quelltext)).is_none(),
+                "{inhalt:?} zeigt keinen rohen Dateitext und wird nicht eingefaerbt"
+            );
+        }
+    }
+
+    /// Das Vorschaumodell weiss von der Einfaerbung nichts (C4, elftes
+    /// Kriterium der Runde 6).
+    ///
+    /// **Eine Probe ueber die Modulgrenze und keine ueber ein Ergebnis.** Die
+    /// Zusage lautet, dass [`Vorschaumodell::laedt_noch`] nicht auf `syntect`
+    /// wartet, und sie haengt daran, **wo** der Vorgang wohnt: an keinem
+    /// Rueckgabewert des Modells ist abzulesen, dass es ihn nicht kennt. Also
+    /// wird der Baum gelesen — dieselbe Art der Abnahme, mit der
+    /// [`super::teilen`] seine Zaehlproben fuehrt.
+    ///
+    /// Die zweite Haelfte ist der Riegel gegen eine Probe, die alles
+    /// bestaetigt: verschwaende die Einfaerbung ganz aus der Vorschau, waere
+    /// die erste Haelfte weiterhin wahr.
+    #[test]
+    fn das_vorschaumodell_weiss_von_der_einfaerbung_nichts() {
+        let lesen = |unterpfad: &str| {
+            let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("src")
+                .join(unterpfad);
+            std::fs::read_to_string(&pfad)
+                .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", pfad.display()))
+        };
+
+        let modell = lesen("vorschaumodell.rs");
+        for name in ["Einfaerbungsvorgang", "Einfaerbungsstand", "fortschreiben"] {
+            assert!(
+                !modell.contains(name),
+                "vorschaumodell.rs nennt {name}; damit haengt die Endbedingung von L7 an syntect"
+            );
+        }
+
+        let ansicht = lesen("appkit/vorschau.rs");
+        for name in ["Einfaerbungsvorgang", "Einfaerbungsstand"] {
+            assert!(
+                ansicht.contains(name),
+                "appkit/vorschau.rs nennt {name} nicht; die Probe darueber bestaetigte dann nichts"
+            );
+        }
+    }
 }
