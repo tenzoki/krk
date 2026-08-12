@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** active
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** (none yet)
 **Active session history:** (none yet)
@@ -165,3 +165,82 @@ Was diese Runde ihm **nicht** vorwegnimmt: sie zeigt keinen Web-Inhalt, öffnet 
 ## Turn log
 
 (noch keiner)
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260812-1027
+**Playmaker-Lauf:** 260812-1027-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Klärungsrunde über die dreizehn abgelegten
+Fragen, ohne vorgelagerte Untersuchung
+
+Dieser Circle ist der empfohlene nächste Kandidat, und zum ersten Mal in diesem Projekt steht
+hinter der Empfehlung ein Vergleich statt eines Einzelstücks. Seit dem Lauf vom 260812-0816 ist
+das Feld der vorgesehenen Circles von einem auf zwei gewachsen. Der zweite Kandidat ist
+`260804-0933-eingebauter-web-betrachter-im-vorschaufenster`, und er steht auf Rang 2.
+
+**Die Rangfolge widerspricht der wörtlichen Zählung der Domänenheuristik, und der Grund liegt an
+der Zählung.** Die Gewichtung `code` bevorzugt Kandidaten mit wenigen offenen
+Entscheidungsdatensätzen im Grounding. Dieser Circle zitiert dreizehn eigene offene Fragen, der
+Web-Betrachter drei. Die dreizehn sind jedoch Vorarbeit und keine Schuld: der Shaper-Lauf vom
+260812-1000 hat jede Frage einzeln abgelegt, mit ihren Möglichkeiten und den Folgen, die jede am
+Code auslöst. Der Web-Betrachter trägt seine offenen Punkte als Prosa im Abschnitt
+`## Grounding snapshot`, drei aus dem Anlage-Lauf und einen vierten, den der Lauf vom 260812-0816
+hinzugefügt hat; kein einziger liegt als Datensatz vor. Gezählt wird damit die Ablagedisziplin und
+nicht die Reife. Wer der Zahl folgt, belohnt den Kandidaten, der seine Fragen nicht aufgeschrieben
+hat.
+
+**Die Festlegungen des Nutzers stehen, und sie stehen im Wortlaut.** Vier Antworten vom
+260812-0930 sind als Festlegung übernommen, mit der ausdrücklichen Anweisung, nicht erneut zu
+fragen (`shared/history/260812-1000-shaper-teilen-ordnersprung-ablage-sichern-vorschau-rendern.md`).
+Der Zuschnitt der Runde ist damit entschieden, bevor die Aktivierung beginnt. Beim Web-Betrachter
+ist die erste seiner offenen Fragen, welche Quellen eine Adresse setzen dürfen, genau die Frage
+nach dem Zuschnitt: sie entscheidet, ob KRK einen Betrachter oder einen Browser bekommt.
+
+**Was diese Runde erbt, liegt auf der Platte, am 260812-1027 nachgelesen.** Die Auswahlregel
+`betroffene` steht in `crates/krk-ui/src/kommandos/operationen.rs:162` und ist die eine Stelle, an
+der „Markierung hat Vorrang, sonst der Eintrag unter der Auswahl" hängt. Der Weg in den Zielordner
+samt vorzumerkendem Namen steht als `Dateifenster::ordner_lesen` und `Tabliste::ordner_setzen` und
+hat mit dem Aufstieg aus C2 und dem Sprung aus C10 bereits zwei Aufrufer. `hervorhebung.rs` führt
+`syntect` einmal über den Text und trägt keine Zeile AppKit, was die zweite Verwendung durch die
+Vorschau überhaupt möglich macht. Die Ablage liegt außerhalb des Bündels, und die Abnahmeprobe
+`der_ablageordner_liegt_unter_application_support` nagelt Ort und Dateinamen fest.
+
+**Offen ist ein Mittel und ein Neuland.** Womit die Vorschau Markdown zerlegt, legt der Circle
+nicht fest, und die Frage gehört dem Plan. Das Teilen hat keinen Anknüpfungspunkt:
+`NSSharingServicePicker` kommt im Baum nicht vor, und ein `menuForEvent:` steht an keiner Stelle
+unter `crates/krk-ui/src/appkit/` (geprüft am 260812-1027 über den ganzen Baum unter `crates/`).
+KRK hat heute kein eigenes Kontextmenü. Beides ist Planarbeit und keine vorgelagerte Untersuchung.
+Beim Web-Betrachter ist der Unterschied genau umgekehrt: sein Datensatz verlangt selbst „eine
+eigene Untersuchung vor dem Plan" für das Mittel der Darstellung, und eine Untersuchung ist teurer
+als eine Klärungsrunde.
+
+**Die Reihenfolge der beiden Circles ist nicht beliebig, und der Datensatz sagt selbst, warum.**
+Der Abschnitt `## Dependencies` führt zwei Kanten zum Web-Betrachter. Diese Runde zieht dessen
+offene Frage 2 vor, ob lokale HTML-Dateien gerendert erscheinen, weil sie die Dreiteilung der
+Anzeige aus C6 für Markdown ohnehin anfasst. Und sie entscheidet mit
+`decisions/260812-1000_*_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md` über
+die rund 17 Punkte Luft, die dem Web-Betrachter oberhalb der heutigen 160 Punkte bleiben; die
+Mindestbreite gehört dem Bereich und nicht dem Tab, gilt also für jeden Vorschau-Tab mit. Läuft
+der Web-Betrachter zuerst, entscheidet er beide Fragen ohne den Markdown-Zusammenhang, in dem sie
+entstehen. Läuft diese Runde zuerst, findet er sie entschieden vor.
+
+**Zur Abhängigkeitslage, die in diesem Projekt nichts unterscheidet.** Alle vier Circle-Abhängig-
+keiten dieses Datensatzes sind beschränkt abgeschlossen (`_b_`) und keine kohärent (`_c_`), also
+trägt er nach der Rangheuristik das Kennzeichen der unerfüllten Vorbedingung. Dasselbe Kennzeichen
+trägt jeder denkbare Kandidat dieses Projekts, weil alle fünf gefahrenen Runden aus demselben
+Grund beschränkt sind: der Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+Als Befund gegen diesen Kandidaten gelesen wäre es falsch. Inhaltlich bindet die Beschränkung hier
+schwächer als beim Web-Betrachter: dessen dritte offene Frage leitet eine mögliche elfte Zeitzusage
+aus den zehn bestehenden ab, deren Belegstand offen ist, während diese Runde ausdrücklich keine
+neue Zusage setzt und keine der zehn anfasst.
+
+**Was vor der Aktivierung zu tun bleibt.** Die dreizehn Fragen in `decisions/` sind die erste
+Arbeit der Klärungsrunde. Vier davon binden über den Circle hinaus, und zwei davon entscheiden
+zugleich über den Web-Betrachter. Der Shaper im portfolio-activation-Modus arbeitet sie mit dem
+Nutzer durch, bevor ein Plan entsteht.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
