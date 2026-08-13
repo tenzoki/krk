@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** orchestrator (nach dem Spec des shaper)
 **Active spec/plan:** circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md (Spec: shared/planning/260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md)
 **Active session history:** shared/history/260813-0040-orchestrator-session.md
@@ -57,4 +57,50 @@ faehrt auf den Empfehlungen:
 
 ## Closure note
 
-(offen)
+**Beschraenkter Abschluss am 260813.** Alle fuenfzehn Planschritte sind gebaut, alle vier
+Faehigkeiten stehen im Baum, und die Runde ist trotzdem nicht abgenommen. Der Grund ist
+derselbe wie bei den sechs Runden davor und keine Haeufung von Fehlschlaegen: **der Abnahmelauf
+verlangt KRK im Vordergrund und ist damit Nutzerarbeit.**
+
+**Was der Artefakt traegt.** Die Belegungsansicht wird durch Tippen durchsucht, jedes Zeichen
+haengt an, die Auswahl springt sofort, die Eingabetaste geht zum naechsten Treffer. Alle 82
+Funktionen stehen im Menue, in neun Obermenues, jede mit ihrem Kuerzel und ausgegraut, wo sie
+gerade nicht wirkt. `opt+cmd+n` startet eine weitere Instanz, und zwei Sperren ueber `flock`
+verhindern, dass zwei Instanzen einander die Ablage zerlegen. 18 Commits, 1003 Proben ueber 19
+Ziele, alle vier Abnahmekommandos auf Exit 0.
+
+**Der Nebengewinn wiegt schwerer als eine der vier Faehigkeiten.** Der dritte Wunsch hat einen
+Fehler ans Licht gebracht, den vorher niemand kannte: ein Menueeintrag mit Kuerzel fuehrte einen
+Befehl aus, den die Fokuspruefung gerade abgewiesen hatte. Mit dem Fokus im Editor bewegte ein
+Auf-Pfeil die Dateiliste statt der Schreibmarke. Das ist weg, und nebenbei kennt der
+Ereignisabgriff den Editor nicht mehr — die Kopplung, vor der `CLAUDE.md` seit Runden warnt.
+
+**Was diese Runde ueber sich selbst gelernt hat, und das ist der uebertragbare Teil.** Dreimal
+hat eine Pruefung denselben Fehlertyp gefunden: **ein Text sagt mehr zu, als seine Probe haelt.**
+Erst ein Loch in der tragenden Regel des Spec, das auf dem Weg ueber den Fokusvorbehalt nie
+gepruefte wurde. Dann eine Zaehlprobe, die drei Aufrufstellen verlangte, wo der Entwurf zwei
+ergab — und deren naheliegende Reparatur der Doppelbau gewesen waere, den die Runde beseitigen
+sollte. Zuletzt die Behauptung, es gebe in Rust genau zwei Wege an eine fremde Funktion; zwei
+uebersetzte Gegenbeispiele haben sie widerlegt. Die Bauform der Zaehlproben dieses Projekts ist
+daraufhin geaendert: **nach dem Gegenstand suchen statt nach dem Namen**, und was keine Suche
+fangen kann, steht am Doc-Kommentar statt im Namen der Probe.
+
+**Drei Pruefungen vor der ersten Zeile Code** haben sich bezahlt gemacht: zwei am Spec, eine am
+Plan. Ohne sie waere das Loch in der Zulaessigkeitsregel in fuenfzehn Planschritte eingegangen.
+
+**Was am Buendel aussteht**, und damit bei dir: die Kriterien, die im Spec **(Buendel)** tragen,
+darunter ob `Cmd+T` und `Cmd+R` die Schaltflaechen der F1-Ansicht erreichen. Dazu zwei bewusst
+hingenommene Verluste gegenueber heute, beide abgeleitet und nicht gemessen: `esc` im Editor
+bricht keine Zusammensetzung einer Eingabemethode mehr ab, und ein Klick in die Bereichsleiste
+wirkt waehrend einer Umbenennung nicht.
+
+**Warum hier Schluss ist und nicht nach dem naechsten Turn.** Jede Durchsicht dieser Runde hat
+etwas gefunden, auch die dritte und die vierte. Die verbliebenen acht Datensaetze sind
+saemtlich von derselben Art — eine Zusage ist weiter als ihre Wache — und keiner betrifft das
+Verhalten. Sie sind benannt, begruendet und binden die naechste Runde. Weiterzureparieren
+verspraeche eine Vollstaendigkeit, die dieselbe Runde dreimal als Trugschluss vorgefuehrt hat.
+
+**Sitzungsprotokoll:** `shared/history/260813-0040-orchestrator-session.md`
+**Abgleich:** `history/260813-0647-reconciliation.md`
+**Durchsichten:** drei am Entwurf (`260813-0109`, `260813-0144`, `260813-0220`), vier an der
+Ausfuehrung (`260813-0532`, `260813-0540`, `260813-0725`).
