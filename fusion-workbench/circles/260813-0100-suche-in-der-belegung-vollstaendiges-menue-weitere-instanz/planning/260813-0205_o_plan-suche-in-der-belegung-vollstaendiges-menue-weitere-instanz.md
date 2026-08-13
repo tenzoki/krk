@@ -2,8 +2,9 @@
 
 **Date:** 2026-08-13
 **Status:** Draft
+**Überarbeitet:** 260813-0233, nach der dritten Diagrammprüfung; siehe den Nachtrag am Ende
 **Spec:** `shared/planning/260813-0053_o_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md` (Fassung nach dem Nachzug vom 260813-0130)
-**Diagrammprüfungen:** `reviews/260813-0109-conceptrev-…` (Spruch `tangled`) und `reviews/260813-0144-conceptrev-…` (Spruch `acceptable`). Beide sind gelesen; was die zweite dem Planner ausdrücklich mitgibt, steht unten unter `## Was aus den zwei Diagrammprüfungen in diesen Plan eingegangen ist`.
+**Diagrammprüfungen:** `reviews/260813-0109-conceptrev-…` (Spruch `tangled`) und `reviews/260813-0144-conceptrev-…` (Spruch `acceptable`), beide zum Spec; `reviews/260813-0220-conceptrev-…` (Spruch `acceptable`) zu diesem Plan. Alle drei sind gelesen; was die ersten zwei mitgeben, steht unter `## Was aus den zwei Diagrammprüfungen in diesen Plan eingegangen ist`, was die dritte geändert hat, im Nachtrag vom 260813-0233 am Ende.
 **Ausführende:** `coder` für Rust und den Makefile, `ontocoder` für `resources/default-keymap.toml`
 **Decidability:** Die tragende Frage der Runde lautet „Darf dieser Befehl an dieser Stelle gerade wirken?", und sie ist aus den Eingaben entscheidbar, die der Mechanismus im Augenblick des Fragens hat: `NSWindow::attachedSheet` am Hauptfenster, der Ersthelfer des Schlüsselfensters samt der Nämlichkeitsfrage nach der Textfläche des Editors, `ersthelferbereich()` und der Wirkungsbereich aus der Belegung. Alle vier werden gelesen, keiner wird vorhergesagt, und weil Abgriff und Ausgrauung dieselbe reine Funktion rufen, können ihre Antworten nicht auseinanderlaufen. Die zweite tragende Frage, „welche gespeicherte Sitzung gehört diesem Prozess", ist aus den Eingaben eines Prozesses **nicht** entscheidbar: ein Prozess trägt über einen Neustart hinweg keine Nämlichkeit, und jede Näherung darüber wäre eine geratene Antwort. Der Mechanismus wechselt deshalb, statt zu nähern. Gefragt wird „hält dieser Prozess das Sitzungsrecht", und das ist an einem gehaltenen `flock`-Griff abzulesen.
 
@@ -21,42 +22,52 @@ Diese Runde setzt keine elfte Zeitzusage und fasst keine der zehn an.
 
 ### Wie ein Tastendruck nach dieser Runde läuft
 
-Das Bild zeigt drei Dinge, die der Plan tragen muss: die Zulässigkeitsfrage als **eine** Funktion mit zwei Frägern, die Wache vor dem Sprungmarkenpuffer als dritten Frager ihres zweiten Bestandteils, und den Mausklick als zweiten Benutzer des Menüs.
+Das Bild zeigt drei Dinge, die der Plan tragen muss: die Zulässigkeitsfrage als **eine** Funktion mit zwei Frägern, die `Lage` als **eine** Erhebung, aus der auch der Sprungmarkenzweig seine Antwort nimmt, und den Mausklick als zweiten Benutzer des Menüs.
 
 ```mermaid
 flowchart TD
     subgraph ABGRIFF["1 · Ereignisabgriff, vor NSApplication sendEvent:"]
         E([Tastendruck]) --> AUF{"Aufnahme der Belegungsansicht läuft?"}
         AUF -->|"ja, Ereignis verbraucht"| ZUW["Kombination zuweisen"]
-        AUF -->|nein| SUF{"Belegungsansicht steht und das Zeichen trägt ein Dateiname?"}
-        SUF -->|"ja, Ereignis verbraucht"| SUCH["Suchtext ergänzen, auf den Treffer springen"]
+        AUF -->|nein| SUF{"Belegungsansicht steht, und gehört das Ereignis der Suche?<br/>Suchzeichen, Eingabetaste oder Rücktaste"}
+        SUF -->|"ja, Ereignis verbraucht"| SUCH["Suchtext ergänzen, zum nächsten Treffer springen oder kürzen"]
         SUF -->|nein| NACH{"Belegung nachschlagen"}
-        NACH -->|"Funktion mit Kommando"| A1{"zulaessig?"}
-        NACH -->|"Sprungmarke: Taste ohne Zusatztaste, keiner Funktion"| WACHE{"gehört der Ersthelfer AppKit?"}
-        NACH -->|"unbelegt, oder Funktion ohne Kommando"| WEITER["unverändert an AppKit"]
-        WACHE -->|"ja, die Taste gehört AppKit"| WEITER
-        WACHE -->|"nein, Ereignis verbraucht"| TIPP["Sprungmarke tippen"]
-        A1 -->|"nein, unzulässig"| WEITER
     end
-    subgraph APPKIT["2 · AppKit, Hauptmenü vor dem Ersthelfer"]
-        WEITER --> MENUE["Hauptmenü prüft die Tastenentsprechungen"]
-        KLICK([Mausklick auf einen Menüeintrag]) --> A2{"zulaessig?"}
+    subgraph DELEG["2 · Anwendungsdelegierter, der eine Ausführungsweg"]
+        A1{"zulaessig?<br/>in kommando_ausfuehren"}
+        ZA{"dieselbe Lage ohne Wirkungsbereich:<br/>kein Blatt, Ersthelfer gehört nicht AppKit,<br/>Fokus im Dateifenster?"}
+        A1 -->|"ja, Ereignis verbraucht"| TUN["der Rumpf des Befehls läuft"]
+        ZA -->|"ja, Ereignis verbraucht"| TIPP["sprungmarke_tippen"]
+    end
+    NACH -->|"Funktion mit Kommando"| A1
+    NACH -->|"Sprungmarke: Taste ohne Zusatztaste, keiner Funktion"| ZA
+    WEITER["unverändert an AppKit"]
+    NACH -->|"unbelegt, oder Funktion ohne Kommando"| WEITER
+    A1 -->|"nein, unzulässig"| WEITER
+    ZA -->|nein| WEITER
+    subgraph APPKIT["3 · AppKit, Hauptmenü vor dem Ersthelfer"]
+        MENUE["Hauptmenü prüft die Tastenentsprechungen"]
+        KLICK([Mausklick auf einen Menüeintrag]) --> A2{"zulaessig?<br/>in validateMenuItem:"}
         MENUE --> A2
         A2 -->|nein| GRAU["Eintrag ausgegraut, für Kürzel und Maus zugleich"]
         A2 -->|ja| FREI["Eintrag bedienbar"]
         GRAU --> ERST([Ersthelfer behält die Taste])
     end
-    A1 -->|"ja, Ereignis verbraucht"| TUN["kommando_ausfuehren, der eine Ausführungsweg"]
-    FREI -->|"führt aus"| TUN
+    WEITER --> MENUE
+    FREI -->|"krkKommando: ruft kommando_ausfuehren"| TUN
     REGEL[["<b>zulaessig(Kommando, Lage)</b><br/>(1) kein Blatt, oder währenddessen erlaubt<br/>(2) Ersthelfer gehört nicht AppKit<br/>(3) fokus::wirkt zum Wirkungsbereich<br/>immer_erreichbar hebt (1) und (2) auf, nicht (3)"]]
-    ERSTH[["<b>ersthelfer_gehoert_appkit()</b><br/>eine Funktion, drei Frager"]]
+    LAGE[["<b>lage() am Anwendungsdelegierten</b><br/>blatt_steht · ersthelfer_gehoert_appkit · fokus<br/>die eine Aufrufstelle von ersthelfer_gehoert_appkit"]]
     A1 -.->|fragt| REGEL
     A2 -.->|fragt| REGEL
-    REGEL -.->|"Bestandteil (2)"| ERSTH
-    WACHE -.->|fragt| ERSTH
+    ZA -.->|liest| LAGE
+    REGEL -.->|"nimmt entgegen"| LAGE
 ```
 
-Der Nachschlag hat drei Ausgänge und nicht zwei. Der mittlere ist die Sprungmarke aus C2 der Runde 1, und er ist der Grund, aus dem der Fokusvorbehalt nicht einfach in die Zulässigkeitsregel wandern darf: `ersthelfer_gehoert_appkit` steht heute als früher Ausstieg vor dem Nachschlag und schützt damit beide Ausgänge zugleich (`crates/krk-ui/src/appkit/ereignisse.rs:487-490`). Wird die Frage zum Bestandteil einer Regel, die nur der Kommandozweig stellt, verliert der Sprungmarkenzweig seine Wache, und ein Zeichen liefe während einer Umbenennung in den Suchpuffer der Dateiliste. Der Plan baut deshalb beides: die Regel bekommt den Bestandteil, und der Sprungmarkenzweig bekommt eine eigene, ausdrückliche Frage an dieselbe Funktion.
+Der Nachschlag hat drei Ausgänge und nicht zwei. Der mittlere ist die Sprungmarke aus C2 der Runde 1, und er ist der Grund, aus dem der Fokusvorbehalt nicht ersatzlos in die Zulässigkeitsregel wandern darf: `ersthelfer_gehoert_appkit` steht heute als früher Ausstieg vor dem Nachschlag und schützt damit beide Ausgänge zugleich (`crates/krk-ui/src/appkit/ereignisse.rs:487-490`). Eine Regel, die nur der Kommandozweig stellt, ließe den Sprungmarkenzweig ohne Antwort, und ein Zeichen liefe während einer Umbenennung in den Suchpuffer der Dateiliste.
+
+**Der Plan versorgt beide Zweige aus derselben Erhebung, statt die Frage ein zweites Mal zu stellen.** Der Abgriff fragt nach dieser Runde überhaupt nicht mehr nach dem Ersthelfer. Er reicht beide Ausgänge unverändert an die Senke, und die Senke sammelt einmal je Eingabe die `Lage`. Der Kommandozweig gibt sie an `zulaessig`; der Zeichenzweig liest aus ihr die drei Werte, die er ohnehin braucht. Zwei davon holt er sich heute schon selbst: `eingabe_ausfuehren` fragt in seinem Zweig `Eingabe::Zeichen` bereits `blatt_steht()` und `fokus()` (`crates/krk-ui/src/appkit/anwendung.rs:2064-2088`), und allein der dritte Wert kommt hinzu. `ersthelfer_gehoert_appkit` behält damit genau **eine** Aufrufstelle, nämlich `lage()`.
+
+Der Mausklick führt in dasselbe `kommando_ausfuehren` und stellt die Frage damit ein zweites Mal. Das Bild zeichnet die Kante auf den Rumpf, um keinen Ring zu behaupten; im Code läuft sie über die Raute `A1`. Die zweite Antwort kann von der ersten nicht abweichen, weil `A1` und `A2` dieselbe Funktion auf derselben `Lage` fragen, und genau das ist der Grund, aus dem die beiden nicht zwei Funktionen sein dürfen.
 
 Die vierte Zeile des Regelknotens ist gegenüber dem Spec-Bild geschärft. Die benannte Liste hebt (1) und (2) auf, den dritten Bestandteil nicht; heute fällt der Unterschied nicht an, weil `beenden` und `fenster_schliessen` beide `Wirkungsbereich::Ueberall` tragen (`crates/krk-core/src/tasten/belegung.rs:738-752`), und mit einem dritten Eintrag auf der Liste fiele er an.
 
@@ -82,18 +93,18 @@ stateDiagram-v2
     Belegungsansicht --> [*]: Fertig (Cmd+Eingabe) oder esc [keine Aufnahme]
 ```
 
-Die vier Wächter `[keine Aufnahme]` sind der Vorrang aus C1.15, und sie stehen hier, weil zwei nebenläufige Regionen jedes Ereignis sonst an beide zustellen. Ohne sie behauptete der Automat, ein Suchzeichen lande während einer Aufnahme im Suchtext, und ein nacktes `esc` verlasse die Ansicht statt die Aufnahme abzubrechen. Der Spec sagt in seinen Kriterien das Gegenteil, das Flussdiagramm daneben zeichnet es richtig, und der Code baut es als zwei hintereinandergeschaltete Stationen im Fänger. Der Plan setzt die Kriterien um, nicht das Bild aus dem Spec.
+Die fünf Wächter `[keine Aufnahme]` sind der Vorrang aus C1.15, und sie stehen hier, weil zwei nebenläufige Regionen jedes Ereignis sonst an beide zustellen. Vier stehen an den Übergängen der Suchregion, der fünfte am Ausgang der Ansicht: ein nacktes `esc` bricht die Aufnahme ab und verlässt nicht. Ohne sie behauptete der Automat, ein Suchzeichen lande während einer Aufnahme im Suchtext, und ein nacktes `esc` verlasse die Ansicht statt die Aufnahme abzubrechen. Der Spec sagt in seinen Kriterien das Gegenteil, das Flussdiagramm daneben zeichnet es richtig, und der Code baut es als zwei hintereinandergeschaltete Stationen im Fänger. Der Plan setzt die Kriterien um, nicht das Bild aus dem Spec.
 
 ### Wo die beiden Sperren wohnen
 
 ```mermaid
 flowchart TD
     subgraph UI["krk-ui · die Aufrufer"]
-        START["Start: sitzung_laden"]
-        KEY["belegung::fuer_den_betrieb"]
-        LZ["Lesezeichenbefehl"]
-        BEL["Belegungsansicht verlassen"]
-        SITZ["Sitzungsschreiber vormerken"]
+        START["Start: sitzung_laden<br/>anwendung.rs:997"]
+        KEY["Start: starten lädt die Belegung<br/>anwendung.rs:5291, ruft krk_core::tasten::belegung::fuer_den_betrieb"]
+        LZ["Lesezeichenbefehl<br/>anwendung.rs:1230"]
+        BEL["Belegungsansicht verlassen<br/>anwendung.rs:2584"]
+        SITZ["sitzung_vormerken<br/>anwendung.rs:4837"]
     end
     subgraph ABL["krk-core::ablage"]
         RECHT["Sitzungsrecht::nehmen<br/>einmal beim Start, bis zum Prozessende gehalten"]
@@ -113,6 +124,8 @@ flowchart TD
     SITZ -.->|"schreibt nur, wenn das Recht gehalten wird"| RECHT
 ```
 
+Der Kasten führt Aufrufer und keine Erklärungen, und jeder der fünf steht mit seiner Zeile in `krk-ui` da. `belegung::fuer_den_betrieb` selbst liegt in `crates/krk-core/src/tasten/belegung.rs:1310` und öffnet dort seine eigene `Ablage`; im Bild steht die Stelle, die es ruft.
+
 Zwei Sperren, zwei Dateien, zwei Lebensdauern, und beide über denselben Fremdaufruf. `flock` ist unter den Mitteln, die dieser Baum kennt, das einzige, das C3.13 erfüllt: der Kern gibt die Sperre beim Prozessende von sich aus frei, auch nach einem `SIGKILL`. Eine Marke im Dateisystem über `OpenOptions::create_new` oder über `renamex_np` mit `RENAME_EXCL` überlebt den Absturz und sperrte danach jede weitere Instanz für immer aus dem Sitzungsschreiben aus; beide Mittel liegen im Baum bereit (`crates/krk-core/src/operation/anlegen.rs:32-36` und `crates/krk-core/src/verzeichnis/sys.rs:668`) und reichen für diese eine Anforderung trotzdem nicht.
 
 `Zugang` steht zwischen den Aufrufern und `atomar::schreiben`, damit „es gibt keinen Schreibweg an der Sperre vorbei" eine Eigenschaft der Typen wird und keine Verabredung in Kommentaren. Die zwei Schreibwege über `atomar::schreiben`, die **nicht** in den Ablageordner gehen, bleiben unberührt: die Markdown-Ausgabe nach `~/Downloads` (`crates/krk-ui/src/belegungsausgabe.rs:456`) und das Sichern der Editordatei (`crates/krk-core/src/text/datei.rs:545`).
@@ -121,7 +134,7 @@ Zwei Sperren, zwei Dateien, zwei Lebensdauern, und beide über denselben Fremdau
 
 ```mermaid
 flowchart TD
-    S1["S1 · zulaessig als reine Funktion"] --> S2["S2 · Fokusvorbehalt als Bestandteil,<br/>Wache vor der Sprungmarke"]
+    S1["S1 · zulaessig als reine Funktion"] --> S2["S2 · Fokusvorbehalt als Bestandteil,<br/>lage() an einer Stelle"]
     S2 --> S3["S3 · der Abgriff schluckt<br/>den zulässigen Befehl"]
     S2 --> S6["S6 · Menü aus dem Modell,<br/>Sammelselektor, Ausgrauung"]
     S2 --> S10["S10 · der Fänger bekommt<br/>seine zweite Station"]
@@ -137,7 +150,9 @@ flowchart TD
     S14 --> S15["S15 · resources/default-keymap.toml"]
 ```
 
-Vier Stränge, die einander nur an einer Stelle berühren. Der Strang um die Zulässigkeitsfrage (S1 bis S3) trägt das Menü und die Suche zugleich, weil beide am selben Ereignisabgriff hängen. Der Strang um die weitere Instanz (S11 bis S15) berührt den Rest allein über die vier Pflichtstellen eines neuen Kommandos, und genau deshalb ist er die Naht, an der die Runde sich teilen ließe.
+Vier Stränge, und je zwei berühren einander an höchstens einem Punkt. Der Strang um die Zulässigkeitsfrage (S1 bis S3) trifft den Menüstrang in S6 und den Suchstrang in S10, weil Menü und Suche beide am selben Ereignisabgriff hängen; Menü und Suche berühren einander nicht. Der Strang um die weitere Instanz (S11 bis S15) hat zu keinem der drei anderen eine Kante, und genau deshalb ist er die Naht, an der die Runde sich teilen ließe.
+
+Unabhängig sind die Stränge in ihrer Reihenfolge und nicht in ihren Dateien. `crates/krk-ui/src/belegungsmodell.rs` wird von S4, S8 und S14 angefasst, in drei verschiedenen Funktionen; eine Reihenfolge erzwingt das nicht, wohl aber die Aufmerksamkeit dessen, der die drei Schritte nacheinander schreibt.
 
 ---
 
@@ -163,11 +178,15 @@ Der Spec trägt die vollständige Ausgangslage. Sieben Befunde stehen hier, weil
 
 ## Der Entwurf
 
-### Eine Frage, eine Funktion, drei Frager
+### Eine Frage, eine Funktion, zwei Frager, eine Lage
 
 Die Zulässigkeit wird eine reine Funktion in `crates/krk-ui/src/kommandos/`, dem Verzeichnis, das nach seinem eigenen Modulkopf keine Zeile AppKit enthält. Sie nimmt ein `Kommando` und eine `Lage` aus drei Wahrheitswerten und einem `Fokus`, und sie ist damit ohne Fenster prüfbar. Die Tafel aus C2.5 hat sieben Wirkungsbereiche mal fünf Fokuswerte mal zwei Blattstände mal zwei Ersthelferbefunde, also 140 Fälle, und sie läuft in `cargo test --workspace` durch.
 
-Die drei Frager sind der Abgriff über `kommando_ausfuehren`, die Ausgrauung über `validateMenuItem:` und, allein für den zweiten Bestandteil, die Wache vor dem Sprungmarkenpuffer. Der Delegierte sammelt die Lage an einer Stelle, damit die drei Eingaben nicht an drei Orten zusammengetragen werden.
+Die zwei Frager von `zulaessig` sind der Abgriff über `kommando_ausfuehren` und die Ausgrauung über `validateMenuItem:`. Ein dritter Abnehmer nimmt nicht die Regel, sondern ihre Eingaben: der Zweig `Eingabe::Zeichen` von `eingabe_ausfuehren` liest aus derselben `Lage`, weil ein getipptes Zeichen kein `Kommando` ist und keinen Wirkungsbereich trägt. Drei Abnehmer der `Lage`, zwei Aufrufer von `zulaessig`, eine Aufrufstelle von `ersthelfer_gehoert_appkit`.
+
+`lage()` am Delegierten ist die eine Stelle, die die drei Eingaben erhebt. Für jeden Tastendruck, der heute schon bis zur Senke läuft, bleibt es bei drei Abfragen: `kommando_ausfuehren` liest heute `blatt_steht()` und `fokus()`, der Zeichenzweig ebenfalls, und den Ersthelfer liest heute der Abgriff.
+
+**Einen Fall verteuert die Änderung, und er ist nicht der seltenste.** Ein Tastendruck in ein Textfeld kostet heute eine Abfrage, weil der frühe Ausstieg ihn vor dem Nachschlag abweist; nach der Runde kostet er drei, dazu den Nachschlag in der Belegung. Betroffen ist das Tippen während einer Umbenennung und in der Pfadeingabe. Eine Kombination, die die Belegung nicht kennt, kostet umgekehrt eine Abfrage weniger. Drei Eigenschaftsabfragen und ein Nachschlag in einer Tabelle sind gegen das Budget eines Tastendrucks klein; gemessen ist das an diesem Baum nicht, und L1 steht ohnehin auf der Abnahmeliste am Bündel. `inference:`
 
 ### Der Menüeintrag trägt sein Kommando im `tag`
 
@@ -210,15 +229,23 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** die Tafel aus 140 Fällen, gebaut aus `Wirkungsbereich`, `Fokus::ALLE` und den vier Kombinationen aus Blattstand und Ersthelferbefund, in der Form der vorhandenen Tafel in `kommandos/fokus.rs`. Dazu je eine benannte Prüfung für die vier Fälle, an denen die Runde hängt: mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulässig; beim Umbenennen in der Liste ebenso, obwohl kein Blatt steht und `fokus()` `Dateifenster` liefert; `beenden` und `fenster_schliessen` sind in beiden Lagen zulässig; ein Befehl auf der Ausnahmeliste mit einem anderen Wirkungsbereich als `Ueberall` wäre es nicht. Der Schritt läuft vollständig grün.
 - **Abhängigkeiten:** keine.
 
-### S2: Der Fokusvorbehalt wird Bestandteil der Regel, und die Sprungmarke behält ihre Wache
+### S2: Der Fokusvorbehalt wird Bestandteil der Regel, und die Lage entsteht an einer Stelle
 
 - **Executor:** `coder`
-- **Dateien:** `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
-- **Änderungen:** `ersthelfer_gehoert_appkit` wird `pub(crate)` und behält seine Signatur, damit der Delegierte sie mit demselben Abschluss `ist_editorflaeche` rufen kann; ihr Doc-Kommentar bekommt den Satz, dass sie ab hier drei Frager hat. In `behandeln` fällt der frühe Ausstieg in `:487-490` weg; stattdessen wird der Wert einmal je Ereignis berechnet und im Zweig `Nachschlag::Sprungmarke` als ausdrückliche Wache gelesen, bevor das getippte Zeichen an die Senke geht. Der Zweig `Nachschlag::Funktion` reicht das Kommando unverändert weiter; die Frage stellt die Senke. `Nachschlag::Unbelegt` bleibt, wie er ist. Am Delegierten entsteht `lage()`, das `blatt_steht()`, `ereignisse::ersthelfer_gehoert_appkit(mtm, …)` und `fokus()` zu einer `Lage` zusammenfasst, und `kommando_ausfuehren` ersetzt seine zwei getrennten Vorbehalte in `:2120` und `:2132` durch einen Aufruf von `zulaessig`. Der Fokuswert, den die Rümpfe weiter unten als Adresse brauchen (`tab_schliessen`, `teilen`, `bereichskommando`), kommt aus derselben `Lage` und wird nicht ein zweites Mal erfragt.
-- **Verhalten:** unverändert gegenüber heute. Was der frühe Ausstieg bisher abwies, weist jetzt Bestandteil (2) ab, und zwar bevor `befehlsantwort_loeschen` und `bildschirmbreiten_uebernehmen` laufen. Der Modulkopf von `ereignisse.rs` wird an der Stelle nachgezogen, an der er den Vorbehalt heute als frühen Ausstieg beschreibt, samt dem Bild in `:26-33`, das den dritten Ausgang des Nachschlags schon zeigt und ihn behalten muss.
-- **Aufzählung:** keine wächst. Der Übersetzer hält an der geänderten Signatur von `kommando_ausfuehren` nicht an, weil sie gleich bleibt.
+- **Dateien:** `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/quellbaum.rs` (neu, nur unter `cfg(test)`), `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/appkit/teilen.rs`
+- **Änderungen:** `ersthelfer_gehoert_appkit` wird `pub(crate)` und behält seine Signatur samt dem Abschluss `ist_editorflaeche`, damit `ereignisse.rs` den Editor weiterhin nicht kennt; ihr Doc-Kommentar bekommt den Satz, dass sie ab hier ihre eine Aufrufstelle in `lage()` hat. In `behandeln` fällt der frühe Ausstieg in `:487-490` **ersatzlos** weg: der Abgriff fragt nach dem Ersthelfer gar nicht mehr, sondern reicht `Nachschlag::Funktion` und `Nachschlag::Sprungmarke` unverändert an die Senke. `Nachschlag::Unbelegt` bleibt, wie er ist.
+  Am Delegierten entsteht `lage()`, das `blatt_steht()`, `ereignisse::ersthelfer_gehoert_appkit(mtm, &|r| self.ist_editorflaeche(r))` und `fokus()` zu einer `Lage` zusammenfasst. `kommando_ausfuehren` ersetzt seine zwei getrennten Vorbehalte in `:2120` und `:2132` durch einen Aufruf von `zulaessig`. Der Zweig `Eingabe::Zeichen` von `eingabe_ausfuehren` (`:2064-2088`) ersetzt seine eigenen zwei Abfragen durch dieselbe `Lage` und bekommt den dritten Wert dazu: er tippt nur, wenn kein Blatt steht, der Ersthelfer nicht AppKit gehört und der Fokus im Dateifenster liegt. Der Fokuswert, den die Rümpfe weiter unten als Adresse brauchen (`tab_schliessen`, `teilen`, `bereichskommando`), kommt aus derselben `Lage` und wird nicht ein zweites Mal erfragt.
+  `Tastenabgriff::einrichten` verliert damit seinen Parameter `ist_editorflaeche`, und `abgriff_aufsetzen` (`anwendung.rs:1735-1757`) eine seiner drei schwachen Referenzen. Der Modulkopf von `ereignisse.rs` beschreibt den Fokusvorbehalt danach nicht mehr als Station des Abgriffs, sondern als Bestandteil (2) der Regel am Delegierten.
+  **`sprungmarke_tippen` bleibt unverändert.** Es liefert `false`, wenn der Kern das Zeichen nicht in den Puffer nimmt (`crates/krk-ui/src/appkit/tabelle.rs:1134-1147`), und das ist keine Ausnahme von der Regel aus S3, sondern ihre Anwendung: ein Zeichen, das keine Sprungmarke ist, war nie zulässig und gehört AppKit.
+- **Verhalten:** unverändert gegenüber heute, in allen drei Ausgängen des Nachschlags. Bei `Funktion` weist statt des frühen Ausstiegs jetzt Bestandteil (2) ab, und zwar bevor `befehlsantwort_loeschen` und `bildschirmbreiten_uebernehmen` laufen. Bei `Sprungmarke` weist derselbe Wert im Zeichenzweig ab, und die Senke liefert `false`, also läuft das Ereignis wie bisher an AppKit weiter und das Textfeld tippt es. Bei `Unbelegt` ändert sich nichts. Das Bild im Modulkopf (`:26-33`) zeigt den dritten Ausgang schon und muss ihn behalten.
+- **Eine sichtbare Nebenwirkung, und zwar nur im Protokollmodus.** `protokollieren` steht heute hinter dem frühen Ausstieg; ein Tastendruck in ein Textfeld erscheint deshalb in `--tasten-protokoll` nicht. Ohne den Ausstieg erscheint er. Der Modus gibt danach wieder, was der Abgriff sieht, und das ist die richtigere Auskunft; der Satz gehört in den Doc-Kommentar des Modus.
+- **Aufzählung:** keine wächst. Der Übersetzer hält an der geänderten Signatur von `kommando_ausfuehren` nicht an, weil sie gleich bleibt; er hält an der um einen Parameter gekürzten Signatur von `Tastenabgriff::einrichten` an, und zwar an ihrer einen Aufrufstelle `anwendung.rs:1740`.
 - **Setzt voraus:** dieselbe Empfehlung wie S1.
-- **Abnahme (Probe):** `cargo test --workspace`, `cargo clippy --workspace --all-targets`, `cargo fmt --all --check` laufen grün. Dazu die Zählprobe zu C2.16: `ersthelfer_gehoert_appkit` hat genau drei Aufrufstellen, `zulaessig` genau zwei. **(Bündel)** bleibt der Nachweis, dass sich am Verhalten nichts geändert hat; er fällt in die Abnahme von C2.6 am Ende der Runde.
+- **Abnahme (Probe):** `cargo test --workspace`, `cargo clippy --workspace --all-targets`, `cargo fmt --all --check` laufen grün. Dazu zwei Zählproben über den Quellbaum, in der Bauform von `es_gibt_genau_einen_menuebauer` (`crates/krk-ui/src/appkit/teilen.rs:446-470`), also mit zusammengesetzten Nadeln, damit die Probe sich nicht selbst zählt:
+  1. **Die Frage nach dem Ersthelfer steht an genau einer Stelle.** `fn ersthelfer_gehoert_appkit` kommt im Baum genau einmal vor, und `isKindOfClass(` steht in genau einer Datei, `appkit/ereignisse.rs`. Gezählt werden für die zweite Nadel Dateien und nicht Fundstellen: heute sind es drei Zeilen, eine je Textklasse (`:549-551`), und eine vierte Textklasse in derselben Funktion ist eine zulässige Änderung.
+  2. **Die erste Hälfte von C2.16.** `fn zulaessig` kommt im Baum genau einmal vor. C2.16 sagt zwei Dinge, „die Zulässigkeitsfrage steht an genau einer Stelle" und „beide Frager rufen sie"; die erste Hälfte ist eine Zählung über Erklärungen und fällt hier an, die zweite ist die Zählung der Aufrufer und fällt mit S6 an, weil `validateMenuItem:` erst dort entsteht.
+  **Der Quellbaumleser bekommt einen Ort.** `quelldateien` und `einsammeln` stehen heute im Prüfmodul von `crates/krk-ui/src/appkit/teilen.rs:374-412` und sind dort privat. Diese Runde braucht sie in mindestens drei weiteren Prüfmodulen (S2, S6, S10). Der Schritt zieht die beiden Funktionen nach `crates/krk-ui/src/quellbaum.rs`, angemeldet als `#[cfg(test)] mod quellbaum;` in `main.rs` und `pub(crate)` erreichbar; die zwei Zählproben in `teilen.rs` bleiben inhaltlich unangetastet und rufen den Leser von dort. Eine zweite Fassung des Lesers entstünde sonst dreimal, und der Plan spart an dieser Runde gerade solche zweiten Fassungen ein.
+  **Keine Zählung der Aufrufstellen von `ersthelfer_gehoert_appkit`.** Die Begründung steht unten im Abschnitt vom 260813-0233. **(Bündel)** bleibt der Nachweis, dass sich am Verhalten nichts geändert hat; er fällt in die Abnahme von C2.6 am Ende der Runde.
 - **Abhängigkeiten:** S1.
 
 ### S3: Der Abgriff schluckt den zulässigen und nicht mehr den ausgeführten Befehl
@@ -299,7 +326,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - **Änderungen:** Der Fänger bekommt das getippte Zeichen dazu: seine Signatur wird `Fn(Tastendruck, Option<char>) -> bool`. Der Grund gehört in den Doc-Kommentar: `Tastendruck::zeichen` ist bereits durch `parser::zeichen_als_kennung` gegangen und trägt nur ASCII-Kleinbuchstaben und Ziffern (`crates/krk-core/src/tasten/mod.rs:68-73`), kann also kein Leerzeichen und keinen Umlaut führen, und die Suche braucht genau die, die ein Funktionsname trägt. Der Abgriff reicht `getipptes_zeichen(ereignis)` mit, dieselbe Quelle, aus der die Sprungmarke schon schöpft. `tastendruck_fangen` am Delegierten wird zu zwei hintereinandergeschalteten Stationen: läuft die Aufnahme, nimmt sie auf und das Ereignis ist verbraucht; sonst, und nur wenn die Belegungsansicht steht, prüft die zweite Station auf ein Suchzeichen, auf die Eingabetaste und auf die Rücktaste und gibt sie an die `Belegungsquelle`. Der Vorrang der Aufnahme ist die Reihenfolge dieser zwei Stationen und keine dritte Regel; `esc`, die Pfeiltasten und jede Kombination mit Zusatztaste fallen durch beide Stationen und laufen weiter wie bisher.
-- **Die Wache aus S2 bleibt stehen.** Der Fänger steht vor dem Fokusvorbehalt, und das ist richtig: während die Belegungsansicht steht, hält die Tabelle den Ersthelferrang, und ein Textfeld gibt es in diesem Blatt nicht. Die zweite Station fragt trotzdem zuerst, ob die Belegungsansicht steht, sonst liefe jedes getippte Zeichen der ganzen Anwendung in ihren Suchtext.
+- **Der Fänger steht vor der Zulässigkeitsfrage, und das bleibt so.** Während die Belegungsansicht steht, hält die Tabelle den Ersthelferrang, und ein Textfeld gibt es in diesem Blatt nicht; die Suche braucht deshalb keine Frage nach dem Ersthelfer. Die zweite Station fragt trotzdem zuerst, ob die Belegungsansicht steht, sonst liefe jedes getippte Zeichen der ganzen Anwendung in ihren Suchtext. Aus S2 übernimmt sie nichts als die Reihenfolge: der Fänger sieht das Ereignis vor dem Nachschlag, und die `Lage` entsteht erst dahinter in der Senke.
 - **Aufzählung:** keine wächst. Der Übersetzer hält an der geänderten Fänger-Signatur an, und zwar an genau zwei Stellen: dem Abschluss in `abgriff_aufsetzen` (`crates/krk-ui/src/appkit/anwendung.rs:1744-1747`) und der Prüfung des Abgriffs, falls eine ihn baut.
 - **Setzt voraus:** die Empfehlung aus S9.
 - **Abnahme (Probe):** C1.14 über die Zahl der `keyDown:`-Überschreibungen im Baum, die null bleibt; C1.15 als Fallunterscheidung über die zwei Stationen; C1.13, dass `esc` keine dritte Bedeutung bekommt. **(Bündel):** C1.1 mit der springenden Auswahl und das Verlassen über `esc`.
@@ -325,7 +352,9 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
   Der Kommentar an `beiseite_legen` (`mod.rs:394-397`) bekommt seine neue Begründung: das Wettrennen zwischen `try_exists` und `schreiben` ist nicht mehr deshalb unerreichbar, weil es nur einen Prozess gibt, sondern weil der ganze Durchgang unter der Schreibsperre läuft.
 - **Zwei Regeln, die der Übersetzer nicht hält und die deshalb im Doc-Kommentar stehen:** ein `Zugang` ist ein Blatt und wird nicht geschachtelt, denn ein zweiter `LOCK_EX` auf demselben Deskriptor blockierte nicht, sondern ließe den inneren `Drop` die äußere Sperre abgeben. Und die zwei `Ablage`-Werte eines Starts dürfen nie zugleich leben, denn zwei Deskriptoren desselben Prozesses auf dieselbe Datei blockieren einander; heute ist das erfüllt, weil `belegung::fuer_den_betrieb` seine Ablage verwirft, bevor `sitzung_laden` die bleibende öffnet.
   Eine Verklemmung zwischen den beiden Sperren gibt es nicht: das Sitzungsrecht wird einmal beim Start genommen und nie, während ein Schreibgriff gehalten wird. Die Reihenfolge ist damit fest und ohne Ring.
-- **Aufzählung:** keine der vier wächst. Der Übersetzer hält an jeder Aufrufstelle von `Ablage::laden` und `Ablage::sichern` an, weil die Methoden umziehen; das sind die fünf Stellen aus dem Aufrufbild oben plus `messmodus.rs:301-315`, das sich einen eigenen `Sitzungsschreiber` baut.
+- **Aufzählung:** keine der vier wächst. Der Übersetzer hält an jeder Aufrufstelle von `Ablage::laden` und `Ablage::sichern` an, weil die Methoden umziehen. Das Aufrufbild oben zeigt die fünf Benutzer von `Ablage::durchgang` und ist eine andere Aufstellung; die Aufrufstellen der zwei Methoden sind am 260813 am Baum nachgezählt und stehen hier einzeln, drei im Kern und drei in der Oberfläche:
+  `crates/krk-core/src/ablage/einstellungen.rs:150`, `crates/krk-core/src/tasten/belegung.rs:1191`, `crates/krk-core/src/tasten/belegung.rs:1280`, `crates/krk-ui/src/appkit/anwendung.rs:983`, `crates/krk-ui/src/appkit/anwendung.rs:1007`, `crates/krk-ui/src/appkit/anwendung.rs:1230`.
+  Dazu `Ablage::beiseite_legen`, das `mod.rs:399` kistenintern ruft, die Prüfungen unter `crates/krk-core/tests/`, und über die geänderte Signatur des `Sitzungsschreiber` auch `messmodus.rs:301-315`, das sich einen eigenen baut.
 - **Setzt voraus:** dieselbe Empfehlung wie S11.
 - **Abnahme (Probe):** C3.7 und C3.13 mit zwei Prozessen, nach dem Muster von `crates/krk-core/tests/ablage.rs:1606-1706`: die Elternprobe legt einen `Pruefordner` an, setzt darauf einen `Ablageort::an(…)` und startet die Kindproben über `std::env::current_exe()` mit dem Ordner in einer Umgebungsvariablen. Geprüft wird, dass genau eines von zwei Kindern das Sitzungsrecht bekommt, dass das andere eine benannte Abweisung bekommt und nicht hängt, und dass nach einem `std::process::abort()` des Halters das nächste Kind das Recht bekommt. **Der Prüfordner ist nicht `~/Library/Caches/krk-messplatz` und nicht das echte Benutzerverzeichnis**; er trägt Prozesskennung und Laufnummer und räumt sich in `Drop` selbst auf. Eine vierte Prüfordner-Fassung entsteht nicht (C4.6). Dazu C3.14 über die Zahl der Absprachen, die bei zwei bleibt, und C4.8 über die zwei `#[must_use]`.
 - **Abhängigkeiten:** S11.
@@ -386,7 +415,8 @@ Sechs neue Typen, jeder mit einem Satz dazu, warum er einer ist.
 |---|---|---|---|
 | Fänger des Abgriffs | `Fn(Tastendruck) -> bool` | `Fn(Tastendruck, Option<char>) -> bool` | `Tastendruck::zeichen` trägt nur ASCII-Kleinbuchstaben und Ziffern und kann kein Leerzeichen führen. |
 | `kommando_ausfuehren` | liefert „hat gewirkt" | liefert „war zulässig" | Sonst liefe ein zulässiger, wirkungsloser Befehl über den Umweg Menü ein zweites Mal. |
-| `ersthelfer_gehoert_appkit` | privat | `pub(crate)` | Drei Frager statt einem, und alle drei rufen dieselbe Funktion. |
+| `ersthelfer_gehoert_appkit` | privat | `pub(crate)` | Die eine Aufrufstelle wandert vom Abgriff an den Delegierten, nach `lage()`. |
+| `Tastenabgriff::einrichten` | mit `ist_editorflaeche` | ohne | Der Abgriff fragt nicht mehr nach dem Ersthelfer; der Abschluss und eine schwache Referenz in `abgriff_aufsetzen` fallen weg. |
 | `Ablage::laden`, `sichern`, `beiseite_legen` | an `Ablage` | an `Zugang` | Kein Schreibweg an der Sperre vorbei, und zwar als Eigenschaft der Typen. |
 | `Sitzungsschreiber::vormerken`, `abgleichen`, `beenden` | ohne Zugang | mit `&Zugang` | Dieselbe Grenze, für den vierten Schreiber. |
 
@@ -398,7 +428,8 @@ Der Zuschnitt folgt der Lage, dass `krk-ui` kein Bibliotheksziel hat: eine Datei
 
 Was am Fenster hängt, verteilt sich auf drei Arten:
 
-- **Zählproben über den Baum** für die Zusagen „genau eine Stelle": die Zahl der Aufrufer von `roher_befehl`, `appkit_paar`, `kommando_ausfuehren`, `zulaessig` und `ersthelfer_gehoert_appkit`, die Zahl der `keyDown:`-Überschreibungen, die Zahl der Prüfordner-Fassungen und die Zahl der Dateien mit `#![allow(unsafe_code)]`.
+- **Zählproben über den Baum** für die Zusagen „genau eine Stelle". Zwei Sorten, und die Unterscheidung ist nicht kosmetisch. Gezählt wird erstens, wie oft eine Sache **erklärt** wird: `fn ersthelfer_gehoert_appkit` einmal, `fn zulaessig` einmal, `isKindOfClass(` in einer Datei, `roher_befehl` und `appkit_paar` je einmal, `keyDown:`-Überschreibungen keinmal, Prüfordner-Fassungen dreimal, Dateien mit `#![allow(unsafe_code)]` zweimal. Gezählt wird zweitens, wie viele Stellen eine Sache **rufen**, und das nur dort, wo ein Kriterium die Zahl selbst zusagt: die zwei Aufrufer von `zulaessig` aus C2.16 und die Aufrufer von `kommando_ausfuehren` aus C2.14.
+  Eine Erklärungszählung hält, was sie verspricht: eine zweite Fassung derselben Sache lässt sie rot werden. Eine Aufruferzählung tut das nicht; sie wird rot, wenn ein weiterer berechtigter Frager hinzukommt. Sie steht deshalb nur da, wo der Spec die Zahl zusagt, und nirgends als Stellvertreter für „es gibt keinen Doppelbau". Alle Proben dieser Art nehmen die Bauform von `es_gibt_genau_einen_menuebauer` (`crates/krk-ui/src/appkit/teilen.rs:446-470`) und dessen Quellbaumleser, der dafür nach S2 einen gemeinsamen Ort bekommt.
 - **Zwei-Prozess-Proben** für die beiden Sperren, nach dem Muster in `crates/krk-core/tests/ablage.rs:1606-1706`, das schon eine Kindprobe über `std::env::current_exe()` startet und ihren Absturz auswertet.
 - **Der Abnahmelauf am Bündel** für alles, was zu sehen ist. Er ist Nutzerarbeit, und die Runde schließt darum voraussichtlich als beschränkter Abschluss wie ihre sechs Vorgängerinnen.
 
@@ -425,7 +456,7 @@ Was am Fenster hängt, verteilt sich auf drei Arten:
 
 | Risiko | Gegenmaßnahme |
 |---|---|
-| Der Fokusvorbehalt wandert in die Zulässigkeitsregel, und der Sprungmarkenpuffer verliert seine Wache. Ein Zeichen liefe während einer Umbenennung in die Sprungmarke der Dateiliste, derselbe Defekt in klein, den die Runde für die Kommandos gerade behebt. | S2 baut die Wache ausdrücklich und benennt sie im Doc-Kommentar; das erste Bild dieses Plans zeigt den dritten Ausgang des Nachschlags, den das Spec-Bild nicht zeigt. Die Zählprobe hält fest, dass `ersthelfer_gehoert_appkit` drei Frager hat. |
+| Der Fokusvorbehalt wandert in die Zulässigkeitsregel, und der Sprungmarkenzweig bleibt ohne Antwort. Ein Zeichen liefe während einer Umbenennung in die Sprungmarke der Dateiliste, derselbe Defekt in klein, den die Runde für die Kommandos gerade behebt. | S2 versorgt beide Zweige aus derselben `Lage`, statt eine zweite Frage zu bauen; das erste Bild dieses Plans zeigt den dritten Ausgang des Nachschlags, den das Spec-Bild nicht zeigt. Der Zeichenzweig von `eingabe_ausfuehren` fragt heute schon zwei der drei Werte ab, und die Zusammenfassung in `lage()` macht das Vergessen des dritten zu einer Änderung an einer Zeile statt an einem ganzen Zweig. Die Zählprobe hält fest, dass die Frage nach dem Ersthelfer im Baum genau einmal erklärt ist. |
 | Ein Menüeintrag mit einem Kürzel **ohne** Befehlstaste nimmt dem Ersthelfer die Taste womöglich nicht weg. Die Annahme ist am eigenen Baum nur für Kombinationen **mit** Befehlstaste belegt. | Das Risiko ist einseitig, und S6 hält es so: trifft die Herleitung zu, verhindert die Ausgrauung den Schaden; trifft sie nicht zu, kostet die Ausgrauung nur den Mausklick, und C2.19 nennt diesen Preis ohnehin. Weil Menüaufbau und Ausgrauung ein Schritt sind, gibt es keinen Zwischenstand, in dem die Kürzel ohne die Ausgrauung stehen. Am Bündel zeigt es sich in der Abnahme der fünf Fälle von C2.6. |
 | Die Ausgrauung hängt an `validateMenuItem:`, und AppKit ruft es vielleicht nicht vor jeder Tastenentsprechung. | `NSMenu` steht auf seiner vorgegebenen automatischen Freigabe, und `--menue-protokoll` ruft `update()` je Untermenü schon heute (`menue.rs:622-633`). C2.17 prüft die Regel über die Tafel und nicht über AppKit; ob AppKit sie im richtigen Augenblick erfragt, entscheidet der Lauf am Bündel. `inference:` bis dahin. |
 | Zwei `Ablage`-Werte eines Prozesses halten Deskriptoren auf dieselbe Sperrdatei und blockieren einander. | Die Lebensdauern sind heute schon getrennt: `belegung::fuer_den_betrieb` verwirft seine Ablage, bevor `sitzung_laden` die bleibende öffnet. S12 schreibt die Regel in den Doc-Kommentar und prüft sie mit einer Probe, die zwei Griffe aus einem Prozess nimmt. |
@@ -441,7 +472,7 @@ Was am Fenster hängt, verteilt sich auf drei Arten:
 
 Die zweite Prüfung nennt zwei Dinge ausdrücklich für die Planung, und beide sind umgesetzt.
 
-**Die Sprungmarke.** Der Nachschlag hat im Code drei Ausgänge und im Spec-Bild zwei (`crates/krk-ui/src/appkit/ereignisse.rs:498-513`). Der fehlende ist `Nachschlag::Sprungmarke`, und er ist der gefährliche: wer den Plan aus dem Bild schriebe, baute `zulaessig` mit zwei Aufrufern und ließe die Wache vor dem Sprungmarkenpuffer fallen. Das erste Bild dieses Plans zeigt den dritten Ausgang, S2 baut die Wache, und die Zählprobe hält fest, dass die Teilfrage nach dem Ersthelfer drei Frager hat und alle drei dieselbe Funktion rufen.
+**Die Sprungmarke.** Der Nachschlag hat im Code drei Ausgänge und im Spec-Bild zwei (`crates/krk-ui/src/appkit/ereignisse.rs:498-513`). Der fehlende ist `Nachschlag::Sprungmarke`, und er ist der gefährliche: wer den Plan aus dem Bild schriebe, baute `zulaessig` mit zwei Aufrufern und ließe die Wache vor dem Sprungmarkenpuffer fallen. Das erste Bild dieses Plans zeigt den dritten Ausgang, und S2 versorgt ihn. **Wie es ihn versorgt, hat die dritte Diagrammprüfung geändert**; der Abschnitt vom 260813-0233 am Ende dieses Plans sagt, wie und warum.
 
 **Die Wächter im Zustandsautomaten.** Zwei nebenläufige Regionen stellen jedes Ereignis an beide zu, und ohne Wächter behauptet der Automat, ein Suchzeichen lande während der Aufnahme im Suchtext. C1.15 sagt das Gegenteil, und das Flussdiagramm daneben zeichnet es richtig. Der zweite Automat dieses Plans trägt vier Wächter `[keine Aufnahme]`, und S10 setzt sie als zwei hintereinandergeschaltete Stationen im Fänger um, nicht als zwei unabhängige Regionen.
 
@@ -475,3 +506,55 @@ Der Spec grenzt acht Dinge ab, und alle acht bleiben abgegrenzt. Drei Punkte kom
 - **Kein Bündelbau, kein Vordergrundlauf, keine Messung.** Unter `target/KRK.app` liegt ein beglaubigtes Bündel, das der Nutzer braucht.
 - **Kein Umzug von `verzeichnis/sys.rs`.** Der Modulkopf hat die Namensspannung für `fcntl` schon angenommen; ein Umzug verschöbe jede Fundstelle, ohne eine Zeile besser zu machen.
 - **Kein Nachziehen der veralteten Zahlen in `CLAUDE.md`.** Die Datei nennt 68 Varianten für `Kommando` und 33 Dateien unter `appkit/`; beide Befunde haben eigene offene Datensätze (`shared/issues/260812-2253_o_claude-md-nennt-fuer-kommando-68-varianten-der-baum-traegt-75.md` und `260812-1438_o_claude-md-nennt-31-von-33-dateien-…`), und diese Runde verschiebt beide Zahlen erneut. Das Nachziehen gehört an den Schluss der Runde und nicht in einen ihrer Schritte.
+
+
+---
+
+## Nachtrag vom 260813-0233: was die dritte Diagrammprüfung geändert hat
+
+Die dritte Prüfung (`reviews/260813-0220-conceptrev-plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md`, Spruch `acceptable`) nennt einen Befund, der vor die Ausführung gehört, und fünf, die mitlaufen dürfen. Alle sechs sind abgearbeitet, keiner ist zurückgewiesen. Der erste hat mehr geändert als eine Zahl.
+
+### Die Zählprobe in S2 war falsch, und die Zahl war nicht ihr eigentlicher Fehler
+
+**Die Zahl drei war falsch, und der Plan hat sie an drei Stellen als prüfbare Zusage geführt**: in der Abnahme von S2, in der ersten Zeile der Risikotabelle und in der Aufschrift des Knotens `ERSTH` im ersten Bild. Am Baum nachgezählt hat `ersthelfer_gehoert_appkit` heute genau eine Aufrufstelle, `crates/krk-ui/src/appkit/ereignisse.rs:488`, dazu die Erklärung ab `:536`. Nach dem Entwurf, den S2 und S6 zusammen beschrieben, wären es zwei geworden: die Wache in `behandeln` und `lage()` am Delegierten. `kommando_ausfuehren` und `validateMenuItem:` rufen beide `self.lage()` und teilen sich damit eine Stelle. C2.16 verlangt die Drei nicht; sie war ein Zusatz dieses Plans, entstanden aus einer richtigen Beobachtung auf der logischen Ebene, die auf der Ebene der Aufrufstellen nicht gilt.
+
+**Auf zwei gesetzt worden ist die Probe trotzdem nicht.** Eine Zählung von Aufrufstellen beantwortet die Frage nicht, für die sie dastand. Zugesagt ist, dass es eine Zulässigkeitsfrage gibt und keinen zweiten Bau derselben Frage. Gegen diese Zusage ist eine Aufruferzahl in beide Richtungen blind. Schreibt jemand an anderer Stelle im Baum eine eigene Prüfung auf `NSTextView`, `NSTextField` und `NSText`, also genau den Doppelbau, bleibt die Zahl der Aufrufer der alten Funktion unverändert und die Probe grün. Kommt umgekehrt ein weiterer berechtigter Frager hinzu, wird sie rot, und der billigste Weg zurück ins Grüne ist dann, einen Frager zu streichen. Eine Probe, deren günstigste Reparatur das Entfernen einer Prüfung ist, taugt weniger als gar keine.
+
+**Die direkte Frage lautet, wie oft im Baum entschieden wird, ob der Ersthelfer seine AppKit-Bedeutung behält, und sie ist zählbar.** Der Baum liefert die Bauform dafür selbst. `es_gibt_genau_einen_menuebauer` (`crates/krk-ui/src/appkit/teilen.rs:446-470`) zählt nicht Aufrufer, sondern Erklärungen, mit zusammengesetzten Nadeln, damit die Probe sich nicht selbst mitzählt. S2 nimmt diese Form: `fn ersthelfer_gehoert_appkit` kommt im Baum genau einmal vor, und `isKindOfClass(` steht in genau einer Datei. Heute sind das drei Zeilen, eine je Textklasse (`ereignisse.rs:549-551`); gezählt werden deshalb Dateien und nicht Fundstellen, denn eine vierte Textklasse in derselben Funktion ist eine zulässige Änderung und kein Doppelbau.
+
+**Der Baum hat sich dabei nie anders verhalten als jetzt beschrieben.** Am 260813 tragen genau drei Prüfungen eine Lesung des Quellbaums: die zwei in `teilen.rs` und `das_vorschaumodell_weiss_von_der_einfaerbung_nichts` (`crates/krk-ui/src/appkit/vorschau.rs:1240-1263`). Alle drei zählen Erklärungen, Dateien oder das Vorkommen eines Namens, und keine zählt Aufrufer. Die Drei in S2 war der Ausreißer und nicht die Regel, von der sie abwich.
+
+Die Prüfstrategie trennt die zwei Sorten von Zählproben jetzt ausdrücklich. Erklärungszählungen halten, was sie versprechen. Aufruferzählungen stehen nur noch dort, wo ein Kriterium die Zahl selbst zusagt, nämlich bei den zwei Aufrufern von `zulaessig` aus C2.16 und bei `kommando_ausfuehren` aus C2.14. Von C2.16 fällt dabei auf, dass es zwei Hälften hat, „die Zulässigkeitsfrage steht an genau einer Stelle" und „beide Frager rufen sie"; der Plan hatte nur die zweite geprüft. Die erste ist jetzt in S2 nachgetragen.
+
+### Der Entwurf hat sich dabei geändert, und zwar zum Einfacheren
+
+**Der Abgriff fragt nach dieser Runde überhaupt nicht mehr nach dem Ersthelfer.** Die alte Fassung von S2 nahm den frühen Ausstieg aus `behandeln` heraus und setzte an seine Stelle eine ausdrückliche Wache im Zweig `Nachschlag::Sprungmarke`. Zwei Stellen also, die dieselbe Frage stellen, in einer Runde, deren Zweck es ist, zweite Stellen einzusparen. Die neue Fassung reicht beide Ausgänge des Nachschlags unverändert an die Senke und lässt die Senke einmal je Eingabe die `Lage` erheben.
+
+Der Zeichenzweig von `eingabe_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:2064-2088`) ist für diese Fassung schon fast gebaut: er fragt heute `blatt_steht()` und `fokus()` und braucht allein den dritten Wert dazu. Nachgerechnet über alle drei Ausgänge des Nachschlags bleibt das Verhalten gleich.
+
+Der Preis ist nachgerechnet und nicht behauptet. Ein Tastendruck, der bis zur Senke läuft, kostet drei Eigenschaftsabfragen wie heute. Ein Tastendruck in ein Textfeld kostet drei statt einer, weil der frühe Ausstieg wegfällt, dazu einen Nachschlag in der Belegung; das trifft das Tippen während einer Umbenennung und in der Pfadeingabe. Eine unbelegte Kombination kostet eine Abfrage weniger. Die Größenordnung spricht gegen jede Bedeutung für L1, gemessen ist sie nicht, und L1 steht auf der Abnahmeliste am Bündel. `inference:`
+
+Drei Dinge fallen dabei weg. `Tastenabgriff::einrichten` verliert den Parameter `ist_editorflaeche`, `abgriff_aufsetzen` eine seiner drei schwachen Referenzen, und `ereignisse.rs` bekommt den Editor nicht länger hereingereicht. Der Modulkopf jener Datei und `CLAUDE.md` sagen beide, dass sie den Editor nicht kennen soll; nach dieser Änderung stimmt der Satz ohne Einschränkung. Übrig bleibt für `ersthelfer_gehoert_appkit` genau eine Aufrufstelle, `lage()`, womit die Erklärungszählung und die Aufruferzählung dasselbe Ergebnis liefern und die Zusage keinen Stellvertreter mehr braucht.
+
+**Was die Änderung nicht leistet, gehört dazu.** Ob AppKit `validateMenuItem:` im richtigen Augenblick erfragt, entscheidet weiterhin der Lauf am Bündel; daran ändert sich nichts. Und die Möglichkeit, den dritten Wert im Zeichenzweig zu vergessen, ist nicht verschwunden, sondern kleiner geworden: sie ist jetzt eine Zeile in einer Bedingung und kein eigener Zweig an anderer Stelle. Die Aussage über die Zahl der Abfragen je Tastendruck ist am Baum abgezählt und nicht am laufenden Bündel gemessen; ihre Bedeutung für L1 ist eine Größenordnungsschätzung. `inference:`
+
+### Die fünf übrigen Befunde
+
+| Befund der Prüfung | Was geändert wurde |
+|---|---|
+| 2 · `belegung::fuer_den_betrieb` steht im Kasten `krk-ui`, liegt aber in `crates/krk-core/src/tasten/belegung.rs:1310` | Alle fünf Knoten des Kastens tragen jetzt ihre Aufrufstelle in `krk-ui` mit Zeilennummer; für die Belegung ist das `anwendung.rs:5291` in `starten`. Der zweideutige Knoten heißt jetzt `sitzung_vormerken` mit `anwendung.rs:4837` und meint damit die Methode am Delegierten, nicht den Typ im Kern. |
+| 2b · S12 verweist für die Aufrufstellen von `Ablage::laden` und `Ablage::sichern` auf „die fünf Stellen aus dem Aufrufbild" | Am Baum nachgezählt stimmt der Verweis nicht: das Bild zeigt die fünf Benutzer von `Ablage::durchgang`, die Aufrufstellen der zwei Methoden sind sechs und eine andere Menge. S12 führt sie jetzt einzeln mit Pfad und Zeile auf und verweist nicht mehr auf das Bild. |
+| 3 · Die Bedingung von `SUF` ist enger als S10 | Der Knoten fragt jetzt nach Suchzeichen, Eingabetaste und Rücktaste und deckt damit dieselben drei Fälle ab wie der Zustandsautomat daneben und wie S10. |
+| 4 · Der Regelknoten wird im Bild vom Abgriff gefragt, im Code von der Senke | Die Raute `A1` ist aus dem Kasten des Abgriffs in einen eigenen Kasten „Anwendungsdelegierter" gewandert, zusammen mit der Raute des Zeichenzweigs. Die zwei Aufrufer von `zulaessig` aus C2.16 sind damit als die zwei Rauten `A1` und `A2` ablesbar, eine in `kommando_ausfuehren` und eine in `validateMenuItem:`. |
+| 5 · Die Prosa zählt vier Wächter, der Automat trägt fünf | Fünf, und der Satz nennt jetzt beide Sorten: vier in der Suchregion, einer am Ausgang für das nackte `esc`. |
+| 6 · „Vier Stränge, die einander nur an einer Stelle berühren" | Der Satz nennt jetzt die zwei Berührungspunkte S6 und S10 und sagt, dass der Strang der weiteren Instanz zu keinem anderen eine Kante hat. Dazu die Einschränkung, die der Graph nicht zeigt: `crates/krk-ui/src/belegungsmodell.rs` wird von S4, S8 und S14 angefasst, in drei verschiedenen Funktionen. |
+
+### Drei Punkte, die aus dem Nachlesen am Baum kamen und nicht aus der Prüfung
+
+- **Der Protokollmodus zeigt nach S2 mehr als heute.** `protokollieren` steht hinter dem frühen Ausstieg; ohne den Ausstieg erscheint auch ein Tastendruck in ein Textfeld in `--tasten-protokoll`. Der Modus gibt danach wieder, was der Abgriff sieht, und der Satz gehört in seinen Doc-Kommentar.
+- **Der Quellbaumleser der Zählproben braucht einen Ort.** `quelldateien` und `einsammeln` sind heute privat im Prüfmodul von `teilen.rs`; die Runde braucht sie in mindestens drei weiteren Prüfmodulen. S2 zieht sie in ein gemeinsames `#[cfg(test)]`-Modul um, statt sie dreimal abzuschreiben.
+- **`sprungmarke_tippen` bleibt, wie es ist.** Es liefert `false`, wenn der Kern das Zeichen nicht in den Puffer nimmt (`crates/krk-ui/src/appkit/tabelle.rs:1134-1147`). Unter der Regel aus S3 ist das keine Ausnahme, sondern ihre Anwendung: ein Zeichen, das keine Sprungmarke ist, war nie zulässig.
+
+### Was nicht geändert wurde
+
+Der Plan behält Namen, Ort und Marker. Der Abschnitt `## Was aus den zwei Diagrammprüfungen in diesen Plan eingegangen ist` bleibt als Aufzeichnung des damaligen Standes stehen; er trägt nur einen Verweis auf diesen Nachtrag. Die offene Frage zur Menügliederung (`decisions/260813-0159_o_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md`) bleibt offen, und die fünf Datensätze unter `## Offene Fragen` sind unverändert. Die Zeile **Decidability** im Kopf gilt weiter: die tragende Frage wird aus gelesenen Eingaben beantwortet, und nach dieser Änderung liest sie ein Mechanismus statt zweier.
