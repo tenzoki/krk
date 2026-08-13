@@ -61,3 +61,21 @@ und seine Antwort bleiben unberührt.
 Gefunden beim Bau des Umsetzungsplans dieser Runde
 (`planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md`,
 Strang A).
+
+---
+
+**Abgleich 260813-1345: zu Recht offen.** Der Abschnitt `## Question` des Entscheids
+`decisions/260813-1037_i_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`
+nennt unverändert `F5` und `delete`. Beide Feststellungen dieses Datensatzes am Baum
+nachgelesen und bestätigt: `Kommando::Kopieren` und `Kommando::InPapierkorb` tragen
+`Wirkungsbereich::Dateifenster`, und `fokus_bei` antwortet vor einem fremden Schlüsselfenster
+`Fokus::Anderswo` (`crates/krk-ui/src/appkit/anwendung.rs:4169-4174`).
+
+Die Zahl **24 von 76** hält: `Kommando` trägt 76 Varianten, davon 24 mit
+`Wirkungsbereich::Ueberall`. Die Liste ist seit Turn 2 in einem Punkt anders zu lesen —
+`fenster_einblenden` steht darauf und kommt seither über die Ausnahmeliste durch
+(`crates/krk-ui/src/kommandos/zulaessigkeit.rs:198-201`), es sind also 23 der 24, die die neue
+Bedingung wirklich sperrt.
+
+Der Entscheid trägt seit diesem Abgleich den Marker `_i_`; die Berichtigung, die dieser Datensatz
+verlangt, ist davon unberührt und bleibt zu tun.

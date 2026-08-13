@@ -44,3 +44,19 @@ Bild 1 hat drei Quellen (`A1`, `B1`, `D1`) und eine Senke (`E2`), Bild 2 vier Qu
 ## What a clean redraw would require
 
 Nicht einschlägig. Das Urteil lautet *acceptable*, kein Befund verlangt eine andere Struktur, und keiner benennt einen Zyklus, einen Gott-Knoten oder eine fehlende Schicht. F1 bis F3 sind an Ort und Stelle zu beheben, ohne einen Knoten zu verschieben oder eine Abhängigkeit umzuhängen. Für das Nutzer-Tor heißt das: die Bilder tragen den Plan, und wer sie prüft, prüft die Beschriftung und nicht den Bau.
+
+---
+
+## Anmerkung des Abgleichs, 260813-1345
+
+Keiner der Befunde dieser Prüfung ist an seinem Dokument behoben worden. Spec und Plan sind seit
+`59b0a6c` nicht mehr angefasst worden; die beanstandeten Beschriftungen stehen unverändert da.
+Das Sitzungsprotokoll des Orchestrators hat die Behebung als selbstverständlich mitgeführt („sind
+an Ort und Stelle zu beheben"), ohne dass ein Schritt sie übernommen hätte.
+
+Dazu ist am Spec ein vierter Punkt entstanden, der beim Prüfen noch nicht bestand: sein
+Stationsbild und zwei Prosastellen zählen sechs Stationen, und der Baum trägt seit `f9e5137` an
+allen drei vorgesehenen Stellen sieben.
+
+Abgelegt als
+`issues/260813-1345_o_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.

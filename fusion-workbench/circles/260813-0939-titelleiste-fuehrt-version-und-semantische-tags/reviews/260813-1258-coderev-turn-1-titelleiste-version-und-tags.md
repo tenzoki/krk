@@ -96,3 +96,43 @@ Kein Befund hält die Abnahme am Bündel (E2) auf. Befund 1 gehört allerdings i
 **Die Zeitstempel dieser Runde liegen vor der Uhr.** `date` meldet auf diesem Gerät `260813-1258`; die vier Commits stehen zwischen 12:14 und 12:47, aber `history/260813-1310-coder-strang-b-titelleiste.md` und `issues/260813-1420_o_…` tragen spätere Zeiten als jetzt. Die Konvention verlangt den Stempel aus `date +%y%m%d-%H%M`. Die Dateien dieser Durchsicht tragen deshalb `1258` und sortieren vor den beiden genannten.
 
 **C4 ist ohne Probe abgenommen.** Die sieben Kriterien zu `README.md` tragen im Spec ein **(Probe)**, und der Plan sieht für D4 keine vor; der Ausführer hat das in seinem Bericht vermerkt. Die sieben Aussagen sind am Text nachgelesen und stehen alle sieben darin, einschließlich der Berichtigung von „Nachzuführen ist nichts" (`README.md:304-308`). Wer sie maschinell will, braucht einen Schritt, der eine Probe an der Datei vorsieht — das ist eine Planlücke und kein Befund an diesem Bau.
+
+---
+
+## Anmerkung des Abgleichs, 260813-1345
+
+Kein Befund dieser Durchsicht ist widerlegt worden; die Belege sind einzeln am Baum nachgelesen.
+Befund 1 ist in Turn 2 behoben (`ed0388e`), die Befunde 2 bis 4 stehen unverändert und tragen
+je eine Abgleichsnotiz an ihrem Datensatz. Die vier geprüften Abweichungen vom Planwortlaut
+halten alle vier.
+
+**Eine Zahl im Abschnitt „Was sonst geprüft und in Ordnung ist" stimmt nicht.** Dort steht:
+„`fokus()` bleibt als Hülle für seine fünf übrigen Aufrufer, nachgezählt: `:1168`, `:1713`,
+`:3454`, `:4822`, `:5286`." Es sind sechs. Der sechste steht bei `anwendung.rs:1084` und heisst
+`selbst.fokus()` statt `self.fokus()`; er entgeht damit dem Muster, das die anderen fünf
+gefunden hat. Dieselbe Zahl steht im Plan (A2) und im Doc-Kommentar bei `anwendung.rs:4163-4165`,
+und derselbe Fehler ist der Runde 7 schon einmal an zwei Zählproben unterlaufen
+(`circles/260813-0100-…/issues/260813-0540_c_zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs.md`).
+Abgelegt als `issues/260813-1345_o_die-aufruferzahl-an-fokus-steht-auf-fuenf-und-der-baum-traegt-sechs.md`.
+Die Aussage, um die es der Durchsicht sachlich ging — dass `lage` das Schlüsselfenster genau
+einmal erhebt —, ist davon unberührt und bestätigt.
+
+**Der Querschnitt ist grösser, als diese Durchsicht ihn fasst.** Sie führt sechs Prosastellen auf
+eine Ursache zurück und schlägt als Abhilfe vor, ein Schritt möge die Dateien in seine Liste
+nehmen, die die geänderte Zahl nennen. Zwei weitere Stellen stehen in `zulaessigkeit.rs` selbst,
+also in der Datei, die A1 als einzige nennt (`:299` „die drei abweisenden Viertel", `:459` „die
+Regel drei Bestandteile"), und eine dritte im Grenzbereich bei `anwendung.rs:2690-2693`. Die
+Dateiliste ist damit die eine Hälfte der Abhilfe; die andere ist die Suche nach der Zahl
+innerhalb der geänderten Datei. Abgelegt als
+`issues/260813-1345_o_zwei-prosastellen-in-zulaessigkeit-rs-stehen-in-der-dateiliste-von-a1-und-sind-trotzdem-nicht-nachgezogen.md`.
+
+**Die Anmerkung zu C4 ist aufgenommen worden.** „C4 ist ohne Probe abgenommen" gilt, und zwei
+weitere Kriterien teilen die Lage: C2.8 und C2.10 tragen ebenfalls **(Probe)** und haben keine.
+Neun der 59 zusammen, abgelegt als
+`issues/260813-1345_o_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`.
+
+**Die Anmerkung zu den Zeitstempeln aus der Zukunft trifft weiter zu.** `date` meldet beim
+Abgleich `260813-1345`; `issues/260813-1420_o_…` trägt weiterhin einen späteren Stempel als die
+Uhr. Der gemeinsame Speicher führt den Fall schon
+(`circles/260812-1000-…/issues/260812-1805_o_sechs-sitzungsprotokolle-tragen-einen-zeitstempel-aus-der-zukunft.md`,
+offen); ein zweiter Datensatz dafür entsteht hier nicht.

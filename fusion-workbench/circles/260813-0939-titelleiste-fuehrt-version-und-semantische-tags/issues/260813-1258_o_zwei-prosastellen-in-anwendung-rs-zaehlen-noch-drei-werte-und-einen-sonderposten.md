@@ -40,3 +40,22 @@ Beide Kommentare nachziehen, sobald ein Schritt `anwendung.rs` ohnehin öffnet. 
 
 - Gefunden bei der Durchsicht von Turn 1 der Runde 8, Bereich `59b0a6c..21dbc59`.
 - Schwesterbefund: `260813-1420_o_vier-modulkoepfe-ausserhalb-der-dateiliste-von-a1-und-a2-nennen-noch-drei-bestandteile.md`. Dessen Punkt 1 (`menue.rs`, „die Tafel aus 140 Faellen", heute Zeile 1132) steht weiter offen, obwohl Strang C `menue.rs` geöffnet hat; die dort vorgeschlagene Abhilfe („`menue.rs` fällt in Strang C dieser Runde an") ist nicht eingetreten.
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, beide Stellen unverändert.** `anwendung.rs:2549-2552`
+(heute `:2604-2607`) sagt weiter „dieselben drei Werte" und „alle drei"; `:733-735` (heute
+`:733-736`) nennt weiter einen Sonderposten. Beide Feststellungen des Datensatzes am Baum
+bestätigt, einschliesslich der Begründung, dass am Verhalten nichts hängt.
+
+**Eine dritte Stelle in derselben Datei gehört dazu**, und sie ist ein Grenzfall:
+`anwendung.rs:2690-2693` sagt „Bis zur Runde 7 standen hier zwei getrennte Vorbehalte … waehrend
+der dritte Bestandteil im Ereignisabgriff wohnte; alle drei stehen jetzt in der einen Regel."
+Der Satz beschreibt einen historischen Vorgang und zählt für ihn richtig; drei Zeilen darunter
+steht „Die vier Bestandteile" (`:2695`). Als Umfangsangabe gelesen führt er trotzdem in die
+Irre, und wer die beiden anderen Stellen anfasst, nimmt ihn mit — ein Halbsatz („die damals
+zusammengeführten drei") genügt.
+
+**Punkt 1 des Schwesterbefunds ist weiterhin offen.** `menue.rs:1132` sagt „die Tafel aus 140
+Faellen", obwohl Strang C dieselbe Datei geöffnet und fünf andere Prosastellen darin nachgezogen
+hat; die Tafel deckt 280 (`zulaessigkeit.rs:435`).

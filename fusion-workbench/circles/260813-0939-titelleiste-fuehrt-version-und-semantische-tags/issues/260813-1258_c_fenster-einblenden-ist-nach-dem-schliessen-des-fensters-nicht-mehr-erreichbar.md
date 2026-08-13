@@ -89,3 +89,30 @@ Der zweite Weg, ein vierter Wert `Keines` in `Schluesselfenster`, ist **nicht** 
 **Verifikation:** `make check` (build, test, clippy mit `-D warnings`, fmt), Exit 0. Die neue Probe läuft grün, ebenso die Tafel aus 280 Fällen und `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf`, die jetzt über drei Einträge geht.
 
 **Nicht behoben, weil außerhalb dieses Schnitts:** die beiden weiteren `Ueberall`-Befehle, die dieselbe Ursache trifft — `weitere_instanz` (opt+cmd+n) und `belegung_ansehen` (F1). Beide sind ohne Fenster weiterhin abgewiesen. `belegung_ansehen` stellt ein Blatt am Hauptfenster auf und könnte ohne Fenster ohnehin nichts zeigen; `weitere_instanz` startet ein zweites KRK und wäre ohne Fenster sinnvoll. Der Bedienweg zurück ist mit `fenster_einblenden` da, also ist keiner der beiden ein Verlust gegenüber heute; wer sie dennoch will, braucht einen genannten Grund je Eintrag, so wie die Liste ihn verlangt.
+
+---
+
+**Abgleich 260813-1345: die Behebung hält, alle vier Stellen nachgelesen.**
+
+1. `immer_erreichbar` führt drei Kommandos: `Beenden`, `FensterSchliessen`, `FensterEinblenden`
+   (`crates/krk-ui/src/kommandos/zulaessigkeit.rs:198-201`).
+2. Der Modulkopf trägt die Herleitung über das fehlende Schlüsselfenster.
+3. Die drei Prosastellen zählen drei (`:107`, `:193`, dazu die Kurzbeschreibung an
+   `immer_erreichbar`).
+4. Die Probe `ohne_schluesselfenster_kommt_fenster_einblenden_durch` steht bei `:527-540` und
+   geht über alle fünf Fokuswerte.
+
+`make check` beim Abgleich wiederholt: exit 0, `cargo test --workspace` 1025 Proben grün,
+`clippy --all-targets -- -D warnings` grün. Die Tafel aus 280 Fällen bleibt von der Erweiterung
+unberührt, weil ihre Stellvertreter keinen Eintrag der Ausnahmeliste führen (`:361-364`).
+
+**Die beiden ausdrücklich nicht behobenen Punkte bestehen wie beschrieben fort** und sind kein
+Widerspruch zur Schliessung: die Faltung von „fremdes Fenster" und „kein Fenster" in
+`Schluesselfenster::Fremd` (`crates/krk-ui/src/appkit/anwendung.rs:2623-2639`), und die beiden
+weiteren `Ueberall`-Befehle `weitere_instanz` und `belegung_ansehen`, die ohne Fenster weiterhin
+abgewiesen sind.
+
+**Ein Nebensatz ausserhalb dieses Datensatzes ist durch die Behebung falsch geworden**: der
+Nachtrag aus Schritt A3 am Defekt der Runde 6 zählt die Ausnahmeliste mit zwei Einträgen.
+Abgelegt als
+`260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md`.

@@ -343,3 +343,58 @@ Zwei Aussagen dieses Spec sind erschlossen und nicht gemessen, und beide sind ge
 **Ob der Über-Dialog KRKs Befehle durchlässt, ist am Baum nicht zu entscheiden.** `blatt_steht` fragt `NSWindow::attachedSheet` und sieht ein freistehendes Panel nicht; `ersthelfer_gehoert_appkit` fragt, ob der Ersthelfer des Schlüsselfensters eine Textklasse ist, und welchen Ersthelfer AppKit im Über-Panel einsetzt, steht nirgends fest. Der Ausgang kann in beide Richtungen fallen. Der Datensatz zur offenen Frage schreibt das aus.
 
 **Dass eine führende Titelleisten-Ergänzung die Mindestgröße des Fensters nicht anhebt, ist erschlossen** (C1.8). `setContentMinSize` bindet den Inhalt und nicht die Titelleiste. Gemessen ist es nicht, und das Kriterium steht deshalb als Kriterium da und nicht als Feststellung.
+
+---
+
+## Reconciliation Log
+
+**Abgleich:** 260813-1345, `reconciler`, Domäne `code`
+**Stand:** `ed0388e`, Sitzungsspanne `9d5fcfa..HEAD`
+**Bericht:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1345-reconciliation.md`
+
+**Der Marker bleibt `_o_`.** Die sechs Fähigkeiten sind gebaut, die Abnahme ist es nicht: elf der
+59 Kriterien haben einen Anteil, den nur ein Mensch am laufenden Bündel sehen kann, und eines
+ist reine Nutzerarbeit. Dieser Spec bleibt das Dokument, gegen das E2 abgenommen wird.
+
+### Die 59 Kriterien, nach ihrem Nachweisweg sortiert
+
+| Sorte | Zahl | Welche |
+|---|---|---|
+| Allein am Baum nachweisbar | 48 | C1.2–C1.5, C1.7, C1.8; C2.1–C2.8, C2.10, C2.11; C3.1–C3.14; C4.1–C4.7; C5.2, C5.4, C5.7; C6.1–C6.8 |
+| Zur einen Hälfte am Baum, zur anderen nur am Bündel | 7 | C1.1, C1.6, C1.9, C1.11; C2.9; C5.1, C5.3 |
+| Allein am laufenden Bündel | 3 | C1.10, C5.5, C5.6 |
+| Nutzerarbeit, keine Prüfung | 1 | C3.15 |
+
+**Alle 48 der ersten Sorte sind beim Abgleich einzeln gegen den Baum gelesen und halten.** Neun
+davon tragen die Kennzeichnung **(Probe)** und haben keine benannte Probe: C2.8, C2.10 und die
+sieben von C4. Sie sind von Hand nachgelesen, nicht maschinell abgenommen; abgelegt als
+`issues/260813-1345_o_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`.
+
+**Die zehn Kriterien mit einem Bündelanteil und C3.15 stehen als Beobachtungen in Planschritt
+E2** und sind Nutzerarbeit, weil der Abnahmelauf KRK im Vordergrund verlangt. Das ist dieselbe
+Grenze, an der die Runden 1 bis 7 beschränkt geschlossen haben.
+
+### Zwei Stellen dieses Spec sind vom Bau überholt
+
+**Das Stationsbild zählt sechs, der Baum trägt sieben.** Der Abschnitt „Der Auslieferungsweg nach
+dieser Runde" führt `S0` ohne Zahl und `1 · AppKit-Grenze` bis `6 · beglaubigen und anheften`,
+und die Prosa sagt zweimal „sechs Stationen". Schritt D3 des Plans hat auf sieben durchgehend
+numerierte Stationen und drei benannte Vorläufe festgelegt, und der Baum trägt das an allen drei
+vorgesehenen Stellen (`xtask/src/release.rs:3`, `xtask/src/main.rs:40`, `README.md:217`).
+
+**Die drei Diagrammbefunde B1, B2 und B6 sind nie behoben worden**, obwohl Prüfbericht und
+Sitzungsprotokoll sie als „an Ort und Stelle zu beheben" führen. Beides zusammen abgelegt als
+`issues/260813-1345_o_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.
+
+### Was der Spec richtig vorausgesehen hat
+
+Der Abschnitt „Der offene Defekt am Auslieferungsort bleibt ausdrücklich draussen" hat gehalten:
+`shared/issues/260813-0026_*_bundle-und-release-schreiben-an-denselben-ort-…` ist nicht
+hereingeholt worden, und `target/KRK.app` ist über die ganze Runde unberührt geblieben. Der Preis
+ist einmal angefallen: die Risiko-Gegenmaßnahme zu `bundle::VERSION` verlangte einen
+`cargo xtask release`, und der Ausführer hat aus genau diesem Grund darauf verzichtet.
+
+Ebenso gehalten: die Runde hat keine elfte Zeitzusage gesetzt und keine der zehn angefasst, und
+sie hat keine der vier vollständigen Aufzählungen wachsen lassen. Beim Abgleich nachgezählt:
+`Kommando` 76, `Wirkungsbereich` 7, `Bereich` 5, `Fokus` 5, `Funktionsbereich` 9,
+`resources/default-keymap.toml` 82 Funktionen mit 88 Kombinationen.

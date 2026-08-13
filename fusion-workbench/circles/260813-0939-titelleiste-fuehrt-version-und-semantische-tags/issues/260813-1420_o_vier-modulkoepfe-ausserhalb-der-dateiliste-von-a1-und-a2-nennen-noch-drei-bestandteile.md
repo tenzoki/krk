@@ -44,3 +44,33 @@ Die vier Stellen nachziehen, sobald ein Schritt diese Dateien ohnehin öffnet.
 - Gefunden beim Umsetzen von A1 und A2 der Runde 8; nicht behoben, weil beide
   Schritte ihre Dateien abschließend aufzählen und ein zweiter `coder`
   gleichzeitig im Baum arbeitet.
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, alle vier Stellen unverändert.** Einzeln am Baum
+nachgelesen:
+
+1. `crates/krk-ui/src/appkit/menue.rs:1132` — „die Tafel aus 140 Faellen". Die Tafel deckt 280
+   (`crates/krk-ui/src/kommandos/zulaessigkeit.rs:435`), und die Probe heisst
+   `die_tafel_aus_zweihundertachtzig_faellen_geht_auf` (`:387`).
+2. `crates/krk-ui/src/kommandos/mod.rs:25` — „einer ihrer drei Bestandteile". Es sind vier.
+3. `crates/krk-ui/src/appkit/ereignisse.rs:90-92` — „die `Lage` aus Blattstand, Ersthelferbefund
+   und Fokus", „dieselben drei Werte".
+4. `crates/krk-ui/src/appkit/ereignisse.rs:103-110` — die Aufzählung (1) bis (3) ohne den
+   vierten Bestandteil.
+
+**Die Abhilfe, die dieser Datensatz für Punkt 1 vorschlägt, ist ausgeblieben.** „`menue.rs`
+fällt in Strang C dieser Runde an" trifft zu — C2 hat die Datei geöffnet und zwei Prosastellen
+darin nachgezogen (`menue.rs:19-24` und `:48-58`) —, aber die Tafelzahl nicht mitgenommen. Die
+Übergabe zwischen den Strängen hat sie nicht getragen; genau das hat die Durchsicht von Turn 1
+schon festgehalten.
+
+**Die Nummerierung (1) bis (3) in `ereignisse.rs` bleibt richtig**, und die Verweise darauf
+ebenfalls: `ereignisse.rs:282`, `:523` und `anwendung.rs:2193` nennen „Bestandteil (2)" und
+zeigen weiter auf dasselbe, weil der neue als (4) angehängt wurde. Beim Abgleich nachgeprüft.
+
+**Zwei Stellen mehr, mit einer anderen Ursache.** Der Titel dieses Datensatzes sagt „ausserhalb
+der Dateiliste von A1 und A2", und das trifft für seine vier zu. Zwei weitere stehen
+**innerhalb** der Liste, in `zulaessigkeit.rs` selbst, und sind damit nicht durch eine
+Schrittgrenze entgangen. Abgelegt als
+`260813-1345_o_zwei-prosastellen-in-zulaessigkeit-rs-stehen-in-der-dateiliste-von-a1-und-sind-trotzdem-nicht-nachgezogen.md`.

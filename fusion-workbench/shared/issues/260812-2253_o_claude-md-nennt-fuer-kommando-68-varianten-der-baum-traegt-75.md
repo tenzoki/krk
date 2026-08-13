@@ -52,3 +52,17 @@ Das ist der dritte Stand, den dieser Datensatz nennen muesste (68 zitiert, 75 be
 eine Zahl, die jede Runde mitwaechst, gehoert nicht in eine Datei, die keine Probe haelt.
 Der Datensatz bleibt offen; die Wahl gehoert dem Nutzer und die Revision von `CLAUDE.md`
 nicht in einen Abgleich.
+
+---
+
+**Abgleich 260813-1345 (Runde 8).** Der Befund besteht, und die Zahl in seinem Titel ist selbst
+überholt: `Kommando` trägt heute **76** Varianten
+(`crates/krk-core/src/tasten/belegung.rs`, beim Abgleich nachgezählt), nicht 75. `CLAUDE.md:66`
+nennt weiter 68. Die Runde 8 hat keine Variante angelegt — C6.1 verlangt das ausdrücklich, und
+es hält; gewachsen ist die Aufzählung zuletzt in der Runde 7.
+
+Der Titel bleibt, wie er ist: er benennt den Fehler, nicht den Tagesstand. Wer die Zeile in
+`CLAUDE.md` berichtigt, schreibt 76 und nicht 75.
+
+Verwandter Befund derselben Sorte, beim selben Abgleich abgelegt:
+`shared/issues/260813-1345_o_fuenf-stellen-nennen-79-funktionen-und-73-mit-kommando-die-belegung-fuehrt-82-und-76.md`.

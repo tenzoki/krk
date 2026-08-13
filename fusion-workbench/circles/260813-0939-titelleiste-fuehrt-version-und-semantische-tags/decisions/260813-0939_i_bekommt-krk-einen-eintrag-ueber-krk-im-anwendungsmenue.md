@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md` (Directive und Grounding-Aufnahme); `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` (Runde 7, das vollständige Hauptmenü); `crates/krk-ui/src/menuemodell.rs` (die eine Gliederung des Menüs)
 
@@ -42,3 +42,8 @@ Superseded by:
 
 ---
 Answered: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md, Abschnitt "Drei Fragen beantwortet" — Antwort: Möglichkeit 2, der Standard-Über-Dialog von AppKit, Menüeintrag ohne Kürzel als Sonderposten.
+
+---
+Implemented: 21dbc59 — Der Sonderposten „Über KRK" steht als erster Eintrag des Anwendungsmenüs, gefolgt von einem Trenner. `UEBER_BESCHRIFTUNG` und `UEBER_SELEKTOR` (`crates/krk-ui/src/menuemodell.rs`), eingefügt über `ueber_eintrag_einfuegen` im Zweig `Funktionsbereich::Anwendung` von `aufbau`; der Selektor `orderFrontStandardAboutPanel:` läuft über die Antwortkette an `NSApplication`, `crates/krk-ui/src/appkit/menue.rs` ändert dafür keine Zeile. Kein Kürzel, kein Eintrag in `resources/default-keymap.toml`, `Kommando` unverändert. Abgeglichen am 260813-1345.
+
+**Was der Marker nicht deckt:** C5.5 (was der Dialog beim Lauf über `cargo run` zeigt) und C5.6 (kein Tastenbefehl wirkt, während der Dialog steht) sind im Spec als **(Bündel)** gekennzeichnet und verlangen KRK im Vordergrund. Sie stehen als Beobachtungen in Planschritt E2 und sind Nutzerarbeit.

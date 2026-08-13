@@ -50,3 +50,22 @@ Eine der beiden Fassungen wählen, nicht beide:
 Nicht Gegenstand dieser Runde. Gefunden beim Bau ihres Umsetzungsplans
 (`planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md`,
 Strang D).
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, unverändert.** Beide Feststellungen am Baum
+nachgelesen: `struct Wegwerfwurzel` steht weiter in `xtask/src/release.rs:720` mit `impl Drop`,
+`std::env::temp_dir()` und `fs::remove_dir_all`, und `quelldateien()`
+(`crates/krk-ui/src/quellbaum.rs:120-124`) sammelt weiter allein unter `crates/`.
+
+Eigene Erhebung über den ganzen Baum: fünf Dateien tragen `impl Drop`, `temp_dir()` und
+`remove_dir_all` zugleich — die drei anerkannten Fassungen
+(`crates/krk-core/tests/gemeinsam/mod.rs`, `crates/krk-ui/src/pruefordner.rs`,
+`crates/krk-bench/src/wegwerfordner.rs`), dazu `xtask/src/release.rs` als die vierte und
+`crates/krk-core/tests/baum.rs`, das die Probe selbst ist. C6.8 hält damit weiterhin nur unter
+der Lesart „Kiste unter `crates/`".
+
+Die Entschärfung, die der Datensatz beschreibt, ist eingetreten: keine Probe der Tag-Prüfung
+braucht ein Verzeichnis. Die acht Proben zu `stand_pruefen` (`release.rs:973-1030`) fahren gegen
+Zeichenketten, und die eine Probe, die ein Verzeichnis braucht, nimmt die vorhandene
+`Wegwerfwurzel`. Eine fünfte Fassung ist nicht entstanden.

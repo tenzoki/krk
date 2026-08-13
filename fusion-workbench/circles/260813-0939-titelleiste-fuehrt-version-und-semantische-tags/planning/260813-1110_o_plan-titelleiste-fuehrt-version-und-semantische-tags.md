@@ -1,7 +1,7 @@
 # Implementation Plan: Die Titelleiste führt Namen und Version, semantische Versionstags decken die Zahl
 
 **Date:** 2026-08-13
-**Status:** Draft
+**Status:** Partially Complete
 **Spec:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md`
 **Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
 **Grundlage erhoben:** 260813-1110, am Baum unter `crates/`, `xtask/`, `resources/`, `README.md`, am SDK und an `~/.cargo/registry`
@@ -467,3 +467,86 @@ Vier Festlegungen stehen ohne Rückfrage in diesem Plan, weil sie sich aus dem B
 - [ ] **Hebt `immer_erreichbar` auch die neue Schlüsselfensterfrage auf?** `decisions/260813-1110_o_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`. Der Plan fährt auf der Empfehlung (ja, sie hebt sie auf), damit Cmd+Q vor einem fremden Fenster weiter beendet. Die strenge Lesart des Entscheids sagt das Gegenteil, und der Unterschied ist eine Zeile in `zulaessig` und eine Spalte in der Tafel. Blockiert keinen Schritt; wird die Antwort die andere, ändert sich A1 und sonst nichts.
 - [ ] **Bleibt der Defekt zum Freigabedialog der Runde 6 offen?** Er hängt an der einen Beobachtung in E2 und nicht an einer Entscheidung. Der Plan schliesst ihn nicht im Voraus; die Begründung liegt als `issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
 - [ ] **Wird der Abschnitt `## Question` des Entscheids zum Über-Dialog berichtigt?** Er nennt zwei Befehle als Beispiel, die heute schon nicht durchkommen. `issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`. Die Antwort des Entscheids bleibt davon unberührt.
+
+---
+
+## Reconciliation Log
+
+**Abgleich:** 260813-1345, `reconciler`, Domäne `code`
+**Stand:** `ed0388e`, Sitzungsspanne `9d5fcfa..HEAD`, acht Commits
+**Bericht:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1345-reconciliation.md`
+**Kein Bündelbau, kein Vordergrundlauf.** `target/KRK.app` ist unberührt geblieben.
+
+### Status
+
+`Draft` → `Partially Complete`. Der Dateimarker bleibt `_o_`: fünfzehn der sechzehn Schritte
+stehen auf `[DONE]` und sind einzeln gegen den Baum gelesen; **E2 ist nicht ausgeführt** und ist
+Nutzerarbeit. `_c_` verlangt alle Schritte, und der Baum trägt bis heute keinen Tag
+(`git tag -l` ist leer, C3.15 offen).
+
+### Was einzeln nachgelesen ist
+
+| Strang | Schritte | Ergebnis |
+|---|---|---|
+| A | A1, A2, A3 | alle drei am Baum bestätigt. Eine Zusage aus A2 trifft nicht zu (siehe unten) |
+| B | B1, B2, B3 | alle drei am Baum bestätigt |
+| C | C1, C2, C3 | alle drei am Baum bestätigt; C1 hat die Zählprobe strenger gebaut als der Wortlaut verlangt, und die Begründung trägt |
+| D | D1 bis D5 | alle fünf am Baum bestätigt. `cargo test -p xtask` 60 Proben grün |
+| E | E1 | `make check` beim Abgleich wiederholt, exit 0. `cargo test --workspace` 1025 Proben, `clippy --all-targets -- -D warnings` grün |
+| E | E2 | **offen, Nutzerarbeit.** Der Abnahmelauf verlangt KRK im Vordergrund |
+
+### Vier Feststellungen, die der Abgleich gegen den Plan hält
+
+**1. Eine siebzehnte Aufgabe ist ausgeführt und steht in diesem Plan nicht.** `F1` — die
+Behebung des hohen Durchsichtsbefunds, `Kommando::FensterEinblenden` auf die Ausnahmeliste,
+Commit `ed0388e` — ist in Turn 2 gelaufen und nur in `agentstate.yaml` und im Circle-Datensatz
+verzeichnet. Der Plan zählt sechzehn Schritte, ausgeführt sind siebzehn Aufgaben. Ein Abgleich
+legt keinen Planschritt an; die Aufgabe ist hier vermerkt, damit die Zahl nicht auseinanderläuft.
+
+**2. Eine Zusage aus A2 trifft nicht zu.** „Der Abschnitt `# Ab welchem macOS die angesprochenen
+Klassen stehen` bleibt richtig: `keyWindow`, `attachedSheet` und `isEqual:` stehen alle drei
+schon darin." Namentlich steht dort allein `attachedSheet`
+(`crates/krk-ui/src/appkit/anwendung.rs:191`). Der Plan hat eine Prüfung durch eine Feststellung
+ersetzt, und der Ausführer hatte damit keinen Anlass nachzusehen. Abgelegt als
+`issues/260813-1345_o_keywindow-und-isequal-stehen-nicht-im-untergrenzen-abschnitt-von-anwendung-rs.md`.
+
+**3. Zwei Zahlen des Plans sind falsch in den Baum gewandert.** A2 zählt fünf verbleibende
+Aufrufer von `fokus` und nennt sie einzeln; es sind sechs, weil `anwendung.rs:1084`
+`selbst.fokus()` heisst und dem Muster entgeht. D2 sagt, `bundle::PLATZHALTER` sei schon
+`pub(crate)`; es ist `pub`. Beide Aussagen sind vom Ausführer in Doc-Kommentare übernommen
+worden. Abgelegt als
+`issues/260813-1345_o_die-aufruferzahl-an-fokus-steht-auf-fuenf-und-der-baum-traegt-sechs.md`
+und
+`issues/260813-1345_o_der-doc-kommentar-an-bundle-version-nennt-eine-sichtbarkeit-die-platzhalter-nicht-traegt.md`.
+
+**4. Eine Gegenmaßnahme der Risikotafel ist nicht gefahren.** „D2 misst es einmal, indem es die
+Version probeweise anhebt, `cargo xtask release` fährt und die Meldung liest." Der Ausführer hat
+darauf verzichtet, weil ein Auslieferungslauf das beglaubigte Bündel überschriebe — die
+Begründung trägt, der Verzicht ist aber nirgends als solcher vermerkt, und die Tafel liest sich
+nach der Runde, als sei gemessen worden. Abgelegt als
+`issues/260813-1345_o_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md`.
+Die übrigen acht Zeilen der Tafel sind eingelöst.
+
+### Die drei offenen Fragen des Plans
+
+Alle drei stehen weiter da, und keine hält etwas auf.
+
+- **Hebt `immer_erreichbar` auch die neue Schlüsselfensterfrage auf?** Beantwortet und gebaut,
+  Möglichkeit 1. Der Datensatz trägt seit diesem Abgleich `_i_`
+  (`decisions/260813-1110_i_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`).
+  Die Antwort hat einen Fall nicht mitgeprüft, und Turn 2 hat ihn nachgetragen.
+- **Bleibt der Defekt zum Freigabedialog der Runde 6 offen?** Ja, er trägt weiter `_o_`. Die
+  Beobachtung steht in E2.
+- **Wird der Abschnitt `## Question` des Entscheids zum Über-Dialog berichtigt?** Nein, noch
+  nicht; `issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-…` bleibt offen.
+
+### Der Querschnitt aus der Durchsicht, nachgezählt
+
+Die Durchsicht führt sechs Prosastellen auf eine Ursache zurück: ein Schritt zählt seine Dateien
+abschliessend auf, und die geänderte Zahl steht in einer anderen. **Der Querschnitt ist grösser.**
+Zwei weitere Stellen stehen in `crates/krk-ui/src/kommandos/zulaessigkeit.rs` selbst, also in der
+einen Datei, die A1 nennt; sie sind nicht durch eine Schrittgrenze entgangen. Dazu kommen ein
+Grenzfall in `anwendung.rs`, zwei Stellen in `titelzusatz.rs` und der Spec selbst, dessen
+Stationsbild sechs zählt, wo D3 den Baum auf sieben gebracht hat. Fünf weitere Stellen derselben
+Sorte stammen aus der Runde 7 und liegen im gemeinsamen Speicher. Die Einzelheiten stehen im
+Abgleichsbericht.

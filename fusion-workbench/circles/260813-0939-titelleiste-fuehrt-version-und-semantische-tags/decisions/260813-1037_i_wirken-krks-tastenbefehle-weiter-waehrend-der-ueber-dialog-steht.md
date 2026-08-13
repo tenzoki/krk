@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-0939_a_bekommt-krk-einen-eintrag-ueber-krk-im-anwendungsmenue.md` (die beantwortete Frage, aus der diese folgt); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_die-blattregel-sieht-den-freigabedialog-nicht.md` (derselbe blinde Fleck, offen); `crates/krk-ui/src/appkit/anwendung.rs` (`blatt_steht`, `lage`); `crates/krk-ui/src/appkit/ereignisse.rs` (`ersthelfer_gehoert_appkit`)
 
@@ -49,3 +49,8 @@ Superseded by:
 
 ---
 Answered: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md, Abschnitt "Spec-Tor und die vierte Frage" — Antwort: Möglichkeit 2, die Runde schließt die Lücke einmal und allgemein in der Zulässigkeitsregel; der Defekt zum Freigabedialog der Runde 6 fällt mit weg.
+
+---
+Implemented: c3ada4d — Möglichkeit 2 ist gebaut. `Lage` trägt das vierte Feld `schluesselfenster_gehoert_krk` (`crates/krk-ui/src/kommandos/zulaessigkeit.rs:152`), `zulaessig` fragt es innerhalb des `durchgelassen`-Ausdrucks (`:172-180`), und der Anwendungsdelegierte erhebt das Schlüsselfenster einmal je Eingabe (`crates/krk-ui/src/appkit/anwendung.rs:2623-2639`, gereicht in `lage` `:2664`). Die Tafel deckt 280 Fälle statt 140 (`zulaessigkeit.rs:435`); mit `schluesselfenster_gehoert_krk == false` steht in allen sieben Zeilen `ALLES_ABGEWIESEN`. Abgeglichen am 260813-1345.
+
+**Zwei Aussagen dieses Datensatzes hat der Bau widerlegt, die Antwort selbst nicht.** Der Abschnitt `## Question` nennt `F5` und `delete` als Beispiele; beide tragen `Wirkungsbereich::Dateifenster` und kommen schon vor dieser Runde nicht durch (`issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`, offen). Der Vorteilssatz zu Möglichkeit 2 sagt, der Defekt zum Freigabedialog der Runde 6 falle mit weg; der Wähler ist keine eigenes Fenster, also erreicht die neue Bedingung ihn nicht (`issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`, offen). Der Datensatz `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_die-blattregel-sieht-den-freigabedialog-nicht.md` steht deshalb weiter offen und trägt seit A3 einen Nachtrag über die Reichweite der neuen Regel.

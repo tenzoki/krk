@@ -59,3 +59,26 @@ dieser Runde führt sie als Abnahmepunkt in Strang E.
 Gefunden beim Bau des Umsetzungsplans dieser Runde
 (`planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md`,
 Schritt A3).
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, beide Punkte.**
+
+Der erste ist unerledigt: der Vorteilssatz zu Möglichkeit 2 im Entscheid
+`decisions/260813-1037_i_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`
+sagt unverändert, der Defekt zum Freigabedialog falle mit weg. Der Abgleich hat die Berichtigung
+stattdessen an den Entscheid selbst angehängt, weil er ihn beim Markerwechsel ohnehin öffnete;
+der Wortlaut im Abschnitt `## Options` steht weiter da.
+
+Der zweite ist eingehalten: `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_die-blattregel-sieht-den-freigabedialog-nicht.md`
+trägt weiter `_o_` und ist nicht ungeprüft geschlossen worden. Schritt A3 hat ihm einen
+Abschnitt über die Reichweite der neuen Regel angehängt (`:83-113`); die Beobachtung selbst
+steht in Planschritt E2 und ist Nutzerarbeit.
+
+Am Baum nachgelesen und bestätigt: `crates/krk-ui/src/appkit/teilen.rs:222` zeigt den Wähler
+über `showRelativeToRect_ofView_preferredEdge`. Die drei Ausgänge dieses Datensatzes sind am
+Baum weiterhin nicht zu unterscheiden.
+
+Ein Nebensatz jenes Nachtrags ist inzwischen falsch (die Ausnahmeliste führt seit `ed0388e`
+drei Befehle, nicht zwei); abgelegt als
+`260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md`.

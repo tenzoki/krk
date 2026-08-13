@@ -668,3 +668,6 @@
 {"ts":"2026-08-13T11:25:29","event":"turn_start","turn":2,"detail":"ein Schritt: die Regression an Cmd+N"}
 {"ts":"2026-08-13T11:25:29","event":"task_start","turn":2,"task":"F1","agent":"coder","detail":"zulaessigkeit.rs immer_erreichbar"}
 {"ts":"2026-08-13T11:25:47","event":"state_drift","turn":2,"detail":"Circle Turn log: surface=1 entries, record=2 turns run. Eintrag fuer Turn 2 nachgetragen."}
+{"ts":"2026-08-13T11:33:21","event":"task_done","turn":2,"task":"F1","agent":"coder","detail":"make check exit 0"}
+{"ts":"2026-08-13T11:33:21","event":"commit","turn":2,"task":"F1","detail":"ed0388e Cmd+N holt das Fenster zurueck"}
+{"ts":"2026-08-13T11:33:21","event":"turn_end","turn":2,"detail":"1/1 Schritt erledigt, Regression behoben"}

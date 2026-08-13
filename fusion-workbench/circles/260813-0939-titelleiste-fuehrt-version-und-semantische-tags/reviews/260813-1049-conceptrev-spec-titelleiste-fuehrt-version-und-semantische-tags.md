@@ -37,3 +37,19 @@ Dichte: 0,90 und 0,92 Kanten je Knoten. Beide Graphen liegen damit unter der Bau
 ## What a clean redraw would require
 
 Nicht einschlägig. Das Urteil lautet *acceptable*, und kein Befund verlangt eine andere Struktur. B1 bis B3 sind an Ort und Stelle zu beheben, ohne einen Knoten oder eine Kante zu verschieben.
+
+---
+
+## Anmerkung des Abgleichs, 260813-1345
+
+Keiner der Befunde dieser Prüfung ist an seinem Dokument behoben worden. Spec und Plan sind seit
+`59b0a6c` nicht mehr angefasst worden; die beanstandeten Beschriftungen stehen unverändert da.
+Das Sitzungsprotokoll des Orchestrators hat die Behebung als selbstverständlich mitgeführt („sind
+an Ort und Stelle zu beheben"), ohne dass ein Schritt sie übernommen hätte.
+
+Dazu ist am Spec ein vierter Punkt entstanden, der beim Prüfen noch nicht bestand: sein
+Stationsbild und zwei Prosastellen zählen sechs Stationen, und der Baum trägt seit `f9e5137` an
+allen drei vorgesehenen Stellen sieben.
+
+Abgelegt als
+`issues/260813-1345_o_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.

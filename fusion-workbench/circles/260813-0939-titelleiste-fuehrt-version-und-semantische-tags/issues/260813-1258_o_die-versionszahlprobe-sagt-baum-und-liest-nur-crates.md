@@ -41,3 +41,18 @@ Den Doc-Kommentar der Probe auf ihre wirkliche Reichweite bringen: „in keiner 
 
 - Gefunden bei der Durchsicht von Turn 1 der Runde 8, Bereich `59b0a6c..21dbc59`.
 - C1.2 selbst ist erfüllt: `titelzusatz::beschriftung` setzt die Zahl über `concat!("KRK ", env!("CARGO_PKG_VERSION"))` zusammen, und in `crates/` steht sie nirgends als Zeichenkette.
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, unverändert.** Der Doc-Kommentar bei
+`crates/krk-ui/src/appkit/titelzusatz.rs:298-311` sagt weiter „des Baums"; `quellbaum.rs:120-124`
+liest weiter `crates/`. C1.2 selbst hält: unter `crates/` steht die Zahl nirgends wörtlich.
+
+**Der Befund reicht weiter, als dieser Datensatz ihn fasst.** Zwei weitere Stellen in derselben
+Datei tragen dieselbe Formulierung, und eine davon ist nicht bloß zu weit gefasst, sondern
+falsch: `titelzusatz.rs:130` sagt „Die einzige Stelle im Baum, die Name und Version
+zusammensetzt", und vier Stellen in `crates/krk-bench/` setzen einen Namen mit derselben Version
+zusammen. Dazu kommt eine fünfte wörtliche Fundstelle der Zahl ausserhalb `crates/`, die dieser
+Datensatz nicht aufzählt: `xtask/src/bundle.rs:587`. Abgelegt als
+`260813-1345_o_zwei-weitere-stellen-sagen-im-baum-und-meinen-crates-eine-davon-ist-widerlegt.md`;
+beide gehören in einen Zug behoben, weil es dieselbe Datei und dieselbe Ursache ist.

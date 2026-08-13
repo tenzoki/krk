@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md` (Antwort 2 der Klärungsrunde); `xtask/src/release.rs`; `shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`
 
@@ -42,3 +42,6 @@ Superseded by:
 
 ---
 Answered: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md, Abschnitt "Drei Fragen beantwortet" — Antwort: Möglichkeit 2, beschränkt auf verfolgte Dateien; unbeachtete Dateien bleiben außen vor.
+
+---
+Implemented: f9e5137 — `stand_pruefen` (`xtask/src/release.rs:226`) vergleicht Version, Tags auf HEAD und geänderte verfolgte Dateien und liefert im Verletzungsfall eine Meldung, die beide Befunde nennt. Die Beschränkung auf verfolgte Dateien steht in der Konstanten `GIT_STAND` (`release.rs:127`): `git status --porcelain --untracked-files=no`, ohne Pfadfilter. Station 1 ruft sie als erste Zeile von `release::ausfuehren` (`release.rs:137`), vor `bundle::vorbereiten()` in `:139`. `cargo xtask bundle` und `make check` sind unangetastet, gehalten von der Probe `allein_release_fragt_nach_tag_und_arbeitsbaum` (`release.rs:1173`) und einem leeren Diff am `Makefile`. Abgeglichen am 260813-1345.

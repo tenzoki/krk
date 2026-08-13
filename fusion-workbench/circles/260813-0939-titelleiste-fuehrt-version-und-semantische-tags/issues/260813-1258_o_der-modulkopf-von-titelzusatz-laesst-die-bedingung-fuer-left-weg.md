@@ -48,3 +48,18 @@ Einen Halbsatz nachtragen: `Left` ist zulässig für Anwendungen, die gegen 10.1
 
 - Gefunden bei der Durchsicht von Turn 1 der Runde 8, Bereich `59b0a6c..21dbc59`.
 - Berührt C6.4 („jede dort genannte Zahl ist am SDK nachgelesen") und die offene Frage `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`: eine Angabe von Hand, die an einer Bedingung vorbeiliest, ist ein Beleg für deren dritte Stufe.
+
+---
+
+**Abgleich 260813-1345: zu Recht offen, unverändert.** Der Abschnitt
+`crates/krk-ui/src/appkit/titelzusatz.rs:54-68` zählt `Left` weiter unter den unbedingt
+zulässigen Werten; die Zeichenfolge `10.11` kommt in der Datei nicht vor. Die Sache selbst ist
+richtig gewählt: `setLayoutAttribute(NSLayoutAttribute::Left)` steht in `:192`, und `Leading`
+kommt im ganzen Baum nicht vor.
+
+Beim Abgleich ist ein zweiter Fall derselben Sorte in derselben Gegend aufgefallen:
+`keyWindow` und `isEqual:` fehlen im Untergrenzen-Abschnitt von `anwendung.rs`, obwohl A1 und A2
+sie neu in die Datei gebracht haben. Abgelegt als
+`260813-1345_o_keywindow-und-isequal-stehen-nicht-im-untergrenzen-abschnitt-von-anwendung-rs.md`.
+Beide zusammen sind der zweite und dritte Beleg für die dritte Stufe der offenen Frage
+`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`.
