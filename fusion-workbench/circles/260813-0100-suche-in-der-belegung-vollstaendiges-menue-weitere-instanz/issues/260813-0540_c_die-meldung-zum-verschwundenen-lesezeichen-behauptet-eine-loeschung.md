@@ -40,3 +40,7 @@ Den Satz auf das umschreiben, was der Ausgang wirklich sagt, etwa: „dieses Les
 nicht mehr so in der Liste; eine andere Instanz von KRK hat es geändert oder gelöscht". Die
 Leiste zeigt in diesem Ausgang ohnehin schon die frisch gelesene Liste, der Nutzer sieht die
 Änderung also unmittelbar daneben.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Der Satz in der Statuszeile heisst jetzt „dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz von KRK hat es geaendert oder geloescht" und deckt damit alle Faelle, die `Ausgang::Verschwunden` traegt. Ein Kommentar daneben nennt den Grund: `Lesezeichenliste::stelle_von` vergleicht den ganzen Eintrag, Name und Ziel, und findet ein umbenanntes Lesezeichen ebenso wenig wie ein geloeschtes. Weder der Ausgang noch `stelle_von` sind angefasst; der Befund betraf allein die Auskunft.

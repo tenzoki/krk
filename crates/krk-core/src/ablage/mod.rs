@@ -21,17 +21,31 @@
 //!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!
-//! **[`Zugang`] steht zwischen der Ablage und [`atomar::schreiben`], und das ist
-//! eine Eigenschaft der Typen und keine Verabredung in Kommentaren.** Ein
+//! **[`Zugang`] steht zwischen der Ablage und [`atomar::schreiben`].** Ein
 //! `Zugang` ist allein aus [`Ablage::durchgang`] zu bekommen, und der nimmt fuer
-//! die Dauer des Durchgangs die Schreibsperre. Gelesen und geschrieben wird
-//! damit nie ausserhalb von ihr; warum das Lesen mit hineingehoert und nicht nur
-//! das Schreiben, steht im Kopf von [`sperre`].
+//! die Dauer des Durchgangs die Schreibsperre. Was durch ihn geht, wird damit
+//! nie ausserhalb von ihr gelesen oder geschrieben; warum das Lesen mit
+//! hineingehoert und nicht nur das Schreiben, steht im Kopf von [`sperre`].
 //!
-//! [`atomar::schreiben`] selbst bleibt frei, denn zwei Schreiber ausserhalb des
-//! Ablageordners benutzen es: die Markdown-Ausgabe der Tastenbelegung nach
-//! `~/Downloads` und das Sichern der Editordatei. Die Grenze zieht [`Zugang`]
-//! und nicht [`atomar`].
+//! **Was die Typen halten, und was sie nicht halten.** Sie halten, dass **aus
+//! der Ablage heraus** kein Weg an der Sperre vorbeifuehrt: die vier Lade- und
+//! Schreibmethoden haengen an einem `Zugang`, und den gibt es nur im Durchgang.
+//! Sie versperren die anderen Wege nicht. [`atomar::schreiben`] ist `pub`, weil
+//! zwei Schreiber **ausserhalb** des Ablageordners es brauchen — die
+//! Markdown-Ausgabe der Tastenbelegung nach `~/Downloads` und das Sichern der
+//! Editordatei —, und [`Ablage::pfad`] liefert den Pfad einer der vier Dateien
+//! ohne Durchgang, weil etliche Meldungen und Proben ihn zum **Lesen** brauchen.
+//! Wer beides zusammennimmt, kann an der Sperre vorbeischreiben; der Uebersetzer
+//! haelt ihn nicht auf.
+//!
+//! Diese eine Luecke bewacht deshalb eine Probe und kein Typ:
+//! `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
+//! `krk-core/tests/baum.rs` zaehlt, welche Dateien des ganzen Baums
+//! [`atomar::schreiben`] ueberhaupt erreichen koennen. Eine sechste laesst sie
+//! rot werden. Bis zur Runde 7 stand hier, die Zusage sei „eine Eigenschaft der
+//! Typen und keine Verabredung in Kommentaren"; sie war beides nicht, sondern
+//! eine unbewachte Aussage ueber den damaligen Baum
+//! (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 //!
 //! # Eine der vier Dateien entsteht einmal und wird nie wieder geschrieben
 //!

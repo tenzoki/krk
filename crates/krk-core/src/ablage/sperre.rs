@@ -59,8 +59,15 @@
 //!   seine Ablage verwirft, bevor die Oberflaeche die bleibende oeffnet.
 //!
 //! **Eine Verklemmung zwischen den beiden Sperren gibt es nicht.** Das
-//! Sitzungsrecht wird einmal beim Start genommen und nie, waehrend ein
-//! Schreibgriff gehalten wird. Die Reihenfolge ist damit fest und ohne Ring.
+//! Sitzungsrecht wird beim Start genommen und nie, waehrend ein Schreibgriff
+//! gehalten wird. Die Reihenfolge ist damit fest und ohne Ring.
+//!
+//! **Zwei Wege nehmen das Recht, und beide beim Start.** Der gewoehnliche Start
+//! haelt es bis zum Prozessende; der Sitzungslauf des Messmodus
+//! (`--messmodus <plan.toml>`) nimmt es, bevor er die Pruefsitzung schreibt, und
+//! gibt es danach wieder ab. Beide gehen dieselbe Reihenfolge, und ein Prozess
+//! haelt nie zwei davon zugleich: der Messlauf kehrt aus `sitzung_laden`
+//! zurueck, bevor der gewoehnliche Weg dort ueberhaupt beginnt.
 
 use std::fs::{File, OpenOptions};
 use std::io;
@@ -191,122 +198,5 @@ impl Sitzungsrecht {
     #[must_use]
     pub fn gehalten(&self) -> bool {
         self.griff.is_some()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ablage::Ablage;
-
-    /// Ein Ablageordner unter dem Temporaerverzeichnis, der sich abraeumt.
-    ///
-    /// Die Proben dieses Moduls stehen neben dem Code und nicht unter `tests/`,
-    /// weil sie die kistenintern sichtbare [`Schreibgriff::nehmen`] brauchen.
-    /// Der Pruefordner der Abnahmeproben liegt in `tests/gemeinsam/` und ist von
-    /// hier aus nicht zu erreichen; das sind zwei Sichtbarkeiten und keine
-    /// zweite Fassung derselben Sache.
-    struct Ordner {
-        pfad: std::path::PathBuf,
-    }
-
-    impl Ordner {
-        fn neu(zweck: &str) -> Self {
-            let pfad = std::env::temp_dir().join(format!(
-                "krk-sperre-{zweck}-{}-{:p}",
-                std::process::id(),
-                &zweck
-            ));
-            std::fs::create_dir_all(&pfad).expect("der Pruefordner laesst sich nicht anlegen");
-            Self { pfad }
-        }
-    }
-
-    impl Drop for Ordner {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.pfad);
-        }
-    }
-
-    /// Das Recht bekommt genau einer, und der erste.
-    #[test]
-    fn das_sitzungsrecht_bekommt_nur_der_erste_halter() {
-        let ordner = Ordner::neu("recht");
-        let ort = Ablageort::an(&ordner.pfad);
-
-        let erstes = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
-        assert!(erstes.gehalten(), "der erste Halter bekommt das Recht");
-
-        let zweites = Sitzungsrecht::nehmen(&ort).expect("der zweite Versuch ist gescheitert");
-        assert!(
-            !zweites.gehalten(),
-            "der zweite Halter hat das Recht bekommen, obwohl der erste es haelt"
-        );
-    }
-
-    /// Faellt der Halter weg, ist das Recht wieder zu haben.
-    ///
-    /// Der gewoehnliche Fall des geordneten Endes. Dass auch ein **Absturz** es
-    /// freigibt, prueft `tests/ablage.rs` mit einem Prozess, der wirklich
-    /// stirbt; hier ist es nicht zu sehen.
-    #[test]
-    fn ein_abgegebenes_sitzungsrecht_ist_wieder_zu_haben() {
-        let ordner = Ordner::neu("wiedervergabe");
-        let ort = Ablageort::an(&ordner.pfad);
-
-        let erstes = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
-        assert!(erstes.gehalten());
-        drop(erstes);
-
-        let zweites = Sitzungsrecht::nehmen(&ort).expect("der zweite Versuch ist gescheitert");
-        assert!(
-            zweites.gehalten(),
-            "nach dem Ende des ersten Halters ist das Recht nicht frei geworden"
-        );
-    }
-
-    /// Ein Recht ohne Ablageordner verneint sich selbst.
-    #[test]
-    fn ein_recht_ohne_ablageordner_wird_nicht_gehalten() {
-        assert!(!Sitzungsrecht::ohne().gehalten());
-    }
-
-    /// Zwei Ablagen desselben Prozesses schliessen einander am Durchgang aus.
-    ///
-    /// Die Regel aus dem Modulkopf, an einem Wert und nicht an einem Kommentar:
-    /// geprueft wird mit [`sys::sperre_versuchen`], weil ein zweiter
-    /// **wartender** Durchgang die Probe hier haengen liesse — und genau das ist
-    /// die Aussage.
-    #[test]
-    fn zwei_ablagen_eines_prozesses_teilen_die_schreibsperre_nicht() {
-        let ordner = Ordner::neu("zweiablagen");
-        let eine = Ablage::oeffnen(Ablageort::an(&ordner.pfad)).expect("Ablage eins");
-        let andere = Ablage::oeffnen(Ablageort::an(&ordner.pfad)).expect("Ablage zwei");
-
-        let fremde = sperrdatei_oeffnen(&ordner.pfad, SCHREIBSPERRE)
-            .expect("die Sperrdatei laesst sich nicht oeffnen");
-        let gesehen = eine
-            .durchgang(|_zugang| {
-                sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert")
-            })
-            .expect("der Durchgang ist gescheitert");
-        assert_eq!(
-            gesehen,
-            Sperrversuch::Belegt,
-            "waehrend eines Durchgangs war die Sperre frei"
-        );
-
-        // Und nach dem Durchgang ist sie es wieder, auch fuer die zweite Ablage.
-        let gesehen = andere
-            .durchgang(|_zugang| {
-                sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert")
-            })
-            .expect("der zweite Durchgang ist gescheitert");
-        assert_eq!(gesehen, Sperrversuch::Belegt);
-        assert_eq!(
-            sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert"),
-            Sperrversuch::Genommen,
-            "nach dem Durchgang ist die Sperre nicht abgegeben worden"
-        );
     }
 }

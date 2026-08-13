@@ -364,11 +364,20 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     gesichert(&ablage, Datei::Lesezeichen, &lesezeichen)
         .expect("bookmarks.toml laesst sich nicht schreiben");
     gesichert(&ablage, Datei::Sitzung, &sitzung).expect("session.toml laesst sich nicht schreiben");
-    atomar::schreiben(
-        &ablage.pfad(Datei::Einstellungen),
-        "terminal = \"com.mitchellh.ghostty\"\n",
-    )
-    .expect("settings.toml laesst sich nicht schreiben");
+    // **Unter einem Durchgang und nicht daneben.** `settings.toml` geht als
+    // einzige nicht ueber `Zugang::sichern` — sie wird von Hand gepflegt, und
+    // die Anlage schreibt einen Text und keine Serialisierung. Der Weg dorthin
+    // ist trotzdem derselbe wie in `einstellungen::anlegen_falls_fehlt`: der
+    // Pfad kommt aus dem `Zugang`, und geschrieben wird unter der Schreibsperre.
+    ablage
+        .durchgang(|zugang| {
+            atomar::schreiben(
+                &zugang.pfad(Datei::Einstellungen),
+                "terminal = \"com.mitchellh.ghostty\"\n",
+            )
+        })
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("settings.toml laesst sich nicht schreiben");
 
     for welche in Datei::ALLE {
         assert!(
@@ -1468,6 +1477,21 @@ fn beendet(schreiber: &mut Sitzungsschreiber, ablage: &Ablage, jetzt: Instant) -
         .expect("schreiben gescheitert")
 }
 
+/// Ein Sitzungsschreiber samt dem Recht, das ihn entstehen laesst.
+///
+/// Seit der Runde 7 verlangt [`Sitzungsschreiber::neu`] ein gehaltenes
+/// [`Sitzungsrecht`] (C3.9). Das Recht kommt deshalb mit zurueck und bleibt in
+/// der Probe so lange gebunden wie der Schreiber — genau wie im Betrieb, wo es
+/// der Anwendungsdelegierte bis zum Prozessende haelt. Ein frischer
+/// Pruefordner ist immer frei, der Versuch scheitert hier also nie.
+fn schreiber_mit_recht(ablage: &Ablage) -> (Sitzungsrecht, Sitzungsschreiber) {
+    let recht =
+        Sitzungsrecht::nehmen(ablage.ort()).expect("das Sitzungsrecht laesst sich nicht nehmen");
+    let schreiber =
+        Sitzungsschreiber::neu(&recht).expect("im frischen Pruefordner haelt niemand das Recht");
+    (recht, schreiber)
+}
+
 fn gelesene_sitzung(ablage: &Ablage) -> Sitzung {
     let geladen: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt(), "session.toml ist beschaedigt");
@@ -1482,7 +1506,7 @@ fn der_takt_ist_zwei_sekunden() {
 #[test]
 fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
     let (_ordner, ablage) = ablage("takt");
-    let mut schreiber = Sitzungsschreiber::neu();
+    let (_recht, mut schreiber) = schreiber_mit_recht(&ablage);
     let start = Instant::now();
 
     let erste = beispielsitzung();
@@ -1531,7 +1555,7 @@ fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
 #[test]
 fn ein_liegengebliebener_stand_geht_ueber_den_takt_hinaus() {
     let (_ordner, ablage) = ablage("abgleich");
-    let mut schreiber = Sitzungsschreiber::neu();
+    let (_recht, mut schreiber) = schreiber_mit_recht(&ablage);
     let start = Instant::now();
 
     let erste = beispielsitzung();
@@ -1570,7 +1594,7 @@ fn ein_liegengebliebener_stand_geht_ueber_den_takt_hinaus() {
 #[test]
 fn beim_beenden_wird_der_letzte_stand_genau_einmal_geschrieben() {
     let (_ordner, ablage) = ablage("beenden");
-    let mut schreiber = Sitzungsschreiber::neu();
+    let (_recht, mut schreiber) = schreiber_mit_recht(&ablage);
     let start = Instant::now();
 
     let erste = beispielsitzung();
@@ -1781,6 +1805,21 @@ fn kind_starten(name: &str, auftrag: &str, wert: &Path) -> std::process::Child {
         .expect("die Kindprobe laesst sich nicht starten")
 }
 
+/// Oeffnet die Datei, an der die Schreibsperre haengt, von aussen.
+///
+/// `sperre::sperrdatei_oeffnen` ist kistenintern und bleibt es: eine Probe ist
+/// kein Grund, die Sichtbarkeit einer Hilfsfunktion zu heben. Die drei Zeilen
+/// hier stehen einmal, nicht zweimal.
+fn sperrdatei(ordner: &Path) -> std::fs::File {
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(ordner.join(SCHREIBSPERRE))
+        .expect("die Sperrdatei laesst sich nicht oeffnen")
+}
+
 /// Der Ablageordner, den eine Kindprobe von ihrem Elternteil bekommen hat.
 ///
 /// `None` heisst: diese Probe ist ohne Auftrag gelaufen, also im gewoehnlichen
@@ -1845,6 +1884,132 @@ fn kind_meldet_sein_sitzungsrecht() {
     let recht = Sitzungsrecht::nehmen(&ort).expect("der Versuch ist gescheitert");
     let wort = if recht.gehalten() { "gehalten" } else { "ohne" };
     fs::write(ort.wurzel().join("recht.txt"), wort).expect("die Meldung laesst sich nicht ablegen");
+}
+
+/// Das Sitzungsrecht bekommt genau einer, und der erste.
+///
+/// **Steht seit der Runde 7 hier und nicht mehr neben dem Code.** Die vier
+/// Proben der beiden Sperren lagen in `#[cfg(test)] mod tests` von
+/// `krk-core/src/ablage/sperre.rs` und brachten dort eine vierte
+/// Pruefordner-Fassung mit, die C4.6 verbietet
+/// (`issues/260813-0540_*_eine-vierte-pruefordner-fassung-steht-im-baum-und-die-probe-sieht-sie-nicht.md`).
+/// Die Begruendung von damals traegt nicht: keine der vier braucht das
+/// kistenintern sichtbare `Schreibgriff::nehmen`. `Sitzungsrecht`,
+/// `Ablageort::an` und `Ablage::durchgang` sind `pub`, und die eine Probe, die
+/// eine Sperrdatei selbst oeffnen muss, tut es hier wie
+/// [`kind_meldet_die_schreibsperre`] es tut.
+#[test]
+fn das_sitzungsrecht_bekommt_nur_der_erste_halter() {
+    let ordner = Pruefordner::neu("recht");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let erstes = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
+    assert!(erstes.gehalten(), "der erste Halter bekommt das Recht");
+
+    let zweites = Sitzungsrecht::nehmen(&ort).expect("der zweite Versuch ist gescheitert");
+    assert!(
+        !zweites.gehalten(),
+        "der zweite Halter hat das Recht bekommen, obwohl der erste es haelt"
+    );
+}
+
+/// Faellt der Halter weg, ist das Recht wieder zu haben.
+///
+/// Der gewoehnliche Fall des geordneten Endes. Dass auch ein **Absturz** es
+/// freigibt, prueft
+/// [`nach_einem_absturz_bekommt_die_naechste_instanz_das_sitzungsrecht`] mit
+/// einem Prozess, der wirklich stirbt; hier ist es nicht zu sehen.
+#[test]
+fn ein_abgegebenes_sitzungsrecht_ist_wieder_zu_haben() {
+    let ordner = Pruefordner::neu("wiedervergabe");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let erstes = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
+    assert!(erstes.gehalten());
+    drop(erstes);
+
+    let zweites = Sitzungsrecht::nehmen(&ort).expect("der zweite Versuch ist gescheitert");
+    assert!(
+        zweites.gehalten(),
+        "nach dem Ende des ersten Halters ist das Recht nicht frei geworden"
+    );
+}
+
+/// Ein Recht ohne Ablageordner verneint sich selbst.
+#[test]
+fn ein_recht_ohne_ablageordner_wird_nicht_gehalten() {
+    assert!(!Sitzungsrecht::ohne().gehalten());
+}
+
+/// Zwei Ablagen desselben Prozesses schliessen einander am Durchgang aus.
+///
+/// Die Regel aus dem Kopf von `krk_core::ablage::sperre`, an einem Wert und
+/// nicht an einem Kommentar: geprueft wird mit [`sys::sperre_versuchen`], weil
+/// ein zweiter **wartender** Durchgang die Probe hier haengen liesse — und genau
+/// das ist die Aussage.
+#[test]
+fn zwei_ablagen_eines_prozesses_teilen_die_schreibsperre_nicht() {
+    let ordner = Pruefordner::neu("zweiablagen");
+    let eine = Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("Ablage eins");
+    let andere = Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("Ablage zwei");
+
+    let fremde = sperrdatei(ordner.pfad());
+    let gesehen = eine
+        .durchgang(|_zugang| sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert"))
+        .expect("der Durchgang ist gescheitert");
+    assert_eq!(
+        gesehen,
+        Sperrversuch::Belegt,
+        "waehrend eines Durchgangs war die Sperre frei"
+    );
+
+    // Und nach dem Durchgang ist sie es wieder, auch fuer die zweite Ablage.
+    let gesehen = andere
+        .durchgang(|_zugang| sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert"))
+        .expect("der zweite Durchgang ist gescheitert");
+    assert_eq!(gesehen, Sperrversuch::Belegt);
+    assert_eq!(
+        sys::sperre_versuchen(&fremde).expect("der Versuch ist gescheitert"),
+        Sperrversuch::Genommen,
+        "nach dem Durchgang ist die Sperre nicht abgegeben worden"
+    );
+}
+
+/// Ohne das Sitzungsrecht entsteht kein Sitzungsschreiber (C3.9).
+///
+/// **Die Zusage steht seit dieser Runde an den Typen und nicht an der
+/// Aufmerksamkeit des Aufrufers.** Sie stand zuvor an einem fehlenden Wert —
+/// wer das Recht nicht bekam, baute eben keinen Schreiber —, und der Messmodus
+/// ist daran vorbeigelaufen und hat sich einen ohne jede Frage gebaut
+/// (`issues/260813-0540_*_der-messmodus-schreibt-die-sitzung-ohne-sitzungsrecht.md`).
+/// Geprueft wird beides in einem Durchgang: der erste Halter bekommt einen
+/// Schreiber, der zweite keinen.
+#[test]
+fn ohne_sitzungsrecht_entsteht_kein_sitzungsschreiber() {
+    let ordner = Pruefordner::neu("schreiberrecht");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let erstes = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
+    assert!(
+        Sitzungsschreiber::neu(&erstes).is_some(),
+        "der Halter des Sitzungsrechts bekommt keinen Schreiber"
+    );
+
+    let zweites = Sitzungsrecht::nehmen(&ort).expect("der zweite Versuch ist gescheitert");
+    assert!(
+        Sitzungsschreiber::neu(&zweites).is_none(),
+        "eine zweite Instanz hat einen Sitzungsschreiber bekommen"
+    );
+    assert!(
+        Sitzungsschreiber::neu(&Sitzungsrecht::ohne()).is_none(),
+        "ein Recht, das niemand haelt, hat einen Sitzungsschreiber hergegeben"
+    );
 }
 
 /// Nach einem Absturz ist das Sitzungsrecht wieder zu haben (C3.13).
@@ -1946,13 +2111,7 @@ fn kind_meldet_die_schreibsperre() {
     let Some(ort) = auftragsordner() else {
         return;
     };
-    let datei = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .open(ort.wurzel().join(SCHREIBSPERRE))
-        .expect("die Sperrdatei laesst sich nicht oeffnen");
+    let datei = sperrdatei(ort.wurzel());
     let wort = match sys::sperre_versuchen(&datei).expect("der Versuch ist gescheitert") {
         Sperrversuch::Genommen => "frei",
         Sperrversuch::Belegt => "belegt",

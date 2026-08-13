@@ -1,18 +1,32 @@
 //! Abnahme der Zusagen, die Aussagen ueber den **Quellbaum** sind.
 //!
-//! Drei Kriterien der Runde 7 sagen eine Zahl von Stellen zu und keinen
-//! Rueckgabewert: genau zwei Dateien mit `#![allow(unsafe_code)]` (C4.5), genau
-//! drei Pruefordner-Fassungen (C4.6) und genau zwei Absprachen ueber der Ablage
-//! (C3.14). An keinem Wert ist abzulesen, dass es keine dritte gibt; geprueft
-//! wird deshalb am Baum.
+//! Vier Zusagen sagen eine Zahl von Stellen zu und keinen Rueckgabewert: genau
+//! zwei Dateien mit `#![allow(unsafe_code)]` (C4.5), genau drei
+//! Pruefordner-Fassungen (C4.6), genau zwei Absprachen ueber der Ablage (C3.14)
+//! und kein Schreibweg an der Schreibsperre vorbei. An keinem Wert ist
+//! abzulesen, dass es keine weitere gibt; geprueft wird deshalb am Baum.
 //!
 //! # Gezaehlt werden Erklaerungen und keine Aufrufer
 //!
 //! Die Unterscheidung ist nicht kosmetisch, und `krk_ui::quellbaum` schreibt sie
-//! aus. Eine Erklaerungszaehlung haelt, was sie verspricht: eine zweite Fassung
-//! derselben Sache laesst sie rot werden. Eine Aufruferzaehlung ist in beide
+//! aus. Eine Erklaerungszaehlung haelt gegen eine zweite Fassung **desselben
+//! Namens** und laesst sie rot werden. Eine Aufruferzaehlung ist in beide
 //! Richtungen blind und steht nur dort, wo ein Kriterium die Zahl selbst
-//! zusagt. Keine Probe dieser Datei zaehlt Aufrufer.
+//! zusagt.
+//!
+//! # Was eine Nadel nicht entscheiden kann
+//!
+//! **Keine Suche im Quelltext entscheidet, ob irgendwo eine zweite Fassung
+//! derselben Sache steht.** Eine Fassung unter anderem Namen, in anderer
+//! Schreibweise oder ueber zwei Dateien verteilt entgeht jeder Nadel; die Runde
+//! 7 hat das an der eigenen C4.6-Probe vorgefuehrt, die eine vierte
+//! Pruefordner-Fassung namens `Ordner` nicht sah. Die Gegenmassnahme ist nicht
+//! eine schaerfere Nadel, sondern eine andere Frage: gesucht wird, wo es geht,
+//! nach dem **Gegenstand** statt nach seinem Namen — nach dem `impl Drop` neben
+//! einem Temporaerordner statt nach `struct Pruefordner`, nach jedem Weg an eine
+//! Funktion statt nach einer Schreibweise ihres Aufrufs. Was danach an
+//! Blindheit bleibt, steht am jeweiligen Doc-Kommentar und wird nicht
+//! verschwiegen.
 //!
 //! # Die Nadel steht zusammengesetzt da
 //!
@@ -24,6 +38,20 @@
 
 mod gemeinsam;
 use gemeinsam::quelldateien;
+
+/// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
+/// Kommentar.
+///
+/// Der Unterschied ist in dieser Datei tragend. Die Doc-Kommentare hier nennen
+/// jede Nadel im Klartext, damit ein Leser weiss, wonach gesucht wird; ein
+/// `contains` ueber den ganzen Text fand deshalb diese Datei selbst und jede
+/// andere, die den Namen nur bespricht. Gefragt ist aber, wer eine Sache
+/// **tut**, und das steht nie hinter `//`.
+fn im_code(inhalt: &str, nadel: &str) -> bool {
+    inhalt
+        .lines()
+        .any(|zeile| !zeile.trim_start().starts_with("//") && zeile.contains(nadel))
+}
 
 /// C4.5: Die Ausnahme von `deny(unsafe_code)` steht an genau zwei Stellen.
 ///
@@ -62,8 +90,26 @@ fn genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code() {
 /// Testziel erreicht den Code eines Binaerziels nicht. Der Modulkopf von
 /// `tests/gemeinsam/mod.rs` schreibt es aus. Eine vierte waere ein Doppelbau.
 ///
-/// Gezaehlt wird die **Erklaerung** des selbstabraeumenden Ordners, also das
-/// `impl Drop` daneben; ein blosser Name faende auch jede Benutzung.
+/// # Gesucht wird der Gegenstand und nicht sein Name
+///
+/// Bis zur Runde 7 suchte die Gegenprobe die Nadel `impl Drop for Pruefordner`.
+/// Sie band damit an den **Namen**, und eine vierte Fassung namens `Ordner`
+/// stand seit S13 in `krk-core/src/ablage/sperre.rs`, ohne dass die Probe
+/// etwas gemeldet haette; denselben blinden Fleck hatte sie fuer den
+/// anerkannten `Wegwerfordner`
+/// (`issues/260813-0540_*_eine-vierte-pruefordner-fassung-steht-im-baum-und-die-probe-sieht-sie-nicht.md`).
+///
+/// Was eine Pruefordner-Fassung ausmacht, ist nicht ihr Name, sondern was sie
+/// tut: sie legt unter dem Temporaerverzeichnis etwas an und raeumt es in
+/// `Drop` wieder ab. Die Gegenprobe sucht deshalb die drei Zeichen dieser
+/// Sache in **derselben** Datei — `impl Drop`, `temp_dir()` und
+/// `remove_dir_all` — und findet damit jede vierte Fassung, gleich wie sie
+/// heisst.
+///
+/// **Was auch das nicht findet**, und der Satz gehoert dazu: eine Fassung, die
+/// ueber zwei Dateien verteilt ist, oder eine, die ihren Ordner Eintrag fuer
+/// Eintrag statt mit `remove_dir_all` abraeumt. Der Kopf dieser Datei sagt,
+/// warum keine Nadel das leisten kann.
 #[test]
 fn genau_drei_pruefordner_fassungen_stehen_im_baum() {
     let fassungen = [
@@ -83,19 +129,78 @@ fn genau_drei_pruefordner_fassungen_stehen_im_baum() {
         );
     }
 
-    // Und keine vierte: ein selbstabraeumender Ordner erklaert sich ueber ein
-    // `impl Drop`, und die drei Fassungen sind die einzigen, die eines tragen.
-    let nadel = concat!("impl Drop for Pruef", "ordner");
+    // Die drei Zeichen der Sache. Zwei Vorkehrungen gegen den Selbstfund, und
+    // beide sind noetig: die Nadeln stehen zusammengesetzt da, weil diese Datei
+    // in dem Baum liegt, den sie liest, und gesucht wird nur in Code-Zeilen,
+    // weil die Doc-Kommentare darueber alle drei im Klartext nennen.
+    let abraeumer = concat!("impl Drop", " for ");
+    let ort = concat!("temp_", "dir()");
+    let abraeumen = concat!("remove_dir", "_all");
     let weitere: Vec<String> = baum
         .iter()
         .filter(|(name, inhalt)| {
-            inhalt.contains(nadel) && !fassungen.iter().any(|(fassung, _)| fassung == name)
+            im_code(inhalt, abraeumer)
+                && im_code(inhalt, ort)
+                && im_code(inhalt, abraeumen)
+                && !fassungen.iter().any(|(fassung, _)| fassung == name)
         })
         .map(|(name, _)| name.clone())
         .collect();
     assert!(
         weitere.is_empty(),
         "eine vierte Pruefordner-Fassung steht im Baum: {weitere:?}"
+    );
+}
+
+/// Nur benannte Dateien erreichen [`atomar::schreiben`].
+///
+/// **Die eine Luecke im Satz „kein Schreibweg an der Sperre vorbei".** Der
+/// Modulkopf von `krk_core::ablage` schreibt aus, was die Typen halten und was
+/// nicht: `atomar::schreiben` ist `pub`, weil zwei Schreiber ausserhalb des
+/// Ablageordners es brauchen, und `Ablage::pfad` liefert den Pfad einer der vier
+/// Dateien ohne Durchgang. Beides zusammen ergibt einen Schreibweg an der Sperre
+/// vorbei, den kein Typ versperrt.
+///
+/// **Diese Zaehlung haengt ausnahmsweise nicht an einer Schreibweise, und das
+/// ist der Grund, aus dem sie hier steht.** Es gibt in Rust genau zwei Wege an
+/// eine fremde Funktion: den Pfad an der Aufrufstelle oder ein `use`, das sie in
+/// den Geltungsbereich holt. Beide nennen das Modul, also enthaelt jede Datei,
+/// die `schreiben` ueberhaupt erreichen kann, eine der drei Zeichenketten
+/// `atomar::schreiben`, `atomar::{` oder `atomar::*`. Ein anderer Weg besteht
+/// nicht; wer die Liste erweitert, tut es sichtbar.
+///
+/// Gesucht wird in Code-Zeilen: eine Datei, die den Namen nur bespricht — der
+/// Kopf von `ablage::sperre` etwa, oder diese Zeile hier —, erreicht nichts.
+/// Was bleibt, ist ein Pfad, den jemand ueber zwei Zeilen umbricht; `rustfmt`
+/// tut das nicht, und der Kopf dieser Datei sagt, warum keine Nadel restlos
+/// dicht ist.
+#[test]
+fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
+    let wege = [
+        concat!("atomar::", "schreiben"),
+        concat!("atomar::", "{"),
+        concat!("atomar::", "*"),
+    ];
+    let erreichbar: Vec<String> = quelldateien()
+        .into_iter()
+        .filter(|(_, inhalt)| wege.iter().any(|weg| im_code(inhalt, weg)))
+        .map(|(name, _)| name)
+        .collect();
+    assert_eq!(
+        erreichbar,
+        vec![
+            // Drei Schreiber hinter einem `Zugang`: `Zugang::sichern`,
+            // `Zugang::beiseite_legen` und die Anlage von `settings.toml`.
+            "krk-core/src/ablage/einstellungen.rs".to_owned(),
+            "krk-core/src/ablage/mod.rs".to_owned(),
+            // Der Editor sichert seine Datei, ausserhalb des Ablageordners.
+            "krk-core/src/text/datei.rs".to_owned(),
+            // Der Rundlauf schreibt `settings.toml`, unter einem Durchgang.
+            "krk-core/tests/ablage.rs".to_owned(),
+            // Die Markdown-Ausgabe nach ~/Downloads, ausserhalb des Ordners.
+            "krk-ui/src/belegungsausgabe.rs".to_owned(),
+        ],
+        "eine andere Datei als die benannten kann das atomare Schreiben erreichen"
     );
 }
 

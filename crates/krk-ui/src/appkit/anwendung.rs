@@ -535,9 +535,10 @@ pub struct AnwendungsIvars {
     /// Sperre; ein Recht, das nur genommen und dann fallengelassen wuerde,
     /// liesse die naechste Instanz sich fuer die erste halten. Gefragt wird es
     /// genau einmal, beim Start: wer es hat, bekommt einen
-    /// [`Sitzungsschreiber`], wer nicht, bekommt keinen. Danach steht die Regel
-    /// „nur die Halterin schreibt die Sitzung" an einem fehlenden Wert und nicht
-    /// an einer Abfrage, die jemand vergessen kann.
+    /// [`Sitzungsschreiber`], wer nicht, bekommt keinen. Die Regel „nur die
+    /// Halterin schreibt die Sitzung" haelt danach der Uebersetzer —
+    /// [`Sitzungsschreiber::neu`] verlangt das Recht als Argument und liefert
+    /// ohne es `None`.
     ///
     /// Leer, solange `sitzung_laden` nicht gelaufen ist, und in den vier
     /// Messmodus-Faellen, die keinen bleibenden Ablageordner oeffnen.
@@ -652,8 +653,8 @@ define_class!(
         /// entsteht nicht. Bis zur Runde 7 liefen drei Eintraege — "KRK
         /// beenden", "Fenster einblenden" und "Fenster schliessen" — ueber je
         /// einen eigenen Selektor und damit **an** `kommando_ausfuehren`
-        /// **vorbei**; mit einem Kuerzel an jedem der zweiundachtzig Eintraege
-        /// waere daraus eine Regel geworden statt einer Ausnahme.
+        /// **vorbei**; mit einem Kuerzel an jedem Eintrag der Leiste waere
+        /// daraus eine Regel geworden statt einer Ausnahme.
         ///
         /// **Und es ist trotzdem nicht `terminate:`.** Der Grund, aus dem
         /// "KRK beenden" seinerzeit einen eigenen Selektor bekam, war die
@@ -804,7 +805,14 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(applicationWillTerminate:))]
         fn wird_beendet(&self, _meldung: &NSNotification) {
-            self.sitzung_vormerken();
+            // **Kein `sitzung_vormerken()` davor.** Bis zur Runde 7 stand hier
+            // eines, und es nahm die Schreibsperre ein zweites Mal: beim
+            // Beenden liefen damit zwei Durchgaenge hintereinander, und genau
+            // dazwischen konnte eine andere Instanz schreiben — der Fall, den
+            // der Kommentar unten ausschliesst. Wirkungslos war es dazu, denn
+            // die Zeilen darunter bauen denselben Stand und ueberschreiben den
+            // vorgemerkten
+            // (`issues/260813-0540_*_beim-beenden-laufen-zwei-durchgaenge-und-der-kommentar-nennt-einen.md`).
             let sitzung = self.sitzung_bauen();
             let mut schreiber = self.ivars().sitzungsschreiber.borrow_mut();
             let Some(schreiber) = schreiber.as_mut() else {
@@ -1228,9 +1236,8 @@ impl Anwendungsdelegierter {
                 Sitzungsrecht::ohne()
             }
         };
-        if recht.gehalten() {
-            *ivars.sitzungsschreiber.borrow_mut() = Some(Sitzungsschreiber::neu());
-        } else {
+        *ivars.sitzungsschreiber.borrow_mut() = Sitzungsschreiber::neu(&recht);
+        if !recht.gehalten() {
             // C3.10: eine Instanz, die die Sitzung nicht schreibt, sagt es beim
             // Start einmal. Der Satz nennt die Folge und nicht den Mechanismus:
             // was der Nutzer merkt, ist die nicht gemerkte Aufteilung.
@@ -1550,10 +1557,17 @@ impl Anwendungsdelegierter {
             return;
         }
         if matches!(ausgang, Ausgang::Verschwunden) {
+            // **„geaendert oder geloescht" und nicht „geloescht".**
+            // `Lesezeichenliste::stelle_von` vergleicht den ganzen Eintrag,
+            // Name und Ziel; der Ausgang tritt deshalb auch ein, wenn die
+            // andere Instanz das Lesezeichen nur umbenannt oder sein Ziel
+            // geaendert hat. Der Satz nannte bis zur Runde 7 allein die
+            // Loeschung und schickte den Nutzer damit ein Lesezeichen suchen,
+            // das umbenannt in der Leiste steht.
             self.antwort_zeigen(
                 seite,
-                "das Lesezeichen gibt es nicht mehr; eine andere Instanz von KRK hat es \
-                 geloescht",
+                "dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz \
+                 von KRK hat es geaendert oder geloescht",
             );
             return;
         }

@@ -27,3 +27,9 @@ führt, und zwar an genau der Stelle, an der die Runde die Regel gewechselt hat.
 **Betroffen:** `crates/krk-ui/src/appkit/ereignisse.rs:528-530`
 
 **Domain:** code
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Der Kommentar am `match` in `behandeln` sagt nicht mehr „geschluckt wird nur, was auch ausgefuehrt wurde". Der erste Halbsatz bleibt stehen, wie der Datensatz es verlangt: eine Funktion ohne Kommando ist belegt und in dieser Runde noch nicht gebaut. Die Begruendung dahinter ist jetzt die von S3 und widerspricht dem Modulkopf nicht mehr — ein Tastendruck darauf faellt an AppKit zurueck, und das ist keine Ausnahme von der Schluckregel, sondern ihre Anwendung: geschluckt wird, was zulaessig war, und ein Nachschlag ohne Kommando kommt bei der Zulaessigkeitsfrage gar nicht erst an.
+
+Mitgenommen ist die Beobachtung ohne eigenen Datensatz aus derselben Durchsicht: `behandeln` rief `getipptes_zeichen(ereignis)` zweimal, einmal fuer den Faenger und einmal im Sprungmarkenzweig. Der Wert steht jetzt einmal in einer Bindung. Das ist ein Fremdaufruf weniger auf dem Tastendruckpfad, an dem L1 haengt.

@@ -39,3 +39,7 @@ einen Menüeintrag binden — `eintrag.setEnabled(`, `posten.setEnabled(` — od
 die Datei `menue.rs` und den `define_class!`-Block des Delegierten begrenzen. Wo das zu
 brüchig ist: den Doc-Kommentar um den Satz ergänzen, dass ein Treffer außerhalb der
 Menüeinträge kein Verstoß ist und die Nadel dann nachzuziehen ist.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Das Verbot von `setEnabled(` gilt jetzt nur noch in Dateien, die `NSMenuItem` ueberhaupt nennen — nur dort ist ein Menueeintrag zur Hand, an dem der Aufruf etwas anrichten koennte. Eine Schaltflaeche, die waehrend einer Operation grau werden soll, macht die Wache damit nicht mehr aus einem sachfremden Grund rot. `setAutoenablesItems(` bleibt im ganzen Baum verboten, weil die Methode `NSMenu` gehoert und niemandem sonst; der Doc-Kommentar sagt jetzt, warum die zwei Verbote verschieden weit geschnitten sind. Was der Schnitt nicht faengt — eine Datei, die einen Menueeintrag entgegennimmt, ohne den Typ zu nennen —, steht ebenfalls dort.

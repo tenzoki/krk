@@ -51,3 +51,19 @@ kennt keine. Drei Wege, keiner davon geschenkt:
 
 Empfohlen ist Weg 1, bis der Nutzer den Trenner vermisst: er kostet nichts, und die zwei
 anderen sind jederzeit nachziehbar.
+
+---
+
+## Zwischenstand 260813, Turn 2: die Vorbedingung ist erfuellt, der Befund bleibt offen
+
+Der `ontorev` hat empfohlen, diesen Befund zusammen mit `260813-0534` zu fahren, weil dessen
+fehlender Absatz im Dateikopf die erste Verschiebung erklaeren muss. **Der Absatz steht seit
+dem 260813 im Kopf von `resources/default-keymap.toml`:** er sagt, dass
+`belegungsmodell::nach_bereichen` die Funktionen einer Gruppe in Dateireihenfolge liefert, dass
+drei Abnehmer sie so anzeigen, und dass ein verschobener Block einen Menueeintrag mitverschiebt.
+
+**Die Verschiebung selbst ist nicht gefahren.** Sie bewegt zwei `[[funktion]]`-Bloecke und ist
+damit eine Aenderung an Daten und nicht an Kommentaren; der Auftrag des Turns hat den
+Rust-Anteil und die Kommentare der Belegungsdatei umfasst und die Datenzeilen ausdruecklich
+nicht. Offen bleibt daneben die Trennerfrage, deren drei Wege oben stehen und deren Weg 1
+empfohlen ist.

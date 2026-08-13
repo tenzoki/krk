@@ -47,3 +47,13 @@ Zwei Wege, und der zweite ist der billigere.
 2. Die Doc-Kommentare und Fehlermeldungen auf „in `krk-ui`" umschreiben und im Kopf von
    `quellbaum.rs` einen Satz ergänzen, dass eine Zusage über alle Kisten nach `tests/baum.rs`
    gehört.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813 — auf dem ersten der beiden vorgeschlagenen Wege in seiner allgemeinen Form, nicht auf dem billigeren zweiten.
+
+**`krk_ui::quellbaum::quelldateien` liest jetzt `crates/` und damit alle Kisten**, genau wie `krk-core/tests/gemeinsam::quelldateien`. Damit stimmt „im Baum" in allen sechs Proben, und C2.16 ist ohne Kistengrenze gehalten: eine zweite Fassung der Zulaessigkeitsregel in `krk-core` wuerde jetzt gesehen. Die Doc-Kommentare umzuschreiben waere billiger gewesen und haette die Zusage ungedeckt gelassen; der Datensatz sagt selbst, dass die Verengung fuer `fn zulaessig(` nicht harmlos ist.
+
+**Damit faellt zugleich die Falle weg, die der `coderev`-Bericht unter „Zweitens" beschreibt.** Die zwei Quellbaumleser unterscheiden sich nicht mehr in ihrer Reichweite, sondern nur noch in ihrem Wohnort, und der Grund dafuer ist die Kistengrenze, die auch die drei Pruefordner-Fassungen erzwingt. Beide Modulkoepfe sagen es jetzt und verweisen aufeinander.
+
+**Nachgezogen sind neun Erwartungen in sieben Dateien**, weil die Dateinamen jetzt mit `krk-ui/src/` beginnen, dazu der Ausschluss in `das_menue_wird_an_zwei_anlaessen_gebaut`. Vor der Umstellung ist nachgesehen worden, dass keine der vierzehn Nadeln ausserhalb von `krk-ui` vorkommt; keine Probe hat ihre Aussage dabei geaendert.

@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use super::pfade;
+use super::sperre::Sitzungsrecht;
 use super::{Datei, Zugang};
 use crate::verzeichnis::Sortierung;
 
@@ -421,10 +422,16 @@ fn standardordner() -> PathBuf {
 /// laeuft. Der Schreiber selbst haelt weiter allein den vorgemerkten Stand und
 /// die Uhr, denn beide ueberdauern einen Durchgang.
 ///
-/// **Er entsteht nur, wenn dieser Prozess das Sitzungsrecht haelt.** Wer es
-/// nicht bekam, baut keinen; die Regel „nur die Halterin schreibt die Sitzung"
-/// steht damit an einem fehlenden Wert und nicht an einer Abfrage, die jemand
-/// vergessen kann.
+/// **Er entsteht nur, wenn dieser Prozess das Sitzungsrecht haelt**, und seit
+/// der Runde 7 haelt der Uebersetzer das fest: beide Erzeuger verlangen ein
+/// [`Sitzungsrecht`] und liefern `None`, wenn eine andere Instanz es haelt.
+///
+/// Bis dahin stand die Regel an einem fehlenden Wert — wer das Recht nicht
+/// bekam, baute eben keinen Schreiber —, und genau daran ist sie einmal
+/// vorbeigelaufen: der Messmodus baute sich einen ohne zu fragen
+/// (`issues/260813-0540_*_der-messmodus-schreibt-die-sitzung-ohne-sitzungsrecht.md`).
+/// Ein fehlender Wert ist eine Abmachung; ein verlangtes Argument ist eine
+/// Eigenschaft der Typen.
 #[derive(Debug)]
 pub struct Sitzungsschreiber {
     takt: Duration,
@@ -435,18 +442,28 @@ pub struct Sitzungsschreiber {
 }
 
 impl Sitzungsschreiber {
-    /// Ein Schreiber mit dem Takt aus [`SITZUNGSTAKT`].
-    pub fn neu() -> Self {
-        Self::mit_takt(SITZUNGSTAKT)
+    /// Ein Schreiber mit dem Takt aus [`SITZUNGSTAKT`], sofern dieser Prozess
+    /// das Sitzungsrecht haelt.
+    ///
+    /// `None` heisst „eine andere Instanz schreibt die Sitzung". Das Recht wird
+    /// hier weder genommen noch gehalten: es kommt von
+    /// [`Sitzungsrecht::nehmen`], wird einmal beim Start vergeben und lebt
+    /// laenger als jeder Schreiber.
+    pub fn neu(recht: &Sitzungsrecht) -> Option<Self> {
+        Self::mit_takt(recht, SITZUNGSTAKT)
     }
 
-    /// Ein Schreiber mit abweichendem Takt.
-    pub fn mit_takt(takt: Duration) -> Self {
-        Self {
+    /// Ein Schreiber mit abweichendem Takt, sofern dieser Prozess das
+    /// Sitzungsrecht haelt.
+    pub fn mit_takt(recht: &Sitzungsrecht, takt: Duration) -> Option<Self> {
+        if !recht.gehalten() {
+            return None;
+        }
+        Some(Self {
             takt,
             offen: None,
             zuletzt: None,
-        }
+        })
     }
 
     /// Ob ein Stand vorgemerkt und noch nicht geschrieben ist.

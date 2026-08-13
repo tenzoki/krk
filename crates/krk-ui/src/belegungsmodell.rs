@@ -158,13 +158,22 @@ impl Funktionsbereich {
     /// Die Ueberschrift des Bereichs in der Ansicht.
     ///
     /// **[`Funktionsbereich::Textbefehle`] heisst hier „Bearbeiten", und das
-    /// ist keine Schoenheitsfrage.** macOS haengt seine eigenen Textzusaetze an
-    /// ein Menue dieses Namens, und `appkit::menue::systemzusaetze_unterdruecken`
-    /// setzt genau dort an; ein anders benanntes Obermenue stellte die Zusage
-    /// aus C2.13 auf eine ungepruefte Annahme. Fuer die
-    /// Belegungsansicht und die Markdown-Ausgabe ist der Name daneben genauer
-    /// als der alte: die sechs Funktionen tragen saemtlich
-    /// `gehalten_von = "menue"` und sind genau die Eintraege jenes Menues.
+    /// ist keine Schoenheitsfrage.** Der Name ist der, den die Mac-Gewohnheit
+    /// fuer dieses Menue verlangt, und er ist genauer als der alte: die sechs
+    /// Funktionen tragen saemtlich `gehalten_von = "menue"` und sind genau die
+    /// Eintraege jenes Menues. Dieselbe Gliederung tragen die Belegungsansicht
+    /// und die Markdown-Ausgabe, also heisst der Bereich dort ebenso.
+    ///
+    /// **Ob macOS seine eigenen Textzusaetze an den Menue*titel* haengt, ist
+    /// ungemessen**, und der Name traegt diese Zusage deshalb nicht.
+    /// `appkit::menue::systemzusaetze_unterdruecken` setzt nicht am Titel an,
+    /// sondern traegt drei Namen in `NSUserDefaults` ein und wirkt damit
+    /// unabhaengig davon, wie das Obermenue heisst; ihr eigener Doc-Kommentar
+    /// nennt die Messung dazu. Hier stand bis zur Runde 7 das Gegenteil, und es
+    /// berief sich als Beleg auf genau jene Funktion
+    /// (`issues/260813-0540_*_ein-doc-kommentar-begruendet-bearbeiten-mit-einem-mechanismus-den-es-nicht-gibt.md`).
+    /// Die offene Frage, ob umbenannt werden **darf**, ist eine andere und steht
+    /// in `decisions/260813-0159_*_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md`.
     pub const fn name(self) -> &'static str {
         match self {
             Funktionsbereich::Anwendung => "Anwendung",
@@ -1797,7 +1806,7 @@ mod suchproben {
         let dauer = concat!("Dura", "tion");
         let (_, inhalt) = crate::quellbaum::quelldateien()
             .into_iter()
-            .find(|(name, _)| name == "belegungsmodell.rs")
+            .find(|(name, _)| name == "krk-ui/src/belegungsmodell.rs")
             .expect("der Quellbaum fuehrt belegungsmodell.rs");
         assert!(!inhalt.contains(uhr), "die Suche fuehrt eine Uhr");
         assert!(!inhalt.contains(dauer), "die Suche fuehrt eine Zeitspanne");

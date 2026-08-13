@@ -6,7 +6,8 @@
 //!
 //! **Was in der Leiste steht, entscheidet diese Datei seit der Runde 7 nicht
 //! mehr.** [`crate::menuemodell::aufbau`] rechnet die Leiste aus der Belegung
-//! aus — neun Obermenues, zweiundachtzig Eintraege —, und [`hauptmenue`] setzt
+//! aus — neun Obermenues und einen Eintrag je Funktion der Belegung —, und
+//! [`hauptmenue`] setzt
 //! den Wert in `NSMenu` und `NSMenuItem` um. Bis dahin standen hier drei
 //! Untermenues und zehn Eintraege als Programmtext, und ihre Reihenfolge war
 //! allein am laufenden Buendel nachzusehen. Der Gewinn ist nicht die Zahl,
@@ -23,7 +24,7 @@
 //!
 //! # Jeder Eintrag mit Kommando traegt einen Selektor, und es ist derselbe
 //!
-//! Fuenfundsiebzig Selektoren waeren fuenfundsiebzig Methoden am
+//! Ein eigener Selektor je Kommando waere eine Methode je Kommando am
 //! Anwendungsdelegierten, jede mit demselben Rumpf. Ein Eintrag mit Kommando
 //! traegt deshalb [`KRK_KOMMANDO`] und im `tag` den Index seines Kommandos in
 //! [`Kommando::KENNUNGEN`]; die Uebersetzung in beide Richtungen steht in
@@ -170,8 +171,8 @@
 //! "Fenster schliessen", "Fenster einblenden" und "KRK beenden" liefen bis zur
 //! Runde 7 ueber `fensterSchliessen:`, `fensterEinblenden:` und `beenden:` am
 //! Anwendungsdelegierten. Sie liefen damit **an** `kommando_ausfuehren`
-//! **vorbei**, und mit einem Kuerzel an jedem der zweiundachtzig Eintraege waere
-//! daraus eine Regel geworden statt einer Ausnahme; C2.14 schliesst genau diese
+//! **vorbei**, und mit einem Kuerzel an jedem Eintrag der Leiste waere daraus
+//! eine Regel geworden statt einer Ausnahme; C2.14 schliesst genau diese
 //! Luecke. Die drei tragen seither [`KRK_KOMMANDO`] wie jeder andere Befehl.
 //!
 //! **Was die drei eigenen Selektoren abwehren sollten, wehren sie weiterhin
@@ -304,7 +305,7 @@ pub fn systemzusaetze_unterdruecken() {
 
 /// Der Sammelselektor jedes Menueeintrags, der ein [`Kommando`] traegt.
 ///
-/// **Eine Methode statt fuenfundsiebzig.** Ein eigener Selektor je Befehl
+/// **Eine Methode statt einer je Befehl.** Ein eigener Selektor je Befehl
 /// waere eine Methode je Befehl am Anwendungsdelegierten, jede mit demselben
 /// zwei Zeilen langen Rumpf. Welchen Befehl ein Eintrag meint, steht deshalb
 /// nicht im Selektor, sondern in seinem `tag`; [`tag_des_kommandos`] setzt ihn,
@@ -1110,20 +1111,40 @@ mod tests {
     /// [`crate::kommandos::zulaessigkeit`], und die zwei Aufrufer zaehlt die
     /// Probe daneben. Was **hier** zu halten ist, ist die andere Haelfte: dass
     /// niemand die Freigabe eines Eintrags an einer zweiten Stelle **setzt**.
-    /// Ein `setEnabled:` irgendwo im Baum uebersteuerte die Regel lautlos, und
-    /// ein abgeschaltetes `setAutoenablesItems` naehme sie ganz weg — dann waere
-    /// jeder Eintrag immer frei, und mit dem Fokus im Editor bewegte ein
+    /// Ein `setEnabled:` an einem Menueeintrag uebersteuerte die Regel lautlos,
+    /// und ein abgeschaltetes `setAutoenablesItems` naehme sie ganz weg — dann
+    /// waere jeder Eintrag immer frei, und mit dem Fokus im Editor bewegte ein
     /// Auf-Pfeil die Dateiliste.
+    ///
+    /// **Die zwei Verbote sind verschieden weit geschnitten, und das ist kein
+    /// Versehen.** `setAutoenablesItems:` gehoert `NSMenu` und niemandem sonst;
+    /// dafuer gilt das Verbot im ganzen Baum. `setEnabled:` gehoert dagegen
+    /// jeder `NSControl` — jeder Schaltflaeche, jedem Textfeld, jedem
+    /// Kontrollkaestchen. Bis zur Runde 7 war es trotzdem im ganzen Baum
+    /// verboten, und die naechste Schaltflaeche, die waehrend einer Operation
+    /// grau werden soll, haette die Wache aus einem sachfremden Grund rot
+    /// gemacht; der billigste Weg zurueck ins Gruene waere ihr Streichen gewesen
+    /// (`issues/260813-0540_*_das-verbot-von-setenabled-trifft-jede-nscontrol-und-nicht-nur-menueeintraege.md`).
+    ///
+    /// Verboten ist es deshalb nur noch in Dateien, die `NSMenuItem`
+    /// ueberhaupt nennen — nur dort ist ein Menueeintrag zur Hand, an dem der
+    /// Aufruf etwas anrichten koennte. Eine Schaltflaeche anderswo geht die
+    /// Probe nichts an. **Was das nicht faengt:** eine Datei, die einen
+    /// Menueeintrag entgegennimmt, ohne den Typ zu nennen. Der Kopf von
+    /// [`crate::quellbaum`] sagt, warum keine Nadel restlos dicht ist.
     #[test]
     fn die_freigabe_eines_eintrags_wird_nirgends_gesetzt() {
         let dateien = quelldateien();
-        for nadel in [
-            concat!("setEnabled", "("),
-            concat!("setAutoenablesItems", "("),
+        let eintragsklasse = concat!("NSMenu", "Item");
+        for (nadel, nur_am_eintrag) in [
+            (concat!("setEnabled", "("), true),
+            (concat!("setAutoenablesItems", "("), false),
         ] {
             let gefunden: Vec<&str> = dateien
                 .iter()
-                .filter(|(_, inhalt)| inhalt.contains(nadel))
+                .filter(|(_, inhalt)| {
+                    inhalt.contains(nadel) && (!nur_am_eintrag || inhalt.contains(eintragsklasse))
+                })
                 .map(|(name, _)| name.as_str())
                 .collect();
             assert!(
@@ -1164,27 +1185,53 @@ mod tests {
     /// Weg, der den Rumpf eines Befehls an dieser Stelle vorbei erreicht, laesst
     /// die Probe rot werden.
     ///
-    /// Gezaehlt werden die zwei Empfaengernamen und nicht der blosse
-    /// Methodenname: `kommando_ausfuehren` heisst daneben auch je eine Methode
-    /// an der Tabelle, an der Leiste und an der Vorschau, an die der Delegierte
-    /// weiterreicht. Das sind keine zweiten Ausfuehrungswege, sondern die
-    /// Fortsetzung dieses einen.
+    /// **Zwei Zahlen, weil eine von beiden an der Schreibweise haengt.**
+    ///
+    /// Der Name `kommando_ausfuehren` heisst daneben auch je eine Methode an der
+    /// Tabelle, an der Leiste und an der Vorschau, an die der Delegierte
+    /// weiterreicht; das sind keine zweiten Ausfuehrungswege, sondern die
+    /// Fortsetzung dieses einen. Die **drei** trennt deshalb der Empfaenger,
+    /// `self.` oder `selbst.`. Genau daran haengt diese Zahl aber auch: ein
+    /// vierter Frager, der den Delegierten unter einem anderen Bindungsnamen
+    /// haelt — der Baum bindet ihn in Rueckrufen schon als `delegierter` —,
+    /// bliebe unsichtbar
+    /// (`issues/260813-0540_*_zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs.md`).
+    ///
+    /// Die **Gesamtzahl** daneben haengt an keinem Empfaenger:
+    /// [`crate::quellbaum::aufrufstellen`] zaehlt jeden Aufruf des Namens im
+    /// Baum, gleich wer ihn ruft. Heute sind es acht — die drei oben und fuenf
+    /// Weiterreichungen an Tabelle, Leiste und Vorschau. Ein neunter macht die
+    /// Probe rot, wie auch immer er geschrieben ist, und zwingt zu der Frage,
+    /// welche der beiden Zahlen sich geaendert hat.
     #[test]
     fn der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten() {
-        let nadel = concat!("kommando_", "ausfuehren(");
-        let aufrufe: usize = quelldateien()
+        let name = concat!("kommando_", "ausfuehren");
+        let dateien = quelldateien();
+
+        let vom_delegierten: usize = dateien
             .iter()
             .map(|(_, inhalt)| {
                 ["self.", "selbst."]
                     .into_iter()
-                    .map(|empfaenger| inhalt.matches(&format!("{empfaenger}{nadel}")).count())
+                    .map(|empfaenger| inhalt.matches(&format!("{empfaenger}{name}(")).count())
                     .sum::<usize>()
             })
             .sum();
         assert_eq!(
-            aufrufe, 3,
+            vom_delegierten, 3,
             "der eine Ausfuehrungsweg hat nicht die drei Aufrufer Tastendruck, \
              Menueeintrag und Bereichsleiste"
+        );
+
+        let alle: usize = dateien
+            .iter()
+            .map(|(_, inhalt)| crate::quellbaum::aufrufstellen(inhalt, name))
+            .sum();
+        assert_eq!(
+            alle, 8,
+            "die Zahl der Aufrufe von {name} im Baum hat sich geaendert: erwartet \
+             sind die drei am Delegierten und fuenf Weiterreichungen an Tabelle, \
+             Leiste und Vorschau"
         );
     }
 
@@ -1205,7 +1252,7 @@ mod tests {
         let nadel = concat!("haupt", "menue(");
         let aufrufe: usize = quelldateien()
             .iter()
-            .filter(|(name, _)| name != "appkit/menue.rs")
+            .filter(|(name, _)| name != "krk-ui/src/appkit/menue.rs")
             .map(|(_, inhalt)| inhalt.matches(nadel).count())
             .sum();
         assert_eq!(

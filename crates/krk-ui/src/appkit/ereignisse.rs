@@ -506,11 +506,16 @@ fn behandeln(
         ereignis.modifierFlags().0 as u64,
     );
 
+    // Einmal gefragt und nicht zweimal: der Faenger und der Sprungmarkenzweig
+    // brauchen dasselbe Zeichen desselben Ereignisses, und das ist ein
+    // Fremdaufruf auf dem Tastendruckpfad, an dem L1 haengt.
+    let zeichen = getipptes_zeichen(ereignis);
+
     // Die Aufnahme und die Suche der Belegungsansicht, vor allem anderen.
     // Siehe den Modulkopf: dort ist der Tastendruck Eingabe und kein Befehl,
     // und auch der Fokusvorbehalt hat hier nichts zu sagen. Das getippte
     // Zeichen geht mit, weil `druck.zeichen` kein Leerzeichen fuehren kann.
-    if faenger(druck, getipptes_zeichen(ereignis)) {
+    if faenger(druck, zeichen) {
         return true;
     }
 
@@ -527,8 +532,11 @@ fn behandeln(
 
     match nachschlag {
         // Belegt und gebaut. Eine Funktion ohne Kommando ist belegt, aber in
-        // dieser Runde noch nicht gebaut; siehe den Modulkopf: geschluckt wird
-        // nur, was auch ausgefuehrt wurde.
+        // dieser Runde noch nicht gebaut, und ein Tastendruck darauf faellt
+        // deshalb an AppKit zurueck. Das ist keine Ausnahme von der Schluckregel
+        // seit S3, sondern ihre Anwendung: geschluckt wird, was zulaessig war,
+        // und ein Nachschlag ohne Kommando kommt bei der Zulaessigkeitsfrage
+        // gar nicht erst an. Siehe den Modulkopf.
         Nachschlag::Funktion(funktion) => match funktion.kommando() {
             Some(kommando) => senke(Eingabe::Kommando(kommando)),
             None => false,
@@ -536,7 +544,7 @@ fn behandeln(
         // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: das Tippen
         // der Anfangsbuchstaben aus C2. Ob das Zeichen in den Puffer gehoert,
         // entscheidet der Kern.
-        Nachschlag::Sprungmarke => match getipptes_zeichen(ereignis) {
+        Nachschlag::Sprungmarke => match zeichen {
             Some(zeichen) => senke(Eingabe::Zeichen(zeichen)),
             None => false,
         },
@@ -698,20 +706,40 @@ mod tests {
     /// [`crate::quellbaum`].
     ///
     /// Zwei Nadeln, weil die Frage zwei Haelften hat, die einzeln abwandern
-    /// koennten: die Erklaerung selbst und die Klassenpruefung darin.
+    /// koennten: die Erklaerung selbst und die Typpruefung darin.
     ///
-    /// **Fuer die zweite Nadel zaehlt die Probe Dateien und nicht
+    /// **Die zweite Nadel erfasst beide Schreibweisen, die dieser Baum
+    /// kennt.** Sie suchte bis zur Runde 7 allein `isKindOfClass(`, und daneben
+    /// stand in `appkit/anwendung.rs` schon eine Typfrage an den Ersthelfer in
+    /// der anderen idiomatischen Form, `ersthelfer.downcast_ref::<NSView>()`.
+    /// Ein zweiter Bau in **dieser** Form haette genau den Doppelbau ergeben,
+    /// gegen den die Probe steht, und beide Nadeln waeren gruen geblieben
+    /// (`issues/260813-0540_*_die-ersthelfer-zaehlprobe-sieht-einen-doppelbau-ueber-downcast-ref-nicht.md`).
+    /// Gesucht wird deshalb `downcast_ref::<NSText` mit — das deckt alle drei
+    /// Textklassen ab, weil `NSTextView` und `NSTextField` mit demselben Wort
+    /// beginnen, und laesst die Frage nach `NSView` in `anwendung.rs` heraus,
+    /// die keine Textklasse nennt.
+    ///
+    /// **Was auch das nicht faengt:** eine dritte Schreibweise derselben Frage,
+    /// etwa ueber `class()` und einen Vergleich. Keine Suche im Quelltext
+    /// entscheidet, ob irgendwo dieselbe Sache noch einmal gebaut ist; der Kopf
+    /// von [`crate::quellbaum`] sagt, was daraus folgt.
+    ///
+    /// **Fuer die Typpruefung zaehlt die Probe Dateien und nicht
     /// Fundstellen.** Es sind heute drei Zeilen, eine je Textklasse, und eine
     /// vierte Textklasse in derselben Funktion waere eine zulaessige Aenderung
     /// und kein Doppelbau. Eine Pruefung in einer **anderen** Datei waere einer.
     ///
-    /// Beide Nadeln stehen zusammengesetzt da, wie bei
+    /// Alle Nadeln stehen zusammengesetzt da, wie bei
     /// `es_gibt_genau_einen_menuebauer` in [`super::super::teilen`]: als ein
     /// Stueck geschrieben faende jede sich selbst.
     #[test]
     fn die_frage_nach_dem_ersthelfer_steht_an_genau_einer_stelle() {
         let erklaerung = concat!("fn ", "ersthelfer_gehoert_appkit");
-        let klassenpruefung = concat!("isKindOf", "Class(");
+        let typpruefungen = [
+            concat!("isKindOf", "Class("),
+            concat!("downcast_ref::<", "NSText"),
+        ];
         let dateien = quelldateien();
 
         let erklaerungen: usize = dateien
@@ -723,14 +751,14 @@ mod tests {
             "die Frage nach dem Ersthelfer ist nicht genau einmal erklaert"
         );
 
-        let mit_klassenpruefung: Vec<String> = dateien
+        let mit_typpruefung: Vec<String> = dateien
             .into_iter()
-            .filter(|(_, inhalt)| inhalt.contains(klassenpruefung))
+            .filter(|(_, inhalt)| typpruefungen.iter().any(|nadel| inhalt.contains(nadel)))
             .map(|(name, _)| name)
             .collect();
         assert_eq!(
-            mit_klassenpruefung,
-            vec!["appkit/ereignisse.rs".to_owned()],
+            mit_typpruefung,
+            vec!["krk-ui/src/appkit/ereignisse.rs".to_owned()],
             "die Pruefung auf die Textklassen steht nicht allein in dieser Datei"
         );
     }

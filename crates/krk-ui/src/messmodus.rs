@@ -58,7 +58,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde::Deserialize;
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
-use krk_core::ablage::{Ablage, Sitzung};
+use krk_core::ablage::{Ablage, Sitzung, Sitzungsrecht};
 
 /// Wie oft jede Messgroesse wiederholt wird. C8 schreibt zwanzig vor.
 pub const WIEDERHOLUNGEN: usize = 20;
@@ -298,11 +298,27 @@ impl Messplan {
     /// die die Anwendung beim Beenden benutzt. Die folgenden L4-Starts
     /// (`--messmodus sitzungsstart`) finden damit dieselbe Lage vor, und ein
     /// zweites Format fuer dieselbe Datei entsteht nicht.
+    ///
+    /// **Auch der Messlauf braucht dafuer das Sitzungsrecht** (C3.9). Er ist
+    /// kein Sonderfall des Schreibwegs und keiner der Zustaendigkeit: laeuft
+    /// daneben eine gewoehnliche Instanz, gehoert `session.toml` ihr, und der
+    /// Messlauf ueberschriebe die Lage, auf der sie arbeitet. Er bricht dann
+    /// ab, statt eine Zahl auf fremder Lage zu liefern — eine solche Zahl waere
+    /// keine.
     pub fn herstellen(&self) -> Result<PathBuf, String> {
         let ablage = Ablage::im_benutzerverzeichnis()
             .map_err(|fehler| format!("der Ablageordner laesst sich nicht oeffnen: {fehler}"))?;
         let pfad = ablage.pfad(krk_core::ablage::Datei::Sitzung);
-        let mut schreiber = Sitzungsschreiber::neu();
+        let recht = Sitzungsrecht::nehmen(ablage.ort())
+            .map_err(|fehler| format!("das Sitzungsrecht laesst sich nicht anfordern: {fehler}"))?;
+        let Some(mut schreiber) = Sitzungsschreiber::neu(&recht) else {
+            return Err(
+                "eine andere Instanz von KRK haelt das Sitzungsrecht und schreibt session.toml. \
+                 Der Messlauf stellt die Pruefsitzung nicht her, solange sie laeuft; beende sie \
+                 und fahre ihn erneut"
+                    .to_owned(),
+            );
+        };
         // Unter der Schreibsperre wie jeder andere Weg auf die Platte. Der
         // Messlauf ist der vierte Schreiber der Ablage und kein Sonderfall;
         // gebraucht wird die Sperre hier nicht, weil kein zweiter Prozess

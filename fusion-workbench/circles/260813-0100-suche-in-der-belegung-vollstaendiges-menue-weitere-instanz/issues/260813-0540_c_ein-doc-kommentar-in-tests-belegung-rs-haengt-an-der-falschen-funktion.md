@@ -37,3 +37,7 @@ also fällt es nur beim Lesen auf.
 
 Die zwei neuen Funktionen samt ihren Kommentaren hinter `ablage_mit` stellen, sodass der alte
 Kommentar wieder an seiner Funktion hängt.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. `ablage_mit` steht jetzt unmittelbar unter seinem eigenen Doc-Kommentar, und `geladene_belegung` und `belegung_sichern` folgen dahinter, jede mit ihrer eigenen Erklaerung. Der Kommentar von `ablage_mit` ist bei der Gelegenheit um den Absatz gewachsen, den die Behebung von `kein-schreibweg-an-der-sperre-vorbei` verlangt: die Funktion schreibt ihren Anfangsinhalt seither unter der Schreibsperre und holt den Pfad aus dem `Zugang`.

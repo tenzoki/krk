@@ -215,11 +215,16 @@ fn entsperren_und_loeschen(pfad: &Path) -> io::Result<()> {
 /// abzulesen, dass es keine dritte gibt.
 ///
 /// **Das ist nicht dieselbe Funktion wie `krk_ui::quellbaum::quelldateien`**,
-/// und sie ist auch nicht mit ihr zusammenzulegen. Jene liest `krk-ui/src` und
-/// ist `pub(crate)` in einer Kiste mit nur einem Binaerziel; ein Testziel
-/// erreicht sie nicht, aus demselben Grund, aus dem es drei
-/// Pruefordner-Fassungen gibt. Diese hier liest **alle** Kisten, weil die
-/// Zusagen darueber genau das behaupten.
+/// und sie ist auch nicht mit ihr zusammenzulegen. Jene ist `pub(crate)` in
+/// einer Kiste mit nur einem Binaerziel; ein Testziel erreicht sie nicht, aus
+/// demselben Grund, aus dem es drei Pruefordner-Fassungen gibt.
+///
+/// **Die beiden lesen seit der Runde 7 denselben Umfang**, naemlich alle Kisten
+/// unter `crates/`. Bis dahin las jene nur `krk-ui/src`, und der Unterschied
+/// stand nirgends nebeneinander: wer eine Zaehlprobe schrieb, waehlte damit
+/// unbemerkt ihre Reichweite mit
+/// (`issues/260813-0540_*_die-zaehlproben-in-krk-ui-sagen-im-baum-und-lesen-nur-eine-kiste.md`).
+/// Wer eine der beiden aendert, aendert die andere mit.
 ///
 /// `CARGO_MANIFEST_DIR` steht beim Uebersetzen fest und zeigt auf
 /// `crates/krk-core`; zwei Schritte darueber liegt die Wurzel. Fehlt der Baum,

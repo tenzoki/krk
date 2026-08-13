@@ -75,3 +75,11 @@ Einen Absatz in den Dateikopf, neben die Ein-Zeilen-Regel, etwa:
 
 **Zusammen mit `260813-0420` zu behandeln**, denn dessen Behebung ist die erste Verschiebung,
 die diesen Absatz braucht.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, in `resources/default-keymap.toml` und ausschliesslich an Kommentarzeilen.
+
+Der empfohlene Absatz steht jetzt im Dateikopf, unmittelbar hinter der Ein-Zeilen-Regel und der Zaehlzeile: `belegungsmodell::nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck, in der sie hier stehen; drei Abnehmer zeigen sie so an — die Belegungsansicht, die Markdown-Ausgabe und seit der Runde 7 die Menueleiste; wer einen Block verschiebt, verschiebt einen Menueeintrag mit, und keine Probe haelt das fest. Der Absatz sagt daneben ausdruecklich, dass die **Gruppe** selbst nicht von hier kommt, sondern aus `belegungsmodell::bereich_des_kommandos`.
+
+**Nicht mitgenommen:** die Verschiebung selbst. Der Befund `260813-0420` bleibt offen — er verlangt, zwei `[[funktion]]`-Bloecke zu verschieben, und das ist eine Aenderung an Daten und nicht an Kommentaren. Der Absatz, den jene Behebung braucht, steht ab jetzt bereit.

@@ -50,3 +50,15 @@ Dann gibt es wirklich nur eine Stelle, die den Ort bestimmt, der `PathBuf` entf�
 Prüfung auf die Endung entscheidet allein. Die Zählprobe
 `der_eigene_buendelort_wird_an_genau_einer_stelle_bestimmt` (`:129-142`) zählt Dateien und
 bleibt davon unberührt; sie sähe den doppelten Aufruf ohnehin nicht.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, auf dem im Datensatz vorgeschlagenen Weg. `eigenes_buendel` liefert jetzt `Option<Retained<NSURL>>` statt eines `PathBuf`, den niemand benutzte, und `starten` schoepft allein daraus:
+
+```rust
+let Some(adresse) = eigenes_buendel() else {
+    return Some(OHNE_BUENDEL);
+};
+```
+
+Damit ist `NSBundle::mainBundle().bundleURL()` wirklich an einer Stelle gefragt, der `PathBuf` und der `use std::path::PathBuf` entfallen, und der falsche Nebenausgang ist fort: ueber den Ort entscheidet jetzt allein die Endung, und ein nicht uebersetzbarer Pfad kann nicht mehr zu „laeuft nicht aus einem Buendel" fuehren. Die Zaehlprobe `der_eigene_buendelort_wird_an_genau_einer_stelle_bestimmt` laeuft unveraendert gruen; sie zaehlt Dateien und war von beidem nicht beruehrt.

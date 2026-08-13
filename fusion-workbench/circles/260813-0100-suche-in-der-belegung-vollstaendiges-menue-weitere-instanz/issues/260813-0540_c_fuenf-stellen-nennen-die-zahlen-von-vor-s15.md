@@ -45,3 +45,20 @@ Die sechs Stellen nachziehen. Wo die Zahl nichts trägt, sie streichen: „Eine 
 einer je Befehl" sagt dasselbe wie „statt fünfundsiebzig" und veraltet nicht. Der Plan der
 Runde nennt in seinem Text ebenfalls durchgehend 82 Einträge; er ist eine Aufzeichnung eines
 Standes und bleibt nach der Ortsregel aus `CLAUDE.md` unangetastet.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813 — durchgehend auf dem im Datensatz empfohlenen Weg: **die Zahl ist gestrichen, wo sie nichts traegt**, statt sie nachzuziehen. Eine nachgezogene Zahl veraltet beim naechsten Schritt wieder, und keine Probe haelt sie; das ist bereits zweimal in dieser Runde geschehen.
+
+| Stelle | steht jetzt da |
+|---|---|
+| `appkit/menue.rs:9` | „neun Obermenues und einen Eintrag je Funktion der Belegung" |
+| `appkit/menue.rs` (Selektorabschnitt) | „Ein eigener Selektor je Kommando waere eine Methode je Kommando" |
+| `appkit/menue.rs` (drei eigene Selektoren) | „mit einem Kuerzel an jedem Eintrag der Leiste" |
+| `appkit/menue.rs` (`KRK_KOMMANDO`) | „Eine Methode statt einer je Befehl" |
+| `appkit/anwendung.rs` (`krkKommando:`) | „mit einem Kuerzel an jedem Eintrag der Leiste" |
+| `menuemodell.rs:19` | „einen Eintrag je Funktion der Belegung statt der zehn von vorher" |
+
+Die neun Obermenues bleiben als Zahl stehen: sie sind durch C2.3 und eine Probe gehalten. Die zehn Eintraege von vorher bleiben ebenfalls, denn sie sind ein abgeschlossener historischer Stand und veralten nicht mehr. Nachgesehen: `zweiundachtzig`, `fuenfundsiebzig` und `82 Eintraege` kommen im Baum nicht mehr vor.
+
+Der Plan der Runde nennt in seinem Text weiterhin 82 Eintraege; er ist eine Aufzeichnung eines Standes und bleibt nach der Ortsregel aus `CLAUDE.md` unangetastet.

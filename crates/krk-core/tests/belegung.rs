@@ -30,9 +30,28 @@ use gemeinsam::Pruefordner;
 /// Pruefordner unter `tests/gemeinsam/` haelt Ordner und Dateien, und eine
 /// [`Ablage`] ist keines von beiden, sondern ein Gegenstand des Kerns. Nur diese
 /// Datei braucht ihn, also steht er hier.
+///
+/// **Der Anfangsinhalt geht unter der Schreibsperre auf die Platte.** Bis zur
+/// Runde 7 stand hier `fs::write(ablage.pfad(...))`, also der eine Schreibweg
+/// an der Sperre vorbei, den `krk_core::ablage` ausschliessen will; die naechste
+/// Probe haette ihn fuer erlaubt gehalten
+/// (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
+/// Geschrieben wird ein roher Text und keine Serialisierung, weil die Proben
+/// auch fehlerhafte `keymap.toml` brauchen; der Pfad kommt deshalb aus dem
+/// [`Zugang`] und der Vorgang aus `atomar::schreiben`, wie bei `settings.toml`.
+fn ablage_mit(ordner: &Pruefordner, keymap: &str) -> Ablage {
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+    ablage
+        .durchgang(|zugang| fs::write(zugang.pfad(Datei::Belegung), keymap))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("keymap.toml laesst sich schreiben");
+    ablage
+}
+
 /// Laedt die Belegung so, wie der Betrieb es tut: unter der Schreibsperre.
 ///
-/// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen [`Zugang`], und
+/// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen `Zugang`, und
 /// den gibt es nur aus einem Durchgang. Die Proben halten sich daran, statt eine
 /// Hintertuer zu bekommen; der Grund steht im Kopf von
 /// `krk_core::ablage::sperre`.
@@ -48,13 +67,6 @@ fn belegung_sichern(ablage: &Ablage, belegung: &Belegung) {
         .durchgang(|zugang| belegung.sichern(zugang))
         .expect("die Schreibsperre laesst sich nicht nehmen")
         .expect("die Belegung laesst sich sichern");
-}
-
-fn ablage_mit(ordner: &Pruefordner, keymap: &str) -> Ablage {
-    let ablage =
-        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
-    fs::write(ablage.pfad(Datei::Belegung), keymap).expect("keymap.toml laesst sich schreiben");
-    ablage
 }
 
 /// Die Kennungen einer Belegung, sortiert: ihr Wortschatz ohne die Reihenfolge.

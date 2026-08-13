@@ -801,7 +801,7 @@ mod tests {
             .collect();
         assert_eq!(
             angefasst,
-            vec!["appkit/belegungsansicht.rs".to_owned()],
+            vec!["krk-ui/src/appkit/belegungsansicht.rs".to_owned()],
             "die Tippauswahl wird ausserhalb dieser Datei angefasst"
         );
     }

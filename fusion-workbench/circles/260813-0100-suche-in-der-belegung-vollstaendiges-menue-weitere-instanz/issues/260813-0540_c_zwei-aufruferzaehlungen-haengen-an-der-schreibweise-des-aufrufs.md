@@ -43,3 +43,13 @@ abziehen — die Erklärung, die Doc-Kommentare und die Weiterreichungen an Tabe
 Vorschau. Das ist mehr Arbeit als der heutige Einzeiler und hält, was der Name der Probe
 verspricht. Wo das zu teuer ist: den Doc-Kommentar um den Satz ergänzen, dass die Probe an
 der Schreibweise hängt.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, auf dem im Datensatz genannten teureren Weg und nicht mit einem Satz im Doc-Kommentar.
+
+**Ein gemeinsames Werkzeug traegt beide Zaehlungen:** `crate::quellbaum::aufrufstellen` zaehlt die Aufrufe eines Namens in einer Datei und zieht die drei Sorten Fundstellen ab, die keine Aufrufe sind — Treffer mitten in einem laengeren Namen (`Unzulaessig(` ist kein Aufruf von `zulaessig`), die Erklaerung selbst, und Nennungen in Kommentaren. Jede Empfaengerform und jeder Pfad bleiben damit drin. Eine eigene Probe, `eine_aufrufzaehlung_sieht_jede_schreibweise_und_keine_nennung`, haelt die drei Abzuege fest; ohne sie waere „jede Schreibweise wird erfasst" selbst wieder nur behauptet.
+
+**`beide_frager_rufen_die_eine_regel`** zaehlt jetzt die Aufrufstellen von `zulaessig` in allen Dateien ausser `kommandos/zulaessigkeit.rs` und erwartet zwei. Ein dritter Frager mit `use` und unqualifiziertem Aufruf macht die Probe rot. Die eigene Datei bleibt aussen vor, so wie `das_menue_wird_an_zwei_anlaessen_gebaut` `menue.rs` aussen vor laesst: dort stehen die Erklaerung und die Tafel aus 140 Faellen, die die Regel hundertvierzigmal ruft.
+
+**`der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten`** traegt jetzt zwei Zahlen. Die drei mit Empfaenger `self.`/`selbst.` bleiben und **benennen**, wer fragt; daneben steht die Gesamtzahl aller Aufrufe des Namens im Baum, heute acht — die drei und fuenf Weiterreichungen an Tabelle, Leiste und Vorschau. Die zweite Zahl haengt an keinem Empfaenger: ein vierter Frager unter einem beliebigen Bindungsnamen macht sie rot, gleich wie er geschrieben ist. Den Delegierten umzubenennen, damit eine einzige Zahl reichte, waere der sauberere Schnitt gewesen und haette `CLAUDE.md` und mehrere Datensaetze mitgerissen; die zwei Zahlen kosten weniger und leisten dasselbe.

@@ -33,6 +33,14 @@
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
 # Ausgeliefert sind 82 Funktionen mit zusammen 88 Kombinationen.
 #
+# Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
+# nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
+# in der sie hier stehen, und drei Abnehmer zeigen sie so an: die
+# Belegungsansicht, die Markdown-Ausgabe und seit der Runde 7 die Menueleiste
+# von macOS. Wer einen Block verschiebt, verschiebt einen Menueeintrag mit, und
+# keine Probe haelt das fest. Welche Gruppe eine Funktion bekommt, kommt
+# dagegen nicht von hier, sondern aus `belegungsmodell::bereich_des_kommandos`.
+#
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
 # schreibt (ctrl, opt, shift, cmd). "Cmd+Shift+K" aus der Spec-Tabelle heisst
@@ -59,8 +67,10 @@
 # Eingabetaste damals ausdruecklich freigegeben (C2 der Runde 1). Seit dem
 # 260811 traegt sie "mit_standardprogramm_oeffnen" (C3 der Runde 4,
 # Nutzerantwort vom 260811-1505); der Eintrag steht weiter unten und nennt den
-# Grund. Ein stehendes Blatt faengt sie weiterhin ab, bevor sie hier
-# nachgeschlagen wird, und die Vorgabeschaltflaeche beantwortet sie wie zuvor.
+# Grund. Ein stehendes Blatt faengt sie weiterhin ab, und die
+# Vorgabeschaltflaeche beantwortet sie wie zuvor. Abgefangen wird sie dabei
+# *hinter* dem Nachschlag und nicht davor: die Blattregel sitzt beim
+# Anwendungsdelegierten, so wie der Fokusvorbehalt seit der Runde 7 auch.
 #
 # Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
 # seither die Textbefehle des Menues "Bearbeiten" und sonst nichts, und genau
@@ -72,12 +82,22 @@
 #
 # Eine Kombination kann im Textfeld etwas anderes bedeuten als im Dateifenster,
 # und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
-# Steht die Schreibmarke in einem Textfeld, reicht der Ereignisabgriff den
-# Tastendruck unveraendert an AppKit weiter, und erst dort wirkt das Menue;
-# steht sie im Dateifenster, schlaegt er in dieser Datei nach.
+# Der Ereignisabgriff schlaegt jede Kombination in dieser Datei nach und
+# entscheidet nicht selbst, ob sie wirkt. Das tut die Zulaessigkeitsregel am
+# Anwendungsdelegierten, und der Fokusvorbehalt ist einer ihrer Bestandteile:
+# gehoert der Ersthelfer AppKit, faellt der Tastendruck unveraendert an AppKit
+# zurueck, und erst dort wirkt das Menue.
 #
-# Der Vorbehalt fragt vor dem Nachschlag und nicht nach der Kombination, und
-# darum traegt er eine nackte Taste genauso wie eine mit Zusatztaste. Seit dem
+# Bis zur Runde 7 stand der Vorbehalt als frueher Ausstieg *vor* dem Nachschlag,
+# und dieser Kopf beschrieb ihn so. Seit dem 260813 (Commit 9da33bc, Schritte S1
+# bis S3) steht er dahinter, und zwar an zwei Stellen, die denselben Wert lesen:
+# in der Zulaessigkeitsregel fuer einen Befehl und in einer eigenen Abfrage fuer
+# das getippte Zeichen der Sprungmarke. Der Code vermerkt den Wechsel dort, wo
+# der Ausstieg stand (`crates/krk-ui/src/appkit/ereignisse.rs`, Modulkopf und
+# `behandeln`).
+#
+# Die Regel fragt nicht nach der Kombination, und darum traegt sie eine nackte
+# Taste genauso wie eine mit Zusatztaste. Seit dem
 # 260805 ist das der Alltagsfall und nicht mehr der Randfall: left und right
 # steigen im Dateifenster aus einem Ordner aus und in einen ein, und in jedem
 # Textfeld bewegen dieselben beiden Tasten die Schreibmarke, wie ueberall auf

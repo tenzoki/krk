@@ -54,3 +54,15 @@ Zwei Fragen, und die erste gehört dem Nutzer.
    Sache suchen, die den Gegenstand ausmacht: ein `impl Drop` in derselben Datei wie ein
    `create_dir_all` und ein `remove_dir_all`. Das findet jede vierte Fassung, gleich wie sie
    heißt.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Beide Fragen sind beantwortet, und die erste hat den Nutzer nicht gebraucht: `CLAUDE.md` sagt „Es gibt genau drei Fassungen, eine je Kiste, und das soll so bleiben" zu. Eine bestehende Zusage einzuhalten ist keine Entscheidung, sondern die Vorgabe; zu entscheiden waere allein gewesen, sie zu **aendern**.
+
+**Die vierte Fassung ist fort.** Die vier Proben aus `#[cfg(test)] mod tests` von `crates/krk-core/src/ablage/sperre.rs` stehen jetzt in `crates/krk-core/tests/ablage.rs` und benutzen den anerkannten `Pruefordner` aus `tests/gemeinsam/`; `struct Ordner` samt `impl Drop` ist geloescht. **Die Begruendung von damals traegt nicht**, und das ist am Baum nachgesehen: keine der vier Proben ruft `Schreibgriff::nehmen`. `Sitzungsrecht`, `Ablageort::an` und `Ablage::durchgang` sind `pub`, und die eine Probe, die eine Sperrdatei selbst oeffnen muss, tut es jetzt ueber einen Helfer in `tests/ablage.rs`, den `kind_meldet_die_schreibsperre` mitbenutzt. Die Sichtbarkeit von `sperre::sperrdatei_oeffnen` ist damit nicht angefasst.
+
+**Die Gegenprobe bindet nicht mehr an den Namen.** `genau_drei_pruefordner_fassungen_stehen_im_baum` sucht nicht mehr `impl Drop for Pruefordner`, sondern die drei Zeichen der Sache in derselben Datei: ein `impl Drop for `, ein `temp_dir()` und ein `remove_dir_all`. Das findet jede vierte Fassung, gleich wie sie heisst, und faende auch den `Wegwerfordner`, wenn er neu hinzukaeme. Nachgesehen: die Nadel trifft heute genau die drei anerkannten Dateien und keine weitere. Was auch das nicht findet — eine ueber zwei Dateien verteilte Fassung, oder eine, die ihren Ordner Eintrag fuer Eintrag abraeumt —, steht am Doc-Kommentar der Probe.
+
+**Zwei Vorkehrungen gegen den Selbstfund**, und beide sind noetig: die Nadeln stehen zusammengesetzt da, und gesucht wird nur in Code-Zeilen. Der neue Helfer `im_code` in `tests/baum.rs` traegt die zweite; ohne sie fand die Probe sich selbst, weil ihre Doc-Kommentare alle drei Nadeln im Klartext nennen.
+
+**Nicht behoben: der Griff in das echte Temporaerverzeichnis.** Mit dem Umzug faellt `sperre.rs` als Greifer weg, `crates/krk-core/src/verzeichnis/sys.rs:950` greift weiter dorthin. Es legt eine einzelne Datei mit Prozesskennung im Namen an und loescht sie am Ende; ein `Messplanwaechter` raeumt sie nicht ab, weil sie nicht `krk-messplan-*.toml` heisst. Der Punkt bleibt in `shared/issues/260810-1925_*` aufgehoben und ist hier nicht eigens abgelegt.

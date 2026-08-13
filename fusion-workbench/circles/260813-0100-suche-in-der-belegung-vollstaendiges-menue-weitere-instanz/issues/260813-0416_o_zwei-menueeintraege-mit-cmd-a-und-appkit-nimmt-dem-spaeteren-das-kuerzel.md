@@ -92,3 +92,21 @@ mit der Schreibmarke in der Pfadeingabe und beim Umbenennen in der Liste.
 ohne Doppelung, entfiele der Fall ganz. Das ist eine Änderung an
 `resources/default-keymap.toml` und gehört dem `ontocoder`; sie ändert daneben, was der Nutzer
 gewohnt ist, und ist deshalb keine Aufräumarbeit, sondern eine eigene Frage.
+
+---
+
+## Zwischenstand 260813, Turn 2: der Zutrag des ontorev ist bewusst nicht geschrieben
+
+Die Durchsicht `reviews/260813-0532-ontorev-belegungsdatei-weitere-instanz.md` empfiehlt, die
+Behebung dieses Befunds um zwei Saetze in `resources/default-keymap.toml` zu erweitern: einen am
+`cmd+a`-Kommentar, der die zweite Absprache `menuemodell::zugestellte_kuerzel` nennt, und einen
+am Eintrag `alle_markieren`, der sagt, dass sein Menueeintrag das Kuerzel nicht anzeigt, obwohl
+es ihn ausloest. Die Beobachtung stimmt: die Erklaerung „der Fokusvorbehalt laesst die beiden
+einander nie begegnen" traegt den Fall seit `16c0924` nicht mehr allein.
+
+**Beide Saetze sind trotzdem nicht geschrieben, und der Grund ist die offene Frage.**
+`decisions/260813-0430_o_wer-bekommt-das-menuekuerzel-wenn-zwei-funktionen-sich-eine-kombination-teilen.md`
+entscheidet, welche der beiden Funktionen das Menuekuerzel behaelt. Faellt die Antwort anders aus
+als die Empfehlung, auf der die Runde faehrt, beschreiben die zwei Saetze den falschen
+Mechanismus und der Satz am Eintrag `alle_markieren` waere schlicht unwahr. Sie gehoeren deshalb
+zur Behebung dieses Befunds und nicht davor.

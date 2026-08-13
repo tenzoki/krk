@@ -50,3 +50,7 @@ ob macOS seine Zusätze an den **Titel** hängt, ist ungemessen, und
 **Nicht zu verwechseln** mit der offenen Frage
 `decisions/260813-0159_o_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md`.
 Die fragt, ob umbenannt werden **darf**; dieser Befund betrifft allein die Begründung im Code.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Der Doc-Kommentar an `Funktionsbereich::name` begruendet den Namen „Bearbeiten" jetzt mit dem, was traegt: die Mac-Gewohnheit verlangt ihn, und die sechs Funktionen tragen saemtlich `gehalten_von = "menue"` und sind genau die Eintraege jenes Menues. Ein zweiter Absatz sagt ausdruecklich, dass ungemessen ist, ob macOS seine Textzusaetze an den Menue**titel** haengt, und dass `systemzusaetze_unterdruecken` ueber `NSUserDefaults` wirkt und keinen Menuetitel kennt; er nennt diesen Datensatz und weist auf die andere, offene Frage `decisions/260813-0159_*` hin. Aus der Tatsachenbehauptung ist damit wieder die ungemessene Annahme geworden, die der Entscheidungsdatensatz selbst formuliert.

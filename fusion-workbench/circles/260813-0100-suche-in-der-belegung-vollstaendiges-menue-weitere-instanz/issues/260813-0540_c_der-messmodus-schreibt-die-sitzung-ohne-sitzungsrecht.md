@@ -37,3 +37,15 @@ nicht als ausnahmslos gelesen wird, und den Grund dazuschreiben — der Messlauf
 Prüfsitzung her und ist der einzige Schreiber, der sie **setzen** und nicht fortschreiben
 soll. Wer es strenger will, nimmt das Recht auch dort und bricht ab, wenn es fehlt; das ist
 für einen Messlauf die richtige Antwort, weil eine Zahl auf fremder Lage keine Zahl ist.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, und zwar auf dem strengeren der beiden vorgeschlagenen Wege — nicht mit einem Satz, sondern am Typ.
+
+**`Sitzungsschreiber::neu` und `::mit_takt` verlangen jetzt ein `&Sitzungsrecht` und liefern `Option<Self>`** (`crates/krk-core/src/ablage/sitzung.rs`). Ohne gehaltenes Recht gibt es keinen Schreiber, und das ist keine Abmachung mehr, an der jemand vorbeilaufen kann: der Uebersetzer verlangt das Argument. Genau daran war der Messmodus vorbeigelaufen. Der Doc-Kommentar sagt die Regel jetzt so, wie sie gilt, und nennt diesen Datensatz als Anlass.
+
+**`Messplan::herstellen` nimmt das Recht und bricht ohne es ab** (`crates/krk-ui/src/messmodus.rs`). Die Meldung nennt die Lage und den Ausweg: eine andere Instanz haelt das Recht und schreibt `session.toml`, der Messlauf stellt die Pruefsitzung nicht her, solange sie laeuft. Das ist die im Datensatz genannte richtige Antwort — eine Zahl auf fremder Lage waere keine. Das Recht wird fuer die Dauer des Schreibens gehalten und danach abgegeben; die Reihenfolge Recht-dann-Schreibgriff ist dieselbe wie beim gewoehnlichen Start, eine Verklemmung entsteht also nicht.
+
+**Zwei weitere Stellen sind nachgezogen.** Der Modulkopf von `crates/krk-core/src/ablage/sperre.rs` fuehrt jetzt beide Nehmer des Rechts und haelt fest, dass ein Prozess nie zwei zugleich haelt. Der Doc-Kommentar am Feld `sitzungsrecht` des Anwendungsdelegierten sagt nicht mehr, die Regel stehe an einem fehlenden Wert, sondern nennt den Uebersetzer.
+
+**Eine Probe haelt es:** `ohne_sitzungsrecht_entsteht_kein_sitzungsschreiber` (`crates/krk-core/tests/ablage.rs`) prueft alle drei Faelle — der erste Halter bekommt einen Schreiber, der zweite keinen, und ein Recht, das niemand haelt, auch keinen.

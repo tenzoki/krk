@@ -398,10 +398,10 @@ impl Blatt {
         let mut abbruchstelle = None;
         for (stelle, schaltflaeche) in schaltflaechen.iter().enumerate() {
             let knopf = warnung.addButtonWithTitle(&NSString::from_str(schaltflaeche.titel));
-            // Auch `Taste::Keine` wird gesetzt und nicht ausgelassen: `NSAlert`
-            // gibt der ersten Schaltflaeche von sich aus die Eingabetaste, und
-            // ohne das Loeschen traegt sie zwei Blaetter spaeter eine Taste, die
-            // niemand ihr zugedacht hat.
+            // Jede Schaltflaeche bekommt ihre Taste ausdruecklich gesetzt und
+            // keine ausgelassen: `NSAlert` gibt der ersten Schaltflaeche von
+            // sich aus die Eingabetaste, und ohne das Ueberschreiben traegt sie
+            // zwei Blaetter spaeter eine Taste, die niemand ihr zugedacht hat.
             knopf.setKeyEquivalent(schaltflaeche.taste.zeichen());
             knopf.setKeyEquivalentModifierMask(schaltflaeche.taste.zusatztasten());
             antworten.push(antwort_von_stelle(stelle));

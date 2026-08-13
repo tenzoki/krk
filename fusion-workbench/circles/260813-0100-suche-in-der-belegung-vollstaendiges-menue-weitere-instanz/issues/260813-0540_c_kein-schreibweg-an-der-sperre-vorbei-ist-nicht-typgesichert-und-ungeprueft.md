@@ -53,3 +53,15 @@ drei Aufrufer außerhalb der Kiste — `crates/krk-ui/src/messmodus.rs:304` und 
 brauchen den Pfad nur für Meldungen; `Zugang::pfad` deckt den Rest ab. Solange das nicht
 geschieht, gehört der Satz im Modulkopf abgeschwächt: die Typen führen den **einen** Weg, sie
 versperren die anderen nicht.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, in drei Teilen.
+
+**Erstens ist der Satz im Modulkopf berichtigt.** `crates/krk-core/src/ablage/mod.rs` behauptet nicht mehr, die Zusage sei „eine Eigenschaft der Typen und keine Verabredung in Kommentaren". Der Abschnitt sagt jetzt, was die Typen halten — aus der Ablage heraus fuehrt kein Weg an der Sperre vorbei, weil die vier Lade- und Schreibmethoden an einem `Zugang` haengen — und was sie nicht halten: `atomar::schreiben` ist `pub` fuer die zwei Schreiber ausserhalb des Ordners, `Ablage::pfad` liefert den Pfad ohne Durchgang, und wer beides zusammennimmt, kommt an der Sperre vorbei.
+
+**Zweitens bewacht eine Probe die Luecke.** `nur_benannte_dateien_erreichen_das_atomare_schreiben` in `crates/krk-core/tests/baum.rs` nennt die fuenf Dateien, die `atomar::schreiben` ueberhaupt erreichen koennen; eine sechste laesst sie rot werden. **Sie haengt ausnahmsweise nicht an einer Schreibweise**, und das ist der Grund, aus dem sie so und nicht als Aufrufzaehlung gebaut ist: es gibt in Rust genau zwei Wege an eine fremde Funktion, den Pfad an der Aufrufstelle oder ein `use`, und beide nennen das Modul. Gesucht wird deshalb `atomar::schreiben`, `atomar::{` und `atomar::*` in Code-Zeilen, und ein weiterer Weg besteht nicht.
+
+**Drittens sind die zwei Proben nachgezogen, die den Weg schon nahmen.** `crates/krk-core/tests/belegung.rs` schrieb `keymap.toml` mit `fs::write(ablage.pfad(...))`; es geht jetzt durch einen Durchgang und holt den Pfad aus dem `Zugang`. Ebenso `alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen` in `crates/krk-core/tests/ablage.rs`, das `settings.toml` an der Sperre vorbei schrieb — eine sechste Aufrufstelle, die der Befund nicht mitgezaehlt hatte.
+
+**Nicht umgesetzt: `Ablage::pfad` auf `pub(crate)`.** Der Vorschlag nennt drei Aufrufer ausserhalb der Kiste; nachgezaehlt sind es ueber vierzig, und die grosse Mehrheit **liest** damit — `fs::read_to_string(ablage.pfad(...))`, `ablage.pfad(...).is_file()`, der Vergleich einer gemeldeten `Ersetzung` gegen den erwarteten Pfad. Lesen an der Sperre vorbei ist nicht der Fehler, gegen den die Zusage steht, und ein Durchgang je Lesevorgang machte die Proben laenger, ohne etwas zu sichern. Der Modulkopf sagt diese Grenze jetzt aus, statt sie zu ueberspielen.

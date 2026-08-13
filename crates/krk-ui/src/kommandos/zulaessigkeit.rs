@@ -186,12 +186,28 @@ mod tests {
     /// richtige Antwort darauf ist die Zahl hier und nicht das Streichen eines
     /// Fragers; was eine Aufruferzaehlung leistet und was nicht, steht in
     /// [`crate::quellbaum`].
+    ///
+    /// **Gezaehlt wird der Aufruf und nicht seine Schreibweise.** Die Nadel war
+    /// bis zur Runde 7 `zulaessigkeit::zulaessig(`, und ein dritter Frager mit
+    /// einem `use` und einem unqualifizierten Aufruf waere ihr entgangen — also
+    /// genau der Fall, fuer den die Probe steht
+    /// (`issues/260813-0540_*_zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs.md`).
+    /// [`crate::quellbaum::aufrufstellen`] zaehlt jetzt jede Empfaengerform und
+    /// jeden Pfad.
+    ///
+    /// **Diese Datei bleibt aussen vor**, so wie
+    /// `das_menue_wird_an_zwei_anlaessen_gebaut` `menue.rs` aussen vor laesst:
+    /// hier stehen die Erklaerung und die Tafel aus 140 Faellen, die
+    /// [`zulaessig`] hundertvierzigmal ruft. Ein dritter Frager **in** dieser
+    /// Datei waere Teil der Regel und nicht ein zweiter Weg an ihr vorbei.
     #[test]
     fn beide_frager_rufen_die_eine_regel() {
-        let nadel = concat!("zulaessigkeit::", "zulaessig(");
+        let zuhause = "krk-ui/src/kommandos/zulaessigkeit.rs";
+        let name = concat!("zulaes", "sig");
         let aufrufe: usize = quelldateien()
             .iter()
-            .map(|(_, inhalt)| inhalt.matches(nadel).count())
+            .filter(|(datei, _)| datei != zuhause)
+            .map(|(_, inhalt)| crate::quellbaum::aufrufstellen(inhalt, name))
             .sum();
         assert_eq!(
             aufrufe, 2,

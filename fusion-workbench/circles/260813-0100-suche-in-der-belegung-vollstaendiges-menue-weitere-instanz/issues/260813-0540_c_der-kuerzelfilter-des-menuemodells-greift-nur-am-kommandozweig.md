@@ -47,3 +47,7 @@ let eigenes = kombination.filter(|k| !zugestellt.contains(k));
 
 Der Textbefehlszweig behält dabei die ungefilterte Kombination, denn er **ist** der Zusteller.
 Das ist eine Zeile weniger als heute und schließt den Zweig mit ein.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, auf dem im Datensatz vorgeschlagenen Weg. Der Filter steht jetzt als `eigenes` vor der Fallunterscheidung und gilt fuer beide `Eintrag::Befehl`-Zweige, den mit Kommando und den ohne. Der Textbefehlszweig behaelt die ungefilterte Kombination, denn er **ist** der Zusteller. Ein Kommentar an der Stelle sagt beides und nennt diesen Datensatz.

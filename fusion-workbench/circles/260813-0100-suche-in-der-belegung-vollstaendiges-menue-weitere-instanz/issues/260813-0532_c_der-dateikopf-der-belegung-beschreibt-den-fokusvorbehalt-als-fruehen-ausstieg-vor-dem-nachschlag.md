@@ -85,3 +85,13 @@ kein zweiter Mechanismus ist. Etwa:
 **Den Datumsvermerk mitnehmen**, wie die Datei es an anderen Stellen tut (`:57-64`, `:818-823`):
 ein Satz, der sagt, was bis zur Runde 7 galt, hält die nächste Durchsicht davon ab, den alten
 Stand für den richtigen zu halten.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, in `resources/default-keymap.toml` und ausschliesslich an Kommentarzeilen — keine Kennung, keine Taste, keine Zahl ist beruehrt.
+
+Die beiden widerlegten Saetze sind durch die Fassung des Modulkopfs von `crates/krk-ui/src/appkit/ereignisse.rs` ersetzt: der Abgriff schlaegt jede Kombination in dieser Datei nach und entscheidet nicht selbst, ob sie wirkt; das tut die Zulaessigkeitsregel am Anwendungsdelegierten, und der Fokusvorbehalt ist einer ihrer Bestandteile. Die Aussage, die fuer den Leser dieser Datei zaehlt — dieselbe Kombination darf im Textfeld etwas anderes bedeuten als im Dateifenster, und das ist kein zweiter Mechanismus —, steht unveraendert davor.
+
+Der empfohlene Datumsvermerk ist mitgenommen: ein eigener Absatz sagt, dass der Vorbehalt bis zur Runde 7 als frueher Ausstieg vor dem Nachschlag stand, nennt Commit `9da33bc` und die Schritte S1 bis S3, und nennt die **zwei** Stellen hinter dem Nachschlag, die heute denselben Wert lesen. Damit ist auch die Folgerung des zweiten Satzes wieder begruendet und nicht nur behauptet.
+
+Mitgenommen ist die Beobachtung ohne Befundcharakter aus derselben Durchsicht (`:62-63`): der Satz zur Eingabetaste behauptete, ein stehendes Blatt fange sie ab, **bevor** sie hier nachgeschlagen werde. Die Blattregel sitzt beim Anwendungsdelegierten und damit hinter dem Nachschlag; der Satz sagt es jetzt.

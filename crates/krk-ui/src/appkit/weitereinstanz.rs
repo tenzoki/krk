@@ -63,10 +63,9 @@
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 
-use std::path::PathBuf;
-
+use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
-use objc2_foundation::NSBundle;
+use objc2_foundation::{NSBundle, NSURL};
 
 /// Der Satz, den KRK meldet, wenn es nicht aus einem Buendel laeuft (C3.6).
 ///
@@ -78,16 +77,24 @@ pub const OHNE_BUENDEL: &str =
 
 /// Der Ort des Buendels, in dem die laufende Instanz steckt.
 ///
-/// `None`, wenn der Ort keine `.app`-Endung traegt oder sich nicht in einen
-/// Pfad uebersetzen laesst. Die eine Stelle des Programms, die den eigenen
-/// Buendelort bestimmt.
-fn eigenes_buendel() -> Option<PathBuf> {
+/// `None`, wenn der Ort keine `.app`-Endung traegt. Die eine Stelle des
+/// Programms, die den eigenen Buendelort bestimmt.
+///
+/// **Liefert die `NSURL` und keinen `PathBuf`.** Bis zur Runde 7 baute sie
+/// einen Pfad, den niemand benutzte: [`starten`] brauchte von ihr allein die
+/// Ja-Nein-Antwort und fragte `NSBundle::mainBundle().bundleURL()` fuer den
+/// Start selbst ein zweites Mal. Dabei fiel ein Nebenausgang falsch aus — ohne
+/// uebersetzbaren Pfad meldete KRK „laeuft nicht aus einem Buendel", obwohl es
+/// das tat
+/// (`issues/260813-0540_*_weitereinstanz-fragt-den-buendelort-zweimal-und-wirft-die-antwort-weg.md`).
+/// Jetzt entscheidet allein die Endung, und der Ort wird einmal bestimmt.
+fn eigenes_buendel() -> Option<Retained<NSURL>> {
     let adresse = NSBundle::mainBundle().bundleURL();
     let endung = adresse.pathExtension()?;
     if endung.to_string() != "app" {
         return None;
     }
-    adresse.path().map(|pfad| PathBuf::from(pfad.to_string()))
+    Some(adresse)
 }
 
 /// Startet eine weitere Instanz von KRK (C3.1, C3.5, C3.6).
@@ -96,10 +103,9 @@ fn eigenes_buendel() -> Option<PathBuf> {
 /// Statuszeile, wenn nichts gestartet worden ist. Was danach geschieht,
 /// entscheidet LaunchServices; der Rueckruf bleibt leer, siehe den Modulkopf.
 pub fn starten() -> Option<&'static str> {
-    let adresse = NSBundle::mainBundle().bundleURL();
-    if eigenes_buendel().is_none() {
+    let Some(adresse) = eigenes_buendel() else {
         return Some(OHNE_BUENDEL);
-    }
+    };
     let einstellung = NSWorkspaceOpenConfiguration::configuration();
     // Der eine Schalter, der LaunchServices davon abhaelt, statt einer zweiten
     // Instanz die laufende nach vorn zu holen.
@@ -136,7 +142,7 @@ mod tests {
             .collect();
         assert_eq!(
             dateien,
-            vec!["appkit/weitereinstanz.rs".to_owned()],
+            vec!["krk-ui/src/appkit/weitereinstanz.rs".to_owned()],
             "der eigene Buendelort wird an mehr als einer Stelle bestimmt"
         );
     }

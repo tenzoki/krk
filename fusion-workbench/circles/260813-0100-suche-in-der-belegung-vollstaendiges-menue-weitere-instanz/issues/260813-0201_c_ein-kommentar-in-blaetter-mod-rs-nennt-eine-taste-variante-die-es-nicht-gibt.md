@@ -37,3 +37,7 @@ dahin keinen Benutzer. Wer die Zeile ändert, liest den Kommentar darüber.
 Den Satz auf einen Wert umstellen, den die Aufzählung führt, etwa: „Auch die erste
 Schaltfläche bekommt ihre Taste ausdrücklich gesetzt und nicht ausgelassen." Damit trägt der
 Absatz seine Begründung weiter und zeigt auf nichts Verschwundenes mehr.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813. Der Satz in `crates/krk-ui/src/appkit/blaetter/mod.rs` heisst jetzt „Jede Schaltflaeche bekommt ihre Taste ausdruecklich gesetzt und keine ausgelassen" und zeigt damit auf nichts Verschwundenes mehr. Die Begruendung darunter — `NSAlert` gibt der ersten Schaltflaeche von sich aus die Eingabetaste, `setKeyEquivalent` laeuft deshalb an jeder — steht unveraendert; verloren war allein der Bezugspunkt. Die Aufzaehlung `Taste` ist nicht angefasst.

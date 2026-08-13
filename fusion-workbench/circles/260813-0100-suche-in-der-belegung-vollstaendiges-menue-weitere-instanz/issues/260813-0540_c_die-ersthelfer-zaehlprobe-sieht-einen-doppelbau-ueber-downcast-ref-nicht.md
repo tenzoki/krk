@@ -50,3 +50,13 @@ Prüfung nicht wandert, und nicht, dass keine zweite entsteht.
 Erklärungs- und Aufruferzählung aus und behauptet dort, eine Erklärungszählung „hält, was sie
 verspricht". Dieser Fall ist das Gegenbeispiel; siehe den Datensatz von derselben Durchsicht
 zu der Reichweite des Quellbaumlesers.
+
+---
+
+Resolved: Behoben in Turn 2 der siebten Runde am 260813, zusammen mit den zwei verwandten Befunden derselben Durchsicht (`die-zaehlproben-in-krk-ui-sagen-im-baum-und-lesen-nur-eine-kiste`, `zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs`).
+
+**Die zweite Nadel erfasst jetzt beide Schreibweisen, die dieser Baum kennt:** `isKindOfClass(` und `downcast_ref::<NSText`. Das eine Wort deckt alle drei Textklassen ab, weil `NSTextView` und `NSTextField` damit beginnen, und laesst die Frage nach `NSView` in `appkit/anwendung.rs` heraus, die keine Textklasse nennt. Der im Datensatz gezeigte Doppelbau macht die Probe damit rot.
+
+**Die Probe ist zugleich ehrlicher beschriftet, wie der Datensatz es als Alternative nennt** — und beides zusammen, nicht statt einander. Ihr Doc-Kommentar sagt jetzt, was sie nicht faengt: eine dritte Schreibweise derselben Frage, etwa ueber `class()` und einen Vergleich. Der Kopf von `crates/krk-ui/src/quellbaum.rs` traegt die Begruendung im Langen.
+
+**Der verwandte Punkt am Kopf von `quellbaum.rs` ist mitbehoben.** Dort stand, eine Erklaerungszaehlung „haelt, was sie verspricht"; das war zu weit gegriffen, und die Runde hat den Gegenbeweis selbst geliefert. Der Abschnitt sagt jetzt, dass sie gegen eine Kopie unter **demselben Namen** haelt, nennt die vierte Pruefordner-Fassung als Gegenbeispiel und zieht drei Folgerungen als Bauanleitung fuer jede neue Zaehlprobe: nach dem Gegenstand suchen statt nach dem Namen, jede schon vorhandene Schreibweise erfassen, und die verbleibende Blindheit am Doc-Kommentar benennen.

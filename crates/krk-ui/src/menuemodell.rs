@@ -16,7 +16,8 @@
 //!
 //! # Was dieser Zuschnitt kauft
 //!
-//! Die Menueleiste traegt nach dieser Runde 82 Eintraege statt zehn, und ohne
+//! Die Menueleiste traegt nach dieser Runde einen Eintrag je Funktion der
+//! Belegung statt der zehn von vorher, und ohne
 //! dieses Modul waeren sie samt Reihenfolge, Titeln und Kuerzeln allein am
 //! laufenden Buendel nachzusehen. `krk-ui` hat kein Bibliotheksziel, und eine
 //! Probe, die ein `NSMenu` baut, braucht den Hauptfaden, den `libtest` nicht
@@ -238,13 +239,21 @@ fn eintrag<'a>(funktion: &'a Funktion, zugestellt: &[Kombination]) -> Eintrag<'a
     // `NSMenuItem` haelt genau eine Tastenentsprechung; der zweite Weg bleibt
     // ueber den Ereignisabgriff erreichbar.
     let kombination = funktion.tasten().first().copied();
+    // Der Zusteller hat den Vortritt; der Grund steht an
+    // [`zugestellte_kuerzel`]. **Der Filter steht vor der Fallunterscheidung
+    // und nicht in einem ihrer Zweige**: er gilt fuer beide Sorten von
+    // `Eintrag::Befehl` gleich, die mit Kommando und die ohne. Bis zur Runde 7
+    // filterte allein der Kommandozweig, und eine benannte Funktion ohne
+    // Kommando haette dieselbe Kombination ungefiltert in die Leiste getragen
+    // (`issues/260813-0540_*_der-kuerzelfilter-des-menuemodells-greift-nur-am-kommandozweig.md`).
+    // Der Textbefehlszweig unten behaelt die ungefilterte Kombination, denn er
+    // **ist** der Zusteller.
+    let eigenes = kombination.filter(|k| !zugestellt.contains(k));
     match funktion.kommando() {
         Some(kommando) => Eintrag::Befehl {
             beschriftung,
             kennung,
-            // Der Zusteller hat den Vortritt; der Grund steht an
-            // [`zugestellte_kuerzel`].
-            kombination: kombination.filter(|k| !zugestellt.contains(k)),
+            kombination: eigenes,
             kommando: Some(kommando),
         },
         None => match zusteller(kennung) {
@@ -257,7 +266,7 @@ fn eintrag<'a>(funktion: &'a Funktion, zugestellt: &[Kombination]) -> Eintrag<'a
             None => Eintrag::Befehl {
                 beschriftung,
                 kennung,
-                kombination,
+                kombination: eigenes,
                 kommando: None,
             },
         },
@@ -467,9 +476,9 @@ mod tests {
         assert_eq!(
             dateien,
             [
-                "belegungsausgabe.rs".to_owned(),
-                "belegungsmodell.rs".to_owned(),
-                "menuemodell.rs".to_owned(),
+                "krk-ui/src/belegungsausgabe.rs".to_owned(),
+                "krk-ui/src/belegungsmodell.rs".to_owned(),
+                "krk-ui/src/menuemodell.rs".to_owned(),
             ],
             "die eine Gliederung hat andere Abnehmer als die Belegungsansicht, \
              die Markdown-Ausgabe und das Hauptmenue"

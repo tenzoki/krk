@@ -379,7 +379,7 @@ mod tests {
             .filter(|(_, inhalt)| inhalt.contains("NSSharingServicePicker::"))
             .map(|(name, _)| name)
             .collect();
-        assert_eq!(bauer, vec!["appkit/teilen.rs".to_owned()]);
+        assert_eq!(bauer, vec!["krk-ui/src/appkit/teilen.rs".to_owned()]);
     }
 
     /// Es gibt genau einen Menuebauer (C1, siebtes Kriterium).
