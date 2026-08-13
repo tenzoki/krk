@@ -1,8 +1,21 @@
 //! Das Auslieferungspaket: `cargo xtask release` (Schritt 23).
 //!
-//! Der Weg in sechs Stationen, jede scheitert mit einer benennenden Meldung:
+//! Der Weg in sieben Stationen, jede scheitert mit einer benennenden Meldung.
+//! Dazwischen stehen drei Vorlaeufe: sie kosten nichts, laufen deshalb frueh,
+//! und tragen einen Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer
+//! spaeteren Station dient. Die Reihenfolge unten ist die des Quelltextes in
+//! [`ausfuehren`].
 //!
-//! 1. **AppKit-Grenze pruefen:** keine Nennung einer `objc2`-Kiste ausserhalb
+//! 1. **Tag und Arbeitsbaum pruefen:** HEAD traegt einen Tag `v<version>` mit
+//!    der Zahl aus `[workspace.package]`, und keine verfolgte Datei ist
+//!    geaendert. Die billigste Station des Weges und die, die am haeufigsten
+//!    anschlaegt; sie steht ganz vorn, damit ein Abbruch dieser Art keinen
+//!    Uebersetzungslauf kostet. Was sie fragt, steht bei
+//!    [`auslieferungsstand_pruefen`], der Vergleich selbst bei
+//!    [`stand_pruefen`].
+//! - *Vorlauf a:* `bundle::vorbereiten` liest die Buendelbeschreibung und
+//!   liefert die Vorlage fuer Station 5.
+//! 2. **AppKit-Grenze pruefen:** keine Nennung einer `objc2`-Kiste ausserhalb
 //!    von `crates/krk-ui/src/appkit/`, weder als `use`-Zeile noch als
 //!    ausgeschriebener Pfad, und das in jeder `.rs`-Datei unter `crates/`.
 //!    Die Pruefung traegt die Grenzzusage aus dem Plan maschinell, weil
@@ -14,16 +27,20 @@
 //!    `260806-1333_*_die-appkit-grenzpruefung-sieht-nur-use-zeilen-und-nur-eine-von-drei-kisten`
 //!    und
 //!    `260807-0800_*_die-appkit-grenzpruefung-kennt-nur-src-baeume-und-nur-die-woertliche-schreibweise`.
-//! 2. **Beide Ziele uebersetzen:** dieselbe Uebersetzung wie `bundle`, einmal
+//! - *Vorlauf b:* die Identitaetssuche aus `sign` liefert die Identitaet fuer
+//!   Station 6.
+//! - *Vorlauf c:* die Zielpruefung ueber `rustup` ist die Voraussetzung von
+//!   Station 3.
+//! 3. **Beide Ziele uebersetzen:** dieselbe Uebersetzung wie `bundle`, einmal
 //!    je Tripel aus `rust-toolchain.toml`.
-//! 3. **`lipo`:** die beiden Binaerdateien zu einer universellen
+//! 4. **`lipo`:** die beiden Binaerdateien zu einer universellen
 //!    zusammenfuegen; `lipo -archs` muss danach beide Architekturen melden.
-//! 4. **Montage:** dasselbe Buendel wie `bundle`, ueber `bundle::Vorlage` —
+//! 5. **Montage:** dasselbe Buendel wie `bundle`, ueber `bundle::Vorlage` —
 //!    ein zweiter Buendelbauer waere die zweite Wahrheit ueber die Struktur
 //!    von `KRK.app`.
-//! 5. **Signieren:** die Identitaetssuche aus `sign` mit Developer-ID statt
+//! 6. **Signieren:** die Identitaetssuche aus `sign` mit Developer-ID statt
 //!    Entwicklungsidentitaet, `codesign` mit `--options runtime`.
-//! 6. **Beglaubigen:** `xcrun notarytool submit --wait` und
+//! 7. **Beglaubigen:** `xcrun notarytool submit --wait` und
 //!    `xcrun stapler staple`. Beides verlangt das vollstaendige Xcode, die
 //!    Beglaubigung zusaetzlich ein Apple-Entwicklerkonto; fehlt eines von
 //!    beidem, bricht allein diese Station ab, und das gebaute, signierte
@@ -80,6 +97,35 @@ const AUSNAHME: &str = "crates/krk-ui/src/appkit";
 /// Die Umgebungsvariable mit dem Namen des notarytool-Schluesselbundprofils.
 pub const NOTAR_PROFIL_VARIABLE: &str = "KRK_NOTARY_PROFILE";
 
+/// Die erste der drei Fragen von Station 1: liegt ueberhaupt ein
+/// Git-Verzeichnis vor?
+///
+/// Sie steht getrennt, damit die Antwort darauf nicht am Wortlaut einer
+/// Fehlermeldung der beiden anderen haengt.
+const GIT_VERZEICHNIS: &[&str] = &["rev-parse", "--git-dir"];
+
+/// Die zweite Frage: welche Tags stehen auf HEAD?
+///
+/// `--points-at HEAD` fragt allein; `git tag` legt erst dann einen Tag an,
+/// wenn ein Name dabeisteht. Annotierte und leichte Tags stehen in dieser
+/// Ausgabe gleich, und das ist die Zusage aus C3.3: gefragt ist, welcher Name
+/// auf HEAD steht, und nicht, wie er entstanden ist.
+const GIT_TAGS: &[&str] = &["tag", "--points-at", "HEAD"];
+
+/// Die dritte Frage: welche verfolgten Dateien sind geaendert?
+///
+/// `--porcelain` meldet vorgemerkte und nicht vorgemerkte Aenderungen in
+/// derselben Form und fuehrt geloeschte verfolgte Dateien mit;
+/// `--untracked-files=no` haelt unbeachtete Dateien draussen, wie es der
+/// Entscheid vom 260813-1010 verlangt.
+///
+/// **Ohne Pfadfilter, und das ist eine Festlegung.** Gezaehlt wird das ganze
+/// Verzeichnis. Eine Liste der bauwirksamen Ordner muesste jemand pflegen, und
+/// sie zu ergaenzen zu vergessen ist die zweite Art, eine Pruefung im
+/// Vorbeigehen zu verlieren — dieselbe Erwaegung, die schon bei
+/// [`GRENZWURZEL`] steht.
+const GIT_STAND: &[&str] = &["status", "--porcelain", "--untracked-files=no"];
+
 /// Baut, signiert und beglaubigt das Auslieferungspaket.
 pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     if let Some(ueberzaehlig) = argumente.first() {
@@ -87,6 +133,8 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             "release kennt {ueberzaehlig:?} nicht"
         )));
     }
+
+    auslieferungsstand_pruefen(&bundle::wurzel())?;
 
     let vorlage = bundle::vorbereiten()?;
     appkit_grenze_pruefen(&vorlage.wurzel)?;
@@ -115,6 +163,151 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     beglaubigen(&buendel)?;
     println!("Beglaubigt und angeheftet: {}", buendel.display());
     Ok(())
+}
+
+/// Station 1: HEAD traegt den passenden Tag, und der Arbeitsbaum entspricht
+/// ihm.
+///
+/// Sie stellt `git` die drei Fragen [`GIT_VERZEICHNIS`], [`GIT_TAGS`] und
+/// [`GIT_STAND`] und reicht die beiden Antworten an [`stand_pruefen`] weiter.
+/// **Alle drei lesen.** Es entsteht kein `git tag`, kein `git add` und kein
+/// Schreibzugriff: den Tag setzt der Nutzer von Hand, so entschieden am
+/// 260813-1010.
+///
+/// Die Sollversion holt sie aus [`bundle::VERSION`], also aus derselben
+/// Konstanten, die auch in die `Info.plist` wandert. Eine zweite Quelle der
+/// Versionszahl entsteht nicht, und ein Zerteiler fuer die `Cargo.toml` auch
+/// nicht.
+fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
+    git_fragen(wurzel, GIT_VERZEICHNIS).map_err(|fehler| {
+        let grund = match fehler {
+            Abbruch::Lauf(text) | Abbruch::Aufruf(text) => text,
+        };
+        Abbruch::Lauf(format!(
+            "Die Auslieferung braucht ein Git-Verzeichnis, und in {} ist keines zu befragen: \
+             {grund}\n\
+             \n\
+             Ausgeliefert wird ein eingetragener Stand, den ein Tag v{} benennt; ohne \
+             Git-Verzeichnis steht weder das eine noch das andere fest. Es wird nicht \
+             ersatzweise durchgebaut, und es entsteht kein Auslieferungspaket.",
+            wurzel.display(),
+            bundle::VERSION
+        ))
+    })?;
+
+    let tags = git_fragen(wurzel, GIT_TAGS)?;
+    let geaenderte = git_fragen(wurzel, GIT_STAND)?;
+    stand_pruefen(bundle::VERSION, &tags, &geaenderte).map_err(Abbruch::Lauf)?;
+
+    println!(
+        "Auslieferungsstand geprueft: HEAD traegt den Tag v{}, und keine verfolgte Datei ist \
+         geaendert.",
+        bundle::VERSION
+    );
+    Ok(())
+}
+
+/// Vergleicht Version, Tags und Arbeitsbaum; die reine Haelfte von Station 1.
+///
+/// Drei Zeichenketten hinein, `Ok(())` im gruenen Fall, sonst die fertige
+/// Abbruchmeldung. Kein Prozessaufruf, kein Dateizugriff, kein
+/// Git-Verzeichnis: der gruene Fall wird an dieser Funktion abgenommen und
+/// nicht an einem Lauf, der einen gesetzten Tag voraussetzt.
+///
+/// `tags_auf_head` ist die Ausgabe von `git tag --points-at HEAD`, ein Name je
+/// Zeile; einer davon muss passen, und mehrere stoeren nicht. `geaenderte` ist
+/// die Ausgabe von `git status --porcelain --untracked-files=no`, eine Datei
+/// je Zeile.
+///
+/// **Zum `#[must_use]` dieses Vorhabens:** der Rueckgabetyp ist `Result`, und
+/// `Result` traegt das Attribut schon in der Standardbibliothek. Ein stilles
+/// Fallenlassen haelt den Bau unter `-D warnings` an, die Zusage steht also
+/// strukturell; ein zweites Attribut daneben waere Rauschen.
+fn stand_pruefen(version: &str, tags_auf_head: &str, geaenderte: &str) -> Result<(), String> {
+    let erwartet = format!("v{version}");
+    let tag_steht = tags_auf_head.lines().any(|zeile| zeile.trim() == erwartet);
+    let abweichungen: Vec<&str> = geaenderte
+        .lines()
+        .map(str::trim_end)
+        .filter(|zeile| !zeile.trim().is_empty())
+        .collect();
+
+    if tag_steht && abweichungen.is_empty() {
+        return Ok(());
+    }
+
+    let mut befunde = Vec::new();
+    if !tag_steht {
+        befunde.push(format!(
+            "Auf HEAD steht kein Tag {erwartet}. Die Cargo.toml fuehrt die Version {version}, \
+             und eine Auslieferung traegt einen Tag, der genau diese Zahl benennt; sonst nennt \
+             die Zahl im Buendel keinen Stand, den jemand wiederfindet. Den Tag setzt der \
+             Nutzer:\n\
+             \x20      git tag {erwartet}"
+        ));
+    }
+    if !abweichungen.is_empty() {
+        let aufzaehlung: Vec<String> = abweichungen
+            .iter()
+            .map(|zeile| format!("\x20      {zeile}"))
+            .collect();
+        let zahlwort = if abweichungen.len() == 1 {
+            "1 verfolgte Datei ist".to_owned()
+        } else {
+            format!("{} verfolgte Dateien sind", abweichungen.len())
+        };
+        befunde.push(format!(
+            "Der Arbeitsbaum weicht vom eingetragenen Stand ab; {zahlwort} geaendert:\n\
+             \n\
+             {}\n\
+             \n\
+             Ein Buendel aus diesem Baum traegt die Version {version} und ist nicht aus dem \
+             Stand gebaut, den {erwartet} benennt. Abhilfe: die Aenderungen eintragen oder \
+             wegstellen:\n\
+             \x20      git commit -a\n\
+             \x20      git stash",
+            aufzaehlung.join("\n")
+        ));
+    }
+
+    Err(format!(
+        "Der Auslieferungsstand ist nicht gedeckt:\n\
+         \n\
+         {}\n\
+         \n\
+         Unbeachtete Dateien zaehlen nicht mit, und `cargo xtask bundle` baut weiterhin \
+         jederzeit ohne Tag. Es entsteht kein Auslieferungspaket.",
+        befunde.join("\n\n")
+    ))
+}
+
+/// Fragt `git` im Projektverzeichnis und liefert seine Standardausgabe.
+///
+/// Nach dem Muster von `security_fragen` in `sign`: absoluter Pfad, weil der
+/// Baum jedes Systemwerkzeug so ruft, `.current_dir` auf die Projektwurzel,
+/// weil die Antwort sonst am Arbeitsverzeichnis des Aufrufers haengt.
+/// Startfehler und ein Rueckgabewert ungleich null werden beide zum
+/// Laufabbruch.
+///
+/// **Dies ist die eine Stelle im Baum, die `git` ruft.** Eine zweite waere die
+/// zweite Wahrheit darueber, wie tief das Bauwerkzeug in den Zustand des
+/// Arbeitsbaums schaut; die Probe `xtask_ruft_git_an_genau_einer_stelle` haelt
+/// die Zahl auf eins.
+fn git_fragen(wurzel: &Path, argumente: &[&str]) -> Result<String, Abbruch> {
+    let ausgabe = Command::new("/usr/bin/git")
+        .args(argumente)
+        .current_dir(wurzel)
+        .output()
+        .map_err(|fehler| Abbruch::Lauf(format!("git laesst sich nicht starten: {fehler}")))?;
+    if !ausgabe.status.success() {
+        return Err(Abbruch::Lauf(format!(
+            "git {} ist gescheitert ({}): {}",
+            argumente.join(" "),
+            ausgabe.status,
+            String::from_utf8_lossy(&ausgabe.stderr).trim()
+        )));
+    }
+    Ok(String::from_utf8_lossy(&ausgabe.stdout).into_owned())
 }
 
 /// Prueft, dass ausserhalb von `crates/krk-ui/src/appkit/` keine `objc2`-Kiste
@@ -749,6 +942,314 @@ mod tests {
         fs::create_dir_all(pfad.parent().expect("die Datei hat einen Ordner"))
             .expect("der Ordner laesst sich nicht anlegen");
         fs::write(pfad, inhalt).expect("die Datei laesst sich nicht schreiben");
+    }
+
+    /// Die Ausgabe von `git tag --points-at HEAD` auf einem getaggten Stand.
+    const TAG_PASST: &str = "v0.1.0\n";
+
+    /// Dieselbe Abfrage auf einem Stand ohne jeden Tag: eine leere Ausgabe.
+    /// So sieht der Baum am 260813 aus, denn er traegt keinen einzigen Tag.
+    const TAG_FEHLT: &str = "";
+
+    /// Mehrere Tags auf demselben Commit, der passende in der Mitte. `git tag`
+    /// gibt sie sortiert und je Zeile aus.
+    const TAG_UNTER_MEHREREN: &str = "release-2026-08\nv0.1.0\nvorletzter-stand\n";
+
+    /// Ein Tag, der nur so anfaengt wie der gesuchte. Er darf nicht passen,
+    /// sonst deckte `v0.1.0-rc1` die Auslieferung von `0.1.0`.
+    const TAG_AEHNLICH: &str = "v0.1.0-rc1\nv0.1.10\n";
+
+    /// Ein sauberer Arbeitsbaum: `git status --porcelain` schweigt.
+    const BAUM_SAUBER: &str = "";
+
+    /// Zwei geaenderte verfolgte Dateien, eine vorgemerkt und eine nicht.
+    /// `--porcelain` schreibt beide in dieselbe Form.
+    const BAUM_GEAENDERT: &str = "M  xtask/src/release.rs\n M README.md\n";
+
+    /// Eine geloeschte verfolgte Datei. Sie zaehlt mit, denn ein Buendel aus
+    /// einem Baum ohne sie ist nicht der getaggte Stand.
+    const BAUM_GELOESCHT: &str = " D crates/krk-ui/src/fenstertitel.rs\n";
+
+    #[test]
+    fn ein_getaggter_und_sauberer_stand_geht_durch() {
+        assert!(stand_pruefen("0.1.0", TAG_PASST, BAUM_SAUBER).is_ok());
+    }
+
+    #[test]
+    fn unter_mehreren_tags_genuegt_der_passende() {
+        assert!(stand_pruefen("0.1.0", TAG_UNTER_MEHREREN, BAUM_SAUBER).is_ok());
+    }
+
+    #[test]
+    fn ein_fehlender_tag_haelt_die_auslieferung_an() {
+        let meldung =
+            stand_pruefen("0.1.0", TAG_FEHLT, BAUM_SAUBER).expect_err("ohne Tag kein Paket");
+        assert!(meldung.contains("kein Tag v0.1.0"), "{meldung}");
+    }
+
+    /// Ein Tag, der mit dem gesuchten Namen nur anfaengt, deckt ihn nicht.
+    #[test]
+    fn ein_aehnlicher_tag_deckt_die_version_nicht() {
+        assert!(stand_pruefen("0.1.0", TAG_AEHNLICH, BAUM_SAUBER).is_err());
+    }
+
+    #[test]
+    fn ein_geaenderter_baum_haelt_die_auslieferung_an() {
+        let meldung = stand_pruefen("0.1.0", TAG_PASST, BAUM_GEAENDERT)
+            .expect_err("ein geaenderter Baum ist nicht der getaggte Stand");
+        assert!(
+            meldung.contains("weicht vom eingetragenen Stand ab"),
+            "{meldung}"
+        );
+        assert!(meldung.contains("xtask/src/release.rs"), "{meldung}");
+        assert!(meldung.contains("README.md"), "{meldung}");
+        assert!(meldung.contains("2 verfolgte Dateien sind"), "{meldung}");
+    }
+
+    #[test]
+    fn eine_geloeschte_verfolgte_datei_zaehlt_mit() {
+        let meldung = stand_pruefen("0.1.0", TAG_PASST, BAUM_GELOESCHT)
+            .expect_err("eine geloeschte verfolgte Datei ist eine Abweichung");
+        assert!(meldung.contains("fenstertitel.rs"), "{meldung}");
+        assert!(meldung.contains("1 verfolgte Datei ist"), "{meldung}");
+    }
+
+    /// Treffen beide Befunde zu, nennt **eine** Meldung beide. Der Nutzer
+    /// raeumt nicht erst den Baum auf, um danach vom fehlenden Tag zu
+    /// erfahren.
+    #[test]
+    fn beide_befunde_stehen_in_einer_meldung() {
+        let meldung = stand_pruefen("0.1.0", TAG_FEHLT, BAUM_GEAENDERT)
+            .expect_err("beide Bedingungen sind verletzt");
+        assert!(meldung.contains("kein Tag v0.1.0"), "{meldung}");
+        assert!(
+            meldung.contains("weicht vom eingetragenen Stand ab"),
+            "{meldung}"
+        );
+    }
+
+    /// Ohne Git-Verzeichnis bricht Station 1 ab und baut nicht ersatzweise
+    /// durch (C3.11).
+    ///
+    /// Der Wegwerfordner liegt im Temporaerverzeichnis und damit ausserhalb
+    /// jedes Arbeitsbaums; `git rev-parse --git-dir` scheitert dort. Das ist
+    /// die eine Probe dieser Datei, die `git` wirklich startet — die drei
+    /// Vergleichsfaelle darueber brauchen weder Prozess noch Verzeichnis.
+    #[test]
+    fn ohne_git_verzeichnis_bricht_station_eins_ab() {
+        let wurzel = wegwerfwurzel("ohne-git");
+        fs::create_dir_all(wurzel.pfad()).expect("der Ordner laesst sich anlegen");
+
+        let fehler = auslieferungsstand_pruefen(wurzel.pfad())
+            .expect_err("im Temporaerverzeichnis liegt kein Git-Verzeichnis");
+        let Abbruch::Lauf(meldung) = fehler else {
+            panic!("das fehlende Git-Verzeichnis ist ein Laufabbruch");
+        };
+        assert!(meldung.contains("braucht ein Git-Verzeichnis"), "{meldung}");
+        assert!(
+            meldung.contains("Es wird nicht ersatzweise durchgebaut"),
+            "{meldung}"
+        );
+    }
+
+    /// Die drei Bestandteile aus C3.8, und was die Meldung nicht nennt.
+    #[test]
+    fn die_meldung_nennt_bedingung_version_und_abhilfe() {
+        let meldung = stand_pruefen("1.2.3", TAG_FEHLT, BAUM_GEAENDERT)
+            .expect_err("beide Bedingungen sind verletzt");
+        // Die verletzte Bedingung.
+        assert!(meldung.contains("kein Tag v1.2.3"), "{meldung}");
+        assert!(
+            meldung.contains("weicht vom eingetragenen Stand ab"),
+            "{meldung}"
+        );
+        // Die Version aus der Cargo.toml.
+        assert!(meldung.contains("Version 1.2.3"), "{meldung}");
+        // Die Abhilfe, als kopierbares Kommando.
+        assert!(meldung.contains("git tag v1.2.3"), "{meldung}");
+        assert!(meldung.contains("git commit -a"), "{meldung}");
+        // Kein Weg vorbei: weder Gewalt noch eine Marke zum Ueberspringen.
+        assert!(!meldung.contains("--force"), "{meldung}");
+        assert!(!meldung.contains("-f "), "{meldung}");
+        assert!(!meldung.contains("--no-verify"), "{meldung}");
+        assert!(
+            meldung.contains("Es entsteht kein Auslieferungspaket."),
+            "{meldung}"
+        );
+    }
+
+    /// Die drei Fragen an `git` lesen, jede einzeln nachgesehen.
+    ///
+    /// `tag` steht in der Liste der schreibenden Unterbefehle nicht, weil es
+    /// beides kann: mit `--points-at` fragt es, mit einem Namen legt es an.
+    /// Genau diese Unterscheidung prueft der zweite Teil.
+    #[test]
+    fn keine_der_drei_fragen_schreibt() {
+        const SCHREIBENDE: [&str; 14] = [
+            "add",
+            "commit",
+            "checkout",
+            "reset",
+            "restore",
+            "clean",
+            "push",
+            "stash",
+            "merge",
+            "rebase",
+            "init",
+            "update-ref",
+            "branch",
+            "notes",
+        ];
+        for frage in [GIT_VERZEICHNIS, GIT_TAGS, GIT_STAND] {
+            let unterbefehl = frage[0];
+            assert!(
+                !SCHREIBENDE.contains(&unterbefehl),
+                "git {unterbefehl} schreibt"
+            );
+            if unterbefehl == "tag" {
+                assert!(
+                    frage.contains(&"--points-at"),
+                    "git tag ohne --points-at legt einen Tag an: {frage:?}"
+                );
+                assert!(
+                    frage
+                        .iter()
+                        .all(|wort| wort.starts_with("--") || *wort == "tag" || *wort == "HEAD"),
+                    "ein Name hinter git tag legt ihn an: {frage:?}"
+                );
+            }
+        }
+    }
+
+    /// Unbeachtete Dateien bleiben aussen vor, und das haengt an der Marke.
+    #[test]
+    fn die_standabfrage_laesst_unbeachtete_dateien_aussen_vor() {
+        assert!(GIT_STAND.contains(&"--untracked-files=no"), "{GIT_STAND:?}");
+        // Kein Pfadfilter: die Abfrage traegt kein `--` und keinen Pfad.
+        assert!(
+            !GIT_STAND.contains(&"--"),
+            "ein Pfadfilter waere eine Liste, die jemand pflegen muss: {GIT_STAND:?}"
+        );
+        assert!(
+            GIT_STAND
+                .iter()
+                .all(|wort| wort.starts_with("--") || *wort == "status"),
+            "{GIT_STAND:?}"
+        );
+    }
+
+    /// Genau ein Aufruf von `git` im ganzen Baum (C3.13).
+    ///
+    /// Die Nadel steht als `concat!`, weil die Probe in derselben Datei liegt,
+    /// die sie liest: ausgeschrieben zaehlte sie sich selbst mit.
+    #[test]
+    fn xtask_ruft_git_an_genau_einer_stelle() {
+        let nadel = concat!("Command", "::new(\"/usr/bin/git\")");
+        let nackt = concat!("Command", "::new(\"git\")");
+        let mut stellen = Vec::new();
+        for datei in rust_dateien(&bundle::wurzel()) {
+            let inhalt = fs::read_to_string(&datei).expect("die Datei ist lesbar");
+            let zahl = inhalt.matches(nadel).count() + inhalt.matches(nackt).count();
+            for _ in 0..zahl {
+                stellen.push(datei.clone());
+            }
+        }
+        assert_eq!(stellen.len(), 1, "git wird gerufen in {stellen:?}");
+        assert!(
+            stellen[0].ends_with("xtask/src/release.rs"),
+            "{:?}",
+            stellen[0]
+        );
+    }
+
+    /// Die Tag-Pruefung haengt allein an `release` (C3.12).
+    ///
+    /// `cargo xtask bundle` fragt weder nach einem Tag noch nach dem
+    /// Arbeitsbaum, und `make check` bekommt keine neue Vorbedingung: die
+    /// sieben Ziele des `Makefile`, die an `bundle` haengen, laufen
+    /// unveraendert.
+    #[test]
+    fn allein_release_fragt_nach_tag_und_arbeitsbaum() {
+        let nadel = concat!("auslieferungsstand_", "pruefen");
+        let mut dateien = Vec::new();
+        for datei in rust_dateien(&bundle::wurzel()) {
+            let inhalt = fs::read_to_string(&datei).expect("die Datei ist lesbar");
+            if inhalt.contains(nadel) {
+                dateien.push(datei);
+            }
+        }
+        assert_eq!(dateien.len(), 1, "die Station steht in {dateien:?}");
+        assert!(
+            dateien[0].ends_with("xtask/src/release.rs"),
+            "{:?}",
+            dateien[0]
+        );
+
+        let bundle_quelle = fs::read_to_string(bundle::wurzel().join("xtask/src/bundle.rs"))
+            .expect("bundle.rs ist lesbar");
+        assert!(
+            !bundle_quelle.contains(concat!("/usr/bin/", "git")),
+            "bundle.rs ruft git"
+        );
+        assert!(!bundle_quelle.contains(nadel), "bundle.rs prueft den Stand");
+    }
+
+    /// Station 1 steht vor dem ersten Uebersetzungslauf (C3.9).
+    ///
+    /// **Was diese Probe nicht sieht:** sie liest die Reihenfolge des Textes
+    /// im Rumpf von [`ausfuehren`] und nicht den Ablauf. Was sie haelt, ist
+    /// die eine Zusage, dass kein Abbruch dieser Art einen Uebersetzungslauf
+    /// kostet.
+    #[test]
+    fn die_standpruefung_steht_vor_der_ersten_uebersetzung() {
+        let quelle = include_str!("release.rs");
+        let anfang = quelle
+            .find(concat!("pub fn ", "ausfuehren("))
+            .expect("release.rs fuehrt ausfuehren");
+        let rumpf = &quelle[anfang..];
+        let ende = rumpf.find("\n}\n").expect("ausfuehren hat ein Ende");
+        let rumpf = &rumpf[..ende];
+
+        let pruefung = rumpf
+            .find(concat!("auslieferungsstand_", "pruefen(&"))
+            .expect("ausfuehren ruft Station 1");
+        let uebersetzung = rumpf
+            .find("bundle::uebersetzen(")
+            .expect("ausfuehren uebersetzt");
+        assert!(
+            pruefung < uebersetzung,
+            "Station 1 steht hinter dem ersten Uebersetzungslauf"
+        );
+    }
+
+    /// Alle `.rs`-Dateien des Baums, ohne `target/` und ohne das
+    /// Git-Verzeichnis.
+    fn rust_dateien(wurzel: &Path) -> Vec<PathBuf> {
+        let mut gefunden = Vec::new();
+        sammeln(wurzel, &mut gefunden);
+        gefunden.sort();
+        gefunden
+    }
+
+    fn sammeln(ordner: &Path, gefunden: &mut Vec<PathBuf>) {
+        let Ok(eintraege) = fs::read_dir(ordner) else {
+            return;
+        };
+        for eintrag in eintraege.flatten() {
+            let pfad = eintrag.path();
+            let name = eintrag.file_name();
+            if pfad.is_dir() {
+                if name == "target" || name == ".git" {
+                    continue;
+                }
+                sammeln(&pfad, gefunden);
+                continue;
+            }
+            if pfad.extension().is_some_and(|endung| endung == "rs") {
+                gefunden.push(pfad);
+            }
+        }
     }
 
     #[test]

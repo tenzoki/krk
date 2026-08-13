@@ -39,7 +39,12 @@ use crate::sign;
 pub const PLATZHALTER: &str = "__KRK_VERSION__";
 
 /// Die Version aus `[workspace.package]`, geerbt ueber `version.workspace = true`.
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+///
+/// `pub(crate)` wie [`PLATZHALTER`], seit `release` sie fuer die Tag-Pruefung
+/// braucht: dort ist `v` gefolgt von dieser Zahl der Name, den HEAD tragen
+/// muss. Beide Abnehmer lesen dieselbe Konstante, damit die Zahl nicht an zwei
+/// Stellen wohnt.
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Der Name des Buendels unter `target/`.
 const BUENDELNAME: &str = "KRK.app";

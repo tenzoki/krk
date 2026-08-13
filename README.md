@@ -214,10 +214,26 @@ stünde dort als `flags=0x2(adhoc)`.
 cargo xtask release
 ```
 
-Der Befehl baut das Auslieferungspaket in sechs Stationen; jede bricht mit
-einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt:
+Der Befehl baut das Auslieferungspaket in sieben Stationen; jede bricht mit
+einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt. Dazwischen laufen
+drei Vorläufe: sie kosten nichts, stehen deshalb früh und tragen einen
+Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer späteren Station
+dient.
 
-1. **AppKit-Grenze prüfen.** Keine `use objc2`-Zeile außerhalb von
+1. **Tag und Arbeitsbaum prüfen.** HEAD muss einen Tag `v<version>` mit der
+   Zahl aus `[workspace.package]` tragen, und keine verfolgte Datei darf
+   geändert sein; unbeachtete Dateien zählen nicht mit. Treffen beide Befunde
+   zu, nennt eine Meldung beide. Die Station ist die billigste des Weges und
+   steht ganz vorn, damit ein Abbruch dieser Art keinen Übersetzungslauf
+   kostet. Den Tag setzt der Nutzer, das Werkzeug erzeugt nie einen; Näheres
+   unter „Versionsstufen". Von Hand sind es diese beiden Fragen:
+   ```sh
+   git tag --points-at HEAD                    # muss v<version> nennen
+   git status --porcelain --untracked-files=no # darf nichts ausgeben
+   ```
+   - *Vorlauf a:* `resources/Info.plist` wird gelesen und die Bündelvorlage
+     gebaut, die Station 5 braucht.
+2. **AppKit-Grenze prüfen.** Keine `use objc2`-Zeile außerhalb von
    `crates/krk-ui/src/appkit/`. `#![deny(unsafe_code)]` erzwingt die Grenze
    nur zur Hälfte, weil ein großer Teil der `objc2`-Bindungen als sicher
    deklariert ist und außerhalb anstandslos übersetzt; diese Prüfung trägt die
@@ -226,26 +242,29 @@ einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt:
    grep -rEln '^[[:space:]]*use +objc2' crates/krk-ui/src --include='*.rs' \
      | grep -v '^crates/krk-ui/src/appkit/'   # darf keine Zeile ausgeben
    ```
-2. **Beide Ziele übersetzen.** `x86_64-apple-darwin` und
+   - *Vorlauf b:* die Identitätssuche liefert die Identität für Station 6.
+   - *Vorlauf c:* die Zielprüfung über `rustup` ist die Voraussetzung von
+     Station 3.
+3. **Beide Ziele übersetzen.** `x86_64-apple-darwin` und
    `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml`. Fehlt
    eines, nennt der Abbruch das Ziel und das Kommando `rustup target add`.
-3. **`lipo`.** Die beiden Binärdateien werden zu
+4. **`lipo`.** Die beiden Binärdateien werden zu
    `target/universal/krk` zusammengefügt und sofort geprüft:
    `lipo -archs` muss `x86_64 arm64` melden.
-4. **Montage.** Dasselbe Bündel wie `cargo xtask bundle`, aus denselben
+5. **Montage.** Dasselbe Bündel wie `cargo xtask bundle`, aus denselben
    Funktionen, samt Versionsersetzung — nur wandert die universelle
    Binärdatei nach `Contents/MacOS`.
-5. **Signieren.** Dieselbe dreistufige Identitätssuche wie bei `bundle`, nur
+6. **Signieren.** Dieselbe dreistufige Identitätssuche wie bei `bundle`, nur
    sucht die zweite Stufe nach dem Namensanfang `Developer ID Application`
    statt nach `KRK Entwicklung`. Signiert wird mit gehärteter
    Laufzeitumgebung und gesichertem Zeitstempel
    (`codesign --options runtime --timestamp`); beides verlangt die
    Beglaubigung. Nachprüfen: `codesign -dv --verbose=4 target/KRK.app` zeigt
    `flags=0x10000(runtime)`.
-6. **Beglaubigen.** `xcrun notarytool submit --wait` reicht das Bündel als
+7. **Beglaubigen.** `xcrun notarytool submit --wait` reicht das Bündel als
    Zip bei Apple ein, `xcrun stapler staple` heftet das Urteil an.
 
-Die sechste Station hat zwei äußere Voraussetzungen, und nur sie: das
+Die siebte Station hat zwei äußere Voraussetzungen, und nur sie: das
 vollständige Xcode (die Command Line Tools führen weder `notarytool` noch
 `stapler`) und ein Apple-Entwicklerkonto. Fehlt eines von beidem, bricht
 allein die Beglaubigung ab, und das universell gebaute, signierte Bündel
@@ -282,8 +301,11 @@ durch die geerbte Version; die Quelldatei bleibt unangetastet. Findet der Bau
 den Platzhalter nicht, bricht er ab und baut kein Bündel — so kann weder eine
 veraltete Zahl noch ein versionsloses Bündel unbemerkt entstehen.
 
-Eine neue Version wird also allein in der `Cargo.toml` gesetzt. Nachzuführen ist
-nichts. Nachprüfen lässt sich das Ergebnis am gebauten Bündel:
+Eine neue Version wird also allein in der `Cargo.toml` gesetzt. Im Baum ist
+danach nichts nachzuführen; nachzuführen ist der Tag, denn `cargo xtask
+release` verlangt einen Tag `v<version>` auf HEAD, und den setzt der Nutzer
+(siehe „Versionsstufen"). Nachprüfen lässt sich das Ergebnis am gebauten
+Bündel:
 
 ```sh
 plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plist
@@ -291,3 +313,57 @@ plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plis
 
 `CFBundleVersion` in der `Info.plist` ist etwas anderes: die Baunummer. Sie steht
 nirgends ein zweites Mal und wird von Hand gepflegt.
+
+### Versionsstufen
+
+Wann welche der drei Zahlen steigt, misst sich an KRKs eigenen Flächen und
+nicht an einer Programmierschnittstelle: KRK ist eine Anwendung und keine
+Bibliothek, und die Stelle des Vertrags nehmen die Flächen ein, die der Nutzer
+sieht und speichert.
+
+- **Major** steigt, wenn KRK etwas hergibt, worauf sich der Nutzer eingerichtet
+  hat: die Bedeutung eines Tastenbefehls ändert sich oder eine Kombination
+  fällt weg, eine Datei unter `~/Library/Application Support/KRK/` wird nicht
+  mehr gelesen, wie sie geschrieben wurde, das Mindest-Zielsystem steigt, oder
+  ein Befehl des Bauwerkzeugs verschwindet oder bedeutet etwas anderes.
+- **Minor** steigt bei jeder neuen Fähigkeit, also bei jeder Runde, die eine
+  bringt. Ein neuer Befehl in der Tastenbelegung und ein neuer Unterbefehl des
+  Bauwerkzeugs zählen dazu.
+- **Patch** steigt bei Behebungen ohne neue Fähigkeit.
+
+**Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt der Nutzer
+von Hand.** Das Werkzeug erzeugt unter keinen Umständen einen Tag; es liest,
+was auf HEAD steht:
+
+```sh
+git tag v0.1.0        # nach dem Commit, der die Version trägt
+```
+
+`v0.1.0` benennt den ersten getaggten Stand und keine Weitergabe. Er steht auf
+dem Commit, der die Runde vom 260813 schließt, damit der grüne Fall der
+Prüfung an einem echten Lauf zu sehen ist; ein Bündel ist an diesem Tag an
+niemanden gegangen. Rückwirkende Tags für die Runden davor gibt es nicht: alle
+liefen auf derselben Zahl `0.1.0`, und sieben Marken für eine Zahl schrieben
+eine Auslieferungsgeschichte, die es nicht gab.
+
+**Was `cargo xtask release` prüft** (Station 1, siehe „Auslieferung"): dass
+HEAD einen Tag mit genau diesem Namen trägt, und dass keine verfolgte Datei
+des Verzeichnisses geändert ist. Vorgemerkte und nicht vorgemerkte Änderungen
+zählen gleich, gelöschte verfolgte Dateien zählen mit.
+
+**Was es nicht prüft:** unbeachtete Dateien. Ein Bauergebnis, eine Notiz oder
+ein Messbericht, der nie eingetragen wurde, hält die Auslieferung nicht auf.
+Und die Prüfung hängt allein an `release`: `cargo xtask bundle` baut jederzeit
+ohne Tag, ebenso jedes Ziel des `Makefile`, das an `bundle` hängt, und
+`make check` bleibt unberührt.
+
+**Die Zahl, die KRK anzeigt, ist an jedem Bau dieselbe.** Sie stammt immer aus
+der `Cargo.toml`, gleich ob der Bau aus einem getaggten Stand kommt oder nicht;
+ein Entwicklungsbau zeigt keine andere Zahl als ein ausgeliefertes Bündel und
+sagt an der Anzeige auch nicht, dass er einer ist. Die Deckung der Zahl durch
+einen Tag hängt deshalb an der Auslieferung und nicht an jedem Bau: ein
+Entwicklungsbündel darf `0.1.0` zeigen, ohne dass der Tag existiert, ein
+ausgeliefertes nicht.
+
+Wo die Zahl wohnt und wie sie in die `Info.plist` kommt, steht im Abschnitt
+darüber und wird hier nicht wiederholt.

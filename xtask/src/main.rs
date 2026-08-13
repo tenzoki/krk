@@ -37,13 +37,24 @@ xtask — Bauwerkzeug fuer KRK
       einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
 
   cargo xtask release
-      Baut das Auslieferungspaket (Schritt 23): prueft die AppKit-Grenze
-      (keine `use objc2`-Zeile ausserhalb von crates/krk-ui/src/appkit/),
-      uebersetzt beide Mac-Ziele, fuegt sie mit lipo zu einer universellen
-      Binaerdatei zusammen, baut dasselbe Buendel wie `bundle`, signiert mit
-      einer Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht
-      ueber \"xcrun notarytool submit --wait\" zur Beglaubigung ein und heftet
-      das Ergebnis mit \"xcrun stapler staple\" an.
+      Baut das Auslieferungspaket (Schritt 23) in sieben Stationen: prueft Tag
+      und Arbeitsbaum, prueft die AppKit-Grenze (keine `use objc2`-Zeile
+      ausserhalb von crates/krk-ui/src/appkit/), uebersetzt beide Mac-Ziele,
+      fuegt sie mit lipo zu einer universellen Binaerdatei zusammen, baut
+      dasselbe Buendel wie `bundle`, signiert mit einer
+      Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht ueber
+      \"xcrun notarytool submit --wait\" zur Beglaubigung ein und heftet das
+      Ergebnis mit \"xcrun stapler staple\" an. Dazwischen laufen drei
+      Vorlaeufe, die einer spaeteren Station zuarbeiten: die Buendelvorlage,
+      die Identitaetssuche und die Zielpruefung.
+
+      Station 1 ist die neue Vorpruefung, und sie steht ganz vorn, damit ein
+      Abbruch keinen Uebersetzungslauf kostet: HEAD muss einen Tag v<version>
+      mit der Zahl aus [workspace.package] tragen, und keine verfolgte Datei
+      darf geaendert sein. Unbeachtete Dateien zaehlen nicht mit. Den Tag
+      setzt der Nutzer von Hand; das Werkzeug erzeugt nie einen und schreibt
+      nichts ins Verzeichnis, es liest. `cargo xtask bundle` fragt weder nach
+      dem einen noch nach dem anderen.
 
       Die Identitaetssuche laeuft in denselben drei Stufen wie bei `bundle`,
       nur sucht die zweite nach dem Namensanfang \"Developer ID Application\".

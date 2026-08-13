@@ -83,7 +83,8 @@ Die Technologiewahl vom 260802-1150 bindet wie überall: Rust mit AppKit über `
 
 ## Turn log
 
-(noch keiner)
+
+- Turn 1 (Sitzung 260813-1006): laeuft. Straenge A und D parallel, danach B und C, dann E1. Commits bisher 5df3909 (Aktivierung), 59b0a6c (Spec und Plan). Coherence-Urteil: offen. Sitzungsprotokoll: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md
 
 ## Activation proposal
 

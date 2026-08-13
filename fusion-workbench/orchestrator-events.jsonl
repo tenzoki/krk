@@ -644,3 +644,9 @@
 {"ts":"2026-08-13T09:20:06","event":"planner_done","agent":"planner","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md — 4 Straenge, 16 Schritte, alle coder; 1 neue offene Frage, 3 Defekte"}
 {"ts":"2026-08-13T09:20:06","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md"}
 {"ts":"2026-08-13T09:42:53","event":"conceptrev_done","agent":"conceptrev","detail":"acceptable; 3 Bilder, 0 Zyklen, max Ausgangsgrad 2; B3 erledigt, B2 geerbt"}
+{"ts":"2026-08-13T09:52:10","event":"queue_built","detail":"16 Schritte aus dem Plan; 0 blockiert am Start, E2 ist Nutzerarbeit"}
+{"ts":"2026-08-13T09:52:10","event":"turn_start","turn":1,"detail":"Straenge A und D parallel; B und C danach"}
+{"ts":"2026-08-13T09:52:28","event":"state_drift","turn":1,"detail":"Circle Turn log: surface=0 entries, record=1 turns run (orchestrator-events.jsonl). Eintrag fuer Turn 1 nachgetragen, wird am Turn-Ende vervollstaendigt."}
+{"ts":"2026-08-13T09:52:44","event":"task_start","turn":1,"task":"A","agent":"coder","detail":"A1-A3 zulaessigkeit.rs, anwendung.rs"}
+{"ts":"2026-08-13T09:52:44","event":"task_start","turn":1,"task":"D","agent":"coder","detail":"D1-D5 xtask/release.rs, main.rs, README.md"}
+{"ts":"2026-08-13T10:10:05","event":"task_done","turn":1,"task":"A","agent":"coder","detail":"A1-A3 fertig, make check exit 0; 1 neuer Befund 260813-1420; Commit steht aus bis Strang D durch ist"}
