@@ -24,28 +24,23 @@
 //!    │
 //!    ├─ Faenger der Belegungsansicht .. nimmt er auf: Ereignis verbraucht
 //!    │
-//!    ├─ Fokusvorbehalt
-//!    │    ├─ Ersthelfer = Textflaeche des Editors? ──ja──> weiter zum Nachschlag
-//!    │    └─ sonst Textfeld oder Feldeditor? ───────ja──> unveraendert an AppKit
-//!    │
 //!    └─ Belegung::nachschlag
-//!         ├─ Kommando ─────> Senke des Aufrufers ─┐
-//!         ├─ Sprungmarke ──> Zeichen ──> Senke ───┤ steht ein Blatt?
+//!         ├─ Kommando ─────> Senke des Aufrufers ─┐ ist der Befehl hier
+//!         ├─ Sprungmarke ──> Zeichen ──> Senke ───┤ gerade zulaessig?
 //!         └─ unbelegt ─────> unveraendert an AppKit
 //! ```
 //!
 //! Die letzte Frage stellt die Senke und nicht dieser Abgriff; siehe den
 //! Abschnitt "Der Fokusvorbehalt" unten.
 //!
-//! Die Normalisierung steht **vor** dem Vorbehalt, weil der Faenger den rohen
-//! [`Tastendruck`] braucht und vor beidem sitzt; bis zum 260808 zeigte das Bild
-//! hier die umgekehrte Reihenfolge und beschrieb damit einen Weg, den der Code
-//! nie gegangen ist.
+//! Die Normalisierung steht **vor** dem Faenger, weil der den rohen
+//! [`Tastendruck`] braucht; bis zum 260808 zeigte das Bild hier die umgekehrte
+//! Reihenfolge und beschrieb damit einen Weg, den der Code nie gegangen ist.
 //!
-//! Trifft der Nachschlag und fuehrt die Senke das Kommando aus, schluckt der
-//! Abgriff das Ereignis (er liefert `nil`); sonst reicht er es unveraendert
-//! weiter, damit Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren
-//! gewohnten Weg gehen.
+//! Trifft der Nachschlag und war der Befehl zulaessig, schluckt der Abgriff das
+//! Ereignis (er liefert `nil`); sonst reicht er es unveraendert weiter, damit
+//! Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren gewohnten Weg
+//! gehen.
 //!
 //! # Der Faenger: die Aufnahme der Belegungsansicht (C3)
 //!
@@ -72,27 +67,33 @@
 //! waere die Pfadeingabe aus C2 damit nicht bedienbar: das Blatt stuende offen,
 //! und Cmd+Links wechselte hinter ihm den Ordner.
 //!
-//! Der Abgriff fragt deshalb **vor** dem Nachschlag, ob der Ersthelfer des
-//! Schluesselfensters ein Textfeld ist, und reicht den Tastendruck in diesem
-//! Fall unveraendert weiter. Der Vorbehalt sitzt hier und nicht je Feld: jedes
-//! Textfeld des Programms erbt ihn dadurch, ohne ihn zu wiederholen — das Feld
-//! eines Blattes so gut wie der Feldeditor einer Umbenennung in der Liste.
-//! Gemeldet war das als
+//! **Seit der Runde 7 ist der Vorbehalt keine Station dieses Abgriffs mehr,
+//! sondern der Bestandteil (2) der Zulaessigkeitsregel am Delegierten.** Bis
+//! dahin stand er als frueher Ausstieg vor dem Nachschlag: war der Ersthelfer
+//! ein Textfeld, kehrte [`behandeln`] auf der Stelle zurueck. Der Abgriff fragt
+//! danach ueberhaupt nicht mehr nach dem Ersthelfer. Er reicht beide Ausgaenge
+//! des Nachschlags unveraendert an die Senke, und die Senke erhebt einmal je
+//! Eingabe die `Lage` aus Blattstand, Ersthelferbefund und Fokus. Der
+//! Kommandozweig gibt sie an `kommandos::zulaessigkeit::zulaessig`, der
+//! Zeichenzweig der Sprungmarke liest dieselben drei Werte heraus. Zwei
+//! Stellen, die dieselbe Frage stellen, gibt es damit nicht mehr, und
+//! [`ersthelfer_gehoert_appkit`] hat genau eine Aufrufstelle,
+//! `Anwendungsdelegierter::lage`.
+//!
+//! Der Vorbehalt gilt weiterhin nicht je Feld: jedes Textfeld des Programms
+//! erbt ihn ueber die eine Regel, ohne ihn zu wiederholen — das Feld eines
+//! Blattes so gut wie der Feldeditor einer Umbenennung in der Liste. Gemeldet
+//! war das als
 //! `issues/260804-1122_*_der-fokusvorbehalt-fuer-tastenbefehle-steht-nur-fuer-die-loeschtasten.md`.
 //!
-//! **Ein stehendes Blatt haelt dieser Vorbehalt nicht an, und er ist auch nicht
-//! die Stelle, die es tun soll.** Er fragt nach dem Ersthelfer, und ein Blatt
-//! ohne Textfeld hat als Ersthelfer eine Schaltflaeche; sein Tastendruck laeuft
-//! also in den Nachschlag und erreicht die Senke. Angehalten wird er dort, beim
-//! Anwendungsdelegierten: `Anwendungsdelegierter::kommando_ausfuehren` weist
-//! jedes Kommando ausser dem Abbruch ab, solange ein Blatt am Fenster haengt
-//! (`kommandos::operationen::waehrend_blatt_erlaubt`), und
-//! `Anwendungsdelegierter::eingabe_ausfuehren` haelt daneben das getippte
-//! Zeichen an. Zwei Stellen mit zwei verschiedenen Fragen und keine doppelte
-//! Regel: hier geht es darum, **wem die Taste gehoert**, dort darum, **welcher
-//! Befehl jetzt zulaessig ist**. Wer nur diese Datei liest, haelt den Vorbehalt
-//! sonst fuer die einzige Sperre und schliesst daraus auf einen Defekt, den es
-//! nicht gibt — genau so entstand
+//! **Ein stehendes Blatt und der Ersthelfer sind zwei verschiedene Fragen, und
+//! keine von beiden wohnt in dieser Datei.** Beide beantwortet der
+//! Anwendungsdelegierte, und `zulaessig` setzt sie zusammen: Bestandteil (1)
+//! fragt, ob ein Blatt steht (`kommandos::operationen::waehrend_blatt_erlaubt`
+//! sagt, was dann durchkommt), Bestandteil (2) fragt, wem die Taste gehoert,
+//! Bestandteil (3) fragt, ob der Fokus zum Wirkungsbereich passt. Wer nur diese
+//! Datei liest, haelt den Vorbehalt sonst fuer die einzige Sperre und schliesst
+//! daraus auf einen Defekt, den es nicht gibt — genau so entstand
 //! `issues/260810-1102_*_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`.
 //!
 //! **Die eine Ausnahme ist die Textflaeche des Editors.** Sie ist selbst eine
@@ -113,12 +114,14 @@
 //! entsteht nirgends. Die Pruefung auf die drei Textklassen bleibt daneben
 //! unveraendert stehen und behaelt ihren Grund.
 //!
-//! **Der Abgriff kennt den Editor nicht.** Die Naemlichkeitsfrage kommt als
-//! Abschluss von aussen, in derselben Form wie `faenger` und `senke` und von
-//! derselben Stelle, dem Anwendungsdelegierten, der die Textflaeche ohnehin
-//! haelt. Dieses Modul haelt sie nicht; es kennt allein die Frage, die jemand
-//! anders beantwortet. Solange kein Editor gebaut ist, antwortet der Abschluss
-//! immer mit `false`, und der Vorbehalt wirkt wie zuvor.
+//! **Der Abgriff kennt den Editor nicht, und seit der Runde 7 bekommt er ihn
+//! auch nicht mehr hereingereicht.** Die Naemlichkeitsfrage steht als Abschluss
+//! im Aufruf von [`ersthelfer_gehoert_appkit`], und dieser Aufruf steht beim
+//! Anwendungsdelegierten, der die Textflaeche ohnehin haelt. [`Tastenabgriff`]
+//! nimmt den Abschluss nicht mehr entgegen; dieses Modul kennt allein die
+//! Frage, die jemand anders beantwortet. Solange kein Editor gebaut ist,
+//! antwortet der Abschluss immer mit `false`, und der Vorbehalt wirkt wie
+//! zuvor.
 //!
 //! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
 //! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es
@@ -134,11 +137,20 @@
 //! der Aufrufer laedt sie ueber [`belegung::fuer_den_betrieb`] und stellt die
 //! Meldung, falls es eine gab, in die Statuszeile.
 //!
-//! **Geschluckt wird nur, was auch ausgefuehrt wurde.** Die Belegung kennt jede
-//! Funktion aus C1 bis C7, gebaut ist in dieser Runde ein Teil davon. Eine
-//! Taste, die einer noch ungebauten Funktion gehoert, geht deshalb unveraendert
-//! weiter, statt ins Leere geschluckt zu werden; sonst naehme der Abgriff dem
-//! Menue ein Kuerzel ab, ohne etwas an seine Stelle zu setzen.
+//! **Geschluckt wird, was zulaessig war, und nicht mehr, was gewirkt hat.**
+//! Bis zur Runde 7 lautete die Grenze „ausgefuehrt": `kommando_ausfuehren`
+//! lieferte zurueck, ob der Rumpf des Befehls etwas getan hatte, und nur dann
+//! gab der Abgriff `nil`. Solange das Hauptmenue kein Kuerzel eines
+//! KRK-Befehls trug, war das die richtige Grenze — ein wirkungsloser Befehl
+//! sollte dem Menue sein Kuerzel nicht abnehmen. Sobald das Menue **alle**
+//! Kuerzel traegt, kehrt sich das um: ein zulaessiger, aber wirkungsloser
+//! Befehl liefe ueber den Umweg Menue ein zweites Mal. Die Grenze ist deshalb
+//! die Zulaessigkeit, und sie ist dieselbe, die den Menueeintrag ausgraut.
+//!
+//! **Eine Funktion ohne Kommando geht weiterhin unveraendert weiter.** Die
+//! Belegung kennt jede Funktion aus C1 bis C7, und eine, die noch kein Kommando
+//! traegt, hat auch keinen Menueeintrag mit Zulaessigkeitsregel; sie faellt vor
+//! der Senke durch, wie bisher.
 //!
 //! # Zwei Zeichen aus demselben Ereignis, und sie beantworten zwei Fragen
 //!
@@ -233,19 +245,20 @@ pub struct Tastenabgriff {
 impl Tastenabgriff {
     /// Richtet den Abgriff ein und leitet jedes gefundene Kommando an `senke`.
     ///
-    /// Die Senke liefert zurueck, ob sie das Kommando ausgefuehrt hat; nur dann
-    /// schluckt der Abgriff das Ereignis.
+    /// Die Senke liefert zurueck, ob der Befehl zulaessig war; nur dann
+    /// schluckt der Abgriff das Ereignis. Siehe den Modulkopf: bis zur Runde 7
+    /// lautete die Grenze „ausgefuehrt".
     ///
     /// `faenger` sieht jeden Tastendruck **vor** dem Nachschlag: die Aufnahme
     /// der Belegungsansicht aus C3, siehe den Modulkopf. Liefert er `true`,
     /// ist das Ereignis verbraucht.
     ///
-    /// `ist_editorflaeche` beantwortet die eine Naemlichkeitsfrage des
-    /// Fokusvorbehalts: ist dieser Ersthelfer dasselbe Objekt wie die
-    /// Textflaeche des Editors? Liefert er `true`, behaelt der Ersthelfer seine
-    /// AppKit-Bedeutung **nicht**, und der Tastendruck laeuft in den
-    /// Nachschlag. Der Abschluss kommt von aussen, weil dieses Modul den Editor
-    /// nicht kennt; siehe den Modulkopf.
+    /// **Kein Abschluss fuer den Ersthelfer mehr.** Bis zur Runde 7 nahm diese
+    /// Funktion `ist_editorflaeche` entgegen und stellte den Fokusvorbehalt
+    /// selbst; er ist jetzt Bestandteil (2) der Zulaessigkeitsregel und wird an
+    /// der Senke gestellt. Mit ihm ist auch der `MainThreadMarker` weggefallen:
+    /// er stand hier allein, um [`ersthelfer_gehoert_appkit`] das
+    /// Schluesselfenster holen zu lassen.
     ///
     /// Liefert `None`, wenn AppKit den Abgriff nicht einrichtet. Der Aufrufer
     /// meldet das; still ohne Tastatur weiterzulaufen waere der schlechteste
@@ -255,20 +268,16 @@ impl Tastenabgriff {
     /// Tastendruck geht mit seinem Code und seiner normalisierten Maske auf die
     /// Standardausgabe, gleich ob die Belegung ihn kennt.
     pub fn einrichten(
-        mtm: MainThreadMarker,
         belegung: Belegung,
         protokoll: bool,
         faenger: impl Fn(Tastendruck) -> bool + 'static,
-        ist_editorflaeche: impl Fn(&NSResponder) -> bool + 'static,
         senke: impl Fn(Eingabe) -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
             // SAFETY: AppKit reicht dem Block einen gueltigen Zeiger auf das
             // Ereignis, das fuer die Dauer des Aufrufs lebt.
             let geschluckt = behandeln(
-                mtm,
                 &faenger,
-                &ist_editorflaeche,
                 &senke,
                 &belegung,
                 unsafe { ereignis.as_ref() },
@@ -461,9 +470,7 @@ fn ereignis_senden(
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
 fn behandeln(
-    mtm: MainThreadMarker,
     faenger: &impl Fn(Tastendruck) -> bool,
-    ist_editorflaeche: &impl Fn(&NSResponder) -> bool,
     senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
@@ -482,13 +489,11 @@ fn behandeln(
         return true;
     }
 
-    // Der Fokusvorbehalt, vor dem Nachschlag. Siehe den Modulkopf: steht die
-    // Schreibmarke in einem Textfeld, behaelt jede Taste ihre AppKit-Bedeutung;
-    // steht sie in der Textflaeche des Editors, nicht.
-    if ersthelfer_gehoert_appkit(mtm, ist_editorflaeche) {
-        return false;
-    }
-
+    // Hier stand bis zur Runde 7 der Fokusvorbehalt als frueher Ausstieg.
+    // Siehe den Modulkopf: er ist Bestandteil (2) der Zulaessigkeitsregel
+    // geworden, und die stellt die Senke. Der Abgriff reicht beide Ausgaenge
+    // des Nachschlags unveraendert weiter und fragt nicht mehr nach dem
+    // Ersthelfer.
     let nachschlag = belegung.nachschlag(druck);
 
     if protokoll {
@@ -516,6 +521,13 @@ fn behandeln(
 
 /// Ob der Ersthelfer des Schluesselfensters seine AppKit-Bedeutung behaelt.
 ///
+/// **Die eine Erklaerung dieser Frage im ganzen Baum, und seit der Runde 7 mit
+/// genau einer Aufrufstelle: `Anwendungsdelegierter::lage`.** Sie stand bis
+/// dahin als frueher Ausstieg in [`behandeln`]; dort steht sie nicht mehr, und
+/// eine zweite Fassung daneben entsteht nicht. Die Probe
+/// `die_frage_nach_dem_ersthelfer_steht_an_genau_einer_stelle` haelt beides
+/// fest, die Erklaerung wie die Klassenpruefung.
+///
 /// Gefragt ist das **Schluesselfenster** und nicht das Hauptfenster: steht ein
 /// Blatt am Fenster, ist dessen Panel das Schluesselfenster, und dort sitzt das
 /// Textfeld der Pfadeingabe.
@@ -533,7 +545,7 @@ fn behandeln(
 /// Klassen: das Feld selbst, solange es nur ausgewaehlt ist, und der
 /// Feldeditor, sobald die Schreibmarke darin steht. `NSText` deckt daneben die
 /// aelteren Textklassen ab, die AppKit weiterhin fuehrt.
-fn ersthelfer_gehoert_appkit(
+pub(crate) fn ersthelfer_gehoert_appkit(
     mtm: MainThreadMarker,
     ist_editorflaeche: &impl Fn(&NSResponder) -> bool,
 ) -> bool {
@@ -611,6 +623,13 @@ fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
 /// kann. Auf einer deutschen Tastatur laufen die ersten beiden auseinander, und
 /// genau das soll die Zeile zeigen: die Taste mit der Aufschrift Y meldet
 /// `tastencode=6` und `zeichen=y`.
+///
+/// **Seit der Runde 7 zeigt der Modus mehr als zuvor, und das ist die
+/// richtigere Auskunft.** Der Aufruf steht hinter dem Faenger und vor dem
+/// Nachschlag; bis dahin stand der Fokusvorbehalt davor, und ein Tastendruck in
+/// ein Textfeld erschien deshalb gar nicht. Ohne den frueheren Ausstieg
+/// erscheint er. Der Modus gibt damit wieder, was der Abgriff sieht, und nicht
+/// mehr, was eine Sperre hinter ihm uebrig laesst.
 fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
     let kombination = match Kombination::aus_tastendruck(druck) {
         Some(kombination) => kombination.to_string(),
@@ -635,7 +654,61 @@ fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
 mod tests {
     use krk_core::tasten::normalisierung::roh;
 
+    use crate::quellbaum::quelldateien;
+
     use super::*;
+
+    /// Die Frage nach dem Ersthelfer steht im Baum an genau einer Stelle
+    /// (C2.16, erste Haelfte).
+    ///
+    /// **Gezaehlt werden Erklaerungen und keine Aufrufer**, und der Unterschied
+    /// ist nicht kosmetisch. Zugesagt ist, dass es diese Frage einmal gibt und
+    /// keinen zweiten Bau derselben Frage. Gegen diese Zusage ist eine
+    /// Aufruferzahl in beide Richtungen blind: schriebe jemand anderswo im Baum
+    /// eine eigene Pruefung auf `NSTextView`, `NSTextField` und `NSText`, also
+    /// genau den Doppelbau, bliebe die Zahl der Aufrufer unveraendert und die
+    /// Probe gruen. Kaeme umgekehrt ein weiterer berechtigter Frager hinzu,
+    /// wuerde sie rot, und der billigste Weg zurueck ins Gruene waere, einen
+    /// Frager zu streichen. Die Begruendung im Langen steht in
+    /// [`crate::quellbaum`].
+    ///
+    /// Zwei Nadeln, weil die Frage zwei Haelften hat, die einzeln abwandern
+    /// koennten: die Erklaerung selbst und die Klassenpruefung darin.
+    ///
+    /// **Fuer die zweite Nadel zaehlt die Probe Dateien und nicht
+    /// Fundstellen.** Es sind heute drei Zeilen, eine je Textklasse, und eine
+    /// vierte Textklasse in derselben Funktion waere eine zulaessige Aenderung
+    /// und kein Doppelbau. Eine Pruefung in einer **anderen** Datei waere einer.
+    ///
+    /// Beide Nadeln stehen zusammengesetzt da, wie bei
+    /// `es_gibt_genau_einen_menuebauer` in [`super::super::teilen`]: als ein
+    /// Stueck geschrieben faende jede sich selbst.
+    #[test]
+    fn die_frage_nach_dem_ersthelfer_steht_an_genau_einer_stelle() {
+        let erklaerung = concat!("fn ", "ersthelfer_gehoert_appkit");
+        let klassenpruefung = concat!("isKindOf", "Class(");
+        let dateien = quelldateien();
+
+        let erklaerungen: usize = dateien
+            .iter()
+            .map(|(_, inhalt)| inhalt.matches(erklaerung).count())
+            .sum();
+        assert_eq!(
+            erklaerungen, 1,
+            "die Frage nach dem Ersthelfer ist nicht genau einmal erklaert"
+        );
+
+        let mit_klassenpruefung: Vec<String> = dateien
+            .into_iter()
+            .filter(|(_, inhalt)| inhalt.contains(klassenpruefung))
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(
+            mit_klassenpruefung,
+            vec!["appkit/ereignisse.rs".to_owned()],
+            "die Pruefung auf die Textklassen steht nicht allein in dieser Datei"
+        );
+    }
 
     /// Die Gegenprobe zu den acht Bitwerten, die der Kern abgeschrieben fuehrt.
     ///

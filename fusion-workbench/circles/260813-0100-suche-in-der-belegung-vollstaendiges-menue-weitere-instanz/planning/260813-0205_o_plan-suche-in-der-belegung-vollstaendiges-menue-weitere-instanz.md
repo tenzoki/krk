@@ -218,7 +218,7 @@ Der Preis steht dagegen im selben Modulkopf: die Zahl „vier Schnittstellen, ac
 
 Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo der Übersetzer anhält, welche Empfehlung eines offenen Datensatzes er voraussetzt, und wie er abgenommen wird. **(Probe)** heißt: `cargo test --workspace` weist es nach. **(Bündel)** heißt: es ist am laufenden `KRK.app` im Vordergrund zu sehen und damit Nutzerarbeit.
 
-### S1: Die Zulässigkeitsfrage als reine Funktion
+### S1: [DONE] Die Zulässigkeitsfrage als reine Funktion
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/kommandos/zulaessigkeit.rs` (neu), `crates/krk-ui/src/kommandos/mod.rs`
@@ -229,7 +229,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** die Tafel aus 140 Fällen, gebaut aus `Wirkungsbereich`, `Fokus::ALLE` und den vier Kombinationen aus Blattstand und Ersthelferbefund, in der Form der vorhandenen Tafel in `kommandos/fokus.rs`. Dazu je eine benannte Prüfung für die vier Fälle, an denen die Runde hängt: mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulässig; beim Umbenennen in der Liste ebenso, obwohl kein Blatt steht und `fokus()` `Dateifenster` liefert; `beenden` und `fenster_schliessen` sind in beiden Lagen zulässig; ein Befehl auf der Ausnahmeliste mit einem anderen Wirkungsbereich als `Ueberall` wäre es nicht. Der Schritt läuft vollständig grün.
 - **Abhängigkeiten:** keine.
 
-### S2: Der Fokusvorbehalt wird Bestandteil der Regel, und die Lage entsteht an einer Stelle
+### S2: [DONE] Der Fokusvorbehalt wird Bestandteil der Regel, und die Lage entsteht an einer Stelle
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/quellbaum.rs` (neu, nur unter `cfg(test)`), `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/appkit/teilen.rs`
@@ -248,7 +248,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
   **Keine Zählung der Aufrufstellen von `ersthelfer_gehoert_appkit`.** Die Begründung steht unten im Abschnitt vom 260813-0233. **(Bündel)** bleibt der Nachweis, dass sich am Verhalten nichts geändert hat; er fällt in die Abnahme von C2.6 am Ende der Runde.
 - **Abhängigkeiten:** S1.
 
-### S3: Der Abgriff schluckt den zulässigen und nicht mehr den ausgeführten Befehl
+### S3: [DONE] Der Abgriff schluckt den zulässigen und nicht mehr den ausgeführten Befehl
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/ereignisse.rs`

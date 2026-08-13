@@ -292,6 +292,8 @@ fn auswaehler_bauen(pfade: &[PathBuf]) -> Retained<NSSharingServicePicker> {
 
 #[cfg(test)]
 mod tests {
+    use crate::quellbaum::quelldateien;
+
     use super::*;
 
     /// Die erwartete Antwort je Fokuswert, von Hand geschrieben.
@@ -354,61 +356,6 @@ mod tests {
             .filter(|fokus| worauf(*fokus) == Quelle::Nichts)
             .collect();
         assert_eq!(ohne_quelle, vec![Fokus::Leiste]);
-    }
-
-    /// Jede `.rs`-Datei unter `crates/krk-ui/src/`, mit ihrem Pfad unterhalb
-    /// von `src/` und ihrem Inhalt, in fester Reihenfolge.
-    ///
-    /// **Die Grundlage der beiden Zaehlproben darunter.** Sie lesen den
-    /// Quellbaum, weil die Zusagen, die sie halten, Aussagen ueber den Baum
-    /// sind und nicht ueber ein Ergebnis: "es gibt genau einen Aufrufer" und
-    /// "es gibt genau einen Bauer" lassen sich an keinem Rueckgabewert
-    /// ablesen. Dieselbe Art der Abnahme, mit der S16 die Kistengrenze von
-    /// [`crate::hervorhebung`] misst — dort von Hand, hier bei jedem
-    /// `make check`.
-    ///
-    /// `CARGO_MANIFEST_DIR` steht beim Uebersetzen fest und zeigt auf
-    /// `crates/krk-ui`; die Probe braucht deshalb den Baum zur Laufzeit an
-    /// derselben Stelle. Fehlt er, schlaegt sie fehl statt still nichts zu
-    /// zaehlen — eine leere Liste waere eine Probe, die alles bestaetigt.
-    fn quelldateien() -> Vec<(String, String)> {
-        let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        let mut gefunden = Vec::new();
-        einsammeln(&wurzel, &wurzel, &mut gefunden);
-        assert!(
-            gefunden.len() > 1,
-            "unter {} steht kein Quellbaum; die Zaehlproben haetten nichts zu zaehlen",
-            wurzel.display()
-        );
-        gefunden.sort();
-        gefunden
-    }
-
-    /// Haengt alle `.rs`-Dateien unter `ordner` an `gefunden`, in die Tiefe.
-    fn einsammeln(
-        wurzel: &std::path::Path,
-        ordner: &std::path::Path,
-        gefunden: &mut Vec<(String, String)>,
-    ) {
-        let eintraege = std::fs::read_dir(ordner)
-            .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", ordner.display()));
-        for eintrag in eintraege {
-            let pfad = eintrag
-                .expect("Eintrag des Quellordners nicht lesbar")
-                .path();
-            if pfad.is_dir() {
-                einsammeln(wurzel, &pfad, gefunden);
-            } else if pfad.extension().is_some_and(|endung| endung == "rs") {
-                let name = pfad
-                    .strip_prefix(wurzel)
-                    .expect("der Pfad kommt aus der Wurzel")
-                    .to_string_lossy()
-                    .into_owned();
-                let inhalt = std::fs::read_to_string(&pfad)
-                    .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", pfad.display()));
-                gefunden.push((name, inhalt));
-            }
-        }
     }
 
     /// Diese Datei ist die einzige, die den Freigabewaehler baut (C1, siebtes

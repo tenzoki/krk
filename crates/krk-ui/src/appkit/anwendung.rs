@@ -225,6 +225,7 @@ use crate::fenstermodell::{
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::zulaessigkeit::{self, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::spalten::Spalte;
@@ -1728,25 +1729,21 @@ impl Anwendungsdelegierter {
     /// Der Faenger ist die Aufnahme der Belegungsansicht aus C3; solange keine
     /// steht oder keine aufnimmt, liefert er `false` und aendert nichts.
     ///
-    /// Der dritte Abschluss beantwortet die Naemlichkeitsfrage des
-    /// Fokusvorbehalts. Er steht hier und nicht im Abgriff, weil der
-    /// Anwendungsdelegierte die Textflaeche des Editors haelt und
-    /// `appkit::ereignisse` sie nicht kennen soll.
+    /// **Zwei Abschluesse und nicht mehr drei.** Bis zur Runde 7 ging die
+    /// Naemlichkeitsfrage des Fokusvorbehalts als dritter Abschluss in den
+    /// Abgriff; sie steht jetzt in [`Self::lage`], und der Abgriff fragt gar
+    /// nicht mehr nach dem Ersthelfer. Damit faellt hier eine der drei
+    /// schwachen Referenzen weg, und `appkit::ereignisse` bekommt den Editor
+    /// nicht mehr hereingereicht.
     fn abgriff_aufsetzen(&self) -> Option<Tastenabgriff> {
         let belegung = self.ivars().belegung.borrow().clone();
         let fuer_faenger = objc2::rc::Weak::from_retained(&self.retain());
-        let fuer_editorflaeche = objc2::rc::Weak::from_retained(&self.retain());
         let fuer_senke = objc2::rc::Weak::from_retained(&self.retain());
         Tastenabgriff::einrichten(
-            self.mtm(),
             belegung,
             self.ivars().tasten_protokoll,
             move |druck| match fuer_faenger.load() {
                 Some(selbst) => selbst.tastendruck_fangen(druck),
-                None => false,
-            },
-            move |ersthelfer| match fuer_editorflaeche.load() {
-                Some(selbst) => selbst.ist_editorflaeche(ersthelfer),
                 None => false,
             },
             move |eingabe| match fuer_senke.load() {
@@ -1758,7 +1755,11 @@ impl Anwendungsdelegierter {
 
     /// Ob dieser Ersthelfer dasselbe Objekt wie die Textflaeche des Editors ist.
     ///
-    /// Die eine Ausnahme vom Fokusvorbehalt des Ereignisabgriffs. Gefragt ist
+    /// Die eine Ausnahme vom Fokusvorbehalt, also von Bestandteil (2) der
+    /// Zulaessigkeitsregel. Gereicht wird sie als Abschluss an
+    /// [`ereignisse::ersthelfer_gehoert_appkit`], und der eine Aufruf dazu steht
+    /// in [`Self::lage`]; bis zur Runde 7 ging sie in den Ereignisabgriff.
+    /// Gefragt ist
     /// die **Naemlichkeit** und nicht die Art: die Textflaeche des Editors ist
     /// eine `NSTextView` wie der Feldeditor eines Textfeldes auch, und eine
     /// Frage nach der Art kann die beiden nicht trennen. Der Vergleich laeuft
@@ -2062,13 +2063,23 @@ impl Anwendungsdelegierter {
         match eingabe {
             Eingabe::Kommando(kommando) => self.kommando_ausfuehren(kommando),
             Eingabe::Zeichen(zeichen) => {
-                // Ein getipptes Zeichen gehoert dem Blatt, solange eines steht:
-                // die Sprungmarke durchsucht eine Liste, die der Nutzer gerade
-                // nicht bedient.
-                if self.blatt_steht() {
+                // **Dieselbe Erhebung wie im Kommandozweig, und dieselben drei
+                // Werte.** Ein getipptes Zeichen ist kein Kommando: es traegt
+                // keinen Wirkungsbereich, und `zulaessig` hat ihm nichts zu
+                // sagen. Die Eingaben der Frage braucht es trotzdem alle drei.
+                //
+                // Ein Zeichen gehoert dem Blatt, solange eines steht: die
+                // Sprungmarke durchsucht eine Liste, die der Nutzer gerade
+                // nicht bedient. Und es gehoert dem Textfeld, solange der
+                // Ersthelfer AppKit gehoert — bis zur Runde 7 stand diese Frage
+                // als frueher Ausstieg im Ereignisabgriff und erreichte diesen
+                // Zweig nie. Ohne sie liefe ein Zeichen waehrend einer
+                // Umbenennung in der Liste in den Sprungmarkenpuffer.
+                let lage = self.lage();
+                if lage.blatt_steht || lage.ersthelfer_gehoert_appkit {
                     return false;
                 }
-                match self.fokus() {
+                match lage.fokus {
                     Fokus::Dateifenster => {
                         let aktiv = self.ivars().modell.borrow().aktiv();
                         self.dateifenster(aktiv)
@@ -2102,36 +2113,71 @@ impl Anwendungsdelegierter {
             .is_some()
     }
 
+    /// Die drei Eingaben der Zulaessigkeitsfrage, an einer Stelle erhoben.
+    ///
+    /// **Die eine Erhebung, und die eine Aufrufstelle von
+    /// [`ereignisse::ersthelfer_gehoert_appkit`].** Drei Abnehmer lesen sie: der
+    /// Kommandozweig in [`Self::kommando_ausfuehren`] gibt sie an
+    /// [`zulaessigkeit::zulaessig`], der Zeichenzweig von
+    /// [`Self::eingabe_ausfuehren`] liest die drei Werte einzeln heraus, und die
+    /// Ausgrauung des Hauptmenues fragt dieselbe Regel auf demselben Wert. Zwei
+    /// Erhebungen desselben Augenblicks koennten auseinanderlaufen; eine kann es
+    /// nicht.
+    ///
+    /// **Der Fokuswert dient danach zweierlei**, und das ist kein Widerspruch:
+    /// als Vorbehalt entscheidet er in `zulaessig`, ob der Befehl wirkt, und
+    /// weiter unten als Adresse, wohin er geht. Die zweite Verwendung fragt
+    /// nicht noch einmal nach.
+    fn lage(&self) -> Lage {
+        Lage {
+            blatt_steht: self.blatt_steht(),
+            ersthelfer_gehoert_appkit: ereignisse::ersthelfer_gehoert_appkit(
+                self.mtm(),
+                &|ersthelfer| self.ist_editorflaeche(ersthelfer),
+            ),
+            fokus: self.fokus(),
+        }
+    }
+
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
     ///
-    /// Liefert, ob es ausgefuehrt wurde; nur dann schluckt der Abgriff das
-    /// Ereignis.
+    /// **Liefert, ob der Befehl zulaessig war, und nicht mehr, ob sein Rumpf
+    /// etwas getan hat.** Nur bei `true` schluckt der Abgriff das Ereignis. Bis
+    /// zur Runde 7 lautete die Grenze „ausgefuehrt", und sie war richtig,
+    /// solange das Hauptmenue kein Kuerzel eines KRK-Befehls trug: ein
+    /// wirkungsloser Befehl sollte dem Menue sein Kuerzel nicht abnehmen.
+    /// Sobald das Menue alle Kuerzel traegt, kehrt sich das um — ein
+    /// zulaessiger, aber wirkungsloser Befehl liefe ueber den Umweg Menue ein
+    /// zweites Mal. Was der Rumpf gemeldet hat, bleibt darunter erhalten und
+    /// entscheidet weiterhin ueber die beiden Nachwirkungen.
+    ///
+    /// **Die eine Stelle, die vor dem Ausfuehren nach der Zulaessigkeit
+    /// fragt**, und sie fragt [`zulaessigkeit::zulaessig`] mit der einen
+    /// [`Lage`] aus [`Self::lage`]. Bis zur Runde 7 standen hier zwei getrennte
+    /// Vorbehalte, das stehende Blatt und der Fokus, waehrend der dritte
+    /// Bestandteil im Ereignisabgriff wohnte; alle drei stehen jetzt in der
+    /// einen Regel, die auch das Hauptmenue fragt.
     fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
-        // Solange ein Blatt steht, kommt allein der Abbruch durch. Alles
-        // uebrige geht unveraendert an AppKit weiter, damit das Blatt seine
-        // eigene Tastaturbedienung behaelt.
+        // Die drei Bestandteile und ihre Herleitung stehen in
+        // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
+        // durch, ein Textfeld behaelt seine AppKit-Bedeutung, und der
+        // Wirkungsbereich muss zum Fokus passen.
         //
-        // Ein laufender Vorgang sperrt seit S16b **nicht** mehr: C4 sagt zu,
-        // dass Navigation, Markierung und Tabwechsel waehrend einer Operation
+        // Ein laufender Vorgang sperrt seit S16b **nicht**: C4 sagt zu, dass
+        // Navigation, Markierung und Tabwechsel waehrend einer Operation
         // wirken, und der Fortschritt steht in der Statuszeile statt in einem
         // Blatt. Dass ein zweiter Operationsbefehl nichts startet, prueft
         // `auftrag_stellen` und meldet es; eine Tastensperre dafuer waere zu
         // grob.
-        if self.blatt_steht() && !operationen::waehrend_blatt_erlaubt(kommando) {
+        let lage = self.lage();
+        if !zulaessigkeit::zulaessig(kommando, lage) {
             return false;
         }
 
-        // **Die eine Stelle, die vor dem Ausfuehren nach dem Fokus fragt.**
-        // Der Wirkungsbereich sagt, welchen Bereich dieser Befehl braucht, und
-        // `fokus` sagt, welcher ihn hat; passt beides nicht zusammen, geschieht
-        // nichts und wird nichts gemeldet. Bis Schritt 18 stand diese Frage an
-        // den beiden Loeschbefehlen; sie ist hier aufgegangen und steht nicht
-        // daneben. Der Wert wird gleich ein zweites Mal gebraucht, dann aber
-        // als Adresse und nicht als Vorbehalt; siehe den Modulkopf.
-        let fokus = self.fokus();
-        if !fokus::wirkt(kommando.wirkungsbereich(), fokus) {
-            return false;
-        }
+        // Derselbe Wert, jetzt als Adresse und nicht mehr als Vorbehalt; siehe
+        // den Modulkopf und `Self::lage`. Ein zweites `self.fokus()` waere eine
+        // zweite Erhebung desselben Augenblicks.
+        let fokus = lage.fokus;
 
         // **Die eine Loeschregel der Befehlsantwort.** Was KRK auf den vorigen
         // Befehl geantwortet hat, gilt bis zum naechsten und keinen Tastendruck
@@ -2153,7 +2199,12 @@ impl Anwendungsdelegierter {
         // dem Ab-Pfeil in der Dateiliste (Defekt vom 260811-1245).
         self.bildschirmbreiten_uebernehmen();
 
-        let ausgefuehrt = match kommando {
+        // **Was der Rumpf meldet, ist seit der Runde 7 nicht mehr der
+        // Rueckgabewert dieser Funktion.** Der Wert traegt genau eine Aufgabe
+        // weiter: er entscheidet ueber die beiden Nachwirkungen unten. Ein
+        // Befehl, der nichts getan hat, braucht weder einen Nachzug der
+        // Aufteilung noch eine vorgemerkte Sitzung.
+        let gewirkt = match kommando {
             Kommando::Kopieren => self.uebertragen(kommando),
             Kommando::Verschieben => self.uebertragen(kommando),
             Kommando::InPapierkorb => self.in_den_papierkorb(),
@@ -2278,11 +2329,11 @@ impl Anwendungsdelegierter {
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
-        if ausgefuehrt {
+        if gewirkt {
             self.aufteilung_nachziehen();
             self.sitzung_vormerken();
         }
-        ausgefuehrt
+        true
     }
 
     /// Reicht ein Kommando an den Bereich weiter, der den Fokus hat.

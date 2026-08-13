@@ -70,6 +70,12 @@ mod messmodus;
 /// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.
 #[cfg(test)]
 mod pruefordner;
+/// Der Quellbaum dieser Kiste als Lesestoff fuer die Zaehlproben. Nur im
+/// Probenbau uebersetzt, aus demselben Grund wie `pruefordner` darueber: kein
+/// ausgeliefertes Programm liest seinen eigenen Quelltext. Mehrere Pruefmodule
+/// teilen ihn, seit die Runde 7 ihn aus `appkit/teilen.rs` herausgezogen hat.
+#[cfg(test)]
+mod quellbaum;
 mod spalten;
 mod tabs;
 mod vorschaumodell;
