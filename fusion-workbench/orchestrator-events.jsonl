@@ -635,3 +635,12 @@
 {"ts":"2026-08-13T05:25:25","event":"session_end","detail":"20 Commits, 1003 Proben, 15 Planschritte, 7 Durchsichten"}
 {"ts":"2026-08-13T06:07:29","event":"session_start","history_file":"shared/history/260813-0807-orchestrator-session.md","detail":"Setup only; no Directive stated yet"}
 {"ts":"2026-08-13T08:06:50","event":"session_start","history_file":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md","detail":"Circle 260813-0939 titelleiste+versionstags; mode pending"}
+{"ts":"2026-08-13T08:25:21","event":"shaper_start","agent":"shaper","detail":"Spec fuer Titelleiste + semantische Versionstags"}
+{"ts":"2026-08-13T08:46:22","event":"shaper_done","agent":"shaper","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md — 6 Faehigkeiten, 59 Kriterien, 2 Diagramme; 1 neue offene Frage"}
+{"ts":"2026-08-13T08:46:22","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md"}
+{"ts":"2026-08-13T08:51:58","event":"conceptrev_done","agent":"conceptrev","detail":"acceptable; 3 mittlere Befunde an Beschriftungen, 0 Zyklen"}
+{"ts":"2026-08-13T08:55:59","event":"gate_response","detail":"Spec freigegeben; vierte Frage nach Moeglichkeit 2 beantwortet"}
+{"ts":"2026-08-13T08:55:59","event":"planner_start","agent":"planner","detail":"Plan aus dem Spec 260813-1037"}
+{"ts":"2026-08-13T09:20:06","event":"planner_done","agent":"planner","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md — 4 Straenge, 16 Schritte, alle coder; 1 neue offene Frage, 3 Defekte"}
+{"ts":"2026-08-13T09:20:06","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md"}
+{"ts":"2026-08-13T09:42:53","event":"conceptrev_done","agent":"conceptrev","detail":"acceptable; 3 Bilder, 0 Zyklen, max Ausgangsgrad 2; B3 erledigt, B2 geerbt"}
