@@ -290,7 +290,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C2.10 als Zählung über den Baum: genau eine Stelle legt ein `NSMenuItem` an, nämlich `roher_befehl`, und genau eine Funktion übersetzt eine Kombination in das AppKit-Paar, nämlich `appkit_paar`. Die zwei Hüllen `befehl` und `ohne_kuerzel` bleiben als Hüllen bestehen und zählen nicht als zweite Stelle. C2.11 über die zwei Bauaufrufe von `hauptmenue`; C2.14 über die Zahl der Aufrufer von `kommando_ausfuehren`; C2.16 über die zwei Aufrufer von `zulaessig`; C2.17 als Umkehrprobe über dieselbe Tafel aus 140 Fällen: für jeden Fall, in dem der Abgriff weiterreicht, ist der zugehörige Eintrag ausgegraut oder steht auf der Ausnahmeliste. C2.12 und C2.13 laufen über `cargo run -p krk-ui --bin krk -- --menue-protokoll`, das nach `finishLaunching` ausgibt und ohne Fenster zurückkehrt (`crates/krk-ui/src/appkit/anwendung.rs:5304-5321`). **Kein `make menue`**: das Ziel hängt an `bundle` und überschriebe das beglaubigte Bündel unter `target/KRK.app`. **(Bündel):** C2.6, C2.7, C2.18 und C2.19, dazu die Gegenprobe, dass Opt+Cmd+Q keine Zweitform „Quit and Keep Windows" bekommt.
 - **Abhängigkeiten:** S3, S5.
 
-### S7: Der Ring bleibt an einer Stelle
+### S7: [DONE] Der Ring bleibt an einer Stelle
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-core/src/text/suche.rs`
@@ -300,7 +300,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** die vorhandenen Prüfungen zu `erster_ab`, `naechster` und `voriger` laufen unverändert grün, denn ihr Verhalten ändert sich nicht. Dazu die vier Randfälle der neuen Funktionen: leere Liste, Stelle vor der ersten, Stelle auf der letzten, Umlauf hinter der letzten.
 - **Abhängigkeiten:** keine.
 
-### S8: Die Suchlage im Belegungsmodell
+### S8: [DONE] Die Suchlage im Belegungsmodell
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/belegungsmodell.rs`
@@ -310,7 +310,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C1.2 bis C1.8, C1.12 und C1.17 als gewöhnliche Prüfungen über eine Belegung ohne Fenster. Namentlich: „datum" findet „Spalte Datum umschalten"; ein Suchtext mit Leerzeichen findet einen mehrwortigen Namen; ein Steuerzeichen und ein Zeichen aus dem Bereich U+F700 bis U+F8FF werden abgewiesen; hinter dem letzten Treffer geht es beim ersten weiter; die Kennung einer Funktion ist kein Treffer.
 - **Abhängigkeiten:** S7.
 
-### S9: Die Belegungsansicht zeigt die Suche und gibt zwei Tasten ab
+### S9: [DONE] Die Belegungsansicht zeigt die Suche und gibt zwei Tasten ab
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/belegungsansicht.rs`
@@ -321,7 +321,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C1.11 über den gesetzten Schalter; C1.16 über die drei Kürzel, gelesen an den Werten und nicht an Zeichenketten im Prüfcode. **(Bündel):** die springende Auswahl, die Meldungszeile und die Bedienung der drei Schaltflächen.
 - **Abhängigkeiten:** S8.
 
-### S10: Der Fänger bekommt seine zweite Station
+### S10: [DONE] Der Fänger bekommt seine zweite Station
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`

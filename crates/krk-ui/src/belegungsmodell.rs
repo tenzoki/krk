@@ -13,7 +13,17 @@
 //!                                    │  zuweisen / zuruecksetzen
 //!                                    ▼
 //!            beim Verlassen: in_belegung ──> Belegung::sichern (keymap.toml)
+//!
+//!                              Suchlage (daneben, seit der Runde 7)
+//!                                    │  liest funktionstext und tastentext
+//!                                    ▼
+//!                              zielzeile / meldung ──> die Ansicht
 //! ```
+//!
+//! **Die Suche steht neben der Arbeitskopie und nicht in ihr.** Sie aendert
+//! keine Belegung; sie waehlt eine Zeile aus. Eine Aufnahme laesst den Suchtext
+//! unberuehrt und umgekehrt (C1.12), und zwei Werte nebeneinander sagen das
+//! deutlicher als ein Feld in [`Belegungsmodell`].
 //!
 //! # Eine Zeile je Funktion, gegliedert nach Funktionsbereich
 //!
@@ -59,6 +69,7 @@
 //! einer_deutschen_tastatur` haelt es fest.
 
 use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
+use krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname;
 
 /// Die Funktionsbereiche der Belegungsansicht, in der Reihenfolge der
 /// Anzeige.
@@ -490,6 +501,23 @@ impl Belegungsmodell {
         Some(tastenliste(self.funktion(stelle)?))
     }
 
+    /// Ob die Zeile den bereits kleingeschriebenen Suchtext traegt (C1.3 bis
+    /// C1.6).
+    ///
+    /// Gesucht wird ueber die zwei Spalten, die auf dem Schirm stehen, und
+    /// ueber keine dritte Groesse. Eine Bereichsueberschrift traegt nie einen
+    /// Treffer, und das ist hier kein Zweig: [`Belegungsmodell::funktionstext`]
+    /// und [`Belegungsmodell::tastentext`] antworten fuer sie `None`.
+    ///
+    /// `gesucht` kommt kleingeschrieben herein, damit die Umschreibung einmal
+    /// je Suche laeuft und nicht einmal je Zeile.
+    fn zeile_traegt(&self, stelle: usize, gesucht: &str) -> bool {
+        [self.funktionstext(stelle), self.tastentext(stelle)]
+            .into_iter()
+            .flatten()
+            .any(|text| text.to_lowercase().contains(gesucht))
+    }
+
     /// Der blosse Name der Funktion an dieser Stelle, fuer die Aufforderung
     /// waehrend der Aufnahme.
     pub fn name(&self, stelle: usize) -> Option<&str> {
@@ -541,6 +569,168 @@ impl Belegungsmodell {
     /// Die Arbeitskopie, fuer das Sichern und den weiteren Betrieb.
     pub fn in_belegung(self) -> Belegung {
         self.belegung
+    }
+}
+
+/// Der Stand der Suche in der Belegungsansicht (C1 der Runde 7).
+///
+/// **Die Rechnung steht hier und nicht in der Ansicht**, weil sie ohne AppKit
+/// auskommt und damit ohne Fenster pruefbar ist. Die Ansicht haelt einen Wert
+/// dieser Art, gibt ihm die drei Ereignisse weiter, die der Faenger des
+/// Ereignisabgriffs ihr zustellt, und liest danach [`Suchlage::zielzeile`] und
+/// [`Suchlage::meldung`] ab.
+///
+/// ```text
+///   Zeichen ──> zeichen_anhaengen ─┐
+///   Ruecktaste ─> letztes_zeichen_weg ─┼─> Suchtext ──> Trefferzeilen
+///   Eingabetaste ─> naechster_treffer ─┘        │            │
+///                                          meldung()    zielzeile()
+/// ```
+///
+/// # Gesucht wird ueber den Text, den die Ansicht zeigt
+///
+/// Ueber [`Belegungsmodell::funktionstext`] und
+/// [`Belegungsmodell::tastentext`], also genau ueber die zwei Spalten auf dem
+/// Schirm (C1.3). Die Kennung wird **nicht** durchsucht: sie steht nicht da,
+/// und ein Treffer, den der Nutzer nicht sehen kann, ist keiner.
+///
+/// Verglichen wird als Teilzeichenfolge (C1.4) und ohne Ruecksicht auf Gross-
+/// und Kleinschreibung (C1.5), wie bei der Sprungmarke der Dateiliste. Eine
+/// Bereichsueberschrift kann kein Treffer sein, und dafuer braucht es keinen
+/// Zweig: [`Belegungsmodell::funktionstext`] und
+/// [`Belegungsmodell::tastentext`] antworten fuer eine Ueberschriftszeile
+/// `None`, und eine Zeile ohne Text traegt keinen Treffer (C1.6).
+///
+/// # Der Suchtext lebt so lange wie die Ansicht
+///
+/// Keine Pause setzt ihn zurueck, und es gibt keinen Zeitgeber (C1.12). Die
+/// Sekundenregel der Sprungmarke aus C2 der Runde 1 hat dort ihren Grund — dort
+/// gibt es keine Ruecktaste —, und hier hat sie keinen.
+///
+/// # Bei leerem Suchtext geschieht nichts
+///
+/// Eingabetaste und Ruecktaste bleiben wirkungslos (C1.8, C1.17). Das ist eine
+/// Regel und nicht zwei: ohne Suchtext gibt es kein naechstes Vorkommen und
+/// kein letztes Zeichen. Beide Wege melden es ueber ihren Rueckgabewert, und
+/// die Ansicht laesst dann ihre Meldungszeile stehen, statt eine
+/// Zuweisungsmeldung mit einer leeren Suchmeldung zu ueberschreiben.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Suchlage {
+    /// Was bisher getippt ist.
+    suchtext: String,
+    /// Die Zeilen der Ansicht, die den Suchtext tragen, aufsteigend. Die
+    /// Sortierung ist die Voraussetzung von
+    /// [`krk_core::text::suche::erster_ab_stelle`] und entsteht von selbst,
+    /// weil die Rechnung die Zeilen von oben nach unten durchgeht.
+    treffer: Vec<usize>,
+    /// Der angesteuerte Treffer, als Stelle in [`Suchlage::treffer`].
+    stelle: Option<usize>,
+}
+
+impl Suchlage {
+    /// Eine Suche ohne Suchtext und ohne Treffer.
+    pub fn neu() -> Self {
+        Self::default()
+    }
+
+    /// Die Zeile, auf die die Auswahl gehoert, oder `None` ohne Treffer.
+    ///
+    /// Bei null Treffern bleibt die Auswahl stehen (C1.9); das ist die Folge
+    /// davon, dass hier `None` steht, und keine eigene Regel in der Ansicht.
+    pub fn zielzeile(&self) -> Option<usize> {
+        self.treffer.get(self.stelle?).copied()
+    }
+
+    /// Haengt ein getipptes Zeichen an und sucht erneut (C1.1).
+    ///
+    /// Liefert, ob das Zeichen aufgenommen wurde. **Die Aufnahmeregel ist
+    /// `krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname`**, dieselbe,
+    /// die die Sprungmarke der Dateiliste benutzt; eine zweite Zeichenregel
+    /// entsteht nicht (C1.2). Sie weist Steuerzeichen ab und den privaten
+    /// Bereich U+F700 bis U+F8FF, in dem AppKit die Funktions- und Pfeiltasten
+    /// meldet.
+    #[must_use]
+    pub fn zeichen_anhaengen(&mut self, zeichen: char, modell: &Belegungsmodell) -> bool {
+        if !traegt_ein_dateiname(zeichen) {
+            return false;
+        }
+        self.suchtext.push(zeichen);
+        self.nachrechnen(modell);
+        true
+    }
+
+    /// Nimmt das letzte Zeichen weg und sucht erneut (C1.8).
+    ///
+    /// Liefert, ob etwas wegzunehmen war. Bei leerem Suchtext geschieht
+    /// nichts.
+    #[must_use]
+    pub fn letztes_zeichen_weg(&mut self, modell: &Belegungsmodell) -> bool {
+        if self.suchtext.pop().is_none() {
+            return false;
+        }
+        self.nachrechnen(modell);
+        true
+    }
+
+    /// Geht auf das naechste Vorkommen; hinter dem letzten beim ersten weiter
+    /// (C1.7).
+    ///
+    /// Liefert, ob es ein Vorkommen gibt. Ohne Suchtext und ohne Treffer
+    /// geschieht nichts (C1.17).
+    #[must_use]
+    pub fn naechster_treffer(&mut self) -> bool {
+        let Some(zeile) = self.zielzeile() else {
+            return false;
+        };
+        self.stelle = krk_core::text::suche::naechster_stelle(&self.treffer, zeile);
+        true
+    }
+
+    /// Der Satz fuer die Meldungszeile: Suchtext, Trefferzahl und Stelle
+    /// darin (C1.9, C1.10).
+    pub fn meldung(&self) -> String {
+        if self.suchtext.is_empty() {
+            return "Der Suchtext ist leer; jedes getippte Zeichen sucht.".to_owned();
+        }
+        match self.stelle {
+            Some(stelle) => format!(
+                "Suche »{}«: Treffer {} von {}.",
+                self.suchtext,
+                stelle + 1,
+                self.treffer.len()
+            ),
+            None => format!("Suche »{}«: kein Treffer.", self.suchtext),
+        }
+    }
+
+    /// Sucht den Suchtext neu und behaelt dabei die Stelle, so gut es geht.
+    ///
+    /// **Auch von aussen zu rufen, und zwar nach jeder Aenderung am Modell.**
+    /// Gesucht wird ueber den Text, den die Ansicht zeigt, und eine Zuweisung
+    /// oder ein Zuruecksetzen aendert die Spalte „Belegung". Eine Trefferliste,
+    /// die danach stehen bliebe, zeigte auf Zeilen, die den Suchtext nicht mehr
+    /// tragen. Die Meldungszeile bleibt dabei unberuehrt: nach einer Zuweisung
+    /// steht dort deren Bestaetigung, bis das naechste Suchzeichen kommt
+    /// (C1.10).
+    ///
+    /// **Gesucht wird ab der bisherigen Zielzeile und nicht wieder von oben.**
+    /// Wer beim Tippen einen Suchtext verlaengert, will nicht bei jedem
+    /// Buchstaben an den Listenanfang zurueckgeworfen werden;
+    /// [`krk_core::text::suche::erster_ab_stelle`] zaehlt die Zeile unter der
+    /// Auswahl deshalb mit und laeuft hinter der letzten um. Ohne bisherige
+    /// Zielzeile faengt die Suche bei Zeile 0 an, und das ist der erste Treffer
+    /// (C1.1).
+    pub fn nachrechnen(&mut self, modell: &Belegungsmodell) {
+        let ab = self.zielzeile().unwrap_or(0);
+        self.treffer = if self.suchtext.is_empty() {
+            Vec::new()
+        } else {
+            let gesucht = self.suchtext.to_lowercase();
+            (0..modell.zeilen())
+                .filter(|&stelle| modell.zeile_traegt(stelle, &gesucht))
+                .collect()
+        };
+        self.stelle = krk_core::text::suche::erster_ab_stelle(&self.treffer, ab);
     }
 }
 
@@ -1325,5 +1515,305 @@ mod tests {
         (0..modell.zeilen())
             .find(|&stelle| modell.name(stelle) == Some(name.as_str()))
             .unwrap_or_else(|| panic!("keine Zeile traegt die Funktion {kennung}"))
+    }
+}
+
+#[cfg(test)]
+mod suchproben {
+    use super::*;
+
+    /// Ein Modell ueber der Auslieferungsbelegung, wie die Ansicht es zeigt.
+    fn modell() -> Belegungsmodell {
+        Belegungsmodell::neu(Belegung::auslieferung())
+    }
+
+    /// Tippt den Text Zeichen fuer Zeichen, wie der Faenger es tut.
+    fn tippen(lage: &mut Suchlage, text: &str, modell: &Belegungsmodell) {
+        for zeichen in text.chars() {
+            assert!(
+                lage.zeichen_anhaengen(zeichen, modell),
+                "das Zeichen {zeichen:?} wurde nicht aufgenommen"
+            );
+        }
+    }
+
+    /// Das erste Zeichen sucht, und die Auswahl steht auf dem ersten Treffer
+    /// (C1.1).
+    #[test]
+    fn das_erste_zeichen_springt_auf_den_ersten_treffer() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        assert_eq!(lage.zielzeile(), None, "ohne Suchtext keine Zielzeile");
+
+        tippen(&mut lage, "t", &modell);
+        let erste = (0..modell.zeilen())
+            .find(|&stelle| modell.zeile_traegt(stelle, "t"))
+            .expect("die Auslieferungsbelegung traegt irgendwo ein t");
+        assert_eq!(lage.zielzeile(), Some(erste));
+    }
+
+    /// Gesucht wird als Teilzeichenfolge und ohne Ruecksicht auf Gross- und
+    /// Kleinschreibung (C1.4, C1.5).
+    ///
+    /// „datum" steht in der Auslieferungsbelegung mitten im Wort, naemlich in
+    /// „Spalte Änderungsdatum ein- und ausblenden". Ein Anfangsvergleich wie
+    /// bei der Sprungmarke der Dateiliste faende die Zeile nicht.
+    ///
+    /// Getroffen wird mehr als diese eine Zeile — „Nach Änderungsdatum
+    /// sortieren" traegt das Wort ebenso —, und deshalb prueft der Test die
+    /// ganze Trefferliste und nicht die erste Zielzeile.
+    #[test]
+    fn datum_findet_das_wort_in_der_wortmitte_und_in_jeder_schreibweise() {
+        let modell = modell();
+        let ziel = zeile_der_spalte_aenderungsdatum(&modell);
+
+        let mut erwartet = None;
+        for geschrieben in ["datum", "DATUM", "Datum"] {
+            let mut lage = Suchlage::neu();
+            tippen(&mut lage, geschrieben, &modell);
+            let getroffen = trefferzeilen(&lage);
+            assert!(
+                getroffen.contains(&ziel),
+                "{geschrieben:?} findet die Zeile in der Wortmitte nicht"
+            );
+            match &erwartet {
+                None => erwartet = Some(getroffen),
+                Some(erste) => assert_eq!(
+                    &getroffen, erste,
+                    "{geschrieben:?} findet andere Zeilen als »datum«"
+                ),
+            }
+        }
+    }
+
+    /// Ein Suchtext mit Leerzeichen findet einen mehrwortigen Namen.
+    ///
+    /// Das ist der Fall, wegen dessen die Schaltflaeche „Zuweisen" von der
+    /// Leertaste auf Cmd+T umgezogen ist: fast jeder Funktionsname besteht aus
+    /// mehreren Woertern.
+    #[test]
+    fn ein_suchtext_mit_leerzeichen_findet_einen_mehrwortigen_namen() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "spalte änderungsdatum", &modell);
+        assert_eq!(
+            lage.zielzeile(),
+            Some(zeile_der_spalte_aenderungsdatum(&modell))
+        );
+    }
+
+    /// Die Zeilen, die der Suchtext trifft, aufsteigend.
+    ///
+    /// Gelesen aus derselben Rechnung, die die Suchlage benutzt; die Liste
+    /// selbst gibt sie nach aussen nicht heraus, weil die Ansicht sie nicht
+    /// braucht.
+    fn trefferzeilen(lage: &Suchlage) -> Vec<usize> {
+        lage.treffer.clone()
+    }
+
+    /// Die Kennung einer Funktion ist kein Treffer (C1.3).
+    ///
+    /// Sie steht nicht auf dem Schirm; gesucht wird ueber die zwei Spalten der
+    /// Ansicht. `spalte_datum_umschalten` ist die Kennung derselben Funktion,
+    /// die der Test darueber ueber ihren Namen findet.
+    #[test]
+    fn die_kennung_einer_funktion_ist_kein_treffer() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "spalte_datum", &modell);
+        assert_eq!(lage.zielzeile(), None);
+        assert!(lage.meldung().contains("kein Treffer"));
+    }
+
+    /// Ein Steuerzeichen und ein Zeichen aus dem privaten Bereich werden
+    /// abgewiesen (C1.2).
+    ///
+    /// Die Regel dafuer ist die der Sprungmarke, und eine zweite entsteht
+    /// nicht. U+F701 ist das Zeichen, das AppKit dem Pfeil ab beilegt.
+    #[test]
+    fn steuerzeichen_und_funktionstasten_gehen_nicht_in_den_suchtext() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        for abgewiesen in ['\u{1B}', '\r', '\u{7F}', '\u{F701}', '\u{F8FF}'] {
+            assert!(
+                !lage.zeichen_anhaengen(abgewiesen, &modell),
+                "{abgewiesen:?} haette nicht aufgenommen werden duerfen"
+            );
+        }
+        assert_eq!(lage.suchtext, "");
+    }
+
+    /// Hinter dem letzten Treffer geht es beim ersten weiter (C1.7).
+    #[test]
+    fn hinter_dem_letzten_treffer_geht_es_beim_ersten_weiter() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "vorschau", &modell);
+
+        let erste = lage.zielzeile().expect("»vorschau« hat Treffer");
+        let mut gesehen = vec![erste];
+        loop {
+            assert!(lage.naechster_treffer(), "die Suche hat Treffer");
+            let zeile = lage.zielzeile().expect("ein angesteuerter Treffer");
+            if zeile == erste {
+                break;
+            }
+            assert!(
+                gesehen.len() < modell.zeilen(),
+                "der Ring laeuft nicht auf den ersten Treffer zurueck"
+            );
+            gesehen.push(zeile);
+        }
+        assert!(
+            gesehen.len() > 1,
+            "»vorschau« traegt nur einen Treffer; der Umlauf ist damit nicht gemessen"
+        );
+    }
+
+    /// Eine Bereichsueberschrift ist nie ein Treffer (C1.6).
+    ///
+    /// „Vorschau" ist zugleich der Name eines Funktionsbereichs und steht
+    /// deshalb als Ueberschriftszeile in der Ansicht. Getroffen werden trotzdem
+    /// allein Funktionszeilen.
+    #[test]
+    fn eine_bereichsueberschrift_ist_nie_ein_treffer() {
+        let modell = modell();
+        let ueberschrift = (0..modell.zeilen())
+            .find(|&stelle| modell.ueberschrift(stelle) == Some("Vorschau"))
+            .expect("die Gliederung fuehrt einen Bereich »Vorschau«");
+
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "vorschau", &modell);
+
+        let erste = lage.zielzeile().expect("»vorschau« hat Treffer");
+        let mut zeile = erste;
+        loop {
+            assert_ne!(zeile, ueberschrift, "die Ueberschrift ist ein Treffer");
+            assert!(
+                modell.ueberschrift(zeile).is_none(),
+                "die Zeile {zeile} ist eine Ueberschrift und ein Treffer"
+            );
+            assert!(lage.naechster_treffer());
+            zeile = lage.zielzeile().expect("ein angesteuerter Treffer");
+            if zeile == erste {
+                break;
+            }
+        }
+    }
+
+    /// Die Ruecktaste nimmt das letzte Zeichen weg und sucht erneut (C1.8).
+    #[test]
+    fn die_ruecktaste_kuerzt_den_suchtext_und_sucht_erneut() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "datum", &modell);
+        assert!(lage.zielzeile().is_some());
+
+        assert!(lage.letztes_zeichen_weg(&modell));
+        assert_eq!(lage.suchtext, "datu");
+
+        for _ in 0..4 {
+            assert!(lage.letztes_zeichen_weg(&modell));
+        }
+        assert_eq!(lage.suchtext, "");
+        assert_eq!(lage.zielzeile(), None, "ohne Suchtext gibt es kein Ziel");
+    }
+
+    /// Bei leerem Suchtext bleiben Eingabetaste und Ruecktaste wirkungslos
+    /// (C1.8, C1.17).
+    ///
+    /// Beide melden es ueber ihren Rueckgabewert, damit die Ansicht ihre
+    /// Meldungszeile stehen laesst, statt eine Zuweisungsmeldung zu
+    /// ueberschreiben.
+    #[test]
+    fn bei_leerem_suchtext_bleiben_eingabetaste_und_ruecktaste_wirkungslos() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        assert!(!lage.naechster_treffer());
+        assert!(!lage.letztes_zeichen_weg(&modell));
+        assert_eq!(lage, Suchlage::neu(), "die leere Suche hat sich geaendert");
+    }
+
+    /// Ein Suchtext ohne Treffer laesst die Auswahl stehen und sagt es (C1.9).
+    #[test]
+    fn ohne_treffer_bleibt_die_auswahl_stehen_und_die_meldung_sagt_es() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "datum", &modell);
+        let vorher = lage.zielzeile();
+        assert!(vorher.is_some());
+
+        tippen(&mut lage, "xyz", &modell);
+        assert_eq!(lage.zielzeile(), None, "ohne Treffer keine Zielzeile");
+        assert!(lage.meldung().contains("kein Treffer"));
+        assert!(
+            !lage.naechster_treffer(),
+            "ohne Treffer geht es nicht weiter"
+        );
+    }
+
+    /// Die Meldungszeile nennt Suchtext, Trefferzahl und Stelle darin (C1.10).
+    #[test]
+    fn die_meldung_nennt_suchtext_trefferzahl_und_stelle() {
+        let modell = modell();
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "vorschau", &modell);
+
+        let meldung = lage.meldung();
+        assert!(meldung.contains("vorschau"), "{meldung}");
+        assert!(meldung.contains("Treffer 1 von "), "{meldung}");
+
+        assert!(lage.naechster_treffer());
+        assert!(
+            lage.meldung().contains("Treffer 2 von "),
+            "{}",
+            lage.meldung()
+        );
+    }
+
+    /// Der Suchtext hat keinen Zeitgeber (C1.12).
+    ///
+    /// **Gezaehlt werden Erklaerungen im Quelltext**, wie in
+    /// [`crate::quellbaum`] beschrieben: an keinem Rueckgabewert ist abzulesen,
+    /// dass es keine Uhr gibt. Die Sekundenregel der Sprungmarke aus C2 der
+    /// Runde 1 steht in `krk_core::verzeichnis::sprungmarke` und misst dort
+    /// ueber einen Zeitpunkt der Standardbibliothek; diese Datei fuehrt keinen.
+    /// Ein Zeitgeber, der den Suchtext nach einer Pause zuruecksetzte, waere
+    /// hier zu sehen.
+    ///
+    /// **Die zwei Nadeln stehen zusammengesetzt da**, wie bei jeder Zaehlprobe
+    /// dieses Baums: als ein Stueck geschrieben faende jede sich in dieser
+    /// Datei selbst und liesse die Probe fehlschlagen, ohne dass eine Uhr da
+    /// waere.
+    #[test]
+    fn die_suche_fuehrt_keinen_zeitgeber() {
+        let uhr = concat!("Inst", "ant");
+        let dauer = concat!("Dura", "tion");
+        let (_, inhalt) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == "belegungsmodell.rs")
+            .expect("der Quellbaum fuehrt belegungsmodell.rs");
+        assert!(!inhalt.contains(uhr), "die Suche fuehrt eine Uhr");
+        assert!(!inhalt.contains(dauer), "die Suche fuehrt eine Zeitspanne");
+    }
+
+    /// Die Zeile der Funktion, deren Name „datum" mitten im Wort traegt.
+    ///
+    /// Gesucht wird sie ueber ihre Kennung, damit der Test nicht an der
+    /// Schreibweise des Namens haengt.
+    fn zeile_der_spalte_aenderungsdatum(modell: &Belegungsmodell) -> usize {
+        let belegung = Belegung::auslieferung();
+        let name = belegung
+            .funktion("spalte_datum_umschalten")
+            .expect("die Auslieferungsbelegung kennt spalte_datum_umschalten")
+            .name()
+            .to_owned();
+        assert!(
+            name.to_lowercase().contains("datum"),
+            "der Name {name:?} traegt kein »datum« mehr; der Test misst nichts"
+        );
+        (0..modell.zeilen())
+            .find(|&stelle| modell.name(stelle) == Some(name.as_str()))
+            .expect("die Funktion steht in der Gliederung")
     }
 }

@@ -22,7 +22,8 @@
 //!    │
 //!    ├─ Tastendruck::aus_ereignis ..... Maske normalisiert, Zeichen gemeldet
 //!    │
-//!    ├─ Faenger der Belegungsansicht .. nimmt er auf: Ereignis verbraucht
+//!    ├─ Faenger der Belegungsansicht .. zwei Stationen, siehe unten;
+//!    │                                  nimmt eine an: Ereignis verbraucht
 //!    │
 //!    └─ Belegung::nachschlag
 //!         ├─ Kommando ─────> Senke des Aufrufers ─┐ ist der Befehl hier
@@ -42,7 +43,7 @@
 //! Cmd+Q, Shift+Cmd+W und die Texteingabe des Systems ihren gewohnten Weg
 //! gehen.
 //!
-//! # Der Faenger: die Aufnahme der Belegungsansicht (C3)
+//! # Der Faenger: Aufnahme und Suche der Belegungsansicht (C3, C1 der Runde 7)
 //!
 //! Die Belegungsansicht weist eine Kombination zu, indem der Nutzer sie
 //! drueckt. Waehrend dieser Aufnahme darf der Tastendruck weder nachgeschlagen
@@ -51,10 +52,23 @@
 //! der Konflikt gemeldet wird, statt die Funktion auszuloesen. Der **Faenger**
 //! steht deshalb vor dem Fokusvorbehalt und dem Nachschlag: liefert er `true`,
 //! hat er den rohen [`Tastendruck`] uebernommen, und das Ereignis ist
-//! verbraucht. Ausserhalb der Aufnahme liefert er `false` und aendert nichts.
-//! Das bleibt **ein** Abgriff mit einem zweiten Abnehmer und wird kein zweiter
-//! Weg: keine Ansicht bekommt eine eigene `keyDown:`-Behandlung, auch die
-//! Belegungsansicht nicht.
+//! verbraucht. Sonst liefert er `false` und aendert nichts. Das bleibt **ein**
+//! Abgriff mit einem zweiten Abnehmer und wird kein zweiter Weg: keine Ansicht
+//! bekommt eine eigene `keyDown:`-Behandlung, auch die Belegungsansicht nicht.
+//!
+//! **Seit der Runde 7 hat der Faenger zwei Stationen, und ihre Reihenfolge ist
+//! der Vorrang aus C1.15.** Die erste ist die Aufnahme; die zweite ist die
+//! Suche und kommt nur zum Zug, wenn keine Aufnahme laeuft und die
+//! Belegungsansicht steht. Sie nimmt drei Sorten Ereignis: ein Suchzeichen, die
+//! Eingabetaste und die Ruecktaste. Dass die Suche waehrend einer Aufnahme
+//! nichts aufnimmt, ist damit keine dritte Regel, sondern die Stellung der
+//! zweiten Station hinter der ersten. Beide Stationen wohnen beim
+//! Anwendungsdelegierten, in `Anwendungsdelegierter::tastendruck_fangen`;
+//! dieses Modul kennt die Belegungsansicht nicht und soll sie nicht
+//! kennenlernen.
+//!
+//! `esc`, die Pfeiltasten und jede Kombination mit Befehls-, Steuerungs- oder
+//! Wahltaste fallen durch beide Stationen und laufen weiter wie bisher.
 //!
 //! # Der Fokusvorbehalt
 //!
@@ -250,8 +264,18 @@ impl Tastenabgriff {
     /// lautete die Grenze „ausgefuehrt".
     ///
     /// `faenger` sieht jeden Tastendruck **vor** dem Nachschlag: die Aufnahme
-    /// der Belegungsansicht aus C3, siehe den Modulkopf. Liefert er `true`,
-    /// ist das Ereignis verbraucht.
+    /// und die Suche der Belegungsansicht, siehe den Modulkopf. Liefert er
+    /// `true`, ist das Ereignis verbraucht.
+    ///
+    /// **Er bekommt das getippte Zeichen dazu, und das ist nicht dasselbe wie
+    /// [`Tastendruck::zeichen`].** Jenes ist bereits durch
+    /// `krk_core::tasten::parser::zeichen_als_kennung` gegangen und traegt
+    /// allein ASCII-Kleinbuchstaben und Ziffern; es kann kein Leerzeichen und
+    /// keinen Umlaut fuehren. Die Suche der Belegungsansicht braucht genau die,
+    /// weil fast jeder Funktionsname aus mehreren Woertern besteht. Gereicht
+    /// wird deshalb [`getipptes_zeichen`], dieselbe Quelle, aus der die
+    /// Sprungmarke aus C2 schon schoepft; die Tabelle im Modulkopf sagt, warum
+    /// es zwei Zeichen sind.
     ///
     /// **Kein Abschluss fuer den Ersthelfer mehr.** Bis zur Runde 7 nahm diese
     /// Funktion `ist_editorflaeche` entgegen und stellte den Fokusvorbehalt
@@ -270,7 +294,7 @@ impl Tastenabgriff {
     pub fn einrichten(
         belegung: Belegung,
         protokoll: bool,
-        faenger: impl Fn(Tastendruck) -> bool + 'static,
+        faenger: impl Fn(Tastendruck, Option<char>) -> bool + 'static,
         senke: impl Fn(Eingabe) -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
@@ -470,7 +494,7 @@ fn ereignis_senden(
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
 fn behandeln(
-    faenger: &impl Fn(Tastendruck) -> bool,
+    faenger: &impl Fn(Tastendruck, Option<char>) -> bool,
     senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
@@ -482,10 +506,11 @@ fn behandeln(
         ereignis.modifierFlags().0 as u64,
     );
 
-    // Die Aufnahme der Belegungsansicht, vor allem anderen. Siehe den
-    // Modulkopf: waehrend der Aufnahme ist der Tastendruck Eingabe und kein
-    // Befehl, und auch der Fokusvorbehalt hat hier nichts zu sagen.
-    if faenger(druck) {
+    // Die Aufnahme und die Suche der Belegungsansicht, vor allem anderen.
+    // Siehe den Modulkopf: dort ist der Tastendruck Eingabe und kein Befehl,
+    // und auch der Fokusvorbehalt hat hier nichts zu sagen. Das getippte
+    // Zeichen geht mit, weil `druck.zeichen` kein Leerzeichen fuehren kann.
+    if faenger(druck, getipptes_zeichen(ereignis)) {
         return true;
     }
 
@@ -707,6 +732,33 @@ mod tests {
             mit_klassenpruefung,
             vec!["appkit/ereignisse.rs".to_owned()],
             "die Pruefung auf die Textklassen steht nicht allein in dieser Datei"
+        );
+    }
+
+    /// Keine Ansicht bekommt eine eigene `keyDown:`-Behandlung (C1.14).
+    ///
+    /// **Die Zusage des Modulkopfs, gezaehlt.** Sie traegt seit der Runde 1
+    /// „ein Abgriff, kein zweiter Weg", und die Suche der Runde 7 ist der
+    /// Anlass, sie nachzumessen: eine Ansicht, die selbst Zeichen faengt, waere
+    /// der naechstliegende und falsche Weg dorthin gewesen. Der Faenger ist
+    /// stattdessen um eine zweite Station gewachsen.
+    ///
+    /// **Gezaehlt wird die Ueberschreibung und nicht das Wort.** Die Nadel
+    /// traegt die Form, in der `define_class!` eine Methode anmeldet; die
+    /// Erwaehnung in einem Doc-Kommentar — es gibt mehrere im Baum, eine davon
+    /// im Kopf dieser Datei — zaehlt damit nicht mit. Zusammengesetzt steht sie
+    /// da, weil die Probe in dem Baum liegt, den sie liest.
+    #[test]
+    fn keine_ansicht_ueberschreibt_keydown() {
+        let ueberschreibung = concat!("method(key", "Down:");
+        let gefunden: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(_, inhalt)| inhalt.contains(ueberschreibung))
+            .map(|(name, _)| name)
+            .collect();
+        assert!(
+            gefunden.is_empty(),
+            "diese Dateien fangen Tastendruecke selbst ab: {gefunden:?}"
         );
     }
 

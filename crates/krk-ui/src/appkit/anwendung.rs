@@ -212,7 +212,8 @@ use krk_core::operation::{
 };
 use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
-use krk_core::tasten::{Belegung, Kommando, Tastendruck};
+use krk_core::tasten::normalisierung::ModMaske;
+use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -256,6 +257,84 @@ use super::vorschau::Vorschaufenster;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
+
+/// Welche Station des Faengers einen Tastendruck der Belegungsansicht bekommt.
+///
+/// **Eine vollstaendige Fallunterscheidung ohne Auffangzweig, und ohne eine
+/// Zeile AppKit.** Die Reihenfolge, in der [`faengerstation`] die Faelle
+/// abfragt, **ist** der Vorrang aus C1.15; sie steht als Wert da, damit sie
+/// ohne Fenster zu pruefen ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Faengerstation {
+    /// Erste Station: die Aufnahme bekommt den rohen Tastendruck (C3).
+    ///
+    /// Sie bekommt **jeden**, auch `esc` und jedes Zeichen. Genau das ist der
+    /// Vorrang aus C1.15.
+    Aufnahme,
+    /// Zweite Station: die Eingabetaste geht zum naechsten Treffer (C1.7).
+    NaechsterTreffer,
+    /// Zweite Station: die Ruecktaste kuerzt den Suchtext (C1.8).
+    ZeichenWeg,
+    /// Zweite Station: das Zeichen wird der Suche **angeboten** (C1.1).
+    ///
+    /// Ob sie es nimmt, entscheidet allein
+    /// [`Suchlage::zeichen_anhaengen`](crate::belegungsmodell::Suchlage::zeichen_anhaengen);
+    /// eine zweite Zeichenregel entsteht hier nicht (C1.2). Daran haengt, dass
+    /// `esc` weiterlaeuft und die Ansicht verlaesst: sein Zeichen ist ein
+    /// Steuerzeichen, die Suche weist es ab, und der Faenger verbraucht das
+    /// Ereignis deshalb nicht (C1.13).
+    Suchzeichen(char),
+    /// Keine: der Tastendruck laeuft unveraendert in den Nachschlag.
+    Keine,
+}
+
+/// Die Station, die diesen Tastendruck bekommt, wenn die Belegungsansicht
+/// steht.
+///
+/// `nimmt_auf` ist [`Belegungsquelle::nimmt_auf`], `zeichen` das **getippte**
+/// Zeichen aus dem Ereignis und nicht [`Tastendruck::zeichen`].
+///
+/// Rein und deshalb hier neben dem Delegierten statt in ihm: die Zuordnung ist
+/// ohne Fenster pruefbar, und C1.13 und C1.15 sind damit gewoehnliche
+/// Pruefungen.
+fn faengerstation(nimmt_auf: bool, druck: Tastendruck, zeichen: Option<char>) -> Faengerstation {
+    if nimmt_auf {
+        return Faengerstation::Aufnahme;
+    }
+    // Eine Kombination mit Befehls-, Steuerungs- oder Wahltaste gehoert nicht
+    // der Suche: sie traegt die Kuerzel der drei Schaltflaechen (Cmd+T, Cmd+R,
+    // Cmd+Eingabe) und jedes Kuerzel des Hauptmenues. Die Umschalttaste bleibt
+    // zugelassen, denn sie ist die Grossschreibung eines Zeichens.
+    if druck.maske.enthaelt(ModMaske::BEFEHL)
+        || druck.maske.enthaelt(ModMaske::STEUERUNG)
+        || druck.maske.enthaelt(ModMaske::WAHL)
+    {
+        return Faengerstation::Keine;
+    }
+    if druck.code == CODE_EINGABE {
+        return Faengerstation::NaechsterTreffer;
+    }
+    if druck.code == CODE_RUECKTASTE {
+        return Faengerstation::ZeichenWeg;
+    }
+    match zeichen {
+        Some(zeichen) => Faengerstation::Suchzeichen(zeichen),
+        None => Faengerstation::Keine,
+    }
+}
+
+/// Der Tastencode der Eingabetaste, aus der einen Tastentabelle des Kerns.
+///
+/// Die zweite Station des Faengers erkennt sie daran und nicht am getippten
+/// Zeichen: `\r` ist ein Steuerzeichen und faellt durch die Aufnahmeregel der
+/// Suche, und eine zweite Zeichenregel daneben entstuende sonst.
+const CODE_EINGABE: u16 = code_von_pflicht("return");
+
+/// Der Tastencode der Ruecktaste, aus derselben Tabelle.
+///
+/// Sie heisst dort `delete`, wie auf der Mac-Tastatur; der Code 51 ist
+/// `kVK_Delete`, die Taste ueber dem Backslash, und nicht `kVK_ForwardDelete`.
+const CODE_RUECKTASTE: u16 = code_von_pflicht("delete");
 
 /// Ein Vorgang, der den ungesicherten Stand des Editors verlieren wuerde (C4).
 ///
@@ -1787,8 +1866,8 @@ impl Anwendungsdelegierter {
         Tastenabgriff::einrichten(
             belegung,
             self.ivars().tasten_protokoll,
-            move |druck| match fuer_faenger.load() {
-                Some(selbst) => selbst.tastendruck_fangen(druck),
+            move |druck, zeichen| match fuer_faenger.load() {
+                Some(selbst) => selbst.tastendruck_fangen(druck, zeichen),
                 None => false,
             },
             move |eingabe| match fuer_senke.load() {
@@ -1845,18 +1924,66 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Der Faenger des Ereignisabgriffs: nimmt die Belegungsansicht gerade
-    /// eine Kombination auf, gehoert ihr dieser Tastendruck (C3).
-    fn tastendruck_fangen(&self, druck: Tastendruck) -> bool {
-        let quelle = {
+    /// Der Faenger des Ereignisabgriffs, zwei Stationen hintereinander.
+    ///
+    /// **Erste Station: die Aufnahme** (C3). Nimmt die Belegungsansicht gerade
+    /// eine Kombination auf, gehoert ihr dieser Tastendruck, und zwar jeder,
+    /// auch `esc` und jedes Zeichen.
+    ///
+    /// **Zweite Station: die Suche** (C1 der Runde 7). Steht die
+    /// Belegungsansicht, ohne aufzunehmen, bekommt sie das Suchzeichen, die
+    /// Eingabetaste und die Ruecktaste.
+    ///
+    /// **Die Reihenfolge der zwei Stationen ist der Vorrang aus C1.15 und keine
+    /// dritte Regel.** Waehrend einer Aufnahme kommt die zweite Station nicht
+    /// zum Zug, und deshalb landet ein Suchzeichen dann in der Zuweisung und
+    /// nicht im Suchtext, und ein nacktes `esc` bricht die Aufnahme ab, statt
+    /// die Ansicht zu verlassen.
+    ///
+    /// **Die zweite Station fragt zuerst, ob die Belegungsansicht ueberhaupt
+    /// steht.** Ohne diese Frage liefe jedes getippte Zeichen der ganzen
+    /// Anwendung in ihren Suchtext. Nach dem Ersthelfer fragt sie dagegen
+    /// **nicht**, und das ist kein Vergessen: solange das Blatt steht, haelt
+    /// seine Tabelle den Ersthelferrang, und ein Textfeld gibt es darin nicht.
+    /// Die [`Lage`] entsteht erst hinter dem Nachschlag, in der Senke.
+    ///
+    /// `esc`, die Pfeiltasten und jede Kombination mit Befehls-, Steuerungs-
+    /// oder Wahltaste fallen durch beide Stationen. Fuer `esc` und die Pfeile
+    /// besorgt das die Aufnahmeregel der Suche, die Steuerzeichen und den
+    /// privaten Bereich U+F700 bis U+F8FF abweist; eine eigene Ausnahme fuer
+    /// sie gibt es nicht.
+    ///
+    /// `zeichen` ist das **getippte** Zeichen aus dem Ereignis und nicht
+    /// [`Tastendruck::zeichen`]; der Doc-Kommentar von
+    /// [`Tastenabgriff::einrichten`] sagt, warum es zwei sind.
+    fn tastendruck_fangen(&self, druck: Tastendruck, zeichen: Option<char>) -> bool {
+        let (quelle, nimmt_auf) = {
             let ansicht = self.ivars().belegungsansicht.borrow();
             match ansicht.as_ref() {
-                Some(quelle) if quelle.nimmt_auf() => quelle.clone(),
-                _ => return false,
+                Some(quelle) => (quelle.clone(), quelle.nimmt_auf()),
+                None => return false,
             }
         };
-        quelle.tastendruck_aufnehmen(druck);
-        true
+
+        match faengerstation(nimmt_auf, druck, zeichen) {
+            Faengerstation::Aufnahme => {
+                quelle.tastendruck_aufnehmen(druck);
+                true
+            }
+            Faengerstation::NaechsterTreffer => {
+                quelle.zum_naechsten_treffer();
+                true
+            }
+            Faengerstation::ZeichenWeg => {
+                quelle.suchzeichen_wegnehmen();
+                true
+            }
+            // Die Aufnahmeregel fuer das Zeichen steht in der Suchlage und
+            // nicht hier; verbraucht wird das Ereignis nur, wenn sie es
+            // genommen hat.
+            Faengerstation::Suchzeichen(zeichen) => quelle.suchzeichen_aufnehmen(zeichen),
+            Faengerstation::Keine => false,
+        }
     }
 
     // ------------------------------------------------------------------
@@ -5443,4 +5570,158 @@ pub fn starten(tasten_protokoll: bool, menue_protokoll: bool, messaufgabe: Optio
     anwendung.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
 
     anwendung.run();
+}
+
+#[cfg(test)]
+mod faengerproben {
+    use krk_core::tasten::normalisieren;
+    use krk_core::tasten::normalisierung::roh;
+
+    use crate::belegungsmodell::Suchlage;
+
+    use super::*;
+
+    /// Das Zeichen, das AppKit der Escape-Taste beilegt.
+    const ZEICHEN_ESC: char = '\u{1B}';
+    /// Das Zeichen, das AppKit dem Pfeil ab beilegt (`NSDownArrowFunctionKey`).
+    const ZEICHEN_PFEIL_AB: char = '\u{F701}';
+
+    /// Ein Tastendruck ohne Zusatztaste, ueber seinen Namen in der einen
+    /// Tastentabelle des Kerns.
+    fn druck(name: &str) -> Tastendruck {
+        Tastendruck::neu(code_von_pflicht(name), ModMaske::LEER)
+    }
+
+    /// Ein Tastendruck mit den rohen Zusatztastenbits von AppKit.
+    ///
+    /// Ueber `Tastendruck::neu`, das sein Zeichen aus derselben Tabelle nimmt
+    /// wie den Code; eine von Hand danebengeschriebene Angabe koennte den zwei
+    /// Feldern widersprechen.
+    fn druck_mit(name: &str, rohe_flaggen: u64) -> Tastendruck {
+        Tastendruck::neu(code_von_pflicht(name), normalisieren(rohe_flaggen))
+    }
+
+    /// Waehrend der Aufnahme bekommt die Suche nichts (C1.15).
+    ///
+    /// Der Vorrang ist keine eigene Regel, sondern die Stellung der ersten
+    /// Station vor der zweiten: mit laufender Aufnahme antwortet
+    /// [`faengerstation`] fuer **jeden** Tastendruck `Aufnahme`, fuer das
+    /// Suchzeichen so gut wie fuer die Eingabetaste, die Ruecktaste und `esc`.
+    #[test]
+    fn waehrend_der_aufnahme_bekommt_die_suche_nichts() {
+        let faelle = [
+            (druck("d"), Some('d'), "ein Suchzeichen"),
+            (druck("space"), Some(' '), "die Leertaste"),
+            (druck("return"), Some('\r'), "die Eingabetaste"),
+            (druck("delete"), Some('\u{7F}'), "die Ruecktaste"),
+            (druck("esc"), Some(ZEICHEN_ESC), "esc"),
+            (druck("down"), Some(ZEICHEN_PFEIL_AB), "der Pfeil ab"),
+        ];
+        for (gedrueckt, zeichen, was) in faelle {
+            assert_eq!(
+                faengerstation(true, gedrueckt, zeichen),
+                Faengerstation::Aufnahme,
+                "{was} erreicht waehrend der Aufnahme nicht die Aufnahme"
+            );
+        }
+    }
+
+    /// `esc` behaelt seine zwei Bedeutungen und bekommt keine dritte (C1.13).
+    ///
+    /// Waehrend der Aufnahme bricht es sie ab; sonst wird es der Suche
+    /// angeboten, **die es abweist**, und laeuft deshalb weiter in den
+    /// Nachschlag, wo `abbrechen` die Ansicht verlaesst. Einen Suchtext loescht
+    /// es nie — der Test haelt beide Haelften zusammen, weil die Zusage nur aus
+    /// beiden folgt.
+    #[test]
+    fn esc_bekommt_keine_dritte_bedeutung() {
+        assert_eq!(
+            faengerstation(true, druck("esc"), Some(ZEICHEN_ESC)),
+            Faengerstation::Aufnahme,
+            "waehrend der Aufnahme bricht esc sie ab"
+        );
+        assert_eq!(
+            faengerstation(false, druck("esc"), Some(ZEICHEN_ESC)),
+            Faengerstation::Suchzeichen(ZEICHEN_ESC),
+            "sonst wird esc der Suche angeboten"
+        );
+
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let mut lage = Suchlage::neu();
+        assert!(
+            lage.zeichen_anhaengen('a', &modell),
+            "»a« ist ein Suchzeichen"
+        );
+        let vorher = lage.clone();
+        assert!(
+            !lage.zeichen_anhaengen(ZEICHEN_ESC, &modell),
+            "die Suche nimmt esc auf"
+        );
+        assert_eq!(lage, vorher, "esc hat den Stand der Suche veraendert");
+    }
+
+    /// Die Eingabetaste und die Ruecktaste gehen an die Suche (C1.7, C1.8).
+    #[test]
+    fn die_eingabetaste_und_die_ruecktaste_gehen_an_die_suche() {
+        assert_eq!(
+            faengerstation(false, druck("return"), Some('\r')),
+            Faengerstation::NaechsterTreffer
+        );
+        assert_eq!(
+            faengerstation(false, druck("delete"), Some('\u{7F}')),
+            Faengerstation::ZeichenWeg
+        );
+    }
+
+    /// Eine Kombination mit Befehls-, Steuerungs- oder Wahltaste gehoert nicht
+    /// der Suche; die Umschalttaste dagegen schon.
+    ///
+    /// Daran haengen die drei Schaltflaechenkuerzel der Ansicht und jedes
+    /// Kuerzel des Hauptmenues: liefe Cmd+T in den Suchtext, waere "Zuweisen"
+    /// nicht mehr zu erreichen.
+    #[test]
+    fn eine_kombination_mit_zusatztaste_gehoert_nicht_der_suche() {
+        for (bit, name) in [
+            (roh::BEFEHL, "cmd"),
+            (roh::STEUERUNG, "ctrl"),
+            (roh::WAHL, "opt"),
+        ] {
+            assert_eq!(
+                faengerstation(false, druck_mit("t", bit), Some('t')),
+                Faengerstation::Keine,
+                "{name}+t gehoert nicht der Suche"
+            );
+            assert_eq!(
+                faengerstation(false, druck_mit("r", bit | roh::UMSCHALT), Some('r')),
+                Faengerstation::Keine,
+                "shift+{name}+r gehoert nicht der Suche"
+            );
+        }
+        assert_eq!(
+            faengerstation(false, druck_mit("d", roh::UMSCHALT), Some('D')),
+            Faengerstation::Suchzeichen('D'),
+            "die Umschalttaste ist die Grossschreibung eines Zeichens"
+        );
+    }
+
+    /// Cmd+Eingabe gehoert der Schaltflaeche "Fertig" und nicht der Suche.
+    ///
+    /// Der Fall faellt sonst zwischen die zwei Zweige: die Eingabetaste steht
+    /// oben in [`faengerstation`], die Zusatztastenfrage darueber.
+    #[test]
+    fn cmd_eingabe_gehoert_der_schaltflaeche_fertig() {
+        assert_eq!(
+            faengerstation(false, druck_mit("return", roh::BEFEHL), Some('\r')),
+            Faengerstation::Keine
+        );
+    }
+
+    /// Ein Ereignis ohne Zeichen laeuft weiter, etwa eine reine Zusatztaste.
+    #[test]
+    fn ein_ereignis_ohne_zeichen_laeuft_weiter() {
+        assert_eq!(
+            faengerstation(false, druck("f5"), None),
+            Faengerstation::Keine
+        );
+    }
 }

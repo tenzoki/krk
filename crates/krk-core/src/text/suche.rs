@@ -1,15 +1,33 @@
-//! Suchen und Ersetzen in der geoeffneten Datei (C5).
+//! Suchen und Ersetzen in der geoeffneten Datei (C5), und der eine Ring
+//! darunter.
 //!
 //! ```text
-//!  alle(text, gesucht) ──> Vec<Treffer>
+//!  alle(text, gesucht) ──> Vec<Treffer>          Trefferbereiche in Bytes
 //!            │
 //!            ├──> erster_ab(treffer, versatz)   der erste ab der Schreibmarke
 //!            ├──> naechster(treffer, versatz)   der darauffolgende
 //!            └──> voriger(treffer, versatz)     der davorliegende
 //!
+//!  &[usize]                                      aufsteigende Zeilennummern
+//!            ├──> erster_ab_stelle(stellen, ab)  der erste ab dieser Zeile
+//!            └──> naechster_stelle(stellen, ab)  der darauffolgende
+//!
+//!  alle fuenf ──> umlaufen(anzahl, stelle)       die eine Ringrechnung
+//!
 //!  einen_ersetzen(text, gesucht, ersatz, treffer) ──> Ersetzung
 //!  alle_ersetzen(text, gesucht, ersatz)           ──> Sammelersetzung
 //! ```
+//!
+//! # Der Ring ist von der Einheit unabhaengig, und deshalb steht er einmal
+//!
+//! [`umlaufen`] rechnete bis zur Runde 7 ueber der Trefferliste selbst und war
+//! damit an die Einheit "Trefferbereich in Bytes" gebunden. Es nimmt seither
+//! die **Zahl** der Kandidaten und die gesuchte Stelle; was gezaehlt wird, geht
+//! es nichts an. Die Suche der Belegungsansicht aus C1 der Runde 7 laeuft ueber
+//! aufsteigend sortierte **Zeilennummern** und benutzt denselben Ring ueber
+//! [`erster_ab_stelle`] und [`naechster_stelle`], statt eine zweite Ringregel
+//! danebenzustellen. Der Defekt `260808-1413` ist genau daraus entstanden, dass
+//! eine zweite Stelle den Umlauf selbst rechnete.
 //!
 //! # Gesucht wird buchstaeblich und ueber den ganzen Text
 //!
@@ -100,7 +118,7 @@ pub fn alle(text: &str, gesucht: &str) -> Vec<Treffer> {
 /// Suche um und liefert den ersten des Textes. Ohne Treffer `None`.
 pub fn erster_ab(treffer: &[Treffer], versatz: usize) -> Option<usize> {
     let ab = treffer.partition_point(|kandidat| kandidat.anfang < versatz);
-    umlaufen(treffer, ab)
+    umlaufen(treffer.len(), ab)
 }
 
 /// Der erste Treffer **hinter** `versatz`.
@@ -110,7 +128,7 @@ pub fn erster_ab(treffer: &[Treffer], versatz: usize) -> Option<usize> {
 /// dem letzten geht es beim ersten weiter. Ohne Treffer `None`.
 pub fn naechster(treffer: &[Treffer], versatz: usize) -> Option<usize> {
     let ab = treffer.partition_point(|kandidat| kandidat.anfang <= versatz);
-    umlaufen(treffer, ab)
+    umlaufen(treffer.len(), ab)
 }
 
 /// Der letzte Treffer **vor** `versatz`.
@@ -122,25 +140,63 @@ pub fn voriger(treffer: &[Treffer], versatz: usize) -> Option<usize> {
     // ersten, deshalb steht der Schritt zurueck als Schritt um `len - 1` nach
     // vorn. Auf der leeren Liste ist der Summand 0 und `umlaufen` antwortet
     // `None`, wie es das fuer alle drei tut.
-    umlaufen(treffer, davor + treffer.len().saturating_sub(1))
+    umlaufen(treffer.len(), davor + treffer.len().saturating_sub(1))
 }
 
-/// Die drei Auswahlfunktionen laufen um, und das ist die eine Stelle, an der
-/// sie es tun: die Stelle wird im **Ring** der Trefferliste gerechnet, und die
+/// Der erste Eintrag, der bei `ab` oder dahinter steht, ueber aufsteigend
+/// sortierten Zeilennummern.
+///
+/// Dieselbe Wahl wie [`erster_ab`], nur ueber der anderen Einheit: die Zeile
+/// unter der Auswahl zaehlt mit, sonst uebergaenge eine frisch begonnene Suche
+/// genau die Zeile, auf der der Nutzer steht. Hinter der letzten laeuft sie um.
+/// Geliefert wird die Stelle **in `stellen`** und nicht die Zeilennummer, wie
+/// bei den drei Funktionen darueber auch. Ohne Eintrag `None`.
+///
+/// `stellen` muss aufsteigend sortiert sein; [`slice::partition_point`] liefert
+/// sonst eine beliebige Antwort. Die Suche der Belegungsansicht laeuft die
+/// Zeilen von oben nach unten durch und erfuellt das von selbst.
+pub fn erster_ab_stelle(stellen: &[usize], ab: usize) -> Option<usize> {
+    let stelle = stellen.partition_point(|kandidat| *kandidat < ab);
+    umlaufen(stellen.len(), stelle)
+}
+
+/// Der erste Eintrag **hinter** `ab`, ueber aufsteigend sortierten
+/// Zeilennummern.
+///
+/// Dieselbe Wahl wie [`naechster`], nur ueber der anderen Einheit: die Zeile,
+/// auf der die Auswahl gerade steht, zaehlt nicht mit, sonst bewegte sich die
+/// Eingabetaste nicht. Hinter der letzten geht es bei der ersten weiter. Ohne
+/// Eintrag `None`.
+///
+/// Zur Sortierbedingung siehe [`erster_ab_stelle`].
+pub fn naechster_stelle(stellen: &[usize], ab: usize) -> Option<usize> {
+    let stelle = stellen.partition_point(|kandidat| *kandidat <= ab);
+    umlaufen(stellen.len(), stelle)
+}
+
+/// Die fuenf Auswahlfunktionen laufen um, und das ist die eine Stelle, an der
+/// sie es tun: die Stelle wird im **Ring** der Kandidaten gerechnet, und die
 /// leere Liste hat keine.
 ///
 /// Umlaufen statt anhalten, weil die Zaehlung, die C5 zusagt ("der wievielte
-/// gerade angesteuert ist"), eine Runde durch die Trefferliste beschreibt.
+/// gerade angesteuert ist"), eine Runde durch die Trefferliste beschreibt; die
+/// Suche der Belegungsansicht sagt in C1.7 der Runde 7 dasselbe zu.
+///
+/// **Gefragt ist die Zahl der Kandidaten und nicht die Liste**, und daran
+/// haengt, dass es die eine Stelle bleibt. Ueber `&[Treffer]` gerechnet, wie
+/// bis zur Runde 7, waere der Ring an die Einheit "Trefferbereich in Bytes"
+/// gebunden gewesen, und eine Suche ueber Zeilennummern haette sich einen
+/// eigenen schreiben muessen.
 ///
 /// Der Ring und nicht ein "sonst der erste": beide Richtungen laufen um, und
-/// nur die Restrechnung traegt beide. Wer sie zu `if stelle < len` verkuerzt,
-/// nimmt [`voriger`] seinen Umlauf und zwingt ihn, sich einen eigenen zu
-/// schreiben — genau das war der Defekt `260808-1413`.
-fn umlaufen(treffer: &[Treffer], stelle: usize) -> Option<usize> {
-    if treffer.is_empty() {
+/// nur die Restrechnung traegt beide. Wer sie zu `if stelle < anzahl`
+/// verkuerzt, nimmt [`voriger`] seinen Umlauf und zwingt ihn, sich einen
+/// eigenen zu schreiben — genau das war der Defekt `260808-1413`.
+fn umlaufen(anzahl: usize, stelle: usize) -> Option<usize> {
+    if anzahl == 0 {
         return None;
     }
-    Some(stelle % treffer.len())
+    Some(stelle % anzahl)
 }
 
 /// Ersetzt den angesteuerten Treffer und nennt den naechsten.
@@ -251,6 +307,45 @@ mod tests {
         assert_eq!(erster_ab(&liste, 0), None);
         assert_eq!(naechster(&liste, 0), None);
         assert_eq!(voriger(&liste, 0), None);
+    }
+
+    /// Die leere Liste hat keine Stelle, in keiner der beiden Einheiten.
+    #[test]
+    fn ohne_zeile_waehlt_keine_der_zwei_stellenfunktionen_etwas_aus() {
+        let leer: [usize; 0] = [];
+        assert_eq!(erster_ab_stelle(&leer, 0), None);
+        assert_eq!(naechster_stelle(&leer, 0), None);
+    }
+
+    /// Vor der ersten Zeile faengt die Suche bei der ersten an, und die Zeile
+    /// unter der Auswahl zaehlt fuer [`erster_ab_stelle`] mit.
+    #[test]
+    fn der_erste_ab_einer_zeile_zaehlt_die_zeile_unter_der_auswahl_mit() {
+        let zeilen = [3usize, 7, 11];
+        assert_eq!(erster_ab_stelle(&zeilen, 0), Some(0), "vor der ersten");
+        assert_eq!(erster_ab_stelle(&zeilen, 7), Some(1), "auf einem Treffer");
+        assert_eq!(
+            naechster_stelle(&zeilen, 7),
+            Some(2),
+            "das Weitergehen nicht"
+        );
+    }
+
+    /// Auf der letzten Zeile bleibt [`erster_ab_stelle`] stehen, und
+    /// [`naechster_stelle`] laeuft um.
+    #[test]
+    fn auf_der_letzten_zeile_bleibt_der_erste_stehen_und_der_naechste_laeuft_um() {
+        let zeilen = [3usize, 7, 11];
+        assert_eq!(erster_ab_stelle(&zeilen, 11), Some(2));
+        assert_eq!(naechster_stelle(&zeilen, 11), Some(0), "hinter der letzten");
+    }
+
+    /// Hinter der letzten Zeile laufen beide um: die Ringrechnung ist dieselbe.
+    #[test]
+    fn hinter_der_letzten_zeile_laufen_beide_stellenfunktionen_um() {
+        let zeilen = [3usize, 7, 11];
+        assert_eq!(erster_ab_stelle(&zeilen, 12), Some(0));
+        assert_eq!(naechster_stelle(&zeilen, 12), Some(0));
     }
 
     #[test]
