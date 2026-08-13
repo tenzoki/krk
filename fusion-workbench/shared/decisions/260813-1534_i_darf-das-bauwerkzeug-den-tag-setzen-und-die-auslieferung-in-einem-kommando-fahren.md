@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator (auf Anweisung des Nutzers)
 **Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-0939_*_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md` (der überholte Entscheid); `shared/issues/260813-1515_*_die-auslieferungspruefung-schlaegt-nach-jeder-agentensitzung-an-weil-vier-werkbankdateien-verfolgt-sind.md`; `xtask/src/release.rs`; `README.md`, Abschnitt „Versionsstufen"
 
@@ -41,6 +41,6 @@ Möglichkeit 1, vom Nutzer am 260813-1534 gewählt.
 
 ---
 Answered: Der Nutzer am 260813-1534 wörtlich: „Wir nehmen den Entscheid einfach zurück, das Werkzeug soll taggen, releasen und fertig." Damit gilt Möglichkeit 1. Der frühere Entscheid `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-0939_s_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md` ist überholt.
-Implemented:
+Implemented: 801f5cc — ./release.sh <zahl> setzt die Zahl, traegt sie ein, taggt und liefert aus; die Logik in xtask/src/version.rs und xtask/src/git.rs, die Huellen in Makefile (Ziel `ausliefern`) und release.sh.
 Deferred:
 Superseded by:
