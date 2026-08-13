@@ -40,3 +40,24 @@ Die vorige Sitzung (shared/history/260813-0807-orchestrator-session.md) hat Setu
 ## Die fünfte Frage: die Ausnahmeliste (Nutzer, 260813-1125)
 
 **Möglichkeit 1** — die Ausnahmeliste `immer_erreichbar` hebt auch die neue Schlüsselfensterfrage auf. `beenden` und `fenster_schliessen` kommen weiter durch, solange der Über-Dialog oder der Freigabewähler vorn steht. Der Grund ist die ausgeschriebene Randbedingung des Spec, kein Verlust gegenüber heute: Cmd+Q beendet KRK heute auch vor dem Freigabewähler der Runde 6. Die Ausnahmeliste behält damit eine Bedeutung, die in einen Satz passt — sie hebt jede Sperre auf, die nach der Lage fragt, und keine, die nach dem Wirkungsbereich fragt. Cmd+W auf `tab_schliessen` steht nicht auf der Liste und bleibt vor einem fremden Schlüsselfenster gesperrt.
+
+## Turn 1 — Bilanz
+
+Vier Stränge gebaut, sechs Commits, davon vier am Baum. 15 von 16 Planschritten stehen auf `[DONE]`; offen bleibt allein E2, die Abnahme am Bündel.
+
+| Strang | Commit | Inhalt |
+|---|---|---|
+| A | `c3ada4d` | Die Zulässigkeitsregel fragt nach dem Schlüsselfenster; Tafel von 140 auf 280 Fälle |
+| D | `f9e5137` | Tag-Prüfung als Station 1, README nennt die Versionsstufen; xtask von 49 auf 60 Proben |
+| B | `6eb0628` | Titelzusatz-Modul, Titel auf leere Zeichenkette, Modulliste von 27 auf 28 |
+| C | `21dbc59` | Über-KRK-Eintrag als Sonderposten ohne Kürzel; E1 mit erfüllt |
+
+`make check` exit 0 nach jedem Strang und am Ende über den ganzen Baum.
+
+**Die Durchsicht hat einen hohen Befund gefunden, und er hält die Runde auf.** `fenster_einblenden` (Cmd+N) ist nach `Shift+Cmd+W` nicht mehr erreichbar: die neue Schlüsselfensterbedingung faltet „fremdes Fenster vorn" und „gar kein Fenster" zu demselben Wert, und der Befehl steht nicht auf der Ausnahmeliste, obwohl er der Rückweg aus genau dieser Lage ist. Das bricht die Randbedingung „kein Verlust gegenüber heute" und C7 der Runde 1. Datensatz: `issues/260813-1258_o_fenster-einblenden-ist-nach-dem-schliessen-des-fensters-nicht-mehr-erreichbar.md`.
+
+Drei weitere Befunde der Durchsicht sind niedrig, dazu vier aus dem Bau. Acht offene Defekte im Circle insgesamt.
+
+**Die vier Abweichungen der Bauer vom Planwortlaut sind einzeln geprüft und alle vier richtig.** Der Tagvergleich auf Zeilengleichheit deckt `v0.1.0-rc1` korrekt nicht, gesetzt ist `NSLayoutAttribute::Left` und nicht `Leading`, und neun von zehn SDK-Angaben im Modulkopf stimmen wörtlich samt Zeilennummer.
+
+**Coherence, drei Kanten.** Artifact↔Grounding: 8 Defekte gefiltert, einer davon hoch. Artifact↔Directive: die Commits bewegen sich auf die Directive zu, alle sechs Fähigkeiten des Spec sind gebaut. Grounding↔Directive: 5 beantwortete Entscheide berührt, keiner im Widerspruch. Aggregat: `review-needed` wegen des hohen Befunds.

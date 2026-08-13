@@ -657,3 +657,9 @@
 {"ts":"2026-08-13T10:33:13","event":"task_done","turn":1,"task":"B","agent":"coder","detail":"B1-B3 fertig, make check exit 0"}
 {"ts":"2026-08-13T10:33:13","event":"commit","turn":1,"task":"B","detail":"6eb0628 Titelleiste traegt links Namen und Version"}
 {"ts":"2026-08-13T10:33:13","event":"task_start","turn":1,"task":"C","agent":"coder","detail":"C1-C3 menuemodell.rs, menue.rs, titelzusatz.rs"}
+{"ts":"2026-08-13T10:47:27","event":"task_done","turn":1,"task":"C","agent":"coder","detail":"C1-C3 und E1 fertig, make check exit 0"}
+{"ts":"2026-08-13T10:47:27","event":"commit","turn":1,"task":"C","detail":"21dbc59 Ueber KRK ganz oben im Anwendungsmenue"}
+{"ts":"2026-08-13T10:47:27","event":"review_start","turn":1,"agent":"coderev","detail":"9 Quelldateien aus 59b0a6c..HEAD; carried=(not recorded), uncovered=6"}
+{"ts":"2026-08-13T11:04:11","event":"review_done","turn":1,"agent":"coderev","detail":"4 Befunde gefiltert, 1 hoch: fenster_einblenden nach Shift+Cmd+W unerreichbar"}
+{"ts":"2026-08-13T11:04:11","event":"coherence_review","turn":1,"detail":"verdict=review-needed; Artifact<->Grounding: 8 Defekte, 1 hoch. Artifact<->Directive: auf die Directive zu, alle sechs Faehigkeiten gebaut. Grounding<->Directive: 5 beantwortete Entscheide, kein Widerspruch."}
+{"ts":"2026-08-13T11:04:11","event":"turn_end","turn":1,"detail":"15/16 Schritte erledigt, 4 Commits am Baum, 4 Befunde gefiltert"}
