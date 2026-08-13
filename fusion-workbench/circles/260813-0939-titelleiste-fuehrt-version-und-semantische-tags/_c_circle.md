@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** closed
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md
 **Active session history:** circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md
@@ -155,3 +155,21 @@ entdecken.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Closure note
+
+**Geschlossen als kohärenter Abschluss (`_c_`) am 260813-1415.** Die erste Runde dieses Projekts, die nicht beschränkt endet.
+
+**Was den Unterschied macht.** Die sieben Runden davor endeten alle aus demselben Grund beschränkt: der Abnahmelauf verlangt KRK im Vordergrund und ist damit Nutzerarbeit, die kein Agent fahren kann. In dieser Runde hat der Nutzer sie gefahren. Alle elf Beobachtungen mit Bündelanteil sind am laufenden `target/KRK.app` bestanden (`history/260813-1405-abnahmeliste-e2.md`, gefahren am 260813-1410). Damit sind alle 59 Abnahmekriterien des Spec abgenommen bis auf eines: C3.15, der Tag `v0.1.0`, den der Nutzer auf den Abschlusscommit setzt.
+
+**Was die Runde gebaut hat.** Die Titelleiste trägt links einen eigenen Bereich mit `KRK 0.1.0`, gebaut über `NSTitlebarAccessoryViewController` im neuen Modul `crates/krk-ui/src/appkit/titelzusatz.rs`; der absolute Pfad steht weiter mittig und ungekürzt, wie C11 der Runde 2 es zusagt. Dieselbe Zahl steht im Standard-Über-Dialog von macOS, den ein Menüeintrag ohne Kürzel ganz oben im Anwendungsmenü öffnet. Verbindlich wird sie durch semantische Versionstags: `cargo xtask release` bricht als erste Station ab, solange HEAD keinen Tag `v<version>` trägt oder eine verfolgte Datei geändert ist, und ein Abschnitt in `README.md` sagt, wann welche Stufe steigt. Den Tag setzt der Nutzer, nie das Werkzeug. Dazu hat die Runde die Zulässigkeitsregel um eine vierte Bedingung erweitert: steht ein fremdes Fenster vorn, wirkt kein Befehl außer denen auf der Ausnahmeliste.
+
+**Ein Nebenertrag, der nicht in der Directive stand.** Der Defekt der Runde 6 zur Blattregel am Freigabedialog (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_die-blattregel-sieht-den-freigabedialog-nicht.md`) ist mit derselben Beobachtung geschlossen worden — und die Vermutung des Plans dazu ist widerlegt statt bestätigt. Der Wähler entsteht über `showRelativeToRect:` als Verfolgungsschleife, und der Plan schloss daraus, die neue Bedingung erreiche ihn nicht. Am laufenden Bündel kommt der Befehl trotzdem nicht durch.
+
+**Eine Regression, die die Runde selbst erzeugt und in Turn 2 behoben hat.** Die neue Bedingung faltete „ein fremdes Fenster steht vorn" und „gar kein Fenster steht vorn" zu demselben Wert; nach `Shift+Cmd+W` war `Cmd+N` tot und nur noch das Dock-Symbol führte zurück. Die Durchsicht hat das gefunden, `ed0388e` hat es behoben, und Beobachtung 5 der Abnahme bestätigt die Behebung am laufenden Bündel. Die Faltung selbst besteht fort; sie fällt an keinem Befehl mehr auf, den ein Nutzer als Verlust bemerkt.
+
+**Was offen bleibt.** 16 Defekte im Circle. Keiner betrifft das Verhalten der Anwendung; der Schwerpunkt liegt bei Prosa, die dem Code hinterherläuft — Zahlen in Modulköpfen, Aufzählungen, die eine Zahl nennen, die eine andere Datei geändert hat. Zwei wiegen mehr als die übrigen: die Aufruferzahl an `fokus` steht in Plan, Baum und Durchsicht auf fünf und ist sechs, und die Diagrammbefunde an Spec und Plan sind nie behoben worden, obwohl das Sitzungsprotokoll sie als erledigt mitführte. Neun Abnahmekriterien tragen die Kennzeichnung `(Probe)` und haben keine; sie sind am Text nachgelesen, nicht maschinell abgenommen.
+
+**Bilanz.** Zwei Turns, elf Commits, 16 von 16 Planschritten auf `[DONE]`. `make check` exit 0 mit 1025 Proben. Fünf Entscheidungsdatensätze, vier davon umgesetzt; der fünfte wartet auf den Tag. Sitzungsprotokoll: `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md`. Abgleich: `history/260813-1345-reconciliation.md`.
+
+**Der eine offene Schritt für den Nutzer.** `git tag v0.1.0 <abschlusscommit>` — danach ist auch C3.15 erfüllt und der grüne Fall der neuen Prüfung an einem echten Lauf zu sehen.

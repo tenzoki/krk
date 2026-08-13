@@ -82,3 +82,6 @@ Baum weiterhin nicht zu unterscheiden.
 Ein Nebensatz jenes Nachtrags ist inzwischen falsch (die Ausnahmeliste führt seit `ed0388e`
 drei Befehle, nicht zwei); abgelegt als
 `260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md`.
+
+---
+Resolved: Widerlegt statt behoben. Am 260813-1410 am laufenden Bündel gemessen (Abnahme E2, Beobachtung 11, `history/260813-1405-abnahmeliste-e2.md`): Freigabewähler über `Shift+Cmd+S` geöffnet, `Cmd+W` gedrückt, es geschieht nichts. Die Schlüsselfensterbedingung fängt den Fall also doch, obwohl der Wähler über `showRelativeToRect:` als Verfolgungsschleife entsteht. Die Vermutung dieses Befundes trifft nicht zu; der Defekt der Runde 6 ist mit demselben Lauf geschlossen worden.

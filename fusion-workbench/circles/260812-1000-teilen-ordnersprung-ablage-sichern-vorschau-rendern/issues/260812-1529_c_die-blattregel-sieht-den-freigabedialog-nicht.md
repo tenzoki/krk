@@ -112,3 +112,6 @@ Geschieht nichts, ist die Frage beantwortet und der Datensatz wird mit dem
 Ergebnis geschlossen; schließt sich der Tab, bleibt er offen und trägt danach
 einen gemessenen Befund statt einer Vermutung. Sie ist Nutzerarbeit, weil sie
 KRK im Vordergrund verlangt.
+
+---
+Resolved: Am 260813-1410 am laufenden Bündel gemessen, im Rahmen der Abnahme E2 der achten Runde (`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1405-abnahmeliste-e2.md`, Beobachtung 11). Freigabewähler über `Shift+Cmd+S` geöffnet, dann `Cmd+W` gedrückt: es geschieht nichts, kein Tab schließt sich. Die in Turn 1 der achten Runde gebaute Schlüsselfensterbedingung (`zulaessigkeit::zulaessig`, viertes Feld `schluesselfenster_gehoert_krk`, Commit `c3ada4d`) fängt den Fall also, obwohl der Wähler über `showRelativeToRect:` als Verfolgungsschleife und nicht als Fenster entsteht. Die Vermutung des Plans in Schritt A3, sie erreiche ihn nicht, ist damit widerlegt statt bestätigt.

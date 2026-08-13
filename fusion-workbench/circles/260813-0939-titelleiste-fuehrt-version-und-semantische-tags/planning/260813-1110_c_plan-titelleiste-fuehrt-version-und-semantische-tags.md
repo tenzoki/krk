@@ -1,7 +1,7 @@
 # Implementation Plan: Die Titelleiste führt Namen und Version, semantische Versionstags decken die Zahl
 
 **Date:** 2026-08-13
-**Status:** Partially Complete
+**Status:** Complete
 **Spec:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md`
 **Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
 **Grundlage erhoben:** 260813-1110, am Baum unter `crates/`, `xtask/`, `resources/`, `README.md`, am SDK und an `~/.cargo/registry`
@@ -381,7 +381,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - **`clippy` ist hier die eigentliche Prüfung und nicht `build`.** `unused_must_use` ist erst unter `-D warnings` ein Fehler; `cargo build` und `cargo test` laufen ohne ihn grün.
   - Kein `make bundle` und kein `cargo xtask bundle` während der Runde. Unter `target/KRK.app` liegt ein beglaubigtes Bündel, und jeder Entwicklungsbau überschreibt es. Dieselbe Randbedingung trug schon die Runde 7.
 
-**E2. Die Abnahme am Bündel und der erste Tag**
+**E2. [DONE] Die Abnahme am Bündel und der erste Tag**
 - Executor: `coder` (bereitet vor und schreibt auf), die Beobachtungen selbst sind **Nutzerarbeit**
 - Files: `fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/`, der Defektdatensatz aus A3
 - Erfüllt: C1.1 (Lage), C1.6 (Klick), C1.9 (Bild), C1.10, C1.11 (hell und dunkel), C2.9 (Bild), C3.15, C5.1 (Bild), C5.3 (Fenster), C5.5, C5.6
