@@ -26,13 +26,19 @@ fusion-workbench/.fusion-setup
 # Schreibrest des Ereignisprotokolls, versehentlich mit 4e86c02 eingecheckt.
 # Das Protokoll selbst ist eine Aufzeichnung und bleibt verfolgt.
 fusion-workbench/orchestrator-events.jsonl.tmp
-# .guard-state ist nicht eine Sache: die Zaehler und Drosselspeicher darin werden
-# an Ort und Stelle neu geschrieben, das Ereignisprotokoll daneben wird nur
-# angehaengt und haelt fest, was der Waechter wann angehalten hat. Deshalb ein
-# Muster mit Wiederaufnahme und nicht das Verzeichnis selbst: waere das
-# Elternverzeichnis ausgeschlossen, bliebe jedes "!" darunter wirkungslos.
-fusion-workbench/.guard-state/*
-!fusion-workbench/.guard-state/events.jsonl
+# .guard-state ganz, das Ereignisprotokoll eingeschlossen. Die Zaehler darin sind
+# Live-Zustand; das Protokoll ist eine Aufzeichnung, und trotzdem steht es hier.
+# Die Konventionen sehen das ausdruecklich vor: was den Beleg sichert, ist nicht
+# das Verfolgen der lebenden Datei, sondern /fusion:archive, das sie datiert ins
+# Archiv rollt und eine leere neue anlegt. Die gerollten Kopien sind gewoehnliche
+# archivierte Dateien und werden verfolgt. Das fusion-Repository selbst faehrt
+# diese Einrichtung.
+#
+# Der Preis steht dazu: laeuft /fusion:archive nie, ist der Beleg nur lokal. Der
+# Gewinn ist, dass der Arbeitsbaum nach einer Sitzung sauber bleibt und
+# `cargo xtask release` nicht an einer Datei anschlaegt, die mit dem Buendel
+# nichts zu tun hat.
+fusion-workbench/.guard-state/
 
 # Rust: Bauergebnisse. Cargo.lock bleibt versioniert, weil der Workspace
 # Binaerprogramme baut und jeder Bau dieselben Abhaengigkeiten treffen soll.
