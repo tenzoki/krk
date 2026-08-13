@@ -51,7 +51,9 @@ faehrt auf den Empfehlungen:
 
 ## Turn log
 
-(noch keiner)
+- Turn 1 (Sitzung 260813-0040): Commits ca66c39..a34bf17. Alle fuenfzehn Planschritte auf [DONE], der Baum gruen ueber 19 Ziele mit 1000 Proben. Coherence-Urteil: ok. Durchsichten: reviews/260813-0532-ontorev-belegungsdatei-weitere-instanz.md und reviews/260813-0540-coderev-turn-1-runde-7-rust-anteil.md, Bereich ca66c39..40b5fb0. 18 Defekte abgelegt, keiner kritisch oder hoch. Vor der Ausfuehrung haben drei Diagrammpruefungen ein Loch in der tragenden Regel, eine falsche Zaehlprobe und zwei falsche Verweismengen gefunden. Sitzungsprotokoll: shared/history/260813-0040-orchestrator-session.md
+
+- Turn 2 (Sitzung 260813-0040): Commits a34bf17..dff167a. Ein Reparatur-Turn ohne Planschritte: achtzehn der zweiundzwanzig Durchsichtsbefunde behoben, 1003 Proben ueber 19 Ziele. Der schwerste war ein Loch im eigenen Mechanismus der Runde, der Messmodus schrieb die Sitzung ohne Sitzungsrecht; behoben am Typ. Drei Befunde teilten eine Ursache, und ihre Behebung hat die Bauform der Zaehlproben dieses Projekts geaendert: nach dem Gegenstand suchen statt nach dem Namen. Vier Datensaetze bleiben offen, einer davon gehoert dem Nutzer. Coherence-Urteil: ok. Sitzungsprotokoll: shared/history/260813-0040-orchestrator-session.md
 
 ## Closure note
 
