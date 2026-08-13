@@ -477,3 +477,161 @@
 {"ts":"2026-08-11T20:21:03","event":"bounded_closure_proposed","turn":2,"detail":"Abnahmelauf verlangt KRK im Vordergrund; 62 Kriterien offen, davon 23 vom Baum getragen"}
 {"ts":"2026-08-11T20:21:03","event":"reconciliation","turn":2,"detail":"1 Fund in 12 geprueften Behebungen; 5 veraltete Stellen in CLAUDE.md"}
 {"ts":"2026-08-11T20:21:03","event":"session_end","turn":2,"detail":"16 Commits, 5 Planschritte, 12 Defekte geschlossen, Bounded Closure"}
+{"ts":"2026-08-12T00:52:49","event":"session_start","history_file":"shared/history/260812-0252-orchestrator-session.md","detail":"Setup complete; directive not yet stated; no active Circle; domain=code; max_turns=5"}
+{"ts":"2026-08-12T01:06:42","event":"session_start","history_file":"shared/history/260812-0306-orchestrator-session.md","detail":"Directive not yet set; mode unresolved; domain=code; no active Circle"}
+{"ts":"2026-08-12T02:27:50","event":"scope_resolved","detail":"mode=plan; Circle 260811-1304-statusleiste-mit-bereichsschaltern aktiviert; 8 Planschritte; Agenten coder+ontocoder"}
+{"ts":"2026-08-12T02:27:50","event":"planner_done","detail":"circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md"}
+{"ts":"2026-08-12T02:27:50","event":"queue_built","detail":"8 Aufgaben, 0 blockiert am Start"}
+{"ts":"2026-08-12T02:27:50","event":"turn_start","turn":1,"detail":"Schritte 1-3: proportionale Breitenregel, zweite Abweisung, linkes Dateifenster"}
+{"ts":"2026-08-12T02:52:48","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"5e17c9e proportionale Breitenregel"}
+{"ts":"2026-08-12T03:10:12","event":"task_done","turn":1,"task":"S2","agent":"coder","detail":"a2ea876 Abweisung an den Mindestbreiten + Defekt 260812-0439 behoben"}
+{"ts":"2026-08-12T03:25:06","event":"task_done","turn":1,"task":"S3","agent":"coder","detail":"8ffaac2 linkes Dateifenster ausblendbar"}
+{"ts":"2026-08-12T03:25:57","event":"turn_end","turn":1,"detail":"3 Aufgaben erledigt, 3 Commits, 2 Defekte offen dazu, 1 behoben"}
+{"ts":"2026-08-12T03:25:57","event":"turn_start","turn":2,"detail":"Schritte 4-6: Belegung, zwei Umschaltbefehle, Spalte als reine Aufzaehlung"}
+{"ts":"2026-08-12T04:21:40","event":"task_done","turn":2,"task":"S4-S7","agent":"coder+ontocoder","detail":"90b02d4 Belegung, Umschaltbefehle, Spalte, Spaltensichtbarkeit"}
+{"ts":"2026-08-12T04:21:40","event":"review_done","turn":2,"agent":"coderev","detail":"4 Befunde abgelegt, 2 mittel; range 5aa22df..8ffaac2"}
+{"ts":"2026-08-12T04:21:40","event":"turn_end","turn":2,"detail":"4 Aufgaben erledigt, 1 Commit, 2 Defekte geschlossen, 4 aus der Durchsicht offen"}
+{"ts":"2026-08-12T04:22:01","event":"turn_start","turn":3,"detail":"Vier Befunde der Durchsicht beheben"}
+{"ts":"2026-08-12T04:22:13","event":"state_drift","turn":3,"detail":"Turn-Log des Circle-Datensatzes stand bei 1 Eintrag, waehrend 3 Turns gelaufen sind; Eintraege fuer Turn 2 und 3 nachgetragen. Ursache: der Eintrag wird am Turn-Ende geschrieben, die Messung greift am Turn-Anfang."}
+{"ts":"2026-08-12T04:55:49","event":"task_done","turn":3,"task":"Befunde","agent":"coder","detail":"026c665 vier Befunde behoben"}
+{"ts":"2026-08-12T05:14:47","event":"task_done","turn":3,"task":"S8","agent":"coder","detail":"0342445 Bereichsleiste mit acht Schaltern"}
+{"ts":"2026-08-12T05:51:04","event":"review_done","turn":4,"agent":"coderev","detail":"zweite Durchsicht 8ffaac2..0342445: 1 mittel, 3 niedrig, alle behoben"}
+{"ts":"2026-08-12T05:51:04","event":"task_done","turn":4,"task":"Befunde-2","agent":"coder+ontocoder","detail":"caeaa18 vier Befunde der zweiten Durchsicht"}
+{"ts":"2026-08-12T05:51:23","event":"turn_end","turn":3,"detail":"3 Aufgaben, 3 Commits; alle acht Planschritte stehen"}
+{"ts":"2026-08-12T05:51:23","event":"turn_start","turn":4,"detail":"Vier Befunde der zweiten Durchsicht"}
+{"ts":"2026-08-12T05:51:23","event":"turn_end","turn":4,"detail":"1 Aufgabe, 1 Commit; vier Befunde behoben, einer neu abgelegt"}
+{"ts":"2026-08-12T05:51:55","event":"state_drift","turn":4,"detail":"Das Turn-Log des Circle-Datensatzes stand bei 1 Eintrag, waehrend 4 Turns gelaufen sind. Zwei Schreibversuche waren still danebengegangen, weil ihr Ankertext nicht traf und der Ersatz nicht geprueft wurde. Eintraege fuer Turn 2 bis 4 nachgetragen und die Zahl der Eintraege danach gezaehlt."}
+{"ts":"2026-08-12T06:11:05","event":"reconciliation","turn":4,"detail":"1 Abweichung (C4.9), 1 neuer Defekt, 8 veraltete Stellen in CLAUDE.md benannt"}
+{"ts":"2026-08-12T06:11:05","event":"bounded_closure_proposed","turn":4,"detail":"13 Abnahmekriterien verlangen KRK im Vordergrund; Nutzerarbeit. Vom Orchestrator autonom angenommen."}
+{"ts":"2026-08-12T06:21:35","event":"portfolio_refresh","turn":4,"detail":"circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md; shared/history/260812-0816-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-12T06:22:38","event":"session_end","detail":"Bounded Closure; 4 Turns, 13 Commits, 12 Defekte geschlossen, 5 offen, 14 Entscheidungen umgesetzt"}
+{"ts":"2026-08-12T08:55:48","event":"session_start","history_file":"circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md","detail":"Runde 6; Directive aus dem Circle-Datensatz; domain=code; max_turns=5"}
+{"ts":"2026-08-12T09:20:17","event":"scope_resolved","detail":"Runde 6: fuenf Faehigkeiten (Teilen, Ordnersprung, Ablage sichern, Vorschau rendern, Statuszeile ueber die volle Breite); 14 Fragen beantwortet"}
+{"ts":"2026-08-12T09:55:16","event":"planner_done","detail":"11 Schritte, 5 Faehigkeiten, 62 Kriterien"}
+{"ts":"2026-08-12T09:55:16","event":"queue_built","detail":"11 Aufgaben; S1, S2, S4 und S7 ohne Vorbedingung"}
+{"ts":"2026-08-12T09:55:16","event":"turn_start","turn":1,"detail":"Schritt 1: beschaedigte Ablagedatei zur Seite legen"}
+{"ts":"2026-08-12T10:08:00","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"755571a beschaedigte Ablagedatei zur Seite legen"}
+{"ts":"2026-08-12T11:00:58","event":"session_start","history_file":"circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md","detail":"resumed after interruption; Runde 6, mode plan, Turn 1 of 5, 1 of 11 steps done"}
+{"ts":"2026-08-12T11:00:58","event":"state_drift","turn":1,"detail":"Circle Turn log: surface=0 entries, record=1 turns run (Turn 1 in flight, not ended; entry due at Turn end). Other four rows agree."}
+{"ts":"2026-08-12T11:08:58","event":"gate_hit","turn":1,"task":"S2","agent":"ontocoder","detail":"ontocoder task: resources/default-keymap.toml gets ordner_der_datei"}
+{"ts":"2026-08-12T11:45:46","event":"gate_response","turn":1,"task":"S2","detail":"proceed; user chose to combine S2 and S4 into one ontocoder dispatch"}
+{"ts":"2026-08-12T11:45:46","event":"task_start","turn":1,"task":"S2+S4","agent":"ontocoder","detail":"resources/default-keymap.toml: ordner_der_datei + teilen"}
+{"ts":"2026-08-12T11:53:29","event":"commit","turn":1,"task":"S2+S4","detail":"95b2dfa feat(keymap): ordner_der_datei und teilen in der Auslieferungsbelegung"}
+{"ts":"2026-08-12T11:53:29","event":"task_done","turn":1,"task":"S2+S4","agent":"ontocoder","detail":"95b2dfa"}
+{"ts":"2026-08-12T11:53:41","event":"task_start","turn":1,"task":"S3","agent":"coder","detail":"angezeigtedatei.rs + OrdnerDerDatei"}
+{"ts":"2026-08-12T12:10:36","event":"commit","turn":1,"task":"S3","detail":"8bc84ce feat(ui): Ordnersprung in den Ordner der angezeigten Datei"}
+{"ts":"2026-08-12T12:10:36","event":"task_done","turn":1,"task":"S3","agent":"coder","detail":"8bc84ce; 3 Entscheidungen _a_ -> _i_"}
+{"ts":"2026-08-12T12:10:36","event":"task_start","turn":1,"task":"S5","agent":"coder","detail":"appkit/teilen.rs, NSSharingServicePicker"}
+{"ts":"2026-08-12T12:39:32","event":"commit","turn":1,"task":"S5","detail":"90b60d8 feat(ui): shift+cmd+s an die Freigabedienste"}
+{"ts":"2026-08-12T12:39:32","event":"task_done","turn":1,"task":"S5","agent":"coder","detail":"90b60d8; 2 Entscheidungen _a_ -> _i_; 1 Defekt abgelegt"}
+{"ts":"2026-08-12T12:39:32","event":"task_start","turn":1,"task":"S6","agent":"coder","detail":"Kontextmenue an Tabelle, Editor, Vorschau"}
+{"ts":"2026-08-12T13:17:51","event":"commit","turn":1,"task":"S6","detail":"d6eff4b feat(ui): Kontextmenue an fuenf Ansichten, Rechtsklick setzt die Auswahl"}
+{"ts":"2026-08-12T13:17:51","event":"task_done","turn":1,"task":"S6","agent":"coder","detail":"d6eff4b; 2 Entscheidungen _a_->_i_, 1 Defekt _o_->_c_, 1 Frage neu"}
+{"ts":"2026-08-12T13:18:13","event":"review_start","turn":1,"agent":"coderev","detail":"15 code files, range 4d4402d..d6eff4b, 7 commits"}
+{"ts":"2026-08-12T13:18:13","event":"review_start","turn":1,"agent":"ontorev","detail":"resources/default-keymap.toml, range 4d4402d..d6eff4b"}
+{"ts":"2026-08-12T13:30:56","event":"review_done","turn":1,"agent":"ontorev","detail":"3 Defekte abgelegt, alle Prosa in default-keymap.toml; Belegung und Deckung halten"}
+{"ts":"2026-08-12T13:37:13","event":"review_done","turn":1,"agent":"coderev","detail":"5 Defekte abgelegt; range 4d4402d..d6eff4b covered"}
+{"ts":"2026-08-12T13:39:40","event":"coherence_review","turn":1,"detail":"verdict ok | Artefakt-Grundlage: 8 Defekte neu, 1 geschlossen, zwei treffen Abnahmekriterien | Artefakt-Directive: 5 Commits, drei von fuenf Faehigkeiten stehen | Grundlage-Directive: 8 Entscheidungen umgesetzt, 1 neue Frage, kein Widerspruch"}
+{"ts":"2026-08-12T13:39:40","event":"gate_response","turn":1,"detail":"coherence gate: weitermachen"}
+{"ts":"2026-08-12T13:39:40","event":"turn_end","turn":1,"detail":"6 Schritte erledigt, 5 Commits, 8 Defekte aus den Durchsichten"}
+{"ts":"2026-08-12T13:40:16","event":"commit","turn":1,"task":"Turn-1-Abschluss","detail":"34ab5b5 chore(workbench): Turn 1 durchgesehen"}
+{"ts":"2026-08-12T13:40:16","event":"turn_start","turn":2,"detail":"Schritte 7 bis 11, Vorschau und Statuszeile"}
+{"ts":"2026-08-12T13:40:32","event":"state_drift","turn":2,"detail":"Circle Turn log: surface=1 entries, record=2 turns run. Turn 2 ist gerade gestartet und noch nicht gelaufen; sein Eintrag faellt am Turn-Ende an. Die vier uebrigen Zeilen stimmen."}
+{"ts":"2026-08-12T13:40:32","event":"task_start","turn":2,"task":"S7","agent":"coder","detail":"appkit/textmerkmale.rs, Umzug aus editor.rs"}
+{"ts":"2026-08-12T13:59:46","event":"commit","turn":2,"task":"S7","detail":"9e089c0 refactor(ui): textmerkmale.rs als eigenes Modul"}
+{"ts":"2026-08-12T13:59:46","event":"task_done","turn":2,"task":"S7","agent":"coder","detail":"9e089c0; 1 Defekt abgelegt (NSLayoutManager 10.7)"}
+{"ts":"2026-08-12T13:59:46","event":"task_start","turn":2,"task":"S8","agent":"coder","detail":"markdown.rs, pulldown-cmark, Inhalt::Markdown"}
+{"ts":"2026-08-12T14:31:55","event":"commit","turn":2,"task":"S8","detail":"b4d9de2 feat(ui): Markdown zerlegen, dritter Weg der Vorschau"}
+{"ts":"2026-08-12T14:31:55","event":"task_done","turn":2,"task":"S8","agent":"coder","detail":"b4d9de2; 432 Proben; linkfarbe weicht gemessen vom Plan ab"}
+{"ts":"2026-08-12T14:31:55","event":"commit","turn":2,"task":"Nebenbefund","detail":"bbcd7dd docs(workbench): Signaturmeldung des Buendelbaus"}
+{"ts":"2026-08-12T14:31:55","event":"state_drift","turn":2,"detail":"progress.commits sagte 9, git zaehlt 11; Circle Turn log 1 Eintrag gegen 2 gestartete Turns. Der Zaehler ist mit diesem Schreibvorgang nachgezogen; der Turn-2-Eintrag faellt am Turn-Ende an."}
+{"ts":"2026-08-12T14:32:22","event":"task_start","turn":2,"task":"S9","agent":"coder","detail":"Vorschau zeigt Auszeichnungen, faerbt Quelltext nach"}
+{"ts":"2026-08-12T15:08:08","event":"commit","turn":2,"task":"S9","detail":"6702800 feat(ui): Vorschau zeigt Auszeichnungen"}
+{"ts":"2026-08-12T15:08:08","event":"task_done","turn":2,"task":"S9","agent":"coder","detail":"6702800; 434 Proben; 2 Defekte, 1 Frage abgelegt"}
+{"ts":"2026-08-12T15:08:08","event":"task_start","turn":2,"task":"S10","agent":"coder","detail":"eine Statuszeile ueber die volle Fensterbreite"}
+{"ts":"2026-08-12T15:32:32","event":"commit","turn":2,"task":"S10","detail":"baf8660 feat(ui): eine Statuszeile ueber die volle Fensterbreite"}
+{"ts":"2026-08-12T15:32:32","event":"task_done","turn":2,"task":"S10","agent":"coder","detail":"baf8660; 445 Proben; 1 Defekt abgelegt"}
+{"ts":"2026-08-12T15:32:32","event":"task_start","turn":2,"task":"S11","agent":"coder","detail":"die Zeile laesst sich nach rechts blaettern"}
+{"ts":"2026-08-12T15:46:12","event":"commit","turn":2,"task":"S11","detail":"05797d7 feat(ui): Statuszeile blaetterbar; Plan auf _c_"}
+{"ts":"2026-08-12T15:46:12","event":"task_done","turn":2,"task":"S11","agent":"coder","detail":"05797d7; alle elf Schritte [DONE]"}
+{"ts":"2026-08-12T15:46:30","event":"review_start","turn":2,"agent":"coderev","detail":"16 Dateien, Bereich 34ab5b5..05797d7, 7 Commits"}
+{"ts":"2026-08-12T16:10:42","event":"rebalance_grounding","turn":2,"detail":"Nutzerentscheid: Kurzhinweis statt Blaettern. 260812-1105 _a_->_s_, neuer Datensatz 260812-1809_a_. C5.10 ueberholt, Schritt 11 zurueckzunehmen."}
+{"ts":"2026-08-12T16:10:42","event":"commit","turn":2,"task":"Grundlage","detail":"4413d7a docs(workbench): Kurzhinweis statt Bildlaufansicht"}
+{"ts":"2026-08-12T16:16:49","event":"review_done","turn":2,"agent":"coderev","detail":"9 Defekte; Markdown-Zerlegung nicht total; ein Nachtrag der Durchsicht ist falsch"}
+{"ts":"2026-08-12T16:16:49","event":"commit","turn":2,"task":"Turn-2-Durchsicht","detail":"94a81bd chore(workbench): Turn 2 durchgesehen"}
+{"ts":"2026-08-12T16:23:27","event":"coherence_review","turn":2,"detail":"verdict ok | Artefakt-Grundlage: 10 Defekte neu, vier mittel | Artefakt-Directive: alle elf Schritte gebaut, C5.10 durch Nutzerentscheid ueberholt | Grundlage-Directive: 1 ueberholt, 1 neu beantwortet, 3 offen, kein Widerspruch"}
+{"ts":"2026-08-12T16:23:27","event":"gate_response","turn":2,"detail":"Turn 3: Kurzhinweis plus die drei Vorschau-Befunde"}
+{"ts":"2026-08-12T16:23:27","event":"turn_end","turn":2,"detail":"5 Schritte, 9 Commits, 10 Defekte; Plan vollstaendig auf [DONE]"}
+{"ts":"2026-08-12T16:23:27","event":"turn_start","turn":3,"detail":"Kurzhinweis statt Blaettern, Markdown-Zerlegung total machen, Listen, ausgeblendetes Dateifenster"}
+{"ts":"2026-08-12T16:23:27","event":"task_start","turn":3,"task":"T3-A","agent":"coder","detail":"markdown.rs: Verweisdefinition und Listen"}
+{"ts":"2026-08-12T16:23:33","event":"state_drift","turn":3,"detail":"Circle Turn log 2 Eintraege gegen 3 gestartete Turns. Turn 3 ist gerade gestartet und noch nicht gelaufen; sein Eintrag faellt am Turn-Ende an. Die vier uebrigen Zeilen stimmen."}
+{"ts":"2026-08-12T16:44:16","event":"commit","turn":3,"task":"T3-A","detail":"a9e1149 fix(ui): Zerlegung deckt die ganze Quelle, Listen mit Tiefe"}
+{"ts":"2026-08-12T16:44:16","event":"task_done","turn":3,"task":"T3-A","agent":"coder","detail":"a9e1149; 454 Proben; 2 Defekte geschlossen, 1 teilweise"}
+{"ts":"2026-08-12T16:44:16","event":"task_start","turn":3,"task":"T3-B","agent":"coder","detail":"Kurzhinweis statt Blaettern, plus ausgeblendetes Dateifenster"}
+{"ts":"2026-08-12T16:52:20","event":"commit","turn":3,"task":"Grundlage","detail":"23e7311 docs(workbench): Umfang erweitert, Schriftschnitte zurueckgestellt"}
+{"ts":"2026-08-12T17:05:51","event":"commit","turn":3,"task":"T3-B","detail":"df4ec00 fix(ui): Kurzhinweis statt Bildlaufansicht"}
+{"ts":"2026-08-12T17:05:51","event":"task_done","turn":3,"task":"T3-B","agent":"coder","detail":"df4ec00; 457 Proben; 1 Entscheidung _a_->_i_, 1 Defekt geschlossen, 1 neu"}
+{"ts":"2026-08-12T17:06:04","event":"review_start","turn":3,"agent":"coderev","detail":"Bereich 94a81bd..df4ec00, 3 Commits, 6 Dateien"}
+{"ts":"2026-08-12T17:27:08","event":"review_done","turn":3,"agent":"coderev","detail":"6 Defekte; eine Verschlechterung dieses Turns (lose Liste)"}
+{"ts":"2026-08-12T17:27:08","event":"commit","turn":3,"task":"Turn-3-Durchsicht","detail":"f401dcc chore(workbench): Turn 3 durchgesehen"}
+{"ts":"2026-08-12T17:27:28","event":"coherence_review","turn":3,"detail":"verdict ok | Artefakt-Grundlage: 6 Defekte neu, eine Verschlechterung dieses Turns | Artefakt-Directive: vier Reparaturen sitzen, Directive-Text noch nicht nachgezogen | Grundlage-Directive: 1 ueberholt, 1 umgesetzt, doppelte Buchfuehrung gefunden"}
+{"ts":"2026-08-12T17:27:28","event":"turn_end","turn":3,"detail":"4 Reparaturen, 4 Commits, 6 Defekte aus der Durchsicht"}
+{"ts":"2026-08-12T17:27:28","event":"turn_start","turn":4,"detail":"lose Liste reparieren, Buchfuehrung aufloesen, dann Abschluss"}
+{"ts":"2026-08-12T17:27:39","event":"state_drift","turn":4,"detail":"Circle Turn log 3 Eintraege gegen 4 gestartete Turns. Turn 4 ist gerade gestartet; sein Eintrag faellt am Turn-Ende an."}
+{"ts":"2026-08-12T17:30:22","event":"commit","turn":4,"task":"T4-B","detail":"c6bf13d chore(workbench): Sternform, doppelte Buchfuehrung"}
+{"ts":"2026-08-12T17:30:22","event":"task_done","turn":4,"task":"T4-B","agent":"orchestrator","detail":"c6bf13d; 3 Defekte geschlossen"}
+{"ts":"2026-08-12T18:03:12","event":"commit","turn":4,"task":"T4-A","detail":"c35f8b1 fix(ui): Merkzeichen am Text, Deckung im Container"}
+{"ts":"2026-08-12T18:03:12","event":"task_done","turn":4,"task":"T4-A","agent":"coder","detail":"c35f8b1; 466 Proben; 2 Defekte geschlossen, 1 Frage abgelegt"}
+{"ts":"2026-08-12T18:03:33","event":"review_start","turn":4,"agent":"coderev","detail":"Bereich f401dcc..c35f8b1, markdown.rs"}
+{"ts":"2026-08-12T18:25:42","event":"review_done","turn":4,"agent":"coderev","detail":"6 Defekte; eine Verschlechterung dieses Turns, Gewicht hoch"}
+{"ts":"2026-08-12T18:25:42","event":"commit","turn":4,"task":"Turn-4-Durchsicht","detail":"1e4e01f chore(workbench): Turn 4 durchgesehen"}
+{"ts":"2026-08-12T18:44:03","event":"turn_end","turn":4,"detail":"2 Reparaturen, 3 Commits, 6 Defekte, davon einer Verschlechterung dieses Turns"}
+{"ts":"2026-08-12T18:44:03","event":"gate_response","turn":4,"detail":"Nutzer: Budget erhoehen, dann reparieren. fusion-guard.json ist geschuetzt, der Nutzer traegt maxTurns selbst ein."}
+{"ts":"2026-08-12T18:44:03","event":"turn_start","turn":5,"detail":"Merkzeichen aus dem Bereich des ersten Kindes holen"}
+{"ts":"2026-08-12T18:44:03","event":"task_start","turn":5,"task":"T5-A","agent":"coder","detail":"Offen::anfang beim Einloesen des Merkzeichens nachziehen"}
+{"ts":"2026-08-12T19:10:44","event":"commit","turn":5,"task":"T5-A","detail":"2c0b2a6 fix(ui): Merkzeichen gehoert seinem Punkt"}
+{"ts":"2026-08-12T19:10:44","event":"task_done","turn":5,"task":"T5-A","agent":"coder","detail":"2c0b2a6; 478 Proben; 6 Defekte geschlossen, 1 neu abgetrennt"}
+{"ts":"2026-08-12T19:38:39","event":"review_done","turn":5,"agent":"coderev","detail":"4 Defekte; Hauptbefund fuer die Klasse geschlossen, keine neue Verschlechterung"}
+{"ts":"2026-08-12T19:38:39","event":"commit","turn":5,"task":"Turn-5-Durchsicht","detail":"dc5e137 chore(workbench): Turn 5 durchgesehen"}
+{"ts":"2026-08-12T19:39:00","event":"circuit_breaker","turn":5,"detail":"Max Turns reached: 5 von 5. Das Budget steht unveraendert auf 5; die vom Nutzer gewaehlte Erhoehung ist in fusion-guard.json nicht eingetragen. Vier neue Defekte aus der Turn-5-Durchsicht, einer mittel, drei niedrig."}
+{"ts":"2026-08-12T21:05:05","event":"reconciliation","turn":5,"detail":"Verdict review-needed wegen der Directive; nach der Berichtigung aufgeloest. 4 Entscheidungen _a_->_i_ gezogen, 4 neue Defekte, 12 offene Fragen ueber beide Speicher."}
+{"ts":"2026-08-12T21:05:05","event":"bounded_closure_proposed","turn":5,"detail":"Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit; kein Agent kann ihn fahren. Sechste Runde in Folge aus demselben Grund."}
+{"ts":"2026-08-12T21:17:00","event":"portfolio_refresh","turn":5,"detail":"0e09377; _t_ -> _b_; portfolio.md neu; 1 vorgesehener Circle bleibt; Playmaker-Protokoll shared/history/260812-2307-playmaker-direct-dispatch.md"}
+{"ts":"2026-08-12T21:17:48","event":"session_end","turn":5,"detail":"Runde 6 beschraenkt abgeschlossen. 5 Turns, 27 Commits, 478 Proben, 0 Fehler. 49 Defekte und 7 Fragen abgelegt, 17 Defekte geschlossen, 14 Entscheidungen umgesetzt. 8 Commits ohne Durchsichtsabdeckung, alle acht reine Werkbank-Commits."}
+{"ts":"2026-08-12T22:08:08","event":"task_start","task":"nachlauf-release","agent":"coder","detail":"Nach dem Abschluss der Runde 6, kein Circle aktiv: Identitaetssuche in xtask reparieren, make release, make signatur erweitern"}
+{"ts":"2026-08-12T22:18:57","event":"task_done","task":"nachlauf-release","agent":"coder","detail":"c81c9c6; Identitaetssuche behoben, make release und make signatur; 1 Defekt geschlossen"}
+{"ts":"2026-08-12T22:18:57","event":"commit","task":"nachlauf-release","detail":"c81c9c6 fix(xtask): Identitaetssuche und Auslieferungsweg"}
+{"ts":"2026-08-12T22:40:11","event":"session_start","history_file":"shared/history/260813-0040-orchestrator-session.md","detail":"Drei Faehigkeiten: Suche in der Belegungsansicht, zweite Instanz, alle Befehle im Menue. Mode custom, autonom."}
+{"ts":"2026-08-12T22:40:25","event":"shaper_start","detail":"Suche in der Belegungsansicht, zweite Instanz, alle Befehle im Menue"}
+{"ts":"2026-08-12T23:04:00","event":"shaper_done","detail":"shared/planning/260813-0053_o_spec-…; eine Runde, vier Faehigkeiten, vier offene Fragen; Circle 260813-0100 angelegt und aktiv (fcc1603)"}
+{"ts":"2026-08-12T23:12:12","event":"conceptrev_done","detail":"tangled; 9 Befunde, 2 substanziell; Loch in der Zulaessigkeitsregel am Fokusvorbehalt; Spec geht zurueck an den shaper"}
+{"ts":"2026-08-12T23:47:03","event":"conceptrev_done","detail":"acceptable im zweiten Durchgang; 5 Befunde, keiner vor der Planung; Sprungmarke und drei Waechter gehen in den Plan"}
+{"ts":"2026-08-12T23:47:03","event":"planner_start","detail":"Spec 260813-0053, vier Faehigkeiten"}
+{"ts":"2026-08-13T00:13:17","event":"planner_done","detail":"15 Schritte, 4 Straenge; neue Frage zur Menuegliederung; 1 Defekt"}
+{"ts":"2026-08-13T00:22:40","event":"conceptrev_done","detail":"Plan acceptable; Zaehlprobe in S2 nennt drei Aufrufstellen, der Entwurf ergibt zwei; geht vor die Ausfuehrung zurueck an den planner"}
+{"ts":"2026-08-13T00:48:01","event":"queue_built","detail":"15 Planschritte in vier Straengen"}
+{"ts":"2026-08-13T00:48:01","event":"turn_start","turn":1,"detail":"S1 bis S3, die Zulaessigkeitsfrage"}
+{"ts":"2026-08-13T00:48:01","event":"task_start","turn":1,"task":"S1-S3","agent":"coder","detail":"Zulaessigkeitsfrage, Lage an einer Stelle, Abgriff schluckt den zulaessigen Befehl"}
+{"ts":"2026-08-13T01:20:08","event":"task_done","turn":1,"task":"S1-S3","agent":"coder","detail":"9da33bc; 488 Proben; 1 Defekt, 1 Frage, beide auf Empfehlung gefahren"}
+{"ts":"2026-08-13T01:20:08","event":"commit","turn":1,"task":"S1-S3","detail":"9da33bc feat(ui): eine Zulaessigkeitsfrage mit einer Antwortstelle"}
+{"ts":"2026-08-13T01:20:08","event":"task_start","turn":1,"task":"S4-S6","agent":"coder","detail":"Gliederung, Menuemodell, Menue mit Ausgrauung"}
+{"ts":"2026-08-13T01:56:48","event":"task_done","turn":1,"task":"S4-S6","agent":"coder","detail":"16c0924; 511 Proben; cmd+a-Kollision am gebauten Menue gemessen und abgewendet"}
+{"ts":"2026-08-13T01:56:48","event":"commit","turn":1,"task":"S4-S6","detail":"16c0924 feat(ui): jeder der 81 Befehle steht im Menue"}
+{"ts":"2026-08-13T01:56:48","event":"task_start","turn":1,"task":"S7-S10","agent":"coder","detail":"Suche in der Belegungsansicht"}
+{"ts":"2026-08-13T02:28:13","event":"task_done","turn":1,"task":"S7-S10","agent":"coder","detail":"ced0ee7; 533 Proben"}
+{"ts":"2026-08-13T02:28:13","event":"commit","turn":1,"task":"S7-S10","detail":"ced0ee7 feat(ui): Suche in der Belegungsansicht"}
+{"ts":"2026-08-13T02:28:13","event":"task_start","turn":1,"task":"S11-S14","agent":"coder","detail":"flock, zwei Sperren, weitere Instanz"}
+{"ts":"2026-08-13T03:23:06","event":"task_done","turn":1,"task":"S11-S15","agent":"coder+ontocoder","detail":"40b5fb0; 1000 Proben gruen; alle 15 Schritte [DONE]"}
+{"ts":"2026-08-13T03:23:06","event":"review_start","turn":1,"agent":"coderev","detail":"Bereich ca66c39..40b5fb0"}
+{"ts":"2026-08-13T03:23:06","event":"review_start","turn":1,"agent":"ontorev","detail":"resources/default-keymap.toml"}
+{"ts":"2026-08-13T03:39:03","event":"review_done","turn":1,"agent":"ontorev","detail":"2 Defekte an der Prosa; Blockreihenfolge steuert seit S6 die Menueleiste"}
+{"ts":"2026-08-13T03:51:01","event":"review_done","turn":1,"agent":"coderev","detail":"16 Defekte, 0 kritisch, 0 hoch, 6 mittel"}
+{"ts":"2026-08-13T03:51:01","event":"turn_end","turn":1,"detail":"15 Planschritte, 6 Commits, 18 Defekte aus den Durchsichten"}
+{"ts":"2026-08-13T03:51:01","event":"turn_start","turn":2,"detail":"die sechs mittleren Befunde"}
+{"ts":"2026-08-13T05:25:25","event":"reconciliation","turn":2,"detail":"18 Marker halten; Urteil bounded-closure-proposed"}
+{"ts":"2026-08-13T05:25:25","event":"bounded_closure_proposed","turn":2,"detail":"Abnahmelauf verlangt KRK im Vordergrund; siebte Runde in Folge"}
+{"ts":"2026-08-13T05:25:25","event":"portfolio_refresh","turn":2,"detail":"9d5fcfa; _t_ -> _b_; ein vorgesehener Circle bleibt"}
+{"ts":"2026-08-13T05:25:25","event":"turn_end","turn":2,"detail":"Runde 7 beschraenkt abgeschlossen"}
+{"ts":"2026-08-13T05:25:25","event":"session_end","detail":"20 Commits, 1003 Proben, 15 Planschritte, 7 Durchsichten"}
+{"ts":"2026-08-13T06:07:29","event":"session_start","history_file":"shared/history/260813-0807-orchestrator-session.md","detail":"Setup only; no Directive stated yet"}
+{"ts":"2026-08-13T08:06:50","event":"session_start","history_file":"circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md","detail":"Circle 260813-0939 titelleiste+versionstags; mode pending"}

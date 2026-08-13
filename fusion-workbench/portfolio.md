@@ -1,115 +1,126 @@
 # Portfolio
 
-**Generated:** 260813-0714 (by playmaker session 260813-0714-playmaker-direct-dispatch)
+**Generated:** 260813-0958 (by playmaker session 260813-0958-playmaker-direct-dispatch)
 **Domain bias:** code
 
-Acht Circles liegen unter `circles/`: keiner aktiv, **einer** vorgesehen, sieben beschränkt
-abgeschlossen. Kein Circle ist überholt oder zurückgestellt. Seit dem Lauf vom 260812-2307 ist
-die Runde 7 hinzugekommen und sofort auf beschränkten Abschluss gegangen. Das Feld der Kandidaten
-ist unverändert eines; ein Vergleich zwischen Kandidaten ist auch in diesem Lauf nicht möglich,
-und die Empfehlung steht auf absoluten Signalen.
+Neun Circles liegen unter `circles/`: keiner aktiv, **zwei** vorgesehen, sieben beschränkt
+abgeschlossen. Kein Circle ist überholt oder zurückgestellt. Seit dem Lauf vom 260813-0859 ist ein
+Circle hinzugekommen, `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`, aus dem
+Ideeneintrag, den jener Lauf zum Shapen empfohlen hat. Der Ideenspeicher ist damit leer.
+
+**Die Rangfolge kehrt sich mit diesem Lauf um.** Zum ersten Mal seit dem Abschluss der Runde 1
+stehen zwei vorgesehene Circles nebeneinander, und der neue nimmt Rang 1. Der Betrachter, in vier
+Läufen der einzige Kandidat und deshalb ohne Vergleichswert empfohlen, steht auf Rang 2.
 
 **Zur Zitierform in dieser Datei.** Jedes Pfadzitat trägt an der Stelle des Zustandsmarkers eine
 Sternstelle (`_*_`), weil `portfolio.md` bei jedem Lauf neu entsteht und seine Zitate zwischen
 zwei Läufen altern. Ausgenommen sind die Stellen, an denen der Marker selbst die Aussage ist.
 
-**Zur Rangheuristik, und warum sie hier ausgesetzt ist.** Die Standardheuristik der
+**Zur Rangheuristik, und warum sie weiterhin ausgesetzt ist.** Die Standardheuristik der
 Domain-Gewichtung `code` bevorzugt Circles, deren Abhängigkeiten sämtlich kohärent abgeschlossen
 sind (`_c_`). In diesem Projekt trägt kein einziger abgeschlossener Circle diesen Marker: alle
 sieben gefahrenen Runden stehen auf beschränktem Abschluss (`_b_`), und alle sieben aus demselben
 Grund. Der Abnahmelauf verlangt KRK im Vordergrund und ist damit Nutzerarbeit
 (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`,
-offen seit dem 260806). Die Heuristik vergäbe damit jedem denkbaren Kandidaten dasselbe
-Kennzeichen und träfe keine Unterscheidung. Sie ist deshalb **nicht in die Rangfolge
-eingerechnet**, sondern ausgesetzt und an dieser Stelle benannt. Was die Rangfolge stattdessen
-trägt, sind absolute Signale am einzelnen Datensatz: der Zustand der geerbten Bauteile am Baum,
-die Zahl und die Art der noch zu klärenden Fragen, und der Preis der Vorarbeit vor dem Plan.
+offen seit dem 260806). Die Heuristik vergäbe jedem denkbaren Kandidaten dasselbe Kennzeichen und
+träfe keine Unterscheidung. Sie ist deshalb **nicht in die Rangfolge eingerechnet**. Was die
+Rangfolge stattdessen trägt, sind absolute Signale am einzelnen Datensatz: der Preis der Vorarbeit
+vor dem Plan, die Zahl und die Art der noch zu klärenden Fragen, das Alter der Grundlage, und die
+Menge der Vorbedingungen.
+
+Eine Nebenbemerkung dazu, weil sie in diesem Lauf zum ersten Mal greift: der Rang-1-Kandidat hat
+**keine** Circle-Vorbedingung. Für ihn ist die Prüfung leer erfüllt statt unentscheidbar, und das
+ist eine echte Auskunft und nicht dieselbe Aussetzung noch einmal.
 
 ## Active (_t_)
 
 **(keiner)**
 
-Kein Circle-Datensatz trägt `_t_`, und `fusion-workbench/.active-circle` ist nicht vorhanden.
-Beides zusammen ist der reguläre Zustand nach einem Abschluss und keine Warnung: der Orchestrator
-löscht den Zeiger, wenn er einen Datensatz von `_t_circle.md` auf `_b_circle.md` umbenennt.
-
-Der nächste Schritt liegt bei dir. Über `/fusion:next` entscheidest du, ob der eine vorgesehene
-Circle aktiv wird.
+`fusion-workbench/.active-circle` ist nicht vorhanden, und kein Datensatz trägt `_t_`. Das ist der
+reguläre Zustand nach einem Abschluss und keine Warnung.
 
 ## Anticipated (_a_) — ranked
 
-Recommended next: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — der einzige nicht
-abgeschlossene Circle; seine geerbten Bauteile stehen unverändert, sein Eintrittspreis pro Befehl
-ist seit der Runde 7 gestiegen.
+Recommended next: `260813-0939-titelleiste-fuehrt-version-und-semantische-tags` — die Vorarbeit
+ist eine Klärungsrunde über drei schmale Fragen, keine Untersuchung, und der Circle hat keine
+Vorbedingung an einem anderen Circle.
 
-### Rang 1 (von 1): `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
+```
+/fusion:next 260813-0939-titelleiste-fuehrt-version-und-semantische-tags
+```
 
-**Directive:** KRK zeigt eine Web-Adresse in einem eigenen Betrachter an, statt sie an den
-Systembrowser abzugeben. Der Betrachter lebt in einem gewöhnlichen Tab des Vorschaufensters,
-wird über die Tastatur bedient und trägt Sprungmarken auf jedem sichtbaren Link.
+### Rang 1: `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
 
-**Abhängigkeiten:** eine Circle-Kante, auf `260802-0842-krk-mac-dateimanager-editor-git`
-(Runde 1, beschränkt abgeschlossen). Dazu eine eingehende Kante aus der Runde 6
-(`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_*_circle.md`,
-Abschnitt `## Dependencies`), die der Datensatz des Betrachters selbst nicht führt. Zur Runde 7
-besteht **keine** notierte Kante in beide Richtungen.
+**Directive.** Die Titelleiste trägt links einen eigenen Bereich mit Namen und Version, geschrieben
+als `KRK 0.1.0`; der absolute Pfad bleibt mittig und ungekürzt. Verbindlich wird die Zahl durch
+semantische Versionstags: ein Git-Tag `v<version>` je Auslieferung, ein Abschnitt in `README.md`
+über die Stufen, und ein Abbruch in `cargo xtask release`, wenn HEAD keinen passenden Tag trägt.
+Den Tag setzt der Nutzer, nicht das Werkzeug.
 
-**Die Runde 7 hat den Zuschnitt dieses Circles nicht angetastet, und das ist diesmal eine
-schwächere Auskunft als beim letzten Lauf.** Beim Abschluss der Runde 6 war die Unberührtheit ein
-Signal: jene Runde baute an derselben Fläche, gerendertes Markdown in der Vorschau, und hat zwei
-Fragen des Betrachters ausdrücklich zu seinen Gunsten entschieden, statt sie stillschweigend zu
-verbrauchen. Die Runde 7 hat die Vorschau gar nicht berührt. Sie hat an der Belegungsansicht, am
-Hauptmenü und an der Ablage gearbeitet. Der Zuschnitt ist unverändert, weil niemand in seine Nähe
-gekommen ist, und nicht, weil jemand ihn geschont hätte.
+**Abhängigkeiten.** Keine auf einen anderen Circle. Vier Stellen binden inhaltlich: die Fähigkeit
+C11 der Runde 2, die einzige bestehende Zusage über die Titelleiste
+(`circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md`);
+die Runde 7, deren Menü keinen Eintrag „Über KRK" führt; und die beiden offenen Defekte am
+Auslieferungsweg
+(`shared/issues/260813-0026_*_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md`
+und
+`shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`).
 
-**Was die Runde 7 diesem Circle tatsächlich hinterlässt, ist ein höherer Preis je Befehl.** Die
-Menüleiste wird seit der Runde 7 aus der Belegung gerechnet und nicht mehr als Programmtext
-gepflegt: `menuemodell::aufbau` liefert neun Obermenüs und einen Eintrag je Funktion, und
-`crates/krk-ui/src/appkit/menue.rs` setzt das Ergebnis in AppKit um. Ein neuer Befehl des
-Betrachters, etwa Blättern, Zurück, Vor oder das Ein- und Ausschalten der Sprungmarken, erzeugt
-damit selbsttätig einen Menüeintrag, und der verlangt eine Ausgrauungsregel. Die Ausgrauung ist
-nach dem Grounding der Runde 7 eine Korrektheitsbedingung und keine Politur: bis zu jener Runde
-führte ein Menüeintrag mit Kürzel einen Befehl aus, den die Fokusprüfung gerade abgewiesen hatte.
-Der Gewinn steht daneben und ist echt: jeder Befehl des Betrachters ist danach auf drei Wegen
-erreichbar statt auf einem, ohne dass der Betrachter dafür etwas eigenes bauen müsste. Der
-Aktivierungs-Spec sollte den Preis beziffern, statt ihn zu erben; die Größenordnung steht am Baum
-mit sechsundsiebzig Einträgen in `Kommando::KENNUNGEN`
-(`crates/krk-core/src/tasten/belegung.rs`).
+**Warum Rang 1.** Der Unterschied zum Betrachter ist der Preis der Vorarbeit vor dem Plan, und er
+ist der einzige, der in diesem Projekt noch unterscheidet. Der Betrachter hält selbst fest, dass
+das Mittel der Darstellung von Web-Inhalt offen ist und in eine eigene Untersuchung gehört. Für
+diesen Circle ist das Mittel mit der Klärungsrunde vom 260813 bereits eingegrenzt: ein neues Modul
+unter `crates/krk-ui/src/appkit/`, vom Nutzer ausdrücklich akzeptiert, dessen Klasse der Planner
+am Baum entscheidet. Dazu kommt das Alter der Grundlage. Der Abschnitt `## Grounding snapshot`
+dieses Datensatzes ist vier Stunden alt, und vier seiner Tatsachenaussagen sind bei diesem Lauf
+gegen den Baum gelesen worden: `git tag -l` liefert null Tags, die Version steht einquellig in
+`[workspace.package]` der Wurzel-`Cargo.toml` auf `0.1.0`, `NSTitlebarAccessoryViewController`
+kommt unter `crates/` nicht vor, und `crates/krk-ui/src/appkit/mod.rs` führt 27 Modulnamen. Alle
+vier halten. Die drei offenen Fragen sind schmal, tragen je einen Datensatz in `decisions/` des
+Circles und verlangen keine Messung. Die zweite ist die dringlichste: nach dieser Runde bricht
+`cargo xtask release` ab, solange HEAD keinen passenden Tag trägt, und das Werkzeug darf ihn nicht
+selbst erzeugen. Ohne eine Festlegung, wer `v0.1.0` setzt, ist der Auslieferungsweg ab dem
+Abschluss der Runde abweisend.
 
-**Die geerbten Bauteile stehen unverändert auf der Platte.** Die Auswertung der Zwischenablage,
-das Vorschaufenster mit seiner Tableiste, die Statuszeile über die volle Fensterbreite seit der
-Runde 6, und der Befehl auf `opt+cmd+g`. Die Mindestbreite der Vorschau von 160 Punkten ist
-weiterhin nicht angetastet (`crates/krk-ui/src/fenstermodell.rs`), also bleiben die rund 17 Punkte
-Luft bis zur gerechneten Obergrenze unverbraucht. Die zweite offene Frage des Betrachters, ob
-lokale HTML-Dateien gerendert erscheinen, ist ihm von der Runde 6 ausdrücklich gelassen worden.
+**Was dagegen spricht.** Die Tag-Hälfte sitzt am selben Weg wie der offene Defekt `260813-0026`:
+`cargo xtask bundle` und `cargo xtask release` schreiben beide nach `target/KRK.app`, und ein
+Entwicklungsbau löscht die Beglaubigung. Die Runde fasst diesen Weg ohnehin an. Der
+Aktivierungs-Spec sollte sagen, ob der Defekt hereingeholt wird oder ausdrücklich draußen bleibt.
+Kleiner, aber notiert: die dritte Antwort der Klärungsrunde schwächt die Begründung ab, mit der
+der Ideeneintrag Anzeige und Tags aneinanderbindet, weil ohne Kennzeichnung des Arbeitsstands
+jeder Bau aus einem geänderten Baum dieselbe Zahl zeigt wie das ausgelieferte Bündel. Die Kopplung
+bleibt eine Nutzerfestlegung; der Restpunkt gehört in den Spec.
 
-**Was gegen eine sofortige Aktivierung spricht, ist unverändert der Zuschnitt.** Der Datensatz
-hält selbst fest, dass das Mittel der Darstellung von Web-Inhalt offen ist und in eine eigene
-Untersuchung vor dem Plan gehört. Eine Untersuchung ist teurer als eine Klärungsrunde, und dieser
-Circle braucht beides. Daneben stehen zwei ungemessene Fragen zur Verfügbarkeit von
-Systemschnittstellen oberhalb von macOS 15
-(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`
-und `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`), die
-gerade eine Web-Ansicht berühren.
+### Rang 2: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
 
-**Die Klärungsrunde trägt fünf eigene Fragen, und eine sechste liegt daneben.** Die drei des
-Abschnitts `## Grounding snapshot`, die Mindestbreite der Vorschau und ihre Schriftgröße. Dazu
-gehört vor die Aktivierung der offene Nutzerentscheid
-`shared/decisions/260813-0053_*_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`:
-seine Antwort bestimmt, welchen Weg ein Tastendruck in einer Web-Ansicht nimmt. Der Fokusvorbehalt
-`ersthelfer_gehoert_appkit` (`crates/krk-ui/src/appkit/ereignisse.rs`) fragt heute nach drei
-Textklassen, und eine Web-Ansicht ist keine davon.
+**Directive.** KRK zeigt eine Web-Adresse in einem eigenen Betrachter statt sie an den
+Systembrowser abzugeben, in einem gewöhnlichen Tab des Vorschaufensters, bedient über die Tastatur
+mit Sprungmarken auf jedem sichtbaren Link.
 
-Die vier Feststellungen im Einzelnen stehen im Abschnitt `## Parent grounding stale` vom
-260813-0714 im Datensatz
-`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_*_circle.md`.
+**Abhängigkeiten.** Eine auf einen Circle: die Runde 1
+(`260802-0842-krk-mac-dateimanager-editor-git`, beschränkt abgeschlossen). Der Circle erweitert
+deren Grenze und ist keine spätere Runde davon.
+
+**Warum Rang 2.** Vor der Aktivierung stehen sechs Fragen und eine Untersuchung des
+Darstellungsmittels; die Untersuchung ist der teurere Posten und der Grund für den zweiten Rang.
+Eine der sechs ist kein Punkt dieses Circles, sondern der offene projektweite Nutzerentscheid
+`shared/decisions/260813-0053_*_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`,
+der bestimmt, welchen Weg ein Tastendruck in einer Web-Ansicht nimmt. Die geerbten Bauteile stehen
+unverändert am Baum: die Auswertung der Zwischenablage, das Vorschaufenster mit seiner Tableiste,
+die Statuszeile über die volle Fensterbreite, und der Befehl auf `opt+cmd+g`. Der Rangwechsel ist
+kein Befund gegen diesen Circle. Es ist der erste Lauf, in dem ihm überhaupt etwas
+gegenübersteht.
 
 ## Backlog — ranked
 
 **(keiner)**
 
-Ein Backlog-Speicher besteht in dieser Workbench nicht; `shared/backlog/` ist nicht angelegt.
-Vorhaben entstehen in diesem Projekt über `/fusion:direct` unmittelbar als vorgesehener Circle.
+`shared/backlog/` trägt einen Eintrag, und der steht auf `_c_`: `260813-0822_*_titelleiste-fuehrt-name-und-version.md`
+ist mit der Anlage des Rang-1-Circles geschlossen. Kein Eintrag trägt `_o_` oder `_p_`. Die
+Empfehlung des Laufs vom 260813-0859 ist damit ausgeführt, und der Speicher ist leer.
+
+Ideen legst du mit `/fusion:memo` ab; ein Titel und ein Absatz genügen. Kein Agent schreibt in
+diesen Speicher, der Playmaker liest und ordnet ihn nur.
 
 ## Recently closed (_c_ / _b_)
 
@@ -119,9 +130,7 @@ Die letzten fünf, neueste zuerst. Alle tragen `_b_`, keiner trägt `_c_`.
    260813). Die Belegungsansicht wird durch Tippen durchsucht, alle Funktionen stehen im Menü in
    neun Obermenüs mit Kürzel und Ausgrauung, und `opt+cmd+n` startet eine weitere Instanz, die
    sich die Ablage über zwei `flock`-Sperren mit der ersten teilt. Fünfzehn Planschritte gebaut,
-   18 Commits, 1003 Proben über 19 Ziele. Nicht abgenommen. Der Nebengewinn wiegt nach eigener
-   Einschätzung schwerer als eine der vier Fähigkeiten: ein Menüeintrag mit Kürzel führte bis
-   dahin einen Befehl aus, den die Fokusprüfung abgewiesen hatte.
+   18 Commits, 1003 Proben über 19 Ziele. Nicht abgenommen.
 
 2. **`260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`** (Runde 6, `_b_`,
    260812). Teilen über die Freigabedienste und ein Kontextmenü an fünf Ansichten, Sprung in den
@@ -144,7 +153,8 @@ Die letzten fünf, neueste zuerst. Alle tragen `_b_`, keiner trägt `_c_`.
 
 Nicht mehr unter den letzten fünf, aber weiterhin bindend: die Runde 2
 (`260807-2116-eingebauter-editor-mit-textmarken`, `_b_`, 260810-1445) und die Runde 1
-(`260802-0842-krk-mac-dateimanager-editor-git`, `_b_`, 260807-1035). Die Runde 1 hält die zehn
+(`260802-0842-krk-mac-dateimanager-editor-git`, `_b_`, 260807-1035). Die Runde 2 hält C11, die
+Zusage über den Fenstertitel, die der Rang-1-Circle fortschreiben würde. Die Runde 1 hält die zehn
 Zeitzusagen aus C8 und die Frage nach dem Vordergrund, an der jeder Abschluss dieses Projekts
 hängt.
 
@@ -158,24 +168,25 @@ Kein Circle-Datensatz trägt `_s_` (überholt) oder `_d_` (zurückgestellt).
 
 Keine Warnung hält etwas auf. Alle sieben unten sind Auskünfte für deine nächste Entscheidung.
 
-**1. Der Abnahmelauf steht jetzt für zwei Runden aus, und die Frage darunter ist die älteste
-offene des Projekts.** Weder die Runde 6 noch die Runde 7 ist abgenommen. Die eine Frage, an der
-das hängt, wie KRK für den Abnahmelauf in den Vordergrund kommt, steht seit dem 260806 offen
+**1. Der Abnahmelauf steht für zwei Runden aus, und die Frage darunter ist die älteste offene des
+Projekts.** Weder die Runde 6 noch die Runde 7 ist abgenommen. Die eine Frage, an der das hängt,
+wie KRK für den Abnahmelauf in den Vordergrund kommt, steht seit dem 260806 offen
 (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
 Solange sie offen ist, endet jede weitere Runde beschränkt, unabhängig davon, wie gut sie gebaut
 ist. Es ist die einzige Frage im Bestand, deren Beantwortung die Abschlussart künftiger Runden
 ändert.
 
 **2. Das beglaubigte Bündel unter `target/KRK.app` überlebt keinen gewöhnlichen
-Entwicklungsbau.** Seit dem 260813 liegt dort ein beglaubigtes, universelles Bündel, das auf
-jedem Mac startet. `cargo xtask bundle` und `cargo xtask release` schreiben an dieselbe Stelle,
-und über `bundle` hängen `run`, `run-terminal`, `tasten`, `menue`, `durchstich` und `frisch`. Ein
-`make run` nach dem Release-Lauf löscht die Beglaubigung. Der Preisunterschied ist der Punkt:
-ein Entwicklungsbündel ist in Sekunden wieder da, ein beglaubigtes verlangt zwei Übersetzungsläufe
-im Profil `release`, `lipo`, eine Signatur mit gehärteter Laufzeitumgebung und einen Netzlauf zu
-Apple. Der Datensatz ist offen:
+Entwicklungsbau, und der empfohlene Circle arbeitet an genau diesem Weg.** `cargo xtask bundle`
+und `cargo xtask release` schreiben an dieselbe Stelle, und über `bundle` hängen `run`,
+`run-terminal`, `tasten`, `menue`, `durchstich` und `frisch`. Ein `make run` nach dem Release-Lauf
+löscht die Beglaubigung. Der Preisunterschied ist der Punkt: ein Entwicklungsbündel ist in
+Sekunden wieder da, ein beglaubigtes verlangt zwei Übersetzungsläufe im Profil `release`, `lipo`,
+eine Signatur mit gehärteter Laufzeitumgebung und einen Netzlauf zu Apple. Der Datensatz ist
+offen:
 `shared/issues/260813-0026_*_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md`.
-Wenn du das Bündel weitergeben willst, sichere es, bevor du das nächste Mal baust.
+Die Tag-Prüfung des Rang-1-Circles kommt als weitere Station an denselben Weg. Der
+Aktivierungs-Spec sollte entscheiden, ob der Defekt mitgenommen wird.
 
 **3. Vier Nutzerfragen sind gebaut und trotzdem unbeantwortet.** Die Runde 7 ist auf den
 Empfehlungen von vier offenen Fragen gefahren, der Baum hat je eine Möglichkeit umgesetzt, und
@@ -191,44 +202,49 @@ Datensatz auf umgesetzt; entscheidest du anders, ist der Baum die Abweichung. Di
 gehört zusätzlich vor die Aktivierung des Betrachters, weil sie den Weg eines Tastendrucks in
 einer Web-Ansicht bestimmt.
 
-**4. Die Abschlussnotiz der Runde 7 zählt acht verbliebene Datensätze, der Speicher trägt
-vierzehn offene.** Die Notiz schreibt: „Die verbliebenen acht Datensaetze sind saemtlich von
-derselben Art, eine Zusage ist weiter als ihre Wache, und keiner betrifft das Verhalten." Unter
-`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/` liegen
-vierzehn Datensätze mit `_o_`, und der Circle-Datensatz ist um 07:13 geschrieben worden,
-nachdem der letzte davon um 07:08 entstanden war. Drei der vierzehn beschreiben sichtbares
-Verhalten und nicht eine ungedeckte Zusage: ein Klick in die Bereichsleiste wirkt während einer
-Umbenennung nicht (`260813-0311_*`, einer der zwei bewusst hingenommenen Verluste), zwei
-Menüeinträge teilen sich `cmd+a` und AppKit nimmt dem späteren das Kürzel (`260813-0416_*`), und
-das Menü Bearbeiten verliert seine mac-übliche Reihenfolge und seinen Trenner (`260813-0420_*`).
-Die Aussage der Notiz ist damit zu eng. Die Zahl selbst hält keine Arbeit auf; wer sie
-korrigieren will, tut es an der Notiz und nicht am Speicher.
-
-**5. `CLAUDE.md` ist an mindestens drei nachgezählten Stellen überholt.** Die Datei nennt vier
-gefahrene Runden, gefahren sind sieben. Sie nennt zwei vorgesehene Circles, vorgesehen ist einer.
-Und sie nennt 68 Varianten für `Kommando`, während `Kommando::KENNUNGEN` in
-`crates/krk-core/src/tasten/belegung.rs` sechsundsiebzig Einträge trägt. Der offene Datensatz
+**4. `CLAUDE.md` ist an vier nachgezählten Stellen überholt, und eine davon ist neu.** Die Datei
+nennt vier gefahrene Runden, gefahren sind sieben. Sie nennt 68 Varianten für `Kommando`, während
+`Kommando::KENNUNGEN` sechsundsiebzig Einträge trägt
+(`crates/krk-core/src/tasten/belegung.rs:566`, am 260813-0958 nachgezählt); der offene Datensatz
 `shared/issues/260812-2253_*_claude-md-nennt-fuer-kommando-68-varianten-der-baum-traegt-75.md`
-kennt den Fehler, nennt aber selbst 75 und ist mit der Runde 7 ebenfalls einen Schritt
-zurückgefallen. Wer `CLAUDE.md` als Bestandsaufnahme liest statt als Kurzfassung, zählt in diesem
-Projekt falsch; `/fusion:revise-claude-md` ist der vorgesehene Weg.
+kennt den Fehler, nennt aber selbst 75 und ist mit der Runde 7 ebenfalls zurückgefallen. Neu ist
+die dritte Stelle: der Abschnitt „Zwei Circles sind vorgesehen und nicht gefahren" nennt die
+Statusleiste (`260811-1304-…`), die seit dem 260812-0820 beschränkt abgeschlossen ist, und den
+Web-Betrachter. Die Zahl zwei stimmt seit heute wieder, die Namen nicht: vorgesehen sind der
+Web-Betrachter und die Titelleiste. Vierte Stelle: derselbe Abschnitt setzt die Statusleiste auf
+Rang 1. `/fusion:revise-claude-md` ist der vorgesehene Weg.
 
-**6. Kein Abhängigkeitszyklus.** Der gerichtete Graph über die nicht terminalen Circles hat genau
-einen Knoten, `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`, und keine Kante
-innerhalb dieser Menge. Seine einzige Circle-Kante zeigt auf die Runde 1 und damit auf einen
-terminalen Circle. Ein Zyklus besteht nicht.
+**5. Kein Abhängigkeitszyklus.** Der gerichtete Graph über die nicht terminalen Circles hat zwei
+Knoten und keine Kante innerhalb dieser Menge.
 
-**7. Parent grounding stale: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` nach dem
-Abschluss der Runde 7.** Der Vermerk vom 260813-0714 steht im Datensatz des Betrachters und
-nennt vier Feststellungen: der Eintrittspreis pro Befehl ist mit der gerechneten Menüleiste
-gestiegen; die dritte Möglichkeit der ersten offenen Frage führt jetzt an eine `flock`-Sperre mit
+```
+260813-0939-titelleiste-…            (keine Circle-Kante)
+260804-0933-web-betrachter-…  ──>  260802-0842-krk-mac-…  (terminal, _b_)
+```
+
+Die einzige Circle-Kante des Betrachters verlässt die Menge der nicht terminalen Circles. Ein
+Zyklus besteht nicht.
+
+**6. Parent grounding stale: kein Vermerk in diesem Lauf, und der Grenzfall wird offen benannt.**
+Seit dem 260813-0714 ist kein Circle auf beschränkten Abschluss gegangen. Der neue Circle
+`260813-0939-titelleiste-fuehrt-version-und-semantische-tags` nennt in seinem Abschnitt
+`## Dependencies` allerdings die Runde 7, die beschränkt abgeschlossen ist, und das sieht nach der
+Auslösebedingung aus. Er ist nicht angehängt worden, aus zwei Gründen. Erstens zitiert der
+Abschnitt `## Grounding snapshot` weder den Verzeichnisnamen der Runde 7 noch den Artefakt ihrer
+Abschlussnotiz; die Kante steht unter `## Dependencies`, wo die Regel nicht greift. Zweitens, und
+das trägt schwerer: der Circle ist am 260813-0939 angelegt worden, also nach dem Abschluss der
+Runde 7, und seine Grundlage liest den Baum in dem Zustand, den jene Runde hinterlassen hat. Ein
+Vermerk „deine Grundlage ist gealtert" wäre an dieser Stelle unwahr. Der Vermerk vom 260813-0714
+im Datensatz des Betrachters gilt unverändert fort; er nennt vier Feststellungen, darunter den
+gestiegenen Eintrittspreis pro Befehl seit der gerechneten Menüleiste und die `flock`-Sperre mit
 elf benannten Löchern
 (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0716_*_die-bewachte-luecke-ist-nicht-die-luecke-elf-schreibwege-an-der-sperre-vorbei-bleiben.md`,
-offen); der Fokusvorbehalt fragt nach drei Textklassen, und eine Web-Ansicht ist keine davon;
-und die Messreihe hinter der dritten offenen Frage steht jetzt zwei Runden zurück.
+offen).
 
-Die wörtliche Auslösebedingung der Regel greift dabei nicht, und der Vermerk sagt das an seiner
-Stelle selbst: der Abschnitt `## Grounding snapshot` des Betrachters zitiert die Runde 7 nicht,
-und der Abschnitt `## Dependencies` der Runde 7 nennt keinen Circle. Zwischen beiden besteht
-keine notierte Kante in irgendeine Richtung. Der Vermerk steht dort, weil die Runde 7 am Baum
-drei Sätze jenes Grounding eingeholt hat.
+**7. Am Datensatz des Betrachters hängt dieser Lauf wieder nichts an, und jetzt aus einem zweiten
+Grund.** `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_*_circle.md` trägt
+674 Zeilen, davon acht Playmaker-Abschnitte aus vier Läufen. Der Lauf vom 260813-0859 hat aus
+diesem Grund keinen fünften Vorschlagsblock angehängt. Jetzt kommt hinzu, dass der Circle nicht
+mehr Rang 1 ist: ein Aktivierungsvorschlag gehört nach der Regel an den empfohlenen Kandidaten,
+und der ist seit diesem Lauf ein anderer. Der neue Rang-1-Circle hat seinen ersten
+`## Activation proposal` erhalten.
