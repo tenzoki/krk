@@ -9,3 +9,5 @@ KRK braucht einen Notizzettel: eine automatisch persistierte Datei, die auf Tast
 **Offene Punkte, die eine Klärungsrunde beantworten müsste.** Wo die Datei liegt (`~/Library/Application Support/KRK/` führt heute die Ablage). Was „automatisch" heißt: bei jedem Zeichen, nach einer Ruhezeit, beim Schließen. Was `Esc` bei ungesicherten Änderungen tut, wo es sonst überall der Weg heraus ist. Ob es einen Zettel gibt oder mehrere. Ob der Zettel den bestehenden Editorkern aus `krk-core/src/text/` benutzt oder eine eigene, schlankere Fläche ist. Und welche Taste ihn holt, wo die Belegung 82 Funktionen mit 88 Kombinationen führt.
 
 **Related:** `crates/krk-core/src/text/` (der Editorkern); `crates/krk-ui/src/kommandos/zulaessigkeit.rs` (die eine Zulässigkeitsregel); `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags` (die Runde, die sie um die Schlüsselfensterfrage erweitert hat)
+
+**Promoted:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` — der Zettel wird ein Blatt am Hauptfenster, zwei Zettel als Tabs, `f2` und `cmd+k`, gesichert bei Tabwechsel, Schließen und Beenden, je Zettel eine eigene Datei im Ablageordner.

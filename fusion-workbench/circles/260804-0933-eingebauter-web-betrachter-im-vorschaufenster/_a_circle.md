@@ -780,3 +780,41 @@ Rangsignal, sondern eine Konstante. Es ist deshalb nicht eingerechnet.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260813-2203
+**Playmaker-Lauf:** 260813-2203-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Untersuchung des Darstellungsmittels und
+einer Klärungsrunde über sechs Fragen
+
+Dieser Vermerk trägt eine einzige Änderung nach und wiederholt den Vorschlag vom 260813-1510
+nicht. Der Circle selbst ist unverändert: derselbe Zuschnitt, dieselben sechs offenen Fragen,
+dieselbe Untersuchung vor dem Plan. Er bleibt Rang 1 und einziger Kandidat.
+
+**Die beiden Nutzerschritte, die der Vermerk vom 260813-1510 dem Aktivierungszeitpunkt
+voranstellte, sind erledigt.** Jener Vermerk nannte als Bedingung den Auslieferungsweg, den
+`cargo xtask release` aus zwei Gründen anhielt: kein Tag auf HEAD und geänderte verfolgte
+Dateien. Beide Gründe bestehen nicht mehr, am Baum geprüft am 260813-2203:
+
+- `git tag --points-at HEAD` liefert `v0.2.1`, und `Cargo.toml:13` führt `version = "0.2.1"`.
+  Station 1 des Auslieferungswegs vergleicht genau diese beiden Werte
+  (`xtask/src/release.rs`, `stand_pruefen` ab Zeile 208).
+- `git status --porcelain --untracked-files=no` ist leer. Der flüchtige Sitzungszustand der
+  Werkbank steht seit `7537ee5` und `5ae3800` in `.gitignore`, das Wächterprotokoll
+  eingeschlossen.
+
+Damit fällt die letzte Bedingung des vorigen Vermerks weg, die nicht am Circle selbst hängt. Der
+Aktivierungszeitpunkt steht jetzt allein hinter Untersuchung und Klärungsrunde.
+
+**Ein zweiter Nachtrag, der diesen Circle mittelbar betrifft.** Der Tag `v0.1.0` sitzt auf
+`3a0a4bf`, dem Abschlusscommit der Runde 8. Damit ist deren letztes offenes Abnahmekriterium
+C3.15 erfüllt, das ihre `## Closure note` als den einen verbleibenden Nutzerschritt benennt. Für
+die Aussicht dieses Circles zählt das: die Runde 8 ist nicht nur kohärent geschlossen, sondern
+inzwischen vollständig abgenommen, und sie ist der Beleg dafür, dass eine Runde dieses Projekts
+über eine Handabnahme des Nutzers kohärent enden kann.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
