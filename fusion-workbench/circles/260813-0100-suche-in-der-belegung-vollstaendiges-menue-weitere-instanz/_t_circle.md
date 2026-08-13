@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** active
 **Filed by:** orchestrator (nach dem Spec des shaper)
-**Active spec/plan:** shared/planning/260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md
+**Active spec/plan:** circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md (Spec: shared/planning/260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md)
 **Active session history:** shared/history/260813-0040-orchestrator-session.md
 
 ---
