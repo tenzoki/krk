@@ -73,3 +73,19 @@ Der erste Weg ist der kleinere und der, den die bestehende Mechanik vorsieht. Ei
 - Gefunden bei der Durchsicht von Turn 1 der Runde 8, Bereich `59b0a6c..21dbc59`.
 - Berührt C5.6 des Spec, die Randbedingung „Kein Verlust gegenüber heute" desselben Spec, und C7 der Runde 1 (`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_c_spec-navigator-geruest.md:340`).
 - Der Rückweg über das Dock-Symbol bleibt: `applicationShouldHandleReopen:` (`anwendung.rs:779-786`) ruft `fenster_zeigen` und geht nicht durch die Zulässigkeitsregel.
+
+---
+Resolved: Am 260813 über den ersten der beiden Wege behoben — `Kommando::FensterEinblenden` steht jetzt in `immer_erreichbar` (`crates/krk-ui/src/kommandos/zulaessigkeit.rs`). Das folgt der Bedeutung, die der Entscheid `decisions/260813-1110_a_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md` der Liste gegeben hat: sie hebt jede Sperre auf, die nach der Lage fragt, und keine, die nach dem Wirkungsbereich fragt. Bestandteil (3) bleibt damit unberührt, und `fenster_einblenden` trägt `Wirkungsbereich::Ueberall`, kommt also in jedem Fokus durch.
+
+Der zweite Weg, ein vierter Wert `Keines` in `Schluesselfenster`, ist **nicht** gegangen worden. Die Faltung besteht unverändert fort; sie fällt nach dieser Behebung an keinem Befehl mehr auf, den der Nutzer als Verlust bemerkt.
+
+**Vier Stellen im Baum, alle in derselben Datei:**
+
+1. `immer_erreichbar` führt drei statt zwei Kommandos.
+2. Der Modulkopf trägt einen neuen Absatz zur Herleitung: nach `fenster_schliessen` liefert `keyWindow()` nichts, KRK hält genau ein Fenster, und die Lage meldet darum denselben Wert wie vor einem fremden Fenster.
+3. Drei Prosastellen zählten „beide Eintraege"; sie zählen jetzt drei. Die Kurzbeschreibung von `immer_erreichbar` nennt neben dem fremden auch das fehlende Schlüsselfenster.
+4. Neue Probe `ohne_schluesselfenster_kommt_fenster_einblenden_durch` als Gegenstück zu `vor_einem_fremden_schluesselfenster_wirkt_kein_fensterweiter_befehl`: über alle fünf Fokuswerte kommt der Befehl ohne Schlüsselfenster durch, und die erste Zusicherung nennt den Weg, über den er das tut.
+
+**Verifikation:** `make check` (build, test, clippy mit `-D warnings`, fmt), Exit 0. Die neue Probe läuft grün, ebenso die Tafel aus 280 Fällen und `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf`, die jetzt über drei Einträge geht.
+
+**Nicht behoben, weil außerhalb dieses Schnitts:** die beiden weiteren `Ueberall`-Befehle, die dieselbe Ursache trifft — `weitere_instanz` (opt+cmd+n) und `belegung_ansehen` (F1). Beide sind ohne Fenster weiterhin abgewiesen. `belegung_ansehen` stellt ein Blatt am Hauptfenster auf und könnte ohne Fenster ohnehin nichts zeigen; `weitere_instanz` startet ein zweites KRK und wäre ohne Fenster sinnvoll. Der Bedienweg zurück ist mit `fenster_einblenden` da, also ist keiner der beiden ein Verlust gegenüber heute; wer sie dennoch will, braucht einen genannten Grund je Eintrag, so wie die Liste ihn verlangt.

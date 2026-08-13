@@ -663,3 +663,8 @@
 {"ts":"2026-08-13T11:04:11","event":"review_done","turn":1,"agent":"coderev","detail":"4 Befunde gefiltert, 1 hoch: fenster_einblenden nach Shift+Cmd+W unerreichbar"}
 {"ts":"2026-08-13T11:04:11","event":"coherence_review","turn":1,"detail":"verdict=review-needed; Artifact<->Grounding: 8 Defekte, 1 hoch. Artifact<->Directive: auf die Directive zu, alle sechs Faehigkeiten gebaut. Grounding<->Directive: 5 beantwortete Entscheide, kein Widerspruch."}
 {"ts":"2026-08-13T11:04:11","event":"turn_end","turn":1,"detail":"15/16 Schritte erledigt, 4 Commits am Baum, 4 Befunde gefiltert"}
+{"ts":"2026-08-13T11:25:29","event":"gate_response","turn":1,"detail":"Nutzer: Regression beheben, dann abschliessen"}
+{"ts":"2026-08-13T11:25:29","event":"rebalance_artifact","turn":2,"detail":"F1 fenster_einblenden auf die Ausnahmeliste"}
+{"ts":"2026-08-13T11:25:29","event":"turn_start","turn":2,"detail":"ein Schritt: die Regression an Cmd+N"}
+{"ts":"2026-08-13T11:25:29","event":"task_start","turn":2,"task":"F1","agent":"coder","detail":"zulaessigkeit.rs immer_erreichbar"}
+{"ts":"2026-08-13T11:25:47","event":"state_drift","turn":2,"detail":"Circle Turn log: surface=1 entries, record=2 turns run. Eintrag fuer Turn 2 nachgetragen."}

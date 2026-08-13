@@ -85,6 +85,14 @@
 //! Hauptmenue ihn aufnimmt. Sobald jeder Eintrag des Menues seine Zulaessigkeit
 //! von hier bezieht, naehme die Regel ohne Ausnahme genau diesen Weg weg.
 //!
+//! **`fenster_einblenden` steht aus derselben Randbedingung darauf, und an ihm
+//! trifft (4) am haertesten.** Ein geschlossenes Fenster gibt den
+//! Schluesselrang ab, KRK haelt genau eines, also meldet die Lage danach
+//! dasselbe `schluesselfenster_gehoert_krk == false` wie vor einem fremden
+//! Fenster. Cmd+N ist der eine Rueckweg aus dieser Lage; ohne den Eintrag
+//! wiese (4) ihn ab und uebrig bliebe der Klick auf das Dock-Symbol
+//! (`issues/260813-1258_*_fenster-einblenden-ist-nach-dem-schliessen-des-fensters-nicht-mehr-erreichbar.md`).
+//!
 //! **Dass sie auch (4) aufhebt, ist eine Wahl und keine Ableitung.** Der
 //! Wortlaut des Entscheids sagt „wirkt kein Befehl", und unter dieser Fassung
 //! wirken `beenden` und `fenster_schliessen` doch. Der Grund ist dieselbe
@@ -96,7 +104,7 @@
 //! so festgelegt.
 //!
 //! Dass sie den dritten Bestandteil nicht aufhebt, faellt heute nicht auf:
-//! beide Befehle tragen `Wirkungsbereich::Ueberall`, und
+//! alle drei Befehle tragen `Wirkungsbereich::Ueberall`, und
 //! [`fokus::wirkt`](super::fokus::wirkt) sagt dafuer in jedem Fokus ja. Mit
 //! einem dritten Eintrag, der einen Bereich braucht, fiele der Unterschied an,
 //! und die Probe `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf` haelt
@@ -173,7 +181,7 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 }
 
 /// Die benannte Liste der Befehle, die ein Blatt, ein Textfeld und ein fremdes
-/// Schluesselfenster nicht aufhalten.
+/// oder fehlendes Schluesselfenster nicht aufhalten.
 ///
 /// **Bewusst keine vollstaendige Fallunterscheidung.** Die uebrigen
 /// Fallunterscheidungen dieses Projekts zaehlen jedes Kommando auf, damit ein
@@ -182,12 +190,15 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 /// sondern nur mit einem genannten Grund. Der Vorgabewert ist „gehoert nicht
 /// dazu", und ein neues Kommando bekommt ihn stillschweigend und richtig.
 ///
-/// Beide Eintraege stammen aus „kein Verlust gegenueber heute"; die Herleitung
-/// steht im Modulkopf. Die Liste hebt die Bestandteile (1), (2) und (4) auf und
+/// Alle drei Eintraege stammen aus „kein Verlust gegenueber heute"; die
+/// Herleitung steht im Modulkopf. Die Liste hebt die Bestandteile (1), (2) und (4) auf und
 /// den dritten nicht: sie hebt jede Sperre auf, die nach der Lage fragt, und
 /// keine, die nach dem Wirkungsbereich fragt.
 pub fn immer_erreichbar(kommando: Kommando) -> bool {
-    matches!(kommando, Kommando::Beenden | Kommando::FensterSchliessen)
+    matches!(
+        kommando,
+        Kommando::Beenden | Kommando::FensterSchliessen | Kommando::FensterEinblenden
+    )
 }
 
 #[cfg(test)]
@@ -501,6 +512,33 @@ mod tests {
         }
     }
 
+    /// Ohne Schluesselfenster kommt `fenster_einblenden` durch.
+    ///
+    /// **Der Rueckweg, und das Gegenstueck zu
+    /// [`vor_einem_fremden_schluesselfenster_wirkt_kein_fensterweiter_befehl`].**
+    /// Nach Shift+Cmd+W ist das Fenster ausgeordnet, `keyWindow()` liefert
+    /// nichts, und die Lage traegt darum denselben Wert wie vor einem fremden
+    /// Fenster. Bestandteil (4) wiese Cmd+N damit ab, und der Nutzer kaeme an
+    /// sein Fenster nur noch ueber das Dock-Symbol
+    /// (`issues/260813-1258_*_fenster-einblenden-ist-nach-dem-schliessen-des-fensters-nicht-mehr-erreichbar.md`).
+    ///
+    /// Die erste Zusicherung nennt den Weg, ueber den der Befehl durchkommt:
+    /// ohne die Ausnahmeliste bliebe die Schleife darunter rot, und mit einem
+    /// engeren Wirkungsbereich waere sie es ebenfalls.
+    #[test]
+    fn ohne_schluesselfenster_kommt_fenster_einblenden_durch() {
+        let kommando = Kommando::FensterEinblenden;
+        assert!(immer_erreichbar(kommando));
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+
+        for fokus in JEDER_FOKUS {
+            assert!(
+                zulaessig(kommando, lage(false, false, false, fokus)),
+                "{kommando:?} kommt ohne Schluesselfenster in {fokus:?} nicht durch"
+            );
+        }
+    }
+
     /// `beenden` und `fenster_schliessen` bleiben in jeder Lage erreichbar.
     ///
     /// Die Pruefung der Ausnahmeliste und zugleich ihre Herleitung: heute
@@ -538,7 +576,7 @@ mod tests {
     /// da und nicht als `true`.
     ///
     /// **Warum sie so und nicht mit einem Gegenbeispiel geprueft ist:** die
-    /// Liste geht ueber [`Kommando`], und beide heutigen Eintraege tragen
+    /// Liste geht ueber [`Kommando`], und alle drei heutigen Eintraege tragen
     /// `Wirkungsbereich::Ueberall`, fuer das `wirkt` in jedem Fokus ja sagt. Ein
     /// Befehl mit einem engeren Bereich laesst sich nicht dazuerfinden. Traegt
     /// ein kuenftiger dritter Eintrag einen engeren Bereich, faellt der

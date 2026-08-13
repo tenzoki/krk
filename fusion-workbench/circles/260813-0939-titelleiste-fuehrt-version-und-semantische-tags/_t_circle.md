@@ -85,6 +85,7 @@ Die Technologiewahl vom 260802-1150 bindet wie überall: Rust mit AppKit über `
 
 
 - Turn 1 (Sitzung 260813-1006): abgeschlossen. Vier Straenge gebaut, Commits 5df3909..21dbc59 (sechs, davon vier am Baum). 15 von 16 Planschritten auf [DONE]; offen bleibt allein E2, die Abnahme am Buendel, die Nutzerarbeit ist. make check exit 0. Die Durchsicht hat einen hohen Befund gefunden: fenster_einblenden ist nach dem Schliessen des Fensters nicht mehr erreichbar. Coherence-Urteil: review-needed, weil dieser Befund eine Randbedingung des Spec bricht. Sitzungsprotokoll: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md
+- Turn 2 (Sitzung 260813-1006): laeuft. Ein Schritt, F1: die Regression an fenster_einblenden aus der Durchsicht von Turn 1. Coherence-Urteil: offen. Sitzungsprotokoll: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md
 
 ## Activation proposal
 
