@@ -650,3 +650,7 @@
 {"ts":"2026-08-13T09:52:44","event":"task_start","turn":1,"task":"A","agent":"coder","detail":"A1-A3 zulaessigkeit.rs, anwendung.rs"}
 {"ts":"2026-08-13T09:52:44","event":"task_start","turn":1,"task":"D","agent":"coder","detail":"D1-D5 xtask/release.rs, main.rs, README.md"}
 {"ts":"2026-08-13T10:10:05","event":"task_done","turn":1,"task":"A","agent":"coder","detail":"A1-A3 fertig, make check exit 0; 1 neuer Befund 260813-1420; Commit steht aus bis Strang D durch ist"}
+{"ts":"2026-08-13T10:15:36","event":"task_done","turn":1,"task":"D","agent":"coder","detail":"D1-D5 fertig"}
+{"ts":"2026-08-13T10:15:36","event":"commit","turn":1,"task":"A","detail":"c3ada4d Zulaessigkeitsregel fragt nach dem Schluesselfenster"}
+{"ts":"2026-08-13T10:15:36","event":"commit","turn":1,"task":"D","detail":"f9e5137 Tag-Pruefung als Station eins, README nennt die Versionsstufen"}
+{"ts":"2026-08-13T10:15:36","event":"task_start","turn":1,"task":"B","agent":"coder","detail":"B1-B3 titelzusatz.rs, fenster.rs, mod.rs"}

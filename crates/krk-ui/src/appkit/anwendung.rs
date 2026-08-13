@@ -1161,9 +1161,10 @@ impl Anwendungsdelegierter {
         self.fokus_setzen(fokus::BEIM_START);
         // **Der Fenstertitel als letzte Handlung des Aufbaus (C11).** Erst
         // jetzt steht der Fokus, und der Titel folgt ihm. `appkit::fenster`
-        // setzt ihn beim Aufbau des Fensters einmal auf den Namen der
-        // Anwendung; diese Zeile ersetzt ihn durch den Pfad, den das aktive
-        // Dateifenster zeigt.
+        // setzt ihn beim Aufbau des Fensters einmal auf die leere
+        // Zeichenkette, weil Name und Version seit der Titelleisten-Runde im
+        // eigenen Bereich links daneben stehen; diese Zeile setzt an seine
+        // Stelle den Pfad, den das aktive Dateifenster zeigt.
         self.titel_nachziehen(self.fokus());
         // **Nach dem Fokus und nach dem Titel**, weil die Wiederherstellung
         // beide nicht anfassen darf; der Ruf steht deshalb hinter ihnen und

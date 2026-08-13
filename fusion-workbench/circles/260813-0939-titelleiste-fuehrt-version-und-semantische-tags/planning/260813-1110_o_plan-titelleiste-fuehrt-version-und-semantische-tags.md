@@ -227,7 +227,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 ### Strang B — Namen und Version links in der Titelleiste
 
-**B1. Das neue Modul `appkit/titelzusatz.rs`**
+**B1. [DONE] Das neue Modul `appkit/titelzusatz.rs`**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/titelzusatz.rs` (neu), `crates/krk-ui/src/appkit/mod.rs`
 - Erfüllt: C1.1, C1.2, C1.4, C1.11, C6.4, C6.6
@@ -240,7 +240,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Anmeldung in `appkit/mod.rs`: die Modulliste wächst von 27 auf 28 Namen. **Die Prosazahl im Modulkopf steht schon heute falsch** — dort steht „Sechsundzwanzig Module" bei 27 tatsächlichen — und wird mit derselben Änderung berichtigt. Der neue Name kommt in die Übersichtsgrafik und in die Modulbeschreibungen darunter.
   - Kein Eintrag in `Cargo.toml`: `NSTitlebarAccessoryViewController`, `NSViewController` und `NSLayoutConstraint` stehen alle drei im Vorgabesatz von `objc2-app-kit 0.3.2`.
 
-**B2. Einhängen ins Fenster, und der Anfangstitel**
+**B2. [DONE] Einhängen ins Fenster, und der Anfangstitel**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/fenster.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/fenstertitel.rs`
 - Erfüllt: C1.5, C1.9, C1.10, C2.1, C2.9
@@ -253,7 +253,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - `fenstertitel::titel` bleibt Zeile für Zeile unverändert. Der Modulkopf bekommt einen Satz, dass C11 der Runde 2 seit dieser Runde fortgeschrieben ist und die elf Kriterien im Spec dieser Runde stehen.
   - Kein Eingriff in `fokusanzeige_nachziehen`: es schreibt weiter genau die fünf Rahmenfarben und den Fenstertitel (C1.7).
 
-**B3. Die Proben, die ohne Fläche auskommen**
+**B3. [DONE] Die Proben, die ohne Fläche auskommen**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/titelzusatz.rs` (Prüfmodul), `crates/krk-ui/src/appkit/mod.rs` (Prüfmodul oder bestehende Zählprobe)
 - Erfüllt: C1.1, C1.2, C1.3, C1.6, C1.7, C1.8

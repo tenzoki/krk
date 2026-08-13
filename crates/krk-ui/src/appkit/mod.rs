@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Sechsundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Achtundzwanzig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
 //! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
 //!
@@ -15,6 +15,7 @@
 //! anwendung ──> menue
 //!           ──> fenster ──> aufteilung ──> tabelle ──> krk-core::verzeichnis
 //!           │            ──> bereichsleiste            crate::fenstermodell
+//!           │            ──> titelzusatz
 //!           ──> ereignisse            ──> tableiste     crate::tabs
 //!           ──> bildtakt ──> crate::messmodus           crate::kommandos
 //!           ──> fsevents ──> crate::auffrischung        blaetter
@@ -70,6 +71,13 @@
 //! darin — beide sind Unteransichten der Traegerflaeche, die
 //! `fenster::fensterinhalt` baut —, und keiner ihrer Schalter nimmt den
 //! Ersthelferrang an; die Begruendung steht in ihrem Modulkopf.
+//! [`titelzusatz`] haelt den einen Bereich links in der **Titelleiste** aus C1
+//! der Titelleisten-Runde: Name und Version in einem
+//! `NSTitlebarAccessoryViewController`. Er liegt damit weder in der Aufteilung
+//! noch neben ihr, sondern ueber dem Fensterinhalt, und er ist kein sechster
+//! Bereich der Fensterzeile — sein Text steht still, waehrend der Pfad daneben
+//! dem Fokus folgt. Eingehaengt wird er in [`fenster`], an der einen Stelle,
+//! die das Fenster aufbaut.
 //! [`tabelle`] haelt das Dateifenster:
 //! `NSTableView` in einer `NSScrollView`, Datenquelle und Delegierter, und die
 //! Anbindung an das Tabmodell. [`tableiste`] ist die Leiste an seinem Kopf,
@@ -181,6 +189,7 @@ mod tableiste;
 mod teilen;
 mod terminal;
 mod textmerkmale;
+mod titelzusatz;
 mod volumes;
 mod vorschau;
 mod weitereinstanz;

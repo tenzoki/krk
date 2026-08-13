@@ -6,6 +6,18 @@
 //! schreibt, ist `Anwendungsdelegierter::titel_nachziehen`; was darin steht,
 //! entscheidet [`titel`], und das ist ohne Fenster pruefbar.
 //!
+//! **C11 ist seit der Titelleisten-Runde fortgeschrieben und nicht ergaenzt.**
+//! Wer wissen will, was der Titel zusagt, liest die elf Abnahmekriterien im
+//! Spec jener Runde
+//! (`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_*_spec-titelleiste-fuehrt-version-und-semantische-tags.md`,
+//! Abschnitt `### C2`) und nicht mehr die der Runde 2; zwei der elf sind
+//! geaendert, neun stehen woertlich wie dort. Zwei Zusagen ueber dieselbe
+//! Titelleiste waeren zwei Wahrheiten. Der Anlass: Name und Version stehen
+//! seither in einem eigenen Bereich links in der Leiste
+//! ([`crate::appkit::titelzusatz`]), und was `setTitle:` bekommt, ist
+//! unveraendert allein das Ergebnis von [`titel`] — diese Datei aendert sich
+//! dafuer in keiner Zeile ausser dieser.
+//!
 //! ```text
 //!  Fokus ──┬─ Dateifenster ──> der angezeigte Ordner
 //!          ├─ Leiste ────────> der Ordner des aktiven Dateifensters

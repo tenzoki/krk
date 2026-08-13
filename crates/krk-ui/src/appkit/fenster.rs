@@ -21,6 +21,13 @@
 //! └──────────────────────────────────────────────┘
 //! ```
 //!
+//! **Ueber dem allen liegt die Titelleiste**, und links darin haengt seit der
+//! Titelleisten-Runde ein eigener Bereich mit Name und Version. Er ist keine
+//! Unteransicht des Fensterinhalts, sondern ein
+//! `NSTitlebarAccessoryViewController`: gebaut in [`super::titelzusatz`],
+//! eingehaengt in [`hauptfenster`], und in der Skizze oben deshalb nicht zu
+//! sehen. Der Titel daneben traegt seither nur noch den Pfad.
+//!
 //! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
 //! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
 //! schliesst. Ohne ihn liesse ein Ordner mit 100.000 Eintraegen seinen
@@ -82,7 +89,13 @@
 //! `autoresizingMask` (`NSView.h:125`) und die drei gesetzten Werte
 //! `NSViewWidthSizable`, `NSViewHeightSizable` und `NSViewMaxYMargin`
 //! (`NSView.h:33-41`) tragen im Kopf des Systems keine eigene Angabe und stehen
-//! damit ebenfalls seit 10.0. Das
+//! damit ebenfalls seit 10.0.
+//!
+//! **Eine Beruehrung liegt hoeher als 10.0**, und es ist die einzige:
+//! `addTitlebarAccessoryViewController:` steht seit 10.10 (`NSWindow.h:323`),
+//! ebenso die Klasse, die sie entgegennimmt. Was dort eingehaengt wird, baut
+//! [`super::titelzusatz`]; die uebrigen Angaben dazu stehen in dessen
+//! Modulkopf, und die hoechste von ihnen ist 10.12. Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
 //! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
 //! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -111,6 +124,7 @@ use objc2_foundation::{
 use super::bereichsleiste;
 use super::statuszeile;
 use super::tabelle::DateifensterQuelle;
+use super::titelzusatz;
 
 /// Die Groesse, mit der das Fenster beim ersten Start aufgeht.
 ///
@@ -433,8 +447,18 @@ pub fn hauptfenster(
         fenster
     };
 
-    fenster.setTitle(ns_string!("KRK"));
+    // **Die leere Zeichenkette und nicht `KRK`.** Der Name steht seit der
+    // Titelleisten-Runde im eigenen Bereich links daneben; ein Titel `KRK`
+    // zeigte ihn zweimal, bis der erste Fokuswechsel ihn ueberschreibt. Die
+    // Zeile steht ausdruecklich da, statt zu fehlen: ein Fenster ohne
+    // `setTitle:` traegt den Vorgabetitel von AppKit.
+    fenster.setTitle(ns_string!(""));
     fenster.setContentMinSize(MINDESTGROESSE);
+    // Der eine Einhaengepunkt des Titelleisten-Bereichs (C1). Er gehoert
+    // hierher und nicht zum Anwendungsdelegierten: das Fenster entsteht an
+    // dieser einen Stelle, und ein zweiter Einhaengepunkt daneben waere ein
+    // zweiter Bereich.
+    fenster.addTitlebarAccessoryViewController(&titelzusatz::bauen(mtm));
     fenster.setContentView(Some(inhalt));
     fenster.setDelegate(Some(ProtocolObject::from_ref(delegierter)));
     fenster.center();
