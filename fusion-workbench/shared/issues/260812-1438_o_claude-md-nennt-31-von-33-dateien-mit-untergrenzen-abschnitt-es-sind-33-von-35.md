@@ -25,3 +25,16 @@ diese Runde nicht.
 
 ---
 Abgleich 260812-2253 (reconciler): Der Defekt besteht, und die im Datensatz genannte Gegenzahl ist inzwischen selbst veraltet. Am 260812-2253 nachgezählt über `find crates/krk-ui/src/appkit -name '*.rs'`: **34 von 36**. Ohne den Abschnitt sind weiterhin allein `koordinaten.rs` und `mod.rs`. Die Kiste ist seit dem Ablegen dieses Datensatzes um eine weitere Datei gewachsen (`appkit/textmerkmale.rs`, Schritt 7 der Runde 6, Commit `9e089c0`), und die Zählung über das Wurzelverzeichnis allein liefert eine dritte Zahl, weil `appkit/blaetter/` ein Unterverzeichnis ist. Wer die Zahl in `CLAUDE.md` nach diesem Datensatz nachzieht, schreibt „33 von 35" und ist wieder falsch. Das ist das Argument für die zweite der beiden hier genannten Möglichkeiten: die zwei Ausnahmen nennen statt der Quote.
+
+---
+Abgleich 260813 (reconciler, Runde 7): **Der Defekt besteht, und die Zahl ist zum dritten Mal
+gewachsen.** Am 260813 nachgezaehlt ueber `crates/krk-ui/src/appkit/*.rs` und
+`crates/krk-ui/src/appkit/blaetter/*.rs`: **35 von 37**. Ohne den Abschnitt sind weiterhin
+allein `koordinaten.rs` und `mod.rs`, beide begruendet; die Deckung ist also erneut nicht
+gesunken. Neu ist `appkit/weitereinstanz.rs` aus Schritt S14 der Runde 7 (Commit `3caa2b7`),
+und sie traegt den Abschnitt.
+
+Die Folge der Zahlen lautet damit: `CLAUDE.md` zitiert 31 von 33, der Datensatz nannte 33 von
+35, der Abgleich der Runde 6 nannte 34 von 36, heute sind es 35 von 37. Vier Staende in vier
+Tagen. Der Datensatz bleibt offen; seine eigene Empfehlung, die zwei Ausnahmen statt der Quote
+zu nennen, ist damit zum dritten Mal belegt.

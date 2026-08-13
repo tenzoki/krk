@@ -66,3 +66,17 @@ Resolved: Behoben in Turn 2 der siebten Runde am 260813. Beide Fragen sind beant
 **Zwei Vorkehrungen gegen den Selbstfund**, und beide sind noetig: die Nadeln stehen zusammengesetzt da, und gesucht wird nur in Code-Zeilen. Der neue Helfer `im_code` in `tests/baum.rs` traegt die zweite; ohne sie fand die Probe sich selbst, weil ihre Doc-Kommentare alle drei Nadeln im Klartext nennen.
 
 **Nicht behoben: der Griff in das echte Temporaerverzeichnis.** Mit dem Umzug faellt `sperre.rs` als Greifer weg, `crates/krk-core/src/verzeichnis/sys.rs:950` greift weiter dorthin. Es legt eine einzelne Datei mit Prozesskennung im Namen an und loescht sie am Ende; ein `Messplanwaechter` raeumt sie nicht ab, weil sie nicht `krk-messplan-*.toml` heisst. Der Punkt bleibt in `shared/issues/260810-1925_*` aufgehoben und ist hier nicht eigens abgelegt.
+
+---
+Abgleich 260813-0644 (reconciler): **Die Behebung hält, der Schlussabsatz nicht.** Die vierte
+Fassung ist fort und die Gegenprobe sucht die Sache statt des Namens — beides am Baum
+nachgelesen (`crates/krk-core/tests/baum.rs:113-152`, `crates/krk-core/tests/ablage.rs`). Der
+Absatz „Nicht behoben: der Griff in das echte Temporaerverzeichnis" trifft dagegen in zwei
+Punkten nicht zu: der genannte Verweis `shared/issues/260810-1925_*` ist geschlossen und
+handelt von `crates/krk-bench/src/messen.rs`, nicht von `sys.rs`, und es sind zwei Proben und
+nicht eine, an `crates/krk-core/src/verzeichnis/sys.rs:962` und `:1004` statt an `:950`.
+
+Der Rest ist damit nirgends aufgehoben gewesen und liegt ab jetzt in
+`issues/260813-0644_*_ein-rest-ist-in-einem-geschlossenen-fremden-datensatz-aufgehoben-worden.md`.
+Der Marker dieses Datensatzes bleibt geschlossen: sein eigener Gegenstand, die vierte
+Pruefordner-Fassung, ist behoben.

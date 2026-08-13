@@ -291,3 +291,26 @@ als Befund 1 **nicht** von dieser Prüfspanne verursacht ist: die Blattregel sa�
    billigste und der einzige, der ohne die anderen keinen Schaden anrichtet.
 
 Keiner der vier hält einen Schritt der Runde auf.
+
+---
+
+## Abgleich 260813-0644 (reconciler) — nur Anmerkung, keine Aenderung an den Befunden
+
+**Beide Befunde sind behoben**, in `resources/default-keymap.toml` und ausschliesslich an
+Kommentarzeilen: der Dateikopf beschreibt den Fokusvorbehalt nicht mehr als fruehen Ausstieg
+(`:84-97`, dazu der Datumsvermerk `:72-76`), und der Absatz zur Blockreihenfolge steht hinter
+der Zaehlzeile (`:35-42`). Belege in den `Resolved:`-Zeilen von
+`issues/260813-0532_c_…`.
+
+**Von den vier Zutraegen sind drei angekommen und einer nicht.** Der Zutrag zu `cmd+a` ist in
+`issues/260813-0416_*_…` als Zwischenstand vermerkt, mit Begruendung, warum die zwei Saetze
+noch nicht geschrieben sind. Der Zutrag zu `260813-0420` ist dort ebenfalls vermerkt, und seine
+Vorbedingung ist erfuellt. Nicht angekommen ist der Zutrag zum `opt+cmd`-Abschnitt: der dritte
+Gegenbeleg zur Reihenordnung steht in
+`circles/260812-1000-…/issues/260812-1527_*_…` nicht, und der Punkt lebt allein hier. Er ist
+ab jetzt in
+`issues/260813-0643_*_ein-zutrag-des-ontorev-an-die-runde-6-ist-nirgends-eingetragen.md`
+aufgehoben.
+
+**Die zwei Zahlen sind nachgezaehlt und stimmen:** 82 `[[funktion]]`-Bloecke und 88 Eintraege
+ueber alle `tasten`-Listen (Kriterium C4.2).

@@ -41,3 +41,12 @@ Absatz seine Begründung weiter und zeigt auf nichts Verschwundenes mehr.
 ---
 
 Resolved: Behoben in Turn 2 der siebten Runde am 260813. Der Satz in `crates/krk-ui/src/appkit/blaetter/mod.rs` heisst jetzt „Jede Schaltflaeche bekommt ihre Taste ausdruecklich gesetzt und keine ausgelassen" und zeigt damit auf nichts Verschwundenes mehr. Die Begruendung darunter — `NSAlert` gibt der ersten Schaltflaeche von sich aus die Eingabetaste, `setKeyEquivalent` laeuft deshalb an jeder — steht unveraendert; verloren war allein der Bezugspunkt. Die Aufzaehlung `Taste` ist nicht angefasst.
+
+---
+Abgleich 260813-0644 (reconciler): **Die Behebung haelt.** Der Satz an
+`crates/krk-ui/src/appkit/blaetter/mod.rs:401-404` nennt keine `Taste::Keine` mehr, und die
+Aufzaehlung `Taste` ist nicht angefasst.
+
+Eine Nebenbehauptung stimmt woertlich nicht: die Begruendung darunter steht nicht
+„unveraendert", ein Wort ist mitgewandert („ohne das Loeschen" heisst jetzt „ohne das
+Ueberschreiben", Commit `dff167a`). Die Aussage ist dieselbe geblieben.

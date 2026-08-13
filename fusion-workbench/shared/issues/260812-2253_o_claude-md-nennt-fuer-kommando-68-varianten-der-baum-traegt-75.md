@@ -38,3 +38,17 @@ ersetzen, das nicht mitwächst.
 Datei, die jeder Agent zuerst liest.
 
 **Herkunft:** Abgleich der Runde 6 am 260812-2253.
+
+---
+Abgleich 260813 (reconciler, Runde 7): **Der Defekt besteht, und die Gegenzahl dieses
+Datensatzes ist mit dieser Runde selbst veraltet.** Am 260813 nachgezaehlt ueber
+`awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs`: **76 Varianten**
+(`belegung.rs:304`). `CLAUDE.md:66` nennt weiterhin 68. Die Runde 7 hat die eine Kennung
+`WeitereInstanz` hinzugefuegt (Kriterium C4.1 des Spec sagt 75 auf 76 zu, und der Baum haelt
+es).
+
+Das ist der dritte Stand, den dieser Datensatz nennen muesste (68 zitiert, 75 beim Ablegen,
+76 heute), und damit das Argument fuer die zweite der beiden hier genannten Moeglichkeiten:
+eine Zahl, die jede Runde mitwaechst, gehoert nicht in eine Datei, die keine Probe haelt.
+Der Datensatz bleibt offen; die Wahl gehoert dem Nutzer und die Revision von `CLAUDE.md`
+nicht in einen Abgleich.

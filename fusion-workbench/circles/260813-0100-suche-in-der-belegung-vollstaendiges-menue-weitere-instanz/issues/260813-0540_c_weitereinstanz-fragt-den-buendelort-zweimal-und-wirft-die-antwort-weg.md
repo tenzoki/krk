@@ -62,3 +62,17 @@ let Some(adresse) = eigenes_buendel() else {
 ```
 
 Damit ist `NSBundle::mainBundle().bundleURL()` wirklich an einer Stelle gefragt, der `PathBuf` und der `use std::path::PathBuf` entfallen, und der falsche Nebenausgang ist fort: ueber den Ort entscheidet jetzt allein die Endung, und ein nicht uebersetzbarer Pfad kann nicht mehr zu „laeuft nicht aus einem Buendel" fuehren. Die Zaehlprobe `der_eigene_buendelort_wird_an_genau_einer_stelle_bestimmt` laeuft unveraendert gruen; sie zaehlt Dateien und war von beidem nicht beruehrt.
+
+---
+Abgleich 260813-0644 (reconciler): **Die Behebung haelt.** `eigenes_buendel` liefert
+`Option<Retained<NSURL>>`, `starten` schoepft allein daraus, der `PathBuf` ist fort
+(`crates/krk-ui/src/appkit/weitereinstanz.rs:91-108`).
+
+Eine Nebenbehauptung stimmt woertlich nicht: die Zaehlprobe
+`der_eigene_buendelort_wird_an_genau_einer_stelle_bestimmt` laeuft nicht „unveraendert" gruen,
+sondern ist im selben Commit `dff167a` mitgeaendert worden — ihre Erwartung heisst jetzt
+`"krk-ui/src/appkit/weitereinstanz.rs"` statt des Pfades ohne Kistenpraefix. Das ist die Folge
+der Umstellung von `quelldateien` auf `crates/` aus dem Datensatz
+`260813-0540_*_die-zaehlproben-in-krk-ui-sagen-im-baum-und-lesen-nur-eine-kiste.md` und nicht
+der `NSURL`-Umstellung. Gemeint war, dass die Umstellung auf `NSURL` sie nicht beruehrt, und
+das trifft zu.

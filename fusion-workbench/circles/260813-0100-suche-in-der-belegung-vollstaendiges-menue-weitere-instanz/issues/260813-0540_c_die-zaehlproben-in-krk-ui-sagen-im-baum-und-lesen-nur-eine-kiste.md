@@ -57,3 +57,13 @@ Resolved: Behoben in Turn 2 der siebten Runde am 260813 — auf dem ersten der b
 **Damit faellt zugleich die Falle weg, die der `coderev`-Bericht unter „Zweitens" beschreibt.** Die zwei Quellbaumleser unterscheiden sich nicht mehr in ihrer Reichweite, sondern nur noch in ihrem Wohnort, und der Grund dafuer ist die Kistengrenze, die auch die drei Pruefordner-Fassungen erzwingt. Beide Modulkoepfe sagen es jetzt und verweisen aufeinander.
 
 **Nachgezogen sind neun Erwartungen in sieben Dateien**, weil die Dateinamen jetzt mit `krk-ui/src/` beginnen, dazu der Ausschluss in `das_menue_wird_an_zwei_anlaessen_gebaut`. Vor der Umstellung ist nachgesehen worden, dass keine der vierzehn Nadeln ausserhalb von `krk-ui` vorkommt; keine Probe hat ihre Aussage dabei geaendert.
+
+---
+Abgleich 260813-0644 (reconciler): **Die Behebung haelt.** `krk_ui::quellbaum::quelldateien`
+liest `crates/` (`crates/krk-ui/src/quellbaum.rs:95-108`), die neun Erwartungen in sieben
+Dateien sind nachgezogen, und `cargo test --workspace` laeuft gruen.
+
+Eine Nebenbehauptung ist ungenau: „Beide Modulkoepfe sagen es jetzt und verweisen aufeinander."
+Der Verweis besteht in beide Richtungen, aber nur einer steht im Modulkopf
+(`crates/krk-ui/src/quellbaum.rs:16-33`); der andere steht am Doc-Kommentar von `quelldateien`
+in `crates/krk-core/tests/gemeinsam/mod.rs:217-227` und nicht im Kopf jener Datei.

@@ -96,3 +96,16 @@ einen Teil von ihnen.
 **Der schwerere Teil ist als eigener Datensatz abgelegt:** fuenf der 16 Commits sind **nach** dem
 `turn_end` von Turn 1 entstanden, ohne dass ein zweiter `turn_start` emittiert worden waere
 (`shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md`).
+
+---
+Abgleich 260813 (reconciler, Runde 7): **Der Defekt tritt in der Sitzung 260813-0040 zur
+Haelfte wieder auf, und die Haelfte ist neu.** Turn 1 ist vollstaendig protokolliert: vier
+`task_start`, vier `task_done`, drei `commit`, zwei `review_start`, zwei `review_done`, ein
+`turn_end`. Turn 2 traegt allein sein `turn_start` (`2026-08-13T03:51:01`) und danach nichts
+mehr — kein `task_start`, kein `task_done`, kein `commit`, kein `turn_end`, obwohl der Turn
+zwei Commits hervorgebracht hat (`dff167a` mit achtzehn behobenen Befunden und `1cd7788`).
+
+**Der Befund ist damit nicht mehr „alle Turns einer Sitzung" sondern „der letzte Turn".**
+Das deckt sich mit `shared/issues/260811-2157_*_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-…`:
+beide Male reisst das Protokoll ab, sobald die geplante Arbeit steht und der Nachlauf beginnt.
+Belegt am Ereignisprotokoll `fusion-workbench/orchestrator-events.jsonl`, letzte Zeile.

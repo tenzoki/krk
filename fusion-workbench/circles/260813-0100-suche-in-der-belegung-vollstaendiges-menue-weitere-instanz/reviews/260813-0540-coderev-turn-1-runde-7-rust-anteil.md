@@ -345,3 +345,22 @@ gehören ausdrücklich dazu, weil der Baum sie nicht beantworten kann: ob Cmd+T 
 Schaltflächen der Belegungsansicht überhaupt erreichen (sie hängen daran, dass die Ausgrauung
 dem Menüeintrag sein Kürzel wirklich abnimmt), und ob AppKit `validateMenuItem:` vor jeder
 Tastenentsprechung erfragt.
+
+---
+
+## Abgleich 260813-0644 (reconciler) — nur Anmerkung, keine Aenderung an den Befunden
+
+**Fuenfzehn der sechzehn Befunde sind behoben und einzeln am Baum nachgelesen**, Commit
+`dff167a`. Belege stehen in der `Resolved:`-Zeile des jeweiligen Datensatzes unter
+`issues/260813-0540_c_…`; vier davon tragen daneben eine Nebenbehauptung, die woertlich nicht
+zutrifft, und tragen dazu eine angehaengte Anmerkung.
+
+**Befund B1 bleibt offen und richtig so.** „Die Belegung wird weiter blind ueberschrieben"
+(`issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md`)
+verlangt eine Nutzerentscheidung und keine Codeaenderung. Die von dieser Durchsicht empfohlene
+Reihenfolge setzt B1 an die erste Stelle, und genau er ist der eine, der stehengeblieben ist.
+
+**Diese Durchsicht deckt den Turn 2 nicht.** Ihr Bereich ist `ca66c39..40b5fb0`. Die Behebung
+selbst (`dff167a`) und der Circle-Nachtrag (`1cd7788`) liegen dahinter und sind von keiner
+Durchsicht gelesen worden. `dff167a` hat dabei die Bauform der Zaehlproben dieses Baums
+geaendert und `quelldateien` auf `crates/` umgestellt, also nicht nur Kommentare.

@@ -68,3 +68,20 @@ Gering. Nichts am Code ist falsch, die fünf Commits sind einzeln geprüft und t
 Warum im gemeinsamen Speicher: der Befund betrifft die Durchführung der Sitzung und nicht den
 Gegenstand der Runde. Er liegt damit bei seinen zwei Schwesterdatensätzen, die der Orchestrator am
 260811-1950 aus demselben Grund ausdrücklich dort belassen hat.
+
+---
+Abgleich 260813 (reconciler, Runde 7): **Der Defekt wiederholt sich in der Sitzung
+260813-0040, und zwar in der schaerferen Form.** Das Ereignisprotokoll traegt
+`turn_start` fuer Turn 2 um `2026-08-13T03:51:01` und danach keine Zeile mehr. Zwei Commits
+liegen hinter dieser Grenze und in keinem geschlossenen Turn:
+
+| Commit | Gegenstand |
+|---|---|
+| `dff167a` | achtzehn Befunde der zwei Durchsichten behoben, Zaehlproben umgebaut |
+| `1cd7788` | der Circle-Datensatz traegt seine zwei Turn-Eintraege |
+
+Anders als bei der Sitzung 260811-1454 fehlt hier nicht nur das `turn_end`, sondern der ganze
+Innenteil des Turns. Daneben steht `fusion-workbench/orchestrator-live.md` unveraendert auf
+`Turn 1/5 | Tasks 6/15 | Commits 9` und damit auf einem Stand von vor mehr als drei Stunden,
+waehrend `agentstate.yaml` `turn: 2`, `tasks_done: 15` und `commits: 16` fuehrt. Die zwei
+Anzeigen desselben Standes laufen auseinander.
