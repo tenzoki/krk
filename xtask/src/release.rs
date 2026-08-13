@@ -13,6 +13,16 @@
 //!    Uebersetzungslauf kostet. Was sie fragt, steht bei
 //!    [`auslieferungsstand_pruefen`], der Vergleich selbst bei
 //!    [`stand_pruefen`].
+//!
+//!    **Sie liest, und sie liest jetzt gegen etwas Geschriebenes.** Den Tag
+//!    setzt seit dem 260813 `cargo xtask version <zahl>`, der Halbschritt vor
+//!    diesem hier; er setzt auch die Zahl und traegt sie ein. Dass die Station
+//!    trotzdem bleibt, ist der Kern der Sache: sie laeuft im **neu
+//!    uebersetzten** Werkzeug und vergleicht die eingebackene Zahl aus
+//!    `env!("CARGO_PKG_VERSION")` mit dem Tag. Bliebe ein altes Werkzeug
+//!    stehen, truege die `Info.plist` die alte Zahl, waehrend der Tag die neue
+//!    nennte — und genau das faellt hier auf. Die Einzelheiten stehen im
+//!    Modulkopf von `version`.
 //! - *Vorlauf a:* `bundle::vorbereiten` liest die Buendelbeschreibung und
 //!   liefert die Vorlage fuer Station 5.
 //! 2. **AppKit-Grenze pruefen:** keine Nennung einer `objc2`-Kiste ausserhalb
@@ -55,6 +65,7 @@ use std::process::Command;
 
 use crate::Abbruch;
 use crate::bundle;
+use crate::git;
 use crate::sign;
 
 /// Die beiden Ziel-Tripel der universellen Binaerdatei.
@@ -96,35 +107,6 @@ const AUSNAHME: &str = "crates/krk-ui/src/appkit";
 
 /// Die Umgebungsvariable mit dem Namen des notarytool-Schluesselbundprofils.
 pub const NOTAR_PROFIL_VARIABLE: &str = "KRK_NOTARY_PROFILE";
-
-/// Die erste der drei Fragen von Station 1: liegt ueberhaupt ein
-/// Git-Verzeichnis vor?
-///
-/// Sie steht getrennt, damit die Antwort darauf nicht am Wortlaut einer
-/// Fehlermeldung der beiden anderen haengt.
-const GIT_VERZEICHNIS: &[&str] = &["rev-parse", "--git-dir"];
-
-/// Die zweite Frage: welche Tags stehen auf HEAD?
-///
-/// `--points-at HEAD` fragt allein; `git tag` legt erst dann einen Tag an,
-/// wenn ein Name dabeisteht. Annotierte und leichte Tags stehen in dieser
-/// Ausgabe gleich, und das ist die Zusage aus C3.3: gefragt ist, welcher Name
-/// auf HEAD steht, und nicht, wie er entstanden ist.
-const GIT_TAGS: &[&str] = &["tag", "--points-at", "HEAD"];
-
-/// Die dritte Frage: welche verfolgten Dateien sind geaendert?
-///
-/// `--porcelain` meldet vorgemerkte und nicht vorgemerkte Aenderungen in
-/// derselben Form und fuehrt geloeschte verfolgte Dateien mit;
-/// `--untracked-files=no` haelt unbeachtete Dateien draussen, wie es der
-/// Entscheid vom 260813-1010 verlangt.
-///
-/// **Ohne Pfadfilter, und das ist eine Festlegung.** Gezaehlt wird das ganze
-/// Verzeichnis. Eine Liste der bauwirksamen Ordner muesste jemand pflegen, und
-/// sie zu ergaenzen zu vergessen ist die zweite Art, eine Pruefung im
-/// Vorbeigehen zu verlieren — dieselbe Erwaegung, die schon bei
-/// [`GRENZWURZEL`] steht.
-const GIT_STAND: &[&str] = &["status", "--porcelain", "--untracked-files=no"];
 
 /// Baut, signiert und beglaubigt das Auslieferungspaket.
 pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
@@ -168,18 +150,18 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 /// Station 1: HEAD traegt den passenden Tag, und der Arbeitsbaum entspricht
 /// ihm.
 ///
-/// Sie stellt `git` die drei Fragen [`GIT_VERZEICHNIS`], [`GIT_TAGS`] und
-/// [`GIT_STAND`] und reicht die beiden Antworten an [`stand_pruefen`] weiter.
-/// **Alle drei lesen.** Es entsteht kein `git tag`, kein `git add` und kein
-/// Schreibzugriff: den Tag setzt der Nutzer von Hand, so entschieden am
-/// 260813-1010.
+/// Sie stellt `git` die drei Fragen [`git::VERZEICHNIS`], [`git::TAGS_AUF_HEAD`]
+/// und [`git::STAND`] und reicht die beiden Antworten an [`stand_pruefen`]
+/// weiter. **Alle drei lesen.** Aus diesem Modul entsteht kein `git tag`, kein
+/// `git commit` und kein Schreibzugriff; wer schreibt, ist `version`, und das
+/// laeuft vor diesem Kommando und in einem eigenen Prozess.
 ///
 /// Die Sollversion holt sie aus [`bundle::VERSION`], also aus derselben
 /// Konstanten, die auch in die `Info.plist` wandert. Eine zweite Quelle der
 /// Versionszahl entsteht nicht, und ein Zerteiler fuer die `Cargo.toml` auch
 /// nicht.
 fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
-    git_fragen(wurzel, GIT_VERZEICHNIS).map_err(|fehler| {
+    git::rufen(wurzel, git::VERZEICHNIS).map_err(|fehler| {
         let grund = match fehler {
             Abbruch::Lauf(text) | Abbruch::Aufruf(text) => text,
         };
@@ -195,8 +177,8 @@ fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
         ))
     })?;
 
-    let tags = git_fragen(wurzel, GIT_TAGS)?;
-    let geaenderte = git_fragen(wurzel, GIT_STAND)?;
+    let tags = git::rufen(wurzel, git::TAGS_AUF_HEAD)?;
+    let geaenderte = git::rufen(wurzel, git::STAND)?;
     stand_pruefen(bundle::VERSION, &tags, &geaenderte).map_err(Abbruch::Lauf)?;
 
     println!(
@@ -225,12 +207,8 @@ fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
 /// strukturell; ein zweites Attribut daneben waere Rauschen.
 fn stand_pruefen(version: &str, tags_auf_head: &str, geaenderte: &str) -> Result<(), String> {
     let erwartet = format!("v{version}");
-    let tag_steht = tags_auf_head.lines().any(|zeile| zeile.trim() == erwartet);
-    let abweichungen: Vec<&str> = geaenderte
-        .lines()
-        .map(str::trim_end)
-        .filter(|zeile| !zeile.trim().is_empty())
-        .collect();
+    let tag_steht = git::tag_steht(tags_auf_head, &erwartet);
+    let abweichungen = git::geaenderte_dateien(geaenderte);
 
     if tag_steht && abweichungen.is_empty() {
         return Ok(());
@@ -241,9 +219,10 @@ fn stand_pruefen(version: &str, tags_auf_head: &str, geaenderte: &str) -> Result
         befunde.push(format!(
             "Auf HEAD steht kein Tag {erwartet}. Die Cargo.toml fuehrt die Version {version}, \
              und eine Auslieferung traegt einen Tag, der genau diese Zahl benennt; sonst nennt \
-             die Zahl im Buendel keinen Stand, den jemand wiederfindet. Den Tag setzt der \
-             Nutzer:\n\
-             \x20      git tag {erwartet}"
+             die Zahl im Buendel keinen Stand, den jemand wiederfindet. Zahl, Eintrag und Tag \
+             setzt der Halbschritt davor, und der ganze Weg steht in einem Kommando:\n\
+             \x20      ./release.sh {version}\n\
+             \x20      cargo xtask version {version}   (nur der Halbschritt)"
         ));
     }
     if !abweichungen.is_empty() {
@@ -279,35 +258,6 @@ fn stand_pruefen(version: &str, tags_auf_head: &str, geaenderte: &str) -> Result
          jederzeit ohne Tag. Es entsteht kein Auslieferungspaket.",
         befunde.join("\n\n")
     ))
-}
-
-/// Fragt `git` im Projektverzeichnis und liefert seine Standardausgabe.
-///
-/// Nach dem Muster von `security_fragen` in `sign`: absoluter Pfad, weil der
-/// Baum jedes Systemwerkzeug so ruft, `.current_dir` auf die Projektwurzel,
-/// weil die Antwort sonst am Arbeitsverzeichnis des Aufrufers haengt.
-/// Startfehler und ein Rueckgabewert ungleich null werden beide zum
-/// Laufabbruch.
-///
-/// **Dies ist die eine Stelle im Baum, die `git` ruft.** Eine zweite waere die
-/// zweite Wahrheit darueber, wie tief das Bauwerkzeug in den Zustand des
-/// Arbeitsbaums schaut; die Probe `xtask_ruft_git_an_genau_einer_stelle` haelt
-/// die Zahl auf eins.
-fn git_fragen(wurzel: &Path, argumente: &[&str]) -> Result<String, Abbruch> {
-    let ausgabe = Command::new("/usr/bin/git")
-        .args(argumente)
-        .current_dir(wurzel)
-        .output()
-        .map_err(|fehler| Abbruch::Lauf(format!("git laesst sich nicht starten: {fehler}")))?;
-    if !ausgabe.status.success() {
-        return Err(Abbruch::Lauf(format!(
-            "git {} ist gescheitert ({}): {}",
-            argumente.join(" "),
-            ausgabe.status,
-            String::from_utf8_lossy(&ausgabe.stderr).trim()
-        )));
-    }
-    Ok(String::from_utf8_lossy(&ausgabe.stdout).into_owned())
 }
 
 /// Prueft, dass ausserhalb von `crates/krk-ui/src/appkit/` keine `objc2`-Kiste
@@ -1065,8 +1015,10 @@ mod tests {
         );
         // Die Version aus der Cargo.toml.
         assert!(meldung.contains("Version 1.2.3"), "{meldung}");
-        // Die Abhilfe, als kopierbares Kommando.
-        assert!(meldung.contains("git tag v1.2.3"), "{meldung}");
+        // Die Abhilfe, als kopierbares Kommando. Seit dem 260813 ist es der
+        // Auslieferungsweg selbst und nicht mehr ein `git tag` von Hand.
+        assert!(meldung.contains("./release.sh 1.2.3"), "{meldung}");
+        assert!(meldung.contains("cargo xtask version 1.2.3"), "{meldung}");
         assert!(meldung.contains("git commit -a"), "{meldung}");
         // Kein Weg vorbei: weder Gewalt noch eine Marke zum Ueberspringen.
         assert!(!meldung.contains("--force"), "{meldung}");
@@ -1078,71 +1030,15 @@ mod tests {
         );
     }
 
-    /// Die drei Fragen an `git` lesen, jede einzeln nachgesehen.
-    ///
-    /// `tag` steht in der Liste der schreibenden Unterbefehle nicht, weil es
-    /// beides kann: mit `--points-at` fragt es, mit einem Namen legt es an.
-    /// Genau diese Unterscheidung prueft der zweite Teil.
-    #[test]
-    fn keine_der_drei_fragen_schreibt() {
-        const SCHREIBENDE: [&str; 14] = [
-            "add",
-            "commit",
-            "checkout",
-            "reset",
-            "restore",
-            "clean",
-            "push",
-            "stash",
-            "merge",
-            "rebase",
-            "init",
-            "update-ref",
-            "branch",
-            "notes",
-        ];
-        for frage in [GIT_VERZEICHNIS, GIT_TAGS, GIT_STAND] {
-            let unterbefehl = frage[0];
-            assert!(
-                !SCHREIBENDE.contains(&unterbefehl),
-                "git {unterbefehl} schreibt"
-            );
-            if unterbefehl == "tag" {
-                assert!(
-                    frage.contains(&"--points-at"),
-                    "git tag ohne --points-at legt einen Tag an: {frage:?}"
-                );
-                assert!(
-                    frage
-                        .iter()
-                        .all(|wort| wort.starts_with("--") || *wort == "tag" || *wort == "HEAD"),
-                    "ein Name hinter git tag legt ihn an: {frage:?}"
-                );
-            }
-        }
-    }
-
-    /// Unbeachtete Dateien bleiben aussen vor, und das haengt an der Marke.
-    #[test]
-    fn die_standabfrage_laesst_unbeachtete_dateien_aussen_vor() {
-        assert!(GIT_STAND.contains(&"--untracked-files=no"), "{GIT_STAND:?}");
-        // Kein Pfadfilter: die Abfrage traegt kein `--` und keinen Pfad.
-        assert!(
-            !GIT_STAND.contains(&"--"),
-            "ein Pfadfilter waere eine Liste, die jemand pflegen muss: {GIT_STAND:?}"
-        );
-        assert!(
-            GIT_STAND
-                .iter()
-                .all(|wort| wort.starts_with("--") || *wort == "status"),
-            "{GIT_STAND:?}"
-        );
-    }
-
     /// Genau ein Aufruf von `git` im ganzen Baum (C3.13).
     ///
     /// Die Nadel steht als `concat!`, weil die Probe in derselben Datei liegt,
     /// die sie liest: ausgeschrieben zaehlte sie sich selbst mit.
+    ///
+    /// Seit dem 260813 steht der Aufruf in `git.rs` und nicht mehr hier: das
+    /// Werkzeug hat einen zweiten Abnehmer bekommen, `version`, und der
+    /// schreibt. Die Zahl bleibt eins, und die Probe bleibt hier, weil die
+    /// Zusage aus dem Abnahmekriterium dieser Station stammt.
     #[test]
     fn xtask_ruft_git_an_genau_einer_stelle() {
         let nadel = concat!("Command", "::new(\"/usr/bin/git\")");
@@ -1156,11 +1052,7 @@ mod tests {
             }
         }
         assert_eq!(stellen.len(), 1, "git wird gerufen in {stellen:?}");
-        assert!(
-            stellen[0].ends_with("xtask/src/release.rs"),
-            "{:?}",
-            stellen[0]
-        );
+        assert!(stellen[0].ends_with("xtask/src/git.rs"), "{:?}", stellen[0]);
     }
 
     /// Die Tag-Pruefung haengt allein an `release` (C3.12).

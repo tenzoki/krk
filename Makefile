@@ -107,6 +107,25 @@ menue: bundle ## Das gebaute Hauptmenue mit allen Kuerzeln ausgeben
 # Makefile waere ein Dauerzustand geworden.
 NOTARPROFIL := $(or $(KRK_NOTARY_PROFILE),krk-notar)
 
+# Der ganze Auslieferungsweg, ein Ziel und ein Wert. ./release.sh reicht hierher
+# weiter, und dieses Ziel reicht an xtask weiter; die Logik steht dort.
+#
+# Die zwei Schritte stehen als eigene Zeilen und nicht als Voraussetzungen, aus
+# demselben Grund wie bei `frisch`: make darf Voraussetzungen in beliebiger
+# Reihenfolge abarbeiten, hier aber muss der Versionsschritt vor dem
+# Auslieferungsschritt liegen. Bricht der erste ab, endet die Kette dort.
+#
+# **Und sie stehen als zwei Prozesse, weil es zwei sein muessen.** xtask liest
+# die Versionszahl beim Uebersetzen ueber env!("CARGO_PKG_VERSION"). Erst wenn
+# der erste Prozess geendet hat, uebersetzt cargo das Werkzeug mit der neuen
+# Zahl neu; Station 1 des zweiten vergleicht dann die neu eingebackene Zahl mit
+# dem Tag und faellt durch, wenn ein altes Werkzeug stehengeblieben ist.
+.PHONY: ausliefern
+ausliefern: ## Version setzen, eintragen, taggen und ausliefern: make ausliefern VERSION=0.2.0
+	@test -n "$(VERSION)" || { echo "make ausliefern braucht eine Zahl: make ausliefern VERSION=0.2.0"; exit 2; }
+	$(CARGO) xtask version $(VERSION)
+	$(MAKE) release
+
 .PHONY: release
 release: ## Universelles Buendel bauen, mit Developer-ID signieren, beglaubigen
 	KRK_NOTARY_PROFILE=$(NOTARPROFIL) $(CARGO) xtask release

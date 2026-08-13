@@ -254,6 +254,20 @@ impl Vorlage {
     }
 }
 
+/// Das `cargo`, aus dem der Aufruf kam.
+///
+/// Cargo setzt `CARGO` auf den Pfad, unter dem es selbst laeuft. Den zu
+/// uebernehmen haelt jeden inneren Aufruf auf derselben Werkzeugkette wie den
+/// aeusseren — und auf diesem Geraet ueberhaupt auffindbar, denn `cargo` steht
+/// hier nicht auf dem Standard-PATH.
+///
+/// Beide inneren Aufrufe lesen ihn hier: die Uebersetzung in [`uebersetzen`]
+/// und das Auffrischen der `Cargo.lock` in `version`. Zwei Arten, `cargo` zu
+/// finden, waeren zwei Werkzeugketten in einem Lauf.
+pub(crate) fn cargo() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
+}
+
 /// Die Projektwurzel.
 ///
 /// Aus dem Manifestordner von `xtask` abgeleitet und nicht aus dem
@@ -441,10 +455,7 @@ pub(crate) fn uebersetzen(
     binaername: &str,
     ziel: Option<&str>,
 ) -> Result<(), Abbruch> {
-    // Cargo setzt CARGO auf den Pfad, unter dem es selbst laeuft. Den zu
-    // uebernehmen haelt den Bau auf derselben Werkzeugkette, aus der der Aufruf
-    // kam.
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+    let cargo = cargo();
     let mut argumente = vec![
         "build",
         "--profile",

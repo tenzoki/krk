@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** superseded
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md` (Directive, Antwort 2 der Klärungsrunde); `xtask/src/release.rs`; `shared/issues/260813-0026_*_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md`
 
@@ -42,3 +42,6 @@ Superseded by:
 
 ---
 Answered: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md, Abschnitt "Drei Fragen beantwortet" — Antwort: Möglichkeit 1, der Nutzer setzt v0.1.0 auf den Commit, der die Runde schließt; README.md nennt ihn als ersten getaggten Stand ohne Weitergabe.
+
+---
+Superseded by: shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md — Der Nutzer hat die Festlegung am 260813-1534 zurückgenommen. Das Werkzeug darf den Tag jetzt setzen und die Auslieferung in einem Kommando fahren. Die Prüfung auf einen unveränderten verfolgten Arbeitsbaum bleibt davon unberührt; überholt ist allein der Satz, dass das Werkzeug nie einen Tag erzeugt. Der Entscheid war nie umgesetzt: seine Umsetzung wäre der von Hand gesetzte Tag v0.1.0 gewesen, und der ist nie gesetzt worden.

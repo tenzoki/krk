@@ -210,6 +210,74 @@ stünde dort als `flags=0x2(adhoc)`.
 
 ## Auslieferung
 
+Ein Kommando, ein Argument, die Versionszahl:
+
+```sh
+./release.sh 0.2.0
+```
+
+Das ist der ganze Weg. Er reicht durch drei Schichten, von denen jede genau
+eine Sache beiträgt und keine zweimal:
+
+```text
+./release.sh 0.2.0
+  └─ make ausliefern VERSION=0.2.0        Pfad zu cargo, Notarprofil, Reihenfolge
+       ├─ cargo xtask version 0.2.0       Zahl setzen, eintragen, taggen
+       └─ cargo xtask release             die sieben Stationen
+```
+
+`release.sh` ist kein drittes Bauwerkzeug. Das Projekt hat eines, `xtask`, und
+eine Hülle darum, das `Makefile`; das Skript ist die zweite Hülle und trägt
+keine Logik. Wer lieber tippt, ruft die beiden Kommandos einzeln — es geht
+nichts verloren.
+
+**Warum es unten zwei Kommandos sind und nicht eines.** `xtask` liest die
+Versionszahl beim Übersetzen, über `env!("CARGO_PKG_VERSION")`. Zwischen dem
+Setzen der Zahl und dem Bau des Bündels muss deshalb ein Prozess enden, sonst
+trüge die `Info.plist` die alte Zahl, während der Tag die neue nennt. Der
+Umweg ist zugleich der Wachposten: Station 1 läuft im neu übersetzten Werkzeug
+und vergleicht die frisch eingebackene Zahl mit dem Tag.
+
+### Zahl, Eintrag, Tag
+
+```sh
+cargo xtask version 0.2.0
+```
+
+Setzt `version` unter `[workspace.package]` der Wurzel-`Cargo.toml`, trägt
+`Cargo.toml` und `Cargo.lock` als **eine** Änderung ein und setzt den Tag
+`v0.2.0` auf HEAD. Die `Cargo.lock` muss mit, weil sie die Zahl für jedes
+Mitglied mitführt; aufgefrischt wird sie nicht von Hand, sondern von
+`cargo update --workspace --offline`.
+
+Erlaubt sind genau drei Zahlenteile ohne führendes `v` — das trägt allein der
+Tag. Was wann steigt, steht unter „Versionsstufen".
+
+Geprüft wird vor dem ersten Schreiben:
+
+| Vorprüfung | Abbruch, wenn |
+|---|---|
+| die Zahl | sie nicht aus drei Zahlenteilen besteht |
+| das Git-Verzeichnis | keines zu befragen ist |
+| der Arbeitsbaum | eine verfolgte Datei geändert ist |
+| der Tagname | `v<zahl>` schon vergeben ist |
+
+Der Abbruch am Arbeitsbaum nennt **jede betroffene Datei beim Namen**. Sind es
+allein Dateien unter `fusion-workbench/`, ist es der bekannte Befund
+`shared/issues/260813-1515_*`: vier Werkbankdateien sind versioniert, die jeder
+Agentenlauf neu schreibt.
+
+**Was ein Abbruch hinterlässt.** Bis zum ersten Schreiben nichts. Scheitert
+danach das Auffrischen der `Cargo.lock` oder der Eintrag, werden beide Dateien
+auf ihren vorigen Stand zurückgeschrieben. Scheitert allein das Setzen des
+Tags, bleibt der Eintrag stehen: er ist für sich richtig, und eine Rücknahme
+schriebe Geschichte um. Dasselbe gilt für einen Abbruch der sieben Stationen
+danach — Eintrag und Tag bleiben. Der Handgriff ist in beiden Fällen derselbe:
+`./release.sh 0.2.0` noch einmal. Der Lauf sieht, dass Zahl und Tag schon
+stehen, trägt nichts doppelt ein und fährt gleich weiter.
+
+### Das Paket bauen
+
 ```sh
 cargo xtask release
 ```
@@ -225,8 +293,8 @@ dient.
    geändert sein; unbeachtete Dateien zählen nicht mit. Treffen beide Befunde
    zu, nennt eine Meldung beide. Die Station ist die billigste des Weges und
    steht ganz vorn, damit ein Abbruch dieser Art keinen Übersetzungslauf
-   kostet. Den Tag setzt der Nutzer, das Werkzeug erzeugt nie einen; Näheres
-   unter „Versionsstufen". Von Hand sind es diese beiden Fragen:
+   kostet. Sie liest allein; geschrieben hat der Halbschritt davor. Von Hand
+   sind es diese beiden Fragen:
    ```sh
    git tag --points-at HEAD                    # muss v<version> nennen
    git status --porcelain --untracked-files=no # darf nichts ausgeben
@@ -301,11 +369,11 @@ durch die geerbte Version; die Quelldatei bleibt unangetastet. Findet der Bau
 den Platzhalter nicht, bricht er ab und baut kein Bündel — so kann weder eine
 veraltete Zahl noch ein versionsloses Bündel unbemerkt entstehen.
 
-Eine neue Version wird also allein in der `Cargo.toml` gesetzt. Im Baum ist
-danach nichts nachzuführen; nachzuführen ist der Tag, denn `cargo xtask
-release` verlangt einen Tag `v<version>` auf HEAD, und den setzt der Nutzer
-(siehe „Versionsstufen"). Nachprüfen lässt sich das Ergebnis am gebauten
-Bündel:
+Eine neue Version wird also allein in der `Cargo.toml` gesetzt, und im Baum ist
+danach nichts nachzuführen. Von Hand geschieht auch das nicht mehr:
+`./release.sh <version>` setzt die Zahl, trägt sie ein, setzt den Tag und
+liefert aus (siehe „Auslieferung"). Nachprüfen lässt sich das Ergebnis am
+gebauten Bündel:
 
 ```sh
 plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plist
@@ -331,20 +399,27 @@ sieht und speichert.
   Bauwerkzeugs zählen dazu.
 - **Patch** steigt bei Behebungen ohne neue Fähigkeit.
 
-**Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt der Nutzer
-von Hand.** Das Werkzeug erzeugt unter keinen Umständen einen Tag; es liest,
-was auf HEAD steht:
+**Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt das
+Werkzeug.** Bis zum 260813-1534 galt das Gegenteil: der Nutzer setzte ihn von
+Hand, und das Werkzeug erzeugte unter keinen Umständen einen. Der Nutzer hat
+diese Festlegung am selben Tag zurückgenommen, weil sie einen Auslieferungsweg
+in einem Kommando unmöglich macht — ein Weg, der den Tag nicht setzt, braucht
+zwei Kommandos, und damit entfällt die Ersparnis. Der Entscheid ist
+`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`;
+er überholt `circles/260813-0939-.../decisions/260813-0939_*_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md`.
 
-```sh
-git tag v0.1.0        # nach dem Commit, der die Version trägt
-```
+Der Tag bleibt trotzdem ein bewusster Akt, nur liegt der Vorsatz jetzt im
+Argument: wer `./release.sh 0.2.0` tippt, hat die Zahl gewählt, und der Tag
+folgt daraus mechanisch. Verschoben wird nie einer — ein vergebener Name hält
+den Lauf an.
 
 `v0.1.0` benennt den ersten getaggten Stand und keine Weitergabe. Er steht auf
 dem Commit, der die Runde vom 260813 schließt, damit der grüne Fall der
 Prüfung an einem echten Lauf zu sehen ist; ein Bündel ist an diesem Tag an
-niemanden gegangen. Rückwirkende Tags für die Runden davor gibt es nicht: alle
-liefen auf derselben Zahl `0.1.0`, und sieben Marken für eine Zahl schrieben
-eine Auslieferungsgeschichte, die es nicht gab.
+niemanden gegangen. Er ist zugleich der einzige von Hand gesetzte. Rückwirkende
+Tags für die Runden davor gibt es nicht: alle liefen auf derselben Zahl
+`0.1.0`, und sieben Marken für eine Zahl schrieben eine
+Auslieferungsgeschichte, die es nicht gab.
 
 **Was `cargo xtask release` prüft** (Station 1, siehe „Auslieferung"): dass
 HEAD einen Tag mit genau diesem Namen trägt, und dass keine verfolgte Datei

@@ -15,9 +15,11 @@
 //! Buendel pruefbar, und das Buendel steht daher vor dem ersten Fenster.
 
 mod bundle;
+mod git;
 mod messen;
 mod release;
 mod sign;
+mod version;
 
 use std::process::ExitCode;
 
@@ -36,6 +38,30 @@ xtask — Bauwerkzeug fuer KRK
       eine gibt. Findet keine Stufe eine Identitaet, bricht der Bau mit
       einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
 
+  ./release.sh <zahl>
+      Der ganze Auslieferungsweg in einem Kommando mit einem Argument, der
+      Versionszahl. Das Skript ist kein drittes Bauwerkzeug: es reicht an
+      \"make ausliefern VERSION=<zahl>\" weiter, und das faehrt die beiden
+      Kommandos darunter nacheinander.
+
+  cargo xtask version <zahl>
+      Setzt die Versionszahl im Feld version unter [workspace.package] der
+      Wurzel-Cargo.toml, traegt Cargo.toml und Cargo.lock als eine Aenderung
+      ein und setzt den Tag v<zahl> auf HEAD. Genau drei Zahlenteile, ohne
+      fuehrendes \"v\": das traegt allein der Tag.
+
+      Geprueft wird vor dem ersten Schreiben: die Zahl, das Git-Verzeichnis,
+      der unveraenderte Arbeitsbaum und der freie Tagname. Ist der
+      Arbeitsbaum geaendert, nennt der Abbruch jede betroffene Datei. Steht
+      die Zahl schon und fehlt nur der Tag, wird nur getaggt; steht beides,
+      ist nichts zu tun. Derselbe Aufruf ein zweites Mal traegt also nichts
+      doppelt ein.
+
+      Warum es zwei Kommandos sind und nicht eines: xtask liest die Zahl beim
+      Uebersetzen ueber env!(\"CARGO_PKG_VERSION\"). Der Prozess muss enden,
+      damit cargo das Werkzeug mit der neuen Zahl neu uebersetzt, und Station
+      1 von release vergleicht danach die neu eingebackene Zahl mit dem Tag.
+
   cargo xtask release
       Baut das Auslieferungspaket (Schritt 23) in sieben Stationen: prueft Tag
       und Arbeitsbaum, prueft die AppKit-Grenze (keine `use objc2`-Zeile
@@ -48,13 +74,12 @@ xtask — Bauwerkzeug fuer KRK
       Vorlaeufe, die einer spaeteren Station zuarbeiten: die Buendelvorlage,
       die Identitaetssuche und die Zielpruefung.
 
-      Station 1 ist die neue Vorpruefung, und sie steht ganz vorn, damit ein
+      Station 1 ist die Vorpruefung, und sie steht ganz vorn, damit ein
       Abbruch keinen Uebersetzungslauf kostet: HEAD muss einen Tag v<version>
       mit der Zahl aus [workspace.package] tragen, und keine verfolgte Datei
-      darf geaendert sein. Unbeachtete Dateien zaehlen nicht mit. Den Tag
-      setzt der Nutzer von Hand; das Werkzeug erzeugt nie einen und schreibt
-      nichts ins Verzeichnis, es liest. `cargo xtask bundle` fragt weder nach
-      dem einen noch nach dem anderen.
+      darf geaendert sein. Unbeachtete Dateien zaehlen nicht mit. Sie liest
+      allein; geschrieben hat der Halbschritt davor, \"cargo xtask version\".
+      `cargo xtask bundle` fragt weder nach dem einen noch nach dem anderen.
 
       Die Identitaetssuche laeuft in denselben drei Stufen wie bei `bundle`,
       nur sucht die zweite nach dem Namensanfang \"Developer ID Application\".
@@ -116,6 +141,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             println!("Buendel: {}", gebaut.buendel.display());
             Ok(())
         }
+        "version" => version::ausfuehren(&argumente[1..]),
         "release" => release::ausfuehren(&argumente[1..]),
         "messen" => messen::ausfuehren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
@@ -153,6 +179,35 @@ mod tests {
     #[test]
     fn bundle_nimmt_keine_weiteren_marken() {
         assert!(ist_aufruffehler(ausfuehren(&worte(&["bundle", "--adhoc"]))));
+    }
+
+    /// Der Unterbefehl steht in der Verteilung und in der Hilfe.
+    ///
+    /// Ein Befehl, den die Hilfe nicht nennt, findet niemand; die Probe haelt
+    /// beide Stellen aneinander, ohne den Wortlaut festzuschreiben.
+    #[test]
+    fn version_steht_in_verteilung_und_hilfe() {
+        // Ohne Zahl ist es ein Aufruffehler und kein unbekannter Unterbefehl:
+        // der Befehl ist also verteilt worden.
+        let Err(Abbruch::Aufruf(meldung)) = ausfuehren(&worte(&["version"])) else {
+            panic!("version ohne Zahl ist ein Aufruffehler");
+        };
+        assert!(meldung.contains("genau ein Argument"), "{meldung}");
+        assert!(HILFE.contains("cargo xtask version <zahl>"), "{HILFE}");
+        assert!(HILFE.contains("./release.sh <zahl>"), "{HILFE}");
+    }
+
+    /// Der ueberholte Satz steht nirgends mehr in der Hilfe.
+    ///
+    /// Bis zum 260813-1534 sagte sie, der Nutzer setze den Tag und das
+    /// Werkzeug erzeuge nie einen. Der Entscheid
+    /// `shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`
+    /// hat das zurueckgenommen.
+    #[test]
+    fn die_hilfe_traegt_den_ueberholten_satz_nicht_mehr() {
+        for satz in ["erzeugt nie einen", "setzt der Nutzer von Hand"] {
+            assert!(!HILFE.contains(satz), "die Hilfe sagt noch {satz:?}");
+        }
     }
 
     #[test]
