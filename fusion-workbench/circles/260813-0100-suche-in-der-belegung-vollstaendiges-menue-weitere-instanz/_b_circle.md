@@ -95,9 +95,20 @@ bricht keine Zusammensetzung einer Eingabemethode mehr ab, und ein Klick in die 
 wirkt waehrend einer Umbenennung nicht.
 
 **Warum hier Schluss ist und nicht nach dem naechsten Turn.** Jede Durchsicht dieser Runde hat
-etwas gefunden, auch die dritte und die vierte. Die verbliebenen acht Datensaetze sind
-saemtlich von derselben Art — eine Zusage ist weiter als ihre Wache — und keiner betrifft das
-Verhalten. Sie sind benannt, begruendet und binden die naechste Runde. Weiterzureparieren
+etwas gefunden, auch die dritte und die vierte. Weiterzureparieren verspraeche eine
+Vollstaendigkeit, die dieselbe Runde dreimal als Trugschluss vorgefuehrt hat.
+
+**Berichtigung vom 260813, am Dateibestand nachgezaehlt.** Eine erste Fassung dieser Notiz
+sprach von acht offenen Datensaetzen, saemtlich von einer Art und keiner am Verhalten. Beides
+war falsch. Offen sind **vierzehn**, und **drei betreffen sichtbares Verhalten**: ein Klick in
+die Bereichsleiste waehrend einer Umbenennung (`issues/260813-0311_*`), zwei Menueeintraege auf
+`cmd+a`, von denen AppKit dem spaeteren das Kuerzel nimmt (`issues/260813-0416_*`), und die
+verlorene mac-uebliche Reihenfolge samt Trenner im Menue Bearbeiten (`issues/260813-0420_*`).
+Der Playmaker hat es beim Erzeugen des Portfolios gemeldet. Die Zahl war beim Schreiben
+nachzaehlbar; sie stammte aus dem Gedaechtnis des Orchestrators und nicht von der Platte, und
+das ist derselbe Fehler, den er in der Runde 6 an derselben Stelle gemacht hat.
+
+Die elf uebrigen sind von der genannten Art: eine Zusage reicht weiter als ihre Wache. Sie sind benannt, begruendet und binden die naechste Runde. Weiterzureparieren
 verspraeche eine Vollstaendigkeit, die dieselbe Runde dreimal als Trugschluss vorgefuehrt hat.
 
 **Sitzungsprotokoll:** `shared/history/260813-0040-orchestrator-session.md`

@@ -506,3 +506,168 @@ dass die Bindung seit der Runde 6 fester geworden ist statt loser.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260813-0714
+**Playmaker-Lauf:** 260813-0714-playmaker-direct-dispatch
+**Beschränkt abgeschlossenes Kind:**
+`260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` (Runde 7), geschlossen
+am 260813
+
+Die Runde 7 hat die Belegung, das Menü und die Ablage angefasst, und alle drei stehen im
+Abschnitt `## Grounding snapshot` dieses Datensatzes als Tatsachenaussagen. Keine der vier
+Feststellungen unten hält die Aktivierung auf; alle vier gehören in die Klärungsrunde.
+
+**Zur Auslösebedingung, offen benannt.** Die Regel verlangt, dass der Abschnitt
+`## Grounding snapshot` dieses Datensatzes den Verzeichnisnamen des abgeschlossenen Kindes oder
+den in seiner `## Closure note` genannten Artefakt zitiert. Er zitiert weder das eine noch das
+andere. Anders als bei der Runde 6 läuft diesmal auch keine Kante in die Gegenrichtung: der
+Abschnitt `## Dependencies` der Runde 7 lautet „Keine auf einen anderen Circle." Zwischen beiden
+Circles besteht also überhaupt keine notierte Kante. Der Vermerk steht hier, weil die Runde 7 am
+Baum drei Sätze dieses Grounding eingeholt hat, nicht weil eine Zitatbeziehung ihn auslöst. Wer
+anders entscheidet, sieht an dieser Stelle, worauf.
+
+### 1. Ein neuer Befehl kostet seit der Runde 7 mehr als einen Eintrag in der Belegungstabelle
+
+Der Abschnitt `## Grounding snapshot` schreibt unter `### Was der aktive Circle schon gebaut hat
+und dieser erbt`:
+
+> Neue Befehle des Betrachters, etwa das Ein- und Ausschalten der Sprungmarken, bekommen ihre
+> Einträge in derselben Tabelle.
+
+Der Satz bleibt wahr und ist seit der Runde 7 unvollständig. Die Menüleiste wird nicht mehr als
+Programmtext gepflegt, sondern aus der Belegung gerechnet: `menuemodell::aufbau` liefert neun
+Obermenüs und einen Eintrag je Funktion, und `crates/krk-ui/src/appkit/menue.rs` setzt den Wert
+nur noch in `NSMenu` und `NSMenuItem` um. Ein Eintrag in `resources/default-keymap.toml` erzeugt
+damit selbsttätig einen Menüeintrag, und der bringt zwei Pflichten mit.
+
+Die erste ist die Ausgrauung, und sie ist nach dem Grounding der Runde 7 eine
+Korrektheitsbedingung und keine Politur: ein Menüeintrag mit Kürzel führte bis dahin einen
+Befehl aus, den die Fokusprüfung gerade abgewiesen hatte. `validateMenuItem:` fragt jetzt
+dieselbe Regel wie der Ereignisabgriff, nämlich `zulaessig` in
+`crates/krk-ui/src/kommandos/zulaessigkeit.rs:113`. Die zweite Pflicht sind die beiden
+Aufzählungsstellen, die `CLAUDE.md` unter „Was man nicht sieht" führt: `Kommando::wirkungsbereich`
+und `bereich_des_kommandos`. Für einen Betrachter, dessen Befehle nur wirken, solange er den
+Fokus hält, ist die Ausgrauung kein Nebenzweig, sondern der Normalfall.
+
+Die Größenordnung: `Kommando::KENNUNGEN` trägt am 260813 sechsundsiebzig Einträge
+(`crates/krk-core/src/tasten/belegung.rs:566`). Jeder Befehl des Betrachters kommt oben drauf und
+durchläuft dieselben Stellen.
+
+### 2. Die dritte Möglichkeit der ersten offenen Frage führt jetzt an eine Sperre
+
+Die erste offene Frage dieses Circles bietet als dritte Möglichkeit an, gespeicherte
+Web-Adressen in die Lesezeichenleiste aus C5 zu legen. Die Lesezeichen liegen in der Ablage unter
+`~/Library/Application Support/KRK/`, und genau dort hat die Runde 7 gearbeitet: `opt+cmd+n`
+startet eine weitere Instanz, und zwei Sperren über `flock` sollen verhindern, dass zwei
+Instanzen einander die Ablage zerlegen.
+
+Die Sperre ist nach der eigenen Durchsicht der Runde nicht dicht. Der Datensatz
+`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0716_*_die-bewachte-luecke-ist-nicht-die-luecke-elf-schreibwege-an-der-sperre-vorbei-bleiben.md`
+ist offen und benennt elf Schreibwege an der Sperre vorbei. Wer die dritte Möglichkeit wählt,
+erbt damit eine bewachte Schnittstelle mit benannten Löchern statt einer ungeschützten Datei.
+Die zugehörige Nutzerfrage steht ebenfalls offen:
+`shared/decisions/260813-0053_*_was-teilen-sich-zwei-instanzen-an-der-ablage-und-wer-schreibt-die-sitzung.md`.
+
+Für die ersten beiden Möglichkeiten der Frage ändert sich nichts. Der Punkt betrifft allein die
+dritte und verteuert sie.
+
+### 3. Der Fokusvorbehalt fragt nach drei Textklassen, und eine Web-Ansicht ist keine davon
+
+`ersthelfer_gehoert_appkit` (`crates/krk-ui/src/appkit/ereignisse.rs:581`) liefert `true` allein
+für `NSTextView`, `NSTextField` und `NSText`, abzüglich der Editorfläche, die seit der Runde 7
+über eine hereingereichte Prüffunktion erkannt wird statt über Modulwissen. Eine Ansicht, die
+Web-Inhalt darstellt, gehört zu keiner der drei Klassen.
+
+`inference:` Solange eine solche Ansicht den Ersthelferrang hält, nimmt die Belegung von KRK
+folglich jede Taste. Für die Tastatursteuerung des Betrachters, die dieser Circle in seiner
+Directive verlangt, ist das der gewünschte Ausgang. Für ein Eingabefeld innerhalb einer
+angezeigten Seite ist es der unerwünschte, und der Baum entscheidet die Frage heute nicht: er
+trägt keine Web-Ansicht, und die Aussage ist am Prädikat abgelesen und nicht gemessen.
+
+Die Frage, an der das hängt, ist eine der vier, auf deren Empfehlung die Runde 7 gefahren ist,
+ohne dass sie beantwortet wäre:
+`shared/decisions/260813-0053_*_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`.
+Wer den Betrachter aktiviert, sollte sie vorher stellen, weil ihre Antwort bestimmt, welchen
+Weg ein Tastendruck in der Web-Ansicht nimmt.
+
+### 4. Die Messreihe hinter der dritten offenen Frage steht jetzt zwei Runden zurück
+
+Die dritte offene Frage dieses Circles leitet eine mögliche elfte Zeitzusage aus L5 und L7 ab.
+Der Vermerk vom 260812-2307 hielt fest, dass die Runde 6 den Abstand zu L7 gemessen verkleinert
+hat. Die Runde 7 setzt keine elfte Zusage und fasst keine der zehn an, sagt das ausdrücklich in
+ihrer Directive und ist trotzdem eine weitere unabgenommene Runde: der Abnahmelauf steht seit der
+Runde 6 aus und jetzt für zwei Runden.
+
+Der Befund von 260807-1042 gilt damit unverändert und wird nur älter. L5 und L7 stehen weiter auf
+der Abnahmereihe `messungen/260805-2207-MacBookPro15-1-abnahme.txt` vom 260805-2207, und
+inzwischen liegen zwei gebaute Runden dazwischen. Eine elfte Zusage, die aus ihnen abgeleitet
+würde, erbte einen Belegstand von acht Tagen.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260813-0714
+**Playmaker-Lauf:** 260813-0714-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Klärungsrunde über fünf Fragen und einer
+Untersuchung des Darstellungsmittels, nicht davor
+
+Dieser Circle ist der empfohlene nächste Kandidat, wie schon beim Lauf vom 260812-2307, und
+wieder ohne Vergleichswert: nach dem Abschluss der Runde 7 ist er der einzige nicht
+abgeschlossene Circle im Portfolio. Eine Rangfolge mit einem Element sagt nichts über relative
+Reife. Der Vorschlag stützt sich auf die absoluten Signale.
+
+**Die Runde 7 hat den Zuschnitt dieses Circles nicht berührt, und zum ersten Mal ist das kein
+Verdienst, sondern eine Randlage.** Bei der Runde 6 war die Unberührtheit ein Signal: jene Runde
+baute an derselben Fläche und hat zwei Fragen dieses Circles ausdrücklich zu seinen Gunsten
+entschieden, statt sie stillschweigend zu verbrauchen. Die Runde 7 hat die Vorschau gar nicht
+angefasst. Sie hat an der Belegungsansicht, am Hauptmenü und an der Ablage gearbeitet, und keine
+der drei Flächen ist die, auf der der Betrachter sitzt. Das ist eine schwächere Auskunft als die
+vom 260812-2307, und sie sollte nicht als dieselbe gelesen werden.
+
+**Was die Runde 7 stattdessen geliefert hat, ist ein größerer Eintrittspreis pro Befehl.** Der
+Abschnitt `## Parent grounding stale` oben schlüsselt es auf: ein neuer Befehl erzeugt seit der
+Runde 7 selbsttätig einen Menüeintrag und braucht dafür eine Ausgrauungsregel, einen
+Wirkungsbereich und eine Zeile in `bereich_des_kommandos`. Für einen Betrachter mit eigenen
+Befehlen für Blättern, Zurück, Vor und Sprungmarken ist das nicht wenig. Der Gewinn steht
+daneben und ist echt: jeder dieser Befehle ist danach auf drei Wegen erreichbar statt auf einem,
+ohne dass der Betrachter dafür etwas eigenes bauen müsste.
+
+**Die geerbten Bauteile stehen unverändert.** Die vier Bauteile aus dem Abschnitt
+`## Grounding snapshot` liegen auf der Platte: die Auswertung der Zwischenablage, das
+Vorschaufenster mit seiner Tableiste, die Statuszeile über die volle Fensterbreite seit der
+Runde 6, und der Befehl auf `opt+cmd+g`. Die 160 Punkte Mindestbreite der Vorschau sind
+weiterhin nicht angetastet (`crates/krk-ui/src/fenstermodell.rs`), also bleiben die rund 17
+Punkte Luft bis zur gerechneten Obergrenze unverbraucht.
+
+**Der Zuschnitt bleibt das stärkste Gegenargument, und er ist unverändert.** Der Datensatz hält
+selbst fest, dass das Mittel der Darstellung von Web-Inhalt offen ist und in eine eigene
+Untersuchung vor dem Plan gehört. Daneben steht die ungemessene Verfügbarkeitsfrage für
+macOS-26-Schnittstellen
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`)
+und die projektweit offene Frage, ob die Untergrenzen-Angabe prüfbar gemacht wird
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`). Eine
+Untersuchung vor dem Plan ist teurer als eine Klärungsrunde, und dieser Circle braucht beides.
+
+**Die Klärungsrunde trägt weiterhin fünf Fragen**, und eine sechste steht jetzt daneben. Die drei
+des Abschnitts `## Grounding snapshot`, die Mindestbreite der Vorschau aus dem Vermerk vom
+260812-0816 und die Schriftgröße der Vorschau aus dem Vermerk vom 260812-2307. Dazu kommt aus der
+Runde 7 die Frage, welchen Weg ein Tastendruck in einer Web-Ansicht nimmt; sie ist keine eigene
+Frage dieses Circles, sondern der offene Nutzerentscheid
+`shared/decisions/260813-0053_*_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`,
+und sie sollte vor der Aktivierung eine Antwort haben statt danach.
+
+**Zur Abhängigkeitslage, die in diesem Projekt nichts unterscheidet.** Die einzige
+Circle-Abhängigkeit dieses Datensatzes, die Runde 1, ist beschränkt abgeschlossen (`_b_`) und
+nicht kohärent (`_c_`). Nach der Rangheuristik trägt er damit das Kennzeichen der unerfüllten
+Vorbedingung. Alle sieben gefahrenen Runden tragen `_b_`, und alle sieben aus demselben Grund:
+der Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`,
+offen seit dem 260806). Das Kennzeichen steht an jedem denkbaren Kandidaten dieses Projekts und
+ist keine Auskunft über diesen. Die Heuristik ist deshalb nicht angewandt, sondern ausgesetzt und
+hier benannt.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
