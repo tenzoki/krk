@@ -190,11 +190,11 @@ use std::time::Instant;
 
 use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate,
-    NSApplicationTerminateReply, NSResponder, NSView, NSWindow,
+    NSApplicationTerminateReply, NSMenuItem, NSMenuItemValidation, NSResponder, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
@@ -537,50 +537,44 @@ define_class!(
             self.messen_weiter();
         }
 
-        /// Der Menueeintrag "Fenster einblenden" (C7).
+        /// Der eine Selektor jedes Menueeintrags, der ein [`Kommando`] traegt
+        /// (C2.14).
         ///
-        /// Er erreicht den Delegierten ueber die Antwortkette, an deren Ende
-        /// `NSApplication` seinen Delegierten fragt. Genau deshalb traegt der
-        /// Eintrag kein festes Ziel: er bleibt damit auch dann bedienbar, wenn
-        /// kein Fenster offen ist, und das ist der Fall, fuer den es ihn gibt.
+        /// **Ein Menueeintrag geht denselben Weg wie ein Tastendruck.** Er
+        /// ruft [`Self::kommando_ausfuehren`] und damit die eine Stelle, die
+        /// entscheidet, wohin ein Befehl geht; ein zweiter Ausfuehrungsweg
+        /// entsteht nicht. Bis zur Runde 7 liefen drei Eintraege — "KRK
+        /// beenden", "Fenster einblenden" und "Fenster schliessen" — ueber je
+        /// einen eigenen Selektor und damit **an** `kommando_ausfuehren`
+        /// **vorbei**; mit einem Kuerzel an jedem der zweiundachtzig Eintraege
+        /// waere daraus eine Regel geworden statt einer Ausnahme.
+        ///
+        /// **Und es ist trotzdem nicht `terminate:`.** Der Grund, aus dem
+        /// "KRK beenden" seinerzeit einen eigenen Selektor bekam, war die
+        /// Zweitform "Quit and Keep Windows", die AppKit zu einem Eintrag mit
+        /// `terminate:` von sich aus auf Opt+Cmd+Q dazustellt. Der
+        /// Sammelselektor ist so wenig `terminate:` wie `beenden:` es war, und
+        /// [`Self::beenden`] ruft `terminate:` weiterhin selbst.
+        ///
+        /// Welchen Befehl der Eintrag meint, steht in seinem `tag`; die
+        /// Uebersetzung dorthin und zurueck steht in [`menue`], weil `tag` ein
+        /// AppKit-Begriff ist. Ein Absender ohne brauchbaren `tag` tut nichts:
+        /// die Ausgrauung in `validateMenuItem:` weist denselben Eintrag schon
+        /// ab, und ein Absturz waere hier die falsche Antwort.
         // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
         // Argument, der Absender.
-        #[unsafe(method(fensterEinblenden:))]
-        fn fenster_einblenden(&self, _absender: Option<&AnyObject>) {
-            self.fenster_zeigen();
-        }
-
-        /// Der Menueeintrag "Fenster schliessen" (C7).
-        ///
-        /// Ein eigener Selektor und nicht `performClose:`, und das ist der
-        /// ganze Zweck: zu einem Menueeintrag mit `performClose:` stellt AppKit
-        /// von sich aus eine Zweitform "Close All" auf Opt+Shift+Cmd+W dazu,
-        /// eine Kombination, die weder in der Belegung steht noch umbelegbar
-        /// ist (gemessen am 260804-1040). Am Verhalten aendert der Umweg
-        /// nichts: der Delegierte ruft `performClose:` am Fenster selbst.
-        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
-        // Argument, der Absender.
-        #[unsafe(method(fensterSchliessen:))]
-        fn fenster_schliessen_aktion(&self, _absender: Option<&AnyObject>) {
-            self.fenster_schliessen();
-        }
-
-        /// Der Menueeintrag "KRK beenden" (C3).
-        ///
-        /// Ein eigener Selektor und nicht `terminate:`, aus demselben Grund wie
-        /// bei `fensterSchliessen:` daneben: zu einem Menueeintrag mit
-        /// `terminate:` stellt AppKit von sich aus eine Zweitform "Quit and
-        /// Keep Windows" auf Opt+Cmd+Q dazu, mit englischer Beschriftung und
-        /// einer Kombination, die weder in der Belegung steht noch umbelegbar
-        /// ist (gemessen am 260805-0753 am laufenden Buendel,
-        /// `issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
-        /// Am Verhalten aendert der Umweg nichts: der Delegierte ruft
-        /// `terminate:` an `NSApplication` selbst.
-        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
-        // Argument, der Absender.
-        #[unsafe(method(beenden:))]
-        fn beenden_aktion(&self, _absender: Option<&AnyObject>) {
-            self.beenden();
+        #[unsafe(method(krkKommando:))]
+        fn krk_kommando(&self, absender: Option<&NSMenuItem>) {
+            let Some(absender) = absender else {
+                return;
+            };
+            let Some(kommando) = menue::kommando_zum_tag(absender.tag()) else {
+                return;
+            };
+            // Der Rueckgabewert sagt, ob der Befehl zulaessig war; wer den
+            // Eintrag angeklickt hat, hat ihn nicht ausgegraut vorgefunden, und
+            // der Abgriff wartet hier auf keine Antwort.
+            let _ = self.kommando_ausfuehren(kommando);
         }
 
         /// Der Menueeintrag "Tastenbelegung als Markdown sichern" (C1 der
@@ -595,6 +589,57 @@ define_class!(
         #[unsafe(method(tastenbelegungSichern:))]
         fn tastenbelegung_sichern_aktion(&self, _absender: Option<&AnyObject>) {
             self.tastenbelegung_sichern();
+        }
+    }
+
+    /// Die Ausgrauung des Hauptmenues, und sie fragt dieselbe Regel wie der
+    /// Ereignisabgriff (C2.5, C2.16).
+    // SAFETY: `NSMenuItemValidation` stellt keine Bedingungen ueber die
+    // Signatur hinaus, und die ist die des Protokolls.
+    unsafe impl NSMenuItemValidation for Anwendungsdelegierter {
+        /// Ob dieser Eintrag jetzt bedienbar ist.
+        ///
+        /// **Der zweite Frager von [`zulaessigkeit::zulaessig`], und er baut
+        /// keine eigene Regel.** Der erste ist
+        /// [`Self::kommando_ausfuehren`]. Beide fragen dieselbe Funktion auf
+        /// derselben [`Lage`] aus [`Self::lage`]; ihre Antworten koennen
+        /// deshalb nicht auseinanderlaufen, und genau daran haengt diese Runde.
+        /// Ein freigegebener Eintrag zu einem abgewiesenen Tastendruck fuehrte
+        /// den Befehl aus, den der Abgriff eben verweigert hat: mit dem Fokus
+        /// im Editor bewegte ein Auf-Pfeil dann die Dateiliste.
+        ///
+        /// **Zuerst die Aktion, dann der `tag`.** Der Vorgabewert eines `tag`
+        /// ist Null, und Null ist ein gueltiger Index in
+        /// [`Kommando::KENNUNGEN`]. Fuer jede fremde Aktion antwortet diese
+        /// Methode deshalb `true` und ueberlaesst AppKit seine gewohnte
+        /// Entscheidung; die sechs Textbefehle (C2.8) und der Eintrag der
+        /// Markdown-Ausgabe (C2.9) behalten damit genau das Verhalten, das sie
+        /// heute haben, und ihre Ausgrauung kommt weiter aus der Antwortkette.
+        ///
+        /// **Kein Beobachter am Fokus, und das ist kein Versehen.** Eine
+        /// Anzeige, die dem Fokus folgt, gehoert nach `CLAUDE.md` an die
+        /// Ueberschreibung von `makeFirstResponder:` in [`super::fenster`].
+        /// Hier wird nichts gesetzt, sondern gefragt: AppKit erhebt die
+        /// Zulaessigkeit von sich aus, bevor es ein Menue oeffnet oder eine
+        /// Tastenentsprechung zustellt. Ein zweiter Beobachter waere ein
+        /// zweiter Weg zu derselben Antwort.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(validateMenuItem:))]
+        fn eintrag_pruefen(&self, eintrag: &NSMenuItem) -> bool {
+            // Ohne `return`, und das ist kein Geschmack: `define_class!` setzt
+            // den Rumpf in eine Huelle mit dem Rueckgabetyp `Bool`, und ein
+            // `return` verliesse die Huelle statt den Rumpf.
+            if eintrag.action() == Some(Sel::register(menue::KRK_KOMMANDO)) {
+                match menue::kommando_zum_tag(eintrag.tag()) {
+                    Some(kommando) => zulaessigkeit::zulaessig(kommando, self.lage()),
+                    // Ein `tag`, den `KENNUNGEN` nicht fuehrt, ist ein
+                    // Programmfehler. Grau ist dafuer die richtige Anzeige: der
+                    // Eintrag taete ohnehin nichts.
+                    None => false,
+                }
+            } else {
+                true
+            }
         }
     }
 
@@ -2950,10 +2995,17 @@ impl Anwendungsdelegierter {
     /// Schliesst das Fenster (C7).
     ///
     /// Die eine Stelle dafuer, und beide Wege gehen darueber: der
-    /// Ereignisabgriff mit [`Kommando::FensterSchliessen`] und der
-    /// Menueeintrag ueber den Selektor `fensterSchliessen:`. `performClose:`
+    /// Ereignisabgriff und der Menueeintrag, beide seit der Runde 7 ueber
+    /// [`Kommando::FensterSchliessen`] und [`Self::kommando_ausfuehren`].
+    /// `performClose:`
     /// und nicht `close`, damit der Fensterdelegierte gefragt wird und die
     /// Schliessanimation dieselbe bleibt wie beim Klick auf den roten Knopf.
+    ///
+    /// **`performClose:` steht hier und an keinem Menueeintrag**, und das ist
+    /// der Grund, aus dem der Umweg ueberhaupt besteht: zu einem Eintrag mit
+    /// diesem Selektor stellt AppKit von sich aus eine Zweitform "Close All"
+    /// auf Opt+Shift+Cmd+W dazu, die weder in der Belegung steht noch umbelegbar
+    /// ist (gemessen am 260804-1040).
     /// Das Fenster ueberlebt sein Schliessen; "Fenster einblenden" holt es
     /// zurueck.
     fn fenster_schliessen(&self) -> bool {
@@ -2967,10 +3019,16 @@ impl Anwendungsdelegierter {
     /// Beendet die Anwendung (C3).
     ///
     /// Die eine Stelle dafuer, und beide Wege gehen darueber: der
-    /// Ereignisabgriff mit [`Kommando::Beenden`] und der Menueeintrag ueber den
-    /// Selektor `beenden:`. `terminate:` und nicht `exit`, damit AppKit seinen
+    /// Ereignisabgriff und der Menueeintrag, beide seit der Runde 7 ueber
+    /// [`Kommando::Beenden`] und [`Self::kommando_ausfuehren`]. `terminate:` und
+    /// nicht `exit`, damit AppKit seinen
     /// Ablauf geht: erst `applicationShouldTerminate:` mit der Nachfrage aus C4,
     /// dann `applicationWillTerminate:` mit dem letzten Sitzungsstand.
+    ///
+    /// **`terminate:` steht hier und an keinem Menueeintrag**, aus demselben
+    /// Grund wie `performClose:` bei [`Self::fenster_schliessen`]: zu einem
+    /// Eintrag mit diesem Selektor stellt AppKit die Zweitform "Quit and Keep
+    /// Windows" auf Opt+Cmd+Q dazu (gemessen am 260805-0753).
     ///
     /// **Der Rueckgabewert `true` sagt nichts ueber das Beenden aus**, sondern
     /// allein, dass der Tastendruck verbraucht ist. Ob KRK wirklich endet,
@@ -4794,9 +4852,11 @@ impl Anwendungsdelegierter {
     /// die Frage beantworten koennte, und ein `TerminateCancel` liesse KRK ohne
     /// Rueckweg stehen.
     ///
-    /// **Steht schon ein Blatt, wird nicht beendet.** Der Ereignisabgriff laesst
-    /// waehrend eines Blattes allein den Abbruch durch, der Menueeintrag "KRK
-    /// beenden" kommt aber ueber die Antwortkette hierher. Ein zweites Blatt
+    /// **Steht schon ein Blatt, wird nicht beendet.** Waehrend eines Blattes
+    /// kommt ausser dem Abbruch allein die Ausnahmeliste aus
+    /// [`zulaessigkeit::immer_erreichbar`] durch, und [`Kommando::Beenden`]
+    /// steht darauf — Cmd+Q und der Menueeintrag "KRK beenden" erreichen diese
+    /// Stelle also auch dann, und genau das ist gewollt. Ein zweites Blatt
     /// darauf zu stapeln hiesse, dem Nutzer zwei Fragen zugleich zu stellen und
     /// die erste unbeantwortet abzuraeumen; er beantwortet stattdessen die
     /// stehende und beendet danach.

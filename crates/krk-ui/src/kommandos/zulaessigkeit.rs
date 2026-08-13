@@ -147,12 +147,10 @@ mod tests {
     /// Die Zulaessigkeitsregel ist im Baum genau einmal erklaert (C2.16, erste
     /// Haelfte).
     ///
-    /// **Eine Erklaerungszaehlung und keine Aufruferzaehlung.** Dass beide
-    /// Frager dieselbe Stelle rufen, ist die zweite Haelfte von C2.16 und faellt
-    /// erst an, wenn die Ausgrauung des Hauptmenues entsteht; sie ist eine
-    /// Zaehlung ueber Aufrufer und steht dann dort, wo das Kriterium die Zahl
-    /// selbst zusagt. Diese hier haelt die andere Haelfte: eine zweite Fassung
-    /// derselben Regel laesst sie rot werden. Die Begruendung fuer die
+    /// **Eine Erklaerungszaehlung und keine Aufruferzaehlung.** Sie haelt die
+    /// eine Haelfte: eine zweite Fassung derselben Regel laesst sie rot werden.
+    /// Die andere Haelfte, dass beide Frager diese eine Stelle rufen, zaehlt
+    /// [`beide_frager_rufen_die_eine_regel`] daneben. Die Begruendung fuer die
     /// Unterscheidung steht in [`crate::quellbaum`].
     ///
     /// Die Nadel steht zusammengesetzt da, wie bei
@@ -169,6 +167,35 @@ mod tests {
         assert_eq!(
             erklaerungen, 1,
             "die Zulaessigkeitsregel ist nicht genau einmal erklaert"
+        );
+    }
+
+    /// Genau zwei Stellen rufen die Regel, und es sind der Abgriff und die
+    /// Ausgrauung (C2.16, zweite Haelfte).
+    ///
+    /// **Eine Aufruferzaehlung, und sie steht hier, weil C2.16 die Zahl selbst
+    /// zusagt.** Der eine Frager ist `Anwendungsdelegierter::kommando_ausfuehren`
+    /// und entscheidet, ob der Ereignisabgriff den Tastendruck schluckt; der
+    /// andere ist `validateMenuItem:` und entscheidet, ob der Menueeintrag
+    /// bedienbar ist. Beide fragen dieselbe Funktion auf derselben [`Lage`], und
+    /// **daran** haengt die Runde: gaeben sie verschiedene Antworten, fuehrte
+    /// ein freigegebener Eintrag den Befehl aus, den der Abgriff eben verweigert
+    /// hat — mit dem Fokus im Editor bewegte ein Auf-Pfeil die Dateiliste.
+    ///
+    /// Rot wird die Probe, wenn ein dritter berechtigter Frager hinzukommt. Die
+    /// richtige Antwort darauf ist die Zahl hier und nicht das Streichen eines
+    /// Fragers; was eine Aufruferzaehlung leistet und was nicht, steht in
+    /// [`crate::quellbaum`].
+    #[test]
+    fn beide_frager_rufen_die_eine_regel() {
+        let nadel = concat!("zulaessigkeit::", "zulaessig(");
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| inhalt.matches(nadel).count())
+            .sum();
+        assert_eq!(
+            aufrufe, 2,
+            "die Regel hat nicht die zwei Frager Ereignisabgriff und Ausgrauung"
         );
     }
 

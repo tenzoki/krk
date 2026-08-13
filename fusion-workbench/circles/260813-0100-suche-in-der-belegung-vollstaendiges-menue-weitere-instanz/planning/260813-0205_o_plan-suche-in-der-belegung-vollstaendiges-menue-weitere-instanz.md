@@ -259,7 +259,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** `cargo test --workspace` grün; die Aufzählung der wirkungslos-zulässigen Befehle liegt in der Commit-Message. **(Bündel):** C2.15, dass ein Befehl auf einen Tastendruck hin höchstens einmal läuft.
 - **Abhängigkeiten:** S2.
 
-### S4: Eine Gliederung für drei Abnehmer
+### S4: [DONE] Eine Gliederung für drei Abnehmer
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/belegungsmodell.rs`
@@ -269,7 +269,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** eine neue Prüfung hält fest, dass `ALLE` mit `Anwendung` beginnt und mit `Fenster` endet und dass `Textbefehle::name()` „Bearbeiten" liefert, jeweils mit dem Grund im Doc-Kommentar. Vorhandene Prüfungen, die die alte Reihenfolge festhalten, werden gesucht und nachgezogen; die Markdown-Ausgabe der Runde 3 hat Prüfungen über ihre Abschnittsfolge, und die gehören in denselben Schritt.
 - **Abhängigkeiten:** keine.
 
-### S5: Das Menümodell, ohne AppKit prüfbar
+### S5: [DONE] Das Menümodell, ohne AppKit prüfbar
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/menuemodell.rs` (neu), `crates/krk-ui/src/main.rs`
@@ -279,7 +279,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C2.1, dass die Zahl der Befehlseinträge gegen `Belegung::funktionen()` aufgeht und keine Funktion zweimal vorkommt; C2.2 über die Zahl der Aufrufer von `nach_bereichen`, die auf drei steigt; C2.3 über Reihenfolge und Titel der neun Obermenüs; C2.4, dass eine Funktion mit mehreren Kombinationen die erste zeigt und eine ohne keine; C2.9 über Ort und Kürzellosigkeit des Markdown-Eintrags. Alle fünf laufen ohne AppKit und ohne Hauptfaden.
 - **Abhängigkeiten:** S4.
 
-### S6: Das Menü baut aus dem Modell, trägt sein Kommando im `tag` und graut aus
+### S6: [DONE] Das Menü baut aus dem Modell, trägt sein Kommando im `tag` und graut aus
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/menue.rs`, `crates/krk-ui/src/appkit/anwendung.rs`

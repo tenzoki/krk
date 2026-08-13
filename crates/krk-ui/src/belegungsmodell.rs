@@ -69,8 +69,30 @@ use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
 /// Gliederung nicht: er beantwortet, welcher Bereich den Fokus haben muss,
 /// und wirft dabei Fenster-, Fokus- und Anwendungsbefehle in einen Topf
 /// (`Ueberall`), den kein Nutzer als Ordnung wiedererkennt.
+///
+/// # Die Reihenfolge beschreibt seit der Runde 7 eine Mac-Menueleiste
+///
+/// Drei Abnehmer lesen diese Gliederung, und der dritte ist seit der Runde 7
+/// das Hauptmenue ([`crate::menuemodell`]). Fuer eine Menueleiste sind zwei
+/// Stellen nicht waehlbar: **Anwendung** muss vorn stehen, weil macOS den Titel
+/// des ersten Obermenues durch den Namen aus der `Info.plist` ersetzt, und
+/// **Fenster** gehoert nach Mac-Gewohnheit ans Ende. Bis dahin lag `Anwendung`
+/// an siebter und `Fenster` an sechster Stelle.
+///
+/// **Die zwei anderen Abnehmer folgen dem Menue, statt eine zweite Ordnung zu
+/// bekommen** — die Belegungsansicht und die Markdown-Ausgabe der Runde 3
+/// zeigen ihre Abschnitte seither in dieser Folge. Der Nutzer sieht damit in
+/// allen drei Oberflaechen dieselbe Gliederung. Der Datensatz dazu ist
+/// `circles/260813-0100-…/decisions/260813-0159_*_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md`,
+/// Moeglichkeit 1; eine zweite Ordnung im Menuemodell waere die Verdopplung,
+/// die der Doc-Kommentar von [`nach_bereichen`] ausschliesst.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Funktionsbereich {
+    /// Die Anwendung als ganze: Belegungsansicht und Beenden (C3).
+    ///
+    /// Steht seit der Runde 7 vorn, weil macOS den Titel des ersten
+    /// Obermenues ohnehin durch den Namen aus der `Info.plist` ersetzt.
+    Anwendung,
     /// Bewegung, Navigation, Markierung, Sortierung und Sichtbarkeit in der
     /// Dateiliste (C2, C10).
     Dateilisting,
@@ -85,46 +107,64 @@ pub enum Funktionsbereich {
     /// Die Lesezeichen- und Geraeteleiste und der Fokuswechsel zwischen ihr
     /// und dem Dateifenster (C5).
     LeisteUndFokus,
-    /// Das Anwendungsfenster und seine Bereiche: wechseln, ein- und
-    /// ausblenden, Breiten (C1, C7).
-    Fenster,
-    /// Die Anwendung als ganze: Belegungsansicht und Beenden (C3).
-    Anwendung,
-    /// Die sechs Textbefehle, die das Menue "Bearbeiten" zustellt (C2, und
-    /// Rueckgaengig und Wiederholen aus der Editor-Runde).
-    Textbefehle,
     /// Der eingebaute Editor: die beiden Einstiegswege, der Fokus, die beiden
     /// Ansichten, das Sichern, der Zeilensprung, Suchen und Ersetzen (C1 bis
     /// C6 der Editor-Runde).
     Editor,
+    /// Die sechs Textbefehle, die das Menue "Bearbeiten" zustellt (C2, und
+    /// Rueckgaengig und Wiederholen aus der Editor-Runde).
+    ///
+    /// **Der Anzeigename lautet seit der Runde 7 „Bearbeiten" und nicht mehr
+    /// „Textbefehle".** Der Grund steht an [`Funktionsbereich::name`]; der
+    /// Bezeichner der Variante bleibt, weil er die sechs Funktionen benennt und
+    /// nicht das Menue.
+    Textbefehle,
+    /// Das Anwendungsfenster und seine Bereiche: wechseln, ein- und
+    /// ausblenden, Breiten (C1, C7).
+    ///
+    /// Steht seit der Runde 7 hinten, weil das Fenstermenue auf dem Mac das
+    /// letzte ist.
+    Fenster,
 }
 
 impl Funktionsbereich {
     /// Alle Bereiche, in der Reihenfolge der Anzeige.
+    ///
+    /// Dieselbe Folge wie die Aufzaehlung darueber, und dort steht auch, warum
+    /// sie seit der Runde 7 eine Mac-Menueleiste beschreibt.
     pub const ALLE: [Funktionsbereich; 9] = [
+        Funktionsbereich::Anwendung,
         Funktionsbereich::Dateilisting,
         Funktionsbereich::Dateioperationen,
         Funktionsbereich::Tabs,
         Funktionsbereich::Vorschau,
         Funktionsbereich::LeisteUndFokus,
-        Funktionsbereich::Fenster,
-        Funktionsbereich::Anwendung,
-        Funktionsbereich::Textbefehle,
         Funktionsbereich::Editor,
+        Funktionsbereich::Textbefehle,
+        Funktionsbereich::Fenster,
     ];
 
     /// Die Ueberschrift des Bereichs in der Ansicht.
+    ///
+    /// **[`Funktionsbereich::Textbefehle`] heisst hier „Bearbeiten", und das
+    /// ist keine Schoenheitsfrage.** macOS haengt seine eigenen Textzusaetze an
+    /// ein Menue dieses Namens, und `appkit::menue::systemzusaetze_unterdruecken`
+    /// setzt genau dort an; ein anders benanntes Obermenue stellte die Zusage
+    /// aus C2.13 auf eine ungepruefte Annahme. Fuer die
+    /// Belegungsansicht und die Markdown-Ausgabe ist der Name daneben genauer
+    /// als der alte: die sechs Funktionen tragen saemtlich
+    /// `gehalten_von = "menue"` und sind genau die Eintraege jenes Menues.
     pub const fn name(self) -> &'static str {
         match self {
+            Funktionsbereich::Anwendung => "Anwendung",
             Funktionsbereich::Dateilisting => "Dateilisting",
             Funktionsbereich::Dateioperationen => "Dateioperationen",
             Funktionsbereich::Tabs => "Tabs",
             Funktionsbereich::Vorschau => "Vorschau",
             Funktionsbereich::LeisteUndFokus => "Leiste und Fokus",
-            Funktionsbereich::Fenster => "Fenster",
-            Funktionsbereich::Anwendung => "Anwendung",
-            Funktionsbereich::Textbefehle => "Textbefehle",
             Funktionsbereich::Editor => "Editor",
+            Funktionsbereich::Textbefehle => "Bearbeiten",
+            Funktionsbereich::Fenster => "Fenster",
         }
     }
 }
@@ -698,6 +738,49 @@ mod tests {
         }
     }
 
+    /// Die zwei Stellen der Gliederung, die eine Mac-Menueleiste nicht frei
+    /// waehlen darf.
+    ///
+    /// **Ohne diese Probe faellt eine falsche Reihenfolge niemandem auf.** Der
+    /// Uebersetzer haelt sie nicht: [`Funktionsbereich::ALLE`] ist eine Liste
+    /// und keine Fallunterscheidung, und eine umgestellte Zeile darin
+    /// uebersetzt anstandslos. Was daran haengt, steht am Doc-Kommentar der
+    /// Aufzaehlung: macOS ersetzt den Titel des **ersten** Obermenues durch den
+    /// Namen aus der `Info.plist`, also muss dort der Anwendungsbereich stehen,
+    /// und das Fenstermenue ist auf dem Mac das letzte.
+    #[test]
+    fn die_gliederung_beginnt_mit_der_anwendung_und_endet_mit_dem_fenster() {
+        assert_eq!(
+            Funktionsbereich::ALLE.first(),
+            Some(&Funktionsbereich::Anwendung),
+            "das erste Obermenue traegt nicht den Anwendungsbereich; macOS \
+             ueberschreibt dessen Titel mit dem Namen aus der Info.plist"
+        );
+        assert_eq!(
+            Funktionsbereich::ALLE.last(),
+            Some(&Funktionsbereich::Fenster),
+            "das Fenstermenue steht auf dem Mac am Ende der Leiste"
+        );
+    }
+
+    /// Das Obermenue der sechs zugestellten Textbefehle heisst „Bearbeiten".
+    ///
+    /// **Der Name traegt eine Zusage und nicht bloss eine Aufschrift.** macOS
+    /// haengt seine eigenen Textzusaetze — „Emoji & Symbols", „Start
+    /// Dictation…", das Untermenue „AutoFill" — an ein Menue dieses Namens, und
+    /// `appkit::menue::systemzusaetze_unterdruecken` setzt genau dort an.
+    /// Heisst das Obermenue anders, ruht die Zusage aus C2.13 auf einer
+    /// ungeprueften Annahme darueber, woran macOS seine Zusaetze festmacht.
+    #[test]
+    fn der_bereich_der_textbefehle_heisst_bearbeiten() {
+        assert_eq!(
+            Funktionsbereich::Textbefehle.name(),
+            "Bearbeiten",
+            "das Obermenue der Textbefehle heisst nicht mehr wie das, an das \
+             macOS seine Zusaetze haengt"
+        );
+    }
+
     /// Die Zeilen sind nach Funktionsbereichen gegliedert: die erste Zeile
     /// ist eine Ueberschrift, die Ueberschriften folgen der Reihenfolge von
     /// [`Funktionsbereich::ALLE`], und jede kommt hoechstens einmal vor.
@@ -1020,17 +1103,22 @@ mod tests {
         );
     }
 
-    /// Die beiden anderen neuen Funktionen stehen unter "Textbefehle" und
-    /// nicht beim Editor, und der Abschnitt fuehrt damit sechs.
+    /// Die beiden anderen neuen Funktionen stehen unter
+    /// [`Funktionsbereich::Textbefehle`] und nicht beim Editor, und der
+    /// Abschnitt fuehrt damit sechs.
     ///
     /// Rueckgaengig und Wiederholen kommen aus dieser Runde, gehoeren aber
     /// nicht dem Editor: das Menue "Bearbeiten" stellt sie zu, und im Textfeld
     /// wirken sie genauso. Die Gliederung fragt nach der Gegend der Anwendung,
     /// und die ist hier dieselbe wie bei Ausschneiden, Kopieren und Einfuegen.
+    ///
+    /// Die Ueberschrift steht hier als [`Funktionsbereich::name`] und nicht als
+    /// Zeichenkette: seit der Runde 7 lautet sie „Bearbeiten", und der Name
+    /// dieser Probe benennt die Variante und nicht die Aufschrift.
     #[test]
     fn die_beiden_neuen_textbefehle_stehen_unter_textbefehle() {
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
-        let gefuehrt = funktionen_unter(&modell, "Textbefehle");
+        let gefuehrt = funktionen_unter(&modell, Funktionsbereich::Textbefehle.name());
         assert_eq!(
             gefuehrt.len(),
             6,

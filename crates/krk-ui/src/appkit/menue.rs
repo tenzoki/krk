@@ -1,16 +1,40 @@
-//! Das Hauptmenue, von Hand gebaut, mit den Kuerzeln aus der Belegung.
+//! Das Hauptmenue: die Umsetzung von [`crate::menuemodell`] in AppKit.
 //!
 //! Der Technologieentscheid bringt keinen Oberflaechenbau mit: es gibt kein
 //! `MainMenu.nib`, aus dem AppKit das Menue laedt. Jeder Eintrag entsteht
-//! deshalb hier im Programmtext.
+//! deshalb im Programm.
 //!
-//! Drei Untermenues: KRK, Bearbeiten, Fenster. Jeder Eintrag bekommt als Ziel
-//! `nil` und laeuft damit ueber die Antwortkette. `cut:`, `copy:` und `paste:`
-//! erreichen den Feldeditor des Textfeldes mit dem Fokus beziehungsweise die
-//! Textflaeche des Editors, und `beenden:`, `fensterEinblenden:` wie
-//! `fensterSchliessen:` erreichen den Anwendungsdelegierten, an dem die Kette
-//! endet. Ein fest gesetztes Ziel wuerde die Kette umgehen und einen Eintrag
-//! auch dann aktiv lassen, wenn niemand ihn beantworten kann.
+//! **Was in der Leiste steht, entscheidet diese Datei seit der Runde 7 nicht
+//! mehr.** [`crate::menuemodell::aufbau`] rechnet die Leiste aus der Belegung
+//! aus — neun Obermenues, zweiundachtzig Eintraege —, und [`hauptmenue`] setzt
+//! den Wert in `NSMenu` und `NSMenuItem` um. Bis dahin standen hier drei
+//! Untermenues und zehn Eintraege als Programmtext, und ihre Reihenfolge war
+//! allein am laufenden Buendel nachzusehen. Der Gewinn ist nicht die Zahl,
+//! sondern dass die Kriterien C2.1 bis C2.4 und C2.9 jetzt ohne Fenster und
+//! ohne Hauptfaden pruefbar sind.
+//!
+//! Jeder Eintrag bekommt als Ziel `nil` und laeuft damit ueber die
+//! Antwortkette. `cut:`, `copy:` und `paste:` erreichen den Feldeditor des
+//! Textfeldes mit dem Fokus beziehungsweise die Textflaeche des Editors, und
+//! [`KRK_KOMMANDO`] wie `tastenbelegungSichern:` erreichen den
+//! Anwendungsdelegierten, an dem die Kette endet. Ein fest gesetztes Ziel wuerde
+//! die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn niemand ihn
+//! beantworten kann.
+//!
+//! # Jeder Eintrag mit Kommando traegt einen Selektor, und es ist derselbe
+//!
+//! Fuenfundsiebzig Selektoren waeren fuenfundsiebzig Methoden am
+//! Anwendungsdelegierten, jede mit demselben Rumpf. Ein Eintrag mit Kommando
+//! traegt deshalb [`KRK_KOMMANDO`] und im `tag` den Index seines Kommandos in
+//! [`Kommando::KENNUNGEN`]; die Uebersetzung in beide Richtungen steht in
+//! [`tag_des_kommandos`] und [`kommando_zum_tag`]. Sie steht hier und nicht im
+//! Modell, weil `tag` ein AppKit-Begriff ist.
+//!
+//! **Damit laeuft ein Menueeintrag ueber `kommando_ausfuehren`, also ueber
+//! denselben einen Ausfuehrungsweg wie ein Tastendruck** (C2.14), und die
+//! Ausgrauung ueber `validateMenuItem:` fragt dieselbe Regel wie der
+//! Ereignisabgriff (C2.16). Beide stehen am Anwendungsdelegierten; diese Datei
+//! kennt sie nicht.
 //!
 //! **Fuer `selectAll:`, `undo:` und `redo:` stand hier bis zum 260811 derselbe
 //! Satz, und fuer alle drei war er zu stark.** Was wirklich antwortet, ist
@@ -19,10 +43,8 @@
 //! # Eine Quelle, zwei sichtbare Wege
 //!
 //! **Ein Eintrag traegt bewusst gar keine Kennung**, und er ist der einzige:
-//! "Tastenbelegung als Markdown sichern" unter "KRK" (Runde 3). Er entsteht
-//! deshalb unmittelbar ueber [`ohne_kuerzel`] und nicht ueber [`befehl`] —
-//! `befehl` schlaegt eine Kennung in der Belegung nach und meldet einen
-//! Programmfehler auf der Standardfehlerausgabe, wenn es keine findet. Ein
+//! "Tastenbelegung als Markdown sichern" im Anwendungsmenue (Runde 3). Er steht
+//! deshalb im Modell als `Eintrag::Sonderposten` und nicht als Befehl. Ein
 //! Kuerzel waere nach dem Nutzerentscheid vom 260805-0000 zwingend ein
 //! Belegungseintrag mit `gehalten_von = "menue"` geworden und haette damit die
 //! Bauform geaendert, nicht nur die Bequemlichkeit; der Nutzer hat den Eintrag
@@ -32,9 +54,8 @@
 //! (`tastenbelegungSichern:`), der die Ausgabe an [`crate::belegungsausgabe`]
 //! weiterreicht.
 //!
-//! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** [`hauptmenue`]
-//! bekommt die Belegung gereicht und holt das Kuerzel jedes Eintrags unter
-//! dessen Kennung aus ihr. Damit ist `resources/default-keymap.toml` auch fuer
+//! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** Jedes kommt aus
+//! der Belegung, ueber das Modell. Damit ist `resources/default-keymap.toml` auch fuer
 //! das Menue die alleinige Quelle: die Konflikterkennung aus C3 sieht jede
 //! Kombination, der Nutzer kann jede umbelegen, und eine Umbelegung wirkt auf
 //! beide Wege. Nutzerentscheid vom 260805-0000,
@@ -144,31 +165,35 @@
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 //!
-//! # Zwei Eintraege tragen einen eigenen Selektor
+//! # Drei Eintraege trugen einen eigenen Selektor, und warum keiner mehr
 //!
-//! **"Fenster schliessen".** Bis Schritt 13c stand dort `performClose:`, und
-//! AppKit stellte von sich aus eine Zweitform "Close All" auf Opt+Shift+Cmd+W
-//! dazu, mit englischer Beschriftung und einer Kombination, die niemand aus der
-//! Belegung setzen oder umbelegen kann (gemessen am 260804-1040 im signierten
-//! Buendel,
-//! `issues/260804-1040_*_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
-//! Der Eintrag traegt deshalb den eigenen Selektor `fensterSchliessen:` am
-//! Anwendungsdelegierten, so wie "Fenster einblenden" ihn seit Schritt 12 hat;
-//! der Delegierte ruft darauf `performClose:` am Fenster selbst, sodass sich am
-//! Verhalten nichts aendert.
+//! "Fenster schliessen", "Fenster einblenden" und "KRK beenden" liefen bis zur
+//! Runde 7 ueber `fensterSchliessen:`, `fensterEinblenden:` und `beenden:` am
+//! Anwendungsdelegierten. Sie liefen damit **an** `kommando_ausfuehren`
+//! **vorbei**, und mit einem Kuerzel an jedem der zweiundachtzig Eintraege waere
+//! daraus eine Regel geworden statt einer Ausnahme; C2.14 schliesst genau diese
+//! Luecke. Die drei tragen seither [`KRK_KOMMANDO`] wie jeder andere Befehl.
 //!
-//! **"KRK beenden", aus demselben Grund.** Zu `terminate:` stellt AppKit eine
-//! Zweitform "Quit and Keep Windows" auf Opt+Cmd+Q dazu. Sie erscheint spaeter
-//! als die von "Close All": nicht schon nach `finishLaunching`, sondern erst an
-//! der wirklich laufenden Anwendung, weshalb `--menue-protokoll` sie nicht sah
-//! und der Befund vom 260805-0753 ueber die Bedienungshilfen kam
-//! (`issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
-//! Der Eintrag traegt seither `beenden:`, und der Delegierte ruft `terminate:`
-//! an `NSApplication` selbst. Gegengeprueft wie bei "Close All", am selben Weg
-//! wie der Befund: am 260805 traegt das Menue "KRK" der laufenden Anwendung
-//! genau einen Eintrag, "KRK beenden" auf Cmd+Q; die Zweitform ist fort. Der
-//! `inference:` des Defekts, die Zweitform haenge allein an `terminate:`, ist
-//! damit nachgemessen.
+//! **Was die drei eigenen Selektoren abwehren sollten, wehren sie weiterhin
+//! ab.** Der Grund fuer sie war nie die Ausfuehrung, sondern die Zweitform, die
+//! AppKit zu einem bestimmten **Systemselektor** von sich aus dazustellt:
+//!
+//! - Zu `performClose:` stellt es "Close All" auf Opt+Shift+Cmd+W dazu, mit
+//!   englischer Beschriftung und einer Kombination, die niemand aus der Belegung
+//!   setzen oder umbelegen kann (gemessen am 260804-1040 im signierten Buendel,
+//!   `issues/260804-1040_*_macos-legt-selbst-einen-zweiten-fensterschliessen-eintrag-mit-kuerzel-an.md`).
+//! - Zu `terminate:` stellt es "Quit and Keep Windows" auf Opt+Cmd+Q dazu. Sie
+//!   erscheint spaeter als die von "Close All": nicht schon nach
+//!   `finishLaunching`, sondern erst an der wirklich laufenden Anwendung,
+//!   weshalb `--menue-protokoll` sie nicht sah und der Befund vom 260805-0753
+//!   ueber die Bedienungshilfen kam
+//!   (`issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+//!
+//! [`KRK_KOMMANDO`] ist so wenig `performClose:` und `terminate:` wie
+//! `fensterSchliessen:` und `beenden:` es waren; der Delegierte ruft beide
+//! Systemselektoren weiterhin selbst, an `NSWindow` beziehungsweise
+//! `NSApplication`. Dass keine Zweitform zurueckkehrt, ist am laufenden Buendel
+//! nachzusehen und steht in der Abnahmeliste der Runde 7.
 //!
 //! # Die zwei Kuerzel des Fenstermenues, und warum sie so liegen
 //!
@@ -190,16 +215,20 @@
 //! nach vorn. Die Runde, die mehrere Fenster einfuehrt, benennt ihn um und
 //! behaelt das Kuerzel.
 
+use core::ffi::CStr;
+
+use objc2::MainThreadOnly;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
-use objc2::{MainThreadOnly, sel};
 use objc2_app_kit::{NSEventModifierFlags, NSMenu, NSMenuItem};
 use objc2_foundation::{
-    MainThreadMarker, NSDictionary, NSNumber, NSString, NSUserDefaults, ns_string,
+    MainThreadMarker, NSDictionary, NSInteger, NSNumber, NSString, NSUserDefaults, ns_string,
 };
 
 use krk_core::tasten::parser::{self, Taste};
-use krk_core::tasten::{Belegung, Kombination, ModMaske};
+use krk_core::tasten::{Belegung, Kombination, Kommando, ModMaske};
+
+use crate::menuemodell::{self, Eintrag};
 
 /// Haelt macOS davon ab, dem Menue "Bearbeiten" eigene Eintraege dazuzustellen.
 ///
@@ -273,103 +302,128 @@ pub fn systemzusaetze_unterdruecken() {
     unsafe { NSUserDefaults::standardUserDefaults().registerDefaults(&vorgaben) };
 }
 
+/// Der Sammelselektor jedes Menueeintrags, der ein [`Kommando`] traegt.
+///
+/// **Eine Methode statt fuenfundsiebzig.** Ein eigener Selektor je Befehl
+/// waere eine Methode je Befehl am Anwendungsdelegierten, jede mit demselben
+/// zwei Zeilen langen Rumpf. Welchen Befehl ein Eintrag meint, steht deshalb
+/// nicht im Selektor, sondern in seinem `tag`; [`tag_des_kommandos`] setzt ihn,
+/// [`kommando_zum_tag`] liest ihn zurueck.
+///
+/// **Nicht `representedObject`**, obwohl es der naheliegende Traeger waere: das
+/// Feld nimmt ein Objective-C-Objekt entgegen und verlangte damit eine
+/// Wrapperklasse um ein Rust-Enum, die dieser Baum sonst nirgends braucht. Der
+/// `tag` ist eine Zahl, und [`Kommando::KENNUNGEN`] fuehrt jedes Kommando genau
+/// einmal — sein Index ist im Prozess stabil und taugt ohne Umweg.
+pub const KRK_KOMMANDO: &CStr = c"krkKommando:";
+
 /// Baut das Hauptmenue der Anwendung aus der Belegung.
+///
+/// **Ein Umsetzer und kein Baumeister.** Was in der Leiste steht, rechnet
+/// [`crate::menuemodell::aufbau`] ohne AppKit aus; hier entstehen daraus
+/// `NSMenu` und `NSMenuItem` und sonst nichts. Bis zur Runde 7 stand die
+/// Gliederung als Programmtext in dieser Funktion — drei Untermenues, zehn
+/// Eintraege, jede Beschriftung und jede Kennung von Hand —, und ihre
+/// Reihenfolge war allein am laufenden Buendel nachzusehen.
+///
+/// Gerufen wird sie an genau zwei Stellen: beim Start (`starten`) und nach einer
+/// Aenderung in der Belegungsansicht (`Anwendungsdelegierter::menue_neu_bauen`).
+/// Ein Kuerzel, das der Nutzer umbelegt, steht danach im Menue (C2.11).
 pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu> {
     let hauptmenue = NSMenu::new(mtm);
-    hauptmenue.addItem(&untermenue(
-        mtm,
-        ns_string!("KRK"),
-        &[
-            // Der einzige Eintrag des Hauptmenues, der nicht ueber `befehl`
-            // entsteht, und der Grund steht im Modulkopf: er traegt bewusst
-            // keine Kennung in der Belegung.
-            ohne_kuerzel(
-                mtm,
-                ns_string!("Tastenbelegung als Markdown sichern"),
-                sel!(tastenbelegungSichern:),
-            ),
-            // Das Beenden steht auf dem Mac unten; der Trenner haelt die
-            // Ausgabe davon getrennt.
-            NSMenuItem::separatorItem(mtm),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("KRK beenden"),
-                sel!(beenden:),
-                "beenden",
-            ),
-        ],
-    ));
-    hauptmenue.addItem(&untermenue(
-        mtm,
-        ns_string!("Bearbeiten"),
-        &[
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Rückgängig"),
-                sel!(undo:),
-                "text_rueckgaengig",
-            ),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Wiederholen"),
-                sel!(redo:),
-                "text_wiederholen",
-            ),
-            NSMenuItem::separatorItem(mtm),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Ausschneiden"),
-                sel!(cut:),
-                "text_ausschneiden",
-            ),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Kopieren"),
-                sel!(copy:),
-                "text_kopieren",
-            ),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Einfügen"),
-                sel!(paste:),
-                "text_einfuegen",
-            ),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Alles auswählen"),
-                sel!(selectAll:),
-                "text_alles_auswaehlen",
-            ),
-        ],
-    ));
-    hauptmenue.addItem(&untermenue(
-        mtm,
-        ns_string!("Fenster"),
-        &[
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Fenster einblenden"),
-                sel!(fensterEinblenden:),
-                "fenster_einblenden",
-            ),
-            befehl(
-                mtm,
-                belegung,
-                ns_string!("Fenster schließen"),
-                sel!(fensterSchliessen:),
-                "fenster_schliessen",
-            ),
-        ],
-    ));
+    for obermenue in menuemodell::aufbau(belegung) {
+        let eintraege: Vec<Retained<NSMenuItem>> = obermenue
+            .eintraege
+            .iter()
+            .map(|eintrag| umsetzen(mtm, eintrag))
+            .collect();
+        hauptmenue.addItem(&untermenue(
+            mtm,
+            &NSString::from_str(obermenue.titel),
+            &eintraege,
+        ));
+    }
     hauptmenue
+}
+
+/// Ein Eintrag des Modells als `NSMenuItem`.
+///
+/// **Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.**
+/// Bekommt [`crate::menuemodell::Eintrag`] eine neue Sorte, haelt der
+/// Uebersetzer hier an und erzwingt eine bewusste Einordnung; ein Auffangzweig
+/// liesse sie stillschweigend aus dem Menue verschwinden.
+fn umsetzen(mtm: MainThreadMarker, eintrag: &Eintrag<'_>) -> Retained<NSMenuItem> {
+    match eintrag {
+        Eintrag::Befehl {
+            beschriftung,
+            kombination,
+            kommando,
+            ..
+        } => {
+            // Ohne Kommando bleibt der Eintrag ohne Aktion und damit grau. Der
+            // Fall ist eine benannte Funktion, die diese Runde noch nicht
+            // ausfuehrt; die Auslieferungsbelegung fuehrt keine solche.
+            let posten = befehl(
+                mtm,
+                &NSString::from_str(beschriftung),
+                kommando.map(|_| Sel::register(KRK_KOMMANDO)),
+                *kombination,
+            );
+            if let Some(kommando) = kommando {
+                posten.setTag(tag_des_kommandos(*kommando));
+            }
+            posten
+        }
+        Eintrag::Textbefehl {
+            beschriftung,
+            kombination,
+            selektor,
+            ..
+        } => befehl(
+            mtm,
+            &NSString::from_str(beschriftung),
+            Some(Sel::register(selektor)),
+            *kombination,
+        ),
+        Eintrag::Sonderposten {
+            beschriftung,
+            selektor,
+        } => ohne_kuerzel(
+            mtm,
+            &NSString::from_str(beschriftung),
+            Some(Sel::register(selektor)),
+        ),
+        Eintrag::Trenner => NSMenuItem::separatorItem(mtm),
+    }
+}
+
+/// Der `tag`, unter dem ein Menueeintrag sein Kommando traegt.
+///
+/// Der Index in [`Kommando::KENNUNGEN`]. Die Liste fuehrt jedes Kommando genau
+/// einmal — `jedes_kommando_traegt_genau_einen_wirkungsbereich` in
+/// `krk-core/tests/belegung.rs` haelt das fest —, und sie ist zur Uebersetzzeit
+/// festgelegt; der Index ist damit im Prozess stabil.
+pub fn tag_des_kommandos(kommando: Kommando) -> NSInteger {
+    let stelle = Kommando::KENNUNGEN
+        .iter()
+        .position(|(gefuehrt, _)| *gefuehrt == kommando)
+        .expect("jedes Kommando steht in KENNUNGEN");
+    NSInteger::try_from(stelle).expect("KENNUNGEN ist kuerzer als isize::MAX")
+}
+
+/// Das Kommando zu einem `tag`, falls der `tag` eines benennt.
+///
+/// **Der Vorgabewert eines `tag` ist Null, und Null ist ein gueltiger Index.**
+/// Wer diese Funktion ruft, hat deshalb vorher die Aktion des Eintrags gegen
+/// [`KRK_KOMMANDO`] geprueft; ohne diese Frage bekaeme jeder fremde Eintrag das
+/// erste Kommando der Liste zugesprochen. Der Rueckgabetyp bleibt trotzdem eine
+/// Moeglichkeit und keine Zusicherung: ein `tag`, der aus der Liste faellt, ist
+/// ein Programmfehler und darf keinen Absturz auf dem Referenzgeraet ausloesen.
+pub fn kommando_zum_tag(tag: NSInteger) -> Option<Kommando> {
+    let stelle = usize::try_from(tag).ok()?;
+    Kommando::KENNUNGEN
+        .get(stelle)
+        .map(|(kommando, _)| *kommando)
 }
 
 /// Haengt ein benanntes Untermenue mit den genannten Befehlen unter einen
@@ -392,34 +446,25 @@ fn untermenue(
     eintrag
 }
 
-/// Ein Menuebefehl, dessen Kuerzel unter `kennung` in der Belegung steht.
+/// Ein Menuebefehl mit der Kombination aus dem Modell, oder ohne.
 ///
-/// Traegt die Funktion mehrere Kombinationen, nimmt der Eintrag die **erste**:
-/// ein `NSMenuItem` haelt genau eine Tastenentsprechung. Der zweite Weg bleibt
-/// ueber den Ereignisabgriff erreichbar und steht mit dem ersten in derselben
-/// Zeile der Belegungsansicht, wie C3 es verlangt.
+/// Eine Huelle um [`roher_befehl`] und keine zweite Stelle, die ein
+/// `NSMenuItem` anlegt: sie entscheidet allein, ob [`appkit_paar`] zu rufen ist.
 ///
-/// Traegt sie gar keine, bekommt der Eintrag keine: der Nutzer hat die Belegung
-/// aufgehoben, und ein Kuerzel aus dem Programmtext daruebersetzen hiesse, die
-/// Aufhebung zu uebergehen.
+/// Welche Kombination hier ankommt, hat [`crate::menuemodell`] entschieden: die
+/// **erste** der Funktion, denn ein `NSMenuItem` haelt genau eine
+/// Tastenentsprechung, und keine, wenn die Funktion keine traegt. Der zweite
+/// Weg bleibt ueber den Ereignisabgriff erreichbar und steht mit dem ersten in
+/// derselben Zeile der Belegungsansicht, wie C3 es verlangt.
 fn befehl(
     mtm: MainThreadMarker,
-    belegung: &Belegung,
     titel: &NSString,
-    aktion: Sel,
-    kennung: &str,
+    aktion: Option<Sel>,
+    kombination: Option<Kombination>,
 ) -> Retained<NSMenuItem> {
-    let Some(funktion) = belegung.funktion(kennung) else {
-        // Kein Nutzerfehler, sondern einer im Programm: die Kennung steht in
-        // keiner Zeile von `resources/default-keymap.toml`. Ein Menue ohne
-        // Kuerzel ist die vertretbare Folge, ein stilles Weglassen waere es
-        // nicht.
-        eprintln!("krk: die Belegung kennt keine Funktion namens {kennung}");
-        return ohne_kuerzel(mtm, titel, aktion);
-    };
-    match funktion.tasten().first() {
+    match kombination {
         Some(kombination) => {
-            let (kuerzel, zusatztasten) = appkit_paar(*kombination);
+            let (kuerzel, zusatztasten) = appkit_paar(kombination);
             roher_befehl(mtm, titel, aktion, &kuerzel, zusatztasten)
         }
         None => ohne_kuerzel(mtm, titel, aktion),
@@ -427,7 +472,11 @@ fn befehl(
 }
 
 /// Ein Menuebefehl ohne Tastenentsprechung.
-fn ohne_kuerzel(mtm: MainThreadMarker, titel: &NSString, aktion: Sel) -> Retained<NSMenuItem> {
+fn ohne_kuerzel(
+    mtm: MainThreadMarker,
+    titel: &NSString,
+    aktion: Option<Sel>,
+) -> Retained<NSMenuItem> {
     roher_befehl(
         mtm,
         titel,
@@ -440,21 +489,25 @@ fn ohne_kuerzel(mtm: MainThreadMarker, titel: &NSString, aktion: Sel) -> Retaine
 /// Ein Menuebefehl mit Titel, Aktion und dem fertigen AppKit-Paar.
 ///
 /// Die eine Stelle, die ein `NSMenuItem` anlegt.
+///
+/// `aktion` ist eine Moeglichkeit: ein Eintrag ohne Aktion findet in der
+/// Antwortkette niemanden und ist grau. Das ist die richtige Anzeige fuer eine
+/// benannte Funktion, die diese Runde nicht ausfuehrt.
 fn roher_befehl(
     mtm: MainThreadMarker,
     titel: &NSString,
-    aktion: Sel,
+    aktion: Option<Sel>,
     kuerzel: &NSString,
     zusatztasten: NSEventModifierFlags,
 ) -> Retained<NSMenuItem> {
     // SAFETY: Titel und Kuerzel sind gueltige Zeichenketten, die Auswahl ist
-    // ein statisches Selektorliteral. Ein Ziel setzt der Aufruf nicht, damit
-    // die Antwortkette entscheidet.
+    // ein zur Uebersetzzeit bekannter Selektorname. Ein Ziel setzt der Aufruf
+    // nicht, damit die Antwortkette entscheidet.
     let eintrag = unsafe {
         NSMenuItem::initWithTitle_action_keyEquivalent(
             NSMenuItem::alloc(mtm),
             titel,
-            Some(aktion),
+            aktion,
             kuerzel,
         )
     };
@@ -688,9 +741,12 @@ fn ja_nein(wahr: bool) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use objc2::ClassType;
     use objc2::runtime::AnyClass;
+    use objc2::{ClassType, sel};
+
+    use crate::quellbaum::quelldateien;
+
+    use super::*;
     use objc2_app_kit::{
         NSApplication, NSScrollView, NSTableView, NSTextField, NSTextView, NSWindow,
     };
@@ -944,30 +1000,217 @@ mod tests {
         }
     }
 
-    /// Die Kennungen, unter denen `hauptmenue` seine Kuerzel sucht, stehen in
-    /// der Auslieferungsbelegung. Ohne diese Zusage faende der Aufbau sie beim
-    /// Start nicht und schriebe eine Meldung, die niemand liest.
+    // -----------------------------------------------------------------------
+    // Der `tag` als Traeger des Kommandos
+    // -----------------------------------------------------------------------
+
+    /// Jedes Kommando kommt aus seinem `tag` unveraendert zurueck.
+    ///
+    /// Der Weg, den ein Mausklick geht: [`hauptmenue`] setzt den `tag`,
+    /// `krkKommando:` liest ihn. Ginge er fuer ein Kommando schief, fuehrte der
+    /// Eintrag einen anderen Befehl aus als seine Aufschrift verspricht.
     #[test]
-    fn jede_kennung_des_hauptmenues_steht_in_der_auslieferungsbelegung() {
-        let belegung = Belegung::auslieferung();
-        for kennung in [
-            "beenden",
-            "text_rueckgaengig",
-            "text_wiederholen",
-            "text_ausschneiden",
-            "text_kopieren",
-            "text_einfuegen",
-            "text_alles_auswaehlen",
-            "fenster_einblenden",
-            "fenster_schliessen",
-        ] {
-            let Some(funktion) = belegung.funktion(kennung) else {
-                panic!("die Auslieferungsbelegung kennt {kennung} nicht");
-            };
-            assert!(
-                !funktion.tasten().is_empty(),
-                "{kennung} traegt ab Werk keine Kombination"
+    fn jedes_kommando_ueberlebt_den_weg_durch_den_tag() {
+        for (kommando, kennung) in Kommando::KENNUNGEN {
+            assert_eq!(
+                kommando_zum_tag(tag_des_kommandos(kommando)),
+                Some(kommando),
+                "{kennung} kommt aus seinem tag anders zurueck"
             );
         }
+    }
+
+    /// Kein zweites Kommando teilt sich einen `tag`.
+    ///
+    /// Der Index in [`Kommando::KENNUNGEN`] ist genau deshalb brauchbar, weil
+    /// die Liste jedes Kommando einmal fuehrt. Faende sie eines zweimal, zeigten
+    /// zwei Eintraege auf denselben Befehl und einer auf gar keinen.
+    #[test]
+    fn kein_zweites_kommando_teilt_sich_einen_tag() {
+        let mut vergeben: Vec<NSInteger> = Kommando::KENNUNGEN
+            .into_iter()
+            .map(|(kommando, _)| tag_des_kommandos(kommando))
+            .collect();
+        let gezaehlt = vergeben.len();
+        vergeben.sort_unstable();
+        vergeben.dedup();
+        assert_eq!(
+            vergeben.len(),
+            gezaehlt,
+            "zwei Kommandos teilen sich einen tag"
+        );
+    }
+
+    /// Ein `tag` ausserhalb der Liste benennt kein Kommando, und ein negativer
+    /// auch nicht.
+    ///
+    /// Der Vorgabewert eines `tag` ist Null und benennt damit das **erste**
+    /// Kommando; deshalb fragt `validateMenuItem:` zuerst nach der Aktion. Was
+    /// diese Probe haelt, ist der andere Rand: aus einem `tag`, den niemand
+    /// gesetzt hat, wird kein Absturz.
+    #[test]
+    fn ein_tag_ausserhalb_der_liste_benennt_kein_kommando() {
+        let hinter_dem_ende =
+            NSInteger::try_from(Kommando::KENNUNGEN.len()).expect("die Liste ist kurz");
+        assert_eq!(kommando_zum_tag(hinter_dem_ende), None);
+        assert_eq!(kommando_zum_tag(-1), None);
+        assert!(kommando_zum_tag(hinter_dem_ende - 1).is_some());
+    }
+
+    // -----------------------------------------------------------------------
+    // C2.10: eine Stelle legt an, eine Stelle uebersetzt
+    // -----------------------------------------------------------------------
+
+    /// Genau eine Stelle legt ein `NSMenuItem` an, und genau eine uebersetzt
+    /// eine Kombination in das AppKit-Paar (C2.10).
+    ///
+    /// **Zwei Erklaerungszaehlungen.** Sie halten, was sie versprechen: eine
+    /// zweite Stelle, die ein `NSMenuItem` baut oder eine Kombination von Hand
+    /// auf Zeichen und Maske abbildet, laesst sie rot werden. Die Begruendung
+    /// fuer die Unterscheidung zwischen Erklaerungs- und Aufruferzaehlung steht
+    /// in [`crate::quellbaum`].
+    ///
+    /// Die Huellen [`befehl`] und [`ohne_kuerzel`] zaehlen nicht mit: sie legen
+    /// nichts an, sondern rufen [`roher_befehl`]. `NSMenuItem::separatorItem`
+    /// zaehlt ebenfalls nicht — AppKit haelt fuer den Trenner ein eigenes,
+    /// gemeinsam benutztes Objekt, und der Aufruf baut keines.
+    ///
+    /// Die Nadeln stehen zusammengesetzt da, wie bei
+    /// `es_gibt_genau_einen_menuebauer` in [`super::teilen`]: als ein Stueck
+    /// geschrieben faenden sie sich selbst.
+    #[test]
+    fn es_gibt_eine_stelle_je_anlage_und_uebersetzung() {
+        let dateien = quelldateien();
+        for (nadel, was) in [
+            (concat!("NSMenuItem", "::alloc("), "legt ein NSMenuItem an"),
+            (
+                concat!("initWithTitle_action_", "keyEquivalent("),
+                "ruft den Erzeuger von NSMenuItem",
+            ),
+            (
+                concat!("fn ", "appkit_paar("),
+                "uebersetzt eine Kombination",
+            ),
+        ] {
+            let gefunden: usize = dateien
+                .iter()
+                .map(|(_, inhalt)| inhalt.matches(nadel).count())
+                .sum();
+            assert_eq!(gefunden, 1, "es gibt nicht genau eine Stelle, die {was}");
+        }
+    }
+
+    /// Die Ausgrauung eines Menueeintrags wird an genau einer Stelle
+    /// entschieden, und es ist `validateMenuItem:` (C2.17).
+    ///
+    /// **Die Umkehrung von C2.5, und sie ist eine Zaehlung und keine Rechnung.**
+    /// Dass der Abgriff und die Ausgrauung nie verschiedene Antworten geben,
+    /// folgt daraus, dass beide dieselbe reine Funktion auf derselben `Lage`
+    /// fragen; die Tafel aus 140 Faellen dazu steht in
+    /// [`crate::kommandos::zulaessigkeit`], und die zwei Aufrufer zaehlt die
+    /// Probe daneben. Was **hier** zu halten ist, ist die andere Haelfte: dass
+    /// niemand die Freigabe eines Eintrags an einer zweiten Stelle **setzt**.
+    /// Ein `setEnabled:` irgendwo im Baum uebersteuerte die Regel lautlos, und
+    /// ein abgeschaltetes `setAutoenablesItems` naehme sie ganz weg — dann waere
+    /// jeder Eintrag immer frei, und mit dem Fokus im Editor bewegte ein
+    /// Auf-Pfeil die Dateiliste.
+    #[test]
+    fn die_freigabe_eines_eintrags_wird_nirgends_gesetzt() {
+        let dateien = quelldateien();
+        for nadel in [
+            concat!("setEnabled", "("),
+            concat!("setAutoenablesItems", "("),
+        ] {
+            let gefunden: Vec<&str> = dateien
+                .iter()
+                .filter(|(_, inhalt)| inhalt.contains(nadel))
+                .map(|(name, _)| name.as_str())
+                .collect();
+            assert!(
+                gefunden.is_empty(),
+                "{nadel} steht in {gefunden:?} und uebersteuert damit die \
+                 Zulaessigkeitsregel"
+            );
+        }
+        // Gezaehlt wird die **Erklaerung** und nicht die Nennung: der Name
+        // steht in etlichen Doc-Kommentaren dieser Runde, die Methode selbst
+        // genau einmal.
+        let pruefungen: usize = dateien
+            .iter()
+            .map(|(_, inhalt)| {
+                inhalt
+                    .matches(concat!("unsafe(method(validateMenu", "Item:))"))
+                    .count()
+            })
+            .sum();
+        assert_eq!(
+            pruefungen, 1,
+            "die Ausgrauung wird nicht an genau einer Stelle entschieden"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // C2.14: ein Ausfuehrungsweg
+    // -----------------------------------------------------------------------
+
+    /// Der Anwendungsdelegierte fuehrt einen Befehl an genau drei Stellen aus,
+    /// und alle drei rufen dieselbe Methode (C2.14).
+    ///
+    /// **Eine Aufruferzaehlung, und sie steht hier, weil C2.14 die Zahl selbst
+    /// zusagt.** Die drei sind die drei Wege, auf denen ein Befehl in KRK
+    /// ausgeloest wird: der Tastendruck ueber `eingabe_ausfuehren`, der
+    /// Menueeintrag ueber `krkKommando:` und der Klick in die Bereichsleiste
+    /// ueber ihren Melder. Sie enden alle in `kommando_ausfuehren`; ein vierter
+    /// Weg, der den Rumpf eines Befehls an dieser Stelle vorbei erreicht, laesst
+    /// die Probe rot werden.
+    ///
+    /// Gezaehlt werden die zwei Empfaengernamen und nicht der blosse
+    /// Methodenname: `kommando_ausfuehren` heisst daneben auch je eine Methode
+    /// an der Tabelle, an der Leiste und an der Vorschau, an die der Delegierte
+    /// weiterreicht. Das sind keine zweiten Ausfuehrungswege, sondern die
+    /// Fortsetzung dieses einen.
+    #[test]
+    fn der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten() {
+        let nadel = concat!("kommando_", "ausfuehren(");
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| {
+                ["self.", "selbst."]
+                    .into_iter()
+                    .map(|empfaenger| inhalt.matches(&format!("{empfaenger}{nadel}")).count())
+                    .sum::<usize>()
+            })
+            .sum();
+        assert_eq!(
+            aufrufe, 3,
+            "der eine Ausfuehrungsweg hat nicht die drei Aufrufer Tastendruck, \
+             Menueeintrag und Bereichsleiste"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // C2.11: zwei Bauanlaesse
+    // -----------------------------------------------------------------------
+
+    /// Das Menue wird an genau zwei Anlaessen gebaut (C2.11).
+    ///
+    /// **Eine Aufruferzaehlung, und sie steht hier, weil C2.11 die Zahl selbst
+    /// zusagt.** Die zwei sind der Start und die Rueckkehr aus der
+    /// Belegungsansicht; ein Kuerzel, das der Nutzer dort aendert, steht danach
+    /// im Menue. Faellt der zweite Aufruf weg, bleibt die Aenderung bis zum
+    /// naechsten Start unsichtbar — ohne dass irgendeine andere Probe es
+    /// bemerkte.
+    #[test]
+    fn das_menue_wird_an_zwei_anlaessen_gebaut() {
+        let nadel = concat!("haupt", "menue(");
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .filter(|(name, _)| name != "appkit/menue.rs")
+            .map(|(_, inhalt)| inhalt.matches(nadel).count())
+            .sum();
+        assert_eq!(
+            aufrufe, 2,
+            "das Hauptmenue wird nicht an genau zwei Anlaessen gebaut"
+        );
     }
 }

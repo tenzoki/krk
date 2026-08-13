@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Fuenfzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Sechzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -42,6 +42,12 @@
 //! daneben, welche Datei "die angezeigte" ist, aus der Sichtbarkeit von
 //! Vorschau und Editor und den Pfaden, die beide halten; der Ordnersprung aus
 //! C2 der Runde 6 und das Teilen aus C1 fragen dieselbe Stelle.
+//! `menuemodell` rechnet aus derselben Belegung die Menueleiste aus: je
+//! Funktionsbereich ein Obermenue, darin je Funktion ein Eintrag mit
+//! Beschriftung, Kuerzel und dem, was ihn ausfuehrt. Es ist der dritte Abnehmer
+//! der einen Gliederung aus `belegungsmodell`, und es liegt hier und nicht
+//! unter `appkit`, damit die Leiste ohne Fenster und ohne Hauptfaden pruefbar
+//! ist; `appkit::menue` setzt den Wert danach nur noch um.
 //! `belegungsausgabe` erzeugt die
 //! Tastenbelegung als Markdown, loest den Zielpfad im Downloads-Ordner auf,
 //! schreibt sie unteilbar und formuliert die Meldung fuer die Statuszeile
@@ -65,6 +71,7 @@ mod hervorhebung;
 mod kommandos;
 mod leistenmodell;
 mod markdown;
+mod menuemodell;
 mod messmodus;
 /// Der Pruefordner der Proben dieser Kiste. Nur im Probenbau uebersetzt, weil
 /// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.
