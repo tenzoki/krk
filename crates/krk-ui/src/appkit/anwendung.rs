@@ -83,13 +83,25 @@
 //! Fokus steht:
 //!
 //! ```text
-//!  Kommando ──> steht ein Blatt? ──> fokus() ──> fokus::wirkt(Wirkungsbereich)
+//!  Kommando ──> gehoert das Schluesselfenster KRK?
+//!                    │  nein: nichts, ausser der Ausnahmeliste
+//!                    ▼
+//!               steht ein Blatt? ──> fokus() ──> fokus::wirkt(Wirkungsbereich)
 //!                                       │                    │  nein: nichts
 //!                                       │                    ▼
 //!                                       │            fensterweiter Befehl
 //!                                       └───Adresse──> Dateifenster / Leiste
 //!                                                       / Vorschau / Editor
 //! ```
+//!
+//! **Die erste Frage ist seit der Runde 8 dabei**, und sie ist der vierte
+//! Bestandteil der Zulaessigkeitsregel: gehoert das Schluesselfenster nicht
+//! KRK, wirkt kein Befehl auf das Hauptfenster. Erhoben wird sie in
+//! [`Anwendungsdelegierter::schluesselfenster`], einmal je Eingabe, und
+//! [`Anwendungsdelegierter::fokus_bei`] bekommt denselben Wert, statt
+//! `NSApplication::keyWindow` ein zweites Mal zu fragen. Ohne sie wirkte hinter
+//! einem freistehenden Panel — dem Ueber-Dialog aus C5 der Runde 8 — jeder
+//! Befehl weiter, der `Wirkungsbereich::Ueberall` traegt.
 //!
 //! Der Wert wird zweimal gebraucht und einmal erhoben. Zuerst als
 //! **Vorbehalt**: [`crate::kommandos::fokus::wirkt`] sagt, ob der Befehl hier
@@ -847,6 +859,49 @@ enum Sperrhindernis {
     OhneOrdner,
     /// Die Schreibsperre liess sich nicht nehmen.
     Gesperrt(std::io::Error),
+}
+
+/// Welches Fenster von KRK aus gesehen gerade das Schluesselfenster ist.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig, erhoben aus
+/// `NSApplication::keyWindow`. Sie steht hier und nicht in
+/// [`crate::kommandos::zulaessigkeit`], weil sie AppKit fragt; was die Regel
+/// daraus macht, steht dort.
+///
+/// **`Fremd` deckt zwei Lagen, und beide sollen dieselbe Antwort bekommen:** ein
+/// fremdes Fenster im Vordergrund — das freistehende Panel des Ueber-Dialogs so
+/// gut wie das Fenster einer anderen Anwendung — und ein KRK ohne
+/// Schluesselfenster, also im Hintergrund. In beiden Faellen darf kein
+/// Tastenbefehl auf das Hauptfenster wirken.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Schluesselfenster {
+    /// KRKs Hauptfenster selbst.
+    Hauptfenster,
+    /// Ein Blatt, das am Hauptfenster haengt.
+    ///
+    /// Es **ist** das Schluesselfenster und deshalb ein eigener Wert und kein
+    /// `Fremd`. Ueber ein stehendes Blatt entscheidet
+    /// [`Anwendungsdelegierter::blatt_steht`] zusammen mit
+    /// [`kommandos::operationen::waehrend_blatt_erlaubt`](crate::kommandos::operationen::waehrend_blatt_erlaubt),
+    /// und diese Aufteilung bleibt, wo sie ist.
+    BlattAmHauptfenster,
+    /// Ein fremdes Fenster, oder gar keines.
+    Fremd,
+}
+
+impl Schluesselfenster {
+    /// Ob das Schluesselfenster KRK gehoert.
+    ///
+    /// Der vierte Bestandteil der Zulaessigkeitsregel, als Wahrheitswert fuer
+    /// [`Lage::schluesselfenster_gehoert_krk`]. Die Fallunterscheidung ist
+    /// vollstaendig und hat keinen Auffangzweig: ein vierter Wert haelt hier den
+    /// Bau an und erzwingt eine bewusste Einordnung.
+    fn gehoert_krk(self) -> bool {
+        match self {
+            Self::Hauptfenster | Self::BlattAmHauptfenster => true,
+            Self::Fremd => false,
+        }
+    }
 }
 
 impl Anwendungsdelegierter {
@@ -2532,6 +2587,15 @@ impl Anwendungsdelegierter {
     /// Die eine Abfrage dafuer. Sie deckt jedes Blatt ab, auch die Pfadeingabe
     /// aus C2 und die kommenden aus S17, und nicht nur die vier aus diesem
     /// Schritt.
+    ///
+    /// **Sie bleibt eine eigene Frage und geht nicht in
+    /// [`Self::schluesselfenster`] auf.** Die beiden Werte sind unabhaengig:
+    /// steht ein Blatt und oeffnet der Nutzer daneben den Ueber-Dialog, ist
+    /// `blatt_steht` wahr und das Schluesselfenster `Fremd`. Umgekehrt meldet
+    /// ein Blatt, das selbst das Schluesselfenster ist,
+    /// `Schluesselfenster::BlattAmHauptfenster`, und der Abbruch aus dem Blatt
+    /// heraus bleibt erreichbar, weil ueber ihn allein
+    /// `waehrend_blatt_erlaubt` entscheidet.
     fn blatt_steht(&self) -> bool {
         self.ivars()
             .fenster
@@ -2540,29 +2604,71 @@ impl Anwendungsdelegierter {
             .is_some()
     }
 
-    /// Die drei Eingaben der Zulaessigkeitsfrage, an einer Stelle erhoben.
+    /// Welches Fenster gerade das Schluesselfenster ist.
+    ///
+    /// **Die eine Abfrage von `NSApplication::keyWindow` fuer die
+    /// Zulaessigkeit**, und ihr Wert beantwortet zwei Fragen: ob ein Befehl
+    /// ueberhaupt wirken darf, ueber [`Schluesselfenster::gehoert_krk`], und ob
+    /// [`Self::fokus_bei`] in den Ansichtsbaum des Hauptfensters hineinsehen
+    /// darf. [`Self::lage`] erhebt sie deshalb **einmal** und reicht den Wert an
+    /// beide weiter; zwei Erhebungen desselben Augenblicks koennten
+    /// auseinanderlaufen, eine kann es nicht.
+    ///
+    /// Gefragt ist die Naemlichkeit und nicht die Klasse, wie in
+    /// [`Self::ist_editorflaeche`]: verglichen wird ueber `isEqual:` gegen das
+    /// Hauptfenster und gegen dessen `attachedSheet`. Ein Panel, das KRK nicht
+    /// gehoert, faellt damit auf [`Schluesselfenster::Fremd`], und ebenso ein
+    /// KRK, das gar kein Schluesselfenster hat.
+    fn schluesselfenster(&self) -> Schluesselfenster {
+        let (Some(schluessel), Some(haupt)) = (
+            NSApplication::sharedApplication(self.mtm()).keyWindow(),
+            self.ivars().fenster.get(),
+        ) else {
+            return Schluesselfenster::Fremd;
+        };
+        if schluessel.isEqual(Some(haupt)) {
+            return Schluesselfenster::Hauptfenster;
+        }
+        match haupt.attachedSheet() {
+            Some(blatt) if schluessel.isEqual(Some(&*blatt)) => {
+                Schluesselfenster::BlattAmHauptfenster
+            }
+            _ => Schluesselfenster::Fremd,
+        }
+    }
+
+    /// Die vier Eingaben der Zulaessigkeitsfrage, an einer Stelle erhoben.
     ///
     /// **Die eine Erhebung, und die eine Aufrufstelle von
     /// [`ereignisse::ersthelfer_gehoert_appkit`].** Drei Abnehmer lesen sie: der
     /// Kommandozweig in [`Self::kommando_ausfuehren`] gibt sie an
     /// [`zulaessigkeit::zulaessig`], der Zeichenzweig von
-    /// [`Self::eingabe_ausfuehren`] liest die drei Werte einzeln heraus, und die
-    /// Ausgrauung des Hauptmenues fragt dieselbe Regel auf demselben Wert. Zwei
-    /// Erhebungen desselben Augenblicks koennten auseinanderlaufen; eine kann es
-    /// nicht.
+    /// [`Self::eingabe_ausfuehren`] liest drei der vier Werte einzeln heraus,
+    /// und die Ausgrauung des Hauptmenues fragt dieselbe Regel auf demselben
+    /// Wert. Zwei Erhebungen desselben Augenblicks koennten auseinanderlaufen;
+    /// eine kann es nicht.
+    ///
+    /// **Das Schluesselfenster wird ebenfalls einmal erhoben**, und aus
+    /// demselben Grund. Der Wert aus [`Self::schluesselfenster`] geht an zwei
+    /// Stellen: als Wahrheitswert in die `Lage` und als Vorabfrage in
+    /// [`Self::fokus_bei`], das ohne ihn selbst wieder `keyWindow` fragen
+    /// muesste. Ein `self.fokus()` an dieser Stelle waere genau diese zweite
+    /// Erhebung.
     ///
     /// **Der Fokuswert dient danach zweierlei**, und das ist kein Widerspruch:
     /// als Vorbehalt entscheidet er in `zulaessig`, ob der Befehl wirkt, und
     /// weiter unten als Adresse, wohin er geht. Die zweite Verwendung fragt
     /// nicht noch einmal nach.
     fn lage(&self) -> Lage {
+        let schluesselfenster = self.schluesselfenster();
         Lage {
             blatt_steht: self.blatt_steht(),
             ersthelfer_gehoert_appkit: ereignisse::ersthelfer_gehoert_appkit(
                 self.mtm(),
                 &|ersthelfer| self.ist_editorflaeche(ersthelfer),
             ),
-            fokus: self.fokus(),
+            schluesselfenster_gehoert_krk: schluesselfenster.gehoert_krk(),
+            fokus: self.fokus_bei(schluesselfenster),
         }
     }
 
@@ -2585,9 +2691,10 @@ impl Anwendungsdelegierter {
     /// Bestandteil im Ereignisabgriff wohnte; alle drei stehen jetzt in der
     /// einen Regel, die auch das Hauptmenue fragt.
     fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
-        // Die drei Bestandteile und ihre Herleitung stehen in
+        // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
-        // durch, ein Textfeld behaelt seine AppKit-Bedeutung, und der
+        // durch, ein Textfeld behaelt seine AppKit-Bedeutung, ein fremdes
+        // Schluesselfenster haelt alles ausser der Ausnahmeliste auf, und der
         // Wirkungsbereich muss zum Fokus passen.
         //
         // Ein laufender Vorgang sperrt seit S16b **nicht**: C4 sagt zu, dass
@@ -4001,10 +4108,11 @@ impl Anwendungsdelegierter {
     /// nachzuziehen haette. Die beiden Fokusbefehle aus C5 setzen deshalb den
     /// Ersthelfer, statt ein Kennzeichen umzulegen.
     ///
-    /// Zwei Vorabfragen und ein Durchgang durch [`Bereich::ALLE`]. Steht ein
+    /// Eine Vorabfrage und ein Durchgang durch [`Bereich::ALLE`]. Steht ein
     /// Blatt am Fenster, ist dessen Panel das Schluesselfenster und nicht das
     /// Hauptfenster: [`Fokus::Anderswo`], und ohne diese Antwort loeschte ein
-    /// Delete vor der stehenden Rueckfrage in dem Ordner dahinter.
+    /// Delete vor der stehenden Rueckfrage in dem Ordner dahinter. Dieselbe
+    /// Antwort gilt fuer jedes fremde Fenster und fuer ein KRK im Hintergrund.
     ///
     /// **Gefragt ist seit S43 das Enthaltensein und nicht mehr die
     /// Naemlichkeit.** Nicht "**ist** der Ersthelfer diese Ansicht", sondern
@@ -4041,16 +4149,27 @@ impl Anwendungsdelegierter {
     /// Befehl des Dateifensters mehr wirkt; genau diesen Zustand hat der Defekt
     /// vom 260805-1845 schon einmal hergestellt.
     fn fokus(&self) -> Fokus {
-        let (Some(schluessel), Some(haupt)) = (
-            NSApplication::sharedApplication(self.mtm()).keyWindow(),
-            self.ivars().fenster.get(),
-        ) else {
-            return Fokus::Anderswo;
-        };
-        if !schluessel.isEqual(Some(haupt)) {
-            return Fokus::Anderswo;
+        self.fokus_bei(self.schluesselfenster())
+    }
+
+    /// Dasselbe, mit einem schon erhobenen Schluesselfenster.
+    ///
+    /// **Die Aufteilung dient der einen Erhebung und keiner zweiten Frage.**
+    /// [`Self::lage`] braucht das Schluesselfenster ohnehin, weil es der vierte
+    /// Bestandteil der Zulaessigkeitsregel ist; riefe es danach [`Self::fokus`],
+    /// fragte AppKit denselben Augenblick ein zweites Mal, und die beiden
+    /// Antworten koennten auseinanderlaufen. [`Self::fokus`] bleibt fuer die
+    /// fuenf uebrigen Aufrufer stehen, die den Wert nicht schon in der Hand
+    /// haben.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig:
+    /// allein vor dem Hauptfenster selbst lohnt der Gang durch den
+    /// Ansichtsbaum.
+    fn fokus_bei(&self, schluesselfenster: Schluesselfenster) -> Fokus {
+        match schluesselfenster {
+            Schluesselfenster::Hauptfenster => self.ersthelferbereich(),
+            Schluesselfenster::BlattAmHauptfenster | Schluesselfenster::Fremd => Fokus::Anderswo,
         }
-        self.ersthelferbereich()
     }
 
     /// In welchem Bereich der Ersthelfer des Hauptfensters liegt.

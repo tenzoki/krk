@@ -1,7 +1,7 @@
 //! Die eine Zulaessigkeitsfrage: darf dieser Befehl hier gerade wirken (C2)?
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
-//! hier keine `use objc2`-Zeile. Die drei Eingaben liest der
+//! hier keine `use objc2`-Zeile. Die vier Eingaben liest der
 //! Anwendungsdelegierte und stellt sie als [`Lage`] zusammen; die Regel selbst
 //! steht hier und ist ohne Fenster pruefbar.
 //!
@@ -11,7 +11,8 @@
 //!                                 ├──> zulaessig()
 //!  Lage ─────┬─> blatt_steht ─────┤
 //!            ├─> Ersthelferbefund ┤
-//!            └─> Fokus ───────────┘
+//!            ├─> Fokus ───────────┤
+//!            └─> Schluesselfenster┘
 //! ```
 //!
 //! # Eine Frage, zwei Frager
@@ -25,7 +26,7 @@
 //! Menueeintrag zu einem abgewiesenen Tastendruck fuehrte den Befehl aus, den
 //! der Abgriff eben verweigert hat.
 //!
-//! # Die drei Bestandteile
+//! # Die vier Bestandteile
 //!
 //! 1. **Es steht kein Blatt**, oder der Befehl ist waehrend eines Blattes
 //!    erlaubt. Die zweite Haelfte beantwortet
@@ -36,6 +37,30 @@
 //!    gestellt hat; sie ist hierher gewandert und steht nicht mehr daneben.
 //! 3. **[`fokus::wirkt`](super::fokus::wirkt) sagt ja** zum Wirkungsbereich des
 //!    Befehls und zum Fokus des Augenblicks.
+//! 4. **Das Schluesselfenster gehoert KRK.** Es ist das Hauptfenster oder ein
+//!    Blatt, das daran haengt; steht ein fremdes Fenster vorn, wirkt kein
+//!    Befehl.
+//!
+//! **Der vierte Bestandteil ist der juengste, und er schliesst die Luecke, die
+//! der Ueber-Dialog aufreisst.** Ein freistehendes Panel ist kein Blatt, also
+//! sagt (1) nichts dazu, und welchen Ersthelfer AppKit darin einsetzt, ist
+//! nicht zugesagt, also traegt (2) den Fall nicht. Bestandteil (3) weist vor
+//! einem fremden Fenster schon heute jeden Befehl ab, dessen Wirkungsbereich
+//! ein Bereich ist, denn `Anwendungsdelegierter::fokus` antwortet dann
+//! `Anderswo`; durch kommt genau, was `Wirkungsbereich::Ueberall` traegt, und
+//! das ist der Rest, den (4) aufhaelt. Entschieden hat das der Nutzer am
+//! 260813-1055 mit Moeglichkeit 2 aus
+//! `decisions/260813-1037_*_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`.
+//!
+//! **Ein anhaengendes Blatt braucht dafuer keinen Sonderfall.** Es **ist** das
+//! Schluesselfenster, also sagt (4) fuer ein stehendes Blatt ja, und ueber das
+//! Blatt entscheidet allein (1) wie bisher. Der Abbruch aus dem Blatt heraus
+//! bleibt damit erreichbar, ohne dass eine Ausnahme dafuer geschrieben waere.
+//!
+//! **(4) steht neben (1) und (2) und nicht ueber ihnen.** Alle drei fragen nach
+//! der Lage, und die Ausnahmeliste hebt sie deshalb gemeinsam auf; nur (3)
+//! fragt nach dem Wirkungsbereich und bleibt unberuehrt. Der naechste Abschnitt
+//! fuehrt es aus.
 //!
 //! **Der zweite Bestandteil ist der, den man weglaesst, und er traegt den
 //! gefaehrlichsten Fall.** Beim Umbenennen direkt in der Dateiliste haelt der
@@ -49,13 +74,26 @@
 //!
 //! # Die Ausnahmeliste
 //!
-//! [`immer_erreichbar`] hebt die Bestandteile (1) und (2) auf, den dritten
-//! **nicht**. Sie ist aus „kein Verlust gegenueber heute" abgeleitet: `beenden`
+//! [`immer_erreichbar`] hebt die Bestandteile (1), (2) und (4) auf, den
+//! dritten **nicht**. In einem Satz: sie hebt jede Sperre auf, die nach der
+//! **Lage** fragt, und keine, die nach dem **Wirkungsbereich** fragt.
+//!
+//! Sie ist aus „kein Verlust gegenueber heute" abgeleitet: `beenden`
 //! und `fenster_schliessen` sind heute waehrend einer Umbenennung in der Liste
 //! und waehrend eines stehenden Blattes allein ueber ihren Menueeintrag
 //! erreichbar, weil der Abgriff den Tastendruck an AppKit weiterreicht und das
 //! Hauptmenue ihn aufnimmt. Sobald jeder Eintrag des Menues seine Zulaessigkeit
 //! von hier bezieht, naehme die Regel ohne Ausnahme genau diesen Weg weg.
+//!
+//! **Dass sie auch (4) aufhebt, ist eine Wahl und keine Ableitung.** Der
+//! Wortlaut des Entscheids sagt „wirkt kein Befehl", und unter dieser Fassung
+//! wirken `beenden` und `fenster_schliessen` doch. Der Grund ist dieselbe
+//! Randbedingung: vor dem Freigabewaehler der Runde 6 beendet Cmd+Q die
+//! Anwendung heute, und die strenge Lesart naehme diesen Weg weg, ohne dass
+//! ihn jemand genannt haette. Der Nutzer hat es am 260813 mit Moeglichkeit 1
+//! aus
+//! `decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`
+//! so festgelegt.
 //!
 //! Dass sie den dritten Bestandteil nicht aufhebt, faellt heute nicht auf:
 //! beide Befehle tragen `Wirkungsbereich::Ueberall`, und
@@ -71,16 +109,15 @@ use super::operationen;
 
 /// Was die Oberflaeche im Augenblick der Frage ueber sich weiss.
 ///
-/// Die drei Eingaben der Zulaessigkeitsfrage an **einer** Stelle, damit die
-/// Frage rein bleibt und die Tafel aus 140 Faellen sie ohne Fenster stellen
+/// Die vier Eingaben der Zulaessigkeitsfrage an **einer** Stelle, damit die
+/// Frage rein bleibt und die Tafel aus 280 Faellen sie ohne Fenster stellen
 /// kann. Erhoben werden sie von `Anwendungsdelegierter::lage`, und zwar einmal
 /// je Eingabe: der Kommandozweig gibt die `Lage` an [`zulaessig`], der
-/// Zeichenzweig der Sprungmarke liest dieselben drei Werte heraus. Zwei
-/// Erhebungen desselben Augenblicks koennten auseinanderlaufen, eine kann es
-/// nicht.
+/// Zeichenzweig der Sprungmarke liest drei davon heraus. Zwei Erhebungen
+/// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
-/// `Copy`, weil der Wert drei Maschinenwoerter gross ist und die Tafel ihn
-/// hundertvierzigmal durchreicht.
+/// `Copy`, weil der Wert vier kleine Felder traegt und die Tafel ihn
+/// zweihundertachtzigmal durchreicht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Lage {
     /// Ob am Hauptfenster gerade ein Blatt haengt.
@@ -91,6 +128,20 @@ pub struct Lage {
     /// meldet hier `false`; die Naemlichkeitsfrage dahinter beantwortet der
     /// Anwendungsdelegierte, der die Flaeche haelt.
     pub ersthelfer_gehoert_appkit: bool,
+    /// Ob das Schluesselfenster KRKs Hauptfenster oder ein daran haengendes
+    /// Blatt ist.
+    ///
+    /// **Ein anhaengendes Blatt meldet hier `true`**, denn es ist selbst das
+    /// Schluesselfenster; ueber das Blatt entscheidet allein
+    /// [`blatt_steht`](Self::blatt_steht) zusammen mit
+    /// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt).
+    /// Die beiden Felder sind unabhaengig: steht ein Blatt und oeffnet der
+    /// Nutzer den Ueber-Dialog, ist `blatt_steht` wahr und dieses Feld `false`.
+    ///
+    /// `false` meldet jedes fremde Fenster, das freistehende Panel des
+    /// Ueber-Dialogs so gut wie das Fenster einer anderen Anwendung, und
+    /// ebenso ein KRK ohne Schluesselfenster, also im Hintergrund.
+    pub schluesselfenster_gehoert_krk: bool,
     /// Wo der Eingabefokus steht.
     pub fokus: Fokus,
 }
@@ -99,7 +150,7 @@ pub struct Lage {
 ///
 /// **Die eine Stelle, an der die Frage beantwortet wird**, und die eine
 /// Antwort, die der Ereignisabgriff und die Ausgrauung des Hauptmenues
-/// gemeinsam bekommen. Die drei Bestandteile und ihre Herleitung stehen im
+/// gemeinsam bekommen. Die vier Bestandteile und ihre Herleitung stehen im
 /// Modulkopf.
 ///
 /// Eine Sonderbehandlung fuer ein einzelnes Kommando gibt es hier nicht:
@@ -113,14 +164,16 @@ pub struct Lage {
 pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
     let kein_blatt_oder_erlaubt =
         !lage.blatt_steht || operationen::waehrend_blatt_erlaubt(kommando);
-    let durchgelassen =
-        immer_erreichbar(kommando) || (kein_blatt_oder_erlaubt && !lage.ersthelfer_gehoert_appkit);
+    let durchgelassen = immer_erreichbar(kommando)
+        || (lage.schluesselfenster_gehoert_krk
+            && kein_blatt_oder_erlaubt
+            && !lage.ersthelfer_gehoert_appkit);
 
     durchgelassen && fokus::wirkt(kommando.wirkungsbereich(), lage.fokus)
 }
 
-/// Die benannte Liste der Befehle, die ein Blatt und ein Textfeld nicht
-/// aufhalten.
+/// Die benannte Liste der Befehle, die ein Blatt, ein Textfeld und ein fremdes
+/// Schluesselfenster nicht aufhalten.
 ///
 /// **Bewusst keine vollstaendige Fallunterscheidung.** Die uebrigen
 /// Fallunterscheidungen dieses Projekts zaehlen jedes Kommando auf, damit ein
@@ -130,8 +183,9 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 /// dazu", und ein neues Kommando bekommt ihn stillschweigend und richtig.
 ///
 /// Beide Eintraege stammen aus „kein Verlust gegenueber heute"; die Herleitung
-/// steht im Modulkopf. Die Liste hebt die Bestandteile (1) und (2) auf und den
-/// dritten nicht.
+/// steht im Modulkopf. Die Liste hebt die Bestandteile (1), (2) und (4) auf und
+/// den dritten nicht: sie hebt jede Sperre auf, die nach der Lage fragt, und
+/// keine, die nach dem Wirkungsbereich fragt.
 pub fn immer_erreichbar(kommando: Kommando) -> bool {
     matches!(kommando, Kommando::Beenden | Kommando::FensterSchliessen)
 }
@@ -197,8 +251,8 @@ mod tests {
     ///
     /// **Diese Datei bleibt aussen vor**, so wie
     /// `das_menue_wird_an_zwei_anlaessen_gebaut` `menue.rs` aussen vor laesst:
-    /// hier stehen die Erklaerung und die Tafel aus 140 Faellen, die
-    /// [`zulaessig`] hundertvierzigmal ruft. Ein dritter Frager **in** dieser
+    /// hier stehen die Erklaerung und die Tafel aus 280 Faellen, die
+    /// [`zulaessig`] zweihundertachtzigmal ruft. Ein dritter Frager **in** dieser
     /// Datei waere Teil der Regel und nicht ein zweiter Weg an ihr vorbei.
     #[test]
     fn beide_frager_rufen_die_eine_regel() {
@@ -246,14 +300,46 @@ mod tests {
         (Wirkungsbereich::Ueberall, Kommando::LeisteUmschalten),
     ];
 
-    /// Die Lage aus drei Werten, kurz geschrieben.
-    fn lage(blatt_steht: bool, ersthelfer_gehoert_appkit: bool, fokus: Fokus) -> Lage {
+    /// Die Lage aus vier Werten, kurz geschrieben.
+    ///
+    /// Die Reihenfolge ist die der Felder: Blattstand, Ersthelferbefund,
+    /// Schluesselfenster, Fokus.
+    fn lage(
+        blatt_steht: bool,
+        ersthelfer_gehoert_appkit: bool,
+        schluesselfenster_gehoert_krk: bool,
+        fokus: Fokus,
+    ) -> Lage {
         Lage {
             blatt_steht,
             ersthelfer_gehoert_appkit,
+            schluesselfenster_gehoert_krk,
             fokus,
         }
     }
+
+    /// Die eine Lage ohne jedes Hindernis: kein Blatt, ein Ersthelfer, der
+    /// nicht AppKit gehoert, und KRKs eigenes Schluesselfenster.
+    ///
+    /// Die Reihenfolge ist die von [`lage`], ohne den Fokus.
+    const OHNE_HINDERNIS: (bool, bool, bool) = (false, false, true);
+
+    /// Die sieben Lagen, in denen mindestens eine der drei aufhebbaren
+    /// Bedingungen einen Befehl aufhaelt.
+    ///
+    /// Alle acht Wahrheitskombinationen aus Blattstand, Ersthelferbefund und
+    /// Schluesselfenster **ausser** [`OHNE_HINDERNIS`]. Die Liste steht
+    /// ausgeschrieben und nicht gerechnet, aus demselben Grund wie die Tafel:
+    /// eine gerechnete Menge waere die Umsetzung ein zweites Mal.
+    const HINDERNISSE: [(bool, bool, bool); 7] = [
+        (false, false, false),
+        (false, true, false),
+        (false, true, true),
+        (true, false, false),
+        (true, false, true),
+        (true, true, false),
+        (true, true, true),
+    ];
 
     #[test]
     fn jeder_stellvertreter_traegt_den_bereich_den_er_vertritt() {
@@ -276,21 +362,22 @@ mod tests {
     }
 
     /// Die ganze Regel auf einen Blick: sieben Wirkungsbereiche mal fuenf
-    /// Fokuswerte mal zwei Blattstaende mal zwei Ersthelferbefunde, also 140
-    /// Faelle.
+    /// Fokuswerte mal zwei Blattstaende mal zwei Ersthelferbefunde mal zwei
+    /// Schluesselfensterbefunde, also 280 Faelle.
     ///
     /// Die Tafel steht in der Form der Tafel aus [`super::super::fokus`], nur um
-    /// zwei Wahrheitswerte erweitert. Ein Viertel traegt die Zeilen des
-    /// Fokusvorbehalts, die drei uebrigen weisen jeden Befehl ab: ein Blatt
-    /// haelt alles auf, was nicht waehrend eines Blattes erlaubt ist, und ein
-    /// Ersthelfer, der AppKit gehoert, ebenso. Dass die drei Viertel wirklich
-    /// leer sind und nicht bloss so aussehen, haengt an den Stellvertretern;
-    /// die Probe darueber haelt ihre beiden Voraussetzungen fest.
+    /// drei Wahrheitswerte erweitert. Ein Achtel traegt die Zeilen des
+    /// Fokusvorbehalts, die sieben uebrigen weisen jeden Befehl ab: ein Blatt
+    /// haelt alles auf, was nicht waehrend eines Blattes erlaubt ist, ein
+    /// Ersthelfer, der AppKit gehoert, ebenso, und ein fremdes
+    /// Schluesselfenster ebenso. Dass die sieben Achtel wirklich leer sind und
+    /// nicht bloss so aussehen, haengt an den Stellvertretern; die Probe
+    /// darueber haelt ihre beiden Voraussetzungen fest.
     ///
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
     #[test]
-    fn die_tafel_aus_hundertvierzig_faellen_geht_auf() {
+    fn die_tafel_aus_zweihundertachtzig_faellen_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
         // Es ist dieselbe Tafel, die `fokus::wirkt` traegt, und sie steht hier
@@ -307,28 +394,34 @@ mod tests {
         ];
         const ALLES_ABGEWIESEN: [[bool; 5]; 7] = [[false; 5]; 7];
 
-        // blatt_steht, ersthelfer_gehoert_appkit, und welches Viertel gilt.
-        let viertel: [(bool, bool, [[bool; 5]; 7]); 4] = [
-            (false, false, OHNE_SPERRE),
-            (false, true, ALLES_ABGEWIESEN),
-            (true, false, ALLES_ABGEWIESEN),
-            (true, true, ALLES_ABGEWIESEN),
+        // blatt_steht, ersthelfer_gehoert_appkit, schluesselfenster_gehoert_krk,
+        // und welches Achtel gilt.
+        let achtel: [(bool, bool, bool, [[bool; 5]; 7]); 8] = [
+            (false, false, true, OHNE_SPERRE),
+            (false, false, false, ALLES_ABGEWIESEN),
+            (false, true, true, ALLES_ABGEWIESEN),
+            (false, true, false, ALLES_ABGEWIESEN),
+            (true, false, true, ALLES_ABGEWIESEN),
+            (true, false, false, ALLES_ABGEWIESEN),
+            (true, true, true, ALLES_ABGEWIESEN),
+            (true, true, false, ALLES_ABGEWIESEN),
         ];
 
         let mut geprueft = 0usize;
-        for (blatt, ersthelfer, tafel) in viertel {
+        for (blatt, ersthelfer, schluessel, tafel) in achtel {
             for ((_, kommando), zeile) in STELLVERTRETER.into_iter().zip(tafel) {
                 for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
                     assert_eq!(
-                        zulaessig(kommando, lage(blatt, ersthelfer, fokus)),
+                        zulaessig(kommando, lage(blatt, ersthelfer, schluessel, fokus)),
                         erwartet,
-                        "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} in {fokus:?}"
+                        "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} \
+                         schluessel={schluessel} in {fokus:?}"
                     );
                     geprueft += 1;
                 }
             }
         }
-        assert_eq!(geprueft, 140, "die Tafel deckt nicht alle 140 Faelle ab");
+        assert_eq!(geprueft, 280, "die Tafel deckt nicht alle 280 Faelle ab");
     }
 
     /// Mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulaessig.
@@ -341,11 +434,11 @@ mod tests {
     fn ein_befehl_des_dateifensters_wirkt_im_editor_nicht() {
         assert!(!zulaessig(
             Kommando::Oeffnen,
-            lage(false, false, Fokus::Editor)
+            lage(false, false, true, Fokus::Editor)
         ));
         assert!(zulaessig(
             Kommando::Oeffnen,
-            lage(false, false, Fokus::Dateifenster)
+            lage(false, false, true, Fokus::Dateifenster)
         ));
     }
 
@@ -358,7 +451,7 @@ mod tests {
     /// Bestandteil (2) waere hier jeder Befehl des Dateifensters freigegeben.
     #[test]
     fn beim_umbenennen_in_der_liste_wirkt_kein_befehl_des_dateifensters() {
-        let umbenennung = lage(false, true, Fokus::Dateifenster);
+        let umbenennung = lage(false, true, true, Fokus::Dateifenster);
         for kommando in [
             Kommando::Oeffnen,
             Kommando::AuswahlHoch,
@@ -373,22 +466,64 @@ mod tests {
         }
     }
 
-    /// `beenden` und `fenster_schliessen` bleiben in beiden Lagen erreichbar.
+    /// Vor einem fremden Schluesselfenster wirkt auch ein fensterweiter Befehl
+    /// nicht (C5.6).
+    ///
+    /// **Die eine Probe, die den Unterschied zwischen der Regel der Runde 7 und
+    /// der dieser Runde zeigt.** Vor einem fremden Fenster antwortet
+    /// `Anwendungsdelegierter::fokus` schon vorher [`Fokus::Anderswo`], und
+    /// damit weist Bestandteil (3) jeden Befehl ab, dessen Wirkungsbereich ein
+    /// Bereich ist. Uebrig bleibt allein die Zeile `Ueberall`, fuer die
+    /// [`fokus::wirkt`](super::super::fokus::wirkt) in jedem Fokus ja sagt;
+    /// dort und nur dort faellt der vierte Bestandteil ueberhaupt an. Ohne
+    /// diese Probe zeigte keine der uebrigen ihn.
+    ///
+    /// Der Stellvertreter ist [`Kommando::LeisteUmschalten`], derselbe, den die
+    /// Tafel fuer `Ueberall` fuehrt: er traegt den Bereich und steht nicht auf
+    /// der Ausnahmeliste. Die zweite Zusicherung haelt fest, dass die neue
+    /// Bedingung nichts anderes wegnimmt: vor KRKs eigenem Schluesselfenster
+    /// kommt derselbe Befehl in jedem Fokus durch.
+    #[test]
+    fn vor_einem_fremden_schluesselfenster_wirkt_kein_fensterweiter_befehl() {
+        let kommando = Kommando::LeisteUmschalten;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+        assert!(!immer_erreichbar(kommando));
+
+        for fokus in JEDER_FOKUS {
+            assert!(
+                !zulaessig(kommando, lage(false, false, false, fokus)),
+                "{kommando:?} kommt vor einem fremden Schluesselfenster in {fokus:?} durch"
+            );
+            assert!(
+                zulaessig(kommando, lage(false, false, true, fokus)),
+                "{kommando:?} kommt vor KRKs eigenem Schluesselfenster in {fokus:?} nicht durch"
+            );
+        }
+    }
+
+    /// `beenden` und `fenster_schliessen` bleiben in jeder Lage erreichbar.
     ///
     /// Die Pruefung der Ausnahmeliste und zugleich ihre Herleitung: heute
     /// erreichen beide Befehle waehrend einer Umbenennung und waehrend eines
     /// Blattes ihr Ziel ueber den Menueeintrag, und die neue Regel naehme ihnen
     /// das ohne Ausnahme weg.
+    ///
+    /// **Der vierte Bestandteil steht seit der Runde 8 mit in der Schleife**,
+    /// und die Probe haelt damit die Wahl aus
+    /// `decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`
+    /// fest: `beenden` kommt auch vor einem fremden Schluesselfenster durch,
+    /// also beendet Cmd+Q die Anwendung, waehrend der Ueber-Dialog steht.
+    /// Ohne diese Zeile waere der Weg lautlos weg.
     #[test]
     fn die_ausnahmeliste_kommt_durch_blatt_und_textfeld() {
         for kommando in [Kommando::Beenden, Kommando::FensterSchliessen] {
             assert!(immer_erreichbar(kommando));
             for fokus in JEDER_FOKUS {
-                for (blatt, ersthelfer) in [(false, true), (true, false), (true, true)] {
+                for (blatt, ersthelfer, schluessel) in HINDERNISSE {
                     assert!(
-                        zulaessig(kommando, lage(blatt, ersthelfer, fokus)),
-                        "{kommando:?} kommt bei blatt={blatt} ersthelfer={ersthelfer} in \
-                         {fokus:?} nicht durch"
+                        zulaessig(kommando, lage(blatt, ersthelfer, schluessel, fokus)),
+                        "{kommando:?} kommt bei blatt={blatt} ersthelfer={ersthelfer} \
+                         schluessel={schluessel} in {fokus:?} nicht durch"
                     );
                 }
             }
@@ -416,14 +551,15 @@ mod tests {
                 continue;
             }
             for fokus in JEDER_FOKUS {
-                for (blatt, ersthelfer) in
-                    [(false, false), (false, true), (true, false), (true, true)]
+                for (blatt, ersthelfer, schluessel) in
+                    HINDERNISSE.into_iter().chain([OHNE_HINDERNIS])
                 {
                     assert_eq!(
-                        zulaessig(kommando, lage(blatt, ersthelfer, fokus)),
+                        zulaessig(kommando, lage(blatt, ersthelfer, schluessel, fokus)),
                         fokus::wirkt(kommando.wirkungsbereich(), fokus),
-                        "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} in {fokus:?} \
-                         haengt nicht allein am Wirkungsbereich"
+                        "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} \
+                         schluessel={schluessel} in {fokus:?} haengt nicht allein am \
+                         Wirkungsbereich"
                     );
                 }
             }
@@ -437,7 +573,7 @@ mod tests {
     /// Liste: die Zusage aus C2.7 handelt von jedem Eintrag des Menues.
     #[test]
     fn waehrend_eines_blattes_kommt_allein_der_abbruch_und_die_ausnahmeliste_durch() {
-        let blatt = lage(true, false, Fokus::Anderswo);
+        let blatt = lage(true, false, true, Fokus::Anderswo);
         for kommando in Kommando::KENNUNGEN.map(|(kommando, _)| kommando) {
             let erwartet =
                 operationen::waehrend_blatt_erlaubt(kommando) || immer_erreichbar(kommando);
@@ -458,11 +594,11 @@ mod tests {
     fn im_textfeld_eines_blattes_ist_auch_der_abbruch_abgewiesen() {
         assert!(zulaessig(
             Kommando::Abbrechen,
-            lage(true, false, Fokus::Anderswo)
+            lage(true, false, true, Fokus::Anderswo)
         ));
         assert!(!zulaessig(
             Kommando::Abbrechen,
-            lage(true, true, Fokus::Anderswo)
+            lage(true, true, true, Fokus::Anderswo)
         ));
     }
 }

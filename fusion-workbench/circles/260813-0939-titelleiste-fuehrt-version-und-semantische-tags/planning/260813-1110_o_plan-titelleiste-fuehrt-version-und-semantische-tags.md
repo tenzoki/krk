@@ -189,7 +189,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 ### Strang A — Die Zulässigkeitsregel schliesst die Lücke
 
-**A1. Die vierte Frage in `Lage` und in `zulaessig`**
+**A1. [DONE] Die vierte Frage in `Lage` und in `zulaessig`**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/kommandos/zulaessigkeit.rs`
 - Erfüllt: C5.6 (erste Hälfte), Entscheid `decisions/260813-1037_a_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`
@@ -202,7 +202,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - `die_ausnahmeliste_kommt_durch_blatt_und_textfeld` und `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf` bekommen den vierten Wert in ihre Schleifen; die erste hält damit fest, dass `beenden` auch vor einem fremden Schlüsselfenster durchkommt.
   - **Eine neue Probe für den Kern des Entscheids:** vor einem fremden Schlüsselfenster ist ein Befehl mit `Wirkungsbereich::Ueberall`, der nicht auf der Ausnahmeliste steht, abgewiesen. Der Stellvertreter dafür ist `Kommando::LeisteUmschalten`; ohne diese Probe zeigte keine der bestehenden den Unterschied zwischen alter und neuer Regel, weil er allein in der Zeile `Ueberall` anfällt.
 
-**A2. Der Anwendungsdelegierte erhebt das Schlüsselfenster einmal**
+**A2. [DONE] Der Anwendungsdelegierte erhebt das Schlüsselfenster einmal**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C5.6 (zweite Hälfte)
@@ -215,7 +215,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Der Doc-Kommentar an `lage` zieht von drei auf vier Werte nach, und der Modulkopf-Abschnitt über die zwei Stellen mit zwei verschiedenen Fragen bekommt die dritte Frage genannt.
   - Der Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` bleibt richtig: `keyWindow`, `attachedSheet` und `isEqual:` stehen alle drei schon darin.
 
-**A3. Der Freigabedialog-Defekt der Runde 6, gegen die neue Regel gelesen**
+**A3. [DONE] Der Freigabedialog-Defekt der Runde 6, gegen die neue Regel gelesen**
 - Executor: `coder`
 - Files: `fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_die-blattregel-sieht-den-freigabedialog-nicht.md`
 - Erfüllt: die zweite Hälfte des Entscheids vom 260813-1055
@@ -303,7 +303,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 ### Strang D — Die Tag-Prüfung und der Abschnitt in `README.md`
 
-**D1. Die reine Vergleichsfunktion**
+**D1. [DONE] Die reine Vergleichsfunktion**
 - Executor: `coder`
 - Files: `xtask/src/release.rs`
 - Erfüllt: C3.1, C3.2, C3.3, C3.4, C3.5, C3.7, C3.8, C3.14, C6.7
@@ -317,7 +317,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Proben nach dem Muster von `sign.rs:391-448`: `const`-Zeichenketten mit wörtlicher Git-Ausgabe, gegen die Funktion gefahren. Abgedeckt werden der grüne Fall, ein fehlender Tag, ein passender Tag unter mehreren, ein geänderter Baum, eine gelöschte verfolgte Datei, beide Befunde zugleich, und die drei Bestandteile der Meldung.
   - Keine dieser Proben braucht ein Verzeichnis. Das ist Absicht: `xtask` trägt in `release.rs:719` schon eine `Wegwerfwurzel`, und eine zweite anzulegen wäre ein Doppelbau. Warum diese Fassung in der Zählung „genau drei Prüfordner-Fassungen" gar nicht vorkommt, steht als `issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md` und ist nicht Gegenstand dieser Runde.
 
-**D2. Der eine `git`-Aufruf und die neue Station 1**
+**D2. [DONE] Der eine `git`-Aufruf und die neue Station 1**
 - Executor: `coder`
 - Files: `xtask/src/release.rs`, `xtask/src/bundle.rs`
 - Erfüllt: C3.9, C3.10, C3.11, C3.13
@@ -336,7 +336,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - `release::ausfuehren` ruft die neue Station als erste Zeile nach der Argumentprüfung, also vor `bundle::vorbereiten()`. Sie braucht daraus nichts: die Wurzel liefert `bundle::wurzel()`, die Version die Konstante.
   - **Eine Probe über die Reihenfolge** (C3.9): sie liest `release.rs` über `include_str!("release.rs")`, sucht die Stelle des Rufs von `auslieferungsstand_pruefen` und die des ersten `bundle::uebersetzen` in `ausfuehren` und verlangt, dass die erste vor der zweiten steht. Ihr Doc-Kommentar benennt die Blindheit: sie liest die Textreihenfolge und nicht den Ablauf, und was sie hält, ist die eine Zusage, dass kein Abbruch dieser Art einen Übersetzungslauf kostet.
 
-**D3. Die Stationszählung an ihren drei Stellen**
+**D3. [DONE] Die Stationszählung an ihren drei Stellen**
 - Executor: `coder`
 - Files: `xtask/src/release.rs`, `xtask/src/main.rs`, `README.md`
 - Erfüllt: C3.9 (Lesbarkeit der Reihenfolge), Befund B3 des Diagrammprüfers
@@ -347,7 +347,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - `README.md:216-246` bekommt die siebengliedrige Liste; `:248` („Die sechste Station hat zwei äussere Voraussetzungen") wird zur siebten.
   - Die Zahl steht danach an denselben drei Stellen wie heute und an keiner vierten. Ein Nachziehen an einer und nicht an allen wäre der Zustand, den der Diagrammprüfer beanstandet hat.
 
-**D4. Der Abschnitt über die Versionsstufen in `README.md`**
+**D4. [DONE] Der Abschnitt über die Versionsstufen in `README.md`**
 - Executor: `coder`
 - Files: `README.md`
 - Erfüllt: C4.1 bis C4.7
@@ -359,7 +359,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - **`README.md:281-283` wird berichtigt.** Dort steht heute: „Eine neue Version wird also allein in der `Cargo.toml` gesetzt. Nachzuführen ist nichts." Mit der neuen Prüfung ist ein Tag nachzuführen, und der Satz wird falsch. Er ist der stärkste Berührungspunkt der Runde im ganzen Dokument.
   - Der bestehende Abschnitt bleibt die eine Stelle, die die Herkunft der Zahl beschreibt; der neue verweist darauf, statt sie zu wiederholen (C4.7).
 
-**D5. `bundle` und `make check` bleiben ohne Vorbedingung**
+**D5. [DONE] `bundle` und `make check` bleiben ohne Vorbedingung**
 - Executor: `coder`
 - Files: `xtask/src/release.rs` (Prüfmodul)
 - Erfüllt: C3.12

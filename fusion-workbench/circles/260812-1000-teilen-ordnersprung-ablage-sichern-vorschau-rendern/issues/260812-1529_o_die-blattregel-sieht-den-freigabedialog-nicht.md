@@ -77,3 +77,38 @@ Kommen sie durch, gibt es zwei Zuschnitte, und keiner ist hier gewählt:
   gemeinsam: wer den Wähler nach dem Schließen freigibt (Möglichkeit 2 dort),
   hat zugleich die Auskunft, die Möglichkeit 2 hier braucht.
 - Gefunden bei der Durchsicht von Turn 1 der Runde 6; nicht behoben.
+
+---
+
+**Nachtrag 260813: die neue Schlüsselfensterfrage der Runde 8, und was sie für diesen Datensatz leistet**
+
+Die Zulässigkeitsregel hat seit Schritt A1 der Runde 8 einen vierten
+Bestandteil: `Lage::schluesselfenster_gehoert_krk`. Er ist wahr, wenn
+`NSApplication::keyWindow` KRKs Hauptfenster ist oder ein Blatt, das daran
+hängt, und sonst falsch; erhoben wird er einmal je Eingabe in
+`Anwendungsdelegierter::schluesselfenster`
+(`crates/krk-ui/src/appkit/anwendung.rs`). Ist er falsch, kommt kein Befehl
+mehr durch außer den beiden der Ausnahmeliste, `beenden` und
+`fenster_schliessen`. Angelegt wurde er für den Über-Dialog aus C5 der Runde 8,
+also für denselben blinden Fleck, den dieser Datensatz beschreibt.
+
+**Was er leistet: jedes fremde Fenster ist damit erledigt**, und zwar an einer
+Stelle und ohne zweite Abfrage. Der Zuschnitt 1 oben, „eine zweite Sperre
+daneben", ist damit gegenstandslos; Zuschnitt 2 bleibt der einzige Weg, falls
+noch einer nötig ist.
+
+**Was er nicht leistet: den Freigabewähler erreicht er nicht.** Der Wähler ist
+kein Fenster. `teilen.rs:222` zeigt ihn über
+`showRelativeToRect:ofView:preferredEdge:`, also als Verfolgungsschleife an
+einer Fläche. Bleibt das Hauptfenster dabei das Schlüsselfenster — und nichts
+spricht dagegen —, antwortet `schluesselfenster_gehoert_krk` mit wahr, und die
+neue Bedingung sperrt nichts. Der Befund liegt eigens als
+`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
+
+**Dieser Datensatz bleibt deshalb offen.** Die Beobachtung, die er selbst
+verlangt, ist unverändert fällig und steht als Schritt E2 im Plan der Runde 8:
+Wähler über `shift+cmd+s` öffnen und, während er steht, `cmd+w` drücken.
+Geschieht nichts, ist die Frage beantwortet und der Datensatz wird mit dem
+Ergebnis geschlossen; schließt sich der Tab, bleibt er offen und trägt danach
+einen gemessenen Befund statt einer Vermutung. Sie ist Nutzerarbeit, weil sie
+KRK im Vordergrund verlangt.
