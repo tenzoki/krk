@@ -103,6 +103,16 @@ GUARD_EVENTS_JSONL = os.path.join(BASE_DIR, ".guard-state", "events.jsonl")
 #     protecting you", so a panel that omits it shows a guard protecting
 #     nothing as normal operation. Rendered at the loudest level the panel
 #     has — see renderWarnings().
+#   - Stale session state (state_drift) reports that the numbers the dashboard
+#     itself is drawing have stopped being written. hooks/tracker.ts measures
+#     agentstate.yaml, the active Circle's Turn log and the session history
+#     against git and orchestrator-events.jsonl on every guarded tool call, and
+#     emits one of these when a surface has frozen (issue 260801-2038, measured
+#     six times). This panel is where it belongs rather than in the event list:
+#     a monitor that keeps rendering "Commits: 4" from a frozen file while git
+#     holds 16 is not merely missing a row, it is reporting a wrong number as a
+#     right one. The divergence is NOT recomputed here — one measurement, in
+#     the hook, surfaced by its event.
 #
 # Everything else a guard hook writes (guard_allow, tracker_record, clears)
 # is bookkeeping: it records the ordinary path, nobody asked to be told
@@ -112,6 +122,7 @@ WARNING_EVENT_TYPES = {
     "guard_block", "guard_halt",
     "guard_advisory",
     "guard_error",
+    "state_drift",
 }
 
 # Subsets of WARNING_EVENT_TYPES, carved out so each can be capped separately.
@@ -119,16 +130,18 @@ WARNING_EVENT_TYPES = {
 # budget a row is charged to.
 ADVISORY_EVENT_TYPES = {"guard_advisory"}
 ERROR_EVENT_TYPES = {"guard_error"}
+DRIFT_EVENT_TYPES = {"state_drift"}
 
 # INDEPENDENT CAPS, NOT ONE SHARED BUDGET.
 #
 # The classes arrive at very different rates. A block or a churn warning is
-# rare and each one is individually worth reading. An advisory is emitted once
-# per exempted write, so a curation session with FUSION_ALLOW_RULES_WRITE set —
-# the session the flag exists for — emits one per file it rewrites. Under a
-# single shared budget, thirty rewritten rule files are thirty advisory rows and
-# every guard_block, guard_halt and churn_critical older than them is off the
-# panel. That is the failure guard.ts already refuses to
+# rare and each one is individually worth reading. An advisory is emitted per
+# guarded tool call for as long as its cause stands — a project whose
+# fusion-guard.json carries a wrong-typed key, or the retired guard.protectedPaths
+# key, gets one on every single call until the line is edited. Under a single
+# shared budget, one un-fixed configuration line is an unbounded stream of
+# advisory rows and every guard_block, guard_halt and churn_critical older than
+# them is off the panel. That is the failure guard.ts already refuses to
 # cause with guard_allow, arriving through a different door.
 #
 # So the warning class keeps its full 30 whatever the other classes do, and each
@@ -136,10 +149,10 @@ ERROR_EVENT_TYPES = {"guard_error"}
 # anything; the worst case is a taller panel.
 #
 # 8 for advisories, deliberately a minority of the panel. What an advisory row
-# has to tell the user is "your override is live, and here is what it bought" —
-# one row establishes that, and a handful gives the shape of the burst. Eight
-# shows a small curation session in full and enough of a large one to recognise
-# the pattern, while leaving the panel still legible as a warnings panel at full
+# has to tell the user is "the guard set something aside, and here is what" —
+# one row establishes that, and a handful gives the shape of the repetition.
+# Eight shows a small burst in full and enough of a long one to recognise the
+# pattern, while leaving the panel still legible as a warnings panel at full
 # advisory load. The complete record is in events.jsonl, which is append-only
 # and where an exhaustive audit belongs; the panel is the 30-row window, and the
 # window is the scarce thing.
@@ -159,9 +172,19 @@ ERROR_EVENT_TYPES = {"guard_error"}
 # repeats one detail string, which renderWarnings() collapses to a single
 # visible row, so what the budget buys is the VARIETY of errors — two emitters,
 # with room for their exception texts to differ.
+#
+# 8 for stale-state rows, and again for a measured rate rather than for
+# symmetry. hooks/tracker.ts throttles state_drift on the drift SIGNATURE, so a
+# divergence that merely persists across a hundred tool calls emits once — but a
+# divergence that GROWS emits again, and a session that commits sixteen times
+# without ever bringing agentstate.yaml current produces a row per commit. Left
+# in the warning class those sixteen would push every guard_block and
+# churn_critical off the panel, which is the advisory burst exactly. Eight is
+# enough to show the divergence widening, which is the part a reader acts on.
 MAX_WARNINGS_RETURNED = 30
 MAX_ADVISORIES_RETURNED = 8
 MAX_ERRORS_RETURNED = 8
+MAX_DRIFTS_RETURNED = 8
 
 # The carve-outs, in the order a row is charged against them. A row matching
 # none of them is charged to the warning class, which is the default and the
@@ -170,6 +193,7 @@ MAX_ERRORS_RETURNED = 8
 SUBSET_BUDGETS = (
     (ADVISORY_EVENT_TYPES, MAX_ADVISORIES_RETURNED),
     (ERROR_EVENT_TYPES, MAX_ERRORS_RETURNED),
+    (DRIFT_EVENT_TYPES, MAX_DRIFTS_RETURNED),
 )
 
 HTML_PAGE = r"""<!DOCTYPE html>
@@ -530,6 +554,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
       // "<X> error (fail-open): ...", so the label names the half they share
       // and the detail beside it says which hook.
       else if (w.event === 'guard_error') { levelClass = 'failopen'; levelLabel = 'Fail-open'; }
+      // Stale session state. It keeps the amber warning level — something IS
+      // wrong — but not the label: "Warning" beside a row reading
+      // "progress.commits: surface=0 record=12" invites the reader to treat it
+      // as one more guard event, when what it says is that the counters in the
+      // header above are no longer being written. The label names that.
+      else if (w.event === 'state_drift') { levelClass = 'warning'; levelLabel = 'Stale state'; }
       var ts = formatLocalTime(w.ts || '', 'date');
       var key = warningKey(w);
       html += '<div class="warning-row ' + levelClass + '">' +
@@ -1216,8 +1246,58 @@ trap 'kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; exit 0' INT TE
 #
 # MONITOR_NO_BROWSER is the second, independent gate: a person at a terminal
 # who wants the server without the tab. Any non-empty value suppresses.
+#
+# The launcher never decides the wrapper's lifetime. This script runs under
+# `set -e`, and a failing command inside an `if` body is not exempt from it —
+# only the condition is. So a missing `open` (Linux, or a macOS whose PATH is
+# narrowed) used to exit 127 as the wrapper's own status before `wait
+# $SERVER_PID` was ever reached: the forked python server was left orphaned,
+# still holding the port, with the INT/TERM trap dead along with the shell
+# that installed it. `|| true` is the load-bearing half of the fix — every
+# launcher can fail for reasons that are none of the server's business (no
+# display, no registered handler, a browser that refuses to start).
+#
+# The platform dispatch is the other half, and it earns its three lines twice:
+# it makes the tab actually open on Linux, where `open` does not exist, and it
+# avoids the trap that a bare `command -v open` walks into there — on many
+# Linux distributions `/usr/bin/open` is util-linux's `openvt`, which switches
+# virtual terminals and has nothing to do with a URL. Darwin gets `open`,
+# everything else gets `xdg-open`.
+#
+# `sleep` is a command like any other: it sits in the `if` body, so it is under
+# `set -e` exactly as the launcher is, and it was the one command in this block
+# left unguarded. The fractional argument is a GNU/BSD extension — POSIX
+# specifies an integer operand, and BusyBox built without FEATURE_FANCY_SLEEP,
+# Solaris `sleep` and AIX `sleep` reject it non-zero. Those are the same
+# platforms the `*)` arm exists for, so the dispatch that made the tab work on
+# Linux is what brought this line within reach of the machines it breaks on.
+# The whole-second fallback keeps the delay rather than dropping it, because
+# the delay is what stops the tab reaching a port the forked server has not
+# bound yet; `2>/dev/null` keeps the rejected fractional call from printing an
+# error a user can do nothing about; and the final `|| true` means even a
+# `sleep` missing outright cannot decide the wrapper's lifetime.
+#
+# Whichever way the tab fails to appear, one line on stderr says so and names
+# the URL. In silence a person who was promised a tab cannot tell an absent
+# launcher from a launcher that refused from a server that never started, and
+# the remedy is one line away. MONITOR_NO_BROWSER is exempt by construction,
+# and so is every non-interactive caller: neither reaches this block, and the
+# gap is only a gap for someone who wanted the tab.
 if [[ -t 1 && -z "${MONITOR_NO_BROWSER:-}" ]]; then
-  sleep 0.5
-  open "http://localhost:${PORT}"
+  case "$(uname -s)" in
+    Darwin) BROWSER_LAUNCHER=open ;;
+    *)      BROWSER_LAUNCHER=xdg-open ;;
+  esac
+  BROWSER_GAP=""
+  if command -v "$BROWSER_LAUNCHER" >/dev/null 2>&1; then
+    sleep 0.5 2>/dev/null || sleep 1 || true
+    "$BROWSER_LAUNCHER" "http://localhost:${PORT}" ||
+      BROWSER_GAP="$BROWSER_LAUNCHER could not open a browser"
+  else
+    BROWSER_GAP="no $BROWSER_LAUNCHER on PATH"
+  fi
+  if [[ -n "$BROWSER_GAP" ]]; then
+    echo "monitor: ${BROWSER_GAP}. Open http://localhost:${PORT} yourself; set MONITOR_NO_BROWSER=1 to silence this." >&2 || true
+  fi
 fi
 wait $SERVER_PID

@@ -85,10 +85,10 @@
       "thrashingScore": 0
     },
     "fusion-workbench/portfolio.md": {
-      "totalChanges": 8,
-      "changesThisSession": 1,
-      "lastChange": "2026-08-11T20:27:08.170Z",
-      "thrashingScore": 2
+      "totalChanges": 9,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T07:01:43.009Z",
+      "thrashingScore": 3
     },
     "fusion-workbench/shared/history/260802-0853-playmaker-direct-dispatch.md": {
       "totalChanges": 1,
@@ -110,7 +110,7 @@
     },
     "CLAUDE.md": {
       "totalChanges": 106,
-      "changesThisSession": 15,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T21:51:42.603Z",
       "thrashingScore": 61
     },
@@ -403,10 +403,10 @@
       "thrashingScore": 4
     },
     "crates/krk-ui/src/main.rs": {
-      "totalChanges": 26,
+      "totalChanges": 27,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T08:29:53.303Z",
-      "thrashingScore": 10
+      "lastChange": "2026-08-13T01:02:30.038Z",
+      "thrashingScore": 9
     },
     "crates/krk-bench/Cargo.toml": {
       "totalChanges": 4,
@@ -427,10 +427,10 @@
       "thrashingScore": 0
     },
     "xtask/src/main.rs": {
-      "totalChanges": 11,
+      "totalChanges": 12,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:59:24.962Z",
-      "thrashingScore": 3
+      "lastChange": "2026-08-13T10:00:40.378Z",
+      "thrashingScore": 4
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_a_sprache-und-ui-werkzeugkasten.md": {
       "totalChanges": 2,
@@ -595,10 +595,10 @@
       "thrashingScore": 0
     },
     "xtask/src/bundle.rs": {
-      "totalChanges": 14,
+      "totalChanges": 15,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T18:20:49.809Z",
-      "thrashingScore": 14
+      "lastChange": "2026-08-13T09:59:19.517Z",
+      "thrashingScore": 5
     },
     "xtask/src/sign.rs": {
       "totalChanges": 14,
@@ -607,10 +607,10 @@
       "thrashingScore": 6
     },
     "README.md": {
-      "totalChanges": 4,
+      "totalChanges": 11,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T06:12:49.251Z",
-      "thrashingScore": 1
+      "lastChange": "2026-08-13T10:09:56.859Z",
+      "thrashingScore": 13
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260802-1927-buendelbau-versionsersetzung-und-lokale-signierung.md": {
       "totalChanges": 2,
@@ -685,10 +685,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/mod.rs": {
-      "totalChanges": 42,
+      "totalChanges": 45,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T17:24:33.292Z",
-      "thrashingScore": 18
+      "lastChange": "2026-08-13T10:25:58.291Z",
+      "thrashingScore": 15
     },
     "crates/krk-ui/src/appkit/menue.rs": {
       "totalChanges": 38,
@@ -697,22 +697,22 @@
       "thrashingScore": 14
     },
     "crates/krk-ui/src/appkit/tabelle.rs": {
-      "totalChanges": 163,
+      "totalChanges": 179,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:49:17.853Z",
-      "thrashingScore": 76
+      "lastChange": "2026-08-12T15:18:45.005Z",
+      "thrashingScore": 71
     },
     "crates/krk-ui/src/appkit/fenster.rs": {
-      "totalChanges": 11,
+      "totalChanges": 25,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:31:16.022Z",
-      "thrashingScore": 5
+      "lastChange": "2026-08-13T10:26:47.254Z",
+      "thrashingScore": 10
     },
     "crates/krk-ui/src/appkit/anwendung.rs": {
-      "totalChanges": 453,
+      "totalChanges": 497,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:49:20.735Z",
-      "thrashingScore": 163
+      "lastChange": "2026-08-13T10:26:55.031Z",
+      "thrashingScore": 165
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260803-1244-fenster-menue-und-echte-dateiliste.md": {
       "totalChanges": 1,
@@ -739,10 +739,10 @@
       "thrashingScore": 6
     },
     "crates/krk-ui/src/appkit/ereignisse.rs": {
-      "totalChanges": 60,
+      "totalChanges": 75,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:06:14.349Z",
-      "thrashingScore": 20
+      "lastChange": "2026-08-13T02:20:28.702Z",
+      "thrashingScore": 51
     },
     "crates/krk-ui/src/appkit/probe.rs": {
       "totalChanges": 1,
@@ -997,9 +997,9 @@
       "thrashingScore": 1
     },
     "crates/krk-core/src/ablage/atomar.rs": {
-      "totalChanges": 1,
+      "totalChanges": 2,
       "changesThisSession": 0,
-      "lastChange": "2026-08-03T18:43:15.864Z",
+      "lastChange": "2026-08-12T09:59:14.971Z",
       "thrashingScore": 0
     },
     "resources/default-keymap.toml": {
@@ -1009,10 +1009,10 @@
       "thrashingScore": 19
     },
     "crates/krk-core/src/ablage/sitzung.rs": {
-      "totalChanges": 12,
+      "totalChanges": 21,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T23:33:56.279Z",
-      "thrashingScore": 6
+      "lastChange": "2026-08-12T04:06:13.363Z",
+      "thrashingScore": 21
     },
     "crates/krk-core/src/ablage/lesezeichen.rs": {
       "totalChanges": 10,
@@ -1021,10 +1021,10 @@
       "thrashingScore": 11
     },
     "crates/krk-core/src/ablage/mod.rs": {
-      "totalChanges": 12,
+      "totalChanges": 17,
       "changesThisSession": 0,
-      "lastChange": "2026-08-08T07:19:28.499Z",
-      "thrashingScore": 4
+      "lastChange": "2026-08-12T10:00:29.235Z",
+      "thrashingScore": 11
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2045_o_c3-nennt-f6-verschieben-und-umbenennen-die-belegungstabelle-nur-verschieben.md": {
       "totalChanges": 2,
@@ -1057,10 +1057,10 @@
       "thrashingScore": 0
     },
     "crates/krk-core/tests/ablage.rs": {
-      "totalChanges": 33,
+      "totalChanges": 39,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T07:35:20.388Z",
-      "thrashingScore": 11
+      "lastChange": "2026-08-12T10:03:23.081Z",
+      "thrashingScore": 13
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2051_o_ersetzt-in-frage-4-und-s10-laesst-offen-ob-die-kaputte-datei-ueberschrieben-wird.md": {
       "totalChanges": 1,
@@ -1111,16 +1111,16 @@
       "thrashingScore": 0
     },
     "crates/krk-core/src/tasten/belegung.rs": {
-      "totalChanges": 90,
+      "totalChanges": 98,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T16:23:08.776Z",
-      "thrashingScore": 36
+      "lastChange": "2026-08-12T04:08:06.727Z",
+      "thrashingScore": 44
     },
     "crates/krk-core/tests/belegung.rs": {
-      "totalChanges": 46,
+      "totalChanges": 49,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T15:33:47.388Z",
-      "thrashingScore": 23
+      "lastChange": "2026-08-12T03:45:29.476Z",
+      "thrashingScore": 18
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260803-2317_o_der-include-str-pfad-in-schritt-11-liegt-eine-ebene-zu-hoch.md": {
       "totalChanges": 1,
@@ -1243,16 +1243,16 @@
       "thrashingScore": 11
     },
     "crates/krk-ui/src/fenstermodell.rs": {
-      "totalChanges": 55,
+      "totalChanges": 87,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T01:52:50.298Z",
-      "thrashingScore": 18
+      "lastChange": "2026-08-12T05:02:17.740Z",
+      "thrashingScore": 89
     },
     "crates/krk-ui/src/appkit/statuszeile.rs": {
-      "totalChanges": 21,
+      "totalChanges": 29,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:06:22.838Z",
-      "thrashingScore": 7
+      "lastChange": "2026-08-12T15:40:12.578Z",
+      "thrashingScore": 21
     },
     "crates/krk-ui/src/appkit/tableiste.rs": {
       "totalChanges": 2,
@@ -1261,10 +1261,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/aufteilung.rs": {
-      "totalChanges": 41,
+      "totalChanges": 53,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:05:53.192Z",
-      "thrashingScore": 13
+      "lastChange": "2026-08-12T15:19:10.263Z",
+      "thrashingScore": 17
     },
     "crates/krk-ui/src/appkit/sonde.rs": {
       "totalChanges": 2,
@@ -1375,10 +1375,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/mod.rs": {
-      "totalChanges": 7,
+      "totalChanges": 9,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T17:25:14.595Z",
-      "thrashingScore": 2
+      "lastChange": "2026-08-13T00:58:13.696Z",
+      "thrashingScore": 3
     },
     "crates/krk-ui/src/kommandos/navigation.rs": {
       "totalChanges": 1,
@@ -2005,9 +2005,9 @@
       "thrashingScore": 0
     },
     "Makefile": {
-      "totalChanges": 7,
+      "totalChanges": 8,
       "changesThisSession": 0,
-      "lastChange": "2026-08-06T10:57:01.347Z",
+      "lastChange": "2026-08-12T22:13:00.015Z",
       "thrashingScore": 2
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-1455_o_macos-stellt-dem-menue-bearbeiten-ein-autofill-untermenue-dazu.md": {
@@ -2029,10 +2029,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/kommandos/fokus.rs": {
-      "totalChanges": 36,
+      "totalChanges": 37,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T16:26:43.211Z",
-      "thrashingScore": 20
+      "lastChange": "2026-08-12T03:21:06.469Z",
+      "thrashingScore": 12
     },
     "crates/krk-ui/src/leistenmodell.rs": {
       "totalChanges": 32,
@@ -2149,10 +2149,10 @@
       "thrashingScore": 30
     },
     "crates/krk-ui/src/appkit/vorschau.rs": {
-      "totalChanges": 13,
+      "totalChanges": 43,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:13:58.333Z",
-      "thrashingScore": 4
+      "lastChange": "2026-08-12T14:59:40.075Z",
+      "thrashingScore": 60
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_o_tastenweg-des-fokus-in-das-vorschaufenster.md": {
       "totalChanges": 5,
@@ -2167,16 +2167,16 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsmodell.rs": {
-      "totalChanges": 35,
+      "totalChanges": 55,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T15:31:25.368Z",
-      "thrashingScore": 11
+      "lastChange": "2026-08-13T02:11:04.086Z",
+      "thrashingScore": 40
     },
     "crates/krk-ui/src/appkit/belegungsansicht.rs": {
-      "totalChanges": 14,
+      "totalChanges": 27,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T19:07:35.735Z",
-      "thrashingScore": 4
+      "lastChange": "2026-08-13T02:20:53.591Z",
+      "thrashingScore": 31
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260805-2250-coder-s20-belegungsansicht.md": {
       "totalChanges": 1,
@@ -2233,10 +2233,10 @@
       "thrashingScore": 0
     },
     "xtask/src/release.rs": {
-      "totalChanges": 20,
+      "totalChanges": 28,
       "changesThisSession": 0,
-      "lastChange": "2026-08-07T07:58:00.030Z",
-      "thrashingScore": 20
+      "lastChange": "2026-08-13T10:08:14.692Z",
+      "thrashingScore": 21
     },
     "fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-0813-coder-s23-auslieferungspaket.md": {
       "totalChanges": 1,
@@ -3175,10 +3175,10 @@
       "thrashingScore": 1
     },
     "crates/krk-core/src/text/suche.rs": {
-      "totalChanges": 6,
+      "totalChanges": 11,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T07:15:56.451Z",
-      "thrashingScore": 2
+      "lastChange": "2026-08-13T02:06:11.730Z",
+      "thrashingScore": 9
     },
     "crates/krk-core/tests/text.rs": {
       "totalChanges": 21,
@@ -3391,10 +3391,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/appkit/editor.rs": {
-      "totalChanges": 261,
+      "totalChanges": 265,
       "changesThisSession": 0,
-      "lastChange": "2026-08-10T13:45:59.589Z",
-      "thrashingScore": 137
+      "lastChange": "2026-08-12T14:45:33.778Z",
+      "thrashingScore": 88
     },
     "fusion-workbench/circles/260807-2116-eingebauter-editor-mit-textmarken/history/260809-1603-coder-s16-textflaeche-als-fuenfter-bereich.md": {
       "totalChanges": 2,
@@ -3607,10 +3607,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/fenstertitel.rs": {
-      "totalChanges": 2,
+      "totalChanges": 3,
       "changesThisSession": 0,
-      "lastChange": "2026-08-09T19:30:53.889Z",
-      "thrashingScore": 0
+      "lastChange": "2026-08-13T10:27:06.921Z",
+      "thrashingScore": 1
     },
     "crates/krk-ui/src/appkit/nummernspalte.rs": {
       "totalChanges": 11,
@@ -4687,10 +4687,10 @@
       "thrashingScore": 0
     },
     "crates/krk-ui/src/belegungsausgabe.rs": {
-      "totalChanges": 27,
+      "totalChanges": 30,
       "changesThisSession": 0,
-      "lastChange": "2026-08-11T15:31:47.358Z",
-      "thrashingScore": 15
+      "lastChange": "2026-08-12T03:45:57.726Z",
+      "thrashingScore": 12
     },
     "fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_o_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md": {
       "totalChanges": 1,
@@ -4814,7 +4814,7 @@
     },
     "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/_a_circle.md": {
       "totalChanges": 4,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T20:24:52.952Z",
       "thrashingScore": 1
     },
@@ -5072,17 +5072,647 @@
     },
     "fusion-workbench/shared/history/260811-2223-playmaker-direct-dispatch.md": {
       "totalChanges": 1,
-      "changesThisSession": 1,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T20:27:54.804Z",
       "thrashingScore": 0
     },
     "activity-log-k1.md": {
       "totalChanges": 6,
-      "changesThisSession": 6,
+      "changesThisSession": 0,
       "lastChange": "2026-08-11T22:16:18.422Z",
       "thrashingScore": 10
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0522-coder-schritt-3-linkes-dateifenster-ausblendbar.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:23:29.363Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0539_o_die-breitenbefehle-aus-c7-wirken-unter-der-mindestsumme-in-die-falsche-richtung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:40:05.947Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0539_o_ein-zusammengezogenes-fenster-ersetzt-die-aufteilung-des-nutzers-dauerhaft.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:40:43.093Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0539_o_die-zuordnung-von-bereich-auf-sichtbarkeit-steht-seit-schritt-3-zweimal-gleich-da.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:41:09.211Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0539_o_eine-probe-heisst-noch-nach-der-abgeschafften-zweiteilung-in-feste-und-bewegliche-bereiche.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:41:23.498Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/reviews/260812-0539-coderev-proportionale-breitenregel-und-linkes-dateifenster.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:43:00.896Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0548_o_make-check-bleibt-auch-nach-schritt-5-rot-die-drei-spaltenkennungen-warten-auf-schritt-7.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:48:51.116Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_p_bereichsleiste-und-proportionale-breitenregel.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:50:19.181Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0548-coder-schritt-5-zwei-umschaltbefehle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T03:51:53.692Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0618-coder-schritt-7-spaltensichtbarkeit.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T04:19:36.712Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0700-coder-vier-befunde-der-durchsicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T04:52:56.174Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/bereichsleiste.rs": {
+      "totalChanges": 9,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T05:44:35.223Z",
+      "thrashingScore": 15
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0712-coder-schritt-8-bereichsleiste.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T05:13:16.747Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/spalten.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T05:41:42.901Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0745-coder-drei-kleine-befunde-der-zweiten-durchsicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T05:48:37.623Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0801_o_zwei-modulkoepfe-nennen-aufteilung-sichtbar-im-das-es-nicht-mehr-gibt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T06:01:41.576Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260811-1304-statusleiste-mit-bereichsschaltern/history/260812-0801-reconciliation.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T06:06:29.453Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_a_circle.md": {
+      "totalChanges": 5,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:14:26.983Z",
+      "thrashingScore": 7
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:04:50.472Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_teilt-krk-auch-ordner-oder-nur-dateien.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:05:19.495Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_an-welchen-drei-flaechen-haengt-das-neue-kontextmenue.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:05:52.181Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_oeffnet-der-ordnersprung-einen-neuen-tab-oder-wechselt-er-den-aktiven.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:07:16.832Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_wird-die-datei-im-zielordner-ausgewaehlt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:07:42.979Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_was-tut-der-ordnersprung-wenn-es-keinen-zielordner-gibt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:08:16.535Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_wie-heisst-die-zur-seite-gelegte-ablagedatei-und-was-geschieht-beim-zweiten-mal.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:08:56.576Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_wie-erfaehrt-der-nutzer-dass-eine-ablagedatei-zur-seite-gelegt-wurde.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:09:30.973Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_welchen-umfang-von-markdown-rendert-die-vorschau.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:10:17.244Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_was-tut-die-nummernspalte-bei-gerendertem-markdown.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:10:45.508Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_was-tut-ein-link-im-gerenderten-markdown-und-bleibt-die-vorschau-unauswaehlbar.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:11:20.845Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_zeigt-die-vorschau-lokale-html-dateien-gerendert.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:11:58.315Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_o_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:12:37.081Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260812-1000-shaper-teilen-ordnersprung-ablage-sichern-vorschau-rendern.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T08:13:45.234Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T10:05:11.050Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1204-coder-ablage-beschaedigte-datei-zur-seite-legen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T10:06:26.987Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/angezeigtedatei.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T11:57:20.084Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1432-coder-ordnersprung-in-den-ordner-der-angezeigten-datei.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T12:08:41.774Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/teilen.rs": {
+      "totalChanges": 9,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:02:05.131Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1434-coder-teilen-ueber-die-tastatur.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T12:36:24.175Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1500_o_der-rechtsklick-bewegt-die-auswahl-nicht-obwohl-der-nutzerentscheid-es-verlangt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:00:59.041Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1500-coder-kontextmenue-an-den-drei-flaechen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:02:22.620Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:30:53.321Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_eine-ablagedatei-mit-ungueltigem-utf-8-wird-nicht-zur-seite-gelegt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:31:29.770Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_die-besitzregel-des-freigabewaehlers-gilt-nur-in-einer-der-zwei-huellen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:32:05.007Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_die-blattregel-sieht-den-freigabedialog-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:32:36.139Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_zwei-doc-kommentare-der-runde-nennen-zahlen-die-der-baum-nicht-traegt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:33:11.526Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/reviews/260812-1529-coderev-turn-1-der-runde-6.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T13:36:10.526Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/markdown.rs": {
+      "totalChanges": 15,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:01:40.541Z",
+      "thrashingScore": 29
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1815-coder-markdown-zerlegen-und-der-dritte-weg-der-vorschau.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T14:29:29.444Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/textmerkmale.rs": {
+      "totalChanges": 6,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T14:44:36.127Z",
+      "thrashingScore": 10
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T15:02:25.847Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1702_o_der-kopf-von-appkit-mod-rs-sagt-die-vorschau-rufe-textmerkmale-noch-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T15:02:47.517Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1705-coder-vorschau-zeigt-auszeichnungen-und-faerbt-quelltext.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T15:04:30.813Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1900-coder-eine-statuszeile-ueber-die-volle-fensterbreite.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T15:29:07.164Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_p_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T15:42:11.595Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-2140-coder-das-merkzeichen-gehoert-seinem-punkt-und-nicht-seinem-ersten-kind.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:07:45.322Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2133_o_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-das-zweieinhalbfache-und-verfehlt-l7-frueher.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:34:08.679Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2134_o_auf-dokumentebene-verliert-die-erste-zeile-einer-luecke-ihren-einzug-und-jede-folgende-behaelt-ihn.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:34:39.560Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2135_o_der-doc-kommentar-von-luecke-bis-sagt-weiter-der-leerraum-falle-zeilenweise-weg.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:34:59.970Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2136_o_die-allgemeine-probe-erkennt-ein-merkzeichen-am-text-und-schlaegt-bei-neun-dateien-dieses-baums-falsch-an.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:35:32.146Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/reviews/260812-2137-coderev-turn-5-der-runde-6.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T19:37:02.859Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260813-0015-identitaetssuche-behoben-make-release-und-beglaubigungspruefung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T22:16:35.941Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0109-conceptrev-spec-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T23:11:09.671Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0144-conceptrev-spec-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-12T23:46:11.035Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/decisions/260813-0159_o_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T00:00:06.210Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0201_o_ein-kommentar-in-blaetter-mod-rs-nennt-eine-taste-variante-die-es-nicht-gibt.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T00:00:30.283Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_o_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md": {
+      "totalChanges": 5,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T00:11:59.265Z",
+      "thrashingScore": 7
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0215-planner-plan-runde-7.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T00:11:43.012Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0220-conceptrev-plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T00:21:50.585Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/kommandos/zulaessigkeit.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:05:45.608Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/quellbaum.rs": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:01:48.631Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:12:03.859Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/decisions/260813-0320_o_esc-im-editor-erreicht-heute-die-textflaeche-und-wird-nach-s3-geschluckt.md": {
+      "totalChanges": 2,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:15:34.465Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0325-coder-s1-bis-s3-zulaessigkeit.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:16:26.943Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/menuemodell.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:32:23.058Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0416_o_zwei-menueeintraege-mit-cmd-a-und-appkit-nimmt-dem-spaeteren-das-kuerzel.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:51:13.601Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/decisions/260813-0430_o_wer-bekommt-das-menuekuerzel-wenn-zwei-funktionen-sich-eine-kombination-teilen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:51:57.119Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:52:24.271Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0445-coder-s4-bis-s6-vollstaendiges-menue.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T01:54:20.500Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0530-coder-s7-bis-s10-suche-in-der-belegung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T02:26:01.051Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/src/ablage/sperre.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T02:40:13.771Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/weitereinstanz.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T02:56:49.182Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-core/tests/baum.rs": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T03:02:19.586Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0620-coder-s11-bis-s14-weitere-instanz.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T03:09:19.687Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0520-ontocoder-s15-weitere-instanz-in-der-belegung.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T03:21:40.527Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/history/260813-0859-playmaker-direct-dispatch.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T07:02:20.248Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-1037_o_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T08:38:54.968Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md": {
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T08:45:22.795Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1037-shaper-spec-titelleiste-fuehrt-version-und-semantische-tags.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T08:44:55.400Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-1110_o_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:11:21.172Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:11:49.331Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:12:19.842Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:12:47.009Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:18:18.055Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1110-planner-plan-titelleiste-fuehrt-version-und-semantische-tags.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:19:19.888Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/reviews/260813-1124-conceptrev-plan-titelleiste-fuehrt-version-und-semantische-tags.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T09:25:19.591Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1235-coder-strang-d-tagpruefung-und-readme.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T10:11:28.629Z",
+      "thrashingScore": 0
+    },
+    "crates/krk-ui/src/appkit/titelzusatz.rs": {
+      "totalChanges": 3,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T10:27:32.175Z",
+      "thrashingScore": 3
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1310-coder-strang-b-titelleiste.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T10:31:31.362Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1258_o_fenster-einblenden-ist-nach-dem-schliessen-des-fensters-nicht-mehr-erreichbar.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T10:59:52.213Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1258_o_zwei-prosastellen-in-anwendung-rs-zaehlen-noch-drei-werte-und-einen-sonderposten.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T11:00:18.481Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1258_o_die-versionszahlprobe-sagt-baum-und-liest-nur-crates.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T11:00:43.381Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1258_o_der-modulkopf-von-titelzusatz-laesst-die-bedingung-fuer-left-weg.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T11:01:13.609Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/reviews/260813-1258-coderev-turn-1-titelleiste-version-und-tags.md": {
+      "totalChanges": 1,
+      "changesThisSession": 0,
+      "lastChange": "2026-08-13T11:02:44.845Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1405-abnahmeliste-e2.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-13T12:03:29.353Z",
+      "thrashingScore": 0
+    },
+    "fusion-workbench/shared/issues/260813-1515_o_die-auslieferungspruefung-schlaegt-nach-jeder-agentensitzung-an-weil-vier-werkbankdateien-verfolgt-sind.md": {
+      "totalChanges": 1,
+      "changesThisSession": 1,
+      "lastChange": "2026-08-13T13:16:28.336Z",
+      "thrashingScore": 0
     }
   },
-  "sessionStart": "2026-08-11T20:24:52.952Z",
+  "sessionStart": "2026-08-13T12:03:29.353Z",
   "keyAnchor": "workbench-root"
 }
