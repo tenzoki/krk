@@ -390,7 +390,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
   Nachgewiesen ist die gemeinsame Ursache und nicht nur behauptet: mit einem vorläufig eingetragenen `[[funktion]]`-Block für `weitere_instanz` und der berichtigten Zählzeile läuft `cargo test --workspace` vollständig grün (Exit 0, 0 Fehlschläge über alle 19 Ziele). Der Eintrag ist danach zurückgenommen worden; `resources/default-keymap.toml` steht unverändert und gehört S15. Dazu C3.5 über die Herkunft des Pfades, C3.6 über den Satz beim Lauf ohne Bündel, C4.4 über die Deckung der Untergrenzenangabe. **(Bündel):** C3.1, dass eine zweite Instanz mit eigenem Fenster nach vorn kommt.
 - **Abhängigkeiten:** S13.
 
-### S15: Die Kombination in der Auslieferungsbelegung
+### S15: [DONE] Die Kombination in der Auslieferungsbelegung
 
 - **Executor:** `ontocoder`
 - **Dateien:** `resources/default-keymap.toml`

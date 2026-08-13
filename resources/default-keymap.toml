@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 81 Funktionen mit zusammen 87 Kombinationen.
+# Ausgeliefert sind 82 Funktionen mit zusammen 88 Kombinationen.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
 # dieser Reihenfolge. Sie folgt der Reihenfolge, in der macOS die Zusatztasten
@@ -869,6 +869,36 @@ name = "Wiederholen"
 tasten = ["shift+cmd+z"]
 gehalten_von = "menue"
 # Das Gegenstueck, ebenfalls der Mac-Standard.
+
+# ── Eine weitere Instanz von KRK ─────────────────────────────────────────────
+# C3 der Runde 7. Der Eintrag steht hier bei der Anwendung als ganze und nicht
+# bei C7 weiter oben: er startet einen zweiten Prozess mit eigenem Fenster und
+# eigener Menueleiste, waehrend C7 die Bereiche dieses einen Fensters ein- und
+# ausblendet. Ebenso ordnet ihn `bereich_des_kommandos` in
+# `crates/krk-ui/src/belegungsmodell.rs` ein, das "weitere_instanz" zusammen mit
+# "belegung_ansehen" und "beenden" unter `Funktionsbereich::Anwendung` fuehrt;
+# das Beenden der Anwendung steht deshalb gleich darunter.
+
+[[funktion]]
+id = "weitere_instanz"
+name = "Weitere Instanz starten"
+tasten = ["opt+cmd+n"]
+# Das n ist in dieser Datei die Taste des Neuen: shift+cmd+n legt einen Ordner
+# an, ctrl+cmd+n eine leere Datei, und das nackte cmd+n haelt bei
+# "fenster_einblenden" den Platz des Mac-ueblichen "Neu". opt+cmd+n ist die
+# vierte Form dieser Reihe und die einzige freie. Nachgezaehlt am 260813 ueber
+# alle Tastenlisten dieser Datei, die vor diesem Eintrag 81 Funktionen mit
+# zusammen 87 Kombinationen fuehrte: keine davon nennt opt+cmd+n.
+#
+# cmd+n bleibt bei "fenster_einblenden" und wechselt seinen Besitzer nicht.
+# Dessen Aufgabe, das geschlossene Fenster zurueckzuholen, gibt es unveraendert
+# weiter. Die Zusage, den Eintrag spaeter in "Neues Fenster" umzubenennen und
+# das Kuerzel dabei zu behalten, gilt der Runde, die mehrere Fenster einfuehrt
+# (Nutzerantwort vom 260804-0830, `circles/
+# 260802-0842-krk-mac-dateimanager-editor-git/decisions/
+# 260803-2007_*_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`).
+# Eine weitere Instanz ist ein weiterer Prozess und kein zweites Fenster
+# dieses Prozesses; diese Runde fuehrt keine zweiten Fenster ein.
 
 # ── C3: das Beenden der Anwendung ────────────────────────────────────────────
 
