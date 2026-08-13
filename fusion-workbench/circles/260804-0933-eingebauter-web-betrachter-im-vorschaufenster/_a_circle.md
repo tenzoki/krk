@@ -671,3 +671,112 @@ hier benannt.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260813-1510
+**Playmaker-Lauf:** 260813-1510-playmaker-direct-dispatch
+**Abgeschlossenes Kind:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
+(Runde 8), geschlossen am 260813-1415 als **kohärenter Abschluss** (`_c_`)
+
+**Zur Auslösebedingung, und sie ist diesmal nicht erfüllt.** Die Regel verlangt ein Kind auf
+beschränktem Abschluss (`_b_`) und ein Zitat des Kindes im Abschnitt `## Grounding snapshot`
+dieses Datensatzes. Beides fehlt: die Runde 8 trägt `_c_`, und dieser Datensatz kann sie nicht
+zitieren, weil sein Grounding vom 260804 stammt. Der Vermerk steht trotzdem, weil die Runde 8 an
+der einen Regel gearbeitet hat, durch die jeder Befehl dieses Betrachters laufen wird. Der
+Auslöser der Regel ist an dieser Stelle zu eng gefasst: ein kohärenter Abschluss bewegt den Baum
+mindestens so weit wie ein beschränkter, und der Markerbuchstabe sagt, ob die Directive erreicht
+wurde, nicht ob sich der Boden verschoben hat. Wer die Regel anders liest, sieht hier, worauf.
+
+Zwei Feststellungen, eine gegen diesen Circle und eine für ihn. Keine hält die Aktivierung auf.
+
+### 1. Die Zulässigkeitsregel fragt seit der Runde 8 vier Dinge statt drei
+
+Der Vermerk vom 260813-0714 hielt fest, dass ein neuer Befehl seit der gerechneten Menüleiste
+mehr kostet als einen Eintrag in `resources/default-keymap.toml`. Die Runde 8 legt eine vierte
+Frage an dieselbe eine Stelle: ob das Schlüsselfenster KRKs Hauptfenster ist. Die vier Eingaben
+werden einmal je Befehl in der Struktur `Lage` erhoben
+(`crates/krk-ui/src/kommandos/zulaessigkeit.rs`), und eine Tafel aus 280 Fällen prüft die Regel
+ohne Fenster. Für die Befehle, die die Directive dieses Circles verlangt, also Blättern, Zurück,
+Vor und das Schalten der Sprungmarken, ändert sich die Art des Preises nicht und seine Höhe um
+eine Frage.
+
+`Kommando::KENNUNGEN` steht dabei unverändert bei 76 Einträgen
+(`crates/krk-core/src/tasten/belegung.rs:566`, am 260813-1510 nachgezählt). Die Runde 8 hat
+keinen Befehl hinzugefügt; sie hat die Frage erweitert, die jeder bestehende beantworten muss.
+
+Daneben steht seit der Runde 8 eine Ausnahmeliste als benanntes Mittel: `immer_erreichbar`
+führt `Beenden`, `FensterSchliessen` und `FensterEinblenden` und hebt den Blattvorbehalt und die
+Schlüsselfensterfrage auf, den Fokusvorbehalt dagegen nicht. Braucht der Betrachter einen Befehl,
+der ohne Rücksicht auf die Lage erreichbar bleibt, gibt es dafür jetzt eine Stelle und eine Probe,
+die die Grenze der Ausnahme festhält.
+
+### 2. Der offene Punkt aus dem Vermerk vom 260813-0714 hat einen gebauten Präzedenzfall bekommen
+
+Die dritte Feststellung jenes Vermerks lautete, `ersthelfer_gehoert_appkit` liefere `true` allein
+für `NSTextView`, `NSTextField` und `NSText`, und eine Ansicht mit Web-Inhalt gehöre zu keiner der
+drei. Das Prädikat steht unverändert (`crates/krk-ui/src/appkit/ereignisse.rs:581`), aber die Form
+seiner Ausnahme ist inzwischen die gesuchte: die Editorfläche wird über eine hereingereichte
+Prüffunktion `ist_editorflaeche` erkannt, also über die Nämlichkeit des Objekts und nicht über
+seine Klasse, und `ereignisse.rs` kennt den Editor dafür nicht.
+
+`inference:` Eine Web-Ansicht braucht dieselbe Behandlung aus demselben Grund: ihre Klasse trennt
+sie nicht von einem Eingabefeld, das die angezeigte Seite selbst mitbringt. Der Baum trägt heute
+keine Web-Ansicht, die Aussage ist am Prädikat abgelesen und nicht gemessen. Sie steht hier, weil
+der Vermerk vom 260813-0714 den Punkt als offen benannt hat und die Runde 8 ihn nicht gelöst, wohl
+aber vorgezeichnet hat. Die zugehörige Nutzerfrage bleibt offen:
+`shared/decisions/260813-0053_*_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260813-1510
+**Playmaker-Lauf:** 260813-1510-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Untersuchung des Darstellungsmittels und
+einer Klärungsrunde über sechs Fragen, und nach den beiden Nutzerschritten, die heute den
+Auslieferungsweg anhalten
+
+Dieser Circle ist der empfohlene nächste Kandidat und der einzige. Mit der Runde 8 ist der
+Vergleichswert weggefallen, den der Lauf vom 260813-0958 hatte: damals standen zwei vorgesehene
+Circles nebeneinander, und dieser stand auf Rang 2. Der Rangwechsel zurück auf 1 ist kein Befund
+zu seinen Gunsten. Das Feld ist leer geräumt worden, nicht er besser geworden. Eine Rangfolge mit
+einem Element sagt nichts über relative Reife, und der Vorschlag stützt sich wie in den vier
+Läufen davor auf absolute Signale.
+
+**Was sich zu seinen Gunsten geändert hat, liegt nicht an ihm, sondern am Projekt.** Sieben Runden
+lang endete jede aus demselben Grund beschränkt, und die Playmaker-Läufe davor haben daraus
+geschlossen, jede weitere Runde werde ebenso enden, solange die Frage nach dem Vordergrund offen
+ist. Die Runde 8 hat das widerlegt: der Nutzer hat die elf Beobachtungen mit Bündelanteil von Hand
+am laufenden `target/KRK.app` abgenommen
+(`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1405-abnahmeliste-e2.md`).
+Für diesen Circle heißt das: eine Runde, die ihn ausführt, kann kohärent enden, sofern der Nutzer
+dieselbe Handabnahme fährt. Die Aussicht ist neu und sie hängt an der Bereitschaft des Nutzers,
+nicht an einer gelösten technischen Frage.
+
+**Der Zuschnitt bleibt das stärkste Gegenargument, und er ist unverändert.** Der Abschnitt
+`## Was dieser Circle nicht festlegt` hält fest, dass das Mittel der Darstellung von Web-Inhalt
+offen ist und in eine eigene Untersuchung vor dem Plan gehört. Eine Untersuchung ist teurer als
+eine Klärungsrunde, und dieser Circle braucht beides. Daneben stehen die ungemessene
+Verfügbarkeitsfrage für macOS-26-Schnittstellen
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`)
+und die projektweit offene Frage, ob die Untergrenzen-Angabe prüfbar gemacht wird
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`).
+
+**Die Klärungsrunde trägt weiterhin sechs Fragen**, unverändert gegenüber dem Vermerk vom
+260813-0714: die drei des Abschnitts `## Grounding snapshot`, die Mindestbreite der Vorschau, ihre
+Schriftgröße, und der offene Nutzerentscheid darüber, welchen Weg ein Tastendruck in einer
+Web-Ansicht nimmt. Die Runde 8 hat keine davon beantwortet und keine hinzugefügt.
+
+**Zur Abhängigkeitsprüfung, die für diesen Circle nie eine Auskunft werden kann.** Die einzige
+Circle-Kante dieses Datensatzes führt auf die Runde 1, und die trägt `_b_`. Bisher war die
+Heuristik ausgesetzt, weil kein einziger Circle des Projekts `_c_` trug und der Marker deshalb
+nichts unterschied. Diese Begründung ist mit der Runde 8 hinfällig. An ihre Stelle tritt eine
+stärkere: `_b_` ist ein Endzustand, und ein Endzustand wird nicht zurückgenommen
+(`rules/circle-records.md`, Abschnitt `### Worked transitions`). Die Prüfung „alle Abhängigkeiten
+kohärent abgeschlossen" fällt für diesen Circle also für immer negativ aus, gleich welche Arbeit
+noch geschieht. Ein Kriterium, dessen Wert keine künftige Arbeit ändern kann, ist für ihn kein
+Rangsignal, sondern eine Konstante. Es ist deshalb nicht eingerechnet.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.

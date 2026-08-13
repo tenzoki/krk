@@ -87,3 +87,140 @@ Die auffällige Kante ist damit nicht abgetan. Sie ist Arbeit für die nächste 
 **Was der Nutzer beim Abschluss zusätzlich tut**, und was kein Agent für ihn tun kann: die Beobachtungsliste aus Planschritt E2 fahren, darunter die eine Beobachtung, an der der Freigabedialog-Defekt der Runde 6 hängt (Shift+Cmd+S öffnen, dabei Cmd+W drücken), und `v0.1.0` auf den Commit setzen, der die Runde schliesst. Danach lässt sich der grüne Fall der neuen Prüfung einmal an einem echten Lauf sehen.
 
 **Abgleich:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1345-reconciliation.md`
+
+---
+
+# Abschlussbericht
+
+**Status:** Vollständig. Der Circle ist als kohärenter Abschluss (`_c_`) geschlossen.
+
+## Budget
+
+| Größe | Zahl |
+|---|---|
+| Turns | 2 |
+| Aufgaben erledigt | 17 von 17 |
+| Aufgaben übersprungen oder zurückgestellt | 0 |
+| Defekte gefiltert | 19 |
+| Defekte geschlossen | 2 |
+| Fragen beantwortet (`_o_`→`_a_`) | 1 |
+| Fragen umgesetzt (`_a_`→`_i_`) | 4 |
+| Commits | 10 |
+| Agentenfehler | 0 |
+| Nutzer-Tore | 7 |
+
+Die vier Datensatzzahlen sind aus den Speichern gelesen, nicht mitgezählt: Anker `9d5fcfa`, Sitzungsbeginn `260813-1006`, über `shared/` und den Circle der achten Runde.
+
+## Per-Turn-Log
+
+### Turn 1
+- Versucht: A1-A3, B1-B3, C1-C3, D1-D5, E1
+- Erledigt: alle 15
+- Commits: `c3ada4d`, `f9e5137`, `6eb0628`, `21dbc59`
+- Durchsicht: 4 Befunde, einer hoch
+- Circuit Breaker: OK
+- Coherence: review-needed
+
+### Turn 2
+- Versucht: F1 (Regression), E2 (Nutzerarbeit)
+- Erledigt: beide
+- Commits: `ed0388e`, `c85aef7`, `e99f454`, `3a0a4bf`
+- Durchsicht: keine weitere
+- Circuit Breaker: OK
+- Coherence: kohärent nach der Abnahme
+
+## Durchsichtsdeckung
+
+**Bereich:** `9d5fcfa..3a0a4bf` — 10 Commits
+**Gedeckt durch:** `reviews/260813-1258-coderev-turn-1-titelleiste-version-und-tags.md`, Bereich `59b0a6c..21dbc59` (4 Commits)
+**Nicht gedeckt:** `5df3909`, `59b0a6c` (reine Werkbank-Commits: Spec, Plan, Entscheide); `ed0388e`, `c85aef7`, `e99f454`, `3a0a4bf` (die Behebung aus Turn 2 und drei Werkbank-Commits)
+**Unbrauchbar für die Deckung:** die beiden Diagrammdurchsichten tragen keine `**Reviewed-range:**`-Zeile
+**Übernommene nicht geöffnete Dateien:** keine verzeichnet
+
+Die Behebung `ed0388e` ist von keiner Durchsicht geöffnet worden. Sie ist am laufenden Bündel abgenommen (Beobachtung 5), nicht durchgesehen.
+
+## Verbleibende Arbeit
+
+- **Beim Nutzer:** `git tag v0.1.0 3a0a4bf`. Damit ist C3.15 erfüllt und der Entscheid `260813-0939_a_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md` geht auf umgesetzt.
+- 16 offene Defekte im Circle, keiner am Verhalten der Anwendung.
+- Ein neuer Defekt im gemeinsamen Speicher: `shared/issues/260813-1515_o_die-auslieferungspruefung-schlaegt-nach-jeder-agentensitzung-an-weil-vier-werkbankdateien-verfolgt-sind.md`.
+
+## Commits
+
+| Hash | Was |
+|---|---|
+| `5df3909` | Circle aktiviert, drei Fragen beantwortet |
+| `59b0a6c` | Spec und Plan, zwei weitere Fragen beantwortet |
+| `c3ada4d` | Zulässigkeitsregel fragt nach dem Schlüsselfenster (A1-A3) |
+| `f9e5137` | Tag-Prüfung als Station 1, README-Abschnitt (D1-D5) |
+| `6eb0628` | Titelleiste trägt links Namen und Version (B1-B3) |
+| `21dbc59` | Über-KRK-Eintrag, E1 grün (C1-C3) |
+| `c85aef7` | Durchsicht von Turn 1 |
+| `ed0388e` | Cmd+N holt das Fenster zurück (F1) |
+| `e99f454` | Abgleich, vier Entscheide umgesetzt |
+| `3a0a4bf` | Abschluss, kohärent |
+
+## Sitzungsablauf
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant S as Shaper
+    participant P as Planner
+    participant K as Conceptrev
+    participant C as Coder
+    participant CR as Coderev
+    participant R as Reconciler
+    participant PM as Playmaker
+
+    U->>O: /fusion:setup
+    U->>O: /fusion:memo (Idee)
+    U->>O: /fusion:next
+    O->>PM: Portfolio
+    PM-->>O: Ideeneintrag empfohlen
+    U-->>O: Idee schärfen
+    O->>S: anticipated-circle
+    S-->>O: Circle 260813-0939, 3 Fragen
+    U-->>O: 3 Antworten
+    O->>O: Aktivierung (5df3909)
+
+    Note over O: Setup, frische Sitzung
+    O->>S: Spec schreiben
+    S-->>O: 6 Fähigkeiten, 59 Kriterien
+    O->>K: Diagramme im Spec
+    K-->>O: acceptable
+    U-->>O: Spec frei, 4. Frage beantwortet
+    O->>P: Plan bauen
+    P-->>O: 16 Schritte, 5 Stränge, 1 Frage
+    O->>K: Diagramme im Plan
+    K-->>O: acceptable
+    U-->>O: Plan frei, 5. Frage beantwortet (59b0a6c)
+
+    Note over O: Turn 1
+    O->>C: Strang A (Zulässigkeitsregel)
+    O->>C: Strang D (Tag-Prüfung)
+    C-->>O: A fertig (c3ada4d)
+    C-->>O: D fertig (f9e5137)
+    O->>C: Strang B (Titelzusatz)
+    C-->>O: B fertig (6eb0628)
+    O->>C: Strang C (Über KRK)
+    C-->>O: C fertig, E1 grün (21dbc59)
+    O->>CR: Durchsicht 59b0a6c..21dbc59
+    CR-->>O: 4 Befunde, einer hoch (c85aef7)
+    U-->>O: beheben, dann abschließen
+
+    Note over O: Turn 2
+    O->>C: F1 Regression an Cmd+N
+    C-->>O: behoben (ed0388e)
+    O->>R: Abgleich
+    R-->>O: bounded-closure-proposed (e99f454)
+    U-->>O: E2 selbst fahren
+    O->>U: Abnahmeliste, 11 Beobachtungen
+    U-->>O: alle 11 bestanden
+
+    Note over O: kohärenter Abschluss
+    O->>O: _t_ → _c_ (3a0a4bf)
+    O->>PM: Portfolio neu
+    PM-->>O: Web-Betrachter auf Rang 1
+```

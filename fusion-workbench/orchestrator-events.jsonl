@@ -676,3 +676,6 @@
 {"ts":"2026-08-13T12:00:38","event":"gate_hit","detail":"Rebalance-Tor, Urteil bounded-closure-proposed"}
 {"ts":"2026-08-13T13:06:45","event":"gate_response","detail":"Nutzer hat E2 gefahren, alle elf Beobachtungen bestanden; Abschluss kohaerent statt beschraenkt"}
 {"ts":"2026-08-13T13:06:45","event":"task_done","turn":2,"task":"E2","agent":"user","detail":"11/11 Beobachtungen bestanden; Defekt der Runde 6 geschlossen"}
+{"ts":"2026-08-13T13:06:51","event":"state_drift","detail":"progress.commits: surface=8, record=10 (git 9d5fcfa..HEAD). Nachgezogen."}
+{"ts":"2026-08-13T13:17:16","event":"portfolio_refresh","detail":"portfolio.md neu; Web-Betrachter wieder Rang 1; playmaker berichtigt eine eigene Aussage aus fuenf Laeufen"}
+{"ts":"2026-08-13T13:17:16","event":"session_end","detail":"2 Turns, 17/17 Aufgaben, 10 Commits, 0 Fehler; Circle kohaerent geschlossen"}
