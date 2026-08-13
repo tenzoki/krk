@@ -236,6 +236,53 @@ mod tests {
         );
     }
 
+    /// Genau eine Stelle im Baum setzt Namen und Version zusammen (C5.4).
+    ///
+    /// Der Eintrag „Über KRK" im Anwendungsmenue oeffnet den Standard-Dialog
+    /// von AppKit. Was der zeigt, liest AppKit aus der `Info.plist` des
+    /// Buendels: `CFBundleName` steht dort auf `KRK`,
+    /// `CFBundleShortVersionString` traegt den Platzhalter, den
+    /// `cargo xtask bundle` zur Bauzeit durch die Zahl aus der `Cargo.toml`
+    /// ersetzt, und `CFBundleVersion` steht auf `1`. Der Dialog schreibt daraus
+    /// **seine eigene** Zeile, und die lautet nicht Zeichen fuer Zeichen wie
+    /// [`beschriftung`]. Gleich ist die **Zahl** und ihre Quelle; genau das
+    /// sagt C5.4 zu, die Schreibweise sagt es nicht zu.
+    ///
+    /// **Gezaehlt werden zuerst Dateien und nicht Fundstellen**, denn in dieser
+    /// einen Datei steht die Zusammensetzung zweimal: in [`beschriftung`] und
+    /// in der Zusicherung von
+    /// [`die_beschriftung_ist_name_leerzeichen_version`], die genau sie prueft.
+    /// Die zweite Zaehlung haelt die Zahl der Fundstellen deshalb ausdruecklich
+    /// auf zwei — eine dritte hier waere eine zweite Zusammensetzung und faende
+    /// sonst keine Probe.
+    ///
+    /// **Ihre Blindheit:** eine Zusammensetzung, die Namen und Zahl anders
+    /// zusammenfuegt, ueber `format!` etwa oder ueber zwei Variablen, faellt
+    /// der Nadel nicht auf; keine Suche im Quelltext entscheidet das. Was den
+    /// Fall daneben traegt, ist die Bauart des Dialogs selbst: er bekommt von
+    /// KRK nichts und liest die Zahl ueber den Platzhalter aus derselben
+    /// `Cargo.toml`.
+    #[test]
+    fn nur_eine_stelle_im_baum_setzt_namen_und_version_zusammen() {
+        let nadel = concat!("\"KRK \", env!(", "\"CARGO_PKG_VERSION\")");
+        let dateien: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(_, inhalt)| inhalt.contains(nadel))
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(
+            dateien,
+            vec![DIESE_DATEI.to_owned()],
+            "Namen und Version werden nicht allein in {DIESE_DATEI} zusammengesetzt"
+        );
+        assert_eq!(
+            diese_datei().matches(nadel).count(),
+            2,
+            "die Zusammensetzung steht in {DIESE_DATEI} nicht genau zweimal, \
+             in der Beschriftung und in ihrer Zusicherung"
+        );
+    }
+
     /// Die Versionszahl steht in keiner `.rs`-Datei des Baums als Zeichenkette
     /// (C1.2).
     ///

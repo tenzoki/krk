@@ -268,7 +268,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 ### Strang C — Der Eintrag „Über KRK"
 
-**C1. Der Sonderposten und sein Trenner im Menümodell**
+**C1. [DONE] Der Sonderposten und sein Trenner im Menümodell**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/menuemodell.rs`
 - Erfüllt: C5.1, C5.2, C5.7, C6.1, C6.2, C6.3
@@ -282,7 +282,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Eine neue Probe: „Über KRK" steht als **erster** Eintrag des Anwendungsmenüs, unmittelbar gefolgt von einem Trenner. Sie prüft die Stelle relativ, wie `der_markdown_eintrag_steht_ueber_dem_beenden` es tut, und nicht über einen festen Index.
   - Nichts wächst sonst: kein `Kommando` (bleibt bei 76), kein `Wirkungsbereich` (7), kein `Funktionsbereich` (9), kein Eintrag in `resources/default-keymap.toml` (82 Funktionen, 88 Kombinationen). Das folgt daraus, dass der Eintrag kein Kürzel trägt.
 
-**C2. Der Selektor läuft über die Antwortkette, und das steht auch so da**
+**C2. [DONE] Der Selektor läuft über die Antwortkette, und das steht auch so da**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/menue.rs`
 - Erfüllt: C5.3
@@ -292,7 +292,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Zwei Prosastellen ziehen nach: `menue.rs:20-21` („`tastenbelegungSichern:` erreichen den Anwendungsdelegierten, an dem die Kette endet") und `:46-48` („Ein Eintrag trägt bewusst gar keine Kennung, und er ist der einzige").
   - **Kein zweiter Zweig in `validateMenuItem:`.** Die Methode antwortet für jede fremde Aktion `true`, und der Über-Eintrag fällt in genau diesen Zweig — wie der Markdown-Sonderposten heute. Er bleibt damit auch bei stehendem Blatt bedienbar. Das ist die bestehende Regel und keine neue Ausnahme; ein eigener Zweig wäre die erste Sonderbehandlung eines einzelnen Eintrags an dieser Stelle. Die Folge steht im Abschnitt „Abgeleitet und nicht gefragt" unten.
 
-**C3. Eine Zusammensetzung von Name und Version, nachgezählt**
+**C3. [DONE] Eine Zusammensetzung von Name und Version, nachgezählt**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/titelzusatz.rs` (Prüfmodul)
 - Erfüllt: C5.4
@@ -371,7 +371,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 ### Strang E — Abnahme
 
-**E1. `make check` läuft grün**
+**E1. [DONE] `make check` läuft grün**
 - Executor: `coder`
 - Files: keine
 - Erfüllt: jede mit **(Probe)** gekennzeichnete Zusage

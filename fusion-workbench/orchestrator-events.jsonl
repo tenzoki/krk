@@ -654,3 +654,6 @@
 {"ts":"2026-08-13T10:15:36","event":"commit","turn":1,"task":"A","detail":"c3ada4d Zulaessigkeitsregel fragt nach dem Schluesselfenster"}
 {"ts":"2026-08-13T10:15:36","event":"commit","turn":1,"task":"D","detail":"f9e5137 Tag-Pruefung als Station eins, README nennt die Versionsstufen"}
 {"ts":"2026-08-13T10:15:36","event":"task_start","turn":1,"task":"B","agent":"coder","detail":"B1-B3 titelzusatz.rs, fenster.rs, mod.rs"}
+{"ts":"2026-08-13T10:33:13","event":"task_done","turn":1,"task":"B","agent":"coder","detail":"B1-B3 fertig, make check exit 0"}
+{"ts":"2026-08-13T10:33:13","event":"commit","turn":1,"task":"B","detail":"6eb0628 Titelleiste traegt links Namen und Version"}
+{"ts":"2026-08-13T10:33:13","event":"task_start","turn":1,"task":"C","agent":"coder","detail":"C1-C3 menuemodell.rs, menue.rs, titelzusatz.rs"}

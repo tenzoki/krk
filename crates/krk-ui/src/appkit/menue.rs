@@ -16,9 +16,11 @@
 //!
 //! Jeder Eintrag bekommt als Ziel `nil` und laeuft damit ueber die
 //! Antwortkette. `cut:`, `copy:` und `paste:` erreichen den Feldeditor des
-//! Textfeldes mit dem Fokus beziehungsweise die Textflaeche des Editors, und
+//! Textfeldes mit dem Fokus beziehungsweise die Textflaeche des Editors,
 //! [`KRK_KOMMANDO`] wie `tastenbelegungSichern:` erreichen den
-//! Anwendungsdelegierten, an dem die Kette endet. Ein fest gesetztes Ziel wuerde
+//! Anwendungsdelegierten, an dem die Kette endet, und
+//! `orderFrontStandardAboutPanel:` erreicht `NSApplication` und damit eine
+//! Station **davor**. Ein fest gesetztes Ziel wuerde
 //! die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn niemand ihn
 //! beantworten kann.
 //!
@@ -43,17 +45,37 @@
 //!
 //! # Eine Quelle, zwei sichtbare Wege
 //!
-//! **Ein Eintrag traegt bewusst gar keine Kennung**, und er ist der einzige:
-//! "Tastenbelegung als Markdown sichern" im Anwendungsmenue (Runde 3). Er steht
+//! **Zwei Eintraege tragen bewusst gar keine Kennung**, und beide stehen im
+//! Anwendungsmenue: "Über KRK" ganz oben (Titelleisten-Runde) und
+//! "Tastenbelegung als Markdown sichern" darunter (Runde 3). Sie stehen
 //! deshalb im Modell als `Eintrag::Sonderposten` und nicht als Befehl. Ein
-//! Kuerzel waere nach dem Nutzerentscheid vom 260805-0000 zwingend ein
-//! Belegungseintrag mit `gehalten_von = "menue"` geworden und haette damit die
-//! Bauform geaendert, nicht nur die Bequemlichkeit; der Nutzer hat den Eintrag
-//! am 260811-0110 ausdruecklich ohne Kuerzel bestellt. Er steht **vor** dem
-//! Beenden, durch einen Trenner davon geschieden, weil das Beenden auf dem Mac
-//! unten steht. Beantwortet wird er am Anwendungsdelegierten
-//! (`tastenbelegungSichern:`), der die Ausgabe an [`crate::belegungsausgabe`]
-//! weiterreicht.
+//! Kuerzel waere fuer beide nach dem Nutzerentscheid vom 260805-0000 zwingend
+//! ein Belegungseintrag mit `gehalten_von = "menue"` geworden und haette damit
+//! die Bauform geaendert, nicht nur die Bequemlichkeit; der Nutzer hat den
+//! Markdown-Eintrag am 260811-0110 und den Ueber-Eintrag am 260813-1010
+//! ausdruecklich ohne Kuerzel bestellt.
+//!
+//! **Beantwortet werden die beiden nicht an derselben Stelle, und diese Datei
+//! setzt dafuer nichts.** [`ohne_kuerzel`] traegt ueber `Sel::register` jeden
+//! Selektornamen ein, den das Modell fuehrt, und [`roher_befehl`] setzt kein
+//! Ziel; wer antwortet, entscheidet allein die Kette. Der Markdown-Eintrag
+//! steht **vor** dem Beenden, durch einen Trenner davon geschieden, weil das
+//! Beenden auf dem Mac unten steht, und beantwortet wird er am
+//! Anwendungsdelegierten (`tastenbelegungSichern:`), der die Ausgabe an
+//! [`crate::belegungsausgabe`] weiterreicht. Der Ueber-Eintrag steht ganz oben,
+//! ebenfalls durch einen Trenner geschieden, und `orderFrontStandardAboutPanel:`
+//! beantwortet `NSApplication` selbst: den Standard-Dialog baut AppKit, und was
+//! darin steht, liest es aus der `Info.plist` des Buendels. KRK baut dafuer
+//! keine eigene Flaeche und implementiert keine Methode (C5.3, C5.4).
+//!
+//! **Kein zweiter Zweig in `validateMenuItem:`.** Die Ausgrauung am
+//! Anwendungsdelegierten fragt zuerst nach der Aktion und antwortet fuer jede
+//! fremde `true`; beide Sonderposten fallen in genau diesen Zweig, und die
+//! Regel nimmt ihnen damit auch bei stehendem Blatt nichts. Das ist die
+//! bestehende Regel und keine Ausnahme fuer einen einzelnen Eintrag — ein
+//! eigener Zweig dort waere die erste. Ob AppKit selbst am Menue etwas
+//! aendert, solange ein Blatt steht, entscheidet diese Regel nicht; das ist am
+//! laufenden Buendel nachzusehen.
 //!
 //! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** Jedes kommt aus
 //! der Belegung, ueber das Modell. Damit ist `resources/default-keymap.toml` auch fuer

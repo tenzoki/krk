@@ -55,9 +55,13 @@
 //!   Stelle; sie hat bis zur Runde 7 im Programmtext von `hauptmenue` gestanden
 //!   und steht dort nicht mehr daneben.
 //! - **[`Eintrag::Sonderposten`]** ist ein benannter Zusatz, der in keiner
-//!   Belegung steht. Es gibt genau einen, „Tastenbelegung als Markdown
-//!   sichern" aus der Runde 3, und er traegt bewusst weder Kennung noch Kuerzel
-//!   (C2.9).
+//!   Belegung steht. Es sind zwei, beide im Anwendungsmenue und beide bewusst
+//!   ohne Kennung und ohne Kuerzel: „Über KRK" ganz oben, das den
+//!   Standard-Ueber-Dialog von AppKit oeffnet (C5.1), und „Tastenbelegung
+//!   als Markdown sichern" ueber dem Beenden (C2.9). Beide tragen einen
+//!   Selektor, und **beantwortet werden sie nicht an derselben Stelle**: der
+//!   der Markdown-Ausgabe beim Anwendungsdelegierten, der des Ueber-Eintrags
+//!   eine Station davor bei `NSApplication`.
 //!
 //! Dazu [`Eintrag::Trenner`]. Die Aufzaehlung ist **vollstaendig und ohne
 //! Auffangzweig**: eine neue Sorte haelt den Bau in der Umsetzung an, statt
@@ -78,7 +82,8 @@
 //! Belegungsdatei. Im Menue „Bearbeiten" stehen „Rueckgaengig" und
 //! „Wiederholen" deshalb **unter** den vier Zwischenablage-Befehlen und nicht
 //! mehr darueber, und der Trenner zwischen beiden Gruppen faellt weg — das
-//! Modell fuehrt genau einen Trenner, den ueber dem Beenden. Beides ist die
+//! Modell fuehrt allein die zwei Trenner des Anwendungsmenues, den unter dem
+//! Ueber-Eintrag und den ueber dem Beenden. Beides ist die
 //! Folge davon, dass die Gliederung die eine Quelle ist, und beides ist am
 //! billigsten in `resources/default-keymap.toml` zu beheben, nicht hier.
 //! Gemeldet als
@@ -98,11 +103,26 @@ use crate::belegungsmodell::{self, Funktionsbereich};
 /// verschwinden.
 const BEENDEN: &str = "beenden";
 
-/// Die Beschriftung des einen Sonderpostens (C1 der Runde 3).
+/// Die Beschriftung des Markdown-Sonderpostens (C1 der Runde 3).
 const MARKDOWN_BESCHRIFTUNG: &str = "Tastenbelegung als Markdown sichern";
 
-/// Der Selektor, den der Anwendungsdelegierte fuer den Sonderposten fuehrt.
+/// Der Selektor, den der Anwendungsdelegierte fuer den Markdown-Sonderposten
+/// fuehrt.
 const MARKDOWN_SELEKTOR: &CStr = c"tastenbelegungSichern:";
+
+/// Die Beschriftung des Ueber-Sonderpostens (C5.1).
+///
+/// Die Mac-Gewohnheit setzt diesen Eintrag ganz oben ins Anwendungsmenue, so
+/// wie sie das Beenden nach unten setzt.
+const UEBER_BESCHRIFTUNG: &str = "Über KRK";
+
+/// Der Selektor, den die Antwortkette fuer den Ueber-Sonderposten beantwortet.
+///
+/// **Er steht an `NSApplication` und nicht am Anwendungsdelegierten.** AppKit
+/// baut daraus den Standard-Ueber-Dialog und liest, was darin steht, aus der
+/// `Info.plist` des Buendels; KRK stellt weder eine eigene Flaeche noch einen
+/// eigenen Inhalt daneben (C5.3, C5.4).
+const UEBER_SELEKTOR: &CStr = c"orderFrontStandardAboutPanel:";
 
 /// Die sechs vom Menue zugestellten Textbefehle mit ihrem AppKit-Selektor.
 ///
@@ -180,12 +200,20 @@ pub enum Eintrag<'a> {
         /// Der Selektor aus [`ZUSTELLER`].
         selektor: &'static CStr,
     },
-    /// Ein benannter Zusatz, der in keiner Belegung steht: der Eintrag der
-    /// Markdown-Ausgabe (C2.9). Ohne Kennung und ohne Kuerzel.
+    /// Ein benannter Zusatz, der in keiner Belegung steht: der Ueber-Eintrag
+    /// (C5.1) und der Eintrag der Markdown-Ausgabe (C2.9). Ohne Kennung und
+    /// ohne Kuerzel.
     Sonderposten {
         /// Die Aufschrift.
         beschriftung: &'static str,
-        /// Der Selektor am Anwendungsdelegierten.
+        /// Der Selektor, den die Antwortkette beantwortet.
+        ///
+        /// **Nicht notwendig der Anwendungsdelegierte**, und bis zur
+        /// Titelleisten-Runde stand hier genau das. `tastenbelegungSichern:`
+        /// erreicht ihn, weil die Kette bei ihm endet;
+        /// `orderFrontStandardAboutPanel:` steht an `NSApplication` und wird
+        /// eine Station davor beantwortet. Dieses Feld sagt, **was** gerufen
+        /// wird, und nicht, wer antwortet.
         selektor: &'static CStr,
     },
     /// Eine Trennlinie.
@@ -214,6 +242,7 @@ pub fn aufbau(belegung: &Belegung) -> Vec<Obermenue<'_>> {
                 .map(|stelle| eintrag(&funktionen[stelle], &zugestellt))
                 .collect();
             if bereich == Funktionsbereich::Anwendung {
+                ueber_eintrag_einfuegen(&mut eintraege);
                 markdownausgabe_einfuegen(&mut eintraege);
             }
             Obermenue {
@@ -322,6 +351,30 @@ fn zusteller(kennung: &str) -> Option<&'static CStr> {
         .into_iter()
         .find(|(gefuehrt, _)| *gefuehrt == kennung)
         .map(|(_, selektor)| selektor)
+}
+
+/// Stellt den Ueber-Eintrag samt Trenner an den Anfang des Anwendungsmenues
+/// (C5.1).
+///
+/// **An den Anfang, gespiegelt zu [`markdownausgabe_einfuegen`]:** das Beenden
+/// liegt auf dem Mac unten im Anwendungsmenue, der Ueber-Eintrag ganz oben.
+/// Eine Kennung, an der die Stelle sich festmachen muesste, braucht es dafuer
+/// nicht — der Anfang der Liste ist der Anfang, ob sie nun leer ist oder
+/// nicht.
+///
+/// Ein Kuerzel traegt der Eintrag nicht (C5.2). Es waere nach dem
+/// Nutzerentscheid vom 260805-0000 zwingend ein Belegungseintrag geworden und
+/// haette die Bauart geaendert, nicht nur die Bequemlichkeit; der Nutzer hat
+/// den Eintrag am 260813-1010 ausdruecklich ohne Kuerzel bestellt.
+fn ueber_eintrag_einfuegen(eintraege: &mut Vec<Eintrag<'_>>) {
+    let zusatz = [
+        Eintrag::Sonderposten {
+            beschriftung: UEBER_BESCHRIFTUNG,
+            selektor: UEBER_SELEKTOR,
+        },
+        Eintrag::Trenner,
+    ];
+    eintraege.splice(0..0, zusatz);
 }
 
 /// Schiebt den Markdown-Eintrag samt Trenner ueber das Beenden (C2.9).
@@ -712,7 +765,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // C2.9: der eine Sonderposten
+    // C2.9 und C5.1: die zwei Sonderposten
     // -----------------------------------------------------------------------
 
     /// Der Markdown-Eintrag steht im Anwendungsmenue, ohne Kuerzel, unmittelbar
@@ -741,14 +794,70 @@ mod tests {
         );
     }
 
-    /// Es gibt genau einen Sonderposten und genau einen Trenner in der ganzen
-    /// Leiste.
+    /// „Über KRK" steht als **erster** Eintrag des Anwendungsmenues,
+    /// unmittelbar gefolgt von einem Trenner, und traegt den Selektor des
+    /// Standard-Ueber-Dialogs (C5.1, C5.3).
     ///
-    /// Ohne diese Zusage staende ein zweiter Zusatz irgendwo, ohne dass eine
-    /// Probe ihn benennt. Die Zahl ist klein und ausdruecklich: waechst sie,
-    /// gehoert der neue Zusatz hier genannt.
+    /// **Die Stelle wird relativ geprueft**, wie in
+    /// [`der_markdown_eintrag_steht_ueber_dem_beenden`]: gesucht wird der
+    /// Eintrag, gemessen wird seine Umgebung. Ein fester Index waere eine
+    /// zweite Aussage darueber, wie viele Funktionen der Bereich
+    /// „Anwendung" fuehrt, und wuerde rot, sobald jemand eine Zeile in
+    /// `resources/default-keymap.toml` verschiebt, ohne dass an dieser Zusage
+    /// etwas faul waere.
+    ///
+    /// **Der Selektorname steht hier ausgeschrieben und nicht als
+    /// [`UEBER_SELEKTOR`]:** gegen die Konstante geprueft waere die Zusicherung
+    /// eine Tautologie, und ein Tippfehler darin bliebe unbemerkt. Dass
+    /// `NSApplication` ihn beantwortet, ist keine Aussage ueber diesen Wert und
+    /// steht deshalb an der Konstanten und im Modulkopf von
+    /// [`crate::appkit::menue`], nicht hier.
     #[test]
-    fn die_leiste_traegt_genau_einen_zusatz() {
+    fn der_ueber_eintrag_steht_ganz_oben() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let eintraege = unter(&leiste, Funktionsbereich::Anwendung.name());
+        let (stelle, selektor) = eintraege
+            .iter()
+            .enumerate()
+            .find_map(|(stelle, eintrag)| match eintrag {
+                Eintrag::Sonderposten {
+                    beschriftung,
+                    selektor,
+                } if *beschriftung == UEBER_BESCHRIFTUNG => Some((stelle, *selektor)),
+                _ => None,
+            })
+            .expect("der Ueber-Eintrag steht im Anwendungsmenue");
+
+        assert_eq!(
+            stelle,
+            0,
+            "vor dem Ueber-Eintrag steht {:?}",
+            &eintraege[..stelle]
+        );
+        assert!(
+            matches!(eintraege.get(stelle + 1), Some(Eintrag::Trenner)),
+            "unter dem Ueber-Eintrag steht kein Trenner"
+        );
+        assert_eq!(
+            selektor.to_bytes(),
+            b"orderFrontStandardAboutPanel:",
+            "der Ueber-Eintrag traegt nicht den Selektor des Standard-Dialogs"
+        );
+    }
+
+    /// Die ganze Leiste traegt genau zwei Sonderposten und genau zwei Trenner
+    /// (C6.3).
+    ///
+    /// Ohne diese Zusage staende ein dritter Zusatz irgendwo, ohne dass eine
+    /// Probe ihn benennt. Die Zahlen sind klein und ausdruecklich: waechst
+    /// eine, gehoert der neue Zusatz hier genannt.
+    ///
+    /// **Gezaehlt werden beide Sorten getrennt**, denn eine Summe von vier
+    /// bliebe auch dann stehen, wenn ein Sonderposten ohne seinen Trenner
+    /// dazukaeme und ein anderer seinen verloere.
+    #[test]
+    fn die_leiste_traegt_zwei_sonderposten_und_zwei_trenner() {
         let belegung = Belegung::auslieferung();
         let leiste = aufbau(&belegung);
         let zusaetze: Vec<&Eintrag<'_>> = leiste
@@ -756,7 +865,16 @@ mod tests {
             .flat_map(|obermenue| obermenue.eintraege.iter())
             .filter(|eintrag| matches!(eintrag, Eintrag::Sonderposten { .. } | Eintrag::Trenner))
             .collect();
-        assert_eq!(zusaetze.len(), 2, "{zusaetze:?}");
+        let sonderposten = zusaetze
+            .iter()
+            .filter(|eintrag| matches!(eintrag, Eintrag::Sonderposten { .. }))
+            .count();
+        let trenner = zusaetze
+            .iter()
+            .filter(|eintrag| matches!(eintrag, Eintrag::Trenner))
+            .count();
+        assert_eq!(sonderposten, 2, "{zusaetze:?}");
+        assert_eq!(trenner, 2, "{zusaetze:?}");
     }
 
     /// Der Sonderposten haengt ans Ende, wenn kein Beenden dasteht.
