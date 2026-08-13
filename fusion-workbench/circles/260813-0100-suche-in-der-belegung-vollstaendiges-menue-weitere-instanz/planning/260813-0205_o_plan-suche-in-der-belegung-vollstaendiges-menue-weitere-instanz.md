@@ -332,7 +332,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C1.14 über die Zahl der `keyDown:`-Überschreibungen im Baum, die null bleibt; C1.15 als Fallunterscheidung über die zwei Stationen; C1.13, dass `esc` keine dritte Bedeutung bekommt. **(Bündel):** C1.1 mit der springenden Auswahl und das Verlassen über `esc`.
 - **Abhängigkeiten:** S2, S9.
 
-### S11: `flock` in der einen Datei des Kerns mit `allow(unsafe_code)`
+### S11: [DONE] `flock` in der einen Datei des Kerns mit `allow(unsafe_code)`
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-core/src/verzeichnis/sys.rs`, `crates/krk-core/src/lib.rs`, `crates/krk-core/src/verzeichnis/mod.rs`
@@ -343,7 +343,7 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C4.5 über die Liste der Dateien mit `#![allow(unsafe_code)]`, die bei zwei bleibt; eine Prüfung, die zwei Griffe auf dieselbe Datei aus **einem** Prozess über zwei Deskriptoren nimmt und den zweiten mit `LOCK_NB` scheitern sieht.
 - **Abhängigkeiten:** keine.
 
-### S12: Schreibsperre und Sitzungsrecht über der Ablage
+### S12: [DONE] Schreibsperre und Sitzungsrecht über der Ablage
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-core/src/ablage/sperre.rs` (neu), `crates/krk-core/src/ablage/mod.rs`, `crates/krk-core/src/ablage/atomar.rs`, `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-core/tests/ablage.rs`
@@ -359,18 +359,19 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Abnahme (Probe):** C3.7 und C3.13 mit zwei Prozessen, nach dem Muster von `crates/krk-core/tests/ablage.rs:1606-1706`: die Elternprobe legt einen `Pruefordner` an, setzt darauf einen `Ablageort::an(…)` und startet die Kindproben über `std::env::current_exe()` mit dem Ordner in einer Umgebungsvariablen. Geprüft wird, dass genau eines von zwei Kindern das Sitzungsrecht bekommt, dass das andere eine benannte Abweisung bekommt und nicht hängt, und dass nach einem `std::process::abort()` des Halters das nächste Kind das Recht bekommt. **Der Prüfordner ist nicht `~/Library/Caches/krk-messplatz` und nicht das echte Benutzerverzeichnis**; er trägt Prozesskennung und Laufnummer und räumt sich in `Drop` selbst auf. Eine vierte Prüfordner-Fassung entsteht nicht (C4.6). Dazu C3.14 über die Zahl der Absprachen, die bei zwei bleibt, und C4.8 über die zwei `#[must_use]`.
 - **Abhängigkeiten:** S11.
 
-### S13: Lesezeichen unter der Sperre neu lesen, und die Sitzung schreibt nur ihre Halterin
+### S13: [DONE] Lesezeichen unter der Sperre neu lesen, und die Sitzung schreibt nur ihre Halterin
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-ui/src/messmodus.rs`
 - **Änderungen:** `lesezeichen_sichern` (`anwendung.rs:1230`) wird von einem Blindschreiben zu einem Durchgang: unter der Schreibsperre wird `bookmarks.toml` frisch von der Platte gelesen, die eine Änderung darauf angewandt und das Ergebnis geschrieben. Die vier Befehle geben dafür ihre Änderung als Vorgang weiter statt als fertige Liste; die Listenrechnung selbst liegt schon ohne Datei in `crates/krk-core/src/ablage/lesezeichen.rs:279-337` und wird von dort gerufen. Läge das Lesen außerhalb der Sperre, wäre die verlorene Änderung nur seltener und nicht fort (C3.8).
   Das Sitzungsrecht wird in `sitzung_laden` genommen und in den Ivars gehalten. `sitzung_vormerken` und der Weg über `applicationWillTerminate:` schreiben nur, wenn es gehalten wird; wer es nicht bekam, sagt es einmal beim Start über den vorhandenen Meldungsvektor, der in `anwendung.rs:931-942` in die Statuszeile läuft (C3.9, C3.10).
+- **Abweichung vom Schrittext, in der Ausführung entschieden:** die vier Befehle nennen ihr Ziel als **Eintrag** und nicht als Stelle. Der Schrittext verweist für die Listenrechnung auf `lesezeichen.rs:279-337`, und jene vier Funktionen nehmen eine Stelle entgegen; eine Stelle ist aber eine Zahl in der Liste, die der Nutzer eben gesehen hat, und in der frisch gelesenen kann dort ein anderes Lesezeichen stehen. Wer nach der Stelle umbenennt oder löscht, trifft dann das falsche, und das ist ein schlimmerer Ausgang als die verlorene Änderung, gegen die C3.8 gebaut ist. Die neue `Aenderung` trägt deshalb das Lesezeichen selbst; `Lesezeichenliste::anwenden` sucht dessen Stelle in der frisch gelesenen Liste und ruft danach genau die vier Rechnungen aus `279-337`. Eine zweite Listenrechnung entsteht nicht, und der dritte Ausgang `Verschwunden` sagt dem Nutzer, dass die andere Instanz seinen Eintrag gelöscht hat.
 - **Aufzählung:** keine wächst.
 - **Setzt voraus:** dieselbe Empfehlung wie S11.
 - **Abnahme (Probe):** C3.8 mit zwei Prozessen, nach demselben Muster wie S12: das eine Kind legt ein Lesezeichen an, das andere danach ein zweites, und beide überleben. C3.9 und C3.11 als gewöhnliche Prüfungen über den Sitzungsschreiber, dem das Recht fehlt. **(Bündel):** die Zeile in der Statuszeile beim Start der zweiten Instanz.
 - **Abhängigkeiten:** S12.
 
-### S14: Der Befehl „Weitere Instanz starten"
+### S14: [DONE] Der Befehl „Weitere Instanz starten"
 
 - **Executor:** `coder`
 - **Dateien:** `crates/krk-ui/src/appkit/weitereinstanz.rs` (neu), `crates/krk-ui/src/appkit/mod.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
@@ -380,7 +381,13 @@ Jeder Schritt nennt, welche der vier gewachsenen Aufzählungen er anfasst und wo
 - **Was der Übersetzer nicht sagt:** das `match` in `kommando_ausfuehren` hat einen Auffangzweig `andere => self.bereichskommando(fokus, andere)`. Ein neues Kommando ohne eigenen Zweig fällt dort stillschweigend hindurch und tut nichts. Der Zweig gehört ausdrücklich dazu.
 - **Aufzählung:** `Kommando` wächst von 75 auf 76. Der Übersetzer hält an drei Stellen an: an der Längenangabe von `Kommando::KENNUNGEN` (`crates/krk-core/src/tasten/belegung.rs:564`), an `Kommando::wirkungsbereich` (`:712-913`) und an `belegungsmodell::bereich_des_kommandos` (`:166-307`). `Wirkungsbereich`, `Bereich`, `Fokus` und `Funktionsbereich` wachsen nicht (C4.1).
 - **Setzt voraus:** die Empfehlung aus S11 bis S13; ohne die beiden Sperren richtete eine zweite Instanz an der Ablage genau den Schaden an, den der Spec beschreibt.
-- **Abnahme (Probe):** **`cargo test --workspace` läuft nach diesem Schritt mit genau einer roten Probe**, `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`crates/krk-core/tests/belegung.rs:830`). Sie schlägt fehl, weil die Auslieferungsbelegung die Funktion `weitere_instanz` noch nicht kennt, und **das ist planmäßig**: S15 macht sie grün. Jeder andere Fehlschlag ist es nicht. Dazu C3.5 über die Herkunft des Pfades, C3.6 über den Satz beim Lauf ohne Bündel, C4.4 über die Deckung der Untergrenzenangabe. **(Bündel):** C3.1, dass eine zweite Instanz mit eigenem Fenster nach vorn kommt.
+- **Abnahme (Probe):** **`cargo test --workspace` läuft nach diesem Schritt mit roten Proben, die alle dieselbe Ursache haben**: die Auslieferungsbelegung kennt die Funktion `weitere_instanz` noch nicht. **Das ist planmäßig**, S15 macht sie grün; jeder Fehlschlag mit einer anderen Ursache ist es nicht.
+
+  **Es sind drei und nicht eine, und die Eins im Plan war falsch gezählt.** Am 260813 am Baum nachgezählt und einzeln gelesen:
+  `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`crates/krk-core/tests/belegung.rs`),
+  `tasten::belegung::tests::jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` (`crates/krk-core/src/tasten/belegung.rs`) und
+  `belegungsausgabe::tests::die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander` (`crates/krk-ui/src/belegungsausgabe.rs`, meldet 75 gegen 76).
+  Nachgewiesen ist die gemeinsame Ursache und nicht nur behauptet: mit einem vorläufig eingetragenen `[[funktion]]`-Block für `weitere_instanz` und der berichtigten Zählzeile läuft `cargo test --workspace` vollständig grün (Exit 0, 0 Fehlschläge über alle 19 Ziele). Der Eintrag ist danach zurückgenommen worden; `resources/default-keymap.toml` steht unverändert und gehört S15. Dazu C3.5 über die Herkunft des Pfades, C3.6 über den Satz beim Lauf ohne Bündel, C4.4 über die Deckung der Untergrenzenangabe. **(Bündel):** C3.1, dass eine zweite Instanz mit eigenem Fenster nach vorn kommt.
 - **Abhängigkeiten:** S13.
 
 ### S15: Die Kombination in der Auslieferungsbelegung

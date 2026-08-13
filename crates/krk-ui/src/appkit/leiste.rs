@@ -86,7 +86,6 @@ use objc2_foundation::{
     NSRect, NSSize, NSString, ns_string,
 };
 
-use krk_core::ablage::Ziel;
 use krk_core::tasten::Kommando;
 
 use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Sinnbild, Zeile};
@@ -312,51 +311,29 @@ impl Leistenquelle {
         self.ivars().modell.borrow().lesezeichenliste()
     }
 
-    /// Der Name des ausgewaehlten Lesezeichens, falls eines ausgewaehlt ist.
+    /// Das ausgewaehlte Lesezeichen als Wert, falls eines ausgewaehlt ist (C5).
     ///
-    /// Die Vorbelegung des Umbenennungsblattes: wer umbenennt, faengt beim
-    /// alten Namen an.
-    pub fn gewaehlter_lesezeichenname(&self) -> Option<String> {
-        let modell = self.ivars().modell.borrow();
-        modell.gewaehltes_lesezeichen()?;
-        modell.gewaehlt().map(|auswahl| auswahl.name)
+    /// Das Ziel der drei Befehle, die ein vorhandenes Lesezeichen aendern. Der
+    /// Eintrag und nicht seine Stelle; der Grund steht bei
+    /// [`Leistenmodell::gewaehltes_lesezeichen_wert`].
+    pub fn gewaehltes_lesezeichen(&self) -> Option<krk_core::ablage::Lesezeichen> {
+        self.ivars().modell.borrow().gewaehltes_lesezeichen_wert()
     }
 
-    /// Legt ein Lesezeichen an und waehlt es aus (C5, C6).
+    /// Uebernimmt eine gelesene Lesezeichenliste und stellt die Auswahl (C5).
     ///
-    /// Nimmt das fertige [`Ziel`] entgegen und fragt nicht nach der Sorte: die
-    /// Leiste zeigt beide, und welche angelegt wird, hat der Fokus beim
-    /// Tastendruck entschieden.
-    pub fn lesezeichen_anlegen(&self, name: &str, ziel: Ziel) {
-        self.ivars().modell.borrow_mut().anlegen(name, ziel);
+    /// Der eine Weg, auf dem eine geaenderte Liste in die Leiste kommt. Bis zur
+    /// Runde 7 standen hier vier Methoden, die selbst rechneten und deren
+    /// Ergebnis der Delegierte danach schrieb; seither entsteht die Liste unter
+    /// der Schreibsperre aus der Datei, und die Leiste zeigt, was dabei
+    /// herauskam.
+    pub fn lesezeichen_uebernehmen(
+        &self,
+        liste: &krk_core::ablage::Lesezeichenliste,
+        stelle: Option<usize>,
+    ) {
+        self.ivars().modell.borrow_mut().uebernehmen(liste, stelle);
         self.nachziehen();
-    }
-
-    /// Benennt das ausgewaehlte Lesezeichen um (C5).
-    pub fn lesezeichen_umbenennen(&self, name: &str) -> bool {
-        let geaendert = self.ivars().modell.borrow_mut().umbenennen(name);
-        if geaendert {
-            self.nachziehen();
-        }
-        geaendert
-    }
-
-    /// Loescht das ausgewaehlte Lesezeichen (C5).
-    pub fn lesezeichen_loeschen(&self) -> bool {
-        let geaendert = self.ivars().modell.borrow_mut().loeschen();
-        if geaendert {
-            self.nachziehen();
-        }
-        geaendert
-    }
-
-    /// Schiebt das ausgewaehlte Lesezeichen einen Platz weiter (C5).
-    pub fn lesezeichen_verschieben(&self, richtung: krk_core::ablage::Verschiebung) -> bool {
-        let geaendert = self.ivars().modell.borrow_mut().verschieben(richtung);
-        if geaendert {
-            self.nachziehen();
-        }
-        geaendert
     }
 
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.

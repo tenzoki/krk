@@ -33,6 +33,24 @@
 //! die Leiste — bei jedem Neuaufbau ihrer Liste und nach jedem Ein- und
 //! Aushaengen eines Datentraegers, nicht bei jedem Zeichendurchgang.
 //!
+//! # Eine Aenderung ist ein Wert und keine fertige Liste
+//!
+//! Seit der Runde 7 kann eine zweite Instanz von KRK dieselbe
+//! `bookmarks.toml` fuehren. Wer eine Aenderung sichert, schreibt deshalb nicht
+//! mehr die Liste, die er beim Programmstart gelesen hat, sondern liest unter
+//! der Schreibsperre frisch von der Platte und wendet **eine** Aenderung darauf
+//! an. Diese eine Aenderung ist [`Aenderung`], und
+//! [`Lesezeichenliste::anwenden`] fuehrt sie aus, indem es die vier Rechnungen
+//! dieses Moduls ruft; eine zweite Listenrechnung entsteht dabei nicht.
+//!
+//! **Eine Aenderung nennt ihr Ziel als Eintrag und nicht als Stelle.** Eine
+//! Stelle waere eine Zahl in **der** Liste, die der Nutzer eben gesehen hat,
+//! und in der frisch gelesenen kann an derselben Stelle ein anderes Lesezeichen
+//! stehen. Wer nach der Stelle umbenennt, benennt dann das falsche um, und das
+//! ist ein schlimmerer Ausgang als die verlorene Aenderung, gegen die die
+//! Sperre gebaut ist. Der Eintrag dagegen ist ein Wert, den die frisch gelesene
+//! Liste selbst beantwortet: [`Lesezeichenliste::stelle_von`] sucht ihn.
+//!
 //! Fuer eine Textmarke heisst ungueltig **allein, dass die Datei fehlt**. Ob
 //! der gemerkte Zeileninhalt noch auf der gemerkten Nummer steht, entscheidet
 //! sich erst beim Sprung und nur dort. Das ist keine Sparsamkeit, sondern der
@@ -240,6 +258,73 @@ pub enum Verschiebung {
     Runter,
 }
 
+/// Eine einzelne Aenderung an der Lesezeichenliste (C5, C6).
+///
+/// **`Aenderung` und nicht `Vorgang`**, obwohl der Plan das zweite Wort
+/// benutzt: `krk_ui::appkit::anwendung` fuehrt schon einen `Vorgang`, naemlich
+/// eine laufende Dateioperation aus C4, und beide Typen treffen sich in
+/// derselben Datei.
+///
+/// Die vier Befehle geben ihre Aenderung als diesen Wert weiter, statt eine
+/// fertige Liste zu uebergeben. Warum das noetig ist und warum das Ziel als
+/// Eintrag und nicht als Stelle darinsteht, sagt der Modulkopf unter „Eine
+/// Aenderung ist ein Wert und keine fertige Liste".
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: eine fuenfte Art,
+/// die Liste zu aendern, haelt [`Lesezeichenliste::anwenden`] beim Uebersetzen
+/// an.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Aenderung {
+    /// Ein neues Lesezeichen unten anhaengen.
+    ///
+    /// Die einzige Aenderung ohne Ziel: sie nennt keinen vorhandenen Eintrag,
+    /// weil sie keinen braucht.
+    Anlegen {
+        /// Der Name, wie der Nutzer ihn eingegeben hat.
+        name: String,
+        /// Ordner oder Textstelle.
+        ziel: Ziel,
+    },
+    /// Ein vorhandenes Lesezeichen umbenennen.
+    Umbenennen {
+        /// Der Eintrag, wie ihn die Leiste zeigte.
+        welches: Lesezeichen,
+        /// Der neue Name.
+        name: String,
+    },
+    /// Ein vorhandenes Lesezeichen loeschen.
+    Loeschen {
+        /// Der Eintrag, wie ihn die Leiste zeigte.
+        welches: Lesezeichen,
+    },
+    /// Ein vorhandenes Lesezeichen einen Platz weiter schieben.
+    Verschieben {
+        /// Der Eintrag, wie ihn die Leiste zeigte.
+        welches: Lesezeichen,
+        /// Wohin.
+        richtung: Verschiebung,
+    },
+}
+
+/// Was ein [`Aenderung`] an der frisch gelesenen Liste ausgerichtet hat.
+///
+/// Drei Ausgaenge, und der dritte ist der Grund fuer diese Aufzaehlung: das
+/// Lesezeichen, das der Nutzer meinte, kann in der frisch gelesenen Liste
+/// fehlen, weil die andere Instanz es geloescht hat. Ein `bool` liesse diesen
+/// Fall mit „nichts geaendert" zusammenfallen, und der Nutzer bekaeme keine
+/// Auskunft darueber, warum sein Befehl nichts getan hat.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "der Ausgang entscheidet, ob geschrieben und was gemeldet wird"]
+pub enum Ausgang {
+    /// Die Liste hat sich geaendert; die Stelle nennt den betroffenen Eintrag.
+    Geaendert(usize),
+    /// Der Eintrag ist da, aber die Aenderung bewirkt nichts: derselbe Name, oder
+    /// ein Verschieben am Rand der Liste.
+    Unveraendert,
+    /// Den genannten Eintrag gibt es in der frisch gelesenen Liste nicht mehr.
+    Verschwunden,
+}
+
 /// Alle Lesezeichen in ihrer Reihenfolge, wie sie in `bookmarks.toml` stehen.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -330,6 +415,62 @@ impl Lesezeichenliste {
         }
         self.eintraege.swap(stelle, ziel);
         Some(ziel)
+    }
+
+    /// Die Stelle des ersten Eintrags, der diesem gleicht.
+    ///
+    /// **Verglichen wird der ganze Eintrag, Name und Ziel.** Zwei Lesezeichen,
+    /// die in beidem uebereinstimmen, sind fuer jeden der vier Befehle
+    /// dasselbe: sie heissen gleich und zeigen auf dasselbe, und welches von
+    /// beiden umbenannt wird, ist keine Frage, die eine Antwort haette. Genommen
+    /// wird das erste.
+    pub fn stelle_von(&self, welches: &Lesezeichen) -> Option<usize> {
+        self.eintraege.iter().position(|eintrag| eintrag == welches)
+    }
+
+    /// Wendet eine einzelne Aenderung auf diese Liste an (C5, C6).
+    ///
+    /// **Die eine Stelle, an der eine [`Aenderung`] die Liste erreicht.** Sie
+    /// rechnet nicht selbst, sondern sucht das Ziel und ruft eine der vier
+    /// Rechnungen darueber; eine zweite Listenrechnung entsteht dabei nicht.
+    ///
+    /// Die Fallunterscheidung ueber die Aenderung ist vollstaendig und hat keinen
+    /// Auffangzweig.
+    pub fn anwenden(&mut self, aenderung: &Aenderung) -> Ausgang {
+        match aenderung {
+            Aenderung::Anlegen { name, ziel } => {
+                Ausgang::Geaendert(self.anlegen(name, ziel.clone()))
+            }
+            Aenderung::Umbenennen { welches, name } => {
+                let Some(stelle) = self.stelle_von(welches) else {
+                    return Ausgang::Verschwunden;
+                };
+                if self.umbenennen(stelle, name) {
+                    Ausgang::Geaendert(stelle)
+                } else {
+                    Ausgang::Unveraendert
+                }
+            }
+            Aenderung::Loeschen { welches } => {
+                let Some(stelle) = self.stelle_von(welches) else {
+                    return Ausgang::Verschwunden;
+                };
+                if self.loeschen(stelle) {
+                    Ausgang::Geaendert(stelle)
+                } else {
+                    Ausgang::Unveraendert
+                }
+            }
+            Aenderung::Verschieben { welches, richtung } => {
+                let Some(stelle) = self.stelle_von(welches) else {
+                    return Ausgang::Verschwunden;
+                };
+                match self.verschieben(stelle, *richtung) {
+                    Some(ziel) => Ausgang::Geaendert(ziel),
+                    None => Ausgang::Unveraendert,
+                }
+            }
+        }
     }
 }
 

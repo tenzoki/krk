@@ -201,3 +201,66 @@ fn entsperren_und_loeschen(pfad: &Path) -> io::Result<()> {
         Err(fehler) => Err(fehler),
     }
 }
+
+// ---------------------------------------------------------------------------
+// Der Quellbaum des Vorhabens als Lesestoff fuer die Zaehlproben
+// ---------------------------------------------------------------------------
+
+/// Jede `.rs`-Datei unter `crates/`, mit ihrem Pfad unterhalb von `crates/` und
+/// ihrem Inhalt, in fester Reihenfolge.
+///
+/// **Etliche Zusagen dieses Vorhabens sind Aussagen ueber den Baum** und nicht
+/// ueber ein Ergebnis: „es gibt genau zwei Dateien mit `#![allow(unsafe_code)]`",
+/// „es gibt genau drei Pruefordner-Fassungen". An keinem Rueckgabewert ist
+/// abzulesen, dass es keine dritte gibt.
+///
+/// **Das ist nicht dieselbe Funktion wie `krk_ui::quellbaum::quelldateien`**,
+/// und sie ist auch nicht mit ihr zusammenzulegen. Jene liest `krk-ui/src` und
+/// ist `pub(crate)` in einer Kiste mit nur einem Binaerziel; ein Testziel
+/// erreicht sie nicht, aus demselben Grund, aus dem es drei
+/// Pruefordner-Fassungen gibt. Diese hier liest **alle** Kisten, weil die
+/// Zusagen darueber genau das behaupten.
+///
+/// `CARGO_MANIFEST_DIR` steht beim Uebersetzen fest und zeigt auf
+/// `crates/krk-core`; zwei Schritte darueber liegt die Wurzel. Fehlt der Baum,
+/// schlaegt die Funktion fehl statt still nichts zu zaehlen — eine leere Liste
+/// waere eine Probe, die alles bestaetigt.
+pub fn quelldateien() -> Vec<(String, String)> {
+    let wurzel = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("crates/krk-core liegt zwei Ebenen unter der Wurzel")
+        .join("crates");
+    let mut gefunden = Vec::new();
+    quellen_einsammeln(&wurzel, &wurzel, &mut gefunden);
+    assert!(
+        gefunden.len() > 1,
+        "unter {} steht kein Quellbaum; die Zaehlproben haetten nichts zu zaehlen",
+        wurzel.display()
+    );
+    gefunden.sort();
+    gefunden
+}
+
+/// Haengt alle `.rs`-Dateien unter `ordner` an `gefunden`, in die Tiefe.
+fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, String)>) {
+    let eintraege = fs::read_dir(ordner)
+        .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", ordner.display()));
+    for eintrag in eintraege {
+        let pfad = eintrag
+            .expect("Eintrag des Quellordners nicht lesbar")
+            .path();
+        if pfad.is_dir() {
+            quellen_einsammeln(wurzel, &pfad, gefunden);
+        } else if pfad.extension().is_some_and(|endung| endung == "rs") {
+            let name = pfad
+                .strip_prefix(wurzel)
+                .expect("der Pfad kommt aus der Wurzel")
+                .to_string_lossy()
+                .into_owned();
+            let inhalt = fs::read_to_string(&pfad)
+                .unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", pfad.display()));
+            gefunden.push((name, inhalt));
+        }
+    }
+}

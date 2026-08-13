@@ -120,7 +120,7 @@ use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, melden};
+use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, melden};
 
 use super::Tastendruck;
 use super::konflikt::{Funktionsname, Konflikt};
@@ -556,12 +556,14 @@ pub enum Kommando {
     BelegungAnsehen,
     /// Die Anwendung beenden (C3).
     Beenden,
+    /// Eine weitere, eigenstaendige Instanz von KRK starten (C3 der Runde 7).
+    WeitereInstanz,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 75] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 76] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -658,6 +660,7 @@ impl Kommando {
         (Kommando::EditorAlleErsetzen, "editor_alle_ersetzen"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::Beenden, "beenden"),
+        (Kommando::WeitereInstanz, "weitere_instanz"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -749,7 +752,12 @@ impl Kommando {
             | Kommando::BereichVerschmaelern
             | Kommando::Abbrechen
             | Kommando::BelegungAnsehen
-            | Kommando::Beenden => Wirkungsbereich::Ueberall,
+            | Kommando::Beenden
+            // Die weitere Instanz aus C3 der Runde 7 steht hier aus demselben
+            // Grund wie das Beenden daneben: sie betrifft die Anwendung als
+            // ganze und keinen ihrer Bereiche. Wer sie aus dem Editor heraus
+            // ruft, will nicht den Editor verlassen, sondern ein zweites KRK.
+            | Kommando::WeitereInstanz => Wirkungsbereich::Ueberall,
             // Die drei Befehle des Navigators, deren Taste im Editor der
             // Textflaeche gehoert.
             //
@@ -1187,8 +1195,12 @@ impl Belegung {
     }
 
     /// Schreibt die Belegung nach `keymap.toml`, atomar ueber die Ablage.
-    pub fn sichern(&self, ablage: &Ablage) -> io::Result<()> {
-        ablage.sichern(Datei::Belegung, &Belegungsdatei::from(self))
+    ///
+    /// Der [`Zugang`] ist seit der Runde 7 noetig und nicht die Ablage selbst:
+    /// geschrieben wird unter der Schreibsperre, damit eine zweite Instanz von
+    /// KRK nicht dieselbe Nachbardatei beschreibt.
+    pub fn sichern(&self, zugang: &Zugang<'_>) -> io::Result<()> {
+        zugang.sichern(Datei::Belegung, &Belegungsdatei::from(self))
     }
 
     /// Baut eine Belegung aus der gelesenen Datei.
@@ -1276,8 +1288,8 @@ impl Default for Belegung {
 /// [`Ersetzung`], die die Datei und den Grund nennt. Die Datei auf der Platte
 /// bleibt in jedem Fall stehen; `keymap.toml` ist von Hand aenderbar, und ein
 /// Tippfehler darin darf die Arbeit des Nutzers nicht loeschen.
-pub fn laden(ablage: &Ablage) -> Geladen<Belegung> {
-    let roh: Geladen<Belegungsdatei> = ablage.laden(Datei::Belegung);
+pub fn laden(zugang: &Zugang<'_>) -> Geladen<Belegung> {
+    let roh: Geladen<Belegungsdatei> = zugang.laden(Datei::Belegung);
     match Belegung::vom_nutzer(&roh.wert) {
         Ok(belegung) => Geladen {
             wert: belegung,
@@ -1286,7 +1298,7 @@ pub fn laden(ablage: &Ablage) -> Geladen<Belegung> {
         Err(fehler) => Geladen {
             wert: Belegung::auslieferung(),
             ersetzung: Some(Ersetzung {
-                datei: ablage.pfad(Datei::Belegung),
+                datei: zugang.pfad(Datei::Belegung),
                 grund: Grund::Beschaedigt(fehler.to_string()),
                 // Nichts zur Seite gelegt: die Datei war gueltiges TOML und ist
                 // erst hier, eine Ebene hoeher, als widerspruechlich
@@ -1309,7 +1321,28 @@ pub fn laden(ablage: &Ablage) -> Geladen<Belegung> {
 /// setzt den Satz in die Statuszeile.
 pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
     match Ablage::im_benutzerverzeichnis() {
-        Ok(ablage) => laden(&ablage).mit_meldung(),
+        // **Der Durchgang umfasst hier nur das Laden, und das ist kein
+        // Versehen**: schon `Zugang::laden` schreibt, wenn `keymap.toml`
+        // beschaedigt ist und zur Seite gelegt wird. Scheitert das Nehmen der
+        // Schreibsperre, faellt der Aufruf auf die Auslieferungsbelegung
+        // zurueck und sagt es, statt ohne Sperre zu lesen.
+        //
+        // **Diese Ablage lebt nur bis zum Ende der Funktion.** Die bleibende
+        // oeffnet die Oberflaeche danach; zwei Ablagen eines Prozesses duerfen
+        // nicht zugleich einen Durchgang fahren, siehe den Kopf von
+        // `ablage::sperre`.
+        Ok(ablage) => match ablage.durchgang(|zugang| laden(zugang).mit_meldung()) {
+            Ok(ergebnis) => ergebnis,
+            Err(fehler) => (
+                Belegung::auslieferung(),
+                Some(melden(&Ersetzung {
+                    datei: ablage.pfad(Datei::Belegung),
+                    grund: Grund::NichtLesbar(fehler.to_string()),
+                    // Gelesen worden ist nichts, also gibt es nichts zu sichern.
+                    beiseite: Beiseite::Nicht,
+                })),
+            ),
+        },
         Err(fehler) => (
             Belegung::auslieferung(),
             Some(melden(&Ersetzung {

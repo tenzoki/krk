@@ -30,12 +30,14 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use krk_core::ablage::sitzung::SITZUNGSTAKT;
+use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
+use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
-    Ablage, Ablageort, Beiseite, Breiten, Datei, Dateifenster, Einstellungen, Ersetzung,
-    Fensterseite, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung,
-    Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar, einstellungen, pfade,
+    Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
+    Ersetzung, Fensterseite, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung,
+    Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar, einstellungen, pfade,
 };
+use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
 mod gemeinsam;
@@ -44,6 +46,48 @@ use gemeinsam::Pruefordner;
 // ---------------------------------------------------------------------------
 // Stellvertreter
 // ---------------------------------------------------------------------------
+
+/// Laedt eine der vier Dateien so, wie der Betrieb es tut: unter der
+/// Schreibsperre.
+///
+/// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen `Zugang`, und
+/// den gibt es nur aus einem Durchgang. Die Proben nehmen denselben Weg wie das
+/// Programm, statt eine Hintertuer zu bekommen; der Grund steht im Kopf von
+/// `krk_core::ablage::sperre`. Der Durchgang selbst scheitert hier nie: er
+/// nimmt eine Sperre, die in einem frischen Pruefordner niemand haelt.
+fn geladen<T>(ablage: &Ablage, welche: Datei) -> Geladen<T>
+where
+    T: serde::de::DeserializeOwned + Default,
+{
+    ablage
+        .durchgang(|zugang| zugang.laden(welche))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Schreibt eine der vier Dateien unter der Schreibsperre.
+///
+/// Der Rueckgabewert ist der des Schreibens und nicht der des Durchgangs: die
+/// Proben pruefen ihn, und ein Fehlschlag beim Nehmen der Sperre waere ein
+/// anderer Befund als ein Fehlschlag beim Schreiben.
+fn gesichert<T>(ablage: &Ablage, welche: Datei, wert: &T) -> std::io::Result<()>
+where
+    T: Serialize,
+{
+    ablage
+        .durchgang(|zugang| zugang.sichern(welche, wert))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Laedt `settings.toml` unter der Schreibsperre.
+///
+/// Eigene Stelle und kein Aufruf von [`geladen`], weil `einstellungen::laden`
+/// mehr tut als lesen: es legt die Datei beim ersten Start an, und genau das
+/// gehoert mit unter die Sperre.
+fn geladene_einstellungen(ablage: &Ablage) -> Geladen<Einstellungen> {
+    ablage
+        .durchgang(einstellungen::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
 
 /// Eine Ablage in einem frischen Pruefordner.
 fn ablage(zweck: &str) -> (Pruefordner, Ablage) {
@@ -245,9 +289,9 @@ fn der_erste_start_legt_den_ordner_an_und_liefert_den_auslieferungszustand() {
     let ablage = Ablage::oeffnen(Ablageort::an(&wurzel)).expect("erster Start scheitert");
     assert!(wurzel.is_dir(), "der erste Start hat nichts angelegt");
 
-    let belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
-    let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
-    let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
+    let lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert_eq!(belegung.wert, BelegungStellvertreter::default());
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
@@ -315,15 +359,11 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let lesezeichen = beispiellesezeichen();
     let sitzung = beispielsitzung();
 
-    ablage
-        .sichern(Datei::Belegung, &belegung)
+    gesichert(&ablage, Datei::Belegung, &belegung)
         .expect("keymap.toml laesst sich nicht schreiben");
-    ablage
-        .sichern(Datei::Lesezeichen, &lesezeichen)
+    gesichert(&ablage, Datei::Lesezeichen, &lesezeichen)
         .expect("bookmarks.toml laesst sich nicht schreiben");
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("session.toml laesst sich nicht schreiben");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("session.toml laesst sich nicht schreiben");
     atomar::schreiben(
         &ablage.pfad(Datei::Einstellungen),
         "terminal = \"com.mitchellh.ghostty\"\n",
@@ -338,9 +378,9 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
         );
     }
 
-    let zurueck_belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
-    let zurueck_lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
-    let zurueck_sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let zurueck_belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
+    let zurueck_lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    let zurueck_sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert!(!zurueck_belegung.ist_ersetzt());
     assert!(!zurueck_lesezeichen.ist_ersetzt());
@@ -350,7 +390,7 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     assert_eq!(zurueck_lesezeichen.wert, lesezeichen);
     assert_eq!(zurueck_sitzung.wert, sitzung);
 
-    let zurueck_einstellungen = einstellungen::laden(&ablage);
+    let zurueck_einstellungen = geladene_einstellungen(&ablage);
     assert!(!zurueck_einstellungen.ist_ersetzt());
     assert_eq!(
         zurueck_einstellungen.wert.terminal, "com.mitchellh.ghostty",
@@ -361,9 +401,7 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
 #[test]
 fn die_geschriebene_sitzung_ist_lesbares_toml() {
     let (_ordner, ablage) = ablage("lesbar");
-    ablage
-        .sichern(Datei::Sitzung, &beispielsitzung())
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &beispielsitzung()).expect("schreiben gescheitert");
 
     let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
 
@@ -394,9 +432,7 @@ fn die_geschriebene_sitzung_ist_lesbares_toml() {
 fn das_fenster_und_tabmodell_ueberlebt_schreiben_und_wiedereinlesen() {
     let (_ordner, ablage) = ablage("tabmodell");
     let vorher = beispielsitzung();
-    ablage
-        .sichern(Datei::Sitzung, &vorher)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &vorher).expect("schreiben gescheitert");
 
     let nachher = gelesene_sitzung(&ablage);
 
@@ -459,7 +495,7 @@ aktiver_tab = 0
 ";
     fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert!(
         !geladen.ist_ersetzt(),
@@ -506,7 +542,7 @@ aktiver_tab = 0
 ";
     fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert!(
         !geladen.ist_ersetzt(),
@@ -566,7 +602,7 @@ aktiver_tab = 0
 ";
     fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert!(
         !geladen.ist_ersetzt(),
@@ -595,23 +631,19 @@ fn das_ausgeblendete_erste_dateifenster_ueberlebt_den_rundlauf_byteweise() {
     sitzung.sichtbar.erstes_dateifenster = false;
     sitzung.aktiv = Fensterseite::Rechts;
 
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
     let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert!(
         zuerst.contains("erstes_dateifenster = false"),
         "das Feld steht nicht in der Datei, die der Nutzer nach C7 von Hand liest: {zuerst}"
     );
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt());
     assert!(!geladen.wert.sichtbar.erstes_dateifenster);
     assert!(geladen.wert.sichtbar.zweites_dateifenster);
 
-    ablage
-        .sichern(Datei::Sitzung, &geladen.wert)
-        .expect("zweites Schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &geladen.wert).expect("zweites Schreiben gescheitert");
     let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
 }
@@ -650,7 +682,7 @@ aktiver_tab = 0
 ";
     fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
 
     assert!(
         !geladen.ist_ersetzt(),
@@ -680,9 +712,7 @@ fn die_spaltensichtbarkeit_ueberlebt_den_rundlauf_byteweise() {
     sitzung.spalten.groesse = false;
     sitzung.spalten.typ = false;
 
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
     let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert!(
         zuerst.contains("[spalten]"),
@@ -692,13 +722,11 @@ fn die_spaltensichtbarkeit_ueberlebt_den_rundlauf_byteweise() {
     assert!(zuerst.contains("geaendert = true"), "{zuerst}");
     assert!(zuerst.contains("typ = false"), "{zuerst}");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt());
     assert_eq!(geladen.wert.spalten, sitzung.spalten);
 
-    ablage
-        .sichern(Datei::Sitzung, &geladen.wert)
-        .expect("zweites Schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &geladen.wert).expect("zweites Schreiben gescheitert");
     let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
 }
@@ -717,19 +745,15 @@ fn die_editorbreite_ueberlebt_den_rundlauf_byteweise() {
     sitzung.sichtbar.editor = true;
     sitzung.sichtbar.vorschau = false;
 
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
     let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt());
     assert_eq!(geladen.wert.breiten.editor, Some(512.5));
     assert!(geladen.wert.sichtbar.editor);
 
-    ablage
-        .sichern(Datei::Sitzung, &geladen.wert)
-        .expect("zweites Schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &geladen.wert).expect("zweites Schreiben gescheitert");
     let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
 }
@@ -742,9 +766,7 @@ fn die_editorbreite_ueberlebt_den_rundlauf_byteweise() {
 #[test]
 fn eine_nicht_gesetzte_editorbreite_steht_nicht_in_der_datei() {
     let (_ordner, ablage) = ablage("editorbreite-ungesetzt");
-    ablage
-        .sichern(Datei::Sitzung, &Sitzung::default())
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &Sitzung::default()).expect("schreiben gescheitert");
 
     let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
 
@@ -770,21 +792,17 @@ fn die_geoeffnete_editordatei_ueberlebt_den_rundlauf_byteweise() {
         ..Sitzung::default()
     };
 
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
     let zuerst = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
 
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt());
     assert_eq!(
         geladen.wert.editor,
         Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md"))
     );
 
-    ablage
-        .sichern(Datei::Sitzung, &geladen.wert)
-        .expect("zweites Schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &geladen.wert).expect("zweites Schreiben gescheitert");
     let danach = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert_eq!(zuerst, danach, "der Rundlauf hat die Datei veraendert");
 }
@@ -802,9 +820,7 @@ fn die_geoeffnete_editordatei_ueberlebt_den_rundlauf_byteweise() {
 fn der_editorpfad_steht_nur_dann_in_der_datei_wenn_eine_datei_offen_ist() {
     let (_ordner, ablage) = ablage("editordatei-zeile");
 
-    ablage
-        .sichern(Datei::Sitzung, &Sitzung::default())
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &Sitzung::default()).expect("schreiben gescheitert");
     let ohne = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     assert!(
         !ohne.lines().any(|zeile| zeile.starts_with("editor = \"")),
@@ -815,9 +831,7 @@ fn der_editorpfad_steht_nur_dann_in_der_datei_wenn_eine_datei_offen_ist() {
         editor: Some(PathBuf::from("/Users/pruefung/notiz.md")),
         ..Sitzung::default()
     };
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("zweites Schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("zweites Schreiben gescheitert");
     let mit = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
     let pfadzeilen: Vec<&str> = mit
         .lines()
@@ -845,9 +859,7 @@ fn ein_dateifenster_traegt_beliebig_viele_tabs() {
         Tab::auf("/vier"),
     ];
     sitzung.fenster_mut(Fensterseite::Links).aktiver_tab = 2;
-    ablage
-        .sichern(Datei::Sitzung, &sitzung)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
 
     let zurueck = gelesene_sitzung(&ablage);
     let fenster = zurueck.fenster(Fensterseite::Links);
@@ -873,10 +885,10 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
         fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
     }
 
-    let belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
-    let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
-    let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
-    let eingestellt = einstellungen::laden(&ablage);
+    let belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
+    let lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    let eingestellt = geladene_einstellungen(&ablage);
 
     assert_eq!(belegung.wert, BelegungStellvertreter::default());
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
@@ -913,7 +925,7 @@ fn gueltiges_toml_mit_falscher_gestalt_gilt_ebenfalls_als_beschaedigt() {
     )
     .expect("schreiben gescheitert");
 
-    let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert_eq!(sitzung.wert, Sitzung::default());
     pruefe_meldung(&ablage, Datei::Sitzung, sitzung.ersetzung, true);
 }
@@ -928,7 +940,7 @@ fn eine_nicht_lesbare_datei_fuehrt_ebenso_zum_auslieferungszustand() {
     // dasselbe, aber nicht fuer root.
     fs::create_dir(ablage.pfad(Datei::Lesezeichen)).expect("Ordner laesst sich nicht anlegen");
 
-    let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
     pruefe_meldung(&ablage, Datei::Lesezeichen, lesezeichen.ersetzung, false);
 }
@@ -985,10 +997,10 @@ fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
 /// `einstellungen::laden`; damit laufen alle vier durch denselben
 /// `Ablage::laden` wie im Betrieb.
 fn vier_ersetzungen(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
-    let belegung: Geladen<BelegungStellvertreter> = ablage.laden(Datei::Belegung);
-    let lesezeichen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
-    let sitzung: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
-    let eingestellt = einstellungen::laden(ablage);
+    let belegung: Geladen<BelegungStellvertreter> = geladen(ablage, Datei::Belegung);
+    let lesezeichen: Geladen<Lesezeichenliste> = geladen(ablage, Datei::Lesezeichen);
+    let sitzung: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
+    let eingestellt = geladene_einstellungen(ablage);
     vec![
         belegung.ersetzung,
         lesezeichen.ersetzung,
@@ -1084,14 +1096,14 @@ fn eine_zweite_beschaedigung_laesst_die_erste_sicherung_unangetastet() {
     let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
 
     fs::write(&pfad, KAPUTT).expect("schreiben gescheitert");
-    let erst: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let erst: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     assert_eq!(
         erst.ersetzung.expect("keine Meldung").beiseite,
         Beiseite::Gesichert(sicherung.clone())
     );
 
     fs::write(&pfad, KAPUTT_ZWEITER).expect("schreiben gescheitert");
-    let wieder: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let wieder: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     assert_eq!(
         wieder.ersetzung.expect("keine Meldung").beiseite,
         Beiseite::SchonVorhanden(sicherung.clone()),
@@ -1132,7 +1144,7 @@ fn eine_zweite_beschaedigung_laesst_die_erste_sicherung_unangetastet() {
 fn eine_fehlende_und_eine_nicht_lesbare_datei_werden_nicht_zur_seite_gelegt() {
     let (_ordner, ablage) = ablage("beiseite-nichts-zu-sichern");
 
-    let fehlt: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let fehlt: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     assert!(fehlt.ersetzung.is_none(), "eine fehlende Datei meldet sich");
     assert!(
         !beiseitepfad(&ablage, Datei::Lesezeichen)
@@ -1144,7 +1156,7 @@ fn eine_fehlende_und_eine_nicht_lesbare_datei_werden_nicht_zur_seite_gelegt() {
     // Ein Ordner an der Stelle der Datei: das Lesen scheitert mit einem anderen
     // Fehler als "nicht vorhanden", und zwar unter jedem Benutzer.
     fs::create_dir(ablage.pfad(Datei::Sitzung)).expect("Ordner laesst sich nicht anlegen");
-    let nicht_lesbar: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let nicht_lesbar: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     let ersetzung = nicht_lesbar.ersetzung.expect("keine Meldung");
     assert!(
         matches!(ersetzung.grund, Grund::NichtLesbar(_)),
@@ -1174,7 +1186,7 @@ fn ein_gescheitertes_zur_seite_legen_wird_gemeldet_und_verspricht_keine_datei() 
     let nachbar = atomar::nachbarpfad(&sicherung).expect("kein Nachbarpfad");
     fs::create_dir(&nachbar).expect("der Sperrordner laesst sich nicht anlegen");
 
-    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     let ersetzung = geladen.ersetzung.expect("keine Meldung");
     let Beiseite::Gescheitert(ref grund) = ersetzung.beiseite else {
         panic!("das Zur-Seite-Legen ist nicht gescheitert: {ersetzung:?}");
@@ -1289,7 +1301,7 @@ fn eine_fehlende_settings_toml_liefert_die_vorbelegung_und_entsteht_mit_kommenta
     let pfad = ablage.pfad(Datei::Einstellungen);
     assert!(!pfad.exists(), "settings.toml steht schon vorher");
 
-    let geladen = einstellungen::laden(&ablage);
+    let geladen = geladene_einstellungen(&ablage);
 
     assert_eq!(geladen.wert.terminal, "com.apple.Terminal");
     assert!(
@@ -1313,7 +1325,7 @@ fn eine_fehlende_settings_toml_liefert_die_vorbelegung_und_entsteht_mit_kommenta
 
     // Der zweite Start findet sie vor und schreibt sie nicht noch einmal.
     fs::write(&pfad, "terminal = \"com.mitchellh.ghostty\"\n").expect("schreiben gescheitert");
-    let wieder = einstellungen::laden(&ablage);
+    let wieder = geladene_einstellungen(&ablage);
     assert_eq!(wieder.wert.terminal, "com.mitchellh.ghostty");
     assert!(!wieder.ist_ersetzt());
     assert_eq!(
@@ -1330,7 +1342,7 @@ fn eine_kaputte_settings_toml_liefert_die_vorbelegung_und_bleibt_liegen() {
     let pfad = ablage.pfad(Datei::Einstellungen);
     fs::write(&pfad, KAPUTT).expect("schreiben gescheitert");
 
-    let geladen = einstellungen::laden(&ablage);
+    let geladen = geladene_einstellungen(&ablage);
 
     assert_eq!(geladen.wert, Einstellungen::auslieferung());
     let ersetzung = geladen
@@ -1358,7 +1370,7 @@ fn eine_settings_toml_ohne_terminal_liefert_die_vorbelegung() {
     let inhalt = "# der Nutzer hat den Eintrag herausgenommen\n";
     fs::write(&pfad, inhalt).expect("schreiben gescheitert");
 
-    let geladen = einstellungen::laden(&ablage);
+    let geladen = geladene_einstellungen(&ablage);
 
     assert_eq!(geladen.wert.terminal, "com.apple.Terminal");
     assert!(
@@ -1383,7 +1395,7 @@ fn ein_unbekanntes_feld_in_settings_toml_gilt_als_beschaedigt() {
     )
     .expect("schreiben gescheitert");
 
-    let geladen = einstellungen::laden(&ablage);
+    let geladen = geladene_einstellungen(&ablage);
 
     assert_eq!(geladen.wert, Einstellungen::auslieferung());
     pruefe_meldung(&ablage, Datei::Einstellungen, geladen.ersetzung, true);
@@ -1401,7 +1413,7 @@ fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
     let ablage = Ablage::oeffnen(Ablageort::an(&wurzel)).expect("Ablage laesst sich nicht oeffnen");
     fs::remove_dir_all(&wurzel).expect("der Ablageordner laesst sich nicht entfernen");
 
-    let geladen = einstellungen::laden(&ablage);
+    let geladen = geladene_einstellungen(&ablage);
 
     assert_eq!(geladen.wert, Einstellungen::auslieferung());
     let ersetzung = geladen
@@ -1422,8 +1434,42 @@ fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
 // Gebuendeltes Schreiben des Sitzungszustands
 // ---------------------------------------------------------------------------
 
+/// Merkt einen Stand vor, unter der Schreibsperre.
+///
+/// Die drei Schreibwege des [`Sitzungsschreiber`]s nehmen seit der Runde 7
+/// einen `Zugang` entgegen; diese drei Helfer halten die Proben lesbar, ohne
+/// eine Hintertuer an der Sperre vorbei zu bauen. Sie liefern, ob geschrieben
+/// wurde, so wie die Methoden es tun.
+fn vorgemerkt(
+    schreiber: &mut Sitzungsschreiber,
+    ablage: &Ablage,
+    sitzung: Sitzung,
+    jetzt: Instant,
+) -> bool {
+    ablage
+        .durchgang(|zugang| schreiber.vormerken(sitzung, jetzt, zugang))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("schreiben gescheitert")
+}
+
+/// Traegt einen liegengebliebenen Stand nach, unter der Schreibsperre.
+fn abgeglichen(schreiber: &mut Sitzungsschreiber, ablage: &Ablage, jetzt: Instant) -> bool {
+    ablage
+        .durchgang(|zugang| schreiber.abgleichen(jetzt, zugang))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("schreiben gescheitert")
+}
+
+/// Schreibt den letzten Stand beim Beenden, unter der Schreibsperre.
+fn beendet(schreiber: &mut Sitzungsschreiber, ablage: &Ablage, jetzt: Instant) -> bool {
+    ablage
+        .durchgang(|zugang| schreiber.beenden(jetzt, zugang))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("schreiben gescheitert")
+}
+
 fn gelesene_sitzung(ablage: &Ablage) -> Sitzung {
-    let geladen: Geladen<Sitzung> = ablage.laden(Datei::Sitzung);
+    let geladen: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt(), "session.toml ist beschaedigt");
     geladen.wert
 }
@@ -1436,14 +1482,12 @@ fn der_takt_ist_zwei_sekunden() {
 #[test]
 fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
     let (_ordner, ablage) = ablage("takt");
-    let mut schreiber = ablage.sitzungsschreiber();
+    let mut schreiber = Sitzungsschreiber::neu();
     let start = Instant::now();
 
     let erste = beispielsitzung();
     assert!(
-        schreiber
-            .vormerken(erste.clone(), start)
-            .expect("schreiben gescheitert"),
+        vorgemerkt(&mut schreiber, &ablage, erste.clone(), start),
         "der erste Stand soll sofort auf die Platte"
     );
     assert_eq!(gelesene_sitzung(&ablage), erste);
@@ -1456,9 +1500,12 @@ fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
 
     for (stand, versatz) in [(&zweite, 500u64), (&dritte, 1_999)] {
         assert!(
-            !schreiber
-                .vormerken(stand.clone(), start + Duration::from_millis(versatz))
-                .expect("schreiben gescheitert"),
+            !vorgemerkt(
+                &mut schreiber,
+                &ablage,
+                stand.clone(),
+                start + Duration::from_millis(versatz)
+            ),
             "nach {versatz} ms darf noch nicht geschrieben werden"
         );
     }
@@ -1471,11 +1518,12 @@ fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
 
     // Nach dem Takt geht der letzte vorgemerkte Stand raus, und nur er: die
     // beiden Zwischenstaende sind gebuendelt und nicht einzeln geschrieben.
-    assert!(
-        schreiber
-            .vormerken(dritte.clone(), start + Duration::from_millis(2_000))
-            .expect("schreiben gescheitert")
-    );
+    assert!(vorgemerkt(
+        &mut schreiber,
+        &ablage,
+        dritte.clone(),
+        start + Duration::from_millis(2_000)
+    ));
     assert_eq!(gelesene_sitzung(&ablage), dritte);
     assert!(!schreiber.steht_aus());
 }
@@ -1483,75 +1531,77 @@ fn der_sitzungsschreiber_buendelt_auf_hoechstens_zwei_sekunden() {
 #[test]
 fn ein_liegengebliebener_stand_geht_ueber_den_takt_hinaus() {
     let (_ordner, ablage) = ablage("abgleich");
-    let mut schreiber = ablage.sitzungsschreiber();
+    let mut schreiber = Sitzungsschreiber::neu();
     let start = Instant::now();
 
     let erste = beispielsitzung();
-    schreiber
-        .vormerken(erste.clone(), start)
-        .expect("schreiben gescheitert");
+    vorgemerkt(&mut schreiber, &ablage, erste.clone(), start);
 
     let mut zweite = erste.clone();
     zweite.aktiv = Fensterseite::Links;
-    schreiber
-        .vormerken(zweite.clone(), start + Duration::from_millis(10))
-        .expect("schreiben gescheitert");
+    vorgemerkt(
+        &mut schreiber,
+        &ablage,
+        zweite.clone(),
+        start + Duration::from_millis(10),
+    );
 
     // Ohne weitere Aenderung: der Takt allein traegt den Stand nach.
-    assert!(
-        !schreiber
-            .abgleichen(start + Duration::from_millis(1_000))
-            .expect("schreiben gescheitert")
-    );
-    assert!(
-        schreiber
-            .abgleichen(start + Duration::from_secs(3))
-            .expect("schreiben gescheitert")
-    );
+    assert!(!abgeglichen(
+        &mut schreiber,
+        &ablage,
+        start + Duration::from_millis(1_000)
+    ));
+    assert!(abgeglichen(
+        &mut schreiber,
+        &ablage,
+        start + Duration::from_secs(3)
+    ));
     assert_eq!(gelesene_sitzung(&ablage), zweite);
 
     // Und ohne vorgemerkten Stand tut der Takt nichts.
-    assert!(
-        !schreiber
-            .abgleichen(start + Duration::from_secs(9))
-            .expect("schreiben gescheitert")
-    );
+    assert!(!abgeglichen(
+        &mut schreiber,
+        &ablage,
+        start + Duration::from_secs(9)
+    ));
 }
 
 #[test]
 fn beim_beenden_wird_der_letzte_stand_genau_einmal_geschrieben() {
     let (_ordner, ablage) = ablage("beenden");
-    let mut schreiber = ablage.sitzungsschreiber();
+    let mut schreiber = Sitzungsschreiber::neu();
     let start = Instant::now();
 
     let erste = beispielsitzung();
-    schreiber
-        .vormerken(erste.clone(), start)
-        .expect("schreiben gescheitert");
+    vorgemerkt(&mut schreiber, &ablage, erste.clone(), start);
 
     let mut letzte = erste.clone();
     letzte.fenster_mut(Fensterseite::Links).aktiver_tab = 0;
     assert!(
-        !schreiber
-            .vormerken(letzte.clone(), start + Duration::from_millis(100))
-            .expect("schreiben gescheitert"),
+        !vorgemerkt(
+            &mut schreiber,
+            &ablage,
+            letzte.clone(),
+            start + Duration::from_millis(100)
+        ),
         "der Takt ist noch nicht abgelaufen"
     );
 
     // Das Beenden schreibt ohne Ruecksicht auf den Takt.
-    assert!(
-        schreiber
-            .beenden(start + Duration::from_millis(101))
-            .expect("schreiben gescheitert")
-    );
+    assert!(beendet(
+        &mut schreiber,
+        &ablage,
+        start + Duration::from_millis(101)
+    ));
     assert_eq!(gelesene_sitzung(&ablage), letzte);
 
     // Und ein zweites Mal beenden schreibt nicht noch einmal.
-    assert!(
-        !schreiber
-            .beenden(start + Duration::from_millis(102))
-            .expect("schreiben gescheitert")
-    );
+    assert!(!beendet(
+        &mut schreiber,
+        &ablage,
+        start + Duration::from_millis(102)
+    ));
 }
 
 // ---------------------------------------------------------------------------
@@ -1634,9 +1684,7 @@ fn ein_abbruch_zwischen_schreiben_und_umbenennen_laesst_die_alte_datei_unveraend
     let (_ordner, ablage) = ablage("abbruch");
     let ziel = ablage.pfad(Datei::Sitzung);
     let alt = beispielsitzung();
-    ablage
-        .sichern(Datei::Sitzung, &alt)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &alt).expect("schreiben gescheitert");
     let alter_text = fs::read_to_string(&ziel).expect("lesen gescheitert");
 
     let ergebnis = kindprobe(
@@ -1679,9 +1727,7 @@ fn ein_abbruch_zwischen_schreiben_und_umbenennen_laesst_die_alte_datei_unveraend
     // Die liegengebliebene Nachbardatei stoert den naechsten Lauf nicht.
     let mut neu = alt.clone();
     neu.aktiv = Fensterseite::Links;
-    ablage
-        .sichern(Datei::Sitzung, &neu)
-        .expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &neu).expect("schreiben gescheitert");
     assert_eq!(gelesene_sitzung(&ablage), neu);
     assert!(
         !nachbar.exists(),
@@ -1705,6 +1751,282 @@ fn kind_stirbt_zwischen_schreiben_und_umbenennen() {
     std::process::abort();
 }
 
+// ---------------------------------------------------------------------------
+// Die beiden Sperren, mit zwei Prozessen
+// ---------------------------------------------------------------------------
+
+/// Die Umgebungsvariable, die eine Sperr-Kindprobe beauftragt. Ihr Wert ist der
+/// Ablageordner.
+const AUFTRAG_SPERRE: &str = "KRK_PROBE_SPERRE";
+
+/// Wie oft ein Kind der Lesezeichenprobe anlegt.
+///
+/// Zwei Kinder mit je so vielen Durchgaengen ueberschneiden sich mit grosser
+/// Wahrscheinlichkeit; ein einzelner Durchgang je Kind koennte einander
+/// verfehlen und die Probe zu einer Zusicherung ueber nichts machen.
+const ANLEGEZAHL: usize = 20;
+
+/// Startet dieselbe Testdatei noch einmal, ohne auf sie zu warten.
+///
+/// Das Gegenstueck zu [`kindprobe`] fuer die Faelle, in denen **zwei** Kinder
+/// zugleich laufen muessen: eine verlorene Aenderung zeigt sich nur, wenn zwei
+/// Schreiber einander begegnen.
+fn kind_starten(name: &str, auftrag: &str, wert: &Path) -> std::process::Child {
+    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
+    Command::new(selbst)
+        .args(["--exact", "--ignored", "--nocapture", "--test-threads", "1"])
+        .arg(name)
+        .env(auftrag, wert)
+        .spawn()
+        .expect("die Kindprobe laesst sich nicht starten")
+}
+
+/// Der Ablageordner, den eine Kindprobe von ihrem Elternteil bekommen hat.
+///
+/// `None` heisst: diese Probe ist ohne Auftrag gelaufen, also im gewoehnlichen
+/// Testlauf. Sie kehrt dann sofort zurueck, wie die Abbruch-Kindprobe darueber.
+fn auftragsordner() -> Option<Ablageort> {
+    std::env::var_os(AUFTRAG_SPERRE).map(Ablageort::an)
+}
+
+/// Genau eine von zwei Instanzen bekommt das Sitzungsrecht (C3.9).
+///
+/// Der Elternteil ist die erste Instanz. Solange er das Recht haelt, bekommt
+/// das Kind keines; danach bekommt das naechste Kind es wie jede erste Instanz,
+/// und das ist die zweite Haelfte von C3.11 — keine Wanderung, sondern die
+/// gewoehnliche Vergabe beim Start.
+#[test]
+fn von_zwei_prozessen_bekommt_genau_einer_das_sitzungsrecht() {
+    let ordner = Pruefordner::neu("sitzungsrecht");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let recht = Sitzungsrecht::nehmen(&ort).expect("der erste Versuch ist gescheitert");
+    assert!(recht.gehalten(), "der Elternteil bekommt das Recht");
+
+    let ergebnis = kindprobe(
+        "kind_meldet_sein_sitzungsrecht",
+        AUFTRAG_SPERRE,
+        ordner.pfad(),
+    );
+    assert!(
+        ergebnis.status.success(),
+        "das Kind ist nicht sauber zurueckgekehrt: {}",
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+    assert_eq!(
+        fs::read_to_string(ordner.pfad().join("recht.txt")).expect("das Kind hat nichts gemeldet"),
+        "ohne",
+        "das Kind hat das Sitzungsrecht bekommen, obwohl der Elternteil es haelt"
+    );
+
+    // Der Elternteil endet; das naechste Kind bekommt das Recht.
+    drop(recht);
+    let ergebnis = kindprobe(
+        "kind_meldet_sein_sitzungsrecht",
+        AUFTRAG_SPERRE,
+        ordner.pfad(),
+    );
+    assert!(ergebnis.status.success());
+    assert_eq!(
+        fs::read_to_string(ordner.pfad().join("recht.txt")).expect("das Kind hat nichts gemeldet"),
+        "gehalten",
+        "nach dem Ende des Halters bekommt die naechste Instanz das Recht nicht"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_SPERRE gestartet"]
+fn kind_meldet_sein_sitzungsrecht() {
+    let Some(ort) = auftragsordner() else {
+        return;
+    };
+    let recht = Sitzungsrecht::nehmen(&ort).expect("der Versuch ist gescheitert");
+    let wort = if recht.gehalten() { "gehalten" } else { "ohne" };
+    fs::write(ort.wurzel().join("recht.txt"), wort).expect("die Meldung laesst sich nicht ablegen");
+}
+
+/// Nach einem Absturz ist das Sitzungsrecht wieder zu haben (C3.13).
+///
+/// Der Kern gibt eine `flock`-Sperre beim Prozessende von sich aus frei, und
+/// `std::process::abort` laesst dem Prozess keine Gelegenheit aufzuraeumen. Eine
+/// Marke im Dateisystem ueberlebte diesen Absturz und sperrte jede weitere
+/// Instanz fuer immer aus; genau das prueft diese Zusicherung.
+#[test]
+fn nach_einem_absturz_bekommt_die_naechste_instanz_das_sitzungsrecht() {
+    use std::os::unix::process::ExitStatusExt;
+
+    let ordner = Pruefordner::neu("absturzrecht");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let ergebnis = kindprobe(
+        "kind_nimmt_das_sitzungsrecht_und_stirbt",
+        AUFTRAG_SPERRE,
+        ordner.pfad(),
+    );
+    assert_eq!(
+        ergebnis.status.signal(),
+        Some(SIGABRT),
+        "das Kind ist nicht abgestuerzt, sondern zurueckgekehrt: {:?}\n{}",
+        ergebnis.status,
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+    assert!(
+        ort.wurzel().join(SITZUNGSRECHT).is_file(),
+        "das Kind ist gestorben, bevor es das Recht genommen hat"
+    );
+
+    let recht = Sitzungsrecht::nehmen(&ort).expect("der Versuch ist gescheitert");
+    assert!(
+        recht.gehalten(),
+        "das Sitzungsrecht des abgestuerzten Kindes ist nicht frei geworden"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_SPERRE gestartet"]
+fn kind_nimmt_das_sitzungsrecht_und_stirbt() {
+    let Some(ort) = auftragsordner() else {
+        return;
+    };
+    let recht = Sitzungsrecht::nehmen(&ort).expect("der Versuch ist gescheitert");
+    assert!(recht.gehalten(), "das Kind sollte das Recht bekommen");
+    // Kein `Drop`, kein Aufraeumen: das ist der Absturz, den C3.13 meint.
+    std::process::abort();
+}
+
+/// Zwei Prozesse sind waehrend eines Durchgangs nicht zugleich in der Ablage
+/// (C3.7).
+///
+/// Geprueft wird mit einem Versuch ohne Warten und nicht mit einem zweiten
+/// Durchgang: ein wartendes Kind haenge bis zum Ende des Elternteils, und die
+/// Probe muesste eine Frist setzen. Die Frage lautet ohnehin nicht „wie lange
+/// wartet das Kind", sondern „sieht es die Sperre".
+#[test]
+fn waehrend_eines_durchgangs_sieht_ein_zweiter_prozess_die_schreibsperre() {
+    let ordner = Pruefordner::neu("schreibsperre");
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("Ablage laesst sich nicht oeffnen");
+
+    let waehrend = ablage
+        .durchgang(|_zugang| {
+            kindprobe(
+                "kind_meldet_die_schreibsperre",
+                AUFTRAG_SPERRE,
+                ordner.pfad(),
+            )
+        })
+        .expect("der Durchgang ist gescheitert");
+    assert!(waehrend.status.success());
+    assert_eq!(
+        fs::read_to_string(ordner.pfad().join("sperre.txt")).expect("das Kind hat nichts gemeldet"),
+        "belegt",
+        "waehrend eines Durchgangs war die Schreibsperre fuer einen zweiten Prozess frei"
+    );
+
+    let danach = kindprobe(
+        "kind_meldet_die_schreibsperre",
+        AUFTRAG_SPERRE,
+        ordner.pfad(),
+    );
+    assert!(danach.status.success());
+    assert_eq!(
+        fs::read_to_string(ordner.pfad().join("sperre.txt")).expect("das Kind hat nichts gemeldet"),
+        "frei",
+        "nach dem Durchgang ist die Schreibsperre nicht abgegeben worden"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_SPERRE gestartet"]
+fn kind_meldet_die_schreibsperre() {
+    let Some(ort) = auftragsordner() else {
+        return;
+    };
+    let datei = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(ort.wurzel().join(SCHREIBSPERRE))
+        .expect("die Sperrdatei laesst sich nicht oeffnen");
+    let wort = match sys::sperre_versuchen(&datei).expect("der Versuch ist gescheitert") {
+        Sperrversuch::Genommen => "frei",
+        Sperrversuch::Belegt => "belegt",
+    };
+    fs::write(ort.wurzel().join("sperre.txt"), wort)
+        .expect("die Meldung laesst sich nicht ablegen");
+}
+
+/// Ein Lesezeichen der anderen Instanz ueberlebt (C3.8).
+///
+/// Zwei Prozesse legen zugleich je [`ANLEGEZAHL`] Lesezeichen an, jeder in
+/// einem vollstaendigen Durchgang aus Lesen, Aendern und Schreiben. Am Ende
+/// stehen alle da.
+///
+/// **Ohne die Sperre schluege die Probe zu, ohne das frische Lesen ebenfalls.**
+/// Schriebe ein Kind die Liste, die es beim Start gelesen hat, verloere es
+/// jedesmal die Eintraege des anderen; laege das Lesen ausserhalb der Sperre,
+/// waere derselbe Verlust nur seltener. Die Zahl am Ende ist deshalb die
+/// Zusicherung und nicht die Abwesenheit eines Absturzes.
+#[test]
+fn zwei_prozesse_verlieren_die_lesezeichen_des_anderen_nicht() {
+    let ordner = Pruefordner::neu("lesezeichen");
+    let ort = Ablageort::an(ordner.pfad());
+    ort.anlegen()
+        .expect("der Ablageordner laesst sich nicht anlegen");
+
+    let mut kinder: Vec<std::process::Child> = (0..2)
+        .map(|_| kind_starten("kind_legt_lesezeichen_an", AUFTRAG_SPERRE, ordner.pfad()))
+        .collect();
+    for kind in &mut kinder {
+        let ergebnis = kind.wait().expect("das Kind laesst sich nicht abwarten");
+        assert!(
+            ergebnis.success(),
+            "ein Kind ist nicht sauber zurueckgekehrt"
+        );
+    }
+
+    let ablage = Ablage::oeffnen(ort).expect("Ablage laesst sich nicht oeffnen");
+    let liste: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert!(!liste.ist_ersetzt(), "bookmarks.toml ist beschaedigt");
+    assert_eq!(
+        liste.wert.zahl(),
+        2 * ANLEGEZAHL,
+        "ein Prozess hat die Lesezeichen des anderen ueberschrieben"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_SPERRE gestartet"]
+fn kind_legt_lesezeichen_an() {
+    let Some(ort) = auftragsordner() else {
+        return;
+    };
+    let ablage = Ablage::oeffnen(ort).expect("Ablage laesst sich nicht oeffnen");
+    let kennung = std::process::id();
+    for lauf in 0..ANLEGEZAHL {
+        ablage
+            .durchgang(|zugang| {
+                let mut liste: Lesezeichenliste = zugang.laden(Datei::Lesezeichen).wert;
+                let ausgang = liste.anwenden(&Aenderung::Anlegen {
+                    name: format!("{kennung}-{lauf}"),
+                    ziel: Ziel::Ordner {
+                        ordner: PathBuf::from("/"),
+                    },
+                });
+                assert!(matches!(ausgang, Ausgang::Geaendert(_)));
+                zugang
+                    .sichern(Datei::Lesezeichen, &liste)
+                    .expect("bookmarks.toml laesst sich nicht schreiben");
+            })
+            .expect("der Durchgang ist gescheitert");
+    }
+}
+
 /// Der Kern gibt nichts aus; er liefert den Satz und laesst den Aufrufer
 /// entscheiden.
 ///
@@ -1719,7 +2041,7 @@ fn die_ersetzung_kommt_als_text_zurueck_und_landet_auf_keinem_kanal() {
     let (_ordner, ablage) = ablage("meldung");
     fs::write(ablage.pfad(Datei::Sitzung), KAPUTT).expect("schreiben gescheitert");
 
-    let (sitzung, meldung) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+    let (sitzung, meldung) = geladen::<Sitzung>(&ablage, Datei::Sitzung).mit_meldung();
 
     assert_eq!(sitzung, Sitzung::default());
     let meldung = meldung.expect("eine beschaedigte Datei muss eine Meldung tragen");
@@ -1732,10 +2054,8 @@ fn die_ersetzung_kommt_als_text_zurueck_und_landet_auf_keinem_kanal() {
     );
 
     // Eine heile Datei liefert keinen Satz, den jemand anzeigen muesste.
-    ablage
-        .sichern(Datei::Sitzung, &beispielsitzung())
-        .expect("schreiben gescheitert");
-    let (_, keine) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+    gesichert(&ablage, Datei::Sitzung, &beispielsitzung()).expect("schreiben gescheitert");
+    let (_, keine) = geladen::<Sitzung>(&ablage, Datei::Sitzung).mit_meldung();
     assert_eq!(keine, None);
 }
 
@@ -1765,15 +2085,14 @@ fn die_vier_aenderungen_an_den_lesezeichen_ueberleben_einen_neustart() {
     assert!(liste.loeschen(0));
     assert_eq!(liste.verschieben(1, Verschiebung::Hoch), Some(0));
 
-    ablage
-        .sichern(Datei::Lesezeichen, &liste)
+    gesichert(&ablage, Datei::Lesezeichen, &liste)
         .expect("bookmarks.toml laesst sich nicht schreiben");
 
     // Der Neustart: eine zweite Ablage auf demselben Ordner liest die Datei so,
     // wie das Programm sie beim naechsten Start liest.
     let wieder = Ablage::oeffnen(Ablageort::an(ablage.ort().wurzel()))
         .expect("die Ablage laesst sich nicht ein zweites Mal oeffnen");
-    let gelesen: Geladen<Lesezeichenliste> = wieder.laden(Datei::Lesezeichen);
+    let gelesen: Geladen<Lesezeichenliste> = geladen(&wieder, Datei::Lesezeichen);
 
     assert!(!gelesen.ist_ersetzt());
     assert_eq!(gelesen.wert, liste);
@@ -1867,7 +2186,7 @@ ordner = \"/\"
 ";
     fs::write(ablage.pfad(Datei::Lesezeichen), alt).expect("schreiben gescheitert");
 
-    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
 
     assert!(
         !geladen.ist_ersetzt(),
@@ -1909,12 +2228,11 @@ fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
     let (_ordner, ablage) = ablage("lesezeichen-rundreise");
     let liste = gemischte_liste();
 
-    ablage
-        .sichern(Datei::Lesezeichen, &liste)
+    gesichert(&ablage, Datei::Lesezeichen, &liste)
         .expect("bookmarks.toml laesst sich nicht schreiben");
     let erster = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
 
-    let geladen: Geladen<Lesezeichenliste> = ablage.laden(Datei::Lesezeichen);
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     assert!(
         !geladen.ist_ersetzt(),
         "die geschriebene Datei liest sich nicht zurueck: {:?}",
@@ -1922,8 +2240,7 @@ fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
     );
     assert_eq!(geladen.wert, liste, "der Wert ueberlebt die Rundreise");
 
-    ablage
-        .sichern(Datei::Lesezeichen, &geladen.wert)
+    gesichert(&ablage, Datei::Lesezeichen, &geladen.wert)
         .expect("bookmarks.toml laesst sich nicht ein zweites Mal schreiben");
     let zweiter = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
 
@@ -1939,8 +2256,7 @@ fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
 #[test]
 fn die_geschriebene_datei_traegt_weder_geschachtelte_tabelle_noch_sortenkennung() {
     let (_ordner, ablage) = ablage("lesezeichen-lesbar");
-    ablage
-        .sichern(Datei::Lesezeichen, &gemischte_liste())
+    gesichert(&ablage, Datei::Lesezeichen, &gemischte_liste())
         .expect("bookmarks.toml laesst sich nicht schreiben");
     let text = fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
 

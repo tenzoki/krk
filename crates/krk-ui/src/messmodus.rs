@@ -302,9 +302,21 @@ impl Messplan {
         let ablage = Ablage::im_benutzerverzeichnis()
             .map_err(|fehler| format!("der Ablageordner laesst sich nicht oeffnen: {fehler}"))?;
         let pfad = ablage.pfad(krk_core::ablage::Datei::Sitzung);
-        let mut schreiber = Sitzungsschreiber::neu(&pfad);
-        schreiber
-            .vormerken(self.sitzung.clone(), Instant::now())
+        let mut schreiber = Sitzungsschreiber::neu();
+        // Unter der Schreibsperre wie jeder andere Weg auf die Platte. Der
+        // Messlauf ist der vierte Schreiber der Ablage und kein Sonderfall;
+        // gebraucht wird die Sperre hier nicht, weil kein zweiter Prozess
+        // mitschreibt, und ausgenommen wird der Lauf trotzdem nicht — eine
+        // Ausnahme waere der zweite Schreibweg, den `ablage::sperre`
+        // ausschliesst.
+        ablage
+            .durchgang(|zugang| schreiber.vormerken(self.sitzung.clone(), Instant::now(), zugang))
+            .map_err(|fehler| {
+                format!(
+                    "die Schreibsperre der Ablage laesst sich nicht nehmen, die Pruefsitzung \
+                     bleibt ungeschrieben: {fehler}"
+                )
+            })?
             .map_err(|fehler| {
                 format!(
                     "die Pruefsitzung liess sich nicht nach {} schreiben: {fehler}",

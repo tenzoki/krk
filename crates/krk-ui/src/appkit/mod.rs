@@ -183,6 +183,7 @@ mod terminal;
 mod textmerkmale;
 mod volumes;
 mod vorschau;
+mod weitereinstanz;
 mod zwischenablage;
 
 pub use anwendung::starten;

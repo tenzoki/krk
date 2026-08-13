@@ -320,7 +320,13 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::FensterSchliessen
         | Kommando::BereichVerbreitern
         | Kommando::BereichVerschmaelern => Funktionsbereich::Fenster,
-        Kommando::BelegungAnsehen | Kommando::Beenden => Funktionsbereich::Anwendung,
+        // Die weitere Instanz aus C3 der Runde 7 steht bei der Anwendung und
+        // nicht beim Fenster: sie startet einen zweiten Prozess mit eigener
+        // Menueleiste, und `Fenster` fuehrt die Bereiche **dieses** Fensters.
+        // Diese Runde fuehrt keine zweiten Fenster ein.
+        Kommando::BelegungAnsehen | Kommando::Beenden | Kommando::WeitereInstanz => {
+            Funktionsbereich::Anwendung
+        }
         // Der eingebaute Editor, und `bearbeiten` steht mit darin.
         //
         // Es ist die einzige Stelle, an der diese Gliederung und

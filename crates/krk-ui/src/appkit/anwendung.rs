@@ -203,8 +203,8 @@ use objc2_foundation::{
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
-    Ablage, Datei, Einstellungen, Fensterseite, Lesezeichenliste, Sitzung, Verschiebung, Ziel,
-    einstellungen, lesezeichen, pfade,
+    Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Lesezeichen, Lesezeichenliste,
+    Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, lesezeichen, pfade,
 };
 use krk_core::operation::{
     self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
@@ -254,9 +254,22 @@ use super::teilen;
 use super::terminal;
 use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
+use super::weitereinstanz;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
+
+/// Der Satz, den eine Instanz ohne Sitzungsrecht beim Start zeigt (C3.10).
+///
+/// **Er nennt die Folge und nicht den Mechanismus.** „Sitzungsrecht" ist ein
+/// Wort dieses Bauplans; was der Nutzer merkt, ist, dass dieses Fenster seine
+/// Tabs und seine Aufteilung nicht wiederfindet. Er steht als Konstante da,
+/// damit die Probe ihn nennen kann, ohne ihn abzuschreiben: `sitzung_laden`
+/// braucht einen Ablageordner und ein Fenster und ist ohne beides nicht zu
+/// pruefen. **Dass der Satz in der Statuszeile ankommt, sieht der Nutzer am
+/// laufenden Buendel**; er geht denselben Weg wie jede andere Startmeldung.
+const OHNE_SITZUNGSRECHT: &str = "eine weitere Instanz von KRK laeuft schon; Tabs und Aufteilung \
+                                  dieses Fensters werden nicht gesichert";
 
 /// Welche Station des Faengers einen Tastendruck der Belegungsansicht bekommt.
 ///
@@ -515,6 +528,20 @@ pub struct AnwendungsIvars {
     /// Ablageordner nicht oeffnen liess; die Meldung dazu steht dann in der
     /// Statuszeile, und die Leiste arbeitet ohne zu sichern weiter.
     ablage: RefCell<Option<Ablage>>,
+    /// Das Sitzungsrecht dieses Prozesses (C3 der Runde 7).
+    ///
+    /// **Es steht hier, weil es gehalten werden muss, und nicht, weil jemand es
+    /// abfragt.** Mit dem Wert faellt der Deskriptor, und mit dem Deskriptor die
+    /// Sperre; ein Recht, das nur genommen und dann fallengelassen wuerde,
+    /// liesse die naechste Instanz sich fuer die erste halten. Gefragt wird es
+    /// genau einmal, beim Start: wer es hat, bekommt einen
+    /// [`Sitzungsschreiber`], wer nicht, bekommt keinen. Danach steht die Regel
+    /// „nur die Halterin schreibt die Sitzung" an einem fehlenden Wert und nicht
+    /// an einer Abfrage, die jemand vergessen kann.
+    ///
+    /// Leer, solange `sitzung_laden` nicht gelaufen ist, und in den vier
+    /// Messmodus-Faellen, die keinen bleibenden Ablageordner oeffnen.
+    sitzungsrecht: OnceCell<Sitzungsrecht>,
     /// Der eine Eintrittspunkt fuer Tastendruecke.
     ///
     /// Veraenderlich seit Schritt 20: der Abgriff haelt seine Belegung selbst,
@@ -780,14 +807,39 @@ define_class!(
             self.sitzung_vormerken();
             let sitzung = self.sitzung_bauen();
             let mut schreiber = self.ivars().sitzungsschreiber.borrow_mut();
-            if let Some(schreiber) = schreiber.as_mut() {
-                let jetzt = Instant::now();
-                let _ = schreiber.vormerken(sitzung, jetzt);
-                let _ = schreiber.beenden(jetzt);
-            }
+            let Some(schreiber) = schreiber.as_mut() else {
+                // Kein Schreiber heisst: kein Sitzungsrecht, oder kein
+                // Ablageordner. Beides hat der Start gemeldet, und beim
+                // Beenden gibt es dafuer keine Statuszeile mehr.
+                return;
+            };
+            let jetzt = Instant::now();
+            // **Ein Durchgang und nicht zwei.** Das Vormerken und das Beenden
+            // laufen unter derselben Schreibsperre; zwei Durchgaenge liessen
+            // dazwischen eine andere Instanz schreiben, ohne dass es einen
+            // Grund dafuer gaebe.
+            let _ = self.unter_der_sperre(|zugang| {
+                let _ = schreiber.vormerken(sitzung, jetzt, zugang);
+                let _ = schreiber.beenden(jetzt, zugang);
+            });
         }
     }
 );
+
+/// Warum ein Durchgang durch die Ablage nicht zustande kam.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig. Sie steht neben dem
+/// Delegierten und nicht im Kern: der Kern kennt nur den zweiten Fall, den
+/// Fehlschlag beim Nehmen der Sperre. Dass es ueberhaupt keinen Ablageordner
+/// gibt, ist eine Lage der Oberflaeche, und sie ist kein Fehler — KRK laeuft
+/// dann und sichert nicht.
+#[derive(Debug)]
+enum Sperrhindernis {
+    /// Es gibt keinen Ablageordner. Der Start hat es gemeldet.
+    OhneOrdner,
+    /// Die Schreibsperre liess sich nicht nehmen.
+    Gesperrt(std::io::Error),
+}
 
 impl Anwendungsdelegierter {
     /// Einen Anwendungsdelegierten ohne Oberflaeche.
@@ -816,6 +868,7 @@ impl Anwendungsdelegierter {
             editor: OnceCell::new(),
             vorschau_nachtrag: RefCell::new(None),
             ablage: RefCell::new(None),
+            sitzungsrecht: OnceCell::new(),
             tastenabgriff: RefCell::new(None),
             belegungsansicht: RefCell::new(None),
             dateisystemwache: RefCell::new(None),
@@ -1068,6 +1121,23 @@ impl Anwendungsdelegierter {
         self.messmodus_einrichten();
     }
 
+    /// Warum ein Durchgang durch die Ablage nicht zustande kam.
+    ///
+    /// Zwei Faelle, und sie sind nicht derselbe: ohne Ablageordner hat der Start
+    /// schon gemeldet, dass nichts gesichert wird, und ein zweiter Satz waere
+    /// dieselbe Auskunft ein zweites Mal; eine Sperre, die sich nicht nehmen
+    /// laesst, ist dagegen neu und gehoert gemeldet. Jeder Aufrufer von
+    /// [`Anwendungsdelegierter::unter_der_sperre`] entscheidet beide einzeln.
+    fn unter_der_sperre<T>(
+        &self,
+        arbeit: impl FnOnce(&Zugang<'_>) -> T,
+    ) -> Result<T, Sperrhindernis> {
+        match self.ivars().ablage.borrow().as_ref() {
+            Some(ablage) => ablage.durchgang(arbeit).map_err(Sperrhindernis::Gesperrt),
+            None => Err(Sperrhindernis::OhneOrdner),
+        }
+    }
+
     /// Laedt die Sitzung und den Ablageordner, oder liefert den
     /// Auslieferungszustand.
     ///
@@ -1105,7 +1175,17 @@ impl Anwendungsdelegierter {
                         std::process::exit(4);
                     }
                 };
-                let geladen = ablage.laden::<Sitzung>(Datei::Sitzung);
+                let geladen =
+                    match ablage.durchgang(|zugang| zugang.laden::<Sitzung>(Datei::Sitzung)) {
+                        Ok(geladen) => geladen,
+                        Err(fehler) => {
+                            eprintln!(
+                                "krk: die Schreibsperre der Ablage laesst sich nicht nehmen \
+                             ({fehler}); ohne sie gibt es keine Pruefsitzung und keine Zahl."
+                            );
+                            std::process::exit(4);
+                        }
+                    };
                 if geladen.ist_ersetzt() {
                     eprintln!(
                         "krk: in session.toml steht keine lesbare Pruefsitzung. Der \
@@ -1128,16 +1208,62 @@ impl Anwendungsdelegierter {
                 return (Sitzung::default(), meldungen);
             }
         };
-        *ivars.sitzungsschreiber.borrow_mut() = Some(ablage.sitzungsschreiber());
-        let (sitzung, meldung) = ablage.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+        // **Das Sitzungsrecht zuerst, und ohne zu warten** (C3.9, C3.11 der
+        // Runde 7). Wer es bekommt, schreibt die Sitzung; wer nicht, laeuft
+        // ohne Sitzungsschreiber weiter und sagt es einmal. Ein zweiter Versuch
+        // findet nie statt: die Zustaendigkeit wandert innerhalb eines
+        // Prozesslebens nicht.
+        //
+        // Es steht **vor** dem Durchgang und nicht darin. Die beiden Sperren
+        // sind zwei Absprachen mit zwei Lebensdauern, und die Reihenfolge ist
+        // damit fest und ohne Ring; siehe den Kopf von
+        // `krk_core::ablage::sperre`.
+        let recht = match Sitzungsrecht::nehmen(ablage.ort()) {
+            Ok(recht) => recht,
+            Err(fehler) => {
+                meldungen.push(format!(
+                    "das Sitzungsrecht laesst sich nicht anfordern, die Sitzung wird nicht \
+                     gesichert: {fehler}"
+                ));
+                Sitzungsrecht::ohne()
+            }
+        };
+        if recht.gehalten() {
+            *ivars.sitzungsschreiber.borrow_mut() = Some(Sitzungsschreiber::neu());
+        } else {
+            // C3.10: eine Instanz, die die Sitzung nicht schreibt, sagt es beim
+            // Start einmal. Der Satz nennt die Folge und nicht den Mechanismus:
+            // was der Nutzer merkt, ist die nicht gemerkte Aufteilung.
+            meldungen.push(OHNE_SITZUNGSRECHT.to_owned());
+        }
+        let _ = ivars.sitzungsrecht.set(recht);
+
+        // **Ein Durchgang fuer beide Dateien.** Die Sitzung und die
+        // Einstellungen werden unter derselben Schreibsperre gelesen; das Lesen
+        // steht mit darunter, weil schon `Zugang::laden` schreibt, wenn eine
+        // Datei beschaedigt ist und zur Seite gelegt wird.
+        let gelesen = ablage.durchgang(|zugang| {
+            let sitzung = zugang.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
+            // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
+            // `settings.toml` beim ersten Start an; ohne diese Anlage haette der
+            // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
+            // Datei schreibt.
+            let eingestellt = einstellungen::laden(zugang).mit_meldung();
+            (sitzung, eingestellt)
+        });
+        let ((sitzung, meldung), (eingestellt, meldung_einstellungen)) = match gelesen {
+            Ok(beides) => beides,
+            Err(fehler) => {
+                meldungen.push(format!(
+                    "die Schreibsperre der Ablage laesst sich nicht nehmen, es wird nichts \
+                     geladen und nichts gesichert: {fehler}"
+                ));
+                return (Sitzung::default(), meldungen);
+            }
+        };
         meldungen.extend(meldung);
-        // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
-        // `settings.toml` beim ersten Start an; ohne diese Anlage haette der
-        // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
-        // Datei schreibt.
-        let (eingestellt, meldung) = einstellungen::laden(&ablage).mit_meldung();
         *ivars.einstellungen.borrow_mut() = eingestellt;
-        meldungen.extend(meldung);
+        meldungen.extend(meldung_einstellungen);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
         // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
         // den Ordner an, und zweimal anzulegen hiesse, dieselbe Frage zweimal an
@@ -1234,18 +1360,26 @@ impl Anwendungsdelegierter {
     /// beschaedigte Sitzung: Auslieferungszustand, also eine leere Liste, und
     /// eine Meldung in der Statuszeile.
     fn leiste_einrichten(&self, meldungen: &mut Vec<String>) {
-        let geladen = match self.ivars().ablage.borrow().as_ref() {
-            Some(ablage) => {
-                let (liste, meldung) = ablage
-                    .laden::<Lesezeichenliste>(Datei::Lesezeichen)
-                    .mit_meldung();
+        let geladen = match self.unter_der_sperre(|zugang| {
+            zugang
+                .laden::<Lesezeichenliste>(Datei::Lesezeichen)
+                .mit_meldung()
+        }) {
+            Ok((liste, meldung)) => {
                 meldungen.extend(meldung);
                 liste
             }
             // Ohne Ablageordner gibt es nichts zu laden und nichts zu sichern.
             // Die Meldung darueber hat `sitzung_laden` schon gestellt; eine
             // zweite waere dieselbe Auskunft ein zweites Mal.
-            None => Lesezeichenliste::default(),
+            Err(Sperrhindernis::OhneOrdner) => Lesezeichenliste::default(),
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                meldungen.push(format!(
+                    "die Lesezeichen liessen sich nicht laden, die Schreibsperre der Ablage \
+                     ist nicht zu nehmen: {fehler}"
+                ));
+                Lesezeichenliste::default()
+            }
         };
         let leiste = self.leiste();
         leiste.quelle().lesezeichen_setzen(&geladen);
@@ -1342,25 +1476,102 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Schreibt die Lesezeichen nach `bookmarks.toml` (C5).
+    /// Fuehrt eine Aenderung an den Lesezeichen aus und sichert sie (C5, C6).
     ///
-    /// Nach **jeder** Aenderung, wie `### Frage 4` des Plans es fuer diese
-    /// Datei vorschreibt, und nicht gebuendelt wie die Sitzung: eine Aenderung
-    /// an den Lesezeichen ist eine Handlung des Nutzers und keine Nebenwirkung
-    /// des Arbeitens, davon gibt es wenige, und jede soll einen Absturz
-    /// ueberleben.
-    fn lesezeichen_sichern(&self, seite: Fensterseite) {
-        let liste = self.leiste().quelle().lesezeichenliste();
-        let ergebnis = match self.ivars().ablage.borrow().as_ref() {
-            Some(ablage) => ablage.sichern(Datei::Lesezeichen, &liste),
-            None => return,
+    /// **Ein vollstaendiger Durchgang aus Lesen, Aendern und Schreiben unter der
+    /// Schreibsperre** (C3.8 der Runde 7). Bis dahin schrieb diese Stelle die
+    /// Liste, die die Leiste seit dem Programmstart hielt, blind ueber die
+    /// Datei; ein Lesezeichen, das eine zweite Instanz inzwischen angelegt
+    /// hatte, war damit fort. Jetzt wird `bookmarks.toml` unter der Sperre
+    /// frisch gelesen, die eine [`Aenderung`] darauf angewandt und das Ergebnis
+    /// geschrieben. Laege das Lesen ausserhalb der Sperre, waere die verlorene
+    /// Aenderung nur seltener und nicht fort.
+    ///
+    /// **Die Leiste zeigt danach das Ergebnis und nicht ihre eigene Rechnung.**
+    /// Sie bekommt die geschriebene Liste zurueck; was die andere Instanz
+    /// beigetragen hat, steht damit sofort in der Leiste, ohne dass diese Runde
+    /// dafuer eine Beobachtung des Ablageordners baut.
+    ///
+    /// **Ohne Ablageordner wird gerechnet und nicht geschrieben.** Der Befehl
+    /// wirkt dann in der laufenden Sitzung und ist mit dem Beenden fort; die
+    /// Meldung darueber hat der Start gestellt. Es ist derselbe Rechenweg,
+    /// [`Lesezeichenliste::anwenden`], und kein zweiter.
+    ///
+    /// Nach **jeder** Aenderung geschrieben, wie `### Frage 4` des Plans es fuer
+    /// diese Datei vorschreibt, und nicht gebuendelt wie die Sitzung: eine
+    /// Aenderung an den Lesezeichen ist eine Handlung des Nutzers und keine
+    /// Nebenwirkung des Arbeitens, davon gibt es wenige, und jede soll einen
+    /// Absturz ueberleben.
+    fn lesezeichen_aendern(&self, seite: Fensterseite, aenderung: &Aenderung) {
+        let ergebnis = self.unter_der_sperre(|zugang| {
+            let (mut liste, meldung) = zugang
+                .laden::<Lesezeichenliste>(Datei::Lesezeichen)
+                .mit_meldung();
+            let ausgang = liste.anwenden(aenderung);
+            let geschrieben = match ausgang {
+                Ausgang::Geaendert(_) => Some(zugang.sichern(Datei::Lesezeichen, &liste)),
+                Ausgang::Unveraendert | Ausgang::Verschwunden => None,
+            };
+            (liste, ausgang, geschrieben, meldung)
+        });
+
+        let (liste, ausgang, geschrieben, meldung) = match ergebnis {
+            Ok(alles) => alles,
+            Err(Sperrhindernis::OhneOrdner) => {
+                let mut liste = self.leiste().quelle().lesezeichenliste();
+                let ausgang = liste.anwenden(aenderung);
+                (liste, ausgang, None, None)
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                self.antwort_zeigen(
+                    seite,
+                    &format!(
+                        "die Lesezeichen liessen sich nicht aendern, die Schreibsperre der \
+                         Ablage ist nicht zu nehmen: {fehler}"
+                    ),
+                );
+                return;
+            }
         };
-        if let Err(fehler) = ergebnis {
+
+        // Die Leiste zeigt in jedem der drei Ausgaenge die gelesene Liste: auch
+        // ein verschwundenes Lesezeichen ist eine Auskunft, die der Nutzer
+        // sehen soll.
+        let stelle = match ausgang {
+            Ausgang::Geaendert(stelle) => Some(stelle),
+            Ausgang::Unveraendert | Ausgang::Verschwunden => None,
+        };
+        self.leiste()
+            .quelle()
+            .lesezeichen_uebernehmen(&liste, stelle);
+
+        if let Some(meldung) = meldung {
+            self.antwort_zeigen(seite, &meldung);
+            return;
+        }
+        if matches!(ausgang, Ausgang::Verschwunden) {
+            self.antwort_zeigen(
+                seite,
+                "das Lesezeichen gibt es nicht mehr; eine andere Instanz von KRK hat es \
+                 geloescht",
+            );
+            return;
+        }
+        if let Some(Err(fehler)) = geschrieben {
             self.antwort_zeigen(
                 seite,
                 &format!("die Lesezeichen liessen sich nicht sichern: {fehler}"),
             );
         }
+    }
+
+    /// Das ausgewaehlte Lesezeichen, oder nichts.
+    ///
+    /// Das Ziel der drei Befehle, die ein vorhandenes Lesezeichen aendern.
+    /// Steht die Auswahl auf einer Ueberschrift oder einem Geraet, wirken sie
+    /// nicht und melden es nicht, wie der Wirkungsbereich es auch nicht tut.
+    fn gewaehltes_lesezeichen(&self) -> Option<Lesezeichen> {
+        self.leiste().quelle().gewaehltes_lesezeichen()
     }
 
     /// `cmd+d` legt ein Lesezeichen an: einen Ordner oder eine Textstelle (C5,
@@ -1493,6 +1704,24 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Startet eine weitere Instanz von KRK (C3 der Runde 7).
+    ///
+    /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
+    /// zu melden hatte. Ein `false` gaebe den Tastendruck an AppKit weiter, das
+    /// mit ihm nichts anfangen kann — dieselbe Ueberlegung wie bei
+    /// [`Self::terminal_oeffnen`] darueber.
+    ///
+    /// Der eine Fall, den der Nutzer sieht, ist der Entwicklungslauf ohne
+    /// Buendel; er geht als Befehlsantwort in die Statuszeile, den ersten der
+    /// fuenf Raenge.
+    fn weitere_instanz_starten(&self) -> bool {
+        if let Some(meldung) = weitereinstanz::starten() {
+            let seite = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(seite, meldung);
+        }
+        true
+    }
+
     /// Legt das Lesezeichen an und sichert die Datei (C5, C6).
     ///
     /// Nimmt das fertige [`Ziel`] entgegen und fragt nicht nach der Sorte: die
@@ -1503,10 +1732,13 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, hinweis.grund());
             return;
         }
-        self.leiste()
-            .quelle()
-            .lesezeichen_anlegen(name, ziel.clone());
-        self.lesezeichen_sichern(seite);
+        self.lesezeichen_aendern(
+            seite,
+            &Aenderung::Anlegen {
+                name: name.to_owned(),
+                ziel: ziel.clone(),
+            },
+        );
         self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
     }
 
@@ -1516,12 +1748,12 @@ impl Anwendungsdelegierter {
     /// Steht die Auswahl nicht auf einem Lesezeichen, geschieht nichts und wird
     /// nichts gemeldet: dieselbe Antwort, die der Wirkungsbereich gibt.
     fn lesezeichen_umbenennen(&self) -> bool {
-        let (Some(fenster), Some(alt)) = (
-            self.ivars().fenster.get(),
-            self.leiste().quelle().gewaehlter_lesezeichenname(),
-        ) else {
+        let (Some(fenster), Some(gewaehlt)) =
+            (self.ivars().fenster.get(), self.gewaehltes_lesezeichen())
+        else {
             return false;
         };
+        let alt = gewaehlt.name;
         let seite = self.ivars().modell.borrow().aktiv();
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
@@ -1546,26 +1778,35 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, hinweis.grund());
             return;
         }
-        if self.leiste().quelle().lesezeichen_umbenennen(name) {
-            self.lesezeichen_sichern(seite);
-        }
+        let Some(welches) = self.gewaehltes_lesezeichen() else {
+            return;
+        };
+        self.lesezeichen_aendern(
+            seite,
+            &Aenderung::Umbenennen {
+                welches,
+                name: name.to_owned(),
+            },
+        );
     }
 
     /// Loescht das ausgewaehlte Lesezeichen und sichert die Datei (C5).
     fn lesezeichen_loeschen(&self) -> bool {
-        if !self.leiste().quelle().lesezeichen_loeschen() {
+        let Some(welches) = self.gewaehltes_lesezeichen() else {
             return false;
-        }
-        self.lesezeichen_sichern(self.ivars().modell.borrow().aktiv());
+        };
+        let seite = self.ivars().modell.borrow().aktiv();
+        self.lesezeichen_aendern(seite, &Aenderung::Loeschen { welches });
         true
     }
 
     /// Schiebt das ausgewaehlte Lesezeichen einen Platz weiter (C5).
     fn lesezeichen_verschieben(&self, richtung: Verschiebung) -> bool {
-        if !self.leiste().quelle().lesezeichen_verschieben(richtung) {
+        let Some(welches) = self.gewaehltes_lesezeichen() else {
             return false;
-        }
-        self.lesezeichen_sichern(self.ivars().modell.borrow().aktiv());
+        };
+        let seite = self.ivars().modell.borrow().aktiv();
+        self.lesezeichen_aendern(seite, &Aenderung::Verschieben { welches, richtung });
         true
     }
 
@@ -2413,6 +2654,11 @@ impl Anwendungsdelegierter {
             }
             Kommando::FensterSchliessen => self.fenster_schliessen(),
             Kommando::Beenden => self.beenden(),
+            // **Ein eigener Zweig, und der Uebersetzer haette ihn nicht
+            // verlangt.** Das `match` hier endet mit einem Auffangzweig auf
+            // `bereichskommando`; ein neues Kommando ohne eigenen Zweig fiele
+            // dort stillschweigend hindurch und taete nichts.
+            Kommando::WeitereInstanz => self.weitere_instanz_starten(),
             Kommando::BereichVerbreitern => self.breite_aendern(BREITENSCHRITT),
             Kommando::BereichVerschmaelern => self.breite_aendern(-BREITENSCHRITT),
             // Die Lesezeichen aus C5. Sie stehen hier und nicht in der Leiste,
@@ -2803,17 +3049,19 @@ impl Anwendungsdelegierter {
         // Das Sichern scheitert nicht still: eine Belegung, die der Nutzer
         // gesetzt hat und die den Neustart doch nicht ueberlebt, waere die
         // Sorte Fehler, die erst Tage spaeter auffaellt.
-        let meldung = match self.ivars().ablage.borrow().as_ref() {
-            Some(ablage) => match belegung.sichern(ablage) {
-                Ok(()) => None,
-                Err(fehler) => Some(format!(
-                    "die Belegung gilt, liess sich aber nicht sichern: {fehler}"
-                )),
-            },
-            None => Some(
+        let meldung = match self.unter_der_sperre(|zugang| belegung.sichern(zugang)) {
+            Ok(Ok(())) => None,
+            Ok(Err(fehler)) => Some(format!(
+                "die Belegung gilt, liess sich aber nicht sichern: {fehler}"
+            )),
+            Err(Sperrhindernis::OhneOrdner) => Some(
                 "die Belegung gilt, ist aber ohne Ablageordner nicht gesichert und geht mit dem Beenden verloren"
                     .to_owned(),
             ),
+            Err(Sperrhindernis::Gesperrt(fehler)) => Some(format!(
+                "die Belegung gilt, ist aber nicht gesichert: die Schreibsperre der Ablage \
+                 laesst sich nicht nehmen ({fehler})"
+            )),
         };
         *self.ivars().belegung.borrow_mut() = belegung;
 
@@ -5082,7 +5330,17 @@ impl Anwendungsdelegierter {
             let schreiber = schreiber
                 .as_mut()
                 .expect("oben geprueft, und dazwischen laeuft nichts");
-            schreiber.vormerken(sitzung, Instant::now())
+            // Der Durchgang umfasst genau das Schreiben: der Stand steht schon
+            // im Schreiber, und gelesen wird hier nichts. Ohne Ablageordner
+            // gaebe es keinen Schreiber, also kann `unter_der_sperre` hier nur
+            // an der Sperre selbst scheitern.
+            match self
+                .unter_der_sperre(|zugang| schreiber.vormerken(sitzung, Instant::now(), zugang))
+            {
+                Ok(ergebnis) => ergebnis,
+                Err(Sperrhindernis::OhneOrdner) => Ok(false),
+                Err(Sperrhindernis::Gesperrt(fehler)) => Err(fehler),
+            }
         };
         if let Err(fehler) = ergebnis
             && !self.ivars().schreibfehler_gemeldet.replace(true)
@@ -5599,6 +5857,29 @@ mod faengerproben {
     /// Feldern widersprechen.
     fn druck_mit(name: &str, rohe_flaggen: u64) -> Tastendruck {
         Tastendruck::neu(code_von_pflicht(name), normalisieren(rohe_flaggen))
+    }
+
+    /// Eine Instanz ohne Sitzungsrecht sagt es, und sie sagt die Folge (C3.10).
+    ///
+    /// Geprueft wird der Satz und nicht sein Weg in die Statuszeile: den geht er
+    /// ueber den Meldungsvektor des Starts wie jede andere Startmeldung, und
+    /// sichtbar ist er am laufenden Buendel. Was hier festgehalten wird, ist,
+    /// dass er ueberhaupt einen nennt und nicht das Wort „Sitzungsrecht"
+    /// weiterreicht, das nur dieser Bauplan kennt.
+    #[test]
+    fn der_satz_ohne_sitzungsrecht_nennt_die_folge_und_nicht_den_mechanismus() {
+        assert!(
+            OHNE_SITZUNGSRECHT.contains("weitere Instanz"),
+            "der Satz nennt den Grund nicht: {OHNE_SITZUNGSRECHT}"
+        );
+        assert!(
+            OHNE_SITZUNGSRECHT.contains("nicht gesichert"),
+            "der Satz nennt die Folge nicht: {OHNE_SITZUNGSRECHT}"
+        );
+        assert!(
+            !OHNE_SITZUNGSRECHT.contains("Sitzungsrecht"),
+            "der Satz reicht ein Wort dieses Bauplans an den Nutzer weiter: {OHNE_SITZUNGSRECHT}"
+        );
     }
 
     /// Waehrend der Aufnahme bekommt die Suche nichts (C1.15).

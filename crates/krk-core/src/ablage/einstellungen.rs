@@ -48,7 +48,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use super::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, atomar};
+use super::{Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, atomar};
 
 /// Die Auslieferungsfassung der Einstellungen, in das Programm einkompiliert.
 ///
@@ -146,8 +146,8 @@ struct Einstellungsdatei {
 ///
 /// Hoechstens eine Meldung kann anfallen: angelegt wird nur, was fehlt, und
 /// eine fehlende Datei traegt keine Ersetzung.
-pub fn laden(ablage: &Ablage) -> Geladen<Einstellungen> {
-    let roh: Geladen<Einstellungsdatei> = ablage.laden(Datei::Einstellungen);
+pub fn laden(zugang: &Zugang<'_>) -> Geladen<Einstellungen> {
+    let roh: Geladen<Einstellungsdatei> = zugang.laden(Datei::Einstellungen);
     let wert = Einstellungen::aus_datei(&roh.wert);
     if roh.ersetzung.is_some() {
         return Geladen {
@@ -155,7 +155,7 @@ pub fn laden(ablage: &Ablage) -> Geladen<Einstellungen> {
             ersetzung: roh.ersetzung,
         };
     }
-    match anlegen_falls_fehlt(ablage) {
+    match anlegen_falls_fehlt(zugang) {
         Ok(()) => Geladen {
             wert,
             ersetzung: None,
@@ -163,7 +163,7 @@ pub fn laden(ablage: &Ablage) -> Geladen<Einstellungen> {
         Err(fehler) => Geladen {
             wert,
             ersetzung: Some(Ersetzung {
-                datei: ablage.pfad(Datei::Einstellungen),
+                datei: zugang.pfad(Datei::Einstellungen),
                 grund: Grund::NichtAnlegbar(fehler.to_string()),
                 // Eine Datei, die es nicht gibt, hat keinen Inhalt zu sichern.
                 beiseite: Beiseite::Nicht,
@@ -176,8 +176,8 @@ pub fn laden(ablage: &Ablage) -> Geladen<Einstellungen> {
 ///
 /// Wiederholbar wie [`super::Ablageort::anlegen`] eine Ebene hoeher: eine
 /// vorhandene Datei ist kein Fehler und wird nicht angefasst.
-fn anlegen_falls_fehlt(ablage: &Ablage) -> io::Result<()> {
-    let pfad = ablage.pfad(Datei::Einstellungen);
+fn anlegen_falls_fehlt(zugang: &Zugang<'_>) -> io::Result<()> {
+    let pfad = zugang.pfad(Datei::Einstellungen);
     if pfad.try_exists()? {
         return Ok(());
     }

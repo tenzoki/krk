@@ -42,7 +42,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Verschiebung, Ziel};
+use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Ziel};
 
 /// Die Ueberschrift des oberen Teils.
 pub const UEBERSCHRIFT_LESEZEICHEN: &str = "Lesezeichen";
@@ -478,70 +478,48 @@ impl Leistenmodell {
         }
     }
 
-    /// Legt ein Lesezeichen an und waehlt es aus (C5, C6).
+    /// Das ausgewaehlte Lesezeichen als Wert, falls eines ausgewaehlt ist (C5).
     ///
-    /// **Eine Tuer fuer beide Sorten**, wie [`Lesezeichenliste::anlegen`] eine
-    /// ist: die Funktion nimmt das fertige [`Ziel`] entgegen und fragt an
-    /// keiner Stelle nach der Sorte. Wer die Sorte waehlt, ist der Fokus, und
-    /// das entscheidet `crate::appkit::anwendung` beim Tastendruck; ein zweites
-    /// Gegenstueck fuer Textmarken daneben waere der zweite Mechanismus fuer
-    /// dieselbe Aufgabe.
-    pub fn anlegen(&mut self, name: &str, ziel: Ziel) {
-        let mut liste = self.lesezeichenliste();
-        let stelle = liste.anlegen(name, ziel);
-        self.lesezeichen_setzen(&liste);
-        self.auswahl = self.zeile_des_lesezeichens(stelle);
+    /// **Der Eintrag und nicht seine Stelle**, und darauf beruht seit der
+    /// Runde 7 die Zusage aus C3.8. Die drei Befehle, die ein vorhandenes
+    /// Lesezeichen aendern, nennen ihr Ziel damit als Wert; eine Stelle waere
+    /// eine Zahl in **dieser** Liste, und geschrieben wird auf die frisch von
+    /// der Platte gelesene, in der an derselben Stelle ein anderes stehen kann.
+    /// Der Modulkopf von [`krk_core::ablage::lesezeichen`] schreibt es aus.
+    pub fn gewaehltes_lesezeichen_wert(&self) -> Option<Lesezeichen> {
+        let stelle = self.gewaehltes_lesezeichen()?;
+        self.lesezeichen
+            .get(stelle)
+            .map(|gemerkt| gemerkt.lesezeichen.clone())
     }
 
-    /// Benennt das ausgewaehlte Lesezeichen um (C5).
+    /// Uebernimmt eine gelesene Lesezeichenliste und stellt die Auswahl (C5).
     ///
-    /// Liefert, ob sich etwas geaendert hat.
-    pub fn umbenennen(&mut self, name: &str) -> bool {
-        let Some(stelle) = self.gewaehltes_lesezeichen() else {
-            return false;
-        };
-        let mut liste = self.lesezeichenliste();
-        if !liste.umbenennen(stelle, name) {
-            return false;
+    /// Der eine Weg, auf dem eine geaenderte Liste in die Leiste kommt. Bis zur
+    /// Runde 7 rechneten hier vier Methoden die neue Liste selbst aus und
+    /// schrieben sie danach; seither entsteht sie unter der Schreibsperre aus
+    /// der Datei, und die Leiste uebernimmt das Ergebnis.
+    ///
+    /// `stelle` ist der betroffene Eintrag: die Auswahl haengt am Lesezeichen
+    /// und nicht an der Zeilennummer, sonst schoebe der zweite Tastendruck den
+    /// naechsten Eintrag.
+    ///
+    /// **Zwei Faelle lassen die Auswahl, wo sie ist**, und in beiden hat
+    /// `lesezeichen_setzen` sie ueber `auswahl_nachziehen` schon auf eine
+    /// waehlbare Zeile gestellt:
+    ///
+    /// - `None`, also kein betroffener Eintrag.
+    /// - Eine Stelle, die die neue Liste nicht mehr fuehrt. Das ist der Fall
+    ///   nach dem Loeschen des letzten Lesezeichens: die Zeile darunter ist die
+    ///   Ueberschrift der Geraete, und `auswahl_nachziehen` geht von dort auf
+    ///   das erste Geraet. Nach dem Loeschen eines Eintrags in der Mitte gibt es
+    ///   die Stelle dagegen weiter, und sie trifft den nachgerueckten Eintrag —
+    ///   dieselbe Antwort, die die Auswahl in der Dateiliste gibt.
+    pub fn uebernehmen(&mut self, liste: &Lesezeichenliste, stelle: Option<usize>) {
+        self.lesezeichen_setzen(liste);
+        if let Some(zeile) = stelle.and_then(|stelle| self.zeile_des_lesezeichens(stelle)) {
+            self.auswahl = Some(zeile);
         }
-        self.lesezeichen_setzen(&liste);
-        self.auswahl = self.zeile_des_lesezeichens(stelle);
-        true
-    }
-
-    /// Loescht das ausgewaehlte Lesezeichen (C5).
-    ///
-    /// Die Auswahl bleibt auf derselben Zeile stehen und trifft damit den
-    /// nachgerueckten Eintrag; war es der letzte Lesezeichen, ruecken die
-    /// Ueberschrift und die Geraete nach, und [`Leistenmodell::auswahl_nachziehen`]
-    /// setzt sie auf die naechste waehlbare Zeile.
-    pub fn loeschen(&mut self) -> bool {
-        let Some(stelle) = self.gewaehltes_lesezeichen() else {
-            return false;
-        };
-        let mut liste = self.lesezeichenliste();
-        if !liste.loeschen(stelle) {
-            return false;
-        }
-        self.lesezeichen_setzen(&liste);
-        true
-    }
-
-    /// Schiebt das ausgewaehlte Lesezeichen einen Platz weiter (C5).
-    ///
-    /// Die Auswahl wandert mit: sie haengt am Lesezeichen und nicht an der
-    /// Zeilennummer, sonst schoebe der zweite Tastendruck den naechsten Eintrag.
-    pub fn verschieben(&mut self, richtung: Verschiebung) -> bool {
-        let Some(stelle) = self.gewaehltes_lesezeichen() else {
-            return false;
-        };
-        let mut liste = self.lesezeichenliste();
-        let Some(ziel) = liste.verschieben(stelle, richtung) else {
-            return false;
-        };
-        self.lesezeichen_setzen(&liste);
-        self.auswahl = self.zeile_des_lesezeichens(ziel);
-        true
     }
 
     /// Baut die Zeilenliste aus den beiden Teilen neu auf.
@@ -593,6 +571,8 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
 
+    use krk_core::ablage::{Aenderung, Ausgang, Verschiebung};
+
     use super::*;
     use crate::pruefordner::Pruefordner;
 
@@ -619,6 +599,38 @@ mod tests {
         (0..modell.zeilen().len())
             .map(|stelle| modell.sinnbild(stelle))
             .collect()
+    }
+
+    /// Fuehrt eine Aenderung an den Lesezeichen so aus, wie der Delegierte es
+    /// tut: rechnen und das Ergebnis samt betroffener Stelle uebernehmen.
+    ///
+    /// Seit der Runde 7 rechnet das Modell nicht mehr selbst; die geaenderte
+    /// Liste kommt unter der Schreibsperre von der Platte. Die Proben nehmen
+    /// denselben Weg, nur ohne Datei, und pruefen damit weiter, was hier zu
+    /// pruefen ist: wo die Auswahl danach steht.
+    fn aendern(modell: &mut Leistenmodell, aenderung: &Aenderung) -> Ausgang {
+        let mut liste = modell.lesezeichenliste();
+        let ausgang = liste.anwenden(aenderung);
+        let stelle = match ausgang {
+            Ausgang::Geaendert(stelle) => Some(stelle),
+            Ausgang::Unveraendert | Ausgang::Verschwunden => None,
+        };
+        modell.uebernehmen(&liste, stelle);
+        ausgang
+    }
+
+    /// Aendert das ausgewaehlte Lesezeichen, oder meldet, dass keines gewaehlt
+    /// ist.
+    ///
+    /// Die drei Befehle, die ein vorhandenes Lesezeichen treffen, nennen ihr
+    /// Ziel als Eintrag. Steht die Auswahl auf einer Ueberschrift oder einem
+    /// Geraet, gibt es keinen, und der Befehl wirkt nicht.
+    fn gewaehltes_aendern(
+        modell: &mut Leistenmodell,
+        bauen: impl FnOnce(Lesezeichen) -> Aenderung,
+    ) -> Option<Ausgang> {
+        let welches = modell.gewaehltes_lesezeichen_wert()?;
+        Some(aendern(modell, &bauen(welches)))
     }
 
     /// Ein Ordnerziel aus einem Pfad, damit die Proben kurz bleiben.
@@ -807,7 +819,17 @@ mod tests {
     #[test]
     fn ein_neues_lesezeichen_steht_unten_und_ist_ausgewaehlt() {
         let mut modell = modell();
-        modell.anlegen("Drei", ordnerziel("/drei"));
+        assert_eq!(
+            aendern(
+                &mut modell,
+                &Aenderung::Anlegen {
+                    name: "Drei".to_owned(),
+                    ziel: ordnerziel("/drei"),
+                },
+            ),
+            Ausgang::Geaendert(2),
+            "ein neues Lesezeichen haengt unten an"
+        );
         assert_eq!(modell.auswahl(), Some(3));
         assert_eq!(modell.beschriftung(3).as_deref(), Some("Drei (fehlt)"));
         assert_eq!(modell.lesezeichenliste().zahl(), 3);
@@ -815,15 +837,22 @@ mod tests {
 
     /// Beide Sorten gehen durch dieselbe Tuer und stehen in einer Ordnung (C6).
     ///
-    /// Die Probe zu [`Leistenmodell::anlegen`] nach S38: die Funktion nimmt das
-    /// fertige [`Ziel`] entgegen, und die angelegte Textmarke haengt unten an
-    /// wie eine Ordnermarke — keine eigene Ordnung, keine Sortierung nach Sorte.
+    /// Die Probe zu [`Aenderung::Anlegen`] nach S38: der Vorgang traegt das
+    /// fertige [`Ziel`], und die angelegte Textmarke haengt unten an wie eine
+    /// Ordnermarke — keine eigene Ordnung, keine Sortierung nach Sorte.
     #[test]
     fn eine_angelegte_textmarke_haengt_unten_an_und_ist_ausgewaehlt() {
         let mut modell = modell();
-        modell.anlegen(
-            "Die Lesestelle",
-            textziel("/eins/leser.rs", 118, "let x = 1;"),
+        assert_eq!(
+            aendern(
+                &mut modell,
+                &Aenderung::Anlegen {
+                    name: "Die Lesestelle".to_owned(),
+                    ziel: textziel("/eins/leser.rs", 118, "let x = 1;"),
+                },
+            ),
+            Ausgang::Geaendert(2),
+            "ein neues Lesezeichen haengt unten an"
         );
         assert_eq!(modell.auswahl(), Some(3));
         assert_eq!(modell.sinnbild(3), Some(Sinnbild::Textstelle));
@@ -837,11 +866,27 @@ mod tests {
     #[test]
     fn die_vier_befehle_wirken_nur_auf_einem_lesezeichen() {
         let mut modell = modell();
-        // Die Auswahl steht auf einem Geraet.
+        // Die Auswahl steht auf einem Geraet: es gibt kein Ziel, und die drei
+        // Befehle, die eines brauchen, kommen gar nicht erst zum Rechnen.
         modell.waehlen(4);
-        assert!(!modell.umbenennen("Neu"));
-        assert!(!modell.loeschen());
-        assert!(!modell.verschieben(Verschiebung::Hoch));
+        assert!(modell.gewaehltes_lesezeichen_wert().is_none());
+        assert!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Umbenennen {
+                welches,
+                name: "Neu".to_owned(),
+            })
+            .is_none()
+        );
+        assert!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Loeschen { welches }).is_none()
+        );
+        assert!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Verschieben {
+                welches,
+                richtung: Verschiebung::Hoch,
+            })
+            .is_none()
+        );
         assert_eq!(modell.lesezeichenliste().zahl(), 2);
     }
 
@@ -926,14 +971,33 @@ mod tests {
             Lesezeichen::textstelle("Stelle", "/p/leser.rs", 118, "let x = 1;"),
         ]));
 
-        modell.anlegen(
-            "Zweite Stelle",
-            textziel("/p/schreiber.rs", 7, "fn sieben() {}"),
+        assert_eq!(
+            aendern(
+                &mut modell,
+                &Aenderung::Anlegen {
+                    name: "Zweite Stelle".to_owned(),
+                    ziel: textziel("/p/schreiber.rs", 7, "fn sieben() {}"),
+                },
+            ),
+            Ausgang::Geaendert(2),
+            "ein neues Lesezeichen haengt unten an"
         );
         assert_eq!(modell.auswahl(), Some(3));
 
-        assert!(modell.umbenennen("Die zweite Stelle"));
-        assert!(modell.verschieben(Verschiebung::Hoch));
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Umbenennen {
+                welches,
+                name: "Die zweite Stelle".to_owned(),
+            }),
+            Some(Ausgang::Geaendert(2))
+        );
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Verschieben {
+                welches,
+                richtung: Verschiebung::Hoch,
+            }),
+            Some(Ausgang::Geaendert(1))
+        );
         assert_eq!(modell.auswahl(), Some(2), "die Auswahl wandert mit");
         assert_eq!(
             modell.beschriftung(2).as_deref(),
@@ -941,7 +1005,10 @@ mod tests {
         );
         assert_eq!(modell.sinnbild(2), Some(Sinnbild::Textstelle));
 
-        assert!(modell.loeschen());
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Loeschen { welches }),
+            Some(Ausgang::Geaendert(1))
+        );
         assert_eq!(modell.lesezeichenliste().zahl(), 2);
     }
 
@@ -1023,10 +1090,23 @@ mod tests {
     fn die_auswahl_wandert_mit_dem_verschobenen_lesezeichen() {
         let mut modell = modell();
         modell.waehlen(2);
-        assert!(modell.verschieben(Verschiebung::Hoch));
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Verschieben {
+                welches,
+                richtung: Verschiebung::Hoch,
+            }),
+            Some(Ausgang::Geaendert(0))
+        );
         assert_eq!(modell.auswahl(), Some(1));
         assert_eq!(modell.beschriftung(1).as_deref(), Some("Zwei (fehlt)"));
-        assert!(!modell.verschieben(Verschiebung::Hoch), "oben ist Schluss");
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Verschieben {
+                welches,
+                richtung: Verschiebung::Hoch,
+            }),
+            Some(Ausgang::Unveraendert),
+            "oben ist Schluss"
+        );
     }
 
     #[test]
@@ -1038,7 +1118,10 @@ mod tests {
         modell.orte_setzen(vec![Ort::neu("Benutzer", "/Users/pruefung")]);
         modell.waehlen(1);
 
-        assert!(modell.loeschen());
+        assert_eq!(
+            gewaehltes_aendern(&mut modell, |welches| Aenderung::Loeschen { welches }),
+            Some(Ausgang::Geaendert(0))
+        );
 
         assert_eq!(modell.lesezeichenliste().zahl(), 0);
         assert_eq!(

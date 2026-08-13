@@ -30,6 +30,26 @@ use gemeinsam::Pruefordner;
 /// Pruefordner unter `tests/gemeinsam/` haelt Ordner und Dateien, und eine
 /// [`Ablage`] ist keines von beiden, sondern ein Gegenstand des Kerns. Nur diese
 /// Datei braucht ihn, also steht er hier.
+/// Laedt die Belegung so, wie der Betrieb es tut: unter der Schreibsperre.
+///
+/// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen [`Zugang`], und
+/// den gibt es nur aus einem Durchgang. Die Proben halten sich daran, statt eine
+/// Hintertuer zu bekommen; der Grund steht im Kopf von
+/// `krk_core::ablage::sperre`.
+fn geladene_belegung(ablage: &Ablage) -> krk_core::ablage::Geladen<Belegung> {
+    ablage
+        .durchgang(belegung::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Sichert die Belegung unter der Schreibsperre.
+fn belegung_sichern(ablage: &Ablage, belegung: &Belegung) {
+    ablage
+        .durchgang(|zugang| belegung.sichern(zugang))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("die Belegung laesst sich sichern");
+}
+
 fn ablage_mit(ordner: &Pruefordner, keymap: &str) -> Ablage {
     let ablage =
         Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
@@ -365,7 +385,7 @@ gehalten_von = "menue"
         let ordner = Pruefordner::neu(zweck);
         let ablage = ablage_mit(&ordner, keymap);
 
-        let geladen = belegung::laden(&ablage);
+        let geladen = geladene_belegung(&ablage);
 
         assert_eq!(
             geladen.wert,
@@ -433,7 +453,7 @@ tasten = []
 gehalten_von = "menue"
 "#,
     );
-    let mut belegung = belegung::laden(&ablage).wert;
+    let mut belegung = geladene_belegung(&ablage).wert;
 
     assert_eq!(
         belegung.zuweisen("text_alles_auswaehlen", kombi("cmd+a")),
@@ -478,7 +498,7 @@ tasten = ["shift+cmd+w"]
 gehalten_von = "menue"
 "#,
     );
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
     assert!(!geladen.ist_ersetzt(), "die Datei ist gueltig");
     let belegung = geladen.wert;
 
@@ -534,10 +554,8 @@ fn der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit() {
     assert_eq!(Belegung::vom_nutzer(&wieder), Ok(belegung.clone()));
 
     // Und derselbe Weg ueber die Platte, den `Belegung::sichern` wirklich geht.
-    belegung
-        .sichern(&ablage)
-        .expect("die Belegung laesst sich sichern");
-    let geladen = belegung::laden(&ablage);
+    belegung_sichern(&ablage, &belegung);
+    let geladen = geladene_belegung(&ablage);
     assert!(
         !geladen.ist_ersetzt(),
         "die selbst geschriebene keymap.toml wurde beim Einlesen abgewiesen"
@@ -1161,7 +1179,7 @@ fn eine_fehlende_keymap_liefert_die_auslieferungsbelegung_ohne_meldung() {
     let ablage =
         Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     assert!(
@@ -1183,7 +1201,7 @@ tasten = ["ctrl+c"]
 "#,
     );
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
     assert!(!geladen.ist_ersetzt(), "die Datei ist gueltig");
     let belegung = geladen.wert;
 
@@ -1245,10 +1263,8 @@ fn eine_geaenderte_belegung_ueberlebt_sichern_und_laden() {
     let mut belegung = Belegung::auslieferung();
     assert_eq!(belegung.zuweisen("kopieren", frei()), Ok(()));
 
-    belegung
-        .sichern(&ablage)
-        .expect("die Belegung laesst sich sichern");
-    let geladen = belegung::laden(&ablage);
+    belegung_sichern(&ablage, &belegung);
+    let geladen = geladene_belegung(&ablage);
 
     assert!(!geladen.ist_ersetzt());
     assert_eq!(geladen.wert, belegung);
@@ -1267,7 +1283,7 @@ tasten = ["ctrl+c"]
 "#,
     );
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     let Some(ersetzung) = geladen.ersetzung else {
@@ -1295,7 +1311,7 @@ tasten = ["cmd+shift+k"]
 "#,
     );
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     let Some(ersetzung) = geladen.ersetzung else {
@@ -1325,7 +1341,7 @@ tasten = ["ctrl+c"]
 "#,
     );
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     let Some(ersetzung) = geladen.ersetzung else {
@@ -1345,7 +1361,7 @@ fn eine_syntaktisch_kaputte_keymap_fuehrt_zum_auslieferungszustand() {
     let ordner = Pruefordner::neu("kaputt");
     let ablage = ablage_mit(&ordner, "[[funktion]\nid = \"kopieren\"\n");
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     assert!(geladen.ist_ersetzt());
@@ -1366,7 +1382,7 @@ taste = ["ctrl+c"]
 "#,
     );
 
-    let geladen = belegung::laden(&ablage);
+    let geladen = geladene_belegung(&ablage);
 
     assert_eq!(geladen.wert, Belegung::auslieferung());
     assert!(geladen.ist_ersetzt());

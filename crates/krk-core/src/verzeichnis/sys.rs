@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die vier Schnittstellen, die KRK braucht, und
-//! die acht Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die fuenf Schnittstellen, die KRK braucht, und
+//! die neun Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -14,18 +14,31 @@
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
 //! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::oeffnen
 //!                                             └─> krk-ui: vorschaumodell
+//! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
+//!                        sperre_versuchen
+//!                        sperre_abgeben
 //! ```
 //!
-//! **Vier ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! vier Schnittstellen und acht gebundene Funktionen, denn `copyfile(3)`
+//! **Fuenf ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! fuenf Schnittstellen und neun gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
 //! Aufrufe ueber die Sprachgrenze schon, und die Reichweite der Ausnahme oben
 //! liest ein Leser hier nach. Die Zeile steht wortgleich in `lib.rs` und in
 //! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
-//! nachgezogen. Gebunden sind alle acht in den drei `unsafe extern "C"`-Bloecken
-//! dieses Moduls, und gerufen sind sie ebenfalls alle acht.
+//! nachgezogen, die fuenfte Schnittstelle die Runde 7. Gebunden sind alle neun
+//! in den vier `unsafe extern "C"`-Bloecken dieses Moduls, und gerufen sind sie
+//! ebenfalls alle neun.
+//!
+//! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
+//! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
+//! ihr haengen die Schreibsperre und das Sitzungsrecht der Ablage, beide in
+//! [`crate::ablage::sperre`]. Gewaehlt ist sie, weil der Kern eine
+//! `flock`-Sperre beim Prozessende von sich aus freigibt, auch nach einem
+//! Absturz; eine Marke im Dateisystem ueber `create_new` oder ueber
+//! `renamex_np` mit `RENAME_EXCL` ueberlebte ihn und sperrte danach jede
+//! weitere Instanz von KRK fuer immer aus.
 //!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
@@ -798,6 +811,101 @@ fn blockierend_stellen(datei: &File) -> io::Result<()> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// flock(2): den Ablageordner gegen einen zweiten Prozess halten
+// ---------------------------------------------------------------------------
+
+/// `LOCK_EX` aus `sys/file.h`: eine Sperre mit genau einem Halter.
+const LOCK_EX: c_int = 2;
+
+/// `LOCK_NB` aus `sys/file.h`: nicht warten, sondern sofort zurueckkehren.
+const LOCK_NB: c_int = 4;
+
+/// `LOCK_UN` aus `sys/file.h`: die gehaltene Sperre abgeben.
+const LOCK_UN: c_int = 8;
+
+/// `EWOULDBLOCK` aus `sys/errno.h`, auf macOS derselbe Wert wie `EAGAIN`.
+///
+/// Der eine erwartete Fehlschlag von `flock` mit [`LOCK_NB`]: die Sperre haelt
+/// ein anderer. Er ist kein Fehler, sondern eine Antwort, und
+/// [`sperre_versuchen`] gibt ihm mit [`Sperrversuch::Belegt`] einen Namen.
+const EWOULDBLOCK: i32 = 35;
+
+unsafe extern "C" {
+    /// `int flock(int fd, int operation)`
+    ///
+    /// **Nicht variadisch, anders als [`fcntl`] darueber**, und das ist keine
+    /// Nachlaessigkeit, sondern der Header: `flock` nimmt genau zwei feste
+    /// Argumente. Die Ueberlegung ist dieselbe wie dort — die Deklaration bildet
+    /// den Header ab und nicht die Bequemlichkeit des Aufrufers, denn auf arm64
+    /// laufen feste und variadische Argumente ueber verschiedene Wege.
+    fn flock(fd: c_int, operation: c_int) -> c_int;
+}
+
+/// Was ein Sperrversuch ohne Warten ergeben hat.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig, und der Grund ist
+/// derselbe wie ueberall in diesem Baum: eine dritte Antwort haelt den Bau an,
+/// statt sich in einen bestehenden Zweig zu mogeln.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "eine nicht genommene Sperre schuetzt nichts"]
+pub enum Sperrversuch {
+    /// Die Sperre gehoert jetzt diesem Deskriptor.
+    Genommen,
+    /// Ein anderer Halter hat sie; es ist nichts genommen worden.
+    Belegt,
+}
+
+/// Nimmt die Sperre auf diesen Deskriptor und **wartet**, bis sie frei ist.
+///
+/// Der Weg der Schreibsperre: ein Durchgang aus Lesen, Aendern und Schreiben
+/// soll nicht abgewiesen werden, sondern warten, bis er an der Reihe ist.
+///
+/// Die Sperre haengt an der **offenen Datei** und nicht am Prozess. Zwei
+/// Deskriptoren desselben Prozesses auf dieselbe Datei schliessen einander
+/// deshalb genauso aus wie zwei Prozesse; zweimal derselbe Deskriptor dagegen
+/// wartet nicht, sondern gibt die Sperre einfach erneut aus. Was daraus fuer die
+/// Ablage folgt, steht bei [`crate::ablage::sperre`].
+pub fn sperre_nehmen(datei: &File) -> io::Result<()> {
+    flock_rufen(datei, LOCK_EX)
+}
+
+/// Versucht die Sperre, **ohne zu warten**.
+///
+/// Der Weg des Sitzungsrechts: wer es nicht bekommt, arbeitet ohne es weiter
+/// und darf darueber nicht haengenbleiben. Der erwartete Fehlschlag
+/// [`EWOULDBLOCK`] kommt als [`Sperrversuch::Belegt`] zurueck und nicht als
+/// Fehler; jeder andere Fehlschlag bleibt einer.
+pub fn sperre_versuchen(datei: &File) -> io::Result<Sperrversuch> {
+    match flock_rufen(datei, LOCK_EX | LOCK_NB) {
+        Ok(()) => Ok(Sperrversuch::Genommen),
+        Err(fehler) if fehler.raw_os_error() == Some(EWOULDBLOCK) => Ok(Sperrversuch::Belegt),
+        Err(fehler) => Err(fehler),
+    }
+}
+
+/// Gibt die Sperre auf diesem Deskriptor wieder ab.
+///
+/// **Der Kern gibt sie auch ohne diesen Aufruf ab**, naemlich sobald der letzte
+/// Deskriptor auf die offene Datei geschlossen wird, und das gilt fuer den
+/// Absturz genauso wie fuer das gewoehnliche Ende. Diese Funktion braucht es
+/// trotzdem: die Schreibsperre lebt kuerzer als ihr Deskriptor, denn die Ablage
+/// haelt die Sperrdatei offen und nimmt die Sperre je Durchgang.
+pub fn sperre_abgeben(datei: &File) -> io::Result<()> {
+    flock_rufen(datei, LOCK_UN)
+}
+
+/// Der eine Aufruf ueber die Sprachgrenze, den sich die drei Huellen teilen.
+fn flock_rufen(datei: &File, operation: c_int) -> io::Result<()> {
+    // SICHERHEIT: `fd` gehoert dem `File` des Aufrufers und ist offen, solange
+    // dessen Bindung lebt. `flock` nimmt genau zwei `int` entgegen, fasst
+    // keinen Speicher an und gibt einen `int` zurueck.
+    if unsafe { flock(datei.as_raw_fd(), operation) } < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
 ///
 /// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
@@ -836,6 +944,53 @@ mod tests {
     #[test]
     fn kurzer_satz_liefert_keinen_eintrag() {
         assert!(satz_zerlegen(&[0u8; 8]).is_none());
+    }
+
+    /// Zwei Deskriptoren desselben Prozesses auf dieselbe Datei schliessen
+    /// einander aus.
+    ///
+    /// Die Zusage, auf der beide Sperren der Ablage ruhen: `flock` haengt an der
+    /// **offenen Datei** und nicht am Prozess. Waere es umgekehrt, saehe eine
+    /// zweite Instanz von KRK die Sperre der ersten zwar, ein Fehlgriff im
+    /// eigenen Prozess dagegen nicht, und die Probe dazu waere nicht zu
+    /// schreiben, ohne einen zweiten Prozess zu starten.
+    ///
+    /// Geprueft wird mit [`sperre_versuchen`], weil ein wartendes
+    /// [`sperre_nehmen`] die Probe genau hier haengen liesse.
+    #[test]
+    fn ein_zweiter_deskriptor_auf_dieselbe_datei_bekommt_die_sperre_nicht() {
+        let pfad = std::env::temp_dir().join(format!("krk-sys-flock-{}", std::process::id()));
+        let erster = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&pfad)
+            .expect("die Sperrdatei laesst sich nicht anlegen");
+        let zweiter = OpenOptions::new()
+            .write(true)
+            .open(&pfad)
+            .expect("die Sperrdatei laesst sich nicht ein zweites Mal oeffnen");
+
+        assert_eq!(
+            sperre_versuchen(&erster).expect("der erste Versuch ist gescheitert"),
+            Sperrversuch::Genommen
+        );
+        assert_eq!(
+            sperre_versuchen(&zweiter).expect("der zweite Versuch ist gescheitert"),
+            Sperrversuch::Belegt,
+            "der zweite Deskriptor hat die Sperre trotz des ersten bekommen"
+        );
+
+        sperre_abgeben(&erster).expect("das Abgeben ist gescheitert");
+        assert_eq!(
+            sperre_versuchen(&zweiter).expect("der dritte Versuch ist gescheitert"),
+            Sperrversuch::Genommen,
+            "nach dem Abgeben ist die Sperre nicht frei geworden"
+        );
+
+        drop(zweiter);
+        drop(erster);
+        let _ = std::fs::remove_file(&pfad);
     }
 
     /// Der Deskriptor kommt blockierend zurueck, nicht nichtblockierend.

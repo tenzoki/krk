@@ -1,21 +1,37 @@
 //! Die Ablage: vier TOML-Dateien unter `~/Library/Application Support/KRK/`.
 //!
-//! Fuenf Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
+//! Sechs Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
 //!
 //! ```text
-//! pfade ──> mod (Ablage: laden, sichern, melden) ──> atomar
-//!                   ^        ^         ^
-//!                   │        │         │
-//!            lesezeichen  sitzung  einstellungen
+//! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
+//!                   │              ^        ^         ^
+//!                sperre            │        │         │
+//!                           lesezeichen  sitzung  einstellungen
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
-//! [`atomar`] schreibt jede Datei ueber eine Nachbardatei und `rename`.
-//! [`sitzung`], [`lesezeichen`] und [`einstellungen`] halten drei der vier
-//! Inhalte; den vierten, die Belegung aus `keymap.toml`, baut Schritt 11 und
-//! legt ihn ueber [`Ablage::laden`] und [`Ablage::sichern`] hier ab. Die Ablage
-//! ist deshalb ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
-//! Fehlerbehandlung, nicht die Felder.
+//! [`sperre`] traegt die beiden Absprachen, die zwei gleichzeitig laufende
+//! Instanzen von KRK auseinanderhalten. [`atomar`] schreibt jede Datei ueber
+//! eine Nachbardatei und `rename`. [`sitzung`], [`lesezeichen`] und
+//! [`einstellungen`] halten drei der vier Inhalte; den vierten, die Belegung aus
+//! `keymap.toml`, baut Schritt 11 und legt ihn ueber [`Zugang::laden`] und
+//! [`Zugang::sichern`] hier ab. Die Ablage ist deshalb ueber den Inhalt
+//! allgemein gehalten: sie kennt Pfad, Format und Fehlerbehandlung, nicht die
+//! Felder.
+//!
+//! # Jeder Weg auf die Platte geht durch die Schreibsperre
+//!
+//! **[`Zugang`] steht zwischen der Ablage und [`atomar::schreiben`], und das ist
+//! eine Eigenschaft der Typen und keine Verabredung in Kommentaren.** Ein
+//! `Zugang` ist allein aus [`Ablage::durchgang`] zu bekommen, und der nimmt fuer
+//! die Dauer des Durchgangs die Schreibsperre. Gelesen und geschrieben wird
+//! damit nie ausserhalb von ihr; warum das Lesen mit hineingehoert und nicht nur
+//! das Schreiben, steht im Kopf von [`sperre`].
+//!
+//! [`atomar::schreiben`] selbst bleibt frei, denn zwei Schreiber ausserhalb des
+//! Ablageordners benutzen es: die Markdown-Ausgabe der Tastenbelegung nach
+//! `~/Downloads` und das Sichern der Editordatei. Die Grenze zieht [`Zugang`]
+//! und nicht [`atomar`].
 //!
 //! # Eine der vier Dateien entsteht einmal und wird nie wieder geschrieben
 //!
@@ -87,9 +103,10 @@ pub mod einstellungen;
 pub mod lesezeichen;
 pub mod pfade;
 pub mod sitzung;
+pub mod sperre;
 
 use std::fmt;
-use std::fs;
+use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -97,12 +114,15 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 pub use einstellungen::Einstellungen;
-pub use lesezeichen::{Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel};
+pub use lesezeichen::{
+    Aenderung, Ausgang, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
+};
 pub use pfade::{Ablageort, Datei};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber,
     Spaltensichtbarkeit, Tab,
 };
+pub use sperre::{Schreibgriff, Sitzungsrecht};
 
 /// Warum eine Datei durch den Auslieferungszustand ersetzt wurde.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -276,17 +296,34 @@ impl<T> Geladen<T> {
     }
 }
 
-/// Der Zugang zu den vier Dateien unter `Application Support`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Der Ablageordner mit den vier Dateien, samt der Schreibsperre darueber.
+///
+/// **Sie laedt und schreibt nicht selbst.** Wer eine der vier Dateien anfassen
+/// will, geht durch [`Ablage::durchgang`] und bekommt einen [`Zugang`]; siehe
+/// den Abschnitt „Jeder Weg auf die Platte geht durch die Schreibsperre" im
+/// Modulkopf.
+///
+/// Kein `Clone` und kein `PartialEq`: der Wert haelt einen Deskriptor auf die
+/// Sperrdatei, und zwei Ablagen desselben Prozesses auf denselben Ordner
+/// schliessen einander am Durchgang aus. Was daraus folgt, steht im Kopf von
+/// [`sperre`].
+#[derive(Debug)]
 pub struct Ablage {
     ort: Ablageort,
+    /// Der offen gehaltene Deskriptor, an dem die Schreibsperre haengt.
+    ///
+    /// Offen gehalten und nicht je Durchgang neu geoeffnet: ein `open` je
+    /// Lesezeichenbefehl waere ein Systemaufruf fuer nichts, und der Deskriptor
+    /// traegt die Sperre ohnehin erst, wenn [`Schreibgriff::nehmen`] sie nimmt.
+    sperrdatei: File,
 }
 
 impl Ablage {
     /// Oeffnet die Ablage an einem Ort und legt den Ordner an, falls er fehlt.
     pub fn oeffnen(ort: Ablageort) -> io::Result<Self> {
         ort.anlegen()?;
-        Ok(Self { ort })
+        let sperrdatei = sperre::sperrdatei_oeffnen(ort.wurzel(), sperre::SCHREIBSPERRE)?;
+        Ok(Self { ort, sperrdatei })
     }
 
     /// Oeffnet die Ablage unter `~/Library/Application Support/KRK/`.
@@ -302,6 +339,47 @@ impl Ablage {
     }
 
     /// Der Pfad einer der vier Dateien.
+    ///
+    /// Eine Frage an den Ort und kein Zugriff auf die Platte; sie braucht die
+    /// Sperre deshalb nicht.
+    pub fn pfad(&self, welche: Datei) -> PathBuf {
+        self.ort.datei(welche)
+    }
+
+    /// Fuehrt einen vollstaendigen Durchgang aus Lesen, Aendern und Schreiben
+    /// unter der Schreibsperre aus.
+    ///
+    /// Die Sperre wird beim Eintritt genommen, wartend, und beim Verlassen
+    /// wieder abgegeben — auch dann, wenn der Rumpf in Panik geraet, denn der
+    /// [`Schreibgriff`] gibt sie in seinem `Drop` ab.
+    ///
+    /// **Der Rumpf ist ein Blatt und wird nicht geschachtelt.** Ein zweiter
+    /// Durchgang darin gaebe die Sperre des ersten vorzeitig ab; der Grund steht
+    /// im Kopf von [`sperre`]. Der Uebersetzer haelt das nicht.
+    ///
+    /// Der Fehler kommt vom Nehmen der Sperre und nicht aus dem Rumpf: was der
+    /// Rumpf zurueckgibt, entscheidet er selbst, und die vier Lade- und
+    /// Schreibwege von [`Zugang`] tragen ihre Antworten je einzeln.
+    pub fn durchgang<T>(&self, arbeit: impl FnOnce(&Zugang<'_>) -> T) -> io::Result<T> {
+        let _griff = Schreibgriff::nehmen(&self.sperrdatei)?;
+        Ok(arbeit(&Zugang { ort: &self.ort }))
+    }
+}
+
+/// Der eine Weg von der Ablage auf die Platte, und er ist nur unter der
+/// Schreibsperre zu bekommen.
+///
+/// Ein `Zugang` entsteht ausschliesslich in [`Ablage::durchgang`] und lebt
+/// genau so lange wie der [`Schreibgriff`] daneben. Damit ist „es gibt keinen
+/// Schreibweg an der Sperre vorbei" eine Aussage ueber die Typen und nicht ueber
+/// die Aufmerksamkeit des naechsten Lesers.
+#[derive(Debug)]
+pub struct Zugang<'a> {
+    ort: &'a Ablageort,
+}
+
+impl Zugang<'_> {
+    /// Der Pfad einer der vier Dateien.
     pub fn pfad(&self, welche: Datei) -> PathBuf {
         self.ort.datei(welche)
     }
@@ -315,6 +393,13 @@ impl Ablage {
     /// **Zur Seite gelegt wird allein im Zweig [`Grund::Beschaedigt`]**, denn
     /// nur dort gibt es einen gelesenen Text zu sichern. Die beiden uebrigen
     /// Zweige tragen [`Beiseite::Nicht`]; siehe den Modulkopf.
+    ///
+    /// **Das Lesen steht mit unter der Sperre und nicht davor.** Ein Aufrufer,
+    /// der seine eine Aenderung auf den eben gelesenen Stand anwendet, haette
+    /// sonst zwischen Lesen und Schreiben ein Fenster, in dem die andere Instanz
+    /// schreibt; die verlorene Aenderung waere dann nur seltener und nicht fort.
+    /// Und schon das Laden schreibt: eine beschaedigte Datei wird zur Seite
+    /// gelegt.
     pub fn laden<T>(&self, welche: Datei) -> Geladen<T>
     where
         T: DeserializeOwned + Default,
@@ -345,7 +430,7 @@ impl Ablage {
                 ersetzung: None,
             },
             Err(fehler) => {
-                let beiseite = beiseite_legen(&pfad, &text);
+                let beiseite = self.beiseite_legen(&pfad, &text);
                 Geladen {
                     wert: T::default(),
                     ersetzung: Some(Ersetzung {
@@ -372,43 +457,43 @@ impl Ablage {
         atomar::schreiben(&self.pfad(welche), &text)
     }
 
-    /// Der Schreiber fuer den gebuendelten Sitzungszustand.
-    pub fn sitzungsschreiber(&self) -> Sitzungsschreiber {
-        Sitzungsschreiber::neu(self.pfad(Datei::Sitzung))
-    }
-}
-
-/// Legt den gelesenen Text einer beschaedigten Datei unter festem Namen daneben.
-///
-/// Die Reihenfolge ist ausgeschrieben, damit sie nicht geraten wird: den Pfad
-/// bilden, fragen, ob dort schon etwas steht, und nur dann schreiben. Steht
-/// schon etwas, bleibt es unangetastet — die aeltere Fassung ist die
-/// wertvollere, siehe [`atomar::beiseitepfad`].
-///
-/// **Der Text wird kopiert, die Datei nicht verschoben.** Ein `rename` waere
-/// kuerzer und ist falsch: `keymap.toml` und `settings.toml` sind von Hand
-/// aenderbar, und ein Tippfehler darin darf dem Nutzer nicht die Datei unter der
-/// Hand wegnehmen, an der er gerade tippt. Der Modulkopf sagt diese Zusage seit
-/// Schritt 10 der Runde 1 zu.
-///
-/// **Das Wettrennen zwischen der Frage und dem Schreiben ist benannt und nicht
-/// erreichbar**: der Vorgang laeuft einmal je Start in einem Prozess. Ein
-/// `File::create_new` an dieser Stelle waere der zweite Schreibweg, den der
-/// Datensatz vom 260812-1105 ausschliesst.
-#[must_use]
-fn beiseite_legen(datei: &Path, inhalt: &str) -> Beiseite {
-    let pfad = match atomar::beiseitepfad(datei) {
-        Ok(pfad) => pfad,
-        Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
-    };
-    match pfad.try_exists() {
-        Ok(true) => return Beiseite::SchonVorhanden(pfad),
-        Ok(false) => {}
-        Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
-    }
-    match atomar::schreiben(&pfad, inhalt) {
-        Ok(()) => Beiseite::Gesichert(pfad),
-        Err(fehler) => Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+    /// Legt den gelesenen Text einer beschaedigten Datei unter festem Namen
+    /// daneben.
+    ///
+    /// Die Reihenfolge ist ausgeschrieben, damit sie nicht geraten wird: den
+    /// Pfad bilden, fragen, ob dort schon etwas steht, und nur dann schreiben.
+    /// Steht schon etwas, bleibt es unangetastet — die aeltere Fassung ist die
+    /// wertvollere, siehe [`atomar::beiseitepfad`].
+    ///
+    /// **Der Text wird kopiert, die Datei nicht verschoben.** Ein `rename` waere
+    /// kuerzer und ist falsch: `keymap.toml` und `settings.toml` sind von Hand
+    /// aenderbar, und ein Tippfehler darin darf dem Nutzer nicht die Datei unter
+    /// der Hand wegnehmen, an der er gerade tippt. Der Modulkopf sagt diese
+    /// Zusage seit Schritt 10 der Runde 1 zu.
+    ///
+    /// **Das Wettrennen zwischen der Frage und dem Schreiben ist benannt und
+    /// nicht erreichbar**, und die Begruendung dafuer ist mit der Runde 7 eine
+    /// andere geworden. Bis dahin lautete sie „der Vorgang laeuft einmal je
+    /// Start in einem Prozess"; mit einer zweiten Instanz von KRK stimmt der
+    /// Satz nicht mehr. Unerreichbar ist das Wettrennen jetzt, weil der ganze
+    /// Durchgang unter der Schreibsperre laeuft und diese Methode allein an
+    /// einem [`Zugang`] haengt. Ein `File::create_new` an dieser Stelle waere
+    /// der zweite Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
+    #[must_use]
+    fn beiseite_legen(&self, datei: &Path, inhalt: &str) -> Beiseite {
+        let pfad = match atomar::beiseitepfad(datei) {
+            Ok(pfad) => pfad,
+            Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+        };
+        match pfad.try_exists() {
+            Ok(true) => return Beiseite::SchonVorhanden(pfad),
+            Ok(false) => {}
+            Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+        }
+        match atomar::schreiben(&pfad, inhalt) {
+            Ok(()) => Beiseite::Gesichert(pfad),
+            Err(fehler) => Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+        }
     }
 }
 

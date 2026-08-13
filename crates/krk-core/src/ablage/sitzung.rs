@@ -30,8 +30,8 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use super::atomar;
 use super::pfade;
+use super::{Datei, Zugang};
 use crate::verzeichnis::Sortierung;
 
 /// Der Mindestabstand zwischen zwei Schreibvorgaengen des Sitzungszustands.
@@ -413,9 +413,20 @@ fn standardordner() -> PathBuf {
 /// Die Zeit kommt von aussen und nicht aus [`Instant::now`]. Damit ist die
 /// Buendelung ohne Warten pruefbar, und der Aufrufer bestimmt, welche Uhr
 /// gilt.
+///
+/// **Den Pfad traegt der Schreiber seit der Runde 7 nicht mehr, sondern der
+/// [`Zugang`], den jede der drei Schreibmethoden entgegennimmt.** Er ist damit
+/// der vierte Schreiber hinter derselben Grenze wie die drei anderen: es gibt
+/// keinen Weg von hier auf die Platte, der nicht unter der Schreibsperre
+/// laeuft. Der Schreiber selbst haelt weiter allein den vorgemerkten Stand und
+/// die Uhr, denn beide ueberdauern einen Durchgang.
+///
+/// **Er entsteht nur, wenn dieser Prozess das Sitzungsrecht haelt.** Wer es
+/// nicht bekam, baut keinen; die Regel „nur die Halterin schreibt die Sitzung"
+/// steht damit an einem fehlenden Wert und nicht an einer Abfrage, die jemand
+/// vergessen kann.
 #[derive(Debug)]
 pub struct Sitzungsschreiber {
-    pfad: PathBuf,
     takt: Duration,
     /// Der vorgemerkte, noch nicht geschriebene Stand.
     offen: Option<Sitzung>,
@@ -424,15 +435,14 @@ pub struct Sitzungsschreiber {
 }
 
 impl Sitzungsschreiber {
-    /// Ein Schreiber auf eine Datei, mit dem Takt aus [`SITZUNGSTAKT`].
-    pub fn neu(pfad: impl Into<PathBuf>) -> Self {
-        Self::mit_takt(pfad, SITZUNGSTAKT)
+    /// Ein Schreiber mit dem Takt aus [`SITZUNGSTAKT`].
+    pub fn neu() -> Self {
+        Self::mit_takt(SITZUNGSTAKT)
     }
 
     /// Ein Schreiber mit abweichendem Takt.
-    pub fn mit_takt(pfad: impl Into<PathBuf>, takt: Duration) -> Self {
+    pub fn mit_takt(takt: Duration) -> Self {
         Self {
-            pfad: pfad.into(),
             takt,
             offen: None,
             zuletzt: None,
@@ -448,16 +458,21 @@ impl Sitzungsschreiber {
     /// zulaesst.
     ///
     /// Liefert `true`, wenn dabei geschrieben wurde.
-    pub fn vormerken(&mut self, sitzung: Sitzung, jetzt: Instant) -> io::Result<bool> {
+    pub fn vormerken(
+        &mut self,
+        sitzung: Sitzung,
+        jetzt: Instant,
+        zugang: &Zugang<'_>,
+    ) -> io::Result<bool> {
         self.offen = Some(sitzung);
-        self.abgleichen(jetzt)
+        self.abgleichen(jetzt, zugang)
     }
 
     /// Schreibt einen vorgemerkten Stand, sobald der Takt abgelaufen ist.
     ///
     /// Ohne vorgemerkten Stand oder vor Ablauf des Takts passiert nichts.
     /// Liefert `true`, wenn geschrieben wurde.
-    pub fn abgleichen(&mut self, jetzt: Instant) -> io::Result<bool> {
+    pub fn abgleichen(&mut self, jetzt: Instant, zugang: &Zugang<'_>) -> io::Result<bool> {
         if self.offen.is_none() {
             return Ok(false);
         }
@@ -466,23 +481,22 @@ impl Sitzungsschreiber {
         {
             return Ok(false);
         }
-        self.schreiben(jetzt)
+        self.schreiben(jetzt, zugang)
     }
 
     /// Der eine Schreibvorgang beim Beenden: schreibt einen vorgemerkten
     /// Stand ohne Ruecksicht auf den Takt.
     ///
     /// Liefert `true`, wenn geschrieben wurde.
-    pub fn beenden(&mut self, jetzt: Instant) -> io::Result<bool> {
-        self.schreiben(jetzt)
+    pub fn beenden(&mut self, jetzt: Instant, zugang: &Zugang<'_>) -> io::Result<bool> {
+        self.schreiben(jetzt, zugang)
     }
 
-    fn schreiben(&mut self, jetzt: Instant) -> io::Result<bool> {
+    fn schreiben(&mut self, jetzt: Instant, zugang: &Zugang<'_>) -> io::Result<bool> {
         let Some(sitzung) = self.offen.as_ref() else {
             return Ok(false);
         };
-        let text = toml::to_string(sitzung).map_err(io::Error::other)?;
-        atomar::schreiben(&self.pfad, &text)?;
+        zugang.sichern(Datei::Sitzung, sitzung)?;
         self.offen = None;
         self.zuletzt = Some(jetzt);
         Ok(true)
