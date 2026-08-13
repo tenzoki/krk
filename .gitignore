@@ -1,8 +1,38 @@
 .claude/settings.local.json
 
-# fusion-workbench: fluechtiger Sitzungszustand, gehoert nicht ins Repository
+# fusion-workbench: Live-Zustand gehoert nicht ins Repository, Aufzeichnungen schon.
+#
+# Wo die Trennung verlaeuft, ist nicht hier festgelegt, sondern in den
+# fusion-Konventionen: rules/fusion-workbench-conventions.md, Abschnitt
+# "## fusion-workbench Layout" -> "### Which of them a tracked workbench tracks".
+# Das Merkmal dort ist, ob eine fruehere Fassung noch eine Frage beantwortet.
+# Live-Zustand wird an Ort und Stelle ueberschrieben und beschreibt allein das
+# Jetzt; eine eingecheckte Fassung ist Rauschen in jedem Diff und, von einem
+# Checkout zurueckgeholt, eine Aussage ueber eine beendete Sitzung. Aufzeichnungen
+# werden angehaengt und nie umgeschrieben -- orchestrator-events.jsonl,
+# .guard-state/events.jsonl, tasklist.md und portfolio.md bleiben deshalb
+# verfolgt und stehen hier nicht.
+fusion-workbench/agentstate.yaml
+fusion-workbench/orchestrator-live.md
+fusion-workbench/.active-circle
 fusion-workbench/.commit-lock/
 fusion-workbench/.session-marker
+# Wortgleiche Kopie des mitgelieferten bin/monitor, von /fusion:setup neu gelegt.
+fusion-workbench/monitor
+# Setup-Marker (Zeitstempel und Plugin-Version): in der Aufzaehlung der
+# Konventionen namentlich nicht genannt, nach ihrem Merkmal aber Live-Zustand --
+# jedes /fusion:setup schreibt ihn neu, und die vorige Fassung beantwortet nichts.
+fusion-workbench/.fusion-setup
+# Schreibrest des Ereignisprotokolls, versehentlich mit 4e86c02 eingecheckt.
+# Das Protokoll selbst ist eine Aufzeichnung und bleibt verfolgt.
+fusion-workbench/orchestrator-events.jsonl.tmp
+# .guard-state ist nicht eine Sache: die Zaehler und Drosselspeicher darin werden
+# an Ort und Stelle neu geschrieben, das Ereignisprotokoll daneben wird nur
+# angehaengt und haelt fest, was der Waechter wann angehalten hat. Deshalb ein
+# Muster mit Wiederaufnahme und nicht das Verzeichnis selbst: waere das
+# Elternverzeichnis ausgeschlossen, bliebe jedes "!" darunter wirkungslos.
+fusion-workbench/.guard-state/*
+!fusion-workbench/.guard-state/events.jsonl
 
 # Rust: Bauergebnisse. Cargo.lock bleibt versioniert, weil der Workspace
 # Binaerprogramme baut und jeder Bau dieselben Abhaengigkeiten treffen soll.

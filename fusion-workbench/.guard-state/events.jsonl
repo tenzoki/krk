@@ -38741,3 +38741,5 @@
 {"ts":"2026-08-13T13:34:48.611Z","event":"tracker_record","tool":"Write","file":"fusion-workbench/shared/decisions/260813-1534_a_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md","detail":"File change recorded"}
 {"ts":"2026-08-13T13:59:38.394Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-release-sh.txt"}
 {"ts":"2026-08-13T13:59:38.512Z","event":"tracker_record","tool":"Write","file":"/tmp/fusion-commit-msg-release-sh.txt","detail":"File change recorded (outside the workbench root, not tracked)"}
+{"ts":"2026-08-13T16:20:25.203Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-gitignore.txt"}
+{"ts":"2026-08-13T16:20:25.321Z","event":"tracker_record","tool":"Write","file":"/tmp/fusion-commit-msg-gitignore.txt","detail":"File change recorded (outside the workbench root, not tracked)"}
