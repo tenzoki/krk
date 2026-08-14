@@ -1282,6 +1282,40 @@ mod tests {
         );
     }
 
+    /// Die eine Ausnahme bleibt die eine, und der Notizzettelbefehl steht
+    /// ausdruecklich nicht darin.
+    ///
+    /// **Der Durchgang geht ueber alle Kommandos**, damit die Aussage „genau
+    /// der Abbruch" nicht an einer Handvoll ausgesuchter Gegenbeispiele haengt
+    /// wie die Nachbarin darueber. Ein neues Kommando kommt hier stillschweigend
+    /// und richtig mit „gehoert nicht dazu" an; wer es dennoch eintraegt, sieht
+    /// diese Probe rot.
+    ///
+    /// **Warum der Notizzettel eine eigene Zeile bekommt, obwohl der Durchgang
+    /// ihn schon deckt:** ein Eintrag fuer ihn waere der naheliegende Griff, um
+    /// den Zettel mit derselben Taste wieder zu schliessen, mit der er kommt.
+    /// Genau das laesst die Notizzettel-Runde ausdruecklich sein — der Weg
+    /// zurueck ist `esc` ueber den Waechter des Zettels. Die Zeile nennt den
+    /// Befehl deshalb beim Namen und macht den Fehlschlag lesbar.
+    #[test]
+    fn waehrend_eines_blattes_bleibt_es_bei_dem_einen_abbruch() {
+        let erlaubt: Vec<Kommando> = Kommando::KENNUNGEN
+            .into_iter()
+            .map(|(kommando, _)| kommando)
+            .filter(|kommando| waehrend_blatt_erlaubt(*kommando))
+            .collect();
+
+        assert_eq!(
+            erlaubt,
+            vec![Kommando::Abbrechen],
+            "waehrend eines Blattes kommt nicht mehr allein der Abbruch durch"
+        );
+        assert!(
+            !waehrend_blatt_erlaubt(Kommando::Notizzettel),
+            "der Notizzettelbefehl steht in der Ausnahme; der Zettel schliesst              mit esc und nicht mit der Taste, mit der er kommt"
+        );
+    }
+
     #[test]
     fn die_rueckfrage_nennt_die_zahl_der_eintraege_und_die_der_ordner() {
         let auswahl = Auswahl {

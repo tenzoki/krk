@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 82 Funktionen mit zusammen 88 Kombinationen.
+# Ausgeliefert sind 83 Funktionen mit zusammen 90 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -889,6 +889,31 @@ name = "Wiederholen"
 tasten = ["shift+cmd+z"]
 gehalten_von = "menue"
 # Das Gegenstueck, ebenfalls der Mac-Standard.
+
+# ── Der Notizzettel ──────────────────────────────────────────────────────────
+# C1 der Notizzettel-Runde. Der Block steht zwischen der Belegungsansicht und
+# der weiteren Instanz, also bei der Anwendung als ganze:
+# `bereich_des_kommandos` in `crates/krk-ui/src/belegungsmodell.rs` fuehrt
+# "notizzettel" unter `Funktionsbereich::Anwendung`, und die Reihenfolge der
+# Bloecke ist die Reihenfolge im Menue.
+#
+# **Zwei Kombinationen in einer Zeile, und das ist keine Doppelung.** F2 kommt
+# aus der Norton-Reihe, in der die Funktionstasten die Befehle tragen; cmd+k ist
+# der Mac-Weg auf dieselbe Funktion. Dass eine Funktion ab Werk zwei Wege
+# bekommt, hat der Nutzer am 260802-1409 fuer die Norton-Reihe entschieden
+# (Nachtrag in `shared/decisions/
+# 260802-0842_*_f-tasten-unter-macos-systembelegung.md`), und die
+# Ein-Zeilen-Regel der Belegungsansicht aus C3 haelt beide Wege in einer Zeile
+# zusammen. Ein zweiter Eintrag daneben waere eine zweite Zeile in der Ansicht
+# und ein zweiter Menueeintrag fuer denselben Befehl.
+#
+# Beide Kombinationen waren am 260814 ueber alle Tastenlisten dieser Datei
+# frei; belegt ist allein shift+cmd+k, und das traegt "kopieren" weiter oben.
+
+[[funktion]]
+id = "notizzettel"
+name = "Notizzettel anzeigen"
+tasten = ["f2", "cmd+k"]
 
 # ── Eine weitere Instanz von KRK ─────────────────────────────────────────────
 # C3 der Runde 7. Der Eintrag steht hier bei der Anwendung als ganze und nicht

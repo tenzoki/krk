@@ -628,6 +628,16 @@ mod tests {
     ///
     /// Die zweite Haelfte von C2.7: `esc` erreicht dann AppKit wie heute und
     /// schliesst das Blatt ueber dessen eigene Abbruchschaltflaeche.
+    ///
+    /// **An dieser Abweisung haengt der Notizzettel.** Seine Textflaeche haelt
+    /// den Ersthelferrang und ist in `ersthelfer_gehoert_appkit` **nicht** als
+    /// Ausnahme angemeldet, also meldet die Lage hier `true`, der Abbruch ist
+    /// abgewiesen, und `esc` geht unveraendert an AppKit. Erst dadurch kommt
+    /// `cancelOperation:` beim Waechter des Zettels an und schliesst ihn. Waere
+    /// diese zweite Zusicherung eines Tages `true`, schluckte KRK die Taste, und
+    /// der Zettel haette keinen Weg zurueck — die Probe haelt damit eine
+    /// Vorbedingung der Notizzettel-Runde und nicht nur eine Aussage ueber den
+    /// Abbruch.
     #[test]
     fn im_textfeld_eines_blattes_ist_auch_der_abbruch_abgewiesen() {
         assert!(zulaessig(
@@ -638,5 +648,75 @@ mod tests {
             Kommando::Abbrechen,
             lage(true, true, true, Fokus::Anderswo)
         ));
+    }
+
+    /// Steht der Zettel, kommt der Befehl nicht durch, der ihn geoeffnet hat.
+    ///
+    /// **Keine Luecke, sondern die Regel.** Der Notizzettelbefehl steht weder
+    /// auf der Ausnahmeliste noch unter
+    /// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt),
+    /// und beides bleibt in dieser Runde ausdruecklich so. Die Folge ist die
+    /// Zusage aus C1: ein zweiter Druck auf `f2` oder `cmd+k` schliesst den
+    /// Zettel nicht und tut nichts; der Weg zurueck ist `esc`.
+    ///
+    /// Die drei Zusicherungen ueber der Schleife nennen die Herleitung, damit
+    /// ein Fehlschlag sagt, **welche** der drei Voraussetzungen gewichen ist.
+    /// Die Schleife selbst haelt daneben die Gegenrichtung fest: ohne Blatt
+    /// wirkt der Befehl aus jedem der fuenf Fokuswerte, und genau dafuer traegt
+    /// er [`Wirkungsbereich::Ueberall`].
+    #[test]
+    fn der_notizzettel_kommt_bei_stehendem_blatt_nicht_durch() {
+        let kommando = Kommando::Notizzettel;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+        assert!(!immer_erreichbar(kommando));
+        assert!(!operationen::waehrend_blatt_erlaubt(kommando));
+
+        for fokus in JEDER_FOKUS {
+            assert!(
+                zulaessig(kommando, lage(false, false, true, fokus)),
+                "der Notizzettel kommt ohne Blatt in {fokus:?} nicht durch"
+            );
+            assert!(
+                !zulaessig(kommando, lage(true, false, true, fokus)),
+                "der Notizzettel kommt bei stehendem Blatt in {fokus:?} durch"
+            );
+        }
+    }
+
+    /// Die Ausnahmeliste fuehrt nach der Notizzettel-Runde dieselben drei
+    /// Befehle wie davor.
+    ///
+    /// **Der Durchgang geht ueber alle Kommandos und nicht ueber eine zweite
+    /// Liste.** Eine ausgeschriebene Erwartung neben [`immer_erreichbar`] waere
+    /// die Umsetzung ein zweites Mal; gezaehlt wird deshalb, welche Kommandos
+    /// die Funktion selbst bejaht.
+    ///
+    /// Die Zahl steht als eigene Zusicherung vor der Mitgliedschaft, weil erst
+    /// beides zusammen „genau diese drei" sagt: die Laenge schliesst einen
+    /// vierten Eintrag aus, die drei Zusicherungen darunter das Verschwinden
+    /// eines der bekannten.
+    #[test]
+    fn die_ausnahmeliste_fuehrt_dieselben_drei_befehle_wie_vor_dieser_runde() {
+        let auf_der_liste: Vec<Kommando> = Kommando::KENNUNGEN
+            .into_iter()
+            .map(|(kommando, _)| kommando)
+            .filter(|kommando| immer_erreichbar(*kommando))
+            .collect();
+
+        assert_eq!(
+            auf_der_liste.len(),
+            3,
+            "die Ausnahmeliste fuehrt nicht mehr drei Befehle, sondern {auf_der_liste:?}"
+        );
+        for kommando in [
+            Kommando::Beenden,
+            Kommando::FensterSchliessen,
+            Kommando::FensterEinblenden,
+        ] {
+            assert!(
+                auf_der_liste.contains(&kommando),
+                "{kommando:?} steht nicht mehr auf der Ausnahmeliste"
+            );
+        }
     }
 }

@@ -333,9 +333,16 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // nicht beim Fenster: sie startet einen zweiten Prozess mit eigener
         // Menueleiste, und `Fenster` fuehrt die Bereiche **dieses** Fensters.
         // Diese Runde fuehrt keine zweiten Fenster ein.
-        Kommando::BelegungAnsehen | Kommando::Beenden | Kommando::WeitereInstanz => {
-            Funktionsbereich::Anwendung
-        }
+        //
+        // Der Notizzettel steht mit hier und bekommt **keinen** eigenen
+        // Funktionsbereich: er waere ein Obermenue mit einem einzigen Eintrag,
+        // und diese Gliederung fragt nach der Gegend der Anwendung. Der Zettel
+        // haengt als Blatt am Hauptfenster und gehoert damit der Anwendung als
+        // ganze, so wie die Belegungsansicht daneben.
+        Kommando::BelegungAnsehen
+        | Kommando::Beenden
+        | Kommando::WeitereInstanz
+        | Kommando::Notizzettel => Funktionsbereich::Anwendung,
         // Der eingebaute Editor, und `bearbeiten` steht mit darin.
         //
         // Es ist die einzige Stelle, an der diese Gliederung und

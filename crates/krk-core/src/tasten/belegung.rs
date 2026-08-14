@@ -558,12 +558,25 @@ pub enum Kommando {
     Beenden,
     /// Eine weitere, eigenstaendige Instanz von KRK starten (C3 der Runde 7).
     WeitereInstanz,
+    /// Den Notizzettel als Blatt am Hauptfenster zeigen (C1 der
+    /// Notizzettel-Runde).
+    ///
+    /// Ausgeliefert auf zwei Kombinationen, `f2` und `cmd+k`, in **einer**
+    /// Zeile der Belegung; die Begruendung steht bei ihrem Eintrag in
+    /// `resources/default-keymap.toml`.
+    ///
+    /// **Der Befehl schliesst den Zettel nicht.** Steht das Blatt, weist
+    /// `zulaessigkeit::zulaessig` ihn ab, denn
+    /// `operationen::waehrend_blatt_erlaubt` nennt allein den Abbruch. Der Weg
+    /// zurueck ist `Esc` ueber den Waechter des Zettels und nicht ein zweiter
+    /// Druck auf dieselbe Taste.
+    Notizzettel,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 76] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 77] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -661,6 +674,7 @@ impl Kommando {
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::Beenden, "beenden"),
         (Kommando::WeitereInstanz, "weitere_instanz"),
+        (Kommando::Notizzettel, "notizzettel"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -757,7 +771,15 @@ impl Kommando {
             // Grund wie das Beenden daneben: sie betrifft die Anwendung als
             // ganze und keinen ihrer Bereiche. Wer sie aus dem Editor heraus
             // ruft, will nicht den Editor verlassen, sondern ein zweites KRK.
-            | Kommando::WeitereInstanz => Wirkungsbereich::Ueberall,
+            | Kommando::WeitereInstanz
+            // Der Notizzettel aus C1 der Notizzettel-Runde steht hier aus
+            // demselben Grund wie die Belegungsansicht ganz oben: er faehrt
+            // als Blatt am Hauptfenster herunter und gehoert keinem der fuenf
+            // Bereiche. Ein Wirkungsbereich, der einen von ihnen verlangte,
+            // schnitte die anderen vier ab — der Nutzer bekaeme den Zettel
+            // aus dem Editor oder aus der Leiste heraus nicht mehr auf,
+            // obwohl er dort so wenig zu tun hat wie im Dateifenster.
+            | Kommando::Notizzettel => Wirkungsbereich::Ueberall,
             // Die drei Befehle des Navigators, deren Taste im Editor der
             // Textflaeche gehoert.
             //
