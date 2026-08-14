@@ -48,3 +48,31 @@ Die Dateiliste von C2 um `crates/krk-ui/src/appkit/tabelle.rs` ergänzen. Der Be
 mit dem von E1 und E3 zusammen: **drei Schritte in zwei Strängen nennen ihre Dateien ohne
 die Datei, durch die der Weg an das Tabmodell führt.** Eine gemeinsame Berichtigung ist
 billiger als drei einzelne.
+
+## Nachtrag vom 260815, beim Umsetzen von B1
+
+**Derselbe Befund ein viertes Mal, und diesmal in schwächerer Form.** Schritt B1 nennt
+unter `Files:` `crates/krk-ui/src/appkit/tabelle.rs` und
+`crates/krk-ui/src/appkit/anwendung.rs`. Geändert sind drei Dateien: die dritte ist
+`crates/krk-ui/src/kommandos/navigation.rs`, in die die reine Funktion `ersatzzeile` für
+C1.11 gezogen wurde.
+
+**Diese dritte Datei ist keine Entdeckung des Umsetzers.** Der letzte Aufzählungspunkt
+unter B1 `Changes:` schreibt sie ausdrücklich vor: „die Rechnung ‚welche Zeile bekommt
+die Auswahl, wenn ihre weggefallen ist‘ wird dafür als reine Funktion nach
+`crate::kommandos::navigation` gezogen, wo `zielzeile` schon steht". Die Zeile `Files:`
+und der Abschnitt `Changes:` desselben Schritts widersprechen sich also, und der Fehler
+sitzt allein in der Zeile.
+
+Damit trennt sich der Befund in zwei Sorten, und eine gemeinsame Berichtigung braucht
+beide:
+
+- **C2, E1, E3** — die Datei steht in keinem Teil des Schritts, und der Weg an das
+  Tabmodell führt trotzdem durch sie. Der Schritt ist ohne sie nicht ausführbar.
+- **B1** — die Datei steht im Fließtext des Schritts und fehlt in seiner Dateiliste. Ein
+  Leser, der nur `Files:` liest, hält die Abweichung für eine Eigenmächtigkeit des
+  Umsetzers.
+
+**Was `Files:` in diesem Plan misst, ist damit nicht verlässlich.** Wer die Zeile als
+Umfangsgrenze liest — für eine Zuständigkeitsprüfung, für eine Abgleichszählung —,
+bekommt bei vier der vierzehn Schritte eine zu kurze Antwort.

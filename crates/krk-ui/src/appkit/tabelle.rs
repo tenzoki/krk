@@ -145,7 +145,7 @@
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -165,12 +165,12 @@ use objc2_foundation::{
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::tasten::Kommando;
-use krk_core::verzeichnis::sprungmarke::{self, Sprungmarke};
+use krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname;
 use krk_core::verzeichnis::{Eintrag, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts};
 use krk_core::zwischenablage::{self, Ziel};
 
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
-use crate::kommandos::navigation::{Bewegung, zielzeile};
+use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::spalten::Spalte;
@@ -356,11 +356,6 @@ pub struct QuelleIvars {
     /// Der Weg, auf dem ein Mausklick das aktive Dateifenster umsetzt. Er ist
     /// wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt.
     aktivierung: RefCell<Option<Box<dyn Fn()>>>,
-    /// Die getippten Anfangsbuchstaben aus C2.
-    ///
-    /// Je Dateifenster und nicht je Tab: gesucht wird in der Liste, die gerade
-    /// auf dem Schirm steht, und jeder Tabwechsel setzt sie zurueck.
-    sprungmarke: RefCell<Sprungmarke>,
     /// Was gerufen wird, wenn dieses Dateifenster einen anderen Ordner zeigt.
     ///
     /// Der Weg, auf dem die Dateisystembeobachtung aus C9 erfaehrt, dass sie
@@ -547,7 +542,6 @@ impl DateifensterQuelle {
             tabs: RefCell::new(tabs),
             einzug: RefCell::new(None),
             aktivierung: RefCell::new(None),
-            sprungmarke: RefCell::new(Sprungmarke::neu()),
             ordnerwechsel: RefCell::new(None),
             auswahlmelder: RefCell::new(None),
             umbenennung: RefCell::new(None),
@@ -763,8 +757,6 @@ impl DateifensterQuelle {
     /// Gemeinsam fuer die Navigation und die Auffrischung; ein zweiter
     /// Ansichtsweg neben diesem entsteht nicht.
     fn nach_lesebeginn(&self) {
-        // Der Puffer der Sprungmarke gehoert der Liste, die er durchsucht hat.
-        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         // Die Auswahl des Modells an die Tabelle geben, statt sich darauf zu
         // verlassen, dass `reloadData` eine Zeilennummer jenseits der neuen
@@ -785,7 +777,6 @@ impl DateifensterQuelle {
     /// Nach einem Tabwechsel: Inhalt, Auswahl, Bildlauf und Leiste nachziehen.
     fn tab_gewechselt(&self) {
         self.fenstermeldung_loeschen();
-        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
         let bildlauf = self.ivars().tabs.borrow().aktiver().bildlauf();
@@ -1124,26 +1115,74 @@ impl DateifensterQuelle {
         self.mit_standardprogramm_oeffnen(std::slice::from_ref(&pfad));
     }
 
-    /// Ein getipptes Zeichen fuer die Sprungmarke aus C2.
+    /// Ein getipptes Zeichen fuer den Filtertext des sichtbaren Tabs (C1.1).
     ///
-    /// Liefert, ob KRK es verbraucht hat. Ein Zeichen, das kein Dateiname
-    /// tragen kann, weist der Kern ab; der Tastendruck geht dann unveraendert
-    /// weiter, statt ins Leere geschluckt zu werden. Findet sich kein Eintrag,
-    /// bleibt die Auswahl stehen und das Zeichen gilt trotzdem als verbraucht:
-    /// der Puffer traegt es, und der naechste Buchstabe baut darauf auf.
-    pub fn sprungmarke_tippen(&self, zeichen: char) -> bool {
-        let zeile = {
-            let mut marke = self.ivars().sprungmarke.borrow_mut();
-            let Some(praefix) = marke.tippen(zeichen, Instant::now()) else {
-                return false;
-            };
+    /// **Die eine Senke des Tippens.** Sie loeste zum 260814 die Sprungmarke
+    /// aus C2 der Runde 1 ab: dasselbe Zeichen aus demselben Zweig des
+    /// Anwendungsdelegierten, nur ein anderes Ziel. Der Filtertext gehoert dem
+    /// `Ordnermodell` des sichtbaren Tabs und nicht mehr der Ansicht; damit
+    /// gehoert er dem Tab, und ein Tabwechsel zeigt den des anderen Tabs
+    /// (C1.8), ohne dass diese Stelle dafuer etwas tut.
+    ///
+    /// Liefert, ob KRK das Zeichen verbraucht hat — derselbe Rueckgabewert wie
+    /// zuvor und dieselbe Zusage: nur ein nicht verbrauchter Tastendruck laeuft
+    /// unveraendert an AppKit weiter. Ein Zeichen, das kein Dateiname tragen
+    /// kann, ist deshalb nicht verbraucht.
+    ///
+    /// **Die Zeichenregel bleibt
+    /// [`traegt_ein_dateiname`](krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname)**
+    /// (C1.4), dieselbe, die die Tippsuche der Belegungsansicht aus der Runde 7
+    /// liest. Gefragt wird sie hier und nicht im Kern: `zeichen_anhaengen` hat
+    /// keinen Rueckgabewert, und ein dort still verworfenes Zeichen waere ein
+    /// Ausgang, den niemand sieht.
+    ///
+    /// **Findet der Filtertext nichts, gilt das Zeichen trotzdem als
+    /// verbraucht.** Die Liste ist dann leer, und der naechste Rueckschritt
+    /// gibt sie zurueck; ein Zeichen, das bei fehlendem Treffer an AppKit
+    /// weiterliefe, machte den Filtertext von seinen Treffern abhaengig.
+    pub fn filterzeichen_tippen(&self, zeichen: char) -> bool {
+        if !traegt_ein_dateiname(zeichen) {
+            return false;
+        }
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            tabs.aktiver_mut().modell_mut().zeichen_anhaengen(zeichen);
+        }
+        self.nach_filteraenderung();
+        true
+    }
+
+    /// Zieht die Ansicht nach, nachdem sich der Filtertext geaendert hat.
+    ///
+    /// Drei Schritte in dieser Reihenfolge: die neue Sicht anzeigen, die
+    /// Auswahl des Modells in die Tabelle geben, und erst danach entscheiden,
+    /// ob eine Ersatzzeile faellig ist. Die Reihenfolge traegt: die Frage aus
+    /// C1.11 laesst sich nur an der **neuen** Sicht stellen, denn erst sie
+    /// weiss, ob die Zeile der Auswahl weggefallen ist.
+    ///
+    /// **Der eine Weg der Anzeige nach einer Filteraenderung**, gerufen vom
+    /// Tippen und vom Ruecknehmen eines Zeichens. Die Rechnung selbst steht
+    /// als reine Funktion in [`crate::kommandos::navigation`] neben
+    /// `zielzeile`, damit sie ohne `NSTableView` zu pruefen ist; hier bleibt
+    /// allein, was AppKit betrifft.
+    ///
+    /// **Die Ersatzzeile geht ueber [`Self::zeile_setzen`]** und nicht ueber
+    /// `zeile_auswaehlen` daneben: die Auswahl muss auch im Modell stehen,
+    /// sonst zeigte der naechste Aufbau der Sicht wieder die alte.
+    fn nach_filteraenderung(&self) {
+        self.umsortiert();
+        let (hatte_auswahl, zeile_jetzt, zeilen) = {
             let tabs = self.ivars().tabs.borrow();
-            sprungmarke::erste_zeile_mit(tabs.aktiver().modell(), praefix)
+            let modell = tabs.aktiver().modell();
+            (
+                modell.auswahl().is_some(),
+                modell.auswahl_zeile(),
+                modell.zeilenzahl(),
+            )
         };
-        if let Some(zeile) = zeile {
+        if let Some(zeile) = ersatzzeile(hatte_auswahl, zeile_jetzt, zeilen) {
             self.zeile_setzen(zeile);
         }
-        true
     }
 
     /// Wie viele Zeilen eine Bildschirmseite fasst.
@@ -1175,8 +1214,8 @@ impl DateifensterQuelle {
     /// Setzt die Auswahl auf diese Zeile und blaettert sie ins Bild.
     ///
     /// Der eine Weg, auf dem die Tastatur die Auswahl umsetzt: die Bewegungen
-    /// aus C2, die Sprungmarke und das Markieren mit Weiterruecken enden alle
-    /// hier.
+    /// aus C2, die Ersatzzeile des Filters aus C1.11 und das Markieren mit
+    /// Weiterruecken enden alle hier.
     fn zeile_setzen(&self, zeile: usize) {
         let tabelle = &self.ivars().tabelle;
         let auswahl = NSIndexSet::indexSetWithIndex(zeile);
@@ -1679,7 +1718,9 @@ impl DateifensterQuelle {
     /// Sicht (C1.14).
     ///
     /// In der Bauart von [`Self::tiefe_suche_umschalten`] darueber: Ausleihe,
-    /// Aenderung am Modell, danach [`Self::umsortiert`] fuer die Anzeige. Die
+    /// Aenderung am Modell, danach [`Self::nach_filteraenderung`] fuer die
+    /// Anzeige — dieselbe Stelle, die auch das Tippen nachzieht, damit jede
+    /// Aenderung des Filtertexts denselben Weg nimmt. Die
     /// Liste waechst dabei um die Eintraege, die mit dem kuerzeren Filtertext
     /// wieder passen; das Neuaufbauen der Sicht gehoert
     /// `Ordnermodell::letztes_zeichen_weg` und nicht dieser Stelle.
@@ -1693,25 +1734,31 @@ impl DateifensterQuelle {
     /// zweite Gelegenheit, dieselbe Frage anders zu beantworten.
     ///
     /// **Weder Auswahl noch Markierung werden angefasst** (C6.9). Die Auswahl
-    /// haengt am Eintragsindex und wandert mit; [`Self::umsortiert`] zeigt sie
-    /// nur neu an.
+    /// haengt am Eintragsindex und wandert mit; [`Self::nach_filteraenderung`]
+    /// zeigt sie nur neu an. Der Ersatzzweig aus C1.11 kann hier nicht
+    /// greifen — ein Zeichen weniger nimmt der Sicht keine Zeile —, und er
+    /// steht trotzdem im Weg, weil zwei Wege fuer dieselbe Aenderung zwei
+    /// Gelegenheiten waeren, auseinanderzulaufen.
     pub fn letztes_filterzeichen_weg(&self) {
         let weggenommen = {
             let mut tabs = self.ivars().tabs.borrow_mut();
             tabs.aktiver_mut().modell_mut().letztes_zeichen_weg()
         };
         if weggenommen {
-            self.umsortiert();
+            self.nach_filteraenderung();
         }
     }
 
     /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
     ///
     /// Die Auswahl haengt am Eintrag und nicht an der Zeile; sie wandert
-    /// deshalb mit und wird hier nur neu angezeigt. Der Puffer der Sprungmarke
-    /// faellt: er hatte die alte Reihenfolge durchsucht.
+    /// deshalb mit und wird hier nur neu angezeigt.
+    ///
+    /// **Faellt die Zeile der Auswahl weg, bleibt die Auswahl hier leer.** Das
+    /// ist das Verhalten, das das Ausblenden der Verstecke seit der Runde 1
+    /// zeigt, und diese Stelle aendert es nicht. Der Filter braucht eine
+    /// andere Antwort; sie steht in [`Self::nach_filteraenderung`].
     fn umsortiert(&self) {
-        self.ivars().sprungmarke.borrow_mut().zuruecksetzen();
         self.ivars().tabelle.reloadData();
         self.auswahl_anzeigen();
     }

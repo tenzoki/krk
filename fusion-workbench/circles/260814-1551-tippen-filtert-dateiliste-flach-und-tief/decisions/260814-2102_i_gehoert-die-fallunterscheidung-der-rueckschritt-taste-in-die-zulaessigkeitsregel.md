@@ -50,6 +50,6 @@ Möglichkeit 2, und so fährt der Plan. Die Begründung ist nicht Geschmack, son
 
 ---
 Answered: `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Abschnitt `## Wo die Fallunterscheidung der Rückschritt-Taste fällt` und Schritte C1 und C2 — Möglichkeit 2. `kommandos/zulaessigkeit.rs` bleibt unverändert; die Regel steht als reine Funktion in `crates/krk-ui/src/kommandos/rueckschritt.rs` und wird im Zweig `Kommando::InPapierkorb` von `kommando_ausfuehren` gefragt, hinter der unveränderten Zulässigkeitsprüfung.
-Implemented: `crates/krk-ui/src/appkit/anwendung.rs:2881` und `:4418` — der Zweig `Kommando::InPapierkorb` fragt `kommandos::rueckschritt::rueckschritt` (`crates/krk-ui/src/kommandos/rueckschritt.rs:146`) hinter der unveraenderten Zulaessigkeitspruefung; der Anschlag kommt ueber `appkit::ereignisse::Anschlag` (`:276`) und `Eingabe::Kommando` in die Senke. `kommandos/zulaessigkeit.rs` ist unveraendert. Noch nicht eingecheckt: der Nutzer setzt den Commit, und der Hash gehoert dann an diese Stelle.
+Implemented: `crates/krk-ui/src/appkit/anwendung.rs:2881` und `:4418` — der Zweig `Kommando::InPapierkorb` fragt `kommandos::rueckschritt::rueckschritt` (`crates/krk-ui/src/kommandos/rueckschritt.rs:146`) hinter der unveraenderten Zulaessigkeitspruefung; der Anschlag kommt ueber `appkit::ereignisse::Anschlag` (`:276`) und `Eingabe::Kommando` in die Senke. `kommandos/zulaessigkeit.rs` ist unveraendert. Commit `1ac8842`.
 Deferred:
 Superseded by:

@@ -287,7 +287,7 @@ flowchart TD
 
 ### Strang B — das getippte Zeichen erreicht den Filter
 
-**B1. Die Senke füllt den Filter des sichtbaren Tabs**
+**B1. [DONE] Die Senke füllt den Filter des sichtbaren Tabs**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C1.1, C1.8, C1.13, C2.7

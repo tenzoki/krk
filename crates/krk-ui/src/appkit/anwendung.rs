@@ -61,12 +61,12 @@
 //! entscheidet, wohin ein Tastendruck geht, entsteht nicht.
 //!
 //! Zwei Sorten von Eingabe kommen an. Ein [`Kommando`] ist eine nachgeschlagene
-//! Funktion; ein Zeichen gehoert der Sprungmarke aus C2 und damit dem aktiven
-//! Dateifenster, weil sie die Liste durchsucht, die vor dem Nutzer steht.
-//! **Beide gehen durch denselben Fokusvorbehalt**: das Zeichen erreicht die
-//! Sprungmarke nur mit dem Fokus im Dateifenster, sonst laeuft der Tastendruck
-//! unveraendert an AppKit weiter. Ohne diese Zeile tippte ein Buchstabe mit der
-//! Schreibmarke im Editor in den Suchpuffer der Dateiliste.
+//! Funktion; ein Zeichen gehoert dem Filtertext des sichtbaren Tabs und damit
+//! dem aktiven Dateifenster, weil er die Liste verkuerzt, die vor dem Nutzer
+//! steht. **Beide gehen durch denselben Fokusvorbehalt**: das Zeichen erreicht
+//! den Filtertext nur mit dem Fokus im Dateifenster, sonst laeuft der
+//! Tastendruck unveraendert an AppKit weiter. Ohne diese Zeile tippte ein
+//! Buchstabe mit der Schreibmarke im Editor in die Dateiliste.
 //!
 //! **Laesst sich der Abgriff nicht einrichten, laeuft KRK nicht weiter.** Beide
 //! Stellen, die ihn aufsetzen — der Aufbau der Oberflaeche und das Nachziehen
@@ -2614,9 +2614,11 @@ impl Anwendungsdelegierter {
     /// Fuehrt aus, was der Ereignisabgriff geliefert hat.
     ///
     /// Die eine Stelle, die entscheidet, wohin ein Tastendruck geht. Ein
-    /// getipptes Zeichen gehoert der Sprungmarke aus C2, und die durchsucht
-    /// die Dateiliste; es geht deshalb an das aktive Dateifenster, **wenn der
-    /// Fokus dort steht**, und sonst nirgendwohin.
+    /// getipptes Zeichen gehoert dem Filtertext des sichtbaren Tabs, und der
+    /// verkuerzt die Dateiliste; es geht deshalb an das aktive Dateifenster,
+    /// **wenn der Fokus dort steht**, und sonst nirgendwohin. Bis zum 260814
+    /// gehoerte es der Sprungmarke aus C2 der Runde 1; der Zweig hat seine Form
+    /// behalten und allein sein Ziel gewechselt.
     ///
     /// **Der Vorbehalt ist derselbe, den jedes Kommando durchlaeuft, und keine
     /// Sonderregel fuer den Editor.** Bis zum 260809 fehlte er hier: ein
@@ -2624,7 +2626,7 @@ impl Anwendungsdelegierter {
     /// [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich), und der eine
     /// Fokusvorbehalt in [`Self::kommando_ausfuehren`] sitzt im anderen Zweig.
     /// Mit der Schreibmarke im Editor lief jeder Buchstabe in den Suchpuffer
-    /// der Sprungmarke, verschob dort die Auswahl und erreichte die
+    /// der damaligen Sprungmarke, verschob dort die Auswahl und erreichte die
     /// Textflaeche nie
     /// (`issues/260809-1648_*_die-sprungmarke-geht-ohne-fokuspruefung-in-das-aktive-dateifenster.md`).
     fn eingabe_ausfuehren(&self, eingabe: Eingabe) -> bool {
@@ -2661,13 +2663,13 @@ impl Anwendungsdelegierter {
                 // keinen Wirkungsbereich, und `zulaessig` hat ihm nichts zu
                 // sagen. Die Eingaben der Frage braucht es trotzdem alle drei.
                 //
-                // Ein Zeichen gehoert dem Blatt, solange eines steht: die
-                // Sprungmarke durchsucht eine Liste, die der Nutzer gerade
-                // nicht bedient. Und es gehoert dem Textfeld, solange der
+                // Ein Zeichen gehoert dem Blatt, solange eines steht: der
+                // Filter verkuerzt eine Liste, die der Nutzer gerade nicht
+                // bedient. Und es gehoert dem Textfeld, solange der
                 // Ersthelfer AppKit gehoert — bis zur Runde 7 stand diese Frage
                 // als frueher Ausstieg im Ereignisabgriff und erreichte diesen
                 // Zweig nie. Ohne sie liefe ein Zeichen waehrend einer
-                // Umbenennung in der Liste in den Sprungmarkenpuffer.
+                // Umbenennung in der Liste in den Filtertext.
                 let lage = self.lage();
                 if lage.blatt_steht || lage.ersthelfer_gehoert_appkit {
                     return false;
@@ -2677,14 +2679,14 @@ impl Anwendungsdelegierter {
                         let aktiv = self.ivars().modell.borrow().aktiv();
                         self.dateifenster(aktiv)
                             .quelle()
-                            .sprungmarke_tippen(zeichen)
+                            .filterzeichen_tippen(zeichen)
                     }
-                    // Keiner dieser vier Bereiche traegt eine Sprungmarke. Der
+                    // Keiner dieser vier Bereiche traegt einen Filtertext. Der
                     // Rueckgabewert `false` ist die Zusage: nur ein nicht
                     // ausgefuehrter Tastendruck laeuft unveraendert an AppKit
                     // weiter, und nur dann tippt die Textflaeche des Editors
                     // das Zeichen. Die Leiste und die Vorschau haben bis zum
-                    // 260809 stillschweigend die Sprungmarke des
+                    // 260809 stillschweigend die damalige Sprungmarke des
                     // Dateifensters bedient; das endet mit derselben Zeile,
                     // wie S17 es vorsieht.
                     Fokus::Leiste | Fokus::Vorschau | Fokus::Editor | Fokus::Anderswo => false,
