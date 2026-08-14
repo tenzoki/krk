@@ -316,7 +316,7 @@ flowchart TD
 
 ### Strang C — die Rückschritt-Taste
 
-**C1. Die Regel als reine Funktion**
+**C1. [DONE] Die Regel als reine Funktion**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/kommandos/rueckschritt.rs` (neu), `crates/krk-ui/src/kommandos/mod.rs`
 - Erfüllt: C6.10
