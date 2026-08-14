@@ -727,3 +727,66 @@
 {"ts":"2026-08-14T10:56:40","event":"bounded_closure_proposed","turn":3,"detail":"Abnahmeliste nicht an die Kriterien gebunden; 8 von 29 belegt"}
 {"ts":"2026-08-14T11:05:51","event":"portfolio_refresh","detail":"portfolio.md neu; F4-Eintrag hat seine Vorbedingung verloren"}
 {"ts":"2026-08-14T11:05:51","event":"session_end","detail":"3 Turns, 16/16 Schritte, 12 Commits, 0 Fehler; Circle beschraenkt geschlossen"}
+{"ts":"2026-08-14T11:58:01","event":"session_start","history_file":"shared/history/260814-1357-orchestrator-session.md","detail":"Directive noch offen; Domaene code; kein aktiver Circle; max_turns=5"}
+{"ts":"2026-08-14T13:01:07","event":"session_start","history_file":"shared/history/260814-1500-orchestrator-session.md","detail":"Setup complete; directive not yet stated; no active Circle; domain=code; max_turns=5"}
+{"ts":"2026-08-14T13:39:59","event":"shaper_start","agent":"shaper","detail":"Filtersuche in den Dateifenstern mit Deep-Kaestchen; anticipated-circle mode"}
+{"ts":"2026-08-14T13:57:27","event":"shaper_done","agent":"shaper","detail":"Circle 260814-1551-tippen-filtert-dateiliste-flach-und-tief angelegt; 6 offene Entscheidungen"}
+{"ts":"2026-08-14T13:57:27","event":"circle_activated","detail":"260814-1551-tippen-filtert-dateiliste-flach-und-tief _a_->_t_"}
+{"ts":"2026-08-14T16:22:53","event":"shaper_start","agent":"shaper","detail":"Spec fuer Circle 260814-1551; Directive korrigiert auf Modell B"}
+{"ts":"2026-08-14T16:40:01","event":"shaper_done","agent":"shaper","detail":"Spec 260814-1830; 6 Faehigkeiten, 62 Abnahmekriterien, 4 neue offene Fragen"}
+{"ts":"2026-08-14T16:40:01","event":"conceptrev_start","agent":"conceptrev","detail":"Spec 260814-1830, 2 Mermaid-Diagramme"}
+{"ts":"2026-08-14T16:45:58","event":"conceptrev_done","agent":"conceptrev","detail":"Urteil tangled; Bild 2 ohne negativen Ast, 5 Befunde"}
+{"ts":"2026-08-14T16:45:58","event":"gate_hit","detail":"Spec-Freigabe Circle 260814-1551"}
+{"ts":"2026-08-14T17:38:36","event":"conceptrev_start","agent":"conceptrev","detail":"Spec 260814-1830 nachgebessert, zweite Pruefung"}
+{"ts":"2026-08-14T18:08:54","event":"conceptrev_done","agent":"conceptrev","detail":"Urteil tangled; 5 alte Befunde geschlossen, 2 neue Widersprueche zwischen Abnahmekriterien"}
+{"ts":"2026-08-14T18:08:54","event":"gate_response","detail":"Nutzer: nachbessern, dann Planner ohne dritte Diagrammpruefung"}
+{"ts":"2026-08-14T18:53:28","event":"gate_response","detail":"Spec freigegeben; C1.20 als angenommen"}
+{"ts":"2026-08-14T18:53:28","event":"planner_start","agent":"planner","detail":"Spec 260814-1830, Circle 260814-1551"}
+{"ts":"2026-08-14T19:32:14","event":"gate_response","detail":"Plan freigegeben"}
+{"ts":"2026-08-14T19:32:14","event":"planner_done","agent":"planner","detail":"Plan 260814-2102; 14 Schritte, 7 Straenge"}
+{"ts":"2026-08-14T19:32:14","event":"queue_built","detail":"14 Aufgaben, 6 Abhaengigkeitsstufen, 3 sofort bereit"}
+{"ts":"2026-08-14T19:32:14","event":"turn_start","turn":1,"detail":"3 bereite Aufgaben: A1, C1, E1; Anker 0c3a6f4"}
+{"ts":"2026-08-14T19:32:36","event":"task_start","turn":1,"task":"A1","agent":"coder","detail":"Pruefschritt und vier Felder am Ordnermodell"}
+{"ts":"2026-08-14T19:45:22","event":"task_done","turn":1,"task":"A1","agent":"coder","detail":"ba4af5f; make check exit 0; 1 Defekt nebenbei geschlossen, 2 neu abgelegt"}
+{"ts":"2026-08-14T19:45:22","event":"commit","turn":1,"task":"A1","detail":"ba4af5f Pruefschritt Sichtbarkeit und vier Felder am Ordnermodell"}
+{"ts":"2026-08-14T20:43:57","event":"task_start","turn":1,"task":"C1","agent":"coder","detail":"Die Rueckschritt-Regel als reine Funktion"}
+{"ts":"2026-08-14T20:57:09","event":"task_done","turn":1,"task":"C1","agent":"coder","detail":"2ff4b5a; make check exit 0; 1 Defekt abgelegt"}
+{"ts":"2026-08-14T20:57:09","event":"commit","turn":1,"task":"C1","detail":"2ff4b5a Rueckschritt-Regel als reine Funktion"}
+{"ts":"2026-08-14T20:57:09","event":"task_start","turn":1,"task":"E1","agent":"coder","detail":"Kommando, Wirkungsbereich, Bereich, Ausfuehrungszweig fuer Deep"}
+{"ts":"2026-08-14T21:05:52","event":"task_blocked","turn":1,"task":"E1","agent":"coder","detail":"make check exit 2; eine Probe verlangt den Belegungseintrag aus E2; kein roter Commit"}
+{"ts":"2026-08-14T21:05:52","event":"task_start","turn":1,"task":"E2","agent":"ontocoder","detail":"Der 84. Eintrag der Belegung; E1 und E2 werden zusammen committet"}
+{"ts":"2026-08-14T21:22:40","event":"task_blocked","turn":1,"task":"E2","agent":"ontocoder","detail":"make check exit 2; drei Proben fuehren eine Liste fester Laenge; Rust-Arbeit"}
+{"ts":"2026-08-14T21:22:40","event":"task_start","turn":1,"task":"E2b","agent":"coder","detail":"Drei Proben auf den vierten unbelegten Eintrag nachziehen"}
+{"ts":"2026-08-14T21:30:16","event":"task_done","turn":1,"task":"E1","agent":"coder","detail":"d73be91 gemeinsam mit E2 und E2b"}
+{"ts":"2026-08-14T21:30:16","event":"task_done","turn":1,"task":"E2","agent":"ontocoder","detail":"d73be91; 84 Funktionen in der Belegung"}
+{"ts":"2026-08-14T21:30:16","event":"task_done","turn":1,"task":"E2b","agent":"coder","detail":"d73be91; drei Proben auf vier unbelegte Funktionen nachgezogen"}
+{"ts":"2026-08-14T21:30:16","event":"commit","turn":1,"task":"E1+E2+E2b","detail":"d73be91 make check exit 0"}
+{"ts":"2026-08-14T21:45:13","event":"task_start","turn":1,"task":"C2","agent":"coder","detail":"Der Anschlag erreicht die Senke, der eine Zweig ruft die Regel"}
+{"ts":"2026-08-14T22:00:57","event":"task_done","turn":1,"task":"C2","agent":"coder","detail":"1ac8842; make check exit 0; expect(dead_code) gefallen"}
+{"ts":"2026-08-14T22:00:57","event":"commit","turn":1,"task":"C2","detail":"1ac8842 Anschlag reist mit, Ruecktaste faellt an der richtigen Stelle"}
+{"ts":"2026-08-14T22:00:57","event":"task_start","turn":1,"task":"B1","agent":"coder","detail":"Die Senke fuellt den Filter des sichtbaren Tabs"}
+{"ts":"2026-08-14T22:11:50","event":"task_done","turn":1,"task":"B1","agent":"coder","detail":"fbab27b; make check exit 0; die Kette vom Tastendruck ins Modell ist geschlossen"}
+{"ts":"2026-08-14T22:11:50","event":"commit","turn":1,"task":"B1","detail":"fbab27b Tippen filtert, Sprungmarke abgeloest"}
+{"ts":"2026-08-14T22:11:57","event":"task_start","turn":1,"task":"B2","agent":"coder","detail":"Ordnerwechsel, Tabwechsel und Esc"}
+{"ts":"2026-08-14T22:24:58","event":"task_done","turn":1,"task":"B2","agent":"coder","detail":"14718c2; make check exit 0; 2 Defekte abgelegt"}
+{"ts":"2026-08-14T22:24:58","event":"commit","turn":1,"task":"B2","detail":"14718c2 Filter ueberlebt Tabwechsel, Esc als dritter Rang"}
+{"ts":"2026-08-14T22:24:58","event":"task_start","turn":1,"task":"D1","agent":"coder","detail":"Der sechste Rang der Statuszeile"}
+{"ts":"2026-08-14T22:42:37","event":"task_done","turn":1,"task":"D1","agent":"coder","detail":"2d3d971; make check exit 0; C4.1-C4.8 und C4.10 an Proben, C4.9 durch Ansehen"}
+{"ts":"2026-08-14T22:42:37","event":"commit","turn":1,"task":"D1","detail":"2d3d971 sechster Rang der Statuszeile"}
+{"ts":"2026-08-14T22:42:37","event":"task_start","turn":1,"task":"E3","agent":"coder","detail":"Das neunte Ankreuzfeld"}
+{"ts":"2026-08-14T22:54:51","event":"task_done","turn":1,"task":"E3","agent":"coder","detail":"a0f76fe; make check exit 0; neun Ankreuzfelder"}
+{"ts":"2026-08-14T22:54:51","event":"commit","turn":1,"task":"E3","detail":"a0f76fe neuntes Ankreuzfeld Deep"}
+{"ts":"2026-08-14T22:54:51","event":"task_start","turn":1,"task":"F1","agent":"coder","detail":"Der Durchlauf als eigenes Modul neben dem Leser"}
+{"ts":"2026-08-14T23:11:41","event":"task_done","turn":1,"task":"F1","agent":"coder","detail":"2cdd299; make check exit 0; C3.4 halb an einer Probe, halb am Code"}
+{"ts":"2026-08-14T23:11:41","event":"commit","turn":1,"task":"F1","detail":"2cdd299 Durchlauf ueber den Unterbaum"}
+{"ts":"2026-08-14T23:11:41","event":"task_start","turn":1,"task":"A2","agent":"coder","detail":"Die Sprungmarke faellt, die Zeichenregel bleibt"}
+{"ts":"2026-08-14T23:27:35","event":"task_done","turn":1,"task":"A2","agent":"coder","detail":"9e1892d; make check exit 0; ein Vergleich, zwei Rufer"}
+{"ts":"2026-08-14T23:27:35","event":"commit","turn":1,"task":"A2","detail":"9e1892d Sprungmarke gefallen, Modul heisst filter"}
+{"ts":"2026-08-14T23:27:35","event":"task_start","turn":1,"task":"F2","agent":"coder","detail":"Der Tab haelt den Durchlauf, zieht Befunde ein, bricht ab"}
+{"ts":"2026-08-14T23:46:27","event":"task_done","turn":1,"task":"F2","agent":"coder","detail":"9789115; make check exit 0; 11 von 13 Kriterien an Proben"}
+{"ts":"2026-08-14T23:46:27","event":"commit","turn":1,"task":"F2","detail":"9789115 der Tab haelt den Durchlauf"}
+{"ts":"2026-08-14T23:47:08","event":"task_done","turn":1,"task":"G1","agent":"orchestrator","detail":"make check exit 0 nach jedem Schritt; target/KRK.app ist ein Entwicklungsbau, das beglaubigte v0.3.0 liegt unter krk-beglaubigt-260814-1054"}
+{"ts":"2026-08-14T23:47:08","event":"task_start","turn":1,"task":"G2","agent":"coder","detail":"Die Abnahmeliste am laufenden Buendel"}
+{"ts":"2026-08-14T23:58:47","event":"task_done","turn":1,"task":"G2","agent":"coder","detail":"50742a6; Abnahmeliste mit 75 Kriterien, 10 mit Buendelanteil"}
+{"ts":"2026-08-14T23:58:47","event":"commit","turn":1,"task":"G2","detail":"50742a6 Abnahmeliste"}
+{"ts":"2026-08-14T23:58:47","event":"turn_end","turn":1,"detail":"14 von 14 Aufgaben, 12 Commits ba4af5f..50742a6, 0 Fehler"}
