@@ -1659,6 +1659,52 @@ impl DateifensterQuelle {
         self.umsortiert();
     }
 
+    /// Ob das Modell des sichtbaren Tabs einen Filtertext fuehrt.
+    ///
+    /// **Die eine Groesse, an der die Rueckschritt-Taste ihre Bedeutung
+    /// entscheidet** (C1.14 bis C1.16). Gefragt wird sie vom
+    /// Anwendungsdelegierten, der die Regel in
+    /// [`crate::kommandos::rueckschritt`] stellt; die Antwort steht am Modell
+    /// und wird nicht daneben ein zweites Mal gehalten.
+    ///
+    /// **Ob der Filtertext Treffer hat, sagt sie nicht**, und das ist Absicht:
+    /// ein Filtertext ohne Treffer schuetzt genauso wie einer mit Treffern
+    /// (C6.10).
+    pub fn filter_steht(&self) -> bool {
+        let tabs = self.ivars().tabs.borrow();
+        tabs.aktiver().modell().filter_steht()
+    }
+
+    /// Nimmt das letzte Zeichen des Filtertexts zurueck und zeigt die neue
+    /// Sicht (C1.14).
+    ///
+    /// In der Bauart von [`Self::tiefe_suche_umschalten`] darueber: Ausleihe,
+    /// Aenderung am Modell, danach [`Self::umsortiert`] fuer die Anzeige. Die
+    /// Liste waechst dabei um die Eintraege, die mit dem kuerzeren Filtertext
+    /// wieder passen; das Neuaufbauen der Sicht gehoert
+    /// `Ordnermodell::letztes_zeichen_weg` und nicht dieser Stelle.
+    ///
+    /// **Ohne Rueckgabewert, und der Grund gehoert dazu.** Der Wert von
+    /// `Ordnermodell::letztes_zeichen_weg` traegt `#[must_use]` und wird hier
+    /// verbraucht: er entscheidet, ob die Anzeige nachzuziehen ist. Fuer den
+    /// Aufrufer bleibt nichts zu entscheiden — er hat die Frage „steht ein
+    /// Filtertext" ueber [`Self::filter_steht`] schon gestellt, und die Regel
+    /// hat auf ihr geantwortet. Ein zweiter Wahrheitswert zurueck waere eine
+    /// zweite Gelegenheit, dieselbe Frage anders zu beantworten.
+    ///
+    /// **Weder Auswahl noch Markierung werden angefasst** (C6.9). Die Auswahl
+    /// haengt am Eintragsindex und wandert mit; [`Self::umsortiert`] zeigt sie
+    /// nur neu an.
+    pub fn letztes_filterzeichen_weg(&self) {
+        let weggenommen = {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            tabs.aktiver_mut().modell_mut().letztes_zeichen_weg()
+        };
+        if weggenommen {
+            self.umsortiert();
+        }
+    }
+
     /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
     ///
     /// Die Auswahl haengt am Eintrag und nicht an der Zeile; sie wandert

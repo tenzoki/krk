@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `decisions/260814-1830_a_wie-nimmt-der-nutzer-ein-einzelnes-zeichen-des-filters-zurueck.md` (die Antwort, die diese Frage ausdrücklich an den Planner gibt); `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md` (Abschnitt `## Offen für den Planner`, vierter Punkt); `crates/krk-ui/src/kommandos/zulaessigkeit.rs:172-181` (die eine Regel mit ihren zwei Fragern); `resources/default-keymap.toml:156-158` (die zwei Kombinationen auf einer Funktion)
 
@@ -50,6 +50,6 @@ Möglichkeit 2, und so fährt der Plan. Die Begründung ist nicht Geschmack, son
 
 ---
 Answered: `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Abschnitt `## Wo die Fallunterscheidung der Rückschritt-Taste fällt` und Schritte C1 und C2 — Möglichkeit 2. `kommandos/zulaessigkeit.rs` bleibt unverändert; die Regel steht als reine Funktion in `crates/krk-ui/src/kommandos/rueckschritt.rs` und wird im Zweig `Kommando::InPapierkorb` von `kommando_ausfuehren` gefragt, hinter der unveränderten Zulässigkeitsprüfung.
-Implemented:
+Implemented: `crates/krk-ui/src/appkit/anwendung.rs:2881` und `:4418` — der Zweig `Kommando::InPapierkorb` fragt `kommandos::rueckschritt::rueckschritt` (`crates/krk-ui/src/kommandos/rueckschritt.rs:146`) hinter der unveraenderten Zulaessigkeitspruefung; der Anschlag kommt ueber `appkit::ereignisse::Anschlag` (`:276`) und `Eingabe::Kommando` in die Senke. `kommandos/zulaessigkeit.rs` ist unveraendert. Noch nicht eingecheckt: der Nutzer setzt den Commit, und der Hash gehoert dann an diese Stelle.
 Deferred:
 Superseded by:

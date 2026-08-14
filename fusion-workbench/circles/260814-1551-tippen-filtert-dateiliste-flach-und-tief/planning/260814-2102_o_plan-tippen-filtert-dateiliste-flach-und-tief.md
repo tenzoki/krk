@@ -328,7 +328,9 @@ flowchart TD
   - Der Modulkopf schreibt die drei Größen aus und **nennt ausdrücklich die drei, an denen die Regel nicht hängt** (C6.10): ob der Filtertext Treffer hat, ob eine Auswahl besteht, ob „Deep" an ist.
   - Proben: alle acht Wahrheitskombinationen ausgeschrieben, dazu die vier Wege aus der Tabelle des Spec einzeln mit ihrer Begründung.
 
-**C2. Der Anschlag erreicht die Senke, und der eine Zweig ruft die Regel**
+**C2. [DONE] Der Anschlag erreicht die Senke, und der eine Zweig ruft die Regel**
+- **Eine dritte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den zwei genannten Dateien ist der Filtertext des sichtbaren Tabs nicht erreichbar. Derselbe Zugriffsweg wie bei E1. Datensatz: `issues/260814-2357_o_c2-nennt-zwei-dateien-der-weg-an-den-filtertext-des-tabs-fuehrt-durch-eine-dritte.md`.
+- **Das `expect(dead_code)` an der Regel ist gefallen**, wie C1 es vorgesehen hatte; `crates/krk-ui/src/kommandos/rueckschritt.rs` ist damit die vierte angefasste Datei und trägt jetzt auch die Zählprobe. `make check` läuft grün (Exit 0).
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C1.14, C1.15, C1.16, C1.17, C1.18, C1.19, C1.20, C6.9, C6.11

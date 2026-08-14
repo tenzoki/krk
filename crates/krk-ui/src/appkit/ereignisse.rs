@@ -21,18 +21,46 @@
 //! NSEvent
 //!    │
 //!    ├─ Tastendruck::aus_ereignis ..... Maske normalisiert, Zeichen gemeldet
+//!    ├─ isARepeat ..................... Anschlag = Tastendruck + Wiederholung
 //!    │
 //!    ├─ Faenger der Belegungsansicht .. zwei Stationen, siehe unten;
 //!    │                                  nimmt eine an: Ereignis verbraucht
 //!    │
 //!    └─ Belegung::nachschlag
-//!         ├─ Kommando ─────> Senke des Aufrufers ─┐ ist der Befehl hier
+//!         ├─ Kommando ──> mit Anschlag ──> Senke ─┐ ist der Befehl hier
 //!         ├─ Sprungmarke ──> Zeichen ──> Senke ───┤ gerade zulaessig?
 //!         └─ unbelegt ─────> unveraendert an AppKit
 //! ```
 //!
 //! Die letzte Frage stellt die Senke und nicht dieser Abgriff; siehe den
 //! Abschnitt "Der Fokusvorbehalt" unten.
+//!
+//! # Der Anschlag, und warum er nicht im Tastendruck steht
+//!
+//! Ein [`Anschlag`] ist ein [`Tastendruck`] samt der Auskunft, ob dieses
+//! Ereignis aus einer **Tastenwiederholung** stammt. Er begleitet das
+//! nachgeschlagene Kommando bis in die Senke, weil eine Fallunterscheidung
+//! dort den Tastendruck noch braucht: `resources/default-keymap.toml` legt
+//! `delete` und `cmd+delete` auf dieselbe Funktion `in_papierkorb`, und beide
+//! werden im Nachschlag zu demselben [`Kommando`], bevor irgendjemand fragen
+//! kann. Die Regel dazu steht in [`crate::kommandos::rueckschritt`]; hier steht
+//! allein, dass der Anschlag den Weg dorthin uebersteht.
+//!
+//! **[`Tastendruck`] selbst bleibt unangetastet**, und das ist keine
+//! Bequemlichkeit. Er ist der Nachschlagschluessel der Belegung, traegt `Hash`
+//! und `Ord`, und ein Wiederholungsbit darin aenderte, was „zwei Ereignisse
+//! ergeben denselben Tastendruck" heisst: eine gehaltene Taste faende ihre
+//! Funktion nicht mehr. Der Anschlag ist deshalb eine kleine Struktur
+//! **daneben** und kein Feld darin.
+//!
+//! **`isARepeat` wird hier zum ersten Mal im Baum gelesen.** Bis zur
+//! Filter-Runde kam der Wert an genau einer Stelle vor, und dort wird er
+//! geschrieben: [`ereignis_senden`] baut die synthetischen Ereignisse des
+//! Messmodus mit `false`. Daraus folgt eine Grenze, die benannt gehoert: **der
+//! Messmodus kann den Wiederholungszweig nicht fahren.** Seine Ereignisse
+//! melden sich nie als Wiederholung, und die Abnahme der beiden Kriterien, die
+//! daran haengen (C1.18 und C1.20), bleibt am laufenden Buendel und damit
+//! Nutzerarbeit. Ein Weg um diese Grenze herum wird nicht gebaut.
 //!
 //! Die Normalisierung steht **vor** dem Faenger, weil der den rohen
 //! [`Tastendruck`] braucht; bis zum 260808 zeigte das Bild hier die umgekehrte
@@ -199,9 +227,11 @@
 //!
 //! `NSEvent`, `NSApplication`, `NSWindow`, `NSResponder`, `NSText`,
 //! `NSTextField` und `NSTextView` stehen seit macOS 10.0 zur Verfuegung, ebenso
-//! `NSString` und `NSProcessInfo`. Vier Beruehrungen sind juenger als ihre
-//! Klasse: `addLocalMonitorForEventsMatchingMask:handler:`, `removeMonitor:`
-//! und `NSProcessInfo.systemUptime` seit 10.6,
+//! `NSString` und `NSProcessInfo`. `NSEvent.isARepeat` steht seit 10.0 und ist
+//! damit keine der juengeren Beruehrungen; die Zeile steht trotzdem hier, weil
+//! die Angabe sonst fuer die neue Lesestelle fehlte. Vier Beruehrungen sind
+//! juenger als ihre Klasse: `addLocalMonitorForEventsMatchingMask:handler:`,
+//! `removeMonitor:` und `NSProcessInfo.systemUptime` seit 10.6,
 //! `charactersByApplyingModifiers:` seit 10.15. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
 //! keine Beruehrung in dieser Datei braucht deshalb eine
@@ -231,14 +261,68 @@ use krk_core::tasten::Belegung;
 use krk_core::tasten::normalisierung::{ModMaske, roh};
 use krk_core::tasten::{Kombination, Kommando, Nachschlag, Tastendruck, code_von_pflicht};
 
+/// Ein einzelner Anschlag: welche Taste, und ob dieses Ereignis aus einer
+/// Tastenwiederholung stammt.
+///
+/// **Eine Struktur neben [`Tastendruck`] und kein Feld darin**, aus dem Grund,
+/// den der Modulkopf ausschreibt: der Tastendruck ist der Nachschlagschluessel
+/// und traegt `Hash` und `Ord`.
+///
+/// Sie wandert mit dem nachgeschlagenen Kommando in die Senke, weil die
+/// Fallunterscheidung der Rueckschritt-Taste dort noch wissen muss, welche
+/// Taste gedrueckt wurde: `delete` und `cmd+delete` tragen dasselbe
+/// [`Kommando`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Anschlag {
+    /// Die gedrueckte Taste, normalisiert wie ueberall.
+    pub druck: Tastendruck,
+    /// Ob AppKit dieses Ereignis als Wiederholung einer gehaltenen Taste
+    /// meldet (`isARepeat`).
+    pub wiederholung: bool,
+}
+
+impl Anschlag {
+    /// Ob dieser Anschlag die **nackte** Rueckschritt-Taste war.
+    ///
+    /// **Die eine Erklaerung dieser Frage, und sie hat zwei Frager.** Der eine
+    /// ist der Zweig `Kommando::InPapierkorb` in
+    /// `Anwendungsdelegierter::kommando_ausfuehren`, der andere die Zeile, die
+    /// den Merker der Tastenwiederholung bei jeder anderen Eingabe
+    /// zuruecksetzt. Zwei Fassungen derselben Frage koennten auseinanderlaufen,
+    /// und dann raeumte die falsche Haelfte Dateien weg; dieselbe Bauart wie
+    /// bei [`crate::kommandos::zulaessigkeit::zulaessig`] und ihren zwei
+    /// Fragern.
+    ///
+    /// **Leere Maske heisst leer.** `cmd+delete` traegt eine Zusatztaste und
+    /// faellt hier heraus, und damit erreicht es den Papierkorb in jeder Lage
+    /// (C1.17). `f8` und `opt+cmd+delete` kommen gar nicht erst an: sie tragen
+    /// `Kommando::EndgueltigLoeschen`.
+    #[must_use]
+    pub fn ist_nackter_rueckschritt(self) -> bool {
+        self.druck.maske.ist_leer() && self.druck.code == code_von_pflicht("delete")
+    }
+}
+
 /// Was der Abgriff an den Aufrufer weitergibt.
 ///
 /// Zwei Sorten, weil ein Tastendruck zwei Dinge sein kann: eine nachgeschlagene
 /// Funktion oder ein getipptes Zeichen fuer die Sprungmarke aus C2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Eingabe {
-    /// Eine belegte Kombination.
-    Kommando(Kommando),
+    /// Eine belegte Kombination, samt dem [`Anschlag`], der sie ausgeloest hat.
+    ///
+    /// **Der Anschlag steht hier und nicht nur der Tastendruck**, weil die
+    /// Senke beide Auskuenfte braucht: welche Taste es war und ob sie gehalten
+    /// wird. Ein Kommando ohne Anschlag gibt es auf diesem Weg nicht — jeder
+    /// Tastendruck hat einen; wer ohne Tastendruck ein Kommando stellt (das
+    /// Hauptmenue, ein Schalter der Bereichsleiste), ruft die Senke gar nicht
+    /// erst und reicht `None` weiter.
+    Kommando {
+        /// Die nachgeschlagene Funktion.
+        kommando: Kommando,
+        /// Der Anschlag, der sie ausgeloest hat.
+        anschlag: Anschlag,
+    },
     /// Ein Zeichen fuer die Sprungmarke aus C2.
     ///
     /// Ob es ueberhaupt in den Puffer gehoert, entscheidet der Kern; der
@@ -506,6 +590,15 @@ fn behandeln(
         ereignis.modifierFlags().0 as u64,
     );
 
+    // **Die erste Lesestelle von `isARepeat` in diesem Baum**; siehe den
+    // Modulkopf, samt der Grenze, die daraus fuer den Messmodus folgt. Gelesen
+    // wird hier und nicht spaeter, weil das Ereignis hinter dieser Funktion
+    // nicht mehr zur Hand ist.
+    let anschlag = Anschlag {
+        druck,
+        wiederholung: ereignis.isARepeat(),
+    };
+
     // Einmal gefragt und nicht zweimal: der Faenger und der Sprungmarkenzweig
     // brauchen dasselbe Zeichen desselben Ereignisses, und das ist ein
     // Fremdaufruf auf dem Tastendruckpfad, an dem L1 haengt.
@@ -538,7 +631,7 @@ fn behandeln(
         // und ein Nachschlag ohne Kommando kommt bei der Zulaessigkeitsfrage
         // gar nicht erst an. Siehe den Modulkopf.
         Nachschlag::Funktion(funktion) => match funktion.kommando() {
-            Some(kommando) => senke(Eingabe::Kommando(kommando)),
+            Some(kommando) => senke(Eingabe::Kommando { kommando, anschlag }),
             None => false,
         },
         // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: das Tippen
@@ -690,6 +783,58 @@ mod tests {
     use crate::quellbaum::quelldateien;
 
     use super::*;
+
+    /// Die Frage, an der `delete` und `cmd+delete` auseinandergehen (C1.17).
+    ///
+    /// **Der Nachschlag trennt die beiden nicht mehr**, und darum steht die
+    /// Trennung hier: `resources/default-keymap.toml` legt beide auf die
+    /// Funktion `in_papierkorb`, und beide kommen als dasselbe
+    /// [`Kommando::InPapierkorb`] in der Senke an. Die Auslieferungsbelegung
+    /// wird deshalb mitgeprueft und nicht nur die Struktur — geht die Zeile
+    /// dort verloren, faellt die Probe, statt still richtig zu bleiben.
+    ///
+    /// Das Wiederholungsbit ist fuer diese Frage gleichgueltig und deshalb in
+    /// beiden Staenden durchgefahren: welche Taste gedrueckt wurde, haengt
+    /// nicht daran, ob sie gehalten wird.
+    #[test]
+    fn nur_die_nackte_ruecktaste_gilt_als_rueckschritt() {
+        let belegung = Belegung::auslieferung();
+        let funktion = belegung
+            .funktion("in_papierkorb")
+            .expect("die Auslieferungsbelegung fuehrt keine Funktion in_papierkorb");
+
+        let mut nackte = 0usize;
+        for kombination in funktion.tasten() {
+            for wiederholung in [false, true] {
+                let anschlag = Anschlag {
+                    druck: kombination.tastendruck(),
+                    wiederholung,
+                };
+                if anschlag.ist_nackter_rueckschritt() {
+                    nackte += 1;
+                }
+            }
+        }
+
+        // Zwei Kombinationen, je zwei Wiederholungsstaende: `delete` zaehlt in
+        // beiden, `cmd+delete` in keinem.
+        assert_eq!(
+            nackte,
+            2,
+            "nicht genau eine der Kombinationen von in_papierkorb ist die nackte \
+             Ruecktaste: {:?}",
+            funktion.tasten()
+        );
+
+        let mit_befehlstaste = Anschlag {
+            druck: Tastendruck::neu(code_von_pflicht("delete"), ModMaske::BEFEHL),
+            wiederholung: false,
+        };
+        assert!(
+            !mit_befehlstaste.ist_nackter_rueckschritt(),
+            "cmd+delete gilt als nackte Ruecktaste und erreicht den Papierkorb damit nicht"
+        );
+    }
 
     /// Die Frage nach dem Ersthelfer steht im Baum an genau einer Stelle
     /// (C2.16, erste Haelfte).

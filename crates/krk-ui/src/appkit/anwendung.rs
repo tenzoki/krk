@@ -239,6 +239,7 @@ use crate::fenstermodell::{
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::zulaessigkeit::{self, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
@@ -258,7 +259,7 @@ use super::blaetter::{
     zettel,
 };
 use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
-use super::ereignisse::{self, Eingabe, Tastenabgriff};
+use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
 use super::hinweis;
@@ -613,6 +614,24 @@ pub struct AnwendungsIvars {
     /// waere weder bedienbar noch sinnvoll — der Nutzer koennte es nicht
     /// beantworten, und KRK bliebe stehen.
     beenden_ohne_nachfrage: Cell<bool>,
+    /// Ob die laufende Wiederholung der Rueckschritt-Taste bei **stehendem**
+    /// Filtertext begonnen hat (C1.18, C1.20).
+    ///
+    /// **Das eine Bit, das `isARepeat` nicht mitbringt.** AppKit meldet an
+    /// einem Tastenereignis allein, ob es eine Wiederholung ist, und nicht,
+    /// wobei die Wiederholung anfing; die Frage aus C1.18 lautet aber genau
+    /// das. Der Modulkopf von [`crate::kommandos::rueckschritt`] schreibt aus,
+    /// warum es ohne dieses Bit nicht geht.
+    ///
+    /// **Es wohnt hier und nicht am Tab.** Eine Tastenwiederholung gehoert
+    /// keinem Tab und keinem Dateifenster: ein Tabwechsel braucht einen anderen
+    /// Tastendruck, und der beendet die Wiederholung. Je Tab gehalten waere
+    /// dasselbe Faktum N-mal da.
+    ///
+    /// Fortgeschrieben wird es allein von der Regel in
+    /// [`Self::papierkorb_oder_zeichen_zurueck`]; zurueckgesetzt wird es von
+    /// jeder anderen Eingabe, am Kopf von [`Self::eingabe_ausfuehren`].
+    rueckschritt_merker: Cell<bool>,
     /// Die Stelle, auf die der laufende Ladevorgang des Editors springen soll
     /// (C6): gemerkte Zeilennummer und gemerkter Zeileninhalt.
     ///
@@ -716,7 +735,13 @@ define_class!(
             // Der Rueckgabewert sagt, ob der Befehl zulaessig war; wer den
             // Eintrag angeklickt hat, hat ihn nicht ausgegraut vorgefunden, und
             // der Abgriff wartet hier auf keine Antwort.
-            let _ = self.kommando_ausfuehren(kommando);
+            //
+            // **Kein Anschlag**, und das ist die Aussage und keine Auslassung:
+            // einen Menueeintrag anzuklicken ist kein Tastendruck. Damit
+            // bekommt "In den Papierkorb raeumen" die Fallunterscheidung der
+            // Rueckschritt-Taste nicht ab und raeumt aus dem Menue heraus
+            // immer (C1.19, C6.11).
+            let _ = self.kommando_ausfuehren(kommando, None);
         }
 
         /// Der Menueeintrag "Tastenbelegung als Markdown sichern" (C1 der
@@ -994,6 +1019,7 @@ impl Anwendungsdelegierter {
             vorgang: RefCell::new(None),
             offenes_blatt: RefCell::new(None),
             beenden_ohne_nachfrage: Cell::new(false),
+            rueckschritt_merker: Cell::new(false),
             vorgemerkte_marke: RefCell::new(None),
             zettel: RefCell::new(Zettelmodell::default()),
             zettelflaeche: RefCell::new(None),
@@ -1091,13 +1117,15 @@ impl Anwendungsdelegierter {
         // Selbstkippung des Ankreuzfelds nimmt `Leistenquelle::geklickt` schon
         // zurueck, bevor das Kommando hier ankommt, und den Rest schreibt
         // `bereichsleiste_nachziehen` als der eine Schreiber. Eine zweite Zeile
-        // hier liefe nach einem angenommenen Klick zusaetzlich zu jenem. Der
-        // Rueckruf haelt den Delegierten **schwach**, aus demselben Grund wie
-        // die uebrigen Melder hier.
+        // hier liefe nach einem angenommenen Klick zusaetzlich zu jenem. **Kein
+        // Anschlag**, aus demselben Grund wie beim Menueeintrag: ein Klick auf
+        // einen Schalter ist kein Tastendruck. Der Rueckruf haelt den
+        // Delegierten **schwach**, aus demselben Grund wie die uebrigen Melder
+        // hier.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         bereichsleiste.melder_setzen(Box::new(move |kommando| {
             if let Some(selbst) = schwach.load() {
-                selbst.kommando_ausfuehren(kommando);
+                selbst.kommando_ausfuehren(kommando, None);
             }
         }));
 
@@ -2603,8 +2631,30 @@ impl Anwendungsdelegierter {
         if self.ivars().dateifenster.get().is_none() {
             return false;
         }
+
+        // **Der Merker der Tastenwiederholung gehoert der Rueckschritt-Taste
+        // und keiner anderen Eingabe.** Jede andere Eingabe setzt ihn zurueck,
+        // und diese eine Zeile nimmt der Regel in
+        // [`crate::kommandos::rueckschritt`] eine Annahme aus der Rechnung:
+        // dass AppKit `isARepeat` nur fuer aufeinanderfolgende Druecke
+        // **derselben** Taste setzt. Stimmt die Annahme, aendert die Zeile
+        // nichts; stimmt sie nicht, traegt die Regel trotzdem.
+        //
+        // Gefragt ist dieselbe Funktion, die der Zweig unten fragt, und nicht
+        // eine zweite Fassung derselben Frage: zwei Fassungen koennten
+        // auseinanderlaufen, und dann raeumte die falsche Haelfte Dateien weg.
+        let nackter_rueckschritt = match eingabe {
+            Eingabe::Kommando { anschlag, .. } => anschlag.ist_nackter_rueckschritt(),
+            Eingabe::Zeichen(_) => false,
+        };
+        if !nackter_rueckschritt {
+            self.ivars().rueckschritt_merker.set(false);
+        }
+
         match eingabe {
-            Eingabe::Kommando(kommando) => self.kommando_ausfuehren(kommando),
+            Eingabe::Kommando { kommando, anschlag } => {
+                self.kommando_ausfuehren(kommando, Some(anschlag))
+            }
             Eingabe::Zeichen(zeichen) => {
                 // **Dieselbe Erhebung wie im Kommandozweig, und dieselben drei
                 // Werte.** Ein getipptes Zeichen ist kein Kommando: es traegt
@@ -2751,7 +2801,28 @@ impl Anwendungsdelegierter {
     /// Vorbehalte, das stehende Blatt und der Fokus, waehrend der dritte
     /// Bestandteil im Ereignisabgriff wohnte; alle drei stehen jetzt in der
     /// einen Regel, die auch das Hauptmenue fragt.
-    fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
+    ///
+    /// # Warum der Anschlag mitkommt
+    ///
+    /// `anschlag` ist der Tastendruck, der diesen Befehl ausgeloest hat, samt
+    /// der Auskunft, ob er aus einer Tastenwiederholung stammt. **`None` ist
+    /// die Aussage „es gab keinen Tastendruck"**, und damit die Antwort auf
+    /// C1.19 und C6.11 in der Signatur statt in einem Zweig: der Menueeintrag
+    /// und der Melder der Bereichsleiste geben `None`, allein die Senke des
+    /// Ereignisabgriffs reicht einen Anschlag durch.
+    ///
+    /// Gebraucht wird er von genau einem Zweig,
+    /// [`Self::papierkorb_oder_zeichen_zurueck`]. Der Grund steht dort und in
+    /// [`crate::kommandos::rueckschritt`]: `resources/default-keymap.toml` legt
+    /// `delete` und `cmd+delete` auf dieselbe Funktion, und beide werden im
+    /// Nachschlag zu demselben [`Kommando`], bevor irgendjemand fragen kann.
+    ///
+    /// **Die Zulaessigkeitsregel bekommt ihn nicht.** Sie bleibt unveraendert,
+    /// und ihre Tafel aus 280 Faellen behaelt ihre Bedeutung; eine Antwort dort
+    /// traefe beide Wege zugleich und graute den Menueeintrag aus. Der
+    /// Datensatz dazu ist
+    /// `decisions/260814-2102_a_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
+    fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
         // durch, ein Textfeld behaelt seine AppKit-Bedeutung, ein fremdes
@@ -2802,7 +2873,12 @@ impl Anwendungsdelegierter {
         let gewirkt = match kommando {
             Kommando::Kopieren => self.uebertragen(kommando),
             Kommando::Verschieben => self.uebertragen(kommando),
-            Kommando::InPapierkorb => self.in_den_papierkorb(),
+            // **Der eine Zweig, dessen falsche Haelfte Dateien wegraeumt.**
+            // Er fragt zuerst, ob der Anschlag die nackte Rueckschritt-Taste
+            // war, und ruft dann die Regel; alles andere geht unveraendert in
+            // den Papierkorb. Die Fallunterscheidung selbst steht in
+            // [`crate::kommandos::rueckschritt`] und nicht hier.
+            Kommando::InPapierkorb => self.papierkorb_oder_zeichen_zurueck(anschlag),
             Kommando::EndgueltigLoeschen => self.endgueltig_loeschen(),
             Kommando::Abbrechen => self.abbrechen(),
             Kommando::OrdnerAnlegen => self.anlegen(Anlegeart::Ordner),
@@ -4296,6 +4372,81 @@ impl Anwendungsdelegierter {
     /// sie hier ankommen.
     fn in_den_papierkorb(&self) -> bool {
         self.auftrag_stellen(Art::InDenPapierkorb)
+    }
+
+    /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
+    /// zurueck, gar nichts, oder eine Datei in den Papierkorb (C1.14 bis C1.20,
+    /// C6.9, C6.11).
+    ///
+    /// **Der eine Zweig dieser Runde, dessen falsche Haelfte Dateien
+    /// wegraeumt**, und deshalb die Stelle, an der die drei Aussagen einzeln
+    /// dastehen:
+    ///
+    /// 1. **Kein Anschlag heisst Papierkorb.** Der Menueeintrag "In den
+    ///    Papierkorb raeumen" und der Melder der Bereichsleiste kommen ohne
+    ///    Tastendruck hier an; die Fallunterscheidung ist fuer sie nicht
+    ///    gestellt, und die Belegungsansicht, das Hauptmenue und die
+    ///    Markdown-Ausgabe fuehren fuer die Taste weiter genau einen Eintrag
+    ///    (C1.19, C6.11).
+    /// 2. **Eine Zusatztaste heisst Papierkorb.** `cmd+delete` faellt an
+    ///    [`Anschlag::ist_nackter_rueckschritt`] heraus und raeumt in jeder
+    ///    Lage, auch bei stehendem Filtertext (C1.17). `f8` und
+    ///    `opt+cmd+delete` erreichen diese Funktion gar nicht: sie tragen
+    ///    [`Kommando::EndgueltigLoeschen`]. `ctrl+delete` ebenso wenig: es
+    ///    wirkt in der Lesezeichenleiste und geht durch
+    ///    `Leistenquelle::kommando_ausfuehren`.
+    /// 3. **Sonst entscheidet die Regel**, und sie steht als reine Funktion in
+    ///    [`crate::kommandos::rueckschritt`], mit einer ausgeschriebenen Tafel
+    ///    ueber acht Faelle. Sie wird hier gerufen und nicht nachgebaut.
+    ///
+    /// **`betroffene` wird fuer die beiden ersten Ausgaenge nicht befragt**
+    /// (C6.9). Der Weg dorthin fuehrt allein ueber [`Self::in_den_papierkorb`],
+    /// und weder eine Auswahl noch eine Markierung wird auf den beiden anderen
+    /// Wegen angefasst.
+    ///
+    /// **Der Merker wird hier fortgeschrieben und sonst nur zurueckgesetzt**;
+    /// die eine Ruecksetzzeile steht am Kopf von [`Self::eingabe_ausfuehren`].
+    /// Er ist nicht "steht ein Filtertext" in Verkleidung: nach dem Anschlag,
+    /// der den Filtertext leert, steht keiner mehr, und der Merker traegt
+    /// trotzdem die Sperre fuer die weiteren Anschlaege derselben Wiederholung.
+    ///
+    /// Der Rueckgabewert ist derselbe wie ueberall in
+    /// [`Self::kommando_ausfuehren`]: ob der Rumpf etwas getan hat. Er
+    /// entscheidet allein ueber die beiden Nachwirkungen dort und nicht
+    /// darueber, ob der Tastendruck geschluckt wird — geschluckt wird jeder der
+    /// drei Ausgaenge, denn zulaessig war der Befehl in allen dreien.
+    fn papierkorb_oder_zeichen_zurueck(&self, anschlag: Option<Anschlag>) -> bool {
+        let Some(anschlag) = anschlag else {
+            return self.in_den_papierkorb();
+        };
+        if !anschlag.ist_nackter_rueckschritt() {
+            return self.in_den_papierkorb();
+        }
+
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let (ausgang, merker) = rueckschritt(
+            self.dateifenster(aktiv).quelle().filter_steht(),
+            anschlag.wiederholung,
+            self.ivars().rueckschritt_merker.get(),
+        );
+        self.ivars().rueckschritt_merker.set(merker);
+
+        match ausgang {
+            // Ein Vertipper wird berichtigt (C1.14, C1.15).
+            Rueckschritt::ZeichenZurueck => {
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .letztes_filterzeichen_weg();
+                true
+            }
+            // Die gehaltene Taste hat den Filtertext geleert und traegt nicht
+            // ueber diese Grenze: kein Auftrag, keine Meldung (C1.18). Erst ein
+            // neuer Druck raeumt, und `false` sagt hier nur, dass kein Nachzug
+            // der Aufteilung und keine Sitzung vorzumerken ist.
+            Rueckschritt::Nichts => false,
+            // Wie vor dieser Runde (C1.16, C1.20).
+            Rueckschritt::InDenPapierkorb => self.in_den_papierkorb(),
+        }
     }
 
     /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).

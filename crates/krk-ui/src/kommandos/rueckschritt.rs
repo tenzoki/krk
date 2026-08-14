@@ -79,29 +79,22 @@
 //! wirkt in der Lesezeichenleiste, also in einem anderen Wirkungsbereich
 //! (C6.11).
 //!
-//! # Die Ausnahme von der Totpruefung, und wann sie faellt
+//! # Der eine Aufrufer
 //!
-//! Die beiden Stuecke dieses Moduls tragen
-//! `#[cfg_attr(not(test), expect(dead_code, ...))]`, weil ihr Aufrufer noch
-//! nicht da ist: er entsteht mit Schritt C2, der den Anschlag bis in den
-//! Ausfuehrungszweig traegt und dort `Kommando::InPapierkorb` aufteilt. Bis
-//! dahin erreicht nur die Tafel darunter die Regel, und `krk-ui` ist ein
-//! Binaerziel, in dem `pub` allein noch keine Verwendung ist.
+//! `Anwendungsdelegierter::papierkorb_oder_zeichen_zurueck`
+//! (`crate::appkit::anwendung`) ist der einzige, und die Probe
+//! `die_regel_hat_genau_einen_aufrufer` haelt die Zahl fest. Der Weg dorthin
+//! traegt der Ereignisabgriff: `ereignisse::Anschlag` nimmt neben dem
+//! `Tastendruck` das Wiederholungsbit auf, `Eingabe::Kommando` traegt ihn bis
+//! in die Senke, und `kommando_ausfuehren` reicht ihn als `Option<Anschlag>`
+//! weiter — `None` heisst „es gab keinen Tastendruck".
 //!
-//! **`expect` und nicht `allow`, und darin liegt das Ablaufdatum.** Der
-//! Modulkopf von [`crate::editormodell`] haelt fest, was an einer stehenden
-//! Ausnahme falsch ist: sie sagt nicht, wann sie faellt. `expect` sagt es —
-//! sobald C2 den Aufrufer setzt, ist die Erwartung unerfuellt, und der Bau
-//! haelt unter `-D warnings` an, bis die beiden Zeilen weg sind. Sie zu
-//! entfernen ist damit kein Vorsatz, sondern eine Bedingung des naechsten
-//! Schrittes.
-//!
-//! **Das `cfg_attr(not(test), ...)` davor ist noetig und nicht schmueckend.**
-//! `cargo clippy --all-targets` uebersetzt dieses Binaerziel zweimal, einmal
-//! mit `cfg(test)` und einmal ohne. Im Prueflauf rufen die Proben darunter
-//! beide Stuecke, dort waere die Erwartung also schon heute unerfuellt und der
-//! Bau bliebe stehen. Die Ausnahme gilt deshalb allein fuer den Lauf ohne
-//! Proben — genau den, in dem der Aufrufer fehlt.
+//! **Bis zum Setzen dieses Aufrufers trugen die beiden Stuecke unten
+//! `#[cfg_attr(not(test), expect(dead_code, ...))]`**, und die Erwartung war
+//! genau darauf gestellt: mit dem Aufrufer wurde sie unerfuellt, und der Bau
+//! hielt unter `-D warnings` an, bis die Zeilen weg waren. Das ist der Grund,
+//! aus dem dort `expect` und nicht `allow` stand — eine Ausnahme mit
+//! Ablaufdatum statt einer, die stehen bleibt und niemandem mehr sagt, warum.
 
 /// Was der Druck auf die nackte Rueckschritt-Taste ausloest.
 ///
@@ -110,13 +103,6 @@
 /// „nichts" kein Sonderfall von „raeumen" ist, sondern ein eigener Ausgang:
 /// kein Auftrag, keine Meldung, und erst ein neuer Druck raeumt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit Schritt C2, siehe Modulkopf"
-    )
-)]
 pub enum Rueckschritt {
     /// Das letzte Zeichen des Filtertextes faellt weg, und die Liste waechst um
     /// die Eintraege, die damit wieder passen (C1.14).
@@ -157,13 +143,6 @@ pub enum Rueckschritt {
 /// bliebe: verlorenginge dabei der Merker, und der naechste Anschlag einer
 /// gehaltenen Taste raeumte.
 #[must_use]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit Schritt C2, siehe Modulkopf"
-    )
-)]
 pub fn rueckschritt(
     filtertext_steht: bool,
     wiederholung: bool,
@@ -190,7 +169,45 @@ pub fn rueckschritt(
 
 #[cfg(test)]
 mod tests {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
     use super::*;
+
+    /// Genau eine Stelle im Baum ruft die Regel (C6.10).
+    ///
+    /// **Eine Aufruferzaehlung in der Form von
+    /// `beide_frager_rufen_die_eine_regel` in [`super::super::zulaessigkeit`]**,
+    /// und sie steht hier aus demselben Grund: die Zusage handelt davon, dass es
+    /// diese Fallunterscheidung einmal gibt. Ein zweiter Aufrufer waere entweder
+    /// ein zweiter Weg zum Papierkorb oder ein zweiter Merker, und beides ist
+    /// genau der Zustand, den diese Runde vermeidet.
+    ///
+    /// Der eine Aufrufer ist `Anwendungsdelegierter::papierkorb_oder_zeichen_zurueck`
+    /// in `crate::appkit::anwendung`. Rot wird die Probe, wenn ein zweiter
+    /// hinzukommt; die richtige Antwort darauf ist die Frage, warum es ihn gibt,
+    /// und nicht die Zahl hier.
+    ///
+    /// **Diese Datei bleibt aussen vor**, wie bei der Vorlage: die Tafel der
+    /// Proben darunter ruft die Regel achtmal, und das sind keine Aufrufer im
+    /// Sinne der Zusage. Was eine Aufruferzaehlung leistet und was nicht, steht
+    /// in [`crate::quellbaum`].
+    ///
+    /// Die Nadel steht zusammengesetzt da, weil die Probe in dem Baum liegt, den
+    /// sie liest.
+    #[test]
+    fn die_regel_hat_genau_einen_aufrufer() {
+        let zuhause = "krk-ui/src/kommandos/rueckschritt.rs";
+        let name = concat!("rueck", "schritt");
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .filter(|(datei, _)| datei != zuhause)
+            .map(|(_, inhalt)| aufrufstellen(inhalt, name))
+            .sum();
+        assert_eq!(
+            aufrufe, 1,
+            "die Regel der Rueckschritt-Taste hat nicht genau einen Aufrufer"
+        );
+    }
 
     /// Die ganze Regel auf einen Blick: zwei Filtertextstaende mal zwei
     /// Wiederholungsbefunde mal zwei Merkerstaende, also acht Faelle.
