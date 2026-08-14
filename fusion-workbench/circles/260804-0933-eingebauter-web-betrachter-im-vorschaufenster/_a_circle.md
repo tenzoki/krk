@@ -912,3 +912,32 @@ Zurück, Vor und Sprungmarken an einer echten Seite zeigen und nicht an einer Pr
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260814-1513
+**Playmaker-Lauf:** 260814-1513-playmaker-user-fusion-next
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Untersuchung des Darstellungsmittels und
+einer Klärungsrunde über die offenen Fragen
+
+Der Circle bleibt Rang 1 und einziger Kandidat, bei unverändertem Zuschnitt. Dieser Vermerk trägt
+zwei Änderungen seit dem 260814-1301 nach und wiederholt die Vorschläge davor nicht.
+
+**Die Auslieferungssperre, die der Vermerk vom 260814-1301 als wieder offen gemeldet hat, ist
+geschlossen.** Am 260814-1513 am Baum geprüft: `git tag --points-at HEAD` liefert `v0.3.0`, und
+`Cargo.toml` führt `version = "0.3.0"`. Station 1 von `cargo xtask release` vergleicht beide und
+hält den Weg damit nicht mehr an. Der Zustand ist nicht dauerhaft: er kehrt nach jeder Runde
+zurück, die Commits hinzufügt und keinen Tag setzt.
+
+**`CLAUDE.md` ist am 260814-1405 kuratiert worden und beschreibt jetzt neun Runden statt vier.**
+Für diesen Circle zählt daran ein Absatz: die Datei sagt seither ausdrücklich, dass der Marker
+`_c_` in diesem Projekt die Verfügbarkeit des Nutzers misst und nicht die Reife einer Runde. Wer
+den Abhängigkeitsstand dieses Circles liest, trifft auf `260802-0842-krk-mac-dateimanager-editor-git`
+mit beschränktem Abschluss (`_b_`) und darf daraus keine unfertige Vorbedingung ableiten. Die
+Runde 1 hat alles gebaut, worauf dieser Circle aufsetzt, die Zwischenablage-Auswertung aus S13 und
+das Vorschaufenster aus S19 eingeschlossen.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
