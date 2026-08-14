@@ -94,20 +94,42 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Knappheit der 39 frei gewaehlten Kombinationen; eine Spaltensichtbarkeit ist
 /// eine Einstellung, die man einmal trifft, und kein Handgriff im Arbeitsfluss.
 ///
+/// **Seit dem 260814 kommt eine vierte hinzu, und ihr Grund ist ein anderer.**
+/// `tiefe_suche_umschalten` ist das Ankreuzfeld "Deep" der Filter-Runde. Es
+/// geht nicht ohne Kombination, weil keine uebrig waere, sondern weil der
+/// Nutzer am 260814-1610 keine der drei vorgeschlagenen Ebenen gewaehlt hat
+/// (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+/// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`):
+/// ausgeliefert wird keine, und wer eine will, vergibt sie in der
+/// Belegungsansicht oder in seiner eigenen `keymap.toml`. Eine offen gelassene
+/// Wahl ist nicht dasselbe wie eine bewusst gesparte Kombination, und der Grund
+/// steht deshalb daneben und nicht in derselben Klammer.
+///
 /// **Sie steht hier und nicht in `resources/default-keymap.toml`.** Das Feld
 /// `reserviert_fuer` der Datei heisst "benannt, aber einer spaeteren Runde
-/// vorbehalten", und diese drei Funktionen gibt es; es passt also nicht. Die
+/// vorbehalten", und diese vier Funktionen gibt es; es passt also nicht. Die
 /// Ausnahme ist damit eine Aussage der Pruefungen ueber die Auslieferung, und
 /// **zwei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
 /// zweimal in je einem Rumpf: `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
 /// liest sie von der Seite der Belegungsdatei her,
 /// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` von der Seite
-/// der gebauten Kommandos. Wer eine vierte Funktion ohne Kombination
+/// der gebauten Kommandos. Wer eine fuenfte Funktion ohne Kombination
 /// ausliefert, traegt sie mit ihrem Datensatz hier nach.
-const OHNE_KOMBINATION_AB_WERK: [&str; 3] = [
+///
+/// **Eine dritte Pruefung fuehrt dieselbe Aufzaehlung ein zweites Mal**, als
+/// Literal im Rumpf von `belegungsausgabe::tests::
+/// jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`
+/// (`crates/krk-ui/src/belegungsausgabe.rs`). Sie erreicht diese Konstante
+/// nicht: `krk-ui` hat kein Bibliotheksziel, und `crates/krk-core/tests/` ist
+/// eine eigene Kiste. Wer hier nachtraegt, traegt dort mit nach; ob die beiden
+/// Listen eine werden, ist die Frage `circles/
+/// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+/// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
+const OHNE_KOMBINATION_AB_WERK: [&str; 4] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
+    "tiefe_suche_umschalten",
 ];
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.

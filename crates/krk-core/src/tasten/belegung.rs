@@ -374,6 +374,26 @@ pub enum Kommando {
     ///
     /// Siehe [`Kommando::SpalteGroesseUmschalten`].
     SpalteTypUmschalten,
+    /// Den stehenden Filter der Dateiliste auf den Unterbaum ausdehnen und
+    /// wieder einholen (C5 der Filter-Runde).
+    ///
+    /// **Die Kennung ist deutsch, die Aufschrift des Kaestchens nicht.** Der
+    /// Schalter in der Bereichsleiste traegt "Deep", weil der Nutzer den Namen
+    /// so gewaehlt hat; die Kennung folgt der Schreibweise der 77 vorhandenen,
+    /// die durchweg deutsch und mit Unterstrichen sind. Eine Aufschrift ist
+    /// eine Entscheidung ueber die Anzeige und keine ueber den Wortschatz der
+    /// Belegung.
+    ///
+    /// **Steht kein Filtertext, kippt der Befehl den Schalter und meldet
+    /// nichts.** Ueber die Zulaessigkeit entscheidet der Wirkungsbereich und
+    /// nicht, ob der Befehl etwas findet; ein Befehl, der von seinem eigenen
+    /// Ergebnis abhinge, waere die zweite Regel neben dem Wirkungsbereich.
+    ///
+    /// Ab Werk traegt er keine Kombination, wie die drei Spaltenschalter
+    /// darueber; Nutzerentscheid vom 260814-1610. Wer eine Taste dafuer will,
+    /// weist sie in der Belegungsansicht zu oder traegt sie in
+    /// `resources/default-keymap.toml` ein.
+    TiefeSucheUmschalten,
     /// Zu dem springen, was in der Zwischenablage steht (C10).
     ZwischenablageSpringen,
     /// Den Inhalt der Zwischenablage im Vorschaufenster ansehen (C10).
@@ -576,7 +596,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 77] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 78] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -606,6 +626,7 @@ impl Kommando {
         ),
         (Kommando::SpalteDatumUmschalten, "spalte_datum_umschalten"),
         (Kommando::SpalteTypUmschalten, "spalte_typ_umschalten"),
+        (Kommando::TiefeSucheUmschalten, "tiefe_suche_umschalten"),
         (Kommando::ZwischenablageSpringen, "zwischenablage_springen"),
         (Kommando::ZwischenablageAnsehen, "zwischenablage_ansehen"),
         (Kommando::TabNeu, "tab_neu"),
@@ -760,6 +781,20 @@ impl Kommando {
             | Kommando::SpalteGroesseUmschalten
             | Kommando::SpalteDatumUmschalten
             | Kommando::SpalteTypUmschalten
+            // Der Schalter "Deep" aus C5 der Filter-Runde steht neben den drei
+            // Spaltenschaltern darueber und aus derselben Erwaegung: er ist ein
+            // Schalter der Bereichsleiste, und ein Klick auf die Leiste faellt
+            // aus jedem Fokus an. Mit einem engeren Bereich waere er genau dann
+            // abgewiesen, wenn der Nutzer ihn braucht — etwa mit der
+            // Schreibmarke im Editor oder mit dem Fokus in der Leiste.
+            //
+            // **Der Unterschied zu den Spaltenschaltern liegt allein im Ziel**,
+            // nicht in der Begruendung: sie treffen beide Dateilisten, er das
+            // Modell des sichtbaren Tabs im aktiven Dateifenster. Ein
+            // `Wirkungsbereich::Dateifenster` daraus zu machen hiesse, den
+            // Klick auf ein Kaestchen davon abhaengig zu machen, wo die
+            // Schreibmarke gerade steht.
+            | Kommando::TiefeSucheUmschalten
             | Kommando::FensterEinblenden
             | Kommando::FensterSchliessen
             | Kommando::BereichVerbreitern

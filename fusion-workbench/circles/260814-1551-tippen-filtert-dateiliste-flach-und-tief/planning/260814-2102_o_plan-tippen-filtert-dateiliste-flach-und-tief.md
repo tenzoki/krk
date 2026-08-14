@@ -364,7 +364,9 @@ flowchart TD
 
 ### Strang E — das Ankreuzfeld und der Befehl
 
-**E1. Kommando, Wirkungsbereich, Bereich, Ausführungszweig**
+**E1. [DONE] Kommando, Wirkungsbereich, Bereich, Ausführungszweig**
+- **Abnahme steht noch aus, und zwar bis E2.** Die Änderungen sind gemacht; `make check` steht auf `Error 2`, weil `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` die neue Kennung in `resources/default-keymap.toml` noch nicht findet. Bau, `cargo fmt --all --check` und `cargo clippy --workspace --all-targets -- -D warnings` laufen sauber. Datensatz: `issues/260814-2303_o_e1-und-e2-teilen-eine-zusicherung-die-eine-probe-haelt-und-lassen-den-baum-dazwischen-rot.md`.
+- **Eine vierte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den drei genannten Dateien ist das Tabmodell nicht erreichbar. Datensatz: `issues/260814-2303_o_e1-und-e3-nennen-drei-dateien-der-weg-an-das-tabmodell-fuehrt-durch-eine-vierte.md`.
 - Executor: `coder`
 - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C5.1, C5.3, C5.6

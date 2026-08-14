@@ -523,10 +523,22 @@ mod tests {
     /// darauf "keine"; seither sind es die drei Spaltenschalter, die nach der
     /// Nutzerantwort vom 260812-0306 ohne Kombination ausgeliefert werden
     /// (`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
-    /// 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`). Die
-    /// Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine Zahl sagte
-    /// nicht, **welche** Funktion aus der Datei faellt, und genau das ist die
-    /// Auskunft, die ein Leser dieser Probe braucht.
+    /// 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`), und seit
+    /// dem 260814 tritt `tiefe_suche_umschalten` hinzu, das Ankreuzfeld "Deep"
+    /// der Filter-Runde (Nutzerantwort vom 260814-1610, `circles/
+    /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+    /// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`):
+    /// vier. Die Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine
+    /// Zahl sagte nicht, **welche** Funktion aus der Datei faellt, und genau
+    /// das ist die Auskunft, die ein Leser dieser Probe braucht.
+    ///
+    /// **Dieselbe Aufzaehlung steht ein zweites Mal**, als
+    /// `OHNE_KOMBINATION_AB_WERK` in `crates/krk-core/tests/belegung.rs`. Diese
+    /// Probe erreicht sie nicht: `krk-ui` hat kein Bibliotheksziel, und die
+    /// Konstante steht in einer Pruefkiste von `krk-core`. Wer hier nachtraegt,
+    /// traegt dort mit nach; ob die beiden Listen eine werden, ist die Frage
+    /// `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+    /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
     #[test]
     fn jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte() {
         let belegung = Belegung::auslieferung();
@@ -555,8 +567,10 @@ mod tests {
             );
         }
 
-        // Ab Werk sind genau die drei Spaltenschalter unbelegt; jede andere
-        // Funktion steht in der Datei.
+        // Ab Werk sind genau diese vier Funktionen unbelegt; jede andere
+        // steht in der Datei. Die Reihenfolge ist die der Belegungsdatei: die
+        // tiefe Suche steht dort hinter den drei Spaltenschaltern, weil sie wie
+        // diese bestimmt, was die Dateiliste zeigt.
         let unbelegt: Vec<&str> = belegung
             .funktionen()
             .iter()
@@ -569,8 +583,10 @@ mod tests {
                 "spalte_groesse_umschalten",
                 "spalte_datum_umschalten",
                 "spalte_typ_umschalten",
+                "tiefe_suche_umschalten",
             ],
-            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter"
+            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter \
+             und die tiefe Suche"
         );
     }
 

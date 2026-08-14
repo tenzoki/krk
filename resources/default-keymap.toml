@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 83 Funktionen mit zusammen 90 Kombinationen.
+# Ausgeliefert sind 84 Funktionen mit zusammen 90 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -380,6 +380,31 @@ tasten = []
 [[funktion]]
 id = "spalte_typ_umschalten"
 name = "Spalte Typ ein- und ausblenden"
+tasten = []
+
+# Der Schalter "Deep" der Bereichsleiste steht hier und nicht bei den
+# Sortierbefehlen: er bestimmt, was die Dateiliste zeigt, wie die drei
+# Spaltenschalter darueber und das Ein- und Ausblenden der versteckten
+# Eintraege. Die Kennung ist deutsch, die Aufschrift des Kaestchens nicht; eine
+# Aufschrift entscheidet ueber die Anzeige und nicht ueber den Wortschatz
+# dieser Datei.
+#
+# Ausgeliefert wird keine Kombination, mit leerer Tastenliste und nicht mit
+# `reserviert_fuer`: dieses Feld heisst "benannt, aber einer spaeteren Runde
+# vorbehalten", und diese Funktion gibt es. Nutzerantwort vom 260814-1610,
+# `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+# 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`. Wer eine
+# Taste dafuer will, weist sie in der Belegungsansicht zu oder traegt sie in
+# seine eigene keymap.toml ein; shift+cmd+f, opt+cmd+f, ctrl+cmd+f und der
+# nackte Tabulator bleiben ausdruecklich frei.
+#
+# Wie die drei Spaltenschalter darueber faellt der Eintrag damit aus der
+# Markdown-Ausgabe der Runde 3, die eine Funktion nur aufnimmt, wenn sie
+# mindestens eine Kombination traegt.
+
+[[funktion]]
+id = "tiefe_suche_umschalten"
+name = "Tiefe Suche ein- und ausschalten"
 tasten = []
 
 # ── C4: Dateioperationen ausserhalb der Norton-Reihe ─────────────────────────

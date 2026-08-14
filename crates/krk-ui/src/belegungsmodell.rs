@@ -262,6 +262,13 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::SpalteGroesseUmschalten
         | Kommando::SpalteDatumUmschalten
         | Kommando::SpalteTypUmschalten
+        // Der Schalter "Deep" aus C5 der Filter-Runde steht mit hier: er
+        // bestimmt, was die Liste zeigt, wie das Ein- und Ausblenden der
+        // versteckten Eintraege und die drei Spaltenschalter darueber. Damit
+        // steht er im Hauptmenue dort, wo der Nutzer ihn sucht, naemlich bei
+        // den drei Schaltern, mit denen er in der Bereichsleiste eine Reihe
+        // bildet.
+        | Kommando::TiefeSucheUmschalten
         | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
         // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
         // wie sie auf dem angezeigten Ordner arbeitet.

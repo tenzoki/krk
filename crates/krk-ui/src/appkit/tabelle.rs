@@ -1631,6 +1631,34 @@ impl DateifensterQuelle {
         self.umsortiert();
     }
 
+    /// Kippt das Kennzeichen "Deep" am Modell des sichtbaren Tabs (C2 und C5
+    /// der Filter-Runde).
+    ///
+    /// **Der eine Schreiber des Kennzeichens**, nach dem Vorbild von
+    /// [`Self::verstecke_umschalten`] darueber: beide aendern, was die Liste
+    /// zeigt, und beide lassen danach [`Self::umsortiert`] die neue Sicht
+    /// anzeigen. Das Neuaufbauen der Sicht selbst gehoert
+    /// `Ordnermodell::tief_setzen` und nicht dieser Stelle.
+    ///
+    /// **Steht kein Filtertext, aendert das Kippen an der Liste nichts**, und
+    /// gemeldet wird nichts (C2.4). Der Schalter steht trotzdem um: sein Stand
+    /// ist eine Einstellung des Tabs und keine Auskunft darueber, ob der Filter
+    /// gerade etwas findet.
+    ///
+    /// Der Aufrufer ist der Anwendungsdelegierte und nicht
+    /// [`Self::kommando_ausfuehren`] daneben: der Befehl traegt
+    /// `Wirkungsbereich::Ueberall` und richtet sich an das **aktive**
+    /// Dateifenster, nicht an das fokussierte.
+    pub fn tiefe_suche_umschalten(&self) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            let modell = tabs.aktiver_mut().modell_mut();
+            let tief = modell.tief();
+            modell.tief_setzen(!tief);
+        }
+        self.umsortiert();
+    }
+
     /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
     ///
     /// Die Auswahl haengt am Eintrag und nicht an der Zeile; sie wandert

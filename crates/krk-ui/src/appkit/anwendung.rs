@@ -2830,6 +2830,29 @@ impl Anwendungsdelegierter {
             Kommando::SpalteGroesseUmschalten => self.spalte_umschalten(Spalte::Groesse),
             Kommando::SpalteDatumUmschalten => self.spalte_umschalten(Spalte::Geaendert),
             Kommando::SpalteTypUmschalten => self.spalte_umschalten(Spalte::Typ),
+            // Der Schalter "Deep" aus C5 der Filter-Runde. **Ein eigener
+            // Zweig, und der Uebersetzer haette ihn nicht verlangt** (C5.6):
+            // das `match` endet mit einem Auffangzweig auf `bereichskommando`,
+            // und dort fiele der Befehl stillschweigend hindurch und taete
+            // nichts. Er traegt `Wirkungsbereich::Ueberall` und kommt damit
+            // auch mit dem Fokus in der Leiste oder im Editor an, wo
+            // `bereichskommando` kein Dateifenster anzusprechen wuesste.
+            //
+            // Er kippt das Kennzeichen am Modell des sichtbaren Tabs im
+            // **aktiven** Dateifenster und nicht im fokussierten: geklickt wird
+            // das Kaestchen in der Bereichsleiste, und der Fokus steht dabei,
+            // wo er eben steht. Denselben Weg gehen die drei Spaltenschalter
+            // darueber.
+            //
+            // Liefert immer `true`. Der Befehl war zustaendig, auch wenn kein
+            // Filtertext steht und die Liste sich nicht aendert; ueber die
+            // Zulaessigkeit hat der Wirkungsbereich entschieden und nicht das
+            // Ergebnis (C2.4).
+            Kommando::TiefeSucheUmschalten => {
+                let seite = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(seite).quelle().tiefe_suche_umschalten();
+                true
+            }
             Kommando::FensterEinblenden => {
                 self.fenster_zeigen();
                 true
