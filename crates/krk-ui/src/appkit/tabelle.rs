@@ -1749,6 +1749,39 @@ impl DateifensterQuelle {
         }
     }
 
+    /// Loescht den ganzen Filtertext und zeigt die neue Sicht (C1.7).
+    ///
+    /// Der Rumpf des dritten und letzten Rangs von `esc`; die Reihenfolge der
+    /// Raenge steht beim Aufrufer in `Anwendungsdelegierter::abbrechen` und
+    /// nicht hier. In der Bauart von [`Self::letztes_filterzeichen_weg`]
+    /// darueber, mit demselben Nachzug ueber [`Self::nach_filteraenderung`]:
+    /// jede Aenderung des Filtertexts nimmt denselben Weg in die Anzeige.
+    ///
+    /// **Liefert, ob etwas zu loeschen war.** Der Wert entscheidet beim
+    /// Aufrufer allein darueber, ob `esc` als gewirkt gilt; ohne ihn muesste er
+    /// die Frage "steht ein Filtertext" ein zweites Mal stellen, und zwei
+    /// Frager an derselben Groesse waeren zwei Gelegenheiten, verschieden zu
+    /// antworten.
+    ///
+    /// **Der Filter der Tiefe bleibt stehen** (C3.5): `esc` loescht den
+    /// Gegenstand des Durchlaufs und beendet ihn damit, legt aber keinen
+    /// Schalter um, den der Nutzer gesetzt hat. Ein Schalter, den eine Taste
+    /// unbemerkt umlegte, waere eine zweite Quelle fuer seinen Stand neben der
+    /// Bereichsleiste.
+    #[must_use]
+    pub fn filter_leeren(&self) -> bool {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            let modell = tabs.aktiver_mut().modell_mut();
+            if !modell.filter_steht() {
+                return false;
+            }
+            modell.filter_leeren();
+        }
+        self.nach_filteraenderung();
+        true
+    }
+
     /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
     ///
     /// Die Auswahl haengt am Eintrag und nicht an der Zeile; sie wandert

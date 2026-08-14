@@ -505,15 +505,53 @@ impl Tabliste {
     /// `wunschauswahl`, die schon die Sitzungswiederherstellung benutzt: der
     /// Name ueberlebt einen noch laufenden Lesevorgang, eine Zeilennummer
     /// nicht.
+    ///
+    /// # Die eine Stelle, an der ein Ordnerwechsel den Filter entscheidet
+    ///
+    /// Der bisherige [`Tabinhalt`] faellt hier, und mit ihm sein
+    /// [`Ordnermodell`]; was der Tab ueber den Wechsel hinweg behaelt, steht
+    /// deshalb genau hier und nirgends sonst. Bis zum 260815 waren das
+    /// Sortierung und Verstecke; seither kommen der Filter der Tiefe und der
+    /// Filtertext dazu, in derselben Bauart und aus demselben Grund.
+    ///
+    /// **Der Aufstieg braucht keine eigene Zeile.** Er geht wie der Einstieg
+    /// durch diese Stelle, und damit gilt fuer ihn dieselbe Regel (C1.9).
+    ///
+    /// **Weder der Filtertext noch der Filter der Tiefe gehen in die
+    /// Sitzung.** Beide werden hier vom alten Modell in das neue getragen und
+    /// nicht ueber [`Tabzustand`], der `session.toml` schreibt: ein
+    /// wiederhergestellter Filter der Tiefe ohne Filtertext waere ein Zustand,
+    /// den nichts anzeigt und der nichts tut.
     pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<String>) {
         let stelle = self.aktiv;
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
+        let tief = self.tabs[stelle].modell.tief();
+        // **Diese eine Zeile traegt die Antwort auf
+        // `decisions/260814-1830_o_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`.**
+        // Der Plan faehrt auf "geleert" (C1.9); bei eingeschaltetem Filter der
+        // Tiefe uebersteht der Text den Wechsel, weil das Modell der tiefen
+        // Ansicht sonst auf jeder Ebene seinen Gegenstand verloere (C1.10).
+        // Faellt die Antwort spaeter auf "stehen lassen", wird aus dieser Zeile
+        // ein `true`, und sonst aendert sich nichts.
+        let filtertext_ueberlebt = tief;
+        let filtertext = if filtertext_ueberlebt {
+            self.tabs[stelle].modell.filtertext().to_owned()
+        } else {
+            String::new()
+        };
         let mut zustand = Tabzustand::auf(ordner);
         zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
         zustand.auswahl = auswahl;
         self.tabs[stelle] = Tabinhalt::aus_zustand(&zustand);
+        let modell = &mut self.tabs[stelle].modell;
+        // Unbedingt gesetzt und nicht nur, wenn sich etwas aendert: das frische
+        // Modell hat null Eintraege, beide Setzer bauen also eine leere Sicht
+        // neu auf, und ein Zweig davor waere eine zweite Stelle, an der die
+        // Uebertragung anders ausfallen koennte.
+        modell.tief_setzen(tief);
+        modell.filtertext_setzen(&filtertext);
         self.lesen_starten(stelle);
     }
 
@@ -542,6 +580,13 @@ impl Tabliste {
     /// Stapel-Umbenennens. Ordner, Sortierung und Filter aendern sich bei einer
     /// Auffrischung ohnehin nicht; zurueckzusetzen sind allein der Auswahlname
     /// und die offene Bildlaufposition, und beide stehen hier.
+    ///
+    /// **Der Filtertext bleibt deshalb stehen, und zwar ohne eine Zeile
+    /// dafuer.** Eine Auffrischung wechselt den Ordner nicht, also greift die
+    /// Regel aus [`Tabliste::ordner_setzen`] hier nicht: der Tab behaelt sein
+    /// [`Ordnermodell`] und damit seinen Filtertext, gleich ob der Filter der
+    /// Tiefe an ist. Was der neue Lesevorgang liefert, geht durch denselben
+    /// Filter wie zuvor.
     pub fn aktiven_neu_lesen(&mut self) {
         let stelle = self.aktiv;
         let auswahlname = self.tabs[stelle].auswahlname();
@@ -1035,6 +1080,129 @@ mod tests {
             "abschliessen sortiert: a.txt steht in Zeile 0, b.txt in Zeile 1"
         );
         assert_eq!(liste.auswahl_auf_namen("c.txt"), Auswahlversuch::Unbekannt);
+    }
+
+    // ------------------------------------------------------------------
+    // Der Filtertext ueber einen Ordner-, Tab- und Auffrischungswechsel
+    // ------------------------------------------------------------------
+
+    /// Zwei Ordner, die es gibt.
+    ///
+    /// `ordner_setzen` und `waehlen` starten einen Lesevorgang, und der soll
+    /// nicht gegen ein Nichts laufen. Geliefert hat er in diesen Proben nie
+    /// etwas: `einziehen` wird nicht gerufen, der Bestand bleibt also der von
+    /// Hand angehaengte.
+    fn zwei_vorhandene_ordner() -> (String, String) {
+        let einer = std::env::temp_dir().display().to_string();
+        (einer, "/".to_owned())
+    }
+
+    /// C1.9: bei ausgeschalteter tiefer Suche faellt der Filtertext mit dem
+    /// Ordner. Der Aufstieg geht durch dieselbe Stelle und zaehlt deshalb wie
+    /// der Einstieg.
+    #[test]
+    fn ein_ordnerwechsel_leert_den_filtertext_wenn_die_tiefe_suche_aus_ist() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
+        assert!(liste.aktiver().modell().filter_steht());
+
+        liste.ordner_setzen(&dorthin, None);
+
+        assert_eq!(
+            liste.aktiver().modell().filtertext(),
+            "",
+            "ohne tiefe Suche faellt der Filtertext mit dem Ordner"
+        );
+        assert!(
+            !liste.aktiver().modell().tief(),
+            "der Schalter selbst bleibt, was er war"
+        );
+    }
+
+    /// C1.10: bei eingeschalteter tiefer Suche uebersteht der Filtertext jeden
+    /// Ordnerwechsel. Ohne diese Ausnahme haette das Modell der tiefen Ansicht
+    /// auf der naechsten Ebene keinen Gegenstand mehr.
+    #[test]
+    fn mit_tiefer_suche_ueberlebt_der_filtertext_den_ordnerwechsel() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.filtertext_setzen("rs");
+        modell.tief_setzen(true);
+
+        liste.ordner_setzen(&dorthin, None);
+
+        assert_eq!(liste.aktiver().modell().filtertext(), "rs");
+        assert!(
+            liste.aktiver().modell().tief(),
+            "der Schalter geht mit dem Filtertext hinueber"
+        );
+        assert_eq!(
+            liste.aktiver().ordner(),
+            Path::new(&dorthin),
+            "gewechselt wurde trotzdem"
+        );
+    }
+
+    /// Der Filter der Tiefe geht auch ohne Filtertext hinueber: er ist ein
+    /// Schalter des Tabs und keine Beigabe zum Text.
+    #[test]
+    fn die_tiefe_suche_geht_auch_ohne_filtertext_hinueber() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        liste.aktiver_mut().modell_mut().tief_setzen(true);
+
+        liste.ordner_setzen(&dorthin, None);
+
+        assert!(liste.aktiver().modell().tief());
+        assert_eq!(liste.aktiver().modell().filtertext(), "");
+    }
+
+    /// Eine Auffrischung wechselt den Ordner nicht, also faellt der Filtertext
+    /// auch bei ausgeschalteter tiefer Suche nicht.
+    #[test]
+    fn eine_auffrischung_laesst_den_filtertext_stehen() {
+        let mut liste = gelesene_liste(&["a.rs", "b.txt"]);
+        liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
+        assert_eq!(liste.aktiver().modell().zeilenzahl(), 1);
+
+        liste.aktiven_neu_lesen();
+
+        assert_eq!(
+            liste.aktiver().modell().filtertext(),
+            "rs",
+            "eine Auffrischung wechselt den Ordner nicht"
+        );
+        assert_eq!(
+            liste.aktiver().modell().zeilenzahl(),
+            1,
+            "und der stehende Bestand wird weiter gefiltert gezeigt"
+        );
+    }
+
+    /// C1.8: der Filtertext gehoert dem Tab. Der Wechsel setzt nichts zurueck
+    /// und traegt nichts hinueber — er zeigt schlicht das Modell des anderen
+    /// Tabs.
+    #[test]
+    fn der_filtertext_gehoert_dem_tab_und_nicht_dem_fenster() {
+        let vorhanden = std::env::temp_dir().display().to_string();
+        let mut liste = liste(&[&vorhanden, &vorhanden]);
+        liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
+
+        assert!(liste.waehlen(1));
+        assert_eq!(
+            liste.aktiver().modell().filtertext(),
+            "",
+            "der zweite Tab hat seinen eigenen, leeren Filtertext"
+        );
+
+        assert!(liste.waehlen(0));
+        assert_eq!(
+            liste.aktiver().modell().filtertext(),
+            "rs",
+            "und der erste hat den seinen behalten"
+        );
     }
 
     #[test]

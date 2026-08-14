@@ -4484,11 +4484,35 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Der Abbruchbefehl (C4).
+    /// Der Abbruchbefehl (C4, C1.7).
     ///
-    /// Er bedient zwei Faelle, und die Reihenfolge ist bindend: ein offenes
-    /// Blatt zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs
-    /// steht und der Abbruch dann ihr gilt.
+    /// **Drei Raenge, und die Reihenfolge ist bindend.** Ein offenes Blatt
+    /// zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs steht
+    /// und der Abbruch dann ihr gilt. Dann eine laufende Dateioperation. Und
+    /// zuletzt der Filtertext des sichtbaren Tabs im aktiven Dateifenster —
+    /// genau an der Stelle, an der die Taste bis zum 260815 nichts mehr zu tun
+    /// fand und `false` lieferte.
+    ///
+    /// ```text
+    /// esc ──> steht ein Blatt?            ──ja──> es schliessen
+    ///          │ nein
+    ///          └──> laeuft eine Operation? ──ja──> sie abbrechen
+    ///                │ nein
+    ///                └──> steht ein Filtertext? ──ja──> ihn loeschen
+    ///                      │ nein
+    ///                      └──> nichts, wie vor dieser Runde
+    /// ```
+    ///
+    /// **Der dritte Rang haengt an
+    /// `decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.**
+    /// Eine andere Antwort verschiebt ihn innerhalb dieser Funktion und aendert
+    /// sonst nichts; die Raenge sind hier eine Reihenfolge und keine verstreute
+    /// Zustaendigkeit.
+    ///
+    /// **Ein eigener Rang fuer das Anhalten des Durchlaufs entsteht nicht**
+    /// (C3.5). Ohne Filtertext hat der Durchlauf keinen Gegenstand: das
+    /// Loeschen beendet ihn, und ein vierter Rang beantwortete dieselbe Frage
+    /// ein zweites Mal.
     ///
     /// Seit S16b erreicht `esc` den Vorgang auf dem gewoehnlichen Weg: solange
     /// kein Blatt steht, schlaegt der Ereignisabgriff `abbrechen` wie jeden
@@ -4501,16 +4525,25 @@ impl Anwendungsdelegierter {
             blatt.abbrechen();
             return true;
         }
-        let (art, seite) = {
+        let laufender = {
             let vorgang = self.ivars().vorgang.borrow();
-            let Some(vorgang) = vorgang.as_ref() else {
-                return false;
-            };
-            vorgang.zustand.abbrechen();
-            (vorgang.art.clone(), vorgang.seite)
+            vorgang.as_ref().map(|vorgang| {
+                vorgang.zustand.abbrechen();
+                (vorgang.art.clone(), vorgang.seite)
+            })
         };
-        self.fortschritt_zeigen(seite, &operationen::abbruchzeile(&art));
-        true
+        if let Some((art, seite)) = laufender {
+            self.fortschritt_zeigen(seite, &operationen::abbruchzeile(&art));
+            return true;
+        }
+        // Der dritte Rang. `Kommando::Abbrechen` traegt
+        // `Wirkungsbereich::Ueberall`, kommt also auch aus dem Editor und aus
+        // der Leiste an; getroffen wird dann derselbe Tab wie beim Umschalten
+        // der tiefen Suche, naemlich der sichtbare des **aktiven**
+        // Dateifensters. Ein Wirkungsbereich, der dafuer den Fokus verlangte,
+        // machte die Taste davon abhaengig, wo die Schreibmarke steht.
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.dateifenster(aktiv).quelle().filter_leeren()
     }
 
     // ------------------------------------------------------------------

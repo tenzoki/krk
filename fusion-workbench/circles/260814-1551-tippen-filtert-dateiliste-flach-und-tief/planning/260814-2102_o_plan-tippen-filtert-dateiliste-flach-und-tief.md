@@ -300,7 +300,12 @@ flowchart TD
   - **Kein neues Kürzel und kein neues Bedienelement** (C1.13): der Nachschlag fällt für eine unbelegte Taste ohne Zusatztaste weiter auf denselben Zweig, und `resources/default-keymap.toml` bekommt keinen Einstiegsbefehl.
   - Proben in einem `#[cfg(test)]`-Modul neben dem Code, soweit sie ohne `NSTableView` auskommen; die Rechnung „welche Zeile bekommt die Auswahl, wenn ihre weggefallen ist" wird dafür als reine Funktion nach `crate::kommandos::navigation` gezogen, wo `zielzeile` schon steht.
 
-**B2. Ordnerwechsel, Tabwechsel und `Esc`**
+**B2. [DONE] Ordnerwechsel, Tabwechsel und `Esc`**
+- **Der Tabwechsel hat wie vorhergesagt keine Zeile gekostet.** `tab_gewechselt` ist unberührt; der Filtertext steht am `Ordnermodell` des Tabs, und die Ansicht zeigt nach dem Wechsel den des neuen (C1.8). `Tabliste::aktiven_neu_lesen` ebenso: der Tab bleibt seit `5f2e45d` stehen, also bleibt sein Filtertext stehen.
+- **Genau die drei genannten Dateien sind angefasst.** `crates/krk-ui/src/appkit/tabelle.rs` trägt den Rumpf des dritten `Esc`-Rangs als `DateifensterQuelle::filter_leeren`, weil der Filtertext des sichtbaren Tabs vom Anwendungsdelegierten aus nur über diesen Weg erreichbar ist — derselbe Zugriffsweg wie bei C2 und E1.
+- **Die Probenhälfte von C1.7 ist offen geblieben**, und der Datensatz dazu ist `issues/260815-0020_o_c1-7-verlangt-eine-probe-fuer-die-reihenfolge-von-esc-und-b2-hat-keinen-ort-dafuer.md`: die Rangfolge hängt an drei Ivars des Anwendungsdelegierten, und eine reine Funktion darüber wäre ein siebter Typ, den die `## Data Structures` dieses Plans nicht führt. C1.8, C1.9 und C1.10 sind als fünf Proben in `crates/krk-ui/src/tabs.rs` abgenommen, C3.5 ist am Code abzulesen.
+- **Eine zweite Stelle baut denselben frischen `Tabinhalt` und ist nicht mitgezogen:** `Tabliste::verdeckten_tab_setzen`, der Weg des Datenträgerauswurfs. Datensatz: `issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md`.
+- `make check` läuft grün (Exit 0).
 - Executor: `coder`
 - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C1.7, C1.8, C1.9, C1.10, C3.5

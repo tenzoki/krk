@@ -1,0 +1,37 @@
+`verdeckten_tab_setzen` baut denselben frischen `Tabinhalt` und trägt zwei von vier Werten hinüber
+
+---
+
+`Tabliste` hat zwei Stellen, die einen Tab auf einen anderen Ordner setzen, indem sie einen
+frischen `Tabinhalt` an die Stelle des alten setzen und vorher einzelne Werte aus dessen
+`Ordnermodell` retten. Seit B2 tragen die beiden verschieden viel:
+
+| Stelle | Sortierung | Verstecke | Filter der Tiefe | Filtertext |
+|---|---|---|---|---|
+| `ordner_setzen` (`crates/krk-ui/src/tabs.rs:508`) | ja | ja | ja | ja, wenn der Filter der Tiefe an ist |
+| `verdeckten_tab_setzen` (`crates/krk-ui/src/tabs.rs:413`) | ja | ja | **nein** | **nein** |
+
+---
+
+**Wann das auffällt.** `verdeckten_tab_setzen` hat genau einen Aufrufer, `tab_ordner_setzen`
+in `crates/krk-ui/src/appkit/tabelle.rs:615`, und der bedient den Auswurf eines
+Datenträgers aus `crate::auffrischung::datentraeger_verloren`. Ein **verdeckter** Tab, der
+auf dem ausgeworfenen Datenträger stand, fällt auf den Standardordner zurück; steht in ihm
+ein Filtertext und ist der Filter der Tiefe an, sind beide danach weg. Der Nutzer sieht das
+erst, wenn er auf diesen Tab wechselt.
+
+**Warum es der Rede wert ist.** C1.10 des Spec sagt zu: „Ist ‚Deep' an, übersteht der
+Filtertext **jeden** Ordnerwechsel." Ob der Auswurf eines Datenträgers ein Ordnerwechsel in
+diesem Sinne ist, sagt weder der Spec noch der Plan; B2 nennt in seinen `Changes` allein
+`Tabliste::ordner_setzen`. Der Zustand ist damit nicht falsch, sondern unentschieden — und
+er steht als zweite Fassung derselben Übertragung da, also genau in der Form, die A1 dieser
+Runde am Prüfschritt für die Sichtbarkeit beseitigt hat
+(`issues/260814-2102_c_der-pruefschritt-fuer-die-sichtbarkeit-steht-im-ordnermodell-zweimal-wortgleich-da.md`).
+
+**Zwei Auswege.** Entweder die vier Werte an einer Stelle übertragen, die beide Wege rufen —
+dann ist die Übertragung eine Regel und keine Aufzählung, die beim nächsten fünften Wert
+wieder auseinanderläuft. Oder ausdrücklich festhalten, dass ein verlorener Datenträger den
+Tab vollständig zurücksetzt, und den Unterschied an beiden Stellen als Prosa begründen.
+
+Der Grund, warum B2 keinen der beiden gegangen ist: beide ändern das Verhalten eines Wegs,
+den der Plan nicht nennt, und die Wahl zwischen ihnen ist eine Entwurfsfrage.
