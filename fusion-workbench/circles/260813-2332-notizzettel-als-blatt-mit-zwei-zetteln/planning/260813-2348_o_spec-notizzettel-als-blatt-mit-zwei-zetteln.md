@@ -468,3 +468,43 @@ Der Nachtrag fasst C5 und das zweite Kriterium unter „Verhältnis zu den zehn 
 **Die Grenzfall-Zusage ist neu und war vorher nicht nötig.** Eine Zetteldatei von genau `EDITORGRENZE` Bytes schöpft das Budget der Kopie restlos aus und ist trotzdem vollständig gesichert. Ohne eine ausdrückliche Zusage dafür wäre die naheliegende Umsetzung — „Budget erschöpft heißt gekürzt" — falsch, und der Nutzer bekäme für eine vollständige Sicherung die Warnung einer gekürzten.
 
 **Die Directive und die zehn Zahlen aus C8 sind unangetastet.** Der Nachtrag setzt keine elfte Zahl und fasst keine der zehn an; er trägt eine Zahl nach, die seit der Runde 2 im Baum steht.
+
+---
+
+## Reconciliation Log
+
+**260814-1247, reconciler, Domäne `code`, Stand `a6098d9`.** Zweiter Abgleich der Runde. Kein
+Bündelbau, kein `cargo xtask`; `target/KRK.app` unberührt.
+
+**Der Marker bleibt `_o_`, und der Grund ist ein anderer als beim ersten Abgleich.** Damals
+stand die Abnahme noch aus. Sie ist am 260814-1115 gefahren worden, und sie deckt die zweiten
+Kriterienlisten nicht ab: von den 29 Kriterien mit Bündelanteil sind 8 belegt, 5 zur Hälfte
+berührt und 16 nie berührt worden. Die Zuordnung Kriterium für Kriterium steht in
+`issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-…`.
+
+**Die Grundmenge ist nicht mehr 72.** Der Nachtrag vom 260814-1010 hat drei Kriterien in die
+erste Liste von C5 eingetragen. Am Dateibestand nachgezählt:
+
+| Fähigkeit | Am Baum | Am Bündel |
+|---|---|---|
+| C1 | 11 | 8 |
+| C2 | 4 | 5 |
+| C3 | 5 | 5 |
+| C4 | 12 | 7 |
+| C5 | 14 | 4 |
+| **Summe** | **46** | **29** |
+
+Dazu die zwei Kriterien unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`, die
+der Spec ausdrücklich zur Abnahme dieser Runde zählt und die in keiner der beiden Spalten
+stehen. 75 ohne sie, 77 mit ihnen; abgelegt als
+`issues/260814-1247_o_die-abnahmeliste-rechnet-gegen-72-kriterien-…`.
+
+**Die 46 am Baum nachweisbaren Kriterien sind gelesen und halten**, mit denselben drei benannten
+Einschränkungen wie beim ersten Abgleich (C1 zweites, C3 erstes, C5 achtes; je ein offener
+Datensatz). Die drei neuen aus dem C5-Nachtrag halten ohne Einschränkung, belegt an
+`crates/krk-core/src/ablage/mod.rs:261`, `:320`, `:720` und den zwei Proben
+`crates/krk-core/tests/ablage.rs:1587`, `:1644`.
+
+**Die 72 Kästchen sind weiterhin nicht abgehakt**, und das gilt jetzt auch für die drei neuen.
+Ein Häkchen behauptete eine Abnahme; welche Kriterien sie haben und welche nicht, steht in den
+zwei Datensätzen oben.

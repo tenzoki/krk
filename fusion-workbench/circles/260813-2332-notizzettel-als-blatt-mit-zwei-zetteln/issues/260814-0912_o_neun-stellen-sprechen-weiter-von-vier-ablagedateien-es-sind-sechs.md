@@ -36,3 +36,14 @@ vier TOML-Dateien" sagt, ist aber nicht falsch.
 - Gefunden bei der Durchsicht von Turn 1, `reviews/260814-0908-coderev-turn-1-notizzettel.md`.
 - Zeilennummern am Stand `dd2643e` gezählt; das Suchmuster war `vier Dateien` und
   `vier Ablagedateien` über `crates/`.
+
+---
+
+**Abgleich 260814-1247: der Befund besteht, die Zeilennummern sind überholt.** Turn 3 hat
+`crates/krk-core/src/ablage/mod.rs` um Zeilen wachsen lassen, und die sechs dort genannten
+Stellen sind mitgewandert: `:40`→`:45`, `:45`→`:59`, `:359`→`:385`, `:361`→`:387`,
+`:401`→`:427`, `:442`→`:468`. Die Zahl der Stellen in dieser einen Datei ist dabei unverändert
+geblieben — vorher wie nachher acht, an `79dab20` und an `a6098d9` gezählt; die Tabelle oben
+führt sechs davon. Die Unvollständigkeit der Erhebung hält
+`260814-1002_o_die-erhebung-zu-vier-ablagedateien-nennt-neun-stellen-die-suche-liefert-mehr.md`
+fest. Wer den Befund behebt, zählt vorher neu.

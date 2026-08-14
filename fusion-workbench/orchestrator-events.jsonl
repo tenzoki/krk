@@ -718,3 +718,5 @@
 {"ts":"2026-08-14T08:32:32","event":"gate_response","detail":"Obergrenze auch fuer die Kopie; Turn 3 behebt die zwei mittleren"}
 {"ts":"2026-08-14T08:32:32","event":"rebalance_artifact","turn":3,"detail":"zwei mittlere Befunde"}
 {"ts":"2026-08-14T08:32:32","event":"turn_start","turn":3,"detail":"zwei mittlere Befunde, dann Abnahme"}
+{"ts":"2026-08-14T08:55:39","event":"task_done","turn":3,"agent":"coder","detail":"zwei mittlere Befunde behoben, make check exit 0"}
+{"ts":"2026-08-14T08:55:39","event":"gate_hit","turn":3,"detail":"Abnahme am Buendel, Nutzerarbeit"}

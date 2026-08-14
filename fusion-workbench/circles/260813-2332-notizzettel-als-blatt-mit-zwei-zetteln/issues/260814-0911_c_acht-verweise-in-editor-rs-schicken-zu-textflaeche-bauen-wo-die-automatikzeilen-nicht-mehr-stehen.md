@@ -76,3 +76,11 @@ wie der Datensatz es festhält: dort stimmt der Verweis weiter.
 Verhalten ändert sich nicht; die Änderung ist Prosa. `make check` am 260814 gefahren,
 Rückgabewert 0, „alle vier gruen" — die Doc-Verweise in eckigen Klammern lösen auf, also
 hält auch `cargo doc` sie.
+
+---
+
+**Abgleich 260814-1247: nachgezählt und bestätigt.** Die acht Verweise zeigen jetzt auf
+`textautomatik::automatiken_abschalten`; gesehen an `crates/krk-ui/src/appkit/editor.rs:316`,
+`:4233`, `:4257`, `:4273`, `:4365`, `:4427`, `:4829` und `:4859`. Die sieben Stellen, an denen
+`textflaeche_bauen` als Erzeuger der Fläche gemeint ist, stehen unverändert. `make check`
+Rückgabewert 0.

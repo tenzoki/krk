@@ -89,3 +89,15 @@ heißt jetzt `die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig` un
 fünf Werte.
 
 `make check` am 260814 gefahren, Rückgabewert 0, „alle vier gruen".
+
+---
+
+**Abgleich 260814-1247: die Behebung ist gegen den Baum gelesen und hält.**
+`quelle.by_ref().take(EDITORGRENZE)` steht an `crates/krk-core/src/ablage/mod.rs:720`,
+`Beiseite::Gekuerzt` an `:261` mit eigener Meldung an `:320`, und die Unterscheidung läuft über
+`begrenzt.limit() > 0` und `steht_noch_etwas_an` und nicht über das erschöpfte Budget. Die zwei
+Proben stehen an `crates/krk-core/tests/ablage.rs:1587` und `:1644`. `EDITORGRENZE` steht
+weiterhin an genau einer Stelle im Quelltext (`crates/krk-core/src/text/datei.rs:164`); jede
+weitere Fundstelle liest sie. `make check` beim Abgleich wiederholt: Rückgabewert 0, „alle vier
+gruen". Die drei Kriterien, die der Spec dafür am 260814-1010 nachgetragen hat, halten alle
+drei.

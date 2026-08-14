@@ -463,3 +463,26 @@ Zwei Datensätze sind bei der Planung entstanden und stehen als eigene Dateien, 
 **Zwei Stellen sind mit dem Nachtrag vom 260814-0941 nicht mitgezogen worden**, beide ohne Widerspruch zum Spec und beide als Datensatz abgelegt (`issues/260814-1002_o_zwei-stellen-des-plans-sind-mit-dem-nachtrag-vom-0941-nicht-mitgezogen-worden.md`): die `**Decidability:**`-Zeile zählt als dritte Eingabe „den offenen Zettel", seit dem Nachtrag ist es der gehaltene Stand **beider** Zettel; und `## Testing Strategy` führt für das Zettelmodell drei Gegenstände auf und kennt den vierten nicht, die Regel „der getippte Stand gewinnt" mit ihren drei Proben.
 
 **Eine im Schritt 11 zugesagte Zählprobe ist nicht gebaut** (`issues/260814-1002_o_zwei-in-c3-zugesagte-proben-stehen-nicht-im-baum.md`). Die Sache selbst hält: `blaetter/zettel.rs` ruft weder Nummernspalte noch Hervorhebung noch Suche, und keine davon steht in seinen `use`-Zeilen.
+
+**260814-1247, reconciler, zweiter Abgleich, Stand `a6098d9`.** Der Status bleibt `Complete` und
+der Marker `_c_`. Nachgesehen ist, was sich seit dem 260814-1002 an diesem Plan geändert haben
+müsste, und das sind zwei Stellen.
+
+**Die Fassungszeile im Kopf ist überholt.** Sie nennt den Spec „Fassung vom 260814-0925, mit dem
+Nachtrag an C4"; es gibt seit `a6098d9` einen dritten Nachtrag vom 260814-1010 an C5. Die drei
+Kriterien daraus sind gebaut, aber nicht über einen Planschritt, sondern über die Behebung des
+Defekts `issues/260814-0910_c_` in Turn 3. Abgelegt als
+`issues/260814-1247_o_der-plan-nennt-als-spec-fassung-die-vom-0925-…`.
+
+**„Nutzerarbeit" Punkt 2 ist gefahren und nicht festgehalten.** Der Nutzer hat den Lauf am
+260814-1115 als Beobachtung 9 der Abnahmeliste gefahren. Punkt 5 der dortigen Reihenfolge — das
+getippte Zeichen steht nach `cmd+n` und `f2` wieder da — ist bestanden, und das ist die Zusage;
+sie ist zugleich das Abnahmekriterium C1, viertes der zweiten Liste. Punkt 4, welche der zwei
+Kanten das Bündel geht, ist nicht notiert worden, und die Datei
+`messungen/YYMMDD-HHMM-performclose-mit-blatt.txt` aus Punkt 6 ist nicht entstanden. **Kein
+Abnahmekriterium des Spec bleibt dadurch unerfüllt** — die Messung war schon im Plan von der
+Zusage entkoppelt („die Messung entscheidet nichts mehr"), und sie steht in keiner der fünf
+Kriterienlisten. Was fehlt, ist die Auskunft über AppKits Verhalten für eine spätere Runde am
+Schließweg.
+
+`make check` beim zweiten Abgleich wiederholt: Rückgabewert 0, „alle vier gruen".

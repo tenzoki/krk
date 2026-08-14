@@ -107,3 +107,31 @@ soweit, wie ein Agent ihn bringen kann.
 **Obergrenze auch für die Kopie.** Dieselbe Zahl, `EDITORGRENZE` mit 16 MB, gilt auch für das Beiseitelegen: kopiert wird bis zur Grenze, darüber bricht es ab und meldet. Eine Zahl, zwei Verwendungen, keine zweite Konstante im Baum. Der Preis ist benannt: von einer sehr großen Fremddatei werden nur die ersten 16 MB gesichert. „Eine zweite Zahl" und „umbenennen statt kopieren" sind verworfen — Letzteres verstieße gegen die erste der drei Regeln von `beiseite_legen`.
 
 **Turn 3 behebt die zwei mittleren Befunde**, danach fährt der Nutzer die Abnahme. Die Runde kann dann kohärent schließen wie die achte. Die fünf niedrigen Befunde der Durchsicht und die sieben des Abgleichs bleiben offen.
+
+## Coherence
+
+*(zweites Urteil, 260814-1247, nach Turn 3 und dem Abnahmelauf des Nutzers)*
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: 46 am Baum nachweisbare Kriterien geprüft und alle 46 gehalten (43 ohne, 3 mit einer benannten Einschränkung), 16 von 16 Planschritten bestätigt, die zwei mittleren Befunde behoben und beide Behebungen gegen den Baum gelesen (`crates/krk-core/src/ablage/mod.rs:261`, `:320`, `:720`; acht Verweise in `crates/krk-ui/src/appkit/editor.rs`), `make check` exit 0 am Stand `a6098d9` — **geflaggt**, und zwar an der Abnahme und nicht am Baum: der Lauf vom 260814-1115 führt zwölf Beobachtungen für 29 Kriterien mit Bündelanteil, davon sind 8 belegt, 5 zur Hälfte berührt und **16 nie berührt** (`issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-…`); die Streichung der Beobachtung 10 nimmt zusätzlich den Kriterien `:267` und `:268` ihren einzigen möglichen Beleg, weil `krk-ui` ohne Bibliotheksziel den Meldeweg nicht proben kann (`issues/260814-1247_o_die-streichung-der-beobachtung-10-…`); und die Grundmenge ist seit dem C5-Nachtrag vom 260814-1010 nicht mehr 72, sondern 75 (`issues/260814-1247_o_die-abnahmeliste-rechnet-gegen-72-kriterien-…`).
+- Artifact↔Directive: der eine Commit seit dem ersten Abgleich, `a6098d9`, läuft auf die Directive zu und nicht daneben — er zieht die Kopiergrenze nach, die der Spec offengelassen hatte, und berichtigt acht Verweise; **nicht geflaggt**, mit demselben Vorbehalt an der Fassung wie beim ersten Urteil: die Directive im Circle-Datensatz nennt weiter drei Sicherungsmomente, der Bau folgt der Fassung mit vier (`issues/260814-0637_o_` und `issues/260814-1002_o_die-directive-abweichung-…`).
+- Grounding↔Directive: 19 offene Fragen über alle Speicher, unverändert gegenüber dem ersten Urteil, keine in diesem Circle und keine im Widerspruch zur Directive; die zwei Entscheide dieses Circles stehen auf umgesetzt; **nicht geflaggt**, und die eine Lücke des ersten Urteils ist geschlossen: die Frage, wie groß „beiseite" werden darf, hat der Nutzer am 260814-1010 beantwortet, und die Antwort steht im Spec unter C5 mit drei Kriterien und drei Festlegungen — einer der zwei Orte, die `issues/260814-0910_*` dafür nannte.
+
+**Rebalance recommendation:** revise Artifact
+
+**Was der Gate daneben wissen muss.** Der Weg zu einem kohärenten Abschluss ist kurz und führt
+noch einmal über den Vordergrund: ein zweiter Abnahmedurchgang, der die sechzehn nie berührten
+Kriterien und die wieder aufgenommene Beobachtung 10 fährt. Mehrere lassen sich zusammenfassen —
+die drei Beenden-Kriterien von C4 in einem Lauf mit getipptem Text, die Kriterien `:267`, `:268`
+und `:269` in einem einzigen Durchgang mit entzogenem Schreibrecht. **Der Unterschied zur Runde 8
+ist eine Formfrage und keine Eigenschaft dieser Runde:** dort trug jedes Kriterium einzeln die
+Kennzeichnung `(Probe)` oder `(Bündel)`, zehn waren es, und der Abnahmelauf führte elf
+Beobachtungen — eine je Kriterium. Diese Runde führt zwei Listen je Fähigkeit, und die Bindung
+zwischen Beobachtung und Kriterium ist dabei verloren gegangen. **Ein beschränkter Abschluss ist
+nicht die naheliegende Wahl**, weil der Grund der acht früheren Beschränkungen hier nicht mehr
+trägt: der Nutzer hat den Vordergrundlauf gefahren, er kann ihn wieder fahren, und die Directive
+ist erreichbar.
+
+**Abgleich:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260814-1247-reconciliation.md`
