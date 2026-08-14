@@ -818,3 +818,97 @@ inzwischen vollständig abgenommen, und sie ist der Beleg dafür, dass eine Rund
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260814-1301
+**Playmaker-Lauf:** 260814-1301-playmaker-direct-dispatch
+**Abgeschlossenes Kind:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` (Runde 9),
+geschlossen am 260814-1300 als **beschränkter Abschluss** (`_b_`)
+
+**Zur Auslösebedingung.** Die eine Hälfte ist diesmal erfüllt, die andere nicht: die Runde 9 trägt
+`_b_`, aber der Abschnitt `## Grounding snapshot` dieses Datensatzes stammt vom 260804 und kann
+sie nicht zitieren. Der Vermerk steht aus demselben Grund wie die vier davor — die Runde hat an
+zwei Stellen gearbeitet, durch die jeder Befehl dieses Betrachters laufen wird. Zwei
+Feststellungen, beide für die Klärungsrunde vor der Aktivierung, keine hält sie auf.
+
+### 1. Die Ausnahme im Ersthelfervorbehalt hat jetzt einen Präzedenzfall in beide Richtungen
+
+Der Vermerk vom 260813-1510 hielt fest, die Form der Editor-Ausnahme über die hereingereichte
+Prüffunktion `ist_editorflaeche` sei „die gesuchte" für eine Web-Ansicht. Die Runde 9 zeigt, dass
+die Frage zwei Antworten hat und die Wahl zwischen ihnen an der Form der Ansicht hängt, nicht an
+ihrem Inhalt.
+
+Die Textfläche des Notizzettels ist die erste zweite bedienbare Textfläche dieses Baums, die in
+`ersthelfer_gehoert_appkit` **absichtlich nicht** angemeldet ist. Der Modulkopf von
+`crates/krk-ui/src/appkit/blaetter/zettel.rs` schreibt die Kette aus: bleibt die Fläche
+unangemeldet, gehört ihr Ersthelfer AppKit, `Kommando::Abbrechen` ist damit unzulässig, der
+Tastendruck läuft unverändert weiter, und `cancelOperation:` kommt beim Wächter des Blattes an.
+Eine Anmeldung kehrte das um und nähme dem Zettel den Weg zurück. Die Probe
+`im_textfeld_eines_blattes_ist_auch_der_abbruch_abgewiesen`
+(`crates/krk-ui/src/kommandos/zulaessigkeit.rs:642`) hält die Vorbedingung fest.
+
+Für diesen Circle heißt das: der Betrachter lebt nach seiner Directive in einem gewöhnlichen Tab
+des Vorschaufensters, ist also ein Bereich der Fensterzeile und kein Blatt. Er steht damit auf der
+Seite des Editors und will KRKs Befehle mit dem Fokus in sich selbst. `inference:` Ob er dafür
+eine Anmeldung braucht, ist offen und am Baum nicht zu entscheiden: das Prädikat prüft auf
+`NSTextView`, `NSTextField` und `NSText` (`crates/krk-ui/src/appkit/ereignisse.rs:594`), und eine
+Ansicht mit Web-Inhalt gehört zu keiner der drei, so dass es für sie ohnehin `false` liefert. Die
+Frage stellt sich erst, wenn ein Eingabefeld der angezeigten Seite den Ersthelferrang an ein
+Objekt einer dieser drei Arten gibt. Der Baum trägt keine Web-Ansicht; gemessen ist nichts davon.
+
+### 2. Ein neuer Befehl kommt beim Nutzer mit eigener Belegungsdatei unbelegt an
+
+`Kommando::KENNUNGEN` steht nach der Runde 9 bei 77 Einträgen
+(`crates/krk-core/src/tasten/belegung.rs:579`, am 260814-1301 nachgezählt); der Zettel ist der
+eine neue Befehl. Beim Planen derselben Runde ist ein Defekt gefunden worden, der jede weitere
+Runde mit neuen Befehlen trifft:
+`shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`.
+`Belegung::bauen` nimmt die Datei des Nutzers als Quelle der Tasten und fügt eine Funktion, die sie
+nicht nennt, mit leerer Tastenliste hinzu. Wer seit der Runde 7 einmal eine Taste zugewiesen hat,
+bekommt jede später ausgelieferte Funktion tot.
+
+Die Directive dieses Circles verlangt vier neue Befehle, Blättern, Zurück, Vor und das Schalten
+der Sprungmarken. Jeder davon ist betroffen. Für die Abnahme der Runde 9 hat ein Handgriff
+gereicht, die eigene `keymap.toml` vor dem Lauf beiseitezulegen; der Defekt nennt drei Wege zu
+einer Lösung und keiner ist gewählt. Die Klärungsrunde dieses Circles wächst damit nicht um eine
+Frage, wohl aber seine Abnahmeplanung um eine Vorbedingung.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260814-1301
+**Playmaker-Lauf:** 260814-1301-playmaker-direct-dispatch
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Untersuchung des Darstellungsmittels und
+einer Klärungsrunde über sechs Fragen
+
+Dieser Vermerk trägt zwei Änderungen nach und wiederholt die Vorschläge vom 260813-1510 und
+260813-2203 nicht. Der Circle bleibt Rang 1 und einziger Kandidat, bei unverändertem Zuschnitt.
+
+**Die eine Bedingung, die der Vermerk vom 260813-2203 als erledigt gemeldet hat, steht wieder
+offen.** Am 260814-1301 am Baum geprüft: `git tag --points-at HEAD` liefert nichts, zwölf Commits
+liegen zwischen `v0.2.1` und `HEAD` (`4907cd4`), und `Cargo.toml` führt weiter `0.2.1`. Station 1
+von `cargo xtask release` vergleicht Tag und Version (`xtask/src/release.rs`, `stand_pruefen` ab
+Zeile 208) und hält den Auslieferungsweg damit erneut an. Der Arbeitsbaum ist sauber. Das ist
+keine Bedingung des Circles, sondern der wiederkehrende Zustand nach jeder Runde: die Runde 9 hat
+zehn Commits hinzugefügt und keinen Tag gesetzt.
+
+**Die Runde 9 nimmt der Aussicht auf einen kohärenten Abschluss etwas von ihrer Sicherheit, und
+sie sagt zugleich, woran es lag.** Der Vermerk vom 260813-1510 hatte aus der Runde 8 geschlossen,
+eine Runde dieses Projekts könne kohärent enden, sofern der Nutzer die Handabnahme fährt. Die
+Runde 9 hat die Handabnahme gefahren und ist dennoch beschränkt geschlossen. Der Unterschied liegt
+nicht am Nutzer und nicht am Baum, sondern am Zuschnitt der Abnahmeliste: die Runde 8
+kennzeichnete jedes Abnahmekriterium einzeln als `(Probe)` oder `(Bündel)` und stellte je
+Bündelkriterium genau eine Beobachtung; die Runde 9 führte zwei Listen je Fähigkeit, verlor die
+Bindung zwischen Beobachtung und Kriterium, und 16 der 29 Kriterien mit Bündelanteil hat keine
+Beobachtung angefasst. Nachzulesen in der `## Closure note` von
+`circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_*_circle.md`.
+
+Für diesen Circle ist das die billigste verfügbare Maßnahme und sie gehört an das Plan-Gate: die
+Abnahmeliste seiner Runde trägt je Kriterium eine Kennzeichnung und je Bündelkriterium eine
+Beobachtung. Der Betrachter wird viele Kriterien am laufenden Bündel haben, weil sich Blättern,
+Zurück, Vor und Sprungmarken an einer echten Seite zeigen und nicht an einer Probe.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
