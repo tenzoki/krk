@@ -674,6 +674,36 @@ fn bei_flacher_suche_bleibt_jeder_ordner_stehen() {
     );
 }
 
+/// C2.4: steht kein Filtertext, aendert "Deep" nichts an der Liste.
+///
+/// Der Befehl kommt trotzdem durch und kippt das Kennzeichen; ueber seine
+/// Zulaessigkeit entscheidet der Wirkungsbereich und nicht, ob er etwas
+/// findet. Das haelt `jeder_schalter_wirkt_aus_jedem_fokus` in
+/// `crates/krk-ui/src/appkit/bereichsleiste.rs`. Hier steht die andere Haelfte:
+/// dass die Liste dabei stehen bleibt, und zwar **auch** mit einem Befund
+/// `KeinTreffer` an einem Ordner — ohne Filtertext wird er gar nicht erst
+/// gefragt.
+#[test]
+fn ohne_filtertext_aendert_die_tiefe_suche_nichts() {
+    let ordner = filterordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+    // Eigene Zeichenketten: `namen` leiht aus dem Modell, und die Ausleihe
+    // ueberstuende die Aenderungen darunter nicht.
+    let vorher: Vec<String> = namen(&modell).into_iter().map(str::to_owned).collect();
+    assert!(!modell.filter_steht(), "diese Probe faehrt ohne Filtertext");
+
+    let still = index_von(&modell, "stiller-ordner");
+    modell.befund_setzen(still, Befund::KeinTreffer);
+    modell.tief_setzen(true);
+
+    assert!(modell.tief(), "das Kennzeichen steht, auch ohne Filtertext");
+    assert_eq!(
+        namen(&modell),
+        vorher,
+        "ohne Filtertext entscheidet der Befund ueber keine Zeile"
+    );
+}
+
 /// C2.5, C2.6: bei tiefer Suche entscheidet ueber einen Ordner sein Name oder
 /// der Befund ueber seinen Unterbaum, und `Unentschieden` haelt ihn draussen.
 #[test]

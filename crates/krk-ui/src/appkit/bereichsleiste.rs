@@ -1,8 +1,9 @@
-//! Die Bereichsleiste am Fensterfuss: acht Ankreuzfelder, sonst nichts.
+//! Die Bereichsleiste am Fensterfuss: neun Ankreuzfelder, sonst nichts.
 //!
 //! Fuenf Schalter fuer die Bereiche der Fensterzeile (C2 der
-//! Bereichsleisten-Runde) und drei fuer die schaltbaren Spalten der
-//! Dateilisten (C3). Jeder zeigt, ob sein Gegenstand steht, und schickt bei
+//! Bereichsleisten-Runde), drei fuer die schaltbaren Spalten der Dateilisten
+//! (C3) und seit der Filter-Runde einer fuer die tiefe Suche (C2.1). Jeder
+//! zeigt, ob sein Gegenstand steht, und schickt bei
 //! einem Klick **ein Kommando** los; ausgefuehrt wird es dort, wo auch der
 //! Tastenbefehl ausgefuehrt wird. Einen zweiten Weg an den Pruefungen vorbei
 //! gibt es nicht, und das ist die Zusage aus C2.2.
@@ -14,6 +15,28 @@
 //!                                            bereichsleiste_nachziehen
 //!            Schalterzustaende <──────────────────┘
 //! ```
+//!
+//! # Der neunte Schalter ist eine Gruppe und keine dritte Sammlung
+//!
+//! Die ersten beiden Gruppen sind Reihungen ueber eine Aufzaehlung —
+//! [`Bereich::ALLE`] und die schaltbaren Werte von [`Spalte::ALLE`] —, und
+//! ihre Schalter nennen sich beim Klick ueber ihre `tag`. Der Schalter der
+//! tiefen Suche ist ein einzelnes Feld: "Deep" ist weder ein Bereich noch
+//! eine Spalte, sondern die Sucheinstellung des sichtbaren Tabs. Eine
+//! Aufzaehlung mit einem Wert daneben waere eine Aufzaehlung zu viel, und
+//! eine `tag` braucht er nicht, weil sein Selektor sein Kommando schon kennt.
+//!
+//! **Er ist auch die eine Groesse dieser Leiste, die nicht fensterweit
+//! gilt.** Die acht anderen stehen im
+//! [`Fenstermodell`](crate::fenstermodell::Fenstermodell),
+//! dieser steht am `Ordnermodell` des sichtbaren Tabs im **aktiven**
+//! Dateifenster. Daran haengen die drei Anlaesse, die
+//! `Anwendungsdelegierter::bereichsleiste_nachziehen` seit der Filter-Runde
+//! zusaetzlich hat; welche das sind, steht dort. Solange
+//! `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
+//! offen ist, faehrt der Bau auf "je Tab": faellt die Antwort auf "je
+//! Fenster", wechselt allein die **Quelle** des dritten Arguments von
+//! [`Bereichsleiste::zustaende_setzen`], und diese Datei bleibt, wie sie ist.
 //!
 //! # Die Leiste zeigt an und haelt keinen Stand
 //!
@@ -54,7 +77,7 @@
 //! Erzeuger; ein Ankreuzfeld ist deren zweistufiges Geschwister und zeigt
 //! seinen Zustand von sich aus. Ein `NSSegmentedControl` waere kompakter,
 //! fuehrte aber einen im Baum unbekannten Bedienelementtyp ein und stellte die
-//! acht Schalter ueber eine Segmentnummer statt ueber eine gehaltene Ansicht
+//! neun Schalter ueber eine Segmentnummer statt ueber eine gehaltene Ansicht
 //! je Bereich zu.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
@@ -158,6 +181,24 @@ const fn kommando_der_spalte(spalte: Spalte) -> Option<Kommando> {
     }
 }
 
+/// Das Kommando, das der Schalter der tiefen Suche schickt (C2.3).
+///
+/// **Eine Konstante und keine Aufbautabelle.** Die beiden Gruppen darueber
+/// rechnen ihr Kommando aus einer Aufzaehlung aus, weil es mehrere sind; hier
+/// ist es eines, und eine Aufzaehlung mit einem Wert waere eine Aufzaehlung zu
+/// viel. Der Selektor `tiefeGedrueckt:` und die Probe lesen dieselbe
+/// Konstante; eine Aufstellung daneben pruefte sich selbst.
+const KOMMANDO_DER_TIEFE: Kommando = Kommando::TiefeSucheUmschalten;
+
+/// Die Aufschrift des Schalters der tiefen Suche (C2.1).
+///
+/// **Englisch und nicht uebersetzt**, waehrend die acht anderen deutsch
+/// beschriftet sind. Das ist ein Nutzerentscheid ueber die Anzeige und keiner
+/// ueber die Kennung: die heisst `tiefe_suche_umschalten` und folgt der
+/// Schreibweise der uebrigen Befehle. Die Konstante steht hier, damit
+/// [`Bereichsleiste::bauen`] und die Probe dieselbe Zeichenkette lesen.
+const AUFSCHRIFT_DER_TIEFE: &str = "Deep";
+
 /// Die Stelle, an der der Schalter dieser Spalte in
 /// [`Bereichsleiste::spaltenschalter`] steht.
 ///
@@ -197,7 +238,7 @@ pub struct LeistenquellenIvars {
 }
 
 define_class!(
-    /// Das Ziel, das der Klick auf einen der acht Schalter anspricht.
+    /// Das Ziel, das der Klick auf einen der neun Schalter anspricht.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
@@ -241,6 +282,21 @@ define_class!(
                 .and_then(kommando_der_spalte);
             self.geklickt(absender, kommando);
         }
+
+        /// Der Nutzer hat den Schalter der tiefen Suche angeklickt (C2.3).
+        ///
+        /// **Ohne Umweg ueber die `tag`**, und das ist der Unterschied zu den
+        /// beiden Zweigen darueber: der Absender ist der einzige Schalter
+        /// dieses Selektors, also nennt der Selektor selbst schon das
+        /// Kommando. Es gibt hier deshalb auch keinen Fall "kein Kommando";
+        /// [`Leistenquelle::geklickt`] nimmt trotzdem denselben Weg, damit die
+        /// Selbstkippung an genau einer Stelle zurueckgenommen wird.
+        // SAFETY: Die Signatur passt zu der, die `NSControl` aufruft: ein
+        // Argument, der Absender.
+        #[unsafe(method(tiefeGedrueckt:))]
+        fn tiefe_gedrueckt(&self, absender: &NSButton) {
+            self.geklickt(absender, Some(KOMMANDO_DER_TIEFE));
+        }
     }
 );
 
@@ -254,7 +310,7 @@ impl Leistenquelle {
         unsafe { msg_send![super(this), init] }
     }
 
-    /// Was bei jedem Klick geschieht, gleich auf welchen der acht Schalter und
+    /// Was bei jedem Klick geschieht, gleich auf welchen der neun Schalter und
     /// gleich, ob daraus ein Kommando wird.
     ///
     /// **Zuerst die Selbstkippung zuruecknehmen, dann melden.** Ein
@@ -324,11 +380,17 @@ pub struct Bereichsleiste {
     /// Die Schalter der drei schaltbaren Spalten, in der Reihenfolge, die
     /// [`spaltenfach`] nennt.
     spaltenschalter: [Retained<NSButton>; 3],
+    /// Der Schalter der tiefen Suche (C2.1).
+    ///
+    /// **Ein einzelnes Feld und keine dritte Reihung.** Die Begruendung steht
+    /// im Modulkopf unter `# Der neunte Schalter ist eine Gruppe und keine
+    /// dritte Sammlung`.
+    tiefenschalter: Retained<NSButton>,
     quelle: Retained<Leistenquelle>,
 }
 
 impl Bereichsleiste {
-    /// Baut die Leiste mit ihren acht Schaltern.
+    /// Baut die Leiste mit ihren neun Schaltern.
     ///
     /// Die Schalter stehen nebeneinander von links nach rechts, jeder so
     /// breit, wie seine Aufschrift ihn macht. Ihre Zustaende sind nach dem Bau
@@ -347,7 +409,7 @@ impl Bereichsleiste {
                 mtm,
                 &quelle,
                 sel!(bereichGedrueckt:),
-                bereich.index(),
+                Some(bereich.index()),
                 bereich.beschriftung(),
                 &format!("{} ein- und ausblenden", bereich.langname()),
             );
@@ -367,7 +429,7 @@ impl Bereichsleiste {
                 mtm,
                 &quelle,
                 sel!(spalteGedrueckt:),
-                stelle,
+                Some(stelle),
                 spalte.beschriftung(),
                 &format!(
                     "Spalte »{}« in beiden Dateilisten ein- und ausblenden",
@@ -384,10 +446,27 @@ impl Bereichsleiste {
             .try_into()
             .expect("genau drei Spalten tragen ein Kommando");
 
+        // Die dritte Gruppe, und deshalb noch einmal [`GRUPPENABSTAND`]: der
+        // Schalter der tiefen Suche schaltet weder eine Flaeche des Fensters
+        // noch eine Spalte, sondern die Sucheinstellung des sichtbaren Tabs.
+        // Er steht rechts von `Typ`, weil die Reihenfolge der Gruppen die
+        // Reihenfolge ihres Nachtrags ist (C2.1).
+        links += GRUPPENABSTAND - ABSTAND;
+        let tiefenschalter = schalter_bauen(
+            mtm,
+            &quelle,
+            sel!(tiefeGedrueckt:),
+            None,
+            AUFSCHRIFT_DER_TIEFE,
+            "Den stehenden Filter auf den Unterbaum ausdehnen",
+        );
+        einhaengen(&sicht, &tiefenschalter, &mut links);
+
         Self {
             sicht,
             bereichsschalter,
             spaltenschalter,
+            tiefenschalter,
             quelle,
         }
     }
@@ -406,7 +485,7 @@ impl Bereichsleiste {
         *self.quelle.ivars().melden.borrow_mut() = Some(melden);
     }
 
-    /// Schreibt die acht Schalterzustaende aus dem Modell.
+    /// Schreibt die neun Schalterzustaende aus dem Modell.
     ///
     /// **Der eine Schreiber, und er schreibt nichts als Zustaende.** Er ruft
     /// weder `anwenden` noch `setHidden` und fasst den Ersthelfer nicht an,
@@ -414,13 +493,26 @@ impl Bereichsleiste {
     /// eine ausgeblendete Ansicht, die den Rang haelt, laesst AppKit ihn neu
     /// vergeben und die Meldung ein zweites Mal ausloesen.
     ///
-    /// **Immer alle acht und nie nur der geaenderte.** Ein Befehl kann zwei
+    /// **Immer alle neun und nie nur der geaenderte.** Ein Befehl kann zwei
     /// Schalter bewegen (Vorschau und Editor teilen sich die Flaeche, C2.3),
     /// und der erste Ruf ueberhaupt schreibt die ganze geladene Sitzung in die
     /// Leiste, ohne dass jemand geklickt haette. Die Frage "welcher hat sich
     /// geaendert" waere hier also eine Fallunterscheidung, die die Antwort
     /// schon voraussetzt.
-    pub fn zustaende_setzen(&self, sichtbar: &Sichtbarkeit, spalten: &Spaltensichtbarkeit) {
+    ///
+    /// **`tief` kommt aus einer anderen Quelle als die beiden anderen
+    /// Argumente**, und die Leiste erfaehrt davon nichts: sie bekommt drei
+    /// Werte und schreibt drei Gruppen. Wo `tief` herkommt, entscheidet allein
+    /// `Anwendungsdelegierter::bereichsleiste_nachziehen`; das ist die Naht,
+    /// an der eine Antwort "je Fenster" auf
+    /// `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
+    /// anfiele, ohne diese Datei zu beruehren.
+    pub fn zustaende_setzen(
+        &self,
+        sichtbar: &Sichtbarkeit,
+        spalten: &Spaltensichtbarkeit,
+        tief: bool,
+    ) {
         for bereich in Bereich::ALLE {
             zustand_setzen(
                 &self.bereichsschalter[bereich.index()],
@@ -436,15 +528,22 @@ impl Bereichsleiste {
                 spalte_sichtbar_in(spalten, spalte),
             );
         }
+        zustand_setzen(&self.tiefenschalter, tief);
     }
 }
 
 /// Baut ein Ankreuzfeld, das seine Stelle ueber die `tag` nennt.
+///
+/// **`None` heisst: dieser Schalter muss sich nicht nennen.** Ein Selektor,
+/// den mehrere Schalter teilen, braucht die `tag`, um den Absender einer
+/// Aufzaehlung zuzuordnen; der Schalter der tiefen Suche ist der einzige
+/// seines Selektors, und eine `tag` an ihm waere eine Nummer, die niemand
+/// liest — und die ein Leser fuer die Stelle in einer Aufzaehlung hielte.
 fn schalter_bauen(
     mtm: MainThreadMarker,
     quelle: &Leistenquelle,
     aktion: Sel,
-    stelle: usize,
+    stelle: Option<usize>,
     aufschrift: &str,
     hinweis: &str,
 ) -> Retained<NSButton> {
@@ -476,7 +575,9 @@ fn schalter_bauen(
     // steht im Modulkopf; sie ist der Grund, aus dem `Fokus` keinen sechsten
     // Wert bekommt.
     schalter.setRefusesFirstResponder(true);
-    schalter.setTag(stelle as isize);
+    if let Some(stelle) = stelle {
+        schalter.setTag(stelle as isize);
+    }
     schalter
 }
 
@@ -527,11 +628,15 @@ mod tests {
 
     use krk_core::tasten::Wirkungsbereich;
 
-    /// Alle acht Schalter dieser Leiste, mit dem Kommando, das sie schicken.
+    use crate::kommandos::fokus::Fokus;
+
+    /// Alle neun Schalter dieser Leiste, mit dem Kommando, das sie schicken,
+    /// in der Reihenfolge, in der [`Bereichsleiste::bauen`] sie einhaengt.
     ///
-    /// Die Proben lesen die Aufbautabelle ueber dieselben beiden Funktionen,
-    /// aus denen [`Bereichsleiste::bauen`] die Schalter baut; eine
-    /// Aufstellung daneben pruefte sich selbst.
+    /// Die Proben lesen dieselben Quellen, aus denen [`Bereichsleiste::bauen`]
+    /// die Schalter baut: die beiden Aufbautabellen und, fuer den neunten,
+    /// [`KOMMANDO_DER_TIEFE`] samt [`AUFSCHRIFT_DER_TIEFE`]. Eine Aufstellung
+    /// daneben pruefte sich selbst.
     fn alle_schalter() -> Vec<(String, Kommando)> {
         let bereiche = Bereich::ALLE.into_iter().map(|bereich| {
             (
@@ -542,14 +647,67 @@ mod tests {
         let spalten = Spalte::ALLE.into_iter().filter_map(|spalte| {
             kommando_der_spalte(spalte).map(|kommando| (spalte.beschriftung().to_owned(), kommando))
         });
-        bereiche.chain(spalten).collect()
+        let tiefe = std::iter::once((AUFSCHRIFT_DER_TIEFE.to_owned(), KOMMANDO_DER_TIEFE));
+        bereiche.chain(spalten).chain(tiefe).collect()
     }
 
-    /// C2.1 und C3.1: fuenf plus drei, und keiner doppelt.
+    /// C2.1 der Filter-Runde, C2.1 und C3.1 der Bereichsleisten-Runde: fuenf
+    /// plus drei plus einer, und keiner doppelt.
     #[test]
-    fn die_leiste_traegt_acht_schalter() {
+    fn die_leiste_traegt_neun_schalter() {
         let schalter = alle_schalter();
-        assert_eq!(schalter.len(), 8, "fuenf Bereiche und drei Spalten");
+        assert_eq!(
+            schalter.len(),
+            9,
+            "fuenf Bereiche, drei Spalten und die tiefe Suche"
+        );
+    }
+
+    /// C2.1: der neunte Schalter traegt die englische Aufschrift `Deep` und
+    /// steht rechts neben `Typ`.
+    ///
+    /// Die **Lage auf dem Schirm** prueft diese Probe nicht — sie liest die
+    /// Reihenfolge, in der [`Bereichsleiste::bauen`] einhaengt, und die ist
+    /// dieselbe Reihenfolge von links nach rechts. Dass die Leiste dabei ihre
+    /// 18 Punkte behaelt, ist am laufenden Buendel zu sehen und hier nicht.
+    #[test]
+    fn der_neunte_schalter_heisst_deep_und_steht_rechts_von_typ() {
+        assert_eq!(
+            AUFSCHRIFT_DER_TIEFE, "Deep",
+            "die Aufschrift ist englisch und wird nicht uebersetzt"
+        );
+        let schalter = alle_schalter();
+        let namen: Vec<&str> = schalter.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(
+            namen.last().copied(),
+            Some(AUFSCHRIFT_DER_TIEFE),
+            "der Schalter der tiefen Suche steht ganz rechts"
+        );
+        assert_eq!(
+            namen.get(namen.len() - 2).copied(),
+            Some(Spalte::Typ.beschriftung()),
+            "links von ihm steht der Schalter der Spalte »Typ«"
+        );
+    }
+
+    /// C2.2: die Leiste bekommt einen neunten Schalter und [`Fokus`] keinen
+    /// sechsten Wert.
+    ///
+    /// **Der Ersthelferrang ist die tragende Entscheidung dieses Moduls**, und
+    /// ihr Grund steht im Modulkopf unter `# Kein Schalter nimmt den
+    /// Ersthelferrang an`: `Anwendungsdelegierter::ersthelferbereich` laeuft
+    /// ueber [`Bereich::ALLE`], und die Leiste liegt in keinem der fuenf
+    /// Teilbaeume. Der neunte Schalter geht dafuer durch dieselbe eine
+    /// Bauzeile wie die acht vorhandenen — [`schalter_bauen`] setzt
+    /// `setRefusesFirstResponder(true)` fuer jeden —, und dass er sie damit
+    /// wirklich traegt, ist am laufenden Buendel zu sehen und hier nicht.
+    #[test]
+    fn der_neunte_schalter_gibt_fokus_keinen_sechsten_wert() {
+        assert_eq!(
+            Fokus::ALLE.len(),
+            5,
+            "die Leiste ist kein fokussierbarer Bereich"
+        );
     }
 
     /// Die Zusage der Feldbreite `[Retained<NSButton>; 3]`: genau drei Spalten
@@ -588,11 +746,19 @@ mod tests {
         }
     }
 
-    /// C2.6: die Schalter wirken aus jedem Fokus.
+    /// C2.6 der Bereichsleisten-Runde und C2.4 der Filter-Runde: die Schalter
+    /// wirken aus jedem Fokus.
     ///
     /// Ein Kommando mit einem engeren Wirkungsbereich waere genau dann
     /// abgewiesen, wenn der Nutzer es am dringendsten braucht — der Klick mit
     /// der Schreibmarke im Editor, der den Editor wieder loswerden will.
+    ///
+    /// **Fuer den Schalter der tiefen Suche ist das zugleich die halbe
+    /// Zusage aus C2.4**: ueber die Zulaessigkeit entscheidet der
+    /// Wirkungsbereich und nicht, ob der Befehl etwas findet. Dass er auch bei
+    /// leerem Filtertext durchkommt und dann nichts an der Liste aendert, haelt
+    /// `ohne_filtertext_aendert_die_tiefe_suche_nichts` in
+    /// `crates/krk-core/tests/verzeichnis.rs`.
     #[test]
     fn jeder_schalter_wirkt_aus_jedem_fokus() {
         for (name, kommando) in alle_schalter() {

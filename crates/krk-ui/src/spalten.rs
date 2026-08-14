@@ -70,7 +70,7 @@ impl Spalte {
     /// Der kurze Name der Spalte, wie ihn ein Schalter der Bereichsleiste
     /// traegt.
     ///
-    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und acht Schalter
+    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und neun Schalter
     /// nebeneinander traegt. Drei der vier Namen sind zugleich die
     /// Ueberschrift der Spalte in der Tabelle, und
     /// `appkit::tabelle::titel` leitet sie von hier ab, statt sie ein zweites

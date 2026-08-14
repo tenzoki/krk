@@ -118,3 +118,74 @@ Rangnummer in Prosa ist im Baum von keiner Prüfung gehalten; sie veraltet auf d
 Weg, auf dem die Zahlen in `CLAUDE.md` viermal in vier Tagen veraltet sind. Wer die
 Berichtigung fährt, sollte dabei entscheiden, ob eine Dateiliste diesen Fall überhaupt
 tragen soll oder ob die Nummern aus der Prosa verschwinden.
+
+## Nachtrag vom 260815, beim Umsetzen von E3
+
+**Der sechste Fall, und er trägt beide bekannten Ursachen auf einmal.** Schritt E3
+nennt unter `Files:` `crates/krk-ui/src/appkit/bereichsleiste.rs` und
+`crates/krk-ui/src/appkit/anwendung.rs`. Geändert sind sieben Dateien.
+
+**Erste Ursache, der Zugriffsweg — wie bei C2, E1 und E3 vorhergesagt.** Der Schritt
+verlangt, `bereichsleiste_nachziehen` hole den Wert „aus dem Modell des sichtbaren Tabs
+des aktiven Dateifensters". Aus den zwei genannten Dateien ist dieses Modell nicht
+erreichbar; der Weg läuft über `self.dateifenster(seite).quelle()`, also über
+`DateifensterQuelle` in `crates/krk-ui/src/appkit/tabelle.rs`. Dazugekommen ist dort
+**eine** öffentliche Methode, unmittelbar über `filter_steht` und in derselben Bauart:
+
+- `tiefe_suche_steht() -> bool` — liest `Ordnermodell::tief` am sichtbaren Tab. Die
+  Leseseite von `tiefe_suche_umschalten` aus E1, dieselbe Adresse (das **aktive**
+  Dateifenster) für Schreiben und Lesen.
+
+Damit ist der Befund für alle drei vorhergesagten Schritte eingetroffen: C2, E1 und E3
+haben ihre dritte Datei jeweils gebraucht.
+
+**Zweite Ursache, die Folge der Änderung — wie bei D1.** Die Zahl „acht Schalter" steht
+in diesem Baum in Prosa, und der neunte Schalter macht jede Nennung in demselben Zug
+falsch. Innerhalb von `bereichsleiste.rs` waren es sechs Stellen. Außerhalb waren es
+vier, in vier weiteren Dateien, und keine davon steht in einer Dateiliste dieses Plans:
+
+- `crates/krk-ui/src/appkit/mod.rs:79` — „acht Ankreuzfelder, fuenf fuer die Bereiche
+  und drei fuer die schaltbaren Spalten", die Übersicht über den AppKit-Anteil.
+- `crates/krk-ui/src/spalten.rs:73` und `crates/krk-ui/src/fenstermodell.rs:244` — die
+  gleichlautende Begründung dafür, warum `beschriftung` kurze Namen liefert: „weil die
+  Leiste 18 Punkte hoch ist und acht Schalter nebeneinander traegt".
+- `crates/krk-ui/src/appkit/tabelle.rs:247` — dieselbe Begründung ein drittes Mal, für
+  den abweichenden Namen der Datumsspalte.
+
+Alle vier sind mitgezogen. **Die drei letzten sind dabei dieselbe Aussage an drei
+Stellen** und damit ein eigener, kleinerer Befund neben diesem: eine Begründung, die in
+drei Dateien wörtlich wiederholt steht, veraltet dreifach. Ein Datensatz dafür ist
+nicht angelegt — er gehört nicht in diese Runde, und diese Nennung hier reicht, um ihn
+bei der Berichtigung mit aufzugreifen.
+
+**Die siebte Datei ist die Probe, und sie hat einen dritten Grund.**
+`crates/krk-core/tests/verzeichnis.rs` trägt jetzt
+`ohne_filtertext_aendert_die_tiefe_suche_nichts` für die eine Hälfte von C2.4, die im
+Kern zu prüfen ist: ohne Filtertext entscheidet der Befund über keine Zeile. Die andere
+Hälfte, dass über die Zulässigkeit der Wirkungsbereich entscheidet, steht in
+`bereichsleiste.rs`. **Ein Kriterium, dessen zwei Hälften in zwei Kisten fallen, sprengt
+jede Dateiliste, die einen Schritt einer Kiste zuordnet** — das ist weder der
+Zugriffsweg noch eine Folge, sondern der Zuschnitt des Kriteriums.
+
+**Ein Anlass, den der Schritt vorschreibt, war schon da.** E3 nennt drei neue Anlässe
+für `bereichsleiste_nachziehen`: Tabwechsel, Wechsel des aktiven Dateifensters,
+Ordnerwechsel. Gebraucht wurde **eine** Zeile, und sie deckt zwei davon ab: der
+Rückruf `ordnerwechsel_setzen` in `oberflaeche_aufbauen` wird von
+`ordnerwechsel_melden` in `tabelle.rs` sowohl beim Tabwechsel (`tab_gewechselt`) als
+auch beim Ordnerwechsel (`ordner_lesen`, `sichtbaren_lesen`) ausgelöst, mit der Maus
+wie mit der Taste. Der dritte, der Wechsel des aktiven Dateifensters, braucht keine
+Zeile: er läuft über `aktives_setzen` (Mausklick) oder über `Kommando::FensterWechseln`
+(Tastenbefehl), und beide rufen `aufteilung_nachziehen`, das
+`bereichsleiste_nachziehen` schon enthält. **Das ist keine Abweichung vom Schritt,
+sondern seine Erfüllung mit weniger Code**, und es steht hier, weil ein Abgleich, der
+drei neue Aufrufstellen sucht, sonst eine fehlende fände.
+
+## Was der Befund inzwischen misst
+
+Sechs der vierzehn Schritte, und weiterhin drei Ursachen:
+
+- **C2, E1, E3** — die Datei steht in keinem Teil des Schritts; der Weg an das
+  Tabmodell führt trotzdem durch sie. Alle drei Vorhersagen sind eingetroffen.
+- **B1** — die Datei steht im Fließtext des Schritts und fehlt in seiner Dateiliste.
+- **D1, E3** — die Dateien sind vollständig für die *Änderung*, aber nicht für ihre
+  *Folge*: eine Rangverschiebung bei D1, eine Zahl in Prosa bei E3.

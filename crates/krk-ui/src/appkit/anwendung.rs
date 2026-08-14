@@ -1170,6 +1170,15 @@ impl Anwendungsdelegierter {
                     if let Some(selbst) = schwach.load() {
                         selbst.dateisystemwache_nachziehen();
                         selbst.titel_nachziehen(selbst.fokus());
+                        // **Und der Schalter "Deep"**, denn er gehoert dem Tab
+                        // und nicht dem Fenster: ein Tabwechsel und ein
+                        // Ordnerwechsel koennen ihn anders stehen lassen, ohne
+                        // dass ein Befehl gelaufen waere. Der Nachzug steht
+                        // **neben** den beiden darueber und nicht in ihnen,
+                        // aus demselben Grund, aus dem die Statuszeile neben
+                        // der Leiste steht: jede dieser Funktionen hat genau
+                        // einen Gegenstand.
+                        selbst.bereichsleiste_nachziehen();
                     }
                 }));
             // Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6). Auch
@@ -4156,13 +4165,33 @@ impl Anwendungsdelegierter {
         self.statuszeile_nachziehen();
     }
 
-    /// Schreibt die acht Schalterzustaende der Bereichsleiste aus dem Modell
-    /// (C2.1, C3.1).
+    /// Schreibt die neun Schalterzustaende der Bereichsleiste aus dem Modell
+    /// (C2.1, C3.1; C2.1 der Filter-Runde).
     ///
-    /// **Der eine Schreiber, mit einem Anlass**, nach dem Vorbild von
-    /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`]:
-    /// [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten Kommando folgt.
-    /// **Auf jedem Weg genau einmal**, fuer den Tastendruck wie fuer den Klick.
+    /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
+    /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`].
+    /// Der erste ist [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten
+    /// Kommando folgt — **auf jedem Weg genau einmal**, fuer den Tastendruck
+    /// wie fuer den Klick.
+    ///
+    /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kommt
+    /// mit dem neunten Schalter dazu. Die acht ersten stehen im
+    /// [`Fenstermodell`](crate::fenstermodell::Fenstermodell) und aendern sich
+    /// nur ueber einen Befehl; der neunte steht am `Ordnermodell` des
+    /// sichtbaren Tabs im aktiven Dateifenster und wechselt damit auch ohne
+    /// Befehl. Drei Anlaesse hat er, und `ordnerwechsel_melden` in
+    /// [`super::tabelle`] deckt zwei davon ab: den Tabwechsel und den
+    /// Ordnerwechsel, auch die mit der Maus. **Der dritte, der Wechsel des
+    /// aktiven Dateifensters, braucht keine Zeile**: er laeuft ueber
+    /// [`Self::aktives_setzen`] oder ueber `Kommando::FensterWechseln`, und
+    /// beide rufen [`Self::aufteilung_nachziehen`], den ersten Anlass.
+    ///
+    /// **Faellt die offene Frage nach dem Gueltigkeitsbereich auf "je
+    /// Fenster"**, faellt der zweite Anlass wieder weg und der Wert kommt aus
+    /// dem Fenstermodell statt aus dem Tab
+    /// (`decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`).
+    /// Beruehrt waeren dann diese Funktion und die eine Zeile im
+    /// Ordnerwechsel-Rueckruf; [`super::bereichsleiste`] bliebe, wie sie ist.
     ///
     /// **Der abgewiesene Klick braucht keinen zweiten Anlass daneben** (C2.4),
     /// und bis zum 260812 hatte er einen: der Melder der Leiste zog unbedingt
@@ -4182,11 +4211,23 @@ impl Anwendungsdelegierter {
         let Some(leiste) = self.ivars().bereichsleiste.get() else {
             return;
         };
-        let (sichtbar, spalten) = {
+        // Die drei fensterweiten Groessen in **einer** Ausleihe, wie es
+        // [`Self::statuszeile_nachziehen`] daneben ebenso haelt. Sie endet vor
+        // der Frage an das Dateifenster darunter, denn dessen Quelle leiht
+        // ihre eigene Tabliste aus.
+        let (sichtbar, spalten, aktiv) = {
             let modell = self.ivars().modell.borrow();
-            (modell.sichtbarkeit(), modell.spaltensichtbarkeit())
+            (
+                modell.sichtbarkeit(),
+                modell.spaltensichtbarkeit(),
+                modell.aktiv(),
+            )
         };
-        leiste.zustaende_setzen(&sichtbar, &spalten);
+        // Steht die Leiste, stehen auch die Dateifenster: `oberflaeche_aufbauen`
+        // haelt sie in derselben Folge fest und die Dateifenster zuerst. Eine
+        // zweite Abfrage daneben taeuschte eine Lage vor, die es nicht gibt.
+        let tief = self.dateifenster(aktiv).quelle().tiefe_suche_steht();
+        leiste.zustaende_setzen(&sichtbar, &spalten, tief);
     }
 
     /// Schreibt die eine Statuszeile ueber die volle Fensterbreite (C5 der

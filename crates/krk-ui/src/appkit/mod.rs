@@ -76,8 +76,9 @@
 //! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters.
 //! [`bereichsleiste`] haelt die Leiste am Fensterfuss aus C1 bis C3 der
-//! Bereichsleisten-Runde: acht Ankreuzfelder, fuenf fuer die Bereiche und drei
-//! fuer die schaltbaren Spalten. Sie liegt **neben** der Aufteilung und nicht
+//! Bereichsleisten-Runde und C2 der Filter-Runde: neun Ankreuzfelder, fuenf
+//! fuer die Bereiche, drei fuer die schaltbaren Spalten und einer fuer die
+//! tiefe Suche. Sie liegt **neben** der Aufteilung und nicht
 //! darin — beide sind Unteransichten der Traegerflaeche, die
 //! `fenster::fensterinhalt` baut —, und keiner ihrer Schalter nimmt den
 //! Ersthelferrang an; die Begruendung steht in ihrem Modulkopf.

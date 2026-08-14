@@ -244,7 +244,7 @@ fn kennung(spalte: Spalte) -> &'static NSString {
 /// [`Spalte::Geaendert`] weicht ab, und das ist gewollt: ueber der Spalte
 /// steht "Änderungsdatum", der Schalter der Bereichsleiste heisst "Datum". Die
 /// Ueberschrift hat die Breite dafuer und die Zelle darunter zeigt neben dem
-/// Datum die Uhrzeit; die Leiste ist 18 Punkte hoch, traegt acht Schalter
+/// Datum die Uhrzeit; die Leiste ist 18 Punkte hoch, traegt neun Schalter
 /// nebeneinander, und "Datum" ist der Name, den der Nutzer dem Schalter
 /// gegeben hat.
 ///
@@ -1709,6 +1709,30 @@ impl DateifensterQuelle {
         // Der Schalter aendert, wie viele Zeilen stehen, und damit den fuenften
         // Rang der Statuszeile (C4.3).
         self.meldung_gewechselt();
+    }
+
+    /// Ob am Modell des sichtbaren Tabs das Kennzeichen "Deep" steht (C2.1).
+    ///
+    /// **Die Leseseite von [`Self::tiefe_suche_umschalten`]**, in derselben
+    /// Bauart wie [`Self::filter_steht`] darunter: eine Ausleihe, eine Frage an
+    /// das `Ordnermodell` des sichtbaren Tabs, kein zweiter Halteort. Gefragt
+    /// wird sie von `Anwendungsdelegierter::bereichsleiste_nachziehen`, dem
+    /// einen Schreiber des angezeigten Schalterstands; die Leiste selbst haelt
+    /// den Wert nicht.
+    ///
+    /// **Sie sagt nichts darueber, ob der Schalter gerade etwas bewirkt**
+    /// (C2.4). Ohne Filtertext aendert "Deep" an der Liste nichts, und das
+    /// Kaestchen steht trotzdem so, wie der Nutzer es gesetzt hat: sein Stand
+    /// ist eine Einstellung des Tabs und keine Auskunft ueber Treffer.
+    ///
+    /// **Der Aufrufer waehlt das Dateifenster**, und er waehlt das aktive und
+    /// nicht das fokussierte — dieselbe Adresse, an die
+    /// [`Self::tiefe_suche_umschalten`] schreibt. Zwei verschiedene Adressen
+    /// fuer Schreiben und Lesen zeigten einen Stand, den der Klick nicht
+    /// gekippt hat.
+    pub fn tiefe_suche_steht(&self) -> bool {
+        let tabs = self.ivars().tabs.borrow();
+        tabs.aktiver().modell().tief()
     }
 
     /// Ob das Modell des sichtbaren Tabs einen Filtertext fuehrt.

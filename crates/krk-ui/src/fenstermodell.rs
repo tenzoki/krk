@@ -241,7 +241,7 @@ impl Bereich {
     /// Der kurze Name des Bereichs, wie ihn ein Schalter der Bereichsleiste
     /// traegt.
     ///
-    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und acht Schalter
+    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und neun Schalter
     /// nebeneinander traegt; ausgeschriebene Namen passten bei der
     /// Mindestbreite des Fensters nicht mehr in eine Zeile. Was der Schalter
     /// meint, sagt der Hinweistext aus [`Bereich::langname`], der beim

@@ -399,7 +399,20 @@ flowchart TD
   - Belegungsansicht und Markdown-Ausgabe führen den Eintrag danach von selbst (C5.5): beide rechnen aus der Belegung und führen keine eigene Liste.
   - **Kein Kommentar über die Zahl der Einträge** wird in die Datei geschrieben. Zahlen, die eine andere Datei ändert, sind in diesem Projekt viermal in vier Tagen falsch geworden.
 
-**E3. Das neunte Ankreuzfeld**
+**E3. [DONE] Das neunte Ankreuzfeld**
+- **Abgenommen mit `make check` — Exit 0**, alle vier Kommandos grün. Drei neue Proben in
+  `bereichsleiste.rs` (`die_leiste_traegt_neun_schalter`,
+  `der_neunte_schalter_heisst_deep_und_steht_rechts_von_typ`,
+  `der_neunte_schalter_gibt_fokus_keinen_sechsten_wert`), eine in
+  `crates/krk-core/tests/verzeichnis.rs` (`ohne_filtertext_aendert_die_tiefe_suche_nichts`).
+- **Sieben Dateien statt zwei**, aus drei Gründen: der Zugriffsweg an das Tabmodell
+  (`tabelle.rs`, neuer Leser `tiefe_suche_steht`), die Zahl „acht Schalter" in Prosa
+  außerhalb der Leiste (`appkit/mod.rs`, `spalten.rs`, `fenstermodell.rs`) und die
+  Kernhälfte von C2.4 (`krk-core/tests/verzeichnis.rs`). Datensatz:
+  `issues/260814-2357_o_c2-nennt-zwei-dateien-…`, Nachtrag vom 260815 zu E3.
+- **Eine neue Aufrufstelle statt drei.** `ordnerwechsel_melden` deckt Tabwechsel und
+  Ordnerwechsel zusammen ab; der Wechsel des aktiven Dateifensters läuft auf beiden
+  Wegen schon durch `aufteilung_nachziehen`.
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/bereichsleiste.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C2.1, C2.2, C2.3, C2.4
