@@ -77,12 +77,15 @@
 //! pruefbar ist. Die Lebensdauern der vier Quellen mit eigenem Feld stehen bei
 //! ihren Feldern in `DateifensterQuelle`; hier steht allein die Rangfolge.
 //!
-//! **Der fuenfte Rang hat als einziger kein Feld.** Der Markierungsstand aus
-//! C2 wird bei jedem Schreiben der Zeile aus dem Ordnermodell des sichtbaren
-//! Tabs gerechnet, statt gesetzt und geloescht zu werden; die Begruendung
-//! steht bei `DateifensterQuelle::markierungsstand_text`.
+//! **Die beiden untersten Raenge haben kein Feld.** Der Filterstand aus C4
+//! der Runde 10 und der Markierungsstand aus C2 werden bei jedem Schreiben der
+//! Zeile aus dem Ordnermodell des sichtbaren Tabs gerechnet, statt gesetzt und
+//! geloescht zu werden. Beide tragen dieselbe Begruendung: ein Feld haette
+//! eine zweite Loeschregel, und beide sind ein Zustand und kein Ereignis. Sie
+//! steht bei `DateifensterQuelle::markierungsstand_text` und bei
+//! [`filterstand_text`].
 //!
-//! **Ein ausgeblendetes Dateifenster bewirbt sich nicht.** Es sind zehn
+//! **Ein ausgeblendetes Dateifenster bewirbt sich nicht.** Es sind zwoelf
 //! Quellen zweier Dateifenster, aber nur die des sichtbaren treten an; die
 //! Begruendung steht bei [`zeile`].
 //!
@@ -171,6 +174,7 @@ use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, ns_s
 use krk_core::ablage::{Fensterseite, Sichtbarkeit};
 
 use crate::fenstermodell::{Bereich, sichtbar_in};
+use crate::kommandos::operationen::zahl;
 
 /// Die Hoehe der Zeile in Punkten.
 ///
@@ -194,11 +198,11 @@ pub enum Art {
     Vorgang,
 }
 
-/// Die fuenf Raenge der Zeile, vom obersten zum untersten.
+/// Die sechs Raenge der Zeile, vom obersten zum untersten.
 ///
-/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein sechster Rang
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein siebter Rang
 /// haelt den Bau an und erzwingt die Antwort darauf, wo er einzuordnen ist und
-/// ob er ein Fehler ist. Dieselbe Bauart wie `Bereich` und `Fokus`.
+/// ob er ein Fehler ist (C4.10). Dieselbe Bauart wie `Bereich` und `Fokus`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rang {
     /// Was KRK auf den letzten Tastenbefehl zu sagen hat.
@@ -209,36 +213,48 @@ pub enum Rang {
     Fenstermeldung,
     /// Der Zustand des sichtbaren Ordners.
     Tabmeldung,
+    /// Der stehende Filtertext und was er von der Liste uebrig laesst (C4 der
+    /// Runde 10).
+    Filterstand,
     /// Was im sichtbaren Tab markiert ist (C2).
     Markierungsstand,
 }
 
 impl Rang {
-    /// Alle fuenf, vom obersten zum untersten.
+    /// Alle sechs, vom obersten zum untersten.
     ///
     /// **Die Reihenfolge ist die Rangfolge**, und [`zeile`] laeuft ohne eine
     /// zweite Vorschrift daneben ueber dieses Feld. Wer sie aendert, aendert
     /// die Auswahl der Zeile.
-    pub const ALLE: [Rang; 5] = [
+    ///
+    /// **Der Filterstand steht ueber dem Markierungsstand** (C4.1). Die eine
+    /// Zeile darunter traegt die ganze Wirkung der Nutzerfrage
+    /// `decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`;
+    /// faellt sie anders aus als die Empfehlung, wandert diese Zeile und
+    /// sonst nichts.
+    pub const ALLE: [Rang; 6] = [
         Rang::Befehlsantwort,
         Rang::Vorgangsanzeige,
         Rang::Fenstermeldung,
         Rang::Tabmeldung,
+        Rang::Filterstand,
         Rang::Markierungsstand,
     ];
 
     /// Ob eine Meldung dieses Ranges ein Fehler ist.
     ///
     /// **Die Art faellt mit dem Rang und wird aus ihm gerechnet statt
-    /// gesetzt.** Ein Fortschritt und eine Markierungszahl sind keine Fehler,
-    /// die drei uebrigen sind welche. Ein zweites Feld, das jemand setzt,
-    /// waere die Gelegenheit, eine Markierungszahl rot zu faerben.
+    /// gesetzt.** Ein Fortschritt, eine Filterzahl und eine Markierungszahl
+    /// sind keine Fehler, die drei uebrigen sind welche (C4.2). Ein zweites
+    /// Feld, das jemand setzt, waere die Gelegenheit, eine Markierungszahl rot
+    /// zu faerben.
     pub const fn art(self) -> Art {
         match self {
             Rang::Befehlsantwort => Art::Fehler,
             Rang::Vorgangsanzeige => Art::Vorgang,
             Rang::Fenstermeldung => Art::Fehler,
             Rang::Tabmeldung => Art::Fehler,
+            Rang::Filterstand => Art::Vorgang,
             Rang::Markierungsstand => Art::Vorgang,
         }
     }
@@ -246,8 +262,8 @@ impl Rang {
 
 /// Was ein Dateifenster der Zeile anzubieten hat.
 ///
-/// Fuenf Quellen, je Rang eine. Die vier oberen haelt das Dateifenster in je
-/// einem eigenen Feld mit je einer Loeschregel, den fuenften rechnet es bei
+/// Sechs Quellen, je Rang eine. Die vier oberen haelt das Dateifenster in je
+/// einem eigenen Feld mit je einer Loeschregel, die zwei unteren rechnet es bei
 /// jeder Abfrage; `DateifensterQuelle::meldungsquellen` schreibt sie ab.
 ///
 /// **Eigene Zeichenketten und keine Ausleihen.** Der Anwendungsdelegierte holt
@@ -264,7 +280,9 @@ pub struct Quellen {
     pub fenstermeldung: Option<String>,
     /// Rang 4: der Zustand des sichtbaren Ordners.
     pub tabmeldung: Option<String>,
-    /// Rang 5: was im sichtbaren Tab markiert ist.
+    /// Rang 5: der stehende Filtertext und was er von der Liste uebrig laesst.
+    pub filterstand: Option<String>,
+    /// Rang 6: was im sichtbaren Tab markiert ist.
     pub markierungsstand: Option<String>,
 }
 
@@ -272,20 +290,102 @@ impl Quellen {
     /// Was dieses Dateifenster auf diesem Rang zu sagen hat.
     ///
     /// Die eine Stelle, die einen Rang auf sein Feld abbildet, und eine
-    /// vollstaendige Fallunterscheidung: ein sechster Rang haelt hier den Bau
-    /// an.
+    /// vollstaendige Fallunterscheidung: ein siebter Rang haelt hier den Bau
+    /// an (C4.10).
     fn text(&self, rang: Rang) -> Option<&str> {
         match rang {
             Rang::Befehlsantwort => self.befehlsantwort.as_deref(),
             Rang::Vorgangsanzeige => self.vorgangsanzeige.as_deref(),
             Rang::Fenstermeldung => self.fenstermeldung.as_deref(),
             Rang::Tabmeldung => self.tabmeldung.as_deref(),
+            Rang::Filterstand => self.filterstand.as_deref(),
             Rang::Markierungsstand => self.markierungsstand.as_deref(),
         }
     }
 }
 
-/// Die eine Aussage, die von zehn moeglichen jetzt in der Zeile steht.
+/// Was der fuenfte Rang aus dem Modell des sichtbaren Tabs braucht.
+///
+/// Vier Groessen, alle aus demselben `Ordnermodell` und alle dort schon
+/// vorhanden. **Dieser Rang rechnet nichts nach, was das Modell ohnehin
+/// weiss**; eine eigene Rechnung daneben waere eine zweite Wahrheit ueber
+/// denselben Zustand.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Filterstand {
+    /// Wie viele Zeilen die Liste jetzt zeigt: `Ordnermodell::zeilenzahl`.
+    ///
+    /// **Entschiedene Zeilen und keine Treffer** (C4.6). Wie viele Treffer
+    /// unter einem Ordner liegen, weiss niemand in diesem Baum: der Durchlauf
+    /// hoert je Ordner beim ersten Fund auf. Der Wert waechst waehrend eines
+    /// Durchlaufs von selbst mit, weil er die Sichtreihenfolge zaehlt und
+    /// keinen eigenen Zaehler fuehrt (C4.5).
+    pub gezeigt: usize,
+    /// Wie viele Eintraege der angezeigte Ordner hat, ungefiltert.
+    pub vorhanden: usize,
+    /// Wie viele Markierungen der Filter gerade ausblendet.
+    ///
+    /// Null heisst: keine, und dann steht der Teil des Satzes, der sie nennt,
+    /// nicht da (C4.4).
+    pub ausgeblendete_markierungen: usize,
+    /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
+    ///
+    /// Kommt aus `Ordnermodell::ersetzt_beim_naechsten_stapel`, der vorhandenen
+    /// Frage nach genau diesem Zustand (C4.7).
+    pub ersetzt_beim_naechsten_stapel: bool,
+}
+
+/// Der fuenfte Rang der Statuszeile: der stehende Filtertext und was er von der
+/// Liste uebrig laesst (C4 der Runde 10).
+///
+/// `None` heisst: dieser Rang meldet nichts. Zwei Wege fuehren dorthin, und
+/// **beide stehen hier und nicht beim Aufrufer**, damit sie ohne Fenster
+/// pruefbar sind. Steht kein Filtertext, ist nichts zu melden, und die Zeile
+/// verhaelt sich wie vor dieser Runde (C4.8). Und solange ein begonnener
+/// Lesevorgang noch nichts geliefert hat, stehen noch die Zeilen des vorigen
+/// Ordners; eine Zahl daraus waere eine Auskunft ueber einen Ordner, den der
+/// Nutzer schon verlassen hat (C4.7).
+///
+/// **Der Satz nennt drei Dinge und manchmal ein viertes** (C4.3, C4.4): den
+/// Filtertext, die Zahl der gezeigten Zeilen, die Zahl der Eintraege des
+/// angezeigten Ordners, und die Zahl der Markierungen, die der Filter gerade
+/// ausblendet. Der vierte Teil steht nur da, wenn es solche Markierungen gibt.
+///
+/// **Er ist die Gegenleistung dafuer, dass die Markierungsregel unter dem
+/// Filter unveraendert bleibt.** Der Nutzer hat am 260814-1610 entschieden,
+/// dass eine ausgeblendete Markierung fortbesteht und nicht wirkt
+/// (`decisions/260814-1552_a_was-geschieht-mit-einer-markierung-die-der-filter-ausblendet.md`);
+/// ohne diesen Satzteil muesste er erraten, dass es sie ueberhaupt gibt.
+///
+/// **Beide Zahlen gehen durch [`zahl`]** und tragen damit dieselben
+/// Tausenderpunkte wie ein laufender Vorgang und der Markierungsstand daneben.
+/// Ein zweites Zahlenformat entsteht nicht.
+///
+/// **Sie steht hier und nicht in [`crate::kommandos`]**, wo
+/// `auswahl::markierungsstand_text` fuer den Rang darunter steht. Jene braucht
+/// einen Baustein aus `operationen` und gehoert zu C2 der Runde 1; diese
+/// gehoert zu keiner Faehigkeit ausser der Zeile selbst und ist bei dem Rang,
+/// den sie fuellt, besser aufgehoben als ohne ihn. AppKit ruft sie so wenig wie
+/// jene, und beide sind ohne Fenster pruefbar.
+pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> {
+    // Dieselbe Frage wie `Ordnermodell::filter_steht`, an demselben Wert
+    // gestellt: der Aufrufer reicht den Filtertext herein, statt die Antwort
+    // getrennt mitzubringen.
+    if filtertext.is_empty() || stand.ersetzt_beim_naechsten_stapel {
+        return None;
+    }
+    let ausgeblendet = match stand.ausgeblendete_markierungen {
+        0 => String::new(),
+        1 => ", eine Markierung ausgeblendet".to_owned(),
+        mehrere => format!(", {} Markierungen ausgeblendet", zahl(mehrere)),
+    };
+    Some(format!(
+        "Filter \u{201e}{filtertext}\u{201c}: {} von {} angezeigt{ausgeblendet}",
+        zahl(stand.gezeigt),
+        zahl(stand.vorhanden)
+    ))
+}
+
+/// Die eine Aussage, die von zwoelf moeglichen jetzt in der Zeile steht.
 ///
 /// Sie traegt ihre Herkunft mit: [`zeilentext`] braucht die Seite, um zu
 /// entscheiden, ob der Satz sie nennen muss.
@@ -301,7 +401,7 @@ pub struct Meldung<'a> {
     pub art: Art,
 }
 
-/// Was von den zehn Quellen jetzt in der Zeile steht.
+/// Was von den zwoelf Quellen jetzt in der Zeile steht.
 ///
 /// **Die eine Regel, und kein Sonderfall je Meldungsart.** Die Zeile traegt
 /// einen Text. Steht mehr als eine Aussage, gewinnt die, die dem letzten Tun
@@ -312,8 +412,19 @@ pub struct Meldung<'a> {
 /// 2  Vorgangsanzeige   der Stand einer laufenden Operation
 /// 3  Fenstermeldung    ein Ereignis am Fenster, das niemand angefordert hat
 /// 4  Tabmeldung        der Zustand des sichtbaren Ordners
-/// 5  Markierungsstand  was im sichtbaren Tab markiert ist
+/// 5  Filterstand       der stehende Filtertext und was er uebrig laesst
+/// 6  Markierungsstand  was im sichtbaren Tab markiert ist
 /// ```
+///
+/// **Der Filterstand steht ueber dem Markierungsstand und unter der
+/// Tabmeldung** (C4.1). Beide unteren beschreiben einen Zustand des sichtbaren
+/// Tabs, und bei stehendem Filter treten sie gegeneinander an; der Nutzer
+/// filtert und markiert im selben Augenblick. Vorn steht die Auskunft, ohne die
+/// er das Fehlen eines Eintrags fuer einen Defekt haelt, und nicht die Zahl,
+/// die er durch Hinsehen abschaetzen kann. **Verloren ist der Markierungsstand
+/// dabei nicht**: der Filterstand nennt selbst, wie viele Markierungen der
+/// Filter gerade ausblendet, und ohne Filtertext meldet er nichts, sodass die
+/// Zeile sich verhaelt wie vor dieser Runde (C4.4, C4.8).
 ///
 /// **Der Markierungsstand steht unter der Tabmeldung und nicht neben ihr.**
 /// Beide beschreiben einen Zustand des sichtbaren Tabs, aber mit
@@ -336,7 +447,7 @@ pub struct Meldung<'a> {
 /// (`issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
 ///
 /// **Verdraengt wird nichts geloescht.** Jede der acht Quellen mit eigenem Feld
-/// haelt ihren Text dort, und jedes Feld hat genau eine Loeschregel; die beiden
+/// haelt ihren Text dort, und jedes Feld hat genau eine Loeschregel; die vier
 /// gerechneten Raenge koennen gar nicht veralten. Eine verdraengte Aussage
 /// erscheint, sobald alles ueber ihr gefallen ist: die Auswurfmeldung, die
 /// waehrend einer Kopie eintrifft, steht auf Rang 3, wartet die Kopie und deren
@@ -346,18 +457,18 @@ pub struct Meldung<'a> {
 ///
 /// # Die zweite Stelle der Ordnung: erst der Rang, dann die aktive Seite
 ///
-/// Seit der Runde 6 gibt es eine Zeile fuer zwei Dateifenster, und damit zehn
-/// Bewerber statt fuenf. **Die Ordnung ist zweistellig: zuerst entscheidet der
+/// Seit der Runde 6 gibt es eine Zeile fuer zwei Dateifenster, und damit
+/// doppelt so viele Bewerber wie Raenge. **Die Ordnung ist zweistellig: zuerst entscheidet der
 /// Rang, und erst bei gleichem Rang die aktive Seite.** Eine Fenstermeldung des
 /// inaktiven Dateifensters steht damit ueber einer Markierungszahl des aktiven,
 /// und zwei laufende Vorgaenge entscheidet die aktive Seite.
 ///
-/// Sie ist ueber alle zehn Paare vollstaendig und ueberschneidungsfrei, und
-/// nicht aus Sorgfalt, sondern der Bauart nach: zwei Bewerber desselben Ranges
-/// gehoeren immer verschiedenen Seiten, also entscheidet die zweite Stelle
-/// jeden Gleichstand der ersten. **Die Ordnung steht deshalb in der
+/// Sie ist ueber alle zwoelf Bewerber vollstaendig und ueberschneidungsfrei,
+/// und nicht aus Sorgfalt, sondern der Bauart nach: zwei Bewerber desselben
+/// Ranges gehoeren immer verschiedenen Seiten, also entscheidet die zweite
+/// Stelle jeden Gleichstand der ersten. **Die Ordnung steht deshalb in der
 /// Schleifenreihenfolge und nicht in einer Vergleichsfunktion** — aussen die
-/// fuenf Raenge aus [`Rang::ALLE`], innen die aktive Seite vor der anderen.
+/// sechs Raenge aus [`Rang::ALLE`], innen die aktive Seite vor der anderen.
 ///
 /// **Der Preis ist benannt und vom Nutzer am 260812-1105 angenommen: laufen in
 /// beiden Dateifenstern zugleich Vorgaenge, ist nur der des aktiven zu sehen.**
@@ -586,7 +697,10 @@ impl Statuszeile {
 
 #[cfg(test)]
 mod tests {
-    use super::{Art, Bereich, Meldung, Quellen, Rang, sichtbar_in, zeile, zeilentext};
+    use super::{
+        Art, Bereich, Filterstand, Meldung, Quellen, Rang, filterstand_text, sichtbar_in, zeile,
+        zeilentext,
+    };
     use krk_core::ablage::{Fensterseite, Sichtbarkeit};
 
     /// Beide Dateifenster stehen: die Lage, in der die Zeile fast immer
@@ -620,15 +734,21 @@ mod tests {
             Rang::Vorgangsanzeige => &mut quellen.vorgangsanzeige,
             Rang::Fenstermeldung => &mut quellen.fenstermeldung,
             Rang::Tabmeldung => &mut quellen.tabmeldung,
+            Rang::Filterstand => &mut quellen.filterstand,
             Rang::Markierungsstand => &mut quellen.markierungsstand,
         };
         *feld = Some(text.to_owned());
         quellen
     }
 
-    /// Die alte Fassung von `zeile`: fuenf Quellen eines Dateifensters, das
-    /// zugleich das aktive ist. Die acht Proben der Runde 1 treffen darueber
-    /// dieselben Aussagen wie vorher.
+    /// Die alte Fassung von `zeile`: die vier Felder und der Markierungsstand
+    /// eines Dateifensters, das zugleich das aktive ist. Die acht Proben der
+    /// Runde 1 treffen darueber dieselben Aussagen wie vorher.
+    ///
+    /// **Der Filterstand aus C4 der Runde 10 steht nicht in der Liste**, und
+    /// das ist Absicht: er hat seine eigenen Proben weiter unten, und diese
+    /// Helferliste ist die der Runde 1. Ein sechster Parameter haette jede
+    /// ihrer acht Proben angefasst, ohne an einer davon etwas zu pruefen.
     fn allein(
         befehlsantwort: Option<&str>,
         vorgangsanzeige: Option<&str>,
@@ -641,6 +761,7 @@ mod tests {
             vorgangsanzeige: vorgangsanzeige.map(str::to_owned),
             fenstermeldung: fenstermeldung.map(str::to_owned),
             tabmeldung: tabmeldung.map(str::to_owned),
+            filterstand: None,
             markierungsstand: markierungsstand.map(str::to_owned),
         };
         let rechts = Quellen::default();
@@ -793,7 +914,7 @@ mod tests {
         );
     }
 
-    /// Der fuenfte Rang aus S16c: er steht unter allen vieren.
+    /// Der Markierungsstand aus S16c: er steht unter der Tabmeldung.
     #[test]
     fn der_markierungsstand_steht_hinter_der_tabmeldung() {
         let markiert = "12 markiert, davon 3 Ordner, 4,2 MB";
@@ -828,6 +949,161 @@ mod tests {
         .expect("der Markierungsstand steht als einzige Quelle in der Zeile");
         assert_eq!(art, Art::Vorgang);
         assert_ne!(art, Art::Fehler);
+    }
+
+    // ------------------------------------------------------------------
+    // Der fuenfte Rang: der Filterstand (C4, Runde 10)
+    // ------------------------------------------------------------------
+
+    /// Die Stelle eines Ranges in der Rangfolge, aus [`Rang::ALLE`] gelesen
+    /// und nicht danebengeschrieben.
+    fn stelle(gesucht: Rang) -> usize {
+        Rang::ALLE
+            .iter()
+            .position(|rang| *rang == gesucht)
+            .expect("jeder Rang steht in der Rangfolge")
+    }
+
+    /// Ein Filterstand mit drei Zahlen und ohne ausstehenden Ersatz.
+    fn stand(gezeigt: usize, vorhanden: usize, ausgeblendet: usize) -> Filterstand {
+        Filterstand {
+            gezeigt,
+            vorhanden,
+            ausgeblendete_markierungen: ausgeblendet,
+            ersetzt_beim_naechsten_stapel: false,
+        }
+    }
+
+    /// C4.1: er steht ueber dem Markierungsstand und unter der Tabmeldung,
+    /// und zwar in der Rangfolge selbst und in der Auswahl, die daraus faellt.
+    #[test]
+    fn der_filterstand_steht_zwischen_tabmeldung_und_markierungsstand() {
+        assert_eq!(Rang::ALLE.len(), 6);
+        assert!(stelle(Rang::Tabmeldung) < stelle(Rang::Filterstand));
+        assert!(stelle(Rang::Filterstand) < stelle(Rang::Markierungsstand));
+
+        let leer = Quellen::default();
+        let mut quellen = nur(Rang::Filterstand, "Filter „rs“: 12 von 340 angezeigt");
+        quellen.markierungsstand = Some("12 markiert, davon 3 Ordner, 4,2 MB".to_owned());
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+            .expect("zwei Raenge melden etwas");
+        assert_eq!(
+            meldung.rang,
+            Rang::Filterstand,
+            "eine verkuerzte Liste wiegt schwerer als die Markierungszahl"
+        );
+
+        quellen.tabmeldung = Some("Ordner nicht lesbar".to_owned());
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+            .expect("drei Raenge melden etwas");
+        assert_eq!(
+            meldung.rang,
+            Rang::Tabmeldung,
+            "ein nicht lesbarer Ordner ist wichtiger als eine Filterzahl"
+        );
+    }
+
+    /// C4.2: eine Filterzahl ist kein Fehler und wird nicht rot.
+    #[test]
+    fn der_filterstand_gilt_nicht_als_fehler() {
+        assert_eq!(Rang::Filterstand.art(), Art::Vorgang);
+        assert_ne!(Rang::Filterstand.art(), Art::Fehler);
+        let quellen = nur(Rang::Filterstand, "Filter „rs“: 12 von 340 angezeigt");
+        let leer = Quellen::default();
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+            .expect("der Filterstand steht als einzige Quelle in der Zeile");
+        assert_eq!(meldung.art, Art::Vorgang);
+    }
+
+    /// C4.3: der Satz nennt den Filtertext, die gezeigten und die vorhandenen
+    /// Eintraege, und die Zahlen tragen dieselben Tausenderpunkte wie ein
+    /// laufender Vorgang.
+    #[test]
+    fn der_satz_nennt_filtertext_gezeigte_und_vorhandene() {
+        assert_eq!(
+            filterstand_text("rs", stand(38, 4_812, 0)).as_deref(),
+            Some("Filter „rs“: 38 von 4.812 angezeigt")
+        );
+    }
+
+    /// C4.4: die ausgeblendeten Markierungen stehen daneben, und ohne sie
+    /// steht dieser Teil nicht da.
+    #[test]
+    fn ausgeblendete_markierungen_stehen_daneben_und_sonst_nicht() {
+        assert_eq!(
+            filterstand_text("rs", stand(38, 412, 0)).as_deref(),
+            Some("Filter „rs“: 38 von 412 angezeigt"),
+            "ohne ausgeblendete Markierung steht der vierte Teil nicht da"
+        );
+        assert_eq!(
+            filterstand_text("rs", stand(38, 412, 1)).as_deref(),
+            Some("Filter „rs“: 38 von 412 angezeigt, eine Markierung ausgeblendet")
+        );
+        assert_eq!(
+            filterstand_text("rs", stand(38, 412, 2_500)).as_deref(),
+            Some("Filter „rs“: 38 von 412 angezeigt, 2.500 Markierungen ausgeblendet")
+        );
+    }
+
+    /// C4.5 und C4.6: die linke Zahl ist die der gezeigten Zeilen und waechst
+    /// mit ihnen, die rechte steht. Gezaehlt werden entschiedene Zeilen; das
+    /// Wort "Treffer" kommt in der Zeile nicht vor, denn eine Trefferzahl gibt
+    /// es nicht.
+    #[test]
+    fn die_linke_zahl_waechst_und_zaehlt_zeilen_und_keine_treffer() {
+        let mut vorher = 0;
+        for gezeigt in [3_usize, 17, 240] {
+            let satz = filterstand_text("rs", stand(gezeigt, 412, 0))
+                .expect("bei stehendem Filtertext meldet der Rang etwas");
+            assert_eq!(satz, format!("Filter „rs“: {gezeigt} von 412 angezeigt"));
+            assert!(!satz.contains("Treffer"));
+            assert!(gezeigt > vorher);
+            vorher = gezeigt;
+        }
+    }
+
+    /// C4.7: solange der begonnene Lesevorgang seinen Bestand noch abloesen
+    /// muss, nennt der Rang keine Zahl aus dem vorigen Ordner.
+    #[test]
+    fn waehrend_der_ersatz_aussteht_nennt_der_rang_nichts() {
+        let mut ausstehend = stand(38, 412, 0);
+        ausstehend.ersetzt_beim_naechsten_stapel = true;
+        assert_eq!(filterstand_text("rs", ausstehend), None);
+    }
+
+    /// C4.8: ohne Filtertext meldet der Rang nichts, und die Zeile verhaelt
+    /// sich wie vor dieser Runde.
+    #[test]
+    fn ohne_filtertext_meldet_der_rang_nichts() {
+        assert_eq!(filterstand_text("", stand(412, 412, 0)), None);
+        assert_eq!(filterstand_text("", stand(412, 412, 7)), None);
+        let quellen = Quellen {
+            filterstand: filterstand_text("", stand(412, 412, 0)),
+            markierungsstand: Some("12 markiert, davon 3 Ordner, 4,2 MB".to_owned()),
+            ..Quellen::default()
+        };
+        let leer = Quellen::default();
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+            .expect("der Markierungsstand steht in der Zeile");
+        assert_eq!(meldung.rang, Rang::Markierungsstand);
+    }
+
+    /// C4.10: die Rangfolge traegt sechs verschiedene Werte, und jeder von
+    /// ihnen hat sein Feld in [`Quellen`]. Beide Fallunterscheidungen sind
+    /// damit ueber dieselben sechs Werte vollstaendig; ein siebter Rang haelt
+    /// den Bau an, statt still in einen Auffangzweig zu fallen.
+    #[test]
+    fn jeder_der_sechs_raenge_hat_genau_ein_feld() {
+        for (stelle_im_feld, rang) in Rang::ALLE.iter().enumerate() {
+            assert_eq!(stelle(*rang), stelle_im_feld, "kein Rang steht doppelt");
+            let quellen = nur(*rang, "Text");
+            let gesetzt = Rang::ALLE
+                .iter()
+                .filter(|anderer| quellen.text(**anderer).is_some())
+                .count();
+            assert_eq!(gesetzt, 1, "ein Rang, ein Feld");
+            assert_eq!(quellen.text(*rang), Some("Text"));
+        }
     }
 
     // ------------------------------------------------------------------
@@ -891,17 +1167,18 @@ mod tests {
         }
     }
 
-    /// Die Ordnung ist ueber alle zehn Paare vollstaendig und
-    /// ueberschneidungsfrei: melden beide Seiten auf jedem der fuenf Raenge,
+    /// Die Ordnung ist ueber alle zwoelf Bewerber vollstaendig und
+    /// ueberschneidungsfrei: melden beide Seiten auf jedem der sechs Raenge,
     /// gewinnt genau eine Aussage, und es ist die des obersten Ranges der
     /// aktiven Seite.
     #[test]
-    fn ueber_alle_zehn_bewerber_gewinnt_genau_eine_aussage() {
+    fn ueber_alle_zwoelf_bewerber_gewinnt_genau_eine_aussage() {
         let voll = |kennung: &str| Quellen {
             befehlsantwort: Some(format!("Antwort {kennung}")),
             vorgangsanzeige: Some(format!("Vorgang {kennung}")),
             fenstermeldung: Some(format!("Ereignis {kennung}")),
             tabmeldung: Some(format!("Zustand {kennung}")),
+            filterstand: Some(format!("Filter {kennung}")),
             markierungsstand: Some(format!("Markierung {kennung}")),
         };
         let links = voll("links");
@@ -911,7 +1188,7 @@ mod tests {
             (Fensterseite::Rechts, "Antwort rechts"),
         ] {
             let meldung =
-                zeile(&links, &rechts, aktiv, &beide()).expect("zehn Bewerber, einer gewinnt");
+                zeile(&links, &rechts, aktiv, &beide()).expect("zwoelf Bewerber, einer gewinnt");
             assert_eq!(meldung.rang, Rang::Befehlsantwort);
             assert_eq!(meldung.seite, aktiv);
             assert_eq!(meldung.text, text);
@@ -938,7 +1215,7 @@ mod tests {
         assert_eq!(meldung.text, "Datenträger ausgeworfen");
     }
 
-    /// Jeder der fuenf Raenge traegt seine Art, und zwar dieselbe auf beiden
+    /// Jeder der sechs Raenge traegt seine Art, und zwar dieselbe auf beiden
     /// Seiten: die Herkunft faerbt nichts.
     #[test]
     fn die_art_haengt_am_rang_und_nicht_an_der_seite() {

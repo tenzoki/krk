@@ -76,3 +76,45 @@ beide:
 **Was `Files:` in diesem Plan misst, ist damit nicht verlässlich.** Wer die Zeile als
 Umfangsgrenze liest — für eine Zuständigkeitsprüfung, für eine Abgleichszählung —,
 bekommt bei vier der vierzehn Schritte eine zu kurze Antwort.
+
+## Nachtrag vom 260815, beim Umsetzen von D1
+
+**Ein fünfter Fall, und er hat eine dritte Ursache.** Schritt D1 nennt unter `Files:`
+`crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/tabelle.rs` und
+`crates/krk-ui/src/appkit/anwendung.rs`. Geändert sind fünf Dateien; die zwei weiteren
+sind `crates/krk-ui/src/kommandos/auswahl.rs` und `crates/krk-ui/src/appkit/editor.rs`,
+und in beiden ist es **eine Zeile Modulkopf beziehungsweise Doc-Kommentar**.
+
+Der Grund liegt nicht am Zugriffsweg wie bei C2, E1 und E3 und nicht an einem
+widersprüchlichen Schritt wie bei B1, sondern an der Rangstelle selbst. D1 setzt den
+neuen Rang **zwischen** Tabmeldung und Markierungsstand (C4.1). Damit rückt der
+Markierungsstand vom fünften auf den sechsten Rang, und jede Stelle im Baum, die ihn
+beim alten Namen nennt, wird in demselben Zug falsch:
+
+- `kommandos/auswahl.rs:31` — „Der fünfte Rang der Statuszeile: was im sichtbaren Tab
+  markiert ist (C2)" über `markierungsstand_text`, der reinen Funktion für genau diesen
+  Rang.
+- `appkit/editor.rs:171` — „auf den obersten ihrer fünf Ränge"; eine Zählung, keine
+  Rangnummer.
+
+**Das ist keine Abweichung vom Schritt, sondern seine Folge.** Wer einen Rang in die
+Mitte einer Rangfolge einfügt, verschiebt die Nummern aller darunter, und die Nummern
+stehen in diesem Baum in Prosa und nicht in einer Aufzählung, die der Übersetzer
+nachzieht. Innerhalb der drei genannten Dateien waren es weitere elf Stellen
+(„fünf Ränge", „zehn Bewerber", „zehn Quellen", „zehn Aussagen"), alle mitgezogen.
+
+## Was der Befund inzwischen misst
+
+Fünf der vierzehn Schritte, und drei verschiedene Ursachen:
+
+- **C2, E1, E3** — die Datei steht in keinem Teil des Schritts; der Weg an das Tabmodell
+  führt trotzdem durch sie. Der Schritt ist ohne sie nicht ausführbar.
+- **B1** — die Datei steht im Fließtext des Schritts und fehlt in seiner Dateiliste.
+- **D1** — die Dateien sind vollständig für die *Änderung*, aber nicht für ihre *Folge*:
+  eine Rangverschiebung entwertet Prosa außerhalb der geänderten Dateien.
+
+Für die dritte Ursache hilft eine Ergänzung der Dateilisten nur begrenzt weiter. Eine
+Rangnummer in Prosa ist im Baum von keiner Prüfung gehalten; sie veraltet auf demselben
+Weg, auf dem die Zahlen in `CLAUDE.md` viermal in vier Tagen veraltet sind. Wer die
+Berichtigung fährt, sollte dabei entscheiden, ob eine Dateiliste diesen Fall überhaupt
+tragen soll oder ob die Nummern aus der Prosa verschwinden.

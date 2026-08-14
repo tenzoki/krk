@@ -28,7 +28,7 @@ pub fn markieren_und_weiter(modell: &mut Ordnermodell, zeile: usize) -> Option<u
     zielzeile(Bewegung::Um(1), jetzt, modell.zeilenzahl())
 }
 
-/// Der fuenfte Rang der Statuszeile: was im sichtbaren Tab markiert ist (C2).
+/// Der sechste Rang der Statuszeile: was im sichtbaren Tab markiert ist (C2).
 ///
 /// `None`, wenn nichts markiert ist; dann bleibt der Rang stumm und die Zeile
 /// leer, statt eine Null anzuzeigen, die in den meisten Augenblicken dastuende.

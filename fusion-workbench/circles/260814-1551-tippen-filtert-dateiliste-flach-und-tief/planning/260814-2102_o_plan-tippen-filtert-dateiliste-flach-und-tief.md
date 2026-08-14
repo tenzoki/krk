@@ -353,7 +353,7 @@ flowchart TD
 
 ### Strang D — die Statuszeile
 
-**D1. Der sechste Rang**
+**D1. [DONE] Der sechste Rang**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C4.1 bis C4.10

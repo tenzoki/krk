@@ -16,7 +16,7 @@
 //! haelt weiter seine vier Meldungsfelder mit ihren je einer Loeschregel,
 //! reicht sie ueber [`DateifensterQuelle::meldungsquellen`] heraus und meldet
 //! ueber [`QuelleIvars::meldungswechsel`], dass sich etwas geaendert hat. Die
-//! Auswahl unter den zehn Bewerbern trifft [`super::statuszeile::zeile`].
+//! Auswahl unter den zwoelf Bewerbern trifft [`super::statuszeile::zeile`].
 //!
 //! Zwei Objective-C-Klassen teilen sich die Arbeit, weil AppKit sie an zwei
 //! Protokollen entgegennimmt. [`DateifensterQuelle`] ist die Datenquelle: sie
@@ -166,7 +166,9 @@ use objc2_foundation::{
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname;
-use krk_core::verzeichnis::{Eintrag, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts};
+use krk_core::verzeichnis::{
+    Eintrag, Markierungsstand, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts,
+};
 use krk_core::zwischenablage::{self, Ziel};
 
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
@@ -178,7 +180,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::blaetter;
 use super::standardprogramm;
-use super::statuszeile::Quellen;
+use super::statuszeile::{self, Filterstand, Quellen};
 use super::tableiste::Tableiste;
 use super::teilen;
 
@@ -1169,8 +1171,16 @@ impl DateifensterQuelle {
     /// **Die Ersatzzeile geht ueber [`Self::zeile_setzen`]** und nicht ueber
     /// `zeile_auswaehlen` daneben: die Auswahl muss auch im Modell stehen,
     /// sonst zeigte der naechste Aufbau der Sicht wieder die alte.
+    ///
+    /// **Der fuenfte Rang der Statuszeile wird hier nachgezogen** (C4). Er
+    /// nennt den Filtertext und die Zahl der gezeigten Zeilen, und beide
+    /// aendert genau diese Stelle; sie ist der eine Weg der Anzeige nach einer
+    /// Filteraenderung, also ist sie auch der eine Ort dieses Rufs. Gezeichnet
+    /// werden muss dafuer wie beim Markierungsstand daneben, denn ein
+    /// gerechneter Rang hat kein Feld, das jemand setzt.
     fn nach_filteraenderung(&self) {
         self.umsortiert();
+        self.meldung_gewechselt();
         let (hatte_auswahl, zeile_jetzt, zeilen) = {
             let tabs = self.ivars().tabs.borrow();
             let modell = tabs.aktiver().modell();
@@ -1696,6 +1706,9 @@ impl DateifensterQuelle {
             modell.tief_setzen(!tief);
         }
         self.umsortiert();
+        // Der Schalter aendert, wie viele Zeilen stehen, und damit den fuenften
+        // Rang der Statuszeile (C4.3).
+        self.meldung_gewechselt();
     }
 
     /// Ob das Modell des sichtbaren Tabs einen Filtertext fuehrt.
@@ -1871,7 +1884,7 @@ impl DateifensterQuelle {
         self.ivars().sicht.reflectScrolledClipView(&inhalt);
     }
 
-    /// Meldet, dass eine der fuenf Quellen dieses Dateifensters sich geaendert
+    /// Meldet, dass eine der sechs Quellen dieses Dateifensters sich geaendert
     /// hat.
     ///
     /// **Sie schreibt nichts und entscheidet nichts.** Bis zur Runde 6 hiess
@@ -1896,8 +1909,8 @@ impl DateifensterQuelle {
 
     /// Was dieses Dateifenster der Statuszeile anzubieten hat.
     ///
-    /// Die vier Felder abgeschrieben, der fuenfte Rang gerechnet; die Regel
-    /// darueber, welche der zehn Aussagen gewinnt, steht bei
+    /// Die vier Felder abgeschrieben, die beiden untersten Raenge gerechnet;
+    /// die Regel darueber, welche der zwoelf Aussagen gewinnt, steht bei
     /// [`super::statuszeile::zeile`] und nicht hier. Diese Methode entscheidet
     /// nichts, damit die Entscheidung an genau einer Stelle steht und ohne
     /// AppKit pruefbar ist.
@@ -1907,20 +1920,59 @@ impl DateifensterQuelle {
     /// eine Ausleihe des Tabmodells, die einen Objective-C-Aufruf ueberlebt,
     /// schliesst der Modulkopf aus.
     pub fn meldungsquellen(&self) -> Quellen {
-        // Vor jeder Ausleihe: die Rechnung leiht das Tabmodell selbst aus und
-        // ruft dabei den Groessenformatierer.
-        let markierungsstand = self.markierungsstand_text();
+        // Vor jeder Ausleihe: die beiden gerechneten Raenge holen ihre Zahlen
+        // in einem Zug aus dem Tabmodell, und der Markierungsstand ruft danach
+        // den Groessenformatierer, also Objective-C.
+        let (markierung, filtertext, filterstand) = self.gerechnete_raenge();
+        let markierungsstand = self.markierungsstand_text(markierung);
         let ivars = self.ivars();
         Quellen {
             befehlsantwort: ivars.befehlsantwort.borrow().clone(),
             vorgangsanzeige: ivars.vorgangsanzeige.borrow().clone(),
             fenstermeldung: ivars.fenstermeldung.borrow().clone(),
             tabmeldung: ivars.tabs.borrow().aktiver().meldung().map(str::to_owned),
+            filterstand: statuszeile::filterstand_text(&filtertext, filterstand),
             markierungsstand,
         }
     }
 
-    /// Der fuenfte Rang der Statuszeile: was im sichtbaren Tab markiert ist
+    /// Die Eingaben der beiden Raenge ohne eigenes Feld, in **einer** Ausleihe
+    /// des Tabmodells.
+    ///
+    /// **Ein Durchlauf ueber die Markierung fuer beide.** Der Markierungsstand
+    /// aus C2 zaehlt ueber alle gelesenen Eintraege; der Filterstand aus C4
+    /// braucht daneben, wie viele dieser Markierungen der Filter gerade
+    /// ausblendet, und das ist dieselbe Zahl weniger den markierten Eintraegen
+    /// der Sichtreihenfolge. Beide getrennt zu erheben hiesse,
+    /// `Ordnermodell::markierungsstand` zweimal je Schreiben der Zeile ueber
+    /// den ganzen Bestand laufen zu lassen.
+    ///
+    /// **Gerechnet wird hier nichts, was das Modell schon weiss.** Die drei
+    /// Zahlen und der ausstehende Ersatz kommen als Fragen an das
+    /// `Ordnermodell` herein; was daraus in der Zeile steht, entscheidet
+    /// [`super::statuszeile::filterstand_text`], und das ist ohne Fenster
+    /// pruefbar.
+    fn gerechnete_raenge(&self) -> (Markierungsstand, String, Filterstand) {
+        // Die Ausleihe endet mit diesem Block: alles hier Gelesene ist ein
+        // eigener Wert, und der Aufrufer ruft gleich darauf Objective-C.
+        let tabs = self.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        let markierung = modell.markierungsstand();
+        let markiert_sichtbar = modell
+            .sichtreihenfolge()
+            .iter()
+            .filter(|index| modell.ist_markiert(**index))
+            .count();
+        let filterstand = Filterstand {
+            gezeigt: modell.zeilenzahl(),
+            vorhanden: modell.eintraege().len(),
+            ausgeblendete_markierungen: markierung.zahl.saturating_sub(markiert_sichtbar),
+            ersetzt_beim_naechsten_stapel: modell.ersetzt_beim_naechsten_stapel(),
+        };
+        (markierung, modell.filtertext().to_owned(), filterstand)
+    }
+
+    /// Der sechste Rang der Statuszeile: was im sichtbaren Tab markiert ist
     /// (C2).
     ///
     /// **Die einzige Quelle der Zeile ohne eigenes Feld, und das ist der
@@ -1943,16 +1995,12 @@ impl DateifensterQuelle {
     /// Markierung leert. Das Umsortieren und das Ein- und Ausblenden brauchen
     /// es nicht, weil sie die Markierung nicht anfassen und der Stand ueber
     /// alle gelesenen Eintraege zaehlt, nicht ueber die sichtbaren.
-    fn markierungsstand_text(&self) -> Option<String> {
-        // Die Ausleihe endet mit dieser Anweisung: `markierungsstand` liefert
-        // einen eigenen Wert, und die Zeile darunter ruft Objective-C.
-        let stand = self
-            .ivars()
-            .tabs
-            .borrow()
-            .aktiver()
-            .modell()
-            .markierungsstand();
+    ///
+    /// **Der Stand kommt herein und wird hier nicht geholt.** Seit der Runde 10
+    /// braucht ihn auch der Rang darueber, der Filterstand, und beide nehmen
+    /// ihn aus [`Self::gerechnete_raenge`]; zwei Erhebungen je Schreiben der
+    /// Zeile waeren zweimal derselbe Durchlauf ueber den ganzen Bestand.
+    fn markierungsstand_text(&self, stand: Markierungsstand) -> Option<String> {
         auswahl::markierungsstand_text(stand, &self.groesse_beschriften(stand.groesse))
     }
 
@@ -2086,7 +2134,13 @@ impl DateifensterQuelle {
         } else if einzug.angehaengt {
             self.ivars().tabelle.noteNumberOfRowsChanged();
         }
-        if einzug.meldung_neu {
+        // Die Tabmeldung wechselt selten, der fuenfte Rang bei jedem Stapel:
+        // er nennt die Zahl der gezeigten und die der vorhandenen Eintraege,
+        // und beide waechst der Lesevorgang. Ohne Filtertext meldet er nichts
+        // (C4.8), und dann hat kein Stapel etwas an der Zeile zu aendern; die
+        // zweite Bedingung haelt den Neubau beider Quellensaetze aus dem Takt
+        // heraus, solange kein Filter steht.
+        if einzug.meldung_neu || self.filter_steht() {
             self.meldung_gewechselt();
         }
 

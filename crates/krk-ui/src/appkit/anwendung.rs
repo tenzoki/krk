@@ -1197,8 +1197,8 @@ impl Anwendungsdelegierter {
                     }
                 }));
             // **Die eine Statuszeile gehoert beiden Dateifenstern** (C5 der
-            // Runde 6). Jedes meldet, dass eine seiner fuenf Quellen sich
-            // geaendert hat; welche der zehn Aussagen dann in der Zeile steht,
+            // Runde 6). Jedes meldet, dass eine seiner sechs Quellen sich
+            // geaendert hat; welche der zwoelf Aussagen dann in der Zeile steht,
             // entscheidet `statuszeile_nachziehen` mit beiden Quellensaetzen
             // und der aktiven Seite. Der Rueckruf traegt die Seite nicht mit,
             // weil der Nachzug ohnehin beide fragt. Auch er haelt den
@@ -1841,7 +1841,7 @@ impl Anwendungsdelegierter {
     /// Zwei Fehler kann der Nutzer beheben, und beide stellt der Befehl vor dem
     /// Aufruf fest: der Ordner ist nicht mehr da, oder zu der eingestellten
     /// Buendelkennung ist keine Anwendung installiert. Beide gehen als
-    /// Befehlsantwort in die Statuszeile, den ersten der fuenf Raenge; ein
+    /// Befehlsantwort in die Statuszeile, den ersten der sechs Raenge; ein
     /// eigenes Blatt entsteht nicht. Der dritte Fehler aus C11, die beschaedigte
     /// `settings.toml`, hat sich beim Start gemeldet, denn dort faellt er an.
     ///
@@ -1871,7 +1871,7 @@ impl Anwendungsdelegierter {
     ///
     /// Der eine Fall, den der Nutzer sieht, ist der Entwicklungslauf ohne
     /// Buendel; er geht als Befehlsantwort in die Statuszeile, den ersten der
-    /// fuenf Raenge.
+    /// sechs Raenge.
     fn weitere_instanz_starten(&self) -> bool {
         if let Some(meldung) = weitereinstanz::starten() {
             let seite = self.ivars().modell.borrow().aktiv();
@@ -4193,10 +4193,10 @@ impl Anwendungsdelegierter {
     /// Runde 6).
     ///
     /// **Der eine Schreiber, mit zwei Anlaessen.** Der erste ist der
-    /// Meldungswechsel eines der beiden Dateifenster: eine seiner fuenf Quellen
+    /// Meldungswechsel eines der beiden Dateifenster: eine seiner sechs Quellen
     /// hat sich geaendert, und es sagt es ueber den Rueckruf aus dem Aufbau.
     /// Der zweite ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
-    /// von den zehn Quellen abhaengt, sondern auch davon, **welches**
+    /// von den zwoelf Quellen abhaengt, sondern auch davon, **welches**
     /// Dateifenster das aktive und **welches sichtbar** ist: der Rang der
     /// aktiven Seite entscheidet jeden Gleichstand, der Namenszusatz haengt an
     /// derselben Frage, und ein ausgeblendetes Dateifenster bewirbt sich gar
@@ -4205,7 +4205,7 @@ impl Anwendungsdelegierter {
     /// Dateifensters geht auf beiden Wegen durch ihn: Mausklick ueber
     /// [`Self::aktives_setzen`], Tastenbefehl ueber `Kommando::FensterWechseln`.
     ///
-    /// **Sie entscheidet selbst nichts.** Die Auswahl unter den zehn Bewerbern
+    /// **Sie entscheidet selbst nichts.** Die Auswahl unter den zwoelf Bewerbern
     /// trifft [`statuszeile::zeile`], den Satz formt
     /// [`statuszeile::zeilentext`]; beide sind reines Rust ohne AppKit und ohne
     /// Fenster pruefbar. Diese Funktion holt die vier Eingaben und schreibt das
@@ -5235,7 +5235,7 @@ impl Anwendungsdelegierter {
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
     /// genannten Dateifensters.
     ///
-    /// Rang 1, der oberste der fuenf Raenge, siehe
+    /// Rang 1, der oberste der sechs Raenge, siehe
     /// [`crate::appkit::statuszeile::zeile`]. Nicht zu verwechseln mit
     /// [`Dateifenstersicht::melden`] weiter unten: das ist der Weg der
     /// Ereignisse, die niemand angefordert hat, und der schreibt die

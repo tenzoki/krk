@@ -168,7 +168,7 @@
 //! fertige Zeile an eine Flaeche.** [`Editormeldung`] benennt es; wohin es
 //! geht, weiss diese Datei nicht. Der Anwendungsdelegierte nimmt den Wert und
 //! stellt ihn in die **eine** Meldeflaeche des Fensters aus C1 der Runde 1, auf
-//! den obersten ihrer fuenf Raenge. Eine zweite Meldeflaeche neben ihr entsteht
+//! den obersten ihrer sechs Raenge. Eine zweite Meldeflaeche neben ihr entsteht
 //! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
 //! "Der Editor bekommt keine eigene Meldezeile".
 //!
