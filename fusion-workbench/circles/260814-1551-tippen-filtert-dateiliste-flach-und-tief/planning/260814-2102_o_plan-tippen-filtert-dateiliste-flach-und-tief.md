@@ -428,7 +428,7 @@ flowchart TD
 
 ### Strang F — der Durchlauf
 
-**F1. Der Durchlauf als eigenes Modul neben dem Leser**
+**F1. [DONE] Der Durchlauf als eigenes Modul neben dem Leser**
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/durchlauf.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/tests/verzeichnis.rs`
 - Erfüllt: C3.1, C3.4, C3.8, C3.9, C3.10, C3.13

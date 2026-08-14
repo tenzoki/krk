@@ -1,11 +1,12 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Sieben Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Acht Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
-//! sys  ──> leser ──> eintrag ──> modell <── sortierung
-//!                       ^          ^
-//!                 kollation        └── sprungmarke
+//! sys ──> leser ──> eintrag ──> modell <── sortierung
+//!  │                     ^          ^  ^
+//!  │               kollation        │  └── sprungmarke
+//!  └──> durchlauf ───────────────────┘
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
@@ -23,10 +24,18 @@
 //! liefert die acht Ordnungen, und [`sprungmarke`] findet einen Eintrag ueber
 //! die getippten Anfangsbuchstaben (C2).
 //!
+//! [`durchlauf`] steht neben [`leser`] und nicht unter ihm: er liest ueber
+//! dieselbe Huelle `sys::Schwungleser` und auf derselben Bauart, beantwortet
+//! aber eine andere Frage. Der Leser liefert den Bestand eines Ordners, der
+//! Durchlauf je Ordner des angezeigten Ordners einen Wahrheitswert ueber
+//! seinen ganzen Unterbaum. Er ist die fuenfte Eingabe des Pruefschritts in
+//! [`modell`], und die einzige, die von aussen kommt.
+//!
 //! Der Kern kennt AppKit nicht; alles hier ist ohne Fenster testbar.
 
 use std::path::{Path, PathBuf};
 
+pub mod durchlauf;
 pub mod eintrag;
 pub mod kollation;
 pub mod leser;
@@ -35,6 +44,7 @@ pub mod sortierung;
 pub mod sprungmarke;
 pub mod sys;
 
+pub use durchlauf::{Auftrag, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 pub use modell::{Markierungsstand, Ordnermodell};

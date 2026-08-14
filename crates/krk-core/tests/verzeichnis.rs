@@ -6,9 +6,11 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
+use krk_core::verzeichnis::durchlauf::{Auftrag, Befundmeldung, Durchlauf};
 use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
@@ -1015,4 +1017,282 @@ fn der_kleingeschriebene_filtertext_laeuft_mit() {
     modell.filter_leeren();
     assert_eq!(modell.filter_klein(), "");
     assert!(!modell.filter_steht());
+}
+
+// ---------------------------------------------------------------------------
+// Der Durchlauf ueber die Unterbaeume (C3)
+// ---------------------------------------------------------------------------
+
+/// Nimmt alle Befunde entgegen, bis der Kanal schliesst.
+///
+/// Der Kanal schliesst, wenn der Arbeitsfaden geendet hat; ein Warten auf das
+/// Fadenstueck braucht es dafuer nicht. **Was hier nicht ankommt, ist nicht
+/// entschieden** — genau das ist der Unterschied zwischen „kein Treffer
+/// darunter" und „noch nicht entschieden" (C3.13).
+fn befunde_einsammeln(durchlauf: &Durchlauf) -> Vec<Befundmeldung> {
+    let mut gesammelt = Vec::new();
+    while let Ok(meldung) = durchlauf.befunde().recv() {
+        gesammelt.push(meldung);
+    }
+    gesammelt
+}
+
+/// Startet einen Durchlauf ueber einen einzigen Auftrag und wartet seinen
+/// Befund ab.
+fn einen_ordner_entscheiden(wurzel: &Path, name: &str, filter_klein: &str) -> Vec<Befundmeldung> {
+    let auftraege = vec![Auftrag {
+        index: 7,
+        name: name.to_owned(),
+    }];
+    let durchlauf = Durchlauf::starten(auftraege, wurzel.to_path_buf(), filter_klein.to_owned(), 1);
+    befunde_einsammeln(&durchlauf)
+}
+
+#[test]
+fn ein_treffer_tief_unten_entscheidet_den_ordner() {
+    let ordner = Pruefordner::neu("durchlauf-tief");
+    let tief = ordner
+        .unter("aussen")
+        .join("a")
+        .join("b")
+        .join("c")
+        .join("d");
+    fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
+    fs::write(tief.join("gesuchtes-blatt.txt"), b"x").expect("Blatt laesst sich nicht schreiben");
+    // Beiwerk auf dem Weg, das den Filtertext nicht traegt.
+    fs::write(ordner.unter("aussen").join("liesmich.md"), b"x").expect("Beiwerk");
+
+    let befunde = einen_ordner_entscheiden(ordner.pfad(), "aussen", "gesuchtes");
+
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "der Treffer liegt fuenf Ebenen tiefer und entscheidet den Ordner trotzdem"
+    );
+}
+
+#[test]
+fn ein_ordner_ohne_treffer_meldet_den_negativen_befund() {
+    let ordner = Pruefordner::neu("durchlauf-ohne-treffer");
+    let aussen = ordner.ordner("aussen");
+    fs::create_dir_all(aussen.join("unten")).expect("Unterordner");
+    fs::write(aussen.join("liesmich.md"), b"x").expect("Datei");
+    fs::write(aussen.join("unten").join("notiz.txt"), b"x").expect("Datei");
+
+    let befunde = einen_ordner_entscheiden(ordner.pfad(), "aussen", "gesuchtes");
+
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "abgeschritten und nichts gefunden ist ein Befund und kein Schweigen"
+    );
+}
+
+#[test]
+fn ein_nicht_lesbarer_ordner_gilt_als_kein_treffer() {
+    let ordner = Pruefordner::neu("durchlauf-gesperrt");
+    let gesperrt = ordner.ordner("aussen");
+    fs::write(gesperrt.join("gesuchtes-blatt.txt"), b"x").expect("Datei");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht entziehen");
+
+    let befunde = einen_ordner_entscheiden(ordner.pfad(), "aussen", "gesuchtes");
+
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "was sich nicht oeffnen laesst, haelt den Durchlauf nicht an und meldet keinen Fehler"
+    );
+}
+
+#[test]
+fn eine_verknuepfung_auf_einen_ordner_meldet_kein_treffer() {
+    let ordner = Pruefordner::neu("durchlauf-verknuepfung");
+    let ziel = ordner.ordner("ziel");
+    fs::write(ziel.join("gesuchtes-blatt.txt"), b"x").expect("Datei");
+    ordner.verknuepfung("verweis", &ziel);
+
+    // Ueber den echten Ordner ist der Treffer da: die Verknuepfung verdeckt ihn
+    // nicht, es wird nur nicht in sie hinabgestiegen.
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "ziel", "gesuchtes"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "derselbe Baum ueber seinen echten Namen"
+    );
+
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "verweis", "gesuchtes"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "in eine Verknuepfung wird nicht abgestiegen (C3.9)"
+    );
+}
+
+/// C3.4: Der Abbruch greift auch dort, wo kein einziges Mal abgestiegen wird.
+///
+/// Der Pruefordner traegt 5.000 gewoehnliche Eintraege und **keinen einzigen
+/// Unterordner**; er passiert die Stapelgrenze viermal und das Absteigen nie.
+/// Eine Pruefung des Abbruchkennzeichens beim Absteigen bliebe hier wirkungslos,
+/// der Ordner liefe vollstaendig durch und meldete `treffer: false`. Dass gar
+/// kein Befund kommt, heisst genau: der Durchlauf hat vor der dritten
+/// Stapelgrenze aufgehoert, und der Ordner bleibt unentschieden.
+#[test]
+fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
+    let ordner = Pruefordner::neu("durchlauf-abbruch");
+    let flach = ordner.ordner("flach");
+    for nummer in 0..5_000 {
+        fs::write(flach.join(format!("eintrag-{nummer:06}.txt")), b"").expect("Datei");
+    }
+    assert!(
+        lesen(&flach).expect("der flache Ordner ist lesbar").len() > 2 * STAPELGROESSE,
+        "die Probe braucht mehr als zwei Stapel, sonst sagt sie nichts ueber zwei Stapel"
+    );
+
+    let durchlauf = Durchlauf::starten(
+        vec![Auftrag {
+            index: 7,
+            name: "flach".to_owned(),
+        }],
+        ordner.pfad().to_path_buf(),
+        "gibt-es-hier-nicht".to_owned(),
+        1,
+    );
+    durchlauf.abbrechen();
+
+    assert_eq!(
+        befunde_einsammeln(&durchlauf),
+        Vec::new(),
+        "ein abgebrochener Durchlauf laesst den Ordner unentschieden, statt ihn zu entscheiden"
+    );
+}
+
+/// C3.13: Jeder Auftrag bekommt genau einen Befund, und der negative kommt auf
+/// drei Wegen.
+#[test]
+fn jeder_auftrag_bekommt_genau_einen_befund() {
+    let ordner = Pruefordner::neu("durchlauf-drei-wege");
+
+    let leer = ordner.ordner("ohne-fund");
+    fs::write(leer.join("liesmich.md"), b"x").expect("Datei");
+
+    let gesperrt = ordner.ordner("gesperrt");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000)).expect("Rechte");
+
+    let ziel = ordner.ordner("ziel");
+    fs::write(ziel.join("gesuchtes-blatt.txt"), b"x").expect("Datei");
+    ordner.verknuepfung("verweis", &ziel);
+
+    let auftraege = [
+        ("ohne-fund", false),
+        ("gesperrt", false),
+        ("verweis", false),
+        ("ziel", true),
+    ];
+    let durchlauf = Durchlauf::starten(
+        auftraege
+            .iter()
+            .enumerate()
+            .map(|(stelle, (name, _))| Auftrag {
+                index: stelle as u32,
+                name: (*name).to_owned(),
+            })
+            .collect(),
+        ordner.pfad().to_path_buf(),
+        "gesuchtes".to_owned(),
+        1,
+    );
+
+    let erwartet: Vec<Befundmeldung> = auftraege
+        .iter()
+        .enumerate()
+        .map(|(stelle, (_, treffer))| Befundmeldung {
+            index: stelle as u32,
+            treffer: *treffer,
+        })
+        .collect();
+    assert_eq!(befunde_einsammeln(&durchlauf), erwartet);
+}
+
+/// C3.8: Es gibt keine Tiefengrenze.
+///
+/// Zweihundert Ebenen, und der Treffer liegt ganz unten. Die Zahl ist nicht
+/// beliebig gross gewaehlt: der Pfad waechst mit jeder Ebene, und
+/// `PATH_MAX` liegt auf macOS bei 1.024 Bytes.
+#[test]
+fn der_durchlauf_kennt_keine_tiefengrenze() {
+    let ordner = Pruefordner::neu("durchlauf-tiefe");
+    let mut tief = ordner.unter("kette");
+    for _ in 0..200 {
+        tief = tief.join("e");
+    }
+    fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
+    fs::write(tief.join("gesuchtes-blatt.txt"), b"x").expect("Blatt");
+
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "kette", "gesuchtes"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "zweihundert Ebenen tief, und der Abstieg laeuft ueber einen eigenen Stapel"
+    );
+}
+
+/// C3.1 und C3.8 als Aussagen ueber den Baum.
+///
+/// Beide sagen etwas ueber das **Fehlen** zu: keine zweite Lesemechanik, keine
+/// Konstante fuer eine Tiefe. An keinem Rueckgabewert ist abzulesen, dass es
+/// keine gibt.
+///
+/// Gelesen werden nur Code-Zeilen. Die Doc-Kommentare des Moduls nennen jede
+/// Nadel im Klartext, damit ein Leser weiss, wonach gesucht wird; ein
+/// `contains` ueber den ganzen Text faende sie dort. Die Hilfsfunktion steht
+/// hier und nicht in `tests/gemeinsam/`, weil `tests/baum.rs` dieselbe fuehrt
+/// und beide Ziele eigene Kisten sind — dieselbe Lage wie beim Pruefordner.
+#[test]
+fn der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze() {
+    let (_, quelle) = gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/verzeichnis/durchlauf.rs")
+        .expect("das Modul des Durchlaufs steht im Baum");
+    let code: Vec<&str> = quelle
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect();
+
+    assert!(
+        code.iter().any(|zeile| zeile.contains("Schwungleser")),
+        "der Durchlauf liest ueber dieselbe Huelle wie der Leser"
+    );
+    for fremde_mechanik in ["read_dir", "WalkDir", "getattrlistbulk"] {
+        assert!(
+            !code.iter().any(|zeile| zeile.contains(fremde_mechanik)),
+            "neben dem Schwungleser steht eine zweite Lesemechanik: {fremde_mechanik}"
+        );
+    }
+    let konstanten: Vec<&&str> = code
+        .iter()
+        .filter(|zeile| {
+            let ohne_rand = zeile.trim_start();
+            ohne_rand.starts_with("const ") || ohne_rand.starts_with("pub const ")
+        })
+        .collect();
+    assert!(
+        konstanten.is_empty(),
+        "das Modul erklaert eine Konstante; eine Tiefengrenze faellt genau so an: {konstanten:?}"
+    );
 }
