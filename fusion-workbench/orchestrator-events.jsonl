@@ -702,3 +702,6 @@
 {"ts":"2026-08-14T06:26:15","event":"task_done","turn":1,"task":"C","agent":"coder","detail":"Schritte 9-12 fertig, make check exit 0"}
 {"ts":"2026-08-14T06:26:15","event":"commit","turn":1,"task":"C","detail":"das zehnte Blatt"}
 {"ts":"2026-08-14T06:26:15","event":"task_start","turn":1,"task":"DEF","agent":"coder","detail":"Schritte 13-16"}
+{"ts":"2026-08-14T06:54:26","event":"task_done","turn":1,"task":"DEF","agent":"coder","detail":"Schritte 13-16 fertig, make check exit 0; alle 16 Planschritte gebaut"}
+{"ts":"2026-08-14T06:54:26","event":"commit","turn":1,"task":"DEF","detail":"vier Sicherungsmomente, Sitzung merkt den Zettel"}
+{"ts":"2026-08-14T06:54:26","event":"review_start","turn":1,"agent":"coderev","detail":"16 Quelldateien aus 6d05bef..HEAD"}
