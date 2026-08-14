@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `decisions/260814-1830_a_wie-nimmt-der-nutzer-ein-einzelnes-zeichen-des-filters-zurueck.md` (die Antwort, aus der diese Frage folgt); `crates/krk-ui/src/appkit/anwendung.rs:4274-4276` (`in_den_papierkorb`, stellt den Auftrag ohne Rückfrage); `crates/krk-ui/src/belegungsmodell.rs` (`letztes_zeichen_weg`, das bei leerem Suchtext nichts tut und das über seinen Rückgabewert meldet)
 

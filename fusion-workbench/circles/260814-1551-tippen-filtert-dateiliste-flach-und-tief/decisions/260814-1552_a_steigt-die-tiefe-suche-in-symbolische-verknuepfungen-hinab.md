@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `crates/krk-core/src/verzeichnis/sys.rs:341` (`Typ::Verknuepfung`); `crates/krk-core/src/verzeichnis/leser.rs` (der gestückelte Lesevorgang)
 

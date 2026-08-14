@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `crates/krk-ui/src/kommandos/operationen.rs:162-192` (`betroffene`, die eine Auswahlregel); `crates/krk-core/src/verzeichnis/modell.rs:339-416` (Markierung und Markierungsstand); `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_c_spec-navigator-geruest.md` (C2, Mehrfachauswahl)
 

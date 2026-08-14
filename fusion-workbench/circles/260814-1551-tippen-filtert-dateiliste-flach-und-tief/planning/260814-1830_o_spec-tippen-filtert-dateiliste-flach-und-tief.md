@@ -6,8 +6,9 @@
 **Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`, aktiv seit 260814-1551
 **Grundlage erhoben:** 260814-1830, am Baum auf dem Stand `43dfe90`, unter `crates/` und `resources/`
 **Nachgebessert:** 260814-1852, nach der Bewertung `reviews/260814-1840-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Rückschritt-Taste vom 260814-1845
+**Nachgebessert:** 260814-1950, nach der zweiten Bewertung `reviews/260814-1938-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Tastenwiederholung vom 260814-1910
 
-**Sechs Fragen sind beantwortet**, fünf davon am 260814-1610 und eine am 260814-1845; sie liegen als Datensätze unter `decisions/` dieses Circles und werden hier nicht erneut gestellt. **Fünf sind offen**, vier aus den früheren Läufen und eine neu aus dieser Nachbesserung; keine hält einen Planschritt auf, jede bindet die Umsetzung.
+**Sieben Fragen sind beantwortet**, fünf davon am 260814-1610, eine am 260814-1845 und eine am 260814-1910; sie liegen als Datensätze unter `decisions/` dieses Circles und werden hier nicht erneut gestellt. **Vier sind offen**; keine hält einen Planschritt auf, jede bindet die Umsetzung. Nachzuzählen bleibt es am Dateibestand und nicht an diesem Satz: `ls decisions/*_a_*.md` und `ls decisions/*_o_*.md`.
 
 ---
 
@@ -71,7 +72,7 @@ Ein neues Kürzel und ein neues Bedienelement für den Einstieg in den Filter en
 
 ## Ausgangslage, am 260814-1830 am Baum erhoben
 
-Zehn Feststellungen tragen den Zuschnitt. Drei davon widersprechen dem, was man ohne sie annähme.
+Elf Feststellungen tragen den Zuschnitt. Drei davon widersprechen dem, was man ohne sie annähme.
 
 **Der Filtermechanismus ist vorhanden und trägt heute einen einzigen Prüfschritt.** `Ordnermodell` baut seine Sichtreihenfolge in `anhaengen` und in `sicht_neu_aufbauen` auf, und der einzige Filter darin ist `verstecke_ausblenden` (`crates/krk-core/src/verzeichnis/modell.rs:195-206` und `:427-442`). Ein Namensfilter ist an dieser Stelle ein Prüfschritt mehr und keine zweite Sicht daneben.
 
@@ -92,6 +93,8 @@ Zehn Feststellungen tragen den Zuschnitt. Drei davon widersprechen dem, was man 
 **Das Räumen in den Papierkorb läuft ohne Rückfrage.** `Anwendungsdelegierter::in_den_papierkorb` stellt den Auftrag unmittelbar (`crates/krk-ui/src/appkit/anwendung.rs:4274-4276`); allein das endgültige Löschen zeigt eine Bestätigung über `loeschbestaetigung::zeigen`. Ein Tastendruck, der versehentlich dorthin gerät, ist damit sofort wirksam. Das trägt die Fallunterscheidung der Rückschritt-Taste aus C1 und ist der Grund, warum sie ein eigenes Abnahmekriterium für die gefährliche Richtung bekommt.
 
 **Die Belegung führt am 260814 83 Einträge, `Kommando` 77 Varianten.** Gezählt mit `grep -c '^\[\[funktion\]\]' resources/default-keymap.toml` und über `awk '/^pub enum Kommando/,/^}/'`. Der Befehl für „Deep" ist die 78. Variante und der 84. Eintrag. Unter den Rückschritt-Kombinationen ist allein `shift+delete` frei; `delete` und `cmd+delete` tragen `in_papierkorb`, `opt+cmd+delete` trägt `endgueltig_loeschen`, `ctrl+delete` das Löschen in der Lesezeichenleiste.
+
+**Nichts im Baum liest heute, ob ein Tastendruck aus einer Wiederholung stammt.** `isARepeat` kommt an einer einzigen Stelle vor, und dort wird es geschrieben und nicht gelesen: `ereignis_senden` baut die synthetischen Tastendrücke des Messmodus mit `false` (`crates/krk-ui/src/appkit/ereignisse.rs:471-481`). Daraus folgt zweierlei. Erstens räumt ein gehaltener Rückschritt heute wiederholt, und C1.16 sagt zu, dass sich daran nichts ändert — die Grenze aus C1.18 darf deshalb nicht an der Wiederholung allein hängen, sondern nur an einer Wiederholung, die bei stehendem Filtertext begann (C1.20). Zweitens kann der Messmodus den Wiederholungszweig nicht fahren, denn seine Ereignisse melden sich nie als Wiederholung; die Abnahme von C1.18 und C1.20 am Bündel bleibt Nutzerarbeit.
 
 ---
 
@@ -130,19 +133,23 @@ flowchart TD
 
 **Die Frage `liegt unter ihm ein Treffer?` beantwortet nicht dieses Bild, sondern das nächste, und zwar nach beiden Seiten:** mit dem Befund `Treffer` und mit dem Befund `kein Treffer darunter`. Ohne den zweiten hinge der Zweig `nein` in der Luft, und genau das war der tragende Befund der Bewertung vom 260814-1840.
 
-**Für „Ordner" gibt es einen Schnitt und nicht zwei, und er steht hier.** Beide Bilder fragen `ist es ein Ordner?`; die Verknüpfungsregel wohnt allein im Durchlauf. Für eine symbolische Verknüpfung auf einen Ordner antwortet dieser Knoten mit ja, denn der Nutzer navigiert in sie hinein. Der Durchlauf steigt nicht in sie hinab und meldet deshalb `kein Treffer darunter`. Bei ausgeschaltetem „Deep" bleibt sie sichtbar wie jeder Ordner (C1.6), bei eingeschaltetem nur, wenn ihr eigener Name den Filtertext trägt (C2.13, C3.9).
+**Dieses Bild entscheidet die Sichtbarkeit, und kein zweites daneben.** Der Durchlauf liefert eine einzige Größe, nämlich die Antwort auf `liegt unter ihm ein Treffer?`, und er wird nur gefragt, wenn `Name trägt die Teilzeichenfolge?` zuvor mit nein geantwortet hat. Für einen Ordner, dessen eigener Name den Filtertext trägt, steht die Zeile damit schon hier fest: er steht in der Liste, gleichgültig was unter ihm liegt, und der Durchlauf läuft für ihn nicht (C2.5, C2.8, C3.14). Die zweite Bewertung hat an dieser Naht den einen substanziellen Widerspruch gefunden — das zweite Bild sprach ein Urteil über die Sichtbarkeit aus, das ihm nicht zusteht, und C3.13 schrieb es als Kriterium fest. Beide sind mit dieser Nachbesserung auf die Aussage zurückgenommen, die dem Durchlauf zusteht.
+
+**Für „Ordner" gibt es einen Schnitt und nicht zwei, und er steht hier.** Die ersten beiden Bilder fragen `ist es ein Ordner?`; die Verknüpfungsregel wohnt allein im Durchlauf. Für eine symbolische Verknüpfung auf einen Ordner antwortet dieser Knoten mit ja, denn der Nutzer navigiert in sie hinein. Der Durchlauf steigt nicht in sie hinab und meldet deshalb `kein Treffer darunter`. Bei ausgeschaltetem „Deep" bleibt sie sichtbar wie jeder Ordner (C1.6), bei eingeschaltetem nur, wenn ihr eigener Name den Filtertext trägt (C2.13, C3.9).
 
 ## Der Durchlauf und was ihn beendet
 
 Das zweite Bild zeigt den einen Zweig aus dem ersten, der etwas kostet, und es entscheidet ihn nach beiden Seiten. Es trägt drei Wiederholungen, und jede ist gewollt: das Weiterrücken über die Einträge eines Ordners, das Nachladen des nächsten Stapels und das Absteigen samt der Rückkehr daraus. Ein Bild ohne die dritte müsste die Tiefe als Zahl vorwegnehmen, die es nicht gibt. **Wie viele Fäden der Durchlauf benutzt, sagt das Bild nicht**; das entscheidet der Planner, und der Abschnitt `## Offen für den Planner` führt die Frage.
 
+**Zwei Grenzen dieses Bildes tragen die Nachbesserung vom 260814-1950, und beide sind Aussagen über seine Zuständigkeit.** Die Eintrittskante trägt die Bedingung, unter der das erste Bild überhaupt fragt: der Durchlauf läuft je Ordner, dessen eigener Name den Filtertext **nicht** trägt. Und die beiden Knoten, die er verlässt, sprechen einen Befund aus und kein Urteil über die Sichtbarkeit: sie beantworten die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit ja oder mit nein, und die Zeile rechnet danach das erste Bild aus Name und Befund zusammen. Ohne diese beiden Grenzen sagte das Bild für jeden Ordner, dessen Name passt und unter dem nichts liegt, das Gegenteil des ersten.
+
 ```mermaid
 flowchart TD
     START(["Deep an, Filtertext steht"])
-    SOFORT["Dateien des angezeigten Ordners:<br/>der Name entscheidet, kein Durchlauf"]
-    LISTE(["die Liste steht sofort und waechst danach"])
+    SOFORT["Dateien und namentlich passende Ordner:<br/>der Name entscheidet, kein Durchlauf"]
+    LISTE(["die Liste steht sofort und waechst weiter"])
 
-    subgraph DURCHLAUF["der Durchlauf, je Ordner des angezeigten Ordners"]
+    subgraph DURCHLAUF["der Durchlauf, je Ordner des angezeigten Ordners,<br/>dessen eigener Name den Filtertext nicht traegt"]
         direction TB
         VERKN{"ist er eine symbolische<br/>Verknuepfung?"}
         OEFFNEN{"laesst er sich<br/>oeffnen?"}
@@ -150,20 +157,22 @@ flowchart TD
         NOCH{"noch ein Eintrag<br/>im Stapel?"}
         PRUEF{"Name traegt<br/>die Folge?"}
         IST{"ist es ein Ordner?"}
-        ABST["in ihn absteigen"]
+        ABST["diesen Eintrag als<br/>naechsten Ordner nehmen"]
         TREFFER(["Treffer: der Ordner des angezeigten Ordners<br/>ist entschieden, der Rest bleibt ungelesen"])
         FERTIG(["abgearbeitet, kein Treffer gefunden"])
         ZURUECK{"war es der Ordner des<br/>angezeigten Ordners?"}
         KEIN(["kein Treffer darunter"])
     end
 
-    ZEIGEN["der Ordner erscheint,<br/>die Statuszeile zaehlt mit"]
-    WEGLASSEN["der Ordner erscheint nicht"]
+    UJA["Befund an Bild 1:<br/>liegt unter ihm ein Treffer? — ja"]
+    UNEIN["Befund an Bild 1:<br/>liegt unter ihm ein Treffer? — nein"]
+    RECHNUNG["Bild 1 rechnet die Zeile des Ordners,<br/>die Statuszeile zaehlt sie mit"]
+    OFFEN{"ist noch ein Ordner<br/>unentschieden?"}
     ENDE(["Durchlauf zu Ende"])
 
     START --> SOFORT
     SOFORT --> LISTE
-    START -->|"je Ordner des angezeigten Ordners"| VERKN
+    START -->|"je Ordner, dessen Name<br/>den Filtertext nicht traegt"| VERKN
     VERKN -->|"ja: es wird nicht abgestiegen"| FERTIG
     VERKN -->|nein| OEFFNEN
     OEFFNEN -->|"nein: keine Meldung"| FERTIG
@@ -180,24 +189,74 @@ flowchart TD
     FERTIG --> ZURUECK
     ZURUECK -->|"nein: weiter im uebergeordneten Ordner"| NOCH
     ZURUECK -->|ja| KEIN
-    TREFFER -->|"Befund an den Hauptfaden"| ZEIGEN
-    KEIN -->|"Befund an den Hauptfaden"| WEGLASSEN
-    ZEIGEN --> LISTE
-    WEGLASSEN --> LISTE
-    ZEIGEN -->|"kein Ordner mehr offen"| ENDE
-    WEGLASSEN -->|"kein Ordner mehr offen"| ENDE
+    TREFFER -->|"Befund an den Hauptfaden"| UJA
+    KEIN -->|"Befund an den Hauptfaden"| UNEIN
+    UJA --> RECHNUNG
+    UNEIN --> RECHNUNG
+    RECHNUNG --> OFFEN
+    OFFEN -->|ja| LISTE
+    OFFEN -->|nein| ENDE
     STAPEL -.->|"Filtertext geloescht oder geaendert,<br/>Ordnerwechsel, Deep aus"| ENDE
 ```
 
 **Der erste Treffer entscheidet den Ordner des angezeigten Ordners, gleich in welcher Tiefe er liegt, und der Rest unter ihm bleibt ungelesen.** Der Befund kehrt nicht Ebene für Ebene zurück; er beendet den Durchlauf für diesen Ordner sofort. Nur der negative Befund läuft über die Rückkehr, denn er steht erst fest, wenn nichts mehr offen ist. Das ist der Grund, warum der gefilterte Ordnerbaum billiger ist als die abgelöste flache Trefferliste und nicht teurer: jene musste den ganzen Unterbaum lesen, um vollständig zu sein, dieser hört je Ordner beim ersten Fund auf. Der Preis steht in C4: die Statuszeile kann während eines Durchlaufs nicht sagen, wie viele Treffer unter einem Ordner liegen, denn sie sind nicht gezählt. Sie zählt entschiedene Zeilen und keine Treffer.
 
-**Jeder Ordner wird auf genau eine von zwei Arten entschieden, und der negative Befund hat drei Quellen.** `kein Treffer darunter` entsteht, wenn der Ordner abgearbeitet ist und nichts trug, wenn er sich nicht öffnen ließ (C3.10) und wenn er eine symbolische Verknüpfung ist (C3.9). Dieser Befund bedient den Zweig `liegt unter ihm ein Treffer? — nein` des ersten Bildes, entscheidet C2.6 und sagt der Statuszeile, dass die Zahl für diesen Ordner steht. Ohne ihn setzen sich die beiden Bilder nicht zusammen.
+**Jeder Ordner wird auf genau eine von zwei Arten entschieden, und der negative Befund hat drei Quellen.** `kein Treffer darunter` entsteht, wenn der Ordner abgearbeitet ist und nichts trug, wenn er sich nicht öffnen ließ (C3.10) und wenn er eine symbolische Verknüpfung ist (C3.9). Dieser Befund bedient den Zweig `liegt unter ihm ein Treffer? — nein` des ersten Bildes, entscheidet C2.6 und sagt der Statuszeile, dass die Zahl für diesen Ordner steht. Ohne ihn setzen sich die ersten beiden Bilder nicht zusammen.
 
 **Der Abbruch hängt an der Stapelgrenze und nicht am Absteigen.** Beides sind eigene Knoten, weil es zwei Vorgänge sind: „in ihn absteigen" kommt in einem Ordner mit fünfzigtausend gewöhnlichen Einträgen kein einziges Mal vor, „nächsten Stapel holen" kommt dort neunundvierzigmal vor. Die Zusage aus C3.4 hängt deshalb am Stapel, und damit gilt sie für jede Gestalt eines Baumes und nicht nur für flache mit vielen Unterordnern.
 
 **Die Verknüpfungsregel wohnt in diesem Bild und nur hier.** Abgestiegen wird in einen Ordner, der keine symbolische Verknüpfung ist; eine Verknüpfung ist mit dem Befund `kein Treffer darunter` entschieden und wird nicht geöffnet. Daraus folgt, dass der Durchlauf ohne eine mitgeführte Menge besuchter Ordner endet, und das ist die tragende Eigenschaft der Antwort vom 260814-1610.
 
-**Die Rückkehr aus dem Abstieg ist die Kante, die das Bild teuer macht, und sie gehört dazu.** Ein Zähler, der einfache Kreise aufzählt, findet hier sieben und nicht drei: die Rückkehr `war es der Ordner des angezeigten Ordners? — nein` verbindet sich mit jeder der beiden inneren Wiederholungen zu je einem weiteren Kreis. Die drei sind die Mechanismen, die sieben sind ihre Verbindungen. Jeder von ihnen hat einen Ausgang, und jeder Knoten des Bildes erreicht einen Endpunkt; nachgerechnet am 260814-1852 über alle siebzehn Knoten. Der Zweig `START → SOFORT → LISTE` berührt den Durchlauf nicht und endet deshalb auch nicht mit ihm — das ist C3.2.
+**Die Rückkehr aus dem Abstieg ist die Kante, die das Bild teuer macht, und sie gehört dazu.** Ein Zähler, der einfache Kreise aufzählt, findet hier sieben und nicht drei, und die Rechnung dahinter ist nicht drei plus zwei. Zwei Kreise sind die inneren Wiederholungen ohne Abstieg: `noch ein Eintrag im Stapel? — nein` zurück auf den Stapel, und `ist es ein Ordner? — nein` zurück auf die Einträge. Die übrigen fünf laufen über den Abstieg, und vier davon über die Rückkehr `war es der Ordner des angezeigten Ordners? — nein`; sie unterscheiden sich darin, auf welchem Weg der Ordner fertig wurde — über einen leeren Stapel, über eine symbolische Verknüpfung, über einen Ordner, der sich nicht öffnen ließ, und über einen abgearbeiteten Abstieg. Der fünfte läuft über den Abstieg, ohne die Rückkehr zu berühren. Jeder der sieben hat einen Ausgang, und jeder Knoten des Bildes erreicht einen Endpunkt; nachgerechnet am 260814-1950 über alle neunzehn Knoten und siebenundzwanzig Kanten. Der Zweig `START → SOFORT → LISTE` berührt den Durchlauf nicht und endet deshalb auch nicht mit ihm — das ist C3.2.
+
+## Die Rückschritt-Taste und was sie erreicht
+
+Das dritte Bild zeigt die eine Fallunterscheidung dieser Runde, deren falscher Zweig Dateien wegräumt. Es steht hier, weil die Regel zehn Abnahmekriterien trägt — C1.14 bis C1.20 und C6.9 bis C6.11 —, vom Zustand abhängt und in keiner Übersicht der Anwendung zu sehen ist (C1.19): der Nutzer lernt sie am laufenden Bündel, und wer sie baut, hat nichts als den Text. Die zweite Bewertung hat das Fehlen dieses Bildes eigens angemerkt, und sie hat recht behalten — beim Zeichnen sind zwei Fehler aufgefallen, die im Text standen.
+
+**Der erste war ein Widerspruch zwischen zwei Kriterien.** C6.10 sagte, die Fallunterscheidung hänge allein daran, ob ein Filtertext steht. Aus dieser einen Größe ist C1.18 nicht zu entscheiden: wer drei Zeichen tippt und die Taste hält, hat nach dem dritten Anschlag keinen Filtertext mehr, und der vierte träfe auf die alte Bedeutung. Es sind zwei Größen, und die zweite steht bereit — AppKit meldet an jedem Tastenereignis, ob es aus einer Wiederholung stammt. C6.10 nennt sie jetzt.
+
+**Der zweite war eine Lücke, die niemand vorgelegt hatte.** Die zweite Größe darf nicht „stammt der Anschlag aus einer Wiederholung" lauten, sondern muss lauten „stammt er aus einer Wiederholung, die bei stehendem Filtertext begann". Ohne den Zusatz hörte auch ein gehaltener Rückschritt ohne jeden Filtertext nach dem ersten Anschlag auf zu räumen, und das änderte das heutige Verhalten, das C1.16 ausdrücklich unangetastet lässt. Der Baum liest heute nichts über Wiederholungen (siehe die elfte Feststellung der Ausgangslage), also ist jede Wirkung dieser Größe neu und keine bestehende. Das neue Kriterium C1.20 hält die Grenze fest.
+
+```mermaid
+flowchart TD
+    DRUCK(["ein Druck auf eine Loeschtaste"])
+    BEREICH{"in welchem Bereich<br/>wirkt er?"}
+    TASTE{"welche Taste?"}
+
+    subgraph NACKT["die nackte Rueckschritt-Taste im Dateifenster"]
+        direction TB
+        FILTER{"steht ein Filtertext?"}
+        WDH{"stammt der Anschlag aus einer Wiederholung,<br/>die bei stehendem Filtertext begann?"}
+    end
+
+    ZURUECKN(["das letzte Zeichen faellt weg, die Liste waechst<br/>um die Eintraege, die wieder passen"])
+    NICHTS(["nichts: kein Auftrag, keine Meldung —<br/>erst ein neuer Druck raeumt"])
+    PAPIER(["in den Papierkorb, ohne Rueckfrage"])
+    ENDG(["endgueltig loeschen, nach der einen Rueckfrage"])
+    LESEZ(["das Lesezeichen faellt weg"])
+
+    DRUCK --> BEREICH
+    BEREICH -->|"Lesezeichenleiste: ctrl+delete"| LESEZ
+    BEREICH -->|Dateifenster| TASTE
+    TASTE -->|"delete, ohne Zusatztaste"| FILTER
+    TASTE -->|"cmd+delete"| PAPIER
+    TASTE -->|"f8 und opt+cmd+delete"| ENDG
+    FILTER -->|ja| ZURUECKN
+    FILTER -->|nein| WDH
+    WDH -->|ja| NICHTS
+    WDH -->|nein| PAPIER
+```
+
+**Das Bild ist ein Entscheidungsbaum ohne Kreis, mit zehn Knoten und zehn Kanten.** Eine Quelle, fünf Senken, größter Ausgangsgrad 3 an `welche Taste?`, größter Eingangsgrad 2 am Papierkorb, kein Knoten ohne Weg zu einem Ende. Nachgerechnet am 260814-1950. Vier Wege führen durch den Unterbaum, und jeder trägt seine eigenen Kriterien:
+
+| Weg durch das Bild | Was der Nutzer tut | Kriterien |
+|---|---|---|
+| `delete` → Filtertext steht → Zeichen fällt weg | einen Vertipper berichtigen | C1.14, C1.15, C6.9 |
+| `delete` → kein Filtertext → keine Wiederholung → Papierkorb | eine Datei wegräumen | C1.16 |
+| `delete` → kein Filtertext → Wiederholung nach stehendem Filtertext → nichts | die Taste zu lange halten | C1.18 |
+| `delete` → kein Filtertext → Wiederholung ohne je stehenden Filtertext → Papierkorb | mehrere Dateien am Stück wegräumen | C1.20 |
+
+**Die drei übrigen Löschwege sind eingezeichnet, damit sichtbar bleibt, dass die Regel sie nicht berührt** (C6.11). `cmd+delete` erreicht den Papierkorb an der Fallunterscheidung vorbei und hält den Weg dorthin in jeder Lage offen (C1.17). `f8` und `opt+cmd+delete` löschen endgültig und zeigen dabei die eine Rückfrage, die dieses Projekt kennt. `ctrl+delete` wirkt in der Lesezeichenleiste, also in einem anderen Wirkungsbereich; es steht im Bild als abgehende Kante des ersten Knotens und nicht im Unterbaum.
 
 ---
 
@@ -205,11 +264,13 @@ flowchart TD
 
 Jedes Kriterium trägt, wie es nachzuweisen ist. **(Probe)** heißt: eine Prüfung im Baum weist es nach, ein Agent kann es abnehmen. **(Bündel)** heißt: es ist am laufenden `KRK.app` im Vordergrund zu sehen, und das ist Nutzerarbeit; jedes Bündelkriterium nennt die Beobachtung, mit der es abgenommen wird. Ein Kriterium mit beiden Kennzeichnungen hat eine Hälfte, die eine Probe deckt, und eine, die sie nicht deckt.
 
-Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese Kennzeichnung nicht führte; die Runde 8 hat sie geführt und ist damit durchgekommen. Das ist der Grund, warum sie hier steht.
+**Am 260814-1950 sind es 75 Kriterien.** 65 tragen allein **(Probe)**, zwei allein **(Bündel)**, acht beides; zehn haben damit einen Bündelanteil und sind Nutzerarbeit. Die Aufteilung über die sechs Fähigkeiten: C1 zwanzig, C2 dreizehn, C3 vierzehn, C4 zehn, C5 sieben, C6 elf. Diese Zahlen laufen dem Dokument hinterher, sobald jemand ein Kriterium hinzufügt; nachzuzählen sind sie an der Datei und nicht an diesem Absatz.
+
+Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md:95`), weil ihr Spec diese Kennzeichnung nicht führte. Die Runde 8 hat sie geführt und ihre elf Beobachtungen mit Bündelanteil sämtlich abgenommen (`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md:163`); sie ist die bislang einzige Runde, die kohärent schließt. Das ist der Grund, warum die Kennzeichnung hier steht.
 
 ### C1: Tippen filtert die sichtbare Liste des Tabs
 
-**Beschreibung:** Ein getipptes Zeichen ohne Zusatztaste verkürzt die Liste des sichtbaren Tabs auf die Einträge, deren Name die getippte Folge an irgendeiner Stelle trägt. Der Filtertext gehört dem Tab, steht bis der Nutzer ihn löscht, und ist in der Statuszeile zu lesen, solange er steht. Ordner bleiben dabei sichtbar, damit die Navigation nicht abbricht. Solange ein Filtertext steht, nimmt die nackte Rückschritt-Taste sein letztes Zeichen zurück und räumt nichts in den Papierkorb.
+**Beschreibung:** Ein getipptes Zeichen ohne Zusatztaste verkürzt die Liste des sichtbaren Tabs auf die Einträge, deren Name die getippte Folge an irgendeiner Stelle trägt. Der Filtertext gehört dem Tab, steht bis der Nutzer ihn löscht, und ist in der Statuszeile zu lesen, solange er steht. Ordner bleiben dabei sichtbar, damit die Navigation nicht abbricht. Solange ein Filtertext steht, nimmt die nackte Rückschritt-Taste sein letztes Zeichen zurück und räumt nichts in den Papierkorb; eine Wiederholung, die bei stehendem Filtertext begann, trägt nicht über diese Grenze.
 
 **Abnahmekriterien:**
 1. Ein Zeichen ohne Zusatztaste, das keiner Funktion gehört, hängt im Dateifenster an den Filtertext des sichtbaren Tabs an. Die Auswahl springt nicht. **(Probe)**
@@ -229,8 +290,9 @@ Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese 
 15. **Steht ein Filtertext, erreicht die nackte Rückschritt-Taste `in_papierkorb` nicht.** Es entsteht kein Auftrag der Art `InDenPapierkorb`, und kein Eintrag wird geräumt. Dieses Kriterium steht eigens da, weil es die gefährliche Richtung der Fallunterscheidung ist: `delete` trägt heute „In den Papierkorb räumen" und das Räumen läuft ohne Rückfrage. **(Probe** für die Regel, **Bündel** für den Tastendruck — **Beobachtung:** in einem Prüfordner eine entbehrliche Datei auswählen, drei Zeichen tippen und dreimal die Rückschritt-Taste drücken; der Filtertext verschwindet Zeichen für Zeichen, und die Datei liegt danach noch da**)**
 16. Steht kein Filtertext, wirkt die nackte Rückschritt-Taste unverändert und räumt in den Papierkorb. An ihrer bisherigen Bedeutung ändert diese Runde nichts. **(Probe)**
 17. `cmd+delete` räumt in jeder Lage in den Papierkorb, auch bei stehendem Filtertext. Der Weg zum Papierkorb ist damit nie versperrt. **(Probe** für die Regel, **Bündel** für den Tastendruck — **Beobachtung:** einen Filtertext tippen, einen Treffer auswählen und `cmd+delete` drücken; die Datei geht in den Papierkorb, der Filtertext steht weiter**)**
-18. Ein gehaltener Rückschritt, der den Filtertext leert, räumt nicht weiter: die Tastenwiederholung endet an dieser Grenze, und erst ein neuer Druck erreicht den Papierkorb. **(Probe** für die Regel, **Bündel** für den Tastendruck — **Beobachtung:** eine entbehrliche Datei auswählen, drei Zeichen tippen und die Rückschritt-Taste gedrückt halten; der Filtertext leert sich, und die Datei liegt danach noch da**)** — hängt an `decisions/260814-1852_o_raeumt-ein-gehaltener-rueckschritt-weiter-wenn-der-filtertext-leer-wird.md`
+18. Ein gehaltener Rückschritt, der den Filtertext leert, räumt nicht weiter: die Tastenwiederholung endet an dieser Grenze, und erst ein neuer Druck erreicht den Papierkorb. Nutzerentscheid vom 260814-1910, `decisions/260814-1852_a_raeumt-ein-gehaltener-rueckschritt-weiter-wenn-der-filtertext-leer-wird.md`, Möglichkeit 2. **(Probe** für die Regel, **Bündel** für den Tastendruck — **Beobachtung:** eine entbehrliche Datei auswählen, drei Zeichen tippen und die Rückschritt-Taste gedrückt halten; der Filtertext leert sich, und die Datei liegt danach noch da**)**
 19. Die Belegungsansicht, das Hauptmenü und die Markdown-Ausgabe führen für die Rückschritt-Taste weiter genau einen Eintrag, „In den Papierkorb räumen". Die Rücknahme eines Zeichens ist keine zweite Funktion und bekommt keine eigene Zeile. **(Probe)**
+20. Eine Tastenwiederholung, die **ohne** Filtertext begonnen hat, räumt weiter in den Papierkorb, so oft sie wiederholt. Die Grenze aus C1.18 gilt allein für eine Wiederholung, die bei stehendem Filtertext begann; ohne diese Unterscheidung änderte diese Runde das Verhalten, das C1.16 unangetastet lässt. Der Baum liest heute nichts über Wiederholungen, also ist jede Wirkung dieser Größe neu. **(Probe** für die Regel, **Bündel** für den Tastendruck — **Beobachtung:** ohne Filtertext in einem Prüfordner mit mehreren entbehrlichen Dateien die Rückschritt-Taste gedrückt halten; es wandert mehr als eine Datei in den Papierkorb**)**
 
 **Getroffene Festlegungen:**
 - **Teilzeichenfolge statt Namensanfang.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_passt-der-filter-auf-den-namensanfang-oder-auf-jede-stelle-des-namens.md`, Möglichkeit 2. Wörtlich: „In jedem Fall muss die Suche Substrings suchen."
@@ -254,7 +316,7 @@ Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese 
 10. `Eintrag` bekommt kein Pfadfeld. Jede gezeigte Zeile liegt im angezeigten Ordner, und `kommandos::operationen::betroffene` baut ihre Pfade weiter als `ordner.join(&eintrag.name)`, unverändert. **(Probe)**
 11. `angezeigtedatei::welche` bekommt keine dritte Quelle und bleibt die eine Rechnung für den Begriff „die angezeigte Datei". Der Ordnersprung `OrdnerDerDatei` aus der Runde 6 bleibt unangetastet. **(Probe)**
 12. Die eingestellte Sortierung bleibt die Ordnung der Liste, und Ordner stehen weiter vorn. Es entsteht keine Ordnung nach Passgenauigkeit. **(Probe)**
-13. Eine symbolische Verknüpfung auf einen Ordner ist bei eingeschaltetem „Deep" nur dann zu sehen, wenn ihr eigener Name den Filtertext trägt. Der Durchlauf steigt nicht in sie hinab und meldet für sie „kein Treffer darunter"; ist „Deep" aus, bleibt sie sichtbar wie jeder Ordner (C1.6). Beide Bilder fragen dafür dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf. **(Probe)**
+13. Eine symbolische Verknüpfung auf einen Ordner ist bei eingeschaltetem „Deep" nur dann zu sehen, wenn ihr eigener Name den Filtertext trägt. Trägt er ihn, entscheidet der Name allein und der Durchlauf läuft für sie nicht (C3.14); trägt er ihn nicht, läuft er, steigt nicht in sie hinab und meldet „kein Treffer darunter". Ist „Deep" aus, bleibt sie sichtbar wie jeder Ordner (C1.6). Die ersten beiden Bilder fragen dafür dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf. **(Probe)**
 
 **Getroffene Festlegungen:**
 - **Ein Ankreuzfeld und keine Tastenkombination.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_welche-tastenkombination-schaltet-die-tiefe-suche.md`. `shift+cmd+f`, `opt+cmd+f`, `ctrl+cmd+f` und der nackte Tabulator bleiben frei.
@@ -264,12 +326,12 @@ Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese 
 
 ### C3: Der Durchlauf über den Unterbaum
 
-**Beschreibung:** Der Durchlauf entscheidet je Ordner des angezeigten Ordners, ob unter ihm ein Treffer liegt. Er läuft auf einem eigenen Faden, liefert seine Befunde gestückelt, hört je Ordner beim ersten Treffer auf und lässt sich anhalten. Er hat keine Tiefengrenze und keinen Deckel auf die Trefferzahl, und er steigt nicht in symbolische Verknüpfungen hinab.
+**Beschreibung:** Der Durchlauf entscheidet je Ordner des angezeigten Ordners, dessen eigener Name den Filtertext nicht trägt, ob unter ihm ein Treffer liegt. Er läuft auf einem eigenen Faden, liefert seine Befunde gestückelt, hört je Ordner beim ersten Treffer auf und lässt sich anhalten. Er hat keine Tiefengrenze und keinen Deckel auf die Trefferzahl, und er steigt nicht in symbolische Verknüpfungen hinab.
 
 **Abnahmekriterien:**
 1. Der Durchlauf läuft nicht auf dem Hauptfaden und liefert gestückelt an ihn, auf derselben Bauart wie der vorhandene Lesevorgang: Stapel zu 1.024 Einträgen, Kanäle mit der Kapazität eines Stapels. Eine zweite Lesemechanik entsteht nicht. **Wie viele Fäden und Kanäle es sind, sagt dieser Spec nicht**; das entscheidet der Planner, und kein Kriterium hängt an der Zahl. **(Probe)**
-2. Die Dateien des angezeigten Ordners stehen sofort und warten nicht auf den Durchlauf. Über sie entscheidet ihr Name allein. **(Probe)**
-3. Ein Ordner erscheint, sobald der erste Treffer unter ihm gefunden ist. Der Durchlauf hört für diesen Ordner damit auf und liest den Rest unter ihm nicht. **(Probe)**
+2. Die Dateien des angezeigten Ordners und die Ordner, deren eigener Name den Filtertext trägt, stehen sofort und warten nicht auf den Durchlauf. Über sie entscheidet ihr Name allein. **(Probe)**
+3. Ein Ordner, dessen eigener Name den Filtertext nicht trägt, erscheint, sobald der erste Treffer unter ihm gefunden ist. Der Durchlauf hört für diesen Ordner damit auf und liest den Rest unter ihm nicht. **(Probe)**
 4. Der Abbruch greift innerhalb von zwei Stapeln, wie beim vorhandenen Lesevorgang, und er wird an der Stapelgrenze geprüft und nicht beim Absteigen. Ein Ordner mit vielen gewöhnlichen Einträgen und ohne einen einzigen Unterordner ist davon nicht ausgenommen. **(Probe** mit einem Prüfordner ohne Unterordner**)**
 5. `Esc` beendet einen laufenden Durchlauf, indem es den Filtertext löscht; ohne Filtertext hat der Durchlauf keinen Gegenstand. Ein eigener Rang für das Anhalten entsteht nicht. **(Probe)**
 6. Ein weiteres getipptes Zeichen bricht den laufenden Durchlauf ab und stößt einen neuen an. Je Tab läuft nie mehr als einer. **(Probe)**
@@ -279,7 +341,8 @@ Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese 
 10. Ein Ordner, den der Durchlauf nicht öffnen kann, gilt als „kein Treffer darunter", hält den Durchlauf nicht an und erzeugt keine Meldung. **(Probe)**
 11. Während der Durchlauf läuft, wächst die Liste, und die Anzeige springt dabei nicht. Die Auswahl bleibt auf dem Eintrag, auf dem sie stand, solange es ihn noch gibt. **(Bündel** — **Beobachtung:** in einem Ordner mit mehreren tausend Einträgen unter dem Benutzerordner „Deep" einschalten und einen Filtertext tippen; die Zeilen kommen nach und nach dazu, der Bildlauf bleibt stehen, und die Auswahl wandert nicht**)**
 12. Der Durchlauf hält KRK nicht an. Tastenbefehle, Bildlauf, der Wechsel in einen anderen Tab und der Wechsel in ein anderes Dateifenster wirken weiter. **(Bündel** — **Beobachtung:** während eines Durchlaufs über einen großen Baum mit den Pfeiltasten durch die Liste gehen und mit dem Tabbefehl in einen anderen Tab wechseln; beides antwortet ohne Verzug**)**
-13. Der Durchlauf entscheidet jeden Ordner mit einem von zwei Befunden, und der negative entsteht auf drei Wegen: der Ordner ist abgearbeitet und trug keinen Treffer, er ließ sich nicht öffnen (C3.10), oder er ist eine symbolische Verknüpfung (C3.9). „Kein Treffer darunter" ist von „noch nicht entschieden" unterschieden; der Befund beendet den Durchlauf für diesen Ordner, und der Ordner erscheint danach auf keinem Weg mehr. **(Probe** über alle drei Wege**)**
+13. Der Durchlauf entscheidet jeden Ordner, für den er läuft, mit einem von zwei Befunden, und der negative entsteht auf drei Wegen: der Ordner ist abgearbeitet und trug keinen Treffer, er ließ sich nicht öffnen (C3.10), oder er ist eine symbolische Verknüpfung (C3.9). „Kein Treffer darunter" ist von „noch nicht entschieden" unterschieden. Der Befund beendet den Durchlauf für diesen Ordner und beantwortet damit die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit nein; **über die Sichtbarkeit entscheidet er nicht.** Sie ergibt sich im ersten Bild aus Name und Befund zusammen, und ein Ordner, für den der Durchlauf läuft, trägt den Filtertext in seinem Namen nicht — er fällt also weg (C2.6). **(Probe** über alle drei Wege**)**
+14. Für einen Ordner, dessen eigener Name den Filtertext trägt, läuft kein Durchlauf. Seine Sichtbarkeit steht mit dem Namen fest (C2.5, C2.8, C2.13), und ein Befund über seinen Unterbaum änderte sie nicht. **(Probe** über die Zahl der angestoßenen Durchläufe: ein Prüfordner, dessen sämtliche Unterordner den Filtertext im Namen tragen, liest keinen Unterbaum**)**
 
 **Getroffene Festlegungen:**
 - **Verknüpfungen werden nicht verfolgt.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_steigt-die-tiefe-suche-in-symbolische-verknuepfungen-hinab.md`, Möglichkeit 1. Der Durchlauf endet damit ohne eine mitgeführte Menge besuchter Ordner, und jede Datei erscheint höchstens einmal.
@@ -332,8 +395,8 @@ Die Runde 9 hat 21 Kriterien ohne vollen Beleg geschlossen, weil ihr Spec diese 
 7. Das Stapelumbenennen holt seine Namen aus derselben Auswahl und prüft Kollisionen weiter gegen `alle_namen`, das über den vollen Bestand läuft. Es bekommt keine eigene Regel. **(Probe)**
 8. Was für den Filter gilt, gilt unverändert für das Ein- und Ausblenden versteckter Dateien. Es entstehen keine zwei Regeln für denselben Vorgang, sondern ein zweiter Prüfschritt in derselben Sicht. **(Probe)**
 9. Bei stehendem Filtertext stellt die nackte Rückschritt-Taste keinen Auftrag der Art `InDenPapierkorb`. Weder eine Auswahl noch eine Markierung wird dabei angefasst, und `betroffene` wird für diesen Tastendruck nicht befragt. **(Probe)**
-10. Die Fallunterscheidung hängt allein daran, ob ein Filtertext steht — nicht daran, ob er Treffer hat, ob eine Auswahl besteht oder ob „Deep" an ist. Ein Filtertext ohne Treffer schützt genauso wie einer mit Treffern. **(Probe)**
-11. Die übrigen Löschwege bleiben unberührt: `cmd+delete` räumt, `f8` und `opt+cmd+delete` löschen endgültig nach ihrer einen Rückfrage, und das Löschen in der Lesezeichenleiste über `ctrl+delete` ist nicht betroffen, denn die Regel gilt im Dateifenster. **(Probe)**
+10. Die Fallunterscheidung hängt an zwei Größen und an keiner dritten: ob ein Filtertext steht, und ob der Anschlag aus einer Tastenwiederholung stammt, die bei stehendem Filtertext begann (C1.18, C1.20). Sie hängt **nicht** daran, ob der Filtertext Treffer hat, ob eine Auswahl besteht oder ob „Deep" an ist. Ein Filtertext ohne Treffer schützt genauso wie einer mit Treffern. Das dritte Bild zeigt beide Größen und die vier Wege, die sie aufspannen. **(Probe)**
+11. Die übrigen Löschwege bleiben unberührt: `cmd+delete` räumt, `f8` und `opt+cmd+delete` löschen endgültig nach ihrer einen Rückfrage, und das Löschen in der Lesezeichenleiste über `ctrl+delete` ist nicht betroffen, denn die Regel gilt im Dateifenster. Das dritte Bild zeichnet alle drei als Wege ein, die den Unterbaum der Fallunterscheidung nicht berühren. **(Probe)**
 
 **Getroffene Festlegungen:**
 - **Die bestehende Regel bleibt, und die Statuszeile sagt es.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_was-geschieht-mit-einer-markierung-die-der-filter-ausblendet.md`, Möglichkeit 2. Verworfen sind das Aufheben der Markierung bei jeder Filteränderung und das Freistellen markierter Einträge vom Filter.
@@ -382,6 +445,7 @@ An die Stelle einer Zusage treten drei ohne Messstrecke prüfbare Kriterien, und
 - **Wo der Prüfschritt des Filters sitzt.** `anhaengen` und `sicht_neu_aufbauen` bauen die Sichtreihenfolge; ein Namensfilter ist dort ein Prüfschritt mehr. Ob der Filtertext dafür in das `Ordnermodell` gereicht oder die Sicht von außen gerechnet wird, entscheidet der Planner.
 - **Wie der Durchlauf gebaut ist.** Ein Faden je Tab oder ein Faden je Ordner, ein Kanal oder mehrere, wie die Befunde zugeordnet werden. Der Spec verlangt allein die Bauart des vorhandenen Lesevorgangs und keine zweite Mechanik daneben. Weder das zweite Bild noch C3.1 nehmen die Zahl vorweg; beide sagen nur, dass der Durchlauf nicht auf dem Hauptfaden läuft und gestückelt liefert.
 - **Wo die Fallunterscheidung der Rückschritt-Taste beantwortet wird.** Die Runde 7 hat mit `crates/krk-ui/src/kommandos/zulaessigkeit.rs` die Stelle gebaut, an der eine solche Frage einmal beantwortet und von zwei Fragern gelesen wird; ob die Regel dorthin gehört oder in den Zweig des Befehls, entscheidet der Planner. Der Spec verlangt allein, dass es eine Stelle ist und nicht zwei.
+- **Woher die zweite Größe der Fallunterscheidung kommt und wo sie gehalten wird.** `isARepeat` steht an jedem Tastenereignis; die Frage aus C1.18 und C1.20 lautet aber, ob die Wiederholung bei stehendem Filtertext begann, und das ist ein Bit mehr, als das Ereignis mitbringt. Ob es an der Fallunterscheidung, am Tab oder am Ereignisabgriff gehalten wird, entscheidet der Planner; der Spec verlangt allein, dass es eine Größe ist und kein Zeitgeber (C1.5).
 - **Ob und wie der Durchlauf `Schwungleser` benutzt.** Die Hülle steht in `krk-core/src/verzeichnis/sys.rs`.
 - **Wie die Statuszeile ihren Text zusammensetzt** und aus welchen Quellen der neue Rang seine drei Bestandteile bekommt.
 - **Der Name der neuen `Kommando`-Variante, der Kennung in `default-keymap.toml` und des Menüeintrags.** Die Aufschrift des Kästchens ist mit „Deep" gesetzt; die Kennung ist es nicht.
@@ -390,32 +454,32 @@ An die Stelle einer Zusage treten drei ohne Messstrecke prüfbare Kriterien, und
 
 ## Offene Nutzerentscheidungen
 
-Fünf Fragen sind offen. Keine hält einen Planschritt auf, jede bindet die Umsetzung. Der Spec fährt bei allen fünf auf der Empfehlung des jeweiligen Datensatzes und nennt an jedem betroffenen Kriterium, was sich mit einer anderen Antwort ändert. Die vierte Zeile ist neu: die Antwort auf die Rückschritt-Taste vom 260814-1845 hat sie aufgeworfen, und ohne sie bliebe der gefährlichste Fall der neuen Regel ungeregelt.
+Vier Fragen sind offen. Keine hält einen Planschritt auf, jede bindet die Umsetzung. Der Spec fährt bei allen vier auf der Empfehlung des jeweiligen Datensatzes und nennt an jedem betroffenen Kriterium, was sich mit einer anderen Antwort ändert. **Es waren fünf.** Die fünfte, die Tastenwiederholung, hat der Nutzer am 260814-1910 beantwortet; ihr Datensatz trägt seither `_a_`, und sie steht in dieser Tabelle nicht mehr. Verbindlich ist der Dateibestand: `ls decisions/*_o_*.md`.
 
 | Frage | Datensatz | Spec fährt auf | Betrifft |
 |---|---|---|---|
 | Wo steht die Filterzahl in der Rangfolge der einen Statuszeile? | `decisions/260814-1552_o_wo-steht-die-filterzahl-…` | über dem Markierungsstand | C4.1 |
 | Bleibt der Filtertext bei einem Ordnerwechsel stehen, wenn „Deep" aus ist? | `decisions/260814-1830_o_bleibt-der-filtertext-…` | nein, geleert | C1.9 |
 | Gilt das Ankreuzfeld „Deep" je Tab oder je Fenster? | `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-…` | je Tab | C2, C3.7 |
-| Räumt ein gehaltener Rückschritt weiter, wenn der Filtertext leer wird? | `decisions/260814-1852_o_raeumt-ein-gehaltener-rueckschritt-…` | nein, die Tastenwiederholung endet an der Grenze | C1.18 |
 | An welcher Stelle der Bedeutungen von `Esc` steht der Filtertext? | `decisions/260814-1830_o_an-welcher-stelle-…` | zuletzt, nach Blatt und laufender Operation | C1.7, C3.5 |
 
-**Die letzte weicht von einer Vorbelegung ab, der der Nutzer nicht widersprochen hat, und das gehört an den Anfang und nicht in eine Fußnote.** Die Directive sagt, `Esc` nehme „zuerst" den Filtertext zurück. Wir lesen das als Vorrang vor der Bedeutungslosigkeit einer freien Taste und nicht als Vorrang vor dem Abbruch eines laufenden Kopiervorgangs; diese Lesart ist eine Erschließung und keine Aussage des Nutzers. Der Datensatz legt sie ihm vor.
+**Die vierte weicht von einer Vorbelegung ab, der der Nutzer nicht widersprochen hat, und das gehört an den Anfang und nicht in eine Fußnote.** Die Directive sagt, `Esc` nehme „zuerst" den Filtertext zurück. Wir lesen das als Vorrang vor der Bedeutungslosigkeit einer freien Taste und nicht als Vorrang vor dem Abbruch eines laufenden Kopiervorgangs; diese Lesart ist eine Erschließung und keine Aussage des Nutzers. Der Datensatz legt sie ihm vor.
 
 ## Abgeleitet und nicht gefragt
 
-Sechs Festlegungen sind aus dem gewählten Modell abgeleitet und dem Nutzer nicht vorgelegt worden. Jede ist am Spec-Tor überstimmbar.
+Sieben Festlegungen sind aus dem gewählten Modell abgeleitet und dem Nutzer nicht vorgelegt worden. Jede ist am Spec-Tor überstimmbar.
 
-- **Ein Ordner passt, wenn sein eigener Name passt oder ein Treffer unter ihm liegt** (C2.5). Die Alternative wäre, nur den Inhalt zu befragen; dann verschwände bei Filter „src" ausgerechnet der Ordner `src`, dessen Name der Nutzer gerade getippt hat.
+- **Ein Ordner passt, wenn sein eigener Name passt oder ein Treffer unter ihm liegt** (C2.5). Die Alternative wäre, nur den Inhalt zu befragen; dann verschwände bei Filter „src" ausgerechnet der Ordner `src`, dessen Name der Nutzer gerade getippt hat. Daraus folgt die Zuständigkeitsgrenze zwischen den ersten beiden Bildern: der Name entscheidet zuerst, und der Durchlauf wird nur gefragt, wenn der Name nichts hergibt (C3.14). Die zweite Bewertung vom 260814-1938 hat den Widerspruch gefunden, der entstand, als das zweite Bild diese Grenze überschritt.
 - **Ein Ordner, der allein über seinen Namen passt, führt auf eine leere Liste** (C2.8). Die Regel gilt auf jeder Ebene gleich, und das ist ihr Wert. Die Alternative wäre, in einem namentlich getroffenen Ordner den vollen Bestand zu zeigen; dann hinge das Verhalten davon ab, wie der Nutzer in den Ordner gekommen ist, und die Liste sagte nicht mehr, was sie zeigt.
 - **Die Auswahl geht auf die erste sichtbare Zeile, wenn ihre Zeile wegfällt** (C1.11). Es ist das Verhalten, das der Nutzer heute beim Ausblenden versteckter Dateien sieht.
 - **`Esc` schaltet „Deep" nicht ab.** Es löscht den Filtertext, und der Schalter bleibt stehen. Ein Schalter, den eine Taste unbemerkt umlegt, wäre eine zweite Quelle für seinen Stand.
-- **Eine symbolische Verknüpfung auf einen Ordner ist ein Ordner für die Sichtbarkeit und keiner für den Durchlauf** (C2.13). Beide Bilder fragen deshalb dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf, der für sie „kein Treffer darunter" meldet. Die Alternative wäre, sie schon bei der Sichtbarkeit auszunehmen; dann verschwände sie auch bei ausgeschaltetem „Deep", und C1.6 deckte sie nicht mehr.
+- **Eine symbolische Verknüpfung auf einen Ordner ist ein Ordner für die Sichtbarkeit und keiner für den Durchlauf** (C2.13). Die ersten beiden Bilder fragen deshalb dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf, der für sie „kein Treffer darunter" meldet. Die Alternative wäre, sie schon bei der Sichtbarkeit auszunehmen; dann verschwände sie auch bei ausgeschaltetem „Deep", und C1.6 deckte sie nicht mehr.
+- **Die Grenze der Tastenwiederholung gilt nur für eine Wiederholung, die bei stehendem Filtertext begann** (C1.20). Der Nutzer hat am 260814-1910 entschieden, dass die Wiederholung nicht über die Grenze trägt; die Rückfrage, was mit einer Wiederholung geschieht, die nie einen Filtertext gesehen hat, ist ihm nicht vorgelegt worden. Wir lesen C1.16 als bindend: ohne Filtertext ändert diese Runde nichts, und das schließt das Halten der Taste ein. Die Alternative wäre, jede Wiederholung anzuhalten; dann verlöre der Nutzer eine Bedienung, die er heute hat, und die Runde änderte etwas, das sie nicht anfassen wollte.
 - **Die Rücknahme eines Zeichens ist keine zweite Funktion der Rückschritt-Taste** (C1.19). Belegungsansicht, Hauptmenü und Markdown-Ausgabe führen für `delete` weiter einen Eintrag. Die Alternative wäre eine zweite Zeile für dieselbe Taste; die drei Ansichten zeigen je Befehl eine Bedeutung, und eine zweite passte dort nicht hinein. Der Preis ist benannt: die Fallunterscheidung steht damit in keiner Übersicht, und der Nutzer lernt sie am laufenden Bündel.
 
 ## Prüfvorbehalt
 
-Die Ausgangslage ist am 260814-1830 auf dem Stand `43dfe90` am Baum erhoben, und jede Zeilennummer darin ist an der genannten Datei gelesen. Zwei Aussagen dieses Specs sind Erschließungen und keine Messungen, und sie sind so gekennzeichnet, weil ein Plan, der sie für geprüft hält, an der falschen Stelle spart:
+Die Ausgangslage ist am 260814-1830 auf dem Stand `43dfe90` am Baum erhoben, und jede Zeilennummer darin ist an der genannten Datei gelesen. Am 260814-1950 steht HEAD auf `7149869`; die drei Commits dazwischen berühren `crates/` und `resources/` nicht, geprüft mit `git diff --stat 43dfe90..HEAD`. Die Zählungen sind bei dieser Gelegenheit am Baum nachgezählt und stimmen: 83 Einträge in der Belegung, 77 `Kommando`-Varianten, fünf Ränge der Statuszeile, acht Ankreuzfelder der Bereichsleiste, `STAPELGROESSE = 1024`. Zwei Aussagen dieses Specs sind Erschließungen und keine Messungen, und sie sind so gekennzeichnet, weil ein Plan, der sie für geprüft hält, an der falschen Stelle spart:
 
 - **Dass der gefilterte Ordnerbaum billiger ist als die abgelöste flache Trefferliste**, folgt daraus, dass der Durchlauf je Ordner beim ersten Treffer aufhört. Gemessen ist es nicht, und für einen Baum ohne jeden Treffer gilt es nicht: dort liest der Durchlauf alles, wie die flache Liste es getan hätte.
 - **Dass der Filter L2 nicht bricht**, ist nicht gemessen. Der Prüfschritt sitzt im Weg jedes Stapels, und die Zusage hängt am ersten. Der nächste Abnahmelauf beantwortet es.
@@ -423,4 +487,5 @@ Die Ausgangslage ist am 260814-1830 auf dem Stand `43dfe90` am Baum erhoben, und
 ## Reconciliation Log
 
 - 260814-1830 — Spec erstellt. Fünf beantwortete Entscheidungsdatensätze eingearbeitet, vier neue offene Fragen abgelegt, die Directive an den zwei vom Nutzer berichtigten Stellen fortgeschrieben.
+- 260814-1950 — Nachgebessert auf die zweite Bewertung `reviews/260814-1938-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` (Urteil `tangled`, ein substanzieller Befund) und auf die Antwort des Nutzers zur Tastenwiederholung vom 260814-1910. Erstens die Zuständigkeitsgrenze zwischen den ersten beiden Bildern: das zweite Bild trägt jetzt die Bedingung an der Eintrittskante und spricht an seinen Ausgängen einen Befund statt eines Urteils über die Sichtbarkeit aus; C3.13 verliert den Halbsatz, der dagegen stand, und C2.13, C3.2, C3.3 sowie die Beschreibung von C3 sind mitgezogen. Zweitens ein drittes Bild für die Rückschritt-Taste, aus dem zwei Berichtigungen folgen: C6.10 nennt beide Eingangsgrößen statt „allein" der einen, und das neue C1.20 hält fest, dass die Grenze nur für eine Wiederholung gilt, die bei stehendem Filtertext begann. Dazu C3.14 als neues Kriterium, eine elfte Feststellung zur Ausgangslage, die berichtigte Herleitung der sieben Kreise, die auf vier zurückgeführte Tabelle der offenen Fragen und die am Baum nachgezählten Zahlen im Prüfvorbehalt.
 - 260814-1852 — Nachgebessert auf zwei Anlässe. Erstens die Bewertung `reviews/260814-1840-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` (Urteil `tangled`): das zweite Bild ist neu gezeichnet und trägt jetzt den negativen Befund, einen eigenen Stapelknoten für die Abbruchgrenze, einen Fehlschlagzweig für C3.10 und für „Ordner" denselben Schnitt wie das erste Bild; die Aussage über die Zahl der Fäden ist aus dem Bild genommen, und die Kreiszählung der Prosa ist berichtigt. Das erste Bild bleibt unverändert. Zweitens der Nutzerentscheid vom 260814-1845 zur Rückschritt-Taste: elf Abnahmekriterien hinzugefügt (C1.14 bis C1.19, C2.13, C3.13, C6.9 bis C6.11), die Verlustzeile über die Sekundenregel berichtigt, eine zehnte Feststellung zur Ausgangslage aufgenommen und ein neuer offener Datensatz zur Tastenwiederholung abgelegt.

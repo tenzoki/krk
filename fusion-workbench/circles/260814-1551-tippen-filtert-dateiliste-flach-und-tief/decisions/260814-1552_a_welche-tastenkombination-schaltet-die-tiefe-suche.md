@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `resources/default-keymap.toml` (die eine Quelle jeder Belegung); `crates/krk-ui/src/appkit/bereichsleiste.rs` (die acht Ankreuzfelder); `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_c_spec-navigator-geruest.md` (C2, erstes Abnahmekriterium)
 

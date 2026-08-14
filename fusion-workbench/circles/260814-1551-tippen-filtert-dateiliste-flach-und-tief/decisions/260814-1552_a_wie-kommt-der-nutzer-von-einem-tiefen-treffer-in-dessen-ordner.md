@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `crates/krk-ui/src/angezeigtedatei.rs:1-58` (`welche`, die Quelle des Ordnersprungs); `crates/krk-core/src/tasten/belegung.rs:866-880` (`Kommando::OrdnerDerDatei`); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` (die Runde, die den Ordnersprung gebaut hat)
 
