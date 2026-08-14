@@ -47,3 +47,13 @@ Zwei saubere Auflösungen, beide ohne Verschiebung eines Knotens. Entweder bekom
 Nicht einschlägig. Das Urteil lautet *acceptable*, und kein Befund verlangt eine andere Struktur: kein Zyklus in einem Abhängigkeitsgraphen, kein Gott-Knoten, keine fehlende Schicht, die als Knäuel erschiene. N1 bis N5 sind an Ort und Stelle zu beheben, ohne einen Knoten zu verschieben oder eine Kante umzuhängen.
 
 Für das Nutzer-Tor bleibt eine Beobachtung außerhalb der Diagrammprüfung. Dieselbe Fallunterscheidung ist jetzt zum dritten Mal unvollständig gezeichnet worden, und die zwei früheren Beanstandungen sind nie an ihrem Dokument behoben worden; der offene Datensatz dazu ist `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`. Ob eine dritte Beanstandung derselben Art die richtige Antwort ist oder ob die Behebung an einen Planschritt gehört, entscheidet der Nutzer und nicht diese Prüfung.
+
+---
+
+**Abgleich 260814-1002 (reconciler, Runde 9).** Der Befund an diesem Spec ist behoben: der
+Nachtrag vom 260814-0628 trägt beide Zweige an beiden Entscheidungsrauten von Bild 1 und die
+zwei Teilgraphen, und Bild 2 führt die zwei Zettel als Teilzustand mit den vier Wegen heraus.
+Das Muster dahinter — dieselbe unvollständige Fallunterscheidung zum dritten Mal, zweimal
+unbehoben — ist nicht behoben und steht als eigener Datensatz
+(`issues/260814-0628_o_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`,
+zu Recht offen). Keine Aussage dieser Prüfung ist widerlegt.

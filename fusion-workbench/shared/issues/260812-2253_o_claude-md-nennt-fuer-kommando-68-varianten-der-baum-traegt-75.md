@@ -66,3 +66,22 @@ Der Titel bleibt, wie er ist: er benennt den Fehler, nicht den Tagesstand. Wer d
 
 Verwandter Befund derselben Sorte, beim selben Abgleich abgelegt:
 `shared/issues/260813-1345_o_fuenf-stellen-nennen-79-funktionen-und-73-mit-kommando-die-belegung-fuehrt-82-und-76.md`.
+
+---
+
+**Abgleich 260814-1002 (Runde 9).** Der Befund besteht, und die Gegenzahl ist zum vierten Mal
+überholt: `Kommando` trägt **77** Varianten
+(`awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs`, am Stand `79dab20`
+gezählt), `KENNUNGEN` entsprechend 77 Paare (`belegung.rs:579`). `CLAUDE.md:66` nennt weiter
+68. Die Runde 9 hat die eine Variante `Notizzettel` angelegt (`belegung.rs:573`), und der Spec
+sagt den Sprung von 76 auf 77 im Abschnitt zu den vollständigen Fallunterscheidungen zu.
+
+Vier Stände sind es jetzt, die dieser Datensatz nennen müsste: 68 zitiert, 75 beim Ablegen,
+76 in den Runden 7 und 8, 77 heute. Der Titel bleibt, wie er ist — er benennt den Fehler und
+nicht den Tagesstand. Wer die Zeile in `CLAUDE.md` berichtigt, schreibt 77.
+
+**Zwei weitere Zahlen desselben Absatzes sind mit dieser Runde unrichtig geworden**, und beide
+gehören nicht in diesen Datensatz, weil sie andere Stellen betreffen: `CLAUDE.md:11` sagt
+„Vier Runden sind gefahren" mit einer Tabelle von vier Zeilen, während der Baum bei der
+**neunten** steht, und `CLAUDE.md:32` datiert den Projektstand auf 260811-2230. Die Revision
+von `CLAUDE.md` gehört nicht in einen Abgleich; die Häufung ist der Grund, sie anzusetzen.

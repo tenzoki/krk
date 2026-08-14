@@ -87,3 +87,17 @@ Drei Proben am Modell halten es fest (`crates/krk-ui/src/zettelmodell.rs`, Prüf
 nachgezogen (`planning/260814-0656_o_plan-…`, Kopfnotiz vom 260814-0941).
 
 `make check` am 260814-0947 gefahren, Rückgabewert 0, „alle vier gruen".
+
+---
+Abgleich 260814-1002 (reconciler, Runde 9): **die Behebung ist nicht widerlegt, alle vier
+Behauptungen einzeln nachgelesen** am Stand `79dab20`.
+
+- `Zettelmodell::oeffnen` (`crates/krk-ui/src/zettelmodell.rs:173`) setzt das Gelesene nur
+  unter `if !stand.weicht_ab()` und gibt in jedem Fall `&stand.gehalten` heraus.
+- Der Rückgabewert trägt `#[must_use]` mit geschriebener Begründung (`:172`).
+- Beide Aufrufer nehmen ihn: `notizzettel_zeigen` (`appkit/anwendung.rs:3296`) und
+  `zettel_wechseln` (`:3385`, Übernahme in die Fläche bei `:3417-3423`).
+- Die drei Proben stehen im Prüfmodul von `zettelmodell.rs` (`:417`, `:438`, `:456`) und
+  rufen `gesichert` gerade nicht.
+
+`make check` beim Abgleich wiederholt: Rückgabewert 0.

@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (Spec der Runde 9)
 **Cross-references:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (C5); `crates/krk-core/src/ablage/mod.rs` (`Zugang::beiseite_legen`); `crates/krk-core/src/ablage/atomar.rs` (`beiseitepfad`); `crates/krk-core/src/text/datei.rs` (`EDITORGRENZE`, die Prüfung am Deskriptor)
 
@@ -51,3 +51,14 @@ Superseded by:
 
 ---
 Answered: circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md, Abschnitt "Drei Antworten am Spec-Tor" — Möglichkeit 3: den unlesbaren Inhalt über den bestehenden beiseite_legen-Weg beiseitelegen und mit einem leeren Zettel weiterarbeiten.
+
+---
+Implemented: 9362034 — `Zugang::text_laden` (`crates/krk-core/src/ablage/mod.rs:564`) legt den unlesbaren Inhalt über `beiseite_legen` beiseite und liefert einen leeren Zettel samt `Ersetzung`; `EDITORGRENZE` ist die obere Schranke. Möglichkeit 3, wie am 260814-0005 am Spec-Tor gewählt.
+
+**Die vier Ausgänge einzeln nachgelesen** (`mod.rs:572-611`): gültiger Text, fehlende Datei (leerer Zettel ohne Meldung), nicht zu öffnen (leerer Zettel mit Meldung, nichts beiseitezulegen), und `Textstand::Unlesbar` mit `Grund::ZuGross` beziehungsweise `Grund::Beschaedigt` über `beiseite_legen`. Die Aufzählung ist vollständig ohne Auffangzweig.
+
+**Die drei Rahmenbedingungen halten.** Keine Rückfrage entsteht. Der Schreibweg ist der eine bestehende: `nur_benannte_dateien_erreichen_das_atomare_schreiben` (`crates/krk-core/tests/baum.rs:189`) bleibt bei denselben fünf Quelldateien. `beiseite_legen` hat jetzt zwei Aufrufer, `Zugang::laden` (`mod.rs:499`) und `Zugang::text_laden` (`mod.rs:596`), und tastet eine dort liegende ältere Fassung nicht an — `eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen` (`crates/krk-core/tests/ablage.rs:1530`) hält es.
+
+**Die Fehlzählung im Contra von Möglichkeit 3 bleibt hier stehen und ist im Spec berichtigt.** Der Datensatz spricht von einem „sechsten Aufrufer"; es ist der zweite. Die Berichtigung steht in C5 des Spec, und dieser Datensatz behält seinen damaligen Wortlaut als Aufzeichnung seines Standes.
+
+Abgleich 260814-1002 (reconciler, Runde 9), `make check` exit 0 am Stand `79dab20`.

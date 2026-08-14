@@ -1,7 +1,7 @@
 # Implementation Plan: Ein Notizzettel als Blatt am Hauptfenster, zwei Zettel, sichert sich selbst
 
 **Date:** 2026-08-14
-**Status:** Draft
+**Status:** Complete
 **Spec:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Fassung vom 260814-0925, mit dem Nachtrag an C4)
 **Nachgezogen am 260814-0941**, an sechs Stellen und nur an C4 entlang: die Schritte 10 bis 14, der Kasten `zettel_sichern` im Bild der Sicherungsmomente und die Risikozeile zu zwei Instanzen. Anlass sind die zwei Defektdatensätze `issues/260814-0908_*` (hoch) und `issues/260814-0909_*` (mittel) aus der Durchsicht von Turn 1 und der Nachtrag des Spec an C4 vom 260814-0925: der getippte Stand gewinnt, und jeder Sicherungsmoment schreibt jeden abweichenden Zettel. Die Reihenfolge der Arbeit, die Zulässigkeitsregel der achten Runde und der eine `durchgang` beim Beenden sind dabei unangetastet geblieben; die fünf niedrigen Befunde der Durchsicht sind nicht Gegenstand dieses Nachtrags und bleiben offen.
 **Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
@@ -433,7 +433,33 @@ Zwei Datensätze sind bei der Planung entstanden und stehen als eigene Dateien, 
 
 ## Open Questions
 
-- [ ] Die Dateinamen `note-1.txt` und `note-2.txt` sind die Wahl des Planers (Schritt 3). Der Nutzer kann sie am Gate ändern; sie folgen der einwortigen Kleinschreibung der vier bestehenden und trennen die zwei Zettel über die knappste Form, die es gibt.
-- [ ] Die Tabbeschriftungen „Zettel 1" und „Zettel 2" sind die schlichte Nummerierung, die der Spec als Vorbelegung nennt. Am Gate änderbar; benannte Zettel wären eine eigene Fähigkeit und stehen ausdrücklich außerhalb dieser Runde.
+- [x] Die Dateinamen `note-1.txt` und `note-2.txt` sind die Wahl des Planers (Schritt 3). **Am Plan-Tor 260814-0715 vom Nutzer angenommen** (Sitzungsprotokoll, Abschnitt „Plan-Tor"); am Baum gebaut in `crates/krk-core/src/ablage/pfade.rs:162-163`. Der Nutzer kann sie am Gate ändern; sie folgen der einwortigen Kleinschreibung der vier bestehenden und trennen die zwei Zettel über die knappste Form, die es gibt.
+- [x] Die Tabbeschriftungen „Zettel 1" und „Zettel 2" sind die schlichte Nummerierung, die der Spec als Vorbelegung nennt. **Am Plan-Tor 260814-0715 vom Nutzer angenommen**; am Baum gebaut in `crates/krk-ui/src/appkit/blaetter/zettel.rs` (Probe `jeder_zettel_traegt_eine_beschriftung`, `:536`). Am Gate änderbar; benannte Zettel wären eine eigene Fähigkeit und stehen ausdrücklich außerhalb dieser Runde.
 - [ ] Ob die Abschaltung der Textautomatiken bauanhaltend wird, ist offen und bindet Arbeit über diese Runde hinaus: `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/decisions/260814-0656_o_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`. Sie hält keinen Schritt dieses Plans auf.
 - [ ] Der Defekt zur unbelegten Funktion bei eigener `keymap.toml` hält keinen Schritt auf, wohl aber die Abnahme am Gerät des Nutzers: `shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`.
+
+---
+
+## Reconciliation Log
+
+**260814-1002, reconciler, Domäne `code`.** Stand `79dab20`, Sitzungsspanne `6d05bef..HEAD`, sieben Commits. Kein `make bundle`, kein `cargo xtask`; `target/KRK.app` ist unberührt geblieben.
+
+**Alle sechzehn Schritte halten, jeder einzeln gegen die Dateien und Zeilen gelesen, die er selbst nennt.** `make check` beim Abgleich wiederholt: Rückgabewert 0, alle vier grün. Der Status steht damit auf `Complete` und der Dateimarker auf `_c_`; ausstehend ist allein Nutzerarbeit, und die ist kein Planschritt.
+
+| Strang | Schritte | Belege am Baum |
+|---|---|---|
+| A — Ablage | 1–5 | `text::datei::lesen` mit `Textstand`/`Unlesbarkeit` und `rewind` (`krk-core/src/text/datei.rs:411`, `:270`, `:294`, `:473`); `oeffnen` als Übersetzung, Signatur unverändert (`:494`); `atomar::vorbereiten`/`schreiben` auf `&mut impl Read` mit `io::copy` (`ablage/atomar.rs:153`, `:167`, `:156`); `Zettel`, `Datei::ALLE: [Datei; 6]`, `note-1.txt`/`note-2.txt`, `Format` (`ablage/pfade.rs:62`, `:142`, `:162`, `:97`, `:174`); `text_laden`/`text_sichern` mit `debug_assert_eq!` auf `Format` und `Grund::ZuGross` (`ablage/mod.rs:564`, `:622`, `:188`); `beiseite_legen` mit zwei Aufrufern (`:664`, gerufen `:499` und `:596`); TOML-Rundläufe hinter `format() == Format::Toml` (`tests/ablage.rs:105`), sechs neue Zettelproben (`:1353`–`:1567`) |
+| B — Der Befehl | 6–8 | 83 `[[funktion]]`-Blöcke, `notizzettel` mit `f2` und `cmd+k` in einer Zeile, Kopfzahlen auf 83/90 (`resources/default-keymap.toml:34`, `:914`); `Kommando::Notizzettel`, `KENNUNGEN` auf 77, `Wirkungsbereich::Ueberall` (`krk-core/src/tasten/belegung.rs:573`, `:579`, `:782`), `Funktionsbereich::Anwendung` (`krk-ui/src/belegungsmodell.rs:345`); vier Proben (`zulaessigkeit.rs:668`, `:699`, `operationen.rs` `waehrend_eines_blattes_bleibt_es_bei_dem_einen_abbruch`) |
+| C — Das zehnte Blatt | 9–12 | `textautomatik::automatiken_abschalten` mit zwei Aufrufern (`appkit/textautomatik.rs:111`, gerufen `editor.rs:3124` und `blaetter/zettel.rs:470`); `Zettelmodell` mit `Wechsel`, `zu_sichern`, `etwas_zu_sichern` (`krk-ui/src/zettelmodell.rs:60`, `:95`, `:248`, `:262`); `Zettelwaechter` als `NSTextViewDelegate`, `uebernimmt` nimmt `cancelOperation:` und nicht `insertNewline:` (`blaetter/zettel.rs:191`, `:313`); `notizzettel_zeigen` und der eigene Zweig in `kommando_ausfuehren` (`appkit/anwendung.rs:3296`, `:2914`) |
+| D — Sicherung | 13–14 | `zettel_sichern` genau einmal erklärt (`anwendung.rs:3492`) und von genau vier Stellen gerufen (`:884`, `:3408`, `:3595`, `:3947`); `performClose` steht in `fenster_schliessen` hinter dem Sichern (`:3947` vor `:3949`); vier Zählproben (`:6649`, `:6675`, `:6700`, `:6727`) und `die_geschriebene_sitzung_traegt_den_text_eines_zettels_an_keiner_stelle` (`tests/ablage.rs:1353`) |
+| E — Sitzung | 15 | `Sitzung::zettel` vor den drei Tabellen (`krk-core/src/ablage/sitzung.rs:361`); `eine_sitzung_ohne_das_zettelfeld_bleibt_lesbar` (`tests/ablage.rs:1384`) |
+| F — Abschluss | 16 | `die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus` misst an zwei gebauten Flächen gegen einen Zeugen (`appkit/editor.rs:4873`, `:4885`–`:4887`) |
+
+**Die zwei Punkte, die den Abgleich eigens beauftragt haben, halten beide.**
+
+- **In `applicationWillTerminate:` steht genau ein Durchgang.** `wird_beendet` (`anwendung.rs:842`) trägt ein `unter_der_sperre`, und der vierte Sicherungsmoment liegt darin, neben dem Sitzungsschreiber (`:884`). Der Kommentar zum Defekt `260813-0540` steht unverändert darüber (`:845`–`:851`). Nachgezählt und nicht übernommen.
+- **Die drei Zulässigkeitsregeln sind außerhalb der Prüfmodule Byte für Byte unverändert.** `krk-ui/src/kommandos/zulaessigkeit.rs` und `.../operationen.rs` sind gegen `6d05bef` verglichen, jeweils bis zum `#[cfg(test)]` abgeschnitten: 10 718 zu 10 718 und 43 895 zu 43 895 Zeichen, identisch. Geändert sind allein Prüfmodul und Doc-Kommentare.
+
+**Zwei Stellen sind mit dem Nachtrag vom 260814-0941 nicht mitgezogen worden**, beide ohne Widerspruch zum Spec und beide als Datensatz abgelegt (`issues/260814-1002_o_zwei-stellen-des-plans-sind-mit-dem-nachtrag-vom-0941-nicht-mitgezogen-worden.md`): die `**Decidability:**`-Zeile zählt als dritte Eingabe „den offenen Zettel", seit dem Nachtrag ist es der gehaltene Stand **beider** Zettel; und `## Testing Strategy` führt für das Zettelmodell drei Gegenstände auf und kennt den vierten nicht, die Regel „der getippte Stand gewinnt" mit ihren drei Proben.
+
+**Eine im Schritt 11 zugesagte Zählprobe ist nicht gebaut** (`issues/260814-1002_o_zwei-in-c3-zugesagte-proben-stehen-nicht-im-baum.md`). Die Sache selbst hält: `blaetter/zettel.rs` ruft weder Nummernspalte noch Hervorhebung noch Suche, und keine davon steht in seinen `use`-Zeilen.

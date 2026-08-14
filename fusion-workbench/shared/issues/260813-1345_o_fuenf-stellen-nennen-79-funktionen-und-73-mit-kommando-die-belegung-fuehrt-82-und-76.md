@@ -50,3 +50,25 @@ Belegung halten, statt sie im Modulkopf als Zahl zu führen.
 - Verwandt: `shared/issues/260812-2253_o_claude-md-nennt-fuer-kommando-68-varianten-der-baum-traegt-75.md`
   (dieselbe Zahlensorte, andere Datei; jener Datensatz nennt 75 und ist selbst überholt, es sind
   76) und `circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md`.
+
+---
+
+**Abgleich 260814-1002 (Runde 9).** Der Befund besteht unverändert, und die Gegenzahlen im
+Titel sind mit dieser Runde überholt: `resources/default-keymap.toml` führt **83** Funktionen
+(83 `[[funktion]]`-Blöcke), davon **77** mit einem `krk_core::tasten::Kommando` und weiter
+sechs ohne, dazu **90** Kombinationen in den `tasten`-Listen. Am Stand `79dab20` gezählt. Die
+fünf Prosastellen sagen weiter 79 und 73; keine davon ist in dieser Runde angefasst worden.
+
+Wer sie berichtigt, schreibt 83 statt 79 und 77 statt 73.
+
+**Eine sechste Stelle derselben Sorte steht nicht in der Tabelle dieses Datensatzes:**
+`crates/krk-ui/src/belegungsausgabe.rs:256`, „Erste Lage: aus der Belegung entscheidbar, ohne
+Naeherung. 73 der 79". Alle fünf Stellen der Tabelle stehen am 260814 unverändert da, die
+dritte weiterhin unter `menue.rs:799-801`.
+
+**Ein Hinweis für den nächsten Zähler, aus einem Fehlgriff dieses Abgleichs.** Ein `grep` auf
+`79 Funktionen` findet in `menue.rs` nur zwei der drei Stellen: bei `:799-801` liegt der
+Zeilenumbruch zwischen „79" und „Funktionen", und die Zeile heißt dort „als einzige der 79".
+Wer über die Zahl sucht, sucht sie **ohne** ihr Substantiv, sonst zählt er zu wenig. Das ist
+derselbe blinde Fleck, den `CLAUDE.md` für Verweise in Kurzform benennt, nur an einer Zahl
+statt an einem Dateinamen.

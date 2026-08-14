@@ -55,3 +55,14 @@ Der Widerspruch wiegt leichter als der vom 260814-0000 und soll nicht schwerer g
 Nicht einschlägig. Das Urteil lautet *acceptable*, und kein Befund verlangt eine andere Struktur: kein Zyklus, kein Gott-Knoten, keine fehlende Schicht, kein überladenes Bild, kein Parse-Fehler. B1 bis B5 sind Beschriftungen und eine Zahl, an Ort und Stelle zu beheben, ohne einen Knoten zu verschieben oder eine Kante umzuhängen.
 
 Für das Nutzer-Tor bleibt die Beobachtung aus der Prüfung vom 260814-0000 bestehen, in abgeschwächter Form. Der Spec ist nachgezogen worden und trägt beide Zweige an beiden Rauten; der Plan hat die Raute vollständig gezeichnet. Was jetzt noch offen ist, sind zwei Auszählungen (B1, B2), von denen eine den nachgezogenen Spec betrifft und nicht den Plan. Ob die Behebung an einen Planschritt gehört oder als Nachtrag am Dokument läuft, entscheidet der Nutzer; der Eigentümerdatensatz dazu ist `issues/260814-0628_o_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`.
+
+---
+
+**Abgleich 260814-1002 (reconciler, Runde 9).** Keine Aussage dieser Prüfung ist widerlegt.
+Der Arbeitsgraph deckt sich weiterhin Kante für Kante mit den Abhängigkeitszeilen der
+Schrittliste; alle sechzehn Schritte stehen auf `[DONE]` und sind am Baum bestätigt, der Plan
+ist auf `_c_` gezogen. Der eine Befund, der beim Spec lag — die Reihenfolge von Sichern und
+Schließen auf dem `Esc`-Weg —, ist am Baum in der Fassung des Plans gebaut:
+`zettel_blatt_geschlossen` (`crates/krk-ui/src/appkit/anwendung.rs:3586`) räumt Fläche und
+Blattgriff ab und sichert danach, mit geschriebener Begründung. Der Spec bleibt an dieser
+Stelle ungenau, und das ist die bewusste Entscheidung, die das Sitzungsprotokoll festhält.

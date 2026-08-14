@@ -710,3 +710,6 @@
 {"ts":"2026-08-14T07:19:38","event":"turn_end","turn":1,"detail":"16/16 Schritte, 5 Commits, 9 Befunde"}
 {"ts":"2026-08-14T07:19:38","event":"rebalance_artifact","turn":2,"detail":"drei zusammenhaengende Befunde, erst der Spec an C4"}
 {"ts":"2026-08-14T07:19:38","event":"turn_start","turn":2,"detail":"Spec an C4, dann die drei Befunde"}
+{"ts":"2026-08-14T07:50:33","event":"shaper_done","turn":2,"agent":"shaper","detail":"C4 nachgezogen, Zusage jeder abweichende Zettel ergaenzt"}
+{"ts":"2026-08-14T07:50:33","event":"task_done","turn":2,"agent":"coder","detail":"drei Befunde behoben, make check exit 0"}
+{"ts":"2026-08-14T07:50:33","event":"commit","turn":2,"detail":"der getippte Zettelstand ueberlebt eine gescheiterte Sicherung"}

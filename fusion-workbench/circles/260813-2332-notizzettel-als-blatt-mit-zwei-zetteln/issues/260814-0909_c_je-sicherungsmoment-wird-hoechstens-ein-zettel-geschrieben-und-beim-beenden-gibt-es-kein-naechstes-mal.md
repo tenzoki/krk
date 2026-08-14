@@ -80,3 +80,22 @@ Modell fest, ohne Fenster. Der Plan ist an sechs Stellen nachgezogen
 (`planning/260814-0656_o_plan-…`, Kopfnotiz vom 260814-0941).
 
 `make check` am 260814-0947 gefahren, Rückgabewert 0, „alle vier gruen".
+
+---
+Abgleich 260814-1002 (reconciler, Runde 9): **die Behebung ist nicht widerlegt**, am Stand
+`79dab20` einzeln nachgelesen.
+
+- `zu_sichern` (`crates/krk-ui/src/zettelmodell.rs:248`) läuft über `Zettel::ALLE` und
+  liefert eine Aufzählung statt des ersten Treffers; `etwas_zu_sichern` (`:262`) ist daraus
+  abgeleitet (`self.zu_sichern().next().is_some()`) und nicht daneben gebaut.
+- `zettel_sichern` (`appkit/anwendung.rs:3492`) ist weiterhin genau einmal erklärt und wird
+  von genau vier Stellen gerufen (`:884`, `:3408`, `:3595`, `:3947`); die vier Zählproben
+  (`:6649`, `:6675`, `:6700`, `:6727`) sind ohne Anpassung grün.
+- Der eine `durchgang` in `applicationWillTerminate:` steht unverändert
+  (`:842`, ein `unter_der_sperre` bei `:860`), der Kommentar zum Defekt `260813-0540`
+  darüber.
+- Die zweite Hälfte des Datensatzes, die fehlende Meldung beim Beenden, ist als Preis
+  benannt und nicht behoben; der Kommentar am `let _ =` trägt jetzt beide Hälften des
+  Grundes (`:876-884`).
+
+`make check` beim Abgleich wiederholt: Rückgabewert 0.

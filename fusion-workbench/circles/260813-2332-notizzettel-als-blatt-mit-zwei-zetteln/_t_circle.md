@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** active
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md
+**Active spec/plan:** circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md
 **Active session history:** circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md
 
 ---

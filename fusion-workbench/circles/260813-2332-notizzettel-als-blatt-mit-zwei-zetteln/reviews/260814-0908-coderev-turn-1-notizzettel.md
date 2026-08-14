@@ -235,3 +235,40 @@ gehört in den Spec oder in einen Entscheid; er hält die Runde nicht auf, weil 
 Fall betrifft, den der Nutzer selbst herstellen muss.
 
 **Aufräumen, in einem Zug:** Befunde 5 bis 9.
+
+---
+
+## Abgleich 260814-1002 (reconciler, Runde 9)
+
+**Keine Aussage dieser Durchsicht ist widerlegt.** Stand `79dab20`, `make check` wiederholt:
+Rückgabewert 0. Angetastet ist an den Befunden nichts; was folgt, sind Bestätigungen und ein
+Nachtrag zum Stand.
+
+**Die eine Zahl, die zu zählen war, stimmt.** In `wird_beendet`
+(`crates/krk-ui/src/appkit/anwendung.rs:842`) steht genau ein `unter_der_sperre` (`:860`), und
+der vierte Sicherungsmoment liegt darin (`:884`). Der Kommentar zum Defekt `260813-0540`
+steht unverändert darüber. Nachgezählt und nicht übernommen.
+
+**Die vier teuren Zusagen halten, und die erste ist stärker belegt als die Durchsicht sagt.**
+`kommandos/zulaessigkeit.rs` und `kommandos/operationen.rs` sind gegen `6d05bef` verglichen,
+jeweils bis zum `#[cfg(test)]` abgeschnitten: 10 718 zu 10 718 und 43 895 zu 43 895 Zeichen,
+Byte für Byte identisch. Die Durchsicht sagt „keine Zeile geändert"; das ist gemessen und
+nicht nur gelesen.
+
+**Der Marker-Hinweis am Schluss ist erledigt.** Beide Entscheide des Circles stehen jetzt auf
+umgesetzt: `decisions/260814-0656_i_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`
+mit `Implemented: bfea397`, wie die Durchsicht es vorschlägt, und daneben
+`decisions/260813-2348_i_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md`
+mit `Implemented: 9362034` — den zweiten nennt die Durchsicht nicht, er ist mit Strang A
+ebenso vollständig umgesetzt.
+
+**Alle neun Befunde sind am Stand `79dab20` erneut nachgesehen.** Befund 1 und 2 sind mit
+`79dab20` behoben, ihre Datensätze geschlossen und die Behebung hier nicht widerlegt. Die
+sieben übrigen stehen unverändert im Baum und sind zu Recht offen; jeder ist an der Stelle
+nachgelesen, die sein Datensatz nennt. Befund 4 ist dabei der teuerste und weiterhin da: die
+Handlungsanweisung an `editor.rs:4854` schickt den nächsten Bauer nach `textflaeche_bauen`.
+
+**Was die Durchsicht ausdrücklich nicht leistet, leistet dieser Abgleich auch nicht.** Kein
+Bündelbau, kein Vordergrundlauf, keine der 29 Zusagen der zweiten Kriterienlisten.
+
+Belege im Einzelnen: `history/260814-1002-reconciliation.md`.

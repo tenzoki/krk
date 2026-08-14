@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner (Plan der Runde 9)
 **Cross-references:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (C3, Festlegung „Diese Zusage ist die einzige der Runde, für die der Baum heute nicht von selbst redet"); `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` (Schritte 9 und 16); `crates/krk-ui/src/appkit/editor.rs` (`textflaeche_bauen`, `EINSTELLUNGEN`); `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` (dieselbe Frage an einer anderen Gewohnheit)
 
@@ -54,3 +54,12 @@ Superseded by:
 
 ---
 Answered: circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md, Abschnitt "Plan-Tor" — Möglichkeit 2: eine Zählprobe am Baum, jede Datei mit setEditable(true) nennt auch automatiken_abschalten. Der blinde Fleck der Nadel gehört benannt.
+
+---
+Implemented: bfea397 — `jede_bearbeitbare_textflaeche_schaltet_die_automatiken_ab` (`crates/krk-ui/src/appkit/textautomatik.rs:271`) zählt jede Quelldatei, die eine `NSTextView` anlegt und in einer Codezeile `setEditable(true)` schreibt, ohne `automatiken_abschalten` zu nennen. Möglichkeit 2, wie am 260814-0715 am Plan-Tor gewählt.
+
+**Der blinde Fleck steht im Doc-Kommentar der Probe und nicht nur im Sitzungsprotokoll**, wie die Empfehlung es verlangt (`textautomatik.rs:252-269`): eine Fläche, die ihre Bearbeitbarkeit über `setValue:forKey:` setzt, den Aufruf über zwei Zeilen umbricht oder sie in einer anderen Datei einschaltet als der, die sie anlegt, entgeht der Nadel. Ein zweiter, dort ebenfalls ausgeschriebener Fleck kommt hinzu: die Probe sieht nur `NSTextView` und kein bearbeitbares `NSTextField`.
+
+**Die drei Rahmenbedingungen halten.** `EINSTELLUNGEN` steht weiterhin an einer Stelle (`crates/krk-ui/src/appkit/editor.rs`), die Messung an einer gebauten Fläche ist geblieben und misst seit Schritt 16 an beiden bearbeitbaren Flächen statt an einer (`die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`, `editor.rs:4873`), und die Vorschau ist von der Regel nicht eingefangen: sie legt keine `NSTextView` mit `setEditable(true)` an.
+
+Abgleich 260814-1002 (reconciler, Runde 9), `make check` exit 0 am Stand `79dab20`.

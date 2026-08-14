@@ -77,3 +77,27 @@ Alle sechzehn Planschritte gebaut, fünf Commits, `make check` exit 0 nach jedem
 **Welcher Stand beim Öffnen gewinnt: der getippte.** Weicht der gehaltene Text von der Datei ab, bleibt er stehen; neu gelesen wird nur, wenn nichts abweicht. Damit hält die Zusage, die der Nutzer spürt — nichts Getipptes verschwindet stillschweigend — und der zweite Satz von C4 wird eingeschränkt und im Spec neu formuliert. „Die Datei gewinnt immer" ist verworfen, „beim Öffnen nachfragen" ist unmöglich: die Nachfrage wäre ein Blatt über dem Zettelblatt.
 
 **Turn 2 behebt die drei zusammenhängenden Befunde**, erst den Spec an C4, dann alle drei in einem Zug. Getrennt behoben bliebe jeweils der andere Weg offen. Die fünf niedrigen Befunde bleiben für später.
+
+## Coherence
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: 43 am Baum nachweisbare Zusagen geprüft und alle 43 gehalten (40 ohne, 3 mit einer benannten Einschränkung), 16 von 16 Planschritten am Baum bestätigt, `make check` exit 0 am Stand `79dab20` — **geflaggt** wegen zwei offener mittlerer Befunde der Durchsicht: `issues/260814-0911_o_` ist der eine, den der Prüfer ausdrücklich „vor dem Abschluss, aber ohne Nutzerfrage" empfiehlt, und er ist nicht behoben (`crates/krk-ui/src/appkit/editor.rs:4854` schickt den nächsten Bauer weiter an `textflaeche_bauen`); `issues/260814-0910_o_` hält eine Zusage des Spec gegen den Bau, die obere Schranke `EDITORGRENZE` für Arbeit auf dem Hauptfaden, und das Beiseitelegen kopiert unbegrenzt (`crates/krk-core/src/ablage/atomar.rs:156`, `io::copy` ohne `take`).
+- Artifact↔Directive: alle sieben Commits `6d05bef..HEAD` laufen auf die Directive zu und keiner daneben — `9362034` die Ablage, `a949ff1` die zwei Tastenwege, `bfea397` das zehnte Blatt, `dd2643e` die vier Sicherungsmomente und die Sitzung, `895089d` die Durchsicht, `79dab20` die Behebung der zwei zusammenhängenden Befunde, `edea4d9` Spec und Plan; **nicht geflaggt**, mit einem Vorbehalt an der Fassung und nicht an den Commits: die Directive im Circle-Datensatz nennt weiter drei Sicherungsmomente, der Bau folgt der vom Nutzer am 260814-0005 beantworteten Fassung mit vier (`issues/260814-0637_o_` und `issues/260814-1002_o_die-directive-abweichung-…`, drei Stellen statt der dort genannten zwei).
+- Grounding↔Directive: 19 offene Fragen über alle Speicher (7 gemeinsam, 12 über sieben Circles) und keine im Widerspruch zur Directive, dazu die zwei Entscheide dieses Circles von beantwortet auf umgesetzt gezogen (`bfea397`, `9362034`); **nicht geflaggt**, mit zwei Lücken zum Vermerk: zwei aktive Datensätze außerhalb dieses Circles tragen Zahlen, die diese Runde verschoben hat (`shared/decisions/260813-0053_o_was-teilen-sich-zwei-instanzen-…` sagt vier Ablagedateien, es sind sechs; `circles/260813-0100-…/decisions/260813-0320_o_esc-im-editor-…` nennt zwei `Esc`-Empfänger, es sind drei), und für die Frage, wie groß „beiseite" werden darf, gibt es keinen Datensatz, obwohl `issues/260814-0910_o_` sie ausdrücklich in den Spec oder einen Entscheid verweist.
+
+**Rebalance recommendation:** revise Artifact
+
+**Was der Gate daneben wissen muss.** Der Weg von hier zu einem kohärenten Abschluss führt über
+Nutzerarbeit, und die ist kein Planschritt: 29 der 72 Abnahmekriterien stehen in den zweiten
+Listen der fünf Fähigkeiten und verlangen KRK im Vordergrund, dazu die `performClose:`-Messung
+aus dem Abschnitt „Nutzerarbeit" des Plans. Fünf dieser 29 brauchen keinen Blick, sondern einen
+Prüfaufbau — eine hergestellte Lage wie ein entzogenes Schreibrecht —, und vier davon sind am
+Modell schon gedeckt; die Aufteilung in die drei Körbe steht in Abschnitt 2 von
+`history/260814-1002-reconciliation.md`. Die acht Runden davor haben alle aus diesem einen Grund
+beschränkt geschlossen, die neunte steht an derselben Stelle. Der Empfehlung „revise Artifact"
+liegen die zwei mittleren Befunde zugrunde und nichts weiter; wer sie behebt, hat den Baum
+soweit, wie ein Agent ihn bringen kann.
+
+**Abgleich:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260814-1002-reconciliation.md`
