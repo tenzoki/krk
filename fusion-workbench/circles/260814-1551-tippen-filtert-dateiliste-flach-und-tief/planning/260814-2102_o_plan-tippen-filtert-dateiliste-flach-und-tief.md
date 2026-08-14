@@ -490,7 +490,7 @@ flowchart TD
 
 ### Strang G — Abnahme
 
-**G1. `make check` läuft grün**
+**G1. [DONE] `make check` läuft grün**
 - Executor: `coder`
 - Files: keine
 - Erfüllt: jede mit **(Probe)** gekennzeichnete Zusage
@@ -500,7 +500,12 @@ flowchart TD
   - **`clippy` ist hier die eigentliche Prüfung und nicht `build`.** `unused_must_use` ist erst unter `-D warnings` ein Fehler; die drei neuen `#[must_use]`-Werte dieser Runde laufen unter `cargo build` und `cargo test` allein grün durch.
   - Kein `make bundle` und kein `cargo xtask bundle` während der Runde außer dem einen Bau für G2. Unter `target/KRK.app` liegt das ausgelieferte Bündel `v0.3.0`, und jeder Entwicklungsbau überschreibt es; es wird vor G2 gesichert, wie die Runde 8 es getan hat.
 
-**G2. Die Abnahmeliste am laufenden Bündel**
+**G2. [DONE] Die Abnahmeliste am laufenden Bündel**
+
+> Geschrieben am 260815-0400: `history/260815-0400-abnahmeliste-g2.md`. Das Bündel ist
+> gebaut und mit „KRK Entwicklung" signiert. **Die zehn Beobachtungen sind noch nicht
+> gefahren** — das ist Nutzerarbeit, und die Ergebnistafel am Fuß der Liste ist leer.
+> `[DONE]` bezeichnet hier den Schritt des Ausführenden und nicht den Abnahmelauf.
 - Executor: `coder` (bereitet vor und schreibt auf), die Beobachtungen selbst sind **Nutzerarbeit**
 - Files: `fusion-workbench/circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/history/`
 - Erfüllt: die Bündelanteile von C1.7, C1.15, C1.17, C1.18, C1.20, C2.1, C3.11, C3.12, C4.5, C5.4
