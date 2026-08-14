@@ -720,3 +720,8 @@
 {"ts":"2026-08-14T08:32:32","event":"turn_start","turn":3,"detail":"zwei mittlere Befunde, dann Abnahme"}
 {"ts":"2026-08-14T08:55:39","event":"task_done","turn":3,"agent":"coder","detail":"zwei mittlere Befunde behoben, make check exit 0"}
 {"ts":"2026-08-14T08:55:39","event":"gate_hit","turn":3,"detail":"Abnahme am Buendel, Nutzerarbeit"}
+{"ts":"2026-08-14T10:53:17","event":"state_drift","turn":3,"detail":"progress.commits: surface=8, record=10. Nachgezogen."}
+{"ts":"2026-08-14T10:53:17","event":"reconciliation","turn":3,"detail":"verdict=review-needed; Baum fertig, Abnahmeliste deckt 8 von 29 Buendelkriterien; Grundmenge 75 statt 72"}
+{"ts":"2026-08-14T10:53:17","event":"gate_hit","turn":3,"detail":"Rebalance-Tor, zweiter Abnahmedurchgang oder beschraenkter Abschluss"}
+{"ts":"2026-08-14T10:56:40","event":"gate_response","turn":3,"detail":"Nutzer: beschraenkter Abschluss"}
+{"ts":"2026-08-14T10:56:40","event":"bounded_closure_proposed","turn":3,"detail":"Abnahmeliste nicht an die Kriterien gebunden; 8 von 29 belegt"}

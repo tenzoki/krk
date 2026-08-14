@@ -135,3 +135,124 @@ trägt: der Nutzer hat den Vordergrundlauf gefahren, er kann ihn wieder fahren, 
 ist erreichbar.
 
 **Abgleich:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260814-1247-reconciliation.md`
+
+---
+
+# Abschlussbericht
+
+**Status:** Beschränkter Abschluss — die Abnahmeliste war nicht an die Abnahmekriterien gebunden.
+
+## Budget
+
+| Größe | Zahl |
+|---|---|
+| Turns | 3 |
+| Planschritte erledigt | 16 von 16 |
+| Defekte gefiltert | 23 |
+| Defekte geschlossen | 4 |
+| Fragen beantwortet (`_o_`→`_a_`) | 2 |
+| Fragen umgesetzt (`_a_`→`_i_`) | 2 |
+| Commits | 10 |
+| Agentenfehler | 0 |
+| Nutzer-Tore | 9 |
+
+Die vier Datensatzzahlen sind aus den Speichern gelesen, nicht mitgezählt: Anker `6d05bef`, Sitzungsbeginn `260813-2342`.
+
+## Per-Turn-Log
+
+### Turn 1
+- Versucht: alle sechzehn Planschritte in sechs Strängen
+- Erledigt: alle sechzehn
+- Commits: `9362034`, `a949ff1`, `bfea397`, `dd2643e`
+- Durchsicht: 9 Befunde, einer hoch
+- Coherence: review-needed
+
+### Turn 2
+- Versucht: C4 des Spec, drei zusammenhängende Befunde
+- Erledigt: beide
+- Commits: `79dab20`, der Abgleich
+- Coherence: review-needed (zwei mittlere Befunde offen)
+
+### Turn 3
+- Versucht: die zwei mittleren Befunde, Abnahmelauf, Abschlussabgleich
+- Erledigt: die Befunde; der Abnahmelauf deckte 8 von 29 Bündelkriterien
+- Commits: die Behebung, der Abschlussabgleich
+- Coherence: review-needed → beschränkter Abschluss auf Nutzerwahl
+
+## Durchsichtsdeckung
+
+**Bereich:** `6d05bef..HEAD` — 10 Commits
+**Gedeckt durch:** `reviews/260814-0908-coderev-turn-1-notizzettel.md`, Bereich `6d05bef..dd2643e`
+**Nicht gedeckt:** die Commits aus Turn 2 und Turn 3 — die Behebung der drei Befunde, die Behebung der zwei mittleren, und drei Werkbank-Commits
+**Unbrauchbar für die Deckung:** die beiden Diagrammdurchsichten tragen keine `**Reviewed-range:**`-Zeile
+
+Die Behebungen aus Turn 2 und Turn 3 sind von keiner Durchsicht geöffnet worden. Beide sind vom Abgleicher am Baum nachgelesen, nicht durchgesehen.
+
+## Verbleibende Arbeit
+
+- **Beim Nutzer:** eine zweite Abnahmeliste über die 21 unbelegten Kriterien, rund zwanzig Minuten im Vordergrund. Danach kann die Runde nachträglich als kohärent gelten.
+- 18 offene Defekte im Circle, keiner am gewöhnlichen Verhalten des Zettels.
+- Die Messung, welche Kante `performClose:` an einem Fenster mit anhängendem Blatt geht.
+- `CLAUDE.md` ist um fünf Runden zurück.
+
+## Sitzungsablauf
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant S as Shaper
+    participant P as Planner
+    participant K as Conceptrev
+    participant C as Coder
+    participant CR as Coderev
+    participant R as Reconciler
+
+    U->>O: /fusion:next 260813-2332
+    O->>O: Aktivierung, Setup
+    O->>S: Spec schreiben
+    S-->>O: 5 Fähigkeiten, 1 offene Frage
+    O->>K: Diagramme im Spec
+    K-->>O: acceptable, Lücke bei shift+cmd+w
+    U-->>O: 3 Antworten, Spec erst nachziehen
+    O->>S: C4 und die Bilder nachziehen
+    S-->>O: vierter Sicherungsmoment
+    O->>P: Plan bauen
+    P-->>O: 16 Schritte, 6 Stränge
+    O->>K: Diagramme im Plan
+    K-->>O: acceptable, kein vierter Fehler
+    U-->>O: Plan frei, Signaturen, Zählprobe
+
+    Note over O: Turn 1
+    O->>C: Strang A (Ablage)
+    O->>C: Strang B (Befehl)
+    C-->>O: A fertig
+    C-->>O: B fertig
+    O->>C: Strang C (das zehnte Blatt)
+    C-->>O: fertig
+    O->>C: Stränge D, E, F
+    C-->>O: fertig, alle 16 Schritte
+    O->>CR: Durchsicht
+    CR-->>O: 9 Befunde, einer hoch
+
+    Note over O: Turn 2
+    U-->>O: der getippte Stand gewinnt
+    O->>S: C4 nachziehen
+    S-->>O: Zusage ergänzt
+    O->>C: drei Befunde beheben
+    C-->>O: behoben
+    O->>R: Abgleich
+    R-->>O: review-needed
+
+    Note over O: Turn 3
+    U-->>O: Obergrenze auch für die Kopie
+    O->>C: zwei mittlere Befunde
+    C-->>O: behoben
+    O->>U: Abnahmeliste, 12 Beobachtungen
+    U-->>O: elf bestanden
+    O->>R: Abschlussabgleich
+    R-->>O: 8 von 29 Kriterien belegt
+    U-->>O: beschränkter Abschluss
+
+    Note over O: _t_ → _b_
+```

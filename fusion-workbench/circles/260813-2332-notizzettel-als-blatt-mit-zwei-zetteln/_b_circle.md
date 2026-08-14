@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
 **Active spec/plan:** circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md
 **Active session history:** circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md
@@ -92,4 +92,24 @@ Mehr als zwei Zettel. Suchen, Ersetzen, Zeilennummern, Syntaxhervorhebung und Te
 
 - Turn 2 (Sitzung 260813-2342): abgeschlossen. C4 des Spec nachgezogen, drei zusammenhaengende Befunde behoben, zwei Defekte geschlossen, Abgleich gefahren. Alle 16 Planschritte halten am Baum, 43 der 72 Abnahmekriterien traegt der Baum. Coherence-Urteil: review-needed wegen zweier mittlerer Befunde.
 
-- Turn 3 (Sitzung 260813-2342): laeuft. Die zwei mittleren Befunde, danach die Abnahme durch den Nutzer.
+- Turn 3 (Sitzung 260813-2342): abgeschlossen. Die zwei mittleren Befunde behoben, Abnahmelauf durch den Nutzer gefahren, Abschlussabgleich. Coherence-Urteil: review-needed, weil 21 der 29 Buendelkriterien unbelegt bleiben. Der Nutzer hat den beschraenkten Abschluss gewaehlt.
+
+## Closure note
+
+**Geschlossen als beschraenkter Abschluss (`_b_`) am 260814-1300.** Der Baum ist fertig; was fehlt, ist Abnahme im Vordergrund.
+
+**Was die Runde gebaut hat.** Ein Notizzettel als zehntes Blatt am Hauptfenster, geholt mit `f2` oder `cmd+k`, geschlossen mit `Esc`. Zwei Zettel als anklickbare Tabs auf einer nackten Textflaeche, gesichert an vier Momenten: Tabwechsel, `Esc`, Beenden von KRK, und `shift+cmd+w`. Zwei Dateien im Ablageordner, `note-1.txt` und `note-2.txt`; `Datei::ALLE` waechst auf sechs, und ein `Format` trennt TOML von Text. `atomar::schreiben` und `Zugang::beiseite_legen` nehmen einen Leser statt einer Zeichenkette, und dieselbe Zahl `EDITORGRENZE` begrenzt Laden und Beiseitelegen. Drei neue Dateien unter `krk-ui`, `appkit` fuehrt 29 Module.
+
+**Warum beschraenkt und nicht kohaerent.** Die Abnahmeliste des Orchestrators war nicht an die Abnahmekriterien gebunden. Zwoelf Beobachtungen standen fuer 29 Kriterien mit Buendelanteil; belegt sind davon **8**, halb beruehrt 5, und **16 hat keine Beobachtung angefasst** — die fuenf Zwischenablagebefehle im Zettel, die sieben Textautomatiken am laufenden Programm, alle drei Beenden-Kriterien von C4. Die dem Nutzer genannte Zahl „71 von 72" stimmte an beiden Enden nicht: die Grundmenge ist seit dem C5-Nachtrag 75, mit den zwei C8-Kriterien 77.
+
+**Der strukturelle Unterschied zur achten Runde, und er ist der eigentliche Ertrag dieser Notiz.** Die Runde 8 kennzeichnete jedes Abnahmekriterium einzeln als `(Probe)` oder `(Buendel)`: zehn Buendelkriterien, elf Beobachtungen, eine je Kriterium. Ihr „alle 59 bis auf eines" war deshalb nachrechenbar, und sie konnte kohaerent schliessen. Diese Runde fuehrt **zwei Listen je Faehigkeit**, was beim Lesen uebersichtlicher ist und die Bindung zwischen Beobachtung und Kriterium verliert. Wer die naechste Runde zuschneidet, waehlt zwischen Lesbarkeit und Nachrechenbarkeit — und diese Runde ist der Beleg, dass die zweite teurer ist, als sie aussieht.
+
+**Was gelernt wurde und die Directive nicht vorhersagen konnte.** Zwei Zusagen von C4 hielten nicht zugleich: eine gescheiterte Sicherung wirft den Stand nicht weg, und der Zettel liest bei jedem Oeffnen neu. Die Durchsicht hat den Widerspruch gefunden, der Nutzer hat ihn entschieden (der getippte Stand gewinnt), und erst dadurch wurde ein zweiter Fall sichtbar: solange ein abweichender Stand beim Oeffnen verschwand, konnten kaum je zwei Zettel zugleich abweichen. Die Antwort auf den einen Defekt hat den zweiten erst erzeugt.
+
+Ebenso: die Kopiergrenze. C5 sagte zu, eine zu grosse Datei werde beiseitegelegt, und legte nicht fest, wie gross „beiseite" werden darf. Der Bau nahm das woertlich und kopierte unbegrenzt auf dem Hauptfaden.
+
+**Was offen bleibt.** 18 Defekte im Circle. Keiner betrifft das Verhalten des Zettels im gewoehnlichen Gebrauch; der Schwerpunkt liegt bei Prosa, die dem Code hinterherlaeuft, und bei der Abnahmedeckung selbst. Dazu die nicht festgehaltene Messung, welche Kante `performClose:` an einem Fenster mit anhaengendem Blatt geht — kein Abnahmekriterium haengt daran, wohl aber eine spaetere Runde am Schliessweg.
+
+**Bilanz.** Drei Turns, zehn Commits, alle sechzehn Planschritte am Baum bestaetigt. `make check` exit 0 nach jedem Strang und nach jedem Turn. Zwei Entscheidungsdatensaetze umgesetzt. Sitzungsprotokoll: `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md`. Abgleiche: `history/260814-1002-reconciliation.md` und `history/260814-1247-reconciliation.md`. Abnahmeliste mit Ergebnissen: `history/260814-1100-abnahmeliste-notizzettel.md`.
+
+**Der Weg zu einem kohaerenten Abschluss ist benannt und offen:** eine zweite Abnahmeliste, gebunden an die 21 unbelegten Kriterien, rund zwanzig Minuten im Vordergrund.
