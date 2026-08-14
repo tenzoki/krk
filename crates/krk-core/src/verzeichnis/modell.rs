@@ -81,6 +81,7 @@
 //! [`Ordnermodell::befund_setzen`] entgegen und baut die Sicht damit neu auf.
 
 use super::eintrag::Eintrag;
+use super::filter::traegt_die_folge;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
 
 /// Was gerade markiert ist, in einem Durchlauf gezaehlt.
@@ -552,11 +553,12 @@ impl Ordnermodell {
             return true;
         }
 
-        // Name traegt die Teilzeichenfolge? Derselbe Vergleich, den
-        // `Belegungsmodell::zeile_traegt` fuehrt: kleingeschrieben und als
-        // Teilzeichenfolge, ohne jede Faltung von Umlauten und Akzenten. `apfel`
-        // findet `Aepfel` mit Umlaut nicht, und das ist so gewollt.
-        if eintrag.name.to_lowercase().contains(&self.filter_klein) {
+        // Name traegt die Teilzeichenfolge? Der eine Vergleich des Filters, und
+        // derselbe, den der Durchlauf auf jeden Namen im Unterbaum zieht:
+        // kleingeschrieben und als Teilzeichenfolge, ohne jede Faltung von
+        // Umlauten und Akzenten. `apfel` findet `Aepfel` mit Umlaut nicht, und
+        // das ist so gewollt.
+        if traegt_die_folge(&eintrag.name, &self.filter_klein) {
             return true;
         }
 
@@ -612,7 +614,7 @@ impl Ordnermodell {
     /// Haengt ein getipptes Zeichen an den Filtertext an.
     ///
     /// **Welche Zeichen der Filter aufnimmt, entscheidet der Aufrufer** ueber
-    /// `krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname`. Diese Stelle
+    /// [`super::filter::traegt_ein_dateiname`]. Diese Stelle
     /// nimmt jedes Zeichen: sie hat keinen Rueckgabewert, und ein still
     /// verworfenes Zeichen waere ein Ausgang, den niemand sieht. Der Aufrufer
     /// muss die Frage ohnehin stellen, denn er meldet der Ereignisbehandlung,

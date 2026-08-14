@@ -121,7 +121,7 @@ use super::operationen;
 /// Frage rein bleibt und die Tafel aus 280 Faellen sie ohne Fenster stellen
 /// kann. Erhoben werden sie von `Anwendungsdelegierter::lage`, und zwar einmal
 /// je Eingabe: der Kommandozweig gibt die `Lage` an [`zulaessig`], der
-/// Zeichenzweig der Sprungmarke liest drei davon heraus. Zwei Erhebungen
+/// Zeichenzweig liest drei davon heraus. Zwei Erhebungen
 /// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
 /// `Copy`, weil der Wert vier kleine Felder traegt und die Tafel ihn

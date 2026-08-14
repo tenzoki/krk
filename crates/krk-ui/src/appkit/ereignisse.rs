@@ -117,7 +117,7 @@
 //! des Nachschlags unveraendert an die Senke, und die Senke erhebt einmal je
 //! Eingabe die `Lage` aus Blattstand, Ersthelferbefund und Fokus. Der
 //! Kommandozweig gibt sie an `kommandos::zulaessigkeit::zulaessig`, der
-//! Zeichenzweig der Sprungmarke liest dieselben drei Werte heraus. Zwei
+//! Zeichenzweig liest dieselben drei Werte heraus. Zwei
 //! Stellen, die dieselbe Frage stellen, gibt es damit nicht mehr, und
 //! [`ersthelfer_gehoert_appkit`] hat genau eine Aufrufstelle,
 //! `Anwendungsdelegierter::lage`.
@@ -202,7 +202,7 @@
 //! | Frage | Woher | Wofuer |
 //! |---|---|---|
 //! | Welche **Taste** wurde gedrueckt? | `charactersByApplyingModifiers:` mit leerer Maske, siehe [`gemeldetes_zeichen`] | der Nachschlag |
-//! | Welches **Zeichen** hat der Nutzer getippt? | `characters`, siehe [`getipptes_zeichen`] | die Sprungmarke aus C2 |
+//! | Welches **Zeichen** hat der Nutzer getippt? | `characters`, siehe [`getipptes_zeichen`] | der Filtertext des sichtbaren Tabs |
 //!
 //! Die erste Frage ist neu. Bis dahin schlug der Abgriff auch Buchstaben ueber
 //! den virtuellen Tastencode nach, und ein Tastencode benennt die **Stelle** auf
@@ -216,9 +216,9 @@
 //!
 //! Die zweite Frage bleibt, wie sie war. Eine Taste ohne Zusatztaste, die keiner
 //! Funktion gehoert, faellt im Kern auf [`Nachschlag::Sprungmarke`]; welches
-//! Zeichen in den Suchpuffer geht, weiss das Ereignis, und die Regel, welche
+//! Zeichen in den Filtertext geht, weiss das Ereignis, und die Regel, welche
 //! Zeichen ein Dateiname tragen kann, steht in
-//! `krk_core::verzeichnis::sprungmarke`. Getippt wird, was auf dem Bildschirm
+//! `krk_core::verzeichnis::filter`. Getippt wird, was auf dem Bildschirm
 //! stuende, samt Grossschreibung; nachgeschlagen wird die Taste. Ein
 //! gemeinsames Zeichen fuer beides waere fuer eine der beiden Fragen die
 //! falsche Antwort.
@@ -306,7 +306,7 @@ impl Anschlag {
 /// Was der Abgriff an den Aufrufer weitergibt.
 ///
 /// Zwei Sorten, weil ein Tastendruck zwei Dinge sein kann: eine nachgeschlagene
-/// Funktion oder ein getipptes Zeichen fuer die Sprungmarke aus C2.
+/// Funktion oder ein getipptes Zeichen fuer den Filtertext des sichtbaren Tabs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Eingabe {
     /// Eine belegte Kombination, samt dem [`Anschlag`], der sie ausgeloest hat.
@@ -323,10 +323,11 @@ pub enum Eingabe {
         /// Der Anschlag, der sie ausgeloest hat.
         anschlag: Anschlag,
     },
-    /// Ein Zeichen fuer die Sprungmarke aus C2.
+    /// Ein Zeichen fuer den Filtertext des sichtbaren Tabs.
     ///
-    /// Ob es ueberhaupt in den Puffer gehoert, entscheidet der Kern; der
-    /// Abgriff reicht weiter, was das Ereignis traegt.
+    /// Ob es ueberhaupt in den Filtertext gehoert, entscheidet die Senke ueber
+    /// die Zeichenregel des Kerns; der Abgriff reicht weiter, was das Ereignis
+    /// traegt.
     Zeichen(char),
 }
 
@@ -357,9 +358,9 @@ impl Tastenabgriff {
     /// allein ASCII-Kleinbuchstaben und Ziffern; es kann kein Leerzeichen und
     /// keinen Umlaut fuehren. Die Suche der Belegungsansicht braucht genau die,
     /// weil fast jeder Funktionsname aus mehreren Woertern besteht. Gereicht
-    /// wird deshalb [`getipptes_zeichen`], dieselbe Quelle, aus der die
-    /// Sprungmarke aus C2 schon schoepft; die Tabelle im Modulkopf sagt, warum
-    /// es zwei Zeichen sind.
+    /// wird deshalb [`getipptes_zeichen`], dieselbe Quelle, aus der auch der
+    /// Filtertext des sichtbaren Tabs schoepft; die Tabelle im Modulkopf sagt,
+    /// warum es zwei Zeichen sind.
     ///
     /// **Kein Abschluss fuer den Ersthelfer mehr.** Bis zur Runde 7 nahm diese
     /// Funktion `ist_editorflaeche` entgegen und stellte den Fokusvorbehalt
@@ -599,7 +600,7 @@ fn behandeln(
         wiederholung: ereignis.isARepeat(),
     };
 
-    // Einmal gefragt und nicht zweimal: der Faenger und der Sprungmarkenzweig
+    // Einmal gefragt und nicht zweimal: der Faenger und der Zeichenzweig
     // brauchen dasselbe Zeichen desselben Ereignisses, und das ist ein
     // Fremdaufruf auf dem Tastendruckpfad, an dem L1 haengt.
     let zeichen = getipptes_zeichen(ereignis);
@@ -634,9 +635,9 @@ fn behandeln(
             Some(kommando) => senke(Eingabe::Kommando { kommando, anschlag }),
             None => false,
         },
-        // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: das Tippen
-        // der Anfangsbuchstaben aus C2. Ob das Zeichen in den Puffer gehoert,
-        // entscheidet der Kern.
+        // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: sie tippt
+        // in den Filtertext des sichtbaren Tabs. Ob das Zeichen dorthin
+        // gehoert, entscheidet die Zeichenregel des Kerns an der Senke.
         Nachschlag::Sprungmarke => match zeichen {
             Some(zeichen) => senke(Eingabe::Zeichen(zeichen)),
             None => false,
@@ -723,7 +724,8 @@ fn erstes_zeichen(text: Option<Retained<NSString>>) -> Option<char> {
 
 /// Das Zeichen, das dieses Ereignis traegt.
 ///
-/// Fuer die Sprungmarke aus C2, und deshalb ueber `characters` und nicht ueber
+/// Fuer den Filtertext des sichtbaren Tabs, und deshalb ueber `characters`
+/// und nicht ueber
 /// [`gemeldetes_zeichen`]: getippt wird, was auf dem Bildschirm stuende, samt
 /// Grossschreibung. Der Nachschlag fragt die andere Frage, naemlich welche
 /// Taste gedrueckt wurde.

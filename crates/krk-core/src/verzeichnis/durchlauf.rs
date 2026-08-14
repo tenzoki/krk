@@ -74,6 +74,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
 use super::eintrag::Typ;
+use super::filter::traegt_die_folge;
 use super::leser::STAPELGROESSE;
 use super::sys::Schwungleser;
 
@@ -282,18 +283,6 @@ fn unterbaum_entscheiden(wurzel: &Path, filter_klein: &str, abbruch: &AtomicBool
 /// braucht keinen eigenen Zweig.
 fn ist_verknuepfung(pfad: &Path) -> bool {
     std::fs::symlink_metadata(pfad).is_ok_and(|angaben| angaben.file_type().is_symlink())
-}
-
-/// Der Vergleich, den auch die Sichtbarkeit zieht: Teilzeichenfolge an jeder
-/// Stelle, ohne Ruecksicht auf die Schreibung, ohne Umlautfaltung.
-///
-/// `filter_klein` ist bereits kleingeschrieben; umgeschrieben wird hier nur der
-/// gelesene Name. **Dieselbe Regel steht heute in `Ordnermodell::sichtbar`**,
-/// und dass sie zweimal dasteht, ist ein bekannter Uebergangszustand: Schritt
-/// A2 des Plans zieht den Vergleich als reine Funktion nach
-/// `verzeichnis::filter`, und diese Aufrufstelle zieht dann mit.
-fn traegt_die_folge(name: &str, filter_klein: &str) -> bool {
-    name.to_lowercase().contains(filter_klein)
 }
 
 /// Ein Eintrag, wie der Durchlauf ihn braucht.

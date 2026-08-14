@@ -69,7 +69,7 @@
 //! einer_deutschen_tastatur` haelt es fest.
 
 use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
-use krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname;
+use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 
 /// Die Funktionsbereiche der Belegungsansicht, in der Reihenfolge der
 /// Anzeige.
@@ -624,7 +624,7 @@ impl Belegungsmodell {
 /// und ein Treffer, den der Nutzer nicht sehen kann, ist keiner.
 ///
 /// Verglichen wird als Teilzeichenfolge (C1.4) und ohne Ruecksicht auf Gross-
-/// und Kleinschreibung (C1.5), wie bei der Sprungmarke der Dateiliste. Eine
+/// und Kleinschreibung (C1.5), wie im Filter der Dateiliste. Eine
 /// Bereichsueberschrift kann kein Treffer sein, und dafuer braucht es keinen
 /// Zweig: [`Belegungsmodell::funktionstext`] und
 /// [`Belegungsmodell::tastentext`] antworten fuer eine Ueberschriftszeile
@@ -632,9 +632,10 @@ impl Belegungsmodell {
 ///
 /// # Der Suchtext lebt so lange wie die Ansicht
 ///
-/// Keine Pause setzt ihn zurueck, und es gibt keinen Zeitgeber (C1.12). Die
-/// Sekundenregel der Sprungmarke aus C2 der Runde 1 hat dort ihren Grund — dort
-/// gibt es keine Ruecktaste —, und hier hat sie keinen.
+/// Keine Pause setzt ihn zurueck, und es gibt keinen Zeitgeber (C1.12). Der
+/// Filter der Dateiliste haelt es seit der Runde 10 ebenso; die Sekundenregel
+/// der abgeloesten Sprungmarke war der letzte Zeitgeber im Weg eines getippten
+/// Zeichens und ist mit ihr gefallen.
 ///
 /// # Bei leerem Suchtext geschieht nichts
 ///
@@ -673,8 +674,8 @@ impl Suchlage {
     /// Haengt ein getipptes Zeichen an und sucht erneut (C1.1).
     ///
     /// Liefert, ob das Zeichen aufgenommen wurde. **Die Aufnahmeregel ist
-    /// `krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname`**, dieselbe,
-    /// die die Sprungmarke der Dateiliste benutzt; eine zweite Zeichenregel
+    /// `krk_core::verzeichnis::filter::traegt_ein_dateiname`**, dieselbe, die
+    /// der Filter der Dateiliste benutzt; eine zweite Zeichenregel
     /// entsteht nicht (C1.2). Sie weist Steuerzeichen ab und den privaten
     /// Bereich U+F700 bis U+F8FF, in dem AppKit die Funktions- und Pfeiltasten
     /// meldet.
@@ -1585,8 +1586,9 @@ mod suchproben {
     /// Kleinschreibung (C1.4, C1.5).
     ///
     /// „datum" steht in der Auslieferungsbelegung mitten im Wort, naemlich in
-    /// „Spalte Änderungsdatum ein- und ausblenden". Ein Anfangsvergleich wie
-    /// bei der Sprungmarke der Dateiliste faende die Zeile nicht.
+    /// „Spalte Änderungsdatum ein- und ausblenden". Ein Anfangsvergleich, wie
+    /// ihn die bis zur Runde 10 bestehende Sprungmarke der Dateiliste zog,
+    /// faende die Zeile nicht.
     ///
     /// Getroffen wird mehr als diese eine Zeile — „Nach Änderungsdatum
     /// sortieren" traegt das Wort ebenso —, und deshalb prueft der Test die
@@ -1657,8 +1659,9 @@ mod suchproben {
     /// Ein Steuerzeichen und ein Zeichen aus dem privaten Bereich werden
     /// abgewiesen (C1.2).
     ///
-    /// Die Regel dafuer ist die der Sprungmarke, und eine zweite entsteht
-    /// nicht. U+F701 ist das Zeichen, das AppKit dem Pfeil ab beilegt.
+    /// Die Regel dafuer ist die eine Zeichenregel des Filters, und eine zweite
+    /// entsteht nicht. U+F701 ist das Zeichen, das AppKit dem Pfeil ab
+    /// beilegt.
     #[test]
     fn steuerzeichen_und_funktionstasten_gehen_nicht_in_den_suchtext() {
         let modell = modell();
@@ -1804,11 +1807,12 @@ mod suchproben {
     ///
     /// **Gezaehlt werden Erklaerungen im Quelltext**, wie in
     /// [`crate::quellbaum`] beschrieben: an keinem Rueckgabewert ist abzulesen,
-    /// dass es keine Uhr gibt. Die Sekundenregel der Sprungmarke aus C2 der
-    /// Runde 1 steht in `krk_core::verzeichnis::sprungmarke` und misst dort
-    /// ueber einen Zeitpunkt der Standardbibliothek; diese Datei fuehrt keinen.
-    /// Ein Zeitgeber, der den Suchtext nach einer Pause zuruecksetzte, waere
-    /// hier zu sehen.
+    /// dass es keine Uhr gibt. Diese Datei fuehrt keinen Zeitpunkt der
+    /// Standardbibliothek; ein Zeitgeber, der den Suchtext nach einer Pause
+    /// zuruecksetzte, waere hier zu sehen. Die Sekundenregel der Sprungmarke
+    /// aus C2 der Runde 1 war die eine Stelle, die es anders hielt; sie ist mit
+    /// der Sprungmarke in der Runde 10 gefallen, und
+    /// `krk_core::verzeichnis::filter` fuehrt keine Zeitmessung mehr.
     ///
     /// **Die zwei Nadeln stehen zusammengesetzt da**, wie bei jeder Zaehlprobe
     /// dieses Baums: als ein Stueck geschrieben faende jede sich in dieser

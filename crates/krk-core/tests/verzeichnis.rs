@@ -1269,10 +1269,7 @@ fn der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze() {
         .into_iter()
         .find(|(name, _)| name == "krk-core/src/verzeichnis/durchlauf.rs")
         .expect("das Modul des Durchlaufs steht im Baum");
-    let code: Vec<&str> = quelle
-        .lines()
-        .filter(|zeile| !zeile.trim_start().starts_with("//"))
-        .collect();
+    let code = code_zeilen(&quelle);
 
     assert!(
         code.iter().any(|zeile| zeile.contains("Schwungleser")),
@@ -1294,5 +1291,184 @@ fn der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze() {
     assert!(
         konstanten.is_empty(),
         "das Modul erklaert eine Konstante; eine Tiefengrenze faellt genau so an: {konstanten:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Was der Filter nicht mehr hat: die Sprungmarke und jede Zeitmessung
+// ---------------------------------------------------------------------------
+
+/// Die Code-Zeilen einer Datei, ohne ihre Kommentare.
+///
+/// Die Doc-Kommentare dieser Runde nennen jede Nadel im Klartext, damit ein
+/// Leser weiss, wonach gesucht wird; ein `contains` ueber den ganzen Text faende
+/// sie dort. Gefragt ist aber, wer eine Sache **tut**, und das steht nie hinter
+/// `//`. Dieselbe Hilfsfunktion fuehrt `der_durchlauf_liest_ueber_den_
+/// schwungleser_und_setzt_keine_grenze` weiter oben in dieser Datei; sie steht
+/// nicht in `tests/gemeinsam/`, weil `tests/baum.rs` eine gleichnamige fuehrt
+/// und beide Ziele eigene Kisten sind — dieselbe Lage wie beim Pruefordner.
+fn code_zeilen(inhalt: &str) -> Vec<&str> {
+    inhalt
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect()
+}
+
+/// Der Inhalt einer benannten Quelldatei, oder ein Fehlschlag.
+///
+/// Fehlt die Datei, schlaegt die Probe fehl statt still nichts zu zaehlen: eine
+/// Zaehlung ueber eine leere Zeichenkette bestaetigt alles.
+fn quelltext_von(name: &str) -> String {
+    gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(datei, _)| datei == name)
+        .unwrap_or_else(|| panic!("{name} steht nicht im Baum"))
+        .1
+}
+
+/// C1.5: Im Filter steht keine Zeitmessung, also laeuft der Filtertext nicht ab.
+///
+/// **Geprueft wird ein Fehlen, und an keinem Rueckgabewert ist ein Fehlen
+/// abzulesen.** Ein Zeitgeber, der den Filtertext nach einer Pause
+/// zuruecksetzte, waere in genau diesen vier Dateien zu sehen: den drei Modulen
+/// des Kerns, die den Filter tragen, und der einen Senke in `krk-ui`, in die
+/// das getippte Zeichen laeuft. Die Sekundenregel der Sprungmarke aus C2 der
+/// Runde 1 stand in der ersten dieser Dateien, als sie noch `sprungmarke.rs`
+/// hiess.
+///
+/// **Was diese Probe nicht entscheidet**, und der Satz gehoert dazu: der Weg
+/// eines getippten Zeichens fuehrt vorher durch
+/// `krk-ui/src/appkit/anwendung.rs`, und diese Datei fuehrt eine Uhr — fuer den
+/// Anzeigeverzug der Dateioperationen, der mit dem Filter nichts zu tun hat.
+/// Sie steht deshalb nicht in der Liste, und damit deckt keine Nadel den ganzen
+/// Weg. Gedeckt ist der Filter selbst.
+///
+/// **`SystemTime` ist ausdruecklich keine Nadel**, und das ist keine Nachsicht,
+/// sondern der Unterschied zwischen einer Uhr und einem Datum: ein
+/// [`Eintrag`] traegt seine Aenderungszeit als `SystemTime`, und das
+/// Pruefmodul von `modell.rs` baut damit seine Eintraege. Eine Uhr liest man
+/// ab; ein Datum steht am Eintrag. Was eine Pause braucht, faellt trotzdem
+/// unter die Nadeln: eine Spanne (`Duration`), ein monotoner Zeitpunkt
+/// (`Instant`) oder das Ablesen einer beliebigen Uhr (`::now(`).
+///
+/// **Die Nadeln stehen zusammengesetzt da**, wie bei jeder Zaehlprobe dieses
+/// Baums: als ein Stueck geschrieben faende jede sich in dieser Datei selbst.
+/// Diese Datei liest zwar nur die vier benannten und nicht sich selbst, aber
+/// die Bauform bleibt dieselbe, damit eine spaeter erweiterte Liste nicht
+/// unbemerkt zur Selbstfundstelle wird.
+#[test]
+fn im_filter_steht_keine_zeitmessung() {
+    let uhr = concat!("Inst", "ant");
+    let dauer = concat!("Dura", "tion");
+    let ablesen = concat!("::no", "w(");
+    for datei in [
+        "krk-core/src/verzeichnis/filter.rs",
+        "krk-core/src/verzeichnis/modell.rs",
+        "krk-core/src/verzeichnis/durchlauf.rs",
+        "krk-ui/src/appkit/tabelle.rs",
+    ] {
+        let quelle = quelltext_von(datei);
+        let code = code_zeilen(&quelle);
+        for nadel in [uhr, dauer, ablesen] {
+            let treffer: Vec<&&str> = code.iter().filter(|zeile| zeile.contains(nadel)).collect();
+            assert!(
+                treffer.is_empty(),
+                "{datei} misst die Zeit ({nadel}): {treffer:?}"
+            );
+        }
+    }
+}
+
+/// C1.12: Die Sprungmarke ist restlos gefallen.
+///
+/// Gesucht wird im **ganzen** Baum und nicht in einer Datei: eine
+/// stehengebliebene Aufrufstelle irgendwo waere genau der Befund, den diese
+/// Probe holen soll. Vier Nadeln, und jede muss null Fundstellen haben — der
+/// Typ, seine beiden Methoden, die Zeilensuche und die Konstante der Pause.
+///
+/// **`Nachschlag::Sprungmarke` behaelt seinen Namen und ist deshalb keine
+/// Nadel.** Der Wert benennt „eine Taste ohne Zusatztaste, die keiner Funktion
+/// gehoert", und das trifft nach der Runde 10 weiter zu; keine der vier Nadeln
+/// findet ihn, weil vor jeder ein `::` oder ein `struct` steht oder sie
+/// ueberhaupt anders heisst.
+///
+/// **Was diese Probe nicht entscheidet:** ob dieselbe Sache unter einem anderen
+/// Namen wieder aufgebaut wird. Der Kopf von `tests/baum.rs` schreibt aus,
+/// warum keine Suche im Quelltext das leisten kann.
+#[test]
+fn die_sprungmarke_steht_nirgends_mehr_im_baum() {
+    let typ = concat!("struct Sprung", "marke");
+    let tippen = concat!("Sprungmarke::", "tippen");
+    let zeilensuche = concat!("erste_zeile", "_mit");
+    let pause = concat!("PAU", "SE");
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        let code = code_zeilen(&inhalt);
+        for nadel in [typ, tippen, zeilensuche, pause] {
+            let treffer: Vec<&&str> = code.iter().filter(|zeile| zeile.contains(nadel)).collect();
+            assert!(
+                treffer.is_empty(),
+                "{name} traegt noch ein Stueck der Sprungmarke ({nadel}): {treffer:?}"
+            );
+        }
+    }
+}
+
+/// C1.4: Die eine Zeichenregel steht einmal und hat genau zwei Aufrufer.
+///
+/// Erklaert wird sie in `krk-core/src/verzeichnis/filter.rs`, gerufen von der
+/// Senke des Tippens in der Dateiliste und von der Tippsuche der
+/// Belegungsansicht aus der Runde 7. **Gezaehlt werden Dateien und nicht
+/// Aufrufe**: welche Datei fragt, ist die Aussage des Kriteriums; wie oft sie
+/// innerhalb ihrer selbst fragt, ist es nicht.
+///
+/// Der Vergleich hat dieselbe Bauart: er steht ebenfalls einmal in `filter.rs`
+/// und wird vom Pruefschritt des Ordnermodells und vom Durchlauf gerufen. Bis
+/// zum 260815 stand er zweimal da, einmal je Rufer.
+#[test]
+fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer() {
+    let zeichenregel = concat!("traegt_ein_", "dateiname");
+    let vergleich = concat!("traegt_die", "_folge");
+    let heimat = "krk-core/src/verzeichnis/filter.rs";
+
+    let mut zeichenrufer = Vec::new();
+    let mut vergleichsrufer = Vec::new();
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        let code = code_zeilen(&inhalt);
+        // Die Probenmodule der Heimatdatei rufen beide Regeln ebenfalls; sie
+        // sind kein Rufer im Sinne des Kriteriums, und die Heimat faellt
+        // deshalb aus der Zaehlung.
+        if name == heimat {
+            for (regel, nadel) in [("Zeichenregel", zeichenregel), ("Vergleich", vergleich)] {
+                assert!(
+                    code.iter()
+                        .any(|zeile| zeile.contains(&format!("pub fn {nadel}("))),
+                    "{heimat} erklaert die {regel} nicht mehr"
+                );
+            }
+            continue;
+        }
+        if code.iter().any(|zeile| zeile.contains(zeichenregel)) {
+            zeichenrufer.push(name.clone());
+        }
+        if code.iter().any(|zeile| zeile.contains(vergleich)) {
+            vergleichsrufer.push(name);
+        }
+    }
+
+    assert_eq!(
+        zeichenrufer,
+        vec![
+            "krk-ui/src/appkit/tabelle.rs".to_owned(),
+            "krk-ui/src/belegungsmodell.rs".to_owned(),
+        ],
+        "die Zeichenregel hat andere Rufer als den Filter und die Tippsuche"
+    );
+    assert_eq!(
+        vergleichsrufer,
+        vec![
+            "krk-core/src/verzeichnis/durchlauf.rs".to_owned(),
+            "krk-core/src/verzeichnis/modell.rs".to_owned(),
+        ],
+        "der Vergleich hat andere Rufer als der Pruefschritt und der Durchlauf"
     );
 }

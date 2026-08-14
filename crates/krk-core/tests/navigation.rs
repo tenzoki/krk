@@ -1,8 +1,13 @@
 //! Abnahme der Tastaturnavigation (Schritt 13 des Plans, Faehigkeit C2).
 //!
 //! Alle Pruefungen laufen ohne Fenster und ohne AppKit. Geprueft ist die reine
-//! Logik: die Sprungmarke mit ihrem Zeitablauf, die Auswahl beim Aufstieg und
-//! die vier Markierungsbefehle auf einem Ordnermodell mit 1.000 Eintraegen.
+//! Logik: die Auswahl beim Aufstieg und die vier Markierungsbefehle auf einem
+//! Ordnermodell mit 1.000 Eintraegen.
+//!
+//! **Die Sprungmarke aus C2 stand bis zur Runde 10 hier obenan.** Sie ist mit
+//! ihrem Zeitablauf gefallen; der Filtertext des Tabs, der sie abgeloest hat,
+//! wird in `tests/verzeichnis.rs` abgenommen, wo auch der Pruefschritt der
+//! Sichtbarkeit und der Durchlauf stehen.
 //!
 //! Das Modell entsteht aus einem echten Pruefordner und nicht aus von Hand
 //! gebauten Eintraegen. Der Grund ist der Sortierschluessel: er wird beim Lesen
@@ -11,9 +16,6 @@
 //! Eintraege als gleich, und die Reihenfolge, gegen die diese Pruefungen
 //! messen, waere beliebig.
 
-use std::time::{Duration, Instant};
-
-use krk_core::verzeichnis::sprungmarke::{self, PAUSE, Sprungmarke};
 use krk_core::verzeichnis::{Ordnermodell, aufwaerts, lesen};
 
 mod gemeinsam;
@@ -78,105 +80,6 @@ fn name_in_zeile(modell: &Ordnermodell, zeile: usize) -> &str {
         .zeile(zeile)
         .map(|eintrag| eintrag.name.as_str())
         .expect("die Zeile steht nicht in der Sicht")
-}
-
-// ---------------------------------------------------------------------------
-// Die Sprungmarke: Tippen der Anfangsbuchstaben (C2)
-// ---------------------------------------------------------------------------
-
-#[test]
-fn getippte_buchstaben_sammeln_sich_und_finden_den_ersten_treffer() {
-    let ordner = Pruefordner::neu("sprungmarke");
-    for name in ["Apfel.txt", "Banane.txt", "Bananenbrot.txt", "Birne.txt"] {
-        ordner.fuelldatei(name, 1);
-    }
-    let modell = modell_von(&ordner);
-
-    let mut marke = Sprungmarke::neu();
-    let jetzt = Instant::now();
-
-    let praefix = marke.tippen('b', jetzt).expect("b traegt ein Dateiname");
-    assert_eq!(praefix, "b");
-    assert_eq!(
-        sprungmarke::erste_zeile_mit(&modell, praefix).map(|zeile| name_in_zeile(&modell, zeile)),
-        Some("Banane.txt"),
-        "gesucht wird ohne Ruecksicht auf die Grossschreibung"
-    );
-
-    let praefix = marke
-        .tippen('i', jetzt + Duration::from_millis(100))
-        .expect("i traegt ein Dateiname");
-    assert_eq!(praefix, "bi");
-    assert_eq!(
-        sprungmarke::erste_zeile_mit(&modell, praefix).map(|zeile| name_in_zeile(&modell, zeile)),
-        Some("Birne.txt")
-    );
-}
-
-#[test]
-fn nach_der_pause_faengt_die_eingabe_von_vorn_an() {
-    let mut marke = Sprungmarke::neu();
-    let jetzt = Instant::now();
-
-    assert_eq!(marke.tippen('b', jetzt), Some("b"));
-    assert_eq!(
-        marke.tippen('i', jetzt + PAUSE - Duration::from_millis(1)),
-        Some("bi")
-    );
-    assert_eq!(
-        marke.tippen('r', jetzt + PAUSE * 2),
-        Some("r"),
-        "nach der Pause traegt der Puffer nur noch das neue Zeichen"
-    );
-}
-
-/// Der Fall, an dem die seit dem 260804 freie Eingabetaste haengt.
-#[test]
-fn ein_wagenruecklauf_laesst_den_puffer_unveraendert_und_startet_die_pause_nicht_neu() {
-    let mut marke = Sprungmarke::neu();
-    let jetzt = Instant::now();
-    assert_eq!(marke.tippen('b', jetzt), Some("b"));
-
-    // Kurz vor Ablauf der Pause die Eingabetaste. Sie wird abgewiesen.
-    let spaet = jetzt + PAUSE - Duration::from_millis(1);
-    assert_eq!(marke.tippen('\r', spaet), None);
-    assert_eq!(marke.puffer(), "b", "der Puffer ist unveraendert");
-
-    // Haette der Wagenruecklauf die Pause neu gestartet, waere hier noch
-    // nichts abgelaufen und der Puffer hiesse "bi". Er heisst "i".
-    assert_eq!(
-        marke.tippen('i', jetzt + PAUSE),
-        Some("i"),
-        "der abgewiesene Tastendruck hat die Pause verlaengert"
-    );
-}
-
-#[test]
-fn ein_zeichen_aus_dem_funktionstastenbereich_laesst_den_puffer_unveraendert() {
-    let mut marke = Sprungmarke::neu();
-    let jetzt = Instant::now();
-    assert_eq!(marke.tippen('b', jetzt), Some("b"));
-
-    // NSDownArrowFunctionKey, das Zeichen, das AppKit einem Pfeil ab beilegt.
-    let spaet = jetzt + PAUSE - Duration::from_millis(1);
-    assert_eq!(marke.tippen('\u{F701}', spaet), None);
-    assert_eq!(marke.puffer(), "b");
-
-    assert_eq!(
-        marke.tippen('i', jetzt + PAUSE),
-        Some("i"),
-        "der abgewiesene Tastendruck hat die Pause verlaengert"
-    );
-}
-
-#[test]
-fn ein_praefix_ohne_treffer_findet_nichts() {
-    let ordner = Pruefordner::neu("kein-treffer");
-    ordner.fuelldatei("Apfel.txt", 1);
-    let modell = modell_von(&ordner);
-
-    assert_eq!(sprungmarke::erste_zeile_mit(&modell, "z"), None);
-    assert_eq!(sprungmarke::erste_zeile_mit(&modell, ""), None);
 }
 
 // ---------------------------------------------------------------------------

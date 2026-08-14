@@ -189,3 +189,73 @@ Sechs der vierzehn Schritte, und weiterhin drei Ursachen:
 - **B1** — die Datei steht im Fließtext des Schritts und fehlt in seiner Dateiliste.
 - **D1, E3** — die Dateien sind vollständig für die *Änderung*, aber nicht für ihre
   *Folge*: eine Rangverschiebung bei D1, eine Zahl in Prosa bei E3.
+
+## Nachtrag vom 260815, beim Umsetzen von A2
+
+**Der siebte Fall, und er trägt eine vierte Ursache.** Schritt A2 nennt unter `Files:`
+`crates/krk-core/src/verzeichnis/sprungmarke.rs` (umbenannt zu `filter.rs`),
+`crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/tests/navigation.rs` und
+`crates/krk-ui/src/belegungsmodell.rs`. Geändert sind elf Dateien.
+
+**Vierte Ursache: der Schritt zieht eine Funktion um, und eine Dateiliste nennt den
+Herkunftsort, nicht die Rufer.** A2 schreibt im Fließtext ausdrücklich vor, den
+Vergleich `traegt_die_folge` aus dem Durchlauf hierherzuziehen, „sodass danach genau ein
+Vergleich im Baum steht und beide Stellen ihn rufen". Genau diese beiden Stellen fehlen
+in der Dateiliste:
+
+- `crates/krk-core/src/verzeichnis/durchlauf.rs` — verliert seine eigene Fassung des
+  Vergleichs und ruft die eine (`use super::filter::traegt_die_folge;`).
+- `crates/krk-core/src/verzeichnis/modell.rs` — `Ordnermodell::sichtbar` ruft dieselbe
+  Funktion statt eines eingesetzten `to_lowercase().contains`.
+
+Ohne diese beiden Dateien ist der Kern des Schritts nicht ausführbar. Es ist derselbe
+Widerspruch zwischen `Files:` und `Changes:` wie bei B1, nur an einem Umzug statt an
+einem Zugriffsweg.
+
+**Zweite Ursache, der Zugriffsweg — ein achtes Mal.** Die Zeichenregel
+`traegt_ein_dateiname` zieht mit der Datei um, und der Schritt nennt für den `use`-Pfad
+allein `crates/krk-ui/src/belegungsmodell.rs:72`. Sie hat aber **zwei** Rufer, und A2
+sagt das eine Zeile vorher selbst („sie behält ihre zwei Aufrufer, den Filter und die
+Tippsuche der Belegungsansicht"). Der zweite ist
+`crates/krk-ui/src/appkit/tabelle.rs:168`, die Senke des Tippens aus B1.
+
+**Dritte Ursache, die Folge der Änderung — wie bei D1 und E3.** Der Modulname
+`krk_core::verzeichnis::sprungmarke` steht in diesem Baum in Prosa, und der Umzug macht
+jede Nennung in demselben Zug falsch. A2 nennt dafür ausdrücklich zwei Modulköpfe, den
+von `appkit/tabelle.rs` und den der Nachschlagart. **Der erste war zum 260815 schon
+richtig** — B1 hat ihn beim Umbau der Senke mitgezogen —, und drei weitere Dateien
+standen dafür falsch:
+
+- `crates/krk-core/src/tasten/belegung.rs` — Modulkopf und `Nachschlag::Sprungmarke`,
+  die von A2 genannte Nachschlagart. Der Name bleibt; die Prosa sagt jetzt, dass er
+  benennt, was der Wert aussagt, und nicht, wohin das Zeichen läuft.
+- `crates/krk-ui/src/appkit/ereignisse.rs` — sieben Stellen, darunter der Modulkopf, der
+  die Regel in `krk_core::verzeichnis::sprungmarke` verortete, also in einem Modul, das
+  es nicht mehr gibt.
+- `crates/krk-ui/src/kommandos/zulaessigkeit.rs` — eine Zeile, „der Zeichenzweig der
+  Sprungmarke".
+
+Dazu die Prosa in `crates/krk-ui/src/belegungsmodell.rs` selbst, die an sechs Stellen
+die Sekundenregel der Sprungmarke als bestehend beschrieb, darunter der Doc-Kommentar
+ihrer eigenen Zählprobe `die_suche_fuehrt_keinen_zeitgeber`.
+
+**Die elfte Datei ist die Probe, und sie hat den Grund von E3.**
+`crates/krk-core/tests/verzeichnis.rs` trägt jetzt die drei Zählproben für C1.4, C1.5
+und C1.12. Sie stehen dort und nicht in der genannten `tests/navigation.rs`, weil dort
+die übrigen Filterproben dieser Runde stehen und weil dieselbe Datei mit
+`der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze` schon die Bauform
+führt, die sie brauchen.
+
+## Was der Befund inzwischen misst
+
+Sieben der vierzehn Schritte, und vier Ursachen:
+
+- **C2, E1, E3, A2** — die Datei steht in keinem Teil des Schritts; der Weg an das
+  Tabmodell beziehungsweise an den zweiten Rufer führt trotzdem durch sie.
+- **B1, A2** — die Datei steht im Fließtext des Schritts und fehlt in seiner
+  Dateiliste.
+- **D1, E3, A2** — die Dateien sind vollständig für die *Änderung*, aber nicht für ihre
+  *Folge*: eine Rangverschiebung bei D1, eine Zahl in Prosa bei E3, ein Modulname in
+  Prosa bei A2.
+- **A2** — die Dateiliste nennt den Herkunftsort einer umgezogenen Funktion und nicht
+  ihre Rufer.

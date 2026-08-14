@@ -272,7 +272,33 @@ flowchart TD
   - **Die Auswahl beim Wegfallen ihrer Zeile** (C1.11): `auswahl_zeile` liefert schon heute `None` für einen ausgeblendeten Eintrag, und die Ansicht setzt die Auswahl in Schritt B1 auf die erste sichtbare Zeile. Der gemerkte Eintragsindex bleibt stehen, wie beim Ausblenden versteckter Dateien.
   - Proben in `crates/krk-core/tests/verzeichnis.rs`: Teilzeichenfolge an jeder Stelle, Groß- und Kleinschreibung, keine Umlautfaltung, Ordner bleiben bei flacher Suche sichtbar, Ordner ohne Treffer fallen bei tiefer Suche weg, ein namentlich passender Ordner steht auch ohne Treffer darunter, die Markierung besteht unter dem Filter fort und wirkt wieder, wenn er fällt.
 
-**A2. Die Sprungmarke fällt, die Zeichenregel bleibt**
+**A2. [DONE] Die Sprungmarke fällt, die Zeichenregel bleibt**
+- **Abgenommen mit `make check` — Exit 0**, alle vier Kommandos grün. Drei neue
+  Zählproben in `crates/krk-core/tests/verzeichnis.rs`: `im_filter_steht_keine_zeitmessung`
+  (C1.5), `die_sprungmarke_steht_nirgends_mehr_im_baum` (C1.12) und
+  `die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer` (C1.4).
+  Dazu sechs Proben im Prüfmodul von `filter.rs`, davon vier neue für den Vergleich.
+- **Der Vergleich steht danach an genau einer Stelle**, `verzeichnis::filter::traegt_die_folge`,
+  gerufen von `Ordnermodell::sichtbar` und vom Durchlauf. Die Doppelung, die F1 bewusst
+  stehen ließ, ist damit weg.
+- **Elf Dateien statt vier.** Die zwei Rufer des umgezogenen Vergleichs (`modell.rs`,
+  `durchlauf.rs`), der zweite Rufer der Zeichenregel (`appkit/tabelle.rs`), drei Dateien
+  mit Prosa über das nicht mehr bestehende Modul `verzeichnis::sprungmarke`
+  (`tasten/belegung.rs`, `appkit/ereignisse.rs`, `kommandos/zulaessigkeit.rs`) und die
+  Probendatei. Datensatz: `issues/260814-2357_o_c2-nennt-zwei-dateien-…`, Nachtrag vom
+  260815 zu A2, vierte Ursache.
+- **C1.5 ist über vier Dateien geprüft und nicht über den ganzen Weg**, und die Probe
+  sagt es selbst: `krk-ui/src/appkit/anwendung.rs` liegt auf dem Weg eines getippten
+  Zeichens und führt eine Uhr für den Anzeigeverzug der Dateioperationen. `SystemTime`
+  ist ausdrücklich keine Nadel, weil ein `Eintrag` seine Änderungszeit so trägt; die
+  Nadeln sind `Instant`, `Duration` und `::now(`.
+- **Eine dritte wortgleiche Fassung des Vergleichs steht weiter im Baum**, in
+  `Belegungsmodell::zeile_traegt` — genau der Stelle, die C1.3 als Maßstab nennt. Sie
+  ist nicht mitgezogen, weil A2 sie nicht nennt und C1.4 die Runde-7-Seite unverändert
+  lässt. Datensatz: `issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md`.
+- **Der Modulkopf von `appkit/tabelle.rs` war schon richtig**, B1 hat ihn beim Umbau der
+  Senke mitgezogen; richtiggestellt ist stattdessen die Prosa der Nachschlagart und die
+  der drei oben genannten Dateien.
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/sprungmarke.rs` (umbenannt zu `filter.rs`), `crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/tests/navigation.rs`, `crates/krk-ui/src/belegungsmodell.rs`
 - Erfüllt: C1.4, C1.5, C1.12

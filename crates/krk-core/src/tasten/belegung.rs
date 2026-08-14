@@ -35,12 +35,14 @@
 //!
 //! # Was ein Nachschlag antwortet
 //!
-//! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist die Sprungmarke aus C2:
+//! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist [`Nachschlag::Sprungmarke`]:
 //! eine Taste **ohne** Zusatztaste, die keiner Funktion gehoert, gehoert dem
-//! Tippen der Anfangsbuchstaben. Der Kern sagt nur, dass der Tastendruck dorthin
-//! faellt; welches Zeichen in den Suchpuffer geht, entscheidet die Oberflaeche
-//! am Ereignis, weil dort auch die Grossschreibung und die Eingabemethoden
-//! stehen.
+//! Tippen. Der Kern sagt nur, dass der Tastendruck dorthin faellt; welches
+//! Zeichen es ist, entscheidet die Oberflaeche am Ereignis, weil dort auch die
+//! Grossschreibung und die Eingabemethoden stehen. Wohin das Zeichen danach
+//! geht, hat die Runde 10 geaendert — bis dahin in den Suchpuffer der
+//! Sprungmarke aus C2 der Runde 1, seither in den Filtertext des sichtbaren
+//! Tabs —, und der Kern der Belegung hat davon nichts gemerkt.
 //!
 //! # Wonach nachgeschlagen wird
 //!
@@ -1060,7 +1062,13 @@ pub enum Nachschlag<'a> {
     /// Die Kombination gehoert dieser Funktion.
     Funktion(&'a Funktion),
     /// Keine Funktion, und keine Zusatztaste gehalten: der Tastendruck faellt
-    /// auf die Sprungmarke aus C2 durch, das Tippen der Anfangsbuchstaben.
+    /// auf das Tippen durch.
+    ///
+    /// **Der Name blieb, als die Sprungmarke aus C2 der Runde 1 fiel.** Er
+    /// benennt, was dieser Wert seit jeher aussagt — eine Taste ohne
+    /// Zusatztaste, die keiner Funktion gehoert —, und das trifft unveraendert
+    /// zu. Wohin das getippte Zeichen laeuft, sagt er nicht und hat er nie
+    /// gesagt: seit der Runde 10 ist es der Filtertext des sichtbaren Tabs.
     Sprungmarke,
     /// Keine Funktion, und eine Zusatztaste gehalten: nichts geschieht.
     Unbelegt,

@@ -165,7 +165,7 @@ use objc2_foundation::{
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::tasten::Kommando;
-use krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname;
+use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 use krk_core::verzeichnis::{
     Eintrag, Markierungsstand, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts,
 };
@@ -1132,7 +1132,7 @@ impl DateifensterQuelle {
     /// kann, ist deshalb nicht verbraucht.
     ///
     /// **Die Zeichenregel bleibt
-    /// [`traegt_ein_dateiname`](krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname)**
+    /// [`traegt_ein_dateiname`](krk_core::verzeichnis::filter::traegt_ein_dateiname)**
     /// (C1.4), dieselbe, die die Tippsuche der Belegungsansicht aus der Runde 7
     /// liest. Gefragt wird sie hier und nicht im Kern: `zeichen_anhaengen` hat
     /// keinen Rueckgabewert, und ein dort still verworfenes Zeichen waere ein
