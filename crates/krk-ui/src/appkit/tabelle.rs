@@ -1172,6 +1172,15 @@ impl DateifensterQuelle {
     /// `zeile_auswaehlen` daneben: die Auswahl muss auch im Modell stehen,
     /// sonst zeigte der naechste Aufbau der Sicht wieder die alte.
     ///
+    /// **Der Durchlauf wird hier nachgezogen** (C3.6). Jede Aenderung des
+    /// Filtertexts bricht den laufenden ab und stoesst, wenn „Deep" steht,
+    /// einen neuen an; die Regel dafuer steht in
+    /// [`Tabliste::durchlauf_nachziehen`](crate::tabs::Tabliste::durchlauf_nachziehen)
+    /// und nicht hier. Diese Stelle ist der eine Weg jeder Filteraenderung,
+    /// also auch der eine Ort dieses Rufs — die drei Aufrufer daneben je
+    /// einzeln rufen zu lassen waeren drei Gelegenheiten, es verschieden zu
+    /// tun.
+    ///
     /// **Der fuenfte Rang der Statuszeile wird hier nachgezogen** (C4). Er
     /// nennt den Filtertext und die Zahl der gezeigten Zeilen, und beide
     /// aendert genau diese Stelle; sie ist der eine Weg der Anzeige nach einer
@@ -1179,6 +1188,7 @@ impl DateifensterQuelle {
     /// werden muss dafuer wie beim Markierungsstand daneben, denn ein
     /// gerechneter Rang hat kein Feld, das jemand setzt.
     fn nach_filteraenderung(&self) {
+        self.durchlauf_nachziehen();
         self.umsortiert();
         self.meldung_gewechselt();
         let (hatte_auswahl, zeile_jetzt, zeilen) = {
@@ -1705,6 +1715,10 @@ impl DateifensterQuelle {
             let tief = modell.tief();
             modell.tief_setzen(!tief);
         }
+        // Einschalten stoesst den Durchlauf an, Ausschalten bricht ihn ab
+        // (C3.7). Beide Haelften stehen in einer Regel, und die Regel steht in
+        // `Tabliste::durchlauf_nachziehen`; hier faellt kein Zweig an.
+        self.durchlauf_nachziehen();
         self.umsortiert();
         // Der Schalter aendert, wie viele Zeilen stehen, und damit den fuenften
         // Rang der Statuszeile (C4.3).
@@ -1817,6 +1831,25 @@ impl DateifensterQuelle {
         }
         self.nach_filteraenderung();
         true
+    }
+
+    /// Zieht den Durchlauf des sichtbaren Tabs nach und wirft den Einzugstakt
+    /// an, falls jetzt einer laeuft.
+    ///
+    /// **Der ganze AppKit-Anteil des Durchlaufs an dieser Stelle**: die Regel,
+    /// wann einer faellt und wann einer beginnt, steht in
+    /// [`Tabliste::durchlauf_nachziehen`](crate::tabs::Tabliste::durchlauf_nachziehen).
+    /// Hier bleibt allein der Zeitgeber, denn der ist AppKit: ohne ihn liefe
+    /// der Arbeitsfaden, und seine Befunde blieben im Kanal stehen, bis der
+    /// naechste Lesevorgang den Takt zufaellig wieder anwirft.
+    ///
+    /// Der Wert von `durchlauf_nachziehen` traegt `#[must_use]` und wird hier
+    /// verbraucht; fuer den Aufrufer bleibt nichts zu entscheiden.
+    fn durchlauf_nachziehen(&self) {
+        let laeuft = self.ivars().tabs.borrow_mut().durchlauf_nachziehen();
+        if laeuft {
+            self.einzug_starten();
+        }
     }
 
     /// Nach einem Wechsel der Reihenfolge oder der Sichtbarkeit.
@@ -2148,11 +2181,19 @@ impl DateifensterQuelle {
             // Bildschirmseite und der fertigen Sortierung rund 800 ms.
             self.auswahl_anzeigen();
             self.gemerkten_bildlauf_herstellen();
-        } else if einzug.ersetzt {
+        } else if einzug.ersetzt || einzug.befunde_neu {
             // Dieser Stapel hat die Liste des vorigen Lesevorgangs abgeloest.
             // `noteNumberOfRowsChanged` genuegt dafuer nicht: die Tabelle
             // zeigte weiter die Zellen des alten Ordners, und ihre Auswahl
             // stuende auf einer Zeile, die es nicht mehr gibt.
+            //
+            // Fuer einen eingetroffenen Befund gilt dasselbe aus einem
+            // verwandten Grund: er stellt seine Zeile an die Stelle, die die
+            // Sortierung ihr zuweist, also mitten in die Liste, und alle Zeilen
+            // darunter tragen danach einen anderen Eintrag (C3.11). Der
+            // Bildlauf bleibt dabei stehen, wo er steht — `reloadData` ruehrt
+            // ihn nicht an —, und die Auswahl haengt am Eintragsindex und
+            // wandert mit; [`Self::auswahl_anzeigen`] zeigt sie nur neu.
             self.ivars().tabelle.reloadData();
             self.auswahl_anzeigen();
         } else if einzug.angehaengt {
@@ -2173,7 +2214,11 @@ impl DateifensterQuelle {
         if self.ivars().tabs.borrow().nachzuegler_faellig() {
             self.ivars().tabs.borrow_mut().nachzuegler_starten();
         }
-        if !self.ivars().tabs.borrow().liest_noch() {
+        // Gefragt wird `arbeitet_noch` und nicht `liest_noch`: der Takt bedient
+        // zwei Kanaele, und ein Durchlauf laeuft gerade dann, wenn kein
+        // Lesevorgang mehr laeuft. Mit der engeren Frage hielte der Takt an,
+        // bevor der erste Befund da ist.
+        if !self.ivars().tabs.borrow().arbeitet_noch() {
             self.einzug_beenden();
         }
     }

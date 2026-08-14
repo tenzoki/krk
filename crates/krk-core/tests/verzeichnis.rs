@@ -695,7 +695,7 @@ fn ohne_filtertext_aendert_die_tiefe_suche_nichts() {
     assert!(!modell.filter_steht(), "diese Probe faehrt ohne Filtertext");
 
     let still = index_von(&modell, "stiller-ordner");
-    modell.befund_setzen(still, Befund::KeinTreffer);
+    modell.befunde_setzen([(still, Befund::KeinTreffer)]);
     modell.tief_setzen(true);
 
     assert!(modell.tief(), "das Kennzeichen steht, auch ohne Filtertext");
@@ -722,13 +722,13 @@ fn bei_tiefer_suche_entscheidet_name_oder_befund() {
     );
 
     let still = index_von(&modell, "stiller-ordner");
-    modell.befund_setzen(still, Befund::KeinTreffer);
+    modell.befunde_setzen([(still, Befund::KeinTreffer)]);
     assert!(
         !namen(&modell).contains(&"stiller-ordner"),
         "ein Ordner ohne Treffer darunter faellt weg"
     );
 
-    modell.befund_setzen(still, Befund::Treffer);
+    modell.befunde_setzen([(still, Befund::Treffer)]);
     assert_eq!(
         namen(&modell),
         vec![
@@ -751,7 +751,7 @@ fn ein_namentlich_passender_ordner_steht_auch_ohne_treffer_darunter() {
     modell.tief_setzen(true);
 
     let passend = index_von(&modell, "aaa-ordner");
-    modell.befund_setzen(passend, Befund::KeinTreffer);
+    modell.befunde_setzen([(passend, Befund::KeinTreffer)]);
 
     assert!(
         namen(&modell).contains(&"aaa-ordner"),
@@ -779,7 +779,7 @@ fn eine_verknuepfung_zaehlt_fuer_die_sichtbarkeit_als_ordner() {
 
     modell.tief_setzen(true);
     let verweis = index_von(&modell, "verweis");
-    modell.befund_setzen(verweis, Befund::KeinTreffer);
+    modell.befunde_setzen([(verweis, Befund::KeinTreffer)]);
 
     assert_eq!(
         namen(&modell),
@@ -982,7 +982,7 @@ fn der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck() {
     modell.tief_setzen(true);
 
     let still = index_von(&modell, "stiller-ordner");
-    modell.befund_setzen(still, Befund::Treffer);
+    modell.befunde_setzen([(still, Befund::Treffer)]);
     assert_eq!(modell.befund(still), Befund::Treffer);
 
     modell.zeichen_anhaengen('x');
@@ -992,7 +992,7 @@ fn der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck() {
         "ein weiteres Zeichen stellt eine andere Frage"
     );
 
-    modell.befund_setzen(still, Befund::Treffer);
+    modell.befunde_setzen([(still, Befund::Treffer)]);
     modell.tief_setzen(false);
     modell.tief_setzen(true);
     assert_eq!(

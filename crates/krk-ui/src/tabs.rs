@@ -37,7 +37,8 @@
 use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
-use krk_core::verzeichnis::{Abschluss, Lesevorgang, Meldung, Ordnermodell};
+use krk_core::verzeichnis::modell::Befund;
+use krk_core::verzeichnis::{Abschluss, Auftrag, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
 
 /// Die Generation, mit der ein noch nicht gelesener Tab anfaengt.
 const GENERATION_LEER: u64 = 0;
@@ -47,6 +48,14 @@ pub struct Tabinhalt {
     ordner: PathBuf,
     modell: Ordnermodell,
     lesevorgang: Option<Lesevorgang>,
+    /// Der Durchlauf ueber die Unterbaeume, falls einer laeuft.
+    ///
+    /// **Hoechstens einer je Tab** (C3.6), und deshalb ein Feld und keine
+    /// Sammlung: es gibt keine Schreibweise, in der zwei zugleich stuenden.
+    /// Neben `lesevorgang` und nicht in ihm, weil die beiden verschiedene
+    /// Fragen beantworten und verschieden lange leben; welcher Anlass ihn
+    /// faellen laesst, steht bei [`Tabliste::durchlauf_nachziehen`].
+    durchlauf: Option<Durchlauf>,
     /// Der Name, auf den die Auswahl springt, sobald der Ordner gelesen ist.
     ///
     /// Er kommt aus `session.toml` und lebt genau bis zum Abschluss des
@@ -82,6 +91,7 @@ impl Tabinhalt {
             ordner: zustand.ordner.clone(),
             modell,
             lesevorgang: None,
+            durchlauf: None,
             wunschauswahl: zustand.auswahl.clone(),
             bildlauf: zustand.bildlauf,
             bildlauf_offen: zustand.bildlauf > 0.0,
@@ -290,7 +300,7 @@ pub enum Auswahlversuch {
 /// Wert wortlos, bleibt die Meldung an AppKit aus, und die `NSTableView` steht
 /// weiter mit dem Bestand von vorhin da, waehrend das Modell laengst den neuen
 /// fuehrt. Kein zweiter Weg meldet das nach, und der Bau waere dabei gruen.
-/// Heute bindet der eine Aufrufer den Wert und wertet alle vier Felder aus
+/// Heute bindet der eine Aufrufer den Wert und wertet alle fuenf Felder aus
 /// (`Dateitabelle::einziehen` in `crate::appkit::tabelle`); das `#[must_use]`
 /// haelt das fuer den zweiten fest.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -309,6 +319,14 @@ pub struct Einzug {
     pub fertig: bool,
     /// Die Statuszeile des sichtbaren Tabs hat einen neuen Text.
     pub meldung_neu: bool,
+    /// Der Durchlauf des sichtbaren Tabs hat Befunde geliefert.
+    ///
+    /// Neben `angehaengt`, weil die Ansicht darauf anders antwortet: ein Befund
+    /// stellt eine Zeile **mitten** in die sortierte Sicht und nicht an ihr
+    /// Ende, also aendert er den Inhalt der Zeilen darunter.
+    /// `noteNumberOfRowsChanged` liesse die alten Inhalte stehen; es braucht
+    /// `reloadData` (C3.11).
+    pub befunde_neu: bool,
 }
 
 /// Was die Lesereihenfolge von einem Dateifenster wissen muss.
@@ -328,6 +346,14 @@ pub struct Tabliste {
     tabs: Vec<Tabinhalt>,
     aktiv: usize,
     letzte_generation: u64,
+    /// Die laufende Nummer des zuletzt gestarteten Durchlaufs.
+    ///
+    /// Eine eigene Zaehlung neben `letzte_generation` und nicht dieselbe: die
+    /// Generation gehoert dem Bestand eines Modells, der Durchlauf laesst sie
+    /// unberuehrt. Die Nummer benennt allein seinen Arbeitsfaden
+    /// (`krk-durchlauf-<n>`), damit zwei Durchlaeufe desselben Tabs in einem
+    /// Fadenprotokoll auseinanderzuhalten sind.
+    letzter_durchlauf: u64,
     /// Ob die verdeckten Tabs noch auf ihre Lesevorgaenge warten.
     nachzuegler_offen: bool,
 }
@@ -351,6 +377,7 @@ impl Tabliste {
             tabs,
             aktiv,
             letzte_generation: GENERATION_LEER,
+            letzter_durchlauf: 0,
             nachzuegler_offen: true,
         }
     }
@@ -677,16 +704,101 @@ impl Tabliste {
         self.tabs.iter().any(Tabinhalt::liest)
     }
 
-    /// Bricht jeden laufenden Lesevorgang ab und schliesst die Modelle ab.
+    /// Ob irgendein Tab dieses Fensters noch etwas einzuziehen hat.
+    ///
+    /// **Die eine Bedingung des Einzugstakts**, und sie zaehlt beide Kanaele:
+    /// den des Lesevorgangs und den des Durchlaufs. Der Takt bedient beide, und
+    /// eine Bedingung, die nur den ersten kennte, hielte ihn an, waehrend die
+    /// Befunde des zweiten noch unterwegs sind — die Liste bliebe dann stehen
+    /// und wuechse erst beim naechsten Anlass weiter.
+    pub fn arbeitet_noch(&self) -> bool {
+        self.liest_noch() || self.tabs.iter().any(|tab| tab.durchlauf.is_some())
+    }
+
+    /// Bricht den Durchlauf des sichtbaren Tabs ab und stoesst, wenn seine
+    /// Bedingungen stehen, einen neuen an.
+    ///
+    /// **Die eine Stelle, an der ein Durchlauf entsteht und vergeht**, und
+    /// damit die Antwort auf beide Haelften von C3.6 und C3.7 zugleich. Zu
+    /// rufen ist sie von jedem Anlass, der eine seiner Eingaben aendert: von
+    /// jeder Aenderung des Filtertexts, vom Umschalten des Filters der Tiefe
+    /// und vom Einzugstakt, sobald ein Tab fertig gelesen ist. Die uebrigen
+    /// Anlaesse brauchen keinen Ruf, weil der [`Tabinhalt`] mit dem Durchlauf
+    /// dort ohnehin faellt: der Ordnerwechsel tauscht ihn aus, das Schliessen
+    /// nimmt ihn weg, und [`Tabliste::lesen_starten`] setzt das Feld
+    /// ausdruecklich zurueck, weil der Bestand gerade abgeloest wird und ein
+    /// Eintragsindex des alten Bestands auf einen beliebigen Eintrag des neuen
+    /// zeigte.
+    ///
+    /// **Ein Tabwechsel ruft hier nicht**, und das ist Absicht (C3.6 zaehlt je
+    /// Tab): ein verdeckter Tab fuellt sich still weiter, wie er es beim
+    /// Lesevorgang tut, und ein Abbruch beim Wegwechseln naehme dem Nutzer
+    /// gerade die Arbeit weg, die er beim Zurueckwechseln braeuchte.
+    ///
+    /// **Liefert, ob jetzt ein Durchlauf laeuft.** Der Wert sagt dem Aufrufer,
+    /// ob er den Einzugstakt anwerfen muss; faellt er still, kaeme kein Befund
+    /// je an und die Zeilen erschienen nie.
+    #[must_use = "laeuft jetzt ein Durchlauf, ist der Einzugstakt anzuwerfen"]
+    pub fn durchlauf_nachziehen(&mut self) -> bool {
+        let stelle = self.aktiv;
+        self.durchlauf_nachziehen_an(stelle)
+    }
+
+    /// Der Rumpf von [`Tabliste::durchlauf_nachziehen`] fuer einen genannten
+    /// Tab.
+    ///
+    /// Der bisherige Durchlauf faellt in jedem Fall zuerst; sein `Drop` setzt
+    /// das Abbruchkennzeichen, und sein Empfaenger geht mit, also kann kein
+    /// Befund des alten Laufs mehr ankommen und die Befunde zweier Filtertexte
+    /// mischen sich nicht.
+    fn durchlauf_nachziehen_an(&mut self, stelle: usize) -> bool {
+        self.tabs[stelle].durchlauf = None;
+        let tab = &self.tabs[stelle];
+        // Der Bestand muss stehen. Waehrend eines Lesevorgangs zeigt das Modell
+        // noch den **alten** Ordner — es wird nicht vorab geleert, sondern mit
+        // dem ersten Stapel ersetzt —, und eine Auftragsliste daraus benennte
+        // Ordner, die es hier gar nicht gibt, unter Indizes, die gleich einem
+        // anderen Eintrag gehoeren werden.
+        if !tab.gelesen || tab.liest() {
+            return false;
+        }
+        if !tab.modell.filter_steht() || !tab.modell.tief() {
+            return false;
+        }
+        let auftraege = auftraege(&tab.modell);
+        // Kein Auftrag, kein Faden: die Zusage aus C3.14 zaehlt Durchlaeufe,
+        // und ein Ordner, dessen saemtliche Unterordner den Filtertext im Namen
+        // tragen, stoesst hier gar keinen an.
+        if auftraege.is_empty() {
+            return false;
+        }
+        self.letzter_durchlauf += 1;
+        let nummer = self.letzter_durchlauf;
+        let tab = &mut self.tabs[stelle];
+        tab.durchlauf = Some(Durchlauf::starten(
+            auftraege,
+            tab.ordner.clone(),
+            tab.modell.filter_klein().to_owned(),
+            nummer,
+        ));
+        true
+    }
+
+    /// Bricht jeden laufenden Lesevorgang und jeden Durchlauf ab und schliesst
+    /// die Modelle ab.
     ///
     /// Gerufen beim Schliessen des Fensters. Ohne diesen Aufruf liefe der
     /// Arbeitsfaden eines Ordners mit 100.000 Eintraegen gegen eine Tabelle
-    /// weiter, die niemand mehr sieht.
+    /// weiter, die niemand mehr sieht. Fuer den Durchlauf gilt dasselbe, und
+    /// sein Abbruch braucht keine eigene Zeile ausser dieser: das Feld
+    /// zurueckzusetzen laesst ihn fallen, und sein `Drop` setzt das
+    /// Abbruchkennzeichen.
     pub fn abbrechen(&mut self) {
         for tab in &mut self.tabs {
             if let Some(vorgang) = tab.lesevorgang.take() {
                 vorgang.abbrechen();
             }
+            tab.durchlauf = None;
             tab.modell.abschliessen();
             tab.gelesen = true;
         }
@@ -696,11 +808,25 @@ impl Tabliste {
     ///
     /// Liefert, was sich am sichtbaren Tab geaendert hat. Die verdeckten Tabs
     /// fuellen sich dabei still: was in ihnen ankommt, steht auf keinem Schirm.
+    ///
+    /// **Der eine Anlass, an dem ein Durchlauf von selbst beginnt.** Ein Tab,
+    /// der eben fertig gelesen hat, hat seinen Bestand zum ersten Mal
+    /// vollstaendig; vorher ist keine Auftragsliste zu bilden. Gefragt wird je
+    /// Tab und nicht nur am sichtbaren, und das trifft dieselbe Menge: einen
+    /// Filtertext bekommt ein Tab allein ueber das Tippen und ueber
+    /// [`Tabliste::ordner_setzen`], und beide fassen den sichtbaren an. Eine
+    /// Bedingung auf die Stelle waere deshalb eine zweite Regel ohne zweiten
+    /// Fall.
     pub fn einziehen(&mut self) -> Einzug {
         let aktiv = self.aktiv;
         let mut einzug = Einzug::default();
-        for (stelle, tab) in self.tabs.iter_mut().enumerate() {
-            let veraendert = einzug_je_tab(tab);
+        for stelle in 0..self.tabs.len() {
+            let veraendert = einzug_je_tab(&mut self.tabs[stelle]);
+            if veraendert.fertig {
+                // Der Wert sagt, ob der Einzugstakt anzuwerfen ist. Hier laeuft
+                // er schon: dieser Aufruf **ist** sein Rumpf.
+                let _ = self.durchlauf_nachziehen_an(stelle);
+            }
             if stelle == aktiv {
                 einzug = veraendert;
             }
@@ -727,6 +853,12 @@ impl Tabliste {
         // Grund, aus dem kein Stapel des alten Laufs mehr ankommen kann: sein
         // Empfaenger ist weg, und der Bestand mischt sich nicht.
         tab.lesevorgang = None;
+        // Und mit ihm der Durchlauf: seine Auftraege nennen Eintragsindizes des
+        // Bestands, der gerade abgeloest wird, und ein Befund darauf traefe nach
+        // dem Ersatz einen beliebigen anderen Eintrag. Ein neuer Durchlauf
+        // beginnt, sobald der Einzugstakt den Abschluss dieses Lesevorgangs
+        // sieht.
+        tab.durchlauf = None;
         tab.modell.lesevorgang_beginnen(generation);
         tab.meldung = None;
         tab.gelesen = false;
@@ -745,8 +877,117 @@ impl Tabliste {
     }
 }
 
+/// Die Ordner des angezeigten Ordners, ueber die der Durchlauf zu entscheiden
+/// hat.
+///
+/// **Rein und ohne Fenster pruefbar**, und das ist der Grund fuer die Form: die
+/// Zusammensetzung dieser Liste ist die Zusage C3.14, und `krk-ui` hat kein
+/// Bibliotheksziel, an dem eine Probe von aussen ansetzen koennte.
+///
+/// **Zwei Bedingungen und keine dritte.**
+///
+/// Erstens `ist es ein Ordner?`, mit demselben Schnitt, den
+/// `Ordnermodell::sichtbar` zieht: eine symbolische Verknuepfung zaehlt mit,
+/// weil der Nutzer in sie hineinnavigiert. Die Verknuepfungsregel selbst wohnt
+/// allein im Durchlauf, der fuer sie „kein Treffer darunter" meldet, ohne in
+/// sie hinabzusteigen (C2.13). Ein zweiter Schnitt hier hiesse, dass eine
+/// Verknuepfung nie einen Befund bekaeme und damit von „noch nicht
+/// entschieden" nicht zu unterscheiden waere.
+///
+/// Zweitens `Name traegt die Folge?` mit **nein**, gefragt ueber
+/// `Ordnermodell::name_traegt_den_filter` und nicht ueber einen eigenen
+/// Vergleich: der Zweig gehoert dem Pruefschritt, und ein zweiter Vergleich
+/// hier hiesse, dass die Auftragsliste etwas anderes fuer passend hielte als
+/// die Liste, die der Nutzer sieht. Fuer einen Ordner, dessen
+/// eigener Name den Filtertext traegt, laeuft kein Durchlauf: seine
+/// Sichtbarkeit steht mit dem Namen fest, und ein Befund ueber seinen
+/// Unterbaum aenderte sie nicht (C3.14, C2.5, C2.8). Das ist die
+/// Zustaendigkeitsgrenze zwischen den ersten beiden Bildern des Spec, und sie
+/// steht hier am Eingang und nicht als Sonderfall an einem Ausgang.
+///
+/// **Ein ausgeblendeter Ordner steht mit in der Liste.** Die Regel, die ihn
+/// heute wegblendet, ist der erste Zweig von `Ordnermodell::sichtbar`, und der
+/// gehoert dorthin: ein zweites Mal hier gefragt waere die zweite Fassung
+/// derselben Regel, die diese Runde gerade abgeschafft hat. Der Befund ist
+/// dabei nicht umsonst — blendet der Nutzer die versteckten Eintraege waehrend
+/// des Durchlaufs ein, steht die Zeile sofort richtig da.
+fn auftraege(modell: &Ordnermodell) -> Vec<Auftrag> {
+    modell
+        .eintraege()
+        .iter()
+        .enumerate()
+        .filter(|(_, eintrag)| eintrag.ist_ordner() || eintrag.ist_verknuepfung())
+        .filter(|(index, _)| !modell.name_traegt_den_filter(*index as u32))
+        .map(|(index, eintrag)| Auftrag {
+            index: index as u32,
+            name: eintrag.name.clone(),
+        })
+        .collect()
+}
+
 /// Holt die wartenden Meldungen eines einzelnen Tabs ab.
+///
+/// Zwei Kanaele, in dieser Reihenfolge: erst die Stapel des Lesevorgangs, dann
+/// die Befunde des Durchlaufs. Die Reihenfolge traegt nichts — die beiden
+/// koennen nie zugleich laufen, weil ein Durchlauf erst nach dem Abschluss des
+/// Lesevorgangs beginnt —, und sie steht so herum, weil der Lesevorgang den
+/// Bestand liefert, auf den sich jeder Befund bezieht.
 fn einzug_je_tab(tab: &mut Tabinhalt) -> Einzug {
+    let mut einzug = lesemeldungen_einziehen(tab);
+    einzug.befunde_neu = befunde_einziehen(tab);
+    einzug
+}
+
+/// Traegt die wartenden Befunde des Durchlaufs in das Modell ein.
+///
+/// Liefert, ob etwas eingetroffen ist. Der ganze Schwung geht in einem Stueck
+/// an `Ordnermodell::befunde_setzen`, das **einmal** neu aufbaut; ein Setzer je
+/// Ordner haette den Neuaufbau samt Sortierlauf so oft auf den Hauptfaden
+/// gelegt, wie der angezeigte Ordner Unterordner hat
+/// (`issues/260814-2145_*_befund-setzen-baut-die-ganze-sicht-neu-auf-und-der-durchlauf-ruft-es-je-ordner.md`).
+///
+/// **Der geschlossene Kanal raeumt den Durchlauf weg.** Er sagt, dass der
+/// Arbeitsfaden geendet hat; das Feld stehen zu lassen hielte den Einzugstakt
+/// fuer immer am Laufen. Was danach an Befunden fehlt, ist damit **nicht**
+/// „kein Treffer darunter", sondern „nicht entschieden" — genau der
+/// Unterschied, den `Befund` fuehrt (C3.13).
+fn befunde_einziehen(tab: &mut Tabinhalt) -> bool {
+    use std::sync::mpsc::TryRecvError;
+
+    let Some(durchlauf) = tab.durchlauf.as_ref() else {
+        return false;
+    };
+    let mut eingetroffen = Vec::new();
+    let mut kanal_zu = false;
+    loop {
+        match durchlauf.befunde().try_recv() {
+            Ok(meldung) => eingetroffen.push((
+                meldung.index,
+                if meldung.treffer {
+                    Befund::Treffer
+                } else {
+                    Befund::KeinTreffer
+                },
+            )),
+            Err(TryRecvError::Empty) => break,
+            Err(TryRecvError::Disconnected) => {
+                kanal_zu = true;
+                break;
+            }
+        }
+    }
+    if kanal_zu {
+        tab.durchlauf = None;
+    }
+    if eingetroffen.is_empty() {
+        return false;
+    }
+    tab.modell.befunde_setzen(eingetroffen);
+    true
+}
+
+/// Holt die wartenden Stapel und den Abschluss des Lesevorgangs ab.
+fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
     let Some(vorgang) = tab.lesevorgang.as_ref() else {
         return Einzug::default();
     };
@@ -1218,6 +1459,460 @@ mod tests {
         assert!(
             !liste.nachzuegler_faellig(),
             "die zweite Stufe laeuft genau einmal"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Der Durchlauf: Auftragsliste, Anlass, Abbruch
+    // ------------------------------------------------------------------
+
+    /// Ein Eintrag der genannten Art, ohne Groesse und ohne Zeitangabe.
+    fn eintrag(name: &str, typ: krk_core::verzeichnis::Typ) -> krk_core::verzeichnis::Eintrag {
+        krk_core::verzeichnis::Eintrag::neu(
+            name.to_owned(),
+            0,
+            std::time::SystemTime::UNIX_EPOCH,
+            typ,
+        )
+    }
+
+    /// Ein fertig gelesenes Ordnermodell mit stehendem Filter.
+    fn modell_mit(
+        bestand: &[(&str, krk_core::verzeichnis::Typ)],
+        filter: &str,
+        tief: bool,
+    ) -> Ordnermodell {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen(bestand.iter().map(|(name, typ)| eintrag(name, *typ)));
+        modell.abschliessen();
+        modell.tief_setzen(tief);
+        modell.filtertext_setzen(filter);
+        modell
+    }
+
+    /// Die Namen der Auftraege, in der Reihenfolge der Liste.
+    fn auftragsnamen(modell: &Ordnermodell) -> Vec<String> {
+        auftraege(modell)
+            .into_iter()
+            .map(|auftrag| auftrag.name)
+            .collect()
+    }
+
+    /// Die Namen der Zeilen, die die Sicht gerade zeigt.
+    fn zeilennamen(modell: &Ordnermodell) -> Vec<String> {
+        modell
+            .zeilen()
+            .map(|eintrag| eintrag.name.clone())
+            .collect()
+    }
+
+    /// C3.14: fuer einen Ordner, dessen eigener Name den Filtertext traegt,
+    /// laeuft kein Durchlauf.
+    #[test]
+    fn die_auftragsliste_laesst_namentlich_passende_ordner_aus() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit(
+            &[
+                ("src", Typ::Ordner),
+                ("bilder", Typ::Ordner),
+                ("liesmich.txt", Typ::Datei),
+            ],
+            "src",
+            true,
+        );
+        assert_eq!(
+            auftragsnamen(&modell),
+            ["bilder"],
+            "`src` traegt den Filtertext im Namen und ist damit ohne Durchlauf entschieden"
+        );
+    }
+
+    /// C3.14, gezaehlt: ein Ordner, dessen saemtliche Unterordner den
+    /// Filtertext im Namen tragen, liest keinen Unterbaum.
+    #[test]
+    fn ein_ordner_mit_lauter_passenden_unterordnern_stoesst_null_durchlaeufe_an() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit(
+            &[
+                ("src", Typ::Ordner),
+                ("src-alt", Typ::Ordner),
+                ("meinsrc", Typ::Ordner),
+                ("SRC-GROSS", Typ::Ordner),
+                ("notiz.md", Typ::Datei),
+            ],
+            "src",
+            true,
+        );
+        assert_eq!(
+            auftraege(&modell).len(),
+            0,
+            "vier passende Ordner und eine Datei ergeben keinen einzigen Auftrag"
+        );
+    }
+
+    /// C3.2: Dateien und namentlich passende Ordner stehen sofort und warten
+    /// nicht auf den Durchlauf.
+    ///
+    /// Zwei Zaehlungen an einem Bestand: keine Datei steht in der
+    /// Auftragsliste, und die Zeilen, die ohne jeden Befund schon stehen, sind
+    /// genau die namentlich passenden.
+    #[test]
+    fn dateien_und_passende_ordner_warten_nicht_auf_den_durchlauf() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit(
+            &[
+                ("notiz.txt", Typ::Datei),
+                ("bild.png", Typ::Datei),
+                ("notizen", Typ::Ordner),
+                ("bilder", Typ::Ordner),
+            ],
+            "notiz",
+            true,
+        );
+        assert_eq!(
+            auftragsnamen(&modell),
+            ["bilder"],
+            "keine Datei bekommt einen Auftrag, und `notizen` ist am Namen entschieden"
+        );
+        assert_eq!(
+            zeilennamen(&modell),
+            ["notizen", "notiz.txt"],
+            "beide stehen, obwohl noch kein Befund eingetroffen ist"
+        );
+    }
+
+    /// C2.13: eine symbolische Verknuepfung auf einen Ordner bekommt einen
+    /// Auftrag wie jeder Ordner; dass nicht in sie hinabgestiegen wird,
+    /// entscheidet der Durchlauf und nicht diese Liste.
+    #[test]
+    fn eine_verknuepfung_bekommt_einen_auftrag_wie_jeder_ordner() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit(
+            &[
+                ("anderswo", Typ::Verknuepfung),
+                ("bilder", Typ::Ordner),
+                ("a.txt", Typ::Datei),
+            ],
+            "zzz",
+            true,
+        );
+        assert_eq!(auftragsnamen(&modell), ["anderswo", "bilder"]);
+    }
+
+    /// Der Eintragsindex und nicht die Zeile: die Auftraege ueberstehen damit
+    /// jedes Umsortieren.
+    #[test]
+    fn ein_auftrag_traegt_den_eintragsindex_und_nicht_die_zeile() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit(
+            &[
+                ("a.txt", Typ::Datei),
+                ("bilder", Typ::Ordner),
+                ("b.txt", Typ::Datei),
+                ("daten", Typ::Ordner),
+            ],
+            "zzz",
+            true,
+        );
+        let auftraege = auftraege(&modell);
+        assert_eq!(auftraege.len(), 2);
+        assert_eq!(
+            (auftraege[0].index, auftraege[0].name.as_str()),
+            (1, "bilder")
+        );
+        assert_eq!(
+            (auftraege[1].index, auftraege[1].name.as_str()),
+            (3, "daten")
+        );
+    }
+
+    /// Eine Tabliste auf einem vorhandenen Ordner, mit stehendem Filter und
+    /// eingeschaltetem "Deep", fertig gelesen.
+    fn tiefe_liste(ordner: &Path, filter: &str) -> Tabliste {
+        let mut liste = liste(&[&ordner.display().to_string()]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.tief_setzen(true);
+        modell.filtertext_setzen(filter);
+        liste.tabs[0].gelesen = true;
+        liste
+    }
+
+    /// C3.6: je Tab laeuft nie mehr als einer, und ein zweiter Anstoss loest
+    /// den ersten ab.
+    #[test]
+    fn je_tab_laeuft_nie_mehr_als_ein_durchlauf() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-einer");
+        ordner.ordner("bilder");
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+
+        assert!(liste.durchlauf_nachziehen(), "der erste Anstoss startet");
+        assert!(liste.durchlauf_nachziehen(), "der zweite ebenso");
+        assert_eq!(
+            liste
+                .tabs
+                .iter()
+                .filter(|tab| tab.durchlauf.is_some())
+                .count(),
+            1,
+            "und danach steht genau einer da"
+        );
+    }
+
+    /// C3.7 und C3.5: ohne Filtertext, ohne "Deep" und vor dem Abschluss des
+    /// Lesevorgangs beginnt keiner.
+    #[test]
+    fn ohne_seine_drei_bedingungen_beginnt_kein_durchlauf() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-bedingungen");
+        ordner.ordner("bilder");
+
+        // Ohne "Deep".
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        liste.aktiver_mut().modell_mut().tief_setzen(false);
+        assert!(!liste.durchlauf_nachziehen(), "\"Deep\" ist aus");
+        assert!(!liste.arbeitet_noch());
+
+        // Ohne Filtertext.
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        liste.aktiver_mut().modell_mut().filter_leeren();
+        assert!(!liste.durchlauf_nachziehen(), "der Filtertext ist leer");
+        assert!(!liste.arbeitet_noch());
+
+        // Solange der Lesevorgang laeuft, steht der Bestand noch nicht.
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        liste.tabs[0].gelesen = false;
+        assert!(!liste.durchlauf_nachziehen(), "der Ordner ist nicht fertig");
+    }
+
+    /// C3.7: das Ausschalten von "Deep" bricht den laufenden Durchlauf ab.
+    #[test]
+    fn das_ausschalten_von_deep_bricht_den_durchlauf_ab() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-deep-aus");
+        ordner.ordner("bilder");
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        assert!(liste.durchlauf_nachziehen());
+        assert!(liste.arbeitet_noch(), "der Einzugstakt hat noch zu tun");
+
+        liste.aktiver_mut().modell_mut().tief_setzen(false);
+        assert!(!liste.durchlauf_nachziehen());
+        assert!(
+            !liste.arbeitet_noch(),
+            "mit dem Schalter faellt der Durchlauf, und der Takt darf enden"
+        );
+    }
+
+    /// C3.6: eine Aenderung des Filtertexts bricht ab und stoesst neu an.
+    #[test]
+    fn ein_weiteres_zeichen_loest_den_laufenden_durchlauf_ab() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-zeichen");
+        ordner.ordner("bilder");
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        assert!(liste.durchlauf_nachziehen());
+
+        liste.aktiver_mut().modell_mut().zeichen_anhaengen('q');
+        assert!(
+            liste.durchlauf_nachziehen(),
+            "der neue Filtertext bekommt seinen eigenen Durchlauf"
+        );
+        assert_eq!(
+            liste
+                .tabs
+                .iter()
+                .filter(|tab| tab.durchlauf.is_some())
+                .count(),
+            1
+        );
+    }
+
+    /// Ein Tabwechsel bricht nicht ab: ein verdeckter Tab fuellt sich still
+    /// weiter, wie er es beim Lesevorgang tut.
+    #[test]
+    fn ein_tabwechsel_laesst_den_durchlauf_stehen() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-tabwechsel");
+        ordner.ordner("bilder");
+        let vorhanden = ordner.pfad().display().to_string();
+        let mut liste = liste(&[&vorhanden, "/b"]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.tief_setzen(true);
+        modell.filtertext_setzen("zzz");
+        modell.anhaengen([eintrag("bilder", Typ::Ordner)]);
+        liste.tabs[0].gelesen = true;
+        assert!(liste.durchlauf_nachziehen());
+
+        assert!(liste.naechster(), "auf den zweiten Tab wechseln");
+        assert!(
+            liste.tabs[0].durchlauf.is_some(),
+            "der verdeckte Tab arbeitet weiter"
+        );
+        assert!(liste.arbeitet_noch());
+    }
+
+    /// `Tabliste::abbrechen` nimmt den Durchlauf mit, wie es den Lesevorgang
+    /// mitnimmt.
+    #[test]
+    fn das_abbrechen_des_fensters_nimmt_den_durchlauf_mit() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-abbrechen");
+        ordner.ordner("bilder");
+        let mut liste = tiefe_liste(ordner.pfad(), "zzz");
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .anhaengen([eintrag("bilder", Typ::Ordner)]);
+        assert!(liste.durchlauf_nachziehen());
+
+        liste.abbrechen();
+        assert!(!liste.arbeitet_noch());
+    }
+
+    /// C3.3 und C3.11 am Modell: der Tab haelt den Durchlauf, zieht seine
+    /// Befunde ein, und die Zeile des tiefen Treffers erscheint.
+    ///
+    /// Der ganze Weg von F2 ohne AppKit: Lesevorgang, `Einzug::fertig`,
+    /// Auftragsliste, Arbeitsfaden, Befundkanal, `befunde_setzen`.
+    #[test]
+    fn der_tab_zieht_die_befunde_ein_und_die_zeile_des_tiefen_treffers_erscheint() {
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-einzug");
+        let daten = ordner.ordner("daten");
+        std::fs::create_dir_all(daten.join("unten")).expect("Unterordner anlegen");
+        std::fs::write(daten.join("unten").join("ziel-xyz.txt"), b"x").expect("Datei anlegen");
+        ordner.ordner("leer");
+        ordner.datei("oben.txt", b"x");
+
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.tief_setzen(true);
+        modell.filtertext_setzen("xyz");
+        liste.sichtbaren_lesen();
+
+        // Der Einzugstakt, von Hand gedreht: erst der Lesevorgang, dann die
+        // Befunde. Die Schranke ist grosszuegig und die Schleife endet an der
+        // Sache und nicht an ihr.
+        let mut takte = 0;
+        while liste.arbeitet_noch() {
+            let _ = liste.einziehen();
+            takte += 1;
+            assert!(takte < 2_000, "der Durchlauf ist nicht zum Ende gekommen");
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        assert_eq!(
+            zeilennamen(liste.aktiver().modell()),
+            ["daten"],
+            "`daten` traegt den Treffer unter sich, `leer` nicht, und `oben.txt` passt nicht"
+        );
+    }
+
+    /// C2.10 und C6.1: eine Zeile, die allein wegen eines tiefen Treffers
+    /// steht, liegt trotzdem im angezeigten Ordner.
+    ///
+    /// Gezaehlt und nicht behauptet: der Pfad, den
+    /// `kommandos::operationen::betroffene` baut, hat unter dem angezeigten
+    /// Ordner genau **einen** Bestandteil. Traege `Eintrag` einen Pfad oder
+    /// naehme die Sicht Zeilen aus einem anderen Ordner auf, stuenden hier
+    /// mehr.
+    #[test]
+    fn eine_zeile_aus_einem_tiefen_treffer_liegt_im_angezeigten_ordner() {
+        use krk_core::verzeichnis::Typ;
+        use krk_core::verzeichnis::modell::Befund;
+
+        let angezeigt = Path::new("/Users/k1/Projekte");
+        let mut modell = modell_mit(
+            &[("daten", Typ::Ordner), ("oben.txt", Typ::Datei)],
+            "xyz",
+            true,
+        );
+        modell.befunde_setzen([(0, Befund::Treffer)]);
+        assert_eq!(zeilennamen(&modell), ["daten"]);
+
+        modell.auswahl_setzen(Some(0));
+        let betroffene = crate::kommandos::operationen::betroffene(&modell, angezeigt);
+        assert_eq!(betroffene.pfade, [angezeigt.join("daten")]);
+        assert_eq!(
+            betroffene.pfade[0]
+                .strip_prefix(angezeigt)
+                .expect("der Pfad liegt unter dem angezeigten Ordner")
+                .components()
+                .count(),
+            1,
+            "genau ein Bestandteil unter dem angezeigten Ordner"
+        );
+    }
+
+    /// C2.9: die Dateiliste bleibt eine flache Tabelle mit vier Spalten.
+    ///
+    /// Gezaehlt an zwei Stellen statt behauptet: die Zahl der Spalten am
+    /// Aufzaehlungstyp, der sie fuehrt, und das Vorkommen von `NSOutlineView`
+    /// im Quelltext der Ansicht. Der Text ist ueber `include_str!` gebunden;
+    /// wird die Datei verschoben, haelt der Bau an, und das ist der richtige
+    /// Zeitpunkt, diese Probe nachzuziehen.
+    #[test]
+    fn die_dateiliste_bleibt_flach_und_hat_vier_spalten() {
+        assert_eq!(crate::spalten::Spalte::ALLE.len(), 4);
+        let quelltext = include_str!("appkit/tabelle.rs");
+        assert_eq!(
+            quelltext.matches("NSOutlineView").count(),
+            0,
+            "keine NSOutlineView, kein Aufklappzeichen"
+        );
+    }
+
+    /// C2.11: `angezeigtedatei::welche` bleibt bei zwei Quellen.
+    ///
+    /// Gezaehlt am Quelltext des Moduls: jede Quelle ist genau ein `return
+    /// Some(`, und eine dritte waere eine dritte. Die Fallunterscheidung selbst
+    /// prueft das Modul in seinem eigenen Probenmodul ueber alle acht
+    /// Kombinationen.
+    #[test]
+    fn die_angezeigte_datei_bleibt_bei_zwei_quellen() {
+        let quelltext = include_str!("angezeigtedatei.rs");
+        let rumpf = quelltext
+            .split("#[cfg(test)]")
+            .next()
+            .expect("der Rumpf steht vor dem Probenmodul");
+        assert_eq!(
+            rumpf.matches("return Some(").count(),
+            2,
+            "die Vorschau und der Editor, und keine dritte Quelle"
         );
     }
 }

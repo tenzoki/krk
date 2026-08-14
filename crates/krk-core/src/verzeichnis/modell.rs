@@ -78,7 +78,7 @@
 //! `verstecke_ausblenden`, `filtertext`, `tief` und `befund` sind Felder dieses
 //! Modells; wer den Unterbaum abschreitet und den Befund liefert, ist nicht
 //! Sache dieser Datei. Sie nimmt ihn ueber
-//! [`Ordnermodell::befund_setzen`] entgegen und baut die Sicht damit neu auf.
+//! [`Ordnermodell::befunde_setzen`] entgegen und baut die Sicht damit neu auf.
 
 use super::eintrag::Eintrag;
 use super::filter::traegt_die_folge;
@@ -115,7 +115,7 @@ impl Markierungsstand {
 ///
 /// Die fuenfte Eingabe des Pruefschritts aus dem Modulkopf, und die einzige,
 /// die dieses Modell nicht selbst ermittelt: sie kommt von dem, der den
-/// Unterbaum abschreitet, und geht ueber [`Ordnermodell::befund_setzen`]
+/// Unterbaum abschreitet, und geht ueber [`Ordnermodell::befunde_setzen`]
 /// herein.
 ///
 /// **Drei Werte und kein Auffangzweig.** `Unentschieden` ist etwas anderes als
@@ -558,7 +558,7 @@ impl Ordnermodell {
         // kleingeschrieben und als Teilzeichenfolge, ohne jede Faltung von
         // Umlauten und Akzenten. `apfel` findet `Aepfel` mit Umlaut nicht, und
         // das ist so gewollt.
-        if traegt_die_folge(&eintrag.name, &self.filter_klein) {
+        if self.name_traegt_den_filter(index as u32) {
             return true;
         }
 
@@ -584,6 +584,26 @@ impl Ordnermodell {
             Befund::Treffer => true,
             Befund::Unentschieden | Befund::KeinTreffer => false,
         }
+    }
+
+    /// Ob der Name dieses Eintrags den stehenden Filtertext traegt.
+    ///
+    /// **Der Zweig `Name traegt die Folge?` des Pruefschritts, herausgegeben.**
+    /// Wer die Auftraege des Durchlaufs zusammenstellt, muss genau diesen Zweig
+    /// kennen — er laeuft fuer einen Ordner, dessen Name den Filtertext traegt,
+    /// ausdruecklich **nicht** —, und er soll dafuer nicht ein zweites Mal
+    /// [`traegt_die_folge`] rufen. Der Vergleich hat damit weiter genau zwei
+    /// Rufer, diese Datei und den Durchlauf, und die Frage wird in `krk-ui`
+    /// nirgends nachgebaut.
+    ///
+    /// Ein Index ausserhalb des Bestands traegt nichts. **Ohne Filtertext ist
+    /// die Frage gegenstandslos**: beide Rufer stellen sie erst hinter dem
+    /// Zweig „steht ein Filtertext?", und der leere Text steckt der Sache nach
+    /// in jedem Namen.
+    pub fn name_traegt_den_filter(&self, eintragsindex: u32) -> bool {
+        self.eintraege
+            .get(eintragsindex as usize)
+            .is_some_and(|eintrag| traegt_die_folge(&eintrag.name, &self.filter_klein))
     }
 
     /// Der Filtertext, so wie der Nutzer ihn getippt hat.
@@ -676,17 +696,33 @@ impl Ordnermodell {
             .unwrap_or_default()
     }
 
-    /// Traegt einen Befund ein und baut die Sicht neu auf.
+    /// Traegt eine Reihe von Befunden ein und baut die Sicht **einmal** neu
+    /// auf.
     ///
     /// Der Weg, auf dem das Ergebnis des Durchlaufs hereinkommt. Ein Index
     /// ausserhalb des Bestands wird verworfen, ohne die Sicht anzufassen: er
-    /// stammt dann aus einem Lauf, dessen Bestand schon abgeloest ist.
-    pub fn befund_setzen(&mut self, eintragsindex: u32, befund: Befund) {
-        let Some(stelle) = self.befund.get_mut(eintragsindex as usize) else {
-            return;
-        };
-        *stelle = befund;
-        self.sicht_neu_aufbauen();
+    /// stammt dann aus einem Lauf, dessen Bestand schon abgeloest ist. Kommt
+    /// kein einziger brauchbarer Index herein, bleibt die Sicht unangetastet.
+    ///
+    /// **Eine Reihe und nicht ein einzelner Befund, und der Grund ist gezaehlt
+    /// und nicht vermutet.** Der Neuaufbau ist ein Gang ueber alle Eintraege
+    /// samt `sort_unstable_by`; ein Setzer je Ordner hiesse bei einem
+    /// angezeigten Ordner mit `k` Unterordnern und `n` Eintraegen `k` Laeufe zu
+    /// je `O(n log n)` auf dem **Hauptfaden**. Der Einzugstakt raeumt den
+    /// Befundkanal ohnehin in einem Zug leer und hat die Reihe damit schon in
+    /// der Hand; er reicht sie hier in einem Stueck herein und baut einmal auf
+    /// (`issues/260814-2145_*_befund-setzen-baut-die-ganze-sicht-neu-auf-und-der-durchlauf-ruft-es-je-ordner.md`).
+    pub fn befunde_setzen(&mut self, befunde: impl IntoIterator<Item = (u32, Befund)>) {
+        let mut eingetragen = false;
+        for (eintragsindex, befund) in befunde {
+            if let Some(stelle) = self.befund.get_mut(eintragsindex as usize) {
+                *stelle = befund;
+                eingetragen = true;
+            }
+        }
+        if eingetragen {
+            self.sicht_neu_aufbauen();
+        }
     }
 
     /// Setzt jeden Befund auf `Unentschieden` zurueck.

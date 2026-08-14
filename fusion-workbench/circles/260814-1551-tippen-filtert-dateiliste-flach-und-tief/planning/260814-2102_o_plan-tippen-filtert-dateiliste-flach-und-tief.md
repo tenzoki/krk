@@ -470,7 +470,7 @@ flowchart TD
   - **Keine Tiefengrenze und kein Deckel** (C3.8): im Modul steht keine Konstante für eine Tiefe und keine Zählung gegen eine Grenze. Der Abstieg läuft über einen eigenen Stapel und nicht über die Rekursion des Fadens, damit ein tiefer Baum den Fadenstapel nicht sprengt.
   - Proben unter `crates/krk-core/tests/verzeichnis.rs`, mit `Pruefordner` aus `crates/krk-core/tests/gemeinsam/mod.rs` — der Fassung dieser Kiste, keine vierte: ein Treffer tief unten wird gefunden, ein Ordner ohne Treffer meldet den negativen Befund, ein nicht lesbarer Ordner ebenso, eine Verknüpfung auf einen Ordner mit einem Treffer darunter meldet „kein Treffer", ein Prüfordner ohne Unterordner mit mehr als 2.048 Einträgen bricht innerhalb von zwei Stapeln ab.
 
-**F2. Der Tab hält den Durchlauf, zieht die Befunde ein und bricht ihn ab**
+**F2. [DONE] Der Tab hält den Durchlauf, zieht die Befunde ein und bricht ihn ab**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/tabelle.rs`
 - Erfüllt: C2.5 bis C2.9, C2.11, C2.13, C3.2, C3.3, C3.6, C3.7, C3.11, C3.12, C3.14

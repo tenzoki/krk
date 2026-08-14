@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coder
 **Cross-references:** `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A1 („Jeder baut die Sicht neu auf") und Schritt F2 („Ein eingetroffener Befund geht über `befund_setzen` in das Modell, das die Sicht neu aufbaut"); `crates/krk-core/src/verzeichnis/modell.rs` (`Ordnermodell::befund_setzen`, `sicht_neu_aufbauen`); C3.11, C3.12
 
@@ -19,3 +19,11 @@
 **Nicht in A1 geändert**, weil Schritt A1 die Setzer so aufzählt, wie sie umgesetzt sind, und ein zweiter Setzer ohne Aufrufer eine Zeile ohne Frager wäre. Die Stelle, an der es sich entscheidet, ist F2.
 
 **Kontext.** Aufgefallen beim Umsetzen von Schritt A1. Aus dieser Directive entstanden, deshalb im Circle und nicht im gemeinsamen Speicher.
+
+---
+
+**Resolved:** 260815, in Schritt F2. Die vorgeschlagene Gegenmaßnahme ist gebaut: `Ordnermodell::befund_setzen` heißt jetzt `befunde_setzen` und nimmt eine Reihe von Paaren aus Eintragsindex und Befund entgegen; `sicht_neu_aufbauen` läuft **einmal** je Reihe und nur dann, wenn wenigstens ein Index im Bestand lag. Gerufen wird es einmal je Einzugstakt aus `tabs::befunde_einziehen`, nachdem der Befundkanal in einem Zug leergeräumt ist.
+
+**Gebaut und nicht gemessen, und der Grund ist die Rechnung und nicht eine Messung.** Der Einzugstakt hat die Reihe ohnehin schon in der Hand — er räumt den Kanal mit einer Schleife über `try_recv` leer —, der Setzer kostet vier Zeilen, und damit sinkt die Zahl der Sortierläufe auf dem Hauptfaden von „einer je entschiedenem Ordner" auf „höchstens einer je Takt". Die Alternative wäre gewesen, erst zu messen; dafür bräuchte es den Abnahmelauf am Bündel, und der ist Nutzerarbeit. Eine Gegenmaßnahme, die weniger kostet als ihre Messung, wird gebaut und nicht terminiert.
+
+**Ein einzelner Setzer bleibt nicht daneben stehen.** Zwei Schreiber für dieselbe Größe wären zwei Bauarten mit zwei Neuaufbau-Verhalten; die sieben Rufer in `crates/krk-core/tests/verzeichnis.rs` sind auf die Reihenform mit einem Paar umgestellt.
