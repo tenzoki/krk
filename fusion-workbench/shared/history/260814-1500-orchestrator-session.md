@@ -1,7 +1,7 @@
 # Orchestrator Session — 260814-1500
 
-**Directive:** (noch nicht gestellt — Setup gelaufen, Auftrag steht aus)
-**Mode:** (noch nicht aufgelöst)
+**Directive:** Tippen filtert die Dateiliste im Dateifenster: jedes Zeichen ohne Zusatztaste blendet aus, was seinen Namen nicht traegt, und ein Ankreuzfeld "Deep" in der Bereichsleiste dehnt den Filter auf den ganzen Unterbaum aus.
+**Mode:** plan (Circle 260814-1551-tippen-filtert-dateiliste-flach-und-tief)
 **Status:** In Arbeit
 
 ## Bestandsaufnahme beim Start

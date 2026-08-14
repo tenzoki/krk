@@ -43,6 +43,42 @@
 //! Mal. Der Bestand ist damit zu keinem Zeitpunkt aus zwei Ordnern gemischt, und
 //! eine leere Zwischenzeit gibt es nur noch dort, wo der neue Ordner wirklich
 //! leer ist.
+//!
+//! # Ob eine Zeile steht, entscheidet ein Pruefschritt und kein zweiter
+//!
+//! [`Ordnermodell::sichtbar`] ist die eine Stelle, an der ueber die
+//! Sichtbarkeit eines Eintrags entschieden wird. Beide Aufbauwege der Sicht
+//! rufen sie: [`Ordnermodell::anhaengen`] je neuem Eintrag und
+//! [`Ordnermodell::sicht_neu_aufbauen`] je Eintrag des Bestands.
+//!
+//! ```text
+//! versteckt und ausgeblendet? ── ja ──> faellt weg
+//!            │ nein
+//! steht ein Filtertext?       ── nein ─> steht in der Liste
+//!            │ ja
+//! Name traegt die Folge?      ── ja ──> steht in der Liste
+//!            │ nein
+//! ist es ein Ordner?          ── nein ─> faellt weg
+//!            │ ja
+//! ist "Deep" eingeschaltet?   ── nein ─> steht in der Liste
+//!            │ ja
+//! liegt unter ihm ein Treffer? ─ ja ──> steht in der Liste
+//!                              └ sonst > faellt weg
+//! ```
+//!
+//! **Bis zur Runde 10 stand die Regel zweimal wortgleich da**, einmal in
+//! `anhaengen` und einmal in `sicht_neu_aufbauen`, und trug damals nur ihren
+//! ersten Zweig
+//! (`issues/260814-2102_*_der-pruefschritt-fuer-die-sichtbarkeit-steht-im-ordnermodell-zweimal-wortgleich-da.md`).
+//! Eine Regel mit fuenf Eingaben an zwei Stellen zu fuehren waere eine zweite
+//! Wahrheit ueber dieselbe Sache; der Filter dieser Runde ist ein Zweig mehr in
+//! demselben Pruefschritt und keine zweite Sicht daneben.
+//!
+//! **Vier der fuenf Eingaben wohnen hier, die fuenfte kommt von aussen.**
+//! `verstecke_ausblenden`, `filtertext`, `tief` und `befund` sind Felder dieses
+//! Modells; wer den Unterbaum abschreitet und den Befund liefert, ist nicht
+//! Sache dieser Datei. Sie nimmt ihn ueber
+//! [`Ordnermodell::befund_setzen`] entgegen und baut die Sicht damit neu auf.
 
 use super::eintrag::Eintrag;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
@@ -74,6 +110,37 @@ impl Markierungsstand {
     }
 }
 
+/// Was ueber den Unterbaum eines Ordners bekannt ist.
+///
+/// Die fuenfte Eingabe des Pruefschritts aus dem Modulkopf, und die einzige,
+/// die dieses Modell nicht selbst ermittelt: sie kommt von dem, der den
+/// Unterbaum abschreitet, und geht ueber [`Ordnermodell::befund_setzen`]
+/// herein.
+///
+/// **Drei Werte und kein Auffangzweig.** `Unentschieden` ist etwas anderes als
+/// `KeinTreffer`: der erste heisst "es ist noch nicht gelesen", der zweite "es
+/// ist gelesen und es liegt nichts darunter". Wer die beiden zusammenzoege,
+/// koennte einen laufenden Durchlauf nicht von einem abgeschlossenen ohne Fund
+/// unterscheiden. Eine vierte Variante soll den Bau anhalten und nicht still in
+/// einen Sammelzweig fallen.
+///
+/// **Der Wert haengt am Eintragsindex und nicht an der Zeile**, aus demselben
+/// Grund wie die Markierung; er uebersteht damit jedes Umsortieren.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Befund {
+    /// Noch nicht entschieden. Der Anfangswert jedes Eintrags und der Stand,
+    /// den [`Ordnermodell::befund_zuruecksetzen`] herstellt.
+    #[default]
+    Unentschieden,
+    /// Unter diesem Ordner liegt mindestens ein Eintrag, dessen Name den
+    /// Filtertext traegt. Der erste Fund entscheidet ihn.
+    Treffer,
+    /// Unter diesem Ordner liegt kein Treffer. Der negative Befund entsteht auf
+    /// drei Wegen: abgeschritten ohne Fund, nicht zu oeffnen, oder eine
+    /// symbolische Verknuepfung, in die nicht hinabgestiegen wird.
+    KeinTreffer,
+}
+
 /// Der Inhalt eines Ordners, wie ihn ein Dateifenster anzeigt.
 #[derive(Debug)]
 pub struct Ordnermodell {
@@ -93,6 +160,33 @@ pub struct Ordnermodell {
     /// Grund wie die Auswahl. Eine Liste statt einer Menge, weil "alle
     /// markieren" bei 100.000 Eintraegen sonst 100.000 Einfuegungen waere.
     markiert: Vec<bool>,
+    /// Der Filtertext, so wie der Nutzer ihn getippt hat.
+    ///
+    /// Er wohnt hier und nicht in der Ansicht, weil ein `Ordnermodell` einem
+    /// Tab gehoert: damit gehoert der Filtertext dem Tab, ohne dass irgendwo
+    /// ein zweiter Wert desselben Namens stuende. Er laeuft nicht ab; es gibt
+    /// keinen Zeitgeber und keine Pause, nach der die Eingabe von vorn begaenne.
+    filtertext: String,
+    /// Der einmal je Aenderung kleingeschriebene Filtertext.
+    ///
+    /// Der Vergleich in [`Ordnermodell::sichtbar`] laeuft ueber diesen Wert und
+    /// schreibt nicht je Zeile um. Bei 100.000 Eintraegen waere das 100.000
+    /// Umschreibungen desselben kurzen Texts.
+    filter_klein: String,
+    /// Ob der Filter auch den Unterbaum meint ("Deep").
+    ///
+    /// Aus heisst: der Name entscheidet jede Datei, und jeder Ordner bleibt
+    /// stehen, damit die Navigation bei stehendem Filter nicht abbricht. An
+    /// heisst: ein Ordner, dessen Name nicht passt, braucht einen Treffer unter
+    /// sich.
+    tief: bool,
+    /// Was ueber den Unterbaum je Eintrag bekannt ist.
+    ///
+    /// Parallel zu `eintraege` und nicht zur Sichtreihenfolge, in derselben
+    /// Bauart und aus demselben Grund wie `markiert`. Gelesen wird der Wert
+    /// allein im letzten Zweig von [`Ordnermodell::sichtbar`], also nur fuer
+    /// einen Ordner, dessen eigener Name den Filtertext nicht traegt.
+    befund: Vec<Befund>,
     /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
     ///
     /// Gesetzt von [`Ordnermodell::lesevorgang_beginnen`], eingeloest von
@@ -113,6 +207,10 @@ impl Ordnermodell {
             generation,
             auswahl: None,
             markiert: Vec::new(),
+            filtertext: String::new(),
+            filter_klein: String::new(),
+            tief: false,
+            befund: Vec::new(),
             ersatz_ausstehend: false,
         }
     }
@@ -166,11 +264,15 @@ impl Ordnermodell {
 
     /// Loest einen vorgemerkten Ersatz ein: der alte Bestand faellt.
     ///
-    /// Auswahl und Markierung fallen mit, und zwar hier und nicht schon beim
-    /// Beginn des Lesevorgangs. Beide haengen am Eintragsindex; ein Index, der
-    /// den Ersatz uebersteht, zeigte danach auf einen beliebigen Eintrag des
-    /// neuen Ordners. Was die Auswahl ueber einen Lesevorgang hinweg traegt, ist
-    /// der **Name** in `krk-ui`s `Tabinhalt::wunschauswahl`.
+    /// Auswahl, Markierung und Befund fallen mit, und zwar hier und nicht schon
+    /// beim Beginn des Lesevorgangs. Alle drei haengen am Eintragsindex; ein
+    /// Index, der den Ersatz uebersteht, zeigte danach auf einen beliebigen
+    /// Eintrag des neuen Ordners. Was die Auswahl ueber einen Lesevorgang hinweg
+    /// traegt, ist der **Name** in `krk-ui`s `Tabinhalt::wunschauswahl`.
+    ///
+    /// **Der Filtertext faellt hier nicht mit.** Er gehoert dem Tab und nicht
+    /// dem Bestand; ob ein Ordnerwechsel ihn stehen laesst, entscheidet der
+    /// Tab, und diese Stelle wuerde ihm die Entscheidung wegnehmen.
     fn ersatz_einloesen(&mut self) {
         if !self.ersatz_ausstehend {
             return;
@@ -179,6 +281,7 @@ impl Ordnermodell {
         self.eintraege.clear();
         self.sichtreihenfolge.clear();
         self.markiert.clear();
+        self.befund.clear();
         self.auswahl = None;
     }
 
@@ -195,12 +298,15 @@ impl Ordnermodell {
     pub fn anhaengen(&mut self, neue: impl IntoIterator<Item = Eintrag>) {
         self.ersatz_einloesen();
         for eintrag in neue {
-            let index = self.eintraege.len() as u32;
-            let sichtbar = !(self.verstecke_ausblenden && eintrag.versteckt);
+            let index = self.eintraege.len();
             self.eintraege.push(eintrag);
             self.markiert.push(false);
-            if sichtbar {
-                self.sichtreihenfolge.push(index);
+            self.befund.push(Befund::Unentschieden);
+            // Erst anhaengen, dann fragen: [`Ordnermodell::sichtbar`] liest den
+            // Eintrag aus dem Bestand, und es soll dieselbe Frage sein, die
+            // `sicht_neu_aufbauen` stellt, und nicht eine zweite Fassung.
+            if self.sichtbar(index) {
+                self.sichtreihenfolge.push(index as u32);
             }
         }
     }
@@ -417,6 +523,193 @@ impl Ordnermodell {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Der Filter: ein Pruefschritt, zwei Frager
+    // ------------------------------------------------------------------
+
+    /// Ob der Eintrag mit diesem Index in der Liste steht.
+    ///
+    /// **Der eine Pruefschritt.** Er traegt das Bild aus dem Modulkopf Zweig
+    /// fuer Zweig und ist die einzige Stelle, an der ueber die Sichtbarkeit
+    /// entschieden wird; seine beiden Frager sind
+    /// [`Ordnermodell::anhaengen`] und [`Ordnermodell::sicht_neu_aufbauen`].
+    ///
+    /// Ein Index ausserhalb des Bestands ist nicht sichtbar. Das ist kein
+    /// Zweig des Bildes, sondern die Antwort auf eine Frage nach einem
+    /// Eintrag, den es nicht gibt.
+    fn sichtbar(&self, index: usize) -> bool {
+        let Some(eintrag) = self.eintraege.get(index) else {
+            return false;
+        };
+
+        // versteckt und Verstecke ausgeblendet?
+        if self.verstecke_ausblenden && eintrag.versteckt {
+            return false;
+        }
+
+        // steht ein Filtertext?
+        if self.filtertext.is_empty() {
+            return true;
+        }
+
+        // Name traegt die Teilzeichenfolge? Derselbe Vergleich, den
+        // `Belegungsmodell::zeile_traegt` fuehrt: kleingeschrieben und als
+        // Teilzeichenfolge, ohne jede Faltung von Umlauten und Akzenten. `apfel`
+        // findet `Aepfel` mit Umlaut nicht, und das ist so gewollt.
+        if eintrag.name.to_lowercase().contains(&self.filter_klein) {
+            return true;
+        }
+
+        // ist es ein Ordner? Eine symbolische Verknuepfung zaehlt hier mit: bei
+        // ausgeschaltetem Filter der Tiefe bleibt sie sichtbar wie jeder Ordner,
+        // bei eingeschaltetem entscheidet ihr Befund, und den meldet der
+        // Durchlauf als "kein Treffer darunter", weil er nicht in sie
+        // hinabsteigt. Das ist der eine Schnitt fuer "Ordner"; die
+        // Verknuepfungsregel selbst wohnt allein im Durchlauf.
+        if !(eintrag.ist_ordner() || eintrag.ist_verknuepfung()) {
+            return false;
+        }
+
+        // ist der Filter der Tiefe eingeschaltet?
+        if !self.tief {
+            return true;
+        }
+
+        // liegt unter ihm ein Treffer? Vollstaendig und ohne Auffangzweig:
+        // `Unentschieden` heisst, dass der Durchlauf diesen Ordner noch nicht
+        // erreicht hat, und bis dahin steht seine Zeile nicht.
+        match self.befund(index as u32) {
+            Befund::Treffer => true,
+            Befund::Unentschieden | Befund::KeinTreffer => false,
+        }
+    }
+
+    /// Der Filtertext, so wie der Nutzer ihn getippt hat.
+    pub fn filtertext(&self) -> &str {
+        &self.filtertext
+    }
+
+    /// Der kleingeschriebene Filtertext, wie der Vergleich ihn braucht.
+    ///
+    /// Wer den Unterbaum abschreitet, vergleicht mit demselben Wert wie
+    /// [`Ordnermodell::sichtbar`] und schreibt ihn nicht ein zweites Mal um.
+    pub fn filter_klein(&self) -> &str {
+        &self.filter_klein
+    }
+
+    /// Ob ein Filtertext steht.
+    pub fn filter_steht(&self) -> bool {
+        !self.filtertext.is_empty()
+    }
+
+    /// Setzt den Filtertext und baut die Sicht neu auf.
+    pub fn filtertext_setzen(&mut self, text: &str) {
+        self.filtertext.clear();
+        self.filtertext.push_str(text);
+        self.filter_uebernehmen();
+    }
+
+    /// Haengt ein getipptes Zeichen an den Filtertext an.
+    ///
+    /// **Welche Zeichen der Filter aufnimmt, entscheidet der Aufrufer** ueber
+    /// `krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname`. Diese Stelle
+    /// nimmt jedes Zeichen: sie hat keinen Rueckgabewert, und ein still
+    /// verworfenes Zeichen waere ein Ausgang, den niemand sieht. Der Aufrufer
+    /// muss die Frage ohnehin stellen, denn er meldet der Ereignisbehandlung,
+    /// ob KRK den Tastendruck verbraucht hat.
+    pub fn zeichen_anhaengen(&mut self, zeichen: char) {
+        self.filtertext.push(zeichen);
+        self.filter_uebernehmen();
+    }
+
+    /// Nimmt das letzte Zeichen des Filtertexts zurueck.
+    ///
+    /// Liefert, ob etwas wegzunehmen war; bei leerem Filtertext geschieht
+    /// nichts. **Dieselbe Form wie `Suchlage::letztes_zeichen_weg` in
+    /// `krk-ui`**, und aus demselben Grund mit `#[must_use]`: am Wert haengt,
+    /// ob der Tastendruck verbraucht ist oder weiterzureichen, und sein stiller
+    /// Verlust bliebe unbemerkt.
+    #[must_use]
+    pub fn letztes_zeichen_weg(&mut self) -> bool {
+        if self.filtertext.pop().is_none() {
+            return false;
+        }
+        self.filter_uebernehmen();
+        true
+    }
+
+    /// Loescht den Filtertext und baut die Sicht neu auf.
+    pub fn filter_leeren(&mut self) {
+        self.filtertext.clear();
+        self.filter_uebernehmen();
+    }
+
+    /// Ob der Filter auch den Unterbaum meint ("Deep").
+    pub fn tief(&self) -> bool {
+        self.tief
+    }
+
+    /// Schaltet den Filter der Tiefe ein oder aus.
+    ///
+    /// Beim **Einschalten** faellt jeder Befund auf `Unentschieden` zurueck:
+    /// was zuletzt unter einem Ordner lag, ist eine Auskunft ueber einen
+    /// frueheren Filtertext und keine ueber den stehenden. Beim Ausschalten
+    /// bleibt der Vektor stehen, weil ihn dann niemand liest.
+    pub fn tief_setzen(&mut self, tief: bool) {
+        if tief && !self.tief {
+            self.befund_zuruecksetzen();
+        }
+        self.tief = tief;
+        self.sicht_neu_aufbauen();
+    }
+
+    /// Was ueber den Unterbaum dieses Eintrags bekannt ist.
+    ///
+    /// `Unentschieden` fuer jeden Index ausserhalb des Bestands: ueber einen
+    /// Eintrag, den es nicht gibt, ist nichts bekannt.
+    pub fn befund(&self, eintragsindex: u32) -> Befund {
+        self.befund
+            .get(eintragsindex as usize)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    /// Traegt einen Befund ein und baut die Sicht neu auf.
+    ///
+    /// Der Weg, auf dem das Ergebnis des Durchlaufs hereinkommt. Ein Index
+    /// ausserhalb des Bestands wird verworfen, ohne die Sicht anzufassen: er
+    /// stammt dann aus einem Lauf, dessen Bestand schon abgeloest ist.
+    pub fn befund_setzen(&mut self, eintragsindex: u32, befund: Befund) {
+        let Some(stelle) = self.befund.get_mut(eintragsindex as usize) else {
+            return;
+        };
+        *stelle = befund;
+        self.sicht_neu_aufbauen();
+    }
+
+    /// Setzt jeden Befund auf `Unentschieden` zurueck.
+    ///
+    /// Zu rufen, wann immer die Frage eine andere wird: bei jeder Aenderung des
+    /// Filtertexts, beim Einschalten des Filters der Tiefe und beim Abbruch
+    /// eines Durchlaufs. Die Sicht baut diese Methode **nicht** neu auf; ihre
+    /// Rufer tun es unmittelbar danach, und zweimal zu bauen waere zweimal
+    /// dieselbe Arbeit.
+    pub fn befund_zuruecksetzen(&mut self) {
+        self.befund.fill(Befund::Unentschieden);
+    }
+
+    /// Zieht die abgeleiteten Groessen des Filters nach und baut die Sicht neu
+    /// auf.
+    ///
+    /// Die eine Stelle, an der `filter_klein` entsteht — einmal je Aenderung
+    /// des Filtertexts und nicht einmal je Zeile — und an der die Befunde
+    /// zurueckfallen, weil sie Auskuenfte ueber den vorigen Filtertext waeren.
+    fn filter_uebernehmen(&mut self) {
+        self.filter_klein = self.filtertext.to_lowercase();
+        self.befund_zuruecksetzen();
+        self.sicht_neu_aufbauen();
+    }
+
     /// Alle sichtbaren Eintraege in Sichtreihenfolge.
     pub fn zeilen(&self) -> impl Iterator<Item = &Eintrag> {
         self.sichtreihenfolge
@@ -425,21 +718,30 @@ impl Ordnermodell {
     }
 
     /// Filtert und sortiert die Sicht von Grund auf neu.
+    ///
+    /// Gefiltert wird ueber [`Ordnermodell::sichtbar`], denselben Pruefschritt,
+    /// den [`Ordnermodell::anhaengen`] je neuem Eintrag stellt.
+    ///
+    /// **Sortiert wird nach dem Filtern und nicht danach, wie gut ein Name
+    /// passt.** Der Sortierschluessel entsteht einmal beim Lesen und traegt die
+    /// Kollation als Bytefolge; der Filter ist ein Pruefschritt davor und kein
+    /// Vergleich. Nur deshalb bleibt das Sortieren, was es war.
     fn sicht_neu_aufbauen(&mut self) {
-        let ausblenden = self.verstecke_ausblenden;
+        // Die Liste wird herausgenommen und zurueckgegeben, damit `sichtbar`
+        // sich `self` ausleihen kann und die Zuteilung trotzdem stehen bleibt.
+        let mut sicht = std::mem::take(&mut self.sichtreihenfolge);
+        sicht.clear();
+        sicht.extend(
+            (0..self.eintraege.len())
+                .filter(|index| self.sichtbar(*index))
+                .map(|index| index as u32),
+        );
         let sortierung = self.sortierung;
         let eintraege = &self.eintraege;
-        self.sichtreihenfolge.clear();
-        self.sichtreihenfolge.extend(
-            eintraege
-                .iter()
-                .enumerate()
-                .filter(|(_, eintrag)| !(ausblenden && eintrag.versteckt))
-                .map(|(index, _)| index as u32),
-        );
-        self.sichtreihenfolge.sort_unstable_by(|links, rechts| {
+        sicht.sort_unstable_by(|links, rechts| {
             sortierung.vergleiche(&eintraege[*links as usize], &eintraege[*rechts as usize])
         });
+        self.sichtreihenfolge = sicht;
     }
 }
 

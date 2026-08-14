@@ -255,7 +255,7 @@ flowchart TD
 
 ### Strang A — der Filter im Kern
 
-**A1. Ein Prüfschritt, zwei Frager, und vier neue Felder am Ordnermodell**
+**A1. [DONE] Ein Prüfschritt, zwei Frager, und vier neue Felder am Ordnermodell**
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/modell.rs`, `crates/krk-core/tests/verzeichnis.rs`
 - Erfüllt: C1.2, C1.3, C1.5, C1.6, C1.11, C2.5, C2.6, C2.10, C2.12, C2.13 (Sichtbarkeitshälfte), C3.14, C6.1 bis C6.8

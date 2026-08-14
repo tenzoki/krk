@@ -10,7 +10,7 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
-use krk_core::verzeichnis::modell::Ordnermodell;
+use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
@@ -576,4 +576,413 @@ fn ein_grosser_ordner_laeuft_stapelweise_ins_modell() {
     assert_eq!(modell.zeilenzahl(), 5_000);
     assert_eq!(modell.zeile(0).unwrap().name, "eintrag-000000.txt");
     assert_eq!(modell.zeile(4_999).unwrap().name, "eintrag-004999.txt");
+}
+
+// ---------------------------------------------------------------------------
+// Der Filter aus C1 und C2: ein Pruefschritt, zwei Frager
+// ---------------------------------------------------------------------------
+
+/// Der Ordner fuer die Filterproben.
+///
+/// | Name              | Typ    | traegt `aaa` |
+/// |---|---|---|
+/// | `bbbaaaccc.rs`    | Datei  | ja, in der Mitte |
+/// | `AAA-gross.txt`   | Datei  | ja, gross geschrieben |
+/// | `ohne.txt`        | Datei  | nein |
+/// | `aaa-ordner`      | Ordner | ja |
+/// | `stiller-ordner`  | Ordner | nein |
+fn filterordner() -> Pruefordner {
+    let ordner = Pruefordner::neu("filtertext");
+    ordner.fuelldatei("bbbaaaccc.rs", 1);
+    ordner.fuelldatei("AAA-gross.txt", 1);
+    ordner.fuelldatei("ohne.txt", 1);
+    ordner.ordner("aaa-ordner");
+    ordner.ordner("stiller-ordner");
+    ordner
+}
+
+fn gefiltert(pfad: &Path, filtertext: &str) -> Ordnermodell {
+    let mut modell = geladenes_modell(pfad);
+    modell.filtertext_setzen(filtertext);
+    modell
+}
+
+fn index_von(modell: &Ordnermodell, name: &str) -> u32 {
+    modell
+        .index_von_namen(name)
+        .unwrap_or_else(|| panic!("den Eintrag {name} gibt es nicht"))
+}
+
+/// C1.2: die Teilzeichenfolge zaehlt an jeder Stelle, und die Schreibung
+/// entscheidet nicht mit.
+#[test]
+fn der_filter_nimmt_die_teilzeichenfolge_an_jeder_stelle_und_in_jeder_schreibung() {
+    let ordner = filterordner();
+
+    let modell = gefiltert(ordner.pfad(), "aaa");
+
+    assert!(
+        namen(&modell).contains(&"bbbaaaccc.rs"),
+        "der Treffer in der Mitte des Namens fehlt"
+    );
+    assert!(
+        namen(&modell).contains(&"AAA-gross.txt"),
+        "der grossgeschriebene Treffer fehlt"
+    );
+    assert!(
+        !namen(&modell).contains(&"ohne.txt"),
+        "eine Datei ohne Treffer steht in der Liste"
+    );
+    assert_eq!(
+        modell.eintraege().len(),
+        5,
+        "der Filter darf keine Eintraege wegwerfen, nur ausblenden"
+    );
+}
+
+/// C1.3: der Vergleich faltet keine Umlaute. `apfel` findet `Aepfel` mit
+/// Umlaut nicht.
+#[test]
+fn der_filter_faltet_keine_umlaute() {
+    let ordner = Pruefordner::neu("filter-umlaut");
+    ordner.fuelldatei("Äpfel.txt", 1);
+    ordner.fuelldatei("apfelkuchen.txt", 1);
+
+    let modell = gefiltert(ordner.pfad(), "apfel");
+
+    assert_eq!(namen(&modell), vec!["apfelkuchen.txt"]);
+}
+
+/// C1.6: bei flacher Suche bleibt jeder Ordner stehen, damit die Navigation
+/// bei stehendem Filter nicht abbricht. Gefiltert werden allein die Dateien.
+#[test]
+fn bei_flacher_suche_bleibt_jeder_ordner_stehen() {
+    let ordner = filterordner();
+
+    let modell = gefiltert(ordner.pfad(), "aaa");
+
+    assert!(!modell.tief(), "die flache Suche ist die Vorbelegung");
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "aaa-ordner",
+            "stiller-ordner",
+            "AAA-gross.txt",
+            "bbbaaaccc.rs"
+        ],
+        "bei flacher Suche steht auch der Ordner ohne Treffer im Namen"
+    );
+}
+
+/// C2.5, C2.6: bei tiefer Suche entscheidet ueber einen Ordner sein Name oder
+/// der Befund ueber seinen Unterbaum, und `Unentschieden` haelt ihn draussen.
+#[test]
+fn bei_tiefer_suche_entscheidet_name_oder_befund() {
+    let ordner = filterordner();
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+
+    modell.tief_setzen(true);
+
+    assert_eq!(
+        namen(&modell),
+        vec!["aaa-ordner", "AAA-gross.txt", "bbbaaaccc.rs"],
+        "solange nichts entschieden ist, steht kein Ordner ohne passenden Namen"
+    );
+
+    let still = index_von(&modell, "stiller-ordner");
+    modell.befund_setzen(still, Befund::KeinTreffer);
+    assert!(
+        !namen(&modell).contains(&"stiller-ordner"),
+        "ein Ordner ohne Treffer darunter faellt weg"
+    );
+
+    modell.befund_setzen(still, Befund::Treffer);
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "aaa-ordner",
+            "stiller-ordner",
+            "AAA-gross.txt",
+            "bbbaaaccc.rs"
+        ],
+        "mit einem Treffer darunter steht der Ordner in der Liste"
+    );
+}
+
+/// C2.5, C3.14: ein namentlich passender Ordner steht auch dann, wenn unter ihm
+/// nichts liegt — sein Befund aendert daran nichts, und deshalb muss fuer ihn
+/// nichts gelesen werden.
+#[test]
+fn ein_namentlich_passender_ordner_steht_auch_ohne_treffer_darunter() {
+    let ordner = filterordner();
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+    modell.tief_setzen(true);
+
+    let passend = index_von(&modell, "aaa-ordner");
+    modell.befund_setzen(passend, Befund::KeinTreffer);
+
+    assert!(
+        namen(&modell).contains(&"aaa-ordner"),
+        "der Name entscheidet ihn, und der Befund kann das nicht umstossen"
+    );
+}
+
+/// C1.6, C2.13: eine symbolische Verknuepfung ist fuer die Sichtbarkeit ein
+/// Ordner. Flach bleibt sie stehen, tief entscheidet ihr Name; der Durchlauf
+/// steigt nicht in sie hinab und meldet deshalb `KeinTreffer`.
+#[test]
+fn eine_verknuepfung_zaehlt_fuer_die_sichtbarkeit_als_ordner() {
+    let ordner = Pruefordner::neu("filter-verknuepfung");
+    ordner.ordner("ziel");
+    ordner.verknuepfung("verweis", ordner.unter("ziel"));
+    ordner.verknuepfung("aaa-verweis", ordner.unter("ziel"));
+    ordner.fuelldatei("ohne.txt", 1);
+
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+
+    assert!(
+        namen(&modell).contains(&"verweis"),
+        "flach bleibt die Verknuepfung stehen wie jeder Ordner"
+    );
+
+    modell.tief_setzen(true);
+    let verweis = index_von(&modell, "verweis");
+    modell.befund_setzen(verweis, Befund::KeinTreffer);
+
+    assert_eq!(
+        namen(&modell),
+        vec!["aaa-verweis"],
+        "tief steht allein die Verknuepfung, deren eigener Name traegt"
+    );
+}
+
+/// C6.8: Filter und Verstecke sind zwei Zweige desselben Pruefschritts und
+/// nicht zwei Regeln. Ein versteckter Treffer bleibt ausgeblendet, bis der
+/// Nutzer die Verstecke einblendet.
+#[test]
+fn filter_und_verstecke_gehen_durch_denselben_pruefschritt() {
+    let ordner = Pruefordner::neu("filter-und-verstecke");
+    ordner.fuelldatei(".aaa-versteckt.txt", 1);
+    ordner.fuelldatei("aaa-sichtbar.txt", 1);
+
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+
+    assert_eq!(namen(&modell), vec!["aaa-sichtbar.txt"]);
+
+    modell.verstecke_umschalten();
+    assert_eq!(
+        namen(&modell),
+        vec![".aaa-versteckt.txt", "aaa-sichtbar.txt"],
+        "der eingeblendete Treffer kommt dazu"
+    );
+}
+
+/// Beide Frager stellen dieselbe Frage: der Filter wirkt schon beim Anhaengen
+/// eines Stapels und nicht erst beim Abschluss.
+#[test]
+fn der_filter_wirkt_schon_beim_anhaengen_eines_stapels() {
+    let ordner = filterordner();
+
+    let mut modell = Ordnermodell::neu(1);
+    modell.filtertext_setzen("aaa");
+    modell.anhaengen(lesen(ordner.pfad()).expect("Lesen gescheitert"));
+
+    // Noch vor dem Abschluss, also in Lesereihenfolge und ungeordnet.
+    let mut gesehen = namen(&modell);
+    gesehen.sort_unstable();
+    assert_eq!(
+        gesehen,
+        vec![
+            "AAA-gross.txt",
+            "aaa-ordner",
+            "bbbaaaccc.rs",
+            "stiller-ordner"
+        ]
+    );
+}
+
+/// C2.12: der Filter ist ein Pruefschritt vor dem Sortieren und kein Vergleich.
+/// Die eingestellte Ordnung bleibt die Ordnung der gefilterten Liste, und
+/// Ordner stehen weiter vorn.
+#[test]
+fn die_eingestellte_sortierung_bleibt_die_ordnung_der_gefilterten_liste() {
+    let ordner = filterordner();
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+
+    modell.sortierung_setzen(Sortierung::neu(Schluessel::Name, Richtung::Absteigend));
+
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "stiller-ordner",
+            "aaa-ordner",
+            "bbbaaaccc.rs",
+            "AAA-gross.txt"
+        ],
+        "absteigend, Ordner weiter vorn, und keine Ordnung nach Passgenauigkeit"
+    );
+}
+
+/// C1.11: faellt die Zeile weg, auf der die Auswahl stand, gibt es keine Zeile
+/// mehr — der gemerkte Eintrag bleibt aber stehen und ist wieder da, sobald der
+/// Filter faellt. Dasselbe Verhalten wie beim Ausblenden versteckter Dateien.
+#[test]
+fn eine_ausgefilterte_auswahl_kommt_beim_leeren_des_filters_zurueck() {
+    let ordner = filterordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+    let index = index_von(&modell, "ohne.txt");
+    modell.auswahl_setzen(Some(index));
+
+    modell.filtertext_setzen("aaa");
+    assert_eq!(modell.auswahl_zeile(), None, "die Zeile ist weggefallen");
+    assert_eq!(modell.auswahl(), Some(index), "der Eintrag bleibt gemerkt");
+
+    modell.filter_leeren();
+    let zeile = modell
+        .auswahl_zeile()
+        .expect("die Auswahl ist verloren gegangen");
+    assert_eq!(
+        modell.zeile(zeile).map(|e| e.name.as_str()),
+        Some("ohne.txt")
+    );
+}
+
+/// C6.2, C6.5: eine ausgeblendete Markierung besteht fort, zaehlt im
+/// Markierungsstand mit und wirkt wieder, sobald der Filter faellt.
+#[test]
+fn die_markierung_besteht_unter_dem_filter_fort_und_wirkt_wieder() {
+    let ordner = filterordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+    let index = index_von(&modell, "ohne.txt");
+    modell.markierung_umschalten(index);
+
+    modell.filtertext_setzen("aaa");
+
+    assert!(
+        !namen(&modell).contains(&"ohne.txt"),
+        "der markierte Eintrag ist ausgeblendet"
+    );
+    assert_eq!(
+        modell.markierungsstand().zahl,
+        1,
+        "der Markierungsstand zaehlt ueber alle Eintraege"
+    );
+    assert!(modell.ist_markiert(index), "die Markierung besteht fort");
+
+    modell.filter_leeren();
+    assert!(modell.ist_markiert(index), "und sie wirkt wieder");
+}
+
+/// C6.3, C6.4: `alle_markieren` und `markierung_umkehren` wirken auf die
+/// sichtbaren Eintraege, `markierung_aufheben` auf jeden.
+#[test]
+fn die_markierbefehle_behalten_ihren_zuschnitt_unter_dem_filter() {
+    let ordner = filterordner();
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+
+    modell.alle_markieren();
+    assert_eq!(
+        modell.markierungsstand().zahl,
+        4,
+        "markiert werden die vier sichtbaren und nicht der ausgefilterte"
+    );
+    assert!(
+        !modell.ist_markiert(index_von(&modell, "ohne.txt")),
+        "der ausgefilterte Eintrag bleibt unberuehrt"
+    );
+
+    modell.markierung_umkehren();
+    assert!(
+        modell.markierungsstand().ist_leer(),
+        "das Umkehren erreicht dieselben vier"
+    );
+
+    modell.alle_markieren();
+    modell.markierung_umschalten(index_von(&modell, "ohne.txt"));
+    assert_eq!(modell.markierungsstand().zahl, 5);
+    modell.markierung_aufheben();
+    assert!(
+        modell.markierungsstand().ist_leer(),
+        "jede Markierung aufheben heisst jede, auch die ausgeblendete"
+    );
+}
+
+/// C1.14: die Ruecknahme eines Zeichens laesst die Liste wieder wachsen, und
+/// bei leerem Filtertext ist nichts wegzunehmen.
+#[test]
+fn ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen() {
+    let ordner = filterordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+
+    modell.zeichen_anhaengen('a');
+    modell.zeichen_anhaengen('a');
+    modell.zeichen_anhaengen('a');
+    assert_eq!(modell.filtertext(), "aaa");
+    let eng = modell.zeilenzahl();
+
+    assert!(modell.letztes_zeichen_weg(), "es war etwas wegzunehmen");
+    assert_eq!(modell.filtertext(), "aa");
+    assert!(
+        modell.zeilenzahl() >= eng,
+        "die Liste waechst um die Eintraege, die wieder passen"
+    );
+
+    assert!(modell.letztes_zeichen_weg());
+    assert!(modell.letztes_zeichen_weg());
+    assert_eq!(
+        modell.zeilenzahl(),
+        5,
+        "ohne Filtertext steht alles wieder da"
+    );
+    assert!(
+        !modell.letztes_zeichen_weg(),
+        "bei leerem Filtertext ist nichts wegzunehmen"
+    );
+}
+
+/// Jede Aenderung des Filtertexts und jedes Einschalten der tiefen Suche setzt
+/// die Befunde zurueck: sie waeren sonst Auskuenfte ueber einen frueheren
+/// Filtertext.
+#[test]
+fn der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck() {
+    let ordner = filterordner();
+    let mut modell = gefiltert(ordner.pfad(), "aaa");
+    modell.tief_setzen(true);
+
+    let still = index_von(&modell, "stiller-ordner");
+    modell.befund_setzen(still, Befund::Treffer);
+    assert_eq!(modell.befund(still), Befund::Treffer);
+
+    modell.zeichen_anhaengen('x');
+    assert_eq!(
+        modell.befund(still),
+        Befund::Unentschieden,
+        "ein weiteres Zeichen stellt eine andere Frage"
+    );
+
+    modell.befund_setzen(still, Befund::Treffer);
+    modell.tief_setzen(false);
+    modell.tief_setzen(true);
+    assert_eq!(
+        modell.befund(still),
+        Befund::Unentschieden,
+        "das Einschalten der tiefen Suche fragt neu"
+    );
+}
+
+/// Der kleingeschriebene Filtertext entsteht einmal je Aenderung und ist der
+/// Wert, mit dem auch der Durchlauf vergleicht.
+#[test]
+fn der_kleingeschriebene_filtertext_laeuft_mit() {
+    let mut modell = Ordnermodell::neu(1);
+
+    assert!(!modell.filter_steht());
+    modell.filtertext_setzen("AaA");
+    assert_eq!(modell.filtertext(), "AaA");
+    assert_eq!(modell.filter_klein(), "aaa");
+    assert!(modell.filter_steht());
+
+    modell.filter_leeren();
+    assert_eq!(modell.filter_klein(), "");
+    assert!(!modell.filter_steht());
 }
