@@ -679,3 +679,12 @@
 {"ts":"2026-08-13T13:06:51","event":"state_drift","detail":"progress.commits: surface=8, record=10 (git 9d5fcfa..HEAD). Nachgezogen."}
 {"ts":"2026-08-13T13:17:16","event":"portfolio_refresh","detail":"portfolio.md neu; Web-Betrachter wieder Rang 1; playmaker berichtigt eine eigene Aussage aus fuenf Laeufen"}
 {"ts":"2026-08-13T13:17:16","event":"session_end","detail":"2 Turns, 17/17 Aufgaben, 10 Commits, 0 Fehler; Circle kohaerent geschlossen"}
+{"ts":"2026-08-13T21:42:48","event":"session_start","history_file":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md","detail":"Circle 260813-2332 Notizzettel; Modus offen"}
+{"ts":"2026-08-13T21:42:57","event":"shaper_start","agent":"shaper","detail":"Spec fuer den Notizzettel"}
+{"ts":"2026-08-13T21:56:00","event":"shaper_done","agent":"shaper","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md — 5 Faehigkeiten, 2 Diagramme, 1 neue offene Frage"}
+{"ts":"2026-08-13T21:56:00","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md"}
+{"ts":"2026-08-14T04:24:51","event":"conceptrev_done","agent":"conceptrev","detail":"acceptable; 5 Befunde, 2 mittel; Luecke: shift+cmd+w bei stehendem Blatt ohne Kriterium"}
+{"ts":"2026-08-14T04:24:51","event":"gate_response","detail":"Spec: erst nachziehen; zwei Fachfragen beantwortet"}
+{"ts":"2026-08-14T04:42:05","event":"planner_start","agent":"planner","detail":"Plan aus dem nachgezogenen Spec 260813-2348"}
+{"ts":"2026-08-14T05:05:46","event":"planner_done","agent":"planner","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md — 16 Schritte, 6 Straenge, 3 Diagramme; 1 neue offene Frage, 1 Defekt in shared"}
+{"ts":"2026-08-14T05:05:46","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md"}
