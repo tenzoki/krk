@@ -1,7 +1,7 @@
 //! Die gemeinsame Huelle fuer die Blaetter am Fenster.
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
-//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat neun:
+//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat zehn:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem endgueltigen Loeschen, Abschlussliste der uebersprungenen Eintraege und
 //! seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen im
@@ -9,7 +9,13 @@
 //! ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde) und seit S35
 //! und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
-//! ([`suche`]), beide C5 der Editor-Runde.
+//! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist der Notizzettel der
+//! Runde 9 ([`zettel`]).
+//!
+//! **Das zehnte ist das erste mit einem eigenen Waechter**, und der traegt die
+//! halbe Regel des [`Eingabewaechter`] darunter: `Esc` schliesst, die
+//! Eingabetaste setzt eine Zeile. Warum das ein eigener Typ ist und kein
+//! Schalter hier, steht im Kopf von [`zettel`].
 //!
 //! **Der Stand einer laufenden Dateioperation ist seit Schritt 16b keines
 //! mehr.** Er stand bis dahin als fuenftes Blatt hier und ist in die
@@ -37,7 +43,7 @@
 //! `NSModalResponse`; was AppKit dafuer als Zahl fuehrt, bleibt in dieser Datei.
 //!
 //! **Der Grund fuer eine gemeinsame Huelle** ist derselbe wie ueberall in
-//! diesem Entwurf: neun Blaetter mit je eigenem Aufbau waeren neun Stellen,
+//! diesem Entwurf: zehn Blaetter mit je eigenem Aufbau waeren zehn Stellen,
 //! die dieselbe Frage beantworten, und die erste Abweichung zwischen ihnen
 //! faende keine Pruefung.
 //!
@@ -120,6 +126,7 @@ pub mod suche;
 pub mod uebersprungen;
 pub mod ungesichert;
 pub mod zeilennummer;
+pub mod zettel;
 
 use std::cell::RefCell;
 
@@ -343,6 +350,26 @@ impl Blattgriff {
     pub fn abbrechen(&self) {
         self.fenster
             .endSheet_returnCode(&self.warnung.window(), self.abbruchcode);
+    }
+
+    /// Derselbe Abbruch als festhaltbarer Ruf.
+    ///
+    /// **Fuer einen Delegierten des Blattes, der es selbst schliessen muss und
+    /// den Griff nicht bekommt.** Der eine Aufrufer ist der
+    /// [`Zettelwaechter`](zettel::Zettelwaechter): der Griff geht an den
+    /// Anwendungsdelegierten, damit `esc` ueber den Abbruchbefehl dasselbe tut
+    /// wie bei jedem anderen Blatt, und der Waechter braucht daneben einen
+    /// eigenen Weg fuer die Escape-Taste **in** der Textflaeche.
+    ///
+    /// **Ein zweiter Schliessweg entsteht damit nicht.** Der Ruf tut Zeile fuer
+    /// Zeile, was [`Blattgriff::abbrechen`] tut, und beide muenden in denselben
+    /// Abschlussblock von AppKit. Ein zweiter Ruf, nachdem das Blatt schon zu
+    /// ist, trifft ein Fenster ohne anhaengendes Blatt und tut nichts.
+    pub fn abbruchweg(&self) -> impl Fn() + use<> {
+        let warnung = self.warnung.clone();
+        let fenster = self.fenster.clone();
+        let abbruchcode = self.abbruchcode;
+        move || fenster.endSheet_returnCode(&warnung.window(), abbruchcode)
     }
 }
 

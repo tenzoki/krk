@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Sechzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Siebzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -58,6 +58,12 @@
 //! der Nutzer schreiben darf. Die Aufzaehlung liegt hier und nicht unter
 //! `appkit`, weil zwei Leser an ihr haengen, die Tabelle und die
 //! Bereichsleiste, und der zweite die Tabelle nicht braucht.
+//! `zettelmodell` haelt zuletzt, was KRK ueber die beiden Notizzettel der
+//! Runde 9 weiss: welcher offen ist, was beim Oeffnen aus der Datei kam und was
+//! seither in der Textflaeche steht. Der Unterschied zwischen den beiden
+//! Zeichenketten **ist** die Sicherungsregel aus C4, und er ist ohne Fenster
+//! pruefbar; das Blatt mit den zwei Tabs steht in `appkit/blaetter/zettel.rs`
+//! und setzt den Stand nur um.
 
 mod angezeigtedatei;
 mod appkit;
@@ -86,6 +92,7 @@ mod quellbaum;
 mod spalten;
 mod tabs;
 mod vorschaumodell;
+mod zettelmodell;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
 /// einschaltet.

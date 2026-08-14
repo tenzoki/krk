@@ -206,7 +206,8 @@ use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationPolicy, NSApplicationDelegate,
-    NSApplicationTerminateReply, NSMenuItem, NSMenuItemValidation, NSResponder, NSView, NSWindow,
+    NSApplicationTerminateReply, NSMenuItem, NSMenuItemValidation, NSResponder, NSTextView, NSView,
+    NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
@@ -243,6 +244,9 @@ use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
+// `Wechsel` heisst hier `zettelmodell::Wechsel` und nicht kurz: `super::volumes`
+// fuehrt einen gleichnamigen Typ, und das ist ein anderer Gegenstand.
+use crate::zettelmodell::{self, Zettelmodell};
 
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
@@ -251,6 +255,7 @@ use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
     self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
+    zettel,
 };
 use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
 use super::ereignisse::{self, Eingabe, Tastenabgriff};
@@ -628,6 +633,24 @@ pub struct AnwendungsIvars {
     /// Datei laesst es ohne eine eigene Zeile fallen: es ist dann schon
     /// herausgenommen.
     vorgemerkte_marke: RefCell<Option<(u32, String)>>,
+    /// Was die beiden Notizzettel der Runde 9 tragen und welcher offen ist.
+    ///
+    /// Es steht hier und nicht im Blatt, weil es das Blatt ueberdauert: der
+    /// Zettel geht zu und wieder auf, und beim Aufgehen soll derselbe Tab offen
+    /// sein. Was daran den **Neustart** ueberdauert, ist die Zettelwahl in der
+    /// `session.toml`, und die traegt `Sitzung`.
+    zettel: RefCell<Zettelmodell>,
+    /// Die Textflaeche des stehenden Notizzettels, falls einer steht.
+    ///
+    /// **Der Delegierte haelt sie, weil er ihren Stand von aussen braucht.**
+    /// Der Zettel wird nicht nur ueber sein eigenes Blatt verlassen: `cmd+q` und
+    /// `shift+cmd+w` treffen ihn, waehrend er steht, und beide muessen den
+    /// getippten Text sichern. Ohne einen Griff auf die Flaeche haette der
+    /// Delegierte in diesem Augenblick keinen Zugang zu ihm.
+    ///
+    /// Leer, solange kein Zettel steht. Der Abschluss des Blattes nimmt den
+    /// Stand ein letztes Mal ab und raeumt sie ab.
+    zettelflaeche: RefCell<Option<Retained<NSTextView>>>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -942,6 +965,8 @@ impl Anwendungsdelegierter {
             offenes_blatt: RefCell::new(None),
             beenden_ohne_nachfrage: Cell::new(false),
             vorgemerkte_marke: RefCell::new(None),
+            zettel: RefCell::new(Zettelmodell::default()),
+            zettelflaeche: RefCell::new(None),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -2844,6 +2869,14 @@ impl Anwendungsdelegierter {
             Kommando::EditorErsetzen => self.editorbefehl(Editorbereich::treffer_ersetzen),
             Kommando::EditorAlleErsetzen => self.editorbefehl(Editorbereich::alle_treffer_ersetzen),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
+            // Der Notizzettel aus C1 der Runde 9. Er steht hier und nicht bei
+            // `bereichskommando`, weil er `Wirkungsbereich::Ueberall` traegt
+            // und keinem Bereich gehoert: er geht aus jedem der fuenf Fokuswerte
+            // auf, und ein einzelnes Dateifenster wuesste mit ihm nichts
+            // anzufangen. **Ohne diesen Zweig fiele der Befehl durch den
+            // Auffangzweig unten und taete nichts**, und der Uebersetzer sagte
+            // dazu kein Wort.
+            Kommando::Notizzettel => self.notizzettel_zeigen(),
             // Cmd+W aus jedem Fokus (C4 der Runde 4). Der einzige Befehl
             // dieser Runde, der ueber die Bereiche hinweg entscheidet, und
             // deshalb der einzige, der hier einen Zweig bekommt: er traegt
@@ -3197,6 +3230,207 @@ impl Anwendungsdelegierter {
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Der Notizzettel (C1 bis C3 der Runde 9)
+    // ------------------------------------------------------------------
+
+    /// Zeigt den Notizzettel als Blatt am Hauptfenster (C1).
+    ///
+    /// **Gelesen wird bei jedem Oeffnen frisch**, und C4 sagt es zu: die
+    /// Zetteldateien werden beim Start **nicht** gelesen, sondern erst hier.
+    /// Damit sieht der Nutzer, was eine zweite Instanz von KRK inzwischen
+    /// geschrieben hat, ohne dass eine dritte Absprache ueber dem Ablageordner
+    /// entstuende.
+    ///
+    /// **Der Blattgriff geht in [`Self::offenes_blatt`]** wie der jedes anderen
+    /// Blattes. Damit schliesst der Abbruchbefehl den Zettel auf demselben Weg
+    /// wie jede Rueckfrage, und es entsteht kein zweiter Weg zum Schliessen.
+    ///
+    /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
+    /// verbraucht.
+    fn notizzettel_zeigen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let offener = self.ivars().zettel.borrow().offener();
+        let text = self.zettel_lesen(offener);
+        self.ivars()
+            .zettel
+            .borrow_mut()
+            .oeffnen(offener, text.clone());
+
+        let beim_tabklick = objc2::rc::Weak::from_retained(&self.retain());
+        let beim_abschluss = objc2::rc::Weak::from_retained(&self.retain());
+        let (flaeche, griff) = zettel::zeigen(
+            self.mtm(),
+            fenster,
+            offener,
+            &text,
+            move |ziel| {
+                beim_tabklick
+                    .load()
+                    .and_then(|selbst| selbst.zettel_wechseln(ziel))
+            },
+            move || {
+                if let Some(selbst) = beim_abschluss.load() {
+                    selbst.zettel_blatt_geschlossen();
+                }
+            },
+        );
+        *self.ivars().zettelflaeche.borrow_mut() = Some(flaeche);
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        true
+    }
+
+    /// Liest die Datei eines Zettels und stellt eine etwaige Meldung in die
+    /// Statuszeile (C5).
+    ///
+    /// **Der Zettel kommt in jedem Fall**, notfalls leer. Eine fehlende Datei
+    /// ist der erste Start und keine Meldung wert; eine unlesbare wird
+    /// beiseitegelegt, und der Nutzer erfaehrt es ueber denselben Meldeweg, den
+    /// [`Ersetzung`](krk_core::ablage::Ersetzung) heute fuer `keymap.toml` und
+    /// `settings.toml` geht. Was der Kern dazu formuliert, wird hier nicht noch
+    /// einmal formuliert: [`Geladen::mit_meldung`](krk_core::ablage::Geladen)
+    /// liefert den Satz.
+    ///
+    /// **Ohne Ablageordner gibt es einen leeren Zettel und eine Meldung.** Still
+    /// einen leeren zu zeigen waere die schlechtere Antwort: der naechste
+    /// Sicherungsmoment schriebe ihn nirgendwohin, und der Nutzer erfuehre nie,
+    /// dass sein Zettel nicht gehalten wird.
+    fn zettel_lesen(&self, welcher: pfade::Zettel) -> String {
+        let datei = Datei::Zettel(welcher);
+        let (text, meldung) = match self.unter_der_sperre(|zugang| zugang.text_laden(datei)) {
+            Ok(geladen) => geladen.mit_meldung(),
+            Err(Sperrhindernis::OhneOrdner) => (
+                String::new(),
+                Some("der Notizzettel steht ohne Ablageordner und wird nicht gesichert".to_owned()),
+            ),
+            Err(Sperrhindernis::Gesperrt(fehler)) => (
+                String::new(),
+                Some(format!(
+                    "der Notizzettel ist nicht lesbar: die Schreibsperre der Ablage laesst sich \
+                     nicht nehmen ({fehler})"
+                )),
+            ),
+        };
+        if let Some(meldung) = meldung {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, &meldung);
+        }
+        text
+    }
+
+    /// Der Nutzer hat einen Tab des Zettels angeklickt (C2).
+    ///
+    /// Liefert den Text des Ziels, oder `None`, wenn der Klick dem bereits
+    /// offenen Tab galt — dann bleibt die Flaeche unberuehrt, und geschrieben
+    /// wird nichts.
+    ///
+    /// **Zuerst der Stand der Flaeche ins Modell, dann erst die Entscheidung.**
+    /// Was der Nutzer getippt hat, steht bis zu dieser Zeile allein in der
+    /// `NSTextView`; wer den Wechsel vor der Uebernahme entschiede, entschiede
+    /// ihn auf dem Stand von vorhin.
+    fn zettel_wechseln(&self, ziel: pfade::Zettel) -> Option<String> {
+        if let Some(stand) = self.zettelstand() {
+            let _ = self.ivars().zettel.borrow_mut().bearbeiten(stand);
+        }
+        // Der Wert steht in einer eigenen Zeile und nicht im Kopf des `match`:
+        // die Ausleihe des Kopfes lebte sonst durch alle Zweige, und der Zweig
+        // darunter fragt das Modell erneut.
+        let wechsel = self.ivars().zettel.borrow_mut().wechseln(ziel);
+        match wechsel {
+            // Der Klick auf den offenen Tab: nichts zu tun und nichts zu
+            // schreiben. C2 sagt es ausdruecklich zu.
+            zettelmodell::Wechsel::Derselbe => return None,
+            zettelmodell::Wechsel::GewechseltUngeaendert => {}
+            // Der erste der vier Sicherungsmomente aus C4. Er steht hier, weil
+            // der Tabklick hier ankommt; die drei uebrigen — das Schliessen des
+            // Blattes, `shift+cmd+w` und das Beenden — kommen anderswo an. Der
+            // Schritt 13 des Plans zieht die vier in **eine** Erklaerung
+            // zusammen und macht diesen Zweig zu ihrem ersten Aufrufer.
+            zettelmodell::Wechsel::GewechseltZuSichern => self.zettel_zurueckschreiben(),
+        }
+        let text = self.zettel_lesen(ziel);
+        self.ivars().zettel.borrow_mut().oeffnen(ziel, text.clone());
+        Some(text)
+    }
+
+    /// Schreibt den Zettel zurueck, den das Modell als zu sichernd nennt (C4).
+    ///
+    /// **Ohne Aenderung geschieht nichts**, und das entscheidet das Modell und
+    /// nicht diese Stelle: [`Zettelmodell::zu_sichern`] liefert `None`, solange
+    /// der gehaltene Stand der gelesene ist.
+    ///
+    /// **Eine gescheiterte Sicherung wirft den Stand nicht weg.** Gemeldet wird
+    /// sie ueber [`Self::gesichert`](Zettelmodell::gesichert) gerade **nicht**:
+    /// der Zettel bleibt abweichend, und der naechste Sicherungsmoment versucht
+    /// es erneut. Der Grund steht in der Statuszeile, damit der Nutzer nicht
+    /// darauf baut, dass sein Text auf der Platte liegt.
+    fn zettel_zurueckschreiben(&self) {
+        let Some((welcher, text)) = self
+            .ivars()
+            .zettel
+            .borrow()
+            .zu_sichern()
+            .map(|(welcher, text)| (welcher, text.to_owned()))
+        else {
+            return;
+        };
+        let datei = Datei::Zettel(welcher);
+        let meldung = match self.unter_der_sperre(|zugang| zugang.text_sichern(datei, &text)) {
+            Ok(Ok(())) => {
+                self.ivars().zettel.borrow_mut().gesichert(welcher);
+                None
+            }
+            Ok(Err(fehler)) => Some(format!(
+                "der Notizzettel liess sich nicht sichern: {fehler}"
+            )),
+            Err(Sperrhindernis::OhneOrdner) => {
+                Some("der Notizzettel ist ohne Ablageordner nicht gesichert".to_owned())
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => Some(format!(
+                "der Notizzettel ist nicht gesichert: die Schreibsperre der Ablage laesst sich \
+                 nicht nehmen ({fehler})"
+            )),
+        };
+        if let Some(meldung) = meldung {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, &meldung);
+        }
+    }
+
+    /// Das Blatt des Zettels ist zu (C1).
+    ///
+    /// **Der Stand kommt noch ins Modell, bevor die Flaeche faellt.** Sie ist
+    /// die einzige Stelle, an der das Getippte steht, und mit dem Blatt ist sie
+    /// fort; ein Modell, das erst danach gefragt wuerde, saehe den Stand von
+    /// vor dem letzten Zeichen.
+    ///
+    /// **Alle drei Wege heraus kommen hier an** — die Escape-Taste ueber den
+    /// Waechter, die Schaltflaeche und der Abbruchbefehl ueber den Blattgriff —,
+    /// weil sie in denselben Abschlussblock von AppKit muenden. Deshalb haengt
+    /// das Sichern an dieser Stelle und nicht am Waechter.
+    fn zettel_blatt_geschlossen(&self) {
+        if let Some(stand) = self.zettelstand() {
+            let _ = self.ivars().zettel.borrow_mut().bearbeiten(stand);
+        }
+        *self.ivars().zettelflaeche.borrow_mut() = None;
+        *self.ivars().offenes_blatt.borrow_mut() = None;
+    }
+
+    /// Was gerade in der Textflaeche des Zettels steht, falls einer steht.
+    ///
+    /// `None` heisst: es steht kein Zettel. Ein leerer Text waere die falsche
+    /// Antwort darauf — er hiesse „der Nutzer hat alles geloescht" und
+    /// ueberschriebe beim naechsten Sicherungsmoment die Datei.
+    fn zettelstand(&self) -> Option<String> {
+        self.ivars()
+            .zettelflaeche
+            .borrow()
+            .as_ref()
+            .map(|flaeche| flaeche.string().to_string())
     }
 
     /// Schreibt die geltende Tastenbelegung als Markdown in den

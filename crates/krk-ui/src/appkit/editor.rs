@@ -346,8 +346,9 @@
 //!   steht ab Werk auf `Default` und ueberlaesst dem System die Wahl; `None`
 //!   (`-1`, nicht `1`) ist die Absage. `allowsWritingToolsAffordance` — das
 //!   Sinnbild, mit dem sich die Werkzeuge selbst anbieten — steht ab Werk **an**.
-//!   Sie geht ueber [`setzen_falls_vorhanden`] und nicht ueber einen Aufruf, weil
-//!   das SDK sie erst ab macOS 15.4 und nur an `NSTextField` fuehrt.
+//!   Sie geht ueber [`super::textautomatik::setzen_falls_vorhanden`] und nicht
+//!   ueber einen Aufruf, weil das SDK sie erst ab macOS 15.4 und nur an
+//!   `NSTextField` fuehrt.
 //! - **Zwei tragen keinen und bekommen keine Zeile.**
 //!   `allowedWritingToolsResultOptions` und `writingToolsAllowedInputOptions` sind
 //!   Bitmasken, deren Null `…ResultDefault` heisst — "das System waehlt" — und
@@ -419,7 +420,8 @@
 //! Datei.** `setAllowsWritingToolsAffordance:` fuehrt das SDK erst ab macOS 15.4
 //! und nur an `NSTextField`; die Laufzeit von 15.7.7 antwortet an `NSTextView`
 //! darauf, aber undokumentiert. Sie geht deshalb ueber
-//! [`setzen_falls_vorhanden`], das `respondsToSelector:` **vorher** fragt. Wer
+//! [`super::textautomatik::setzen_falls_vorhanden`], das `respondsToSelector:`
+//! **vorher** fragt. Wer
 //! eine Methode aus macOS 15.1 oder spaeter anfasst, nimmt diesen einen Weg und
 //! baut keine Versionsabfrage daneben.
 //!
@@ -433,23 +435,21 @@
 //! bewusst nicht: sie wird nirgends gebunden, sondern nachgefragt.
 
 use std::cell::{Cell, RefCell};
-use std::ffi::CString;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::rc::{Retained, Weak};
-use objc2::runtime::{AnyObject, ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSMenu, NSScrollView, NSTextAlignment,
-    NSTextDelegate, NSTextField, NSTextInputTraitType, NSTextView, NSTextViewDelegate, NSView,
-    NSWritingToolsBehavior,
+    NSTextDelegate, NSTextField, NSTextView, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSNotification, NSNumber, NSObject, NSObjectProtocol, NSPoint, NSRange,
-    NSRect, NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
+    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRange, NSRect,
+    NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
     NSUndoManager, ns_string,
 };
 
@@ -469,6 +469,7 @@ use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
 use super::teilen;
+use super::textautomatik;
 use super::textmerkmale;
 
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
@@ -3117,59 +3118,10 @@ fn textflaeche_bauen(
     text.setEditable(true);
     text.setSelectable(true);
     // Reiner Text, und die sieben Automatiken aus: der gesicherte Stand ist der
-    // getippte. Der Grund steht im Modulkopf.
-    text.setRichText(false);
-    // Die vier, die beim Tippen greifen.
-    text.setAutomaticQuoteSubstitutionEnabled(false);
-    text.setAutomaticDashSubstitutionEnabled(false);
-    text.setAutomaticTextReplacementEnabled(false);
-    text.setAutomaticSpellingCorrectionEnabled(false);
-    // Die fuenfte greift beim Einfuegen und Ausschneiden statt beim Tippen und
-    // steht deshalb fuer sich. Ab Werk ist sie **an**; ohne diese Zeile setzte
-    // ein Einfuegen ein Leerzeichen dazu, das niemand getippt hat.
-    text.setSmartInsertDeleteEnabled(false);
-    // Die sechste und die siebte tragen keinen Schalter der Form `set…Enabled:`
-    // und waeren deshalb beinahe stehen geblieben. Die Vorhersage im Textfluss
-    // schlaegt die Fortsetzung eines Wortes grau vor und traegt sie ein, sobald
-    // der Nutzer die Leer- oder die Tabulatortaste drueckt; die Auswertung von
-    // Rechenausdruecken ersetzt beim Tippen von `=` den Ausdruck davor durch
-    // sein Ergebnis, und in `wert=1+2` einer Konfigurationsdatei ist das eine
-    // Aenderung, die niemand getippt hat. Beide stehen ab Werk auf `Default`,
-    // ueberlassen die Wahl also dem System; `No` ist die Absage. Gemessen an
-    // derselben Flaeche, nicht der Dokumentation entnommen.
-    text.setInlinePredictionType(NSTextInputTraitType::No);
-    text.setMathExpressionCompletionType(NSTextInputTraitType::No);
-    // Die achte: die Schreibwerkzeuge aus macOS 15. Sie schreiben markierten Text
-    // um und wirken beim Korrekturlesen ueber eine ganze Datei; danach steht in
-    // `NSTextView::string` nicht mehr das Getippte, und ueber
-    // `Editormodell::stand` geht es beim Sichern in die Datei. Anders als die
-    // sieben darueber greifen sie erst auf einen ausdruecklichen Aufruf des
-    // Nutzers aus dem Kontextmenue — dass C4 sie trotzdem ausschliesst, ist eine
-    // Lesart und war eine Frage an den Nutzer; entschieden am 260810 fuer den
-    // Ausschluss (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`).
-    // `None` ist die Absage, `Default` (der Werkswert) ueberliesse dem System die
-    // Wahl. Die Faehigkeit ist damit nicht verloren: sie steht in jedem anderen
-    // Textfeld des Systems, nur nicht an einer Flaeche, deren Inhalt Zeichen fuer
-    // Zeichen in eine Datei zurueckgeschrieben wird.
-    text.setWritingToolsBehavior(NSWritingToolsBehavior::None);
-    // Und die neunte, die Angebotsflaeche derselben Sache: das Sinnbild, das die
-    // Schreibwerkzeuge von sich aus anbietet. Sie steht ab Werk **an** — gemessen,
-    // nicht der Dokumentation entnommen — und haengt nicht am Verhalten darueber:
-    // `setWritingToolsBehavior(None)` laesst sie unberuehrt, sie ist also keine
-    // zweite Tuer, sondern eine eigene Einstellung mit eigenem Aus-Wert.
-    //
-    // Sie geht ueber den gehueteten Weg und nicht ueber einen Aufruf, weil sie
-    // erst ab macOS 15.4 zugesagt ist; der Grund steht bei
-    // [`setzen_falls_vorhanden`].
-    setzen_falls_vorhanden(&text, "allowsWritingToolsAffordance", false);
-    // Die beiden uebrigen Schreibwerkzeug-Einstellungen bekommen **keine** Zeile,
-    // und das ist gemessen und nicht vergessen: `allowedWritingToolsResultOptions`
-    // und `writingToolsAllowedInputOptions` sind Bitmasken, deren Null
-    // `…ResultDefault` heisst — "das System waehlt" — und nicht "nichts". Einen
-    // Wert, der nichts zulaesst, fuehrt die Aufzaehlung nicht, und beide stehen ab
-    // Werk schon auf Null. Eine Zeile waere hier ein Aufruf ohne Wirkung; was die
-    // Schreibwerkzeuge abschaltet, sind die beiden Zeilen darueber. Die Einordnung
-    // und ihre Probe stehen unter `mod tests` als `Einordnung::Gegenstandslos`.
+    // getippte. Der Grund steht im Modulkopf, die Zeilen selbst seit der Runde 9
+    // in `super::textautomatik` — die eine Antwort fuer die beiden bearbeitbaren
+    // Flaechen dieses Programms, den Editor und den Notizzettel.
+    textautomatik::automatiken_abschalten(&text);
     // Ohne diese Zeile traegt die Textansicht keine einzige
     // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
     // Ende der Antwortkette einen leeren Verwalter vor. `allowsUndo` steht bei
@@ -3210,77 +3162,6 @@ fn textflaeche_bauen(
     // Editor zeigt ausschliesslich den Inhalt einer Datei.
     Nummernspalte::einhaengen(mtm, &rolle, &text);
     (rolle, text)
-}
-
-/// Setzt einen booleschen Schalter der Textflaeche, **falls diese Laufzeit ihn
-/// fuehrt**, und meldet, ob sie es tat.
-///
-/// # Warum gefragt und nicht gerufen wird
-///
-/// `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt
-/// die Untergrenze des Buendels deshalb nicht (`CLAUDE.md`, Technologiewahl). Ein
-/// Setzer, den das System nicht kennt, ist kein Fehler zur Uebersetzungszeit,
-/// sondern ein `doesNotRecognizeSelector:` zur Laufzeit — also ein Absturz auf
-/// dem Geraet des Nutzers.
-///
-/// Der eine Aufrufer ist [`textflaeche_bauen`] mit
-/// `setAllowsWritingToolsAffordance:`, und der braucht die Frage: das SDK fuehrt
-/// die Angebotsflaeche allein an `NSTextField` und erst ab **macOS 15.4**, das
-/// Buendel zielt auf **15.0**. Die Laufzeit von 15.7.7 antwortet an `NSTextView`
-/// darauf, aber undokumentiert; auf 15.0 bis 15.3 kann sie fehlen. `objc2` bildet
-/// den Setzer an `NSTextView` folgerichtig nicht ab, weshalb der Weg ueber
-/// `msg_send!` und nicht ueber eine erzeugte Methode laeuft.
-///
-/// **Fehlt der Setzer, ist nichts zu tun, und das ist keine Notluege.** Eine
-/// Einstellung, die es nicht gibt, aendert kein Zeichen — dieselbe Begruendung,
-/// mit der die Gegenrichtung des Stolperdrahts ein Hinweis und kein Fehlschlag
-/// ist (Defekt 260810-0417). Der Rueckgabewert ist fuer die Proben da, die
-/// zwischen "steht aus" und "gibt es nicht" unterscheiden muessen.
-///
-/// **Der gehuetete Weg ist einer und nicht zwei.** Die lesende Seite derselben
-/// Frage ist `merkmal_falls_vorhanden` unter `mod tests`; beide fragen
-/// `respondsToSelector:` nach demselben, von [`setzername`] gebildeten Setzer und
-/// sonst nichts. Wer eine dritte Beruehrung einer Methode ueber der Untergrenze
-/// braucht, nimmt diese Frage und baut keine Versionsabfrage daneben.
-///
-/// # Warum ueber `setValue:forKey:` und nicht ueber den Setzer selbst
-///
-/// Weil `objc2` den Setzer an `NSTextView` nicht abbildet, muesste ein
-/// unmittelbarer Ruf durch `msg_send!` — und dessen Selektor steht zur
-/// Uebersetzungszeit fest, waehrend die Frage davor zur Laufzeit faellt. Ein
-/// dynamischer Selektor mit einem `BOOL`-Argument ist in `objc2` nur ueber rohes
-/// `objc_msgSend` samt Umdeutung des Funktionszeigers zu haben, und
-/// `performSelector:withObject:` ist **keine** Ausweiche: es uebergibt einen
-/// Objektzeiger, wo der Setzer ein `BOOL` erwartet, und ein Zeiger ist nie
-/// `NO`. Die Schluesselwertkodierung nimmt dagegen die `NSNumber`, liest die
-/// Typkodierung des Merkmals und packt den Wahrheitswert selbst aus — derselbe
-/// Weg, den `merkmal_setzen` unter `mod tests` schon geht.
-fn setzen_falls_vorhanden(flaeche: &NSTextView, merkmal: &str, wert: bool) -> bool {
-    let setzer = CString::new(setzername(merkmal)).expect("ein Setzername traegt kein Nullbyte");
-    if !flaeche.respondsToSelector(Sel::register(&setzer)) {
-        return false;
-    }
-    let schluessel = NSString::from_str(merkmal);
-    let zahl = NSNumber::new_bool(wert);
-    // SAFETY: Das Merkmal traegt an dieser Flaeche einen Setzer — eben gefragt —,
-    // und damit ist es schluesselwertkodiert erreichbar; `setValue:forKey:` steht
-    // an `NSObject` seit macOS 10.0.
-    let _: () = unsafe { msg_send![flaeche, setValue: &*zahl, forKey: &*schluessel] };
-    true
-}
-
-/// `smartQuotesType` wird zu `setSmartQuotesType:` — die eine kanonische Form, in
-/// der dieses Modul eine Einstellung benennt.
-///
-/// Die Regel ist die, die Objective-C selbst anwendet, wenn eine Eigenschaft
-/// keinen eigenen Setzer nennt: `set`, erster Buchstabe gross, Doppelpunkt. Sie
-/// steht hier und nicht unter `mod tests`, weil [`setzen_falls_vorhanden`] und die
-/// lesende Seite dort **denselben** Namen bilden muessen — sonst fragte die eine
-/// nach einem anderen Selektor als die andere setzt.
-fn setzername(merkmal: &str) -> String {
-    let mut zeichen = merkmal.chars();
-    let erstes = zeichen.next().expect("ein Merkmalsname ist nicht leer");
-    format!("set{}{}:", erstes.to_uppercase(), zeichen.as_str())
 }
 
 /// Leert Rueckgaengig- und Wiederherstellungsstapel eines Verwalters.
@@ -3362,9 +3243,13 @@ mod tests {
     use krk_core::text::marke::wiederfinden;
     use krk_core::text::suche;
     use objc2::runtime::{AnyClass, AnyProtocol, Sel};
-    use objc2_app_kit::NSWritingToolsBehavior;
+    use objc2_app_kit::{NSTextInputTraitType, NSWritingToolsBehavior};
+    use objc2_foundation::NSNumber;
 
     use super::*;
+    // Die lesende Seite der Merkmalsfrage bildet denselben Setzernamen wie die
+    // setzende; seit der Runde 9 wohnt er in `super::super::textautomatik`.
+    use super::super::textautomatik::setzername;
 
     fn pfad() -> PathBuf {
         PathBuf::from("/tmp/probe.txt")
@@ -4608,8 +4493,10 @@ mod tests {
     }
 
     /// `setSmartQuotesType:` wird zu `smartQuotesType` — der Weg zurueck, den
-    /// `valueForKey:` braucht. Die Hinrichtung ist [`setzername`], und die steht
-    /// im Modul darueber, weil [`setzen_falls_vorhanden`] denselben Namen braucht.
+    /// `valueForKey:` braucht. Die Hinrichtung ist
+    /// [`setzername`](super::super::textautomatik::setzername), und die steht seit
+    /// der Runde 9 in `super::textautomatik`, weil beide Seiten der Frage — die
+    /// setzende dort, die lesende hier — denselben Namen bilden muessen.
     fn merkmalsname(setzer: &str) -> String {
         let kern = setzer
             .strip_prefix("set")

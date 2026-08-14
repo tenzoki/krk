@@ -264,7 +264,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang C — Das zehnte Blatt
 
-9. **Die Abschaltung der Automatiken zieht in ein eigenes Modul**
+9. [DONE] **Die Abschaltung der Automatiken zieht in ein eigenes Modul**
    - Executor: `coder`
    - Files: neu `crates/krk-ui/src/appkit/textautomatik.rs`, geändert `crates/krk-ui/src/appkit/mod.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes: Das neue Modul trägt `pub(crate) fn automatiken_abschalten(text: &NSTextView)` mit den neun heutigen Zeilen aus `textflaeche_bauen` (`setRichText(false)`, die vier tippenden, `setSmartInsertDeleteEnabled`, die zwei ohne booleschen Schalter, `setWritingToolsBehavior`, die Angebotsfläche über den gehüteten Weg) samt allen ihren Begründungen, dazu `setzen_falls_vorhanden` und `setzername`. `textflaeche_bauen` ruft es und behält alles Editorspezifische: Bildlaufansicht, Rückgängig, der Zugriff auf `layoutManager`, die Schrift, die Nummernspalte. Der Modulkopf des neuen Moduls sagt, warum die Frage einmal steht und zwei Flächen bedient, und trägt den Abschnitt „Ab welchem macOS die angesprochenen Klassen stehen" für die Setzer, die aus `editor.rs` mitziehen. Das Prüfmodul in `editor.rs` bezieht `setzername` künftig von dort.
@@ -272,14 +272,14 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: Vorbereitung für C3 — „Die sieben Automatiken sind an der Textfläche des Zettels abgeschaltet." Die Messung selbst ist Schritt 16.
    - Prüfung: Alle sechs bestehenden Proben zu `EINSTELLUNGEN` bleiben unverändert grün. Wird an dieser Stelle eine Zeile verloren, fällt `die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`.
 
-10. **Das Zettelmodell ohne AppKit**
+10. [DONE] **Das Zettelmodell ohne AppKit**
     - Executor: `coder`
     - Files: neu `crates/krk-ui/src/zettelmodell.rs`, geändert `crates/krk-ui/src/main.rs`
     - Changes: `Zettelmodell` hält den offenen `Zettel`, je Zettel den beim Öffnen gelesenen Stand und den gehaltenen Stand. Methoden: `offener(&self) -> Zettel`; `oeffnen(&mut self, zettel: Zettel, gelesen: String)`; `bearbeiten(&mut self, stand: String) -> bool` mit `#[must_use]` und dem Doc-Kommentar, den die Projektregel verlangt — ein stilles Fallenlassen bliebe unbemerkt, so entschieden am 260811-2140; `wechseln(&mut self, ziel: Zettel) -> Wechsel`, wobei `Wechsel` eine vollständige Aufzählung ohne Auffangzweig ist und den Fall „derselbe Zettel, nichts zu tun" von „gewechselt, der verlassene ist zu sichern" und „gewechselt, nichts zu sichern" trennt; `zu_sichern(&self) -> Option<(Zettel, &str)>`; `gesichert(&mut self, zettel: Zettel)`. Ein `#[cfg(test)] mod tests` daneben, ohne Fenster und ohne `MainThreadMarker`.
     - Dependencies: 3
     - Abnahmekriterium: C2 — „Der Zustandsübergang beim Tabwechsel sichert den verlassenen Zettel, und zwar ohne Fenster prüfbar am Modell." „Ein Wechsel auf den bereits offenen Tab schreibt nichts." C4 — „Ist der Text des Zettels derselbe, der beim Öffnen gelesen wurde, schreibt KRK nicht."
 
-11. **Das Blatt: zwei Tabs, eine Textfläche, ein eigener Wächter**
+11. [DONE] **Das Blatt: zwei Tabs, eine Textfläche, ein eigener Wächter**
     - Executor: `coder`
     - Files: neu `crates/krk-ui/src/appkit/blaetter/zettel.rs`, geändert `crates/krk-ui/src/appkit/blaetter/mod.rs` (nur die Modulanmeldung und die Zahl neun im Modulkopf)
     - Changes: `Zettelwaechter` als `define_class!` über `NSObject` mit `NSTextViewDelegate`; die eine beantwortete Methode ist `textView:doCommandBySelector:`, sie übernimmt `cancelOperation:` und **nicht** `insertNewline:`. Die Beigabe ist ein `NSView` mit einem `NSSegmentedControl` über zwei Segmenten („Zettel 1", „Zettel 2") und einer `NSScrollView` mit einer bearbeitbaren `NSTextView` darunter. Die Fläche ruft `textautomatik::automatiken_abschalten`, setzt `setEditable(true)`, `setSelectable(true)`, `setAllowsUndo(true)` und keine Nummernspalte, keine Hervorhebung, keine Suche. `zeigen(…)` baut über `Blatt::mit_schaltflaechen` mit einer Schaltfläche, setzt Beigabe und Ersthelfer und gibt den `Blattgriff` zurück; der Abschlussblock ist die eine Stelle, an der das Schließen des Blattes ankommt, gleich ob es über den Wächter, über die Schaltfläche oder über den Griff kam. Der Tabklick sichert über den Rückruf, tauscht den Text der Fläche und ruft danach `makeFirstResponder` auf die Textfläche zurück. Der Modulkopf trägt drei Absätze: warum die Fläche in `ersthelfer_gehoert_appkit` **nicht** angemeldet wird, mit ausdrücklichem Verweis auf die entgegenlautende Warnung in `CLAUDE.md`; warum der Wächter nur die halbe Regel des `Eingabewaechter` trägt und ein eigener Typ ist und kein Schalter am bestehenden; und „Ab welchem macOS die angesprochenen Klassen stehen" für `NSSegmentedControl`, `NSScrollView`, `NSTextView` und `NSTextViewDelegate`.
@@ -287,7 +287,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
     - Abnahmekriterium: C3 — „Die Textfläche des Zettels ist in `ersthelfer_gehoert_appkit` **nicht** als Ausnahme angemeldet." „Der Modulkopf der neuen Datei schreibt aus, warum die Anmeldung hier unterbleibt." „Der Wächter des Zettels fängt `cancelOperation:` ab und `insertNewline:` **nicht**. Eine Probe hält beide Hälften fest." „Im Zettel gibt es keinen Aufruf der Suche, des Ersetzens, der Zeilennummernspalte und der Syntaxhervorhebung." C2 — die Zusage des Rücksprungs in die Textfläche.
     - Prüfung: Eine Probe fährt den Wächter an einem `Sel` und prüft beide Hälften; eine Zählprobe über `krk_ui::quellbaum::quelldateien` hält fest, dass `zettel.rs` weder `Nummernspalte` noch `hervorhebung` noch `suche` nennt.
 
-12. **Der Delegierte hält den Zettel und öffnet ihn**
+12. [DONE] **Der Delegierte hält den Zettel und öffnet ihn**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `AnwendungsIvars` bekommt `zettel: RefCell<Zettelmodell>`; der Blattgriff geht in das bestehende `offenes_blatt`, damit ein Abbruch über den Griff denselben Weg nimmt wie jedes andere Blatt. Neu `notizzettel_zeigen(&self) -> bool`: es liest die Datei des offenen Zettels über `unter_der_sperre(|z| z.text_laden(…))` frisch ein, stellt eine etwaige `Ersetzung` über `melden` und `antwort_zeigen` in die Statuszeile, füllt das Modell und zeigt das Blatt. Ein eigener Zweig `Kommando::Notizzettel => self.notizzettel_zeigen()` in `kommando_ausfuehren`, mit einem Kommentar in der Form der Nachbarzweige: er steht hier und nicht bei `bereichskommando`, weil er `Wirkungsbereich::Ueberall` trägt und der Zettel keinem Bereich gehört.

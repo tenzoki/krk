@@ -695,3 +695,7 @@
 {"ts":"2026-08-14T05:34:03","event":"task_start","turn":1,"task":"A","agent":"coder","detail":"Schritte 1-5, krk-core/ablage und text"}
 {"ts":"2026-08-14T05:34:03","event":"task_start","turn":1,"task":"B","agent":"coder","detail":"Schritte 6-8, Belegung und Kommando"}
 {"ts":"2026-08-14T05:47:10","event":"task_done","turn":1,"task":"B","agent":"coder","detail":"Schritte 6-8 fertig, make check exit 0 im eigenen worktree; Commit wartet auf Strang A"}
+{"ts":"2026-08-14T05:53:45","event":"task_done","turn":1,"task":"A","agent":"coder","detail":"Schritte 1-5 fertig, make check exit 0 gemeinsam mit B"}
+{"ts":"2026-08-14T05:53:45","event":"commit","turn":1,"task":"A","detail":"Ablage fuehrt zwei Zettel, atomar schreibt aus einem Leser"}
+{"ts":"2026-08-14T05:53:45","event":"commit","turn":1,"task":"B","detail":"Notizzettel auf f2 und cmd+k"}
+{"ts":"2026-08-14T05:53:45","event":"task_start","turn":1,"task":"C","agent":"coder","detail":"Schritte 9-12, das zehnte Blatt"}

@@ -7,9 +7,11 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Achtundzwanzig Module, entlang dessen geschnitten, was AppKit als
-//! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`], das keines fuehrt
-//! und trotzdem hier liegt, weil die Koordinate, in die es rechnet, AppKits ist:
+//! Neunundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und [`textautomatik`],
+//! die keines fuehren und trotzdem hier liegen, weil die Koordinate, in die das
+//! eine rechnet, AppKits ist und die Einstellungen, die das andere setzt, an
+//! AppKits Textflaeche haengen:
 //!
 //! ```text
 //! anwendung ──> menue
@@ -28,6 +30,7 @@
 //!           ──> editor   ──> crate::editormodell
 //!           │             ──> nummernspalte ──> krk-core::text::zeilen
 //!           │             ──> textmerkmale  ──> crate::hervorhebung
+//!           │             ──> textautomatik <── blaetter::zettel
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
@@ -45,6 +48,13 @@
 //! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
 //! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
 //! und die Vorschau teilen sich denselben Platz in der Fensterzeile.
+//! [`textautomatik`] haelt die eine Antwort darauf, welche Automatiken an einer
+//! bearbeitbaren Textflaeche abgeschaltet gehoeren. Sie stand bis zur Runde 8
+//! mitten in [`editor`], und das trug, solange es genau eine bearbeitbare
+//! `NSTextView` gab; mit dem Notizzettel der Runde 9 gibt es zwei, und zwei
+//! Aufzaehlungen derselben Einstellungen waeren zwei Wahrheiten darueber, was
+//! „abgeschaltet" heisst. Ein eigenes Modul aus demselben Grund wie
+//! [`textmerkmale`] und [`nummernspalte`] daneben.
 //! [`textmerkmale`] haelt die eine Umsetzung einer `crate::hervorhebung`-
 //! `Formatierung` in die Merkmale einer `NSTextView`: Schrift, Einzug, Farbe
 //! und Unterstreichung. Ein eigenes Modul aus demselben Grund wie die
@@ -188,6 +198,7 @@ mod tabelle;
 mod tableiste;
 mod teilen;
 mod terminal;
+mod textautomatik;
 mod textmerkmale;
 mod titelzusatz;
 mod volumes;
