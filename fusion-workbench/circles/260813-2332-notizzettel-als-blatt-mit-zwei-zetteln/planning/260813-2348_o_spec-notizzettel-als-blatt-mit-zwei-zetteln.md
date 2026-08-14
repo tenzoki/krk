@@ -6,7 +6,8 @@
 **Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`, aktiv seit 260813-2341
 **Grundlage erhoben:** 260813-2348, am Baum unter `crates/` und `resources/`
 **Sieben Fragen sind beantwortet**, in zwei Klärungsrunden vor der Anlage des Circles; sie stehen vollständig in der Grounding-Aufnahme des Circle-Datensatzes. Dieser Spec stellt keine davon erneut.
-**Nachgezogen am 260814-0628**, nach der Diagrammprüfung `reviews/260814-0000-conceptrev-spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Spruch `acceptable`, fünf Befunde) und den drei Nutzerantworten vom 260814-0005. Was sich gegenüber der Fassung vom 260813-2348 geändert hat, steht am Ende unter „Was der Nachtrag vom 260814 geändert hat".
+**Nachgezogen am 260814-0628**, nach der Diagrammprüfung `reviews/260814-0000-conceptrev-spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Spruch `acceptable`, fünf Befunde) und den drei Nutzerantworten vom 260814-0005. Was sich gegenüber der Fassung vom 260813-2348 geändert hat, steht am Ende unter „Was der Nachtrag vom 260814-0628 geändert hat".
+**Ein zweites Mal nachgezogen am 260814-0925**, an C4 allein, nach der Durchsicht von Turn 1 (`reviews/260814-0908-coderev-turn-1-notizzettel.md`) und der Nutzerantwort vom 260814-0925. Der Anlass steht am Ende unter „Was der Nachtrag vom 260814-0925 an C4 geändert hat".
 
 ---
 
@@ -128,14 +129,14 @@ stateDiagram-v2
     state Offen {
         [*] --> Zettel1: Zettel 1 war zuletzt offen
         [*] --> Zettel2: Zettel 2 war zuletzt offen
-        Zettel1 --> Zettel2: Klick auf den Tab, sichert Zettel 1, wenn geaendert
-        Zettel2 --> Zettel1: Klick auf den Tab, sichert Zettel 2, wenn geaendert
+        Zettel1 --> Zettel2: Klick auf den Tab, sichert jeden abweichenden Zettel
+        Zettel2 --> Zettel1: Klick auf den Tab, sichert jeden abweichenden Zettel
     }
     [*] --> Zu: KRK startet
-    Zu --> Offen: f2 oder cmd+k
-    Offen --> Zu: Esc, sichert den offenen Zettel, wenn geaendert
-    Offen --> Zu: shift+cmd+w, sichert erst, dann schliesst AppKit das Fenster
-    Offen --> [*]: cmd+q bei sauberem Editor, sichert den offenen Zettel, wenn geaendert
+    Zu --> Offen: f2 oder cmd+k, liest die Datei neu, wo der Zettel nichts Ungesichertes haelt
+    Offen --> Zu: Esc, sichert jeden abweichenden Zettel
+    Offen --> Zu: shift+cmd+w, sichert erst jeden abweichenden Zettel, dann schliesst AppKit das Fenster
+    Offen --> [*]: cmd+q bei sauberem Editor, sichert jeden abweichenden Zettel
     Offen --> Offen: cmd+n, kein Sichern: fuehrt nicht aus dem Zettel heraus<br/>cmd+q bei ungesichertem Editor, kein Sichern: KRK bleibt stehen<br/>shift+cmd+w, wenn AppKit das Schliessen abweist: gesichert, Blatt bleibt, ungemessen
     Zu --> [*]: KRK beendet, nichts zu sichern
 ```
@@ -146,7 +147,11 @@ stateDiagram-v2
 
 **Die Kante zurück in den offenen Zettel trägt drei Fälle, die die Fassung vom 260813 nicht hatte.** Sie stehen an einer Kante und nicht an dreien, weil Mermaid mehrere Übergänge eines Zustands auf sich selbst zu einem zusammenzieht und die übrigen stillschweigend fallen lässt; am 260814-0636 an `@mermaid-js/mermaid-cli` 11.16.0 gemessen. `cmd+n` sichert nicht, weil es aus dem Zettel nicht herausführt. `cmd+q` sichert nicht, wenn `beenden_erlauben` das Beenden abweist, weil der Editor einen ungesicherten Stand hält. Und `shift+cmd+w` sichert in beiden Richtungen, gleich ob AppKit das Schließen des Fensters mit anhängendem Blatt annimmt oder abweist; welche der beiden Kanten das laufende Bündel geht, ist im Baum nicht gemessen und steht unten beim Planer.
 
-**„sichert, wenn geändert" steht an jeder Kante und nicht in der Überschrift.** C4 sagt zu, dass ein Sichern ohne Änderung unterbleibt, und C2 sagt dasselbe für den Wechsel auf den bereits offenen Tab. Eine Kante, die unbedingt „sichert" sagt, ließe daraus eine Zahl von Schreibvorgängen ablesen, die der Spec nicht zusagt (Befund N4 der Diagrammprüfung).
+**Die Bedingung steht an jeder sichernden Kante und nicht in der Überschrift.** C4 sagt zu, dass ein Sichern ohne Änderung unterbleibt, und C2 sagt dasselbe für den Wechsel auf den bereits offenen Tab. Eine Kante, die unbedingt „sichert" sagt, ließe daraus eine Zahl von Schreibvorgängen ablesen, die der Spec nicht zusagt (Befund N4 der Diagrammprüfung).
+
+**„jeden abweichenden Zettel" ist seit dem 260814-0925 die genauere Beschriftung, und sie trägt eine Zusage und keine bloße Bedingung.** Bis dahin stand an drei Kanten „den offenen Zettel" und an einer bloß „sichert"; das ließ offen, was mit dem anderen geschieht, wenn auch er abweicht. Die Durchsicht von Turn 1 hat den Fall am Bau gefunden: gesichert wurde der erste abweichende Zettel und sonst keiner, und der vierte Moment hat kein nächstes Mal (`issues/260814-0909_*_je-sicherungsmoment-wird-hoechstens-ein-zettel-geschrieben-und-beim-beenden-gibt-es-kein-naechstes-mal.md`). Die Beschriftung sagt jetzt, was C4 zusagt: jeder Zettel, der etwas hält, was nicht auf der Platte steht, wird geschrieben.
+
+**Die Kante in den offenen Zustand trägt neuerdings ebenfalls eine Bedingung.** Der Zettel liest seine Datei beim Öffnen neu, aber nur dort, wo er nichts Ungesichertes hält. Ohne diese Hälfte zeichnete das Bild einen Zustandsübergang, der den getippten Text des Nutzers stillschweigend durch den Inhalt der Datei ersetzt; genau das war Befund 1 der Durchsicht. Die Herleitung steht unter C4.
 
 ---
 
@@ -236,9 +241,9 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 - **Rückgängig läuft über die Rückgängigverwaltung von AppKit, ohne Budget in Bytes.** Der Rückgängigstapel des Editors trägt eines, weil er Dateien bis 16 MB hält. Der Zettel hält, was der Nutzer hineinschreibt, und die obere Grenze dafür ist seit dem 260814 dieselbe Zahl: `EDITORGRENZE`, gesetzt in C5. Ein Budget am Rückgängigstapel folgt daraus nicht, denn die Grenze fängt die fremde Datei ab und nicht das Tippen.
 - **Der Rückgängigverlauf endet mit dem Blatt.** Nach dem Schließen und erneuten Öffnen nimmt Rückgängig den vorigen Stand nicht zurück. Eine Runde, die das zusagt, müsste den Verlauf über die Sitzung tragen.
 
-### C4: Gesichert wird an vier Punkten, ohne Zutun des Nutzers
+### C4: Gesichert wird an vier Punkten, ohne Zutun des Nutzers, und nichts Getipptes geht dabei still verloren
 
-**Beschreibung:** KRK schreibt den Zettel beim Wechsel zwischen den beiden Zetteln, beim Schließen des Blattes mit `Esc`, beim Schließen des Fensters mit `shift+cmd+w` und beim Beenden der Anwendung. Der Nutzer sichert nie selbst und wird nie gefragt.
+**Beschreibung:** KRK schreibt den Zettel beim Wechsel zwischen den beiden Zetteln, beim Schließen des Blattes mit `Esc`, beim Schließen des Fensters mit `shift+cmd+w` und beim Beenden der Anwendung. Jeder dieser Momente schreibt jeden Zettel, der etwas hält, was nicht auf der Platte steht. Der Nutzer sichert nie selbst und wird nie gefragt. Was er getippt hat, verschwindet nicht ohne Meldung: gelingt eine Sicherung nicht, bleibt der getippte Text stehen, und ein erneutes Öffnen ersetzt ihn nicht durch den Inhalt der Datei.
 
 **Abnahmekriterien, am Baum nachweisbar:**
 - [ ] Die vier Momente sind an genau einer Stelle erklärt und werden von vier Aufrufern angesprochen. Eine zweite Erklärung daneben entsteht nicht.
@@ -248,20 +253,32 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 - [ ] Der Zwei-Sekunden-Takt des `Sitzungsschreiber` trägt den Text des Zettels nicht. Eine Probe hält fest, dass der Text an keiner Stelle in die `session.toml` gerät.
 - [ ] Das Schreiben läuft über `atomar::schreiben` und unter dem `Schreibgriff`, wie jedes andere Schreiben im Ablageordner. Ein zweiter Schreibweg entsteht nicht.
 - [ ] Ist der Text des Zettels derselbe, der beim Öffnen gelesen wurde, schreibt KRK nicht.
-- [ ] Eine gescheiterte Sicherung, etwa wegen fehlenden Schreibrechts, wirft den Stand nicht weg und meldet den Grund.
+- [ ] Jeder Sicherungsmoment schreibt **jeden** abweichenden Zettel und nicht nur den ersten. Weichen beide ab, gehen in einem Moment beide auf die Platte. Ohne Fenster am Modell prüfbar.
+- [ ] Eine gescheiterte Sicherung, etwa wegen fehlenden Schreibrechts, wirft den gehaltenen Text nicht weg. Der Zettel gilt danach weiter als abweichend, und der nächste Moment nimmt ihn erneut.
+- [ ] Das Öffnen des Zettels setzt den gehaltenen Text eines abweichenden Zettels nicht zurück. Den Inhalt seiner Datei bekommt nur ein Zettel, der nichts Ungesichertes hält; für den abweichenden wird der gelesene Stand verworfen. Ohne Fenster am Modell prüfbar.
+- [ ] Für den Tabwechsel gilt dasselbe wie für das Öffnen: der Wechsel auf einen abweichenden Zettel zeigt dessen gehaltenen Text und nicht den Inhalt seiner Datei.
+- [ ] Scheitert eine Sicherung an einem der drei Momente, nach denen KRK weiterläuft, nennt die Statuszeile den Grund. Beim Beenden unterbleibt die Meldung, und die Stelle schreibt aus, warum: eine Statuszeile gibt es dort nicht mehr. Der Preis steht unter den Festlegungen.
 
 **Abnahmekriterien, nur am laufenden Bündel prüfbar (Nutzerarbeit):**
 - [ ] Text tippen, mit `Esc` schließen, KRK beenden, KRK starten, `f2`: der Text steht da.
 - [ ] Text tippen, auf den anderen Zettel wechseln, KRK ohne weiteres Schließen beenden: beide Zettel stehen beim nächsten Start so da, wie sie verlassen wurden.
 - [ ] Text tippen und KRK bei stehendem Zettel beenden: der Text steht beim nächsten Start da, sofern der Editor keinen ungesicherten Stand hält. Hält er einen, beendet KRK sich nicht, und der Zettel steht weiter.
-- [ ] Eine gescheiterte Sicherung meldet ihren Grund an einer Stelle, an der der Nutzer sie sieht.
+- [ ] Eine gescheiterte Sicherung an einem der ersten drei Momente meldet ihren Grund an einer Stelle, an der der Nutzer sie sieht.
+- [ ] Der Datei des ersten Zettels das Schreibrecht nehmen, `f2`, „abc" tippen, `Esc`: die Meldung nennt den Grund. Danach `f2` erneut: „abc" steht unverändert im Zettel. Das Schreibrecht zurückgeben und mit `Esc` schließen: die Datei trägt „abc".
+- [ ] Derselbe Anfang, aber statt `Esc` ein Klick auf den zweiten Tab und einer zurück: „abc" steht unverändert in Zettel 1.
+- [ ] Beide Zettel zugleich abweichend machen (Schreibrecht nehmen, in Zettel 1 tippen, auf Zettel 2 wechseln, dort tippen, Schreibrecht zurückgeben) und KRK bei sauberem Editor beenden: beim nächsten Start tragen **beide** Zettel ihren Text.
 
 **Getroffene Festlegungen:**
 - **Der Preis ist angenommen und benannt: bei einem Absturz ist alles fort, was seit dem Öffnen des Zettels getippt wurde.** Der Nutzer hat den Zwei-Sekunden-Takt für den Text am 260813 ausdrücklich verworfen. Das ist keine Lücke der Spezifikation, sondern eine Zusage, die diese Runde nicht macht. Ein erzwungenes Beenden über `SIGKILL` zählt wie ein Absturz; die vier Momente sind ordentliche Wege und keine Signalbehandlung.
 - **Der vierte Moment folgt aus den drei anderen und nicht aus einer neuen Überlegung.** Antwort 1 vom 260814-0005 nennt den Grund: kein Weg aus dem Zettel heraus verliert Text. `shift+cmd+w` war bis dahin der eine Weg heraus, an dem der Zettel geschwiegen hätte, und zwar weil `fenster_schliessen` auf der Ausnahmeliste steht und den Blattstand deshalb nicht abwartet.
 - **Der Moment „Beenden" trägt seit dem 260814 eine ausgeschriebene Bedingung.** `beenden_erlauben` weist das Beenden bei stehendem Blatt ab, sobald der Editor einen ungesicherten Stand hält, und dann läuft `applicationWillTerminate:` nicht. Verloren geht dabei nichts: KRK bleibt stehen, und der Zettel steht mit seinem Text weiter da.
 - **Der zweite Preis ist ebenfalls angenommen: laufen zwei Instanzen von KRK und bearbeiten beide denselben Zettel, gewinnt die zuletzt schließende.** Der Schreibgriff verhindert eine vermischte Datei, kein Überschreiben. Der Nutzer hat diese Gefahr mit Antwort 7 in Kauf genommen. Der Fall bleibt offen und ist nicht übersehen; er steht hier, damit die nächste Runde ihn nicht als neuen Befund entdeckt.
-- **Der Zettel liest seine Datei bei jedem Öffnen neu.** Das kostet nichts und mildert den zweiten Preis an der einzigen Stelle, an der es ohne eine dritte Absprache über dem Ablageordner geht: wer nach dem Sichern der anderen Instanz öffnet, sieht deren Stand und überschreibt ihn nicht ungesehen. Zugesagt ist damit nichts über gleichzeitig offene Zettel.
+- **Der getippte Stand gewinnt, und das Neulesen tritt hinter ihn zurück.** So hat der Nutzer am 260814-0925 entschieden. Der Zettel liest seine Datei weiter bei jedem Öffnen, und im gewöhnlichen Fall zeigt er, was darin steht; hält er dagegen einen Text, der noch nicht auf der Platte steht, bleibt dieser stehen und der gelesene wird verworfen. Die Zusage, die der Nutzer beim Tippen spürt, ist die erste: nichts Getipptes verschwindet stillschweigend.
+- **Die zwei Sätze standen bis dahin nebeneinander und trugen nicht zusammen.** Die Durchsicht von Turn 1 hat es am Bau gefunden (`issues/260814-0908_*_ein-neuoeffnen-nach-gescheiterter-sicherung-wirft-den-ungesicherten-zettelstand-weg.md`): `Zettelmodell::oeffnen` setzte den gehaltenen Text auf das Gelesene, und damit war fort, was die gescheiterte Sicherung stehen lassen sollte. Der Prüfer hat die Ursache im Spec verortet und nicht im Bau, und er hat recht: beide Zusagen gelten nur gemeinsam, wenn das Neulesen einen abweichenden Stand nicht antastet. Der zweite Satz ist deshalb eingeschränkt und nicht gestrichen.
+- **Zwei Möglichkeiten sind verworfen, und ihre Gründe stehen hier, damit die nächste Runde sie nicht neu erwägt.** „Die Datei gewinnt immer" ist die Lage, die Turn 1 gebaut hat, und der Befund selbst: getippter Text verschwindet ohne Meldung. „Beim Öffnen nachfragen" ist keine Möglichkeit, sondern unmöglich: die Nachfrage wäre ein Blatt über dem Zettelblatt, und ein Blatt über einem Blatt geht in AppKit nicht. An derselben Unmöglichkeit hängt schon die nackte Textfläche aus C3.
+- **Der zweite Preis wächst mit dieser Wahl um eine Hälfte: wer einen abweichenden Zettel öffnet, sieht den Stand der anderen Instanz nicht.** Das Neulesen mildert den zweiten Preis damit nur noch dort, wo der Zettel nichts Ungesichertes hält, und das ist der gewöhnliche Fall. Wo es ihn nicht mehr mildert, steht der kleinere von zwei Verlusten gegen den größeren: die andere Instanz hat ihren Text auf der Platte, der Nutzer dieser Instanz hätte seinen nirgends. Zugesagt ist damit weiterhin nichts über gleichzeitig offene Zettel.
+- **Jeder Sicherungsmoment schreibt jeden abweichenden Zettel, und diese Zusage folgt aus der vorigen.** Solange ein abweichender Stand beim Öffnen verschwand, konnte kaum je mehr als ein Zettel zugleich abweichen. Jetzt bleibt er stehen, überdauert das Schließen des Blattes und liegt beim nächsten Moment neben dem Zettel, den der Nutzer inzwischen bearbeitet hat. Ein Moment, der nur den ersten abweichenden schreibt, verlöre den zweiten. Der zweite Datensatz der Durchsicht hält den Fall fest (`issues/260814-0909_*_je-sicherungsmoment-wird-hoechstens-ein-zettel-geschrieben-und-beim-beenden-gibt-es-kein-naechstes-mal.md`), und die Kosten sind gering: ein unveränderter Zettel schreibt ohnehin nichts.
+- **Beim Beenden gibt es kein nächstes Mal, und daran hängt der dritte benannte Preis.** Die ersten drei Momente dürfen eine gescheiterte Sicherung an den nächsten weiterreichen; `applicationWillTerminate:` ist der letzte, der läuft. Deshalb muss dort jeder abweichende Zettel geschrieben werden, und deshalb erfährt der Nutzer von einem Fehlschlag an dieser Stelle nichts: eine Statuszeile gibt es nicht mehr, und ein Fenster für die Meldung wäre eine Rückfrage beim Beenden, die diese Runde ausdrücklich nicht führt. Der Fall ist damit benannt und nicht übersehen; wer ihn auflösen will, öffnet eine eigene Runde.
 - **Ein Sichern ohne Änderung unterbleibt.** Es spart nicht Rechenzeit, sondern das Nehmen des Schreibgriffs und eine Ersetzung der Datei bei jedem Blick auf einen Zettel, den niemand angefasst hat.
 
 ### C5: Zwei Dateien im Ablageordner, und zwei Stellen, die dabei den Bau anhalten
@@ -283,7 +300,7 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 
 **Abnahmekriterien, nur am laufenden Bündel prüfbar (Nutzerarbeit):**
 - [ ] Nach dem ersten Sichern liegen die Dateien im Ablageordner und lassen sich in einem beliebigen Textprogramm öffnen und lesen.
-- [ ] Eine von außen geänderte Zetteldatei zeigt sich beim nächsten Öffnen des Zettels mit ihrem neuen Inhalt.
+- [ ] Eine von außen geänderte Zetteldatei zeigt sich beim nächsten Öffnen des Zettels mit ihrem neuen Inhalt, sofern der Zettel nichts Ungesichertes hält. Hält er etwas, gewinnt der getippte Stand (C4).
 - [ ] Eine Zetteldatei von außen mit einer ungültigen Bytefolge füllen, KRK starten, `f2`: der Zettel ist leer, die alte Fassung liegt unter dem Beiseitepfad, und eine Meldung nennt sie.
 - [ ] Danach in den leeren Zettel tippen und mit `Esc` schließen: die beiseitegelegte Fassung bleibt unangetastet.
 
@@ -357,6 +374,7 @@ Der bekannte Grund zuerst. Eine Zeitzusage ist nur dann eine Zusage, wenn sie ab
 - Ein Weg vom Zettel in den Editor oder umgekehrt, etwa das Öffnen des Zettels als Datei.
 - Eine Zeitzusage für die Erscheinungszeit des Blattes.
 - Eine Auflösung des Falls, dass `cmd+q` bei stehendem Zettel und ungesichertem Editor abgewiesen wird. KRK bleibt dabei stehen und verliert nichts; wer dem Nutzer an dieser Stelle eine Meldung geben will, öffnet eine eigene Runde.
+- Eine Meldung über eine Sicherung, die beim Beenden scheitert, und ein Beenden, das sich deswegen verweigert. Der Preis steht unter C4; die Vorlage dafür gäbe es (`beenden_erlauben` hält KRK für den ungesicherten Editor an), und sie zu übernehmen wäre eine eigene Entscheidung.
 - Ein Sichern des Zettels an `cmd+n` oder an einem anderen Befehl, der nicht aus dem Zettel herausführt.
 
 ---
@@ -382,9 +400,11 @@ Der bekannte Grund zuerst. Eine Zeitzusage ist nur dann eine Zusage, wenn sie ab
 
 **Keine.** Die eine Frage dieses Spec ist am 260814-0005 beantwortet: `decisions/260813-2348_a_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md`, Möglichkeit 3 mit `EDITORGRENZE` als Grenze. Die Antwort steht als Zusage in C5 und ist Bestandteil der Abnahme.
 
+Die zweite Frage, welcher der beiden Stände beim Öffnen eines abweichenden Zettels gewinnt, ist am 260814-0925 beantwortet und steht als Zusage in C4. Sie ist aus der Durchsicht von Turn 1 gekommen und nicht aus einer Klärungsrunde; ein eigener Datensatz entsteht dafür nicht, weil die Antwort dieselbe Stelle bindet, an der sie steht.
+
 ---
 
-## Was der Nachtrag vom 260814 geändert hat
+## Was der Nachtrag vom 260814-0628 geändert hat
 
 Drei Nutzerantworten vom 260814-0005 und fünf Befunde der Diagrammprüfung vom 260814-0000 sind eingearbeitet. Die sieben beantworteten Klärungsfragen, die Ausnahmeliste `immer_erreichbar` und die Zulässigkeitsregel der achten Runde sind dabei unangetastet geblieben.
 
@@ -401,3 +421,23 @@ Drei Nutzerantworten vom 260814-0005 und fünf Befunde der Diagrammprüfung vom 
 **Was nicht geändert wurde und warum.** Die Prüfung hält fest, dass dieselbe unvollständig gezeichnete Fallunterscheidung zum dritten Mal auftrat und die zwei früheren Beanstandungen nie behoben wurden. Der Befund an diesem Spec ist mit diesem Nachtrag behoben. Das Muster dahinter ist kein Mangel dieses Dokuments und steht deshalb als eigener Datensatz: `issues/260814-0628_o_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`.
 
 **Die Directive im Circle-Datensatz ist nicht mitgezogen worden**, weil der Shaper sie außerhalb des Aktivierungsmodus nicht schreiben darf. Sie nennt weiter drei Sicherungsmomente, und der Datensatz `issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md` hält die Abweichung mit ihren zwei Stellen fest. Verbindlich für den Plan ist bis dahin dieser Spec.
+
+---
+
+## Was der Nachtrag vom 260814-0925 an C4 geändert hat
+
+Der Nachtrag fasst C4 an und sonst nichts. Die neun übrigen beantworteten Fragen dieser Runde, die Zulässigkeitsregel der achten Runde und der Plan bleiben unangetastet.
+
+**Der Anlass ist ein hoher Befund aus der Durchsicht von Turn 1** (`reviews/260814-0908-coderev-turn-1-notizzettel.md`). C4 sagte zwei Dinge zu, die nicht zugleich hielten: „Eine gescheiterte Sicherung wirft den Stand nicht weg" und „Der Zettel liest seine Datei bei jedem Öffnen neu". Der Bau hat den Widerspruch stillschweigend zugunsten des zweiten Satzes aufgelöst, und damit verschwand der getippte Text ohne Meldung. Der Prüfer hat die Ursache im Spec verortet und die Entscheidung vor die Behebung gestellt.
+
+**Der Nutzer hat am 260814-0925 entschieden: der getippte Stand gewinnt.** Weicht der gehaltene Text von der Datei ab, bleibt er stehen; neu gelesen wird nur, wo nichts abweicht. Der zweite Satz ist damit eingeschränkt und nicht gestrichen, denn im gewöhnlichen Fall liest der Zettel weiter neu. „Die Datei gewinnt immer" ist verworfen, „beim Öffnen nachfragen" ist in einem Blatt nicht baubar.
+
+**Eine Zusage ist dazugekommen, die vorher fehlte: jeder Sicherungsmoment schreibt jeden abweichenden Zettel.** Sie folgt aus der ersten. Solange ein abweichender Stand beim Öffnen verschwand, konnte kaum je mehr als ein Zettel zugleich abweichen; jetzt überdauert er das Schließen des Blattes, und zwei abweichende Zettel sind der gewöhnliche Folgezustand einer gescheiterten Sicherung. Der zweite Datensatz der Durchsicht (`issues/260814-0909_*_je-sicherungsmoment-wird-hoechstens-ein-zettel-geschrieben-und-beim-beenden-gibt-es-kein-naechstes-mal.md`) ist damit im Spec gedeckt und nicht nur im Bau zu beheben.
+
+**Die fehlende Meldung beim Beenden ist als Preis benannt und nicht behoben.** `applicationWillTerminate:` hat keine Statuszeile mehr, und ein Fenster dafür wäre eine Rückfrage beim Beenden. Die Zusage zur Meldung bindet deshalb ausdrücklich die drei Momente, nach denen KRK weiterläuft. Der vierte trägt dafür die Pflicht, jeden abweichenden Zettel zu schreiben, weil es nach ihm kein nächstes Mal gibt. Eine Meldung an dieser Stelle und ein Beenden, das sich verweigert, stehen jetzt unter „Ausdrücklich außerhalb dieser Runde".
+
+**Betroffen sind sieben Stellen, und sechs davon gehören zu C4.** Die Überschrift, die Beschreibung, fünf neue und zwei umformulierte Kriterien in den beiden Listen, sechs neue Festlegungen anstelle der einen zum Neulesen, dazu das Bild der Sicherungsmomente mit sechs neu beschrifteten Kanten und zwei Absätzen zu deren Begründung, und eine Zeile mehr unter „Ausdrücklich außerhalb dieser Runde". Beide Bilder sind am 260814-0927 erneut mit `@mermaid-js/mermaid-cli` 11.16.0 nach SVG gerendert; die sechs geänderten Beschriftungen stehen im Ergebnis nachgezählt.
+
+**Die siebte Stelle liegt außerhalb von C4 und war nicht zu umgehen.** C5 sagte zu: „Eine von außen geänderte Zetteldatei zeigt sich beim nächsten Öffnen des Zettels mit ihrem neuen Inhalt." Das ist derselbe Satz wie der eingeschränkte in C4, nur aus der Sicht des Nutzers, und ohne dieselbe Einschränkung stünde der Widerspruch nach dem Nachtrag in C5 statt in C4. Das Kriterium trägt sie jetzt und verweist auf C4. Die Zusage zum unlesbaren Zettel, die C5 trägt, ist davon nicht berührt.
+
+**Die Directive ist unangetastet.** Sie nennt die vier Momente und sagt über den Vorrang der beiden Stände nichts; der Shaper darf sie außerhalb des Aktivierungsmodus ohnehin nicht schreiben.

@@ -2,11 +2,13 @@
 //! was beim Oeffnen aus der Datei kam und was seither in der Flaeche steht.
 //!
 //! ```text
-//!   f2 / cmd+k ──> text_laden ──> oeffnen(zettel, gelesen)
-//!                                     │
+//!   f2 / cmd+k ──> text_laden ──> oeffnen(zettel, gelesen) ──> der Text der Flaeche
+//!                                     │                        (gehalten, nicht gelesen,
+//!                                     │                         wo der Zettel abweicht)
 //!   Tippen ─────> bearbeiten(stand) ──┤
 //!                                     │
-//!   Sicherungsmoment ──> zu_sichern() ┴─> Some((zettel, text)) ──> text_sichern
+//!   Sicherungsmoment ──> zu_sichern() ┴─> je abweichendem Zettel
+//!                                         (zettel, text) ──> text_sichern
 //!                                                                      │
 //!                                     gesichert(zettel) <──────────────┘
 //!
@@ -14,6 +16,13 @@
 //!                                ──> GewechseltUngeaendert nur nachladen
 //!                                ──> GewechseltZuSichern   sichern, dann nachladen
 //! ```
+//!
+//! **Der getippte Stand gewinnt.** Weicht ein Zettel von seiner Datei ab, so
+//! bleibt sein gehaltener Text beim Oeffnen stehen, und das frisch Gelesene
+//! wird verworfen; neu gelesen wird nur, wo nichts abweicht. So hat der Nutzer
+//! am 260814-0925 entschieden, und C4 traegt es als Zusage. Ohne diese Regel
+//! loeschte gerade das Neulesen den Text, den eine gescheiterte Sicherung
+//! stehen lassen sollte.
 //!
 //! **Ohne AppKit und ohne Fenster.** Das Modul liegt neben `appkit/` und nicht
 //! darin, aus demselben Grund wie [`crate::editormodell`]: was der Zettel haelt,
@@ -104,14 +113,38 @@ impl Zettelmodell {
     ///
     /// **Danach steht der Zettel leer und ohne Abweichung.** Wer diese Stelle
     /// benutzt, sichert also nichts: gelesen und gehalten sind beide leer, und
-    /// [`zu_sichern`](Self::zu_sichern) liefert `None`, bis
+    /// [`zu_sichern`](Self::zu_sichern) nennt keinen Zettel, bis
     /// [`oeffnen`](Self::oeffnen) den wirklichen Stand gebracht hat.
     pub fn offenen_setzen(&mut self, zettel: Zettel) {
         self.offener = zettel;
     }
 
-    /// Nimmt den frisch aus der Datei gelesenen Stand eines Zettels auf und
-    /// macht ihn zum offenen.
+    /// Nimmt den frisch aus der Datei gelesenen Stand eines Zettels auf, macht
+    /// ihn zum offenen und liefert den Text, der danach in der Flaeche zu
+    /// stehen hat.
+    ///
+    /// # Der getippte Stand gewinnt
+    ///
+    /// Weicht der Zettel von seiner Datei ab, bleibt sein gehaltener Text
+    /// stehen, und `gelesen` wird verworfen. Er gilt danach weiter als
+    /// abweichend, [`zu_sichern`](Self::zu_sichern) nennt ihn weiter, und der
+    /// naechste Sicherungsmoment schreibt ihn. So hat der Nutzer am 260814-0925
+    /// entschieden; C4 traegt beide Haelften der Regel.
+    ///
+    /// **Ohne diese Fallunterscheidung trugen zwei Zusagen von C4 nicht
+    /// zusammen.** „Eine gescheiterte Sicherung wirft den Stand nicht weg" und
+    /// „der Zettel liest seine Datei bei jedem Oeffnen neu" gelten nur
+    /// gemeinsam, wenn das Neulesen einen abweichenden Stand nicht antastet;
+    /// die Durchsicht von Turn 1 hat den Verlust am Bau gefunden
+    /// (`issues/260814-0908_*`).
+    ///
+    /// **Der Preis steht in C4 und ist angenommen:** wer einen abweichenden
+    /// Zettel oeffnet, sieht nicht, was eine zweite Instanz von KRK inzwischen
+    /// in die Datei geschrieben hat. Der Verlust ist der kleinere von zweien —
+    /// die andere Instanz hat ihren Text auf der Platte, dieser Nutzer haette
+    /// seinen nirgends.
+    ///
+    /// # Der gewoehnliche Fall
     ///
     /// **Gelesen und gehalten sind danach dasselbe**, und genau das heisst
     /// „nichts zu sichern": ein Zettel, der eben erst gelesen wurde, weicht von
@@ -120,12 +153,31 @@ impl Zettelmodell {
     ///
     /// **Der Aufrufer liest bei jedem Oeffnen neu**, auch beim Wechsel auf den
     /// anderen Tab; C4 sagt es zu. Das Modell haelt deshalb keinen Stand von
-    /// gestern fest, sondern bekommt ihn gereicht.
-    pub fn oeffnen(&mut self, zettel: Zettel, gelesen: String) {
+    /// gestern fest, sondern bekommt ihn gereicht — und entscheidet hier, ob er
+    /// gebraucht wird.
+    ///
+    /// # Warum der Rueckgabewert
+    ///
+    /// Der Aufrufer setzt den Text in die Textflaeche und darf dafuer nicht das
+    /// Gelesene nehmen: das waere genau der Verlust, den diese Stelle
+    /// verhindert. Welcher der beiden Staende gilt, entscheidet das Modell, und
+    /// es gibt ihn deshalb selbst heraus.
+    ///
+    /// **Der Wert laesst sich nicht still fallenlassen**, wie jeder in diesem
+    /// Baum, dessen Fallenlassen unbemerkt bliebe; so entschieden vom Nutzer am
+    /// 260811-2140. Hier bliebe es unbemerkt, weil der Aufrufer dann das
+    /// Gelesene in die Flaeche setzte und alles richtig aussaehe — bis der
+    /// abweichende Zettel seinen Text verloren hat. `let _ =` davor heisst wie
+    /// ueberall in diesem Baum „ich brauche den Wert nicht".
+    #[must_use = "in die Textflaeche gehoert der gehaltene und nicht der gelesene Stand"]
+    pub fn oeffnen(&mut self, zettel: Zettel, gelesen: String) -> &str {
         self.offener = zettel;
         let stand = &mut self.staende[zettel.index()];
-        stand.gehalten.clone_from(&gelesen);
-        stand.gelesen = gelesen;
+        if !stand.weicht_ab() {
+            stand.gehalten.clone_from(&gelesen);
+            stand.gelesen = gelesen;
+        }
+        &stand.gehalten
     }
 
     /// Nimmt den Stand der Textflaeche fuer den **offenen** Zettel auf und
@@ -176,26 +228,39 @@ impl Zettelmodell {
         }
     }
 
-    /// Welcher Zettel zu sichern ist und mit welchem Text, falls einer es ist.
+    /// **Jeder** abweichende Zettel mit seinem Text, in der Reihenfolge von
+    /// [`Zettel::ALLE`].
     ///
     /// **Gefragt sind beide und nicht nur der offene.** Nach einem Tabwechsel ist
     /// der zu sichernde gerade der **verlassene**; eine Frage allein nach dem
     /// offenen ginge an ihm vorbei.
     ///
-    /// **Unter dem Ablauf dieser Runde weicht hoechstens einer ab**, weil jeder
-    /// Wechsel den verlassenen sofort sichert. Weichen doch beide ab — das
-    /// geschieht, wenn ein Schreibvorgang gescheitert ist und der Nutzer danach
-    /// den anderen Zettel bearbeitet hat —, liefert diese Frage den in der
-    /// Reihenfolge von [`Zettel::ALLE`] ersten, und der naechste
-    /// Sicherungsmoment nimmt den zweiten. Was sie nicht tut: melden, dass es
-    /// zwei sind.
-    pub fn zu_sichern(&self) -> Option<(Zettel, &str)> {
-        Zettel::ALLE.into_iter().find_map(|zettel| {
+    /// **Alle und nicht der erste, und das ist eine Zusage aus C4:** jeder
+    /// Sicherungsmoment schreibt jeden Zettel, der etwas haelt, was nicht auf
+    /// der Platte steht. Zwei zugleich abweichende Zettel sind der gewoehnliche
+    /// Folgezustand einer gescheiterten Sicherung — der eine bleibt abweichend
+    /// stehen, der Nutzer bearbeitet inzwischen den anderen —, und seit ein
+    /// abweichender Stand das Oeffnen ueberdauert
+    /// ([`oeffnen`](Self::oeffnen)), ueberdauert er auch das Schliessen des
+    /// Blattes. Wer hier nur den ersten lieferte, verloere den zweiten
+    /// spaetestens beim Beenden: nach `applicationWillTerminate:` gibt es kein
+    /// naechstes Mal (`issues/260814-0909_*`).
+    pub fn zu_sichern(&self) -> impl Iterator<Item = (Zettel, &str)> {
+        Zettel::ALLE.into_iter().filter_map(|zettel| {
             let stand = &self.staende[zettel.index()];
             stand
                 .weicht_ab()
                 .then_some((zettel, stand.gehalten.as_str()))
         })
+    }
+
+    /// Ob ueberhaupt etwas zu sichern ist.
+    ///
+    /// Dieselbe Frage wie [`zu_sichern`](Self::zu_sichern), auf ihre knappste
+    /// Antwort gebracht, und aus ihr abgeleitet und nicht daneben gebaut: eine
+    /// zweite Aufzaehlung der Staende koennte von der ersten abweichen.
+    pub fn etwas_zu_sichern(&self) -> bool {
+        self.zu_sichern().next().is_some()
     }
 
     /// Vermerkt, dass der Text dieses Zettels jetzt in seiner Datei steht.
@@ -221,7 +286,7 @@ mod tests {
     fn ein_frisches_modell_steht_auf_dem_ersten_zettel_und_ist_sauber() {
         let modell = Zettelmodell::default();
         assert_eq!(modell.offener(), Zettel::Erster);
-        assert_eq!(modell.zu_sichern(), None);
+        assert!(!modell.etwas_zu_sichern());
     }
 
     /// Ein eben gelesener Zettel weicht von seiner Datei nicht ab.
@@ -231,17 +296,20 @@ mod tests {
     #[test]
     fn ein_gelesener_zettel_hat_nichts_zu_sichern() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "aus der Datei".to_owned());
-        assert_eq!(modell.zu_sichern(), None);
+        let _ = modell.oeffnen(Zettel::Erster, "aus der Datei".to_owned());
+        assert!(!modell.etwas_zu_sichern());
     }
 
     /// Getippter Text macht den offenen Zettel zu sicherndem.
     #[test]
     fn bearbeiten_meldet_die_abweichung_und_nennt_den_zettel() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Zweiter, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Zweiter, "alt".to_owned());
         assert!(modell.bearbeiten("neu".to_owned()));
-        assert_eq!(modell.zu_sichern(), Some((Zettel::Zweiter, "neu")));
+        assert_eq!(
+            modell.zu_sichern().collect::<Vec<_>>(),
+            [(Zettel::Zweiter, "neu")]
+        );
     }
 
     /// Wer den gelesenen Text wieder herstellt, hat nichts zu sichern.
@@ -251,20 +319,20 @@ mod tests {
     #[test]
     fn der_zurueckgetippte_stand_ist_wieder_sauber() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
         assert!(modell.bearbeiten("altx".to_owned()));
         assert!(!modell.bearbeiten("alt".to_owned()));
-        assert_eq!(modell.zu_sichern(), None);
+        assert!(!modell.etwas_zu_sichern());
     }
 
     /// Nach dem Sichern steht der gehaltene Stand als der gelesene.
     #[test]
     fn gesichert_nimmt_dem_zettel_die_abweichung() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
         assert!(modell.bearbeiten("neu".to_owned()));
         modell.gesichert(Zettel::Erster);
-        assert_eq!(modell.zu_sichern(), None);
+        assert!(!modell.etwas_zu_sichern());
     }
 
     /// Der Wechsel auf den bereits offenen Tab schreibt nichts (C2).
@@ -274,7 +342,7 @@ mod tests {
     #[test]
     fn ein_wechsel_auf_den_offenen_tab_ist_derselbe() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
         assert!(modell.bearbeiten("neu".to_owned()));
         assert_eq!(modell.wechseln(Zettel::Erster), Wechsel::Derselbe);
         assert_eq!(modell.offener(), Zettel::Erster);
@@ -287,26 +355,29 @@ mod tests {
     #[test]
     fn ein_wechsel_laesst_den_verlassenen_zettel_zu_sichern() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
         assert!(modell.bearbeiten("getippt".to_owned()));
         assert_eq!(
             modell.wechseln(Zettel::Zweiter),
             Wechsel::GewechseltZuSichern
         );
         assert_eq!(modell.offener(), Zettel::Zweiter);
-        assert_eq!(modell.zu_sichern(), Some((Zettel::Erster, "getippt")));
+        assert_eq!(
+            modell.zu_sichern().collect::<Vec<_>>(),
+            [(Zettel::Erster, "getippt")]
+        );
     }
 
     /// Ein Wechsel ohne Aenderung hat nichts zu sichern.
     #[test]
     fn ein_wechsel_ohne_aenderung_schreibt_nichts() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
         assert_eq!(
             modell.wechseln(Zettel::Zweiter),
             Wechsel::GewechseltUngeaendert
         );
-        assert_eq!(modell.zu_sichern(), None);
+        assert!(!modell.etwas_zu_sichern());
     }
 
     /// Der Text des einen Zettels landet nicht im anderen.
@@ -317,18 +388,87 @@ mod tests {
     #[test]
     fn die_beiden_zettel_halten_ihre_texte_auseinander() {
         let mut modell = Zettelmodell::default();
-        modell.oeffnen(Zettel::Erster, "eins".to_owned());
+        let _ = modell.oeffnen(Zettel::Erster, "eins".to_owned());
         assert!(modell.bearbeiten("eins geaendert".to_owned()));
         assert_eq!(
             modell.wechseln(Zettel::Zweiter),
             Wechsel::GewechseltZuSichern
         );
         modell.gesichert(Zettel::Erster);
-        modell.oeffnen(Zettel::Zweiter, "zwei".to_owned());
+        let _ = modell.oeffnen(Zettel::Zweiter, "zwei".to_owned());
         assert!(modell.bearbeiten("zwei geaendert".to_owned()));
         assert_eq!(
-            modell.zu_sichern(),
-            Some((Zettel::Zweiter, "zwei geaendert"))
+            modell.zu_sichern().collect::<Vec<_>>(),
+            [(Zettel::Zweiter, "zwei geaendert")]
+        );
+    }
+
+    /// Das Oeffnen setzt den abweichenden Stand **nicht** zurueck (C4).
+    ///
+    /// Der Weg, den die Durchsicht von Turn 1 gefunden hat: die Sicherung
+    /// scheitert, der Zettel bleibt abweichend, und das naechste Oeffnen liest
+    /// die Datei erneut. Der getippte Text steht danach unveraendert da, und
+    /// der Zettel ist weiter zu sichern.
+    ///
+    /// Die Probe steht am Modell, weil dort die Regel steht; die gescheiterte
+    /// Sicherung bildet sie dadurch ab, dass `gesichert` gerade **nicht**
+    /// gerufen wird.
+    #[test]
+    fn das_oeffnen_setzt_den_abweichenden_stand_nicht_zurueck() {
+        let mut modell = Zettelmodell::default();
+        let _ = modell.oeffnen(Zettel::Erster, "auf der Platte".to_owned());
+        assert!(modell.bearbeiten("abc".to_owned()));
+        assert_eq!(
+            modell.oeffnen(Zettel::Erster, "auf der Platte".to_owned()),
+            "abc"
+        );
+        assert_eq!(
+            modell.zu_sichern().collect::<Vec<_>>(),
+            [(Zettel::Erster, "abc")]
+        );
+    }
+
+    /// Wo nichts abweicht, gewinnt die Datei (C4, C5).
+    ///
+    /// Die Gegenprobe zur vorigen: die Einschraenkung des Neulesens gilt allein
+    /// fuer den abweichenden Zettel. Ein sauberer bekommt, was von aussen in
+    /// seine Datei geschrieben wurde — sonst waere „der Zettel liest seine
+    /// Datei bei jedem Oeffnen neu" nicht eingeschraenkt, sondern gestrichen.
+    #[test]
+    fn ein_sauberer_zettel_bekommt_den_neuen_dateiinhalt() {
+        let mut modell = Zettelmodell::default();
+        let _ = modell.oeffnen(Zettel::Erster, "alt".to_owned());
+        assert_eq!(
+            modell.oeffnen(Zettel::Erster, "von aussen geaendert".to_owned()),
+            "von aussen geaendert"
+        );
+        assert!(!modell.etwas_zu_sichern());
+    }
+
+    /// Jeder abweichende Zettel steht zur Sicherung an, nicht nur der erste
+    /// (C4).
+    ///
+    /// Zwei zugleich abweichende Zettel sind der Folgezustand einer
+    /// gescheiterten Sicherung: der verlassene bleibt stehen, der Nutzer tippt
+    /// im anderen weiter. Ein Sicherungsmoment, der nur den ersten schriebe,
+    /// verloere den zweiten beim Beenden endgueltig.
+    #[test]
+    fn jeder_abweichende_zettel_steht_zur_sicherung_an() {
+        let mut modell = Zettelmodell::default();
+        let _ = modell.oeffnen(Zettel::Erster, "eins".to_owned());
+        assert!(modell.bearbeiten("eins getippt".to_owned()));
+        assert_eq!(
+            modell.wechseln(Zettel::Zweiter),
+            Wechsel::GewechseltZuSichern
+        );
+        let _ = modell.oeffnen(Zettel::Zweiter, "zwei".to_owned());
+        assert!(modell.bearbeiten("zwei getippt".to_owned()));
+        assert_eq!(
+            modell.zu_sichern().collect::<Vec<_>>(),
+            [
+                (Zettel::Erster, "eins getippt"),
+                (Zettel::Zweiter, "zwei getippt")
+            ]
         );
     }
 }

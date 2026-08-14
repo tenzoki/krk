@@ -866,9 +866,21 @@ define_class!(
                 // Beenden ab, kommt der Rueckruf nie, und der Zettel sichert
                 // nicht. Es gibt dafuer nichts abzufragen.
                 //
+                // **Dieser Moment ist der letzte, und deshalb schreibt er jeden
+                // abweichenden Zettel.** Die drei anderen duerfen einen
+                // Fehlschlag an den naechsten Moment weiterreichen; nach diesem
+                // hier laeuft nichts mehr, das ihn nachholte. Was „jeden"
+                // heisst, steht in `zettel_sichern` und nicht hier.
+                //
                 // Der Rueckgabewert ist der Satz fuer die Statuszeile. Beim
                 // Beenden gibt es keine mehr, an der er ankaeme; deshalb steht
-                // hier `let _ =` und kein Melder.
+                // hier `let _ =` und kein Melder. **Der Preis ist benannt und
+                // angenommen:** scheitert die Sicherung hier, erfaehrt der
+                // Nutzer es nicht. Ein Fenster dafuer waere eine Rueckfrage
+                // beim Beenden, und die fuehrt diese Runde ausdruecklich nicht
+                // — der Spec bindet die Meldezusage an die drei Momente, nach
+                // denen KRK weiterlaeuft, und fuehrt die Alternative unter
+                // „Ausdruecklich ausserhalb dieser Runde".
                 let _ = self.zettel_sichern(zugang);
                 // Kein Schreiber heisst: kein Sitzungsrecht, oder kein
                 // Ablageordner. Beides hat der Start gemeldet, und beim
@@ -3267,6 +3279,14 @@ impl Anwendungsdelegierter {
     /// geschrieben hat, ohne dass eine dritte Absprache ueber dem Ablageordner
     /// entstuende.
     ///
+    /// **Was das Gelesene wird, entscheidet das Modell und nicht diese
+    /// Stelle.** Haelt der Zettel einen Text, der noch nicht auf der Platte
+    /// steht, so bleibt dieser stehen und das Gelesene wird verworfen; C4 sagt
+    /// seit dem 260814-0925 beides zu. Die Zusage aus dem Absatz darueber gilt
+    /// deshalb fuer den gewoehnlichen Fall und nicht fuer den abweichenden
+    /// Zettel — [`Zettelmodell::oeffnen`](crate::zettelmodell::Zettelmodell::oeffnen)
+    /// traegt die Regel und liefert den Text der Flaeche.
+    ///
     /// **Der Blattgriff geht in [`Self::offenes_blatt`]** wie der jedes anderen
     /// Blattes. Damit schliesst der Abbruchbefehl den Zettel auf demselben Weg
     /// wie jede Rueckfrage, und es entsteht kein zweiter Weg zum Schliessen.
@@ -3278,11 +3298,18 @@ impl Anwendungsdelegierter {
             return false;
         };
         let offener = self.ivars().zettel.borrow().offener();
-        let text = self.zettel_lesen(offener);
-        self.ivars()
+        let gelesen = self.zettel_lesen(offener);
+        // **Der Text der Flaeche kommt aus dem Modell und nicht aus der
+        // Datei.** Haelt der Zettel etwas Ungesichertes, verwirft das Modell
+        // das Gelesene und gibt den gehaltenen Stand heraus; wer hier `gelesen`
+        // naehme, loeschte genau den Text, den eine gescheiterte Sicherung
+        // stehen lassen sollte.
+        let text = self
+            .ivars()
             .zettel
             .borrow_mut()
-            .oeffnen(offener, text.clone());
+            .oeffnen(offener, gelesen)
+            .to_owned();
 
         let beim_tabklick = objc2::rc::Weak::from_retained(&self.retain());
         let beim_abschluss = objc2::rc::Weak::from_retained(&self.retain());
@@ -3382,16 +3409,38 @@ impl Anwendungsdelegierter {
                 self.zettel_sicherung_melden(ergebnis);
             }
         }
-        let text = self.zettel_lesen(ziel);
-        self.ivars().zettel.borrow_mut().oeffnen(ziel, text.clone());
+        // **Die Flaeche bekommt den gehaltenen Stand des Ziels.** Weicht der
+        // Zielzettel von seiner Datei ab, verwirft das Modell das eben
+        // Gelesene; ein Tabwechsel, der `gelesen` in die Flaeche setzte, waere
+        // derselbe Verlust wie ein Neuoeffnen und stand als eigener Weg im
+        // Datensatz `260814-0908`.
+        let gelesen = self.zettel_lesen(ziel);
+        let text = self
+            .ivars()
+            .zettel
+            .borrow_mut()
+            .oeffnen(ziel, gelesen)
+            .to_owned();
         Some(text)
     }
 
     /// Was Sichern fuer den Notizzettel heisst — die eine Erklaerung dafuer
     /// (C4).
     ///
-    /// Liefert den Satz fuer die Statuszeile, falls das Schreiben scheiterte,
-    /// und `None`, wenn geschrieben wurde oder nichts zu schreiben war.
+    /// Liefert den Satz fuer die Statuszeile, falls ein Schreibvorgang
+    /// scheiterte, und `None`, wenn geschrieben wurde oder nichts zu schreiben
+    /// war.
+    ///
+    /// # Geschrieben wird jeder abweichende Zettel
+    ///
+    /// Nicht der erste, sondern jeder: C4 sagt es seit dem 260814-0925 zu, und
+    /// die Schleife kostet nichts, weil ein unveraenderter Zettel ohnehin nicht
+    /// geschrieben wird. Der Anlass steht in `issues/260814-0909_*`. Zwei
+    /// zugleich abweichende Zettel entstehen aus einer gescheiterten Sicherung:
+    /// der eine bleibt abweichend stehen, der Nutzer bearbeitet inzwischen den
+    /// anderen. Beim vierten Moment ist das keine Frage der Bequemlichkeit
+    /// mehr — nach `applicationWillTerminate:` gibt es kein naechstes Mal, das
+    /// den zweiten Zettel nachholte.
     ///
     /// # Die vier Momente, an denen gesichert wird
     ///
@@ -3436,23 +3485,40 @@ impl Anwendungsdelegierter {
     /// [`Zettelmodell::gesichert`] wird dann gerade **nicht** gerufen: der
     /// Zettel bleibt abweichend, und der naechste Moment versucht es erneut.
     /// Der Grund geht in die Statuszeile, damit der Nutzer nicht darauf baut,
-    /// dass sein Text auf der Platte liegt.
+    /// dass sein Text auf der Platte liegt. Die zweite Haelfte dieser Zusage
+    /// steht am Modell und nicht hier: seit dem Nachtrag zu C4 setzt auch das
+    /// Oeffnen den gehaltenen Text eines abweichenden Zettels nicht mehr
+    /// zurueck.
     fn zettel_sichern(&self, zugang: &Zugang<'_>) -> Option<String> {
-        let (welcher, text) = self
+        // **Erst sammeln, dann schreiben, und die Texte dabei kopieren.** Das
+        // Schreiben unten braucht das Modell veraenderlich, um `gesichert` zu
+        // melden; eine noch laufende Ausleihe der Staende liesse das nicht zu.
+        let abweichende: Vec<(pfade::Zettel, String)> = self
             .ivars()
             .zettel
             .borrow()
             .zu_sichern()
-            .map(|(welcher, text)| (welcher, text.to_owned()))?;
-        match zugang.text_sichern(Datei::Zettel(welcher), &text) {
-            Ok(()) => {
-                self.ivars().zettel.borrow_mut().gesichert(welcher);
-                None
+            .map(|(welcher, text)| (welcher, text.to_owned()))
+            .collect();
+        let mut meldung = None;
+        for (welcher, text) in abweichende {
+            match zugang.text_sichern(Datei::Zettel(welcher), &text) {
+                Ok(()) => self.ivars().zettel.borrow_mut().gesichert(welcher),
+                // **Der erste Fehlschlag steht in der Statuszeile**, und ein
+                // zweiter verdraengt ihn nicht: die Zeile traegt einen Satz,
+                // und scheitern beide Zettel, so scheitern sie am selben
+                // Hindernis — kein Ablageordner, kein Schreibrecht, die Sperre
+                // nicht zu nehmen. **Abgebrochen wird deshalb nicht:** der
+                // zweite Zettel bekommt seinen Versuch, denn der Fehlschlag des
+                // ersten sagt ueber ihn nichts.
+                Err(fehler) => {
+                    meldung.get_or_insert_with(|| {
+                        format!("der Notizzettel liess sich nicht sichern: {fehler}")
+                    });
+                }
             }
-            Err(fehler) => Some(format!(
-                "der Notizzettel liess sich nicht sichern: {fehler}"
-            )),
         }
+        meldung
     }
 
     /// Nimmt in das Zettelmodell auf, was gerade in der Textflaeche steht.
@@ -3487,7 +3553,7 @@ impl Anwendungsdelegierter {
     fn zettel_sicherung_melden(&self, ergebnis: Result<Option<String>, Sperrhindernis>) {
         let meldung = match ergebnis {
             Ok(meldung) => meldung,
-            Err(_) if self.ivars().zettel.borrow().zu_sichern().is_none() => None,
+            Err(_) if !self.ivars().zettel.borrow().etwas_zu_sichern() => None,
             Err(Sperrhindernis::OhneOrdner) => {
                 Some("der Notizzettel ist ohne Ablageordner nicht gesichert".to_owned())
             }

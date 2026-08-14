@@ -54,3 +54,26 @@ Fünf Befunde, zwei mittel. Der schwerere ist kein Zeichenfehler, sondern eine L
 Urteil `acceptable` (`reviews/260814-0711-conceptrev-plan-notizzettel-als-blatt-mit-zwei-zetteln.md`). **Der Fehler ist nicht zum vierten Mal passiert:** die einzige Entscheidungsraute des Plans trägt vier Ausgänge, und der Absatz darunter behauptet die Vollständigkeit ausdrücklich. Der Arbeitsgraph deckt sich Kante für Kante mit den Abhängigkeitszeilen der Schrittliste — sechzehn Schritte, neunzehn Kanten, kein Zyklus.
 
 Zwei Befunde, beide Auszählungen. Der eine liegt beim Spec: er zeichnet auf dem `Esc`-Weg erst das Sichern und dann das Schließen, der Plan hängt es hinter das Schließen; belegt ist die Fassung des Plans. Kein Abnahmekriterium bindet die Reihenfolge, der Nutzer hat auf einen weiteren shaper-Lauf verzichtet. **Der Spec bleibt damit an dieser Stelle ungenau, und das ist eine bewusste Entscheidung, keine Lücke.**
+
+## Turn 1 — Bilanz
+
+Alle sechzehn Planschritte gebaut, fünf Commits, `make check` exit 0 nach jedem Strang und am Ende über den ganzen Baum.
+
+| Strang | Commit | Inhalt |
+|---|---|---|
+| A | `9362034` | Ablage führt zwei Zettel, `atomar` schreibt aus einem Leser, `Datei::ALLE` auf sechs |
+| B | `a949ff1` | `f2` und `cmd+k` in einer Zeile, Belegung auf 83 Funktionen mit 90 Kombinationen |
+| C | `bfea397` | Das zehnte Blatt, drei neue Dateien, `appkit` auf 29 Module |
+| D/E/F | `dd2643e` | Vier Sicherungsmomente in einer Erklärung, `Sitzung::zettel` |
+
+**Die Durchsicht hat neun Befunde gefiltert, einer davon hoch, und seine Ursache liegt im Spec.** C4 sagt beides zu — eine gescheiterte Sicherung wirft den Stand nicht weg, und der Zettel liest seine Datei bei jedem Öffnen neu — und beide halten nur gemeinsam, wenn das Neulesen einen abweichenden Stand nicht antastet. `Zettelmodell::oeffnen` setzt den gehaltenen Text auf das Gelesene; damit ist weg, was die gescheiterte Sicherung stehen lassen sollte.
+
+**Die sieben Planabweichungen der Bauer tragen alle sieben**, jede einzeln geprüft. Die eine mit einer Zahl daran ist nachgezählt: in `applicationWillTerminate:` steht genau ein Durchgang, der Defekt aus zweien ist nicht ein zweites Mal gebaut.
+
+**Die vier teuren Zusagen halten alle vier.** Die drei Regeln sind außerhalb der Prüfmodule unangetastet, die Textfläche des Zettels ist nirgends in `ersthelfer_gehoert_appkit` angemeldet, der Schreibfokus geht nach jedem Tabklick zurück, und `Datei::ALLE` und `Format` sind vollständig.
+
+## Zwei Antworten am Coherence-Tor (Nutzer, 260814-0925)
+
+**Welcher Stand beim Öffnen gewinnt: der getippte.** Weicht der gehaltene Text von der Datei ab, bleibt er stehen; neu gelesen wird nur, wenn nichts abweicht. Damit hält die Zusage, die der Nutzer spürt — nichts Getipptes verschwindet stillschweigend — und der zweite Satz von C4 wird eingeschränkt und im Spec neu formuliert. „Die Datei gewinnt immer" ist verworfen, „beim Öffnen nachfragen" ist unmöglich: die Nachfrage wäre ein Blatt über dem Zettelblatt.
+
+**Turn 2 behebt die drei zusammenhängenden Befunde**, erst den Spec an C4, dann alle drei in einem Zug. Getrennt behoben bliebe jeweils der andere Weg offen. Die fünf niedrigen Befunde bleiben für später.

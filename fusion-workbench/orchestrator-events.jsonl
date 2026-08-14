@@ -705,3 +705,8 @@
 {"ts":"2026-08-14T06:54:26","event":"task_done","turn":1,"task":"DEF","agent":"coder","detail":"Schritte 13-16 fertig, make check exit 0; alle 16 Planschritte gebaut"}
 {"ts":"2026-08-14T06:54:26","event":"commit","turn":1,"task":"DEF","detail":"vier Sicherungsmomente, Sitzung merkt den Zettel"}
 {"ts":"2026-08-14T06:54:26","event":"review_start","turn":1,"agent":"coderev","detail":"16 Quelldateien aus 6d05bef..HEAD"}
+{"ts":"2026-08-14T07:19:38","event":"review_done","turn":1,"agent":"coderev","detail":"9 Befunde, 1 hoch: Neuoeffnen wirft ungesicherten Stand weg; Ursache in C4"}
+{"ts":"2026-08-14T07:19:38","event":"coherence_review","turn":1,"detail":"verdict=review-needed; Artifact<->Grounding: 11 Defekte, 1 hoch. Artifact<->Directive: alle 16 Schritte gebaut. Grounding<->Directive: 2 Entscheide, kein Widerspruch."}
+{"ts":"2026-08-14T07:19:38","event":"turn_end","turn":1,"detail":"16/16 Schritte, 5 Commits, 9 Befunde"}
+{"ts":"2026-08-14T07:19:38","event":"rebalance_artifact","turn":2,"detail":"drei zusammenhaengende Befunde, erst der Spec an C4"}
+{"ts":"2026-08-14T07:19:38","event":"turn_start","turn":2,"detail":"Spec an C4, dann die drei Befunde"}

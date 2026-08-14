@@ -61,3 +61,29 @@ den Bau; sie ist im Spec nicht getroffen.
   „**Eine gescheiterte Sicherung wirft den Stand nicht weg.**"
 - Betroffene Stellen: `crates/krk-ui/src/zettelmodell.rs:124` (`oeffnen`),
   `crates/krk-ui/src/appkit/anwendung.rs:3276` und `:3358`.
+
+---
+Resolved: Der getippte Stand gewinnt. `Zettelmodell::oeffnen`
+(`crates/krk-ui/src/zettelmodell.rs`) trägt die Regel jetzt selbst: weicht der Zettel von
+seiner Datei ab, bleibt sein gehaltener Text stehen und das frisch Gelesene wird verworfen;
+nur wo nichts abweicht, wird das Gelesene beides. Der Rückgabewert ist der Text, der in die
+Textfläche gehört, und er trägt `#[must_use]` — wer ihn fallenließe, setzte das Gelesene in
+die Fläche und hätte denselben Verlust wieder, und der Bau sagt es ihm. Beide Aufrufer
+nehmen ihn: `notizzettel_zeigen` und `zettel_wechseln`
+(`crates/krk-ui/src/appkit/anwendung.rs`), also sind die zwei Wege des Datensatzes, das
+Neuöffnen und der Tabwechsel, mit einer Regel geschlossen und nicht mit zweien.
+
+Die Entscheidung dahinter ist die des Nutzers vom 260814-0925, und sie steht als Zusage im
+Spec: `planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, C4, Fassung
+vom 260814-0925. Der zweite Satz von C4 ist damit eingeschränkt und nicht gestrichen: der
+Zettel liest weiter bei jedem Öffnen, und im gewöhnlichen Fall zeigt er, was in der Datei
+steht. Der Preis steht dort ebenfalls: wer einen abweichenden Zettel öffnet, sieht den
+Stand einer zweiten Instanz von KRK nicht.
+
+Drei Proben am Modell halten es fest (`crates/krk-ui/src/zettelmodell.rs`, Prüfmodul):
+`das_oeffnen_setzt_den_abweichenden_stand_nicht_zurueck`,
+`ein_sauberer_zettel_bekommt_den_neuen_dateiinhalt` als Gegenprobe, und
+`jeder_abweichende_zettel_steht_zur_sicherung_an`. Der Plan ist an sechs Stellen
+nachgezogen (`planning/260814-0656_o_plan-…`, Kopfnotiz vom 260814-0941).
+
+`make check` am 260814-0947 gefahren, Rückgabewert 0, „alle vier gruen".
