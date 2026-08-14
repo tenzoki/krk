@@ -95,6 +95,11 @@
 //!   `text::datei::EDITORGRENZE` wird nicht geladen, ihr Inhalt geht aber
 //!   denselben Weg beiseite. Sie wird dabei aus ihrem offenen Deskriptor
 //!   kopiert und steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher.
+//!   **Kopiert wird hoechstens `EDITORGRENZE`**, also dieselbe Zahl, die ueber
+//!   dem Laden steht: von einer sehr grossen Fremddatei liegen danach allein
+//!   die ersten 16 MB da, und [`Beiseite::Gekuerzt`] sagt es dem Nutzer. Der
+//!   Preis ist angenommen, die Begruendung steht bei
+//!   [`Zugang::beiseite_legen`].
 //! - **Der Text wird kopiert und die Datei nicht verschoben.** Ein `rename`
 //!   waere kuerzer und naehme dem Nutzer die Datei unter der Hand weg, an der er
 //!   gerade tippt; siehe den Abschnitt darueber.
@@ -227,7 +232,7 @@ impl Grund {
 /// Was mit dem Inhalt der ersetzten Datei geschehen ist.
 ///
 /// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: der Uebersetzer
-/// haelt an jeder Stelle an, die sie auseinandernimmt. Die vier Werte sind
+/// haelt an jeder Stelle an, die sie auseinandernimmt. Die fuenf Werte sind
 /// paarweise verschieden und decken jeden Ausgang ab, und genau darauf beruht
 /// die Zusage, dass keine Meldung eine Datei verspricht, die es nicht gibt.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -238,8 +243,22 @@ pub enum Beiseite {
     /// sich nicht lesen liess, gibt es keinen Inhalt zu sichern, und eine
     /// fehlende Datei ist der erste Start.
     Nicht,
-    /// Der Inhalt liegt jetzt unter diesem Pfad.
+    /// Der Inhalt liegt jetzt unter diesem Pfad, und zwar ganz.
     Gesichert(PathBuf),
+    /// Unter diesem Pfad liegen die ersten [`EDITORGRENZE`] Bytes des Inhalts
+    /// und der Rest nicht.
+    ///
+    /// Der Wert der Runde 9. Die Quelle war laenger als das Budget, das
+    /// [`Zugang::beiseite_legen`] fuer eine Sicherung ausgibt; was darueber
+    /// hinausging, ist nicht kopiert worden. Der Preis ist benannt und
+    /// angenommen, und die Begruendung steht bei [`Zugang::beiseite_legen`].
+    ///
+    /// **Er ist von [`Beiseite::Gesichert`] getrennt und nicht mit ihm
+    /// zusammengelegt**, weil die Meldung an den Nutzer eine andere sein muss:
+    /// eine gekuerzte Sicherung sieht auf der Platte aus wie eine
+    /// vollstaendige, und sie bleibt beim naechsten Start als
+    /// [`Beiseite::SchonVorhanden`] stehen.
+    Gekuerzt(PathBuf),
     /// Unter diesem Pfad stand schon eine Sicherung, und sie ist unangetastet
     /// geblieben.
     ///
@@ -295,6 +314,13 @@ impl fmt::Display for Ersetzung {
             Beiseite::Gesichert(pfad) => write!(
                 ausgabe,
                 "Die bisherige Fassung liegt unter {}; {datei} {beschreibung} und wird durch den \
+                 Auslieferungszustand ersetzt: {einzelheit}",
+                pfad.display()
+            ),
+            Beiseite::Gekuerzt(pfad) => write!(
+                ausgabe,
+                "Die bisherige Fassung liegt gekuerzt unter {}, gesichert sind allein ihre \
+                 ersten {EDITORGRENZE} Bytes; {datei} {beschreibung} und wird durch den \
                  Auslieferungszustand ersetzt: {einzelheit}",
                 pfad.display()
             ),
@@ -637,8 +663,8 @@ impl Zugang<'_> {
     /// ihren gelesenen Text als `&mut text.as_bytes()` herein; eine Zetteldatei
     /// reicht ihren **offenen Deskriptor** herein, denn ihre zwei unlesbaren
     /// Faelle tragen keinen `&str`: eine ungueltige Bytefolge ist definitions-
-    /// gemaess keiner, und eine Datei ueber `EDITORGRENZE` darf zu keinem
-    /// Zeitpunkt vollstaendig im Arbeitsspeicher stehen. Die drei Regeln unten
+    /// gemaess keiner, und eine Datei ueber [`EDITORGRENZE`] darf zu keinem
+    /// Zeitpunkt vollstaendig im Arbeitsspeicher stehen. Die vier Regeln unten
     /// gelten fuer beide Aufrufer Wort fuer Wort gleich.
     ///
     /// Die Reihenfolge ist ausgeschrieben, damit sie nicht geraten wird: den
@@ -660,6 +686,26 @@ impl Zugang<'_> {
     /// Durchgang unter der Schreibsperre laeuft und diese Methode allein an
     /// einem [`Zugang`] haengt. Ein `File::create_new` an dieser Stelle waere
     /// der zweite Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
+    ///
+    /// **Kopiert wird hoechstens [`EDITORGRENZE`], und der Preis dieser Regel
+    /// gehoert dazu: von einer sehr grossen Fremddatei werden allein die ersten
+    /// 16 MB gesichert.** Es ist dieselbe Zahl, die ueber dem Laden steht, und
+    /// ausdruecklich keine zweite daneben; so hat der Nutzer am 260814-1010
+    /// entschieden. Ohne sie kopierte ein `f2` eine Datei von 40 GB, die unter
+    /// dem Namen eines Zettels liegt, in voller Laenge und synchron auf dem
+    /// Hauptfaden, mit stehender Oberflaeche, gehaltenem Schreibgriff und einem
+    /// Ablageordner, der um dieselben 40 GB waechst
+    /// (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`).
+    /// Der Preis ist der kleinere Verlust: gekuerzt gesichert ist mehr als gar
+    /// nicht gesichert, und der Nutzer erfaehrt von der Kuerzung, weil
+    /// [`Beiseite::Gekuerzt`] eine eigene Meldung traegt. Verworfen sind eine
+    /// zweite, groessere Zahl und ein Umbenennen statt eines Kopierens;
+    /// Letzteres verstiesse gegen die Regel darueber.
+    ///
+    /// **Ob gekuerzt wurde, entscheidet ein einzelnes Byte hinter dem Budget**
+    /// und nicht das ausgeschoepfte Budget selbst: eine Datei von genau
+    /// [`EDITORGRENZE`] Bytes ist vollstaendig gesichert und wird auch so
+    /// gemeldet. Die Frage stellt [`steht_noch_etwas_an`].
     #[must_use]
     fn beiseite_legen(&self, datei: &Path, quelle: &mut impl Read) -> Beiseite {
         let pfad = match atomar::beiseitepfad(datei) {
@@ -671,9 +717,42 @@ impl Zugang<'_> {
             Ok(false) => {}
             Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
         }
-        match atomar::schreiben(&pfad, quelle) {
-            Ok(()) => Beiseite::Gesichert(pfad),
-            Err(fehler) => Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
+        let mut begrenzt = quelle.by_ref().take(EDITORGRENZE);
+        if let Err(fehler) = atomar::schreiben(&pfad, &mut begrenzt) {
+            return Beiseite::Gescheitert(einzeilig(&fehler.to_string()));
+        }
+        if begrenzt.limit() > 0 {
+            // Die Quelle war vor dem Budget zu Ende; laenger als sie selbst kann
+            // die Sicherung nicht sein.
+            return Beiseite::Gesichert(pfad);
+        }
+        if steht_noch_etwas_an(quelle) {
+            Beiseite::Gekuerzt(pfad)
+        } else {
+            Beiseite::Gesichert(pfad)
+        }
+    }
+}
+
+/// Fragt eine Quelle, ob hinter dem ausgeschoepften Budget noch etwas steht.
+///
+/// Ein Byte genuegt fuer die Antwort, und mehr als eines wird nicht gelesen:
+/// die Frage lautet nicht "wie lang ist der Rest", sondern "gibt es einen".
+///
+/// **Ein Lesefehler wird als "ja" beantwortet**, und das ist die vorsichtige
+/// Seite: die Sicherung liegt dann genau auf der Grenze, ihre Vollstaendigkeit
+/// ist unbekannt, und eine Meldung, die sie faelschlich als vollstaendig
+/// ausgibt, kostet den Nutzer mehr als eine, die faelschlich vor einer Kuerzung
+/// warnt. `Interrupted` ist kein solcher Fehler, sondern ein unterbrochener
+/// Versuch, und wird wiederholt.
+fn steht_noch_etwas_an(quelle: &mut impl Read) -> bool {
+    let mut eins = [0_u8; 1];
+    loop {
+        match quelle.read(&mut eins) {
+            Ok(0) => return false,
+            Ok(_) => return true,
+            Err(fehler) if fehler.kind() == io::ErrorKind::Interrupted => {}
+            Err(_) => return true,
         }
     }
 }

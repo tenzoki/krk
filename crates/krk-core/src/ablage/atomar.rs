@@ -28,6 +28,12 @@
 //!   Zeitpunkt vollstaendig im Arbeitsspeicher stehen; aus einem Leser flieszt
 //!   sie ueber [`io::copy`] in Stuecken auf die Platte.
 //!
+//! **Eine obere Schranke fuer die Menge steht hier nicht und gehoert nicht
+//! hierher.** Diese Datei schreibt, was ihr gereicht wird, bis die Quelle zu
+//! Ende ist; wer begrenzen will, reicht einen `Take` herein und liest an dessen
+//! `limit()` ab, ob die Quelle vorher zu Ende war. So macht es
+//! `Zugang::beiseite_legen`, und dort steht auch der Grund.
+//!
 //! Wer eine Zeichenkette hat, uebergibt `&mut text.as_bytes()`; `&[u8]` ist
 //! selbst ein Leser. Eine zweite Schreibfunktion neben dieser waere der zweite
 //! Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
@@ -148,8 +154,9 @@ impl Drop for Nachbardatei {
 /// `sync_all` sorgt dafuer, dass das Umbenennen nicht einen Namen auf einen
 /// noch nicht geschriebenen Inhalt setzt.
 ///
-/// Die Quelle wird bis zu ihrem Ende gelesen. Warum ein Leser und keine
-/// Zeichenkette, steht im Modulkopf.
+/// Die Quelle wird bis zu ihrem Ende gelesen, und eine eigene Obergrenze setzt
+/// diese Funktion nicht; wer eine braucht, reicht einen begrenzten Leser
+/// herein. Warum ein Leser und keine Zeichenkette, steht im Modulkopf.
 pub fn vorbereiten(ziel: &Path, quelle: &mut impl Read) -> io::Result<Nachbardatei> {
     let nachbar = nachbarpfad(ziel)?;
     let mut datei = fs::File::create(&nachbar)?;

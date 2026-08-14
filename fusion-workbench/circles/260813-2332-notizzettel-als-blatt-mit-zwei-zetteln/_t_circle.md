@@ -90,4 +90,6 @@ Mehr als zwei Zettel. Suchen, Ersetzen, Zeilennummern, Syntaxhervorhebung und Te
 
 - Turn 1 (Sitzung 260813-2342): abgeschlossen. Alle sechzehn Planschritte gebaut, Commits 9362034, a949ff1, bfea397, dd2643e, dazu die Durchsicht. make check exit 0. Neun Befunde gefiltert, einer hoch: ein Neuoeffnen nach gescheiterter Sicherung wirft den ungesicherten Stand weg, und die Ursache liegt in C4 des Spec. Coherence-Urteil: review-needed. Sitzungsprotokoll: circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md
 
-- Turn 2 (Sitzung 260813-2342): laeuft. Erst der Spec an C4, dann die drei zusammenhaengenden Befunde in einem Zug. Coherence-Urteil: offen.
+- Turn 2 (Sitzung 260813-2342): abgeschlossen. C4 des Spec nachgezogen, drei zusammenhaengende Befunde behoben, zwei Defekte geschlossen, Abgleich gefahren. Alle 16 Planschritte halten am Baum, 43 der 72 Abnahmekriterien traegt der Baum. Coherence-Urteil: review-needed wegen zweier mittlerer Befunde.
+
+- Turn 3 (Sitzung 260813-2342): laeuft. Die zwei mittleren Befunde, danach die Abnahme durch den Nutzer.

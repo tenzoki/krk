@@ -8,6 +8,7 @@
 **Sieben Fragen sind beantwortet**, in zwei Klärungsrunden vor der Anlage des Circles; sie stehen vollständig in der Grounding-Aufnahme des Circle-Datensatzes. Dieser Spec stellt keine davon erneut.
 **Nachgezogen am 260814-0628**, nach der Diagrammprüfung `reviews/260814-0000-conceptrev-spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Spruch `acceptable`, fünf Befunde) und den drei Nutzerantworten vom 260814-0005. Was sich gegenüber der Fassung vom 260813-2348 geändert hat, steht am Ende unter „Was der Nachtrag vom 260814-0628 geändert hat".
 **Ein zweites Mal nachgezogen am 260814-0925**, an C4 allein, nach der Durchsicht von Turn 1 (`reviews/260814-0908-coderev-turn-1-notizzettel.md`) und der Nutzerantwort vom 260814-0925. Der Anlass steht am Ende unter „Was der Nachtrag vom 260814-0925 an C4 geändert hat".
+**Ein drittes Mal nachgezogen am 260814-1010**, an C5 und am Abschnitt zu den zehn Zeitzusagen, aus derselben Durchsicht und nach der Nutzerantwort vom 260814-1010. Der Anlass steht am Ende unter „Was der Nachtrag vom 260814-1010 an C5 geändert hat".
 
 ---
 
@@ -294,6 +295,9 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 - [ ] Fehlt eine Zetteldatei, ist der Zettel leer, und KRK meldet keinen Fehler.
 - [ ] Eine Zetteldatei, die keine gültige UTF-8-Folge trägt, führt zu einem leeren Zettel, und ihr Inhalt liegt danach unter dem Beiseitepfad. Steht dort schon eine ältere Fassung, bleibt sie unangetastet.
 - [ ] Eine Zetteldatei über `EDITORGRENZE` wird nicht geladen und geht denselben Weg beiseite. Der Baum führt `EDITORGRENZE` nach dieser Runde weiterhin an genau einer Stelle (`crates/krk-core/src/text/datei.rs:153`); eine zweite Zahl für dieselbe Sache entsteht nicht.
+- [ ] **Dieselbe Zahl begrenzt das Beiseitelegen.** Kopiert werden höchstens `EDITORGRENZE` Bytes. Eine Fremddatei von beliebiger Größe unter dem Namen eines Zettels wird nicht in voller Länge kopiert, weder auf dem Hauptfaden noch daneben, und der Ablageordner wächst höchstens um 16 MB je Zettel.
+- [ ] Eine gekürzte Sicherung ist von einer vollständigen unterscheidbar, und der Nutzer erfährt den Unterschied über denselben Meldeweg von `Ersetzung`. Die Meldung nennt die Grenze. Auf der Platte sehen beide gleich aus; die Meldung ist die einzige Stelle, an der der Unterschied steht.
+- [ ] Eine Zetteldatei von genau `EDITORGRENZE` Bytes, die an ihrer Bytefolge und nicht an ihrer Größe herausfällt, geht **vollständig** beiseite und wird nicht als gekürzt gemeldet. Eine Probe hält den Grenzfall fest.
 - [ ] Das Beiseitelegen läuft über `Zugang::beiseite_legen` und über keinen daneben gebauten zweiten Weg. Die Funktion bekommt damit ihren zweiten Aufrufer.
 - [ ] Der Zettel öffnet seine Datei über dieselbe Hülle `ohne_warten_oeffnen`, die Editor und Vorschau benutzen, und prüft Art und Größe am offenen Deskriptor. Ein dritter Weg an das Dateisystem entsteht nicht.
 - [ ] Der Nutzer erfährt vom Beiseitelegen über denselben Meldeweg, den `Ersetzung` heute für `keymap.toml` und `settings.toml` geht.
@@ -311,6 +315,9 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 - **Die Wahl ist keine neue Erfindung, sondern die bestehende Antwort dieses Projekts auf dieselbe Frage.** `keymap.toml` und `settings.toml` sind von Hand änderbar, und ein Tippfehler darin nimmt dem Nutzer die Datei nicht weg: `Zugang::beiseite_legen` kopiert den gelesenen Text an den Beiseitepfad und tastet eine dort schon liegende ältere Fassung nicht an. Der Zettel bekommt damit keinen zweiten Zustand, keine dauerhafte Sperre und keine Ausnahme im Sicherungsweg.
 - **Der Preis ist benannt: `beiseite_legen` bekommt einen zweiten Aufrufer, und der Zettel läuft über `Zugang` statt an ihm vorbei.** Der Datensatz vom 260813-2348 spricht an dieser Stelle von einem „sechsten Aufrufer"; das war eine Fehlzählung des Shapers und ist hier berichtigt. `beiseite_legen` hat heute genau einen Aufrufer, `Zugang::laden` (`crates/krk-core/src/ablage/mod.rs:447`). Die Fünf gehört der Probe `nur_benannte_dateien_erreichen_das_atomare_schreiben` mit ihren fünf Quelldateien, und diese Zahl wächst nur dann, wenn der Zettel außerhalb von `krk-core/src/ablage/mod.rs` schreibt.
 - **Die Grenze ist `EDITORGRENZE` und keine eigene Zahl.** 16 MB sind für einen Notizzettel weit bemessen, und das ist der Punkt: die Grenze soll den Fall abfangen, in dem eine fremde Datei unter dem Namen eines Zettels liegt, und nicht den Nutzer beim Schreiben begrenzen. Eine zweite Zahl daneben wäre die zweite Wahrheit über dieselbe Frage, und der Editor hat sie schon beantwortet.
+- **Dieselbe Zahl gilt für das Laden und für die Kopie, und der Preis dafür gehört dazu: von einer sehr großen Fremddatei werden nur die ersten 16 MB gesichert.** So hat der Nutzer am 260814-1010 entschieden. Bis dahin sagte dieser Spec über die Größe der Kopie nichts, und der Bau nahm das wörtlich: eine Datei von 40 GB unter dem Namen `note-1.txt` wurde bei jedem `f2` vollständig kopiert, synchron auf dem Hauptfaden und unter dem gehaltenen Schreibgriff. Die Durchsicht von Turn 1 hat es gefunden (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`) und die Lücke ausdrücklich hier verortet und nicht im Bau.
+- **Der Preis ist der kleinere von zwei Verlusten.** Gekürzt gesichert ist mehr als gar nicht gesichert, und der Nutzer bleibt nicht darüber im Unklaren: die gekürzte Sicherung trägt ihre eigene Meldung. Sie ist deshalb nötig, weil eine gekürzte Sicherung auf der Platte aussieht wie eine vollständige und beim nächsten Start als die schon vorhandene ältere Fassung stehen bleibt.
+- **Zwei Möglichkeiten sind verworfen, und ihre Gründe stehen hier, damit die nächste Runde sie nicht neu erwägt.** Eine zweite, größere Zahl allein für die Kopie wäre genau die zweite Wahrheit über dieselbe Frage, die die Festlegung darüber ausschließt. Ein Umbenennen statt eines Kopierens wäre billig und ist falsch: es verstieße gegen die Regel „kopiert wird, verschoben nicht", die `Zugang::beiseite_legen` seit der Runde 1 trägt, und nähme dem Nutzer die Datei unter der Hand weg.
 
 ---
 
@@ -325,7 +332,7 @@ Der bekannte Grund zuerst. Eine Zeitzusage ist nur dann eine Zusage, wenn sie ab
 **Was an die Stelle einer Zahl tritt, sind zwei ohne Messstrecke prüfbare Kriterien.** Sie sind Bestandteil der Abnahme dieser Runde:
 
 - [ ] Keine der zehn Zahlen aus C8 der Runde 1 wird durch diese Runde geändert, gelockert oder umgedeutet.
-- [ ] Der Zettel liest und schreibt seine Datei auf dem Hauptfaden, und die obere Schranke dafür ist `EDITORGRENZE` mit 16 MB. Eine Datei darüber wird nicht geladen, sondern beiseitegelegt (C5). Dieses Kriterium trägt damit eine Zahl, die schon im Baum steht, und keine neue.
+- [ ] Der Zettel liest und schreibt seine Datei auf dem Hauptfaden, und die obere Schranke dafür ist `EDITORGRENZE` mit 16 MB. Eine Datei darüber wird nicht geladen, sondern beiseitegelegt (C5), und **auch das Beiseitelegen kopiert höchstens diese 16 MB**. Ohne die zweite Hälfte des Satzes gölte die Schranke für das Lesen und nicht für das Schreiben, und der Hauptfaden stünde für die Dauer einer beliebig langen Kopie. Dieses Kriterium trägt damit eine Zahl, die schon im Baum steht, und keine neue.
 
 **Wo diese Runde einen gemessenen Weg berührt, sagt der Spec es, damit eine spätere Messrunde weiß, wo sie hinsehen muss.** Zwei Zusagen sind betroffen, beide leicht. **L4** misst den Kaltstart bis zur bedienbaren Oberfläche; die Sitzung bekommt ein Feld dazu, und die Zetteldateien werden beim Start **nicht** gelesen, sondern erst beim ersten Öffnen des Zettels. **L1** misst die Spanne vom Tastendruck bis zum Zeichendurchgang im Dateifenster; die Belegung wächst um eine Funktion, und der Nachschlag im Ereignisabgriff läuft über dieselbe Tabelle wie bisher.
 
@@ -441,3 +448,23 @@ Der Nachtrag fasst C4 an und sonst nichts. Die neun übrigen beantworteten Frage
 **Die siebte Stelle liegt außerhalb von C4 und war nicht zu umgehen.** C5 sagte zu: „Eine von außen geänderte Zetteldatei zeigt sich beim nächsten Öffnen des Zettels mit ihrem neuen Inhalt." Das ist derselbe Satz wie der eingeschränkte in C4, nur aus der Sicht des Nutzers, und ohne dieselbe Einschränkung stünde der Widerspruch nach dem Nachtrag in C5 statt in C4. Das Kriterium trägt sie jetzt und verweist auf C4. Die Zusage zum unlesbaren Zettel, die C5 trägt, ist davon nicht berührt.
 
 **Die Directive ist unangetastet.** Sie nennt die vier Momente und sagt über den Vorrang der beiden Stände nichts; der Shaper darf sie außerhalb des Aktivierungsmodus ohnehin nicht schreiben.
+
+---
+
+## Was der Nachtrag vom 260814-1010 an C5 geändert hat
+
+Der Nachtrag fasst C5 und das zweite Kriterium unter „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1" an, und sonst nichts. C4 in der Fassung vom 260814-0925, die Zulässigkeitsregel der achten Runde und der Plan bleiben unangetastet.
+
+**Der Anlass ist ein mittlerer Befund aus derselben Durchsicht von Turn 1** (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`). C5 verlangte „eine Zetteldatei über `EDITORGRENZE` wird nicht geladen und geht denselben Weg beiseite" und legte nicht fest, wie groß „beiseite" werden darf. Der Bau tat genau das Verlangte: die Schranke stand über dem Laden, und die Kopie lief ohne jede Obergrenze über `atomar::schreiben` in `io::copy`. Eine Datei von 40 GB unter dem Namen `note-1.txt` wurde bei jedem `f2` vollständig kopiert, synchron auf dem Hauptfaden und unter dem gehaltenen Schreibgriff. Der Prüfer hat die Ursache im Spec verortet und nicht im Bau, und er hat recht: was nicht zugesagt ist, kann kein Bau falsch bauen.
+
+**Der Nutzer hat am 260814-1010 entschieden: dieselbe Zahl gilt auch für die Kopie.** `EDITORGRENZE` mit 16 MB begrenzt das Beiseitelegen ebenso wie das Laden. Kopiert wird bis zur Grenze, darüber bricht der Vorgang ab und meldet. Eine Zahl, zwei Verwendungen; eine zweite Konstante entsteht im Baum nicht.
+
+**Der Preis ist ausdrücklich in Kauf genommen und steht jetzt im Spec und im Doc-Kommentar:** von einer sehr großen Fremddatei werden nur die ersten 16 MB gesichert. Er ist der kleinere von zwei Verlusten — gekürzt gesichert ist mehr als gar nicht gesichert —, und er bleibt dem Nutzer nicht verborgen: eine gekürzte Sicherung trägt ihre eigene Meldung, weil sie auf der Platte aussieht wie eine vollständige und beim nächsten Start als die ältere Fassung stehen bleibt.
+
+**Zwei Möglichkeiten sind verworfen.** Eine zweite, größere Zahl allein für die Kopie wäre die zweite Wahrheit über dieselbe Frage, die C5 seit dem 260814-0628 ausschließt. Ein Umbenennen statt eines Kopierens verstieße gegen die Regel „kopiert wird, verschoben nicht", die `Zugang::beiseite_legen` seit der Runde 1 trägt.
+
+**Betroffen sind fünf Stellen, und vier davon gehören zu C5.** Drei neue Kriterien in der am Baum nachweisbaren Liste, drei neue Festlegungen. Die fünfte Stelle ist das zweite Kriterium unter „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1": es sagte die Schranke für das Lesen **und** das Schreiben auf dem Hauptfaden zu und nannte dabei nur das Laden. Ohne die Ergänzung stünde der Widerspruch nach diesem Nachtrag dort statt in C5.
+
+**Die Grenzfall-Zusage ist neu und war vorher nicht nötig.** Eine Zetteldatei von genau `EDITORGRENZE` Bytes schöpft das Budget der Kopie restlos aus und ist trotzdem vollständig gesichert. Ohne eine ausdrückliche Zusage dafür wäre die naheliegende Umsetzung — „Budget erschöpft heißt gekürzt" — falsch, und der Nutzer bekäme für eine vollständige Sicherung die Warnung einer gekürzten.
+
+**Die Directive und die zehn Zahlen aus C8 sind unangetastet.** Der Nachtrag setzt keine elfte Zahl und fasst keine der zehn an; er trägt eine Zahl nach, die seit der Runde 2 im Baum steht.

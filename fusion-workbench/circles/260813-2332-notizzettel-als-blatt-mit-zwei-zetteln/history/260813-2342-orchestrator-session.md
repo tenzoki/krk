@@ -101,3 +101,9 @@ liegen die zwei mittleren Befunde zugrunde und nichts weiter; wer sie behebt, ha
 soweit, wie ein Agent ihn bringen kann.
 
 **Abgleich:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260814-1002-reconciliation.md`
+
+## Zwei Antworten am Rebalance-Tor (Nutzer, 260814-1010)
+
+**Obergrenze auch für die Kopie.** Dieselbe Zahl, `EDITORGRENZE` mit 16 MB, gilt auch für das Beiseitelegen: kopiert wird bis zur Grenze, darüber bricht es ab und meldet. Eine Zahl, zwei Verwendungen, keine zweite Konstante im Baum. Der Preis ist benannt: von einer sehr großen Fremddatei werden nur die ersten 16 MB gesichert. „Eine zweite Zahl" und „umbenennen statt kopieren" sind verworfen — Letzteres verstieße gegen die erste der drei Regeln von `beiseite_legen`.
+
+**Turn 3 behebt die zwei mittleren Befunde**, danach fährt der Nutzer die Abnahme. Die Runde kann dann kohärent schließen wie die achte. Die fünf niedrigen Befunde der Durchsicht und die sieben des Abgleichs bleiben offen.

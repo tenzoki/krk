@@ -24,6 +24,7 @@
 //! Kern nichts mehr ausgibt, ist die Zusage ohne zweiten Prozess pruefbar.
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{Duration, Instant};
@@ -1241,9 +1242,9 @@ fn ein_gescheitertes_zur_seite_legen_wird_gemeldet_und_verspricht_keine_datei() 
 ///
 /// Die Saetze werden an gebauten Werten geprueft und nicht an einem Ablauf:
 /// die Fallunterscheidung ist ueber `Beiseite` vollstaendig, und eine Probe
-/// ueber die vier Werte prueft sie ebenso vollstaendig.
+/// ueber die fuenf Werte prueft sie ebenso vollstaendig.
 #[test]
-fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
+fn die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig() {
     let datei = PathBuf::from("/Users/pruefung/Library/Application Support/KRK/bookmarks.toml");
     let sicherung = atomar::beiseitepfad(&datei).expect("kein Beiseitepfad");
     let bau = |beiseite: Beiseite| Ersetzung {
@@ -1264,6 +1265,7 @@ fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
 
     for (lage, beiseite) in [
         ("gesichert", Beiseite::Gesichert(sicherung.clone())),
+        ("gekuerzt", Beiseite::Gekuerzt(sicherung.clone())),
         (
             "schon vorhanden",
             Beiseite::SchonVorhanden(sicherung.clone()),
@@ -1284,11 +1286,22 @@ fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
         );
     }
 
-    // Die beiden Saetze sind verschieden: der zweite sagt, dass die Sicherung
-    // von einem frueheren Start stammt und dort bleibt.
-    assert_ne!(
-        bau(Beiseite::Gesichert(sicherung.clone())).to_string(),
-        bau(Beiseite::SchonVorhanden(sicherung.clone())).to_string()
+    // Die drei Saetze sind paarweise verschieden: der zweite sagt, dass die
+    // Sicherung gekuerzt ist, der dritte, dass sie von einem frueheren Start
+    // stammt und dort bleibt.
+    let gesichert = bau(Beiseite::Gesichert(sicherung.clone())).to_string();
+    let gekuerzt = bau(Beiseite::Gekuerzt(sicherung.clone())).to_string();
+    let schon = bau(Beiseite::SchonVorhanden(sicherung.clone())).to_string();
+    assert_ne!(gesichert, schon);
+    assert_ne!(gesichert, gekuerzt);
+    assert_ne!(gekuerzt, schon);
+
+    // Eine gekuerzte Sicherung sieht auf der Platte aus wie eine
+    // vollstaendige; die Meldung ist die einzige Stelle, an der der Nutzer den
+    // Unterschied erfaehrt, und sie nennt deshalb die Grenze.
+    assert!(
+        gekuerzt.contains(&EDITORGRENZE.to_string()),
+        "der Satz nennt die Grenze nicht: {gekuerzt}"
     );
 
     let gescheitert = bau(Beiseite::Gescheitert("kein Platz mehr".to_owned())).to_string();
@@ -1304,6 +1317,7 @@ fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
     for beiseite in [
         Beiseite::Nicht,
         Beiseite::Gesichert(sicherung.clone()),
+        Beiseite::Gekuerzt(sicherung.clone()),
         Beiseite::SchonVorhanden(sicherung.clone()),
         Beiseite::Gescheitert("kein Platz mehr".to_owned()),
     ] {
@@ -1552,19 +1566,25 @@ fn eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen() {
     );
 }
 
-/// Eine Zetteldatei ueber `EDITORGRENZE` wird nicht geladen und geht beiseite
-/// (C5).
+/// Eine Zetteldatei ueber `EDITORGRENZE` wird nicht geladen und geht gekuerzt
+/// beiseite (C5).
 ///
 /// **Die Grenze ist die des Editors und keine zweite Zahl**, und sie faengt
 /// genau den Fall, fuer den sie dasteht: eine fremde Datei unter dem Namen
 /// eines Zettels. Der Inhalt wird dabei aus dem offenen Deskriptor kopiert und
-/// steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher; dass er
-/// vollstaendig ankommt, prueft die Laengenzusicherung unten.
+/// steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher.
+///
+/// **Dieselbe Zahl begrenzt seit dem 260814-1010 auch die Kopie**, und die
+/// Laengenzusicherung unten ist deshalb umgekehrt worden: sie hielt bis dahin
+/// fest, dass die Sicherung den ganzen Inhalt traegt, und haelt jetzt fest,
+/// dass sie bei der Grenze aufhoert. Ohne die Schranke kopierte ein `f2` eine
+/// Datei von 40 GB in voller Laenge, synchron auf dem Hauptfaden
+/// (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`).
 ///
 /// Gelesen wuerde ein Loch als lauter Nullbytes, und die sind gueltiges UTF-8:
 /// die Datei faellt also an ihrer Groesse heraus und an nichts sonst.
 #[test]
-fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_beiseite() {
+fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_gekuerzt_beiseite() {
     let (ordner, ablage) = ablage("zettel-zu-gross");
     let groesse = EDITORGRENZE + 1;
     let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
@@ -1581,17 +1601,79 @@ fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_beiseite() {
     assert_eq!(ersetzung.grund, Grund::ZuGross { groesse });
 
     let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
-    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+    assert_eq!(ersetzung.beiseite, Beiseite::Gekuerzt(sicherung.clone()));
     assert_eq!(
         fs::metadata(&sicherung).expect("die Sicherung fehlt").len(),
+        EDITORGRENZE,
+        "die Sicherung haelt nicht bei der Grenze an"
+    );
+
+    // Kopiert und nicht verschoben: das Original steht unangetastet da, in
+    // voller Laenge.
+    assert_eq!(
+        fs::metadata(&pfad).expect("das Original fehlt").len(),
         groesse,
-        "die Sicherung traegt nicht den ganzen Inhalt"
+        "die zu grosse Zetteldatei wurde verschoben oder gekuerzt"
     );
 
     let text = melden(&ersetzung);
     assert!(
         text.contains(&groesse.to_string()) && text.contains(&EDITORGRENZE.to_string()),
         "die Meldung nennt Groesse und Grenze nicht: {text}"
+    );
+    assert!(
+        text.contains("gekuerzt"),
+        "die Meldung verschweigt, dass die Sicherung nicht vollstaendig ist: {text}"
+    );
+}
+
+/// Eine Zetteldatei von genau `EDITORGRENZE` Bytes geht **ganz** beiseite (C5).
+///
+/// Der Grenzfall zur Probe darueber, und er misst die Stelle, an der die
+/// Kuerzung sonst zu frueh gemeldet wuerde: das Budget ist hier restlos
+/// ausgeschoepft, und trotzdem fehlt kein Byte. Unterschieden werden die
+/// beiden Faelle an einem einzelnen Byte hinter dem Budget und nicht am
+/// ausgeschoepften Budget selbst; steht dort keines, ist die Sicherung
+/// vollstaendig.
+///
+/// Herausfallen muss die Datei an ihrer Bytefolge und nicht an ihrer Groesse:
+/// genau `EDITORGRENZE` Bytes nimmt der Leser an. Das erste Byte ist deshalb
+/// `0xff`, das in keiner gueltigen UTF-8-Folge vorkommt; der Rest ist ein Loch.
+#[test]
+fn eine_zetteldatei_genau_auf_der_grenze_geht_ganz_beiseite() {
+    let (ordner, ablage) = ablage("zettel-auf-der-grenze");
+    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
+    assert_eq!(pfad.parent(), Some(ordner.pfad()));
+    ordner.luecke("note-1.txt", EDITORGRENZE);
+    let mut datei = fs::OpenOptions::new()
+        .write(true)
+        .open(&pfad)
+        .expect("die Zetteldatei laesst sich nicht oeffnen");
+    datei
+        .write_all(b"\xff")
+        .expect("das ungueltige Byte laesst sich nicht schreiben");
+    drop(datei);
+
+    let geladen = geladener_zettel(&ablage, Zettel::Erster);
+    assert_eq!(geladen.wert, "", "die ungueltige Datei wurde geladen");
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die ungueltige Datei wurde nicht gemeldet");
+    assert!(
+        matches!(ersetzung.grund, Grund::Beschaedigt(_)),
+        "die Datei faellt an ihrer Groesse heraus und nicht an ihrer Bytefolge: {ersetzung:?}"
+    );
+
+    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
+    assert_eq!(
+        ersetzung.beiseite,
+        Beiseite::Gesichert(sicherung.clone()),
+        "eine vollstaendige Sicherung wurde als gekuerzt gemeldet"
+    );
+    assert_eq!(
+        fs::metadata(&sicherung).expect("die Sicherung fehlt").len(),
+        EDITORGRENZE,
+        "die Sicherung traegt nicht den ganzen Inhalt"
     );
 }
 

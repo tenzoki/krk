@@ -312,10 +312,12 @@
 //!   haengt — gemessen, nicht der Dokumentation entnommen
 //!   (`issues/260810-0747_*_der-hinweis-der-gegenrichtung-wird-von-libtest-verschluckt-und-erreicht-niemanden.md`).
 //!
-//! **Und die neun Zeilen selbst haelt eine Probe.** Sie baut die Flaeche mit
-//! [`textflaeche_bauen`], liest jede der neun zurueck und vergleicht sie mit
-//! einer frisch gebauten `NSTextView`: an KRKs Flaeche steht jede aus, an der
-//! frischen jede anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
+//! **Und die neun Zeilen selbst haelt eine Probe.** Die Zeilen stehen seit der
+//! Runde 9 in [`super::textautomatik::automatiken_abschalten`], das
+//! [`textflaeche_bauen`] und die Flaeche des Zettels rufen; die Probe baut beide
+//! Flaechen, liest jede der neun zurueck und vergleicht sie mit einer frisch
+//! gebauten `NSTextView`: an KRKs Flaechen steht jede aus, an der frischen jede
+//! anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
 //! laufenden Buendel — dass getippte Anfuehrungszeichen als getippte in der
 //! Datei stehen —, nicht mehr die Frage, ob die Zeilen stehen und greifen.
 //!
@@ -4228,8 +4230,10 @@ mod tests {
     /// (`issues/260810-0746_*_es-gibt-eine-dritte-tuer-und-sie-liegt-ausserhalb-aller-drei-namensformen.md`).
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Einordnung {
-        /// [`textflaeche_bauen`] schaltet sie ab, weil sie Zeichen in den Text
-        /// bringt oder aus ihm nimmt, die der Nutzer nicht getippt hat.
+        /// [`textautomatik::automatiken_abschalten`] schaltet sie ab, das
+        /// [`textflaeche_bauen`] und die Flaeche des Zettels rufen, weil sie
+        /// Zeichen in den Text bringt oder aus ihm nimmt, die der Nutzer nicht
+        /// getippt hat.
         ///
         /// Dass sie an der gebauten Flaeche wirklich aus steht, misst
         /// [`die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
@@ -4250,7 +4254,7 @@ mod tests {
         ///
         /// Sie wird in KRK **nicht gesetzt**: sie waere eine zweite Stelle mit
         /// einer Meinung darueber, was abgeschaltet ist, und die einzelnen
-        /// Zeilen in [`textflaeche_bauen`] sind die erste. Dass sie auf
+        /// Zeilen in [`textautomatik::automatiken_abschalten`] sind die erste. Dass sie auf
         /// dieselben Bits sieht, misst
         /// [`die_sammeltuer_ist_eine_sicht_auf_dieselben_bits`].
         SammeltuerZu(&'static [&'static str]),
@@ -4266,9 +4270,9 @@ mod tests {
         ///
         /// Zwei sind es, die beiden Bitmasken der Schreibwerkzeuge: ihre Null
         /// heisst `…ResultDefault`, also "das System waehlt", und nicht "nichts".
-        /// [`textflaeche_bauen`] setzt sie deshalb **nicht** — eine Zeile waere ein
-        /// Aufruf ohne Wirkung, und [`aus_bedeutet`] kennt fuer die Form
-        /// `Options:` folgerichtig keinen Aus-Wert.
+        /// [`textautomatik::automatiken_abschalten`] setzt sie deshalb **nicht**
+        /// — eine Zeile waere ein Aufruf ohne Wirkung, und [`aus_bedeutet`] kennt
+        /// fuer die Form `Options:` folgerichtig keinen Aus-Wert.
         Gegenstandslos(&'static str),
         /// Bekannt, benannt, und die Einordnung haengt an einer Lesart von C4,
         /// die der Nutzer zu treffen hat. Der Datensatz steht dabei.
@@ -4358,7 +4362,7 @@ mod tests {
         ("setAutomaticTextCompletionEnabled:", Einordnung::Geduldet),
         ("setIncrementalSearchingEnabled:", Einordnung::Geduldet),
         // Die zehn zweiten Tueren. Keine braucht eine eigene Zeile in
-        // `textflaeche_bauen`.
+        // `textautomatik::automatiken_abschalten`.
         (
             "setSmartQuotesType:",
             Einordnung::ZweiteTuerZu("setAutomaticQuoteSubstitutionEnabled:"),
@@ -4420,8 +4424,8 @@ mod tests {
         // sie ausschliesst, ist am 260810 entschieden
         // (`decisions/260810-0959_*_schliesst-c4-die-schreibwerkzeuge-aus.md`);
         // zwei tragen daraufhin einen Aus-Wert und je eine Zeile in
-        // `textflaeche_bauen`, zwei tragen keinen — der Grund steht bei
-        // `Einordnung::Gegenstandslos`.
+        // `textautomatik::automatiken_abschalten`, zwei tragen keinen — der
+        // Grund steht bei `Einordnung::Gegenstandslos`.
         ("setWritingToolsBehavior:", Einordnung::Abgeschaltet),
         ("setAllowsWritingToolsAffordance:", Einordnung::Abgeschaltet),
         (
@@ -4851,9 +4855,12 @@ mod tests {
     /// (`decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`).
     ///
     /// Die Aufstellung liefert die Namen. Wer eine zehnte Einstellung als
-    /// `Abgeschaltet` eintraegt, ohne die Zeile in [`textflaeche_bauen`] zu
-    /// schreiben, bekommt hier den Fehlschlag — und nicht erst der Nutzer am
-    /// laufenden Buendel.
+    /// `Abgeschaltet` eintraegt, ohne die Zeile in
+    /// [`textautomatik::automatiken_abschalten`] zu schreiben, bekommt hier den
+    /// Fehlschlag — und nicht erst der Nutzer am laufenden Buendel. **Die Zeile
+    /// gehoert dorthin und nicht in [`textflaeche_bauen`]**: dort geschrieben
+    /// bekaeme sie allein der Editor, und der Zettel stuende ohne sie da — zwei
+    /// Wahrheiten darueber, was „abgeschaltet" heisst.
     ///
     /// # Eine Einstellung, die diese Laufzeit nicht fuehrt, ist ein Hinweis
     ///
@@ -5250,15 +5257,15 @@ mod tests {
                 merkmal(&frische, "writingToolsBehavior"),
                 NSWritingToolsBehavior::Default.0,
                 "eine frische NSTextView steht nicht mehr auf Default. Stuende sie ab Werk \
-                 auf None, waere die Zeile in textflaeche_bauen ueberfluessig und die \
+                 auf None, waere die Zeile in automatiken_abschalten ueberfluessig und die \
                  Entscheidung aus dem Datensatz gegenstandslos geworden"
             );
             match merkmal_falls_vorhanden(&frische, "allowsWritingToolsAffordance") {
                 Some(angebotsflaeche) => assert_ne!(
                     angebotsflaeche, 0,
                     "die Angebotsflaeche steht an einer frischen Flaeche schon aus — dann \
-                     nimmt die Zeile in textflaeche_bauen nichts fort, und der Grund, aus dem \
-                     der Datensatz sie mitfuehrt, ist ein anderer geworden"
+                     nimmt die Zeile in automatiken_abschalten nichts fort, und der Grund, aus \
+                     dem der Datensatz sie mitfuehrt, ist ein anderer geworden"
                 ),
                 None => {
                     let _ = writeln!(

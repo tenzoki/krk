@@ -713,3 +713,8 @@
 {"ts":"2026-08-14T07:50:33","event":"shaper_done","turn":2,"agent":"shaper","detail":"C4 nachgezogen, Zusage jeder abweichende Zettel ergaenzt"}
 {"ts":"2026-08-14T07:50:33","event":"task_done","turn":2,"agent":"coder","detail":"drei Befunde behoben, make check exit 0"}
 {"ts":"2026-08-14T07:50:33","event":"commit","turn":2,"detail":"der getippte Zettelstand ueberlebt eine gescheiterte Sicherung"}
+{"ts":"2026-08-14T08:32:32","event":"reconciliation","turn":2,"detail":"verdict=review-needed; 16/16 Schritte am Baum, 43 von 72 Kriterien, 2 Entscheide auf _i_, 7 neue Defekte"}
+{"ts":"2026-08-14T08:32:32","event":"gate_hit","detail":"Rebalance-Tor, Urteil review-needed"}
+{"ts":"2026-08-14T08:32:32","event":"gate_response","detail":"Obergrenze auch fuer die Kopie; Turn 3 behebt die zwei mittleren"}
+{"ts":"2026-08-14T08:32:32","event":"rebalance_artifact","turn":3,"detail":"zwei mittlere Befunde"}
+{"ts":"2026-08-14T08:32:32","event":"turn_start","turn":3,"detail":"zwei mittlere Befunde, dann Abnahme"}

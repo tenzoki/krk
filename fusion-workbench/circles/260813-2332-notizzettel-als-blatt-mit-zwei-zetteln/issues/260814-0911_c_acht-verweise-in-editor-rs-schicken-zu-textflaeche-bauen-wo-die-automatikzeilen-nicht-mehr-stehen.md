@@ -45,3 +45,34 @@ Zettels rufen".
 
 - Gefunden bei der Durchsicht von Turn 1, `reviews/260814-0908-coderev-turn-1-notizzettel.md`.
 - Zeilennummern am Stand `dd2643e` gezählt.
+
+---
+Resolved: Die acht Stellen zeigen jetzt auf
+`textautomatik::automatiken_abschalten`. Nachgezogen in
+`crates/krk-ui/src/appkit/editor.rs`, in der Reihenfolge des Befundes:
+
+| vorher | nachher |
+|---|---|
+| 316 | die neun Zeilen stehen in `super::textautomatik::automatiken_abschalten`, das `textflaeche_bauen` und die Fläche des Zettels rufen; die Probe baut beide Flächen |
+| 4231 | „`automatiken_abschalten` schaltet sie ab, das `textflaeche_bauen` und die Fläche des Zettels rufen" |
+| 4253 | „die einzelnen Zeilen in `automatiken_abschalten` sind die erste" |
+| 4269 | „`automatiken_abschalten` setzt sie deshalb **nicht**" |
+| 4361 | „Keine braucht eine eigene Zeile in `textautomatik::automatiken_abschalten`" |
+| 4423 | „je eine Zeile in `textautomatik::automatiken_abschalten`" |
+| 4854 | die Handlungsanweisung nennt `automatiken_abschalten` und sagt dazu, warum die Zeile nicht in `textflaeche_bauen` gehört |
+| 5253, 5260 | beide Probenmeldungen nennen `automatiken_abschalten` |
+
+**Die teure Stelle bei 4854 trägt jetzt ihre Begründung mit.** Der bloße Austausch des
+Namens hätte den nächsten Bauer richtig geschickt und ihm nicht gesagt, warum; die Stelle
+schreibt deshalb aus, dass eine Zeile in `textflaeche_bauen` allein dem Editor gehörte und
+der Zettel ohne sie dastünde — die zwei Wahrheiten darüber, was „abgeschaltet" heißt, die
+der Entscheid `decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`
+als den stillen Schaden benennt.
+
+**Die sieben Stellen, an denen `textflaeche_bauen` als Erzeuger der Fläche gemeint ist,
+sind unangetastet geblieben** (`:201`, `:343`, `:398`, `:4885`, `:4943`, `:5016`, `:5168`),
+wie der Datensatz es festhält: dort stimmt der Verweis weiter.
+
+Verhalten ändert sich nicht; die Änderung ist Prosa. `make check` am 260814 gefahren,
+Rückgabewert 0, „alle vier gruen" — die Doc-Verweise in eckigen Klammern lösen auf, also
+hält auch `cargo doc` sie.
