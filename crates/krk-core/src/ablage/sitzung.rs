@@ -342,6 +342,23 @@ pub struct Sitzung {
     /// traegt; die Probe dazu steht in `tests/ablage.rs`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub editor: Option<PathBuf>,
+    /// Welcher der beiden Notizzettel zuletzt offen war.
+    ///
+    /// **Die Merkung und nicht der Text.** Was auf den Zetteln steht, liegt in
+    /// `note-1.txt` und `note-2.txt` und kommt in diese Datei an keiner Stelle;
+    /// der Zwei-Sekunden-Takt des [`Sitzungsschreiber`] traegt damit vom Zettel
+    /// nichts als diese eine Angabe. C4 der Runde 9 sagt beides zu, und eine
+    /// Probe in `tests/ablage.rs` haelt es fest. Es ist derselbe Zuschnitt wie
+    /// bei [`Sitzung::editor`] weiter oben: der Ort und nicht der Stand.
+    ///
+    /// **Vor den drei Tabellen und vor `fenster`**, aus dem Grund, den
+    /// [`Sitzung::editor`] ausschreibt: TOML verlangt, dass die Werte einer
+    /// Tabelle vor ihren Untertabellen stehen.
+    ///
+    /// Mit der Runde 9 dazugekommen. Eine `session.toml` aus der Zeit davor
+    /// bleibt lesbar, weil diese Struktur `#[serde(default)]` traegt, und
+    /// ergibt den ersten Zettel.
+    pub zettel: pfade::Zettel,
     /// Die Breiten der fuenf Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
@@ -367,11 +384,13 @@ pub struct Sitzung {
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
-    /// ausgeblendet und ohne Datei, alle vier Spalten sichtbar, links aktiv.
+    /// ausgeblendet und ohne Datei, alle vier Spalten sichtbar, links aktiv,
+    /// der erste Notizzettel offen.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
+            zettel: pfade::Zettel::default(),
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
             spalten: Spaltensichtbarkeit::default(),

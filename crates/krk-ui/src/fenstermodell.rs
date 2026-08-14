@@ -85,7 +85,7 @@ use std::path::PathBuf;
 
 use krk_core::ablage::{
     Breiten, Dateifenster as Fensterzustand, Fensterseite, Sichtbarkeit, Sitzung,
-    Spaltensichtbarkeit,
+    Spaltensichtbarkeit, Zettel,
 };
 
 use crate::spalten::Spalte;
@@ -442,10 +442,22 @@ impl Fenstermodell {
     /// Modell haelt vom Editor allein Breite und Sichtbarkeit. Sie hier aus
     /// einer zweiten Quelle zu erfragen hiesse, zwei Orte darueber zu haben,
     /// welche Datei offen ist.
-    pub fn sitzung(&self, fenster: [Fensterzustand; 2], editor: Option<PathBuf>) -> Sitzung {
+    ///
+    /// **Der offene Notizzettel kommt aus demselben Grund von aussen.** Er
+    /// wohnt in [`Zettelmodell`](crate::zettelmodell::Zettelmodell); dieses
+    /// Modell kennt vom Zettel nichts, denn er ist ein Blatt und kein Bereich
+    /// der Fensterzeile. Was mitgeht, ist allein die Merkung und nie der Text
+    /// (C4 der Runde 9).
+    pub fn sitzung(
+        &self,
+        fenster: [Fensterzustand; 2],
+        editor: Option<PathBuf>,
+        zettel: Zettel,
+    ) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
             editor,
+            zettel,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
             spalten: self.spalten,
@@ -2595,7 +2607,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -2736,7 +2748,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None);
+        let sitzung = modell.sitzung(fenster, None, Zettel::Erster);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -2758,7 +2770,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);

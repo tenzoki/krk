@@ -699,3 +699,6 @@
 {"ts":"2026-08-14T05:53:45","event":"commit","turn":1,"task":"A","detail":"Ablage fuehrt zwei Zettel, atomar schreibt aus einem Leser"}
 {"ts":"2026-08-14T05:53:45","event":"commit","turn":1,"task":"B","detail":"Notizzettel auf f2 und cmd+k"}
 {"ts":"2026-08-14T05:53:45","event":"task_start","turn":1,"task":"C","agent":"coder","detail":"Schritte 9-12, das zehnte Blatt"}
+{"ts":"2026-08-14T06:26:15","event":"task_done","turn":1,"task":"C","agent":"coder","detail":"Schritte 9-12 fertig, make check exit 0"}
+{"ts":"2026-08-14T06:26:15","event":"commit","turn":1,"task":"C","detail":"das zehnte Blatt"}
+{"ts":"2026-08-14T06:26:15","event":"task_start","turn":1,"task":"DEF","agent":"coder","detail":"Schritte 13-16"}

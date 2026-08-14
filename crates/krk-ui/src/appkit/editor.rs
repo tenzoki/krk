@@ -4822,14 +4822,33 @@ mod tests {
         }
     }
 
-    /// Die sieben Zeilen in [`textflaeche_bauen`] wirken, und das steht nicht
-    /// mehr allein in der Prosa.
+    /// Die sieben Zeilen aus [`textautomatik::automatiken_abschalten`] wirken,
+    /// und das steht nicht mehr allein in der Prosa.
     ///
-    /// **Zwei Flaechen, ein Vergleich.** Die eine kommt aus
-    /// [`textflaeche_bauen`], die andere ist eine frisch gebaute `NSTextView`. An
-    /// der ersten steht jede der sieben aus; an der zweiten steht jede **anders**.
-    /// Die zweite Haelfte ist die tragende: ohne sie liefe die Probe gruen durch,
-    /// wenn eine Einstellung ab Werk schon aus waere und die Zeile fehlte.
+    /// **Drei Flaechen, ein Zeuge.** Gemessen wird an den **zwei** bearbeitbaren
+    /// Flaechen, die KRK baut — der des Editors aus [`textflaeche_bauen`] und der
+    /// des Notizzettels aus
+    /// [`blaetter::zettel::textflaeche_bauen`](crate::appkit::blaetter::zettel::textflaeche_bauen)
+    /// —, und beide werden gegen denselben Zeugen gestellt: eine frisch erzeugte
+    /// `NSTextView`. An den unseren steht jede abgeschaltete Einstellung aus, am
+    /// Zeugen jede **anders**. Die zweite Haelfte ist die tragende: ohne sie liefe
+    /// die Probe gruen durch, wenn eine Einstellung ab Werk schon aus waere und
+    /// die Zeile fehlte.
+    ///
+    /// # Warum hier zwei Flaechen stehen und die Aufstellung trotzdem einmal
+    ///
+    /// Seit der Runde 9 lautet die Aussage „jede bearbeitbare Flaeche in KRK" und
+    /// nicht mehr „die Flaeche des Editors" (C3 der Runde 9). Beide Flaechen
+    /// rufen dieselbe Abschaltung, und [`EINSTELLUNGEN`] steht deshalb weiter an
+    /// **einer** Stelle: eine zweite Aufstellung fuer den Zettel koennte von
+    /// dieser abweichen, und dann sagte jede der beiden Proben etwas ueber eine
+    /// andere Liste. Die Schleife ueber die zwei Flaechen ist die billigere
+    /// Haelfte, die Aufstellung die teure.
+    ///
+    /// **Was die Probe nicht sieht:** eine dritte bearbeitbare Flaeche einer
+    /// spaeteren Runde, die die Abschaltung nicht ruft. Der Bau haelt dabei nicht
+    /// an; ob er es kuenftig tut, ist als Frage gefilt
+    /// (`decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`).
     ///
     /// Die Aufstellung liefert die Namen. Wer eine zehnte Einstellung als
     /// `Abgeschaltet` eintraegt, ohne die Zeile in [`textflaeche_bauen`] zu
@@ -4863,12 +4882,31 @@ mod tests {
         );
 
         an_einer_flaeche(|mtm| {
-            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+            let (_rolle, editorflaeche) = textflaeche_bauen(mtm, probenrahmen());
+            let (_bildlauf, zettelflaeche) =
+                crate::appkit::blaetter::zettel::textflaeche_bauen(mtm, probenrahmen());
+            let unsere = [
+                ("die Flaeche des Editors", editorflaeche),
+                ("die Flaeche des Notizzettels", zettelflaeche),
+            ];
             let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
             for setzer in abgeschaltet {
                 let name = merkmalsname(setzer);
                 let aus = aus_bedeutet(setzer);
-                let Some(unser_wert) = merkmal_falls_vorhanden(&unsere, &name) else {
+                let mut gemessen = false;
+                for (woher, flaeche) in &unsere {
+                    let Some(unser_wert) = merkmal_falls_vorhanden(flaeche, &name) else {
+                        continue;
+                    };
+                    gemessen = true;
+                    assert_eq!(
+                        unser_wert, aus,
+                        "{setzer} steht an {woher} nicht auf aus — C4 verlangt, dass der \
+                         gesicherte Stand der getippte ist, und C3 der Runde 9, dass es \
+                         fuer jede bearbeitbare Flaeche gilt"
+                    );
+                }
+                if !gemessen {
                     let _ = writeln!(
                         std::io::stderr(),
                         "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Was es nicht \
@@ -4877,17 +4915,12 @@ mod tests {
                         module_path!()
                     );
                     continue;
-                };
-                assert_eq!(
-                    unser_wert, aus,
-                    "{setzer} steht an der Flaeche aus textflaeche_bauen nicht auf aus — \
-                     C4 verlangt, dass der gesicherte Stand der getippte ist"
-                );
+                }
                 assert_ne!(
                     merkmal(&frische, &name),
                     aus,
                     "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
-                     Zeile in textflaeche_bauen nichts, und der Vergleich braucht einen \
+                     Zeile in der Abschaltung nichts, und der Vergleich braucht einen \
                      anderen Zeugen"
                 );
             }

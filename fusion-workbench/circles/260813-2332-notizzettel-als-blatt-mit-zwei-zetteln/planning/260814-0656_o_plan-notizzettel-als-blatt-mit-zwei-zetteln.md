@@ -297,7 +297,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang D — Die vier Sicherungsmomente
 
-13. **Die eine Erklärung und ihre vier Aufrufer**
+13. [DONE] **Die eine Erklärung und ihre vier Aufrufer**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: Neu `zettel_sichern(&self, zugang: &Zugang<'_>) -> Option<String>` — die eine Stelle, an der erklärt ist, was Sichern für den Zettel heißt: das Modell fragen, bei fehlender Änderung nichts tun, sonst `text_sichern` und dem Modell den neuen Ausgangsstand melden; der Rückgabewert ist der Satz für die Statuszeile, falls das Schreiben scheiterte. Vier Aufrufstellen: der Tabklick im Rückruf aus Schritt 11, der Abschlussblock des Blattes, `fenster_schliessen` **vor** `performClose(None)`, und `wird_beendet` innerhalb des bestehenden `unter_der_sperre`-Rumpfes neben dem Sitzungsschreiber. Die ersten drei nehmen je einen eigenen Durchgang über `unter_der_sperre`; der vierte nimmt keinen, weil der Rumpf ihn schon hält. Der Doc-Kommentar an `zettel_sichern` zählt die vier Momente auf und nennt zu jedem, warum er einer ist — und nennt `Kommando::FensterEinblenden` ausdrücklich als den Befehl, der durchkommt und trotzdem keiner ist, weil er nicht aus dem Zettel herausführt. `fenster_schliessen` räumt das Blatt **nicht** ab; die Begründung steht als Kommentar dort und wiederholt die Decidability-Zeile im Kurzen.
@@ -305,7 +305,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
     - Abnahmekriterium: C4 — „Die vier Momente sind an genau einer Stelle erklärt und werden von vier Aufrufern angesprochen. Eine zweite Erklärung daneben entsteht nicht." „Der vierte Aufrufer ist der Weg von `Kommando::FensterSchliessen`, und er sichert **vor** `performClose:`." „Weist `beenden_erlauben` das Beenden ab, … sichert der Zettel nicht." C1 — „Der Zettel sichert, bevor `fenster_schliessen` `performClose:` ruft."
     - Hinweis für den Ausführer: Kein zweiter `durchgang` in `applicationWillTerminate:`. Der Kommentar dort nennt den Defekt, der aus zweien entstand; er wird nicht ein zweites Mal gebaut. Der Moment „Beenden" hängt an `applicationWillTerminate:` und nicht am Tastendruck — damit fällt die Bedingung aus C4 von selbst, ohne dass sie irgendwo abgefragt würde.
 
-14. **Proben: die vier Momente, die Reihenfolge, die Gegenrichtung**
+14. [DONE] **Proben: die vier Momente, die Reihenfolge, die Gegenrichtung**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs` (unter `mod tests`), `crates/krk-core/tests/ablage.rs`
     - Changes: Vier Zählproben über `krk_ui::quellbaum::quelldateien`, in der Bauform der bestehenden Zählproben, mit zusammengesetzten Nadeln, weil die Datei in dem Baum liegt, den sie liest. Erstens: `zettel_sichern` ist genau einmal erklärt. Zweitens: genau vier Stellen sprechen es an. Drittens: im Rumpf von `fenster_schliessen` steht die Nadel des Sicherns **vor** der von `performClose`. Viertens: im Rumpf von `fenster_zeigen` steht keine Sicherungsnadel. Dazu in `ablage.rs` eine Probe, dass der geschriebene Text einer `session.toml` den Text eines Zettels an keiner Stelle trägt. Jeder Doc-Kommentar sagt, was seine Nadel **nicht** sieht — die dritte etwa sieht ein Sichern nicht, das in eine später gerufene Hilfsfunktion gewandert ist.
@@ -314,7 +314,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang E — Die Sitzung
 
-15. **`Sitzung` trägt, welcher Zettel zuletzt offen war**
+15. [DONE] **`Sitzung` trägt, welcher Zettel zuletzt offen war**
     - Executor: `coder`
     - Files: `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `Sitzung` bekommt `pub zettel: Zettel`, und zwar **vor** den drei Tabellen und vor `fenster` — TOML verlangt, dass die Werte einer Tabelle vor ihren Untertabellen stehen, und die Datei sagt es an zwei Feldern bereits selbst. `Sitzung::default()` setzt den ersten Zettel. `Fenstermodell::sitzung` nimmt den Wert als Parameter entgegen, `sitzung_bauen` liest ihn aus dem Zettelmodell, und der Aufbau der Oberfläche setzt ihn aus der geladenen Sitzung in das Zettelmodell.
@@ -324,7 +324,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang F — Abschluss
 
-16. **Die Abschaltung der Automatiken an beiden Flächen nachmessen**
+16. [DONE] **Die Abschaltung der Automatiken an beiden Flächen nachmessen**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/editor.rs` (unter `mod tests`)
     - Changes: `die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus` misst künftig an zwei gebauten Flächen statt an einer: der des Editors und der des Zettels. Der Zeuge, die frisch erzeugte `NSTextView`, bleibt derselbe. Der Doc-Kommentar sagt, warum die Aussage jetzt „jede bearbeitbare Fläche in KRK" lautet und warum die Aufzählung `EINSTELLUNGEN` nicht doppelt geführt wird.

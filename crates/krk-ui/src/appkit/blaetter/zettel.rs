@@ -450,7 +450,13 @@ fn textrahmen() -> NSRect {
 /// Rueckgaengig steht **an**, ueber die Rueckgaengigverwaltung von AppKit und
 /// ohne Budget in Bytes: der Zettel haelt, was der Nutzer hineinschreibt, und
 /// nicht eine fremde Datei. Der Verlauf endet mit dem Blatt (C3).
-fn textflaeche_bauen(
+///
+/// **`pub(crate)` allein wegen einer Probe**, und zwar wegen der einen, die die
+/// abgeschalteten Automatiken an einer **gebauten** Flaeche misst: sie steht im
+/// Pruefmodul von [`super::super::editor`] und faehrt seit der Runde 9 beide
+/// Flaechen, damit die Aussage „jede bearbeitbare Flaeche in KRK" gemessen ist
+/// und nicht behauptet. Gerufen wird die Funktion sonst allein von [`zeigen`].
+pub(crate) fn textflaeche_bauen(
     mtm: MainThreadMarker,
     rahmen: NSRect,
 ) -> (Retained<NSScrollView>, Retained<NSTextView>) {

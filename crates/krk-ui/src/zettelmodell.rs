@@ -94,6 +94,22 @@ impl Zettelmodell {
         self.offener
     }
 
+    /// Setzt, welcher Zettel offen ist, **ohne** eine Datei zu lesen.
+    ///
+    /// Die eine Stelle dafuer ist der Aufbau der Oberflaeche: welcher Zettel
+    /// zuletzt offen war, kommt aus [`krk_core::ablage::Sitzung::zettel`]. Der
+    /// Text kommt nicht mit, und das ist die Zusage aus C4 — die Zetteldateien
+    /// werden beim Start nicht gelesen, sondern erst beim ersten Oeffnen des
+    /// Blattes, und der Spec haengt daran das Verhaeltnis zur Zeitzusage L4.
+    ///
+    /// **Danach steht der Zettel leer und ohne Abweichung.** Wer diese Stelle
+    /// benutzt, sichert also nichts: gelesen und gehalten sind beide leer, und
+    /// [`zu_sichern`](Self::zu_sichern) liefert `None`, bis
+    /// [`oeffnen`](Self::oeffnen) den wirklichen Stand gebracht hat.
+    pub fn offenen_setzen(&mut self, zettel: Zettel) {
+        self.offener = zettel;
+    }
+
     /// Nimmt den frisch aus der Datei gelesenen Stand eines Zettels auf und
     /// macht ihn zum offenen.
     ///

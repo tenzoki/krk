@@ -143,6 +143,7 @@ fn beispielsitzung() -> Sitzung {
     Sitzung {
         aktiv: Fensterseite::Rechts,
         editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
+        zettel: Zettel::Zweiter,
         breiten: Breiten {
             lesezeichen: Some(180.0),
             links: Some(520.5),
@@ -1331,6 +1332,87 @@ fn gesicherter_zettel(ablage: &Ablage, welcher: Zettel, text: &str) -> std::io::
     ablage
         .durchgang(|zugang| zugang.text_sichern(Datei::Zettel(welcher), text))
         .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Der Text eines Zettels gerät an keine Stelle der `session.toml` (C4).
+///
+/// **Die Sitzung traegt die Merkung und nie den Text.** Welcher der zwei Zettel
+/// offen war, gehoert in die Sitzung — der Zwei-Sekunden-Takt des
+/// [`Sitzungsschreiber`] schreibt sie, und ein Text im Takt waere genau die
+/// Zusage, die diese Runde nicht macht. Geschrieben wird der Text allein an den
+/// vier Sicherungsmomenten und allein in `note-1.txt` und `note-2.txt`.
+///
+/// Beide Haelften stehen hier: die Nadel darf in der Zetteldatei vorkommen und
+/// in der Sitzungsdatei nicht. Ohne die erste liefe die Probe auch dann gruen,
+/// wenn der Text nirgends stuende.
+///
+/// **Was die Probe nicht sieht:** ein Weg, der den Text in eine dritte Datei
+/// schreibt. Dass es keine dritte gibt, halten `Datei::ALLE` und
+/// `nur_benannte_dateien_erreichen_das_atomare_schreiben` fest.
+#[test]
+fn die_geschriebene_sitzung_traegt_den_text_eines_zettels_an_keiner_stelle() {
+    let (_ordner, ablage) = ablage("sitzung-ohne-zettelext");
+    // Eine Nadel, die in keinem Feld der Sitzung als Wert vorkommen kann.
+    let nadel = "Milch-Eier-Brot-4711";
+    gesicherter_zettel(&ablage, Zettel::Zweiter, nadel).expect("schreiben gescheitert");
+    gesichert(&ablage, Datei::Sitzung, &beispielsitzung()).expect("schreiben gescheitert");
+
+    let zetteldatei =
+        fs::read_to_string(ablage.pfad(Datei::Zettel(Zettel::Zweiter))).expect("lesen gescheitert");
+    assert_eq!(
+        zetteldatei, nadel,
+        "der Text steht nicht in der Datei des Zettels; dann sagt die Gegenprobe nichts"
+    );
+
+    let sitzungsdatei = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        !sitzungsdatei.contains(nadel),
+        "der Text des Zettels steht in der session.toml: {sitzungsdatei}"
+    );
+    assert!(
+        sitzungsdatei.contains("zettel = \"zweiter\""),
+        "die Merkung des offenen Zettels fehlt in der session.toml: {sitzungsdatei}"
+    );
+}
+
+/// Eine `session.toml` ohne das Feld `zettel` bleibt lesbar und ergibt den
+/// ersten Zettel (C2).
+///
+/// Die Datei tritt so auf, wie die Runden vor der neunten sie geschrieben
+/// haben. Sie gilt nicht als beschaedigt, und der Nutzer verliert nichts.
+#[test]
+fn eine_sitzung_ohne_das_zettelfeld_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-dem-zettel");
+    let alt = "\
+aktiv = \"rechts\"
+
+[breiten]
+links = 420.0
+
+[sichtbar]
+lesezeichen = true
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei ohne das Zettelfeld gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(
+        geladen.wert.zettel,
+        Zettel::Erster,
+        "ohne das Feld ist der erste Zettel offen"
+    );
+    assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
 }
 
 /// Eine fehlende Zetteldatei ist der erste Start und keine Meldung wert (C5).

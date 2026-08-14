@@ -849,21 +849,39 @@ define_class!(
             // vorgemerkten
             // (`issues/260813-0540_*_beim-beenden-laufen-zwei-durchgaenge-und-der-kommentar-nennt-einen.md`).
             let sitzung = self.sitzung_bauen();
+            self.zettel_stand_uebernehmen();
             let mut schreiber = self.ivars().sitzungsschreiber.borrow_mut();
-            let Some(schreiber) = schreiber.as_mut() else {
-                // Kein Schreiber heisst: kein Sitzungsrecht, oder kein
-                // Ablageordner. Beides hat der Start gemeldet, und beim
-                // Beenden gibt es dafuer keine Statuszeile mehr.
-                return;
-            };
             let jetzt = Instant::now();
             // **Ein Durchgang und nicht zwei.** Das Vormerken und das Beenden
             // laufen unter derselben Schreibsperre; zwei Durchgaenge liessen
             // dazwischen eine andere Instanz schreiben, ohne dass es einen
-            // Grund dafuer gaebe.
+            // Grund dafuer gaebe. Der Zettel teilt sich denselben Durchgang und
+            // nimmt aus demselben Grund keinen eigenen.
             let _ = self.unter_der_sperre(|zugang| {
-                let _ = schreiber.vormerken(sitzung, jetzt, zugang);
-                let _ = schreiber.beenden(jetzt, zugang);
+                // **Der vierte Sicherungsmoment aus C4** (Runde 9). Er haengt an
+                // diesem Rueckruf und nicht am Tastendruck, und damit faellt die
+                // Bedingung des Kriteriums von selbst: AppKit ruft
+                // `applicationWillTerminate:` erst **nach** der Zustimmung aus
+                // `applicationShouldTerminate:`. Weist `beenden_erlauben` das
+                // Beenden ab, kommt der Rueckruf nie, und der Zettel sichert
+                // nicht. Es gibt dafuer nichts abzufragen.
+                //
+                // Der Rueckgabewert ist der Satz fuer die Statuszeile. Beim
+                // Beenden gibt es keine mehr, an der er ankaeme; deshalb steht
+                // hier `let _ =` und kein Melder.
+                let _ = self.zettel_sichern(zugang);
+                // Kein Schreiber heisst: kein Sitzungsrecht, oder kein
+                // Ablageordner. Beides hat der Start gemeldet, und beim
+                // Beenden gibt es dafuer keine Statuszeile mehr. **Der Zettel
+                // haengt nicht daran**: er wird auch von der Instanz gesichert,
+                // die die Sitzung nicht schreiben darf — sonst verloere die
+                // zweite Instanz von KRK ihren Zettel beim Beenden, waehrend
+                // C4 den Preis zweier Instanzen ausdruecklich nur auf
+                // „die zuletzt schliessende gewinnt" beschraenkt.
+                if let Some(schreiber) = schreiber.as_mut() {
+                    let _ = schreiber.vormerken(sitzung, jetzt, zugang);
+                    let _ = schreiber.beenden(jetzt, zugang);
+                }
             });
         }
     }
@@ -982,6 +1000,11 @@ impl Anwendungsdelegierter {
 
         let (sitzung, mut meldungen) = self.sitzung_laden();
         *ivars.modell.borrow_mut() = Fenstermodell::aus_sitzung(&sitzung);
+        // **Welcher Zettel offen war, kommt aus der Sitzung; sein Text nicht.**
+        // Die Zetteldateien werden beim Start nicht gelesen — C4 sagt es zu, und
+        // der Spec haengt daran das Verhaeltnis zur Zeitzusage L4. Gelesen wird
+        // erst beim ersten Oeffnen des Blattes, in `notizzettel_zeigen`.
+        ivars.zettel.borrow_mut().offenen_setzen(sitzung.zettel);
 
         let dateifenster = [
             Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[0])),
@@ -3333,9 +3356,11 @@ impl Anwendungsdelegierter {
     /// `NSTextView`; wer den Wechsel vor der Uebernahme entschiede, entschiede
     /// ihn auf dem Stand von vorhin.
     fn zettel_wechseln(&self, ziel: pfade::Zettel) -> Option<String> {
-        if let Some(stand) = self.zettelstand() {
-            let _ = self.ivars().zettel.borrow_mut().bearbeiten(stand);
-        }
+        // **Vor dem Wechsel und nicht darin.** Danach waere der offene Zettel
+        // schon das Ziel, und der Stand der Flaeche ginge in den falschen von
+        // beiden. Aus demselben Grund uebernimmt `zettel_sichern` den Stand
+        // nicht selbst: es weiss nicht, ob eben gewechselt wurde.
+        self.zettel_stand_uebernehmen();
         // Der Wert steht in einer eigenen Zeile und nicht im Kopf des `match`:
         // die Ausleihe des Kopfes lebte sonst durch alle Zweige, und der Zweig
         // darunter fragt das Modell erneut.
@@ -3345,48 +3370,124 @@ impl Anwendungsdelegierter {
             // schreiben. C2 sagt es ausdruecklich zu.
             zettelmodell::Wechsel::Derselbe => return None,
             zettelmodell::Wechsel::GewechseltUngeaendert => {}
-            // Der erste der vier Sicherungsmomente aus C4. Er steht hier, weil
-            // der Tabklick hier ankommt; die drei uebrigen — das Schliessen des
-            // Blattes, `shift+cmd+w` und das Beenden — kommen anderswo an. Der
-            // Schritt 13 des Plans zieht die vier in **eine** Erklaerung
-            // zusammen und macht diesen Zweig zu ihrem ersten Aufrufer.
-            zettelmodell::Wechsel::GewechseltZuSichern => self.zettel_zurueckschreiben(),
+            // **Der erste der vier Sicherungsmomente aus C4.** Er steht hier,
+            // weil der Tabklick hier ankommt; die drei uebrigen kommen
+            // anderswo an. Was Sichern heisst, steht an keiner der vier Stellen,
+            // sondern einmal in `zettel_sichern`.
+            //
+            // Der eigene Durchgang ist der erste von drei: allein der vierte
+            // Moment, das Beenden, findet den Schreibgriff schon genommen vor.
+            zettelmodell::Wechsel::GewechseltZuSichern => {
+                let ergebnis = self.unter_der_sperre(|zugang| self.zettel_sichern(zugang));
+                self.zettel_sicherung_melden(ergebnis);
+            }
         }
         let text = self.zettel_lesen(ziel);
         self.ivars().zettel.borrow_mut().oeffnen(ziel, text.clone());
         Some(text)
     }
 
-    /// Schreibt den Zettel zurueck, den das Modell als zu sichernd nennt (C4).
+    /// Was Sichern fuer den Notizzettel heisst — die eine Erklaerung dafuer
+    /// (C4).
+    ///
+    /// Liefert den Satz fuer die Statuszeile, falls das Schreiben scheiterte,
+    /// und `None`, wenn geschrieben wurde oder nichts zu schreiben war.
+    ///
+    /// # Die vier Momente, an denen gesichert wird
+    ///
+    /// Vier Aufrufer sprechen diese Stelle an, und jeder ist ein Weg **aus dem
+    /// Zettel heraus**. Das ist der Zuschnitt aus C4, und er steht hier
+    /// aufgezaehlt, weil er sonst an vier Stellen halb erklaert waere:
+    ///
+    /// 1. **Der Tabklick** ([`Self::zettel_wechseln`]): der verlassene Zettel
+    ///    verschwindet von der Flaeche, und niemand koennte ihn danach noch
+    ///    aus ihr lesen.
+    /// 2. **Das Schliessen des Blattes** ([`Self::zettel_blatt_geschlossen`]):
+    ///    die Escape-Taste, die Schaltflaeche und der Abbruchbefehl ueber den
+    ///    Blattgriff muenden alle drei in denselben Abschlussblock, und mit ihm
+    ///    fallen Blatt und Flaeche.
+    /// 3. **`shift+cmd+w`** ([`Self::fenster_schliessen`]): das Fenster geht zu,
+    ///    und das Blatt haengt daran. Gesichert wird dort **vor**
+    ///    `performClose:` und ohne Bedingung; die Begruendung steht an jener
+    ///    Stelle.
+    /// 4. **Das Beenden von KRK** (`applicationWillTerminate:`): der Prozess
+    ///    endet. Dieser Aufrufer bringt seinen [`Zugang`] mit, statt einen
+    ///    zweiten Durchgang durch die Ablage zu nehmen — der Grund steht dort.
+    ///
+    /// # Was durchkommt und trotzdem kein Moment ist
+    ///
+    /// [`Kommando::FensterEinblenden`] fuehrt **nicht** aus dem Zettel heraus.
+    /// Es holt dasselbe Fenster nach vorn, an dem das Blatt haengt; der Zettel
+    /// steht danach unveraendert da, und ein Schreibvorgang waere ein Schreiben
+    /// ohne Anlass. Eine Probe unter `mod tests` haelt diese Gegenrichtung fest.
+    ///
+    /// # Was diese Stelle nicht tut
+    ///
+    /// **Sie liest die Textflaeche nicht.** Was in ihr steht, kommt ueber
+    /// [`Self::zettel_stand_uebernehmen`] in das Modell, und das ruft jeder der
+    /// vier Momente vorher; beim Tabklick muss es sogar vor dem Wechsel
+    /// geschehen, und deshalb steht es nicht hier.
     ///
     /// **Ohne Aenderung geschieht nichts**, und das entscheidet das Modell und
     /// nicht diese Stelle: [`Zettelmodell::zu_sichern`] liefert `None`, solange
     /// der gehaltene Stand der gelesene ist.
     ///
-    /// **Eine gescheiterte Sicherung wirft den Stand nicht weg.** Gemeldet wird
-    /// sie ueber [`Self::gesichert`](Zettelmodell::gesichert) gerade **nicht**:
-    /// der Zettel bleibt abweichend, und der naechste Sicherungsmoment versucht
-    /// es erneut. Der Grund steht in der Statuszeile, damit der Nutzer nicht
-    /// darauf baut, dass sein Text auf der Platte liegt.
-    fn zettel_zurueckschreiben(&self) {
-        let Some((welcher, text)) = self
+    /// **Eine gescheiterte Sicherung wirft den Stand nicht weg.**
+    /// [`Zettelmodell::gesichert`] wird dann gerade **nicht** gerufen: der
+    /// Zettel bleibt abweichend, und der naechste Moment versucht es erneut.
+    /// Der Grund geht in die Statuszeile, damit der Nutzer nicht darauf baut,
+    /// dass sein Text auf der Platte liegt.
+    fn zettel_sichern(&self, zugang: &Zugang<'_>) -> Option<String> {
+        let (welcher, text) = self
             .ivars()
             .zettel
             .borrow()
             .zu_sichern()
-            .map(|(welcher, text)| (welcher, text.to_owned()))
-        else {
-            return;
-        };
-        let datei = Datei::Zettel(welcher);
-        let meldung = match self.unter_der_sperre(|zugang| zugang.text_sichern(datei, &text)) {
-            Ok(Ok(())) => {
+            .map(|(welcher, text)| (welcher, text.to_owned()))?;
+        match zugang.text_sichern(Datei::Zettel(welcher), &text) {
+            Ok(()) => {
                 self.ivars().zettel.borrow_mut().gesichert(welcher);
                 None
             }
-            Ok(Err(fehler)) => Some(format!(
+            Err(fehler) => Some(format!(
                 "der Notizzettel liess sich nicht sichern: {fehler}"
             )),
+        }
+    }
+
+    /// Nimmt in das Zettelmodell auf, was gerade in der Textflaeche steht.
+    ///
+    /// **Die Flaeche ist die einzige Stelle, an der das Getippte steht**, und
+    /// sie ist mit dem Blatt fort. Jeder der vier Sicherungsmomente ruft dies
+    /// deshalb, bevor er sichert; steht kein Zettel, geschieht nichts.
+    ///
+    /// Der Rueckgabewert von [`Zettelmodell::bearbeiten`] wird hier nicht
+    /// gebraucht: er sagt, ob es etwas zu sichern gibt, und genau das
+    /// beantwortet [`Zettelmodell::zu_sichern`] gleich danach noch einmal und
+    /// nennt dazu den Zettel.
+    fn zettel_stand_uebernehmen(&self) {
+        let Some(stand) = self.zettelstand() else {
+            return;
+        };
+        let _ = self.ivars().zettel.borrow_mut().bearbeiten(stand);
+    }
+
+    /// Stellt in die Statuszeile, was an einer Sicherung des Zettels
+    /// scheiterte.
+    ///
+    /// Der Weg der drei Momente mit eigenem Durchgang. Das Beenden ruft dies
+    /// nicht: dort gibt es keine Statuszeile mehr, an der ein Satz ankaeme.
+    ///
+    /// **Ein Hindernis wird nur gemeldet, wenn wirklich etwas ungesichert
+    /// ist.** Ohne Ablageordner scheitert jeder Durchgang, und ein Zettel, der
+    /// seiner Datei gleicht, hatte nichts zu schreiben; ein Satz darueber waere
+    /// eine Meldung ueber ein Nichtereignis, und der Tabklick trueg sie bei
+    /// jedem Klick vor. Der Start hat den fehlenden Ordner ohnehin einmal
+    /// gemeldet.
+    fn zettel_sicherung_melden(&self, ergebnis: Result<Option<String>, Sperrhindernis>) {
+        let meldung = match ergebnis {
+            Ok(meldung) => meldung,
+            Err(_) if self.ivars().zettel.borrow().zu_sichern().is_none() => None,
             Err(Sperrhindernis::OhneOrdner) => {
                 Some("der Notizzettel ist ohne Ablageordner nicht gesichert".to_owned())
             }
@@ -3411,13 +3512,22 @@ impl Anwendungsdelegierter {
     /// **Alle drei Wege heraus kommen hier an** — die Escape-Taste ueber den
     /// Waechter, die Schaltflaeche und der Abbruchbefehl ueber den Blattgriff —,
     /// weil sie in denselben Abschlussblock von AppKit muenden. Deshalb haengt
-    /// das Sichern an dieser Stelle und nicht am Waechter.
+    /// das Sichern an dieser Stelle und nicht am Waechter: **ein** Aufrufer fuer
+    /// drei Wege und nicht drei.
+    ///
+    /// Der zweite der vier Sicherungsmomente aus C4; was Sichern heisst, steht
+    /// in [`Self::zettel_sichern`].
     fn zettel_blatt_geschlossen(&self) {
-        if let Some(stand) = self.zettelstand() {
-            let _ = self.ivars().zettel.borrow_mut().bearbeiten(stand);
-        }
+        self.zettel_stand_uebernehmen();
         *self.ivars().zettelflaeche.borrow_mut() = None;
         *self.ivars().offenes_blatt.borrow_mut() = None;
+        // **Nach dem Abraeumen und nicht davor.** Das Schreiben laeuft durch die
+        // Ablage; bliebe die Flaeche bis dahin eingetragen, saehe ein Weg, der in
+        // dieser Spanne hierher zurueckkaeme, ein Blatt, das es nicht mehr gibt.
+        // Der Stand steht zu diesem Zeitpunkt im Modell, und nur von dort liest
+        // das Sichern.
+        let ergebnis = self.unter_der_sperre(|zugang| self.zettel_sichern(zugang));
+        self.zettel_sicherung_melden(ergebnis);
     }
 
     /// Was gerade in der Textflaeche des Zettels steht, falls einer steht.
@@ -3739,10 +3849,37 @@ impl Anwendungsdelegierter {
     /// ist (gemessen am 260804-1040).
     /// Das Fenster ueberlebt sein Schliessen; "Fenster einblenden" holt es
     /// zurueck.
+    ///
+    /// # Der Zettel wird hier gesichert, und zwar vor `performClose:`
+    ///
+    /// Der dritte der vier Sicherungsmomente aus C4, und der einzige, dessen
+    /// Reihenfolge zugesagt ist. Er haengt am **Ausfuehrungsweg** dieses
+    /// Befehls und nicht an der Zulaessigkeitsregel: `zulaessigkeit::zulaessig`,
+    /// `operationen::waehrend_blatt_erlaubt` und `immer_erreichbar` sind von der
+    /// Runde 9 unberuehrt geblieben, und das ist eine ausgeschriebene Zusage des
+    /// Spec.
+    ///
+    /// **Gesichert wird ohne Bedingung.** Was AppKit mit `performClose:` an
+    /// einem Fenster mit anhaengendem Blatt tut, ist in diesem Baum nicht
+    /// gemessen: es kann das Fenster samt Blatt schliessen oder beides stehen
+    /// lassen und einen Ton geben. Ein Code, der die eine oder die andere Kante
+    /// annaehme, saette eine Vermutung fest; ein Sichern davor haelt die Zusage
+    /// „kein Weg aus dem Zettel heraus verliert Text" in **beiden** Ausgaengen.
+    /// Die Messung traegt danach nur nach, welche Kante das laufende Buendel
+    /// geht.
+    ///
+    /// **Das Blatt wird hier nicht abgeraeumt.** Bleibt es stehen, weil AppKit
+    /// das Schliessen verweigert, waere ein geleerter [`Self::offenes_blatt`] die
+    /// Lage, in der der Abbruchbefehl das sichtbare Blatt nicht mehr schliessen
+    /// koennte. Geht das Fenster dagegen zu, kommt der Abschlussblock des
+    /// Blattes von selbst hierher zurueck und raeumt beides ab.
     fn fenster_schliessen(&self) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
+        self.zettel_stand_uebernehmen();
+        let ergebnis = self.unter_der_sperre(|zugang| self.zettel_sichern(zugang));
+        self.zettel_sicherung_melden(ergebnis);
         fenster.performClose(None);
         true
     }
@@ -5670,6 +5807,14 @@ impl Anwendungsdelegierter {
     /// `krk_core::ablage::Sitzung::editor`. Solange kein Editor gebaut ist —
     /// vor `oberflaeche_aufbauen` und im Messmodus — steht dort `None`, und das
     /// ist dieselbe Aussage wie die eines Editors ohne Datei.
+    ///
+    /// **Vom Notizzettel geht die Merkung mit und nie der Text.** Welcher der
+    /// zwei offen ist, steht im Zettelmodell; was auf ihm steht, gehoert in
+    /// `note-1.txt` und `note-2.txt`. Der Zwei-Sekunden-Takt der
+    /// Sitzungssicherung ruft diese Funktion, und deshalb ist genau hier
+    /// entschieden, dass er den Text des Zettels nicht mittraegt (C4 der Runde
+    /// 9); eine Probe in `krk-core/tests/ablage.rs` haelt es an der
+    /// geschriebenen Datei fest.
     fn sitzung_bauen(&self) -> Sitzung {
         // Der zweite der beiden Anlaesse, an denen der Schirm in das Modell
         // zurueckgelesen wird. Er faellt auch ohne Befehl an, naemlich ueber
@@ -5681,7 +5826,11 @@ impl Anwendungsdelegierter {
             self.dateifenster(Fensterseite::Rechts).quelle().zustand(),
         ];
         let editor = self.editordatei();
-        self.ivars().modell.borrow().sitzung(fenster, editor)
+        let zettel = self.ivars().zettel.borrow().offener();
+        self.ivars()
+            .modell
+            .borrow()
+            .sitzung(fenster, editor, zettel)
     }
 
     /// Merkt den Sitzungszustand vor; geschrieben wird gebuendelt.
@@ -6372,5 +6521,153 @@ mod faengerproben {
             faengerstation(false, druck("f5"), None),
             Faengerstation::Keine
         );
+    }
+}
+
+/// Die vier Sicherungsmomente des Notizzettels, am Quelltext gezaehlt (C1, C4
+/// der Runde 9).
+///
+/// **Warum am Baum und nicht an einem Rueckgabewert.** „Die vier Momente sind an
+/// genau einer Stelle erklaert und werden von vier Aufrufern angesprochen" ist
+/// eine Aussage ueber den Baum: an keinem Ergebnis ist abzulesen, dass es keine
+/// zweite Erklaerung daneben gibt. Der Kopf von [`crate::quellbaum`] beschreibt
+/// die Bauform und sagt auch, was sie nicht kann.
+///
+/// **Die Nadeln stehen zusammengesetzt da**, weil diese Proben in der Datei
+/// liegen, die sie lesen; als ein Stueck geschrieben faende jede sich selbst.
+#[cfg(test)]
+mod zettelproben {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Der Quelltext der Datei, in der die vier Momente stehen.
+    fn diese_datei() -> String {
+        quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == "krk-ui/src/appkit/anwendung.rs")
+            .expect("die Datei des Anwendungsdelegierten steht im Quellbaum")
+            .1
+    }
+
+    /// Der Rumpf einer Methode dieser Datei, ohne Doc-Kommentar und ohne Prosa.
+    ///
+    /// Der Rumpf endet an der ersten schliessenden Klammer auf der Einrueckung
+    /// einer Methode; die Doc-Kommentare stehen vor dem `fn` und kommen damit
+    /// gar nicht herein. Die Kommentarzeilen **im** Rumpf werden abgezogen: sie
+    /// nennen `performClose:` und das Sichern in Prosa, und eine Nadel darf
+    /// keine Prosa treffen.
+    fn rumpf(inhalt: &str, name: &str) -> String {
+        let kopf = format!("fn {name}(");
+        let beginn = inhalt
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("{kopf} steht nicht in dieser Datei"));
+        let rest = &inhalt[beginn..];
+        let ende = rest
+            .find("\n    }\n")
+            .unwrap_or_else(|| panic!("der Rumpf von {name} endet nicht"));
+        rest[..ende]
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Was Sichern fuer den Zettel heisst, ist genau **einmal** erklaert (C4).
+    ///
+    /// Eine Erklaerungszaehlung ueber den ganzen Baum: eine zweite Fassung
+    /// desselben Namens laesst sie rot werden, gleich in welcher Datei sie
+    /// steht. **Was sie nicht sieht:** dieselbe Sache noch einmal gebaut unter
+    /// einem anderen Namen — etwa ein zweites `text_sichern` von einer dritten
+    /// Stelle aus. Dagegen haelt
+    /// `krk-core/tests/baum.rs::nur_benannte_dateien_erreichen_das_atomare_schreiben`.
+    #[test]
+    fn das_sichern_des_zettels_ist_genau_einmal_erklaert() {
+        let nadel = concat!("fn ", "zettel_sichern");
+        let treffer: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| inhalt.matches(nadel).count())
+            .sum();
+        assert_eq!(
+            treffer, 1,
+            "das Sichern des Zettels ist nicht genau einmal erklärt"
+        );
+    }
+
+    /// Genau **vier** Stellen sprechen das Sichern an (C4).
+    ///
+    /// Die vier Momente aus C4: der Tabklick, der Abschlussblock des Blattes,
+    /// `shift+cmd+w` und das Beenden. Eine Aufruferzaehlung steht hier, weil das
+    /// Abnahmekriterium die Zahl selbst zusagt; der Kopf von
+    /// [`crate::quellbaum`] sagt, warum sie sonst nirgends stehen soll — sie ist
+    /// in beide Richtungen blind, und der billigste Weg zurueck ins Gruene waere
+    /// das Streichen eines berechtigten Fragers.
+    ///
+    /// **Was sie nicht sieht:** einen fuenften Moment, der ueber eine
+    /// Hilfsfunktion sichert, statt selbst zu rufen. Die Zahl bliebe dann bei
+    /// vier, und die Aufzaehlung im Doc-Kommentar von `zettel_sichern` waere
+    /// still falsch geworden.
+    #[test]
+    fn genau_vier_stellen_sichern_den_zettel() {
+        let name = concat!("zettel_", "sichern");
+        let treffer: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| aufrufstellen(inhalt, name))
+            .sum();
+        assert_eq!(
+            treffer, 4,
+            "es sind nicht die vier Sicherungsmomente aus C4, die den Zettel sichern"
+        );
+    }
+
+    /// `shift+cmd+w` sichert **vor** `performClose:` (C1, C4).
+    ///
+    /// Die Reihenfolge ist zugesagt, und sie ist der Grund, aus dem die Frage
+    /// „was tut AppKit mit `performClose:` an einem Fenster mit anhaengendem
+    /// Blatt" den Code nichts mehr kostet: gesichert wird unbedingt und vorher,
+    /// also haelt die Zusage in beiden Ausgaengen.
+    ///
+    /// **Was die Probe nicht sieht:** ein Sichern, das aus dieser Methode in
+    /// eine spaeter gerufene Hilfsfunktion gewandert ist. Dann stuende die Nadel
+    /// hier nicht mehr, und die Probe faende sie auch nicht in der falschen
+    /// Reihenfolge, sondern gar nicht — deshalb prueft sie beide Nadeln erst auf
+    /// ihr Dasein.
+    #[test]
+    fn das_fensterschliessen_sichert_vor_dem_performclose() {
+        let sichern = concat!("zettel_", "sichern(");
+        let schliessen = concat!("perform", "Close(");
+        let rumpf = rumpf(&diese_datei(), "fenster_schliessen");
+        let stelle_sichern = rumpf
+            .find(sichern)
+            .expect("das Fensterschließen sichert den Zettel nicht");
+        let stelle_schliessen = rumpf
+            .find(schliessen)
+            .expect("das Fensterschließen ruft performClose: nicht");
+        assert!(
+            stelle_sichern < stelle_schliessen,
+            "der Zettel wird nach performClose: gesichert; C4 verlangt davor"
+        );
+    }
+
+    /// „Fenster einblenden" sichert den Zettel **nicht** (C1).
+    ///
+    /// Die Gegenrichtung, und sie ist ein eigenes Abnahmekriterium: der Befehl
+    /// kommt bei stehendem Blatt durch, fuehrt aber nicht aus dem Zettel heraus.
+    /// Er holt dasselbe Fenster nach vorn, an dem das Blatt haengt; ein
+    /// Schreibvorgang waere ein Schreiben ohne Anlass.
+    ///
+    /// **Was die Probe nicht sieht:** ein Sichern, das `fenster_zeigen` aus
+    /// einer der Funktionen erbt, die es ruft. Sie liest den Rumpf und nicht den
+    /// Aufrufbaum darunter.
+    #[test]
+    fn das_fenstereinblenden_sichert_den_zettel_nicht() {
+        let rumpf = rumpf(&diese_datei(), "fenster_zeigen");
+        for nadel in [
+            concat!("zettel_", "sichern("),
+            concat!("zettel_", "stand_uebernehmen("),
+        ] {
+            assert!(
+                !rumpf.contains(nadel),
+                "»Fenster einblenden« rührt den Zettel an: {nadel}"
+            );
+        }
     }
 }
