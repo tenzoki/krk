@@ -1,5 +1,22 @@
-//! Wo die vier Ablagedateien liegen, und wie der Ordner beim ersten Start
-//! entsteht.
+//! Wo die sechs Ablagedateien liegen, in welchen zwei Formaten sie stehen, und
+//! wie der Ordner beim ersten Start entsteht.
+//!
+//! # Zwei Formate, und warum die Zettel kein TOML tragen
+//!
+//! Vier Dateien tragen TOML und gehen ueber [`super::Zugang::laden`] und
+//! [`super::Zugang::sichern`]; die zwei Zetteldateien der Runde 9 tragen den
+//! Text des Zettels und sonst nichts. [`Datei::format`] sagt, welche welche
+//! ist, und wer beide Sorten verschieden behandeln muss, fragt diese abgeleitete
+//! Frage statt eine zweite Liste neben [`Datei::ALLE`] zu fuehren: eine Liste
+//! kann auseinanderlaufen, eine vollstaendige Fallunterscheidung nicht.
+//!
+//! **Der Nutzer hat zwei einzelne Zetteldateien gewaehlt und ausdruecklich
+//! keine gemeinsame.** Aus dieser Wahl folgt die Form des Inhalts: eine Datei je
+//! Zettel ist nur dann eine Verbesserung gegenueber einer gemeinsamen, wenn sie
+//! fuer sich lesbar ist und in einem beliebigen Textprogramm aufgeht. Ein
+//! TOML-Rahmen um den Text naehme genau das zurueck und brachte daneben die
+//! Frage nach der Behandlung von Sonderzeichen mit, die eine Textdatei nicht
+//! kennt.
 //!
 //! Der Ort ist `~/Library/Application Support/KRK/`, so wie `### Frage 4` des
 //! Plans ihn festlegt. Aufgeloest wird er ueber das Benutzerverzeichnis, das
@@ -31,10 +48,64 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Die vier Dateien, die KRK unter `Application Support` ablegt.
+use serde::{Deserialize, Serialize};
+
+/// Welcher der beiden Notizzettel gemeint ist (C2 der Runde 9).
 ///
-/// Eine Aufzaehlung statt vier loser Namen: wer alle anfassen muss, laeuft
-/// ueber [`Datei::ALLE`] und kann keine vergessen.
+/// Das Blatt fuehrt genau zwei, gleichrangig nebeneinander. **Ein eigener Typ
+/// statt einer Zahl, damit ein Index nicht versehentlich zu drei Zetteln
+/// wird**; dieselbe Erwaegung und dieselbe Bauform wie bei
+/// [`Fensterseite`](super::Fensterseite). Damit ist "das Blatt fuehrt genau
+/// zwei Zettel" eine Aussage ueber einen Typ und nicht ueber eine Zeile Code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Zettel {
+    /// Der Zettel, der ohne weiteres Zutun offen ist.
+    #[default]
+    Erster,
+    /// Der zweite Zettel.
+    Zweiter,
+}
+
+impl Zettel {
+    /// Beide Zettel, der erste zuerst.
+    pub const ALLE: [Zettel; 2] = [Zettel::Erster, Zettel::Zweiter];
+
+    /// Die Stelle im Feld der beiden Zettel, etwa fuer die Tabs des Blattes.
+    pub const fn index(self) -> usize {
+        match self {
+            Zettel::Erster => 0,
+            Zettel::Zweiter => 1,
+        }
+    }
+
+    /// Der jeweils andere Zettel. Beim Tabwechsel ist er das Ziel.
+    pub const fn andere(self) -> Self {
+        match self {
+            Zettel::Erster => Zettel::Zweiter,
+            Zettel::Zweiter => Zettel::Erster,
+        }
+    }
+}
+
+/// In welchem Format eine Ablagedatei steht.
+///
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig.** Eine dritte Sorte haelt
+/// den Bau an, und zwar an jeder Stelle, die heute nach dem Format fragt: den
+/// zwei Gegenproben in [`super::Zugang`] und den Rundlaeufen der Proben.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Format {
+    /// TOML, gelesen und geschrieben ueber `serde`.
+    Toml,
+    /// Nackter Text, ohne Kopf und ohne Rahmen.
+    Text,
+}
+
+/// Die sechs Dateien, die KRK unter `Application Support` ablegt.
+///
+/// Eine Aufzaehlung statt sechs loser Namen: wer alle anfassen muss, laeuft
+/// ueber [`Datei::ALLE`] und kann keine vergessen. Eine Ablagedatei, die in
+/// keiner Aufzaehlung steht, gibt es nicht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Datei {
     /// `keymap.toml`: die vollstaendige Belegung des Nutzers.
@@ -53,24 +124,59 @@ pub enum Datei {
     /// beim ersten Start aus der eingebetteten Auslieferungsfassung und bleibt
     /// danach dem Nutzer ueberlassen.
     Einstellungen,
+    /// `note-1.txt` und `note-2.txt`: die zwei Notizzettel aus C5 der Runde 9.
+    ///
+    /// **Eine Variante mit Nutzlast und nicht zwei nebeneinander.** Welcher
+    /// Zettel gemeint ist, sagt [`Zettel`]; damit traegt die Ablageaufzaehlung
+    /// die Zusage "genau zwei Zettel" mit, statt sie ein zweites Mal zu
+    /// behaupten.
+    ///
+    /// Die einzigen beiden, die kein TOML tragen; siehe [`Datei::format`] und
+    /// den Modulkopf.
+    Zettel(Zettel),
 }
 
 impl Datei {
-    /// Alle vier, in fester Reihenfolge.
-    pub const ALLE: [Datei; 4] = [
+    /// Alle sechs, in fester Reihenfolge: die vier TOML-Dateien, danach die
+    /// zwei Zettel.
+    pub const ALLE: [Datei; 6] = [
         Datei::Belegung,
         Datei::Lesezeichen,
         Datei::Sitzung,
         Datei::Einstellungen,
+        Datei::Zettel(Zettel::Erster),
+        Datei::Zettel(Zettel::Zweiter),
     ];
 
     /// Der Dateiname unterhalb des Ablageordners.
+    ///
+    /// Die zwei Zettelnamen folgen der englischsprachigen Kleinschreibung der
+    /// vier bestehenden; der Bindestrich mit Ziffer ist die knappste Form, zwei
+    /// Dateien derselben Art zu unterscheiden.
     pub const fn dateiname(self) -> &'static str {
         match self {
             Datei::Belegung => "keymap.toml",
             Datei::Lesezeichen => "bookmarks.toml",
             Datei::Sitzung => "session.toml",
             Datei::Einstellungen => "settings.toml",
+            Datei::Zettel(Zettel::Erster) => "note-1.txt",
+            Datei::Zettel(Zettel::Zweiter) => "note-2.txt",
+        }
+    }
+
+    /// In welchem Format diese Datei steht.
+    ///
+    /// Die abgeleitete Frage, ueber die sich die beiden Sorten trennen lassen,
+    /// ohne eine zweite Liste neben [`Datei::ALLE`] zu fuehren. Die
+    /// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
+    /// siebte Ablagedatei haelt den Bau hier an und erzwingt eine bewusste
+    /// Einordnung.
+    pub const fn format(self) -> Format {
+        match self {
+            Datei::Belegung | Datei::Lesezeichen | Datei::Sitzung | Datei::Einstellungen => {
+                Format::Toml
+            }
+            Datei::Zettel(_) => Format::Text,
         }
     }
 }
@@ -132,7 +238,7 @@ pub fn gekuerzt_fuer_anzeige(pfad: &Path, benutzerverzeichnis: Option<&Path>) ->
     }
 }
 
-/// Der Ordner, in dem die vier Dateien liegen.
+/// Der Ordner, in dem die sechs Dateien liegen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablageort {
     wurzel: PathBuf,
@@ -169,7 +275,7 @@ impl Ablageort {
         &self.wurzel
     }
 
-    /// Der Pfad einer der vier Dateien.
+    /// Der Pfad einer der sechs Dateien.
     pub fn datei(&self, welche: Datei) -> PathBuf {
         self.wurzel.join(welche.dateiname())
     }

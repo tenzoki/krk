@@ -1,4 +1,13 @@
-//! Die Ablage: vier TOML-Dateien unter `~/Library/Application Support/KRK/`.
+//! Die Ablage: sechs Dateien in zwei Formaten unter
+//! `~/Library/Application Support/KRK/`.
+//!
+//! Vier tragen TOML und gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
+//! die zwei Notizzettel der Runde 9 tragen nackten Text und gehen ueber
+//! [`Zugang::text_laden`] und [`Zugang::text_sichern`]. Welche Datei welches
+//! Format traegt, sagt [`pfade::Datei::format`], und der Kopf von [`pfade`]
+//! sagt, warum die Zettel kein TOML tragen. Die vier Wege stehen nebeneinander
+//! und nicht uebereinander: TOML und Text unterscheiden sich im Lesen, im
+//! Auslieferungszustand und in dem, was eine beschaedigte Datei bedeutet.
 //!
 //! Sechs Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
 //!
@@ -82,6 +91,10 @@
 //!
 //! - **Nur eine beschaedigte Datei wird gesichert.** Von einer, die sich nicht
 //!   lesen liess, gibt es keinen Inhalt, und eine fehlende ist der erste Start.
+//!   Seit der Runde 9 zaehlt "zu gross" mit dazu: eine Zetteldatei ueber
+//!   `text::datei::EDITORGRENZE` wird nicht geladen, ihr Inhalt geht aber
+//!   denselben Weg beiseite. Sie wird dabei aus ihrem offenen Deskriptor
+//!   kopiert und steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher.
 //! - **Der Text wird kopiert und die Datei nicht verschoben.** Ein `rename`
 //!   waere kuerzer und naehme dem Nutzer die Datei unter der Hand weg, an der er
 //!   gerade tippt; siehe den Abschnitt darueber.
@@ -90,8 +103,11 @@
 //! - **Der Weg dorthin ist [`atomar::schreiben`]**, also derselbe wie fuer jede
 //!   andere Datei dieses Moduls. Ein zweiter Schreibweg entsteht nicht.
 //!
-//! Alle vier Dateien gehen durch [`Ablage::laden`] und haben dort keinen
-//! eigenen Zweig; die Regel gilt deshalb fuer alle vier gleich.
+//! Alle vier TOML-Dateien gehen durch [`Zugang::laden`] und haben dort keinen
+//! eigenen Zweig; die Regel gilt deshalb fuer alle vier gleich. Die zwei Zettel
+//! gehen durch [`Zugang::text_laden`], und die vier Regeln gelten dort
+//! unveraendert weiter — [`Zugang::beiseite_legen`] ist dieselbe Funktion und
+//! hat mit dem Zettel ihren zweiten Aufrufer bekommen.
 //!
 //! # Der Kern gibt nichts aus
 //!
@@ -119,19 +135,23 @@ pub mod pfade;
 pub mod sitzung;
 pub mod sperre;
 
+use std::borrow::Cow;
 use std::fmt;
 use std::fs::{self, File};
 use std::io;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use crate::text::datei::{EDITORGRENZE, Textstand, Unlesbarkeit};
+
 pub use einstellungen::Einstellungen;
 pub use lesezeichen::{
     Aenderung, Ausgang, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
 };
-pub use pfade::{Ablageort, Datei};
+pub use pfade::{Ablageort, Datei, Format, Zettel};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber,
     Spaltensichtbarkeit, Tab,
@@ -156,24 +176,50 @@ pub enum Grund {
     /// den drei uebrigen ist eine fehlende Datei der erste Start und keine
     /// Meldung wert.
     NichtAnlegbar(String),
+    /// Die Datei ist groesser als [`EDITORGRENZE`] und wurde deshalb gar nicht
+    /// erst gelesen.
+    ///
+    /// Nur eine Zetteldatei kann ihn tragen: die vier TOML-Dateien schreibt KRK
+    /// selbst, und ihr Leseweg kennt keine Grenze. Der Wert steht neben
+    /// [`Grund::Beschaedigt`] und nicht darin, weil die beiden verschiedene
+    /// Auskuenfte sind — die eine laedt zum Teilen der Datei ein, die andere
+    /// nicht. Dieselbe Unterscheidung trifft `text::datei::Abweisung` fuer den
+    /// Editor.
+    ZuGross {
+        /// Die Groesse in Bytes, wie `fstat(2)` sie vor dem Lesen gemeldet hat.
+        groesse: u64,
+    },
 }
 
 impl Grund {
     /// Der Satzteil, der den Grund benennt.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
+    /// fuenfter Grund haelt den Bau an und erzwingt einen fuenften Satzteil.
     fn beschreibung(&self) -> &'static str {
         match self {
             Grund::NichtLesbar(_) => "ist nicht lesbar",
             Grund::Beschaedigt(_) => "ist beschaedigt",
             Grund::NichtAnlegbar(_) => "liess sich nicht anlegen",
+            Grund::ZuGross { .. } => "ist zu gross",
         }
     }
 
     /// Die Einzelheit, die das System oder der Leser gemeldet hat.
-    pub fn einzelheit(&self) -> &str {
+    ///
+    /// **`Cow` und nicht `&str`, seit [`Grund::ZuGross`] dazugekommen ist.** Er
+    /// traegt eine Zahl und keinen Satz, und der Satz entsteht hier statt beim
+    /// Erzeugen: sonst stuende die Grenze ein zweites Mal im Baum, an der
+    /// Stelle, die den Wert baut. Die vier uebrigen Gruende reichen ihren Text
+    /// weiter und kosten weiterhin keine Kopie.
+    pub fn einzelheit(&self) -> Cow<'_, str> {
         match self {
             Grund::NichtLesbar(text) | Grund::Beschaedigt(text) | Grund::NichtAnlegbar(text) => {
-                text
+                Cow::Borrowed(text)
             }
+            Grund::ZuGross { groesse } => Cow::Owned(format!(
+                "{groesse} Bytes, und die Grenze liegt bei {EDITORGRENZE} Bytes"
+            )),
         }
     }
 }
@@ -418,6 +464,12 @@ impl Zugang<'_> {
     where
         T: DeserializeOwned + Default,
     {
+        debug_assert_eq!(
+            welche.format(),
+            Format::Toml,
+            "{} traegt kein TOML; der Weg dorthin ist text_laden",
+            welche.dateiname()
+        );
         let pfad = self.pfad(welche);
         let text = match fs::read_to_string(&pfad) {
             Ok(text) => text,
@@ -444,7 +496,7 @@ impl Zugang<'_> {
                 ersetzung: None,
             },
             Err(fehler) => {
-                let beiseite = self.beiseite_legen(&pfad, &text);
+                let beiseite = self.beiseite_legen(&pfad, &mut text.as_bytes());
                 Geladen {
                     wert: T::default(),
                     ersetzung: Some(Ersetzung {
@@ -467,12 +519,127 @@ impl Zugang<'_> {
     where
         T: Serialize,
     {
+        debug_assert_eq!(
+            welche.format(),
+            Format::Toml,
+            "{} traegt kein TOML; der Weg dorthin ist text_sichern",
+            welche.dateiname()
+        );
         let text = toml::to_string(wert).map_err(io::Error::other)?;
-        atomar::schreiben(&self.pfad(welche), &text)
+        atomar::schreiben(&self.pfad(welche), &mut text.as_bytes())
     }
 
-    /// Legt den gelesenen Text einer beschaedigten Datei unter festem Namen
+    /// Liest eine der zwei Zetteldateien als nackten Text (C5 der Runde 9).
+    ///
+    /// Scheitert nie, wie [`laden`](Self::laden) auch: es kommt immer ein Text
+    /// heraus, notfalls ein leerer. Der Befund kommt aus
+    /// [`text::datei::lesen`](crate::text::datei::lesen), also aus derselben
+    /// Stelle, die der Editor benutzt; ein dritter Weg an das Dateisystem
+    /// entsteht nicht, und `EDITORGRENZE` steht weiterhin an genau einer
+    /// Stelle.
+    ///
+    /// **Die vier Ausgaenge und ihre Uebersetzung**, vollstaendig und ohne
+    /// Auffangzweig:
+    ///
+    /// ```text
+    ///   Text                     ──> der gelesene Zettel, keine Meldung
+    ///   KeinGueltigesZiel, fehlt ──> leerer Zettel, keine Meldung
+    ///   KeinGueltigesZiel        ──> leerer Zettel, Meldung, nichts beiseite
+    ///   Unlesbar (zu gross)      ──> leerer Zettel, Meldung, beiseitegelegt
+    ///   Unlesbar (kein Text)     ──> leerer Zettel, Meldung, beiseitegelegt
+    /// ```
+    ///
+    /// **Die fehlende Datei ist der erste Start und keine Meldung wert.** Das
+    /// ist dieselbe Regel, die [`laden`](Self::laden) fuer eine fehlende
+    /// TOML-Datei anwendet, und sie steht hier nicht daneben, sondern haengt an
+    /// dem einen Feld `fehlt` des Befundes.
+    ///
+    /// **Beiseitegelegt wird in beiden unlesbaren Faellen, und das ist die
+    /// Antwort des Nutzers vom 260814-0005.** Zeigte der Zettel eine unlesbare
+    /// Datei als leer an, ohne ihren Inhalt zu sichern, schriebe der naechste
+    /// Sicherungsmoment den leeren Stand darueber: ein blosser Blick auf einen
+    /// Zettel vernichtete eine Datei. Der Weg ist
+    /// [`beiseite_legen`](Self::beiseite_legen) und kein daneben gebauter
+    /// zweiter.
+    pub fn text_laden(&self, welche: Datei) -> Geladen<String> {
+        debug_assert_eq!(
+            welche.format(),
+            Format::Text,
+            "{} traegt TOML; der Weg dorthin ist laden",
+            welche.dateiname()
+        );
+        let pfad = self.pfad(welche);
+        match crate::text::datei::lesen(&pfad) {
+            Textstand::Text(text) => Geladen {
+                wert: text,
+                ersetzung: None,
+            },
+            // Die Datei gibt es nicht: der erste Start eines Zettels.
+            Textstand::KeinGueltigesZiel { fehlt: true, .. } => Geladen {
+                wert: String::new(),
+                ersetzung: None,
+            },
+            Textstand::KeinGueltigesZiel {
+                grund,
+                fehlt: false,
+            } => Geladen {
+                wert: String::new(),
+                ersetzung: Some(Ersetzung {
+                    datei: pfad,
+                    grund: Grund::NichtLesbar(einzeilig(&grund)),
+                    // Von einer Datei, die sich nicht oeffnen liess, gibt es
+                    // keinen Inhalt zu sichern.
+                    beiseite: Beiseite::Nicht,
+                }),
+            },
+            Textstand::Unlesbar { mut datei, grund } => {
+                let beiseite = self.beiseite_legen(&pfad, &mut datei);
+                let grund = match grund {
+                    Unlesbarkeit::ZuGross(groesse) => Grund::ZuGross { groesse },
+                    Unlesbarkeit::KeinText => {
+                        Grund::Beschaedigt(String::from("keine gueltige UTF-8-Folge"))
+                    }
+                };
+                Geladen {
+                    wert: String::new(),
+                    ersetzung: Some(Ersetzung {
+                        datei: pfad,
+                        grund,
+                        beiseite,
+                    }),
+                }
+            }
+        }
+    }
+
+    /// Schreibt eine der zwei Zetteldateien, atomar ueber
+    /// [`atomar::schreiben`].
+    ///
+    /// Geschrieben wird der Text des Zettels und sonst nichts: kein TOML, kein
+    /// Kopf, keine Bytefolgenmarke und kein angehaengter Umbruch. Was der
+    /// Nutzer im Zettel stehen hat, steht in der Datei, und was in der Datei
+    /// steht, kommt beim naechsten Oeffnen unveraendert zurueck.
+    pub fn text_sichern(&self, welche: Datei, text: &str) -> io::Result<()> {
+        debug_assert_eq!(
+            welche.format(),
+            Format::Text,
+            "{} traegt TOML; der Weg dorthin ist sichern",
+            welche.dateiname()
+        );
+        atomar::schreiben(&self.pfad(welche), &mut text.as_bytes())
+    }
+
+    /// Legt den Inhalt einer Datei, die KRK nicht versteht, unter festem Namen
     /// daneben.
+    ///
+    /// **Die Quelle ist ein Leser und keine Zeichenkette**, und sie hat mit der
+    /// Runde 9 ihren zweiten Aufrufer bekommen. Die vier TOML-Dateien reichen
+    /// ihren gelesenen Text als `&mut text.as_bytes()` herein; eine Zetteldatei
+    /// reicht ihren **offenen Deskriptor** herein, denn ihre zwei unlesbaren
+    /// Faelle tragen keinen `&str`: eine ungueltige Bytefolge ist definitions-
+    /// gemaess keiner, und eine Datei ueber `EDITORGRENZE` darf zu keinem
+    /// Zeitpunkt vollstaendig im Arbeitsspeicher stehen. Die drei Regeln unten
+    /// gelten fuer beide Aufrufer Wort fuer Wort gleich.
     ///
     /// Die Reihenfolge ist ausgeschrieben, damit sie nicht geraten wird: den
     /// Pfad bilden, fragen, ob dort schon etwas steht, und nur dann schreiben.
@@ -494,7 +661,7 @@ impl Zugang<'_> {
     /// einem [`Zugang`] haengt. Ein `File::create_new` an dieser Stelle waere
     /// der zweite Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
     #[must_use]
-    fn beiseite_legen(&self, datei: &Path, inhalt: &str) -> Beiseite {
+    fn beiseite_legen(&self, datei: &Path, quelle: &mut impl Read) -> Beiseite {
         let pfad = match atomar::beiseitepfad(datei) {
             Ok(pfad) => pfad,
             Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
@@ -504,7 +671,7 @@ impl Zugang<'_> {
             Ok(false) => {}
             Err(fehler) => return Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
         }
-        match atomar::schreiben(&pfad, inhalt) {
+        match atomar::schreiben(&pfad, quelle) {
             Ok(()) => Beiseite::Gesichert(pfad),
             Err(fehler) => Beiseite::Gescheitert(einzeilig(&fehler.to_string())),
         }

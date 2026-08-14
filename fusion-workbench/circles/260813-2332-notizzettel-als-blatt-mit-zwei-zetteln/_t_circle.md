@@ -87,3 +87,5 @@ Mehr als zwei Zettel. Suchen, Ersetzen, Zeilennummern, Syntaxhervorhebung und Te
 - `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` — die sechste Runde hat die Ablage angefasst, in die die zwei Zetteldateien einziehen.
 
 ## Turn log
+
+- Turn 1 (Sitzung 260813-2342): laeuft. Straenge A und B parallel, danach C, D, E, F. Sechzehn Schritte. Coherence-Urteil: offen. Sitzungsprotokoll: circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md

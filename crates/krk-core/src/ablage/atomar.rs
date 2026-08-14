@@ -13,9 +13,27 @@
 //! unveraendert" an einem Prozess pruefen, der wirklich stirbt, statt an einem,
 //! der die Luecke nur nachspielt. [`schreiben`] setzt beide Schritte zusammen
 //! und ist der Weg, den der Alltag geht.
+//!
+//! # Geschrieben wird aus einem Leser und nicht aus einer Zeichenkette
+//!
+//! Bis zur Runde 9 nahmen beide Funktionen `&str`. Die Runde 9 hat den
+//! Notizzettel gebracht, und mit ihm zwei Nutzlasten, die keine Zeichenkette
+//! sind und es nicht werden koennen:
+//!
+//! - **Eine Zetteldatei, die kein gueltiges UTF-8 traegt.** Sie wird
+//!   beiseitegelegt, also Byte fuer Byte kopiert; eine ungueltige Bytefolge ist
+//!   definitionsgemaess kein `&str`, und ein Ersatzzeichen darin waere genau der
+//!   Verlust, den das Beiseitelegen verhindern soll.
+//! - **Eine Zetteldatei ueber `text::datei::EDITORGRENZE`.** Sie darf zu keinem
+//!   Zeitpunkt vollstaendig im Arbeitsspeicher stehen; aus einem Leser flieszt
+//!   sie ueber [`io::copy`] in Stuecken auf die Platte.
+//!
+//! Wer eine Zeichenkette hat, uebergibt `&mut text.as_bytes()`; `&[u8]` ist
+//! selbst ein Leser. Eine zweite Schreibfunktion neben dieser waere der zweite
+//! Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
 
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 /// Die Endung, die die Nachbardatei vom Ziel unterscheidet.
@@ -129,10 +147,13 @@ impl Drop for Nachbardatei {
 /// Nach der Rueckkehr stehen die Daten auf der Platte, das Ziel ist noch alt.
 /// `sync_all` sorgt dafuer, dass das Umbenennen nicht einen Namen auf einen
 /// noch nicht geschriebenen Inhalt setzt.
-pub fn vorbereiten(ziel: &Path, inhalt: &str) -> io::Result<Nachbardatei> {
+///
+/// Die Quelle wird bis zu ihrem Ende gelesen. Warum ein Leser und keine
+/// Zeichenkette, steht im Modulkopf.
+pub fn vorbereiten(ziel: &Path, quelle: &mut impl Read) -> io::Result<Nachbardatei> {
     let nachbar = nachbarpfad(ziel)?;
     let mut datei = fs::File::create(&nachbar)?;
-    datei.write_all(inhalt.as_bytes())?;
+    io::copy(quelle, &mut datei)?;
     datei.sync_all()?;
     drop(datei);
     Ok(Nachbardatei {
@@ -143,6 +164,6 @@ pub fn vorbereiten(ziel: &Path, inhalt: &str) -> io::Result<Nachbardatei> {
 }
 
 /// Schreibt den Inhalt atomar auf das Ziel.
-pub fn schreiben(ziel: &Path, inhalt: &str) -> io::Result<()> {
-    vorbereiten(ziel, inhalt)?.umbenennen()
+pub fn schreiben(ziel: &Path, quelle: &mut impl Read) -> io::Result<()> {
+    vorbereiten(ziel, quelle)?.umbenennen()
 }

@@ -181,7 +181,7 @@ fn anlegen_falls_fehlt(zugang: &Zugang<'_>) -> io::Result<()> {
     if pfad.try_exists()? {
         return Ok(());
     }
-    atomar::schreiben(&pfad, AUSLIEFERUNGSTEXT)
+    atomar::schreiben(&pfad, &mut AUSLIEFERUNGSTEXT.as_bytes())
 }
 
 #[cfg(test)]

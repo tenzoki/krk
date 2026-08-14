@@ -453,7 +453,8 @@ pub fn ausgeben(belegung: &Belegung) -> Ausgang {
 /// Pruefbarkeit.
 fn in_ordner_schreiben(belegung: &Belegung, zielordner: &Path) -> Ausgang {
     let ziel = zielordner.join(DATEINAME);
-    match atomar::schreiben(&ziel, &markdown(belegung)) {
+    let text = markdown(belegung);
+    match atomar::schreiben(&ziel, &mut text.as_bytes()) {
         Ok(()) => Ausgang::Geschrieben(ziel),
         // Am Rueckgabewert unterschieden und nicht an einer Vorabpruefung,
         // siehe den Modulkopf. `io::ErrorKind` ist `#[non_exhaustive]` und

@@ -199,7 +199,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang A — Ablage: zwei Zetteldateien, ein Leseweg, ein Schreibweg
 
-1. **`text::datei` liefert den einen Befund über eine Textdatei**
+1. [DONE] **`text::datei` liefert den einen Befund über eine Textdatei**
    - Executor: `coder`
    - Files: `crates/krk-core/src/text/datei.rs`
    - Changes: Neu `pub enum Textstand { Text(String), Unlesbar { datei: File, grund: Unlesbarkeit }, KeinGueltigesZiel(String) }` und `pub enum Unlesbarkeit { ZuGross(u64), KeinText }`, beide vollständig und ohne Auffangzweig. Neu `pub fn lesen(pfad: &Path) -> Textstand` mit dem heutigen Rumpf von `oeffnen`: `sys::ohne_warten_oeffnen`, `metadata()` am offenen Deskriptor, Typprüfung, `EDITORGRENZE`, `read_to_end` mit `take(EDITORGRENZE + 1)`, `einlesen`. Vor jeder Rückkehr mit `Unlesbar` wird der Deskriptor über `Seek::rewind` an den Anfang gestellt — im Fall „zwischen `fstat` und `read` gewachsen" ist er sonst nicht dort, und der Aufrufer kopiert dann einen Rumpf. `oeffnen(pfad) -> Result<String, Abweisung>` bleibt in Signatur und Rückgabewerten Zeichen für Zeichen, was es heute ist, und wird zur Übersetzung des Befundes in `Abweisung`. `EDITORGRENZE` bleibt an genau einer Stelle stehen.
@@ -207,7 +207,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: C5 — „Der Zettel öffnet seine Datei über dieselbe Hülle `ohne_warten_oeffnen`, die Editor und Vorschau benutzen, und prüft Art und Größe am offenen Deskriptor. Ein dritter Weg an das Dateisystem entsteht nicht." Dazu C5 — „`EDITORGRENZE` steht weiterhin an genau einer Stelle."
    - Prüfung: Die bestehenden Proben zu `oeffnen` in `crates/krk-core/tests/` bleiben unverändert grün; eine neue Probe fährt `lesen` gegen alle vier Ausgänge und prüft im `Unlesbar`-Fall, dass der Deskriptor am Anfang steht.
 
-2. **`atomar` schreibt aus einem Leser statt aus einer Zeichenkette**
+2. [DONE] **`atomar` schreibt aus einem Leser statt aus einer Zeichenkette**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/atomar.rs`, `crates/krk-core/src/ablage/mod.rs`, `crates/krk-core/src/ablage/einstellungen.rs`, `crates/krk-core/src/text/datei.rs`, `crates/krk-ui/src/belegungsausgabe.rs`, `crates/krk-core/tests/ablage.rs`
    - Changes: `vorbereiten(ziel: &Path, quelle: &mut impl Read)` und `schreiben(ziel: &Path, quelle: &mut impl Read)`; der Rumpf ersetzt `write_all(inhalt.as_bytes())` durch `io::copy(quelle, &mut datei)`, `sync_all` und das zweistufige Umbenennen bleiben unangetastet. Die fünf bestehenden Aufrufstellen schreiben `&mut text.as_bytes()`. Der Modulkopf bekommt einen Absatz: warum ein Leser und keine Zeichenkette — eine beiseitezulegende Datei trägt Bytes, die definitionsgemäß kein `&str` sind, und eine Datei über der Grenze darf nicht in den Speicher.
@@ -215,7 +215,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: C4 — „Das Schreiben läuft über `atomar::schreiben` und unter dem `Schreibgriff`, wie jedes andere Schreiben im Ablageordner. Ein zweiter Schreibweg entsteht nicht."
    - Prüfung: `crates/krk-core/tests/baum.rs::nur_benannte_dateien_erreichen_das_atomare_schreiben` bleibt bei denselben fünf Dateien; die Liste wird nicht angefasst.
 
-3. **`pfade` führt die zwei Zettel, und ein `Format` trennt TOML von Text**
+3. [DONE] **`pfade` führt die zwei Zettel, und ein `Format` trennt TOML von Text**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/pfade.rs`
    - Changes: Neu `pub enum Zettel { Erster, Zweiter }` mit `ALLE: [Zettel; 2]`, `index()`, `andere()`, abgeleitet `Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize` und `#[serde(rename_all = "lowercase")]` — Bauform und Begründung wörtlich nach `Fensterseite`. `Datei` bekommt die Variante `Zettel(Zettel)`; `Datei::ALLE` wird `[Datei; 6]` mit den zwei Zetteln am Ende; `dateiname()` liefert `note-1.txt` und `note-2.txt`. Neu `pub enum Format { Toml, Text }` und `pub const fn Datei::format(self) -> Format`, vollständig ohne Auffangzweig. Der Modulkopf sagt „sechs Dateien in zwei Formaten" statt „vier Dateien" und schreibt aus, warum die Zettel kein TOML tragen: eine Datei je Zettel ist nur dann eine Verbesserung gegenüber einer gemeinsamen, wenn sie für sich lesbar ist.
@@ -223,14 +223,14 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: C5 — „Der Ablageordner führt nach dieser Runde sechs Dateien … Die Namen der zwei neuen folgen der englischsprachigen Form der vier bestehenden." Und: „Die Aufzählung der Ablagedateien führt die zwei neuen mit." C2 — „Das Blatt führt genau zwei Zettel. Eine dritte Wahl gibt es an keiner Stelle."
    - Hinweis für den Ausführer: Die Namen `note-1.txt` und `note-2.txt` sind die Wahl des Planers und am Gate änderbar. Die vier bestehenden Namen sind einwortig und kleingeschrieben; ein Bindestrich mit Ziffer ist die knappste Form, zwei Dateien derselben Art zu unterscheiden.
 
-4. **`Zugang` bekommt den Textweg, und `beiseite_legen` seinen zweiten Aufrufer**
+4. [DONE] **`Zugang` bekommt den Textweg, und `beiseite_legen` seinen zweiten Aufrufer**
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/mod.rs`
    - Changes: `beiseite_legen(&self, datei: &Path, quelle: &mut impl Read) -> Beiseite` — die Signatur weitet sich, die drei Regeln bleiben Wort für Wort stehen (kopieren statt verschieben, eine dastehende Sicherung bleibt unangetastet, der Weg ist `atomar::schreiben`). `Zugang::laden` ruft sie mit `&mut text.as_bytes()`. `Grund` bekommt die vierte Variante `ZuGross { groesse: u64 }`; `beschreibung()` und `einzelheit()` sind vollständige Fallunterscheidungen und halten den Bau an, bis beide sie nennen. Neu `pub fn Zugang::text_laden(&self, welche: Datei) -> Geladen<String>`: es prüft `welche.format() == Format::Text`, ruft `crate::text::datei::lesen` und übersetzt die vier Ausgänge nach dem Bild oben. Neu `pub fn Zugang::text_sichern(&self, welche: Datei, text: &str) -> io::Result<()>` über `atomar::schreiben`. `laden` und `sichern` bekommen die Gegenprobe `Format::Toml`; beide Prüfungen stehen als `debug_assert!`, damit eine Fehlverdrahtung im Prüfbau laut wird, statt TOML in einen Zettel zu schreiben. Der Modulkopf zieht nach: sechs Dateien, zwei Formate, und die Beiseiteregel gilt jetzt auch für „zu groß".
    - Dependencies: 1, 2, 3
    - Abnahmekriterium: C5 — „Das Beiseitelegen läuft über `Zugang::beiseite_legen` und über keinen daneben gebauten zweiten Weg. Die Funktion bekommt damit ihren zweiten Aufrufer." Und: „Der Nutzer erfährt vom Beiseitelegen über denselben Meldeweg, den `Ersetzung` heute für `keymap.toml` und `settings.toml` geht." C4 — „Eine gescheiterte Sicherung wirft den Stand nicht weg und meldet den Grund."
 
-5. **Die Proben der Ablage folgen der Trennung nach Format**
+5. [DONE] **Die Proben der Ablage folgen der Trennung nach Format**
    - Executor: `coder`
    - Files: `crates/krk-core/tests/ablage.rs`, `crates/krk-core/tests/baum.rs`
    - Changes: Die vier TOML-Rundläufe (`ablage.rs:382`, `:893`, `:1030`, `:1034`) laufen über `Datei::ALLE.into_iter().filter(|d| d.format() == Format::Toml)`; `vier_ersetzungen` heißt danach, was es tut. Die drei Fragen nach Pfad, Name und Nichtanlage (`:216`, `:306`, `:1073`) bleiben auf `Datei::ALLE` und decken damit die zwei Zettel mit; die erwartete Namensliste an `:216` wächst um zwei. Neue Proben für den Zettel: fehlende Datei ergibt leeren Zettel ohne Meldung; ungültige UTF-8-Folge ergibt leeren Zettel, eine Sicherung unter dem Beiseitepfad und eine Meldung, die sie nennt; eine zweite ungültige Fassung lässt die erste Sicherung unangetastet; eine Datei über `EDITORGRENZE` wird nicht geladen und geht denselben Weg; ein Rundlauf schreibt Text und liest ihn unverändert zurück. Der Kommentar in `baum.rs` sagt „vier Schreiber hinter einem `Zugang`" statt „drei"; die Liste der fünf Dateien bleibt.
@@ -239,7 +239,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
 
 ### Strang B — Der Befehl: zwei Wege, eine Zeile, ein Menüeintrag
 
-6. **Die Auslieferungsbelegung führt den Notizzettel**
+6. [DONE] **Die Auslieferungsbelegung führt den Notizzettel**
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes: Ein `[[funktion]]`-Block mit `id = "notizzettel"`, `name = "Notizzettel anzeigen"`, `tasten = ["f2", "cmd+k"]`, mit einem Kommentar, der die zwei Wege begründet (Norton-Reihe, Nutzerentscheid vom 260802-1409: zwei Wege ab Werk auf dieselbe Funktion, eine Zeile in der Belegungsansicht). Der Block steht im Abschnitt der Anwendung, zwischen `belegung_ansehen` und `weitere_instanz` — die Reihenfolge der Blöcke ist die Reihenfolge im Menü, und der Dateikopf sagt es selbst. Die Zeile „Ausgeliefert sind 82 Funktionen mit zusammen 88 Kombinationen" wird auf 83 und 90 nachgezogen.
@@ -247,7 +247,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: C1 — „`resources/default-keymap.toml` führt eine Funktion für den Notizzettel mit den beiden Kombinationen `f2` und `cmd+k` in einer Zeile. Eine zweite Funktion daneben entsteht nicht." Und: „Keine der 82 bestehenden Funktionen verliert eine Kombination, und keine Kombination steht danach zweimal."
    - Hinweis für den Ausführer: Vor dem Eintrag noch einmal prüfen, ob `f2` und `cmd+k` frei sind — am 260814-0656 waren sie es, belegt ist allein `shift+cmd+k`. Die Probe `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` fällt sonst, und sie meint dann den Dateikopf und nicht sich selbst. Nach diesem Schritt allein ist der Baum grün: eine Funktion ohne Kommando ist ein zulässiger Zwischenstand, den der Dateikopf ausdrücklich kennt.
 
-7. **`Kommando::Notizzettel` und die zwei vollständigen Fallunterscheidungen**
+7. [DONE] **`Kommando::Notizzettel` und die zwei vollständigen Fallunterscheidungen**
    - Executor: `coder`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`
    - Changes: Neue Variante `Kommando::Notizzettel`; `KENNUNGEN` wächst von 76 auf 77 Paare mit `(Kommando::Notizzettel, "notizzettel")`; `Kommando::wirkungsbereich` ordnet sie zu `Wirkungsbereich::Ueberall` im Zweig „das Fenster als ganzes", mit einem Kommentar, der den Grund nennt: der Zettel öffnet aus jedem der fünf Bereiche, und ein Wirkungsbereich, der einen davon verlangte, schnitte die anderen vier ab. `bereich_des_kommandos` ordnet sie zu `Funktionsbereich::Anwendung`, neben `BelegungAnsehen`, `Beenden` und `WeitereInstanz`; der Kommentar sagt, warum kein eigener Funktionsbereich entsteht — er ergäbe ein Obermenü mit einem einzigen Eintrag.
@@ -255,7 +255,7 @@ Jeder Schritt endet grün: `make check` fährt Bau, Proben, `clippy` und `fmt` i
    - Abnahmekriterium: C1 — „Der Befehl trägt einen Wirkungsbereich, unter dem er aus jedem der fünf Fokuswerte wirkt." „Die Belegungsansicht führt genau eine Zeile für den Notizzettel, und in ihr stehen beide Kombinationen." „Die Markdown-Ausgabe der Tastenbelegung führt dieselbe eine Zeile." „Die Menüleiste trägt einen Eintrag für den Notizzettel, und er entsteht ohne eine neue Zeile im Menübauer."
    - Prüfung: `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` deckt Kennung und Rückweg ab. Weder `belegungsansicht.rs` noch `belegungsausgabe.rs` noch `menuemodell.rs` werden angefasst; dass die drei Flächen die Zeile trotzdem führen, ist die Zusage dieses Schrittes.
 
-8. **Proben: die Zulässigkeitsregel bleibt, wie sie ist**
+8. [DONE] **Proben: die Zulässigkeitsregel bleibt, wie sie ist**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/kommandos/operationen.rs`
    - Changes: In `zulaessigkeit.rs` unter `mod tests` zwei Proben neben der Falltafel: `zulaessig(Kommando::Notizzettel, …)` liefert `false`, sobald ein Blatt steht, und `zulaessig(Kommando::Abbrechen, …)` liefert `false`, sobald ein Blatt steht **und** der Ersthelfer AppKit gehört — die zweite ist die Herleitung, aus der `Esc` den Zettel überhaupt schließt, und sie steht heute schon als `im_textfeld_eines_blattes_ist_auch_der_abbruch_abgewiesen` da; sie bekommt einen Verweis auf den Zettel in ihrem Doc-Kommentar. Eine Probe hält fest, dass `immer_erreichbar` nach dieser Runde dieselben drei Befehle führt. In `operationen.rs` eine Probe, dass `waehrend_blatt_erlaubt` genau `Abbrechen` nennt und den Notizzettelbefehl ausdrücklich **nicht**.

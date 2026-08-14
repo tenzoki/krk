@@ -45,11 +45,13 @@
 //! Gigabyte. Jede der Proben sagt in ihrem Kopf, welchen Teil sie haelt.
 
 use std::fs;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
+use krk_core::text::datei::{Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
@@ -1013,4 +1015,95 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
 
     assert_eq!(ueber_oeffnen, ueber_einlesen);
     assert_eq!(ueber_oeffnen, "erste\nzweite\ndritte ohne Umbruch");
+}
+
+/// Der eine Befund geht ueber alle vier Ausgaenge, und der unlesbare traegt
+/// seinen Deskriptor zurueckgespult.
+///
+/// **Der Befund ist die Stelle, an der `oeffnen` und der Notizzettel sich
+/// treffen** (Runde 9). Der Editor uebersetzt ihn in eine [`Abweisung`] und
+/// wirft die Bytes weg; `ablage::Zugang::text_laden` legt sie beiseite. Was
+/// dieser zweite Aufrufer braucht und die `Abweisung` nicht traegt, ist der
+/// offene Deskriptor — und zwar am Anfang.
+///
+/// **Zurueckgespult wird auch dort, wo es nicht noetig scheint.** Der Fall "zu
+/// gross" kehrt in `lesen` zurueck, bevor gelesen wird, und stuende ohnehin am
+/// Anfang; der Fall "kein Text" steht hinter einem `read_to_end` und stuende es
+/// nicht. Die Probe fragt beide, weil eine Regel, die nur an einer Stelle gilt,
+/// beim naechsten Umbau an der anderen vergessen wird.
+///
+/// Der fuenfte Ausgang, den es nicht gibt: eine fehlende Datei ist kein eigener
+/// Wert, sondern das Feld `fehlt` an `KeinGueltigesZiel`. Die Probe haelt beide
+/// Haelften fest, denn allein daran haengt die Zusage, dass ein fehlender
+/// Zettel keine Meldung nach sich zieht.
+#[test]
+fn der_befund_deckt_alle_vier_ausgaenge_und_spult_zurueck() {
+    let ordner = Pruefordner::neu("befund");
+
+    // 1. Gueltiges UTF-8 unter der Grenze.
+    let text = ordner.datei("zettel.txt", b"erste\nzweite");
+    match datei::lesen(&text) {
+        Textstand::Text(stand) => assert_eq!(stand, "erste\nzweite"),
+        anderes => panic!("die Textdatei kam als {anderes:?} zurueck"),
+    }
+
+    // 2. Kein gueltiges UTF-8. Der Deskriptor steht am Anfang, obwohl vorher
+    //    gelesen wurde, und liefert die Bytes vollstaendig ein zweites Mal.
+    let roh: &[u8] = b"noch lesbar\n\xff\xfe und ab hier nicht mehr";
+    let binaer = ordner.datei("bild.png", roh);
+    match datei::lesen(&binaer) {
+        Textstand::Unlesbar {
+            mut datei,
+            grund: Unlesbarkeit::KeinText,
+        } => {
+            assert_eq!(
+                datei.stream_position().expect("keine Stelle"),
+                0,
+                "der Deskriptor steht nicht am Anfang"
+            );
+            let mut bytes = Vec::new();
+            datei.read_to_end(&mut bytes).expect("lesen gescheitert");
+            assert_eq!(bytes, roh, "aus dem Deskriptor kam ein Rumpf");
+        }
+        anderes => panic!("die Binaerdatei kam als {anderes:?} zurueck"),
+    }
+
+    // 3. Ueber der Grenze. Gelesen wird sie nicht, zurueckgespult trotzdem.
+    let gross = ordner.luecke("zu-gross.log", datei::EDITORGRENZE + 1);
+    match datei::lesen(&gross) {
+        Textstand::Unlesbar {
+            mut datei,
+            grund: Unlesbarkeit::ZuGross(groesse),
+        } => {
+            assert_eq!(groesse, datei::EDITORGRENZE + 1);
+            assert_eq!(
+                datei.stream_position().expect("keine Stelle"),
+                0,
+                "der Deskriptor steht nicht am Anfang"
+            );
+            assert_eq!(
+                datei.seek(SeekFrom::End(0)).expect("kein Ende"),
+                datei::EDITORGRENZE + 1,
+                "der Deskriptor zeigt nicht auf die ganze Datei"
+            );
+        }
+        anderes => panic!("die zu grosse Datei kam als {anderes:?} zurueck"),
+    }
+
+    // 4. Kein gueltiges Ziel, in beiden Haelften: ein Ordner steht da, eine
+    //    fehlende Datei steht nicht da.
+    let unterordner = ordner.ordner("ein-ordner");
+    match datei::lesen(&unterordner) {
+        Textstand::KeinGueltigesZiel { grund, fehlt } => {
+            assert!(!fehlt, "ein Ordner gilt als fehlend");
+            assert!(!grund.is_empty(), "der Grund ist leer");
+        }
+        anderes => panic!("der Ordner kam als {anderes:?} zurueck"),
+    }
+    match datei::lesen(&ordner.unter("gibt-es-nicht.txt")) {
+        Textstand::KeinGueltigesZiel { fehlt, .. } => {
+            assert!(fehlt, "die fehlende Datei gilt nicht als fehlend");
+        }
+        anderes => panic!("die fehlende Datei kam als {anderes:?} zurueck"),
+    }
 }

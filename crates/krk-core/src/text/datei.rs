@@ -4,7 +4,9 @@
 //! ```text
 //!  ein Pfad
 //!     │
-//!     └──> oeffnen ──> Abweisung (kein gueltiges Ziel, zu gross, kein Text)
+//!     └──> lesen ──> Textstand ──> oeffnen ──> Abweisung (kein gueltiges
+//!            │           │                       Ziel, zu gross, kein Text)
+//!            │           └───────> Zugang::text_laden ──> der Notizzettel
 //!            │
 //!            │  die Bytes, und zwar erst nach der Groessenpruefung
 //!            v
@@ -110,13 +112,21 @@
 //!
 //! # Der eine Weg von einem Pfad zu einem Stand
 //!
-//! **[`oeffnen`] ist die einzige Stelle im Programm, die eine Datei fuer den
-//! Editor liest.** Beide Einstiege aus C2, F4 und das Menue, rufen sie, und der
-//! Sprung auf eine Textmarke aus C6 ruft sie ebenfalls. Genau das meint C2 mit
-//! "beide Einstiege legen dieselbe Pruefung an"; ein zweiter Leseweg daneben
-//! waere die zweite Wahrheit darueber, welche Datei der Editor annimmt, und die
-//! erste Abweichung zwischen beiden faende keine Pruefung. Es ist derselbe
-//! Zuschnitt, den `krk-ui`s `kommandos::pfadeingabe` fuer den Pfad zieht.
+//! **[`lesen`] ist die einzige Stelle im Programm, die einen Pfad daraufhin
+//! ansieht, ob eine Textdatei dahintersteht.** Beide Einstiege des Editors aus
+//! C2, F4 und das Menue, kommen ueber [`oeffnen`] dort an, der Sprung auf eine
+//! Textmarke aus C6 ebenfalls, und seit der Runde 9 auch der Notizzettel ueber
+//! `ablage::Zugang::text_laden`. Genau das meint C2 mit "beide Einstiege legen
+//! dieselbe Pruefung an"; ein zweiter Leseweg daneben waere die zweite Wahrheit
+//! darueber, welche Datei KRK als Text annimmt, und die erste Abweichung
+//! zwischen beiden faende keine Pruefung. Es ist derselbe Zuschnitt, den
+//! `krk-ui`s `kommandos::pfadeingabe` fuer den Pfad zieht.
+//!
+//! **Die zwei Aufrufer uebersetzen denselben Befund verschieden, und das ist
+//! der Grund fuer die Trennung.** Der Editor weist ab und wirft die Bytes weg;
+//! der Notizzettel legt sie beiseite und arbeitet mit einem leeren Zettel
+//! weiter. [`Textstand::Unlesbar`] traegt den offenen Deskriptor deshalb mit,
+//! und [`Abweisung`] tut es nicht.
 //!
 //! [`einlesen`] nimmt weiterhin Bytes und keinen Pfad. Die Unwucht gegenueber
 //! [`sichern`] ist Absicht und jetzt erst recht: die Groessenpruefung laeuft
@@ -125,8 +135,9 @@
 //! Wer die Bytes schon hat, hat die Grenze schon ueberschritten.
 
 use std::borrow::Cow;
+use std::fs::File;
 use std::io;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
 
 /// Die Bytefolgenmarke, wie `String::from_utf8` sie liefert: ein Zeichen am
@@ -247,11 +258,79 @@ impl Abweisung {
     }
 }
 
+/// Warum eine Datei nicht als Text angenommen wird, samt der Angabe, die dazu
+/// gehoert.
+///
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig.** Sie sind dieselbe
+/// Unterscheidung, die [`Abweisung`] fuer den Editor trifft — "zu gross" laedt
+/// zum Teilen der Datei ein, "kein Text" nicht —, und sie steht hier ein
+/// zweites Mal, weil [`lesen`] den Befund erhebt und die Uebersetzung in eine
+/// Meldung nicht mehr kennt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Unlesbarkeit {
+    /// Ueber [`EDITORGRENZE`], also gar nicht erst gelesen. Traegt die Groesse
+    /// in Bytes, wie sie zum Zeitpunkt der Feststellung galt.
+    ZuGross(u64),
+    /// Gelesen, aber kein gueltiges UTF-8.
+    KeinText,
+}
+
+/// Was hinter einem Pfad steht, gemessen an dem, was KRK als Textdatei annimmt.
+///
+/// **Der eine Befund, und zwei Uebersetzungen leben davon.** Der Editor macht
+/// daraus eine [`Abweisung`] ([`oeffnen`]), der Notizzettel einen leeren Zettel
+/// samt beiseitegelegtem Inhalt (`ablage::Zugang::text_laden`). Vor der Runde 9
+/// stand die Pruefung allein in [`oeffnen`] und warf dabei genau das weg, was
+/// das Beiseitelegen braucht: die Bytes und den offenen Deskriptor. Ein zweiter
+/// Leser daneben waere die zweite Wahrheit darueber, was eine Textdatei ist.
+///
+/// **Drei Werte und vier Ausgaenge**, ueberschneidungsfrei und vollstaendig;
+/// beide Uebersetzungen halten den Bau an, wenn ein fuenfter dazukommt.
+///
+/// Kein `PartialEq` und kein `Clone`: [`Textstand::Unlesbar`] haelt einen
+/// offenen Deskriptor, und der ist weder vergleichbar noch beliebig
+/// vervielfaeltigbar.
+#[derive(Debug)]
+pub enum Textstand {
+    /// Gueltiges UTF-8 unter der Grenze, schon in der gehaltenen Form.
+    Text(String),
+    /// Eine gewoehnliche Datei, die KRK nicht als Text annimmt.
+    ///
+    /// **Der Deskriptor steht am Anfang**, und das ist die Zusage, von der der
+    /// Aufrufer lebt: er kopiert den Inhalt weiter, ohne den Pfad ein zweites
+    /// Mal aufzuloesen. Wer hier einen Wert erzeugt, stellt ihn zurueck; siehe
+    /// [`lesen`].
+    Unlesbar {
+        /// Die offene Datei, zurueckgespult.
+        datei: File,
+        /// Woran es lag.
+        grund: Unlesbarkeit,
+    },
+    /// Nichts, was ein Texteditor oeffnen koennte: ein Ordner, ein fehlender
+    /// Pfad, ein fehlendes Leserecht, alles, was keine gewoehnliche Datei ist.
+    KeinGueltigesZiel {
+        /// Woran es lag, in einem Satzteil: der Systemfehler oder die Art.
+        grund: String,
+        /// Ob der Pfad schlicht nichts benennt.
+        ///
+        /// **Ein Feld und kein fuenfter Ausgang**, und der Unterschied ist
+        /// tragend. Fuer den Editor ist eine fehlende Datei dasselbe wie ein
+        /// Ordner: beide werden abgewiesen, mit demselben Wert und demselben
+        /// Satz. Der Notizzettel trennt sie, weil eine fehlende Zetteldatei der
+        /// erste Start ist und keine Meldung wert — dieselbe Regel, die
+        /// `ablage::Zugang::laden` fuer eine fehlende TOML-Datei anwendet. Ein
+        /// eigener Wert daneben machte aus vier Ausgaengen fuenf und zwaenge
+        /// den Editor zu einer Unterscheidung, die er nicht trifft.
+        fehlt: bool,
+    },
+}
+
 /// Die **eine** Groessen- und Typpruefung vor dem Oeffnen (C2, C6).
 ///
-/// Liefert den fertigen Stand des Editors oder einen benannten Grund, aus dem
-/// nichts geoeffnet wird. Warum es nur diese eine Stelle gibt, steht im
-/// Modulkopf.
+/// Liefert den [`Textstand`] hinter einem Pfad: den fertigen Stand, oder einen
+/// benannten Grund, aus dem nichts geoeffnet wird. Warum es nur diese eine
+/// Stelle gibt, steht im Modulkopf; wer eine [`Abweisung`] und keinen Befund
+/// braucht, nimmt [`oeffnen`].
 ///
 /// # Die Reihenfolge ist bindend
 ///
@@ -313,39 +392,60 @@ impl Abweisung {
 ///   und beurteilt es richtig. Das ist keine Luecke, sondern die Grenze jeder
 ///   Schnittstelle, die einen Namen annimmt: wer eine bestimmte Datei meint, muss
 ///   einen Deskriptor uebergeben und keinen Pfad.
-pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
-    let kein_ziel = |grund: String| Abweisung::KeinGueltigesZiel {
-        pfad: pfad.to_path_buf(),
-        grund,
+///
+/// # Ein unlesbarer Befund traegt seinen Deskriptor zurueckgespult
+///
+/// [`Textstand::Unlesbar`] reicht die offene Datei weiter, damit der Aufrufer
+/// den Inhalt beiseitelegen kann, ohne den Pfad ein zweites Mal aufzuloesen.
+/// **Zurueckgespult wird vor jeder solchen Rueckkehr und nicht nur dort, wo es
+/// noetig scheint**: im Fall "zwischen `fstat` und `read` gewachsen" sind
+/// bereits [`EDITORGRENZE`] `+ 1` Bytes gelesen, und der Aufrufer kopierte
+/// sonst einen Rumpf.
+///
+/// Scheitert das Zurueckspulen, kommt kein `Unlesbar` zurueck, sondern
+/// [`Textstand::KeinGueltigesZiel`] mit der Meldung des Systems. Ein Deskriptor
+/// an unbekannter Stelle ist schlimmer als eine Meldung: er ergaebe eine
+/// abgeschnittene Sicherung, die aussieht wie eine vollstaendige. Auf einer
+/// gewoehnlichen Datei — und eine andere kommt bis hierher nicht — ist der Fall
+/// nicht zu erreichen.
+pub fn lesen(pfad: &Path) -> Textstand {
+    let kein_ziel = |grund: String, fehlt: bool| Textstand::KeinGueltigesZiel { grund, fehlt };
+
+    let mut datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
+        Ok(datei) => datei,
+        Err(fehler) => {
+            let fehlt = fehler.kind() == io::ErrorKind::NotFound;
+            return kein_ziel(fehler.to_string(), fehlt);
+        }
+    };
+    let angaben = match datei.metadata() {
+        Ok(angaben) => angaben,
+        Err(fehler) => return kein_ziel(fehler.to_string(), false),
     };
 
-    let mut datei = crate::verzeichnis::sys::ohne_warten_oeffnen(pfad)
-        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
-    let angaben = datei
-        .metadata()
-        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
-
     if !angaben.is_file() {
-        return Err(kein_ziel(String::from(if angaben.is_dir() {
-            "ein Ordner hat keinen Text, den der Editor zeigen könnte"
-        } else {
-            "das ist keine gewöhnliche Datei"
-        })));
+        return kein_ziel(
+            String::from(if angaben.is_dir() {
+                "ein Ordner hat keinen Text, den der Editor zeigen könnte"
+            } else {
+                "das ist keine gewöhnliche Datei"
+            }),
+            false,
+        );
     }
 
     if angaben.len() > EDITORGRENZE {
-        return Err(Abweisung::ZuGross {
-            pfad: pfad.to_path_buf(),
-            groesse: angaben.len(),
-        });
+        return unlesbar(datei, Unlesbarkeit::ZuGross(angaben.len()));
     }
 
     let mut bytes = Vec::with_capacity(angaben.len() as usize);
-    datei
+    if let Err(fehler) = datei
         .by_ref()
         .take(EDITORGRENZE + 1)
         .read_to_end(&mut bytes)
-        .map_err(|fehler| kein_ziel(fehler.to_string()))?;
+    {
+        return kein_ziel(fehler.to_string(), false);
+    }
     if bytes.len() as u64 > EDITORGRENZE {
         // Die Datei ist zwischen `fstat` und `read` gewachsen. Gemeldet wird die
         // Groesse von jetzt und nicht die von vorhin, denn die alte war nie
@@ -355,15 +455,66 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
             .metadata()
             .map(|angaben| angaben.len())
             .unwrap_or(bytes.len() as u64);
-        return Err(Abweisung::ZuGross {
-            pfad: pfad.to_path_buf(),
-            groesse,
-        });
+        return unlesbar(datei, Unlesbarkeit::ZuGross(groesse));
     }
 
-    einlesen(bytes).ok_or(Abweisung::NichtAlsTextLesbar {
-        pfad: pfad.to_path_buf(),
-    })
+    match einlesen(bytes) {
+        Some(text) => Textstand::Text(text),
+        None => unlesbar(datei, Unlesbarkeit::KeinText),
+    }
+}
+
+/// Der Befund, der einen zurueckgespulten Deskriptor mitgibt.
+///
+/// Die **eine** Stelle, an der [`Textstand::Unlesbar`] entsteht; ein zweiter
+/// Bauplatz daneben koennte das Zurueckspulen vergessen. Warum ueberhaupt
+/// zurueckgespult wird und was ein Scheitern bedeutet, steht an [`lesen`].
+fn unlesbar(mut datei: File, grund: Unlesbarkeit) -> Textstand {
+    match datei.rewind() {
+        Ok(()) => Textstand::Unlesbar { datei, grund },
+        Err(fehler) => Textstand::KeinGueltigesZiel {
+            grund: fehler.to_string(),
+            fehlt: false,
+        },
+    }
+}
+
+/// Die Uebersetzung des Befundes in die Sprache des Editors (C2, C6).
+///
+/// Signatur und Rueckgabewerte sind unveraendert das, was sie vor der Runde 9
+/// waren; der Editor sieht von der Zerlegung in [`lesen`] nichts. Die
+/// Reihenfolge der Pruefungen, die Schranke gegen eine wachsende Datei und die
+/// Begruendung, warum am Deskriptor geprueft wird und nicht am Pfad, stehen
+/// jetzt an [`lesen`] und werden hier nicht wiederholt.
+///
+/// **Der Deskriptor aus [`Textstand::Unlesbar`] wird hier fallengelassen.** Der
+/// Editor oeffnet nichts, was er nicht als Text lesen kann, und braucht die
+/// Bytes deshalb nicht; wer sie braucht, ist der Notizzettel, und der geht
+/// ueber [`lesen`].
+pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
+    match lesen(pfad) {
+        Textstand::Text(stand) => Ok(stand),
+        Textstand::Unlesbar {
+            grund: Unlesbarkeit::ZuGross(groesse),
+            ..
+        } => Err(Abweisung::ZuGross {
+            pfad: pfad.to_path_buf(),
+            groesse,
+        }),
+        Textstand::Unlesbar {
+            grund: Unlesbarkeit::KeinText,
+            ..
+        } => Err(Abweisung::NichtAlsTextLesbar {
+            pfad: pfad.to_path_buf(),
+        }),
+        // Die fehlende Datei ist fuer den Editor kein eigener Fall: sie hat so
+        // wenig Text zu zeigen wie ein Ordner. Der Notizzettel trennt sie,
+        // siehe das Feld `fehlt`.
+        Textstand::KeinGueltigesZiel { grund, .. } => Err(Abweisung::KeinGueltigesZiel {
+            pfad: pfad.to_path_buf(),
+            grund,
+        }),
+    }
 }
 
 /// Aus den Bytes einer Datei den gehaltenen Stand des Editors.
@@ -542,5 +693,6 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
 /// ab: was am Anfang des Standes steht, ist Text des Nutzers, und der Stand
 /// traegt dort keine Marke, weil [`einlesen`] sie abgeschnitten hat.
 pub fn sichern(ziel: &Path, stand: &str) -> io::Result<()> {
-    crate::ablage::atomar::schreiben(ziel, &sicherungsform(stand))
+    let form = sicherungsform(stand);
+    crate::ablage::atomar::schreiben(ziel, &mut form.as_bytes())
 }

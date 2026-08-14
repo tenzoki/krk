@@ -34,9 +34,11 @@ use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
-    Ersetzung, Fensterseite, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit, Sitzung,
-    Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar, einstellungen, pfade,
+    Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit,
+    Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel, atomar,
+    einstellungen, melden, pfade,
 };
+use krk_core::text::datei::EDITORGRENZE;
 use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
@@ -87,6 +89,22 @@ fn geladene_einstellungen(ablage: &Ablage) -> Geladen<Einstellungen> {
     ablage
         .durchgang(einstellungen::laden)
         .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Die vier Ablagedateien, die TOML tragen, in der Reihenfolge von
+/// [`Datei::ALLE`].
+///
+/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 9 fuehrt
+/// [`Datei::ALLE`] sechs Dateien in zwei Formaten, und die Rundlaeufe dieser
+/// Datei meinen die vier, die durch `Zugang::laden` und `Zugang::sichern`
+/// gehen. Eine von Hand gepflegte Liste daneben koennte von `Datei::ALLE`
+/// abweichen; ein Filter ueber [`Datei::format`] kann es nicht. Die Proben, die
+/// **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —, laufen weiterhin
+/// ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
+fn toml_dateien() -> impl Iterator<Item = Datei> {
+    Datei::ALLE
+        .into_iter()
+        .filter(|welche| welche.format() == Format::Toml)
 }
 
 /// Eine Ablage in einem frischen Pruefordner.
@@ -232,7 +250,9 @@ fn der_ablageordner_liegt_unter_application_support() {
             "keymap.toml",
             "bookmarks.toml",
             "session.toml",
-            "settings.toml"
+            "settings.toml",
+            "note-1.txt",
+            "note-2.txt"
         ]
     );
 }
@@ -373,13 +393,13 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
         .durchgang(|zugang| {
             atomar::schreiben(
                 &zugang.pfad(Datei::Einstellungen),
-                "terminal = \"com.mitchellh.ghostty\"\n",
+                &mut "terminal = \"com.mitchellh.ghostty\"\n".as_bytes(),
             )
         })
         .expect("die Schreibsperre laesst sich nicht nehmen")
         .expect("settings.toml laesst sich nicht schreiben");
 
-    for welche in Datei::ALLE {
+    for welche in toml_dateien() {
         assert!(
             ablage.pfad(welche).is_file(),
             "{} liegt nicht im Ablageordner",
@@ -890,7 +910,7 @@ const KAPUTT: &str = "dies = ist [kein gueltiges TOML\n";
 #[test]
 fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
     let (_ordner, ablage) = ablage("kaputt");
-    for welche in Datei::ALLE {
+    for welche in toml_dateien() {
         fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
     }
 
@@ -999,13 +1019,14 @@ fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
     atomar::beiseitepfad(&ablage.pfad(welche)).expect("kein Beiseitepfad")
 }
 
-/// Laedt alle vier Dateien und liefert die vier Ersetzungen in der Reihenfolge
-/// von [`Datei::ALLE`].
+/// Laedt die vier TOML-Dateien und liefert ihre Ersetzungen in der Reihenfolge
+/// von [`toml_dateien`].
 ///
 /// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
 /// `einstellungen::laden`; damit laufen alle vier durch denselben
-/// `Ablage::laden` wie im Betrieb.
-fn vier_ersetzungen(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
+/// `Zugang::laden` wie im Betrieb. Die zwei Zettel stehen nicht darin: sie
+/// gehen ueber `Zugang::text_laden` und haben ihre eigenen Proben weiter unten.
+fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     let belegung: Geladen<BelegungStellvertreter> = geladen(ablage, Datei::Belegung);
     let lesezeichen: Geladen<Lesezeichenliste> = geladen(ablage, Datei::Lesezeichen);
     let sitzung: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
@@ -1027,11 +1048,11 @@ fn vier_ersetzungen(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
 #[test]
 fn jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt() {
     let (_ordner, ablage) = ablage("beiseite-alle-vier");
-    for welche in Datei::ALLE {
+    for welche in toml_dateien() {
         fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
     }
 
-    for (welche, ersetzung) in Datei::ALLE.into_iter().zip(vier_ersetzungen(&ablage)) {
+    for (welche, ersetzung) in toml_dateien().zip(ersetzungen_der_toml_dateien(&ablage)) {
         let ersetzung = ersetzung
             .unwrap_or_else(|| panic!("{} wurde ohne Meldung ersetzt", welche.dateiname()));
         let erwartet = beiseitepfad(&ablage, welche);
@@ -1292,6 +1313,204 @@ fn die_meldung_unterscheidet_die_vier_lagen_und_bleibt_einzeilig() {
             "die Meldung nennt die Ersetzung nicht: {text}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Die zwei Notizzettel (C5 der Runde 9)
+// ---------------------------------------------------------------------------
+
+/// Laedt einen Zettel unter der Schreibsperre, wie der Betrieb es tut.
+fn geladener_zettel(ablage: &Ablage, welcher: Zettel) -> Geladen<String> {
+    ablage
+        .durchgang(|zugang| zugang.text_laden(Datei::Zettel(welcher)))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Schreibt einen Zettel unter der Schreibsperre.
+fn gesicherter_zettel(ablage: &Ablage, welcher: Zettel, text: &str) -> std::io::Result<()> {
+    ablage
+        .durchgang(|zugang| zugang.text_sichern(Datei::Zettel(welcher), text))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Eine fehlende Zetteldatei ist der erste Start und keine Meldung wert (C5).
+///
+/// Dieselbe Regel, die `Zugang::laden` fuer eine fehlende TOML-Datei anwendet.
+/// Sie steht als eigene Probe da, weil sie im Befund von `text::datei::lesen`
+/// an einem einzigen Feld haengt: eine fehlende Datei kommt dort als
+/// `KeinGueltigesZiel` herein wie ein Ordner auch, und allein `fehlt` trennt
+/// die beiden.
+#[test]
+fn eine_fehlende_zetteldatei_ergibt_einen_leeren_zettel_ohne_meldung() {
+    let (_ordner, ablage) = ablage("zettel-fehlt");
+
+    for welcher in Zettel::ALLE {
+        let geladen = geladener_zettel(&ablage, welcher);
+        assert_eq!(geladen.wert, "", "der fehlende Zettel kam nicht leer");
+        assert!(
+            !geladen.ist_ersetzt(),
+            "der fehlende Zettel wurde gemeldet: {:?}",
+            geladen.ersetzung
+        );
+        assert!(
+            !ablage.pfad(Datei::Zettel(welcher)).exists(),
+            "das Laden hat die Zetteldatei angelegt"
+        );
+    }
+}
+
+/// Ein Rundlauf: was hineingeschrieben wird, kommt unveraendert zurueck (C5).
+///
+/// Zwei Zusagen in einer Probe, und beide gehoeren zusammen: der Inhalt der
+/// Datei ist der Text des Zettels — kein TOML, kein Kopf, keine
+/// Bytefolgenmarke —, und die zwei Zettel liegen in zwei Dateien, die sich
+/// nicht ins Gehege kommen.
+#[test]
+fn ein_zettel_kommt_unveraendert_zurueck_und_stoert_den_anderen_nicht() {
+    let (_ordner, ablage) = ablage("zettel-rundlauf");
+    let erster = "Pfad: ~/Projekte\nzweite Zeile ohne Umbruch am Ende";
+    let zweiter = "";
+
+    gesicherter_zettel(&ablage, Zettel::Erster, erster)
+        .expect("note-1.txt laesst sich nicht schreiben");
+    gesicherter_zettel(&ablage, Zettel::Zweiter, zweiter)
+        .expect("note-2.txt laesst sich nicht schreiben");
+
+    // Auf der Platte steht der Text und sonst nichts.
+    assert_eq!(
+        fs::read_to_string(ablage.pfad(Datei::Zettel(Zettel::Erster))).expect("note-1.txt fehlt"),
+        erster,
+        "die Zetteldatei traegt mehr oder weniger als den Text des Zettels"
+    );
+
+    let zurueck = geladener_zettel(&ablage, Zettel::Erster);
+    assert!(!zurueck.ist_ersetzt(), "{:?}", zurueck.ersetzung);
+    assert_eq!(zurueck.wert, erster);
+
+    let zurueck = geladener_zettel(&ablage, Zettel::Zweiter);
+    assert!(!zurueck.ist_ersetzt(), "{:?}", zurueck.ersetzung);
+    assert_eq!(zurueck.wert, zweiter);
+}
+
+/// Eine ungueltige Bytefolge wird beiseitegelegt, und der Zettel ist leer (C5).
+///
+/// **Das ist die Antwort des Nutzers vom 260814-0005 in einer Probe.** Waere
+/// der Inhalt nicht gesichert, schriebe der naechste Sicherungsmoment den
+/// leeren Stand darueber, und ein blosser Blick auf einen Zettel haette eine
+/// Datei vernichtet.
+#[test]
+fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
+    let (_ordner, ablage) = ablage("zettel-ungueltig");
+    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
+    let kaputt: &[u8] = b"noch lesbar\n\xff\xfe und ab hier nicht mehr";
+    fs::write(&pfad, kaputt).expect("schreiben gescheitert");
+
+    let geladen = geladener_zettel(&ablage, Zettel::Erster);
+    assert_eq!(geladen.wert, "", "der unlesbare Zettel kam nicht leer");
+    let ersetzung = geladen
+        .ersetzung
+        .expect("der unlesbare Zettel wurde nicht gemeldet");
+    assert!(
+        matches!(ersetzung.grund, Grund::Beschaedigt(_)),
+        "{ersetzung:?}"
+    );
+
+    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
+    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+    assert_eq!(
+        fs::read(&sicherung).expect("die Sicherung fehlt"),
+        kaputt,
+        "die Sicherung traegt nicht Byte fuer Byte den Inhalt der Datei"
+    );
+
+    // Kopiert und nicht verschoben, wie bei den vier TOML-Dateien.
+    assert_eq!(
+        fs::read(&pfad).expect("das Original fehlt"),
+        kaputt,
+        "die Zetteldatei wurde verschoben statt kopiert"
+    );
+
+    // Die Meldung nennt die Sicherung, ueber denselben Weg, den `Ersetzung`
+    // fuer `keymap.toml` und `settings.toml` geht.
+    let text = melden(&ersetzung);
+    assert!(
+        text.contains(&sicherung.display().to_string()),
+        "die Meldung nennt die Sicherung nicht: {text}"
+    );
+    assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
+}
+
+/// Eine zweite ungueltige Fassung laesst die erste Sicherung unangetastet (C5).
+///
+/// Dieselbe Zusage wie fuer die vier TOML-Dateien, und sie haengt an derselben
+/// Funktion: `Zugang::beiseite_legen` fragt vorher, ob dort schon etwas steht.
+#[test]
+fn eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen() {
+    let (_ordner, ablage) = ablage("zettel-zweimal");
+    let pfad = ablage.pfad(Datei::Zettel(Zettel::Zweiter));
+    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Zweiter));
+
+    fs::write(&pfad, b"\xff die erste Fassung").expect("schreiben gescheitert");
+    let erst = geladener_zettel(&ablage, Zettel::Zweiter);
+    assert_eq!(
+        erst.ersetzung.expect("keine Meldung").beiseite,
+        Beiseite::Gesichert(sicherung.clone())
+    );
+
+    fs::write(&pfad, b"\xff die zweite Fassung").expect("schreiben gescheitert");
+    let dann = geladener_zettel(&ablage, Zettel::Zweiter);
+    assert_eq!(
+        dann.ersetzung.expect("keine Meldung").beiseite,
+        Beiseite::SchonVorhanden(sicherung.clone())
+    );
+    assert_eq!(
+        fs::read(&sicherung).expect("die Sicherung fehlt"),
+        b"\xff die erste Fassung",
+        "die zweite Fassung hat die erste Sicherung ueberschrieben"
+    );
+}
+
+/// Eine Zetteldatei ueber `EDITORGRENZE` wird nicht geladen und geht beiseite
+/// (C5).
+///
+/// **Die Grenze ist die des Editors und keine zweite Zahl**, und sie faengt
+/// genau den Fall, fuer den sie dasteht: eine fremde Datei unter dem Namen
+/// eines Zettels. Der Inhalt wird dabei aus dem offenen Deskriptor kopiert und
+/// steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher; dass er
+/// vollstaendig ankommt, prueft die Laengenzusicherung unten.
+///
+/// Gelesen wuerde ein Loch als lauter Nullbytes, und die sind gueltiges UTF-8:
+/// die Datei faellt also an ihrer Groesse heraus und an nichts sonst.
+#[test]
+fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_beiseite() {
+    let (ordner, ablage) = ablage("zettel-zu-gross");
+    let groesse = EDITORGRENZE + 1;
+    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
+    // Der Ablageordner ist die Wurzel des Pruefordners; das Loch entsteht
+    // deshalb unter dem Namen der Zetteldatei selbst.
+    assert_eq!(pfad.parent(), Some(ordner.pfad()));
+    ordner.luecke("note-1.txt", groesse);
+
+    let geladen = geladener_zettel(&ablage, Zettel::Erster);
+    assert_eq!(geladen.wert, "", "die zu grosse Datei wurde geladen");
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die zu grosse Datei wurde nicht gemeldet");
+    assert_eq!(ersetzung.grund, Grund::ZuGross { groesse });
+
+    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
+    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+    assert_eq!(
+        fs::metadata(&sicherung).expect("die Sicherung fehlt").len(),
+        groesse,
+        "die Sicherung traegt nicht den ganzen Inhalt"
+    );
+
+    let text = melden(&ersetzung);
+    assert!(
+        text.contains(&groesse.to_string()) && text.contains(&EDITORGRENZE.to_string()),
+        "die Meldung nennt Groesse und Grenze nicht: {text}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1645,7 +1864,8 @@ fn die_nachbardatei_liegt_neben_dem_ziel_und_verschwindet_nach_dem_umbenennen() 
         Some("session.toml.neu")
     );
 
-    let vorbereitet = atomar::vorbereiten(&ziel, "neu = true\n").expect("vorbereiten gescheitert");
+    let vorbereitet = atomar::vorbereiten(&ziel, &mut "neu = true\n".as_bytes())
+        .expect("vorbereiten gescheitert");
     assert!(vorbereitet.nachbarpfad().is_file());
     assert_eq!(
         fs::read_to_string(&ziel).expect("lesen gescheitert"),
@@ -1668,7 +1888,10 @@ fn eine_fallengelassene_nachbardatei_raeumt_sich_ab() {
     fs::write(&ziel, "alt = true\n").expect("schreiben gescheitert");
     let nachbar = atomar::nachbarpfad(&ziel).expect("kein Nachbarpfad");
 
-    drop(atomar::vorbereiten(&ziel, "neu = true\n").expect("vorbereiten gescheitert"));
+    drop(
+        atomar::vorbereiten(&ziel, &mut "neu = true\n".as_bytes())
+            .expect("vorbereiten gescheitert"),
+    );
 
     assert!(!nachbar.exists(), "die Nachbardatei liegt noch da");
     assert_eq!(
@@ -1765,8 +1988,8 @@ fn kind_stirbt_zwischen_schreiben_und_umbenennen() {
     let Some(ziel) = std::env::var_os(AUFTRAG_ABBRUCH) else {
         return;
     };
-    let vorbereitet =
-        atomar::vorbereiten(Path::new(&ziel), KINDINHALT).expect("vorbereiten gescheitert");
+    let vorbereitet = atomar::vorbereiten(Path::new(&ziel), &mut KINDINHALT.as_bytes())
+        .expect("vorbereiten gescheitert");
     assert!(vorbereitet.nachbarpfad().is_file());
 
     // Genau hier liegt die Luecke: geschrieben ist, umbenannt ist nicht.

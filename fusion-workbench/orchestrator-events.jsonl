@@ -688,3 +688,10 @@
 {"ts":"2026-08-14T04:42:05","event":"planner_start","agent":"planner","detail":"Plan aus dem nachgezogenen Spec 260813-2348"}
 {"ts":"2026-08-14T05:05:46","event":"planner_done","agent":"planner","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md — 16 Schritte, 6 Straenge, 3 Diagramme; 1 neue offene Frage, 1 Defekt in shared"}
 {"ts":"2026-08-14T05:05:46","event":"conceptrev_start","agent":"conceptrev","detail":"circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md"}
+{"ts":"2026-08-14T05:34:03","event":"conceptrev_done","agent":"conceptrev","detail":"acceptable; Raute mit vier Ausgaengen, Graph deckt 19 Kanten, kein vierter Fehler"}
+{"ts":"2026-08-14T05:34:03","event":"gate_response","detail":"Plan freigegeben; Signaturen geweitet; Automatiken ueber Zaehlprobe"}
+{"ts":"2026-08-14T05:34:03","event":"queue_built","detail":"16 Schritte aus dem Plan, 6 Straenge"}
+{"ts":"2026-08-14T05:34:03","event":"turn_start","turn":1,"detail":"Straenge A und B parallel, danach C, D, E, F"}
+{"ts":"2026-08-14T05:34:03","event":"task_start","turn":1,"task":"A","agent":"coder","detail":"Schritte 1-5, krk-core/ablage und text"}
+{"ts":"2026-08-14T05:34:03","event":"task_start","turn":1,"task":"B","agent":"coder","detail":"Schritte 6-8, Belegung und Kommando"}
+{"ts":"2026-08-14T05:47:10","event":"task_done","turn":1,"task":"B","agent":"coder","detail":"Schritte 6-8 fertig, make check exit 0 im eigenen worktree; Commit wartet auf Strang A"}

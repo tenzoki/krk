@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** planner (Plan der Runde 9)
 **Cross-references:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (C3, Festlegung „Diese Zusage ist die einzige der Runde, für die der Baum heute nicht von selbst redet"); `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` (Schritte 9 und 16); `crates/krk-ui/src/appkit/editor.rs` (`textflaeche_bauen`, `EINSTELLUNGEN`); `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` (dieselbe Frage an einer anderen Gewohnheit)
 
@@ -51,3 +51,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md, Abschnitt "Plan-Tor" — Möglichkeit 2: eine Zählprobe am Baum, jede Datei mit setEditable(true) nennt auch automatiken_abschalten. Der blinde Fleck der Nadel gehört benannt.
