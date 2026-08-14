@@ -725,3 +725,5 @@
 {"ts":"2026-08-14T10:53:17","event":"gate_hit","turn":3,"detail":"Rebalance-Tor, zweiter Abnahmedurchgang oder beschraenkter Abschluss"}
 {"ts":"2026-08-14T10:56:40","event":"gate_response","turn":3,"detail":"Nutzer: beschraenkter Abschluss"}
 {"ts":"2026-08-14T10:56:40","event":"bounded_closure_proposed","turn":3,"detail":"Abnahmeliste nicht an die Kriterien gebunden; 8 von 29 belegt"}
+{"ts":"2026-08-14T11:05:51","event":"portfolio_refresh","detail":"portfolio.md neu; F4-Eintrag hat seine Vorbedingung verloren"}
+{"ts":"2026-08-14T11:05:51","event":"session_end","detail":"3 Turns, 16/16 Schritte, 12 Commits, 0 Fehler; Circle beschraenkt geschlossen"}
