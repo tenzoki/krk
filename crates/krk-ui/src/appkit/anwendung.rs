@@ -2832,7 +2832,7 @@ impl Anwendungsdelegierter {
     /// und ihre Tafel aus 280 Faellen behaelt ihre Bedeutung; eine Antwort dort
     /// traefe beide Wege zugleich und graute den Menueeintrag aus. Der
     /// Datensatz dazu ist
-    /// `decisions/260814-2102_i_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
+    /// `decisions/260814-2102_*_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
     fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
@@ -4189,7 +4189,7 @@ impl Anwendungsdelegierter {
     /// **Faellt die offene Frage nach dem Gueltigkeitsbereich auf "je
     /// Fenster"**, faellt der zweite Anlass wieder weg und der Wert kommt aus
     /// dem Fenstermodell statt aus dem Tab
-    /// (`decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`).
+    /// (`decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`).
     /// Beruehrt waeren dann diese Funktion und die eine Zeile im
     /// Ordnerwechsel-Rueckruf; [`super::bereichsleiste`] bliebe, wie sie ist.
     ///
@@ -4545,7 +4545,7 @@ impl Anwendungsdelegierter {
     /// ```
     ///
     /// **Der dritte Rang haengt an
-    /// `decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.**
+    /// `decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.**
     /// Eine andere Antwort verschiebt ihn innerhalb dieser Funktion und aendert
     /// sonst nichts; die Raenge sind hier eine Reihenfolge und keine verstreute
     /// Zustaendigkeit.

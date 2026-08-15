@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-13
 **Status:** Complete
-**Spec:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_o_spec-titelleiste-fuehrt-version-und-semantische-tags.md`
+**Spec:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_*_spec-titelleiste-fuehrt-version-und-semantische-tags.md`
 **Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
 **Grundlage erhoben:** 260813-1110, am Baum unter `crates/`, `xtask/`, `resources/`, `README.md`, am SDK und an `~/.cargo/registry`
 **Decidability:** Zwei Fragen tragen diesen Plan, und sie fallen verschieden aus. Die Tag-Hälfte fragt „ist der Stand, aus dem gebaut wird, benannt?" — entscheidbar aus dem, was `git tag --points-at HEAD` und `git status --porcelain --untracked-files=no` über den Augenblick melden; die Prüfung misst einen Zustand und sagt nichts voraus, und der Vergleich ist eine reine Funktion über drei Zeichenketten. Die Anzeige-Hälfte fragt „steht vor dem Hauptfenster etwas, hinter dem kein Befehl wirken darf?" — entscheidbar für jedes **Fenster**, weil `NSApplication::keyWindow` die Antwort ausliefert, und **nicht** entscheidbar für eine Verfolgungsschleife wie den Freigabewähler aus der Runde 6, die kein Fenster ist und im Schlüsselfenster keine Spur hinterlässt. Der Plan ändert dafür nicht die Näherung, sondern benennt die Grenze: Schritt A1 beantwortet die Fensterfrage vollständig, Schritt A3 hält fest, dass der Wähler ausserhalb ihrer Reichweite liegt, und Strang E trägt die eine Beobachtung, die den Fall entscheidet. Wer die Wählerfrage später mechanisch beantworten will, ändert das Mittel und nicht die Bedingung: gefragt wäre dann nicht das Schlüsselfenster, sondern der Halt in `teilen.rs`, und der weiss heute nicht, wann sein Dialog zugeht.
@@ -25,9 +25,9 @@ Sieben Feststellungen, am 260813-1110 erhoben. Vier davon widersprechen dem, was
 
 **Die Zulässigkeitsregel hat zwei Frager und nicht drei.** `zulaessigkeit::zulaessig` (`crates/krk-ui/src/kommandos/zulaessigkeit.rs:113`) wird von genau zwei Stellen gerufen, dem Kommandozweig `Anwendungsdelegierter::kommando_ausfuehren` (`anwendung.rs:2600`) und der Ausgrauung `validateMenuItem:` (`anwendung.rs:741`); die Probe `beide_frager_rufen_die_eine_regel` (`zulaessigkeit.rs:204`) hält die Zahl auf 2. Drei Abnehmer hat die Stufe darunter, `Anwendungsdelegierter::lage` (`anwendung.rs:2558`): die beiden Frager und der Zeichenzweig, der die Felder einzeln liest statt die Regel zu rufen.
 
-**Die Lücke, die der vierte Entscheid schliesst, ist enger als er sie beschreibt.** `Anwendungsdelegierter::fokus` (`anwendung.rs:4043`) fragt schon heute als erstes, ob das Schlüsselfenster das Hauptfenster ist, und antwortet sonst `Fokus::Anderswo`. Damit weist der dritte Bestandteil der Regel vor einem fremden Fenster bereits jeden Befehl ab, dessen Wirkungsbereich ein Bereich ist. Durch kommen genau die Befehle mit `Wirkungsbereich::Ueberall`, denn für diesen sagt `fokus::wirkt` auch bei `Anderswo` ja: **vierundzwanzig der sechsundsiebzig Kommandos**, darunter `tab_schliessen`, `ordner_der_datei`, `teilen` und `belegung_ansehen`. Der Entscheid nennt stattdessen `F5` und `delete`, und beide tragen `Wirkungsbereich::Dateifenster` und kommen heute schon nicht durch. Der Befund liegt als `issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`.
+**Die Lücke, die der vierte Entscheid schliesst, ist enger als er sie beschreibt.** `Anwendungsdelegierter::fokus` (`anwendung.rs:4043`) fragt schon heute als erstes, ob das Schlüsselfenster das Hauptfenster ist, und antwortet sonst `Fokus::Anderswo`. Damit weist der dritte Bestandteil der Regel vor einem fremden Fenster bereits jeden Befehl ab, dessen Wirkungsbereich ein Bereich ist. Durch kommen genau die Befehle mit `Wirkungsbereich::Ueberall`, denn für diesen sagt `fokus::wirkt` auch bei `Anderswo` ja: **vierundzwanzig der sechsundsiebzig Kommandos**, darunter `tab_schliessen`, `ordner_der_datei`, `teilen` und `belegung_ansehen`. Der Entscheid nennt stattdessen `F5` und `delete`, und beide tragen `Wirkungsbereich::Dateifenster` und kommen heute schon nicht durch. Der Befund liegt als `issues/260813-1110_*_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`.
 
-**Der Freigabewähler ist kein Fenster.** `teilen.rs:222` zeigt ihn über `showRelativeToRect_ofView_preferredEdge`, also als Verfolgungsschleife an einer Ansicht. Bleibt das Hauptfenster dabei das Schlüsselfenster, sperrt die neue Bedingung dort nichts, und der Vorteilssatz des Entscheids trifft nicht zu. Befund: `issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
+**Der Freigabewähler ist kein Fenster.** `teilen.rs:222` zeigt ihn über `showRelativeToRect_ofView_preferredEdge`, also als Verfolgungsschleife an einer Ansicht. Bleibt das Hauptfenster dabei das Schlüsselfenster, sperrt die neue Bedingung dort nichts, und der Vorteilssatz des Entscheids trifft nicht zu. Befund: `issues/260813-1110_*_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
 
 **Der Auslieferungsweg trägt sechs numerierte Stationen und drei unnumerierte Vorläufe.** Die Numerierung 1 bis 6 steht wörtlich an drei Stellen: `xtask/src/release.rs:3-33` (Modulkopf), `xtask/src/main.rs:40-46` (Hilfetext) und `README.md:216-246`. Die drei Vorläufe — `bundle::vorbereiten()` (`release.rs:91`), `sign::bestimmen_fuer_release()` (`:93`) und `ziele_pruefen()` (`:101`) — laufen früh und gehören einer späteren Station. Der billige Vorlauf endet mit Zeile 101, die erste Übersetzung beginnt in Zeile 104. Genau diese Vermischung ist der mittlere Befund B3 des Diagrammprüfers.
 
@@ -136,7 +136,7 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 
 Die Blattlage kommt damit weiter durch, und zwar ohne einen Sonderfall: ein anhängendes Blatt **ist** das Schlüsselfenster, also antwortet `schluesselfenster_gehoert_krk` mit `true`, und `waehrend_blatt_erlaubt` entscheidet wie bisher allein. Der Abbruch aus dem Blatt heraus bleibt erreichbar.
 
-**Dass `immer_erreichbar` auch die vierte Bedingung aufhebt, ist eine Wahl und keine Ableitung.** Der Wortlaut des Entscheids sagt „wirkt kein Befehl", und unter der Fassung oben wirken `beenden` und `fenster_schliessen` doch. Der Grund ist die Randbedingung „kein Verlust gegenüber heute": vor dem Freigabewähler beendet Cmd+Q heute die Anwendung, und die strenge Lesart nähme diesen Weg weg. Die Frage steht als `decisions/260813-1110_o_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`, der Plan fährt bis zur Antwort auf der Empfehlung.
+**Dass `immer_erreichbar` auch die vierte Bedingung aufhebt, ist eine Wahl und keine Ableitung.** Der Wortlaut des Entscheids sagt „wirkt kein Befehl", und unter der Fassung oben wirken `beenden` und `fenster_schliessen` doch. Der Grund ist die Randbedingung „kein Verlust gegenüber heute": vor dem Freigabewähler beendet Cmd+Q heute die Anwendung, und die strenge Lesart nähme diesen Weg weg. Die Frage steht als `decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`, der Plan fährt bis zur Antwort auf der Empfehlung.
 
 **Der Zeichenzweig bleibt unverändert, und das ist geprüft und nicht vergessen.** Er weist ein Zeichen ab, sobald ein Blatt steht oder der Ersthelfer AppKit gehört, und für jeden Fokus ausser `Dateifenster` liefert er ohnehin `false`. Vor einem fremden Schlüsselfenster antwortet `fokus` schon heute `Anderswo`, also greift dieser Ausgang. Eine vierte Bedingung dort wäre eine zweite Fassung derselben Sperre.
 
@@ -192,7 +192,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 **A1. [DONE] Die vierte Frage in `Lage` und in `zulaessig`**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/kommandos/zulaessigkeit.rs`
-- Erfüllt: C5.6 (erste Hälfte), Entscheid `decisions/260813-1037_a_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`
+- Erfüllt: C5.6 (erste Hälfte), Entscheid `decisions/260813-1037_*_wirken-krks-tastenbefehle-weiter-waehrend-der-ueber-dialog-steht.md`
 - Dependencies: keine
 - Changes:
   - `Lage` bekommt ein viertes Feld `pub schluesselfenster_gehoert_krk: bool` mit Doc-Kommentar: ob das Schlüsselfenster KRKs Hauptfenster oder ein daran hängendes Blatt ist. Der Kommentar sagt ausdrücklich, dass ein anhängendes Blatt hier `true` meldet, weil es selbst das Schlüsselfenster ist.
@@ -217,13 +217,13 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
 
 **A3. [DONE] Der Freigabedialog-Defekt der Runde 6, gegen die neue Regel gelesen**
 - Executor: `coder`
-- Files: `fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_die-blattregel-sieht-den-freigabedialog-nicht.md`
+- Files: `fusion-workbench/circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_die-blattregel-sieht-den-freigabedialog-nicht.md`
 - Erfüllt: die zweite Hälfte des Entscheids vom 260813-1055
 - Dependencies: A2
 - Changes:
   - Dem Datensatz wird ein Abschnitt angehängt, der festhält, was die neue Regel für ihn leistet und was nicht: sie schliesst jedes fremde **Fenster** und erreicht eine Verfolgungsschleife nicht, weil der Wähler über `showRelativeToRect:` erscheint und im Schlüsselfenster keine Spur hinterlässt.
   - **Der Datensatz wird in diesem Schritt nicht geschlossen.** Die Beobachtung, die er selbst verlangt, steht in Strang E: Wähler über Shift+Cmd+S öffnen, währenddessen Cmd+W drücken. Geschieht nichts, ist er beantwortet und wird mit dem Ergebnis geschlossen; schliesst sich der Tab, bleibt er offen und trägt danach einen benannten, gemessenen Befund statt einer Vermutung.
-  - Die Begründung dafür steht als eigener Befund: `issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
+  - Die Begründung dafür steht als eigener Befund: `issues/260813-1110_*_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
 
 ### Strang B — Namen und Version links in der Titelleiste
 
@@ -315,7 +315,7 @@ Die Numerierung ist damit lückenlos, die drei Vorläufe tragen einen Buchstaben
   - Treffen beide Befunde zu, nennt **eine** Meldung beide (C3.7). Sie sagt, welche Bedingung verletzt ist, welche Version die `Cargo.toml` führt und was zu tun ist (C3.8), und sie nennt kein `git`-Kommando mit `--force` und keinen Weg vorbei. Der Stil folgt den beiden Vorlagen im Baum: Befund im Indikativ, dann die Folge, dann die Abhilfe als kopierbares Kommando, Schlusssatz in der Art von „Es entsteht kein Auslieferungspaket." Ohne Umlaute, wie jede Meldung in `xtask`.
   - **Zu C6.7:** der Rückgabetyp ist `Result`, und `Result` trägt `#[must_use]` schon in der Standardbibliothek. Ein stilles Fallenlassen hält den Bau unter `-D warnings` an, also trägt die Prüfung die Zusage strukturell. Ein zweites, eigenes `#[must_use]` daneben wäre Rauschen; der Doc-Kommentar sagt das in einem Satz, damit die nächste Erhebung nicht nach dem Attribut sucht.
   - Proben nach dem Muster von `sign.rs:391-448`: `const`-Zeichenketten mit wörtlicher Git-Ausgabe, gegen die Funktion gefahren. Abgedeckt werden der grüne Fall, ein fehlender Tag, ein passender Tag unter mehreren, ein geänderter Baum, eine gelöschte verfolgte Datei, beide Befunde zugleich, und die drei Bestandteile der Meldung.
-  - Keine dieser Proben braucht ein Verzeichnis. Das ist Absicht: `xtask` trägt in `release.rs:719` schon eine `Wegwerfwurzel`, und eine zweite anzulegen wäre ein Doppelbau. Warum diese Fassung in der Zählung „genau drei Prüfordner-Fassungen" gar nicht vorkommt, steht als `issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md` und ist nicht Gegenstand dieser Runde.
+  - Keine dieser Proben braucht ein Verzeichnis. Das ist Absicht: `xtask` trägt in `release.rs:719` schon eine `Wegwerfwurzel`, und eine zweite anzulegen wäre ein Doppelbau. Warum diese Fassung in der Zählung „genau drei Prüfordner-Fassungen" gar nicht vorkommt, steht als `issues/260813-1110_*_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md` und ist nicht Gegenstand dieser Runde.
 
 **D2. [DONE] Der eine `git`-Aufruf und die neue Station 1**
 - Executor: `coder`
@@ -464,9 +464,9 @@ Vier Festlegungen stehen ohne Rückfrage in diesem Plan, weil sie sich aus dem B
 
 ## Open Questions
 
-- [ ] **Hebt `immer_erreichbar` auch die neue Schlüsselfensterfrage auf?** `decisions/260813-1110_o_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`. Der Plan fährt auf der Empfehlung (ja, sie hebt sie auf), damit Cmd+Q vor einem fremden Fenster weiter beendet. Die strenge Lesart des Entscheids sagt das Gegenteil, und der Unterschied ist eine Zeile in `zulaessig` und eine Spalte in der Tafel. Blockiert keinen Schritt; wird die Antwort die andere, ändert sich A1 und sonst nichts.
-- [ ] **Bleibt der Defekt zum Freigabedialog der Runde 6 offen?** Er hängt an der einen Beobachtung in E2 und nicht an einer Entscheidung. Der Plan schliesst ihn nicht im Voraus; die Begründung liegt als `issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
-- [ ] **Wird der Abschnitt `## Question` des Entscheids zum Über-Dialog berichtigt?** Er nennt zwei Befehle als Beispiel, die heute schon nicht durchkommen. `issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`. Die Antwort des Entscheids bleibt davon unberührt.
+- [ ] **Hebt `immer_erreichbar` auch die neue Schlüsselfensterfrage auf?** `decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`. Der Plan fährt auf der Empfehlung (ja, sie hebt sie auf), damit Cmd+Q vor einem fremden Fenster weiter beendet. Die strenge Lesart des Entscheids sagt das Gegenteil, und der Unterschied ist eine Zeile in `zulaessig` und eine Spalte in der Tafel. Blockiert keinen Schritt; wird die Antwort die andere, ändert sich A1 und sonst nichts.
+- [ ] **Bleibt der Defekt zum Freigabedialog der Runde 6 offen?** Er hängt an der einen Beobachtung in E2 und nicht an einer Entscheidung. Der Plan schliesst ihn nicht im Voraus; die Begründung liegt als `issues/260813-1110_*_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`.
+- [ ] **Wird der Abschnitt `## Question` des Entscheids zum Über-Dialog berichtigt?** Er nennt zwei Befehle als Beispiel, die heute schon nicht durchkommen. `issues/260813-1110_*_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`. Die Antwort des Entscheids bleibt davon unberührt.
 
 ---
 
@@ -508,23 +508,23 @@ Klassen stehen` bleibt richtig: `keyWindow`, `attachedSheet` und `isEqual:` steh
 schon darin." Namentlich steht dort allein `attachedSheet`
 (`crates/krk-ui/src/appkit/anwendung.rs:191`). Der Plan hat eine Prüfung durch eine Feststellung
 ersetzt, und der Ausführer hatte damit keinen Anlass nachzusehen. Abgelegt als
-`issues/260813-1345_o_keywindow-und-isequal-stehen-nicht-im-untergrenzen-abschnitt-von-anwendung-rs.md`.
+`issues/260813-1345_*_keywindow-und-isequal-stehen-nicht-im-untergrenzen-abschnitt-von-anwendung-rs.md`.
 
 **3. Zwei Zahlen des Plans sind falsch in den Baum gewandert.** A2 zählt fünf verbleibende
 Aufrufer von `fokus` und nennt sie einzeln; es sind sechs, weil `anwendung.rs:1084`
 `selbst.fokus()` heisst und dem Muster entgeht. D2 sagt, `bundle::PLATZHALTER` sei schon
 `pub(crate)`; es ist `pub`. Beide Aussagen sind vom Ausführer in Doc-Kommentare übernommen
 worden. Abgelegt als
-`issues/260813-1345_o_die-aufruferzahl-an-fokus-steht-auf-fuenf-und-der-baum-traegt-sechs.md`
+`issues/260813-1345_*_die-aufruferzahl-an-fokus-steht-auf-fuenf-und-der-baum-traegt-sechs.md`
 und
-`issues/260813-1345_o_der-doc-kommentar-an-bundle-version-nennt-eine-sichtbarkeit-die-platzhalter-nicht-traegt.md`.
+`issues/260813-1345_*_der-doc-kommentar-an-bundle-version-nennt-eine-sichtbarkeit-die-platzhalter-nicht-traegt.md`.
 
 **4. Eine Gegenmaßnahme der Risikotafel ist nicht gefahren.** „D2 misst es einmal, indem es die
 Version probeweise anhebt, `cargo xtask release` fährt und die Meldung liest." Der Ausführer hat
 darauf verzichtet, weil ein Auslieferungslauf das beglaubigte Bündel überschriebe — die
 Begründung trägt, der Verzicht ist aber nirgends als solcher vermerkt, und die Tafel liest sich
 nach der Runde, als sei gemessen worden. Abgelegt als
-`issues/260813-1345_o_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md`.
+`issues/260813-1345_*_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md`.
 Die übrigen acht Zeilen der Tafel sind eingelöst.
 
 ### Die drei offenen Fragen des Plans
@@ -533,12 +533,12 @@ Alle drei stehen weiter da, und keine hält etwas auf.
 
 - **Hebt `immer_erreichbar` auch die neue Schlüsselfensterfrage auf?** Beantwortet und gebaut,
   Möglichkeit 1. Der Datensatz trägt seit diesem Abgleich `_i_`
-  (`decisions/260813-1110_i_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`).
+  (`decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md`).
   Die Antwort hat einen Fall nicht mitgeprüft, und Turn 2 hat ihn nachgetragen.
 - **Bleibt der Defekt zum Freigabedialog der Runde 6 offen?** Ja, er trägt weiter `_o_`. Die
   Beobachtung steht in E2.
 - **Wird der Abschnitt `## Question` des Entscheids zum Über-Dialog berichtigt?** Nein, noch
-  nicht; `issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-…` bleibt offen.
+  nicht; `issues/260813-1110_*_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-…` bleibt offen.
 
 ### Der Querschnitt aus der Durchsicht, nachgezählt
 

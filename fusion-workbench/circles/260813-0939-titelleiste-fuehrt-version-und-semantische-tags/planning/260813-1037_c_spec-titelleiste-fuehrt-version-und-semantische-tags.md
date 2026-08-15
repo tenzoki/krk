@@ -368,7 +368,7 @@ ist reine Nutzerarbeit. Dieser Spec bleibt das Dokument, gegen das E2 abgenommen
 **Alle 48 der ersten Sorte sind beim Abgleich einzeln gegen den Baum gelesen und halten.** Neun
 davon tragen die Kennzeichnung **(Probe)** und haben keine benannte Probe: C2.8, C2.10 und die
 sieben von C4. Sie sind von Hand nachgelesen, nicht maschinell abgenommen; abgelegt als
-`issues/260813-1345_o_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`.
+`issues/260813-1345_*_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`.
 
 **Die zehn Kriterien mit einem Bündelanteil und C3.15 stehen als Beobachtungen in Planschritt
 E2** und sind Nutzerarbeit, weil der Abnahmelauf KRK im Vordergrund verlangt. Das ist dieselbe
@@ -384,7 +384,7 @@ vorgesehenen Stellen (`xtask/src/release.rs:3`, `xtask/src/main.rs:40`, `README.
 
 **Die drei Diagrammbefunde B1, B2 und B6 sind nie behoben worden**, obwohl Prüfbericht und
 Sitzungsprotokoll sie als „an Ort und Stelle zu beheben" führen. Beides zusammen abgelegt als
-`issues/260813-1345_o_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.
+`issues/260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.
 
 ### Was der Spec richtig vorausgesehen hat
 

@@ -1,8 +1,8 @@
 # Implementation Plan: Tippen filtert die Dateiliste, flach und als gefilterter Ordnerbaum
 
 **Date:** 2026-08-14
-**Status:** Entwurf
-**Spec:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, vom Nutzer am 260814-2000 freigegeben
+**Status:** Complete
+**Spec:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-1830_*_spec-tippen-filtert-dateiliste-flach-und-tief.md`, vom Nutzer am 260814-2000 freigegeben
 **Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`, aktiv seit 260814-1551
 **Grundlage erhoben:** 260814-2102, am Baum auf dem Stand `6cd122c`, unter `crates/` und `resources/`
 **Decidability:** Die tragende Frage dieses Entwurfs lautet: *Was bedeutet ein Druck auf die Rückschritt-Taste — ein Zeichen zurück oder eine Datei in den Papierkorb?* Aus den Eingaben der bestehenden Zulässigkeitsregel ist sie **nicht** entscheidbar, und das ist ein Befund am Baum und keine Vermutung. `resources/default-keymap.toml:156-158` legt `delete` und `cmd+delete` auf dieselbe Funktion `in_papierkorb`; beide Tastendrücke werden im Nachschlag zu demselben `Kommando::InPapierkorb`, bevor irgendjemand fragen kann. `zulaessigkeit::zulaessig(kommando, lage)` bekommt genau dieses Kommando und die vier Lagewerte, also nichts, woran die zwei Wege sich unterscheiden ließen, und derselbe Frager ist die Ausgrauung des Hauptmenüs, die überhaupt keinen Tastendruck hat. Eine Antwort dort träfe beide Wege zugleich und graute den Menüeintrag aus, was C1.19 und C6.11 ausdrücklich ausschließen. Der Plan ändert deshalb nicht die Näherung, sondern das Mittel: er stellt die Frage dort, wo der Tastendruck noch bekannt ist, nämlich im Ausführungszweig hinter der unveränderten Zulässigkeitsregel, und trägt den Anschlag bis dorthin mit. Damit wird die Frage entscheidbar, und die zweite Größe aus C1.18 und C1.20 fällt an derselben Stelle an. Die übrigen Fragen dieses Plans sind aus dem entscheidbar, was der Mechanismus ohnehin hat: die Sichtbarkeit einer Zeile aus Name, Versteckt-Kennzeichen und Befund, der Befund aus dem, was der Durchlauf gelesen hat, und die Zahl der Statuszeile aus dem Modell des sichtbaren Tabs.
@@ -135,7 +135,7 @@ flowchart LR
 
 ## Wo die Fallunterscheidung der Rückschritt-Taste fällt
 
-Das dritte Bild beantwortet die zweite Frage, die der Entscheidungsdatensatz `260814-1830_a_wie-nimmt-der-nutzer-ein-einzelnes-zeichen-des-filters-zurueck.md` ausdrücklich dem Planner überlässt. Es zeigt nicht, **was** die Regel entscheidet — das tut das dritte Bild des Spec —, sondern **wo** sie steht und woran das hängt.
+Das dritte Bild beantwortet die zweite Frage, die der Entscheidungsdatensatz `260814-1830_*_wie-nimmt-der-nutzer-ein-einzelnes-zeichen-des-filters-zurueck.md` ausdrücklich dem Planner überlässt. Es zeigt nicht, **was** die Regel entscheidet — das tut das dritte Bild des Spec —, sondern **wo** sie steht und woran das hängt.
 
 ```mermaid
 flowchart TD
@@ -285,7 +285,7 @@ flowchart TD
   `durchlauf.rs`), der zweite Rufer der Zeichenregel (`appkit/tabelle.rs`), drei Dateien
   mit Prosa über das nicht mehr bestehende Modul `verzeichnis::sprungmarke`
   (`tasten/belegung.rs`, `appkit/ereignisse.rs`, `kommandos/zulaessigkeit.rs`) und die
-  Probendatei. Datensatz: `issues/260814-2357_o_c2-nennt-zwei-dateien-…`, Nachtrag vom
+  Probendatei. Datensatz: `issues/260814-2357_*_c2-nennt-zwei-dateien-…`, Nachtrag vom
   260815 zu A2, vierte Ursache.
 - **C1.5 ist über vier Dateien geprüft und nicht über den ganzen Weg**, und die Probe
   sagt es selbst: `krk-ui/src/appkit/anwendung.rs` liegt auf dem Weg eines getippten
@@ -295,7 +295,7 @@ flowchart TD
 - **Eine dritte wortgleiche Fassung des Vergleichs steht weiter im Baum**, in
   `Belegungsmodell::zeile_traegt` — genau der Stelle, die C1.3 als Maßstab nennt. Sie
   ist nicht mitgezogen, weil A2 sie nicht nennt und C1.4 die Runde-7-Seite unverändert
-  lässt. Datensatz: `issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md`.
+  lässt. Datensatz: `issues/260815-0230_*_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md`.
 - **Der Modulkopf von `appkit/tabelle.rs` war schon richtig**, B1 hat ihn beim Umbau der
   Senke mitgezogen; richtiggestellt ist stattdessen die Prosa der Nachschlagart und die
   der drei oben genannten Dateien.
@@ -329,8 +329,8 @@ flowchart TD
 **B2. [DONE] Ordnerwechsel, Tabwechsel und `Esc`**
 - **Der Tabwechsel hat wie vorhergesagt keine Zeile gekostet.** `tab_gewechselt` ist unberührt; der Filtertext steht am `Ordnermodell` des Tabs, und die Ansicht zeigt nach dem Wechsel den des neuen (C1.8). `Tabliste::aktiven_neu_lesen` ebenso: der Tab bleibt seit `5f2e45d` stehen, also bleibt sein Filtertext stehen.
 - **Genau die drei genannten Dateien sind angefasst.** `crates/krk-ui/src/appkit/tabelle.rs` trägt den Rumpf des dritten `Esc`-Rangs als `DateifensterQuelle::filter_leeren`, weil der Filtertext des sichtbaren Tabs vom Anwendungsdelegierten aus nur über diesen Weg erreichbar ist — derselbe Zugriffsweg wie bei C2 und E1.
-- **Die Probenhälfte von C1.7 ist offen geblieben**, und der Datensatz dazu ist `issues/260815-0020_o_c1-7-verlangt-eine-probe-fuer-die-reihenfolge-von-esc-und-b2-hat-keinen-ort-dafuer.md`: die Rangfolge hängt an drei Ivars des Anwendungsdelegierten, und eine reine Funktion darüber wäre ein siebter Typ, den die `## Data Structures` dieses Plans nicht führt. C1.8, C1.9 und C1.10 sind als fünf Proben in `crates/krk-ui/src/tabs.rs` abgenommen, C3.5 ist am Code abzulesen.
-- **Eine zweite Stelle baut denselben frischen `Tabinhalt` und ist nicht mitgezogen:** `Tabliste::verdeckten_tab_setzen`, der Weg des Datenträgerauswurfs. Datensatz: `issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md`.
+- **Die Probenhälfte von C1.7 ist offen geblieben**, und der Datensatz dazu ist `issues/260815-0020_*_c1-7-verlangt-eine-probe-fuer-die-reihenfolge-von-esc-und-b2-hat-keinen-ort-dafuer.md`: die Rangfolge hängt an drei Ivars des Anwendungsdelegierten, und eine reine Funktion darüber wäre ein siebter Typ, den die `## Data Structures` dieses Plans nicht führt. C1.8, C1.9 und C1.10 sind als fünf Proben in `crates/krk-ui/src/tabs.rs` abgenommen, C3.5 ist am Code abzulesen.
+- **Eine zweite Stelle baut denselben frischen `Tabinhalt` und ist nicht mitgezogen:** `Tabliste::verdeckten_tab_setzen`, der Weg des Datenträgerauswurfs. Datensatz: `issues/260815-0020_*_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md`.
 - `make check` läuft grün (Exit 0).
 - Executor: `coder`
 - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
@@ -338,11 +338,11 @@ flowchart TD
 - Dependencies: A1
 - Changes:
   - `Tabliste::ordner_setzen` trägt Filtertext und Deep-Kennzeichen in den neuen `Tabinhalt` hinüber, neben Sortierung und Verstecke. **Der Filtertext geht in jedem Fall hinüber, ohne Bedingung** (C1.9, C1.10). Der Aufstieg geht durch dieselbe Stelle und zählt deshalb wie der Einstieg, ohne eigene Zeile. Bis zum Nutzerentscheid vom 260815-0955 stand hier, bei ausgeschaltetem „Deep“ werde der Filtertext geleert; der Schritt ist am 260815 in `897605e` auf die eine Regel umgebaut.
-  - **Beantwortet durch `decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, Nutzerentscheid vom 260815-0955.** Die Antwort lautet „stehen lassen“, also fällt die Bedingung weg: der Filtertext wandert in jedem Fall in das neue Modell. Die Zeile `let filtertext_ueberlebt = tief;`, die die offene Antwort trug, ist dabei ersatzlos entfallen.
+  - **Beantwortet durch `decisions/260814-1830_*_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, Nutzerentscheid vom 260815-0955.** Die Antwort lautet „stehen lassen“, also fällt die Bedingung weg: der Filtertext wandert in jedem Fall in das neue Modell. Die Zeile `let filtertext_ueberlebt = tief;`, die die offene Antwort trug, ist dabei ersatzlos entfallen.
   - `Tabliste::aktiven_neu_lesen` lässt den Filtertext stehen: eine Auffrischung wechselt den Ordner nicht.
   - Der Tabwechsel setzt nichts zurück. Der Filtertext gehört dem Tab, und die Ansicht zeigt nach `tab_gewechselt` den des neuen Tabs (C1.8) — das fällt ohne Zeile an, weil das Modell ihn führt.
   - `Esc` bekommt seine Stelle in `Anwendungsdelegierter::abbrechen`, **hinter** dem Schließen eines stehenden Blattes und hinter dem Abbruch einer laufenden Dateioperation, an der Stelle, an der die Taste heute nichts mehr zu tun findet (C1.7). Ein eigener Rang für das Anhalten des Durchlaufs entsteht nicht: ohne Filtertext hat der Durchlauf keinen Gegenstand (C3.5).
-  - **Hängt an `decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.** Eine andere Antwort verschiebt die Zeile innerhalb derselben Funktion und ändert sonst nichts.
+  - **Hängt an `decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.** Eine andere Antwort verschiebt die Zeile innerhalb derselben Funktion und ändert sonst nichts.
   - **`Esc` schaltet „Deep" nicht ab.** Der Schalter bleibt stehen; ein Schalter, den eine Taste unbemerkt umlegt, wäre eine zweite Quelle für seinen Stand.
 
 ### Strang C — die Rückschritt-Taste
@@ -360,7 +360,7 @@ flowchart TD
   - Proben: alle acht Wahrheitskombinationen ausgeschrieben, dazu die vier Wege aus der Tabelle des Spec einzeln mit ihrer Begründung.
 
 **C2. [DONE] Der Anschlag erreicht die Senke, und der eine Zweig ruft die Regel**
-- **Eine dritte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den zwei genannten Dateien ist der Filtertext des sichtbaren Tabs nicht erreichbar. Derselbe Zugriffsweg wie bei E1. Datensatz: `issues/260814-2357_o_c2-nennt-zwei-dateien-der-weg-an-den-filtertext-des-tabs-fuehrt-durch-eine-dritte.md`.
+- **Eine dritte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den zwei genannten Dateien ist der Filtertext des sichtbaren Tabs nicht erreichbar. Derselbe Zugriffsweg wie bei E1. Datensatz: `issues/260814-2357_*_c2-nennt-zwei-dateien-der-weg-an-den-filtertext-des-tabs-fuehrt-durch-eine-dritte.md`.
 - **Das `expect(dead_code)` an der Regel ist gefallen**, wie C1 es vorgesehen hatte; `crates/krk-ui/src/kommandos/rueckschritt.rs` ist damit die vierte angefasste Datei und trägt jetzt auch die Zählprobe. `make check` läuft grün (Exit 0).
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
@@ -386,7 +386,7 @@ flowchart TD
 - Dependencies: A1
 - Changes:
   - `Rang` bekommt den Wert `Filterstand`, `Rang::ALLE` wächst auf sechs, und er steht **zwischen `Tabmeldung` und `Markierungsstand`** (C4.1). `Rang::art` gibt `Art::Vorgang`: eine Filterzahl ist kein Fehler und wird nicht rot (C4.2). Beide Fallunterscheidungen bleiben vollständig und ohne Auffangzweig (C4.10).
-  - **Hängt an `decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`.** Eine andere Antwort verschiebt eine Zeile in `Rang::ALLE` und ändert sonst nichts.
+  - **Hängt an `decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`.** Eine andere Antwort verschiebt eine Zeile in `Rang::ALLE` und ändert sonst nichts.
   - `Quellen` bekommt ein sechstes Feld, `Quellen::text` einen sechsten Zweig.
   - **Der neue Rang hat wie der Markierungsstand kein eigenes Feld am Dateifenster**, sondern wird bei jedem Schreiben der Zeile aus dem Modell des sichtbaren Tabs gerechnet. Dieselbe Begründung wie dort: ein gesetzter und gelöschter Wert hätte eine zweite Löschregel, und der Filterstand ist ein Zustand und kein Ereignis.
   - Der Text nennt drei Dinge (C4.3): den Filtertext, die Zahl der gezeigten Zeilen und die Zahl der Einträge des angezeigten Ordners. Blendet der Filter markierte Einträge aus, kommt ein vierter Teil dazu, und ohne ausgeblendete Markierung steht er nicht da (C4.4). Ohne Filtertext meldet der Rang nichts (C4.8).
@@ -398,8 +398,8 @@ flowchart TD
 ### Strang E — das Ankreuzfeld und der Befehl
 
 **E1. [DONE] Kommando, Wirkungsbereich, Bereich, Ausführungszweig**
-- **Abnahme steht noch aus, und zwar bis E2.** Die Änderungen sind gemacht; `make check` steht auf `Error 2`, weil `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` die neue Kennung in `resources/default-keymap.toml` noch nicht findet. Bau, `cargo fmt --all --check` und `cargo clippy --workspace --all-targets -- -D warnings` laufen sauber. Datensatz: `issues/260814-2303_o_e1-und-e2-teilen-eine-zusicherung-die-eine-probe-haelt-und-lassen-den-baum-dazwischen-rot.md`.
-- **Eine vierte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den drei genannten Dateien ist das Tabmodell nicht erreichbar. Datensatz: `issues/260814-2303_o_e1-und-e3-nennen-drei-dateien-der-weg-an-das-tabmodell-fuehrt-durch-eine-vierte.md`.
+- **Abnahme steht noch aus, und zwar bis E2.** Die Änderungen sind gemacht; `make check` steht auf `Error 2`, weil `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` die neue Kennung in `resources/default-keymap.toml` noch nicht findet. Bau, `cargo fmt --all --check` und `cargo clippy --workspace --all-targets -- -D warnings` laufen sauber. Datensatz: `issues/260814-2303_*_e1-und-e2-teilen-eine-zusicherung-die-eine-probe-haelt-und-lassen-den-baum-dazwischen-rot.md`.
+- **Eine vierte Datei ist angefasst**, `crates/krk-ui/src/appkit/tabelle.rs`: aus den drei genannten Dateien ist das Tabmodell nicht erreichbar. Datensatz: `issues/260814-2303_*_e1-und-e3-nennen-drei-dateien-der-weg-an-das-tabmodell-fuehrt-durch-eine-vierte.md`.
 - Executor: `coder`
 - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C5.1, C5.3, C5.6
@@ -413,7 +413,7 @@ flowchart TD
   - **Nur eine neue Variante** (C5.1). Die Rücknahme eines Zeichens bekommt keine: sie ist ein Zweig im vorhandenen Befehl, entschieden in Schritt C2, und sichtbar wird sie in keinem Fall (C1.19).
   - Steht kein Filtertext, kommt der Befehl durch, kippt den Schalter und meldet nichts (C2.4). Über die Zulässigkeit entscheidet der Wirkungsbereich und nicht, ob der Befehl etwas findet.
 
-**E2. Der 84. Eintrag der Belegung**
+**E2. [DONE] Der 84. Eintrag der Belegung**
 - Executor: `ontocoder`
 - Files: `resources/default-keymap.toml`
 - Erfüllt: C5.2, C5.5, C5.7
@@ -435,7 +435,7 @@ flowchart TD
   (`tabelle.rs`, neuer Leser `tiefe_suche_steht`), die Zahl „acht Schalter" in Prosa
   außerhalb der Leiste (`appkit/mod.rs`, `spalten.rs`, `fenstermodell.rs`) und die
   Kernhälfte von C2.4 (`krk-core/tests/verzeichnis.rs`). Datensatz:
-  `issues/260814-2357_o_c2-nennt-zwei-dateien-…`, Nachtrag vom 260815 zu E3.
+  `issues/260814-2357_*_c2-nennt-zwei-dateien-…`, Nachtrag vom 260815 zu E3.
 - **Eine neue Aufrufstelle statt drei.** `ordnerwechsel_melden` deckt Tabwechsel und
   Ordnerwechsel zusammen ab; der Wechsel des aktiven Dateifensters läuft auf beiden
   Wegen schon durch `aufteilung_nachziehen`.
@@ -449,7 +449,7 @@ flowchart TD
   - Der Schalter steht rechts neben `Typ`, mit `GRUPPENABSTAND` davor, weil er eine dritte Gruppe ist. Aufschrift `Deep`, englisch und nicht übersetzt (C2.1). `setRefusesFirstResponder(true)` wie die acht vorhandenen; `Fokus` bekommt keinen sechsten Wert (C2.2).
   - `zustaende_setzen` bekommt ein drittes Argument `tief: bool` und bleibt der eine Schreiber jedes angezeigten Stands.
   - `bereichsleiste_nachziehen` holt den Wert aus dem Modell des sichtbaren Tabs des aktiven Dateifensters und bekommt **drei neue Anlässe**: der Tabwechsel, der Wechsel des aktiven Dateifensters und der Ordnerwechsel. Alle drei rufen heute schon `aufteilung_nachziehen` oder `statuszeile_nachziehen`; der Nachzug der Leiste tritt daneben und nicht hinein, aus demselben Grund, aus dem die Statuszeile neben ihm steht.
-  - **Hängt an `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`.** Fällt die Antwort auf „je Fenster", fallen die drei neuen Anlässe weg, das Kennzeichen zieht in das Fenstermodell neben `Spaltensichtbarkeit`, und der Ausführungszweig aus E1 schreibt dorthin. Der Rest dieses Schritts bleibt gleich.
+  - **Hängt an `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`.** Fällt die Antwort auf „je Fenster", fallen die drei neuen Anlässe weg, das Kennzeichen zieht in das Fenstermodell neben `Spaltensichtbarkeit`, und der Ausführungszweig aus E1 schreibt dorthin. Der Rest dieses Schritts bleibt gleich.
   - Der Modulkopf bekommt seine Untergrenzenangabe nachgetragen: `checkboxWithTitle:target:action:` seit 10.12 bleibt die höchste dieser Datei, denn eine neue Klasse wird nicht angesprochen. Die Zahl „acht Ankreuzfelder" im Modulkopf wird zu neun.
 
 ### Strang F — der Durchlauf
@@ -574,14 +574,26 @@ Vier Signaturen ändern sich, alle innerhalb einer Kiste.
 
 Vier offene Nutzerentscheidungen binden die Umsetzung, keine hält einen Schritt auf. Der Plan fährt bei allen vier auf derselben Empfehlung wie der Spec, und jeder betroffene Schritt nennt, was sich mit einer anderen Antwort ändert.
 
-- [ ] Wo steht die Filterzahl in der Rangfolge der einen Statuszeile? — `decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`, betrifft D1
-- [x] Bleibt der Filtertext bei einem Ordnerwechsel stehen, wenn „Deep“ aus ist? — `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, betrifft B2. Beantwortet am 260815-0955 mit Möglichkeit 2.
-- [ ] Gilt das Ankreuzfeld „Deep" je Tab oder je Fenster? — `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`, betrifft E3 und F2
-- [ ] An welcher Stelle der Bedeutungen von `Esc` steht der Filtertext? — `decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`, betrifft B2
+- [ ] Wo steht die Filterzahl in der Rangfolge der einen Statuszeile? — `decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`, betrifft D1
+- [x] Bleibt der Filtertext bei einem Ordnerwechsel stehen, wenn „Deep“ aus ist? — `decisions/260814-1830_*_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, betrifft B2. Beantwortet am 260815-0955 mit Möglichkeit 2.
+- [ ] Gilt das Ankreuzfeld „Deep" je Tab oder je Fenster? — `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`, betrifft E3 und F2
+- [ ] An welcher Stelle der Bedeutungen von `Esc` steht der Filtertext? — `decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`, betrifft B2
 
 Zwei Fragen sind mit diesem Plan beantwortet und liegen als Datensätze im Circle:
 
-- [x] Wie viele Fäden und Kanäle benutzt der Durchlauf? — `decisions/260814-2102_a_wie-viele-faeden-und-kanaele-benutzt-der-durchlauf-ueber-den-unterbaum.md`
-- [x] Gehört die Fallunterscheidung der Rückschritt-Taste in `kommandos/zulaessigkeit.rs`? — `decisions/260814-2102_a_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`
+- [x] Wie viele Fäden und Kanäle benutzt der Durchlauf? — `decisions/260814-2102_*_wie-viele-faeden-und-kanaele-benutzt-der-durchlauf-ueber-den-unterbaum.md`
+- [x] Gehört die Fallunterscheidung der Rückschritt-Taste in `kommandos/zulaessigkeit.rs`? — `decisions/260814-2102_*_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`
 
-Ein Defekt ist beim Erheben der Grundlage aufgefallen und liegt im Circle: `issues/260814-2102_o_der-pruefschritt-fuer-die-sichtbarkeit-steht-im-ordnermodell-zweimal-wortgleich-da.md`. Schritt A1 behebt ihn nebenbei; der Datensatz besteht, weil der Zustand vor dieser Runde entstanden ist und ohne sie fortbestünde.
+Ein Defekt ist beim Erheben der Grundlage aufgefallen und liegt im Circle: `issues/260814-2102_*_der-pruefschritt-fuer-die-sichtbarkeit-steht-im-ordnermodell-zweimal-wortgleich-da.md`. Schritt A1 behebt ihn nebenbei; der Datensatz besteht, weil der Zustand vor dieser Runde entstanden ist und ohne sie fortbestünde.
+
+---
+
+## Reconciliation Log
+
+**260815-1216, reconciler, Stand `9a2d0e0`.** Abgeglichen wurde dieser Plan gegen den Baum, nicht gegen seine eigenen Kopfzeilen.
+
+**Der Schritt E2 trug als einziger der vierzehn keinen `[DONE]`-Vermerk, obwohl er gefahren ist.** Der Beleg steht in `resources/default-keymap.toml:405-408`: der Eintrag `id = "tiefe_suche_umschalten"` mit `name = "Tiefe Suche ein- und ausschalten"` und `tasten = []` steht unmittelbar hinter den drei Spaltenschaltern, wie der Schritt es verlangt. Die Datei führt heute 84 `[[funktion]]`-Einträge (`grep -c '^\[\[funktion\]\]' resources/default-keymap.toml`), also die von C5.2 zugesagte Zahl. Ausgeführt hat den Schritt der `ontocoder`, festgehalten in `history/260814-2320-ontocoder-e2-eintrag-der-tiefen-suche.md`. Der Vermerk ist nachgetragen.
+
+**Damit stehen alle vierzehn Schritte auf `[DONE]`**, die Kopfzeile `**Status:**` ist von `Entwurf` auf `Complete` gezogen und der Dateiname auf den Marker `_c_`. Der Plan war der einzige einer geschlossenen Runde, der noch `_o_` trug; alle acht Pläne der Runden 1 bis 9 stehen auf `_c_`. Der Abnahmelauf am laufenden Bündel bleibt davon unberührt: die Zeile unter Strang G hält ausdrücklich fest, dass `[DONE]` den Schritt des Ausführenden bezeichnet und nicht die Abnahme, und die Runde ist genau deswegen beschränkt geschlossen.
+
+**Zwei Verweise dieses Plans nennen einen Marker, den ihr Ziel nicht mehr trägt.** In der Liste der offenen Nutzerentscheidungen steht `decisions/260814-1830_*_bleibt-der-filtertext-…`, das Ziel trägt seit `9a2d0e0` `_i_`; im Verzeichnis der Datensätze steht `decisions/260814-2102_*_gehoert-die-fallunterscheidung-…` (heute `_i_`) und `issues/260814-2102_*_der-pruefschritt-fuer-die-sichtbarkeit-…` (heute `_c_`). Sie sind hier nicht berichtigt, weil sie in der Prosa des Plans stehen und diese dem Planer gehört; aufgenommen sind sie mit den sechs übrigen Fundstellen in `shared/issues/260815-1216_*_sieben-verweise-dieser-sitzung-nennen-einen-marker-den-ihr-ziel-nicht-mehr-traegt.md`.

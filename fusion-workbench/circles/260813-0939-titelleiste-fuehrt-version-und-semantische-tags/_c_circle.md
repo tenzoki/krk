@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** closed
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_o_plan-titelleiste-fuehrt-version-und-semantische-tags.md
+**Active spec/plan:** circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_*_plan-titelleiste-fuehrt-version-und-semantische-tags.md
 **Active session history:** circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md
 
 ---
@@ -60,9 +60,9 @@ Die Kopplung bleibt trotzdem gewollt, und der Nutzer hat beide Antworten in ders
 
 Drei Punkte sind beim Lesen des Baums aufgekommen, die die vier Antworten nicht abdecken. Keiner davon ändert die Directive, jeder ist Eingabe für die Klärungsrunde bei der Aktivierung. Jeder trägt einen eigenen Datensatz in `decisions/` dieses Circles.
 
-1. **Bekommt KRK zugleich einen Eintrag "Über KRK" im Anwendungsmenü?** Das Menü der Runde 7 führt keinen, und auf dem Mac ist er der übliche Ort für Namen und Version. Wer ihn später nachträgt, hat zwei Anzeigen derselben Zahl. `decisions/260813-0939_o_bekommt-krk-einen-eintrag-ueber-krk-im-anwendungsmenue.md`
-2. **Wer setzt den ersten Tag `v0.1.0`, und wann?** Nach dieser Runde bricht `cargo xtask release` ab, solange HEAD keinen passenden Tag trägt, und das Werkzeug darf ihn nach Antwort 2 nicht selbst erzeugen. Ohne eine Festlegung ist der Auslieferungsweg ab dem Abschluss der Runde abweisend. `decisions/260813-0939_o_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md`
-3. **Reicht ein passender Tag auf HEAD, oder muss der Arbeitsbaum sauber sein?** Ein Tag zeigt auf einen Commit, nicht auf den Baum. Ein geänderter Baum liefert ein Bündel, das der Tag nicht benennt, und die Prüfung ließe es durch. `decisions/260813-0939_o_reicht-ein-tag-auf-head-oder-muss-der-arbeitsbaum-sauber-sein.md`
+1. **Bekommt KRK zugleich einen Eintrag "Über KRK" im Anwendungsmenü?** Das Menü der Runde 7 führt keinen, und auf dem Mac ist er der übliche Ort für Namen und Version. Wer ihn später nachträgt, hat zwei Anzeigen derselben Zahl. `decisions/260813-0939_*_bekommt-krk-einen-eintrag-ueber-krk-im-anwendungsmenue.md`
+2. **Wer setzt den ersten Tag `v0.1.0`, und wann?** Nach dieser Runde bricht `cargo xtask release` ab, solange HEAD keinen passenden Tag trägt, und das Werkzeug darf ihn nach Antwort 2 nicht selbst erzeugen. Ohne eine Festlegung ist der Auslieferungsweg ab dem Abschluss der Runde abweisend. `decisions/260813-0939_*_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md`
+3. **Reicht ein passender Tag auf HEAD, oder muss der Arbeitsbaum sauber sein?** Ein Tag zeigt auf einen Commit, nicht auf den Baum. Ein geänderter Baum liefert ein Bündel, das der Tag nicht benennt, und die Prüfung ließe es durch. `decisions/260813-0939_*_reicht-ein-tag-auf-head-oder-muss-der-arbeitsbaum-sauber-sein.md`
 
 ### Was dieser Circle nicht festlegt
 

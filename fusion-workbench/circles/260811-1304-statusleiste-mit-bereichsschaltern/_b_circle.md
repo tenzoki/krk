@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_c_bereichsleiste-und-proportionale-breitenregel.md
+**Active spec/plan:** circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_*_bereichsleiste-und-proportionale-breitenregel.md
 **Active session history:** shared/history/260812-0306-orchestrator-session.md
 
 ---
@@ -19,7 +19,7 @@ Vorläufig. Ein vorgesehener Circle trägt noch keine erhobene Grundlage; dieser
 
 ### Woher das Vorhaben kommt
 
-Der Nutzer hat den Entwurf am 260811 diktiert, im selben Zug mit dem Defekt `shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`, den er am 260811-1240 gemeldet hat. Der Defekt und der Entwurf liegen in derselben Maschinerie, und der Defektdatensatz sagt das von sich aus: eine proportionale Neuaufteilung auf einer Grundlage, die die Ziehbewegung des Nutzers nicht hält, verteilt die falschen Anteile.
+Der Nutzer hat den Entwurf am 260811 diktiert, im selben Zug mit dem Defekt `shared/issues/260811-1245_*_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md`, den er am 260811-1240 gemeldet hat. Der Defekt und der Entwurf liegen in derselben Maschinerie, und der Defektdatensatz sagt das von sich aus: eine proportionale Neuaufteilung auf einer Grundlage, die die Ziehbewegung des Nutzers nicht hält, verteilt die falschen Anteile.
 
 ### Was schon steht, am Code geprüft am 260811-1304
 
@@ -68,13 +68,13 @@ Sieben Fragen sind bei der Klärung aufgekommen und liegen als eigene Datensätz
 
 | Datei in `decisions/` | Worum es geht |
 |---|---|
-| `260811-1305_o_was-heisst-proportional-zur-letzten-aufteilung.md` | Ob die eine Breitenregel neu geschrieben wird und was aus der Vorrangordnung vom 260808 wird. Die entscheidende Frage: sie bestimmt den Umfang der Runde. |
-| `260811-1305_o_traegt-das-linke-dateifenster-einen-schalter.md` | Ob die Leiste vier oder fünf Schalter trägt, und ob `Sichtbarkeit` ein fünftes Feld bekommt. |
-| `260811-1305_o_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md` | Wie die Leiste den gegenseitigen Ausschluss von Vorschau und Editor zeigt. |
-| `260811-1305_o_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md` | Ob die neue Fläche auch Meldungen trägt und damit C1 der Runde 1 anfasst. |
-| `260811-1305_o_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md` | Woraus der erste Anteil eines nie sichtbaren Bereichs entsteht. Entfällt, wenn die erste Frage auf die heutige Regel fällt. |
-| `260811-1305_o_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md` | Was ein Schalter tut, dessen Bereich nicht mehr hineinpasst. |
-| `260811-1305_o_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md` | Ob der gemeldete Defekt in dieser Runde oder in einer eigenen davor behoben wird. |
+| `260811-1305_*_was-heisst-proportional-zur-letzten-aufteilung.md` | Ob die eine Breitenregel neu geschrieben wird und was aus der Vorrangordnung vom 260808 wird. Die entscheidende Frage: sie bestimmt den Umfang der Runde. |
+| `260811-1305_*_traegt-das-linke-dateifenster-einen-schalter.md` | Ob die Leiste vier oder fünf Schalter trägt, und ob `Sichtbarkeit` ein fünftes Feld bekommt. |
+| `260811-1305_*_wie-zeigen-zwei-schalter-eine-flaeche-die-nur-einer-haben-kann.md` | Wie die Leiste den gegenseitigen Ausschluss von Vorschau und Editor zeigt. |
+| `260811-1305_*_ist-die-neue-leiste-die-statuszeile-aus-c1-oder-eine-zweite-flaeche.md` | Ob die neue Fläche auch Meldungen trägt und damit C1 der Runde 1 anfasst. |
+| `260811-1305_*_welchen-anteil-bekommt-ein-bereich-der-noch-nie-sichtbar-war.md` | Woraus der erste Anteil eines nie sichtbaren Bereichs entsteht. Entfällt, wenn die erste Frage auf die heutige Regel fällt. |
+| `260811-1305_*_was-geschieht-wenn-die-mindestbreiten-nicht-mehr-hineinpassen.md` | Was ein Schalter tut, dessen Bereich nicht mehr hineinpasst. |
+| `260811-1305_*_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md` | Ob der gemeldete Defekt in dieser Runde oder in einer eigenen davor behoben wird. |
 
 ### Was diese Runde nicht festlegt
 
@@ -86,7 +86,7 @@ Womit die Schalter gezeichnet werden, ist offen und gehört in den Plan. Der Cir
 
 `260807-2116-eingebauter-editor-mit-textmarken` — die Editor-Runde, beschränkt abgeschlossen. Ihr **C1** trägt den gegenseitigen Ausschluss von Vorschau und Editor und damit die dritte offene Frage. Sie hat außerdem den fünften Bereich, den fünften Fokuswert und die fünf Rahmen gebaut, auf denen diese Runde aufsetzt.
 
-`shared/issues/260811-1245_o_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md` — der Defekt in derselben Maschinerie. Ob er in dieser Runde oder vor ihr behoben wird, ist die vierte offene Frage; der Datensatz selbst benennt die zwei möglichen Bruchstellen und verlangt, dass zuerst gemessen wird, welche es ist.
+`shared/issues/260811-1245_*_die-breite-des-vorschaufensters-faellt-beim-navigieren-in-der-dateiliste-zurueck.md` — der Defekt in derselben Maschinerie. Ob er in dieser Runde oder vor ihr behoben wird, ist die vierte offene Frage; der Datensatz selbst benennt die zwei möglichen Bruchstellen und verlangt, dass zuerst gemessen wird, welche es ist.
 
 `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — vorgesehen, nicht gefahren. **Er bindet diese Runde nicht.** Der Betrachter lebt in einem Tab des Vorschaufensters und fasst weder die Breitenregel noch die Sichtbarkeit an. Eine Berührung bleibt und ist klein: ein gerenderter Web-Inhalt braucht plausibel mehr als die 160 Punkte Mindestbreite, die die Vorschau heute trägt. Wer jenen Circle aktiviert, prüft die Zahl; wer diesen plant, muss nicht auf ihn warten.
 
@@ -256,7 +256,7 @@ Aus demselben Grund wie die vier Runden davor, und es ist eine Eigenschaft diese
 keine Häufung von Fehlschlägen: dreizehn Abnahmekriterien dieser Runde (C1.1, C1.2, C1.4, C2.1
 bis C2.5, C3.1, C3.2, C3.4, C5.1, C6.3) sind nur am laufenden `KRK.app` im Vordergrund zu sehen,
 und kein Agent kann ihn fahren
-(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_o_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`).
 Was ein Agent abnehmen kann, ist abgenommen: 27 Kriterien einzeln gegen den Baum gelesen,
 `make check` mit Exit 0 über vierzehn Prüfziele, `make bundle` gebaut und signiert. „Gebaut" ist
 damit die richtige Aussage über diese Runde und „abgenommen" nicht.

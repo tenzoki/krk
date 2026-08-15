@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_t_circle.md` (`## Directive`, Abschnitt „Vorbelegungen, denen der Nutzer nicht widersprochen hat"); `crates/krk-ui/src/tabs.rs` (`Tabinhalt`, der Halter des Filters); `crates/krk-core/src/verzeichnis/sprungmarke.rs:80-88` (`zuruecksetzen`, heute bei jedem Ordnerwechsel gerufen)
 

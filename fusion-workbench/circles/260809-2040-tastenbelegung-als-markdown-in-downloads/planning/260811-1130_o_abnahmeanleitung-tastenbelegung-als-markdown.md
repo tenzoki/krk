@@ -1,7 +1,7 @@
 # Abnahmeanleitung: Die Tastenbelegung als Markdown
 
 **Status:** offen, wartet auf den Abnahmelauf des Nutzers
-**Grundlage:** `planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md`, C1 bis C4
+**Grundlage:** `planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md`, C1 bis C4
 **Zweck:** Die 41 Abnahmekriterien des Specs sind als Behauptungen über den Endzustand
 formuliert. Diese Datei macht Schritte daraus: Handlung, Beobachtungsort, Bestehensbedingung.
 

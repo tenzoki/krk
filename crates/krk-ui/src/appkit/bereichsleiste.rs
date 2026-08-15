@@ -33,7 +33,7 @@
 //! Dateifenster. Daran haengen die drei Anlaesse, die
 //! `Anwendungsdelegierter::bereichsleiste_nachziehen` seit der Filter-Runde
 //! zusaetzlich hat; welche das sind, steht dort. Solange
-//! `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
+//! `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
 //! offen ist, faehrt der Bau auf "je Tab": faellt die Antwort auf "je
 //! Fenster", wechselt allein die **Quelle** des dritten Arguments von
 //! [`Bereichsleiste::zustaende_setzen`], und diese Datei bleibt, wie sie ist.
@@ -505,7 +505,7 @@ impl Bereichsleiste {
     /// Werte und schreibt drei Gruppen. Wo `tief` herkommt, entscheidet allein
     /// `Anwendungsdelegierter::bereichsleiste_nachziehen`; das ist die Naht,
     /// an der eine Antwort "je Fenster" auf
-    /// `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
+    /// `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
     /// anfiele, ohne diese Datei zu beruehren.
     pub fn zustaende_setzen(
         &self,

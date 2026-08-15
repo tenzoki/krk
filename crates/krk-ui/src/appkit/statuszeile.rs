@@ -229,7 +229,7 @@ impl Rang {
     ///
     /// **Der Filterstand steht ueber dem Markierungsstand** (C4.1). Die eine
     /// Zeile darunter traegt die ganze Wirkung der Nutzerfrage
-    /// `decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`;
+    /// `decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`;
     /// faellt sie anders aus als die Empfehlung, wandert diese Zeile und
     /// sonst nichts.
     pub const ALLE: [Rang; 6] = [
@@ -353,7 +353,7 @@ pub struct Filterstand {
 /// **Er ist die Gegenleistung dafuer, dass die Markierungsregel unter dem
 /// Filter unveraendert bleibt.** Der Nutzer hat am 260814-1610 entschieden,
 /// dass eine ausgeblendete Markierung fortbesteht und nicht wirkt
-/// (`decisions/260814-1552_a_was-geschieht-mit-einer-markierung-die-der-filter-ausblendet.md`);
+/// (`decisions/260814-1552_*_was-geschieht-mit-einer-markierung-die-der-filter-ausblendet.md`);
 /// ohne diesen Satzteil muesste er erraten, dass es sie ueberhaupt gibt.
 ///
 /// **Beide Zahlen gehen durch [`zahl`]** und tragen damit dieselben

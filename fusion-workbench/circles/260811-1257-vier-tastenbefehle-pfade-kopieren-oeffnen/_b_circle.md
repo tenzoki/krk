@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** bounded closure (260811-2210) — gebaut, nicht abgenommen
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md, planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md
+**Active spec/plan:** planning/260811-1552_*_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md, planning/260811-1648_*_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md
 **Active session history:** circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md
 
 ---
@@ -31,7 +31,7 @@ Der Bestand ist am 260811-1257 am Baum gelesen worden. Sieben Feststellungen tra
 
 **Die vier vollständigen Fallunterscheidungen halten den Bau an.** Nachgezählt am 260811: `resources/default-keymap.toml` führt 71 Funktionen, die Aufzählung `Kommando` 65 Varianten, `Wirkungsbereich` sieben Werte. Vier neue Funktionen heißen vier Zeilen in der Belegungsdatei, vier Werte in `Kommando` und je vier Zeilen in `Kommando::wirkungsbereich` (`krk-core/src/tasten/belegung.rs`) und `bereich_des_kommandos` (`krk-ui/src/belegungsmodell.rs`). Keine dieser Stellen hat einen Auffangzweig, der Übersetzer nennt sie also von selbst.
 
-Die bindende Entscheidung zu Menükürzeln ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`. Der Nutzer hat am 260811-1250 festgelegt, dass sie **nicht** umgekehrt wird: Cmd+W bleibt auf dem Tab, `fenster_schliessen` bleibt auf Shift+Cmd+W.
+Die bindende Entscheidung zu Menükürzeln ist `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`. Der Nutzer hat am 260811-1250 festgelegt, dass sie **nicht** umgekehrt wird: Cmd+W bleibt auf dem Tab, `fenster_schliessen` bleibt auf Shift+Cmd+W.
 
 **Vier Fragen sind offen und liegen als Entscheidungsdatensätze in `decisions/` dieses Circles.** Sie betreffen die Reichweite von Cmd+W (F1), was der Pfadkopierer bei stehender Markierung nimmt (F2), was ein Doppelklick auf einen Ordner tut (F3) und welche vier Kombinationen ab Werk gelten (F4). Keine davon hindert die Aktivierung; alle vier gehören vor den Spec beantwortet.
 

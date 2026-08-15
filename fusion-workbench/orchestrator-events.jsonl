@@ -825,3 +825,12 @@
 {"ts":"2026-08-15T09:52:00","event":"gate_response","turn":1,"detail":"Nutzer waehlt: nichts am Verhalten aendern, die Grundlage berichtigen"}
 {"ts":"2026-08-15T09:52:00","event":"turn_end","turn":1,"detail":"2 Aufgaben erledigt, 2 Commits, 4 Defektdatensaetze aus der Durchsicht"}
 {"ts":"2026-08-15T09:52:00","event":"turn_start","turn":2,"detail":"2 Aufgaben: Werkbanktext und Codekommentare"}
+{"ts":"2026-08-15T10:07:24","event":"task_done","turn":2,"task":"T3","agent":"orchestrator","detail":"Werkbanktext berichtigt"}
+{"ts":"2026-08-15T10:07:24","event":"task_done","turn":2,"task":"T4","agent":"coder","detail":"Codekommentare, 7 Markerverweise"}
+{"ts":"2026-08-15T10:07:24","event":"commit","turn":2,"detail":"9a2d0e0"}
+{"ts":"2026-08-15T10:07:24","event":"turn_end","turn":2,"detail":"2 Aufgaben erledigt, 1 Commit, Warteschlange leer"}
+{"ts":"2026-08-15T10:50:23","event":"reconciliation","detail":"Urteil review-needed; 24 Abweichungen in 5 Befunden, 3 berichtigt, 2 neue Datensaetze; Plan der Runde 10 auf _c_"}
+{"ts":"2026-08-15T10:50:23","event":"gate_hit","detail":"Rebalance: Zitierform und CLAUDE.md"}
+{"ts":"2026-08-15T10:50:23","event":"gate_response","detail":"Sternform ohne Pruefung; CLAUDE.md ergaenzen"}
+{"ts":"2026-08-15T10:50:23","event":"rebalance_artifact","detail":"Turn 3: Zitierform umsetzen, CLAUDE.md nachziehen"}
+{"ts":"2026-08-15T10:50:23","event":"turn_start","turn":3,"detail":"2 Aufgaben"}

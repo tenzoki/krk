@@ -45,3 +45,13 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+## Abgleich 260815-1216 (reconciler, Stand `9a2d0e0`)
+
+**Diese Frage ist weder beantwortet noch gegenstandslos geworden.** Der Marker bleibt `_o_`.
+
+**Der Baum fährt auf der Empfehlung, Möglichkeit 2, ohne Antwort des Nutzers.** `Anwendungsdelegierter::abbrechen` (`crates/krk-ui/src/appkit/anwendung.rs:4565-4588`) prüft in dieser Reihenfolge: ein stehendes Blatt schließen, eine laufende Dateioperation abbrechen, und erst dann `filter_leeren` auf dem sichtbaren Tab des aktiven Dateifensters. Der Kommentar an der dritten Stelle nennt sie ausdrücklich „den dritten Rang". C1.7 des Spec beschreibt dieselbe Reihenfolge und hält fest, dass sie sich mit einer anderen Antwort ändert.
+
+**Die Sitzung vom 260815-0912 hat die Tragweite der Frage vergrößert, ohne sie zu berühren.** Seit `897605e` übersteht der Filtertext jeden Ordnerwechsel (`decisions/260814-1830_i_bleibt-der-filtertext-…`, Möglichkeit 2). `Esc` ist damit der einzige Griff, der einen stehenden Filtertext in einem Zug wegnimmt — die Rückschritt-Taste nimmt ihn Zeichen für Zeichen zurück, und kein Ordnerwechsel räumt ihn mehr ab. Ein Filtertext steht deshalb länger und über mehr Ordner hinweg als zur Zeit der Fragestellung, und der Fall aus dem Abschnitt `## Question`, in dem `Esc` während eines laufenden Kopiervorgangs gedrückt wird, tritt entsprechend häufiger bei stehendem Filtertext ein. Am Abwägungsstoff der drei Möglichkeiten ändert das nichts.

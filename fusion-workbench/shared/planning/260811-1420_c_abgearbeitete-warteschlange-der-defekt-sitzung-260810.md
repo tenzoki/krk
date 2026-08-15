@@ -67,12 +67,12 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 1. Der Plan der Runde 1 führt den Messstrecken-Defekt noch als offen
 
 - **ID:** I:260807-1022-plan
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_der-plan-fuehrt-den-messstrecken-defekt-an-zwei-stellen-noch-als-offen.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_der-plan-fuehrt-den-messstrecken-defekt-an-zwei-stellen-noch-als-offen.md`
 - **Executor:** ontocoder
 - **Depends on:** keine
 - **Priority:** normal
 - **Status:** [ ] open
-- **Detail:** Zu berichtigen ist `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_c_plan-navigator-geruest-runde-1.md`. Der Plan behauptet, die Auswertung der Messstrecke könne die zweiteilige Fassung der Zeitzusage L9 nicht abnehmen. Seit Commit `d569f8a` ist das falsch: `Abnahmemass::AnteilImBild` (`crates/krk-bench/src/messen.rs:390-405`) trägt Bildlänge, Mindestanteil und Obergrenze, die frühere gemeinsame Konstante `ANTEIL_IM_BILD_PROZENT` gibt es im Baum nicht mehr, und der zugehörige Defekt trägt `_c_`.
+- **Detail:** Zu berichtigen ist `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md`. Der Plan behauptet, die Auswertung der Messstrecke könne die zweiteilige Fassung der Zeitzusage L9 nicht abnehmen. Seit Commit `d569f8a` ist das falsch: `Abnahmemass::AnteilImBild` (`crates/krk-bench/src/messen.rs:390-405`) trägt Bildlänge, Mindestanteil und Obergrenze, die frühere gemeinsame Konstante `ANTEIL_IM_BILD_PROZENT` gibt es im Baum nicht mehr, und der zugehörige Defekt trägt `_c_`.
 
   **Von den zwei gemeldeten Stellen steht nur noch eine offen.** Nachgeprüft am 260810-1707 gegen den Baum:
   - **Zeile 25**, Absatz "Nachzug 260807-0832", schließt weiterhin mit "Offen bleibt daraus ein Defekt an der Messstrecke, `issues/260807-0832_*_die-messstrecke-kann-die-neue-zweiteilige-fassung-von-l9-nicht-abnehmen.md`". **Diese Stelle ist zu berichtigen.**
@@ -88,7 +88,7 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 2. Circle-Datensätze und portfolio.md tragen überholte Zustandsmarker
 
 - **ID:** I:260807-1022-marker-a
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md`
 - **Executor:** ontocoder
 - **Depends on:** keine
 - **Priority:** normal
@@ -117,8 +117,8 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 3. Ein abgebrochener Messlauf lässt seinen Messplan im Temporärverzeichnis liegen
 
 - **ID:** I:260810-1330
-- **Source:** `fusion-workbench/shared/issues/260810-1330_o_der-messplan-bleibt-liegen-wenn-eine-runde-abbricht.md`
-- **Dublette:** `fusion-workbench/shared/issues/260810-1430_o_ein-abgebrochener-messlauf-laesst-seinen-messplan-im-temporaerverzeichnis-liegen.md` — derselbe Defekt, mit demselben Fix zu schließen. Beide Dateien am Ende auf `_c_` setzen, in der Dublette mit einem `Resolved:`-Vermerk, der auf den Datensatz vom 260810-1330 zeigt.
+- **Source:** `fusion-workbench/shared/issues/260810-1330_*_der-messplan-bleibt-liegen-wenn-eine-runde-abbricht.md`
+- **Dublette:** `fusion-workbench/shared/issues/260810-1430_*_ein-abgebrochener-messlauf-laesst-seinen-messplan-im-temporaerverzeichnis-liegen.md` — derselbe Defekt, mit demselben Fix zu schließen. Beide Dateien am Ende auf `_c_` setzen, in der Dublette mit einem `Resolved:`-Vermerk, der auf den Datensatz vom 260810-1330 zeigt.
 - **Executor:** coder
 - **Depends on:** keine
 - **Priority:** low
@@ -136,23 +136,23 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 4. Ein Verweis nennt den falschen Circle
 
 - **ID:** I:260810-0805
-- **Source:** `fusion-workbench/shared/issues/260810-0805_o_ein-verweis-nennt-den-falschen-circle-und-die-zustellerregel-liegt-woanders.md`
+- **Source:** `fusion-workbench/shared/issues/260810-0805_*_ein-verweis-nennt-den-falschen-circle-und-die-zustellerregel-liegt-woanders.md`
 - **Executor:** ontocoder
 - **Depends on:** keine
 - **Priority:** low
 - **Status:** [ ] open
-- **Detail:** In `fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_o_wie-wird-die-ausgabe-der-belegung-ausgeloest.md`, Zeile 7, führt `**Cross-references:**` den Pfad `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260805-0713_i_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`. Diese Datei gibt es nicht. Der Datensatz liegt im Circle der Runde 1, unter `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/`. Zu ersetzen ist allein das Verzeichnis; der Marker `_i_` und der Dateiname stimmen.
+- **Detail:** In `fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_*_wie-wird-die-ausgabe-der-belegung-ausgeloest.md`, Zeile 7, führt `**Cross-references:**` den Pfad `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`. Diese Datei gibt es nicht. Der Datensatz liegt im Circle der Runde 1, unter `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/`. Zu ersetzen ist allein das Verzeichnis; der Marker `_i_` und der Dateiname stimmen.
 
   Der Verweis trägt die Klammer "die Zustellerregel, zitiert wo sie liegt", und genau das leistet er nicht. Es ist deshalb nicht die bekannte Sorte aus T2 und T5, wo ein ausgeschriebener Marker veraltet ist. Hier stimmt der Marker und das Verzeichnis ist falsch; eine Sternform repariert das nicht.
 
-  **Der Datensatz verlangt, alle fünf Datensätze dieses Circles zu prüfen. Das ist erledigt.** Nachgeprüft am 260810-1707: die übrigen vier (`gehoert-der-wirkungsbereich-in-die-ausgabe`, `was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert`, `welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht`, `wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen`) tragen den Fehler nicht, und der zweite fremde Verweis in derselben Zeile 7, auf `260805-0000_i_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`, nennt den Circle richtig. Es bleibt genau eine Stelle.
+  **Der Datensatz verlangt, alle fünf Datensätze dieses Circles zu prüfen. Das ist erledigt.** Nachgeprüft am 260810-1707: die übrigen vier (`gehoert-der-wirkungsbereich-in-die-ausgabe`, `was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert`, `welche-belegung-schreibt-die-ausgabe-bei-offener-belegungsansicht`, `wie-heisst-die-ausgabedatei-und-was-geschieht-bei-einer-vorhandenen`) tragen den Fehler nicht, und der zweite fremde Verweis in derselben Zeile 7, auf `260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`, nennt den Circle richtig. Es bleibt genau eine Stelle.
 
   `Domain: data`. Kein Bau nötig.
 
 ### 5. CLAUDE.md und spikes/ tragen überholte Zustandsmarker
 
 - **ID:** I:260807-1022-marker-b
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_o_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md`
 - **Executor:** coder
 - **Depends on:** I:260807-1022-marker-a (Aufgabe 2)
 - **Priority:** low
@@ -162,8 +162,8 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
   **Warum diese Aufgabe an Aufgabe 2 hängt.** Beide Hälften fassen zwar getrennte Dateien an, aber `spikes/fn-tasten/README.md` ist genau das, was der Datensatz eine "Aufzeichnung eines Standes" nennt, und er erlaubt solchen Dateien ausdrücklich, ihren damaligen Marker zu behalten, "wenn der Fixer das ausdrücklich so entscheidet". Diese eine Festlegung trifft Aufgabe 2. Sie hier ein zweites Mal und womöglich anders zu treffen, wäre die zweite Wahrheit über dieselbe Frage. Warte sie ab.
 
   **Der Bestand ist kleiner als der Datensatz sagt.** Nachgeprüft am 260810-1707:
-  - **`CLAUDE.md`: nichts zu tun.** Der Datensatz führt `CLAUDE.md:17` mit `260802-1036_a_leistungszusagen-navigator.md` gegen einen Ist-Marker `_i_`. Die Datei ist seither neu geschrieben und führt den Verweis heute schon in der Sternform. Eine Erhebung über die ganze Datei liefert null Treffer.
-  - **`spikes/fn-tasten/README.md`: drei Stellen, nicht zwei.** Zeilen 17, 25 und 54. Der Datensatz kennt nur 25 und 54; Zeile 17 mit `260802-1036_o_spec-navigator-geruest.md` ist neu dazugekommen, der Ist-Marker dort ist `_c_`.
+  - **`CLAUDE.md`: nichts zu tun.** Der Datensatz führt `CLAUDE.md:17` mit `260802-1036_*_leistungszusagen-navigator.md` gegen einen Ist-Marker `_i_`. Die Datei ist seither neu geschrieben und führt den Verweis heute schon in der Sternform. Eine Erhebung über die ganze Datei liefert null Treffer.
+  - **`spikes/fn-tasten/README.md`: drei Stellen, nicht zwei.** Zeilen 17, 25 und 54. Der Datensatz kennt nur 25 und 54; Zeile 17 mit `260802-1036_*_spec-navigator-geruest.md` ist neu dazugekommen, der Ist-Marker dort ist `_c_`.
 
   Fällt in Aufgabe 2 die Festlegung, dass Aufzeichnungen eines Standes ihren Marker behalten, dann ist diese Aufgabe leer und wird mit einer Begründung geschlossen, nicht mit einer Änderung. Das ist ein zulässiges Ergebnis und kein Versäumnis.
 
@@ -178,7 +178,7 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 6. Die Meldung zur Bündelkennung nennt den Ladezeitpunkt nicht
 
 - **ID:** I:260807-0930
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0930_o_die-meldung-zur-buendelkennung-sagt-nicht-dass-settings-toml-erst-beim-start-gelesen-wird.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0930_*_die-meldung-zur-buendelkennung-sagt-nicht-dass-settings-toml-erst-beim-start-gelesen-wird.md`
 - **Executor:** Nutzerentscheid, danach coder
 - **Depends on:** Nutzerentscheid (Tor G1 im Graphen)
 - **Priority:** low
@@ -200,7 +200,7 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 7. vorgang_beenden wirft den Auswahlversuch weg
 
 - **ID:** I:260807-0219
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0219_o_drei-aufrufer-von-eintrag-waehlen-werfen-den-auswahlversuch-weg.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-werfen-den-auswahlversuch-weg.md`
 - **Executor:** Nutzerentscheid, danach coder
 - **Depends on:** Nutzerentscheid (Tor G2 im Graphen)
 - **Priority:** low
@@ -232,7 +232,7 @@ Zwei Aufgaben verlangen eine Wahl des Nutzers, bevor `coder` sie anfassen darf. 
 ### 8. Der Sitzungslauf blieb einmal von drei Malen bei L6 stehen
 
 - **ID:** I:260806-1304
-- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1304_o_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md`
+- **Source:** `fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1304_*_der-sitzungslauf-blieb-einmal-von-drei-malen-bei-l6-stehen.md`
 - **Executor:** keiner
 - **Depends on:** ein Messlauf mit KRK im Vordergrund, und der ist Nutzerarbeit
 - **Priority:** low

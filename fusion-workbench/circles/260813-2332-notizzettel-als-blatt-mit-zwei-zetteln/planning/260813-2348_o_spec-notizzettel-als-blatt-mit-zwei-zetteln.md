@@ -192,7 +192,7 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 - **Der Wechsel zwischen den Zetteln braucht dort ebenfalls keinen Eintrag**, weil die Tabs angeklickt und nicht getastet werden. C2 sagt es aus.
 - **Das Abnahmekriterium zur laufenden Dateioperation ist eine Folge und keine Wahl.** Solange der Zettel steht und seine Textfläche den Ersthelferrang hält, erreicht `Esc` den Abbruchbefehl nicht. Der laufenden Operation geschieht dabei nichts; sie läuft weiter, und ihre Statuszeile nennt den Abbruch unverändert.
 - **Die Menüzeile ist kein Zusatzaufwand, sondern eine Folge der Runde 7.** Der Eintrag entsteht aus der Belegung, und seine Ausgrauung kommt aus derselben Regel wie die Beurteilung des Tastendrucks.
-- **`shift+cmd+w` sichert, und die Ausnahmeliste bleibt dabei unangetastet.** Der Nutzer hat es am 260814-0005 entschieden, und der Grund ist die Logik der drei anderen Momente: kein Weg aus dem Zettel heraus verliert Text. `fenster_schliessen` steht seit dem Entscheid `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-1110_i_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md` ausdrücklich auf `immer_erreichbar`, und dieser Entscheid wird nicht gekippt. Der Zettel ändert nichts an der Zulässigkeit des Befehls; er hängt sich an dessen Ausführungsweg.
+- **`shift+cmd+w` sichert, und die Ausnahmeliste bleibt dabei unangetastet.** Der Nutzer hat es am 260814-0005 entschieden, und der Grund ist die Logik der drei anderen Momente: kein Weg aus dem Zettel heraus verliert Text. `fenster_schliessen` steht seit dem Entscheid `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-1110_*_hebt-die-ausnahmeliste-auch-die-neue-schluesselfensterfrage-auf.md` ausdrücklich auf `immer_erreichbar`, und dieser Entscheid wird nicht gekippt. Der Zettel ändert nichts an der Zulässigkeit des Befehls; er hängt sich an dessen Ausführungsweg.
 - **`cmd+n` sichert nicht, und das ist keine Lücke in der Zusage.** Die Zusage lautet, dass kein Weg aus dem Zettel heraus Text verliert. `cmd+n` führt nicht heraus: es holt das Fenster nach vorn, das Blatt bleibt stehen, und der getippte Text steht weiter in der Fläche. Ein Sichern dort wäre ein fünfter Moment ohne Anlass.
 
 ### C2: Zwei Zettel als anklickbare Tabs, und der zuletzt offene kommt wieder
@@ -311,7 +311,7 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen. Die erste ist am Ba
 **Getroffene Festlegungen:**
 - **Der Nutzer hat zwei einzelne Dateien gewählt und ausdrücklich keine gemeinsame.** Aus dieser Wahl folgt die Form des Inhalts: eine Datei je Zettel ist nur dann eine Verbesserung gegenüber einer gemeinsamen, wenn sie für sich lesbar ist. Ein TOML-Rahmen um den Text nähme genau das zurück und brächte daneben die Frage nach der Behandlung von Sonderzeichen mit, die eine Textdatei nicht kennt.
 - **Damit trennen sich die zwei neuen Dateien von den vier bestehenden**, die alle TOML tragen und über `Zugang::laden` und `Zugang::sichern` laufen. Ob die Aufzählung `Datei` um zwei Varianten wächst oder die Zettel daneben stehen, entscheidet der Planer; er entscheidet damit zugleich, was mit den elf Fundstellen in `crates/krk-core/tests/ablage.rs` geschieht, die heute über `Datei::ALLE` einen TOML-Rundlauf fahren.
-- **Die unlesbare Zetteldatei ist entschieden und keine offene Frage mehr.** Der Nutzer hat am 260814-0005 Möglichkeit 3 des Datensatzes `decisions/260813-2348_a_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md` gewählt, mit `EDITORGRENZE` als oberer Schranke. Die beiden verworfenen Möglichkeiten stehen dort mit ihren Kosten; der Grund, der die Wahl trägt, gehört hierher: Möglichkeit 1 wäre der einzige Weg in diesem Programm, auf dem ein bloßer Blick auf einen Zettel eine Datei vernichtet, und Möglichkeit 2 verlöre Text, den der Nutzer gerade erst getippt hat.
+- **Die unlesbare Zetteldatei ist entschieden und keine offene Frage mehr.** Der Nutzer hat am 260814-0005 Möglichkeit 3 des Datensatzes `decisions/260813-2348_*_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md` gewählt, mit `EDITORGRENZE` als oberer Schranke. Die beiden verworfenen Möglichkeiten stehen dort mit ihren Kosten; der Grund, der die Wahl trägt, gehört hierher: Möglichkeit 1 wäre der einzige Weg in diesem Programm, auf dem ein bloßer Blick auf einen Zettel eine Datei vernichtet, und Möglichkeit 2 verlöre Text, den der Nutzer gerade erst getippt hat.
 - **Die Wahl ist keine neue Erfindung, sondern die bestehende Antwort dieses Projekts auf dieselbe Frage.** `keymap.toml` und `settings.toml` sind von Hand änderbar, und ein Tippfehler darin nimmt dem Nutzer die Datei nicht weg: `Zugang::beiseite_legen` kopiert den gelesenen Text an den Beiseitepfad und tastet eine dort schon liegende ältere Fassung nicht an. Der Zettel bekommt damit keinen zweiten Zustand, keine dauerhafte Sperre und keine Ausnahme im Sicherungsweg.
 - **Der Preis ist benannt: `beiseite_legen` bekommt einen zweiten Aufrufer, und der Zettel läuft über `Zugang` statt an ihm vorbei.** Der Datensatz vom 260813-2348 spricht an dieser Stelle von einem „sechsten Aufrufer"; das war eine Fehlzählung des Shapers und ist hier berichtigt. `beiseite_legen` hat heute genau einen Aufrufer, `Zugang::laden` (`crates/krk-core/src/ablage/mod.rs:447`). Die Fünf gehört der Probe `nur_benannte_dateien_erreichen_das_atomare_schreiben` mit ihren fünf Quelldateien, und diese Zahl wächst nur dann, wenn der Zettel außerhalb von `krk-core/src/ablage/mod.rs` schreibt.
 - **Die Grenze ist `EDITORGRENZE` und keine eigene Zahl.** 16 MB sind für einen Notizzettel weit bemessen, und das ist der Punkt: die Grenze soll den Fall abfangen, in dem eine fremde Datei unter dem Namen eines Zettels liegt, und nicht den Nutzer beim Schreiben begrenzen. Eine zweite Zahl daneben wäre die zweite Wahrheit über dieselbe Frage, und der Editor hat sie schon beantwortet.
@@ -405,7 +405,7 @@ Der bekannte Grund zuerst. Eine Zeitzusage ist nur dann eine Zusage, wenn sie ab
 
 ## Offene Nutzerfragen
 
-**Keine.** Die eine Frage dieses Spec ist am 260814-0005 beantwortet: `decisions/260813-2348_a_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md`, Möglichkeit 3 mit `EDITORGRENZE` als Grenze. Die Antwort steht als Zusage in C5 und ist Bestandteil der Abnahme.
+**Keine.** Die eine Frage dieses Spec ist am 260814-0005 beantwortet: `decisions/260813-2348_*_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md`, Möglichkeit 3 mit `EDITORGRENZE` als Grenze. Die Antwort steht als Zusage in C5 und ist Bestandteil der Abnahme.
 
 Die zweite Frage, welcher der beiden Stände beim Öffnen eines abweichenden Zettels gewinnt, ist am 260814-0925 beantwortet und steht als Zusage in C4. Sie ist aus der Durchsicht von Turn 1 gekommen und nicht aus einer Klärungsrunde; ein eigener Datensatz entsteht dafür nicht, weil die Antwort dieselbe Stelle bindet, an der sie steht.
 
@@ -425,9 +425,9 @@ Drei Nutzerantworten vom 260814-0005 und fünf Befunde der Diagrammprüfung vom 
 
 **Eine Zahl ist berichtigt.** Der Datensatz zum unlesbaren Zettel nennt einen „sechsten Aufrufer von `beiseite_legen`". Die Funktion hat heute genau einen Aufrufer; der Zettel wird der zweite. Die Berichtigung steht in C5 und in der Ausgangslage, der Datensatz selbst bleibt als Aufzeichnung seines Standes stehen.
 
-**Was nicht geändert wurde und warum.** Die Prüfung hält fest, dass dieselbe unvollständig gezeichnete Fallunterscheidung zum dritten Mal auftrat und die zwei früheren Beanstandungen nie behoben wurden. Der Befund an diesem Spec ist mit diesem Nachtrag behoben. Das Muster dahinter ist kein Mangel dieses Dokuments und steht deshalb als eigener Datensatz: `issues/260814-0628_o_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`.
+**Was nicht geändert wurde und warum.** Die Prüfung hält fest, dass dieselbe unvollständig gezeichnete Fallunterscheidung zum dritten Mal auftrat und die zwei früheren Beanstandungen nie behoben wurden. Der Befund an diesem Spec ist mit diesem Nachtrag behoben. Das Muster dahinter ist kein Mangel dieses Dokuments und steht deshalb als eigener Datensatz: `issues/260814-0628_*_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`.
 
-**Die Directive im Circle-Datensatz ist nicht mitgezogen worden**, weil der Shaper sie außerhalb des Aktivierungsmodus nicht schreiben darf. Sie nennt weiter drei Sicherungsmomente, und der Datensatz `issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md` hält die Abweichung mit ihren zwei Stellen fest. Verbindlich für den Plan ist bis dahin dieser Spec.
+**Die Directive im Circle-Datensatz ist nicht mitgezogen worden**, weil der Shaper sie außerhalb des Aktivierungsmodus nicht schreiben darf. Sie nennt weiter drei Sicherungsmomente, und der Datensatz `issues/260814-0637_*_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md` hält die Abweichung mit ihren zwei Stellen fest. Verbindlich für den Plan ist bis dahin dieser Spec.
 
 ---
 
@@ -480,7 +480,7 @@ Bündelbau, kein `cargo xtask`; `target/KRK.app` unberührt.
 stand die Abnahme noch aus. Sie ist am 260814-1115 gefahren worden, und sie deckt die zweiten
 Kriterienlisten nicht ab: von den 29 Kriterien mit Bündelanteil sind 8 belegt, 5 zur Hälfte
 berührt und 16 nie berührt worden. Die Zuordnung Kriterium für Kriterium steht in
-`issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-…`.
+`issues/260814-1247_*_sechzehn-der-neunundzwanzig-buendelkriterien-…`.
 
 **Die Grundmenge ist nicht mehr 72.** Der Nachtrag vom 260814-1010 hat drei Kriterien in die
 erste Liste von C5 eingetragen. Am Dateibestand nachgezählt:
@@ -497,7 +497,7 @@ erste Liste von C5 eingetragen. Am Dateibestand nachgezählt:
 Dazu die zwei Kriterien unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`, die
 der Spec ausdrücklich zur Abnahme dieser Runde zählt und die in keiner der beiden Spalten
 stehen. 75 ohne sie, 77 mit ihnen; abgelegt als
-`issues/260814-1247_o_die-abnahmeliste-rechnet-gegen-72-kriterien-…`.
+`issues/260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-…`.
 
 **Die 46 am Baum nachweisbaren Kriterien sind gelesen und halten**, mit denselben drei benannten
 Einschränkungen wie beim ersten Abgleich (C1 zweites, C3 erstes, C5 achtes; je ein offener

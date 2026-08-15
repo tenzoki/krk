@@ -78,3 +78,16 @@ Der Nutzer hat die Änderung als Korrektur ohne eigene Runde beauftragt.
 ### Turn 2
 
 - Aufgaben: T3 (vier Textkorrekturen in der Werkbank, orchestrator), T4 (Codekommentare, coder)
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: Fünf tragende Behauptungen der Sitzung sind einzeln am Baum belegt (die fünf Löschwege aus C1.9, der Sichtbarkeitsvorbehalt im Doc-Kommentar von `Tabliste::ordner_setzen`, der Wegfall von `filtertext_ueberlebt` samt drei Proben, der berichtigte Typname `DateifensterQuelle::ordner_aufwaerts`, der Absatz über die Runde 10 in `CLAUDE.md`); dagegen stehen neun Verweise mit totem Marker, sieben davon aus dieser Sitzung und fünf falsch im schreibenden Commit (`shared/issues/260815-1216_o_sieben-verweise-dieser-sitzung-…`), ein Entscheidungsdatensatz, dessen Kopfzeile `open` sagte, während sein Name `_i_` trägt (berichtigt), und ein Planschritt E2 ohne `[DONE]`-Vermerk bei fertiger Arbeit (berichtigt, Plan auf `_c_`). Von den vier Durchsichtsbefunden sind zwei geschlossen, einer zurückgestellt, einer offen. **Geflaggt.**
+- Artifact↔Directive: Die drei Commits `f8297b6`, `897605e` und `9a2d0e0` bewegen sich sämtlich auf die Directive zu. `897605e` setzt sie im Baum um (`Tabliste::ordner_setzen` trägt den Filtertext bedingungslos, `crates/krk-ui/src/tabs.rs:596-610`), `f8297b6` zieht C1.9 und C1.10 nach, `9a2d0e0` arbeitet die Durchsicht ein und nimmt zwei zu weit gehende Zusagen zurück. Kein Commit ist quer dazu oder von ihr weg. **In Ordnung.**
+- Grounding↔Directive: 33 aktive Datensätze (`_o_` und `_a_`) in allen Speichern, keiner im Widerspruch zur Directive. Acht nennen den Filtertext oder den Ordnerwechsel und sind einzeln gelesen; die einzige Stelle, die das alte Leeren nahelegt, ist Möglichkeit 2 von `circles/260814-1551-…/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md`, und diese Möglichkeit ist am 260814-1610 verworfen. Die überholte Aussage steht nicht in der Grundlage, sondern im Abschnitt `## Directive` des Circle-Datensatzes der Runde 10; sie ist als `shared/issues/260815-1047_o_die-directive-der-runde-10-…` aufgenommen und in der Closure-Notiz derselben Datei richtiggestellt. **In Ordnung.**
+
+**Rebalance recommendation:** revise Artifact

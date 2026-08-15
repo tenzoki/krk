@@ -348,7 +348,7 @@ sich prüfen lassen. Die Trennung ist am Baum gemessen und nicht geschätzt.
 Diese Kriterien sagen etwas über den Programmtext, über Zahlen in Dateien oder über etwas, das
 ausdrücklich **nicht** geschehen soll. Der Abgleich hat jedes einzeln nachgesehen; alle 23 halten.
 Die Belege stehen im Reconciliation Log des Plans
-(`planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md`) mit Datei und Zeile.
+(`planning/260811-1648_*_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md`) mit Datei und Zeile.
 
 | Fähigkeit | Kriterium, verkürzt | Beleg |
 |---|---|---|

@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** bounded
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_p_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md
+**Active spec/plan:** circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_*_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md
 **Active session history:** circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md
 
 ---

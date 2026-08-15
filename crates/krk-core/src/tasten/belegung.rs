@@ -1369,7 +1369,7 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Belegung> {
                 // erst hier, eine Ebene hoeher, als widerspruechlich
                 // aufgefallen. Das Zur-Seite-Legen wohnt in `Ablage::laden` und
                 // sieht diesen Fall nicht; der Datensatz dazu ist
-                // `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md`.
+                // `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_*_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md`.
                 beiseite: Beiseite::Nicht,
             }),
         },

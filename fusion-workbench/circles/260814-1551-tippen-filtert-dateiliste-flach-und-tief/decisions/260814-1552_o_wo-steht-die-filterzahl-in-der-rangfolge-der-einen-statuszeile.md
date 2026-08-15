@@ -45,3 +45,15 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+## Abgleich 260815-1216 (reconciler, Stand `9a2d0e0`)
+
+**Diese Frage ist weder beantwortet noch gegenstandslos geworden, und die Sitzung vom 260815-0912 hat ihr Gewicht erhöht.** Der Marker bleibt `_o_`.
+
+**Der Baum fährt seit der Runde 10 auf der Empfehlung, ohne dass der Nutzer sie bestätigt hätte.** `Rang::ALLE` (`crates/krk-ui/src/appkit/statuszeile.rs:235-242`) trägt sechs Werte, und `Rang::Filterstand` steht auf Platz 5, unmittelbar **über** `Rang::Markierungsstand`. Das ist Möglichkeit 2 dieses Datensatzes. Der Kommentar darüber (`statuszeile.rs:230-233`) zitiert diese Frage und sagt zu, dass eine andere Antwort genau diese eine Zeile verschiebt und sonst nichts.
+
+**Zwei Angaben im Rumpf sind damit überholt** und stehen bewusst unverändert, weil dieser Datensatz die Frage stellt und nicht den Stand beschreibt: der Abschnitt `## Question` spricht von der Aufzählung „mit ihren fünf Werten", der Baum hat sechs; die Kopfzeile `**Cross-references:**` nennt `statuszeile.rs:197-240` als „die fünf Ränge".
+
+**Neu hinzugekommen ist ein zweiter Abhängiger.** Die Sitzung vom 260815 hat den Filtertext jeden Ordnerwechsel überstehen lassen (`decisions/260814-1830_i_bleibt-der-filtertext-…`, Möglichkeit 2, umgesetzt in `897605e`). Die Bedingung dieses Entscheids ist, dass der stehende Filtertext zu sehen ist — und sichtbar ist er nur, solange keiner der vier Ränge über ihm steht. Der Nutzer hat die Lage am 260815-1055 festgehalten statt sie zu beheben (`shared/issues/260815-1047_d_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`, Möglichkeit 3). Damit hängt an der Rangfolge jetzt nicht mehr nur C4.1 der Runde 10, sondern auch die Tragfähigkeit des Filters im gewöhnlichen Gebrauch: ein vergessener Filtertext, den die Zeile nicht nennt, war bis zum 260815 die Ausnahme und ist seither der Regelfall.

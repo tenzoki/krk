@@ -2,10 +2,10 @@
 
 **Date:** 2026-08-14
 **Status:** Complete
-**Spec:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Fassung vom 260814-0925, mit dem Nachtrag an C4)
+**Spec:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_*_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Fassung vom 260814-0925, mit dem Nachtrag an C4)
 **Nachgezogen am 260814-0941**, an sechs Stellen und nur an C4 entlang: die Schritte 10 bis 14, der Kasten `zettel_sichern` im Bild der Sicherungsmomente und die Risikozeile zu zwei Instanzen. Anlass sind die zwei Defektdatensätze `issues/260814-0908_*` (hoch) und `issues/260814-0909_*` (mittel) aus der Durchsicht von Turn 1 und der Nachtrag des Spec an C4 vom 260814-0925: der getippte Stand gewinnt, und jeder Sicherungsmoment schreibt jeden abweichenden Zettel. Die Reihenfolge der Arbeit, die Zulässigkeitsregel der achten Runde und der eine `durchgang` beim Beenden sind dabei unangetastet geblieben; die fünf niedrigen Befunde der Durchsicht sind nicht Gegenstand dieses Nachtrags und bleiben offen.
 **Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
-**Bindender Entscheid:** `decisions/260813-2348_a_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md` — Möglichkeit 3, `EDITORGRENZE` als Grenze
+**Bindender Entscheid:** `decisions/260813-2348_*_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md` — Möglichkeit 3, `EDITORGRENZE` als Grenze
 **Grundlage erhoben:** 260814-0656, am Baum unter `crates/` und `resources/`
 
 **Decidability:** Die tragende Frage lautet an jedem der vier Sicherungsmomente: *schreiben oder nicht, und in welche Datei?* Sie ist aus den Eingaben entscheidbar, die der Mechanismus zur Hand hat — dem beim Öffnen gelesenen Text, dem Stand der Textfläche und dem offenen Zettel. Alle drei liegen im selben Augenblick vor, keine wird vorhergesagt. **Eine zweite Frage ist im Baum nicht entscheidbar, und der Plan nimmt sie deshalb aus dem tragenden Weg heraus:** was AppKit mit `performClose:` an einem Fenster mit anhängendem Blatt tut, ist ungemessen. Der Plan sagt die Reihenfolge nicht nach einer Vermutung an, sondern macht das Sichern unbedingt und vorgängig; damit hält die Zusage „kein Weg aus dem Zettel heraus verliert Text" in beiden Ausgängen, und die Messung entscheidet nichts mehr, sondern trägt nur noch nach, welche der zwei gezeichneten Kanten das laufende Bündel geht. Wer die Messung führt und wie, steht unten unter „Nutzerarbeit".
@@ -14,7 +14,7 @@
 
 ## Directive
 
-Der Plan setzt den Spec um, und der Spec ist die verbindliche Fassung. Die Directive im Circle-Datensatz nennt weiter drei Sicherungsmomente; die Abweichung hält `issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md` fest, und ihre Behebung gehört dem Shaper und nicht diesem Plan.
+Der Plan setzt den Spec um, und der Spec ist die verbindliche Fassung. Die Directive im Circle-Datensatz nennt weiter drei Sicherungsmomente; die Abweichung hält `issues/260814-0637_*_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md` fest, und ihre Behebung gehört dem Shaper und nicht diesem Plan.
 
 Fünf Fähigkeiten, zwei Kisten, sechs Stränge. Die Naht liegt dort, wo der Spec sie zieht: C1 bis C3 fassen `crates/krk-ui/` an, C4 und C5 fassen `crates/krk-core/src/ablage/` an, und die eine Frage, die beide Hälften teilen, ist der Zeitpunkt des Sicherns.
 
@@ -428,15 +428,15 @@ Fällt Punkt 5 negativ aus, ist das ein Defekt an Schritt 13 und keine Eigenscha
 
 Zwei Datensätze sind bei der Planung entstanden und stehen als eigene Dateien, nicht in diesem Plan:
 
-- `shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — der Defekt, der jede Runde seit der siebten betrifft. Er steht im gemeinsamen Speicher und nicht im Circle, weil er nicht aus dieser Directive entstanden ist, sondern hier nur aufgefallen ist.
-- `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/decisions/260814-0656_o_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md` — die Frage, ob der Baum künftig anhält, wenn eine bearbeitbare Textfläche die Automatiken nicht abschaltet.
+- `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — der Defekt, der jede Runde seit der siebten betrifft. Er steht im gemeinsamen Speicher und nicht im Circle, weil er nicht aus dieser Directive entstanden ist, sondern hier nur aufgefallen ist.
+- `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md` — die Frage, ob der Baum künftig anhält, wenn eine bearbeitbare Textfläche die Automatiken nicht abschaltet.
 
 ## Open Questions
 
 - [x] Die Dateinamen `note-1.txt` und `note-2.txt` sind die Wahl des Planers (Schritt 3). **Am Plan-Tor 260814-0715 vom Nutzer angenommen** (Sitzungsprotokoll, Abschnitt „Plan-Tor"); am Baum gebaut in `crates/krk-core/src/ablage/pfade.rs:162-163`. Der Nutzer kann sie am Gate ändern; sie folgen der einwortigen Kleinschreibung der vier bestehenden und trennen die zwei Zettel über die knappste Form, die es gibt.
 - [x] Die Tabbeschriftungen „Zettel 1" und „Zettel 2" sind die schlichte Nummerierung, die der Spec als Vorbelegung nennt. **Am Plan-Tor 260814-0715 vom Nutzer angenommen**; am Baum gebaut in `crates/krk-ui/src/appkit/blaetter/zettel.rs` (Probe `jeder_zettel_traegt_eine_beschriftung`, `:536`). Am Gate änderbar; benannte Zettel wären eine eigene Fähigkeit und stehen ausdrücklich außerhalb dieser Runde.
-- [ ] Ob die Abschaltung der Textautomatiken bauanhaltend wird, ist offen und bindet Arbeit über diese Runde hinaus: `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/decisions/260814-0656_o_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`. Sie hält keinen Schritt dieses Plans auf.
-- [ ] Der Defekt zur unbelegten Funktion bei eigener `keymap.toml` hält keinen Schritt auf, wohl aber die Abnahme am Gerät des Nutzers: `shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`.
+- [ ] Ob die Abschaltung der Textautomatiken bauanhaltend wird, ist offen und bindet Arbeit über diese Runde hinaus: `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`. Sie hält keinen Schritt dieses Plans auf.
+- [ ] Der Defekt zur unbelegten Funktion bei eigener `keymap.toml` hält keinen Schritt auf, wohl aber die Abnahme am Gerät des Nutzers: `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`.
 
 ---
 
@@ -460,9 +460,9 @@ Zwei Datensätze sind bei der Planung entstanden und stehen als eigene Dateien, 
 - **In `applicationWillTerminate:` steht genau ein Durchgang.** `wird_beendet` (`anwendung.rs:842`) trägt ein `unter_der_sperre`, und der vierte Sicherungsmoment liegt darin, neben dem Sitzungsschreiber (`:884`). Der Kommentar zum Defekt `260813-0540` steht unverändert darüber (`:845`–`:851`). Nachgezählt und nicht übernommen.
 - **Die drei Zulässigkeitsregeln sind außerhalb der Prüfmodule Byte für Byte unverändert.** `krk-ui/src/kommandos/zulaessigkeit.rs` und `.../operationen.rs` sind gegen `6d05bef` verglichen, jeweils bis zum `#[cfg(test)]` abgeschnitten: 10 718 zu 10 718 und 43 895 zu 43 895 Zeichen, identisch. Geändert sind allein Prüfmodul und Doc-Kommentare.
 
-**Zwei Stellen sind mit dem Nachtrag vom 260814-0941 nicht mitgezogen worden**, beide ohne Widerspruch zum Spec und beide als Datensatz abgelegt (`issues/260814-1002_o_zwei-stellen-des-plans-sind-mit-dem-nachtrag-vom-0941-nicht-mitgezogen-worden.md`): die `**Decidability:**`-Zeile zählt als dritte Eingabe „den offenen Zettel", seit dem Nachtrag ist es der gehaltene Stand **beider** Zettel; und `## Testing Strategy` führt für das Zettelmodell drei Gegenstände auf und kennt den vierten nicht, die Regel „der getippte Stand gewinnt" mit ihren drei Proben.
+**Zwei Stellen sind mit dem Nachtrag vom 260814-0941 nicht mitgezogen worden**, beide ohne Widerspruch zum Spec und beide als Datensatz abgelegt (`issues/260814-1002_*_zwei-stellen-des-plans-sind-mit-dem-nachtrag-vom-0941-nicht-mitgezogen-worden.md`): die `**Decidability:**`-Zeile zählt als dritte Eingabe „den offenen Zettel", seit dem Nachtrag ist es der gehaltene Stand **beider** Zettel; und `## Testing Strategy` führt für das Zettelmodell drei Gegenstände auf und kennt den vierten nicht, die Regel „der getippte Stand gewinnt" mit ihren drei Proben.
 
-**Eine im Schritt 11 zugesagte Zählprobe ist nicht gebaut** (`issues/260814-1002_o_zwei-in-c3-zugesagte-proben-stehen-nicht-im-baum.md`). Die Sache selbst hält: `blaetter/zettel.rs` ruft weder Nummernspalte noch Hervorhebung noch Suche, und keine davon steht in seinen `use`-Zeilen.
+**Eine im Schritt 11 zugesagte Zählprobe ist nicht gebaut** (`issues/260814-1002_*_zwei-in-c3-zugesagte-proben-stehen-nicht-im-baum.md`). Die Sache selbst hält: `blaetter/zettel.rs` ruft weder Nummernspalte noch Hervorhebung noch Suche, und keine davon steht in seinen `use`-Zeilen.
 
 **260814-1247, reconciler, zweiter Abgleich, Stand `a6098d9`.** Der Status bleibt `Complete` und
 der Marker `_c_`. Nachgesehen ist, was sich seit dem 260814-1002 an diesem Plan geändert haben
@@ -472,7 +472,7 @@ müsste, und das sind zwei Stellen.
 Nachtrag an C4"; es gibt seit `a6098d9` einen dritten Nachtrag vom 260814-1010 an C5. Die drei
 Kriterien daraus sind gebaut, aber nicht über einen Planschritt, sondern über die Behebung des
 Defekts `issues/260814-0910_c_` in Turn 3. Abgelegt als
-`issues/260814-1247_o_der-plan-nennt-als-spec-fassung-die-vom-0925-…`.
+`issues/260814-1247_*_der-plan-nennt-als-spec-fassung-die-vom-0925-…`.
 
 **„Nutzerarbeit" Punkt 2 ist gefahren und nicht festgehalten.** Der Nutzer hat den Lauf am
 260814-1115 als Beobachtung 9 der Abnahmeliste gefahren. Punkt 5 der dortigen Reihenfolge — das

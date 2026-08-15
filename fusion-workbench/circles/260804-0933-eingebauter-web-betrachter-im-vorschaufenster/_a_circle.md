@@ -148,9 +148,9 @@ Der Abschnitt `## Dependencies` zitiert drei Dateien unter ihrem damaligen Zusta
 
 | Zeile | zitiert | ist |
 |---|---|---|
-| 100 | `planning/260802-1036_o_spec-navigator-geruest.md` | `_c_` |
+| 100 | `planning/260802-1036_*_spec-navigator-geruest.md` | `_c_` |
 | 102 | `260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md` | `_b_circle.md` |
-| 106 | `planning/260802-1428_o_plan-navigator-geruest-runde-1.md` | `_c_` |
+| 106 | `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` | `_c_` |
 
 Der Abgleich `history/260807-1022-reconciliation.md` und der daraus entstandene Defekt `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260807-1022_*_zweiundzwanzig-verweise-in-lebenden-dokumenten-tragen-einen-ueberholten-zustandsmarker.md` decken diese drei Stellen nicht ab: der Abgleich lief um 260807-1022 und damit vor der Umbenennung, und sein Suchmuster `YYMMDD-HHMM_x_name.md` erfasst die Form `_t_circle.md` ohnehin nicht. Zeile 101 desselben Abschnitts steht dort und ist die einzige Stelle dieses Circles, die der Defekt führt.
 
