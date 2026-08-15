@@ -1833,7 +1833,7 @@ fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer()
 }
 
 // ---------------------------------------------------------------------------
-// Worauf eine Verknuepfung zeigt (Defekt 260814-1612)
+// Worauf eine Verknuepfung zeigt (Defekt 260814-1612, Befund 260815-1713)
 // ---------------------------------------------------------------------------
 
 /// Der Fall, den der Nutzer gemeldet hat: eine Verknuepfung auf ein
@@ -1863,6 +1863,54 @@ fn eine_verknuepfung_auf_eine_datei_ist_kein_ordner() {
     let verweis = ordner.verknuepfung("verweis.txt", ordner.unter("ziel.txt"));
 
     assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::KeinOrdner);
+}
+
+/// Eine Verknuepfung auf eine Datei ohne Leserecht ist trotzdem eine Datei.
+///
+/// Der praktisch haeufigste Fehlfall des Befunds `260815-1713`. Am Deskriptor
+/// gefragt scheiterte `open` hier mit `EACCES`, und der Doppelklick bekam
+/// "laesst sich nicht oeffnen: Permission denied" in die Statuszeile, statt wie
+/// jede andere Datei an das Standardprogramm zu gehen. Am Namen gefragt kommt
+/// die Antwort heraus, die der Wert benennt: es ist kein Verzeichnis. Ob sich
+/// das Ziel oeffnen laesst, entscheidet das Programm, das es oeffnet.
+///
+/// **Als `root` liefe die Probe nicht anders**, und deshalb steht kein
+/// `#[ignore]` daran: `stat(2)` beantwortet die Typfrage fuer jede Kennung
+/// gleich, und die Behauptung stimmt damit unter jeder. Was unter `root`
+/// verloren ginge, ist allein die Faehigkeit dieser Probe, einen Rueckfall auf
+/// den Deskriptorweg zu fangen — dort duerfte `root` die Datei oeffnen. Ein
+/// Schnitt ueber das tatsaechliche Ergebnis waere deshalb kein Gewinn: er
+/// machte aus einer immer richtigen Behauptung eine, die sich selbst bestaetigt.
+#[test]
+fn eine_verknuepfung_auf_eine_datei_ohne_leserecht_ist_kein_ordner() {
+    let ordner = Pruefordner::neu("verweisziel-datei-gesperrt");
+    let ziel = ordner.fuelldatei("ziel.txt", 3);
+    fs::set_permissions(&ziel, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht entziehen");
+    let verweis = ordner.verknuepfung("verweis.txt", &ziel);
+
+    assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::KeinOrdner);
+}
+
+/// Eine Verknuepfung auf ein Verzeichnis ohne Leserecht ist trotzdem ein Ordner.
+///
+/// Modus `0111` laesst durchschreiten und nicht lesen. `open` scheitert daran
+/// mit `EACCES`, `stat` nicht; der zweite gemessene Fehlfall des Befunds
+/// `260815-1713` kam deshalb als `Unerreichbar` statt als `Ordner` zurueck.
+///
+/// **Das Leserecht prueft [`Verweisziel::Ordner`] bewusst nicht.** Der Einstieg
+/// landet danach in einer leeren Liste — genau wie heute schon der Einstieg in
+/// einen gewoehnlichen [`Typ::Ordner`] ohne Leserecht, und das ist eine Regel
+/// statt zweier. Zum Verhalten als `root` siehe die Probe darueber.
+#[test]
+fn eine_verknuepfung_auf_ein_verzeichnis_ohne_leserecht_ist_ein_ordner() {
+    let ordner = Pruefordner::neu("verweisziel-ordner-gesperrt");
+    let ziel = ordner.ordner("ziel");
+    fs::set_permissions(&ziel, fs::Permissions::from_mode(0o111))
+        .expect("Rechte lassen sich nicht entziehen");
+    let verweis = ordner.verknuepfung("verweis", &ziel);
+
+    assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::Ordner);
 }
 
 /// Eine Verknuepfung ins Leere ist unerreichbar, und der Grund kommt mit.
@@ -1920,9 +1968,14 @@ fn ohne_verknuepfung_gilt_der_name_selbst() {
 
 /// Eine benannte Roehre ohne Schreiber haelt die Frage nicht an.
 ///
-/// Das ist die eine Zusage, um derentwillen dieses Modul
-/// `sys::ohne_warten_oeffnen` nimmt und kein eigenes `File::open`: ein `open`
-/// ohne `O_NONBLOCK` wartete hier, bis jemand hineinschreibt, also fuer immer.
+/// Die Zusage ist echt und diese Probe misst sie: ein Doppelklick darf nicht
+/// haengen bleiben. **Ihr Gegenstueck ist ein blockierendes `open(2)` und nicht
+/// `File::open`**, wie hier bis zum 260815 stand. `File::open` war nie die
+/// Alternative; zur Wahl standen das Fragen am Deskriptor und das Fragen am
+/// Namen, und seit dem Befund `260815-1713` fragt `bestimmen` am Namen. Ein
+/// `stat(2)` fasst die Roehre gar nicht erst an, wartet also auch nicht auf
+/// einen Schreiber.
+///
 /// Die Zeitschranke macht aus dem Stillstand einen Fehlschlag mit Namen; sie
 /// ist dieselbe Bauart wie `oeffnen_mit_zeitschranke` in `tests/text.rs`, und
 /// eine gemeinsame Fassung gaebe es nur um den Preis, den Pruefling durch die

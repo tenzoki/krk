@@ -132,3 +132,29 @@ allein den Mechanismus der Auflösung.
 
 Gemeinsamer Speicher. Betrifft den Kern und den Einstiegsweg der Oberfläche und nicht die
 Directive einer Runde.
+
+---
+Resolved: `verweisziel::bestimmen` fragt `std::fs::metadata` statt
+`sys::ohne_warten_oeffnen` (`crates/krk-core/src/verzeichnis/verweisziel.rs`). Ein
+Systemaufruf statt fuenf, geoeffnet wird nichts. Am Referenzgeraet vorher und nachher
+gemessen, uid 502, ueber `bestimmen` selbst: Unix-Socket `Unerreichbar {"Operation not
+supported on socket (os error 102)"}` → `KeinOrdner`; Datei Modus `000` `Unerreichbar
+{"Permission denied (os error 13)"}` → `KeinOrdner`; Verzeichnis Modus `0111` `Unerreichbar
+{"Permission denied (os error 13)"}` → `Ordner`; benannte Roehre ohne Schreiber `KeinOrdner`
+→ `KeinOrdner` (unveraendert richtig).
+
+Der Modulkopf traegt jetzt die Unterscheidung, an der der Fehlschluss haengt: wer den
+Deskriptor danach benutzt, oeffnet; wer nur fragt, was hinter dem Namen steht, fragt am
+Namen. Die Zusicherung „drei Werte, ueberschneidungsfrei und vollstaendig" gilt nach dem
+Wechsel auch fuer die Zustaende, die die Werte benennen, und sagt das jetzt ausdruecklich.
+`Unerreichbar` heisst „der Name loest sich nicht auf", also ohne Recht **am Pfad**. Die
+Roehrenprobe stellt nicht mehr `File::open` gegenueber, sondern ein blockierendes `open(2)`.
+Zwei Proben sind dazugekommen: Verknuepfung auf eine Datei ohne Leserecht und auf ein
+Verzeichnis mit Modus `0111`.
+
+Die Nutzerfrage nach einer Leserechtspruefung in `Verweisziel::Ordner` ist mit „nein, nicht
+in dieser Runde" beantwortet; die aeltere Ungleichheit zwischen Pfadsprung und Doppelklick
+steht als eigener Datensatz
+`shared/issues/260815-1749_o_der-pfadsprung-meldet-den-ordner-ohne-leserecht-und-der-doppelklick-schweigt.md`.
+Vier Beschreibungsstellen ausserhalb der Auftragsgrenzen sind noch nachzuziehen:
+`shared/issues/260815-1752_o_zwei-modulkoepfe-nennen-das-verweisziel-am-deskriptor-obwohl-es-am-pfad-fragt.md`.

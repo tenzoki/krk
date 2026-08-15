@@ -69,3 +69,17 @@ jenem bearbeitet werden.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft den Kern und `CLAUDE.md` und nicht die Directive einer Runde.
+
+---
+Resolved: auf dem Weg, den dieser Datensatz selbst vorgezeichnet hat. `260815-1713` ist so
+entschieden, dass `verweisziel::bestimmen` auf `std::fs::metadata` wechselt; der dritte
+Rufer ist damit wieder weg, und alle sechs genannten Stellen stimmen ohne eine Aenderung an
+ihnen. Nachgezaehlt am 260815-1755: `grep -rn 'ohne_warten_oeffnen' crates/` findet genau
+zwei Aufrufstellen, `text/datei.rs:414` und `vorschaumodell.rs:679`; die uebrigen Treffer
+sind Verweise in Prosa. Damit traegt auch `sys.rs:794-796` wieder, was es behauptet: die
+zwei genannten Rufer sind alle Rufer, und ihr Ablauf ist tatsaechlich gemeinsam.
+
+Umgekehrt ist der Modulkopf von `verzeichnis/mod.rs` jetzt derjenige, der zu viel nennt —
+er fuehrt `verweisziel` weiter als Rufer der Huelle. Das steht in
+`shared/issues/260815-1752_o_zwei-modulkoepfe-nennen-das-verweisziel-am-deskriptor-obwohl-es-am-pfad-fragt.md`
+und nicht hier, weil es die umgekehrte Abweichung an einer anderen Stelle ist.
