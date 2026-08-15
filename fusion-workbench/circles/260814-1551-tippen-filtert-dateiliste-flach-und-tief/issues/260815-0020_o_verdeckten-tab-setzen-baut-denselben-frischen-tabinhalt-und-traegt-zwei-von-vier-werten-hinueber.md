@@ -8,8 +8,8 @@ frischen `Tabinhalt` an die Stelle des alten setzen und vorher einzelne Werte au
 
 | Stelle | Sortierung | Verstecke | Filter der Tiefe | Filtertext |
 |---|---|---|---|---|
-| `ordner_setzen` (`crates/krk-ui/src/tabs.rs:508`) | ja | ja | ja | ja, wenn der Filter der Tiefe an ist |
-| `verdeckten_tab_setzen` (`crates/krk-ui/src/tabs.rs:413`) | ja | ja | **nein** | **nein** |
+| `ordner_setzen` (`crates/krk-ui/src/tabs.rs:592`) | ja | ja | ja | **ja, unbedingt** |
+| `verdeckten_tab_setzen` (`crates/krk-ui/src/tabs.rs:440`) | ja | ja | **nein** | **nein** |
 
 ---
 
@@ -35,3 +35,31 @@ Tab vollständig zurücksetzt, und den Unterschied an beiden Stellen als Prosa b
 
 Der Grund, warum B2 keinen der beiden gegangen ist: beide ändern das Verhalten eines Wegs,
 den der Plan nicht nennt, und die Wahl zwischen ihnen ist eine Entwurfsfrage.
+
+---
+
+**Nachtrag 260815-1130 (coder, Aufgabe T4).** Zwei Aussagen dieses Datensatzes sind mit
+`897605e` überholt und hier berichtigt; der Datensatz selbst bleibt offen, denn an
+`verdeckten_tab_setzen` hat sich nichts geändert.
+
+1. **Die Befundtabelle** führte für `ordner_setzen` „ja, wenn der Filter der Tiefe an ist".
+   Seit `897605e` trägt `ordner_setzen` den Filtertext unbedingt hinüber, gleich wie der
+   Filter der Tiefe steht. Die Spalte ist auf „ja, unbedingt" nachgezogen, und die beiden
+   Zeilennummern stehen auf dem heutigen Stand.
+2. **Die Einordnung als „unentschieden"** stützte sich auf den damaligen Wortlaut von
+   C1.10, „ist ‚Deep' an, übersteht der Filtertext **jeden** Ordnerwechsel". Dieser Vorbehalt
+   ist entfallen: C1.9 sagt seit dem Nutzerentscheid vom 260815-0955
+   (`decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`,
+   Möglichkeit 2) unbedingt zu, dass der Filtertext jeden Ordnerwechsel übersteht, und
+   C1.10 ist dabei keine Ausnahme mehr, sondern ein Fall von C1.9. Der Auswurf unter einem
+   verdeckten Tab ist damit **kein unentschiedener Fall mehr, sondern ein Widerspruch zum
+   Wortlaut von C1.9** — festgehalten in
+   `shared/issues/260815-1047_o_c1-9-und-der-doc-kommentar-nennen-zwei-loeschwege-des-filtertextes-der-baum-hat-fuenf.md`.
+
+Der Nutzer hat am 260815-1055 für jenen Datensatz Möglichkeit 1 gewählt: die Aufzählung der
+Löschwege wird geöffnet, das Verhalten der drei Wege bleibt, wie es ist. C1.9 und der
+Doc-Kommentar von `Tabliste::ordner_setzen` nennen den Auswurf unter einem verdeckten Tab
+seither ausdrücklich als einen der drei Wege, die den Filtertext ohne Zutun des Nutzers
+wegnehmen. **Die Entwurfsfrage dieses Datensatzes bleibt offen**: ob die vier Werte an einer
+Stelle übertragen werden, hat der Nutzer nicht beantwortet, und beide Auswege oben stehen
+unverändert.

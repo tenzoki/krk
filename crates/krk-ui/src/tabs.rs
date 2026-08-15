@@ -543,15 +543,43 @@ impl Tabliste {
     ///
     /// **Eine Regel und keine Fallunterscheidung:** der Filtertext uebersteht
     /// jeden Ordnerwechsel, gleich ob der Filter der Tiefe an oder aus ist
-    /// (C1.9, C1.10). Geloescht wird er allein vom Nutzer, mit `Esc` oder
-    /// Zeichen fuer Zeichen ueber die Rueckschritt-Taste. Bis zum 260815-0955
-    /// leerte ein Wechsel bei ausgeschaltetem Filter der Tiefe den Text; der
-    /// Nutzerentscheid zu
-    /// `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
-    /// (Moeglichkeit 2) hat aus der Ausnahme die Regel gemacht. **Getragen
-    /// wird sie davon, dass der stehende Filtertext zu sehen ist**: die
-    /// Statuszeile nennt ihn samt Trefferzahl, sonst hielte der Nutzer den
-    /// neuen Ordner fuer fast leer.
+    /// (C1.9, C1.10). Kein Ordnerwechsel und keine Auffrischung loescht ihn.
+    /// Bis zum 260815-0955 leerte ein Wechsel bei ausgeschaltetem Filter der
+    /// Tiefe den Text; der Nutzerentscheid zu
+    /// `decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
+    /// (Moeglichkeit 2) hat aus der Ausnahme die Regel gemacht.
+    ///
+    /// **Die Wege, auf denen der Filtertext verschwindet, sind nicht
+    /// abschliessend aufgezaehlt.** Der Nutzer nimmt ihn mit `Esc` weg oder
+    /// Zeichen fuer Zeichen ueber die Rueckschritt-Taste; daneben faellt er
+    /// mit dem Tab, der ihn haelt, und mit der Sitzung. C1.9 sagt seit dem
+    /// 260815 ausdruecklich, dass das keine Liste von zwei Tastenwegen ist:
+    /// drei weitere Wege nehmen ihn weg, ohne dass der Nutzer den Filter
+    /// anfasst. Es sind das Schliessen des
+    /// letzten Tabs ([`Tabliste::schliessen`] baut dort einen frischen
+    /// [`Tabinhalt`]), der Auswurf eines Datentraegers unter einem verdeckten
+    /// Tab ([`Tabliste::verdeckten_tab_setzen`]) und der Neustart, weil
+    /// `krk_core::ablage::sitzung::Tab` den Filtertext nicht fuehrt. Erhoben
+    /// als
+    /// `shared/issues/260815-1047_o_c1-9-und-der-doc-kommentar-nennen-zwei-loeschwege-des-filtertextes-der-baum-hat-fuenf.md`.
+    ///
+    /// **Die Sichtbarkeit des stehenden Filtertextes ist nicht zugesagt.** Der
+    /// Nutzerentscheid haengt an ihr: die Statuszeile soll den Filtertext samt
+    /// Trefferzahl nennen, sonst hielte der Nutzer den neuen Ordner fuer fast
+    /// leer. Geprueft war dafuer allein `statuszeile::filterstand_text`, das
+    /// den Satz **baut**. Ob er die Zeile erreicht, entscheidet
+    /// `statuszeile::zeile` ueber die Rangfolge `Rang::ALLE`, und dort ist der
+    /// Filterstand Rang 5 von 6. Die Ordnung ist erst der Rang und dann die
+    /// aktive Seite, also stehen vier Raenge ueber ihm, drei davon auch dem
+    /// anderen Dateifenster offen. Eine Fenstermeldung (Rang 3) des inaktiven
+    /// Dateifensters verdraengt den Filterstand und wird allein vom Ordner-
+    /// oder Tabwechsel **derselben** Seite geraeumt. Wer in dieser Lage
+    /// filtert, sieht seinen Filtertext nicht, auch nicht im Augenblick des
+    /// Tippens und ueber jeden folgenden Ordnerwechsel hinweg. Der Weg besteht
+    /// seit der Runde 10 unveraendert; was der 260815 aendert, ist die
+    /// Haeufigkeit: ein vergessener Filter war die Ausnahme und ist der
+    /// Regelfall. Offen als
+    /// `shared/issues/260815-1047_o_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`.
     ///
     /// **Der Aufstieg braucht keine eigene Zeile.** Er geht wie der Einstieg
     /// durch diese Stelle, und damit gilt fuer ihn dieselbe Regel (C1.9).
@@ -569,7 +597,7 @@ impl Tabliste {
         // Die vierte Uebertragung, in derselben Bauart wie die drei darueber
         // und ohne Bedingung: der Filtertext geht hinueber, gleich wie `tief`
         // steht (C1.9, C1.10). Bis zum Nutzerentscheid vom 260815-0955 zu
-        // `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
+        // `decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
         // stand hier ein `filtertext_ueberlebt`, das die offene Antwort trug.
         // Es ist ersatzlos entfallen: mit der einen Regel truege es nur noch
         // ein `true` und liesse eine Fallunterscheidung vermuten, die es nicht
@@ -1350,7 +1378,7 @@ mod tests {
     /// ausgeschalteter tiefer Suche.
     ///
     /// Die Richtung, die der Nutzerentscheid vom 260815-0955 umgekehrt hat
-    /// (`decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`,
+    /// (`decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`,
     /// Moeglichkeit 2). Bis dahin pruefte diese Probe das Gegenteil.
     #[test]
     fn ein_ordnerwechsel_laesst_den_filtertext_stehen_wenn_die_tiefe_suche_aus_ist() {
@@ -1381,7 +1409,7 @@ mod tests {
     ///
     /// Er geht durch dieselbe Stelle, nimmt aber den verlassenen Ordner als
     /// Wunschauswahl mit. Die Probe faehrt ihn so, wie
-    /// `Dateifenster::ordner_aufwaerts` ihn faehrt: mit
+    /// `DateifensterQuelle::ordner_aufwaerts` ihn faehrt: mit
     /// [`krk_core::verzeichnis::aufwaerts`] gerechnet und mit dem Namen des
     /// verlassenen Ordners als `auswahl`.
     #[test]

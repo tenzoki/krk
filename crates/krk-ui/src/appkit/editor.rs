@@ -522,7 +522,7 @@ pub enum Editormeldung {
     ///
     /// Die drei Gruende bleiben unterschieden, weil das zehnte
     /// Abnahmekriterium von C2 es verlangt und weil der Datensatz
-    /// `decisions/260807-2147_a_welche-dateien-oeffnet-der-editor-ueberhaupt.md`
+    /// `decisions/260807-2147_i_welche-dateien-oeffnet-der-editor-ueberhaupt.md`
     /// es ausdruecklich fordert. Unterschieden werden sie in
     /// [`Abweisung::meldung`] und hier nicht ein zweites Mal.
     Abgewiesen(Abweisung),
@@ -1051,7 +1051,7 @@ fn bis_zur_zeichengrenze(text: &str, versatz: usize) -> usize {
 /// **Den Anlass kennt allein der Aufrufer**, und deshalb kommt die Antwort als
 /// Wert herein, statt in [`Editorbereich::stand_einsetzen`] geraten zu werden.
 /// Das ist die Behebung von
-/// `issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`:
+/// `issues/260810-0303_c_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`:
 /// bis dahin leerte die eine Schreibstelle den Stapel bei jedem Anlass, weil
 /// sie keinen von ihnen unterscheiden konnte.
 ///
@@ -2017,7 +2017,7 @@ impl Editorbereich {
     /// Antwort fuer alle drei — der Stapel wurde immer geleert —, und das kostete
     /// dem Nutzer den Verlauf an zwei Anlaessen, an denen die Datei dieselbe
     /// blieb
-    /// (`issues/260810-0303_o_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`).
+    /// (`issues/260810-0303_c_ein-ersetzen-und-ein-eingefuegtes-crlf-verlieren-den-rueckgaengigverlauf.md`).
     ///
     /// **Die Anmeldung geht dem Schreiben voraus.** Der Verwalter soll die
     /// Handlung auch dann tragen, wenn `setString:` unten am Text nichts mehr

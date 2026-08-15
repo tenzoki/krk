@@ -30,7 +30,7 @@ Für den eingeschalteten Zustand ist die Antwort damit gegeben: der Filtertext �
 
 - Das gewählte Modell der tiefen Ansicht schließt Möglichkeit 3 aus. Sie steht hier, weil eine Aufzählung, die die wörtliche Vorbelegung wegließe, den Preis der beiden anderen verschwiege.
 - Der Filter gehört dem Tab. Ein Tabwechsel zeigt den Filter des anderen Tabs, gleich welche Antwort fällt.
-- Möglichkeit 2 hängt daran, dass der stehende Filtertext zu sehen ist. Die Statuszeile trägt ihn nach C4 dieses Specs; wo genau, hängt an `260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`.
+- Möglichkeit 2 hängt daran, dass der stehende Filtertext zu sehen ist. **Diese Bedingung ist nicht zugesagt, und der Vermerk in der Zeile `Answered:`, sie sei geprüft und erfüllt, greift zu kurz.** Geprüft war `filterstand_text` (`crates/krk-ui/src/appkit/statuszeile.rs:369-386`), das den Satz baut; ob er die Zeile erreicht, entscheidet eine Ebene höher `zeile` (`statuszeile.rs:516`) über die Rangfolge `Rang::ALLE` (`statuszeile.rs:235`). Der Filterstand steht dort auf Rang 5 von 6, und die Ordnung ist zweistellig: erst der Rang, dann die aktive Seite. Eine Fenstermeldung auf Rang 3 verdrängt ihn deshalb auch dann, wenn sie vom anderen Dateifenster kommt, und sie wird allein von einem Ordner- oder Tabwechsel **jener** Seite geräumt. Der Nutzer hat die Lage am 260815-1055 zur Kenntnis genommen und sie festhalten statt beheben lassen; der Weg selbst ist offen unter `shared/issues/260815-1047_o_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`. Wo der Filterstand in der Rangfolge steht, hängt weiter an `260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`.
 - Der Aufstieg zählt wie der Einstieg. Eine Regel, die nur für die eine Richtung gilt, entsteht nicht.
 
 ## Recommendation
@@ -45,3 +45,6 @@ Superseded by:
 
 ---
 Answered: `shared/history/260815-0912-orchestrator-session.md` — Möglichkeit 2, Nutzerentscheid vom 260815-0955. Eine Regel für beide Zustände des Kennzeichens: der Filtertext übersteht jeden Ordnerwechsel und fällt erst mit `Esc`. Die Empfehlung des Datensatzes (Möglichkeit 1, zwei Regeln) ist damit verworfen. Anlass war der Bugreport des Nutzers, der das Leeren beim Wechsel als Fehlverhalten meldete: „besser stehen lassen bis escape, dann kann der nutzer den filter zu suchen nach einer datei auch ohne deep=true nutzen". Die Bedingung des Abschnitts `## Constraints`, dass der stehende Filtertext zu sehen sein muss, ist vor der Antwort am Baum geprüft und erfüllt (`crates/krk-ui/src/appkit/statuszeile.rs:369-386`, `filterstand_text` schreibt `Filter „rs": 3 von 47 angezeigt`).
+
+---
+Implemented: 897605e — `Tabliste::ordner_setzen` trägt den Filtertext ohne Bedingung in das neue Modell; `filtertext_ueberlebt` ist ersatzlos entfallen. Drei Proben decken die Regel: `ein_ordnerwechsel_laesst_den_filtertext_stehen_wenn_die_tiefe_suche_aus_ist`, `der_aufstieg_laesst_den_filtertext_stehen_wie_der_einstieg` und `mit_tiefer_suche_ueberlebt_der_filtertext_den_ordnerwechsel` (alle in `crates/krk-ui/src/tabs.rs`).

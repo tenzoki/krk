@@ -59,3 +59,22 @@ Der Nutzer meldet drei Punkte am Filter der Dateiliste aus der Runde 10. Die Pr�
 Die Bedingung, die der Datensatz an Möglichkeit 2 knüpft, ist vor der Vergabe geprüft und erfüllt: der stehende Filtertext muss zu sehen sein, sonst hält der Nutzer einen gefilterten Ordner für fast leer. `filterstand_text` schreibt `Filter „rs": 3 von 47 angezeigt` in die eine Statuszeile (`crates/krk-ui/src/appkit/statuszeile.rs:369-386`).
 
 Der Nutzer hat die Änderung als Korrektur ohne eigene Runde beauftragt.
+
+## Per-Turn Log
+
+### Turn 1
+
+- Aufgaben: T1 (Entscheid beantworten, Spec-Kriterien nachziehen, orchestrator), T2 (Codeänderung samt Proben, coder)
+- Erledigt: beide
+- Commits: `f8297b6`, `897605e`
+- Durchsicht: `coderev` über `c3fcdef..HEAD`, vier Defektdatensätze, keiner an der Codezeile selbst
+- Coherence: review-needed — die Durchsicht hat eine Bedingung der gewählten Möglichkeit als nicht zugesagt nachgewiesen
+- Menschliches Gate: der Nutzer wählt am 260815-1055, die Lage festzuhalten statt sie zu beheben
+
+**Der Befund, der die Sitzung trägt, gehört mir und nicht dem `coder`.** Vor der Vergabe hatte ich dem Nutzer zugesagt, die Bedingung des Entscheidungsdatensatzes sei erfüllt: der stehende Filtertext sei zu sehen. Belegt hatte ich das mit `filterstand_text`, der Funktion, die den Satz **baut**. Ob der Satz die Zeile erreicht, entscheidet eine Ebene höher `zeile` über eine Rangfolge, in der der Filterstand auf Rang 5 von 6 steht. Die Prüfung hat eine Funktion zu früh aufgehört, und die Zusage war damit unbelegt. Die Durchsicht hat es gefunden.
+
+**Eine zweite Aussage hat die Nachmessung nicht überstanden, diesmal die des `coder`.** Er berichtete die Wettrennprobe des Öffnens als knapp an einer Zeitschranke wackelnd, mit einem grünen `release`-Lauf von 4,66 s. Sechs eigene Läufe ergaben sechs Ausfälle, in beiden Profilen und auch am Stand `c3fcdef` von vor der Sitzung. Der Unterschied trägt eine Folge: „wackelt" legt nahe, die Schranke anzuheben, „fällt immer" lässt offen, ob die Probe gerade den Defekt fängt, für den sie geschrieben wurde. Der Datensatz ist entsprechend neu geschrieben und umbenannt.
+
+### Turn 2
+
+- Aufgaben: T3 (vier Textkorrekturen in der Werkbank, orchestrator), T4 (Codekommentare, coder)

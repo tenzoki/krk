@@ -2832,7 +2832,7 @@ impl Anwendungsdelegierter {
     /// und ihre Tafel aus 280 Faellen behaelt ihre Bedeutung; eine Antwort dort
     /// traefe beide Wege zugleich und graute den Menueeintrag aus. Der
     /// Datensatz dazu ist
-    /// `decisions/260814-2102_a_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
+    /// `decisions/260814-2102_i_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
     fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
