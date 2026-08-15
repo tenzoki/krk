@@ -920,3 +920,6 @@
 {"ts":"2026-08-15T20:26:24","event":"task_start","turn":2,"task":"T2","agent":"coder","detail":"Zeichendurchgang waehrend offener Umbenennung"}
 {"ts":"2026-08-15T20:26:24","event":"task_start","turn":2,"task":"T3","agent":"coder","detail":"Schraegstrich in der Zeichenregel des Filters"}
 {"ts":"2026-08-15T20:34:24","event":"task_done","turn":2,"task":"T3","agent":"coder","detail":"Weg 1; Vorpruefung gemessen: Belegungssuche braucht den Schraegstrich nicht. Noch nicht committet."}
+{"ts":"2026-08-15T20:47:40","event":"task_done","turn":2,"task":"T2","agent":"coder","detail":"d7e2dea; Befund 260815-2203 gemessen widerlegt und geschlossen"}
+{"ts":"2026-08-15T20:47:40","event":"commit","turn":2,"detail":"bdd627a, d7e2dea, 58cc33e"}
+{"ts":"2026-08-15T20:47:40","event":"turn_end","turn":2,"detail":"2 tasks resolved, 3 commits, 1 decision filed"}
