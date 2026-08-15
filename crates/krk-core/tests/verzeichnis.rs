@@ -1841,8 +1841,7 @@ fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer()
 ///
 /// Der Verzeichnisleser meldet sie als [`Typ::Verknuepfung`] und `ist_ordner`
 /// antwortet fuer sie mit `false`; genau daran endete der Einstieg. Aufgeloest
-/// wird sie erst hier, am Deskriptor, und erst dann, wenn jemand hineingehen
-/// will.
+/// wird sie erst hier, am Namen, und erst dann, wenn jemand hineingehen will.
 #[test]
 fn eine_verknuepfung_auf_ein_verzeichnis_ist_ein_ordner() {
     let ordner = Pruefordner::neu("verweisziel-ordner");
@@ -1913,6 +1912,29 @@ fn eine_verknuepfung_auf_ein_verzeichnis_ohne_leserecht_ist_ein_ordner() {
     assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::Ordner);
 }
 
+/// Eine Verknuepfung auf einen Unix-Socket ist kein Ordner.
+///
+/// Der dritte am Referenzgeraet gemessene Fehlfall des Befunds `260815-1713`:
+/// `open(O_RDONLY|O_NONBLOCK)` scheitert an einem Socket mit `EOPNOTSUPP`, und
+/// der Doppelklick bekam deshalb „laesst sich nicht oeffnen" in die
+/// Statuszeile, statt den Eintrag wie jede andere Nicht-Ordner-Zeile zu
+/// behandeln. `stat(2)` sagt dagegen ohne Umstaende, was dasteht.
+///
+/// **Von den drei Proben zu diesem Befund ist dies die einzige, die unter jeder
+/// Kennung misst, was sie zu messen vorgibt.** Die beiden darueber haengen an
+/// entzogenen Rechten, und unter `root` duerfte `open` die entsperrten Ziele
+/// oeffnen: ihre Behauptung bliebe richtig, ihre Faehigkeit, einen Rueckfall auf
+/// den Deskriptorweg zu fangen, waere weg. `EOPNOTSUPP` haengt an der Art des
+/// Eintrags und nicht an Rechten und faellt fuer `root` genauso an.
+#[test]
+fn eine_verknuepfung_auf_einen_socket_ist_kein_ordner() {
+    let ordner = Pruefordner::neu("verweisziel-socket");
+    let ziel = ordner.socket("s");
+    let verweis = ordner.verknuepfung("verweis", &ziel);
+
+    assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::KeinOrdner);
+}
+
 /// Eine Verknuepfung ins Leere ist unerreichbar, und der Grund kommt mit.
 ///
 /// Der Grund ist die Meldung des Systems und keine eigene Formulierung; den
@@ -1932,9 +1954,11 @@ fn eine_verknuepfung_ins_leere_ist_unerreichbar() {
 
 /// Ein Ring aus zwei Verknuepfungen ist unerreichbar und haelt nichts an.
 ///
-/// `ELOOP` ist der zweite Weg, auf dem das Aufloesen scheitert, und er kommt
-/// aus demselben `open(2)` wie das fehlende Ziel; eine eigene Regel braucht er
-/// deshalb nicht.
+/// `ELOOP` ist einer der Fehlschlaege, mit denen `stat(2)` den Namen nicht
+/// aufloest, und er kommt aus demselben Aufruf wie das fehlende Ziel; eine
+/// eigene Regel braucht er deshalb nicht. Ein Ring ist dabei nicht der einzige
+/// Weg dorthin: macOS meldet `ELOOP` ab `SYMLOOP_MAX` aufgeloesten
+/// Verknuepfungen, also auch fuer eine lange Kette ohne Ring.
 #[test]
 fn ein_ring_aus_verknuepfungen_ist_unerreichbar() {
     let ordner = Pruefordner::neu("verweisziel-ring");

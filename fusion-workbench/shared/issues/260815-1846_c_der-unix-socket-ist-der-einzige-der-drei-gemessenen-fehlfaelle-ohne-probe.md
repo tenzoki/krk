@@ -70,3 +70,18 @@ Kennung, die beiden anderen nur unterhalb von `root`.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft den Kern und die Directive keiner Runde.
+
+---
+Resolved: `Pruefordner::socket` steht in `crates/krk-core/tests/gemeinsam/mod.rs` ueber
+`std::os::unix::net::UnixListener::bind`, ohne Fremdaufruf, ohne weitere Bindung in
+`verzeichnis::sys` und ohne neue Abhaengigkeit; eine vierte Pruefordner-Fassung entsteht nicht.
+Die Probe `eine_verknuepfung_auf_einen_socket_ist_kein_ordner` steht in
+`crates/krk-core/tests/verzeichnis.rs` neben den beiden anderen und laeuft gruen. Ihr
+Doc-Kommentar haelt fest, warum sie unter jeder Kennung misst und die beiden anderen nur
+unterhalb von `root`.
+
+Zur Pfadgrenze: der laengste Pfad des einzigen Rufers misst am Referenzgeraet 92 Bytes gegen
+die 104 von `AF_UNIX`. Die Zahl steht am Doc-Kommentar von `socket`, samt dem Fehlschlag, den
+ein laengerer Zweckname stattdessen liefert. Nachgemessen ausserdem, dass die Probe nicht
+leerlaeuft: `stat` meldet den Socket als Nicht-Verzeichnis, `open(O_RDONLY|O_NONBLOCK)`
+scheitert an ihm mit `errno 102`.

@@ -77,3 +77,11 @@ und dabei nicht nur den Marker, sondern den ganzen Pfad gegen den Dateibestand a
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft den Kern und die Directive keiner Runde.
+
+---
+Resolved: `crates/krk-core/src/verzeichnis/verweisziel.rs:95` verweist jetzt auf
+`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`,
+also auf Speicher und Namensteil, die die Datei wirklich traegt; die Sternform bleibt (Entscheid
+`260815-1145`). Die zwei Fundstellen in `issues/260815-1713_c_…` und `history/260815-1758-…`
+sind eingefrorene Aufzeichnungen und bleiben unberuehrt. Die Wiederkehr ist damit nicht
+abgestellt — der Vorschlag dazu steht unveraendert als Punkt 3 in `260815-1216`.

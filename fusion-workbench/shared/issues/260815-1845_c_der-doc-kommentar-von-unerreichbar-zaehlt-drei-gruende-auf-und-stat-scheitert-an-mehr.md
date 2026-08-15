@@ -73,3 +73,17 @@ Bei der Ring-Probe denselben Halbsatz nachziehen.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft den Kern und die Directive keiner Runde.
+
+---
+Resolved: Der erlaeuternde Satz an `verweisziel.rs` ist eine Regel mit Beispielen statt einer
+Liste: der Wert traegt **jeden** Fehlschlag von `stat(2)` am Pfad, haeufig ein fehlendes Ziel,
+eine ringfoermige oder schlicht zu lange Verknuepfungskette, eine Stufe ohne
+Durchschreitrecht oder ein zu langer Name, „das sind Beispiele und keine Liste". Keine
+`errno`-Aufzaehlung, die selbst wieder veraltet. Bei der Ring-Probe
+(`tests/verzeichnis.rs`) ist beides nachgezogen: der Aufruf heisst `stat(2)`, und ein Satz
+haelt fest, dass macOS `ELOOP` ab `SYMLOOP_MAX` auch ohne Ring meldet.
+
+Nicht angefasst und als eigener Datensatz gefuehrt: dieselbe dreigliedrige Aufzaehlung steht
+ein drittes Mal in `crates/krk-ui/src/appkit/tabelle.rs:1432`, ausserhalb der Betroffen-Liste
+dieses Datensatzes
+(`shared/issues/260815-1858_*_die-dritte-aufzaehlung-der-unerreichbar-gruende-steht-im-einstiegsweg-und-ist-dieselbe-verengung.md`).

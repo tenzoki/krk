@@ -46,13 +46,13 @@
 //! und nicht denselben Namen; und `open` haengt an einer benannten Roehre ohne
 //! Schreiber nicht fest, weil `O_NONBLOCK` gesetzt ist.
 //!
-//! Dieses Modul benutzt seinen Deskriptor nicht. Es gibt ihn am Ende der
-//! Funktion sofort wieder ab, und der Aufrufer oeffnet danach den **Pfad** ein
-//! zweites Mal (`krk-ui`, `tabelle::in_zeile_einsteigen` ruft `ordner_lesen`
-//! mit dem Namen). Das Fenster zwischen Pruefung und Benutzung besteht damit
-//! unveraendert fort; der Deskriptor kauft es nicht weg. Und `stat(2)` wartet
-//! an einer Roehre nie, weil es sie nicht anfasst. Von den zwei Gewinnen ist
-//! hier keiner ein Gewinn.
+//! Dieses Modul benutzte seinen Deskriptor nicht. Es gab ihn am Ende der
+//! Funktion sofort wieder ab, und der Aufrufer oeffnet danach ohnehin den
+//! **Pfad** ein zweites Mal (`krk-ui`, `tabelle::in_zeile_einsteigen` ruft
+//! `ordner_lesen` mit dem Namen). Das Fenster zwischen Pruefung und Benutzung
+//! bestand damit unveraendert fort; der Deskriptor kaufte es nicht weg. Und
+//! `stat(2)` wartet an einer Roehre nie, weil es sie nicht anfasst. Von den
+//! zwei Gewinnen war hier keiner einer.
 //!
 //! Der Preis war dagegen echt, denn `open(2)` beantwortet eine andere Frage als
 //! die gestellte: nicht "was steht hinter diesem Namen", sondern "darf ich das
@@ -92,7 +92,7 @@
 //! Regel statt zweier. Dass der Pfadsprung an derselben Stelle meldet und der
 //! Doppelklick schweigt, ist eine aeltere Ungleichheit und eine Frage an den
 //! Nutzer
-//! (`shared/issues/260815-1749_*_der-pfadsprung-meldet-den-ordner-ohne-leserecht-und-der-doppelklick-schweigt.md`).
+//! (`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
 
 use std::path::Path;
 
@@ -128,8 +128,12 @@ pub enum Verweisziel {
     /// Einstiegsweg.
     KeinOrdner,
     /// Der Name loest sich nicht auf: hinter ihm steht nichts, was von hier aus
-    /// erreichbar waere. Er zeigt ins Leere, im Ring, oder eine Stufe des
-    /// Pfades laesst sich nicht durchschreiten.
+    /// erreichbar waere. Der Wert traegt **jeden** Fehlschlag von `stat(2)` am
+    /// Pfad, also alles, was die Aufloesung des Namens verhindert. Haeufig ist
+    /// es ein fehlendes Ziel, eine ringfoermige oder schlicht zu lange
+    /// Verknuepfungskette, eine Stufe des Pfades ohne Durchschreitrecht oder ein
+    /// zu langer Name; das sind Beispiele und keine Liste, und der naechste
+    /// `errno`, den niemand genannt hat, faellt ebenso hierher.
     ///
     /// **"Ohne Recht" heisst hier ohne Recht am Pfad und nicht ohne Recht am
     /// Ziel.** Was das Ziel selbst erlaubt, fragt dieser Wert nicht und kann er

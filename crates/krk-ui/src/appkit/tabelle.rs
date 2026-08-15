@@ -1401,7 +1401,7 @@ impl DateifensterQuelle {
     /// sich nicht betreten.
     ///
     /// Aufgeloest wird sie **allein an dieser Stelle**, ueber
-    /// [`verweisziel::bestimmen`] am Deskriptor, und **nur fuer eine
+    /// [`verweisziel::bestimmen`] am Namen, und **nur fuer eine
     /// Verknuepfung**. Der Lesevorgang bekommt dafuer keinen zusaetzlichen
     /// Systemaufruf: an seiner Rechnung haengen die Zeitzusagen L3 und L10, und
     /// ein `stat` je Verknuepfung bei jeder Anzeige aenderte sie. Der eine

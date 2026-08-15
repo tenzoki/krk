@@ -146,6 +146,33 @@ impl Pruefordner {
         pfad
     }
 
+    /// Legt einen gebundenen Unix-Socket an und liefert seinen Pfad.
+    ///
+    /// Anders als bei der Roehre braucht es dafuer kein Werkzeug des Systems und
+    /// keine weitere Bindung in `verzeichnis::sys`: `UnixListener::bind` steht
+    /// in der Standardbibliothek, und der gebundene Eintrag bleibt im
+    /// Dateisystem stehen, auch nachdem der Horcher gefallen ist. `abraeumen`
+    /// nimmt ihn ohne Zutun mit; `remove_dir_all` kommt an einem Socket vorbei.
+    ///
+    /// **Der Name bleibt kurz, und das ist keine Geschmacksfrage.** `AF_UNIX`
+    /// fasst auf macOS 104 Bytes Pfad. Der Pruefordner liegt unter
+    /// `/var/folders/…/T`, also schon 48 Zeichen tief, und traegt Zweck,
+    /// Prozesskennung und Laufnummer im Namen; der einzige Rufer kommt damit auf
+    /// 92 Bytes und hat ein Dutzend uebrig. Wer den Zwecknamen laenger waehlt
+    /// oder den Socket tiefer legt, bekommt keinen Befund ueber das
+    /// Verweisziel, sondern „AF_UNIX path too long".
+    pub fn socket(&self, name: &str) -> PathBuf {
+        let pfad = self.unter(name);
+        let horcher = std::os::unix::net::UnixListener::bind(&pfad).unwrap_or_else(|fehler| {
+            panic!(
+                "Socket {} laesst sich nicht binden: {fehler}",
+                pfad.display()
+            )
+        });
+        drop(horcher);
+        pfad
+    }
+
     /// Setzt `UF_HIDDEN` auf einen Eintrag im Ordner.
     ///
     /// Das Kennzeichen des Dateisystems ist der zweite Weg, auf dem ein Eintrag

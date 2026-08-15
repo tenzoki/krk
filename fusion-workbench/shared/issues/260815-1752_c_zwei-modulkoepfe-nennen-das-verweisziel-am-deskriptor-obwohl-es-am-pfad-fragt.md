@@ -93,3 +93,13 @@ Die erste Zeile ist die auffälligste, weil sie im **Modulkopf des Verweisziels 
 also in genau der Fassung, aus der die vier älteren Stellen nachgezogen werden sollen. Wer
 sie als Quelle nimmt, übernimmt die Präsensform mit. Zwei Wörter genügen dagegen: der Absatz
 sagt, was das Modul mit einem Deskriptor **täte**, nicht was es tut.
+
+---
+Resolved: Alle sieben Stellen nachgezogen (260815-1858, coder). `verzeichnis/mod.rs`: der
+Pfeil `sys ──> verweisziel` faellt aus der Modulskizze, `verweisziel` steht dort jetzt allein
+daneben; die Aufzaehlung der `fcntl(2)`-Rufer fuehrt wieder die zwei, die auch `sys.rs:15-16`
+fuehrt; der Absatz zu `verweisziel` sagt „haengt an gar keinem anderen" und „gefragt wird am
+Namen ueber `std::fs::metadata`", der alte Weg steht im Praeteritum daneben.
+`tabelle.rs:1404` sagt „am Namen". `verweisziel.rs:49-53` steht im Praeteritum: „benutzte",
+„gab ab", „bestand fort", „kaufte nicht weg". `tests/verzeichnis.rs:1844` sagt „am Namen",
+und der Halbsatz zu `ELOOP` in der Ring-Probe nennt `stat(2)` statt `open(2)`.
