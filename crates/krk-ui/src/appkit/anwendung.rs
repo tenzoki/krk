@@ -6450,6 +6450,16 @@ impl Dateifenstersicht for Anwendungsdelegierter {
     fn melden(&self, seite: Fensterseite, text: &str) {
         self.dateifenster(seite).quelle().meldung_zeigen(text);
     }
+
+    fn namenszelle_in_bearbeitung(&self, seite: Fensterseite) -> bool {
+        self.dateifenster(seite)
+            .quelle()
+            .namenszelle_in_bearbeitung()
+    }
+
+    fn auffrischung_vormerken(&self, seite: Fensterseite) {
+        self.dateifenster(seite).quelle().auffrischung_vormerken();
+    }
 }
 
 /// Der Vermittlerfaden zwischen der Operationsmaschine und dem Hauptfaden.

@@ -141,9 +141,12 @@
 //!
 //! **Die Zelle der Namensspalte ist seit dem Ordnerzeichen eine eigene
 //! Unterklasse von `NSTextField`** ([`Namensfeld`]). Sie ueberschreibt
-//! `becomeFirstResponder` von `NSResponder` (`NSResponder.h:105`) und
-//! `abortEditing` von `NSControl` (`NSControl.h:89`) und liest `target`
-//! derselben Klasse (`NSControl.h:24`); alle drei stehen seit 10.0. Angelegt
+//! `becomeFirstResponder` von `NSResponder` (`NSResponder.h:105`),
+//! `abortEditing` von `NSControl` (`NSControl.h:89`) und seit dem Aufschub der
+//! Auffrischung `textDidEndEditing:` von `NSTextField` selbst
+//! (`NSTextField.h:37`), und sie liest `target` von `NSControl`
+//! (`NSControl.h:24`); alle vier stehen seit 10.0 — keine der drei
+//! Deklarationen traegt im Kopf des Systems ein `API_AVAILABLE`. Angelegt
 //! wird sie ueber `labelWithString:`, also die 10.12 aus der Liste darunter.
 //!
 //! Alle uebrigen Setzer und Abfragen der genannten Klassen tragen im Kopf des
@@ -156,7 +159,7 @@
 //! sich, und der Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist
 //! die Gegenmassnahme.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -525,6 +528,35 @@ pub struct QuelleIvars {
     /// Delegierte kommt ueber [`DateifensterDelegierter::quelle`] an ihn heran;
     /// die starke Richtung geht ohnehin von ihm zur Quelle.
     groessenformat: Retained<NSByteCountFormatter>,
+    /// Ob in diesem Dateifenster gerade eine Namenszelle bearbeitet wird (C4).
+    ///
+    /// **Gesetzt und geloescht an den beiden Enden, die AppKit hat**, und an
+    /// keinem dritten: [`Namensfeld::wird_ersthelfer`] setzt, die
+    /// Ueberschreibungen `textDidEndEditing:` und `abortEditing` loeschen. Dass
+    /// diese zwei jedes Ende abdecken, ist gemessen; die Tabelle steht bei
+    /// [`Namensfeld`].
+    ///
+    /// **Wozu das Kennzeichen dasteht.** Solange es steht, laesst
+    /// [`crate::auffrischung::ordner_neu_lesen`] dieses Dateifenster nicht
+    /// lesen: ein `reloadData` beendete die Bearbeitung, ohne die Aktion zu
+    /// schicken, und der getippte Name waere fort (Nutzerentscheid vom
+    /// 260816-0021).
+    namensbearbeitung: Cell<bool>,
+    /// Ob eine Auffrischung ausgefallen ist, waehrend die Namenszelle offen
+    /// stand.
+    ///
+    /// **Der Nachhol-Weg, den der Vorgangsaufschub nicht braucht.** Dort holt
+    /// der Abschluss der Operation die Ordner ohnehin neu; das Ende einer
+    /// Bearbeitung hat nichts Vergleichbares, und ohne dieses Kennzeichen
+    /// bliebe die Liste auf ihrem alten Stand stehen, bis irgendetwas anderes
+    /// sie anfasst.
+    ///
+    /// Gesetzt von [`DateifensterQuelle::auffrischung_vormerken`], eingeloest
+    /// von [`DateifensterQuelle::aufgeschobene_auffrischung_nachholen`] und
+    /// geloescht von jedem wirklichen [`DateifensterQuelle::neu_lesen`] —
+    /// letzteres, damit die Auffrischung, die die Umbenennung selbst
+    /// ausloest, das Nachholen ueberfluessig macht statt es zu verdoppeln.
+    auffrischung_vorgemerkt: Cell<bool>,
 }
 
 define_class!(
@@ -631,6 +663,8 @@ impl DateifensterQuelle {
             fenstermeldung: RefCell::new(None),
             vorgangsanzeige: RefCell::new(None),
             groessenformat,
+            namensbearbeitung: Cell::new(false),
+            auffrischung_vorgemerkt: Cell::new(false),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -825,6 +859,11 @@ impl DateifensterQuelle {
     /// liefert; siehe [`Tabliste::aktiven_neu_lesen`]. Ohne das lief die Liste
     /// waehrend eines Stapel-Umbenennens im angezeigten Ordner leer.
     pub fn neu_lesen(&self) {
+        // Was aufgeschoben war, ist damit erledigt: dieser Lesevorgang holt
+        // genau das, was der Aufschub hat ausfallen lassen. Ohne diese Zeile
+        // liefe nach einer Umbenennung ein zweiter Lesevorgang, der dem ersten
+        // seine vorgemerkte Auswahl naehme.
+        self.ivars().auffrischung_vorgemerkt.set(false);
         // Zuerst die Bildlaufposition aus der Ansicht in den Tab holen: sie
         // steht in der `NSScrollView` und nirgends sonst, und der naechste
         // Schritt merkt sie als noch herzustellen vor.
@@ -1787,6 +1826,53 @@ impl DateifensterQuelle {
         self.zeile_neu_zeichnen(zeile);
     }
 
+    /// Eine Namenszelle dieses Dateifensters steht jetzt in Bearbeitung (C4).
+    fn namensbearbeitung_begonnen(&self) {
+        self.ivars().namensbearbeitung.set(true);
+    }
+
+    /// Die Bearbeitung ist zu Ende; das Dateifenster liest wieder (C4).
+    ///
+    /// **Getrennt vom Nachholen darunter, und der Grund ist die Reihenfolge.**
+    /// Auf dem Return-Weg schickt `NSTextField` die Aktion aus
+    /// `textDidEndEditing:` heraus; das Kennzeichen muss davor fallen, sonst
+    /// schoebe die Auffrischung, die die Umbenennung selbst ausloest, sich
+    /// gleich wieder auf, und `eintrag_waehlen` fande keinen laufenden
+    /// Lesevorgang mehr, an den es seinen Wunsch haengen koennte. Der
+    /// Zeichendurchgang des Nachholens darf umgekehrt erst **nach** der Aktion
+    /// laufen, weil er dem Feld seine Zeile nimmt.
+    fn namensbearbeitung_beendet(&self) {
+        self.ivars().namensbearbeitung.set(false);
+    }
+
+    /// Ob in diesem Dateifenster gerade eine Namenszelle bearbeitet wird (C4).
+    pub fn namenszelle_in_bearbeitung(&self) -> bool {
+        self.ivars().namensbearbeitung.get()
+    }
+
+    /// Merkt vor, dass eine Auffrischung wegen der offenen Zelle ausfiel (C4).
+    ///
+    /// Gerufen von [`crate::auffrischung::ordner_neu_lesen`] anstelle von
+    /// [`Self::neu_lesen`]. Mehrere ausgefallene Auffrischungen ergeben ein
+    /// Nachholen und nicht mehrere: gelesen wird der Ordner, wie er beim
+    /// Nachholen dasteht, und nicht jede Zwischenstufe.
+    pub fn auffrischung_vormerken(&self) {
+        self.ivars().auffrischung_vorgemerkt.set(true);
+    }
+
+    /// Holt eine Auffrischung nach, die die offene Namenszelle aufgehalten hat
+    /// (C4).
+    ///
+    /// Gerufen an **jedem** Ende einer Bearbeitung, also nach Return, nach
+    /// Escape und nach dem Klick daneben. Steht nichts vorgemerkt, geschieht
+    /// nichts — der gewoehnliche Fall, denn zwischen dem Beginn und dem Ende
+    /// einer Umbenennung schreibt meist niemand in den Ordner.
+    fn aufgeschobene_auffrischung_nachholen(&self) {
+        if self.ivars().auffrischung_vorgemerkt.get() {
+            self.neu_lesen();
+        }
+    }
+
     /// Holt sich die Beschriftung einer Zeile aus dem Modell zurueck.
     ///
     /// Der Weg, auf dem eine abgelehnte Eingabe verschwindet: das Feld traegt
@@ -2627,8 +2713,13 @@ impl DateifensterDelegierter {
     /// hierher: die beiden Zeichendurchgaenge beenden die Bearbeitung, ohne
     /// die Aktion zu schicken, und werfen damit den getippten Text fort. Das
     /// ist der dritte Ausgang aus
-    /// `shared/issues/260815-2125_*_verlaesst-der-nutzer-die-offene-namenszelle-…`,
-    /// und er wartet auf eine Nutzerantwort.
+    /// `shared/issues/260815-2125_*_verlaesst-der-nutzer-die-offene-namenszelle-…`.
+    /// **Seit dem Nutzerentscheid vom 260816-0021 erreichen die beiden
+    /// Zeichendurchgaenge eine offene Zelle nicht mehr von selbst:**
+    /// [`crate::auffrischung::ordner_neu_lesen`] laesst dieses Dateifenster
+    /// nicht lesen, solange sie steht. Offen bleibt allein der wirkliche Klick
+    /// des Nutzers neben die Zelle
+    /// (`shared/decisions/260816-0021_*_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`).
     fn zellenansicht(
         &self,
         tabelle: &NSTableView,
@@ -2755,6 +2846,21 @@ impl DateifensterDelegierter {
     /// Tabelle.
     fn namenszelle_zuruecksetzen(&self, feld: &NSTextField) {
         self.ivars().quelle.umbenennung_abgebrochen(feld);
+    }
+
+    /// Meldet der Quelle den Beginn einer Namensbearbeitung (C4).
+    fn namensbearbeitung_begonnen(&self) {
+        self.ivars().quelle.namensbearbeitung_begonnen();
+    }
+
+    /// Meldet der Quelle das Ende einer Namensbearbeitung (C4).
+    fn namensbearbeitung_beendet(&self) {
+        self.ivars().quelle.namensbearbeitung_beendet();
+    }
+
+    /// Laesst die Quelle nachholen, was die offene Zelle aufgehalten hat (C4).
+    fn aufgeschobene_auffrischung_nachholen(&self) {
+        self.ivars().quelle.aufgeschobene_auffrischung_nachholen();
     }
 
     /// Der Text, der in dieser Spalte fuer diesen Eintrag steht.
@@ -2892,7 +2998,35 @@ define_class!(
     /// [`ohne_ordnerzeichen`]. Was die Anwendung am Ende zeigt, nimmt der
     /// Nutzer ab.
     ///
-    /// Ab welchem macOS die drei ueberschriebenen und angesprochenen Methoden
+    /// # Die beiden Enden einer Bearbeitung
+    ///
+    /// AppKit hat genau zwei, und diese Klasse ueberschreibt beide:
+    /// `textDidEndEditing:` und `abortEditing`. Am 260816 auf macOS 15.7.7 mit
+    /// einem weggeworfenen Programm auf dem wirklichen Hauptfaden gemessen, an
+    /// einer `NSTableView` in einer `NSScrollView` mit derselben Verdrahtung
+    /// wie hier:
+    ///
+    /// | Anlass | Bearbeitung danach | Rueckrufe in dieser Reihenfolge |
+    /// |---|---|---|
+    /// | Return (`insertNewline:`) | beendet | `textDidEndEditing:` → Aktion `umbenennungBeendet:` |
+    /// | Escape (`cancelOperation:`) | beendet | `abortEditing` |
+    /// | Fokusverlust (`makeFirstResponder:` auf die Tabelle) | beendet | `textDidEndEditing:` |
+    /// | `reloadData` | beendet | `textDidEndEditing:` |
+    /// | `reloadDataForRowIndexes:columnIndexes:` | beendet | `textDidEndEditing:` |
+    /// | `selectRowIndexes:byExtendingSelection:` | beendet | `textDidEndEditing:` |
+    /// | `noteNumberOfRowsChanged` | steht weiter | — |
+    ///
+    /// **Die Aktion kommt aus `textDidEndEditing:` heraus und nicht davor.**
+    /// Das ist der Grund, aus dem der Aufschub der Auffrischung sein
+    /// Kennzeichen vor `super` fallen laesst und erst danach nachholt; die
+    /// Begruendung im Einzelnen steht bei [`Self::bearbeitung_beendet`].
+    ///
+    /// **`controlTextDidEndEditing:` waere die falsche Stelle**, obwohl das
+    /// Protokoll schon angenommen ist: die Delegiertenmeldung kommt vor der
+    /// Aktion, und wer die Zeile dort neu zeichnete, naehme der Aktion ihren
+    /// getippten Text.
+    ///
+    /// Ab welchem macOS die vier ueberschriebenen und angesprochenen Methoden
     /// stehen, sagt der Modulkopf.
     // SAFETY:
     // - Die Oberklasse `NSTextField` stellt an eine Unterklasse keine
@@ -2938,7 +3072,46 @@ define_class!(
             }
             // SAFETY: `becomeFirstResponder` von `NSResponder` hat die hier
             // angenommene Signatur.
-            unsafe { msg_send![super(self), becomeFirstResponder] }
+            let angenommen: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
+            // Erst wenn die Oberklasse angenommen hat, steht der Feldeditor;
+            // ein abgelehnter Ersthelferrang ist keine Bearbeitung. Ein
+            // `Namensfeld` gibt es nur in der beschreibbaren Spalte, die
+            // Annahme ist also zugleich der Beginn einer Umbenennung.
+            if angenommen && let Some(delegierter) = self.delegierter() {
+                delegierter.namensbearbeitung_begonnen();
+            }
+            angenommen
+        }
+
+        /// Meldet das Ende der Bearbeitung auf jedem Weg ausser Escape.
+        ///
+        /// **Hier und nicht in `controlTextDidEndEditing:`**: die
+        /// Delegiertenmeldung kommt **vor** der Aktion, diese Methode
+        /// **schickt** sie. Beide Stellungen werden hier gebraucht, und nur
+        /// von hier aus sind sie zu haben.
+        ///
+        /// Die Reihenfolge traegt die Zusage, und beide Haelften sind noetig:
+        /// das Kennzeichen faellt **vor** `super`, damit die Umbenennung, die
+        /// `super` ausloest, ihre eigene Auffrischung nicht am Aufschub
+        /// verliert; nachgeholt wird **nach** `super`, weil ein
+        /// Zeichendurchgang davor dem Feld seine Zeile naehme und
+        /// [`DateifensterQuelle::umbenennung_beenden`] ueber `rowForView:`
+        /// nichts mehr faende. Die Begruendung im Einzelnen steht bei
+        /// [`DateifensterQuelle::namensbearbeitung_beendet`].
+        // SAFETY: Die Signatur ist die von `NSTextField`: ein
+        // `NSNotification`, kein Rueckgabewert.
+        #[unsafe(method(textDidEndEditing:))]
+        fn bearbeitung_beendet(&self, meldung: &NSNotification) {
+            let delegierter = self.delegierter();
+            if let Some(delegierter) = delegierter.as_ref() {
+                delegierter.namensbearbeitung_beendet();
+            }
+            // SAFETY: `textDidEndEditing:` von `NSTextField` hat die hier
+            // angenommene Signatur.
+            unsafe { msg_send![super(self), textDidEndEditing: meldung] }
+            if let Some(delegierter) = delegierter.as_ref() {
+                delegierter.aufgeschobene_auffrischung_nachholen();
+            }
         }
 
         /// Holt die Anzeigeform zurueck, nachdem Escape die Bearbeitung
@@ -2963,8 +3136,14 @@ define_class!(
             // SAFETY: `abortEditing` von `NSControl` hat die hier angenommene
             // Signatur.
             let abgebrochen: bool = unsafe { msg_send![super(self), abortEditing] };
+            // **Der Rueckgabewert entscheidet und nicht der Aufruf.** AppKit
+            // ruft `abortEditing` auch an Feldern, die gar nichts bearbeiten
+            // — bei jedem `reloadData` etwa —, und dort ist nichts zu Ende
+            // gegangen (am 260816 am wirklichen Hauptfaden gemessen).
             if abgebrochen && let Some(delegierter) = self.delegierter() {
+                delegierter.namensbearbeitung_beendet();
                 delegierter.namenszelle_zuruecksetzen(self);
+                delegierter.aufgeschobene_auffrischung_nachholen();
             }
             abgebrochen
         }

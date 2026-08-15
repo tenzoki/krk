@@ -60,6 +60,15 @@
 //! legt die Ordner daneben, und [`auffrischung_aufgeschoben`] beantwortet
 //! damit den einzelnen gemeldeten Pfad.
 //!
+//! # Der Aufschub waehrend einer offenen Namenszelle
+//!
+//! Der zweite Aufschub sitzt eine Ebene tiefer, naemlich in
+//! [`ordner_neu_lesen`] selbst, und haelt **ein** Dateifenster an statt einen
+//! Pfad: solange darin eine Namenszelle bearbeitet wird, liest es nicht,
+//! sondern merkt die Auffrischung vor. Warum die beiden Aufschuebe an
+//! verschiedenen Stellen sitzen und warum das kein zweiter Mechanismus fuer
+//! dieselbe Frage ist, steht dort.
+//!
 //! # Warum die Pfade nicht bloss verglichen werden
 //!
 //! FSEvents meldet den Pfad in aufgeloester Form: unter `/tmp` angelegte
@@ -134,6 +143,21 @@ pub trait Dateifenstersicht {
 
     /// Stellt einen Text in die Statuszeile dieses Dateifensters (C1).
     fn melden(&self, seite: Fensterseite, text: &str);
+
+    /// Ob in diesem Dateifenster gerade eine Namenszelle bearbeitet wird (C4).
+    ///
+    /// **Je Dateifenster gefragt und nicht je Pfad.** Beide duerfen denselben
+    /// Ordner zeigen, und dann steht die Zelle trotzdem nur in einem von
+    /// ihnen; das andere frischt weiter auf, wie C9 es zusagt.
+    fn namenszelle_in_bearbeitung(&self, seite: Fensterseite) -> bool;
+
+    /// Merkt diesem Dateifenster vor, dass eine Auffrischung ausgefallen ist.
+    ///
+    /// Der Gegenpart zu [`Dateifenstersicht::neu_lesen`]: statt zu lesen,
+    /// merkt sich das Dateifenster, dass zu lesen waere. Das Ende der
+    /// Bearbeitung holt es nach; warum es dafuer einen eigenen Weg braucht,
+    /// steht bei [`ordner_neu_lesen`].
+    fn auffrischung_vormerken(&self, seite: Fensterseite);
 }
 
 /// Die Ordner, die beobachtet werden. Hoechstens drei.
@@ -208,23 +232,64 @@ fn editorordner(editordatei: Option<&Path>) -> Option<PathBuf> {
 
 /// Liest jedes Dateifenster neu, das diesen Ordner zeigt.
 ///
-/// **Der einzige Auffrischungspfad.** Liefert die Zahl der aufgefrischten
-/// Dateifenster; null heisst, dass der gemeldete Pfad auf keinem Schirm steht.
-/// Der Fall ist gewoehnlich und kein Fehler: FSEvents beobachtet einen Ordner
-/// samt allem darunter und meldet auch Aenderungen in einem Unterordner, den
-/// kein Dateifenster zeigt.
+/// **Der einzige Auffrischungspfad.** Liefert die Zahl der Dateifenster, die
+/// wirklich gelesen haben; null heisst, dass der gemeldete Pfad auf keinem
+/// Schirm steht **oder** dass jedes betroffene Dateifenster ihn aufgeschoben
+/// hat. Der erste Fall ist gewoehnlich und kein Fehler: FSEvents beobachtet
+/// einen Ordner samt allem darunter und meldet auch Aenderungen in einem
+/// Unterordner, den kein Dateifenster zeigt. Der zweite steht im Abschnitt
+/// darunter.
 ///
 /// Ein ausgeblendetes Dateifenster wird mitgenommen, obwohl der Strom seinen
 /// Ordner nicht beobachtet: der zweite Ausloeser aus S16 kann es treffen, und
 /// ein Fenster, das beim Wiedereinblenden einen ueberholten Stand zeigt, waere
 /// genau die Luecke, die C4 ausschliesst.
+///
+/// # Eine offene Namenszelle haelt ihr Dateifenster an
+///
+/// Steht in einem Dateifenster eine Namenszelle in Bearbeitung, liest es
+/// nicht, sondern merkt sich die ausgefallene Auffrischung vor
+/// ([`Dateifenstersicht::auffrischung_vormerken`]). Der Grund ist gemessen:
+/// `reloadData` und `reloadDataForRowIndexes:columnIndexes:` **beenden** eine
+/// offene Bearbeitung, ohne die Aktion zu schicken, und der getippte Name ist
+/// damit fort, ohne dass umbenannt wuerde. Schreibt also irgendein anderes
+/// Programm in den angezeigten Ordner, waehrend der Nutzer einen Namen tippt,
+/// endete seine Eingabe bis zum 260816 still (Nutzerentscheid vom 260816-0021,
+/// `shared/decisions/260815-2247_*_was-geschieht-mit-einer-offenen-umbenennung-
+/// die-ohne-aktion-endet.md`, Option 1).
+///
+/// **Die Entscheidung faellt hier und nicht am Vorgangsaufschub darueber.**
+/// [`aufgeschobene_ordner`] beantwortet, welche **Pfade** ein laufender
+/// Vorgang zurueckhaelt, und trifft damit jedes Dateifenster, das den Pfad
+/// zeigt. Der Aufschub der Bearbeitung gehoert dagegen dem einzelnen
+/// Dateifenster: zeigen beide denselben Ordner und steht die Zelle nur links
+/// offen, frischt rechts weiter auf. Dazu kommt, dass diese Funktion der eine
+/// Auffrischungspfad ist und deshalb **beide** Ausloeser abdeckt — die
+/// Dateisystemwache und den Abschluss einer Dateioperation aus S16. Der
+/// Nutzerentscheid nennt genau das: kein Programmweg dieser Datei beendet die
+/// Bearbeitung.
+///
+/// **Der Aufschub laesst die Liste nicht leerlaufen**, anders als der Aufschub
+/// des Vorgangs es 260805-1337 einmal tat. Dort lief ein Lesevorgang und leerte
+/// sein Ordnermodell vorab; hier beginnt gar keiner, das Ordnermodell bleibt
+/// unangetastet, und die Tabelle behaelt jede Zeile, die sie hat.
+///
+/// **Der Takt eines schon laufenden Lesevorgangs geht hier nicht durch** und
+/// bleibt darum unberuehrt; der Befund dazu ist
+/// `shared/issues/260816-0040_*_der-takt-eines-laufenden-lesevorgangs-beendet-
+/// eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md`.
 pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
     let mut aufgefrischt = 0;
     for seite in Fensterseite::ALLE {
-        if gleicher_ordner(&sicht.ordner(seite), pfad) {
-            sicht.neu_lesen(seite);
-            aufgefrischt += 1;
+        if !gleicher_ordner(&sicht.ordner(seite), pfad) {
+            continue;
         }
+        if sicht.namenszelle_in_bearbeitung(seite) {
+            sicht.auffrischung_vormerken(seite);
+            continue;
+        }
+        sicht.neu_lesen(seite);
+        aufgefrischt += 1;
     }
     aufgefrischt
 }
@@ -459,6 +524,8 @@ mod tests {
         editordatei: Option<PathBuf>,
         /// Was die Probe erlebt hat, in der Reihenfolge des Geschehens.
         protokoll: RefCell<Vec<String>>,
+        /// Ob in diesem Dateifenster eine Namenszelle bearbeitet wird (C4).
+        bearbeitung: [bool; 2],
     }
 
     impl Probe {
@@ -469,7 +536,14 @@ mod tests {
                 sichtbar: [true, true],
                 editordatei: None,
                 protokoll: RefCell::new(Vec::new()),
+                bearbeitung: [false, false],
             }
+        }
+
+        /// Laesst in diesem Dateifenster eine Namenszelle offen stehen (C4).
+        fn mit_offener_namenszelle(mut self, seite: Fensterseite) -> Self {
+            self.bearbeitung[seite.index()] = true;
+            self
         }
 
         /// Laesst den Editor die genannte Datei halten.
@@ -535,6 +609,14 @@ mod tests {
         fn melden(&self, seite: Fensterseite, text: &str) {
             self.notieren(format!("melden {} {text}", seite.index()));
         }
+
+        fn namenszelle_in_bearbeitung(&self, seite: Fensterseite) -> bool {
+            self.bearbeitung[seite.index()]
+        }
+
+        fn auffrischung_vormerken(&self, seite: Fensterseite) {
+            self.notieren(format!("vormerken {}", seite.index()));
+        }
     }
 
     #[test]
@@ -549,6 +631,41 @@ mod tests {
         let probe = Probe::neu("/a", "/a");
         assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 2);
         assert_eq!(probe.protokoll(), ["neu_lesen 0", "neu_lesen 1"]);
+    }
+
+    #[test]
+    fn eine_offene_namenszelle_haelt_die_auffrischung_ihres_dateifensters_an() {
+        let probe = Probe::neu("/a", "/b").mit_offener_namenszelle(Fensterseite::Links);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 0);
+        assert_eq!(probe.protokoll(), ["vormerken 0"]);
+    }
+
+    #[test]
+    fn der_aufschub_gilt_dem_dateifenster_und_nicht_dem_ordner() {
+        // Beide zeigen denselben Ordner, die Zelle steht nur links offen: das
+        // rechte frischt weiter auf, wie C9 es zusagt.
+        let probe = Probe::neu("/a", "/a").mit_offener_namenszelle(Fensterseite::Links);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 1);
+        assert_eq!(probe.protokoll(), ["vormerken 0", "neu_lesen 1"]);
+    }
+
+    #[test]
+    fn eine_offene_namenszelle_haelt_einen_fremden_ordner_nicht_an() {
+        let probe = Probe::neu("/a", "/b").mit_offener_namenszelle(Fensterseite::Links);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/b")), 1);
+        assert_eq!(probe.protokoll(), ["neu_lesen 1"]);
+    }
+
+    #[test]
+    fn ohne_offene_namenszelle_wird_nichts_vorgemerkt() {
+        let probe = Probe::neu("/a", "/a");
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 2);
+        assert!(
+            !probe
+                .protokoll()
+                .iter()
+                .any(|zeile| zeile.starts_with("vormerken"))
+        );
     }
 
     #[test]

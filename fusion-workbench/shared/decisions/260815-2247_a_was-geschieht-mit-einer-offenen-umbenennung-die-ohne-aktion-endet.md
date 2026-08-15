@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** orchestrator
 **Cross-references:** shared/issues/260815-2125_o_verlaesst-der-nutzer-die-offene-namenszelle-bleibt-der-getippte-text-stehen-und-das-ordnerzeichen-weg.md, shared/issues/260815-2204_o_der-doc-kommentar-von-umbenennung-beenden-nennt-den-fokusverlust-als-aufrufer-die-messung-derselben-sitzung-widerlegt-das.md, shared/decisions/260815-2056_i_woran-erkennt-der-nutzer-in-der-dateiliste-einen-ordner.md
 
@@ -68,8 +68,34 @@ einzige, die die beiden Wege ohne Nutzerzutun schließt, ohne eine Zusage von C4
 zu ändern, und sie baut nichts Neues. Option 3 ohne Option 1 wäre die einzige
 Wahl, die aus einem fremden Schreibvorgang eine Umbenennung macht.
 
+## Nutzerentscheid vom 260816-0021: Option 1
+
+Die Auffrischung wird aufgeschoben, solange eine Namenszelle offen steht.
+
+**Was damit entschieden ist und was nicht.** Die beiden Wege ohne Zutun des
+Nutzers — die Dateisystemwache und der Takt des Lesevorgangs — sollen eine
+laufende Umbenennung nicht mehr beenden. Der dritte Ausgang bleibt danach allein
+über einen wirklichen Klick des Nutzers erreichbar. **Was dieser Klick tun soll,
+verwerfen oder übernehmen, ist mit dieser Antwort nicht entschieden** und steht
+als eigene Frage in
+`shared/decisions/260816-0021_o_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`.
+
+**Zwei Dinge, die die Umsetzung zu klären hat**, beide beim Lesen des
+vorhandenen Mechanismus aufgefallen und keines davon hier entschieden:
+
+1. **Der Aufschub des laufenden Vorgangs hat einen Auslöser zum Nachholen, die
+   offene Zelle hat keinen.** `auffrischung_aufgeschoben` verlässt sich darauf,
+   dass der Abschluss des Vorgangs die Ordner ohnehin neu liest
+   (`auffrischung.rs`, Doc-Kommentar). Beim Ende einer Bearbeitung gibt es
+   nichts Vergleichbares: `zeile_neu_zeichnen` zeichnet eine Zeile aus dem
+   Modell und liest nicht von der Platte. Ein Nachhol-Weg ist hier also neu.
+2. **Der Takt eines noch laufenden Lesevorgangs ist kein FSEvents-Weg.** Wer in
+   einem großen Ordner zu tippen beginnt, während dieser noch einläuft, trifft
+   `einziehen` und nicht die Wache. Ob der Aufschub das mit abdeckt, ist zu
+   messen und im Ergebnis zu benennen, statt es offenzulassen.
+
 ---
-Answered:
+Answered: shared/decisions/260815-2247_a_was-geschieht-mit-einer-offenen-umbenennung-die-ohne-aktion-endet.md §Nutzerentscheid — Option 1, die Auffrischung wird aufgeschoben, solange eine Namenszelle offen steht.
 Implemented:
 Deferred:
 Superseded by:

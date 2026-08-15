@@ -923,3 +923,6 @@
 {"ts":"2026-08-15T20:47:40","event":"task_done","turn":2,"task":"T2","agent":"coder","detail":"d7e2dea; Befund 260815-2203 gemessen widerlegt und geschlossen"}
 {"ts":"2026-08-15T20:47:40","event":"commit","turn":2,"detail":"bdd627a, d7e2dea, 58cc33e"}
 {"ts":"2026-08-15T20:47:40","event":"turn_end","turn":2,"detail":"2 tasks resolved, 3 commits, 1 decision filed"}
+{"ts":"2026-08-15T22:22:36","event":"gate_response","detail":"Nutzerentscheid zu 260815-2247: Option 1, Auffrischung aufschieben"}
+{"ts":"2026-08-15T22:22:36","event":"turn_start","turn":3,"detail":"1 ready task"}
+{"ts":"2026-08-15T22:22:36","event":"task_start","turn":3,"task":"T4","agent":"coder","detail":"Auffrischung aufschieben, solange eine Namenszelle offen steht"}

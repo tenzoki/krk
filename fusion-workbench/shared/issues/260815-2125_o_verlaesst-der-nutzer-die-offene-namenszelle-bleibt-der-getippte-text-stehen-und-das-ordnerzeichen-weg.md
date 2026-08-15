@@ -132,3 +132,33 @@ ist hier **nicht** gemessen. Das Messprogramm hat den Delegierten der Tabelle ge
 keinen Delegierten am Feld gesetzt, und `NSTextField` schickt die Meldung an seinen eigenen
 Delegierten. Die Datei setzt ihn ebenso wenig; wer die Meldung als Aufhänger einer Behebung
 nimmt, misst das zuerst.
+
+---
+
+## Nachtrag der Umsetzung vom 260816-0040 (coder, Nutzerentscheid 260816-0021)
+
+**Zwei der drei Ausgänge sind abgetragen, der Befund bleibt offen.**
+`crate::auffrischung::ordner_neu_lesen` lässt ein Dateifenster nicht mehr lesen, solange
+darin eine Namenszelle in Bearbeitung steht; es merkt die Auffrischung stattdessen vor, und
+das Ende der Bearbeitung holt sie nach. Damit erreichen weder die Dateisystemwache noch der
+Abschluss einer Dateioperation die offene Zelle. Der getippte Text überlebt eine fremde
+Schreibbewegung im angezeigten Ordner.
+
+**Was bleibt:** der wirkliche Klick des Nutzers neben die Zelle — sowohl sein Ausgang
+(verwerfen oder übernehmen,
+`shared/decisions/260816-0021_o_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`)
+als auch die Anzeigehälfte, die daran hängt. Der Zustand am Code ist für diesen Weg
+unverändert.
+
+**Ein dritter Weg ist gemessen und liegt getrennt:** `DateifensterQuelle::einziehen`, der
+Takt eines schon laufenden Lesevorgangs, läuft an `ordner_neu_lesen` vorbei und ist vom
+Aufschub nicht erreicht —
+`shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md`.
+
+**Die Messtabelle der Enden ist in derselben Sitzung erweitert worden** und steht im
+Sitzungsprotokoll
+`shared/history/260816-0040-coder-aufschub-der-auffrischung-bei-offener-namenszelle.md`:
+`-[NSTextField textDidEndEditing:]` trägt jedes Ende außer Escape, `abortEditing` trägt
+Escape, und `textDidEndEditing:` **schickt** die Aktion, statt ihr vorauszulaufen. Damit ist
+auch die Frage beantwortet, die der Nachtrag vom 260816 offengelassen hat: der Delegierte
+am Feld wird für die Behebung nicht gebraucht.
