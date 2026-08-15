@@ -533,13 +533,25 @@ impl Tabliste {
     /// Name ueberlebt einen noch laufenden Lesevorgang, eine Zeilennummer
     /// nicht.
     ///
-    /// # Die eine Stelle, an der ein Ordnerwechsel den Filter entscheidet
+    /// # Die eine Stelle, an der ein Ordnerwechsel den Filter traegt
     ///
     /// Der bisherige [`Tabinhalt`] faellt hier, und mit ihm sein
     /// [`Ordnermodell`]; was der Tab ueber den Wechsel hinweg behaelt, steht
     /// deshalb genau hier und nirgends sonst. Bis zum 260815 waren das
     /// Sortierung und Verstecke; seither kommen der Filter der Tiefe und der
     /// Filtertext dazu, in derselben Bauart und aus demselben Grund.
+    ///
+    /// **Eine Regel und keine Fallunterscheidung:** der Filtertext uebersteht
+    /// jeden Ordnerwechsel, gleich ob der Filter der Tiefe an oder aus ist
+    /// (C1.9, C1.10). Geloescht wird er allein vom Nutzer, mit `Esc` oder
+    /// Zeichen fuer Zeichen ueber die Rueckschritt-Taste. Bis zum 260815-0955
+    /// leerte ein Wechsel bei ausgeschaltetem Filter der Tiefe den Text; der
+    /// Nutzerentscheid zu
+    /// `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
+    /// (Moeglichkeit 2) hat aus der Ausnahme die Regel gemacht. **Getragen
+    /// wird sie davon, dass der stehende Filtertext zu sehen ist**: die
+    /// Statuszeile nennt ihn samt Trefferzahl, sonst hielte der Nutzer den
+    /// neuen Ordner fuer fast leer.
     ///
     /// **Der Aufstieg braucht keine eigene Zeile.** Er geht wie der Einstieg
     /// durch diese Stelle, und damit gilt fuer ihn dieselbe Regel (C1.9).
@@ -554,19 +566,15 @@ impl Tabliste {
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let tief = self.tabs[stelle].modell.tief();
-        // **Diese eine Zeile traegt die Antwort auf
-        // `decisions/260814-1830_o_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`.**
-        // Der Plan faehrt auf "geleert" (C1.9); bei eingeschaltetem Filter der
-        // Tiefe uebersteht der Text den Wechsel, weil das Modell der tiefen
-        // Ansicht sonst auf jeder Ebene seinen Gegenstand verloere (C1.10).
-        // Faellt die Antwort spaeter auf "stehen lassen", wird aus dieser Zeile
-        // ein `true`, und sonst aendert sich nichts.
-        let filtertext_ueberlebt = tief;
-        let filtertext = if filtertext_ueberlebt {
-            self.tabs[stelle].modell.filtertext().to_owned()
-        } else {
-            String::new()
-        };
+        // Die vierte Uebertragung, in derselben Bauart wie die drei darueber
+        // und ohne Bedingung: der Filtertext geht hinueber, gleich wie `tief`
+        // steht (C1.9, C1.10). Bis zum Nutzerentscheid vom 260815-0955 zu
+        // `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
+        // stand hier ein `filtertext_ueberlebt`, das die offene Antwort trug.
+        // Es ist ersatzlos entfallen: mit der einen Regel truege es nur noch
+        // ein `true` und liesse eine Fallunterscheidung vermuten, die es nicht
+        // gibt. Der Doc-Kommentar darueber schreibt die Regel aus.
+        let filtertext = self.tabs[stelle].modell.filtertext().to_owned();
         let mut zustand = Tabzustand::auf(ordner);
         zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
@@ -609,11 +617,11 @@ impl Tabliste {
     /// und die offene Bildlaufposition, und beide stehen hier.
     ///
     /// **Der Filtertext bleibt deshalb stehen, und zwar ohne eine Zeile
-    /// dafuer.** Eine Auffrischung wechselt den Ordner nicht, also greift die
-    /// Regel aus [`Tabliste::ordner_setzen`] hier nicht: der Tab behaelt sein
-    /// [`Ordnermodell`] und damit seinen Filtertext, gleich ob der Filter der
-    /// Tiefe an ist. Was der neue Lesevorgang liefert, geht durch denselben
-    /// Filter wie zuvor.
+    /// dafuer.** Eine Auffrischung wechselt den Ordner nicht, also faellt das
+    /// [`Ordnermodell`] hier gar nicht erst: der Tab behaelt es samt seinem
+    /// Filtertext, ohne dass die Uebertragung aus
+    /// [`Tabliste::ordner_setzen`] etwas zu tun haette. Was der neue
+    /// Lesevorgang liefert, geht durch denselben Filter wie zuvor.
     pub fn aktiven_neu_lesen(&mut self) {
         let stelle = self.aktiv;
         let auswahlname = self.tabs[stelle].auswahlname();
@@ -1338,11 +1346,14 @@ mod tests {
         (einer, "/".to_owned())
     }
 
-    /// C1.9: bei ausgeschalteter tiefer Suche faellt der Filtertext mit dem
-    /// Ordner. Der Aufstieg geht durch dieselbe Stelle und zaehlt deshalb wie
-    /// der Einstieg.
+    /// C1.9: der Filtertext uebersteht den Ordnerwechsel auch bei
+    /// ausgeschalteter tiefer Suche.
+    ///
+    /// Die Richtung, die der Nutzerentscheid vom 260815-0955 umgekehrt hat
+    /// (`decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`,
+    /// Moeglichkeit 2). Bis dahin pruefte diese Probe das Gegenteil.
     #[test]
-    fn ein_ordnerwechsel_leert_den_filtertext_wenn_die_tiefe_suche_aus_ist() {
+    fn ein_ordnerwechsel_laesst_den_filtertext_stehen_wenn_die_tiefe_suche_aus_ist() {
         let (hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
@@ -1352,18 +1363,55 @@ mod tests {
 
         assert_eq!(
             liste.aktiver().modell().filtertext(),
-            "",
-            "ohne tiefe Suche faellt der Filtertext mit dem Ordner"
+            "rs",
+            "der Filtertext haengt nicht am Filter der Tiefe"
         );
         assert!(
             !liste.aktiver().modell().tief(),
             "der Schalter selbst bleibt, was er war"
         );
+        assert_eq!(
+            liste.aktiver().ordner(),
+            Path::new(&dorthin),
+            "gewechselt wurde trotzdem"
+        );
     }
 
-    /// C1.10: bei eingeschalteter tiefer Suche uebersteht der Filtertext jeden
-    /// Ordnerwechsel. Ohne diese Ausnahme haette das Modell der tiefen Ansicht
-    /// auf der naechsten Ebene keinen Gegenstand mehr.
+    /// C1.9: der Aufstieg zaehlt wie der Einstieg.
+    ///
+    /// Er geht durch dieselbe Stelle, nimmt aber den verlassenen Ordner als
+    /// Wunschauswahl mit. Die Probe faehrt ihn so, wie
+    /// `Dateifenster::ordner_aufwaerts` ihn faehrt: mit
+    /// [`krk_core::verzeichnis::aufwaerts`] gerechnet und mit dem Namen des
+    /// verlassenen Ordners als `auswahl`.
+    #[test]
+    fn der_aufstieg_laesst_den_filtertext_stehen_wie_der_einstieg() {
+        let (hier, _) = zwei_vorhandene_ordner();
+        let (eltern, verlassen) = krk_core::verzeichnis::aufwaerts(Path::new(&hier))
+            .expect("das Temporaerverzeichnis hat einen uebergeordneten Ordner");
+        let mut liste = liste(&[&hier]);
+        liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
+
+        liste.ordner_setzen(&eltern, Some(verlassen.clone()));
+
+        assert_eq!(
+            liste.aktiver().modell().filtertext(),
+            "rs",
+            "der Aufstieg loescht den Filtertext so wenig wie der Einstieg"
+        );
+        assert_eq!(liste.aktiver().ordner(), eltern.as_path());
+        assert_eq!(
+            liste.aktiver().auswahlname().as_deref(),
+            Some(verlassen.as_str()),
+            "die Auswahl geht weiterhin auf den verlassenen Ordner"
+        );
+    }
+
+    /// C1.10: bei eingeschalteter tiefer Suche uebersteht der Filtertext den
+    /// Ordnerwechsel ebenfalls. Seit dem 260815 ist das kein eigener Fall mehr,
+    /// sondern derselbe wie in C1.9; die Probe steht daneben, weil das Modell
+    /// der tiefen Ansicht auf der naechsten Ebene sonst seinen Gegenstand
+    /// verloere.
     #[test]
     fn mit_tiefer_suche_ueberlebt_der_filtertext_den_ordnerwechsel() {
         let (hier, dorthin) = zwei_vorhandene_ordner();
