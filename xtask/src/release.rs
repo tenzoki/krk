@@ -75,7 +75,50 @@ use crate::sign;
 const ZIELE: [&str; 2] = ["x86_64-apple-darwin", "aarch64-apple-darwin"];
 
 /// Die Architekturnamen, die `lipo -archs` danach melden muss.
+///
+/// **In der Reihenfolge von [`ZIELE`]:** [`lipo_name`] liest die beiden
+/// Aufzaehlungen paarweise, und wer eine davon umsortiert, sortiert die andere
+/// mit. Die Probe `die_beiden_ziele_tragen_die_namen_die_lipo_dafuer_meldet`
+/// faengt es.
 const ARCHITEKTUREN: [&str; 2] = ["x86_64", "arm64"];
+
+/// Paare haben gleich viele Glieder; sonst waeren es keine.
+const _: () = assert!(ZIELE.len() == ARCHITEKTUREN.len());
+
+/// Der Name, unter dem `lipo` die Architektur `architektur` meldet.
+///
+/// Rust und `lipo` benennen dieselbe Architektur verschieden: `rustc` zielt auf
+/// `aarch64-apple-darwin`, und `std::env::consts::ARCH` sagt entsprechend
+/// `aarch64`, waehrend `lipo -info` und `lipo -archs` fuer dasselbe Programm
+/// `arm64` schreiben. Wer eine Architektur nennt, damit der Leser die
+/// Weitergabefaehigkeit mit `lipo` nachprueft, muss den Namen von `lipo`
+/// nennen; sonst sucht der Leser in dessen Ausgabe ein Wort, das dort nie
+/// steht. Am 260812 ist genau das geschehen
+/// (`shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`).
+///
+/// **Eine zweite Namensliste entsteht dabei nicht.** Beide Namen stehen schon
+/// in dieser Datei und tragen dort je eine eigene Aufgabe: der Rust-Name als
+/// Praefix des Ziel-Tripels in [`ZIELE`], der Name von `lipo` in
+/// [`ARCHITEKTUREN`], wo er die Pruefbedingung des Zusammenfuegens ist. Die
+/// Umrechnung liest die beiden paarweise und schreibt keinen Namen selbst aus.
+///
+/// **Einen unbekannten Namen reicht sie durch.** KRK zielt heute auf zwei
+/// Architekturen; bekaeme diese Funktion eine dritte, waere eine geratene
+/// Uebersetzung falsch und ein Weglassen ein Verschweigen. Ein durchgereichtes
+/// `aarch64` ist eine schlechtere Auskunft als `arm64`, ein erfundener Name
+/// waere eine unwahre.
+#[must_use]
+pub fn lipo_name(architektur: &str) -> &str {
+    for (ziel, gemeldet) in ZIELE.into_iter().zip(ARCHITEKTUREN) {
+        if ziel
+            .strip_prefix(architektur)
+            .is_some_and(|rest| rest.starts_with('-'))
+        {
+            return gemeldet;
+        }
+    }
+    architektur
+}
 
 /// Die Wurzel der AppKit-Grenzpruefung: das Verzeichnis der Anwendungskisten.
 ///
@@ -701,6 +744,47 @@ fn werkzeug_pruefen(name: &str, buendel: &Path) -> Result<(), Abbruch> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Die zwei Ziele dieses Projekts unter dem Namen ihres Pruefwerkzeugs.
+    ///
+    /// Sie haelt zugleich die Paarung der beiden Aufzaehlungen: wer eine davon
+    /// umsortiert und die andere stehen laesst, meldet hier `x86_64` fuer
+    /// `aarch64`.
+    #[test]
+    fn die_beiden_ziele_tragen_die_namen_die_lipo_dafuer_meldet() {
+        assert_eq!(lipo_name("aarch64"), "arm64");
+        assert_eq!(lipo_name("x86_64"), "x86_64");
+    }
+
+    /// Die Umrechnung deckt jedes gebaute Ziel ab.
+    ///
+    /// Sie liest die Rust-Namen aus [`ZIELE`] statt sie aufzuschreiben; ein
+    /// drittes Ziel liefe hier von selbst mit und muesste einen Namen aus
+    /// [`ARCHITEKTUREN`] bekommen, statt still durchgereicht zu werden.
+    #[test]
+    fn jedes_ziel_tripel_bekommt_einen_namen_aus_den_architekturen() {
+        for ziel in ZIELE {
+            let rust_name = ziel.split('-').next().unwrap();
+            assert!(
+                ARCHITEKTUREN.contains(&lipo_name(rust_name)),
+                "{ziel} wird nicht uebersetzt"
+            );
+        }
+    }
+
+    /// Ein unbekannter Name wird durchgereicht und nicht erfunden.
+    ///
+    /// Vier Faelle, die keine Uebersetzung haben: eine fremde Architektur, ein
+    /// Name, der schon der von `lipo` ist, das ganze Tripel statt seines
+    /// Praefixes und die leere Zeichenkette. Keiner darf verschwinden, und
+    /// keiner darf zu `arm64` oder `x86_64` werden.
+    #[test]
+    fn ein_unbekannter_name_wird_durchgereicht_und_nicht_erfunden() {
+        assert_eq!(lipo_name("riscv64"), "riscv64");
+        assert_eq!(lipo_name("arm64"), "arm64");
+        assert_eq!(lipo_name("aarch64-apple-darwin"), "aarch64-apple-darwin");
+        assert_eq!(lipo_name(""), "");
+    }
 
     #[test]
     fn eine_use_zeile_aus_einer_objc2_kiste_ist_ein_verstoss() {

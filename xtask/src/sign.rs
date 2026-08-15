@@ -135,6 +135,62 @@ fn developer_id_namen(namen: &[String]) -> Vec<String> {
         .collect()
 }
 
+/// Der Abschlusshinweis nach einem lokalen Buendelbau.
+///
+/// `bundle` erzeugt ein Buendel, das der Nutzer weitergeben kann, und die
+/// Signaturmeldung sagt nichts darueber, was dabei geschieht. Am 260812 ist ein
+/// so gebautes Buendel auf einem zweiten Mac als moegliche Schadsoftware
+/// abgewiesen worden, und der Nutzer hat KRK fuer beschaedigt gehalten
+/// (`shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`).
+///
+/// **Unterschieden wird nach der Art der Identitaet und nicht nach dem
+/// Unterbefehl.** Wer `bundle` ueber [`UMGEBUNGSVARIABLE`] mit einer
+/// Developer-ID signiert, hat das Signaturproblem nicht, und ein pauschaler
+/// Warnsatz waere dort falsch. Die Grenze ist [`DEVELOPER_ID_PRAEFIX`],
+/// dieselbe wie in [`bestimmen_fuer_release`]; eine zweite Wahrheit daneben
+/// entsteht nicht.
+///
+/// Die Architektur steht in beiden Faellen, denn sie haengt nicht an der
+/// Identitaet: `bundle` uebersetzt ohne Ziel-Tripel, also fuer die Architektur
+/// der Baumaschine, und ist damit nie universell. Erst `release` baut beide
+/// Ziele und fuegt sie mit `lipo` zusammen. Der Aufrufer reicht sie deshalb
+/// herein, statt dass hier zur Laufzeit gemessen wuerde; die Tatsache steht
+/// schon beim Uebersetzen fest.
+///
+/// **Er reicht sie unter dem Namen herein, den `lipo` benutzt.** Der Hinweis
+/// steht da, damit jemand die Weitergabefaehigkeit prueft, und das Werkzeug
+/// dafuer ist `lipo`; stuende hier `aarch64`, waehrend `lipo -info` fuer
+/// dasselbe Programm `arm64` schreibt, truege die Ausgabe zwei Namen fuer eine
+/// Architektur. Die Umrechnung ist `release::lipo_name`, angewandt auf
+/// `std::env::consts::ARCH`, und sie steht dort, weil dort die Namen stehen,
+/// die `lipo` melden muss.
+///
+/// Der Hinweis gehoert allein an `bundle`. `release` faehrt genau den Weg, auf
+/// den er zeigt, und bekommt ihn nicht.
+#[must_use]
+pub fn weitergabehinweis(identitaet: &str, architektur: &str) -> String {
+    let lage = if identitaet.starts_with(DEVELOPER_ID_PRAEFIX) {
+        format!(
+            "signiert ist dieses Buendel mit der Developer-ID {identitaet:?} und damit richtig. \
+             Beglaubigt ist es nicht: bundle reicht nichts bei Apple ein und heftet kein Ticket \
+             an, und ohne Beglaubigung weist Gatekeeper es auf einem anderen Mac ab"
+        )
+    } else {
+        format!(
+            "dieses Buendel bleibt auf dieser Maschine. Signiert ist es mit {identitaet:?}, \
+             einer Entwicklungsidentitaet, und Gatekeeper weist ein so signiertes Buendel auf \
+             jedem anderen Mac als moegliche Schadsoftware ab"
+        )
+    };
+    format!(
+        "Weitergabe: {lage}. Universell ist es ausserdem nicht: gebaut wurde allein fuer \
+         {architektur}.\n\
+         Wer weitergeben will, nimmt \"cargo xtask release\": es baut beide Mac-Architekturen \
+         und fuegt sie zusammen, signiert mit einer Developer-ID und heftet nach der \
+         Beglaubigung das Ticket an."
+    )
+}
+
 /// Signiert das Buendel.
 pub fn signieren(buendel: &Path, identitaet: &Identitaet) -> Result<(), Abbruch> {
     signieren_mit(buendel, identitaet, &[])
@@ -512,6 +568,78 @@ Policy: Code Signing
         // Stufe der Release-Suche darf sie nicht greifen.
         let namen = gueltige_namen(GUELTIGE_EINE);
         assert!(developer_id_namen(&namen).is_empty());
+    }
+
+    /// Der Fall vom 260812, an dem der Hinweis haengt.
+    ///
+    /// "Apple Development: …" beginnt nicht mit [`DEVELOPER_ID_PRAEFIX`], ist
+    /// also eine Entwicklungsidentitaet. Genau damit signiert war das Buendel,
+    /// das der zweite Mac als moegliche Schadsoftware abgewiesen hat.
+    #[test]
+    fn eine_apple_development_identitaet_bekommt_die_maschinengrenze_genannt() {
+        let namen = gueltige_namen(GUELTIGE_EINE);
+        let text = weitergabehinweis(&namen[0], "x86_64");
+        assert!(text.contains("bleibt auf dieser Maschine"), "{text}");
+        assert!(text.contains("Entwicklungsidentitaet"), "{text}");
+        assert!(text.contains("moegliche Schadsoftware"), "{text}");
+        assert!(text.contains(&namen[0]), "{text}");
+    }
+
+    /// Bei einer Developer-ID faellt der Warnsatz zur Signatur weg.
+    ///
+    /// Wer `bundle` ueber die Umgebungsvariable mit einer Developer-ID
+    /// signiert, hat richtig signiert; ein pauschaler Warnsatz waere dort
+    /// falsch. Offen bleibt allein die Beglaubigung.
+    #[test]
+    fn eine_developer_id_wird_nicht_fuer_falsch_signiert_erklaert() {
+        let namen = developer_id_namen(&gueltige_namen(GUELTIGE_ZWEI));
+        let text = weitergabehinweis(&namen[0], "x86_64");
+        assert!(text.contains("damit richtig"), "{text}");
+        assert!(text.contains("Beglaubigt ist es nicht"), "{text}");
+        assert!(!text.contains("Entwicklungsidentitaet"), "{text}");
+        assert!(!text.contains("moegliche Schadsoftware"), "{text}");
+    }
+
+    /// Die zweite Luecke haengt an keiner Identitaet.
+    ///
+    /// `bundle` uebersetzt fuer die Architektur der Baumaschine und ist nie
+    /// universell; das gilt in beiden Faellen, und in beiden fuehrt der Weg
+    /// zur Weitergabe ueber `cargo xtask release`.
+    ///
+    /// Die Architektur geht durch dieselbe Umrechnung wie beim Aufrufer, damit
+    /// die Probe den Namen misst, den der Nutzer liest: `arm64` und nicht
+    /// `aarch64`.
+    #[test]
+    fn beide_faelle_nennen_die_architektur_und_den_weg_zur_weitergabe() {
+        let entwicklung = gueltige_namen(GUELTIGE_EINE);
+        let developer_id = developer_id_namen(&gueltige_namen(GUELTIGE_ZWEI));
+        for name in [&entwicklung[0], &developer_id[0]] {
+            let text = weitergabehinweis(name, crate::release::lipo_name("aarch64"));
+            assert!(text.contains("Universell ist es ausserdem nicht"), "{text}");
+            assert!(text.contains("arm64"), "{text}");
+            assert!(!text.contains("aarch64"), "{text}");
+            assert!(text.contains("cargo xtask release"), "{text}");
+        }
+    }
+
+    /// Den Hinweis gibt allein der Unterbefehl `bundle` aus.
+    ///
+    /// In `release` waere er falsch: der Unterbefehl faehrt genau den Weg, auf
+    /// den der Hinweis zeigt. `messen --alle` baut dasselbe Buendel fuer eine
+    /// Messung und gibt es nicht weiter. Die Probe schreibt den Ausgabeort
+    /// nicht fest, sondern haelt fest, dass es genau einen gibt und wo er
+    /// nicht liegt.
+    #[test]
+    fn allein_der_unterbefehl_bundle_gibt_den_hinweis_aus() {
+        let nadel = concat!("weitergabe", "hinweis(");
+        for (name, quelle) in [
+            ("release.rs", include_str!("release.rs")),
+            ("messen.rs", include_str!("messen.rs")),
+            ("bundle.rs", include_str!("bundle.rs")),
+        ] {
+            assert!(!quelle.contains(nadel), "{name} gibt den Hinweis aus");
+        }
+        assert_eq!(include_str!("main.rs").matches(nadel).count(), 1);
     }
 
     #[test]

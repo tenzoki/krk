@@ -139,6 +139,24 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             }
             let gebaut = bundle::bauen()?;
             println!("Buendel: {}", gebaut.buendel.display());
+            // Der Abschlusshinweis haengt an diesem Unterbefehl und nicht an
+            // `bundle::bauen`: `messen --alle` baut dasselbe Buendel fuer eine
+            // Messung und gibt es nicht weiter, und `release` faehrt genau den
+            // Weg, auf den der Hinweis zeigt. Was er sagt, entscheidet die Art
+            // der Identitaet; siehe [`sign::weitergabehinweis`].
+            //
+            // Die Architektur der Baumaschine steht schon beim Uebersetzen
+            // fest, wird aber unter dem Namen gemeldet, den `lipo` benutzt:
+            // wer den Hinweis nachprueft, tut es mit `lipo`, und das schreibt
+            // `arm64`, wo Rust `aarch64` sagt. Die Umrechnung liest die Namen
+            // aus `release` und legt keine zweite Liste an.
+            println!(
+                "{}",
+                sign::weitergabehinweis(
+                    &gebaut.identitaet.name,
+                    release::lipo_name(std::env::consts::ARCH)
+                )
+            );
             Ok(())
         }
         "version" => version::ausfuehren(&argumente[1..]),

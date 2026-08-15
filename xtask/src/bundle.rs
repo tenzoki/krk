@@ -129,6 +129,13 @@ pub struct Gebaut {
     pub buendel: PathBuf,
     /// Das Binaerprogramm darin, `KRK.app/Contents/MacOS/<CFBundleExecutable>`.
     pub binaer: PathBuf,
+    /// Die Identitaet, mit der das Buendel signiert wurde.
+    ///
+    /// Sie steht hier, weil der Abschlusshinweis des Unterbefehls `bundle`
+    /// nach ihrer Art fragt ([`sign::weitergabehinweis`]) und ein Buendel ohne
+    /// die Auskunft, womit es signiert ist, nicht vollstaendig beschrieben
+    /// waere.
+    pub identitaet: sign::Identitaet,
 }
 
 /// Baut `target/KRK.app` und gibt seinen Pfad zurueck.
@@ -142,7 +149,11 @@ pub fn bauen() -> Result<Gebaut, Abbruch> {
     let buendel = vorlage.zusammensetzen(&uebersetzt)?;
     sign::signieren(&buendel, &identitaet)?;
     let binaer = vorlage.binaer_im_buendel(&buendel);
-    Ok(Gebaut { buendel, binaer })
+    Ok(Gebaut {
+        buendel,
+        binaer,
+        identitaet,
+    })
 }
 
 /// Die geprueften Zutaten des Buendels, vor jedem Uebersetzungslauf gesammelt.
