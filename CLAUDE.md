@@ -35,7 +35,7 @@ Aus `idea.txt`: superschnell, supersimpel, Steuerung über die Tastatur bei zus�
 
 ## Projektstand
 
-Geprüft am 260815-0600. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut, trägt sein Symbol, ist signiert und liegt als `v0.3.0` aus. Die Anwendung trägt: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Editor, Bereichsleiste am Fensterfuß mit Schaltern für die fünf Bereiche, eine Statuszeile über die volle Fensterbreite, Dateioperationen mit Fortschritt und Abbruch samt Stapelumbenennen, Terminalaufruf im angezeigten Ordner, Belegungsansicht mit Tippsuche samt Markdown-Ausgabe, ein vollständiges Hauptmenü über alle Funktionen, Pfadkopierer, Öffnen mit dem Standardprogramm, Teilen über die Freigabedienste des Systems, Ordnersprung zur angezeigten Datei, gerenderte Markdown-Vorschau mit Syntaxfarben, eine weitere Instanz, die sich die Ablage teilt, Namen und Version links in der Titelleiste, einen Notizzettel als Blatt mit zwei Zetteln, einen Filter über die Dateiliste, den das Tippen füllt und ein Ankreuzfeld „Deep" auf den Unterbaum ausdehnt, und einen Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt.
+Geprüft am 260815-0600. KRK entsteht in Rust mit AppKit über `objc2`. Der Cargo-Workspace steht, das Bündel `target/KRK.app` baut, trägt sein Symbol, ist signiert und liegt als `v0.3.0` aus. Aus der Runde 1 trägt die Anwendung ihr Gerüst: Lesezeichen- und Geräteleiste, zwei Dateifenster mit Tabs, Vorschaufenster, Dateioperationen mit Fortschritt und Abbruch samt Stapelumbenennen, Terminalaufruf im angezeigten Ordner und einen Messmodus, der die Zeitzusagen aus C8 am laufenden Bündel abnimmt. **Was die Runden 2 bis 10 hinzugefügt haben, steht in der Tabelle oben und wird hier nicht wiederholt**: eine Aufzählung an dieser Stelle wüchse mit jeder Runde um ein Glied, und die Tabelle führt dieselbe Auskunft schon nach Runden geordnet.
 
 ```
 krk/
@@ -98,7 +98,7 @@ cargo xtask bundle          # baut und signiert target/KRK.app im Profil release
 
 **`cargo` steht auf diesem Gerät nicht auf dem Standard-PATH.** Es liegt unter `$HOME/.cargo/bin`. Jeder Aufruf braucht deshalb den vollen Pfad oder ein vorangestelltes `export PATH="$HOME/.cargo/bin:$PATH"`.
 
-Das `Makefile` im Projektwurzelverzeichnis nimmt einem genau das ab und ist eine Hülle um dieselben Kommandos, kein zweites Bauwerkzeug. `make help` listet alle Ziele; `make check` fährt die vier Abnahmekommandos in einem Zug, `make bundle` und `make run` bauen und starten, `make menue` und `make tasten` geben die beiden Protokollmodi aus, `make fixture`, `make messen` und `make durchstich` bedienen die Messstrecke. Wer lieber `cargo` tippt, verliert nichts.
+Das `Makefile` im Projektwurzelverzeichnis nimmt einem genau das ab und ist eine Hülle um dieselben Kommandos, kein zweites Bauwerkzeug. `make check` fährt die vier Abnahmekommandos in einem Zug; die übrigen Ziele listet `make help`. Wer lieber `cargo` tippt, verliert nichts.
 
 `cargo xtask` ist kein eingebautes Kommando, sondern der Alias aus `.cargo/config.toml`. Der Bündelbau **verlangt eine Signaturidentität**, sucht sie in drei Stufen und bricht ohne Bündel ab, wenn keine greift; auf eine Ad-hoc-Signatur weicht er nicht aus. Die drei Stufen, das Anlegen einer Entwicklungsidentität, der Fehler `errSecInternalComponent` und die Versionspflege stehen in `README.md`.
 
