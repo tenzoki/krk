@@ -80,9 +80,10 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSRulerView`, `NSLayoutManager`, `NSTextContainer`, `NSTextStorage` und
-//! `NSClipView` stehen seit macOS 10.0 zur Verfuegung; das Buendel zielt auf
-//! 15.0 (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15
+//! `NSRulerView`, `NSTextContainer`, `NSTextStorage` und `NSClipView` stehen
+//! seit macOS 10.0 zur Verfuegung, `NSLayoutManager` traegt im SDK
+//! `macos(10.7)` (`NSLayoutManager.h:65`, am SDK gelesen); das Buendel zielt
+//! auf 15.0 (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15
 //! hinzugekommen, und deshalb braucht keine der Beruehrungen in dieser Datei
 //! eine Verfuegbarkeitspruefung zur Laufzeit.
 //!

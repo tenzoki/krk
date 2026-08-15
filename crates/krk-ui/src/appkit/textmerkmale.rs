@@ -61,10 +61,11 @@
 //! `NSFontDescriptor` (`NSFontDescriptor.h:61`), `NSView` (`NSView.h:81`),
 //! `NSArray` und
 //! `NSMutableParagraphStyle` (`NSParagraphStyle.h:112`) stehen seit macOS 10.0
-//! zur Verfuegung. `NSLayoutManager` traegt im SDK `macos(10.7)`
-//! (`NSLayoutManager.h:65`) und nicht die 10.0, die zwei andere Modulkoepfe
-//! dieses Verzeichnisses fuer dieselbe Klasse nennen; die Zahl hier ist am SDK
-//! gelesen. Das Buendel zielt auf 15.0 (`.cargo/config.toml`), keine von ihnen
+//! zur Verfuegung. `NSLayoutManager` nicht: die Klasse traegt im SDK
+//! `macos(10.7)` (`NSLayoutManager.h:65`, am SDK gelesen). Sie steht in dieser
+//! Aufzaehlung zwischen lauter 10.0ern, und die Reihe fortzuschreiben statt
+//! nachzusehen hat in diesem Verzeichnis schon einmal die falsche Zahl
+//! erzeugt. Das Buendel zielt auf 15.0 (`.cargo/config.toml`), keine von ihnen
 //! ist nach macOS 15 hinzugekommen, und deshalb braucht keine der Beruehrungen
 //! in dieser Datei eine Verfuegbarkeitspruefung zur Laufzeit.
 //!

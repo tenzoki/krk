@@ -32,3 +32,29 @@ Zahl, die nachweislich falsch ist.
 
 Herkunft: gemeinsamer Speicher. Die falsche Angabe ist älter als diese Runde und betrifft
 eine projektweite Gewohnheit, nicht die Directive der Runde 6.
+
+---
+Resolved: `crates/krk-ui/src/appkit/nummernspalte.rs` nennt für `NSLayoutManager` jetzt die
+`macos(10.7)` mit Fundstelle `NSLayoutManager.h:65`; die Klasse ist aus der Aufzählung der
+seit 10.0 verfügbaren herausgenommen. Geprüft mit `cargo fmt --all --check && cargo build
+--workspace`, Exit 0. Die 10.7 ist dabei am SDK nachgelesen und nicht diesem Datensatz
+geglaubt worden.
+
+**Es war nur noch ein Kopf, nicht zwei.** Der Datensatz nennt `editor.rs` und
+`nummernspalte.rs`. `editor.rs` ist seit dem 260812 berichtigt und führt die Klasse in einem
+eigenen Absatz mit der 10.7, der Fundstelle und dem Verweis auf diesen Datensatz. Angefasst
+wurde deshalb nur `nummernspalte.rs`; eine zweite Angabe in `editor.rs` wäre eine Doppelung
+gewesen.
+
+**Ein Folgesatz ist mitgezogen worden.** `textmerkmale.rs` begründete seine 10.7 damit, sie
+stehe „nicht die 10.0, die zwei andere Modulkoepfe dieses Verzeichnisses fuer dieselbe Klasse
+nennen" — im Präsens, und nach dieser Berichtigung nennt sie keiner mehr. Der Satz zählt
+jetzt keine fremden Köpfe, sondern begründet die 10.7 aus der Lage der Klasse selbst: sie
+steht in einer Aufzählung lauter echter 10.0er, und wer die Reihe fortschreibt statt im SDK
+nachzusehen, trägt die falsche Zahl ein. `vorschau.rs` sagte dasselbe von Anfang an im
+Präteritum und ist unangetastet geblieben — der Unterschied zwischen den beiden Fassungen ist
+genau die Zeitform.
+
+**Die Gewohnheit ist damit nicht abgesichert**, nur dieser eine Fall. Ob die Untergrenzen-
+Angabe prüfbar gemacht wird, steht weiter offen
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`).
