@@ -790,3 +790,18 @@
 {"ts":"2026-08-14T23:58:47","event":"task_done","turn":1,"task":"G2","agent":"coder","detail":"50742a6; Abnahmeliste mit 75 Kriterien, 10 mit Buendelanteil"}
 {"ts":"2026-08-14T23:58:47","event":"commit","turn":1,"task":"G2","detail":"50742a6 Abnahmeliste"}
 {"ts":"2026-08-14T23:58:47","event":"turn_end","turn":1,"detail":"14 von 14 Aufgaben, 12 Commits ba4af5f..50742a6, 0 Fehler"}
+{"ts":"2026-08-14T23:59:02","event":"coderev_start","agent":"coderev","turn":1,"detail":"Bereich ba4af5f..HEAD, zwoelf Commits"}
+{"ts":"2026-08-15T00:16:37","event":"coderev_done","agent":"coderev","turn":1,"detail":"1 hoch, 2 mittel, 4 niedrig; 7 Defektdatensaetze"}
+{"ts":"2026-08-15T00:16:37","event":"turn_start","turn":2,"detail":"Reparatur-Turn; Anker 05881d1"}
+{"ts":"2026-08-15T00:16:50","event":"state_drift","turn":2,"detail":"progress.turn und Circle-Turn-log nachgezogen; der Turn-2-Eintrag folgt am Turn-Ende"}
+{"ts":"2026-08-15T00:16:50","event":"task_start","turn":2,"task":"R1","agent":"coder","detail":"H1 EMFILE im Durchlauf"}
+{"ts":"2026-08-15T00:37:57","event":"task_done","turn":2,"task":"R1","agent":"coder","detail":"195791a; ein Deskriptor statt einer je Ebene; Gegenprobe mit altem Code gefahren"}
+{"ts":"2026-08-15T00:37:57","event":"task_done","turn":2,"task":"R2","agent":"coder","detail":"195791a; vier schwache Proben nachgezogen"}
+{"ts":"2026-08-15T00:37:57","event":"commit","turn":2,"task":"R1+R2","detail":"195791a make check exit 0"}
+{"ts":"2026-08-15T00:37:57","event":"task_start","turn":2,"task":"R3","agent":"shaper","detail":"Drei Berichtigungen am Spec"}
+{"ts":"2026-08-15T00:55:17","event":"task_done","turn":2,"task":"R3","agent":"shaper","detail":"8e7b87d; 5 Datensaetze geschlossen, 77 Kriterien statt 75"}
+{"ts":"2026-08-15T00:55:17","event":"commit","turn":2,"task":"R3","detail":"8e7b87d Spec zieht dem Baum nach"}
+{"ts":"2026-08-15T00:55:17","event":"task_start","turn":2,"task":"R4","agent":"coder","detail":"C3.15 zur zweiten Haelfte messen"}
+{"ts":"2026-08-15T01:04:50","event":"task_done","turn":2,"task":"R4","agent":"coder","detail":"3af3f4a; C3.15 ganz gemessen, Gegenprobe gefahren"}
+{"ts":"2026-08-15T01:04:50","event":"commit","turn":2,"task":"R4","detail":"3af3f4a"}
+{"ts":"2026-08-15T01:04:50","event":"turn_end","turn":2,"detail":"4 Reparaturaufgaben, 4 Commits 14db98d..3af3f4a, 0 Fehler"}

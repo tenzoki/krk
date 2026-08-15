@@ -77,3 +77,21 @@ Ein vorgesehener Circle liegt bereit. `/fusion:next` zeigt das Portfolio.
 **Was die Zählproben während des Baus gefunden haben.** F2 rief zunächst den einen Vergleich unmittelbar aus `tabs.rs`, und die Probe aus A2 schlug fehl: drei Rufer statt zwei. Nicht die Zahl in der Probe ist erhöht worden, sondern die Wurzel behoben.
 
 **Offen:** zehn Defekte und fünf Fragen im Circle. Der Abnahmelauf am laufenden Bündel steht aus und ist Nutzerarbeit; die Liste dafür ist `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/history/260815-0400-abnahmeliste-g2.md`.
+
+---
+
+## Turn 2 — Reparatur, 260815-0430 bis 260815-0545
+
+**Vier Aufgaben, vier Commits, `14db98d..3af3f4a`.** Die Durchsicht von Turn 1 fand einen hohen Befund, zwei mittlere und vier niedrige.
+
+**Der hohe Befund ist an der Wurzel behoben.** Der Durchlauf hielt einen offenen Deskriptor je Ebene, erzeugte den Deskriptormangel damit selbst und legte ihn als „kein Treffer darunter" aus. Nachgestellt vom Prüfer, nicht erschlossen: ein 400 Ebenen tiefer Baum mit dem Treffer ganz unten meldete unter `ulimit -n 64` das Gegenteil dessen, was er unter der Sitzungsgrenze meldete. Jetzt merkt der Abstieg die Unterordner als Pfad vor und hält genau einen Deskriptor, gleich wie tief der Baum ist; die Rückkehrkante gibt es nicht mehr, und 256 KB Antwortpuffer je Ebene fallen mit ihr weg.
+
+**Vier Proben sagten mehr zu, als sie hielten**, und eine fünfte Schwäche fand der Coder selbst: die Abbruchprobe hätte auch bei einem völlig kaputten Durchlauf bestanden, weil ihr der Kontrollauf fehlte.
+
+**Fünf Spec-Stellen sind dem Baum nachgezogen**, in allen fünf hatte der Baum recht. Das zweite Bild ist neu gezeichnet, weil die Behebung den Bau geändert hat, den es zeigte: 22 Knoten, 31 Kanten, fünf Kreise, am geschriebenen Bild nachgezählt. Die Kriterien wachsen auf 77; die zehn mit Bündelanteil bleiben unverändert.
+
+**Zwei Entscheidungen sind dabei zugunsten des bestehenden Verhaltens gefallen.** C1.11 zieht an den Baum: die Meldung „es ist nichts ausgewählt" ist in der Lage, in der die Liste leer dasteht, die einzige Auskunft darüber, warum der Tastendruck nichts getan hat. Und das neue C2.14 hält fest, dass die vier Wege ungleich bleiben sollen, weil eine Ersatzzeile beim Umschalten von „Deep" den Platz des Nutzers dauerhaft verlöre, obwohl der Eintrag gleich darauf wiederkommt.
+
+**`C3.15` ist mit Gegenprobe ganz gemessen.** Mit entferntem Zweig wird die Probe rot. Eine Feinheit bleibt ungemessen und wird ausdrücklich nicht zugesagt: ob der Durchlauf nach dem Mangel anhält oder die restlichen Aufträge nur übergeht — beide Lesarten liefern dasselbe beobachtbare Ergebnis.
+
+**Offen:** acht Defektdatensätze im Circle, keiner vom Typ „Spec gegen Baum". Der Abnahmelauf am laufenden Bündel steht weiter aus und ist Nutzerarbeit.
