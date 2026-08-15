@@ -25,6 +25,12 @@
 //! beschriftet sie. Der Delegierte haelt die Quelle, nicht umgekehrt, denn er
 //! liest aus ihr; die Gegenrichtung gibt es nicht und damit auch keinen Zyklus.
 //!
+//! Eine dritte Klasse steht daneben und teilt sich diese Arbeit nicht:
+//! [`Namensfeld`] ist die Zelle der Namensspalte selbst. Es gibt sie, weil ein
+//! Ordner in dieser Spalte einen Schraegstrich hinter dem Namen traegt und
+//! dasselbe Feld zugleich der Editor des Umbenennens ist; ihr Kopf sagt, warum
+//! AppKit den Beginn einer Bearbeitung nirgends sonst abfangen laesst.
+//!
 //! **Was hier steht und was im Modell.** Die Tabs, ihre Ordner, ihr Inhalt,
 //! ihre Auswahl und ihre Bildlaufposition wohnen in [`Tabliste`] und damit
 //! ausserhalb von `appkit/`. Diese Datei setzt und liest sie an der
@@ -133,6 +139,13 @@
 //! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
 //! vor dem Rechtsklick aus C1 der Runde 6.
 //!
+//! **Die Zelle der Namensspalte ist seit dem Ordnerzeichen eine eigene
+//! Unterklasse von `NSTextField`** ([`Namensfeld`]). Sie ueberschreibt
+//! `becomeFirstResponder` von `NSResponder` (`NSResponder.h:105`) und
+//! `abortEditing` von `NSControl` (`NSControl.h:89`) und liest `target`
+//! derselben Klasse (`NSControl.h:24`); alle drei stehen seit 10.0. Angelegt
+//! wird sie ueber `labelWithString:`, also die 10.12 aus der Liste darunter.
+//!
 //! Alle uebrigen Setzer und Abfragen der genannten Klassen tragen im Kopf des
 //! Systems keine Angabe und stehen damit seit 10.0; der Block beim Doppelklick
 //! weiter unten fuehrt das fuer `setTarget:`, `setDoubleAction:` und
@@ -149,7 +162,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
+use objc2::{ClassType, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightBold,
     NSFontWeightRegular, NSMenu, NSMenuDelegate, NSScrollView, NSTableColumn, NSTableView,
@@ -308,6 +321,46 @@ const NAMENSSPALTE: NSInteger = {
     }
     stelle as NSInteger
 };
+
+/// Das Zeichen, das ein Ordner in der Spalte `Name` hinter seinem Namen
+/// traegt.
+///
+/// **Es ist Anzeige und nie Name.** Sortierung, Filter, Zwischenablage,
+/// Vorschau und jede Dateioperation lesen weiter `eintrag.name`; keine von
+/// ihnen sieht es. Der Nutzerentscheid vom 260815-2058 steht in
+/// `shared/decisions/260815-2056_*_woran-erkennt-der-nutzer-in-der-dateiliste-einen-ordner.md`.
+///
+/// Der Schraegstrich und kein anderes Zeichen: er kann in keinem Namen
+/// vorkommen, den ein Dateisystem hergibt, und damit ist [`ohne_ordnerzeichen`]
+/// eindeutig umkehrbar.
+const ORDNERZEICHEN: char = '/';
+
+/// Die Anzeigeform eines Eintrags in der Spalte `Name`.
+///
+/// **Die Bedingung ist [`Eintrag::ist_ordner`]**, also `Typ::Ordner`, und damit
+/// dieselbe wie beim `--` der Spalte `Groesse` und bei der Gruppe der
+/// Sortierung. Eine Verknuepfung auf einen Ordner bekommt kein Zeichen: das
+/// Verweisziel zu erfragen hiesse ein `stat` je sichtbarer Zeile, und genau
+/// diese Schleife messen L3 und L10.
+#[must_use]
+fn namensform(eintrag: &Eintrag) -> String {
+    let mut anzeige = eintrag.name.clone();
+    if eintrag.ist_ordner() {
+        anzeige.push(ORDNERZEICHEN);
+    }
+    anzeige
+}
+
+/// Der wirkliche Name zu einer Anzeigeform, falls sie das Ordnerzeichen
+/// traegt.
+///
+/// `None` heisst "da war keines" und nicht "der Name ist leer": der Aufrufer
+/// laesst die Zeichenkette dann unberuehrt, statt eine gleiche zweite zu
+/// bauen.
+#[must_use]
+fn ohne_ordnerzeichen(anzeige: &str) -> Option<&str> {
+    anzeige.strip_suffix(ORDNERZEICHEN)
+}
 
 /// Was mit einem umbenannten Eintrag zu geschehen hat: alter Name, neuer Name.
 ///
@@ -1679,7 +1732,8 @@ impl DateifensterQuelle {
     /// an:** AppKit bricht die Bearbeitung dann ueber `abortEditing` ab, stellt
     /// den alten Text wieder her und schickt keine Aktion. Genau das verlangt
     /// C4, "Return uebernimmt, Escape verwirft", und es kostet keine eigene
-    /// Regel.
+    /// Regel. Was Escape seit dem Ordnerzeichen zusaetzlich braucht, steht bei
+    /// [`Namensfeld::bearbeitung_abbrechen`] und nicht hier.
     ///
     /// Die Zeile kommt von der Tabelle ueber `rowForView:` und nicht aus einem
     /// gemerkten Zustand: die Zellenansicht **ist** das Feld, das die Aktion
@@ -1715,6 +1769,22 @@ impl DateifensterQuelle {
                 }
             }
         }
+    }
+
+    /// Holt die Anzeigeform der Namenszelle zurueck, nachdem AppKit die
+    /// Bearbeitung verworfen hat (C4, Escape).
+    ///
+    /// Der Name ist dabei unveraendert geblieben; zurueckzuholen ist allein
+    /// das Ordnerzeichen, das [`Namensfeld::wird_ersthelfer`] fuer die Dauer
+    /// der Bearbeitung abgelegt hat. Die Zeile kommt ueber `rowForView:` und
+    /// nicht aus einem gemerkten Zustand, aus demselben Grund wie bei
+    /// [`Self::umbenennung_beenden`].
+    fn umbenennung_abgebrochen(&self, feld: &NSTextField) {
+        let zeile = self.ivars().tabelle.rowForView(feld);
+        let Ok(zeile) = usize::try_from(zeile) else {
+            return;
+        };
+        self.zeile_neu_zeichnen(zeile);
     }
 
     /// Holt sich die Beschriftung einer Zeile aus dem Modell zurueck.
@@ -2629,10 +2699,23 @@ impl DateifensterDelegierter {
         &self.ivars().quelle
     }
 
+    /// Holt die Anzeigeform einer Namenszelle aus dem Modell zurueck.
+    ///
+    /// Gerufen von [`Namensfeld::bearbeitung_abbrechen`], also nach Escape.
+    /// Der Delegierte reicht die Zelle an die Quelle weiter, wie es
+    /// `umbenennungBeendet:` daneben tut; welche Zeile gemeint ist, weiss die
+    /// Tabelle.
+    fn namenszelle_zuruecksetzen(&self, feld: &NSTextField) {
+        self.ivars().quelle.umbenennung_abgebrochen(feld);
+    }
+
     /// Der Text, der in dieser Spalte fuer diesen Eintrag steht.
     fn beschriften(&self, spalte: Spalte, eintrag: &Eintrag) -> String {
         match spalte {
-            Spalte::Name => eintrag.name.clone(),
+            // Ein Ordner traegt hier einen Schraegstrich hinter dem Namen; wie
+            // die Anzeigeform entsteht und warum sie nie ein Name ist, steht
+            // bei [`namensform`].
+            Spalte::Name => namensform(eintrag),
             Spalte::Groesse => {
                 if eintrag.ist_ordner() {
                     // Ein Ordner hat keine eigene Groesse, und die seines
@@ -2696,7 +2779,17 @@ impl DateifensterDelegierter {
             return gebraucht;
         }
         let mtm = self.mtm();
-        let feld = NSTextField::labelWithString(ns_string!(""), mtm);
+        // Die beschreibbare Spalte bekommt die Unterklasse [`Namensfeld`]: ihre
+        // Zelle ist zugleich der Editor des Umbenennens und muss das
+        // Ordnerzeichen beim Beginn einer Bearbeitung ablegen. Die drei
+        // uebrigen Spalten bleiben, was sie waren. Es ist dieselbe Bedingung
+        // wie beim `setEditable(true)` weiter unten, weil es dieselbe Sache
+        // ist.
+        let feld = if spalte.beschreibbar() {
+            Retained::into_super(Namensfeld::neu(mtm))
+        } else {
+            NSTextField::labelWithString(ns_string!(""), mtm)
+        };
         feld.setIdentifier(Some(kennung));
         feld.setAlignment(ausrichtung(spalte));
         feld.setMaximumNumberOfLines(1);
@@ -2718,6 +2811,142 @@ impl DateifensterDelegierter {
             }
         }
         feld
+    }
+}
+
+define_class!(
+    /// Die Zelle der Namensspalte: sie zeigt die Anzeigeform und gibt zum
+    /// Bearbeiten den wirklichen Namen her.
+    ///
+    /// **Warum es diese Unterklasse gibt.** Dasselbe `NSTextField` ist Zelle
+    /// und Editor des Umbenennens aus C4. Seit dem Ordnerzeichen sind
+    /// angezeigter und wirklicher Name nicht mehr dieselbe Zeichenkette, und
+    /// der Beginn einer Bearbeitung muss deshalb abgefangen werden. **AppKit
+    /// meldet ihn nirgends sonst:** `control:textShouldBeginEditing:` des
+    /// schon angenommenen `NSControlTextEditingDelegate` kommt beim Einstieg
+    /// in die Bearbeitung nicht, sondern erst beim ersten Aendern des Textes
+    /// (gemessen am 260815 an einer `NSTableView` mit bearbeitbarer Zelle:
+    /// nach `editColumn:row:withEvent:select:` steht der Feldeditor, und der
+    /// Haken ist nicht gerufen worden). `becomeFirstResponder` dagegen ist der
+    /// eine Weg in die Bearbeitung, gleich ob sie vom Tastenbefehl oder vom
+    /// Klick ins Feld ausgeht: AppKit haengt den Feldeditor genau dort ein.
+    ///
+    /// **Keine der drei Zusagen dieser Klasse steht in einer Probe, und der
+    /// Grund ist nicht Nachlaessigkeit:** eine laufende Bearbeitung braucht
+    /// einen Feldeditor, ein Feldeditor braucht ein Fenster, und `NSWindow`
+    /// wirft ausserhalb des Hauptfadens. `libtest` gibt ihn nicht her
+    /// (`issues/260810-1001_*_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md`),
+    /// und `MainThreadMarker::new_unchecked` behauptet ihn nur gegenueber
+    /// Rust, nicht gegenueber AppKit — die Behauptung traegt eine
+    /// `NSTextView`, ein `NSWindow` nicht. Gemessen wurde am 260815 mit einem
+    /// weggeworfenen Programm auf dem wirklichen Hauptfaden; in `cargo test`
+    /// stehen allein die reinen Regeln [`namensform`] und
+    /// [`ohne_ordnerzeichen`]. Was die Anwendung am Ende zeigt, nimmt der
+    /// Nutzer ab.
+    ///
+    /// Ab welchem macOS die drei ueberschriebenen und angesprochenen Methoden
+    /// stehen, sagt der Modulkopf.
+    // SAFETY:
+    // - Die Oberklasse `NSTextField` stellt an eine Unterklasse keine
+    //   Bedingungen, die diese Klasse nicht erfuellt: sie fuegt keine
+    //   Zustandsvariablen hinzu und ruft in beiden Ueberschreibungen die
+    //   Fassung der Oberklasse.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTextField)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = ()]
+    pub struct Namensfeld;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Namensfeld {}
+
+    impl Namensfeld {
+        /// Nimmt das Ordnerzeichen weg, bevor die Bearbeitung beginnt.
+        ///
+        /// Die Reihenfolge traegt die Zusage: `stringValue` wird **vor** dem
+        /// Aufruf der Oberklasse gesetzt, denn erst diese haengt den
+        /// Feldeditor ein und fuellt ihn aus der Zelle. Danach zu setzen
+        /// hilft nicht, im Gegenteil — ein `setStringValue:` waehrend der
+        /// Bearbeitung schreibt in den Feldeditor zurueck (am 260815
+        /// gemessen).
+        ///
+        /// Die Auswahl des Textes richtet AppKit danach selbst ein: der
+        /// Tastenbefehl kommt mit `select: true` und hat damit den ganzen
+        /// Namen ausgewaehlt, der Klick setzt die Schreibmarke an die
+        /// geklickte Stelle.
+        // SAFETY: Die Signatur ist die von `NSResponder`: kein Argument, ein
+        // `BOOL` zurueck.
+        #[unsafe(method(becomeFirstResponder))]
+        fn wird_ersthelfer(&self) -> bool {
+            let anzeige = self.stringValue().to_string();
+            if let Some(name) = ohne_ordnerzeichen(&anzeige) {
+                self.setStringValue(&NSString::from_str(name));
+            }
+            // SAFETY: `becomeFirstResponder` von `NSResponder` hat die hier
+            // angenommene Signatur.
+            unsafe { msg_send![super(self), becomeFirstResponder] }
+        }
+
+        /// Holt die Anzeigeform zurueck, nachdem Escape die Bearbeitung
+        /// verworfen hat.
+        ///
+        /// **Escape kommt hier an und nirgends sonst.** Der Feldeditor
+        /// beantwortet die Taste mit `cancelOperation:`, und `NSTextField`
+        /// macht daraus diesen Aufruf; `controlTextDidEndEditing:` bleibt
+        /// dabei aus (am 260815 an derselben Tabelle gemessen). Die
+        /// Oberklasse stellt den Stand vor der Bearbeitung wieder her, und
+        /// das ist seit [`Self::wird_ersthelfer`] der Name ohne Zeichen.
+        ///
+        /// Zurueckgeholt wird die Anzeigeform ueber einen Zeichendurchgang der
+        /// Zeile und nicht durch ein angehaengtes Zeichen: das Modell ist die
+        /// eine Quelle der Anzeigeform, und derselbe Weg laesst schon eine
+        /// abgelehnte Eingabe verschwinden
+        /// ([`DateifensterQuelle::zeile_neu_zeichnen`]).
+        // SAFETY: Die Signatur ist die von `NSControl`: kein Argument, ein
+        // `BOOL` zurueck.
+        #[unsafe(method(abortEditing))]
+        fn bearbeitung_abbrechen(&self) -> bool {
+            // SAFETY: `abortEditing` von `NSControl` hat die hier angenommene
+            // Signatur.
+            let abgebrochen: bool = unsafe { msg_send![super(self), abortEditing] };
+            if abgebrochen && let Some(delegierter) = self.delegierter() {
+                delegierter.namenszelle_zuruecksetzen(self);
+            }
+            abgebrochen
+        }
+    }
+);
+
+impl Namensfeld {
+    /// Ein leeres Feld der Namensspalte.
+    ///
+    /// **Ueber `+labelWithString:` und nicht ueber `initWithFrame:`**, damit
+    /// diese Zelle in jeder Eigenschaft die des Vorbilds bleibt, das die drei
+    /// uebrigen Spalten weiter unmittelbar bauen. Die Sammelmethode legt ueber
+    /// die empfangende Klasse an und liefert deshalb ein `Namensfeld`; am
+    /// 260815 gemessen, zusammen mit dem Vergleich beider Wege: sie
+    /// unterscheiden sich in `alignment` und `textColor`, und beide setzt
+    /// [`DateifensterDelegierter::feld`] beziehungsweise
+    /// [`DateifensterDelegierter::zellenansicht`] ohnehin selbst.
+    fn neu(mtm: MainThreadMarker) -> Retained<Self> {
+        // Der Nachweis des Hauptfadens geht in den Aufruf ein: `Namensfeld`
+        // ist `MainThreadOnly`, und diese Methode legt eine Instanz an.
+        let _ = mtm;
+        // SAFETY: `+labelWithString:` von `NSTextField` nimmt eine
+        // Zeichenkette und liefert eine Instanz der empfangenden Klasse,
+        // hier also ein `Namensfeld`. Der Rueckgabewert ist autofreigegeben;
+        // `Retained` als Ergebnistyp sagt `msg_send!`, dass es ihn festhaelt.
+        unsafe { msg_send![Self::class(), labelWithString: ns_string!("")] }
+    }
+
+    /// Der Delegierte des Dateifensters, in dem diese Zelle steht.
+    ///
+    /// Er ist das Ziel der Aktion, die [`DateifensterDelegierter::feld`] an
+    /// dieses Feld haengt; die Zelle liest ihn zurueck, statt eine zweite
+    /// Verbindung zu halten. `None`, solange das Feld noch keins hat.
+    fn delegierter(&self) -> Option<Retained<DateifensterDelegierter>> {
+        let ziel = self.target()?;
+        ziel.downcast::<DateifensterDelegierter>().ok()
     }
 }
 
@@ -3038,6 +3267,40 @@ pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Ein Eintrag der genannten Art. Groesse und Zeitpunkt spielen fuer die
+    /// Anzeigeform der Namensspalte keine Rolle.
+    fn eintrag(name: &str, typ: Typ) -> Eintrag {
+        Eintrag::neu(name.to_owned(), 0, UNIX_EPOCH, typ)
+    }
+
+    #[test]
+    fn allein_ein_ordner_traegt_den_schraegstrich() {
+        assert_eq!(namensform(&eintrag("Bilder", Typ::Ordner)), "Bilder/");
+        assert_eq!(namensform(&eintrag("Ablage.rs", Typ::Datei)), "Ablage.rs");
+        // Eine Verknuepfung bekommt keinen, auch wenn sie auf einen Ordner
+        // zeigt: die Bedingung ist `Typ::Ordner` und nicht das Verweisziel,
+        // sonst stuende ein `stat` je sichtbarer Zeile zwischen L3 und L10.
+        assert_eq!(namensform(&eintrag("Kurz", Typ::Verknuepfung)), "Kurz");
+    }
+
+    #[test]
+    fn die_anzeigeform_laesst_sich_auf_den_namen_zuruecknehmen() {
+        // Der Weg, den [`Namensfeld::wird_ersthelfer`] beim Beginn einer
+        // Bearbeitung geht: aus der Anzeigeform wird der wirkliche Name.
+        for typ in [Typ::Ordner, Typ::Datei, Typ::Verknuepfung] {
+            let eintrag = eintrag("Bilder", typ);
+            let anzeige = namensform(&eintrag);
+            let name = ohne_ordnerzeichen(&anzeige).unwrap_or(&anzeige);
+            assert_eq!(name, eintrag.name, "die Art {typ:?} verliert ihren Namen");
+        }
+        // Ein Name ohne Zeichen bleibt unberuehrt, und `None` sagt das an.
+        assert_eq!(ohne_ordnerzeichen("Ablage.rs"), None);
+        // Ein Schraegstrich mitten im Text bleibt stehen: nur der letzte ist
+        // das Kennzeichen. In einem Dateinamen kann ohnehin keiner stehen.
+        assert_eq!(ohne_ordnerzeichen("a/b"), None);
+        assert_eq!(ohne_ordnerzeichen("a/b/"), Some("a/b"));
+    }
 
     #[test]
     fn jede_spalte_findet_sich_ueber_ihre_kennung_wieder() {
