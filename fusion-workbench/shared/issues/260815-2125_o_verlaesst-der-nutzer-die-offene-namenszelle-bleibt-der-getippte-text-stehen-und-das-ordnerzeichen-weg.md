@@ -63,3 +63,72 @@ Verhalten von C4:
   auf 1, und die Umbenennung laeuft ohne ausdrueckliche Bestaetigung.
 
 Solange das nicht entschieden ist, bleibt der Zustand am Code, wie er ist.
+
+---
+
+## Nachtrag der Durchsicht vom 260815-2202 (coderev, `3b128c3`)
+
+**Die Anzeigehälfte lässt sich beheben, ohne die Nutzerfrage zu beantworten**, und die
+Reihenfolgefalle oben steht dem nicht entgegen. Sie betrifft die **Delegiertenmeldung**
+`controlTextDidEndEditing:`, die vor der Aktion kommt. Die Methode am Feld selbst,
+`-[NSTextField textDidEndEditing:]` (`NSTextField.h:37`, ohne `API_AVAILABLE`, also seit
+10.0), ist dagegen die Stelle, aus der AppKit die Aktion **schickt**. Eine Überschreibung
+auf `Namensfeld`, die zuerst `super` ruft und danach die Zeile neu zeichnet, läuft damit
+**nach** der Aktion; `umbenennung_beenden` hat den getippten Text dann bereits gelesen, und
+der Zeichendurchgang holt anschließend die Anzeigeform. Der Return-Weg zeichnet die Zeile
+dann zweimal, was folgenlos ist; der Escape-Weg erreicht `textDidEndEditing:` nicht und
+bleibt bei `abortEditing`.
+
+`inference:` Am wirklichen Hauptfaden nicht nachgefahren. Die Ordnung Aktion-vor-Rückkehr
+ist aus dem Kopf des Systems abgelesen und gehört wie jede andere Zusage dieser Datei
+gemessen, bevor sie behauptet wird.
+
+**Das entscheidet die offene Frage nicht mit.** Ein Zeichendurchgang stellt die Anzeige auf
+den Stand her, den das Modell trägt — und das Modell ist beim Fokusverlust unverändert, weil
+nichts umbenannt wird. Die Anzeige holte damit nur nach, was ohnehin gilt. Ob ein Klick
+daneben später verwerfen oder übernehmen soll, bleibt offen und träfe dann auch diesen
+Zeichendurchgang.
+
+**Nebenbefund, eigener Datensatz:** Der Doc-Kommentar von `umbenennung_beenden`
+(`tabelle.rs:1727-1729`) nennt den Fokusverlust weiter als Aufrufer der Aktion und
+widerspricht damit der Messtabelle oben —
+`shared/issues/260815-2204_o_der-doc-kommentar-von-umbenennung-beenden-…`.
+
+---
+
+## Nachtrag der Messung vom 260816 (coder, bei der Nachprüfung von `260815-2203`)
+
+**Der dritte Ausgang hängt nicht nur an einem Klick des Nutzers.** Zwei weitere Anlässe
+lösen ihn aus, beide ohne dessen Zutun, und beide sind Programmwege dieser Datei:
+
+| Anlass | Bearbeitung danach | Aktion `umbenennungBeendet:` | getippter Text |
+|---|---|---|---|
+| `reloadData` | beendet | **nein** | fort |
+| `reloadDataForRowIndexes:columnIndexes:` | beendet | **nein** | fort |
+| `selectRowIndexes:byExtendingSelection:` | beendet | **nein** | bleibt in der Zelle stehen |
+| `noteNumberOfRowsChanged` | steht weiter | — | — |
+| Bildlauf aus dem Bild und zurück | steht weiter | — | — |
+
+Gemessen am 260816 auf macOS 15.7.7 mit einem weggeworfenen Programm auf dem wirklichen
+Hauptfaden, an einer `NSTableView` in einer `NSScrollView` mit derselben Verdrahtung wie in
+der Datei; zur Gegenprobe schickt `insertNewline:` am Feldeditor im selben Lauf die Aktion
+mit dem getippten Text, die Verdrahtung trägt also.
+
+Die Rufer der ersten beiden stehen in `crates/krk-ui/src/appkit/tabelle.rs`:
+`nach_lesebeginn` (jede Navigation und jede Auffrischung durch die Dateisystemwache) und
+`einziehen` (der Takt des Lesevorgangs, sobald ein Stapel den bisherigen Bestand ablöst
+oder die Sortierung steht). Schreibt also irgendein anderer Prozess in den angezeigten
+Ordner, während der Nutzer einen Namen tippt, endet seine Bearbeitung still und der
+getippte Text ist fort.
+
+**Das hebt die Schwere und ändert die offene Frage nicht.** Der Datensatz fragt, was ein
+Fokusverlust tun soll, verwerfen oder übernehmen; die Antwort trägt diese beiden Anlässe
+mit. Für sie ist „übernehmen" allerdings die unangenehmere Wahl: eine Umbenennung, die eine
+Schreibbewegung eines fremden Prozesses auslöst, hat der Nutzer nicht bestätigt.
+
+**Eine Zeile der Messtabelle oben widerspricht der Tabelle unter „Was gemessen ist" nicht,
+sondern lässt sie offen:** ob `controlTextDidEndEditing:` bei diesen beiden Anlässen kommt,
+ist hier **nicht** gemessen. Das Messprogramm hat den Delegierten der Tabelle geführt und
+keinen Delegierten am Feld gesetzt, und `NSTextField` schickt die Meldung an seinen eigenen
+Delegierten. Die Datei setzt ihn ebenso wenig; wer die Meldung als Aufhänger einer Behebung
+nimmt, misst das zuerst.

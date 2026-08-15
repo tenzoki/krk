@@ -2581,6 +2581,54 @@ impl DateifensterDelegierter {
     /// Zeile, die es im Modell nicht gibt. Beides kann AppKit waehrend eines
     /// Lesevorgangs anfragen, wenn Zeilenzahl und Zeichendurchgang um einen
     /// Takt auseinanderliegen.
+    ///
+    /// # Eine Zeile mit offener Namensbearbeitung kommt hier nicht an
+    ///
+    /// Das `setStringValue:` weiter unten laeuft in **jedem** Durchgang und
+    /// fragt nicht, ob diese Zelle gerade der Editor einer Umbenennung ist.
+    /// Das sieht nach einem Defekt aus, und der Fehlbefund
+    /// `shared/issues/260815-2203_c_…` ist genau daraus entstanden: waehrend
+    /// einer Bearbeitung schreibt ein `setStringValue:` wirklich in den
+    /// Feldeditor zurueck (der Kopf von [`Namensfeld`] sagt es), also stuende
+    /// nach einem Durchgang die Anzeigeform `Bilder/` im Feldeditor und Return
+    /// meldete dem Nutzer einen Schraegstrich, den er nie getippt hat.
+    ///
+    /// **Diesen Durchgang gibt es nicht.** AppKit haelt die Zeile mit dem
+    /// offenen Feldeditor aus dem Delegierten heraus, und zwar auf zwei Weisen
+    /// je nach Anlass: `reloadData` und
+    /// `reloadDataForRowIndexes:columnIndexes:` **beenden die Bearbeitung**,
+    /// bevor der erste Durchgang laeuft, und ein Bildlauf **ueberspringt** die
+    /// bearbeitete Zeile, waehrend er ihre Nachbarn neu holt. `currentEditor`
+    /// ist hier deshalb immer `None`, und eine Abfrage darauf waere toter
+    /// Code.
+    ///
+    /// Am 260816 auf macOS 15.7.7 mit einem weggeworfenen Programm auf dem
+    /// wirklichen Hauptfaden gemessen, an einer `NSTableView` in einer
+    /// `NSScrollView` mit derselben Verdrahtung wie hier. Sechs Anlaesse, in
+    /// keinem einzigen Durchgang ein Feldeditor:
+    ///
+    /// | Anlass | Bearbeitung danach | Durchgang der bearbeiteten Zeile |
+    /// |---|---|---|
+    /// | `reloadData` | beendet | ja, danach, ohne Feldeditor |
+    /// | `reloadDataForRowIndexes:columnIndexes:` | beendet | ja, danach, ohne Feldeditor |
+    /// | `noteNumberOfRowsChanged` | steht weiter | keiner |
+    /// | `selectRowIndexes:byExtendingSelection:` | beendet | keiner |
+    /// | Bildlauf aus dem Bild und zurueck | steht weiter | keiner, die Zeile wird uebersprungen |
+    /// | erstmaliger Aufbau einer Zeile | — | ohne Feldeditor |
+    ///
+    /// **`NSTableView::editedRow` und `editedColumn` beantworten die Frage
+    /// nicht**, und das ist dieselbe Messung: beide stehen waehrend einer
+    /// offenen Bearbeitung dieser Tabelle auf `-1`. Sie gehoeren der
+    /// zellenbasierten Tabelle; die hier ist ansichtsbasiert. Wer die Zelle in
+    /// Bearbeitung doch einmal erkennen muss, fragt `currentEditor` am Feld
+    /// und nicht die Tabelle.
+    ///
+    /// Was an derselben Messung **nicht** in Ordnung ist, gehoert nicht
+    /// hierher: die beiden Zeichendurchgaenge beenden die Bearbeitung, ohne
+    /// die Aktion zu schicken, und werfen damit den getippten Text fort. Das
+    /// ist der dritte Ausgang aus
+    /// `shared/issues/260815-2125_*_verlaesst-der-nutzer-die-offene-namenszelle-…`,
+    /// und er wartet auf eine Nutzerantwort.
     fn zellenansicht(
         &self,
         tabelle: &NSTableView,
@@ -2868,7 +2916,13 @@ define_class!(
         /// Feldeditor ein und fuellt ihn aus der Zelle. Danach zu setzen
         /// hilft nicht, im Gegenteil — ein `setStringValue:` waehrend der
         /// Bearbeitung schreibt in den Feldeditor zurueck (am 260815
-        /// gemessen).
+        /// gemessen, am 260816 wiederholt).
+        ///
+        /// **Ein Zeichendurchgang der Zeile ist trotzdem kein Weg dorthin**,
+        /// und wer beides zusammenliest, kommt sonst zu dem Fehlbefund
+        /// `shared/issues/260815-2203_c_…`: AppKit reicht dem Delegierten nie
+        /// eine Zelle mit offenem Feldeditor. Die Messung dazu steht bei
+        /// [`DateifensterDelegierter::zellenansicht`].
         ///
         /// Die Auswahl des Textes richtet AppKit danach selbst ein: der
         /// Tastenbefehl kommt mit `select: true` und hat damit den ganzen
