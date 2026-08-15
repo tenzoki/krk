@@ -55,3 +55,24 @@ Der geschlossene Datensatz hat sein Muster ausdrücklich auf `crates/` und `xtas
 1. **Die neun Fundstellen berichtigen** — oder, falls die Frage `260815-1145` auf die Sternform fällt, sie gleich in diese Form bringen. Die Reihenfolge ist umgekehrt sinnvoll: erst die Frage beantworten, dann einmal umschreiben, statt zweimal.
 2. **Das Muster auf die Werkbank ausdehnen.** Die Beschränkung auf `crates/` und `xtask/` hat fünf der neun Fundstellen nicht gesehen.
 3. **Die Prüfung an den Bau oder an eine Probe hängen.** Ohne sie ist der nächste Rückfall eine Frage der Zeit; er ist am 260815 in einer Sitzung zweimal eingetreten.
+
+---
+Resolved: Behoben mit `e49412a` (Zitierform-Entscheid
+`shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md`,
+Möglichkeit 2). Am 260815-1400 gegen den Baum gelesen: alle sechs von diesem Datensatz
+namentlich genannten Fundstellen tragen die Sternform, `crates/krk-ui/src/tabs.rs:564`
+und `:582` ebenso wie die drei Stellen in Spec und Plan der Runde 10.
+
+**Erhebung über den ganzen lebenden Text**, also `crates/`, `xtask/`, `CLAUDE.md`, die
+Circle-Datensätze und die Dateien unter `planning/`, mit einem Muster ohne die Endung
+`\.md` und damit ohne den blinden Fleck aus `CLAUDE.md`: zwei Fundstellen mit
+ausgeschriebenem Marker bleiben, und beide sind die Ausnahmen, die der Entscheid selbst
+benennt — Sätze über Zitate, in denen der Marker die Aussage ist und kein Zeiger
+(`circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-*.md:1670`
+und `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-*.md:625`).
+Die eingefrorenen Orte der Ortsregel sind unangetastet.
+
+**Die Grenze der Antwort steht im Entscheid und gilt weiter:** die Sternform hält gegen
+einen Markerwechsel und gegen nichts sonst. Wird der Namensteil eines Datensatzes
+umgeschrieben, zeigt das Zitat weiter ins Leere, und ohne Prüfung im Bau bemerkt das
+niemand, bis jemand danach sucht.

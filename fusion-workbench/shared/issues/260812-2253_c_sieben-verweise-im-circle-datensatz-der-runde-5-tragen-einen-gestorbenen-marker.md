@@ -45,3 +45,12 @@ liest.
 
 **Herkunft:** Abgleich der Runde 6 am 260812-2253, Nebenbefund neben
 `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2253_*_zwei-verweise-in-lebenden-dokumenten-der-runde-6-tragen-einen-gestorbenen-marker.md`.
+
+---
+Resolved: Behoben mit `e49412a`, der die Sternform als Zitierform des lebenden Textes
+eingesetzt hat (Entscheid `shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md`,
+Möglichkeit 2). Am 260815-1400 nachgemessen: die Zeile 22 und die Zeilen 71 bis 77 von
+`circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` tragen alle acht
+Zitate in der Sternform. Der Datensatz verlangte, die sieben toten Marker nachzuziehen;
+die Umstellung hat sie samt der achten Stelle erledigt, und zwar dauerhaft, weil ein
+Sternzitat bei der nächsten Zustandsänderung seines Ziels nicht wieder falsch wird.
