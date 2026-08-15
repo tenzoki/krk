@@ -676,9 +676,15 @@ impl Suchlage {
     /// Liefert, ob das Zeichen aufgenommen wurde. **Die Aufnahmeregel ist
     /// `krk_core::verzeichnis::filter::traegt_ein_dateiname`**, dieselbe, die
     /// der Filter der Dateiliste benutzt; eine zweite Zeichenregel
-    /// entsteht nicht (C1.2). Sie weist Steuerzeichen ab und den privaten
+    /// entsteht nicht (C1.2). Sie weist Steuerzeichen ab, den privaten
     /// Bereich U+F700 bis U+F8FF, in dem AppKit die Funktions- und Pfeiltasten
-    /// meldet.
+    /// meldet, und den Schraegstrich.
+    ///
+    /// **Der Schraegstrich kostet diese Suche nichts.** Kein Tastenname der
+    /// Tabelle in `krk_core::tasten::parser::TASTEN` traegt ihn, also kann
+    /// keine Anzeigeform einer Kombination ihn zeigen, und keine Beschriftung
+    /// in `resources/default-keymap.toml` fuehrt ihn. Gesucht wird ueber genau
+    /// diese beiden Spalten, siehe `Belegungsmodell::zeile_traegt`.
     #[must_use]
     pub fn zeichen_anhaengen(&mut self, zeichen: char, modell: &Belegungsmodell) -> bool {
         if !traegt_ein_dateiname(zeichen) {

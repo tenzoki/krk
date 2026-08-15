@@ -37,8 +37,17 @@
 //! Wagenruecklaufzeichen in den Filtertext, und die Liste zeigte danach nichts
 //! mehr. Die Regel ist trotzdem **keine Sonderregel fuer die Eingabetaste**:
 //! sie deckt jede unbelegte Funktionstaste ab, deren Zeichen AppKit aus dem
-//! privaten Bereich `U+F700` bis `U+F8FF` meldet, und jede andere Taste, die
-//! ein Steuerzeichen liefert.
+//! privaten Bereich `U+F700` bis `U+F8FF` meldet, jede andere Taste, die ein
+//! Steuerzeichen liefert, und den Schraegstrich.
+//!
+//! **Der Schraegstrich faellt weg, seit die Namensspalte ihn zeigt.** Seit dem
+//! 260815 haengt die Dateiliste an jeden Ordner ein Ordnerzeichen an, und das
+//! ist der Schraegstrich (`krk-ui/src/appkit/tabelle.rs`, `ORDNERZEICHEN`). Er
+//! ist dort Anzeige und nie Name: der Vergleich unten liest weiter
+//! `eintrag.name`. Wer `Bilder/` liest und `bilder/` tippt, bekaeme also eine
+//! leere Liste, wenn die Zeichenregel den Schraegstrich aufnaehme. Sie nimmt
+//! ihn nicht auf, und der Grund ist derselbe wie beim Wagenruecklauf: kein
+//! Name kann ihn tragen.
 //!
 //! Ein abgewiesenes Zeichen laesst den Filtertext unveraendert. Damit uebersteht
 //! eine begonnene Suche einen Tastendruck, der keine Suche sein kann.
@@ -52,15 +61,20 @@ const FUNKTIONSTASTEN_ENDE: char = '\u{F8FF}';
 
 /// Ob ein Dateiname dieses Zeichen tragen kann.
 ///
-/// Zwei Klassen fallen weg. Steuerzeichen, wozu der Wagenruecklauf der
+/// Drei Klassen fallen weg. Steuerzeichen, wozu der Wagenruecklauf der
 /// Eingabetaste, der Tabulator und die Escape-Taste gehoeren; ein Dateiname
 /// traegt sie nicht, und sie im Filtertext zu fuehren hiesse, nach etwas zu
-/// suchen, das kein Eintrag heissen kann. Und der Bereich `U+F700` bis
-/// `U+F8FF`, in dem AppKit die Pfeile und die Funktionstasten meldet: diese
-/// Zeichen sind ein Behelf der Oberflaeche und stehen fuer gar kein
-/// Schriftzeichen.
+/// suchen, das kein Eintrag heissen kann. Der Bereich `U+F700` bis `U+F8FF`,
+/// in dem AppKit die Pfeile und die Funktionstasten meldet: diese Zeichen sind
+/// ein Behelf der Oberflaeche und stehen fuer gar kein Schriftzeichen. Und der
+/// Schraegstrich, der die Bestandteile eines Pfades trennt und deshalb in
+/// keinem Namen vorkommen kann, den ein Dateisystem hergibt;
+/// [`crate::operation::name_pruefen`] weist ihn aus demselben
+/// Grund ab.
 pub fn traegt_ein_dateiname(zeichen: char) -> bool {
-    !zeichen.is_control() && !(FUNKTIONSTASTEN_ANFANG..=FUNKTIONSTASTEN_ENDE).contains(&zeichen)
+    !zeichen.is_control()
+        && !(FUNKTIONSTASTEN_ANFANG..=FUNKTIONSTASTEN_ENDE).contains(&zeichen)
+        && zeichen != '/'
 }
 
 /// Ob dieser Name den Filtertext traegt: Teilzeichenfolge an jeder Stelle, ohne
@@ -98,6 +112,35 @@ mod tests {
         assert!(!traegt_ein_dateiname('\u{1B}'), "die Escape-Taste");
         assert!(!traegt_ein_dateiname('\u{F701}'), "NSDownArrowFunctionKey");
         assert!(!traegt_ein_dateiname('\u{F704}'), "NSF1FunctionKey");
+    }
+
+    /// Der Schraegstrich trennt die Bestandteile eines Pfades; kein Name
+    /// traegt ihn, und die Namensspalte zeigt ihn seit dem 260815 als
+    /// Ordnerzeichen. Naehme der Filter ihn auf, liefe ein getipptes `bilder/`
+    /// gegen den Namen `Bilder` und faende nichts.
+    #[test]
+    fn ein_schraegstrich_traegt_kein_dateiname() {
+        assert!(!traegt_ein_dateiname('/'));
+    }
+
+    /// Was die Zeichenregel aufnimmt, muss die Namenspruefung des Umbenennens
+    /// durchlassen. **Die Umkehrung gilt nicht** und soll nicht gelten: ein
+    /// Name mit Zeilenumbruch ist unter macOS zulaessig, taugt aber als
+    /// Filtereingabe nicht. Genau in der einen Richtung stand der Widerspruch,
+    /// den `shared/issues/260815-2208_*_der-filter-nimmt-den-schraegstrich-auf`
+    /// gemeldet hat.
+    #[test]
+    fn was_die_zeichenregel_aufnimmt_traegt_auch_ein_name() {
+        for zeichen in ['/', '\0', 'a', 'Z', '7', '.', '-', ' ', 'ä', '中'] {
+            if !traegt_ein_dateiname(zeichen) {
+                continue;
+            }
+            let name = format!("datei{zeichen}name");
+            assert!(
+                crate::operation::name_pruefen(&name).is_ok(),
+                "{zeichen:?} wird aufgenommen, aber {name:?} ist kein Name"
+            );
+        }
     }
 
     #[test]
