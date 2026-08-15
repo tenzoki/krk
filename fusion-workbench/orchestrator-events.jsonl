@@ -909,3 +909,14 @@
 {"ts":"2026-08-15T19:05:16","event":"gate_response","detail":"Nutzer waehlt Option 3: Schraegstrich hinter dem Ordnernamen"}
 {"ts":"2026-08-15T19:05:16","event":"turn_start","turn":1,"detail":"1 ready task"}
 {"ts":"2026-08-15T19:05:16","event":"task_start","turn":1,"task":"T1","agent":"coder","detail":"tabelle.rs: Schraegstrich fuer Ordner in Spalte Name"}
+{"ts":"2026-08-15T19:49:47","event":"task_done","turn":1,"task":"T1","agent":"coder","detail":"3b128c3"}
+{"ts":"2026-08-15T19:49:47","event":"commit","turn":1,"task":"T1","detail":"3b128c3 feat(ui): Ordner traegt Schraegstrich in der Namensspalte"}
+{"ts":"2026-08-15T19:49:47","event":"review_start","turn":1,"agent":"coderev","detail":"1 changed file, range c27d845..3b128c3"}
+{"ts":"2026-08-15T20:26:24","event":"review_done","turn":1,"agent":"coderev","detail":"8 issues filed, 0 critical, 0 high, 4 medium"}
+{"ts":"2026-08-15T20:26:24","event":"coherence_review","turn":1,"verdict":"ok","detail":"Artifact/Grounding: 8 Befunde abgelegt, keiner kritisch. Artifact/Directive: der Commit bewegt sich auf die Directive zu. Grounding/Directive: 1 Entscheid _o_->_a_->_i_, konsistent, mit einer Berichtigung."}
+{"ts":"2026-08-15T20:26:24","event":"turn_end","turn":1,"detail":"1 task resolved, 1 commit, 8 issues created"}
+{"ts":"2026-08-15T20:26:24","event":"gate_response","detail":"Nutzer waehlt: nur die zwei Folgebefunde beheben (260815-2203, 260815-2208)"}
+{"ts":"2026-08-15T20:26:24","event":"turn_start","turn":2,"detail":"2 ready tasks"}
+{"ts":"2026-08-15T20:26:24","event":"task_start","turn":2,"task":"T2","agent":"coder","detail":"Zeichendurchgang waehrend offener Umbenennung"}
+{"ts":"2026-08-15T20:26:24","event":"task_start","turn":2,"task":"T3","agent":"coder","detail":"Schraegstrich in der Zeichenregel des Filters"}
+{"ts":"2026-08-15T20:34:24","event":"task_done","turn":2,"task":"T3","agent":"coder","detail":"Weg 1; Vorpruefung gemessen: Belegungssuche braucht den Schraegstrich nicht. Noch nicht committet."}

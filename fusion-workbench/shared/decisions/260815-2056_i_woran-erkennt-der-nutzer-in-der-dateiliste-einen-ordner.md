@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** orchestrator
 **Cross-references:** circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260804-1309_c_die-markierung-ist-allein-an-der-farbe-erkennbar.md, circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260806-1723_c_die-spalte-typ-zeigt-die-eintragsart-sortiert-aber-nach-der-endung.md, circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_a_zweites-kennzeichen-der-markierung-und-ihr-platz-in-der-statuszeile.md
 
@@ -84,8 +84,9 @@ diese Spalte die Dateiendung führt, damit Anzeige und Sortierung übereinstimme
 
 - Es bleibt bei vier Spalten (C1, C2). Eine fünfte Spalte ist verworfen.
 - Das Kennzeichen darf Orange, Fett und Blau nicht antasten.
-- Die zehn Zeitzusagen aus C8 gelten weiter; L3 und L10 messen das Blättern und
-  Sortieren großer Ordner.
+- Die zehn Zeitzusagen aus C8 gelten weiter. **Sie messen die Zeichenschleife
+  nicht:** L2, L3 und L10 laufen kopflos über Lesen, Modell und Sortierung.
+  Berichtigt am 260815-2210, siehe den Abschnitt darunter.
 
 ## Empfehlung
 
@@ -97,7 +98,7 @@ in einer Datei.
 
 ---
 Answered:
-Implemented:
+Implemented: 3b128c3 — `namensform()` haengt den Schraegstrich in der Spalte `Name` an, die Unterklasse `Namensfeld` nimmt ihn in `becomeFirstResponder` fuer die Dauer der Bearbeitung weg und holt ihn nach `abortEditing` ueber die Zeilenauffrischung zurueck (`crates/krk-ui/src/appkit/tabelle.rs`). Gewaehlt ist damit ein dritter Weg: die beiden im Entscheid genannten Kandidaten sind gemessen und fallen beide durch.
 Deferred:
 Superseded by:
 
@@ -140,7 +141,17 @@ Messung am Bündel und nicht diese Zeile.
 Kennzeichen hängt an `Eintrag::ist_ordner()`, also an `Typ::Ordner`, und damit an
 derselben Bedingung wie das `--` der Spalte `Größe` und die Gruppe der
 Sortierung. Die Alternative hieße, das Verweisziel je Zeile zu erfragen, also ein
-`stat` je sichtbarem Eintrag, und genau diese Schleife messen L3 und L10.
+`stat` je sichtbarem Eintrag in der Zeichenschleife.
+
+**Berichtigt am 260815-2210, nach der Durchsicht von `3b128c3`.** Hier stand,
+diese Schleife werde von L3 und L10 gemessen. Das ist falsch, und der Fehler ist
+meiner: L2, L3 und L10 laufen auf der kopflosen Strecke, die keine `NSTableView`
+baut und `zellenansicht` nie ruft (`crates/krk-bench/src/messen.rs:1199-1202`).
+Die Zeichenschleife der Dateiliste ist von **keiner** der zehn Zusagen aus C8
+gemessen. Die Entscheidung bleibt dieselbe, ihre Begründung ist eine andere: ein
+Systemaufruf je sichtbarer Zeile wäre eine Kostenstelle, die keine Zusage
+abnimmt, und die Gleichheit mit dem `--` der Spalte `Größe` entscheidet sie.
+Befund `shared/issues/260815-2202_o_vier-stellen-sagen-l3-und-l10-messen-die-zellenschleife-beide-laufen-kopflos.md`.
 
 ---
 Answered: fusion-workbench/shared/decisions/260815-2056_a_woran-erkennt-der-nutzer-in-der-dateiliste-einen-ordner.md §Nutzerentscheid — Option 3, Schrägstrich hinter dem Ordnernamen, Anzeige nur in der Namensspalte, Umbenennen zeigt und liest den wirklichen Namen.
