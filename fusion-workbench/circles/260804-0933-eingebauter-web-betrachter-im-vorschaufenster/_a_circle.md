@@ -941,3 +941,129 @@ das Vorschaufenster aus S19 eingeschlossen.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260815-0350
+**Playmaker-Lauf:** 260815-0350-playmaker-user-fusion-next
+**Abgeschlossenes Kind:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief` (Runde 10),
+geschlossen am 260815 als **beschränkter Abschluss** (`_b_`)
+
+**Zur Auslösebedingung, und sie ist wie beim Vermerk vom 260814-1301 zur Hälfte erfüllt.** Die
+Runde 10 trägt `_b_`. Der Abschnitt `## Grounding snapshot` dieses Datensatzes stammt vom
+260804 und kann eine Runde vom 260814 nicht zitieren; er nennt weder das Verzeichnis der Runde 10
+noch ihr Artefakt. Was ihn dennoch berührt, ist kein Zitat, sondern ein Bauteil: die eine
+Statuszeile und die Bedeutung eines nackten Tastendrucks stehen beide in seiner Grundlage, und die
+Runde 10 hat beide angefasst. Der Vermerk steht deshalb hier, mit derselben Einordnung wie seine
+Vorgänger: Eingabe für die Klärungsrunde, kein Grund, die Aktivierung aufzuhalten.
+
+### 1. Die Statuszeile trägt jetzt sechs Ränge, und der siebte hält den Bau an
+
+Die Grundlage dieses Circles sagt, was der Betrachter zu melden hat, etwa eine nicht erreichbare
+Adresse, gehöre in die eine Statuszeile und nicht in ein eigenes Meldewesen. Diese Zusage gilt
+unverändert; der Preis dafür ist gestiegen. `Rang` in `crates/krk-ui/src/appkit/statuszeile.rs:207`
+führt am 260815 sechs Werte, und der neue heißt `Filterstand`: er steht zwischen `Tabmeldung` und
+`Markierungsstand` und nennt den stehenden Filtertext samt den gezeigten gegen die vorhandenen
+Einträge. Die Aufzählung ist weiterhin eine vollständige Fallunterscheidung ohne Auffangzweig, und
+ihre Reihenfolge **ist** die Rangfolge.
+
+Für diesen Circle folgt daraus eine Frage an den Aktivierungs-Spec, die vorher keine war: an
+welcher Stelle der sechs steht die Meldung des Betrachters. Eine nicht erreichbare Adresse ist der
+Sache nach eine Befehlsantwort und stünde damit obenauf; eine Ladeanzeige während des Abrufs käme
+der `Vorgangsanzeige` nahe, die heute allein Dateioperationen trägt. Beides ist entscheidbar, und
+keines entscheidet sich von selbst: ein siebter Rang hält den Bau an und erzwingt die Einordnung
+an Ort und Stelle.
+
+### 2. Ein nackter Tastendruck im Dateifenster bedeutet seit der Runde 10 etwas anderes
+
+Die Runde 1 hatte festgelegt, dass eine freie Taste ohne Zusatztaste im Dateifenster auf die
+Sprungmarke durchfällt. Die Runde 10 hat dieses Abnahmekriterium **ersetzt und nicht ergänzt**,
+nach ausdrücklicher Wahl des Nutzers: Tippen füllt jetzt einen Filter, der Sprung auf den ersten
+passenden Eintrag ist auf keinem Weg mehr zu haben.
+
+Die Directive dieses Circles verspricht „Sprungmarken auf jedem sichtbaren Link". Das ist ein
+anderer Mechanismus als die gefallene Sprungmarke des Dateifensters, und die Zeichenprüfung
+`krk_core::verzeichnis::sprungmarke::traegt_ein_dateiname` steht weiter, weil die Tippsuche der
+Belegungsansicht aus der Runde 7 sie ebenfalls benutzt. Zwei Dinge gehören trotzdem in die
+Klärungsrunde. Erstens die Benennung: wer nach der Runde 10 „Sprungmarke" liest, denkt an eine
+Sache, die es im Dateifenster nicht mehr gibt, und der Aktivierungs-Spec sollte den Verweisanker
+des Betrachters anders nennen oder den Unterschied ausdrücklich hinschreiben. Zweitens die Frage,
+die der Betrachter neu aufwirft: das Dateifenster beansprucht nackte Zeichen inzwischen für sich,
+das Vorschaufenster tut es nicht. Ein Betrachter, der über die Tastatur bedient wird und dessen
+Verweisanker aus getippten Zeichen bestehen, ist der erste Bereich neben dem Dateifenster mit
+diesem Anspruch.
+
+### 3. `Esc` trägt drei Bedeutungen, und der Betrachter brächte eine vierte
+
+Nach der Runde 10 räumt `Esc` den Filtertext weg, als dritter und letzter Rang hinter einem
+stehenden Blatt und einer laufenden Operation. Der Betrachter will `Esc` für den Ausstieg aus der
+Verweisanker-Anzeige, und das wäre der vierte Anspruch auf dieselbe Taste. Die Reihenfolge ist
+kein Detail: sie entscheidet, was der Nutzer verliert, wenn er die Taste einmal zu oft drückt.
+
+Der Entscheidungsdatensatz der Runde 10 zu dieser Reihenfolge steht im Speicher weiter auf offen
+(`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`),
+während der Baum die Frage beantwortet hat. Wer die Rangfolge für den Betrachter fortschreibt,
+liest den Baum und nicht allein den Datensatz.
+
+### 4. Die Belegung ist gewachsen, und die Bindung an einen offenen Defekt bleibt
+
+Am 260815 führt `resources/default-keymap.toml` 84 Einträge und `Kommando` 78 Varianten, gezählt
+mit `grep -c '^\[\[' resources/default-keymap.toml` und
+`awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs`. Die Runde 10 hat den
+Befehl für die tiefe Suche beigesteuert. Die vier Befehle dieses Circles, Blättern, Zurück, Vor
+und das Schalten der Verweisanker, kommen darauf und erreichen einen Nutzer mit eigener
+Belegungsdatei weiterhin unbelegt
+(`shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`).
+Der Befund ist gegenüber dem Vermerk vom 260814-1301 unverändert und wird hier nur nachgezählt.
+
+### 5. Was die Runde 10 über das Prüfen gelernt hat, gilt diesem Circle besonders
+
+Die Abschlussnotiz der Runde 10 nennt einen Fehlertyp, der siebenmal aufgetreten und jedes Mal von
+einer Prüfung gefangen worden ist, nie von einem Menschen beim Lesen: ein Text sagt mehr zu, als
+seine Probe hält. Zwei Diagrammprüfungen des Spec fanden je einen echten Fehler, bevor eine Zeile
+Code geschrieben war, darunter einen fehlenden Ausgang, den drei Abnahmekriterien voraussetzten.
+
+Der Spec dieses Circles wird einen Navigationsstapel je Tab beschreiben, dazu Zurück, Vor und die
+Verweisanker. Ein Stapel mit zwei Richtungen und einem Zustand, der beim Ersetzen des Tabinhalts
+stirbt, ist genau die Art Gegenstand, an der eine Diagrammprüfung vor dem Plan-Gate billig einen
+fehlenden Ausgang findet. Zusammen mit der Empfehlung des Vermerks vom 260814-1301, je Kriterium
+eine Kennzeichnung und je Bündelkriterium eine Beobachtung zu führen, sind das die zwei
+Maßnahmen, die aus zwei aufeinanderfolgenden Runden dieses Projekts stammen und nichts kosten
+außer Reihenfolge.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260815-0350
+**Playmaker-Lauf:** 260815-0350-playmaker-user-fusion-next
+**Domain-Gewichtung:** code
+**Vorgeschlagener Aktivierungszeitpunkt:** nach einer Untersuchung des Darstellungsmittels und
+einer Klärungsrunde über die offenen Fragen
+
+Der Circle bleibt Rang 1 und einziger Kandidat, bei unverändertem Zuschnitt. Dieser Vermerk trägt
+die Änderungen seit dem 260814-1513 nach und wiederholt die Vorschläge davor nicht.
+
+**Die Runde 10 ist gefahren und beschränkt geschlossen.** Was sie an der Grundlage dieses Circles
+bewegt, steht im Vermerk `## Parent grounding stale` vom 260815-0350 darüber und wird hier nicht
+wiederholt. Für die Rangfolge selbst ändert sie nichts: kein neuer Circle trägt vorgesehen (`_a_`),
+und der Abhängigkeitsgraph über die nicht terminalen Circles hat weiterhin einen Knoten und keine
+Kante.
+
+**Die Auslieferungssperre steht wieder offen, wie nach jeder Runde.** Am 260815-0350 am Baum
+geprüft: `git tag --points-at HEAD` liefert nichts, 24 Commits liegen zwischen `v0.3.0` und `HEAD`
+(`2d2ce87`), und `Cargo.toml` führt weiter `0.3.0`. Station 1 von `cargo xtask release` vergleicht
+Tag und Version und hält den Auslieferungsweg damit an. Das ist keine Bedingung dieses Circles,
+sondern der wiederkehrende Zustand: der Tag wird vom Nutzer gesetzt, nicht vom Werkzeug.
+
+**Zwei Abnahmelisten stehen jetzt aus statt einer.** Die Runde 9 hat 21 Kriterien ohne vollen
+Beleg gelassen, die Runde 10 zehn von 77 mit Bündelanteil, davon vier sicherheitsrelevant; ihre
+Liste ist
+`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/history/260815-0400-abnahmeliste-g2.md`,
+geschätzt 25 Minuten am laufenden Bündel. Beide Läufe sind Nutzerarbeit und keiner bewegt einen
+Marker. Für diesen Circle zählt daran, dass er selbst viele Kriterien am laufenden Bündel haben
+wird, weil sich Blättern, Zurück, Vor und die Verweisanker an einer echten Seite zeigen und nicht
+an einer Probe. Wer den Betrachter aktiviert, ohne die zwei stehenden Listen zu fahren, sammelt
+eine dritte an.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
