@@ -42,3 +42,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: `shared/history/260815-0912-orchestrator-session.md` — Möglichkeit 2, Nutzerentscheid vom 260815-0955. Eine Regel für beide Zustände des Kennzeichens: der Filtertext übersteht jeden Ordnerwechsel und fällt erst mit `Esc`. Die Empfehlung des Datensatzes (Möglichkeit 1, zwei Regeln) ist damit verworfen. Anlass war der Bugreport des Nutzers, der das Leeren beim Wechsel als Fehlverhalten meldete: „besser stehen lassen bis escape, dann kann der nutzer den filter zu suchen nach einer datei auch ohne deep=true nutzen". Die Bedingung des Abschnitts `## Constraints`, dass der stehende Filtertext zu sehen sein muss, ist vor der Antwort am Baum geprüft und erfüllt (`crates/krk-ui/src/appkit/statuszeile.rs:369-386`, `filterstand_text` schreibt `Filter „rs": 3 von 47 angezeigt`).

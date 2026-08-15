@@ -338,7 +338,7 @@ flowchart TD
 - Dependencies: A1
 - Changes:
   - `Tabliste::ordner_setzen` trägt Filtertext und Deep-Kennzeichen in den neuen `Tabinhalt` hinüber, neben Sortierung und Verstecke. Bei ausgeschaltetem „Deep" wird der Filtertext dabei geleert (C1.9), bei eingeschaltetem übernommen (C1.10). Der Aufstieg geht durch dieselbe Stelle und zählt deshalb wie der Einstieg, ohne eigene Zeile.
-  - **Hängt an `decisions/260814-1830_o_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`.** Fällt die Antwort auf „stehen lassen", entfällt die Bedingung und die Zeile wird kürzer; sonst ändert sich nichts.
+  - **Beantwortet durch `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, Nutzerentscheid vom 260815-0955.** Die Antwort lautet „stehen lassen“, also fällt die Bedingung weg: der Filtertext wandert in jedem Fall in das neue Modell, und die Zeile `let filtertext_ueberlebt = tief;` wird zu einem `true`.
   - `Tabliste::aktiven_neu_lesen` lässt den Filtertext stehen: eine Auffrischung wechselt den Ordner nicht.
   - Der Tabwechsel setzt nichts zurück. Der Filtertext gehört dem Tab, und die Ansicht zeigt nach `tab_gewechselt` den des neuen Tabs (C1.8) — das fällt ohne Zeile an, weil das Modell ihn führt.
   - `Esc` bekommt seine Stelle in `Anwendungsdelegierter::abbrechen`, **hinter** dem Schließen eines stehenden Blattes und hinter dem Abbruch einer laufenden Dateioperation, an der Stelle, an der die Taste heute nichts mehr zu tun findet (C1.7). Ein eigener Rang für das Anhalten des Durchlaufs entsteht nicht: ohne Filtertext hat der Durchlauf keinen Gegenstand (C3.5).
@@ -575,7 +575,7 @@ Vier Signaturen ändern sich, alle innerhalb einer Kiste.
 Vier offene Nutzerentscheidungen binden die Umsetzung, keine hält einen Schritt auf. Der Plan fährt bei allen vier auf derselben Empfehlung wie der Spec, und jeder betroffene Schritt nennt, was sich mit einer anderen Antwort ändert.
 
 - [ ] Wo steht die Filterzahl in der Rangfolge der einen Statuszeile? — `decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`, betrifft D1
-- [ ] Bleibt der Filtertext bei einem Ordnerwechsel stehen, wenn „Deep" aus ist? — `decisions/260814-1830_o_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, betrifft B2
+- [x] Bleibt der Filtertext bei einem Ordnerwechsel stehen, wenn „Deep“ aus ist? — `decisions/260814-1830_a_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`, betrifft B2. Beantwortet am 260815-0955 mit Möglichkeit 2.
 - [ ] Gilt das Ankreuzfeld „Deep" je Tab oder je Fenster? — `decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`, betrifft E3 und F2
 - [ ] An welcher Stelle der Bedeutungen von `Esc` steht der Filtertext? — `decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`, betrifft B2
 
