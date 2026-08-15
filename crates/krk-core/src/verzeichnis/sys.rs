@@ -1026,6 +1026,51 @@ mod tests {
         let _ = std::fs::remove_file(&pfad);
     }
 
+    /// Nur `EMFILE` und `ENFILE` sprechen ueber den Prozess, jeder andere
+    /// Oeffnungsfehler spricht ueber den Pfad.
+    ///
+    /// Die Trennung traegt C3.15: [`crate::verzeichnis::durchlauf`] laesst
+    /// einen Ordner unentschieden, wenn sie ja sagt, und entscheidet ihn
+    /// negativ, wenn sie nein sagt. Ein zu weites Ja hielte den Durchlauf bei
+    /// einem gewoehnlichen Rechtefehler an; ein zu enges Nein brachte den
+    /// Defekt `260815-0211` zurueck.
+    ///
+    /// Der letzte Fall ist der, den ein Blick auf die Zahlen uebersieht:
+    /// [`Schwungleser::oeffnen`] baut den Fehler „kein Verzeichnis" selbst und
+    /// gibt ihm gar keine Betriebssystemnummer. `raw_os_error()` liefert dann
+    /// `None`, und das darf nicht als Mangel durchgehen.
+    #[test]
+    fn nur_emfile_und_enfile_gelten_als_deskriptormangel() {
+        for kennung in [EMFILE, ENFILE] {
+            assert!(
+                ist_deskriptormangel(&io::Error::from_raw_os_error(kennung)),
+                "errno {kennung} spricht ueber den Vorrat an Deskriptoren und wird nicht erkannt"
+            );
+        }
+
+        // Die Oeffnungsfehler, die etwas ueber den Pfad sagen, dazu `EINTR` als
+        // einer, der weder ueber den Pfad noch ueber den Vorrat spricht.
+        for (kennung, name) in [
+            (2, "ENOENT"),
+            (4, "EINTR"),
+            (13, "EACCES"),
+            (20, "ENOTDIR"),
+            (62, "ELOOP"),
+            (63, "ENAMETOOLONG"),
+        ] {
+            assert!(
+                !ist_deskriptormangel(&io::Error::from_raw_os_error(kennung)),
+                "{name} spricht nicht ueber den Vorrat an Deskriptoren und gilt trotzdem als Mangel"
+            );
+        }
+
+        let ohne_nummer = io::Error::new(io::ErrorKind::NotADirectory, "kein Verzeichnis");
+        assert!(
+            !ist_deskriptormangel(&ohne_nummer),
+            "ein selbst gebauter Fehler ohne Betriebssystemnummer gilt als Deskriptormangel"
+        );
+    }
+
     /// Der Deskriptor kommt blockierend zurueck, nicht nichtblockierend.
     ///
     /// Das ist die eine Zusage von [`ohne_warten_oeffnen`], die der Aufrufer

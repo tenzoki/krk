@@ -14,6 +14,7 @@ use krk_core::verzeichnis::durchlauf::{Auftrag, Befundmeldung, Durchlauf};
 use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
+use krk_core::verzeichnis::sys::ist_deskriptormangel;
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
@@ -1305,7 +1306,7 @@ const KETTENTIEFE: usize = 200;
 /// und nicht behauptet.
 const DESKRIPTORSCHRANKE: usize = 100;
 
-/// C3.8 und C3.10 **unter der Deskriptorgrenze, die ein Buendel bekommt**.
+/// C3.8 und C3.15 **unter der Deskriptorgrenze, die ein Buendel bekommt**.
 ///
 /// `der_durchlauf_kennt_keine_tiefengrenze` darueber legt zweihundert Ebenen an
 /// und ist gruen — aber `cargo test` erbt die angehobene Grenze der
@@ -1412,6 +1413,176 @@ fn kind_entscheidet_die_tiefe_kette() {
         }],
         "der Treffer liegt {KETTENTIEFE} Ebenen tief und faellt unter {vorrat} \
          freien Deskriptoren aus der Antwort"
+    );
+}
+
+/// Die Umgebungsvariable, die die Kindprobe zum Mangel von aussen beauftragt.
+/// Ihr Wert ist der Ordner, unter dem `aussen` und `zweiter` schon stehen.
+const AUFTRAG_MANGEL: &str = "KRK_PROBE_DESKRIPTORMANGEL";
+
+/// C3.15 in der **Vorwaertsrichtung**: ein von aussen herbeigefuehrter Mangel
+/// fuehrt zu keinem Befund.
+///
+/// `die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden`
+/// darueber misst die Rueckrichtung, naemlich dass der Durchlauf keinen eigenen
+/// Mangel erzeugt. Erst beide zusammen decken C3.15 ab: ohne diese Probe hier
+/// waere der Zweig `Err(fehler) if ist_deskriptormangel(&fehler) => return
+/// None` in [`krk_core::verzeichnis::durchlauf`] von keiner Pruefung erreicht.
+///
+/// **Der Mangel wird hergestellt und nicht abgewartet.** Das Kind nimmt unter
+/// `ulimit -n 64` Deskriptoren, bis keiner mehr kommt, und **haelt sie**,
+/// waehrend der Durchlauf laeuft. Dessen erstes `File::open` kann dann nur noch
+/// `EMFILE` liefern; der Mangel schlaegt also gleich beim ersten Oeffnen zu und
+/// nicht irgendwo in der Tiefe. Darin liegt der Unterschied zur Probe darueber:
+/// dort ist der Baum tief und der Durchlauf soll trotzdem durchkommen, hier ist
+/// er flach und der Durchlauf soll gar nicht erst anfangen.
+///
+/// **Gemessen ist dabei auch der zweite Halbsatz von C3.15**, dass die noch
+/// offenen Auftraege ebenfalls unentschieden bleiben. Der erste Auftrag ist
+/// eine symbolische Verknuepfung und damit ohne Oeffnen entschieden (C3.9);
+/// von den beiden Ordnern danach kommt kein Befund mehr, obwohl der Kanal
+/// danach schliesst und nicht abgebrochen wurde.
+///
+/// Angelegt und abgeraeumt wird der Baum vom **Elternteil**, aus demselben
+/// Grund wie bei der Probe darueber.
+#[test]
+fn ein_deskriptormangel_von_aussen_laesst_die_ordner_unentschieden() {
+    let ordner = Pruefordner::neu("durchlauf-mangel");
+    for name in ["aussen", "zweiter"] {
+        let unterordner = ordner.unter(name).join("a");
+        fs::create_dir_all(&unterordner).expect("Unterordner laesst sich nicht anlegen");
+        fs::write(unterordner.join("gesuchtes-blatt.txt"), b"x").expect("Blatt");
+    }
+    // Der erste Auftrag ist eine Verknuepfung, und der ist ohne ein einziges
+    // Oeffnen entschieden (C3.9). Nur so ist zu sehen, dass der Mangel den
+    // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
+    ordner.verknuepfung("verweis", ordner.unter("aussen"));
+
+    let ergebnis = kind_mit_wenigen_deskriptoren(
+        "kind_meldet_bei_deskriptormangel_nichts",
+        AUFTRAG_MANGEL,
+        ordner.pfad(),
+    );
+
+    assert!(
+        ergebnis.status.success(),
+        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber einen Ordner\n\
+         --- stdout ---\n{}\n--- stderr ---\n{}",
+        String::from_utf8_lossy(&ergebnis.stdout),
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_DESKRIPTORMANGEL gestartet"]
+fn kind_meldet_bei_deskriptormangel_nichts() {
+    let Some(ordner) = std::env::var_os(AUFTRAG_MANGEL) else {
+        return;
+    };
+    let ordner = std::path::PathBuf::from(ordner);
+    let auftraege = || {
+        vec![
+            Auftrag {
+                index: 5,
+                name: "verweis".to_owned(),
+            },
+            Auftrag {
+                index: 7,
+                name: "aussen".to_owned(),
+            },
+            Auftrag {
+                index: 8,
+                name: "zweiter".to_owned(),
+            },
+        ]
+    };
+
+    // Erster Durchgang, mit freiem Vorrat, und er ist die Gegenprobe: ohne ihn
+    // saehe der zweite auch dann so aus, wenn der Baum gar nicht stuende oder
+    // der Filtertext nirgends traefe. Die Probe sagte dann mehr zu, als sie
+    // haelt.
+    let mit_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        auftraege(),
+        ordner.clone(),
+        "gesuchtes".to_owned(),
+        1,
+    ));
+
+    // Jetzt den Mangel herstellen: nehmen, bis keiner mehr kommt, und halten.
+    // Die Schranke daneben faengt den Fall ab, dass `ulimit` nicht gegriffen
+    // hat; dann bleibt `abweisung` leer und die Probe sagt es.
+    let mut gehalten = Vec::new();
+    let mut abweisung = None;
+    while gehalten.len() < 4 * DESKRIPTORSCHRANKE {
+        match fs::File::open("/dev/null") {
+            Ok(datei) => gehalten.push(datei),
+            Err(fehler) => {
+                abweisung = Some(fehler);
+                break;
+            }
+        }
+    }
+    let vorrat = gehalten.len();
+
+    // Der Durchlauf laeuft, waehrend `gehalten` steht: sein erstes Oeffnen
+    // trifft auf eine volle Deskriptortabelle. Ein leerer Kanal kann hier nur
+    // zwei Ursachen haben, und die zweite ist ausgeschlossen — der `Durchlauf`
+    // lebt bis zum Ende des Einsammelns, also hat niemand abgebrochen.
+    let ohne_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        auftraege(),
+        ordner.clone(),
+        "gesuchtes".to_owned(),
+        2,
+    ));
+
+    // Erst zurueckgeben, dann pruefen: eine gescheiterte Behauptung soll ihre
+    // Meldung noch schreiben koennen.
+    drop(gehalten);
+
+    let abweisung = abweisung.expect(
+        "der Vorrat an Deskriptoren ist nicht ausgegangen; die Grenze des Kindes ist nicht \
+         abgesenkt, und die Probe wuerde nichts messen",
+    );
+    assert!(
+        ist_deskriptormangel(&abweisung),
+        "das Oeffnen ist nicht am Vorrat gescheitert, sondern an etwas anderem: {abweisung}"
+    );
+    assert!(
+        vorrat < DESKRIPTORSCHRANKE,
+        "die Deskriptorgrenze des Kindes ist nicht abgesenkt: {vorrat} Deskriptoren zugleich frei"
+    );
+
+    assert_eq!(
+        mit_vorrat,
+        vec![
+            Befundmeldung {
+                index: 5,
+                treffer: false
+            },
+            Befundmeldung {
+                index: 7,
+                treffer: true
+            },
+            Befundmeldung {
+                index: 8,
+                treffer: true
+            },
+        ],
+        "die Gegenprobe mit freiem Vorrat entscheidet die drei Auftraege nicht; der zweite \
+         Durchgang maesse dann etwas anderes als den Mangel"
+    );
+
+    // Die Verknuepfung ist entschieden, weil sie kein Oeffnen braucht. Der
+    // Ordner danach ist es nicht, und der dritte Auftrag bleibt es ebenfalls:
+    // beides sagt C3.15 zu, und beides steht in dieser einen Erwartung.
+    assert_eq!(
+        ohne_vorrat,
+        vec![Befundmeldung {
+            index: 5,
+            treffer: false
+        }],
+        "unter einer vollen Deskriptortabelle wird ein Ordner entschieden, statt ihn und die \
+         Auftraege nach ihm unentschieden zu lassen (C3.15)"
     );
 }
 
