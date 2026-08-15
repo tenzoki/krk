@@ -31,3 +31,43 @@ Ob eine Verknüpfung auf einen Ordner auch als Ziel einer Dateioperation, als Le
 ## Abgrenzung
 
 Die tiefe Suche des Circles `260814-1551-tippen-filtert-dateiliste-flach-und-tief` steigt ausdrücklich **nicht** in Verknüpfungen hinab (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_*_steigt-die-tiefe-suche-in-symbolische-verknuepfungen-hinab.md`). Dieser Defekt und jene Antwort widersprechen sich nicht: der Scan folgt keiner Verknüpfung, der Nutzer soll sie von Hand betreten können.
+
+---
+Stand 260815-1700: gebaut, im Kern geprüft, **nicht abgenommen**. Der Datensatz bleibt
+deshalb auf `_p_` und nicht auf `_c_`.
+
+**Die Entwurfsrichtung ist ein Nutzerentscheid vom 260815:** aufgelöst wird allein im
+Einstiegsweg, am Deskriptor, und nicht beim Lesen des Ordners. Der Lesevorgang bekommt
+keinen zusätzlichen Systemaufruf, weil der Sortierschlüssel dort einmalig entsteht und daran
+die Zeitzusagen L3 und L10 hängen, die seit der Runde 4 nicht mehr gemessen sind. Der eine
+Aufruf fällt beim Doppelklick an, nicht bei der Anzeige.
+
+**Der Schnitt.** Neu ist `krk-core/src/verzeichnis/verweisziel.rs` mit der Aufzählung
+`Verweisziel` (`Ordner`, `KeinOrdner`, `Unerreichbar`), überschneidungsfrei und ohne
+Auffangzweig. Sie fragt über `sys::ohne_warten_oeffnen` und ist deren dritter Rufer neben
+dem Editor und der Vorschau; eine zweite Hülle um `open` oder `stat` ist nicht entstanden.
+Der prüfbare Teil liegt im Kern, weil `krk-ui` kein Bibliotheksziel hat.
+
+`in_zeile_einsteigen` liefert jetzt die Aufzählung `Einstieg` statt eines Wahrheitswerts, und
+das ist der Kern der Sache: „gemeldet" ist weder „eingestiegen" noch „gib es an das System".
+Ginge eine unerreichbare Verknüpfung zusätzlich an das Standardprogramm, überschriebe dessen
+Antwort die eben geschriebene Zeile der Statuszeile.
+
+**Die drei Fälle:** auf ein Verzeichnis heißt Einstieg, und zwar mit dem Pfad der
+Verknüpfung, damit der Aufstieg zurück in deren Ordner führt. Auf eine Datei heißt, was heute
+bei einer Datei geschieht. Ins Leere, im Ring oder ohne Recht heißt ein Satz in der
+Statuszeile und kein zweiter Versuch.
+
+**Die Warnung dieses Datensatzes zur Sortierung ist gegenstandslos**, am 260815 am Baum
+geprüft: `sortierung.rs`, `fn gruppe`, liest `eintrag.typ == Typ::Ordner` unmittelbar und
+nicht über `ist_ordner`; zudem ordnet die Typsortierung seit dem Nutzerentscheid vom 260806
+nach der Dateiendung. `ist_ordner` ist ohnehin unverändert geblieben.
+
+**Was zum Abschluss fehlt: ein Klicktest am laufenden Bündel.** Der Weg vom Doppelklick bis
+`ordner_lesen` hängt an `NSTableView` und ist nicht kopflos prüfbar; die Auflösung selbst ist
+mit sechs Proben im Kern abgedeckt, darunter der Ring und eine benannte Röhre unter
+Zeitschranke. Wie bei jedem Abnahmelauf dieses Projekts ist das Nutzerarbeit.
+
+**Ein Nebenbefund:** eine Verknüpfung auf einen Socket kommt als `Unerreichbar` zurück und
+nicht als `KeinOrdner`, weil `open(2)` dort mit `ENXIO` scheitert. Der Nutzer bekommt eine
+Meldung statt stiller Wirkungslosigkeit; richtig eingeordnet ist es nicht.

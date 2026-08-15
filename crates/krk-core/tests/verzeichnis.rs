@@ -15,6 +15,7 @@ use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESS
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
 use krk_core::verzeichnis::sys::ist_deskriptormangel;
+use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
@@ -1829,4 +1830,116 @@ fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer()
         ],
         "der Vergleich hat andere Rufer als der Pruefschritt und der Durchlauf"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Worauf eine Verknuepfung zeigt (Defekt 260814-1612)
+// ---------------------------------------------------------------------------
+
+/// Der Fall, den der Nutzer gemeldet hat: eine Verknuepfung auf ein
+/// Verzeichnis.
+///
+/// Der Verzeichnisleser meldet sie als [`Typ::Verknuepfung`] und `ist_ordner`
+/// antwortet fuer sie mit `false`; genau daran endete der Einstieg. Aufgeloest
+/// wird sie erst hier, am Deskriptor, und erst dann, wenn jemand hineingehen
+/// will.
+#[test]
+fn eine_verknuepfung_auf_ein_verzeichnis_ist_ein_ordner() {
+    let ordner = Pruefordner::neu("verweisziel-ordner");
+    ordner.ordner("ziel");
+    let verweis = ordner.verknuepfung("verweis", ordner.unter("ziel"));
+
+    assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::Ordner);
+}
+
+/// Eine Verknuepfung auf eine Datei bleibt eine Datei.
+///
+/// Damit geschieht mit ihr, was heute mit einer Datei geschieht: der Einstieg
+/// findet nicht statt, und der Doppelklick gibt sie an das System.
+#[test]
+fn eine_verknuepfung_auf_eine_datei_ist_kein_ordner() {
+    let ordner = Pruefordner::neu("verweisziel-datei");
+    ordner.fuelldatei("ziel.txt", 3);
+    let verweis = ordner.verknuepfung("verweis.txt", ordner.unter("ziel.txt"));
+
+    assert_eq!(verweisziel::bestimmen(&verweis), Verweisziel::KeinOrdner);
+}
+
+/// Eine Verknuepfung ins Leere ist unerreichbar, und der Grund kommt mit.
+///
+/// Der Grund ist die Meldung des Systems und keine eigene Formulierung; den
+/// Satz darum herum baut die Oberflaeche, die auch den Pfad hat. Ohne ihn
+/// bliebe der Doppelklick auf eine Verknuepfung, deren Ziel geloescht wurde,
+/// wirkungslos und stumm.
+#[test]
+fn eine_verknuepfung_ins_leere_ist_unerreichbar() {
+    let ordner = Pruefordner::neu("verweisziel-leer");
+    let verweis = ordner.verknuepfung("verweis", ordner.unter("gibtsnicht"));
+
+    let Verweisziel::Unerreichbar { grund } = verweisziel::bestimmen(&verweis) else {
+        panic!("die Verknuepfung ins Leere kam nicht als unerreichbar zurueck");
+    };
+    assert!(!grund.is_empty(), "der Grund ist leer");
+}
+
+/// Ein Ring aus zwei Verknuepfungen ist unerreichbar und haelt nichts an.
+///
+/// `ELOOP` ist der zweite Weg, auf dem das Aufloesen scheitert, und er kommt
+/// aus demselben `open(2)` wie das fehlende Ziel; eine eigene Regel braucht er
+/// deshalb nicht.
+#[test]
+fn ein_ring_aus_verknuepfungen_ist_unerreichbar() {
+    let ordner = Pruefordner::neu("verweisziel-ring");
+    ordner.verknuepfung("hin", ordner.unter("her"));
+    let her = ordner.verknuepfung("her", ordner.unter("hin"));
+
+    assert!(
+        matches!(
+            verweisziel::bestimmen(&her),
+            Verweisziel::Unerreichbar { .. }
+        ),
+        "der Ring kam nicht als unerreichbar zurueck"
+    );
+}
+
+/// Ein Verzeichnis und eine Datei ohne jede Verknuepfung kommen richtig zurueck.
+///
+/// Die Funktion fragt nicht, ob der Name eine Verknuepfung ist; sie sagt, was
+/// hinter ihm steht. Gerufen wird sie im Einstiegsweg nur fuer eine
+/// Verknuepfung, und diese Probe haelt fest, dass die Einschraenkung beim
+/// Aufrufer liegt und nicht in der Funktion.
+#[test]
+fn ohne_verknuepfung_gilt_der_name_selbst() {
+    let ordner = Pruefordner::neu("verweisziel-ohne");
+    let unten = ordner.ordner("unten");
+    let datei = ordner.fuelldatei("datei.txt", 1);
+
+    assert_eq!(verweisziel::bestimmen(&unten), Verweisziel::Ordner);
+    assert_eq!(verweisziel::bestimmen(&datei), Verweisziel::KeinOrdner);
+}
+
+/// Eine benannte Roehre ohne Schreiber haelt die Frage nicht an.
+///
+/// Das ist die eine Zusage, um derentwillen dieses Modul
+/// `sys::ohne_warten_oeffnen` nimmt und kein eigenes `File::open`: ein `open`
+/// ohne `O_NONBLOCK` wartete hier, bis jemand hineinschreibt, also fuer immer.
+/// Die Zeitschranke macht aus dem Stillstand einen Fehlschlag mit Namen; sie
+/// ist dieselbe Bauart wie `oeffnen_mit_zeitschranke` in `tests/text.rs`, und
+/// eine gemeinsame Fassung gaebe es nur um den Preis, den Pruefling durch die
+/// Hilfsfunktion zu reichen.
+#[test]
+fn eine_roehre_haelt_die_frage_nach_dem_verweisziel_nicht_an() {
+    let ordner = Pruefordner::neu("verweisziel-roehre");
+    let roehre = ordner.roehre("ohne-schreiber");
+
+    let (sender, empfaenger) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(verweisziel::bestimmen(&roehre));
+    });
+    let schranke = Duration::from_secs(5);
+    let ergebnis = empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+        panic!("bestimmen ist nach {schranke:?} nicht zurueckgekommen; die Frage haengt")
+    });
+
+    assert_eq!(ergebnis, Verweisziel::KeinOrdner);
 }

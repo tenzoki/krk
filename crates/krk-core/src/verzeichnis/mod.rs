@@ -1,22 +1,25 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Acht Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Neun Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys ──> leser ──> eintrag ──> modell <── sortierung
-//!  │                     ^         ^ ^
-//!  │               kollation       │ │
-//!  └──> durchlauf ─────────────────┘ │
-//!             ^                      │
-//!             └──── filter ──────────┘
+//!  │ │                   ^         ^ ^
+//!  │ │             kollation       │ │
+//!  │ └──> durchlauf ───────────────┘ │
+//!  │            ^                    │
+//!  │            └──── filter ────────┘
+//!  │
+//!  └──> verweisziel
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
 //! `getattrlistbulk(2)` fuer das Lesen, seit Schritt 15 `copyfile(3)` und
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
 //! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
-//! von `text::datei::oeffnen` und, seit dem Defekt `260810-1247`, vom Leseweg
-//! der Vorschau in `krk-ui`, und seit der Runde 7 `flock(2)` fuer die beiden
+//! von `text::datei::oeffnen`, seit dem Defekt `260810-1247` vom Leseweg
+//! der Vorschau in `krk-ui` und seit dem Defekt `260814-1612` von
+//! [`verweisziel`], und seit der Runde 7 `flock(2)` fuer die beiden
 //! Sperren der Ablage. Das sind fuenf Schnittstellen und neun gebundene
 //! Funktionen, denn `copyfile(3)` braucht seine vier
 //! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der fuenf
@@ -41,6 +44,14 @@
 //! seinen ganzen Unterbaum. Er ist die fuenfte Eingabe des Pruefschritts in
 //! [`modell`], und die einzige, die von aussen kommt.
 //!
+//! [`verweisziel`] steht wie [`filter`] neben der Kette und nicht in ihr, und
+//! haengt als einziges Modul unmittelbar an [`sys`]: es beantwortet die eine
+//! Frage, die der Leser bewusst offenlaesst, naemlich worauf eine Verknuepfung
+//! zeigt. Gefragt wird sie am Deskriptor und erst dann, wenn jemand in eine
+//! Verknuepfung einsteigen will; der Lesevorgang bekommt dafuer keinen
+//! zusaetzlichen Systemaufruf, weil an seiner Rechnung die Zusagen L3 und L10
+//! haengen.
+//!
 //! Der Kern kennt AppKit nicht; alles hier ist ohne Fenster testbar.
 
 use std::path::{Path, PathBuf};
@@ -53,12 +64,14 @@ pub mod leser;
 pub mod modell;
 pub mod sortierung;
 pub mod sys;
+pub mod verweisziel;
 
 pub use durchlauf::{Auftrag, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
+pub use verweisziel::Verweisziel;
 
 /// Der uebergeordnete Ordner und der Name des verlassenen (C2).
 ///

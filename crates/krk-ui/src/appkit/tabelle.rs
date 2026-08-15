@@ -166,6 +166,7 @@ use objc2_foundation::{
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
+use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{
     Eintrag, Markierungsstand, Ordnermodell, Schluessel, Sortierung, Typ, aufwaerts,
 };
@@ -320,6 +321,32 @@ pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 /// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
 /// darueber.
 pub type Auswahlmelder = Box<dyn Fn(Option<PathBuf>)>;
+
+/// Was ein Einstiegsversuch in eine Zeile ergeben hat.
+///
+/// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**, und
+/// der dritte ist der Grund, aus dem hier eine Aufzaehlung steht, wo bis zum
+/// Defekt `260814-1612` ein Wahrheitswert genuegte: eine Verknuepfung, deren
+/// Ziel nicht erreichbar ist, ist weder ein Einstieg noch etwas, das der
+/// Aufrufer an das System weiterreichen sollte. Sie ist gemeldet, und das ist
+/// eine dritte Antwort.
+///
+/// `#[must_use]`, weil ein stilles Fallenlassen unbemerkt bliebe: der
+/// Doppelklick verzweigt daran, und ohne die Verzweigung oeffnete er eine Datei
+/// nicht mehr. Der eine Aufrufer, der die Antwort nicht braucht, schreibt
+/// `let _ =` und sagt damit ausdruecklich, dass er sie nicht braucht.
+#[must_use]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Einstieg {
+    /// Der Ordner wird gelesen.
+    Eingestiegen,
+    /// Kein Ordner, oder die Zeile gibt es nicht. Was sonst geschieht,
+    /// entscheidet der Aufrufer.
+    KeinOrdner,
+    /// Eine Verknuepfung, deren Ziel sich nicht aufloesen laesst. Der Grund
+    /// steht bereits in der Statuszeile; der Aufrufer tut nichts weiter.
+    Gemeldet,
+}
 
 /// Was die Datenquelle haelt.
 pub struct QuelleIvars {
@@ -1066,6 +1093,12 @@ impl DateifensterQuelle {
     /// [`Kommando::MitStandardprogrammOeffnen`] gibt auch einen Ordner an das
     /// System, und der Nutzer hat damit beide Wege.
     ///
+    /// **Was ein Ordner ist, entscheidet dabei [`Self::in_zeile_einsteigen`]**
+    /// und nicht dieser Rumpf; seit dem Defekt `260814-1612` zaehlt eine
+    /// Verknuepfung auf einen Ordner mit. Eine dritte Antwort kommt von dort:
+    /// eine Verknuepfung, deren Ziel sich nicht aufloesen laesst, ist gemeldet
+    /// und geht nicht an das Standardprogramm.
+    ///
     /// **Die zweite Ungleichheit ist die Menge.** Die Taste erbt
     /// [`Self::betroffene_eintraege`] und oeffnet alle betroffenen Eintraege;
     /// der Doppelklick nimmt genau die angeklickte Zeile. Eine Markierung
@@ -1108,8 +1141,13 @@ impl DateifensterQuelle {
         let Ok(zeile) = usize::try_from(zeile) else {
             return;
         };
-        if self.in_zeile_einsteigen(zeile) {
-            return;
+        match self.in_zeile_einsteigen(zeile) {
+            // Gemeldet ist gemeldet: eine Verknuepfung, deren Ziel fehlt, geht
+            // nicht auch noch an das System, das an ihr ebenso scheiterte und
+            // die eben geschriebene Statuszeile mit seiner eigenen Antwort
+            // ueberschriebe.
+            Einstieg::Eingestiegen | Einstieg::Gemeldet => return,
+            Einstieg::KeinOrdner => {}
         }
         let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
             return;
@@ -1322,8 +1360,9 @@ impl DateifensterQuelle {
     ///
     /// Eine Datei oeffnet nichts: das Ansehen und das Bearbeiten sind eigene
     /// Funktionen und kommen mit dem Editor, nicht mit diesem Schritt. Einer
-    /// symbolischen Verknuepfung folgt KRK hier ebenfalls nicht, weil der Leser
-    /// sie als Verknuepfung meldet und nicht als das, worauf sie zeigt.
+    /// symbolischen Verknuepfung folgt KRK hier seit dem Defekt `260814-1612`
+    /// dagegen schon: zeigt sie auf einen Ordner, geht der Einstieg hinein. Wo
+    /// das entschieden wird, steht bei [`Self::in_zeile_einsteigen`].
     ///
     /// Der Rechts-Pfeil ist seit C3 der Runde 4 nicht mehr der einzige
     /// Einstieg; der Doppelklick nimmt denselben Weg. Was diese Funktion
@@ -1335,8 +1374,9 @@ impl DateifensterQuelle {
             return;
         };
         // Der Rueckgabewert interessiert hier nicht: auf einer Datei loest der
-        // Rechts-Pfeil unveraendert nichts aus.
-        self.in_zeile_einsteigen(zeile);
+        // Rechts-Pfeil unveraendert nichts aus, und eine unerreichbare
+        // Verknuepfung hat ihre Meldung schon gesetzt.
+        let _ = self.in_zeile_einsteigen(zeile);
     }
 
     /// Steigt in den Ordner dieser Zeile hinein und meldet, ob es einer war.
@@ -1347,36 +1387,86 @@ impl DateifensterQuelle {
     /// `selectedRow`, der Doppelklick `clickedRow`. Alles danach ist dasselbe,
     /// und deshalb steht es hier und nicht zweimal.
     ///
-    /// `false` heisst "diese Zeile war kein Ordner" **und** "diese Zeile gibt
-    /// es nicht"; beides fuehrt zu keinem Einstieg, und ein Aufrufer, der die
-    /// Faelle trennen wollte, fragte danach ohnehin
+    /// [`Einstieg::KeinOrdner`] heisst "diese Zeile war kein Ordner" **und**
+    /// "diese Zeile gibt es nicht"; beides fuehrt zu keinem Einstieg, und ein
+    /// Aufrufer, der die Faelle trennen wollte, fragte danach ohnehin
     /// [`Self::eintrag_in_zeile`].
-    fn in_zeile_einsteigen(&self, zeile: usize) -> bool {
-        let Some((ziel, ist_ordner)) = self.eintrag_in_zeile(zeile) else {
-            return false;
+    ///
+    /// # Eine Verknuepfung wird hier aufgeloest und nicht beim Lesen
+    ///
+    /// Der Verzeichnisleser folgt keiner Verknuepfung: er meldet sie als
+    /// [`Typ::Verknuepfung`], gleichgueltig worauf sie zeigt, und `ist_ordner`
+    /// antwortet fuer sie deshalb mit `false`. Bis zum Defekt `260814-1612`
+    /// endete der Einstieg damit, und eine Verknuepfung auf einen Ordner liess
+    /// sich nicht betreten.
+    ///
+    /// Aufgeloest wird sie **allein an dieser Stelle**, ueber
+    /// [`verweisziel::bestimmen`] am Deskriptor, und **nur fuer eine
+    /// Verknuepfung**. Der Lesevorgang bekommt dafuer keinen zusaetzlichen
+    /// Systemaufruf: an seiner Rechnung haengen die Zeitzusagen L3 und L10, und
+    /// ein `stat` je Verknuepfung bei jeder Anzeige aenderte sie. Der eine
+    /// Aufruf faellt an, wenn der Nutzer tatsaechlich hineingeht.
+    ///
+    /// **Die anderen Rufer von `Eintrag::ist_ordner` bleiben, wie sie sind**,
+    /// weil sie eine andere Frage stellen: `kommandos::operationen` zaehlt
+    /// Ordner einer Auswahl fuer eine Dateioperation, und dort ist die
+    /// Verknuepfung selbst das Ziel und nicht ihr Verweisziel. Dieselbe
+    /// Trennung, die `text::datei::lesen` und `pfadeingabe::pruefen` schon
+    /// ziehen: als Ziel eines Sprungs gilt das Verweisziel, in der Liste die
+    /// Verknuepfung.
+    fn in_zeile_einsteigen(&self, zeile: usize) -> Einstieg {
+        let Some((ziel, typ)) = self.eintrag_in_zeile(zeile) else {
+            return Einstieg::KeinOrdner;
+        };
+        let ist_ordner = match typ {
+            Typ::Ordner => true,
+            // Eine Datei bleibt eine Datei: der Doppelklick gibt sie an das
+            // System, der Rechts-Pfeil tut nichts. Kein Systemaufruf.
+            Typ::Datei => false,
+            Typ::Verknuepfung => match verweisziel::bestimmen(&ziel) {
+                Verweisziel::Ordner => true,
+                // Zeigt sie auf eine Datei, geschieht, was bei einer Datei
+                // geschieht: der Aufrufer reicht sie an das System, und das
+                // loest sie seinerseits auf.
+                Verweisziel::KeinOrdner => false,
+                // Ins Leere, im Ring oder ohne Recht: nicht still verschlucken.
+                // Die Statuszeile aus C1 ist die eine Meldeflaeche dafuer,
+                // dieselbe, die "die Zwischenablage ist leer" traegt.
+                Verweisziel::Unerreichbar { grund } => {
+                    self.befehlsantwort_zeigen(&format!(
+                        "{} lässt sich nicht öffnen: {grund}",
+                        ziel.display()
+                    ));
+                    return Einstieg::Gemeldet;
+                }
+            },
         };
         if !ist_ordner {
-            return false;
+            return Einstieg::KeinOrdner;
         }
         self.ordner_lesen(&ziel, None);
-        true
+        Einstieg::Eingestiegen
     }
 
-    /// Der volle Pfad des Eintrags in dieser Zeile und ob er ein Ordner ist.
+    /// Der volle Pfad des Eintrags in dieser Zeile und seine Art.
     ///
     /// Die eine Stelle dieses Weges, die eine Zeilennummer in einen Pfad
     /// uebersetzt. Die Pfadarithmetik `ordner.join(name)` steht daneben nur
     /// noch in [`operationen::betroffene`], und die beantwortet eine andere
     /// Frage: nicht "welche Zeile", sondern "welche Eintraege sind betroffen".
     ///
+    /// Geliefert wird der [`Typ`] und nicht mehr die Antwort von `ist_ordner`:
+    /// [`Self::in_zeile_einsteigen`] behandelt die drei Arten verschieden, und
+    /// ein Wahrheitswert warf zwei von ihnen zusammen.
+    ///
     /// Die Ausleihe des Tabmodells endet mit der Rueckgabe: der Pfad ist
     /// eigener Besitz, und der Aufrufer darf danach AppKit rufen.
-    fn eintrag_in_zeile(&self, zeile: usize) -> Option<(PathBuf, bool)> {
+    fn eintrag_in_zeile(&self, zeile: usize) -> Option<(PathBuf, Typ)> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
         tab.modell()
             .zeile(zeile)
-            .map(|eintrag| (tab.ordner().join(&eintrag.name), eintrag.ist_ordner()))
+            .map(|eintrag| (tab.ordner().join(&eintrag.name), eintrag.typ))
     }
 
     /// Steigt in den uebergeordneten Ordner auf (C2).
