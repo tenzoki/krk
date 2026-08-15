@@ -35,3 +35,26 @@ sucht) und „das Gerät war langsam" (kein Defekt). Wer sie anhebt, verlängert
 wer die Durchläufe senkt, schwächt den Beleg. Ein dritter Weg wäre, den Ausfall an der
 Frage aufzuhängen, die die Probe wirklich stellt — ob **ein einzelner** Aufruf hängt —,
 statt an der Gesamtdauer.
+
+---
+
+## Nachmessung des Orchestrators vom 260816-0100
+
+Die Quote ist deutlich schlechter als „gelegentlich", und der Ausfall hängt
+nicht an der Änderung dieser Runde:
+
+| Stand | Läufe | Ausfälle |
+|---|---|---|
+| Arbeitsbaum mit dem Aufschub (T4) | 5 | 4 |
+| Unveränderter HEAD `ca81e82`, dieselbe Maschine, dieselbe Minute | 3 | 2 |
+
+Jeder Ausfall endet nach 15,0 Sekunden, also an der Notbremse, und nicht an
+einer Zusage der Probe. Der Vergleich am unveränderten HEAD ist mit
+`git stash push` über die drei geänderten Codedateien gefahren; die Probe liegt
+in `krk-core` und kann von einer Änderung in `krk-ui` ohnehin nicht erreicht
+werden.
+
+**Die Folge wiegt schwerer als die Probe.** `make check` ist das Abnahmekommando
+dieses Projekts, und es fällt derzeit in rund zwei Dritteln der Läufe aus einem
+Grund aus, der mit dem Geprüften nichts zu tun hat. Ein Tor, das zufällig
+schließt, wird umgangen. Verwandt: `shared/issues/260815-1019_o_die-wettrennprobe-des-oeffnens-ist-lastabhaengig-und-ihre-marge-traegt-keinen-parallelen-bau.md`.

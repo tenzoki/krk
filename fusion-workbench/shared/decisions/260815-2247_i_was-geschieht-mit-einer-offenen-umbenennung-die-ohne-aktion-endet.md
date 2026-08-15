@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator
 **Cross-references:** shared/issues/260815-2125_o_verlaesst-der-nutzer-die-offene-namenszelle-bleibt-der-getippte-text-stehen-und-das-ordnerzeichen-weg.md, shared/issues/260815-2204_o_der-doc-kommentar-von-umbenennung-beenden-nennt-den-fokusverlust-als-aufrufer-die-messung-derselben-sitzung-widerlegt-das.md, shared/decisions/260815-2056_i_woran-erkennt-der-nutzer-in-der-dateiliste-einen-ordner.md
 
@@ -96,6 +96,6 @@ vorhandenen Mechanismus aufgefallen und keines davon hier entschieden:
 
 ---
 Answered: shared/decisions/260815-2247_a_was-geschieht-mit-einer-offenen-umbenennung-die-ohne-aktion-endet.md §Nutzerentscheid — Option 1, die Auffrischung wird aufgeschoben, solange eine Namenszelle offen steht.
-Implemented:
+Implemented: 27dca57 — der Aufschub sitzt in `auffrischung::ordner_neu_lesen`, nicht in `aufgeschobene_ordner`; das Nachholen hängt an `-[NSTextField textDidEndEditing:]` und `abortEditing`, zusammen sieben gemessene Enden ohne Lücke. Der zweite der beiden offenen Punkte, der Takt eines laufenden Lesevorgangs, ist mit Grund **nicht** abgedeckt und steht als `shared/issues/260816-0040_o_…`.
 Deferred:
 Superseded by:
