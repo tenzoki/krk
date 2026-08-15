@@ -65,3 +65,33 @@ Sperrgrund, und die gehärtete Laufzeitumgebung ändert daran nichts.
 
 Gemeinsamer Speicher. Betrifft den Bauweg des ganzen Projekts und nicht die Directive einer
 Runde.
+
+---
+Resolved: Beide Zweige nennen die fehlende gehärtete Laufzeitumgebung, und zwar nicht als
+Zusatz je Zweig, sondern im gemeinsamen Teil: „Beglaubigt ist es nicht: bundle reicht nichts
+bei Apple ein und heftet kein Ticket an, und signiert ist es ohne gehaertete
+Laufzeitumgebung, ohne die Apple keine Beglaubigung annimmt." Die Wendung „und damit richtig"
+ist gefallen; sie gab die Signaturform als erledigt aus, was dieser Datensatz genau
+beanstandet.
+
+Der Schlusssatz über `cargo xtask release` nennt die gehärtete Laufzeitumgebung jetzt
+ebenfalls. Sie ist der eine Unterschied, den `release` gegenüber einer selbst eingereichten
+Signatur bringt, und sie fehlte dort, obwohl der Hilfetext in `main.rs` sie führt.
+
+**Die Bindung an den Hilfetext ist geprüft statt verabredet.** Die neue Probe
+`beide_faelle_nennen_die_fehlende_gehaertete_laufzeitumgebung` hält den Schlusssatz mit einer
+Zusicherung gegen `include_str!("main.rs")` an den Hilfetext: fällt die Wendung dort, fällt
+die Probe. Damit können die zwei Beschreibungen desselben Befehls nicht mehr auseinanderlaufen
+— genau der Fehlertyp, den diese Sitzung an anderer Stelle mehrfach vorgefunden hat.
+
+**Nicht getan, und ausdrücklich:** `bundle` bekommt kein `--options runtime`. Ob es gehärtet
+signieren soll, ist eine eigene Frage, die niemand gestellt hat und die Verhalten ändern
+würde. Dieser Datensatz verlangt, richtig zu beschreiben, was ist, und das ist geschehen.
+
+Ein Befund über diesen Datensatz hinaus: Gatekeeper stand in zwei Stärken nebeneinander, „auf
+einem anderen Mac" gegen „auf jedem anderen Mac". Genommen ist die schwächere. Ein Bündel,
+das ohne Quarantänemarke auf einen zweiten Mac kommt, etwa über rsync, scp oder git, wird
+nicht angehalten; „jedem" war schon vor dieser Runde zu stark.
+
+Geprüft mit `cargo fmt --all --check && cargo clippy --workspace --all-targets && cargo test
+--workspace`, Exit 0.

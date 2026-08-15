@@ -143,12 +143,34 @@ fn developer_id_namen(namen: &[String]) -> Vec<String> {
 /// abgewiesen worden, und der Nutzer hat KRK fuer beschaedigt gehalten
 /// (`shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`).
 ///
-/// **Unterschieden wird nach der Art der Identitaet und nicht nach dem
-/// Unterbefehl.** Wer `bundle` ueber [`UMGEBUNGSVARIABLE`] mit einer
-/// Developer-ID signiert, hat das Signaturproblem nicht, und ein pauschaler
-/// Warnsatz waere dort falsch. Die Grenze ist [`DEVELOPER_ID_PRAEFIX`],
-/// dieselbe wie in [`bestimmen_fuer_release`]; eine zweite Wahrheit daneben
-/// entsteht nicht.
+/// **Der Hinweis nennt Folgen und ordnet kein Zertifikat ein.** Was `bundle`
+/// tut, steht ohne jede Ruecksicht auf die Identitaet fest: es reicht nichts
+/// bei Apple ein und heftet kein Ticket an, und es signiert ueber
+/// [`signieren`] ohne `--options runtime` — die gehaertete Laufzeitumgebung
+/// setzt allein [`signieren_gehaertet`], und das ruft nur `release`. Ohne sie
+/// nimmt Apple keine Beglaubigung an. Diese beiden Saetze sind die ganze
+/// Auskunft, und sie stehen darum im gemeinsamen Teil.
+///
+/// Die eine Verzweigung sagt dazu, was am **Namen** ablesbar ist, und nicht
+/// mehr: traegt er [`DEVELOPER_ID_PRAEFIX`], ist es eine Developer-ID, sonst
+/// ist er nicht der einer Developer-ID. Der Auffangzweig behauptet
+/// ausdruecklich keine Art. `codesign --sign` nimmt ueber
+/// [`UMGEBUNGSVARIABLE`] auch eine Teilzeichenfolge des Common Name oder den
+/// SHA-1-Abdruck an, und beide koennen eine Developer-ID waehlen, ohne das
+/// Praefix zu tragen; die dritte Stufe von [`bestimmen`] nimmt daneben die
+/// einzige gueltige Identitaet des Schluesselbunds gleich welcher Art. Ein
+/// Satz wie "einer Entwicklungsidentitaet" oder "bleibt auf dieser Maschine"
+/// waere in diesen Faellen falsch
+/// (`shared/issues/260815-1444_*_der-weitergabehinweis-erklaert-jede-nicht-developer-id-zur-entwicklungsidentitaet.md`).
+/// **Aufgeloest wird die Art bewusst nicht:** das kostete einen
+/// `security`-Aufruf samt eigener Fehlerlage im Hinweispfad, und fuer die
+/// Folge, die der Hinweis nennt, aendert die Art nichts.
+///
+/// Der Schlusssatz beschreibt `cargo xtask release` in den Worten des
+/// Hilfetexts aus `main.rs`, gehaerteter Laufzeitumgebung eingeschlossen: sie
+/// ist der eine Unterschied gegenueber einer selbst eingereichten Signatur,
+/// und zwei Beschreibungen desselben Befehls sollen nicht nebeneinander stehen
+/// (`shared/issues/260815-1445_*_der-developer-id-zweig-nennt-die-fehlende-beglaubigung-und-nicht-die-fehlende-gehaertete-laufzeitumgebung.md`).
 ///
 /// Die Architektur steht in beiden Faellen, denn sie haengt nicht an der
 /// Identitaet: `bundle` uebersetzt ohne Ziel-Tripel, also fuer die Architektur
@@ -169,25 +191,20 @@ fn developer_id_namen(namen: &[String]) -> Vec<String> {
 /// den er zeigt, und bekommt ihn nicht.
 #[must_use]
 pub fn weitergabehinweis(identitaet: &str, architektur: &str) -> String {
-    let lage = if identitaet.starts_with(DEVELOPER_ID_PRAEFIX) {
-        format!(
-            "signiert ist dieses Buendel mit der Developer-ID {identitaet:?} und damit richtig. \
-             Beglaubigt ist es nicht: bundle reicht nichts bei Apple ein und heftet kein Ticket \
-             an, und ohne Beglaubigung weist Gatekeeper es auf einem anderen Mac ab"
-        )
+    let signatur = if identitaet.starts_with(DEVELOPER_ID_PRAEFIX) {
+        format!("mit der Developer-ID {identitaet:?}")
     } else {
-        format!(
-            "dieses Buendel bleibt auf dieser Maschine. Signiert ist es mit {identitaet:?}, \
-             einer Entwicklungsidentitaet, und Gatekeeper weist ein so signiertes Buendel auf \
-             jedem anderen Mac als moegliche Schadsoftware ab"
-        )
+        format!("mit {identitaet:?}, und dieser Name ist nicht der einer Developer-ID")
     };
     format!(
-        "Weitergabe: {lage}. Universell ist es ausserdem nicht: gebaut wurde allein fuer \
-         {architektur}.\n\
+        "Weitergabe: signiert ist dieses Buendel {signatur}. Beglaubigt ist es nicht: bundle \
+         reicht nichts bei Apple ein und heftet kein Ticket an, und signiert ist es ohne \
+         gehaertete Laufzeitumgebung, ohne die Apple keine Beglaubigung annimmt. Ohne \
+         Beglaubigung weist Gatekeeper es auf einem anderen Mac ab. Universell ist es \
+         ausserdem nicht: gebaut wurde allein fuer {architektur}.\n\
          Wer weitergeben will, nimmt \"cargo xtask release\": es baut beide Mac-Architekturen \
-         und fuegt sie zusammen, signiert mit einer Developer-ID und heftet nach der \
-         Beglaubigung das Ticket an."
+         und fuegt sie zusammen, signiert mit einer Developer-ID-Identitaet und gehaerteter \
+         Laufzeitumgebung und heftet nach der Beglaubigung das Ticket an."
     )
 }
 
@@ -572,32 +589,80 @@ Policy: Code Signing
 
     /// Der Fall vom 260812, an dem der Hinweis haengt.
     ///
-    /// "Apple Development: …" beginnt nicht mit [`DEVELOPER_ID_PRAEFIX`], ist
-    /// also eine Entwicklungsidentitaet. Genau damit signiert war das Buendel,
-    /// das der zweite Mac als moegliche Schadsoftware abgewiesen hat.
+    /// "Apple Development: …" beginnt nicht mit [`DEVELOPER_ID_PRAEFIX`]. Der
+    /// Hinweis sagt darum, was am Namen steht, und schreibt der Identitaet
+    /// keine Art zu: das Wort "Entwicklungsidentitaet" faellt ebenso wie der
+    /// Satz "bleibt auf dieser Maschine", der bei einer ueber den Abdruck
+    /// gewaehlten Developer-ID nicht zutraefe.
     #[test]
-    fn eine_apple_development_identitaet_bekommt_die_maschinengrenze_genannt() {
+    fn ein_name_ohne_developer_id_praefix_bekommt_keine_art_zugeschrieben() {
         let namen = gueltige_namen(GUELTIGE_EINE);
         let text = weitergabehinweis(&namen[0], "x86_64");
-        assert!(text.contains("bleibt auf dieser Maschine"), "{text}");
-        assert!(text.contains("Entwicklungsidentitaet"), "{text}");
-        assert!(text.contains("moegliche Schadsoftware"), "{text}");
         assert!(text.contains(&namen[0]), "{text}");
+        assert!(text.contains("nicht der einer Developer-ID"), "{text}");
+        assert!(!text.contains("Entwicklungsidentitaet"), "{text}");
+        assert!(!text.contains("bleibt auf dieser Maschine"), "{text}");
+    }
+
+    /// Ein SHA-1-Abdruck ist eine gueltige Auswahl und traegt kein Praefix.
+    ///
+    /// `codesign --sign` nimmt in [`UMGEBUNGSVARIABLE`] neben dem vollen Namen
+    /// auch eine Teilzeichenfolge des Common Name und den Abdruck des
+    /// Zertifikats an, und beide koennen eine Developer-ID waehlen. Auf diesem
+    /// Weg kam der Befund herein
+    /// (`shared/issues/260815-1444_*_der-weitergabehinweis-erklaert-jede-nicht-developer-id-zur-entwicklungsidentitaet.md`);
+    /// der Hinweis darf hier nichts einordnen.
+    #[test]
+    fn ein_sha1_abdruck_als_identitaet_bekommt_keine_art_zugeschrieben() {
+        let abdruck = "8C11B4E60A2D77F5913EE0A4C2B8D6F30947AA12";
+        let text = weitergabehinweis(abdruck, "arm64");
+        assert!(text.contains(abdruck), "{text}");
+        assert!(!text.contains("Entwicklungsidentitaet"), "{text}");
+        assert!(!text.contains("bleibt auf dieser Maschine"), "{text}");
     }
 
     /// Bei einer Developer-ID faellt der Warnsatz zur Signatur weg.
     ///
     /// Wer `bundle` ueber die Umgebungsvariable mit einer Developer-ID
-    /// signiert, hat richtig signiert; ein pauschaler Warnsatz waere dort
-    /// falsch. Offen bleibt allein die Beglaubigung.
+    /// signiert, bekommt sie beim Namen genannt. "und damit richtig" faellt
+    /// trotzdem: der Halbsatz traf die Identitaet und gab die Signaturform als
+    /// erledigt aus, die es ohne gehaertete Laufzeitumgebung nicht ist
+    /// (`shared/issues/260815-1445_*_der-developer-id-zweig-nennt-die-fehlende-beglaubigung-und-nicht-die-fehlende-gehaertete-laufzeitumgebung.md`).
     #[test]
     fn eine_developer_id_wird_nicht_fuer_falsch_signiert_erklaert() {
         let namen = developer_id_namen(&gueltige_namen(GUELTIGE_ZWEI));
         let text = weitergabehinweis(&namen[0], "x86_64");
-        assert!(text.contains("damit richtig"), "{text}");
+        assert!(text.contains(&namen[0]), "{text}");
+        assert!(text.contains("mit der Developer-ID"), "{text}");
         assert!(text.contains("Beglaubigt ist es nicht"), "{text}");
+        assert!(!text.contains("damit richtig"), "{text}");
+        assert!(!text.contains("nicht der einer Developer-ID"), "{text}");
         assert!(!text.contains("Entwicklungsidentitaet"), "{text}");
-        assert!(!text.contains("moegliche Schadsoftware"), "{text}");
+    }
+
+    /// Die fehlende gehaertete Laufzeitumgebung steht in beiden Faellen.
+    ///
+    /// Sie haengt an keiner Identitaet: `bundle` signiert ueber
+    /// [`signieren`] ohne `--options runtime`, und `notarytool` weist ein so
+    /// signiertes Buendel ab. Wer den Hinweis liest und selbst einreicht, muss
+    /// das vorher wissen. Der Schlusssatz nennt sie als das, was `release`
+    /// zusaetzlich tut, und zwar in den Worten des Hilfetexts aus `main.rs`.
+    #[test]
+    fn beide_faelle_nennen_die_fehlende_gehaertete_laufzeitumgebung() {
+        let entwicklung = gueltige_namen(GUELTIGE_EINE);
+        let developer_id = developer_id_namen(&gueltige_namen(GUELTIGE_ZWEI));
+        for name in [&entwicklung[0], &developer_id[0]] {
+            let text = weitergabehinweis(name, "arm64");
+            assert!(text.contains("ohne gehaertete Laufzeitumgebung"), "{text}");
+            assert!(text.contains("keine Beglaubigung annimmt"), "{text}");
+            assert!(text.contains("und gehaerteter Laufzeitumgebung"), "{text}");
+        }
+        // Eine Beschreibung von `release`, nicht zwei: der Hilfetext traegt
+        // dieselbe Wendung. Faellt sie dort, faellt diese Probe.
+        assert!(
+            include_str!("main.rs").contains("und gehaerteter Laufzeitumgebung"),
+            "der Hilfetext in main.rs nennt die gehaertete Laufzeitumgebung nicht mehr"
+        );
     }
 
     /// Die zweite Luecke haengt an keiner Identitaet.

@@ -84,3 +84,33 @@ ein Zertifikat einordnen.
 
 Gemeinsamer Speicher. Betrifft den Bauweg des ganzen Projekts und nicht die Directive einer
 Runde.
+
+---
+Resolved: Möglichkeit 1 gefahren, wie dieser Datensatz sie empfiehlt: keine Auflösung der
+Identitätsart am Schlüsselbund, kein `security`-Aufruf im Hinweispfad. Der Auffangzweig
+behauptet keine Art mehr, sondern sagt, was feststeht — `mit {name}, und dieser Name ist
+nicht der einer Developer-ID`. Damit sind alle vier in der Tabelle oben genannten Fälle
+richtig beschrieben, der SHA-1-Abdruck und die Teilzeichenfolge eingeschlossen.
+
+**Der Schnitt liegt tiefer als der Befund.** Vorher trug jeder Zweig seine eigene Folgenkette
+und beide waren unvollständig. Jetzt trägt die Verzweigung allein die Aussage über den
+**Namen**; alles, was ohne Rücksicht auf die Identität gilt, steht einmal im gemeinsamen
+Teil. Damit kann ein Zweig nicht mehr eine Folge nennen, die dem anderen fehlt.
+
+`bleibt auf dieser Maschine` ist gefallen, weil es bei einer über den Abdruck gewählten
+Developer-ID nicht stimmt. `moegliche Schadsoftware` ist im Hinweis ebenfalls gefallen: der
+Wortlaut stammt aus dem Vorfall vom 260812 über eine Entwicklungsidentität, und ihn im
+Auffangzweig stehenzulassen hieße, die Art durch die Hintertür wieder zu behaupten. Im
+Modulkopf bleibt er, dort beschreibt er den Vorfall.
+
+**Der Leitsatz des Modulkopfs war mitbetroffen und ist ersetzt.** Er sagte, unterschieden
+werde „nach der Art der Identitaet und nicht nach dem Unterbefehl". Der Teil über den
+Unterbefehl stimmt; die Verzweigung liest aber nicht die Art, sondern den Namen, und der Satz
+hat die falsche Einordnung mitgetragen.
+
+Proben: `eine_apple_development_identitaet_bekommt_die_maschinengrenze_genannt` ist zu
+`ein_name_ohne_developer_id_praefix_bekommt_keine_art_zugeschrieben` geworden und prüft die
+Abwesenheit beider gestrichener Wendungen; neu ist
+`ein_sha1_abdruck_als_identitaet_bekommt_keine_art_zugeschrieben`, weil das der Weg ist, auf
+dem der Befund hereinkam. Geprüft mit `cargo fmt --all --check && cargo clippy --workspace
+--all-targets && cargo test --workspace`, Exit 0, 1195 Proben.
