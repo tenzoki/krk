@@ -76,3 +76,20 @@ ist: **vier Beschreibungsstellen in zwei Dateien, davon drei in einem Modulkopf.
 Zahl sind hier nicht angefasst — der Titel benennt den Fehler und nicht den Tagesstand, und
 die Liste im Rumpf ist vollständig; wer den Datensatz abarbeitet, geht nach der Liste und
 nicht nach der Zahl davor.
+
+---
+Nachtrag 260815-1844 (coderev, Durchsicht `e37a1e3..60a8ca5`): **Drei weitere
+Beschreibungsstellen derselben Art, und sie stehen in den zwei Dateien, die `7fae5ba` selbst
+angefasst hat.** Kein eigener Datensatz, weil es dieselbe Sorte Befund ist; die Liste im
+Rumpf oben wächst damit von vier auf sieben Stellen.
+
+| Stelle | Was dort steht | Warum es nicht mehr trägt |
+|---|---|---|
+| `crates/krk-core/src/verzeichnis/verweisziel.rs:49-53` | „Dieses Modul benutzt seinen Deskriptor nicht. Es gibt ihn am Ende der Funktion sofort wieder ab" | Das Modul hat seit `7fae5ba` gar keinen Deskriptor mehr. Der Absatz argumentiert gegen den alten Weg, steht aber im Präsens und beschreibt damit dem Leser einen Deskriptor, den es nicht gibt. Der Halbsatz danach, dass der Aufrufer den Pfad ein zweites Mal öffnet, stimmt unverändert. |
+| `crates/krk-core/tests/verzeichnis.rs:1843-1845` | „Aufgeloest wird sie erst hier, am Deskriptor, und erst dann, wenn jemand hineingehen will" | Aufgelöst wird am Namen. Die zweite Hälfte des Satzes, „erst dann, wenn jemand hineingehen will", bleibt richtig und ist der eigentliche Punkt der Probe. |
+| `crates/krk-core/tests/verzeichnis.rs:1934-1937` | „`ELOOP` … kommt aus demselben `open(2)` wie das fehlende Ziel" | Es kommt aus `stat(2)`. Dass derselbe Satz `ELOOP` außerdem auf Ringe verengt, ist ein eigener Befund und steht in `shared/issues/260815-1845_*_der-doc-kommentar-von-unerreichbar-zaehlt-drei-gruende-auf-und-stat-scheitert-an-mehr.md`. |
+
+Die erste Zeile ist die auffälligste, weil sie im **Modulkopf des Verweisziels selbst** steht,
+also in genau der Fassung, aus der die vier älteren Stellen nachgezogen werden sollen. Wer
+sie als Quelle nimmt, übernimmt die Präsensform mit. Zwei Wörter genügen dagegen: der Absatz
+sagt, was das Modul mit einem Deskriptor **täte**, nicht was es tut.
