@@ -71,3 +71,44 @@ Zeitschranke. Wie bei jedem Abnahmelauf dieses Projekts ist das Nutzerarbeit.
 **Ein Nebenbefund:** eine Verknüpfung auf einen Socket kommt als `Unerreichbar` zurück und
 nicht als `KeinOrdner`, weil `open(2)` dort mit `ENXIO` scheitert. Der Nutzer bekommt eine
 Meldung statt stiller Wirkungslosigkeit; richtig eingeordnet ist es nicht.
+
+---
+Abgleich 260815-1812 (reconciler): **Der Marker ist von `_p_` auf `_o_` gezogen, und zwei
+Aussagen der Notiz vom 260815-1700 sind seit `7fae5ba` überholt.**
+
+**Zum Marker.** `_p_` heißt nach `rules/fusion-workbench-conventions.md`, Abschnitt
+`## State Markers — issues and planning`, „ein Agent arbeitet aktiv daran". Nach dem Ende
+der Sitzung 260815-1328 arbeitet niemand daran: `agentstate.yaml` führt die Aufgabe `I:7`
+als `done` mit Commit `8c06747`, und der Sitzungslauf ist beendet. Das Vokabular der
+Defektdatensätze kennt vier Werte, und von `_o_`, `_p_`, `_c_`, `_d_` beschreibt allein
+`_o_` die Lage „nicht abgeschlossen, niemand arbeitet daran". `_c_` wäre falsch, weil die
+Abnahme aussteht; `_d_` verlangt nach derselben Regel eine Entscheidung des Nutzers und
+steht dem Abgleich nicht zu. Gezogen ist deshalb `_o_`.
+
+**Der Sache nach ist der Datensatz weder offen noch geschlossen**, sondern in derselben Lage
+wie die neun beschränkt geschlossenen Runden dieses Projekts: gebaut, im Kern geprüft, nicht
+abgenommen, weil der Lauf KRK im Vordergrund verlangt und damit Nutzerarbeit ist. Ein
+Gegenstück zum Circle-Marker `_b_` hat das Defektvokabular nicht. Ob dieser Datensatz
+stattdessen als `_d_` mit dem Ziel „nächster Abnahmelauf des Nutzers" stehen soll, ist eine
+Frage an den Nutzer und hier nicht entschieden.
+
+**Zwei überholte Aussagen der Notiz vom 260815-1700.**
+
+1. „Sie fragt über `sys::ohne_warten_oeffnen` und ist deren dritter Rufer neben dem Editor
+   und der Vorschau." Seit `7fae5ba` fragt `verweisziel::bestimmen` über
+   `std::fs::metadata` (`crates/krk-core/src/verzeichnis/verweisziel.rs:164-165`), und die
+   Hülle hat wieder genau zwei Rufer: `grep -rn 'ohne_warten_oeffnen' crates/` findet am
+   260815-1812 die Aufrufstellen `text/datei.rs:414` und `vorschaumodell.rs:679`, alles
+   übrige sind Verweise in Prosa. Der Anlass des Wechsels ist
+   `shared/issues/260815-1713_*_verweisziel-beantwortet-die-ordnerfrage-mit-open-und-nicht-mit-stat.md`.
+2. „Eine Verknüpfung auf einen Socket kommt als `Unerreichbar` zurück und nicht als
+   `KeinOrdner`, weil `open(2)` dort mit `ENXIO` scheitert." Am Referenzgerät gemessen
+   scheitert `open(2)` dort mit `EOPNOTSUPP` (os error 102) und nicht mit `ENXIO`, und der
+   Socket war nicht der einzige Fehlfall; die Messreihe steht in `260815-1713`. Seit
+   `7fae5ba` liefert der Socket `KeinOrdner`, der Nebenbefund ist damit behoben.
+
+**Was zum Abschluss unverändert fehlt**, ist der Klicktest am laufenden Bündel. Die
+Auflösung selbst ist im Kern abgedeckt: `cargo test --workspace` läuft am 260815-1812 grün
+(Exit 0), und `crates/krk-core/tests/verzeichnis.rs` prüft `verweisziel::bestimmen` an neun
+Stellen, darunter Ring, benannte Röhre unter Zeitschranke, Datei ohne Leserecht und
+Verzeichnis mit Modus `0111`.

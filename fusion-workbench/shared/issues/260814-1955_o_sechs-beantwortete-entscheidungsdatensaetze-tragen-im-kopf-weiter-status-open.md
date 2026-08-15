@@ -33,3 +33,38 @@ Dazu kommt ein zweiter, kleinerer Befund am selben Ort: `260814-1852_a_raeumt-ei
 ## Was zu tun bleibt
 
 Die sechs Felder sind gesetzt. Offen ist die Ursache: wer einen Datensatz beantwortet, benennt heute die Datei um und schreibt die `Answered:`-Zeile, fasst das Kopffeld aber nicht an. Solange der Schritt einzeln neben der Umbenennung steht, wird er wieder ausgelassen — dieses Projekt hat genau diese Gestalt schon mehrfach als übersprungen gemessen. Die Berichtigung gehört deshalb in denselben Vorgang wie die Umbenennung und nicht daneben.
+
+---
+Abgleich 260815-1812 (reconciler): **Der Bestand ist erledigt, die Ursache steht unverändert,
+und ein zweiter Datensatz hat inzwischen dieselbe Sache anders geschlossen.**
+
+**Der Bestand.** Der Prüflauf über alle Entscheidungsdatensätze läuft am 260815-1812 ohne
+eine einzige Abweichung durch — 137 Datensätze in `shared/decisions` und
+`circles/*/decisions`, Marker und Kopffeld stimmen überall überein. Die sieben Datensätze der
+Tabelle oben sind darunter. Gefahren ist die Berichtigung nicht von diesem Datensatz,
+sondern von `cd0b5b7` über
+`shared/issues/260815-1216_c_vierzehn-entscheidungsdatensaetze-tragen-im-rumpf-einen-anderen-stand-als-im-dateinamen.md`,
+das denselben Befund projektweit erhoben hat.
+
+**Die beiden Datensätze beschreiben eine Sache und schließen verschieden.** `260815-1216`
+ist als `_c_` geschlossen mit der Feststellung, Weg 2 — die Kopfzeile aus der Vorlage nehmen —
+gehöre `fusion` und sei von hier aus nicht gangbar, „der Rest ist als bekannte Lage
+hinzunehmen". Dieser Datensatz bleibt offen und verlangt genau das, was jener als nicht
+gangbar abgelegt hat. Zu entscheiden ist deshalb nicht mehr die Sache, sondern welcher der
+beiden Abschlüsse gilt; solange das offen ist, bleibt der Marker hier `_o_`.
+
+**Der Nebenbefund ist größer als die eine Datei, die er nennt.** Am 260815-1812 über alle
+137 Entscheidungsdatensätze gezählt: **49** tragen eine leere Zeile `Answered:` ohne Inhalt
+dahinter, und **25** tragen zwei `Answered:`-Blöcke, den leeren und einen ausgefüllten
+darunter — also genau die Gestalt, die dieser Datensatz an
+`260814-1852_a_raeumt-ein-gehaltener-rueckschritt-…` beschreibt. Alle 25 mit doppeltem Block
+sind unter den 49. Ein Suchmuster auf einen leeren `Answered:`-Block meldet damit 49
+angeblich unbeantwortete Datensätze; unbeantwortet sind 24 (`_o_`), und die beiden Mengen
+decken sich nicht. Nachzuzählen mit:
+
+```sh
+cd fusion-workbench
+for f in shared/decisions/*.md circles/*/decisions/*.md; do
+  printf '%s %s %s\n' "$(grep -cE '^Answered: *$' "$f")" "$(grep -c '^Answered:' "$f")" "$f"
+done
+```

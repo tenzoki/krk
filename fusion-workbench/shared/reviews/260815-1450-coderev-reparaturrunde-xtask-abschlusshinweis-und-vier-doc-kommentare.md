@@ -167,3 +167,22 @@ Kein Auslieferungshindernis. Keiner der fünf Befunde ändert Verhalten, Bau ode
 3. **M3** und **N1** zusammen — beides Proben, beides in derselben Sitzung.
 4. **M4** ist eine Nutzerfrage vor einer Codeänderung: Zahlen verankern oder aus der Prosa
    nehmen, wie `CLAUDE.md` es getan hat.
+
+---
+Abgleich 260815-1812 (reconciler), nur Statusvermerk — keine Aussage dieser Durchsicht ist
+geändert.
+
+Von den fünf abgelegten Datensätzen sind zwei geschlossen und drei stehen offen:
+
+| Datensatz | Stand am 260815-1812 | Beleg |
+|---|---|---|
+| `260815-1444` Weitergabehinweis erklärt jede Nicht-Developer-ID zur Entwicklungsidentität | `_c_` | `a46fd1f`; `xtask/src/sign.rs:194-198`, Proben `ein_name_ohne_developer_id_praefix_bekommt_keine_art_zugeschrieben` und `ein_sha1_abdruck_als_identitaet_bekommt_keine_art_zugeschrieben` |
+| `260815-1445` Developer-ID-Zweig nennt die gehärtete Laufzeitumgebung nicht | `_c_` | `a46fd1f`; `xtask/src/sign.rs:199-208`, Probe `beide_faelle_nennen_die_fehlende_gehaertete_laufzeitumgebung` bindet über `include_str!("main.rs")` |
+| `260815-1446` Probe zum einen Rufer liest drei von sechs Modulen | `_o_` | `xtask/src/sign.rs:701-707` liest weiter `release.rs`, `messen.rs`, `bundle.rs` |
+| `260815-1447` Paarungsprobe prüft Mitgliedschaft statt Paarung | `_o_` | `xtask/src/release.rs:769` steht unverändert auf `ARCHITEKTUREN.contains(&lipo_name(rust_name))` |
+| `260815-1448` die neun Zahlen stehen unverankert | `_o_` | keine Zusicherung auf 84/78 in `crates/krk-ui/src/belegungsausgabe.rs` |
+
+Die Gegenprüfungen dieser Durchsicht halten: `xtask` fährt am 260815-1812 **98** Proben
+(96 zur Zeit der Durchsicht plus die zwei, die `260815-1444` und `260815-1445` mitgebracht
+haben), `cargo test --workspace` läuft grün, Exit 0. Die Zahlen 84 und 78 sind unabhängig
+nachgezählt und stimmen.

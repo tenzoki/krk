@@ -51,3 +51,28 @@ und ist die Quelle, aus der sie nachgezogen werden koennen.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft den Kern und die Oberflaeche und die Directive keiner Runde.
+
+---
+Abgleich 260815-1812 (reconciler): **Der Befund besteht an allen vier genannten Stellen,
+und die Zahl im Rumpf dieses Datensatzes stimmt nicht mit seiner eigenen Liste überein.**
+
+Am Baum gegengelesen, Stand `7fae5ba`:
+
+| Stelle | Steht dort noch | Nachgelesen |
+|---|---|---|
+| `crates/krk-core/src/verzeichnis/mod.rs:13` | Pfeil `└──> verweisziel` unter `sys` | ja |
+| `crates/krk-core/src/verzeichnis/mod.rs:20-22` | „und seit dem Defekt `260814-1612` von [`verweisziel`]" in der Aufzählung der `fcntl(2)`-Rufer | ja |
+| `crates/krk-core/src/verzeichnis/mod.rs:47-49` | „haengt als einziges Modul unmittelbar an [`sys`]", „Gefragt wird sie am Deskriptor" | ja |
+| `crates/krk-ui/src/appkit/tabelle.rs:1403-1404` | „ueber [`verweisziel::bestimmen`] am Deskriptor" | ja |
+
+Der Widerspruch zu `crates/krk-core/src/verzeichnis/sys.rs:15-16` und `:787-792` besteht
+ebenfalls unverändert: die Hülle führt dort richtig zwei Rufer, `mod.rs` führt drei.
+
+**Zwei Zählangaben dieses Datensatzes tragen nicht.** Der Rumpf sagt „Drei Stellen in zwei
+Dateien" und listet darunter vier, drei in `mod.rs` und eine in `tabelle.rs`. Der Titel sagt
+„Zwei Modulkoepfe"; ein Modulkopf ist darunter, der von `verzeichnis/mod.rs`, die vierte
+Stelle ist der Doc-Kommentar der Methode `in_zeile_einsteigen` und kein Modulkopf. Richtig
+ist: **vier Beschreibungsstellen in zwei Dateien, davon drei in einem Modulkopf.** Titel und
+Zahl sind hier nicht angefasst — der Titel benennt den Fehler und nicht den Tagesstand, und
+die Liste im Rumpf ist vollständig; wer den Datensatz abarbeitet, geht nach der Liste und
+nicht nach der Zahl davor.

@@ -158,3 +158,26 @@ steht als eigener Datensatz
 `shared/issues/260815-1749_o_der-pfadsprung-meldet-den-ordner-ohne-leserecht-und-der-doppelklick-schweigt.md`.
 Vier Beschreibungsstellen ausserhalb der Auftragsgrenzen sind noch nachzuziehen:
 `shared/issues/260815-1752_o_zwei-modulkoepfe-nennen-das-verweisziel-am-deskriptor-obwohl-es-am-pfad-fragt.md`.
+
+---
+Abgleich 260815-1812 (reconciler): **Die Abschlussnotiz hält in der Sache, und einer ihrer
+Verweise zeigt ins Leere.**
+
+**Was nachgemessen ist und hält.** `verweisziel::bestimmen` fragt `std::fs::metadata`
+(`crates/krk-core/src/verzeichnis/verweisziel.rs:164-165`), der Modulkopf trägt die
+Unterscheidung zwischen „wer den Deskriptor benutzt, öffnet" und „wer fragt, fragt am
+Namen" (`:1-10`, `:32-34`). `bestimmen` hat genau einen Rufer im ausgelieferten Code,
+`crates/krk-ui/src/appkit/tabelle.rs:1426`. `cargo test --workspace` läuft grün, Exit 0.
+
+**Der tote Verweis.** Die Notiz nennt die Nutzerfrage als
+`shared/issues/260815-1749_o_der-pfadsprung-meldet-den-ordner-ohne-leserecht-und-der-doppelklick-schweigt.md`.
+Diesen Pfad gibt es nicht und hat es nie gegeben: der Datensatz ist im selben Commit
+`7fae5ba` als **Entscheid** angelegt worden, unter
+`shared/decisions/260815-1749_o_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`.
+Speicher und Namensteil weichen beide ab, die Sternform hilft dagegen nicht — genau die
+Grenze, die `shared/issues/260815-1216_c_sieben-verweise-dieser-sitzung-…` in ihrem
+Abschluss benennt. Dieselbe tote Angabe steht in `crates/krk-core/src/verzeichnis/verweisziel.rs:95`,
+also im lebenden Code, und ist dort als eigener Defekt aufgenommen:
+`shared/issues/260815-1812_o_ein-verweis-im-modulkopf-des-verweisziels-zeigt-auf-einen-datensatz-der-nie-so-hiess.md`.
+Der Marker dieses Datensatzes bleibt `_c_`; berichtigt wird die Fundstelle im Code, nicht
+diese Aufzeichnung.

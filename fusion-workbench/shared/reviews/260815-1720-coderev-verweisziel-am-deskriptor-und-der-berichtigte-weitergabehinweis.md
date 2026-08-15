@@ -200,3 +200,25 @@ Bündel, und der gemeldete Defekt ist behoben.
 3. **M2** ist ein Halbsatz.
 4. **N1** zusammen mit `260815-1446` und `260815-1447`: drei Proben derselben Art, ein
    Durchgang.
+
+---
+Abgleich 260815-1812 (reconciler), nur Statusvermerk — keine Aussage dieser Durchsicht ist
+geändert.
+
+Von den vier abgelegten Datensätzen sind zwei geschlossen und zwei stehen offen:
+
+| Datensatz | Stand am 260815-1812 | Beleg |
+|---|---|---|
+| `260815-1713` Ordnerfrage über `open(2)` statt `stat(2)` (Schwere hoch) | `_c_` | `7fae5ba`; `crates/krk-core/src/verzeichnis/verweisziel.rs:164-165` fragt `std::fs::metadata` |
+| `260815-1714` `sys.rs` und `CLAUDE.md` nennen zwei Rufer, es sind drei | `_c_` | mit `7fae5ba` von selbst erledigt: `grep -rn 'ohne_warten_oeffnen' crates/` findet wieder genau zwei Aufrufstellen |
+| `260815-1715` Aufrufkommentar in `main.rs` | `_o_` | unverändert |
+| `260815-1716` `include_str!`-Bindung koppelt eine Wendung | `_o_` | unverändert |
+
+**Der Befund der Schwere hoch ist behoben, und die Behebung ist selbst nicht durchgesehen.**
+`7fae5ba` liegt hinter dem Bereich dieser Durchsicht (`a2670db..8c06747`) und wird von keiner
+zweiten gedeckt; `bin/fusion-review-coverage` führt ihn unter den sieben ungedeckten Commits.
+Er ist der einzige davon, der Code anfasst. Aufgenommen als
+`shared/issues/260815-1812_*_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md`.
+Der Abgleich hat an `7fae5ba` zwei Abweichungen gefunden, beide auf der Beschreibungsebene:
+`shared/issues/260815-1812_*_ein-verweis-im-modulkopf-des-verweisziels-zeigt-auf-einen-datensatz-der-nie-so-hiess.md`
+und die Zählangabe im Rumpf von `260815-1752`.
