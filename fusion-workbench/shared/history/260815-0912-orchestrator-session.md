@@ -2,7 +2,7 @@
 
 **Directive:** Der Filter der Dateiliste soll den Ordnerwechsel überstehen, statt beim Wechsel gelöscht zu werden (Punkt 3 des Bugreports vom 260815). Punkt 1 und 2 des Berichts hat der Nutzer als bestehendes Verhalten bestätigt.
 **Mode:** custom
-**Status:** Läuft
+**Status:** Complete
 
 ## Bestandsaufnahme beim Start
 
@@ -91,3 +91,116 @@ Der Nutzer hat die Änderung als Korrektur ohne eigene Runde beauftragt.
 - Grounding↔Directive: 33 aktive Datensätze (`_o_` und `_a_`) in allen Speichern, keiner im Widerspruch zur Directive. Acht nennen den Filtertext oder den Ordnerwechsel und sind einzeln gelesen; die einzige Stelle, die das alte Leeren nahelegt, ist Möglichkeit 2 von `circles/260814-1551-…/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md`, und diese Möglichkeit ist am 260814-1610 verworfen. Die überholte Aussage steht nicht in der Grundlage, sondern im Abschnitt `## Directive` des Circle-Datensatzes der Runde 10; sie ist als `shared/issues/260815-1047_o_die-directive-der-runde-10-…` aufgenommen und in der Closure-Notiz derselben Datei richtiggestellt. **In Ordnung.**
 
 **Rebalance recommendation:** revise Artifact
+- Erledigt: beide. Commits `9a2d0e0`, dazu die Berichtigungen des Abgleichs
+- Abgleich: `reconciler`, Urteil `review-needed`, 24 Abweichungen in fünf Befunden
+- Menschliches Gate: Zitierform (Sternform ohne Prüfung) und `CLAUDE.md` (ergänzen)
+
+### Turn 3
+
+- Aufgaben: T5 (Sternform in der Werkbank, orchestrator), T6 (Sternform im Baum und ein Satz in `CLAUDE.md`, coder)
+- Erledigt: beide. Commits `e49412a` und `3f9fac1`
+- Konvergenz: die Warteschlange ist leer
+
+**Der Abgleich hat überzählt, und das ist festzuhalten, damit niemand seine Zahl nacharbeitet.** Er meldete sieben neue tote Verweise dieser Sitzung. Nach der Ortsregel aus `CLAUDE.md` sind davon nur drei lebender Text; die übrigen liegen in `history/`, `reviews/`, `issues/` und `decisions/` und behalten ihren damaligen Marker ausdrücklich. Wer sie „berichtigt", bricht die Regel, statt ihr zu folgen.
+
+**Die Umstellung auf die Sternform hat den Beleg geliefert, den ihr Entscheid noch nicht hatte.** Von 111 verschiedenen Zitaten im lebenden Text trugen 52 einen Marker, den ihr Ziel nicht mehr hat, 47 Prozent, quer durch alle zehn Runden. Kein einziges Ziel war unauffindbar — es veraltete ausschließlich der Marker. Gegenprobe zur Sorge, die Umstellung kehre eine Gewohnheit um: der Baum schrieb schon vorher über 350-mal die Sternform gegen 17 ausgeschriebene Marker.
+
+**Ein Fehler beim Zusammenstellen der Staging-Liste, gefangen vom Haken und nicht von mir.** Die Liste wurde aus `git status` gebaut und dabei jeder Pfad weggefiltert, den es nicht mehr gibt. Bei einer Umbenennung gehören beide Namen hinein, und der Filter entfernte genau die Hälfte, die die Löschung trägt: der alte Name des Zitierform-Entscheids blieb als geloescht im Arbeitsbaum stehen. Nachgezogen in `3f9fac1`.
+
+## Budget
+
+| Größe | Zahl |
+|---|---|
+| Turns | 3 |
+| Aufgaben erledigt | 6 |
+| Aufgaben übersprungen oder zurückgestellt | 0 |
+| Defekte gefiltert | 7 |
+| Defekte geschlossen | 2 |
+| Defekte zurückgestellt | 1 |
+| Fragen gefiltert | 1 |
+| Fragen umgesetzt (`_a_`→`_i_`) | 1 |
+| Commits | 5 |
+| Agentenfehler | 0 |
+| Menschliche Gates | 3 |
+
+Die vier Datensatzzahlen sind am Dateibestand erhoben und nicht mitgezählt, Anker `c3fcdef`, Sitzungsbeginn `260815-0912`.
+
+## Review coverage
+
+**Range:** `c3fcdef..HEAD` — 5 Commits
+**Covered by:** `shared/reviews/260815-1047-coderev-der-filtertext-uebersteht-jeden-ordnerwechsel.md`, Bereich `c3fcdef..897605e`, `Not-opened: none`, deckt 2 Commits
+**Not covered:**
+- `9a2d0e0` docs: die Durchsicht wird eingearbeitet, und zwei Zusagen werden ehrlich
+- `e49412a` docs: Zitate tragen die Sternform, und CLAUDE.md kennt die neue Filterregel
+- `3f9fac1` chore(workbench): der alte Name des Zitierform-Entscheids faellt nach
+
+Alle drei ändern kein Verhalten: Kommentare, Zitierform und die Nachführung einer Umbenennung. Der Anteil unter `crates/` ist mit `git diff` daraufhin geprüft, dass keine Zeile außerhalb von `///` und `//` berührt ist. Eine zweite Durchsicht ist damit nicht gefahren; wer sie für nötig hält, findet die drei Commits hier beim Namen.
+
+**Carried out-of-scope files:** none
+
+## Remaining Work
+
+| Datensatz | Warum offen |
+|---|---|
+| `shared/issues/260815-1019_*_die-wettrennprobe-des-oeffnens-ist-lastabhaengig-…` | die zwei Zähler im Ausfallzweig fehlen; erst danach ist die Marge zu entscheiden |
+| `shared/issues/260815-1047_*_die-directive-der-runde-10-…` | die Directive selbst gehört weder dem Orchestrator noch dem Reconciler |
+| `shared/issues/260815-1216_*_vierzehn-entscheidungsdatensaetze-tragen-im-rumpf-…` | Befund des Abgleichs, eigene Arbeit |
+| `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-…` | vom Nutzer zurückgestellt (`_d_`), Auslöser ist Gebrauchserfahrung |
+| `circles/260814-1551-…/decisions/260814-1552_*_wo-steht-die-filterzahl-…` | offene Frage der Runde 10, durch diese Sitzung schwerer geworden |
+| `circles/260814-1551-…/decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-…` | dieselbe Lage; der Baum fährt bei beiden auf der Empfehlung ohne Bestätigung |
+
+## Commits
+
+| Hash | Was | Aufgabe |
+|---|---|---|
+| `f8297b6` | Entscheid beantwortet, C1.9 und C1.10 nachgezogen | T1 |
+| `897605e` | der Filtertext übersteht jeden Ordnerwechsel, drei Proben | T2 |
+| `9a2d0e0` | die vier Durchsichtsbefunde eingearbeitet | T3, T4 |
+| `e49412a` | Sternform, und ein Satz in `CLAUDE.md` | T5, T6 |
+| `3f9fac1` | der alte Name einer Umbenennung fällt nach | — |
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant C as Coder
+    participant CR as Coderev
+    participant R as Reconciler
+
+    U->>O: Fehlerbericht, drei Punkte am Filter
+    O->>O: Baum gelesen: Punkt 1 und 2 sind C1.6, Punkt 3 ein offener Entscheid
+    O->>U: GATE Filterregel und Umfang
+    U-->>O: C1.6 bleibt; Korrektur ohne neue Runde
+
+    Note over O: Turn 1
+    O->>O: T1 Entscheid beantwortet, C1.9 und C1.10 (f8297b6)
+    O->>C: T2 Filtertext ueberlebt jeden Ordnerwechsel
+    C-->>O: fertig, Abnahme rot durch fremde Probe
+    O->>O: nachgemessen: fremder Defekt, vorbestehend (897605e)
+    O->>CR: Durchsicht c3fcdef..HEAD
+    CR-->>O: 4 Defekte, keiner an der Codezeile
+    O->>U: GATE Sichtbarkeit des Filtertexts nicht zugesagt
+    U-->>O: festhalten, nicht beheben
+
+    Note over O: Turn 2
+    O->>O: T3 Werkbanktext berichtigt
+    O->>C: T4 Codekommentare, Markerverweise
+    C-->>O: fertig, voller Testlauf gruen
+    O->>O: Commit 9a2d0e0
+
+    Note over O: Phase 3
+    O->>R: Abgleich
+    R-->>O: review-needed, 24 Abweichungen
+    O->>U: GATE Zitierform und CLAUDE.md
+    U-->>O: Sternform ohne Pruefung; CLAUDE.md ergaenzen
+
+    Note over O: Turn 3
+    O->>O: T5 145 Zitate in der Werkbank
+    O->>C: T6 Sternform im Baum, ein Satz in CLAUDE.md
+    C-->>O: fertig, Abnahme gruen
+    O->>O: Commits e49412a, 3f9fac1
+
+    Note over O: Konvergenz
+```

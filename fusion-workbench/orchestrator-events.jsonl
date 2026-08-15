@@ -834,3 +834,9 @@
 {"ts":"2026-08-15T10:50:23","event":"gate_response","detail":"Sternform ohne Pruefung; CLAUDE.md ergaenzen"}
 {"ts":"2026-08-15T10:50:23","event":"rebalance_artifact","detail":"Turn 3: Zitierform umsetzen, CLAUDE.md nachziehen"}
 {"ts":"2026-08-15T10:50:23","event":"turn_start","turn":3,"detail":"2 Aufgaben"}
+{"ts":"2026-08-15T11:00:01","event":"state_drift","turn":3,"detail":"progress.commits stand auf 3, git zaehlte 5; nachgezogen. Ursache: zwei Commits in einem Zug ohne Zwischenschreibung des Standes."}
+{"ts":"2026-08-15T11:00:01","event":"task_done","turn":3,"task":"T5","agent":"orchestrator","detail":"145 Zitate Werkbank"}
+{"ts":"2026-08-15T11:00:01","event":"task_done","turn":3,"task":"T6","agent":"coder","detail":"18 Zitate crates+CLAUDE.md, ein Satz in CLAUDE.md"}
+{"ts":"2026-08-15T11:00:01","event":"commit","turn":3,"detail":"e49412a, dazu Nachtrag"}
+{"ts":"2026-08-15T11:00:01","event":"turn_end","turn":3,"detail":"Warteschlange leer, Konvergenz"}
+{"ts":"2026-08-15T11:03:24","event":"session_end","detail":"3 Turns, 6 Aufgaben, 5 Commits, 0 Agentenfehler, 3 Gates"}
