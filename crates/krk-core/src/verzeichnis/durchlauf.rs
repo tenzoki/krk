@@ -11,13 +11,14 @@
 //! ```text
 //! ist er eine Verknuepfung? ─ ja ──> kein Treffer darunter
 //!            │ nein
-//! laesst er sich oeffnen?   ─ nein ─> kein Treffer darunter
-//!            │ ja
-//! naechsten Stapel holen    ─ leer ─> zurueck zum uebergeordneten Ordner
+//! laesst er sich oeffnen?   ─ nein ─> fehlt ein Deskriptor? ─ ja ─> kein Befund
+//!            │ ja                              │ nein
+//!            │                                 └───────> kein Treffer darunter
+//! naechsten Stapel holen    ─ leer ─> naechster vorgemerkter Ordner
 //!            │                        (oder: kein Treffer darunter)
 //! Name traegt die Folge?    ─ ja ──> Treffer, der Rest bleibt ungelesen
 //!            │ nein
-//! ist es ein Ordner?        ─ ja ──> absteigen
+//! ist es ein Ordner?        ─ ja ──> vormerken
 //!            └ nein ─────────────────> naechster Eintrag im Stapel
 //! ```
 //!
@@ -45,14 +46,38 @@
 //! Mal. Haenge man die Pruefung ans Absteigen, waere genau dieser Ordner von
 //! der Zusage ausgenommen.
 //!
+//! # Ein offener Deskriptor, gleich wie tief der Baum ist
+//!
+//! **Der Abstieg merkt Ordner als Pfad vor und nicht als offenen Leser.** Ein
+//! Ordner wird ganz gelesen, seine Unterordner wandern dabei als Pfad auf den
+//! Stapel `offen`, und erst wenn er zu Ende ist, faellt sein [`Schwungleser`]
+//! und der naechste wird geoeffnet. Zu jedem Zeitpunkt haelt der Durchlauf
+//! damit **genau einen** Verzeichnisdeskriptor, ob der Baum drei Ebenen tief
+//! ist oder vierhundert.
+//!
+//! Bis zum 260815 hielt er stattdessen einen Leser je Ebene, weil der
+//! uebergeordnete Ordner nach der Rueckkehr aus dem Abstieg weitergelesen
+//! wurde. Das war kein blosser Preis, sondern eine Fehlerquelle: der Durchlauf
+//! erzeugte damit seinen eigenen `EMFILE`, und der wurde unten zu einem
+//! stillen „kein Treffer darunter" (Defekt `260815-0211`). Die Kante „zurueck
+//! zum uebergeordneten Ordner" gibt es deshalb nicht mehr — der Rueckweg
+//! laeuft ueber den vorgemerkten Pfad.
+//!
+//! **Getauscht ist damit ein knapper, prozessweit geteilter Vorrat gegen einen
+//! reichlichen, der diesem Durchlauf allein gehoert.** Die Deskriptortabelle
+//! teilt sich der Durchlauf mit dem Editor, der Vorschau, den
+//! Kopiervorgaengen und dem Lesevorgang der zweiten Dateiliste, und ein
+//! aus dem Finder gestartetes Buendel bekommt sie klein. Der Stapel `offen`
+//! haelt dagegen je vorgemerktem Ordner einen Pfad, und das ist weniger, als
+//! das Ordnermodell fuer denselben Ordner ohnehin haelt: dort steht je Eintrag
+//! ein [`Eintrag`](super::eintrag::Eintrag) mit zwei Sortierschluesseln.
+//!
 //! # Was dieses Modul nicht hat, und warum
 //!
 //! **Keine Tiefengrenze und keine Zaehlung gegen eine Grenze.** Der Abstieg
-//! laeuft ueber einen eigenen Stapel von [`Ebene`]n und nicht ueber die
-//! Rekursion des Arbeitsfadens; ein tiefer Baum sprengt damit keinen
-//! Fadenstapel, und es gibt nichts, wogegen zu zaehlen waere. Der Preis ist ein
-//! offener Deskriptor je Ebene, denn der uebergeordnete Ordner wird nach der
-//! Rueckkehr aus dem Abstieg weitergelesen.
+//! laeuft ueber einen eigenen Stapel von Pfaden und nicht ueber die Rekursion
+//! des Arbeitsfadens; ein tiefer Baum sprengt damit keinen Fadenstapel, und es
+//! gibt nichts, wogegen zu zaehlen waere.
 //!
 //! **Keinen mitgefuehrten Zustand ueber besuchte Ordner.** In eine symbolische
 //! Verknuepfung wird nicht abgestiegen, und damit ist kein Ordner zweimal zu
@@ -76,7 +101,7 @@ use std::thread;
 use super::eintrag::Typ;
 use super::filter::traegt_die_folge;
 use super::leser::STAPELGROESSE;
-use super::sys::Schwungleser;
+use super::sys::{Schwungleser, ist_deskriptormangel};
 
 /// Ein Ordner des angezeigten Ordners, ueber den noch nichts bekannt ist.
 ///
@@ -202,12 +227,30 @@ fn durchlauffaden(
 /// Schreitet den Unterbaum ab, bis der erste Treffer faellt oder nichts mehr
 /// offen ist.
 ///
-/// `None` heisst abgebrochen, und das ist der eine Ausgang, der keinen Befund
-/// traegt. `Some(true)` ist der Treffer, `Some(false)` der negative Befund; er
-/// entsteht auf drei Wegen, und alle drei stehen unten im Rumpf: eine
-/// symbolische Verknuepfung, ein Ordner, der sich nicht oeffnen laesst, und ein
+/// `Some(true)` ist der Treffer, `Some(false)` der negative Befund; er entsteht
+/// auf drei Wegen, und alle drei stehen unten im Rumpf: eine symbolische
+/// Verknuepfung, ein Ordner, der sich nicht oeffnen laesst, und ein
 /// abgeschrittener Unterbaum ohne Fund. Keiner der drei haelt den Durchlauf an,
 /// und keiner erzeugt eine Meldung ueber den Befund hinaus.
+///
+/// **`None` heisst „nicht entschieden", und es hat zwei Ursachen.** Die erste
+/// ist der Abbruch. Die zweite ist ein Mangel an Deskriptoren, und sie ist die
+/// Antwort auf den Defekt `260815-0211`: `EMFILE` und `ENFILE` sind kein
+/// Befund ueber den Ordner, sondern ein Zustand des Prozesses, und derselbe
+/// Aufruf auf denselben Pfad kann gleich darauf gelingen. Ihn als „kein Treffer
+/// darunter" zu melden, hiesse eine Zeile dauerhaft und ohne Meldung aus der
+/// Liste zu nehmen; ihn unentschieden zu lassen, heisst, dass die naechste
+/// Frage — ein weiteres Zeichen, ein Umschalten, ein Ordnerwechsel — ihn neu
+/// stellt. Die Trennung selbst steht in
+/// [`sys::ist_deskriptormangel`](super::sys::ist_deskriptormangel).
+///
+/// **Beide Ursachen beenden den ganzen Durchlauf und nicht nur diesen
+/// Auftrag**, denn der Aufrufer wertet `None` als „hoer auf". Fuer den Abbruch
+/// ist das die Zusage selbst; fuer den Deskriptormangel ist es die ehrliche
+/// Antwort, weil der naechste Auftrag aus demselben leeren Vorrat oeffnen
+/// muesste. Ein Warten mit erneutem Versuch stuende dagegen fuer eine Frage,
+/// die dieses Modul nicht beantworten kann — ob und wann ein anderer Teil von
+/// KRK einen Deskriptor freigibt —, und hielte den Arbeitsfaden dabei an.
 fn unterbaum_entscheiden(wurzel: &Path, filter_klein: &str, abbruch: &AtomicBool) -> Option<bool> {
     // Erster Zweig: eine symbolische Verknuepfung ist ohne Lesen entschieden.
     //
@@ -222,55 +265,61 @@ fn unterbaum_entscheiden(wurzel: &Path, filter_klein: &str, abbruch: &AtomicBool
         return Some(false);
     }
 
-    // Zweiter Zweig: was sich nicht oeffnen laesst, ist ebenfalls entschieden.
-    let Ok(leser) = Schwungleser::oeffnen(wurzel) else {
-        return Some(false);
-    };
+    // Die vorgemerkten Ordner, als Pfad und nicht als offener Leser. Der
+    // Auftrag selbst ist der erste, und tiefer liegende kommen beim Lesen
+    // dazu.
+    let mut offen = vec![wurzel.to_path_buf()];
+    while let Some(pfad) = offen.pop() {
+        // Zweiter Zweig, und hier faellt die Unterscheidung, um die es geht:
+        // was sich aus einem Grund am Pfad nicht oeffnen laesst, ist
+        // uebergangen (C3.10) — was sich mangels Deskriptor nicht oeffnen
+        // laesst, ist ueberhaupt nicht entschieden.
+        let leser = match Schwungleser::oeffnen(&pfad) {
+            Ok(leser) => leser,
+            Err(fehler) if ist_deskriptormangel(&fehler) => return None,
+            Err(_) => continue,
+        };
 
-    let mut ebenen = vec![Ebene::neu(leser, wurzel.to_path_buf())];
-    while let Some(ebene) = ebenen.last_mut() {
-        if let Some(kandidat) = ebene.stapel.next() {
-            if traegt_die_folge(&kandidat.name, filter_klein) {
-                // Der erste Treffer entscheidet den Auftrag, in welcher Tiefe
-                // er auch liegt. Die offenen Ebenen fallen mit `ebenen`, und
-                // der Rest unter ihnen bleibt ungelesen.
-                return Some(true);
+        let mut lesestand = Lesestand::neu(leser, pfad);
+        loop {
+            // Hier und nur hier steht die Abbruchgrenze, und sie gilt auch fuer
+            // einen Ordner, der keinen einzigen Unterordner traegt: ein frisch
+            // geoeffneter Ordner steht sofort an ihr, weil sein Stapel leer
+            // beginnt.
+            if abbruch.load(Ordering::Relaxed) {
+                return None;
             }
-            // „Ist es ein Ordner?" beantwortet auch eine Verknuepfung auf einen
-            // Ordner mit ja; es ist derselbe Schnitt, den die Sichtbarkeit
-            // zieht. Erst der Zweig danach trennt die beiden, und er steht am
-            // Kopf dieser Funktion fuer den Auftrag und hier fuer den Abstieg:
-            // in eine Verknuepfung wird nicht abgestiegen, sie traegt damit
-            // nichts bei.
-            if kandidat.typ == Typ::Ordner {
-                let pfad = ebene.pfad.join(&kandidat.name);
-                // Ein Unterordner, der sich nicht oeffnen laesst, ist
-                // uebergangen und nicht gemeldet: derselbe Zweig wie oben, nur
-                // eine Ebene tiefer.
-                if let Ok(leser) = Schwungleser::oeffnen(&pfad) {
-                    ebenen.push(Ebene::neu(leser, pfad));
+
+            // Ein leerer Stapel und ein Lesefehler mitten im Ordner enden beide
+            // gleich: dieser Ordner ist fertig. Ein Fehler beim Weiterlesen
+            // sagt dasselbe wie ein Fehler beim Oeffnen, naemlich dass von hier
+            // nichts mehr zu holen ist, und er haelt den Durchlauf ebenso wenig
+            // an.
+            match lesestand.stapel_holen() {
+                Ok(true) => {}
+                Ok(false) | Err(_) => break,
+            }
+
+            for kandidat in lesestand.stapel.by_ref() {
+                if traegt_die_folge(&kandidat.name, filter_klein) {
+                    // Der erste Treffer entscheidet den Auftrag, in welcher
+                    // Tiefe er auch liegt. Der offene Leser faellt mit
+                    // `lesestand`, die Vormerkungen mit `offen`, und der Rest
+                    // darunter bleibt ungelesen.
+                    return Some(true);
+                }
+                // „Ist es ein Ordner?" beantwortet auch eine Verknuepfung auf
+                // einen Ordner mit ja; es ist derselbe Schnitt, den die
+                // Sichtbarkeit zieht. Erst der Zweig danach trennt die beiden,
+                // und er steht am Kopf dieser Funktion fuer den Auftrag und
+                // hier fuer den Abstieg: in eine Verknuepfung wird nicht
+                // abgestiegen, sie traegt damit nichts bei.
+                if kandidat.typ == Typ::Ordner {
+                    offen.push(lesestand.pfad.join(&kandidat.name));
                 }
             }
-            continue;
         }
-
-        // Der Stapel ist aufgebraucht. Hier und nur hier steht die
-        // Abbruchgrenze, und sie gilt auch fuer einen Ordner, der kein einziges
-        // Mal absteigt.
-        if abbruch.load(Ordering::Relaxed) {
-            return None;
-        }
-
-        // Ein leerer Stapel und ein Lesefehler mitten im Ordner enden beide
-        // gleich: diese Ebene ist fertig. Ein Fehler beim Weiterlesen sagt
-        // dasselbe wie ein Fehler beim Oeffnen, naemlich dass von hier nichts
-        // mehr zu holen ist, und er haelt den Durchlauf ebenso wenig an.
-        match ebene.stapel_holen() {
-            Ok(true) => {}
-            Ok(false) | Err(_) => {
-                ebenen.pop();
-            }
-        }
+        // `lesestand` faellt hier, und mit ihm der eine offene Deskriptor.
     }
 
     // Dritter Zweig: abgeschritten, kein Treffer gefunden.
@@ -297,14 +346,15 @@ struct Kandidat {
     typ: Typ,
 }
 
-/// Ein Ordner, der gerade gelesen wird, mit seiner Stelle im Bestand.
+/// Der **eine** Ordner, der gerade gelesen wird.
 ///
-/// Der Abstieg legt eine neue Ebene oben auf, die Rueckkehr nimmt sie weg. Der
-/// [`Schwungleser`] der uebergeordneten Ebene bleibt dabei offen, denn nach der
-/// Rueckkehr geht es in ihrem Stapel weiter.
-struct Ebene {
+/// Es gibt zu jedem Zeitpunkt genau einen davon, und daran haengt die Zusage
+/// aus dem Modulkopf: ein offener Deskriptor, gleich wie tief der Baum ist. Wer
+/// hier wieder einen Stapel daraus macht, holt sich den Defekt `260815-0211`
+/// zurueck.
+struct Lesestand {
     leser: Schwungleser,
-    /// Der Ordner dieser Ebene, um die Namen ihrer Eintraege anzuhaengen.
+    /// Der Ordner, um die Namen seiner Eintraege anzuhaengen.
     pfad: PathBuf,
     /// Der Stapel, der gerade abgearbeitet wird.
     stapel: std::vec::IntoIter<Kandidat>,
@@ -320,7 +370,7 @@ struct Ebene {
     erschoepft: bool,
 }
 
-impl Ebene {
+impl Lesestand {
     fn neu(leser: Schwungleser, pfad: PathBuf) -> Self {
         Self {
             leser,
@@ -333,7 +383,8 @@ impl Ebene {
 
     /// Holt den naechsten Stapel von hoechstens [`STAPELGROESSE`] Eintraegen.
     ///
-    /// `Ok(false)` heisst: der Ordner ist zu Ende, diese Ebene ist fertig.
+    /// `Ok(false)` heisst: der Ordner ist zu Ende, dieser Lesestand ist
+    /// fertig.
     fn stapel_holen(&mut self) -> io::Result<bool> {
         let Self {
             leser,

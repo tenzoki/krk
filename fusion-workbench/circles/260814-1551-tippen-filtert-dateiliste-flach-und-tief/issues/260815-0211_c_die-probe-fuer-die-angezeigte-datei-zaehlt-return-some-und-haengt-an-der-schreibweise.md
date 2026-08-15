@@ -29,3 +29,14 @@ Zwei Möglichkeiten, und die zweite ist billiger:
 2. Die Blindheit im Doc-Kommentar benennen: die Probe hält gegen eine dritte Quelle **in der Form eines frühen Rücksprungs** und gegen keine andere. Dann sagt die Probe, was sie kann, und der nächste Leser weiß es.
 
 Die Fallunterscheidung selbst ist über alle acht Kombinationen im Prüfmodul von `angezeigtedatei.rs` geprüft; dieser Befund betrifft allein die Zählung.
+
+---
+Resolved: Gefahren ist keine der beiden genannten Möglichkeiten, sondern die Bauform aus `quellbaum.rs`: nach dem Gegenstand suchen und nicht nach seinem Namen. `die_angezeigte_datei_bleibt_bei_zwei_quellen` liest keine Zeile Quelltext mehr und hält stattdessen zwei Zusicherungen.
+
+**Die Signatur.** `welche` wird an einen Funktionszeiger mit genau diesen vier Eingaben gebunden. Eine dritte Quelle, die eine fünfte Eingabe braucht — die Auswahl der Dateiliste, der angezeigte Ordner —, hält damit den Bau an, statt still dazuzukommen.
+
+**Die Antwort.** Über alle sechzehn Kombinationen der vier Eingaben ist das Ergebnis entweder `None` oder genau einer der beiden übergebenen Pfade. Eine Quelle außerhalb der Eingaben — ein Ivar, eine Umgebungsvariable, ein Blick ins Dateisystem — läge außerhalb dieser Menge und fällt heraus. Die Schreibweise spielt dabei keine Rolle mehr: ein Rumpfwert, ein `.or_else`, ein `match`-Armwert werden alle vier gleich behandelt, weil keiner von ihnen gelesen wird.
+
+Die verbleibende Blindheit steht am Doc-Kommentar: eine dritte Quelle, die genau einen der beiden übergebenen Pfade liefert, sähe die Probe nicht — sie wäre von den beiden aber auch nicht zu unterscheiden, und C2.11 spricht über die Antwort. Welche Quelle in welcher Lage gewinnt, prüft `angezeigtedatei.rs` in seinem eigenen Probenmodul über die volle Tafel; daran ist nichts geändert.
+
+Berührte Datei: `crates/krk-ui/src/tabs.rs`.

@@ -56,3 +56,18 @@ Drei Stufen, aufsteigend im Aufwand:
 3. `RLIMIT_NOFILE` beim Start auf die harte Grenze anheben. Das berührt den ganzen Prozess und gehört dann nicht in dieses Modul.
 
 Welche Stufe, ist eine Nutzerfrage; dieser Datensatz nimmt sie nicht vorweg.
+
+---
+Resolved: Beide Hälften des Befunds sind behoben, in dieser Reihenfolge.
+
+**Die zweite zuerst, weil sie die erste selten macht.** `unterbaum_entscheiden` hält keinen Leser je Ebene mehr. Ein Ordner wird ganz gelesen, seine Unterordner wandern dabei als Pfad auf einen Stapel `offen`, und erst wenn er zu Ende ist, fällt sein `Schwungleser` und der nächste wird geöffnet. Der Durchlauf hält damit zu jedem Zeitpunkt **genau einen** Verzeichnisdeskriptor, gleich wie tief der Baum ist; die Kante „zurück zum übergeordneten Ordner" gibt es nicht mehr. Getauscht ist ein knapper, prozessweit geteilter Vorrat gegen einen reichlichen, der dem Durchlauf allein gehört: `offen` hält je vorgemerktem Ordner einen Pfad. Der Umbau steht im Modulkopf unter `# Ein offener Deskriptor, gleich wie tief der Baum ist`.
+
+**Die erste ist Stufe 1 der drei genannten.** `verzeichnis::sys::ist_deskriptormangel` trennt `EMFILE` und `ENFILE` von den übrigen Öffnungsfehlern, die beiden Konstanten stehen dort neben `EXDEV`, `ECANCELED` und `EWOULDBLOCK`. Trifft einer der beiden, liefert `unterbaum_entscheiden` `None`: der Auftrag bleibt unentschieden, wie beim Abbruch, und der Durchlauf endet. Ein Warten mit erneutem Versuch (die zweite genannte Möglichkeit) stünde für eine Frage, die dieses Modul nicht beantworten kann — ob und wann ein anderer Teil von KRK einen Deskriptor freigibt — und hielte den Arbeitsfaden dabei an. Stufe 3, das Anheben von `RLIMIT_NOFILE` beim Start, ist nicht gefahren; sie berührt den ganzen Prozess und gehört nicht in dieses Modul.
+
+**Die Probe misst den Fall jetzt.** `die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden` legt eine 200 Ebenen tiefe Kette mit dem Treffer ganz unten an und lässt sie von einer Kindprobe entscheiden, die über `/bin/sh` mit `ulimit -n 64` startet. Das Kind misst seine Grenze zuerst selbst, indem es Deskriptoren nimmt, bis keiner mehr kommt; ohne diese Zusicherung bestünde die Probe auch dann, wenn `ulimit` nicht gegriffen hätte. Angelegt und abgeräumt wird der Baum vom Elternteil, weil `remove_dir_all` selbst einen Deskriptor je Ebene hält.
+
+**Gegenprobe gefahren:** mit dem alten `durchlauf.rs` an derselben Stelle meldet sie `treffer: false` bei 61 freien Deskriptoren, also genau den Befund der Nachstellung. Mit dem neuen meldet sie `treffer: true`.
+
+`der_durchlauf_kennt_keine_tiefengrenze` bleibt daneben stehen: sie prüft C3.8 unter der Grenze der Sitzung, die neue prüft es unter der, die ein Bündel bekommt.
+
+Berührte Dateien: `crates/krk-core/src/verzeichnis/sys.rs`, `crates/krk-core/src/verzeichnis/durchlauf.rs`, `crates/krk-core/tests/verzeichnis.rs`. Folgedatensatz für den Spec: `issues/260815-0233_o_das-zweite-bild-des-spec-zeigt-den-abstieg-mit-rueckkehr-der-baum-merkt-pfade-vor.md`.

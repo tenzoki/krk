@@ -262,6 +262,39 @@ impl Schwungleser {
     }
 }
 
+/// `ENFILE` aus `sys/errno.h`: die systemweite Deskriptortabelle ist voll.
+const ENFILE: i32 = 23;
+
+/// `EMFILE` aus `sys/errno.h`: dieser Prozess hat keinen Deskriptor mehr frei.
+const EMFILE: i32 = 24;
+
+/// Ob ein Fehlschlag beim Oeffnen **ueber den Prozess** spricht und nicht ueber
+/// den Pfad.
+///
+/// `ENOENT`, `EACCES` und `ENOTDIR` sind Aussagen ueber den Pfad: er ist nicht
+/// da, er gehoert einem anderen, er ist keine Ordnung. Wer sie bekommt, weiss
+/// etwas ueber den Pfad und darf danach entscheiden. [`EMFILE`] und [`ENFILE`]
+/// sagen dagegen nichts ueber den Pfad, sondern ueber die Deskriptortabelle des
+/// Prozesses oder des Systems; derselbe Aufruf auf denselben Pfad kann eine
+/// Sekunde spaeter gelingen.
+///
+/// **Wer beide Sorten zusammenzieht, macht aus einem Zustand seines eigenen
+/// Prozesses eine Aussage ueber eine fremde Ordnung.** Genau das hat der
+/// Durchlauf getan, bis der Defekt `260815-0211` es nachgestellt hat: unter
+/// einer knappen Grenze fiel ein Ordner mit einem Treffer darunter still aus
+/// der Liste. Der Aufrufer, der die Unterscheidung braucht, ist
+/// [`crate::verzeichnis::durchlauf`]; der Verzeichnisleser braucht sie nicht,
+/// weil ein Lesevorgang seinen einen Ordner ohnehin abbricht und den Fehler
+/// meldet.
+///
+/// Eine dritte Sorte gibt es nicht, und das ist keine Verkuerzung: gefragt ist
+/// allein, ob der Fehlschlag am Vorrat an Deskriptoren liegt, und darauf gibt
+/// es zwei Antworten.
+#[must_use]
+pub fn ist_deskriptormangel(fehler: &io::Error) -> bool {
+    matches!(fehler.raw_os_error(), Some(EMFILE | ENFILE))
+}
+
 /// Zerlegt einen einzelnen Satz aus dem Antwortpuffer.
 ///
 /// Liefert `None`, wenn der Satz keinen Namen traegt. Das trifft die Eintraege,

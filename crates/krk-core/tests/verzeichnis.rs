@@ -1142,14 +1142,31 @@ fn eine_verknuepfung_auf_einen_ordner_meldet_kein_treffer() {
     );
 }
 
-/// C3.4: Der Abbruch greift auch dort, wo kein einziges Mal abgestiegen wird.
+/// C3.4, zweite Haelfte: Der Abbruch greift auch dort, wo kein einziges Mal
+/// abgestiegen wird.
 ///
 /// Der Pruefordner traegt 5.000 gewoehnliche Eintraege und **keinen einzigen
 /// Unterordner**; er passiert die Stapelgrenze viermal und das Absteigen nie.
-/// Eine Pruefung des Abbruchkennzeichens beim Absteigen bliebe hier wirkungslos,
-/// der Ordner liefe vollstaendig durch und meldete `treffer: false`. Dass gar
-/// kein Befund kommt, heisst genau: der Durchlauf hat vor der dritten
-/// Stapelgrenze aufgehoert, und der Ordner bleibt unentschieden.
+/// Eine Pruefung des Abbruchkennzeichens beim Absteigen bliebe hier wirkungslos.
+///
+/// **Gemessen wird an zwei Laeufen ueber denselben Ordner** und nicht an einem.
+/// Der Kontrollauf ohne Abbruch muss `treffer: false` melden; erst dadurch
+/// heisst das Schweigen des zweiten Laufs „der Abbruch hat gegriffen" und nicht
+/// „der Durchlauf meldet fuer diesen Ordner ohnehin nichts". Ohne den
+/// Kontrollauf bestuende die Probe auch bei einem vollstaendig kaputten
+/// Durchlauf.
+///
+/// **Was diese Probe nicht entscheidet, und der Satz gehoert dazu:** die erste
+/// Haelfte von C3.4, also die Zahl **zwei**. Das Kennzeichen steht hier, bevor
+/// der Arbeitsfaden den ersten Stapel geholt hat, und wie viele Stapel zwischen
+/// dem Setzen und dem Ende des Fadens liegen, ist von aussen an nichts
+/// abzulesen: der Durchlauf meldet je Auftrag genau einen Befund und sonst
+/// nichts, und eine Probe ueber eine Zeitspanne waere eine ueber den Planer des
+/// Betriebssystems. Wer die Zahl messen will, braucht zuerst eine Groesse am
+/// Durchlauf, an der die geleistete Arbeit abzulesen ist
+/// (`issues/260815-0211_*_die-abbruchprobe-bricht-vor-dem-ersten-stapel-ab-…`).
+/// Die 5.000 Eintraege stehen deshalb nicht als Beleg fuer die Zahl zwei da,
+/// sondern als Ordner, der sicher mehr als einen Stapel braucht.
 #[test]
 fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
     let ordner = Pruefordner::neu("durchlauf-abbruch");
@@ -1159,17 +1176,38 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
     }
     assert!(
         lesen(&flach).expect("der flache Ordner ist lesbar").len() > 2 * STAPELGROESSE,
-        "die Probe braucht mehr als zwei Stapel, sonst sagt sie nichts ueber zwei Stapel"
+        "der Ordner soll mehr als zwei Stapel brauchen"
     );
 
-    let durchlauf = Durchlauf::starten(
+    let auftrag = || {
         vec![Auftrag {
             index: 7,
             name: "flach".to_owned(),
-        }],
+        }]
+    };
+
+    // Kontrollauf: ohne Abbruch entscheidet derselbe Ordner.
+    let ungestoert = Durchlauf::starten(
+        auftrag(),
         ordner.pfad().to_path_buf(),
         "gibt-es-hier-nicht".to_owned(),
         1,
+    );
+    assert_eq!(
+        befunde_einsammeln(&ungestoert),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "ohne Abbruch wird der Ordner abgeschritten und entschieden"
+    );
+
+    // Derselbe Ordner mit gesetztem Abbruchkennzeichen.
+    let durchlauf = Durchlauf::starten(
+        auftrag(),
+        ordner.pfad().to_path_buf(),
+        "gibt-es-hier-nicht".to_owned(),
+        2,
     );
     durchlauf.abbrechen();
 
@@ -1252,6 +1290,131 @@ fn der_durchlauf_kennt_keine_tiefengrenze() {
     );
 }
 
+/// Die Umgebungsvariable, die die Deskriptor-Kindprobe beauftragt. Ihr Wert ist
+/// der Ordner, unter dem die tiefe Kette schon steht.
+const AUFTRAG_DESKRIPTOREN: &str = "KRK_PROBE_DESKRIPTOREN";
+
+/// Wie tief die Kette der Deskriptorprobe ist.
+///
+/// Deutlich mehr als die 64 Deskriptoren, unter denen das Kind laeuft, und
+/// deutlich weniger als `PATH_MAX / 2`: bei zwei Bytes je Ebene und einem
+/// Temporaerpfad von rund 60 Bytes bleibt die tiefste Stelle unter 500 Bytes.
+const KETTENTIEFE: usize = 200;
+
+/// Wie viele Deskriptoren das Kind hoechstens haben darf, damit die Probe misst
+/// und nicht behauptet.
+const DESKRIPTORSCHRANKE: usize = 100;
+
+/// C3.8 und C3.10 **unter der Deskriptorgrenze, die ein Buendel bekommt**.
+///
+/// `der_durchlauf_kennt_keine_tiefengrenze` darueber legt zweihundert Ebenen an
+/// und ist gruen — aber `cargo test` erbt die angehobene Grenze der
+/// Anmeldesitzung, waehrend `launchctl limit maxfiles` 256 als Voreinstellung
+/// fuehrt. Die Probe lief damit unter Bedingungen, die der Nutzer nicht hat,
+/// und der Defekt `260815-0211` ist genau darin gewachsen: der Durchlauf hielt
+/// einen Deskriptor je Ebene, erzeugte seinen eigenen `EMFILE` und meldete
+/// darauf „kein Treffer darunter" — dieselbe Kette, dieselbe Frage, zwei
+/// Antworten.
+///
+/// **Diese Probe misst den Fall.** Der Elternteil legt die Kette an; das Kind
+/// laeuft ueber `/bin/sh` mit `ulimit -n 64` und entscheidet sie. Das Kind
+/// misst seine Grenze zuerst selbst, indem es Deskriptoren nimmt, bis keiner
+/// mehr kommt: ohne diese Zusicherung bestuende die Probe auch dann, wenn
+/// `ulimit` nicht gegriffen haette, und waere wieder eine Behauptung.
+///
+/// **Ohne die Behebung meldet sie `treffer: false`.** Der alte Abstieg braucht
+/// [`KETTENTIEFE`] Deskriptoren gleichzeitig, bekommt bei rund 55 keinen mehr
+/// und uebergeht den Rest der Kette stillschweigend; der Treffer ganz unten
+/// wird nie gelesen.
+///
+/// Angelegt und abgeraeumt wird der Baum vom **Elternteil**, und das ist kein
+/// Zierrat: `remove_dir_all` haelt selbst einen Deskriptor je Ebene, koennte
+/// die Kette unter der abgesenkten Grenze also nicht abraeumen.
+#[test]
+fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
+    let ordner = Pruefordner::neu("durchlauf-deskriptoren");
+    let mut tief = ordner.unter("kette");
+    for _ in 0..KETTENTIEFE {
+        tief = tief.join("e");
+    }
+    fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
+    fs::write(tief.join("gesuchtes-blatt.txt"), b"x").expect("Blatt");
+
+    let ergebnis = kind_mit_wenigen_deskriptoren(
+        "kind_entscheidet_die_tiefe_kette",
+        AUFTRAG_DESKRIPTOREN,
+        ordner.pfad(),
+    );
+
+    assert!(
+        ergebnis.status.success(),
+        "unter einer knappen Deskriptorgrenze faellt der Treffer aus der Antwort\n\
+         --- stdout ---\n{}\n--- stderr ---\n{}",
+        String::from_utf8_lossy(&ergebnis.stdout),
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+}
+
+/// Startet dieselbe Testdatei noch einmal, mit abgesenkter Deskriptorgrenze.
+///
+/// Der Umweg ueber `/bin/sh` ist der einzige ohne `setrlimit(2)`, und
+/// `setrlimit(2)` waere eine sechste Bindung in [`krk_core::verzeichnis::sys`]
+/// fuer etwas, das KRK selbst nicht braucht. `$0` ist die Testdatei, `$1` der
+/// Name der Kindprobe.
+fn kind_mit_wenigen_deskriptoren(name: &str, auftrag: &str, wert: &Path) -> std::process::Output {
+    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
+    std::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg("ulimit -n 64 && exec \"$0\" --exact --ignored --nocapture --test-threads 1 \"$1\"")
+        .arg(&selbst)
+        .arg(name)
+        .env(auftrag, wert)
+        .output()
+        .expect("die Kindprobe laesst sich nicht starten")
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_DESKRIPTOREN gestartet"]
+fn kind_entscheidet_die_tiefe_kette() {
+    let Some(ordner) = std::env::var_os(AUFTRAG_DESKRIPTOREN) else {
+        return;
+    };
+    let ordner = std::path::PathBuf::from(ordner);
+
+    // Erst die Grenze messen, dann die Frage stellen. Genommen wird, bis nichts
+    // mehr kommt; was dabei zusammenkommt, ist die Zahl der Deskriptoren, die
+    // dieses Kind ueberhaupt hat.
+    let mut gehalten = Vec::new();
+    while gehalten.len() < 4 * DESKRIPTORSCHRANKE {
+        match fs::File::open("/dev/null") {
+            Ok(datei) => gehalten.push(datei),
+            Err(_) => break,
+        }
+    }
+    let vorrat = gehalten.len();
+    drop(gehalten);
+    assert!(
+        vorrat < DESKRIPTORSCHRANKE,
+        "die Deskriptorgrenze des Kindes ist nicht abgesenkt: {vorrat} Deskriptoren \
+         zugleich frei, die Probe wuerde nichts messen"
+    );
+    assert!(
+        vorrat < KETTENTIEFE,
+        "der Vorrat von {vorrat} Deskriptoren reicht fuer {KETTENTIEFE} Ebenen; \
+         ein Abstieg mit einem Deskriptor je Ebene liefe hier durch"
+    );
+
+    assert_eq!(
+        einen_ordner_entscheiden(&ordner, "kette", "gesuchtes"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "der Treffer liegt {KETTENTIEFE} Ebenen tief und faellt unter {vorrat} \
+         freien Deskriptoren aus der Antwort"
+    );
+}
+
 /// C3.1 und C3.8 als Aussagen ueber den Baum.
 ///
 /// Beide sagen etwas ueber das **Fehlen** zu: keine zweite Lesemechanik, keine
@@ -1314,6 +1477,19 @@ fn code_zeilen(inhalt: &str) -> Vec<&str> {
         .collect()
 }
 
+/// Die Code-Zeilen einer Datei **bis zu ihrem Pruefmodul**.
+///
+/// [`code_zeilen`] streicht Kommentarzeilen und sonst nichts; ein Pruefmodul
+/// bleibt darin stehen. Fuer eine Nadel wie `Duration` ist das der Unterschied
+/// zwischen einer Aussage ueber das Programm und einer ueber seine Proben: eine
+/// Probe, die zwischen zwei Takten schlaeft, ist keine Uhr im Filter. Der
+/// Schnitt steht am ersten Pruefmodul-Vermerk; eine Datei ohne ihn kommt ganz
+/// zurueck.
+fn code_zeilen_vor_dem_pruefmodul(inhalt: &str) -> Vec<&str> {
+    let vermerk = concat!("#[cfg(", "test)]");
+    code_zeilen(inhalt.split(vermerk).next().unwrap_or(inhalt))
+}
+
 /// Der Inhalt einer benannten Quelldatei, oder ein Fehlschlag.
 ///
 /// Fehlt die Datei, schlaegt die Probe fehl statt still nichts zu zaehlen: eine
@@ -1330,11 +1506,21 @@ fn quelltext_von(name: &str) -> String {
 ///
 /// **Geprueft wird ein Fehlen, und an keinem Rueckgabewert ist ein Fehlen
 /// abzulesen.** Ein Zeitgeber, der den Filtertext nach einer Pause
-/// zuruecksetzte, waere in genau diesen vier Dateien zu sehen: den drei Modulen
-/// des Kerns, die den Filter tragen, und der einen Senke in `krk-ui`, in die
-/// das getippte Zeichen laeuft. Die Sekundenregel der Sprungmarke aus C2 der
-/// Runde 1 stand in der ersten dieser Dateien, als sie noch `sprungmarke.rs`
-/// hiess.
+/// zuruecksetzte, waere in genau diesen fuenf Dateien zu sehen: den drei
+/// Modulen des Kerns, die den Filter tragen, der Senke in `krk-ui`, in die das
+/// getippte Zeichen laeuft, und der Tabliste. Die Sekundenregel der Sprungmarke
+/// aus C2 der Runde 1 stand in der ersten dieser Dateien, als sie noch
+/// `sprungmarke.rs` hiess.
+///
+/// **`krk-ui/src/tabs.rs` ist die fuenfte und war es nicht immer.** Seit
+/// Schritt F2 traegt sie den Filtertext ueber den Ordnerwechsel, haelt den
+/// `Durchlauf` je Tab, entscheidet, wann einer beginnt und vergeht, und zieht
+/// die Befunde ein; ein Zeitgeber liesse sich dort ebenso gut unterbringen wie
+/// in den vier anderen. Bis zum 260815 fehlte sie in der Liste, waehrend der
+/// Doc-Kommentar von „den Dateien, die den Filter tragen" sprach
+/// (`issues/260815-0211_*_die-probe-gegen-eine-zeitmessung-liest-vier-dateien-…`).
+/// Aufnehmen liess sie sich erst mit [`code_zeilen_vor_dem_pruefmodul`], denn
+/// ihr Pruefmodul schlaeft zwischen zwei Einzugstakten.
 ///
 /// **Was diese Probe nicht entscheidet**, und der Satz gehoert dazu: der Weg
 /// eines getippten Zeichens fuehrt vorher durch
@@ -1366,9 +1552,10 @@ fn im_filter_steht_keine_zeitmessung() {
         "krk-core/src/verzeichnis/modell.rs",
         "krk-core/src/verzeichnis/durchlauf.rs",
         "krk-ui/src/appkit/tabelle.rs",
+        "krk-ui/src/tabs.rs",
     ] {
         let quelle = quelltext_von(datei);
-        let code = code_zeilen(&quelle);
+        let code = code_zeilen_vor_dem_pruefmodul(&quelle);
         for nadel in [uhr, dauer, ablesen] {
             let treffer: Vec<&&str> = code.iter().filter(|zeile| zeile.contains(nadel)).collect();
             assert!(

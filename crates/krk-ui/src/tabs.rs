@@ -1882,37 +1882,101 @@ mod tests {
     ///
     /// Gezaehlt an zwei Stellen statt behauptet: die Zahl der Spalten am
     /// Aufzaehlungstyp, der sie fuehrt, und das Vorkommen von `NSOutlineView`
-    /// im Quelltext der Ansicht. Der Text ist ueber `include_str!` gebunden;
-    /// wird die Datei verschoben, haelt der Bau an, und das ist der richtige
-    /// Zeitpunkt, diese Probe nachzuziehen.
+    /// **im ganzen Baum**.
+    ///
+    /// Bis zum 260815 las die Nadel ueber `include_str!` genau
+    /// `appkit/tabelle.rs`. Damit war die dritte Zusage von C2.9, „keine zweite
+    /// Tabellenklasse", gar nicht geprueft: eine zweite Klasse stuende ja
+    /// gerade **nicht** in dieser Datei
+    /// (`issues/260815-0211_*_die-probe-fuer-die-flache-dateiliste-liest-eine-datei-…`).
+    /// [`crate::quellbaum::quelldateien`] steht fuer genau diesen Fall bereit,
+    /// und der Kopf dieses Moduls schreibt aus, warum eine Zaehlprobe den Baum
+    /// liest und nicht eine Datei.
+    ///
+    /// **`NSTableView` ist ausdruecklich keine Nadel.** KRK hat mehrere
+    /// Tabellen — die Belegungsansicht und das Blatt zum Stapelumbenennen —,
+    /// und eine Zaehlung darueber saehe sie als Fundstellen. Gefragt ist die
+    /// Aufklappansicht, und die heisst in AppKit `NSOutlineView`.
+    ///
+    /// **Die verbleibende Blindheit:** eine Aufklappansicht, die niemand so
+    /// nennt, weil sie von Hand aus Zeilen mit Einzug gebaut waere, faende
+    /// diese Zaehlung nicht. Der Bezug auf `spalten::Spalte::ALLE` haengt
+    /// dagegen am Aufzaehlungstyp und nicht an seinem Namen im Text.
     #[test]
     fn die_dateiliste_bleibt_flach_und_hat_vier_spalten() {
         assert_eq!(crate::spalten::Spalte::ALLE.len(), 4);
-        let quelltext = include_str!("appkit/tabelle.rs");
-        assert_eq!(
-            quelltext.matches("NSOutlineView").count(),
-            0,
-            "keine NSOutlineView, kein Aufklappzeichen"
-        );
+        let aufklappansicht = concat!("NSOutline", "View");
+        for (name, inhalt) in crate::quellbaum::quelldateien() {
+            let treffer: Vec<&str> = inhalt
+                .lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(aufklappansicht))
+                .collect();
+            assert!(
+                treffer.is_empty(),
+                "{name} baut eine Aufklappansicht: {treffer:?}"
+            );
+        }
     }
 
     /// C2.11: `angezeigtedatei::welche` bleibt bei zwei Quellen.
     ///
-    /// Gezaehlt am Quelltext des Moduls: jede Quelle ist genau ein `return
-    /// Some(`, und eine dritte waere eine dritte. Die Fallunterscheidung selbst
-    /// prueft das Modul in seinem eigenen Probenmodul ueber alle acht
-    /// Kombinationen.
+    /// **Gefragt ist der Gegenstand und nicht die Schreibweise.** Bis zum
+    /// 260815 zaehlte diese Probe die Zeichenfolge `return Some(` im Rumpf des
+    /// Moduls und erklaerte damit die heutige Schreibweise zur Regel: ein Wert
+    /// am Ende der Funktion, ein `.or_else`, ein `match` mit `Some(…)` als
+    /// Armwert — jede dritte Quelle in einer dieser Formen waere durchgelaufen
+    /// (`issues/260815-0211_*_die-probe-fuer-die-angezeigte-datei-zaehlt-return-some-…`).
+    ///
+    /// An ihre Stelle treten zwei Zusicherungen, die keine Zeile Quelltext
+    /// lesen:
+    ///
+    /// 1. **Die Signatur.** `welche` wird an einen Funktionszeiger mit genau
+    ///    diesen vier Eingaben gebunden. Eine dritte Quelle, die eine fuenfte
+    ///    Eingabe braucht — die Auswahl der Dateiliste, der angezeigte Ordner
+    ///    —, haelt damit den Bau an, statt still dazuzukommen.
+    /// 2. **Die Antwort.** Ueber alle sechzehn Kombinationen der vier Eingaben
+    ///    ist das Ergebnis entweder `None` oder **genau einer der beiden
+    ///    uebergebenen Pfade**. Eine Quelle ausserhalb der Eingaben — ein
+    ///    Ivar, eine Umgebungsvariable, ein Blick ins Dateisystem — laege
+    ///    ausserhalb dieser Menge und faellt hier heraus.
+    ///
+    /// **Die verbleibende Blindheit:** eine dritte Quelle, die genau einen der
+    /// beiden uebergebenen Pfade liefert, saehe diese Probe nicht. Sie waere
+    /// von den beiden aber auch nicht zu unterscheiden, und C2.11 spricht ueber
+    /// die Antwort. Welche der beiden Quellen in welcher Lage gewinnt, prueft
+    /// `angezeigtedatei.rs` in seinem eigenen Probenmodul ueber die volle Tafel.
     #[test]
     fn die_angezeigte_datei_bleibt_bei_zwei_quellen() {
-        let quelltext = include_str!("angezeigtedatei.rs");
-        let rumpf = quelltext
-            .split("#[cfg(test)]")
-            .next()
-            .expect("der Rumpf steht vor dem Probenmodul");
-        assert_eq!(
-            rumpf.matches("return Some(").count(),
-            2,
-            "die Vorschau und der Editor, und keine dritte Quelle"
-        );
+        use crate::angezeigtedatei::welche;
+
+        let gebunden: fn(bool, Option<PathBuf>, bool, Option<PathBuf>) -> Option<PathBuf> = welche;
+
+        let vorschau = PathBuf::from("/Users/k1/Bilder/schirm.png");
+        let editor = PathBuf::from("/Users/k1/Projekte/krk/README.md");
+
+        for vorschau_sichtbar in [false, true] {
+            for editor_sichtbar in [false, true] {
+                for vorschau_pfad in [None, Some(vorschau.clone())] {
+                    for editor_pfad in [None, Some(editor.clone())] {
+                        let antwort = gebunden(
+                            vorschau_sichtbar,
+                            vorschau_pfad.clone(),
+                            editor_sichtbar,
+                            editor_pfad.clone(),
+                        );
+                        let erlaubt = antwort.is_none()
+                            || antwort.as_ref() == Some(&vorschau)
+                            || antwort.as_ref() == Some(&editor);
+                        assert!(
+                            erlaubt,
+                            "eine dritte Quelle: {antwort:?} ist weder die Vorschau noch der \
+                             Editor (sichtbar {vorschau_sichtbar}/{editor_sichtbar}, Pfade \
+                             {vorschau_pfad:?}/{editor_pfad:?})"
+                        );
+                    }
+                }
+            }
+        }
     }
 }

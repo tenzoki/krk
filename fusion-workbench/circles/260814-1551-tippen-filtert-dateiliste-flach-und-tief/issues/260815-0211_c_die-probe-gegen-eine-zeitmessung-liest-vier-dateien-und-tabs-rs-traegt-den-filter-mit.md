@@ -31,3 +31,12 @@ Zwei Wege:
 2. Die Liste lassen und den Doc-Kommentar berichtigen: er sagt heute, die vier Dateien seien die, die den Filter tragen, und das ist seit F2 unvollständig.
 
 Der Befund ist gering im Gewicht — die Runde hat keinen Zeitgeber gebaut, und die Sekundenregel ist nachweislich gefallen. Er gehört trotzdem in die Liste, weil die Probe eine Aussage über den **Filter** macht und nicht über vier Dateien.
+
+---
+Resolved: Gefahren ist Weg 1. `code_zeilen_vor_dem_pruefmodul` schneidet am ersten `#[cfg(test)]` und reicht das Ergebnis an `code_zeilen` weiter; `im_filter_steht_keine_zeitmessung` liest damit fünf Dateien statt vier, und `krk-ui/src/tabs.rs` ist die fünfte.
+
+Die Zusicherung ist damit eine über den Filter und nicht über eine Dateiliste: `tabs.rs` trägt seit Schritt F2 den Filtertext über den Ordnerwechsel, hält den `Durchlauf` je Tab, entscheidet in `durchlauf_nachziehen_an`, wann einer beginnt und vergeht, und zieht die Befunde ein. `Duration` und `SystemTime` stehen dort in ihrem Prüfmodul und fallen mit dem Schnitt heraus; vor dem Schnitt trägt die Datei keine der drei Nadeln.
+
+Der Doc-Kommentar nennt jetzt fünf Dateien, sagt in einem eigenen Absatz, warum `tabs.rs` dazugehört und seit wann, und behält die Feststellung, dass `krk-ui/src/appkit/anwendung.rs` weiterhin nicht in der Liste steht: die Uhr dort gehört dem Anzeigeverzug der Dateioperationen und nicht dem Filter.
+
+Berührte Datei: `crates/krk-core/tests/verzeichnis.rs`.

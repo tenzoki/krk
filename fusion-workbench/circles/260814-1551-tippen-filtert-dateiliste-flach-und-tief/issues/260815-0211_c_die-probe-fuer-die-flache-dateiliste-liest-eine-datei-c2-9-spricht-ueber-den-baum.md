@@ -25,3 +25,12 @@ Die Kiste führt für genau diesen Fall `crate::quellbaum::quelldateien`, und de
 ## Was zu tun wäre
 
 Die Nadel `NSOutlineView` über `quelldateien()` zählen statt über `include_str!`, und dabei die Nadel zusammengesetzt schreiben, weil die Probe dann in dem Baum liegt, den sie liest. Der Bezug auf `spalten::Spalte::ALLE` bleibt, wie er ist: er zählt den Aufzählungstyp und nicht seinen Namen im Text.
+
+---
+Resolved: `die_dateiliste_bleibt_flach_und_hat_vier_spalten` zählt die Nadel jetzt über `crate::quellbaum::quelldateien()` und nicht mehr über `include_str!("appkit/tabelle.rs")`. Die Nadel steht mit `concat!` zusammengesetzt da, weil die Probe in dem Baum liegt, den sie liest; gelesen werden nur Code-Zeilen, also nicht die Nennungen im Doc-Kommentar daneben. Der Bezug auf `spalten::Spalte::ALLE` bleibt unverändert: er zählt den Aufzählungstyp und nicht seinen Namen im Text.
+
+`NSTableView` ist ausdrücklich **keine** Nadel, und der Doc-Kommentar sagt jetzt warum: KRK hat mehrere Tabellen — die Belegungsansicht und das Blatt zum Stapelumbenennen —, und eine Zählung darüber sähe sie als Fundstellen. Gefragt ist die Aufklappansicht, und die heißt in AppKit `NSOutlineView`.
+
+Die verbleibende Blindheit steht am Doc-Kommentar: eine Aufklappansicht, die niemand so nennt, weil sie von Hand aus Zeilen mit Einzug gebaut wäre, fände diese Zählung nicht.
+
+Berührte Datei: `crates/krk-ui/src/tabs.rs`.
