@@ -45,3 +45,30 @@ Die Muster dieses Projekts lesen den Marker aus dem Dateinamen, nicht die Kopfze
 2. **Die Status-Kopfzeile aus der Vorlage nehmen.** Dann führt den Stand allein der Dateiname, und zwei Stellen können nicht mehr auseinanderlaufen. Kostet die Auskunft nicht, denn der Dateiname steht in jeder Auflistung mit dabei — aber die Vorlage gehört `fusion` und nicht diesem Projekt, also ist der Ausweg von hier aus nicht gangbar.
 
 **Weg 1 ist der einzige, den dieses Projekt selbst gehen kann.** Zu entscheiden bleibt, ob er sich lohnt oder ob die Abweichung als bekannt hingenommen wird.
+
+---
+Resolved: Weg 1 gefahren. Am 260815-1410 hat der `reconciler` die Kopfzeile `**Status:**` in
+allen vierzehn Datensätzen auf den Marker des Dateinamens nachgezogen, je Datei genau eine
+Zeile, ohne Umbenennung und ohne Eingriff in die Rümpfe.
+
+**Gemessene Übergänge**, aus dem Diff gezählt und nicht aus dem Bericht übernommen:
+
+| Von | Auf | Zahl |
+|---|---|---|
+| `answered` | `implemented` | 9 |
+| `open` | `implemented` | 3 |
+| `open` | `deferred` | 2 |
+
+Der Prüflauf dieses Datensatzes über alle 136 Datensätze in `shared/decisions` und
+`circles/*/decisions` gibt danach nichts mehr aus, Exit-Code 0. Die Verteilung steht bei
+96 `implemented`, 23 `open`, 9 `answered`, 6 `superseded`, 2 `deferred`.
+
+**Was damit nicht behoben ist, und der Datensatz sagt es selbst.** Weg 1 zieht den Bestand
+nach und ändert nichts an der Bauart: die nächste Abweichung entsteht beim nächsten Lauf,
+den jemand vergisst. Weg 2, die `Status:`-Kopfzeile aus der Vorlage zu nehmen, bleibt von
+hier aus ungangbar, weil die Vorlage `fusion` gehört. Der Rest ist als bekannte Lage
+hinzunehmen, bis jemand die Vorlage anfasst.
+
+**Ein Nebenbefund zur Sorgfalt:** die Zusammenfassung des `reconciler` bezifferte die
+Übergänge mit 8/4/2 und zählte in ihrem eigenen Fließtext drei Dateien für die vier. Die
+Arbeit war richtig, die Tabelle darüber nicht. Gegengelesen wurde am Diff.

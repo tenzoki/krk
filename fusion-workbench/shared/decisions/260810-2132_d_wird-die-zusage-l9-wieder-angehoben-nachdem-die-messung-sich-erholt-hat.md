@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** deferred
 **Filed by:** orchestrator (nach dem Abnahmelauf des Nutzers vom 260810)
 **Cross-references:** `shared/issues/260807-1748_*_l9-ist-seit-dem-260805-messbar-schlechter-geworden.md`,
 `messungen/260810-1918-alle-zusagen.txt`, `messungen/260807-1538-alle-zusagen.txt`,

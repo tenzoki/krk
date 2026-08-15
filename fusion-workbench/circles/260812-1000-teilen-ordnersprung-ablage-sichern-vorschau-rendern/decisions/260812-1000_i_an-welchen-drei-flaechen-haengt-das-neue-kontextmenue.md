@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs` (die `NSTableView` des Dateifensters); `crates/krk-ui/src/appkit/vorschau.rs:574-575` (die Inhaltsfläche, weder bearbeitbar noch auswählbar); `crates/krk-ui/src/appkit/editor.rs` (die Textfläche); `crates/krk-ui/src/appkit/ereignisse.rs` (`ersthelfer_gehoert_appkit`)
 

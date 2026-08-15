@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_o_spec-eingebauter-editor-mit-textmarken.md` (C2 und C3), `shared/decisions/260802-0842_*_editor-formatansicht-je-dateityp.md`, `crates/krk-ui/src/vorschaumodell.rs:81` (die Textgrenze der Vorschau)
 

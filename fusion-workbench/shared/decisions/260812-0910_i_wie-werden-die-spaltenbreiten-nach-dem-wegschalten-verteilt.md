@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator
 **Cross-references:** `shared/issues/260812-0907_*_das-wegschalten-einer-spalte-verteilt-die-breiten-nicht-neu-und-schiebt-datum-aus-dem-bild.md`, `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5), `crates/krk-ui/src/appkit/tabelle.rs:227` (die vier Breitenpaare), `:2237` (die Betriebsart)
 

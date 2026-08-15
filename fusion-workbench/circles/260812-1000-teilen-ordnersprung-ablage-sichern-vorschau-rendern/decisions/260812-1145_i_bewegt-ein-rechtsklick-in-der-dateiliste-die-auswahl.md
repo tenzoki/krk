@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_o_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md` (Schritt 6, Kriterium C1.2 und C1.3); `crates/krk-ui/src/kommandos/operationen.rs:162` (`betroffene`, die eine Auswahlregel); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_an-welchen-drei-flaechen-haengt-das-neue-kontextmenue.md`
 

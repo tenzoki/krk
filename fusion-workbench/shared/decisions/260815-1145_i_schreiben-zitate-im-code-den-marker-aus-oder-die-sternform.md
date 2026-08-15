@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** orchestrator
 **Cross-references:** `shared/issues/260815-1047_c_vier-verweise-im-code-nennen-einen-marker-den-ihr-ziel-nicht-mehr-traegt-drei-davon-sind-neu.md` (der Anlass); `CLAUDE.md` (`## Bindende Grundlage: die Entscheidungsdatensatze`, die Markertabelle); `shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md` (derselbe Gegenstand von der Suchseite her)
 
