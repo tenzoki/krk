@@ -2,7 +2,7 @@
 
 **Directive:** Tippen filtert die Dateiliste im Dateifenster: jedes Zeichen ohne Zusatztaste blendet aus, was seinen Namen nicht traegt, und ein Ankreuzfeld "Deep" in der Bereichsleiste dehnt den Filter auf den ganzen Unterbaum aus.
 **Mode:** plan (Circle 260814-1551-tippen-filtert-dateiliste-flach-und-tief)
-**Status:** In Arbeit
+**Status:** Complete
 
 ## Bestandsaufnahme beim Start
 
@@ -95,3 +95,15 @@ Ein vorgesehener Circle liegt bereit. `/fusion:next` zeigt das Portfolio.
 **`C3.15` ist mit Gegenprobe ganz gemessen.** Mit entferntem Zweig wird die Probe rot. Eine Feinheit bleibt ungemessen und wird ausdrücklich nicht zugesagt: ob der Durchlauf nach dem Mangel anhält oder die restlichen Aufträge nur übergeht — beide Lesarten liefern dasselbe beobachtbare Ergebnis.
 
 **Offen:** acht Defektdatensätze im Circle, keiner vom Typ „Spec gegen Baum". Der Abnahmelauf am laufenden Bündel steht weiter aus und ist Nutzerarbeit.
+
+---
+
+## Abschluss — 260815-0600
+
+**Der Circle `260814-1551-tippen-filtert-dateiliste-flach-und-tief` ist beschränkt geschlossen.** 25 Commits in dieser Sitzung, zwei Turns, `make check` nach jedem Schritt grün. Der Zeiger `.active-circle` ist gelöscht, kein Circle ist aktiv.
+
+Der Nutzer hat am 260815 gewählt, beschränkt zu schließen statt vorher abzunehmen. Der Abnahmelauf steht damit aus und ist Nutzerarbeit; die Liste liegt unter `circles/260814-1551-…/history/260815-0400-abnahmeliste-g2.md`, geschätzt 25 Minuten.
+
+**Was die Sitzung außerdem hinterlässt.** Drei Defekte im gemeinsamen Speicher, die neben der Runde gefunden wurden: eine Verknüpfung auf einen Ordner lässt sich nicht betreten, sechs beantwortete Entscheidungsdatensätze trugen im Kopf weiter „Status: open", und der doppelt belegte Ausgabeort besteht unverändert. `CLAUDE.md` kennt die zehnte Runde nicht und ist an fünf Stellen überholt.
+
+**Der Driftabgleich meldet `verdict=clean`** über alle fünf Zeilen.
