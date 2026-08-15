@@ -55,3 +55,6 @@ Spaltenschalter, und die Probe ist in beiden Richtungen schreibbar.
 `resources/default-keymap.toml` trägt die Aussage bereits im Kommentar über dem neuen
 Eintrag; sie steht dort als Auskunft an den Leser der Datei und ersetzt die Berichtigung
 des Spec nicht.
+
+---
+Resolved: 260815-0246, shaper. Der Vorschlag des Datensatzes ist wörtlich übernommen. C5.5 lautet jetzt: die Belegungsansicht führt ihn; in der Markdown-Ausgabe der Runde 3 steht er nicht, solange er ab Werk keine Kombination trägt, und er steht dort, sobald der Nutzer ihm eine zuweist. Damit sagt das Kriterium dasselbe wie der Kopfkommentar von resources/default-keymap.toml über die drei Spaltenschalter, die Probe ist in beiden Richtungen schreibbar, und der Nutzerentscheid vom 260811-0110 über den Umfang der Ausgabe bleibt unangetastet. Am Code ist nichts geändert.

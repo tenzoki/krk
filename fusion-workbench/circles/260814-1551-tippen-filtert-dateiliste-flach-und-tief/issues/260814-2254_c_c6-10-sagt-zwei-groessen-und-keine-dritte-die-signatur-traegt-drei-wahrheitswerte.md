@@ -22,3 +22,6 @@ Der Spec und der Plan zählen dieselbe Regel verschieden, und beide Zahlen stehe
 **Vorschlag.** C6.10 um einen Halbsatz ergänzen, etwa: „…, und die zweite Größe steht in der Umsetzung als zwei Wahrheitswerte da, weil ein einzelnes Tastenereignis nur den Wiederholungsbefund trägt und nicht seinen Anfang." Das ist eine Änderung am Spec und keine am Code; sie gehört dem Nutzer beziehungsweise dem shaper, nicht diesem Schritt.
 
 **Kontext.** Aufgefallen beim Umsetzen von Schritt C1, beim Schreiben des Modulkopfes gegen C6.10. Aus dieser Directive entstanden, deshalb im Circle und nicht im gemeinsamen Speicher.
+
+---
+Resolved: 260815-0246, shaper. Der Vorschlag des Datensatzes ist übernommen und um einen Satz erweitert. C6.10 sagt jetzt, dass die zweite Größe in der Umsetzung als zwei Wahrheitswerte dasteht, weil ein einzelnes Tastenereignis nur den Wiederholungsbefund trägt und nicht seinen Anfang, und dass eine Regel über zwei Wahrheitswerte genau die Unterscheidung verlöre, die C1.20 von C1.18 trennt. Zwei Größen der Sache nach, drei Parameter in der Signatur, und beides steht jetzt im Spec und nicht nur im Modulkopf von kommandos/rueckschritt.rs. Am Code ist nichts geändert.

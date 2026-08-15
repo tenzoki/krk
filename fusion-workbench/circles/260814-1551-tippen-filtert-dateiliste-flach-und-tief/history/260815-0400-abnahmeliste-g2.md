@@ -3,8 +3,9 @@
 **Datum:** 260815-0400
 **Agent:** coder (bereitet vor und schreibt auf; die Beobachtungen selbst sind Nutzerarbeit)
 **Plan:** `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Strang G, Schritt G2
-**Spec:** `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, 75 Abnahmekriterien
+**Spec:** `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, 77 Abnahmekriterien
 **Bündel:** `target/KRK.app`, gebaut und signiert am 260815-0155 mit „KRK Entwicklung", Version 0.3.0
+**Nachgezogen:** 260815-0246, auf die Spec-Berichtigung derselben Uhrzeit. Zwei Kriterien sind dazugekommen (C2.14, C3.15), sechs sind umformuliert (C1.11, C3.8, C3.10, C3.13, C5.5, C6.10). **Die zehn Beobachtungen des Nutzers sind unverändert** — der Durchgang unten ist derselbe wie vorher.
 
 **Das beglaubigte Bündel ist vorher gesichert worden** und liegt unter
 `~/Library/Caches/krk-beglaubigt-260814-1054/KRK.app`. Es ist dort als *accepted,
@@ -16,21 +17,23 @@ also nicht verdrängt, sondern nur die Kopie im Baum ersetzt. Der offene Defekt 
 
 ## Die Zahlen, am Dokument nachgezählt
 
-Nicht aus dem Absatz des Spec übernommen, sondern an seinen 75 nummerierten Kriterien
+Nicht aus dem Absatz des Spec übernommen, sondern an seinen 77 nummerierten Kriterien
 gezählt (Fähigkeitsüberschrift für Fähigkeitsüberschrift, Kennzeichnung für
 Kennzeichnung):
 
 | | Zahl |
 |---|---|
-| Kriterien insgesamt | **75** — C1 zwanzig, C2 dreizehn, C3 vierzehn, C4 zehn, C5 sieben, C6 elf |
-| allein **(Probe)** | **65** |
+| Kriterien insgesamt | **77** — C1 zwanzig, C2 vierzehn, C3 fünfzehn, C4 zehn, C5 sieben, C6 elf |
+| allein **(Probe)** | **67** |
 | allein **(Bündel)** | **2** — C3.11, C3.12 |
 | **beides** | **8** — C1.7, C1.15, C1.17, C1.18, C1.20, C2.1, C4.5, C5.4 |
 | mit Bündelanteil, also Nutzerarbeit | **10** |
 | ohne Kennzeichnung | **0** |
 
-Die Zahl aus dem Auftrag hält: **zehn der 75 Kriterien haben einen Bündelanteil.** Sie
-sind unten die zehn Beobachtungen und stehen einzeln in der Kriterientafel.
+**Zehn der 77 Kriterien haben einen Bündelanteil**, dieselben zehn wie am 260815-0400. Sie
+sind unten die zehn Beobachtungen und stehen einzeln in der Kriterientafel. Die zwei neuen
+Kriterien C2.14 und C3.15 tragen beide allein **(Probe)** und ändern am Durchgang des
+Nutzers nichts.
 
 **Der Baumanteil ist gefahren.** `make check` ist nach jedem der dreizehn Bauschritte grün
 gelaufen; der letzte Lauf steht im Bericht zu F2
@@ -154,7 +157,7 @@ Nachzufahren ist eine einzelne Probe mit
 | C1.8 | Probe | `krk-ui/src/tabs.rs::der_filtertext_gehoert_dem_tab_und_nicht_dem_fenster` |
 | C1.9 | Probe | `krk-ui/src/tabs.rs::ein_ordnerwechsel_leert_den_filtertext_wenn_die_tiefe_suche_aus_ist` |
 | C1.10 | Probe | `krk-ui/src/tabs.rs::mit_tiefer_suche_ueberlebt_der_filtertext_den_ordnerwechsel`, `…::die_tiefe_suche_geht_auch_ohne_filtertext_hinueber` |
-| C1.11 | Probe | `krk-core/tests/verzeichnis.rs::eine_ausgefilterte_auswahl_kommt_beim_leeren_des_filters_zurueck`, `krk-ui/src/kommandos/navigation.rs::eine_weggefallene_auswahl_geht_auf_die_erste_zeile`, `…::eine_leere_sicht_bekommt_keine_auswahl` |
+| C1.11 | Probe | `krk-core/tests/verzeichnis.rs::eine_ausgefilterte_auswahl_kommt_beim_leeren_des_filters_zurueck`, `krk-ui/src/kommandos/navigation.rs::eine_weggefallene_auswahl_geht_auf_die_erste_zeile`, `…::eine_leere_sicht_bekommt_keine_auswahl`. **Am 260815-0246 umformuliert** (Befund 9): die Meldung „es ist nichts ausgewählt" bei leerer Auswahl ist Verhalten der Runde 1 und trägt keine Probe dieser Runde |
 | C1.12 | Probe | `krk-core/tests/verzeichnis.rs::die_sprungmarke_steht_nirgends_mehr_im_baum` |
 | C1.13 | Probe | **Keine eigene Probe** (Befund 4). Belegt am Bestand: `resources/default-keymap.toml` trägt keinen Einstiegsbefehl für den Filter, `grep -c '^\[\[funktion\]\]'` gibt 84, und der einzige neue Eintrag ist `tiefe_suche_umschalten` |
 | C1.14 | Probe | `krk-core/tests/verzeichnis.rs::ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen`, `krk-ui/src/kommandos/rueckschritt.rs::ein_stehender_filtertext_nimmt_ein_zeichen_zurueck` |
@@ -182,6 +185,7 @@ Nachzufahren ist eine einzelne Probe mit
 | C2.11 | Probe | `krk-ui/src/tabs.rs::die_angezeigte_datei_bleibt_bei_zwei_quellen` |
 | C2.12 | Probe | `krk-core/tests/verzeichnis.rs::die_eingestellte_sortierung_bleibt_die_ordnung_der_gefilterten_liste` |
 | C2.13 | Probe | `krk-core/tests/verzeichnis.rs::eine_verknuepfung_zaehlt_fuer_die_sichtbarkeit_als_ordner`, `…::eine_verknuepfung_auf_einen_ordner_meldet_kein_treffer`, `krk-ui/src/tabs.rs::eine_verknuepfung_bekommt_einen_auftrag_wie_jeder_ordner` |
+| **C2.14** | Probe | **Neu am 260815-0246** (Befund 10). Modellseite: `krk-core/tests/verzeichnis.rs::eine_ausgefilterte_auswahl_kommt_beim_leeren_des_filters_zurueck` (der Eintrag bleibt gemerkt, während seine Zeile fehlt), `…::der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck` (das Einschalten von „Deep" setzt die Befunde zurück). Die Oberflächenseite hat **keine eigene Probe**: `Tabellenansicht::tiefe_suche_umschalten` ruft `umsortiert` und `meldung_gewechselt` und nicht `nach_filteraenderung`, nachzulesen in `krk-ui/src/appkit/tabelle.rs` |
 
 ### C3 — Der Durchlauf über den Unterbaum
 
@@ -194,13 +198,14 @@ Nachzufahren ist eine einzelne Probe mit
 | C3.5 | Probe | `krk-ui/src/tabs.rs::ohne_seine_drei_bedingungen_beginnt_kein_durchlauf`; der dritte Rang von `Esc` steht in `krk-ui/src/appkit/anwendung.rs::abbrechen` |
 | C3.6 | Probe | `krk-ui/src/tabs.rs::je_tab_laeuft_nie_mehr_als_ein_durchlauf`, `…::ein_weiteres_zeichen_loest_den_laufenden_durchlauf_ab` |
 | C3.7 | Probe | `krk-ui/src/tabs.rs::das_ausschalten_von_deep_bricht_den_durchlauf_ab`, `…::ohne_seine_drei_bedingungen_beginnt_kein_durchlauf` |
-| C3.8 | Probe | `krk-core/tests/verzeichnis.rs::der_durchlauf_kennt_keine_tiefengrenze`, `…::der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze` |
+| C3.8 | Probe | `krk-core/tests/verzeichnis.rs::der_durchlauf_kennt_keine_tiefengrenze`, `…::der_durchlauf_liest_ueber_den_schwungleser_und_setzt_keine_grenze`, **und seit dem 260815** `…::die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden` für den zweiten Satz des Kriteriums |
 | C3.9 | Probe | `krk-core/tests/verzeichnis.rs::eine_verknuepfung_auf_einen_ordner_meldet_kein_treffer` |
 | C3.10 | Probe | `krk-core/tests/verzeichnis.rs::ein_nicht_lesbarer_ordner_gilt_als_kein_treffer` |
 | **C3.11** | **Bündel** | **Beobachtung 8** — kein Probenanteil |
 | **C3.12** | **Bündel** | **Beobachtung 9** — kein Probenanteil |
-| C3.13 | Probe | `krk-core/tests/verzeichnis.rs::jeder_auftrag_bekommt_genau_einen_befund`, `…::ein_ordner_ohne_treffer_meldet_den_negativen_befund` |
+| C3.13 | Probe | `krk-core/tests/verzeichnis.rs::jeder_auftrag_bekommt_genau_einen_befund`, `…::ein_ordner_ohne_treffer_meldet_den_negativen_befund`; die Abbruchursache von „nicht entschieden" über `…::der_abbruch_greift_in_einem_ordner_ohne_unterordner` |
 | C3.14 | Probe | `krk-ui/src/tabs.rs::die_auftragsliste_laesst_namentlich_passende_ordner_aus`, `…::ein_ordner_mit_lauter_passenden_unterordnern_stoesst_null_durchlaeufe_an` |
+| **C3.15** | Probe | **Neu am 260815-0246, und zur Hälfte gemessen** (Befund 11). Gemessen ist, dass der Durchlauf keinen eigenen Deskriptormangel erzeugt: `krk-core/tests/verzeichnis.rs::die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden`. **Ungemessen** ist, dass ein von außen herbeigeführter Mangel zu keinem Befund führt; die Trennung selbst steht in `krk-core/src/verzeichnis/sys.rs::ist_deskriptormangel` und hat keine Probe |
 
 ### C4 — Die eine Statuszeile trägt den Filter
 
@@ -227,7 +232,7 @@ Alle acht Proben stehen in `krk-ui/src/appkit/statuszeile.rs`.
 | C5.2 | Probe | `krk-core/tests/belegung.rs::jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`, `krk-core/src/tasten/belegung.rs::die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` |
 | C5.3 | Probe | `krk-core/tests/belegung.rs::jedes_kommando_traegt_genau_einen_wirkungsbereich`, `krk-ui/src/belegungsmodell.rs::jede_kennung_hat_einen_funktionsbereich` |
 | **C5.4** | Probe + **Bündel** | `krk-ui/src/menuemodell.rs::jede_funktion_der_belegung_steht_genau_einmal_im_menue`. Bündel: **Beobachtung 10** |
-| C5.5 | Probe | **Nur zur Hälfte erfüllt** (Befund 3). Die Belegungsansicht führt ihn (`krk-ui/src/belegungsmodell.rs::jede_kennung_hat_einen_funktionsbereich`); die Markdown-Ausgabe führt ihn **nicht**, und `krk-ui/src/belegungsausgabe.rs::jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte` hält ausdrücklich das Gegenteil fest |
+| C5.5 | Probe | **Am 260815-0246 an den Baum gezogen** (Befund 3, damit erledigt). Die Belegungsansicht führt ihn: `krk-ui/src/belegungsmodell.rs::jede_kennung_hat_einen_funktionsbereich`. Dass die Markdown-Ausgabe eine ab Werk unbelegte Funktion **nicht** führt, hält `krk-ui/src/belegungsausgabe.rs::jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte` fest — und genau das sagt das Kriterium jetzt auch |
 | C5.6 | Probe | **Keine eigene Probe** (Befund 5). Belegt am Baum: eigener Zweig `Kommando::TiefeSucheUmschalten` in `krk-ui/src/appkit/anwendung.rs:2938`, vor dem Auffangzweig auf `bereichskommando` |
 | C5.7 | Probe | `krk-core/tests/belegung.rs::jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste` über `OHNE_KOMBINATION_AB_WERK` (jetzt vier Einträge), `krk-ui/src/belegungsausgabe.rs::jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte` |
 
@@ -244,15 +249,19 @@ Alle acht Proben stehen in `krk-ui/src/appkit/statuszeile.rs`.
 | C6.7 | Probe | **Keine eigene Probe** (Befund 5). Belegt daran, dass das Stapelumbenennen in dieser Runde keine Zeile bekommen hat: `git diff 0c3a6f4 HEAD -- crates/krk-core/src/stapelumbenennen/` ist leer |
 | C6.8 | Probe | `krk-core/tests/verzeichnis.rs::filter_und_verstecke_gehen_durch_denselben_pruefschritt` |
 | C6.9 | Probe | `krk-ui/src/kommandos/rueckschritt.rs::ein_stehender_filtertext_nimmt_ein_zeichen_zurueck`, `…::die_tafel_aus_acht_faellen_geht_auf` |
-| C6.10 | Probe | `krk-ui/src/kommandos/rueckschritt.rs::die_regel_hat_genau_einen_aufrufer`, `…::die_tafel_aus_acht_faellen_geht_auf` — **mit einem Vorbehalt** (Befund 8) |
+| C6.10 | Probe | `krk-ui/src/kommandos/rueckschritt.rs::die_regel_hat_genau_einen_aufrufer`, `…::die_tafel_aus_acht_faellen_geht_auf`. **Der Vorbehalt aus Befund 8 ist am 260815-0246 im Spec aufgelöst**: das Kriterium sagt jetzt selbst, dass die zweite Größe als zwei Wahrheitswerte dasteht |
 | C6.11 | Probe | `krk-ui/src/appkit/ereignisse.rs::nur_die_nackte_ruecktaste_gilt_als_rueckschritt`; `f8` und `opt+cmd+delete` tragen `Kommando::EndgueltigLoeschen`, `ctrl+delete` geht durch `Leistenquelle::kommando_ausfuehren` und erreicht die Regel nicht |
 
 ---
 
 ## Was beim Zusammentragen aufgefallen ist
 
-Acht Befunde. Keiner hält den Abnahmelauf auf; drei betreffen die Frage, ob ein Kriterium
+Elf Befunde. Keiner hält den Abnahmelauf auf; vier betreffen die Frage, ob ein Kriterium
 so nachgewiesen ist, wie sein eigenes Kennzeichen es behauptet.
+
+**Die Befunde 9 bis 11 sind am 260815-0246 dazugekommen**, mit der Spec-Berichtigung
+derselben Uhrzeit. Die Befunde 3 und 8 sind mit ihr erledigt und unten als solche
+gekennzeichnet.
 
 **1. C4.9 trägt (Probe), und eine Probe gibt es nicht.** Der Spec sagt „Probe über die
 Zahl der Anzeigen". Der Schritt D1 hat sie nicht gebaut und sagt auch warum: sie müsste
@@ -267,13 +276,13 @@ Die Rangfolge von `Esc` hängt an drei Ivars des Anwendungsdelegierten, und `krk
 kein Bibliotheksziel. **C1.7 ist damit in der Sache ein reines Bündelkriterium**, obwohl
 es zwei Kennzeichnungen trägt; Beobachtung 5 ist sein einziger Nachweis.
 
-**3. C5.5 und C5.7 widersprechen sich, und der Widerspruch besteht fort.** Offener
-Datensatz
-`issues/260814-2320_o_c5-5-verlangt-den-eintrag-in-der-markdown-ausgabe-und-c5-7-schliesst-ihn-daraus-aus.md`.
-C5.5 verlangt den Eintrag in der Markdown-Ausgabe, C5.7 liefert keine Kombination aus, und
-die Markdown-Ausgabe nimmt seit dem Nutzerentscheid vom 260811-0110 nur Funktionen auf,
-die mindestens eine Kombination tragen. **C5.5 ist zur Hälfte nicht erfüllbar**, solange
-der Entscheid steht; nachzuziehen ist der Spec und nicht der Code.
+**3. C5.5 und C5.7 widersprachen sich. Erledigt am 260815-0246.** Datensatz
+`issues/260814-2320_c_c5-5-verlangt-den-eintrag-in-der-markdown-ausgabe-und-c5-7-schliesst-ihn-daraus-aus.md`,
+geschlossen. C5.5 verlangte den Eintrag in der Markdown-Ausgabe, C5.7 liefert keine
+Kombination aus, und die Markdown-Ausgabe nimmt seit dem Nutzerentscheid vom 260811-0110
+nur Funktionen auf, die mindestens eine Kombination tragen. C5.5 sagt jetzt, was der Baum
+tut: der Eintrag steht dort nicht, solange er ab Werk keine Kombination trägt, und er
+steht dort, sobald der Nutzer ihm eine zuweist.
 
 **4. C1.13 trägt (Probe über das Fehlen eines Einstiegsbefehls), und diese Probe gibt es
 nicht.** Der Nachweis ist von Hand zu führen, mit einem Blick in
@@ -299,13 +308,48 @@ Ordners verabreden. Geprüft ist die Aussage, für die das Kriterium den Prüfor
 Unterordner ausdrücklich verlangt — der Abbruch hängt nicht am Absteigen. Ungeprüft
 bleibt „an **jeder** Stapelgrenze".
 
-**8. C6.10 nennt zwei Größen, die Signatur trägt drei.** Offener Datensatz
-`issues/260814-2254_o_c6-10-sagt-zwei-groessen-und-keine-dritte-die-signatur-traegt-drei-wahrheitswerte.md`.
-Die dritte ist der Merker, ob die laufende Wiederholung bei stehendem Filtertext begann;
-sachlich ist sie die zweite Hälfte derselben Größe, die C1.18 und C1.20 aufspannen. Die
-Probe `die_tafel_aus_acht_faellen_geht_auf` schreibt alle acht Kombinationen aus, deckt
-also mehr ab, als das Kriterium verlangt. **Kein Widerspruch am Verhalten**, ein
-Widerspruch an der Formulierung.
+**8. C6.10 nannte zwei Größen, die Signatur trägt drei. Erledigt am 260815-0246.**
+Datensatz
+`issues/260814-2254_c_c6-10-sagt-zwei-groessen-und-keine-dritte-die-signatur-traegt-drei-wahrheitswerte.md`,
+geschlossen. Die dritte ist der Merker, ob die laufende Wiederholung bei stehendem
+Filtertext begann; sachlich ist sie die zweite Hälfte derselben Größe, die C1.18 und C1.20
+aufspannen. Die Probe `die_tafel_aus_acht_faellen_geht_auf` schreibt alle acht
+Kombinationen aus, deckt also mehr ab, als das Kriterium verlangt. Es war kein Widerspruch
+am Verhalten, sondern einer an der Formulierung, und C6.10 trägt den fehlenden Halbsatz
+jetzt.
+
+**9. C1.11 sagte „meldet nichts", und jeder Operationsbefehl meldet „es ist nichts
+ausgewählt". Erledigt am 260815-0246.** Datensatz
+`issues/260815-0211_c_c1-11-sagt-meldet-nichts-und-jeder-operationsbefehl-meldet-es-ist-nichts-ausgewaehlt.md`,
+geschlossen. `Anwendungsdelegierter::auftrag_stellen` antwortet seit der Runde 1 auf eine
+leere Auswahl mit dieser Meldung, und alle vier Operationsbefehle gehen dort durch. Das
+Kriterium ist an den Baum gezogen worden und nicht umgekehrt: die Meldung ist in der Lage,
+in der die Liste leer vor dem Nutzer steht, seine einzige Auskunft darüber, warum sein
+Tastendruck nichts getan hat. **Die Meldung selbst trägt keine Probe dieser Runde**, weil
+sie kein Zweig dieser Runde ist.
+
+**10. Die Ersatzzeile aus C1.11 greift beim Tippen und nicht beim Umschalten von „Deep".
+Erledigt am 260815-0246, als neues Kriterium C2.14.** Datensatz
+`issues/260815-0211_c_die-ersatzzeile-aus-c1-11-greift-beim-tippen-und-nicht-beim-umschalten-von-deep.md`,
+geschlossen. Von den vier Stellen, die ändern, was der Filter übrig lässt, nehmen drei den
+Weg über `nach_filteraenderung` und die vierte, `tiefe_suche_umschalten`, nicht. **Das ist
+so richtig**: beim Tippen fällt eine Zeile endgültig weg, beim Umschalten nur so lange,
+bis der Befund für ihren Ordner eintrifft. Die Ersatzzeile würde in diesem Fall den Platz
+des Nutzers verlieren, obwohl der Eintrag gleich darauf wiederkommt. Die Ungleichheit der
+vier Wege ist damit eine Entscheidung und kein Versehen. **Der Preis steht in C2.14**: in
+der Spanne dazwischen ist keine Zeile ausgewählt, und ein Operationsbefehl meldet „es ist
+nichts ausgewählt".
+
+**11. C3.15 trägt (Probe), und die Probe deckt nur die Rückrichtung ab.** Neu am
+260815-0246 mit dem Kriterium selbst. Gemessen ist, dass der Durchlauf keinen eigenen
+Deskriptormangel erzeugt: die Kindprobe unter 64 Deskriptoren entscheidet eine Kette von
+zweihundert Ebenen. **Ungemessen ist die andere Hälfte** — dass ein von außen
+herbeigeführter Mangel zu keinem Befund führt statt zu einem negativen.
+`krk_core::verzeichnis::sys::ist_deskriptormangel` hat keine eigene Probe, und der Zweig
+`Err(fehler) if ist_deskriptormangel(&fehler) => return None` in
+`crates/krk-core/src/verzeichnis/durchlauf.rs` wird von keiner Prüfung erreicht. **Das ist
+Coder-Arbeit und keine Sache dieser Liste**; die Kindprobe mit `ulimit -n 64` steht als
+Muster bereits daneben.
 
 **Kein Coder-Bericht widerspricht der Zahl zehn.** Die Summe der Bündelanteile über alle
 dreizehn Berichte ist dieselbe Menge, die die Kennzeichnung im Spec liefert: C1.7, C1.15,

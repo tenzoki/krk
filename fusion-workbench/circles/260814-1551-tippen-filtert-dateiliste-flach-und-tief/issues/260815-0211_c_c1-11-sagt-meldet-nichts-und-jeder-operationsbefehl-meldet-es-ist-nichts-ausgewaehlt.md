@@ -34,3 +34,6 @@ Zwei Richtungen, und die zweite ist wahrscheinlich die richtige:
 2. **Das Kriterium an den Baum ziehen** — „tut nichts und meldet, dass nichts ausgewählt ist". Dann ist die Zusage dieselbe wie seit der Runde 1, und C1.11 sagt es nur genauer.
 
 Für C1.11 gibt es keine Probe im Baum; welche der beiden Fassungen gilt, entscheidet, wie sie zu schreiben wäre.
+
+---
+Resolved: 260815-0246, shaper. Richtung 2 des Datensatzes gewählt: das Kriterium ist an den Baum gezogen worden. C1.11 sagt jetzt, dass ein Befehl ohne Auswahl keinen Auftrag stellt und dabei nicht schweigt, sondern seit der Runde 1 "es ist nichts ausgewählt" meldet. Begründung: die Meldung ist in der Lage, in der die Liste leer vor dem Nutzer steht, seine einzige Auskunft darüber, warum sein Tastendruck nichts getan hat; sie zu entfernen hieße, den einen Zweig in auftrag_stellen zu ändern, durch den alle vier Operationsbefehle laufen, also sichtbares Verhalten außerhalb dieses Specs. Die Kennzeichnung des Kriteriums nennt jetzt ausdrücklich, dass die Meldung keine Probe dieser Runde trägt.

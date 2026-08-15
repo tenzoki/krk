@@ -7,6 +7,7 @@
 **Grundlage erhoben:** 260814-1830, am Baum auf dem Stand `43dfe90`, unter `crates/` und `resources/`
 **Nachgebessert:** 260814-1852, nach der Bewertung `reviews/260814-1840-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Rückschritt-Taste vom 260814-1845
 **Nachgebessert:** 260814-1950, nach der zweiten Bewertung `reviews/260814-1938-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Tastenwiederholung vom 260814-1910
+**Nachgebessert:** 260815-0246, auf fünf Defektdatensätze aus Turn 1 und Turn 2. Das zweite Bild ist neu gezeichnet, weil der Umbau des Durchlaufs (`195791a`) die Rückkehr aus dem Abstieg abgeschafft hat; C1.11, C3.8, C3.10, C3.13, C5.5 und C6.10 sind an den Baum gezogen, C2.14 und C3.15 sind neu. **In allen fünf Fällen hat der Baum recht behalten und der Spec nicht.**
 
 **Sieben Fragen sind beantwortet**, fünf davon am 260814-1610, eine am 260814-1845 und eine am 260814-1910; sie liegen als Datensätze unter `decisions/` dieses Circles und werden hier nicht erneut gestellt. **Vier sind offen**; keine hält einen Planschritt auf, jede bindet die Umsetzung. Nachzuzählen bleibt es am Dateibestand und nicht an diesem Satz: `ls decisions/*_a_*.md` und `ls decisions/*_o_*.md`.
 
@@ -139,9 +140,9 @@ flowchart TD
 
 ## Der Durchlauf und was ihn beendet
 
-Das zweite Bild zeigt den einen Zweig aus dem ersten, der etwas kostet, und es entscheidet ihn nach beiden Seiten. Es trägt drei Wiederholungen, und jede ist gewollt: das Weiterrücken über die Einträge eines Ordners, das Nachladen des nächsten Stapels und das Absteigen samt der Rückkehr daraus. Ein Bild ohne die dritte müsste die Tiefe als Zahl vorwegnehmen, die es nicht gibt. **Wie viele Fäden der Durchlauf benutzt, sagt das Bild nicht**; das entscheidet der Planner, und der Abschnitt `## Offen für den Planner` führt die Frage.
+Das zweite Bild zeigt den einen Zweig aus dem ersten, der etwas kostet. Es entscheidet ihn nach beiden Seiten und lässt ihn auf einem dritten Weg unentschieden. Es trägt drei Wiederholungen, und jede ist gewollt: das Weiterrücken über die Einträge eines Stapels, das Nachladen des nächsten Stapels und das Aufnehmen des nächsten vorgemerkten Ordners. Ein Bild ohne die dritte müsste die Tiefe als Zahl vorwegnehmen, die es nicht gibt. **Wie viele Fäden der Durchlauf benutzt, sagt das Bild nicht**; das entscheidet der Planner, und der Abschnitt `## Offen für den Planner` führt die Frage.
 
-**Zwei Grenzen dieses Bildes tragen die Nachbesserung vom 260814-1950, und beide sind Aussagen über seine Zuständigkeit.** Die Eintrittskante trägt die Bedingung, unter der das erste Bild überhaupt fragt: der Durchlauf läuft je Ordner, dessen eigener Name den Filtertext **nicht** trägt. Und die beiden Knoten, die er verlässt, sprechen einen Befund aus und kein Urteil über die Sichtbarkeit: sie beantworten die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit ja oder mit nein, und die Zeile rechnet danach das erste Bild aus Name und Befund zusammen. Ohne diese beiden Grenzen sagte das Bild für jeden Ordner, dessen Name passt und unter dem nichts liegt, das Gegenteil des ersten.
+**Zwei Grenzen dieses Bildes tragen die Nachbesserung vom 260814-1950, und beide sind Aussagen über seine Zuständigkeit.** Die Eintrittskante trägt die Bedingung, unter der das erste Bild überhaupt fragt: der Durchlauf läuft je Ordner, dessen eigener Name den Filtertext **nicht** trägt. Und die Knoten, die er verlässt, sprechen einen Befund aus und kein Urteil über die Sichtbarkeit: zwei von ihnen beantworten die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit ja oder mit nein, der dritte beantwortet sie gar nicht. Die Zeile rechnet danach das erste Bild aus Name und Befund zusammen. Ohne diese beiden Grenzen sagte das Bild für jeden Ordner, dessen Name passt und unter dem nichts liegt, das Gegenteil des ersten.
 
 ```mermaid
 flowchart TD
@@ -152,20 +153,23 @@ flowchart TD
     subgraph DURCHLAUF["der Durchlauf, je Ordner des angezeigten Ordners,<br/>dessen eigener Name den Filtertext nicht traegt"]
         direction TB
         VERKN{"ist er eine symbolische<br/>Verknuepfung?"}
+        VORGEMERKT{"ist noch ein Ordner<br/>vorgemerkt?"}
         OEFFNEN{"laesst er sich<br/>oeffnen?"}
+        MANGEL{"fehlt dem Prozess<br/>ein Deskriptor?"}
+        ABBRUCH{"ist der Abbruch<br/>angefordert?"}
         STAPEL["naechsten Stapel holen,<br/>bis zu 1.024 Eintraege"]
         NOCH{"noch ein Eintrag<br/>im Stapel?"}
         PRUEF{"Name traegt<br/>die Folge?"}
-        IST{"ist es ein Ordner?"}
-        ABST["diesen Eintrag als<br/>naechsten Ordner nehmen"]
+        IST{"ist es ein Ordner<br/>und keine Verknuepfung?"}
+        VORMERK["seinen Pfad vormerken"]
         TREFFER(["Treffer: der Ordner des angezeigten Ordners<br/>ist entschieden, der Rest bleibt ungelesen"])
-        FERTIG(["abgearbeitet, kein Treffer gefunden"])
-        ZURUECK{"war es der Ordner des<br/>angezeigten Ordners?"}
         KEIN(["kein Treffer darunter"])
+        UNENTSCH(["nicht entschieden:<br/>der ganze Durchlauf endet hier"])
     end
 
     UJA["Befund an Bild 1:<br/>liegt unter ihm ein Treffer? — ja"]
     UNEIN["Befund an Bild 1:<br/>liegt unter ihm ein Treffer? — nein"]
+    OHNE["kein Befund an Bild 1: die Zeile bleibt ungezeigt,<br/>bis die naechste Frage sie neu stellt"]
     RECHNUNG["Bild 1 rechnet die Zeile des Ordners,<br/>die Statuszeile zaehlt sie mit"]
     OFFEN{"ist noch ein Ordner<br/>unentschieden?"}
     ENDE(["Durchlauf zu Ende"])
@@ -173,41 +177,61 @@ flowchart TD
     START --> SOFORT
     SOFORT --> LISTE
     START -->|"je Ordner, dessen Name<br/>den Filtertext nicht traegt"| VERKN
-    VERKN -->|"ja: es wird nicht abgestiegen"| FERTIG
-    VERKN -->|nein| OEFFNEN
-    OEFFNEN -->|"nein: keine Meldung"| FERTIG
-    OEFFNEN -->|ja| STAPEL
+    VERKN -->|"ja: es wird nicht abgestiegen"| KEIN
+    VERKN -->|"nein: er selbst ist der<br/>erste vorgemerkte Pfad"| VORGEMERKT
+    VORGEMERKT -->|"ja: den zuletzt<br/>vorgemerkten nehmen"| OEFFNEN
+    VORGEMERKT -->|"nein: abgeschritten,<br/>kein Treffer gefunden"| KEIN
+    OEFFNEN -->|ja| ABBRUCH
+    OEFFNEN -->|nein| MANGEL
+    MANGEL -->|"ja: kein Befund ueber<br/>diesen Ordner"| UNENTSCH
+    MANGEL -->|"nein: uebergangen,<br/>keine Meldung"| VORGEMERKT
+    ABBRUCH -->|"ja: Filtertext geaendert oder geloescht,<br/>Ordnerwechsel, Deep aus"| UNENTSCH
+    ABBRUCH -->|nein| STAPEL
     STAPEL -->|"der Stapel traegt Eintraege"| NOCH
-    STAPEL -->|"der Stapel ist leer"| FERTIG
+    STAPEL -->|"leer oder Lesefehler: dieser Ordner ist<br/>fertig, sein Deskriptor faellt"| VORGEMERKT
     NOCH -->|ja| PRUEF
-    NOCH -->|"nein: der Stapel ist aufgebraucht"| STAPEL
+    NOCH -->|"nein: der Stapel ist aufgebraucht"| ABBRUCH
     PRUEF -->|ja| TREFFER
     PRUEF -->|nein| IST
+    IST -->|ja| VORMERK
     IST -->|nein| NOCH
-    IST -->|ja| ABST
-    ABST --> VERKN
-    FERTIG --> ZURUECK
-    ZURUECK -->|"nein: weiter im uebergeordneten Ordner"| NOCH
-    ZURUECK -->|ja| KEIN
+    VORMERK --> NOCH
     TREFFER -->|"Befund an den Hauptfaden"| UJA
     KEIN -->|"Befund an den Hauptfaden"| UNEIN
+    UNENTSCH --> OHNE
     UJA --> RECHNUNG
     UNEIN --> RECHNUNG
+    OHNE --> ENDE
     RECHNUNG --> OFFEN
     OFFEN -->|ja| LISTE
     OFFEN -->|nein| ENDE
-    STAPEL -.->|"Filtertext geloescht oder geaendert,<br/>Ordnerwechsel, Deep aus"| ENDE
 ```
 
-**Der erste Treffer entscheidet den Ordner des angezeigten Ordners, gleich in welcher Tiefe er liegt, und der Rest unter ihm bleibt ungelesen.** Der Befund kehrt nicht Ebene für Ebene zurück; er beendet den Durchlauf für diesen Ordner sofort. Nur der negative Befund läuft über die Rückkehr, denn er steht erst fest, wenn nichts mehr offen ist. Das ist der Grund, warum der gefilterte Ordnerbaum billiger ist als die abgelöste flache Trefferliste und nicht teurer: jene musste den ganzen Unterbaum lesen, um vollständig zu sein, dieser hört je Ordner beim ersten Fund auf. Der Preis steht in C4: die Statuszeile kann während eines Durchlaufs nicht sagen, wie viele Treffer unter einem Ordner liegen, denn sie sind nicht gezählt. Sie zählt entschiedene Zeilen und keine Treffer.
+**Der erste Treffer entscheidet den Ordner des angezeigten Ordners, gleich in welcher Tiefe er liegt, und der Rest unter ihm bleibt ungelesen.** Der Befund wartet nicht, bis die tieferen Ebenen abgeschritten sind; er beendet den Durchlauf für diesen Ordner sofort, und die noch vorgemerkten Pfade fallen ungelesen weg. Nur der negative Befund muss warten, denn er steht erst fest, wenn kein Pfad mehr vorgemerkt ist. Das ist der Grund, warum der gefilterte Ordnerbaum billiger ist als die abgelöste flache Trefferliste und nicht teurer: jene musste den ganzen Unterbaum lesen, um vollständig zu sein, dieser hört je Ordner beim ersten Fund auf. Der Preis steht in C4: die Statuszeile kann während eines Durchlaufs nicht sagen, wie viele Treffer unter einem Ordner liegen, denn sie sind nicht gezählt. Sie zählt entschiedene Zeilen und keine Treffer.
 
-**Jeder Ordner wird auf genau eine von zwei Arten entschieden, und der negative Befund hat drei Quellen.** `kein Treffer darunter` entsteht, wenn der Ordner abgearbeitet ist und nichts trug, wenn er sich nicht öffnen ließ (C3.10) und wenn er eine symbolische Verknüpfung ist (C3.9). Dieser Befund bedient den Zweig `liegt unter ihm ein Treffer? — nein` des ersten Bildes, entscheidet C2.6 und sagt der Statuszeile, dass die Zahl für diesen Ordner steht. Ohne ihn setzen sich die ersten beiden Bilder nicht zusammen.
+**Jeder Ordner wird auf genau eine von zwei Arten entschieden, der negative Befund hat drei Quellen, und daneben steht ein vierter Ausgang ohne Befund.** `kein Treffer darunter` entsteht, wenn der Ordner abgearbeitet ist und nichts trug, wenn er sich aus einem Grund am Pfad nicht öffnen ließ (C3.10) und wenn er eine symbolische Verknüpfung ist (C3.9). Dieser Befund bedient den Zweig `liegt unter ihm ein Treffer? — nein` des ersten Bildes, entscheidet C2.6 und sagt der Statuszeile, dass die Zahl für diesen Ordner steht. Ohne ihn setzen sich die ersten beiden Bilder nicht zusammen.
 
-**Der Abbruch hängt an der Stapelgrenze und nicht am Absteigen.** Beides sind eigene Knoten, weil es zwei Vorgänge sind: „in ihn absteigen" kommt in einem Ordner mit fünfzigtausend gewöhnlichen Einträgen kein einziges Mal vor, „nächsten Stapel holen" kommt dort neunundvierzigmal vor. Die Zusage aus C3.4 hängt deshalb am Stapel, und damit gilt sie für jede Gestalt eines Baumes und nicht nur für flache mit vielen Unterordnern.
+**Der vierte Ausgang heißt `nicht entschieden` und trägt gar keinen Befund an das erste Bild.** Er hat zwei Ursachen, und beide liegen außerhalb des Ordners, über den gefragt wird: der Abbruch und ein Mangel an Deskriptoren des Prozesses (C3.15). Beide beenden den ganzen Durchlauf und nicht nur den laufenden Auftrag, und beide lassen die Zeile des Ordners so stehen, wie sie steht, bis die nächste Frage sie neu stellt. Ein Ordner ohne Befund ist dabei ebenso wenig zu sehen wie einer mit dem negativen Befund; der Unterschied liegt nicht im Bild der Liste, sondern in der Dauer. Ein negativer Befund gilt, bis der Nutzer die Frage ändert; ein ausgebliebener wird bei der nächsten Gelegenheit neu gestellt.
 
-**Die Verknüpfungsregel wohnt in diesem Bild und nur hier.** Abgestiegen wird in einen Ordner, der keine symbolische Verknüpfung ist; eine Verknüpfung ist mit dem Befund `kein Treffer darunter` entschieden und wird nicht geöffnet. Daraus folgt, dass der Durchlauf ohne eine mitgeführte Menge besuchter Ordner endet, und das ist die tragende Eigenschaft der Antwort vom 260814-1610.
+**Der Abbruch hängt an der Stapelgrenze und nicht am Vormerken.** Beides sind eigene Knoten, weil es zwei Vorgänge sind: „seinen Pfad vormerken" kommt in einem Ordner mit fünfzigtausend gewöhnlichen Einträgen kein einziges Mal vor, „nächsten Stapel holen" kommt dort neunundvierzigmal vor. Die Frage nach dem Abbruch steht deshalb unmittelbar vor dem Stapel; damit gilt die Zusage aus C3.4 für jede Gestalt eines Baumes und nicht nur für flache mit vielen Unterordnern.
 
-**Die Rückkehr aus dem Abstieg ist die Kante, die das Bild teuer macht, und sie gehört dazu.** Ein Zähler, der einfache Kreise aufzählt, findet hier sieben und nicht drei, und die Rechnung dahinter ist nicht drei plus zwei. Zwei Kreise sind die inneren Wiederholungen ohne Abstieg: `noch ein Eintrag im Stapel? — nein` zurück auf den Stapel, und `ist es ein Ordner? — nein` zurück auf die Einträge. Die übrigen fünf laufen über den Abstieg, und vier davon über die Rückkehr `war es der Ordner des angezeigten Ordners? — nein`; sie unterscheiden sich darin, auf welchem Weg der Ordner fertig wurde — über einen leeren Stapel, über eine symbolische Verknüpfung, über einen Ordner, der sich nicht öffnen ließ, und über einen abgearbeiteten Abstieg. Der fünfte läuft über den Abstieg, ohne die Rückkehr zu berühren. Jeder der sieben hat einen Ausgang, und jeder Knoten des Bildes erreicht einen Endpunkt; nachgerechnet am 260814-1950 über alle neunzehn Knoten und siebenundzwanzig Kanten. Der Zweig `START → SOFORT → LISTE` berührt den Durchlauf nicht und endet deshalb auch nicht mit ihm — das ist C3.2.
+**Ein Kreis des Bildes trägt die Abbruchfrage nicht**, nämlich der über `fehlt dem Prozess ein Deskriptor? — nein`. Ein Ordner, der sich nicht öffnen lässt, hält keinen Stapel und passiert deshalb keine Stapelgrenze; er kostet einen Öffnungsversuch und nichts weiter. Über eine Kette solcher Ordner ist die Zusage aus C3.4 der Sache nach leer und nicht verletzt. Das steht hier, weil ein Leser, der C3.4 gegen das Bild prüft, sonst genau diesen Kreis findet und für eine Lücke hält.
+
+**Die Verknüpfungsregel wohnt in diesem Bild und nur hier, und sie steht an zwei Knoten.** Der Auftrag selbst wird an `ist er eine symbolische Verknüpfung?` geprüft und ist damit als `kein Treffer darunter` entschieden, ohne geöffnet zu werden. Eine tiefer liegende Verknüpfung fällt an `ist es ein Ordner und keine Verknüpfung?` heraus und wird gar nicht erst vorgemerkt; ihr Name ist einen Knoten davor geprüft worden wie jeder andere, eine Verknüpfung mit passendem Namen ist also ein Treffer. Daraus folgt, dass der Durchlauf ohne eine mitgeführte Menge besuchter Ordner endet, und das ist die tragende Eigenschaft der Antwort vom 260814-1610.
+
+**Die Rückkehr aus dem Abstieg gibt es nicht mehr, und das Bild ist damit billiger geworden.** Bis zum 260815 hielt der Durchlauf einen offenen Leser je Ebene und las den übergeordneten Ordner nach der Rückkehr weiter. Dieser Bau erzeugte seinen eigenen Deskriptormangel und ist mit der Behebung des Defekts `issues/260815-0211_c_ein-deskriptormangel-des-prozesses-wird-zu-einem-dauerhaften-kein-treffer-darunter.md` weggefallen (`195791a`). Ein Ordner wird jetzt ganz gelesen, seine Unterordner wandern dabei als Pfad auf einen Stapel, und der nächste wird erst geöffnet, wenn der laufende zu Ende ist.
+
+Ein Zähler, der einfache Kreise aufzählt, findet deshalb **fünf** und nicht mehr sieben, nachgerechnet am 260815-0246 über alle **zweiundzwanzig Knoten und einunddreißig Kanten**:
+
+| Kreis | Was er wiederholt |
+|---|---|
+| `noch ein Eintrag im Stapel?` → `Name trägt die Folge?` → `ist es ein Ordner und keine Verknüpfung?` → zurück | ein Eintrag, der weder Treffer noch Ordner ist |
+| derselbe Weg, mit `seinen Pfad vormerken` dazwischen | ein Unterordner, der für später vorgemerkt wird |
+| `ist der Abbruch angefordert?` → `nächsten Stapel holen` → `noch ein Eintrag im Stapel?` → zurück | der nächste Stapel desselben Ordners; in diesem Kreis liegt die Abbruchgrenze aus C3.4 |
+| `ist noch ein Ordner vorgemerkt?` → `lässt er sich öffnen?` → `ist der Abbruch angefordert?` → `nächsten Stapel holen` → zurück | der nächste vorgemerkte Ordner, nachdem der laufende zu Ende gelesen ist |
+| `ist noch ein Ordner vorgemerkt?` → `lässt er sich öffnen?` → `fehlt dem Prozess ein Deskriptor?` → zurück | der nächste vorgemerkte Ordner, nachdem der laufende sich nicht öffnen ließ |
+
+Zwei Kreise laufen über die Einträge eines Stapels, einer über die Stapel eines Ordners, zwei über die vorgemerkten Ordner. Kein Kreis läuft mehr über einen zweiten offenen Leser, und daran hängt die Zusage aus C3.8: der Durchlauf hält zu jedem Zeitpunkt genau einen Verzeichnisdeskriptor. Jeder der fünf Kreise hat einen Ausgang, und jeder Knoten des Bildes erreicht einen Endpunkt. Der Zweig `START → SOFORT → LISTE` berührt den Durchlauf nicht und endet deshalb auch nicht mit ihm — das ist C3.2.
 
 ## Die Rückschritt-Taste und was sie erreicht
 
@@ -283,7 +307,7 @@ Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circle
 8. Der Filtertext gehört dem Tab. Ein Tabwechsel zeigt den Filtertext des anderen Tabs, und ein Tab ohne Filtertext zeigt seinen vollen Bestand. **(Probe)**
 9. Ist „Deep" aus, leert ein Ordnerwechsel den Filtertext. Der Aufstieg zählt wie der Einstieg. **(Probe)** — hängt an `decisions/260814-1830_o_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`
 10. Ist „Deep" an, übersteht der Filtertext jeden Ordnerwechsel. Ohne diese Ausnahme hätte das Modell der tiefen Ansicht keinen Gegenstand. **(Probe)**
-11. Fällt die Zeile weg, auf der die Auswahl stand, geht die Auswahl auf die erste sichtbare Zeile. Ist keine Zeile sichtbar, gibt es keine Auswahl, und ein Befehl, der eine bräuchte, tut nichts und meldet nichts. **(Probe)**
+11. Fällt die Zeile weg, auf der die Auswahl stand, geht die Auswahl auf die erste sichtbare Zeile. Ist keine Zeile sichtbar, gibt es keine Auswahl, und ein Befehl, der eine bräuchte, stellt keinen Auftrag. **Er schweigt dabei nicht:** jeder Operationsbefehl antwortet seit der Runde 1 auf eine leere Auswahl mit „es ist nichts ausgewählt" (`Anwendungsdelegierter::auftrag_stellen`), und diese Runde ändert daran nichts — sie macht den bisher seltenen Fall zum Regelfall. Dieses Kriterium gilt für das Tippen und für das Zurücknehmen eines Zeichens; für das Umschalten von „Deep" gilt C2.14. **(Probe** für die Auswahl und für das Ausbleiben des Auftrags; die Meldung selbst ist unverändertes Verhalten der Runde 1 und trägt keine eigene Probe dieser Runde**)**
 12. Die Sprungmarke fällt vollständig weg. `erste_zeile_mit` und `Sprungmarke::tippen` haben danach keinen Aufrufer mehr, und die Konstante `PAUSE` steht nirgends mehr. Die Zeichenprüfung `traegt_ein_dateiname` bleibt und wechselt gegebenenfalls das Modul. **(Probe** über die Zahl der Aufrufer**)**
 13. Es entsteht kein neues Kürzel und kein neues Bedienelement für den Einstieg in den Filter. Das Tippen selbst ist der Einstieg. **(Probe** über das Fehlen eines Einstiegsbefehls in `resources/default-keymap.toml`**)**
 14. Steht ein Filtertext, nimmt die nackte Rückschritt-Taste sein letztes Zeichen zurück, und die Liste wächst um die Einträge, die damit wieder passen. Es ist dieselbe Handlung, die die Tippsuche der Belegungsansicht aus der Runde 7 über `letztes_zeichen_weg` bedient. **(Probe)**
@@ -317,6 +341,7 @@ Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circle
 11. `angezeigtedatei::welche` bekommt keine dritte Quelle und bleibt die eine Rechnung für den Begriff „die angezeigte Datei". Der Ordnersprung `OrdnerDerDatei` aus der Runde 6 bleibt unangetastet. **(Probe)**
 12. Die eingestellte Sortierung bleibt die Ordnung der Liste, und Ordner stehen weiter vorn. Es entsteht keine Ordnung nach Passgenauigkeit. **(Probe)**
 13. Eine symbolische Verknüpfung auf einen Ordner ist bei eingeschaltetem „Deep" nur dann zu sehen, wenn ihr eigener Name den Filtertext trägt. Trägt er ihn, entscheidet der Name allein und der Durchlauf läuft für sie nicht (C3.14); trägt er ihn nicht, läuft er, steigt nicht in sie hinab und meldet „kein Treffer darunter". Ist „Deep" aus, bleibt sie sichtbar wie jeder Ordner (C1.6). Die ersten beiden Bilder fragen dafür dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf. **(Probe)**
+14. **Das Umschalten von „Deep" rückt die Auswahl nicht nach, und C1.11 gilt dafür nicht.** Steht ein Filtertext und schaltet der Nutzer „Deep" ein, fällt jeder Ordner aus der Sicht, dessen Name den Filtertext nicht trägt, und kommt zurück, sobald sein Befund eintrifft. Stand die Auswahl auf einem solchen Ordner, bleibt sie am Eintrag stehen und ist wieder zu sehen, sobald der Durchlauf ihn als Treffer meldet. In der Spanne dazwischen ist keine Zeile ausgewählt, und ein Befehl, der eine Auswahl braucht, findet keine und meldet „es ist nichts ausgewählt" (C1.11). **Der Preis ist benannt und angenommen:** die Ersatzzeile aus C1.11 würde die Auswahl auf die erste sichtbare Zeile setzen und damit den Platz des Nutzers dauerhaft verlieren, obwohl der Eintrag gleich darauf wiederkommt. Das Wegfallen beim Tippen ist endgültig, das Wegfallen beim Umschalten ist vorübergehend, und deshalb sind es zwei Regeln und nicht eine. **(Probe** über das Modell: der Eintrag bleibt gemerkt, während seine Zeile fehlt**)**
 
 **Getroffene Festlegungen:**
 - **Ein Ankreuzfeld und keine Tastenkombination.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_welche-tastenkombination-schaltet-die-tiefe-suche.md`. `shift+cmd+f`, `opt+cmd+f`, `ctrl+cmd+f` und der nackte Tabulator bleiben frei.
@@ -336,13 +361,14 @@ Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circle
 5. `Esc` beendet einen laufenden Durchlauf, indem es den Filtertext löscht; ohne Filtertext hat der Durchlauf keinen Gegenstand. Ein eigener Rang für das Anhalten entsteht nicht. **(Probe)**
 6. Ein weiteres getipptes Zeichen bricht den laufenden Durchlauf ab und stößt einen neuen an. Je Tab läuft nie mehr als einer. **(Probe)**
 7. Ein Ordnerwechsel und das Ausschalten von „Deep" brechen den Durchlauf ab. **(Probe)**
-8. Es gibt keine Tiefengrenze und keinen Deckel auf die Trefferzahl. **(Probe** über das Fehlen einer Grenze und einer Zählung gegen eine Grenze**)**
+8. Es gibt keine Tiefengrenze und keinen Deckel auf die Trefferzahl. **Die Tiefe eines Baumes ist auch dann keine Grenze, wenn KRK unter der Deskriptorgrenze läuft, die ein aus dem Finder gestartetes Bündel bekommt**: der Durchlauf hält zu jedem Zeitpunkt genau einen Verzeichnisdeskriptor, gleich wie tief der Baum ist. Ohne diese Eigenschaft wäre die Zusage an einem Baum von zweihundert Ebenen keine, denn der Prozess bekäme vorher keinen Deskriptor mehr. **(Probe** über das Fehlen einer Grenze und einer Zählung gegen eine Grenze, und über einen Treffer zweihundert Ebenen tief unter einer auf 64 Deskriptoren abgesenkten Grenze**)**
 9. Der Durchlauf steigt nicht in symbolische Verknüpfungen hinab. Eine Verknüpfung erscheint als Treffer, wenn ihr Name passt, und wird nicht geöffnet. Für einen Ordner, der eine symbolische Verknüpfung ist, lautet der Befund „kein Treffer darunter" und nicht „unentschieden". Damit endet jeder Durchlauf ohne einen mitgeführten Zustand über besuchte Ordner. **(Probe)**
-10. Ein Ordner, den der Durchlauf nicht öffnen kann, gilt als „kein Treffer darunter", hält den Durchlauf nicht an und erzeugt keine Meldung. **(Probe)**
+10. Ein Ordner, den der Durchlauf nicht öffnen kann, gilt als „kein Treffer darunter", hält den Durchlauf nicht an und erzeugt keine Meldung. **Gemeint ist ein Grund, der am Pfad liegt** — fehlende Rechte, ein Pfad, den es nicht mehr gibt, ein Eintrag, der kein Verzeichnis ist. Ein Mangel an Deskriptoren liegt nicht am Pfad, sondern am Prozess, und ist von C3.15 geregelt. **(Probe)**
 11. Während der Durchlauf läuft, wächst die Liste, und die Anzeige springt dabei nicht. Die Auswahl bleibt auf dem Eintrag, auf dem sie stand, solange es ihn noch gibt. **(Bündel** — **Beobachtung:** in einem Ordner mit mehreren tausend Einträgen unter dem Benutzerordner „Deep" einschalten und einen Filtertext tippen; die Zeilen kommen nach und nach dazu, der Bildlauf bleibt stehen, und die Auswahl wandert nicht**)**
 12. Der Durchlauf hält KRK nicht an. Tastenbefehle, Bildlauf, der Wechsel in einen anderen Tab und der Wechsel in ein anderes Dateifenster wirken weiter. **(Bündel** — **Beobachtung:** während eines Durchlaufs über einen großen Baum mit den Pfeiltasten durch die Liste gehen und mit dem Tabbefehl in einen anderen Tab wechseln; beides antwortet ohne Verzug**)**
-13. Der Durchlauf entscheidet jeden Ordner, für den er läuft, mit einem von zwei Befunden, und der negative entsteht auf drei Wegen: der Ordner ist abgearbeitet und trug keinen Treffer, er ließ sich nicht öffnen (C3.10), oder er ist eine symbolische Verknüpfung (C3.9). „Kein Treffer darunter" ist von „noch nicht entschieden" unterschieden. Der Befund beendet den Durchlauf für diesen Ordner und beantwortet damit die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit nein; **über die Sichtbarkeit entscheidet er nicht.** Sie ergibt sich im ersten Bild aus Name und Befund zusammen, und ein Ordner, für den der Durchlauf läuft, trägt den Filtertext in seinem Namen nicht — er fällt also weg (C2.6). **(Probe** über alle drei Wege**)**
+13. Der Durchlauf entscheidet jeden Ordner, den er zu Ende bringt, mit einem von zwei Befunden, und der negative entsteht auf drei Wegen: der Ordner ist abgearbeitet und trug keinen Treffer, er ließ sich aus einem Grund am Pfad nicht öffnen (C3.10), oder er ist eine symbolische Verknüpfung (C3.9). **„Kein Treffer darunter" ist von „noch nicht entschieden" unterschieden, und der zweite Fall hat zwei Ursachen: den Abbruch und einen Deskriptormangel des Prozesses (C3.15).** Beide melden gar nichts, statt den Ordner negativ zu entscheiden. Der Befund beendet den Durchlauf für diesen Ordner und beantwortet damit die Frage `liegt unter ihm ein Treffer?` des ersten Bildes mit nein; **über die Sichtbarkeit entscheidet er nicht.** Sie ergibt sich im ersten Bild aus Name und Befund zusammen, und ein Ordner, für den der Durchlauf läuft, trägt den Filtertext in seinem Namen nicht — er fällt also weg (C2.6). **(Probe** über alle drei Wege**)**
 14. Für einen Ordner, dessen eigener Name den Filtertext trägt, läuft kein Durchlauf. Seine Sichtbarkeit steht mit dem Namen fest (C2.5, C2.8, C2.13), und ein Befund über seinen Unterbaum änderte sie nicht. **(Probe** über die Zahl der angestoßenen Durchläufe: ein Prüfordner, dessen sämtliche Unterordner den Filtertext im Namen tragen, liest keinen Unterbaum**)**
+15. **Ein Mangel an Deskriptoren ist kein Befund über einen Ordner.** Kann der Durchlauf einen Ordner nicht öffnen, weil der Prozess keinen Deskriptor mehr frei hat (`EMFILE`, `ENFILE`), meldet er für ihn nichts, statt „kein Treffer darunter" zu melden, und beendet sich; die noch offenen Aufträge bleiben ebenfalls unentschieden. Der Grund ist die Dauer: derselbe Aufruf auf denselben Pfad kann gleich darauf gelingen, und ein negativer Befund nähme die Zeile dauerhaft und ohne Meldung aus der Liste, während ein ausgebliebener Befund bei der nächsten Frage — ein weiteres Zeichen, ein Umschalten, ein Ordnerwechsel — neu gestellt wird. **(Probe** für die Trennung von „am Pfad" und „am Prozess"; **am 260815 ist von diesem Kriterium allein die Rückrichtung gemessen**, nämlich dass der Durchlauf keinen eigenen Mangel erzeugt (C3.8). Dass ein von außen herbeigeführter Mangel zu keinem Befund führt, hat noch keine Probe**)**
 
 **Getroffene Festlegungen:**
 - **Verknüpfungen werden nicht verfolgt.** Nutzerentscheid vom 260814-1610, `decisions/260814-1552_a_steigt-die-tiefe-suche-in-symbolische-verknuepfungen-hinab.md`, Möglichkeit 1. Der Durchlauf endet damit ohne eine mitgeführte Menge besuchter Ordner, und jede Datei erscheint höchstens einmal.
@@ -377,7 +403,7 @@ Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circle
 2. `resources/default-keymap.toml` bekommt genau einen Eintrag mit `tasten = []`, nach dem Muster von `spalte_typ_umschalten`. Er ist am 260814 der 84. **(Probe)**
 3. `Kommando::wirkungsbereich` und `bereich_des_kommandos` bekommen je eine Zeile. Beide Fallunterscheidungen bleiben vollständig und ohne Auffangzweig. **(Probe)**
 4. Das vollständige Hauptmenü aus der Runde 7 führt den Befehl. **(Probe** über `--menue-protokoll`, **Bündel** für das Bild — **Beobachtung:** das Menü öffnen und den Eintrag ohne Kürzel dort sehen, wo die drei Spaltenschalter stehen**)**
-5. Die Belegungsansicht führt ihn, und die Markdown-Ausgabe der Runde 3 führt ihn mit. **(Probe** über `--tasten-protokoll` und über die Ausgabe**)**
+5. Die Belegungsansicht führt ihn. In der Markdown-Ausgabe der Runde 3 steht er nicht, solange er ab Werk keine Kombination trägt; weist der Nutzer ihm eine zu, findet er ihn danach auch dort. Das ist dieselbe Aussage, die der Kopfkommentar von `resources/default-keymap.toml` seit dem 260812 über die drei Spaltenschalter macht, und sie folgt aus dem Nutzerentscheid vom 260811-0110 über den Umfang der Ausgabe. **(Probe** über `--tasten-protokoll` und über die Ausgabe, in beiden Richtungen**)**
 6. Der Befehl bekommt einen eigenen Zweig in `kommando_ausfuehren` und fällt nicht still durch den Auffangzweig auf `bereichskommando`. **(Probe)**
 7. Der Nutzer kann ihm eine Kombination geben, wie jeder Funktion. Ausgeliefert wird keine. **(Probe)**
 
@@ -395,7 +421,7 @@ Die Runde 9 ist mit 21 ihrer 29 Bündelkriterien ohne Beleg geschlossen (`circle
 7. Das Stapelumbenennen holt seine Namen aus derselben Auswahl und prüft Kollisionen weiter gegen `alle_namen`, das über den vollen Bestand läuft. Es bekommt keine eigene Regel. **(Probe)**
 8. Was für den Filter gilt, gilt unverändert für das Ein- und Ausblenden versteckter Dateien. Es entstehen keine zwei Regeln für denselben Vorgang, sondern ein zweiter Prüfschritt in derselben Sicht. **(Probe)**
 9. Bei stehendem Filtertext stellt die nackte Rückschritt-Taste keinen Auftrag der Art `InDenPapierkorb`. Weder eine Auswahl noch eine Markierung wird dabei angefasst, und `betroffene` wird für diesen Tastendruck nicht befragt. **(Probe)**
-10. Die Fallunterscheidung hängt an zwei Größen und an keiner dritten: ob ein Filtertext steht, und ob der Anschlag aus einer Tastenwiederholung stammt, die bei stehendem Filtertext begann (C1.18, C1.20). Sie hängt **nicht** daran, ob der Filtertext Treffer hat, ob eine Auswahl besteht oder ob „Deep" an ist. Ein Filtertext ohne Treffer schützt genauso wie einer mit Treffern. Das dritte Bild zeigt beide Größen und die vier Wege, die sie aufspannen. **(Probe)**
+10. Die Fallunterscheidung hängt an zwei Größen und an keiner dritten: ob ein Filtertext steht, und ob der Anschlag aus einer Tastenwiederholung stammt, die bei stehendem Filtertext begann (C1.18, C1.20). Sie hängt **nicht** daran, ob der Filtertext Treffer hat, ob eine Auswahl besteht oder ob „Deep" an ist. Ein Filtertext ohne Treffer schützt genauso wie einer mit Treffern. Das dritte Bild zeigt beide Größen und die vier Wege, die sie aufspannen. **Die zweite Größe steht in der Umsetzung als zwei Wahrheitswerte da**, weil ein einzelnes Tastenereignis nur den Wiederholungsbefund trägt und nicht seinen Anfang; die Regel hat deshalb drei Parameter und die Fallunterscheidung zwei Größen. Wer statt dessen eine Regel über zwei Wahrheitswerte baute, verlöre genau die Unterscheidung, die C1.20 von C1.18 trennt. **(Probe)**
 11. Die übrigen Löschwege bleiben unberührt: `cmd+delete` räumt, `f8` und `opt+cmd+delete` löschen endgültig nach ihrer einen Rückfrage, und das Löschen in der Lesezeichenleiste über `ctrl+delete` ist nicht betroffen, denn die Regel gilt im Dateifenster. Das dritte Bild zeichnet alle drei als Wege ein, die den Unterbaum der Fallunterscheidung nicht berühren. **(Probe)**
 
 **Getroffene Festlegungen:**
@@ -467,7 +493,7 @@ Vier Fragen sind offen. Keine hält einen Planschritt auf, jede bindet die Umset
 
 ## Abgeleitet und nicht gefragt
 
-Sieben Festlegungen sind aus dem gewählten Modell abgeleitet und dem Nutzer nicht vorgelegt worden. Jede ist am Spec-Tor überstimmbar.
+Neun Festlegungen sind aus dem gewählten Modell abgeleitet und dem Nutzer nicht vorgelegt worden. Jede ist am Spec-Tor überstimmbar. **Die letzten beiden sind am 260815-0246 dazugekommen**, aus zwei Defektdatensätzen der Durchsicht.
 
 - **Ein Ordner passt, wenn sein eigener Name passt oder ein Treffer unter ihm liegt** (C2.5). Die Alternative wäre, nur den Inhalt zu befragen; dann verschwände bei Filter „src" ausgerechnet der Ordner `src`, dessen Name der Nutzer gerade getippt hat. Daraus folgt die Zuständigkeitsgrenze zwischen den ersten beiden Bildern: der Name entscheidet zuerst, und der Durchlauf wird nur gefragt, wenn der Name nichts hergibt (C3.14). Die zweite Bewertung vom 260814-1938 hat den Widerspruch gefunden, der entstand, als das zweite Bild diese Grenze überschritt.
 - **Ein Ordner, der allein über seinen Namen passt, führt auf eine leere Liste** (C2.8). Die Regel gilt auf jeder Ebene gleich, und das ist ihr Wert. Die Alternative wäre, in einem namentlich getroffenen Ordner den vollen Bestand zu zeigen; dann hinge das Verhalten davon ab, wie der Nutzer in den Ordner gekommen ist, und die Liste sagte nicht mehr, was sie zeigt.
@@ -476,6 +502,8 @@ Sieben Festlegungen sind aus dem gewählten Modell abgeleitet und dem Nutzer nic
 - **Eine symbolische Verknüpfung auf einen Ordner ist ein Ordner für die Sichtbarkeit und keiner für den Durchlauf** (C2.13). Die ersten beiden Bilder fragen deshalb dasselbe, `ist es ein Ordner?`, und die Verknüpfungsregel wohnt allein im Durchlauf, der für sie „kein Treffer darunter" meldet. Die Alternative wäre, sie schon bei der Sichtbarkeit auszunehmen; dann verschwände sie auch bei ausgeschaltetem „Deep", und C1.6 deckte sie nicht mehr.
 - **Die Grenze der Tastenwiederholung gilt nur für eine Wiederholung, die bei stehendem Filtertext begann** (C1.20). Der Nutzer hat am 260814-1910 entschieden, dass die Wiederholung nicht über die Grenze trägt; die Rückfrage, was mit einer Wiederholung geschieht, die nie einen Filtertext gesehen hat, ist ihm nicht vorgelegt worden. Wir lesen C1.16 als bindend: ohne Filtertext ändert diese Runde nichts, und das schließt das Halten der Taste ein. Die Alternative wäre, jede Wiederholung anzuhalten; dann verlöre der Nutzer eine Bedienung, die er heute hat, und die Runde änderte etwas, das sie nicht anfassen wollte.
 - **Die Rücknahme eines Zeichens ist keine zweite Funktion der Rückschritt-Taste** (C1.19). Belegungsansicht, Hauptmenü und Markdown-Ausgabe führen für `delete` weiter einen Eintrag. Die Alternative wäre eine zweite Zeile für dieselbe Taste; die drei Ansichten zeigen je Befehl eine Bedeutung, und eine zweite passte dort nicht hinein. Der Preis ist benannt: die Fallunterscheidung steht damit in keiner Übersicht, und der Nutzer lernt sie am laufenden Bündel.
+- **Das Umschalten von „Deep" rückt die Auswahl nicht nach** (C2.14). Die Alternative wäre, C1.11 auch auf den Schalter anzuwenden; dann spränge die Auswahl im Augenblick des Klicks auf die erste sichtbare Zeile und käme nicht zurück, wenn der Ordner Sekundenbruchteile später als Treffer gemeldet wird. Der Preis der gewählten Richtung ist eine Spanne ohne sichtbare Auswahl, in der ein Operationsbefehl „es ist nichts ausgewählt" meldet.
+- **Ein Deskriptormangel lässt einen Ordner unentschieden, statt ihn negativ zu entscheiden** (C3.15). Die Alternative wäre, jedes gescheiterte Öffnen gleich zu behandeln; dann verschwände eine Zeile dauerhaft und ohne Meldung, weil der Prozess in einem Augenblick keinen Deskriptor frei hatte. Genau das war der Defekt `issues/260815-0211_c_ein-deskriptormangel-des-prozesses-wird-zu-einem-dauerhaften-kein-treffer-darunter.md`.
 
 ## Prüfvorbehalt
 
@@ -486,6 +514,7 @@ Die Ausgangslage ist am 260814-1830 auf dem Stand `43dfe90` am Baum erhoben, und
 
 ## Reconciliation Log
 
+- 260815-0246 — Nachgebessert auf fünf Defektdatensätze, alle vom Typ „der Spec sagt etwas anderes als der Baum". In allen fünf hat der Baum recht behalten, und keine Zeile Code ist dabei geändert worden. Erstens das zweite Bild: der Umbau des Durchlaufs (`195791a`, Behebung von `issues/260815-0211_c_ein-deskriptormangel-…`) hat die Kante „zurück zum übergeordneten Ordner" abgeschafft, und mit ihr fallen der Knoten „in ihn absteigen" und vier der sieben Kreise. Das Bild ist neu gezeichnet und trägt jetzt zweiundzwanzig Knoten, einunddreißig Kanten und fünf Kreise, dazu die Frage nach dem Abbruch als eigenen Knoten und einen vierten Ausgang „nicht entschieden". Zweitens C1.11: „meldet nichts" ist an den Baum gezogen, der seit der Runde 1 „es ist nichts ausgewählt" meldet. Drittens das neue C2.14: die Ersatzzeile aus C1.11 gilt für das Tippen und nicht für das Umschalten von „Deep", und diese Ungleichheit ist jetzt eine Entscheidung mit Begründung. Viertens C5.5: die Markdown-Ausgabe führt eine ab Werk unbelegte Funktion nicht, und das Kriterium sagt es jetzt. Fünftens C6.10: der Halbsatz über die drei Wahrheitswerte der Signatur steht dabei. Dazu C3.8, C3.10 und C3.13 nachgezogen und C3.15 als neues Kriterium für den Deskriptormangel. **Die Zahl der Abnahmekriterien steigt damit von 75 auf 77**, die Zahl der Bündelkriterien bleibt bei zehn.
 - 260814-1830 — Spec erstellt. Fünf beantwortete Entscheidungsdatensätze eingearbeitet, vier neue offene Fragen abgelegt, die Directive an den zwei vom Nutzer berichtigten Stellen fortgeschrieben.
 - 260814-1950 — Nachgebessert auf die zweite Bewertung `reviews/260814-1938-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` (Urteil `tangled`, ein substanzieller Befund) und auf die Antwort des Nutzers zur Tastenwiederholung vom 260814-1910. Erstens die Zuständigkeitsgrenze zwischen den ersten beiden Bildern: das zweite Bild trägt jetzt die Bedingung an der Eintrittskante und spricht an seinen Ausgängen einen Befund statt eines Urteils über die Sichtbarkeit aus; C3.13 verliert den Halbsatz, der dagegen stand, und C2.13, C3.2, C3.3 sowie die Beschreibung von C3 sind mitgezogen. Zweitens ein drittes Bild für die Rückschritt-Taste, aus dem zwei Berichtigungen folgen: C6.10 nennt beide Eingangsgrößen statt „allein" der einen, und das neue C1.20 hält fest, dass die Grenze nur für eine Wiederholung gilt, die bei stehendem Filtertext begann. Dazu C3.14 als neues Kriterium, eine elfte Feststellung zur Ausgangslage, die berichtigte Herleitung der sieben Kreise, die auf vier zurückgeführte Tabelle der offenen Fragen und die am Baum nachgezählten Zahlen im Prüfvorbehalt.
 - 260814-1852 — Nachgebessert auf zwei Anlässe. Erstens die Bewertung `reviews/260814-1840-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` (Urteil `tangled`): das zweite Bild ist neu gezeichnet und trägt jetzt den negativen Befund, einen eigenen Stapelknoten für die Abbruchgrenze, einen Fehlschlagzweig für C3.10 und für „Ordner" denselben Schnitt wie das erste Bild; die Aussage über die Zahl der Fäden ist aus dem Bild genommen, und die Kreiszählung der Prosa ist berichtigt. Das erste Bild bleibt unverändert. Zweitens der Nutzerentscheid vom 260814-1845 zur Rückschritt-Taste: elf Abnahmekriterien hinzugefügt (C1.14 bis C1.19, C2.13, C3.13, C6.9 bis C6.11), die Verlustzeile über die Sekundenregel berichtigt, eine zehnte Feststellung zur Ausgangslage aufgenommen und ein neuer offener Datensatz zur Tastenwiederholung abgelegt.

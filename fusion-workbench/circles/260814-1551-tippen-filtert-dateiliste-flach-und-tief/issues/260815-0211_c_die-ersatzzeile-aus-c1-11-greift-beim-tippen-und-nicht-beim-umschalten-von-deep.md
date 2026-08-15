@@ -33,3 +33,6 @@ C1.11 steht in C1, und C1 handelt vom Tippen. Ob das Kriterium auch für den Sch
 2. **Es gilt nicht.** Dann gehört der Satz in C2, damit die Ungleichheit der vier Wege eine Entscheidung ist und kein Versehen.
 
 Der Befund ist gering im Gewicht und deutlich in der Form: derselbe Vorgang nimmt zwei Wege, und einer der beiden trägt eine Zusage, die der andere nicht trägt.
+
+---
+Resolved: 260815-0246, shaper. Antwort 2 des Datensatzes gewählt: C1.11 gilt für das Tippen und nicht für den Schalter, und der Satz steht jetzt als eigenes Kriterium C2.14 in C2. Begründung: beim Tippen fällt eine Zeile endgültig weg, beim Umschalten von "Deep" nur so lange, bis der Befund für ihren Ordner eintrifft; die Ersatzzeile setzte die Auswahl in diesem Fall auf die erste sichtbare Zeile und verlöre den Platz des Nutzers dauerhaft, obwohl der Eintrag gleich darauf wiederkommt. Die Ungleichheit der vier Wege ist damit eine Entscheidung mit Begründung. Der Preis steht in C2.14 benannt: in der Spanne dazwischen ist keine Zeile ausgewählt, und ein Operationsbefehl meldet "es ist nichts ausgewählt". Am Baum ist nichts geändert.
