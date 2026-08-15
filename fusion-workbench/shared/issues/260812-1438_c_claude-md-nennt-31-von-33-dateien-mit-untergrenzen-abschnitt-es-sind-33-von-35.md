@@ -38,3 +38,21 @@ Die Folge der Zahlen lautet damit: `CLAUDE.md` zitiert 31 von 33, der Datensatz 
 35, der Abgleich der Runde 6 nannte 34 von 36, heute sind es 35 von 37. Vier Staende in vier
 Tagen. Der Datensatz bleibt offen; seine eigene Empfehlung, die zwei Ausnahmen statt der Quote
 zu nennen, ist damit zum dritten Mal belegt.
+
+---
+Resolved: Über den zweiten der beiden Wege, die dieser Datensatz vorschlägt: die Zahl ist
+durch die Nennung der zwei Ausnahmen ersetzt. `CLAUDE.md` (`## Technologiewahl`) sagt heute,
+der Abschnitt stehe in **jeder** Datei unter `crates/krk-ui/src/appkit/` außer
+`koordinaten.rs` und `mod.rs`, und hält ausdrücklich fest: „Eine Quote steht hier nicht — sie
+ist zwischen dem 260811 und dem 260814 viermal falsch geworden, während die zwei Ausnahmen
+dieselben blieben."
+
+**Der Beleg, dass der Weg trägt**, am 260815-1405 nachgezählt: die Kiste führt heute 40
+Dateien unter `appkit/` einschließlich `blaetter/`, gegenüber 35 am Tag dieses Datensatzes.
+Gewachsen ist sie also um fünf, und die Aussage in `CLAUDE.md` ist trotzdem nicht veraltet:
+ohne den Abschnitt sind weiterhin genau `koordinaten.rs` und `mod.rs`. Eine Quote hätte in
+derselben Zeit ein sechstes Mal nachgezogen werden müssen.
+
+Nicht behoben ist damit die Gewohnheit selbst: der Abschnitt hält sich weiter ohne Werkzeug,
+und ob die Angabe prüfbar gemacht wird, ist offen
+(`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`).

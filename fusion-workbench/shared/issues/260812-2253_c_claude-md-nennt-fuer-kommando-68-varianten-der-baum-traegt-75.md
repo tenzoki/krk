@@ -85,3 +85,15 @@ gehören nicht in diesen Datensatz, weil sie andere Stellen betreffen: `CLAUDE.m
 „Vier Runden sind gefahren" mit einer Tabelle von vier Zeilen, während der Baum bei der
 **neunten** steht, und `CLAUDE.md:32` datiert den Projektstand auf 260811-2230. Die Revision
 von `CLAUDE.md` gehört nicht in einen Abgleich; die Häufung ist der Grund, sie anzusetzen.
+
+---
+Resolved: Die Zahl steht nicht mehr da. `CLAUDE.md` (`## Projektstand`) führt für `Kommando`
+heute keine Ziffer mehr, nennt diesen Datensatz als Grund — „sie wächst mit fast jeder Runde
+und ist in dieser Datei viermal in vier Tagen falsch geworden" — und gibt stattdessen das
+Kommando an, mit dem sich der Stand jederzeit selbst zählen lässt.
+
+**Nachgezählt am 260815-1405:** `Kommando` trägt **78** Varianten, also drei mehr als die 75
+dieses Datensatzes. Die drei anderen Zahlen, die `CLAUDE.md` weiter ausschreibt, stimmen
+unverändert: `Wirkungsbereich` 7, `Bereich` 5, `Fokus` 5. Diese drei sind seit der Runde 1
+stabil, `Kommando` ist es nicht — die Trennung, die `CLAUDE.md` inzwischen zieht, ist damit
+am Baum bestätigt.
