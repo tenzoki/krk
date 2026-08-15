@@ -72,3 +72,35 @@ Zeilenumbruch zwischen „79" und „Funktionen", und die Zeile heißt dort „a
 Wer über die Zahl sucht, sucht sie **ohne** ihr Substantiv, sonst zählt er zu wenig. Das ist
 derselbe blinde Fleck, den `CLAUDE.md` für Verweise in Kurzform benennt, nur an einer Zahl
 statt an einem Dateinamen.
+
+---
+Resolved: Neun Zeilen in zwei Dateien auf 84 und 78 gebracht, `menue.rs` in den Zeilen 128,
+799 und 867, `belegungsausgabe.rs` in 45, 48, 56, 256, 725 und 726. Nach der Änderung findet
+`grep -n '79\|73'` in beiden Dateien keine Fundstelle dieser Bedeutung mehr. Geprüft mit
+`cargo fmt --all --check && cargo clippy --workspace --all-targets && cargo build --workspace`,
+Exit 0.
+
+**Zwei Abweichungen von diesem Datensatz, beide zu seinen Ungunsten.**
+
+*Die Zielzahlen waren veraltet.* Der Datensatz nennt 82 Funktionen und 76 mit `Kommando`;
+das war der Stand am 260813. Am 260815-1418 dreifach nachgezählt sind es **84 und 78**:
+
+```
+grep -c '^id = ' resources/default-keymap.toml             -> 84
+grep -c '^gehalten_von = ' resources/default-keymap.toml   ->  6
+awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs | grep -cE '^    [A-ZÄÖÜ]'  -> 78
+```
+
+Die drei Zahlen stützen sich gegenseitig: 84 minus die sechs zugestellten Textbefehle, deren
+`gehalten_von` gesetzt ist und deren `Funktion::kommando` deshalb `None` liefert, ergibt 78,
+und die Aufzählung trägt genau 78 Varianten. Eingesetzt sind 84 und 78, nicht die Zahlen
+dieses Datensatzes.
+
+*Es waren neun Zeilen, nicht fünf.* Der Datensatz zählt fünf Stellen; das `grep` findet neun.
+Die Differenz sind vier Zeilen in `belegungsausgabe.rs` (56, 256, 725, 726), die derselbe
+Befund erfasst hätte.
+
+**Der Befund ist damit behoben und die Ursache nicht.** Die Zahlen stehen weiter von Hand in
+der Prosa und veralten mit der nächsten Runde, die eine Funktion hinzufügt — dieser Datensatz
+ist der Beleg dafür, dass sie zwischen dem 260813 und dem 260815 erneut falsch geworden sind,
+diesmal noch bevor jemand sie berichtigen konnte.

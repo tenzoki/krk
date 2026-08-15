@@ -125,7 +125,7 @@
 //!
 //! # Wer die sechs Textbefehle beantwortet
 //!
-//! Die sechs sind die einzigen der 79 Funktionen ohne
+//! Die sechs sind die einzigen der 84 Funktionen ohne
 //! [`krk_core::tasten::Kommando`] und damit ohne Wirkungsbereich. Wo sie wirken,
 //! entscheidet zur Laufzeit die Antwortkette, in die die Belegung keine Eingabe
 //! hat. Die Tastenbelegung als Markdown-Datei aus der Runde 3 muss es dem Nutzer
@@ -796,7 +796,7 @@ mod tests {
     ///
     /// Dieselben sechs, die [`hauptmenue`] unter "Bearbeiten" eintraegt, und
     /// dieselben sechs, die `resources/default-keymap.toml` mit
-    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige der 79
+    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige der 84
     /// Funktionen kein [`krk_core::tasten::Kommando`] und damit keinen
     /// Wirkungsbereich.
     fn die_sechs_zugestellten() -> [(&'static str, Sel); 6] {
@@ -864,7 +864,7 @@ mod tests {
 
     /// Die Messung aus S1 der Runde 3, als mitlaufende Zusicherung.
     ///
-    /// **Sie misst, statt zu naehern.** Fuer 73 der 79 Funktionen ist der
+    /// **Sie misst, statt zu naehern.** Fuer 78 der 84 Funktionen ist der
     /// Wirkungsbereich aus der Belegung entscheidbar; fuer diese sechs ist er es
     /// nicht, weil sie kein Kommando tragen und die Antwortkette von AppKit zur
     /// Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre
