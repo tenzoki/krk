@@ -64,3 +64,29 @@ Zusagen aus C8 — L2, L3 und L10 laufen kopflos (`krk-bench/src/messen.rs:1199`
 Der Entscheidungsdatensatz trägt denselben Satz und ist mit zu berichtigen; er ist `_i_` und
 damit endständig, die Berichtigung gehört deshalb als Nachtrag an sein Ende, nicht in seinen
 Text.
+
+---
+Resolved: Die zwei Codestellen sind nachgezogen (260816, coder), beide in
+`crates/krk-ui/src/appkit/tabelle.rs`. Am Doc-Kommentar von `namensform` steht jetzt zuerst,
+was die Sache entscheidet — die Gleichheit mit dem `--` der Spalte `Größe` —, und darunter in
+einem eigenen Absatz, warum das Verweisziel nicht erfragt wird: ein `stat` je sichtbarer
+Zeile stünde in der Zeichenschleife der Dateiliste, und die misst **keine** der zehn Zusagen
+aus C8, weil L2, L3 und L10 auf der kopflosen Strecke laufen
+(`krk-bench/src/messen.rs:1199`). Der Absatz sagt ausdrücklich, dass das der stärkere Grund
+ist und nicht der schwächere, und nennt den bis zum 260816 dort stehenden falschen Satz samt
+diesem Befund und dem Entscheid. Der Kommentar in der Probe
+`allein_ein_ordner_traegt_den_schraegstrich` sagt dasselbe in einem Satz und verweist für die
+Begründung auf `namensform`.
+
+Die zwei übrigen der vier Stellen sind nicht von dieser Arbeit berührt und brauchten es
+nicht: der Entscheidungsdatensatz `shared/decisions/260815-2056_i_…` trägt die Berichtigung
+seit dem 260815-2210 als Nachtrag an seinem Ende und in seinem Abschnitt
+`## Randbedingungen`, und die Commit-Nachricht von `3b128c3` ändert niemand mehr.
+
+Gegengeprüft am ganzen Baum: außer den zwei berichtigten Stellen führt keine Code- oder
+Prosadatei den Satz mehr. Die drei verbleibenden Nennungen von „L3 und L10" in
+`crates/` — `tabelle.rs:1500`, `krk-core/src/verzeichnis/eintrag.rs:157`,
+`krk-core/src/verzeichnis/verweisziel.rs:23` — meinen den Lesevorgang und den
+Sortierschlüssel und sind richtig: die Strecke misst sie, und zwar kopflos.
+
+Verification: `make check` — exit 0.

@@ -344,9 +344,23 @@ const ORDNERZEICHEN: char = '/';
 ///
 /// **Die Bedingung ist [`Eintrag::ist_ordner`]**, also `Typ::Ordner`, und damit
 /// dieselbe wie beim `--` der Spalte `Groesse` und bei der Gruppe der
-/// Sortierung. Eine Verknuepfung auf einen Ordner bekommt kein Zeichen: das
-/// Verweisziel zu erfragen hiesse ein `stat` je sichtbarer Zeile, und genau
-/// diese Schleife messen L3 und L10.
+/// Sortierung. **Diese Gleichheit entscheidet die Sache**: eine Verknuepfung
+/// auf einen Ordner bekommt kein Zeichen, weil sie in der Spalte `Groesse`
+/// ebenfalls keine bekommt.
+///
+/// **Warum das Verweisziel nicht erfragt wird.** Es zu erfragen hiesse ein
+/// `stat` je sichtbarer Zeile, und das stuende in der Zeichenschleife der
+/// Dateiliste. Die misst **keine** der zehn Zusagen aus C8: L2, L3 und L10
+/// laufen auf der kopflosen Strecke, die keine `NSTableView` baut und
+/// [`DateifensterDelegierter::zellenansicht`] nie ruft
+/// (`krk-bench/src/messen.rs:1199`). Ein Systemaufruf je Zeile kaeme damit als
+/// Kostenstelle ohne Abnahmekriterium in den Baum, und das ist der staerkere
+/// Grund, ihn zu unterlassen, nicht der schwaechere.
+///
+/// Bis zum 260816 stand hier, genau diese Schleife messe L3 und L10. Das war
+/// falsch (Befund `shared/issues/260815-2202_*_…`); die berichtigte Begruendung
+/// steht im Nutzerentscheid vom 260815-2058 in
+/// `shared/decisions/260815-2056_*_woran-erkennt-der-nutzer-in-der-dateiliste-einen-ordner.md`.
 #[must_use]
 fn namensform(eintrag: &Eintrag) -> String {
     let mut anzeige = eintrag.name.clone();
@@ -3000,11 +3014,26 @@ impl DateifensterDelegierter {
             // kommt also nur wieder in die Namensspalte, und mit ihm seine
             // Aktion.
             feld.setEditable(true);
+            // **Das Ziel hat seit dem Ordnerzeichen zwei Abnehmer statt einen**
+            // — wie `clickedRow` im Modulkopf, und aus demselben Grund steht es
+            // hier: [`Namensfeld::delegierter`] liest dasselbe `target`
+            // zurueck, weil es der einzige Weg von der Zelle zu ihrem
+            // Delegierten ist. Drei Ueberschreibungen der Zelle gehen darueber
+            // (`becomeFirstResponder`, `textDidEndEditing:`, `abortEditing`),
+            // und alle drei tragen Zusage 3 des Nutzerentscheids vom
+            // 260815-2058. Wer das Ziel umhaengt oder die Aktion an eine
+            // andere Stelle zieht, nimmt der Zelle **still** ihren
+            // Delegierten: `delegierter()` liefert dann `None`, und die drei
+            // Methoden fallen durch ihr `if let`, ohne dass etwas meldet.
+            //
             // SAFETY: Ziel ist der Delegierte, den `Dateifenster` festhaelt;
             // die Aktion ist die Methode, die er oben ausdruecklich fuer diesen
             // Zweck traegt. `NSControl` haelt sein Ziel schwach, und der
             // Delegierte ueberlebt das Feld: er haelt die Tabelle mittelbar
-            // ueber die Quelle.
+            // ueber die Quelle. Das Zuruecklesen traegt dieselbe Bindung:
+            // `NSControl.target` ist `@property (nullable, weak) id`
+            // (`NSControl.h:24`, ohne `API_AVAILABLE`), also nullend — ein
+            // gestorbener Delegierter liefert `nil` und keinen Absturz.
             unsafe {
                 feld.setTarget(Some(self));
                 feld.setAction(Some(sel!(umbenennungBeendet:)));
@@ -3116,23 +3145,71 @@ define_class!(
         /// Tastenbefehl kommt mit `select: true` und hat damit den ganzen
         /// Namen ausgewaehlt, der Klick setzt die Schreibmarke an die
         /// geklickte Stelle.
+        ///
+        /// **Der abgelehnte Rang nimmt zurueck, was diese Methode genommen
+        /// hat.** Warum der Zweig dasteht, obwohl kein Weg zum Nein gemessen
+        /// ist, steht als Kommentar am `match` darunter.
         // SAFETY: Die Signatur ist die von `NSResponder`: kein Argument, ein
         // `BOOL` zurueck.
         #[unsafe(method(becomeFirstResponder))]
         fn wird_ersthelfer(&self) -> bool {
             let anzeige = self.stringValue().to_string();
-            if let Some(name) = ohne_ordnerzeichen(&anzeige) {
+            // `true` heisst: diese Methode hat die Zelle umgestellt und ist
+            // damit diejenige, die sie zuruecksetzt, wenn nichts daraus wird.
+            let abgelegt = if let Some(name) = ohne_ordnerzeichen(&anzeige) {
                 self.setStringValue(&NSString::from_str(name));
-            }
+                true
+            } else {
+                false
+            };
             // SAFETY: `becomeFirstResponder` von `NSResponder` hat die hier
             // angenommene Signatur.
             let angenommen: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
-            // Erst wenn die Oberklasse angenommen hat, steht der Feldeditor;
-            // ein abgelehnter Ersthelferrang ist keine Bearbeitung. Ein
-            // `Namensfeld` gibt es nur in der beschreibbaren Spalte, die
-            // Annahme ist also zugleich der Beginn einer Umbenennung.
-            if angenommen && let Some(delegierter) = self.delegierter() {
-                delegierter.namensbearbeitung_begonnen();
+            // **Beide Ausgaenge der Oberklasse, und der zweite ist der Grund
+            // fuer diese Fallunterscheidung.** Lehnt sie ab, steht kein
+            // Feldeditor und es beginnt keine Bearbeitung; das Zeichen ist
+            // trotzdem schon weg, denn es **muss** vor `super` weg. Die Zelle
+            // stuende dann bis zum naechsten Zeichendurchgang ohne ihr
+            // Kennzeichen da.
+            //
+            // **Gemessen ist dieser Ausgang nicht**, und der Satz gehoert
+            // dazu: fuer ein beschreibbares Feld in einem Schluesselfenster
+            // liefert `becomeFirstResponder` "ja", und ein Weg zum Nein ist in
+            // diesem Baum nirgends gezeigt (Befund
+            // `shared/issues/260815-2207_*_…`). Der Zweig steht nicht als
+            // Schutz vor einem bekannten Fall, sondern weil eine Methode
+            // aufraeumt, was sie selbst umgestellt hat, sobald der Schritt
+            // scheitert, fuer den sie es umgestellt hat. Er kostet keinen
+            // neuen Mechanismus: die Zeichenkette liegt in `anzeige` schon
+            // vor, und `setStringValue:` steht zehn Zeilen darueber.
+            //
+            // **`textShouldBeginEditing:` waere die genauere Tuer und hilft
+            // nicht.** `NSText` stellt die Frage erst beim ersten *Aendern*
+            // des Textes und nicht beim Erscheinen des Feldeditors — dieselbe
+            // Messung, an der die Delegiertenfassung
+            // `control:textShouldBeginEditing:` gescheitert ist (Kopf von
+            // [`Namensfeld`]). Der Schraegstrich stuende dann bis zum ersten
+            // Tastendruck im Editor.
+            match (angenommen, abgelegt) {
+                // Erst wenn die Oberklasse angenommen hat, steht der
+                // Feldeditor; ein abgelehnter Ersthelferrang ist keine
+                // Bearbeitung. Ein `Namensfeld` gibt es nur in der
+                // beschreibbaren Spalte, die Annahme ist also zugleich der
+                // Beginn einer Umbenennung. Ob die Zelle vorher ein Zeichen
+                // abgelegt hatte, aendert daran nichts: eine Datei trug nie
+                // eines, und ihre Bearbeitung beginnt genauso.
+                (true, _) => {
+                    if let Some(delegierter) = self.delegierter() {
+                        delegierter.namensbearbeitung_begonnen();
+                    }
+                }
+                // Abgelehnt, und diese Methode hatte das Zeichen weggenommen:
+                // sie holt es zurueck. Der Kopf sagt, warum der Zweig
+                // dasteht, obwohl kein Weg hierher gemessen ist.
+                (false, true) => self.setStringValue(&NSString::from_str(&anzeige)),
+                // Abgelehnt, und nichts weggenommen: die Zelle steht
+                // unveraendert da, es gibt nichts zurueckzuholen.
+                (false, false) => {}
             }
             angenommen
         }
@@ -3258,6 +3335,20 @@ impl Namensfeld {
     /// Er ist das Ziel der Aktion, die [`DateifensterDelegierter::feld`] an
     /// dieses Feld haengt; die Zelle liest ihn zurueck, statt eine zweite
     /// Verbindung zu halten. `None`, solange das Feld noch keins hat.
+    ///
+    /// **Damit ist diese Methode der zweite Abnehmer des Ziels**, und die
+    /// Setzstelle in [`DateifensterDelegierter::feld`] sagt es dort ebenfalls:
+    /// wer das Ziel umhaengt oder die Aktion an eine andere Stelle zieht,
+    /// nimmt der Zelle ihren Delegierten und damit alle drei Zusagen des
+    /// Nutzerentscheids vom 260815-2058.
+    ///
+    /// **`None` bleibt hier ohne Meldung**, obwohl dieses Projekt kein stilles
+    /// Fallenlassen kennt. Der Grund ist keine Nachsicht, sondern der einzige
+    /// Weg, den es gaebe: eine Meldung landete in der Statuszeile, und die
+    /// erreicht diese Zelle allein ueber die Quelle, an die sie nur ueber
+    /// genau diesen Delegierten kommt. Wer `None` melden wollte, brauchte das,
+    /// was `None` gerade sagt, dass es fehlt. Gehalten wird der Fall deshalb
+    /// nicht von einer Meldung, sondern von der Notiz an der Setzstelle.
     fn delegierter(&self) -> Option<Retained<DateifensterDelegierter>> {
         let ziel = self.target()?;
         ziel.downcast::<DateifensterDelegierter>().ok()
@@ -3581,11 +3672,180 @@ pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Der Pfad dieser Datei in dem Baum, den [`quelldateien`] liest.
+    const DIESE_DATEI: &str = "krk-ui/src/appkit/tabelle.rs";
 
     /// Ein Eintrag der genannten Art. Groesse und Zeitpunkt spielen fuer die
     /// Anzeigeform der Namensspalte keine Rolle.
     fn eintrag(name: &str, typ: Typ) -> Eintrag {
         Eintrag::neu(name.to_owned(), 0, UNIX_EPOCH, typ)
+    }
+
+    /// Die Code-Zeilen einer Quelldatei: alles, was nicht Kommentar ist.
+    ///
+    /// Die Doc-Kommentare dieser Datei nennen jede Nadel darunter im Klartext,
+    /// damit ein Leser weiss, wonach gesucht wird. Gefragt ist aber, wer eine
+    /// Sache **tut**, und das steht nie hinter `//`. Dieselbe Unterscheidung
+    /// trifft [`aufrufstellen`] fuer sich selbst; hier steht sie noch einmal,
+    /// weil die Zaehlung des Zeichens keine Aufrufzaehlung ist.
+    fn code_zeilen(inhalt: &str) -> impl Iterator<Item = &str> {
+        inhalt
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+    }
+
+    /// Ob eine Zeile den Namen als **ganzen** Bezeichner fuehrt.
+    ///
+    /// Ein blosses `contains` findet ihn auch mitten in einem laengeren Namen,
+    /// und der Baum fuehrt genau so einen Fall: `krk-bench/src/bericht.rs`
+    /// nennt eine Probe `der_kurzstempel_passt_zur_namensform_des_projekts`,
+    /// und das ist kein zweiter Bau der Anzeigeform, sondern dasselbe deutsche
+    /// Wort. Entschieden wird an den beiden Nachbarzeichen: gehoert eines von
+    /// ihnen zu einem Bezeichner, faellt die Fundstelle heraus. Dieselbe
+    /// Grenze zieht [`aufrufstellen`] fuer ihre Seite.
+    fn fuehrt_den_namen(zeile: &str, name: &str) -> bool {
+        zeile.match_indices(name).any(|(stelle, _)| {
+            let gehoert_dazu = |zeichen: char| zeichen.is_alphanumeric() || zeichen == '_';
+            let davor = zeile[..stelle].chars().next_back();
+            let danach = zeile[stelle + name.len()..].chars().next();
+            !davor.is_some_and(gehoert_dazu) && !danach.is_some_and(gehoert_dazu)
+        })
+    }
+
+    /// Der Teil einer Quelldatei vor ihrem Pruefmodul.
+    ///
+    /// Die Proben dieser Datei rufen beide Regeln selbst, und sie sind keine
+    /// Aufrufer im Sinne des Nutzerentscheids. Die Bauform stammt von
+    /// `code_zeilen_vor_dem_pruefmodul` in `krk-core/tests/verzeichnis.rs`.
+    fn vor_dem_pruefmodul(inhalt: &str) -> &str {
+        let vermerk = concat!("#[cfg(", "test)]");
+        inhalt.split(vermerk).next().unwrap_or(inhalt)
+    }
+
+    /// Der Inhalt dieser Datei, so wie die Zaehlproben ihn lesen.
+    fn diese_datei() -> String {
+        quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == DIESE_DATEI)
+            .map(|(_, inhalt)| inhalt)
+            .unwrap_or_else(|| panic!("der Quellbaum fuehrt {DIESE_DATEI} nicht"))
+    }
+
+    /// Das Ordnerzeichen entsteht an genau einer Stelle im Baum.
+    ///
+    /// **Die Zusage ist eine Aussage ueber den Baum und an keinem
+    /// Rueckgabewert abzulesen.** Der Nutzerentscheid vom 260815-2058 sagt:
+    /// „Er entsteht in `DateifensterDelegierter::beschriften` fuer
+    /// `Spalte::Name` und nirgends sonst. Sortierung, Filter, Zwischenablage,
+    /// Vorschau und jede Dateioperation lesen weiterhin `eintrag.name`."
+    /// Bliebe sie ungezaehlt, faende ein zweiter Rufer, den ein spaeterer Turn
+    /// anlegt, keine Pruefung: der Bau bliebe gruen, die beiden Proben darueber
+    /// blieben gruen, und die teuerste Zusage dieser Aenderung fiele still
+    /// (`shared/issues/260815-2205_*_…`).
+    ///
+    /// **Eine Aufruferzaehlung und ausdruecklich die richtige Form.** Der Kopf
+    /// von [`crate::quellbaum`] warnt vor ihr, wo sie als Stellvertreter fuer
+    /// „es gibt keinen Doppelbau" steht; sie gehoert dorthin, wo ein
+    /// Abnahmekriterium die **Zahl selbst** zusagt, und hier tut es das.
+    /// Faengt sie spaeter einen neuen Rufer, ist die Frage, warum es ihn gibt,
+    /// und nicht die Zahl hier.
+    ///
+    /// Drei Zaehlungen. Die erste haelt fest, dass keine andere Datei des
+    /// Baums die drei Namen ueberhaupt fuehrt — sie sind privat, und ein
+    /// gleichnamiger Doppelbau anderswo wuerde rot. Die zweite haelt die zwei
+    /// Regeln bei je einem Rufer. Die dritte haelt das Zeichen selbst bei drei
+    /// Code-Zeilen: seiner Erklaerung und den zwei Regeln, die es tragen.
+    ///
+    /// **Ihre Blindheit**, und der Satz gehoert dazu: eine zweite Fassung
+    /// derselben Regel unter anderem Namen sieht auch diese Zaehlung nicht,
+    /// und ein `'/'` als Zeichenkonstante neben [`ORDNERZEICHEN`] ginge ihr
+    /// ebenso durch. Der Kopf von [`crate::quellbaum`] sagt, warum keine Suche
+    /// im Quelltext das leisten kann. Was sie ausdruecklich **nicht** meldet,
+    /// steht bei [`fuehrt_den_namen`]: ein Name, der nur als Wortbestandteil
+    /// eines laengeren Bezeichners dasteht, ist keine Fundstelle, und der Baum
+    /// fuehrt genau so einen Fall.
+    ///
+    /// Die Nadeln stehen zusammengesetzt da, weil die Probe in dem Baum liegt,
+    /// den sie liest.
+    #[test]
+    fn das_ordnerzeichen_entsteht_an_genau_einer_stelle() {
+        let bilden = concat!("namens", "form");
+        let zuruecknehmen = concat!("ohne_ordner", "zeichen");
+        let zeichen = concat!("ORDNER", "ZEICHEN");
+
+        for nadel in [bilden, zuruecknehmen, zeichen] {
+            let anderswo: Vec<String> = quelldateien()
+                .into_iter()
+                .filter(|(name, inhalt)| {
+                    name != DIESE_DATEI
+                        && code_zeilen(inhalt).any(|zeile| fuehrt_den_namen(zeile, nadel))
+                })
+                .map(|(name, _)| name)
+                .collect();
+            assert!(
+                anderswo.is_empty(),
+                "{nadel} steht ausser in {DIESE_DATEI} auch in {anderswo:?}"
+            );
+        }
+
+        let inhalt = diese_datei();
+        let code = vor_dem_pruefmodul(&inhalt);
+        assert_eq!(
+            aufrufstellen(code, bilden),
+            1,
+            "die Anzeigeform entsteht nicht an genau einer Stelle; \
+             der einzige Rufer ist DateifensterDelegierter::beschriften"
+        );
+        assert_eq!(
+            aufrufstellen(code, zuruecknehmen),
+            1,
+            "das Zeichen wird nicht an genau einer Stelle zurueckgenommen; \
+             der einzige Rufer ist Namensfeld::wird_ersthelfer"
+        );
+        let zeilen = code_zeilen(code)
+            .filter(|zeile| fuehrt_den_namen(zeile, zeichen))
+            .count();
+        assert_eq!(
+            zeilen, 3,
+            "das Ordnerzeichen steht nicht in genau drei Code-Zeilen, \
+             seiner Erklaerung und den zwei Regeln"
+        );
+    }
+
+    /// Die Anzeigeform hat genau die zwei Leser, die sie heute hat.
+    ///
+    /// Die zweite Haelfte derselben Zusage: der Schraegstrich entsteht an einer
+    /// Stelle, und was ihn zu sehen bekommt, ist gezaehlt. Ein Namenszellentext
+    /// wird an zwei Stellen gelesen, und beide sind Enden einer Bearbeitung —
+    /// [`DateifensterQuelle::umbenennung_beenden`] liest den getippten Text
+    /// nach Return, [`Namensfeld::wird_ersthelfer`] die Anzeigeform vor dem
+    /// Ablegen des Zeichens. Ein dritter Leser waere eine Stelle, an der der
+    /// Schraegstrich als Name durchginge, und genau das schliesst der
+    /// Nutzerentscheid aus.
+    ///
+    /// **Gezaehlt wird allein in dieser Datei**, und das ist keine Verengung:
+    /// die Namenszelle ist [`Namensfeld`], und die Probe darueber haelt fest,
+    /// dass keine andere Datei des Baums sie kennt. Andere `stringValue`-Rufe
+    /// im Baum lesen andere Felder.
+    ///
+    /// **Ihre Blindheit:** ein Leser, der den Text ueber den Feldeditor holt
+    /// (`currentEditor`) statt ueber `stringValue`, faellt dieser Nadel nicht
+    /// auf.
+    ///
+    /// Die Nadel steht zusammengesetzt da, aus demselben Grund wie oben.
+    #[test]
+    fn die_anzeigeform_hat_genau_zwei_leser() {
+        let lesen = concat!("string", "Value");
+        let inhalt = diese_datei();
+        let code = vor_dem_pruefmodul(&inhalt);
+        assert_eq!(
+            aufrufstellen(code, lesen),
+            2,
+            "der Text einer Namenszelle hat nicht genau zwei Leser, \
+             umbenennung_beenden und wird_ersthelfer"
+        );
     }
 
     #[test]
@@ -3594,7 +3854,9 @@ mod tests {
         assert_eq!(namensform(&eintrag("Ablage.rs", Typ::Datei)), "Ablage.rs");
         // Eine Verknuepfung bekommt keinen, auch wenn sie auf einen Ordner
         // zeigt: die Bedingung ist `Typ::Ordner` und nicht das Verweisziel,
-        // sonst stuende ein `stat` je sichtbarer Zeile zwischen L3 und L10.
+        // sonst stuende ein `stat` je sichtbarer Zeile in der Zeichenschleife
+        // der Dateiliste — und die misst keine der zehn Zusagen aus C8. Die
+        // Begruendung im Einzelnen steht bei [`namensform`].
         assert_eq!(namensform(&eintrag("Kurz", Typ::Verknuepfung)), "Kurz");
     }
 
