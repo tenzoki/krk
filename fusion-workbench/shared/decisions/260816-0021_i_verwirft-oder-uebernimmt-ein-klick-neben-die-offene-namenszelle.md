@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** orchestrator
 **Cross-references:** shared/decisions/260815-2247_a_was-geschieht-mit-einer-offenen-umbenennung-die-ohne-aktion-endet.md, shared/issues/260815-2125_o_verlaesst-der-nutzer-die-offene-namenszelle-bleibt-der-getippte-text-stehen-und-das-ordnerzeichen-weg.md
 
@@ -77,6 +77,6 @@ der `coder` schon einmal als folgenlos gemessen hat.
 
 ---
 Answered: shared/decisions/260816-0021_a_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md §Nutzerentscheid — verwerfen wie Escape; zu bauen ist allein die Wiederherstellung der Anzeigeform an jedem Ende ohne Umbenennung.
-Implemented:
+Implemented: 2c5a1b5 — `-[Namensfeld textDidEndEditing:]` ruft nach `super` bedingungslos `anzeigeform_herstellen`, dieselbe Methode, die Escape schon rief. Acht Ausgänge am Hauptfaden gemessen; auf dem Return-Weg fällt der Durchgang von selbst aus (`rowForView` liefert dort -1), eine Fallunterscheidung „kam eine Aktion?" ist deshalb nicht nötig. Der wirkliche Mausklick bleibt Nutzerarbeit.
 Deferred:
 Superseded by:

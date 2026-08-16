@@ -104,3 +104,23 @@
 - Artefakt ↔ Directive: die Directive der Sitzung ist erreicht; diese Runde hat
   einen Defekt behoben, den die Umsetzung sichtbar gemacht hat.
 - Grundlage ↔ Directive: 2 Entscheide umgesetzt, 1 offen, kein Widerspruch.
+
+## Turn 4
+
+- Der Nutzer hat am laufenden Bündel abgenommen: Anzeige und die drei
+  Umbenenn-Zusagen, über KRKs eigenen Ereignisabgriff. Befund `260815-2209`
+  geschlossen, mit der ausdrücklichen Nennung dessen, was der Lauf nicht
+  abdeckt (Klick als Einstieg, Aufschub aus `27dca57`).
+- Nutzerentscheid zu `260816-0021`: verwerfen wie Escape.
+- Eine Randbedingung dieses Datensatzes war falsch und ist berichtigt: C4 zählt
+  die Ausgänge **nicht** auf. Der Satz „Return übernimmt, Escape verwirft" steht
+  im Plan der Runde 1 und in einem Doc-Kommentar, der ihn C4 zuschrieb.
+- T5 (`2c5a1b5`): jedes Ende ohne Umbenennung holt die Anzeigeform zurück, über
+  dieselbe Methode, die Escape schon rief. Acht Ausgänge gemessen. Zwei Befunde
+  geschlossen (`260815-2125`, `260815-2204`).
+
+### Coherence, Runde 4
+
+- Artefakt ↔ Grundlage: 3 Befunde geschlossen, keiner neu.
+- Artefakt ↔ Directive: erreicht und vom Nutzer abgenommen.
+- Grundlage ↔ Directive: 3 Entscheide umgesetzt, keiner offen aus dieser Kette.
