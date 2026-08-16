@@ -124,3 +124,28 @@
 - Artefakt ↔ Grundlage: 3 Befunde geschlossen, keiner neu.
 - Artefakt ↔ Directive: erreicht und vom Nutzer abgenommen.
 - Grundlage ↔ Directive: 3 Entscheide umgesetzt, keiner offen aus dieser Kette.
+
+## Turn 5
+
+- T6 (`ebdb7ce`): die vier Nachzieharbeiten aus der Durchsicht. Die neue
+  Zählprobe holte beim ersten Lauf einen falschen Treffer, und behoben ist die
+  Wurzel (die Nadel zieht jetzt eine Bezeichnergrenze), nicht die Zahl. Der
+  Befund über das Feldziel war untertrieben: drei Leser, nicht zwei.
+- Neuer Nutzerbefund `260816-1101`: der Dateifilter nimmt den Unterstrich nicht.
+  Die Zeichenregel war unschuldig; `Belegung::nachschlag` ließ nur Tasten ohne
+  Zusatztaste durch, womit auch jeder Großbuchstabe und `@ | ~ \` verloren
+  waren.
+- Nutzerentscheid 260816-1105, Zuschnitt 2: Umschalt und Wahl sind
+  Schreibtasten, Befehl und Steuerung sind Befehlstasten.
+- T7 (`296108b`): umgesetzt, `Nachschlag::Sprungmarke` heißt jetzt `Tippen`. Die
+  tote Taste ist auf zwei Wegen gemessen und liefert die leere Zeichenkette; der
+  befürchtete einzelne Akzent im Filtertext tritt nicht ein.
+- Turn-Budget auf Nutzerwunsch von 5 auf 8 angehoben.
+
+### Offen am Ende der Runde
+
+- `shared/consult/260815-1354-befehlslauf-und-makros-in-krk.md` ist am 260816
+  um 11:03 geändert worden, sieben Zeilen, und gehört zu keiner vergebenen
+  Aufgabe. Nicht committet, solange die Herkunft nicht geklärt ist.
+- `260816-0040` (Takt des Lesevorgangs) und `260816-0055` (Wettrennprobe) sind
+  die zwei offenen Befunde dieser Kette.

@@ -1,4 +1,4 @@
-# Consultation: Befehle absetzen und Makros speichern, Weg A
+# Consultation: Befehle absetzen und Makros speichern
 
 **Date:** 2026-08-15 13:54
 **Status:** Complete
@@ -8,7 +8,7 @@
 
 Was braucht KRK, um Terminalfunktionalität aufzunehmen? Der Nutzer nennt zwei Wünsche: Bash-Befehle absetzen und Makros speichern und ausführen, mit Beispielen wie „alle Dateien nach einem Muster auflisten", „ein Replace-Skript im Baum mit Argumenten rufen", „git-Befehle" und „eine CLI starten, etwa fusion".
 
-Die Vorprüfung im Chat hat die Wünsche in zwei Vorhaben getrennt. Weg A setzt einen Befehl ab und zeigt seine Ausgabe. Weg B startet ein Programm, das selbst die Tastatur führt, und verlangt ein Terminal-Emulat mit Pseudoterminal, ANSI-Zerleger und Bildschirmmodell. **Der Nutzer hat sich am 260815 auf Weg A beschränkt.** Dieser Bericht behandelt allein Weg A. Weg B bleibt außerhalb und wird hier nur dort erwähnt, wo eine Entscheidung ihn später verbaut oder offen hält.
+Die Vorprüfung im Chat hat den Gegenstand umrissen, und der Nutzer hat ihn am 260815 festgelegt: KRK setzt einen Befehl ab und zeigt dessen Ausgabe. Ein Werkzeug, das selbst die Tastatur führt und dafür ein eingebautes Terminal verlangte, gehört nicht dazu. Dieser Bericht projektiert allein den festgelegten Gegenstand.
 
 ## Context
 
@@ -32,7 +32,7 @@ Wo die beiden Vorlagen sich nicht berühren, liegt der Zuschnitt der Arbeit. `La
 
 KRK startet heute keinen einzigen Unterprozess im Produktivcode. Nachgesehen über den ganzen Baum findet sich `std::process::Command` allein in Prüfdateien, nirgends unter `crates/krk-ui/src` oder `crates/krk-core/src`. Der Modulkopf von `crates/krk-ui/src/appkit/terminal.rs:22-27` nennt das ausdrücklich als einen der drei Gründe, aus denen der Terminalaufruf aus C11 nicht über `open -a` läuft: er „wäre der erste Unterprozess dieses Vorhabens, mit den Fragen, wer ihn abholt und was der Hauptfaden solange tut".
 
-Weg A stellt diese Fragen und beantwortet sie. Der Vermittlerfaden ist die Antwort auf beide, und die Symmetrie ist bemerkenswert genug, sie zu nennen: dieselbe Runde, die den Unterprozess einführt, bringt die Maschinerie mit, deren Fehlen 260805 das Argument gegen ihn war.
+Das Vorhaben stellt diese Fragen und beantwortet sie. Der Vermittlerfaden ist die Antwort auf beide, und die Symmetrie ist bemerkenswert genug, sie zu nennen: dieselbe Runde, die den Unterprozess einführt, bringt die Maschinerie mit, deren Fehlen 260805 das Argument gegen ihn war.
 
 Zwei Eigenschaften des Laufs sind aus den Beispielen des Nutzers ableitbar und sollten früh festgeschrieben werden. Der Lauf geht durch eine Shell, denn „Dateien nach Muster auflisten" verlangt Namensausdehnung und die genannten Skriptaufrufe verlangen Röhren und Verkettungen; ein direktes `execve` ohne Shell könnte davon nichts. Und die Ausgabe wird fortlaufend gelesen und nicht am Ende eingesammelt, weil ein Befehl über einem großen Baum sonst minutenlang eine leere Fläche zeigt.
 
@@ -60,7 +60,7 @@ Eine im Betrieb wachsende Zahl von Makros passt in diese Form nicht. Zwei Zuschn
 
 Wir empfehlen die nummerierten Plätze. Der Preis ist eine willkürliche Obergrenze, der Gewinn ist, dass keine der gewachsenen Aufzählungen ihre Form verliert.
 
-### Was Weg A auch dann nicht kann
+### Was der Befehlslauf auch dann nicht kann
 
 Drei Grenzen gehören in den Spec, damit sie nicht später als Defekt erscheinen.
 
@@ -74,7 +74,7 @@ Die Ausgabe braucht eine Größengrenze. Die Vorschau trägt für Text 1 MB (`cr
 
 Der letzte vollständige Abnahmelauf der zehn Zeitzusagen stammt vom 260810 und liegt vor den Runden 5 bis 10; keine der sechs ist gegen die Zusagen gemessen. Eine elfte Runde ändert daran nichts und vergrößert den Abstand.
 
-Ein belegter Präzedenzfall verdient dabei Beachtung. Die Closure Note der ersten Runde nennt `9a47c4a` als einen von drei Commits, die eine Messreihe altern ließen, und der Grund war eine Erweiterung der Kommando-Aufzählung, durch die jeder Tastendruck läuft. Weg A erweitert dieselbe Aufzählung. Der Effekt ist vermutlich klein, gemessen ist er nicht.
+Ein belegter Präzedenzfall verdient dabei Beachtung. Die Closure Note der ersten Runde nennt `9a47c4a` als einen von drei Commits, die eine Messreihe altern ließen, und der Grund war eine Erweiterung der Kommando-Aufzählung, durch die jeder Tastendruck läuft. Der Befehlslauf erweitert dieselbe Aufzählung. Der Effekt ist vermutlich klein, gemessen ist er nicht.
 
 ## Recommendations
 
@@ -88,7 +88,7 @@ Die dritte ist der Aufruf: eine Liste der Makros als Blatt, aus der ein Eintrag 
 
 Die vierte ist die Tastenbindung über nummerierte Plätze, mit je einer Zeile in `Kommando::wirkungsbereich` und `bereich_des_kommandos`.
 
-**Zwei Dinge gehören ausdrücklich nicht hinein.** Ein sechster Bereich in der Fensterzeile lohnt nicht: er zöge `Bereich` (`crates/krk-ui/src/fenstermodell.rs:103-128`), `Fokus`, `Wirkungsbereich` (`belegung.rs:186`) und die proportionale Breitenregel der fünften Runde nach sich, und die Vorschau leistet dasselbe ohne eine dieser vier Änderungen. Und das Terminal-Emulat aus Weg B bleibt draußen; für interaktive Werkzeuge bleibt `Ctrl+O`, das den angezeigten Ordner an Ghostty oder Terminal übergibt.
+**Zwei Dinge gehören ausdrücklich nicht hinein.** Ein sechster Bereich in der Fensterzeile lohnt nicht: er zöge `Bereich` (`crates/krk-ui/src/fenstermodell.rs:103-128`), `Fokus`, `Wirkungsbereich` (`belegung.rs:186`) und die proportionale Breitenregel der fünften Runde nach sich, und die Vorschau leistet dasselbe ohne eine dieser vier Änderungen. Und ein eingebautes Terminal bleibt draußen: für Werkzeuge, die selbst die Tastatur führen, bleibt `Ctrl+O`, das den angezeigten Ordner an Ghostty oder Terminal übergibt.
 
 **Ein Hinweis zur Reihenfolge im Portfolio.** Der einzige heute vorgesehene und nicht gefahrene Circle ist der Web-Betrachter im Vorschaufenster (`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster`). Er greift dieselbe Fläche an wie dieser Vorschlag, nämlich die Tabs des Vorschaufensters. Wer beide fährt, sollte die Reihenfolge bewusst wählen; wer den Befehlslauf zuerst baut, legt die Regel fest, nach der eine dritte fremde Quelle in einen Vorschau-Tab schreibt, und der Web-Betrachter wäre dann die vierte nach derselben Regel.
 
@@ -99,7 +99,7 @@ Die vierte ist die Tastenbindung über nummerierte Plätze, mit je einer Zeile i
 - [ ] Bleibt eine Befehlsausgabe stehen, wenn der Nutzer im Dateifenster die Auswahl wechselt, oder überschreibt die Datei sie wie heute die Zwischenablage? Die bestehende Regel des Vorschaumodells beantwortet das mit „überschreiben", und eine Ausnahme wäre die Tab-Sorte mit eigener Regel, die der Modulkopf ausdrücklich vermeidet.
 - [ ] Wie viele nummerierte Makroplätze, und welche Kombinationen tragen sie? Die Belegung führt heute 78 Kommandos, und die freien Kombinationen sind knapp.
 - [ ] Trägt die Ausgabe die Textgrenze der Vorschau von 1 MB, oder eine eigene Zahl?
-- [ ] Wird der Verzicht auf ein Terminal-Emulat im Circle-Datensatz als Abgrenzung geführt, zusammen mit der Nennung der Abgrenzung „KRK als Kommandozentrale für Fusion" aus der ersten Runde?
+- [ ] Wird der Verzicht auf ein eingebautes Terminal im Circle-Datensatz als Abgrenzung geführt, zusammen mit der Nennung der Abgrenzung „KRK als Kommandozentrale für Fusion" aus der ersten Runde?
 
 ## Sources
 

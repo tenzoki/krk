@@ -940,3 +940,6 @@
 {"ts":"2026-08-16T09:10:33","event":"gate_response","detail":"Nutzer: Zuschnitt 2 fuer 260816-1101; Turn-Budget von 5 auf 8 angehoben"}
 {"ts":"2026-08-16T09:10:33","event":"task_start","turn":5,"task":"T7","agent":"coder","detail":"Umschalt und Wahl erreichen den Dateifilter"}
 {"ts":"2026-08-16T09:11:19","event":"task_done","turn":5,"task":"T6","agent":"coder","detail":"vier Befunde geschlossen; Commit steht aus, T7 laeuft noch"}
+{"ts":"2026-08-16T09:27:43","event":"task_done","turn":5,"task":"T7","agent":"coder","detail":"296108b"}
+{"ts":"2026-08-16T09:27:43","event":"commit","turn":5,"detail":"ebdb7ce, 296108b"}
+{"ts":"2026-08-16T09:27:43","event":"turn_end","turn":5,"detail":"2 tasks resolved, 5 issues closed, 2 commits"}
