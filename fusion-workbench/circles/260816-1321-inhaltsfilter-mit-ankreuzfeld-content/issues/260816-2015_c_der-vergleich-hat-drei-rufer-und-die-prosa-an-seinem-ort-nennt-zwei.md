@@ -65,3 +65,14 @@ grep -rn "beiden Rufer\|zwei Rufer\|Vergleich hat zwei\|zwei Aufrufer\|beiden Au
 **Nicht behoben.** G1 liest ab und repariert nicht; der Auftrag sagt das ausdrücklich. Die
 Behebung ist eine Änderung an vier Zeilen und einem Bild in `filter.rs` und an zwei Absätzen
 in `sys.rs`, und sie fasst keine Regel an.
+
+---
+Resolved: 260816-2115, coder. Alle drei genannten Stellen sind nachgezogen, dazu zwei weitere derselben Art, die der Befund nicht nennt. Nachgezählt ist am Baum und nicht am Befund: `traegt_die_folge` hat drei Rufer (`verzeichnis/modell.rs:653`, `verzeichnis/durchlauf.rs:497`, `verzeichnis/inhalt.rs:139`), `traegt_ein_dateiname` zwei (`krk-ui/src/appkit/tabelle.rs:1295`, `krk-ui/src/belegungsmodell.rs:695`), `ohne_warten_oeffnen` zwei (`text/datei.rs:421` in `lesen`, `text/datei.rs:606` in `bis_zur_grenze_lesen`, beide in `krk-core`), `ist_deskriptormangel` zwei (`verzeichnis/durchlauf.rs:472`, `text/datei.rs:609`).
+
+In `verzeichnis/filter.rs`: das Bild im Modulkopf führt jetzt drei Pfeile auf den Vergleich (`modell::sichtbar`, `durchlauf`, `inhalt`) und heißt `traegt_die_folge(Text, Filtertext)`, weil der dritte Rufer keinen Namen hereingibt; der Abriss darunter nennt die drei einzeln statt „zwei"; der Absatz „Der eine Vergleich" nennt sie einzeln und sagt dazu, warum das Argument weiter `name` heißt; die Vorbedingung nennt statt „ihre beiden Rufer" den Prüfschritt und den Durchlauf beim Namen und begründet für den Inhaltsbefund über `inhaltsschwelle`, warum die Frage dort ohne Filtertext gar nicht erst entsteht.
+
+In `verzeichnis/sys.rs`: der Absatz zum Ort der Aufrufer nennt beide beim Namen und sagt, dass beide seit dieser Runde in `text/datei.rs` liegen, dass Vorschau und Inhaltsfilter die Hülle rufen und nicht diese Stelle, und dass die Hülle bis zur Runde 11 in `krk-ui` stand. Der Absatz zu `ist_deskriptormangel` nennt zwei Frager statt eines und sagt für den zweiten, an welchem Zweig er hängt.
+
+Zwei Stellen mehr, als der Befund nennt, und beide derselbe Fehlertyp: das Bild im Modulkopf von `verzeichnis/sys.rs` führte für `fcntl(2)` die Zeile `└─> krk-ui: vorschaumodell` und nennt jetzt `text::datei::bis_zur_grenze_lesen`; die obere Zeile hieß `text::datei::oeffnen`, während der Aufrufer `text::datei::lesen` ist. Der Modulkopf von `verzeichnis/mod.rs` verortete den zweiten Aufrufer ebenfalls noch „vom Leseweg der Vorschau in `krk-ui`".
+
+Keine Zahl steht neu ohne ihre Stellen: wo eine Zahl bleibt, stehen die gezählten Stellen daneben, so wie die Zählprobe es hält. Verhalten, Signaturen und Proben sind nicht angefasst. `make check` — exit 0, alle vier grün, einschließlich `die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei` und der Wettrennprobe `ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an`.

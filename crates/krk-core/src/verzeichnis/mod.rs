@@ -19,9 +19,9 @@
 //! `getattrlistbulk(2)` fuer das Lesen, seit Schritt 15 `copyfile(3)` und
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
 //! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
-//! von `text::datei::oeffnen` und, seit dem Defekt `260810-1247`, vom Leseweg
-//! der Vorschau in `krk-ui`, und seit der Runde 7 `flock(2)` fuer die beiden
-//! Sperren der Ablage. Das sind fuenf Schnittstellen und neun gebundene
+//! von `text::datei::lesen` und, seit dem Defekt `260810-1247`, von
+//! `text::datei::bis_zur_grenze_lesen`, und seit der Runde 7 `flock(2)` fuer
+//! die beiden Sperren der Ablage. Das sind fuenf Schnittstellen und neun gebundene
 //! Funktionen, denn `copyfile(3)` braucht seine vier
 //! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der fuenf
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und

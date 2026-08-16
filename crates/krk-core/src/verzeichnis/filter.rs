@@ -4,9 +4,9 @@
 //! ```text
 //! Taste ohne Zusatztaste ──> traegt_ein_dateiname ──> Filtertext des Tabs
 //!                                                            │
-//!                        traegt_die_folge(Name, Filtertext) <┤
-//!                              ^                    ^        │
-//!                    modell::sichtbar        durchlauf       │
+//!                        traegt_die_folge(Text, Filtertext) <┤
+//!                            ^             ^         ^       │
+//!                    modell::sichtbar  durchlauf  inhalt     │
 //!                                                            │
 //!                        inhaltsschwelle(tief) <─ Zeichenzahl┘
 //!                              ^
@@ -16,11 +16,13 @@
 //! Die Datei traegt alle drei Regeln, weil jede an mehreren Stellen dieselbe
 //! Antwort geben soll und es bei zwei Fassungen nicht mehr taete. Die
 //! Zeichenregel hat zwei Aufrufer, den Filter der Dateiliste und die Tippsuche
-//! der Belegungsansicht aus der Runde 7; der Vergleich hat zwei,
-//! [`super::modell::Ordnermodell::sichtbar`] fuer die angezeigte Zeile und
-//! [`super::durchlauf`] fuer den Unterbaum. Die Schwelle hat einen,
-//! [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist seinerseits die
-//! eine Stelle, die alle Frager nach dem Inhaltsfilter bedient.
+//! der Belegungsansicht aus der Runde 7; der Vergleich hat drei,
+//! [`super::modell::Ordnermodell::sichtbar`] fuer die angezeigte Zeile,
+//! [`super::durchlauf`] fuer den Unterbaum und seit der Runde 11
+//! [`super::inhalt`] fuer den gelesenen Text einer Datei. Die Schwelle hat
+//! einen, [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist
+//! seinerseits die eine Stelle, die alle Frager nach dem Inhaltsfilter
+//! bedient.
 //!
 //! # Was hier bis zur Runde 10 stand
 //!
@@ -94,12 +96,18 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
 /// Ob dieser Name den Filtertext traegt: Teilzeichenfolge an jeder Stelle, ohne
 /// Ruecksicht auf die Schreibung, ohne Faltung von Umlauten und Akzenten.
 ///
-/// **Der eine Vergleich.** Seine beiden Rufer sind
-/// [`super::modell::Ordnermodell::sichtbar`], das ueber die angezeigte Zeile
-/// entscheidet, und [`super::durchlauf`], das denselben Vergleich auf jeden
-/// Namen im Unterbaum zieht. Bis zum 260815 stand er in beiden Dateien
-/// getrennt; dass eine tiefe Suche etwas anderes faende als eine flache, waere
-/// keine Eigenschaft, die jemand haette erklaeren koennen.
+/// **Der eine Vergleich, und seine Rufer stehen alle im Kern.**
+/// [`super::modell::Ordnermodell::sichtbar`] entscheidet ueber die angezeigte
+/// Zeile, [`super::durchlauf`] zieht denselben Vergleich auf jeden Namen im
+/// Unterbaum, und seit der Runde 11 legt ihn [`super::inhalt`] an den
+/// gelesenen Text einer Datei. Bis zum 260815 stand er in den ersten beiden
+/// Dateien getrennt; dass eine tiefe Suche etwas anderes faende als eine
+/// flache, waere keine Eigenschaft, die jemand haette erklaeren koennen.
+///
+/// **Das Argument heisst `name`, weil die ersten beiden Rufer Namen
+/// vergleichen.** Der dritte gibt den gelesenen Text einer Datei herein, und
+/// die Regel ist dieselbe — genau darum steht sie hier einmal und nicht je
+/// Gegenstand einmal.
 ///
 /// `filter_klein` ist **bereits kleingeschrieben** und wird hier nicht noch
 /// einmal umgeschrieben. Das ist der Grund fuer die Asymmetrie der beiden
@@ -108,8 +116,9 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
 /// nichts mit Grossbuchstaben.
 ///
 /// Ein leerer `filter_klein` traegt jeder Name. Wer nicht filtern will, fragt
-/// diese Funktion nicht; ihre beiden Rufer haben den Zweig „steht ein
-/// Filtertext?" davor.
+/// diese Funktion nicht: der Pruefschritt und der Durchlauf haben den Zweig
+/// „steht ein Filtertext?" davor, und der Inhaltsbefund kommt gar nicht erst
+/// zustande, weil [`inhaltsschwelle`] ohne Filtertext nicht erreicht ist.
 pub fn traegt_die_folge(name: &str, filter_klein: &str) -> bool {
     name.to_lowercase().contains(filter_klein)
 }

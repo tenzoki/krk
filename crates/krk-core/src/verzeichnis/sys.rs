@@ -12,8 +12,8 @@
 //! copyfile(3)        ──> datei_kopieren       ──> operation::kopieren
 //!   copyfile_state_{alloc,free,set,get}
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
-//! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::oeffnen
-//!                                             └─> krk-ui: vorschaumodell
+//! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::lesen
+//!                                             └─> text::datei::bis_zur_grenze_lesen
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
@@ -44,10 +44,14 @@
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
 //! ersten Aufrufer von ausserhalb `verzeichnis/`, und sie sind der Grund, aus
 //! dem die Aussage nicht mehr nur behauptet ist. Es sind seit dem Defekt
-//! `260810-1247` zwei, und der zweite liegt ausserhalb der Kiste: die Vorschau
-//! in `krk-ui` liest ueber denselben Eingang wie der Editor. Warum die
-//! Zielpruefung trotzdem bei den Aufrufern bleibt, steht bei
-//! [`ohne_warten_oeffnen`]. Das Modul liegt unter
+//! `260810-1247` zwei, und seit der Runde 11 liegen beide in `text/datei.rs`:
+//! [`crate::text::datei::lesen`] fuer den Editor und
+//! [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden, der seine eigene
+//! Grenze mitbringt. Die Vorschau und der Inhaltsfilter der Dateiliste, beide
+//! in `krk-ui`, rufen die Huelle und nicht diese Stelle; bis zur Runde 11 stand
+//! die Huelle in `krk-ui`s `vorschaumodell.rs`, und der zweite Aufrufer lag
+//! damit ausserhalb der Kiste. Warum die Zielpruefung trotzdem bei den
+//! Aufrufern bleibt, steht bei [`ohne_warten_oeffnen`]. Das Modul liegt unter
 //! `verzeichnis/`, weil es dort entstanden ist und ein Umzug jede Fundstelle
 //! verschoebe, ohne eine Zeile besser zu machen.
 //!
@@ -282,10 +286,14 @@ const EMFILE: i32 = 24;
 /// Prozesses eine Aussage ueber eine fremde Ordnung.** Genau das hat der
 /// Durchlauf getan, bis der Defekt `260815-0211` es nachgestellt hat: unter
 /// einer knappen Grenze fiel ein Ordner mit einem Treffer darunter still aus
-/// der Liste. Der Aufrufer, der die Unterscheidung braucht, ist
-/// [`crate::verzeichnis::durchlauf`]; der Verzeichnisleser braucht sie nicht,
-/// weil ein Lesevorgang seinen einen Ordner ohnehin abbricht und den Fehler
-/// meldet.
+/// der Liste. Die Aufrufer, die die Unterscheidung brauchen, sind zwei:
+/// [`crate::verzeichnis::durchlauf`], der einen Ordner sonst still aus der
+/// Liste fallen liesse, und seit der Runde 11
+/// [`crate::text::datei::bis_zur_grenze_lesen`], das den Mangel als eigenes
+/// [`Lesehindernis`](crate::text::datei::Lesehindernis) herausgibt, statt ihn
+/// unter die uebrigen Lesefehler zu ziehen. Der Verzeichnisleser braucht sie
+/// nicht, weil ein Lesevorgang seinen einen Ordner ohnehin abbricht und den
+/// Fehler meldet.
 ///
 /// Eine dritte Sorte gibt es nicht, und das ist keine Verkuerzung: gefragt ist
 /// allein, ob der Fehlschlag am Vorrat an Deskriptoren liegt, und darauf gibt
