@@ -926,3 +926,7 @@
 {"ts":"2026-08-15T22:22:36","event":"gate_response","detail":"Nutzerentscheid zu 260815-2247: Option 1, Auffrischung aufschieben"}
 {"ts":"2026-08-15T22:22:36","event":"turn_start","turn":3,"detail":"1 ready task"}
 {"ts":"2026-08-15T22:22:36","event":"task_start","turn":3,"task":"T4","agent":"coder","detail":"Auffrischung aufschieben, solange eine Namenszelle offen steht"}
+{"ts":"2026-08-15T22:57:08","event":"task_done","turn":3,"task":"T4","agent":"coder","detail":"27dca57"}
+{"ts":"2026-08-15T22:57:08","event":"commit","turn":3,"detail":"27dca57, 3dd799a"}
+{"ts":"2026-08-15T22:57:08","event":"turn_end","turn":3,"detail":"1 task resolved, 2 commits, 2 issues created, 1 decision implemented"}
+{"ts":"2026-08-16T07:30:15","event":"user_acceptance","detail":"Anzeige und die drei Umbenenn-Zusagen am Buendel geprueft, alles gut; 260815-2209 geschlossen"}
