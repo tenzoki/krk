@@ -28,7 +28,7 @@
 //!    │
 //!    └─ Belegung::nachschlag
 //!         ├─ Kommando ──> mit Anschlag ──> Senke ─┐ ist der Befehl hier
-//!         ├─ Sprungmarke ──> Zeichen ──> Senke ───┤ gerade zulaessig?
+//!         ├─ Tippen ─────> Zeichen ──> Senke ─────┤ gerade zulaessig?
 //!         └─ unbelegt ─────> unveraendert an AppKit
 //! ```
 //!
@@ -214,14 +214,22 @@
 //! Zeichen kommt. Nutzerentscheid vom 260808-0155, `decisions/
 //! 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
 //!
-//! Die zweite Frage bleibt, wie sie war. Eine Taste ohne Zusatztaste, die keiner
-//! Funktion gehoert, faellt im Kern auf [`Nachschlag::Sprungmarke`]; welches
-//! Zeichen in den Filtertext geht, weiss das Ereignis, und die Regel, welche
-//! Zeichen ein Dateiname tragen kann, steht in
+//! Die zweite Frage bleibt, wie sie war. Eine Taste, die keiner Funktion
+//! gehoert und keine Befehlstaste haelt, faellt im Kern auf
+//! [`Nachschlag::Tippen`]; welches Zeichen in den Filtertext geht, weiss das
+//! Ereignis, und die Regel, welche Zeichen ein Dateiname tragen kann, steht in
 //! `krk_core::verzeichnis::filter`. Getippt wird, was auf dem Bildschirm
 //! stuende, samt Grossschreibung; nachgeschlagen wird die Taste. Ein
 //! gemeinsames Zeichen fuer beides waere fuer eine der beiden Fragen die
 //! falsche Antwort.
+//!
+//! **Seit dem 260816 ist der Unterschied auch zu sehen.** Bis dahin liess der
+//! Kern nur die leere Maske zum Tippen durch, und `characters` lieferte zwar
+//! die Grossschreibung, aber niemand bekam sie je: `shift+a` endete auf
+//! [`Nachschlag::Unbelegt`]. Der Satz „samt Grossschreibung" stand hier also
+//! richtig und war trotzdem unwahr. Jetzt tragen `shift` und `opt` ihr Zeichen
+//! bis in den Filtertext, und die beiden Quellen laufen sichtbar auseinander:
+//! dieselbe Taste meldet fuer den Nachschlag `a` und fuer den Filtertext `A`.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -635,10 +643,11 @@ fn behandeln(
             Some(kommando) => senke(Eingabe::Kommando { kommando, anschlag }),
             None => false,
         },
-        // Eine Taste ohne Zusatztaste, die keiner Funktion gehoert: sie tippt
-        // in den Filtertext des sichtbaren Tabs. Ob das Zeichen dorthin
-        // gehoert, entscheidet die Zeichenregel des Kerns an der Senke.
-        Nachschlag::Sprungmarke => match zeichen {
+        // Eine Taste, die keiner Funktion gehoert und keine Befehlstaste haelt:
+        // sie tippt in den Filtertext des sichtbaren Tabs. Ob das Zeichen
+        // dorthin gehoert, entscheidet die Zeichenregel des Kerns an der Senke,
+        // und ob der Fokus dort steht, die Senke selbst.
+        Nachschlag::Tippen => match zeichen {
             Some(zeichen) => senke(Eingabe::Zeichen(zeichen)),
             None => false,
         },
@@ -733,7 +742,36 @@ fn erstes_zeichen(text: Option<Retained<NSString>>) -> Option<char> {
 /// `None` fuer ein Ereignis ohne Zeichen, etwa eine reine Zusatztaste. Genommen
 /// wird das **erste** Zeichen: eine Taste liefert in aller Regel genau eines,
 /// und eine Folge aus mehreren stammt von einer Eingabemethode, deren Ergebnis
-/// nicht in einen Suchpuffer gehoert.
+/// nicht in den Filtertext gehoert.
+///
+/// # Was die Wahltaste liefert, gemessen und nicht angenommen
+///
+/// Seit dem 260816 erreicht auch eine Taste mit `shift` oder `opt` diese
+/// Stelle, und die Wahltaste ist auf einer deutschen Tastatur nicht nur der
+/// Weg zu einem weiteren Zeichen, sondern auch der zu drei **toten Tasten**.
+/// Gemessen am 260816 auf der aktiven Belegung `com.apple.keylayout.German`,
+/// auf zwei Wegen, die dasselbe sagen — `NSEvent` aus einem `CGEvent` gebaut
+/// und `characters` gelesen, und `UCKeyTranslate` unmittelbar auf den
+/// Layoutdaten:
+///
+/// | Anschlag | `characters` | was hier ankommt |
+/// |---|---|---|
+/// | `opt+l` | `"@"` | `Some('@')`, geht in den Filtertext |
+/// | `opt+u` (Trema, tot) | `""` | `None`, es geht nichts in den Filtertext |
+/// | `shift+a` | `"A"` | `Some('A')` |
+/// | `ctrl+a` | `"\u{1}"` | kommt nicht her: `ctrl` faellt auf [`Nachschlag::Unbelegt`] |
+///
+/// **Eine tote Taste liefert also die leere Zeichenkette und keinen Akzent**,
+/// und [`erstes_zeichen`] macht daraus `None`. Der Anschlag verpufft in KRK,
+/// statt ein `¨` in den Filtertext zu setzen.
+///
+/// **Was der Anschlag danach liefert, ist hier nicht gemessen und gehoert
+/// nicht dieser Datei.** Ob die Taste nach `opt+u` als `ä` oder als `a`
+/// gemeldet wird, entscheidet der Totentastenstand des Ereignisstroms, nicht
+/// KRK: der Abgriff liest das fertige `characters` und ruft
+/// `interpretKeyEvents:` nirgends. Beide Ausgaenge sind gutartig — es kommt in
+/// jedem Fall **ein** Zeichen an, das ein Dateiname tragen kann, und die
+/// Rueckschritt-Taste holt es wieder heraus.
 fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
     erstes_zeichen(ereignis.characters())
 }
@@ -765,7 +803,7 @@ fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
     };
     let funktion = match nachschlag {
         Nachschlag::Funktion(funktion) => funktion.kennung().to_owned(),
-        Nachschlag::Sprungmarke => "(Sprungmarke)".to_owned(),
+        Nachschlag::Tippen => "(Tippen)".to_owned(),
         Nachschlag::Unbelegt => "(unbelegt)".to_owned(),
     };
     let zeichen = match druck.zeichen {

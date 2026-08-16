@@ -935,3 +935,8 @@
 {"ts":"2026-08-16T08:07:39","event":"task_start","turn":4,"task":"T5","agent":"coder","detail":"Ende ohne Umbenennung stellt die Anzeigeform her"}
 {"ts":"2026-08-16T08:28:32","event":"task_done","turn":4,"task":"T5","agent":"coder","detail":"2c5a1b5"}
 {"ts":"2026-08-16T08:28:32","event":"turn_end","turn":4,"detail":"1 task resolved, 2 issues closed, 1 decision implemented"}
+{"ts":"2026-08-16T08:55:32","event":"turn_start","turn":5,"detail":"1 ready task, four findings"}
+{"ts":"2026-08-16T08:55:32","event":"task_start","turn":5,"task":"T6","agent":"coder","detail":"260815-2202, -2205, -2206, -2207"}
+{"ts":"2026-08-16T09:10:33","event":"gate_response","detail":"Nutzer: Zuschnitt 2 fuer 260816-1101; Turn-Budget von 5 auf 8 angehoben"}
+{"ts":"2026-08-16T09:10:33","event":"task_start","turn":5,"task":"T7","agent":"coder","detail":"Umschalt und Wahl erreichen den Dateifilter"}
+{"ts":"2026-08-16T09:11:19","event":"task_done","turn":5,"task":"T6","agent":"coder","detail":"vier Befunde geschlossen; Commit steht aus, T7 laeuft noch"}

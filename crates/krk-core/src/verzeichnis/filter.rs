@@ -27,11 +27,18 @@
 //!
 //! # Aufgenommen wird nur, was ein Dateiname tragen kann
 //!
-//! [`Nachschlag::Sprungmarke`](crate::tasten::Nachschlag::Sprungmarke)
-//! antwortet auf **jede** Taste ohne Zusatztaste, die keiner Funktion gehoert,
+//! [`Nachschlag::Tippen`](crate::tasten::Nachschlag::Tippen) antwortet auf
+//! **jede** Taste, die keiner Funktion gehoert und keine Befehlstaste haelt,
 //! nicht nur auf Buchstaben: der Kern kennt allein den Tastencode und weiss
 //! nicht, welches Zeichen darauf liegt. Diese Datei traegt deshalb die eine
 //! Regel, die daraus eine Sucheingabe macht, [`traegt_ein_dateiname`].
+//!
+//! **Die beiden Fragen bleiben getrennt.** Welcher **Tastendruck** ueberhaupt
+//! ankommt, entscheidet der Nachschlag; welches **Zeichen** aufgenommen wird,
+//! entscheidet [`traegt_ein_dateiname`]. Seit dem 260816 laesst der Nachschlag
+//! auch `shift` und `opt` durch, und damit kommt hier mehr an als zuvor — ein
+//! Grossbuchstabe, `_`, `@`, `|`, `~`, `\`. Die Regel hier hat sich dafuer
+//! nicht geaendert: sie liess diese Zeichen immer schon durch.
 //!
 //! Ohne sie schoebe die seit dem 260804 freie Eingabetaste ein
 //! Wagenruecklaufzeichen in den Filtertext, und die Liste zeigte danach nichts

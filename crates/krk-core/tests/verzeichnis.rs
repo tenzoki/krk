@@ -1745,11 +1745,14 @@ fn im_filter_steht_keine_zeitmessung() {
 /// Probe holen soll. Vier Nadeln, und jede muss null Fundstellen haben — der
 /// Typ, seine beiden Methoden, die Zeilensuche und die Konstante der Pause.
 ///
-/// **`Nachschlag::Sprungmarke` behaelt seinen Namen und ist deshalb keine
-/// Nadel.** Der Wert benennt „eine Taste ohne Zusatztaste, die keiner Funktion
-/// gehoert", und das trifft nach der Runde 10 weiter zu; keine der vier Nadeln
-/// findet ihn, weil vor jeder ein `::` oder ein `struct` steht oder sie
-/// ueberhaupt anders heisst.
+/// **Der letzte Traeger des Namens hiess `Nachschlag::Sprungmarke` und heisst
+/// seit dem 260816 `Nachschlag::Tippen`.** Er behielt den Namen ueber die
+/// Runde 10 hinweg, weil er weiter zutraf — „eine Taste ohne Zusatztaste, die
+/// keiner Funktion gehoert" —, und verlor ihn, als der Nutzerentscheid vom
+/// 260816-1105 `shift` und `opt` ebenfalls dorthin fallen liess. Die vier
+/// Nadeln haetten ihn ohnehin nie gefunden, weil vor jeder ein `::` oder ein
+/// `struct` steht oder sie ueberhaupt anders heisst; die Probe misst dasselbe
+/// wie zuvor.
 ///
 /// **Was diese Probe nicht entscheidet:** ob dieselbe Sache unter einem anderen
 /// Namen wieder aufgebaut wird. Der Kopf von `tests/baum.rs` schreibt aus,

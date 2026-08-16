@@ -322,7 +322,7 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     assert!(
         matches!(
             belegung.nachschlag(druck),
-            Nachschlag::Sprungmarke | Nachschlag::Unbelegt
+            Nachschlag::Tippen | Nachschlag::Unbelegt
         ),
         "{text} ist ab Werk belegt"
     );
@@ -774,10 +774,12 @@ fn beide_ausgelieferten_wege_treffen_dieselbe_funktion() {
 }
 
 #[test]
-fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_die_sprungmarke() {
-    // C2: Tippt der Nutzer Buchstaben ohne Zusatztaste, springt die Auswahl auf
-    // den ersten Eintrag, dessen Name so beginnt. Kein Buchstabe der
-    // Auslieferungsbelegung ist ohne Zusatztaste belegt.
+fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_das_tippen() {
+    // C2 der Runde 1 liess die Auswahl auf den ersten Eintrag mit diesem
+    // Anfangsbuchstaben springen; seit der Runde 10 verkuerzt derselbe
+    // Tastendruck die Liste. Beide Male gilt dieselbe Voraussetzung, und die
+    // prueft diese Probe: kein Buchstabe der Auslieferungsbelegung ist ohne
+    // Zusatztaste belegt.
     let belegung = Belegung::auslieferung();
     for buchstabe in 'a'..='z' {
         let Some(code) = parser::code_von(&buchstabe.to_string()) else {
@@ -786,14 +788,23 @@ fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_die_sprungmarke() {
         let druck = Tastendruck::neu(code, ModMaske::LEER);
         assert_eq!(
             belegung.nachschlag(druck),
-            Nachschlag::Sprungmarke,
-            "{buchstabe} faellt nicht auf die Sprungmarke durch"
+            Nachschlag::Tippen,
+            "{buchstabe} faellt nicht auf das Tippen durch"
         );
     }
 }
 
-/// Die Sprungmarke tippt Anfangsbuchstaben. Eine Kombination mit Zusatztaste
-/// ist keiner und muss weitergehen duerfen, statt in der Sprungmarke zu enden.
+/// Eine unbelegte Kombination mit **Befehlstaste** endet nicht im Tippen.
+///
+/// **Die Zusage hat sich am 260816 verschoben, und die Probe mit ihr.** Bis
+/// dahin galt sie fuer jede der fuenfzehn Masken: eine Zusatztaste, gleich
+/// welche, hielt den Tastendruck vom Tippen fern. Der Nutzerentscheid vom
+/// 260816-1105 teilt die vier Zusatztasten in Schreibtasten (`shift`, `opt`)
+/// und Befehlstasten (`cmd`, `ctrl`); die Zusage gilt seither fuer die
+/// Masken, die eine Befehlstaste halten, und nur fuer sie. Die anderen prueft
+/// `eine_unbelegte_kombination_aus_schreibtasten_faellt_auf_das_tippen`
+/// darunter — dieselbe Schleife, die andere Haelfte, damit keine der fuenfzehn
+/// Masken ungeprueft bleibt.
 ///
 /// **Ohne festes Beispiel, und das ist der Punkt.** Die Vorgaengerin nannte
 /// `cmd+q`. Der Nachtrag des Eintrags `beenden` am 260805-0820 belegte die
@@ -806,18 +817,16 @@ fn ein_unbelegter_buchstabe_ohne_zusatztaste_faellt_auf_die_sprungmarke() {
 /// an allen. Ein Nachtrag in `resources/default-keymap.toml` nimmt ihr damit
 /// einen Fall und laesst die uebrigen stehen.
 #[test]
-fn keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke() {
+fn keine_unbelegte_kombination_mit_befehlstaste_faellt_auf_das_tippen() {
     let belegung = Belegung::auslieferung();
-    let vergeben: Vec<Tastendruck> = belegung
-        .funktionen()
-        .iter()
-        .flat_map(|funktion| funktion.tasten())
-        .map(|kombination| kombination.tastendruck())
-        .collect();
+    let vergeben = vergebene_tastendruecke(&belegung);
 
     let mut geprueft = 0usize;
     for taste in parser::TASTEN {
         for maske in masken_mit_zusatztaste() {
+            if !haelt_befehlstaste(maske) {
+                continue;
+            }
             let kombination = Kombination::neu(taste, maske);
             if vergeben.contains(&kombination.tastendruck()) {
                 continue;
@@ -825,19 +834,171 @@ fn keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke() {
             assert_eq!(
                 belegung.nachschlag(kombination.tastendruck()),
                 Nachschlag::Unbelegt,
-                "{kombination} faellt auf die Sprungmarke durch"
+                "{kombination} faellt auf das Tippen durch"
             );
             geprueft += 1;
         }
     }
 
     // Ohne diese Zeile bestuende die Pruefung auch dann, wenn die
-    // Auslieferungsbelegung eines Tages jede Kombination mit Zusatztaste
+    // Auslieferungsbelegung eines Tages jede Kombination mit Befehlstaste
     // vergibt und es nichts mehr zu pruefen gibt.
     assert!(
         geprueft > 0,
-        "die Auslieferungsbelegung laesst keine Kombination mit Zusatztaste frei"
+        "die Auslieferungsbelegung laesst keine Kombination mit Befehlstaste frei"
     );
+}
+
+/// Die Gegenprobe: eine unbelegte Kombination aus **Schreibtasten** tippt.
+///
+/// Das ist die Zusage des Nutzerentscheids vom 260816-1105, an allen drei
+/// Masken ohne Befehlstaste — `shift`, `opt` und `opt+shift` — und an jeder
+/// Taste, die die Auslieferungsbelegung dort frei laesst. Der gemeldete Fall
+/// ist `shift` und der Bindestrich, also `_`; die Probe nennt ihn nicht
+/// eigens, weil sie den ganzen Bereich abdeckt, aus dem er stammt, und weil
+/// welche Taste den Unterstrich traegt eine Frage der Tastaturbelegung des
+/// Geraets ist und nicht des Kerns.
+///
+/// **Der Kern entscheidet ueber den Tastendruck und nicht ueber das Zeichen.**
+/// Dass aus `Nachschlag::Tippen` auch wirklich ein Zeichen im Filtertext wird,
+/// haengt an `krk_core::verzeichnis::filter::traegt_ein_dateiname` und an der
+/// Senke in `krk-ui`; diese Probe reicht bis an die Grenze des Kerns und
+/// keinen Schritt weiter.
+#[test]
+fn eine_unbelegte_kombination_aus_schreibtasten_faellt_auf_das_tippen() {
+    let belegung = Belegung::auslieferung();
+    let vergeben = vergebene_tastendruecke(&belegung);
+
+    let mut geprueft = 0usize;
+    for taste in parser::TASTEN {
+        for maske in masken_mit_zusatztaste() {
+            if haelt_befehlstaste(maske) {
+                continue;
+            }
+            let kombination = Kombination::neu(taste, maske);
+            if vergeben.contains(&kombination.tastendruck()) {
+                continue;
+            }
+            assert_eq!(
+                belegung.nachschlag(kombination.tastendruck()),
+                Nachschlag::Tippen,
+                "{kombination} faellt nicht auf das Tippen durch"
+            );
+            geprueft += 1;
+        }
+    }
+
+    assert!(
+        geprueft > 0,
+        "die Auslieferungsbelegung laesst keine Kombination aus Schreibtasten frei"
+    );
+}
+
+/// Die vier Zusatztasten, jede einzeln, an einer Taste, die keine Funktion
+/// traegt.
+///
+/// Die Abnahme des Nutzerentscheids vom 260816-1105 in ihrer knappsten Form:
+/// `shift` und `opt` tippen, `cmd` und `ctrl` nicht. Die beiden Schleifen
+/// darueber pruefen dieselbe Regel breiter; diese Probe steht daneben, weil
+/// eine Schleife ueber alle freien Kombinationen ihre Zusage nicht mehr
+/// benennt, sobald sie fehlschlaegt — hier steht in der Meldung, welche der
+/// vier Zusatztasten sich falsch verhaelt.
+///
+/// **Die Taste sucht die Probe sich selbst.** Ein fest genanntes `f5` waere
+/// dieselbe Falle, in die `cmd+q` am 260805-0820 gelaufen ist.
+#[test]
+fn die_vier_zusatztasten_trennen_schreiben_und_befehlen() {
+    let belegung = Belegung::auslieferung();
+    let vergeben = vergebene_tastendruecke(&belegung);
+
+    for (maske, name) in ModMaske::BENANNT {
+        let Some(taste) = parser::TASTEN
+            .into_iter()
+            .find(|taste| !vergeben.contains(&Kombination::neu(*taste, maske).tastendruck()))
+        else {
+            panic!("die Auslieferungsbelegung laesst mit {name} keine Taste frei");
+        };
+        let kombination = Kombination::neu(taste, maske);
+        let erwartet = if haelt_befehlstaste(maske) {
+            Nachschlag::Unbelegt
+        } else {
+            Nachschlag::Tippen
+        };
+        assert_eq!(
+            belegung.nachschlag(kombination.tastendruck()),
+            erwartet,
+            "{name} ist als Zusatztaste falsch eingeordnet ({kombination})"
+        );
+    }
+}
+
+/// Jede belegte Kombination wird weiterhin als Funktion gefunden.
+///
+/// **Die Zusage, an der die ganze Aenderung vom 260816 haengt.** Die neue
+/// Unterscheidung steht hinter der Belegungssuche und kann deshalb keinem
+/// Kuerzel etwas wegnehmen; das misst diese Probe an **jeder** Kombination,
+/// die die Auslieferungsbelegung vergibt.
+///
+/// **Der Unterschied zu `beide_ausgelieferten_wege_treffen_dieselbe_funktion`
+/// ist das Wort „jeder", und er ist genau der Fall, in dem ein Rueckschritt
+/// sich verstecken wuerde.** Jene Probe fragt nach C3 und ueberspringt deshalb
+/// jede Funktion mit nur einem Weg; die allermeisten Kombinationen der
+/// Auslieferungsbelegung sind aber genau das. Ein Fehler, der eine einzelne
+/// belegte Taste ins Tippen fallen liesse, bliebe dort unsichtbar.
+///
+/// Zugestellte Funktionen bleiben aussen vor: sie kommen im Nachschlag
+/// ueberhaupt nicht vor, und warum, steht im Modulkopf von
+/// `krk_core::tasten::belegung`.
+#[test]
+fn jede_belegte_kombination_wird_weiterhin_als_funktion_gefunden() {
+    let belegung = Belegung::auslieferung();
+
+    let mut geprueft = 0usize;
+    for funktion in belegung.funktionen() {
+        if funktion.gehalten_von().is_some() {
+            continue;
+        }
+        for kombination in funktion.tasten() {
+            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
+            else {
+                panic!(
+                    "{kombination} von {} faellt nicht mehr auf eine Funktion",
+                    funktion.kennung()
+                );
+            };
+            assert_eq!(
+                getroffen.kennung(),
+                funktion.kennung(),
+                "{kombination} trifft eine andere Funktion"
+            );
+            geprueft += 1;
+        }
+    }
+
+    assert!(
+        geprueft > 0,
+        "die Auslieferungsbelegung vergibt keine einzige Kombination"
+    );
+}
+
+/// Ob diese Maske eine der beiden Befehlstasten haelt.
+///
+/// Die Probenseite der Regel aus `Belegung::nachschlag`. Sie steht hier
+/// bewusst **zweitgeschrieben** und ruft nicht in den Kern hinein: eine Probe,
+/// die ihre Erwartung aus derselben Zeile bezieht wie der Prueffling, bestaende
+/// jede Aenderung dieser Zeile.
+fn haelt_befehlstaste(maske: ModMaske) -> bool {
+    maske.enthaelt(ModMaske::BEFEHL) || maske.enthaelt(ModMaske::STEUERUNG)
+}
+
+/// Jeder Tastendruck, den die Auslieferungsbelegung vergibt.
+fn vergebene_tastendruecke(belegung: &Belegung) -> Vec<Tastendruck> {
+    belegung
+        .funktionen()
+        .iter()
+        .flat_map(|funktion| funktion.tasten())
+        .map(|kombination| kombination.tastendruck())
+        .collect()
 }
 
 /// Die fuenfzehn nicht leeren Masken ueber den vier Zusatztasten.
@@ -1255,7 +1416,7 @@ tasten = ["ctrl+c"]
         assert!(
             matches!(
                 belegung.nachschlag(weg.tastendruck()),
-                Nachschlag::Unbelegt | Nachschlag::Sprungmarke
+                Nachschlag::Unbelegt | Nachschlag::Tippen
             ),
             "{weg} wirkt noch, obwohl die Nutzerdatei die Belegung ersetzt"
         );

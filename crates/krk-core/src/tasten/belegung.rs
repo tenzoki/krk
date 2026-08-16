@@ -35,14 +35,37 @@
 //!
 //! # Was ein Nachschlag antwortet
 //!
-//! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist [`Nachschlag::Sprungmarke`]:
-//! eine Taste **ohne** Zusatztaste, die keiner Funktion gehoert, gehoert dem
-//! Tippen. Der Kern sagt nur, dass der Tastendruck dorthin faellt; welches
-//! Zeichen es ist, entscheidet die Oberflaeche am Ereignis, weil dort auch die
-//! Grossschreibung und die Eingabemethoden stehen. Wohin das Zeichen danach
-//! geht, hat die Runde 10 geaendert — bis dahin in den Suchpuffer der
+//! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist [`Nachschlag::Tippen`]:
+//! eine Taste, die keiner Funktion gehoert und **keine Befehlstaste** haelt,
+//! gehoert dem Tippen. Der Kern sagt nur, dass der Tastendruck dorthin faellt;
+//! welches Zeichen es ist, entscheidet die Oberflaeche am Ereignis, weil dort
+//! auch die Grossschreibung und die Eingabemethoden stehen. Wohin das Zeichen
+//! danach geht, hat die Runde 10 geaendert — bis dahin in den Suchpuffer der
 //! Sprungmarke aus C2 der Runde 1, seither in den Filtertext des sichtbaren
 //! Tabs —, und der Kern der Belegung hat davon nichts gemerkt.
+//!
+//! # Schreibtasten und Befehlstasten
+//!
+//! **Umschalt und Wahl schreiben, Befehl und Steuerung befehlen.** Die vier
+//! Zusatztasten aus [`ModMaske`] taugen alle als Teil einer Belegung, aber sie
+//! taugen nicht alle als Grund, einen unbelegten Tastendruck vom Tippen
+//! fernzuhalten: `shift` und `opt` sind auf jeder Tastatur der Weg zu einem
+//! anderen **Zeichen** — auf einer deutschen zu `_`, zu jedem Grossbuchstaben,
+//! zur Umschalt-Interpunktion und ueber die Wahltaste zu `@`, `|`, `~`, `\` —,
+//! waehrend `cmd` und `ctrl` kein Zeichen aufschliessen, sondern einen Befehl
+//! erwarten. Ein unbelegtes `cmd+irgendwas` tippt deshalb weiterhin nichts.
+//!
+//! Es ist der Zuschnitt, den macOS selbst faehrt. Bis zum 260816 stand hier
+//! statt der Unterscheidung die Frage, ob die Maske **leer** ist; damit war
+//! jede Taste mit Zusatztaste fuer den Filtertext verloren, und der
+//! Unterstrich, den die Datensaetze dieses Projekts in jedem Dateinamen
+//! tragen, war nicht zu tippen. Nutzerentscheid vom 260816-1105,
+//! `shared/issues/260816-1101_*_kein-zeichen-mit-umschalttaste-erreicht-den-dateifilter.md`.
+//!
+//! **Die Unterscheidung steht hinter der Belegungssuche und kann keinem
+//! belegten Kuerzel etwas wegnehmen.** [`Belegung::nachschlag`] durchlaeuft
+//! erst alle Funktionen und kommt nur dorthin, wenn keine passt; `shift+f2`
+//! bleibt also `shift+f2`, gleich was hier steht.
 //!
 //! # Wonach nachgeschlagen wird
 //!
@@ -124,9 +147,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, melden};
 
-use super::Tastendruck;
 use super::konflikt::{Funktionsname, Konflikt};
 use super::parser::{Kombination, Schreibfehler};
+use super::{ModMaske, Tastendruck};
 
 /// Die Auslieferungsbelegung, in das Programm einkompiliert.
 ///
@@ -1061,16 +1084,21 @@ impl Funktion {
 pub enum Nachschlag<'a> {
     /// Die Kombination gehoert dieser Funktion.
     Funktion(&'a Funktion),
-    /// Keine Funktion, und keine Zusatztaste gehalten: der Tastendruck faellt
+    /// Keine Funktion, und keine Befehlstaste gehalten: der Tastendruck faellt
     /// auf das Tippen durch.
     ///
-    /// **Der Name blieb, als die Sprungmarke aus C2 der Runde 1 fiel.** Er
-    /// benennt, was dieser Wert seit jeher aussagt — eine Taste ohne
-    /// Zusatztaste, die keiner Funktion gehoert —, und das trifft unveraendert
-    /// zu. Wohin das getippte Zeichen laeuft, sagt er nicht und hat er nie
-    /// gesagt: seit der Runde 10 ist es der Filtertext des sichtbaren Tabs.
-    Sprungmarke,
-    /// Keine Funktion, und eine Zusatztaste gehalten: nichts geschieht.
+    /// **Der Wert hiess bis zum 260816 `Sprungmarke`**, nach der Sprungmarke
+    /// aus C2 der Runde 1, die die Runde 10 abgeloest hat. Der Name blieb
+    /// damals stehen, weil er weiter zutraf: „eine Taste **ohne** Zusatztaste,
+    /// die keiner Funktion gehoert". Genau dieser Satz stimmt seit dem
+    /// Nutzerentscheid vom 260816-1105 nicht mehr — `shift` und `opt` fallen
+    /// jetzt ebenfalls hierher —, und damit war der Name faellig. `Tippen`
+    /// benennt, was der Wert aussagt: dieser Tastendruck gehoert dem Tippen.
+    ///
+    /// Wohin das getippte Zeichen laeuft, sagt er nicht und hat er nie gesagt:
+    /// seit der Runde 10 ist es der Filtertext des sichtbaren Tabs.
+    Tippen,
+    /// Keine Funktion, und eine Befehlstaste gehalten: nichts geschieht.
     Unbelegt,
 }
 
@@ -1170,10 +1198,19 @@ impl Belegung {
                 return Nachschlag::Funktion(funktion);
             }
         }
-        if druck.maske.ist_leer() {
-            Nachschlag::Sprungmarke
-        } else {
+        // Hinter der Suche und nicht davor: was oben eine Funktion gefunden hat,
+        // kommt hier nicht mehr an, und diese Unterscheidung kann deshalb keinem
+        // belegten Kuerzel etwas wegnehmen. Sie trennt allein die beiden
+        // Schreibtasten von den beiden Befehlstasten; der Modulkopf schreibt
+        // aus, warum das die Trennung ist und nicht die leere Maske.
+        //
+        // Die Frage steht als zwei `enthaelt` und nicht als eine Maske mit zwei
+        // Bits: `enthaelt` verlangt **alle** genannten Bits, und `cmd+ctrl+x`
+        // haelt eine Befehlstaste schon mit einer von beiden.
+        if druck.maske.enthaelt(ModMaske::BEFEHL) || druck.maske.enthaelt(ModMaske::STEUERUNG) {
             Nachschlag::Unbelegt
+        } else {
+            Nachschlag::Tippen
         }
     }
 
