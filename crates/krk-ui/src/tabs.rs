@@ -58,6 +58,20 @@ pub struct Tabinhalt {
     /// Fragen beantworten und verschieden lange leben; welcher Anlass ihn
     /// faellen laesst, steht bei [`Tabliste::durchlauf_nachziehen`].
     durchlauf: Option<Durchlauf>,
+    /// Wie viele Dateien der letzte Durchlauf wegen ihrer Groesse **nicht**
+    /// gelesen hat.
+    ///
+    /// Ein Feld am Tab und nicht die Frage an den Durchlauf, und der Grund ist
+    /// die Lebensdauer: der [`Durchlauf`] faellt, sobald sein Kanal schliesst,
+    /// die Zahl soll danach aber weiter dastehen. Sonst saehe der Nutzer sie
+    /// bei einem kleinen Ordner nie — dort ist der Lauf durch, bevor die
+    /// Statuszeile das naechste Mal rechnet —, und der Groessenhinweis waere
+    /// eine Anzeige, die nur bei langen Laeufen aufblitzt.
+    ///
+    /// Sie gehoert dem Lauf und nicht dem Ordner: `Tabliste::lesen_starten`
+    /// und `Tabliste::durchlauf_nachziehen_an` setzen sie auf null, wo ein
+    /// Lauf faellt oder beginnt.
+    zu_gross: u64,
     /// Der Name, auf den die Auswahl springt, sobald der Ordner gelesen ist.
     ///
     /// Er kommt aus `session.toml` und lebt genau bis zum Abschluss des
@@ -94,6 +108,7 @@ impl Tabinhalt {
             modell,
             lesevorgang: None,
             durchlauf: None,
+            zu_gross: 0,
             wunschauswahl: zustand.auswahl.clone(),
             bildlauf: zustand.bildlauf,
             bildlauf_offen: zustand.bildlauf > 0.0,
@@ -123,6 +138,28 @@ impl Tabinhalt {
     /// Ob gerade ein Lesevorgang laeuft.
     pub fn liest(&self) -> bool {
         self.lesevorgang.is_some()
+    }
+
+    /// Wie viele Dateien der letzte Durchlauf wegen ihrer Groesse **nicht**
+    /// gelesen hat.
+    ///
+    /// Null, wo kein Lauf war oder keine Datei zu gross war. Der Wert steht
+    /// auch nach dem Ende des Laufs; warum, steht am Feld.
+    ///
+    /// **Die Ausnahme von der Totpruefung nimmt sich selbst zurueck.** Ihr
+    /// Ableser ist der Groessenhinweis der Statuszeile, und der entsteht einen
+    /// Schritt spaeter (F2 des Plans zum Inhaltsfilter). `expect` statt `allow`
+    /// ist dabei die Ankuendigung in einer Form, die sich selbst erzwingt:
+    /// sobald der Ableser dasteht, ist die Erwartung unerfuellt, und
+    /// `unfulfilled_lint_expectations` haelt unter `-D warnings` den Bau an,
+    /// bis diese Zeile faellt. Die Proben lesen deshalb das Feld unmittelbar
+    /// und nicht diese Methode.
+    #[expect(
+        dead_code,
+        reason = "der Ableser ist der Groessenhinweis der Statuszeile aus Schritt F2"
+    )]
+    pub fn zu_gross(&self) -> u64 {
+        self.zu_gross
     }
 
     /// Ob der Tab bedienbar ist: er zeigt Zeilen oder ist fertig gelesen.
@@ -464,11 +501,23 @@ impl Tabliste {
     /// Eine Stelle ausserhalb der Liste wird uebergangen. Liefert, ob der
     /// sichtbare Tab dadurch ein anderer geworden ist; nur dann muss die
     /// Ansicht ihren Inhalt austauschen.
+    ///
+    /// **Der Durchlauf des verlassenen Tabs endet hier** (C4.5). Gerufen wird
+    /// dafuer [`Tabliste::durchlauf_nachziehen_an`] auf der verlassenen Stelle,
+    /// und zwar erst, nachdem `aktiv` schon umgesetzt ist: die Sichtbarkeit ist
+    /// eine der Bedingungen jener Methode, also faellt der Lauf dort und
+    /// beginnt nicht neu. Ein Zweig nach der Art des Laufs faellt hier nicht
+    /// an; die Regel steht ganz in der einen Methode.
     pub fn waehlen(&mut self, stelle: usize) -> bool {
         if stelle >= self.tabs.len() || stelle == self.aktiv {
             return false;
         }
+        let verlassen = self.aktiv;
         self.aktiv = stelle;
+        // Der Wert sagt, ob jetzt ein Durchlauf laeuft. Auf der verlassenen
+        // Stelle ist die Antwort seit dem Nutzerentscheid vom 260816-1410
+        // immer "nein", und der Ruf steht hier des Abbruchs wegen.
+        let _ = self.durchlauf_nachziehen_an(verlassen);
         self.ungelesenen_aktiven_nachlesen();
         true
     }
@@ -541,7 +590,11 @@ impl Tabliste {
     /// [`Ordnermodell`]; was der Tab ueber den Wechsel hinweg behaelt, steht
     /// deshalb genau hier und nirgends sonst. Bis zum 260815 waren das
     /// Sortierung und Verstecke; seither kommen der Filter der Tiefe und der
-    /// Filtertext dazu, in derselben Bauart und aus demselben Grund.
+    /// Filtertext dazu, in derselben Bauart und aus demselben Grund. Seit dem
+    /// 260816 ist der Filter des Inhalts die fuenfte Uebertragung, und sie hat
+    /// keine eigene Regel: der Stand von „Content" uebersteht den Wechsel
+    /// unbedingt, wie der von „Deep" (C1.12, C2.4). Genau davon lebt die
+    /// Zusage, dass der neue Ordner sofort anfaengt, seine Dateien zu lesen.
     ///
     /// **Eine Regel und keine Fallunterscheidung:** der Filtertext uebersteht
     /// jeden Ordnerwechsel, gleich ob der Filter der Tiefe an oder aus ist
@@ -586,16 +639,17 @@ impl Tabliste {
     /// **Der Aufstieg braucht keine eigene Zeile.** Er geht wie der Einstieg
     /// durch diese Stelle, und damit gilt fuer ihn dieselbe Regel (C1.9).
     ///
-    /// **Weder der Filtertext noch der Filter der Tiefe gehen in die
-    /// Sitzung.** Beide werden hier vom alten Modell in das neue getragen und
-    /// nicht ueber [`Tabzustand`], der `session.toml` schreibt: ein
-    /// wiederhergestellter Filter der Tiefe ohne Filtertext waere ein Zustand,
-    /// den nichts anzeigt und der nichts tut.
+    /// **Weder der Filtertext noch die beiden Filterschalter gehen in die
+    /// Sitzung** (C2.5). Alle drei werden hier vom alten Modell in das neue
+    /// getragen und nicht ueber [`Tabzustand`], der `session.toml` schreibt:
+    /// ein wiederhergestellter Filter der Tiefe oder des Inhalts ohne
+    /// Filtertext waere ein Zustand, den nichts anzeigt und der nichts tut.
     pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<String>) {
         let stelle = self.aktiv;
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let tief = self.tabs[stelle].modell.tief();
+        let inhalt = self.tabs[stelle].modell.inhalt();
         // Die vierte Uebertragung, in derselben Bauart wie die drei darueber
         // und ohne Bedingung: der Filtertext geht hinueber, gleich wie `tief`
         // steht (C1.9, C1.10). Bis zum Nutzerentscheid vom 260815-0955 zu
@@ -616,6 +670,7 @@ impl Tabliste {
         // neu auf, und ein Zweig davor waere eine zweite Stelle, an der die
         // Uebertragung anders ausfallen koennte.
         modell.tief_setzen(tief);
+        modell.inhalt_setzen(inhalt);
         modell.filtertext_setzen(&filtertext);
         self.lesen_starten(stelle);
     }
@@ -768,10 +823,27 @@ impl Tabliste {
     /// Eintragsindex des alten Bestands auf einen beliebigen Eintrag des neuen
     /// zeigte.
     ///
-    /// **Ein Tabwechsel ruft hier nicht**, und das ist Absicht (C3.6 zaehlt je
-    /// Tab): ein verdeckter Tab fuellt sich still weiter, wie er es beim
-    /// Lesevorgang tut, und ein Abbruch beim Wegwechseln naehme dem Nutzer
-    /// gerade die Arbeit weg, die er beim Zurueckwechseln braeuchte.
+    /// **Ein Tabwechsel ruft hier, und ein verdeckter Tab haelt keinen
+    /// Durchlauf** (C4.5). Bis zum 260816 stand hier das Gegenteil: die Runde
+    /// 10 liess den verlassenen Tab weiterlaufen, weil ein Namensdurchlauf
+    /// ueber Verzeichnismetadaten in Millisekunden durch ist und ein Abbruch
+    /// dem Nutzer die Arbeit naehme, die er beim Zurueckwechseln braeuchte.
+    /// Mit dem Inhaltsfilter wiegt das anders: ein Lauf oeffnet und liest
+    /// Dateien bis 1 MB, ueber einen Unterbaum minutenlang, fuer einen Tab, den
+    /// niemand ansieht, und er nimmt Deskriptoren aus einem Vorrat, den Editor,
+    /// Vorschau, Kopiervorgaenge und beide Lesevorgaenge teilen. Der Nutzer hat
+    /// am 260816-1410 Moeglichkeit 1 von
+    /// `decisions/260816-1359_*_beendet-ein-tabwechsel-den-durchlauf-des-verlassenen-tabs-jetzt-wo-er-dateien-liest.md`
+    /// gewaehlt: **eine Regel und kein Zweig nach der Art des Laufs.** Der Preis
+    /// ist benannt und angenommen — wer mit stehendem Filtertext zwischen zwei
+    /// Tabs hin und her wechselt, laesst den Unterbaum jedes Mal von vorn
+    /// abschreiten.
+    ///
+    /// Getragen wird die Regel von der Sichtbarkeitsbedingung im Rumpf und
+    /// nicht von einem Zweig in [`Tabliste::waehlen`]. Damit ist der Zuschnitt
+    /// des Einzugstakts, der ueber **alle** Tabs fragt, nicht falsch geworden,
+    /// sondern gegenstandslos: fuer einen verdeckten Tab faellt der Ruf hier
+    /// von selbst.
     ///
     /// **Liefert, ob jetzt ein Durchlauf laeuft.** Der Wert sagt dem Aufrufer,
     /// ob er den Einzugstakt anwerfen muss; faellt er still, kaeme kein Befund
@@ -788,9 +860,19 @@ impl Tabliste {
     /// Der bisherige Durchlauf faellt in jedem Fall zuerst; sein `Drop` setzt
     /// das Abbruchkennzeichen, und sein Empfaenger geht mit, also kann kein
     /// Befund des alten Laufs mehr ankommen und die Befunde zweier Filtertexte
-    /// mischen sich nicht.
+    /// mischen sich nicht. Mit ihm faellt die Zahl der ungelesenen Dateien:
+    /// sie gehoert dem Lauf, und ein neuer beginnt bei null.
+    ///
+    /// **Vier Bedingungen, und die erste ist die Sichtbarkeit.** Ein verdeckter
+    /// Tab bekommt keinen Durchlauf; die Begruendung steht bei
+    /// [`Tabliste::durchlauf_nachziehen`]. Sie steht vor den uebrigen drei, weil
+    /// sie die einzige ist, die nicht am Modell des Tabs haengt.
     fn durchlauf_nachziehen_an(&mut self, stelle: usize) -> bool {
         self.tabs[stelle].durchlauf = None;
+        self.tabs[stelle].zu_gross = 0;
+        if stelle != self.aktiv {
+            return false;
+        }
         let tab = &self.tabs[stelle];
         // Der Bestand muss stehen. Waehrend eines Lesevorgangs zeigt das Modell
         // noch den **alten** Ordner — es wird nicht vorab geleert, sondern mit
@@ -800,7 +882,11 @@ impl Tabliste {
         if !tab.gelesen || tab.liest() {
             return false;
         }
-        if !tab.modell.filter_steht() || !tab.modell.tief() {
+        // Ein Filtertext muss stehen, und mindestens einer der beiden Schalter
+        // muss etwas zu tun geben. Ob der Inhaltsfilter wirkt, entscheidet
+        // `inhalt_wirkt` und nicht diese Stelle: die Schwelle wird an einem Ort
+        // geprueft (C2.10).
+        if !tab.modell.filter_steht() || (!tab.modell.tief() && !tab.modell.inhalt_wirkt()) {
             return false;
         }
         let auftraege = auftraege(&tab.modell);
@@ -817,9 +903,15 @@ impl Tabliste {
             auftraege,
             tab.ordner.clone(),
             tab.modell.filter_klein().to_owned(),
-            // Bis Schritt D1 zaehlt der Inhalt bei keinem Lauf; `None` heisst,
-            // dass keine Datei geoeffnet wird.
-            None,
+            // **Die eine Stelle, an der die 1 MB in den Kern reisen**, und sie
+            // liegt hier, weil die Zahl in `crate::vorschaumodell` wohnt:
+            // `krk-core` bekommt keinen Bezug auf `krk-ui` (C1.7). `None` heisst
+            // "bei diesem Lauf wird keine Datei geoeffnet", `Some(n)` heisst
+            // "es wird gelesen, und n ist die Grenze" — zwei Aussagen in einem
+            // Wert, damit sie nicht widerspruechlich gesetzt werden koennen.
+            tab.modell
+                .inhalt_wirkt()
+                .then_some(crate::vorschaumodell::TEXTGRENZE),
             nummer,
         ));
         true
@@ -900,6 +992,9 @@ impl Tabliste {
         // beginnt, sobald der Einzugstakt den Abschluss dieses Lesevorgangs
         // sieht.
         tab.durchlauf = None;
+        // Und mit ihm seine Zahl der ungelesenen Dateien: sie gehoert dem Lauf
+        // und nicht dem Tab, und der neue Bestand hat noch keinen.
+        tab.zu_gross = 0;
         tab.modell.lesevorgang_beginnen(generation);
         tab.meldung = None;
         tab.gelesen = false;
@@ -918,53 +1013,78 @@ impl Tabliste {
     }
 }
 
-/// Die Ordner des angezeigten Ordners, ueber die der Durchlauf zu entscheiden
-/// hat.
+/// Die Eintraege des angezeigten Ordners, ueber die der Durchlauf zu
+/// entscheiden hat, mit der Frage, die er fuer jeden beantworten soll.
 ///
 /// **Rein und ohne Fenster pruefbar**, und das ist der Grund fuer die Form: die
-/// Zusammensetzung dieser Liste ist die Zusage C3.14, und `krk-ui` hat kein
-/// Bibliotheksziel, an dem eine Probe von aussen ansetzen koennte.
+/// Zusammensetzung dieser Liste ist die Zusage C3.14 der Runde 10, und
+/// `krk-ui` hat kein Bibliotheksziel, an dem eine Probe von aussen ansetzen
+/// koennte.
 ///
-/// **Zwei Bedingungen und keine dritte.**
+/// # Zwei Bedingungen und eine Tafel
 ///
-/// Erstens `ist es ein Ordner?`, mit demselben Schnitt, den
-/// `Ordnermodell::sichtbar` zieht: eine symbolische Verknuepfung zaehlt mit,
-/// weil der Nutzer in sie hineinnavigiert. Die Verknuepfungsregel selbst wohnt
-/// allein im Durchlauf, der fuer sie „kein Treffer darunter" meldet, ohne in
-/// sie hinabzusteigen (C2.13). Ein zweiter Schnitt hier hiesse, dass eine
-/// Verknuepfung nie einen Befund bekaeme und damit von „noch nicht
-/// entschieden" nicht zu unterscheiden waere.
+/// Am Eingang steht der Kurzschluss: `Name traegt die Folge?` mit **nein**,
+/// gefragt ueber `Ordnermodell::name_traegt_den_filter` und nicht ueber einen
+/// eigenen Vergleich. Der Zweig gehoert dem Pruefschritt, und ein zweiter
+/// Vergleich hier hiesse, dass die Auftragsliste etwas anderes fuer passend
+/// hielte als die Liste, die der Nutzer sieht. Wessen Name die Folge traegt,
+/// steht damit fest — ein Ordner braucht keinen Befund ueber seinen Unterbaum
+/// mehr, und eine Datei bleibt ungelesen (C3.4). Der Kurzschluss steht hier am
+/// Eingang und nicht als Sonderfall an einem Ausgang, und er gilt fuer beide
+/// Auftragsarten.
 ///
-/// Zweitens `Name traegt die Folge?` mit **nein**, gefragt ueber
-/// `Ordnermodell::name_traegt_den_filter` und nicht ueber einen eigenen
-/// Vergleich: der Zweig gehoert dem Pruefschritt, und ein zweiter Vergleich
-/// hier hiesse, dass die Auftragsliste etwas anderes fuer passend hielte als
-/// die Liste, die der Nutzer sieht. Fuer einen Ordner, dessen
-/// eigener Name den Filtertext traegt, laeuft kein Durchlauf: seine
-/// Sichtbarkeit steht mit dem Namen fest, und ein Befund ueber seinen
-/// Unterbaum aenderte sie nicht (C3.14, C2.5, C2.8). Das ist die
-/// Zustaendigkeitsgrenze zwischen den ersten beiden Bildern des Spec, und sie
-/// steht hier am Eingang und nicht als Sonderfall an einem Ausgang.
+/// Was danach uebrig ist, entscheidet eine Tafel ueber den Typ des Eintrags und
+/// die zwei Schalter. Sie ist ueberschneidungsfrei und vollstaendig, weil der
+/// Schnitt „Ordner oder Verknuepfung gegen gewoehnliche Datei" derselbe ist,
+/// den `Ordnermodell::sichtbar` zieht:
 ///
-/// **Ein ausgeblendeter Ordner steht mit in der Liste.** Die Regel, die ihn
-/// heute wegblendet, ist der erste Zweig von `Ordnermodell::sichtbar`, und der
+/// ```text
+/// Eintrag                     Deep   Content wirkt   Auftrag
+/// ---------------------------------------------------------
+/// Ordner oder Verknuepfung    aus    beliebig        keiner  (der Ordner steht immer)
+/// Ordner oder Verknuepfung    an     beliebig        Unterbaum
+/// gewoehnliche Datei          bel.   nein            keiner  (die Zeile faellt weg)
+/// gewoehnliche Datei          bel.   ja              Inhalt
+/// ```
+///
+/// **Eine symbolische Verknuepfung zaehlt zu den Ordnern**, weil der Nutzer in
+/// sie hineinnavigiert. Die Verknuepfungsregel selbst wohnt allein im
+/// Durchlauf, der fuer sie „kein Treffer darunter" meldet, ohne in sie
+/// hinabzusteigen oder in sie hineinzulesen (C2.13 der Runde 10, C3.7). Ein
+/// zweiter Schnitt hier hiesse, dass eine Verknuepfung nie einen Befund
+/// bekaeme und damit von „noch nicht entschieden" nicht zu unterscheiden waere.
+///
+/// **Ob der Inhaltsfilter wirkt, sagt `Ordnermodell::inhalt_wirkt`** und nicht
+/// diese Stelle. Die Schwelle wird an einem Ort geprueft (C2.10); hier ein
+/// zweites Mal nachzurechnen waere die Gelegenheit, sie verschieden zu
+/// beantworten. Beide Schalter werden einmal je Liste gefragt und nicht einmal
+/// je Eintrag.
+///
+/// **Ein ausgeblendeter Eintrag steht mit in der Liste.** Die Regel, die ihn
+/// wegblendet, ist der erste Zweig von `Ordnermodell::sichtbar`, und der
 /// gehoert dorthin: ein zweites Mal hier gefragt waere die zweite Fassung
-/// derselben Regel, die diese Runde gerade abgeschafft hat. Der Befund ist
+/// derselben Regel, die die Runde 10 gerade abgeschafft hat. Der Befund ist
 /// dabei nicht umsonst — blendet der Nutzer die versteckten Eintraege waehrend
 /// des Durchlaufs ein, steht die Zeile sofort richtig da.
 fn auftraege(modell: &Ordnermodell) -> Vec<Auftrag> {
+    let tief = modell.tief();
+    let inhalt_wirkt = modell.inhalt_wirkt();
     modell
         .eintraege()
         .iter()
         .enumerate()
-        .filter(|(_, eintrag)| eintrag.ist_ordner() || eintrag.ist_verknuepfung())
         .filter(|(index, _)| !modell.name_traegt_den_filter(*index as u32))
-        .map(|(index, eintrag)| Auftrag {
-            index: index as u32,
-            name: eintrag.name.clone(),
-            // Bis Schritt D1 stellt diese Liste allein Unterbaumauftraege
-            // zusammen; die Tafel der vier Auftragslagen zieht dort ein.
-            art: Auftragsart::Unterbaum,
+        .filter_map(|(index, eintrag)| {
+            let art = if eintrag.ist_ordner() || eintrag.ist_verknuepfung() {
+                tief.then_some(Auftragsart::Unterbaum)
+            } else {
+                inhalt_wirkt.then_some(Auftragsart::Inhalt)
+            }?;
+            Some(Auftrag {
+                index: index as u32,
+                name: eintrag.name.clone(),
+                art,
+            })
         })
         .collect()
 }
@@ -1020,6 +1140,12 @@ fn befunde_einziehen(tab: &mut Tabinhalt) -> bool {
             }
         }
     }
+    // Der Stand der wegen ihrer Groesse ungelesenen Dateien, bei **jedem** Takt
+    // und auch bei dem, der den geschlossenen Kanal sieht. Er wird hier
+    // abgeschrieben und nicht spaeter am `Durchlauf` gefragt, weil der gleich
+    // darunter faellt; danach traegt ihn allein der Tab, und die Statuszeile
+    // findet die Zahl auch bei einem Ordner, dessen Lauf laengst durch ist.
+    tab.zu_gross = durchlauf.zu_gross();
     if kanal_zu {
         tab.durchlauf = None;
     }
@@ -1470,6 +1596,58 @@ mod tests {
         );
     }
 
+    /// C2.4 und C1.12: der Stand von „Content" uebersteht den Ordnerwechsel,
+    /// wie der Filtertext und der Stand von „Deep".
+    ///
+    /// Die fuenfte Uebertragung in `ordner_setzen`, unbedingt und ohne Zweig.
+    /// Daran haengt die Zusage, dass der neue Ordner sofort anfaengt, seine
+    /// Dateien zu lesen: faellt der Schalter beim Wechsel, wirkt der
+    /// Inhaltsfilter dort gar nicht.
+    #[test]
+    fn ein_ordnerwechsel_traegt_den_stand_von_content() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.filtertext_setzen("notiz");
+        modell.inhalt_setzen(true);
+        assert!(liste.aktiver().modell().inhalt_wirkt());
+
+        liste.ordner_setzen(&dorthin, None);
+
+        assert!(
+            liste.aktiver().modell().inhalt(),
+            "der Schalter geht mit dem Filtertext hinueber"
+        );
+        assert!(
+            liste.aktiver().modell().inhalt_wirkt(),
+            "und mit ihm die Wirkung, denn der Filtertext steht auch noch"
+        );
+        assert_eq!(
+            liste.aktiver().ordner(),
+            Path::new(&dorthin),
+            "gewechselt wurde trotzdem"
+        );
+    }
+
+    /// Der Filter des Inhalts geht auch ohne Filtertext hinueber, wie der
+    /// Filter der Tiefe: er ist ein Schalter des Tabs und keine Beigabe zum
+    /// Text.
+    #[test]
+    fn der_inhaltsfilter_geht_auch_ohne_filtertext_hinueber() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        liste.aktiver_mut().modell_mut().inhalt_setzen(true);
+
+        liste.ordner_setzen(&dorthin, None);
+
+        assert!(liste.aktiver().modell().inhalt());
+        assert!(
+            !liste.aktiver().modell().inhalt_wirkt(),
+            "ohne Filtertext steht der Schalter und tut nichts"
+        );
+        assert_eq!(liste.aktiver().modell().filtertext(), "");
+    }
+
     /// Der Filter der Tiefe geht auch ohne Filtertext hinueber: er ist ein
     /// Schalter des Tabs und keine Beigabe zum Text.
     #[test]
@@ -1715,6 +1893,153 @@ mod tests {
         );
     }
 
+    /// Ein fertig gelesenes Ordnermodell mit stehendem Filter und beiden
+    /// Schaltern.
+    fn modell_mit_schaltern(
+        bestand: &[(&str, krk_core::verzeichnis::Typ)],
+        filter: &str,
+        tief: bool,
+        inhalt: bool,
+    ) -> Ordnermodell {
+        let mut modell = modell_mit(bestand, filter, tief);
+        modell.inhalt_setzen(inhalt);
+        modell
+    }
+
+    /// Die Auftraege als Paare aus Name und Art, in der Reihenfolge der Liste.
+    fn auftragstafel(modell: &Ordnermodell) -> Vec<(String, Auftragsart)> {
+        auftraege(modell)
+            .into_iter()
+            .map(|auftrag| (auftrag.name, auftrag.art))
+            .collect()
+    }
+
+    /// Die Tafel der vier Auftragslagen, in einer Probe.
+    ///
+    /// Ein Bestand, vier Schalterstellungen. Der Kurzschluss am Eingang nimmt
+    /// in jeder von ihnen `notiz.txt` und `notizen` heraus, weil ihr Name die
+    /// Folge schon traegt; was uebrig ist, entscheidet der Typ mit dem
+    /// zugehoerigen Schalter.
+    ///
+    /// Fuenf Zeichen sind es mit Absicht: sie liegen ueber beiden Schwellen,
+    /// also haengt das Ergebnis allein an den Schaltern und nicht daran, wie
+    /// `inhaltsschwelle` gerade steht.
+    #[test]
+    fn die_auftragsliste_stellt_die_tafel_der_vier_auftragslagen() {
+        use krk_core::verzeichnis::Typ;
+
+        let bestand = [
+            ("notiz.txt", Typ::Datei),
+            ("bild.png", Typ::Datei),
+            ("notizen", Typ::Ordner),
+            ("bilder", Typ::Ordner),
+        ];
+
+        assert!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", false, false)).is_empty(),
+            "ohne beide Schalter gibt es nichts zu entscheiden"
+        );
+        assert_eq!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", true, false)),
+            [("bilder".to_owned(), Auftragsart::Unterbaum)],
+            "allein \"Deep\": der Ordner ohne Namenstreffer bekommt seinen Unterbaum"
+        );
+        assert_eq!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", false, true)),
+            [("bild.png".to_owned(), Auftragsart::Inhalt)],
+            "allein \"Content\": die Datei ohne Namenstreffer wird gelesen"
+        );
+        assert_eq!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", true, true)),
+            [
+                ("bild.png".to_owned(), Auftragsart::Inhalt),
+                ("bilder".to_owned(), Auftragsart::Unterbaum),
+            ],
+            "beide Schalter: beide Arten nebeneinander, in der Reihenfolge des Bestands"
+        );
+    }
+
+    /// C3.2: bei vier getippten Zeichen und gesetztem "Deep" entscheidet allein
+    /// der Name, auch wenn "Content" steht.
+    ///
+    /// Die Schwelle steigt mit der tiefen Suche von drei auf fuenf, und sie
+    /// wird bei jeder Bewertung neu gefragt. Ein fuenftes Zeichen holt die
+    /// Inhaltsauftraege zurueck.
+    #[test]
+    fn bei_vier_zeichen_und_deep_traegt_die_auftragsliste_keinen_inhaltsauftrag() {
+        use krk_core::verzeichnis::Typ;
+
+        let bestand = [("bild.png", Typ::Datei), ("bilder", Typ::Ordner)];
+
+        assert_eq!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "noti", true, true)),
+            [("bilder".to_owned(), Auftragsart::Unterbaum)],
+            "vier Zeichen liegen unter der Schwelle der tiefen Suche"
+        );
+        assert_eq!(
+            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", true, true)),
+            [
+                ("bild.png".to_owned(), Auftragsart::Inhalt),
+                ("bilder".to_owned(), Auftragsart::Unterbaum),
+            ],
+            "das fuenfte Zeichen holt den Inhaltsauftrag zurueck"
+        );
+    }
+
+    /// C3.4: eine Datei, deren Name die Folge traegt, bekommt keinen Auftrag
+    /// und bleibt damit ungelesen.
+    ///
+    /// Der Kurzschluss steht am Eingang der Liste und gilt fuer beide Arten.
+    /// Ohne ihn oeffnete der Durchlauf Dateien, deren Zeile ohnehin schon
+    /// feststeht.
+    #[test]
+    fn eine_datei_mit_namenstreffer_bleibt_ungelesen() {
+        use krk_core::verzeichnis::Typ;
+
+        let modell = modell_mit_schaltern(
+            &[("notiz-gross.txt", Typ::Datei), ("bild.png", Typ::Datei)],
+            "notiz",
+            false,
+            true,
+        );
+        assert_eq!(
+            auftragstafel(&modell),
+            [("bild.png".to_owned(), Auftragsart::Inhalt)],
+            "`notiz-gross.txt` steht am Namen und wird nicht geoeffnet"
+        );
+    }
+
+    /// C3.8 und die Sperre: ohne wirkenden Schalter beginnt kein Durchlauf,
+    /// mit gesetztem "Content" schon — auch wenn "Deep" aus ist.
+    #[test]
+    fn allein_content_stoesst_einen_durchlauf_an() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-content");
+        ordner.datei("bild.png", b"x");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.filtertext_setzen("notiz");
+        modell.anhaengen([eintrag("bild.png", Typ::Datei)]);
+        liste.tabs[0].gelesen = true;
+
+        assert!(
+            !liste.durchlauf_nachziehen(),
+            "ohne beide Schalter gibt es nichts zu tun"
+        );
+        liste.aktiver_mut().modell_mut().inhalt_setzen(true);
+        assert!(
+            liste.durchlauf_nachziehen(),
+            "\"Content\" allein reicht, \"Deep\" ist dafuer nicht noetig"
+        );
+
+        // Unter die Schwelle: der Lauf faellt, ohne dass jemand den Schalter
+        // angefasst haette.
+        liste.aktiver_mut().modell_mut().filtertext_setzen("no");
+        assert!(!liste.durchlauf_nachziehen());
+        assert!(!liste.arbeitet_noch());
+    }
+
     /// Eine Tabliste auf einem vorhandenen Ordner, mit stehendem Filter und
     /// eingeschaltetem "Deep", fertig gelesen.
     fn tiefe_liste(ordner: &Path, filter: &str) -> Tabliste {
@@ -1844,10 +2169,16 @@ mod tests {
         );
     }
 
-    /// Ein Tabwechsel bricht nicht ab: ein verdeckter Tab fuellt sich still
-    /// weiter, wie er es beim Lesevorgang tut.
+    /// C4.5: ein Tabwechsel beendet den Durchlauf des verlassenen Tabs, gleich
+    /// welcher Art.
+    ///
+    /// Bis zum 260816 stand hier die Gegenprobe: der verdeckte Tab lief weiter.
+    /// Der Nutzerentscheid vom 260816-1410 zu
+    /// `decisions/260816-1359_*_beendet-ein-tabwechsel-den-durchlauf-des-verlassenen-tabs-jetzt-wo-er-dateien-liest.md`
+    /// hat das umgedreht, und der Preis steht am Doc-Kommentar von
+    /// `Tabliste::durchlauf_nachziehen`.
     #[test]
-    fn ein_tabwechsel_laesst_den_durchlauf_stehen() {
+    fn ein_tabwechsel_beendet_den_durchlauf_des_verlassenen_tabs() {
         use krk_core::verzeichnis::Typ;
 
         let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-tabwechsel");
@@ -1859,14 +2190,43 @@ mod tests {
         modell.filtertext_setzen("zzz");
         modell.anhaengen([eintrag("bilder", Typ::Ordner)]);
         liste.tabs[0].gelesen = true;
+        // Auch der zweite Tab gilt als gelesen, sonst stiesse der Wechsel dort
+        // einen Lesevorgang an und `arbeitet_noch` bliebe deswegen wahr.
+        liste.tabs[1].gelesen = true;
         assert!(liste.durchlauf_nachziehen());
 
         assert!(liste.naechster(), "auf den zweiten Tab wechseln");
         assert!(
-            liste.tabs[0].durchlauf.is_some(),
-            "der verdeckte Tab arbeitet weiter"
+            liste.tabs[0].durchlauf.is_none(),
+            "der verlassene Tab laeuft nicht weiter"
         );
-        assert!(liste.arbeitet_noch());
+        assert!(
+            !liste.arbeitet_noch(),
+            "und der Einzugstakt hat nichts mehr zu tun"
+        );
+    }
+
+    /// Ein verdeckter Tab bekommt auch sonst keinen Durchlauf: die Bedingung
+    /// steht im Rumpf und nicht als Zweig in `waehlen`.
+    #[test]
+    fn ein_verdeckter_tab_bekommt_keinen_durchlauf() {
+        use krk_core::verzeichnis::Typ;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-verdeckt");
+        ordner.ordner("bilder");
+        let vorhanden = ordner.pfad().display().to_string();
+        let mut liste = liste(&["/b", &vorhanden]);
+        let modell = liste.tabs[1].modell_mut();
+        modell.tief_setzen(true);
+        modell.filtertext_setzen("zzz");
+        modell.anhaengen([eintrag("bilder", Typ::Ordner)]);
+        liste.tabs[1].gelesen = true;
+
+        assert!(
+            !liste.durchlauf_nachziehen_an(1),
+            "Tab 1 ist verdeckt, und der sichtbare ist Tab 0"
+        );
+        assert!(liste.tabs[1].durchlauf.is_none());
     }
 
     /// `Tabliste::abbrechen` nimmt den Durchlauf mit, wie es den Lesevorgang
@@ -1923,6 +2283,60 @@ mod tests {
             zeilennamen(liste.aktiver().modell()),
             ["daten"],
             "`daten` traegt den Treffer unter sich, `leer` nicht, und `oben.txt` passt nicht"
+        );
+    }
+
+    /// Der ganze Weg des Inhaltsfilters ohne AppKit, und die Zahl der wegen
+    /// ihrer Groesse ungelesenen Dateien steht **nach** dem Ende des Laufs
+    /// noch da.
+    ///
+    /// Die Datei ueber der Grenze ist mit Absicht echt und nicht behauptet: die
+    /// Grenze wird gehalten und nicht vorhergesagt, und was `zu_gross` zaehlt,
+    /// entsteht erst beim Lesen. Der Lauf ueber diesen kleinen Ordner ist durch,
+    /// bevor die Statuszeile das naechste Mal rechnet — genau deshalb traegt der
+    /// Tab die Zahl und nicht der `Durchlauf`.
+    ///
+    /// **Gelesen wird hier das Feld und nicht `Tabinhalt::zu_gross`.** Der
+    /// Ableser jener Methode entsteht mit dem Groessenhinweis der Statuszeile;
+    /// bis dahin haelt sie ihre Ausnahme von der Totpruefung, und die faellt,
+    /// sobald jemand sie ruft.
+    #[test]
+    fn die_zahl_der_zu_grossen_dateien_steht_auch_nach_dem_ende_des_laufs() {
+        let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-zu-gross");
+        ordner.datei("klein.txt", b"hier steht notiz drin");
+        ordner.datei(
+            "gross.bin",
+            "a".repeat((crate::vorschaumodell::TEXTGRENZE + 1) as usize),
+        );
+        ordner.datei("leer.txt", b"nichts davon");
+
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let modell = liste.aktiver_mut().modell_mut();
+        modell.inhalt_setzen(true);
+        modell.filtertext_setzen("notiz");
+        liste.sichtbaren_lesen();
+
+        let mut takte = 0;
+        while liste.arbeitet_noch() {
+            let _ = liste.einziehen();
+            takte += 1;
+            assert!(takte < 2_000, "der Durchlauf ist nicht zum Ende gekommen");
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        assert_eq!(
+            zeilennamen(liste.aktiver().modell()),
+            ["klein.txt"],
+            "der Inhaltstreffer steht, die anderen beiden nicht"
+        );
+        assert!(
+            liste.aktiver().durchlauf.is_none(),
+            "der Lauf ist durch, und sein `Durchlauf` ist weg"
+        );
+        assert_eq!(
+            liste.aktiver().zu_gross,
+            1,
+            "die eine ungelesene Datei steht danach immer noch zu Buche"
         );
     }
 

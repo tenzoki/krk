@@ -968,3 +968,6 @@
 {"ts":"2026-08-16T15:06:41","event":"gate_response","detail":"Nutzer: Budget anheben und bis Strang G durchziehen; Zwischenstand nach D entfaellt"}
 {"ts":"2026-08-16T15:06:41","event":"task_start","turn":8,"task":"B1","agent":"coder","detail":"Durchlauf entscheidet auch Inhalte"}
 {"ts":"2026-08-16T15:22:48","event":"task_done","turn":8,"task":"B1","agent":"coder","detail":"Durchlauf entscheidet Inhalte; Kindprobe unter ulimit -n 64"}
+{"ts":"2026-08-16T15:23:27","event":"commit","turn":8,"detail":"32fd038 (B1)"}
+{"ts":"2026-08-16T15:23:27","event":"task_start","turn":9,"task":"D1","agent":"coder","detail":"Tab haelt Lauf, Auftraege und die Zahl der ungelesenen Dateien"}
+{"ts":"2026-08-16T15:43:22","event":"task_done","turn":9,"task":"D1","agent":"coder","detail":"Tafel der vier Auftragslagen; ein neuer Defekt abgelegt"}

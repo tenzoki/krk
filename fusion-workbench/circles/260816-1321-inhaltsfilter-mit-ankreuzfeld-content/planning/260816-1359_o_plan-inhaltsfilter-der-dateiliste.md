@@ -289,7 +289,7 @@ flowchart TD
 
 ### Strang D — der Tab
 
-**D1. Der Tab hält den Lauf, seine Aufträge und die Zahl der ungelesenen Dateien**
+**D1. [DONE] Der Tab hält den Lauf, seine Aufträge und die Zahl der ungelesenen Dateien**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/tabs.rs`
 - Erfüllt: C1.12, C2.3, C2.4, C2.5, C3.2, C3.8, C4.4, C4.5, C4.6
