@@ -1,14 +1,35 @@
-//! Der Durchlauf ueber die Unterbaeume: liegt unter diesem Ordner ein Treffer?
+//! Der Durchlauf: liegt unter diesem Ordner ein Treffer, traegt diese Datei ihn?
 //!
-//! Das Ordnermodell entscheidet die Sichtbarkeit einer Zeile aus fuenf
-//! Eingaben, und vier davon hat es selbst. Die fuenfte ist der Befund ueber den
-//! Unterbaum eines Ordners, und den ermittelt dieses Modul: je Ordner des
-//! angezeigten Ordners, **dessen eigener Name den Filtertext nicht traegt**,
-//! genau einen von zwei Befunden. Wer den Auftrag zusammenstellt, ist nicht
-//! Sache dieser Datei; sie bekommt die Liste beim Start vollstaendig
-//! uebergeben.
+//! Das Ordnermodell entscheidet die Sichtbarkeit einer Zeile aus sechs
+//! Eingaben, und fuenf davon hat es selbst. Die sechste ist der Befund ueber
+//! einen Eintrag, den sein eigener Name nicht entscheidet, und den ermittelt
+//! dieses Modul: je Auftrag genau einen von zwei Befunden — oder gar keinen.
+//! **Was einen Auftrag bekommt, traegt den Filtertext im Namen nicht**; wessen
+//! Name ihn traegt, ist ohne dieses Modul entschieden. Wer die Auftraege
+//! zusammenstellt, ist nicht Sache dieser Datei; sie bekommt die Liste beim
+//! Start vollstaendig uebergeben.
+//!
+//! **Zwei Auftragsarten, eine Maschine.** [`Auftragsart::Unterbaum`] fragt nach
+//! dem Unterbaum eines Ordners, [`Auftragsart::Inhalt`] nach dem Text einer
+//! gewoehnlichen Datei. Beide stellen dieselbe Art Frage an dieselbe Art
+//! Gegenstand — eine Auskunft von der Platte, die nebenlaeufig entsteht, einen
+//! Eintragsindex traegt und die Sicht neu aufbauen laesst —, und deshalb
+//! bekommt die zweite keine zweite Maschine daneben. Ueber den Kanal geht
+//! weiterhin **genau eine [`Befundmeldung`] je Auftrag**, und ihre Bedeutung
+//! aendert sich nicht.
 //!
 //! ```text
+//! Auftragsart Inhalt — eine gewoehnliche Datei:
+//!
+//! abgebrochen?              ─ ja ──> kein Befund
+//!            │ nein
+//! traegt der Inhalt?        ─ Traegt ───────> Treffer
+//!                           ├ TraegtNicht ──> kein Treffer
+//!                           ├ ZuGross ──────> kein Treffer, der Zaehler steigt
+//!                           └ Unentschieden > kein Befund
+//!
+//! Auftragsart Unterbaum — ein Ordner oder eine Verknuepfung:
+//!
 //! ist er eine Verknuepfung? ─ ja ──> kein Treffer darunter
 //!            │ nein
 //! laesst er sich oeffnen?   ─ nein ─> fehlt ein Deskriptor? ─ ja ─> kein Befund
@@ -19,8 +40,32 @@
 //! Name traegt die Folge?    ─ ja ──> Treffer, der Rest bleibt ungelesen
 //!            │ nein
 //! ist es ein Ordner?        ─ ja ──> vormerken
+//!            │ nein
+//! eine Datei, und eine Grenze steht? ─ ja ──> traegt der Inhalt? (wie oben)
 //!            └ nein ─────────────────> naechster Eintrag im Stapel
 //! ```
+//!
+//! # Die Grenze reist als Argument, und `None` heisst „zaehlt nicht"
+//!
+//! `krk-core` kennt die 1 MB der Vorschau nicht und soll sie nicht kennen; sie
+//! kommt aus `krk-ui` herein. [`Durchlauf::starten`] nimmt sie als
+//! `Option<u64>`, und der Wert traegt zwei Aussagen in einem: `None` heisst
+//! „der Inhalt zaehlt bei diesem Lauf nicht", `Some(n)` heisst „er zaehlt, und
+//! `n` ist die groesste Zahl Bytes, die je Datei gelesen werden darf". **Ein
+//! Lauf mit `None` verhaelt sich in jeder Hinsicht wie der Durchlauf vor der
+//! Runde 11**: es wird keine Datei geoeffnet, weder flach noch im Unterbaum.
+//! Zwei getrennte Argumente waeren zwei Gelegenheiten, sie widerspruechlich zu
+//! setzen.
+//!
+//! # Die zu grossen Dateien sind ein Zustand des Laufs und kein zweiter Kanal
+//!
+//! Eine Datei ueber der Grenze wird gar nicht erst gelesen. Sie ist damit kein
+//! Nichttreffer, sondern **ungelesen**, und die Statuszeile sagt, wie viele es
+//! waren. Der Durchlauf zaehlt sie in einem zweiten geteilten Kennzeichen neben
+//! dem Abbruch, einem `Arc<AtomicU64>`, abzulesen ueber [`Durchlauf::zu_gross`].
+//! Es steht dort, wo der Lauf seinen anderen Zustand schon haelt, und es ist
+//! ausdruecklich kein zweiter Kanal: der Kanal traegt Befunde ueber Eintraege,
+//! die Zahl aber gehoert zum Lauf und zu keinem einzelnen Eintrag.
 //!
 //! # Die Bauart ist die des Lesevorgangs
 //!
@@ -38,9 +83,14 @@
 //! Arbeitsfaden nach jedem einzelnen Befund bis zum naechsten Einzugstakt, also
 //! bis zu 16 ms je entschiedenem Ordner.
 //!
-//! **Die Abbruchzusage haengt nicht an der Kanaltiefe, sondern an der
-//! Stapelgrenze.** Das Kennzeichen wird gelesen, bevor der naechste Stapel
-//! geholt wird, und ausdruecklich **nicht** beim Absteigen: ein Ordner mit
+//! **Die Abbruchzusage haengt nicht an der Kanaltiefe, sondern an den Einheiten
+//! des Laufs.** Die Regel lautet: geprueft wird vor jeder Einheit, die dauern
+//! kann. Das sind seit der Runde 11 **zwei**, der naechste Stapel eines Ordners
+//! und die naechste gelesene Datei. Die zweite kam mit dem Inhaltsfilter dazu,
+//! und ohne sie laese ein Ordner mit tausend Dateien in einem Stapel tausend
+//! Dateien durch, bevor der Abbruch greift.
+//!
+//! Ausdruecklich **nicht** geprueft wird beim Absteigen: ein Ordner mit
 //! fuenfzigtausend gewoehnlichen Eintraegen und ohne einen einzigen Unterordner
 //! steigt kein einziges Mal ab, passiert die Stapelgrenze aber neunundvierzig
 //! Mal. Haenge man die Pruefung ans Absteigen, waere genau dieser Ordner von
@@ -54,6 +104,14 @@
 //! und der naechste wird geoeffnet. Zu jedem Zeitpunkt haelt der Durchlauf
 //! damit **genau einen** Verzeichnisdeskriptor, ob der Baum drei Ebenen tief
 //! ist oder vierhundert.
+//!
+//! **Der Inhaltsfilter legt genau einen Deskriptor dazu, und nur waehrend eines
+//! Lesens.** [`inhalt::traegt_der_inhalt`](super::inhalt::traegt_der_inhalt)
+//! oeffnet die Datei, liest sie bis zur Grenze und gibt sie wieder frei, bevor
+//! der naechste Kandidat drankommt; gehalten wird waehrenddessen ein
+//! Verzeichnisdeskriptor und ein Dateideskriptor, gleich wie tief der Baum ist
+//! und gleich wie viele Dateien im Ordner stehen. Wer daraus eine Liste offener
+//! Dateien macht, holt sich den Defekt `260815-0211` in seiner zweiten Gestalt.
 //!
 //! Bis zum 260815 hielt er stattdessen einen Leser je Ebene, weil der
 //! uebergeordnete Ordner nach der Rueckkehr aus dem Abstieg weitergelesen
@@ -94,16 +152,34 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
 use super::eintrag::Typ;
 use super::filter::traegt_die_folge;
+use super::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use super::leser::STAPELGROESSE;
 use super::sys::{Schwungleser, ist_deskriptormangel};
 
-/// Ein Ordner des angezeigten Ordners, ueber den noch nichts bekannt ist.
+/// Wonach ein Auftrag fragt.
+///
+/// **Zwei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.** Sie
+/// bilden den Schnitt ab, den auch [`Ordnermodell::sichtbar`] zieht: ein Ordner
+/// oder eine Verknuepfung auf der einen Seite, eine gewoehnliche Datei auf der
+/// anderen. Wer die Frage stellt, entscheidet die Art beim Zusammenstellen der
+/// Liste; dieses Modul verzweigt danach und raet nicht am Typ herum.
+///
+/// [`Ordnermodell::sichtbar`]: super::modell::Ordnermodell::sichtbar
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Auftragsart {
+    /// Liegt unter diesem Ordner ein Eintrag, dessen Name die Folge traegt?
+    Unterbaum,
+    /// Traegt der Text dieser gewoehnlichen Datei die Folge?
+    Inhalt,
+}
+
+/// Ein Eintrag des angezeigten Ordners, ueber den noch nichts bekannt ist.
 ///
 /// Der Eintragsindex und nicht die Zeile: die Sichtreihenfolge wird bei jedem
 /// Sortierwechsel neu gebaut, der Bestand nicht. Der Name statt des vollen
@@ -111,10 +187,12 @@ use super::sys::{Schwungleser, ist_deskriptormangel};
 /// Start uebergeben wird.
 #[derive(Debug, Clone)]
 pub struct Auftrag {
-    /// Der Index des Ordners im Bestand des Ordnermodells.
+    /// Der Index des Eintrags im Bestand des Ordnermodells.
     pub index: u32,
     /// Sein Name ohne Pfad.
     pub name: String,
+    /// Wonach gefragt wird.
+    pub art: Auftragsart,
 }
 
 /// Was der Arbeitsfaden ueber einen Auftrag meldet.
@@ -128,14 +206,16 @@ pub struct Auftrag {
 pub struct Befundmeldung {
     /// Der Eintragsindex aus dem [`Auftrag`].
     pub index: u32,
-    /// Wahr, wenn unter diesem Ordner ein Eintrag liegt, dessen Name den
-    /// Filtertext traegt.
+    /// Wahr, wenn der Eintrag die Frage seines Auftrags mit ja beantwortet:
+    /// unter diesem Ordner liegt ein Name mit der Folge, oder der Text dieser
+    /// Datei traegt sie.
     pub treffer: bool,
 }
 
 /// Ein laufender Durchlauf auf einem eigenen Faden.
 pub struct Durchlauf {
     abbruch: Arc<AtomicBool>,
+    zu_gross: Arc<AtomicU64>,
     befunde: Receiver<Befundmeldung>,
 }
 
@@ -144,6 +224,11 @@ impl Durchlauf {
     ///
     /// `filter_klein` ist der bereits kleingeschriebene Filtertext: er wird
     /// einmal je Suche umgeschrieben und nicht einmal je gelesenem Namen.
+    ///
+    /// `inhaltsgrenze` ist die groesste Zahl Bytes, die je Datei gelesen werden
+    /// darf; `None` heisst, dass bei diesem Lauf keine Datei geoeffnet wird.
+    /// Der Modulkopf schreibt aus, warum die Zahl von aussen kommt.
+    ///
     /// `generation` benennt allein den Arbeitsfaden (`krk-durchlauf-<n>`),
     /// damit ein Fadenprotokoll lesbar bleibt; den Befunden liegt sie nicht
     /// bei, weil jeder Tab seinen eigenen Durchlauf haelt und allein aus dessen
@@ -152,18 +237,33 @@ impl Durchlauf {
         auftraege: Vec<Auftrag>,
         ordner: PathBuf,
         filter_klein: String,
+        inhaltsgrenze: Option<u64>,
         generation: u64,
     ) -> Self {
         let abbruch = Arc::new(AtomicBool::new(false));
+        let zu_gross = Arc::new(AtomicU64::new(0));
         let (sender, befunde) = sync_channel(STAPELGROESSE);
         let faden_abbruch = Arc::clone(&abbruch);
+        let faden_zu_gross = Arc::clone(&zu_gross);
         thread::Builder::new()
             .name(format!("krk-durchlauf-{generation}"))
             .spawn(move || {
-                durchlauffaden(&auftraege, &ordner, &filter_klein, &faden_abbruch, &sender);
+                durchlauffaden(
+                    &auftraege,
+                    &ordner,
+                    filter_klein.as_str(),
+                    inhaltsgrenze,
+                    &faden_abbruch,
+                    &faden_zu_gross,
+                    &sender,
+                );
             })
             .expect("Arbeitsfaden fuer den Durchlauf laesst sich nicht starten");
-        Self { abbruch, befunde }
+        Self {
+            abbruch,
+            zu_gross,
+            befunde,
+        }
     }
 
     /// Der Kanal, aus dem der Hauptfaden die Befunde holt.
@@ -173,6 +273,22 @@ impl Durchlauf {
     /// Treffer tragen: er heisst, dass sie nicht entschieden sind.
     pub fn befunde(&self) -> &Receiver<Befundmeldung> {
         &self.befunde
+    }
+
+    /// Wie viele Dateien dieser Lauf bisher wegen ihrer Groesse **nicht**
+    /// gelesen hat.
+    ///
+    /// Der Wert waechst waehrend des Laufs und faellt nie; wer ihn zweimal
+    /// fragt, bekommt zweimal den Stand von genau diesem Augenblick. Er zaehlt
+    /// Dateien und keine Auftraege: eine ungelesene Datei tief im Unterbaum
+    /// zaehlt genauso mit wie eine, die selbst einen Auftrag hatte.
+    ///
+    /// **Er ist kein Befund ueber eine Zeile.** Eine zu grosse Datei steht
+    /// nicht in der Liste, und sie steht auch nicht als Nichttreffer da — sie
+    /// wurde nicht angesehen, und diese Zahl ist der Satzteil der Statuszeile,
+    /// der das sagt.
+    pub fn zu_gross(&self) -> u64 {
+        self.zu_gross.load(Ordering::Relaxed)
     }
 
     /// Bricht den Durchlauf ab.
@@ -198,20 +314,46 @@ impl Drop for Durchlauf {
 
 /// Arbeitet die Auftraege der Reihe nach ab und meldet je einen Befund.
 ///
-/// Endet ohne weitere Meldung, sobald der Abbruch greift oder der Empfaenger
-/// verschwunden ist. Die Reihenfolge ist die der Liste; keine Zusage haengt an
-/// ihr, und ein Ordner mit grossem Unterbaum ohne Treffer verzoegert die nach
-/// ihm.
+/// Endet ohne weitere Meldung, sobald der Abbruch greift, ein Deskriptor fehlt
+/// oder der Empfaenger verschwunden ist. Die Reihenfolge ist die der Liste;
+/// keine Zusage haengt an ihr, und ein Ordner mit grossem Unterbaum ohne
+/// Treffer verzoegert die nach ihm.
 fn durchlauffaden(
     auftraege: &[Auftrag],
     ordner: &Path,
     filter_klein: &str,
+    inhaltsgrenze: Option<u64>,
     abbruch: &AtomicBool,
+    zu_gross: &AtomicU64,
     sender: &SyncSender<Befundmeldung>,
 ) {
     for auftrag in auftraege {
         let pfad = ordner.join(&auftrag.name);
-        let Some(treffer) = unterbaum_entscheiden(&pfad, filter_klein, abbruch) else {
+        // Vollstaendig und ohne Auffangzweig: zwei Auftragsarten mal die zwei
+        // Gestalten der Grenze.
+        let entschieden = match (auftrag.art, inhaltsgrenze) {
+            (Auftragsart::Unterbaum, grenze) => {
+                unterbaum_entscheiden(&pfad, filter_klein, grenze, abbruch, zu_gross)
+            }
+            (Auftragsart::Inhalt, Some(grenze)) => {
+                // Die zweite Stelle der Abbruchgrenze, hier im flachen Zweig:
+                // eine gelesene Datei ist die kleinere der beiden Einheiten,
+                // die dauern koennen.
+                if abbruch.load(Ordering::Relaxed) {
+                    None
+                } else {
+                    datei_entscheiden(&pfad, filter_klein, grenze, zu_gross)
+                }
+            }
+            // Ein Inhaltsauftrag ohne Grenze ist von diesem Lauf nicht zu
+            // beantworten, und ungelesen heisst unentschieden und nicht „traegt
+            // nicht". Die Paarung kann nicht auftreten: der Aufrufer leitet die
+            // Auftragsart und die Grenze aus derselben Frage ab, naemlich ob
+            // „Content" wirkt. Sie steht hier, weil ein Auffangzweig sie
+            // stillschweigend negativ entschiede.
+            (Auftragsart::Inhalt, None) => None,
+        };
+        let Some(treffer) = entschieden else {
             return;
         };
         let meldung = Befundmeldung {
@@ -224,6 +366,42 @@ fn durchlauffaden(
     }
 }
 
+/// Liest eine einzelne Datei und uebersetzt ihren Inhaltsbefund in die Antwort
+/// des Durchlaufs.
+///
+/// `Some(true)` ist der Treffer, `Some(false)` der negative Befund, `None`
+/// heisst „nicht entschieden" und beendet den ganzen Durchlauf — dieselbe
+/// Bedeutung wie bei [`unterbaum_entscheiden`], und aus demselben Grund: der
+/// Deskriptormangel ist ein Zustand des Prozesses, und die naechste Datei
+/// muesste aus demselben leeren Vorrat oeffnen.
+///
+/// **Eine zu grosse Datei ist ein `Some(false)` mit einem Nebeneffekt**, und
+/// das ist keine Vermengung zweier Aussagen: die Zeile steht nicht, weil ueber
+/// sie nichts bekannt ist, und dass sie nicht angesehen wurde, sagt der Zaehler
+/// und nicht ihre Zeile. Einen dritten Trefferzustand gaebe es sonst, und
+/// [`Befund`](super::modell::Befund) hat aus genau diesem Grund keinen.
+///
+/// **Die Abbruchgrenze steht nicht hier, sondern bei jedem Rufer davor.** Beide
+/// Rufer pruefen unmittelbar vor dem Aufruf; sie hier hereinzuziehen naehme dem
+/// Modulkopf seine Aussage, dass die Pruefung vor jeder Einheit steht, die
+/// dauern kann, und machte aus zwei sichtbaren Stellen eine versteckte.
+fn datei_entscheiden(
+    pfad: &Path,
+    filter_klein: &str,
+    grenze: u64,
+    zu_gross: &AtomicU64,
+) -> Option<bool> {
+    match traegt_der_inhalt(pfad, filter_klein, grenze) {
+        Inhaltsbefund::Traegt => Some(true),
+        Inhaltsbefund::TraegtNicht => Some(false),
+        Inhaltsbefund::ZuGross => {
+            zu_gross.fetch_add(1, Ordering::Relaxed);
+            Some(false)
+        }
+        Inhaltsbefund::Unentschieden => None,
+    }
+}
+
 /// Schreitet den Unterbaum ab, bis der erste Treffer faellt oder nichts mehr
 /// offen ist.
 ///
@@ -232,6 +410,13 @@ fn durchlauffaden(
 /// Verknuepfung, ein Ordner, der sich nicht oeffnen laesst, und ein
 /// abgeschrittener Unterbaum ohne Fund. Keiner der drei haelt den Durchlauf an,
 /// und keiner erzeugt eine Meldung ueber den Befund hinaus.
+///
+/// **`inhaltsgrenze` macht den Abstieg inhaltsempfindlich.** Steht sie, wird
+/// jede gewoehnliche Datei gelesen, deren Name die Folge nicht traegt, und ein
+/// Treffer in ihrem Text entscheidet den Ordner genauso wie ein Treffer an
+/// einem Namen. Steht sie nicht, wird im ganzen Unterbaum keine Datei
+/// geoeffnet. Der Kurzschluss des Namens gilt dabei unveraendert: wessen Name
+/// die Folge traegt, entscheidet den Ordner sofort und bleibt ungelesen.
 ///
 /// **`None` heisst „nicht entschieden", und es hat zwei Ursachen.** Die erste
 /// ist der Abbruch. Die zweite ist ein Mangel an Deskriptoren, und sie ist die
@@ -250,8 +435,16 @@ fn durchlauffaden(
 /// Antwort, weil der naechste Auftrag aus demselben leeren Vorrat oeffnen
 /// muesste. Ein Warten mit erneutem Versuch stuende dagegen fuer eine Frage,
 /// die dieses Modul nicht beantworten kann — ob und wann ein anderer Teil von
-/// KRK einen Deskriptor freigibt —, und hielte den Arbeitsfaden dabei an.
-fn unterbaum_entscheiden(wurzel: &Path, filter_klein: &str, abbruch: &AtomicBool) -> Option<bool> {
+/// KRK einen Deskriptor freigibt —, und hielte den Arbeitsfaden dabei an. Seit
+/// der Runde 11 hat `None` eine dritte Ursache, und sie ist dieselbe Sache in
+/// anderer Gestalt: der Deskriptormangel beim Lesen einer Datei im Unterbaum.
+fn unterbaum_entscheiden(
+    wurzel: &Path,
+    filter_klein: &str,
+    inhaltsgrenze: Option<u64>,
+    abbruch: &AtomicBool,
+    zu_gross: &AtomicU64,
+) -> Option<bool> {
     // Erster Zweig: eine symbolische Verknuepfung ist ohne Lesen entschieden.
     //
     // Gefragt wird mit `symlink_metadata`, also `lstat(2)`, und das ist hier
@@ -305,17 +498,37 @@ fn unterbaum_entscheiden(wurzel: &Path, filter_klein: &str, abbruch: &AtomicBool
                     // Der erste Treffer entscheidet den Auftrag, in welcher
                     // Tiefe er auch liegt. Der offene Leser faellt mit
                     // `lesestand`, die Vormerkungen mit `offen`, und der Rest
-                    // darunter bleibt ungelesen.
+                    // darunter bleibt ungelesen. Der Kurzschluss spart hier
+                    // seit der Runde 11 auch das Lesen: eine namentlich
+                    // passende Datei wird nie geoeffnet.
                     return Some(true);
                 }
-                // „Ist es ein Ordner?" beantwortet auch eine Verknuepfung auf
-                // einen Ordner mit ja; es ist derselbe Schnitt, den die
-                // Sichtbarkeit zieht. Erst der Zweig danach trennt die beiden,
+                // Die Fallunterscheidung ueber den Typ ist vollstaendig und hat
+                // keinen Auffangzweig. `Ordner` ist auch eine Verknuepfung auf
+                // einen Ordner; es ist derselbe Schnitt, den die Sichtbarkeit
+                // zieht. Erst der Zweig fuer `Verknuepfung` trennt die beiden,
                 // und er steht am Kopf dieser Funktion fuer den Auftrag und
-                // hier fuer den Abstieg: in eine Verknuepfung wird nicht
-                // abgestiegen, sie traegt damit nichts bei.
-                if kandidat.typ == Typ::Ordner {
-                    offen.push(lesestand.pfad.join(&kandidat.name));
+                // hier fuer den Abstieg: in eine Verknuepfung wird weder
+                // abgestiegen noch hineingelesen, sie traegt damit nichts bei.
+                match kandidat.typ {
+                    Typ::Ordner => offen.push(lesestand.pfad.join(&kandidat.name)),
+                    Typ::Datei => {
+                        let Some(grenze) = inhaltsgrenze else {
+                            continue;
+                        };
+                        // Die zweite Stelle der Abbruchgrenze, hier in der
+                        // Kandidatenschleife. Ohne sie laese ein Ordner mit
+                        // tausend Dateien den ganzen Stapel durch, bevor der
+                        // Abbruch an der Stapelgrenze wieder drankaeme.
+                        if abbruch.load(Ordering::Relaxed) {
+                            return None;
+                        }
+                        let pfad = lesestand.pfad.join(&kandidat.name);
+                        if datei_entscheiden(&pfad, filter_klein, grenze, zu_gross)? {
+                            return Some(true);
+                        }
+                    }
+                    Typ::Verknuepfung => {}
                 }
             }
         }

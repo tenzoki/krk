@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 
-use krk_core::verzeichnis::durchlauf::{Auftrag, Befundmeldung, Durchlauf};
+use krk_core::verzeichnis::durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 use krk_core::verzeichnis::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
@@ -1569,15 +1569,72 @@ fn befunde_einsammeln(durchlauf: &Durchlauf) -> Vec<Befundmeldung> {
     gesammelt
 }
 
-/// Startet einen Durchlauf ueber einen einzigen Auftrag und wartet seinen
-/// Befund ab.
-fn einen_ordner_entscheiden(wurzel: &Path, name: &str, filter_klein: &str) -> Vec<Befundmeldung> {
+/// Startet einen Durchlauf ueber einen einzigen Auftrag und wartet ihn ab.
+///
+/// Liefert die Befunde **und** den Stand des Zaehlers der ungelesenen Dateien.
+/// Beides erst nach dem Einsammeln: der Kanal schliesst, wenn der Arbeitsfaden
+/// geendet hat, und danach steht der Zaehler still.
+fn einen_auftrag_entscheiden(
+    wurzel: &Path,
+    name: &str,
+    art: Auftragsart,
+    filter_klein: &str,
+    inhaltsgrenze: Option<u64>,
+) -> (Vec<Befundmeldung>, u64) {
     let auftraege = vec![Auftrag {
         index: 7,
         name: name.to_owned(),
+        art,
     }];
-    let durchlauf = Durchlauf::starten(auftraege, wurzel.to_path_buf(), filter_klein.to_owned(), 1);
-    befunde_einsammeln(&durchlauf)
+    let durchlauf = Durchlauf::starten(
+        auftraege,
+        wurzel.to_path_buf(),
+        filter_klein.to_owned(),
+        inhaltsgrenze,
+        1,
+    );
+    let befunde = befunde_einsammeln(&durchlauf);
+    (befunde, durchlauf.zu_gross())
+}
+
+/// Ein einzelner Unterbaumauftrag ohne Inhaltsfilter — der Durchlauf, wie er
+/// vor der Runde 11 war.
+fn einen_ordner_entscheiden(wurzel: &Path, name: &str, filter_klein: &str) -> Vec<Befundmeldung> {
+    einen_auftrag_entscheiden(wurzel, name, Auftragsart::Unterbaum, filter_klein, None).0
+}
+
+/// Ein einzelner Unterbaumauftrag **mit** Inhaltsfilter.
+fn einen_ordner_mit_inhalt_entscheiden(
+    wurzel: &Path,
+    name: &str,
+    filter_klein: &str,
+    grenze: u64,
+) -> Vec<Befundmeldung> {
+    einen_auftrag_entscheiden(
+        wurzel,
+        name,
+        Auftragsart::Unterbaum,
+        filter_klein,
+        Some(grenze),
+    )
+    .0
+}
+
+/// Ein einzelner Inhaltsauftrag ueber eine gewoehnliche Datei.
+fn eine_datei_entscheiden(
+    wurzel: &Path,
+    name: &str,
+    filter_klein: &str,
+    grenze: u64,
+) -> Vec<Befundmeldung> {
+    einen_auftrag_entscheiden(
+        wurzel,
+        name,
+        Auftragsart::Inhalt,
+        filter_klein,
+        Some(grenze),
+    )
+    .0
 }
 
 #[test]
@@ -1715,6 +1772,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
         vec![Auftrag {
             index: 7,
             name: "flach".to_owned(),
+            art: Auftragsart::Unterbaum,
         }]
     };
 
@@ -1723,6 +1781,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
         auftrag(),
         ordner.pfad().to_path_buf(),
         "gibt-es-hier-nicht".to_owned(),
+        None,
         1,
     );
     assert_eq!(
@@ -1739,6 +1798,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
         auftrag(),
         ordner.pfad().to_path_buf(),
         "gibt-es-hier-nicht".to_owned(),
+        None,
         2,
     );
     durchlauf.abbrechen();
@@ -1779,10 +1839,12 @@ fn jeder_auftrag_bekommt_genau_einen_befund() {
             .map(|(stelle, (name, _))| Auftrag {
                 index: stelle as u32,
                 name: (*name).to_owned(),
+                art: Auftragsart::Unterbaum,
             })
             .collect(),
         ordner.pfad().to_path_buf(),
         "gesuchtes".to_owned(),
+        None,
         1,
     );
 
@@ -1795,6 +1857,459 @@ fn jeder_auftrag_bekommt_genau_einen_befund() {
         })
         .collect();
     assert_eq!(befunde_einsammeln(&durchlauf), erwartet);
+}
+
+// ---------------------------------------------------------------------------
+// Der Inhalt als zweite Auftragsart (C3, C4)
+// ---------------------------------------------------------------------------
+
+/// Die Grenze, unter der die Inhaltsproben lesen.
+///
+/// Klein genug, dass eine Datei von wenigen Kilobyte sicher darueber liegt, und
+/// gross genug fuer jeden Text, den diese Proben schreiben. Die 1 MB der
+/// Oberflaeche wohnen in `krk-ui` und haben im Kern nichts zu suchen; hier
+/// steht die Zahl, die diese Proben brauchen, und keine zweite Fassung von
+/// jener.
+const PROBENGRENZE: u64 = 1_024;
+
+/// C4.1 und C4.2: Ein flacher Inhaltsauftrag entscheidet die Datei an ihrem
+/// Text.
+///
+/// Beide Namen tragen die Folge nicht — sonst waere die Datei ohne diesen
+/// Auftrag entschieden und die Probe maesse den Kurzschluss statt des Lesens.
+#[test]
+fn ein_flacher_inhaltsauftrag_liest_die_datei_und_entscheidet_sie() {
+    let ordner = Pruefordner::neu("inhalt-flach");
+    ordner.datei("mit.txt", b"oben steht gesuchtes und darunter nichts");
+    ordner.datei("ohne.txt", b"hier steht nichts davon");
+
+    let (befunde, ungelesen) = einen_auftrag_entscheiden(
+        ordner.pfad(),
+        "mit.txt",
+        Auftragsart::Inhalt,
+        "gesuchtes",
+        Some(PROBENGRENZE),
+    );
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "der Text traegt die Folge, obwohl der Name sie nicht traegt"
+    );
+    assert_eq!(
+        ungelesen, 0,
+        "eine gelesene Datei ist keine ungelesene, und der Zaehler sagt das"
+    );
+
+    assert_eq!(
+        eine_datei_entscheiden(ordner.pfad(), "ohne.txt", "gesuchtes", PROBENGRENZE),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "gelesen und nichts gefunden ist ein Befund und kein Schweigen"
+    );
+}
+
+/// C3.1: Ein Treffer, der allein im **Text** einer Datei tief unten liegt,
+/// entscheidet den Ordner.
+///
+/// Derselbe Baum, zwei Laeufe: ohne Grenze bleibt er unentschieden — kein Name
+/// traegt die Folge —, mit Grenze faellt der Treffer. Der Unterschied ist genau
+/// die Zeile, um die es geht.
+#[test]
+fn ein_treffer_allein_im_text_entscheidet_den_unterbaum() {
+    let ordner = Pruefordner::neu("inhalt-unterbaum");
+    let tief = ordner.unter("aussen").join("a").join("b");
+    fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
+    fs::write(tief.join("notiz.txt"), b"ganz unten steht gesuchtes").expect("Blatt");
+    fs::write(ordner.unter("aussen").join("liesmich.md"), b"nichts davon").expect("Beiwerk");
+
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "aussen", "gesuchtes"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "ohne Grenze wird keine Datei geoeffnet, und kein Name traegt die Folge"
+    );
+    assert_eq!(
+        einen_ordner_mit_inhalt_entscheiden(ordner.pfad(), "aussen", "gesuchtes", PROBENGRENZE),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "mit Grenze entscheidet der Text drei Ebenen tiefer den Ordner (C3.1)"
+    );
+}
+
+/// C3.4: Der Kurzschluss des Namens spart im Unterbaum auch das **Lesen**.
+///
+/// Die eine Datei traegt die Folge im Namen und ist nicht lesbar. Wer sie
+/// laese, bekaeme `TraegtNicht` und schriebe den Ordner ab; wer den Namen
+/// zuerst fragt, entscheidet ihn ohne einen einzigen Lesevorgang. `treffer:
+/// true` ist damit der Beleg, dass nicht gelesen wurde — an einem Zaehler ist
+/// er nicht abzulesen, denn ein gescheitertes Lesen zaehlt nirgends mit.
+#[test]
+fn ein_namenstreffer_im_unterbaum_bleibt_ungelesen() {
+    let ordner = Pruefordner::neu("inhalt-kurzschluss");
+    let aussen = ordner.ordner("aussen");
+    let blatt = aussen.join("gesuchtes-blatt.txt");
+    fs::write(&blatt, b"").expect("Blatt laesst sich nicht schreiben");
+    fs::set_permissions(&blatt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht entziehen");
+
+    assert_eq!(
+        einen_ordner_mit_inhalt_entscheiden(ordner.pfad(), "aussen", "gesuchtes", PROBENGRENZE),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "der Name entscheidet vor dem Lesen; eine unlesbare Datei mit passendem Namen \
+         zeigt, dass gar nicht erst geoeffnet wurde (C3.4)"
+    );
+}
+
+/// C3.7: In eine symbolische Verknuepfung wird weder abgestiegen noch
+/// hineingelesen.
+///
+/// Die Verknuepfung im Unterbaum zeigt auf eine Datei, deren Text die Folge
+/// traegt und die **ausserhalb** des Unterbaums liegt. Wuerde in sie
+/// hineingelesen, faende der Durchlauf den Treffer; er traegt nichts bei, und
+/// das ist genau die Regel, die der Durchlauf schon fuer Ordner hat.
+#[test]
+fn eine_verknuepfung_im_unterbaum_wird_nicht_gelesen() {
+    let ordner = Pruefordner::neu("inhalt-verknuepfung");
+    let ziel = ordner.datei("ziel.txt", b"hier steht gesuchtes");
+    let aussen = ordner.ordner("aussen");
+    std::os::unix::fs::symlink(&ziel, aussen.join("verweis.txt"))
+        .expect("Verknuepfung laesst sich nicht anlegen");
+
+    assert_eq!(
+        einen_ordner_mit_inhalt_entscheiden(ordner.pfad(), "aussen", "gesuchtes", PROBENGRENZE),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "eine Verknuepfung traegt zum Befund nichts bei, auch nicht ueber ihren Inhalt (C3.7)"
+    );
+    // Gegenprobe: ueber ihren echten Ort ist derselbe Text sehr wohl ein
+    // Treffer. Ohne sie hiesse `treffer: false` vielleicht nur, dass der Text
+    // gar nicht dasteht.
+    assert_eq!(
+        eine_datei_entscheiden(ordner.pfad(), "ziel.txt", "gesuchtes", PROBENGRENZE),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "derselbe Text ueber seinen echten Ort"
+    );
+}
+
+/// Ein Lauf mit `inhaltsgrenze: None` verhaelt sich wie der Durchlauf vor
+/// dieser Runde.
+#[test]
+fn ohne_grenze_wird_keine_einzige_datei_geoeffnet() {
+    let ordner = Pruefordner::neu("inhalt-ohne-grenze");
+    let aussen = ordner.ordner("aussen");
+    fs::write(aussen.join("notiz.txt"), b"hier steht gesuchtes").expect("Datei");
+    ordner.datei("flach.txt", b"hier steht gesuchtes");
+
+    let (befunde, ungelesen) = einen_auftrag_entscheiden(
+        ordner.pfad(),
+        "aussen",
+        Auftragsart::Unterbaum,
+        "gesuchtes",
+        None,
+    );
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "ohne Grenze zaehlt allein der Name, und keiner traegt die Folge"
+    );
+    assert_eq!(
+        ungelesen, 0,
+        "ohne Grenze wird nichts gelesen und nichts gezaehlt"
+    );
+
+    // Ein Inhaltsauftrag ohne Grenze ist von diesem Lauf nicht zu beantworten,
+    // und ungelesen heisst unentschieden. Die Paarung entsteht in KRK nicht —
+    // Auftragsart und Grenze kommen aus derselben Frage —, und diese Erwartung
+    // haelt fest, dass sie nicht still negativ entschieden wird.
+    assert_eq!(
+        einen_auftrag_entscheiden(
+            ordner.pfad(),
+            "flach.txt",
+            Auftragsart::Inhalt,
+            "gesuchtes",
+            None,
+        )
+        .0,
+        Vec::new(),
+        "ein Inhaltsauftrag ohne Grenze bleibt unentschieden, statt als Nichttreffer zu gelten"
+    );
+}
+
+/// C4.6: Eine Datei ueber der Grenze bleibt ungelesen, traegt nichts bei und
+/// **zaehlt**.
+///
+/// Der Zaehler ist die eine Stelle, an der eine ungelesene Datei sichtbar
+/// bleibt; ihre Zeile sagt darueber nichts, und das ist der Grund, aus dem
+/// `Befund` keine vierte Variante bekommen hat.
+#[test]
+fn eine_zu_grosse_datei_bleibt_ungelesen_und_zaehlt() {
+    let ordner = Pruefordner::neu("inhalt-zu-gross");
+    ordner.datei("gross.txt", vec![b'x'; 4 * 1024]);
+
+    let (befunde, ungelesen) = einen_auftrag_entscheiden(
+        ordner.pfad(),
+        "gross.txt",
+        Auftragsart::Inhalt,
+        "gesuchtes",
+        Some(64),
+    );
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "eine ungelesene Datei steht nicht in der Liste"
+    );
+    assert_eq!(
+        ungelesen, 1,
+        "und sie zaehlt in den Satzteil der Statuszeile"
+    );
+
+    // Dieselbe Datei im Unterbaum: sie zaehlt auch dort, und der Ordner ist
+    // entschieden, ohne dass sie angesehen wurde.
+    let aussen = ordner.ordner("aussen");
+    fs::write(aussen.join("gross.txt"), vec![b'x'; 4 * 1024]).expect("Datei");
+    let (befunde, ungelesen) = einen_auftrag_entscheiden(
+        ordner.pfad(),
+        "aussen",
+        Auftragsart::Unterbaum,
+        "gesuchtes",
+        Some(64),
+    );
+    assert_eq!(
+        befunde,
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "ein Unterbaum, in dem nur Ungelesenes liegt, ist entschieden und nicht offen"
+    );
+    assert_eq!(
+        ungelesen, 1,
+        "auch tief unten zaehlt eine ungelesene Datei mit"
+    );
+}
+
+/// C4.7, soweit an einer Probe abzulesen: die Abbruchgrenze steht an **zwei**
+/// Stellen im Unterbaum und an einer im flachen Zweig.
+///
+/// **Was diese Probe nicht entscheidet, und der Satz gehoert dazu:** die Spanne
+/// zwischen dem Setzen des Kennzeichens und dem Ende des Fadens. Sie zu messen
+/// brauchte eine Uhr, und in diesem Weg steht keine — derselbe Vorbehalt, den
+/// `der_abbruch_greift_in_einem_ordner_ohne_unterordner` schon festhaelt.
+/// Abzulesen ist stattdessen, **wo** geprueft wird, und das ist die Aussage der
+/// Regel: vor jeder Einheit, die dauern kann, und das sind seit dieser Runde
+/// zwei.
+///
+/// Gezaehlt wird ueber die Code-Zeilen ohne Kommentare, damit der Modulkopf,
+/// der die Regel im Klartext nennt, nicht mitzaehlt.
+#[test]
+fn die_abbruchgrenze_steht_vor_jedem_stapel_und_vor_jeder_datei() {
+    let quelle = quelltext_von("krk-core/src/verzeichnis/durchlauf.rs");
+    let code = code_zeilen(&quelle).join("\n");
+    let zaehlen = |stueck: &str| stueck.matches("abbruch.load(").count();
+
+    let (vor_dem_unterbaum, rest) = code
+        .split_once("fn unterbaum_entscheiden")
+        .expect("der Durchlauf traegt die Funktion `unterbaum_entscheiden`");
+    let (im_unterbaum, nach_dem_unterbaum) = rest
+        .split_once("\nfn ")
+        .expect("nach `unterbaum_entscheiden` folgt eine weitere Funktion");
+
+    assert_eq!(
+        zaehlen(im_unterbaum),
+        2,
+        "`unterbaum_entscheiden` traegt genau zwei Abbruchgrenzen: vor dem naechsten \
+         Stapel und vor der naechsten gelesenen Datei"
+    );
+    assert_eq!(
+        zaehlen(vor_dem_unterbaum),
+        1,
+        "der flache Zweig traegt genau eine, vor dem Lesen der Datei"
+    );
+    assert_eq!(
+        zaehlen(nach_dem_unterbaum),
+        0,
+        "hinter `unterbaum_entscheiden` steht keine weitere Abbruchgrenze"
+    );
+}
+
+/// Die Umgebungsvariable, die die Kindprobe zum Mangel ueber einer **Datei**
+/// beauftragt. Ihr Wert ist der Ordner, unter dem die drei Auftraege stehen.
+const AUFTRAG_INHALTSMANGEL: &str = "KRK_PROBE_INHALT_DESKRIPTORMANGEL";
+
+/// C3.6: Ein Deskriptormangel **beim Lesen einer Datei** laesst sie
+/// unentschieden.
+///
+/// Dieselbe Regel wie beim Oeffnen eines Ordners, und derselbe Grund: `EMFILE`
+/// und `ENFILE` sind ein Zustand des Prozesses und kein Befund ueber die Datei.
+/// Der Faden endet ohne Meldung, statt die Zeile still und dauerhaft aus der
+/// Liste zu nehmen; die naechste Frage — ein weiteres Zeichen, ein Umschalten,
+/// ein Ordnerwechsel — stellt sie neu.
+///
+/// **Gemessen wird im Kindprozess unter `ulimit -n 64`.** `cargo test` erbt die
+/// angehobene Grenze der Anmeldesitzung; ohne den Kindprozess behauptete die
+/// Zusage sich selbst. Die Form steht seit der Runde 10 in dieser Datei, und
+/// diese Probe schreibt sie ab.
+///
+/// Angelegt und abgeraeumt wird der Baum vom **Elternteil**, aus demselben
+/// Grund wie bei den beiden Proben darueber.
+#[test]
+fn ein_deskriptormangel_beim_lesen_laesst_die_datei_unentschieden() {
+    let ordner = Pruefordner::neu("inhalt-mangel");
+    let ziel = ordner.datei("ziel.txt", b"hier steht gesuchtes");
+    ordner.datei("zweiter.txt", b"auch hier steht gesuchtes");
+    // Der erste Auftrag ist eine Verknuepfung und damit ohne ein einziges
+    // Oeffnen entschieden (C3.7). Nur so ist zu sehen, dass der Mangel den
+    // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
+    ordner.verknuepfung("verweis", &ziel);
+
+    let ergebnis = kind_mit_wenigen_deskriptoren(
+        "kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts",
+        AUFTRAG_INHALTSMANGEL,
+        ordner.pfad(),
+    );
+
+    assert!(
+        ergebnis.status.success(),
+        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber eine Datei\n\
+         --- stdout ---\n{}\n--- stderr ---\n{}",
+        String::from_utf8_lossy(&ergebnis.stdout),
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_INHALT_DESKRIPTORMANGEL gestartet"]
+fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
+    let Some(ordner) = std::env::var_os(AUFTRAG_INHALTSMANGEL) else {
+        return;
+    };
+    let ordner = std::path::PathBuf::from(ordner);
+    let auftraege = || {
+        vec![
+            Auftrag {
+                index: 5,
+                name: "verweis".to_owned(),
+                art: Auftragsart::Unterbaum,
+            },
+            Auftrag {
+                index: 7,
+                name: "ziel.txt".to_owned(),
+                art: Auftragsart::Inhalt,
+            },
+            Auftrag {
+                index: 8,
+                name: "zweiter.txt".to_owned(),
+                art: Auftragsart::Inhalt,
+            },
+        ]
+    };
+
+    // Erster Durchgang, mit freiem Vorrat, und er ist die Gegenprobe: ohne ihn
+    // saehe der zweite auch dann so aus, wenn die Dateien gar nicht stuenden
+    // oder der Filtertext nirgends traefe.
+    let mit_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        auftraege(),
+        ordner.clone(),
+        "gesuchtes".to_owned(),
+        Some(PROBENGRENZE),
+        1,
+    ));
+
+    // Jetzt den Mangel herstellen: nehmen, bis keiner mehr kommt, und halten.
+    let mut gehalten = Vec::new();
+    let mut abweisung = None;
+    while gehalten.len() < 4 * DESKRIPTORSCHRANKE {
+        match fs::File::open("/dev/null") {
+            Ok(datei) => gehalten.push(datei),
+            Err(fehler) => {
+                abweisung = Some(fehler);
+                break;
+            }
+        }
+    }
+    let vorrat = gehalten.len();
+
+    // Der Durchlauf laeuft, waehrend `gehalten` steht: sein erstes Oeffnen
+    // einer Datei trifft auf eine volle Deskriptortabelle.
+    let ohne_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        auftraege(),
+        ordner.clone(),
+        "gesuchtes".to_owned(),
+        Some(PROBENGRENZE),
+        2,
+    ));
+
+    // Erst zurueckgeben, dann pruefen: eine gescheiterte Behauptung soll ihre
+    // Meldung noch schreiben koennen.
+    drop(gehalten);
+
+    let abweisung = abweisung.expect(
+        "der Vorrat an Deskriptoren ist nicht ausgegangen; die Grenze des Kindes ist nicht \
+         abgesenkt, und die Probe wuerde nichts messen",
+    );
+    assert!(
+        ist_deskriptormangel(&abweisung),
+        "das Oeffnen ist nicht am Vorrat gescheitert, sondern an etwas anderem: {abweisung}"
+    );
+    assert!(
+        vorrat < DESKRIPTORSCHRANKE,
+        "die Deskriptorgrenze des Kindes ist nicht abgesenkt: {vorrat} Deskriptoren zugleich frei"
+    );
+
+    assert_eq!(
+        mit_vorrat,
+        vec![
+            Befundmeldung {
+                index: 5,
+                treffer: false
+            },
+            Befundmeldung {
+                index: 7,
+                treffer: true
+            },
+            Befundmeldung {
+                index: 8,
+                treffer: true
+            },
+        ],
+        "die Gegenprobe mit freiem Vorrat entscheidet die drei Auftraege nicht; der zweite \
+         Durchgang maesse dann etwas anderes als den Mangel"
+    );
+
+    // Die Verknuepfung ist entschieden, weil sie kein Oeffnen braucht. Die
+    // Datei danach ist es nicht, und der dritte Auftrag bleibt es ebenfalls.
+    assert_eq!(
+        ohne_vorrat,
+        vec![Befundmeldung {
+            index: 5,
+            treffer: false
+        }],
+        "unter einer vollen Deskriptortabelle wird eine Datei entschieden, statt sie und die \
+         Auftraege nach ihr unentschieden zu lassen (C3.6)"
+    );
 }
 
 /// C3.8: Es gibt keine Tiefengrenze.
@@ -2016,14 +2531,17 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
             Auftrag {
                 index: 5,
                 name: "verweis".to_owned(),
+                art: Auftragsart::Unterbaum,
             },
             Auftrag {
                 index: 7,
                 name: "aussen".to_owned(),
+                art: Auftragsart::Unterbaum,
             },
             Auftrag {
                 index: 8,
                 name: "zweiter".to_owned(),
+                art: Auftragsart::Unterbaum,
             },
         ]
     };
@@ -2036,6 +2554,7 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
+        None,
         1,
     ));
 
@@ -2063,6 +2582,7 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
+        None,
         2,
     ));
 

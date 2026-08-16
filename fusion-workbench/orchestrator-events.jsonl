@@ -964,3 +964,7 @@
 {"ts":"2026-08-16T13:21:07","event":"turn_start","turn":8,"detail":"A2, danach B1 und D1"}
 {"ts":"2026-08-16T13:21:07","event":"task_start","turn":8,"task":"A2","agent":"coder","detail":"verzeichnis::inhalt"}
 {"ts":"2026-08-16T13:37:57","event":"task_done","turn":8,"task":"A2","agent":"coder","detail":"verzeichnis::inhalt, Zaehlprobe auf drei"}
+{"ts":"2026-08-16T15:06:41","event":"commit","turn":8,"detail":"7283d55 (A2)"}
+{"ts":"2026-08-16T15:06:41","event":"gate_response","detail":"Nutzer: Budget anheben und bis Strang G durchziehen; Zwischenstand nach D entfaellt"}
+{"ts":"2026-08-16T15:06:41","event":"task_start","turn":8,"task":"B1","agent":"coder","detail":"Durchlauf entscheidet auch Inhalte"}
+{"ts":"2026-08-16T15:22:48","event":"task_done","turn":8,"task":"B1","agent":"coder","detail":"Durchlauf entscheidet Inhalte; Kindprobe unter ulimit -n 64"}

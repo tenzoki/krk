@@ -249,7 +249,7 @@ flowchart TD
 
 ### Strang B — der Durchlauf
 
-**B1. Der Durchlauf entscheidet auch Inhalte**
+**B1. [DONE] Der Durchlauf entscheidet auch Inhalte**
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/durchlauf.rs`, `crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/tests/verzeichnis.rs`
 - Erfüllt: C1.1, C1.9, C1.10, C1.11, C3.1, C3.3, C3.4, C3.5, C3.6, C3.7, C4.1, C4.2, C4.6, C4.7

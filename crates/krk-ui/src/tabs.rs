@@ -38,7 +38,9 @@ use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
 use krk_core::verzeichnis::modell::Befund;
-use krk_core::verzeichnis::{Abschluss, Auftrag, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
+use krk_core::verzeichnis::{
+    Abschluss, Auftrag, Auftragsart, Durchlauf, Lesevorgang, Meldung, Ordnermodell,
+};
 
 /// Die Generation, mit der ein noch nicht gelesener Tab anfaengt.
 const GENERATION_LEER: u64 = 0;
@@ -815,6 +817,9 @@ impl Tabliste {
             auftraege,
             tab.ordner.clone(),
             tab.modell.filter_klein().to_owned(),
+            // Bis Schritt D1 zaehlt der Inhalt bei keinem Lauf; `None` heisst,
+            // dass keine Datei geoeffnet wird.
+            None,
             nummer,
         ));
         true
@@ -957,6 +962,9 @@ fn auftraege(modell: &Ordnermodell) -> Vec<Auftrag> {
         .map(|(index, eintrag)| Auftrag {
             index: index as u32,
             name: eintrag.name.clone(),
+            // Bis Schritt D1 stellt diese Liste allein Unterbaumauftraege
+            // zusammen; die Tafel der vier Auftragslagen zieht dort ein.
+            art: Auftragsart::Unterbaum,
         })
         .collect()
 }

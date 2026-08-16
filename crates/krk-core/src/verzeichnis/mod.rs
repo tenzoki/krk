@@ -7,10 +7,10 @@
 //!  │                     ^         ^ ^
 //!  │               kollation       │ │
 //!  └──> durchlauf ─────────────────┘ │
-//!            ^                       │
-//!            └──── filter ───────────┘
-//!                    ^
-//!                  inhalt
+//!         ^     ^                    │
+//!         │     └──── filter ────────┘
+//!         │                       │
+//!         └──── inhalt <──────────┘
 //!
 //! verweisziel   (steht allein, an keinem der neun)
 //! ```
@@ -47,14 +47,17 @@
 //! der Aufrufer es zulaesst; verglichen wird mit derselben Regel aus
 //! [`filter`], die schon ueber Namen entscheidet. **Wer ihn ruft, haelt den
 //! Abbruch**: [`inhalt`] beantwortet eine Frage ueber eine Datei und weiss von
-//! Faeden nichts. Sein Rufer wird deshalb der [`durchlauf`], der den Abbruch
+//! Faeden nichts. Sein Rufer ist deshalb der [`durchlauf`], der den Abbruch
 //! schon fuehrt und die Frage je Datei stellt.
 //!
 //! [`durchlauf`] steht neben [`leser`] und nicht unter ihm: er liest ueber
 //! dieselbe Huelle `sys::Schwungleser` und auf derselben Bauart, beantwortet
 //! aber eine andere Frage. Der Leser liefert den Bestand eines Ordners, der
-//! Durchlauf je Ordner des angezeigten Ordners einen Wahrheitswert ueber
-//! seinen ganzen Unterbaum. Er ist die fuenfte Eingabe des Pruefschritts in
+//! Durchlauf je Auftrag einen Wahrheitswert — ueber den ganzen Unterbaum eines
+//! Ordners oder, seit der Runde 11, ueber den Text einer gewoehnlichen Datei.
+//! **Zwei Auftragsarten in einer Maschine und nicht zwei Maschinen**: beide
+//! Fragen entstehen nebenlaeufig, tragen einen Eintragsindex und lassen die
+//! Sicht neu aufbauen. Er ist die sechste Eingabe des Pruefschritts in
 //! [`modell`], und die einzige, die von aussen kommt.
 //!
 //! [`verweisziel`] steht wie [`filter`] neben der Kette und nicht in ihr, und
@@ -82,7 +85,7 @@ pub mod sortierung;
 pub mod sys;
 pub mod verweisziel;
 
-pub use durchlauf::{Auftrag, Befundmeldung, Durchlauf};
+pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
