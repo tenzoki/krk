@@ -984,3 +984,8 @@
 {"ts":"2026-08-16T16:15:26","event":"task_start","turn":11,"task":"F1","agent":"coder","detail":"die abgesetzte Zeile"}
 {"ts":"2026-08-16T16:27:43","event":"task_done","turn":11,"task":"F1","agent":"coder","detail":"dreiwertige Farbwahl; Kontraste gemessen"}
 {"ts":"2026-08-16T16:44:39","event":"task_done","turn":11,"task":"F2","agent":"coder","detail":"vier Satzteile; Bedingung nach tabs.rs verlegt"}
+{"ts":"2026-08-16T16:45:51","event":"commit","turn":11,"detail":"f7cf88b (F1), c8fd829 (F2), Nachtrag der zwei Marker"}
+{"ts":"2026-08-16T16:45:51","event":"turn_end","turn":11,"detail":"F1 und F2 done"}
+{"ts":"2026-08-16T16:45:51","event":"turn_start","turn":12,"detail":"G1 und G2"}
+{"ts":"2026-08-16T16:45:51","event":"task_start","turn":12,"task":"G1+G2","agent":"coder","detail":"Spec gegen den Baum lesen, Abnahmeliste schreiben"}
+{"ts":"2026-08-16T17:06:45","event":"task_done","turn":12,"task":"G1+G2","agent":"coder","detail":"57 Kriterien gelesen, 2 ohne Zuordnung, Abnahmeliste steht"}

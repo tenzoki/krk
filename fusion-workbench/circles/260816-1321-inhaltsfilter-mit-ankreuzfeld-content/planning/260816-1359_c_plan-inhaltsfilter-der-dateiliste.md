@@ -1,7 +1,7 @@
 # Implementation Plan: Der Filter der Dateiliste berücksichtigt den Inhalt, geschaltet über „Content"
 
 **Date:** 2026-08-16
-**Status:** Draft
+**Status:** Complete
 **Spec:** `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md` — sechs Fähigkeiten, 57 Abnahmekriterien. Er bleibt im gemeinsamen Speicher; dieser Circle nimmt ihn über sein Feld `Active spec/plan:` an.
 **Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`, aktiv seit 260816-1330
 **Grundlage erhoben:** 260816-1359, am Baum auf dem Stand `eae7b1c`, unter `crates/` und `resources/`
@@ -386,7 +386,7 @@ flowchart TD
 
 ### Strang G — Abnahme
 
-**G1. `make check` läuft grün**
+**G1. [DONE] `make check` läuft grün**
 - Executor: `coder`
 - Files: keine über die vorigen Schritte hinaus
 - Erfüllt: die probengestützte Hälfte aller sechs Fähigkeiten
@@ -398,7 +398,7 @@ flowchart TD
   - **`unused_must_use` fängt der Bau erst unter `-D warnings`.** `cargo build` und `cargo test` allein laufen grün, wenn ein `#[must_use]`-Wert stillschweigend fällt; `make check` fährt clippy und fängt es. `Durchlauf`-nahe Rückgabewerte (`durchlauf_nachziehen`) tragen es bereits.
 - Abzulesen an: `make check`, Exit 0, alle vier Kommandos ohne Ausgabe außer den Zusammenfassungen.
 
-**G2. Die Abnahmeliste am Bündel — Nutzerarbeit**
+**G2. [DONE] Die Abnahmeliste am Bündel — Nutzerarbeit**
 - Executor: `coder` (schreibt die Liste; **das Fahren ist Nutzerarbeit**)
 - Files: `messungen/260816-abnahme-inhaltsfilter.md` (neu)
 - Erfüllt: die Bündelhälfte von C1, C2, C3, C4, C5 und die zwei Kriterien aus `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`
