@@ -217,7 +217,7 @@ flowchart TD
 
 ### Strang A — der Leseweg
 
-**A1. Die begrenzte Lesehülle zieht nach `krk-core`, die Vorschau ruft sie**
+**A1. [DONE] Die begrenzte Lesehülle zieht nach `krk-core`, die Vorschau ruft sie**
 - Executor: `coder`
 - Files: `crates/krk-core/src/text/datei.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-core/tests/text.rs`
 - Erfüllt: C6.5, C6.6 (Hälfte), C1.8 (Bauartteil)
@@ -270,7 +270,7 @@ flowchart TD
 
 ### Strang C — das Ordnermodell
 
-**C1. Schalter, Schwelle und der sechste Zweig des einen Prüfschritts**
+**C1. [DONE] Schalter, Schwelle und der sechste Zweig des einen Prüfschritts**
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/modell.rs`, `crates/krk-core/src/verzeichnis/filter.rs`, `crates/krk-core/tests/verzeichnis.rs`
 - Erfüllt: C1.1, C1.2, C1.3, C1.10, C2.6, C2.9, C2.10, C5.4, C5.5

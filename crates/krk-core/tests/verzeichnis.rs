@@ -1022,6 +1022,326 @@ fn der_kleingeschriebene_filtertext_laeuft_mit() {
 }
 
 // ---------------------------------------------------------------------------
+// Der Inhaltsfilter aus C1, C2 und C5: derselbe Pruefschritt, ein Zweig mehr
+// ---------------------------------------------------------------------------
+
+/// Ein Eintrag fuer die Proben unten, ohne Platte.
+///
+/// Die Sortierschluessel entstehen dabei so, wie sie es beim Lesen tun.
+fn handeintrag(name: &str, typ: Typ) -> Eintrag {
+    Eintrag::neu(name.to_owned(), 0, SystemTime::UNIX_EPOCH, typ)
+}
+
+/// Ein fertiges Ordnermodell aus Eintraegen von Hand.
+///
+/// **Diese Proben brauchen keine Platte**, und das ist kein Sparen, sondern die
+/// Aussage: der Pruefschritt entscheidet ueber den **Befund**, nicht ueber eine
+/// Datei. Wer den Befund von Hand setzt, misst genau den Zweig, um den es geht,
+/// und nicht nebenbei den Leseweg. Wer eine Datei wirklich liest, misst
+/// [`krk_core::verzeichnis::inhalt`], und das steht anderswo.
+fn handmodell(eintraege: impl IntoIterator<Item = Eintrag>) -> Ordnermodell {
+    let mut modell = Ordnermodell::neu(1);
+    modell.anhaengen(eintraege);
+    modell.abschliessen();
+    modell
+}
+
+/// Der Ordner der Inhaltsproben, von Hand gebaut.
+///
+/// | Name             | Typ    | traegt `aaa` im Namen |
+/// |---|---|---|
+/// | `bbbaaaccc.rs`   | Datei  | ja |
+/// | `ohne.txt`       | Datei  | nein — der Inhaltskandidat |
+/// | `zweite.txt`     | Datei  | nein — bleibt unentschieden |
+/// | `stiller-ordner` | Ordner | nein |
+fn inhaltsmodell() -> Ordnermodell {
+    handmodell([
+        handeintrag("bbbaaaccc.rs", Typ::Datei),
+        handeintrag("ohne.txt", Typ::Datei),
+        handeintrag("zweite.txt", Typ::Datei),
+        handeintrag("stiller-ordner", Typ::Ordner),
+    ])
+}
+
+/// C1.1, C1.2, C1.10: die Schwelle von drei Zeichen ohne tiefe Suche, und was
+/// unterhalb von ihr geschieht.
+///
+/// **Der Befund wird nach dem Filtertext gesetzt und nicht davor.** Jede
+/// Aenderung des Filtertexts setzt die Befunde zurueck, weil sie Auskuenfte
+/// ueber eine frueher gestellte Frage waeren; in der Anwendung liefert der
+/// Durchlauf sie danach neu. Die Probe schreibt denselben Ablauf ab.
+///
+/// C1.10 steht in derselben Probe: `zweite.txt` bleibt `Unentschieden` und
+/// steht deshalb nicht. Die Liste beginnt bei den Namenstreffern und waechst
+/// waehrend des Lesens.
+#[test]
+fn der_inhaltsfilter_wirkt_ab_drei_zeichen_und_darunter_nicht() {
+    let mut modell = inhaltsmodell();
+    modell.filtertext_setzen("aaa");
+    let kandidat = index_von(&modell, "ohne.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(!modell.inhalt(), "\"Content\" ist aus die Vorbelegung");
+    assert!(!modell.inhalt_wirkt());
+    assert_eq!(
+        namen(&modell),
+        vec!["stiller-ordner", "bbbaaaccc.rs"],
+        "ohne \"Content\" entscheidet ueber eine Datei allein ihr Name"
+    );
+
+    modell.inhalt_setzen(true);
+    // Das Einschalten setzt die Befunde zurueck, wie das Einschalten der
+    // tiefen Suche es tut; der Durchlauf liefert sie danach neu.
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(modell.inhalt_wirkt(), "drei Zeichen ohne tiefe Suche");
+    assert_eq!(
+        namen(&modell),
+        vec!["stiller-ordner", "bbbaaaccc.rs", "ohne.txt"],
+        "die Datei mit dem Inhaltstreffer fehlt"
+    );
+    assert!(
+        !namen(&modell).contains(&"zweite.txt"),
+        "eine noch nicht gelesene Datei steht nicht (C1.10)"
+    );
+
+    modell.filtertext_setzen("aa");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(
+        !modell.inhalt_wirkt(),
+        "zwei Zeichen bleiben unter der Schwelle"
+    );
+    assert_eq!(
+        namen(&modell),
+        vec!["stiller-ordner", "bbbaaaccc.rs"],
+        "unterhalb der Schwelle zeigt die Liste dasselbe wie ohne \"Content\""
+    );
+}
+
+/// C2.10: mit eingeschalteter tiefer Suche steigt die Schwelle auf fuenf. Vier
+/// Zeichen nehmen die Inhaltstreffer weg, ein fuenftes holt sie zurueck.
+///
+/// Der Ordner steht in dieser Probe nicht mehr: bei tiefer Suche entscheidet
+/// ueber ihn sein Befund, und der ist `Unentschieden`. Das ist die Regel der
+/// Runde 10 und hier nur der Hintergrund.
+#[test]
+fn die_tiefe_suche_hebt_die_schwelle_auf_fuenf_zeichen() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaa");
+    let kandidat = index_von(&modell, "ohne.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(modell.inhalt_wirkt(), "vier Zeichen ohne tiefe Suche");
+    assert!(namen(&modell).contains(&"ohne.txt"));
+
+    modell.tief_setzen(true);
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(
+        !modell.inhalt_wirkt(),
+        "vier Zeichen liegen unter der Schwelle der tiefen Suche"
+    );
+    assert!(
+        !namen(&modell).contains(&"ohne.txt"),
+        "die gestiegene Schwelle nimmt den Inhaltstreffer weg"
+    );
+
+    modell.zeichen_anhaengen('a');
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert_eq!(modell.filtertext(), "aaaaa");
+    assert!(
+        modell.inhalt_wirkt(),
+        "fuenf Zeichen erreichen die Schwelle"
+    );
+    assert!(
+        namen(&modell).contains(&"ohne.txt"),
+        "das fuenfte Zeichen holt den Inhaltstreffer zurueck"
+    );
+}
+
+/// Die Schwelle zaehlt **Zeichen und keine Bytes**. Ein getipptes `äöü` sind
+/// drei Zeichen und sechs Bytes; gerechnet wird mit den drei.
+#[test]
+fn die_schwelle_zaehlt_zeichen_und_keine_bytes() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("äöü");
+
+    assert_eq!(modell.filtertext().len(), 6, "sechs Bytes");
+    assert!(
+        modell.inhalt_wirkt(),
+        "drei Zeichen erreichen die flache Schwelle"
+    );
+}
+
+/// C2.6: ohne stehenden Filtertext aendert "Content" nichts an der Liste.
+///
+/// Dieselbe Aussage wie `ohne_filtertext_aendert_die_tiefe_suche_nichts` fuer
+/// die tiefe Suche, und aus demselben Grund **auch** mit einem gesetzten
+/// Befund: ohne Filtertext wird er gar nicht erst gefragt.
+#[test]
+fn ohne_filtertext_aendert_der_inhaltsfilter_nichts() {
+    let mut modell = inhaltsmodell();
+    let vorher: Vec<String> = namen(&modell).into_iter().map(str::to_owned).collect();
+    assert!(!modell.filter_steht(), "diese Probe faehrt ohne Filtertext");
+
+    let kandidat = index_von(&modell, "ohne.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    modell.inhalt_setzen(true);
+
+    assert!(
+        modell.inhalt(),
+        "das Kennzeichen steht, auch ohne Filtertext"
+    );
+    assert!(
+        !modell.inhalt_wirkt(),
+        "ein leerer Filtertext bleibt unter jeder Schwelle"
+    );
+    assert_eq!(
+        namen(&modell),
+        vorher,
+        "ohne Filtertext entscheidet der Befund ueber keine Zeile"
+    );
+}
+
+/// C2.9: das Ausschalten nimmt die Zeilen weg, die allein wegen ihres Inhalts
+/// standen — und laesst den Befundvektor stehen.
+///
+/// Der Vektor bleibt, weil ihn fuer eine Datei bei ausgeschaltetem "Content"
+/// niemand liest. Nachgeprueft wird das am Wert selbst und nicht an der Liste:
+/// an der Liste waere ein zurueckgesetzter Vektor nicht von einem stehenden zu
+/// unterscheiden.
+#[test]
+fn das_ausschalten_nimmt_die_inhaltszeilen_weg_und_laesst_den_befund_stehen() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaa");
+    let kandidat = index_von(&modell, "ohne.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    assert!(namen(&modell).contains(&"ohne.txt"));
+
+    modell.inhalt_setzen(false);
+
+    assert!(
+        !namen(&modell).contains(&"ohne.txt"),
+        "die Zeile stand allein wegen ihres Inhalts"
+    );
+    assert_eq!(
+        modell.befund(kandidat),
+        Befund::Treffer,
+        "das Ausschalten fasst den Befundvektor nicht an"
+    );
+}
+
+/// C1.3, Sichtbarkeitshaelfte: traegt der Name die Folge, steht die Zeile ohne
+/// jeden Befund.
+///
+/// Die andere Haelfte des Kriteriums — dass die Datei dabei ungelesen bleibt —
+/// haengt am Durchlauf und an der Auftragsliste des Tabs und steht dort.
+#[test]
+fn ein_namentlicher_treffer_steht_ohne_jeden_befund() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaa");
+
+    let namenstreffer = index_von(&modell, "bbbaaaccc.rs");
+    assert_eq!(
+        modell.befund(namenstreffer),
+        Befund::Unentschieden,
+        "fuer diese Datei ist nichts gelesen worden"
+    );
+    assert!(
+        namen(&modell).contains(&"bbbaaaccc.rs"),
+        "der Namenstreffer steht, und der Inhaltszweig liegt hinter ihm"
+    );
+}
+
+/// C5.4, C5.5: die Frage der Dateizelle hat alle Vorbedingungen vor sich und
+/// gibt fuer jeden anderen Fall `false`.
+///
+/// Sie ist derselbe Rumpf wie der Dateizweig des Pruefschritts; gemessen wird
+/// hier, dass die Vorbedingungen davor vollstaendig sind. **C5.4 steht im
+/// Namenstreffer**: er steht in der Liste, aber nicht wegen seines Inhalts, und
+/// damit ueberschneiden sich die beiden Treffergruende nicht.
+#[test]
+fn steht_wegen_des_inhalts_antwortet_nur_fuer_die_eine_lage() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaa");
+    let kandidat = index_von(&modell, "ohne.txt");
+    let namenstreffer = index_von(&modell, "bbbaaaccc.rs");
+    let ordner = index_von(&modell, "stiller-ordner");
+    let unentschieden = index_von(&modell, "zweite.txt");
+    modell.befunde_setzen([
+        (kandidat, Befund::Treffer),
+        (namenstreffer, Befund::Treffer),
+        (ordner, Befund::Treffer),
+    ]);
+
+    assert!(
+        modell.steht_wegen_des_inhalts(kandidat),
+        "die eine Lage, fuer die die Frage ja heisst"
+    );
+    assert!(
+        !modell.steht_wegen_des_inhalts(namenstreffer),
+        "ueber diese Zeile entscheidet ihr Name (C5.4)"
+    );
+    assert!(
+        !modell.steht_wegen_des_inhalts(ordner),
+        "fuer einen Ordner trifft die Kennzeichnung keine Aussage (C5.5)"
+    );
+    assert!(
+        !modell.steht_wegen_des_inhalts(unentschieden),
+        "ungelesen heisst nicht: steht wegen des Inhalts"
+    );
+    assert!(
+        !modell.steht_wegen_des_inhalts(9_999),
+        "ueber einen Eintrag, den es nicht gibt, ist nichts bekannt"
+    );
+
+    modell.filter_leeren();
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    assert!(
+        !modell.steht_wegen_des_inhalts(kandidat),
+        "ohne Filtertext steht jede Zeile ohnehin"
+    );
+}
+
+/// Eine symbolische Verknuepfung steht nie wegen ihres Inhalts, und zwar aus
+/// demselben Schnitt, den der Pruefschritt zieht: fuer die Sichtbarkeit zaehlt
+/// sie als Ordner.
+#[test]
+fn eine_verknuepfung_steht_nie_wegen_ihres_inhalts() {
+    let mut modell = handmodell([
+        handeintrag("ohne.txt", Typ::Datei),
+        handeintrag("verweis", Typ::Verknuepfung),
+    ]);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaa");
+    let verweis = index_von(&modell, "verweis");
+    modell.befunde_setzen([(verweis, Befund::Treffer)]);
+
+    assert!(!modell.steht_wegen_des_inhalts(verweis));
+}
+
+/// Unterhalb der Schwelle antwortet auch die Frage der Zelle mit `false`. Sie
+/// rechnet die Schwelle nicht nach, sondern geht durch dieselbe eine Stelle.
+#[test]
+fn unter_der_schwelle_steht_keine_zeile_wegen_ihres_inhalts() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aa");
+    let kandidat = index_von(&modell, "ohne.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+
+    assert!(!modell.inhalt_wirkt());
+    assert!(!modell.steht_wegen_des_inhalts(kandidat));
+}
+
+// ---------------------------------------------------------------------------
 // Der Durchlauf ueber die Unterbaeume (C3)
 // ---------------------------------------------------------------------------
 

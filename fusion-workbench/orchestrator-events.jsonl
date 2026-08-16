@@ -952,3 +952,10 @@
 {"ts":"2026-08-16T11:48:57","event":"task_start","turn":6,"task":"T9","agent":"planner","detail":"Umsetzungsplan des Inhaltsfilters"}
 {"ts":"2026-08-16T12:58:31","event":"task_done","turn":6,"task":"T9","agent":"planner","detail":"12 Schritte in 7 Straengen"}
 {"ts":"2026-08-16T12:58:31","event":"gate_response","detail":"Nutzer: Tabwechsel beendet jeden Durchlauf, eine Regel"}
+{"ts":"2026-08-16T13:05:29","event":"gate_response","detail":"Nutzer: erst der Kern, Straenge A bis D, dann Zwischenstand"}
+{"ts":"2026-08-16T13:05:29","event":"turn_start","turn":7,"detail":"2 ready tasks: A1 und C1, ohne Abhaengigkeiten"}
+{"ts":"2026-08-16T13:05:29","event":"task_start","turn":7,"task":"A1","agent":"coder","detail":"Lesehuelle zieht nach krk-core"}
+{"ts":"2026-08-16T13:05:29","event":"task_start","turn":7,"task":"C1","agent":"coder","detail":"Schalter, Schwelle, sechster Zweig des Pruefschritts"}
+{"ts":"2026-08-16T13:17:34","event":"task_done","turn":7,"task":"A1","agent":"coder","detail":"Lesehuelle in krk-core; Commit steht aus, C1 laeuft"}
+{"ts":"2026-08-16T13:20:28","event":"task_done","turn":7,"task":"C1","agent":"coder","detail":"Schalter, Schwelle, sechster Zweig"}
+{"ts":"2026-08-16T13:20:28","event":"commit","turn":7,"detail":"5c7f5b9 (A1)"}

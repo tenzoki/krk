@@ -1,19 +1,26 @@
-//! Die zwei Regeln des Filters: welche Zeichen er aufnimmt und wann ein Name
-//! passt.
+//! Die drei Regeln des Filters: welche Zeichen er aufnimmt, wann ein Name
+//! passt, und ab welcher Laenge der Filtertext auch Inhalte meint.
 //!
 //! ```text
 //! Taste ohne Zusatztaste ──> traegt_ein_dateiname ──> Filtertext des Tabs
 //!                                                            │
-//!                        traegt_die_folge(Name, Filtertext) <┘
-//!                              ^                    ^
-//!                    modell::sichtbar        durchlauf
+//!                        traegt_die_folge(Name, Filtertext) <┤
+//!                              ^                    ^        │
+//!                    modell::sichtbar        durchlauf       │
+//!                                                            │
+//!                        inhaltsschwelle(tief) <─ Zeichenzahl┘
+//!                              ^
+//!                    modell::inhalt_wirkt
 //! ```
 //!
-//! Die Datei traegt beide Regeln, weil beide dasselbe beantworten sollen und es
-//! bei zwei Fassungen nicht mehr taeten. Die Zeichenregel hat zwei Aufrufer,
-//! den Filter der Dateiliste und die Tippsuche der Belegungsansicht aus der
-//! Runde 7; der Vergleich hat zwei, [`super::modell::Ordnermodell::sichtbar`]
-//! fuer die angezeigte Zeile und [`super::durchlauf`] fuer den Unterbaum.
+//! Die Datei traegt alle drei Regeln, weil jede an mehreren Stellen dieselbe
+//! Antwort geben soll und es bei zwei Fassungen nicht mehr taete. Die
+//! Zeichenregel hat zwei Aufrufer, den Filter der Dateiliste und die Tippsuche
+//! der Belegungsansicht aus der Runde 7; der Vergleich hat zwei,
+//! [`super::modell::Ordnermodell::sichtbar`] fuer die angezeigte Zeile und
+//! [`super::durchlauf`] fuer den Unterbaum. Die Schwelle hat einen,
+//! [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist seinerseits die
+//! eine Stelle, die alle Frager nach dem Inhaltsfilter bedient.
 //!
 //! # Was hier bis zur Runde 10 stand
 //!
@@ -105,6 +112,41 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
 /// Filtertext?" davor.
 pub fn traegt_die_folge(name: &str, filter_klein: &str) -> bool {
     name.to_lowercase().contains(filter_klein)
+}
+
+/// Ab wie vielen getippten **Zeichen** der Filter auch den Inhalt einer Datei
+/// liest: fuenf bei eingeschalteter tiefer Suche, sonst drei.
+///
+/// **Die Staffelung ist hergeleitet und nicht gesetzt.** Ein flacher
+/// Inhaltsfilter liest die Dateien des angezeigten Ordners, ein tiefer die
+/// Dateien seines ganzen Unterbaums, und das sind je nach Ort um
+/// Groessenordnungen mehr. Zwei Zeichen bezeichnen wenig und treffen
+/// entsprechend viel; die Zahl der zu lesenden Dateien waechst also genau
+/// dort, wo die Eingabe am wenigsten aussagt. Die hoehere Schwelle der tiefen
+/// Suche gleicht das aus.
+///
+/// **Gezaehlt werden Zeichen und keine Bytes.** Ein getipptes `äöü` sind drei
+/// Zeichen und sechs Bytes; die Staffelung spricht von Zeichen, und der eine
+/// Rufer zaehlt deshalb mit `chars().count()`.
+///
+/// **Ein Rufer, und der ist selbst die eine Stelle:**
+/// [`super::modell::Ordnermodell::inhalt_wirkt`]. Wer wissen will, ob der
+/// Inhaltsfilter wirkt, fragt dort und rechnet die Schwelle nicht nach. Ein
+/// zweiter Rechenweg waere die Gelegenheit, an zwei Stellen verschieden zu
+/// antworten, und genau die schliesst diese Runde aus.
+///
+/// **Die Schwelle wird bei jeder Bewertung neu gefragt und nicht beim Start
+/// gemerkt.** Daraus folgt ein Fall, der benannt gehoert: wer bei vier Zeichen
+/// ohne tiefe Suche Inhaltstreffer vor sich hat und die tiefe Suche
+/// einschaltet, verliert sie, weil die Schwelle auf fuenf steigt. Ein fuenftes
+/// Zeichen holt sie zurueck. Eine Ausnahme fuer den Umschaltmoment waere ein
+/// Sonderfall ohne Gegenstueck.
+///
+/// `#[must_use]`, weil der Aufruf nichts tut ausser zu antworten: wer den Wert
+/// fallen laesst, hat ihn umsonst geholt, und still.
+#[must_use]
+pub fn inhaltsschwelle(tief: bool) -> usize {
+    if tief { 5 } else { 3 }
 }
 
 #[cfg(test)]
@@ -201,5 +243,12 @@ mod tests {
     #[test]
     fn ein_leerer_filtertext_steht_in_jedem_namen() {
         assert!(traegt_die_folge("beliebig.txt", ""));
+    }
+
+    /// Die Staffelung, ausgeschrieben: drei Zeichen flach, fuenf tief.
+    #[test]
+    fn die_inhaltsschwelle_steht_bei_drei_und_bei_fuenf() {
+        assert_eq!(inhaltsschwelle(false), 3, "ohne tiefe Suche");
+        assert_eq!(inhaltsschwelle(true), 5, "mit tiefer Suche");
     }
 }

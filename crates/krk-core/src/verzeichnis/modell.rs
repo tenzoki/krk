@@ -58,8 +58,10 @@
 //!            │ ja
 //! Name traegt die Folge?      ── ja ──> steht in der Liste
 //!            │ nein
-//! ist es ein Ordner?          ── nein ─> faellt weg
-//!            │ ja
+//! ist es ein Ordner?          ── nein ─> wirkt "Content"? ── nein ─> faellt weg
+//!            │ ja                            │ ja
+//!            │                        traegt der Inhalt? ── Treffer ──> steht
+//!            │                                           └ sonst ────> faellt weg
 //! ist "Deep" eingeschaltet?   ── nein ─> steht in der Liste
 //!            │ ja
 //! liegt unter ihm ein Treffer? ─ ja ──> steht in der Liste
@@ -70,18 +72,33 @@
 //! `anhaengen` und einmal in `sicht_neu_aufbauen`, und trug damals nur ihren
 //! ersten Zweig
 //! (`issues/260814-2102_*_der-pruefschritt-fuer-die-sichtbarkeit-steht-im-ordnermodell-zweimal-wortgleich-da.md`).
-//! Eine Regel mit fuenf Eingaben an zwei Stellen zu fuehren waere eine zweite
-//! Wahrheit ueber dieselbe Sache; der Filter dieser Runde ist ein Zweig mehr in
-//! demselben Pruefschritt und keine zweite Sicht daneben.
+//! Eine Regel mit sechs Eingaben an zwei Stellen zu fuehren waere eine zweite
+//! Wahrheit ueber dieselbe Sache; der Inhaltsfilter der Runde 11 ist wieder ein
+//! Zweig mehr in demselben Pruefschritt und keine zweite Sicht daneben.
 //!
-//! **Vier der fuenf Eingaben wohnen hier, die fuenfte kommt von aussen.**
-//! `verstecke_ausblenden`, `filtertext`, `tief` und `befund` sind Felder dieses
-//! Modells; wer den Unterbaum abschreitet und den Befund liefert, ist nicht
-//! Sache dieser Datei. Sie nimmt ihn ueber
-//! [`Ordnermodell::befunde_setzen`] entgegen und baut die Sicht damit neu auf.
+//! **Fuenf der sechs Eingaben wohnen hier, die sechste kommt von aussen.**
+//! `verstecke_ausblenden`, `filtertext`, `tief`, `inhalt` und die Zeichenzahl
+//! des Filtertexts sind Groessen dieses Modells; wer den Unterbaum abschreitet
+//! oder eine Datei liest und den Befund liefert, ist nicht Sache dieser Datei.
+//! Sie nimmt ihn ueber [`Ordnermodell::befunde_setzen`] entgegen und baut die
+//! Sicht damit neu auf.
+//!
+//! # Die beiden Treffergruende ueberschneiden sich nicht
+//!
+//! Eine Zeile steht entweder, weil ihr **Name** die Folge traegt, oder weil ihr
+//! **Inhalt** sie traegt, und nie aus beiden Gruenden zugleich. Das leistet
+//! keine zusaetzliche Regel, sondern der Kurzschluss des Namens: der Zweig
+//! `Name traegt die Folge? ── ja` verlaesst den Pruefschritt, und der
+//! Inhaltszweig liegt hinter ihm. Daran haengen zwei Dinge auf einmal — die
+//! Ersparnis, denn eine namentlich passende Datei wird nie gelesen, und die
+//! Ausschliesslichkeit, an der die abgesetzte Darstellung der Zelle haengt.
+//!
+//! [`Ordnermodell::steht_wegen_des_inhalts`] ist deshalb kein zweiter
+//! Pruefschritt, sondern derselbe Rumpf mit den Vorbedingungen davor, die der
+//! Pruefschritt an dieser Stelle schon hinter sich hat.
 
 use super::eintrag::Eintrag;
-use super::filter::traegt_die_folge;
+use super::filter::{self, traegt_die_folge};
 use super::sortierung::{Richtung, Schluessel, Sortierung};
 
 /// Was gerade markiert ist, in einem Durchlauf gezaehlt.
@@ -111,12 +128,13 @@ impl Markierungsstand {
     }
 }
 
-/// Was ueber den Unterbaum eines Ordners bekannt ist.
+/// Was ueber einen Eintrag von der Platte her bekannt ist: bei einem Ordner
+/// ueber seinen Unterbaum, bei einer Datei ueber ihren Text.
 ///
-/// Die fuenfte Eingabe des Pruefschritts aus dem Modulkopf, und die einzige,
+/// Die sechste Eingabe des Pruefschritts aus dem Modulkopf, und die einzige,
 /// die dieses Modell nicht selbst ermittelt: sie kommt von dem, der den
-/// Unterbaum abschreitet, und geht ueber [`Ordnermodell::befunde_setzen`]
-/// herein.
+/// Unterbaum abschreitet oder die Datei liest, und geht ueber
+/// [`Ordnermodell::befunde_setzen`] herein.
 ///
 /// **Drei Werte und kein Auffangzweig.** `Unentschieden` ist etwas anderes als
 /// `KeinTreffer`: der erste heisst "es ist noch nicht gelesen", der zweite "es
@@ -124,6 +142,12 @@ impl Markierungsstand {
 /// koennte einen laufenden Durchlauf nicht von einem abgeschlossenen ohne Fund
 /// unterscheiden. Eine vierte Variante soll den Bau anhalten und nicht still in
 /// einen Sammelzweig fallen.
+///
+/// **Eine vierte Variante fuer "zu gross" gibt es ausdruecklich nicht.** Sie
+/// waere ein dritter Trefferzustand, und zu gross ist kein Treffer: die Zeile
+/// steht nicht, und wie viele Dateien wegen ihrer Groesse ungelesen blieben,
+/// sagt die Statuszeile und nicht die Zeile selbst. Die drei Werte tragen fuer
+/// eine Datei damit genau dasselbe wie fuer einen Ordner.
 ///
 /// **Der Wert haengt am Eintragsindex und nicht an der Zeile**, aus demselben
 /// Grund wie die Markierung; er uebersteht damit jedes Umsortieren.
@@ -133,12 +157,15 @@ pub enum Befund {
     /// den [`Ordnermodell::befund_zuruecksetzen`] herstellt.
     #[default]
     Unentschieden,
-    /// Unter diesem Ordner liegt mindestens ein Eintrag, dessen Name den
-    /// Filtertext traegt. Der erste Fund entscheidet ihn.
+    /// Der Eintrag traegt die Folge: unter einem Ordner liegt mindestens ein
+    /// Eintrag, dessen Name sie traegt, oder der Text einer Datei enthaelt sie.
+    /// Der erste Fund entscheidet ihn.
     Treffer,
-    /// Unter diesem Ordner liegt kein Treffer. Der negative Befund entsteht auf
-    /// drei Wegen: abgeschritten ohne Fund, nicht zu oeffnen, oder eine
-    /// symbolische Verknuepfung, in die nicht hinabgestiegen wird.
+    /// Der Eintrag traegt die Folge nicht. Bei einem Ordner entsteht der
+    /// negative Befund auf drei Wegen: abgeschritten ohne Fund, nicht zu
+    /// oeffnen, oder eine symbolische Verknuepfung, in die nicht hinabgestiegen
+    /// wird. Bei einer Datei heisst er, dass ihr gelesener Text die Folge nicht
+    /// enthaelt, dass sie kein Text ist oder dass sie zu gross war.
     KeinTreffer,
 }
 
@@ -181,12 +208,25 @@ pub struct Ordnermodell {
     /// heisst: ein Ordner, dessen Name nicht passt, braucht einen Treffer unter
     /// sich.
     tief: bool,
-    /// Was ueber den Unterbaum je Eintrag bekannt ist.
+    /// Ob der Filter auch den Text einer Datei meint ("Content").
+    ///
+    /// Aus heisst: ueber eine Datei entscheidet allein ihr Name. An heisst:
+    /// eine Datei, deren Name die Folge nicht traegt, bleibt stehen, wenn ihr
+    /// Text sie traegt — aber erst ab der Schwelle aus
+    /// [`super::filter::inhaltsschwelle`]. Das Kennzeichen allein sagt deshalb
+    /// nicht, ob der Inhaltsfilter wirkt; das sagt
+    /// [`Ordnermodell::inhalt_wirkt`].
+    inhalt: bool,
+    /// Was von der Platte her je Eintrag bekannt ist.
     ///
     /// Parallel zu `eintraege` und nicht zur Sichtreihenfolge, in derselben
-    /// Bauart und aus demselben Grund wie `markiert`. Gelesen wird der Wert
-    /// allein im letzten Zweig von [`Ordnermodell::sichtbar`], also nur fuer
-    /// einen Ordner, dessen eigener Name den Filtertext nicht traegt.
+    /// Bauart und aus demselben Grund wie `markiert`. Gelesen wird der Wert in
+    /// den beiden letzten Zweigen von [`Ordnermodell::sichtbar`]: fuer einen
+    /// Ordner, dessen eigener Name den Filtertext nicht traegt, sagt er etwas
+    /// ueber seinen Unterbaum; fuer eine gewoehnliche Datei, deren Name ihn
+    /// nicht traegt, etwas ueber ihren Text. **Zwei Fragen, ein Vektor**, denn
+    /// ein Eintrag ist entweder das eine oder das andere, und beide Fragen
+    /// haben dieselben drei Antworten.
     befund: Vec<Befund>,
     /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
     ///
@@ -211,6 +251,7 @@ impl Ordnermodell {
             filtertext: String::new(),
             filter_klein: String::new(),
             tief: false,
+            inhalt: false,
             befund: Vec::new(),
             ersatz_ausstehend: false,
         }
@@ -568,8 +609,13 @@ impl Ordnermodell {
         // Durchlauf als "kein Treffer darunter", weil er nicht in sie
         // hinabsteigt. Das ist der eine Schnitt fuer "Ordner"; die
         // Verknuepfungsregel selbst wohnt allein im Durchlauf.
+        //
+        // Eine gewoehnliche Datei faellt hier nicht mehr weg, sondern geht in
+        // den Inhaltszweig. Er steht hinter dem Kurzschluss des Namens, und
+        // genau daran haengt, dass die beiden Treffergruende sich nicht
+        // ueberschneiden.
         if !(eintrag.ist_ordner() || eintrag.ist_verknuepfung()) {
-            return false;
+            return self.inhalt_entscheidet(index as u32);
         }
 
         // ist der Filter der Tiefe eingeschaltet?
@@ -604,6 +650,67 @@ impl Ordnermodell {
         self.eintraege
             .get(eintragsindex as usize)
             .is_some_and(|eintrag| traegt_die_folge(&eintrag.name, &self.filter_klein))
+    }
+
+    /// Der Rumpf der Inhaltsregel, **ohne** ihre Vorbedingungen.
+    ///
+    /// Gueltig allein dort, wo die Vorbedingungen schon feststehen: ein
+    /// Filtertext steht, sein Name traegt ihn nicht, und der Eintrag ist eine
+    /// gewoehnliche Datei. Genau das ist die Lage im Dateizweig von
+    /// [`Ordnermodell::sichtbar`], und deshalb ist diese Funktion privat.
+    ///
+    /// **Zwei Eingaenge, ein Rumpf**, und dies ist der Rumpf. Der zweite
+    /// Eingang ist [`Ordnermodell::steht_wegen_des_inhalts`], das dieselbe
+    /// Regel mit allen Vorbedingungen davor anbietet.
+    ///
+    /// `Unentschieden` und `KeinTreffer` sind beide ein Nein, und dass sie es
+    /// aus verschiedenen Gruenden sind, aendert an der Zeile nichts:
+    /// `Unentschieden` heisst "noch nicht gelesen", und bis dahin steht die
+    /// Zeile nicht. Die Liste beginnt damit bei den Namenstreffern und waechst
+    /// waehrend des Lesens.
+    fn inhalt_entscheidet(&self, eintragsindex: u32) -> bool {
+        self.inhalt_wirkt() && matches!(self.befund(eintragsindex), Befund::Treffer)
+    }
+
+    /// Ob dieser Eintrag allein wegen seines Inhalts in der Liste steht.
+    ///
+    /// **Die Frage der Dateizelle**, die eine so stehende Zeile abgesetzt
+    /// schreibt. Sie stellt dieselbe Frage wie der Dateizweig von
+    /// [`Ordnermodell::sichtbar`], nur ohne dessen Vorlauf: die Zelle bekommt
+    /// eine Zeile und weiss von den Zweigen davor nichts.
+    ///
+    /// **Zwei Eingaenge, ein Rumpf, und der Grund ist gezaehlt.** Der Rumpf ist
+    /// [`Ordnermodell::inhalt_entscheidet`]; hier stehen die Vorbedingungen
+    /// davor, die der Pruefschritt an seiner Stelle schon hinter sich hat. Sie
+    /// dort ein zweites Mal zu pruefen kostete je Eintrag einen weiteren Aufruf
+    /// von [`Ordnermodell::name_traegt_den_filter`], und der schreibt den Namen
+    /// einmal um — bei 100.000 Eintraegen also 100.000 Umschreibungen je
+    /// Neuaufbau der Sicht. Umgekehrt fehlten der Zelle die Vorbedingungen
+    /// ganz, wenn sie den blossen Rumpf riefe.
+    ///
+    /// Die Vorbedingungen, in dieser Reihenfolge: ein Index ausserhalb des
+    /// Bestands steht nicht; ein Ordner und eine symbolische Verknuepfung
+    /// stehen nie wegen ihres Inhalts, denn ueber sie entscheidet der Name oder
+    /// ihr Unterbaum; ohne stehenden Filtertext steht jede Zeile ohnehin; und
+    /// traegt der Name die Folge, ist das ihr Grund und nicht der Inhalt.
+    ///
+    /// **Damit sind die beiden Treffergruende ueberschneidungsfrei**: keine
+    /// Zeile steht aus beiden zugleich.
+    #[must_use]
+    pub fn steht_wegen_des_inhalts(&self, eintragsindex: u32) -> bool {
+        let Some(eintrag) = self.eintraege.get(eintragsindex as usize) else {
+            return false;
+        };
+        if eintrag.ist_ordner() || eintrag.ist_verknuepfung() {
+            return false;
+        }
+        if self.filtertext.is_empty() {
+            return false;
+        }
+        if self.name_traegt_den_filter(eintragsindex) {
+            return false;
+        }
+        self.inhalt_entscheidet(eintragsindex)
     }
 
     /// Der Filtertext, so wie der Nutzer ihn getippt hat.
@@ -685,6 +792,58 @@ impl Ordnermodell {
         self.sicht_neu_aufbauen();
     }
 
+    /// Ob der Filter auch den Text einer Datei meint ("Content").
+    ///
+    /// Das blosse Kennzeichen. Ob der Inhaltsfilter **wirkt**, sagt
+    /// [`Ordnermodell::inhalt_wirkt`]; unterhalb der Schwelle steht das
+    /// Kennzeichen und tut nichts.
+    #[must_use]
+    pub fn inhalt(&self) -> bool {
+        self.inhalt
+    }
+
+    /// Schaltet den Filter des Inhalts ein oder aus.
+    ///
+    /// **Dieselbe Form wie [`Ordnermodell::tief_setzen`]**, Zeile fuer Zeile,
+    /// und aus demselben Grund: beim **Einschalten** faellt jeder Befund auf
+    /// `Unentschieden` zurueck, denn was zuletzt bekannt war, ist eine Auskunft
+    /// ueber eine frueher gestellte Frage. Beim Ausschalten bleibt der Vektor
+    /// stehen, weil ihn dann fuer eine Datei niemand liest.
+    ///
+    /// Die Sicht wird in jedem Fall neu aufgebaut, auch beim Ausschalten: dann
+    /// fallen genau die Zeilen weg, die allein wegen ihres Inhalts standen.
+    pub fn inhalt_setzen(&mut self, inhalt: bool) {
+        if inhalt && !self.inhalt {
+            self.befund_zuruecksetzen();
+        }
+        self.inhalt = inhalt;
+        self.sicht_neu_aufbauen();
+    }
+
+    /// Ob der Inhaltsfilter bei diesem Stand wirkt: „Content" steht **und** der
+    /// Filtertext ist lang genug.
+    ///
+    /// **Die eine Stelle, an der die Schwelle geprueft wird.** Ihre Frager
+    /// stellen alle dieselbe Frage und rechnen sie nicht nach: der Dateizweig
+    /// des Pruefschritts (steht diese Zeile?), die Auftragsliste des Tabs
+    /// (bekommt diese Datei einen Auftrag?), die Entscheidung, ob ueberhaupt
+    /// ein Durchlauf laeuft, und die Statuszeile (ist der Lesehinweis
+    /// faellig?). Ein zweiter Rechenweg an einer dieser Stellen waere die
+    /// Gelegenheit, verschieden zu antworten.
+    ///
+    /// Die Schwelle selbst wohnt in [`super::filter::inhaltsschwelle`] und
+    /// haengt am Stand der tiefen Suche. **Gezaehlt werden Zeichen und keine
+    /// Bytes**: ein getipptes `äöü` sind drei Zeichen und sechs Bytes.
+    ///
+    /// Gefragt wird bei jeder Bewertung neu. Wer bei vier Zeichen ohne tiefe
+    /// Suche Inhaltstreffer vor sich hat und die tiefe Suche einschaltet,
+    /// verliert sie an der gestiegenen Schwelle; ein fuenftes Zeichen holt sie
+    /// zurueck.
+    #[must_use]
+    pub fn inhalt_wirkt(&self) -> bool {
+        self.inhalt && self.filtertext.chars().count() >= filter::inhaltsschwelle(self.tief)
+    }
+
     /// Was ueber den Unterbaum dieses Eintrags bekannt ist.
     ///
     /// `Unentschieden` fuer jeden Index ausserhalb des Bestands: ueber einen
@@ -728,8 +887,9 @@ impl Ordnermodell {
     /// Setzt jeden Befund auf `Unentschieden` zurueck.
     ///
     /// Zu rufen, wann immer die Frage eine andere wird: bei jeder Aenderung des
-    /// Filtertexts, beim Einschalten des Filters der Tiefe und beim Abbruch
-    /// eines Durchlaufs. Die Sicht baut diese Methode **nicht** neu auf; ihre
+    /// Filtertexts, beim Einschalten des Filters der Tiefe, beim Einschalten
+    /// des Filters des Inhalts und beim Abbruch eines Durchlaufs. Die Sicht
+    /// baut diese Methode **nicht** neu auf; ihre
     /// Rufer tun es unmittelbar danach, und zweimal zu bauen waere zweimal
     /// dieselbe Arbeit.
     pub fn befund_zuruecksetzen(&mut self) {
