@@ -162,3 +162,42 @@ Sitzungsprotokoll
 Escape, und `textDidEndEditing:` **schickt** die Aktion, statt ihr vorauszulaufen. Damit ist
 auch die Frage beantwortet, die der Nachtrag vom 260816 offengelassen hat: der Delegierte
 am Feld wird für die Behebung nicht gebraucht.
+
+---
+
+**Resolved:** 260816-1017. Der dritte Ausgang ist verdrahtet, und beide Hälften sind
+abgetragen.
+
+**Die Verwerfen-Hälfte war schon da und ist nicht gebaut, sondern gemessen worden:** ein
+Ende ohne Return schickt die Aktion `umbenennungBeendet:` nicht, also benennt ein Klick
+neben die Zelle nichts um. Der Nutzer hat am 260816-0935 entschieden, dass es dabei
+bleibt (`shared/decisions/260816-0021_*_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`,
+Option 1: verwerfen wie Escape).
+
+**Die Anzeigehälfte ist gebaut.** `-[Namensfeld textDidEndEditing:]` ruft nach `super`
+bedingungslos `DateifensterQuelle::anzeigeform_herstellen` — dieselbe Methode, die Escape
+schon rief, unter ihrem alten Namen `umbenennung_abgebrochen`. Damit stellt jedes Ende
+einer Bearbeitung, dem keine Umbenennung folgt, die Anzeigeform wieder her: der getippte
+Text ist fort, das Ordnerzeichen ist zurück, und die Zelle behauptet keine Umbenennung
+mehr, die nicht stattgefunden hat.
+
+Acht Ausgänge am 260816 auf macOS 15.7.7 mit einem weggeworfenen Programm auf dem
+wirklichen Hauptfaden gemessen, mit derselben Verdrahtung wie in der Datei. Die Zeile
+`Fokusverlust ohne Zeichendurchgang` reproduziert den Befund (`getippt` bleibt stehen),
+die Zeile mit Durchgang zeigt die Behebung (`alpha/` steht wieder da). Der zweite
+Durchgang nach Return ist folgenlos, und nach einer ausgelösten Auffrischung fällt der
+Durchgang über `rowForView` = -1 still aus. Der Nachhol-Weg aus `27dca57` kommt ihm nicht
+in die Quere: ein Zeichendurchgang ist kein Lesevorgang und fasst `auffrischung_vorgemerkt`
+nicht an.
+
+**Nicht mit abgetragen, und mit Absicht:** der Verlust des getippten Textes, wenn der Takt
+eines laufenden Lesevorgangs die Bearbeitung beendet. Die **Anzeige** ist auch dort jetzt
+richtig, denn `einziehen` endet ebenfalls über `textDidEndEditing:`; was bleibt, ist das
+stille Ende selbst, und das führt
+`shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md`.
+
+**Was der Nutzer noch von Hand abnimmt:** den wirklichen Klick mit der Maus. Jedes Ende
+ist programmatisch nachgefahren; ein echtes Mausereignis kann kein Agent erzeugen.
+
+`make check` — exit 0. Verlauf:
+`shared/history/260816-1017-coder-anzeigeform-an-jedem-ende-ohne-umbenennung.md`

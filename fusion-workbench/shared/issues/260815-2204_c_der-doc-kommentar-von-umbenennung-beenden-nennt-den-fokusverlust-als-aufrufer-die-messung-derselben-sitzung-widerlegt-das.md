@@ -38,3 +38,26 @@ Aktion und landet hier; Escape läuft über `abortEditing` und landet bei
 `Namensfeld::bearbeitung_abbrechen`; der Fokusverlust schickt nichts und ist offen
 (`shared/issues/260815-2125_o_…`). Damit steht die vollständige Fallunterscheidung an der
 Stelle, an der heute eine unvollständige steht.
+
+---
+
+**Resolved:** 260816-1017, der Vorschlag ist umgesetzt. Der Doc-Kommentar von
+`umbenennung_beenden` zählt jetzt die drei Ausgänge einzeln auf, jeden mit seinem Weg:
+Return schickt die Aktion und landet dort; Escape läuft über `abortEditing` und landet bei
+`Namensfeld::bearbeitung_abbrechen`; jedes übrige Ende schickt keine Aktion und landet bei
+`Namensfeld::bearbeitung_beendet`. Der falsche Halbsatz "oder die Zelle verlässt" steht
+nicht mehr da, und der Kommentar benennt ausdrücklich, dass er dort stand.
+
+Zwei Dinge kommen dazu, die es bei der Meldung noch nicht gab. Der dritte Ausgang ist
+nicht mehr offen: der Nutzer hat ihn am 260816-0935 entschieden
+(`shared/decisions/260816-0021_*_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`,
+verwerfen wie Escape), und die Anzeigehälfte ist gebaut
+(`shared/issues/260815-2125_c_…`). Und die Zuschreibung an C4 ist berichtigt: der Satz
+"Return übernimmt, Escape verwirft" stammt aus dem **Plan** der Runde 1, nicht aus dem
+Abnahmekriterium.
+
+Behoben in derselben Änderung wie `260815-2125`, weil es derselbe Absatz derselben Datei
+ist.
+
+`make check` — exit 0. Verlauf:
+`shared/history/260816-1017-coder-anzeigeform-an-jedem-ende-ohne-umbenennung.md`

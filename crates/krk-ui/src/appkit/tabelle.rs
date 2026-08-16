@@ -144,7 +144,9 @@
 //! `becomeFirstResponder` von `NSResponder` (`NSResponder.h:105`),
 //! `abortEditing` von `NSControl` (`NSControl.h:89`) und seit dem Aufschub der
 //! Auffrischung `textDidEndEditing:` von `NSTextField` selbst
-//! (`NSTextField.h:37`), und sie liest `target` von `NSControl`
+//! (`NSTextField.h:37`) — letzteres traegt seit dem 260816 zusaetzlich die
+//! Wiederherstellung der Anzeigeform an jedem Ende ohne Umbenennung —, und sie
+//! liest `target` von `NSControl`
 //! (`NSControl.h:24`); alle vier stehen seit 10.0 — keine der drei
 //! Deklarationen traegt im Kopf des Systems ein `API_AVAILABLE`. Angelegt
 //! wird sie ueber `labelWithString:`, also die 10.12 aus der Liste darunter.
@@ -1766,13 +1768,38 @@ impl DateifensterQuelle {
 
     /// Wertet aus, was in der Namenszelle steht, und benennt um (C4).
     ///
-    /// Gerufen aus der Aktion des Feldes, also wenn der Nutzer die Eingabe mit
-    /// Return abschliesst oder die Zelle verlaesst. **Escape kommt hier nicht
-    /// an:** AppKit bricht die Bearbeitung dann ueber `abortEditing` ab, stellt
-    /// den alten Text wieder her und schickt keine Aktion. Genau das verlangt
-    /// C4, "Return uebernimmt, Escape verwirft", und es kostet keine eigene
-    /// Regel. Was Escape seit dem Ordnerzeichen zusaetzlich braucht, steht bei
-    /// [`Namensfeld::bearbeitung_abbrechen`] und nicht hier.
+    /// **Gerufen aus der Aktion des Feldes, und die kommt allein von Return.**
+    /// Die drei Ausgaenge und wo jeder landet:
+    ///
+    /// - **Return** schickt die Aktion und landet hier.
+    /// - **Escape** laeuft ueber `abortEditing` und landet bei
+    ///   [`Namensfeld::bearbeitung_abbrechen`].
+    /// - **Jedes uebrige Ende** — der Klick daneben, der Fokuswechsel, ein
+    ///   Zeichendurchgang der Tabelle — schickt **keine** Aktion und landet bei
+    ///   [`Namensfeld::bearbeitung_beendet`]. Ein Klick neben die Zelle benennt
+    ///   damit nichts um.
+    ///
+    /// Am 260816 am wirklichen Hauptfaden gemessen; die Tabelle der Enden steht
+    /// im Kopf von [`Namensfeld`]. Bis zum 260816 stand hier "wenn der Nutzer
+    /// die Eingabe mit Return abschliesst oder die Zelle verlaesst", und die
+    /// zweite Haelfte davon war falsch.
+    ///
+    /// # Woher der Satz ueber die drei Ausgaenge stammt
+    ///
+    /// Das Abnahmekriterium von C4 verlangt allein "ein Tastenbefehl benennt
+    /// den ausgewaehlten Eintrag um, direkt in der Liste"
+    /// (`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_c_spec-navigator-geruest.md:254`).
+    /// Der Satz "Return uebernimmt, Escape verwirft" stammt aus dem **Plan**
+    /// derselben Runde und nicht aus dem Spec; bis zum 260816 stand er hier als
+    /// Zitat aus C4 und schrieb dem Spec damit eine Zusage zu, die er nicht
+    /// traegt.
+    ///
+    /// Den dritten Ausgang, das Ende ohne Return, hat der Nutzer am 260816-0935
+    /// entschieden: er **verwirft wie Escape**
+    /// (`shared/decisions/260816-0021_*_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md`).
+    /// Zu bauen war daran allein die Anzeige, denn umbenannt wird ohne Aktion
+    /// ohnehin nichts; hergestellt wird sie ueber
+    /// [`Self::anzeigeform_herstellen`] an beiden Enden, die AppKit hat.
     ///
     /// Die Zeile kommt von der Tabelle ueber `rowForView:` und nicht aus einem
     /// gemerkten Zustand: die Zellenansicht **ist** das Feld, das die Aktion
@@ -1810,15 +1837,33 @@ impl DateifensterQuelle {
         }
     }
 
-    /// Holt die Anzeigeform der Namenszelle zurueck, nachdem AppKit die
-    /// Bearbeitung verworfen hat (C4, Escape).
+    /// Holt die Anzeigeform der Namenszelle aus dem Modell zurueck (C4).
     ///
-    /// Der Name ist dabei unveraendert geblieben; zurueckzuholen ist allein
-    /// das Ordnerzeichen, das [`Namensfeld::wird_ersthelfer`] fuer die Dauer
-    /// der Bearbeitung abgelegt hat. Die Zeile kommt ueber `rowForView:` und
-    /// nicht aus einem gemerkten Zustand, aus demselben Grund wie bei
-    /// [`Self::umbenennung_beenden`].
-    fn umbenennung_abgebrochen(&self, feld: &NSTextField) {
+    /// **Die eine Zusage des Nutzerentscheids vom 260816-0935:** jedes Ende
+    /// einer Bearbeitung, dem keine Umbenennung folgt, stellt die Anzeigeform
+    /// wieder her. Deshalb hat diese Methode beide Enden als Rufer, die AppKit
+    /// hat — Escape ueber [`Namensfeld::bearbeitung_abbrechen`], jedes uebrige
+    /// Ende ueber [`Namensfeld::bearbeitung_beendet`]. Zurueckzuholen ist der
+    /// getippte Text, der sonst stehen bliebe und eine Umbenennung behauptete,
+    /// die nicht stattgefunden hat, und mit ihm das Ordnerzeichen, das
+    /// [`Namensfeld::wird_ersthelfer`] fuer die Dauer der Bearbeitung abgelegt
+    /// hat.
+    ///
+    /// **Gefragt wird nicht, ob eine Umbenennung folgte, und das ist gemessen
+    /// und nicht angenommen.** Nach Return hat die Aktion die Zeile schon
+    /// gezeichnet, und dieser zweite Durchgang findet seine Zeile und ist
+    /// folgenlos; hat die Umbenennung eine Auffrischung ausgeloest, liefert
+    /// `rowForView:` dem Feld gar keine Zeile mehr, und der Durchgang faellt
+    /// still aus, waehrend der Zeichendurchgang der Auffrischung die
+    /// Anzeigeform ohnehin schon geholt hat. Beide Faelle sind am 260816 auf
+    /// macOS 15.7.7 am wirklichen Hauptfaden gemessen
+    /// (`shared/history/260816-1017-coder-anzeigeform-an-jedem-ende-ohne-umbenennung.md`,
+    /// Messungen C, F und G). Eine Fallunterscheidung "kam eine Aktion?" waere
+    /// damit eine Regel ohne Wirkung.
+    ///
+    /// Die Zeile kommt ueber `rowForView:` und nicht aus einem gemerkten
+    /// Zustand, aus demselben Grund wie bei [`Self::umbenennung_beenden`].
+    fn anzeigeform_herstellen(&self, feld: &NSTextField) {
         let zeile = self.ivars().tabelle.rowForView(feld);
         let Ok(zeile) = usize::try_from(zeile) else {
             return;
@@ -2838,14 +2883,15 @@ impl DateifensterDelegierter {
         &self.ivars().quelle
     }
 
-    /// Holt die Anzeigeform einer Namenszelle aus dem Modell zurueck.
+    /// Holt die Anzeigeform einer Namenszelle aus dem Modell zurueck (C4).
     ///
-    /// Gerufen von [`Namensfeld::bearbeitung_abbrechen`], also nach Escape.
-    /// Der Delegierte reicht die Zelle an die Quelle weiter, wie es
-    /// `umbenennungBeendet:` daneben tut; welche Zeile gemeint ist, weiss die
-    /// Tabelle.
-    fn namenszelle_zuruecksetzen(&self, feld: &NSTextField) {
-        self.ivars().quelle.umbenennung_abgebrochen(feld);
+    /// Gerufen von beiden Enden einer Bearbeitung,
+    /// [`Namensfeld::bearbeitung_abbrechen`] und
+    /// [`Namensfeld::bearbeitung_beendet`]. Der Delegierte reicht die Zelle an
+    /// die Quelle weiter, wie es `umbenennungBeendet:` daneben tut; welche
+    /// Zeile gemeint ist, weiss die Tabelle.
+    fn anzeigeform_herstellen(&self, feld: &NSTextField) {
+        self.ivars().quelle.anzeigeform_herstellen(feld);
     }
 
     /// Meldet der Quelle den Beginn einer Namensbearbeitung (C4).
@@ -3017,9 +3063,17 @@ define_class!(
     /// | `noteNumberOfRowsChanged` | steht weiter | — |
     ///
     /// **Die Aktion kommt aus `textDidEndEditing:` heraus und nicht davor.**
-    /// Das ist der Grund, aus dem der Aufschub der Auffrischung sein
-    /// Kennzeichen vor `super` fallen laesst und erst danach nachholt; die
-    /// Begruendung im Einzelnen steht bei [`Self::bearbeitung_beendet`].
+    /// Das ist der Grund, aus dem beide Stuecke, die nach dem Ende zu tun sind,
+    /// hinter `super` stehen und allein das Kennzeichen des aufgeschobenen
+    /// Lesens davor faellt; die Begruendung im Einzelnen steht bei
+    /// [`Self::bearbeitung_beendet`].
+    ///
+    /// **Die Aktion kommt nur nach Return, und die uebrigen sechs Zeilen der
+    /// Tabelle sind Enden ohne Umbenennung.** Sie stellen seit dem
+    /// Nutzerentscheid vom 260816-0935 die Anzeigeform wieder her, ueber
+    /// [`DateifensterQuelle::anzeigeform_herstellen`] und damit ueber dieselbe
+    /// Methode wie Escape. Ein Klick neben die offene Zelle verwirft damit, wie
+    /// Escape verwirft.
     ///
     /// **`controlTextDidEndEditing:` waere die falsche Stelle**, obwohl das
     /// Protokoll schon angenommen ist: die Delegiertenmeldung kommt vor der
@@ -3083,21 +3137,43 @@ define_class!(
             angenommen
         }
 
-        /// Meldet das Ende der Bearbeitung auf jedem Weg ausser Escape.
+        /// Traegt jedes Ende der Bearbeitung ausser Escape (C4).
         ///
         /// **Hier und nicht in `controlTextDidEndEditing:`**: die
         /// Delegiertenmeldung kommt **vor** der Aktion, diese Methode
         /// **schickt** sie. Beide Stellungen werden hier gebraucht, und nur
         /// von hier aus sind sie zu haben.
         ///
-        /// Die Reihenfolge traegt die Zusage, und beide Haelften sind noetig:
-        /// das Kennzeichen faellt **vor** `super`, damit die Umbenennung, die
-        /// `super` ausloest, ihre eigene Auffrischung nicht am Aufschub
-        /// verliert; nachgeholt wird **nach** `super`, weil ein
-        /// Zeichendurchgang davor dem Feld seine Zeile naehme und
-        /// [`DateifensterQuelle::umbenennung_beenden`] ueber `rowForView:`
-        /// nichts mehr faende. Die Begruendung im Einzelnen steht bei
+        /// # Die drei Stuecke und ihre Reihenfolge
+        ///
+        /// **Vor `super` faellt das Kennzeichen** der Namensbearbeitung, damit
+        /// die Umbenennung, die `super` ausloest, ihre eigene Auffrischung
+        /// nicht am Aufschub verliert; die Begruendung im Einzelnen steht bei
         /// [`DateifensterQuelle::namensbearbeitung_beendet`].
+        ///
+        /// **Nach `super` steht die Anzeigeform**, denn ein Zeichendurchgang
+        /// davor naehme dem Feld seine Zeile, und
+        /// [`DateifensterQuelle::umbenennung_beenden`] fande ueber
+        /// `rowForView:` nichts mehr. Das ist die Umsetzung des
+        /// Nutzerentscheids vom 260816-0935: ein Ende ohne Umbenennung
+        /// verwirft, und verworfen wird sichtbar erst dadurch, dass die Zelle
+        /// den getippten Text wieder hergibt.
+        ///
+        /// **Danach erst das Nachholen.** Beide Reihenfolgen halten die Zusage,
+        /// aber nur diese laesst den Zeichendurchgang sie selbst tragen: laeuft
+        /// das Nachholen zuerst, nimmt sein `reloadData` dem Feld die Zeile
+        /// (`rowForView` = -1 am 260816 gemessen, Messung H), der
+        /// Zeichendurchgang faellt still aus, und die Anzeigeform haengt daran,
+        /// dass ueberhaupt etwas vorgemerkt war.
+        ///
+        /// **In die Quere kommen sich die beiden nicht.** Ein
+        /// Zeichendurchgang ist kein Lesevorgang: er ruft
+        /// [`DateifensterQuelle::zeile_neu_zeichnen`], nicht
+        /// [`DateifensterQuelle::neu_lesen`], fasst das Kennzeichen
+        /// `auffrischung_vorgemerkt` nicht an und liest allein das Modell.
+        /// Die zwei Lesevorgaenge hintereinander, wegen derer es das
+        /// Kennzeichen gibt, entstehen daraus nicht (am 260816 gemessen,
+        /// Messung D).
         // SAFETY: Die Signatur ist die von `NSTextField`: ein
         // `NSNotification`, kein Rueckgabewert.
         #[unsafe(method(textDidEndEditing:))]
@@ -3110,6 +3186,7 @@ define_class!(
             // angenommene Signatur.
             unsafe { msg_send![super(self), textDidEndEditing: meldung] }
             if let Some(delegierter) = delegierter.as_ref() {
+                delegierter.anzeigeform_herstellen(self);
                 delegierter.aufgeschobene_auffrischung_nachholen();
             }
         }
@@ -3128,7 +3205,11 @@ define_class!(
         /// Zeile und nicht durch ein angehaengtes Zeichen: das Modell ist die
         /// eine Quelle der Anzeigeform, und derselbe Weg laesst schon eine
         /// abgelehnte Eingabe verschwinden
-        /// ([`DateifensterQuelle::zeile_neu_zeichnen`]).
+        /// ([`DateifensterQuelle::zeile_neu_zeichnen`]). Gerufen wird dafuer
+        /// [`DateifensterQuelle::anzeigeform_herstellen`], und zwar dieselbe
+        /// Methode, die seit dem 260816 auch [`Self::bearbeitung_beendet`]
+        /// ruft: die Zusage gilt jedem Ende ohne Umbenennung, also gehoert sie
+        /// an eine Stelle und nicht an zwei.
         // SAFETY: Die Signatur ist die von `NSControl`: kein Argument, ein
         // `BOOL` zurueck.
         #[unsafe(method(abortEditing))]
@@ -3142,7 +3223,7 @@ define_class!(
             // gegangen (am 260816 am wirklichen Hauptfaden gemessen).
             if abgebrochen && let Some(delegierter) = self.delegierter() {
                 delegierter.namensbearbeitung_beendet();
-                delegierter.namenszelle_zuruecksetzen(self);
+                delegierter.anzeigeform_herstellen(self);
                 delegierter.aufgeschobene_auffrischung_nachholen();
             }
             abgebrochen

@@ -78,3 +78,29 @@
   auf einen Blick erkennbar.
 - Grundlage ↔ Directive: 1 Entscheid umgesetzt (`_i_`), 1 neuer offen (`_o_`),
   kein Widerspruch.
+
+## Turn 3
+
+- Nutzerentscheid zu `260815-2247`: Option 1, die Auffrischung wird aufgeschoben.
+- T4 (`27dca57`): der Aufschub sitzt in `ordner_neu_lesen` und nicht, wie der
+  Auftrag vorschlug, in `aufgeschobene_ordner`. Der `coder` hat den Vorschlag
+  geprüft und mit drei Gründen verworfen, von denen der erste allein trägt: die
+  Aufschubliste ist pfadbezogen und hielte beide Dateifenster an, wenn beide
+  denselben Ordner zeigen. Das Nachholen hängt an sieben gemessenen Enden der
+  Bearbeitung, getragen von zwei Rückrufen, ohne Lücke.
+- Nicht abgedeckt, mit Grund: der Takt eines laufenden Lesevorgangs. Dort ändert
+  sich das Ordnermodell unter der offenen Zelle, und ein Aufschub über die
+  Umsortierung hinweg benennte eine andere Datei um. Datensatz `260816-0040`.
+- `make check` ist auf dieser Maschine rot, und zwar an einer Wettrennprobe in
+  `krk-core`, die diese Änderung nicht erreichen kann. Nachgemessen: 4 Ausfälle
+  in 5 Läufen am Arbeitsbaum, 2 in 3 am unveränderten HEAD, jedes Mal an der
+  15-Sekunden-Notbremse. Die Nachmessung steht am Datensatz `260816-0055`.
+- `3dd799a`: Entscheid auf `_i_`, Nachmessung abgelegt.
+
+### Coherence, Runde 3
+
+- Artefakt ↔ Grundlage: 2 neue Befunde, beide benannt statt stillschweigend
+  offengelassen.
+- Artefakt ↔ Directive: die Directive der Sitzung ist erreicht; diese Runde hat
+  einen Defekt behoben, den die Umsetzung sichtbar gemacht hat.
+- Grundlage ↔ Directive: 2 Entscheide umgesetzt, 1 offen, kein Widerspruch.

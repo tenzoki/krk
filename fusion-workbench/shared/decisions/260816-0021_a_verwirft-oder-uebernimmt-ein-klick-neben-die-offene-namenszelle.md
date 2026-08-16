@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** orchestrator
 **Cross-references:** shared/decisions/260815-2247_a_was-geschieht-mit-einer-offenen-umbenennung-die-ohne-aktion-endet.md, shared/issues/260815-2125_o_verlaesst-der-nutzer-die-offene-namenszelle-bleibt-der-getippte-text-stehen-und-das-ordnerzeichen-weg.md
 
@@ -41,7 +41,15 @@ zugesagter Ausgang, sondern ein unbeschriebener.
 - Der Fokusverlust schickt die Aktion `umbenennungBeendet:` **nicht**; das ist am
   260816 am Hauptfaden gemessen. Jede Antwort außer 1 braucht deshalb einen
   Weg, an den getippten Text zu kommen, bevor AppKit ihn verwirft.
-- C4 zählt heute zwei Ausgänge auf. Jede Antwort ändert den Spec-Wortlaut.
+- **Berichtigt am 260816-0935:** hier stand, C4 zähle zwei Ausgänge auf und
+  jede Antwort ändere den Spec-Wortlaut. Am Baum nachgesehen stimmt das nicht.
+  Das Abnahmekriterium von C4 sagt allein „ein Tastenbefehl benennt den
+  ausgewählten Eintrag um, direkt in der Liste"
+  (`circles/260802-0842-…/planning/260802-1036_c_spec-navigator-geruest.md:254`).
+  Der Satz „Return übernimmt, Escape verwirft" steht im **Plan** der Runde 1
+  (`260802-1428_c_…:1044` und `:1046`) und in `tabelle.rs:1773`, wo er C4
+  zugeschrieben wird. Der Spec ist also unberührt; nachzuziehen ist der
+  Doc-Kommentar, und der Plan bleibt als Aufzeichnung seines Standes stehen.
 
 ## Empfehlung
 
@@ -49,8 +57,26 @@ Keine. Das ist eine Frage der Bedienung und nicht der Technik: alle drei Wege
 sind baubar, und welcher richtig ist, hängt daran, was der Nutzer beim
 Wegklicken meint.
 
+## Nutzerentscheid vom 260816-0935: Option 1, verwerfen
+
+Ein Klick neben die offene Namenszelle verwirft wie Escape.
+
+**Die Hälfte davon gilt schon.** Umbenannt wird beim Fokusverlust ohnehin
+nichts, weil AppKit die Aktion nicht schickt; das ist am 260816 gemessen. Offen
+ist allein die Anzeige: der getippte Text bleibt in der Zelle stehen, bis
+irgendein Zeichendurchgang sie anfasst. Die Umsetzung hat damit genau eine
+Zusage herzustellen — **jedes Ende der Bearbeitung, dem keine Umbenennung
+folgt, stellt die Anzeigeform wieder her.**
+
+Escape ist bereits abgedeckt (`Namensfeld::bearbeitung_abbrechen`). Für die
+übrigen Enden ist `textDidEndEditing:` die Stelle, und die Reihenfolge ist aus
+der Messung zu T4 bekannt: ein Zeichendurchgang **vor** `super` liefert der
+Aktion `rowForView = -1` und liesse die Umbenennung still ausfallen, **nach**
+`super` ist er folgenlos. Der Return-Weg zeichnet die Zeile dann zweimal, was
+der `coder` schon einmal als folgenlos gemessen hat.
+
 ---
-Answered:
+Answered: shared/decisions/260816-0021_a_verwirft-oder-uebernimmt-ein-klick-neben-die-offene-namenszelle.md §Nutzerentscheid — verwerfen wie Escape; zu bauen ist allein die Wiederherstellung der Anzeigeform an jedem Ende ohne Umbenennung.
 Implemented:
 Deferred:
 Superseded by:
