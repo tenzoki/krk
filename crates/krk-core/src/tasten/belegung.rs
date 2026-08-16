@@ -419,6 +419,31 @@ pub enum Kommando {
     /// weist sie in der Belegungsansicht zu oder traegt sie in
     /// `resources/default-keymap.toml` ein.
     TiefeSucheUmschalten,
+    /// Den stehenden Filter der Dateiliste auch auf den Inhalt der Dateien
+    /// anwenden und wieder zuruecknehmen (C2 der Inhaltsfilter-Runde).
+    ///
+    /// **Der zweite Schalter derselben Art**, neben
+    /// [`Kommando::TiefeSucheUmschalten`] darueber, und er folgt ihm in jedem
+    /// Stueck: die Kennung ist deutsch, die Aufschrift des Kaestchens lautet
+    /// "Content", der Wirkungsbereich ist `Ueberall`, und ab Werk traegt er
+    /// keine Kombination. Die Wahl der Aufschrift ist eine Entscheidung ueber
+    /// die Anzeige und keine ueber den Wortschatz der Belegung.
+    ///
+    /// **Er wirkt erst ab einer Mindestlaenge des Filtertexts**, drei Zeichen
+    /// ohne "Deep" und fuenf mit; die Regel steht als
+    /// `krk_core::verzeichnis::filter::inhaltsschwelle` an einer Stelle. Der
+    /// Befehl fragt sie nicht: er kippt das Kennzeichen, und ob das Kennzeichen
+    /// gerade etwas bewirkt, ist eine andere Frage als die, ob der Befehl
+    /// zulaessig war. Damit steht er neben "Deep", das bei fehlendem Filtertext
+    /// dieselbe Trennung zieht.
+    ///
+    /// Ab Werk ohne Kombination, wie "Deep" und die drei Spaltenschalter
+    /// darueber; die Nutzerantwort vom 260814-1610 hat das fuer den ersten
+    /// Schalter dieser Art entschieden, und ein zweiter derselben Art folgt
+    /// derselben Form, statt eine der frei gehaltenen Kombinationen zu belegen.
+    /// Wer eine Taste dafuer will, weist sie in der Belegungsansicht zu oder
+    /// traegt sie in `resources/default-keymap.toml` ein.
+    InhaltssucheUmschalten,
     /// Zu dem springen, was in der Zwischenablage steht (C10).
     ZwischenablageSpringen,
     /// Den Inhalt der Zwischenablage im Vorschaufenster ansehen (C10).
@@ -621,7 +646,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 78] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 79] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -652,6 +677,7 @@ impl Kommando {
         (Kommando::SpalteDatumUmschalten, "spalte_datum_umschalten"),
         (Kommando::SpalteTypUmschalten, "spalte_typ_umschalten"),
         (Kommando::TiefeSucheUmschalten, "tiefe_suche_umschalten"),
+        (Kommando::InhaltssucheUmschalten, "inhaltssuche_umschalten"),
         (Kommando::ZwischenablageSpringen, "zwischenablage_springen"),
         (Kommando::ZwischenablageAnsehen, "zwischenablage_ansehen"),
         (Kommando::TabNeu, "tab_neu"),
@@ -820,6 +846,13 @@ impl Kommando {
             // Klick auf ein Kaestchen davon abhaengig zu machen, wo die
             // Schreibmarke gerade steht.
             | Kommando::TiefeSucheUmschalten
+            // Der Schalter "Content" aus C2 der Inhaltsfilter-Runde steht
+            // neben "Deep" und aus genau derselben Erwaegung: er ist ein
+            // Schalter der Bereichsleiste, er trifft das Modell des sichtbaren
+            // Tabs im aktiven Dateifenster, und ein Klick auf die Leiste faellt
+            // aus jedem Fokus an. Die beiden gehoeren zusammen und stehen
+            // deshalb auch hier nebeneinander.
+            | Kommando::InhaltssucheUmschalten
             | Kommando::FensterEinblenden
             | Kommando::FensterSchliessen
             | Kommando::BereichVerbreitern

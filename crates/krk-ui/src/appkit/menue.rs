@@ -864,7 +864,7 @@ mod tests {
 
     /// Die Messung aus S1 der Runde 3, als mitlaufende Zusicherung.
     ///
-    /// **Sie misst, statt zu naehern.** Fuer 78 der 84 Funktionen ist der
+    /// **Sie misst, statt zu naehern.** Fuer 79 der 85 Funktionen ist der
     /// Wirkungsbereich aus der Belegung entscheidbar; fuer diese sechs ist er es
     /// nicht, weil sie kein Kommando tragen und die Antwortkette von AppKit zur
     /// Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre

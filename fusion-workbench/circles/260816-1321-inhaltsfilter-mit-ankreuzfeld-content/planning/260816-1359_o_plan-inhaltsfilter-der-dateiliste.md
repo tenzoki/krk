@@ -308,7 +308,7 @@ flowchart TD
 
 ### Strang E — das Ankreuzfeld und der Befehl
 
-**E1. Das Kommando, die zwei Fallunterscheidungen und die zwei Probenlisten**
+**E1. [DONE] Das Kommando, die zwei Fallunterscheidungen und die zwei Probenlisten**
 - Executor: `coder`
 - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/belegungsausgabe.rs`
 - Erfüllt: C2.7 (Kommandohälfte), C2.8, C2.9
@@ -327,7 +327,7 @@ flowchart TD
 - Abzulesen an: `cargo build --workspace` hält an, bis beide übersetzerpflichtigen Zweige stehen; danach `cargo test --workspace` **rot**, bis E2 gelandet ist, weil `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` (`belegung.rs:1605`) den Belegungseintrag verlangt. Das ist erwartet.
 - Am Diff abzulesen: der Zweig in `kommando_ausfuehren` steht da. Das ist die einzige der sechs Stellen, für die weder Übersetzer noch Probe bürgt.
 
-**E2. Der Eintrag der Belegung**
+**E2. [DONE] Der Eintrag der Belegung**
 - Executor: `ontocoder`
 - Files: `resources/default-keymap.toml`
 - Erfüllt: C2.7
@@ -338,7 +338,7 @@ flowchart TD
 - Abzulesen an: `cargo test --workspace` grün — `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` und `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` sind die zwei Proben, die genau diesen Schritt abnehmen, und `jede_funktion_der_belegung_steht_genau_einmal_im_menue` nimmt C2.8 ab.
 - Am laufenden Bündel abzulesen: `make tasten` gibt die Markdown-Ausgabe aus, und `inhaltssuche_umschalten` steht **nicht** darin; `make menue` gibt das Hauptmenü aus, und der Eintrag steht darin, im selben Bereich wie „Tiefe Suche ein- und ausschalten".
 
-**E3. Das zehnte Ankreuzfeld**
+**E3. [DONE] Das zehnte Ankreuzfeld**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/bereichsleiste.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 - Erfüllt: C2.1, C2.2, C2.3

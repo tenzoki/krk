@@ -1170,10 +1170,11 @@ impl Anwendungsdelegierter {
                     if let Some(selbst) = schwach.load() {
                         selbst.dateisystemwache_nachziehen();
                         selbst.titel_nachziehen(selbst.fokus());
-                        // **Und der Schalter "Deep"**, denn er gehoert dem Tab
-                        // und nicht dem Fenster: ein Tabwechsel und ein
-                        // Ordnerwechsel koennen ihn anders stehen lassen, ohne
-                        // dass ein Befehl gelaufen waere. Der Nachzug steht
+                        // **Und die Schalter "Deep" und "Content"**, denn sie
+                        // gehoeren dem Tab und nicht dem Fenster: ein
+                        // Tabwechsel und ein Ordnerwechsel koennen sie anders
+                        // stehen lassen, ohne dass ein Befehl gelaufen waere
+                        // (C2.3 der Inhaltsfilter-Runde). Der Nachzug steht
                         // **neben** den beiden darueber und nicht in ihnen,
                         // aus demselben Grund, aus dem die Statuszeile neben
                         // der Leiste steht: jede dieser Funktionen hat genau
@@ -2940,6 +2941,25 @@ impl Anwendungsdelegierter {
                 self.dateifenster(seite).quelle().tiefe_suche_umschalten();
                 true
             }
+            // Der Schalter "Content" aus C2 der Inhaltsfilter-Runde. **Ein
+            // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**,
+            // aus demselben Grund wie bei "Deep" darueber: das `match` endet
+            // mit einem Auffangzweig auf `bereichskommando`, und dort fiele der
+            // Befehl stillschweigend hindurch und taete nichts. Von den sechs
+            // Stellen, die dieses Kommando anfassen muss, ist diese die
+            // einzige, fuer die weder Uebersetzer noch Probe buergt.
+            //
+            // Adresse und Rueckgabewert folgen "Deep" Zeile fuer Zeile: das
+            // **aktive** Dateifenster und nicht das fokussierte, und immer
+            // `true`. Der Befehl war zustaendig, auch wenn der Filtertext zu
+            // kurz ist und die Liste sich nicht aendert; ueber die
+            // Zulaessigkeit hat der Wirkungsbereich entschieden und nicht das
+            // Ergebnis.
+            Kommando::InhaltssucheUmschalten => {
+                let seite = self.ivars().modell.borrow().aktiv();
+                self.dateifenster(seite).quelle().inhaltssuche_umschalten();
+                true
+            }
             Kommando::FensterEinblenden => {
                 self.fenster_zeigen();
                 true
@@ -4165,8 +4185,9 @@ impl Anwendungsdelegierter {
         self.statuszeile_nachziehen();
     }
 
-    /// Schreibt die neun Schalterzustaende der Bereichsleiste aus dem Modell
-    /// (C2.1, C3.1; C2.1 der Filter-Runde).
+    /// Schreibt die zehn Schalterzustaende der Bereichsleiste aus dem Modell
+    /// (C2.1, C3.1; C2.1 der Filter-Runde; C2.1 und C2.3 der
+    /// Inhaltsfilter-Runde).
     ///
     /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`].
@@ -4174,21 +4195,26 @@ impl Anwendungsdelegierter {
     /// Kommando folgt — **auf jedem Weg genau einmal**, fuer den Tastendruck
     /// wie fuer den Klick.
     ///
-    /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kommt
-    /// mit dem neunten Schalter dazu. Die acht ersten stehen im
+    /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kam mit
+    /// dem neunten Schalter dazu. Die acht ersten stehen im
     /// [`Fenstermodell`](crate::fenstermodell::Fenstermodell) und aendern sich
-    /// nur ueber einen Befehl; der neunte steht am `Ordnermodell` des
-    /// sichtbaren Tabs im aktiven Dateifenster und wechselt damit auch ohne
-    /// Befehl. Drei Anlaesse hat er, und `ordnerwechsel_melden` in
-    /// [`super::tabelle`] deckt zwei davon ab: den Tabwechsel und den
-    /// Ordnerwechsel, auch die mit der Maus. **Der dritte, der Wechsel des
-    /// aktiven Dateifensters, braucht keine Zeile**: er laeuft ueber
-    /// [`Self::aktives_setzen`] oder ueber `Kommando::FensterWechseln`, und
-    /// beide rufen [`Self::aufteilung_nachziehen`], den ersten Anlass.
+    /// nur ueber einen Befehl; der neunte und der zehnte stehen am
+    /// `Ordnermodell` des sichtbaren Tabs im aktiven Dateifenster und wechseln
+    /// damit auch ohne Befehl. Drei Anlaesse haben sie, und
+    /// `ordnerwechsel_melden` in [`super::tabelle`] deckt zwei davon ab: den
+    /// Tabwechsel und den Ordnerwechsel, auch die mit der Maus. **Der dritte,
+    /// der Wechsel des aktiven Dateifensters, braucht keine Zeile**: er laeuft
+    /// ueber [`Self::aktives_setzen`] oder ueber `Kommando::FensterWechseln`,
+    /// und beide rufen [`Self::aufteilung_nachziehen`], den ersten Anlass.
+    ///
+    /// **Der zehnte Schalter hat deshalb keinen vierten Anlass gebracht**: der
+    /// Stand von "Content" haengt am selben `Ordnermodell` wie der von "Deep",
+    /// und damit ist C2.3 der Inhaltsfilter-Runde ohne eine eigene Zeile
+    /// erfuellt.
     ///
     /// **Faellt die offene Frage nach dem Gueltigkeitsbereich auf "je
-    /// Fenster"**, faellt der zweite Anlass wieder weg und der Wert kommt aus
-    /// dem Fenstermodell statt aus dem Tab
+    /// Fenster"**, faellt der zweite Anlass wieder weg und die zwei Werte
+    /// kommen aus dem Fenstermodell statt aus dem Tab
     /// (`decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`).
     /// Beruehrt waeren dann diese Funktion und die eine Zeile im
     /// Ordnerwechsel-Rueckruf; [`super::bereichsleiste`] bliebe, wie sie ist.
@@ -4226,8 +4252,10 @@ impl Anwendungsdelegierter {
         // Steht die Leiste, stehen auch die Dateifenster: `oberflaeche_aufbauen`
         // haelt sie in derselben Folge fest und die Dateifenster zuerst. Eine
         // zweite Abfrage daneben taeuschte eine Lage vor, die es nicht gibt.
-        let tief = self.dateifenster(aktiv).quelle().tiefe_suche_steht();
-        leiste.zustaende_setzen(&sichtbar, &spalten, tief);
+        let quelle = self.dateifenster(aktiv).quelle();
+        let tief = quelle.tiefe_suche_steht();
+        let inhalt = quelle.inhaltssuche_steht();
+        leiste.zustaende_setzen(&sichtbar, &spalten, tief, inhalt);
     }
 
     /// Schreibt die eine Statuszeile ueber die volle Fensterbreite (C5 der

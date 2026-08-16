@@ -42,10 +42,10 @@
 //!
 //! # Die vier Begruendungslagen der dritten Spalte
 //!
-//! **Gezaehlt wird ueber alle 84 Funktionen, und die Ziffer einer Lage heisst
+//! **Gezaehlt wird ueber alle 85 Funktionen, und die Ziffer einer Lage heisst
 //! ueberall dasselbe**: im Modulkopf, an den Zweigen von [`wirkung`] und in der
 //! Probe `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`. Die
-//! erste Lage traegt die 78 Funktionen mit [`Kommando`], die zweite bis vierte
+//! erste Lage traegt die 79 Funktionen mit [`Kommando`], die zweite bis vierte
 //! verteilen die sechs zugestellten Textbefehle unter sich.
 //!
 //! Die Spalte "Wirkt in" hat damit **vier verschiedene Quellen**, und
@@ -53,7 +53,7 @@
 //!
 //! | Lage | Funktionen | Zelle | woher die Aussage kommt |
 //! |---|---|---|---|
-//! | 1 | die 78 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
+//! | 1 | die 79 mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
 //! | 2 | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen**, zuzueglich eines `inference:`-Schrittes ueber den Feldeditor (siehe unten) |
 //! | 3 | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
 //! | 4 | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
@@ -253,7 +253,7 @@ const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
 /// Der Modulkopf stellt alle vier als Tabelle daneben und legt dort die
 /// Zaehlung fest, der die Zweige hier folgen.
 fn wirkung(funktion: &Funktion) -> &'static str {
-    // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 78 der 84
+    // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. 79 der 85
     // Funktionen tragen ein Kommando, `Kommando::wirkungsbereich` ist eine
     // totale Funktion darueber, und `Wirkungsbereich::beschriftung` ist eine
     // zweite, deren Vollstaendigkeit der Uebersetzer erzwingt. Hier ist nichts
@@ -527,8 +527,10 @@ mod tests {
     /// dem 260814 tritt `tiefe_suche_umschalten` hinzu, das Ankreuzfeld "Deep"
     /// der Filter-Runde (Nutzerantwort vom 260814-1610, `circles/
     /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-    /// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`):
-    /// vier. Die Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine
+    /// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`),
+    /// und seit dem 260816 `inhaltssuche_umschalten`, das Ankreuzfeld
+    /// "Content" der Inhaltsfilter-Runde, das derselben Nutzerantwort folgt:
+    /// fuenf. Die Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine
     /// Zahl sagte nicht, **welche** Funktion aus der Datei faellt, und genau
     /// das ist die Auskunft, die ein Leser dieser Probe braucht.
     ///
@@ -567,10 +569,12 @@ mod tests {
             );
         }
 
-        // Ab Werk sind genau diese vier Funktionen unbelegt; jede andere
+        // Ab Werk sind genau diese fuenf Funktionen unbelegt; jede andere
         // steht in der Datei. Die Reihenfolge ist die der Belegungsdatei: die
         // tiefe Suche steht dort hinter den drei Spaltenschaltern, weil sie wie
-        // diese bestimmt, was die Dateiliste zeigt.
+        // diese bestimmt, was die Dateiliste zeigt, und die Inhaltssuche hinter
+        // der tiefen Suche, weil die beiden Schalter in der Bereichsleiste eine
+        // Reihe bilden.
         let unbelegt: Vec<&str> = belegung
             .funktionen()
             .iter()
@@ -584,9 +588,10 @@ mod tests {
                 "spalte_datum_umschalten",
                 "spalte_typ_umschalten",
                 "tiefe_suche_umschalten",
+                "inhaltssuche_umschalten",
             ],
-            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter \
-             und die tiefe Suche"
+            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter, \
+             die tiefe Suche und die Inhaltssuche"
         );
     }
 
@@ -722,8 +727,8 @@ mod tests {
 
     /// **Die dritte Spalte, ueber ihre vier Begruendungslagen.**
     ///
-    /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle 84
-    /// Funktionen: die erste Lage traegt die 78 mit Kommando, die zweite bis
+    /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle 85
+    /// Funktionen: die erste Lage traegt die 79 mit Kommando, die zweite bis
     /// vierte die sechs zugestellten Textbefehle. Die Probe haelt jede der
     /// vier einzeln fest, weil ein Alles-oder-nichts ueber die sechs fuer zwei
     /// der drei sie betreffenden Lagen falsch waere. Aendert eine der vier

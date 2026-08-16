@@ -105,15 +105,22 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Wahl ist nicht dasselbe wie eine bewusst gesparte Kombination, und der Grund
 /// steht deshalb daneben und nicht in derselben Klammer.
 ///
+/// **Seit dem 260816 tritt eine fuenfte hinzu, und sie hat denselben Grund wie
+/// die vierte.** `inhaltssuche_umschalten` ist das Ankreuzfeld "Content" der
+/// Inhaltsfilter-Runde, der zweite Schalter derselben Art neben "Deep". Es
+/// folgt der Nutzerantwort vom 260814-1610, die fuer den ersten Schalter dieser
+/// Art keine Kombination gewaehlt hat; ein zweiter derselben Art belegt keine
+/// der frei gehaltenen Kombinationen, sondern folgt derselben Form.
+///
 /// **Sie steht hier und nicht in `resources/default-keymap.toml`.** Das Feld
 /// `reserviert_fuer` der Datei heisst "benannt, aber einer spaeteren Runde
-/// vorbehalten", und diese vier Funktionen gibt es; es passt also nicht. Die
+/// vorbehalten", und diese fuenf Funktionen gibt es; es passt also nicht. Die
 /// Ausnahme ist damit eine Aussage der Pruefungen ueber die Auslieferung, und
 /// **zwei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
 /// zweimal in je einem Rumpf: `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
 /// liest sie von der Seite der Belegungsdatei her,
 /// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` von der Seite
-/// der gebauten Kommandos. Wer eine fuenfte Funktion ohne Kombination
+/// der gebauten Kommandos. Wer eine sechste Funktion ohne Kombination
 /// ausliefert, traegt sie mit ihrem Datensatz hier nach.
 ///
 /// **Eine dritte Pruefung fuehrt dieselbe Aufzaehlung ein zweites Mal**, als
@@ -125,11 +132,12 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Listen eine werden, ist die Frage `circles/
 /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
 /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
-const OHNE_KOMBINATION_AB_WERK: [&str; 4] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 5] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
     "tiefe_suche_umschalten",
+    "inhaltssuche_umschalten",
 ];
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.

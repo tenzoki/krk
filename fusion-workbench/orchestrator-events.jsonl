@@ -971,3 +971,10 @@
 {"ts":"2026-08-16T15:23:27","event":"commit","turn":8,"detail":"32fd038 (B1)"}
 {"ts":"2026-08-16T15:23:27","event":"task_start","turn":9,"task":"D1","agent":"coder","detail":"Tab haelt Lauf, Auftraege und die Zahl der ungelesenen Dateien"}
 {"ts":"2026-08-16T15:43:22","event":"task_done","turn":9,"task":"D1","agent":"coder","detail":"Tafel der vier Auftragslagen; ein neuer Defekt abgelegt"}
+{"ts":"2026-08-16T15:44:12","event":"commit","turn":9,"detail":"09baffd (D1); Kern A-D vollstaendig"}
+{"ts":"2026-08-16T15:44:12","event":"task_start","turn":10,"task":"E1","agent":"coder","detail":"Kommando und die zwei Fallunterscheidungen; Baum danach bewusst rot bis E2"}
+{"ts":"2026-08-16T15:55:51","event":"task_done","turn":10,"task":"E1","agent":"coder","detail":"Baum planmaessig rot; eine zweite rote Stelle faellt erst mit E3"}
+{"ts":"2026-08-16T15:55:51","event":"task_start","turn":10,"task":"E2","agent":"ontocoder","detail":"Eintrag in default-keymap.toml"}
+{"ts":"2026-08-16T16:03:57","event":"task_done","turn":10,"task":"E2","agent":"ontocoder","detail":"1229 Proben gruen; nur die clippy-Warnung aus E3 bleibt"}
+{"ts":"2026-08-16T16:03:57","event":"task_start","turn":10,"task":"E3","agent":"coder","detail":"Ankreuzfeld Content; macht den Baum wieder gruen"}
+{"ts":"2026-08-16T16:14:42","event":"task_done","turn":10,"task":"E3","agent":"coder","detail":"Baum wieder gruen"}

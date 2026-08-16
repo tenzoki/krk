@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md` (C4.5); `crates/krk-ui/src/tabs.rs:770-773` (die Begründung der Runde 10, warum ein Tabwechsel gerade **nicht** abbricht) und `:790-822` (`durchlauf_nachziehen_an`); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-2102_c_plan-tippen-filtert-dateiliste-flach-und-tief.md` (Strang F)
 
@@ -61,6 +61,6 @@ Sie wird deshalb nicht überholt, sondern nachgezogen — Schritt D1 des Plans.
 
 ---
 Answered: circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/decisions/260816-1359_a_beendet-ein-tabwechsel-den-durchlauf-des-verlassenen-tabs-jetzt-wo-er-dateien-liest.md §Nutzerentscheid — Möglichkeit 1, eine Regel für jeden Durchlauf; der Doc-Kommentar der Runde 10 wird in Schritt D1 nachgezogen.
-Implemented:
+Implemented: 09baffd — Möglichkeit 1 gebaut, und sie brauchte eine vierte Bedingung: der bloße Ruf von `durchlauf_nachziehen_an` auf der verlassenen Stelle hätte den Lauf abgebrochen und im selben Zug neu gestartet, weil Filtertext und Schalter dort stehen bleiben. Die Regel liegt deshalb im Rumpf jener Methode und lautet, dass ein verdeckter Tab keinen Durchlauf bekommt. Der Kommentar der Runde 10 ist ersetzt und nennt Datensatz, Abwägung und Preis. Ein Folgedefekt ist dabei gefunden und abgelegt: `issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md`.
 Deferred:
 Superseded by:

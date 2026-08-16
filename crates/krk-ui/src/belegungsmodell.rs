@@ -269,6 +269,11 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // den drei Schaltern, mit denen er in der Bereichsleiste eine Reihe
         // bildet.
         | Kommando::TiefeSucheUmschalten
+        // Der Schalter "Content" aus C2 der Inhaltsfilter-Runde steht neben
+        // "Deep": er bestimmt, was die Liste zeigt, und er bildet mit ihm in
+        // der Bereichsleiste eine Reihe. Im Hauptmenue steht er damit dort, wo
+        // der Nutzer ihn sucht, naemlich unmittelbar bei der tiefen Suche.
+        | Kommando::InhaltssucheUmschalten
         | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
         // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
         // wie sie auf dem angezeigten Ordner arbeitet.

@@ -2054,6 +2054,66 @@ impl DateifensterQuelle {
         tabs.aktiver().modell().tief()
     }
 
+    /// Kippt das Kennzeichen "Content" am Modell des sichtbaren Tabs (C2 der
+    /// Inhaltsfilter-Runde).
+    ///
+    /// **Zeile fuer Zeile die Bauart von [`Self::tiefe_suche_umschalten`]**
+    /// darueber: eine Ausleihe, das Kippen am Modell, danach
+    /// [`Self::durchlauf_nachziehen`] fuer den Lauf, [`Self::umsortiert`] fuer
+    /// die Sicht und [`Self::meldung_gewechselt`] fuer die Statuszeile. Das
+    /// Neuaufbauen der Sicht gehoert `Ordnermodell::inhalt_setzen` und nicht
+    /// dieser Stelle; das Anstossen und Abbrechen des Laufs gehoert
+    /// `Tabliste::durchlauf_nachziehen`, und hier faellt dafuer kein Zweig an.
+    ///
+    /// **Ist der Filtertext zu kurz, aendert das Kippen an der Liste nichts**,
+    /// und gemeldet wird nichts. Der Schalter steht trotzdem um: sein Stand ist
+    /// eine Einstellung des Tabs und keine Auskunft darueber, ob der Filter
+    /// gerade Inhalte liest. Ob er wirkt, beantwortet
+    /// `Ordnermodell::inhalt_wirkt` an einer Stelle und nicht dieser Rumpf.
+    ///
+    /// Der Aufrufer ist der Anwendungsdelegierte und nicht
+    /// [`Self::kommando_ausfuehren`] daneben: der Befehl traegt
+    /// `Wirkungsbereich::Ueberall` und richtet sich an das **aktive**
+    /// Dateifenster, nicht an das fokussierte.
+    pub fn inhaltssuche_umschalten(&self) {
+        {
+            let mut tabs = self.ivars().tabs.borrow_mut();
+            let modell = tabs.aktiver_mut().modell_mut();
+            let inhalt = modell.inhalt();
+            modell.inhalt_setzen(!inhalt);
+        }
+        // Einschalten stoesst den Durchlauf an, Ausschalten bricht ihn ab.
+        // Beide Haelften stehen in einer Regel, und die Regel steht in
+        // `Tabliste::durchlauf_nachziehen`; hier faellt kein Zweig an.
+        self.durchlauf_nachziehen();
+        self.umsortiert();
+        // Der Schalter aendert, wie viele Zeilen stehen, und ob der Lesehinweis
+        // faellig ist; beides schreibt die Statuszeile.
+        self.meldung_gewechselt();
+    }
+
+    /// Ob am Modell des sichtbaren Tabs das Kennzeichen "Content" steht (C2.1).
+    ///
+    /// **Die Leseseite von [`Self::inhaltssuche_umschalten`]**, in derselben
+    /// Bauart wie [`Self::tiefe_suche_steht`] darueber: eine Ausleihe, eine
+    /// Frage an das `Ordnermodell` des sichtbaren Tabs, kein zweiter Halteort.
+    /// Gefragt wird sie von `Anwendungsdelegierter::bereichsleiste_nachziehen`,
+    /// dem einen Schreiber des angezeigten Schalterstands.
+    ///
+    /// **Sie sagt nichts darueber, ob der Schalter gerade etwas bewirkt.** Bei
+    /// zu kurzem Filtertext liest KRK keine Inhalte, und das Kaestchen steht
+    /// trotzdem so, wie der Nutzer es gesetzt hat. Die Frage nach der Wirkung
+    /// beantwortet `Ordnermodell::inhalt_wirkt`, und sie hat einen anderen
+    /// Frager.
+    ///
+    /// **Der Aufrufer waehlt das Dateifenster**, und er waehlt das aktive und
+    /// nicht das fokussierte — dieselbe Adresse, an die
+    /// [`Self::inhaltssuche_umschalten`] schreibt.
+    pub fn inhaltssuche_steht(&self) -> bool {
+        let tabs = self.ivars().tabs.borrow();
+        tabs.aktiver().modell().inhalt()
+    }
+
     /// Ob das Modell des sichtbaren Tabs einen Filtertext fuehrt.
     ///
     /// **Die eine Groesse, an der die Rueckschritt-Taste ihre Bedeutung

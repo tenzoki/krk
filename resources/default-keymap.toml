@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 84 Funktionen mit zusammen 90 Kombinationen.
+# Ausgeliefert sind 85 Funktionen mit zusammen 90 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -405,6 +405,31 @@ tasten = []
 [[funktion]]
 id = "tiefe_suche_umschalten"
 name = "Tiefe Suche ein- und ausschalten"
+tasten = []
+
+# Der Schalter "Content" der Bereichsleiste steht unmittelbar neben "Deep" und
+# nicht bei den Spaltenschaltern darueber: die beiden gehoeren zusammen, denn
+# sie schalten beide die Suche des sichtbaren Tabs. "Deep" bestimmt, wie weit
+# gesucht wird, "Content", woraufhin. Kennung deutsch, Aufschrift englisch, aus
+# demselben Grund wie beim Nachbarn darueber.
+#
+# Ausgeliefert wird auch hier keine Kombination, mit leerer Tastenliste und
+# nicht mit `reserviert_fuer`. Der Nutzerentscheid vom 260814-1610 hat das fuer
+# den ersten Schalter dieser Art so entschieden
+# (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+# 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`), und ein
+# zweiter derselben Art folgt derselben Form, statt eine der dort frei
+# gehaltenen Kombinationen zu belegen. Wer eine Taste dafuer will, weist sie in
+# der Belegungsansicht zu oder traegt sie in seine eigene keymap.toml ein.
+#
+# Wie "Deep" faellt der Eintrag damit aus der Markdown-Ausgabe der Runde 3 und
+# steht zugleich im Hauptmenue, in derselben Gruppe wie sein Nachbar
+# (C2.7 und C2.8 des Spec
+# `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md`).
+
+[[funktion]]
+id = "inhaltssuche_umschalten"
+name = "Inhaltssuche ein- und ausschalten"
 tasten = []
 
 # ── C4: Dateioperationen ausserhalb der Norton-Reihe ─────────────────────────
