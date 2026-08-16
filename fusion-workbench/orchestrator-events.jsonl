@@ -989,3 +989,6 @@
 {"ts":"2026-08-16T16:45:51","event":"turn_start","turn":12,"detail":"G1 und G2"}
 {"ts":"2026-08-16T16:45:51","event":"task_start","turn":12,"task":"G1+G2","agent":"coder","detail":"Spec gegen den Baum lesen, Abnahmeliste schreiben"}
 {"ts":"2026-08-16T17:06:45","event":"task_done","turn":12,"task":"G1+G2","agent":"coder","detail":"57 Kriterien gelesen, 2 ohne Zuordnung, Abnahmeliste steht"}
+{"ts":"2026-08-16T17:17:51","event":"commit","turn":12,"detail":"6442613 (G1/G2), b9ab8ae (Prosa-Nachzug)"}
+{"ts":"2026-08-16T17:17:51","event":"review_start","turn":12,"agent":"coderev","detail":"ganze Runde, 9f5ced5..b9ab8ae"}
+{"ts":"2026-08-16T17:37:30","event":"review_done","turn":12,"agent":"coderev","detail":"6 Befunde, 0 kritisch, 4 mittel; gemeinsame Wurzel fuer drei"}
