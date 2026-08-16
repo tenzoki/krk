@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `shared/decisions/260816-1310_a_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md` (der Nutzerentscheid, der diese Bauentscheidung hinterlässt); `crates/krk-ui/src/appkit/tabelle.rs:2808-2820` (die eine Stelle, die Farbe und Schrift der Zelle schreibt); `crates/krk-ui/src/appkit/leiste.rs:471-473` und `:541-542` (das vorhandene Vokabular der Dämpfung); `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md` (C5)
 
@@ -48,6 +48,6 @@ Die Rangfolge folgt aus den Folgen. Wer eine Markierung übersieht, verliert Dat
 
 ---
 Answered: `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt F1 — Möglichkeit 1: die Markierung schreibt die Zelle, die Dämpfung weicht, und gedämpft wird mit `secondaryLabelColor`. Der benannte Verlust steht im Plan unter `## Risks & Mitigations`.
-Implemented:
+Implemented: f7cf88b — die Farbwahl in `zellenansicht` ist dreiwertig und in der Reihenfolge markiert, Inhaltstreffer, gewöhnlich ausgeschrieben; die `else if`-Kette ist zugleich der Kurzschluss. Die Dämpfung ist `secondaryLabelColor`, und die Wahl trägt jetzt eine Messung: 3,95:1 hell und 5,89:1 dunkel gegen den Listenhintergrund, während `tertiaryLabelColor` hell bei 1,88:1 läge. Ungemessen und im Bericht benannt bleibt der Kontrast gegen die blaue Fläche einer ausgewählten Zeile.
 Deferred:
 Superseded by:

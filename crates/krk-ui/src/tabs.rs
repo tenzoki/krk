@@ -146,20 +146,28 @@ impl Tabinhalt {
     /// Null, wo kein Lauf war oder keine Datei zu gross war. Der Wert steht
     /// auch nach dem Ende des Laufs; warum, steht am Feld.
     ///
-    /// **Die Ausnahme von der Totpruefung nimmt sich selbst zurueck.** Ihr
-    /// Ableser ist der Groessenhinweis der Statuszeile, und der entsteht einen
-    /// Schritt spaeter (F2 des Plans zum Inhaltsfilter). `expect` statt `allow`
-    /// ist dabei die Ankuendigung in einer Form, die sich selbst erzwingt:
-    /// sobald der Ableser dasteht, ist die Erwartung unerfuellt, und
-    /// `unfulfilled_lint_expectations` haelt unter `-D warnings` den Bau an,
-    /// bis diese Zeile faellt. Die Proben lesen deshalb das Feld unmittelbar
-    /// und nicht diese Methode.
-    #[expect(
-        dead_code,
-        reason = "der Ableser ist der Groessenhinweis der Statuszeile aus Schritt F2"
-    )]
+    /// Ihr einer Ableser ist der Groessenhinweis der Statuszeile: er faellt in
+    /// `appkit::statuszeile::Filterstand::zu_gross` und von dort in den Satz
+    /// des Filterstands.
     pub fn zu_gross(&self) -> u64 {
         self.zu_gross
+    }
+
+    /// Ob gerade ein Durchlauf laeuft, der Dateiinhalte liest.
+    ///
+    /// **Zwei Bedingungen, und die zweite ist noetig.** Ein Durchlauf allein
+    /// genuegt nicht: ueber einen Unterbaum laeuft auch der Namensdurchlauf der
+    /// Runde 10, und der liest keine Datei. Erst mit [`Ordnermodell::inhalt_wirkt`]
+    /// steht fest, dass der Lauf Inhalte oeffnet, und nur dann ist der
+    /// Lesehinweis der Statuszeile wahr. Ohne diese zweite Bedingung waere der
+    /// Satz des Filterstands bei ausgeschaltetem "Content" nicht mehr
+    /// zeichengleich mit dem der Runde 10.
+    ///
+    /// **Die Frage steht hier und nicht beim Ableser**, weil allein dieser Typ
+    /// den [`Durchlauf`] haelt und weil sie hier ohne AppKit pruefbar ist. Ihr
+    /// Ableser ist `appkit::statuszeile::Filterstand::liest_inhalt`.
+    pub fn liest_inhalt(&self) -> bool {
+        self.durchlauf.is_some() && self.modell.inhalt_wirkt()
     }
 
     /// Ob der Tab bedienbar ist: er zeigt Zeilen oder ist fertig gelesen.
@@ -2295,11 +2303,6 @@ mod tests {
     /// entsteht erst beim Lesen. Der Lauf ueber diesen kleinen Ordner ist durch,
     /// bevor die Statuszeile das naechste Mal rechnet — genau deshalb traegt der
     /// Tab die Zahl und nicht der `Durchlauf`.
-    ///
-    /// **Gelesen wird hier das Feld und nicht `Tabinhalt::zu_gross`.** Der
-    /// Ableser jener Methode entsteht mit dem Groessenhinweis der Statuszeile;
-    /// bis dahin haelt sie ihre Ausnahme von der Totpruefung, und die faellt,
-    /// sobald jemand sie ruft.
     #[test]
     fn die_zahl_der_zu_grossen_dateien_steht_auch_nach_dem_ende_des_laufs() {
         let ordner = crate::pruefordner::Pruefordner::neu("durchlauf-zu-gross");
@@ -2334,9 +2337,13 @@ mod tests {
             "der Lauf ist durch, und sein `Durchlauf` ist weg"
         );
         assert_eq!(
-            liste.aktiver().zu_gross,
+            liste.aktiver().zu_gross(),
             1,
             "die eine ungelesene Datei steht danach immer noch zu Buche"
+        );
+        assert!(
+            !liste.aktiver().liest_inhalt(),
+            "ohne laufenden Durchlauf ist der Lesehinweis falsch, auch wenn \u{201e}Content\u{201c} steht"
         );
     }
 

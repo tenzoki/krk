@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `crates/krk-core/src/verzeichnis/modell.rs:542-587` (der eine Prüfschritt); `crates/krk-ui/src/appkit/tabelle.rs` (die flache Tabelle mit ihren vier Spalten, `ORDNERZEICHEN`); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md`, Abschnitt `## Directive`, „Was diese Runde fallen lässt" (kein Baum, keine zweite Tabellenklasse); `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md` (C1, C4)
 
@@ -68,6 +68,6 @@ Nutzerfrage:
 
 ---
 Answered: shared/decisions/260816-1310_a_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md §Nutzerentscheid — Möglichkeit 3, reine Inhaltstreffer werden abgesetzt dargestellt; die Wahl der Dämpfung und das Zusammentreffen mit der Markierung sind Bauentscheidungen.
-Implemented:
+Implemented: f7cf88b — die Farbwahl in `zellenansicht` ist dreiwertig und in der Reihenfolge markiert, Inhaltstreffer, gewöhnlich ausgeschrieben; die `else if`-Kette ist zugleich der Kurzschluss. Die Dämpfung ist `secondaryLabelColor`, und die Wahl trägt jetzt eine Messung: 3,95:1 hell und 5,89:1 dunkel gegen den Listenhintergrund, während `tertiaryLabelColor` hell bei 1,88:1 läge. Ungemessen und im Bericht benannt bleibt der Kontrast gegen die blaue Fläche einer ausgewählten Zeile.
 Deferred:
 Superseded by:

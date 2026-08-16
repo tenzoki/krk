@@ -2388,16 +2388,19 @@ impl DateifensterQuelle {
     /// `Ordnermodell::markierungsstand` zweimal je Schreiben der Zeile ueber
     /// den ganzen Bestand laufen zu lassen.
     ///
-    /// **Gerechnet wird hier nichts, was das Modell schon weiss.** Die drei
-    /// Zahlen und der ausstehende Ersatz kommen als Fragen an das
-    /// `Ordnermodell` herein; was daraus in der Zeile steht, entscheidet
+    /// **Gerechnet wird hier nichts, was Modell oder Tab schon wissen.** Die
+    /// drei Zahlen und der ausstehende Ersatz kommen als Fragen an das
+    /// `Ordnermodell` herein, der Lesehinweis und die Zahl der zu grossen
+    /// Dateien als Fragen an den [`crate::tabs::Tabinhalt`], der den Durchlauf
+    /// haelt. Was daraus in der Zeile steht, entscheidet
     /// [`super::statuszeile::filterstand_text`], und das ist ohne Fenster
     /// pruefbar.
     fn gerechnete_raenge(&self) -> (Markierungsstand, String, Filterstand) {
         // Die Ausleihe endet mit diesem Block: alles hier Gelesene ist ein
         // eigener Wert, und der Aufrufer ruft gleich darauf Objective-C.
         let tabs = self.ivars().tabs.borrow();
-        let modell = tabs.aktiver().modell();
+        let tab = tabs.aktiver();
+        let modell = tab.modell();
         let markierung = modell.markierungsstand();
         let markiert_sichtbar = modell
             .sichtreihenfolge()
@@ -2409,6 +2412,8 @@ impl DateifensterQuelle {
             vorhanden: modell.eintraege().len(),
             ausgeblendete_markierungen: markierung.zahl.saturating_sub(markiert_sichtbar),
             ersetzt_beim_naechsten_stapel: modell.ersetzt_beim_naechsten_stapel(),
+            liest_inhalt: tab.liest_inhalt(),
+            zu_gross: tab.zu_gross(),
         };
         (markierung, modell.filtertext().to_owned(), filterstand)
     }

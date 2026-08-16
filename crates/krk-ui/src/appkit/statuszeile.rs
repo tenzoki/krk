@@ -304,34 +304,51 @@ impl Quellen {
     }
 }
 
-/// Was der fuenfte Rang aus dem Modell des sichtbaren Tabs braucht.
+/// Was der fuenfte Rang aus dem sichtbaren Tab braucht.
 ///
-/// Vier Groessen, alle aus demselben `Ordnermodell` und alle dort schon
-/// vorhanden. **Dieser Rang rechnet nichts nach, was das Modell ohnehin
-/// weiss**; eine eigene Rechnung daneben waere eine zweite Wahrheit ueber
-/// denselben Zustand.
+/// Sechs Groessen, und keine davon wird hier gerechnet. Vier kommen aus dem
+/// `Ordnermodell` und stehen dort schon; die zwei der Runde 11 kommen vom
+/// [`crate::tabs::Tabinhalt`], der den Durchlauf haelt. **Dieser Rang rechnet
+/// nichts nach, was Modell oder Tab ohnehin wissen**; eine eigene Rechnung
+/// daneben waere eine zweite Wahrheit ueber denselben Zustand.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Filterstand {
     /// Wie viele Zeilen die Liste jetzt zeigt: `Ordnermodell::zeilenzahl`.
     ///
-    /// **Entschiedene Zeilen und keine Treffer** (C4.6). Wie viele Treffer
+    /// **Entschiedene Zeilen und keine Treffer** (C4.6 der Runde 10). Wie viele Treffer
     /// unter einem Ordner liegen, weiss niemand in diesem Baum: der Durchlauf
     /// hoert je Ordner beim ersten Fund auf. Der Wert waechst waehrend eines
     /// Durchlaufs von selbst mit, weil er die Sichtreihenfolge zaehlt und
-    /// keinen eigenen Zaehler fuehrt (C4.5).
+    /// keinen eigenen Zaehler fuehrt (C4.5 der Runde 10).
     pub gezeigt: usize,
     /// Wie viele Eintraege der angezeigte Ordner hat, ungefiltert.
     pub vorhanden: usize,
     /// Wie viele Markierungen der Filter gerade ausblendet.
     ///
     /// Null heisst: keine, und dann steht der Teil des Satzes, der sie nennt,
-    /// nicht da (C4.4).
+    /// nicht da (C4.4 der Runde 10).
     pub ausgeblendete_markierungen: usize,
     /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
     ///
     /// Kommt aus `Ordnermodell::ersetzt_beim_naechsten_stapel`, der vorhandenen
-    /// Frage nach genau diesem Zustand (C4.7).
+    /// Frage nach genau diesem Zustand (C4.7 der Runde 10).
     pub ersetzt_beim_naechsten_stapel: bool,
+    /// Ob gerade ein Durchlauf laeuft, der Dateiinhalte liest (C4.8 der
+    /// Runde 11).
+    ///
+    /// Kommt aus `Tabinhalt::liest_inhalt` und traegt dessen beide
+    /// Bedingungen: es laeuft ein Durchlauf, **und** der Inhaltsfilter wirkt.
+    /// Ein reiner Namensdurchlauf ist damit falsch, und der Satz bei
+    /// ausgeschaltetem "Content" zeichengleich mit dem der Runde 10.
+    pub liest_inhalt: bool,
+    /// Wie viele Dateien der Durchlauf wegen ihrer Groesse **nicht** gelesen
+    /// hat.
+    ///
+    /// Null heisst: keine, und dann steht der Teil des Satzes, der sie nennt,
+    /// nicht da. Kommt aus `Tabinhalt::zu_gross` und steht deshalb auch nach
+    /// dem Ende des Laufs noch; bei einem kleinen Ordner ist der Lauf durch,
+    /// bevor die Zeile das naechste Mal rechnet.
+    pub zu_gross: u64,
 }
 
 /// Der fuenfte Rang der Statuszeile: der stehende Filtertext und was er von der
@@ -340,15 +357,51 @@ pub struct Filterstand {
 /// `None` heisst: dieser Rang meldet nichts. Zwei Wege fuehren dorthin, und
 /// **beide stehen hier und nicht beim Aufrufer**, damit sie ohne Fenster
 /// pruefbar sind. Steht kein Filtertext, ist nichts zu melden, und die Zeile
-/// verhaelt sich wie vor dieser Runde (C4.8). Und solange ein begonnener
-/// Lesevorgang noch nichts geliefert hat, stehen noch die Zeilen des vorigen
-/// Ordners; eine Zahl daraus waere eine Auskunft ueber einen Ordner, den der
-/// Nutzer schon verlassen hat (C4.7).
+/// verhaelt sich wie vor jener Runde (C4.8 der Runde 10). Und solange ein
+/// begonnener Lesevorgang noch nichts geliefert hat, stehen noch die Zeilen des
+/// vorigen Ordners; eine Zahl daraus waere eine Auskunft ueber einen Ordner,
+/// den der Nutzer schon verlassen hat (C4.7 der Runde 10).
 ///
-/// **Der Satz nennt drei Dinge und manchmal ein viertes** (C4.3, C4.4): den
-/// Filtertext, die Zahl der gezeigten Zeilen, die Zahl der Eintraege des
-/// angezeigten Ordners, und die Zahl der Markierungen, die der Filter gerade
-/// ausblendet. Der vierte Teil steht nur da, wenn es solche Markierungen gibt.
+/// **Der Satz hat einen Kern und drei Zusaetze, und jeder Zusatz steht nur
+/// unter seiner Bedingung.** Der Kern nennt den Filtertext, die Zahl der
+/// gezeigten Zeilen und die Zahl der Eintraege des angezeigten Ordners (C4.3
+/// der Runde 10). Danach folgen, in dieser Reihenfolge:
+///
+/// ```text
+/// Filter „notiz“: 38 von 4.812 angezeigt        Kern, immer
+/// , Inhalt wird gelesen                         solange ein Inhaltsdurchlauf laeuft
+/// , 12 Dateien zu groß                          wenn der Lauf Dateien uebergangen hat
+/// , 3 Markierungen ausgeblendet                 wenn der Filter Markierungen verdeckt
+/// ```
+///
+/// **Die Reihenfolge ist entschieden und nicht beliebig**
+/// (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/decisions/260816-1359_*_in-welcher-reihenfolge-stehen-die-satzteile-des-filterstands-und-was-faellt-im-schmalen-fenster-weg.md`,
+/// Moeglichkeit 1). Der Lesehinweis steht unmittelbar hinter der Zahl, die er
+/// einschraenkt: "38 von 4.812" ist waehrend eines Laufs eine Momentaufnahme,
+/// und die beiden zu trennen hiesse, die Einschraenkung von der Aussage zu
+/// loesen. Gekuerzt wird von hinten, also faellt im schmalen Fenster der
+/// Markierungshinweis zuerst und der Lesehinweis zuletzt.
+///
+/// **Der Satz der Runde 10 aendert sich dadurch an keiner Stelle.** Beide
+/// neuen Teile entstehen allein bei gesetztem "Content", und ohne sie steht
+/// der Markierungshinweis wie bisher direkt hinter dem Kern.
+///
+/// **Gekuerzt wird von AppKit und nicht hier.** Eine zweite, kurze Fassung
+/// jedes Satzteils entsteht nicht: die Zeile kuerzt am rechten Rand, und
+/// `Statuszeile::kurzhinweis_nachziehen` haengt genau dann den vollen Satz
+/// als Kurzhinweis an. Diese Funktion bleibt rein und ohne Fenster pruefbar;
+/// eine Messung der Breite zoege das Fenster in sie hinein.
+///
+/// **Der Groessenhinweis ist mitentschieden und nicht optional**
+/// (`shared/decisions/260816-1310_*_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md`).
+/// Er ist der Rest der Antwort zur 1-MB-Grenze: ohne ihn haelt der Nutzer eine
+/// nicht gefundene grosse Datei fuer nicht vorhanden, und genau diese
+/// Verwechslung war der einzige ernsthafte Einwand gegen die Grenze.
+///
+/// **Kein siebter Rang und keine neue Farbregel** (C4.9, C4.10 der Runde 11).
+/// Es bleibt bei einer Statuszeile, der Filterstand bleibt ein Rang, und
+/// [`Rang::art`] rechnet fuer ihn weiter [`Art::Vorgang`]: ein Lesefortschritt
+/// ist kein Fehler und wird nicht rot.
 ///
 /// **Er ist die Gegenleistung dafuer, dass die Markierungsregel unter dem
 /// Filter unveraendert bleibt.** Der Nutzer hat am 260814-1610 entschieden,
@@ -356,9 +409,10 @@ pub struct Filterstand {
 /// (`decisions/260814-1552_*_was-geschieht-mit-einer-markierung-die-der-filter-ausblendet.md`);
 /// ohne diesen Satzteil muesste er erraten, dass es sie ueberhaupt gibt.
 ///
-/// **Beide Zahlen gehen durch [`zahl`]** und tragen damit dieselben
+/// **Jede Zahl geht durch [`zahl`]** und traegt damit dieselben
 /// Tausenderpunkte wie ein laufender Vorgang und der Markierungsstand daneben.
-/// Ein zweites Zahlenformat entsteht nicht.
+/// Ein zweites Zahlenformat entsteht nicht. Der Groessenhinweis hat dafuer
+/// einen eigenen Singularzweig, genau wie der Markierungshinweis unter ihm.
 ///
 /// **Sie steht hier und nicht in [`crate::kommandos`]**, wo
 /// `auswahl::markierungsstand_text` fuer den Rang darunter steht. Jene braucht
@@ -373,13 +427,30 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
     if filtertext.is_empty() || stand.ersetzt_beim_naechsten_stapel {
         return None;
     }
+    let liest = if stand.liest_inhalt {
+        ", Inhalt wird gelesen"
+    } else {
+        ""
+    };
+    // `zu_gross` zaehlt Dateien und kommt als `u64` vom Tab, weil der
+    // `Durchlauf` es so fuehrt. `zahl` nimmt ein `usize`; auf dem Bauziel sind
+    // beide gleich breit, und die Saettigung ist trotzdem ehrlicher als ein
+    // Abschneiden.
+    let zu_gross = match stand.zu_gross {
+        0 => String::new(),
+        1 => ", eine Datei zu groß".to_owned(),
+        mehrere => format!(
+            ", {} Dateien zu groß",
+            zahl(usize::try_from(mehrere).unwrap_or(usize::MAX))
+        ),
+    };
     let ausgeblendet = match stand.ausgeblendete_markierungen {
         0 => String::new(),
         1 => ", eine Markierung ausgeblendet".to_owned(),
         mehrere => format!(", {} Markierungen ausgeblendet", zahl(mehrere)),
     };
     Some(format!(
-        "Filter \u{201e}{filtertext}\u{201c}: {} von {} angezeigt{ausgeblendet}",
+        "Filter \u{201e}{filtertext}\u{201c}: {} von {} angezeigt{liest}{zu_gross}{ausgeblendet}",
         zahl(stand.gezeigt),
         zahl(stand.vorhanden)
     ))
@@ -964,13 +1035,20 @@ mod tests {
             .expect("jeder Rang steht in der Rangfolge")
     }
 
-    /// Ein Filterstand mit drei Zahlen und ohne ausstehenden Ersatz.
+    /// Ein Filterstand mit drei Zahlen, ohne ausstehenden Ersatz und ohne
+    /// Inhaltsdurchlauf.
+    ///
+    /// Der Stand der Runde 10: kein Lesehinweis, keine zu grosse Datei. Die
+    /// Proben jener Runde geben ihn unveraendert weiter und pruefen damit
+    /// zugleich, dass ihr Satz zeichengleich geblieben ist.
     fn stand(gezeigt: usize, vorhanden: usize, ausgeblendet: usize) -> Filterstand {
         Filterstand {
             gezeigt,
             vorhanden,
             ausgeblendete_markierungen: ausgeblendet,
             ersetzt_beim_naechsten_stapel: false,
+            liest_inhalt: false,
+            zu_gross: 0,
         }
     }
 
@@ -1086,6 +1164,173 @@ mod tests {
         let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
             .expect("der Markierungsstand steht in der Zeile");
         assert_eq!(meldung.rang, Rang::Markierungsstand);
+    }
+
+    // ------------------------------------------------------------------
+    // Die zwei Satzteile des Inhaltsfilters (C4.8 bis C4.10, Runde 11)
+    // ------------------------------------------------------------------
+
+    /// Der Kern des Satzes, wie ihn alle Proben dieses Abschnitts erwarten.
+    const KERN: &str = "Filter \u{201e}notiz\u{201c}: 38 von 4.812 angezeigt";
+
+    /// Ein Filterstand mit allen sechs Groessen.
+    fn voll(liest_inhalt: bool, zu_gross: u64, ausgeblendet: usize) -> Filterstand {
+        Filterstand {
+            liest_inhalt,
+            zu_gross,
+            ..stand(38, 4_812, ausgeblendet)
+        }
+    }
+
+    /// Der Satz zu einem Stand, der bei stehendem Filtertext immer einen hat.
+    fn satz(stand: Filterstand) -> String {
+        filterstand_text("notiz", stand).expect("bei stehendem Filtertext meldet der Rang etwas")
+    }
+
+    /// C4.8: jede der acht Kombinationen der drei Zusaetze, in der
+    /// entschiedenen Reihenfolge Kern, Lesehinweis, Groessenhinweis,
+    /// Markierungshinweis.
+    ///
+    /// Die erwarteten Saetze stehen ausgeschrieben da und werden nicht aus
+    /// denselben Bausteinen zusammengesetzt wie [`filterstand_text`]; eine
+    /// Probe, die die Regel nachbaut, prueft sie nicht.
+    #[test]
+    fn jede_kombination_der_vier_satzteile_steht_in_der_festgelegten_reihenfolge() {
+        let faelle: [(bool, u64, usize, String); 8] = [
+            (false, 0, 0, KERN.to_owned()),
+            (false, 0, 3, format!("{KERN}, 3 Markierungen ausgeblendet")),
+            (false, 12, 0, format!("{KERN}, 12 Dateien zu groß")),
+            (
+                false,
+                12,
+                3,
+                format!("{KERN}, 12 Dateien zu groß, 3 Markierungen ausgeblendet"),
+            ),
+            (true, 0, 0, format!("{KERN}, Inhalt wird gelesen")),
+            (
+                true,
+                0,
+                3,
+                format!("{KERN}, Inhalt wird gelesen, 3 Markierungen ausgeblendet"),
+            ),
+            (
+                true,
+                12,
+                0,
+                format!("{KERN}, Inhalt wird gelesen, 12 Dateien zu groß"),
+            ),
+            (
+                true,
+                12,
+                3,
+                format!(
+                    "{KERN}, Inhalt wird gelesen, 12 Dateien zu groß, 3 Markierungen ausgeblendet"
+                ),
+            ),
+        ];
+        for (liest_inhalt, zu_gross, ausgeblendet, erwartet) in faelle {
+            assert_eq!(
+                satz(voll(liest_inhalt, zu_gross, ausgeblendet)),
+                erwartet,
+                "liest_inhalt={liest_inhalt}, zu_gross={zu_gross}, ausgeblendet={ausgeblendet}"
+            );
+        }
+    }
+
+    /// Null zu grosse Dateien heisst: der Groessenhinweis steht nicht da.
+    ///
+    /// Der Fall steht ausdruecklich fuer sich, weil er der haeufigste ist:
+    /// jeder Lauf ohne eine Datei ueber der Grenze faellt in ihn, und ein
+    /// Satzteil "0 Dateien zu groß" waere eine Auskunft ueber nichts.
+    #[test]
+    fn ohne_zu_grosse_datei_steht_der_groessenhinweis_nicht_da() {
+        for eingabe in [voll(false, 0, 0), voll(true, 0, 0), voll(true, 0, 3)] {
+            let gesetzt = satz(eingabe);
+            assert!(
+                !gesetzt.contains("zu groß"),
+                "kein Groessenhinweis bei null zu grossen Dateien: {gesetzt}"
+            );
+            assert!(
+                !gesetzt.contains("Datei"),
+                "auch kein Rest des Hinweises: {gesetzt}"
+            );
+        }
+        assert_eq!(
+            satz(voll(true, 0, 3)),
+            format!("{KERN}, Inhalt wird gelesen, 3 Markierungen ausgeblendet")
+        );
+    }
+
+    /// Der Groessenhinweis hat einen Singularzweig, genau wie der
+    /// Markierungshinweis unter ihm, und seine Zahl traegt den Tausenderpunkt.
+    #[test]
+    fn der_groessenhinweis_trennt_eine_datei_von_mehreren() {
+        assert_eq!(
+            satz(voll(false, 1, 0)),
+            format!("{KERN}, eine Datei zu groß")
+        );
+        assert_eq!(
+            satz(voll(false, 2, 0)),
+            format!("{KERN}, 2 Dateien zu groß")
+        );
+        assert_eq!(
+            satz(voll(false, 2_500, 0)),
+            format!("{KERN}, 2.500 Dateien zu groß")
+        );
+    }
+
+    /// Ohne die beiden neuen Teile ist der Satz zeichengleich mit dem der
+    /// Runde 10.
+    ///
+    /// Das ist die Bedingung der Bauentscheidung: die Umstellung der
+    /// Reihenfolge wirkt genau dann, wenn einer der neuen Teile dasteht, und
+    /// die entstehen nur bei gesetztem "Content".
+    #[test]
+    fn ohne_inhaltsdurchlauf_ist_der_satz_der_der_runde_zehn() {
+        assert_eq!(
+            satz(voll(false, 0, 0)),
+            "Filter \u{201e}notiz\u{201c}: 38 von 4.812 angezeigt"
+        );
+        assert_eq!(
+            satz(voll(false, 0, 1)),
+            "Filter \u{201e}notiz\u{201c}: 38 von 4.812 angezeigt, eine Markierung ausgeblendet"
+        );
+        assert_eq!(
+            satz(voll(false, 0, 2_500)),
+            "Filter \u{201e}notiz\u{201c}: 38 von 4.812 angezeigt, 2.500 Markierungen ausgeblendet"
+        );
+    }
+
+    /// C4.9 und C4.10: der volle Satz bleibt ein Rang von sechs und ist kein
+    /// Fehler.
+    ///
+    /// Die beiden Zusaetze aendern weder die Rangfolge noch die Farbe: ein
+    /// Lesefortschritt wird nicht rot.
+    #[test]
+    fn der_volle_satz_bleibt_ein_rang_und_kein_fehler() {
+        assert_eq!(Rang::ALLE.len(), 6, "kein siebter Rang");
+        let quellen = Quellen {
+            filterstand: filterstand_text("notiz", voll(true, 12, 3)),
+            ..Quellen::default()
+        };
+        let leer = Quellen::default();
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+            .expect("der Filterstand steht als einzige Quelle in der Zeile");
+        assert_eq!(meldung.rang, Rang::Filterstand);
+        assert_eq!(meldung.art, Art::Vorgang);
+        assert_ne!(meldung.art, Art::Fehler);
+        assert!(meldung.text.contains("Inhalt wird gelesen"));
+    }
+
+    /// Die beiden Abbruchgruende der Runde 10 gehen den neuen Teilen vor:
+    /// ohne Filtertext und waehrend eines ausstehenden Ersatzes meldet der
+    /// Rang nichts, gleich was der Durchlauf treibt.
+    #[test]
+    fn die_neuen_teile_heben_die_beiden_abbruchgruende_nicht_auf() {
+        assert_eq!(filterstand_text("", voll(true, 12, 3)), None);
+        let mut ausstehend = voll(true, 12, 3);
+        ausstehend.ersetzt_beim_naechsten_stapel = true;
+        assert_eq!(filterstand_text("notiz", ausstehend), None);
     }
 
     /// C4.10: die Rangfolge traegt sechs verschiedene Werte, und jeder von

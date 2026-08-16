@@ -370,7 +370,7 @@ flowchart TD
 - Abzulesen an: `cargo test --workspace` grün. Die Farbwahl selbst ist in `krk-ui` nicht ohne Fenster prüfbar; prüfbar ist die Regel dahinter, und die steht in `krk-core` und wird von C1 abgenommen. Am Diff abzulesen: `tabelle.rs` trägt danach drei `NSColor`-Fundstellen und nicht zwei, und die Schriftwahl hat unverändert zwei Zweige.
 - **Am laufenden Bündel abzunehmen, und das ist Nutzerarbeit:** C5.1 (ein Inhaltstreffer ist von einem Namenstreffer unterscheidbar), C5.2 (eine markierte Inhaltstrefferzeile bleibt orange und fett, eine ausgewählte bleibt blau unterlegt) und C5.3 (beide Farbtafeln, mit einem Wechsel im laufenden Betrieb).
 
-**F2. Zwei Satzteile am Filterstand**
+**F2. [DONE] Zwei Satzteile am Filterstand**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/tabelle.rs`
 - Erfüllt: C4.8, C4.9, C4.10
