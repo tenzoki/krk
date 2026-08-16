@@ -1990,12 +1990,33 @@ impl DateifensterQuelle {
     }
 
     /// Blendet versteckte Eintraege ein und wieder aus (C2).
+    ///
+    /// **Seit dem 260816 zieht dieser Schalter den Durchlauf nach**, in
+    /// derselben Bauart wie [`Self::tiefe_suche_umschalten`] und
+    /// [`Self::inhaltssuche_umschalten`] darunter. Der Grund ist, dass er seit
+    /// diesem Tag eine Eingabe der Auftragsliste aendert: ein ausgeblendeter
+    /// Eintrag bekommt keinen Auftrag mehr, weil seine Zeile ohnehin nicht
+    /// stehen kann, und ein eben eingeblendeter braucht deshalb einen, den er
+    /// vorher nicht hatte. Bis dahin bekam **jeder** Eintrag seinen Auftrag,
+    /// auch der unsichtbare; das kostete bei ausgeschaltetem „Content" einen
+    /// Metadatengang und seit der Runde 11 ein `open(2)` samt bis zu 1 MB
+    /// gelesener Bytes je verstecktem Eintrag
+    /// (`issues/260816-1931_*_der-inhaltsfilter-liest-versteckte-dateien-und-steigt-in-versteckte-ordner-ab.md`).
+    ///
+    /// Der Handel ist damit umgedreht: wer nie einblendet, zahlt nichts mehr;
+    /// wer einblendet, zahlt einen neuen Lauf. Das Anstossen und Abbrechen
+    /// selbst gehoert `Tabliste::durchlauf_nachziehen`, und hier faellt dafuer
+    /// kein Zweig an.
     fn verstecke_umschalten(&self) {
         {
             let mut tabs = self.ivars().tabs.borrow_mut();
             tabs.aktiver_mut().modell_mut().verstecke_umschalten();
         }
+        self.durchlauf_nachziehen();
         self.umsortiert();
+        // Der Schalter aendert, wie viele Zeilen stehen, und ob ein Lauf
+        // laeuft; beides schreibt die Statuszeile.
+        self.meldung_gewechselt();
     }
 
     /// Kippt das Kennzeichen "Deep" am Modell des sichtbaren Tabs (C2 und C5

@@ -65,3 +65,16 @@ unter dem sichtbaren Ordner darüber, und ihn zu übergehen änderte die Bedeutu
 Ein Ausschluss hier wäre eine neue Regel und keine Sparmaßnahme.
 
 Gefunden bei der Durchsicht der elften Runde, Bereich `9f5ced5..b9ab8ae`.
+
+---
+Resolved: 260816-2230, erste Hälfte behoben, zweite ausdrücklich nicht — so, wie der Datensatz oben es trennt.
+
+**Die Auftragsliste.** Sie ist nicht um einen Versteckt-Zweig ergänzt worden, sondern an ihre Wurzel gezogen: sie stand in `krk-ui` und war die zweite Fassung des Prüfschritts, und genau deshalb fehlte ihr dessen erster Zweig. Der Prüfschritt liefert jetzt einen Wert `Zeilengrund` (`Steht`, `FaelltWeg`, `UnterVorbehalt(Auftragsart)`), und `Ordnermodell::auftraege` ist ein Gang über diesen Wert. Wessen Zeile an einem Befund hängt, verdient einen Auftrag — es ist dieselbe Frage, und sie steht jetzt einmal da. Ein ausgeblendeter Eintrag fällt damit ohne eigene Regel heraus; die freie Funktion `auftraege` in `crates/krk-ui/src/tabs.rs` ist gefallen.
+
+**Der Handel ist umgedreht, nicht abgeschafft.** Bis heute bekam jeder versteckte Eintrag seinen Befund im Voraus, damit seine Zeile beim Einblenden sofort richtig dasteht; das kostete seit der Runde 11 je verstecktem Eintrag ein `open(2)` und bis zu 1 MB gelesene Bytes. Jetzt zahlt nichts, wer nie einblendet, und wer einblendet, zahlt einen neuen Lauf: `DateifensterQuelle::verstecke_umschalten` (`crates/krk-ui/src/appkit/tabelle.rs`) zieht seit dieser Änderung `durchlauf_nachziehen` und `meldung_gewechselt` nach, in derselben Bauart wie die beiden anderen Schalter. Das Ausblenden ist damit eine Eingabe der Auftragsliste geworden und steht als solche im Doc-Kommentar von `Tabliste::durchlauf_nachziehen`.
+
+**Der Abstieg bleibt, wie er war**, und das ist eine Entscheidung und kein Übersehen: ein Treffer unter einem versteckten Ordner ist ein Treffer unter dem sichtbaren Ordner darüber, und ihn zu übergehen wäre eine neue Regel und keine Sparmaßnahme — sie änderte die Bedeutung von C3.1. Der Grund steht am Doc-Kommentar von `Ordnermodell::auftraege`, damit die nächste Durchsicht nicht dieselbe Frage noch einmal aufmacht. Der Kostenpunkt „ein Quellbaum liest sein `.git` mit" ist trotzdem weitgehend weg: das `.git` selbst ist ein versteckter Ordner des angezeigten Ordners und bekommt keinen Auftrag mehr.
+
+Prüfbar gemacht in `crates/krk-core/tests/verzeichnis.rs`: `ein_ausgeblendeter_eintrag_bekommt_keinen_auftrag` misst beide Hälften des Handels an einem Zug, `die_auftragsliste_traegt_je_typ_die_richtige_art` hält den Schnitt fest. Die Abnahmeliste führt dafür die neue Beobachtung **27**.
+
+Abnahme: `make check` — exit 0.

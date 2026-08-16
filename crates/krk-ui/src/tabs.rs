@@ -38,9 +38,7 @@ use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
 use krk_core::verzeichnis::modell::Befund;
-use krk_core::verzeichnis::{
-    Abschluss, Auftrag, Auftragsart, Durchlauf, Lesevorgang, Meldung, Ordnermodell,
-};
+use krk_core::verzeichnis::{Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
 
 /// Die Generation, mit der ein noch nicht gelesener Tab anfaengt.
 const GENERATION_LEER: u64 = 0;
@@ -822,8 +820,10 @@ impl Tabliste {
     /// **Die eine Stelle, an der ein Durchlauf entsteht und vergeht**, und
     /// damit die Antwort auf beide Haelften von C3.6 und C3.7 zugleich. Zu
     /// rufen ist sie von jedem Anlass, der eine seiner Eingaben aendert: von
-    /// jeder Aenderung des Filtertexts, vom Umschalten des Filters der Tiefe
-    /// und vom Einzugstakt, sobald ein Tab fertig gelesen ist. Die uebrigen
+    /// jeder Aenderung des Filtertexts, vom Umschalten eines der beiden Filter,
+    /// seit dem 260816 vom Ein- und Ausblenden der versteckten Eintraege — sie
+    /// entscheiden seither mit, wer einen Auftrag bekommt — und vom Einzugstakt,
+    /// sobald ein Tab fertig gelesen ist. Die uebrigen
     /// Anlaesse brauchen keinen Ruf, weil der [`Tabinhalt`] mit dem Durchlauf
     /// dort ohnehin faellt: der Ordnerwechsel tauscht ihn aus, das Schliessen
     /// nimmt ihn weg, und [`Tabliste::lesen_starten`] setzt das Feld
@@ -897,7 +897,11 @@ impl Tabliste {
         if !tab.modell.filter_steht() || (!tab.modell.tief() && !tab.modell.inhalt_wirkt()) {
             return false;
         }
-        let auftraege = auftraege(&tab.modell);
+        // Die Liste kommt aus dem Ordnermodell und wird hier nicht
+        // zusammengestellt: wessen Zeile an einem Befund haengt, ist dieselbe
+        // Frage, die der Pruefschritt schon beantwortet hat, und sie steht
+        // seit dem 260816 nur dort.
+        let auftraege = tab.modell.auftraege();
         // Kein Auftrag, kein Faden: die Zusage aus C3.14 zaehlt Durchlaeufe,
         // und ein Ordner, dessen saemtliche Unterordner den Filtertext im Namen
         // tragen, stoesst hier gar keinen an.
@@ -908,6 +912,9 @@ impl Tabliste {
         let nummer = self.letzter_durchlauf;
         let tab = &mut self.tabs[stelle];
         tab.durchlauf = Some(Durchlauf::starten(
+            // Der Bestand wird geteilt und nicht kopiert; der Auftrag traegt
+            // deshalb den blossen Index und keinen Namen.
+            tab.modell.bestand(),
             auftraege,
             tab.ordner.clone(),
             tab.modell.filter_klein().to_owned(),
@@ -1021,82 +1028,6 @@ impl Tabliste {
     }
 }
 
-/// Die Eintraege des angezeigten Ordners, ueber die der Durchlauf zu
-/// entscheiden hat, mit der Frage, die er fuer jeden beantworten soll.
-///
-/// **Rein und ohne Fenster pruefbar**, und das ist der Grund fuer die Form: die
-/// Zusammensetzung dieser Liste ist die Zusage C3.14 der Runde 10, und
-/// `krk-ui` hat kein Bibliotheksziel, an dem eine Probe von aussen ansetzen
-/// koennte.
-///
-/// # Zwei Bedingungen und eine Tafel
-///
-/// Am Eingang steht der Kurzschluss: `Name traegt die Folge?` mit **nein**,
-/// gefragt ueber `Ordnermodell::name_traegt_den_filter` und nicht ueber einen
-/// eigenen Vergleich. Der Zweig gehoert dem Pruefschritt, und ein zweiter
-/// Vergleich hier hiesse, dass die Auftragsliste etwas anderes fuer passend
-/// hielte als die Liste, die der Nutzer sieht. Wessen Name die Folge traegt,
-/// steht damit fest — ein Ordner braucht keinen Befund ueber seinen Unterbaum
-/// mehr, und eine Datei bleibt ungelesen (C3.4). Der Kurzschluss steht hier am
-/// Eingang und nicht als Sonderfall an einem Ausgang, und er gilt fuer beide
-/// Auftragsarten.
-///
-/// Was danach uebrig ist, entscheidet eine Tafel ueber den Typ des Eintrags und
-/// die zwei Schalter. Sie ist ueberschneidungsfrei und vollstaendig, weil der
-/// Schnitt „Ordner oder Verknuepfung gegen gewoehnliche Datei" derselbe ist,
-/// den `Ordnermodell::sichtbar` zieht:
-///
-/// ```text
-/// Eintrag                     Deep   Content wirkt   Auftrag
-/// ---------------------------------------------------------
-/// Ordner oder Verknuepfung    aus    beliebig        keiner  (der Ordner steht immer)
-/// Ordner oder Verknuepfung    an     beliebig        Unterbaum
-/// gewoehnliche Datei          bel.   nein            keiner  (die Zeile faellt weg)
-/// gewoehnliche Datei          bel.   ja              Inhalt
-/// ```
-///
-/// **Eine symbolische Verknuepfung zaehlt zu den Ordnern**, weil der Nutzer in
-/// sie hineinnavigiert. Die Verknuepfungsregel selbst wohnt allein im
-/// Durchlauf, der fuer sie „kein Treffer darunter" meldet, ohne in sie
-/// hinabzusteigen oder in sie hineinzulesen (C2.13 der Runde 10, C3.7). Ein
-/// zweiter Schnitt hier hiesse, dass eine Verknuepfung nie einen Befund
-/// bekaeme und damit von „noch nicht entschieden" nicht zu unterscheiden waere.
-///
-/// **Ob der Inhaltsfilter wirkt, sagt `Ordnermodell::inhalt_wirkt`** und nicht
-/// diese Stelle. Die Schwelle wird an einem Ort geprueft (C2.10); hier ein
-/// zweites Mal nachzurechnen waere die Gelegenheit, sie verschieden zu
-/// beantworten. Beide Schalter werden einmal je Liste gefragt und nicht einmal
-/// je Eintrag.
-///
-/// **Ein ausgeblendeter Eintrag steht mit in der Liste.** Die Regel, die ihn
-/// wegblendet, ist der erste Zweig von `Ordnermodell::sichtbar`, und der
-/// gehoert dorthin: ein zweites Mal hier gefragt waere die zweite Fassung
-/// derselben Regel, die die Runde 10 gerade abgeschafft hat. Der Befund ist
-/// dabei nicht umsonst — blendet der Nutzer die versteckten Eintraege waehrend
-/// des Durchlaufs ein, steht die Zeile sofort richtig da.
-fn auftraege(modell: &Ordnermodell) -> Vec<Auftrag> {
-    let tief = modell.tief();
-    let inhalt_wirkt = modell.inhalt_wirkt();
-    modell
-        .eintraege()
-        .iter()
-        .enumerate()
-        .filter(|(index, _)| !modell.name_traegt_den_filter(*index as u32))
-        .filter_map(|(index, eintrag)| {
-            let art = if eintrag.ist_ordner() || eintrag.ist_verknuepfung() {
-                tief.then_some(Auftragsart::Unterbaum)
-            } else {
-                inhalt_wirkt.then_some(Auftragsart::Inhalt)
-            }?;
-            Some(Auftrag {
-                index: index as u32,
-                name: eintrag.name.clone(),
-                art,
-            })
-        })
-        .collect()
-}
-
 /// Holt die wartenden Meldungen eines einzelnen Tabs ab.
 ///
 /// Zwei Kanaele, in dieser Reihenfolge: erst die Stapel des Lesevorgangs, dann
@@ -1207,6 +1138,8 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
 
 #[cfg(test)]
 mod tests {
+    use krk_core::verzeichnis::{Auftrag, Auftragsart};
+
     use super::*;
 
     /// Ein Fensterzustand mit den genannten Ordnern, der erste ist sichtbar.
@@ -1760,11 +1693,20 @@ mod tests {
         modell
     }
 
+    /// Der Name, den ein Auftrag benennt.
+    ///
+    /// Der Auftrag traegt seit dem 260816 nur den Index; nachgeschlagen wird im
+    /// Bestand, genau wie der Durchlauf es tut.
+    fn auftragsname(modell: &Ordnermodell, auftrag: &Auftrag) -> String {
+        modell.eintraege()[auftrag.index as usize].name.clone()
+    }
+
     /// Die Namen der Auftraege, in der Reihenfolge der Liste.
     fn auftragsnamen(modell: &Ordnermodell) -> Vec<String> {
-        auftraege(modell)
-            .into_iter()
-            .map(|auftrag| auftrag.name)
+        modell
+            .auftraege()
+            .iter()
+            .map(|auftrag| auftragsname(modell, auftrag))
             .collect()
     }
 
@@ -1816,7 +1758,7 @@ mod tests {
             true,
         );
         assert_eq!(
-            auftraege(&modell).len(),
+            modell.auftraege().len(),
             0,
             "vier passende Ordner und eine Datei ergeben keinen einzigen Auftrag"
         );
@@ -1889,15 +1831,15 @@ mod tests {
             "zzz",
             true,
         );
-        let auftraege = auftraege(&modell);
+        let auftraege = modell.auftraege();
         assert_eq!(auftraege.len(), 2);
         assert_eq!(
-            (auftraege[0].index, auftraege[0].name.as_str()),
-            (1, "bilder")
+            (auftraege[0].index, auftragsname(&modell, &auftraege[0])),
+            (1, "bilder".to_owned())
         );
         assert_eq!(
-            (auftraege[1].index, auftraege[1].name.as_str()),
-            (3, "daten")
+            (auftraege[1].index, auftragsname(&modell, &auftraege[1])),
+            (3, "daten".to_owned())
         );
     }
 
@@ -1916,9 +1858,10 @@ mod tests {
 
     /// Die Auftraege als Paare aus Name und Art, in der Reihenfolge der Liste.
     fn auftragstafel(modell: &Ordnermodell) -> Vec<(String, Auftragsart)> {
-        auftraege(modell)
-            .into_iter()
-            .map(|auftrag| (auftrag.name, auftrag.art))
+        modell
+            .auftraege()
+            .iter()
+            .map(|auftrag| (auftragsname(modell, auftrag), auftrag.art))
             .collect()
     }
 

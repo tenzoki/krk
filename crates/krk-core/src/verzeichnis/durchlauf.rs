@@ -7,7 +7,8 @@
 //! **Was einen Auftrag bekommt, traegt den Filtertext im Namen nicht**; wessen
 //! Name ihn traegt, ist ohne dieses Modul entschieden. Wer die Auftraege
 //! zusammenstellt, ist nicht Sache dieser Datei; sie bekommt die Liste beim
-//! Start vollstaendig uebergeben.
+//! Start vollstaendig uebergeben, zusammen mit dem Bestand, in dem die
+//! Auftraege ihre Namen nachschlagen.
 //!
 //! **Zwei Auftragsarten, eine Maschine.** [`Auftragsart::Unterbaum`] fragt nach
 //! dem Unterbaum eines Ordners, [`Auftragsart::Inhalt`] nach dem Text einer
@@ -156,7 +157,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
-use super::eintrag::Typ;
+use super::eintrag::{Eintrag, Typ};
 use super::filter::traegt_die_folge;
 use super::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use super::leser::STAPELGROESSE;
@@ -165,12 +166,14 @@ use super::sys::{Schwungleser, ist_deskriptormangel};
 /// Wonach ein Auftrag fragt.
 ///
 /// **Zwei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.** Sie
-/// bilden den Schnitt ab, den auch [`Ordnermodell::sichtbar`] zieht: ein Ordner
-/// oder eine Verknuepfung auf der einen Seite, eine gewoehnliche Datei auf der
-/// anderen. Wer die Frage stellt, entscheidet die Art beim Zusammenstellen der
-/// Liste; dieses Modul verzweigt danach und raet nicht am Typ herum.
+/// bilden den Schnitt ab, den auch der Pruefschritt des Ordnermodells zieht: ein
+/// Ordner oder eine Verknuepfung auf der einen Seite, eine gewoehnliche Datei
+/// auf der anderen. Es ist seit dem 260816 buchstaeblich derselbe Schnitt und
+/// nicht mehr nur derselbe der Absicht nach: die Auftragsliste entsteht in
+/// [`Ordnermodell::auftraege`] aus dem Ergebnis des Pruefschritts. Dieses Modul
+/// verzweigt danach und raet nicht am Typ herum.
 ///
-/// [`Ordnermodell::sichtbar`]: super::modell::Ordnermodell::sichtbar
+/// [`Ordnermodell::auftraege`]: super::modell::Ordnermodell::auftraege
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Auftragsart {
     /// Liegt unter diesem Ordner ein Eintrag, dessen Name die Folge traegt?
@@ -182,15 +185,20 @@ pub enum Auftragsart {
 /// Ein Eintrag des angezeigten Ordners, ueber den noch nichts bekannt ist.
 ///
 /// Der Eintragsindex und nicht die Zeile: die Sichtreihenfolge wird bei jedem
-/// Sortierwechsel neu gebaut, der Bestand nicht. Der Name statt des vollen
-/// Pfades, weil alle Auftraege im selben Ordner liegen und der einmal beim
-/// Start uebergeben wird.
-#[derive(Debug, Clone)]
+/// Sortierwechsel neu gebaut, der Bestand nicht.
+///
+/// **Der Index und kein Name.** Bis zum 260816 trug der Auftrag eine Kopie des
+/// Namens, und die Auftragsliste entstand bei jedem getippten Zeichen neu: bei
+/// 100.000 Eintraegen also bis zu 100.000 Zeichenketten je Tastendruck, auf dem
+/// Hauptfaden (`issues/260816-1933_*_die-auftragsliste-legt-je-tastendruck-einen-namen-je-datei-an-auf-dem-hauptfaden.md`).
+/// Den Namen haelt das Ordnermodell ohnehin schon; [`Durchlauf::starten`]
+/// bekommt seinen Bestand deshalb mitgereicht und schlaegt ihn dort nach. Ein
+/// Auftrag ist damit acht Bytes und eine Sicht auf den Bestand statt einer
+/// zweiten Fassung davon.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Auftrag {
     /// Der Index des Eintrags im Bestand des Ordnermodells.
     pub index: u32,
-    /// Sein Name ohne Pfad.
-    pub name: String,
     /// Wonach gefragt wird.
     pub art: Auftragsart,
 }
@@ -233,7 +241,16 @@ impl Durchlauf {
     /// damit ein Fadenprotokoll lesbar bleibt; den Befunden liegt sie nicht
     /// bei, weil jeder Tab seinen eigenen Durchlauf haelt und allein aus dessen
     /// Kanal liest.
+    ///
+    /// `bestand` ist der Bestand des Ordnermodells, aus dem die Auftraege
+    /// stammen; jeder Auftrag liest seinen Namen dort nach. Er wird **geteilt
+    /// und nicht kopiert** — was daran haengt, steht bei [`Auftrag`]. Ein Index
+    /// ausserhalb dieses Bestands kann von einem Aufrufer, der beide aus
+    /// demselben Modell nimmt, nicht kommen; er endet trotzdem in einem eigenen
+    /// Zweig, weil ein stillschweigend uebergangener Auftrag ein Befund waere,
+    /// den niemand je bekommt.
     pub fn starten(
+        bestand: Arc<Vec<Eintrag>>,
         auftraege: Vec<Auftrag>,
         ordner: PathBuf,
         filter_klein: String,
@@ -248,15 +265,14 @@ impl Durchlauf {
         thread::Builder::new()
             .name(format!("krk-durchlauf-{generation}"))
             .spawn(move || {
-                durchlauffaden(
-                    &auftraege,
-                    &ordner,
-                    filter_klein.as_str(),
+                let lage = Auftragslage {
+                    bestand: &bestand,
+                    auftraege: &auftraege,
+                    ordner: &ordner,
+                    filter_klein: filter_klein.as_str(),
                     inhaltsgrenze,
-                    &faden_abbruch,
-                    &faden_zu_gross,
-                    &sender,
-                );
+                };
+                durchlauffaden(&lage, &faden_abbruch, &faden_zu_gross, &sender);
             })
             .expect("Arbeitsfaden fuer den Durchlauf laesst sich nicht starten");
         Self {
@@ -312,6 +328,27 @@ impl Drop for Durchlauf {
     }
 }
 
+/// Was ein Lauf zu tun hat: die Frage und die Gegenstaende, an die sie geht.
+///
+/// **Eine Struktur und keine fuenf einzelnen Argumente**, und der Grund ist
+/// nicht die Bequemlichkeit: die fuenf Werte stehen fuer die Dauer eines Laufs
+/// fest und gehoeren zusammen, waehrend das Abbruchkennzeichen, der Zaehler und
+/// der Kanal sich waehrenddessen aendern. Zusammengefasst sind genau die
+/// unveraenderlichen.
+struct Auftragslage<'a> {
+    /// Der Bestand des Ordnermodells, aus dem die Auftraege stammen.
+    bestand: &'a [Eintrag],
+    /// Die Auftraege, in der Reihenfolge, in der sie abzuarbeiten sind.
+    auftraege: &'a [Auftrag],
+    /// Der angezeigte Ordner; alle Auftraege liegen unmittelbar in ihm.
+    ordner: &'a Path,
+    /// Der bereits kleingeschriebene Filtertext.
+    filter_klein: &'a str,
+    /// Die groesste Zahl Bytes je Datei, oder `None` fuer „es wird keine Datei
+    /// geoeffnet".
+    inhaltsgrenze: Option<u64>,
+}
+
 /// Arbeitet die Auftraege der Reihe nach ab und meldet je einen Befund.
 ///
 /// Endet ohne weitere Meldung, sobald der Abbruch greift, ein Deskriptor fehlt
@@ -319,19 +356,24 @@ impl Drop for Durchlauf {
 /// keine Zusage haengt an ihr, und ein Ordner mit grossem Unterbaum ohne
 /// Treffer verzoegert die nach ihm.
 fn durchlauffaden(
-    auftraege: &[Auftrag],
-    ordner: &Path,
-    filter_klein: &str,
-    inhaltsgrenze: Option<u64>,
+    lage: &Auftragslage<'_>,
     abbruch: &AtomicBool,
     zu_gross: &AtomicU64,
     sender: &SyncSender<Befundmeldung>,
 ) {
-    for auftrag in auftraege {
-        let pfad = ordner.join(&auftrag.name);
+    let filter_klein = lage.filter_klein;
+    for auftrag in lage.auftraege {
+        // Ein Auftrag ohne Eintrag im Bestand ist von diesem Lauf nicht zu
+        // beantworten. Die Lage kann nicht auftreten — Auftragsliste und
+        // Bestand stammen aus demselben Ordnermodell —, und sie endet aus
+        // demselben Grund wie der Deskriptormangel: unentschieden.
+        let Some(eintrag) = lage.bestand.get(auftrag.index as usize) else {
+            return;
+        };
+        let pfad = lage.ordner.join(&eintrag.name);
         // Vollstaendig und ohne Auffangzweig: zwei Auftragsarten mal die zwei
         // Gestalten der Grenze.
-        let entschieden = match (auftrag.art, inhaltsgrenze) {
+        let entschieden = match (auftrag.art, lage.inhaltsgrenze) {
             (Auftragsart::Unterbaum, grenze) => {
                 unterbaum_entscheiden(&pfad, filter_klein, grenze, abbruch, zu_gross)
             }

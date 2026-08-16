@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
@@ -976,11 +976,17 @@ fn ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen() {
     );
 }
 
-/// Jede Aenderung des Filtertexts und jedes Einschalten der tiefen Suche setzt
-/// die Befunde zurueck: sie waeren sonst Auskuenfte ueber einen frueheren
-/// Filtertext.
+/// Ein Befund gilt nur zu der Frage, die ihn erzeugt hat — und die Frage ist
+/// der Filtertext und die Angabe, ob der Inhalt dabei zaehlt.
+///
+/// **Die dritte Behauptung ist die eigentliche.** Der Stand der tiefen Suche
+/// entscheidet, ob die Frage fuer einen Ordner ueberhaupt gestellt wird, und
+/// nicht, wie sie ausgeht: derselbe Unterbaum wird immer gleich abgeschritten.
+/// Ein Umlegen von „Deep", das die Schwelle des Inhaltsfilters nicht kreuzt,
+/// darf deshalb keine Antwort wegwerfen. Bis zum 260816 warf das Einschalten
+/// jede weg.
 #[test]
-fn der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck() {
+fn ein_befund_gilt_nur_zu_seiner_frage() {
     let ordner = filterordner();
     let mut modell = gefiltert(ordner.pfad(), "aaa");
     modell.tief_setzen(true);
@@ -1001,8 +1007,33 @@ fn der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck() {
     modell.tief_setzen(true);
     assert_eq!(
         modell.befund(still),
+        Befund::Treffer,
+        "\"Deep\" allein aendert die Frage nicht; die Antwort gilt weiter"
+    );
+
+    modell.inhalt_setzen(true);
+    assert!(
+        !modell.inhalt_wirkt(),
+        "vier Zeichen liegen unter der Schwelle der tiefen Suche; der Schalter \
+         steht und wirkt nicht"
+    );
+    assert_eq!(
+        modell.befund(still),
+        Befund::Treffer,
+        "ein Schalter, der nichts bewirkt, aendert die Frage nicht"
+    );
+
+    modell.zeichen_anhaengen('x');
+    modell.befunde_setzen([(still, Befund::Treffer)]);
+    assert!(
+        modell.inhalt_wirkt(),
+        "fuenf Zeichen erreichen die Schwelle"
+    );
+    modell.inhalt_setzen(false);
+    assert_eq!(
+        modell.befund(still),
         Befund::Unentschieden,
-        "das Einschalten der tiefen Suche fragt neu"
+        "jetzt zaehlt der Inhalt nicht mehr mit, und das ist eine andere Frage"
     );
 }
 
@@ -1210,14 +1241,15 @@ fn ohne_filtertext_aendert_der_inhaltsfilter_nichts() {
 }
 
 /// C2.9: das Ausschalten nimmt die Zeilen weg, die allein wegen ihres Inhalts
-/// standen — und laesst den Befundvektor stehen.
+/// standen — und setzt den Befundvektor zurueck.
 ///
-/// Der Vektor bleibt, weil ihn fuer eine Datei bei ausgeschaltetem "Content"
-/// niemand liest. Nachgeprueft wird das am Wert selbst und nicht an der Liste:
-/// an der Liste waere ein zurueckgesetzter Vektor nicht von einem stehenden zu
-/// unterscheiden.
+/// **Bis zum 260816 blieb der Vektor stehen**, mit der Begruendung, ihn lese
+/// beim Ausschalten fuer eine Datei niemand. Fuer eine Datei stimmte das; die
+/// Probe darunter zeigt, was es fuer einen Ordner hiess. Nachgeprueft wird am
+/// Wert selbst und nicht an der Liste: an der Liste waere ein zurueckgesetzter
+/// Vektor hier nicht von einem stehenden zu unterscheiden.
 #[test]
-fn das_ausschalten_nimmt_die_inhaltszeilen_weg_und_laesst_den_befund_stehen() {
+fn das_ausschalten_nimmt_die_inhaltszeilen_weg_und_setzt_den_befund_zurueck() {
     let mut modell = inhaltsmodell();
     modell.inhalt_setzen(true);
     modell.filtertext_setzen("aaa");
@@ -1233,8 +1265,183 @@ fn das_ausschalten_nimmt_die_inhaltszeilen_weg_und_laesst_den_befund_stehen() {
     );
     assert_eq!(
         modell.befund(kandidat),
-        Befund::Treffer,
-        "das Ausschalten fasst den Befundvektor nicht an"
+        Befund::Unentschieden,
+        "der Befund beantwortete eine Frage, die nicht mehr gestellt ist"
+    );
+}
+
+/// C2.9 fuer einen **Ordner**: das Ausschalten von „Content" nimmt auch seine
+/// Zeile sofort weg, ohne auf einen neuen Unterbaumlauf zu warten.
+///
+/// **Der Befund, um den es geht.** Bei eingeschaltetem „Deep" haengt die Zeile
+/// eines Ordners ohne Namenstreffer am Befundvektor, und der hing bis zum
+/// 260816 nicht daran, ob „Content" steht. Ein Ordner, den allein ein
+/// **gelesener Dateiinhalt** unter ihm ins Bild gebracht hatte, blieb nach dem
+/// Ausschalten stehen, bis der neue Lauf ihn einholte — bei einem grossen
+/// Unterbaum minutenlang, und C2.9 verlangt „sofort"
+/// (`issues/260816-1930_*_content-ausschalten-laesst-ordnerzeilen-auf-einem-veralteten-inhaltsbefund-stehen.md`).
+///
+/// **Gemessen wird an der Zeile und nicht am Vektor**, denn die Zeile ist die
+/// Zusage. Der Befund wird von Hand gesetzt, wie in jeder Probe dieses
+/// Abschnitts: welcher Lauf ihn erzeugt haette, ist hier ohne Belang — er
+/// haette ihn nur mit gesetztem „Content" erzeugen koennen.
+#[test]
+fn das_ausschalten_des_inhaltsfilters_nimmt_auch_die_ordnerzeile_sofort_weg() {
+    let mut modell = inhaltsmodell();
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaaa");
+    assert!(
+        modell.inhalt_wirkt(),
+        "fuenf Zeichen liegen ueber der tiefen Schwelle"
+    );
+
+    let ordner = index_von(&modell, "stiller-ordner");
+    modell.befunde_setzen([(ordner, Befund::Treffer)]);
+    assert!(
+        namen(&modell).contains(&"stiller-ordner"),
+        "mit beiden Schaltern steht die Ordnerzeile auf ihrem Befund"
+    );
+
+    modell.inhalt_setzen(false);
+
+    assert!(
+        !namen(&modell).contains(&"stiller-ordner"),
+        "die Ordnerzeile stand auf einem Befund, den nur der Inhaltsfilter \
+         erzeugt haben kann"
+    );
+    assert!(
+        modell.tief(),
+        "\"Deep\" steht weiter; es ist \"Content\", das gefallen ist"
+    );
+}
+
+/// Was das Ausschalten kostet: eine Ordnerzeile, die auf einem **Namen** unter
+/// sich stand, faellt mit und kommt mit dem neuen Lauf wieder.
+///
+/// Die Kehrseite der Probe darueber, und sie steht hier, damit der Preis
+/// gemessen ist und nicht bloss behauptet. Der Befundvektor sagt, **dass**
+/// etwas unter einem Ordner liegt, und nicht **warum**; ihn nach dem Grund zu
+/// fragen hiesse, den Grund ueber den Befundkanal zu melden.
+#[test]
+fn das_ausschalten_nimmt_auch_eine_namentlich_begruendete_ordnerzeile_mit() {
+    let mut modell = inhaltsmodell();
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaaa");
+
+    let ordner = index_von(&modell, "stiller-ordner");
+    modell.befunde_setzen([(ordner, Befund::Treffer)]);
+
+    modell.inhalt_setzen(false);
+
+    assert!(!namen(&modell).contains(&"stiller-ordner"));
+    assert_eq!(
+        modell.befund(ordner),
+        Befund::Unentschieden,
+        "der neue Lauf entscheidet ihn noch einmal"
+    );
+}
+
+/// Ein ausgeblendeter Eintrag bekommt keinen Auftrag, und das Einblenden gibt
+/// ihm einen.
+///
+/// **Der Befund, um den es geht.** Die Auftragsliste stand bis zum 260816 in
+/// `krk-ui` und war eine zweite Fassung des Pruefschritts; sie kannte dessen
+/// ersten Zweig nicht und erteilte deshalb Auftraege fuer Eintraege, deren
+/// Zeile gar nicht stehen kann. Solange ein Auftrag einen Metadatengang kostete
+/// und nur Ordner traf, war das ein Vorrat fuer den Fall, dass der Nutzer die
+/// Verstecke einblendet. Seit der Runde 11 kostet er je verstecktem Eintrag ein
+/// `open(2)` und bis zu 1 MB gelesene Bytes — ein Quellbaum mit „Deep" und
+/// „Content" las damit sein ganzes `.git` mit
+/// (`issues/260816-1931_*_der-inhaltsfilter-liest-versteckte-dateien-und-steigt-in-versteckte-ordner-ab.md`).
+///
+/// **Der Handel ist umgedreht und nicht abgeschafft:** wer nie einblendet,
+/// zahlt nichts mehr; wer einblendet, bekommt die Auftraege in demselben
+/// Augenblick und braucht dafuer einen neuen Lauf. Die zweite Haelfte der Probe
+/// misst genau das.
+///
+/// **Vom Abstieg handelt diese Probe nicht.** Ein Treffer unter einem
+/// versteckten Ordner ist ein Treffer unter dem sichtbaren Ordner darueber; ihn
+/// zu uebergehen waere eine neue Regel und keine Ersparnis, und der Durchlauf
+/// steigt deshalb unveraendert ab.
+#[test]
+fn ein_ausgeblendeter_eintrag_bekommt_keinen_auftrag() {
+    let mut modell = handmodell([
+        handeintrag("ohne.txt", Typ::Datei),
+        handeintrag(".geheim.txt", Typ::Datei),
+        handeintrag("stiller-ordner", Typ::Ordner),
+        handeintrag(".verborgen", Typ::Ordner),
+    ]);
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaaa");
+    assert!(
+        modell.inhalt_wirkt(),
+        "fuenf Zeichen ueber der tiefen Schwelle"
+    );
+
+    let auftragsnamen = |modell: &Ordnermodell| -> Vec<String> {
+        modell
+            .auftraege()
+            .iter()
+            .map(|auftrag| modell.eintraege()[auftrag.index as usize].name.clone())
+            .collect()
+    };
+
+    assert_eq!(
+        auftragsnamen(&modell),
+        vec!["ohne.txt".to_owned(), "stiller-ordner".to_owned()],
+        "die beiden versteckten Eintraege koennen keine Zeile bekommen und \
+         werden deshalb nicht gelesen"
+    );
+
+    modell.verstecke_ausblenden_setzen(false);
+
+    assert_eq!(
+        auftragsnamen(&modell),
+        vec![
+            "ohne.txt".to_owned(),
+            ".geheim.txt".to_owned(),
+            "stiller-ordner".to_owned(),
+            ".verborgen".to_owned(),
+        ],
+        "eingeblendet stehen sie unter demselben Vorbehalt wie jeder andere"
+    );
+}
+
+/// Die Auftragsarten bleiben, was sie waren, auch wenn die Liste jetzt aus dem
+/// Ordnermodell kommt.
+///
+/// Der Schnitt „Ordner oder Verknuepfung gegen gewoehnliche Datei" ist derselbe,
+/// den der Pruefschritt zieht — er ist es jetzt buchstaeblich und nicht mehr
+/// nur der Absicht nach.
+#[test]
+fn die_auftragsliste_traegt_je_typ_die_richtige_art() {
+    let mut modell = handmodell([
+        handeintrag("ohne.txt", Typ::Datei),
+        handeintrag("stiller-ordner", Typ::Ordner),
+        handeintrag("verweis", Typ::Verknuepfung),
+    ]);
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaaa");
+
+    let arten: Vec<(u32, Auftragsart)> = modell
+        .auftraege()
+        .iter()
+        .map(|auftrag| (auftrag.index, auftrag.art))
+        .collect();
+
+    assert_eq!(
+        arten,
+        vec![
+            (0, Auftragsart::Inhalt),
+            (1, Auftragsart::Unterbaum),
+            (2, Auftragsart::Unterbaum),
+        ],
+        "eine Verknuepfung zaehlt zu den Ordnern, weil der Nutzer in sie \
+         hineinnavigiert"
     );
 }
 
@@ -1569,6 +1776,29 @@ fn befunde_einsammeln(durchlauf: &Durchlauf) -> Vec<Befundmeldung> {
     gesammelt
 }
 
+/// Ein Bestand fuer den Durchlauf, in dem die genannten Namen an den genannten
+/// Stellen stehen.
+///
+/// Seit dem 260816 traegt ein [`Auftrag`] nur noch seinen Index, und der
+/// Durchlauf schlaegt den Namen im Bestand des Ordnermodells nach; eine Probe,
+/// die einen Auftrag von Hand baut, reicht ihm deshalb einen Bestand mit. Die
+/// Stellen davor tragen Fuellnamen, die kein Auftrag nennt — sie halten den
+/// Index dort, wo die Probe ihn haben will.
+fn bestand_aus(stellen: &[(u32, &str)]) -> Arc<Vec<Eintrag>> {
+    let laenge = stellen
+        .iter()
+        .map(|(index, _)| *index as usize + 1)
+        .max()
+        .unwrap_or_default();
+    let mut eintraege: Vec<Eintrag> = (0..laenge)
+        .map(|nummer| handeintrag(&format!("fuellstelle-{nummer}"), Typ::Datei))
+        .collect();
+    for (index, name) in stellen {
+        eintraege[*index as usize] = handeintrag(name, Typ::Datei);
+    }
+    Arc::new(eintraege)
+}
+
 /// Startet einen Durchlauf ueber einen einzigen Auftrag und wartet ihn ab.
 ///
 /// Liefert die Befunde **und** den Stand des Zaehlers der ungelesenen Dateien.
@@ -1581,12 +1811,9 @@ fn einen_auftrag_entscheiden(
     filter_klein: &str,
     inhaltsgrenze: Option<u64>,
 ) -> (Vec<Befundmeldung>, u64) {
-    let auftraege = vec![Auftrag {
-        index: 7,
-        name: name.to_owned(),
-        art,
-    }];
+    let auftraege = vec![Auftrag { index: 7, art }];
     let durchlauf = Durchlauf::starten(
+        bestand_aus(&[(7, name)]),
         auftraege,
         wurzel.to_path_buf(),
         filter_klein.to_owned(),
@@ -1771,13 +1998,14 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
     let auftrag = || {
         vec![Auftrag {
             index: 7,
-            name: "flach".to_owned(),
             art: Auftragsart::Unterbaum,
         }]
     };
+    let bestand = || bestand_aus(&[(7, "flach")]);
 
     // Kontrollauf: ohne Abbruch entscheidet derselbe Ordner.
     let ungestoert = Durchlauf::starten(
+        bestand(),
         auftrag(),
         ordner.pfad().to_path_buf(),
         "gibt-es-hier-nicht".to_owned(),
@@ -1795,6 +2023,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
 
     // Derselbe Ordner mit gesetztem Abbruchkennzeichen.
     let durchlauf = Durchlauf::starten(
+        bestand(),
         auftrag(),
         ordner.pfad().to_path_buf(),
         "gibt-es-hier-nicht".to_owned(),
@@ -1832,13 +2061,18 @@ fn jeder_auftrag_bekommt_genau_einen_befund() {
         ("verweis", false),
         ("ziel", true),
     ];
+    let stellen: Vec<(u32, &str)> = auftraege
+        .iter()
+        .enumerate()
+        .map(|(stelle, (name, _))| (stelle as u32, *name))
+        .collect();
     let durchlauf = Durchlauf::starten(
+        bestand_aus(&stellen),
         auftraege
             .iter()
             .enumerate()
-            .map(|(stelle, (name, _))| Auftrag {
+            .map(|(stelle, _)| Auftrag {
                 index: stelle as u32,
-                name: (*name).to_owned(),
                 art: Auftragsart::Unterbaum,
             })
             .collect(),
@@ -2207,21 +2441,19 @@ fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
         return;
     };
     let ordner = std::path::PathBuf::from(ordner);
+    let bestand = || bestand_aus(&[(5, "verweis"), (7, "ziel.txt"), (8, "zweiter.txt")]);
     let auftraege = || {
         vec![
             Auftrag {
                 index: 5,
-                name: "verweis".to_owned(),
                 art: Auftragsart::Unterbaum,
             },
             Auftrag {
                 index: 7,
-                name: "ziel.txt".to_owned(),
                 art: Auftragsart::Inhalt,
             },
             Auftrag {
                 index: 8,
-                name: "zweiter.txt".to_owned(),
                 art: Auftragsart::Inhalt,
             },
         ]
@@ -2231,6 +2463,7 @@ fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
     // saehe der zweite auch dann so aus, wenn die Dateien gar nicht stuenden
     // oder der Filtertext nirgends traefe.
     let mit_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        bestand(),
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
@@ -2255,6 +2488,7 @@ fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
     // Der Durchlauf laeuft, waehrend `gehalten` steht: sein erstes Oeffnen
     // einer Datei trifft auf eine volle Deskriptortabelle.
     let ohne_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        bestand(),
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
@@ -2530,27 +2764,26 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
         vec![
             Auftrag {
                 index: 5,
-                name: "verweis".to_owned(),
                 art: Auftragsart::Unterbaum,
             },
             Auftrag {
                 index: 7,
-                name: "aussen".to_owned(),
                 art: Auftragsart::Unterbaum,
             },
             Auftrag {
                 index: 8,
-                name: "zweiter".to_owned(),
                 art: Auftragsart::Unterbaum,
             },
         ]
     };
+    let bestand = || bestand_aus(&[(5, "verweis"), (7, "aussen"), (8, "zweiter")]);
 
     // Erster Durchgang, mit freiem Vorrat, und er ist die Gegenprobe: ohne ihn
     // saehe der zweite auch dann so aus, wenn der Baum gar nicht stuende oder
     // der Filtertext nirgends traefe. Die Probe sagte dann mehr zu, als sie
     // haelt.
     let mit_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        bestand(),
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
@@ -2579,6 +2812,7 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
     // zwei Ursachen haben, und die zweite ist ausgeschlossen — der `Durchlauf`
     // lebt bis zum Ende des Einsammelns, also hat niemand abgebrochen.
     let ohne_vorrat = befunde_einsammeln(&Durchlauf::starten(
+        bestand(),
         auftraege(),
         ordner.clone(),
         "gesuchtes".to_owned(),
@@ -2911,6 +3145,53 @@ fn die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei() {
         ],
         "der Vergleich hat andere Rufer als der Pruefschritt, der Durchlauf und \
          der Inhaltsbefund"
+    );
+}
+
+/// C6, gezaehlt: die Namensfrage des Filters wird an genau einer Stelle
+/// gestellt.
+///
+/// `Ordnermodell::name_traegt_den_filter` ist der herausgegebene Zweig
+/// `Name traegt die Folge?` des Pruefschritts. Er schreibt je Aufruf einen Namen
+/// klein, kostet also je Gang ueber den Bestand so viele Zeichenketten, wie der
+/// Ordner Eintraege hat — bei 100.000 Eintraegen 100.000 je Gang.
+///
+/// **Bis zum 260816 gab es drei Gaenge**, und zwei davon liefen ungezaehlt:
+/// der Neuaufbau der Sicht, die Auftragsliste in `krk-ui` und, je gezeichneter
+/// Zelle, die Frage `steht_wegen_des_inhalts`. Der Neuaufbau lief dabei auch
+/// bei **jedem** eintreffenden Befund, waehrend eines Durchlaufs also bis zu
+/// sechzigmal in der Sekunde, alles auf dem Hauptfaden
+/// (`issues/260816-1933_*_die-auftragsliste-legt-je-tastendruck-einen-namen-je-datei-an-auf-dem-hauptfaden.md`).
+/// Seither steht die Antwort im Zeilengrund, und die Frage hat einen Rufer.
+///
+/// **Gezaehlt werden die Dateien unter `src/`.** Die Probe zu C6.9 nennt die
+/// Funktion ebenfalls und misst sie gegen den Inhaltsbefund; ein Rufer im Sinne
+/// dieser Zaehlung ist sie nicht.
+///
+/// **Was diese Probe nicht entscheidet:** wie oft `modell.rs` innerhalb seiner
+/// selbst fragt. Sie faengt den zweiten Ort, und der zweite Ort war der Befund.
+#[test]
+fn die_namensfrage_des_filters_hat_einen_rufer() {
+    let nadel = concat!("name_traegt", "_den_filter");
+    let heimat = "krk-core/src/verzeichnis/modell.rs";
+
+    let mut rufer = Vec::new();
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        if !name.contains("/src/") {
+            continue;
+        }
+        if code_zeilen(&inhalt)
+            .iter()
+            .any(|zeile| zeile.contains(nadel))
+        {
+            rufer.push(name);
+        }
+    }
+
+    assert_eq!(
+        rufer,
+        vec![heimat.to_owned()],
+        "die Namensfrage wird ausserhalb des Pruefschritts gestellt"
     );
 }
 

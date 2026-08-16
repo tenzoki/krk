@@ -57,7 +57,7 @@ sagt unter G2, er führe sie schon; das trifft für die Runde 10 zu und für die
 Kennzeichnung unten ist deshalb hier hergeleitet, aus der Lage jedes Kriteriums am Baum, und
 nicht abgeschrieben. Sie ist Teil dieses Dokuments und nicht des Spec.
 
-Die 37 Kriterien mit Bündelanteil sind unten **25 nummerierte Beobachtungen und drei
+Die 37 Kriterien mit Bündelanteil sind unten **27 nummerierte Beobachtungen und drei
 Farbbeobachtungen F1 bis F3**; eine Beobachtung deckt teils mehrere Kriterien, und die
 Kriterientafel am Ende nennt für jedes die Nummer.
 
@@ -171,7 +171,7 @@ zwar durchkommt, der Ordner selbst aber lesbar bleiben soll, falls jemand vorher
 
 ---
 
-## Der Durchgang: 25 Beobachtungen an vier Orten
+## Der Durchgang: 27 Beobachtungen an vier Orten
 
 ```text
 Ort 1  das Fenster, wie es startet     Beobachtung 1 bis 5    nichts wird angefasst
@@ -225,7 +225,7 @@ Byte zu viel ankommt.
 |---|---|---|---|
 | 15 | `notiz` tippen (fünf Zeichen) | `eins` steht — der einzige Treffer darunter ist der **Inhalt** von `eins/zwei/drei/tief-traeger.txt`, drei Ebenen tief. `nurname` steht ebenfalls (Namenstreffer darunter). `leer` steht **nicht** | C3.1, C3.3 |
 | 16 | Ein Zeichen zurücknehmen, sodass `noti` steht (vier Zeichen) | `eins` **verschwindet**: mit `Deep` liegt die Schwelle bei fünf Zeichen, und darunter entscheidet allein der Name. `nurname` bleibt stehen. Das fünfte Zeichen wieder tippen holt `eins` zurück | C2.10, C3.2 |
-| 17 | Bei stehendem `notiz` und `Deep` ein: `Content` ausschalten | `eins` verschwindet, `nurname` bleibt. Ein Unterbaum ohne Namenstreffer steht bei ausgeschaltetem `Content` nicht mehr | C4.4 |
+| 17 | Bei stehendem `notiz` und `Deep` ein: `Content` ausschalten | `eins` verschwindet **sofort** und bleibt weg. `nurname` verschwindet **mit** und steht gleich darauf wieder da: der Befundvektor sagt, *dass* etwas unter einem Ordner lag, und nicht *warum*, also fällt er ganz und der neue Lauf entscheidet neu. Bei diesem kleinen Baum ist das ein Aufblitzen; zu sehen sein muss, dass `nurname` **steht**, wenn die Hand von der Maus ist | C2.9, C4.4 |
 
 ### Ort 4 — der große Baum
 
@@ -237,11 +237,13 @@ kein Filtertext. `stumm.txt` auswählen und mit der **Leertaste** markieren.
 | 18 | `notiz` tippen und **während der Lauf läuft** die Statuszeile lesen | Alle **vier** Satzteile stehen zugleich: `Filter „notiz“: N von 102 angezeigt, Inhalt wird gelesen, eine Datei zu groß, eine Markierung ausgeblendet`. Wenn der Lauf durch ist, **vergeht der Teil „, Inhalt wird gelesen"**, und die anderen drei bleiben stehen | C4.8 |
 | 19 | Während der Lauf läuft: mit den Pfeiltasten durch die Liste gehen, mit dem Tabbefehl in einen anderen Tab und zurück, das andere Dateifenster anklicken, an der Bereichsleiste ein Kästchen umlegen | **Alles antwortet ohne Verzug.** KRK steht nicht, der Regenbogenzeiger erscheint nicht, die Auswahl bewegt sich, der Tabwechsel geschieht | C3.9, Z1 |
 | 20 | Filtertext löschen. `notiz` tippen und **während der Lauf läuft** ein sechstes Zeichen anhängen; dann eines zurücknehmen; dann `Esc` | Jedes davon **beendet den Lauf sofort** und beginnt gegebenenfalls einen neuen. Das getippte Zeichen erscheint **ohne Wartezeit** in der Statuszeile — es wartet nie auf den Durchlauf des vorigen Filtertexts. Nach `Esc` ist die Liste wieder vollständig, und der Zusatz „, Inhalt wird gelesen" ist weg | C4.1, C4.2, C4.3, C4.6 |
-| 21 | `notiz` tippen und **während der Lauf läuft** `Content` ausschalten; erneut anstoßen und `Deep` ausschalten | Beides **beendet den Lauf**. Der Lesehinweis verschwindet, und die Zeilen, die allein wegen ihres Inhalts standen, fallen weg | C4.4 |
+| 21 | `notiz` tippen und **während der Lauf läuft** `Content` ausschalten; erneut anstoßen und `Deep` ausschalten | Beides **beendet den Lauf**. Der Lesehinweis verschwindet, und die Zeilen, die allein wegen ihres Inhalts standen, fallen weg — **Dateien wie Ordner**, und ohne auf einen neuen Unterbaumlauf zu warten | C2.9, C4.4 |
 | 22 | `notiz` tippen und **während der Lauf läuft** in einen der `ordner-*` einsteigen; danach mit dem Tabbefehl den Tab wechseln, während wieder ein Lauf läuft | Der Lauf der verlassenen Ansicht **endet**. Im neuen Ordner stehen Filtertext und `Content` unverändert, und er **beginnt sofort** damit, seine Dateien zu lesen — der Lesehinweis erscheint dort ohne Zutun | C1.12, C2.4, C4.5 |
 | 23 | Beim Tippen von `notiz` genau hinsehen, welche Zeilen zuerst dastehen | Die Liste beginnt bei den **Namenstreffern** und wächst danach um die Inhaltstreffer. Eine Datei, deren Inhalt noch nicht gelesen ist, steht **nicht** vorsorglich da | C1.10, C1.11 |
 | 24 | Zwei Tabs anlegen, in einem `Content` einschalten, im anderen nicht, und zwischen ihnen wechseln | Das Kästchen `Content` in der Bereichsleiste **zieht beim Tabwechsel den Stand des sichtbaren Tabs nach**. Dasselbe beim Wechsel des aktiven Dateifensters | C2.3 |
 | 25 | Mit gesetztem `Content` KRK beenden und neu starten | Nach dem Neustart steht `Content` **aus**, in jedem Tab. Der Stand übersteht die Sitzung nicht | C2.5 |
+| 26 | `Deep` **ein**, `Content` **ein**, `notiz` tippen und den Lauf **ganz durchlaufen lassen**. Dann `Content` ausschalten und **auf die Ordnerzeilen sehen** | Die Ordnerzeilen, die auf einem Befund standen, sind **im selben Augenblick** weg — nicht erst, wenn der neue Lauf sie eingeholt hat. Wer die Uhr mitlaufen lässt: zwischen Klick und leerer Liste liegt kein Lauf über den Unterbaum. Was zurückkommt, sind die Ordner mit einem **Namens**treffer darunter, und zwar so schnell, wie der neue Lauf sie findet | C2.9 |
+| 27 | `Esc`, `Deep` **ein**, `Content` **ein**, in einem Ordner mit einem `.git` (etwa dem Projektbaum von KRK) `notiz` tippen. Danach die versteckten Einträge einblenden | Beim ersten Tippen wird **kein** versteckter Eintrag gelesen: kein `.git`, kein `.DS_Store`. Der Lauf ist damit spürbar kürzer als vor dem 260816. Das Einblenden **stößt einen neuen Lauf an** — der Lesehinweis erscheint wieder —, und danach stehen auch versteckte Inhaltstreffer da | C1.9, C2.9 |
 
 ### Die Farben, in beiden Farbtafeln
 
@@ -309,7 +311,7 @@ der Beobachtung von oben.
 | C2.6 | Probe | `krk-core/tests/verzeichnis.rs::ohne_filtertext_aendert_der_inhaltsfilter_nichts` |
 | C2.7 | Probe + **Bündel** | `krk-core/tests/belegung.rs::jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste` über `OHNE_KOMBINATION_AB_WERK` (fünf Einträge seit E1), `…::jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste`, `krk-core/src/tasten/belegung.rs::die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch`. Bündel: **4** |
 | C2.8 | Probe + Diff + **Bündel** | `krk-ui/src/menuemodell.rs::jede_funktion_der_belegung_steht_genau_einmal_im_menue`, `krk-ui/src/belegungsausgabe.rs::jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`, `…::eine_funktion_ohne_kombination_erscheint_nicht`. Diff: `make menue \| grep Inhaltssuche` zeigt den Eintrag unter „Dateilisting" mit `kombination=(keines)`, direkt hinter „Tiefe Suche ein- und ausschalten". Bündel: **3**, **5** |
-| C2.9 | Probe + **Bündel** | `krk-core/tests/verzeichnis.rs::das_ausschalten_nimmt_die_inhaltszeilen_weg_und_laesst_den_befund_stehen`. Bündel: **7**, **9** |
+| C2.9 | Probe + **Bündel** | `krk-core/tests/verzeichnis.rs::das_ausschalten_nimmt_die_inhaltszeilen_weg_und_setzt_den_befund_zurueck` für die Datei, `…::das_ausschalten_des_inhaltsfilters_nimmt_auch_die_ordnerzeile_sofort_weg` für den Ordner, `…::das_ausschalten_nimmt_auch_eine_namentlich_begruendete_ordnerzeile_mit` für den benannten Preis, `…::ein_befund_gilt_nur_zu_seiner_frage` für die Regel dahinter. Bündel: **7**, **9**, **17**, **21**, **26**, **27** |
 | C2.10 | Probe + **Bündel** | `krk-core/tests/verzeichnis.rs::die_tiefe_suche_hebt_die_schwelle_auf_fuenf_zeichen`, `krk-core/src/verzeichnis/filter.rs::die_inhaltsschwelle_steht_bei_drei_und_bei_fuenf`, `krk-ui/src/tabs.rs::bei_vier_zeichen_und_deep_traegt_die_auftragsliste_keinen_inhaltsauftrag`. Bündel: **16** |
 
 ### C3 — Der Inhaltsfilter über den Unterbaum
@@ -331,7 +333,7 @@ der Beobachtung von oben.
 | # | Kennzeichnung | Nachweis |
 |---|---|---|
 | C4.1 | Probe + **Bündel** | `krk-ui/src/tabs.rs::ein_weiteres_zeichen_loest_den_laufenden_durchlauf_ab`. Bündel: **20** |
-| C4.2 | Probe + **Bündel** | derselbe Weg über `filtertext_setzen`; `krk-core/tests/verzeichnis.rs::der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck`. Bündel: **20** |
+| C4.2 | Probe + **Bündel** | derselbe Weg über `filtertext_setzen`; `krk-core/tests/verzeichnis.rs::ein_befund_gilt_nur_zu_seiner_frage`. Bündel: **20** |
 | C4.3 | Probe + **Bündel** | **Keinem Schritt des Plans zugewiesen; hält am Baum.** `krk-ui/src/tabs.rs::ohne_seine_drei_bedingungen_beginnt_kein_durchlauf` (Abschnitt „Ohne Filtertext"). Der Weg: `abbrechen` → `filter_leeren` → `nach_filteraenderung` → `durchlauf_nachziehen_an`, das `durchlauf = None` als erste Zeile setzt. Datensatz `issues/260816-2020_o_zwei-abnahmekriterien-sind-keinem-schritt-des-plans-zugewiesen.md`. Bündel: **20** |
 | C4.4 | Probe + **Bündel** | `krk-ui/src/tabs.rs::das_ausschalten_von_deep_bricht_den_durchlauf_ab`, `…::allein_content_stoesst_einen_durchlauf_an` (in beide Richtungen). Bündel: **17**, **21** |
 | C4.5 | Probe + **Bündel** | `krk-ui/src/tabs.rs::ein_tabwechsel_beendet_den_durchlauf_des_verlassenen_tabs`, `…::ein_verdeckter_tab_bekommt_keinen_durchlauf`. Bündel: **22** |

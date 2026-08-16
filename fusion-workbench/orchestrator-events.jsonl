@@ -992,3 +992,7 @@
 {"ts":"2026-08-16T17:17:51","event":"commit","turn":12,"detail":"6442613 (G1/G2), b9ab8ae (Prosa-Nachzug)"}
 {"ts":"2026-08-16T17:17:51","event":"review_start","turn":12,"agent":"coderev","detail":"ganze Runde, 9f5ced5..b9ab8ae"}
 {"ts":"2026-08-16T17:37:30","event":"review_done","turn":12,"agent":"coderev","detail":"6 Befunde, 0 kritisch, 4 mittel; gemeinsame Wurzel fuer drei"}
+{"ts":"2026-08-16T17:45:30","event":"gate_response","detail":"Nutzer: die gemeinsame Wurzel beheben, dann schliessen"}
+{"ts":"2026-08-16T17:45:30","event":"turn_start","turn":13,"detail":"Wurzel dreier Befunde"}
+{"ts":"2026-08-16T17:45:30","event":"task_start","turn":13,"task":"W1","agent":"coder","detail":"260816-1930, -1931, -1933 an ihrer Wurzel"}
+{"ts":"2026-08-16T18:30:33","event":"task_done","turn":13,"task":"W1","agent":"coder","detail":"ein Eingriff, drei Befunde geschlossen"}

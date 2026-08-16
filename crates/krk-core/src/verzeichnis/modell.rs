@@ -46,10 +46,12 @@
 //!
 //! # Ob eine Zeile steht, entscheidet ein Pruefschritt und kein zweiter
 //!
-//! [`Ordnermodell::sichtbar`] ist die eine Stelle, an der ueber die
-//! Sichtbarkeit eines Eintrags entschieden wird. Beide Aufbauwege der Sicht
-//! rufen sie: [`Ordnermodell::anhaengen`] je neuem Eintrag und
-//! [`Ordnermodell::sicht_neu_aufbauen`] je Eintrag des Bestands.
+//! Der Pruefschritt ist die eine Stelle, an der ueber die Sichtbarkeit eines
+//! Eintrags entschieden wird. Er steht in zwei Stuecken, und die Naht dazwischen
+//! traegt: `zeilengrund_von` beantwortet alles, was das Modell selbst weiss,
+//! und [`Ordnermodell::sichtbar`] haengt den Blick in den Befund daran. Beide
+//! Aufbauwege der Sicht rufen `sichtbar`: [`Ordnermodell::anhaengen`] je neuem
+//! Eintrag und [`Ordnermodell::sicht_neu_aufbauen`] je Eintrag des Bestands.
 //!
 //! ```text
 //! versteckt und ausgeblendet? ── ja ──> faellt weg
@@ -68,6 +70,11 @@
 //!                              └ sonst > faellt weg
 //! ```
 //!
+//! Die beiden Fragen an den Befund — „traegt der Inhalt?" und „liegt unter ihm
+//! ein Treffer?" — sind der letzte Schritt und stehen in
+//! [`Ordnermodell::sichtbar`]; alles davor rechnet `zeilengrund_von` und legt
+//! es als `Zeilengrund` ab.
+//!
 //! **Bis zur Runde 10 stand die Regel zweimal wortgleich da**, einmal in
 //! `anhaengen` und einmal in `sicht_neu_aufbauen`, und trug damals nur ihren
 //! ersten Zweig
@@ -83,6 +90,32 @@
 //! Sie nimmt ihn ueber [`Ordnermodell::befunde_setzen`] entgegen und baut die
 //! Sicht damit neu auf.
 //!
+//! **Genau daran liegt die Naht.** Die fuenf eigenen Eingaben aendern sich, wenn
+//! der Nutzer tippt oder einen Schalter umlegt — selten also, gemessen an dem,
+//! was dazwischen geschieht. Die sechste trifft waehrend eines Durchlaufs
+//! sechzigmal in der Sekunde ein. Der Zeilengrund haelt das Ergebnis der fuenf
+//! fest, und ein eintreffender Befund baut damit die Sicht neu auf, ohne die
+//! Namensfrage noch einmal an 100.000 Eintraege zu stellen.
+//!
+//! # Ein Befund gilt nur zu der Frage, die ihn erzeugt hat
+//!
+//! Der Befundvektor ist eine Sammlung von Antworten, und die Frage steht nicht
+//! bei jeder Antwort dabei. Sie lautet fuer jeden Eintrag gleich — traegt er
+//! den Filtertext unter sich oder in sich, und zaehlt sein Inhalt dabei mit? —,
+//! und sie steckt in zwei Groessen: `filter_klein` und dem, was
+//! [`Ordnermodell::inhalt_wirkt`] sagt. Aendert sich eine von beiden, faellt
+//! der ganze Vektor auf `Unentschieden`; das besorgen `filter_uebernehmen` und
+//! `schalter_setzen`, und sonst niemand.
+//!
+//! **Der Stand der tiefen Suche gehoert nicht dazu.** Er entscheidet, ob die
+//! Frage fuer einen Ordner ueberhaupt gestellt wird, und nicht, wie sie
+//! ausgeht: derselbe Unterbaum wird immer gleich abgeschritten. Ihn trotzdem
+//! mitzuzaehlen hiesse, beim Umlegen von „Deep" Antworten wegzuwerfen, die
+//! weiter gelten.
+//!
+//! **Die Verstecke gehoeren erst recht nicht dazu.** Sie aendern den
+//! Zeilengrund und damit die Auftragsliste, aber keine einzige Antwort.
+//!
 //! # Die beiden Treffergruende ueberschneiden sich nicht
 //!
 //! Eine Zeile steht entweder, weil ihr **Name** die Folge traegt, oder weil ihr
@@ -97,6 +130,9 @@
 //! Pruefschritt, sondern derselbe Rumpf mit den Vorbedingungen davor, die der
 //! Pruefschritt an dieser Stelle schon hinter sich hat.
 
+use std::sync::Arc;
+
+use super::durchlauf::{Auftrag, Auftragsart};
 use super::eintrag::Eintrag;
 use super::filter::{self, traegt_die_folge};
 use super::sortierung::{Richtung, Schluessel, Sortierung};
@@ -169,10 +205,57 @@ pub enum Befund {
     KeinTreffer,
 }
 
+/// Woran die Zeile eines Eintrags haengt: an nichts weiter, oder an einem
+/// Befund von der Platte.
+///
+/// **Die eine Regel des Filters, ohne ihren letzten Schritt.** Der
+/// Pruefschritt aus dem Modulkopf zerfaellt in zwei Teile: alles, was das
+/// Modell selbst weiss, und die Frage an den Befund. Dieser Wert ist der erste
+/// Teil, einmal je Eintrag und je Frage gerechnet und in `grund` aufbewahrt;
+/// der zweite ist ein Blick in `befund` und kostet nichts.
+///
+/// **Drei Werte, vollstaendig und ohne Auffangzweig.** Sie sind die drei
+/// Ausgaenge des Bildes im Modulkopf; eine vierte Lage soll den Bau anhalten.
+///
+/// **Dieser Wert beantwortet zwei Fragen auf einmal, und das ist der Grund,
+/// warum es ihn gibt.** Wessen Zeile an einem Befund haengt, ist genau der,
+/// der einen [`Auftrag`] verdient — es ist dieselbe Frage, und bis zum 260816
+/// stand sie zweimal da, einmal hier und einmal in der Auftragsliste von
+/// `krk-ui`. Die zweite Fassung kannte den ersten Zweig des Pruefschritts
+/// nicht und erteilte deshalb Auftraege fuer ausgeblendete Eintraege
+/// (`issues/260816-1931_*_der-inhaltsfilter-liest-versteckte-dateien-und-steigt-in-versteckte-ordner-ab.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Zeilengrund {
+    /// Ohne Befund entschieden: die Zeile steht.
+    Steht,
+    /// Ohne Befund entschieden: die Zeile faellt weg.
+    FaelltWeg,
+    /// Die Zeile steht unter dem Vorbehalt eines Befunds, und der Auftrag
+    /// fragt nach dem Genannten.
+    UnterVorbehalt(Auftragsart),
+}
+
 /// Der Inhalt eines Ordners, wie ihn ein Dateifenster anzeigt.
 #[derive(Debug)]
 pub struct Ordnermodell {
-    eintraege: Vec<Eintrag>,
+    /// Der gelesene Bestand, geteilt statt kopiert.
+    ///
+    /// **Der `Arc` steht hier, damit der Durchlauf denselben Bestand ansieht
+    /// und keine zweite Fassung davon bekommt.** Bis zum 260816 trug jeder
+    /// [`Auftrag`] eine Kopie des Namens, den dieses Modell ohnehin schon
+    /// hielt; bei 100.000 Eintraegen waren das 100.000 Zeichenketten je
+    /// getipptem Zeichen, auf dem Hauptfaden
+    /// (`issues/260816-1933_*_die-auftragsliste-legt-je-tastendruck-einen-namen-je-datei-an-auf-dem-hauptfaden.md`).
+    /// Der Auftrag traegt seither den blossen Index, und
+    /// [`Ordnermodell::bestand`] reicht den Bestand mit — ein Zaehlerschritt
+    /// statt einer Kopie.
+    ///
+    /// **Geschrieben wird ueber [`Arc::make_mut`], und tief kopiert wird dabei
+    /// nie.** Ein Durchlauf entsteht erst, wenn der Lesevorgang durch ist, und
+    /// `ersatz_einloesen` setzt einen **frischen** `Arc` ein, statt den alten
+    /// zu leeren; der Bestand, an dem [`Ordnermodell::anhaengen`] arbeitet,
+    /// gehoert damit immer diesem Modell allein.
+    eintraege: Arc<Vec<Eintrag>>,
     sichtreihenfolge: Vec<u32>,
     sortierung: Sortierung,
     verstecke_ausblenden: bool,
@@ -228,6 +311,23 @@ pub struct Ordnermodell {
     /// ein Eintrag ist entweder das eine oder das andere, und beide Fragen
     /// haben dieselben drei Antworten.
     befund: Vec<Befund>,
+    /// Woran die Zeile je Eintrag haengt, einmal je Frage gerechnet.
+    ///
+    /// Parallel zu `eintraege`, in derselben Bauart wie `markiert` und
+    /// `befund`. **Er ist kein zweiter Wahrheitsort, sondern das Ergebnis des
+    /// einen Pruefschritts**: `zeilengrund_von` rechnet ihn,
+    /// `grund_neu_rechnen` fuellt ihn, und jeder Frager liest ihn, statt die
+    /// Frage noch einmal zu stellen.
+    ///
+    /// **Aufbewahrt wird er, weil die Frage teuer ist und selten wechselt.**
+    /// Sie kostet je Eintrag eine kleingeschriebene Fassung seines Namens, bei
+    /// 100.000 Eintraegen also 100.000 Zeichenketten; sie aendert sich aber nur
+    /// mit dem Filtertext, mit einem der beiden Schalter oder mit dem Aus- und
+    /// Einblenden der Verstecke. Ein eintreffender Befund und ein
+    /// Sortierwechsel bauen die Sicht neu auf und ruehren diesen Vektor nicht
+    /// an — vor dem 260816 rechnete der Neuaufbau die Namensfrage jedes Mal
+    /// mit, also bis zu sechzigmal in der Sekunde, solange ein Durchlauf lief.
+    grund: Vec<Zeilengrund>,
     /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
     ///
     /// Gesetzt von [`Ordnermodell::lesevorgang_beginnen`], eingeloest von
@@ -241,7 +341,7 @@ impl Ordnermodell {
     /// Ein leeres Modell fuer die genannte Generation.
     pub fn neu(generation: u64) -> Self {
         Self {
-            eintraege: Vec::new(),
+            eintraege: Arc::default(),
             sichtreihenfolge: Vec::new(),
             sortierung: Sortierung::default(),
             verstecke_ausblenden: true,
@@ -253,6 +353,7 @@ impl Ordnermodell {
             tief: false,
             inhalt: false,
             befund: Vec::new(),
+            grund: Vec::new(),
             ersatz_ausstehend: false,
         }
     }
@@ -320,10 +421,15 @@ impl Ordnermodell {
             return;
         }
         self.ersatz_ausstehend = false;
-        self.eintraege.clear();
+        // Ein **frischer** `Arc` und kein `clear` am alten: der Faden eines
+        // eben abgebrochenen Durchlaufs kann den bisherigen Bestand noch
+        // halten, und `Arc::make_mut` kopierte ihn dann Eintrag fuer Eintrag,
+        // nur um ihn gleich darauf zu leeren.
+        self.eintraege = Arc::default();
         self.sichtreihenfolge.clear();
         self.markiert.clear();
         self.befund.clear();
+        self.grund.clear();
         self.auswahl = None;
     }
 
@@ -341,12 +447,14 @@ impl Ordnermodell {
         self.ersatz_einloesen();
         for eintrag in neue {
             let index = self.eintraege.len();
-            self.eintraege.push(eintrag);
+            Arc::make_mut(&mut self.eintraege).push(eintrag);
             self.markiert.push(false);
             self.befund.push(Befund::Unentschieden);
-            // Erst anhaengen, dann fragen: [`Ordnermodell::sichtbar`] liest den
-            // Eintrag aus dem Bestand, und es soll dieselbe Frage sein, die
-            // `sicht_neu_aufbauen` stellt, und nicht eine zweite Fassung.
+            // Erst anhaengen, dann fragen: `zeilengrund_von` liest den Eintrag
+            // aus dem Bestand, und es soll dieselbe Frage sein, die
+            // `grund_neu_rechnen` stellt, und nicht eine zweite Fassung.
+            let grund = self.zeilengrund_von(index);
+            self.grund.push(grund);
             if self.sichtbar(index) {
                 self.sichtreihenfolge.push(index as u32);
             }
@@ -396,8 +504,17 @@ impl Ordnermodell {
     }
 
     /// Blendet versteckte Eintraege aus oder ein und baut die Sicht neu auf.
+    ///
+    /// **Der Befundvektor bleibt stehen**, denn die Frage ist dieselbe
+    /// geblieben: ob unter einem Ordner ein Treffer liegt, haengt nicht daran,
+    /// ob der Nutzer Verstecke sieht. Der **Zeilengrund** aendert sich sehr
+    /// wohl, und mit ihm die Auftragsliste — ein eben eingeblendeter Eintrag
+    /// steht seit dem 260816 unter einem Vorbehalt, unter dem er vorher nicht
+    /// stand, und braucht dafuer einen neuen Lauf. Ihn anzustossen ist Sache
+    /// des Aufrufers, wie bei jeder anderen Aenderung dieser Liste auch.
     pub fn verstecke_ausblenden_setzen(&mut self, ausblenden: bool) {
         self.verstecke_ausblenden = ausblenden;
+        self.grund_neu_rechnen();
         self.sicht_neu_aufbauen();
     }
 
@@ -569,29 +686,31 @@ impl Ordnermodell {
     // Der Filter: ein Pruefschritt, zwei Frager
     // ------------------------------------------------------------------
 
-    /// Ob der Eintrag mit diesem Index in der Liste steht.
+    /// Woran die Zeile dieses Eintrags haengt.
     ///
     /// **Der eine Pruefschritt.** Er traegt das Bild aus dem Modulkopf Zweig
     /// fuer Zweig und ist die einzige Stelle, an der ueber die Sichtbarkeit
-    /// entschieden wird; seine beiden Frager sind
-    /// [`Ordnermodell::anhaengen`] und [`Ordnermodell::sicht_neu_aufbauen`].
+    /// entschieden wird. Was er **nicht** tut, ist den Befund zu lesen: das ist
+    /// der letzte Schritt, er kostet nichts, und er steht in
+    /// [`Ordnermodell::sichtbar`]. Genau an dieser Naht haengt, dass sich die
+    /// Frage aufbewahren laesst, ohne die Antwort mit aufzubewahren.
     ///
-    /// Ein Index ausserhalb des Bestands ist nicht sichtbar. Das ist kein
-    /// Zweig des Bildes, sondern die Antwort auf eine Frage nach einem
-    /// Eintrag, den es nicht gibt.
-    fn sichtbar(&self, index: usize) -> bool {
+    /// Ein Index ausserhalb des Bestands faellt weg. Das ist kein Zweig des
+    /// Bildes, sondern die Antwort auf eine Frage nach einem Eintrag, den es
+    /// nicht gibt.
+    fn zeilengrund_von(&self, index: usize) -> Zeilengrund {
         let Some(eintrag) = self.eintraege.get(index) else {
-            return false;
+            return Zeilengrund::FaelltWeg;
         };
 
         // versteckt und Verstecke ausgeblendet?
         if self.verstecke_ausblenden && eintrag.versteckt {
-            return false;
+            return Zeilengrund::FaelltWeg;
         }
 
         // steht ein Filtertext?
         if self.filtertext.is_empty() {
-            return true;
+            return Zeilengrund::Steht;
         }
 
         // Name traegt die Teilzeichenfolge? Der eine Vergleich des Filters, und
@@ -600,7 +719,7 @@ impl Ordnermodell {
         // Umlauten und Akzenten. `apfel` findet `Aepfel` mit Umlaut nicht, und
         // das ist so gewollt.
         if self.name_traegt_den_filter(index as u32) {
-            return true;
+            return Zeilengrund::Steht;
         }
 
         // ist es ein Ordner? Eine symbolische Verknuepfung zaehlt hier mit: bei
@@ -615,103 +734,167 @@ impl Ordnermodell {
         // genau daran haengt, dass die beiden Treffergruende sich nicht
         // ueberschneiden.
         if !(eintrag.ist_ordner() || eintrag.ist_verknuepfung()) {
-            return self.inhalt_entscheidet(index as u32);
+            return if self.inhalt_wirkt() {
+                Zeilengrund::UnterVorbehalt(Auftragsart::Inhalt)
+            } else {
+                Zeilengrund::FaelltWeg
+            };
         }
 
         // ist der Filter der Tiefe eingeschaltet?
         if !self.tief {
-            return true;
+            return Zeilengrund::Steht;
         }
 
-        // liegt unter ihm ein Treffer? Vollstaendig und ohne Auffangzweig:
-        // `Unentschieden` heisst, dass der Durchlauf diesen Ordner noch nicht
-        // erreicht hat, und bis dahin steht seine Zeile nicht.
-        match self.befund(index as u32) {
-            Befund::Treffer => true,
-            Befund::Unentschieden | Befund::KeinTreffer => false,
+        // liegt unter ihm ein Treffer? Das entscheidet der Befund, und ihn
+        // liest `sichtbar`.
+        Zeilengrund::UnterVorbehalt(Auftragsart::Unterbaum)
+    }
+
+    /// Woran die Zeile dieses Eintrags haengt, aus dem aufbewahrten Vektor.
+    ///
+    /// Ein Index ausserhalb des Bestands faellt weg, aus demselben Grund wie in
+    /// [`Ordnermodell::zeilengrund_von`].
+    fn grund(&self, index: usize) -> Zeilengrund {
+        self.grund
+            .get(index)
+            .copied()
+            .unwrap_or(Zeilengrund::FaelltWeg)
+    }
+
+    /// Rechnet den Zeilengrund jedes Eintrags neu.
+    ///
+    /// **Zu rufen, wann immer sich eine Eingabe des Pruefschritts aendert**,
+    /// und das sind genau drei Anlaesse: der Filtertext, einer der beiden
+    /// Schalter, und das Aus- und Einblenden der versteckten Eintraege. Ein
+    /// eintreffender Befund gehoert ausdruecklich **nicht** dazu — er ist die
+    /// Antwort und nicht die Frage —, und ein Sortierwechsel ebenso wenig.
+    fn grund_neu_rechnen(&mut self) {
+        // Herausgenommen und zurueckgegeben, damit `zeilengrund_von` sich
+        // `self` ausleihen kann und die Zuteilung trotzdem stehen bleibt.
+        let mut grund = std::mem::take(&mut self.grund);
+        grund.clear();
+        grund.extend((0..self.eintraege.len()).map(|index| self.zeilengrund_von(index)));
+        self.grund = grund;
+    }
+
+    /// Ob der Eintrag mit diesem Index in der Liste steht.
+    ///
+    /// **Der letzte Schritt des Pruefschritts**, und der einzige, der den
+    /// Befund liest. Seine beiden Frager sind [`Ordnermodell::anhaengen`] und
+    /// [`Ordnermodell::sicht_neu_aufbauen`].
+    ///
+    /// Beide Fallunterscheidungen sind vollstaendig und ohne Auffangzweig:
+    /// `Unentschieden` heisst, dass der Durchlauf diesen Eintrag noch nicht
+    /// erreicht hat, und bis dahin steht seine Zeile nicht.
+    fn sichtbar(&self, index: usize) -> bool {
+        match self.grund(index) {
+            Zeilengrund::Steht => true,
+            Zeilengrund::FaelltWeg => false,
+            Zeilengrund::UnterVorbehalt(_) => match self.befund(index as u32) {
+                Befund::Treffer => true,
+                Befund::Unentschieden | Befund::KeinTreffer => false,
+            },
         }
     }
 
     /// Ob der Name dieses Eintrags den stehenden Filtertext traegt.
     ///
     /// **Der Zweig `Name traegt die Folge?` des Pruefschritts, herausgegeben.**
-    /// Wer die Auftraege des Durchlaufs zusammenstellt, muss genau diesen Zweig
-    /// kennen — er laeuft fuer einen Ordner, dessen Name den Filtertext traegt,
-    /// ausdruecklich **nicht** —, und er soll dafuer nicht ein zweites Mal
-    /// [`traegt_die_folge`] rufen. Der Vergleich hat damit keinen Rufer in
-    /// `krk-ui` bekommen und die Frage wird dort nirgends nachgebaut; seine
-    /// drei Rufer stehen alle im Kern, diese Datei, der Durchlauf und seit der
-    /// Runde 11 [`super::inhalt`] fuer den Text einer Datei.
+    /// Sein einziger Rufer in diesem Baum ist [`Ordnermodell::zeilengrund_von`]
+    /// — einmal je Eintrag und je Frage, und nicht einmal je Frager. Bis zum
+    /// 260816 rief ihn daneben die Auftragsliste in `krk-ui`, und der Neuaufbau
+    /// der Sicht rief ihn ein drittes Mal, sooft ein Befund eintraf.
+    ///
+    /// Herausgegeben ist er trotzdem, denn die Probe zu C6.9 misst ihn gegen
+    /// den Inhaltsbefund: dieselbe Folge soll am Namen und am Inhalt dieselbe
+    /// Antwort geben. Der Vergleich selbst, [`traegt_die_folge`], hat weiterhin
+    /// keinen Rufer in `krk-ui`; seine drei Rufer stehen alle im Kern, diese
+    /// Datei, der Durchlauf und seit der Runde 11 [`super::inhalt`] fuer den
+    /// Text einer Datei.
     ///
     /// Ein Index ausserhalb des Bestands traegt nichts. **Ohne Filtertext ist
-    /// die Frage gegenstandslos**: beide Rufer stellen sie erst hinter dem
-    /// Zweig „steht ein Filtertext?", und der leere Text steckt der Sache nach
-    /// in jedem Namen.
+    /// die Frage gegenstandslos**: der Rufer stellt sie erst hinter dem Zweig
+    /// „steht ein Filtertext?", und der leere Text steckt der Sache nach in
+    /// jedem Namen.
     pub fn name_traegt_den_filter(&self, eintragsindex: u32) -> bool {
         self.eintraege
             .get(eintragsindex as usize)
             .is_some_and(|eintrag| traegt_die_folge(&eintrag.name, &self.filter_klein))
     }
 
-    /// Der Rumpf der Inhaltsregel, **ohne** ihre Vorbedingungen.
-    ///
-    /// Gueltig allein dort, wo die Vorbedingungen schon feststehen: ein
-    /// Filtertext steht, sein Name traegt ihn nicht, und der Eintrag ist eine
-    /// gewoehnliche Datei. Genau das ist die Lage im Dateizweig von
-    /// [`Ordnermodell::sichtbar`], und deshalb ist diese Funktion privat.
-    ///
-    /// **Zwei Eingaenge, ein Rumpf**, und dies ist der Rumpf. Der zweite
-    /// Eingang ist [`Ordnermodell::steht_wegen_des_inhalts`], das dieselbe
-    /// Regel mit allen Vorbedingungen davor anbietet.
-    ///
-    /// `Unentschieden` und `KeinTreffer` sind beide ein Nein, und dass sie es
-    /// aus verschiedenen Gruenden sind, aendert an der Zeile nichts:
-    /// `Unentschieden` heisst "noch nicht gelesen", und bis dahin steht die
-    /// Zeile nicht. Die Liste beginnt damit bei den Namenstreffern und waechst
-    /// waehrend des Lesens.
-    fn inhalt_entscheidet(&self, eintragsindex: u32) -> bool {
-        self.inhalt_wirkt() && matches!(self.befund(eintragsindex), Befund::Treffer)
-    }
-
     /// Ob dieser Eintrag allein wegen seines Inhalts in der Liste steht.
     ///
     /// **Die Frage der Dateizelle**, die eine so stehende Zeile abgesetzt
-    /// schreibt. Sie stellt dieselbe Frage wie der Dateizweig von
-    /// [`Ordnermodell::sichtbar`], nur ohne dessen Vorlauf: die Zelle bekommt
-    /// eine Zeile und weiss von den Zweigen davor nichts.
-    ///
-    /// **Zwei Eingaenge, ein Rumpf, und der Grund ist gezaehlt.** Der Rumpf ist
-    /// [`Ordnermodell::inhalt_entscheidet`]; hier stehen die Vorbedingungen
-    /// davor, die der Pruefschritt an seiner Stelle schon hinter sich hat. Sie
-    /// dort ein zweites Mal zu pruefen kostete je Eintrag einen weiteren Aufruf
-    /// von [`Ordnermodell::name_traegt_den_filter`], und der schreibt den Namen
-    /// einmal um — bei 100.000 Eintraegen also 100.000 Umschreibungen je
-    /// Neuaufbau der Sicht. Umgekehrt fehlten der Zelle die Vorbedingungen
-    /// ganz, wenn sie den blossen Rumpf riefe.
-    ///
-    /// Die Vorbedingungen, in dieser Reihenfolge: ein Index ausserhalb des
-    /// Bestands steht nicht; ein Ordner und eine symbolische Verknuepfung
-    /// stehen nie wegen ihres Inhalts, denn ueber sie entscheidet der Name oder
-    /// ihr Unterbaum; ohne stehenden Filtertext steht jede Zeile ohnehin; und
-    /// traegt der Name die Folge, ist das ihr Grund und nicht der Inhalt.
+    /// schreibt. Sie stellt keine zweite Frage neben dem Pruefschritt, sondern
+    /// liest dessen aufbewahrtes Ergebnis: unter dem Vorbehalt eines
+    /// Inhaltsbefunds zu stehen und ihn als Treffer beantwortet zu haben, ist
+    /// genau das, was der Dateizweig von [`Ordnermodell::zeilengrund_von`]
+    /// bedeutet.
     ///
     /// **Damit sind die beiden Treffergruende ueberschneidungsfrei**: keine
-    /// Zeile steht aus beiden zugleich.
+    /// Zeile steht aus beiden zugleich. Das leistet der Kurzschluss des Namens
+    /// im Pruefschritt, denn wessen Name die Folge traegt, kommt gar nicht erst
+    /// unter einen Vorbehalt.
+    ///
+    /// **Bis zum 260816 stand hier eine zweite Fassung der Vorbedingungen**,
+    /// fuenf Zweige lang, und einer davon rief je gezeichneter Zelle
+    /// [`Ordnermodell::name_traegt_den_filter`] und schrieb den Namen dafuer
+    /// klein. Beides ist mit dem aufbewahrten Zeilengrund weg.
     #[must_use]
     pub fn steht_wegen_des_inhalts(&self, eintragsindex: u32) -> bool {
-        let Some(eintrag) = self.eintraege.get(eintragsindex as usize) else {
-            return false;
-        };
-        if eintrag.ist_ordner() || eintrag.ist_verknuepfung() {
-            return false;
-        }
-        if self.filtertext.is_empty() {
-            return false;
-        }
-        if self.name_traegt_den_filter(eintragsindex) {
-            return false;
-        }
-        self.inhalt_entscheidet(eintragsindex)
+        self.grund(eintragsindex as usize) == Zeilengrund::UnterVorbehalt(Auftragsart::Inhalt)
+            && matches!(self.befund(eintragsindex), Befund::Treffer)
+    }
+
+    /// Die Auftraege, die dieser Stand des Filters offen laesst.
+    ///
+    /// **Wessen Zeile an einem Befund haengt, verdient einen Auftrag, und das
+    /// ist keine zweite Regel, sondern dieselbe.** Die Liste ist deshalb ein
+    /// Gang ueber den aufbewahrten Zeilengrund und stellt keine einzige Frage
+    /// neu. Wer den Bestand zum Beantworten braucht, bekommt ihn ueber
+    /// [`Ordnermodell::bestand`]; der Auftrag selbst traegt nur den Index.
+    ///
+    /// Die Reihenfolge ist die des Bestands, und keine Zusage haengt an ihr.
+    ///
+    /// **Bis zum 260816 stand diese Liste in `krk-ui` und war die zweite
+    /// Fassung des Pruefschritts.** Sie kannte dessen ersten Zweig nicht und
+    /// erteilte Auftraege fuer ausgeblendete Eintraege, die keine Zeile
+    /// bekommen koennen; seit der Runde 11 kostet ein solcher Auftrag ein
+    /// `open(2)` und bis zu 1 MB gelesene Bytes
+    /// (`issues/260816-1931_*_der-inhaltsfilter-liest-versteckte-dateien-und-steigt-in-versteckte-ordner-ab.md`).
+    ///
+    /// **Der Abstieg in einen versteckten Ordner ist davon unberuehrt**: ein
+    /// Treffer unter ihm ist ein Treffer unter dem sichtbaren Ordner darueber,
+    /// und ihn zu uebergehen waere eine neue Regel und keine Ersparnis. Die
+    /// Verstecke sind hier eine Frage an die **Zeile** und keine an den
+    /// Unterbaum.
+    ///
+    /// **Ein Eintrag, den das Einblenden der Verstecke sichtbar macht, braucht
+    /// deshalb einen neuen Lauf.** Der Aufrufer stoesst ihn an, wie er ihn nach
+    /// jeder anderen Aenderung dieser Liste auch anstoesst.
+    #[must_use]
+    pub fn auftraege(&self) -> Vec<Auftrag> {
+        self.grund
+            .iter()
+            .enumerate()
+            .filter_map(|(index, grund)| match grund {
+                Zeilengrund::UnterVorbehalt(art) => Some(Auftrag {
+                    index: index as u32,
+                    art: *art,
+                }),
+                Zeilengrund::Steht | Zeilengrund::FaelltWeg => None,
+            })
+            .collect()
+    }
+
+    /// Der gelesene Bestand, zum Mitgeben an einen Durchlauf.
+    ///
+    /// Ein Zaehlerschritt und keine Kopie; was daran haengt, steht am Feld
+    /// `eintraege`.
+    #[must_use]
+    pub fn bestand(&self) -> Arc<Vec<Eintrag>> {
+        Arc::clone(&self.eintraege)
     }
 
     /// Der Filtertext, so wie der Nutzer ihn getippt hat.
@@ -781,16 +964,16 @@ impl Ordnermodell {
 
     /// Schaltet den Filter der Tiefe ein oder aus.
     ///
-    /// Beim **Einschalten** faellt jeder Befund auf `Unentschieden` zurueck:
-    /// was zuletzt unter einem Ordner lag, ist eine Auskunft ueber einen
-    /// frueheren Filtertext und keine ueber den stehenden. Beim Ausschalten
-    /// bleibt der Vektor stehen, weil ihn dann niemand liest.
+    /// Ob dabei ein Befund verfaellt, entscheidet
+    /// [`Ordnermodell::schalter_setzen`] und nicht diese Stelle. **Der Stand
+    /// der tiefen Suche gehoert nicht zu der Frage, die ein Befund
+    /// beantwortet**, sondern nur dazu, ob sie ueberhaupt gestellt wird: der
+    /// Durchlauf schreitet einen Unterbaum immer gleich ab, gleich wie der
+    /// Schalter steht. Er aendert die Frage trotzdem, wenn er die Schwelle des
+    /// Inhaltsfilters ueber- oder unterschreitet — und genau das misst
+    /// `schalter_setzen`, statt es hier nachzurechnen.
     pub fn tief_setzen(&mut self, tief: bool) {
-        if tief && !self.tief {
-            self.befund_zuruecksetzen();
-        }
-        self.tief = tief;
-        self.sicht_neu_aufbauen();
+        self.schalter_setzen(|modell| modell.tief = tief);
     }
 
     /// Ob der Filter auch den Text einer Datei meint ("Content").
@@ -806,18 +989,49 @@ impl Ordnermodell {
     /// Schaltet den Filter des Inhalts ein oder aus.
     ///
     /// **Dieselbe Form wie [`Ordnermodell::tief_setzen`]**, Zeile fuer Zeile,
-    /// und aus demselben Grund: beim **Einschalten** faellt jeder Befund auf
-    /// `Unentschieden` zurueck, denn was zuletzt bekannt war, ist eine Auskunft
-    /// ueber eine frueher gestellte Frage. Beim Ausschalten bleibt der Vektor
-    /// stehen, weil ihn dann fuer eine Datei niemand liest.
-    ///
-    /// Die Sicht wird in jedem Fall neu aufgebaut, auch beim Ausschalten: dann
-    /// fallen genau die Zeilen weg, die allein wegen ihres Inhalts standen.
+    /// und aus demselben Grund: was verfaellt, entscheidet
+    /// [`Ordnermodell::schalter_setzen`] an einer Stelle fuer beide Schalter.
     pub fn inhalt_setzen(&mut self, inhalt: bool) {
-        if inhalt && !self.inhalt {
+        self.schalter_setzen(|modell| modell.inhalt = inhalt);
+    }
+
+    /// Legt einen der beiden Schalter um und traegt die Folgen nach.
+    ///
+    /// **Ein Befund ist die Antwort auf eine Frage, und diese Stelle huetet die
+    /// Frage.** Sie lautet: traegt dieser Eintrag den Filtertext unter sich
+    /// oder in sich, und zaehlt sein Inhalt dabei mit? Beides sind Angaben, mit
+    /// denen der Durchlauf startet — der kleingeschriebene Filtertext und die
+    /// Inhaltsgrenze —, und aendert sich eine von beiden, sind die aufbewahrten
+    /// Antworten Auskuenfte ueber eine frueher gestellte Frage. Der Filtertext
+    /// geht seinen eigenen Weg ueber `filter_uebernehmen`, das ohnehin jedes
+    /// Mal zuruecksetzt; hier bleibt die zweite Haelfte.
+    ///
+    /// **Bis zum 260816 stand die Regel zweimal da und war beide Male
+    /// unsymmetrisch**: eingeschaltet wurde zurueckgesetzt, ausgeschaltet
+    /// nicht, „weil ihn dann niemand liest". Fuer eine Datei stimmte das, fuer
+    /// einen Ordner nie: dessen Zweig liest den Befund, solange die tiefe Suche
+    /// steht. Eine Ordnerzeile blieb nach dem Ausschalten von „Content" auf
+    /// einem Befund stehen, den erst das Lesen von Dateien erzeugt hatte, und
+    /// zwar so lange, wie der neue Lauf bis zu ihr brauchte — nach dem eigenen
+    /// Text der Runde bis zu Minuten
+    /// (`issues/260816-1930_*_content-ausschalten-laesst-ordnerzeilen-auf-einem-veralteten-inhaltsbefund-stehen.md`).
+    /// C2.9 verlangt „sofort", und sofort heisst hier: der Befund faellt mit dem
+    /// Schalter.
+    ///
+    /// **Der Preis ist benannt und angenommen.** Ein Ordner, der wegen eines
+    /// **Namens** unter sich stand, verschwindet beim Umlegen ebenfalls und
+    /// kommt mit dem neuen Lauf wieder. Der Vektor sagt, **dass** etwas
+    /// darunter lag, und nicht **warum**; ihn nach dem Grund zu fragen hiesse,
+    /// den Grund ueber den Befundkanal zu melden und aus einem Wahrheitswert je
+    /// Auftrag zwei zu machen. Es ist derselbe Handel, den das Einschalten der
+    /// tiefen Suche seit der Runde 10 schon eingeht.
+    fn schalter_setzen(&mut self, umlegen: impl FnOnce(&mut Self)) {
+        let inhalt_zaehlte = self.inhalt_wirkt();
+        umlegen(self);
+        if self.inhalt_wirkt() != inhalt_zaehlte {
             self.befund_zuruecksetzen();
         }
-        self.inhalt = inhalt;
+        self.grund_neu_rechnen();
         self.sicht_neu_aufbauen();
     }
 
@@ -887,12 +1101,12 @@ impl Ordnermodell {
 
     /// Setzt jeden Befund auf `Unentschieden` zurueck.
     ///
-    /// Zu rufen, wann immer die Frage eine andere wird: bei jeder Aenderung des
-    /// Filtertexts, beim Einschalten des Filters der Tiefe, beim Einschalten
-    /// des Filters des Inhalts und beim Abbruch eines Durchlaufs. Die Sicht
-    /// baut diese Methode **nicht** neu auf; ihre
-    /// Rufer tun es unmittelbar danach, und zweimal zu bauen waere zweimal
-    /// dieselbe Arbeit.
+    /// Zu rufen, wann immer die Frage eine andere wird, und **nur** dann. Die
+    /// Frage ist der kleingeschriebene Filtertext und die Angabe, ob der Inhalt
+    /// dabei zaehlt; wer sie aendert, sind `filter_uebernehmen` und
+    /// [`Ordnermodell::schalter_setzen`], dazu der Abbruch eines Durchlaufs von
+    /// aussen. Die Sicht baut diese Methode **nicht** neu auf; ihre Rufer tun es
+    /// unmittelbar danach, und zweimal zu bauen waere zweimal dieselbe Arbeit.
     pub fn befund_zuruecksetzen(&mut self) {
         self.befund.fill(Befund::Unentschieden);
     }
@@ -906,6 +1120,7 @@ impl Ordnermodell {
     fn filter_uebernehmen(&mut self) {
         self.filter_klein = self.filtertext.to_lowercase();
         self.befund_zuruecksetzen();
+        self.grund_neu_rechnen();
         self.sicht_neu_aufbauen();
     }
 
@@ -936,7 +1151,7 @@ impl Ordnermodell {
                 .map(|index| index as u32),
         );
         let sortierung = self.sortierung;
-        let eintraege = &self.eintraege;
+        let eintraege: &[Eintrag] = &self.eintraege;
         sicht.sort_unstable_by(|links, rechts| {
             sortierung.vergleiche(&eintraege[*links as usize], &eintraege[*rechts as usize])
         });

@@ -6,7 +6,7 @@
 //!                                                            │
 //!                        traegt_die_folge(Text, Filtertext) <┤
 //!                            ^             ^         ^       │
-//!                    modell::sichtbar  durchlauf  inhalt     │
+//!                 modell::zeilengrund_von durchlauf inhalt   │
 //!                                                            │
 //!                        inhaltsschwelle(tief) <─ Zeichenzahl┘
 //!                              ^
@@ -16,8 +16,8 @@
 //! Die Datei traegt alle drei Regeln, weil jede an mehreren Stellen dieselbe
 //! Antwort geben soll und es bei zwei Fassungen nicht mehr taete. Die
 //! Zeichenregel hat zwei Aufrufer, den Filter der Dateiliste und die Tippsuche
-//! der Belegungsansicht aus der Runde 7; der Vergleich hat drei,
-//! [`super::modell::Ordnermodell::sichtbar`] fuer die angezeigte Zeile,
+//! der Belegungsansicht aus der Runde 7; der Vergleich hat drei, den
+//! Pruefschritt des Ordnermodells fuer die angezeigte Zeile,
 //! [`super::durchlauf`] fuer den Unterbaum und seit der Runde 11
 //! [`super::inhalt`] fuer den gelesenen Text einer Datei. Die Schwelle hat
 //! einen, [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist
@@ -96,11 +96,11 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
 /// Ob dieser Name den Filtertext traegt: Teilzeichenfolge an jeder Stelle, ohne
 /// Ruecksicht auf die Schreibung, ohne Faltung von Umlauten und Akzenten.
 ///
-/// **Der eine Vergleich, und seine Rufer stehen alle im Kern.**
-/// [`super::modell::Ordnermodell::sichtbar`] entscheidet ueber die angezeigte
-/// Zeile, [`super::durchlauf`] zieht denselben Vergleich auf jeden Namen im
-/// Unterbaum, und seit der Runde 11 legt ihn [`super::inhalt`] an den
-/// gelesenen Text einer Datei. Bis zum 260815 stand er in den ersten beiden
+/// **Der eine Vergleich, und seine Rufer stehen alle im Kern.** Der
+/// Pruefschritt des Ordnermodells entscheidet ueber die angezeigte Zeile,
+/// [`super::durchlauf`] zieht denselben Vergleich auf jeden Namen im Unterbaum,
+/// und seit der Runde 11 legt ihn [`super::inhalt`] an den gelesenen Text einer
+/// Datei. Bis zum 260815 stand er in den ersten beiden
 /// Dateien getrennt; dass eine tiefe Suche etwas anderes faende als eine
 /// flache, waere keine Eigenschaft, die jemand haette erklaeren koennen.
 ///

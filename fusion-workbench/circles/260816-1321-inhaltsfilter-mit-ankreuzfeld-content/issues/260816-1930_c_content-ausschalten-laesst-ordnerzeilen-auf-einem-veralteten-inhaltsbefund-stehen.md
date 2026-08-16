@@ -74,3 +74,14 @@ von C2.9 benannt: sie gilt für Dateien sofort und für Ordner erst nach dem neu
 Gefunden bei der Durchsicht der elften Runde, Bereich `9f5ced5..b9ab8ae`.
 Verwandt: `issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md`
 (dieselbe Sorte Anzeige: eine Liste, die vollständiger aussieht, als sie ist).
+
+---
+Resolved: 260816-2230, gemeinsam mit `260816-1931` und `260816-1933` an ihrer Wurzel behoben. Nicht der Zweig in `inhalt_setzen` ist geändert, sondern die Regel dahinter: **ein Befund gilt nur zu der Frage, die ihn erzeugt hat.** Die Frage besteht aus zwei Größen — dem kleingeschriebenen Filtertext und der Angabe, ob der Inhalt mitzählt —, und beide sind genau die Angaben, mit denen `Durchlauf::starten` losläuft. Ändert sich eine, fällt der ganze Vektor auf `Unentschieden`.
+
+Die beiden unsymmetrischen Zweige in `tief_setzen` und `inhalt_setzen` sind dafür durch **eine** Stelle ersetzt, `Ordnermodell::schalter_setzen` (`crates/krk-core/src/verzeichnis/modell.rs`): sie merkt sich `inhalt_wirkt()` vor dem Umlegen, vergleicht danach und setzt zurück, wenn der Wert gekippt ist. Der falsche Doc-Kommentar „weil ihn dann niemand liest" ist damit an beiden Stellen weg, samt der Begründung, die ihn getragen hat.
+
+**Zwei Nebenwirkungen, beide gewollt.** Erstens setzt `tief_setzen(true)` nicht mehr blind zurück: der Stand der tiefen Suche entscheidet, ob die Frage für einen Ordner gestellt wird, und nicht, wie sie ausgeht — er wirft deshalb keine gültige Antwort mehr weg, außer wenn er die Schwelle des Inhaltsfilters kreuzt. Zweitens fällt beim Ausschalten von „Content" auch eine Ordnerzeile mit, die auf einem **Namens**treffer unter sich stand, und kommt mit dem neuen Lauf wieder. Das ist der Preis, den der Datensatz oben benennt; er ist angenommen, weil der Vektor sagt, *dass* etwas darunter lag, und nicht *warum*. Ihn nach dem Grund zu fragen hieße, den Grund über den Befundkanal zu melden und aus einem Wahrheitswert je Auftrag zwei zu machen.
+
+Prüfbar gemacht in `crates/krk-core/tests/verzeichnis.rs`: `das_ausschalten_des_inhaltsfilters_nimmt_auch_die_ordnerzeile_sofort_weg` (die Zusage), `das_ausschalten_nimmt_auch_eine_namentlich_begruendete_ordnerzeile_mit` (der Preis), `das_ausschalten_nimmt_die_inhaltszeilen_weg_und_setzt_den_befund_zurueck` (die umgeschriebene alte Probe) und `ein_befund_gilt_nur_zu_seiner_frage` (die Regel; ersetzt `der_befund_faellt_bei_jeder_aenderung_der_frage_zurueck`). Die Abnahmeliste `messungen/260816-abnahme-inhaltsfilter.md` führt dafür die neuen Beobachtungen **26** und **27** und die nachgezogenen **17** und **21**.
+
+Abnahme: `make check` — exit 0.
