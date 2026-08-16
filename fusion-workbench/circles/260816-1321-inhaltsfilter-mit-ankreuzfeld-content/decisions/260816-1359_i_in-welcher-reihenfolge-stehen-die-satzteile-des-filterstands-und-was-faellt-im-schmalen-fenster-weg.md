@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `shared/decisions/260816-1310_a_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md` (der Nutzerentscheid, der diese Bauentscheidung hinterlässt); `crates/krk-ui/src/appkit/statuszeile.rs:369-386` (`filterstand_text`), `:314-335` (`Filterstand`), `:668-671` und `:689-695` (Kurzhinweis bei Kürzung), `:126-136` (die benannte Lücke der Messung); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`
 
@@ -46,6 +46,6 @@ Der Singular bekommt einen eigenen Zweig, wie ihn der Markierungshinweis schon h
 
 ---
 Answered: `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt F2 — Möglichkeit 1: Kern, Lesehinweis, Größenhinweis, Markierungshinweis; gekürzt wird von AppKit am rechten Rand, und der vorhandene Kurzhinweis trägt den vollen Satz.
-Implemented:
+Implemented: c8fd829 — der Satz traegt vier Teile in der Reihenfolge Kern, Lesehinweis, Groessenhinweis, Markierungshinweis; kein siebter Rang, keine zweite Zeile, keine eigene Kuerzungsvorrichtung. Sechs Proben in `statuszeile.rs` decken alle acht Kombinationen, darunter den Fall null zu grosser Dateien, in dem der Hinweis ausbleiben muss.
 Deferred:
 Superseded by:

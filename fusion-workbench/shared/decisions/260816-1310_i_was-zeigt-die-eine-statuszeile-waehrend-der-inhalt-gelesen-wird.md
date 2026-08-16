@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs:201-241` (die sechs Ränge, vollständige Fallunterscheidung ohne Auffangzweig) und `:376-386` (der Satz des Filterstands); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md` (die Runde-10-Fassung derselben Frage, weiter offen); `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`; `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md` (C4)
 
@@ -66,6 +66,6 @@ bleibt es; wie der Satz bricht oder kürzt, ist eine Bauentscheidung.
 
 ---
 Answered: shared/decisions/260816-1310_a_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md §Nutzerentscheid — Möglichkeit 1, ein Satzteil am Filterstand, erweitert um den Hinweis auf die wegen ihrer Größe ungelesenen Dateien.
-Implemented:
+Implemented: c8fd829 — der Satz traegt vier Teile in der Reihenfolge Kern, Lesehinweis, Groessenhinweis, Markierungshinweis; kein siebter Rang, keine zweite Zeile, keine eigene Kuerzungsvorrichtung. Sechs Proben in `statuszeile.rs` decken alle acht Kombinationen, darunter den Fall null zu grosser Dateien, in dem der Hinweis ausbleiben muss.
 Deferred:
 Superseded by:
