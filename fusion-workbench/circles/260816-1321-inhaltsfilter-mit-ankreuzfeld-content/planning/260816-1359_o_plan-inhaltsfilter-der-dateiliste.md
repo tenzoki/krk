@@ -355,7 +355,7 @@ flowchart TD
 
 ### Strang F — die Anzeige
 
-**F1. Die abgesetzte Zeile**
+**F1. [DONE] Die abgesetzte Zeile**
 - Executor: `coder`
 - Files: `crates/krk-ui/src/appkit/tabelle.rs`
 - Erfüllt: C5.1, C5.2, C5.3, C5.4, C5.5

@@ -123,7 +123,10 @@
 //!   `NSUserInterfaceItemIdentification`
 //!   (`NSUserInterfaceItemIdentification.h:17`), aus dem die Kennung der
 //!   Spalte gelesen und die der Zelle gesetzt wird.
-//! - 10.10: `labelColor` und `systemOrangeColor` (`NSColor.h:201` und `:253`).
+//! - 10.10: `labelColor`, `secondaryLabelColor` und `systemOrangeColor`
+//!   (`NSColor.h:201`, `:202` und `:253`). Die zweite ist seit der Runde 11
+//!   die gedaempfte Farbe der Zeile, die allein wegen ihres Inhalts steht;
+//!   die Leiste faerbt eine Ueberschrift schon damit.
 //! - 10.11: `monospacedDigitSystemFontOfSize:weight:` samt
 //!   `NSFontWeightRegular` und `NSFontWeightBold` — die drei Stellen im Kopf
 //!   des Systems nennt der Block bei der Schriftwahl weiter unten — sowie
@@ -2250,6 +2253,22 @@ impl DateifensterQuelle {
             .is_some_and(|index| modell.ist_markiert(index))
     }
 
+    /// Ob der Eintrag dieser Zeile allein wegen seines Inhalts dasteht (C5).
+    ///
+    /// **Die Regel wird hier nicht nachgebaut.** Sie steht als
+    /// [`krk_core::verzeichnis::Ordnermodell::steht_wegen_des_inhalts`] im Kern
+    /// und traegt ihre Vorbedingungen selbst; diese Methode rechnet die Zeile
+    /// in den Eintragsindex um und fragt, genau wie [`Self::zeile_markiert`]
+    /// daneben. Eine zweite Fassung in `krk-ui` waere die zweite Antwort auf
+    /// dieselbe Frage und liefe irgendwann von der ersten weg.
+    fn zeile_steht_wegen_des_inhalts(&self, zeile: usize) -> bool {
+        let tabs = self.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        modell
+            .eintragsindex(zeile)
+            .is_some_and(|index| modell.steht_wegen_des_inhalts(index))
+    }
+
     // ------------------------------------------------------------------
     // Bildlauf, Statuszeile, Einzugstakt
     // ------------------------------------------------------------------
@@ -2865,9 +2884,41 @@ impl DateifensterDelegierter {
         // Durchgang gesetzt und nicht nur im markierten Fall: die
         // Zellenansichten sind wiederverwendet, und eine ungesetzte Eigenschaft
         // bliebe die des vorigen Eintrags.
+        //
+        // **Die Daempfung aus C5 teilt sich diese eine Eigenschaft mit der
+        // Markierung, und bei einem Zusammentreffen schreibt die Markierung.**
+        // Eine Zeile, die allein wegen ihres Inhalts dasteht, steht in
+        // `secondaryLabelColor`; ein markierter Eintrag bleibt orange und fett,
+        // gleich aus welchem Grund er in der Liste steht. Die Rangfolge folgt
+        // den Folgen: die Markierung entscheidet, worauf Loeschen, Verschieben
+        // und Kopieren wirken, und wer sie uebersieht, verliert Dateien; die
+        // Daempfung ist eine Auskunft ueber die Herkunft der Zeile, und wer sie
+        // uebersieht, oeffnet die Datei und sieht nach. **Der Verlust ist benannt
+        // und angenommen:** unter den markierten Eintraegen ist ein
+        // Inhaltstreffer nicht mehr von einem Namenstreffer zu unterscheiden.
+        // Die Abwaegung im Einzelnen steht in
+        // `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/decisions/260816-1359_*_welche-aussage-schreibt-die-dateizelle-wenn-markierung-und-inhaltsdaempfung-zusammentreffen.md`.
+        //
+        // **`secondaryLabelColor` und nicht `tertiaryLabelColor`.** Die Leiste
+        // traegt das Vokabular schon: das zweite steht dort fuer eine Marke, deren
+        // Ziel fehlt, also fuer etwas Kaputtes; das erste fuer eine Ueberschrift,
+        // also fuer etwas Gueltiges mit anderem Rang. Ein Inhaltstreffer ist eine
+        // gueltige Zeile mit anderer Herkunft und keine beschaedigte Datei.
+        //
+        // **Die Schriftwahl bleibt zweiwertig.** Fett gehoert der Markierung;
+        // die Daempfung bekommt kein zweites Kennzeichen, sonst entstuende der
+        // dritte Zustand, den C5.4 ausschliesst.
+        //
+        // **Alle drei sind dynamische Systemfarben.** Ein Wechsel der Farbtafel
+        // zieht damit von selbst nach, und die Tabelle braucht keinen Beobachter
+        // der Erscheinung. Die Auswahl bleibt AppKit ueberlassen: KRK schreibt
+        // keine Auswahlfarbe, und eine ausgewaehlte Zeile bleibt blau unterlegt,
+        // gleich welche Textfarbe sie traegt.
         let markiert = self.ivars().quelle.zeile_markiert(zeile);
         let farbe = if markiert {
             NSColor::systemOrangeColor()
+        } else if self.ivars().quelle.zeile_steht_wegen_des_inhalts(zeile) {
+            NSColor::secondaryLabelColor()
         } else {
             NSColor::labelColor()
         };

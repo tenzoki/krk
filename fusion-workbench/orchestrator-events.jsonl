@@ -978,3 +978,8 @@
 {"ts":"2026-08-16T16:03:57","event":"task_done","turn":10,"task":"E2","agent":"ontocoder","detail":"1229 Proben gruen; nur die clippy-Warnung aus E3 bleibt"}
 {"ts":"2026-08-16T16:03:57","event":"task_start","turn":10,"task":"E3","agent":"coder","detail":"Ankreuzfeld Content; macht den Baum wieder gruen"}
 {"ts":"2026-08-16T16:14:42","event":"task_done","turn":10,"task":"E3","agent":"coder","detail":"Baum wieder gruen"}
+{"ts":"2026-08-16T16:15:26","event":"commit","turn":10,"detail":"37ca972 (Strang E, drei Schritte in einem Commit)"}
+{"ts":"2026-08-16T16:15:26","event":"turn_end","turn":10,"detail":"E1 E2 E3 done, 1 commit"}
+{"ts":"2026-08-16T16:15:26","event":"turn_start","turn":11,"detail":"F1, danach F2"}
+{"ts":"2026-08-16T16:15:26","event":"task_start","turn":11,"task":"F1","agent":"coder","detail":"die abgesetzte Zeile"}
+{"ts":"2026-08-16T16:27:43","event":"task_done","turn":11,"task":"F1","agent":"coder","detail":"dreiwertige Farbwahl; Kontraste gemessen"}
