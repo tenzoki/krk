@@ -959,3 +959,8 @@
 {"ts":"2026-08-16T13:17:34","event":"task_done","turn":7,"task":"A1","agent":"coder","detail":"Lesehuelle in krk-core; Commit steht aus, C1 laeuft"}
 {"ts":"2026-08-16T13:20:28","event":"task_done","turn":7,"task":"C1","agent":"coder","detail":"Schalter, Schwelle, sechster Zweig"}
 {"ts":"2026-08-16T13:20:28","event":"commit","turn":7,"detail":"5c7f5b9 (A1)"}
+{"ts":"2026-08-16T13:21:07","event":"commit","turn":7,"detail":"4a54212 (C1)"}
+{"ts":"2026-08-16T13:21:07","event":"turn_end","turn":7,"detail":"2 steps done, 2 commits"}
+{"ts":"2026-08-16T13:21:07","event":"turn_start","turn":8,"detail":"A2, danach B1 und D1"}
+{"ts":"2026-08-16T13:21:07","event":"task_start","turn":8,"task":"A2","agent":"coder","detail":"verzeichnis::inhalt"}
+{"ts":"2026-08-16T13:37:57","event":"task_done","turn":8,"task":"A2","agent":"coder","detail":"verzeichnis::inhalt, Zaehlprobe auf drei"}

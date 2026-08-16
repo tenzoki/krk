@@ -638,9 +638,10 @@ impl Ordnermodell {
     /// Wer die Auftraege des Durchlaufs zusammenstellt, muss genau diesen Zweig
     /// kennen — er laeuft fuer einen Ordner, dessen Name den Filtertext traegt,
     /// ausdruecklich **nicht** —, und er soll dafuer nicht ein zweites Mal
-    /// [`traegt_die_folge`] rufen. Der Vergleich hat damit weiter genau zwei
-    /// Rufer, diese Datei und den Durchlauf, und die Frage wird in `krk-ui`
-    /// nirgends nachgebaut.
+    /// [`traegt_die_folge`] rufen. Der Vergleich hat damit keinen Rufer in
+    /// `krk-ui` bekommen und die Frage wird dort nirgends nachgebaut; seine
+    /// drei Rufer stehen alle im Kern, diese Datei, der Durchlauf und seit der
+    /// Runde 11 [`super::inhalt`] fuer den Text einer Datei.
     ///
     /// Ein Index ausserhalb des Bestands traegt nichts. **Ohne Filtertext ist
     /// die Frage gegenstandslos**: beide Rufer stellen sie erst hinter dem

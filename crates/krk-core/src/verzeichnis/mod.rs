@@ -1,6 +1,6 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Neun Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Zehn Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys ──> leser ──> eintrag ──> modell <── sortierung
@@ -9,8 +9,10 @@
 //!  └──> durchlauf ─────────────────┘ │
 //!            ^                       │
 //!            └──── filter ───────────┘
+//!                    ^
+//!                  inhalt
 //!
-//! verweisziel   (steht allein, an keinem der acht)
+//! verweisziel   (steht allein, an keinem der neun)
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
@@ -27,14 +29,26 @@
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]
 //! liefert die acht Ordnungen.
 //!
-//! [`filter`] steht als einziges Modul **unter** zwei anderen und nicht in der
-//! Kette: es traegt die zwei Regeln des Filters aus der Runde 10, welche
-//! Zeichen aufgenommen werden und wann ein Name den Filtertext traegt, und
-//! beide Regeln stehen dort je einmal. Der Vergleich hat zwei Rufer, [`modell`]
-//! fuer die angezeigte Zeile und [`durchlauf`] fuer jeden Namen im Unterbaum;
-//! zwei Fassungen davon hiessen, dass eine tiefe Suche etwas anderes faende als
-//! eine flache. Bis zum 260815 hiess das Modul `sprungmarke` und trug die
-//! Sprungmarke aus C2 der Runde 1, die die Runde 10 abgeloest hat.
+//! [`filter`] steht als einziges Modul **unter** mehreren anderen und nicht in
+//! der Kette: es traegt die drei Regeln des Filters, welche Zeichen
+//! aufgenommen werden, wann ein Name den Filtertext traegt und ab welcher
+//! Laenge der Filtertext auch Inhalte meint, und jede Regel steht dort je
+//! einmal. Der Vergleich hat seit der Runde 11 drei Rufer, [`modell`] fuer die
+//! angezeigte Zeile, [`durchlauf`] fuer jeden Namen im Unterbaum und
+//! [`inhalt`] fuer den Text einer Datei; zwei Fassungen davon hiessen, dass
+//! eine tiefe Suche etwas anderes faende als eine flache und der Inhalt etwas
+//! anderes als der Name. Bis zum 260815 hiess das Modul `sprungmarke` und trug
+//! die Sprungmarke aus C2 der Runde 1, die die Runde 10 abgeloest hat.
+//!
+//! [`inhalt`] steht wie [`filter`] neben der Kette und beantwortet die eine
+//! Frage, die der Name allein nicht beantwortet: traegt der **Text** dieser
+//! Datei die Folge? Gelesen wird ueber
+//! [`crate::text::datei::bis_zur_grenze_lesen`] und hoechstens so weit, wie
+//! der Aufrufer es zulaesst; verglichen wird mit derselben Regel aus
+//! [`filter`], die schon ueber Namen entscheidet. **Wer ihn ruft, haelt den
+//! Abbruch**: [`inhalt`] beantwortet eine Frage ueber eine Datei und weiss von
+//! Faeden nichts. Sein Rufer wird deshalb der [`durchlauf`], der den Abbruch
+//! schon fuehrt und die Frage je Datei stellt.
 //!
 //! [`durchlauf`] steht neben [`leser`] und nicht unter ihm: er liest ueber
 //! dieselbe Huelle `sys::Schwungleser` und auf derselben Bauart, beantwortet
@@ -60,6 +74,7 @@ use std::path::{Path, PathBuf};
 pub mod durchlauf;
 pub mod eintrag;
 pub mod filter;
+pub mod inhalt;
 pub mod kollation;
 pub mod leser;
 pub mod modell;
@@ -69,6 +84,7 @@ pub mod verweisziel;
 
 pub use durchlauf::{Auftrag, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
+pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};

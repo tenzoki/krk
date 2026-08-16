@@ -8,9 +8,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::durchlauf::{Auftrag, Befundmeldung, Durchlauf};
+use krk_core::verzeichnis::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
@@ -1342,6 +1344,214 @@ fn unter_der_schwelle_steht_keine_zeile_wegen_ihres_inhalts() {
 }
 
 // ---------------------------------------------------------------------------
+// Der Inhaltsbefund: traegt der Text dieser Datei die Folge? (C1.4 bis C1.6, C6.9)
+// ---------------------------------------------------------------------------
+
+/// Fragt den Inhaltsbefund auf einem Arbeitsfaden und bricht ab, wenn nach
+/// `schranke` keine Antwort da ist.
+///
+/// Dieselbe Bauart wie `bis_zur_grenze_mit_zeitschranke` in `tests/text.rs`, und
+/// aus demselben Grund: eine benannte Roehre ohne Schreiber laesst ein
+/// gewoehnliches `open(2)` warten, und eine haengende Probe unterscheidet sich
+/// von einer laufenden durch nichts. Der Faden bleibt im Fehlerfall stehen; das
+/// Testziel endet ohnehin gleich danach.
+fn inhalt_mit_zeitschranke(
+    pfad: &Path,
+    filter_klein: &str,
+    grenze: u64,
+    schranke: Duration,
+) -> Inhaltsbefund {
+    let (sender, empfaenger) = mpsc::channel();
+    let pfad = pfad.to_path_buf();
+    let filter_klein = filter_klein.to_owned();
+    std::thread::spawn(move || {
+        let _ = sender.send(traegt_der_inhalt(&pfad, &filter_klein, grenze));
+    });
+    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+        panic!("traegt_der_inhalt ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+    })
+}
+
+/// C1.4: Der Text traegt die Folge, oder er traegt sie nicht.
+///
+/// Beide Male ist die Frage entschieden und die Antwort sagt etwas ueber die
+/// Datei. Die Schreibung spielt dabei so wenig eine Rolle wie beim Namen, denn
+/// der Vergleich ist derselbe.
+#[test]
+fn ein_text_mit_der_folge_traegt_sie_und_einer_ohne_nicht() {
+    let ordner = Pruefordner::neu("inhalt-folge");
+
+    let mit = ordner.datei("mit.txt", b"erste Zeile\nzweite mit gesuchtem Wort\n");
+    assert_eq!(
+        traegt_der_inhalt(&mit, "gesuchtem", 1024),
+        Inhaltsbefund::Traegt
+    );
+
+    let ohne = ordner.datei("ohne.txt", b"erste Zeile\nzweite Zeile\n");
+    assert_eq!(
+        traegt_der_inhalt(&ohne, "gesuchtem", 1024),
+        Inhaltsbefund::TraegtNicht
+    );
+
+    let gross = ordner.datei("gross.txt", b"GESUCHTES WORT\n");
+    assert_eq!(
+        traegt_der_inhalt(&gross, "gesuchtes", 1024),
+        Inhaltsbefund::Traegt,
+        "die Schreibung des Textes zaehlt so wenig wie die des Namens"
+    );
+}
+
+/// C1.6: Eine Datei ohne gueltiges UTF-8 ist kein Text und traegt nichts —
+/// auch dann nicht, wenn die gesuchten Bytes in ihr stehen.
+///
+/// Die Folge steht hier als reines ASCII in der Datei, und eine Suche ueber die
+/// **Bytes** faende sie. Gefragt ist aber, ob der **Text** sie traegt, und diese
+/// Datei hat keinen. Genau darum liest der Weg die Datei ganz und nicht
+/// streifenweise: die Typfrage ist erst am Ende beantwortet.
+#[test]
+fn eine_datei_ohne_gueltiges_utf8_traegt_nichts() {
+    let ordner = Pruefordner::neu("inhalt-kein-text");
+    let binaer = ordner.datei("binaer.bin", b"gesuchtes\xff\xfe\x00Wort");
+
+    assert_eq!(
+        traegt_der_inhalt(&binaer, "gesuchtes", 1024),
+        Inhaltsbefund::TraegtNicht
+    );
+}
+
+/// Eine Datei ueber der Grenze bleibt ungelesen, und `ZuGross` ist kein
+/// `TraegtNicht`.
+///
+/// Sie traegt die Folge; die Antwort ist trotzdem nicht `Traegt`, weil gar nicht
+/// gelesen wurde. Und sie ist auch nicht `TraegtNicht`, denn ueber die Datei ist
+/// nichts entschieden — die Zahl der ungelesenen wandert spaeter in die
+/// Statuszeile und nicht an die Zeile.
+#[test]
+fn eine_datei_ueber_der_grenze_bleibt_ungelesen() {
+    let ordner = Pruefordner::neu("inhalt-zu-gross");
+    let gross = ordner.datei("gross.txt", b"gesuchtes Wort\n");
+
+    assert_eq!(
+        traegt_der_inhalt(&gross, "gesuchtes", 8),
+        Inhaltsbefund::ZuGross
+    );
+    assert_eq!(
+        traegt_der_inhalt(&gross, "gesuchtes", 15),
+        Inhaltsbefund::Traegt,
+        "genau auf der Grenze wird gelesen"
+    );
+}
+
+/// C1.5: Die Folge steht in den letzten Bytes vor der Grenze und wird gefunden.
+///
+/// Gelesen wird die ganze Datei und nicht ihr Anfang; ein Weg, der nach einem
+/// ersten Streifen aufhoerte, faende hier nichts. Die Datei liegt genau auf der
+/// Grenze, damit die Probe zugleich sagt, dass die Grenze selbst nichts
+/// abschneidet.
+#[test]
+fn die_folge_in_den_letzten_bytes_vor_der_grenze_wird_gefunden() {
+    let ordner = Pruefordner::neu("inhalt-am-ende");
+    let mut inhalt = vec![b'a'; 4096 - 9];
+    inhalt.extend_from_slice(b"gesuchtes");
+    let grenze = inhalt.len() as u64;
+    assert_eq!(grenze, 4096, "die Datei liegt genau auf der Grenze");
+    let lang = ordner.datei("lang.txt", &inhalt);
+
+    assert_eq!(
+        traegt_der_inhalt(&lang, "gesuchtes", grenze),
+        Inhaltsbefund::Traegt
+    );
+}
+
+/// Was keine gewoehnliche Datei ist, traegt nichts — und die Frage danach
+/// haengt nicht.
+///
+/// Eine benannte Roehre ohne Schreiber liesse ein gewoehnliches `open(2)`
+/// warten. Der Weg dorthin geht ueber `ohne_warten_oeffnen`, also kommt die
+/// Antwort; die Zeitschranke ist der Unterschied zwischen dieser Zusage und
+/// einer Behauptung. Ein Ordner steht daneben, weil er dieselbe Antwort ueber
+/// einen anderen Zweig bekommt: das `fstat` am Deskriptor.
+#[test]
+fn was_keine_gewoehnliche_datei_ist_traegt_nichts() {
+    let ordner = Pruefordner::neu("inhalt-keine-datei");
+
+    let roehre = ordner.roehre("roehre");
+    assert_eq!(
+        inhalt_mit_zeitschranke(&roehre, "gesuchtes", 1024, Duration::from_secs(5)),
+        Inhaltsbefund::TraegtNicht
+    );
+
+    let unterordner = ordner.ordner("unterordner");
+    assert_eq!(
+        traegt_der_inhalt(&unterordner, "gesuchtes", 1024),
+        Inhaltsbefund::TraegtNicht
+    );
+}
+
+/// Eine Datei ohne Leserecht traegt nichts und ist ausdruecklich nicht
+/// `Unentschieden`.
+///
+/// `EACCES` sagt etwas ueber **diese** Datei, `EMFILE` und `ENFILE` sagen etwas
+/// ueber den Prozess. Nur die zweite Lage laesst den Auftrag offen, und diese
+/// Probe zieht die Grenze von der einen Seite; die andere haengt an C3.6 und
+/// steht beim Durchlauf.
+#[test]
+fn eine_datei_ohne_leserecht_traegt_nichts() {
+    let ordner = Pruefordner::neu("inhalt-gesperrt");
+    let gesperrt = ordner.datei("verschlossen.txt", b"gesuchtes Wort\n");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht setzen");
+    if fs::read(&gesperrt).is_ok() {
+        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
+        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
+        // nichts.
+        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
+        return;
+    }
+
+    assert_eq!(
+        traegt_der_inhalt(&gesperrt, "gesuchtes", 1024),
+        Inhaltsbefund::TraegtNicht
+    );
+}
+
+/// C6.9: Dieselbe Folge gibt am Namen und am Inhalt dieselbe Antwort.
+///
+/// **Gemessen wird ueber beide Wege und nicht ueber die eine Regel, die sie
+/// sich teilen.** Links steht [`Ordnermodell::name_traegt_den_filter`], rechts
+/// der Inhaltsbefund an einer Datei, deren ganzer Inhalt derselbe Text ist. Eine
+/// Probe gegen die geteilte Regel selbst sagte nur, dass sie sich verhaelt wie
+/// sie selbst; diese hier faellt, sobald einer der beiden Wege eine zweite
+/// Fassung des Vergleichs bekommt.
+///
+/// Die Reihe deckt die drei Eigenschaften des Vergleichs ab: die Folge zaehlt an
+/// jeder Stelle, die Schreibung spielt keine Rolle, und gefaltet wird nichts.
+#[test]
+fn der_name_und_der_inhalt_geben_dieselbe_antwort() {
+    let ordner = Pruefordner::neu("inhalt-neben-namen");
+    let gegenstaende = ["Banane", "Äpfel", "LIESMICH", "Cafe", "Café", "bbbaaaccc"];
+    let folgen = [
+        "nan", "äpfel", "apfel", "liesmich", "café", "cafe", "aaa", "xyz",
+    ];
+
+    for (nummer, gegenstand) in gegenstaende.iter().enumerate() {
+        let datei = ordner.datei(&format!("stueck-{nummer}.txt"), gegenstand.as_bytes());
+        for folge in folgen {
+            let mut modell = handmodell([handeintrag(gegenstand, Typ::Datei)]);
+            modell.filtertext_setzen(folge);
+            let am_namen = modell.name_traegt_den_filter(0);
+            let am_inhalt =
+                traegt_der_inhalt(&datei, modell.filter_klein(), 1024) == Inhaltsbefund::Traegt;
+
+            assert_eq!(
+                am_namen, am_inhalt,
+                "{gegenstand:?} gegen {folge:?}: der Name sagt {am_namen}, der Inhalt {am_inhalt}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Der Durchlauf ueber die Unterbaeume (C3)
 // ---------------------------------------------------------------------------
 
@@ -1998,17 +2208,28 @@ fn quelltext_von(name: &str) -> String {
 ///
 /// **Geprueft wird ein Fehlen, und an keinem Rueckgabewert ist ein Fehlen
 /// abzulesen.** Ein Zeitgeber, der den Filtertext nach einer Pause
-/// zuruecksetzte, waere in genau diesen fuenf Dateien zu sehen: den drei
-/// Modulen des Kerns, die den Filter tragen, der Senke in `krk-ui`, in die das
-/// getippte Zeichen laeuft, und der Tabliste. Die Sekundenregel der Sprungmarke
-/// aus C2 der Runde 1 stand in der ersten dieser Dateien, als sie noch
-/// `sprungmarke.rs` hiess.
+/// zuruecksetzte, waere in genau diesen sieben Dateien zu sehen: den vier
+/// Modulen des Kerns, die den Filter tragen, dem Leseweg, ueber den der
+/// Inhaltsfilter an die Bytes kommt, der Senke in `krk-ui`, in die das getippte
+/// Zeichen laeuft, und der Tabliste. Die Sekundenregel der Sprungmarke aus C2
+/// der Runde 1 stand in der ersten dieser Dateien, als sie noch `sprungmarke.rs`
+/// hiess.
 ///
-/// **`krk-ui/src/tabs.rs` ist die fuenfte und war es nicht immer.** Seit
+/// **Zwei Dateien sind mit der Runde 11 dazugekommen**, und beide liegen auf dem
+/// Weg des Inhaltsfilters: `krk-core/src/verzeichnis/inhalt.rs` stellt die Frage
+/// je Datei, `krk-core/src/text/datei.rs` holt die Bytes dafuer. Eine Wartezeit
+/// oder eine Frist liesse sich in beiden ebenso gut unterbringen wie in den
+/// fuenf anderen. **`krk-core/src/verzeichnis/sys.rs` tritt der Liste
+/// ausdruecklich nicht bei**, obwohl der Filter darueber oeffnet: die Datei
+/// fuehrt `Duration` viermal zur Umrechnung der Aenderungszeit, und die Nadel
+/// kann eine Umrechnung nicht von einer Messung trennen
+/// (`issues/260816-1359_o_die-probe-gegen-zeitmessung-im-filter-erreicht-zwei-dateien-des-filterwegs-nicht.md`).
+///
+/// **`krk-ui/src/tabs.rs` war nicht von Anfang an dabei.** Seit
 /// Schritt F2 traegt sie den Filtertext ueber den Ordnerwechsel, haelt den
 /// `Durchlauf` je Tab, entscheidet, wann einer beginnt und vergeht, und zieht
 /// die Befunde ein; ein Zeitgeber liesse sich dort ebenso gut unterbringen wie
-/// in den vier anderen. Bis zum 260815 fehlte sie in der Liste, waehrend der
+/// in den uebrigen. Bis zum 260815 fehlte sie in der Liste, waehrend der
 /// Doc-Kommentar von „den Dateien, die den Filter tragen" sprach
 /// (`issues/260815-0211_*_die-probe-gegen-eine-zeitmessung-liest-vier-dateien-…`).
 /// Aufnehmen liess sie sich erst mit [`code_zeilen_vor_dem_pruefmodul`], denn
@@ -2031,7 +2252,7 @@ fn quelltext_von(name: &str) -> String {
 ///
 /// **Die Nadeln stehen zusammengesetzt da**, wie bei jeder Zaehlprobe dieses
 /// Baums: als ein Stueck geschrieben faende jede sich in dieser Datei selbst.
-/// Diese Datei liest zwar nur die vier benannten und nicht sich selbst, aber
+/// Diese Datei liest zwar nur die benannten und nicht sich selbst, aber
 /// die Bauform bleibt dieselbe, damit eine spaeter erweiterte Liste nicht
 /// unbemerkt zur Selbstfundstelle wird.
 #[test]
@@ -2043,6 +2264,8 @@ fn im_filter_steht_keine_zeitmessung() {
         "krk-core/src/verzeichnis/filter.rs",
         "krk-core/src/verzeichnis/modell.rs",
         "krk-core/src/verzeichnis/durchlauf.rs",
+        "krk-core/src/verzeichnis/inhalt.rs",
+        "krk-core/src/text/datei.rs",
         "krk-ui/src/appkit/tabelle.rs",
         "krk-ui/src/tabs.rs",
     ] {
@@ -2095,19 +2318,33 @@ fn die_sprungmarke_steht_nirgends_mehr_im_baum() {
     }
 }
 
-/// C1.4: Die eine Zeichenregel steht einmal und hat genau zwei Aufrufer.
+/// C1.4 und C6.3: Die eine Zeichenregel steht einmal und hat genau zwei
+/// Aufrufer, der eine Vergleich steht einmal und hat genau drei.
 ///
-/// Erklaert wird sie in `krk-core/src/verzeichnis/filter.rs`, gerufen von der
-/// Senke des Tippens in der Dateiliste und von der Tippsuche der
-/// Belegungsansicht aus der Runde 7. **Gezaehlt werden Dateien und nicht
-/// Aufrufe**: welche Datei fragt, ist die Aussage des Kriteriums; wie oft sie
-/// innerhalb ihrer selbst fragt, ist es nicht.
+/// Die Zeichenregel wird in `krk-core/src/verzeichnis/filter.rs` erklaert und
+/// von der Senke des Tippens in der Dateiliste und von der Tippsuche der
+/// Belegungsansicht aus der Runde 7 gerufen. **Gezaehlt werden Dateien und
+/// nicht Aufrufe**: welche Datei fragt, ist die Aussage des Kriteriums; wie oft
+/// sie innerhalb ihrer selbst fragt, ist es nicht. Der Inhaltsfilter aendert an
+/// ihr nichts — welche Zeichen in den Filtertext kommen, ist dieselbe Frage
+/// geblieben, und ihre Zahl bleibt deshalb bei zwei (C6.4).
 ///
-/// Der Vergleich hat dieselbe Bauart: er steht ebenfalls einmal in `filter.rs`
-/// und wird vom Pruefschritt des Ordnermodells und vom Durchlauf gerufen. Bis
-/// zum 260815 stand er zweimal da, einmal je Rufer.
+/// Der Vergleich hat dieselbe Bauart und steht ebenfalls einmal in `filter.rs`.
+/// Bis zum 260815 stand er zweimal da, einmal je Rufer; seither hat er zwei,
+/// den Pruefschritt des Ordnermodells und den Durchlauf. **Mit der Runde 11
+/// werden es drei**, und der dritte ist `krk-core/src/verzeichnis/inhalt.rs`.
+/// Die Zahl steigt hier bewusst und nicht versehentlich: „lies eine Datei und
+/// vergleiche ihren Text" ist eine andere Aufgabe als „schreite ein Verzeichnis
+/// ab", also bekommt sie eine eigene Datei. In `durchlauf.rs` geschrieben
+/// bliebe die Zahl bei zwei und mischte zwei Zustaendigkeiten — die Zahl waere
+/// dann die falsche Auskunft und nicht die richtige.
+///
+/// **Die Probe behaelt ihre namentliche Liste und wird nicht durch eine blosse
+/// Zahl ersetzt.** Eine Zahl sagte, dass es drei sind; die Liste sagt, welche
+/// drei, und nur die zweite Auskunft faengt einen Rufer, der an die Stelle
+/// eines anderen getreten ist.
 #[test]
-fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer() {
+fn die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei() {
     let zeichenregel = concat!("traegt_ein_", "dateiname");
     let vergleich = concat!("traegt_die", "_folge");
     let heimat = "krk-core/src/verzeichnis/filter.rs";
@@ -2149,9 +2386,11 @@ fn die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer()
         vergleichsrufer,
         vec![
             "krk-core/src/verzeichnis/durchlauf.rs".to_owned(),
+            "krk-core/src/verzeichnis/inhalt.rs".to_owned(),
             "krk-core/src/verzeichnis/modell.rs".to_owned(),
         ],
-        "der Vergleich hat andere Rufer als der Pruefschritt und der Durchlauf"
+        "der Vergleich hat andere Rufer als der Pruefschritt, der Durchlauf und \
+         der Inhaltsbefund"
     );
 }
 

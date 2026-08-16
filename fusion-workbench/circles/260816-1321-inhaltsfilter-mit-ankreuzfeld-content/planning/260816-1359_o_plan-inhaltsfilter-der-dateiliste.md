@@ -230,7 +230,7 @@ flowchart TD
 - Abzulesen an: `cargo test --workspace` grün, dazu Proben in `crates/krk-core/tests/text.rs`, die je einen der vier Hindernisfälle an einem Prüfordner herstellen — eine Datei über der Grenze, ein Ordner, eine Datei ohne Leserecht, eine benannte Röhre ohne Schreiber (die zurückkehrt und nicht hängt). Der Deskriptormangel wird hier nicht geprüft; er hängt an C3.6 und steht bei B1.
 - Am Diff abzulesen: `vorschaumodell.rs` verliert eine Funktion und gewinnt einen `use`; im Baum steht danach genau ein Rumpf, der `take(grenze + 1)` schreibt.
 
-**A2. `verzeichnis::inhalt` — die eine Antwort auf „trägt diese Datei die Folge"**
+**A2. [DONE] `verzeichnis::inhalt` — die eine Antwort auf „trägt diese Datei die Folge"**
 - Executor: `coder`
 - Files: `crates/krk-core/src/verzeichnis/inhalt.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/tests/verzeichnis.rs`
 - Erfüllt: C1.4, C1.5, C1.6, C6.1, C6.3, C6.7, C6.8, C6.9
