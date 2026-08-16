@@ -996,3 +996,6 @@
 {"ts":"2026-08-16T17:45:30","event":"turn_start","turn":13,"detail":"Wurzel dreier Befunde"}
 {"ts":"2026-08-16T17:45:30","event":"task_start","turn":13,"task":"W1","agent":"coder","detail":"260816-1930, -1931, -1933 an ihrer Wurzel"}
 {"ts":"2026-08-16T18:30:33","event":"task_done","turn":13,"task":"W1","agent":"coder","detail":"ein Eingriff, drei Befunde geschlossen"}
+{"ts":"2026-08-16T18:31:59","event":"commit","turn":13,"detail":"721c6e4 (Wurzel dreier Befunde)"}
+{"ts":"2026-08-16T18:31:59","event":"circle_closed","detail":"260816-1321-inhaltsfilter-mit-ankreuzfeld-content, _t_ -> _b_, Abnahmelauf am Buendel steht aus"}
+{"ts":"2026-08-16T18:31:59","event":"turn_end","turn":13,"detail":"Circle beschraenkt geschlossen"}

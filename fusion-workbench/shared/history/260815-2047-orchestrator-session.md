@@ -2,7 +2,7 @@
 
 **Directive:** Ordner in der Dateiliste auf einen Blick von Dateien unterscheidbar machen
 **Mode:** custom
-**Status:** Läuft
+**Status:** Complete
 
 ## Aufnahme beim Start
 
@@ -149,3 +149,53 @@
   Aufgabe. Nicht committet, solange die Herkunft nicht geklärt ist.
 - `260816-0040` (Takt des Lesevorgangs) und `260816-0055` (Wettrennprobe) sind
   die zwei offenen Befunde dieser Kette.
+
+## Turn 6 bis 13 — die elfte Runde
+
+Der Nutzer hat mitten in der Sitzung eine neue Fähigkeit verlangt: der Filter
+der Dateiliste soll den Dateiinhalt berücksichtigen, eingeschaltet über ein
+zweites Ankreuzfeld „Content". Daraus wurde die elfte Runde des Projekts, als
+eigener Circle geführt.
+
+- `shaper` → Spec, sechs Fähigkeiten, 57 Abnahmekriterien. Vier Festlegungen kamen
+  vorab vom Nutzer (Staffelung 5/3 Zeichen, nur Text, vorhandene Größengrenze,
+  Kurzschluss bei Namenstreffer), zwei weitere hat er auf Vorlage entschieden
+  (1 MB statt 16 MB, keine elfte Zeitzusage).
+- Circle `260816-1321-inhaltsfilter-mit-ankreuzfeld-content` angelegt und
+  aktiviert. Spec und Entscheide bleiben im gemeinsamen Speicher und werden
+  zitiert, weil sie vor dem Circle entstanden sind.
+- `planner` → Plan, zwölf Schritte in sieben Strängen, mit einer
+  `Decidability`-Zeile, die den Punkt benennt, an dem der Mechanismus die Frage
+  wechselt statt sie zu nähern.
+- Zehn bauende Schritte, je einzeln abgenommen und committet: `5c7f5b9`,
+  `4a54212`, `7283d55`, `32fd038`, `09baffd`, `37ca972`, `f7cf88b`, `c8fd829`,
+  `6442613`, `b9ab8ae`.
+- `coderev` über die ganze Runde → sechs Befunde, keiner kritisch. Drei davon
+  hatten eine gemeinsame Wurzel, und der Nutzer hat entschieden, sie dort zu
+  beheben statt dreimal ihr Symptom (`721c6e4`).
+- Circle beschränkt geschlossen: die Directive ist im Baum erreicht, der
+  Abnahmelauf am Bündel steht aus und ist Nutzerarbeit.
+
+### Was diese Sitzung über das Arbeiten gezeigt hat
+
+**Dreimal ist ein vorgeschlagener Mechanismus an der Messung gescheitert**, und
+jedes Mal war die Messung billiger als der Irrtum: die zwei Kandidaten für den
+Einstieg in die Umbenennung, der vermutete Zeichendurchgang während einer
+offenen Bearbeitung, und die Annahme, ein Ruf allein genüge für den Abbruch beim
+Tabwechsel.
+
+**Zweimal hat eine Auflage, selbst nachzuzählen, mehr gefunden als der Befund
+nannte** — beim Prosa-Nachzug zwei zusätzliche Stellen, beim Lesen der 57
+Kriterien zwei ohne Zuordnung.
+
+**Der Orchestrator hat drei eigene Fehler gemacht:** einen falschen Satz über
+L3 und L10, der an vier Stellen stand; einen erfundenen Commit-Hash in einem
+Auftrag; und eine Commit-Nachricht, die zwei Marker-Übergänge behauptete, die
+nicht ausgeführt waren. Alle drei sind berichtigt und aufgeschrieben.
+
+### Verbleibende Arbeit für den Nutzer
+
+1. `messungen/260816-abnahme-inhaltsfilter.md` am laufenden Bündel fahren.
+2. Die Wettrennprobe `ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an`
+   macht `make check` unter Last unbrauchbar (`shared/issues/260816-0055`).
+3. Sechs offene Befunde im Circle, 21 im gemeinsamen Speicher.

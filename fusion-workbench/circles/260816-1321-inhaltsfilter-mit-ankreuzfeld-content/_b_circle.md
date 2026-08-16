@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** bounded
 **Filed by:** orchestrator
-**Active spec/plan:** shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md
+**Active spec/plan:** shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md (Spec), circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md (Plan, geschlossen)
 **Active session history:** shared/history/260815-2047-orchestrator-session.md
 
 ---
@@ -77,7 +77,58 @@ aus demselben Grund im gemeinsamen Speicher.
 
 - Aktiviert am 260816-1330 durch den Nutzer, aus der Sitzung
   `shared/history/260815-2047-orchestrator-session.md`. Anker `9f5ced5`.
+- Turn 7 bis 13 (Sitzung 260815-2047): Commits `9f5ced5..721c6e4`, zwölf
+  Planschritte plus zwei Nachträge. Coherence-Urteil: beschränkt, weil der
+  Abnahmelauf am Bündel aussteht. Sitzungsprotokoll:
+  `shared/history/260815-2047-orchestrator-session.md`.
 
 ## Closure note
 
-(offen)
+**Beschränkter Abschluss am 260816-2030, und der Grund ist der übliche dieses
+Projekts:** die Directive ist im Baum erreicht, aber nicht am laufenden Bündel
+abgenommen. Der Abnahmelauf verlangt KRK im Vordergrund und ist Nutzerarbeit;
+kein Agent kann ihn fahren. Die Liste dafür liegt fertig unter
+`messungen/260816-abnahme-inhaltsfilter.md`: 28 Beobachtungen an vier Orten, je
+mit Handgriff und erwartetem Ergebnis, dazu die Tafel aller 57 Kriterien und der
+Kommandoblock, der den Prüfordner anlegt.
+
+**Was gebaut ist.** Der Filter der Dateiliste berücksichtigt den Inhalt,
+eingeschaltet über das zehnte Ankreuzfeld „Content" neben „Deep". Gelesen wird
+ab 5 Zeichen bei eingeschaltetem „Deep" und ab 3 ohne, nur Text und nur bis
+1 MB, und nur bei Dateien, deren Name die Folge nicht schon trägt. Eine Zeile,
+die allein wegen ihres Inhalts steht, wird gedämpft; der Filterstand nennt den
+laufenden Lesevorgang und die Zahl der wegen ihrer Größe ungelesenen Dateien.
+
+**Die vier Zusagen, auf die es ankam, sind von der Durchsicht am Baum
+nachgelesen und halten:** kein Weg öffnet eine Datei, deren Name die Folge
+trägt; unterhalb der Schwelle und über 1 MB wird nicht gelesen; der Durchlauf
+hält einen Verzeichnis- und höchstens einen Dateideskriptor; die Abbruchprüfung
+steht vor jeder Einheit, die dauern kann, ohne Vorbeiweg.
+
+**Keine elfte Zeitzusage.** An ihre Stelle treten Kriterien ohne Messstrecke,
+wie in Runde 2 und Runde 10. Der Inhaltsdurchlauf ist als Gegenstand für eine
+spätere Messrunde benannt, zusammen mit dem Befund, dass die vorhandenen
+Prüfordner dünnbesetzt sind und für eine Inhaltsmessung nicht taugen.
+
+**Sieben Entscheidungsdatensätze**, alle beantwortet, sechs davon umgesetzt.
+Der Bruch mit einer Zusage der Runde 10 — ein Tabwechsel beendet jetzt jeden
+Durchlauf — ist als Nutzerentscheid festgehalten, samt dem angenommenen Preis,
+und die Begründung jener Runde ist im Code ersetzt statt gelöscht.
+
+**Was offen bleibt: sechs Befunde im Circle**, keiner kritisch, jeder mit
+Schwere, Fundstelle und Weg:
+
+| Datensatz | Gegenstand |
+|---|---|
+| `260816-1359` | die Probe gegen Zeitmessung erreicht zwei Dateien des Filterwegs nicht |
+| `260816-1710` | der Rückwechsel auf einen Tab setzt seinen beendeten Durchlauf nicht fort |
+| `260816-1932` | ein Deskriptormangel beendet den Durchlauf still, und der Lesehinweis verschwindet |
+| `260816-1934` | sechs Prosastellen beschreiben den Stand vor dieser Runde |
+| `260816-1935` | CLAUDE.md nennt zwei Filterregeln und eine Hülle in `krk-ui`; beides ist abgelöst |
+| `260816-2020` | zwei Abnahmekriterien sind keinem Planschritt zugewiesen, halten aber |
+
+Drei weitere Befunde derselben Durchsicht sind vor dem Abschluss abgetragen
+worden, und zwar an ihrer gemeinsamen Wurzel statt einzeln (`721c6e4`): dieselbe
+Frage stand an drei Stellen in drei Fassungen, und eine Antwort wurde ohne ihre
+Frage aufbewahrt. Der Prüfschritt liefert seitdem einen Zeilengrund, den die
+drei Leser lesen, statt die Frage neu zu stellen.
