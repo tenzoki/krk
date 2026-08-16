@@ -128,6 +128,13 @@
 //! weiter. [`Textstand::Unlesbar`] traegt den offenen Deskriptor deshalb mit,
 //! und [`Abweisung`] tut es nicht.
 //!
+//! **[`bis_zur_grenze_lesen`] steht daneben und stellt eine andere Frage.** Es
+//! sagt nicht, ob hinter einem Pfad eine Textdatei steht, sondern liefert
+//! hoechstens so viele Bytes, wie sein Aufrufer zulaesst; was daraus ein Text
+//! ist, entscheidet der Aufrufer. Es ist damit kein zweiter Leseweg im Sinne
+//! des Absatzes darueber, sondern derselbe Eingang mit einer anderen Grenze.
+//! Der Unterschied zu [`lesen`] steht an der Huelle selbst.
+//!
 //! [`einlesen`] nimmt weiterhin Bytes und keinen Pfad. Die Unwucht gegenueber
 //! [`sichern`] ist Absicht und jetzt erst recht: die Groessenpruefung laeuft
 //! **vor** dem Lesen, damit eine Datei ueber der Grenze zu keinem Zeitpunkt
@@ -515,6 +522,115 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
             grund,
         }),
     }
+}
+
+/// Warum das begrenzte Lesen keine Bytes geliefert hat.
+///
+/// **Vier Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
+/// Ueberschneidungsfrei sind sie durch die Reihenfolge der Pruefungen in
+/// [`bis_zur_grenze_lesen`]: das Oeffnen scheitert vor jeder Frage an den
+/// Deskriptor, die Typfrage steht vor der Groessenfrage, und was danach
+/// schiefgeht, ist ein Lesefehler. Ein fuenfter Grund haelt jede Uebersetzung
+/// an, die diese Werte auseinanderlegt.
+///
+/// **[`Deskriptormangel`](Self::Deskriptormangel) wird hier getrennt und nicht
+/// beim Aufrufer**, denn allein diese Stelle haelt den `io::Error` in der Hand;
+/// die Regel dafuer ist die eine vorhandene
+/// [`verzeichnis::sys::ist_deskriptormangel`](crate::verzeichnis::sys::ist_deskriptormangel).
+/// Der Unterschied ist tragend und nicht bloss genauer: `EMFILE` und `ENFILE`
+/// sagen etwas ueber den Prozess und nichts ueber die Datei. Wer sie mit den
+/// uebrigen Fehlern zusammenzoege, entschiede negativ, wo nichts entschieden
+/// ist — derselbe Fehlgriff, den der Durchlauf ueber den Unterbaum seit der
+/// Runde 10 vermeidet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lesehindernis {
+    /// Ueber der uebergebenen Grenze. Gelesen wurde die Datei damit nicht, und
+    /// der Aufrufer weiss ueber ihren Inhalt nichts.
+    ZuGross,
+    /// Keine gewoehnliche Datei: ein Ordner, eine benannte Roehre, ein Socket,
+    /// ein Zeichen- oder Blockgeraet.
+    KeineDatei,
+    /// Der Vorrat an Deskriptoren ist erschoepft (`EMFILE`, `ENFILE`). Eine
+    /// Lage des Prozesses und kein Befund ueber die Datei.
+    Deskriptormangel,
+    /// Jeder andere Fehler des Systems: der fehlende Pfad, das fehlende
+    /// Leserecht, ein Fehler beim Lesen selbst.
+    Fehler,
+}
+
+/// Liest hoechstens `grenze` Bytes hinter einem Pfad, **ohne bei einer
+/// benannten Roehre zu warten** (C1, C6).
+///
+/// Die zweite Haelfte des Zuschnitts aus dem Modulkopf: [`lesen`] beantwortet
+/// "ist das eine Textdatei fuer den Editor", diese Huelle beantwortet "gib mir
+/// die Bytes, aber hoechstens so viele". Beide gehen durch dieselbe eine Tuer,
+/// [`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen),
+/// und ein dritter Weg zu den Bytes entsteht daneben nicht.
+///
+/// # Die Grenze reist als Argument und wohnt nicht hier
+///
+/// [`EDITORGRENZE`] gilt fuer [`lesen`] und fuer sonst nichts. Wer diese Huelle
+/// ruft, bringt seine eigene Zahl mit: die Vorschau ihre `TEXTGRENZE` und ihre
+/// `BILDGRENZE`, der Inhaltsfilter der Dateiliste die Zahl, die er von der
+/// Vorschau erbt. Alle drei wohnen in `krk-ui`, und `krk-core` kennt `krk-ui`
+/// nicht.
+///
+/// # Warum das nicht [`lesen`] ist
+///
+/// [`lesen`] gibt den offenen, zurueckgespulten Deskriptor zurueck
+/// ([`Textstand::Unlesbar`]), damit der Notizzettel den Inhalt beiseitelegen
+/// kann, ohne den Pfad ein zweites Mal aufzuloesen. **Diese Huelle gibt ihn
+/// nicht zurueck**, und ihre Aufrufer brauchen ihn auch nicht: sie haben die
+/// Bytes oder einen Grund. Die zweite Fassung ist deshalb kein Versehen und
+/// keine Doppelung derselben Frage, sondern die andere Frage; ein Umbau von
+/// [`lesen`] auf diese Form kostete die Zusage des Notizzettels und der
+/// Sicherungsform und braechte den Aufrufern dieser Huelle nichts.
+///
+/// # Die Reihenfolge ist dieselbe wie bei [`lesen`]
+///
+/// Oeffnen ohne zu warten, `fstat(2)` am Deskriptor, Typ, dann Groesse, dann
+/// erst lesen. Sie steht ausfuehrlich an [`lesen`] und wird hier nicht ein
+/// zweites Mal begruendet; der eine Aufruf, der den **Namen** anfasst, ist das
+/// Oeffnen, und alles danach fragt den Deskriptor.
+///
+/// # Die Grenze wird eingehalten und nicht nur vorhergesagt
+///
+/// Zwischen `fstat` und `read` kann eine Datei wachsen, und `/dev/zero` liefert
+/// ohne Ende, ohne je eine Groesse zu melden. Gelesen werden deshalb hoechstens
+/// `grenze + 1` Bytes, und das eine Byte zuviel entscheidet: kommt es an, ist
+/// die Datei ueber der Grenze und die Antwort
+/// [`Lesehindernis::ZuGross`]. Ohne diese Schranke waere "es wird nie mehr als
+/// die Grenze gelesen" eine Vorhersage aus einer alten Auskunft, mit ihr ist es
+/// eine Eigenschaft der Bauart.
+pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehindernis> {
+    let datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
+        Ok(datei) => datei,
+        Err(fehler) => {
+            return Err(if crate::verzeichnis::sys::ist_deskriptormangel(&fehler) {
+                Lesehindernis::Deskriptormangel
+            } else {
+                Lesehindernis::Fehler
+            });
+        }
+    };
+    let angaben = datei.metadata().map_err(|_| Lesehindernis::Fehler)?;
+    if !angaben.is_file() {
+        return Err(Lesehindernis::KeineDatei);
+    }
+    if angaben.len() > grenze {
+        return Err(Lesehindernis::ZuGross);
+    }
+
+    let mut bytes = Vec::with_capacity(angaben.len() as usize);
+    datei
+        .take(grenze + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Lesehindernis::Fehler)?;
+    if bytes.len() as u64 > grenze {
+        // Die Datei ist zwischen `fstat` und `read` gewachsen.
+        return Err(Lesehindernis::ZuGross);
+    }
+    Ok(bytes)
 }
 
 /// Aus den Bytes einer Datei den gehaltenen Stand des Editors.

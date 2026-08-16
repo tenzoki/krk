@@ -786,10 +786,12 @@ unsafe extern "C" {
 ///
 /// # Zwei Aufrufer, und die Zielpruefung bleibt bei beiden
 ///
-/// Gerufen wird die Funktion von [`crate::text::datei::oeffnen`], dem Eingang
-/// des Editors, und von `vorschaumodell::bis_zur_grenze_lesen` in `krk-ui`, dem
-/// Leseweg der Vorschau. Der zweite steht ohne Doku-Verweis da, weil `krk-ui` an
-/// `krk-core` haengt und nicht umgekehrt.
+/// Gerufen wird die Funktion von [`crate::text::datei::lesen`], dem Eingang des
+/// Editors, und von [`crate::text::datei::bis_zur_grenze_lesen`], der Huelle mit
+/// der uebergebenen Grenze. **Beide liegen seit der Runde 11 in `krk-core`**;
+/// bis dahin stand die zweite als private Fassung in `krk-ui`s
+/// `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis. Aufrufer der
+/// Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
 ///
 /// **Gemeinsam ist beiden der Ablauf**: hier oeffnen, `fstat` am Deskriptor
 /// fragen, alles abweisen, was `is_file()` nicht bejaht, die Groesse gegen eine

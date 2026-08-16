@@ -62,8 +62,9 @@
 //!
 //! # Gelesen wird ueber den Deskriptor und nicht ueber den Pfad
 //!
-//! Der eine Weg von einem Pfad zu den Bytes ist [`bis_zur_grenze_lesen`], und
-//! er oeffnet ueber
+//! Der eine Weg von einem Pfad zu den Bytes ist
+//! [`krk_core::text::datei::bis_zur_grenze_lesen`](krk_core::text::datei::bis_zur_grenze_lesen),
+//! und er oeffnet ueber
 //! [`krk_core::verzeichnis::sys::ohne_warten_oeffnen`](krk_core::verzeichnis::sys::ohne_warten_oeffnen)
 //! — dasselbe Stueck, das
 //! [`krk_core::text::datei::oeffnen`](krk_core::text::datei::oeffnen) fuer den
@@ -71,6 +72,15 @@
 //! es ist derselbe Eingang mit einer anderen Grenze, und die beiden Grenzen
 //! sind der eine Unterschied zwischen Ansehen und Bearbeiten (siehe
 //! [`TEXTGRENZE`]).
+//!
+//! **Die Huelle wohnt seit der Runde 11 in `krk-core` und nicht mehr hier.**
+//! Bis dahin stand ihr Rumpf in dieser Datei, und er stand damit an einer
+//! Stelle, die der Inhaltsfilter der Dateiliste nicht erreicht; der Rumpf ist
+//! unveraendert umgezogen. Die Vorschau uebersetzt jedes
+//! [`Lesehindernis`](krk_core::text::datei::Lesehindernis) in ihre
+//! Metadatenanzeige — vier Gruende, eine Antwort, siehe [`laden`] — und ist
+//! damit der eine Aufrufer, den die Unterscheidung der vier Gruende nichts
+//! angeht.
 //!
 //! **Zwei Fragen stehen hier nebeneinander, und sie sind verschieden.** Wer sie
 //! zusammenzieht, hat entweder eine Verknuepfung, die als ihr Ziel erscheint,
@@ -80,7 +90,7 @@
 //!   Pfades. Drei Zweige, denn eine Verknuepfung erscheint als sie selbst und
 //!   nicht als das, worauf sie zeigt.
 //! - **Ob sich etwas lesen laesst**, entscheidet `fstat(2)` am Deskriptor in
-//!   [`bis_zur_grenze_lesen`]. Eine benannte Roehre, ein Zeichengeraet, ein
+//!   der Huelle aus `krk-core`. Eine benannte Roehre, ein Zeichengeraet, ein
 //!   Blockgeraet und ein Socket sind fuer [`typ_von`] `Typ::Datei`, melden alle
 //!   `st_size == 0` und kaemen damit durch jede Groessenschranke; heraus fallen
 //!   sie am Typ des Deskriptors.
@@ -104,13 +114,13 @@
 //! scheitert still, und eine Generationspruefung braucht es nicht. Die
 //! Zwischenablage liegt im Arbeitsspeicher und braucht keinen Faden.
 
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
@@ -581,8 +591,10 @@ fn zu_gross_text(groesse: u64) -> String {
 /// Metadaten.** Zu gross, keine gewoehnliche Datei, nicht lesbar, kein UTF-8:
 /// die Metadaten sind fuer alle vier die Antwort, und sie waren es schon fuer
 /// die letzten drei. Deshalb steht die Groessenschranke nicht mehr als eigener
-/// Zweig hier, sondern in [`bis_zur_grenze_lesen`] neben den anderen Gruenden;
-/// vier Wege zu derselben Antwort brauchen keine vier Verzweigungen.
+/// Zweig hier, sondern in
+/// [`krk_core::text::datei::bis_zur_grenze_lesen`](krk_core::text::datei::bis_zur_grenze_lesen)
+/// neben den anderen Gruenden; vier Wege zu derselben Antwort brauchen keine
+/// vier Verzweigungen.
 fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
@@ -611,15 +623,20 @@ fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
         // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben; dieselbe
         // Antwort wie beim Text und aus demselben Grund.
         return match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
-            Some(daten) => Inhalt::Bild {
+            Ok(daten) => Inhalt::Bild {
                 daten: Arc::new(daten),
                 metadaten: Some(metadaten),
             },
-            None => Inhalt::Metadaten(metadaten),
+            // Jeder der vier Gruende endet in den Metadaten; welcher es war,
+            // fragt die Vorschau nicht.
+            Err(_) => Inhalt::Metadaten(metadaten),
         };
     }
     // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
-    match bis_zur_grenze_lesen(pfad, TEXTGRENZE).and_then(|bytes| String::from_utf8(bytes).ok()) {
+    match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+    {
         // Die drei Wege der Anzeige entscheidet die **eine** vorhandene Stelle
         // (C4, fuenfzehntes Kriterium der Runde 6): Markdown wird gerendert,
         // was die Syntaxkiste als Sprache kennt und alles Uebrige bleibt der
@@ -639,53 +656,6 @@ fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
         // keine Textdatei im Sinne von C6.
         None => Inhalt::Metadaten(metadaten),
     }
-}
-
-/// Liest den Pfad, **ohne bei einer benannten Roehre zu warten**, und
-/// hoechstens `grenze` Bytes weit.
-///
-/// `None` heisst: hier gibt es nichts, was die Vorschau zeigen kann. Welcher der
-/// vier Gruende es war, sagt diese Stelle nicht, denn die Antwort ist fuer alle
-/// vier dieselbe (siehe [`laden`]).
-///
-/// # Die Reihenfolge ist dieselbe wie im Editor
-///
-/// Sie steht ausfuehrlich bei
-/// [`krk_core::text::datei::oeffnen`](krk_core::text::datei::oeffnen) und wird
-/// hier nicht ein zweites Mal begruendet:
-///
-/// 1. **Geoeffnet wird zuerst, und zwar ohne zu warten.** Das ist der eine
-///    Aufruf, der den **Namen** anfasst; alles danach fragt den Deskriptor. Ein
-///    `File::open` auf eine benannte Roehre ohne Schreiber haengt fuer immer,
-///    und der Faden `krk-vorschau` haengt mit ihm.
-/// 2. **Gefragt wird der Deskriptor** (`fstat(2)` ueber `File::metadata`), und
-///    heraus faellt alles, was keine gewoehnliche Datei ist. Geoeffnet wird ohne
-///    `O_NOFOLLOW`, eine Verknuepfung wird hier also nach ihrem Ziel beurteilt;
-///    dass die **Anzeige** sie als Verknuepfung fuehrt, entscheidet [`typ_von`]
-///    und nicht diese Stelle. `laden` kommt fuer eine Verknuepfung ohnehin nicht
-///    bis hierher.
-/// 3. **Die Groesse wird vor dem Lesen geprueft**, damit eine Datei ueber der
-///    Grenze zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher steht.
-///
-/// # Die Grenze wird eingehalten und nicht nur vorhergesagt
-///
-/// Zwischen `fstat` und `read` kann eine Datei wachsen, und `/dev/zero` liefert
-/// ohne Ende, ohne je eine Groesse zu melden. Gelesen werden deshalb hoechstens
-/// `grenze + 1` Bytes, und das eine Byte zuviel entscheidet: kommt es an, ist
-/// die Datei ueber der Grenze und die Antwort sind die Metadaten. Ohne diese
-/// Schranke waere "die Vorschau liest nie mehr als ihre Grenze" eine Vorhersage
-/// aus einer alten Auskunft, mit ihr ist es eine Eigenschaft der Bauart.
-fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Option<Vec<u8>> {
-    let datei = krk_core::verzeichnis::sys::ohne_warten_oeffnen(pfad).ok()?;
-    let angaben = datei.metadata().ok()?;
-    if !angaben.is_file() || angaben.len() > grenze {
-        return None;
-    }
-
-    let mut bytes = Vec::with_capacity(angaben.len() as usize);
-    datei.take(grenze + 1).read_to_end(&mut bytes).ok()?;
-    // Die Datei ist zwischen `fstat` und `read` gewachsen.
-    (bytes.len() as u64 <= grenze).then_some(bytes)
 }
 
 /// Ob der Pfad auf eines der gaengigen Bildformate endet.

@@ -37,6 +37,15 @@
 //! Er kommt aus `tests/gemeinsam/`, traegt Prozesskennung und Laufnummer und
 //! raeumt sich in `Drop` selbst ab.
 //!
+//! **Vier Proben stehen seit der Runde 11 daneben**, und sie gehoeren zu keinem
+//! der zwoelf Faelle: `datei::bis_zur_grenze_lesen` ist die zweite Huelle um
+//! dieselbe Tuer, die eine uebergebene Grenze haelt statt der Editorgrenze. Sie
+//! pruefen die Grenze in ihren drei Lagen und drei der vier Werte von
+//! `Lesehindernis`. **Der Deskriptormangel wird hier nicht geprueft**: er
+//! braucht eine Kindprobe unter `ulimit -n 64`, weil `cargo test` sonst die
+//! angehobene Grenze der Sitzung erbt, und er steht deshalb bei der Probe des
+//! Durchlaufs.
+//!
 //! **Fall 10 ist am 260810 auf drei Proben verteilt worden**, weil `oeffnen`
 //! seither zuerst oeffnet und danach am Deskriptor prueft (Defekt
 //! `260809-1652`). Der eine Byte Unterschied bleibt bei Fall 10 selbst, die
@@ -51,7 +60,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use krk_core::text::datei::{Textstand, Unlesbarkeit};
+use krk_core::text::datei::{Lesehindernis, Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
@@ -1106,4 +1115,126 @@ fn der_befund_deckt_alle_vier_ausgaenge_und_spult_zurueck() {
         }
         anderes => panic!("die fehlende Datei kam als {anderes:?} zurueck"),
     }
+}
+
+/// Ruft [`datei::bis_zur_grenze_lesen`] auf einem eigenen Faden und gibt die
+/// Antwort nur heraus, wenn sie innerhalb der Schranke kommt.
+///
+/// Dieselbe Bauform und derselbe Grund wie bei [`oeffnen_mit_zeitschranke`]: ein
+/// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines, und
+/// ohne Schranke waere das ein stehender Probelauf statt eines Befundes.
+fn bis_zur_grenze_mit_zeitschranke(
+    pfad: &Path,
+    grenze: u64,
+    schranke: Duration,
+) -> Result<Vec<u8>, Lesehindernis> {
+    let (sender, empfaenger) = mpsc::channel();
+    let pfad = pfad.to_path_buf();
+    std::thread::spawn(move || {
+        let _ = sender.send(datei::bis_zur_grenze_lesen(&pfad, grenze));
+    });
+    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+        panic!(
+            "bis_zur_grenze_lesen ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt"
+        )
+    })
+}
+
+/// Die Huelle liefert die Bytes und haelt ihre Grenze in beide Richtungen.
+///
+/// Die Grenze reist als Argument, also braucht diese Probe keine grosse Datei:
+/// acht Bytes und eine Grenze von acht sagen ueber die Regel dasselbe wie 1 MB
+/// und 1 MB, und sie sagen es ohne Wartezeit. Geprueft werden die drei Lagen,
+/// die an der Zahl haengen — darunter, genau darauf, darueber.
+#[test]
+fn die_huelle_liefert_die_bytes_und_haelt_ihre_grenze() {
+    let ordner = Pruefordner::neu("huelle-grenze");
+
+    let klein = ordner.datei("klein.txt", b"drei");
+    assert_eq!(datei::bis_zur_grenze_lesen(&klein, 8), Ok(b"drei".to_vec()));
+
+    let genau = ordner.datei("genau.txt", b"achtbyte");
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&genau, 8),
+        Ok(b"achtbyte".to_vec()),
+        "genau auf der Grenze wird angenommen"
+    );
+
+    let darueber = ordner.datei("darueber.txt", b"achtbytes");
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&darueber, 8),
+        Err(Lesehindernis::ZuGross),
+        "ein Byte ueber der Grenze wird abgewiesen"
+    );
+}
+
+/// Die Huelle liest nicht, was keine gewoehnliche Datei ist.
+///
+/// Der Ordner ist der Fall, den man erwartet; er faellt am `fstat` des
+/// Deskriptors heraus und nicht an einer Endung.
+#[test]
+fn ein_ordner_ist_fuer_die_huelle_keine_datei() {
+    let ordner = Pruefordner::neu("huelle-ordner");
+    let unterordner = ordner.ordner("ein-ordner");
+
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&unterordner, 1024),
+        Err(Lesehindernis::KeineDatei)
+    );
+}
+
+/// Eine benannte Roehre ohne Schreiber kommt als `KeineDatei` zurueck, und sie
+/// kommt ueberhaupt zurueck.
+///
+/// **Zwei Aussagen, und die groessere ist die zweite.** Ein `File::open` auf eine
+/// Roehre ohne Schreiber wartet fuer immer; dass hier eine Antwort faellt, haengt
+/// am `O_NONBLOCK` in `verzeichnis::sys::ohne_warten_oeffnen`, durch das auch
+/// diese Huelle geht. Wer es dort herausnimmt, sieht diese Probe an ihrer
+/// Zeitschranke scheitern und nicht an einem falschen Wert.
+#[test]
+fn eine_benannte_roehre_ist_keine_datei_und_haelt_die_huelle_nicht_an() {
+    let ordner = Pruefordner::neu("huelle-roehre");
+    let roehre = ordner.roehre("ohne-schreiber");
+
+    assert_eq!(
+        bis_zur_grenze_mit_zeitschranke(&roehre, 1024, Duration::from_secs(5)),
+        Err(Lesehindernis::KeineDatei)
+    );
+}
+
+/// Das fehlende Leserecht und der fehlende Pfad sind derselbe Wert.
+///
+/// Beide scheitern am Oeffnen, beide sagen etwas ueber **diese** Datei, und
+/// keiner von beiden ist ein Deskriptormangel: `EACCES` und `ENOENT` fallen
+/// deshalb in [`Lesehindernis::Fehler`] und nicht in
+/// [`Lesehindernis::Deskriptormangel`]. Die Trennung der beiden ist die eine
+/// Aussage, die diese Probe ueber die Aufzaehlung macht.
+#[test]
+fn ein_fehler_beim_oeffnen_ist_kein_deskriptormangel() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("huelle-fehler");
+
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&ordner.unter("gibt-es-nicht.txt"), 1024),
+        Err(Lesehindernis::Fehler),
+        "der fehlende Pfad gilt nicht als Fehler"
+    );
+
+    let gesperrt = ordner.datei("verschlossen.txt", b"eins\n");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht setzen");
+    if fs::read(&gesperrt).is_ok() {
+        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
+        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
+        // nichts.
+        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
+        return;
+    }
+
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&gesperrt, 1024),
+        Err(Lesehindernis::Fehler),
+        "das fehlende Leserecht gilt nicht als Fehler"
+    );
 }
