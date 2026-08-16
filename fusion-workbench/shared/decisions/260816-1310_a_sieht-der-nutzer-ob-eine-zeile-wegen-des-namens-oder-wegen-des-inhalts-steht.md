@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `crates/krk-core/src/verzeichnis/modell.rs:542-587` (der eine Prüfschritt); `crates/krk-ui/src/appkit/tabelle.rs` (die flache Tabelle mit ihren vier Spalten, `ORDNERZEICHEN`); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md`, Abschnitt `## Directive`, „Was diese Runde fallen lässt" (kein Baum, keine zweite Tabellenklasse); `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md` (C1, C4)
 
@@ -43,8 +43,31 @@ Ohne Kennzeichnung ist die Liste mehrdeutig zu lesen. Wer `budget` tippt und `st
 
 Möglichkeit 3. Sie trägt die Aussage dort, wo der Nutzer sie braucht, nämlich an der einzelnen Zeile, und sie belastet weder den Namen noch die Spaltenrechnung. Der Einwand gegen sie ist echt und benannt: die Tabelle kennt heute keine bedeutungstragende Einfärbung, und eine erste muss sich mit Auswahl, Markierung und beiden Farbtafeln vertragen. Möglichkeit 2 ist billiger zu bauen und teurer zu behalten, weil sie die Ausnahmebehandlung des Ordnerzeichens ein zweites Mal erzeugt. Möglichkeit 1 ist nur dann vertretbar, wenn der Nutzer die Mehrdeutigkeit ausdrücklich hinnimmt; sie wäre dann als hingenommener Verlust im Spec zu benennen und nicht stillschweigend zu wählen.
 
+## Nutzerentscheid vom 260816-1330: Möglichkeit 3, die abgesetzte Darstellung
+
+Eine Zeile, die allein wegen ihres Inhalts dasteht, wird abgesetzt dargestellt.
+Kein Zeichen in der Namensspalte, keine Spalte, keine Änderung der
+Breitenrechnung.
+
+**Der benannte Gegengrund bleibt bestehen und wird zur Bauaufgabe:** die Tabelle
+färbt heute keine Zeile nach Bedeutung, und die neue Regel muss sich mit drei
+vergebenen Aussagen vertragen. Orange und Fett gehören der Markierung aus C2,
+Blau der Auswahl, und beide Farbtafeln gelten. Die Planung hat deshalb
+mindestens zwei Fragen zu beantworten, und keine davon ist mehr eine
+Nutzerfrage:
+
+1. **Welche Dämpfung.** Der Baum trägt das Vokabular dafür schon: die Leiste
+   setzt `secondaryLabelColor` für eine Überschrift und `tertiaryLabelColor` für
+   eine ungültige Marke (`crates/krk-ui/src/appkit/leiste.rs`). Eine vierte
+   Farbe daneben wäre die zu begründende, nicht diese zwei.
+2. **Was gilt, wenn beides zutrifft.** Ein markierter Inhaltstreffer trägt Orange
+   und Fett aus C2 und zugleich die Dämpfung. Die Markierung entscheidet über
+   Dateioperationen und darf nicht verschwinden; die Dämpfung ist eine Auskunft
+   über den Filterstand. Welche der beiden die Zelle schreibt, gehört in den
+   Plan, samt der Begründung.
+
 ---
-Answered:
+Answered: shared/decisions/260816-1310_a_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md §Nutzerentscheid — Möglichkeit 3, reine Inhaltstreffer werden abgesetzt dargestellt; die Wahl der Dämpfung und das Zusammentreffen mit der Markierung sind Bauentscheidungen.
 Implemented:
 Deferred:
 Superseded by:

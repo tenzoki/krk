@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** anticipated
+**Status:** active
 **Filed by:** orchestrator
 **Active spec/plan:** shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md
 **Active session history:** shared/history/260815-2047-orchestrator-session.md
@@ -32,13 +32,19 @@ Vier Festlegungen des Nutzers vom 260816 stehen fest und sind im Spec ausgeführ
 
 ## Grounding snapshot
 
-Wird beim Übergang auf aktiv gefüllt. Der Stand beim Anlegen:
+Gefüllt beim Übergang auf aktiv am 260816-1330. Der Stand:
 
 - Der Spec ist geschrieben und liegt im gemeinsamen Speicher, weil beim Shaping
   kein Circle aktiv war: `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md`,
   sechs Fähigkeiten, 57 Abnahmekriterien.
-- Zwei Fragen sind offen und tragen im Spec eine benannte Vorbelegung, halten die
-  Planung also nicht auf. Zwei weitere sind beantwortet.
+- **Alle vier Entscheidungsdatensätze sind beantwortet.** Die zwei, die beim
+  Schreiben des Specs offen waren, hat der Nutzer am 260816-1330 beantwortet: die
+  Statuszeile bekommt einen Satzteil am Filterstand samt Hinweis auf die wegen
+  ihrer Größe ungelesenen Dateien, und eine Zeile, die allein wegen ihres Inhalts
+  dasteht, wird abgesetzt dargestellt. Beide Antworten hinterlassen je eine
+  Bauentscheidung, die in den Plan gehört und keine Nutzerfrage mehr ist: wie der
+  Satz im schmalen Fenster kürzt, und welche Aussage die Zelle schreibt, wenn ein
+  Inhaltstreffer zugleich markiert ist.
 - Der Filter der Runde 10 trägt zwei Regeln, jede genau einmal und mit je zwei
   Ruferrn, gehalten von einer Zählprobe. Der Inhaltsvergleich wird der dritte
   Rufer von `traegt_die_folge`, und die Zählprobe ist bewusst nachzuziehen.
@@ -69,7 +75,8 @@ aus demselben Grund im gemeinsamen Speicher.
 
 ## Turn log
 
-(noch keine Runde gefahren)
+- Aktiviert am 260816-1330 durch den Nutzer, aus der Sitzung
+  `shared/history/260815-2047-orchestrator-session.md`. Anker `9f5ced5`.
 
 ## Closure note
 

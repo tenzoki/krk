@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs:201-241` (die sechs Ränge, vollständige Fallunterscheidung ohne Auffangzweig) und `:376-386` (der Satz des Filterstands); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md` (die Runde-10-Fassung derselben Frage, weiter offen); `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`; `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md` (C4)
 
@@ -48,8 +48,24 @@ Möglichkeit 1, und zwar erweitert um den Größenhinweis aus der Nebenbedingung
 
 Möglichkeit 1. Die Zusage der Runde 6 ist ausdrücklich und wörtlich, und sie hat schon einmal eine Möglichkeit ausgeschlossen (Möglichkeit 4 der Runde-10-Fassung dieser Frage). Der Zusatz ist ein Satzteil und kein Rang, er entsteht und vergeht mit dem Durchlauf, und er braucht keine neue Farbregel. Der Einwand gegen ihn, die feste Breite, trifft Möglichkeit 3 der Runde-10-Fassung genauso und ist dort schon abgewogen worden. Möglichkeit 2 kauft die Sichtbarkeit mit einem siebten Fall in einer Aufzählung, die vier andere nachzieht, und nimmt dem Nutzer dafür die Zahl weg, die sich gerade bewegt.
 
+## Nutzerentscheid vom 260816-1330: Möglichkeit 1, mit dem Größenhinweis
+
+Der Satz des Filterstands bekommt zwei Zusätze, und beide entstehen und vergehen
+mit dem Durchlauf: einen, solange gelesen wird, und einen für die Dateien, die
+wegen der 1-MB-Grenze ungelesen blieben. Kein siebter Rang, keine neue
+Farbregel, `Rang::ALLE` unverändert.
+
+**Der Größenhinweis ist ausdrücklich mitentschieden.** Er ist der Rest der
+Antwort zur Größengrenze: ohne ihn hält der Nutzer eine nicht gefundene große
+Datei für nicht vorhanden, und genau diese Verwechslung war der einzige
+ernsthafte Einwand gegen die 1 MB.
+
+Offen für die Planung, nicht für den Nutzer: die Reihenfolge und die Kürzung der
+Satzteile im schmalen Fenster. Die feste Breite ist als Gegengrund benannt und
+bleibt es; wie der Satz bricht oder kürzt, ist eine Bauentscheidung.
+
 ---
-Answered:
+Answered: shared/decisions/260816-1310_a_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md §Nutzerentscheid — Möglichkeit 1, ein Satzteil am Filterstand, erweitert um den Hinweis auf die wegen ihrer Größe ungelesenen Dateien.
 Implemented:
 Deferred:
 Superseded by:
