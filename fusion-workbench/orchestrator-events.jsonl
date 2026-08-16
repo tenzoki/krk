@@ -950,3 +950,5 @@
 {"ts":"2026-08-16T11:48:57","event":"gate_response","detail":"Nutzer: Satzteil mit Groessenhinweis; abgesetzte Darstellung; Circle jetzt aktivieren"}
 {"ts":"2026-08-16T11:48:57","event":"circle_activated","detail":"260816-1321-inhaltsfilter-mit-ankreuzfeld-content, _a_ -> _t_, Anker 9f5ced5"}
 {"ts":"2026-08-16T11:48:57","event":"task_start","turn":6,"task":"T9","agent":"planner","detail":"Umsetzungsplan des Inhaltsfilters"}
+{"ts":"2026-08-16T12:58:31","event":"task_done","turn":6,"task":"T9","agent":"planner","detail":"12 Schritte in 7 Straengen"}
+{"ts":"2026-08-16T12:58:31","event":"gate_response","detail":"Nutzer: Tabwechsel beendet jeden Durchlauf, eine Regel"}
