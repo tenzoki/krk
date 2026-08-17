@@ -197,13 +197,13 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Changes: `pub const SCHWELLE: u32 = 25;` und `pub enum Umfang { Genau(u32), MehrAls(u32), Unentschieden }`, dazu `#[must_use] pub fn zaehlen(auswahl: &[PathBuf]) -> Umfang`. Gezählt wird jeder ausgewählte Eintrag als eins und jeder Eintrag unterhalb eines ausgewählten Ordners rekursiv; der Deckel ist `SCHWELLE + 1` und steht nicht als zweite Zahl da. Verknüpfungen zählen eins und werden nicht verfolgt, also entscheidet `Typ` aus dem gelesenen Eintrag und `symlink_metadata` an der obersten Ebene. Gelesen wird über `sys::Schwungleser` und nicht über `verzeichnis::lesen`; die Begründung gehört in den Modulkopf. Ein Fehlschlag beim Öffnen liefert `Unentschieden`, wenn `sys::ist_deskriptormangel` ihn als Deskriptormangel einordnet, und zählt sonst als ein Eintrag ohne Abstieg. Der Modulkopf schreibt die Schranke aus: jeder Abstieg kostet mindestens einen Zähler, also höchstens 26 geöffnete Verzeichnisse und höchstens 26 Ebenen Rekursion. Proben über `Pruefordner`: flacher Ordner unter der Schwelle, genau 25, genau 26, tiefe Kette, Verknüpfung auf einen großen Baum.
    - Dependencies: 4
 
-8. [IN PROGRESS] **Der Arbeitsbaum, aufwärts und in der Auswahl**
+8. [DONE] **Der Arbeitsbaum, aufwärts und in der Auswahl**
    - Executor: `coder`
    - Files: `crates/krk-core/src/verzeichnis/arbeitsbaum.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`
    - Changes: Drei Funktionen wie oben unter „Approach" beschrieben, alle drei `#[must_use]`. Der Aufwärtsgang läuft über `verzeichnis::aufwaerts` und endet am mitgegebenen Benutzerverzeichnis oder an der Wurzel. Ein Zugriff, der weder „da" noch „nicht da" beantwortet, liefert `Unentschieden`; `symlink_metadata` unterscheidet das über `ErrorKind::NotFound`. Der Modulkopf sagt, dass keine Anbindung an Git entsteht und dass die Grenze allein die Kosten begrenzt, weil ein Pfad oberhalb des Benutzerverzeichnisses schon über den ersten Auslöser laut wird. Proben über `Pruefordner`: Arbeitsbaum am Ordner selbst, zwei Ebenen darüber, keiner im ganzen Ast, ausgewählter Unterordner als Wurzel, Abbruch beim ersten Treffer.
    - Dependencies: 4
 
-9. **Ist der Datenträger lokal**
+9. [IN PROGRESS] **Ist der Datenträger lokal**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/volumes.rs`
    - Changes: `#[must_use] pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund` über `resourceValuesForKeys_error` mit `NSURLVolumeIsLocalKey`. Ein fehlender oder nicht lesbarer Wert heißt `Unentschieden`, nicht `Ja`. Der Modulkopf nimmt die dritte Frage auf, die das Modul jetzt beantwortet, und der Abschnitt über die Untergrenzen bekommt `NSURLVolumeIsLocalKey` seit 10.7, geprüft in `NSURL.h:338`.

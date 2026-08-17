@@ -1,6 +1,6 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Zwoelf Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Dreizehn Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys ──> leser ──> eintrag ──> modell <── sortierung
@@ -15,7 +15,11 @@
 //!  └──> umfang        (liest, haengt aber an keinem der uebrigen)
 //!
 //! verweisziel        (steht allein, an keinem der anderen)
+//!
 //! loeschzielbefund   (ein Typ und kein Schritt, an keinem der anderen)
+//!        ^
+//!        └──── arbeitsbaum   (liest ueber `std::fs`, nicht ueber sys;
+//!                             haengt daneben an `aufwaerts` in dieser Datei)
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
@@ -116,10 +120,29 @@
 //! Welcher der beiden umbenannt wurde und warum nicht der andere, steht im
 //! Modulkopf von [`loeschzielbefund`].
 //!
+//! [`arbeitsbaum`] beantwortet den fuenften Ausloeser derselben Runde: beruehrt
+//! dieser Loeschvorgang einen Git-Arbeitsbaum? Es ist das einzige lesende Modul
+//! hier, das **nicht** ueber [`sys`] liest, und es liest auch nicht ueber
+//! [`leser`]: gefragt wird nach einem einzigen Namen in einem einzigen Ordner,
+//! und dafuer reicht `std::fs::symlink_metadata`, also `lstat(2)`. Der Gegenstand
+//! ist die **Anwesenheit** eines Eintrags `.git` und nicht sein Inhalt; eine
+//! Anbindung an Git entsteht dabei nicht. Es haengt an [`loeschzielbefund`] fuer
+//! die Antwort und an [`aufwaerts`] in dieser Datei fuer den Gang nach oben —
+//! dessen einziger anderer Rufer ist die Navigation in `krk-ui`.
+//!
+//! **Seine drei Funktionen stehen bewusst nicht in den Wiederausfuhren unten**,
+//! aus demselben Grund wie [`umfang::zaehlen`]: der Modulname ist der Gegenstand
+//! jeder der drei Fragen, und `arbeitsbaum::beruehrt_einen_arbeitsbaum(…)` sagt
+//! am Aufrufort, wovon die Rede ist. Was die Reichweite des Aufwaertsgangs
+//! kostet — in diesem Projekt selbst wird nach ihm fast jede Loeschung laut —
+//! steht in seinem eigenen Modulkopf; der Nutzer kennt die Folge und hat sie
+//! angenommen.
+//!
 //! Der Kern kennt AppKit nicht; alles hier ist ohne Fenster testbar.
 
 use std::path::{Path, PathBuf};
 
+pub mod arbeitsbaum;
 pub mod durchlauf;
 pub mod eintrag;
 pub mod filter;
@@ -149,6 +172,13 @@ pub use verweisziel::Verweisziel;
 /// der Nutzer gerade kam. Der Name dafuer ist reine Pfadarithmetik und steht
 /// deshalb im Kern und nicht in der Oberflaeche: er ist ohne Fenster pruefbar,
 /// und `krk-ui` haengt allein die Navigation daran.
+///
+/// **Seit der Loeschrunde hat er einen zweiten Rufer im Kern selbst**, den
+/// Aufwaertsgang in [`arbeitsbaum`]. Der braucht von den beiden
+/// Rueckgabewerten nur den ersten und rechnet gerade darauf, dass die Wurzel
+/// `None` liefert: das ist seine eine Abbruchbedingung neben dem
+/// Benutzerverzeichnis, und sie ist auch das Argument dafuer, dass sein Gang
+/// endet.
 ///
 /// `None` fuer die Wurzel, die keinen uebergeordneten Ordner hat. Ein Aufstieg
 /// von `/` ist damit kein Sonderfall mit eigener Meldung, sondern schlicht
