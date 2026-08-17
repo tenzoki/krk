@@ -57,7 +57,15 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
 
 ## Turn log
 
-(noch kein Turn gefahren)
+- Turn 1 (Sitzung 260816-2113): Commits `664a0fd`..`472eb81`, dazu `a8b4bf8` für die
+  Durchsicht. Bündel A vollständig, drei Schritte. **Die Schutzschwelle ist erreicht:** KRK
+  fragt vor jedem Räumen nach, und die Durchsicht hat jeden Löschweg einzeln nachgezählt.
+  Kohärenz-Befund `ok`. Sieben Befunde gefiled, davon einer hoch — eine unbekannte
+  Blattantwort fällt im Löschblatt auf die zerstörende Schaltfläche. Ein Defekt, den der
+  Spec nicht kannte, ist mitbehoben: der bestätigte Auftrag trägt jetzt die gezeigte
+  Auswahl statt einer zweiten Lesung nach dem Blatt. Sitzungsprotokoll:
+  `shared/history/260816-2113-orchestrator-session.md`. Der Nutzer hat die Sitzung nach
+  diesem Turn beendet; Bündel B bis E stehen aus.
 
 ## Closure note
 

@@ -283,3 +283,17 @@ Regel dann ohnehin angefasst wird. Befund 7 aus demselben Grund: Bündel B legt
 **Mit Bündel E:** Befunde 4, 5 und 6. Sie sind derselbe Nachzug, den Bündel E ohnehin fährt.
 
 **Mit Schritt 11:** Befund 3. Er löst sich dort von selbst auf, wenn der Zuschnitt bleibt.
+
+---
+
+## Abgleich 260817-1129 (reconciler)
+
+Kein Befund dieser Durchsicht ist bestätigt-und-behoben; alle sieben stehen offen und sind
+einzeln an ihrer zitierten Stelle nachgelesen. Die Einzelnachweise stehen als Zeile
+`Abgleich 260817-1129` in den sieben Datensätzen unter `issues/` dieses Circles. Die
+Zusammenfassung dieser Durchsicht hält am Baum: die drei Wege in `in_den_papierkorb` und der
+eine in `endgueltig_loeschen` gehen weiterhin sämtlich durch `loeschen_nach_rueckfrage`
+(`anwendung.rs:4606`), und `auftrag_stellen` trägt keine Löschart.
+
+Der Bereich in der Zeile `**Reviewed-range:**` ist unberichtigt; der Befund dazu ist
+`shared/issues/260817-1122_*_der-durchsichtsbereich-schliesst-seinen-ersten-commit-aus.md`.

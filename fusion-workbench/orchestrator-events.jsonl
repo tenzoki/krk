@@ -1048,3 +1048,8 @@
 {"ts":"2026-08-17T08:53:18","event":"task_done","turn":1,"task":"A3","agent":"coder","detail":"make check exit 0, 1244 Proben; Schutzschwelle erreicht"}
 {"ts":"2026-08-17T08:53:18","event":"commit","turn":1,"detail":"472eb81 A3 jedes Raeumen fragt vorher nach"}
 {"ts":"2026-08-17T08:53:31","event":"review_start","turn":1,"agent":"coderev","detail":"664a0fd..472eb81, fuenf Codedateien; Buendel A"}
+{"ts":"2026-08-17T09:12:30","event":"review_done","turn":1,"agent":"coderev","detail":"7 Befunde: 0 kritisch, 1 hoch, 1 mittel, 5 niedrig; Schutzschwelle nachgezaehlt und haelt"}
+{"ts":"2026-08-17T09:12:30","event":"commit","turn":1,"detail":"a8b4bf8 Durchsicht Buendel A und sieben Befunde"}
+{"ts":"2026-08-17T09:21:37","event":"coherence_review","turn":1,"detail":"verdict ok | Artefakt<->Grundlage: 7 Befunde, 0 kritisch, 1 hoch | Artefakt<->Directive: Schutzschwelle erreicht, Commits gehen auf die Directive zu | Grundlage<->Directive: 0 beantwortete Entscheidungen beruehrt"}
+{"ts":"2026-08-17T09:21:37","event":"gate_response","turn":1,"detail":"Nutzer beendet die Sitzung nach Turn 1; Buendel B bis E und sieben Befunde warten"}
+{"ts":"2026-08-17T09:21:37","event":"turn_end","turn":1,"detail":"3 Aufgaben erledigt, 7 Befunde gefiled, 4 Commits; Schutzschwelle erreicht"}

@@ -96,3 +96,22 @@ Griff hat zweimal auf zwei Geräten denselben Schaden angerichtet.
 Der Datensatz ist damit ursächlich geklärt. Was bleibt, ist die Abstellung, und die
 gehört nicht hierher, sondern nach
 `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.
+
+---
+Resolved: Der Datensatz trägt seine eigene Erledigung in zwei Sätzen. „Der Werkbank fehlt
+nichts mehr" (`git ls-files -d` ohne Treffer, am 260817-1129 nachgeprüft und weiterhin leer),
+und „Der Datensatz ist damit ursächlich geklärt. Was bleibt, ist die Abstellung, und die
+gehört nicht hierher". Die Bergung ist vollständig, die Ursache ist mit dem zweiten Vorfall
+belegt, und die Abstellung läuft als eigene Runde
+(`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`) auf dem
+Datensatz `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.
+In diesem Datensatz steht damit keine offene Arbeit mehr.
+
+Abgleich 260817-1129 (reconciler): **Titel und Rumpf widersprechen einander weiterhin, und
+zwar mit Absicht.** Titelzeile und Dateiname sagen „während der Planner lief"; die
+Berichtigung vom 260817-0435 weist nach, dass der Planner zum Zeitpunkt der Löschung vier
+Stunden 26 Minuten beendet war, und begründet, warum der Name trotzdem stehen bleibt: die
+forensische Untersuchung zitiert ihn. Der Widerspruch ist damit benannt, begründet und nicht
+zu beheben, ohne die Zitierkette der Analyse zu brechen. Wer nur die Trefferliste einer Suche
+liest, bekommt hier eine falsche Auskunft; wer die Datei öffnet, bekommt sie im dritten
+Abschnitt richtig.

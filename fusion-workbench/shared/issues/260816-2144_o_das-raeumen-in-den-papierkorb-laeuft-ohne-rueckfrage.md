@@ -132,3 +132,31 @@ als einzigen Weg an. Wenn KRK den endgültigen Weg nicht mehr kennt, kann es auf
 Zielen gar nicht mehr löschen. Ob das die richtige Antwort ist — nicht löschen können statt
 unwiederbringlich löschen — ist eine Nutzerfrage und keine Ableitung. Sie ist am 260817
 gestellt und noch nicht beantwortet.
+
+---
+Abgleich 260817-1129 (reconciler): **offen und teilweise abgetragen; die zuletzt genannte
+offene Frage ist inzwischen beantwortet.**
+
+**Was gebaut ist.** Der Papierkorbweg fragt seit Commit `472eb81` nach. `in_den_papierkorb`
+(`crates/krk-ui/src/appkit/anwendung.rs:4454`) geht durch `loeschen_nach_rueckfrage`
+(`:4606`), das Blatt steht vor jedem Auftrag, und „Abbrechen" ist vorbelegt
+(`appkit/blaetter/loeschbestaetigung.rs:98-105`). Damit ist der Kern der Meldung vom
+260816-2144 eingelöst: keiner der beiden Löschbefehle nimmt heute noch eine Datei ohne
+stehende Rückfrage vom Datenträger.
+
+**Was offen bleibt, und warum der Marker `_o_` steht.** Die Verschärfung vom 260817 verlangt
+mehr als die Rückfrage: der endgültige Löschweg fällt ganz, kein Löschen auf Zielen ohne
+Papierkorb, und die überholte Festlegung wird an sechs Stellen nachgezogen. `Kommando::`
+`EndgueltigLoeschen` steht am 260817 mit zwanzig Nennungen im Baum, `resources/`
+`default-keymap.toml:151-153` führt `endgueltig_loeschen` unverändert, und die vier
+mitzuziehenden Stellen aus dem Abschnitt `## Was die Umsetzung mitziehen muss` sind
+unangetastet. Der Plan
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_*_plan-absicherung-jedes-loeschwegs.md`
+trägt sie als Bündel B bis E, vierzehn Schritte, alle offen.
+
+**Die Frage am Ende dieses Datensatzes ist beantwortet.** Der Schlussabsatz sagt, ob KRK auf
+Zielen ohne Papierkorb gar nicht mehr löschen könne, sei „am 260817 gestellt und noch nicht
+beantwortet". Sie ist am selben Tag beantwortet worden:
+`shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`
+hält die Antwort des Nutzers, ein Ziel ohne Papierkorb wird nicht gelöscht, sondern gemeldet.
+Der Absatz oben bleibt im Wortlaut stehen; verbindlich ist diese Zeile.

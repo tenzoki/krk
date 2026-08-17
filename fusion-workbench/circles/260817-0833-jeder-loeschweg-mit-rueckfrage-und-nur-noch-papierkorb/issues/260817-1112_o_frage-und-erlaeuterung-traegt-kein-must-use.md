@@ -27,3 +27,6 @@ Bündel C legt zwei weitere Funktionen in dasselbe Modul, `warngruende` und die 
 Auslöser, und der Plan verlangt `#[must_use]` für die Nachbarn dieser Kette ausdrücklich
 (Schritt 5 für `fuehrt_einen_papierkorb`, Schritt 7 für `zaehlen`). Ein Modul mit drei
 Funktionen und zwei Haltungen zu derselben Frage ist die Abweichung, die niemand prüft.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** `frage_und_erlaeuterung` steht an `loeschwarnung.rs:86` weiterhin ohne `#[must_use]`; die Zeilen darüber tragen allein Doc-Kommentar.

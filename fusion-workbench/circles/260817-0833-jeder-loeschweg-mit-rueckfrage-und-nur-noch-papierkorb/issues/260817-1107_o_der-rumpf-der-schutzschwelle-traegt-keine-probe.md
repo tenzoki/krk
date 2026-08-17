@@ -31,3 +31,6 @@ Tafel prüfbar, so wie dieses Projekt seine übrigen Regeln hält.
 
 Bündel B setzt mit der Papierkorbprüfung eine fünfte Stufe in dieselbe Kette. Wenn die Regel
 umzieht, dann dort, nicht danach: ein Umzug nach Bündel B änderte dieselbe Stelle zweimal.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Weiterhin keine Probe über `loeschen_nach_rueckfrage` (`anwendung.rs:4606`) oder `loeschauftrag_stellen` (`:4684`). `kommandos/loeschwarnung.rs` trägt fünf Proben, alle allein über die beiden Texte. `cargo test --workspace` läuft grün, misst diesen Rumpf aber nicht.

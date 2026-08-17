@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** answered
 **Filed by:** planner
 **Cross-references:** `shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `circles/260816-2255-befehle-absetzen-und-makros-speichern/planning/260816-2307_o_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf
 
@@ -41,7 +41,7 @@ Zwei Fragen liegen hier dicht beieinander. „Kommt noch Ausgabe?" ist aus dem, 
 Der Gewinn ist mehr als die Vermeidung einer Sperre. Möglichkeit 1 ersetzt eine unentscheidbare Frage durch eine entscheidbare, und sie tut es ohne einen zweiten Mechanismus: das Signal an die Gruppe steht für den Abbruch ohnehin da und bekommt einen zweiten Auslöser.
 
 ---
-Answered:
+Answered: `circles/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md`:81-84 (Abschlussnotiz) — Möglichkeit 1: der Lauf endet mit der Shell, und dasselbe Signal, das der Abbruch schickt, geht danach an die Prozessgruppe. Ein mit `&` abgehängter Prozess überlebt den Lauf nicht; die Grenze gehört ausgeschrieben zu denen unter `## Was der Befehlslauf nicht kann`. Vom Nutzer am 260816 gewählt, der Antwort folgend, die der Datensatz empfiehlt. Nicht umgesetzt: die Runde ist am 260817-0445 zurückgestellt worden, bevor eine Zeile Code entstand.
 Implemented:
 Deferred:
 Superseded by:

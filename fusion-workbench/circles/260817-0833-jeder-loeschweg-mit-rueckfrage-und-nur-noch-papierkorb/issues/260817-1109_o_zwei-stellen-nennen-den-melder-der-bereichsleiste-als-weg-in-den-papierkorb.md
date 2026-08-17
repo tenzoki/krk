@@ -32,3 +32,6 @@ nie bestand, und weiß am Ende nicht, ob er ihn übersehen hat.
 
 Beide Stellen auf das kürzen, was der Baum trägt: die beiden Tasten und den Menüeintrag. Nach
 Bündel D kommt `f8` als dritte Taste hinzu.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Der Modulkopf `kommandos/loeschwarnung.rs:47-49` nennt den Melder der Bereichsleiste unverändert. Die zweite Stelle an `papierkorb_oder_zeichen_zurueck` steht ebenfalls noch.

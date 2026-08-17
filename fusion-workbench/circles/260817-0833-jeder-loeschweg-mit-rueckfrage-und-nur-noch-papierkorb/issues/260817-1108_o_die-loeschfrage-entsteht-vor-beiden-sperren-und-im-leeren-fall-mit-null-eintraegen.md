@@ -25,3 +25,6 @@ Schritt 11 des Plans zieht das Bauen der Texte in den Rumpf, weil die Frage dort
 Warngründe braucht, und nimmt beides mit. Dieser Datensatz steht, damit der Befund nicht
 verlorengeht, falls der Zuschnitt von Schritt 11 sich noch ändert. Er ist bis dahin kein
 Fehlverhalten, sondern verworfene Arbeit und ein Satz, der nie erscheint.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** `in_den_papierkorb` (`anwendung.rs:4454-4467`) baut beide Texte unverändert vor dem Aufruf des Rumpfes; die beiden Sperren stehen weiter erst darin. Schritt 11, der den Befund auflösen soll, ist nicht gebaut.

@@ -33,3 +33,6 @@ zusätzlich zugelassenen Befehle ändert die aktive Seite. Dieselbe verkürzte F
 in `blaetter/mod.rs:272` und in `CLAUDE.md`; hier trägt sie zum ersten Mal eine Zusage über
 eine zerstörende Handlung, und deshalb gehört sie hier ausgeschrieben, gleich ob die anderen
 beiden mitgezogen werden.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Die verkürzte Begründung steht unverändert an `anwendung.rs:4676-4678` („jedes Kommando ausser dem Abbruch ab"), während `zulaessigkeit::immer_erreichbar` weiter vier Kommandos durchlässt.

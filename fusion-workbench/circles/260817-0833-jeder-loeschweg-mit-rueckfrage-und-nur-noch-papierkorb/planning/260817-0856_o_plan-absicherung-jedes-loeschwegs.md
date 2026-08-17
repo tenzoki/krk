@@ -1,7 +1,7 @@
 # Implementation Plan: Jeder Löschweg fragt nach, und es gibt nur noch den Papierkorb
 
 **Date:** 2026-08-17
-**Status:** Draft
+**Status:** In Progress — Bündel A ist gebaut, die Schritte 1 bis 3 tragen `[DONE]` und sind am 260817-1129 einzeln gegen den Baum gelesen. Die Schritte 4 bis 17 stehen offen; der Nutzer hat die Sitzung nach Turn 1 beendet, der Circle bleibt aktiv. Der Beleg steht unten unter `## Reconciliation Log`.
 **Spec:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, nachgezogene Fassung vom 260817
 **Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
 **Baumstand:** `984d31a`, gelesen am 260817-0850
@@ -376,3 +376,42 @@ pub struct Loeschziel {
 
 - [ ] Keine, die diesen Plan aufhält. Der Abschnitt `## Ausstehende Nutzerentscheidungen` des Specs ist leer, und die acht Punkte seines Abschnitts `## Offen für den Planner` sind oben beantwortet.
 - [ ] Zwei Beobachtungen für eine spätere Runde, beide vom Nutzer schon als Folge angenommen und deshalb hier ohne eigenen Datensatz: ob die laute Form im eigenen Quellbaum ihre Unterscheidungskraft behält, und ob `opt+cmd+delete` unbelegt bleibt.
+
+## Reconciliation Log
+
+### 260817-1129 (reconciler, Baumstand `a8b4bf8`)
+
+**Drei von siebzehn Schritten sind gebaut, und alle drei halten am Baum.** Jede Behauptung
+einzeln gelesen, nicht aus dem Sitzungsprotokoll übernommen:
+
+| Schritt | Behauptung | Beleg am Baum |
+|---|---|---|
+| 1 `[DONE]` | `kommandos/loeschwarnung.rs` trägt `frage_und_erlaeuterung` in ruhiger Form | Datei steht, `frage_und_erlaeuterung` an `loeschwarnung.rs:86`, fünf Proben in `#[cfg(test)]` ab `:127`; `pub mod loeschwarnung` in `kommandos/mod.rs:66`; Commit `664a0fd` |
+| 2 `[DONE]` | `loeschbestaetigung::zeigen` nimmt Beschriftung und `laut` entgegen, `als_warnung` nur bei `laut` | Signatur `loeschbestaetigung.rs:89-97` trägt `schaltflaeche: &str` und `laut: bool`; `if laut { blatt.als_warnung(); }` an `:109-110`; Commit `375d07c` |
+| 3 `[DONE]` | Gemeinsamer Rumpf, `delete` fragt, Doc-Kommentar nachgezogen | `loeschen_nach_rueckfrage` an `anwendung.rs:4606`, `loeschauftrag_stellen` an `:4684`, `in_den_papierkorb` an `:4454` ruft beides mit `laut = false`; der Satz „Sofort und ohne Rueckfrage" steht nur noch als datierter Rückblick (`:4437-4439`), nicht mehr als Aussage über das heutige Verhalten; Commit `472eb81` |
+
+**Die Anmerkung zur Ausführung an Schritt 1 stimmt ebenfalls.** `zahl` und `ordner_text` sind
+`pub(crate)` geblieben statt `pub(super)` zu werden; `expect(dead_code)` ist mit dem Aufrufer
+aus Schritt 3 gefallen und steht nur noch als Erklärung im Modulkopf (`loeschwarnung.rs:56`).
+
+**Die Schritte 4 bis 17 sind unangetastet.** Gegenprobe am Baum, damit „offen" belegt ist und
+nicht behauptet: `verzeichnis/befund.rs`, `verzeichnis/umfang.rs` und
+`verzeichnis/arbeitsbaum.rs` gibt es nicht (4, 7, 8); `fuehrt_einen_papierkorb`, `ist_lokal`,
+`Warngrund` und `Loeschziel` liefern über `crates/` keinen Treffer (5, 9, 10);
+`EndgueltigLoeschen` steht mit zwanzig Nennungen im Baum (12); `resources/default-keymap.toml`
+führt `endgueltig_loeschen` unverändert mit `["f8", "opt+cmd+delete"]`, und `in_papierkorb`
+trägt weiter `["delete", "cmd+delete"]` (13).
+
+**`cargo test --workspace` läuft grün**, 98 Proben in `krk-core`, keine fehlgeschlagene über
+den ganzen Arbeitsbereich. Die Schutzschwelle nach Schritt 3 ist damit auch am Prüflauf
+belegt und nicht nur an der Durchsicht.
+
+**Sieben Befunde der Durchsicht stehen offen, und keiner ist inzwischen behoben.** Alle sieben
+sind am 260817-1129 an ihrer zitierten Stelle nachgelesen und stehen unverändert; die
+Einzelnachweise stehen in den Datensätzen unter `issues/` dieses Circles.
+
+**Der Marker des Dateinamens bleibt `_o_`.** Die Konvention kennt `_p_` für „ein Agent
+arbeitet daran", dieses Projekt hat für Pläne aber durchgehend `_o_` bis `_c_` gefahren und
+keinen Plan je auf `_p_` gesetzt. Eine Umbenennung zöge daneben die Zeile
+`**Active spec/plan:**` des Circle-Datensatzes und den Eintrag in `agentstate.yaml` nach sich,
+und beide gehören dem Orchestrator. Geändert ist deshalb allein das Kopffeld `**Status:**`.

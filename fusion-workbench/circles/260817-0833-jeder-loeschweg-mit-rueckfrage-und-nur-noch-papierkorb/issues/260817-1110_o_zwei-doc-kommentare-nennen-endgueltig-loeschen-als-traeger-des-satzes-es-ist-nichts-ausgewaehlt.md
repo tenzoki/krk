@@ -25,3 +25,6 @@ Seit Schritt 3 steht die Prüfung dort nicht mehr. Sie ist nach `loeschen_nach_r
 Beide Verweise auf die Stelle ziehen, an der der Satz jetzt steht. Sie stehen nicht auf der
 Liste der 46 Nennungen, die Bündel E nachzieht: diese Liste ist gegen `b8e198e` aufgestellt
 und kennt die beiden Verschiebungen dieses Bündels nicht.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Beide Stellen stehen unverändert: `anwendung.rs:5526` („derselbe Satz, den `endgueltig_loeschen` seit der Runde 1 fuer die leere Auswahl fuehrt") und `:6276` (`Self::endgueltig_loeschen` liest `aktiv`).

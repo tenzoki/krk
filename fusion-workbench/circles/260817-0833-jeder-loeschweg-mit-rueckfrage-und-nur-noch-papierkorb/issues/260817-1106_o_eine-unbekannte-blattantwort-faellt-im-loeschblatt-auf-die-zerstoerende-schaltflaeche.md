@@ -59,3 +59,6 @@ der Escape-Taste abgeleitet werden; entweder gibt das Blatt sie ausdrücklich mi
 Vorbelegungen in `blaetter/mod.rs` sollten dabei zu einer werden.
 
 Die Entscheidung gehört nach `blaetter/mod.rs` und trifft alle sechs Blätter.
+
+---
+Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Der Rückfall auf die letzte Schaltfläche steht unverändert in `crates/krk-ui/src/appkit/blaetter/mod.rs:572-575` (`.unwrap_or(antworten.len().saturating_sub(1))`), und `loeschbestaetigung.rs:98-105` setzt die zerstörende Schaltfläche weiter an die zweite und damit letzte Stelle. Nichts daran ist seit `472eb81` angefasst worden.
