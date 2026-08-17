@@ -1027,3 +1027,8 @@
 {"ts":"2026-08-17T03:26:35","event":"gate_response","agent":"shaper","detail":"Runde 2: Lesezeichen ohne Rueckfrage; Ordner mit eigenem .git warnt; kein Protokoll in dieser Runde; Warngrund in der Frage"}
 {"ts":"2026-08-17T03:43:45","event":"shaper_done","agent":"shaper","detail":"shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md; sechs Faehigkeiten; vier Entscheidungsdatensaetze"}
 {"ts":"2026-08-17T03:43:45","event":"gate_hit","detail":"Spec-Abnahme Loeschabsicherung plus drei neue Entscheidungen"}
+{"ts":"2026-08-17T06:42:41","event":"gate_response","detail":"Spec abgenommen; keymap bleibt wie heute; f8 auf Papierkorb; Git-Pruefung sieht aufwaerts"}
+{"ts":"2026-08-17T06:42:41","event":"commit","detail":"984d31a Circle der Loeschabsicherung angelegt und aktiviert, Spec und vier Entscheidungen"}
+{"ts":"2026-08-17T06:42:41","event":"planner_start","agent":"planner","detail":"Plan aus shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md"}
+{"ts":"2026-08-17T07:02:49","event":"planner_done","agent":"planner","detail":"circles/260817-0833-.../planning/260817-0856_o_plan-...md; 17 Schritte in fuenf Buendeln; Schutz nach Buendel A"}
+{"ts":"2026-08-17T07:02:49","event":"gate_hit","detail":"Plan-Abnahme Loeschabsicherung"}
