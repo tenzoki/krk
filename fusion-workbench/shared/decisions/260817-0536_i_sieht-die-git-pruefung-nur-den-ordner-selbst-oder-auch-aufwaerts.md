@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md` (C3), `shared/analyses/260817-0419-verlust-des-speichers-shared.md`
 
@@ -55,7 +55,7 @@ Die Reichweite des Aufwärtsgangs ist im Spec unter C3 festgelegt, ebenso die Ko
 
 ---
 Answered: `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, C3 und Abschnitt `## Was die Prüfungen beim Vorfall vom 260817 geleistet hätten` — Möglichkeit 2: die Prüfung sieht aufwärts; die Empfehlung des Shapers ist verworfen, sein Einwand steht als benannte Folge im Spec.
-Implemented:
+Implemented: `5a0f041`, `c1b52db`, `792995a` — Möglichkeit 2, der Aufwärtsgang, steht am Baum. `5a0f041` (Schritt 8): `krk_core::verzeichnis::arbeitsbaum::liegt_in_arbeitsbaum` (`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:288`) endet am mitgegebenen Benutzerverzeichnis oder an der Wurzel, `beruehrt_einen_arbeitsbaum` (`:338`) setzt ihn mit der Schleife über die Auswahl zusammen. `c1b52db` (Schritt 10): `Warngrund::Arbeitsbaum` (`crates/krk-ui/src/kommandos/loeschwarnung.rs:486`) und seine Bewertung in `warngruende` (`:642`). `792995a` (Schritt 11): die Verdrahtung in `crates/krk-ui/src/appkit/anwendung.rs`, die das Feld `Loeschziel.arbeitsbaum` füllt und das Blatt laut macht. Die Abgleichsnotiz vom 260817-1833 unter diesem Absatz hat den Beleg vorgeprüft; er ist am 260818 gegen den Baum nachgelesen und hält. Bewegt in Schritt 16 des Plans `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`.
 Deferred:
 Superseded by:
 

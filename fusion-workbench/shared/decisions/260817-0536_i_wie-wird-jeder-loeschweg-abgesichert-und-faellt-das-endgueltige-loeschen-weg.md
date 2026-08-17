@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md` (die überholte Festlegung), `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, `shared/analyses/260817-0419-verlust-des-speichers-shared.md`, `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`
 
@@ -68,6 +68,6 @@ Sie hebt `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md`
 
 ---
 Answered: `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md` — ein Löschweg in den Papierkorb, Rückfrage vor jedem Vorgang mit vorbelegtem Abbrechen, laute Form bei sechs Auslösern, keine Löschung auf Zielen ohne Papierkorb, `Kommando::EndgueltigLoeschen` fällt.
-Implemented:
+Implemented: `472eb81`, `ee85950`, `792995a`, `82707ef` — Möglichkeit 2 steht vollständig am Baum. `472eb81` (Schritt 3): jeder Papierkorbvorgang fragt genau einmal nach, `Anwendungsdelegierter::loeschen_nach_rueckfrage` (`crates/krk-ui/src/appkit/anwendung.rs:4621`). `ee85950` (Schritt 6): ein Ziel ohne Papierkorb wird gemeldet statt gelöscht, `papierkorb::fuehrt_einen_papierkorb` vor dem Blatt und `loeschwarnung::ohne_papierkorb` (`crates/krk-ui/src/kommandos/loeschwarnung.rs:411`) in der Statuszeile. `792995a` (Schritt 11): die laute Form, `laut` aus der Länge der Warngründe. `82707ef` (Schritte 12 und 13, ein Commit): `Kommando::EndgueltigLoeschen` und `Art::EndgueltigLoeschen` fallen — `grep -rn "EndgueltigLoeschen" --include="*.rs" crates` liefert am 260818 keine Zeile —, und `resources/default-keymap.toml` verliert den Eintrag `endgueltig_loeschen`. Bewegt in Schritt 16 des Plans `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`.
 Deferred:
 Superseded by:

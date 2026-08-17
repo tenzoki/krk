@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md` (C5), `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`
 
@@ -48,6 +48,6 @@ Der Nutzer nimmt den Verlust seiner eigenen Belegung ausdrücklich in Kauf. Die 
 
 ---
 Answered: `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, Abschnitt `## Was der Nutzer entschieden hat` — Möglichkeit 1: die Nutzerbelegung wird verworfen, die Auslieferung greift, die Statuszeile nennt die Datei; der Verlust ist benannt und angenommen.
-Implemented:
+Implemented: `82707ef` — kein bauender Schritt, denn die Antwort ist „bleibt wie heute". Realisiert ist sie durch die neue Probe `eine_keymap_mit_der_zurueckgezogenen_kennung_wird_als_ganzes_verworfen` (`crates/krk-core/tests/belegung.rs:1642`) aus Schritt 12 des Plans, die das unveränderte Verhalten am neuen Wortschatz **misst** statt es zu behaupten: eine Belegung mit der zurückgezogenen Kennung liefert `Belegungsfehler::UnbekannteFunktion("endgueltig_loeschen")`, und `belegung::laden` fällt auf die vollständige Auslieferungsbelegung zurück. Ohne sie hielte niemand ein Verhalten fest, das niemand geschrieben hat. Bewegt in Schritt 16 des Plans `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`.
 Deferred:
 Superseded by:

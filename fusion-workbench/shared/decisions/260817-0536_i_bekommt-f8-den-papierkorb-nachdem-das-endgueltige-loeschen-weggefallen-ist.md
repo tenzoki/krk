@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md` (C1, C5, C6), `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_o_spec-navigator-geruest.md` (C3), `shared/decisions/260802-0842_i_f-tasten-unter-macos-systembelegung.md`
 
@@ -49,6 +49,6 @@ Möglichkeit 1. Die Norton-Reihe ist eine ausdrückliche Zusage der Runde 1, F8 
 
 ---
 Answered: `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, Abschnitt `## Was der Nutzer entschieden hat` und C5 — Möglichkeit 1: `f8` zeigt auf „In den Papierkorb räumen", `opt+cmd+delete` bleibt unbelegt.
-Implemented:
+Implemented: `82707ef` — Möglichkeit 1 steht in `resources/default-keymap.toml`: `in_papierkorb` trägt dort `tasten = ["delete", "cmd+delete", "f8"]`, der Eintrag `endgueltig_loeschen` ist ganz gefallen, und `opt+cmd+delete` steht in keiner Tastenliste mehr. Der Kopf der Datei nennt 84 Funktionen mit 89 Kombinationen und als bindenden Datensatz nicht mehr den überholten Löschentscheid vom 260802, sondern `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`. Das ist Schritt 13 des Plans `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`; seine Voraussetzung, Schritt 12, trägt derselbe Commit, weil der Baum zwischen beiden in jeder Reihenfolge rot wäre. Bewegt in Schritt 16 desselben Plans.
 Deferred:
 Superseded by:
