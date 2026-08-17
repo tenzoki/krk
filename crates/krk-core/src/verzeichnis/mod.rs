@@ -1,16 +1,18 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Elf Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Zwoelf Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys ──> leser ──> eintrag ──> modell <── sortierung
 //!  │                     ^         ^ ^
 //!  │               kollation       │ │
-//!  └──> durchlauf ─────────────────┘ │
-//!         ^     ^                    │
-//!         │     └──── filter ────────┘
-//!         │                       │
-//!         └──── inhalt <──────────┘
+//!  ├──> durchlauf ─────────────────┘ │
+//!  │      ^     ^                    │
+//!  │      │     └──── filter ────────┘
+//!  │      │                       │
+//!  │      └──── inhalt <──────────┘
+//!  │
+//!  └──> umfang        (liest, haengt aber an keinem der uebrigen)
 //!
 //! verweisziel        (steht allein, an keinem der anderen)
 //! loeschzielbefund   (ein Typ und kein Schritt, an keinem der anderen)
@@ -71,6 +73,23 @@
 //! und hing dafuer an [`sys`]; warum das die falsche Frage war, steht in
 //! seinem eigenen Modulkopf.
 //!
+//! [`umfang`] haengt wie [`durchlauf`] unmittelbar an [`sys`] und an keinem
+//! der uebrigen: es beantwortet die eine Frage, die vor einer Rueckfrage ueber
+//! ein Loeschziel zu stellen ist, naemlich ob mehr als
+//! [`umfang::SCHWELLE`] Eintraege an der Auswahl haengen. Gelesen wird ueber
+//! dieselbe Huelle `sys::Schwungleser`, gezaehlt wird bis zu einem Deckel, und
+//! **die Bauform ist die des [`durchlauf`]**: ein Ordner ganz, seine
+//! Unterordner als Pfad auf einen Stapel, zu jedem Zeitpunkt genau ein offener
+//! Verzeichnisdeskriptor. Der Deckel begrenzt die Kosten, nicht die Deskriptoren;
+//! warum das zwei verschiedene Zusagen sind und welche davon der Defekt
+//! `260815-0211` verletzt hatte, steht in seinem eigenen Modulkopf.
+//!
+//! **[`umfang::SCHWELLE`] und [`umfang::zaehlen`] stehen bewusst nicht in den
+//! Wiederausfuhren unten**, [`Umfang`] dagegen schon. Ein nacktes `SCHWELLE`
+//! oder `zaehlen` an dieser Ebene sagte nicht, wovon es die Schwelle ist und
+//! was es zaehlt; der Modulname traegt diese Auskunft und soll sie am Aufruf
+//! tragen. Der Typ dagegen nennt seinen Gegenstand selbst.
+//!
 //! [`loeschzielbefund`] ist das einzige Modul hier, das **nichts liest**: kein
 //! Systemaufruf, kein Deskriptor, kein Pfad. Es traegt die dreiwertige Antwort
 //! [`Loeschzielbefund`] und die eine Verknuepfung darauf, und es steht in diesem
@@ -111,6 +130,7 @@ pub mod loeschzielbefund;
 pub mod modell;
 pub mod sortierung;
 pub mod sys;
+pub mod umfang;
 pub mod verweisziel;
 
 pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
@@ -120,6 +140,7 @@ pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 pub use loeschzielbefund::Loeschzielbefund;
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
+pub use umfang::Umfang;
 pub use verweisziel::Verweisziel;
 
 /// Der uebergeordnete Ordner und der Name des verlassenen (C2).

@@ -29,6 +29,18 @@
 //! `krk-bench/src/wegwerfordner.rs` zusammenlegbar: beide Kisten haben nur ein
 //! Binaerziel, und ein Testziel erreicht den Code eines Binaerziels nicht.
 //!
+//! # Warum der Starter der Kindproben ebenfalls hier steht
+//!
+//! [`kind_mit_deskriptorgrenze`] startet dieselbe Testdatei noch einmal, mit
+//! abgesenkter Deskriptorgrenze. Etliche Zusagen dieses Vorhabens sind Aussagen
+//! ueber den **Vorrat an Deskriptoren** — der Durchlauf haelt einen, gleich wie
+//! tief der Baum ist; ein Mangel von aussen laesst einen Auftrag unentschieden;
+//! die gedeckelte Zaehlung des Umfangs haelt einen — und keine davon ist unter
+//! `cargo test` messbar, weil der Lauf die angehobene Grenze der
+//! Anmeldesitzung erbt. Der Starter stand bis zum 260817 in
+//! `tests/verzeichnis.rs`; seit `tests/umfang.rs` daneben denselben Bedarf hat,
+//! steht er hier, damit es nicht zwei Fassungen davon gibt.
+//!
 //! # Jedes Ziel nimmt einen anderen Ausschnitt
 //!
 //! `#![allow(dead_code)]` steht deshalb hier und nicht als Ausnahme je Funktion:
@@ -295,4 +307,45 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
             gefunden.push((name, inhalt));
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Der Starter der Kindproben unter abgesenkter Deskriptorgrenze
+// ---------------------------------------------------------------------------
+
+/// Startet dieselbe Testdatei noch einmal, mit abgesenkter Deskriptorgrenze.
+///
+/// Der Umweg ueber `/bin/sh` ist der einzige ohne `setrlimit(2)`, und
+/// `setrlimit(2)` waere eine sechste Bindung in [`krk_core::verzeichnis::sys`]
+/// fuer etwas, das KRK selbst nicht braucht. `$0` ist die Testdatei, `$1` der
+/// Name der Kindprobe.
+///
+/// **`grenze` reist als Argument, weil die beiden Rufer verschiedene Zahlen
+/// brauchen.** Die Proben des Durchlaufs messen unter 64, der Zahl, unter der
+/// ein aus dem Finder gestartetes Buendel ungefaehr laeuft. Die Zaehlung des
+/// Umfangs braucht eine tiefere: ihr Deckel begrenzt die Zahl der geoeffneten
+/// Verzeichnisse ohnehin auf 26, und unter 64 liefe deshalb auch ein Abstieg
+/// durch, der einen Deskriptor je Ebene haelt. Die Probe wuerde dann nichts
+/// messen, und genau davor steht dieser Starter.
+///
+/// Der Aufrufer prueft im Kind zuerst, wie viele Deskriptoren es ueberhaupt
+/// bekommt, und behauptet die abgesenkte Grenze nicht: ohne diese Zusicherung
+/// bestuende jede Probe hier auch dann, wenn `ulimit` nicht gegriffen haette.
+pub fn kind_mit_deskriptorgrenze(
+    grenze: usize,
+    name: &str,
+    auftrag: &str,
+    wert: &Path,
+) -> std::process::Output {
+    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
+    std::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg(format!(
+            "ulimit -n {grenze} && exec \"$0\" --exact --ignored --nocapture --test-threads 1 \"$1\""
+        ))
+        .arg(&selbst)
+        .arg(name)
+        .env(auftrag, wert)
+        .output()
+        .expect("die Kindprobe laesst sich nicht starten")
 }

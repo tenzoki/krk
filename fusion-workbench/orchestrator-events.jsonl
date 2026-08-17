@@ -1080,3 +1080,6 @@
 {"ts":"2026-08-17T12:46:03","event":"coherence_review","turn":1,"verdict":"ok","artifact_grounding":"7 Datensaetze, 6 Codebefunde, keiner hoch","artifact_directive":"commits move toward the stated Directive","grounding_directive":"0 active decisions touched this Turn"}
 {"ts":"2026-08-17T12:46:03","event":"turn_end","turn":1,"commits":6,"tasks_done":5}
 {"ts":"2026-08-17T12:46:03","event":"turn_start","turn":2}
+{"ts":"2026-08-17T13:11:25","event":"commit","task":"T5b","hash":"17d3550","summary":"Umbenennung auf Loeschzielbefund"}
+{"ts":"2026-08-17T13:11:25","event":"task_done","task":"T5b","commit":"17d3550"}
+{"ts":"2026-08-17T13:11:25","event":"task_start","task":"T6","agent":"coder"}

@@ -21,7 +21,7 @@ use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
 
 /// Ein flacher Ordner mit `anzahl` Dateien, deren Namen fest zugeordnet sind.
 fn ordner_mit_dateien(zweck: &str, anzahl: usize) -> Pruefordner {
@@ -2419,7 +2419,8 @@ fn ein_deskriptormangel_beim_lesen_laesst_die_datei_unentschieden() {
     // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
     ordner.verknuepfung("verweis", &ziel);
 
-    let ergebnis = kind_mit_wenigen_deskriptoren(
+    let ergebnis = kind_mit_deskriptorgrenze(
+        DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts",
         AUFTRAG_INHALTSMANGEL,
         ordner.pfad(),
@@ -2586,6 +2587,15 @@ const KETTENTIEFE: usize = 200;
 /// und nicht behauptet.
 const DESKRIPTORSCHRANKE: usize = 100;
 
+/// Die Grenze, unter der die Kindproben dieser Datei laufen.
+///
+/// 64, weil `launchctl limit maxfiles` 256 als Voreinstellung fuehrt und ein aus
+/// dem Finder gestartetes Buendel ungefaehr in dieser Groessenordnung liegt. Die
+/// Zahl stand bis zum 260817 im Rumpf des Starters; seit der in
+/// `tests/gemeinsam/` steht und `tests/umfang.rs` eine tiefere braucht, reist sie
+/// als Argument.
+const DESKRIPTORGRENZE: usize = 64;
+
 /// C3.8 und C3.15 **unter der Deskriptorgrenze, die ein Buendel bekommt**.
 ///
 /// `der_durchlauf_kennt_keine_tiefengrenze` darueber legt zweihundert Ebenen an
@@ -2621,7 +2631,8 @@ fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
     fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
     fs::write(tief.join("gesuchtes-blatt.txt"), b"x").expect("Blatt");
 
-    let ergebnis = kind_mit_wenigen_deskriptoren(
+    let ergebnis = kind_mit_deskriptorgrenze(
+        DESKRIPTORGRENZE,
         "kind_entscheidet_die_tiefe_kette",
         AUFTRAG_DESKRIPTOREN,
         ordner.pfad(),
@@ -2634,24 +2645,6 @@ fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
         String::from_utf8_lossy(&ergebnis.stdout),
         String::from_utf8_lossy(&ergebnis.stderr)
     );
-}
-
-/// Startet dieselbe Testdatei noch einmal, mit abgesenkter Deskriptorgrenze.
-///
-/// Der Umweg ueber `/bin/sh` ist der einzige ohne `setrlimit(2)`, und
-/// `setrlimit(2)` waere eine sechste Bindung in [`krk_core::verzeichnis::sys`]
-/// fuer etwas, das KRK selbst nicht braucht. `$0` ist die Testdatei, `$1` der
-/// Name der Kindprobe.
-fn kind_mit_wenigen_deskriptoren(name: &str, auftrag: &str, wert: &Path) -> std::process::Output {
-    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
-    std::process::Command::new("/bin/sh")
-        .arg("-c")
-        .arg("ulimit -n 64 && exec \"$0\" --exact --ignored --nocapture --test-threads 1 \"$1\"")
-        .arg(&selbst)
-        .arg(name)
-        .env(auftrag, wert)
-        .output()
-        .expect("die Kindprobe laesst sich nicht starten")
 }
 
 #[test]
@@ -2738,7 +2731,8 @@ fn ein_deskriptormangel_von_aussen_laesst_die_ordner_unentschieden() {
     // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
     ordner.verknuepfung("verweis", ordner.unter("aussen"));
 
-    let ergebnis = kind_mit_wenigen_deskriptoren(
+    let ergebnis = kind_mit_deskriptorgrenze(
+        DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_nichts",
         AUFTRAG_MANGEL,
         ordner.pfad(),
