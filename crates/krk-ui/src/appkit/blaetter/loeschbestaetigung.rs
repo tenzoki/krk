@@ -52,6 +52,15 @@
 //! Formen richtig. Der Satz benennt deshalb allein die Taste, und er bleibt
 //! damit auch dann richtig, wenn mit Buendel D nur noch eine Form uebrig ist.
 //!
+//! **Auch eine Antwort, die zu keiner der beiden Schaltflaechen gehoert, raeumt
+//! nichts.** Dieses Blatt ist das eine im Baum, dessen **letzte** Schaltflaeche
+//! die ausfuehrende ist; solange die Huelle eine unbekannte Antwort auf die
+//! letzte Stelle abbildete, ergab sie hier den Loeschauftrag
+//! (`issues/260817-1106_*`). Die Huelle fragt seit dem 260817 die
+//! [`Wirkung`](super::Wirkung) der Schaltflaechen und nicht ihre Reihenfolge;
+//! [`schaltflaechen`] traegt sie, und die Probe darunter liest nach, dass die
+//! ungefaehrliche Stelle nicht die ausfuehrende ist.
+//!
 //! Der zweite Weg zum Abbruch, die Escape-Taste, laeuft nicht ueber eine
 //! Tastenentsprechung dieses Blattes, sondern ueber den Befehl `abbrechen` aus
 //! `resources/default-keymap.toml`: der Ereignisabgriff sieht die Taste vor dem
@@ -75,13 +84,34 @@
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
-use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
+
+/// Die Stelle der Schaltflaeche, die den Vorgang ausloest.
+///
+/// Sie steht als Konstante da, weil zwei Stellen sie brauchen: der Rueckruf,
+/// der aus der gedrueckten Stelle ein `bool` macht, und die Probe darunter, die
+/// nachliest, dass eine unbekannte Antwort **nicht** hier landet.
+const AUSFUEHRENDE_STELLE: usize = 1;
+
+/// Die beiden Schaltflaechen der Rueckfrage, in bindender Reihenfolge.
+///
+/// **Als reine Funktion herausgezogen**, damit die Reihenfolge ohne AppKit und
+/// ohne Hauptfaden pruefbar ist: [`Schaltflaeche`] traegt nur eine
+/// Beschriftung, eine Taste und eine [`Wirkung`]. Der Bauplan des Blattes ist
+/// die eine Angabe, an der die Zusage "eine unbekannte Antwort loescht nichts"
+/// haengt (`issues/260817-1106_*`).
+fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
+    [
+        Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
+        Schaltflaeche::neu(vorgang, Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+    ]
+}
 
 /// Zeigt die Rueckfrage und meldet, ob der Nutzer den Vorgang bestaetigt hat.
 ///
 /// `schaltflaeche` ist die Beschriftung der **zweiten** Schaltflaeche, also
 /// derjenigen, die den Vorgang ausloest; die erste bleibt "Abbrechen" und
-/// traegt die Eingabetaste. `laut` setzt das Warnzeichen des Systems und sonst
+/// traegt die Eingabetaste. Angelegt wird beides in [`schaltflaechen`]. `laut` setzt das Warnzeichen des Systems und sonst
 /// nichts: Text, Reihenfolge und Tasten sind in beiden Formen dieselben.
 ///
 /// `fertig` laeuft auf dem Hauptfaden und genau einmal. `false` heisst
@@ -95,19 +125,58 @@ pub fn zeigen(
     laut: bool,
     fertig: impl Fn(bool) + 'static,
 ) -> Blattgriff {
-    let blatt = Blatt::mit_schaltflaechen(
-        mtm,
-        frage,
-        &[
-            Schaltflaeche::neu("Abbrechen", Taste::Eingabe),
-            Schaltflaeche::neu(schaltflaeche, Taste::EingabeMitBefehl),
-        ],
-    );
+    let blatt = Blatt::mit_schaltflaechen(mtm, frage, &schaltflaechen(schaltflaeche));
     blatt.erlaeuterung_setzen(&format!(
         "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Bestätigen Cmd+Return."
     ));
     if laut {
         blatt.als_warnung();
     }
-    blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| fertig(stelle == 1))
+    blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| {
+        fertig(stelle == AUSFUEHRENDE_STELLE)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::appkit::blaetter::abbruchstelle;
+
+    use super::{AUSFUEHRENDE_STELLE, Wirkung, schaltflaechen};
+
+    /// Eine unbekannte Antwort von `NSAlert` raeumt nichts.
+    ///
+    /// Die Zusage, um derentwillen die Rueckfallstelle aus der [`Wirkung`]
+    /// kommt und nicht aus der Reihenfolge: dieses Blatt ist das eine im Baum,
+    /// dessen **letzte** Schaltflaeche die ausfuehrende ist. Solange die Regel
+    /// die letzte nahm, ergab eine unbekannte Antwort hier
+    /// `bestaetigt == true` und damit den Loeschauftrag
+    /// (`issues/260817-1106_*`).
+    #[test]
+    fn eine_unbekannte_antwort_stellt_keinen_auftrag() {
+        let schaltflaechen = schaltflaechen("In den Papierkorb");
+        let stelle = abbruchstelle(&schaltflaechen);
+        assert_ne!(
+            stelle, AUSFUEHRENDE_STELLE,
+            "eine unbekannte Antwort faellt auf die ausfuehrende Schaltflaeche"
+        );
+        assert_eq!(stelle, 0, "die abbrechende Schaltflaeche steht vorn");
+    }
+
+    /// Die ausfuehrende Stelle und der Bauplan sagen dasselbe.
+    ///
+    /// Ohne diese Probe koennte die Reihenfolge in [`schaltflaechen`] sich
+    /// drehen, ohne dass [`AUSFUEHRENDE_STELLE`] mitgeht; der Rueckruf machte
+    /// dann aus "Abbrechen" ein `true`.
+    #[test]
+    fn die_ausfuehrende_stelle_zeigt_auf_die_ausfuehrende_schaltflaeche() {
+        let schaltflaechen = schaltflaechen("Endgültig löschen");
+        assert_eq!(
+            schaltflaechen[AUSFUEHRENDE_STELLE].wirkung,
+            Wirkung::Ausfuehren
+        );
+        assert_eq!(
+            schaltflaechen[AUSFUEHRENDE_STELLE].titel,
+            "Endgültig löschen"
+        );
+    }
 }

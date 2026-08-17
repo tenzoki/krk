@@ -43,7 +43,7 @@ use std::path::Path;
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
-use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Was der Nutzer auf die Nachfrage geantwortet hat (C4).
 ///
@@ -87,9 +87,9 @@ pub fn zeigen(
         mtm,
         &format!("„{name}“ hat ungesicherte Änderungen"),
         &[
-            Schaltflaeche::neu("Sichern", Taste::Eingabe),
-            Schaltflaeche::neu("Verwerfen", Taste::EingabeMitBefehl),
-            Schaltflaeche::neu("Abbrechen", Taste::Escape),
+            Schaltflaeche::neu("Sichern", Taste::Eingabe, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Verwerfen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
         ],
     );
     blatt.erlaeuterung_setzen(&format!(
@@ -98,9 +98,10 @@ pub fn zeigen(
     ));
 
     blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| {
-        // Eine unbekannte Antwort gilt als die letzte Schaltflaeche, und die ist
-        // hier die abbrechende: lieber nichts tun als raten. Dieselbe Regel wie
-        // im Konfliktblatt.
+        // Der Auffangzweig faengt die abbrechende Stelle und nichts sonst: eine
+        // Antwort, die zu keiner Schaltflaeche gehoert, kommt hier als
+        // `Wirkung::Liegenlassen`-Stelle an, also als die 2. Welche das ist,
+        // entscheidet `blaetter::abbruchstelle` einmal fuer jedes Blatt.
         let antwort = match stelle {
             0 => Antwort::Sichern,
             1 => Antwort::Verwerfen,

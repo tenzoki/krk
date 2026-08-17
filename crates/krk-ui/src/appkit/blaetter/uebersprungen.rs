@@ -22,7 +22,7 @@
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
-use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Zeigt die Abschlussliste am Fenster.
 ///
@@ -38,7 +38,11 @@ pub fn zeigen(
     let blatt = Blatt::mit_schaltflaechen(
         mtm,
         frage,
-        &[Schaltflaeche::neu("Schließen", Taste::Eingabe)],
+        &[Schaltflaeche::neu(
+            "Schließen",
+            Taste::Eingabe,
+            Wirkung::Liegenlassen,
+        )],
     );
     blatt.erlaeuterung_setzen(liste);
     blatt.zeigen_mit_wahl(fenster, move |_stelle, _fuer_alle| fertig())

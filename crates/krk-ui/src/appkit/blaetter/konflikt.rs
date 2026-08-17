@@ -48,7 +48,7 @@ use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::operation::{Konfliktantwort, Konfliktentscheid};
 
-use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Breite des Namensfeldes in Punkten.
 const FELDBREITE: f64 = 420.0;
@@ -83,10 +83,14 @@ pub fn zeigen(
         mtm,
         &format!("„{name}“ gibt es am Ziel schon"),
         &[
-            Schaltflaeche::neu("Überschreiben", Taste::EingabeMitBefehl),
-            Schaltflaeche::neu("Überspringen", Taste::Eingabe),
-            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl),
-            Schaltflaeche::neu("Abbrechen", Taste::Escape),
+            Schaltflaeche::neu(
+                "Überschreiben",
+                Taste::EingabeMitBefehl,
+                Wirkung::Ausfuehren,
+            ),
+            Schaltflaeche::neu("Überspringen", Taste::Eingabe, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
         ],
     );
     blatt.erlaeuterung_setzen(&format!(

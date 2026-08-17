@@ -119,7 +119,7 @@ use objc2_foundation::{
 use krk_core::ablage::pfade::Zettel;
 
 use super::super::textautomatik;
-use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Breite der Beigabe in Punkten. Sie bestimmt zugleich die Breite des
 /// Blattes: `NSAlert` waechst mit seiner Beigabe.
@@ -408,7 +408,11 @@ pub fn zeigen(
     let blatt = Blatt::mit_schaltflaechen(
         mtm,
         "Notizzettel",
-        &[Schaltflaeche::neu("Fertig", Taste::Escape)],
+        &[Schaltflaeche::neu(
+            "Fertig",
+            Taste::Escape,
+            Wirkung::Liegenlassen,
+        )],
     );
     // Der Satz nennt die Taste und die Zusage aus C4 und zaehlt die vier
     // Sicherungsmomente **nicht** auf: welcher Weg heraus wann schreibt, ist

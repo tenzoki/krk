@@ -131,7 +131,7 @@ use krk_core::tasten::{Tastendruck, code_von_pflicht};
 
 use crate::belegungsmodell::{Belegungsmodell, Suchlage, Zuweisung};
 
-use super::blaetter::{Blatt, Blattgriff, Schaltflaeche, Taste};
+use super::blaetter::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Hoehe einer Zeile in Punkten, wie in der Dateiliste und der Leiste.
 const ZEILENHOEHE: f64 = 20.0;
@@ -750,6 +750,9 @@ pub fn zeigen(
         &[Schaltflaeche::neu(
             SCHALTFLAECHEN[FERTIG].titel,
             Taste::EingabeMitBefehl,
+            // "Fertig" schliesst die Ansicht und richtet nichts an: jede
+            // Zuweisung ist beim Druecken schon geschrieben.
+            Wirkung::Liegenlassen,
         )],
     );
     blatt.erlaeuterung_setzen(&erlaeuterung());

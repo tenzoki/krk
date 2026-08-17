@@ -58,6 +58,29 @@
 //! Schaltflaeche entgegen und loescht die Vorgabe von `NSAlert`, wo sie nicht
 //! gemeint ist.
 //!
+//! # Welche Schaltflaeche die ungefaehrliche ist, steht genau einmal
+//!
+//! Drei Stellen dieser Datei brauchen die Antwort: der Abschlussblock, wenn
+//! `NSAlert` einen Rueckgabewert liefert, der zu keiner angelegten
+//! Schaltflaeche gehoert, [`Blattgriff::abbrechen`], das ein stehendes Blatt
+//! von aussen schliesst, und der [`Eingabewaechter`], wenn die Escape-Taste im
+//! Textfeld faellt. Sie steht als [`abbruchstelle`] einmal da, ist eine reine
+//! Funktion ueber die angelegte Reihenfolge und ohne AppKit pruefbar.
+//!
+//! **Bis zum 260817 stand sie zweimal und widersprach sich.** Der
+//! Abschlussblock nahm die **letzte** Schaltflaeche, der Griff die **erste**.
+//! In der Rueckfrage vor dem Loeschen ist die letzte die loeschende, also fiel
+//! eine unbekannte Antwort dort auf den zerstoerenden Ausgang
+//! (`issues/260817-1106_*_eine-unbekannte-blattantwort-faellt-im-loeschblatt-auf-die-zerstoerende-schaltflaeche.md`).
+//!
+//! **Abgeleitet wird sie nicht aus der Escape-Taste, sondern aus der
+//! [`Wirkung`], die jede Schaltflaeche ausdruecklich mitbringt.** Die
+//! Rueckfrage vor dem Loeschen traegt gar keine Schaltflaeche mit
+//! [`Taste::Escape`], denn ihr Abbruch laeuft ueber den Befehl `abbrechen` aus
+//! `resources/default-keymap.toml`; aus einer Taste, die es nicht gibt, ist
+//! nichts abzuleiten. Die [`Wirkung`] hat keine Vorgabe, also kann kein
+//! kuenftiges Blatt sie stillschweigend auslassen.
+//!
 //! # Ein Blatt ist mit der Tastatur bedienbar, und das kostet zwei Vorkehrungen
 //!
 //! Die erste ist der **Fokusvorbehalt** im Ereignisabgriff. Solange das Blatt
@@ -106,10 +129,12 @@
 //! beiden, und seine Untergrenze ist deren.
 //!
 //! `NSModalResponse` ist ein `typedef` auf `NSInteger` ohne
-//! Verfuegbarkeitsangabe; `NSAlertFirstButtonReturn`,
-//! `NSAlertSecondButtonReturn` und `NSControlStateValueOff` sind
-//! Uebersetzungszeitkonstanten ohne eigenes Laufzeitsymbol. Keiner der vier
-//! stellt die Frage ueberhaupt.
+//! Verfuegbarkeitsangabe; `NSAlertFirstButtonReturn` und
+//! `NSControlStateValueOff` sind Uebersetzungszeitkonstanten ohne eigenes
+//! Laufzeitsymbol. Keiner der drei stellt die Frage ueberhaupt.
+//! `NSAlertSecondButtonReturn` stand hier bis zum 260817 als vierter; die eine
+//! Stelle, die ihn nannte, rechnet ihre Antwort seither aus
+//! [`abbruchstelle`].
 //!
 //! Das Buendel zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach
 //! macOS 15 hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb
@@ -135,9 +160,9 @@ use objc2::rc::Retained;
 use objc2::runtime::{ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle, NSButton,
-    NSControl, NSControlStateValueOff, NSControlTextEditingDelegate, NSEventModifierFlags,
-    NSModalResponse, NSTextField, NSTextFieldDelegate, NSTextView, NSView, NSWindow,
+    NSAlert, NSAlertFirstButtonReturn, NSAlertStyle, NSButton, NSControl, NSControlStateValueOff,
+    NSControlTextEditingDelegate, NSEventModifierFlags, NSModalResponse, NSTextField,
+    NSTextFieldDelegate, NSTextView, NSView, NSWindow,
 };
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol, NSString, ns_string};
 
@@ -310,6 +335,29 @@ impl Taste {
     }
 }
 
+/// Was das Druecken einer Schaltflaeche anrichtet.
+///
+/// **Das Feld hat keine Vorgabe, und das ist der Zweck der Aufzaehlung.** Jedes
+/// Blatt sagt fuer jede seiner Schaltflaechen, ob sie etwas anrichtet; genau
+/// daraus liest [`abbruchstelle`] die ungefaehrliche Stelle. Eine Vorgabe hier
+/// waere eine Sicherung, die man beim naechsten Blatt vergessen kann, ohne dass
+/// es auffaellt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wirkung {
+    /// Sie fuehrt den Vorgang aus, um den das Blatt fragt: loeschen,
+    /// ueberschreiben, umbenennen, sichern, verwerfen.
+    Ausfuehren,
+    /// Sie laesst den Vorgang liegen, um den das Blatt fragt.
+    ///
+    /// Der Abbruch. Ebenso der einzige Ausgang eines Blattes, das nach keinem
+    /// Vorgang fragt: die Abschlussliste der uebersprungenen Eintraege
+    /// ("Schliessen"), die Tastaturbelegung und der Notizzettel (beide
+    /// "Fertig"). Dort steht keine ausfuehrende Schaltflaeche daneben, aus der
+    /// eine verlorene Antwort waehlen koennte, und das Schliessen ist der
+    /// ungefaehrliche Ausgang, weil es derselbe ist, den die Escape-Taste nimmt.
+    Liegenlassen,
+}
+
 /// Eine Schaltflaeche eines Blattes.
 #[derive(Debug, Clone, Copy)]
 pub struct Schaltflaeche<'a> {
@@ -317,13 +365,54 @@ pub struct Schaltflaeche<'a> {
     pub titel: &'a str,
     /// Die Taste, die sie ausloest.
     pub taste: Taste,
+    /// Was ihr Druecken anrichtet.
+    pub wirkung: Wirkung,
 }
 
 impl<'a> Schaltflaeche<'a> {
-    /// Eine Schaltflaeche mit dieser Beschriftung und dieser Taste.
-    pub fn neu(titel: &'a str, taste: Taste) -> Self {
-        Self { titel, taste }
+    /// Eine Schaltflaeche mit dieser Beschriftung, dieser Taste und dieser
+    /// Wirkung.
+    pub fn neu(titel: &'a str, taste: Taste, wirkung: Wirkung) -> Self {
+        Self {
+            titel,
+            taste,
+            wirkung,
+        }
     }
+}
+
+/// Die Stelle, auf die eine Antwort faellt, die zu keiner Schaltflaeche gehoert.
+///
+/// Die eine Antwort auf die Frage "welche Schaltflaeche ist die ungefaehrliche"
+/// (Modulkopf), als reine Funktion ueber die angelegte Reihenfolge.
+/// [`Blatt::mit_schaltflaechen`] ruft sie einmal je Blatt und legt das Ergebnis
+/// ab; die drei Stellen, die es lesen, stehen im Modulkopf.
+///
+/// # Die Tafel
+///
+/// | Die Schaltflaechen des Blattes | Ergebnis |
+/// |---|---|
+/// | die erste mit [`Wirkung::Liegenlassen`] steht an Stelle `s` | `s` |
+/// | keine traegt [`Wirkung::Liegenlassen`] | `0` |
+/// | keine Schaltflaeche | `0` |
+///
+/// **Die zweite Zeile ist ein Blatt, das es nicht geben soll**, und
+/// [`Blatt::mit_schaltflaechen`] laesst es im Probenbau auffliegen. Ein Blatt,
+/// dessen Schaltflaechen alle etwas ausfuehren, hat keinen ungefaehrlichen
+/// Ausgang; die Regel nimmt dann die erste Stelle, weil sie die einzige ist,
+/// die jedes Blatt hat. Etwas Ungefaehrliches trifft sie dabei nicht, denn es
+/// gibt nichts Ungefaehrliches zu treffen.
+///
+/// Die dritte Zeile kommt nicht vor: ein `NSAlert` ohne zugefuegte
+/// Schaltflaeche legt selbst eine an, und deren Antwort ist
+/// `NSAlertFirstButtonReturn`, also Stelle 0. Sie steht in der Tafel, weil eine
+/// Tafel mit einer Luecke keine ist.
+#[must_use]
+pub fn abbruchstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
+    schaltflaechen
+        .iter()
+        .position(|schaltflaeche| schaltflaeche.wirkung == Wirkung::Liegenlassen)
+        .unwrap_or(0)
 }
 
 /// Ein stehendes Blatt, das der Aufrufer wieder schliessen kann.
@@ -337,6 +426,9 @@ pub struct Blattgriff {
     warnung: Retained<NSAlert>,
     fenster: Retained<NSWindow>,
     /// Der Rueckgabewert, den [`Blattgriff::abbrechen`] einsetzt.
+    ///
+    /// Er gehoert der Schaltflaeche an [`abbruchstelle`]; die Frage nach der
+    /// ungefaehrlichen Stelle ist in dieser Datei einmal beantwortet.
     abbruchcode: NSModalResponse,
 }
 
@@ -379,8 +471,11 @@ pub struct Blatt {
     /// Die Rueckgabewerte der Schaltflaechen, in der Reihenfolge, in der sie
     /// angelegt wurden.
     antworten: Vec<NSModalResponse>,
-    /// Die Stelle der abbrechenden Schaltflaeche, falls es eine gibt.
-    abbruchstelle: Option<usize>,
+    /// Die Stelle der Schaltflaeche, die alles liegen laesst.
+    ///
+    /// Aus [`abbruchstelle`] und damit aus der [`Wirkung`] der Schaltflaechen,
+    /// nicht aus ihrer Taste.
+    abbruchstelle: usize,
     /// Der Delegierte des Eingabefeldes, falls es eines gibt.
     ///
     /// Ein `NSControl` haelt seinen Delegierten schwach; die starke Richtung
@@ -395,14 +490,18 @@ impl Blatt {
     /// Die Reihenfolge ist bindend: die **erste** Schaltflaeche bestaetigt und
     /// traegt die Eingabetaste, die zweite bricht ab und traegt die
     /// Escape-Taste. Beides ist die Mac-Gewohnheit, und C2 verlangt sie
-    /// ausdruecklich fuer jedes Textfeld.
+    /// ausdruecklich fuer jedes Textfeld. Auf dieser Reihenfolge ruht der
+    /// [`Eingabewaechter`]: er uebersetzt die Eingabetaste des Feldes in die
+    /// **erste** Schaltflaeche, und jedes bewachte Blatt kommt von hier. Ein
+    /// Feld allein reicht dafuer nicht — das Konfliktblatt traegt eines ohne
+    /// Waechter —, ein Aufruf von [`Blatt::waechter_anhaengen`] tut es.
     pub fn neu(mtm: MainThreadMarker, frage: &str, bestaetigen: &str) -> Self {
         Self::mit_schaltflaechen(
             mtm,
             frage,
             &[
-                Schaltflaeche::neu(bestaetigen, Taste::Eingabe),
-                Schaltflaeche::neu("Abbrechen", Taste::Escape),
+                Schaltflaeche::neu(bestaetigen, Taste::Eingabe, Wirkung::Ausfuehren),
+                Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
             ],
         )
     }
@@ -412,17 +511,28 @@ impl Blatt {
     /// Die erste Schaltflaeche steht rechts und ist die hervorgehobene; welche
     /// die Eingabetaste traegt, entscheidet allein das Feld
     /// [`Schaltflaeche::taste`]. Genau deshalb kann die Rueckfrage vor dem
-    /// endgueltigen Loeschen "Abbrechen" vorbelegen, ohne die Reihenfolge zu
-    /// verdrehen, die C4 aufzaehlt.
+    /// Loeschen "Abbrechen" vorbelegen, ohne die Reihenfolge zu verdrehen, die
+    /// C4 aufzaehlt. Welche Schaltflaeche nichts anrichtet, entscheidet ebenso
+    /// allein das Feld [`Schaltflaeche::wirkung`]; siehe [`abbruchstelle`].
+    ///
+    /// **Mindestens eine Schaltflaeche traegt [`Wirkung::Liegenlassen`].** Ein
+    /// Blatt ohne ungefaehrlichen Ausgang kann eine unbekannte Antwort nicht
+    /// sicher beantworten; im Probenbau fliegt es hier auf, statt still auf
+    /// eine ausfuehrende Schaltflaeche zu fallen.
     pub fn mit_schaltflaechen(
         mtm: MainThreadMarker,
         frage: &str,
         schaltflaechen: &[Schaltflaeche<'_>],
     ) -> Self {
+        debug_assert!(
+            schaltflaechen
+                .iter()
+                .any(|schaltflaeche| schaltflaeche.wirkung == Wirkung::Liegenlassen),
+            "das Blatt \"{frage}\" traegt keine Schaltflaeche, die alles liegen laesst"
+        );
         let warnung = NSAlert::new(mtm);
         warnung.setMessageText(&NSString::from_str(frage));
         let mut antworten = Vec::with_capacity(schaltflaechen.len());
-        let mut abbruchstelle = None;
         for (stelle, schaltflaeche) in schaltflaechen.iter().enumerate() {
             let knopf = warnung.addButtonWithTitle(&NSString::from_str(schaltflaeche.titel));
             // Jede Schaltflaeche bekommt ihre Taste ausdruecklich gesetzt und
@@ -432,14 +542,11 @@ impl Blatt {
             knopf.setKeyEquivalent(schaltflaeche.taste.zeichen());
             knopf.setKeyEquivalentModifierMask(schaltflaeche.taste.zusatztasten());
             antworten.push(antwort_von_stelle(stelle));
-            if schaltflaeche.taste == Taste::Escape {
-                abbruchstelle = Some(stelle);
-            }
         }
         Self {
             warnung,
             antworten,
-            abbruchstelle,
+            abbruchstelle: abbruchstelle(schaltflaechen),
             waechter: None,
         }
     }
@@ -564,15 +671,17 @@ impl Blatt {
         let warnung = self.warnung.clone();
         let waechter = self.waechter.clone();
         let antworten = self.antworten.clone();
+        let rueckfall = self.abbruchstelle;
         let block = RcBlock::new(move |antwort: NSModalResponse| {
             let _haelt = &waechter;
-            // Eine unbekannte Antwort gilt als die letzte Schaltflaeche, und
-            // die ist in jedem Blatt dieser Runde die abbrechende. Lieber
-            // nichts tun als raten.
+            // Eine Antwort, die zu keiner angelegten Schaltflaeche gehoert,
+            // gilt als die, die alles liegen laesst. Lieber nichts tun als
+            // raten, und welche das ist, sagt `abbruchstelle` und nicht die
+            // Reihenfolge.
             let stelle = antworten
                 .iter()
                 .position(|kandidat| *kandidat == antwort)
-                .unwrap_or(antworten.len().saturating_sub(1));
+                .unwrap_or(rueckfall);
             let fuer_alle = warnung
                 .suppressionButton()
                 .is_some_and(|kaestchen| kaestchen.state() != NSControlStateValueOff);
@@ -583,22 +692,25 @@ impl Blatt {
 
         // Der Waechter kann das Blatt erst jetzt beenden: das Fenster, an dem
         // es haengt, steht erst mit diesem Aufruf fest.
+        let abbruchcode = antwort_von_stelle(self.abbruchstelle);
         if let Some(waechter) = &self.waechter {
             let blattfenster = self.warnung.window();
             let elternfenster = fenster.retain();
             waechter.antwort_setzen(Box::new(move |bestaetigt| {
+                // Bestaetigt heisst die erste Schaltflaeche: einen Waechter
+                // haelt nur ein Blatt aus `Blatt::neu`, dessen Reihenfolge die
+                // erste als die bestaetigende festlegt. Abgebrochen heisst
+                // dieselbe Stelle, die auch der Griff einsetzt; die Frage nach
+                // der ungefaehrlichen Schaltflaeche ist einmal beantwortet.
                 let antwort = if bestaetigt {
                     NSAlertFirstButtonReturn
                 } else {
-                    NSAlertSecondButtonReturn
+                    abbruchcode
                 };
                 elternfenster.endSheet_returnCode(&blattfenster, antwort);
             }));
         }
 
-        let abbruchcode = self
-            .abbruchstelle
-            .map_or(NSAlertFirstButtonReturn, antwort_von_stelle);
         Blattgriff {
             warnung: self.warnung,
             fenster: fenster.retain(),
@@ -615,4 +727,107 @@ impl Blatt {
 /// rechnet.
 fn antwort_von_stelle(stelle: usize) -> NSModalResponse {
     NSAlertFirstButtonReturn + stelle as NSModalResponse
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    use super::*;
+
+    /// Die Tafel von [`abbruchstelle`], Zeile fuer Zeile.
+    ///
+    /// Ohne AppKit und ohne Hauptfaden: [`Schaltflaeche`] traegt nur eine
+    /// Beschriftung, eine Taste und eine Wirkung, und die Regel darueber rechnet
+    /// mit nichts sonst. Genau dafuer ist sie von der Rueckrechnung getrennt.
+    #[test]
+    fn die_tafel_der_liegenlassenden_stelle() {
+        let fuehrt_aus = Schaltflaeche::neu("Los", Taste::Eingabe, Wirkung::Ausfuehren);
+        let laesst_liegen = Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen);
+
+        assert_eq!(
+            abbruchstelle(&[laesst_liegen, fuehrt_aus]),
+            0,
+            "die liegenlassende Schaltflaeche steht vorn und wird nicht gefunden"
+        );
+        assert_eq!(
+            abbruchstelle(&[fuehrt_aus, laesst_liegen]),
+            1,
+            "die liegenlassende Schaltflaeche steht hinten und wird nicht gefunden"
+        );
+        assert_eq!(
+            abbruchstelle(&[fuehrt_aus, fuehrt_aus, laesst_liegen]),
+            2,
+            "die liegenlassende Schaltflaeche steht an dritter Stelle und wird nicht gefunden"
+        );
+        assert_eq!(
+            abbruchstelle(&[fuehrt_aus, laesst_liegen, laesst_liegen]),
+            1,
+            "bei zwei liegenlassenden zaehlt die erste"
+        );
+        assert_eq!(
+            abbruchstelle(&[fuehrt_aus, fuehrt_aus]),
+            0,
+            "ein Blatt ohne liegenlassende Schaltflaeche faellt auf die erste Stelle"
+        );
+        assert_eq!(abbruchstelle(&[]), 0, "ein Blatt ohne Schaltflaeche");
+    }
+
+    /// Die Escape-Taste entscheidet die Rueckfallstelle nicht mehr.
+    ///
+    /// Die Reihenfolge der Rueckfrage vor dem Loeschen: eine liegenlassende
+    /// Schaltflaeche auf der **Eingabetaste** vorn, die ausfuehrende hinten,
+    /// keine Escape-Taste im Blatt. Solange die Regel an der Taste hing, fiel
+    /// eine unbekannte Antwort hier auf die ausfuehrende Stelle.
+    #[test]
+    fn ohne_escape_taste_faellt_die_antwort_trotzdem_auf_die_liegenlassende() {
+        let schaltflaechen = [
+            Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
+            Schaltflaeche::neu("Räumen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+        ];
+        assert!(
+            schaltflaechen
+                .iter()
+                .all(|schaltflaeche| schaltflaeche.taste != Taste::Escape),
+            "die Probe prueft nicht, was sie pruefen soll: hier traegt eine Schaltflaeche Escape"
+        );
+        assert_eq!(abbruchstelle(&schaltflaechen), 0);
+    }
+
+    /// Jedes Blatt im Baum nennt eine Schaltflaeche, die alles liegen laesst.
+    ///
+    /// **Gezaehlt wird im Quelltext**, weil die Zusage eine Aussage ueber den
+    /// Baum ist: dass es kein Blatt gibt, dessen Schaltflaechen alle etwas
+    /// ausfuehren. Am Rueckgabewert einer Funktion ist das nicht abzulesen, und
+    /// ein Blatt bauen kann `libtest` nicht — `krk-ui` hat kein
+    /// Bibliotheksziel, und `NSAlert` braucht den Hauptfaden.
+    ///
+    /// **Wo die Zaehlung blind ist:** sie prueft je Datei und nicht je
+    /// Blatt. Eine Datei mit zwei Blaettern, von denen nur eines seine
+    /// liegenlassende Schaltflaeche nennt, kaeme durch. Heute traegt jede Datei
+    /// genau ein Blatt; der `debug_assert!` in [`Blatt::mit_schaltflaechen`]
+    /// deckt den Rest ab, sobald das Blatt im Probenbau wirklich aufgeht.
+    ///
+    /// Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum, den
+    /// sie liest.
+    #[test]
+    fn jedes_blatt_nennt_seine_liegenlassende_schaltflaeche() {
+        let bauer = concat!("mit_schalt", "flaechen");
+        let marke = concat!("Wirkung::Liegen", "lassen");
+        let mut geprueft = 0;
+        for (pfad, inhalt) in quelldateien() {
+            if aufrufstellen(&inhalt, bauer) == 0 {
+                continue;
+            }
+            geprueft += 1;
+            assert!(
+                inhalt.contains(marke),
+                "{pfad} baut ein Blatt, nennt aber keine Schaltflaeche, die alles liegen laesst"
+            );
+        }
+        assert!(
+            geprueft >= 6,
+            "die Probe hat nur {geprueft} Blatt-Bauer gefunden; der Baum traegt mindestens sechs"
+        );
+    }
 }

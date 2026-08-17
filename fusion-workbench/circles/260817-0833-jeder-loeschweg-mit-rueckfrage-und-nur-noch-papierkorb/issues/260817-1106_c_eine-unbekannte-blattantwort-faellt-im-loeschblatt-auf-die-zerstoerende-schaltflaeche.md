@@ -62,3 +62,27 @@ Die Entscheidung gehört nach `blaetter/mod.rs` und trifft alle sechs Blätter.
 
 ---
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Der Rückfall auf die letzte Schaltfläche steht unverändert in `crates/krk-ui/src/appkit/blaetter/mod.rs:572-575` (`.unwrap_or(antworten.len().saturating_sub(1))`), und `loeschbestaetigung.rs:98-105` setzt die zerstörende Schaltfläche weiter an die zweite und damit letzte Stelle. Nichts daran ist seit `472eb81` angefasst worden.
+
+---
+Resolved 260817-1240 (coder, T1): Die Vorbelegung nimmt die abbrechende Stelle, und die beiden
+widersprechenden Vorbelegungen in `blaetter/mod.rs` sind eine geworden. `Schaltflaeche` trägt
+eine `Wirkung` als drittes Pflichtfeld (`Ausfuehren` oder `Liegenlassen`); die reine Funktion
+`blaetter::abbruchstelle` liest daraus die ungefährliche Stelle, mit ausgeschriebener Tafel und
+`#[must_use]`. Die Ableitung über `Taste::Escape` ist gefallen — die Löschrückfrage trägt keine
+solche Schaltfläche. Drei Stellen lesen jetzt die eine Antwort: der Auffangzweig im
+Abschlussblock (vorher die letzte Schaltfläche), der `abbruchcode` des `Blattgriff` (vorher
+`NSAlertFirstButtonReturn`) und der `Eingabewaechter` auf dem Escape-Weg (vorher fest
+`NSAlertSecondButtonReturn`). Alle sechs Blätter samt `Blatt::neu` sind nachgezogen und
+einzeln nachgezählt; der `abbruchcode` ändert sich an keinem, der Auffangzweig allein im
+Löschblatt, von der löschenden Stelle 1 auf die abbrechende Stelle 0.
+
+Fünf neue Proben, alle ohne AppKit: die Tafel Zeile für Zeile, der Fall ohne Escape-Taste, eine
+Zählprobe über den Quellbaum („jedes Blatt nennt seine liegenlassende Schaltfläche"), und im
+Löschblatt das Abnahmekriterium selbst — eine unbekannte Antwort ergibt nicht die bestätigende
+Stelle. Dazu ein `debug_assert!` in `mit_schaltflaechen`: ein Blatt ohne ungefährlichen Ausgang
+fliegt im Probenbau auf. `make check` — exit 0.
+
+Angefasst: `crates/krk-ui/src/appkit/blaetter/mod.rs`, `blaetter/loeschbestaetigung.rs`,
+`blaetter/konflikt.rs`, `blaetter/ungesichert.rs`, `blaetter/uebersprungen.rs`,
+`blaetter/zettel.rs`, `appkit/belegungsansicht.rs`. Log:
+`history/260817-1240-coder-t1-rueckfallstelle-des-blattes.md`.
