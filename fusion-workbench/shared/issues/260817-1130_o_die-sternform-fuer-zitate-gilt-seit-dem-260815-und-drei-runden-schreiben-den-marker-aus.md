@@ -61,3 +61,15 @@ reicht über drei Runden und geht keine ihrer Directives an, deshalb im gemeinsa
 
 **Gefunden von:** reconciler, Abgleich 260817-1129
 **Domain:** code
+
+---
+Also seen: 260818-0024 by coderev — der Schritt 17 der laufenden Runde (`da716c1`) hat elf weitere
+ausgeschriebene Marker in zwei Datensätze der Runde 1 eingetragen, sechs davon reine Zeiger und
+damit unter der Regel: `_b_circle.md:18`, `:66`, `:93` und
+`planning/260802-1036_c_spec-navigator-geruest.md:12`, `:278`, `:281`, jeweils
+`260817-0536_i_wie-wird-jeder-loeschweg-abgesichert-…` in Sätzen der Form „Bindend ist …" und
+„An seine Stelle tritt …". Die übrigen fünf nennen `260802-0842_s_loeschen-papierkorb-oder-endgueltig`
+in der Form „steht als überholt (…)", wo der Marker die Aussage selbst ist; sie fallen unter die
+ausdrückliche Ausnahme. Die Commit-Nachricht von `24bbccc` begründet die Schreibweise eigens,
+wägt dabei aber `_i_` gegen `_a_` ab und nicht gegen die Sternform — die Entscheidung vom
+260815-1230 war dem Bearbeiter nicht gegenwärtig. Das ist die vierte Runde nach `e49412a`.
