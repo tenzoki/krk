@@ -1,6 +1,6 @@
 //! Verzeichnisleser und Ordnermodell.
 //!
-//! Zehn Module, in der Reihenfolge, in der die Daten sie durchlaufen:
+//! Elf Module, in der Reihenfolge, in der die Daten sie durchlaufen:
 //!
 //! ```text
 //! sys ──> leser ──> eintrag ──> modell <── sortierung
@@ -12,7 +12,8 @@
 //!         │                       │
 //!         └──── inhalt <──────────┘
 //!
-//! verweisziel   (steht allein, an keinem der neun)
+//! verweisziel   (steht allein, an keinem der anderen)
+//! befund        (ein Typ und kein Schritt, an keinem der anderen)
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
@@ -61,7 +62,7 @@
 //! [`modell`], und die einzige, die von aussen kommt.
 //!
 //! [`verweisziel`] steht wie [`filter`] neben der Kette und nicht in ihr, und
-//! haengt als einziges Modul an gar keinem anderen: es beantwortet die eine
+//! haengt als einziges lesendes Modul an gar keinem anderen: es beantwortet die eine
 //! Frage, die der Leser bewusst offenlaesst, naemlich worauf eine Verknuepfung
 //! zeigt. Gefragt wird sie am Namen ueber `std::fs::metadata`, und erst dann,
 //! wenn jemand in eine Verknuepfung einsteigen will; der Lesevorgang bekommt
@@ -70,10 +71,22 @@
 //! und hing dafuer an [`sys`]; warum das die falsche Frage war, steht in
 //! seinem eigenen Modulkopf.
 //!
+//! [`befund`] ist das einzige Modul hier, das **nichts liest**: kein
+//! Systemaufruf, kein Deskriptor, kein Pfad. Es traegt die dreiwertige Antwort
+//! [`Befund`] und die eine Verknuepfung darauf, und es steht in diesem
+//! Verzeichnis, weil die Fragen, die es beantwortet, am Dateisystem entschieden
+//! werden und nicht am Fenster. Die dritte Antwort `Unentschieden` ist die
+//! Verallgemeinerung dessen, was [`sys::ist_deskriptormangel`] seit der Runde 10
+//! am [`durchlauf`] leistet: ein Mangel von aussen laesst einen Auftrag
+//! unentschieden, statt ihn negativ zu entscheiden. Warum die Loeschrunde diese
+//! Unterscheidung braucht und warum sie nicht auf einen Wahrheitswert
+//! zusammenfaellt, steht in seinem eigenen Modulkopf.
+//!
 //! Der Kern kennt AppKit nicht; alles hier ist ohne Fenster testbar.
 
 use std::path::{Path, PathBuf};
 
+pub mod befund;
 pub mod durchlauf;
 pub mod eintrag;
 pub mod filter;
@@ -85,6 +98,7 @@ pub mod sortierung;
 pub mod sys;
 pub mod verweisziel;
 
+pub use befund::Befund;
 pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};

@@ -170,13 +170,13 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 
 ### Bündel B — Kein Löschen ohne Papierkorb
 
-4. **Der dreiwertige Befund**
+4. [DONE] **Der dreiwertige Befund**
    - Executor: `coder`
    - Files: `crates/krk-core/src/verzeichnis/befund.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`
    - Changes: `pub enum Befund { Ja, Nein, Unentschieden }` mit `ist_warnwuerdig()` („nicht `Nein`") und einer dreiwertigen Oder-Verknüpfung `oder(self, andere) -> Befund` samt ausgeschriebener Tafel über alle neun Kombinationen. Der Modulkopf erklärt, warum die dritte Antwort nötig ist, und verweist auf `sys::ist_deskriptormangel` als den Fall, in dem der Baum die Unterscheidung schon einmal gebraucht hat. Re-Export als `krk_core::verzeichnis::Befund`.
    - Dependencies: keine
 
-5. **Die Frage nach dem Papierkorb**
+5. [IN PROGRESS] **Die Frage nach dem Papierkorb**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/papierkorb.rs`
    - Changes: `#[must_use] pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund` über `NSFileManager::defaultManager().URLForDirectory_inDomain_appropriateForURL_create_error(NSSearchPathDirectory::TrashDirectory, NSSearchPathDomainMask::UserDomainMask, Some(&url), false)`. Erfolg heißt `Ja`, ein Fehler heißt `Nein`, ein Pfad ohne gültiges UTF-8 heißt `Unentschieden`. `#[must_use]` mit ausgeschriebenem Grund: wer den Wert fallen lässt, löscht auf einem Ziel ohne Papierkorb. Der Modulkopf wird auf den erweiterten Gegenstand gezogen (die eine Hülle um den Papierkorb des Systems, Räumen **und** Vorprüfung) und sein Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` bekommt die drei neuen Berührungen mit ihren geprüften Zahlen: `URLForDirectory:…` seit 10.6, `NSTrashDirectory` seit 10.8, `NSUserDomainMask` ohne Angabe und damit seit 10.0.
