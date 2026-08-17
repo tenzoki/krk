@@ -77,3 +77,32 @@ Hinweis (260817, Aufgabe T5b): Im Ausschnitt oben heißt der Typ inzwischen `Loe
 statt `Befund`; die Umbenennung stammt aus
 `260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`
 und ändert am Befund nichts.
+
+---
+Resolved: 260817-1806 (coder, Aufgabe T10, Schritt 11 des Plans). Genommen ist die **erste** der
+beiden Formen aus **Richtung**: `vor_der_rueckfrage` bekommt statt eines `Loeschzielbefund` ein
+`impl FnOnce() -> Loeschzielbefund` und ruft es allein im Feld `(false, false)` seiner Tafel.
+Die Aufruferzählung bleibt damit auf eins festgeschrieben, und die Regel ist ohne Fenster
+prüfbar wie zuvor.
+
+**Die Reihenfolge der Stufen ist unverändert**, und das war die Bedingung. Sie steht weiter in
+der Tafel und nirgends sonst; verschoben hat sich allein, **wann** die teure Tatsache anfällt,
+und das entscheidet jetzt die Regel selbst statt ihres Aufrufers. Die beiden ersten Zeilen der
+Tafel tragen in der Spalte des Papierkorbbefunds jetzt „ungefragt" statt „gleichgültig" — am
+Ausgang ändert das nichts, am Preis alles.
+
+**Gemessen und nicht behauptet:** die Probe
+`die_teure_tatsache_bleibt_in_den_ersten_zwei_stufen_ungefragt` zählt die Aufrufe des Abschlusses
+über eine `Cell` und erwartet null in den drei Kombinationen, in denen eine billige Stufe schon
+anhält, und genau eins im vierten Feld. Die letzte Zeile ist die Gegenprobe: ohne sie wäre eine
+Regel, die den Papierkorbtest **nie** ruft, grün und die dritte Stufe stillgelegt.
+
+**Mitgenommen ist mehr als der Befund verlangt.** Auch die fünf Tatsachen der Auslösertafel
+fallen erst im vierten Zweig an, und die teuerste davon ist `umfang::zaehlen` mit bis zu 26
+geöffneten Verzeichnissen. Ein Löschbefehl, den ein laufender Vorgang oder eine leere Auswahl
+anhält, greift damit gar nicht mehr auf das Dateisystem. Für `f8` (endgültiges Löschen, bis
+Bündel D) fallen sie überhaupt nicht an, weil seine Texte aus `operationen::loeschfrage` kommen
+und keinen Warngrund tragen.
+
+Verifikation: `make check` — exit 0. Die Abrechnung im Einzelnen steht in
+`history/260817-1806-coder-t10-die-laute-warnform.md`.

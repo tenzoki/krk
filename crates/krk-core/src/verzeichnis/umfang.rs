@@ -135,12 +135,16 @@
 //!
 //! # Wer sie ruft
 //!
-//! Zum Zeitpunkt dieses Schrittes niemand: der Aufrufer entsteht in derselben
-//! Runde, in `krk-ui`, wenn der Anwendungsdelegierte die Tatsachen fuer die
-//! Auslesertafel beschafft. `dead_code` trifft das Modul trotzdem nicht, denn
-//! `krk-core` ist eine Bibliothek und alles hier ist von ihrer Wurzel aus
-//! erreichbar; eine Ausnahme nach dem Vorbild von
-//! `krk-ui/src/kommandos/rueckschritt.rs` braucht es nicht.
+//! Genau einer, und er steht seit dem elften Schritt derselben Runde da:
+//! `Anwendungsdelegierter::loeschen_nach_rueckfrage` in `krk-ui` beschafft die
+//! Tatsachen fuer die Ausloesertafel, und die Zaehlung geschieht dabei einmal je
+//! Loeschbefehl. Sie faellt erst an, wenn die beiden billigen Stufen jenes
+//! Rumpfes durch sind und das Blatt wirklich erscheint; ein Befehl, den ein
+//! laufender Vorgang oder eine leere Auswahl anhaelt, oeffnet hier kein
+//! Verzeichnis. `dead_code` traf das Modul auch vorher nicht, denn `krk-core`
+//! ist eine Bibliothek und alles hier ist von ihrer Wurzel aus erreichbar; eine
+//! Ausnahme nach dem Vorbild von `krk-ui/src/kommandos/rueckschritt.rs` brauchte
+//! es nie.
 //!
 //! Die bindende Grundlage ist
 //! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.

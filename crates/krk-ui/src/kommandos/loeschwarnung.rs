@@ -9,8 +9,8 @@
 //! ```text
 //!  vorgang_laeuft ─┐
 //!  auswahl_leer ───┼──> vor_der_rueckfrage() ──> Vorstufe
-//!  papierkorb ─────┘                              ├─ Rueckfrage ──> das Blatt
-//!                                                 └─ sonst ──> eine Meldung
+//!  || papierkorb ──┘                              ├─ Rueckfrage ──> das Blatt
+//!     (faul)                                      └─ sonst ──> eine Meldung
 //!
 //!  Loeschziel ──> warngruende() ──> [Warngrund], gerangt
 //!
@@ -19,6 +19,9 @@
 //!  gruende ──┘
 //!
 //!            ohne_papierkorb() ──> die Meldung der dritten Stufe
+//!
+//!  bestaetigt ───┐
+//!  traegt_auswahl┼──> nach_der_rueckfrage() ──> Nachstufe
 //! ```
 //!
 //! # Warum die Stufenregel hier steht und nicht im Rumpf, der sie ausfuehrt
@@ -48,18 +51,40 @@
 //!
 //! Die Kette vor dem Auftrag hat fuenf Stufen — laufender Vorgang, leere
 //! Auswahl, Papierkorb am Ziel, das Blatt, die Bestaetigung —, und die Regel
-//! hier traegt die **drei**, die vor dem Blatt entschieden sind. Die vierte ist
-//! das Blatt selbst, und die fuenfte, die Bestaetigung, bleibt bei ihm: ob
-//! Cmd+Return oder Esc gedrueckt wurde, weiss allein AppKit, und dass ein
-//! Abbruch keinen Auftrag stellt, ist am Rueckruf des Blattes zu pruefen und
-//! damit im Vordergrund. Der Zuschnitt ist keine Bequemlichkeit, sondern die
-//! Grenze der Kiste: was hier steht, ist ohne Fenster pruefbar, und was am Blatt
-//! haengt, ist es nicht.
+//! [`vor_der_rueckfrage`] traegt die **drei**, die vor dem Blatt entschieden
+//! sind. Die vierte ist das Blatt selbst: ob Cmd+Return oder Esc gedrueckt
+//! wurde, weiss allein AppKit, und das ist im Vordergrund zu pruefen. Was KRK
+//! aus der Antwort des Blattes **macht**, ist wieder eine Rechnung ueber zwei
+//! Wahrheitswerte und steht deshalb hier, als [`nach_der_rueckfrage`]; der
+//! Abschnitt „Die fuenfte Stufe" weiter unten sagt, warum sie eigens dasteht.
+//! Der Zuschnitt ist keine Bequemlichkeit, sondern die Grenze der Kiste: was
+//! hier steht, ist ohne Fenster pruefbar, und was AppKit antwortet, ist es
+//! nicht.
 //!
 //! **Die dritte Stufe kommt aus dem Buendel B dieser Runde** und ist der Grund,
 //! aus dem die Regel jetzt umzieht und nicht spaeter: sie setzt eine weitere
 //! Stufe in dieselbe Kette, und ein Umzug danach aenderte dieselbe Stelle
 //! zweimal.
+//!
+//! # Warum die dritte Tatsache faul hereinkommt
+//!
+//! Die ersten beiden Tatsachen stehen im Speicher: ob ein Vorgang laeuft und ob
+//! die Auswahl leer ist. Die dritte kostet **zwei Zugriffe auf das
+//! Dateisystem** — der angezeigte Ordner wird aufgeloest, und `NSFileManager`
+//! wird nach dem Papierkorb seines Datentraegers gefragt. Erhoben wurden bis
+//! zum 260817 alle drei, bevor die erste Stufe entschieden war, und damit
+//! blockierte ein `delete` ohne Auswahl auf einem haengenden Netzlaufwerk den
+//! Hauptfaden, wo vorher eine Abfrage im Speicher genuegte
+//! (`issues/260817-1419_*_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren-*.md`).
+//!
+//! Der dritte Eingang ist deshalb ein `FnOnce`, und die Tafel ruft ihn genau
+//! dort, wo sie seine Antwort braucht: im Feld `(false, false)`. **Die
+//! Reihenfolge der Stufen aendert sich dadurch nicht** — sie ist eine Zusage
+//! des Specs, und die Tafel traegt sie unveraendert. Verschoben hat sich allein,
+//! **wann** die teure Tatsache beschafft wird, und das entscheidet jetzt die
+//! Regel selbst statt ihres Aufrufers. Ein Aufrufer, der sie doch vorab
+//! beschaffte, koennte die Zusage nicht mehr brechen, ohne dass sein eigener
+//! Rumpf es zeigt.
 //!
 //! # Warum die Frage nach dem Papierkorb hier auf [`Loeschzielbefund::Ja`] prueft
 //!
@@ -163,35 +188,62 @@
 //! hat. Ein zweiter Pfadformatierer daneben waere die erste Abweichung, die
 //! niemand prueft.
 //!
-//! # Der eine Aufrufer, dreimal
+//! # Die fuenfte Stufe: was KRK aus der Antwort des Blattes macht
 //!
-//! Jedes der drei Stuecke dieses Moduls hat genau einen Aufrufer, und alle drei
-//! sitzen im Kommandoweg von `crate::appkit::anwendung`:
-//! `in_den_papierkorb` ruft [`frage_und_erlaeuterung`], der gemeinsame Rumpf
-//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`] und, im dritten ihrer
-//! vier Zweige, [`ohne_papierkorb`]. Die Aufruferzaehlung
+//! [`nach_der_rueckfrage`] ist die Abbildung von „bestaetigt" auf „Auftrag mit
+//! dieser Auswahl", und sie steht hier, weil sie **keine** AppKit-Sache ist. Den
+//! Vordergrund verlangt allein die Schicht darueber: dass ein Klick, ein
+//! `Return` und ein `Esc` beim Blatt als der Rueckgabewert ankommen, den KRK
+//! erwartet. Was KRK mit diesem Wert tut, ist eine Rechnung ueber zwei
+//! Wahrheitswerte und ohne Fenster pruefbar.
+//!
+//! Bis zum 260817 stand sie als Kette von `let`-Ausstiegen im Abschluss des
+//! Blattes, und damit waren die beiden Eigenschaften „ein Abbruch stellt keinen
+//! Auftrag" und „der bestaetigte Auftrag traegt die gezeigte Auswahl" von keiner
+//! Probe erreicht — dieselbe Lage, in der die Stufenregel darueber war
+//! (`issues/260817-1419_*_der-abschluss-von-260817-1107-begruendet-zwei-ungepruefte-eigenschaften-zu-weit.md`).
+//! Der Abnahmelauf im Vordergrund belegt seitdem nur noch, was allein er belegen
+//! kann.
+//!
+//! # Der eine Aufrufer, viermal
+//!
+//! Jedes Stueck dieses Moduls hat genau einen Aufrufer, und alle sitzen im
+//! Kommandoweg von `crate::appkit::anwendung`: der gemeinsame Rumpf
+//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`], im dritten ihrer vier
+//! Zweige [`ohne_papierkorb`] und im vierten [`warngruende`] und
+//! [`frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
+//! [`nach_der_rueckfrage`]. Die Aufruferzaehlung
 //! `die_stufenregel_hat_genau_einen_aufrufer` haelt die Zahl fuer die Regel
 //! fest; sie steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
 //! [`super::rueckschritt`], und die Zusage, die sie traegt, ist die dieser
 //! Runde: **die Stufenfolge gibt es einmal.** Ein zweiter Aufrufer waere ein
 //! zweiter Loeschweg mit einer eigenen Reihenfolge seiner Pruefungen.
 //!
-//! `Anwendungsdelegierter::in_den_papierkorb` (`crate::appkit::anwendung`) ist
-//! fuer die beiden Texte der einzige, und er ist es fuer jeden Weg in den
-//! Papierkorb: die beiden Tasten `delete` und `cmd+delete` und der Menueeintrag
-//! "In den Papierkorb raeumen" laufen durch ihn hindurch, und er reicht die
-//! beiden Texte an den gemeinsamen Rumpf `loeschen_nach_rueckfrage` weiter. Ein zweiter Aufrufer
-//! waere ein zweiter Loeschweg, und genau den schafft diese Runde ab.
+//! **Seit dem elften Schritt dieser Runde baut der gemeinsame Rumpf die beiden
+//! Texte selbst**, und nicht mehr `Anwendungsdelegierter::in_den_papierkorb`.
+//! Der Grund ist die Tafel der Ausloeser: die Frage nennt den ersten Warngrund,
+//! also braucht sie die fuenf Tatsachen ueber das Ziel, und die beschafft der
+//! Rumpf erst, wenn die beiden billigen Stufen durch sind. Der Weg in den
+//! Papierkorb bleibt trotzdem der eine, den er war: die beiden Tasten `delete`
+//! und `cmd+delete` und der Menueeintrag "In den Papierkorb raeumen" laufen
+//! durch `in_den_papierkorb` hindurch, und der ruft den Rumpf. Ein zweiter
+//! Aufrufer waere ein zweiter Loeschweg, und genau den schafft diese Runde ab.
 //!
-//! **Seit der Tafel der Ausloeser sind es vier Stuecke und zwei Zaehlungen.**
+//! **Mit dem Umzug sind zwei Nebenwirkungen weg**, beide aus
+//! `issues/260817-1108_*_die-loeschfrage-entsteht-vor-beiden-sperren-*.md`: die
+//! Texte entstanden vor beiden Sperren und wurden in drei der Ausgaenge
+//! verworfen, und im leeren Fall entstand dabei der Satz „Diese 0 Eintraege in
+//! den Papierkorb raeumen?", den [`frage_und_erlaeuterung`] mangels Einzahl fuer
+//! `0` bildet und den nie ein Schirm zeigte. Die Auswahl wird ausserdem einmal
+//! je Tastendruck gelesen statt zweimal.
+//!
+//! **Seit der Tafel der Ausloeser sind es fuenf Stuecke und zwei Zaehlungen.**
 //! [`warngruende`] bekommt eine eigene, `die_ausloesertafel_hat_genau_einen_aufrufer`,
 //! und die Zusage, die sie traegt, ist eine andere als die der Stufenregel: die
 //! **Einordnung des Ziels geschieht einmal**. Ein zweiter Aufrufer waere eine
 //! zweite Stelle, an der entschieden wird, ob und warum die Rueckfrage laut
 //! ist, und die beiden liefen auseinander, ohne dass eine Uebersetzung etwas
-//! dazu sagt. Der eine Aufrufer entsteht mit dem elften Schritt dieser Runde,
-//! der die fuenf Tatsachen beschafft; bis dahin traegt [`warngruende`] ein
-//! `expect(dead_code)` und die Zaehlung erwartet null.
+//! dazu sagt.
 //!
 //! **Die Bereichsleiste ist keiner dieser Wege**, obwohl auch sie Kommandos
 //! meldet: `crate::appkit::bereichsleiste` schickt zehn, und alle zehn sind
@@ -203,12 +255,13 @@
 //! `Kommando::EndgueltigLoeschen` und erreicht diese Texte nicht; erst mit dem
 //! Wegfall jenes Befehls wird es die dritte Taste dieser Aufzaehlung.
 //!
-//! **Das `expect(dead_code)` an [`frage_und_erlaeuterung`] ist mit dem
-//! Aufrufer gefallen, und an [`warngruende`] steht es jetzt.** Es war und ist
-//! `expect` und nicht `allow`, damit der Bau unter `-D warnings` anhaelt,
-//! sobald die Erwartung unerfuellt wird: eine Ausnahme mit Ablaufdatum statt
-//! einer, die stehen bleibt und niemandem mehr sagt, warum. Dieselbe Bauform
-//! hat [`super::rueckschritt`] in der Runde 10 getragen.
+//! **Kein Stueck dieses Moduls traegt mehr ein `expect(dead_code)`.** Es stand
+//! zuerst an [`frage_und_erlaeuterung`] und dann an [`warngruende`], jeweils
+//! solange der Aufrufer noch nicht gebaut war, und beide Male ist es mit ihm
+//! gefallen. Es war dabei `expect` und nicht `allow`, damit der Bau unter
+//! `-D warnings` anhaelt, sobald die Erwartung unerfuellt wird: eine Ausnahme mit
+//! Ablaufdatum statt einer, die stehen bleibt und niemandem mehr sagt, warum.
+//! Dieselbe Bauform hat [`super::rueckschritt`] in der Runde 10 getragen.
 
 use std::path::{Path, PathBuf};
 
@@ -251,10 +304,10 @@ pub enum Vorstufe {
 ///
 /// Der Rumpf ist diese Tafel, und sie steht ausgeschrieben und nicht gerechnet:
 ///
-/// | `vorgang_laeuft` | `auswahl_leer` | `papierkorb` | Ausgang |
+/// | `vorgang_laeuft` | `auswahl_leer` | `papierkorb()` | Ausgang |
 /// |---|---|---|---|
-/// | ja | gleichgueltig | gleichgueltig | [`Vorstufe::VorgangLaeuft`] |
-/// | nein | ja | gleichgueltig | [`Vorstufe::NichtsAusgewaehlt`] |
+/// | ja | gleichgueltig | **ungefragt** | [`Vorstufe::VorgangLaeuft`] |
+/// | nein | ja | **ungefragt** | [`Vorstufe::NichtsAusgewaehlt`] |
 /// | nein | nein | [`Loeschzielbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
 /// | nein | nein | [`Loeschzielbefund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
 /// | nein | nein | [`Loeschzielbefund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
@@ -266,6 +319,14 @@ pub enum Vorstufe {
 /// alle zwoelf aus, aus demselben Grund, aus dem die Tafeln in
 /// [`super::rueckschritt`] und [`Loeschzielbefund::oder`] ausgeschrieben dastehen: eine
 /// gerechnete Erwartung waere die Umsetzung ein zweites Mal.
+///
+/// **„Ungefragt" statt „gleichgueltig" in den ersten beiden Zeilen**, und der
+/// Unterschied ist nicht der Ausgang, sondern der Preis: `papierkorb` ist ein
+/// `FnOnce`, und in diesen beiden Zeilen wird es nicht gerufen. Warum, sagt der
+/// Modulkopf unter „Warum die dritte Tatsache faul hereinkommt"; die Probe
+/// `die_teure_tatsache_bleibt_in_den_ersten_zwei_stufen_ungefragt` haelt es fest.
+/// Am **Ergebnis** aendert das nichts — die beiden Zeilen hiessen vorher
+/// „gleichgueltig" und tun dasselbe.
 ///
 /// # Warum die Reihenfolge selbst die Zusage ist
 ///
@@ -284,10 +345,10 @@ pub enum Vorstufe {
 ///   sie zu sein behauptet. Danach gefragt, haette der Nutzer einem Raeumen
 ///   zugestimmt, das nicht raeumen kann.
 ///
-/// Ein `papierkorb`, der [`Loeschzielbefund::Unentschieden`] traegt, faellt mit
+/// Ein `papierkorb`, der [`Loeschzielbefund::Unentschieden`] liefert, faellt mit
 /// [`Loeschzielbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist hier die
-/// Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann, reicht
-/// deshalb `Unentschieden` herein und loescht damit ebenfalls nicht.
+/// Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann, liefert
+/// deshalb `Unentschieden` und loescht damit ebenfalls nicht.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: die Funktion ist rein, aendert also nichts, und wer ihre Antwort
@@ -298,24 +359,28 @@ pub enum Vorstufe {
 pub fn vor_der_rueckfrage(
     vorgang_laeuft: bool,
     auswahl_leer: bool,
-    papierkorb: Loeschzielbefund,
+    papierkorb: impl FnOnce() -> Loeschzielbefund,
 ) -> Vorstufe {
-    match (vorgang_laeuft, auswahl_leer, papierkorb) {
+    match (vorgang_laeuft, auswahl_leer) {
         // Die erste Stufe. Sie fragt vor allen anderen, weil ein zweiter
         // Vorgang gar nicht anfangen kann und der Nutzer das erfahren soll,
         // bevor er eine Rueckfrage beantwortet.
-        (true, _, _) => Vorstufe::VorgangLaeuft,
+        (true, _) => Vorstufe::VorgangLaeuft,
         // Die zweite. Ohne Auswahl hat die Rueckfrage keinen Gegenstand.
-        (false, true, _) => Vorstufe::NichtsAusgewaehlt,
-        // Die dritte, und `Ja` ist ihre Erlaubnis: erst jetzt steht fest, dass
-        // es einen Rueckweg gibt (C4).
-        (false, false, Loeschzielbefund::Ja) => Vorstufe::Rueckfrage,
-        // Kein Papierkorb, oder keine Auskunft darueber — beides haelt an. Die
-        // beiden Werte stehen ausgeschrieben und nicht als `_` da: ein vierter
-        // Befund haelt so den Bau an, statt still hierher zu fallen.
-        (false, false, Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden) => {
-            Vorstufe::OhnePapierkorb
-        }
+        (false, true) => Vorstufe::NichtsAusgewaehlt,
+        // Die dritte, und erst hier wird `papierkorb` gerufen: die beiden Zeilen
+        // darueber brauchen die Antwort nicht, und sie kostet zwei Zugriffe auf
+        // das Dateisystem. Die **Reihenfolge** der Stufen steht unveraendert in
+        // dieser Tafel; verschoben ist allein, wann die Tatsache anfaellt.
+        (false, false) => match papierkorb() {
+            // `Ja` ist die Erlaubnis: erst jetzt steht fest, dass es einen
+            // Rueckweg gibt (C4).
+            Loeschzielbefund::Ja => Vorstufe::Rueckfrage,
+            // Kein Papierkorb, oder keine Auskunft darueber — beides haelt an.
+            // Die beiden Werte stehen ausgeschrieben und nicht als `_` da: ein
+            // vierter Befund haelt so den Bau an, statt still hierher zu fallen.
+            Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden => Vorstufe::OhnePapierkorb,
+        },
     }
 }
 
@@ -574,13 +639,6 @@ fn liegt_an_einem_cloudort(ordner: &Path, benutzerverzeichnis: &Path) -> bool {
 /// gefahren — die Rueckfrage erschiene ruhig ueber einem Ziel, das jeden der
 /// sechs Ausloeser trifft, und der Uebersetzer sagt dazu von sich aus nichts.
 #[must_use = "die Liste entscheidet, ob die Rueckfrage laut wird und welchen Grund sie nennt; fallengelassen bleibt sie ruhig"]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit dem elften Schritt dieser Runde, der die fuenf Tatsachen beschafft"
-    )
-)]
 pub fn warngruende(ziel: &Loeschziel) -> Vec<Warngrund> {
     let mut gruende: Vec<Warngrund> = Vec::new();
 
@@ -729,6 +787,76 @@ pub fn frage_und_erlaeuterung(
     (frage, erlaeuterung)
 }
 
+// ---------------------------------------------------------------------------
+// Die fuenfte Stufe: was aus der Antwort des Blattes folgt (C2)
+// ---------------------------------------------------------------------------
+
+/// Was nach der Rueckfrage geschieht.
+///
+/// Zwei Werte, und der Name des ersten ist die Zusage dieser Runde: **ohne
+/// Bestaetigung kein Auftrag.** Sie stehen als Aufzaehlung und nicht als
+/// Wahrheitswert da, damit der Abschluss des Blattes eine vollstaendige
+/// Fallunterscheidung schreibt und ein dritter Ausgang den Bau anhaelt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Nachstufe {
+    /// Nichts geschieht: der Nutzer hat abgebrochen, oder der Auftrag ist nicht
+    /// mehr da. Nichts wird bewegt, nichts wird veraendert.
+    KeinAuftrag,
+    /// Der Auftrag wird gestellt, und zwar mit der Auswahl, die im Blatt stand.
+    Auftrag,
+}
+
+/// Die eine Abbildung von der Antwort des Blattes auf den Auftrag (C2).
+///
+/// Der Rumpf ist diese Tafel, und sie steht ausgeschrieben und nicht gerechnet:
+///
+/// | `bestaetigt` | `traegt_auswahl` | Ausgang |
+/// |---|---|---|
+/// | nein | nein | [`Nachstufe::KeinAuftrag`] |
+/// | nein | ja | [`Nachstufe::KeinAuftrag`] |
+/// | ja | nein | [`Nachstufe::KeinAuftrag`] |
+/// | ja | ja | [`Nachstufe::Auftrag`] |
+///
+/// Vier Faelle, ein Auftrag. Beide Bedingungen tragen etwas eigenes:
+///
+/// - **`bestaetigt`** ist die Antwort von AppKit auf Cmd+Return, `Return`, `Esc`
+///   und den Klick. Ist sie `false`, geschieht nichts — das ist die Zusage, um
+///   derentwillen diese Runde laeuft, und sie ist hier eine Zeile und keine
+///   Beobachtung am laufenden Fenster.
+/// - **`traegt_auswahl`** sagt, ob der Aufrufer die **gezeigte** Auswahl noch
+///   hat. Sie reist durch den Rueckruf und nicht neben ihm her, weil ein zweites
+///   Lesen nach dem Blatt etwas anderes loeschen koennte, als das Blatt gefragt
+///   hat; die Begruendung im Einzelnen steht an
+///   `Anwendungsdelegierter::loeschauftrag_stellen`. Ist sie weg, wird nichts
+///   gestellt: ein Auftrag ohne die gezeigte Auswahl waere genau der Fehler,
+///   gegen den die Auswahl mitreist.
+///
+/// # Was diese Funktion nicht prueft
+///
+/// Ob `bestaetigt` ueberhaupt richtig ankommt. Dass AppKit auf Cmd+Return `true`
+/// und auf `Esc` `false` liefert, ist eine Aussage ueber das Blatt und im
+/// Abnahmelauf im Vordergrund zu pruefen; die Zuordnung der ausfuehrenden
+/// Schaltflaeche haelt daneben
+/// `crate::appkit::blaetter::loeschbestaetigung::tests` fest. Hier steht allein,
+/// was KRK aus dem Wert **macht**, und das ist eine Rechnung ueber zwei
+/// Wahrheitswerte.
+///
+/// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: die Funktion
+/// ist rein, und wer ihre Antwort nicht nimmt, hat die Fallunterscheidung nicht
+/// gefahren — der Auftrag bliebe aus oder entstuende ungeprueft, und der
+/// Uebersetzer sagt dazu von sich aus nichts.
+#[must_use = "die Stufe entscheidet, ob der bestaetigte Auftrag gestellt wird; fallengelassen geschieht nichts"]
+pub fn nach_der_rueckfrage(bestaetigt: bool, traegt_auswahl: bool) -> Nachstufe {
+    match (bestaetigt, traegt_auswahl) {
+        // Der eine Fall, der einen Auftrag stellt: bestaetigt, und die gezeigte
+        // Auswahl ist noch da.
+        (true, true) => Nachstufe::Auftrag,
+        // Die drei anderen stehen ausgeschrieben und nicht als `_` da, damit
+        // sichtbar bleibt, dass **jeder** von ihnen nichts tut.
+        (false, false) | (false, true) | (true, false) => Nachstufe::KeinAuftrag,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -812,7 +940,7 @@ mod tests {
 
         for (vorgang_laeuft, auswahl_leer, papierkorb, ausgang) in TAFEL {
             assert_eq!(
-                vor_der_rueckfrage(vorgang_laeuft, auswahl_leer, papierkorb),
+                vor_der_rueckfrage(vorgang_laeuft, auswahl_leer, || papierkorb),
                 ausgang,
                 "vorgang_laeuft={vorgang_laeuft}, auswahl_leer={auswahl_leer}, \
                  papierkorb={papierkorb:?}"
@@ -835,7 +963,7 @@ mod tests {
         for auswahl_leer in [false, true] {
             for papierkorb in BEFUNDE {
                 assert_eq!(
-                    vor_der_rueckfrage(true, auswahl_leer, papierkorb),
+                    vor_der_rueckfrage(true, auswahl_leer, || papierkorb),
                     Vorstufe::VorgangLaeuft,
                     "ein laufender Vorgang haelt den Befehl nicht an: \
                      auswahl_leer={auswahl_leer}, papierkorb={papierkorb:?}"
@@ -854,7 +982,7 @@ mod tests {
     fn eine_leere_auswahl_kommt_nicht_bis_zum_blatt() {
         for papierkorb in BEFUNDE {
             assert_eq!(
-                vor_der_rueckfrage(false, true, papierkorb),
+                vor_der_rueckfrage(false, true, || papierkorb),
                 Vorstufe::NichtsAusgewaehlt,
                 "die leere Auswahl erreicht das Blatt: papierkorb={papierkorb:?}"
             );
@@ -872,15 +1000,60 @@ mod tests {
     #[test]
     fn ohne_papierkorb_erscheint_kein_blatt() {
         assert_eq!(
-            vor_der_rueckfrage(false, false, Nein),
+            vor_der_rueckfrage(false, false, || Nein),
             Vorstufe::OhnePapierkorb,
             "ein Ziel ohne Papierkorb fuehrt trotzdem zur Rueckfrage"
         );
         assert_eq!(
-            vor_der_rueckfrage(false, false, Unentschieden),
+            vor_der_rueckfrage(false, false, || Unentschieden),
             Vorstufe::OhnePapierkorb,
             "ein unentschiedener Befund fuehrt zur Rueckfrage, obwohl C4 ihn \
              wie das Nein behandelt"
+        );
+    }
+
+    /// Die teure Tatsache bleibt ungefragt, solange eine billige Stufe schon
+    /// anhaelt.
+    ///
+    /// **Die Zusicherung gilt den Kosten und nicht dem Ausgang.** Am Ergebnis
+    /// aendert die Reihenfolge der Erhebung nichts — die ersten beiden Zeilen der
+    /// Tafel trugen vorher „gleichgueltig" —, aber `papierkorb` loest den
+    /// angezeigten Ordner auf und fragt `NSFileManager` nach dem Papierkorb
+    /// seines Datentraegers. Auf einem haengenden Netzlaufwerk blockierte damit
+    /// ein `delete` ohne Auswahl den Hauptfaden, wo eine Abfrage im Speicher
+    /// genuegt haette
+    /// (`issues/260817-1419_*_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren-*.md`).
+    ///
+    /// Gezaehlt wird ueber eine `Cell`, weil der Eingang ein `FnOnce` ist: er
+    /// darf sich beim Rufen verbrauchen, also zaehlt der Abschluss, statt ein
+    /// `&mut` zu halten. Die letzte Zeile ist die Gegenprobe — ohne sie waere
+    /// eine Regel, die `papierkorb` **nie** ruft, gruen und die dritte Stufe
+    /// stillgelegt.
+    #[test]
+    fn die_teure_tatsache_bleibt_in_den_ersten_zwei_stufen_ungefragt() {
+        for (vorgang_laeuft, auswahl_leer) in [(true, false), (true, true), (false, true)] {
+            let gefragt = std::cell::Cell::new(0_u32);
+            let _ = vor_der_rueckfrage(vorgang_laeuft, auswahl_leer, || {
+                gefragt.set(gefragt.get() + 1);
+                Ja
+            });
+            assert_eq!(
+                gefragt.get(),
+                0,
+                "der Papierkorbtest lief, obwohl eine billige Stufe schon anhielt: \
+                 vorgang_laeuft={vorgang_laeuft}, auswahl_leer={auswahl_leer}"
+            );
+        }
+
+        let gefragt = std::cell::Cell::new(0_u32);
+        let _ = vor_der_rueckfrage(false, false, || {
+            gefragt.set(gefragt.get() + 1);
+            Ja
+        });
+        assert_eq!(
+            gefragt.get(),
+            1,
+            "die dritte Stufe fragt den Papierkorbtest nicht genau einmal"
         );
     }
 
@@ -902,7 +1075,7 @@ mod tests {
                 })
             })
             .filter(|(vorgang_laeuft, auswahl_leer, papierkorb)| {
-                vor_der_rueckfrage(*vorgang_laeuft, *auswahl_leer, *papierkorb)
+                vor_der_rueckfrage(*vorgang_laeuft, *auswahl_leer, || *papierkorb)
                     == Vorstufe::Rueckfrage
             })
             .collect();
@@ -1085,13 +1258,12 @@ mod tests {
     /// und die beiden liefen auseinander, ohne dass eine Uebersetzung etwas dazu
     /// sagt.
     ///
-    /// **Die Erwartung ist heute null und nicht eins, und der Name sagt das.**
-    /// Der eine Aufrufer entsteht mit dem elften Schritt dieser Runde, der die
-    /// fuenf Tatsachen beschafft. Eine Probe, die heute schon eins erwartet,
-    /// waere rot; eine, die „hoechstens eins" erwartet, waere fuer immer gruen
-    /// und wuerde nie etwas messen. Der elfte Schritt setzt die Erwartung auf
-    /// eins und den Namen auf `die_ausloesertafel_hat_genau_einen_aufrufer`,
-    /// zugleich mit dem `expect(dead_code)`, das dann unerfuellt wird.
+    /// **Der eine Aufrufer ist seit dem elften Schritt dieser Runde da**, und
+    /// die Erwartung steht deshalb auf eins: `loeschen_nach_rueckfrage` beschafft
+    /// die fuenf Tatsachen und ruft die Tafel, im vierten Zweig der Stufenregel.
+    /// Bis dahin hiess diese Probe `die_ausloesertafel_hat_noch_keinen_aufrufer`
+    /// und zaehlte null; eine, die „hoechstens eins" erwartet haette, waere fuer
+    /// immer gruen gewesen und haette nie etwas gemessen.
     ///
     /// **Diese Datei bleibt aussen vor**, wie bei der Vorlage: die Proben
     /// darunter rufen die Regel vielfach, und das sind keine Aufrufer im Sinne
@@ -1101,7 +1273,7 @@ mod tests {
     /// Die Nadel steht zusammengesetzt da, weil die Probe in dem Baum liegt, den
     /// sie liest.
     #[test]
-    fn die_ausloesertafel_hat_noch_keinen_aufrufer() {
+    fn die_ausloesertafel_hat_genau_einen_aufrufer() {
         let zuhause = "krk-ui/src/kommandos/loeschwarnung.rs";
         let name = concat!("warn", "gruende");
         let aufrufe: usize = quelldateien()
@@ -1110,10 +1282,9 @@ mod tests {
             .map(|(_, inhalt)| aufrufstellen(inhalt, name))
             .sum();
         assert_eq!(
-            aufrufe, 0,
-            "die Ausloesertafel hat einen Aufrufer; ist der elfte Schritt gelaufen, gehoert \
-             die Erwartung auf 1 und der Name dieser Probe auf \
-             die_ausloesertafel_hat_genau_einen_aufrufer"
+            aufrufe, 1,
+            "die Ausloesertafel hat nicht genau einen Aufrufer; ein zweiter waere eine zweite \
+             Stelle, an der entschieden wird, ob und warum die Rueckfrage laut ist"
         );
     }
 
@@ -1504,6 +1675,76 @@ mod tests {
             erlaeuterung,
             "Geräumt wird aus /Users/k1/Notizen.\n\nDarunter ein Ordner, jeweils mit ihrem \
              gesamten Inhalt."
+        );
+    }
+    /// Die Tafel der fuenften Stufe geht auf: vier Faelle, ein Auftrag.
+    ///
+    /// Die beiden Eigenschaften, die bis zum 260817 von keiner Probe erreicht
+    /// waren, stehen hier als zwei Zeilen: **ein Abbruch stellt keinen Auftrag**
+    /// (die beiden Zeilen mit `bestaetigt == false`) und **der Auftrag entsteht
+    /// nur mit der gezeigten Auswahl** (die Zeile `(true, false)`). Sie hingen
+    /// am Abschluss des Blattes und galten damit als Sache des Abnahmelaufs;
+    /// die Abbildung selbst ist reine Rechnung
+    /// (`issues/260817-1419_*_der-abschluss-von-260817-1107-begruendet-zwei-ungepruefte-eigenschaften-zu-weit.md`).
+    #[test]
+    fn die_tafel_der_fuenften_stufe_geht_auf() {
+        // bestaetigt, traegt_auswahl, Ausgang.
+        const TAFEL: [(bool, bool, Nachstufe); 4] = [
+            (false, false, Nachstufe::KeinAuftrag),
+            (false, true, Nachstufe::KeinAuftrag),
+            (true, false, Nachstufe::KeinAuftrag),
+            (true, true, Nachstufe::Auftrag),
+        ];
+
+        for (bestaetigt, traegt_auswahl, ausgang) in TAFEL {
+            assert_eq!(
+                nach_der_rueckfrage(bestaetigt, traegt_auswahl),
+                ausgang,
+                "bestaetigt={bestaetigt}, traegt_auswahl={traegt_auswahl}"
+            );
+        }
+    }
+
+    /// Ein Abbruch stellt keinen Auftrag, gleich ob die Auswahl noch da ist.
+    ///
+    /// Die Zusage dieser Runde, eigens und nicht bloss als zwei Zeilen der
+    /// Tafel: „Abbrechen" ist im Blatt vorbelegt, also ist dies der Ausgang, den
+    /// der Nutzer am haeufigsten nimmt. Rot wird die Probe, wenn jemand die
+    /// Fallunterscheidung zu `traegt_auswahl` allein verkuerzt.
+    #[test]
+    fn ein_abbruch_stellt_keinen_auftrag() {
+        for traegt_auswahl in [false, true] {
+            assert_eq!(
+                nach_der_rueckfrage(false, traegt_auswahl),
+                Nachstufe::KeinAuftrag,
+                "ein Abbruch stellte einen Auftrag: traegt_auswahl={traegt_auswahl}"
+            );
+        }
+    }
+
+    /// Genau einer der vier Faelle stellt einen Auftrag.
+    ///
+    /// Die Zaehlung zur Tafel, in der Form von
+    /// [`genau_ein_fall_erreicht_das_blatt`]: sie sagt, dass der Auftrag der
+    /// **eine** Ausgang mit beiden Bedingungen ist. Faende sich ein zweiter,
+    /// waere eine der beiden durchlaessig geworden.
+    #[test]
+    fn genau_ein_fall_stellt_einen_auftrag() {
+        let mit_auftrag: Vec<(bool, bool)> = [false, true]
+            .into_iter()
+            .flat_map(|bestaetigt| {
+                [false, true]
+                    .into_iter()
+                    .map(move |traegt_auswahl| (bestaetigt, traegt_auswahl))
+            })
+            .filter(|(bestaetigt, traegt_auswahl)| {
+                nach_der_rueckfrage(*bestaetigt, *traegt_auswahl) == Nachstufe::Auftrag
+            })
+            .collect();
+        assert_eq!(
+            mit_auftrag,
+            vec![(true, true)],
+            "nicht genau eine der vier Kombinationen stellt einen Auftrag"
         );
     }
 }

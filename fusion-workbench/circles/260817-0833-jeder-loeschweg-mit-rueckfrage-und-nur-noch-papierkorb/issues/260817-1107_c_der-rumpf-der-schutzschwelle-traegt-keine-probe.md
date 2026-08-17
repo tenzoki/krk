@@ -56,3 +56,15 @@ lässt sich unter `libtest` nicht bedienen, und am Code ist dafür nichts mehr z
 gehören in den Abnahmelauf, der KRK im Vordergrund verlangt und Nutzerarbeit ist. Die
 Abrechnung im Einzelnen steht in
 `history/260817-1359-coder-t5-pruefung-vor-dem-blatt-und-die-stufenregel.md`.
+
+---
+Nachtrag 260817-1806 (coder, Aufgabe T10, Schritt 11 des Plans): **die beiden ungeprüften
+Eigenschaften sind auf der KRK-Seite jetzt geprüft.** Der Abschlussvermerk darüber sagt, am Code
+sei dafür nichts mehr zu tun; das war zu weit gegriffen, und der Befund
+`260817-1419_*_der-abschluss-von-260817-1107-begruendet-zwei-ungepruefte-eigenschaften-zu-weit.md`
+hat es aufgeschrieben. An die Stelle der Kette von `let`-Ausstiegen im Abschluss des Blattes ist
+`kommandos::loeschwarnung::nach_der_rueckfrage(bestaetigt, traegt_auswahl) -> Nachstufe` getreten,
+eine reine Regel mit ausgeschriebener Tafel über vier Fälle und drei Proben. Im Abnahmelauf
+bleibt allein, was ihn wirklich verlangt: dass AppKit auf Klick, `Return` und `Esc` den
+Rückgabewert liefert, den KRK erwartet. Der Vermerk darüber bleibt im Wortlaut stehen, wie es die
+Ortsregel für `issues/` verlangt.

@@ -256,13 +256,6 @@ fn namensteil(pfad: &Path) -> String {
 /// Dateisystem; ein Pfad, der sich nicht aufloesen laesst, zaehlt beim Aufrufer
 /// als [`Loeschzielbefund::Unentschieden`].
 #[must_use = "der Befund entscheidet, ob die Rueckfrage das Netzlaufwerk nennt; fallengelassen bleibt sie darueber still"]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit dem elften Schritt dieser Runde, der die Tatsachen fuer die Ausloesertafel beschafft"
-    )
-)]
 pub fn liegt_auf_netzlaufwerk(pfad: &Path) -> Loeschzielbefund {
     let Some(text) = pfad.to_str() else {
         return Loeschzielbefund::Unentschieden;

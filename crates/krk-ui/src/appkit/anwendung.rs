@@ -227,7 +227,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
-use krk_core::verzeichnis::Loeschzielbefund;
+use krk_core::verzeichnis::{Loeschzielbefund, arbeitsbaum, umfang};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -239,7 +239,7 @@ use crate::fenstermodell::{
 };
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
-use crate::kommandos::loeschwarnung::{self, Vorstufe};
+use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::zulaessigkeit::{self, Lage};
@@ -272,7 +272,7 @@ use super::statuszeile::{self, Statuszeile};
 use super::tabelle::Dateifenster;
 use super::teilen;
 use super::terminal;
-use super::volumes::{Datentraeger, Datentraegerwache, Wechsel};
+use super::volumes::{self, Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
 use super::weitereinstanz;
 
@@ -982,6 +982,31 @@ impl Schluesselfenster {
             Self::Fremd => false,
         }
     }
+}
+
+/// Woher die beiden Zeilen der Loeschrueckfrage kommen — die eine
+/// Fallunterscheidung, in der sich die beiden Loeschbefehle noch unterscheiden.
+///
+/// **Sie faellt mit Buendel D dieser Runde weg**, zusammen mit
+/// [`Kommando::EndgueltigLoeschen`], und der Name des zweiten Wertes sagt das.
+/// Bis dahin fuehrt KRK zwei Löschbefehle, die durch **denselben** Rumpf gehen
+/// und sich in drei Stuecken unterscheiden: der Auftragsart, der Beschriftung
+/// der zweiten Schaltflaeche und dieser Herkunft der Texte.
+///
+/// Sie steht als Aufzaehlung und nicht als Wahrheitswert da, damit
+/// [`Anwendungsdelegierter::loeschtexte`] eine vollstaendige Fallunterscheidung
+/// ohne Auffangzweig schreibt: der Wegfall des zweiten Wertes haelt dort dann
+/// den Bau an, statt einen Zweig stehen zu lassen, den niemand mehr erreicht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Loeschtexte {
+    /// Der eine Loeschweg dieser Runde: die Texte entstehen in
+    /// [`loeschwarnung::frage_und_erlaeuterung`] aus den Warngruenden des Ziels,
+    /// und laut ist die Rueckfrage genau dann, wenn einer zutrifft (C3).
+    AusDenWarngruenden,
+    /// Das endgueltige Loeschen, bis Buendel D: die Texte kommen aus
+    /// [`operationen::loeschfrage`], und laut ist die Rueckfrage in jedem Fall,
+    /// wie das Blatt sie fuer diesen Befehl seit der Runde 1 gezeigt hat.
+    EndgueltigBisBuendelD,
 }
 
 impl Anwendungsdelegierter {
@@ -4445,7 +4470,14 @@ impl Anwendungsdelegierter {
     /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`] und derselbe wie fuer
     /// [`Self::endgueltig_loeschen`]. Hier stehen allein die drei Stuecke, in
     /// denen sich die beiden Befehle unterscheiden: die Auftragsart, die
-    /// Beschriftung der zweiten Schaltflaeche und die beiden Texte.
+    /// Beschriftung der zweiten Schaltflaeche und die Herkunft der beiden Texte.
+    ///
+    /// **Die Texte selbst entstehen seit dem 260817 im Rumpf** und nicht mehr
+    /// hier. Der Grund ist die Tafel der Ausloeser: die Frage nennt den ersten
+    /// Warngrund, also braucht sie die fuenf Tatsachen ueber das Ziel, und die
+    /// beschafft der Rumpf erst, wenn seine beiden billigen Stufen durch sind.
+    /// Was dieser Befehl weiterreicht, ist deshalb [`Loeschtexte`] und kein
+    /// fertiger Wortlaut.
     ///
     /// **Der Fokusvorbehalt steht seit Schritt 18 nicht mehr hier.** Er stand
     /// als eigene Abfrage an dieser Stelle und an der von
@@ -4453,23 +4485,10 @@ impl Anwendungsdelegierter {
     /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist sie ab, bevor
     /// sie hier ankommen.
     fn in_den_papierkorb(&self) -> bool {
-        let aktiv = self.ivars().modell.borrow().aktiv();
-        let quelle = self.dateifenster(aktiv).quelle();
-        // Die leere Liste ist die ruhige Form. Der elfte Schritt dieser Runde
-        // beschafft hier die fuenf Tatsachen und setzt
-        // `loeschwarnung::warngruende` an diese Stelle; bis dahin bleibt die
-        // Rueckfrage ruhig, und `laut` unten steht auf `false`.
-        let (frage, erlaeuterung) = loeschwarnung::frage_und_erlaeuterung(
-            &quelle.betroffene_eintraege(),
-            &quelle.angezeigter_ordner(),
-            &[],
-        );
         self.loeschen_nach_rueckfrage(
             Art::InDenPapierkorb,
-            &frage,
-            &erlaeuterung,
             "In den Papierkorb räumen",
-            false,
+            Loeschtexte::AusDenWarngruenden,
         )
     }
 
@@ -4553,10 +4572,11 @@ impl Anwendungsdelegierter {
     /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).
     ///
     /// **Der Befehl faellt mit Buendel D dieser Runde weg**, und bis dahin
-    /// behaelt er, was ihn ausmacht: dieselben beiden Texte, dieselbe
-    /// Beschriftung, und `laut` traegt das Warnzeichen, das das Blatt fuer ihn
-    /// seit der Runde 1 gesetzt hat. Geteilt ist ab jetzt der Rumpf und nicht
-    /// mehr nur das Blatt, siehe [`Self::loeschen_nach_rueckfrage`].
+    /// behaelt er, was ihn ausmacht: dieselben beiden Texte aus
+    /// [`operationen::loeschfrage`], dieselbe Beschriftung, und das Warnzeichen,
+    /// das das Blatt fuer ihn seit der Runde 1 in jedem Fall gesetzt hat.
+    /// Geteilt ist ab jetzt der Rumpf und nicht mehr nur das Blatt, siehe
+    /// [`Self::loeschen_nach_rueckfrage`].
     ///
     /// **Zwei Dinge sind ihm dabei doch anders geworden**, und beide zu seinen
     /// Gunsten: ein bereits laufender Vorgang wird jetzt vor dem Blatt gemeldet
@@ -4564,15 +4584,10 @@ impl Anwendungsdelegierter {
     /// Auswahl, die im Blatt stand. Die Begruendungen stehen an den beiden
     /// Funktionen darunter.
     fn endgueltig_loeschen(&self) -> bool {
-        let aktiv = self.ivars().modell.borrow().aktiv();
-        let auswahl = self.dateifenster(aktiv).quelle().betroffene_eintraege();
-        let (frage, erlaeuterung) = operationen::loeschfrage(&auswahl);
         self.loeschen_nach_rueckfrage(
             Art::EndgueltigLoeschen,
-            &frage,
-            &erlaeuterung,
             "Endgültig löschen",
-            true,
+            Loeschtexte::EndgueltigBisBuendelD,
         )
     }
 
@@ -4619,6 +4634,19 @@ impl Anwendungsdelegierter {
     /// Pfad, der sich nicht aufloesen laesst, zaehlt als
     /// [`Loeschzielbefund::Unentschieden`] und loescht damit ebenfalls nicht.
     ///
+    /// **Die teuren Tatsachen fallen erst an, wenn die billigen Stufen durch
+    /// sind.** Aufloesen und Papierkorbfrage kosten Zugriffe auf das
+    /// Dateisystem, die fuenf Tatsachen der Ausloesertafel kosten bis zu 26
+    /// geoeffnete Verzeichnisse; erhoben wurden die ersten beiden bis zum
+    /// 260817 unbedingt, und damit blockierte ein `delete` ohne Auswahl auf
+    /// einem haengenden Netzlaufwerk den Hauptfaden
+    /// (`issues/260817-1419_*_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren-*.md`).
+    /// Der Papierkorbbefund reist deshalb als `FnOnce` in die Tafel, und die
+    /// fuenf Tatsachen entstehen im vierten Zweig. **An der Reihenfolge der
+    /// Stufen aendert das nichts** — sie steht in
+    /// [`loeschwarnung::vor_der_rueckfrage`] und ist eine Zusage des Specs;
+    /// verschoben hat sich allein, wann eine Tatsache anfaellt.
+    ///
     /// **Die Pruefung trifft beide Loeschbefehle**, also bis zum Buendel D auch
     /// das endgueltige Loeschen auf `f8`, obwohl das keinen Papierkorb braucht.
     /// Das ist Absicht und keine Nachlaessigkeit des gemeinsamen Rumpfes: die
@@ -4629,14 +4657,21 @@ impl Anwendungsdelegierter {
     /// ueberspringt, waere ein zweiter Loeschweg an der Stelle, an der diese
     /// Runde den zweiten abschafft.
     ///
-    /// **Die beiden Texte kommen fertig herein.** Welcher Wortlaut in welcher
-    /// Form dasteht, gehoert [`crate::kommandos::loeschwarnung`] und nicht
-    /// dieser Datei; hier steht der Ablauf. Der Aufrufer rechnet sie aus seiner
-    /// eigenen Lesung der Auswahl, und diese Lesung und die des Rumpfes liegen
-    /// im selben Durchgang der Ereignisschleife: zwischen ihnen kann nichts
-    /// laufen, was den Ordner aendert. Die Lesung, die auseinanderlaufen kann,
-    /// ist die **nach** dem Blatt, und die gibt es nicht mehr; warum, sagt
-    /// [`Self::loeschauftrag_stellen`].
+    /// **Die beiden Texte entstehen hier und kommen nicht mehr fertig herein.**
+    /// Welcher Wortlaut in welcher Form dasteht, gehoert weiter
+    /// [`crate::kommandos::loeschwarnung`] und nicht dieser Datei; hier steht,
+    /// **wann** er gebaut wird, und das ist seit dem 260817 der vierte Zweig der
+    /// Stufenregel. Der Grund ist die Tafel der Ausloeser: die Frage nennt den
+    /// ersten Warngrund, also braucht sie die fuenf Tatsachen ueber das Ziel.
+    /// Zwei Nebenwirkungen sind damit weg
+    /// (`issues/260817-1108_*_die-loeschfrage-entsteht-vor-beiden-sperren-*.md`):
+    /// die Texte entstanden vor beiden Sperren und wurden in drei der Ausgaenge
+    /// verworfen, und im leeren Fall entstand dabei der Satz „Diese 0 Eintraege
+    /// in den Papierkorb raeumen?", den nie ein Schirm zeigte. Die Auswahl wird
+    /// ausserdem einmal je Tastendruck gelesen statt zweimal.
+    ///
+    /// Die Lesung, die auseinanderlaufen kann, ist die **nach** dem Blatt, und
+    /// die gibt es nicht mehr; warum, sagt [`Self::loeschauftrag_stellen`].
     ///
     /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
     /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
@@ -4644,39 +4679,41 @@ impl Anwendungsdelegierter {
     fn loeschen_nach_rueckfrage(
         &self,
         art: Art,
-        frage: &str,
-        erlaeuterung: &str,
         schaltflaeche: &str,
-        laut: bool,
+        textform: Loeschtexte,
     ) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
 
-        // Die drei Tatsachen der Regel, jede aus genau einer Quelle, und alle
-        // drei erhoben, bevor eine Stufe entschieden ist. Die Reihenfolge, in der
-        // sie hier anfallen, entscheidet nichts — welche Stufe daraus folgt,
-        // sagt `vor_der_rueckfrage`, und dass der Papierkorbtest vor der
-        // Rueckfrage steht, steht als Zeile in seiner Tafel und nicht als
-        // Zeilenfolge hier.
+        // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
+        // Sie stehen im Speicher, und die Reihenfolge, in der sie hier
+        // anfallen, entscheidet nichts — welche Stufe daraus folgt, sagt
+        // `vor_der_rueckfrage`, und dass der Papierkorbtest vor der Rueckfrage
+        // steht, steht als Zeile in seiner Tafel und nicht als Zeilenfolge hier.
         let vorgang_laeuft = self.ivars().vorgang.borrow().is_some();
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
         let quellordner = quelle.angezeigter_ordner();
-        // Aufgeloest wird genau hier und genau einmal: `fuehrt_einen_papierkorb`
-        // fasst das Dateisystem nicht an und bekommt den Ordner deshalb
-        // aufgeloest herein, sonst meldete eine Verknuepfung den Papierkorb
-        // ihres eigenen Ortes statt den ihres Ziels. Ein Pfad, der sich nicht
-        // aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine ueber
-        // KRKs Kenntnis von ihm, und zaehlt darum als unentschieden.
-        let papierkorb_am_ziel = std::fs::canonicalize(&quellordner)
-            .map_or(Loeschzielbefund::Unentschieden, |aufgeloest| {
-                papierkorb::fuehrt_einen_papierkorb(&aufgeloest)
-            });
 
-        match loeschwarnung::vor_der_rueckfrage(
-            vorgang_laeuft,
-            auswahl.ist_leer(),
-            papierkorb_am_ziel,
-        ) {
+        // Der aufgeloeste Ordner, gemerkt fuer den vierten Zweig: die Tafel
+        // ruft den Abschluss darunter allein im Feld `(false, false)`, und dann
+        // brauchen ihn beide Fragen an den Datentraeger. Aufgeloest wird deshalb
+        // genau einmal und nur dort, wo die Antwort gebraucht wird.
+        let mut aufgeloester_ordner: Option<PathBuf> = None;
+
+        match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, auswahl.ist_leer(), || {
+            // `fuehrt_einen_papierkorb` fasst das Dateisystem nicht an und
+            // bekommt den Ordner deshalb aufgeloest herein, sonst meldete eine
+            // Verknuepfung den Papierkorb ihres eigenen Ortes statt den ihres
+            // Ziels. Ein Pfad, der sich nicht aufloesen laesst, ist keine
+            // Aussage ueber das Ziel, sondern eine ueber KRKs Kenntnis von ihm,
+            // und zaehlt darum als unentschieden.
+            aufgeloester_ordner = std::fs::canonicalize(&quellordner).ok();
+            aufgeloester_ordner
+                .as_deref()
+                .map_or(Loeschzielbefund::Unentschieden, |aufgeloest| {
+                    papierkorb::fuehrt_einen_papierkorb(aufgeloest)
+                })
+        }) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
             // die sie fuer alle drei Frager baut; sie nennt die Art des
             // laufenden Vorgangs und liest ihn dafuer ein zweites Mal. Es ist
@@ -4702,6 +4739,9 @@ impl Anwendungsdelegierter {
                     return false;
                 };
 
+                let (frage, erlaeuterung, laut) =
+                    Self::loeschtexte(textform, &auswahl, &quellordner, aufgeloester_ordner);
+
                 // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
                 // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
                 // eine `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
@@ -4710,8 +4750,8 @@ impl Anwendungsdelegierter {
                 let griff = loeschbestaetigung::zeigen(
                     self.mtm(),
                     fenster,
-                    frage,
-                    erlaeuterung,
+                    &frage,
+                    &erlaeuterung,
                     schaltflaeche,
                     laut,
                     move |bestaetigt| {
@@ -4719,17 +4759,123 @@ impl Anwendungsdelegierter {
                             return;
                         };
                         *selbst.ivars().offenes_blatt.borrow_mut() = None;
-                        if !bestaetigt {
-                            return;
+                        // Die fuenfte Stufe, und sie steht als Tafel in
+                        // `loeschwarnung::nach_der_rueckfrage`: was KRK aus der
+                        // Antwort des Blattes macht, ist eine Rechnung ueber
+                        // zwei Wahrheitswerte und ohne Fenster pruefbar. Den
+                        // Vordergrund verlangt allein, dass `bestaetigt` richtig
+                        // ankommt.
+                        let auftrag = bestaetigter.take();
+                        match (
+                            loeschwarnung::nach_der_rueckfrage(bestaetigt, auftrag.is_some()),
+                            auftrag,
+                        ) {
+                            (Nachstufe::Auftrag, Some((art, auswahl, quellordner))) => {
+                                selbst.loeschauftrag_stellen(art, auswahl, quellordner);
+                            }
+                            // `(Auftrag, None)` kann die Tafel nicht liefern —
+                            // sie hat `Auftrag` gerade fuer `is_some()` gesagt —,
+                            // und der Zweig steht trotzdem ausgeschrieben da,
+                            // damit die Fallunterscheidung ohne Auffangzweig
+                            // vollstaendig ist.
+                            (Nachstufe::Auftrag, None) | (Nachstufe::KeinAuftrag, _) => {}
                         }
-                        let Some((art, auswahl, quellordner)) = bestaetigter.take() else {
-                            return;
-                        };
-                        selbst.loeschauftrag_stellen(art, auswahl, quellordner);
                     },
                 );
                 *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
                 true
+            }
+        }
+    }
+
+    /// Die beiden Zeilen der Rueckfrage und ihre Form, aus den fuenf Tatsachen
+    /// ueber das Ziel (C3).
+    ///
+    /// **Hier stehen die fuenf Quellen und sonst nichts.** Was aus ihnen folgt,
+    /// entscheidet [`loeschwarnung::warngruende`] an einer Stelle, und wie es
+    /// dasteht, [`loeschwarnung::frage_und_erlaeuterung`]. Jede Tatsache kommt
+    /// aus genau einer Quelle:
+    ///
+    /// ```text
+    /// ordner              der angezeigte Ordner, hier schon aufgeloest
+    /// benutzerverzeichnis krk_core::ablage::pfade::benutzerverzeichnis
+    /// netzlaufwerk        super::volumes::liegt_auf_netzlaufwerk
+    /// arbeitsbaum         krk_core::verzeichnis::arbeitsbaum
+    /// umfang              krk_core::verzeichnis::umfang::zaehlen
+    /// ```
+    ///
+    /// **Das Benutzerverzeichnis hat weiterhin genau einen Frager.** Gefragt wird
+    /// `pfade::benutzerverzeichnis` einmal je Loeschbefehl, der Pfad wird einmal
+    /// aufgeloest, und derselbe Wert geht an beide Stellen, die ihn brauchen: an
+    /// das Feld des Ziels, aus dem [`loeschwarnung::warngruende`] die Ausloeser 1,
+    /// 2 und 4 rechnet, und an die Grenze des Aufwaertsgangs der Git-Pruefung.
+    /// Genommen wird **nicht** das freie [`benutzerverzeichnis`] dieses Moduls:
+    /// es weicht auf `/` aus, wenn das System keines nennt, und ein `/` an
+    /// dieser Stelle machte aus „KRK kennt den Benutzerordner nicht" die Aussage
+    /// „der Ordner liegt darin". `None` heisst hier, dass die Frage offen ist,
+    /// und die Tafel macht daraus [`loeschwarnung::Warngrund::Unentscheidbar`].
+    ///
+    /// **Der aufgeloeste Ordner kommt herein und wird nicht neu erfragt.** Der
+    /// Rumpf hat ihn fuer den Papierkorbtest schon aufgeloest, und beide Fragen
+    /// an den Datentraeger brauchen dieselbe Fassung: eine Verknuepfung meldete
+    /// sonst den Datentraeger ihres eigenen Ortes statt den ihres Ziels. Ein
+    /// `None` — der Ordner liess sich nicht aufloesen — fuehrt an allen drei
+    /// Stellen auf `Unentschieden` beziehungsweise `Unentscheidbar` und nie auf
+    /// eine stille Entwarnung.
+    ///
+    /// **Die Polaritaet ist hier zu lesen und nicht zu erschliessen.**
+    /// `liegt_auf_netzlaufwerk` und `beruehrt_einen_arbeitsbaum` liegen auf der
+    /// Polaritaet, auf der [`Loeschzielbefund::Ja`] warnt und
+    /// [`Loeschzielbefund::Unentschieden`] zu ihm gehoert; genau so nehmen die
+    /// beiden Felder des Ziels sie auf. Die Papierkorbfrage im Rumpf darueber
+    /// liegt auf der anderen, dort ist `Ja` die Erlaubnis. Der Modulkopf von
+    /// [`krk_core::verzeichnis::Loeschzielbefund`] haelt die beiden
+    /// auseinander.
+    ///
+    /// Der dritte Rueckgabewert ist `laut`: die Liste der Warngruende ist nicht
+    /// leer. Er gehoert hierher und nicht in
+    /// [`loeschwarnung::frage_und_erlaeuterung`], weil ein Text kein Warnzeichen
+    /// tragen kann.
+    #[must_use = "die drei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer oder gar nicht"]
+    fn loeschtexte(
+        textform: Loeschtexte,
+        auswahl: &Auswahl,
+        quellordner: &Path,
+        aufgeloester_ordner: Option<PathBuf>,
+    ) -> (String, String, bool) {
+        match textform {
+            Loeschtexte::AusDenWarngruenden => {
+                let zuhause =
+                    pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
+                let netzlaufwerk = aufgeloester_ordner.as_deref().map_or(
+                    Loeschzielbefund::Unentschieden,
+                    volumes::liegt_auf_netzlaufwerk,
+                );
+                let beruehrt_arbeitsbaum = aufgeloester_ordner.as_deref().map_or(
+                    Loeschzielbefund::Unentschieden,
+                    |ordner| {
+                        arbeitsbaum::beruehrt_einen_arbeitsbaum(
+                            ordner,
+                            zuhause.as_deref(),
+                            &auswahl.pfade,
+                        )
+                    },
+                );
+                let ziel = Loeschziel {
+                    ordner: aufgeloester_ordner,
+                    benutzerverzeichnis: zuhause,
+                    netzlaufwerk,
+                    arbeitsbaum: beruehrt_arbeitsbaum,
+                    umfang: umfang::zaehlen(&auswahl.pfade),
+                };
+                let gruende = loeschwarnung::warngruende(&ziel);
+                let (frage, erlaeuterung) =
+                    loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
+                (frage, erlaeuterung, !gruende.is_empty())
+            }
+            Loeschtexte::EndgueltigBisBuendelD => {
+                let (frage, erlaeuterung) = operationen::loeschfrage(auswahl);
+                (frage, erlaeuterung, true)
             }
         }
     }

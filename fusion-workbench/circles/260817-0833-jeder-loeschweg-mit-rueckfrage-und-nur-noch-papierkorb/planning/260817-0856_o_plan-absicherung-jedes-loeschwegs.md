@@ -258,7 +258,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
       `issues/260817-1720_*_die-frage-kann-diese-25-eintraege-mit-25-eintraegen-lauten.md`
       abgelegt.
 
-11. [IN PROGRESS] **Die Tatsachen beschaffen und das Blatt laut machen**
+11. [DONE] **Die Tatsachen beschaffen und das Blatt laut machen**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `loeschen_nach_rueckfrage` fragt `benutzerverzeichnis()` einmal, löst es auf, baut das `Loeschziel` aus den fünf Quellen und ruft `warngruende`. Ist die Liste leer, bleibt das Blatt ruhig; sonst ist es laut. Der Wahrheitswert `laut` und die beiden Texte gehen unverändert an `loeschbestaetigung::zeigen`. Die Reihenfolge im Rumpf ist die des ersten Bildes und steht als Kommentar daneben, weil der Papierkorbtest vor der Rückfrage zu stehen hat.

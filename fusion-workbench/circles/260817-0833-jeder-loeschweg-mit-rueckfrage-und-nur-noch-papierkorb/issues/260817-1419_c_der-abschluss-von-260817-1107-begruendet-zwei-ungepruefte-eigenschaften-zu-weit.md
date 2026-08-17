@@ -74,3 +74,31 @@ gemacht hat, und der Abnahmelauf müsste nur noch belegen, was allein er belegen
 Ob der Schnitt die Kosten wert ist, entscheidet der Nutzer oder der nächste Plan. Verlangt ist
 hier nur, dass die Abschlussnotiz das sagt, statt zu sagen, es sei nichts mehr zu tun. Eine
 Aussage über den Code, die ein Gegenbeispiel hat, liest die nächste Runde als bindend.
+
+---
+Resolved: 260817-1806 (coder, Aufgabe T10, Schritt 11 des Plans). Der Schnitt aus **Richtung**
+ist gemacht, und er ist billig geblieben: `kommandos::loeschwarnung::nach_der_rueckfrage(bestaetigt,
+traegt_auswahl) -> Nachstufe` mit den beiden Werten `KeinAuftrag` und `Auftrag`, ausgeschriebener
+Tafel über vier Fälle, `#[must_use]` und ohne Auffangzweig. Der Abschluss des Blattes in
+`anwendung.rs` ruft sie und schreibt eine vollständige Fallunterscheidung über `(Nachstufe,
+Option<(Art, Auswahl, PathBuf)>)`; der Zweig `(Auftrag, None)` steht ausdrücklich da, obwohl die
+Tafel ihn nicht liefern kann.
+
+Drei Proben, und jede sagt etwas, das die anderen nicht sagen:
+`die_tafel_der_fuenften_stufe_geht_auf` schreibt alle vier Fälle aus,
+`ein_abbruch_stellt_keinen_auftrag` fährt beide Werte von `traegt_auswahl` gegen `bestaetigt ==
+false` durch (der Vorrang und nicht nur der Ausgang, wie bei den Vorstufen), und
+`genau_ein_fall_stellt_einen_auftrag` zählt, dass der Auftrag der eine Ausgang mit beiden
+Bedingungen ist.
+
+**Was im Abnahmelauf bleibt, ist genau das, was dieser Befund als die eigentliche Schicht
+benannt hat:** dass AppKit auf einen Klick, auf `Return` und auf `Esc` den Rückgabewert liefert,
+den KRK erwartet. Die Abbildung von diesem Wert auf den Auftrag ist es nicht mehr.
+
+**Zum Abschlussvermerk von `260817-1107`.** Der Satz „am Code ist dafür nichts mehr zu tun" ist
+damit nicht mehr nachzuziehen, sondern überholt: es war etwas zu tun, es ist getan, und die
+Aufzeichnung des damaligen Standes behält ihren Wortlaut nach der Ortsregel für `issues/`. Ein
+Nachtrag dort verweist auf diesen Datensatz.
+
+Verifikation: `make check` — exit 0. Die Abrechnung im Einzelnen steht in
+`history/260817-1806-coder-t10-die-laute-warnform.md`.
