@@ -1103,3 +1103,5 @@
 {"ts":"2026-08-17T16:18:16","event":"review_done","turn":2,"agent":"coderev","findings":9,"verdict":"covered"}
 {"ts":"2026-08-17T16:18:16","event":"coherence_review","turn":2,"verdict":"ok","artifact_grounding":"9 Datensaetze, keiner hoch, alle sieben Zusagen halten","artifact_directive":"Planschritte 4 bis 11 DONE, Kette der Directive steht bis auf Buendel D und E","grounding_directive":"0 active decisions touched this Turn, 1 neuer Nutzerentscheid umgesetzt"}
 {"ts":"2026-08-17T16:18:16","event":"turn_end","turn":2,"commits":7,"tasks_done":6}
+{"ts":"2026-08-17T16:48:12","event":"reconciliation","discrepancies":6,"verdict":"review-needed","resolved_by":"orchestrator artifact revision"}
+{"ts":"2026-08-17T16:48:12","event":"session_end","turns":2,"tasks_done":11,"commits":15,"errors":0}
