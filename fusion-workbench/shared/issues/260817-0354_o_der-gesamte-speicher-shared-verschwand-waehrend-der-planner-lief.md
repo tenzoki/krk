@@ -86,3 +86,13 @@ tragen ihre Datensätze. Der Verlust ist damit vollständig behoben.
 **Die Ursache steht weiter offen**, und sie hat einen eigenen Datensatz:
 `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`. Er
 war am 260816-2144 als Risiko abgelegt und ist seit dieser Nacht ein Schadensfall.
+
+## Nachtrag vom 260817: ein zweiter Vorfall auf einem anderen Gerät
+
+Der Nutzer berichtet einen gleichartigen Vorfall auf einem seiner anderen Computer.
+Damit ist die Fehlbedienung als Ursache gesichert und nicht mehr erschlossen: derselbe
+Griff hat zweimal auf zwei Geräten denselben Schaden angerichtet.
+
+Der Datensatz ist damit ursächlich geklärt. Was bleibt, ist die Abstellung, und die
+gehört nicht hierher, sondern nach
+`shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.

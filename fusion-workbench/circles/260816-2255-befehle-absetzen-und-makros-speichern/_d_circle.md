@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** deferred
 **Filed by:** orchestrator
 **Active spec/plan:** shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md
 **Active session history:** shared/history/260816-2113-orchestrator-session.md
@@ -66,3 +66,26 @@ Kein eingebautes Terminal, kein sechster Bereich der Fensterzeile, keine Oberfl�
 ## Closure note
 
 (offen)
+
+**Zurückgestellt am 260817-0445.** Nichts ist gebaut. Der Nutzer hat den Plan nicht
+abgenommen und in derselben Nacht eine höhere Priorität gesetzt: die Absicherung jedes
+Löschwegs in KRK, nachdem ein Fehlgriff im Dateifenster den Speicher
+`fusion-workbench/shared` mit 189 Dateien in den Papierkorb geräumt hat und der Nutzer
+einen gleichartigen Vorfall auf einem zweiten Gerät berichtet.
+
+Die Runde ist nicht gescheitert und ihre Directive ist erreichbar; sie ist nur nicht
+dran. Was sie hinterlässt, ist vollständig und zitierbar:
+
+- Spec mit 54 Abnahmekriterien: `shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md`
+- Plan mit 22 Schritten in fünf Bündeln: `planning/260816-2307_o_plan-befehle-absetzen-und-makros-speichern.md`
+- Zwei offene Entscheidungen: die Shell des Laufs, und ob die Prozessgruppe am normalen
+  Ende stirbt. Die zweite hat der Nutzer am 260816 beantwortet (Möglichkeit 1, die Gruppe
+  stirbt mit der Shell); der Datensatz trägt die Antwort noch nicht, weil die Sitzung
+  vorher die Richtung wechselte.
+- Ein Befund zur Anführungsregel aus C2.6, mit Messung.
+- Die Beratung, auf der alles aufsetzt: `shared/consult/260815-1354-befehlslauf-und-makros-in-krk.md`
+
+Wer die Runde wieder aufnimmt, legt einen neuen Circle an und zitiert diesen über
+`## Dependencies`; ein zurückgestellter Circle wird nicht wiederbelebt.
+
+Sitzungsprotokoll: `shared/history/260816-2113-orchestrator-session.md`
