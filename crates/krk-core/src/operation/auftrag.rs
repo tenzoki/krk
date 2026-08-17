@@ -5,7 +5,7 @@
 //! [`super::starten`] auf einem eigenen Arbeitsfaden.
 //!
 //! **Das Ziel steht in der Art und nicht daneben.** Kopieren und Verschieben
-//! brauchen einen Zielordner, Papierkorb und endgueltiges Loeschen nicht. Ein
+//! brauchen einen Zielordner, Papierkorb und Stapelumbenennen nicht. Ein
 //! flaches Feld `ziel` haette bei zwei der vier Arten keinen Wert, den der
 //! Aufrufer sinnvoll fuellen koennte, und jede Auswertung muesste sich darauf
 //! verlassen, dass er ihn trotzdem richtig gefuellt hat.

@@ -26,8 +26,8 @@
 //! steht, ist nichts umbenannt: die Vorschau rechnet auf Zeichenketten.
 //!
 //! **Die Eingabetaste liegt auf "Umbenennen" und nicht auf "Abbrechen".** Das
-//! ist der Unterschied zur Rueckfrage vor dem endgueltigen Loeschen, wo C4 die
-//! Vorbelegung ausdruecklich umdreht: ein Umbenennen loescht nichts, und der
+//! ist der Unterschied zur Loeschrueckfrage, wo C4 die Vorbelegung
+//! ausdruecklich umdreht: ein Umbenennen loescht nichts, und der
 //! Nutzer hat die Vorschau vor sich, waehrend er die Taste drueckt.
 //!
 //! # Bedienung ohne Maus

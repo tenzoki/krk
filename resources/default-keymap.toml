@@ -6,7 +6,7 @@
 # zweite Belegungstabelle im Code gibt es danach nicht mehr.
 #
 # Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeiten C1 bis
-# C7, C10 und C11. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
+# C7, C10 und C11. Die fuenf Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
 # in der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
 # `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md` und
 # `shared/decisions/
@@ -166,7 +166,7 @@ tasten = ["f4"]
 # und den gab es noch nicht. Er oeffnet jetzt den ausgewaehlten Eintrag des
 # Dateifensters im eingebauten Editor (C1 der Editor-Runde).
 #
-# Es bleibt bei der einen Taste. Die Zwei-Wege-Regel aus C3 gilt den sechs
+# Es bleibt bei der einen Taste. Die Zwei-Wege-Regel aus C3 gilt den fuenf
 # Funktionen der Norton-Reihe ganz oben; `bearbeiten` gehoert zu den spaeteren
 # Funktionen, die je eine tragen, wie "terminal_oeffnen" weiter unten. Ein
 # Cmd-Kuerzel daneben braucht es auch sachlich nicht: der zweite Einstiegsweg in
@@ -637,7 +637,7 @@ tasten = ["ctrl+o"]
 # darin liegt hier die Wiedererkennung.
 #
 # Ein Cmd-Kuerzel daneben traegt die Funktion nicht. Die Zwei-Wege-Regel aus C3
-# gilt fuer die sechs Funktionen der Norton-Reihe ganz oben und nicht fuer jede
+# gilt fuer die fuenf Funktionen der Norton-Reihe ganz oben und nicht fuer jede
 # Funktion; die vier Funktionen vom 260804 tragen aus demselben Grund je eine.
 
 # ── Pfade kopieren und mit dem Standardprogramm öffnen ───────────────────────
@@ -846,7 +846,7 @@ tasten = ["f1"]
 # Anwendung mit der Tastatursteuerung als erster Maxime ist die
 # Belegungsansicht genau das. Auf dem Mac ist F1 keine Hilfetaste, sondern die
 # Verringerung der Bildschirmhelligkeit; hier weicht die Belegung vom Mac ab,
-# anders als bei den sechs Cmd-Kuerzeln der Norton-Reihe oben. Die Ansicht
+# anders als bei den fuenf Cmd-Kuerzeln der Norton-Reihe oben. Die Ansicht
 # dahinter entsteht spaeter in dieser Runde; bis dahin loest die Taste nichts
 # aus und nimmt dem System das Ereignis nicht weg (C3).
 

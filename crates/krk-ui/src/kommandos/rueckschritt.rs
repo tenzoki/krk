@@ -1,5 +1,6 @@
 //! Was ein Druck auf die nackte Rueckschritt-Taste bedeutet: ein Zeichen des
-//! Filtertextes zurueck, gar nichts, oder eine Datei in den Papierkorb (C6.10).
+//! Filtertextes zurueck, gar nichts, oder der Weg in den Papierkorb mit seiner
+//! Rueckfrage (C6.10).
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Die drei Wahrheitswerte liest der
@@ -15,13 +16,20 @@
 //!
 //! # Warum diese Regel eigens dasteht
 //!
-//! Sie ist die eine Fallunterscheidung dieser Runde, deren falscher Zweig
-//! Dateien wegraeumt. `delete` traegt in `resources/default-keymap.toml` die
-//! Funktion `in_papierkorb`, und das Raeumen laeuft ohne Rueckfrage. Ohne die
-//! Unterscheidung raeumte die Berichtigung eines Vertippers Dateien weg
-//! (C1.15). Deshalb steht sie als reine Funktion mit einer ausgeschriebenen
-//! Tafel da und nicht als Bedingung im Ausfuehrungszweig: dort waere sie an
-//! keiner Probe zu fassen.
+//! Sie ist die eine Fallunterscheidung der Runde 10, deren falscher Zweig
+//! einen Loeschbefehl stellt. `delete` traegt in `resources/default-keymap.toml`
+//! die Funktion `in_papierkorb`; ohne die Unterscheidung liesse die
+//! Berichtigung eines Vertippers die Rueckfrage vor dem Raeumen aufgehen
+//! (C1.15).
+//!
+//! **Seit dem 260817 ist die Rueckfrage die zweite Sperre, und die
+//! Unterscheidung hier ist dadurch milder geworden**: ihr falscher Zweig
+//! raeumt nichts mehr, er fragt. Sie bleibt trotzdem eigens gefasst, denn eine
+//! Rueckfrage, die auf jeden berichtigten Vertipper aufgeht, ist die Sorte
+//! Frage, die weggeklickt und nicht gelesen wird — und damit waere die zweite
+//! Sperre so viel wert wie keine. Deshalb steht die Regel als reine Funktion
+//! mit einer ausgeschriebenen Tafel da und nicht als Bedingung im
+//! Ausfuehrungszweig: dort waere sie an keiner Probe zu fassen.
 //!
 //! # Zwei Groessen, drei Wahrheitswerte
 //!
@@ -111,8 +119,9 @@ pub enum Rueckschritt {
     /// Nichts geschieht: kein Auftrag, keine Meldung. Die Tastenwiederholung
     /// hat den Filtertext geleert und traegt nicht ueber diese Grenze (C1.18).
     Nichts,
-    /// Der Eintrag geht in den Papierkorb, ohne Rueckfrage, wie bisher
-    /// (C1.16, C1.20).
+    /// Der Loeschbefehl laeuft weiter und erreicht die Rueckfrage vor dem
+    /// Raeumen (C1.16, C1.20). Bis zum 260817 raeumte dieser Ausgang ohne sie;
+    /// der Name ist geblieben, der Weg dahinter hat eine Sperre bekommen.
     InDenPapierkorb,
 }
 

@@ -902,7 +902,8 @@ mod tests {
     use super::*;
 
     /// Das Modell fuehrt jede Funktion der Belegung genau einmal: eine Zeile
-    /// je Funktion, und Papierkorb und endgueltiges Loeschen sind zwei davon.
+    /// je Funktion, und der Papierkorb ist seit dem Wegfall des endgueltigen
+    /// Loeschens die eine Zeile des Loeschwegs und nicht mehr eine von zweien.
     /// Dazu kommen allein die Bereichsueberschriften.
     #[test]
     fn eine_zeile_je_funktion() {

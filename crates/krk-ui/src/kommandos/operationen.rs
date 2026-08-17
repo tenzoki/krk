@@ -140,8 +140,8 @@ pub fn anzeige_faellig(begonnen: Instant, jetzt: Instant) -> bool {
 pub struct Auswahl {
     /// Die vollen Pfade, in der Reihenfolge, in der sie auf dem Schirm stehen.
     pub pfade: Vec<PathBuf>,
-    /// Wie viele davon Ordner sind. Die Rueckfrage vor dem endgueltigen
-    /// Loeschen nennt die Zahl gesondert (C4).
+    /// Wie viele davon Ordner sind. Die Rueckfrage vor dem Raeumen in den
+    /// Papierkorb nennt die Zahl gesondert (C4).
     pub ordner: usize,
 }
 

@@ -281,16 +281,23 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // bindet die Pruefung an ihre Groesse statt an ihre Zusage und muesste bei
     // jeder Aenderung mit umbenannt werden.
     //
-    // **Seit dem 260811 ist es eine einzige Kombination, und die Schleife
+    // **Seit dem 260811 prueft sie eine einzige Kombination, und die Schleife
     // darueber ist deshalb weg.** Clippy weist eine Schleife ueber ein Element
     // ab (`single_element_loop`), und ein `#[allow]` daneben waere teurer als
-    // die geradeaus geschriebene Pruefung. Kommt eine zweite frei gehaltene
-    // Kombination dazu, kommt die Schleife mit ihr zurueck.
+    // die geradeaus geschriebene Pruefung.
     //
-    // Umschalt+Entf loescht nach `shared/decisions/
-    // 260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` nichts endgueltig.
-    // Es ist seit dem 260811 die einzige Kombination dieser Liste, und der
-    // Kopfkommentar von `resources/default-keymap.toml` fuehrt es ebenso.
+    // Umschalt+Entf bleibt ab Werk frei. Bis zum 260817 stand der Grund im
+    // Datensatz `shared/decisions/
+    // 260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`, naemlich dass die
+    // Kombination nichts endgueltig loesche; seit dem Wegfall des endgueltigen
+    // Loeschens fuehrt der Kopfkommentar von `resources/default-keymap.toml`
+    // sie ohne diesen Zusatz weiter.
+    //
+    // **Opt+Cmd+Entf ist am 260817 danebengetreten und steht nicht in dieser
+    // Pruefung.** Es trug bis dahin das endgueltige Loeschen und ist mit ihm
+    // frei geworden; der Kopfkommentar der Belegung fuehrt seitdem zwei ab Werk
+    // freie Kombinationen und diese Pruefung eine. Wer die zweite aufnimmt,
+    // holt die Schleife mit ihr zurueck.
     //
     // **Die Eingabetaste stand bis zum 260811 hier und steht es nicht mehr.**
     // Der Nutzer hatte sie am 260804 freigegeben, als der Einstieg in den

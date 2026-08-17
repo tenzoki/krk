@@ -1,10 +1,11 @@
-//! Loeschen: in den Papierkorb des Systems und endgueltig.
+//! Loeschen: in den Papierkorb des Systems, und sonst nirgendwohin.
 //!
-//! Zwei Wege, wie es der Nutzer am 260802-1105 entschieden hat
-//! (`shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`):
-//! Delete raeumt in den Papierkorb, F8 loescht endgueltig. Die Rueckfrage vor
-//! dem endgueltigen Loeschen stellt die Oberflaeche, genau einmal je Vorgang;
-//! der Kern bekommt den Auftrag erst danach.
+//! **Ein Weg.** Der Nutzer hatte am 260802-1105 zwei entschieden, Delete in den
+//! Papierkorb und F8 endgueltig; am 260817 ist der zweite weggefallen, und der
+//! Datensatz von damals ist damit ueberholt (`shared/decisions/
+//! 260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`).
+//! Die Rueckfrage vor dem Raeumen stellt die Oberflaeche, genau einmal je
+//! Vorgang; der Kern bekommt den Auftrag erst danach.
 //!
 //! # Die eine Abhaengigkeitsumkehr des Entwurfs
 //!

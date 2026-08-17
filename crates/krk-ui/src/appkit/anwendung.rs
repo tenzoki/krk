@@ -600,7 +600,8 @@ pub struct AnwendungsIvars {
     /// Die laufende Dateioperation aus C4, falls eine laeuft.
     vorgang: RefCell<Option<Vorgang>>,
     /// Ein Blatt, das auf eine Antwort des Nutzers wartet: die Konfliktfrage,
-    /// die Rueckfrage vor dem endgueltigen Loeschen oder die Abschlussliste.
+    /// die Rueckfrage vor dem Raeumen in den Papierkorb oder die
+    /// Abschlussliste.
     ///
     /// Es steht hier, damit die Escape-Taste es schliessen kann. Ein `NSButton`
     /// traegt genau eine Tastenentsprechung, und die Eingabetaste liegt in der
@@ -4459,8 +4460,8 @@ impl Anwendungsdelegierter {
     }
 
     /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
-    /// zurueck, gar nichts, oder eine Datei in den Papierkorb (C1.14 bis C1.20,
-    /// C6.9, C6.11).
+    /// zurueck, gar nichts, oder der Weg in den Papierkorb mit seiner
+    /// Rueckfrage (C1.14 bis C1.20, C6.9, C6.11).
     ///
     /// **Der eine Zweig dieser Runde, dessen falsche Haelfte Dateien
     /// wegraeumt**, und deshalb die Stelle, an der die drei Aussagen einzeln

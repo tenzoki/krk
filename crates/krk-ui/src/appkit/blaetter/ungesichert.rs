@@ -20,7 +20,7 @@
 //!
 //! # Warum die Eingabetaste auf "Sichern" liegt
 //!
-//! Anders als bei der Rueckfrage vor dem endgueltigen Loeschen ist die
+//! Anders als bei der Rueckfrage vor dem Raeumen in den Papierkorb ist die
 //! bewahrende Antwort hier zugleich die erste: ein reflexhaftes Bestaetigen mit
 //! der Eingabetaste schreibt die Datei und verliert nichts. Verwerfen kostet
 //! deshalb die Zusatztaste, und der erlaeuternde Text nennt alle drei Wege, wie

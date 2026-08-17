@@ -3,11 +3,11 @@
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat zehn:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
-//! dem endgueltigen Loeschen, Abschlussliste der uebersprungenen Eintraege und
-//! seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen im
-//! Stapel), dazu seit S27 der Editor-Runde die Nachfrage vor dem Verlust eines
-//! ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde) und seit S35
-//! und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
+//! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
+//! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
+//! im Stapel), dazu seit S27 der Editor-Runde die Nachfrage vor dem Verlust
+//! eines ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde) und seit
+//! S35 und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
 //! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist der Notizzettel der
 //! Runde 9 ([`zettel`]).
@@ -52,7 +52,7 @@
 //! `NSAlert` gibt die Eingabetaste von sich aus der **ersten** Schaltflaeche und
 //! die Escape-Taste nur einer mit dem Titel "Cancel", den eine
 //! deutschsprachige Anwendung nicht traegt. Beides waere fuer die Rueckfrage vor
-//! dem endgueltigen Loeschen falsch: C4 verlangt dort **Abbrechen** als
+//! dem Raeumen in den Papierkorb falsch: C4 verlangt dort **Abbrechen** als
 //! Vorbelegung, damit ein reflexhaftes Bestaetigen mit der Eingabetaste nichts
 //! loescht. [`Blatt::mit_schaltflaechen`] nimmt die Taste deshalb je
 //! Schaltflaeche entgegen und loescht die Vorgabe von `NSAlert`, wo sie nicht
@@ -281,7 +281,7 @@ impl Eingabewaechter {
 /// erreicht die Schaltflaechen eines Blattes nur, wenn der Nutzer im System die
 /// vollstaendige Tastaturnavigation eingeschaltet hat. Ein Blatt mit mehr als
 /// zwei Antworten waere ohne Maus damit nicht zu beantworten, und C4 verlangt
-/// fuer die Rueckfrage vor dem endgueltigen Loeschen ausdruecklich das
+/// fuer die Rueckfrage vor dem Raeumen in den Papierkorb ausdruecklich das
 /// Gegenteil. Die beiden Kombinationen mit Zusatztaste geben jeder weiteren
 /// Antwort einen eigenen Griff; **das Blatt schreibt sie in seinen
 /// erlaeuternden Text**, sonst waeren sie unauffindbar.
@@ -424,7 +424,7 @@ pub fn abbruchstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
 ///
 /// Der Abbruchbefehl braucht das: `esc` schliesst ein stehendes Blatt ueber
 /// seinen Griff, weil ein `NSButton` genau eine Tastenentsprechung traegt und
-/// die Rueckfrage vor dem endgueltigen Loeschen die Eingabetaste auf
+/// die Rueckfrage vor dem Raeumen in den Papierkorb die Eingabetaste auf
 /// "Abbrechen" gelegt hat. Wer den Griff nicht braucht, laesst ihn fallen; das
 /// schadet nicht, weil AppKit das Blatt haelt, solange es steht.
 pub struct Blattgriff {
@@ -563,8 +563,10 @@ impl Blatt {
 
     /// Macht das Blatt zur Warnung, mit dem Warnzeichen des Systems.
     ///
-    /// Fuer die Rueckfrage vor dem endgueltigen Loeschen: sie ist der eine
-    /// Vorgang in KRK, der keinen Rueckweg hat.
+    /// Fuer die **laute** Form der Loeschrueckfrage: das Warnzeichen steht,
+    /// wenn [`crate::kommandos::loeschwarnung::warngruende`] mindestens einen
+    /// Grund liefert, und sonst nicht. Die ruhige Form derselben Rueckfrage
+    /// ruft diese Funktion nicht.
     pub fn als_warnung(&self) {
         self.warnung.setAlertStyle(NSAlertStyle::Critical);
     }

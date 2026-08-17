@@ -123,8 +123,9 @@
 //! Abfrage der Loeschtasten aus Schritt 16 ist darin aufgegangen.
 //!
 //! **Die Eigenschaft steht im Kern, die Antwort in der Oberflaeche.** Dass das
-//! endgueltige Loeschen das Dateifenster braucht, ist eine Aussage ueber den
-//! Befehl und kein AppKit-Wissen; sie ist deshalb hier ohne Fenster pruefbar.
+//! Raeumen in den Papierkorb das Dateifenster braucht, ist eine Aussage ueber
+//! den Befehl und kein AppKit-Wissen; sie ist deshalb hier ohne Fenster
+//! pruefbar.
 //! Welcher Bereich den Fokus gerade hat, weiss allein `krk-ui`. Die
 //! Aufrufrichtung bleibt von oben nach unten.
 //!
@@ -264,8 +265,7 @@ pub enum Wirkungsbereich {
     /// Blatt und ein Textfeld sind kein Bereich des Navigators und bleiben
     /// damit ausgeschlossen, so wie sie es unter `Dateifenster` und `Leiste`
     /// schon sind. "Ueberall ausser im Editor" schloesse sie ein, und ein
-    /// `up` vor der Rueckfrage des endgueltigen Loeschens bewegte die Auswahl
-    /// im Ordner dahinter.
+    /// `up` vor der Loeschrueckfrage bewegte die Auswahl im Ordner dahinter.
     Navigator,
     /// Wirkt ohne Vorbehalt.
     ///

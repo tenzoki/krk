@@ -87,6 +87,18 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
   Zuschnitt auf Befunde plus Bündel B und C gewählt; **Bündel D und E stehen aus**, das
   endgültige Löschen ist damit noch im Programm.
 
+- Turn 1 (Sitzung 260817-2131): Commits `82707ef`..`f7a85c1`, dazu `8f556ed` für die
+  Durchsicht. **Das ganze Bündel D, drei Aufgaben — das endgültige Löschen ist aus dem
+  Programm.** `Kommando::EndgueltigLoeschen` und `Art::EndgueltigLoeschen` sind gefallen,
+  `Kommando::KENNUNGEN` steht bei 78, `opt+cmd+delete` ist unbelegt und wird nicht neu
+  vergeben, und `f8` liegt auf dem Papierkorb. Die Auslieferung führt 84 Funktionen mit 89
+  Kombinationen, beide Zahlen gegen die Datei gezählt. Eine neue Probe misst die
+  Nutzerantwort zur gespeicherten `keymap.toml`, statt sie zu behaupten. Schritt 14 fand
+  sieben Prosazahlen statt der acht, die der Plan erwartete: `menue.rs:128` war falsch,
+  solange der Baum 85 trug, und ist durch den Wegfall von selbst richtig geworden. Vier
+  Datensätze aus der Durchsicht, einer mittel, keiner hoch; der mittlere erreicht keinen
+  verbliebenen Planschritt und ist deshalb an Schritt 15 gehängt. Kohärenz-Befund `ok`.
+
 ## Closure note
 
 (offen)

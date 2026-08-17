@@ -8,9 +8,9 @@
 //!
 //! `NSAlert` gibt sie von sich aus der ersten Schaltflaeche, und das waere hier
 //! "Überschreiben": ein reflexhaftes Bestaetigen loeschte damit den Eintrag am
-//! Ziel. Dieselbe Ueberlegung, die C4 fuer die Rueckfrage vor dem endgueltigen
-//! Loeschen ausschreibt ("vorbelegt ist Abbrechen, sodass ein reflexhaftes
-//! Bestaetigen mit der Return-Taste nichts loescht"), traegt auch hier. Die
+//! Ziel. Dieselbe Ueberlegung, die C4 fuer die Loeschrueckfrage ausschreibt
+//! ("vorbelegt ist Abbrechen, sodass ein reflexhaftes Bestaetigen mit der
+//! Return-Taste nichts loescht"), traegt auch hier. Die
 //! Reihenfolge der Schaltflaechen bleibt die des Spec; allein die Taste wandert.
 //!
 //! # Das Namensfeld steht bereit, ohne den Fokus zu nehmen

@@ -63,3 +63,17 @@ Four occurrences, one fact. Set all four to five in one edit, and keep line 9's 
 at the round-1 table so that step 17 and this file end up saying the same number. Line 849 is
 about the Cmd shortcuts rather than the functions; both counts are five, so the same number
 serves.
+
+---
+Resolved: Alle vier Stellen in `resources/default-keymap.toml` (Zeilen 9, 170, 640, 849)
+sagen jetzt „fuenf" statt „sechs". Nachgezaehlt wurde gegen die Datei und nicht gegen die
+Zahl im Datensatz: der Norton-Block laeuft vom Abschnittskopf `:129` bis zum Eintrag
+`bearbeiten` `:161` und traegt sechs `[[funktion]]`-Eintraege, von denen `bearbeiten` seit
+der Editor-Runde eine einzige Taste fuehrt und im Kommentar bei `:169` ausdruecklich von
+der Zwei-Wege-Regel ausgenommen ist. Die Reihe, ueber die alle vier Stellen sprechen, sind
+damit `vorschau_umschalten`, `kopieren`, `verschieben`, `ordner_anlegen` und
+`in_papierkorb`: **fuenf Funktionen mit fuenf Cmd-Kuerzeln** (`cmd+y`, `shift+cmd+k`,
+`shift+cmd+v`, `shift+cmd+n`, `cmd+delete`). Das deckt sich mit der Messung im Abschnitt
+`## Measured` darueber. Geaendert wurden allein Kommentarzeilen; kein Eintrag, keine
+Tastenliste. `make check` laeuft gruen (Exit 0). Erledigt im Schritt 15 des Plans
+`planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`.

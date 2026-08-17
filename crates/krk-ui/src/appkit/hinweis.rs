@@ -71,9 +71,10 @@ pub fn zeigen(mtm: MainThreadMarker, titel: &str, satz: &str) {
     warnung.setMessageText(&NSString::from_str(titel));
     warnung.setInformativeText(&NSString::from_str(satz));
     // `Critical` und nicht die Vorgabe `Warning`: dieses Fenster erscheint nur,
-    // wenn KRK danach aufhoert zu laufen. Dieselbe Wahl wie bei der Rueckfrage
-    // vor dem endgueltigen Loeschen, und aus demselben Grund — das Warnzeichen
-    // des Systems steht fuer den Vorgang ohne Rueckweg.
+    // wenn KRK danach aufhoert zu laufen. Dieselbe Wahl wie bei der lauten Form
+    // der Loeschrueckfrage, und aus demselben Grund — das Warnzeichen des
+    // Systems steht fuer den Vorgang, dessen Ruecknahme teuer oder unmoeglich
+    // ist.
     warnung.setAlertStyle(NSAlertStyle::Critical);
     // Die eine Schaltflaeche ausdruecklich und nicht die Vorgabe von `NSAlert`:
     // deren Beschriftung kaeme aus der Lokalisierung von AppKit, und welche

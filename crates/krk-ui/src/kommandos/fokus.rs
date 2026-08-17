@@ -104,9 +104,9 @@ pub enum Fokus {
     /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
     ///
     /// Ein Kommando, das einen Bereich braucht, wirkt hier nicht. Der Fall ist
-    /// nicht theoretisch: vor der Rueckfrage des endgueltigen Loeschens ist das
-    /// Panel des Blattes das Schluesselfenster, und ohne diesen Wert loeschte
-    /// ein Delete davor in dem Ordner dahinter.
+    /// nicht theoretisch: bei stehender Loeschrueckfrage ist das Panel des
+    /// Blattes das Schluesselfenster, und ohne diesen Wert loeschte ein Delete
+    /// davor in dem Ordner dahinter.
     Anderswo,
 }
 
@@ -342,9 +342,9 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
         }
         // Positiv aufgezaehlt und **nicht** als `fokus != Fokus::Editor`. Die
-        // Verneinung liesse `Fokus::Anderswo` durch, und ein `up` vor der
-        // Rueckfrage des endgueltigen Loeschens bewegte die Auswahl im Ordner
-        // dahinter. Die Begruendung im Langen steht an
+        // Verneinung liesse `Fokus::Anderswo` durch, und ein `up` bei
+        // stehender Loeschrueckfrage bewegte die Auswahl im Ordner dahinter.
+        // Die Begruendung im Langen steht an
         // [`Wirkungsbereich::Navigator`].
         Wirkungsbereich::Navigator => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Leiste | Fokus::Vorschau)
@@ -425,9 +425,8 @@ mod tests {
     /// stehende Blatt aus.
     ///
     /// Die Gegenprobe zur Verneinung: waere der Wert als "ueberall ausser im
-    /// Editor" geschrieben, kaeme hier `true` heraus, und ein `up` vor der
-    /// Rueckfrage des endgueltigen Loeschens bewegte die Auswahl im Ordner
-    /// dahinter.
+    /// Editor" geschrieben, kaeme hier `true` heraus, und ein `up` bei
+    /// stehender Loeschrueckfrage bewegte die Auswahl im Ordner dahinter.
     #[test]
     fn der_navigator_schliesst_auch_das_stehende_blatt_aus() {
         assert!(!wirkt(Wirkungsbereich::Navigator, Fokus::Anderswo));

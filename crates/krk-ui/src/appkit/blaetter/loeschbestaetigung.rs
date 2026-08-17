@@ -1,7 +1,8 @@
 //! Die eine Rueckfrage vor dem Raeumen in den Papierkorb (C2, C3).
 //!
 //! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege
-//! und unabhaengig davon, welcher der Loeschbefehle ihn ausgeloest hat. Die
+//! und unabhaengig davon, welche der drei Tasten oder ob der Menueeintrag ihn
+//! ausgeloest hat. Die
 //! beiden Texte rechnet
 //! [`crate::kommandos::loeschwarnung::frage_und_erlaeuterung`]; hier steht
 //! allein, was AppKit betrifft.
@@ -41,16 +42,16 @@
 //!
 //! **Der Hinweissatz darunter nennt keinen Vorgang.** Er lautet "Return und
 //! Esc brechen ab. Zum Bestätigen Cmd+Return." und sagte bis zum 260817 "Zum
-//! Löschen Cmd+Return". Das ging, solange das Blatt einen einzigen Befehl
-//! bediente; seit beide Loeschbefehle durch dasselbe Blatt gehen, waere
-//! "Löschen" fuer den alltaeglichen Weg schlicht das falsche Wort. Es ist
-//! dasselbe Wort, das [`crate::kommandos::loeschwarnung`] in der Frage
+//! Löschen Cmd+Return". Das ging, solange das Blatt allein das endgueltige
+//! Loeschen bediente; seit der alltaegliche Weg in den Papierkorb durch
+//! dasselbe Blatt geht, waere "Löschen" fuer ihn schlicht das falsche Wort. Es
+//! ist dasselbe Wort, das [`crate::kommandos::loeschwarnung`] in der Frage
 //! ausdruecklich vermeidet, weil der Rueckweg ueber den Papierkorb der
-//! Unterschied zu dem Weg ist, den diese Runde abschafft; ein Satz, der es
-//! zwei Zeilen darunter doch benutzt, nimmt der Unterscheidung ihre Wirkung.
+//! Unterschied zu dem Weg ist, den diese Runde abgeschafft hat; ein Satz, der
+//! es zwei Zeilen darunter doch benutzt, nimmt der Unterscheidung ihre Wirkung.
 //! Den Vorgang benennt die zweite Schaltflaeche, und sie tut es in beiden
-//! Formen richtig. Der Satz benennt deshalb allein die Taste, und er bleibt
-//! damit auch dann richtig, wenn mit Buendel D nur noch eine Form uebrig ist.
+//! Formen richtig. Der Satz benennt deshalb allein die Taste, und er ist mit
+//! Buendel D richtig geblieben, wo nur noch der eine Loeschweg uebrig ist.
 //!
 //! **Auch eine Antwort, die zu keiner der beiden Schaltflaechen gehoert, raeumt
 //! nichts.** Dieses Blatt ist das eine im Baum, dessen **letzte** Schaltflaeche
