@@ -1053,3 +1053,6 @@
 {"ts":"2026-08-17T09:21:37","event":"coherence_review","turn":1,"detail":"verdict ok | Artefakt<->Grundlage: 7 Befunde, 0 kritisch, 1 hoch | Artefakt<->Directive: Schutzschwelle erreicht, Commits gehen auf die Directive zu | Grundlage<->Directive: 0 beantwortete Entscheidungen beruehrt"}
 {"ts":"2026-08-17T09:21:37","event":"gate_response","turn":1,"detail":"Nutzer beendet die Sitzung nach Turn 1; Buendel B bis E und sieben Befunde warten"}
 {"ts":"2026-08-17T09:21:37","event":"turn_end","turn":1,"detail":"3 Aufgaben erledigt, 7 Befunde gefiled, 4 Commits; Schutzschwelle erreicht"}
+{"ts":"2026-08-17T09:37:45","event":"reconciliation","detail":"7 Abweichungen; Kohaerenz review-needed, beide Kanten bekannt und als Schritte 16/17 verplant; kein Rebalance-Gate geoeffnet, Nutzer hatte die Sitzung beendet"}
+{"ts":"2026-08-17T09:37:45","event":"commit","detail":"6ff96b1 Abgleich und Sitzungsprotokoll"}
+{"ts":"2026-08-17T09:37:45","event":"session_end","detail":"1 Turn, 3 von 17 Aufgaben, 11 Commits, 13 Defekte gefiled, 5 Entscheidungen beantwortet, 0 Agentenfehler, 12 Nutzergates; Schutzschwelle erreicht"}
