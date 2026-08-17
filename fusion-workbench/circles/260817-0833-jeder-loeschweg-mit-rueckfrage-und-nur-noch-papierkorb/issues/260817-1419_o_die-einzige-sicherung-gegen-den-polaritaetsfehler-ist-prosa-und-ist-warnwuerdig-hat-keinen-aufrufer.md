@@ -143,3 +143,27 @@ ohne zweite Änderung an derselben Stelle" argument in **Richtung** has expired 
 would now cost its own change.
 
 Tree state: `3fcd375` plus the uncommitted steps 9 and 10. Verification: `make check` — exit 0.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, und der Titel trifft nicht mehr
+ganz.**
+
+`ist_warnwuerdig` hat seit Schritt 8 (`5a0f041`) drei Aufrufstellen, alle im Probencode:
+`crates/krk-core/tests/arbeitsbaum.rs:100` und `:305` sowie
+`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:573` im `#[cfg(test)]`-Modul. Einen Aufrufer im
+Nicht-Probencode gibt es weiterhin nicht, und alle drei liegen auf der ersten Polarität, wo die
+Frage die richtige ist. Der Befund selbst ist davon unberührt: die Sicherung gegen die
+Verwechslung der beiden Polaritäten ist nach wie vor Prosa in drei Modulköpfen plus eine
+Zählprobe in `appkit/volumes.rs`, und `appkit/papierkorb.rs` trägt nur Prosa. Die Zählung von
+„sechs Treffer" im Abschnitt `## Was am Baum steht` ist ein aufgezeichneter Stand und bleibt im
+Wortlaut; am 260817-1833 liefert `grep -rn "ist_warnwuerdig" crates/ --include='*.rs'` 14
+Zeilen.
+
+**Ablage:** dieser Datensatz führt zwei Sachen, und nur eine davon ist ein Defekt. Der Defekt
+ist die fehlende Messung der drei Prosaaussagen. Der zweite Weg der `## Richtung` — „zwei Typen
+für zwei Fragen", mit benannten Kosten von einem Typ plus einer Umrechnung — ist ein Wahlpunkt
+und kein Defekt, und die Fortschrittsnotiz von Schritt 10 nennt ihn ausdrücklich als „die
+substanzielle Frage". Als Befund fällt er aus jeder Suche nach aktiver Grundlage heraus. Er
+gehört als Entscheidungsdatensatz in `shared/decisions/`; der Vorschlag steht im
+Abgleichsprotokoll `history/260817-1833-reconciliation.md` unter „Misfiled — should be a
+decision", und die Umlage ist Nutzerarbeit.

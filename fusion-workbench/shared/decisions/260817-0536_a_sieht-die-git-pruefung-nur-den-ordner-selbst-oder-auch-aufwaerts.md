@@ -58,3 +58,34 @@ Answered: `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, 
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **die Antwort ist am Baum vollständig
+realisiert; der Marker bleibt trotzdem `_a_`.**
+
+Möglichkeit 2 steht in drei Commits und ist einzeln nachgelesen. Der Aufwärtsgang:
+`krk_core::verzeichnis::arbeitsbaum::liegt_in_arbeitsbaum`
+(`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:288`) geht über `verzeichnis::aufwaerts` und
+endet am mitgegebenen Benutzerverzeichnis oder an der Wurzel; `beruehrt_einen_arbeitsbaum`
+(`:338`) setzt ihn mit der Schleife über die Auswahl zusammen und fragt die Auswahl nur, wenn der
+Gang `Nein` sagt; elf Proben in `crates/krk-core/tests/arbeitsbaum.rs` messen es, darunter „zwei
+Ebenen darüber" (`:71`) und „oberhalb der Grenze" (`:112`). Commit `5a0f041`, Schritt 8 des Plans.
+Die Bewertung: `Warngrund::Arbeitsbaum` in
+`crates/krk-ui/src/kommandos/loeschwarnung.rs:461` mit seinem Rang aus der
+Deklarationsreihenfolge, gelesen von `warngruende` (`:642`). Commit `c1b52db`, Schritt 10. Die
+Verdrahtung: `appkit/anwendung.rs:4857` füllt das Feld `Loeschziel.arbeitsbaum`, und `:4874`
+macht das Blatt laut, sobald die Liste der Warngründe nicht leer ist. Commit `792995a`,
+Schritt 11. `make check` — exit 0.
+
+**Warum der Marker nicht wandert.** Der Plan
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`
+hängt die Bewegung dieses und der drei anderen Datensätze ausdrücklich an Schritt 16, und der ist
+nicht gefahren; die Tabelle `## Welcher Schritt welchen Entscheidungsdatensatz realisiert` nennt
+für diesen Datensatz die Schritte 8, 10 und 11 und als Ziel „Schritt 16". `_i_` ist daneben ein
+Endzustand, aus dem nur eine Überholung herausführt, also ist eine vorgezogene Bewegung nicht
+billig zurückzunehmen. Diese Notiz steht hier, damit Schritt 16 den Beleg vorgeprüft findet und
+nur noch die Zeile `Implemented:` mit den drei Commits zu setzen hat.
+
+Die drei anderen Datensätze der Reihe `260817-0536_a_*` sind **nicht** realisiert: sie hängen an
+den Schritten 12 und 13, und `resources/default-keymap.toml:151` führt `endgueltig_loeschen`
+unverändert mit `["f8", "opt+cmd+delete"]`.

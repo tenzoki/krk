@@ -86,3 +86,10 @@ Correct both sentences to say what holds, and say why, because the "why" is the 
 already carries an adjacent paragraph on its counting probe and needs only its second half fixed.
 Neither change touches behaviour. Whether the value's polarity should be carried by the type at
 all remains the second way of `260817-1419`, untouched.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **open, and holds without
+re-measuring the code.** This record was filed against `792995a`, and the only commit since is
+`e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
+review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
+therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".

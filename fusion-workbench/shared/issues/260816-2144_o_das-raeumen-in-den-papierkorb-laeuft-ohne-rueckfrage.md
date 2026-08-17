@@ -160,3 +160,30 @@ beantwortet". Sie ist am selben Tag beantwortet worden:
 `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`
 hält die Antwort des Nutzers, ein Ziel ohne Papierkorb wird nicht gelöscht, sondern gemeldet.
 Der Absatz oben bleibt im Wortlaut stehen; verbindlich ist diese Zeile.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **weiter offen, und der Marker wandert
+ausdrücklich nicht.**
+
+Die Durchsicht des Bündels B hat das Gegenteil empfohlen:
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260817-1419_o_der-ausloesende-defekt-des-raeumens-ohne-rueckfrage-ist-behoben-und-steht-weiter-offen.md`
+verlangt die Zeile `Resolved:` mit `472eb81` und den Übergang auf `_c_` und begründet es mit
+„sein Wortlaut ist von Bündel D nicht mehr betroffen". **Der Wortlaut dieses Datensatzes
+widerlegt das selbst.** Der Abschnitt `## Verschärfung vom 260817: der endgültige Löschweg
+fällt ganz weg` verlangt drei Dinge, die keine davon gebaut ist: `Kommando::EndgueltigLoeschen`
+fällt weg, `f8` und `opt+cmd+delete` werden frei, und die Nutzerfestlegung vom 260802 ist ganz
+und nicht nur in ihrer Rückfragenhälfte überholt. Genau das ist Bündel D. Am Baum stehen am
+260817-1833 22 Zeilen `EndgueltigLoeschen` in 12 Dateien, und
+`resources/default-keymap.toml:151` führt `endgueltig_loeschen` unverändert mit
+`["f8", "opt+cmd+delete"]`. Auch die vier Stellen aus `## Was die Umsetzung mitziehen muss`
+sind unangetastet: Bündel E trägt sie als Schritte 15 bis 17.
+
+**Was gebaut ist, ist mehr als beim letzten Abgleich.** Neben der Rückfrage aus Bündel A steht
+jetzt die Papierkorbprüfung vor dem Blatt (`appkit/anwendung.rs:4713`, Statuszeile über
+`kommandos::loeschwarnung::ohne_papierkorb`) und die laute Form mit ihren sechs Auslösern
+(`kommandos::loeschwarnung::warngruende`, `anwendung.rs:4871`). Die eine offene Frage am
+Dokumentende bleibt beantwortet wie beim Abgleich 260817-1129 vermerkt.
+
+**Der Übergang auf `_c_` gehört an das Ende von Bündel D**, wenn `grep -rn "EndgueltigLoeschen"
+crates` keinen Treffer mehr liefert. Bis dahin führt dieser Datensatz die Verschärfung als
+offen, und das ist die richtige Auskunft.

@@ -59,3 +59,13 @@ vier Datensaetze liest.
 der verkuerzten Formulierung eine zweite Verengung derselben Art: die Aufzaehlung der vier
 Bestandteile von `zulaessigkeit::zulaessig` nennt `immer_erreichbar` gar nicht, obwohl es
 drei der vier aufhebt.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, beide Stellen nachgelesen, eine
+Zeilennummer verschoben.** `crates/krk-ui/src/appkit/editor.rs:1298` steht unverändert.
+Der Kopfkommentar von `kommando_ausfuehren` liegt jetzt an
+`crates/krk-ui/src/appkit/anwendung.rs:2866` und nicht mehr an `:2840`; die Commits des Bündels C
+haben Zeilen davor eingefügt. Die dritte und vierte Stelle derselben Formulierung führt
+`260817-1419_o_ein-vierter-traeger-der-verkuerzten-blattsperre-…`, dessen Erhebung über
+`crates/`, `CLAUDE.md` und `resources/` fünf Zeilen zählt und den Nachzug dieses Datensatzes
+mitträgt.

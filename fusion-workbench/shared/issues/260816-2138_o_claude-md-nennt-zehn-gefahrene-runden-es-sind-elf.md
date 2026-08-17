@@ -25,3 +25,13 @@ Die Datei trägt an drei weiteren Stellen ausdrücklich die Regel, dass der Date
 verbindlich ist und nicht die Aufzählung. Die Zeile "Zehn Runden sind gefahren" sagt das
 im selben Absatz und nennt trotzdem eine Zahl. Wer den Befund behebt, sollte prüfen, ob
 die Zahl dort überhaupt stehen bleiben soll.
+
+---
+Also seen: 260817-1833 by reconciler — die Zahl ist inzwischen zwölf, `CLAUDE.md` sagt weiter
+zehn. Gemessen über `ls fusion-workbench/circles/*/*_circle.md`: vierzehn Circles, davon einer
+`_a_` (anticipated, nie gefahren) und einer `_d_` (`260816-2255-befehle-absetzen-und-makros-speichern`,
+am 260817 zugunsten der laufenden Runde zurückgestellt), also zwölf gefahrene. Der
+Circle-Datensatz der laufenden Runde nennt sich selbst „die zwölfte gefahrene Runde", und
+`crates/krk-ui/src/kommandos/mod.rs:26` schreibt „Runde 12" aus. Die Tabelle in `CLAUDE.md`
+führt zehn Zeilen. Damit ist die Zahl seit dem Filing dieses Datensatzes ein zweites Mal
+veraltet, was der Datensatz selbst als Muster benennt.

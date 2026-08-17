@@ -44,3 +44,10 @@ Name `Anwendungsdelegierter::loeschtexte` and say that `loeschen_nach_rueckfrage
 fourth branch of the stage rule — which is what carries the cost claim. Two sentences, no
 behaviour. Worth doing in the same pass as the record cross-referenced above, since both are
 caller sentences in the same two files.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **open, and holds without
+re-measuring the code.** This record was filed against `792995a`, and the only commit since is
+`e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
+review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
+therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".

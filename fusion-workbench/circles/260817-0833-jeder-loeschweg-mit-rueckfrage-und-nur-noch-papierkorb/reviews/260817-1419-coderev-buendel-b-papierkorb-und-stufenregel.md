@@ -429,3 +429,27 @@ Umbenennung und gehört in denselben Durchgang wie die Prosazahlen.
 **Ohne Bündelbindung:** Befund 5 und Befund 7. Beide sind Datensatzarbeit und blockieren
 niemanden; Befund 7 sollte vor dem Sitzungsende laufen, damit die tragende Zusage der Runde
 nicht als offen im Speicher steht.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **drei der sieben Befunde sind
+geschlossen, vier stehen offen, und einer der offenen trägt eine widerlegte Behauptung.**
+Geschlossen: `260817-1419_c_zwei-verschiedene-dreiwertige-typen…` in `17d3550`,
+`260817-1419_c_der-abschluss-von-260817-1107…` und
+`260817-1419_c_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren…` in `792995a`; alle
+drei am Baum nachgelesen. Offen und am Baum unverändert: die Sicherung gegen den
+Polaritätsfehler, die Zusicherung gegen ein Blatt ohne ungefährlichen Ausgang, der vierte Träger
+der verkürzten Blattsperre.
+
+**Der vierte offene Befund,
+`260817-1419_o_der-ausloesende-defekt-des-raeumens-ohne-rueckfrage-ist-behoben-und-steht-weiter-offen.md`,
+trägt eine Behauptung, die nicht hält.** Er sagt „sein Wortlaut ist von Bündel D nicht mehr
+betroffen" und empfiehlt daraus den Übergang von
+`shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md` auf `_c_`.
+Dessen Abschnitt `## Verschärfung vom 260817: der endgültige Löschweg fällt ganz weg` verlangt
+den Wegfall von `Kommando::EndgueltigLoeschen`, also genau Bündel D, und der ist nicht gebaut:
+22 Zeilen im Baum, `resources/default-keymap.toml:151` unverändert. Die Empfehlung ist nicht
+ausgeführt, und der Marker bleibt `_o_`. Beide Datensätze tragen die Begründung.
+
+Die Erhebung dieser Durchsicht über die elf Bauplätze der Blatt-Vorbelegung ist gegengeprüft und
+stimmt: `260817-1419_o_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang…` zählt sie
+einzeln auf, und `abbruchstelle` (`blaetter/mod.rs:416`) hat drei Leser.

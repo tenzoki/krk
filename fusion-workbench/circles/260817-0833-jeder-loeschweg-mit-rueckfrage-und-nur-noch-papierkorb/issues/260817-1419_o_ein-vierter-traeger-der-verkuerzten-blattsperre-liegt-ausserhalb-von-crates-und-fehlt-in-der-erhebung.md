@@ -70,3 +70,14 @@ Fleck die Ordnergrenze `crates/`.
 Die Zeile in `resources/default-keymap.toml` nachziehen, mit `1302` und `1111` in einem Zug —
 sie tragen denselben Nachzug. Und die Nadel der nächsten Erhebung um `resources/` und
 `CLAUDE.md` erweitern, bevor gezählt wird.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, alle fünf Stellen der Erhebung
+nachgelesen, zwei Zeilennummern verschoben.** Die Nadel
+`grep -rn "ausser dem Abbruch\|außer dem Abbruch" crates/ CLAUDE.md resources/` liefert weiter
+fünf Zeilen. Neu sind zwei Stände: `anwendung.rs:6312` liegt jetzt an `:6463` (die Commits des
+Bündels C haben rund 450 Zeilen vor der Stelle eingefügt), und `CLAUDE.md:123` liegt an `:124`,
+weil `CLAUDE.md` am 260817-1600 die Zeile `**Artifact language:** en` bekommen hat.
+`resources/default-keymap.toml:708`, `editor.rs:1298` und `anwendung.rs:406` stehen unverschoben.
+Die Stelle mit der gleichbedeutenden, nicht wortgleichen Formulierung liegt jetzt an
+`anwendung.rs:2866` und nicht an `:2841`, wie dieser Datensatz sagt.

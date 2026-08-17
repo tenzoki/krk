@@ -75,3 +75,10 @@ returns three hits — `loeschzielbefund.rs:128`, `loeschwarnung.rs:1252` and on
 in this record; the needle is short and the reading is quick. That is the same lesson as
 `shared/issues/260815-1448_o_…-berichtigten-zahlen-…`: the reach of the search and the reach of the
 claim have to stand next to each other.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **open, and holds without
+re-measuring the code.** This record was filed against `792995a`, and the only commit since is
+`e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
+review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
+therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".

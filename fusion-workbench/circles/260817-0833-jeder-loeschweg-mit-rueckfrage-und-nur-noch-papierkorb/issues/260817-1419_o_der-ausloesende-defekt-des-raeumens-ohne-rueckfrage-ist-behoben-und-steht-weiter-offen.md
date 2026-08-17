@@ -48,3 +48,25 @@ spricht nichts für das Warten.
 
 Daneben gehört in den Plan ein Schritt für die Defektdatensätze neben Schritt 16, sonst hängt
 ihr Nachzug jedes Mal daran, dass ein Aufgabenauftrag sie zufällig einschließt.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, und die tragende Behauptung
+dieses Datensatzes hält nicht.**
+
+Der Datensatz sagt: „Was er verlangt, steht seit Bündel A am Baum", und die `## Richtung`
+schließt daraus, „sein Wortlaut ist von Bündel D nicht mehr betroffen, also spricht nichts für
+das Warten". Beide Sätze gelten allein für die erste Hälfte von
+`shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`. Dessen
+Abschnitt `## Verschärfung vom 260817: der endgültige Löschweg fällt ganz weg` verlangt drei
+weitere Dinge, und keines davon ist gebaut: `Kommando::EndgueltigLoeschen` fällt weg, `f8` und
+`opt+cmd+delete` werden frei, und die Nutzerfestlegung vom 260802 ist ganz überholt. Am Baum
+stehen 22 Zeilen `EndgueltigLoeschen` in 12 Dateien, und `resources/default-keymap.toml:151`
+führt `endgueltig_loeschen` unverändert. Der Abgleich vom 260817-1129 hat diesen Abschnitt
+zitiert und den Marker aus genau diesem Grund stehen gelassen; die Durchsicht hat den Absatz
+nicht mitgelesen.
+
+**Was von diesem Datensatz trägt**, und weshalb er nicht geschlossen wird: sein zweiter Punkt.
+Der Plan führt in Schritt 16 die Entscheidungsdatensätze nach und in Schritt 15 die Prosa, aber
+keinen Schritt für die Defektdatensätze; der auslösende Defekt liegt im gemeinsamen Speicher und
+in keinem Aufgabenauftrag. Das bleibt richtig und ist eine Frage an den Planner, nicht an den
+Abgleich. Der Marker bleibt `_o_`.

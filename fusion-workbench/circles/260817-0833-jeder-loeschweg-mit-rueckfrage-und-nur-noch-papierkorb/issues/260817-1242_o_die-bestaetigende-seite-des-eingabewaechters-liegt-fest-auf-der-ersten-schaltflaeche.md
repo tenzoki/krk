@@ -35,3 +35,9 @@ Antworten, die zu ihrem Blatt passen statt zu einer Gewohnheit.
 Angehängt daran hängt die Frage, die
 `260817-1241_o_das-konfliktblatt-gibt-seinem-namensfeld-keinen-eingabewaechter.md` aufwirft:
 was ein Wächter in einem Blatt mit vier Antworten bedeuten soll.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
+`Blatt::zeigen_mit_wahl` liegt an `crates/krk-ui/src/appkit/blaetter/mod.rs:667` und trägt an
+`:711` weiter das feste `NSAlertFirstButtonReturn`, während die Gegenseite über
+`blaetter::abbruchstelle` (`:416`) berechnet wird.

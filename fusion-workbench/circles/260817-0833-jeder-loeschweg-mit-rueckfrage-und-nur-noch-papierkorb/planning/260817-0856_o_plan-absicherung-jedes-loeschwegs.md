@@ -1,7 +1,7 @@
 # Implementation Plan: Jeder Löschweg fragt nach, und es gibt nur noch den Papierkorb
 
 **Date:** 2026-08-17
-**Status:** In Progress — Bündel A ist gebaut, die Schritte 1 bis 3 tragen `[DONE]` und sind am 260817-1129 einzeln gegen den Baum gelesen. Die Schritte 4 bis 17 stehen offen; der Nutzer hat die Sitzung nach Turn 1 beendet, der Circle bleibt aktiv. Der Beleg steht unten unter `## Reconciliation Log`.
+**Status:** In Progress — die Bündel A, B und C sind gebaut. Die Schritte 1 bis 11 tragen `[DONE]` und sind einzeln gegen den Baum gelesen: die Schritte 1 bis 3 am 260817-1129, die Schritte 4 bis 11 am 260817-1833. Die Schritte 12 bis 17 stehen offen, also die Bündel D und E; der Nutzer hat sie beim Zuschnitt vom 260817-1213 für eine spätere Sitzung zurückgestellt, der Circle bleibt aktiv. Die Belege stehen unten unter `## Reconciliation Log`.
 **Spec:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, nachgezogene Fassung vom 260817
 **Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
 **Baumstand:** `984d31a`, gelesen am 260817-0850
@@ -18,6 +18,8 @@ Der Spec ist abgenommen und bindend. Dieser Plan verhandelt keine seiner elf Nut
 **Der Baum trägt heute zwei Löschwege, und der ungesicherte ist der alltägliche.** `Kommando::InPapierkorb` (`delete`, `cmd+delete`) läuft über `Anwendungsdelegierter::in_den_papierkorb` unmittelbar in `auftrag_stellen(Art::InDenPapierkorb)`, ohne jede Rückfrage. `Kommando::EndgueltigLoeschen` (`f8`, `opt+cmd+delete`) geht über `Anwendungsdelegierter::endgueltig_loeschen`, zeigt das Blatt aus `appkit/blaetter/loeschbestaetigung.rs` mit vorbelegtem „Abbrechen" und stellt den Auftrag erst nach der Bestätigung. Das Blatt hat genau einen Aufrufer, und sein Rumpf ist die Vorlage für alles, was diese Runde baut.
 
 **Der Umfang des Wegfalls ist nachgezählt und stimmt mit dem Spec überein.** Über `crates/` liefert `grep -rn "EndgueltigLoeschen" --include="*.rs"` zwanzig Zeilen in elf Dateien. Drei davon stehen in Doc-Kommentaren (`kommandos/rueckschritt.rs:78`, `appkit/ereignisse.rs:307`, `appkit/anwendung.rs:4466`) und halten den Bau nicht an. Es bleiben siebzehn Nennungen in neun Dateien, und das ist genau die Tabelle unter C5 des Specs. Sie ist geprüft und nicht übernommen.
+
+*Nachtrag 260817-1843:* Die Zahl gilt für den Baumstand `984d31a`, gegen den dieser Plan geschrieben ist, und ist seitdem gewachsen. Am Baumstand `e313841` liefert dieselbe Suche **22 Zeilen in 12 Dateien**, weil die Bündel A bis C den gemeinsamen Rumpf, die Stufenregel und die Aufzählung `Loeschtexte` hinzugefügt haben und `endgueltig_loeschen` darin genannt ist. Der Satz oben bleibt als Messung seines Datums stehen; verbindlich für Bündel D ist die Suche zum Zeitpunkt der Ausführung, wie Schritt 15 es für seine eigene Erhebung schon sagt.
 
 **Was der Übersetzer nicht einfordert und der Spec ebenfalls nicht nennt, sind fünf weitere Stellen.** Sie fallen erst im Probenlauf oder gar nicht auf:
 
@@ -188,6 +190,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/kommandos/loeschwarnung.rs`
    - Changes: `loeschen_nach_rueckfrage` löst den angezeigten Ordner einmal über `std::fs::canonicalize` auf und fragt `papierkorb::fuehrt_einen_papierkorb`. Bei `Nein` und bei `Unentschieden` erscheint kein Blatt, es entsteht kein Auftrag, und die Statuszeile trägt den Text aus der neuen Funktion `loeschwarnung::ohne_papierkorb()`. Er nennt den Befund und den Ausweg: das Ziel führt keinen Papierkorb, es wurde nichts gelöscht, im Finder löschen. Ein nicht auflösbarer Ordnerpfad zählt als `Unentschieden` und löscht damit ebenfalls nicht.
    - Dependencies: 3, 5
+   - Anmerkung zur Ausführung (260817-1843, nachgetragen vom Orchestrator): **Die Stufenfolge ist als reine Funktion `loeschwarnung::vor_der_rueckfrage` gebaut und nicht als Reihe von Prüfungen im Rumpf.** Der Schritt sagt dazu nichts; verlangt hat es der Befund `issues/260817-1107_c_der-rumpf-der-schutzschwelle-traegt-keine-probe.md` der Durchsicht des Bündels A, und zwar ausdrücklich **mit** diesem Schritt und nicht danach, weil die Papierkorbprüfung eine fünfte Stufe in dieselbe Kette setzt und ein späterer Umzug dieselbe Stelle zweimal geändert hätte. Die Funktion nimmt drei Eingänge, deckt mit fünf Zweigen alle zwölf Kombinationen ab, trägt die Tafel ausgeschrieben und hat keinen Auffangzweig; `Befund::Nein` und `Befund::Unentschieden` stehen einzeln da, damit eine vierte Variante den Bau anhält. `loeschen_nach_rueckfrage` entscheidet seitdem nichts mehr, sondern beschafft Tatsachen und führt die Ausgänge aus. Der neue Typ heißt `Vorstufe`; die Tabelle `## API Changes` führt beide.
 
 ### Bündel C — Die laute Form
 
@@ -263,6 +266,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `loeschen_nach_rueckfrage` fragt `benutzerverzeichnis()` einmal, löst es auf, baut das `Loeschziel` aus den fünf Quellen und ruft `warngruende`. Ist die Liste leer, bleibt das Blatt ruhig; sonst ist es laut. Der Wahrheitswert `laut` und die beiden Texte gehen unverändert an `loeschbestaetigung::zeigen`. Die Reihenfolge im Rumpf ist die des ersten Bildes und steht als Kommentar daneben, weil der Papierkorbtest vor der Rückfrage zu stehen hat.
     - Dependencies: 6, 8, 10
+    - Anmerkung zur Ausführung (260817-1843, nachgetragen vom Orchestrator): **Drei Dinge sind anders gebaut als der Schritt sie beschreibt, alle drei begründet.** Erstens trägt der Rumpf jetzt die private Aufzählung `Loeschtexte` mit zwei Fällen statt der drei Parameter `frage`, `erlaeuterung` und `laut`: `endgueltig_loeschen` braucht bis Bündel D eigene Texte, und ein Rumpf, der für beide Befehle die Papierkorb-Texte baut, zeigte `f8` ein Blatt „in den Papierkorb räumen" über einem endgültigen Löschen. Die Fallunterscheidung ist vollständig ohne Auffangzweig, also hält Bündel D den Bau genau an dem Zweig an, der wegfallen muss. Zweitens nimmt `vor_der_rueckfrage` den Papierkorbbefund als `impl FnOnce` und ruft ihn allein im Feld `(false, false)`; das löst den Kostenbefund `issues/260817-1419_c_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren-und-bringt-zwei-dateisystemzugriffe-mit.md` **ohne** die Reihenfolge der Stufen anzutasten, denn verschoben ist nur, wann die teure Tatsache anfällt, und die Tafel liest sich unverändert. Drittens ist `nach_der_rueckfrage` hinzugekommen, eine reine Regel über `(bestaetigt, traegt_auswahl)` mit Vierertafel: damit sind „ein Abbruch stellt keinen Auftrag" und „der Auftrag trägt die gezeigte Auswahl" gemessen statt behauptet, und im Abnahmelauf bleibt allein, dass AppKit den Rückgabewert des Blattes richtig liefert.
 
 ### Bündel D — Der Wegfall des endgültigen Löschens
 
@@ -397,10 +401,12 @@ pub enum Warngrund {
 |---|---|---|
 | `Loeschzielbefund` | `krk_core::verzeichnis` | dreiwertige Antwort, mit `oder` und `ist_warnwuerdig` |
 | `umfang::zaehlen`, `Umfang`, `SCHWELLE` | `krk_core::verzeichnis` | gedeckelte Zählung eines Unterbaums |
-| `arbeitsbaum::befund`, `liegt_in_arbeitsbaum`, `traegt_arbeitsbaum` | `krk_core::verzeichnis` | Aufwärtsgang und Einzelprüfung auf `.git` |
+| `arbeitsbaum::beruehrt_einen_arbeitsbaum`, `liegt_in_arbeitsbaum`, `traegt_arbeitsbaum` | `krk_core::verzeichnis` | Aufwärtsgang und Einzelprüfung auf `.git`. **Nicht `befund`**: siehe die Anmerkung an Schritt 4 |
 | `papierkorb::fuehrt_einen_papierkorb` | `krk-ui/src/appkit` | Vorprüfung ohne Probelauf |
 | `volumes::liegt_auf_netzlaufwerk` | `krk-ui/src/appkit` | Netzlaufwerk-Erkennung. **Nicht `ist_lokal`**: der Nutzerentscheid vom 260817-1640, siehe die Anmerkung an Schritt 9 |
 | `loeschwarnung::{Warngrund, Umfangsgrund, Loeschziel, warngruende, frage_und_erlaeuterung, ohne_papierkorb}` | `krk-ui/src/kommandos` | die Tafel und die drei Texte |
+| `loeschwarnung::{Vorstufe, vor_der_rueckfrage, Nachstufe, nach_der_rueckfrage}` | `krk-ui/src/kommandos` | die zwei Stufenregeln, je mit ausgeschriebener Tafel. Vom Plan nicht vorgesehen; siehe die Anmerkungen an den Schritten 6 und 11 |
+| `Loeschtexte` (privat) | `krk-ui/src/appkit/anwendung.rs` | zwei Fälle, welche Texte der gemeinsame Rumpf baut. Fällt mit Bündel D auf einen Fall und damit ganz |
 | `loeschwarnung::frage_und_erlaeuterung` | `krk-ui/src/kommandos` | ein Argument mehr: die Warngründe, gerangt. Leer heißt ruhig |
 | `loeschbestaetigung::zeigen` | `krk-ui/src/appkit/blaetter` | zwei Argumente mehr: Beschriftung der zweiten Schaltfläche, `laut` |
 | `operationen::{zahl, ordner_text}` | `krk-ui/src/kommandos` | von privat auf `pub(super)` |
@@ -474,3 +480,91 @@ arbeitet daran", dieses Projekt hat für Pläne aber durchgehend `_o_` bis `_c_`
 keinen Plan je auf `_p_` gesetzt. Eine Umbenennung zöge daneben die Zeile
 `**Active spec/plan:**` des Circle-Datensatzes und den Eintrag in `agentstate.yaml` nach sich,
 und beide gehören dem Orchestrator. Geändert ist deshalb allein das Kopffeld `**Status:**`.
+
+### 260817-1833 (reconciler, Baumstand `e313841`)
+
+**Die acht Schritte dieser Sitzung halten alle am Baum.** Jede Behauptung einzeln gelesen,
+nicht aus dem Sitzungsprotokoll und nicht aus der Durchsicht des Bündels C übernommen:
+
+| Schritt | Behauptung | Beleg am Baum |
+|---|---|---|
+| 4 `[DONE]` | dreiwertiger Befund mit `ist_warnwuerdig`, `oder` und Tafel über neun Kombinationen | `crates/krk-core/src/verzeichnis/loeschzielbefund.rs`: `enum` an `:146`, `ist_warnwuerdig` an `:176`, `oder` an `:248`, beide mit `#[must_use = "…"]` (`:175`, `:247`); fünf Proben ab `:289`, darunter `die_tafel_aus_neun_kombinationen_geht_auf` (`:315`); Re-Export `pub use loeschzielbefund::Loeschzielbefund` in `verzeichnis/mod.rs:163`; Commit `4b50cc1`, Umbenennung `17d3550` |
+| 5 `[DONE]` | `papierkorb::fuehrt_einen_papierkorb` über `URLForDirectory:…` mit `TrashDirectory` | `crates/krk-ui/src/appkit/papierkorb.rs:185`, Aufruf an `:191-193` mit `NSSearchPathDirectory::TrashDirectory` und `NSSearchPathDomainMask::UserDomainMask`; `#[must_use = "…"]` an `:184`; die drei Untergrenzen im Modulkopf `:88-99`; Commit `e2760cd` |
+| 6 `[DONE]` | Papierkorbprüfung vor dem Blatt, Statuszeile aus `loeschwarnung::ohne_papierkorb` | `anwendung.rs:4710` löst über `std::fs::canonicalize` auf, `:4713-4714` fragt `fuehrt_einen_papierkorb`, ein nicht auflösbarer Pfad wird `Loeschzielbefund::Unentschieden`; `:4734` zeigt `loeschwarnung::ohne_papierkorb()`, dessen Text (`loeschwarnung.rs:412`) den Befund und den Ausweg nennt; Commit `ee85950` |
+| 7 `[DONE]` | gedeckelte Zählung, `SCHWELLE = 25`, Deckel als `SCHWELLE + 1`, über `Schwungleser` | `crates/krk-core/src/verzeichnis/umfang.rs:164` und `:172`, `enum Umfang` an `:181`, `zaehlen` an `:217` mit `#[must_use = "…"]` an `:216`; `Schwungleser` an `:252`, `ist_deskriptormangel` an `:254` und `:280`, `symlink_metadata` an `:235`; die Schranke ausgeschrieben im Modulkopf `:22-59`; alle fünf verlangten Fälle als Proben in `crates/krk-core/tests/umfang.rs` (`:82`, `:120`, `:137`, `:155`, `:187`) plus zwei Kindproben; Commit `c260e64` |
+| 8 `[DONE]` | drei Funktionen zum Arbeitsbaum, Aufwärtsgang mit Abbruch beim ersten Treffer | `crates/krk-core/src/verzeichnis/arbeitsbaum.rs`: `traegt_arbeitsbaum` `:227`, `liegt_in_arbeitsbaum` `:288`, `beruehrt_einen_arbeitsbaum` `:338`, alle drei mit `#[must_use = "…"]`; `VERWALTUNGSEINTRAG = ".git"` an `:179`; elf Proben in `crates/krk-core/tests/arbeitsbaum.rs`, darunter alle fünf verlangten Fälle (`:49`, `:71`, `:92`, `:176`, `:112`); Commit `5a0f041` |
+| 9 `[DONE]` | Netzlaufwerkfrage über `NSURLVolumeIsLocalKey`, unentschieden statt `Ja` bei fehlendem Wert | `crates/krk-ui/src/appkit/volumes.rs:259` heißt `liegt_auf_netzlaufwerk`, nicht `ist_lokal`; `#[must_use = "…"]` an `:258`, der Schlüssel an `:267`, die eine Umkehrung an `:279`; die Untergrenze 10.7 im Modulkopf `:130`; Commit `749a4f3` |
+| 10 `[DONE]` | `Warngrund` mit sieben Werten in der Rangfolge des Specs, `Loeschziel`, `warngruende` | `crates/krk-ui/src/kommandos/loeschwarnung.rs`: `Umfangsgrund` `:434`, `Warngrund` `:461` mit `wortlaut` `:525`, `const _: () = assert!(…)` `:500`, `Loeschziel` mit den fünf Feldern `:556-571`, `warngruende` `:642` mit `#[must_use = "…"]` `:641`; Commit `c1b52db` |
+| 11 `[DONE]` | die fünf Tatsachen im Rumpf, `laut` aus der Länge der Warngründe | `anwendung.rs:4849` fragt `pfade::benutzerverzeichnis` einmal und löst auf, `:4852` `volumes::liegt_auf_netzlaufwerk`, `:4857` `arbeitsbaum::beruehrt_einen_arbeitsbaum`, `:4869` `umfang::zaehlen`; `Loeschziel` an `:4864`, `warngruende` an `:4871`, `laut` als `!gruende.is_empty()` an `:4874`; Commit `792995a` |
+
+**Die Schritte 1 bis 3 tragen weiter, soweit diese Sitzung sie angefasst hat.** Ihr Rumpf ist
+von den Schritten 6 und 11 stark gewachsen, die Zeilennummern des Abgleichs vom 260817-1129
+sind damit verschoben: `loeschen_nach_rueckfrage` liegt jetzt an `anwendung.rs:4679` statt
+`:4606`, `loeschauftrag_stellen` an `:4922` statt `:4684`. Die Signatur aus Schritt 2 steht
+unverändert (`loeschbestaetigung.rs:119-127` mit `schaltflaeche: &str` und `laut: bool`), der
+Doc-Kommentar von `in_den_papierkorb` (`:4460-4486`) nennt das Räumen ohne Rückfrage nur noch
+als datierten Rückblick. **Eine Aussage von Schritt 3 ist von Schritt 11 überholt und nicht
+gebrochen:** `in_den_papierkorb` reicht `laut = false` nicht mehr durch, sondern
+`Loeschtexte::AusDenWarngruenden` (`:4491`); den Wahrheitswert rechnet der Rumpf jetzt selbst.
+Genau das verlangt Schritt 11.
+
+**Zwei Abweichungen vom Plantext, beide belegt und keine davon in einer Ausführungsanmerkung
+festgehalten.** Sie gehören nachgetragen, damit die nächste Sitzung sie nicht als Drift liest:
+
+1. **Schritt 6 hat mehr gebaut, als sein Abschnitt `Changes` nennt.** Der Plan lässt dort
+   allein `loeschen_nach_rueckfrage` auflösen und fragen. Am Baum steht die Stufenfolge als
+   reine Funktion `loeschwarnung::vor_der_rueckfrage` (`:359`) mit `enum Vorstufe` (`:286`),
+   und Schritt 11 hat `nach_der_rueckfrage` (`:849`) mit `enum Nachstufe` (`:801`)
+   danebengesetzt. Der Grund ist bekannt und richtig: Befund 2 der Durchsicht des Bündels A
+   verlangt es, und die Aufgabe T5 hat ihn bewusst in denselben Schritt gefaltet, statt
+   dieselbe Stelle zweimal zu ändern. Die Abweichung ist die fehlende Anmerkung, nicht die
+   Arbeit.
+2. **Die Tabelle `## API Changes` führt vier dieser Namen nicht.** `Vorstufe`, `Nachstufe`,
+   `vor_der_rueckfrage` und `nach_der_rueckfrage` fehlen in ihrer Zeile zu
+   `loeschwarnung::{…}`, ebenso `Loeschtexte` (`anwendung.rs:1001`), die Aufzählung, über die
+   die beiden Löschbefehle die Herkunft ihrer Texte weiterreichen.
+
+**Drei Zahlen im Plantext sind gealtert.** Keine davon ist ein Abnahmekriterium, und zwei
+nennen ihre Messung ausdrücklich am Ausführungszeitpunkt; die dritte steht unter
+`## Current State` und liest sich als Stand:
+
+- `## Current State` nennt „zwanzig Zeilen in elf Dateien" für `EndgueltigLoeschen`. Am
+  260817-1833 sind es 22 Zeilen in 12 Dateien, davon 5 in Doc-Kommentaren; die zwei neuen sind
+  von Schritt 3 gekommen. Schritt 12 zählt gegen den Baum, also bindet die Zahl nichts.
+- Die fünf Stellen der Tabelle darunter und die acht Prosazahlen von Schritt 14 sind nicht
+  nachgeprüft: sie liegen in Bündel D und E und sind unangetastet.
+
+**Eine Aussage des Abgleichs vom 260817-1129 ist zu berichtigen.** Dort steht
+„`cargo test --workspace` läuft grün, 98 Proben in `krk-core`". Die 98 sind das Prüfziel von
+`xtask`, unverändert 98. `krk-core` trägt am 260817-1833 176 Proben in seiner Kiste selbst,
+`krk-ui` 679 in der seinen, dazu die dreizehn eigenen Prüfziele von `krk-core` unter
+`crates/krk-core/tests/`. Der Befund selbst — grün, keine fehlgeschlagene Probe — stimmt und
+stimmt weiter.
+
+**Der Prüflauf.** `make check` gibt „alle vier gruen" und `exit 0`; `cargo test --workspace`
+meldet über jedes Prüfziel 0 fehlgeschlagene Proben, bei 10 übersprungenen: fünf in
+`tests/ablage.rs`, drei in `tests/verzeichnis.rs` und zwei in `tests/umfang.rs`, die Kindproben
+unter gesenkter Deskriptorgrenze.
+
+**Die Datensätze.** Zwölf Datensätze dieses Circles stehen auf `_c_`, und der Bestand widerlegt
+die Aufteilung, die dem Abgleich mitgegeben wurde: **elf davon hat diese Sitzung geschlossen,
+nicht fünf, und einer stammt aus der Vorsitzung, nicht sieben.** Gemessen am ersten Commit, in
+dem der `_c_`-Pfad steht (`git log --diff-filter=A --no-renames`): `260817-1130_c` in `6ff96b1`
+(260817-1137, vor `3fcd375` und damit Vorsitzung); `260817-1106_c` in `873b9f4`; die vier
+Datensätze `260817-1109_c` bis `260817-1112_c` in `8c18887`; `260817-1107_c` in `ee85950`;
+`260817-1419_c_zwei-verschiedene…` in `17d3550`; `260817-1623_c` in `c1b52db`;
+`260817-1108_c`, `260817-1419_c_der-abschluss…` und `260817-1419_c_der-papierkorbtest…` in
+`792995a`. Alle elf sind einzeln gegen den Baum nachgelesen und halten; die Einzelnachweise
+stehen im Abgleichsprotokoll `history/260817-1833-reconciliation.md`.
+
+**Vier Entscheidungsdatensätze bleiben auf `_a_`, und einer davon ist inhaltlich erfüllt.**
+`shared/decisions/260817-0536_a_sieht-die-git-pruefung-nur-den-ordner-selbst-oder-auch-aufwaerts.md`
+verlangt Möglichkeit 2, den Aufwärtsgang, und die Schritte 8, 10 und 11 realisieren ihn
+vollständig (Commits `5a0f041`, `c1b52db`, `792995a`). Der Marker bleibt trotzdem stehen: der
+Plan hängt jede dieser vier Bewegungen ausdrücklich an Schritt 16, und `_i_` ist ein Endzustand.
+Der Datensatz trägt jetzt eine Abgleichsnotiz mit den drei Commits, damit Schritt 16 den Beleg
+vorgeprüft findet. Die anderen drei sind nicht erfüllt: sie hängen an den Schritten 12 und 13,
+und `resources/default-keymap.toml:151` führt `endgueltig_loeschen` unverändert.
+
+**Der Marker des Dateinamens bleibt `_o_`, und der Kopf trägt den neuen Stand.** Sechs Schritte
+stehen offen. Die Begründung gegen `_p_` von 260817-1129 gilt unverändert.

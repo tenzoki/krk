@@ -577,3 +577,26 @@ What is *not* covered by any of them is the acceptance run of C3 and C4 in the f
 user work: whether the sheet really goes loud, whether the reason really reads as intended in the
 question, and whether a Finder-mounted network volume answers `Ja`. The coder named all three as
 unchecked and that account is accurate.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **all nine findings are filed as
+their own records, all nine still hold, and the review's own two corrections are confirmed.**
+
+The nine records are `issues/260817-1759_o_…` through `issues/260817-1807_o_…`, one per finding,
+added by `e313841` together with this review. `e313841` touches nothing under `crates/` or
+`resources/`, so the lines each finding cites are still the lines it read; each record now carries
+that as a one-line reconciliation note.
+
+Two counts this review corrected against its dispatch are independently confirmed. **Eleven
+build sites of the sheet prefill, not five** — enumerated in
+`issues/260817-1419_o_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang…` and matching
+`blaetter::abbruchstelle` (`blaetter/mod.rs:416`) with its three readers. **Five closed records in
+this range, not four** — `git log --diff-filter=A --no-renames` puts `260817-1419_c_zwei-verschiedene…`
+in `17d3550`, `260817-1623_c` in `c1b52db`, and `260817-1108_c`,
+`260817-1419_c_der-abschluss…` and `260817-1419_c_der-papierkorbtest…` in `792995a`.
+
+**Finding 9 undercounts its own subject**, and the correction is in that record: four history
+filenames run ahead of the commit that added them, not two, and one further closure note
+(`Resolved: 260817-1722` in `issues/260817-1623_c_…`) is not in its **Affected** list. One of the
+four, `history/260817-1104-coder-a2-blatt-beschriftung-und-laut.md` in `375d07c`, predates this
+session.

@@ -74,3 +74,10 @@ For the payload, the cheap form is to read it: `Umfang::MehrAls(schwelle) if sch
 with the mismatching case falling to `Unentscheidbar` rather than to a wording it cannot support.
 Whether that branch is worth its line is a judgement, and stating the alternative here is enough:
 today the case is unreachable by construction of `zaehlen`, and the construction is the guarantee.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **open, and holds without
+re-measuring the code.** This record was filed against `792995a`, and the only commit since is
+`e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
+review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
+therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".

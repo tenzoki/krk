@@ -72,3 +72,10 @@ Four ways, and the first is the cheapest.
 Ways 2 and 3 change wording the user accepted at the spec gate; ways 1 and 4 do not need code.
 Whichever is chosen, the place is `Warngrund::wortlaut` — two string literals and the
 `const _: () = assert!(SCHWELLE == 25, …)` that binds them to the threshold.
+
+---
+Reconciliation 260817-1833 (reconciler, tree state `e313841`): **open, unchanged.** Both
+wordings stand verbatim in `crates/krk-ui/src/kommandos/loeschwarnung.rs:533-534`
+(`"mit 25 Einträgen"` and `"mit mehr als 25 Einträgen"`), and the spec wording they come from is
+accepted, so nothing here is a defect to fix without a user decision. Recorded as read, not as
+resolved.

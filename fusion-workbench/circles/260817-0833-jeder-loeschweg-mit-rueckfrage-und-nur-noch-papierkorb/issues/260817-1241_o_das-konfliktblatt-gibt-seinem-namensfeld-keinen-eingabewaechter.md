@@ -48,3 +48,8 @@ Seite läuft heute fest auf die **erste** Schaltfläche, und die ist hier „Üb
 wäre für einen Return im Namensfeld die falsche Antwort. Die Frage gehört damit an
 `blaetter/mod.rs` und nicht an dieses Blatt, siehe
 `260817-1242_o_die-bestaetigende-seite-des-eingabewaechters-liegt-fest-auf-der-ersten-schaltflaeche.md`.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
+`crates/krk-ui/src/appkit/blaetter/konflikt.rs:102` ruft weiter allein `beigabe_setzen`; weder
+`textfeld_setzen` noch `waechter_anhaengen` kommen in der Datei vor.

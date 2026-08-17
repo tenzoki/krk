@@ -297,3 +297,13 @@ eine in `endgueltig_loeschen` gehen weiterhin sämtlich durch `loeschen_nach_rue
 
 Der Bereich in der Zeile `**Reviewed-range:**` ist unberichtigt; der Befund dazu ist
 `shared/issues/260817-1122_*_der-durchsichtsbereich-schliesst-seinen-ersten-commit-aus.md`.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **alle sieben Befunde dieser Durchsicht
+sind geschlossen, und alle sieben Abschlüsse halten am Baum.** `260817-1106` in Commit `873b9f4`,
+`260817-1109` bis `260817-1112` in `8c18887`, `260817-1107` in `ee85950` mit einem Nachtrag in
+`792995a`, `260817-1108` in `792995a`. Die Einzelnachweise stehen im Abgleichsprotokoll
+`history/260817-1833-reconciliation.md`. Zwei Abschlüsse berichtigen eine Zahl dieser Durchsicht
+gegen den Baum, und die Berichtigung ist die richtige Auskunft: die Bereichsleiste schickt zehn
+Kommandos und nicht elf (`260817-1109`), und der Satz „es ist nichts ausgewählt" steht an vier
+Stellen und nicht an zwei (`260817-1110`).

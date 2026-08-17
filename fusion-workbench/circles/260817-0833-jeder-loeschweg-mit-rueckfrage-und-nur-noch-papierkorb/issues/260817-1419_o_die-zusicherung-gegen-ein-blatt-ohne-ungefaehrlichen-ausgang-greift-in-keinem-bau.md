@@ -85,3 +85,11 @@ Rückfall entfällt, und der Übersetzer trägt die Zusage statt einer Zeichenfo
 Die kleine Form, falls der Umbau nicht gewollt ist: die beiden Prosastellen auf das
 zurückziehen, was hält — die Zählprobe trägt die Zusage, das `debug_assert!` trägt sie nicht —
 und die Zählprobe auf `Blatt::neu` mit ausweiten.
+
+---
+Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert am Baum.** Der
+`debug_assert!` steht an `crates/krk-ui/src/appkit/blaetter/mod.rs:532-537`, kein
+`[profile.…]`-Abschnitt ist hinzugekommen, und kein Prüfziel baut ein `Blatt`: `cargo test
+--workspace` lief am 260817-1833 über jedes Ziel grün, ohne die Zusicherung einmal auszuführen.
+Die drei Prosastellen liegen nach den Commits des Bündels C an `:404-409`, `:521-527` und
+`:810-814`, also unverschoben. Die Zählung „alle elf Aufrufstellen" stimmt weiter.

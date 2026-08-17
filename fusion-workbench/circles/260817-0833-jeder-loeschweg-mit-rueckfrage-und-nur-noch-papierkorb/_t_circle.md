@@ -5,7 +5,7 @@
 **Status:** active
 **Filed by:** orchestrator
 **Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md)
-**Active session history:** shared/history/260816-2113-orchestrator-session.md
+**Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-1208-orchestrator-session.md
 
 ---
 
@@ -66,6 +66,26 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
   Auswahl statt einer zweiten Lesung nach dem Blatt. Sitzungsprotokoll:
   `shared/history/260816-2113-orchestrator-session.md`. Der Nutzer hat die Sitzung nach
   diesem Turn beendet; Bündel B bis E stehen aus.
+- Turn 1 (Sitzung 260817-1208): Commits `873b9f4`..`ee85950`, dazu `1a57418` für die
+  Durchsicht. Die sieben Befunde des Bündels A und das ganze Bündel B, fünf Aufgaben.
+  Zuerst der hohe Befund: die Vorbelegung einer unbekannten Blattantwort geht im Löschblatt
+  von der zerstörenden auf die abbrechende Stelle, und die zwei widersprechenden
+  Vorbelegungen in `blaetter/mod.rs` sind zu einer geworden. **Die zweite Stufe des
+  Schutzes steht:** ein Ziel ohne Papierkorb wird gemeldet statt gelöscht. Die Stufenfolge
+  vor der Rückfrage ist als reine Funktion `vor_der_rueckfrage` nach `kommandos/` gezogen
+  und erstmals ohne Fenster prüfbar. Kohärenz-Befund `ok`. Sieben Datensätze aus der
+  Durchsicht, zwei mittel, keiner hoch.
+- Turn 2 (Sitzung 260817-1208): Commits `17d3550`..`792995a`, dazu `e313841` für die
+  Durchsicht. Das ganze Bündel C, sechs Aufgaben, dazu die vorgezogene Umbenennung auf
+  `Loeschzielbefund`. **Die dritte Stufe steht:** die Rückfrage trägt Warnzeichen und Grund,
+  wenn ein Ziel ungewöhnlich oder der Umfang groß ist. Ein Nutzerentscheid am 260817-1640
+  hat `ist_lokal` in `liegt_auf_netzlaufwerk` umbenannt, weil die Funktion die Umkehrung
+  ihres Feldes lieferte und der Übersetzer die Verdrehung nicht sieht. Kohärenz-Befund `ok`,
+  Abgleichsverdikt `review-needed` mit sechs Driftpunkten, alle in der Buchführung und
+  keiner am Code. Neun Datensätze aus der Durchsicht, zwei mittel, keiner hoch. Die
+  Abdeckung der Durchsichten schließt lückenlos über beide Turns. Der Nutzer hat den
+  Zuschnitt auf Befunde plus Bündel B und C gewählt; **Bündel D und E stehen aus**, das
+  endgültige Löschen ist damit noch im Programm.
 
 ## Closure note
 
