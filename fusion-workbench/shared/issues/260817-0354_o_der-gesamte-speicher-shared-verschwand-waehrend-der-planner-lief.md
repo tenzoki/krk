@@ -42,3 +42,47 @@ Sie wäre erst beim nächsten `git status` aufgefallen, und das war Zufall: der
 Orchestrator hat ihn vor einem Commit gefahren. Wäre in diesem Zustand ein
 `git add`-Aufruf mit Verzeichnisargument gelaufen, hätte er 183 Löschungen in einen
 Commit gestellt.
+
+---
+
+## Berichtigung vom 260817-0435
+
+Die forensische Untersuchung `shared/analyses/260817-0419-verlust-des-speichers-shared.md`
+widerlegt drei Aussagen dieses Datensatzes. Sie bleiben oben stehen, damit der Irrtum
+nachlesbar ist; verbindlich ist, was hier steht.
+
+**Der Titel ist falsch.** Der Planner war zum Zeitpunkt der Löschung 4 Stunden 26 Minuten
+beendet (`planner_done` am 260816-23:18). Seine Mitschrift zeigt 78 Werkzeugaufrufe, unter
+`shared/` ausschließlich lesend plus die eine abgelegte Datei. Der Dateiname ist nicht
+geändert, weil die Analyse ihn zitiert.
+
+**Der Verursacher ist KRK selbst.** Um 03:44:31 Ortszeit über `trashItemAtURL:` in den
+Papierkorb, während die Anwendung von Hand bedient wurde und im Vordergrund stand. Vier
+unabhängige Messungen tragen das: Prozessstart 03:42:51, Maus- und Vordergrundspuren bis
+03:44:33, die XPC-Verbindung `com.apple.coreservices.quarantine-resolver` um 03:44:31.204,
+und die mtime von `~/.Trash` auf dieselbe Sekunde. Dass der geräumte Eintrag `shared` war,
+war erschlossen und ist inzwischen bestätigt: der Nutzer hat den Ordner im Papierkorb
+gefunden.
+
+**Der Schluss aus dem Wächterprotokoll trug nicht.** Oben steht, das Schweigen des Logs
+schließe ein bewachtes Schreiben aus. Der Wächter zeichnet seit dem 260816 keinen
+Bash-Aufruf mehr auf und blockiert seit dem 260807 nichts; ein `rm -rf` aus der Sitzung
+hätte dieselbe Stille hinterlassen. Der Beleg war keiner.
+
+**Die Zahl war 189, nicht 183.** Dreifach gemessen.
+
+## Stand nach der Bergung
+
+Der Nutzer hat den Ordner aus dem Papierkorb nach `~/Documents/shared` kopiert. Der
+Abgleich am 260817-0435 zeigt: 190 Dateien im geborgenen Ordner, alle inhaltlich
+identisch mit der Werkbank (`diff -rq`, kein Unterschied bei den gemeinsamen Dateien).
+Die eine Datei, die der Wiederherstellung aus `HEAD` fehlte, ist zurückgestellt:
+`issues/260816-2307_o_der-doc-kommentar-von-ablage-pfad-nennt-vier-dateien-die-aufzaehlung-fuehrt-sechs.md`.
+
+**Der Werkbank fehlt nichts mehr.** `git ls-files -d` meldet keine fehlende verfolgte
+Datei im ganzen Baum, alle wurzelverankerten Flächen stehen, und die dreizehn Circles
+tragen ihre Datensätze. Der Verlust ist damit vollständig behoben.
+
+**Die Ursache steht weiter offen**, und sie hat einen eigenen Datensatz:
+`shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`. Er
+war am 260816-2144 als Risiko abgelegt und ist seit dieser Nacht ein Schadensfall.

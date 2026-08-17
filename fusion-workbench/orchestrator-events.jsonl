@@ -1016,3 +1016,5 @@
 {"ts":"2026-08-16T21:18:11","event":"planner_done","agent":"planner","detail":"circles/260816-2255-.../planning/260816-2307_o_plan-...md; 22 Schritte in fuenf Buendeln; 18 coder, 4 ontocoder"}
 {"ts":"2026-08-16T21:18:11","event":"gate_hit","detail":"Plan-Abnahme plus zwei Entscheidungsdatensaetze"}
 {"ts":"2026-08-17T01:53:56","event":"gate_response","detail":"Plan abgelehnt: Abbrechen. Prozessgruppe stirbt mit der Shell (Moeglichkeit 1). Shell-Frage unbeantwortet."}
+{"ts":"2026-08-17T02:02:57","event":"revert","detail":"shared/ war vollstaendig aus dem Arbeitsbaum verschwunden; git checkout HEAD -- fusion-workbench/shared; 183 Dateien zurueck, eine unverfolgte verloren"}
+{"ts":"2026-08-17T02:02:57","event":"commit","detail":"ec87d39 Plan der zwoelften Runde und Vorfallsbericht gesichert"}
