@@ -25,7 +25,7 @@ Dateinamen von Entscheidungsdatensätzen, datierte Rückblicke, die seit den Bü
 richtig dastehen, oder Verwendungen des Wortes in seiner allgemeinen Bedeutung
 („die endgültige Reihenfolge", „die endgültige Antwort").
 
-Nach dem Durchgang liefert dieselbe Suche 33 Zeilen; keine davon behauptet einen zweiten
+Nach dem Durchgang liefert dieselbe Suche 34 Zeilen; keine davon behauptet einen zweiten
 Löschweg. Ein zweiter Durchgang über
 `grep -rniE "ohne rueckfrage|ohne nachfrage|opt\+cmd\+delete|beide loeschbefehle"` hat drei
 weitere Stellen gefunden, die das Wort „endgueltig" gar nicht tragen und trotzdem falsch
@@ -79,14 +79,14 @@ Zwei-Wege-Regel ausgenommen ist. Die Reihe ist damit `vorschau_umschalten`, `kop
 - **`krk-ui/src/kommandos/rueckschritt.rs:88`, `belegungsmodell.rs:1182–1184`,
   `anwendung.rs:4481/4816/5691/6446`, `loeschwarnung.rs:167/254`** — datierte Rückblicke,
   in den Schritten 12 bis 14 geschrieben und richtig.
-- **`verzeichnis/{arbeitsbaum,loeschzielbefund,umfang}.rs`, `loeschbestaetigung.rs:73`,
+- **`verzeichnis/{arbeitsbaum,loeschzielbefund,umfang}.rs`, `loeschbestaetigung.rs:74`,
   `loeschen.rs:6`, `tests/belegung.rs:291`** — Dateinamen von Entscheidungsdatensätzen.
 - **`modell.rs:464`, `zettelmodell.rs:454`, `anwendung.rs:844`, `hinweis.rs:31`,
   `papierkorb.rs:183`, `loeschen.rs:57`** — „endgültig" in seiner allgemeinen Bedeutung,
   ohne Bezug auf einen Löschweg.
 - **`tests/belegung.rs:1622`–`:1660`** — die Probe über die zurückgezogene Kennung
   `endgueltig_loeschen`; sie muss die Kennung führen, um sie zu prüfen.
-- **`loeschbestaetigung.rs:172`, `:179`** — Prüfkörper, kein Kommentar. Als Befund
+- **`loeschbestaetigung.rs:173`, `:180`** — Prüfkörper, kein Kommentar. Als Befund
   abgelegt: `issues/260817-2355_o_a-probe-fixture-still-labels-the-executing-button-…`.
 
 ## Abgelegte Befunde

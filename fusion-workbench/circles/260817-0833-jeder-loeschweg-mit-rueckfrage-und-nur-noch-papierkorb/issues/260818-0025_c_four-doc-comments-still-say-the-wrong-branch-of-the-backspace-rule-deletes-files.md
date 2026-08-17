@@ -78,3 +78,30 @@ files, and that is why the case split is milder but not superfluous — the word
 Do not weaken the four sentences into "nothing can go wrong here". The rule is still
 security-relevant for the reason `rueckschritt.rs` now states: a confirmation that opens on every
 corrected typo gets clicked away instead of read.
+
+---
+Resolved: Alle vier Stellen auf den Stand von `rueckschritt.rs:26-33` nachgezogen — der
+falsche Zweig raeumt nichts mehr, er laesst die Loeschrueckfrage aufgehen, und genau darum
+ist die Fallunterscheidung milder und nicht ueberfluessig. Geaendert:
+
+- `crates/krk-ui/src/appkit/anwendung.rs:4468-4474` — „dessen falsche Haelfte die
+  Loeschrueckfrage aufgehen laesst", dazu der Grund in zwei Saetzen: seit dem 260817 fragt
+  diese Haelfte, und eine Rueckfrage, die auf jeden berichtigten Vertipper aufgeht, wird
+  weggeklickt statt gelesen.
+- `crates/krk-ui/src/appkit/anwendung.rs:2892-2897` — dieselbe Ueberschrift auf dem
+  `Kommando::InPapierkorb`-Zweig, und die zweite Haelfte mit: „alles andere geht
+  unveraendert in die Rueckfrage vor dem Papierkorb".
+- `crates/krk-ui/src/appkit/anwendung.rs:2659-2661` — die Folge einer Divergenz ist nicht
+  mehr ein Loeschen, sondern eine Rueckfrage auf einen berichtigten Vertipper.
+- `crates/krk-ui/src/appkit/ereignisse.rs:298-301` — dieselbe Korrektur am Doc-Kommentar
+  von `Anschlag::ist_nackter_rueckschritt`.
+
+Der fuenfte, schwaechere Kandidat ist mitgezogen: `anwendung.rs:4541` sagt jetzt „Wie vor
+der Runde 10 (C1.16, C1.20): der Weg in den Papierkorb, seit dem 260817 mit seiner
+Rueckfrage davor" statt „Wie vor dieser Runde".
+
+Die Suche des Datensatzes,
+`grep -rniE "raeumte? .{0,20}(Dateien )?weg|wegraeumt" --include="*.rs" crates/krk-ui/src/appkit`,
+liefert von diesen fuenf keine Zeile mehr; die verbleibenden Treffer betreffen die
+Statuszeile, die Tabelle und `ereignisse.rs:307`, das seit Buendel D richtig steht.
+`make check` — exit 0.

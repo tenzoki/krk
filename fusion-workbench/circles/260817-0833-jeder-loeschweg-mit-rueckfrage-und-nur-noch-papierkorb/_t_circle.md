@@ -99,6 +99,19 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
   Datensätze aus der Durchsicht, einer mittel, keiner hoch; der mittlere erreicht keinen
   verbliebenen Planschritt und ist deshalb an Schritt 15 gehängt. Kohärenz-Befund `ok`.
 
+- Turn 2 (Sitzung 260817-2131): Commits `522cf51`..`da716c1`, dazu `f79f964` für die
+  Durchsicht. **Das ganze Bündel E, drei Aufgaben — der Plan der Runde trägt damit alle
+  siebzehn Schritte auf `[DONE]`.** Die Prosa des Baums kennt nur noch einen Löschweg: 22
+  von 51 Fundstellen nachgezogen, darunter drei, die das Wort „endgültig" gar nicht tragen
+  und erst eine zweite Suche über „ohne Rückfrage" gefunden hat. Fünf
+  Entscheidungsdatensätze bewegt, einer auf `_s_` und vier auf `_i_`, jeder Commit-Hash mit
+  `git log -S` belegt statt aus dem Plan übernommen. Die Datensätze der Runde 1 tragen ihre
+  aufgehobene Festlegung an zwanzig Stellen als Nachtrag, ohne dass ein aufgezeichneter
+  Stand überschrieben wäre. Kohärenz-Befund `ok`. Sieben Datensätze, einer mittel: vier
+  Doc-Kommentare unter `appkit/` sagen weiter, der falsche Zweig der Rückschritt-Regel
+  räume Dateien weg, während der Modulkopf derselben Regel seit `522cf51` das Gegenteil
+  sagt. Die Abdeckung der Durchsichten kachelt den Sitzungsbereich lückenlos.
+
 ## Closure note
 
 (offen)

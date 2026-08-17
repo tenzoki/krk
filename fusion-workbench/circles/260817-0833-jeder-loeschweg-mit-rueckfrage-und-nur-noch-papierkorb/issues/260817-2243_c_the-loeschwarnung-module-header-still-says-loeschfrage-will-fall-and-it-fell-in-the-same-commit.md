@@ -48,3 +48,18 @@ a symbol that Bundle D itself deleted, in a file Bundle D itself edited.
 
 Past tense, and drop the dangling symbol reference or mark it as gone: "`operationen::loeschfrage`,
 der Wortlaut des endgueltigen Loeschens, ist mit jenem Loeschweg weggefallen."
+
+---
+Resolved: `crates/krk-ui/src/kommandos/loeschwarnung.rs:167` steht jetzt im Perfekt und
+nennt den Loeschweg als vergangenen: „`operationen::loeschfrage`, der Wortlaut des
+endgueltigen Loeschens, ist mit jenem Loeschweg weggefallen." Wortlaut wie unter
+`## Direction` vorgeschlagen.
+
+**Derselbe Satz ist die Stelle, die
+`issues/260818-0026_*_the-sweep-of-step-15-reports-33-remaining-lines-and-the-search-returns-34.md`
+als falsch eingeordnet meldet** — jener Datensatz zaehlt `loeschwarnung.rs:167` unter den
+datierten Rueckblicken, und mit dieser Korrektur trifft die Einordnung zu. Die beiden
+Datensaetze meinen bei dieser Zeile dasselbe; ihr uebriger Gegenstand ist verschieden (dort
+die Zahl 33 gegen 34 im Sitzungsbericht, hier der haengende Symbolverweis).
+
+`make check` — exit 0.

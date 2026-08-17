@@ -65,3 +65,29 @@ does not yet hold either.
 Correct the number to 34 in the session record. The commit message is written and stays as it is;
 the record is the surface a later pass reads. Correct the three line citations at the same time,
 or drop the line numbers there — the file names alone carry the classification.
+
+---
+Resolved: Beide Teile des Datensatzes sind abgetragen.
+
+**Die Zahl.** `history/260817-2356-coder-e15-kommentare-und-claude-md.md` sagt jetzt „Nach
+dem Durchgang liefert dieselbe Suche 34 Zeilen" statt 33. Nachgemessen am Arbeitsbaum und
+an `522cf51`: `grep -rniE "endgueltig|endgültig" --include="*.rs" crates | wc -l` liefert
+beide Male 34. Die Commit-Nachricht von `522cf51` bleibt, wie sie ist. Die drei um eine
+Zeile zu niedrigen Zitate im selben Bericht sind mitgezogen:
+`loeschbestaetigung.rs:73` → `:74`, `:172` → `:173`, `:179` → `:180`.
+
+**Die falsche Klasse.** `loeschwarnung.rs:167` ist nicht umgeordnet, sondern richtiggestellt
+worden: die Zeile steht jetzt im Perfekt („ist mit jenem Loeschweg weggefallen"), womit die
+Einordnung „datierter Rueckblick, richtig" zutrifft und keine der 34 Zeilen mehr eine
+falsche Aussage traegt. Der eigene Datensatz dieser Zeile,
+`issues/260817-2243_c_the-loeschwarnung-module-header-still-says-loeschfrage-will-fall-and-it-fell-in-the-same-commit.md`,
+traegt die Aenderung und verweist hierher zurueck; die beiden meinen bei dieser einen Zeile
+dasselbe.
+
+Nicht nachgezogen sind die uebrigen Zeilennummern des Berichts. Er ist die Aufzeichnung
+eines Standes zu `522cf51`, und die Nummern verschieben sich mit jedem spaeteren Commit,
+dieser hier eingeschlossen (`anwendung.rs:4481` liegt nach der Korrektur der vier
+Doc-Kommentare vier Zeilen tiefer). Nachgezogen ist allein, was schon beim Schreiben falsch
+war.
+
+`make check` — exit 0.

@@ -297,9 +297,9 @@ impl Anschlag {
     /// `Anwendungsdelegierter::kommando_ausfuehren`, der andere die Zeile, die
     /// den Merker der Tastenwiederholung bei jeder anderen Eingabe
     /// zuruecksetzt. Zwei Fassungen derselben Frage koennten auseinanderlaufen,
-    /// und dann raeumte die falsche Haelfte Dateien weg; dieselbe Bauart wie
-    /// bei [`crate::kommandos::zulaessigkeit::zulaessig`] und ihren zwei
-    /// Fragern.
+    /// und dann liesse die falsche Haelfte die Loeschrueckfrage auf einen
+    /// berichtigten Vertipper aufgehen; dieselbe Bauart wie bei
+    /// [`crate::kommandos::zulaessigkeit::zulaessig`] und ihren zwei Fragern.
     ///
     /// **Leere Maske heisst leer.** `cmd+delete` traegt eine Zusatztaste und
     /// faellt hier heraus, und damit erreicht es den Papierkorb in jeder Lage

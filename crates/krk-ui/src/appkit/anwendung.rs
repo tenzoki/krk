@@ -2657,7 +2657,8 @@ impl Anwendungsdelegierter {
         //
         // Gefragt ist dieselbe Funktion, die der Zweig unten fragt, und nicht
         // eine zweite Fassung derselben Frage: zwei Fassungen koennten
-        // auseinanderlaufen, und dann raeumte die falsche Haelfte Dateien weg.
+        // auseinanderlaufen, und dann liesse die falsche Haelfte die
+        // Loeschrueckfrage auf einen berichtigten Vertipper aufgehen.
         let nackter_rueckschritt = match eingabe {
             Eingabe::Kommando { anschlag, .. } => anschlag.ist_nackter_rueckschritt(),
             Eingabe::Zeichen(_) => false,
@@ -2888,10 +2889,11 @@ impl Anwendungsdelegierter {
         let gewirkt = match kommando {
             Kommando::Kopieren => self.uebertragen(kommando),
             Kommando::Verschieben => self.uebertragen(kommando),
-            // **Der eine Zweig, dessen falsche Haelfte Dateien wegraeumt.**
-            // Er fragt zuerst, ob der Anschlag die nackte Rueckschritt-Taste
-            // war, und ruft dann die Regel; alles andere geht unveraendert in
-            // den Papierkorb. Die Fallunterscheidung selbst steht in
+            // **Der eine Zweig, dessen falsche Haelfte die Loeschrueckfrage
+            // aufgehen laesst.** Er fragt zuerst, ob der Anschlag die nackte
+            // Rueckschritt-Taste war, und ruft dann die Regel; alles andere
+            // geht unveraendert in die Rueckfrage vor dem Papierkorb. Die
+            // Fallunterscheidung selbst steht in
             // [`crate::kommandos::rueckschritt`] und nicht hier.
             Kommando::InPapierkorb => self.papierkorb_oder_zeichen_zurueck(anschlag),
             Kommando::Abbrechen => self.abbrechen(),
@@ -4463,9 +4465,13 @@ impl Anwendungsdelegierter {
     /// zurueck, gar nichts, oder der Weg in den Papierkorb mit seiner
     /// Rueckfrage (C1.14 bis C1.20, C6.9, C6.11).
     ///
-    /// **Der eine Zweig dieser Runde, dessen falsche Haelfte Dateien
-    /// wegraeumt**, und deshalb die Stelle, an der die drei Aussagen einzeln
-    /// dastehen:
+    /// **Der eine Zweig dieser Runde, dessen falsche Haelfte die
+    /// Loeschrueckfrage aufgehen laesst**, und deshalb die Stelle, an der die
+    /// drei Aussagen einzeln dastehen. Seit dem 260817 raeumt diese Haelfte
+    /// nichts mehr, sie fragt; die Unterscheidung ist dadurch milder geworden
+    /// und nicht ueberfluessig, denn eine Rueckfrage, die auf jeden
+    /// berichtigten Vertipper aufgeht, wird weggeklickt statt gelesen
+    /// ([`crate::kommandos::rueckschritt`]):
     ///
     /// 1. **Kein Anschlag heisst Papierkorb.** Der Menueeintrag "In den
     ///    Papierkorb raeumen" ist der eine Weg, der hier ohne Tastendruck
@@ -4532,7 +4538,8 @@ impl Anwendungsdelegierter {
             // neuer Druck raeumt, und `false` sagt hier nur, dass kein Nachzug
             // der Aufteilung und keine Sitzung vorzumerken ist.
             Rueckschritt::Nichts => false,
-            // Wie vor dieser Runde (C1.16, C1.20).
+            // Wie vor der Runde 10 (C1.16, C1.20): der Weg in den Papierkorb,
+            // seit dem 260817 mit seiner Rueckfrage davor.
             Rueckschritt::InDenPapierkorb => self.in_den_papierkorb(),
         }
     }

@@ -164,7 +164,7 @@
 //! Wahrheiten ueber dieselbe Frage; deshalb steht er hier und nicht im Blatt,
 //! das ihn zeigt, und nicht in [`super::operationen`], das die Texte aller
 //! uebrigen Dateioperationen traegt. `operationen::loeschfrage`, der Wortlaut
-//! des endgueltigen Loeschens, faellt mit diesem Loeschweg weg.
+//! des endgueltigen Loeschens, ist mit jenem Loeschweg weggefallen.
 //!
 //! # Warum der Pfad ungekuerzt dasteht
 //!
