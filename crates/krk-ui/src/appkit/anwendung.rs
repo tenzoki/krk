@@ -4539,6 +4539,8 @@ impl Anwendungsdelegierter {
             fenster,
             &frage,
             &erlaeuterung,
+            "Endgültig löschen",
+            true,
             move |bestaetigt| {
                 let Some(selbst) = schwach.load() else {
                     return;

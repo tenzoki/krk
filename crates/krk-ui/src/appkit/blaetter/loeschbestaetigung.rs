@@ -1,10 +1,31 @@
-//! Die Rueckfrage vor dem endgueltigen Loeschen (C4).
+//! Die eine Rueckfrage vor dem Raeumen in den Papierkorb (C2, C3).
 //!
-//! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege.
-//! Sie nennt die Zahl der Eintraege und, falls Ordner darunter sind, deren Zahl
-//! gesondert. Die beiden Texte rechnet
-//! [`crate::kommandos::operationen::loeschfrage`]; hier steht allein, was
-//! AppKit betrifft.
+//! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege
+//! und unabhaengig davon, welcher der Loeschbefehle ihn ausgeloest hat. Die
+//! beiden Texte rechnet
+//! [`crate::kommandos::loeschwarnung::frage_und_erlaeuterung`]; hier steht
+//! allein, was AppKit betrifft.
+//!
+//! # Ruhig und laut sind dasselbe Blatt
+//!
+//! Ein zweites Blatt entsteht nicht: zwei Blaetter waeren zwei Wahrheiten ueber
+//! dieselbe Frage. Die laute Form unterscheidet sich von der ruhigen in genau
+//! drei Dingen, und nur eines davon steht in dieser Datei. Der Grund in der
+//! Frage und die Folgen in der Erlaeuterung kommen als Text herein; das
+//! Warnzeichen setzt [`Blatt::als_warnung`], und zwar nur bei `laut`. Die
+//! Schaltflaechen, ihre Reihenfolge und ihre Tasten sind in beiden Formen
+//! dieselben (C3).
+//!
+//! ```text
+//!  frage, erlaeuterung ─┬──> ruhig: Frage, Erlaeuterung, zwei Schaltflaechen
+//!  laut ────────────────┘    laut:  dasselbe, dazu das Warnzeichen
+//! ```
+//!
+//! **Die Beschriftung der zweiten Schaltflaeche kommt als Argument herein**,
+//! weil der Wortlaut des Vorgangs [`crate::kommandos::loeschwarnung`] gehoert
+//! und nicht dieser Datei. "Abbrechen" bleibt als einziger Wortlaut hier
+//! stehen, denn es benennt keinen Vorgang, sondern die Sicherheitseigenschaft
+//! des Blattes, und es haengt untrennbar an der Tastenzuordnung darunter.
 //!
 //! # Vorbelegt ist Abbrechen
 //!
@@ -14,6 +35,10 @@
 //! Eingabetaste sonst der ersten, und die erste soll hier "Abbrechen" sein,
 //! damit sie zugleich die hervorgehobene ist.
 //!
+//! Dieselbe Forderung steht als Abnahmekriterium in C2 dieser Runde, und sie
+//! gilt dort fuer **beide** Formen: die ruhige Rueckfrage vor dem alltaeglichen
+//! Raeumen ist genauso vorbelegt wie die laute.
+//!
 //! Der zweite Weg zum Abbruch, die Escape-Taste, laeuft nicht ueber eine
 //! Tastenentsprechung dieses Blattes, sondern ueber den Befehl `abbrechen` aus
 //! `resources/default-keymap.toml`: der Ereignisabgriff sieht die Taste vor dem
@@ -21,9 +46,9 @@
 //! Tastenentsprechung waere hier auch gar nicht moeglich, weil ein `NSButton`
 //! genau eine traegt.
 //!
-//! Der Weg dahin ist bindend: das Loeschen faengt erst an, wenn diese Frage mit
+//! Der Weg dahin ist bindend: das Raeumen faengt erst an, wenn diese Frage mit
 //! Ja beantwortet ist. Der Kern bekommt seinen Auftrag danach, siehe
-//! `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
+//! `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -39,7 +64,12 @@ use objc2_foundation::MainThreadMarker;
 
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste};
 
-/// Zeigt die Rueckfrage und meldet, ob der Nutzer das Loeschen bestaetigt hat.
+/// Zeigt die Rueckfrage und meldet, ob der Nutzer den Vorgang bestaetigt hat.
+///
+/// `schaltflaeche` ist die Beschriftung der **zweiten** Schaltflaeche, also
+/// derjenigen, die den Vorgang ausloest; die erste bleibt "Abbrechen" und
+/// traegt die Eingabetaste. `laut` setzt das Warnzeichen des Systems und sonst
+/// nichts: Text, Reihenfolge und Tasten sind in beiden Formen dieselben.
 ///
 /// `fertig` laeuft auf dem Hauptfaden und genau einmal. `false` heisst
 /// abgebrochen, und dann geschieht nichts.
@@ -48,6 +78,8 @@ pub fn zeigen(
     fenster: &NSWindow,
     frage: &str,
     erlaeuterung: &str,
+    schaltflaeche: &str,
+    laut: bool,
     fertig: impl Fn(bool) + 'static,
 ) -> Blattgriff {
     let blatt = Blatt::mit_schaltflaechen(
@@ -55,12 +87,14 @@ pub fn zeigen(
         frage,
         &[
             Schaltflaeche::neu("Abbrechen", Taste::Eingabe),
-            Schaltflaeche::neu("Endgültig löschen", Taste::EingabeMitBefehl),
+            Schaltflaeche::neu(schaltflaeche, Taste::EingabeMitBefehl),
         ],
     );
     blatt.erlaeuterung_setzen(&format!(
         "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Löschen Cmd+Return."
     ));
-    blatt.als_warnung();
+    if laut {
+        blatt.als_warnung();
+    }
     blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| fertig(stelle == 1))
 }

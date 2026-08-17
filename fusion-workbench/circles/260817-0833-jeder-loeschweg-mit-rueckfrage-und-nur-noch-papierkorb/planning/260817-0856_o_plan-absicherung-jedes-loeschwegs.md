@@ -152,11 +152,12 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Dependencies: keine
    - Anmerkung zur Ausführung (260817): **Die Sichtbarkeit von `zahl` und `ordner_text` bleibt `pub(crate)`.** Der Plan liest sie als privat; am Baum `984d31a` sind sie bereits `pub(crate)`, und `zahl` hat mit `crate::appkit::statuszeile` (Zeile 177) einen Aufrufer außerhalb von `kommandos`. `pub(super)` übersetzte dort nicht und verlangte eine vierte Datei. Die Wiederverwendung, die der Schritt will, steht ohne jede Änderung; beide Doc-Kommentare nennen den neuen Aufrufer, und der von `zahl` schreibt aus, warum die enge Form nicht geht. Der Pfad entsteht über `operationen::pfadtext`, das die Nicht-Kürzung schon einmal begründet hat, statt über einen zweiten Formatierer. Bis Schritt 3 den Aufrufer setzt, trägt `frage_und_erlaeuterung` `#[cfg_attr(not(test), expect(dead_code, …))]` nach dem Vorbild aus `rueckschritt.rs`; ohne die Zeile hält `-D warnings` den Bau an, und Schritt 3 muss sie entfernen, weil die Erwartung dann unerfüllt wird.
 
-2. **Die Schaltflächenbeschriftung des Blattes wird zum Argument**
+2. **[DONE] Die Schaltflächenbeschriftung des Blattes wird zum Argument**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs`
    - Changes: `zeigen` nimmt die Beschriftung der zweiten Schaltfläche und einen Wahrheitswert `laut` entgegen; `als_warnung` wird nur noch bei `laut` gerufen. Die erste Schaltfläche bleibt „Abbrechen" mit `Taste::Eingabe`, die zweite behält `Taste::EingabeMitBefehl`, und die Reihenfolge ändert sich nicht. Der Modulkopf wird umgeschrieben: sein Gegenstand ist ab jetzt die eine Rückfrage vor dem Räumen in den Papierkorb, in ruhiger und in lauter Form, und die Begründung für die Vorbelegung auf „Abbrechen" bleibt wörtlich stehen, weil sie unverändert gilt.
    - Dependencies: keine
+   - Anmerkung zur Ausführung (260817): Die beiden neuen Argumente stehen zwischen `erlaeuterung` und `fertig`, damit der Abschluss letztes Argument bleibt. **Eine Zeile in `appkit/anwendung.rs` ist mitgezogen**: der einzige heutige Aufrufer, `endgueltig_loeschen` (4537), reicht jetzt `"Endgültig löschen"` und `true` durch und verhält sich unverändert; sonst ist dort nichts angefasst. Der Verweis am Ende des Modulkopfs zeigt auf den Datensatz dieser Runde statt auf den von 260802, den sie überholt. Der Hinweissatz „Zum Löschen Cmd+Return" ist unverändert geblieben, weil der Plan zu ihm nichts sagt; er trifft nach Schritt 3 nicht mehr ganz, was die zweite Schaltfläche tut.
 
 3. **Der gemeinsame Rumpf, und `delete` fragt**
    - Executor: `coder`

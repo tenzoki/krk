@@ -1039,3 +1039,6 @@
 {"ts":"2026-08-17T08:14:38","event":"task_start","turn":1,"task":"A1","agent":"coder","detail":"kommandos/loeschwarnung.rs neu"}
 {"ts":"2026-08-17T08:14:38","event":"task_start","turn":1,"task":"A2","agent":"coder","detail":"blaetter/loeschbestaetigung.rs, Beschriftung wird Argument"}
 {"ts":"2026-08-17T08:15:21","event":"task_blocked","turn":1,"task":"A2","agent":"coder","detail":"task_start war verfrueht emittiert: A2 laeuft NICHT parallel zu A1. Grund: zwei gleichzeitige cargo-test-Laeufe streiten um krk-messplan-*.toml im Temporaerverzeichnis (CLAUDE.md, shared/issues/260810-1925). A2 startet nach A1."}
+{"ts":"2026-08-17T08:29:56","event":"task_done","turn":1,"task":"A1","agent":"coder","detail":"make check exit 0; fuenf Proben"}
+{"ts":"2026-08-17T08:29:56","event":"commit","turn":1,"detail":"664a0fd A1 Modul der Loeschfrage"}
+{"ts":"2026-08-17T08:29:56","event":"task_start","turn":1,"task":"A2","agent":"coder","detail":"blaetter/loeschbestaetigung.rs, Beschriftung und laut werden Argumente"}
