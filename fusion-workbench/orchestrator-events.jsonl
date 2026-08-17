@@ -1032,3 +1032,10 @@
 {"ts":"2026-08-17T06:42:41","event":"planner_start","agent":"planner","detail":"Plan aus shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md"}
 {"ts":"2026-08-17T07:02:49","event":"planner_done","agent":"planner","detail":"circles/260817-0833-.../planning/260817-0856_o_plan-...md; 17 Schritte in fuenf Buendeln; Schutz nach Buendel A"}
 {"ts":"2026-08-17T07:02:49","event":"gate_hit","detail":"Plan-Abnahme Loeschabsicherung"}
+{"ts":"2026-08-17T08:14:09","event":"gate_response","detail":"Plan abgenommen"}
+{"ts":"2026-08-17T08:14:09","event":"commit","detail":"2793287 Plan der Loeschabsicherung"}
+{"ts":"2026-08-17T08:14:09","event":"queue_built","detail":"17 Aufgaben in fuenf Buendeln, 0 blockiert; Buendel A-E auf Turn 1-5"}
+{"ts":"2026-08-17T08:14:09","event":"turn_start","turn":1,"detail":"Buendel A, drei Aufgaben, Schutzschwelle"}
+{"ts":"2026-08-17T08:14:38","event":"task_start","turn":1,"task":"A1","agent":"coder","detail":"kommandos/loeschwarnung.rs neu"}
+{"ts":"2026-08-17T08:14:38","event":"task_start","turn":1,"task":"A2","agent":"coder","detail":"blaetter/loeschbestaetigung.rs, Beschriftung wird Argument"}
+{"ts":"2026-08-17T08:15:21","event":"task_blocked","turn":1,"task":"A2","agent":"coder","detail":"task_start war verfrueht emittiert: A2 laeuft NICHT parallel zu A1. Grund: zwei gleichzeitige cargo-test-Laeufe streiten um krk-messplan-*.toml im Temporaerverzeichnis (CLAUDE.md, shared/issues/260810-1925). A2 startet nach A1."}

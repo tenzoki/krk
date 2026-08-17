@@ -715,7 +715,9 @@ fn positionen_text(positionen: usize) -> String {
 ///
 /// Auch der Markierungsstand aus S16c nennt die Ordner gesondert und benutzt
 /// dieselbe Wendung; die Loeschfrage hat sie zuerst gebraucht, deshalb steht
-/// sie hier und nicht in [`super::auswahl`].
+/// sie hier und nicht in [`super::auswahl`]. Seit der Runde 12 nimmt sie
+/// [`super::loeschwarnung`] mit, dem die Loeschfrage gehoert; die Wendung
+/// bleibt trotzdem hier, denn sie ist ein Zahlwort und kein Loeschtext.
 pub(crate) fn ordner_text(ordner: usize) -> String {
     match ordner {
         1 => "ein Ordner".to_owned(),
@@ -727,7 +729,12 @@ pub(crate) fn ordner_text(ordner: usize) -> String {
 ///
 /// Die eine Schreibweise fuer Zahlen in der Oberflaeche. [`super::auswahl`]
 /// nimmt sie fuer den Markierungsstand mit, damit eine markierte Liste
-/// dieselben Punkte zeigt wie ein laufender Vorgang.
+/// dieselben Punkte zeigt wie ein laufender Vorgang; seit der Runde 12 auch
+/// [`super::loeschwarnung`] fuer die Zahl der Eintraege in der Loeschfrage.
+///
+/// **`pub(crate)` und nicht `pub(super)`**, und das ist kein Versehen: der
+/// dritte Aufrufer ist `crate::appkit::statuszeile` und liegt ausserhalb von
+/// [`super`]. Die enge Sichtbarkeit haelt der Uebersetzer dort nicht ein.
 pub(crate) fn zahl(wert: usize) -> String {
     let ziffern = wert.to_string();
     let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);

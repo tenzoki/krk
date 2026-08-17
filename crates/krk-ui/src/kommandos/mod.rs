@@ -5,7 +5,7 @@
 //! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
-//! Sieben Module entlang dessen geschnitten, was ein Tastenbefehl bewegt:
+//! Acht Module entlang dessen geschnitten, was ein Tastenbefehl bewegt:
 //!
 //! ```text
 //! zulaessigkeit Ob ein Befehl hier gerade wirken darf: kein Blatt, der
@@ -21,9 +21,12 @@
 //! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4),
 //!              die Antworten des Terminal-Befehls (C11) und die Texte der
 //!              beiden Pfadkopierer und des Oeffners (C1 bis C3 der Runde 4)
+//! loeschwarnung Die Texte der einen Rueckfrage vor dem Raeumen in den
+//!              Papierkorb, und wie ein Ziel eingeordnet wird (C2 und C3 der
+//!              Runde 12)
 //! ```
 //!
-//! **`zulaessigkeit` steht vor den sechs anderen, und das ist die Reihenfolge
+//! **`zulaessigkeit` steht vor den sieben anderen, und das ist die Reihenfolge
 //! des Weges.** Sie ist seit der Runde 7 die erste Frage jedes Befehls, und
 //! `fokus` ist einer ihrer drei Bestandteile geworden statt der einen Regel
 //! daneben. Zwei Frager stellen sie, der Ereignisabgriff ueber
@@ -32,7 +35,7 @@
 //! zwei Abfragen, ist der Grund, aus dem ihre Antworten nicht auseinanderlaufen
 //! koennen.
 //!
-//! **`fokus` steht danach und vor den fuenf uebrigen.** Jeder Befehl laeuft durch
+//! **`fokus` steht danach und vor den sechs uebrigen.** Jeder Befehl laeuft durch
 //! diese eine Regel, bevor irgendein anderes Modul ihn zu sehen bekommt. Bis
 //! Schritt 18 wohnte sie in `operationen` und galt allein fuer die
 //! Loeschtasten; mit der Leiste aus C5 betrifft sie jedes Kommando und gehoert
@@ -60,6 +63,7 @@
 
 pub mod auswahl;
 pub mod fokus;
+pub mod loeschwarnung;
 pub mod navigation;
 pub mod operationen;
 pub mod pfadeingabe;

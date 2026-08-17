@@ -145,11 +145,12 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 
 ### Bündel A — Die unbedingte Rückfrage
 
-1. **Das Modul der Löschfrage anlegen, mit der ruhigen Form**
+1. **[DONE] Das Modul der Löschfrage anlegen, mit der ruhigen Form**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/kommandos/loeschwarnung.rs` (neu), `crates/krk-ui/src/kommandos/mod.rs`, `crates/krk-ui/src/kommandos/operationen.rs`
    - Changes: Neues Modul ohne eine `use objc2`-Zeile, wie das ganze Verzeichnis. Es trägt zunächst `frage_und_erlaeuterung(auswahl: &Auswahl, ordner: &Path) -> (String, String)` in der ruhigen Form. Die Frage lautet bei einem Eintrag „Diesen Eintrag in den Papierkorb räumen?" und sonst „Diese N Einträge in den Papierkorb räumen?". Die Erläuterung nennt den vollen Pfad des Ordners, **ungekürzt**, und die Zahl der Ordner gesondert, falls welche darunter sind; `pfade::gekuerzt_fuer_anzeige` wird hier ausdrücklich nicht benutzt, und der Modulkopf sagt warum. `operationen::zahl` und `operationen::ordner_text` werden `pub(super)` und hier wiederverwendet. Der Modulkopf nennt den Gegenstand des Moduls und trägt die Aufruferzusage vor. Proben: Einzahl, Mehrzahl, Pfad in der Erläuterung, Ordnerzahl gesondert.
    - Dependencies: keine
+   - Anmerkung zur Ausführung (260817): **Die Sichtbarkeit von `zahl` und `ordner_text` bleibt `pub(crate)`.** Der Plan liest sie als privat; am Baum `984d31a` sind sie bereits `pub(crate)`, und `zahl` hat mit `crate::appkit::statuszeile` (Zeile 177) einen Aufrufer außerhalb von `kommandos`. `pub(super)` übersetzte dort nicht und verlangte eine vierte Datei. Die Wiederverwendung, die der Schritt will, steht ohne jede Änderung; beide Doc-Kommentare nennen den neuen Aufrufer, und der von `zahl` schreibt aus, warum die enge Form nicht geht. Der Pfad entsteht über `operationen::pfadtext`, das die Nicht-Kürzung schon einmal begründet hat, statt über einen zweiten Formatierer. Bis Schritt 3 den Aufrufer setzt, trägt `frage_und_erlaeuterung` `#[cfg_attr(not(test), expect(dead_code, …))]` nach dem Vorbild aus `rueckschritt.rs`; ohne die Zeile hält `-D warnings` den Bau an, und Schritt 3 muss sie entfernen, weil die Erwartung dann unerfüllt wird.
 
 2. **Die Schaltflächenbeschriftung des Blattes wird zum Argument**
    - Executor: `coder`
