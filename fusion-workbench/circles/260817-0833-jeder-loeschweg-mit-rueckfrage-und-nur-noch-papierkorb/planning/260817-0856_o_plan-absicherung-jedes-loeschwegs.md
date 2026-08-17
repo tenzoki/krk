@@ -182,7 +182,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Changes: `#[must_use] pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund` über `NSFileManager::defaultManager().URLForDirectory_inDomain_appropriateForURL_create_error(NSSearchPathDirectory::TrashDirectory, NSSearchPathDomainMask::UserDomainMask, Some(&url), false)`. Erfolg heißt `Ja`, ein Fehler heißt `Nein`, ein Pfad ohne gültiges UTF-8 heißt `Unentschieden`. `#[must_use]` mit ausgeschriebenem Grund: wer den Wert fallen lässt, löscht auf einem Ziel ohne Papierkorb. Der Modulkopf wird auf den erweiterten Gegenstand gezogen (die eine Hülle um den Papierkorb des Systems, Räumen **und** Vorprüfung) und sein Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` bekommt die drei neuen Berührungen mit ihren geprüften Zahlen: `URLForDirectory:…` seit 10.6, `NSTrashDirectory` seit 10.8, `NSUserDomainMask` ohne Angabe und damit seit 10.0.
    - Dependencies: 4
 
-6. [IN PROGRESS] **Die Prüfung vor dem Blatt**
+6. [DONE] **Die Prüfung vor dem Blatt**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/kommandos/loeschwarnung.rs`
    - Changes: `loeschen_nach_rueckfrage` löst den angezeigten Ordner einmal über `std::fs::canonicalize` auf und fragt `papierkorb::fuehrt_einen_papierkorb`. Bei `Nein` und bei `Unentschieden` erscheint kein Blatt, es entsteht kein Auftrag, und die Statuszeile trägt den Text aus der neuen Funktion `loeschwarnung::ohne_papierkorb()`. Er nennt den Befund und den Ausweg: das Ziel führt keinen Papierkorb, es wurde nichts gelöscht, im Finder löschen. Ein nicht auflösbarer Ordnerpfad zählt als `Unentschieden` und löscht damit ebenfalls nicht.
@@ -190,7 +190,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 
 ### Bündel C — Die laute Form
 
-7. **Die gedeckelte Zählung des Unterbaums**
+7. [IN PROGRESS] **Die gedeckelte Zählung des Unterbaums**
    - Executor: `coder`
    - Files: `crates/krk-core/src/verzeichnis/umfang.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`
    - Changes: `pub const SCHWELLE: u32 = 25;` und `pub enum Umfang { Genau(u32), MehrAls(u32), Unentschieden }`, dazu `#[must_use] pub fn zaehlen(auswahl: &[PathBuf]) -> Umfang`. Gezählt wird jeder ausgewählte Eintrag als eins und jeder Eintrag unterhalb eines ausgewählten Ordners rekursiv; der Deckel ist `SCHWELLE + 1` und steht nicht als zweite Zahl da. Verknüpfungen zählen eins und werden nicht verfolgt, also entscheidet `Typ` aus dem gelesenen Eintrag und `symlink_metadata` an der obersten Ebene. Gelesen wird über `sys::Schwungleser` und nicht über `verzeichnis::lesen`; die Begründung gehört in den Modulkopf. Ein Fehlschlag beim Öffnen liefert `Unentschieden`, wenn `sys::ist_deskriptormangel` ihn als Deskriptormangel einordnet, und zählt sonst als ein Eintrag ohne Abstieg. Der Modulkopf schreibt die Schranke aus: jeder Abstieg kostet mindestens einen Zähler, also höchstens 26 geöffnete Verzeichnisse und höchstens 26 Ebenen Rekursion. Proben über `Pruefordner`: flacher Ordner unter der Schwelle, genau 25, genau 26, tiefe Kette, Verknüpfung auf einen großen Baum.

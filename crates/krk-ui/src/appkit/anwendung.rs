@@ -227,6 +227,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
+use krk_core::verzeichnis::Befund;
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -238,7 +239,7 @@ use crate::fenstermodell::{
 };
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
-use crate::kommandos::loeschwarnung;
+use crate::kommandos::loeschwarnung::{self, Vorstufe};
 use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::zulaessigkeit::{self, Lage};
@@ -266,7 +267,7 @@ use super::fsevents::Dateisystemwache;
 use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
-use super::papierkorb::Systempapierkorb;
+use super::papierkorb::{self, Systempapierkorb};
 use super::statuszeile::{self, Statuszeile};
 use super::tabelle::Dateifenster;
 use super::teilen;
@@ -4573,7 +4574,7 @@ impl Anwendungsdelegierter {
     /// Der eine Rumpf jedes Loeschbefehls: pruefen, fragen, und erst dann den
     /// Auftrag stellen (C2 der Runde 12).
     ///
-    /// **Vier Stufen in dieser Reihenfolge**, und die Reihenfolge ist die
+    /// **Fuenf Stufen in dieser Reihenfolge**, und die Reihenfolge ist die
     /// Zusage:
     ///
     /// ```text
@@ -4581,10 +4582,23 @@ impl Anwendungsdelegierter {
     ///  │ nein
     ///  └─> Auswahl leer?         ──ja──> Statuszeile, kein Blatt
     ///       │ nein
-    ///       └─> Blatt zeigen ──> Cmd+Return? ──nein──> nichts geschieht
-    ///                                │ ja
-    ///                                └──> Auftrag mit der gezeigten Auswahl
+    ///       └─> fuehrt das Ziel einen Papierkorb?
+    ///            │        └──nein oder unentschieden──> Statuszeile, kein Blatt
+    ///            │ ja
+    ///            └─> Blatt zeigen ──> Cmd+Return? ──nein──> nichts geschieht
+    ///                                     │ ja
+    ///                                     └──> Auftrag mit der gezeigten Auswahl
     /// ```
+    ///
+    /// **Die Reihenfolge steht seit dem 260817 nicht mehr hier, sondern in
+    /// [`loeschwarnung::vor_der_rueckfrage`].** Sie ist eine Regel ueber drei
+    /// Wahrheitswerte und keine AppKit-Sache; als Kette von `if`-Zweigen in
+    /// diesem Rumpf war ausgerechnet die Mechanik dieser Runde von keiner Probe
+    /// gedeckt, denn ein Blatt laesst sich unter `libtest` nicht bedienen. Dieser
+    /// Rumpf beschafft jetzt die drei Tatsachen — jede aus genau einer Quelle —
+    /// und fuehrt aus, was die Regel sagt. **Was er dabei nicht mehr tut, ist
+    /// entscheiden**, und wer die Reihenfolge aendern will, aendert die Tafel
+    /// dort und nicht die Zeilenfolge hier.
     ///
     /// **Der laufende Vorgang wird vor dem Blatt geprueft und nicht danach.**
     /// Bis zum 260817 stand die Frage in [`Self::auftrag_stellen`], also hinter
@@ -4592,6 +4606,23 @@ impl Anwendungsdelegierter {
     /// und meldete erst danach, dass bereits eine Operation laeuft. Eine
     /// Rueckfrage, deren Ja folgenlos bleibt, gewoehnt den Nutzer daran, sie
     /// wegzudruecken, und genau diese Gewoehnung ist der Gegner dieser Runde.
+    ///
+    /// **Der Papierkorbtest steht aus demselben Grund vor dem Blatt** (C4). Er
+    /// entscheidet, ob es fuer diesen Vorgang einen Rueckweg gibt; danach
+    /// gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
+    /// kann. Der angezeigte Ordner wird dafuer **einmal** aufgeloest, und ein
+    /// Pfad, der sich nicht aufloesen laesst, zaehlt als
+    /// [`Befund::Unentschieden`] und loescht damit ebenfalls nicht.
+    ///
+    /// **Die Pruefung trifft beide Loeschbefehle**, also bis zum Buendel D auch
+    /// das endgueltige Loeschen auf `f8`, obwohl das keinen Papierkorb braucht.
+    /// Das ist Absicht und keine Nachlaessigkeit des gemeinsamen Rumpfes: die
+    /// Directive dieser Runde sagt ohne Einschraenkung „ein Ziel ohne Papierkorb
+    /// wird nicht geloescht, sondern gemeldet", und ein Ziel ohne Rueckweg ist
+    /// genau das Ziel, an dem ein endgueltiges Loeschen am wenigsten
+    /// zurueckzunehmen waere. Ein Zweig, der die Pruefung fuer den einen Befehl
+    /// ueberspringt, waere ein zweiter Loeschweg an der Stelle, an der diese
+    /// Runde den zweiten abschafft.
     ///
     /// **Die beiden Texte kommen fertig herein.** Welcher Wortlaut in welcher
     /// Form dasteht, gehoert [`crate::kommandos::loeschwarnung`] und nicht
@@ -4614,49 +4645,88 @@ impl Anwendungsdelegierter {
         laut: bool,
     ) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        if self.vorgang_laeuft_schon(aktiv) {
-            return true;
-        }
 
+        // Die drei Tatsachen der Regel, jede aus genau einer Quelle, und alle
+        // drei erhoben, bevor eine Stufe entschieden ist. Die Reihenfolge, in der
+        // sie hier anfallen, entscheidet nichts — welche Stufe daraus folgt,
+        // sagt `vor_der_rueckfrage`, und dass der Papierkorbtest vor der
+        // Rueckfrage steht, steht als Zeile in seiner Tafel und nicht als
+        // Zeilenfolge hier.
+        let vorgang_laeuft = self.ivars().vorgang.borrow().is_some();
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
-        if auswahl.ist_leer() {
-            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
-            return true;
-        }
         let quellordner = quelle.angezeigter_ordner();
-        let Some(fenster) = self.ivars().fenster.get() else {
-            return false;
-        };
+        // Aufgeloest wird genau hier und genau einmal: `fuehrt_einen_papierkorb`
+        // fasst das Dateisystem nicht an und bekommt den Ordner deshalb
+        // aufgeloest herein, sonst meldete eine Verknuepfung den Papierkorb
+        // ihres eigenen Ortes statt den ihres Ziels. Ein Pfad, der sich nicht
+        // aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine ueber
+        // KRKs Kenntnis von ihm, und zaehlt darum als unentschieden.
+        let papierkorb_am_ziel = std::fs::canonicalize(&quellordner)
+            .map_or(Befund::Unentschieden, |aufgeloest| {
+                papierkorb::fuehrt_einen_papierkorb(&aufgeloest)
+            });
 
-        // Der Auftrag reist durch den Rueckruf und nicht neben ihm her. Der
-        // Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt eine
-        // `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
-        let bestaetigter = Cell::new(Some((art, auswahl, quellordner)));
-        let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let griff = loeschbestaetigung::zeigen(
-            self.mtm(),
-            fenster,
-            frage,
-            erlaeuterung,
-            schaltflaeche,
-            laut,
-            move |bestaetigt| {
-                let Some(selbst) = schwach.load() else {
-                    return;
+        match loeschwarnung::vor_der_rueckfrage(
+            vorgang_laeuft,
+            auswahl.ist_leer(),
+            papierkorb_am_ziel,
+        ) {
+            // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
+            // die sie fuer alle drei Frager baut; sie nennt die Art des
+            // laufenden Vorgangs und liest ihn dafuer ein zweites Mal. Es ist
+            // derselbe Durchgang der Ereignisschleife wie oben, also dieselbe
+            // Antwort, und `let _ =` heisst hier wie ueberall im Baum „ich
+            // brauche den Wert nicht": entschieden ist die Stufe schon.
+            Vorstufe::VorgangLaeuft => {
+                let _ = self.vorgang_laeuft_schon(aktiv);
+                true
+            }
+            Vorstufe::NichtsAusgewaehlt => {
+                self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+                true
+            }
+            // Kein Blatt, kein Auftrag, und die Statuszeile nennt Befund, Folge
+            // und Ausweg (C4).
+            Vorstufe::OhnePapierkorb => {
+                self.antwort_zeigen(aktiv, loeschwarnung::ohne_papierkorb());
+                true
+            }
+            Vorstufe::Rueckfrage => {
+                let Some(fenster) = self.ivars().fenster.get() else {
+                    return false;
                 };
-                *selbst.ivars().offenes_blatt.borrow_mut() = None;
-                if !bestaetigt {
-                    return;
-                }
-                let Some((art, auswahl, quellordner)) = bestaetigter.take() else {
-                    return;
-                };
-                selbst.loeschauftrag_stellen(art, auswahl, quellordner);
-            },
-        );
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
-        true
+
+                // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
+                // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
+                // eine `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
+                let bestaetigter = Cell::new(Some((art, auswahl, quellordner)));
+                let schwach = objc2::rc::Weak::from_retained(&self.retain());
+                let griff = loeschbestaetigung::zeigen(
+                    self.mtm(),
+                    fenster,
+                    frage,
+                    erlaeuterung,
+                    schaltflaeche,
+                    laut,
+                    move |bestaetigt| {
+                        let Some(selbst) = schwach.load() else {
+                            return;
+                        };
+                        *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                        if !bestaetigt {
+                            return;
+                        }
+                        let Some((art, auswahl, quellordner)) = bestaetigter.take() else {
+                            return;
+                        };
+                        selbst.loeschauftrag_stellen(art, auswahl, quellordner);
+                    },
+                );
+                *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+                true
+            }
+        }
     }
 
     /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die

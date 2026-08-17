@@ -181,13 +181,6 @@ impl Papierkorb for Systempapierkorb {
 /// Einhaengepunkt eines anderen Datentraegers liegt. Dieser Rest wird
 /// nachtraeglich am Ergebnis des einzelnen Eintrags entschieden, und sein
 /// Ausgang ist „uebersprungen mit Grund" und nie „endgueltig geloescht".
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit dem sechsten Schritt dieser Runde, der die Pruefung vor das Blatt setzt"
-    )
-)]
 #[must_use = "der Befund ist die Erlaubnis zu loeschen; fallengelassen loescht der Aufrufer auf einem Ziel, das keinen Papierkorb fuehrt"]
 pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund {
     let Some(text) = ordner.to_str() else {
