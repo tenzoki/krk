@@ -79,3 +79,13 @@ nicht mehr `Befund`, sondern `Loeschzielbefund`, und die Datei heißt
 `# Warum der Typ nicht Befund heisst` gewachsen, die Zeilenangaben unter **Betroffen** sind
 damit verschoben. Der Befund selbst besteht unverändert: die Sicherung gegen den
 Polaritätsfehler ist weiterhin Prosa in drei Modulköpfen.
+
+Progress (260817-1623, coder, step 9): the first way now stands in **one** of the three files.
+`crates/krk-ui/src/appkit/volumes.rs` carries `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt`,
+a count over its own file asserting `aufrufstellen(inhalt, "ist_warnwuerdig") == 0`, with the
+composed needle. The record stays open: `appkit/papierkorb.rs` and `kommandos/loeschwarnung.rs`
+carry no such count, and the second, stronger way — two types for two questions — is untouched.
+The new check `volumes::ist_lokal` also adds a case this record does not describe, filed as
+`260817-1623_o_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`: its return value runs
+counter to the `Loeschziel` field that consumes it, so the hazard there is not the habitual
+`ist_warnwuerdig` but a missing inversion.

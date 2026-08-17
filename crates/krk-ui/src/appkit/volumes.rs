@@ -1,4 +1,21 @@
-//! Die Beobachtung der eingehaengten Datentraeger ueber `NSWorkspace` (C9).
+//! Die eine Stelle, die das System nach **Datentraegern** fragt: Beobachtung,
+//! Aufzaehlung und die Einordnung eines einzelnen Ordners (C9 der Runde 1, C3
+//! dieser Runde).
+//!
+//! Drei Fragen, ein Gegenstand, und die dritte ist die juengste:
+//!
+//! ```text
+//!  1. was hat sich geaendert?          Datentraegerwache ──> NSWorkspace
+//!  2. welche gibt es gerade?           eingehaengte      ──> NSFileManager
+//!  3. ist der unter diesem Ordner
+//!     ein lokaler?                     ist_lokal         ──> NSURL
+//! ```
+//!
+//! Sie liegen zusammen, weil sie dieselbe Sache befragen, und die dritte kommt
+//! ausdruecklich **hierher** und nicht in ein eigenes Modul: die Abfrage von
+//! Ressourcenwerten eines Datentraegers ueber `resourceValuesForKeys:error:`
+//! steht in [`eingehaengte`] schon, und eine zweite Stelle daneben waere der
+//! Doppelbau, den dieses Modul seit S18 vermeidet.
 //!
 //! Ordnerinhalte und Datentraeger sind zwei Mechanismen und bekommen zwei
 //! Module. [`super::fsevents`] beobachtet, was sich **in** einem Ordner
@@ -37,27 +54,70 @@
 //! Datentraeger und kommt aus `krk_core::ablage::pfade`. Zusammengesetzt wird
 //! beides in [`crate::leistenmodell`], das auch die Reihenfolge fuehrt.
 //!
+//! # Die dritte Frage, und auf welcher Polaritaet ihre Antwort liegt
+//!
+//! [`ist_lokal`] beantwortet den dritten der sechs Ausloeser aus C3: „der
+//! Datentraeger des Ordners ist kein lokaler". **Der Ausloeser ist die
+//! Verneinung der Frage, die die Funktion stellt**, und daraus folgt alles, was
+//! ueber ihren Rueckgabewert zu wissen ist:
+//!
+//! ```text
+//!  ist_lokal(ordner)  ──>  Ja            der Datentraeger ist lokal   ruhig
+//!                     ──>  Nein          ein Netzlaufwerk             LAUT
+//!                     ──>  Unentschieden KRK weiss es nicht           LAUT
+//! ```
+//!
+//! Damit liegt die Antwort auf der **zweiten** Polaritaet aus dem Modulkopf von
+//! [`krk_core::verzeichnis::Loeschzielbefund`], derselben wie bei
+//! [`super::papierkorb::fuehrt_einen_papierkorb`]: `Ja` ist die harmlose
+//! Auskunft, und `Unentschieden` gehoert zu `Nein`.
+//! [`Loeschzielbefund::ist_warnwuerdig`] ist hier folglich das falsche Werkzeug
+//! — es fasst `Ja` und `Unentschieden` zusammen und liesse damit ein
+//! Netzlaufwerk als harmlos durchgehen, waehrend es einen lokalen Datentraeger
+//! anzeigte. Die Zaehlprobe `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt`
+//! haelt das fest, statt es bloss hinzuschreiben.
+//!
+//! **Der Aufrufer dreht, und er dreht dreiwertig.** Das Feld `netzlaufwerk` des
+//! `Loeschziel` aus dem zehnten Schritt dieser Runde traegt die Polaritaet 1:
+//! dort heisst `Ja` „es ist ein Netzlaufwerk". Wer diesen Rueckgabewert
+//! ungedreht dort einsetzt, vertauscht lokal und fern, und die Vertauschung
+//! faellt an keiner Uebersetzung auf, weil beide Seiten denselben Typ tragen —
+//! `Unentschieden` bleibt unter der Drehung stehen und laesst die Zusage
+//! „Unentschieden gilt als laut" weiter gelten, waehrend der genannte Grund
+//! falsch ist. Der Befund
+//! `issues/260817-1623_*_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`
+//! nennt die beiden Wege, das unuebersetzbar zu machen; bis dahin ist diese
+//! Warnung die Sicherung.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSWorkspace`, `NSNotificationCenter`, `NSNotification`, `NSFileManager`,
-//! `NSArray`, `NSDictionary`, `NSString` und `NSURL` stehen seit macOS 10.0 zur
-//! Verfuegung, ebenso die drei beobachteten Meldungsnamen
+//! `NSArray`, `NSDictionary`, `NSString`, `NSNumber` und `NSURL` stehen seit
+//! macOS 10.0 zur Verfuegung, ebenso die drei beobachteten Meldungsnamen
 //! (`NSWorkspaceDidMountNotification`, `NSWorkspaceWillUnmountNotification`,
 //! `NSWorkspaceDidUnmountNotification`) und die Beruehrungen `sharedWorkspace`,
 //! `notificationCenter`, `addObserver:selector:name:object:`, `removeObserver:`,
-//! `userInfo`, `objectForKey:` und `NSURL.path`. Sechs Beruehrungen sind
-//! juenger: `NSWorkspaceVolumeURLKey`, `NSWorkspaceVolumeLocalizedNameKey`,
+//! `userInfo`, `objectForKey:`, `fileURLWithPath:` (`NSURL.h:52`, die Form ohne
+//! weitere Argumente), `boolValue` (`NSValue.h:73`) und `NSURL.path`. Sieben
+//! Beruehrungen sind juenger: `NSWorkspaceVolumeURLKey`,
+//! `NSWorkspaceVolumeLocalizedNameKey`,
 //! `mountedVolumeURLsIncludingResourceValuesForKeys:options:`,
-//! `resourceValuesForKeys:error:` und die Aufzaehlung
+//! `resourceValuesForKeys:error:` (`NSURL.h:183`) und die Aufzaehlung
 //! `NSVolumeEnumerationOptions` stehen seit 10.6,
-//! `NSURLVolumeLocalizedNameKey` seit 10.7. Das Buendel zielt auf 15.0
+//! `NSURLVolumeLocalizedNameKey` und `NSURLVolumeIsLocalKey` (`NSURL.h:338`,
+//! `API_AVAILABLE(macos(10.7), …)`) seit 10.7. Ein Typname traegt im Kopf keine
+//! Angabe und steht damit seit 10.0: `NSURLResourceKey` (`NSURL.h:17`), der
+//! Schluesseltyp der Ressourcenwerte, ein `typedef` auf `NSString` und keine
+//! eigene Klasse. Alle Zeilenangaben sind am 260817 in
+//! `$(xcrun --show-sdk-path)/System/Library/Frameworks/Foundation.framework/Headers/`
+//! nachgelesen und nicht uebernommen. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
 //! keine Beruehrung in dieser Datei braucht deshalb eine Verfuegbarkeitspruefung
 //! zur Laufzeit. `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der
 //! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
 //! Gegenmassnahme.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use objc2::rc::Retained;
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
@@ -66,9 +126,12 @@ use objc2_app_kit::{
     NSWorkspaceVolumeLocalizedNameKey, NSWorkspaceVolumeURLKey, NSWorkspaceWillUnmountNotification,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSArray, NSFileManager, NSNotification, NSObject, NSObjectProtocol, NSString,
-    NSURL, NSURLVolumeLocalizedNameKey, NSVolumeEnumerationOptions,
+    MainThreadMarker, NSArray, NSFileManager, NSNotification, NSNumber, NSObject, NSObjectProtocol,
+    NSString, NSURL, NSURLVolumeIsLocalKey, NSURLVolumeLocalizedNameKey,
+    NSVolumeEnumerationOptions,
 };
+
+use krk_core::verzeichnis::Loeschzielbefund;
 
 use crate::leistenmodell::Ort;
 
@@ -119,10 +182,83 @@ pub fn eingehaengte() -> Vec<Ort> {
 ///
 /// Der Rueckfall fuer einen Datentraeger ohne Namen. `/` hat keinen
 /// Namensteil, und dort ist der Pfad selbst die beste Auskunft.
-fn namensteil(pfad: &std::path::Path) -> String {
+fn namensteil(pfad: &Path) -> String {
     pfad.file_name()
         .map(|teil| teil.to_string_lossy().into_owned())
         .unwrap_or_else(|| pfad.display().to_string())
+}
+
+/// Ob der Datentraeger unter diesem Ordner ein lokaler ist (C3, Ausloeser 3).
+///
+/// Gefragt wird der Ressourcenwert `NSURLVolumeIsLocalKey` am `NSURL` des
+/// Ordners. Das System beantwortet ihn aus dem Einhaengepunkt, unter dem der
+/// Pfad liegt; ein `NSNumber` mit einem Wahrheitswert kommt zurueck, und der
+/// Kommentar der Kopfdatei nennt ihn „true if the volume is stored on a local
+/// device".
+///
+/// **Die drei Ausgaenge, und welcher warnt:**
+///
+/// - [`Loeschzielbefund::Ja`] — der Datentraeger ist lokal. Das ist die
+///   **harmlose** Auskunft, und die Rueckfrage bleibt an diesem Ausloeser ruhig.
+/// - [`Loeschzielbefund::Nein`] — der Datentraeger ist keiner: ein
+///   Netzlaufwerk. **Das ist der Warngrund**, denn der Ausloeser aus C3 lautet
+///   „der Datentraeger des Ordners ist kein lokaler".
+/// - [`Loeschzielbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8,
+///   das System nennt einen Fehler, oder es liefert den Schluessel ohne Wert
+///   beziehungsweise mit einem Wert, der kein `NSNumber` ist. Das ist keine
+///   Aussage ueber den Datentraeger, sondern eine ueber KRKs Kenntnis von ihm,
+///   und **auch dieser Ausgang warnt**.
+///
+/// Ein fehlender Wert wird ausdruecklich **nicht** als `Ja` gelesen. Ein
+/// Vorgabewert „lokal, wenn nichts dagegen spricht" waere der bequeme Weg und
+/// stellte die Warnung genau dort still, wo KRK am wenigsten ueber das Ziel
+/// weiss; die Zusage „Unentschieden gilt als laut" waere damit an dieser
+/// Pruefung aufgegeben.
+///
+/// **Die Polaritaet ist gegenlaeufig zu dem Feld, das die Antwort aufnimmt**,
+/// und [`Loeschzielbefund::ist_warnwuerdig`] ist hier deshalb das falsche
+/// Werkzeug. Der Modulkopf schreibt beides aus; wer diesen Rueckgabewert
+/// weitergibt, liest ihn dort nach, bevor er ihn einsetzt.
+///
+/// Der Ordner kommt **aufgeloest** herein, wie bei
+/// [`super::papierkorb::fuehrt_einen_papierkorb`] und aus demselben Grund: eine
+/// Verknuepfung meldete sonst den Datentraeger ihres eigenen Ortes statt den
+/// ihres Ziels. Diese Funktion ruft weder `canonicalize` noch sonst etwas am
+/// Dateisystem; ein Pfad, der sich nicht aufloesen laesst, zaehlt beim Aufrufer
+/// als [`Loeschzielbefund::Unentschieden`].
+#[must_use = "der Befund entscheidet, ob die Rueckfrage das Netzlaufwerk nennt; fallengelassen bleibt sie darueber still"]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "der Aufrufer entsteht mit dem elften Schritt dieser Runde, der die Tatsachen fuer die Ausloesertafel beschafft"
+    )
+)]
+pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund {
+    let Some(text) = pfad.to_str() else {
+        return Loeschzielbefund::Unentschieden;
+    };
+    let url = NSURL::fileURLWithPath(&NSString::from_str(text));
+    // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname der
+    // Ortsangabe des Datentraegers. Es wird gelesen und nicht geschrieben,
+    // ebenso wie der Namensschluessel in `eingehaengte`.
+    let schluessel_lokal = unsafe { NSURLVolumeIsLocalKey };
+    let schluessel = NSArray::from_slice(&[schluessel_lokal]);
+
+    let Some(wert) = url
+        .resourceValuesForKeys_error(&schluessel)
+        .ok()
+        .and_then(|werte| werte.objectForKey(schluessel_lokal))
+        .and_then(|wert| wert.downcast::<NSNumber>().ok())
+    else {
+        return Loeschzielbefund::Unentschieden;
+    };
+
+    if wert.boolValue() {
+        Loeschzielbefund::Ja
+    } else {
+        Loeschzielbefund::Nein
+    }
 }
 
 /// Was mit einem Datentraeger geschehen ist.
@@ -279,5 +415,188 @@ impl Drop for Datentraegerwache {
         // drei Meldungen angemeldet hat. Die Form ohne Namen nimmt ihn fuer
         // alle drei zugleich wieder heraus.
         unsafe { zentrale.removeObserver(&self.ziel) };
+    }
+}
+
+/// Der Einhaengepunkt der Automatik fuer `/home`, der Ort des negativen
+/// Ausgangs von [`ist_lokal`].
+///
+/// Er steht als Konstante neben den Proben und nicht in ihnen, weil zwei von
+/// ihnen ihn brauchen: die eine prueft die Vorbedingung, die andere den Befund.
+#[cfg(test)]
+const AUTOMATIK_HOME: &str = "/System/Volumes/Data/home";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Das Benutzerverzeichnis liegt auf einem lokalen Datentraeger.
+    ///
+    /// Der positive Ausgang an einem echten Ort, und die Probe braucht kein
+    /// Fenster und keinen Hauptfaden: die Abfrage eines Ressourcenwerts an einem
+    /// `NSURL` ist von jedem Faden aus zu stellen, ebenso wie die Vorpruefung in
+    /// [`super::super::papierkorb`].
+    #[test]
+    fn das_benutzerverzeichnis_liegt_auf_einem_lokalen_datentraeger() {
+        let Some(zuhause) = krk_core::ablage::pfade::benutzerverzeichnis() else {
+            panic!(
+                "das System nennt kein Benutzerverzeichnis, und ohne eines misst diese Probe nichts"
+            );
+        };
+        assert_eq!(
+            ist_lokal(&zuhause),
+            Loeschzielbefund::Ja,
+            "das Benutzerverzeichnis {} liegt angeblich nicht auf einem lokalen Datentraeger",
+            zuhause.display()
+        );
+    }
+
+    /// Der Einhaengepunkt der `/home`-Automatik ist **nicht** lokal.
+    ///
+    /// **Der negative Ausgang, ohne dass eine Probe ein Netzlaufwerk einhaengen
+    /// muesste.** macOS haengt seit der Trennung von System- und Datenband unter
+    /// [`AUTOMATIK_HOME`] die Automatik `auto_home` ein; sie ist ein
+    /// `autofs`-Einhaengepunkt, `/sbin/mount` fuehrt ihn ohne das Merkmal
+    /// `local`, und `NSURLVolumeIsLocalKey` antwortet dort `false`. Ohne diese
+    /// Probe waere [`ist_lokal`] mit einem festen [`Loeschzielbefund::Ja`] gruen,
+    /// und der dritte Ausloeser aus C3 haette keinen Beleg — genau die Lage, die
+    /// bei der Frage nach dem Papierkorb `/dev` aufgeloest hat.
+    ///
+    /// **Es ist der Zielpfad und nicht `/home`.** Am 260817 gemessen antwortet
+    /// `/home` mit `true` und [`AUTOMATIK_HOME`] mit `false`, obwohl das erste
+    /// eine Festverknuepfung auf das zweite ist. Woran das haengt, ist hier nicht
+    /// geklaert und wird nicht geraten; die Messung steht, und wer den Pfad
+    /// „vereinfacht", macht die Probe still gruen.
+    ///
+    /// # Warum die Vorbedingung mitgeprueft wird
+    ///
+    /// Ein Nutzer kann `/etc/auto_master` aendern und die `/home`-Automatik
+    /// abschalten. Dann bleibt unter [`AUTOMATIK_HOME`] ein gewoehnlicher, leerer
+    /// Ordner des Datenbands stehen, und der ist lokal: die Probe wuerde rot,
+    /// ohne dass an [`ist_lokal`] etwas falsch waere. Geprueft wird deshalb
+    /// zuerst, dass dort ueberhaupt ein eigener Einhaengepunkt steht, und zwar an
+    /// der Geraetekennung aus `stat(2)`: ein Einhaengepunkt traegt eine andere als
+    /// sein uebergeordneter Ordner. Diese Vorpruefung braucht kein AppKit und
+    /// nicht die Funktion, die sie sichern soll.
+    ///
+    /// Fehlt der Einhaengepunkt, **haelt die Probe an statt sich zu ueberspringen**.
+    /// Ein stiller Sprung liesse den einzigen negativen Beleg dieser Datei
+    /// verschwinden, ohne dass es jemandem auffiele; ein Anhalten nennt den
+    /// Grund und die Stelle.
+    #[test]
+    fn ein_nicht_lokaler_datentraeger_wird_erkannt() {
+        use std::os::unix::fs::MetadataExt;
+
+        let einhaengepunkt = Path::new(AUTOMATIK_HOME);
+        let eigen = std::fs::metadata(einhaengepunkt)
+            .unwrap_or_else(|fehler| panic!("{AUTOMATIK_HOME} ist nicht lesbar: {fehler}"));
+        let darueber = std::fs::metadata(
+            einhaengepunkt
+                .parent()
+                .expect("der Pfad der Automatik hat einen uebergeordneten Ordner"),
+        )
+        .expect("der Ordner ueber der Automatik ist nicht lesbar");
+        assert_ne!(
+            eigen.dev(),
+            darueber.dev(),
+            "unter {AUTOMATIK_HOME} steht kein eigener Einhaengepunkt, \
+             also misst diese Probe den negativen Ausgang von ist_lokal nicht; \
+             ist die /home-Automatik in /etc/auto_master abgeschaltet?"
+        );
+
+        assert_eq!(
+            ist_lokal(einhaengepunkt),
+            Loeschzielbefund::Nein,
+            "{AUTOMATIK_HOME} gilt als lokal, also unterscheidet die Pruefung nicht"
+        );
+    }
+
+    /// Ein Pfad, den es nicht gibt, bleibt unentschieden und wird nicht zum
+    /// `Ja`.
+    ///
+    /// Der Zweig, in dem das System einen Fehler nennt. Er ist von
+    /// [`super::super::papierkorb::fuehrt_einen_papierkorb`] zu unterscheiden:
+    /// dort heisst ein Fehler [`Loeschzielbefund::Nein`], denn dort **ist** der
+    /// Fehler die Antwort. Hier sagt er nichts ueber den Datentraeger, und ein
+    /// `Nein` behauptete ein Netzlaufwerk, das niemand gesehen hat.
+    ///
+    /// Im laufenden Programm kommt dieser Fall nicht an: der Aufrufer loest den
+    /// Ordner vorher auf und zaehlt sein Scheitern selbst als unentschieden. Die
+    /// Probe haelt den Zweig trotzdem fest, weil er der einzige ist, in dem ein
+    /// bequemer Vorgabewert die Warnung stillstellen wuerde.
+    #[test]
+    fn ein_fehlender_pfad_bleibt_unentschieden() {
+        let fehlt = Path::new("/nicht-da-krk-volumes/und-auch-das-nicht");
+        assert!(
+            !fehlt.exists(),
+            "der Pfad der Probe steht im Dateisystem und misst damit nicht, was sie messen soll"
+        );
+        assert_eq!(
+            ist_lokal(fehlt),
+            Loeschzielbefund::Unentschieden,
+            "ein fehlender Pfad liefert nicht den unentschiedenen Befund"
+        );
+    }
+
+    /// Ein Pfad ohne gueltiges UTF-8 bleibt unentschieden.
+    ///
+    /// Derselbe Fall wie in [`super::super::papierkorb`] und aus demselben
+    /// Grund: `NSString` nimmt nur gueltiges UTF-8, und die Uebersetzung
+    /// scheitert, bevor das System etwas gefragt worden ist.
+    ///
+    /// Das Byte `0xff` ist in keiner UTF-8-Folge zulaessig; der Ordner wird
+    /// nicht angelegt, denn die Funktion greift vor dieser Pruefung nicht auf das
+    /// Dateisystem zu.
+    #[test]
+    fn ein_pfad_ohne_gueltiges_utf8_bleibt_unentschieden() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        let krumm = PathBuf::from(OsStr::from_bytes(b"/tmp/krk-volumes-\xffkrumm"));
+        assert!(
+            krumm.to_str().is_none(),
+            "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
+        );
+        assert_eq!(
+            ist_lokal(&krumm),
+            Loeschzielbefund::Unentschieden,
+            "ein Pfad ohne gueltiges UTF-8 liefert nicht den unentschiedenen Befund"
+        );
+    }
+
+    /// In dieser Datei wird nach der Warnwuerdigkeit nicht gefragt.
+    ///
+    /// **Die Sicherung gegen den Polaritaetsfehler, als Zaehlung statt als
+    /// Prosa.** [`Loeschzielbefund::ist_warnwuerdig`] fasst `Ja` und
+    /// `Unentschieden` zusammen; der Rueckgabewert von [`ist_lokal`] traegt seinen
+    /// Warngrund aber auf `Nein`. Ein Aufruf hier machte aus einem lokalen
+    /// Datentraeger einen Warngrund und aus einem Netzlaufwerk eine harmlose
+    /// Auskunft — die Vertauschung, gegen die der Modulkopf argumentiert.
+    ///
+    /// Die Richtung stammt aus
+    /// `issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`,
+    /// erster Weg. **Der Befund ist damit nicht geschlossen:** er verlangt
+    /// dieselbe Zaehlung auch in `appkit/papierkorb.rs` und in
+    /// `kommandos/loeschwarnung.rs`, und sein zweiter, staerkerer Weg — zwei
+    /// Typen fuer zwei Fragen — bleibt unberuehrt.
+    ///
+    /// Was eine Zaehlung im Quelltext leistet und was nicht, steht im Modulkopf
+    /// von [`crate::quellbaum`]. Die Nadel steht zusammengesetzt da, weil die
+    /// Probe in dem Baum liegt, den sie liest.
+    #[test]
+    fn hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt() {
+        let zuhause = "krk-ui/src/appkit/volumes.rs";
+        let name = concat!("ist_warn", "wuerdig");
+        let dateien = quelldateien();
+        let Some((_, inhalt)) = dateien.iter().find(|(datei, _)| datei == zuhause) else {
+            panic!("{zuhause} steht nicht im gelesenen Quellbaum; die Zaehlung misst nichts");
+        };
+        assert_eq!(
+            aufrufstellen(inhalt, name),
+            0,
+            "diese Datei fragt nach der Warnwuerdigkeit, und ihr Befund traegt den Warngrund \
+             auf der anderen Antwort"
+        );
     }
 }

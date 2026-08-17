@@ -1086,3 +1086,6 @@
 {"ts":"2026-08-17T13:33:20","event":"commit","task":"T6","hash":"c260e64","summary":"gedeckelte Zaehlung des Unterbaums"}
 {"ts":"2026-08-17T13:33:20","event":"task_done","task":"T6","commit":"c260e64"}
 {"ts":"2026-08-17T13:33:20","event":"task_start","task":"T7","agent":"coder"}
+{"ts":"2026-08-17T14:08:46","event":"commit","task":"T7","hash":"5a0f041","summary":"git worktree detection"}
+{"ts":"2026-08-17T14:08:46","event":"task_done","task":"T7","commit":"5a0f041"}
+{"ts":"2026-08-17T14:08:46","event":"task_start","task":"T8","agent":"coder"}

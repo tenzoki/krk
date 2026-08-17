@@ -203,7 +203,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Changes: Drei Funktionen wie oben unter „Approach" beschrieben, alle drei `#[must_use]`. Der Aufwärtsgang läuft über `verzeichnis::aufwaerts` und endet am mitgegebenen Benutzerverzeichnis oder an der Wurzel. Ein Zugriff, der weder „da" noch „nicht da" beantwortet, liefert `Unentschieden`; `symlink_metadata` unterscheidet das über `ErrorKind::NotFound`. Der Modulkopf sagt, dass keine Anbindung an Git entsteht und dass die Grenze allein die Kosten begrenzt, weil ein Pfad oberhalb des Benutzerverzeichnisses schon über den ersten Auslöser laut wird. Proben über `Pruefordner`: Arbeitsbaum am Ordner selbst, zwei Ebenen darüber, keiner im ganzen Ast, ausgewählter Unterordner als Wurzel, Abbruch beim ersten Treffer.
    - Dependencies: 4
 
-9. [IN PROGRESS] **Ist der Datenträger lokal**
+9. [DONE] **Ist der Datenträger lokal**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/volumes.rs`
    - Changes: `#[must_use] pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund` über `resourceValuesForKeys_error` mit `NSURLVolumeIsLocalKey`. Ein fehlender oder nicht lesbarer Wert heißt `Unentschieden`, nicht `Ja`. Der Modulkopf nimmt die dritte Frage auf, die das Modul jetzt beantwortet, und der Abschnitt über die Untergrenzen bekommt `NSURLVolumeIsLocalKey` seit 10.7, geprüft in `NSURL.h:338`.
