@@ -4476,11 +4476,13 @@ impl Anwendungsdelegierter {
     /// dastehen:
     ///
     /// 1. **Kein Anschlag heisst Papierkorb.** Der Menueeintrag "In den
-    ///    Papierkorb raeumen" und der Melder der Bereichsleiste kommen ohne
-    ///    Tastendruck hier an; die Fallunterscheidung ist fuer sie nicht
-    ///    gestellt, und die Belegungsansicht, das Hauptmenue und die
-    ///    Markdown-Ausgabe fuehren fuer die Taste weiter genau einen Eintrag
-    ///    (C1.19, C6.11).
+    ///    Papierkorb raeumen" ist der eine Weg, der hier ohne Tastendruck
+    ///    ankommt; die Fallunterscheidung ist fuer ihn nicht gestellt, und die
+    ///    Belegungsansicht, das Hauptmenue und die Markdown-Ausgabe fuehren
+    ///    fuer die Taste weiter genau einen Eintrag (C1.19, C6.11). Die
+    ///    Bereichsleiste ist kein zweiter solcher Weg, obwohl auch sie ohne
+    ///    Anschlag meldet: ihre zehn Kommandos sind Umschalter, und
+    ///    [`Kommando::InPapierkorb`] ist keines davon.
     /// 2. **Eine Zusatztaste heisst Papierkorb.** `cmd+delete` faellt an
     ///    [`Anschlag::ist_nackter_rueckschritt`] heraus und raeumt in jeder
     ///    Lage, auch bei stehendem Filtertext (C1.17). `f8` und
@@ -4673,11 +4675,26 @@ impl Anwendungsdelegierter {
     /// ist der Anlass dieser Runde, also reist die gezeigte Auswahl mit dem
     /// bestaetigten Auftrag, und es wird kein zweites Mal gelesen.
     ///
-    /// **Die Fensterseite darf dagegen hier gelesen werden.** Solange ein Blatt
-    /// steht, weist `Anwendungsdelegierter::kommando_ausfuehren` jedes Kommando
-    /// ausser dem Abbruch ab, und ein Blatt ist fenstermodal, nimmt der Maus
-    /// also ebenfalls den Zugriff. Die aktive Seite kann sich zwischen Frage
-    /// und Antwort nicht aendern.
+    /// **Die Fensterseite darf dagegen hier gelesen werden**, und weil die
+    /// Zusage einer zerstoerenden Handlung daran haengt, steht die Begruendung
+    /// hier ausgeschrieben statt in ihrer sonst ueblichen Kurzform.
+    ///
+    /// Solange ein Blatt steht, laesst
+    /// [`Self::kommando_ausfuehren`] genau **vier** Kommandos durch und weist
+    /// jedes weitere ab: [`Kommando::Abbrechen`] ueber
+    /// [`operationen::waehrend_blatt_erlaubt`], dazu
+    /// [`Kommando::Beenden`], [`Kommando::FensterSchliessen`] und
+    /// [`Kommando::FensterEinblenden`] ueber
+    /// [`zulaessigkeit::immer_erreichbar`], das die Blattsperre ausdruecklich
+    /// mit aufhebt. Keines der vier aendert die aktive Seite: der Abbruch
+    /// schliesst das Blatt, und der Rueckruf laeuft dann mit `bestaetigt ==
+    /// false` und stellt keinen Auftrag; [`Self::beenden`] ruft `terminate:`,
+    /// [`Self::fenster_schliessen`] ruft `performClose:`, das ein Fenster mit
+    /// anhaengendem Blatt nicht schliesst, und [`Self::fenster_zeigen`] ruft
+    /// `makeKeyAndOrderFront:` und `activate`. Geschrieben wird `aktiv` von
+    /// keinem davon. Ein Blatt ist ausserdem fenstermodal, nimmt der Maus also
+    /// ebenfalls den Zugriff. Die aktive Seite kann sich zwischen Frage und
+    /// Antwort damit nicht aendern.
     ///
     /// Die Kopf-an-Kopf-Pruefung von Quelle und Ziel aus `auftrag_stellen`
     /// entfaellt: ein Loeschauftrag hat kein Ziel.
@@ -5523,10 +5540,13 @@ impl Anwendungsdelegierter {
         let Some(pfad) = self.dateifenster(aktiv).quelle().auswahl_pfad() else {
             // Kein Eintrag, also nichts, was der Editor annehmen oder abweisen
             // koennte — keine Abweisung und deshalb keine `Editormeldung`,
-            // sondern derselbe Satz, den `endgueltig_loeschen` seit der Runde 1
-            // fuer die leere Auswahl fuehrt. `true` verbraucht den Tastendruck,
-            // aus demselben Grund wie dort: F4 auf leerer Auswahl gehoert nicht
-            // in die Menueleiste.
+            // sondern derselbe Satz, den KRK seit der Runde 1 fuer die leere
+            // Auswahl fuehrt. Fuer den Loeschweg fuehrt ihn seit dem 260817
+            // `loeschen_nach_rueckfrage` und nicht mehr `endgueltig_loeschen`,
+            // das ihn an jenen gemeinsamen Rumpf abgegeben hat; daneben stehen
+            // `auftrag_stellen` und `stapel_umbenennen`. `true` verbraucht den
+            // Tastendruck, aus demselben Grund wie dort: F4 auf leerer Auswahl
+            // gehoert nicht in die Menueleiste.
             self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
             return true;
         };
@@ -6273,9 +6293,12 @@ impl Anwendungsdelegierter {
     /// Der Editor steht neben beiden Fenstern und gehoert keinem; die Zeile,
     /// die der Nutzer im Blick hat, ist die des Fensters, mit dem er zuletzt
     /// gearbeitet hat. Denselben Bezug nehmen die Befehle ohne eigene Seite
-    /// seit der Runde 1: [`Self::endgueltig_loeschen`] liest `aktiv` und meldet
-    /// „es ist nichts ausgewählt" dorthin, und die beiden Operationsbefehle
-    /// tun es genauso.
+    /// seit der Runde 1: [`Self::loeschen_nach_rueckfrage`], der eine Rumpf
+    /// jedes Loeschbefehls, liest `aktiv` und meldet „es ist nichts
+    /// ausgewählt" dorthin, und die beiden Operationsbefehle tun es ueber
+    /// [`Self::auftrag_stellen`] genauso. Bis zum 260817 stand jene Meldung in
+    /// [`Self::endgueltig_loeschen`]; der Bezug hat sich mit ihr nicht
+    /// geaendert.
     fn editormeldung_zeigen(&self, meldung: &Editormeldung) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         self.antwort_zeigen(aktiv, &meldung.text());

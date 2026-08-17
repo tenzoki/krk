@@ -35,3 +35,19 @@ Bündel D kommt `f8` als dritte Taste hinzu.
 
 ---
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Der Modulkopf `kommandos/loeschwarnung.rs:47-49` nennt den Melder der Bereichsleiste unverändert. Die zweite Stelle an `papierkorb_oder_zeichen_zurueck` steht ebenfalls noch.
+
+---
+Resolved 260817-1302 (coder, T2): **behoben, beide Stellen.** Der Modulkopf
+`kommandos/loeschwarnung.rs` nennt jetzt „die beiden Tasten `delete` und `cmd+delete` und der
+Menueeintrag" und traegt zwei neue Absaetze: dass die Bereichsleiste keiner dieser Wege ist,
+mit der Zaehlung ihrer Umschalter, und dass `f8` erst mit Buendel D dazukommt. Punkt 1 des
+Doc-Kommentars von `papierkorb_oder_zeichen_zurueck` (`appkit/anwendung.rs`) nennt den
+Menueeintrag als den einen Weg ohne Tastendruck und die Bereichsleiste ausdruecklich als
+keinen zweiten.
+
+**Abweichung von der Zahl im Datensatz:** die Bereichsleiste schickt **zehn** Kommandos und
+nicht elf. Die Aufstellung dieses Datensatzes selbst summiert sich auf zehn — fuenf Bereiche
+(`bereichsleiste.rs:164-168`), drei Spalten (`:182-184`), die Tiefe (`:195`), der Inhalt
+(`:214`) —, und `grep -c 'Kommando::' crates/krk-ui/src/appkit/bereichsleiste.rs` zaehlt
+zehn. Der behobene Text nennt zehn. Am Befund aendert die Zahl nichts: keines der zehn ist
+`Kommando::InPapierkorb`.

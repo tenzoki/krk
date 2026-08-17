@@ -294,10 +294,15 @@ impl Eingabewaechter {
 /// ist ein anderer geworden.
 ///
 /// Er lautet: bei stehendem Blatt weist
-/// `Anwendungsdelegierter::kommando_ausfuehren` jeden Befehl ausser dem Abbruch
-/// ab (`crate::kommandos::operationen::waehrend_blatt_erlaubt`), und ein
+/// `Anwendungsdelegierter::kommando_ausfuehren` jeden Befehl ab bis auf vier —
+/// den Abbruch (`crate::kommandos::operationen::waehrend_blatt_erlaubt`) und
+/// die drei der Ausnahmeliste `crate::kommandos::zulaessigkeit::immer_erreichbar`,
+/// die die Blattsperre mit aufhebt —, und ein
 /// abgewiesener Tastendruck laeuft unveraendert an AppKit weiter, wo die
-/// Vorgabeschaltflaeche ihn beantwortet. Die Sperre steht **vor** dem
+/// Vorgabeschaltflaeche ihn beantwortet. Keiner der drei zusaetzlich
+/// zugelassenen Befehle liegt ab Werk auf einer der Eingabetasten-Kombinationen
+/// dieser Aufzaehlung — sie liegen auf `cmd+q`, `shift+cmd+w` und `cmd+n` —,
+/// also traegt der Grund die Zusage weiterhin. Die Sperre steht **vor** dem
 /// Fokusvorbehalt, also greift sie auch dann, wenn der Fokus in einem
 /// Dateifenster steht und der Befehl dort wirken wuerde.
 ///

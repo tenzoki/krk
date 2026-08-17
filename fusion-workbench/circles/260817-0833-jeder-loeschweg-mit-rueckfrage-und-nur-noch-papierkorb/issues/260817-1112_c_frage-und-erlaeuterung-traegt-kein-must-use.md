@@ -30,3 +30,12 @@ Funktionen und zwei Haltungen zu derselben Frage ist die Abweichung, die niemand
 
 ---
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** `frage_und_erlaeuterung` steht an `loeschwarnung.rs:86` weiterhin ohne `#[must_use]`; die Zeilen darüber tragen allein Doc-Kommentar.
+
+---
+Resolved 260817-1302 (coder, T2): **behoben.** `frage_und_erlaeuterung` traegt `#[must_use]`
+mit ausgeschriebener Begruendung nach dem Vorbild von `rueckschritt.rs`: die Funktion ist rein,
+ein Aufruf ohne Verwendung ihrer beiden Zeichenketten ist ein Aufruf ohne jede Wirkung, der
+Uebersetzer sagt dazu von sich aus nichts, und verlorenginge dabei die Rueckfrage selbst.
+
+`operationen::loeschfrage`, das Gegengewicht dieses Datensatzes, ist nicht mitgezogen: es
+faellt mit Buendel D, und der Auftrag zu T2 zog seine Grenze um zwei Dateien.

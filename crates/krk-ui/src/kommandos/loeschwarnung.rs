@@ -45,13 +45,24 @@
 //!
 //! `Anwendungsdelegierter::in_den_papierkorb` (`crate::appkit::anwendung`) ist
 //! der einzige, und er ist es fuer jeden Weg in den Papierkorb: die beiden
-//! Tasten, der Menueeintrag und der Melder der Bereichsleiste laufen durch ihn
-//! hindurch, und er reicht die beiden Texte an den gemeinsamen Rumpf
-//! `loeschen_nach_rueckfrage` weiter. Ein zweiter Aufrufer waere ein zweiter
-//! Loeschweg, und genau den schafft diese Runde ab. Die Aufruferzaehlung dazu
-//! steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
-//! [`super::rueckschritt`]; sie kommt mit der Tafel der Ausloeser, weil erst
-//! diese die Zusage traegt, dass die Einordnung des Ziels einmal geschieht.
+//! Tasten `delete` und `cmd+delete` und der Menueeintrag "In den Papierkorb
+//! raeumen" laufen durch ihn hindurch, und er reicht die beiden Texte an den
+//! gemeinsamen Rumpf `loeschen_nach_rueckfrage` weiter. Ein zweiter Aufrufer
+//! waere ein zweiter Loeschweg, und genau den schafft diese Runde ab. Die
+//! Aufruferzaehlung dazu steht in der Form von
+//! `die_regel_hat_genau_einen_aufrufer` in [`super::rueckschritt`]; sie kommt
+//! mit der Tafel der Ausloeser, weil erst diese die Zusage traegt, dass die
+//! Einordnung des Ziels einmal geschieht.
+//!
+//! **Die Bereichsleiste ist keiner dieser Wege**, obwohl auch sie Kommandos
+//! meldet: `crate::appkit::bereichsleiste` schickt zehn, und alle zehn sind
+//! Umschalter — fuenf Bereiche, drei Spalten, die tiefe Suche und der
+//! Inhaltsfilter. `Kommando::InPapierkorb` ist keines davon, und wer sie in
+//! dieser Aufzaehlung mitzaehlt, sucht einen Loeschweg, der nie bestand.
+//!
+//! **`f8` kommt erst mit Buendel D dazu.** Heute traegt es
+//! `Kommando::EndgueltigLoeschen` und erreicht diese Texte nicht; erst mit dem
+//! Wegfall jenes Befehls wird es die dritte Taste dieser Aufzaehlung.
 //!
 //! **Das `expect(dead_code)` ist mit dem Aufrufer gefallen.** Es stand hier,
 //! solange die Funktion nur von ihren eigenen Proben erreicht wurde, und es war
@@ -83,6 +94,15 @@ use super::operationen::{Auswahl, ordner_text, pfadtext, zahl};
 /// eingeschalteter tiefer Suche.
 ///
 /// Warum der Pfad ungekuerzt dasteht, sagt der Modulkopf.
+///
+/// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
+/// bliebe: die Funktion ist rein, also ist ein Aufruf ohne Verwendung ihrer
+/// beiden Zeichenketten ein Aufruf ohne jede Wirkung, und der Uebersetzer sagt
+/// dazu von sich aus nichts, auch nicht unter `-D warnings`. Verlorenginge
+/// dabei die Rueckfrage selbst — ein Blatt ohne Text oder gar keines —, und
+/// damit die eine Zusage dieser Runde. Dieselbe Bauform traegt
+/// [`super::rueckschritt::rueckschritt`], die Schwesterregel dieses Loeschwegs.
+#[must_use]
 pub fn frage_und_erlaeuterung(auswahl: &Auswahl, ordner: &Path) -> (String, String) {
     let frage = match auswahl.zahl() {
         1 => "Diesen Eintrag in den Papierkorb räumen?".to_owned(),
