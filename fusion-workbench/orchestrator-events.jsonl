@@ -1011,3 +1011,8 @@
 {"ts":"2026-08-16T20:46:10","event":"shaper_done","agent":"shaper","detail":"shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md; 54 Abnahmekriterien ueber vier Faehigkeiten"}
 {"ts":"2026-08-16T20:46:10","event":"gate_hit","detail":"Spec-Abnahme"}
 {"ts":"2026-08-16T20:55:40","event":"gate_response","detail":"Spec abgenommen"}
+{"ts":"2026-08-16T20:57:01","event":"commit","detail":"5a52f16 Circle der zwoelften Runde angelegt und aktiviert, Spec und drei Befunde"}
+{"ts":"2026-08-16T20:57:01","event":"planner_start","agent":"planner","detail":"Plan aus shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md"}
+{"ts":"2026-08-16T21:18:11","event":"planner_done","agent":"planner","detail":"circles/260816-2255-.../planning/260816-2307_o_plan-...md; 22 Schritte in fuenf Buendeln; 18 coder, 4 ontocoder"}
+{"ts":"2026-08-16T21:18:11","event":"gate_hit","detail":"Plan-Abnahme plus zwei Entscheidungsdatensaetze"}
+{"ts":"2026-08-17T01:53:56","event":"gate_response","detail":"Plan abgelehnt: Abbrechen. Prozessgruppe stirbt mit der Shell (Moeglichkeit 1). Shell-Frage unbeantwortet."}
