@@ -34,7 +34,7 @@
 //! dieser Kiste sitzt.
 //!
 //! Was ueber die Grenze geht, sind gewoehnliche Rust-Werte: ein [`Path`] hinein,
-//! ein [`PathBuf`], ein [`io::Error`] oder ein [`Befund`] heraus. Kein `NSURL`,
+//! ein [`PathBuf`], ein [`io::Error`] oder ein [`Loeschzielbefund`] heraus. Kein `NSURL`,
 //! kein `NSError`.
 //!
 //! # Warum die Vorpruefung keine Methode der Schnittstelle ist
@@ -48,14 +48,14 @@
 //!
 //! # Auf welcher Polaritaet der Befund liegt
 //!
-//! Auf der **zweiten**: bei der Frage nach dem Papierkorb ist [`Befund::Ja`] die
-//! **Erlaubnis** und nicht der Warngrund, und [`Befund::Unentschieden`] gehoert
-//! deshalb zu [`Befund::Nein`]. [`Befund::ist_warnwuerdig`] ist hier folglich das
+//! Auf der **zweiten**: bei der Frage nach dem Papierkorb ist [`Loeschzielbefund::Ja`] die
+//! **Erlaubnis** und nicht der Warngrund, und [`Loeschzielbefund::Unentschieden`] gehoert
+//! deshalb zu [`Loeschzielbefund::Nein`]. [`Loeschzielbefund::ist_warnwuerdig`] ist hier folglich das
 //! falsche Werkzeug — es fasst `Ja` und `Unentschieden` zusammen, und wer es an
 //! diesen Rueckgabewert haelt, macht aus „wir wissen nichts" die Erlaubnis zu
-//! loeschen. Der Aufrufer prueft auf [`Befund::Ja`] selbst. Die beiden
+//! loeschen. Der Aufrufer prueft auf [`Loeschzielbefund::Ja`] selbst. Die beiden
 //! Polaritaeten und der Grund fuer die Unterscheidung stehen im Modulkopf von
-//! [`krk_core::verzeichnis::Befund`] auseinandergehalten; hier steht nur, welche
+//! [`krk_core::verzeichnis::Loeschzielbefund`] auseinandergehalten; hier steht nur, welche
 //! von beiden gilt, damit der naechste Leser sie nicht neu findet.
 //!
 //! # Warum die Vorpruefung nicht anlegen laesst
@@ -113,7 +113,7 @@ use objc2_foundation::{
 };
 
 use krk_core::operation::Papierkorb;
-use krk_core::verzeichnis::Befund;
+use krk_core::verzeichnis::Loeschzielbefund;
 
 /// Der Papierkorb des Systems.
 ///
@@ -161,11 +161,11 @@ impl Papierkorb for Systempapierkorb {
 ///
 /// Drei Ausgaenge:
 ///
-/// - [`Befund::Ja`] — das System nennt einen Papierkorb. **Das ist die
+/// - [`Loeschzielbefund::Ja`] — das System nennt einen Papierkorb. **Das ist die
 ///   Erlaubnis**, nicht ein Warngrund; die Polaritaet steht im Modulkopf.
-/// - [`Befund::Nein`] — das System nennt einen Fehler. Es gibt dort keinen
+/// - [`Loeschzielbefund::Nein`] — das System nennt einen Fehler. Es gibt dort keinen
 ///   Papierkorb, und es wird nicht geloescht.
-/// - [`Befund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
+/// - [`Loeschzielbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
 ///   sich nicht in ein `NSString` uebersetzen. Das ist keine Aussage ueber das
 ///   Ziel, sondern eine ueber KRKs Kenntnis von ihm, und der Aufrufer loescht
 ///   auch dann nicht.
@@ -174,7 +174,7 @@ impl Papierkorb for Systempapierkorb {
 /// `canonicalize` noch sonst etwas am Dateisystem: eine Verknuepfung wuerde
 /// sonst den Papierkorb ihres eigenen Ortes melden statt den ihres Ziels. Wer
 /// sie aufloest, ist ihr Aufrufer, und ein Pfad, der sich nicht aufloesen laesst,
-/// zaehlt dort ebenfalls als [`Befund::Unentschieden`].
+/// zaehlt dort ebenfalls als [`Loeschzielbefund::Unentschieden`].
 ///
 /// **Ein Rest bleibt und ist benannt:** ein einzelner Eintrag kann trotz
 /// bestandener Pruefung scheitern, etwa weil unter dem angezeigten Ordner ein
@@ -182,9 +182,9 @@ impl Papierkorb for Systempapierkorb {
 /// nachtraeglich am Ergebnis des einzelnen Eintrags entschieden, und sein
 /// Ausgang ist „uebersprungen mit Grund" und nie „endgueltig geloescht".
 #[must_use = "der Befund ist die Erlaubnis zu loeschen; fallengelassen loescht der Aufrufer auf einem Ziel, das keinen Papierkorb fuehrt"]
-pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund {
+pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Loeschzielbefund {
     let Some(text) = ordner.to_str() else {
-        return Befund::Unentschieden;
+        return Loeschzielbefund::Unentschieden;
     };
     let url = NSURL::fileURLWithPath(&NSString::from_str(text));
 
@@ -194,8 +194,8 @@ pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund {
         Some(&url),
         false,
     ) {
-        Ok(_) => Befund::Ja,
-        Err(_) => Befund::Nein,
+        Ok(_) => Loeschzielbefund::Ja,
+        Err(_) => Loeschzielbefund::Nein,
     }
 }
 
@@ -217,7 +217,7 @@ mod tests {
         };
         assert_eq!(
             fuehrt_einen_papierkorb(&zuhause),
-            Befund::Ja,
+            Loeschzielbefund::Ja,
             "das Benutzerverzeichnis {} fuehrt keinen Papierkorb",
             zuhause.display()
         );
@@ -229,19 +229,19 @@ mod tests {
     /// einhaengen muesste.** `/dev` ist auf jedem macOS ein eigener
     /// Einhaengepunkt mit einem Dateisystem fuer Geraetedateien, und es kann
     /// keinen Papierkorb fuehren; kein Recht und kein Aufbau ist dafuer noetig.
-    /// Ohne diese Probe waere die Funktion mit einem festen [`Befund::Ja`]
+    /// Ohne diese Probe waere die Funktion mit einem festen [`Loeschzielbefund::Ja`]
     /// gruen, und die Zusage von C4 haette keinen Beleg.
     ///
     /// Gewaehlt ist ein Ort, der die Antwort aus seinem Wesen bezieht, und nicht
     /// ein fehlender Pfad: ein fehlender Pfad liefert dieselbe Antwort, sagt
     /// damit aber nichts ueber den Papierkorb eines Datentraegers, und er kommt
     /// hier ohnehin nicht an — den loest der Aufrufer vorher auf und zaehlt sein
-    /// Scheitern als [`Befund::Unentschieden`].
+    /// Scheitern als [`Loeschzielbefund::Unentschieden`].
     #[test]
     fn ein_datentraeger_ohne_papierkorb_wird_erkannt() {
         assert_eq!(
             fuehrt_einen_papierkorb(Path::new("/dev")),
-            Befund::Nein,
+            Loeschzielbefund::Nein,
             "/dev fuehrt angeblich einen Papierkorb, also unterscheidet die Pruefung nicht"
         );
     }
@@ -268,7 +268,7 @@ mod tests {
         );
         assert_eq!(
             fuehrt_einen_papierkorb(&krumm),
-            Befund::Unentschieden,
+            Loeschzielbefund::Unentschieden,
             "ein Pfad ohne gueltiges UTF-8 liefert nicht den unentschiedenen Befund"
         );
     }

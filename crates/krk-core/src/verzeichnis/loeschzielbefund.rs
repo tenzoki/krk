@@ -7,10 +7,61 @@
 //! es neben der Kette des Verzeichnislesers und nicht in ihr.
 //!
 //! ```text
-//!  befund ──> Befund::{Ja, Nein, Unentschieden}
-//!               ├── ist_warnwuerdig()  ──> bool
-//!               └── oder(andere)       ──> Befund
+//!  loeschzielbefund ──> Loeschzielbefund::{Ja, Nein, Unentschieden}
+//!                         ├── ist_warnwuerdig()  ──> bool
+//!                         └── oder(andere)       ──> Loeschzielbefund
 //! ```
+//!
+//! # Warum der Typ nicht `Befund` heisst
+//!
+//! **Weil dieser Modulbaum schon einen `Befund` fuehrt.** Bis zum 260817 hiess
+//! der Typ hier so, und damit standen unter [`super`] zwei verschiedene
+//! dreiwertige Typen desselben Namens: dieser und [`super::modell::Befund`] aus
+//! der Runde 10, `Unentschieden`/`Treffer`/`KeinTreffer`. Der Uebersetzer trennt
+//! sie, eine Verwechslung uebersetzt nicht — fuer den Leser unterschieden sie
+//! sich um einen Pfadabschnitt, und beide trugen eine Variante `Unentschieden`
+//! mit derselben Bedeutung
+//! (`issues/260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`).
+//!
+//! **Umbenannt wurde dieser und nicht der aeltere**, aus drei Gruenden, und der
+//! erste ist der tragende:
+//!
+//! 1. Der aeltere steht in der Mitte einer Benennung, die um ihn herum gewachsen
+//!    ist: [`super::durchlauf::Befundmeldung`] fuellt ihn,
+//!    [`super::inhalt::Inhaltsbefund`] beantwortet seine Frage fuer eine Datei,
+//!    und `Ordnermodell` traegt `befund`, `befunde_setzen` und
+//!    `befund_zuruecksetzen`. Ihn allein umzubenennen liesse die halbe Familie
+//!    auf einen Namen zeigen, den es nicht mehr gibt; sie mitzunehmen waere ein
+//!    Umbau des Filters der Runden 10 und 11.
+//! 2. Der nackte Name gehoert dem weiteren Begriff. Auf den Filterbefund
+//!    arbeitet die ganze Kette dieses Verzeichnisses hin; dieser Typ hier
+//!    beantwortet die Pruefungen **einer** Runde an **einem** Gegenstand.
+//! 3. Er ist der juengere von beiden und hatte drei Aufrufer, alle drei in
+//!    `krk-ui`. Am 260817 nachgezaehlt kostete die Umbenennung hier 25
+//!    Stellen im Code; beim aelteren waeren es 48 gewesen, mehr als zwei
+//!    Drittel davon in `krk-core/tests/verzeichnis.rs`.
+//!
+//! **Der Wortstamm bleibt, und der Gegenstand kommt davor.** Genau das tut
+//! [`super::inhalt::Inhaltsbefund`] schon: `Befund` ist in diesem Baum das
+//! Rollenwort fuer „was ein Lesen oder eine Pruefung ueber einen genannten
+//! Gegenstand herausgefunden hat", und der Gegenstand steht vorn. Ein Name ohne
+//! den Stamm — `Zielantwort`, `Pruefbefund`, `Loeschpruefung` — braeche diese
+//! Regel, statt sie herzustellen, und die beiden letzten benennen ausserdem die
+//! Maschine und nicht die Frage.
+//!
+//! **`Zielbefund` waere der kuerzere Name und der falsche.** „Ziel" ist in
+//! diesem Baum zweimal vergeben: in diesem Modulbaum als
+//! [`super::verweisziel::Verweisziel`] fuer das Ziel einer Verknuepfung, und in
+//! der Operationsmaschine als `Kopierziel` fuer das Ziel eines Kopiervorgangs.
+//! Der kurze Name tauschte also ein Wort mit zwei Lesarten gegen ein anderes.
+//! Das ganze Wort `Loeschziel` ist dagegen das Wort des Specs dieser Runde und
+//! hat hier genau eine Lesart.
+//!
+//! **Im Namen steht kein `Warn`**, und das ist kein Zufall: der Typ traegt beide
+//! Polaritaeten. Bei der Frage nach dem Netzlaufwerk und der nach dem
+//! Arbeitsbaum ist `Ja` der Warngrund, bei der Frage nach dem Papierkorb ist es
+//! die Erlaubnis. Welche vorliegt, haengt an der Frage und nicht am Typ; der
+//! Abschnitt weiter unten haelt die beiden auseinander.
 //!
 //! # Warum es die dritte Antwort gibt
 //!
@@ -47,21 +98,21 @@
 //! das Ziel sagt oder ueber den Vorrat der laufenden Sitzung. Hier steht, was
 //! sein Aufrufer mit der Antwort tut.
 //!
-//! # Die zwei Polaritaeten, und warum [`Befund::ist_warnwuerdig`] nur die eine trifft
+//! # Die zwei Polaritaeten, und warum [`Loeschzielbefund::ist_warnwuerdig`] nur die eine trifft
 //!
 //! Die Fragen dieser Runde zerfallen in zwei Sorten, und der Unterschied
-//! entscheidet, ob [`Befund::ist_warnwuerdig`] die richtige Frage an den Wert
+//! entscheidet, ob [`Loeschzielbefund::ist_warnwuerdig`] die richtige Frage an den Wert
 //! ist:
 //!
 //! - **Ein `Ja` ist ein Warngrund** — liegt der Ordner auf einem Netzlaufwerk,
 //!   steckt er in einem Git-Arbeitsbaum. Hier gehoert `Unentschieden` zu `Ja`,
-//!   und genau das fasst [`Befund::ist_warnwuerdig`] zusammen.
+//!   und genau das fasst [`Loeschzielbefund::ist_warnwuerdig`] zusammen.
 //! - **Ein `Ja` ist die Erlaubnis** — fuehrt das Ziel einen Papierkorb (C4).
 //!   Hier gehoert `Unentschieden` zu `Nein`, denn ein Ziel, dessen Papierkorb
 //!   sich nicht feststellen laesst, wird nicht geloescht.
 //!
-//! **Fuer die zweite Sorte ist [`Befund::ist_warnwuerdig`] die falsche Frage**,
-//! und der Aufrufer prueft dort auf [`Befund::Ja`] selbst. Wer aus Gewohnheit
+//! **Fuer die zweite Sorte ist [`Loeschzielbefund::ist_warnwuerdig`] die falsche Frage**,
+//! und der Aufrufer prueft dort auf [`Loeschzielbefund::Ja`] selbst. Wer aus Gewohnheit
 //! nach der Warnwuerdigkeit fragt, macht aus „wir wissen nichts" die Erlaubnis
 //! zu loeschen — genau der Fall, gegen den C4 gebaut ist. Beide Sorten folgen
 //! derselben Haltung, im Zweifel die vorsichtigere Antwort zu nehmen; welche
@@ -92,7 +143,7 @@
 /// Antwort haelt damit den Bau an und erzwingt eine bewusste Einordnung, statt
 /// still in einen bestehenden Zweig zu fallen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Befund {
+pub enum Loeschzielbefund {
     /// Die Pruefung hat die Frage beantwortet, und die Antwort ist ja.
     Ja,
     /// Die Pruefung hat die Frage beantwortet, und die Antwort ist nein. Das
@@ -105,11 +156,11 @@ pub enum Befund {
     Unentschieden,
 }
 
-impl Befund {
-    /// Ob dieser Befund die Rueckfrage laut macht: alles ausser [`Befund::Nein`].
+impl Loeschzielbefund {
+    /// Ob dieser Befund die Rueckfrage laut macht: alles ausser [`Loeschzielbefund::Nein`].
     ///
     /// Die eine Zeile der Zusage „Unentschieden gilt als laut", als Frage an den
-    /// Wert. Sie fasst [`Befund::Ja`] und [`Befund::Unentschieden`] zusammen,
+    /// Wert. Sie fasst [`Loeschzielbefund::Ja`] und [`Loeschzielbefund::Unentschieden`] zusammen,
     /// und die Zusammenfassung ist erlaubt, weil die laute Form fuer beide
     /// dieselbe ist; **verschieden ist allein der Grund**, den die Frage nennt,
     /// und den holt sich der Aufrufer nicht hier, sondern aus dem Befund selbst.
@@ -134,11 +185,11 @@ impl Befund {
     /// Der Rumpf ist diese Tafel, und sie steht ausgeschrieben und nicht
     /// gerechnet. Neun Kombinationen, neun Felder:
     ///
-    /// | `self` \ `andere` | [`Befund::Ja`] | [`Befund::Nein`] | [`Befund::Unentschieden`] |
+    /// | `self` \ `andere` | [`Loeschzielbefund::Ja`] | [`Loeschzielbefund::Nein`] | [`Loeschzielbefund::Unentschieden`] |
     /// |---|---|---|---|
-    /// | **[`Befund::Ja`]** | `Ja` | `Ja` | `Ja` |
-    /// | **[`Befund::Nein`]** | `Ja` | `Nein` | `Unentschieden` |
-    /// | **[`Befund::Unentschieden`]** | `Ja` | `Unentschieden` | `Unentschieden` |
+    /// | **[`Loeschzielbefund::Ja`]** | `Ja` | `Ja` | `Ja` |
+    /// | **[`Loeschzielbefund::Nein`]** | `Ja` | `Nein` | `Unentschieden` |
+    /// | **[`Loeschzielbefund::Unentschieden`]** | `Ja` | `Unentschieden` | `Unentschieden` |
     ///
     /// # Woraus die Tafel abgeleitet ist
     ///
@@ -147,7 +198,7 @@ impl Befund {
     ///
     /// 1. **Ein `Ja` ist eine gewusste Tatsache, und keine zweite Antwort nimmt
     ///    sie zurueck.** Trifft ein Ausloeser zu, trifft er zu, gleich was die
-    ///    andere Pruefung ergab. Damit ist [`Befund::Ja`] aufsaugend: die ganze
+    ///    andere Pruefung ergab. Damit ist [`Loeschzielbefund::Ja`] aufsaugend: die ganze
     ///    erste Zeile und die ganze erste Spalte sind `Ja`. Das sind fuenf der
     ///    neun Felder.
     /// 2. **Ruhig wird es nur mit Wissen.** Die ruhige Form der Rueckfrage sagt
@@ -178,7 +229,7 @@ impl Befund {
     /// wenn jemand `Unentschieden` **vor** der Verknuepfung in ein `Ja`
     /// umdeutet; dann stimmt die Lautheit weiter und der Grund nicht mehr.
     ///
-    /// Die Verknuepfung ist ausserdem symmetrisch und hat [`Befund::Nein`] als
+    /// Die Verknuepfung ist ausserdem symmetrisch und hat [`Loeschzielbefund::Nein`] als
     /// neutrales Element. Beides ist an der Tafel abzulesen und wird von
     /// Proben festgehalten, damit die Reihenfolge, in der ein Aufrufer seine
     /// Tatsachen sammelt, keine Rolle spielt.
@@ -218,16 +269,16 @@ impl Befund {
 mod tests {
     use super::*;
     // Die Tafeln darunter stehen in der Form der Tafel aus dem Doc-Kommentar von
-    // [`Befund::oder`], und die kurzen Namen halten jede Zeile lesbar auf einer
+    // [`Loeschzielbefund::oder`], und die kurzen Namen halten jede Zeile lesbar auf einer
     // Zeile. Es ist eine Einfuhr der drei Werte und keine pauschale.
-    use Befund::{Ja, Nein, Unentschieden};
+    use Loeschzielbefund::{Ja, Nein, Unentschieden};
 
     /// Alle drei Werte und alle neun Paare, einmal als Daten.
     ///
     /// Sie stehen hier oben, weil vier der fuenf Proben sie durchfahren, und
     /// nicht damit eine Erwartung daraus gerechnet wuerde: die Erwartungen
     /// stehen in ihren Proben Feld fuer Feld da.
-    const ALLE: [Befund; 3] = [Ja, Nein, Unentschieden];
+    const ALLE: [Loeschzielbefund; 3] = [Ja, Nein, Unentschieden];
 
     /// Die Zusage „Unentschieden gilt als laut", an den drei Werten
     /// ausgeschrieben.
@@ -263,7 +314,7 @@ mod tests {
     #[test]
     fn die_tafel_aus_neun_kombinationen_geht_auf() {
         // self, andere, Ausgang.
-        const TAFEL: [(Befund, Befund, Befund); 9] = [
+        const TAFEL: [(Loeschzielbefund, Loeschzielbefund, Loeschzielbefund); 9] = [
             (Ja, Ja, Ja),
             (Ja, Nein, Ja),
             (Ja, Unentschieden, Ja),
@@ -287,12 +338,12 @@ mod tests {
     /// Genau ein Feld der Tafel ist ruhig, und es ist das mit zwei Mal Wissen.
     ///
     /// Das ist die zweite Ableitungsstufe aus dem Doc-Kommentar von
-    /// [`Befund::oder`], als Zaehlung: haette ein zweites Feld `Nein`, waere die
+    /// [`Loeschzielbefund::oder`], als Zaehlung: haette ein zweites Feld `Nein`, waere die
     /// ruhige Rueckfrage ueber einem Ziel moeglich, ueber das eine der beiden
     /// Pruefungen nichts sagen konnte.
     #[test]
     fn nur_zwei_mal_nein_bleibt_ruhig() {
-        let ruhige: Vec<(Befund, Befund)> = ALLE
+        let ruhige: Vec<(Loeschzielbefund, Loeschzielbefund)> = ALLE
             .iter()
             .flat_map(|einer| ALLE.iter().map(move |anderer| (*einer, *anderer)))
             .filter(|(einer, anderer)| einer.oder(*anderer) == Nein)

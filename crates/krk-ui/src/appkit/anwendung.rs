@@ -227,7 +227,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
-use krk_core::verzeichnis::Befund;
+use krk_core::verzeichnis::Loeschzielbefund;
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -4612,7 +4612,7 @@ impl Anwendungsdelegierter {
     /// gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
     /// kann. Der angezeigte Ordner wird dafuer **einmal** aufgeloest, und ein
     /// Pfad, der sich nicht aufloesen laesst, zaehlt als
-    /// [`Befund::Unentschieden`] und loescht damit ebenfalls nicht.
+    /// [`Loeschzielbefund::Unentschieden`] und loescht damit ebenfalls nicht.
     ///
     /// **Die Pruefung trifft beide Loeschbefehle**, also bis zum Buendel D auch
     /// das endgueltige Loeschen auf `f8`, obwohl das keinen Papierkorb braucht.
@@ -4663,7 +4663,7 @@ impl Anwendungsdelegierter {
         // aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine ueber
         // KRKs Kenntnis von ihm, und zaehlt darum als unentschieden.
         let papierkorb_am_ziel = std::fs::canonicalize(&quellordner)
-            .map_or(Befund::Unentschieden, |aufgeloest| {
+            .map_or(Loeschzielbefund::Unentschieden, |aufgeloest| {
                 papierkorb::fuehrt_einen_papierkorb(&aufgeloest)
             });
 

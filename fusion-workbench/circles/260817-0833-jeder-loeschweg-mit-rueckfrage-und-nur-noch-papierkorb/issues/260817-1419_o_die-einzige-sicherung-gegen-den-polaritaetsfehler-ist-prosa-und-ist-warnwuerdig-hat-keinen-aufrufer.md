@@ -72,3 +72,10 @@ Zwei Wege, und der zweite ist der stärkere.
 
 Bündel C berührt beide Dateien ohnehin (Schritte 9 und 10), also fällt der Schnitt dort ohne
 zweite Änderung an derselben Stelle.
+
+Hinweis (260817, Aufgabe T5b): Der Typ heißt seit `260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`
+nicht mehr `Befund`, sondern `Loeschzielbefund`, und die Datei heißt
+`crates/krk-core/src/verzeichnis/loeschzielbefund.rs`. Der Modulkopf ist dabei um den Abschnitt
+`# Warum der Typ nicht Befund heisst` gewachsen, die Zeilenangaben unter **Betroffen** sind
+damit verschoben. Der Befund selbst besteht unverändert: die Sicherung gegen den
+Polaritätsfehler ist weiterhin Prosa in drei Modulköpfen.

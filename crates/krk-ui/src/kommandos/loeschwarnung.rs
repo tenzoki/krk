@@ -58,15 +58,15 @@
 //! Stufe in dieselbe Kette, und ein Umzug danach aenderte dieselbe Stelle
 //! zweimal.
 //!
-//! # Warum die Frage nach dem Papierkorb hier auf [`Befund::Ja`] prueft
+//! # Warum die Frage nach dem Papierkorb hier auf [`Loeschzielbefund::Ja`] prueft
 //!
 //! Weil sie auf der anderen Polaritaet liegt als die Ausloeser der lauten Form:
-//! bei ihr ist [`Befund::Ja`] die **Erlaubnis** und nicht der Warngrund, und
-//! [`Befund::Unentschieden`] gehoert deshalb zu [`Befund::Nein`].
-//! [`Befund::ist_warnwuerdig`] kommt in dieser Datei nicht vor, und das ist
+//! bei ihr ist [`Loeschzielbefund::Ja`] die **Erlaubnis** und nicht der Warngrund, und
+//! [`Loeschzielbefund::Unentschieden`] gehoert deshalb zu [`Loeschzielbefund::Nein`].
+//! [`Loeschzielbefund::ist_warnwuerdig`] kommt in dieser Datei nicht vor, und das ist
 //! Absicht: es fasst `Ja` und `Unentschieden` zusammen und machte hier aus „wir
 //! wissen nichts" die Erlaubnis zu loeschen. Die beiden Polaritaeten stehen im
-//! Modulkopf von [`krk_core::verzeichnis::Befund`] auseinandergehalten.
+//! Modulkopf von [`krk_core::verzeichnis::Loeschzielbefund`] auseinandergehalten.
 //!
 //! # Warum die Texte der Loeschfrage eigens dastehen
 //!
@@ -142,7 +142,7 @@
 
 use std::path::Path;
 
-use krk_core::verzeichnis::Befund;
+use krk_core::verzeichnis::Loeschzielbefund;
 
 use super::operationen::{Auswahl, ordner_text, pfadtext, zahl};
 
@@ -185,16 +185,16 @@ pub enum Vorstufe {
 /// |---|---|---|---|
 /// | ja | gleichgueltig | gleichgueltig | [`Vorstufe::VorgangLaeuft`] |
 /// | nein | ja | gleichgueltig | [`Vorstufe::NichtsAusgewaehlt`] |
-/// | nein | nein | [`Befund::Ja`] | [`Vorstufe::Rueckfrage`] |
-/// | nein | nein | [`Befund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
-/// | nein | nein | [`Befund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
+/// | nein | nein | [`Loeschzielbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
+/// | nein | nein | [`Loeschzielbefund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
+/// | nein | nein | [`Loeschzielbefund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
 ///
 /// **Die fuenf Zeilen decken alle zwoelf Kombinationen ab** — zwei mal zwei mal
 /// drei —, und die Fallunterscheidung ist damit ueberschneidungsfrei und
 /// vollstaendig; einen Auffangzweig gibt es nicht, und der Uebersetzer haelt die
 /// Vollstaendigkeit. Die Probe `die_tafel_aus_zwoelf_faellen_geht_auf` schreibt
 /// alle zwoelf aus, aus demselben Grund, aus dem die Tafeln in
-/// [`super::rueckschritt`] und [`Befund::oder`] ausgeschrieben dastehen: eine
+/// [`super::rueckschritt`] und [`Loeschzielbefund::oder`] ausgeschrieben dastehen: eine
 /// gerechnete Erwartung waere die Umsetzung ein zweites Mal.
 ///
 /// # Warum die Reihenfolge selbst die Zusage ist
@@ -214,8 +214,8 @@ pub enum Vorstufe {
 ///   sie zu sein behauptet. Danach gefragt, haette der Nutzer einem Raeumen
 ///   zugestimmt, das nicht raeumen kann.
 ///
-/// Ein `papierkorb`, der [`Befund::Unentschieden`] traegt, faellt mit
-/// [`Befund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist hier die
+/// Ein `papierkorb`, der [`Loeschzielbefund::Unentschieden`] traegt, faellt mit
+/// [`Loeschzielbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist hier die
 /// Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann, reicht
 /// deshalb `Unentschieden` herein und loescht damit ebenfalls nicht.
 ///
@@ -228,7 +228,7 @@ pub enum Vorstufe {
 pub fn vor_der_rueckfrage(
     vorgang_laeuft: bool,
     auswahl_leer: bool,
-    papierkorb: Befund,
+    papierkorb: Loeschzielbefund,
 ) -> Vorstufe {
     match (vorgang_laeuft, auswahl_leer, papierkorb) {
         // Die erste Stufe. Sie fragt vor allen anderen, weil ein zweiter
@@ -239,11 +239,13 @@ pub fn vor_der_rueckfrage(
         (false, true, _) => Vorstufe::NichtsAusgewaehlt,
         // Die dritte, und `Ja` ist ihre Erlaubnis: erst jetzt steht fest, dass
         // es einen Rueckweg gibt (C4).
-        (false, false, Befund::Ja) => Vorstufe::Rueckfrage,
+        (false, false, Loeschzielbefund::Ja) => Vorstufe::Rueckfrage,
         // Kein Papierkorb, oder keine Auskunft darueber — beides haelt an. Die
         // beiden Werte stehen ausgeschrieben und nicht als `_` da: ein vierter
         // Befund haelt so den Bau an, statt still hierher zu fallen.
-        (false, false, Befund::Nein | Befund::Unentschieden) => Vorstufe::OhnePapierkorb,
+        (false, false, Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden) => {
+            Vorstufe::OhnePapierkorb
+        }
     }
 }
 
@@ -261,8 +263,8 @@ pub fn vor_der_rueckfrage(
 /// auf den Ordner vor sich zurueckrechnen muesste.
 ///
 /// **Der Wortlaut sagt nicht, dass es zwei Wege hierher gibt**, und das ist
-/// Absicht. [`Vorstufe::OhnePapierkorb`] entsteht aus [`Befund::Nein`] wie aus
-/// [`Befund::Unentschieden`], und die beiden unterscheiden sich darin, ob KRK
+/// Absicht. [`Vorstufe::OhnePapierkorb`] entsteht aus [`Loeschzielbefund::Nein`] wie aus
+/// [`Loeschzielbefund::Unentschieden`], und die beiden unterscheiden sich darin, ob KRK
 /// das Ziel gefragt hat oder nicht fragen konnte. Fuer den Nutzer ist die Folge
 /// dieselbe, und die Statuszeile traegt eine Zeile; die Unterscheidung bleibt
 /// dort, wo sie etwas entscheidet, naemlich am Befund.
@@ -328,14 +330,14 @@ mod tests {
     // Die Tafeln darunter stehen in der Form der Tafel aus dem Doc-Kommentar von
     // [`vor_der_rueckfrage`], und die kurzen Namen halten jede Zeile lesbar auf
     // einer Zeile. Es ist eine Einfuhr der drei Werte und keine pauschale.
-    use Befund::{Ja, Nein, Unentschieden};
+    use Loeschzielbefund::{Ja, Nein, Unentschieden};
 
     /// Alle drei Befunde, einmal als Daten.
     ///
     /// Sie stehen hier, weil drei der Stufenproben sie durchfahren, und nicht
     /// damit eine Erwartung daraus gerechnet wuerde: die Erwartungen stehen in
     /// ihren Proben Fall fuer Fall da.
-    const BEFUNDE: [Befund; 3] = [Ja, Nein, Unentschieden];
+    const BEFUNDE: [Loeschzielbefund; 3] = [Ja, Nein, Unentschieden];
 
     /// Genau eine Stelle im Baum ruft die Stufenregel.
     ///
@@ -384,7 +386,7 @@ mod tests {
     #[test]
     fn die_tafel_aus_zwoelf_faellen_geht_auf() {
         // vorgang_laeuft, auswahl_leer, papierkorb, Ausgang.
-        const TAFEL: [(bool, bool, Befund, Vorstufe); 12] = [
+        const TAFEL: [(bool, bool, Loeschzielbefund, Vorstufe); 12] = [
             (true, true, Ja, Vorstufe::VorgangLaeuft),
             (true, true, Nein, Vorstufe::VorgangLaeuft),
             (true, true, Unentschieden, Vorstufe::VorgangLaeuft),
@@ -454,8 +456,8 @@ mod tests {
     /// zaehlt dabei wie das Nein (C4).
     ///
     /// **Die zweite Zusicherung ist die eigentliche.** Hier liegt die Frage auf
-    /// der Polaritaet, auf der [`Befund::Ja`] die Erlaubnis ist; wer aus
-    /// Gewohnheit [`Befund::ist_warnwuerdig`] nimmt, macht aus „wir wissen
+    /// der Polaritaet, auf der [`Loeschzielbefund::Ja`] die Erlaubnis ist; wer aus
+    /// Gewohnheit [`Loeschzielbefund::ist_warnwuerdig`] nimmt, macht aus „wir wissen
     /// nichts" die Erlaubnis zu loeschen, und dann waere die zweite Zeile dieser
     /// Probe rot und die Runde um ihre Zusage aus C4 herum.
     #[test]
@@ -481,7 +483,7 @@ mod tests {
     /// durchlaessig geworden.
     #[test]
     fn genau_ein_fall_erreicht_das_blatt() {
-        let bis_zum_blatt: Vec<(bool, bool, Befund)> = [false, true]
+        let bis_zum_blatt: Vec<(bool, bool, Loeschzielbefund)> = [false, true]
             .into_iter()
             .flat_map(|vorgang_laeuft| {
                 [false, true].into_iter().flat_map(move |auswahl_leer| {

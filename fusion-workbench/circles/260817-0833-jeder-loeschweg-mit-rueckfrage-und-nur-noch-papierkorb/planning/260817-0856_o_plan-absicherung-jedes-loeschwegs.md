@@ -175,6 +175,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Files: `crates/krk-core/src/verzeichnis/befund.rs` (neu), `crates/krk-core/src/verzeichnis/mod.rs`
    - Changes: `pub enum Befund { Ja, Nein, Unentschieden }` mit `ist_warnwuerdig()` („nicht `Nein`") und einer dreiwertigen Oder-Verknüpfung `oder(self, andere) -> Befund` samt ausgeschriebener Tafel über alle neun Kombinationen. Der Modulkopf erklärt, warum die dritte Antwort nötig ist, und verweist auf `sys::ist_deskriptormangel` als den Fall, in dem der Baum die Unterscheidung schon einmal gebraucht hat. Re-Export als `krk_core::verzeichnis::Befund`.
    - Dependencies: keine
+   - Anmerkung zur Ausführung (260817): **Der Typ heißt seit dem Befund `260817-1419` nicht mehr `Befund`, sondern `Loeschzielbefund`, und das Modul heißt `loeschzielbefund` statt `befund`.** Unter `krk_core::verzeichnis` stand mit `modell::Befund` aus der Runde 10 ein zweiter dreiwertiger Typ desselben Namens. Umbenannt wurde der neue: der ältere steht in der Mitte einer gewachsenen Benennung (`Befundmeldung`, `Inhaltsbefund`, `Ordnermodell::befund`, `befunde_setzen`, `befund_zuruecksetzen`) und trägt 48 Stellen im Code gegen 25 hier. Die Begründung der Wahl und der verworfenen Namen steht im Modulkopf von `crates/krk-core/src/verzeichnis/loeschzielbefund.rs`. **Die Schritte 7 bis 11 lesen deshalb `Loeschzielbefund`, wo sie `Befund` schreiben**; die Datenstrukturen und die API-Tabelle unten führen den neuen Namen schon. **Eine Stelle entscheidet der Schritt 8 neu:** die API-Tabelle nennt dort eine Funktion `arbeitsbaum::befund`, und eine Funktion dieses Namens, die einen `Loeschzielbefund` liefert, stünde neben `Ordnermodell::befund`, das einen `modell::Befund` liefert — dieselbe Verwechslung eine Ebene tiefer. Der Ausführende benennt sie nach ihrer Frage (etwa `liegt_in_arbeitsbaum` allein oder `traegt_der_ast_einen_arbeitsbaum`) statt nach ihrem Rückgabetyp.
 
 5. [DONE] **Die Frage nach dem Papierkorb**
    - Executor: `coder`
@@ -205,7 +206,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 9. **Ist der Datenträger lokal**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/volumes.rs`
-   - Changes: `#[must_use] pub fn ist_lokal(pfad: &Path) -> Befund` über `resourceValuesForKeys_error` mit `NSURLVolumeIsLocalKey`. Ein fehlender oder nicht lesbarer Wert heißt `Unentschieden`, nicht `Ja`. Der Modulkopf nimmt die dritte Frage auf, die das Modul jetzt beantwortet, und der Abschnitt über die Untergrenzen bekommt `NSURLVolumeIsLocalKey` seit 10.7, geprüft in `NSURL.h:338`.
+   - Changes: `#[must_use] pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund` über `resourceValuesForKeys_error` mit `NSURLVolumeIsLocalKey`. Ein fehlender oder nicht lesbarer Wert heißt `Unentschieden`, nicht `Ja`. Der Modulkopf nimmt die dritte Frage auf, die das Modul jetzt beantwortet, und der Abschnitt über die Untergrenzen bekommt `NSURLVolumeIsLocalKey` seit 10.7, geprüft in `NSURL.h:338`.
    - Dependencies: 4
 
 10. **Die Tafel der sechs Auslöser**
@@ -304,8 +305,8 @@ flowchart TD
 ## Data Structures
 
 ```rust
-// krk-core/src/verzeichnis/befund.rs
-pub enum Befund { Ja, Nein, Unentschieden }
+// krk-core/src/verzeichnis/loeschzielbefund.rs
+pub enum Loeschzielbefund { Ja, Nein, Unentschieden }
 
 // krk-core/src/verzeichnis/umfang.rs
 pub const SCHWELLE: u32 = 25;
@@ -325,8 +326,8 @@ pub enum Warngrund {
 pub struct Loeschziel {
     pub ordner: Option<PathBuf>,              // aufgelöst; None heißt nicht auflösbar
     pub benutzerverzeichnis: Option<PathBuf>, // aufgelöst
-    pub netzlaufwerk: Befund,
-    pub arbeitsbaum: Befund,
+    pub netzlaufwerk: Loeschzielbefund,
+    pub arbeitsbaum: Loeschzielbefund,
     pub umfang: Umfang,
 }
 ```
@@ -337,7 +338,7 @@ pub struct Loeschziel {
 
 | Neu oder geändert | Wo | Was |
 |---|---|---|
-| `Befund` | `krk_core::verzeichnis` | dreiwertige Antwort, mit `oder` und `ist_warnwuerdig` |
+| `Loeschzielbefund` | `krk_core::verzeichnis` | dreiwertige Antwort, mit `oder` und `ist_warnwuerdig` |
 | `umfang::zaehlen`, `Umfang`, `SCHWELLE` | `krk_core::verzeichnis` | gedeckelte Zählung eines Unterbaums |
 | `arbeitsbaum::befund`, `liegt_in_arbeitsbaum`, `traegt_arbeitsbaum` | `krk_core::verzeichnis` | Aufwärtsgang und Einzelprüfung auf `.git` |
 | `papierkorb::fuehrt_einen_papierkorb` | `krk-ui/src/appkit` | Vorprüfung ohne Probelauf |

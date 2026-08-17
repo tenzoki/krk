@@ -72,3 +72,8 @@ festgeschrieben ist.
 
 Schritt 11 fasst denselben Rumpf an. Wenn der Zuschnitt dort ohnehin geändert wird, gehört
 dieser Befund dazu.
+
+Hinweis (260817, Aufgabe T5b): Im Ausschnitt oben heißt der Typ inzwischen `Loeschzielbefund`
+statt `Befund`; die Umbenennung stammt aus
+`260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`
+und ändert am Befund nichts.

@@ -62,3 +62,21 @@ neue ist zwei Commits alt und billiger umzubenennen.
 Die kleine Form: ein Satz im Modulkopf von `verzeichnis/mod.rs`, der die beiden nebeneinander
 stellt und sagt, welcher welche Frage beantwortet. Sie kostet nichts und nimmt dem nächsten
 Leser den Umweg; sie nimmt der nächsten Erweiterung aber nicht die Verwechslungsgefahr.
+
+---
+Resolved: 260817-1504 — Der neue Typ heißt `krk_core::verzeichnis::Loeschzielbefund`, sein Modul
+`loeschzielbefund` (Datei `crates/krk-core/src/verzeichnis/loeschzielbefund.rs`).
+`modell::Befund` aus der Runde 10 behält seinen Namen unverändert; unter `verzeichnis` trägt
+damit kein zweiter Typ mehr denselben Namen, nachgezählt mit einer Suche über alle
+Typdeklarationen des Modulbaums (`grep -rhoE '^[[:space:]]*(pub(\([^)]*\))?[[:space:]]+)?(enum|struct|trait|union|type)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' crates/krk-core/src/verzeichnis | awk '{print $NF}' | sort | uniq -d`
+liefert keine Zeile.
+
+Warum der neue und nicht der ältere, warum der Wortstamm bleibt und warum `Zielbefund`
+verworfen ist, steht im Modulkopf von `loeschzielbefund.rs` unter
+`# Warum der Typ nicht Befund heisst`. Der Modulkopf von `verzeichnis/mod.rs` nennt den
+gleichnamigen Nachbarn jetzt ausdrücklich: `modell::Befund`, `Befundmeldung` und
+`Inhaltsbefund` gehören zusammen, `Loeschzielbefund` nicht zu ihnen.
+
+`durchlauf::Befundmeldung` bleibt, wie es ist: es meldet den Filterbefund und gehört damit zur
+Familie des älteren Typs, nicht zu der des neuen. Verhalten ist an keiner Stelle geändert;
+`make check` läuft grün.

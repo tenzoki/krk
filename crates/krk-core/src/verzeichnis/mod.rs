@@ -12,8 +12,8 @@
 //!         │                       │
 //!         └──── inhalt <──────────┘
 //!
-//! verweisziel   (steht allein, an keinem der anderen)
-//! befund        (ein Typ und kein Schritt, an keinem der anderen)
+//! verweisziel        (steht allein, an keinem der anderen)
+//! loeschzielbefund   (ein Typ und kein Schritt, an keinem der anderen)
 //! ```
 //!
 //! [`sys`] ist die einzige Stelle im Kern mit einem Fremdaufruf und bindet
@@ -71,9 +71,9 @@
 //! und hing dafuer an [`sys`]; warum das die falsche Frage war, steht in
 //! seinem eigenen Modulkopf.
 //!
-//! [`befund`] ist das einzige Modul hier, das **nichts liest**: kein
+//! [`loeschzielbefund`] ist das einzige Modul hier, das **nichts liest**: kein
 //! Systemaufruf, kein Deskriptor, kein Pfad. Es traegt die dreiwertige Antwort
-//! [`Befund`] und die eine Verknuepfung darauf, und es steht in diesem
+//! [`Loeschzielbefund`] und die eine Verknuepfung darauf, und es steht in diesem
 //! Verzeichnis, weil die Fragen, die es beantwortet, am Dateisystem entschieden
 //! werden und nicht am Fenster. Die dritte Antwort `Unentschieden` ist die
 //! Verallgemeinerung dessen, was [`sys::ist_deskriptormangel`] seit der Runde 10
@@ -82,27 +82,42 @@
 //! Unterscheidung braucht und warum sie nicht auf einen Wahrheitswert
 //! zusammenfaellt, steht in seinem eigenen Modulkopf.
 //!
+//! **Er heisst ausdruecklich nicht `Befund`, denn dieser Name gehoert hier einem
+//! anderen Typ.** Der Wortstamm traegt in diesem Modulbaum mehrere Typen, und
+//! diese drei gehoeren zusammen: [`modell::Befund`], die dreiwertige Auskunft
+//! `Unentschieden`/`Treffer`/`KeinTreffer` darueber, ob ein Eintrag die getippte
+//! Folge traegt; [`Befundmeldung`], mit der der [`durchlauf`] sie meldet; und
+//! [`Inhaltsbefund`], der dieselbe Frage fuer den Text einer Datei beantwortet.
+//! [`Loeschzielbefund`] gehoert nicht zu ihnen: er beantwortet keine Frage des
+//! Filters, sondern die Pruefungen der Loeschrunde an einem Loeschziel.
+//! Bis zum 260817 hiessen er und [`modell::Befund`] beide `Befund`, und dieser
+//! Absatz hier erklaerte den einen, ohne den anderen zu nennen — genau daran
+//! entstand der Befund
+//! (`issues/260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`).
+//! Welcher der beiden umbenannt wurde und warum nicht der andere, steht im
+//! Modulkopf von [`loeschzielbefund`].
+//!
 //! Der Kern kennt AppKit nicht; alles hier ist ohne Fenster testbar.
 
 use std::path::{Path, PathBuf};
 
-pub mod befund;
 pub mod durchlauf;
 pub mod eintrag;
 pub mod filter;
 pub mod inhalt;
 pub mod kollation;
 pub mod leser;
+pub mod loeschzielbefund;
 pub mod modell;
 pub mod sortierung;
 pub mod sys;
 pub mod verweisziel;
 
-pub use befund::Befund;
 pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
+pub use loeschzielbefund::Loeschzielbefund;
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
 pub use verweisziel::Verweisziel;
