@@ -238,7 +238,8 @@ use crate::fenstermodell::{
 };
 use crate::fenstertitel;
 use crate::kommandos::fokus::{self, Fokus};
-use crate::kommandos::operationen::{self, Anlegeart, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::loeschwarnung;
+use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::zulaessigkeit::{self, Lage};
 use crate::leistenmodell::Ort;
@@ -4432,9 +4433,18 @@ impl Anwendungsdelegierter {
 
     /// Die Auswahl in den Papierkorb des Systems raeumen (C4, Taste Delete).
     ///
-    /// Sofort und ohne Rueckfrage: der Rueckweg ist der Papierkorb des Systems,
-    /// und einen eigenen Rueckgaengig-Speicher fuehrt KRK nicht
-    /// (`shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`).
+    /// **Nach genau einer Rueckfrage**, in ihrer ruhigen Form, also ohne
+    /// Warnzeichen (C2 der Runde 12). Bis zum 260817 lief der Befehl sofort
+    /// und ohne Rueckfrage, mit dem Papierkorb als Rueckweg; der Anlass, das
+    /// zu aendern, ist ein Schadensfall, bei dem ein einziger Tastendruck 189
+    /// verfolgte Dateien geraeumt hat und vier Stunden lang niemandem auffiel.
+    /// Der Rueckweg bleibt, was er war, und ersetzt die Rueckfrage nicht: er
+    /// hilft allein dem, der den Vorgang bemerkt.
+    ///
+    /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`] und derselbe wie fuer
+    /// [`Self::endgueltig_loeschen`]. Hier stehen allein die drei Stuecke, in
+    /// denen sich die beiden Befehle unterscheiden: die Auftragsart, die
+    /// Beschriftung der zweiten Schaltflaeche und die beiden Texte.
     ///
     /// **Der Fokusvorbehalt steht seit Schritt 18 nicht mehr hier.** Er stand
     /// als eigene Abfrage an dieser Stelle und an der von
@@ -4442,7 +4452,19 @@ impl Anwendungsdelegierter {
     /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist sie ab, bevor
     /// sie hier ankommen.
     fn in_den_papierkorb(&self) -> bool {
-        self.auftrag_stellen(Art::InDenPapierkorb)
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let quelle = self.dateifenster(aktiv).quelle();
+        let (frage, erlaeuterung) = loeschwarnung::frage_und_erlaeuterung(
+            &quelle.betroffene_eintraege(),
+            &quelle.angezeigter_ordner(),
+        );
+        self.loeschen_nach_rueckfrage(
+            Art::InDenPapierkorb,
+            &frage,
+            &erlaeuterung,
+            "In den Papierkorb räumen",
+            false,
+        )
     }
 
     /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
@@ -4521,38 +4543,156 @@ impl Anwendungsdelegierter {
     }
 
     /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).
+    ///
+    /// **Der Befehl faellt mit Buendel D dieser Runde weg**, und bis dahin
+    /// behaelt er, was ihn ausmacht: dieselben beiden Texte, dieselbe
+    /// Beschriftung, und `laut` traegt das Warnzeichen, das das Blatt fuer ihn
+    /// seit der Runde 1 gesetzt hat. Geteilt ist ab jetzt der Rumpf und nicht
+    /// mehr nur das Blatt, siehe [`Self::loeschen_nach_rueckfrage`].
+    ///
+    /// **Zwei Dinge sind ihm dabei doch anders geworden**, und beide zu seinen
+    /// Gunsten: ein bereits laufender Vorgang wird jetzt vor dem Blatt gemeldet
+    /// statt nach der Bestaetigung, und der bestaetigte Auftrag traegt die
+    /// Auswahl, die im Blatt stand. Die Begruendungen stehen an den beiden
+    /// Funktionen darunter.
     fn endgueltig_loeschen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let auswahl = self.dateifenster(aktiv).quelle().betroffene_eintraege();
-        if auswahl.ist_leer() {
-            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
-            return true;
-        }
-        let Some(fenster) = self.ivars().fenster.get() else {
-            return false;
-        };
-
         let (frage, erlaeuterung) = operationen::loeschfrage(&auswahl);
-        let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let griff = loeschbestaetigung::zeigen(
-            self.mtm(),
-            fenster,
+        self.loeschen_nach_rueckfrage(
+            Art::EndgueltigLoeschen,
             &frage,
             &erlaeuterung,
             "Endgültig löschen",
             true,
+        )
+    }
+
+    /// Der eine Rumpf jedes Loeschbefehls: pruefen, fragen, und erst dann den
+    /// Auftrag stellen (C2 der Runde 12).
+    ///
+    /// **Vier Stufen in dieser Reihenfolge**, und die Reihenfolge ist die
+    /// Zusage:
+    ///
+    /// ```text
+    /// laeuft schon ein Vorgang? ──ja──> Statuszeile, kein Blatt
+    ///  │ nein
+    ///  └─> Auswahl leer?         ──ja──> Statuszeile, kein Blatt
+    ///       │ nein
+    ///       └─> Blatt zeigen ──> Cmd+Return? ──nein──> nichts geschieht
+    ///                                │ ja
+    ///                                └──> Auftrag mit der gezeigten Auswahl
+    /// ```
+    ///
+    /// **Der laufende Vorgang wird vor dem Blatt geprueft und nicht danach.**
+    /// Bis zum 260817 stand die Frage in [`Self::auftrag_stellen`], also hinter
+    /// der Rueckfrage: KRK zeigte dann ein Blatt, liess den Nutzer bestaetigen
+    /// und meldete erst danach, dass bereits eine Operation laeuft. Eine
+    /// Rueckfrage, deren Ja folgenlos bleibt, gewoehnt den Nutzer daran, sie
+    /// wegzudruecken, und genau diese Gewoehnung ist der Gegner dieser Runde.
+    ///
+    /// **Die beiden Texte kommen fertig herein.** Welcher Wortlaut in welcher
+    /// Form dasteht, gehoert [`crate::kommandos::loeschwarnung`] und nicht
+    /// dieser Datei; hier steht der Ablauf. Der Aufrufer rechnet sie aus seiner
+    /// eigenen Lesung der Auswahl, und diese Lesung und die des Rumpfes liegen
+    /// im selben Durchgang der Ereignisschleife: zwischen ihnen kann nichts
+    /// laufen, was den Ordner aendert. Die Lesung, die auseinanderlaufen kann,
+    /// ist die **nach** dem Blatt, und die gibt es nicht mehr; warum, sagt
+    /// [`Self::loeschauftrag_stellen`].
+    ///
+    /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
+    /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
+    /// kein Fenster gibt, an dem das Blatt haengen koennte.
+    fn loeschen_nach_rueckfrage(
+        &self,
+        art: Art,
+        frage: &str,
+        erlaeuterung: &str,
+        schaltflaeche: &str,
+        laut: bool,
+    ) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        if self.vorgang_laeuft_schon(aktiv) {
+            return true;
+        }
+
+        let quelle = self.dateifenster(aktiv).quelle();
+        let auswahl = quelle.betroffene_eintraege();
+        if auswahl.ist_leer() {
+            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+            return true;
+        }
+        let quellordner = quelle.angezeigter_ordner();
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+
+        // Der Auftrag reist durch den Rueckruf und nicht neben ihm her. Der
+        // Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt eine
+        // `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
+        let bestaetigter = Cell::new(Some((art, auswahl, quellordner)));
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = loeschbestaetigung::zeigen(
+            self.mtm(),
+            fenster,
+            frage,
+            erlaeuterung,
+            schaltflaeche,
+            laut,
             move |bestaetigt| {
                 let Some(selbst) = schwach.load() else {
                     return;
                 };
                 *selbst.ivars().offenes_blatt.borrow_mut() = None;
-                if bestaetigt {
-                    selbst.auftrag_stellen(Art::EndgueltigLoeschen);
+                if !bestaetigt {
+                    return;
                 }
+                let Some((art, auswahl, quellordner)) = bestaetigter.take() else {
+                    return;
+                };
+                selbst.loeschauftrag_stellen(art, auswahl, quellordner);
             },
         );
         *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
         true
+    }
+
+    /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die
+    /// im Blatt stand**.
+    ///
+    /// **Das ist der Unterschied zu [`Self::auftrag_stellen`], und er ist der
+    /// Grund, aus dem es diese Funktion gibt.** Bis zum 260817 rechnete
+    /// [`Self::endgueltig_loeschen`] die Auswahl fuer die Frage, und
+    /// `auftrag_stellen` las sie nach der Bestaetigung ueber
+    /// `betroffene_eintraege()` ein zweites Mal. Zwischen beiden Lesungen steht
+    /// das Blatt, und ein Blatt haelt weder FSEvents noch ein fremdes Programm
+    /// an: `auffrischung::schiebt_auffrischung_auf` schiebt allein beim
+    /// Stapel-Umbenennen auf, sonst zieht eine gemeldete Aenderung den
+    /// angezeigten Ordner nach, waehrend der Nutzer noch liest. KRK loeschte
+    /// dann etwas anderes, als es gefragt hatte. Genau diese Klasse von Fehler
+    /// ist der Anlass dieser Runde, also reist die gezeigte Auswahl mit dem
+    /// bestaetigten Auftrag, und es wird kein zweites Mal gelesen.
+    ///
+    /// **Die Fensterseite darf dagegen hier gelesen werden.** Solange ein Blatt
+    /// steht, weist `Anwendungsdelegierter::kommando_ausfuehren` jedes Kommando
+    /// ausser dem Abbruch ab, und ein Blatt ist fenstermodal, nimmt der Maus
+    /// also ebenfalls den Zugriff. Die aktive Seite kann sich zwischen Frage
+    /// und Antwort nicht aendern.
+    ///
+    /// Die Kopf-an-Kopf-Pruefung von Quelle und Ziel aus `auftrag_stellen`
+    /// entfaellt: ein Loeschauftrag hat kein Ziel.
+    fn loeschauftrag_stellen(&self, art: Art, auswahl: Auswahl, quellordner: PathBuf) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let positionen = auswahl.zahl();
+        let auftrag = Auftrag {
+            quellen: auswahl.pfade,
+            art,
+            konfliktregel: Default::default(),
+            uebertragung: Default::default(),
+        };
+        // `auftrag_starten` liefert immer `true`; hier gibt es niemanden mehr,
+        // der die Antwort brauchte, denn der Tastendruck ist laengst verbraucht.
+        let _ = self.auftrag_starten(aktiv, auftrag, quellordner, positionen);
     }
 
     /// Der Abbruchbefehl (C4, C1.7).

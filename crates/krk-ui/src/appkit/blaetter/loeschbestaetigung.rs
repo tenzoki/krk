@@ -39,6 +39,19 @@
 //! gilt dort fuer **beide** Formen: die ruhige Rueckfrage vor dem alltaeglichen
 //! Raeumen ist genauso vorbelegt wie die laute.
 //!
+//! **Der Hinweissatz darunter nennt keinen Vorgang.** Er lautet "Return und
+//! Esc brechen ab. Zum Bestätigen Cmd+Return." und sagte bis zum 260817 "Zum
+//! Löschen Cmd+Return". Das ging, solange das Blatt einen einzigen Befehl
+//! bediente; seit beide Loeschbefehle durch dasselbe Blatt gehen, waere
+//! "Löschen" fuer den alltaeglichen Weg schlicht das falsche Wort. Es ist
+//! dasselbe Wort, das [`crate::kommandos::loeschwarnung`] in der Frage
+//! ausdruecklich vermeidet, weil der Rueckweg ueber den Papierkorb der
+//! Unterschied zu dem Weg ist, den diese Runde abschafft; ein Satz, der es
+//! zwei Zeilen darunter doch benutzt, nimmt der Unterscheidung ihre Wirkung.
+//! Den Vorgang benennt die zweite Schaltflaeche, und sie tut es in beiden
+//! Formen richtig. Der Satz benennt deshalb allein die Taste, und er bleibt
+//! damit auch dann richtig, wenn mit Buendel D nur noch eine Form uebrig ist.
+//!
 //! Der zweite Weg zum Abbruch, die Escape-Taste, laeuft nicht ueber eine
 //! Tastenentsprechung dieses Blattes, sondern ueber den Befehl `abbrechen` aus
 //! `resources/default-keymap.toml`: der Ereignisabgriff sieht die Taste vor dem
@@ -91,7 +104,7 @@ pub fn zeigen(
         ],
     );
     blatt.erlaeuterung_setzen(&format!(
-        "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Löschen Cmd+Return."
+        "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Bestätigen Cmd+Return."
     ));
     if laut {
         blatt.als_warnung();

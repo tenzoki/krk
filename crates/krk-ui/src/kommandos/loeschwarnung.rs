@@ -43,27 +43,22 @@
 //!
 //! # Der eine Aufrufer
 //!
-//! `Anwendungsdelegierter::loeschen_nach_rueckfrage` (`crate::appkit::anwendung`)
-//! ist der einzige, und er ist es fuer jeden Loeschbefehl: die beiden Tasten
-//! und der Menueeintrag laufen durch denselben Rumpf. Ein zweiter Aufrufer
-//! waere ein zweiter Loeschweg, und genau den schafft diese Runde ab. Die
-//! Aufruferzaehlung dazu steht in der Form von
-//! `die_regel_hat_genau_einen_aufrufer` in [`super::rueckschritt`]; sie kommt
-//! mit der Tafel der Ausloeser, weil erst diese die Zusage traegt, dass die
-//! Einordnung des Ziels einmal geschieht.
+//! `Anwendungsdelegierter::in_den_papierkorb` (`crate::appkit::anwendung`) ist
+//! der einzige, und er ist es fuer jeden Weg in den Papierkorb: die beiden
+//! Tasten, der Menueeintrag und der Melder der Bereichsleiste laufen durch ihn
+//! hindurch, und er reicht die beiden Texte an den gemeinsamen Rumpf
+//! `loeschen_nach_rueckfrage` weiter. Ein zweiter Aufrufer waere ein zweiter
+//! Loeschweg, und genau den schafft diese Runde ab. Die Aufruferzaehlung dazu
+//! steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
+//! [`super::rueckschritt`]; sie kommt mit der Tafel der Ausloeser, weil erst
+//! diese die Zusage traegt, dass die Einordnung des Ziels einmal geschieht.
 //!
-//! **Bis dahin traegt [`frage_und_erlaeuterung`]
-//! `#[cfg_attr(not(test), expect(dead_code, ...))]`**, weil ihr Aufrufer noch
-//! nicht da ist: er entsteht mit dem dritten Schritt dieser Runde, der den
-//! gemeinsamen Rumpf beider Loeschbefehle zieht. Bis dahin erreichen nur die
-//! Proben darunter die Funktion, und `krk-ui` ist ein Binaerziel, in dem `pub`
-//! allein noch keine Verwendung ist.
-//!
-//! **`expect` und nicht `allow`, und darin liegt das Ablaufdatum.** Mit dem
-//! Aufrufer wird die Erwartung unerfuellt, und der Bau haelt unter
-//! `-D warnings` an, bis die Zeilen weg sind. Eine Ausnahme mit Ablaufdatum
-//! statt einer, die stehen bleibt und niemandem mehr sagt, warum. Dieselbe
-//! Bauform hat [`super::rueckschritt`] in der Runde 10 getragen.
+//! **Das `expect(dead_code)` ist mit dem Aufrufer gefallen.** Es stand hier,
+//! solange die Funktion nur von ihren eigenen Proben erreicht wurde, und es war
+//! `expect` und nicht `allow`, damit der Bau unter `-D warnings` anhaelt,
+//! sobald die Erwartung unerfuellt wird. Eine Ausnahme mit Ablaufdatum statt
+//! einer, die stehen bleibt und niemandem mehr sagt, warum; dieselbe Bauform
+//! hat [`super::rueckschritt`] in der Runde 10 getragen.
 
 use std::path::Path;
 
@@ -88,13 +83,6 @@ use super::operationen::{Auswahl, ordner_text, pfadtext, zahl};
 /// eingeschalteter tiefer Suche.
 ///
 /// Warum der Pfad ungekuerzt dasteht, sagt der Modulkopf.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit dem dritten Schritt dieser Runde, siehe Modulkopf"
-    )
-)]
 pub fn frage_und_erlaeuterung(auswahl: &Auswahl, ordner: &Path) -> (String, String) {
     let frage = match auswahl.zahl() {
         1 => "Diesen Eintrag in den Papierkorb räumen?".to_owned(),

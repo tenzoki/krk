@@ -1042,3 +1042,6 @@
 {"ts":"2026-08-17T08:29:56","event":"task_done","turn":1,"task":"A1","agent":"coder","detail":"make check exit 0; fuenf Proben"}
 {"ts":"2026-08-17T08:29:56","event":"commit","turn":1,"detail":"664a0fd A1 Modul der Loeschfrage"}
 {"ts":"2026-08-17T08:29:56","event":"task_start","turn":1,"task":"A2","agent":"coder","detail":"blaetter/loeschbestaetigung.rs, Beschriftung und laut werden Argumente"}
+{"ts":"2026-08-17T08:38:18","event":"task_done","turn":1,"task":"A2","agent":"coder","detail":"make check exit 0"}
+{"ts":"2026-08-17T08:38:18","event":"commit","turn":1,"detail":"375d07c A2 Blatt traegt Beschriftung und Lautstaerke"}
+{"ts":"2026-08-17T08:38:18","event":"task_start","turn":1,"task":"A3","agent":"coder","detail":"gemeinsamer Rumpf; delete fragt; Schutzschwelle"}
