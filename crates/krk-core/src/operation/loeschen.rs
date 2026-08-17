@@ -30,7 +30,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::verzeichnis::{Typ, lesen};
+use crate::verzeichnis::lesen;
 
 use super::fortschritt::Steuerung;
 use super::{Ablauf, Quelle, grund};
@@ -78,61 +78,6 @@ pub(crate) fn in_den_papierkorb(
     match papierkorb.in_den_papierkorb(quelle.pfad) {
         Ok(_) => {
             steuerung.eintrag_fertig(quelle.pfad, quelle.groesse);
-            Ablauf::Weiter
-        }
-        Err(fehler) => {
-            steuerung.ueberspringen(quelle.pfad, grund(&fehler));
-            Ablauf::Weiter
-        }
-    }
-}
-
-/// Loescht einen Eintrag endgueltig, rekursiv und mit Bericht.
-///
-/// Der Abstieg laeuft ueber den Leser aus Schritt 2, aus demselben Grund wie
-/// beim Kopieren: er ist die eine Auskunft darueber, was in einem Ordner steht.
-/// `fs::remove_dir_all` waere die zweite und koennte weder abbrechen noch eine
-/// einzelne gescheiterte Position ueberspringen.
-pub(crate) fn endgueltig_loeschen(quelle: &Quelle<'_>, steuerung: &mut Steuerung) -> Ablauf {
-    if quelle.typ != Typ::Ordner {
-        return match fs::remove_file(quelle.pfad) {
-            Ok(()) => {
-                steuerung.eintrag_fertig(quelle.pfad, quelle.groesse);
-                Ablauf::Weiter
-            }
-            Err(fehler) => {
-                steuerung.ueberspringen(quelle.pfad, grund(&fehler));
-                Ablauf::Weiter
-            }
-        };
-    }
-
-    let eintraege = match lesen(quelle.pfad) {
-        Ok(eintraege) => eintraege,
-        Err(fehler) => {
-            steuerung.ueberspringen(quelle.pfad, grund(&fehler));
-            return Ablauf::Weiter;
-        }
-    };
-
-    for eintrag in eintraege {
-        if steuerung.abgebrochen() {
-            return Ablauf::Abgebrochen;
-        }
-        let unterpfad = quelle.pfad.join(&eintrag.name);
-        let kind = Quelle {
-            pfad: &unterpfad,
-            typ: eintrag.typ,
-            groesse: eintrag.groesse,
-        };
-        if endgueltig_loeschen(&kind, steuerung) == Ablauf::Abgebrochen {
-            return Ablauf::Abgebrochen;
-        }
-    }
-
-    match fs::remove_dir(quelle.pfad) {
-        Ok(()) => {
-            steuerung.eintrag_fertig(quelle.pfad, 0);
             Ablauf::Weiter
         }
         Err(fehler) => {

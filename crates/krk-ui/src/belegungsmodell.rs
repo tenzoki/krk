@@ -287,7 +287,6 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         Kommando::Kopieren
         | Kommando::Verschieben
         | Kommando::InPapierkorb
-        | Kommando::EndgueltigLoeschen
         | Kommando::Abbrechen
         | Kommando::OrdnerAnlegen
         | Kommando::DateiAnlegen
@@ -950,7 +949,6 @@ mod tests {
 
         let belegung = Belegung::auslieferung();
         assert!(belegung.funktion("in_papierkorb").is_some());
-        assert!(belegung.funktion("endgueltig_loeschen").is_some());
     }
 
     /// Jede Kennung der Auslieferungsbelegung hat einen Funktionsbereich.
@@ -1178,17 +1176,23 @@ mod tests {
 
     /// Eine vergebene Kombination wird abgewiesen, und die Meldung nennt die
     /// andere Funktion — sie kommt woertlich aus dem Kern (C3).
+    ///
+    /// Genommen wird `f6`, weil die Probe eine Kombination braucht, die einer
+    /// **anderen** Funktion als der beschriebenen Zeile gehoert. Bis zum
+    /// 260817 stand hier `f8` mit `endgueltig_loeschen` als der anderen
+    /// Funktion; mit dem Wegfall des endgueltigen Loeschens waere das keine
+    /// vergebene Kombination mehr gewesen.
     #[test]
     fn eine_vergebene_kombination_meldet_die_andere_funktion() {
         let mut modell = Belegungsmodell::neu(Belegung::auslieferung());
         let stelle = zeile_von("kopieren");
-        // f8 gehoert dem endgueltigen Loeschen.
-        let druck = Tastendruck::neu(code_von_pflicht("f8"), ModMaske::LEER);
+        // f6 gehoert dem Verschieben.
+        let druck = Tastendruck::neu(code_von_pflicht("f6"), ModMaske::LEER);
         let Zuweisung::Abgelehnt(meldung) = modell.zuweisen(stelle, druck) else {
-            panic!("f8 ist vergeben und darf nicht zugewiesen werden");
+            panic!("f6 ist vergeben und darf nicht zugewiesen werden");
         };
         assert!(
-            meldung.contains("endgueltig_loeschen"),
+            meldung.contains("verschieben"),
             "{meldung} nennt die andere Funktion nicht"
         );
         assert!(!modell.geaendert());

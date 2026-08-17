@@ -270,13 +270,13 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 
 ### Bündel D — Der Wegfall des endgültigen Löschens
 
-12. **Die beiden Aufzählungswerte und alles, was daran hängt, fallen**
+12. [DONE] **Die beiden Aufzählungswerte und alles, was daran hängt, fallen**
     - Executor: `coder`
     - Files: `crates/krk-core/src/operation/auftrag.rs`, `crates/krk-core/src/operation/mod.rs`, `crates/krk-core/src/operation/loeschen.rs`, `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-core/tests/operation.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/auffrischung.rs`, `crates/krk-ui/src/kommandos/fokus.rs`, `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `Kommando::EndgueltigLoeschen` und `Art::EndgueltigLoeschen` fallen mit allen siebzehn Nennungen, die der Übersetzer einfordert. `Kommando::KENNUNGEN` sinkt von 79 auf 78, und die Zahl steht im Typ. `krk_core::operation::loeschen::endgueltig_loeschen` verliert seinen einzigen Aufrufer und fällt mit seiner Probe in `tests/operation.rs`; **`baum_entfernen` bleibt und behält seine zwei Aufrufer**, das Ersetzen eines Ziels und das Verschieben über eine Datenträgergrenze. `Auftrag::endgueltig_loeschen` und `Anwendungsdelegierter::endgueltig_loeschen` fallen; `operationen::loeschfrage` fällt mit seiner Probe, weil `loeschwarnung::frage_und_erlaeuterung` an seiner Stelle steht. Dazu die drei Stellen, die der Übersetzer **nicht** nennt und die als rote Probe auffallen: `belegungsmodell.rs:953` verliert die Zusicherung über `endgueltig_loeschen`, und die Probe `eine_vergebene_kombination_meldet_die_andere_funktion` nimmt statt `f8` eine noch vergebene Kombination und erwartet deren Funktionsnamen. **Neu**: eine Probe, die eine Nutzerbelegung mit der Kennung `endgueltig_loeschen` gegen den neuen Wortschatz baut und `Belegungsfehler::UnbekannteFunktion` erwartet; sie belegt die Antwort des Nutzers zur gespeicherten `keymap.toml`, statt sie zu behaupten.
     - Dependencies: 11
 
-13. **Die Belegungsdatei**
+13. [DONE] **Die Belegungsdatei**
     - Executor: `ontocoder`
     - Files: `resources/default-keymap.toml`
     - Changes: Der Eintrag `endgueltig_loeschen` fällt ganz; `opt+cmd+delete` bleibt damit unbelegt und wird nicht neu vergeben. Die Zeile `tasten` von `in_papierkorb` lautet danach `["delete", "cmd+delete", "f8"]`. Im Kopf der Datei: die Zahl „85 Funktionen mit zusammen 90 Kombinationen" wird zu 84 Funktionen mit 89 Kombinationen (eine Funktion und zwei Kombinationen fallen, eine Kombination wandert), und die Nennung von `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` als bindender Datensatz wird durch `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` ersetzt. Menü, Belegungsansicht und Markdown-Ausgabe folgen dieser Datei und brauchen keinen eigenen Schritt.

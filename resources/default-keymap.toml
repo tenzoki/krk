@@ -9,7 +9,8 @@
 # C7, C10 und C11. Die sechs Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
 # in der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
 # `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md` und
-# `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
+# `shared/decisions/
+# 260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
 #
 # Aufbau je Eintrag:
 #   id               maschinenlesbarer Bezeichner, ASCII, ohne Umlaute
@@ -31,7 +32,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 85 Funktionen mit zusammen 90 Kombinationen.
+# Ausgeliefert sind 84 Funktionen mit zusammen 89 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -58,8 +59,12 @@
 # beider Faelle ist daraus abgeleitet und am Referenzgeraet nicht messbar, weil
 # dessen Touch Bar ohne gehaltenes fn ueberhaupt keine F3 liefert).
 #
-# Eine Kombination bleibt ab Werk ausdruecklich frei und steht deshalb in keiner
-# Tastenliste: Umschalt+Entf.
+# Zwei Kombinationen bleiben ab Werk ausdruecklich frei und stehen deshalb in
+# keiner Tastenliste: Umschalt+Entf und Opt+Cmd+Entf. Die zweite trug bis zum
+# 260817 das endgueltige Loeschen. Sie wird nicht neu vergeben: im Finder
+# bedeutet sie "sofort loeschen", und diese Bedeutung hat KRK nicht mehr
+# (`shared/decisions/
+# 260817-0536_*_bekommt-f8-den-papierkorb-nachdem-das-endgueltige-loeschen-weggefallen-ist.md`).
 #
 # Die Eingabetaste stand bis zum 260811 daneben. Sie trug bis zum 260804 den
 # Einstieg in einen Ordner; der liegt seither auf einem Rechtspfeil, bis zum
@@ -148,14 +153,9 @@ name = "Ordner anlegen"
 tasten = ["f7", "shift+cmd+n"]
 
 [[funktion]]
-id = "endgueltig_loeschen"
-name = "Endgültig löschen"
-tasten = ["f8", "opt+cmd+delete"]
-
-[[funktion]]
 id = "in_papierkorb"
 name = "In den Papierkorb räumen"
-tasten = ["delete", "cmd+delete"]
+tasten = ["delete", "cmd+delete", "f8"]
 
 [[funktion]]
 id = "bearbeiten"
@@ -702,7 +702,9 @@ name = "Mit dem Standardprogramm öffnen"
 tasten = ["return"]
 # Die Gewohnheit aus Norton Commander und dem Finder. Die Eingabetaste war seit
 # der Runde 1 ab Werk frei gehalten und vom Nutzer in C2 ausdruecklich fuer
-# diesen Zweck freigegeben. Frei bleibt ab Werk damit allein Umschalt+Entf.
+# diesen Zweck freigegeben. Frei blieb ab Werk damit allein Umschalt+Entf; seit
+# dem Wegfall des endgueltigen Loeschens am 260817 steht Opt+Cmd+Entf daneben
+# (siehe den Kopf dieser Datei).
 #
 # Ein Blatt faengt die Taste weiterhin ab, bevor sie hier ankommt: bei stehender
 # Nachfrage weist der Anwendungsdelegierte jeden Befehl ausser dem Abbruch ab,

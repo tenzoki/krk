@@ -224,9 +224,9 @@
 //! Der Grund ist die Tafel der Ausloeser: die Frage nennt den ersten Warngrund,
 //! also braucht sie die fuenf Tatsachen ueber das Ziel, und die beschafft der
 //! Rumpf erst, wenn die beiden billigen Stufen durch sind. Der Weg in den
-//! Papierkorb bleibt trotzdem der eine, den er war: die beiden Tasten `delete`
-//! und `cmd+delete` und der Menueeintrag "In den Papierkorb raeumen" laufen
-//! durch `in_den_papierkorb` hindurch, und der ruft den Rumpf. Ein zweiter
+//! Papierkorb bleibt trotzdem der eine, den er war: die drei Tasten `delete`,
+//! `cmd+delete` und `f8` und der Menueeintrag "In den Papierkorb raeumen"
+//! laufen durch `in_den_papierkorb` hindurch, und der ruft den Rumpf. Ein zweiter
 //! Aufrufer waere ein zweiter Loeschweg, und genau den schafft diese Runde ab.
 //!
 //! **Mit dem Umzug sind zwei Nebenwirkungen weg**, beide aus
@@ -251,9 +251,9 @@
 //! Inhaltsfilter. `Kommando::InPapierkorb` ist keines davon, und wer sie in
 //! dieser Aufzaehlung mitzaehlt, sucht einen Loeschweg, der nie bestand.
 //!
-//! **`f8` kommt erst mit Buendel D dazu.** Heute traegt es
-//! `Kommando::EndgueltigLoeschen` und erreicht diese Texte nicht; erst mit dem
-//! Wegfall jenes Befehls wird es die dritte Taste dieser Aufzaehlung.
+//! **`f8` ist mit Buendel D dazugekommen.** Mit dem Wegfall des endgueltigen
+//! Loeschens traegt es `Kommando::InPapierkorb` und erreicht damit dieselben
+//! Texte wie `delete` und `cmd+delete`.
 //!
 //! **Kein Stueck dieses Moduls traegt mehr ein `expect(dead_code)`.** Es stand
 //! zuerst an [`frage_und_erlaeuterung`] und dann an [`warngruende`], jeweils

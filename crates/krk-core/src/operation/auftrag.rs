@@ -29,12 +29,6 @@ pub enum Art {
     },
     /// In den Papierkorb des Systems raeumen (C4, Taste Delete).
     InDenPapierkorb,
-    /// Endgueltig loeschen, ohne Umweg ueber den Papierkorb (C4, F8).
-    ///
-    /// Die Rueckfrage davor stellt die Oberflaeche, genau einmal je Vorgang;
-    /// der Kern bekommt den Auftrag erst, wenn sie beantwortet ist. Festgelegt
-    /// in `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`.
-    EndgueltigLoeschen,
     /// Im Stapel umbenennen, jeder Eintrag in seinem eigenen Ordner (C4).
     ///
     /// Die Regel, aus der die neuen Namen entstehen, rechnet die Oberflaeche;
@@ -106,11 +100,6 @@ impl Auftrag {
         Self::neu(quellen, Art::InDenPapierkorb)
     }
 
-    /// Endgueltig loeschen.
-    pub fn endgueltig_loeschen(quellen: Vec<PathBuf>) -> Self {
-        Self::neu(quellen, Art::EndgueltigLoeschen)
-    }
-
     /// Im Stapel umbenennen (C4).
     ///
     /// Genommen werden Paare aus altem Pfad und neuem Namen, damit die beiden
@@ -159,7 +148,7 @@ impl Auftrag {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),
             // Ein Stapel-Umbenennen hat keinen Zielordner: jeder Eintrag
             // bleibt, wo er ist, und bekommt nur einen anderen Namen.
-            Art::InDenPapierkorb | Art::EndgueltigLoeschen | Art::UmbenennenImStapel { .. } => None,
+            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => None,
         }
     }
 }
@@ -171,7 +160,7 @@ mod tests {
 
     #[test]
     fn ein_loeschauftrag_hat_keinen_zielordner() {
-        let auftrag = Auftrag::endgueltig_loeschen(vec![PathBuf::from("/tmp/a")]);
+        let auftrag = Auftrag::in_den_papierkorb(vec![PathBuf::from("/tmp/a")]);
         assert_eq!(auftrag.zielordner(), None);
     }
 

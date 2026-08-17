@@ -73,11 +73,12 @@
 //! den Ersthelferrang, `zulaessig` sagt nein, und die Taste geht unveraendert
 //! an AppKit, ohne dass hier ein Zweig dafuer stuende.
 //!
-//! Die uebrigen Loeschwege erreichen diese Funktion nie: `cmd+delete` traegt
-//! eine Zusatztaste und geht am Fragezweig vorbei (C1.17), `f8` und
-//! `opt+cmd+delete` tragen `Kommando::EndgueltigLoeschen`, und `ctrl+delete`
-//! wirkt in der Lesezeichenleiste, also in einem anderen Wirkungsbereich
-//! (C6.11).
+//! Die uebrigen Loeschwege erreichen die Regel nie: `cmd+delete` und `f8`
+//! tragen keine nackte Rueckschritt-Taste und gehen am Fragezweig vorbei
+//! (C1.17), und `ctrl+delete` wirkt in der Lesezeichenleiste, also in einem
+//! anderen Wirkungsbereich (C6.11). `f8` steht seit dem Wegfall des
+//! endgueltigen Loeschens in dieser Reihe: es traegt seitdem denselben Befehl
+//! wie `delete`, und die Fallunterscheidung hier trennt es von ihm.
 //!
 //! # Der eine Aufrufer
 //!

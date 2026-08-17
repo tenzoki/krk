@@ -450,7 +450,7 @@ impl Vorgang {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => ordner.push(ziel.clone()),
             // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
             // Quellordner.
-            Art::InDenPapierkorb | Art::EndgueltigLoeschen | Art::UmbenennenImStapel { .. } => {}
+            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => {}
         }
         ordner
     }
@@ -982,31 +982,6 @@ impl Schluesselfenster {
             Self::Fremd => false,
         }
     }
-}
-
-/// Woher die beiden Zeilen der Loeschrueckfrage kommen — die eine
-/// Fallunterscheidung, in der sich die beiden Loeschbefehle noch unterscheiden.
-///
-/// **Sie faellt mit Buendel D dieser Runde weg**, zusammen mit
-/// [`Kommando::EndgueltigLoeschen`], und der Name des zweiten Wertes sagt das.
-/// Bis dahin fuehrt KRK zwei Löschbefehle, die durch **denselben** Rumpf gehen
-/// und sich in drei Stuecken unterscheiden: der Auftragsart, der Beschriftung
-/// der zweiten Schaltflaeche und dieser Herkunft der Texte.
-///
-/// Sie steht als Aufzaehlung und nicht als Wahrheitswert da, damit
-/// [`Anwendungsdelegierter::loeschtexte`] eine vollstaendige Fallunterscheidung
-/// ohne Auffangzweig schreibt: der Wegfall des zweiten Wertes haelt dort dann
-/// den Bau an, statt einen Zweig stehen zu lassen, den niemand mehr erreicht.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Loeschtexte {
-    /// Der eine Loeschweg dieser Runde: die Texte entstehen in
-    /// [`loeschwarnung::frage_und_erlaeuterung`] aus den Warngruenden des Ziels,
-    /// und laut ist die Rueckfrage genau dann, wenn einer zutrifft (C3).
-    AusDenWarngruenden,
-    /// Das endgueltige Loeschen, bis Buendel D: die Texte kommen aus
-    /// [`operationen::loeschfrage`], und laut ist die Rueckfrage in jedem Fall,
-    /// wie das Blatt sie fuer diesen Befehl seit der Runde 1 gezeigt hat.
-    EndgueltigBisBuendelD,
 }
 
 impl Anwendungsdelegierter {
@@ -2918,7 +2893,6 @@ impl Anwendungsdelegierter {
             // den Papierkorb. Die Fallunterscheidung selbst steht in
             // [`crate::kommandos::rueckschritt`] und nicht hier.
             Kommando::InPapierkorb => self.papierkorb_oder_zeichen_zurueck(anschlag),
-            Kommando::EndgueltigLoeschen => self.endgueltig_loeschen(),
             Kommando::Abbrechen => self.abbrechen(),
             Kommando::OrdnerAnlegen => self.anlegen(Anlegeart::Ordner),
             Kommando::DateiAnlegen => self.anlegen(Anlegeart::Datei),
@@ -4467,29 +4441,21 @@ impl Anwendungsdelegierter {
     /// Der Rueckweg bleibt, was er war, und ersetzt die Rueckfrage nicht: er
     /// hilft allein dem, der den Vorgang bemerkt.
     ///
-    /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`] und derselbe wie fuer
-    /// [`Self::endgueltig_loeschen`]. Hier stehen allein die drei Stuecke, in
-    /// denen sich die beiden Befehle unterscheiden: die Auftragsart, die
-    /// Beschriftung der zweiten Schaltflaeche und die Herkunft der beiden Texte.
+    /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`]. Hier stehen allein die
+    /// beiden Stuecke, die dieser Befehl mitbringt: die Auftragsart und die
+    /// Beschriftung der zweiten Schaltflaeche.
     ///
     /// **Die Texte selbst entstehen seit dem 260817 im Rumpf** und nicht mehr
     /// hier. Der Grund ist die Tafel der Ausloeser: die Frage nennt den ersten
     /// Warngrund, also braucht sie die fuenf Tatsachen ueber das Ziel, und die
     /// beschafft der Rumpf erst, wenn seine beiden billigen Stufen durch sind.
-    /// Was dieser Befehl weiterreicht, ist deshalb [`Loeschtexte`] und kein
-    /// fertiger Wortlaut.
     ///
     /// **Der Fokusvorbehalt steht seit Schritt 18 nicht mehr hier.** Er stand
-    /// als eigene Abfrage an dieser Stelle und an der von
-    /// [`Self::endgueltig_loeschen`]; heute tragen beide Befehle
-    /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist sie ab, bevor
-    /// sie hier ankommen.
+    /// als eigene Abfrage an dieser Stelle; heute traegt der Befehl
+    /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist ihn ab, bevor
+    /// er hier ankommt.
     fn in_den_papierkorb(&self) -> bool {
-        self.loeschen_nach_rueckfrage(
-            Art::InDenPapierkorb,
-            "In den Papierkorb räumen",
-            Loeschtexte::AusDenWarngruenden,
-        )
+        self.loeschen_nach_rueckfrage(Art::InDenPapierkorb, "In den Papierkorb räumen")
     }
 
     /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
@@ -4510,10 +4476,11 @@ impl Anwendungsdelegierter {
     ///    [`Kommando::InPapierkorb`] ist keines davon.
     /// 2. **Eine Zusatztaste heisst Papierkorb.** `cmd+delete` faellt an
     ///    [`Anschlag::ist_nackter_rueckschritt`] heraus und raeumt in jeder
-    ///    Lage, auch bei stehendem Filtertext (C1.17). `f8` und
-    ///    `opt+cmd+delete` erreichen diese Funktion gar nicht: sie tragen
-    ///    [`Kommando::EndgueltigLoeschen`]. `ctrl+delete` ebenso wenig: es
-    ///    wirkt in der Lesezeichenleiste und geht durch
+    ///    Lage, auch bei stehendem Filtertext (C1.17). `f8` faellt an derselben
+    ///    Frage heraus: es traegt seit dem Wegfall des endgueltigen Loeschens
+    ///    [`Kommando::InPapierkorb`] und ist keine Rueckschritt-Taste.
+    ///    `ctrl+delete` erreicht diese Funktion gar nicht: es wirkt in der
+    ///    Lesezeichenleiste und geht durch
     ///    `Leistenquelle::kommando_ausfuehren`.
     /// 3. **Sonst entscheidet die Regel**, und sie steht als reine Funktion in
     ///    [`crate::kommandos::rueckschritt`], mit einer ausgeschriebenen Tafel
@@ -4567,28 +4534,6 @@ impl Anwendungsdelegierter {
             // Wie vor dieser Runde (C1.16, C1.20).
             Rueckschritt::InDenPapierkorb => self.in_den_papierkorb(),
         }
-    }
-
-    /// Die Auswahl endgueltig loeschen, nach genau einer Rueckfrage (C4, F8).
-    ///
-    /// **Der Befehl faellt mit Buendel D dieser Runde weg**, und bis dahin
-    /// behaelt er, was ihn ausmacht: dieselben beiden Texte aus
-    /// [`operationen::loeschfrage`], dieselbe Beschriftung, und das Warnzeichen,
-    /// das das Blatt fuer ihn seit der Runde 1 in jedem Fall gesetzt hat.
-    /// Geteilt ist ab jetzt der Rumpf und nicht mehr nur das Blatt, siehe
-    /// [`Self::loeschen_nach_rueckfrage`].
-    ///
-    /// **Zwei Dinge sind ihm dabei doch anders geworden**, und beide zu seinen
-    /// Gunsten: ein bereits laufender Vorgang wird jetzt vor dem Blatt gemeldet
-    /// statt nach der Bestaetigung, und der bestaetigte Auftrag traegt die
-    /// Auswahl, die im Blatt stand. Die Begruendungen stehen an den beiden
-    /// Funktionen darunter.
-    fn endgueltig_loeschen(&self) -> bool {
-        self.loeschen_nach_rueckfrage(
-            Art::EndgueltigLoeschen,
-            "Endgültig löschen",
-            Loeschtexte::EndgueltigBisBuendelD,
-        )
     }
 
     /// Der eine Rumpf jedes Loeschbefehls: pruefen, fragen, und erst dann den
@@ -4647,13 +4592,9 @@ impl Anwendungsdelegierter {
     /// [`loeschwarnung::vor_der_rueckfrage`] und ist eine Zusage des Specs;
     /// verschoben hat sich allein, wann eine Tatsache anfaellt.
     ///
-    /// **Die Pruefung trifft beide Loeschbefehle**, also bis zum Buendel D auch
-    /// das endgueltige Loeschen auf `f8`, obwohl das keinen Papierkorb braucht.
-    /// Das ist Absicht und keine Nachlaessigkeit des gemeinsamen Rumpfes: die
-    /// Directive dieser Runde sagt ohne Einschraenkung „ein Ziel ohne Papierkorb
-    /// wird nicht geloescht, sondern gemeldet", und ein Ziel ohne Rueckweg ist
-    /// genau das Ziel, an dem ein endgueltiges Loeschen am wenigsten
-    /// zurueckzunehmen waere. Ein Zweig, der die Pruefung fuer den einen Befehl
+    /// **Die Pruefung kennt keine Ausnahme.** Die Directive dieser Runde sagt
+    /// ohne Einschraenkung „ein Ziel ohne Papierkorb wird nicht geloescht,
+    /// sondern gemeldet"; ein Zweig, der sie fuer irgendeinen Befehl
     /// ueberspringt, waere ein zweiter Loeschweg an der Stelle, an der diese
     /// Runde den zweiten abschafft.
     ///
@@ -4676,12 +4617,7 @@ impl Anwendungsdelegierter {
     /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
     /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
-    fn loeschen_nach_rueckfrage(
-        &self,
-        art: Art,
-        schaltflaeche: &str,
-        textform: Loeschtexte,
-    ) -> bool {
+    fn loeschen_nach_rueckfrage(&self, art: Art, schaltflaeche: &str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
@@ -4740,7 +4676,7 @@ impl Anwendungsdelegierter {
                 };
 
                 let (frage, erlaeuterung, laut) =
-                    Self::loeschtexte(textform, &auswahl, &quellordner, aufgeloester_ordner);
+                    Self::loeschtexte(&auswahl, &quellordner, aufgeloester_ordner);
 
                 // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
                 // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
@@ -4838,46 +4774,37 @@ impl Anwendungsdelegierter {
     /// tragen kann.
     #[must_use = "die drei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer oder gar nicht"]
     fn loeschtexte(
-        textform: Loeschtexte,
         auswahl: &Auswahl,
         quellordner: &Path,
         aufgeloester_ordner: Option<PathBuf>,
     ) -> (String, String, bool) {
-        match textform {
-            Loeschtexte::AusDenWarngruenden => {
-                let zuhause =
-                    pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
-                let netzlaufwerk = aufgeloester_ordner.as_deref().map_or(
-                    Loeschzielbefund::Unentschieden,
-                    volumes::liegt_auf_netzlaufwerk,
-                );
-                let beruehrt_arbeitsbaum = aufgeloester_ordner.as_deref().map_or(
-                    Loeschzielbefund::Unentschieden,
-                    |ordner| {
-                        arbeitsbaum::beruehrt_einen_arbeitsbaum(
-                            ordner,
-                            zuhause.as_deref(),
-                            &auswahl.pfade,
-                        )
-                    },
-                );
-                let ziel = Loeschziel {
-                    ordner: aufgeloester_ordner,
-                    benutzerverzeichnis: zuhause,
-                    netzlaufwerk,
-                    arbeitsbaum: beruehrt_arbeitsbaum,
-                    umfang: umfang::zaehlen(&auswahl.pfade),
-                };
-                let gruende = loeschwarnung::warngruende(&ziel);
-                let (frage, erlaeuterung) =
-                    loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
-                (frage, erlaeuterung, !gruende.is_empty())
-            }
-            Loeschtexte::EndgueltigBisBuendelD => {
-                let (frage, erlaeuterung) = operationen::loeschfrage(auswahl);
-                (frage, erlaeuterung, true)
-            }
-        }
+        let zuhause =
+            pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
+        let netzlaufwerk = aufgeloester_ordner.as_deref().map_or(
+            Loeschzielbefund::Unentschieden,
+            volumes::liegt_auf_netzlaufwerk,
+        );
+        let beruehrt_arbeitsbaum =
+            aufgeloester_ordner
+                .as_deref()
+                .map_or(Loeschzielbefund::Unentschieden, |ordner| {
+                    arbeitsbaum::beruehrt_einen_arbeitsbaum(
+                        ordner,
+                        zuhause.as_deref(),
+                        &auswahl.pfade,
+                    )
+                });
+        let ziel = Loeschziel {
+            ordner: aufgeloester_ordner,
+            benutzerverzeichnis: zuhause,
+            netzlaufwerk,
+            arbeitsbaum: beruehrt_arbeitsbaum,
+            umfang: umfang::zaehlen(&auswahl.pfade),
+        };
+        let gruende = loeschwarnung::warngruende(&ziel);
+        let (frage, erlaeuterung) =
+            loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
+        (frage, erlaeuterung, !gruende.is_empty())
     }
 
     /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die
@@ -4885,7 +4812,7 @@ impl Anwendungsdelegierter {
     ///
     /// **Das ist der Unterschied zu [`Self::auftrag_stellen`], und er ist der
     /// Grund, aus dem es diese Funktion gibt.** Bis zum 260817 rechnete
-    /// [`Self::endgueltig_loeschen`] die Auswahl fuer die Frage, und
+    /// das endgueltige Loeschen die Auswahl fuer die Frage, und
     /// `auftrag_stellen` las sie nach der Bestaetigung ueber
     /// `betroffene_eintraege()` ein zweites Mal. Zwischen beiden Lesungen steht
     /// das Blatt, und ein Blatt haelt weder FSEvents noch ein fremdes Programm
@@ -5630,10 +5557,7 @@ impl Anwendungsdelegierter {
                         .eintrag_waehlen(erster);
                 }
             }
-            Art::Kopieren { .. }
-            | Art::Verschieben { .. }
-            | Art::InDenPapierkorb
-            | Art::EndgueltigLoeschen => {}
+            Art::Kopieren { .. } | Art::Verschieben { .. } | Art::InDenPapierkorb => {}
         }
 
         // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
@@ -6517,9 +6441,8 @@ impl Anwendungsdelegierter {
     /// seit der Runde 1: [`Self::loeschen_nach_rueckfrage`], der eine Rumpf
     /// jedes Loeschbefehls, liest `aktiv` und meldet „es ist nichts
     /// ausgewählt" dorthin, und die beiden Operationsbefehle tun es ueber
-    /// [`Self::auftrag_stellen`] genauso. Bis zum 260817 stand jene Meldung in
-    /// [`Self::endgueltig_loeschen`]; der Bezug hat sich mit ihr nicht
-    /// geaendert.
+    /// [`Self::auftrag_stellen`] genauso. Bis zum 260817 stand jene Meldung im
+    /// endgueltigen Loeschen; der Bezug hat sich mit ihr nicht geaendert.
     fn editormeldung_zeigen(&self, meldung: &Editormeldung) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         self.antwort_zeigen(aktiv, &meldung.text());

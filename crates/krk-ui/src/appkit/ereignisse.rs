@@ -303,8 +303,9 @@ impl Anschlag {
     ///
     /// **Leere Maske heisst leer.** `cmd+delete` traegt eine Zusatztaste und
     /// faellt hier heraus, und damit erreicht es den Papierkorb in jeder Lage
-    /// (C1.17). `f8` und `opt+cmd+delete` kommen gar nicht erst an: sie tragen
-    /// `Kommando::EndgueltigLoeschen`.
+    /// (C1.17). `f8` faellt an der zweiten Haelfte heraus, denn es ist keine
+    /// Rueckschritt-Taste, und raeumt seit dem Wegfall des endgueltigen
+    /// Loeschens ebenso in jeder Lage.
     #[must_use]
     pub fn ist_nackter_rueckschritt(self) -> bool {
         self.druck.maske.ist_leer() && self.druck.code == code_von_pflicht("delete")

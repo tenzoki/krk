@@ -718,7 +718,6 @@ mod tests {
             Kommando::Kopieren,
             Kommando::Verschieben,
             Kommando::InPapierkorb,
-            Kommando::EndgueltigLoeschen,
             Kommando::OrdnerAnlegen,
             Kommando::DateiAnlegen,
             Kommando::Umbenennen,

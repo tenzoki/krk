@@ -330,10 +330,7 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
     match art {
         Art::UmbenennenImStapel { .. } => true,
-        Art::Kopieren { .. }
-        | Art::Verschieben { .. }
-        | Art::InDenPapierkorb
-        | Art::EndgueltigLoeschen => false,
+        Art::Kopieren { .. } | Art::Verschieben { .. } | Art::InDenPapierkorb => false,
     }
 }
 
@@ -790,9 +787,9 @@ mod tests {
         }
     }
 
-    /// Die vier Arten, die nicht aufschieben, in einer Liste; so faellt beim
-    /// Hinzukommen einer fuenften auf, dass sie hier fehlt.
-    fn die_gemaechlichen() -> [Art; 4] {
+    /// Die drei Arten, die nicht aufschieben, in einer Liste; so faellt beim
+    /// Hinzukommen einer vierten auf, dass sie hier fehlt.
+    fn die_gemaechlichen() -> [Art; 3] {
         [
             Art::Kopieren {
                 ziel: PathBuf::from("/ziel"),
@@ -801,12 +798,11 @@ mod tests {
                 ziel: PathBuf::from("/ziel"),
             },
             Art::InDenPapierkorb,
-            Art::EndgueltigLoeschen,
         ]
     }
 
     /// Die Zuordnung "schnell / nicht schnell" steht an einer Stelle; diese
-    /// Pruefung geht sie fuer alle fuenf Operationsarten durch
+    /// Pruefung geht sie fuer alle vier Operationsarten durch
     /// (`issues/260806-1331_*`).
     #[test]
     fn allein_das_stapel_umbenennen_schiebt_die_auffrischung_auf() {

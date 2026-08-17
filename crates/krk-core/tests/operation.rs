@@ -565,19 +565,6 @@ fn ohne_papierkorb_wird_nichts_geloescht_sondern_gemeldet() {
 }
 
 #[test]
-fn endgueltiges_loeschen_raeumt_einen_ordner_mit_inhalt_ab() {
-    let ordner = Pruefordner::neu("endgueltig");
-    let baum = ordner.unter("baum");
-    baum_anlegen(&baum, 40);
-
-    let bericht = durchlaufen_ohne_papierkorb(Auftrag::endgueltig_loeschen(vec![baum.clone()]));
-
-    assert_eq!(bericht.abschluss, Abschluss::Fertig);
-    assert_eq!(bericht.eintraege, 41, "40 Eintraege und der Wurzelordner");
-    assert!(!baum.exists(), "der Baum steht noch da");
-}
-
-#[test]
 fn anlegen_legt_an_und_ueberschreibt_nichts() {
     let ordner = Pruefordner::neu("anlegen");
 

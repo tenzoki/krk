@@ -487,8 +487,6 @@ pub enum Kommando {
     Verschieben,
     /// Die Auswahl in den Papierkorb des Systems raeumen (C4, Taste Delete).
     InPapierkorb,
-    /// Die Auswahl endgueltig loeschen (C4, F8; mit Rueckfrage davor).
-    EndgueltigLoeschen,
     /// Eine laufende Dateioperation abbrechen (C4).
     Abbrechen,
     /// Einen Ordner im Ordner des aktiven Fensters anlegen (C4).
@@ -646,7 +644,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 79] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 78] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -702,7 +700,6 @@ impl Kommando {
         (Kommando::Kopieren, "kopieren"),
         (Kommando::Verschieben, "verschieben"),
         (Kommando::InPapierkorb, "in_papierkorb"),
-        (Kommando::EndgueltigLoeschen, "endgueltig_loeschen"),
         (Kommando::Abbrechen, "abbrechen"),
         (Kommando::OrdnerAnlegen, "ordner_anlegen"),
         (Kommando::DateiAnlegen, "datei_anlegen"),
@@ -1024,7 +1021,6 @@ impl Kommando {
             | Kommando::Kopieren
             | Kommando::Verschieben
             | Kommando::InPapierkorb
-            | Kommando::EndgueltigLoeschen
             | Kommando::OrdnerAnlegen
             | Kommando::DateiAnlegen
             | Kommando::UmbenennenStapel

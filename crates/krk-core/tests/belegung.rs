@@ -1611,6 +1611,64 @@ tasten = []
     );
 }
 
+/// Eine gesicherte `keymap.toml`, die die zurueckgezogene Kennung
+/// `endgueltig_loeschen` noch fuehrt, wird als Ganzes verworfen.
+///
+/// **Die Probe misst eine Nutzerantwort, statt sie zu behaupten.** Mit dem
+/// Wegfall des endgueltigen Loeschens zieht dieses Projekt zum ersten Mal eine
+/// Funktionskennung zurueck. Wer seine Belegung je ueber die Belegungsansicht
+/// gesichert hat, traegt sie in seiner Datei, denn gesichert wird die
+/// vollstaendige Belegung und nicht nur das Geaenderte. Gefragt war, ob KRK den
+/// einen Eintrag uebergeht, die Datei einmalig nachzieht oder es beim heutigen
+/// Verhalten belaesst; der Nutzer hat am 260817 "bleibt wie heute" gewaehlt und
+/// den Verlust der eigenen Belegung ausdruecklich in Kauf genommen
+/// (`shared/decisions/260817-0536_*_was-geschieht-mit-einer-gespeicherten-keymap-die-die-entfallene-funktion-fuehrt.md`).
+///
+/// **Fuer diese Antwort ist nichts gebaut worden**, und genau deshalb steht die
+/// Probe hier: ein Verhalten, das niemand geschrieben hat, haelt auch niemand
+/// fest, und ein spaeterer Sonderweg fiele ohne sie erst dem Nutzer auf.
+///
+/// Zwei Haelften, weil die Antwort zwei Aussagen hat: der Wortschatz der
+/// Auslieferung kennt die Kennung nicht mehr, und die Ladelogik faellt darauf
+/// auf die **vollstaendige** Auslieferung zurueck und meldet die Ersetzung.
+#[test]
+fn eine_keymap_mit_der_zurueckgezogenen_kennung_wird_als_ganzes_verworfen() {
+    let gesichert = r#"
+[[funktion]]
+id = "endgueltig_loeschen"
+name = "Endgültig löschen"
+tasten = ["f8", "opt+cmd+delete"]
+
+[[funktion]]
+id = "kopieren"
+name = "In das andere Fenster kopieren"
+tasten = ["ctrl+c"]
+"#;
+
+    let datei: krk_core::tasten::Belegungsdatei =
+        toml::from_str(gesichert).expect("gueltiges TOML");
+    assert_eq!(
+        Belegung::vom_nutzer(&datei),
+        Err(Belegungsfehler::UnbekannteFunktion(
+            "endgueltig_loeschen".to_owned()
+        ))
+    );
+
+    let ordner = Pruefordner::neu("zurueckgezogene-kennung");
+    let ablage = ablage_mit(&ordner, gesichert);
+    let geladen = geladene_belegung(&ablage);
+
+    assert_eq!(
+        geladen.wert,
+        Belegung::auslieferung(),
+        "die Auslieferung greift, und zwar vollstaendig"
+    );
+    assert!(
+        geladen.ist_ersetzt(),
+        "die zur Seite gelegte Datei wird gemeldet"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Der Wirkungsbereich (Schritt 18, C5)
 // ---------------------------------------------------------------------------
@@ -1665,11 +1723,6 @@ fn die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt() {
         Kommando::InPapierkorb.wirkungsbereich(),
         Wirkungsbereich::Dateifenster,
         "delete darf in der Leiste keine Datei loeschen"
-    );
-    assert_eq!(
-        Kommando::EndgueltigLoeschen.wirkungsbereich(),
-        Wirkungsbereich::Dateifenster,
-        "das endgueltige Loeschen ebenso"
     );
     assert_eq!(
         Kommando::Oeffnen.wirkungsbereich(),

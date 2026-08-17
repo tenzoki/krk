@@ -186,7 +186,6 @@ fn einen_abarbeiten(
             None => Ablauf::Weiter,
         },
         Art::InDenPapierkorb => loeschen::in_den_papierkorb(&quelle, papierkorb, steuerung),
-        Art::EndgueltigLoeschen => loeschen::endgueltig_loeschen(&quelle, steuerung),
         Art::UmbenennenImStapel { .. } => match auftrag.neuer_name(stelle) {
             Some(neuer_name) => umbenennen::eintrag_umbenennen(&quelle, neuer_name, steuerung),
             // Die beiden Listen entstehen aus denselben Paaren und sind damit

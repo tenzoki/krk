@@ -416,7 +416,6 @@ fn ueberschrift(art: &Art) -> &'static str {
         Art::Kopieren { .. } => "Kopieren",
         Art::Verschieben { .. } => "Verschieben",
         Art::InDenPapierkorb => "In den Papierkorb räumen",
-        Art::EndgueltigLoeschen => "Endgültig löschen",
         Art::UmbenennenImStapel { .. } => "Umbenennen",
     }
 }
@@ -475,29 +474,6 @@ pub fn abbruchzeile(art: &Art) -> String {
 /// sie baut einen Zustand mehr, den keine Zusage verlangt.
 pub fn schon_ein_vorgang(art: &Art) -> String {
     format!("es läuft bereits eine Operation: {}", ueberschrift(art))
-}
-
-/// Die beiden Zeilen der Rueckfrage vor dem endgueltigen Loeschen (C4).
-///
-/// Genau einmal je Vorgang, unabhaengig von der Zahl der Eintraege. Die
-/// Rueckfrage nennt die Zahl der Eintraege und, falls Ordner darunter sind,
-/// deren Zahl gesondert.
-pub fn loeschfrage(auswahl: &Auswahl) -> (String, String) {
-    let frage = match auswahl.zahl() {
-        1 => "Diesen Eintrag endgültig löschen?".to_owned(),
-        zahl => format!("Diese {} Einträge endgültig löschen?", self::zahl(zahl)),
-    };
-    let mut erlaeuterung = String::from(
-        "Endgültig gelöschte Einträge lassen sich nicht wiederherstellen; \
-         KRK führt keinen eigenen Rückgängig-Speicher.",
-    );
-    if auswahl.ordner > 0 {
-        erlaeuterung.push_str(&format!(
-            "\n\nDarunter {}, jeweils mit ihrem gesamten Inhalt.",
-            ordner_text(auswahl.ordner)
-        ));
-    }
-    (frage, erlaeuterung)
 }
 
 /// Die Meldung, die nach dem Ende eines Vorgangs in der Statuszeile steht.
@@ -1321,34 +1297,6 @@ mod tests {
             !waehrend_blatt_erlaubt(Kommando::Notizzettel),
             "der Notizzettelbefehl steht in der Ausnahme; der Zettel schliesst              mit esc und nicht mit der Taste, mit der er kommt"
         );
-    }
-
-    #[test]
-    fn die_rueckfrage_nennt_die_zahl_der_eintraege_und_die_der_ordner() {
-        let auswahl = Auswahl {
-            pfade: vec![
-                PathBuf::from("/tmp/a"),
-                PathBuf::from("/tmp/b"),
-                PathBuf::from("/tmp/c"),
-            ],
-            ordner: 2,
-        };
-        let (frage, erlaeuterung) = loeschfrage(&auswahl);
-        assert!(frage.contains('3'), "die Zahl der Eintraege fehlt: {frage}");
-        assert!(
-            erlaeuterung.contains("2 Ordner"),
-            "die Zahl der Ordner fehlt gesondert: {erlaeuterung}"
-        );
-    }
-
-    #[test]
-    fn ohne_ordner_nennt_die_rueckfrage_keine() {
-        let auswahl = Auswahl {
-            pfade: vec![PathBuf::from("/tmp/a")],
-            ordner: 0,
-        };
-        let (_, erlaeuterung) = loeschfrage(&auswahl);
-        assert!(!erlaeuterung.contains("Ordner"));
     }
 
     #[test]
