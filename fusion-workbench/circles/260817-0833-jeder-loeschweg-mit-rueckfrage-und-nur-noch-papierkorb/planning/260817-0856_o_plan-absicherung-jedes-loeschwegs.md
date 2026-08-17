@@ -284,7 +284,7 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
 
 **Die Schritte 12 und 13 sind ein Commit.** Zwischen ihnen ist der Baum rot, und zwar in beiden möglichen Reihenfolgen: `Belegung::auslieferung()` prüft die Datei nicht gegen `Kommando`, aber `krk-core/tests/belegung.rs::jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` und `belegungsausgabe.rs:758` tun es. `make check` läuft erst nach Schritt 13.
 
-14. **Die Prosazahlen, die niemand hält**
+14. [DONE] **Die Prosazahlen, die niemand hält**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/belegungsausgabe.rs`, `crates/krk-ui/src/appkit/menue.rs`
     - Changes: Acht ausgeschriebene Zahlen über die Zahl der Funktionen und der Funktionen mit Kommando werden nachgezogen: `belegungsausgabe.rs` in den Zeilen 45, 48, 56, 256, 730 und 731, `appkit/menue.rs` in den Zeilen 128 und 867. Gezählt wird gegen den Baum nach Schritt 13 und nicht gegen die Zahlen in diesem Plan; die Rechnung „85 minus 1" ist eine Erwartung, `Kommando::KENNUNGEN.len()` und die Zahl der Einträge in der Belegungsdatei sind die Messung.
