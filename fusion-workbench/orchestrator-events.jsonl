@@ -1097,3 +1097,6 @@
 {"ts":"2026-08-17T15:14:07","event":"commit","task":"T9","hash":"c1b52db","summary":"table of triggers and the rename"}
 {"ts":"2026-08-17T15:14:07","event":"task_done","task":"T9","commit":"c1b52db"}
 {"ts":"2026-08-17T15:14:07","event":"task_start","task":"T10","agent":"coder"}
+{"ts":"2026-08-17T15:40:21","event":"commit","task":"T10","hash":"792995a","summary":"the confirmation goes loud"}
+{"ts":"2026-08-17T15:40:21","event":"task_done","task":"T10","commit":"792995a"}
+{"ts":"2026-08-17T15:40:21","event":"review_start","turn":2,"agent":"coderev","range":"1a57418..792995a"}

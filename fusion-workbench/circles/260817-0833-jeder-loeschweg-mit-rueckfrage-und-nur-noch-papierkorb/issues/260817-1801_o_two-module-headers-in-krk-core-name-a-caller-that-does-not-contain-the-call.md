@@ -1,0 +1,46 @@
+Two module headers in `krk-core` name a caller that does not contain the call
+
+---
+`crates/krk-core/src/verzeichnis/umfang.rs:138-141` and
+`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:151-154` both open their section "Wer sie ruft"
+with "Genau einer, und er steht seit dem elften Schritt derselben Runde da:
+`Anwendungsdelegierter::loeschen_nach_rueckfrage` in `krk-ui`". Neither call stands in that
+function. `umfang::zaehlen` is called at `appkit/anwendung.rs:4869` and
+`arbeitsbaum::beruehrt_einen_arbeitsbaum` at `:4857`, both inside
+`Anwendungsdelegierter::loeschtexte` (`:4840`), which `loeschen_nach_rueckfrage` (`:4679`) calls
+at `:4743`.
+
+---
+
+**Severity:** Low. Nothing behaves wrongly. The cost is one wrong turn for anyone following the
+citation: `loeschen_nach_rueckfrage` runs from `:4679` to `:4788` and contains neither name, so a
+reader who opens it and searches finds nothing and has to fall back to grepping the whole file.
+Both sentences were written in `792995a`, the same commit that created `loeschtexte`.
+**Found by:** coderev, review `reviews/260817-1759-coderev-bundle-c-the-loud-confirmation.md`
+**Affected:** `crates/krk-core/src/verzeichnis/umfang.rs:138-141`,
+`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:151-154`
+**Tree state:** `792995a`
+**Domain:** code
+**Cross-references:**
+`issues/260817-1802_o_two-more-no-caller-yet-statements-remain-so-the-count-of-two-undercounts.md`
+(the same commit's other stale caller sentences),
+`shared/issues/260815-1448_o_die-neun-berichtigten-zahlen-stehen-weiter-unverankert-und-die-benannte-ursache-traegt-keinen-datensatz.md`
+
+## Why the rest of each sentence is right
+
+The substance of both sentences holds and only the name is off by one level:
+
+- **"Genau einer"** — counted with `grep -rn "umfang::zaehlen\|beruehrt_einen_arbeitsbaum" crates/`:
+  one call each, plus doc comments. Correct.
+- **"einmal je Loeschbefehl"** — `loeschtexte` is called once, in the fourth branch of the stage
+  rule (`:4743`). Correct.
+- **"erst, wenn die beiden billigen Stufen jenes Rumpfes durch sind"** — correct, and this is the
+  half that makes naming the right function worth the edit: the claim is about *where in the body*
+  the call sits, and it is checkable only in the function that holds it.
+
+## Direction
+
+Name `Anwendungsdelegierter::loeschtexte` and say that `loeschen_nach_rueckfrage` reaches it in the
+fourth branch of the stage rule — which is what carries the cost claim. Two sentences, no
+behaviour. Worth doing in the same pass as the record cross-referenced above, since both are
+caller sentences in the same two files.
