@@ -1020,3 +1020,10 @@
 {"ts":"2026-08-17T02:02:57","event":"commit","detail":"ec87d39 Plan der zwoelften Runde und Vorfallsbericht gesichert"}
 {"ts":"2026-08-17T02:39:51","event":"gate_hit","detail":"Nutzer setzt neue Prioritaet: Loeschabsicherung (2144). Frage nach dem Verbleib des aktiven Circles der zwoelften Runde"}
 {"ts":"2026-08-17T02:50:26","event":"gate_response","detail":"Runde 12 zurueckgestellt (_t_ -> _d_); laute Warnung bekommt Umfang als fuenfte Bedingung"}
+{"ts":"2026-08-17T02:57:37","event":"gate_hit","agent":"shaper","detail":"Loeschabsicherung Klaerungsrunde 1: vier Fragen; zwei Befunde zur Nichtentscheidbarkeit von Clouddrive und Freigabe"}
+{"ts":"2026-08-17T03:00:19","event":"gate_response","agent":"shaper","detail":"Runde 1: immer fragen mit Abbrechen vorbelegt; Warnsymbol mit Grund und Pfad; Schwelle 25 im Unterbaum gedeckelt; vier entscheidbare Tests"}
+{"ts":"2026-08-17T03:05:07","event":"gate_response","detail":"Verschaerfung: endgueltiges Loeschen faellt ganz weg, alles geht in den Papierkorb"}
+{"ts":"2026-08-17T03:23:33","event":"gate_hit","agent":"shaper","detail":"Loeschabsicherung Klaerungsrunde 2: vier Fragen (Lesezeichen, versionierter Ordner, Protokoll, Ort des Warngrunds)"}
+{"ts":"2026-08-17T03:26:35","event":"gate_response","agent":"shaper","detail":"Runde 2: Lesezeichen ohne Rueckfrage; Ordner mit eigenem .git warnt; kein Protokoll in dieser Runde; Warngrund in der Frage"}
+{"ts":"2026-08-17T03:43:45","event":"shaper_done","agent":"shaper","detail":"shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md; sechs Faehigkeiten; vier Entscheidungsdatensaetze"}
+{"ts":"2026-08-17T03:43:45","event":"gate_hit","detail":"Spec-Abnahme Loeschabsicherung plus drei neue Entscheidungen"}

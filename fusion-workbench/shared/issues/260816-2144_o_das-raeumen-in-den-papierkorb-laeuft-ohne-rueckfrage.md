@@ -106,3 +106,29 @@ eigene Frage und hier nicht gestellt.
 Ob eine Rückfrage vor dem Papierkorbweg eine der zehn Zeitzusagen aus C8 der ersten Runde
 bewegt. Keine der zehn misst einen Löschvorgang von Hand; der Abnahmelauf ist seit dem
 260810 nicht mehr gefahren und Nutzerarbeit.
+
+## Verschärfung vom 260817: der endgültige Löschweg fällt ganz weg
+
+Der Nutzer hat am 260817 nachgeschärft: **Löschen ohne Papierkorb wird entfernt. Jeder
+Datei- und Ordner-Löschvorgang geht immer in den Papierkorb.**
+
+Damit ändert sich der Zuschnitt der Runde, und zwar in beide Richtungen. Kleiner wird sie,
+weil danach ein Löschweg existiert statt zweier: `Kommando::EndgueltigLoeschen` fällt weg,
+`f8` und `opt+cmd+delete` werden frei, und die Frage aus der Tabelle oben, ob beide Wege
+dasselbe Blatt tragen, beantwortet sich von selbst. Größer wird sie, weil eine Variante aus
+`Kommando` zu entfernen jede vollständige Fallunterscheidung darüber anfasst und weil die
+Nutzerfestlegung vom 260802 damit nicht nur in ihrer Rückfragenhälfte überholt ist, sondern
+ganz.
+
+Die überholte Festlegung `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md`
+hält beide Hälften: „Delete löscht in Papierkorb, FN+F8 endgültig". Nach dieser Runde stimmt
+kein Teil davon mehr.
+
+**Was daraus offen ist und vor der Umsetzung geklärt gehört:**
+
+Nicht jedes Ziel hat einen Papierkorb. `trashItemAtURL:` scheitert auf Datenträgern, die
+keinen führen, und auf manchen Netzlaufwerken; der Finder bietet dort das endgültige Löschen
+als einzigen Weg an. Wenn KRK den endgültigen Weg nicht mehr kennt, kann es auf solchen
+Zielen gar nicht mehr löschen. Ob das die richtige Antwort ist — nicht löschen können statt
+unwiederbringlich löschen — ist eine Nutzerfrage und keine Ableitung. Sie ist am 260817
+gestellt und noch nicht beantwortet.
