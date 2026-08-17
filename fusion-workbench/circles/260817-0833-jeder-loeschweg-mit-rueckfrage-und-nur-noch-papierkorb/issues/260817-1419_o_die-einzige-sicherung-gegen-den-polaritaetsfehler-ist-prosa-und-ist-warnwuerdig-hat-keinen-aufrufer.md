@@ -89,3 +89,57 @@ The new check `volumes::ist_lokal` also adds a case this record does not describ
 `260817-1623_o_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`: its return value runs
 counter to the `Loeschziel` field that consumes it, so the hazard there is not the habitual
 `ist_warnwuerdig` but a missing inversion.
+
+Progress (260817-1722, coder, step 10 — and one claim of this record no longer holds).
+
+**The expectation stated above is now falsified: bundle C does not bring the first call site of
+`ist_warnwuerdig`.** This record says "Bündel C bringt die erste Aufrufstelle von
+`ist_warnwuerdig`, und wer sie schreibt, hat drei Prosaabsätze und keine rote Probe als
+Widerstand". Step 10 wrote the one place that would have made that call — `warngruende` in
+`kommandos/loeschwarnung.rs`, the judge over all six triggers of C3 — and it does not call it,
+for a reason that is design and not oversight:
+
+`ist_warnwuerdig` merges `Ja` and `Unentschieden`. `warngruende` has to keep them apart, because
+they produce **different** entries in its list. A network volume answered `Ja` yields
+`Warngrund::Netzlaufwerk`; answered `Unentschieden` it yields `Warngrund::Unentscheidbar`, and
+*not* `Netzlaufwerk` as well — KRK does not know whether the volume is one, and naming it in the
+explanation would be a claim with no measurement behind it. That is spec C3's own acceptance
+criterion ("nennt als Grund, dass das Ziel sich nicht einordnen ließ"). The promise
+"Unentschieden gilt als laut" is kept by `Unentscheidbar` sitting at rank 1, not by merging the
+two answers. So every check in that function writes all three answers out, and the merged
+question has no place to be asked.
+
+Together with the rename recorded in
+`260817-1623_c_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`, this changes the shape of
+the record rather than closing it:
+
+| what this record asked for | state after step 10 |
+|---|---|
+| counting probe in `appkit/volumes.rs` | stands (step 9), **subject changed** by the rename — see below |
+| counting probe in `appkit/papierkorb.rs` | **not done.** File outside this task's bounds |
+| counting probe in `kommandos/loeschwarnung.rs` | **not done, and it would now over-promise** — see below |
+| two types for two questions (second, stronger way) | **untouched** |
+
+**Why the count in `volumes.rs` no longer measures what this record wanted.** After the rename
+its value sits on polarity 1, so `ist_warnwuerdig` is the *correct* question for it. The probe
+stays, with a rewritten rationale: the module answers the trigger and does not judge it. It is a
+module boundary now, not a polarity guard.
+
+**Why a file-level count in `loeschwarnung.rs` would over-promise.** After step 10 that one file
+carries **both** polarities: `vor_der_rueckfrage` consumes the trash answer (polarity 2, `Ja` is
+permission, `ist_warnwuerdig` forbidden) and `warngruende` consumes the trigger answers
+(polarity 1, where it would be allowed and is merely useless). A count of zero over the whole
+file would hold today and would state a ban that applies to one function and not the other; the
+next person to add a polarity-1 consumer would have to break a green probe to write correct
+code. What holds instead is written out at `warngruende`'s doc comment and in the module header:
+all three answers are matched explicitly, and the reason is that `Ja` and `Unentschieden` lead
+to different reasons.
+
+**What is left of this record, restated.** One producer file (`appkit/papierkorb.rs`) still has
+prose only. And the substantive question is unchanged and is the second way: the polarity belongs
+to the question, not to the value, and one three-valued type for both cannot be made
+uncompilable-when-swapped. Bundle C is now past both of its files, so the "der Schnitt fällt dort
+ohne zweite Änderung an derselben Stelle" argument in **Richtung** has expired — the second way
+would now cost its own change.
+
+Tree state: `3fcd375` plus the uncommitted steps 9 and 10. Verification: `make check` — exit 0.

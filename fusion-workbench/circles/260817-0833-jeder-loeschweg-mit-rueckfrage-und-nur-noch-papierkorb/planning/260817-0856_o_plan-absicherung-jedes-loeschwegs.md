@@ -80,7 +80,7 @@ flowchart LR
     end
     subgraph appkit["krk-ui/src/appkit"]
         PK["papierkorb::fuehrt_einen_papierkorb"]
-        VL["volumes::ist_lokal"]
+        VL["volumes::liegt_auf_netzlaufwerk"]
     end
     subgraph kern["krk-core"]
         BV["ablage::pfade::benutzerverzeichnis"]
@@ -208,14 +208,57 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Files: `crates/krk-ui/src/appkit/volumes.rs`
    - Changes: `#[must_use] pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund` über `resourceValuesForKeys_error` mit `NSURLVolumeIsLocalKey`. Ein fehlender oder nicht lesbarer Wert heißt `Unentschieden`, nicht `Ja`. Der Modulkopf nimmt die dritte Frage auf, die das Modul jetzt beantwortet, und der Abschnitt über die Untergrenzen bekommt `NSURLVolumeIsLocalKey` seit 10.7, geprüft in `NSURL.h:338`.
    - Dependencies: 4
+   - Anmerkung zur Ausführung (260817, nachgetragen mit Schritt 10): **Die Funktion heißt seit dem 260817-1640 `liegt_auf_netzlaufwerk` und liefert die Antwort des Auslösers, also `Ja` für einen nicht lokalen Datenträger.** Der Plan schreibt `ist_lokal` vor, und der Name lief der Polarität des Feldes zuwider, das ihn aufnimmt: `Loeschziel.netzlaufwerk` trägt `Ja` für „ist ein Netzlaufwerk", also für warnwürdig, `ist_lokal` lieferte `Ja` für harmlos, und beide Seiten trugen denselben Typ. `netzlaufwerk: volumes::ist_lokal(&ordner)` hätte übersetzt, jede Probe bestanden und lokal mit fern vertauscht; `Unentschieden` ist ein Fixpunkt der Umkehrung, also wäre „Unentschieden gilt als laut" sichtbar erfüllt geblieben, während der genannte Grund in den beiden entschiedenen Fällen falsch war. Der Befund dazu ist `issues/260817-1623_*_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`; **der Nutzer hat am 260817-1640 dessen Weg 1 gewählt** — Name und Rückgabewert folgen dem Auslöser, die Umkehrung geschieht einmal im Rumpf, neben dem Modulkopf, der sie erklärt. Verworfen sind `Loeschzielbefund::umgekehrt()`, zwei Typen je Polarität und die Umkehrung von Hand im Aufrufer. **Der abgefragte Ressourcenwert bleibt `NSURLVolumeIsLocalKey`**, und mit ihm der Abschnitt über die Untergrenzen; geändert sind der Name, die eine Umkehrung im Rumpf, die vier Proben und der Modulkopf. Die Zählprobe `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt` bleibt stehen und trägt einen anderen Gegenstand: sie hielt die falsche Polarität ab, die es hier nicht mehr gibt, und hält jetzt die Modulgrenze — dieses Modul beantwortet den Auslöser und beurteilt ihn nicht. Die Begründung steht an ihrem Doc-Kommentar.
 
-10. **Die Tafel der sechs Auslöser**
+10. [DONE] **Die Tafel der sechs Auslöser**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/kommandos/loeschwarnung.rs`
     - Changes: `pub enum Warngrund` mit sieben Werten in der Rangfolge des Specs (`Unentscheidbar`, `Netzlaufwerk`, `Cloudort`, `AusserhalbBenutzerordner`, `ImBenutzerordner`, `Arbeitsbaum`, `Umfang`), `Ord` abgeleitet, `wortlaut()` je Wert. `pub struct Loeschziel` mit den fünf Feldern `ordner: Option<PathBuf>`, `benutzerverzeichnis: Option<PathBuf>`, `netzlaufwerk: Befund`, `arbeitsbaum: Befund`, `umfang: Umfang`. `#[must_use] pub fn warngruende(ziel: &Loeschziel) -> Vec<Warngrund>`, sortiert, erster Eintrag ist der genannte Grund. Die Auslöser 1, 2 und 4 rechnet die Funktion selbst aus den beiden Pfaden; die Cloud-Orte sind `~/Library/CloudStorage` und `~/Library/Mobile Documents`, jeweils samt allem darunter. `Unentscheidbar` steht in der Liste, sobald einer der fünf Eingänge nicht beantwortet ist. `frage_und_erlaeuterung` bekommt die Warngründe als Argument, setzt den Wortlaut des ersten in die Frage und führt die übrigen in der Erläuterung auf. Die Tafel steht im Doc-Kommentar ausgeschrieben, und die Proben schreiben die Fälle einzeln aus statt sie zu rechnen; dieselbe Bauform wie in `rueckschritt.rs`. Dazu eine Aufruferzählung über `crate::quellbaum`, die `warngruende` bei genau einem Aufrufer festhält.
     - Dependencies: 1, 4, 7, 9
+    - Anmerkung zur Ausführung (260817): Vier Stellen, die der Plan nicht bespricht.
+      **Erstens: `Warngrund::Umfang` trägt einen Wert.** Der sechste Auslöser hat zwei
+      Wortlaute („mit 25 Einträgen" und „mit mehr als 25 Einträgen"), also kann
+      `wortlaut()` ihn nicht aus einem wertfreien Wert bilden. `Umfang` als Nutzlast ginge
+      nicht: `Ord` wäre dafür an `krk_core::verzeichnis::Umfang` abzuleiten, das ist eine
+      vierte Datei außerhalb der Grenzen dieser Aufgabe, und eine Ordnung über `Genau`,
+      `MehrAls` und `Unentschieden` wäre eine Behauptung ohne Gegenstand. Stattdessen steht
+      neben `Warngrund` eine Aufzählung `Umfangsgrund` mit zwei Werten,
+      `GenauDieSchwelle` und `MehrAlsDieSchwelle`; sie trägt keine Zahl, weil die Zahl in
+      jedem Fall `SCHWELLE` ist — `zaehlen` deckelt bei `SCHWELLE + 1` —, und ein
+      `const _: () = assert!(SCHWELLE == 25, …)` hält die beiden ausgeschriebenen Wortlaute
+      beim Übersetzen daran. Es bleiben damit sieben Werte von `Warngrund` mit abgeleitetem
+      `Ord`, wie der Plan sie nennt; die Tafel der Proben schreibt acht Zeilen, weil der
+      Umfang zwei Wortlaute hat.
+      **Zweitens: ein unentschiedener Eingang nennt seinen eigenen Auslöser nicht mit.**
+      `netzlaufwerk == Unentschieden` liefert `Unentscheidbar` und **nicht** zusätzlich
+      `Netzlaufwerk`: KRK weiß dann nicht, ob der Datenträger einer ist, und ein Wortlaut
+      „von einem Netzlaufwerk" in der Erläuterung wäre eine Behauptung ohne Messung. Das
+      ist genau das Abnahmekriterium aus C3 („nennt als Grund, dass das Ziel sich nicht
+      einordnen ließ") und der Grund, aus dem **`Loeschzielbefund::ist_warnwuerdig` in
+      dieser Datei auch für die erste Polarität nicht vorkommt**: es fasst `Ja` und
+      `Unentschieden` zusammen, und die beiden führen hier zu verschiedenen Gründen. Die
+      Fallunterscheidungen schreiben deshalb alle drei Antworten aus. Für den Befund
+      `issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-…` folgt
+      daraus, dass Bündel C den erwarteten ersten Aufrufer von `ist_warnwuerdig` **nicht**
+      bringt; die Fortschrittsnotiz dort sagt es.
+      **Drittens: die Aufruferzählung erwartet heute null.** Der eine Aufrufer von
+      `warngruende` entsteht erst mit Schritt 11, also heißt die Probe
+      `die_ausloesertafel_hat_noch_keinen_aufrufer` und zählt null; eine Probe, die schon
+      eins erwartete, wäre rot, eine mit „höchstens eins" für immer grün. Schritt 11 setzt
+      Erwartung und Name auf eins, zugleich mit dem `expect(dead_code)` an `warngruende`,
+      das dann unerfüllt wird. Dieselbe Bauform hat Schritt 1 für
+      `frage_und_erlaeuterung` getragen.
+      **Viertens: eine Zeile in `appkit/anwendung.rs` ist mitgezogen.**
+      `frage_und_erlaeuterung` bekommt das dritte Argument, also reicht `in_den_papierkorb`
+      dort `&[]` durch und bleibt damit in der ruhigen Form; Schritt 11 setzt an diese
+      Stelle die Warngründe. Sonst ist dort nichts angefasst.
+      **Beobachtung ohne Änderung:** steht der Umfang als **genannter** Grund in der Frage,
+      kann sie „Diese 25 Einträge mit 25 Einträgen in den Papierkorb räumen?" lauten. Der
+      Wortlaut ist der des Specs und bleibt, weil der Spec abgenommen ist; der Fall ist als
+      `issues/260817-1720_*_die-frage-kann-diese-25-eintraege-mit-25-eintraegen-lauten.md`
+      abgelegt.
 
-11. **Die Tatsachen beschaffen und das Blatt laut machen**
+11. [IN PROGRESS] **Die Tatsachen beschaffen und das Blatt laut machen**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `loeschen_nach_rueckfrage` fragt `benutzerverzeichnis()` einmal, löst es auf, baut das `Loeschziel` aus den fünf Quellen und ruft `warngruende`. Ist die Liste leer, bleibt das Blatt ruhig; sonst ist es laut. Der Wahrheitswert `laut` und die beiden Texte gehen unverändert an `loeschbestaetigung::zeigen`. Die Reihenfolge im Rumpf ist die des ersten Bildes und steht als Kommentar daneben, weil der Papierkorbtest vor der Rückfrage zu stehen hat.
@@ -285,7 +328,7 @@ flowchart TD
     S4["4 Befund, dreiwertig"] --> S5["5 Papierkorb-Frage"]
     S4 --> S7["7 Umfang, gedeckelt"]
     S4 --> S8["8 Arbeitsbaum"]
-    S4 --> S9["9 ist_lokal"]
+    S4 --> S9["9 liegt_auf_netzlaufwerk"]
     S5 --> S6
     S1 --> S10["10 Tafel der Auslöser"]
     S4 --> S10
@@ -326,9 +369,23 @@ pub enum Warngrund {
 pub struct Loeschziel {
     pub ordner: Option<PathBuf>,              // aufgelöst; None heißt nicht auflösbar
     pub benutzerverzeichnis: Option<PathBuf>, // aufgelöst
-    pub netzlaufwerk: Loeschzielbefund,
+    pub netzlaufwerk: Loeschzielbefund,       // Ja = Netzlaufwerk, also warnwürdig
     pub arbeitsbaum: Loeschzielbefund,
     pub umfang: Umfang,
+}
+```
+
+**Nachgezogen am 260817 (Schritt 10).** `Warngrund::Umfang` trägt einen Wert, weil der
+sechste Auslöser zwei Wortlaute hat; die Begründung und die verworfenen Wege stehen in der
+Anmerkung zur Ausführung an Schritt 10.
+
+```rust
+// krk-ui/src/kommandos/loeschwarnung.rs — keine Zahl, denn die Zahl ist immer SCHWELLE
+pub enum Umfangsgrund { GenauDieSchwelle, MehrAlsDieSchwelle }
+
+pub enum Warngrund {
+    // … die ersten sechs wie oben …
+    Umfang(Umfangsgrund),
 }
 ```
 
@@ -342,8 +399,9 @@ pub struct Loeschziel {
 | `umfang::zaehlen`, `Umfang`, `SCHWELLE` | `krk_core::verzeichnis` | gedeckelte Zählung eines Unterbaums |
 | `arbeitsbaum::befund`, `liegt_in_arbeitsbaum`, `traegt_arbeitsbaum` | `krk_core::verzeichnis` | Aufwärtsgang und Einzelprüfung auf `.git` |
 | `papierkorb::fuehrt_einen_papierkorb` | `krk-ui/src/appkit` | Vorprüfung ohne Probelauf |
-| `volumes::ist_lokal` | `krk-ui/src/appkit` | Netzlaufwerk-Erkennung |
-| `loeschwarnung::{Warngrund, Loeschziel, warngruende, frage_und_erlaeuterung, ohne_papierkorb}` | `krk-ui/src/kommandos` | die Tafel und die drei Texte |
+| `volumes::liegt_auf_netzlaufwerk` | `krk-ui/src/appkit` | Netzlaufwerk-Erkennung. **Nicht `ist_lokal`**: der Nutzerentscheid vom 260817-1640, siehe die Anmerkung an Schritt 9 |
+| `loeschwarnung::{Warngrund, Umfangsgrund, Loeschziel, warngruende, frage_und_erlaeuterung, ohne_papierkorb}` | `krk-ui/src/kommandos` | die Tafel und die drei Texte |
+| `loeschwarnung::frage_und_erlaeuterung` | `krk-ui/src/kommandos` | ein Argument mehr: die Warngründe, gerangt. Leer heißt ruhig |
 | `loeschbestaetigung::zeigen` | `krk-ui/src/appkit/blaetter` | zwei Argumente mehr: Beschriftung der zweiten Schaltfläche, `laut` |
 | `operationen::{zahl, ordner_text}` | `krk-ui/src/kommandos` | von privat auf `pub(super)` |
 | entfällt: `Kommando::EndgueltigLoeschen`, `Art::EndgueltigLoeschen`, `Auftrag::endgueltig_loeschen`, `loeschen::endgueltig_loeschen`, `operationen::loeschfrage` | beide Kisten | Bündel D |

@@ -7,8 +7,8 @@
 //! ```text
 //!  1. was hat sich geaendert?          Datentraegerwache ──> NSWorkspace
 //!  2. welche gibt es gerade?           eingehaengte      ──> NSFileManager
-//!  3. ist der unter diesem Ordner
-//!     ein lokaler?                     ist_lokal         ──> NSURL
+//!  3. liegt der Ordner auf einem
+//!     Netzlaufwerk?                    liegt_auf_netzlaufwerk ──> NSURL
 //! ```
 //!
 //! Sie liegen zusammen, weil sie dieselbe Sache befragen, und die dritte kommt
@@ -54,40 +54,63 @@
 //! Datentraeger und kommt aus `krk_core::ablage::pfade`. Zusammengesetzt wird
 //! beides in [`crate::leistenmodell`], das auch die Reihenfolge fuehrt.
 //!
-//! # Die dritte Frage, und auf welcher Polaritaet ihre Antwort liegt
+//! # Die dritte Frage, und warum sie nach dem Netzlaufwerk fragt
 //!
-//! [`ist_lokal`] beantwortet den dritten der sechs Ausloeser aus C3: „der
-//! Datentraeger des Ordners ist kein lokaler". **Der Ausloeser ist die
-//! Verneinung der Frage, die die Funktion stellt**, und daraus folgt alles, was
-//! ueber ihren Rueckgabewert zu wissen ist:
+//! [`liegt_auf_netzlaufwerk`] beantwortet den dritten der sechs Ausloeser aus
+//! C3: „der Datentraeger des Ordners ist kein lokaler". **Die Funktion heisst
+//! nach dem Ausloeser und liefert dessen Antwort** und nicht die des
+//! Ressourcenwerts, den sie dafuer abfragt:
 //!
 //! ```text
-//!  ist_lokal(ordner)  ──>  Ja            der Datentraeger ist lokal   ruhig
-//!                     ──>  Nein          ein Netzlaufwerk             LAUT
-//!                     ──>  Unentschieden KRK weiss es nicht           LAUT
+//!  liegt_auf_netzlaufwerk(ordner)  ──>  Ja            kein lokaler       LAUT
+//!                                  ──>  Nein          ein lokaler        ruhig
+//!                                  ──>  Unentschieden KRK weiss nichts   LAUT
 //! ```
 //!
-//! Damit liegt die Antwort auf der **zweiten** Polaritaet aus dem Modulkopf von
-//! [`krk_core::verzeichnis::Loeschzielbefund`], derselben wie bei
-//! [`super::papierkorb::fuehrt_einen_papierkorb`]: `Ja` ist die harmlose
-//! Auskunft, und `Unentschieden` gehoert zu `Nein`.
-//! [`Loeschzielbefund::ist_warnwuerdig`] ist hier folglich das falsche Werkzeug
-//! — es fasst `Ja` und `Unentschieden` zusammen und liesse damit ein
-//! Netzlaufwerk als harmlos durchgehen, waehrend es einen lokalen Datentraeger
-//! anzeigte. Die Zaehlprobe `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt`
-//! haelt das fest, statt es bloss hinzuschreiben.
+//! Damit liegt die Antwort auf der **ersten** Polaritaet aus dem Modulkopf von
+//! [`krk_core::verzeichnis::Loeschzielbefund`]: `Ja` ist der Warngrund, und
+//! `Unentschieden` gehoert zu ihm. [`Loeschzielbefund::ist_warnwuerdig`] ist
+//! fuer diesen Wert folglich die **richtige** Frage — anders als bei
+//! [`super::papierkorb::fuehrt_einen_papierkorb`], das auf der zweiten
+//! Polaritaet liegt und bei dem `Ja` die Erlaubnis ist.
 //!
-//! **Der Aufrufer dreht, und er dreht dreiwertig.** Das Feld `netzlaufwerk` des
-//! `Loeschziel` aus dem zehnten Schritt dieser Runde traegt die Polaritaet 1:
-//! dort heisst `Ja` „es ist ein Netzlaufwerk". Wer diesen Rueckgabewert
-//! ungedreht dort einsetzt, vertauscht lokal und fern, und die Vertauschung
-//! faellt an keiner Uebersetzung auf, weil beide Seiten denselben Typ tragen —
-//! `Unentschieden` bleibt unter der Drehung stehen und laesst die Zusage
-//! „Unentschieden gilt als laut" weiter gelten, waehrend der genannte Grund
-//! falsch ist. Der Befund
+//! **Der Ressourcenwert antwortet umgekehrt, und die Umkehrung geschieht genau
+//! einmal: hier, im Rumpf, neben dieser Erklaerung.** Gefragt wird
+//! `NSURLVolumeIsLocalKey`, und ein `true` von dort heisst „lokal", also
+//! harmlos; [`liegt_auf_netzlaufwerk`] gibt darauf `Nein` zurueck.
+//!
+//! Bis zum 260817 hiess die Funktion `ist_lokal` und lieferte die Antwort des
+//! Ressourcenwerts. Sie fuellte damit ein Feld — `Loeschziel::netzlaufwerk` aus
+//! dem zehnten Schritt dieser Runde —, das die **umgekehrte** Polaritaet
+//! traegt, und beide Seiten trugen denselben Typ:
+//! `netzlaufwerk: volumes::ist_lokal(&ordner)` uebersetzte, bestand jede Probe
+//! und vertauschte lokal und fern. `Unentschieden` ist ein Fixpunkt der
+//! Umkehrung, also blieb die Zusage „Unentschieden gilt als laut" dabei
+//! sichtbar erfuellt, waehrend der **genannte Grund** in den beiden
+//! entschiedenen Faellen falsch war. Der Nutzer hat am 260817-1640 den Weg 1
+//! aus
 //! `issues/260817-1623_*_ist-lokal-returns-the-inverse-of-the-field-it-fills.md`
-//! nennt die beiden Wege, das unuebersetzbar zu machen; bis dahin ist diese
-//! Warnung die Sicherung.
+//! gewaehlt: Name und Rueckgabewert folgen dem Ausloeser, die Umkehrung steht
+//! einmal im Rumpf. Verworfen sind ein `Loeschzielbefund::umgekehrt()`, zwei
+//! Typen je Polaritaet und die Umkehrung von Hand im Aufrufer.
+//!
+//! **Was die Umbenennung nicht leistet.** Sie macht die Vertauschung nicht
+//! unuebersetzbar, sie nimmt ihr den Anlass. Wer zwei Fragen entgegengesetzter
+//! Polaritaet in demselben Typ fuehrt, kann sie weiter verwechseln; dagegen
+//! stuende allein der zweite Weg aus
+//! `issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`,
+//! zwei Typen fuer zwei Fragen, und der ist unberuehrt.
+//!
+//! **Die Zaehlprobe `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt` bleibt
+//! stehen, und ihr Gegenstand hat gewechselt.** Bis zur Umbenennung hielt sie
+//! einen Fehler ab: [`Loeschzielbefund::ist_warnwuerdig`] an einem Wert der
+//! zweiten Polaritaet. Diesen Fehler gibt es hier nicht mehr, denn die Frage
+//! ist jetzt die richtige. Was die Zaehlung seitdem festhaelt, ist eine
+//! Modulgrenze: dieses Modul **beantwortet** den Ausloeser und **beurteilt**
+//! ihn nicht. Ob die Rueckfrage laut wird, entscheidet
+//! `crate::kommandos::loeschwarnung::warngruende` an einer Stelle fuer alle
+//! sechs Ausloeser; eine Datei, die ihren eigenen Befund schon hier nach seiner
+//! Warnwuerdigkeit fragt, legt die Rangfolge aus C3 ein zweites Mal an.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -188,7 +211,7 @@ fn namensteil(pfad: &Path) -> String {
         .unwrap_or_else(|| pfad.display().to_string())
 }
 
-/// Ob der Datentraeger unter diesem Ordner ein lokaler ist (C3, Ausloeser 3).
+/// Ob der Ordner auf einem Netzlaufwerk liegt (C3, Ausloeser 3).
 ///
 /// Gefragt wird der Ressourcenwert `NSURLVolumeIsLocalKey` am `NSURL` des
 /// Ordners. Das System beantwortet ihn aus dem Einhaengepunkt, unter dem der
@@ -196,29 +219,35 @@ fn namensteil(pfad: &Path) -> String {
 /// Kommentar der Kopfdatei nennt ihn „true if the volume is stored on a local
 /// device".
 ///
+/// **Der Rueckgabewert ist die Antwort des Ausloesers und nicht die des
+/// Ressourcenwerts.** Die eine Umkehrung dazwischen steht im Rumpf, wenige
+/// Zeilen unter dieser Erklaerung; der Modulkopf sagt, warum sie genau hier
+/// geschieht und genau einmal.
+///
 /// **Die drei Ausgaenge, und welcher warnt:**
 ///
-/// - [`Loeschzielbefund::Ja`] — der Datentraeger ist lokal. Das ist die
+/// - [`Loeschzielbefund::Ja`] — der Datentraeger ist **kein** lokaler. **Das
+///   ist der Warngrund**, denn der Ausloeser aus C3 lautet „der Datentraeger
+///   des Ordners ist kein lokaler".
+/// - [`Loeschzielbefund::Nein`] — der Datentraeger ist ein lokaler. Das ist die
 ///   **harmlose** Auskunft, und die Rueckfrage bleibt an diesem Ausloeser ruhig.
-/// - [`Loeschzielbefund::Nein`] — der Datentraeger ist keiner: ein
-///   Netzlaufwerk. **Das ist der Warngrund**, denn der Ausloeser aus C3 lautet
-///   „der Datentraeger des Ordners ist kein lokaler".
 /// - [`Loeschzielbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8,
 ///   das System nennt einen Fehler, oder es liefert den Schluessel ohne Wert
 ///   beziehungsweise mit einem Wert, der kein `NSNumber` ist. Das ist keine
 ///   Aussage ueber den Datentraeger, sondern eine ueber KRKs Kenntnis von ihm,
 ///   und **auch dieser Ausgang warnt**.
 ///
-/// Ein fehlender Wert wird ausdruecklich **nicht** als `Ja` gelesen. Ein
+/// Ein fehlender Wert wird ausdruecklich **nicht** als „lokal" gelesen. Ein
 /// Vorgabewert „lokal, wenn nichts dagegen spricht" waere der bequeme Weg und
 /// stellte die Warnung genau dort still, wo KRK am wenigsten ueber das Ziel
 /// weiss; die Zusage „Unentschieden gilt als laut" waere damit an dieser
 /// Pruefung aufgegeben.
 ///
-/// **Die Polaritaet ist gegenlaeufig zu dem Feld, das die Antwort aufnimmt**,
-/// und [`Loeschzielbefund::ist_warnwuerdig`] ist hier deshalb das falsche
-/// Werkzeug. Der Modulkopf schreibt beides aus; wer diesen Rueckgabewert
-/// weitergibt, liest ihn dort nach, bevor er ihn einsetzt.
+/// **Auf der ersten Polaritaet**, wie das Feld `Loeschziel::netzlaufwerk`, das
+/// die Antwort aufnimmt: `Ja` warnt, `Unentschieden` gehoert zu ihm, und
+/// [`Loeschzielbefund::ist_warnwuerdig`] ist damit fuer diesen Wert die
+/// richtige Frage. Gestellt wird sie nicht hier, sondern dort, wo die Rangfolge
+/// aus C3 steht; der Modulkopf sagt, warum.
 ///
 /// Der Ordner kommt **aufgeloest** herein, wie bei
 /// [`super::papierkorb::fuehrt_einen_papierkorb`] und aus demselben Grund: eine
@@ -234,7 +263,7 @@ fn namensteil(pfad: &Path) -> String {
         reason = "der Aufrufer entsteht mit dem elften Schritt dieser Runde, der die Tatsachen fuer die Ausloesertafel beschafft"
     )
 )]
-pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund {
+pub fn liegt_auf_netzlaufwerk(pfad: &Path) -> Loeschzielbefund {
     let Some(text) = pfad.to_str() else {
         return Loeschzielbefund::Unentschieden;
     };
@@ -254,10 +283,15 @@ pub fn ist_lokal(pfad: &Path) -> Loeschzielbefund {
         return Loeschzielbefund::Unentschieden;
     };
 
+    // **Die eine Umkehrung.** `NSURLVolumeIsLocalKey` antwortet „lokal", der
+    // Ausloeser aus C3 fragt „kein lokaler". Sie steht hier und nicht beim
+    // Aufrufer, damit Name, Rueckgabewert und das Feld, das ihn aufnimmt, in
+    // dieselbe Richtung zeigen; der Modulkopf schreibt aus, was die frueher
+    // gegenlaeufige Form gekostet haette.
     if wert.boolValue() {
-        Loeschzielbefund::Ja
-    } else {
         Loeschzielbefund::Nein
+    } else {
+        Loeschzielbefund::Ja
     }
 }
 
@@ -418,8 +452,8 @@ impl Drop for Datentraegerwache {
     }
 }
 
-/// Der Einhaengepunkt der Automatik fuer `/home`, der Ort des negativen
-/// Ausgangs von [`ist_lokal`].
+/// Der Einhaengepunkt der Automatik fuer `/home`, der Ort des warnenden
+/// Ausgangs von [`liegt_auf_netzlaufwerk`].
 ///
 /// Er steht als Konstante neben den Proben und nicht in ihnen, weil zwei von
 /// ihnen ihn brauchen: die eine prueft die Vorbedingung, die andere den Befund.
@@ -431,37 +465,50 @@ mod tests {
     use super::*;
     use crate::quellbaum::{aufrufstellen, quelldateien};
 
-    /// Das Benutzerverzeichnis liegt auf einem lokalen Datentraeger.
+    /// Das Benutzerverzeichnis liegt nicht auf einem Netzlaufwerk.
     ///
-    /// Der positive Ausgang an einem echten Ort, und die Probe braucht kein
+    /// Der ruhige Ausgang an einem echten Ort, und die Probe braucht kein
     /// Fenster und keinen Hauptfaden: die Abfrage eines Ressourcenwerts an einem
     /// `NSURL` ist von jedem Faden aus zu stellen, ebenso wie die Vorpruefung in
     /// [`super::super::papierkorb`].
+    ///
+    /// **Die Erwartung ist seit dem 260817 [`Loeschzielbefund::Nein`]** und
+    /// nicht mehr `Ja`: der Rueckgabewert traegt jetzt die Antwort des
+    /// Ausloesers, und „liegt auf einem Netzlaufwerk" ist am
+    /// Benutzerverzeichnis eines Mac mit eingebautem Datenband zu verneinen.
     #[test]
-    fn das_benutzerverzeichnis_liegt_auf_einem_lokalen_datentraeger() {
+    fn das_benutzerverzeichnis_liegt_nicht_auf_einem_netzlaufwerk() {
         let Some(zuhause) = krk_core::ablage::pfade::benutzerverzeichnis() else {
             panic!(
                 "das System nennt kein Benutzerverzeichnis, und ohne eines misst diese Probe nichts"
             );
         };
         assert_eq!(
-            ist_lokal(&zuhause),
-            Loeschzielbefund::Ja,
-            "das Benutzerverzeichnis {} liegt angeblich nicht auf einem lokalen Datentraeger",
+            liegt_auf_netzlaufwerk(&zuhause),
+            Loeschzielbefund::Nein,
+            "das Benutzerverzeichnis {} liegt angeblich auf einem Netzlaufwerk",
             zuhause.display()
         );
     }
 
-    /// Der Einhaengepunkt der `/home`-Automatik ist **nicht** lokal.
+    /// Der Einhaengepunkt der `/home`-Automatik gilt als Netzlaufwerk.
     ///
-    /// **Der negative Ausgang, ohne dass eine Probe ein Netzlaufwerk einhaengen
+    /// **Der warnende Ausgang, ohne dass eine Probe ein Netzlaufwerk einhaengen
     /// muesste.** macOS haengt seit der Trennung von System- und Datenband unter
     /// [`AUTOMATIK_HOME`] die Automatik `auto_home` ein; sie ist ein
     /// `autofs`-Einhaengepunkt, `/sbin/mount` fuehrt ihn ohne das Merkmal
     /// `local`, und `NSURLVolumeIsLocalKey` antwortet dort `false`. Ohne diese
-    /// Probe waere [`ist_lokal`] mit einem festen [`Loeschzielbefund::Ja`] gruen,
-    /// und der dritte Ausloeser aus C3 haette keinen Beleg — genau die Lage, die
-    /// bei der Frage nach dem Papierkorb `/dev` aufgeloest hat.
+    /// Probe waere [`liegt_auf_netzlaufwerk`] mit einem festen
+    /// [`Loeschzielbefund::Nein`] gruen, und der dritte Ausloeser aus C3 haette
+    /// keinen Beleg — genau die Lage, die bei der Frage nach dem Papierkorb
+    /// `/dev` aufgeloest hat.
+    ///
+    /// **Der Wortlaut des Ausloesers ist „Netzlaufwerk", gemessen wird „kein
+    /// lokaler Datentraeger".** Eine Automatik von `autofs` ist kein
+    /// Netzlaufwerk im engeren Sinn, und trotzdem ist `Ja` hier die richtige
+    /// Antwort: der Ausloeser aus C3 hangt am fehlenden Merkmal `local` und
+    /// nicht an einem Protokoll. Der Spec waehlt „Netzlaufwerk" als den
+    /// Wortlaut, den der Nutzer versteht.
     ///
     /// **Es ist der Zielpfad und nicht `/home`.** Am 260817 gemessen antwortet
     /// `/home` mit `true` und [`AUTOMATIK_HOME`] mit `false`, obwohl das erste
@@ -474,7 +521,7 @@ mod tests {
     /// Ein Nutzer kann `/etc/auto_master` aendern und die `/home`-Automatik
     /// abschalten. Dann bleibt unter [`AUTOMATIK_HOME`] ein gewoehnlicher, leerer
     /// Ordner des Datenbands stehen, und der ist lokal: die Probe wuerde rot,
-    /// ohne dass an [`ist_lokal`] etwas falsch waere. Geprueft wird deshalb
+    /// ohne dass an [`liegt_auf_netzlaufwerk`] etwas falsch waere. Geprueft wird deshalb
     /// zuerst, dass dort ueberhaupt ein eigener Einhaengepunkt steht, und zwar an
     /// der Geraetekennung aus `stat(2)`: ein Einhaengepunkt traegt eine andere als
     /// sein uebergeordneter Ordner. Diese Vorpruefung braucht kein AppKit und
@@ -501,25 +548,25 @@ mod tests {
             eigen.dev(),
             darueber.dev(),
             "unter {AUTOMATIK_HOME} steht kein eigener Einhaengepunkt, \
-             also misst diese Probe den negativen Ausgang von ist_lokal nicht; \
+             also misst diese Probe den warnenden Ausgang der Pruefung nicht; \
              ist die /home-Automatik in /etc/auto_master abgeschaltet?"
         );
 
         assert_eq!(
-            ist_lokal(einhaengepunkt),
-            Loeschzielbefund::Nein,
+            liegt_auf_netzlaufwerk(einhaengepunkt),
+            Loeschzielbefund::Ja,
             "{AUTOMATIK_HOME} gilt als lokal, also unterscheidet die Pruefung nicht"
         );
     }
 
     /// Ein Pfad, den es nicht gibt, bleibt unentschieden und wird nicht zum
-    /// `Ja`.
+    /// `Nein`.
     ///
     /// Der Zweig, in dem das System einen Fehler nennt. Er ist von
     /// [`super::super::papierkorb::fuehrt_einen_papierkorb`] zu unterscheiden:
     /// dort heisst ein Fehler [`Loeschzielbefund::Nein`], denn dort **ist** der
     /// Fehler die Antwort. Hier sagt er nichts ueber den Datentraeger, und ein
-    /// `Nein` behauptete ein Netzlaufwerk, das niemand gesehen hat.
+    /// `Nein` erklaerte ein Ziel fuer harmlos, das niemand gesehen hat.
     ///
     /// Im laufenden Programm kommt dieser Fall nicht an: der Aufrufer loest den
     /// Ordner vorher auf und zaehlt sein Scheitern selbst als unentschieden. Die
@@ -533,7 +580,7 @@ mod tests {
             "der Pfad der Probe steht im Dateisystem und misst damit nicht, was sie messen soll"
         );
         assert_eq!(
-            ist_lokal(fehlt),
+            liegt_auf_netzlaufwerk(fehlt),
             Loeschzielbefund::Unentschieden,
             "ein fehlender Pfad liefert nicht den unentschiedenen Befund"
         );
@@ -559,7 +606,7 @@ mod tests {
             "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
         );
         assert_eq!(
-            ist_lokal(&krumm),
+            liegt_auf_netzlaufwerk(&krumm),
             Loeschzielbefund::Unentschieden,
             "ein Pfad ohne gueltiges UTF-8 liefert nicht den unentschiedenen Befund"
         );
@@ -567,19 +614,34 @@ mod tests {
 
     /// In dieser Datei wird nach der Warnwuerdigkeit nicht gefragt.
     ///
-    /// **Die Sicherung gegen den Polaritaetsfehler, als Zaehlung statt als
-    /// Prosa.** [`Loeschzielbefund::ist_warnwuerdig`] fasst `Ja` und
-    /// `Unentschieden` zusammen; der Rueckgabewert von [`ist_lokal`] traegt seinen
-    /// Warngrund aber auf `Nein`. Ein Aufruf hier machte aus einem lokalen
+    /// **Die Zaehlung bleibt, ihr Gegenstand hat am 260817 gewechselt.** Bis zur
+    /// Umbenennung von `ist_lokal` hielt sie einen Fehler ab: der
+    /// Rueckgabewert lag auf der zweiten Polaritaet, und
+    /// [`Loeschzielbefund::ist_warnwuerdig`] haette aus einem lokalen
     /// Datentraeger einen Warngrund und aus einem Netzlaufwerk eine harmlose
-    /// Auskunft — die Vertauschung, gegen die der Modulkopf argumentiert.
+    /// Auskunft gemacht. Diesen Fehler gibt es hier nicht mehr:
+    /// [`liegt_auf_netzlaufwerk`] liefert die Antwort des Ausloesers, und die
+    /// Warnwuerdigkeit ist fuer diesen Wert die **richtige** Frage.
+    ///
+    /// **Sie faellt trotzdem nicht, weil sie eine zweite, unveraenderte Zusage
+    /// traegt: dieses Modul beantwortet den Ausloeser und beurteilt ihn nicht.**
+    /// Ob die Rueckfrage laut wird und welcher der sechs Gruende sie benennt,
+    /// entscheidet `crate::kommandos::loeschwarnung::warngruende` an einer
+    /// Stelle. Eine Datei, die ihren eigenen Befund schon hier nach seiner
+    /// Warnwuerdigkeit fragt, legt die Rangfolge aus C3 ein zweites Mal an, und
+    /// die zweite Lage laeuft von der ersten weg, ohne dass eine Uebersetzung
+    /// etwas dazu sagt. Rot wird die Probe, wenn dieses Modul anfaengt zu
+    /// urteilen; die richtige Antwort darauf ist die Frage, warum es das tut.
+    ///
+    /// **Die Umkehrung waere die falsche Bewegung.** Eine Zusicherung, dass hier
+    /// **doch** nach der Warnwuerdigkeit gefragt wird, machte die Modulgrenze zur
+    /// Pflicht, sie zu ueberschreiten.
     ///
     /// Die Richtung stammt aus
     /// `issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`,
     /// erster Weg. **Der Befund ist damit nicht geschlossen:** er verlangt
-    /// dieselbe Zaehlung auch in `appkit/papierkorb.rs` und in
-    /// `kommandos/loeschwarnung.rs`, und sein zweiter, staerkerer Weg — zwei
-    /// Typen fuer zwei Fragen — bleibt unberuehrt.
+    /// dieselbe Zaehlung auch in `appkit/papierkorb.rs`, und sein zweiter,
+    /// staerkerer Weg — zwei Typen fuer zwei Fragen — bleibt unberuehrt.
     ///
     /// Was eine Zaehlung im Quelltext leistet und was nicht, steht im Modulkopf
     /// von [`crate::quellbaum`]. Die Nadel steht zusammengesetzt da, weil die

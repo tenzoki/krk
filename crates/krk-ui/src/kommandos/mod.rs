@@ -21,9 +21,9 @@
 //! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4),
 //!              die Antworten des Terminal-Befehls (C11) und die Texte der
 //!              beiden Pfadkopierer und des Oeffners (C1 bis C3 der Runde 4)
-//! loeschwarnung Die Texte der einen Rueckfrage vor dem Raeumen in den
-//!              Papierkorb, und wie ein Ziel eingeordnet wird (C2 und C3 der
-//!              Runde 12)
+//! loeschwarnung Der eine Loeschweg vor dem Auftrag: die Stufenfolge bis zur
+//!              Rueckfrage, die Tafel der sechs Ausloeser mit ihrer Rangfolge,
+//!              und die Texte, die daraus entstehen (C2, C3 und C4 der Runde 12)
 //! ```
 //!
 //! **`zulaessigkeit` steht vor den sieben anderen, und das ist die Reihenfolge

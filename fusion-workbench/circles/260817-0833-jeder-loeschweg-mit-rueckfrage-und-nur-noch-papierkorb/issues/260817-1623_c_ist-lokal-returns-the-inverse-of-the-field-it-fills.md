@@ -80,3 +80,52 @@ Three ways, and the first is the cheapest by a wide margin.
 
 Whichever is chosen, it should land **before** step 11, since step 11 is the first caller and the
 inversion is its work.
+
+---
+
+Resolved: 260817-1722 (coder, T9) — **way 1, chosen by the user on 260817-1640.** The function
+is `volumes::liegt_auf_netzlaufwerk(pfad) -> Loeschzielbefund` and returns the *trigger's*
+answer: `Ja` for a non-local volume, `Nein` for a local one, `Unentschieden` unchanged. Name,
+return value and the field that consumes it (`Loeschziel.netzlaufwerk`, polarity 1) now point
+the same way, and the one inversion happens inside the function, next to the module header that
+explains it:
+
+```rust
+// **Die eine Umkehrung.** `NSURLVolumeIsLocalKey` antwortet „lokal", der
+// Ausloeser aus C3 fragt „kein lokaler". …
+if wert.boolValue() {
+    Loeschzielbefund::Nein
+} else {
+    Loeschzielbefund::Ja
+}
+```
+
+The queried resource value is still `NSURLVolumeIsLocalKey`, so the availability section of the
+module header is untouched. What changed: the name, that one inversion, the module header's
+polarity section, and four probes — `das_benutzerverzeichnis_liegt_nicht_auf_einem_netzlaufwerk`
+now expects `Nein` and `der Einhaengepunkt der /home-Automatik` expects `Ja`. Nothing outside
+`volumes.rs` referenced the old name, so no other file moved with it.
+
+**The three rejected ways, as the user rejected them.** `Loeschzielbefund::umgekehrt()` — keeps
+the plan's name and gives the caller one named operation, but a caller can still omit the call,
+so the swap stays compilable. Two types per polarity — the only option that makes the mistake a
+compile error, and the most expensive: a second type plus a conversion at every checkpoint of
+bundle C. The inversion by hand at the call site — a three-arm `match` in
+`appkit/anwendung.rs`, a file that carries none of the reasoning.
+
+**What this does not fix, stated so nobody reads it as fixed.** The swap is not uncompilable; it
+has lost its occasion. Two questions of opposite polarity still share one type, and the only
+guard against confusing them remains prose plus counting probes. That is the second way of
+`260817-1419_o_die-einzige-sicherung-gegen-den-polaritaetsfehler-…`, and it is untouched.
+
+**One consequence for the counting probe named in this record.**
+`hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt` in `volumes.rs` did lose its stated subject:
+after the rename `ist_warnwuerdig` is the *correct* question for this value, so the count no
+longer guards against a wrong answer. It stays, with a rewritten doc comment and a different,
+unchanged promise — this module *answers* the trigger and does not *judge* it; whether the
+confirmation goes loud, and which of the six reasons it names, is decided once in
+`kommandos::loeschwarnung::warngruende`. Inverting the probe was rejected: an assertion that the
+file *does* ask would turn a module boundary into an obligation to cross it. Dropping it was
+rejected because the boundary is real and nothing else holds it.
+
+Verification: `make check` — exit 0.

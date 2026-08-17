@@ -1089,3 +1089,8 @@
 {"ts":"2026-08-17T14:08:46","event":"commit","task":"T7","hash":"5a0f041","summary":"git worktree detection"}
 {"ts":"2026-08-17T14:08:46","event":"task_done","task":"T7","commit":"5a0f041"}
 {"ts":"2026-08-17T14:08:46","event":"task_start","task":"T8","agent":"coder"}
+{"ts":"2026-08-17T14:38:34","event":"commit","task":"T8","hash":"749a4f3","summary":"volume locality probe"}
+{"ts":"2026-08-17T14:38:34","event":"task_done","task":"T8","commit":"749a4f3"}
+{"ts":"2026-08-17T14:38:34","event":"gate_hit","task":"T9","gate":"Polaritaet von ist_lokal gegen das Feld netzlaufwerk"}
+{"ts":"2026-08-17T14:38:34","event":"gate_response","task":"T9","choice":"Funktion nach dem Ausloeser benennen (liegt_auf_netzlaufwerk)"}
+{"ts":"2026-08-17T14:38:34","event":"task_start","task":"T9","agent":"coder"}

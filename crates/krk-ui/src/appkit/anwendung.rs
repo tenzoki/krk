@@ -4455,9 +4455,14 @@ impl Anwendungsdelegierter {
     fn in_den_papierkorb(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let quelle = self.dateifenster(aktiv).quelle();
+        // Die leere Liste ist die ruhige Form. Der elfte Schritt dieser Runde
+        // beschafft hier die fuenf Tatsachen und setzt
+        // `loeschwarnung::warngruende` an diese Stelle; bis dahin bleibt die
+        // Rueckfrage ruhig, und `laut` unten steht auf `false`.
         let (frage, erlaeuterung) = loeschwarnung::frage_und_erlaeuterung(
             &quelle.betroffene_eintraege(),
             &quelle.angezeigter_ordner(),
+            &[],
         );
         self.loeschen_nach_rueckfrage(
             Art::InDenPapierkorb,
