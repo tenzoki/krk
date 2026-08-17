@@ -1,6 +1,7 @@
 # KRK
 
 **Language:** de
+**Artifact language:** en
 
 ## Worum es geht
 
