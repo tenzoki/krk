@@ -176,13 +176,13 @@ Fünf Bündel, siebzehn Schritte. Jeder Schritt nennt genau einen Executor.
    - Changes: `pub enum Befund { Ja, Nein, Unentschieden }` mit `ist_warnwuerdig()` („nicht `Nein`") und einer dreiwertigen Oder-Verknüpfung `oder(self, andere) -> Befund` samt ausgeschriebener Tafel über alle neun Kombinationen. Der Modulkopf erklärt, warum die dritte Antwort nötig ist, und verweist auf `sys::ist_deskriptormangel` als den Fall, in dem der Baum die Unterscheidung schon einmal gebraucht hat. Re-Export als `krk_core::verzeichnis::Befund`.
    - Dependencies: keine
 
-5. [IN PROGRESS] **Die Frage nach dem Papierkorb**
+5. [DONE] **Die Frage nach dem Papierkorb**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/papierkorb.rs`
    - Changes: `#[must_use] pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Befund` über `NSFileManager::defaultManager().URLForDirectory_inDomain_appropriateForURL_create_error(NSSearchPathDirectory::TrashDirectory, NSSearchPathDomainMask::UserDomainMask, Some(&url), false)`. Erfolg heißt `Ja`, ein Fehler heißt `Nein`, ein Pfad ohne gültiges UTF-8 heißt `Unentschieden`. `#[must_use]` mit ausgeschriebenem Grund: wer den Wert fallen lässt, löscht auf einem Ziel ohne Papierkorb. Der Modulkopf wird auf den erweiterten Gegenstand gezogen (die eine Hülle um den Papierkorb des Systems, Räumen **und** Vorprüfung) und sein Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` bekommt die drei neuen Berührungen mit ihren geprüften Zahlen: `URLForDirectory:…` seit 10.6, `NSTrashDirectory` seit 10.8, `NSUserDomainMask` ohne Angabe und damit seit 10.0.
    - Dependencies: 4
 
-6. **Die Prüfung vor dem Blatt**
+6. [IN PROGRESS] **Die Prüfung vor dem Blatt**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/kommandos/loeschwarnung.rs`
    - Changes: `loeschen_nach_rueckfrage` löst den angezeigten Ordner einmal über `std::fs::canonicalize` auf und fragt `papierkorb::fuehrt_einen_papierkorb`. Bei `Nein` und bei `Unentschieden` erscheint kein Blatt, es entsteht kein Auftrag, und die Statuszeile trägt den Text aus der neuen Funktion `loeschwarnung::ohne_papierkorb()`. Er nennt den Befund und den Ausweg: das Ziel führt keinen Papierkorb, es wurde nichts gelöscht, im Finder löschen. Ein nicht auflösbarer Ordnerpfad zählt als `Unentschieden` und löscht damit ebenfalls nicht.
