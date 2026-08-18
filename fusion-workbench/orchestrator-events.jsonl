@@ -1199,3 +1199,9 @@
 {"ts":"2026-08-18T15:50:08","event":"queue_built","detail":"10 Aufgaben, 0 blockiert; 9 coder, 1 ontocoder"}
 {"ts":"2026-08-18T17:27:25","event":"gate_response","turn":1,"detail":"ontocoder-Gate Belegungsdatei: proceed, gilt fuer die Sitzung"}
 {"ts":"2026-08-18T17:27:25","event":"turn_start","turn":1,"detail":"Buendel A (P-1 bis P-5), 4 sofort bereit"}
+{"ts":"2026-08-18T18:51:24","event":"task_done","turn":1,"task":"P-1","agent":"ontocoder","detail":"Belegungsdatei; 39-Zeile als Zitat erkannt und bei 39 belassen"}
+{"ts":"2026-08-18T18:51:24","event":"task_done","turn":1,"task":"P-3","agent":"coder","detail":"must_use mit drei Bedeutungen von false"}
+{"ts":"2026-08-18T18:51:24","event":"task_error","turn":1,"task":"P-1","detail":"51 Proben rot im Zwischenstand; Plan-Zusage widerlegt, Datensatz 260818-1704 gefilt"}
+{"ts":"2026-08-18T18:51:24","event":"task_done","turn":1,"task":"P-2","agent":"coder","detail":"make check exit 0; 51 Proben wieder gruen"}
+{"ts":"2026-08-18T18:51:24","event":"commit","turn":1,"detail":"18af77f feat(ui): opt+cmd+s in Belegung und Menue"}
+{"ts":"2026-08-18T18:51:24","event":"task_start","turn":1,"task":"P-4","agent":"coder","detail":"anwendung.rs, tabelle.rs"}

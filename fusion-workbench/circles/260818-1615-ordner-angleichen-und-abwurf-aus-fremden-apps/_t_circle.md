@@ -89,3 +89,11 @@ Kein anderer Circle blockiert diesen. Die folgenden Runden binden ihn über ihre
 - `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — offen. Diese Runde bringt eine neue Funktion in die Belegung und läuft damit erneut in seine Wirkung.
 
 ## Turn log
+
+- Runde 1 (Sitzung 260818-1117): Commits `b47355e..71413c3`; Bündel A gebaut, also die
+  Fähigkeiten C1 bis C3, `make check` grün. Durchsicht `reviews/260818-2133-coderev-round-13-turn-1-ordner-angleichen.md`,
+  sechs Datensätze gefilt, keiner hält eine Auslieferung auf. Ein Widerspruch zwischen C1
+  und C2 des Specs ist dabei aufgefallen und vom Nutzer entschieden: ein ausgeblendetes
+  Zieldateifenster wird auch dann eingeblendet, wenn es den Ordner schon führt, aber nicht
+  neu gelesen. Kohärenzverdikt: coherent. Sitzungsprotokoll:
+  `shared/history/260818-1117-orchestrator-session.md`
