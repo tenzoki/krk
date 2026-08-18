@@ -112,20 +112,23 @@ pub enum Abwurfmarke {
 /// unter „Warum `Schreibrecht::Unbekannt` durchlaesst"; wer die beiden Werte
 /// zusammenlegt, entscheidet jene Frage nebenbei mit.
 ///
-/// **Diese Aufzaehlung wird hier gelesen und nirgends gebaut**, und deshalb
-/// traegt sie ihre eigene Ausnahme statt der beiden Funktionen unten: gebaut
-/// wird sie in `abwurf::beschreibbarkeit`, also in Schritt 8 und nicht in
-/// Schritt 10.
+/// **Gelesen wird sie hier, gebaut in `abwurf::beschreibbarkeit`.** Bis zu
+/// jenem Schritt trug sie deshalb eine eigene `expect(dead_code)`-Ausnahme
+/// statt der beiden Funktionen unten: die drei Werte entstanden zu dem
+/// Zeitpunkt an keiner Stelle des Baums. Die Ausnahme ist mit dem Erbauer
+/// gefallen.
+///
+/// **Der Uebersetzer hat sie dabei nicht selbst fallen lassen**, anders als bei
+/// den beiden Funktionen unten und anders als beim Vorbild in
+/// [`super::rueckschritt`]. Ein `expect(dead_code)` an einer Funktion macht sie
+/// fuer die Totlaufpruefung zu einer lebendigen Wurzel, und was sie in ihrem
+/// Rumpf baut, gilt damit als gebaut — auch solange sie selbst noch keinen
+/// Aufrufer hat. Die Erwartung hier wurde deshalb weder unerfuellt noch blieb
+/// eine Warnung uebrig, als `beschreibbarkeit` entstand: sie wurde bloss
+/// wirkungslos. Wer eine solche Ausnahme an eine **Aufzaehlung** haengt, deren
+/// Erbauer selbst unter einer Ausnahme steht, bekommt kein Ablaufdatum, sondern
+/// eine Zeile, an die ihn niemand mehr erinnert.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "die drei Werte entstehen ab Schritt 8 dieser Runde in \
-                  abwurf::beschreibbarkeit; mit ihm wird die Erwartung \
-                  unerfuellt und diese Zeile faellt"
-    )
-)]
 pub enum Schreibrecht {
     /// `NSURLIsWritableKey` hat `true` geliefert.
     Ja,

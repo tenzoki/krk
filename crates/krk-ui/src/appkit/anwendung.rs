@@ -238,6 +238,7 @@ use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
 use crate::fenstertitel;
+use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
@@ -4832,7 +4833,10 @@ impl Anwendungsdelegierter {
         // anfallen, entscheidet nichts — welche Stufe daraus folgt, sagt
         // `vor_der_rueckfrage`, und dass der Papierkorbtest vor der Rueckfrage
         // steht, steht als Zeile in seiner Tafel und nicht als Zeilenfolge hier.
-        let vorgang_laeuft = self.ivars().vorgang.borrow().is_some();
+        // Die Frage geht seit der Runde 13 durch `vorgang_laeuft` und nicht
+        // mehr an `ivars().vorgang` heran: sie hat eine Antwortstelle, und
+        // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
+        let vorgang_laeuft = self.vorgang_laeuft().is_some();
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
         let quellordner = quelle.angezeigter_ordner();
@@ -5485,37 +5489,133 @@ impl Anwendungsdelegierter {
         self.auftrag_starten(aktiv, auftrag, quellordner, positionen)
     }
 
+    /// Ob KRK gerade einen Vorgang haelt, und welcher Art er ist (C4).
+    ///
+    /// **Die eine Stelle, die diese Frage beantwortet**, und sie meldet nichts.
+    /// KRK haelt genau einen Vorgang; wer wissen will, ob ein weiterer
+    /// anfangen darf, liest hier `ivars().vorgang` und nirgends sonst. Eine
+    /// zweite Prueferei waeren zwei Antworten auf dieselbe Frage.
+    ///
+    /// **Vier Wege fragen, und sie teilen sich in drei und einen.** Drei folgen
+    /// einem Tastendruck und nehmen deshalb den meldenden Mantel
+    /// [`Self::vorgang_laeuft_schon`], denn auf einen Tastendruck gehoert eine
+    /// Antwort in die Statuszeile: die vier Befehle aus der Auswahl
+    /// ([`Self::auftrag_stellen`]), das Stapel-Umbenennen
+    /// ([`Self::stapel_beauftragen`]) und die Vorstufe der Loeschrueckfrage
+    /// ([`Self::loeschen_nach_rueckfrage`], die von der Antwort allein braucht,
+    /// **ob** es einen Vorgang gibt).
+    ///
+    /// Der vierte ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
+    /// und er nimmt die Frage **ohne** die Meldung. Der Grund ist der Ort seines
+    /// Fragers: `validateDrop:` laeuft bei jeder Zeigerbewegung, und eine
+    /// Meldung von dort schriebe die Statuszeile mehrmals je Sekunde voll. Was
+    /// der Abwurf stattdessen zeigt, ist der Zeiger selbst.
+    ///
+    /// Der vierte Weg ist damit **keine zweite Pruefung**, sondern dieselbe ohne
+    /// ihre Nebenwirkung.
+    fn vorgang_laeuft(&self) -> Option<Art> {
+        self.ivars()
+            .vorgang
+            .borrow()
+            .as_ref()
+            .map(|vorgang| vorgang.art.clone())
+    }
+
     /// Meldet einen bereits laufenden Vorgang und sagt, ob deshalb nichts
     /// startet (C4).
     ///
-    /// KRK haelt genau einen Vorgang. Die Meldung geht als **Befehlsantwort** an
+    /// Der meldende Mantel um [`Self::vorgang_laeuft`]; die Frage selbst und
+    /// ihre vier Wege stehen dort. Die Meldung geht als **Befehlsantwort** an
     /// das Dateifenster, in dem der Nutzer die Taste gedrueckt hat, und steht
     /// damit auch dann in der Zeile, wenn genau dieses Fenster den laufenden
     /// Vorgang begonnen hat. Bis zum 260804-1915 war sie eine Fenstermeldung und
     /// verschwand im haeufigen Fall hinter dem eigenen Fortschritt,
     /// `issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`.
-    ///
-    /// **Beide Wege in die Operationsmaschine fragen hier.** Die vier Befehle
-    /// aus der Auswahl gehen ueber [`Self::auftrag_stellen`], das
-    /// Stapel-Umbenennen ueber [`Self::stapel_beauftragen`]; eine zweite Prueferei
-    /// waeren zwei Antworten auf dieselbe Frage.
     fn vorgang_laeuft_schon(&self, seite: Fensterseite) -> bool {
-        let laufende_art = self
-            .ivars()
-            .vorgang
-            .borrow()
-            .as_ref()
-            .map(|vorgang| vorgang.art.clone());
-        let Some(laufende_art) = laufende_art else {
+        // Die Ausleihe endet in `vorgang_laeuft` und damit vor dem Aufruf
+        // darunter: `antwort_zeigen` geht nach AppKit hinein.
+        let Some(laufende_art) = self.vorgang_laeuft() else {
             return false;
         };
         self.antwort_zeigen(seite, &operationen::schon_ein_vorgang(&laufende_art));
         true
     }
 
+    /// Gibt einen angenommenen Abwurf an die Operationsmaschine (C4 bis C6 der
+    /// Runde 13).
+    ///
+    /// **Der vierte Rufer von [`Self::auftrag_starten`]**, neben den vier
+    /// Befehlen aus der Auswahl ([`Self::auftrag_stellen`]), dem
+    /// Stapel-Umbenennen ([`Self::stapel_beauftragen`]) und dem bestaetigten
+    /// Loeschen ([`Self::loeschauftrag_stellen`]). Der Plan der Runde 13 nennt
+    /// ihn den dritten und zaehlt in seinem eigenen Abschnitt „Current State"
+    /// drei vorhandene Rufer; gezaehlt wird hier gegen den Baum. Er steht
+    /// daneben und nicht in `auftrag_stellen`: jenes nimmt seine Quellen aus der
+    /// Auswahl des **aktiven** Dateifensters, waehrend ein Abwurf fremde Pfade
+    /// mitbringt und ein Ziel, das nicht das aktive Dateifenster sein muss.
+    ///
+    /// **Er fragt nicht, ob schon ein Vorgang laeuft.** Gefragt hat
+    /// `DateifensterQuelle::abwurf_pruefen` in `validateDrop:`, ueber
+    /// [`Self::vorgang_laeuft`], und AppKit ruft `acceptDrop:` allein dann, wenn
+    /// `validateDrop:` einen Vorgang zurueckgegeben hat. Eine Nachfrage hier
+    /// waere die zweite Antwort auf dieselbe Frage, gegen die
+    /// [`Self::vorgang_laeuft`] geschrieben ist.
+    ///
+    /// **Der Auftrag entsteht ueber [`Auftrag::kopieren`] und
+    /// [`Auftrag::verschieben`]** und nicht ueber ein Strukturliteral: die
+    /// beiden Erzeuger fuellen `konfliktregel` und `uebertragung` aus ihrer
+    /// Vorgabe, und ein Literal daneben muesste beide Felder ein zweites Mal
+    /// nennen. Eine eigene Auftragsart bringt der Abwurf nicht mit; er muendet
+    /// in dieselben zwei Arten wie F5 und F6.
+    ///
+    /// **`seite` ist das Dateifenster, ueber dem der Zeiger stand**, und es
+    /// reist bis in den [`Vorgang`] mit: Fortschritt, Abschlusstext und
+    /// Konfliktantwort erscheinen dort und nicht im aktiven Dateifenster.
+    ///
+    /// **Als Quellordner geht das Ziel mit**, und das ist eine bewusste
+    /// Fuellung: der Ordner, aus dem gezogen wurde, gehoert einer fremden
+    /// Anwendung, und KRK zeigt ihn nicht notwendig an. Wo er doch in einem der
+    /// beiden Dateifenster steht, zieht ihn die Dateisystemwache nach; ein
+    /// Abwurf schiebt die Auffrischung nicht auf
+    /// ([`auffrischung::schiebt_auffrischung_auf`] laesst allein das
+    /// Stapel-Umbenennen aufschieben).
+    ///
+    /// Der Preis steht dazu: [`Vorgang::ordner`] nennt den Zielordner damit
+    /// zweimal, und der Abschluss liest ihn zweimal. Beide Laeufe kommen am
+    /// selben Ergebnis heraus — der zweite `neu_lesen` liest den Auswahlnamen
+    /// aus dem noch stehenden Bestand und merkt ihn erneut als
+    /// `wunschauswahl` vor, und die Generationszaehlung des
+    /// [`krk_core::verzeichnis::Ordnermodell`] laesst die Stapel des ersten
+    /// Laufs fallen. Was bleibt, ist ein ueberzaehliger Verzeichnisdurchgang je
+    /// Abwurf; er ist als
+    /// `issues/260818-2221_*_the-drop-passes-its-target-as-the-source-folder-and-the-completion-reads-it-twice.md`
+    /// gefilt.
+    #[expect(
+        dead_code,
+        reason = "der eine Aufrufer entsteht in Schritt 10 dieser Runde, in \
+                  DateifensterQuelle::abwurf_annehmen; mit ihm wird die \
+                  Erwartung unerfuellt und diese Zeile faellt"
+    )]
+    fn abwurf_ausfuehren(
+        &self,
+        seite: Fensterseite,
+        ziel: PathBuf,
+        quellen: Vec<PathBuf>,
+        art: Abwurfvorgang,
+    ) {
+        let positionen = quellen.len();
+        let auftrag = match art {
+            Abwurfvorgang::Kopieren => Auftrag::kopieren(quellen, &ziel),
+            Abwurfvorgang::Verschieben => Auftrag::verschieben(quellen, &ziel),
+        };
+        // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
+        // es keinen: ein Abwurf ist eine Mausbewegung.
+        let _ = self.auftrag_starten(seite, auftrag, ziel, positionen);
+    }
+
     /// Startet einen fertigen Auftrag auf der Operationsmaschine.
     ///
-    /// Der gemeinsame Teil der beiden Wege: Arbeitsfaden ueber
+    /// Der gemeinsame Teil aller vier Wege hinein: Arbeitsfaden ueber
     /// [`krk_core::operation::starten`], Vermittlerfaden fuer die Meldungen und
     /// der [`Vorgang`], an dem der Hauptfaden ihn wiederfindet. Liefert immer
     /// `true`: der Tastendruck ist verbraucht, gleich ob der Faden zustande kam.

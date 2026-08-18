@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Neunundzwanzig Module, entlang dessen geschnitten, was AppKit als
+//! Dreissig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und [`textautomatik`],
 //! die keines fuehren und trotzdem hier liegen, weil die Koordinate, in die das
 //! eine rechnet, AppKits ist und die Einstellungen, die das andere setzt, an
@@ -108,6 +108,14 @@
 //! Systembrowser aus C10, das Lesen des Inhalts fuer die Vorschau und seit der
 //! Runde 4 die Gegenrichtung, mit der die beiden Pfadkopierer aus C1 und C2
 //! ihren Text ablegen.
+//! [`abwurf`] haelt daneben, was AppKit ueber einen **Ziehvorgang** und ueber
+//! das Schreibrecht eines Ordners sagt (Runde 13): die anzumeldenden Sorten,
+//! die Abfrage von `NSURLIsWritableKey` und die eine Umsetzung von
+//! `NSDragOperation` in die Sprache von `crate::kommandos::abwurfregel` und
+//! zurueck. Ein eigenes Modul neben [`zwischenablage`] und nicht darin, nach
+//! derselben Regel wie [`standardprogramm`] neben [`terminal`]: ein Modul je
+//! Frage. Die Ablage des Ziehvorgangs bleibt Sache der einen `NSPasteboard`-
+//! Huelle, hier steht alles Uebrige eines Abwurfs.
 //! [`terminal`] haelt die eine aus C11: die Aufloesung der eingestellten
 //! Buendelkennung und die Uebergabe des angezeigten Ordners an die so gefundene
 //! Anwendung, beides ueber `NSWorkspace`.
@@ -177,6 +185,7 @@
 //! `crate::kommandos::fokus`, und [`volumes`] zieht
 //! `crate::leistenmodell::Ort`.
 
+mod abwurf;
 mod anwendung;
 mod aufteilung;
 mod belegungsansicht;
