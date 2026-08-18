@@ -258,7 +258,7 @@ Zwei Bündel, zehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
    - Dependencies: 2, 3
    - Abnahme: `make check`. Danach sind C1, C2 und C3 gebaut; was von ihnen nur mit der Hand zu prüfen ist, steht unten unter „Nutzerarbeit".
 
-5. **Die acht Prosazahlen nachziehen**
+5. **[DONE] Die acht Prosazahlen nachziehen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/belegungsausgabe.rs`, `crates/krk-ui/src/appkit/menue.rs`
    - Changes: `84` → `85` und `78` → `79` an acht Stellen: `belegungsausgabe.rs:45`, `:48`, `:56`, `:256`, `:730-731` und `menue.rs:128`, `:799`, `:867`. **Gezählt wird gegen den Baum und nicht gegen diesen Plan**: die Zahlen gelten für `b47355e`, und wer den Schritt später fährt, erhebt sie neu. Nicht anzufassen sind `belegungsansicht.rs:665` und `:738` — das sind Maße in Punkten, keine Zählungen.
