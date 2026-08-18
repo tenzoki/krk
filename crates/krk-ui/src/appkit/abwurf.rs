@@ -78,22 +78,17 @@
 //! demselben Weg, den F5 und F6 heute gehen; ein zweiter Weg dafuer entsteht
 //! nicht.
 //!
-//! # Die Aufrufer entstehen mit Schritt 10
+//! # Wer die vier Funktionen ruft
 //!
-//! Alle vier Funktionen tragen bis dahin einen `expect(dead_code)`-Vermerk nach
-//! dem Vorbild aus [`super::zwischenablage::dateiverweise`] und
-//! [`crate::kommandos::abwurfregel`]. `expect` und nicht `allow`, damit die
-//! Ausnahme ihr Ablaufdatum selbst durchsetzt: mit dem Aufrufer wird die
-//! Erwartung unerfuellt, und der Bau haelt unter `-D warnings` an, bis die Zeile
-//! weg ist.
-//!
-//! **Drei der Vermerke stehen unter `cfg_attr(not(test), …)`, der vierte nicht**,
-//! und der Unterschied ist keine Nachlaessigkeit: die Proben unten rufen
-//! [`sorten`], [`beschreibbarkeit`] und [`zeiger`], also sind diese drei im
-//! Probenbau lebendig und der Vermerk waere dort unerfuellt. [`angebot`] traegt
-//! keine Probe, weil sich ein `NSDraggingInfo` ohne Ziehsitzung nicht bauen
-//! laesst; es ist in beiden Bauarten tot und traegt seinen Vermerk deshalb
-//! unbedingt.
+//! Alle vier Aufrufer stehen seit Schritt 10 der Runde 13 und liegen in
+//! `super::tabelle`: [`sorten`] in `Dateifenster::bauen`, die drei uebrigen in
+//! `DateifensterQuelle::abwurf_pruefen`. Bis dahin trugen sie einen
+//! `expect(dead_code)`-Vermerk nach dem Vorbild aus
+//! [`super::zwischenablage::dateiverweise`] und
+//! [`crate::kommandos::abwurfregel`] — `expect` und nicht `allow`, damit die
+//! Ausnahme ihr Ablaufdatum selbst durchsetzt. Mit dem Aufrufer wurde die
+//! Erwartung unerfuellt, der Bau hielt unter `-D warnings` an, und die Zeilen
+//! sind gefallen.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -170,14 +165,6 @@ use crate::kommandos::abwurfregel::{Abwurfurteil, Abwurfvorgang, Schreibrecht};
 /// Dateiverweis uebrig, und eine Zusagedatei erreicht KRK wieder nicht. Das ist
 /// am gebauten Buendel zu messen und steht als erstes Kriterium der C7-Zeile in
 /// der Nutzerarbeit des Plans.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht in Schritt 10 der Runde 13, in \
-                  Dateifenster::bauen; siehe Modulkopf"
-    )
-)]
 #[must_use = "die Liste ist die Anmeldung selbst; fallengelassen nimmt die Dateiliste keinen Abwurf an"]
 pub fn sorten() -> Retained<NSArray<NSPasteboardType>> {
     // SAFETY: Ein Fremdsymbol von AppKit, der Name der Dateiverweis-Sorte. Es
@@ -233,14 +220,6 @@ pub fn sorten() -> Retained<NSArray<NSPasteboardType>> {
 /// [`Schreibrecht`] gefallen**, denn hier entstehen die drei Werte. Der
 /// Uebersetzer hat das nicht eingefordert; warum nicht, steht am Doc-Kommentar
 /// jener Aufzaehlung.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht in Schritt 10 der Runde 13, in \
-                  DateifensterQuelle::abwurf_pruefen; siehe Modulkopf"
-    )
-)]
 #[must_use = "wer das gemessene Schreibrecht fallen laesst, schreibt in einen Ordner, der es verweigert"]
 pub fn beschreibbarkeit(ordner: &Path) -> Schreibrecht {
     let Some(text) = ordner.to_str() else {
@@ -293,14 +272,6 @@ pub fn beschreibbarkeit(ordner: &Path) -> Schreibrecht {
 /// Werte (`Link`, `Generic`, `Private`, `Delete` stehen daneben). Ein Vergleich
 /// auf Gleichheit verfehlte jede Quelle, die einen dritten Vorgang mit
 /// anbietet.
-#[expect(
-    dead_code,
-    reason = "der Aufrufer entsteht in Schritt 10 der Runde 13, in \
-              DateifensterQuelle::abwurf_pruefen. Der Vermerk steht unbedingt \
-              und nicht unter cfg_attr(not(test), ...), weil ein \
-              NSDraggingInfo sich ohne Ziehsitzung nicht bauen laesst und \
-              diese Funktion deshalb auch im Probenbau keinen Aufrufer hat"
-)]
 #[must_use = "das Angebot ist eine der sechs Tatsachen der Abwurflage; fallengelassen urteilt die Regel ueber eine Luecke"]
 pub fn angebot(zug: &ProtocolObject<dyn NSDraggingInfo>) -> (bool, bool) {
     let angebotene = zug.draggingSourceOperationMask();
@@ -324,14 +295,6 @@ pub fn angebot(zug: &ProtocolObject<dyn NSDraggingInfo>) -> (bool, bool) {
 /// Gruende: der Zeiger kennt nur „nimmt an" und „nimmt nicht an". **Der Grund
 /// geht dabei nicht verloren** — er bleibt beim Aufrufer, der die Meldung aus
 /// C7 daraus schreibt und sie ueber den gemerkten letzten Grund entdoppelt.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht in Schritt 10 der Runde 13, in \
-                  DateifensterQuelle::abwurf_pruefen; siehe Modulkopf"
-    )
-)]
 #[must_use = "der Wert ist die Antwort an AppKit; fallengelassen zeigt der Zeiger, was das System raet"]
 pub fn zeiger(gefaellt: Abwurfurteil) -> NSDragOperation {
     match gefaellt {

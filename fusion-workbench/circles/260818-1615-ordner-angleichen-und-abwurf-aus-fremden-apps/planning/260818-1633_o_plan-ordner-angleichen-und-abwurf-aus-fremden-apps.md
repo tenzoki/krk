@@ -293,7 +293,7 @@ Zwei Bündel, zehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
    - Changes: `vorgang_laeuft(&self) -> Option<Art>` liest `ivars().vorgang` und meldet nichts; `vorgang_laeuft_schon(seite) -> bool` (`:5348`) wird ihr Rufer und behält Verhalten und Meldung unverändert. Der Doc-Kommentar wandert an die neue Funktion und sagt dort, dass es weiterhin **eine** Antwortstelle gibt und dass der dritte Weg — der Abwurf — sie ohne die Meldung nimmt, weil `validateDrop:` bei jeder Zeigerbewegung läuft. Neuer Rumpf `abwurf_ausfuehren(&self, seite: Fensterseite, ziel: PathBuf, quellen: Vec<PathBuf>, art: Abwurfvorgang)`, der über `Auftrag::kopieren` bzw. `Auftrag::verschieben` (`auftrag.rs:88`, `:93`) baut — nicht über ein Strukturliteral — und `auftrag_starten(seite, auftrag, ziel, quellen.len())` ruft. Sein Doc-Kommentar schreibt aus, dass er **nicht** nach dem laufenden Vorgang fragt, und nennt die Stelle, die gefragt hat. Bis Schritt 10 trägt er `expect(dead_code)`.
    - Dependencies: 7
 
-10. **Die Tabelle nimmt an**
+10. **[DONE] Die Tabelle nimmt an**
     - Executor: `coder`
     - Files: `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: Fünf zusammengehörige Teile, in dieser Reihenfolge zu bauen.

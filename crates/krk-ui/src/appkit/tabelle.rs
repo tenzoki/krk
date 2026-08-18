@@ -137,6 +137,21 @@
 //!   (`NSTableView.h:377` und `:77-96`). **Die juengste Beruehrung dieser
 //!   Datei**, und damit vier Hauptfassungen unter der Untergrenze.
 //!
+//! **Die acht Beruehrungen des Abwurfs stehen seit 10.0** (C4 bis C7 der
+//! Runde 13), jede am SDK nachgelesen und keine mit einem `API_AVAILABLE` im
+//! Kopf: `registerForDraggedTypes:` (`NSView.h:488`), das Protokoll
+//! `NSDraggingInfo` (`NSDragging.h:69`) mit `draggingPasteboard`
+//! (`NSDragging.h:79`), die Aufzaehlung `NSDragOperation` (`NSDragging.h:25`),
+//! `NSTableViewDropOperation` (`NSTableView.h:25`),
+//! `setDropRow:dropOperation:` (`NSTableView.h:319`) und die beiden
+//! Protokollmethoden `tableView:validateDrop:proposedRow:proposedDropOperation:`
+//! und `tableView:acceptDrop:row:dropOperation:` (`NSTableView.h:783` und
+//! `:787`). Jede Zeilenangabe ist am 260818 in
+//! `$(xcrun --show-sdk-path)/System/Library/Frameworks/AppKit.framework/Headers/`
+//! nachgelesen. Die uebrigen Beruehrungen jener Runde stehen im Kopf von
+//! [`super::abwurf`], das sie geschlossen fuehrt; hier stehen die, die diese
+//! Datei selbst anspricht.
+//!
 //! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
 //! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260812 zwei
 //! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
@@ -172,10 +187,11 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{ClassType, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightBold,
-    NSFontWeightRegular, NSMenu, NSMenuDelegate, NSScrollView, NSTableColumn, NSTableView,
-    NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSDragOperation,
+    NSDraggingInfo, NSFont, NSFontWeightBold, NSFontWeightRegular, NSMenu, NSMenuDelegate,
+    NSScrollView, NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle,
+    NSTableViewDataSource, NSTableViewDelegate, NSTableViewDropOperation, NSTableViewStyle,
+    NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSDate,
@@ -193,6 +209,9 @@ use krk_core::verzeichnis::{
 };
 use krk_core::zwischenablage::{self, Ziel};
 
+use crate::kommandos::abwurfregel::{
+    self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
+};
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
@@ -200,6 +219,7 @@ use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
 
+use super::abwurf;
 use super::blaetter;
 use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
@@ -397,6 +417,81 @@ pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 /// darueber.
 pub type Auswahlmelder = Box<dyn Fn(Option<PathBuf>)>;
 
+/// Ob KRK gerade schon einen Vorgang haelt, ohne dass die Frage etwas meldet
+/// (C6 der Runde 13).
+///
+/// Der Weg zu `Anwendungsdelegierter::vorgang_laeuft`, also zu der einen
+/// Stelle, die diese Frage beantwortet. **Ohne den meldenden Mantel**, den die
+/// drei Tastenwege nehmen: [`DateifensterQuelle::abwurf_pruefen`] fragt bei
+/// jeder Zeigerbewegung, und eine Meldung von dort schriebe die Statuszeile
+/// mehrmals je Sekunde voll.
+pub type Vorgangsfrage = Box<dyn Fn() -> bool>;
+
+/// Was mit einem angenommenen Abwurf zu geschehen hat: der Zielordner, die
+/// Quellen und der Vorgang (C4 bis C6 der Runde 13).
+///
+/// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
+/// darueber. Ausgefuehrt wird der Abwurf beim Anwendungsdelegierten, weil die
+/// Operationsmaschine dort haengt und die Quellen einer fremden Anwendung
+/// gehoeren, also nicht aus der Auswahl dieses Dateifensters kommen.
+pub type Abwurfmelder = Box<dyn Fn(PathBuf, Vec<PathBuf>, Abwurfvorgang)>;
+
+/// Was die Statuszeile sagt, wenn die Quelle keine Datei auf dem Datentraeger
+/// liefert (C7).
+///
+/// **Die eine Meldung des Abwurfs.** Die vier uebrigen [`Abwurfgrund`]-Werte
+/// zeigen sich allein am Zeiger; warum, steht an jener Aufzaehlung.
+const KEINE_DATEI: &str = "die Quelle liefert keine Datei auf dem Datenträger";
+
+/// Ob ein neu gefaelltes Urteil eine Meldung in die Statuszeile schreibt (C7).
+///
+/// `gemerkt` ist der Grund, den [`DateifensterQuelle::abwurf_pruefen`] beim
+/// vorigen Durchgang gefaellt hat, `jetzt` der eben gefaellte; `None` steht in
+/// beiden fuer „kein Grund", also fuer ein angenommenes Urteil. Zurueck kommt
+/// der Text oder `None` fuer „nichts schreiben".
+///
+/// | `gemerkt` | `jetzt` | Ausgang |
+/// |---|---|---|
+/// | gleich `jetzt` | gleichgueltig | nichts schreiben |
+/// | ungleich | `Some(KeineDatei)` | [`KEINE_DATEI`] |
+/// | ungleich | jeder andere Wert | nichts schreiben |
+///
+/// **Die erste Zeile ist die ganze Entdopplung, und sie ist eine Zusage des
+/// Spec:** die Meldung darf nicht bei jeder Zeigerbewegung neu geschrieben
+/// werden, und `validateDrop:` laeuft bei jeder. Ohne sie schriebe ein
+/// stehender Zeiger dieselbe Zeile mehrmals je Sekunde, und jede
+/// Vorgangsanzeige darunter flackerte mit.
+///
+/// **Sie entscheidet nicht, ob der Abwurf durchgeht** — das tut
+/// [`abwurfregel::urteil`] und niemand sonst. Sie entscheidet allein, ob eine
+/// Zeile geschrieben wird, und das ist eine andere Frage: vier der fuenf
+/// Gruende weisen ab, ohne etwas zu sagen.
+///
+/// **Steht die Meldung einmal, bleibt sie stehen**, auch nachdem der Zeiger die
+/// Liste verlassen hat, und faellt mit der naechsten Befehlsantwort. Das ist
+/// die Loeschregel des Rangs 1 und keine Ausnahme fuer den Abwurf; der gemerkte
+/// Grund faellt an derselben Stelle mit, sonst bliebe eine zweite gleiche
+/// Ziehbewegung nach einem Tastendruck stumm
+/// ([`DateifensterQuelle::befehlsantwort_loeschen`]).
+#[must_use]
+fn abwurfmeldung(gemerkt: Option<Abwurfgrund>, jetzt: Option<Abwurfgrund>) -> Option<&'static str> {
+    if gemerkt == jetzt {
+        return None;
+    }
+    match jetzt {
+        Some(Abwurfgrund::KeineDatei) => Some(KEINE_DATEI),
+        // Ein angenommenes Urteil raeumt die stehende Meldung ausdruecklich
+        // nicht weg: das taete eine zweite Loeschregel neben der des Rangs 1.
+        None
+        | Some(
+            Abwurfgrund::VorgangLaeuft
+            | Abwurfgrund::NichtBeschreibbar
+            | Abwurfgrund::SelberOrdner
+            | Abwurfgrund::KeinAngebot,
+        ) => None,
+    }
+}
+
 /// Was ein Einstiegsversuch in eine Zeile ergeben hat.
 ///
 /// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**, und
@@ -576,6 +671,53 @@ pub struct QuelleIvars {
     /// letzteres, damit die Auffrischung, die die Umbenennung selbst
     /// ausloest, das Nachholen ueberfluessig macht statt es zu verdoppeln.
     auffrischung_vorgemerkt: Cell<bool>,
+    /// Ob KRK gerade schon einen Vorgang haelt (C6 der Runde 13).
+    ///
+    /// Der sechste Rueckruf, wahlfrei wie die fuenf darueber und aus demselben
+    /// Grund: die Quelle kommt vor dem Anwendungsdelegierten zur Welt. Was ein
+    /// fehlender Rueckruf bedeutet, entscheidet
+    /// [`DateifensterQuelle::vorgang_laeuft_fragen`] an einer Stelle.
+    vorgang_laeuft: RefCell<Option<Vorgangsfrage>>,
+    /// Was mit einem angenommenen Abwurf zu geschehen hat (C4 bis C6 der
+    /// Runde 13).
+    ///
+    /// Der siebte Rueckruf. Er geht an den Anwendungsdelegierten, weil die
+    /// Operationsmaschine dort haengt; von hier aus ist sie nicht zu erreichen,
+    /// und ein zweiter Weg hinein entstuende sonst. Wahlfrei aus demselben
+    /// Grund wie die sechs darueber.
+    abwurf: RefCell<Option<Abwurfmelder>>,
+    /// Der Grund, den der vorige Durchgang von
+    /// [`DateifensterQuelle::abwurf_pruefen`] gefaellt hat, `None` fuer ein
+    /// angenommenes Urteil (C7).
+    ///
+    /// **Keine zweite Wahrheit ueber irgendetwas, sondern die Entdopplung der
+    /// Meldung.** `validateDrop:` laeuft bei jeder Zeigerbewegung; geschrieben
+    /// wird die Zeile nur, wenn der Grund sich gegenueber diesem Feld geaendert
+    /// hat. Die Regel dazu steht als reine Funktion in [`abwurfmeldung`], samt
+    /// der Tafel und dem Grund.
+    ///
+    /// **Seine Loeschregel ist die des Rangs 1.** Es faellt mit der
+    /// Befehlsantwort, die es beschreibt, und an keiner anderen Stelle; siehe
+    /// [`DateifensterQuelle::befehlsantwort_loeschen`]. Ein Feld, das laenger
+    /// stuende als die Zeile, die es meint, liesse eine zweite gleiche
+    /// Ziehbewegung stumm.
+    gemeldeter_abwurfgrund: Cell<Option<Abwurfgrund>>,
+    /// Der Vorgang, den [`DateifensterQuelle::abwurf_pruefen`] zuletzt
+    /// beschlossen hat, `None` fuer ein abgewiesenes Urteil (C5).
+    ///
+    /// **Ein eigenes Feld neben dem gemerkten Grund und nicht dasselbe**, weil
+    /// die Loeschregeln die entgegengesetzten sind: der gemerkte Grund faellt
+    /// mit der Befehlsantwort, dieses Feld darf das nicht — ein Tastendruck
+    /// waehrend eines stehenden Ziehvorgangs naehme dem Loslassen sonst seinen
+    /// Vorgang. Ein Feld mit zwei Loeschregeln waere derselbe Sonderfall, den
+    /// `fenstermeldung` und `vorgangsanzeige` weiter oben schon vermeiden.
+    ///
+    /// **Es traegt das Urteil vom Ziehen zum Loslassen**, und genau deshalb
+    /// faellt es kein zweites: `tableView:acceptDrop:…` bekommt von AppKit
+    /// keine Zusatztaste und keine angebotene Menge mehr, und eine zweite
+    /// Beurteilung koennte anders ausfallen als die, die der Zeiger gezeigt
+    /// hat. C5 sagt zu, dass beide uebereinstimmen.
+    beschlossener_vorgang: Cell<Option<Abwurfvorgang>>,
 }
 
 define_class!(
@@ -606,6 +748,45 @@ define_class!(
         #[unsafe(method(numberOfRowsInTableView:))]
         fn zeilenzahl(&self, _tabelle: &NSTableView) -> NSInteger {
             self.zeilen() as NSInteger
+        }
+
+        /// Waehrend der Nutzer die Maustaste noch haelt: was geschaehe, wenn
+        /// er hier loslaesst (C4 bis C7 der Runde 13).
+        ///
+        /// **Der Rumpf steht daneben, in [`DateifensterQuelle::
+        /// abwurf_pruefen`]**, nach der Bauform von `ansicht_fuer_zelle`
+        /// weiter unten. Dieser Block ist die Liste dessen, was KRK dem
+        /// Protokoll beantwortet, und er ist nur so lange zu ueberblicken, wie
+        /// er eine Liste bleibt; ein Rumpf von vierzig Zeilen mittendrin
+        /// verdeckte die beiden Nachbarn.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(tableView:validateDrop:proposedRow:proposedDropOperation:))]
+        fn ziehen_pruefen(
+            &self,
+            _tabelle: &NSTableView,
+            zug: &ProtocolObject<dyn NSDraggingInfo>,
+            zeile: NSInteger,
+            vorgeschlagen: NSTableViewDropOperation,
+        ) -> NSDragOperation {
+            self.abwurf_pruefen(zug, zeile, vorgeschlagen)
+        }
+
+        /// Der Nutzer hat losgelassen (C4 bis C6 der Runde 13).
+        ///
+        /// AppKit ruft dies **allein dann**, wenn `validateDrop:` etwas
+        /// anderes als `NSDragOperation::None` zurueckgegeben hat. Das Urteil
+        /// ist damit gefaellt, und der Rumpf faellt kein zweites; der Rumpf
+        /// steht daneben, aus demselben Grund wie oben.
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(tableView:acceptDrop:row:dropOperation:))]
+        fn ziehen_annehmen(
+            &self,
+            _tabelle: &NSTableView,
+            zug: &ProtocolObject<dyn NSDraggingInfo>,
+            zeile: NSInteger,
+            _vorgeschlagen: NSTableViewDropOperation,
+        ) -> bool {
+            self.abwurf_annehmen(zug, zeile)
         }
     }
 
@@ -684,6 +865,10 @@ impl DateifensterQuelle {
             groessenformat,
             namensbearbeitung: Cell::new(false),
             auffrischung_vorgemerkt: Cell::new(false),
+            vorgang_laeuft: RefCell::new(None),
+            abwurf: RefCell::new(None),
+            gemeldeter_abwurfgrund: Cell::new(None),
+            beschlossener_vorgang: Cell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -719,6 +904,18 @@ impl DateifensterQuelle {
     /// (C5 der Runde 6).
     pub fn meldungswechsel_setzen(&self, melden: Box<dyn Fn()>) {
         *self.ivars().meldungswechsel.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, wie sich erfragen laesst, ob schon ein Vorgang laeuft
+    /// (C6 der Runde 13).
+    pub fn vorgang_laeuft_setzen(&self, fragen: Vorgangsfrage) {
+        *self.ivars().vorgang_laeuft.borrow_mut() = Some(fragen);
+    }
+
+    /// Hinterlegt, was mit einem angenommenen Abwurf zu geschehen hat
+    /// (C4 bis C6 der Runde 13).
+    pub fn abwurf_setzen(&self, melden: Abwurfmelder) {
+        *self.ivars().abwurf.borrow_mut() = Some(melden);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -2555,6 +2752,14 @@ impl DateifensterQuelle {
     /// Vorschein, was darunter liegt — der Fortschritt der laufenden Operation
     /// oder die verdraengte Auswurfmeldung.
     pub fn befehlsantwort_loeschen(&self) {
+        // **Der gemerkte Abwurfgrund faellt mit**, und zwar unabhaengig davon,
+        // ob eine Antwort stand: er beschreibt die Zeile, die eben geraeumt
+        // wurde, und ein Gedaechtnis, das laenger stuende als sein Gegenstand,
+        // liesse eine zweite gleiche Ziehbewegung stumm — die Entdopplung in
+        // [`abwurfmeldung`] vergliche gegen einen Grund, dessen Meldung es
+        // nicht mehr gibt. Die Loeschregel des Rangs 1 gilt damit fuer beide
+        // Felder und steht an einer Stelle.
+        self.ivars().gemeldeter_abwurfgrund.set(None);
         if self.ivars().befehlsantwort.borrow_mut().take().is_some() {
             self.meldung_gewechselt();
         }
@@ -2701,6 +2906,174 @@ impl DateifensterQuelle {
         if let Some(melden) = melden.as_ref() {
             melden();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13)
+    // ------------------------------------------------------------------
+
+    /// Ob KRK gerade schon einen Vorgang haelt.
+    ///
+    /// Der Weg zu der einen Stelle, die diese Frage beantwortet, ohne die
+    /// Meldung, die die drei Tastenwege bekommen; der Grund steht an
+    /// [`Vorgangsfrage`].
+    ///
+    /// **Steht der Rueckruf nicht, gilt „es laeuft einer".** Das ist die
+    /// vorsichtige Fuellung einer Tatsache, die KRK dann nicht messen kann, und
+    /// sie faellt mit den uebrigen fuenf in dieselbe Regel statt in einen
+    /// eigenen Ausgang daneben. Eintreten kann der Fall nicht: der Rueckruf
+    /// steht seit `Anwendungsdelegierter::oberflaeche_aufbauen`, und ein
+    /// Ziehvorgang braucht ein stehendes Fenster.
+    fn vorgang_laeuft_fragen(&self) -> bool {
+        let fragen = self.ivars().vorgang_laeuft.borrow();
+        fragen.as_ref().is_none_or(|fragen| fragen())
+    }
+
+    /// Was geschaehe, wenn der Nutzer jetzt loslaesst (C4 bis C7).
+    ///
+    /// Sechs Tatsachen herein, ein Urteil heraus, und keine der sechs wird hier
+    /// beurteilt: die Marke und der Zielordner kommen aus
+    /// [`abwurfregel::marke`], das Urteil aus [`abwurfregel::urteil`], die
+    /// Uebersetzung in die Sprache des Zeigers aus [`abwurf::zeiger`]. Diese
+    /// Funktion **beschafft** und ordnet nichts ein.
+    ///
+    /// Der Reihe nach: der laufende Vorgang, die Marke und mit ihr der
+    /// Zielordner, die Quellen aus der Ablage des Ziehvorgangs, das
+    /// Schreibrecht des Ziels, die angebotene Menge. Danach das Urteil, die
+    /// Marke an der Tabelle, die entdoppelte Meldung und zuletzt der Zeiger.
+    ///
+    /// **Die Ausleihe des Tabmodells endet vor dem ersten Objective-C-Aufruf**,
+    /// und zwar in [`Self::eintrag_in_zeile`] und [`Self::angezeigter_ordner`]
+    /// selbst: beide geben eigenen Besitz zurueck. Das ist die Regel des
+    /// Modulkopfs, und ein `borrow()`, das eine AppKit-Zeile ueberlebte, waere
+    /// der Absturz, gegen den sie geschrieben ist — `setDropRow:` und die
+    /// Meldung rufen beide in AppKit hinein, und die Meldung kommt ueber die
+    /// Statuszeile in dieselbe Quelle zurueck.
+    ///
+    /// **Der Zielordner entsteht an genau einer Stelle**, naemlich hier, und
+    /// eine zweite, die aus einer Zeilennummer einen Pfad macht, entsteht
+    /// nicht: [`Self::eintrag_in_zeile`] ist die eine Uebersetzung, und
+    /// [`Self::abwurf_annehmen`] liest die Zeile zurueck, die diese Funktion
+    /// gesetzt hat, statt sie neu zu bestimmen.
+    ///
+    /// **„Das Ziel ist der Quellordner" heisst: jede Quelle liegt darin.**
+    /// Liegt nur ein Teil der gezogenen Eintraege im Ziel, ist der Ziehvorgang
+    /// nicht der Fall aus C6 — er kommt aus mehreren Ordnern —, und die
+    /// Eintraege, die dort schon stehen, treffen auf dieselbe Konfliktrueckfrage
+    /// wie bei F5 und F6. Das ist genau die Antwort, die `auftrag_stellen` fuer
+    /// die Auswahl gibt, wo alle Quellen ohnehin aus einem Ordner kommen.
+    fn abwurf_pruefen(
+        &self,
+        zug: &ProtocolObject<dyn NSDraggingInfo>,
+        zeile: NSInteger,
+        vorgeschlagen: NSTableViewDropOperation,
+    ) -> NSDragOperation {
+        let eintrag = usize::try_from(zeile)
+            .ok()
+            .and_then(|zeile| self.eintrag_in_zeile(zeile));
+        let marke = abwurfregel::marke(
+            vorgeschlagen == NSTableViewDropOperation::On,
+            eintrag.as_ref().map(|(_, typ)| *typ),
+        );
+        let ziel = match (marke, eintrag) {
+            (Abwurfmarke::Zeile, Some((pfad, _))) => pfad,
+            // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
+            // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
+            // verlangt, und faellt auf dasselbe Ziel wie `Liste`.
+            (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => self.angezeigter_ordner(),
+        };
+
+        let quellen = super::zwischenablage::dateiverweise(&zug.draggingPasteboard());
+        let (bietet_kopieren, bietet_verschieben) = abwurf::angebot(zug);
+        let gefaellt = abwurfregel::urteil(&Abwurflage {
+            traegt_dateien: !quellen.is_empty(),
+            vorgang_laeuft: self.vorgang_laeuft_fragen(),
+            schreibrecht: abwurf::beschreibbarkeit(&ziel),
+            ziel_ist_quellordner: !quellen.is_empty()
+                && quellen
+                    .iter()
+                    .all(|quelle| quelle.parent() == Some(ziel.as_path())),
+            bietet_kopieren,
+            bietet_verschieben,
+        });
+
+        // Die Marke des Systems und keine eigene Zeichnung: eine Zeilennummer
+        // hebt die Zeile hervor, `-1` umrandet die ganze Liste
+        // (`NSTableView.h:317`). Beide Male `On`, denn zwischen zwei Zeilen
+        // gibt es hier nichts einzufuegen.
+        let (marken_zeile, marken_art) = match marke {
+            Abwurfmarke::Zeile => (zeile, NSTableViewDropOperation::On),
+            Abwurfmarke::Liste => (-1, NSTableViewDropOperation::On),
+        };
+        self.ivars()
+            .tabelle
+            .setDropRow_dropOperation(marken_zeile, marken_art);
+
+        let grund = match gefaellt {
+            Abwurfurteil::Abweisen(grund) => Some(grund),
+            Abwurfurteil::Ausfuehren(_) => None,
+        };
+        if let Some(meldung) = abwurfmeldung(self.ivars().gemeldeter_abwurfgrund.get(), grund) {
+            self.befehlsantwort_zeigen(meldung);
+        }
+        self.ivars().gemeldeter_abwurfgrund.set(grund);
+        self.ivars().beschlossener_vorgang.set(match gefaellt {
+            Abwurfurteil::Ausfuehren(vorgang) => Some(vorgang),
+            Abwurfurteil::Abweisen(_) => None,
+        });
+
+        abwurf::zeiger(gefaellt)
+    }
+
+    /// Gibt einen angenommenen Abwurf an den Anwendungsdelegierten weiter
+    /// (C4 bis C6).
+    ///
+    /// **Hier wird nichts mehr beurteilt.** Der Vorgang steht seit
+    /// [`Self::abwurf_pruefen`] in `beschlossener_vorgang`, und die Zeile ist
+    /// die, die jene Funktion an der Tabelle gesetzt hat: `-1` heisst „der
+    /// angezeigte Ordner", jede andere benennt die Ordnerzeile. Gelesen wird
+    /// damit zurueck, was das Urteil entschieden hat, statt es zu wiederholen —
+    /// eine zweite Beurteilung koennte anders ausfallen als die, die der Zeiger
+    /// gezeigt hat, und C5 sagt zu, dass beide uebereinstimmen.
+    ///
+    /// Ziel und Quellen entstehen noch einmal, weil beides billig und ohne
+    /// Zustand ist; ein drittes Feld in den Ivars waere ein Zwischenspeicher,
+    /// der zwischen dem Ziehen und dem Loslassen veralten koennte.
+    ///
+    /// **Was zwischen dem letzten Zeigerpunkt und dem Loslassen geschieht, ist
+    /// nicht vorherzusagen.** Frischt die Liste in dieser Spanne auf und steht
+    /// an der Zeile ein anderer Eintrag, geht dessen Pfad als Ziel mit; die
+    /// Operationsmaschine haengt jeden Namen daran an und meldet den
+    /// gescheiterten Eintrag mit seinem Grund in der Abschlussliste, auf
+    /// demselben Weg, den F5 und F6 gehen. Der Plan der Runde 13 nennt diese
+    /// Sorte Frage in seiner `Decidability`-Zeile: nachtraeglich entschieden
+    /// und nicht vorhergesagt.
+    ///
+    /// Zurueck kommt, ob der Abwurf angenommen wurde. `false` heisst „es ist
+    /// nichts geschehen"; AppKit laesst die Einträge dann an ihren Ort
+    /// zurueckfliegen.
+    fn abwurf_annehmen(&self, zug: &ProtocolObject<dyn NSDraggingInfo>, zeile: NSInteger) -> bool {
+        let Some(vorgang) = self.ivars().beschlossener_vorgang.get() else {
+            return false;
+        };
+        let ziel = match usize::try_from(zeile)
+            .ok()
+            .and_then(|zeile| self.eintrag_in_zeile(zeile))
+        {
+            Some((pfad, _)) => pfad,
+            None => self.angezeigter_ordner(),
+        };
+        let quellen = super::zwischenablage::dateiverweise(&zug.draggingPasteboard());
+        if quellen.is_empty() {
+            return false;
+        }
+
+        let melden = self.ivars().abwurf.borrow();
+        let Some(melden) = melden.as_ref() else {
+            return false;
+        };
+        melden(ziel, quellen, vorgang);
+        true
     }
 }
 
@@ -3566,6 +3939,28 @@ impl Dateifenster {
             tabelle.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
         }
 
+        // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13).
+        // Welche Sorten angemeldet werden und warum die Zusagesorten dabei
+        // sind, obwohl KRK jede Zusagedatei abweist, sagt `abwurf::sorten`:
+        // eine nicht angemeldete Sorte erreicht die Ansicht nie, und KRK
+        // bekaeme keine Gelegenheit, etwas dazu zu sagen.
+        //
+        // **Die Lesezeichen- und Geraeteleiste bleibt aussen vor.** Sie meldet
+        // sich nicht an, und weil die beiden Tabellen keine Zeile Code teilen,
+        // verlangt das keine Abwehr, sondern nur das Unterlassen; eine Probe
+        // unten haelt die Zahl der Anmeldestellen im Baum bei eins.
+        //
+        // **Ohne `unsafe`-Block, und das ist gemessen und nicht angenommen:**
+        // `objc2` bindet `registerForDraggedTypes:` sicher
+        // (`objc2-app-kit-0.3.2/src/generated/NSView.rs:1412-1414`, ein `pub fn`
+        // ohne `unsafe`), weil die Methode ausser einer Liste von Sortennamen
+        // nichts verlangt. Ein Block davor waere ein `unused_unsafe` und
+        // brauchte einen SAFETY-Satz, der nichts zu tragen haette. Die Ansicht
+        // kopiert die Liste; das `Retained` darf danach fallen. Die Methode
+        // steht seit macOS 10.0 (`NSView.h:488`, ohne `API_AVAILABLE`), die
+        // Untergrenze des Buendels ist 15.0.
+        tabelle.registerForDraggedTypes(&abwurf::sorten());
+
         // Der Doppelklick aus C3 der Runde 4. Er steht hier und nicht bei den
         // Kommandos, weil er keines ist: er bekommt keinen Eintrag in
         // `resources/default-keymap.toml` und keine Variante in `Kommando`.
@@ -4067,6 +4462,118 @@ mod tests {
             for andere in Spalte::ALLE.into_iter().skip(stelle + 1) {
                 assert_ne!(kennung(spalte), kennung(andere));
                 assert_ne!(titel(spalte), titel(andere));
+            }
+        }
+    }
+
+    /// Genau eine Ansicht im Baum meldet sich fuer einen Abwurf an, und es ist
+    /// die Dateiliste (C4, letztes Kriterium der Runde 13).
+    ///
+    /// **Die Zusage ist eine Aussage ueber den Baum und an keinem
+    /// Rueckgabewert abzulesen.** Der Spec sagt unter C4: „Die Lesezeichen- und
+    /// Geraeteleiste nimmt keinen Abwurf an: der Zeiger weist dort ab, und
+    /// nichts wird kopiert oder verschoben." Getragen wird das nicht von einer
+    /// Abwehr in [`super::leiste`], sondern davon, dass jene Datei sich nicht
+    /// anmeldet — eine Ansicht ohne angemeldete Sorte bekommt vom System gar
+    /// keinen Ziehvorgang zu sehen. Bliebe das ungezaehlt, machte eine spaetere
+    /// Anmeldung in der Leiste sie unbemerkt zum Abwurfziel, ohne dass eine
+    /// Probe rot wuerde: die beiden Tabellen teilen keine Zeile Code, und kein
+    /// Rueckgabewert dieser Datei aendert sich dabei.
+    ///
+    /// **Eine Aufruferzaehlung und ausdruecklich die richtige Form.** Der Kopf
+    /// von [`crate::quellbaum`] laesst sie dort zu, wo ein Abnahmekriterium die
+    /// Zahl selbst zusagt, und hier tut es das. Faengt sie spaeter einen
+    /// zweiten Rufer, ist die Frage, welche Ansicht sich da anmeldet, und nicht
+    /// die Zahl hier.
+    ///
+    /// **Ihre Blindheit**, in der Form, die [`crate::quellbaum`] verlangt: eine
+    /// Anmeldung ueber einen anderen Weg — `NSView`s Eigenschaft in einer
+    /// Unterklasse ueberschrieben, oder eine Ansicht, die
+    /// `NSDraggingDestination` von Hand umsetzt — sieht diese Nadel nicht. Sie
+    /// zaehlt die eine Schreibweise, die der Baum kennt.
+    ///
+    /// Die Nadel steht zusammengesetzt da, weil die Probe in dem Baum liegt,
+    /// den sie liest.
+    #[test]
+    fn genau_eine_ansicht_meldet_sich_fuer_einen_abwurf_an() {
+        let anmelden = concat!("registerFor", "DraggedTypes");
+        let anmeldestellen: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(_, inhalt)| aufrufstellen(inhalt, anmelden) > 0)
+            .map(|(name, _)| name)
+            .collect();
+
+        assert_eq!(
+            anmeldestellen,
+            vec![DIESE_DATEI.to_owned()],
+            "die Anmeldung fuer einen Abwurf steht nicht allein in {DIESE_DATEI}; \
+             die Lesezeichen- und Geraeteleiste nimmt keinen Abwurf an"
+        );
+
+        let inhalt = diese_datei();
+        assert_eq!(
+            aufrufstellen(&inhalt, anmelden),
+            1,
+            "die Dateiliste meldet sich nicht an genau einer Stelle an; \
+             die eine ist Dateifenster::bauen"
+        );
+    }
+
+    /// Die Tafel der Abwurfmeldung, vollstaendig: sechs gemerkte Gruende mal
+    /// sechs eben gefaellte (C7).
+    ///
+    /// Sie schreibt aus, was die erste Zeile der Tafel an [`abwurfmeldung`] mit
+    /// „gleich `jetzt`" zusammenfasst, und zeigt, dass keine Kombination fehlt.
+    /// Die Erwartungen stehen als Werte da und werden nicht gerechnet: eine
+    /// gerechnete Erwartung waere die Umsetzung ein zweites Mal. Dieselbe
+    /// Bauform tragen die Tafeln in [`abwurfregel`] und
+    /// [`crate::kommandos::rueckschritt`].
+    ///
+    /// **Was sie misst, ist die Zusage des Spec unter C7:** die Meldung darf
+    /// nicht bei jeder Zeigerbewegung neu geschrieben werden. In der Tafel ist
+    /// das die Hauptdiagonale — gleicher Grund, keine Meldung —, und sie ist
+    /// der einzige Teil, den ein Ziehvorgang oft durchlaeuft: `validateDrop:`
+    /// laeuft bei jeder Bewegung, und der Grund aendert sich dabei selten.
+    ///
+    /// **Was sie nicht misst**, und der Satz gehoert dazu: ob die Meldung
+    /// wirklich in der Statuszeile ankommt und ob sie im richtigen
+    /// Dateifenster steht. Beides verlangt ein stehendes Fenster und einen
+    /// Ziehvorgang aus einer zweiten Anwendung; es steht als Nutzerarbeit im
+    /// Plan der Runde 13.
+    #[test]
+    fn die_tafel_der_abwurfmeldung_geht_auf() {
+        const GRUENDE: [Option<Abwurfgrund>; 6] = [
+            None,
+            Some(Abwurfgrund::KeineDatei),
+            Some(Abwurfgrund::VorgangLaeuft),
+            Some(Abwurfgrund::NichtBeschreibbar),
+            Some(Abwurfgrund::SelberOrdner),
+            Some(Abwurfgrund::KeinAngebot),
+        ];
+        // Zeile: der gemerkte Grund. Spalte: der eben gefaellte, in derselben
+        // Reihenfolge. `true` heisst: es wird geschrieben.
+        //
+        //                        —      KeineDatei  Vorgang  Recht  Ordner  Angebot
+        const TAFEL: [[bool; 6]; 6] = [
+            /* —          */ [false, true, false, false, false, false],
+            /* KeineDatei */ [false, false, false, false, false, false],
+            /* Vorgang    */ [false, true, false, false, false, false],
+            /* Recht      */ [false, true, false, false, false, false],
+            /* Ordner     */ [false, true, false, false, false, false],
+            /* Angebot    */ [false, true, false, false, false, false],
+        ];
+
+        for (gemerkt, zeile) in GRUENDE.into_iter().zip(TAFEL) {
+            for (jetzt, erwartet) in GRUENDE.into_iter().zip(zeile) {
+                let meldung = abwurfmeldung(gemerkt, jetzt);
+                assert_eq!(
+                    meldung.is_some(),
+                    erwartet,
+                    "gemerkt={gemerkt:?}, jetzt={jetzt:?}"
+                );
+                if erwartet {
+                    assert_eq!(meldung, Some(KEINE_DATEI));
+                }
             }
         }
     }

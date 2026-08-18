@@ -1226,6 +1226,33 @@ impl Anwendungsdelegierter {
                         selbst.statuszeile_nachziehen();
                     }
                 }));
+            // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13).
+            // Zwei Rueckrufe, weil die Dateiliste zwei Dinge braucht, die sie
+            // selbst nicht hat: die Frage nach dem laufenden Vorgang **ohne**
+            // ihre Meldung — `validateDrop:` laeuft bei jeder Zeigerbewegung —
+            // und den Weg in die Operationsmaschine. Auch sie halten den
+            // Delegierten **schwach**, aus demselben Grund wie die vier
+            // darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .vorgang_laeuft_setzen(Box::new(move || {
+                    schwach
+                        .load()
+                        .is_some_and(|selbst| selbst.vorgang_laeuft().is_some())
+                }));
+            // **`seite` ist das Dateifenster, ueber dem der Zeiger stand**, und
+            // nicht das aktive. Sie reist bis in den `Vorgang` mit; damit
+            // erscheinen Fortschritt, Konfliktrueckfrage und Abschlusstext in
+            // der Statuszeile jenes Dateifensters, wie C4 es verlangt.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .abwurf_setzen(Box::new(move |ziel, quellen, art| {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.abwurf_ausfuehren(seite, ziel, quellen, art);
+                    }
+                }));
         }
 
         self.aufteilung_nachziehen();
@@ -5590,12 +5617,6 @@ impl Anwendungsdelegierter {
     /// Abwurf; er ist als
     /// `issues/260818-2221_*_the-drop-passes-its-target-as-the-source-folder-and-the-completion-reads-it-twice.md`
     /// gefilt.
-    #[expect(
-        dead_code,
-        reason = "der eine Aufrufer entsteht in Schritt 10 dieser Runde, in \
-                  DateifensterQuelle::abwurf_annehmen; mit ihm wird die \
-                  Erwartung unerfuellt und diese Zeile faellt"
-    )]
     fn abwurf_ausfuehren(
         &self,
         seite: Fensterseite,

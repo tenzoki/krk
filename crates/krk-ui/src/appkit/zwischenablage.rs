@@ -278,13 +278,6 @@ pub fn im_browser_oeffnen(adresse: &str) -> bool {
 /// Zusagedatei aus C7 ab, ohne dass KRK eine solche je einordnen muesste: es
 /// misst, was ihm gereicht wird, statt der abgebenden Anwendung eine Diagnose
 /// zu stellen. Ein `NSURL` ohne `path` faellt aus demselben Grund still weg.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Aufrufer entsteht mit Schritt 8 der Runde 13, siehe Modulkopf"
-    )
-)]
 pub fn dateiverweise(ablage: &NSPasteboard) -> Vec<PathBuf> {
     let klassen = NSArray::from_slice(&[NSURL::class()]);
     let ja = NSNumber::new_bool(true);

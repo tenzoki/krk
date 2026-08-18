@@ -259,15 +259,6 @@ pub struct Abwurflage {
 /// Zielordners, und die Ansicht entschiede sie ein zweites Mal auf eigene
 /// Faust — eine zweite Wahrheit ueber dieselbe Sache.
 #[must_use]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der eine Aufrufer entsteht in Schritt 10 dieser Runde, in \
-                  DateifensterQuelle::abwurf_pruefen; mit ihm wird die \
-                  Erwartung unerfuellt und diese Zeile faellt"
-    )
-)]
 pub fn marke(auf_die_zeile: bool, typ_der_zeile: Option<Typ>) -> Abwurfmarke {
     match (auf_die_zeile, typ_der_zeile) {
         // Ueber einer Ordnerzeile ist dieser Ordner das Ziel, und die Zeile
@@ -330,15 +321,6 @@ pub fn marke(auf_die_zeile: bool, typ_der_zeile: Option<Typ>) -> Abwurfmarke {
 /// bliebe: der Abwurf liefe dann ohne Urteil, und mit ihm fielen alle fuenf
 /// Abweisungen aus C6 und C7 weg, ohne dass irgendetwas rot wuerde.
 #[must_use]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der eine Aufrufer entsteht in Schritt 10 dieser Runde, in \
-                  DateifensterQuelle::abwurf_pruefen; mit ihm wird die \
-                  Erwartung unerfuellt und diese Zeile faellt"
-    )
-)]
 pub fn urteil(lage: &Abwurflage) -> Abwurfurteil {
     match (
         lage.traegt_dateien,
@@ -431,21 +413,21 @@ mod tests {
     /// Ziel ist, und `abwurf_pruefen` und `abwurf_annehmen` muessten dieselbe
     /// geben.
     ///
-    /// **Bis Schritt 10 dieser Runde ist die erwartete Zahl null**, und das ist
-    /// die einzige Zahl, die jetzt richtig ist: eine Probe, die schon eins
-    /// erwartete, waere heute rot, und eine mit „hoechstens eins" waere fuer
-    /// immer gruen und maesse nichts. Schritt 10 setzt sie auf eins.
+    /// **Bis Schritt 10 dieser Runde war die erwartete Zahl null**, weil es den
+    /// Aufrufer noch nicht gab; eine Probe, die schon damals eins erwartet
+    /// haette, waere rot gewesen, und eine mit „hoechstens eins" fuer immer
+    /// gruen und ohne Aussage.
     ///
     /// Die Nadel steht zusammengesetzt da, weil die Probe in dem Baum liegt,
     /// den sie liest.
     #[test]
-    fn die_marke_hat_noch_keinen_aufrufer() {
+    fn die_marke_hat_genau_einen_aufrufer() {
         let name = concat!("mar", "ke");
         assert_eq!(
             aufrufer(name),
-            0,
-            "die Bestimmung der Abwurfmarke hat nicht genau null Aufrufer; \
-             ab Schritt 10 der Runde 13 ist die erwartete Zahl eins"
+            1,
+            "die Bestimmung der Abwurfmarke hat nicht genau einen Aufrufer; \
+             der eine ist DateifensterQuelle::abwurf_pruefen"
         );
     }
 
@@ -458,15 +440,16 @@ mod tests {
     /// derselben Lage, die anders ausfallen koennte als die, die der Zeiger
     /// gezeigt hat.
     ///
-    /// **Bis Schritt 10 dieser Runde ist die erwartete Zahl null.**
+    /// **Bis Schritt 10 dieser Runde war die erwartete Zahl null**, aus dem
+    /// Grund, den die Probe darueber ausschreibt.
     #[test]
-    fn das_urteil_hat_noch_keinen_aufrufer() {
+    fn das_urteil_hat_genau_einen_aufrufer() {
         let name = concat!("urt", "eil");
         assert_eq!(
             aufrufer(name),
-            0,
-            "das Abwurfurteil hat nicht genau null Aufrufer; ab Schritt 10 der \
-             Runde 13 ist die erwartete Zahl eins"
+            1,
+            "das Abwurfurteil hat nicht genau einen Aufrufer; \
+             der eine ist DateifensterQuelle::abwurf_pruefen"
         );
     }
 
