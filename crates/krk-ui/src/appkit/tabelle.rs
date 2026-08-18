@@ -850,6 +850,14 @@ impl DateifensterQuelle {
     /// `auswahl` ist der Name des Eintrags, auf den die Auswahl springt, sobald
     /// gelesen ist: beim Aufstieg der verlassene Ordner (C2), beim Sprung aus
     /// der Zwischenablage die genannte Datei (C10).
+    ///
+    /// **Seit der Runde 13 nennt ein Tastenbefehl ein anderes Dateifenster als
+    /// das aktive:** `Anwendungsdelegierter::ordner_angleichen` stellt das
+    /// Gegenueber auf den Ordner des aktiven (C1). Unter den Befehlen ist er
+    /// darin der erste; eine Seite fest zu benennen kannte der Baum bis dahin
+    /// nur aus dem Messmodus, und der ist kein Befehl. Fuer diese Methode
+    /// aendert das nichts: sie wechselt den Ordner des **sichtbaren** Tabs und
+    /// legt keinen neuen an, gleich von welcher Seite aus gerufen.
     pub fn ordner_lesen(&self, pfad: &Path, auswahl: Option<String>) {
         self.fenstermeldung_loeschen();
         self.ivars().tabs.borrow_mut().ordner_setzen(pfad, auswahl);

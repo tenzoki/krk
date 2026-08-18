@@ -230,7 +230,7 @@ Zwei Bündel, zehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
 
 ### Bündel A — Der Befehl (C1 bis C3)
 
-1. **Die Funktion in die Belegungsdatei**
+1. **[DONE] Die Funktion in die Belegungsdatei**
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes: Neuer `[[funktion]]`-Block im Abschnitt `# ── C2: Navigation in der Liste ──`, unmittelbar hinter `ordner_der_datei` (endet `:277`) und vor `pfadeingabe` (`:279`); die Stellung im Abschnitt bestimmt die Stellung im Hauptmenü, die Gruppe kommt aus `bereich_des_kommandos`. `id = "ordner_angleichen"`, `name = "Anderes Dateifenster auf diesen Ordner stellen"`, `tasten = ["opt+cmd+s"]`, kein `gehalten_von`, kein `reserviert_fuer`. Der Begründungskommentar der `opt+cmd`-Reihe (`:266-272`) zählt seine Mitglieder von Hand auf und bekommt `opt+cmd+s` dazu, mit dem Satz, warum der Befehl in die Reihe gehört: er liefert einen Ordner an das andere Dateifenster. Dazu die Feststellung, dass `opt+cmd+s` ab Werk frei ist, am 260818 gegen alle `tasten`-Zeilen der Datei nachgezählt — die zehn belegten `opt+cmd`-Kombinationen sind `b c d e g l left n o right`. Die Kopfzeile `:34` wird von „84 Funktionen mit zusammen 89 Kombinationen" auf 85 und 90 gesetzt. **Eine Stelle ist zu lesen und zu entscheiden, nicht blind zu ändern:** `:354` nennt „39 frei gewählte Kombinationen"; steht das als Zitat eines Datensatzes der Runde 1 da, bleibt es stehen, steht es als lebende Aussage über die ausgelieferte Datei da, wird es 40. Die Entscheidung gehört an die Stelle und in den Commit-Text.
@@ -244,14 +244,14 @@ Zwei Bündel, zehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
    - Dependencies: 1. **Die Schritte 1 und 2 sind ein Commit.**
    - Abnahme: `make check`. Der Befehl steht danach im Menü und in der Belegungsansicht und **tut nichts**; das ist der erwartete Zwischenstand und der Grund für Schritt 4.
 
-3. **`bereich_einblenden` bekommt das `#[must_use]` seines Modells**
+3. **[DONE] `bereich_einblenden` bekommt das `#[must_use]` seines Modells**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: `#[must_use = "…"]` an `bereich_einblenden` (`:3862`), mit ausgeschriebenem Grund in der Bauform von `Fenstermodell::einblenden` (`fenstermodell.rs:734`) und um die dritte Bedeutung erweitert, die allein der Mantel hinzufügt: `zeilenmass()` liefert `None`, solange die Aufteilung nicht steht. Der eine Rufer, der den Wert heute als nackte Anweisung fallen lässt (`:1516`, `zwischenablage_ansehen`), bekommt `let _ =`; der zweite (`:2010`, `fokus_holen`) liest ihn schon. Der Doc-Kommentar nennt die drei Lagen einzeln und sagt, welche davon eine Abweisung ist.
    - Dependencies: keine
    - Anmerkung: Der Schritt steht getrennt, weil er allein für sich richtig ist und weil `-D warnings` ihn sofort misst: `unused_must_use` ist erst dort ein Fehler, `cargo build` allein liefe auch mit dem vergessenen `let _ =` grün.
 
-4. **Der Befehl wirkt: einblenden, vergleichen, stellen**
+4. **[DONE] Der Befehl wirkt: einblenden, vergleichen, stellen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/tabelle.rs`
    - Changes: Zweig `Kommando::OrdnerAngleichen => self.ordner_angleichen(),` in `kommando_ausfuehren` (`:2896`), **vor** dem Auffangzweig `:2983`, in der Bauform von `Kommando::OrdnerDerDatei` (`:3068`). Neuer Rumpf `ordner_angleichen(&self) -> bool` in dieser Reihenfolge: `aktiv` lesen, `ziel = aktiv.andere()`, den angezeigten Ordner beider Seiten holen; sind sie gleich, `antwort_zeigen(aktiv, …)` mit „das andere Dateifenster zeigt diesen Ordner bereits" und `true` zurück, ohne zu lesen und ohne einzublenden; sonst `bereich = Bereich::von_seite(ziel)`, `sichtbar` am Modell fragen, und nur wenn es verneint, `bereich_einblenden` rufen und bei `false` mit „das Fenster ist zu schmal; es wurde nichts eingeblendet und nichts gestellt" abbrechen; danach `self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None)`. Der Fokus wird nicht angefasst, `aktiv_setzen` nicht gerufen, kein Bereich ausgeblendet. Der Doc-Kommentar trägt drei Sätze, die je eine Falle benennen: warum die Sichtbarkeit **vor** dem Einblenden gefragt wird, warum die Pfade ohne `canonicalize` verglichen werden, und warum die Meldung an das auslösende und nicht an das Zieldateifenster geht. In `tabelle.rs` bekommt der Doc-Kommentar von `ordner_lesen` (`:844`) seinen vierten Rufer genannt, mit dem Zusatz, dass er der erste mit einer anderen Seite als `aktiv` ist.

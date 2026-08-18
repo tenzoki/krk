@@ -3066,6 +3066,15 @@ impl Anwendungsdelegierter {
             // Dateifenster. Ein einzelnes Dateifenster kommt an beide Quellen
             // nicht heran.
             Kommando::OrdnerDerDatei => self.ordner_der_datei_zeigen(),
+            // Das Angleichen aus C1 der Runde 13. **Ein eigener Zweig, und der
+            // Uebersetzer haette ihn nicht verlangt**: das `match` hier endet
+            // mit einem Auffangzweig auf `bereichskommando`, und dort fiele der
+            // Befehl stillschweigend hindurch und taete nichts. Er traegt
+            // `Wirkungsbereich::Dateifenster` und stuende damit scheinbar dem
+            // Auffangzweig zu; das Ziel ist aber das **andere** Dateifenster,
+            // und an das kommt ein einzelnes nicht heran. Denselben Weg gehen
+            // die drei Spaltenschalter weiter oben, aus demselben Grund.
+            Kommando::OrdnerAngleichen => self.ordner_angleichen(),
             // Das Teilen aus C1 der Runde 6. Es steht hier und nicht bei
             // `bereichskommando`, aus demselben Grund wie die beiden Befehle
             // darueber: es traegt `Wirkungsbereich::Ueberall` und kommt damit
@@ -3271,6 +3280,75 @@ impl Anwendungsdelegierter {
             editor_sichtbar,
             editor_pfad,
         )
+    }
+
+    /// Stellt das andere Dateifenster auf den Ordner des aktiven
+    /// (C1 bis C3 der Runde 13).
+    ///
+    /// Wirkt in eine Richtung, vom aktiven zum anderen, und trifft dort den
+    /// **sichtbaren** Tab. Sortierung, Filtertext, "Deep", Inhaltsfilter und die
+    /// Anzeige ausgeblendeter Eintraege bleiben dort stehen, wie sie standen: der
+    /// Befehl geht durch [`DateifensterQuelle::ordner_lesen`] und erbt damit die
+    /// eine Regel des Ordnerwechsels, statt eine zweite daneben zu setzen (C3).
+    ///
+    /// **Die Sichtbarkeit wird am Fenstermodell gefragt, bevor eingeblendet
+    /// wird**, und nicht aus dem Rueckgabewert von [`Self::bereich_einblenden`]
+    /// erschlossen: dessen `false` traegt drei Bedeutungen, und nur eine davon
+    /// ist eine Abweisung. Wer beide ueber denselben Wert liest, meldet dem
+    /// Nutzer ein zu schmales Fenster, wenn das andere Dateifenster laengst
+    /// dasteht.
+    ///
+    /// **Die beiden Ordner werden verglichen, wie sie angezeigt werden, ohne
+    /// `canonicalize`.** Die Aufloesung kostete zwei Systemaufrufe je
+    /// Tastendruck und braechte einen eigenen Fehlerausgang; was ohne sie
+    /// durchrutscht, ist derselbe Ordner unter zwei Pfaden, und sein Ausgang ist
+    /// ein Lesevorgang, der denselben Inhalt noch einmal liest. Das ist
+    /// folgenlos, und deshalb faellt der Rest der Regel auf die harmlose Seite.
+    ///
+    /// **Die Meldung geht an das ausloesende Dateifenster und nicht an das
+    /// Ziel.** So haelt es KRK bei jeder Befehlsantwort auf Rang 1: die Zeile
+    /// antwortet dem, der gedrueckt hat. Eine Antwort im Zielfenster stuende
+    /// gerade dort, wohin der Nutzer nicht sieht, wenn das Ziel ausgeblendet
+    /// geblieben ist.
+    ///
+    /// Der Fokus wird nicht angefasst, [`Fenstermodell::aktiv_setzen`] nicht
+    /// gerufen und kein Bereich ausgeblendet (C1, C2).
+    ///
+    /// **Die Reihenfolge "steht schon dort" vor "ist sichtbar" ist die des
+    /// Specs.** Ihre Folge steht hier, damit sie niemand fuer ein Versehen
+    /// haelt: ein ausgeblendetes Dateifenster, dessen sichtbarer Tab denselben
+    /// Ordner fuehrt, bleibt ausgeblendet und bekommt die Meldung "steht schon
+    /// dort".
+    ///
+    /// Liefert immer `true`, wie [`Self::ordner_der_datei_zeigen`]: der Befehl
+    /// war zustaendig, auch wenn er nur etwas zu melden hatte.
+    fn ordner_angleichen(&self) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let ziel = aktiv.andere();
+        let ordner = self.dateifenster(aktiv).quelle().angezeigter_ordner();
+        let dort = self.dateifenster(ziel).quelle().angezeigter_ordner();
+        if ordner == dort {
+            self.antwort_zeigen(aktiv, "das andere Dateifenster zeigt diesen Ordner bereits");
+            return true;
+        }
+
+        let bereich = Bereich::von_seite(ziel);
+        // **Die Ausleihe endet mit dieser Zeile und nicht erst mit der
+        // Bedingung darunter.** `bereich_einblenden` nimmt sich denselben
+        // `RefCell` veraenderlich; stuende der Aufruf in derselben Bedingung
+        // wie dieses `borrow()`, lebte die Ausleihe noch, und der Griff danach
+        // waere der Absturz.
+        let sichtbar = self.ivars().modell.borrow().sichtbar(bereich);
+        if !sichtbar && !self.bereich_einblenden(bereich) {
+            self.antwort_zeigen(
+                aktiv,
+                "das Fenster ist zu schmal; es wurde nichts eingeblendet und nichts gestellt",
+            );
+            return true;
+        }
+
+        self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None);
+        true
     }
 
     /// Gibt die betroffenen Eintraege an die Freigabedienste des Systems
@@ -7276,7 +7354,11 @@ mod zettelproben {
     use crate::quellbaum::{aufrufstellen, quelldateien};
 
     /// Der Quelltext der Datei, in der die vier Momente stehen.
-    fn diese_datei() -> String {
+    ///
+    /// `pub(super)`, weil [`super::angleichproben`] denselben Quelltext liest.
+    /// Eine zweite Fassung daneben waere der Doppelbau, gegen den die Proben
+    /// dieser Datei geschrieben sind.
+    pub(super) fn diese_datei() -> String {
         quelldateien()
             .into_iter()
             .find(|(name, _)| name == "krk-ui/src/appkit/anwendung.rs")
@@ -7291,7 +7373,10 @@ mod zettelproben {
     /// gar nicht herein. Die Kommentarzeilen **im** Rumpf werden abgezogen: sie
     /// nennen `performClose:` und das Sichern in Prosa, und eine Nadel darf
     /// keine Prosa treffen.
-    fn rumpf(inhalt: &str, name: &str) -> String {
+    ///
+    /// `pub(super)` aus demselben Grund wie [`diese_datei`] darueber: die
+    /// Angleichproben schneiden ihre Ruempfe mit derselben Regel heraus.
+    pub(super) fn rumpf(inhalt: &str, name: &str) -> String {
         let kopf = format!("fn {name}(");
         let beginn = inhalt
             .find(&kopf)
@@ -7403,6 +7488,98 @@ mod zettelproben {
             assert!(
                 !rumpf.contains(nadel),
                 "»Fenster einblenden« rührt den Zettel an: {nadel}"
+            );
+        }
+    }
+}
+
+/// Was am Angleichen aus C1 bis C3 der Runde 13 **ohne Fenster** zu messen ist.
+///
+/// Der Befehl selbst laesst sich hier nicht ausfuehren: er braucht das
+/// Fenstermodell, zwei Dateifenster und eine Aufteilung, und der
+/// Anwendungsdelegierte ist ohne laufende Anwendung nicht zu bauen. Was die
+/// Kriterien aus C1 und C2 am gebauten Buendel verlangen, steht deshalb im Plan
+/// unter "Nutzerarbeit" und wird hier **nicht** behauptet.
+///
+/// Was bleibt, sind drei Aussagen ueber den **Baum**, und jede von ihnen ist
+/// eine Falle, die kein Uebersetzer haelt: der fehlende Ausfuehrungszweig, die
+/// Sichtbarkeitsfrage nach dem Einblenden statt davor, und ein Griff an Fokus
+/// oder Sichtbarkeit, den C1 und C2 ausschliessen. Sie werden am Quelltext
+/// gelesen, mit derselben Rumpfregel wie in [`zettelproben`].
+///
+/// **Was die drei nicht sehen:** eine Wirkung, die aus diesem Rumpf in eine
+/// spaeter gerufene Hilfsfunktion gewandert ist. Sie lesen den Rumpf und nicht
+/// den Aufrufbaum darunter.
+#[cfg(test)]
+mod angleichproben {
+    use super::zettelproben::{diese_datei, rumpf};
+
+    /// Der Ausfuehrungszweig steht **vor** dem Auffangzweig.
+    ///
+    /// Die eine Pflichtstelle je Kommando, die kein Uebersetzer einfordert:
+    /// `Kommando::wirkungsbereich` und `bereich_des_kommandos` sind
+    /// vollstaendige Fallunterscheidungen und halten den Bau an, dieses `match`
+    /// endet auf `andere => self.bereichskommando(…)`. Ein Kommando ohne
+    /// eigenen Zweig uebersetzt, besteht jede Probe, steht mit Namen und
+    /// Kombination im Hauptmenue und tut nichts.
+    #[test]
+    fn der_befehl_steht_vor_dem_auffangzweig() {
+        let zweig = concat!("Kommando::Ordner", "Angleichen =>");
+        let auffang = concat!("andere ", "=> self.bereichskommando");
+        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren");
+        let stelle_zweig = rumpf
+            .find(zweig)
+            .expect("das Angleichen hat keinen Ausführungszweig und täte damit nichts");
+        let stelle_auffang = rumpf
+            .find(auffang)
+            .expect("der Auffangzweig steht nicht mehr in kommando_ausfuehren");
+        assert!(
+            stelle_zweig < stelle_auffang,
+            "der Zweig des Angleichens steht hinter dem Auffangzweig und ist unerreichbar"
+        );
+    }
+
+    /// Die Sichtbarkeit wird **vor** dem Einblenden gefragt (C2).
+    ///
+    /// `bereich_einblenden` liefert `false` in drei Lagen, und nur eine davon
+    /// ist eine Abweisung. Wer erst einblendet und dann den Rueckgabewert
+    /// deutet, meldet ein zu schmales Fenster, wenn das andere Dateifenster
+    /// laengst dasteht.
+    #[test]
+    fn die_sichtbarkeit_wird_vor_dem_einblenden_gefragt() {
+        let frage = concat!("sicht", "bar(bereich)");
+        let einblenden = concat!("bereich_ein", "blenden(bereich)");
+        let rumpf = rumpf(&diese_datei(), "ordner_angleichen");
+        let stelle_frage = rumpf
+            .find(frage)
+            .expect("das Angleichen fragt die Sichtbarkeit nicht am Fenstermodell");
+        let stelle_einblenden = rumpf
+            .find(einblenden)
+            .expect("das Angleichen blendet den Zielbereich nicht ein");
+        assert!(
+            stelle_frage < stelle_einblenden,
+            "die Sichtbarkeit wird nach dem Einblenden gefragt; C2 verlangt davor"
+        );
+    }
+
+    /// Der Befehl ruehrt weder den Fokus noch eine Sichtbarkeit an, die er
+    /// nicht herstellt (C1, C2).
+    ///
+    /// C1 sagt zu, dass danach dasselbe Dateifenster aktiv ist wie davor, und
+    /// C2, dass in keiner Lage ein Bereich **ausgeblendet** wird. Beides ist am
+    /// Rumpf abzulesen: die drei Nadeln sind die Wege, auf denen es sonst
+    /// geschaehe.
+    #[test]
+    fn das_angleichen_ruehrt_weder_fokus_noch_sichtbarkeit_an() {
+        let rumpf = rumpf(&diese_datei(), "ordner_angleichen");
+        for nadel in [
+            concat!("aktiv_", "setzen("),
+            concat!("bereich_um", "schalten("),
+            concat!("aus", "blenden("),
+        ] {
+            assert!(
+                !rumpf.contains(nadel),
+                "das Angleichen greift an Fokus oder Sichtbarkeit: {nadel}"
             );
         }
     }
