@@ -1,7 +1,7 @@
 # Implementation Plan: Jeder Löschweg fragt nach, und es gibt nur noch den Papierkorb
 
 **Date:** 2026-08-17
-**Status:** Complete — alle siebzehn Schritte tragen `[DONE]`. Die Schritte 1 bis 3 sind am 260817-1129 einzeln gegen den Baum gelesen, die Schritte 4 bis 11 am 260817-1833; beide Belege stehen unten unter `## Reconciliation Log`. Die Bündel D und E sind danach gebaut: die Schritte 12 bis 15 am Code, in `resources/default-keymap.toml` und in den Kommentaren, Schritt 16 in den fünf Entscheidungsdatensätzen und Schritt 17 am 260818-0006 in den beiden Datensätzen der Runde 1. Ein Abgleich über die Bündel D und E steht noch aus. Der Marker des Dateinamens bleibt `_o_`; die Umbenennung auf `_c_` gehört dem Abgleich am Sitzungsende und nicht dem ausführenden Schritt.
+**Status:** Complete — alle siebzehn Schritte tragen `[DONE]`, und alle siebzehn sind einzeln gegen den Baum gelesen: die Schritte 1 bis 3 am 260817-1129, die Schritte 4 bis 11 am 260817-1833, die Schritte 12 bis 17 am 260818-0708. Die drei Belege stehen unten unter `## Reconciliation Log`. Der Dateimarker steht seit dem 260818-0708 auf `_c_`.
 **Spec:** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`, nachgezogene Fassung vom 260817
 **Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
 **Baumstand:** `984d31a`, gelesen am 260817-0850
@@ -568,3 +568,36 @@ und `resources/default-keymap.toml:151` führt `endgueltig_loeschen` unveränder
 
 **Der Marker des Dateinamens bleibt `_o_`, und der Kopf trägt den neuen Stand.** Sechs Schritte
 stehen offen. Die Begründung gegen `_p_` von 260817-1129 gilt unverändert.
+
+---
+
+### 260818-0708 (reconciler, Baumstand `e843d90`, Arbeitsbaum mit zwei unfestgeschriebenen Werkbankdateien)
+
+**Die sechs Schritte der Bündel D und E halten am Baum, und keiner ist gegen Bericht oder
+Sitzungsprotokoll übernommen.** Verifikation: `make check` — Exit 0 (alle vier Abnahmekommandos).
+
+| Schritt | Behauptung | Beleg am Baum |
+|---|---|---|
+| 12 `[DONE]` | Beide Aufzählungswerte fallen, `Kommando::KENNUNGEN` sinkt auf 78, die neue Probe misst die verworfene Nutzerbelegung | `grep -rn 'EndgueltigLoeschen' crates/ xtask/ resources/` liefert keine Zeile; `KENNUNGEN: [(Kommando, &'static str); 78]` an `crates/krk-core/src/tasten/belegung.rs:647`, und die Aufzählung `Kommando` trägt selbst gezählt 78 Varianten; `Art` (`crates/krk-core/src/operation/auftrag.rs`) führt `InDenPapierkorb` und keinen zweiten Löschwert; die Probe `eine_keymap_mit_der_zurueckgezogenen_kennung_wird_als_ganzes_verworfen` an `crates/krk-core/tests/belegung.rs:1642`; Commit `82707ef` |
+| 13 `[DONE]` | Der Eintrag fällt, `opt+cmd+delete` bleibt unbelegt, der Kopf nennt 84 und 89 und den neuen bindenden Datensatz | `resources/default-keymap.toml:156-158` trägt `in_papierkorb` mit `tasten = ["delete", "cmd+delete", "f8"]`; `grep -n 'opt+cmd+delete'` liefert keine Zeile; am Bestand nachgezählt: 84 `[[funktion]]`-Blöcke und 89 Kombinationen über alle `tasten`-Zeilen, wie der Kopf an `:34` sagt; der bindende Datensatz an `:12` ist `260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-…`; Commit `82707ef` |
+| 14 `[DONE]` | Die Prosazahlen stehen wieder am Baum | `crates/krk-ui/src/belegungsausgabe.rs` nennt an `:45`, `:48`, `:56`, `:256` und `:730` durchgängig 84 Funktionen und 78 mit `Kommando`; `crates/krk-ui/src/appkit/menue.rs:128` und `:867` ebenso. Beide Zahlen stimmen gegen die Messung: 84 Blöcke in der Belegungsdatei, 78 in `KENNUNGEN`; Commit `f7a85c1` |
+| 15 `[DONE]` | Die Prosa des Baums kennt nur noch einen Löschweg, `CLAUDE.md` ist nachgezogen | `grep -rniE 'endgueltig\|endgültig' --include='*.rs' crates` liefert 33 Zeilen in 15 Dateien. Alle 33 einzeln gelesen: keine behauptet einen zweiten Löschweg. Sie zerfallen in datierte Rückblicke (`operation/loeschen.rs:4`, `belegungsmodell.rs:1183`, `kommandos/rueckschritt.rs:88`, `appkit/anwendung.rs:4503`), Zitate von Entscheidungspfaden, die Prüfdaten der neuen Probe und vier Stellen ohne Bezug zum Löschen (`verzeichnis/modell.rs:464` „endgueltige Reihenfolge", `zettelmodell.rs:454`, `appkit/hinweis.rs:31`, `appkit/anwendung.rs:844`). `CLAUDE.md:140` trägt den neuen Stand; Commit `522cf51` |
+| 16 `[DONE]` | Einer auf `_s_`, vier auf `_i_`, jeder mit Beleg | Die fünf Dateien tragen die Marker im Namen, `**Status:**` stimmt in jeder gegen den Marker, und jede führt ihre Belegzeile: `260802-0842_s_…` mit `Superseded by:` auf den Datensatz vom 260817-0536; die vier `260817-0536_i_…` mit `Implemented:` und den Commits `472eb81`, `ee85950`, `792995a`, `82707ef`, `5a0f041`, `c1b52db`. Die Belege sind stichprobenweise am Baum nachgelesen und halten; Commit `24bbccc` |
+| 17 `[DONE]` | Die beiden Datensätze der Runde 1 tragen den neuen Stand als Nachtrag | `circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md`, `## Directive`: der Schlusssatz nennt jetzt Delete, Cmd+Delete und F8 als Papierkorbwege mit Rückfrage, darunter der Nachtrag vom 260818-0006, der die Ersetzung als vierte Korrektur des Abschnitts kenntlich macht. `planning/260802-1036_c_spec-navigator-geruest.md`: der Kopfeintrag an `:12`, dazu `:189` (F8 auf dem Papierkorb), `:207` („die fünf Funktionen der Norton-Reihe … bis zum 260817 waren es sechs") und `:223` („die fünf Zeilen der Kürzel-Tabelle … bis zum 260817 waren es zwanzig und sechs"). Der Abschnitt `## Abgleich mit der Circle-Directive` steht unverändert; Commit `da716c1` |
+
+**Der Dateimarker wandert auf `_c_`.** Alle siebzehn Schritte sind `[DONE]` und alle siebzehn
+gegen den Baum belegt. Nachgezogen ist der eine Zitierer in lebendem Text, die Kopfzeile
+`**Active spec/plan:**` des Circle-Datensatzes; die 35 weiteren Zitierer stehen sämtlich in
+`history/`, `reviews/`, `issues/` und `decisions/` und behalten ihren damaligen Marker nach der
+Ortsregel aus `CLAUDE.md`.
+
+**Eine Abweichung, und sie stammt aus Schritt 16 selbst.** Die Bewegung der fünf
+Entscheidungsdatensätze hat 22 Zeiger in lebendem Text getötet, darunter drei Modulköpfe unter
+`crates/krk-core/src/verzeichnis/`, vier Zeilen dieses Plans und vier des Circle-Datensatzes.
+Der Plan verlangt die Bewegung und nennt die Zitierer nicht; behoben ist hier nichts, weil
+Plantext zu ändern nicht Sache des Abgleichs ist. Datensatz:
+`issues/260818-0710_*_step-16-killed-22-pointers-in-living-text-and-five-of-them-are-in-crates.md`.
+
+**Der Spec bleibt vorerst auf `_o_`.** `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`
+ist inhaltlich mit diesem Plan erfüllt, aber sein Marker gehört an den Abschluss des Circles und
+damit an das Rebalance-Gate, nicht an diesen Abgleich.

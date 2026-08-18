@@ -109,3 +109,10 @@ zwei Commits hervorgebracht hat (`dff167a` mit achtzehn behobenen Befunden und `
 Das deckt sich mit `shared/issues/260811-2157_*_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-…`:
 beide Male reisst das Protokoll ab, sobald die geplante Arbeit steht und der Nachlauf beginnt.
 Belegt am Ereignisprotokoll `fusion-workbench/orchestrator-events.jsonl`, letzte Zeile.
+
+Also seen: 260818-0710 by reconciler — dieselbe Lücke, milder: in der Sitzung 260817-2131 tragen 13
+der 16 Commits aus `cdde9da..HEAD` ein `commit`-Ereignis, drei nicht (`8f556ed`, `f79f964`,
+`b0eee2c`). Zwei davon legen eine Durchsicht ab, der dritte ist ein Datencommit. `task_start` und
+`task_done` stehen diesmal vollständig (je 13). Der Befund ist damit nicht mehr „gar keine
+Aufgabenereignisse", sondern „das Ablegen einer Durchsicht emittiert keins", und das ist eine
+engere und leichter zu schließende Fassung derselben Sache.

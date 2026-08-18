@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** active
 **Filed by:** orchestrator
-**Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md)
+**Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_c_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md)
 **Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md
 
 ---
@@ -111,6 +111,20 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
   Doc-Kommentare unter `appkit/` sagen weiter, der falsche Zweig der Rückschritt-Regel
   räume Dateien weg, während der Modulkopf derselben Regel seit `522cf51` das Gegenteil
   sagt. Die Abdeckung der Durchsichten kachelt den Sitzungsbereich lückenlos.
+
+- Turn 3 (Sitzung 260817-2131): Commits `ae665e5`..`a4d8211`, dazu die Durchsicht.
+  **Der Befunde-Durchgang: 30 Datensätze geschlossen, darunter der auslösende Defekt der
+  ganzen Runde.** Sieben Stapel. Drei Befunde waren im gemessenen Umfang deutlich größer
+  als im gemeldeten: die verkürzte Blattsperre trägt der Baum an sechs statt vier Stellen,
+  von den Pfaden der Belegungsdatei brachen 22 statt zwei um, und vier statt zwei
+  Protokolldateien tragen einen falschen Zeitstempel. `285b58f` hat einen zweiten
+  Datenverlustweg geschlossen, den der Spec nicht kannte: das Konfliktblatt hätte auf ein
+  Return im Namensfeld hin „Überschreiben" ausgelöst. Sechs behauptete Eigenschaften sind
+  Messungen geworden, und die Durchsicht hat sie mit neun eingebauten Fehlern selbst
+  nachgeprüft statt den Berichten zu glauben. Kohärenz-Befund `ok`. Sechs Datensätze aus
+  der Durchsicht, zwei mittel, keiner ein Release-Blocker. Vier neue Entscheidungsfragen an
+  den Nutzer. Ein Lauf ist an einem Verbindungsfehler abgebrochen; sein vollständiger Teil
+  ist als `48bb57f` gerettet.
 
 ## Closure note
 

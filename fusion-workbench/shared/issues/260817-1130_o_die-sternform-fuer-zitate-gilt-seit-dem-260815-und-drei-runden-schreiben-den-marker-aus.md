@@ -73,3 +73,11 @@ in der Form „steht als überholt (…)", wo der Marker die Aussage selbst ist;
 ausdrückliche Ausnahme. Die Commit-Nachricht von `24bbccc` begründet die Schreibweise eigens,
 wägt dabei aber `_i_` gegen `_a_` ab und nicht gegen die Sternform — die Entscheidung vom
 260815-1230 war dem Bearbeiter nicht gegenwärtig. Das ist die vierte Runde nach `e49412a`.
+
+Also seen: 260818-0710 by reconciler — die vorhergesagte Alterung ist eingetreten und gemessen:
+`circles/260817-0833-…/issues/260818-0710_*_step-16-killed-22-pointers-in-living-text-and-five-of-them-are-in-crates.md`
+zählt 22 tote Zeiger in sechs Dateien lebenden Textes, alle auf die fünf Entscheidungsdatensätze,
+die Schritt 16 der laufenden Runde in `24bbccc` bewegt hat. Fünf davon stehen in `crates/`, dem
+ersten Geltungsbereich, den die Entscheidung vom 260815-1230 nennt. Der 23. tote Zeiger ist der
+hier schon gemeldete auf `260802-1036_*_spec-navigator-geruest.md`. Damit sind es nicht mehr drei
+von 52, sondern 23 in einem einzigen Durchgang.
