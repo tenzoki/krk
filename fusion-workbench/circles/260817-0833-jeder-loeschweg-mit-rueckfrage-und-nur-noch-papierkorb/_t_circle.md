@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** active
 **Filed by:** orchestrator
-**Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_c_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md)
+**Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_c_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_c_spec-absicherung-jedes-loeschwegs.md)
 **Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md
 
 ---
@@ -125,6 +125,19 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
   der Durchsicht, zwei mittel, keiner ein Release-Blocker. Vier neue Entscheidungsfragen an
   den Nutzer. Ein Lauf ist an einem Verbindungsfehler abgebrochen; sein vollständiger Teil
   ist als `48bb57f` gerettet.
+
+- Turn 4 (Sitzung 260817-2131): Commits `adf638b`..`0494604`, dazu die Durchsicht.
+  **Aus dem Rebalance-Gate heraus gefahren:** der Abgleich hatte `review-needed` gemeldet,
+  weil Schritt 16 mit der Bewegung von fünf Entscheidungsdatensätzen 22 Zeiger in lebendem
+  Text getötet hatte. Alle 22 stehen jetzt in der Sternform und lösen auf, dazu sechzehn
+  weitere, die zwei eigene Erhebungen mitbrachten. Für `crates/` war die Sternform ohnehin
+  bindend (`shared/decisions/260815-1145_*_…`, umgesetzt); in Werkbank-Prosa ist sie
+  vorläufig gewählt, solange `shared/decisions/260818-0201_*_…` offen ist. Drei Stellen
+  behalten den Buchstaben mit Absicht, weil dort der Marker die Aussage selbst ist.
+  **Zwei Zitate zeigten aus einem anderen Grund als dem Marker ins Leere**, beide mit
+  richtiger Sternform und falschem Namensteil; die Durchsicht fand einen dritten außerhalb
+  dieser Runde. Kohärenz-Befund `ok`. Zwei Datensätze aus der Durchsicht, einer mittel,
+  beide außerhalb des durchgesehenen Bereichs.
 
 ## Closure note
 

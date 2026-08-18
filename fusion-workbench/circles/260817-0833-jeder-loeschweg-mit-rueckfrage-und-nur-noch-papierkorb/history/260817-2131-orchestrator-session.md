@@ -37,21 +37,36 @@ program. The plan is
 
 <!-- RECONCILER-OWNED -->
 
-**Verdict:** review-needed
+**Zweiter Durchgang, 260818-0807, nach dem Rebalance-Gate.** Der erste Durchgang (260818-0712)
+meldete `review-needed` und flaggte die Kante Artefakt↔Grundlage mit drei Driftpunkten: 22 tote
+Zeiger in lebendem Text, 43 von 428 Abschlussvermerken in einer Form, die keine
+`^Resolved:`-Suche findet, und drei von 16 Commits ohne `commit`-Ereignis. Der Nutzer wählte
+„Artefakt überarbeiten" und benannte die Zeigerreparatur; Turn 4 hat sie gefahren. Dieser Befund
+ersetzt den ersten.
+
+**Verdict:** coherent
 
 **Edges:**
-- Artifact↔Grounding: 17 of 17 plan steps verified against the tree and `make check` exit 0, but three drift items stand — 22 dead workbench pointers in living text created by the Circle's own step 16 (`24bbccc`), five of them module heads under `crates/krk-core/src/verzeichnis/`; 43 of the workbench's 428 closed defect records carry a closure note no `^Resolved:` search finds; three of the session's 16 commits carry no `commit` event. Six reviewer findings from bundle F remain open (`260818-0410`..`260818-0415`), two Medium, none a release blocker. Evidence: `history/260818-0712-reconciliation.md`, `issues/260818-0710_*_step-16-killed-22-pointers-…`, `shared/issues/260818-0710_*_forty-three-closure-notes-…`.
-- Artifact↔Directive: all 16 commits in `cdde9da..e843d90` move toward the stated Directive, none orthogonal and none away. `82707ef` removes `Kommando::EndgueltigLoeschen`, `Art::EndgueltigLoeschen` and the keymap entry; `f7a85c1` pulls the prose counts; `522cf51`, `24bbccc` and `da716c1` pull the tree comments, `CLAUDE.md` and the records of round 1; the remaining eleven close review findings inside the same Directive. Every clause of the Directive is measurable at the tree and every one holds.
-- Grounding↔Directive: 14 active decision records in scan scope (9 open and 2 answered in `shared/`, 3 open in this Circle) and 41 across all stores; 41 consistent, 0 conflicting. The one record that did conflict, `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`, was moved to superseded in `24bbccc` with a stated reason, and its four successors moved to implemented in the same commit. Two round-10 records, `circles/260814-1551-…/decisions/260814-1830_*_` and `260814-1852_*_`, argue their answer from a premise this session removed ("das Räumen läuft ohne Rückfrage"); their answers survive the change unaltered and were reaffirmed by `260818-0025`, so they are consistent, not conflicting. Noted without flagging: the three Circle decisions filed at `260818-0249`, `260818-0250` and `260818-0512` are open refinements of this Circle's own subject, so the round would close carrying three of its own questions.
+- Artifact↔Grounding: 17 von 17 Planschritten stehen weiter am Baum, `make check` Exit 0 im zweiten Lauf (der erste fiel an der seit dem 260816 aufgenommenen Wettrennprobe aus, `shared/issues/260816-0055_*_…`, offen und nicht von dieser Runde verursacht). **Driftpunkt 1 ist behoben und unabhängig nachgemessen:** eigene Auflösung über 205 lebende Dateien und 1465 Zitate nach Zeitstempel **und** Namensteil findet unter `crates/`, `xtask/`, `resources/`, im Plan, im Spec und im Circle-Datensatz keinen toten Zeiger mehr; die vier Stellen, an denen der Marker die Aussage ist (`plan:553`–`:556`, `plan:585`, `_t_circle.md:7`), stehen unbeschädigt. Die Driftpunkte 2 und 3 stehen unverändert (43 von jetzt 429; vier von jetzt 20 Commits ohne Ereignis) und flaggen die Kante nicht: keiner macht eine Aussage in einer Verfolgungsdatei unwahr, sie machen eine Suche blind und ein Protokoll lückenhaft. Beide sind gefilt und haben einen Eigentümer. Getragen werden daneben sieben offene Befunde im Circle (zwei mittel, keiner ein Auslieferungshindernis) und drei neue Datensätze dieses Durchgangs. Belege: `history/260818-0807-reconciliation.md`.
+- Artifact↔Directive: alle 20 Commits in `cdde9da..9ac41ea` bewegen sich auf die Directive zu, keiner quer, keiner davon weg. `82707ef` nimmt `Kommando::EndgueltigLoeschen`, `Art::EndgueltigLoeschen` und den Belegungseintrag heraus; `f7a85c1`, `522cf51`, `24bbccc` und `da716c1` ziehen Prosa, Datensätze und `CLAUDE.md` nach; acht Commits des Turns 3 schließen 30 Befunde, darunter den auslösenden Defekt der Runde und mit `285b58f` einen zweiten Datenverlustweg, den der Spec nicht kannte. Die drei Commits des Turns 4 (`adf638b`, `0494604`, `9ac41ea`) sind keine Nebenarbeit: die Directive steht auf fünf Entscheidungsdatensätzen, und ein Zitat, das ins Leere zeigt, macht die Grundlage vom lebenden Text aus unerreichbar.
+- Grounding↔Directive: vier Entscheidungsdatensätze hat diese Sitzung angelegt, alle offen, alle vier lösen vollständig auf (14 Zitate, 0 tot) und keiner widerspricht der Directive — drei verschärfen oder verfeinern sie (`260818-0249`, `260818-0250`, `260818-0512`), einer betrifft die Schreibweise von Werkbank-Zitaten und berührt sie nicht (`shared/decisions/260818-0201_*_…`). Über alle Speicher stehen 29 offene Entscheidungen; die eine, die dieser Runde widersprach, ist seit `24bbccc` überholt (`shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`, `_s_`, mit Grund und Nachfolger). Die Runde schließt mit drei eigenen offenen Fragen, was hier festgehalten und nicht geflaggt wird.
 
-**Rebalance recommendation:** revise Artifact
+**Rebalance recommendation:** none
 
-**Note for the gate, not part of the verdict.** The acceptance run of the ten time promises from C8
-requires KRK in the foreground and is therefore user work; no agent can drive it
-(`CLAUDE.md`, "Was man nicht sieht"). It was not run this session, and the last run is
-`messungen/260810-1918-alle-zusagen.txt`, six rounds back. That is the condition under which ten of
-this project's eleven previous rounds closed bounded, counted at `ls circles/*/_b_circle.md` (10) and
-`ls circles/*/_c_circle.md` (1); the dispatch of this pass said nine. It is where this round lands
-too, once the drift above is repaired. It is reported here rather than folded into the verdict because
-the Directive of this Circle says nothing about the ten promises: everything the Directive asks for
-is built, green and verified. What is unreachable is the user's acceptance, not the Directive.
+**Zwei Anmerkungen, nicht Teil des Verdikts.**
+
+Der Abnahmelauf der zehn Zeitzusagen aus C8 bleibt aus dem Verdikt heraus, wie im ersten
+Durchgang und aus demselben Grund: die Directive dieser Runde sagt über die zehn Zusagen nichts,
+und unerreichbar ist die Abnahme durch den Nutzer, nicht die Directive. Der Lauf verlangt KRK im
+Vordergrund und ist Nutzerarbeit (`CLAUDE.md`, „Was man nicht sieht"); zuletzt am 260810
+gefahren, sechs Runden zurück. Das ist die Bedingung, unter der zehn der elf bisher gefahrenen
+Runden beschränkt geschlossen haben (`ls circles/*/_b_circle.md`). Wo diese Runde landet,
+entscheidet der Abschluss.
+
+Zwei Nacharbeiten liegen beim Orchestrator, der die Dateien besitzt, und beide gehören an den
+Abschluss: der Turn-Log-Eintrag zu Turn 4 nennt zehn weitere gestellte Zeiger, gestellt sind
+sechzehn (`issues/260818-0807_*_der-turn-log-nennt-zehn-weitere-zeiger-…`); und
+`shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md` ist inhaltlich erfüllt,
+bleibt aber auf `_o_`, weil das maschinell gelesene Kopffeld `**Active spec/plan:**` in
+`_t_circle.md:7` seinen Pfad wörtlich mit dem Buchstaben führt. Wer den Spec umbenennt, ohne
+dieselbe Zeile nachzuziehen, wiederholt Schritt 16.

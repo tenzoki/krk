@@ -116,3 +116,13 @@ der 16 Commits aus `cdde9da..HEAD` ein `commit`-Ereignis, drei nicht (`8f556ed`,
 `task_done` stehen diesmal vollständig (je 13). Der Befund ist damit nicht mehr „gar keine
 Aufgabenereignisse", sondern „das Ablegen einer Durchsicht emittiert keins", und das ist eine
 engere und leichter zu schließende Fassung derselben Sache.
+
+Also seen: 260818-0807 by reconciler — die engere Fassung des vorigen Eintrags hält nicht. In
+`cdde9da..HEAD` derselben Sitzung stehen jetzt 20 Commits und 16 `commit`-Ereignisse; ohne
+Ereignis sind vier: `8f556ed` und `f79f964` (Ablage einer Durchsicht), `b0eee2c` (Datencommit,
+das zugehörige `task_done` steht) und `1cef661` (der erste Abgleich; ein `reconciliation`-Ereignis
+steht auf derselben Sekunde, ein `commit`-Ereignis nicht). **Das Ablegen einer Durchsicht ist
+damit nicht der Grund:** `e843d90` und `9ac41ea` legen ebenfalls eine Durchsicht ab und tragen
+beide ihr `commit`-Ereignis. Die Lücke sitzt in den Turns 1 und 2 und im Nachlauf, nicht an einer
+Commit-Art. `task_start`/`task_done` stehen bei 15/16, und die Paarung geht nicht auf: `F-7` und `R-3`
+tragen ein `task_done` ohne `task_start`, `F-5` ein `task_error` statt eines `task_done`.

@@ -70,3 +70,30 @@ body carries a line beginning `Resolved:` would cover this and would have caught
 each was written. Filed as a defect rather than a decision because the convention already exists
 and is simply not met; what shape the check takes is an implementation question for whoever writes
 it.
+
+---
+
+**Nachmessung des zweiten Abgleichs derselben Sitzung, 260818-0807, an `9ac41ea`.** Die Zahl
+steht unverändert bei 43; der Nenner ist um eins gewachsen.
+
+| Form | 260818-0710 (an `e843d90`) | 260818-0807 (an `9ac41ea`) |
+|---|---|---|
+| `^Resolved:` — die Konvention | 385 | 386 |
+| abweichend geschrieben oder ohne Zeile | 43 | 43 |
+| geschlossene Datensätze insgesamt | 428 | 429 |
+
+Der eine hinzugekommene ist
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0710_*_step-16-killed-22-pointers-in-living-text-and-five-of-them-are-in-crates.md`,
+und er trägt seinen Abschlussvermerk in der Konvention. Turn 4 der Sitzung hat also einen
+Datensatz geschlossen und die Quote nicht verschlechtert.
+
+Kommando:
+
+```sh
+find fusion-workbench -name '*_c_*.md' -path '*issues*' | wc -l
+find fusion-workbench -name '*_c_*.md' -path '*issues*' -exec grep -l '^Resolved:' {} \; | wc -l
+```
+
+Nicht behoben, und das ist die richtige Entscheidung für diesen Durchgang: der Nutzer hat am
+Rebalance-Gate „Artefakt überarbeiten" gewählt und dabei die Zeigerreparatur benannt, nicht
+diese. Der Datensatz bleibt offen.

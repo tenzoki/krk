@@ -601,3 +601,33 @@ Plantext zu ändern nicht Sache des Abgleichs ist. Datensatz:
 **Der Spec bleibt vorerst auf `_o_`.** `shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md`
 ist inhaltlich mit diesem Plan erfüllt, aber sein Marker gehört an den Abschluss des Circles und
 damit an das Rebalance-Gate, nicht an diesen Abgleich.
+
+### 260818-0807 — zweiter Abgleich, nach dem Rebalance-Durchgang
+
+Am Plan hat sich nichts geändert: alle siebzehn Schritte stehen weiter auf `[DONE]`, der Marker
+bleibt `_c_`, der Status bleibt „Complete". Turn 4 hat keinen Planschritt angefasst, sondern die
+Zeiger dieser Datei und zweier anderer.
+
+**Die Zitate dieses Plans lösen jetzt vollständig auf.** Eigene Erhebung an `9ac41ea` über 205
+lebende Dateien und 1465 Zitate der Form `YYMMDD-HHMM_x_<slug>`, aufgelöst nach **Zeitstempel und
+Namensteil** und nicht nach dem Marker allein: kein toter Zeiger in dieser Datei, keiner im Spec,
+keiner im Circle-Datensatz, keiner unter `crates/`, `xtask/` und `resources/`.
+
+**Vier Stellen behalten den ausgeschriebenen Marker, und alle vier zu Recht.** Der Absatz des
+Abgleichs an `:553`–`:556` misst, in welchem Commit der `_c_`-Pfad eines Datensatzes zuerst
+steht; die Zeile `:585` behauptet gerade, dass die fünf bewegten Dateien `_s_` und `_i_` im Namen
+tragen. An beiden Stellen ist der Marker die Aussage, und ein Stern löschte den Inhalt. Die
+dritte und vierte liegen außerhalb dieser Datei: `_t_circle.md:7` ist ein maschinell gelesenes
+Kopffeld, und der Kopfeintrag `**Spec:**` dieser Datei steht in der Sternform, weil ihn kein
+Verbraucher wörtlich liest. Die Zählung „drei Stellen" im Abschlussvermerk von
+`issues/260818-0710_*_step-16-killed-22-pointers-…` zählt Absätze und nicht Zeilen; sie ist eng,
+aber nicht falsch.
+
+**Der Spec bleibt auf `_o_`, und der Grund hat sich geändert.** Er ist mit diesem Plan inhaltlich
+erfüllt. Ihn jetzt auf `_c_` zu stellen bräche aber `_t_circle.md:7`, wo das Kopffeld
+`**Active spec/plan:**` seinen Pfad wörtlich mit dem Buchstaben `_o_` führt und von vier
+Verbrauchern als Pfad gelesen wird — genau der Vorgang, den Schritt 16 an fünf anderen Dateien
+ausgelöst hat. Die Umbenennung gehört deshalb an den Abschluss des Circles, wo derselbe Schreiber
+beide Dateien in der Hand hat.
+
+Bericht: `history/260818-0807-reconciliation.md`.
