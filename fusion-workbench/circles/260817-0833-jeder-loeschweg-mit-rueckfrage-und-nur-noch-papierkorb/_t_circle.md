@@ -27,13 +27,13 @@ Der Befund selbst war schon sechs Stunden vor dem Schaden abgelegt, als Risiko: 
 
 ### Was diese Runde aufhebt
 
-Der heutige Zustand ist keine Nachlässigkeit, sondern eine umgesetzte Nutzerfestlegung. `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md` hält die Antwort vom 260802-1105: „Delete löscht in Papierkorb, FN+F8 endgültig". Der Datensatz trägt `_i_`, nennt die Commits `daecb45` und `343a7f3` und führt die fehlende Rückfrage ausdrücklich als gewollten Preis. Nach dieser Runde stimmt kein Teil davon mehr.
+Der heutige Zustand ist keine Nachlässigkeit, sondern eine umgesetzte Nutzerfestlegung. `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` hält die Antwort vom 260802-1105: „Delete löscht in Papierkorb, FN+F8 endgültig". Der Datensatz trägt `_i_`, nennt die Commits `daecb45` und `343a7f3` und führt die fehlende Rückfrage ausdrücklich als gewollten Preis. Nach dieser Runde stimmt kein Teil davon mehr.
 
 Die Festlegung steht an sechs weiteren Stellen, darunter die Directive der Runde 1 und neun bindende Zeilen ihres Specs. Das Nachziehen ist deshalb ein eigener Gegenstand der Runde (C6) und kein Nebeneffekt: eine überholte Zusage, die stehen bleibt, wird von der nächsten Runde als bindend gelesen.
 
 ### Die elf Antworten des Nutzers
 
-Sie stehen ausformuliert im Spec und im neuen Entscheidungsdatensatz `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` und werden hier nicht wiederholt. In Stichworten: Rückfrage vor jedem Vorgang mit Abbrechen vorbelegt; laute Warnung als dasselbe Blatt mit Warnzeichen, Pfad, Zahl und Grund in der ersten Zeile; Umfangsschwelle bei 25 Einträgen im Unterbaum, gedeckelt gezählt; vier entscheidbare Zielarten plus Umfang plus Git-Arbeitsbaum; kein endgültiger Löschweg mehr; kein Löschen auf Zielen ohne Papierkorb; `ctrl+delete` für Lesezeichen bleibt ohne Rückfrage; kein Protokoll in dieser Runde; `f8` zeigt künftig auf den Papierkorb; eine gespeicherte `keymap.toml` mit der entfallenen Kennung wird wie heute verworfen; die Git-Prüfung sieht aufwärts.
+Sie stehen ausformuliert im Spec und im neuen Entscheidungsdatensatz `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` und werden hier nicht wiederholt. In Stichworten: Rückfrage vor jedem Vorgang mit Abbrechen vorbelegt; laute Warnung als dasselbe Blatt mit Warnzeichen, Pfad, Zahl und Grund in der ersten Zeile; Umfangsschwelle bei 25 Einträgen im Unterbaum, gedeckelt gezählt; vier entscheidbare Zielarten plus Umfang plus Git-Arbeitsbaum; kein endgültiger Löschweg mehr; kein Löschen auf Zielen ohne Papierkorb; `ctrl+delete` für Lesezeichen bleibt ohne Rückfrage; kein Protokoll in dieser Runde; `f8` zeigt künftig auf den Papierkorb; eine gespeicherte `keymap.toml` mit der entfallenen Kennung wird wie heute verworfen; die Git-Prüfung sieht aufwärts.
 
 Die letzte dieser Antworten hat der Nutzer am Spec-Gate umgedreht, nachdem die Kalibrierung des Shapers gezeigt hatte, dass die enge Form seinen eigenen Schadensfall nicht trifft. Der Einwand des Shapers dagegen bleibt gültig und steht im Spec: in diesem Projekt warnt danach fast jede Löschung im Quellbaum laut.
 
@@ -51,9 +51,9 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
 
 **Bindende Datensätze:**
 
-- `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md` — wird von dieser Runde überholt und wandert in C6 auf `_s_`.
-- `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` — die Antwort, auf der diese Runde steht.
-- `shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — offen, und diese Runde berührt seine Kehrseite: eine **entfallene** Funktion in einer gespeicherten Belegung. Der Nutzer hat entschieden, es beim heutigen Verhalten zu belassen.
+- `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` — von dieser Runde überholt: der Datensatz trägt seit Commit `24bbccc` den Marker `_s_`, mit Grund und Verweis auf den nachfolgenden.
+- `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` — die Antwort, auf der diese Runde steht.
+- `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — offen, und diese Runde berührt seine Kehrseite: eine **entfallene** Funktion in einer gespeicherten Belegung. Der Nutzer hat entschieden, es beim heutigen Verhalten zu belassen.
 
 ## Turn log
 

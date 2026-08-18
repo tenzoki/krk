@@ -123,3 +123,77 @@ Ablauf und Zahlen im Einzelnen:
 **Offen bleiben die siebzehn in der Werkbank-Prosa:** neun in
 `shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md`, vier im Plan dieser Runde
 und vier im Circle-Datensatz.
+
+**Weiter erledigt: 260818-0744 durch `analyst`, die dreizehn in Spec und Plan.** Neun im Spec
+(`shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md`, Zeilen 29, 41, 47, 49,
+215, 216, 289, 290, 291) und vier im Plan (`planning/260817-0856_*_plan-absicherung-jedes-loeschwegs.md`,
+Zeilen 303, 304, 323, 561) stehen jetzt in der Sternform. Der oben genannte vierzehnte Fall
+ist mitgezogen: `spec:218` nennt den Runde-1-Spec nicht mehr als `_o_`, sondern als
+`260802-1036_*_spec-navigator-geruest.md`. **Offen bleiben allein die vier im Circle-Datensatz
+`_t_circle.md`**; der Nutzer zieht sie nach, dann kann dieser Datensatz schließen.
+
+**Die Sternform ist auch hier vorläufig gewählt**, auf demselben Grund wie in den zwei
+`**Cross-references:**`-Zeilen desselben Tages: der ausgeschriebene Buchstabe ist beim nächsten
+Zustandswechsel des Ziels wieder ein toter Zeiger, und genau das ist der behobene Defekt. Für
+Werkbank-Prosa ist die Frage weiter offen
+(`shared/decisions/260818-0201_*_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md`);
+fällt sie anders aus, sind diese 23 Stellen mit einem `sed` zurückzunehmen.
+
+**Die eigene Auflösung hat neun weitere Stellen ergeben, alle mitgestellt.** Aufgelöst wurden
+alle 33 Zitate der Form `YYMMDD-HHMM_x_<slug>` in den zwei Dateien, nicht nur die dreizehn
+gemeldeten:
+
+- **ein toter Zeiger, den keine Markerprüfung findet** — `plan:261` trug bereits die Sternform,
+  aber einen erfundenen Namensteil: zitiert war
+  `issues/260817-1720_*_die-frage-kann-diese-25-eintraege-mit-25-eintraegen-lauten.md`, der
+  Datensatz heißt `260817-1720_*_the-question-can-read-diese-25-eintraege-mit-25-eintraegen.md`.
+  Berichtigt. Es ist derselbe Fehlertyp wie `textautomatik.rs:98` aus dem Lauf um 0737, und
+  damit der zweite Beleg für den breiten Fix aus `## Fix`: die Runde hat den Fall jetzt zweimal
+  in zwei Speichern.
+- **zwei tote Glob-Zitate** — `plan:303` und `plan:316` nennen die vier Datensätze als
+  `260817-0536_a_*.md` und `260817-0536_a_…`; beide Muster treffen seit `24bbccc` keine Datei
+  mehr. Jetzt `260817-0536_*_*.md` und `260817-0536_*_…`; das Muster trifft weiterhin genau die
+  vier.
+- **sechs Stellen mit ausgeschriebenem Marker, deren Ziel ihn noch trägt** — `plan:5`, `:193`,
+  `:269`, `:309`, `:586` und `:601`. Keine toten Zeiger, sondern die Verstöße gegen die
+  Festlegung vom 260815, die beim nächsten Zustandswechsel welche würden.
+
+**Drei Stellen bleiben bewusst beim ausgeschriebenen Marker**, `plan:555` und `:556`: der Absatz
+des Abgleichs misst, in welchem Commit der `_c_`-Pfad eines Datensatzes zuerst steht. Dort ist der
+Marker die Aussage selbst, und die Sternform löschte den Inhalt — die Ausnahme, die `CLAUDE.md`
+unter `## Bindende Grundlage` benennt.
+
+**Ein Folgesatz ist durch diese Berichtigung stehen geblieben und nicht angefasst:** `plan:310`
+sagt am Ende von Schritt 17, der Spec dieser Runde nenne den Pfad des Runde-1-Specs „einmal mit
+dem Marker `_o_`". Seit dieser Berichtigung tut er das nicht mehr. Der Satz steht im Feld
+`Changes` eines `[DONE]`-Schritts und zeichnet einen Stand zur Planzeit auf; ihn zu ändern wäre
+Planarbeit und nicht Zeigerpflege.
+
+**Verification.** Das Kommando löst jedes Zitat der zwei Dateien gegen den Dateibestand auf und
+meldet daneben jeden ausgeschriebenen Marker außerhalb der zwei Ausnahmezeilen 555 und 556.
+Ausgabe `citations=33 bad=0`, Exit 0:
+
+```sh
+python3 -c '
+import re,glob,sys
+S=glob.glob("fusion-workbench/**/*.md",recursive=True); bad=0; tot=0
+for f in sys.argv[1:]:
+  for i,l in enumerate(open(f),1):
+    for ts,mk,sl in re.findall(r"(\d{6}-\d{4})_([a-z*])_([A-Za-z0-9äöüß-]+)",l):
+      tot+=1
+      n=len([p for p in S if re.search("/%s_._%s"%(ts,re.escape(sl)),p)])
+      if n!=1 or (mk!="*" and i not in (555,556)): bad+=1; print("BAD",f,i,ts,mk,sl,n)
+print("citations=%d bad=%d"%(tot,bad)); sys.exit(1 if bad else 0)' \
+ fusion-workbench/shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md \
+ fusion-workbench/circles/260817-0833-*/planning/260817-0856_*_plan-absicherung-jedes-loeschwegs.md
+```
+
+Es ist der schmale Vorgriff auf den breiten Fix aus `## Fix`: fünfzehn Zeilen, zwei Dateien.
+Über den ganzen Baum gefahren wäre es die Prüfung, die dort verlangt ist.
+
+---
+Resolved: Alle 22 Zeiger stehen in der Sternform und lösen auf. Fünf unter `crates/` in Commit `adf638b`, dazu fünf weitere aus derselben Erhebung über 424 Zitate; dreizehn in Spec und Plan; vier im Circle-Datensatz `_t_circle.md` vom Orchestrator, der die Datei besitzt. Zwei der reparierten Stellen zeigten aus einem anderen Grund als dem Marker ins Leere — `crates/krk-ui/src/appkit/textautomatik.rs:98` und `plan:261` trugen schon die Sternform und einen falschen Namensteil. Beide belegen, dass eine Prüfung über den Marker allein nicht genügt.
+
+Eine Stelle im Circle-Datensatz behält den Buchstaben mit Absicht: `**Active spec/plan:**` in Zeile 7 ist ein maschinell gelesenes Kopffeld, das `rules/circle-records.md` als Pfad definiert, und ein Stern darin bricht einen wörtlichen Dateizugriff. Sie löst heute auf.
+
+Die Sternform ist in der Werkbank-Prosa vorläufig gewählt, weil `shared/decisions/260818-0201_*_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md` offen ist. Für `crates/` ist sie durch `shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md` bindend und nicht vorläufig.
