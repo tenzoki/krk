@@ -137,18 +137,20 @@
 //!   (`NSTableView.h:377` und `:77-96`). **Die juengste Beruehrung dieser
 //!   Datei**, und damit vier Hauptfassungen unter der Untergrenze.
 //!
-//! **Die acht Beruehrungen des Abwurfs stehen seit 10.0** (C4 bis C7 der
+//! **Die neun Beruehrungen des Abwurfs stehen seit 10.0** (C4 bis C7 der
 //! Runde 13), jede am SDK nachgelesen und keine mit einem `API_AVAILABLE` im
 //! Kopf: `registerForDraggedTypes:` (`NSView.h:488`), das Protokoll
 //! `NSDraggingInfo` (`NSDragging.h:69`) mit `draggingPasteboard`
-//! (`NSDragging.h:79`), die Aufzaehlung `NSDragOperation` (`NSDragging.h:25`),
+//! (`NSDragging.h:79`) und `draggingSequenceNumber` (`NSDragging.h:81`), die
+//! Aufzaehlung `NSDragOperation` (`NSDragging.h:25`),
 //! `NSTableViewDropOperation` (`NSTableView.h:25`),
 //! `setDropRow:dropOperation:` (`NSTableView.h:319`) und die beiden
 //! Protokollmethoden `tableView:validateDrop:proposedRow:proposedDropOperation:`
 //! und `tableView:acceptDrop:row:dropOperation:` (`NSTableView.h:783` und
 //! `:787`). Jede Zeilenangabe ist am 260818 in
 //! `$(xcrun --show-sdk-path)/System/Library/Frameworks/AppKit.framework/Headers/`
-//! nachgelesen. Die uebrigen Beruehrungen jener Runde stehen im Kopf von
+//! nachgelesen, die neunte am 260819. Die uebrigen Beruehrungen jener Runde
+//! stehen im Kopf von
 //! [`super::abwurf`], das sie geschlossen fuehrt; hier stehen die, die diese
 //! Datei selbst anspricht.
 //!
@@ -499,6 +501,116 @@ fn abwurfmeldung(gemerkt: Option<Abwurfgrund>, jetzt: Option<Abwurfgrund>) -> Op
     }
 }
 
+/// Der Ordner, in dem **alle** gezogenen Eintraege liegen, falls sie alle in
+/// einem liegen (C6, Lage 3 der Runde 13).
+///
+/// Rein und ohne AppKit, damit die Rechnung ohne Ziehsitzung zu pruefen ist;
+/// gerufen wird sie von [`DateifensterQuelle::abwurfquellen`], hoechstens
+/// einmal je Ziehsitzung.
+///
+/// **`None` heisst dreierlei, und alle drei fuehren zu demselben Ausgang:** die
+/// Ablage traegt keinen Eintrag; die Eintraege kommen aus mehreren Ordnern; ein
+/// Eintrag hat gar keinen uebergeordneten Ordner, ist also die Wurzel des
+/// Datentraegers. In keinem der drei Faelle ist der Zielordner „der
+/// Quellordner", und C6 Lage 3 greift nicht. Ein eigener Wert je Fall waere ein
+/// Unterschied, den niemand liest.
+///
+/// **Der Vergleich mit dem Ziel steht nicht hier**, sondern beim Aufrufer, und
+/// zwar aus einem Grund: das Ziel wechselt mit jeder Zeigerbewegung, dieses
+/// Ergebnis nicht. Was hier steht, ist genau der Teil, der eine Ziehsitzung
+/// lang gilt.
+#[must_use]
+fn gemeinsamer_quellordner(quellen: &[PathBuf]) -> Option<PathBuf> {
+    let mut uebrige = quellen.iter();
+    let erster = uebrige.next()?.parent()?;
+    uebrige
+        .all(|weiterer| weiterer.parent() == Some(erster))
+        .then(|| erster.to_path_buf())
+}
+
+/// Welcher Ordner beim **Loslassen** das Ziel ist (C4 der Runde 13).
+///
+/// `benennt_eine_zeile` ist wahr, wenn AppKit eine Zeilennummer und nicht die
+/// `-1` liefert; `-1` heisst „die ganze Liste" (`NSTableView.h:317`).
+/// `typ_der_zeile` ist, was **jetzt** an dieser Zeile steht, und `None` heisst,
+/// dass dort nichts mehr steht.
+///
+/// Der Rumpf ist diese Tafel, und sie steht ausgeschrieben und nicht gerechnet:
+///
+/// | `benennt_eine_zeile` | `typ_der_zeile` | Ausgang |
+/// |---|---|---|
+/// | nein | gleichgueltig | [`Abwurfziel::AngezeigterOrdner`] |
+/// | ja | `Some(Typ::Ordner)` | [`Abwurfziel::Zeile`] |
+/// | ja | `Some(Typ::Datei)` | [`Abwurfziel::Keines`] |
+/// | ja | `Some(Typ::Verknuepfung)` | [`Abwurfziel::Keines`] |
+/// | ja | `None` | [`Abwurfziel::Keines`] |
+///
+/// **Fuenf Arme ueber acht Kombinationen**, ohne Auffangzweig; [`Typ`] ist
+/// geschlossen, also haelt der Uebersetzer die Vollstaendigkeit, und eine
+/// vierte Eintragsart hielte den Bau an. Die Probe `die_tafel_des_abwurfziels_
+/// geht_auf` schreibt alle acht aus.
+///
+/// # Warum das nicht [`abwurfregel::marke`] ist
+///
+/// Die beiden Tafeln sehen einander aehnlich und beantworten zwei
+/// verschiedene Fragen; sichtbar wird der Unterschied an der Dateizeile.
+///
+/// [`abwurfregel::marke`] laeuft **waehrend** des Ziehens und entscheidet, was
+/// der Zeiger zeigt. Ueber einer Dateizeile springt die Marke auf die ganze
+/// Liste, und der angezeigte Ordner ist damit ein angekuendigtes und voellig
+/// gueltiges Ziel — der Nutzer sieht es vor dem Loslassen.
+///
+/// Diese Tafel laeuft **beim** Loslassen und entscheidet, ob das, was AppKit
+/// zurueckmeldet, noch das ist, was gezeigt wurde. Eine Zeilennummer kommt hier
+/// nur an, wenn `abwurf_pruefen` sie ueber `setDropRow:` gesetzt hat, und
+/// gesetzt hat sie es allein fuer einen Ordner. Steht dort jetzt eine Datei
+/// oder gar nichts mehr, hat sich die Liste unter dem Zeiger geaendert; „der
+/// angezeigte Ordner" war dann nie angekuendigt, und ihn stillschweigend zu
+/// nehmen hiesse, in einen anderen Ordner zu schreiben als den, auf den der
+/// Nutzer gezeigt hat.
+///
+/// Eine gemeinsame Tafel muesste den Fall der Dateizeile in beide Richtungen
+/// zugleich beantworten. Ausserdem sagt `abwurfregel`s Probe
+/// `die_marke_hat_genau_einen_aufrufer` zu, dass aus einer Zeilennummer an
+/// genau einer Stelle ein Ziel **waehrend des Ziehens** wird; ein zweiter
+/// Aufrufer dort waere eine zweite Antwort auf jene Frage.
+///
+/// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
+/// bliebe: der Abwurf naehme dann wieder jedes Ziel an, das die Zeile gerade
+/// hergibt.
+#[must_use]
+fn abwurfziel(benennt_eine_zeile: bool, typ_der_zeile: Option<Typ>) -> Abwurfziel {
+    match (benennt_eine_zeile, typ_der_zeile) {
+        // Die `-1`: der Abwurf gilt der ganzen Liste, also dem angezeigten
+        // Ordner. Das ist ein Ziel aus C4 und keine Notloesung.
+        (false, _) => Abwurfziel::AngezeigterOrdner,
+        // Die Ordnerzeile, die `abwurf_pruefen` markiert hat, steht noch.
+        (true, Some(Typ::Ordner)) => Abwurfziel::Zeile,
+        // An der markierten Zeile steht jetzt eine Datei.
+        (true, Some(Typ::Datei)) => Abwurfziel::Keines,
+        // Oder eine Verknuepfung; sie zaehlt nicht als Ordner, hier so wenig
+        // wie in `abwurfregel::marke`.
+        (true, Some(Typ::Verknuepfung)) => Abwurfziel::Keines,
+        // Oder gar nichts mehr: die Liste ist kuerzer geworden.
+        (true, None) => Abwurfziel::Keines,
+    }
+}
+
+/// Welcher Ordner einen angenommenen Abwurf bekommt, oder keiner.
+///
+/// Drei Werte, ueberschneidungsfrei und vollstaendig. Der dritte ist der, den
+/// es bis zum 260819 nicht gab: er heisst „die Zeile ist nicht mehr die, die
+/// der Zeiger gezeigt hat", und sein Ausgang ist ein `false` an AppKit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Abwurfziel {
+    /// Der Ordner der Zeile, die AppKit nennt.
+    Zeile,
+    /// Der angezeigte Ordner des sichtbaren Tabs.
+    AngezeigterOrdner,
+    /// Keiner: der Abwurf wird nicht angenommen.
+    Keines,
+}
+
 /// Was ein Einstiegsversuch in eine Zeile ergeben hat.
 ///
 /// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**, und
@@ -743,6 +855,89 @@ pub struct QuelleIvars {
     /// Beurteilung koennte anders ausfallen als die, die der Zeiger gezeigt
     /// hat. C5 sagt zu, dass beide uebereinstimmen.
     beschlossener_vorgang: Cell<Option<Abwurfvorgang>>,
+    /// Was die Ablage des laufenden Ziehvorgangs traegt, samt der Nummer der
+    /// Ziehsitzung, zu der sie gehoert (C4 bis C7 der Runde 13).
+    ///
+    /// **Kein Zwischenspeicher aus Bequemlichkeit, sondern gegen eine gemessene
+    /// Zahl.** `validateDrop:` laeuft bei **jeder** Zeigerbewegung, und
+    /// [`super::zwischenablage::dateiverweise`] baut dabei je gezogenem Eintrag
+    /// ein `NSURL` ueber den Ablageserver und einen `PathBuf` daneben. Am
+    /// 260819 auf dem Referenzgeraet gemessen, im Profil `release` und je
+    /// Durchgang: 1 Eintrag 0,13 ms, 100 Eintraege 6,0 ms, 1.000 Eintraege
+    /// 155 ms, 5.000 Eintraege 585 ms. Ein Bild dauert bei 60 Hz 16,7 ms; von
+    /// hundert gezogenen Eintraegen an verbraucht der Aufruf allein davon mehr
+    /// als ein Drittel, von tausend an steht die Anwendung. Das ist genau das
+    /// Kriterium, das diese Runde an die Stelle einer elften Zeitzusage gesetzt
+    /// hat: „waehrend ein Ziehvorgang ueber der Dateiliste steht, bleibt die
+    /// Liste bildlauffaehig".
+    ///
+    /// **Gemerkt wird, was allein an der Ablage haengt**, und nichts, was am
+    /// Zeiger haengt: ob ueberhaupt ein Dateiverweis kommt, und in welchem
+    /// Ordner die gezogenen Eintraege liegen, falls sie alle in einem liegen.
+    /// Der Zielordner wechselt mit jeder Zeile und steht deshalb nicht hier.
+    ///
+    /// # Die Loeschregel
+    ///
+    /// **Es wird ersetzt und nicht geraeumt, und der Schluessel dazu ist
+    /// `NSDraggingInfo::draggingSequenceNumber`** (`NSDragging.h:81`), die
+    /// Nummer, die eine Ziehsitzung eindeutig benennt.
+    ///
+    /// - **Geschrieben** wird das Feld allein in
+    ///   [`DateifensterQuelle::abwurfquellen`], und dort allein dann, wenn die
+    ///   gemerkte Nummer nicht die des laufenden Ziehvorgangs ist.
+    /// - **Gelesen** wird es allein an derselben Stelle, und allein dann, wenn
+    ///   die Nummern uebereinstimmen.
+    /// - **Es faellt nie von selbst.** Ein `draggingExited:` gibt es hier
+    ///   nicht, und es soll auch keines geben.
+    ///
+    /// Die drei Lagen, in denen ein geraeumtes Feld noetig schiene, und warum
+    /// keine es verlangt:
+    ///
+    /// - **Der Ziehvorgang verlaesst die Liste und kehrt zurueck.** Die Nummer
+    ///   ist dieselbe, die Ablage ist dieselbe, das Gemerkte stimmt. Wer hier
+    ///   raeumte, zahlte die gemessene Zeit oben bei jedem Wiedereintritt noch
+    ///   einmal.
+    /// - **Der Ziehvorgang wird abgebrochen.** Es kommt kein weiterer Aufruf.
+    ///   Das Feld bleibt stehen und traegt Pfade und einen Wahrheitswert, keine
+    ///   Griffe auf etwas, das ablaufen koennte.
+    /// - **Ein zweiter Ziehvorgang beginnt ohne ein Loslassen dazwischen.** Er
+    ///   traegt eine andere Nummer, und der erste `validateDrop:` ersetzt das
+    ///   Feld. Genau dafuer steht die Nummer darin.
+    ///
+    /// **Es ist damit die Bauform von [`QuelleIvars::beschlossener_vorgang`]
+    /// und ausdruecklich nicht die von
+    /// [`QuelleIvars::gemeldeter_abwurfgrund`]**: es faellt nicht mit der
+    /// Befehlsantwort, denn ein Tastendruck waehrend eines stehenden
+    /// Ziehvorgangs hat mit dessen Ablage nichts zu schaffen. Ein dritter
+    /// Ausgang neben den zweien, die diese Datei fuehrt, entsteht nicht.
+    ///
+    /// **Was es nicht traegt, ist die Sicherheit gegen eine wiederverwendete
+    /// Nummer.** `speculation:` — der Kopf des Systems sagt „uniquely
+    /// identifies", ohne eine Aussage ueber die Wiederverwendung nach dem Ende
+    /// einer Sitzung zu machen. Eine wiederverwendete Nummer liesse einen
+    /// zweiten Ziehvorgang die Quellen des ersten sehen. Die Nummer ist ein
+    /// `NSInteger`; dass sie innerhalb einer Anwendungssitzung ueberlaeuft, ist
+    /// nicht anzunehmen.
+    abwurfquellen: RefCell<Option<Abwurfquellen>>,
+}
+
+/// Was die Ablage eines Ziehvorgangs traegt, und zu welcher Ziehsitzung sie
+/// gehoert (C4 bis C7 der Runde 13).
+///
+/// Der Inhalt von [`QuelleIvars::abwurfquellen`]; die Loeschregel und der
+/// gemessene Grund stehen dort. Beide Tatsachen haengen allein an der Ablage
+/// und nicht am Zeiger, und genau deshalb duerfen sie eine Ziehsitzung lang
+/// stehen bleiben.
+#[derive(Debug, Clone)]
+struct Abwurfquellen {
+    /// `NSDraggingInfo::draggingSequenceNumber` der Sitzung, aus der die
+    /// beiden Tatsachen darunter stammen.
+    folge: NSInteger,
+    /// Ob die Ablage mindestens einen Dateiverweis liefert (C7).
+    traegt_dateien: bool,
+    /// Der Ordner, in dem **alle** gezogenen Eintraege liegen, falls sie alle
+    /// in einem liegen (C6, Lage 3). Gebaut von [`gemeinsamer_quellordner`].
+    gemeinsamer_ordner: Option<PathBuf>,
 }
 
 define_class!(
@@ -895,6 +1090,7 @@ impl DateifensterQuelle {
             befehlsantwort_raeumer: RefCell::new(None),
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
+            abwurfquellen: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -3003,6 +3199,41 @@ impl DateifensterQuelle {
         }
     }
 
+    /// Was die Ablage dieses Ziehvorgangs traegt, hoechstens einmal je
+    /// Ziehsitzung erhoben (C4, C6, C7).
+    ///
+    /// **Die eine Stelle, die [`QuelleIvars::abwurfquellen`] liest und
+    /// schreibt.** Stimmt die gemerkte Nummer der Ziehsitzung mit der des
+    /// laufenden Ziehvorgangs ueberein, kommt das Gemerkte zurueck; sonst wird
+    /// die Ablage einmal gelesen und das Feld ersetzt. Die Loeschregel im
+    /// Einzelnen und die gemessenen Zahlen, die den Zwischenspeicher
+    /// verlangen, stehen an jenem Feld.
+    ///
+    /// **Die Ausleihe endet vor dem Griff in die Ablage.** Das Gemerkte wird
+    /// herauskopiert, und erst danach faellt die Entscheidung, ob
+    /// [`super::zwischenablage::dateiverweise`] laeuft; ein `borrow()`, das
+    /// diesen Aufruf ueberlebte, traefe auf das `borrow_mut()` unmittelbar
+    /// dahinter. Das ist dieselbe Regel, unter der auch das Tabmodell in
+    /// dieser Datei steht.
+    fn abwurfquellen(&self, zug: &ProtocolObject<dyn NSDraggingInfo>) -> Abwurfquellen {
+        let folge = zug.draggingSequenceNumber();
+        let gemerkt = self.ivars().abwurfquellen.borrow().clone();
+        if let Some(gemerkt) = gemerkt
+            && gemerkt.folge == folge
+        {
+            return gemerkt;
+        }
+
+        let quellen = super::zwischenablage::dateiverweise(&zug.draggingPasteboard());
+        let frisch = Abwurfquellen {
+            folge,
+            traegt_dateien: !quellen.is_empty(),
+            gemeinsamer_ordner: gemeinsamer_quellordner(&quellen),
+        };
+        *self.ivars().abwurfquellen.borrow_mut() = Some(frisch.clone());
+        frisch
+    }
+
     /// Was geschaehe, wenn der Nutzer jetzt loslaesst (C4 bis C7).
     ///
     /// Sechs Tatsachen herein, ein Urteil heraus, und keine der sechs wird hier
@@ -3012,8 +3243,10 @@ impl DateifensterQuelle {
     /// Funktion **beschafft** und ordnet nichts ein.
     ///
     /// Der Reihe nach: der laufende Vorgang, die Marke und mit ihr der
-    /// Zielordner, die Quellen aus der Ablage des Ziehvorgangs, das
-    /// Schreibrecht des Ziels, die angebotene Menge. Danach das Urteil, die
+    /// Zielordner, die Quellen aus der Ablage des Ziehvorgangs — ueber
+    /// [`Self::abwurfquellen`] und damit hoechstens einmal je Ziehsitzung statt
+    /// einmal je Zeigerbewegung —, das Schreibrecht des Ziels, die angebotene
+    /// Menge. Danach das Urteil, die
     /// Marke an der Tabelle, die entdoppelte Meldung — und mit ihr, an
     /// derselben Kante, die Raeumung des Rangs 1 an **beiden** Dateifenstern —
     /// und zuletzt der Zeiger.
@@ -3038,6 +3271,30 @@ impl DateifensterQuelle {
     /// Eintraege, die dort schon stehen, treffen auf dieselbe Konfliktrueckfrage
     /// wie bei F5 und F6. Das ist genau die Antwort, die `auftrag_stellen` fuer
     /// die Auswahl gibt, wo alle Quellen ohnehin aus einem Ordner kommen.
+    ///
+    /// **Dieser Vergleich ist eine Vorhersage und keine Entscheidung**, und das
+    /// steht hier, weil er als Entscheidung gelesen worden ist. Verglichen
+    /// werden zwei Pfade als Text, und die beiden Seiten kommen seit dieser
+    /// Runde nicht mehr aus derselben Quelle: der Zielordner stammt aus KRKs
+    /// Ordnermodell, die Quellpfade aus `NSURL::path` auf Verweisen, die eine
+    /// fremde Anwendung geschrieben hat — und die schreibt sie aufgeloest.
+    /// Derselbe Ordner unter zwei Schreibweisen — `/tmp` gegen `/private/tmp`,
+    /// ein Lesezeichen ueber einen symbolischen Verweis, ein Unterschied in der
+    /// Gross- und Kleinschreibung — liest sich damit als zwei Ordner, und die
+    /// Abweisung aus C6 Lage 3 bleibt aus.
+    ///
+    /// **Genauer laesst sich die Frage an dieser Stelle nicht beantworten, und
+    /// sie muss es auch nicht.** Genauer waere sie nur ueber `st_dev` und
+    /// `st_ino`, also ueber einen Systemaufruf je Zeigerbewegung; und selbst
+    /// dann bliebe sie eine Vorhersage, denn zwischen der letzten
+    /// Zeigerbewegung und dem Loslassen kann der Ordner ein anderer werden.
+    /// Entschieden wird sie deshalb dort, wo sie zu entscheiden ist: in
+    /// `krk_core::operation`s `zielpfad`, im Augenblick des Zugriffs und ueber
+    /// die Naemlichkeit statt ueber die Schreibweise. Was hier durchrutscht,
+    /// kostet den Nutzer damit einen Zeiger, der annimmt, und danach je Eintrag
+    /// die Zeile „Quelle und Ziel sind derselbe Eintrag" in der Abschlussliste
+    /// — auf demselben Weg, auf dem C6 auch seine vierte Lage beantwortet:
+    /// nachtraeglich entschieden und nicht vorhergesagt.
     fn abwurf_pruefen(
         &self,
         zug: &ProtocolObject<dyn NSDraggingInfo>,
@@ -3059,16 +3316,13 @@ impl DateifensterQuelle {
             (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => self.angezeigter_ordner(),
         };
 
-        let quellen = super::zwischenablage::dateiverweise(&zug.draggingPasteboard());
+        let quellen = self.abwurfquellen(zug);
         let (bietet_kopieren, bietet_verschieben) = abwurf::angebot(zug);
         let gefaellt = abwurfregel::urteil(&Abwurflage {
-            traegt_dateien: !quellen.is_empty(),
+            traegt_dateien: quellen.traegt_dateien,
             vorgang_laeuft: self.vorgang_laeuft_fragen(),
             schreibrecht: abwurf::beschreibbarkeit(&ziel),
-            ziel_ist_quellordner: !quellen.is_empty()
-                && quellen
-                    .iter()
-                    .all(|quelle| quelle.parent() == Some(ziel.as_path())),
+            ziel_ist_quellordner: quellen.gemeinsamer_ordner.as_deref() == Some(ziel.as_path()),
             bietet_kopieren,
             bietet_verschieben,
         });
@@ -3127,18 +3381,40 @@ impl DateifensterQuelle {
     /// eine zweite Beurteilung koennte anders ausfallen als die, die der Zeiger
     /// gezeigt hat, und C5 sagt zu, dass beide uebereinstimmen.
     ///
-    /// Ziel und Quellen entstehen noch einmal, weil beides billig und ohne
-    /// Zustand ist; ein drittes Feld in den Ivars waere ein Zwischenspeicher,
-    /// der zwischen dem Ziehen und dem Loslassen veralten koennte.
+    /// **Die Quellen werden hier noch einmal gelesen und nicht dem
+    /// Zwischenspeicher entnommen**, den [`Self::abwurfquellen`] fuehrt. Billig
+    /// ist das nicht: gemessen sind 585 ms fuer 5.000 gezogene Eintraege, und
+    /// die Zahlen stehen bei [`super::zwischenablage::dateiverweise`]. Sie
+    /// fallen aber **einmal** an, im Augenblick des Loslassens, unmittelbar vor
+    /// einem Vorgang, der laenger dauert — und nicht je Zeigerbewegung, was der
+    /// gemessene Grund fuer jenen Zwischenspeicher war. Was er fuehrt, sind
+    /// zwei abgeleitete Groessen, ein Wahrheitswert und ein Pfad; die ganze
+    /// Liste dazuzunehmen hiesse, eine Ziehsitzung voller Pfade ueber deren
+    /// Ende hinaus zu halten, ohne dass eine gemessene Zahl es verlangte.
     ///
     /// **Was zwischen dem letzten Zeigerpunkt und dem Loslassen geschieht, ist
-    /// nicht vorherzusagen.** Frischt die Liste in dieser Spanne auf und steht
-    /// an der Zeile ein anderer Eintrag, geht dessen Pfad als Ziel mit; die
+    /// nicht vorherzusagen**, und die drei Ausgaenge stehen in [`abwurfziel`]
+    /// als Tafel. Frischt die Liste in dieser Spanne auf und steht an der Zeile
+    /// ein **anderer Ordner**, geht dessen Pfad als Ziel mit; die
     /// Operationsmaschine haengt jeden Namen daran an und meldet den
     /// gescheiterten Eintrag mit seinem Grund in der Abschlussliste, auf
     /// demselben Weg, den F5 und F6 gehen. Der Plan der Runde 13 nennt diese
     /// Sorte Frage in seiner `Decidability`-Zeile: nachtraeglich entschieden
     /// und nicht vorhergesagt.
+    ///
+    /// **Steht an der Zeile dagegen nichts mehr oder keine Ordnerzeile, wird
+    /// der Abwurf nicht angenommen.** Bis zum 260819 gingen beide Faelle
+    /// stillschweigend anders aus. Eine **verschwundene** Zeile ergab dasselbe
+    /// `None` wie die `-1`, die „die ganze Liste" heisst, und der Abwurf landete
+    /// im angezeigten Ordner — also im uebergeordneten Ordner dessen, worauf
+    /// der Nutzer gezeigt hatte. Nichts war dabei gescheitert, also stand auch
+    /// nichts in der Abschlussliste. Eine Zeile, an der jetzt eine **Datei**
+    /// steht, ging als Zielordner mit, und die Operationsmaschine haengt die
+    /// Namen an einen Pfad an, der kein Ordner ist. Der erste Ausgang ist der,
+    /// den der Nutzer nicht wiederholen kann: er sieht nicht, dass etwas
+    /// anderes geschehen ist als das, worauf er gezeigt hat. `false` ist
+    /// dagegen billig: AppKit laesst die Eintraege zurueckfliegen, geschrieben
+    /// wird nirgends etwas, und die Geste kostet den Nutzer eine Sekunde.
     ///
     /// Zurueck kommt, ob der Abwurf angenommen wurde. `false` heisst „es ist
     /// nichts geschehen"; AppKit laesst die Einträge dann an ihren Ort
@@ -3147,12 +3423,19 @@ impl DateifensterQuelle {
         let Some(vorgang) = self.ivars().beschlossener_vorgang.get() else {
             return false;
         };
-        let ziel = match usize::try_from(zeile)
+        let eintrag = usize::try_from(zeile)
             .ok()
-            .and_then(|zeile| self.eintrag_in_zeile(zeile))
-        {
-            Some((pfad, _)) => pfad,
-            None => self.angezeigter_ordner(),
+            .and_then(|zeile| self.eintrag_in_zeile(zeile));
+        let ziel = match (
+            abwurfziel(zeile >= 0, eintrag.as_ref().map(|(_, typ)| *typ)),
+            eintrag,
+        ) {
+            (Abwurfziel::Zeile, Some((pfad, _))) => pfad,
+            (Abwurfziel::AngezeigterOrdner, _) => self.angezeigter_ordner(),
+            // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
+            // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
+            // verlangt, und faellt auf denselben Ausgang wie `Keines`.
+            (Abwurfziel::Zeile, None) | (Abwurfziel::Keines, _) => return false,
         };
         let quellen = super::zwischenablage::dateiverweise(&zug.draggingPasteboard());
         if quellen.is_empty() {
@@ -4631,6 +4914,89 @@ mod tests {
     /// Dateifenster steht. Beides verlangt ein stehendes Fenster und einen
     /// Ziehvorgang aus einer zweiten Anwendung; es steht als Nutzerarbeit im
     /// Plan der Runde 13.
+    /// Die ganze Tafel des Abwurfziels: zwei Zeilenlagen mal vier
+    /// Zeilenbefunde, also acht Faelle (C4).
+    ///
+    /// Sie schreibt aus, was die erste Zeile der Tafel an [`abwurfziel`] mit
+    /// „gleichgueltig" zusammenfasst. Die Erwartungen stehen als Werte da und
+    /// nicht als Rechnung: eine gerechnete Erwartung waere die Umsetzung ein
+    /// zweites Mal. Dieselbe Bauform tragen die Tafeln in [`abwurfregel`] und
+    /// [`crate::kommandos::rueckschritt`].
+    ///
+    /// **Was sie misst**, ist der Ausgang, den es bis zum 260819 nicht gab:
+    /// eine Zeilennummer, an der jetzt kein Ordner mehr steht, faellt nicht
+    /// mehr auf den angezeigten Ordner zurueck. Die drei unteren Zeilen sind
+    /// dieser Ausgang; wer den Rueckfall wieder einbaut, macht sie rot.
+    ///
+    /// **Was sie nicht misst**, und der Satz gehoert dazu: dass AppKit
+    /// wirklich `-1` fuer die ganze Liste liefert und die gesetzte Zeilennummer
+    /// zurueckmeldet. Das verlangt eine Ziehsitzung aus einer zweiten
+    /// Anwendung und steht als Nutzerarbeit im Plan der Runde 13.
+    #[test]
+    fn die_tafel_des_abwurfziels_geht_auf() {
+        // benennt_eine_zeile, typ_der_zeile, Ziel.
+        const TAFEL: [(bool, Option<Typ>, Abwurfziel); 8] = [
+            (false, None, Abwurfziel::AngezeigterOrdner),
+            (false, Some(Typ::Ordner), Abwurfziel::AngezeigterOrdner),
+            (false, Some(Typ::Datei), Abwurfziel::AngezeigterOrdner),
+            (
+                false,
+                Some(Typ::Verknuepfung),
+                Abwurfziel::AngezeigterOrdner,
+            ),
+            (true, Some(Typ::Ordner), Abwurfziel::Zeile),
+            (true, Some(Typ::Datei), Abwurfziel::Keines),
+            (true, Some(Typ::Verknuepfung), Abwurfziel::Keines),
+            (true, None, Abwurfziel::Keines),
+        ];
+
+        for (benennt_eine_zeile, typ, erwartet) in TAFEL {
+            assert_eq!(
+                abwurfziel(benennt_eine_zeile, typ),
+                erwartet,
+                "benennt_eine_zeile={benennt_eine_zeile}, typ={typ:?}"
+            );
+        }
+    }
+
+    /// Der gemeinsame Quellordner entsteht nur, wenn wirklich alle gezogenen
+    /// Eintraege in einem Ordner liegen (C6, Lage 3).
+    ///
+    /// Die drei `None`-Faelle stehen einzeln da, weil sie drei verschiedene
+    /// Lagen sind und derselbe Ausgang: eine leere Ablage, Eintraege aus zwei
+    /// Ordnern, und ein Eintrag ohne uebergeordneten Ordner. Der letzte ist
+    /// der, den ein `unwrap` verschluckt haette.
+    #[test]
+    fn der_gemeinsame_quellordner_entsteht_nur_aus_einem_ordner() {
+        assert_eq!(gemeinsamer_quellordner(&[]), None, "eine leere Ablage");
+        assert_eq!(
+            gemeinsamer_quellordner(&[PathBuf::from("/haus/eins.txt")]),
+            Some(PathBuf::from("/haus")),
+            "ein einzelner Eintrag"
+        );
+        assert_eq!(
+            gemeinsamer_quellordner(&[
+                PathBuf::from("/haus/eins.txt"),
+                PathBuf::from("/haus/zwei.txt"),
+            ]),
+            Some(PathBuf::from("/haus")),
+            "zwei Eintraege aus demselben Ordner"
+        );
+        assert_eq!(
+            gemeinsamer_quellordner(&[
+                PathBuf::from("/haus/eins.txt"),
+                PathBuf::from("/hof/zwei.txt"),
+            ]),
+            None,
+            "zwei Eintraege aus zwei Ordnern"
+        );
+        assert_eq!(
+            gemeinsamer_quellordner(&[PathBuf::from("/")]),
+            None,
+            "die Wurzel hat keinen uebergeordneten Ordner"
+        );
+    }
+
     #[test]
     fn die_tafel_der_abwurfmeldung_geht_auf() {
         const GRUENDE: [Option<Abwurfgrund>; 6] = [

@@ -40,3 +40,6 @@ The `Some((pfad, _))` arm discards the `Typ`. `abwurf_pruefen` sets a row as the
 Both points close with the same two-line change: match on `Some((pfad, Typ::Ordner))` and let every other shape — a different type, a vanished row — fall to `return false`. Returning `false` is the honest answer for a drop whose target no longer exists: AppKit flies the entries back, nothing is written anywhere, and the user repeats a gesture that took a second. Falling back to the parent folder is the one outcome that cannot be undone by repeating the gesture.
 
 The doc comment then needs its third branch named, so that the next reader does not restore the fallback as a convenience.
+
+---
+Resolved: Es war falsch und nicht bloss undokumentiert. Die Zeile -1 ("die ganze Liste") und eine Zeile, deren Eintrag verschwunden ist, fielen in dasselbe None zusammen, und der Typ ging dabei verloren. abwurfziel() trennt sie jetzt in einer ausgeschriebenen Tafel ueber alle acht Kombinationen; eine verschwundene Zeile oder ein gewechselter Typ liefert false, und AppKit fliegt die Eintraege zurueck. In den uebergeordneten Ordner zu schreiben ist der eine Ausgang, den ein Wiederholen der Geste nicht zuruecknimmt.

@@ -55,6 +55,7 @@ mod verschieben;
 
 use std::fs;
 use std::io;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -206,21 +207,125 @@ fn einen_abarbeiten(
 /// wird, waechst waehrend des Kopierens weiter, und der Abstieg fuellt den
 /// Datentraeger. Die Pruefung steht hier oben und nicht im Abstieg, weil der
 /// Abstieg sie sonst bei jedem Eintrag wiederholen muesste.
+///
+/// # Beide Fragen sind Fragen nach der Naemlichkeit und nicht nach der
+/// Schreibweise
+///
+/// Bis zum 260819 verglich diese Funktion Pfade als Text: `ziel == quelle.pfad`
+/// und `ziel.starts_with(quelle.pfad)`. Beides faengt allein den Fall, in dem
+/// derselbe Ordner in beiden Pfaden **gleich geschrieben** steht. Derselbe
+/// Ordner unter zwei Schreibweisen — `/tmp` gegen `/private/tmp`, ein
+/// Lesezeichen ueber einen symbolischen Verweis, ein Unterschied in der Gross-
+/// und Kleinschreibung auf dem hier ueblichen Datentraeger — kam an beiden
+/// vorbei.
+///
+/// **Was daran haengt, ist kein Schoenheitsfehler, sondern die Datei des
+/// Nutzers.** Kam eine Quelle an der ersten Frage vorbei, fand
+/// [`ziel_klaeren`] am Ziel einen vorhandenen Eintrag, fragte den Nutzer, und
+/// `Konfliktantwort::Ueberschreiben` raeumte diesen Eintrag ueber
+/// [`loeschen::baum_entfernen`] weg — und weggeraeumt war die Quelle selbst.
+/// Danach scheiterte das Kopieren an einer Quelle, die es nicht mehr gab, und
+/// der Nutzer las in der Abschlussliste "kein Eintrag dieses Namens" ueber eine
+/// Datei, die es vor seinem Abwurf noch gab. Kam eine Ordnerquelle an der
+/// zweiten Frage vorbei, stieg der Kopiervorgang in den eigenen Baum ab und
+/// fuellte den Datentraeger.
+///
+/// **Erreichbar geworden ist beides mit dem Abwurf aus einer fremden Anwendung
+/// (Runde 13).** Bis dahin kamen beide Pfade aus KRK selbst und trugen die
+/// Schreibweise, die der Nutzer erlaufen hatte; seither schreibt die abgebende
+/// Anwendung die Quellpfade, und sie schreibt sie aufgeloest. Die Vorpruefung
+/// waehrend des Ziehens (`ziel_ist_quellordner` in
+/// `DateifensterQuelle::abwurf_pruefen`) vergleicht weiterhin als Text und ist
+/// damit eine **Vorhersage**; entschieden wird die Frage hier, im Augenblick
+/// des Zugriffs, und dort kann sie entschieden werden.
+///
+/// **Die zwei Fragen folgen den Verweisen verschieden**, und das ist kein
+/// Versehen: die erste fragt, ueber welchen Eintrag geschrieben wuerde, und
+/// bleibt deshalb beim Namen stehen (`lstat(2)`); die zweite fragt, wohin ein
+/// Pfad **laeuft**, und muss deshalb folgen (`stat(2)`). Die Begruendung im
+/// Einzelnen steht an [`benennen_denselben_eintrag`] und [`liegt_im_ordner`].
+///
+/// Der Preis sind zwei `lstat(2)` je Eintrag und, fuer eine Ordnerquelle, ein
+/// `stat(2)` je Ebene des Zielpfades dazu. Sie fallen je Eintrag eines
+/// laufenden Vorgangs an und nicht je Zeigerbewegung; neben dem Kopieren selbst
+/// sind sie nicht zu messen.
 fn zielpfad(quelle: &Quelle<'_>, zielordner: &Path, steuerung: &mut Steuerung) -> Option<PathBuf> {
     let Some(name) = quelle.pfad.file_name() else {
         steuerung.ueberspringen(quelle.pfad, "der Pfad benennt keinen Eintrag");
         return None;
     };
     let ziel = zielordner.join(name);
-    if ziel == quelle.pfad {
+    if benennen_denselben_eintrag(&ziel, quelle.pfad) {
         steuerung.ueberspringen(quelle.pfad, "Quelle und Ziel sind derselbe Eintrag");
         return None;
     }
-    if quelle.typ == Typ::Ordner && ziel.starts_with(quelle.pfad) {
+    if quelle.typ == Typ::Ordner && liegt_im_ordner(zielordner, quelle.pfad) {
         steuerung.ueberspringen(quelle.pfad, "das Ziel liegt in der Quelle");
         return None;
     }
     Some(ziel)
+}
+
+/// Die Stelle, die ein Eintrag im Dateisystem einnimmt: `(st_dev, st_ino)`.
+///
+/// Das Paar benennt einen Eintrag auf einem Datentraeger eindeutig und ist
+/// damit die einzige Antwort auf "ist das dasselbe", die eine Schreibweise
+/// nicht taeuschen kann.
+fn stelle(angaben: &fs::Metadata) -> (u64, u64) {
+    (angaben.dev(), angaben.ino())
+}
+
+/// Ob zwei Namen denselben Eintrag benennen, **ohne** dem letzten Namensteil zu
+/// folgen.
+///
+/// Die Frage der ersten Pruefung in [`zielpfad`]: schreibe ich hier ueber das,
+/// was ich gerade lese. Gefragt wird ueber `fs::symlink_metadata`, also
+/// `lstat(2)`, und das ist hier die richtige Frage: [`ziel_klaeren`] wuerde beim
+/// Ueberschreiben den **Namen** wegraeumen und nicht das, worauf er zeigt. Ist
+/// das Ziel selbst eine Verknuepfung auf die Quelle, faellt beim Ueberschreiben
+/// die Verknuepfung und die Quelle bleibt stehen; das ist kein Fall fuer diese
+/// Pruefung. Verweise **innerhalb** des Pfades loest der Kern ohnehin auf, und
+/// genau die sind der Fall, um den es geht.
+///
+/// **Ein Name, den es nicht gibt, ist keine Stelle**: schlaegt eines der beiden
+/// `lstat(2)` fehl, lautet die Antwort `false`. Das ist die harmlose Seite —
+/// ein Ziel, das es nicht gibt, kann nicht die Quelle sein, und eine Quelle, die
+/// es nicht mehr gibt, scheitert gleich darauf mit ihrem eigenen Grund in der
+/// Abschlussliste.
+///
+/// **Zwei harte Verweise auf dieselbe Datei gelten als derselbe Eintrag**, und
+/// das ist gewollt, auch wenn das Ueberschreiben dort nur einen der beiden
+/// Namen naehme: die Aussage "Quelle und Ziel sind derselbe Eintrag" ist dann
+/// wahr, und der Eintrag steht mit seinem Grund in der Abschlussliste, statt
+/// eine Datei auf sich selbst zu kopieren.
+fn benennen_denselben_eintrag(einer: &Path, anderer: &Path) -> bool {
+    let (Ok(einer), Ok(anderer)) = (fs::symlink_metadata(einer), fs::symlink_metadata(anderer))
+    else {
+        return false;
+    };
+    stelle(&einer) == stelle(&anderer)
+}
+
+/// Ob `zielordner` der Quellordner selbst ist oder unter ihm liegt, **mit**
+/// Verfolgung der Verweise.
+///
+/// Die Frage der zweiten Pruefung in [`zielpfad`]: steigt der Kopiervorgang in
+/// den eigenen Baum ab. Gefragt wird hier ueber `fs::metadata`, also `stat(2)`,
+/// und der Unterschied zur Pruefung darueber ist tragend: ein Pfad **laeuft**
+/// durch seine Verweise hindurch. Ist `verweis` eine Verknuepfung auf den
+/// Quellordner, dann liegt `verweis/unten` wirklich in der Quelle, und ein
+/// `lstat(2)` auf `verweis` saehe die Verknuepfung statt des Ordners, auf den
+/// sie zeigt.
+///
+/// Gelaufen wird ueber `Path::ancestors`, das mit dem Ordner selbst beginnt.
+/// Der Fall "das Ziel ist die Quelle" ist damit mit erfasst.
+fn liegt_im_ordner(zielordner: &Path, quellordner: &Path) -> bool {
+    let Ok(quelle) = fs::metadata(quellordner) else {
+        return false;
+    };
+    zielordner
+        .ancestors()
+        .any(|oben| fs::metadata(oben).is_ok_and(|oben| stelle(&oben) == stelle(&quelle)))
 }
 
 /// Klaert, wohin ein Eintrag geht, wenn am Ziel schon etwas steht.
@@ -299,54 +404,26 @@ pub(crate) fn grund(fehler: &io::Error) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn ein_ordner_kann_nicht_in_sich_selbst_kopiert_werden() {
-        let (mut steuerung, _empfaenger) = pruefsteuerung();
-        let pfad = Path::new("/tmp/krk-ordner");
-        let quelle = Quelle {
-            pfad,
-            typ: Typ::Ordner,
-            groesse: 0,
-        };
-        let ziel = zielpfad(&quelle, Path::new("/tmp/krk-ordner/unten"), &mut steuerung);
-        assert!(ziel.is_none(), "das Ziel laege in der Quelle");
-
-        let bericht = steuerung.bericht(Abschluss::Fertig);
-        assert_eq!(bericht.uebersprungen.len(), 1);
-        assert_eq!(
-            bericht.uebersprungen[0].grund,
-            "das Ziel liegt in der Quelle"
-        );
-    }
-
-    #[test]
-    fn eine_quelle_kann_nicht_auf_sich_selbst_kopiert_werden() {
-        let (mut steuerung, _empfaenger) = pruefsteuerung();
-        let pfad = Path::new("/tmp/krk-ordner/datei.txt");
-        let quelle = Quelle {
-            pfad,
-            typ: Typ::Datei,
-            groesse: 7,
-        };
-        let ziel = zielpfad(&quelle, Path::new("/tmp/krk-ordner"), &mut steuerung);
-        assert!(ziel.is_none());
-    }
-
+    /// Die beiden Pruefungen von [`zielpfad`] stehen **nicht** hier, sondern in
+    /// `tests/operation.rs`.
+    ///
+    /// Bis zum 260819 standen sie hier und reichten [`zielpfad`] erfundene
+    /// Pfade wie `/tmp/krk-ordner`, die es auf keinem Datentraeger gab. Das
+    /// ging, solange die beiden Fragen Text verglichen. Seit sie nach `st_dev`
+    /// und `st_ino` fragen, brauchen sie einen Ordner, den es wirklich gibt,
+    /// und ein selbstabraeumender Pruefordner ist in dieser Kiste genau einer:
+    /// `tests/gemeinsam/mod.rs`. Eine vierte Fassung daneben verbietet
+    /// `CLAUDE.md` ausdruecklich, und ein Testziel unter `tests/` erreicht sie.
+    ///
+    /// Was dort steht, deckt beide Fragen in beiden Schreibweisen ab:
+    /// `eine_quelle_kann_nicht_auf_ihren_eigenen_ordner_kopiert_werden` und
+    /// `ein_ziel_das_ueber_einen_verweis_die_quelle_selbst_ist_wird_uebersprungen`
+    /// fuer die erste, `ein_ordner_laesst_sich_nicht_in_sich_selbst_kopieren`
+    /// und `ein_ziel_das_ueber_einen_verweis_in_der_quelle_liegt_wird_uebersprungen`
+    /// fuer die zweite.
     #[test]
     fn die_haeufigen_gruende_stehen_auf_deutsch_da() {
         let fehler = io::Error::from(io::ErrorKind::PermissionDenied);
         assert_eq!(grund(&fehler), "keine Rechte");
-    }
-
-    fn pruefsteuerung() -> (Steuerung, std::sync::mpsc::Receiver<Meldung>) {
-        let (sender, empfaenger) = channel();
-        (
-            Steuerung::neu(
-                Arc::new(AtomicBool::new(false)),
-                Some(sender),
-                Konfliktregel::Fragen,
-            ),
-            empfaenger,
-        )
     }
 }

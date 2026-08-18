@@ -801,6 +801,41 @@ fn die_regel_ueberschreiben_ersetzt_das_vorhandene() {
     );
 }
 
+/// Ein Ziel, das durch eine zweite Schreibweise auf die Quelle selbst zeigt,
+/// wird uebersprungen und nicht geloescht.
+///
+/// **Die Pruefung, die das haelt, fragt nach der Naemlichkeit und nicht nach
+/// der Schreibweise.** `zielpfad` vergleicht die beiden Pfade als Text, und das
+/// faengt allein den Fall, in dem sie gleich geschrieben sind. Zeigt ein
+/// symbolischer Verweis auf den Quellordner — `/tmp` gegen `/private/tmp`, ein
+/// Lesezeichen ueber einen Verweis, ein Unterschied in der Gross- und
+/// Kleinschreibung —, sind die beiden Pfade verschieden und benennen dieselbe
+/// Datei. Ohne die Frage nach `st_dev` und `st_ino` raeumte
+/// `Konfliktantwort::Ueberschreiben` das Ziel weg, und weggeraeumt waere die
+/// Quelle.
+#[test]
+fn ein_ziel_das_ueber_einen_verweis_die_quelle_selbst_ist_wird_uebersprungen() {
+    let ordner = Pruefordner::neu("konflikt-selber-eintrag");
+    let echt = ordner.ordner("echt");
+    let quelle = echt.join("bericht.txt");
+    fs::write(&quelle, "Inhalt").expect("nicht schreibbar");
+    let verweis = ordner.unter("verweis");
+    std::os::unix::fs::symlink(&echt, &verweis)
+        .expect("die Verknuepfung laesst sich nicht anlegen");
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::kopieren(vec![quelle.clone()], &verweis)
+            .mit_konfliktregel(Konfliktregel::Ueberschreiben),
+    );
+
+    assert_eq!(bericht.eintraege, 0);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(
+        fs::read_to_string(&quelle).expect("die Quelle ist weg"),
+        "Inhalt"
+    );
+}
+
 #[test]
 fn die_regel_umbenennen_legt_die_kopie_daneben() {
     let ordner = Pruefordner::neu("konflikt-umbenennen");
@@ -974,6 +1009,65 @@ fn ein_ordner_laesst_sich_nicht_in_sich_selbst_kopieren() {
     fs::create_dir(&ziel).expect("nicht anlegbar");
 
     let bericht = durchlaufen_ohne_papierkorb(Auftrag::kopieren(vec![quelle], &ziel));
+
+    assert_eq!(bericht.eintraege, 0);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(
+        bericht.uebersprungen[0].grund,
+        "das Ziel liegt in der Quelle"
+    );
+}
+
+/// Eine Quelle laesst sich nicht in den Ordner kopieren, in dem sie schon
+/// liegt.
+///
+/// Der einfache Fall der ersten Pruefung von `zielpfad`, in **einer**
+/// Schreibweise; der Fall mit zwei Schreibweisen steht in
+/// `ein_ziel_das_ueber_einen_verweis_die_quelle_selbst_ist_wird_uebersprungen`.
+/// Beide standen bis zum 260819 als Einheitsproben in
+/// `krk-core/src/operation/mod.rs` und reichten `zielpfad` erfundene Pfade;
+/// seit die Frage nach `st_dev` und `st_ino` geht, braucht sie einen Ordner,
+/// den es wirklich gibt.
+#[test]
+fn eine_quelle_kann_nicht_auf_ihren_eigenen_ordner_kopiert_werden() {
+    let ordner = Pruefordner::neu("auf-sich-selbst");
+    let quelle = ordner.datei("bericht.txt", "Inhalt");
+
+    let bericht =
+        durchlaufen_ohne_papierkorb(Auftrag::kopieren(vec![quelle.clone()], ordner.pfad()));
+
+    assert_eq!(bericht.eintraege, 0);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(
+        bericht.uebersprungen[0].grund,
+        "Quelle und Ziel sind derselbe Eintrag"
+    );
+    assert_eq!(
+        fs::read_to_string(&quelle).expect("die Quelle ist weg"),
+        "Inhalt"
+    );
+}
+
+/// Ein Ziel, das ueber einen Verweis **in** der Quelle liegt, wird
+/// uebersprungen und nicht abgestiegen.
+///
+/// Das Gegenstueck zu `ein_ordner_laesst_sich_nicht_in_sich_selbst_kopieren`
+/// unter der zweiten Schreibweise. Ohne die Frage nach `st_dev` und `st_ino`
+/// sieht `zielpfad` zwei verschiedene Pfade, legt den Zielordner an und steigt
+/// in den eigenen Baum ab; der Vorgang endet erst mit dem vollen
+/// Datentraeger.
+#[test]
+fn ein_ziel_das_ueber_einen_verweis_in_der_quelle_liegt_wird_uebersprungen() {
+    let ordner = Pruefordner::neu("in-sich-selbst-ueber-verweis");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("datei.txt"), "Inhalt").expect("nicht schreibbar");
+    fs::create_dir(quelle.join("unten")).expect("nicht anlegbar");
+    let verweis = ordner.unter("verweis");
+    std::os::unix::fs::symlink(&quelle, &verweis)
+        .expect("die Verknuepfung laesst sich nicht anlegen");
+
+    let bericht =
+        durchlaufen_ohne_papierkorb(Auftrag::kopieren(vec![quelle], verweis.join("unten")));
 
     assert_eq!(bericht.eintraege, 0);
     assert_eq!(bericht.uebersprungen.len(), 1);
