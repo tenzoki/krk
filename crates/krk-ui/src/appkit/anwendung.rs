@@ -1513,7 +1513,7 @@ impl Anwendungsdelegierter {
         // vor dem Einblenden: danach faende der Nachtrag ihn noch vor und
         // ueberschriebe den gerade gezeigten Inhalt.
         *self.ivars().vorschau_nachtrag.borrow_mut() = None;
-        self.bereich_einblenden(Bereich::Vorschau);
+        let _ = self.bereich_einblenden(Bereich::Vorschau);
         true
     }
 
@@ -3859,6 +3859,26 @@ impl Anwendungsdelegierter {
     /// [`Fenstermodell::einblenden`] und damit ausserhalb von AppKit; hier
     /// kommen allein die Nachzuege dazu, die jeder Sichtbarkeitswechsel
     /// braucht.
+    ///
+    /// **`false` traegt hier drei Bedeutungen, das Modell darunter nur zwei.**
+    /// Der Rueckgabewert haelt sie nicht auseinander, deshalb stehen sie
+    /// einzeln da:
+    ///
+    /// 1. Der Bereich stand schon da; [`Fenstermodell::einblenden`] weist ihn
+    ///    deshalb ab. Es war nichts zu tun, und die gewuenschte Sichtbarkeit
+    ///    besteht hinterher genauso wie vorher.
+    /// 2. **Die Mindestbreiten passen nicht**, geerbt von
+    ///    [`Fenstermodell::umschalten`]. **Das ist die eine Abweisung unter den
+    ///    dreien**: der Bereich bleibt ausgeblendet, und das Fenster ist zu
+    ///    schmal, um ihn aufzunehmen. Wer dem Nutzer etwas zu sagen hat, sagt
+    ///    es zu dieser Lage.
+    /// 3. [`Self::zeilenmass`] liefert `None`, die Aufteilung steht also noch
+    ///    nicht. Diese dritte legt allein der Mantel ueber die zwei des
+    ///    Modells. Fuer einen Tastenbefehl kann sie nicht eintreten, weil die
+    ///    Aufteilung seit `oberflaeche_aufbauen` steht und vorher kein
+    ///    Tastendruck den Delegierten erreicht; sie steht hier trotzdem, statt
+    ///    uebergangen zu werden.
+    #[must_use = "eine Abweisung bleibt stumm; wer sie nicht liest, haelt einen Bereich fuer hervorgeholt, den das Modell nicht eingeblendet hat oder den die Aufteilung noch gar nicht aufnehmen kann"]
     fn bereich_einblenden(&self, bereich: Bereich) -> bool {
         let Some(mass) = self.zeilenmass() else {
             return false;

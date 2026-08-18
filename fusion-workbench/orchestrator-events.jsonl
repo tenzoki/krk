@@ -1192,3 +1192,10 @@
 {"ts":"2026-08-18T12:35:41","event":"shaper_start","agent":"shaper","detail":"Verzeichnis-Angleichen zwischen den Dateifenstern + Ablegen aus fremden Apps in die Dateiliste"}
 {"ts":"2026-08-18T14:12:36","event":"shaper_done","agent":"shaper","detail":"spec: shared/planning/260818-1510_o_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md; 7 Faehigkeiten, ~40 Kriterien"}
 {"ts":"2026-08-18T14:12:36","event":"gate_response","detail":"Spec-Gate: approve; vier abgeleitete Festlegungen uebernommen"}
+{"ts":"2026-08-18T14:19:41","event":"commit","detail":"b47355e docs(workbench): Runde 13 hat Spec und Circle"}
+{"ts":"2026-08-18T14:19:41","event":"planner_start","agent":"planner","detail":"spec shared/planning/260818-1510_o_spec-...; Circle 260818-1615 aktiv"}
+{"ts":"2026-08-18T15:50:08","event":"planner_done","agent":"planner","detail":"plan circles/260818-1615-.../planning/260818-1633_o_plan-...; 10 Schritte, 2 Buendel"}
+{"ts":"2026-08-18T15:50:08","event":"gate_response","detail":"Plan-Gate: approve; Entscheidung Schreibrecht-unbekannt: Moeglichkeit 1 (durchlassen)"}
+{"ts":"2026-08-18T15:50:08","event":"queue_built","detail":"10 Aufgaben, 0 blockiert; 9 coder, 1 ontocoder"}
+{"ts":"2026-08-18T17:27:25","event":"gate_response","turn":1,"detail":"ontocoder-Gate Belegungsdatei: proceed, gilt fuer die Sitzung"}
+{"ts":"2026-08-18T17:27:25","event":"turn_start","turn":1,"detail":"Buendel A (P-1 bis P-5), 4 sofort bereit"}

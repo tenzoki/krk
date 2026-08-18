@@ -351,6 +351,20 @@ pub enum Kommando {
     /// `angezeigtedatei::welche` und nicht hier, weil sie die Sichtbarkeit von
     /// Bereichen braucht, die der Kern nicht kennt.
     OrdnerDerDatei,
+    /// Das andere Dateifenster auf den Ordner stellen, den das aktive zeigt
+    /// (C1 der Runde 13).
+    ///
+    /// **Die Richtung ist eine und nicht zwei:** die Quelle ist immer das
+    /// aktive Dateifenster, das Ziel immer das andere. Ein Befehl, der die
+    /// Richtung aus dem Fokus ablaese und dabei beide Seiten als Quelle
+    /// zuliesse, waere derselbe Befehl mit einem verborgenen Schalter.
+    ///
+    /// Was beim Ausfuehren geschieht — das andere Dateifenster gegebenenfalls
+    /// einblenden, die beiden angezeigten Ordner vergleichen und nur bei
+    /// Ungleichheit lesen —, steht in `krk-ui` unter
+    /// `Anwendungsdelegierter::ordner_angleichen` und nicht hier: es braucht
+    /// die Sichtbarkeit von Bereichen, die der Kern nicht kennt.
+    OrdnerAngleichen,
     /// Einen Pfad eingeben und dorthin springen (C2).
     Pfadeingabe,
     /// Den Eintrag unter der Auswahl markieren und weiterruecken (C2).
@@ -644,7 +658,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 78] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 79] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -654,6 +668,7 @@ impl Kommando {
         (Kommando::Oeffnen, "oeffnen"),
         (Kommando::OrdnerAufwaerts, "ordner_aufwaerts"),
         (Kommando::OrdnerDerDatei, "ordner_der_datei"),
+        (Kommando::OrdnerAngleichen, "ordner_angleichen"),
         (Kommando::Pfadeingabe, "pfadeingabe"),
         (Kommando::MarkierungUmschalten, "markierung_umschalten"),
         (Kommando::AlleMarkieren, "alle_markieren"),
@@ -1005,6 +1020,16 @@ impl Kommando {
             | Kommando::Listenende
             | Kommando::Oeffnen
             | Kommando::OrdnerAufwaerts
+            // Das Angleichen aus C1 der Runde 13 steht **auf der anderen Seite
+            // der Linie** als der Ordnersprung darueber, und das ist kein
+            // Widerspruch. Der Ordnersprung traegt `Ueberall`, weil seine
+            // Quelle nicht am Fokus haengt: er wird aus Vorschau und Editor
+            // heraus gedrueckt, also aus Bereichen, die keine Dateifenster
+            // sind, und mit `Dateifenster` waere er genau dort abgewiesen, wo
+            // er am meisten taugt. Das Angleichen liegt umgekehrt: seine
+            // Quelle **ist** der angezeigte Ordner eines Dateifensters, und
+            // ausserhalb eines Dateifensters hat der Befehl keinen Gegenstand.
+            | Kommando::OrdnerAngleichen
             | Kommando::Pfadeingabe
             | Kommando::MarkierungUmschalten
             | Kommando::AlleMarkieren

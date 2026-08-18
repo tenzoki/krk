@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 84 Funktionen mit zusammen 89 Kombinationen.
+# Ausgeliefert sind 85 Funktionen mit zusammen 90 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -265,15 +265,35 @@ name = "Ordner der angezeigten Datei zeigen"
 tasten = ["opt+cmd+o"]
 # Die opt+cmd-Reihe traegt in diesem Programm, was einen Ordner herstellt oder
 # liefert: opt+cmd+c kopiert den Pfad des angezeigten Ordners, opt+cmd+g springt
-# zur Adresse aus der Zwischenablage, opt+cmd+l, opt+cmd+d, opt+cmd+b,
-# opt+cmd+left und opt+cmd+right schalten Bereiche ein und aus. Dieser Befehl
-# liefert einen Ordner und steht deshalb hier; er ist der unmittelbare Nachbar
-# von opt+cmd+c, das den Pfad desselben Ordners kopiert. Wer die eine
-# Kombination kennt, findet die andere ohne Nachschlagen.
+# zur Adresse aus der Zwischenablage, opt+cmd+s liefert den angezeigten Ordner
+# an das andere Dateifenster, opt+cmd+l, opt+cmd+d, opt+cmd+b, opt+cmd+left und
+# opt+cmd+right schalten Bereiche ein und aus. Dieser Befehl liefert einen
+# Ordner und steht deshalb hier; er ist der unmittelbare Nachbar von opt+cmd+c,
+# das den Pfad desselben Ordners kopiert. Wer die eine Kombination kennt,
+# findet die andere ohne Nachschlagen.
 #
 # opt+cmd+o ist ab Werk frei; am 260812 nachgezaehlt, keine Tastenliste dieser
 # Datei nennt es. Nutzerentscheid vom 260812-1105, Moeglichkeit 1
 # (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`).
+
+[[funktion]]
+id = "ordner_angleichen"
+name = "Anderes Dateifenster auf diesen Ordner stellen"
+tasten = ["opt+cmd+s"]
+# Der Befehl stellt das andere Dateifenster auf den Ordner, den das aktive
+# zeigt. Er gehoert damit in die opt+cmd-Reihe, und zwar auf deren liefernde
+# Seite: opt+cmd+o liefert einen Ordner an das aktive Dateifenster, opt+cmd+c
+# liefert dessen Pfad an die Zwischenablage, und dieser hier liefert den Ordner
+# selbst an das andere Dateifenster. Er steht unmittelbar hinter opt+cmd+o,
+# weil beide denselben Gegenstand bewegen und sich nur im Empfaenger
+# unterscheiden. Der Buchstabe folgt der dritten Wahlregel der
+# Auslieferungsbelegung, dem Anfangsbuchstaben des deutschen Verbs: s wie
+# "stellen".
+#
+# opt+cmd+s ist ab Werk frei; am 260818 gegen alle tasten-Zeilen dieser Datei
+# nachgezaehlt. Belegt sind in der opt+cmd-Reihe zehn Kombinationen, naemlich
+# opt+cmd+b, opt+cmd+c, opt+cmd+d, opt+cmd+e, opt+cmd+g, opt+cmd+l,
+# opt+cmd+left, opt+cmd+n, opt+cmd+o und opt+cmd+right.
 
 [[funktion]]
 id = "pfadeingabe"
@@ -359,6 +379,16 @@ tasten = ["shift+cmd+h"]
 # seine eigene keymap.toml ein; die Datei ist nach C3 die eine Quelle jeder
 # Belegung und von Hand aenderbar. Nutzerantwort vom 260812-0306,
 # `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`.
+#
+# Die 39 sind ein Zitat und keine Zaehlung dieser Datei. Sie stehen im eben
+# genannten Datensatz und meinen die 39 von damals 52 Kombinationen, die der
+# Spec der Runde 1 offengelassen hat; die uebrigen sieben schreibt C3 fest.
+# Schon als dieser Absatz am 260812 geschrieben wurde, fuehrte die Datei 85
+# Kombinationen, heute sind es 90. Die Zahl waechst trotzdem nicht mit: sie
+# benennt den Umfang jener Annahme und nicht den Umfang der Auslieferung, und
+# wer sie beim Eintragen einer Kombination hochzaehlt, loest den Verweis auf
+# den Datensatz von seinem Gegenstand. Am 260818 geprueft, als opt+cmd+s
+# dazukam, und deshalb unveraendert gelassen.
 #
 # Die Spalte Name traegt keinen Schalter und deshalb auch keinen Eintrag: sie
 # bleibt immer sichtbar.

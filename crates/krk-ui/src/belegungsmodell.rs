@@ -243,6 +243,13 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // macht keinen zweiten Ort auf — diese Gliederung fragt nach der
         // Gegend der Anwendung, und die ist die Dateiliste, die sich bewegt.
         | Kommando::OrdnerDerDatei
+        // Das Angleichen aus C1 der Runde 13 steht aus demselben Grund hier
+        // wie der Aufstieg und der Sprung aus der Zwischenablage: alle setzen
+        // den Ordner, den eine Dateiliste zeigt. Dass es die **andere** Liste
+        // ist, die sich bewegt, macht keinen zweiten Ort auf — diese
+        // Gliederung fragt nach der Gegend der Anwendung, und die Dateiliste
+        // ist eine, gleich wie viele es davon gibt.
+        | Kommando::OrdnerAngleichen
         | Kommando::Pfadeingabe
         | Kommando::MarkierungUmschalten
         | Kommando::AlleMarkieren
@@ -1390,6 +1397,35 @@ mod tests {
         assert!(
             !funktion.tasten().is_empty(),
             "der Ordnersprung traegt ab Werk keine Kombination und erschiene damit in keiner Zeile"
+        );
+    }
+
+    /// Das Angleichen aus C1 der Runde 13 steht unter "Dateilisting".
+    ///
+    /// Anders als beim Ordnersprung darueber ist die Zuordnung hier keine
+    /// Wahl gegen den Fokus: der Befehl traegt
+    /// [`Wirkungsbereich::Dateifenster`](krk_core::tasten::Wirkungsbereich),
+    /// weil seine Quelle der angezeigte Ordner eines Dateifensters ist. Die
+    /// Probe haelt trotzdem beides fest, denn die Gliederung ist eine eigene
+    /// Aussage und keine Ableitung aus dem Wirkungsbereich.
+    ///
+    /// Die zweite Behauptung ist die wichtigere: ohne Kombination ab Werk
+    /// erschiene die Funktion in keiner Zeile der Belegungsansicht, und der
+    /// Befehl waere gebaut und unerreichbar.
+    #[test]
+    fn das_ordnerangleichen_steht_unter_dateilisting() {
+        assert_eq!(
+            bereich("ordner_angleichen"),
+            Some(Funktionsbereich::Dateilisting),
+            "das Ordnerangleichen steht nicht beim Dateilisting"
+        );
+        let belegung = Belegung::auslieferung();
+        let funktion = belegung
+            .funktion("ordner_angleichen")
+            .expect("die Auslieferungsbelegung kennt ordner_angleichen");
+        assert!(
+            !funktion.tasten().is_empty(),
+            "das Ordnerangleichen traegt ab Werk keine Kombination und erschiene damit in keiner Zeile"
         );
     }
 
