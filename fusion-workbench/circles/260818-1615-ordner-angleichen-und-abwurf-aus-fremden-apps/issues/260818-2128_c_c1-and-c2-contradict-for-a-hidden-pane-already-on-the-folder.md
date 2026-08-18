@@ -61,3 +61,6 @@ wrong is a contradiction in the binding text, not an open design fork; either re
 one-branch edit plus one criterion reworded.
 
 **Filed by:** coderev
+
+---
+Resolved: Nutzerentscheid am 260818: Einblenden und Lesen sind getrennte Handlungen. Der Sichtbarkeitszweig laeuft zuerst und blendet bedingungslos ein; der Ordnervergleich sitzt dahinter und steuert allein das Lesen. Alle vier Kombinationen sind damit definiert. Die Abweisung wegen zu schmalen Fensters haelt weiterhin auch das Lesen an, weil C2 zusagt, dass das Fenster ausgeblendet UND auf seinem bisherigen Ordner bleibt.

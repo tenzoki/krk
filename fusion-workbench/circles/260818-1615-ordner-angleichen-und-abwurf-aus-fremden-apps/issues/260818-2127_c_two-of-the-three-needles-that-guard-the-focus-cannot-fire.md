@@ -49,3 +49,6 @@ the whole source tree (`aufrufstellen`, `quelldateien`). A needle set inside one
 is the weakest of the three shapes this file uses, because the needle set *is* the whole test.
 
 **Filed by:** coderev
+
+---
+Resolved: Die drei Nadeln sind fuenf, und jede einzelne ist zum Ausloesen gebracht worden: der verbotene Aufruf wurde probeweise eingebaut, die Probe wurde rot, der Baum aus einer byteidentischen Sicherung wiederhergestellt. Nadeln jetzt: aktives_setzen(, fokus_setzen(, fokus_holen(, bereich_umschalten(, ausblenden(.

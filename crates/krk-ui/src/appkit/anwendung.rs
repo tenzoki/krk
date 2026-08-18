@@ -3291,6 +3291,18 @@ impl Anwendungsdelegierter {
     /// Befehl geht durch [`DateifensterQuelle::ordner_lesen`] und erbt damit die
     /// eine Regel des Ordnerwechsels, statt eine zweite daneben zu setzen (C3).
     ///
+    /// **Hervorholen und Stellen sind zwei Handlungen und keine Kette.** Sie
+    /// beantworten verschiedene Fragen, und keine von beiden folgt aus der
+    /// anderen: ausgeblendet heisst hervorholen, gleich ob der Ordner schon
+    /// stimmt, und ein abweichender Ordner heisst stellen, gleich ob dafuer
+    /// hervorgeholt werden musste. Damit sind alle vier Lagen bestimmt, und
+    /// die eine, in der nichts geschieht, ist das sichtbare Ziel auf demselben
+    /// Ordner. So entschieden vom Nutzer am 260818. Davor entschied die
+    /// Reihenfolge des Flussdiagramms im Spec die Frage stillschweigend
+    /// zugunsten von C1: ein ausgeblendetes Dateifenster mit demselben Ordner
+    /// blieb ausgeblendet, waehrend die Statuszeile ueber einen Bereich
+    /// berichtete, den der Nutzer nicht sah.
+    ///
     /// **Die Sichtbarkeit wird am Fenstermodell gefragt, bevor eingeblendet
     /// wird**, und nicht aus dem Rueckgabewert von [`Self::bereich_einblenden`]
     /// erschlossen: dessen `false` traegt drei Bedeutungen, und nur eine davon
@@ -3298,12 +3310,32 @@ impl Anwendungsdelegierter {
     /// Nutzer ein zu schmales Fenster, wenn das andere Dateifenster laengst
     /// dasteht.
     ///
+    /// **Die eine Abweisung haelt auch das Stellen an** (C2, zweites
+    /// Kriterium): bleibt der Bereich ausgeblendet, weil das Fenster zu schmal
+    /// ist, bleibt er auch auf seinem bisherigen Ordner. Das ist keine
+    /// Rueckkehr zur Kette, sondern ihr Preis: ein Lesevorgang dorthin kostete
+    /// den Zieltab Auswahl und Bildlaufposition fuer eine Anzeige, die niemand
+    /// sieht.
+    ///
     /// **Die beiden Ordner werden verglichen, wie sie angezeigt werden, ohne
     /// `canonicalize`.** Die Aufloesung kostete zwei Systemaufrufe je
-    /// Tastendruck und braechte einen eigenen Fehlerausgang; was ohne sie
-    /// durchrutscht, ist derselbe Ordner unter zwei Pfaden, und sein Ausgang ist
-    /// ein Lesevorgang, der denselben Inhalt noch einmal liest. Das ist
-    /// folgenlos, und deshalb faellt der Rest der Regel auf die harmlose Seite.
+    /// Tastendruck und braechte einen eigenen Fehlerausgang. Der Vergleich kann
+    /// nur in eine Richtung irren: zwei **verschiedene** Ordner teilen nie
+    /// denselben `PathBuf`, ein falsches "steht schon dort" ist damit
+    /// ausgeschlossen. Was durchrutscht, ist derselbe Ordner unter zwei
+    /// Schreibweisen, etwa `/tmp` gegen `/private/tmp`, ein Lesezeichen ueber
+    /// einen symbolischen Verweis, oder ein Unterschied in der Gross- und
+    /// Kleinschreibung auf dem hier ueblichen Datentraeger.
+    ///
+    /// **Sein Ausgang ist ein zweiter Lesevorgang, und der ist nicht
+    /// folgenlos.** [`DateifensterQuelle::ordner_lesen`] geht durch
+    /// [`Tabliste::ordner_setzen`], und das liest den stehenden Tab nicht nach,
+    /// sondern ersetzt ihn: Sortierung, "Deep", Inhaltsfilter, die Anzeige
+    /// ausgeblendeter Eintraege und der Filtertext gehen von Hand mit,
+    /// **Auswahl und Bildlaufposition nicht**. Genau darum besteht
+    /// [`Tabliste::aktiven_neu_lesen`] daneben. Der Preis ist hingenommen: er
+    /// trifft einen Tab, den der Nutzer gerade nicht ansieht, und faellt nur in
+    /// der Lage an, die zwei Schreibweisen eines Ordners braucht.
     ///
     /// **Die Meldung geht an das ausloesende Dateifenster und nicht an das
     /// Ziel.** So haelt es KRK bei jeder Befehlsantwort auf Rang 1: die Zeile
@@ -3311,26 +3343,34 @@ impl Anwendungsdelegierter {
     /// gerade dort, wohin der Nutzer nicht sieht, wenn das Ziel ausgeblendet
     /// geblieben ist.
     ///
+    /// **Zwei Meldungen und nicht eine**, weil "steht schon dort" seit der
+    /// Trennung zwei Lagen benennt. War der Bereich sichtbar, ist nichts
+    /// geschehen, und der Satz sagt das. War er ausgeblendet, steht er jetzt
+    /// da; ein Satz, der allein "zeigt diesen Ordner bereits" sagte,
+    /// verschwiege die eine Aenderung, die der Tastendruck bewirkt hat.
+    ///
     /// Der Fokus wird nicht angefasst, [`Fenstermodell::aktiv_setzen`] nicht
     /// gerufen und kein Bereich ausgeblendet (C1, C2).
     ///
-    /// **Die Reihenfolge "steht schon dort" vor "ist sichtbar" ist die des
-    /// Specs.** Ihre Folge steht hier, damit sie niemand fuer ein Versehen
-    /// haelt: ein ausgeblendetes Dateifenster, dessen sichtbarer Tab denselben
-    /// Ordner fuehrt, bleibt ausgeblendet und bekommt die Meldung "steht schon
-    /// dort".
-    ///
-    /// Liefert immer `true`, wie [`Self::ordner_der_datei_zeigen`]: der Befehl
-    /// war zustaendig, auch wenn er nur etwas zu melden hatte.
+    /// **Der Rueckgabewert sagt "hat gewirkt" und nicht "war zustaendig".** So
+    /// steht es im Vertrag am Kopf des `match` in
+    /// [`Self::kommando_ausfuehren`]: ueber die Zustaendigkeit ist vorher
+    /// entschieden, und der Wert traegt allein die zwei Nachwirkungen,
+    /// [`Self::aufteilung_nachziehen`] und [`Self::sitzung_vormerken`]. Hier
+    /// ist er tragend und nicht kosmetisch, denn
+    /// [`Self::nach_dem_sichtbarkeitswechsel`] legt die Fensterzeile **nicht**
+    /// neu aus: ein hervorgeholtes Dateifenster bekommt seinen Nachzug allein
+    /// ueber diesen Wert. Darum `false` in den beiden Zweigen, in denen nichts
+    /// geschah, dem zu schmalen Fenster und dem sichtbaren Ziel auf demselben
+    /// Ordner, und `true` in den uebrigen.
+    /// [`Self::ordner_der_datei_zeigen`] weicht davon ab und liefert auch auf
+    /// seinem Leerweg `true`; die Abweichung ist aelter als dieser Befehl und
+    /// hier nicht mitgezogen.
     fn ordner_angleichen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let ziel = aktiv.andere();
         let ordner = self.dateifenster(aktiv).quelle().angezeigter_ordner();
         let dort = self.dateifenster(ziel).quelle().angezeigter_ordner();
-        if ordner == dort {
-            self.antwort_zeigen(aktiv, "das andere Dateifenster zeigt diesen Ordner bereits");
-            return true;
-        }
 
         let bereich = Bereich::von_seite(ziel);
         // **Die Ausleihe endet mit dieser Zeile und nicht erst mit der
@@ -3344,7 +3384,23 @@ impl Anwendungsdelegierter {
                 aktiv,
                 "das Fenster ist zu schmal; es wurde nichts eingeblendet und nichts gestellt",
             );
-            return true;
+            return false;
+        }
+
+        if ordner == dort {
+            // `!sichtbar` heisst an dieser Stelle "war ausgeblendet und steht
+            // jetzt da": die Abweisung hat der Zweig darueber schon
+            // abgefangen. Genau dann hat der Tastendruck gewirkt, und genau
+            // dann braucht die Fensterzeile ihren Nachzug.
+            self.antwort_zeigen(
+                aktiv,
+                if sichtbar {
+                    "das andere Dateifenster zeigt diesen Ordner bereits"
+                } else {
+                    "das andere Dateifenster wurde eingeblendet und zeigt diesen Ordner bereits"
+                },
+            );
+            return !sichtbar;
         }
 
         self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None);
@@ -7567,13 +7623,23 @@ mod angleichproben {
     ///
     /// C1 sagt zu, dass danach dasselbe Dateifenster aktiv ist wie davor, und
     /// C2, dass in keiner Lage ein Bereich **ausgeblendet** wird. Beides ist am
-    /// Rumpf abzulesen: die drei Nadeln sind die Wege, auf denen es sonst
+    /// Rumpf abzulesen: die fuenf Nadeln sind die Wege, auf denen es sonst
     /// geschaehe.
+    ///
+    /// **Jede Nadel nennt den Namen, den dieser Baum wirklich ruft.** Bis zum
+    /// 260818 stand hier `aktiv_setzen(` fuer die aktive Seite; der Setzer des
+    /// Delegierten heisst `aktives_setzen`, und `aktiv_setzen(` ist davon keine
+    /// Teilzeichenfolge. Die Nadel konnte also nicht anschlagen, und der
+    /// Fokusteil dieser Probe mass nichts. `fokus_setzen(` und `fokus_holen(`
+    /// sind die beiden Wege, auf denen der Fokus in dieser Datei ueberhaupt
+    /// wechselt, und standen gar nicht erst da.
     #[test]
     fn das_angleichen_ruehrt_weder_fokus_noch_sichtbarkeit_an() {
         let rumpf = rumpf(&diese_datei(), "ordner_angleichen");
         for nadel in [
-            concat!("aktiv_", "setzen("),
+            concat!("aktives_", "setzen("),
+            concat!("fokus_", "setzen("),
+            concat!("fokus_", "holen("),
             concat!("bereich_um", "schalten("),
             concat!("aus", "blenden("),
         ] {

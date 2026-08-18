@@ -56,3 +56,6 @@ would have to go through a path that preserves the selection, and that path
 (`aktiven_neu_lesen`) answers a different question.
 
 **Filed by:** coderev
+
+---
+Resolved: Der Doc-Kommentar nennt den Preis jetzt beim Namen: ordner_lesen geht durch Tabliste::ordner_setzen, das den stehenden Tab ersetzt statt ihn neu zu lesen, und Auswahl und Bildlaufposition sind die zwei Groessen, die dabei nicht mitgehen. Der Verzicht auf canonicalize bleibt, wird aber nicht mehr als folgenlos begruendet; die drei Wege, auf denen zwei Schreibweisen desselben Ordners entstehen, stehen daneben.

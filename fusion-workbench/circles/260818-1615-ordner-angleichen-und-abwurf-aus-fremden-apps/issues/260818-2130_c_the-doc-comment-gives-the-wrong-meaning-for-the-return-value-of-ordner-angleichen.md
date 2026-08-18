@@ -57,3 +57,6 @@ Filing this as one record rather than two: the new sentence and the old preceden
 disagreement, and splitting them would produce two records that have to be resolved together.
 
 **Filed by:** coderev
+
+---
+Resolved: Beide waren falsch, Kommentar und Code. Entscheidend war nach_dem_sichtbarkeitswechsel: es legt die Fensterzeile nicht neu aus, ein eingeblendeter Bereich bekommt seinen Auslegungsdurchgang allein ueber kommando_ausfuehren. Der Zweig eingeblendet-aber-nicht-gelesen liefert deshalb true, die zwei Zweige ohne Wirkung liefern false. Die sechs weiteren Stellen mit derselben Fossilie bleiben stehen; sie sind der groessere Umbau aus Moeglichkeit 2 des Datensatzes.
