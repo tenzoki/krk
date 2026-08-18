@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** closed
 **Filed by:** orchestrator
 **Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_c_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_c_spec-absicherung-jedes-loeschwegs.md)
 **Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md
@@ -141,4 +141,38 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
 
 ## Closure note
 
-(offen)
+Geschlossen am 260818 als **kohärent** (`_c_`), auf Entscheid des Nutzers am Rebalance-Gate der
+Sitzung `260817-2131`. Sitzungsprotokoll:
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md`.
+Der zweite Abgleich (`.../history/260818-0807-reconciliation.md`) verdikt `coherent`, nachdem der
+erste (`.../history/260818-0712-reconciliation.md`) `review-needed` gemeldet und der daraus
+gefahrene Turn 4 den einen Driftpunkt behoben hatte.
+
+**Was die Runde erreicht hat.** KRK kennt genau einen Löschweg, und er führt in den Papierkorb.
+Jeder Datei- und Ordner-Löschvorgang fragt vorher genau einmal nach, mit „Abbrechen" vorbelegt;
+wo das Ziel ungewöhnlich oder der Umfang groß ist, trägt dieselbe Rückfrage ein Warnzeichen und
+nennt den Grund in ihrer ersten Zeile. Ein Ziel ohne Papierkorb wird gemeldet statt gelöscht. Der
+Befehl zum endgültigen Löschen ist aus der Anwendung, aus der Belegung und aus dem Menü gefallen;
+`opt+cmd+delete` bleibt unbelegt, `f8` liegt auf dem Papierkorb. Jede Klausel der Directive ist am
+Baum messbar, und jede hält.
+
+**Der auslösende Defekt ist geschlossen.** `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`
+war sechs Stunden vor dem Schadensfall vom 260817-0344 als Risiko abgelegt worden. Er ist am Baum
+nachgelesen und nicht auf Zuruf geschlossen: von `Kommando::InPapierkorb` bis
+`loeschauftrag_stellen` stellt nur noch der Rückruf des Blattes einen Auftrag.
+
+**Warum dieses `_c_` etwas anderes bedeutet als das der Runde 8.** Bis heute hieß `_c_` in diesem
+Projekt „der Nutzer hat den Abnahmelauf selbst gefahren", und das trifft allein auf
+`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags` zu. Hier ist der Abnahmelauf
+**nicht** gefahren, und niemand hat von Hand eine Datei gelöscht. Der Marker steht trotzdem auf
+kohärent, weil der Abgleich zweimal begründet hat, dass die Directive dieser Runde über die zehn
+Zeitzusagen aus C8 nichts sagt: unerreichbar ist die Abnahme durch den Nutzer, nicht die Directive.
+Der Nutzer hat diese Lesart am Gate ausdrücklich gewählt, nachdem ihm beide Möglichkeiten mit ihren
+Folgen vorgelegen hatten. **Wer künftig `_c_` als „vom Nutzer abgenommen" liest, liest diese Runde
+falsch.**
+
+**Was offen bleibt.** Sieben Befunde im Circle, alle aus den beiden letzten Durchsichten und keiner
+ein Release-Blocker, davon zwei mittel: `Blatt::zeigen` beantwortet die Frage nach der bestätigenden
+Schaltfläche ein zweites Mal, und die eine ungemessene Zusage des neuen Eingabewächters steht nur in
+Prosa. Vier Entscheidungsfragen an den Nutzer, alle in dieser Runde entstanden. Der Abnahmelauf der
+zehn Zeitzusagen ist seit dem 260810 nicht gefahren, also inzwischen sieben Runden lang nicht.

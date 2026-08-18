@@ -1067,3 +1067,142 @@ eine dritte an.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260818-1018
+**Playmaker-Lauf:** 260818-1018-playmaker-orchestrator-phase4
+**Beschränkt abgeschlossenes Kind:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
+(Runde 11), beschränkt geschlossen am 260816-2030
+**Kohärent abgeschlossenes Kind:** `260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
+(Runde 12), kohärent geschlossen am 260818
+
+Zwei Runden sind seit dem Vermerk vom 260815-0350 geschlossen worden, und eine dritte ist
+zurückgestellt. Die Auslösebedingung ist wie bei den Vermerken davor zur Hälfte erfüllt: der
+Grounding-Abschnitt dieses Circles stammt vom 260804 und zitiert keine der beiden Runden, wohl
+aber Bauteile, die beide angefasst haben. Vier Punkte gehören in die Klärungsrunde bei der
+Aktivierung, und der fünfte ist eine Berichtigung an diesem Datensatz selbst. Keiner hält die
+Aktivierung auf.
+
+### 1. Das Halteverhalten des Tabs gilt seit der Runde 11 nicht mehr für laufende Arbeit
+
+Die Directive dieses Circles setzt auf C6 auf und sagt zu: „die nächste Auswahl im Dateifenster
+ersetzt seinen Inhalt im aktiven Tab, ein anderer Tab behält ihn stehen." Für einen fertig
+angezeigten Inhalt stimmt das weiter. Für **laufende** Arbeit stimmt es seit der Runde 11 nicht
+mehr: ein Tabwechsel beendet den Durchlauf des verlassenen Tabs, so entschieden vom Nutzer am
+260816-1410
+(`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/decisions/260816-1359_*_beendet-ein-tabwechsel-den-durchlauf-des-verlassenen-tabs-jetzt-wo-er-dateien-liest.md`).
+Der Rückwechsel stößt ihn nicht wieder an; das ist als Befund abgelegt und offen
+(`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_*_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md`).
+
+Das Laden einer Web-Seite ist laufende Arbeit, und der Betrachter erbt damit eine Frage, die es
+am 260804 nicht gab: Wechselt der Nutzer während des Ladens den Tab, bricht das Laden ab oder
+läuft es weiter? Beide Antworten sind vertretbar — die Runde 11 hat für das Lesen von Dateien
+abgebrochen, weil ein Durchlauf über den Unterbaum Deskriptoren hält —, und der
+Aktivierungs-Spec muss eine wählen, statt sich auf das Halteverhalten aus C6 zu berufen. Der
+Berufungssatz ist nach der Runde 11 nicht mehr eindeutig.
+
+### 2. Die Statuszeile trägt weiter sechs Ränge, und das ist nachgezählt
+
+Der Vermerk vom 260815-0350 nannte den siebten Rang für die Meldungen des Betrachters. Die
+Runde 11 hat trotz ihres Lesefortschritts **keinen** achten hinzugefügt: sie schreibt in den
+vorhandenen `Rang::Filterstand`. Am 260818 nachgezählt trägt `Rang`
+(`crates/krk-ui/src/appkit/statuszeile.rs:207`) unverändert sechs Werte. Der Punkt aus dem
+Vermerk vom 260815-0350 steht damit unverändert und ist nicht teurer geworden: die Meldungen des
+Betrachters wären der siebte Rang, und die Aufzählung ist ohne Auffangzweig, der Bau erzwingt
+also die Einordnung.
+
+### 3. Ein Blatt als Adresseingabe kostet seit der Runde 12 mehr als eine Fläche
+
+Die zweite Möglichkeit der ersten offenen Frage oben — „ein Tastenbefehl öffnet ein Blatt am
+Fenster, wie die Pfadeingabe aus C2" — trifft seit der Runde 12 auf einen Blattbauer, an dem
+zwei Fragen offen stehen und ein Befund liegt.
+
+Der Bauer beantwortet die Frage „welche Schaltfläche ist die ungefährliche" über
+`abbruchstelle` und muss dabei eine mitbeantworten, die keine Antwort hat: welche es ist, wenn
+keine es ist. Ob er die liegenlassende Schaltfläche künftig am Typ verlangt, ist eine offene
+Nutzerfrage
+(`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/decisions/260818-0250_*_verlangt-der-blattbauer-die-liegenlassende-schaltflaeche-am-typ.md`).
+Daneben steht ein offener Befund: `Blatt::zeigen` setzt „bestätigt" mit der ersten Schaltfläche
+gleich, und die im Kommentar genannte Vorbedingung ist schwächer als die wirkliche
+(`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_*_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md`).
+
+Ein Adressblatt hätte eine ausführende erste Schaltfläche und wäre genau der Fall, den der
+Befund als noch nicht eingetreten beschreibt. Wer die zweite Möglichkeit wählt, wählt damit
+mit, dass diese beiden Punkte vorher geklärt sind. Die erste Möglichkeit — Zwischenablage und
+Verweisanker der Seite — ist davon nicht berührt.
+
+### 4. Was die Runde 12 aufgehoben hat, berührt die Grundlage dieses Circles nicht
+
+Das steht hier, damit niemand danach sucht. Die Runde 12 hat eine umgesetzte Nutzerfestlegung
+der Runde 1 überholt: `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`
+trägt seither überholt (`_s_`), und C6 jener Runde hat Directive und Spec der Runde 1 an sieben
+Stellen nachgezogen. Am 260818 gegen den Baum gelesen: **keine der drei Stellen, die dieser
+Circle unter `## Dependencies` aus der Runde 1 zitiert, ist davon berührt.** Die Fähigkeit C10
+des Specs steht unverändert, der Nutzerentscheid vom 260804 zur Zwischenablage-Auswertung steht
+unverändert, und der Ausschluss „Integrierter Browser zum Navigieren von Websites" steht
+unverändert als erster Punkt in `### Ausdrücklich außerhalb dieses Circles` des Circle-Datensatzes
+der Runde 1. Alle drei Zitate lösen auf.
+
+Zwei Zahlen dazu, ebenfalls am 260818 nachgezählt: `Kommando` trägt 78 Varianten und
+`resources/default-keymap.toml` 84 Einträge, in der Summe unverändert seit dem 260815. Die
+Zusammensetzung hat sich bewegt — das endgültige Löschen ist weggefallen, das Ankreuzfeld
+„Content" hinzugekommen, `f8` liegt jetzt auf dem Papierkorb und `opt+cmd+delete` ist frei.
+
+### 5. Dieser Datensatz trägt einen toten Zeiger, und er steht in der Grundlage
+
+Zeile 438 zitiert eine Datei, deren Namensteil es nie gegeben hat. Das Zitat steht bereits in der
+Sternform; falsch ist der Slug. Abgelegt als
+`shared/issues/260818-0752_*_ein-zitat-im-circle-datensatz-des-web-betrachters-nennt-einen-namensteil-den-es-nie-gab.md`,
+mit dem richtigen Namen und dem Beleg, dass er nie gewechselt hat. Der Ort macht ihn teuer: die
+Zeile begründet, dass L7 seit der Runde 6 schon ab rund 12 kB verfehlt wird statt ab 19 kB, und
+der Abschnitt `## Grounding snapshot` wird bei der Aktivierung als bindende Grundlage gelesen. Wer
+den Beleg nachschlägt, findet nichts und kann nicht unterscheiden, ob der Datensatz gelöscht wurde
+oder ob der Zeiger falsch ist. Der Playmaker schreibt keine Circle-Datensätze außer den drei
+Abschnitten, die sein Auftrag nennt; die Berichtigung der einen Zeile ist Nutzer- oder
+Coder-Arbeit und gehört vor die Aktivierung.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260818-1018
+**Playmaker-Lauf:** 260818-1018-playmaker-orchestrator-phase4
+**Vorgeschlagener Aktivierungszeitpunkt:** der nächste `/fusion:next` des Nutzers; dieser Lauf
+ist eine Phase-4-Zuteilung des Orchestrators und hält keine Bestätigung.
+
+**Rang 1 von 1.** Dieser Circle ist weiterhin der einzige vorgesehene (`_a_`) des Projekts, und
+die Rangfolge ist damit keine Leistung der Heuristik. Was die Heuristik beiträgt, ist die Prüfung
+der Vorbedingungen, und sie fällt weiter sauber aus: ein einziger offener Entscheidungsdatensatz
+bindet ihn
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`),
+seine Abhängigkeiten führen auf die Runden 1, 5, 6 und 7, alle terminal und alle am Baum gebaut,
+und die Bauteile, auf denen er aufsetzt — die Zwischenablage-Auswertung aus S13 und das
+Vorschaufenster aus S19 — stehen. Der Abzug für beschränkten statt kohärenten Abschluss der
+Abhängigkeiten ist wie in allen Läufen davor nicht angesetzt: `CLAUDE.md` weist den Marker `_b_`
+in diesem Projekt ausdrücklich als Auskunft über die Verfügbarkeit des Nutzers für den
+Abnahmelauf aus und nicht über die Reife einer Runde.
+
+**Was sich seit dem 260815-0350 geändert hat.** Zwei Runden sind geschlossen, die elfte
+beschränkt und die zwölfte kohärent, und eine dritte ist zurückgestellt, ohne gefahren worden zu
+sein. Der Vermerk darüber steht unmittelbar über diesem Abschnitt; seine Punkte 1 und 3 sind
+neue Arbeit für die Klärungsrunde, Punkt 2 bestätigt einen alten Punkt und Punkt 4 nimmt eine
+Sorge weg. Punkt 5 ist eine Berichtigung an diesem Datensatz, die vor die Aktivierung gehört.
+
+**Was vor der Aktivierung steht, unverändert seit dem 260804.** Erstens eine Untersuchung des
+Darstellungsmittels: der Circle legt bewusst nicht fest, womit KRK Web-Inhalt darstellt, weder
+eine Systemschnittstelle noch eine fremde Kiste, und die offene Frage zur
+Verfügbarkeitsprüfung für Schnittstellen ab macOS 26 hängt genau daran. Zweitens die
+Klärungsrunde über die drei offenen Fragen oben, von denen die erste den Zuschnitt entscheidet:
+Bleibt es bei der Zwischenablage und den Verweisankern der Seite, bekommt KRK einen Betrachter;
+kommen Adresseingabe und gespeicherte Web-Adressen hinzu, bekommt es einen Browser.
+
+**Ein zweiter Kandidat steht daneben, und er ist nicht vorgesehen.** Die Runde
+`260816-2255-befehle-absetzen-und-makros-speichern` ist am 260817-0445 zugunsten der zwölften
+Runde zurückgestellt worden, mit vollständigem Spec (54 Abnahmekriterien) und vollständigem Plan
+(22 Schritte). Zurückgestellt (`_d_`) ist ein Endzustand; eine Aufnahme ist ein neuer Circle, der
+den zurückgestellten über `## Dependencies` zitiert. Der Playmaker rankt ihn nicht mit, weil er
+nicht vorgesehen ist, nennt ihn aber, damit die Wahl zwischen den beiden dem Nutzer offensteht
+und nicht durch das Schweigen des Portfolios vorentschieden wird.
+
+Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
+`_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
+`/fusion:next` oder beim Orchestrator.
