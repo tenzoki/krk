@@ -241,14 +241,28 @@ pub fn rechtsklick_zielzeile(modell: &Ordnermodell, angeklickt: isize) -> Option
 }
 
 // ----------------------------------------------------------------------
-// Was durchkommt, solange ein Blatt steht
+// Was die Blattsperre selbst durchlaesst
 // ----------------------------------------------------------------------
 
-/// Was durchkommt, solange ein Blatt steht.
+/// Was die Blattsperre selbst durchlaesst.
 ///
-/// Genau der Abbruchbefehl. Alles uebrige geht unveraendert an AppKit weiter,
-/// damit das Blatt seine eigene Tastaturbedienung behaelt und der Abgriff kein
-/// Ereignis ins Leere schluckt.
+/// Genau der Abbruchbefehl.
+///
+/// **Das ist nicht dasselbe wie „was durchkommt, solange ein Blatt steht".**
+/// Diese Regel ist einer von zwei Eingaengen; der zweite ist
+/// `crate::kommandos::zulaessigkeit::immer_erreichbar`, das die Blattsperre
+/// ausdruecklich mit aufhebt und drei weitere Befehle durchlaesst. Waehrend
+/// eines Blattes kommen also **vier** Kommandos durch und nicht eines, und
+/// welche vier, schreibt
+/// `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch` aus.
+/// Bis zum 260818 stand die Zusammenfassung hier in der verkuerzten Form, und
+/// vier weitere Stellen im Baum haben sie von hier uebernommen
+/// (`issues/260817-1302_*_zwei-weitere-stellen-tragen-die-verkuerzte-blattsperre-*.md`,
+/// `issues/260817-1419_*_ein-vierter-traeger-der-verkuerzten-blattsperre-*.md`).
+///
+/// Alles uebrige geht unveraendert an AppKit weiter, damit das Blatt seine
+/// eigene Tastaturbedienung behaelt und der Abgriff kein Ereignis ins Leere
+/// schluckt.
 ///
 /// **Ohne diese Sperre waere kein Blatt mit mehr als einer Antwort bedienbar.**
 /// Der Tabulator liegt in `resources/default-keymap.toml` auf
@@ -1254,8 +1268,13 @@ mod tests {
 
     /// Die Sperre gilt fuer ein stehendes Blatt und nicht mehr fuer einen
     /// laufenden Vorgang; der zweite Fall wohnt in `kommando_ausfuehren`.
+    ///
+    /// **Der Name sagt „die Blattsperre" und nicht „ein stehendes Blatt".**
+    /// Gemessen wird diese eine Regel; was insgesamt durchkommt, solange ein
+    /// Blatt steht, sind vier Kommandos, und das misst
+    /// `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch`.
     #[test]
-    fn bei_stehendem_blatt_kommt_allein_der_abbruch_durch() {
+    fn die_blattsperre_laesst_allein_den_abbruch_durch() {
         assert!(waehrend_blatt_erlaubt(Kommando::Abbrechen));
         assert!(!waehrend_blatt_erlaubt(Kommando::InPapierkorb));
         assert!(!waehrend_blatt_erlaubt(Kommando::AuswahlRunter));
@@ -1269,8 +1288,11 @@ mod tests {
     /// ausdruecklich nicht darin.
     ///
     /// **Der Durchgang geht ueber alle Kommandos**, damit die Aussage „genau
-    /// der Abbruch" nicht an einer Handvoll ausgesuchter Gegenbeispiele haengt
-    /// wie die Nachbarin darueber. Ein neues Kommando kommt hier stillschweigend
+    /// der Abbruch, und zwar in dieser Regel" nicht an einer Handvoll
+    /// ausgesuchter Gegenbeispiele haengt wie die Nachbarin darueber. Die
+    /// Aussage handelt von [`waehrend_blatt_erlaubt`] und nicht von der Lage
+    /// „ein Blatt steht"; der Unterschied steht am Doc-Kommentar der Regel.
+    /// Ein neues Kommando kommt hier stillschweigend
     /// und richtig mit „gehoert nicht dazu" an; wer es dennoch eintraegt, sieht
     /// diese Probe rot.
     ///
@@ -1281,7 +1303,7 @@ mod tests {
     /// zurueck ist `esc` ueber den Waechter des Zettels. Die Zeile nennt den
     /// Befehl deshalb beim Namen und macht den Fehlschlag lesbar.
     #[test]
-    fn waehrend_eines_blattes_bleibt_es_bei_dem_einen_abbruch() {
+    fn in_der_blattsperre_bleibt_es_bei_dem_einen_abbruch() {
         let erlaubt: Vec<Kommando> = Kommando::KENNUNGEN
             .into_iter()
             .map(|(kommando, _)| kommando)
@@ -1291,7 +1313,7 @@ mod tests {
         assert_eq!(
             erlaubt,
             vec![Kommando::Abbrechen],
-            "waehrend eines Blattes kommt nicht mehr allein der Abbruch durch"
+            "die Blattsperre laesst nicht mehr allein den Abbruch durch"
         );
         assert!(
             !waehrend_blatt_erlaubt(Kommando::Notizzettel),

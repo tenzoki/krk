@@ -79,3 +79,24 @@ wordings stand verbatim in `crates/krk-ui/src/kommandos/loeschwarnung.rs:533-534
 (`"mit 25 Einträgen"` and `"mit mehr als 25 Einträgen"`), and the spec wording they come from is
 accepted, so nothing here is a defect to fix without a user decision. Recorded as read, not as
 resolved.
+
+---
+Closed 260818 (coder, Bündel C/D-Nachzug): **als Entscheidungsfrage weitergereicht, nicht
+gebaut.** Der Datensatz ist
+`decisions/260818-0512_o_wie-lautet-die-frage-wenn-der-umfang-der-genannte-grund-ist-und-die-zahl-doppelt-dasteht.md`.
+
+**Warum nicht gebaut.** Die beiden Wortlaute stehen wörtlich in der Spalte „Wortlaut in der
+Frage" der C3-Tafel des Specs, und der Spec ist am Gate angenommen. Die zwei Möglichkeiten,
+die die Doppelung wirklich auflösen, ändern beide diesen Text: Möglichkeit 2 weicht von der
+Spalte ab, Möglichkeit 3 bricht daneben ein Kriterium von C2. Der Datensatz sagt es selbst
+(„no reformulation is obviously right"), und ein Executor, der hier eigenmächtig umformuliert,
+entzieht dem Gate eine Frage, die ihm gehört — der Wortlaut ist das, was der Nutzer im
+Ernstfall liest.
+
+Der Entscheidungsdatensatz trägt die vier Möglichkeiten dieses Befundes mit ihren
+Folgewirkungen: welche Zeichenketten, welche Proben und welche Abnahmekriterien jede berührt,
+und dass allein Möglichkeit 4 das Verhalten ändert und nicht nur den Text. Empfohlen ist
+Möglichkeit 2.
+
+Am Baum ist nichts geändert. `crates/krk-ui/src/kommandos/loeschwarnung.rs:604-605` trägt
+beide Wortlaute unverändert.

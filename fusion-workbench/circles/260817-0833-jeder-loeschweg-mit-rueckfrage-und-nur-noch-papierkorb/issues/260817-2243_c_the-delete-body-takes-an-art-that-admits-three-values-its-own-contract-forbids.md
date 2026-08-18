@@ -54,3 +54,37 @@ Two ways, and the choice is a design call rather than a defect fix:
 Not a candidate: merging `loeschen_nach_rueckfrage` into `in_den_papierkorb`. The split is what
 keeps the five-stage rule readable next to the two pieces the command contributes, and the
 executor's note says the separation was deliberate.
+
+---
+Resolved 260818 (coder, Bündel C/D-Nachzug): **der Parameter ist gefallen; Möglichkeit 1 des
+Datensatzes, und zwar zur Hälfte.**
+
+**Kann der Typ die Einschränkung tragen?** Nein, und der Umbau dafür wäre größer als der
+Gewinn. `krk_core::operation::Art` führt die vier Arten, die die Dateioperationen dieses
+Programms kennen, und wird von `krk-core` und `krk-ui` gelesen; ein zweiter Typ daneben, der
+nur `InDenPapierkorb` kennt, wäre eine Aufzählung mit einer Variante samt Rücktausch an der
+einen Übergabestelle an `loeschauftrag_stellen`.
+
+**Der kleinste Typ, der allein die zulässigen Werte kennt, ist hier aber kein Parameter.** Es
+gibt einen zulässigen Wert und einen Aufrufer; eine Angabe, die nichts unterscheidet, kann
+auch nichts falsch unterscheiden. `loeschen_nach_rueckfrage(&self, schaltflaeche: &str)` nennt
+`Art::InDenPapierkorb` jetzt selbst. Das ist strikt stärker als das `debug_assert!` aus
+Möglichkeit 2 des Datensatzes, und der Grund steht in dieser Runde schon dokumentiert:
+`debug_assert!` greift im Auslieferungsbau nicht — genau daran ist die Zusicherung in
+`Blatt::mit_schaltflaechen` gescheitert
+(`issues/260817-1419_c_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+Hier hält die Einschränkung in jedem Profil, weil es nichts mehr zu prüfen gibt.
+
+**Eine Probe braucht es dafür nicht, und das ist die Aussage und keine Auslassung.** Die
+Messung ist die Übersetzung: es gibt keine Stelle mehr, an der `Art::Kopieren` hingeschrieben
+werden könnte. Dass es bei einem Aufrufer bleibt, hält die vorhandene Aufruferzählung
+`die_stufenregel_hat_genau_einen_aufrufer`.
+
+**Der zweite Parameter bleibt.** `schaltflaeche: &str` trägt die Beschriftung, die dieser
+Befehl mitbringt, und ist der Grund, aus dem der Schnitt zwischen `in_den_papierkorb` und dem
+Rumpf noch einen Gegenstand hat. Beide zu streichen machte `in_den_papierkorb` zu einem
+Weiterreicher ohne Inhalt und nähme dem Schnitt seine Begründung — und die Zusammenlegung
+schließt der Datensatz ausdrücklich aus. Ein `&str` ließe sich ohnehin durch keinen Typ
+einschränken; falsch besetzt ist er eine falsche Beschriftung und keine falsche Operation.
+
+Abnahme: `make check` — Exit 0.

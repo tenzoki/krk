@@ -53,3 +53,42 @@ wäre für einen Return im Namensfeld die falsche Antwort. Die Frage gehört dam
 Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
 `crates/krk-ui/src/appkit/blaetter/konflikt.rs:102` ruft weiter allein `beigabe_setzen`; weder
 `textfeld_setzen` noch `waechter_anhaengen` kommen in der Datei vor.
+
+---
+Resolved 260818 (coder, Bündel C/D-Nachzug): **das Namensfeld hat seinen Wächter, und
+`260817-1242` war die Vorbedingung dafür.**
+
+**Die Reihenfolge war nicht beliebig.** Dieser Datensatz nennt die Frage, die zuerst zu
+beantworten war, und sie ist eine harte Vorbedingung und keine Zugabe: hätte der Wächter hier
+gehangen, solange seine bestätigende Seite fest auf der **ersten** Schaltfläche lag, hätte ein
+Return im Namensfeld „Überschreiben" ausgelöst und den Eintrag am Ziel gelöscht. Der Modulkopf
+dieser Datei schließt genau diese Bewegung für die Vorgabeschaltfläche ausdrücklich aus. Der
+Wächter allein wäre also kein halber Fix gewesen, sondern ein neuer Defekt, und zwar auf dem
+zerstörenden Ausgang.
+
+Gebaut wurde deshalb erst `blaetter::bestaetigungsstelle` (`260817-1242`), dann hier
+`waechter_anhaengen(mtm, &feld)` — die dritte der drei Handlungen von `textfeld_setzen` und
+nicht dieses selbst, denn das Feld soll weiterhin **nicht** Ersthelfer werden; warum, sagt der
+Kopf dieser Datei unverändert.
+
+**Was der Wächter in diesem Blatt bedeutet, ist damit abgeleitet und nicht gewählt.** Die
+Eingabetaste geht an die Schaltfläche, die sie trägt, und das ist hier „Überspringen"; die
+Escape-Taste fällt über `abbruchstelle` auf „Abbrechen". Der Wächter sagt im Feld damit genau
+das, was die Erläuterung des Blattes dem Nutzer ansagt („Return überspringt, … Esc bricht
+ab"), und keine der beiden Tasten führt etwas aus, das der Nutzer nicht erwartet.
+
+**Was weiterhin nicht belegt ist**, und im Modulkopf jetzt als offen dasteht: ob der
+Feldeditor `Cmd+Return` und `Opt+Return` durchlässt. Das ist am laufenden Bündel zu messen und
+verlangt KRK im Vordergrund. Der Befund selbst hängt nicht daran: die beiden Tasten waren vor
+dieser Änderung ebenso ungemessen, und erreichbar bleiben „Überschreiben" und „Umbenennen" in
+jedem Fall, indem der Nutzer das Feld verlässt oder die Maus nimmt.
+
+**Der Baum trägt damit kein Textfeld ohne Wächter mehr.** Nachgezählt: sechs Blätter halten
+einen — `pfadeingabe`, `namenseingabe` und `zeilennummer` über `textfeld_setzen`, `suche`
+(zwei Felder), `stapelumbenennen` (vier Felder in einer Schleife) und jetzt `konflikt`
+unmittelbar über `waechter_anhaengen`. Die drei letzten rufen einzeln und nicht über
+`textfeld_setzen`, jedes aus seinem eigenen Grund: bei `suche` und `stapelumbenennen` ist die
+Beigabe der Rahmen um mehrere Felder und nicht eines davon, beim Konfliktblatt soll das Feld
+nicht Ersthelfer werden.
+
+Abnahme: `make check` — Exit 0.

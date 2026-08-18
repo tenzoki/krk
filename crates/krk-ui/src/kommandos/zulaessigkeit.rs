@@ -623,6 +623,69 @@ mod tests {
         }
     }
 
+    /// Waehrend eines Blattes kommen genau diese vier durch, ausgeschrieben.
+    ///
+    /// **Die Zahl vier ist in diesem Baum bisher Prosa gewesen, und sie ist
+    /// vier Prosastellen falsch geraten.** Die Nachbarin darueber prueft
+    /// `zulaessig` gegen `waehrend_blatt_erlaubt(k) || immer_erreichbar(k)`,
+    /// also gegen die beiden Quellen selbst; sie haelt, dass die Zusammenrechnung
+    /// stimmt, und sagt nichts darueber, **wie viele** Kommandos das sind. Wer
+    /// einen fuenften auf die Ausnahmeliste setzt, sieht sie gruen bleiben.
+    ///
+    /// Diese Probe schreibt die Liste aus. Sie ist damit die eine Stelle, an
+    /// der die Zahl gemessen und nicht behauptet steht, und jede Prosastelle,
+    /// die von „vier" spricht, hat hier ihren Beleg
+    /// (`issues/260817-1302_*_zwei-weitere-stellen-tragen-die-verkuerzte-blattsperre-*.md`,
+    /// `issues/260817-1419_*_ein-vierter-traeger-der-verkuerzten-blattsperre-*.md`).
+    ///
+    /// **Sie wird rot, wenn die Liste waechst oder schrumpft**, und der
+    /// Fehlschlag nennt die Kommandos beim Namen statt einer Zahl. Sie ist
+    /// ausdruecklich **keine** Aufruferzaehlung, die man durch Streichen eines
+    /// Fragers wieder gruen bekommt: ein neuer Eintrag ist eine Erweiterung der
+    /// Zulaessigkeit, und der Weg ins Gruene ist, ihn hier einzutragen und die
+    /// Prosastellen mitzuziehen, die die Zahl nennen. Genau dieses Mitziehen ist
+    /// viermal unterblieben.
+    ///
+    /// Der Fokus steht auf [`Fokus::Anderswo`], damit allein die Lage
+    /// entscheidet: alle vier tragen `Wirkungsbereich::Ueberall`, und ein
+    /// Kommando, das das eines Tages nicht mehr taete, faellt hier heraus und
+    /// meldet sich.
+    ///
+    /// Die Zahl steht als eigene Zusicherung vor der Mitgliedschaft, in der
+    /// Bauform von [`die_ausnahmeliste_fuehrt_dieselben_drei_befehle_wie_vor_dieser_runde`]
+    /// darunter: die Laenge schliesst einen fuenften aus, die vier
+    /// Zusicherungen darunter das Verschwinden eines der bekannten. Verglichen
+    /// wird nicht mit einer festen Reihenfolge, denn die waere die von
+    /// `Kommando::KENNUNGEN` und sagt ueber die Zulaessigkeit nichts.
+    #[test]
+    fn waehrend_eines_blattes_kommen_genau_diese_vier_durch() {
+        let blatt = lage(true, false, true, Fokus::Anderswo);
+        let durchgelassen: Vec<Kommando> = Kommando::KENNUNGEN
+            .into_iter()
+            .map(|(kommando, _)| kommando)
+            .filter(|kommando| zulaessig(*kommando, blatt))
+            .collect();
+
+        assert_eq!(
+            durchgelassen.len(),
+            4,
+            "waehrend eines Blattes kommen nicht mehr vier Kommandos durch, sondern \
+             {durchgelassen:?}; wer die Liste aendert, zieht die Prosastellen mit, \
+             die ihre Laenge nennen"
+        );
+        for kommando in [
+            Kommando::Abbrechen,
+            Kommando::Beenden,
+            Kommando::FensterSchliessen,
+            Kommando::FensterEinblenden,
+        ] {
+            assert!(
+                durchgelassen.contains(&kommando),
+                "{kommando:?} kommt waehrend eines Blattes nicht mehr durch"
+            );
+        }
+    }
+
     /// Steht die Schreibmarke im Textfeld eines Blattes, ist auch der Abbruch
     /// abgewiesen.
     ///

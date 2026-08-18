@@ -1294,10 +1294,18 @@ pub struct EditorIvars {
     ///
     /// **Auch die zurueckgehaltene Datei aus C4 gehoert zum zuletzt begonnenen
     /// Oeffnen**, und deshalb braucht sie keine zweite Angabe daneben. Solange
-    /// das Blatt aus C4 steht, kommt kein weiterer Oeffnungsbefehl durch: der
-    /// Anwendungsdelegierte weist jedes Kommando ausser dem Abbruch ab, solange
-    /// ein Blatt am Fenster haengt. Ein zweites Feld fuer die zurueckgehaltene
+    /// das Blatt aus C4 steht, kommt kein weiterer Oeffnungsbefehl durch:
+    /// [`crate::kommandos::zulaessigkeit::zulaessig`] laesst bei stehendem Blatt
+    /// vier Kommandos durch — `Abbrechen` ueber
+    /// [`crate::kommandos::operationen::waehrend_blatt_erlaubt`] und `Beenden`,
+    /// `FensterSchliessen` und `FensterEinblenden` ueber
+    /// [`crate::kommandos::zulaessigkeit::immer_erreichbar`] —, und keines der
+    /// vier oeffnet eine Datei. Ein zweites Feld fuer die zurueckgehaltene
     /// Datei unterschiede damit etwas, das nicht auseinanderlaufen kann.
+    ///
+    /// Bis zum 260818 stand hier „jedes Kommando ausser dem Abbruch". Der
+    /// Schluss hielt und haelt, die Begruendung war zu eng
+    /// (`issues/260817-1302_*_zwei-weitere-stellen-tragen-die-verkuerzte-blattsperre-*.md`).
     ///
     /// **Der Aufbau setzt [`Oeffnungsherkunft::Befehl`], und niemand liest ihn.**
     /// Alle drei Aufrufer von [`Editorbereich::melden`] setzen einen Wert voraus,

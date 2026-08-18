@@ -69,3 +69,51 @@ haben Zeilen davor eingefügt. Die dritte und vierte Stelle derselben Formulieru
 `260817-1419_o_ein-vierter-traeger-der-verkuerzten-blattsperre-…`, dessen Erhebung über
 `crates/`, `CLAUDE.md` und `resources/` fünf Zeilen zählt und den Nachzug dieses Datensatzes
 mitträgt.
+
+---
+Resolved 260818 (coder, Bündel C/D-Nachzug): **beide genannten Stellen nachgezogen, und die
+Erhebung hat zwei weitere gefunden, die kein Datensatz nennt.**
+
+Behoben:
+- `crates/krk-ui/src/appkit/anwendung.rs`, Kopfkommentar von `kommando_ausfuehren`: die
+  Aufzählung der vier Bestandteile nennt jetzt die Ausnahmeliste als eigenen Absatz und sagt,
+  dass `immer_erreichbar` drei der vier aufhebt und nicht nur den dritten. Der erste Punkt
+  spricht daneben von „der Blattsperre" statt von „einem Blatt", denn er beschreibt einen der
+  vier Eingänge und nicht die Lage.
+- `crates/krk-ui/src/appkit/editor.rs`: die Begründung nennt die vier Kommandos, beide Quellen
+  und den Schluss, dass keines der vier eine Datei öffnet.
+
+**Zwei weitere Träger, in keinem Datensatz und in keiner vorigen Erhebung** — beide in
+`crates/krk-ui/src/kommandos/operationen.rs`, und der erste ist die Wurzel, aus der die
+übrigen vier ihre Formulierung haben:
+- der Abschnittskopf und der Doc-Kommentar von `waehrend_blatt_erlaubt` selbst hießen „Was
+  durchkommt, solange ein Blatt steht" und antworteten „Genau der Abbruchbefehl". Das ist eine
+  Aussage über die Lage und nicht über diese Regel; sie heißen jetzt „Was die Blattsperre
+  selbst durchlässt" und nennen den zweiten Eingang samt der Zahl vier.
+- die beiden Proben derselben Regel trugen die verkürzte Aussage im Namen
+  (`bei_stehendem_blatt_kommt_allein_der_abbruch_durch`,
+  `waehrend_eines_blattes_bleibt_es_bei_dem_einen_abbruch`) und in ihrer Fehlschlagsmeldung,
+  während die Nachbarprobe in `zulaessigkeit.rs` die vollständige Aussage im Namen trägt. Sie
+  heißen jetzt `die_blattsperre_laesst_allein_den_abbruch_durch` und
+  `in_der_blattsperre_bleibt_es_bei_dem_einen_abbruch`.
+
+**Die Zahl ist jetzt gemessen und nicht behauptet.**
+`kommandos::zulaessigkeit::tests::waehrend_eines_blattes_kommen_genau_diese_vier_durch` zählt,
+welche Kommandos `zulaessig` bei stehendem Blatt durchlässt, prüft die Länge gegen 4 und
+schreibt die vier Namen aus. Sie unterscheidet sich von der Nachbarprobe
+`waehrend_eines_blattes_kommt_allein_der_abbruch_und_die_ausnahmeliste_durch`, die `zulaessig`
+gegen `waehrend_blatt_erlaubt || immer_erreichbar` prüft und damit die Zusammenrechnung hält,
+aber nichts über die Zahl sagt. Nachgewiesen: ein vierter Eintrag auf `immer_erreichbar`
+(probeweise `Kommando::Notizzettel`) lässt sie rot werden und meldet
+`[FensterEinblenden, FensterSchliessen, Abbrechen, Beenden, Notizzettel]`; zurückgenommen.
+
+**Zwei Träger stehen weiter**, beide außerhalb des Auftragsumfangs: `CLAUDE.md:124` und
+`resources/default-keymap.toml:710`. Die Erhebung dazu steht bei `260817-1419_c_ein-vierter-…`.
+
+**Nachgelesen und weiterhin kein Befund:** `krk-core/src/tasten/belegung.rs:638` und `:952`
+sagen beide etwas über ein **einzelnes** Kommando (`Notizzettel`, `TabSchliessen`), leiten es
+korrekt aus `waehrend_blatt_erlaubt` her, und keines der beiden steht auf `immer_erreichbar`.
+`anwendung.rs:406` ist eine Aussage über den Stand bis S16 und sagt das. `anwendung.rs:6440`
+und `zulaessigkeit.rs:613` nennen die Ausnahmeliste und sind vollständig.
+
+Abnahme: `make check` — Exit 0.

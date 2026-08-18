@@ -2840,10 +2840,16 @@ impl Anwendungsdelegierter {
     /// `decisions/260814-2102_*_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
     fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
-        // `kommandos::zulaessigkeit`. Kurz: ein Blatt laesst allein den Abbruch
-        // durch, ein Textfeld behaelt seine AppKit-Bedeutung, ein fremdes
-        // Schluesselfenster haelt alles ausser der Ausnahmeliste auf, und der
-        // Wirkungsbereich muss zum Fokus passen.
+        // `kommandos::zulaessigkeit`. Kurz: die Blattsperre laesst allein den
+        // Abbruch durch, ein Textfeld behaelt seine AppKit-Bedeutung, ein fremdes
+        // Schluesselfenster haelt alles auf, und der Wirkungsbereich muss zum
+        // Fokus passen. **Die Ausnahmeliste `zulaessigkeit::immer_erreichbar`
+        // hebt davon drei auf und nicht nur den dritten**: Beenden,
+        // FensterSchliessen und FensterEinblenden kommen auch durch ein
+        // stehendes Blatt und durch ein Textfeld. Waehrend eines Blattes sind
+        // es damit vier Kommandos und nicht eines; bis zum 260818 stand die
+        // Ausnahme hier allein am dritten Glied
+        // (`issues/260817-1302_*_zwei-weitere-stellen-tragen-die-verkuerzte-blattsperre-*.md`).
         //
         // Ein laufender Vorgang sperrt seit S16b **nicht**: C4 sagt zu, dass
         // Navigation, Markierung und Tabwechsel waehrend einer Operation
@@ -4444,9 +4450,19 @@ impl Anwendungsdelegierter {
     /// Der Rueckweg bleibt, was er war, und ersetzt die Rueckfrage nicht: er
     /// hilft allein dem, der den Vorgang bemerkt.
     ///
-    /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`]. Hier stehen allein die
-    /// beiden Stuecke, die dieser Befehl mitbringt: die Auftragsart und die
-    /// Beschriftung der zweiten Schaltflaeche.
+    /// Der Rumpf ist [`Self::loeschen_nach_rueckfrage`]. Hier steht allein das
+    /// eine Stueck, das dieser Befehl mitbringt: die Beschriftung der zweiten
+    /// Schaltflaeche.
+    ///
+    /// **Die Auftragsart stand bis zum 260818 als zweites daneben**, und mit
+    /// ihr eine Angabe, die nichts mehr unterschied: der Rumpf nahm ein
+    /// `art: Art`, dessen Aufzaehlung vier Werte fuehrt und von denen sein
+    /// eigener Vertrag drei ausschliesst. Ein `debug_assert!` daneben waere die
+    /// schwaechere Antwort gewesen — es greift im Auslieferungsbau nicht, wie
+    /// derselbe Fehler an [`crate::appkit::blaetter::Blatt::mit_schaltflaechen`]
+    /// gerade gezeigt hat. Die Angabe ist stattdessen gefallen: was es nicht
+    /// gibt, kann kein Aufrufer falsch besetzen, und zwar in jedem Profil
+    /// (`issues/260817-2243_*_the-delete-body-takes-an-art-that-admits-three-values-*.md`).
     ///
     /// **Die Texte selbst entstehen seit dem 260817 im Rumpf** und nicht mehr
     /// hier. Der Grund ist die Tafel der Ausloeser: die Frage nennt den ersten
@@ -4458,7 +4474,7 @@ impl Anwendungsdelegierter {
     /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist ihn ab, bevor
     /// er hier ankommt.
     fn in_den_papierkorb(&self) -> bool {
-        self.loeschen_nach_rueckfrage(Art::InDenPapierkorb, "In den Papierkorb räumen")
+        self.loeschen_nach_rueckfrage("In den Papierkorb räumen")
     }
 
     /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
@@ -4622,10 +4638,39 @@ impl Anwendungsdelegierter {
     /// Die Lesung, die auseinanderlaufen kann, ist die **nach** dem Blatt, und
     /// die gibt es nicht mehr; warum, sagt [`Self::loeschauftrag_stellen`].
     ///
+    /// **Die Auftragsart nennt der Rumpf selbst, und das ist der Vertrag.**
+    /// Bis zum 260818 nahm er sie als `art: Art` entgegen — eine Aufzaehlung mit
+    /// vier Werten, von denen dieser Rumpf drei ausschliesst: mit
+    /// `Art::Kopieren`, `Art::Verschieben` oder `Art::UmbenennenImStapel`
+    /// zeigte er die Loeschrueckfrage und startete auf ein Ja hin eine Kopie,
+    /// eine Verschiebung oder ein Stapelumbenennen. Nichts hielt das auf, weder
+    /// der Typ noch eine Zusicherung noch eine Probe. Der Nachbarparameter
+    /// hatte diesen Halter einmal: die Aufzaehlung `Loeschtexte` bestand allein
+    /// dafuer, dass der Uebersetzer den Bau anhaelt, sobald der zweite
+    /// Loeschbefehl faellt — sie hat ihre Arbeit getan und ist mit ihm
+    /// gefallen. `art` hatte nie einen
+    /// (`issues/260817-2243_*_the-delete-body-takes-an-art-that-admits-three-values-*.md`).
+    ///
+    /// **Der Typ selbst kann die Einschraenkung nicht tragen.**
+    /// [`Art`](krk_core::operation::Art) gehoert `krk-core` und fuehrt die vier
+    /// Arten, die die Dateioperationen dieses Programms kennen; ein zweiter Typ
+    /// daneben, der nur einen Wert kennt, waere eine Aufzaehlung mit einer
+    /// Variante samt Ruecktausch an der einen Uebergabestelle. Der kleinste
+    /// Typ, der allein die zulaessigen Werte kennt, ist hier **kein
+    /// Parameter**: es gibt einen zulaessigen Wert, es gibt einen Aufrufer, und
+    /// eine Angabe, die nichts unterscheidet, kann auch nichts falsch
+    /// unterscheiden. Das haelt in jedem Profil, anders als ein
+    /// `debug_assert!`.
+    ///
+    /// **Der Schnitt zu [`Self::in_den_papierkorb`] bleibt trotzdem**, und der
+    /// Befehl bringt weiterhin ein Stueck mit: die Beschriftung der zweiten
+    /// Schaltflaeche. Zusammengelegt truege eine Funktion die Stufenregel und
+    /// die zwei Angaben des Befehls in einem Rumpf.
+    ///
     /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
     /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
-    fn loeschen_nach_rueckfrage(&self, art: Art, schaltflaeche: &str) -> bool {
+    fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
@@ -4689,7 +4734,7 @@ impl Anwendungsdelegierter {
                 // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
                 // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
                 // eine `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
-                let bestaetigter = Cell::new(Some((art, auswahl, quellordner)));
+                let bestaetigter = Cell::new(Some((Art::InDenPapierkorb, auswahl, quellordner)));
                 let schwach = objc2::rc::Weak::from_retained(&self.retain());
                 let griff = loeschbestaetigung::zeigen(
                     self.mtm(),

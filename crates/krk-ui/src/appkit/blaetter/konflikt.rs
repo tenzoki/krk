@@ -21,6 +21,37 @@
 //! Schaltflaechen waeren ohne Maus nicht mehr erreichbar. Wer den Namen aendern
 //! will, tabuliert hinein.
 //!
+//! # Und es traegt seit dem 260818 den Waechter
+//!
+//! Bis dahin war dies das eine Blatt im Baum mit einem Textfeld **ohne**
+//! [`Eingabewaechter`](super::Eingabewaechter). Solange der Nutzer nicht
+//! hineinklickt, kostet das nichts: Ersthelfer ist eine Schaltflaeche, und die
+//! vier Tastenentsprechungen greifen. Sobald er hineintabuliert, um den Namen
+//! fuer "Umbenennen" zu tippen, haelt das Feld den Ersthelferrang, und sein
+//! Feldeditor verbraucht die Eingabe- und die Escape-Taste selbst — das Blatt
+//! war dann mit keiner von beiden zu beantworten, und der Abbruchbefehl aus
+//! `resources/default-keymap.toml` half nicht daneben, weil
+//! `kommandos::zulaessigkeit::zulaessig` bei einem Textfeld als Ersthelfer auch
+//! ihn abweist
+//! (`issues/260817-1241_*_das-konfliktblatt-gibt-seinem-namensfeld-keinen-eingabewaechter.md`).
+//!
+//! **Der Waechter kennt zwei Antworten, dieses Blatt hat vier**, und das war
+//! der Grund, ihn nicht einfach anzuhaengen: er schickte fuer "bestaetigt" fest
+//! die **erste** Schaltflaeche, und die ist hier "Überschreiben". Ein Return im
+//! Namensfeld haette damit den Eintrag am Ziel geloescht — dieselbe Bewegung,
+//! die der Kopf darueber fuer die Vorgabeschaltflaeche ausdruecklich
+//! ausschliesst. Beantwortet ist das an [`super::bestaetigungsstelle`]: die
+//! Eingabetaste geht an die Schaltflaeche, die sie traegt, und das ist hier
+//! "Überspringen". Der Waechter sagt damit im Feld dasselbe, was die
+//! Erlaeuterung dem Nutzer ansagt ("Return überspringt"), und die Escape-Taste
+//! faellt wie ueberall auf "Abbrechen".
+//!
+//! Zwei der vier Antworten bleiben im Feld ohne Taste: "Überschreiben" und
+//! "Umbenennen" liegen auf Cmd+Return und Opt+Return, und ob der Feldeditor die
+//! beiden durchlaesst, ist am laufenden Buendel zu messen und nicht hier zu
+//! behaupten. Erreichbar sind sie in jedem Fall, indem der Nutzer das Feld
+//! wieder verlaesst oder die Maus nimmt.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSTextField` (ueber `NSControl`, `NSView` und `NSResponder`), `NSWindow`
@@ -79,7 +110,7 @@ pub fn zeigen(
     );
     feld.setStringValue(&NSString::from_str(vorschlag));
 
-    let blatt = Blatt::mit_schaltflaechen(
+    let mut blatt = Blatt::mit_schaltflaechen(
         mtm,
         &format!("„{name}“ gibt es am Ziel schon"),
         &[
@@ -100,6 +131,10 @@ pub fn zeigen(
         ziel.display()
     ));
     blatt.beigabe_setzen(&feld);
+    // Der Waechter, aber **nicht** `textfeld_setzen`: das machte das Feld
+    // daneben zum Ersthelfer, und der Kopf dieser Datei sagt, warum es das
+    // nicht wird. Gebraucht wird allein die dritte der drei Handlungen.
+    blatt.waechter_anhaengen(mtm, &feld);
     blatt.wahl_fuer_alle_zeigen("Für alle weiteren übernehmen");
 
     let feld: Retained<NSTextField> = feld;

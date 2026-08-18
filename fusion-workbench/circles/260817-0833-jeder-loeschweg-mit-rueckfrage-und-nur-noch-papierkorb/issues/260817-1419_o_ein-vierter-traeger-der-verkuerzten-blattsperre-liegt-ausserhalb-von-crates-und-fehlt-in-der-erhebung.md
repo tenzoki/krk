@@ -81,3 +81,62 @@ weil `CLAUDE.md` am 260817-1600 die Zeile `**Artifact language:** en` bekommen h
 `resources/default-keymap.toml:708`, `editor.rs:1298` und `anwendung.rs:406` stehen unverschoben.
 Die Stelle mit der gleichbedeutenden, nicht wortgleichen Formulierung liegt jetzt an
 `anwendung.rs:2866` und nicht an `:2841`, wie dieser Datensatz sagt.
+
+---
+Abgleich 260818 (coder, Bündel C/D-Nachzug): **bleibt offen, und zwar allein an seiner
+eigenen Zeile.** Die zweite Hälfte des Befundes — dass eine Erhebung, die „der ganze Baum"
+sagt und eine Kiste liest, dieselbe Stelle wieder nicht sieht — ist erledigt; die
+beanstandete Zeile selbst steht unverändert.
+
+**Warum sie nicht mitkommt.** `resources/default-keymap.toml` ist vom Auftrag dieser Runde
+ausdrücklich ausgenommen: daran arbeitet als nächstes ein anderer Executor, und eine Änderung
+hier fiele in dessen Commit. Die Datei ist daneben die eine Quelle jeder Tastenbelegung, also
+Datenbestand und nicht Bauwerkzeug, und gehört damit ohnehin nicht dem `coder`. Die Richtung
+des Datensatzes gilt unverändert: die Zeile nennt vier Kommandos statt einem, mit `1302` und
+`1111` in einem Zug.
+
+**Die Erhebung, dieses Mal über den ganzen Baum und nicht über eine Kiste.** Gezählt am
+260818 nach den Korrekturen dieser Runde. Gesucht wurde nicht nach dem Wortlaut allein,
+sondern nach der **Aussage**: eine Stelle, die sagt, was die Sperre *als Ganzes* durchlässt,
+und dabei weniger als vier nennt. Zwei Nadeln, die zweite absichtlich weiter als die
+wörtliche, weil `anwendung.rs` die Aussage in anderen Worten trug:
+
+```
+$ grep -rn "ausser dem Abbruch\|außer dem Abbruch" \
+      crates/ xtask/ resources/ CLAUDE.md README.md Makefile idea.txt Cargo.toml .claude/
+$ grep -rniE "(ausser|außer|bis auf|nur|allein|einzig)[^.]{0,45}(abbruch|abbrechen)" \
+      <denselben Pfaden>
+```
+
+Ausgenommen sind `fusion-workbench/`, `messungen/` und `spikes/`: nach der Ortsregel in
+`CLAUDE.md` behalten Aufzeichnungen eines Standes ihre damalige Formulierung. `target/` und
+`.git/` tragen keinen Quelltext.
+
+**Sechs Träger, und zwei davon nannte kein Datensatz und keine vorige Erhebung:**
+
+| Stelle | genannt in | Stand |
+|---|---|---|
+| `crates/krk-ui/src/kommandos/operationen.rs`, Abschnittskopf und Doc von `waehrend_blatt_erlaubt` | keinem — **die Wurzel**, aus der die übrigen ihre Formulierung haben | behoben |
+| `crates/krk-ui/src/kommandos/operationen.rs`, zwei Probennamen und eine Fehlschlagsmeldung | keinem | behoben |
+| `crates/krk-ui/src/appkit/anwendung.rs`, Kopf von `kommando_ausfuehren` | `260817-1302` | behoben |
+| `crates/krk-ui/src/appkit/editor.rs` | `260817-1302` | behoben |
+| `resources/default-keymap.toml:710` | **dieser Datensatz** | steht, außerhalb des Umfangs |
+| `CLAUDE.md:124` | `260817-1111`, `260817-1302` | steht, außerhalb des Umfangs |
+
+Fünf Stellen sind gelesen und **kein** Träger: `krk-core/src/tasten/belegung.rs:638` und
+`:952` (Aussagen über je ein einzelnes Kommando, korrekt aus `waehrend_blatt_erlaubt`
+hergeleitet, und weder `Notizzettel` noch `TabSchliessen` steht auf `immer_erreichbar`),
+`anwendung.rs:406` (Stand bis S16, sagt es), `anwendung.rs:6440` und `zulaessigkeit.rs:613`
+(nennen die Ausnahmeliste, vollständig).
+
+**Der blinde Fleck ist damit zweimal derselbe gewesen, und der zweite war nicht die
+Ordnergrenze.** Der erste war `crates/`, wie dieser Datensatz sagt. Der zweite war die Nadel:
+`anwendung.rs` trug die Aussage in anderen Worten, `operationen.rs` unter der Überschrift
+statt im Satz, und beide entgingen der wörtlichen Suche. Wer die nächste Erhebung fährt, sucht
+nach der Aussage und nicht nach ihrer Schreibweise — so, wie es der Modulkopf von
+`crate::quellbaum` für jede Zählprobe dieses Baums schon vorschreibt.
+
+**Die Zahl vier ist seit dem 260818 gemessen** und steht in
+`zulaessigkeit::tests::waehrend_eines_blattes_kommen_genau_diese_vier_durch`. Jede Prosastelle,
+die von vier spricht, hat dort ihren Beleg, und eine fünfte Zulassung lässt die Probe rot
+werden.

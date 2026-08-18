@@ -60,6 +60,14 @@
 //!
 //! # Welche Schaltflaeche die ungefaehrliche ist, steht genau einmal
 //!
+//! Es sind zwei Fragen dieser Art, und seit dem 260818 ist jede einmal
+//! beantwortet: **welche Schaltflaeche laesst alles liegen** ([`abbruchstelle`],
+//! gleich darunter) und **welcher gehoert die Eingabetaste**
+//! ([`bestaetigungsstelle`]). Die zweite stand bis dahin nicht als Regel da,
+//! sondern als festes `NSAlertFirstButtonReturn` im Rumpf des
+//! [`Eingabewaechter`]; der Abschnitt bei [`bestaetigungsstelle`] sagt, warum
+//! das eine Annahme derselben Sorte war.
+//!
 //! Drei Stellen dieser Datei brauchen die Antwort: der Abschlussblock, wenn
 //! `NSAlert` einen Rueckgabewert liefert, der zu keiner angelegten
 //! Schaltflaeche gehoert, [`Blattgriff::abbrechen`], das ein stehendes Blatt
@@ -432,6 +440,52 @@ pub fn abbruchstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
         .unwrap_or(0)
 }
 
+/// Die Stelle, auf die die Eingabetaste in einem bewachten Textfeld faellt.
+///
+/// Die Gegenfrage zu [`abbruchstelle`], und seit dem 260818 abgeleitet statt
+/// angenommen. Der [`Eingabewaechter`] schickte fuer `bestaetigt == true`
+/// unveraendert `NSAlertFirstButtonReturn`, also die **erste** Schaltflaeche;
+/// das war richtig, solange einen Waechter nur ein Blatt aus [`Blatt::neu`]
+/// hielt, dessen Reihenfolge die erste als die bestaetigende festlegt, und es
+/// war dieselbe Sorte Annahme, die auf der abbrechenden Seite den Defekt
+/// `260817-1106` gekostet hat
+/// (`issues/260817-1242_*_die-bestaetigende-seite-des-eingabewaechters-liegt-fest-auf-der-ersten-schaltflaeche.md`).
+///
+/// **Abgeleitet wird sie aus der Taste und nicht aus der Reihenfolge**, und die
+/// Herleitung ist die Daseinsberechtigung des Waechters selbst: es gibt ihn,
+/// weil der Feldeditor die Eingabetaste verbraucht, bevor eine Schaltflaeche
+/// sie sieht. Er gibt sie deshalb der Schaltflaeche zurueck, der sie in diesem
+/// Blatt gehoert, und das sagt allein das Feld [`Schaltflaeche::taste`].
+///
+/// # Die Tafel
+///
+/// | Die Schaltflaechen des Blattes | Ergebnis |
+/// |---|---|
+/// | die erste mit [`Taste::Eingabe`] steht an Stelle `s` | `s` |
+/// | keine traegt [`Taste::Eingabe`] | [`abbruchstelle`] |
+/// | keine Schaltflaeche | `0`, ueber [`abbruchstelle`] |
+///
+/// **Die zweite Zeile faellt auf den ungefaehrlichen Ausgang und nicht auf die
+/// erste Stelle.** Ein Blatt ohne Schaltflaeche auf der Eingabetaste gibt der
+/// Taste keine Bedeutung; die Rueckfrage vor dem Raeumen in den Papierkorb ist
+/// der Gegenfall dazu und traegt sie ausdruecklich auf "Abbrechen". Ratend die
+/// erste Stelle zu nehmen hiesse in einem solchen Blatt, die Eingabetaste auf
+/// den ausfuehrenden Ausgang zu legen — genau die Bewegung, die diese Runde
+/// abschafft. Lieber nichts tun als raten, wie im Abschlussblock von
+/// [`Blatt::zeigen_mit_wahl`].
+///
+/// **Hoechstens eine Schaltflaeche je Blatt traegt [`Taste::Eingabe`]**; das
+/// sagt die Aufzaehlung [`Taste`] und der Bau haelt es nicht. Die Regel nimmt
+/// deshalb die erste und nicht "die eine", so wie [`abbruchstelle`] es fuer
+/// zwei liegenlassende Schaltflaechen tut.
+#[must_use]
+pub fn bestaetigungsstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
+    schaltflaechen
+        .iter()
+        .position(|schaltflaeche| schaltflaeche.taste == Taste::Eingabe)
+        .unwrap_or_else(|| abbruchstelle(schaltflaechen))
+}
+
 /// Ein stehendes Blatt, das der Aufrufer wieder schliessen kann.
 ///
 /// Der Abbruchbefehl braucht das: `esc` schliesst ein stehendes Blatt ueber
@@ -493,6 +547,14 @@ pub struct Blatt {
     /// Aus [`abbruchstelle`] und damit aus der [`Wirkung`] der Schaltflaechen,
     /// nicht aus ihrer Taste.
     abbruchstelle: usize,
+    /// Die Stelle der Schaltflaeche, der die Eingabetaste gehoert.
+    ///
+    /// Aus [`bestaetigungsstelle`] und damit aus der [`Taste`] der
+    /// Schaltflaechen, nicht aus ihrer Reihenfolge. Gebraucht wird sie von
+    /// genau einer Stelle, dem [`Eingabewaechter`]: sonst beantwortet die
+    /// Schaltflaeche die Taste selbst, und niemand muss rechnen, wem sie
+    /// gehoert.
+    bestaetigungsstelle: usize,
     /// Der Delegierte des Eingabefeldes, falls es eines gibt.
     ///
     /// Ein `NSControl` haelt seinen Delegierten schwach; die starke Richtung
@@ -525,11 +587,16 @@ impl Blatt {
     /// Die Reihenfolge ist bindend: die **erste** Schaltflaeche bestaetigt und
     /// traegt die Eingabetaste, die zweite bricht ab und traegt die
     /// Escape-Taste. Beides ist die Mac-Gewohnheit, und C2 verlangt sie
-    /// ausdruecklich fuer jedes Textfeld. Auf dieser Reihenfolge ruht der
-    /// [`Eingabewaechter`]: er uebersetzt die Eingabetaste des Feldes in die
-    /// **erste** Schaltflaeche, und jedes bewachte Blatt kommt von hier. Ein
-    /// Feld allein reicht dafuer nicht — das Konfliktblatt traegt eines ohne
-    /// Waechter —, ein Aufruf von [`Blatt::waechter_anhaengen`] tut es.
+    /// ausdruecklich fuer jedes Textfeld.
+    ///
+    /// **Der [`Eingabewaechter`] ruht seit dem 260818 nicht mehr auf dieser
+    /// Reihenfolge.** Er uebersetzte die Eingabetaste des Feldes fest in die
+    /// **erste** Schaltflaeche, was hier zufaellig dieselbe ist, die
+    /// [`Taste::Eingabe`] traegt; heute rechnet [`bestaetigungsstelle`] sie aus
+    /// der Taste, und ein Blatt mit einer anderen Reihenfolge bekommt eine
+    /// Antwort, die zu ihm passt. Das Konfliktblatt ist der erste solche Fall.
+    /// Ein Feld allein macht ein Blatt noch nicht bewacht, ein Aufruf von
+    /// [`Blatt::waechter_anhaengen`] tut es.
     pub fn neu(mtm: MainThreadMarker, frage: &str, bestaetigen: &str) -> Self {
         Self::mit_schaltflaechen(mtm, frage, &standardschaltflaechen(bestaetigen))
     }
@@ -591,6 +658,7 @@ impl Blatt {
             warnung,
             antworten,
             abbruchstelle: abbruchstelle(schaltflaechen),
+            bestaetigungsstelle: bestaetigungsstelle(schaltflaechen),
             waechter: None,
         }
     }
@@ -739,17 +807,20 @@ impl Blatt {
         // Der Waechter kann das Blatt erst jetzt beenden: das Fenster, an dem
         // es haengt, steht erst mit diesem Aufruf fest.
         let abbruchcode = antwort_von_stelle(self.abbruchstelle);
+        let bestaetigungscode = antwort_von_stelle(self.bestaetigungsstelle);
         if let Some(waechter) = &self.waechter {
             let blattfenster = self.warnung.window();
             let elternfenster = fenster.retain();
             waechter.antwort_setzen(Box::new(move |bestaetigt| {
-                // Bestaetigt heisst die erste Schaltflaeche: einen Waechter
-                // haelt nur ein Blatt aus `Blatt::neu`, dessen Reihenfolge die
-                // erste als die bestaetigende festlegt. Abgebrochen heisst
-                // dieselbe Stelle, die auch der Griff einsetzt; die Frage nach
-                // der ungefaehrlichen Schaltflaeche ist einmal beantwortet.
+                // Beide Seiten sind gerechnet und keine geraten. Bestaetigt
+                // heisst die Schaltflaeche, der die Eingabetaste gehoert
+                // (`bestaetigungsstelle`) — bis zum 260818 stand hier fest die
+                // erste, was fuer ein Blatt mit vier Antworten die falsche
+                // waere. Abgebrochen heisst dieselbe Stelle, die auch der Griff
+                // einsetzt; beide Fragen sind in dieser Datei je einmal
+                // beantwortet.
                 let antwort = if bestaetigt {
-                    NSAlertFirstButtonReturn
+                    bestaetigungscode
                 } else {
                     abbruchcode
                 };
@@ -817,6 +888,91 @@ mod tests {
             "ein Blatt ohne liegenlassende Schaltflaeche faellt auf die erste Stelle"
         );
         assert_eq!(abbruchstelle(&[]), 0, "ein Blatt ohne Schaltflaeche");
+    }
+
+    /// Die Tafel von [`bestaetigungsstelle`], Zeile fuer Zeile.
+    ///
+    /// Dieselbe Bauform wie [`die_tafel_der_liegenlassenden_stelle`] darueber
+    /// und aus demselben Grund: die Regel rechnet mit nichts als der Liste der
+    /// Schaltflaechen und ist ohne AppKit pruefbar.
+    #[test]
+    fn die_tafel_der_bestaetigenden_stelle() {
+        let auf_eingabe = Schaltflaeche::neu("Los", Taste::Eingabe, Wirkung::Ausfuehren);
+        let auf_cmd = Schaltflaeche::neu("Auch los", Taste::EingabeMitBefehl, Wirkung::Ausfuehren);
+        let laesst_liegen = Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen);
+
+        assert_eq!(
+            bestaetigungsstelle(&[auf_eingabe, laesst_liegen]),
+            0,
+            "die Schaltflaeche mit der Eingabetaste steht vorn und wird nicht gefunden"
+        );
+        assert_eq!(
+            bestaetigungsstelle(&[auf_cmd, auf_eingabe, laesst_liegen]),
+            1,
+            "die Schaltflaeche mit der Eingabetaste steht in der Mitte und wird nicht gefunden"
+        );
+        assert_eq!(
+            bestaetigungsstelle(&[auf_cmd, laesst_liegen, auf_eingabe]),
+            2,
+            "die Schaltflaeche mit der Eingabetaste steht hinten und wird nicht gefunden"
+        );
+        assert_eq!(
+            bestaetigungsstelle(&[auf_cmd, laesst_liegen]),
+            1,
+            "ohne Schaltflaeche auf der Eingabetaste faellt die Antwort auf die liegenlassende"
+        );
+        assert_eq!(
+            bestaetigungsstelle(&[]),
+            0,
+            "ein Blatt ohne Schaltflaeche faellt ueber abbruchstelle auf die erste Stelle"
+        );
+    }
+
+    /// Die Eingabetaste im Feld faellt nie auf einen ausfuehrenden Ausgang,
+    /// dem sie nicht gehoert.
+    ///
+    /// **Die eigentliche Zusage der Regel**, und die Tafel darueber ist nur ihr
+    /// Rumpf. Gemessen an den beiden Bauplaenen, die im Baum auseinandergehen:
+    /// bei [`Blatt::neu`] traegt die **erste** Schaltflaeche die Eingabetaste,
+    /// beim Konfliktblatt die **zweite**, und bei der Rueckfrage vor dem
+    /// Raeumen in den Papierkorb die erste, die aber alles liegen laesst.
+    ///
+    /// **So faengt sie den Fehler, gegen den sie gerichtet ist:** wer
+    /// [`bestaetigungsstelle`] wieder auf `0` festlegt, bekommt hier die Zeile
+    /// des Konfliktblattes rot, und zwar mit dem Titel „Überschreiben" im
+    /// Fehlschlag — also mit dem Schaden benannt, den die feste Stelle
+    /// anrichtete, und nicht mit einer Zahl.
+    #[test]
+    fn die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche() {
+        let konfliktblatt = [
+            Schaltflaeche::neu(
+                "Überschreiben",
+                Taste::EingabeMitBefehl,
+                Wirkung::Ausfuehren,
+            ),
+            Schaltflaeche::neu("Überspringen", Taste::Eingabe, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+        ];
+        let loeschrueckfrage = [
+            Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
+            Schaltflaeche::neu(
+                "In den Papierkorb räumen",
+                Taste::EingabeMitBefehl,
+                Wirkung::Ausfuehren,
+            ),
+        ];
+        let blatt_neu = standardschaltflaechen("Sichern");
+
+        for schaltflaechen in [&konfliktblatt[..], &loeschrueckfrage[..], &blatt_neu[..]] {
+            let stelle = bestaetigungsstelle(schaltflaechen);
+            assert_eq!(
+                schaltflaechen[stelle].taste,
+                Taste::Eingabe,
+                "die Eingabetaste faellt auf \"{}\", und die traegt sie nicht",
+                schaltflaechen[stelle].titel
+            );
+        }
     }
 
     /// Die Escape-Taste entscheidet die Rueckfallstelle nicht mehr.

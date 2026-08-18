@@ -41,3 +41,39 @@ Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
 `Blatt::zeigen_mit_wahl` liegt an `crates/krk-ui/src/appkit/blaetter/mod.rs:667` und trägt an
 `:711` weiter das feste `NSAlertFirstButtonReturn`, während die Gegenseite über
 `blaetter::abbruchstelle` (`:416`) berechnet wird.
+
+---
+Resolved 260818 (coder, Bündel C/D-Nachzug): **die bestätigende Seite ist abgeleitet und
+nicht mehr angenommen.**
+
+Gebaut in der Richtung, die dieser Datensatz nennt: `blaetter::bestaetigungsstelle`
+(`crates/krk-ui/src/appkit/blaetter/mod.rs`), eine reine Funktion neben `abbruchstelle`, die
+die erste Schaltfläche mit `Taste::Eingabe` liefert und ohne eine solche auf `abbruchstelle`
+zurückfällt. `Blatt::mit_schaltflaechen` legt das Ergebnis wie die Abbruchstelle einmal je
+Blatt ab; der `Eingabewaechter` liest es in `zeigen_mit_wahl`, wo bis dahin ein festes
+`NSAlertFirstButtonReturn` stand.
+
+**Warum der Rückfall auf `abbruchstelle` und nicht auf die erste Stelle.** Ein Blatt ohne
+Schaltfläche auf der Eingabetaste gibt der Taste keine Bedeutung, und die Rückfrage vor dem
+Räumen ist der Gegenfall dazu: sie legt die Eingabetaste ausdrücklich auf „Abbrechen". Ratend
+die erste Stelle zu nehmen hieße in einem Blatt mit ausführender erster Schaltfläche, die
+Eingabetaste auf den zerstörenden Ausgang zu legen — genau der Fehler von `260817-1106`, nur
+auf der anderen Seite. Es ist dieselbe Antwort, die der Abschlussblock schon für eine
+unbekannte Antwort gibt: lieber nichts tun als raten.
+
+**Zwei Proben, beide ohne AppKit** (`blaetter::tests`):
+- `die_tafel_der_bestaetigenden_stelle` — die Tafel Zeile für Zeile, in der Bauform der
+  Nachbarin `die_tafel_der_liegenlassenden_stelle`.
+- `die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche` — die eigentliche Zusage,
+  gemessen an den drei Bauplänen, die im Baum auseinandergehen: `Blatt::neu` (Eingabetaste
+  vorn), Konfliktblatt (in der Mitte) und Löschrückfrage (vorn, aber liegenlassend).
+
+**Nachgewiesen, dass sie den Fehler fängt, gegen den sie gerichtet ist.** Probeweise wieder
+auf `0` festgelegt: beide Proben werden rot, und die zweite meldet
+`die Eingabetaste faellt auf "Überschreiben", und die traegt sie nicht` — also mit dem Schaden
+benannt und nicht mit einer Zahl. Zurückgenommen.
+
+Nachgezogen: der Modulkopf von `blaetter/mod.rs` (der Abschnitt nennt jetzt beide Fragen) und
+der Doc-Kommentar von `Blatt::neu`, der sagte, auf seiner Reihenfolge ruhe der Wächter.
+
+Abnahme: `make check` — Exit 0.
