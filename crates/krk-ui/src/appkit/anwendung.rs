@@ -7342,3 +7342,139 @@ mod zettelproben {
         }
     }
 }
+
+#[cfg(test)]
+mod loeschzielproben {
+    use super::*;
+    use crate::pruefordner::Pruefordner;
+
+    /// Der Einhaengepunkt der `/home`-Automatik, der eine Ort dieses Baums, an
+    /// dem `NSURLVolumeIsLocalKey` `false` antwortet, ohne dass eine Probe ein
+    /// Netzlaufwerk einhaengen muesste.
+    ///
+    /// Er steht auch in `super::super::volumes` neben den dortigen Proben; die
+    /// Begruendung im Einzelnen steht dort. Eine gemeinsame Fassung waere ein
+    /// `pub(crate)` an einer `#[cfg(test)]`-Konstante quer durch die Kiste, und
+    /// das ist teurer als die zwei Zeilen.
+    const AUTOMATIK_HOME: &str = "/System/Volumes/Data/home";
+
+    /// Die drei Werte der Rueckfrage zu einem Ordner, mit aufgeloestem Pfad.
+    ///
+    /// Genau der Weg des Rumpfes: der Ordner wird einmal aufgeloest und geht
+    /// aufgeloest an [`Anwendungsdelegierter::loeschtexte`], das ihn von dort an
+    /// nicht mehr anfasst.
+    fn texte(ordner: &Path, pfade: Vec<PathBuf>) -> (String, String, bool) {
+        let auswahl = Auswahl { pfade, ordner: 0 };
+        let aufgeloest = std::fs::canonicalize(ordner).ok();
+        assert!(
+            aufgeloest.is_some(),
+            "{} liess sich nicht aufloesen, also misst diese Probe die Verdrahtung nicht",
+            ordner.display()
+        );
+        Anwendungsdelegierter::loeschtexte(&auswahl, ordner, aufgeloest)
+    }
+
+    /// Frage und Erlaeuterung in einem Stueck.
+    ///
+    /// Die Rangfolge aus C3 entscheidet, welcher Grund in der Frage steht und
+    /// welcher im Absatz der Erlaeuterung; welcher es ist, ist hier nicht die
+    /// Frage, sondern **ob der Grund ueberhaupt der ist, der zur Tatsache
+    /// gehoert**. Beide Texte zusammen zu lesen macht die Probe unabhaengig von
+    /// der Rangfolge, die `loeschwarnung` schon einzeln misst.
+    fn beide(ordner: &Path, pfade: Vec<PathBuf>) -> (String, bool) {
+        let (frage, erlaeuterung, laut) = texte(ordner, pfade);
+        (format!("{frage}\n{erlaeuterung}"), laut)
+    }
+
+    /// Ein Arbeitsbaum kommt als Arbeitsbaum an und nicht als Netzlaufwerk.
+    ///
+    /// **Die Probe misst die Verdrahtung und nicht die Ausloeser.** Beide
+    /// Ausloeser sind einzeln gemessen — `volumes::liegt_auf_netzlaufwerk` in
+    /// seiner Datei, `arbeitsbaum::beruehrt_einen_arbeitsbaum` in seiner —, und
+    /// `loeschwarnung::warngruende` urteilt ueber die fertigen Tatsachen. Was
+    /// dazwischen niemand gelesen hat, sind die zwei Zeilen in
+    /// [`Anwendungsdelegierter::loeschtexte`], die die Antworten in die Felder
+    /// des Ziels legen: ein Tausch der beiden Feldnamen uebersetzt, laesst jede
+    /// jener Proben gruen und macht aus einem Arbeitsbaum ein Netzlaufwerk
+    /// (`issues/260817-1759_*`).
+    ///
+    /// Der Prueforder traegt ein `.git` und liegt auf dem eingebauten
+    /// Datenband. Die beiden Tatsachen sind damit **verschieden** — Arbeitsbaum
+    /// ja, Netzlaufwerk nein —, und nur bei verschiedenen Tatsachen ist ein
+    /// Tausch ueberhaupt sichtbar.
+    #[test]
+    fn ein_arbeitsbaum_kommt_nicht_als_netzlaufwerk_an() {
+        let ordner = Pruefordner::neu("loeschtexte-arbeitsbaum");
+        ordner.ordner(".git");
+        let eintrag = ordner.datei("eine-datei.txt", b"Inhalt");
+
+        let (text, laut) = beide(ordner.pfad(), vec![eintrag]);
+
+        assert!(
+            laut,
+            "das Ziel traegt einen Warngrund und die Frage ist still: {text}"
+        );
+        assert!(
+            text.contains("aus einem Git-Arbeitsbaum"),
+            "der Arbeitsbaum erreicht sein Feld nicht: {text}"
+        );
+        assert!(
+            !text.contains("von einem Netzlaufwerk"),
+            "ein lokaler Ordner wird als Netzlaufwerk angesagt: {text}"
+        );
+    }
+
+    /// Ein nicht lokaler Datentraeger kommt als Netzlaufwerk an und nicht als
+    /// Arbeitsbaum.
+    ///
+    /// Die Gegenprobe, und sie ist noetig: ohne sie waere ein
+    /// [`Anwendungsdelegierter::loeschtexte`], das **nie** ein Netzlaufwerk
+    /// meldet, ebenso gruen wie die richtige Fassung. Zusammen halten die beiden
+    /// Proben den Tausch von beiden Seiten fest.
+    ///
+    /// # Warum die Vorbedingung mitgeprueft wird
+    ///
+    /// Ist die `/home`-Automatik in `/etc/auto_master` abgeschaltet, steht unter
+    /// [`AUTOMATIK_HOME`] ein gewoehnlicher, lokaler Ordner, und die Probe
+    /// wuerde rot, ohne dass an der Verdrahtung etwas falsch waere. Geprueft
+    /// wird deshalb zuerst die Geraetekennung aus `stat(2)`: ein Einhaengepunkt
+    /// traegt eine andere als der Ordner ueber ihm. Fehlt er, **haelt die Probe
+    /// an statt sich zu ueberspringen** — dieselbe Wahl wie bei der
+    /// Schwesterprobe in `super::super::volumes`.
+    #[test]
+    fn ein_netzlaufwerk_kommt_nicht_als_arbeitsbaum_an() {
+        use std::os::unix::fs::MetadataExt;
+
+        let einhaengepunkt = Path::new(AUTOMATIK_HOME);
+        let eigen = std::fs::metadata(einhaengepunkt)
+            .unwrap_or_else(|fehler| panic!("{AUTOMATIK_HOME} ist nicht lesbar: {fehler}"));
+        let darueber = std::fs::metadata(
+            einhaengepunkt
+                .parent()
+                .expect("der Pfad der Automatik hat einen uebergeordneten Ordner"),
+        )
+        .expect("der Ordner ueber der Automatik ist nicht lesbar");
+        assert_ne!(
+            eigen.dev(),
+            darueber.dev(),
+            "unter {AUTOMATIK_HOME} steht kein eigener Einhaengepunkt, \
+             also misst diese Probe den nicht lokalen Datentraeger nicht; \
+             ist die /home-Automatik in /etc/auto_master abgeschaltet?"
+        );
+
+        let (text, laut) = beide(einhaengepunkt, vec![einhaengepunkt.join("nicht-da")]);
+
+        assert!(
+            laut,
+            "ein nicht lokaler Datentraeger laesst die Frage still: {text}"
+        );
+        assert!(
+            text.contains("von einem Netzlaufwerk"),
+            "das Netzlaufwerk erreicht sein Feld nicht: {text}"
+        );
+        assert!(
+            !text.contains("aus einem Git-Arbeitsbaum"),
+            "ein Datentraeger wird als Arbeitsbaum angesagt: {text}"
+        );
+    }
+}

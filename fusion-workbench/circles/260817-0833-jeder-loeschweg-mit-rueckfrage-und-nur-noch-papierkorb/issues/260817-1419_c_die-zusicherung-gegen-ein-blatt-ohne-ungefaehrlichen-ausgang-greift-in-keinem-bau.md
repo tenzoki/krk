@@ -93,3 +93,68 @@ Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert am
 --workspace` lief am 260817-1833 über jedes Ziel grün, ohne die Zusicherung einmal auszuführen.
 Die drei Prosastellen liegen nach den Commits des Bündels C an `:404-409`, `:521-527` und
 `:810-814`, also unverschoben. Die Zählung „alle elf Aufrufstellen" stimmt weiter.
+
+---
+Resolved: Die Zusicherung greift jetzt in jedem Bau, und dass sie greift, ist
+gemessen. Zwei Aenderungen an `crates/krk-ui/src/appkit/blaetter/mod.rs`, dazu
+die Richtigstellung der drei Prosastellen.
+
+**Erstens: aus dem `debug_assert!` ist ein `assert!` geworden.** Damit faellt
+die Haelfte des Befunds weg, die den Auslieferungsbau betrifft. Gemessen und
+nicht behauptet:
+
+| Form | `strings target/release/krk \| grep -c 'traegt keine Schaltflaeche…'` |
+|---|---|
+| `debug_assert!` | 0 |
+| `assert!` | 1 |
+
+Beide Zahlen sind an `cargo build --release -p krk-ui` abgenommen. Der Preis ist
+benannt und klein: ein Blatt entsteht auf eine Nutzerhandlung hin, die Pruefung
+liest zwei Felder, und ausloesen kann sie allein ein Bauplan im Quelltext, nie
+eine Eingabe. Ein Absturz hier meldet einen Programmierfehler und loest eine
+Lage ab, in der die unbekannte Antwort eines Blattes loescht.
+
+**Zweitens: eine Probe erreicht die Zeile.**
+`ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf` baut ein Blatt aus zwei
+ausfuehrenden Schaltflaechen und erwartet mit `#[should_panic(expected = …)]`
+den Absturz. Der Einwand des Datensatzes, `libtest` koenne kein Blatt bauen,
+trifft den Zweig nicht, den die Probe erreicht: die Zusicherung steht als erste
+Anweisung des Rumpfes, **vor** `NSAlert::new`, und AppKit wird nie angesprochen.
+Das `MainThreadMarker::new_unchecked` ist damit vertretbarer als in
+`appkit::editor`, wo der Marker eingeloest wird; hier wird er weitergereicht und
+nie benutzt. Die Probe laeuft gruen.
+
+Nachweis, dass sie faengt: die Zusicherung versuchsweise herausgenommen, und
+der Probenlauf bricht ab (`fatal runtime error: Rust cannot catch foreign
+exceptions`, SIGABRT) — die Probe laeuft dann in `NSAlert::new` auf einem
+Nebenfaden. Das ist ein Fehlschlag und kein Durchkommen, aber ein harter: der
+Abbruch nimmt den ganzen Probenlauf mit. Der Doc-Kommentar der Probe sagt das,
+damit der naechste Leser den Abbruch hier sucht und nicht bei der Probe, die
+zuletzt gemeldet hat.
+
+**Drittens: die fuenf Blaetter aus `Blatt::neu` haben ihre eigene Messung.** Die
+Zaehlprobe `jedes_blatt_nennt_seine_liegenlassende_schaltflaeche` sieht sie
+nicht und soll es nicht — ihre Dateien bringen keine Schaltflaechen mit. Der
+Datensatz schlaegt vor, die Zaehlung auf `Blatt::neu` auszuweiten; das haette
+von Dateien verlangt, `Wirkung::Liegenlassen` zu nennen, die es nicht noetig
+haben. Gebaut ist stattdessen die Bauform aus `blaetter/loeschbestaetigung.rs`:
+der Bauplan steht als reine Funktion `standardschaltflaechen(bestaetigen)` da,
+`Blatt::neu` setzt sie ein, und
+`der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang` prueft ihn ohne
+AppKit. Nachweis: die abbrechende Schaltflaeche versuchsweise auf
+`Wirkung::Ausfuehren` gestellt, Probe rot.
+
+**Was nicht gebaut ist: der Mechanismuswechsel.** Die liegenlassende
+Schaltflaeche am **Typ** zu verlangen, damit `abbruchstelle` total wird und
+`unwrap_or(0)` entfaellt, bleibt offen — und es bleibt der staerkere Weg. Der
+Grund fuers Nichtbauen ist nicht der Aufwand an den elf Aufrufstellen, sondern
+die Signatur: die liegenlassende Schaltflaeche steht mal vorn (die Rueckfrage
+vor dem Raeumen) und mal hinten (`Blatt::neu`), also verliert
+`mit_schaltflaechen(…, ausfuehrende: &[…], liegenlassende: …)` ihre Stelle in
+der Reihenfolge, und die Reihenfolge ist bindend (C4). Eine Form, die beides
+traegt, braucht einen eigenen Typ fuer den Bauplan; das ist ein Entwurfsschnitt
+und keine Messung, und er gehoert als Entscheidungsdatensatz vorgelegt statt
+nebenbei gefahren. Die drei uebrigen direkten Aufrufer von `mit_schaltflaechen`
+(`belegungsansicht`, `blaetter/zettel`, `blaetter/konflikt`,
+`blaetter/uebersprungen`, `blaetter/ungesichert`) bleiben damit von der
+Zeichenfolgensuche je Datei gedeckt, deren Blindheit unveraendert bei ihr steht.

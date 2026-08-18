@@ -37,3 +37,25 @@ one, and that whoever adds the second brings the loop back with it.
 Restore the loop over a two-element list and assert both combinations. The comment block
 above already carries the reasoning for each; the paragraph naming the gap comes out with
 the fix.
+
+---
+Resolved: `die_ab_werk_freien_kombinationen_kommen_nicht_vor`
+(`crates/krk-core/tests/belegung.rs`) traegt wieder eine Liste und laeuft ueber
+zwei Eintraege, `shift+delete` und `opt+cmd+delete`. Die Pruefung und der
+Kopfkommentar von `resources/default-keymap.toml` (`:62`-`:67`) nennen damit
+dieselben Kombinationen.
+
+Der Kommentarblock ueber der Zusicherung ist nachgezogen: der Absatz, der die
+Luecke benannte, ist heraus, der Absatz zur fehlenden Schleife sagt jetzt,
+warum sie zwischen dem 260811 und dem 260818 weg war und seit wann sie wieder
+dasteht, und Opt+Cmd+Entf traegt seinen Grund fuers Freibleiben an Ort und
+Stelle statt eines Verweises auf die Luecke. Clippys `single_element_loop`
+greift bei zwei Eintraegen nicht mehr; `make check` laeuft durch.
+
+Nachweis, dass der zweite Eintrag wirklich geprueft wird: die Liste
+versuchsweise auf `["shift+delete", "f8"]` gestellt, und die Probe meldet
+`f8 ist ab Werk belegt` (Fehlschlag), weil `f8` in der Auslieferungsbelegung
+steht. Die Zusicherung greift also auf beide Eintraege und nicht nur auf den
+ersten. Der naheliegendere Nachweis waere gewesen, `opt+cmd+delete` wieder in
+eine Tastenliste zu schreiben; dafuer haette `resources/default-keymap.toml`
+angefasst werden muessen, und die Datei gehoerte nicht zu dieser Aufgabe.

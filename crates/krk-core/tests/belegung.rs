@@ -281,10 +281,12 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // bindet die Pruefung an ihre Groesse statt an ihre Zusage und muesste bei
     // jeder Aenderung mit umbenannt werden.
     //
-    // **Seit dem 260811 prueft sie eine einzige Kombination, und die Schleife
-    // darueber ist deshalb weg.** Clippy weist eine Schleife ueber ein Element
-    // ab (`single_element_loop`), und ein `#[allow]` daneben waere teurer als
-    // die geradeaus geschriebene Pruefung.
+    // **Zwischen dem 260811 und dem 260818 stand hier eine einzige Kombination
+    // und keine Schleife**, weil Clippy eine Schleife ueber ein Element abweist
+    // (`single_element_loop`). Seit Opt+Cmd+Entf danebensteht, traegt die
+    // Pruefung wieder eine Liste, und die Liste ist die Zusage: sie und der
+    // Kopfkommentar von `resources/default-keymap.toml` (`:62`-`:67`) nennen
+    // dieselben Kombinationen.
     //
     // Umschalt+Entf bleibt ab Werk frei. Bis zum 260817 stand der Grund im
     // Datensatz `shared/decisions/
@@ -293,11 +295,11 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // Loeschens fuehrt der Kopfkommentar von `resources/default-keymap.toml`
     // sie ohne diesen Zusatz weiter.
     //
-    // **Opt+Cmd+Entf ist am 260817 danebengetreten und steht nicht in dieser
-    // Pruefung.** Es trug bis dahin das endgueltige Loeschen und ist mit ihm
-    // frei geworden; der Kopfkommentar der Belegung fuehrt seitdem zwei ab Werk
-    // freie Kombinationen und diese Pruefung eine. Wer die zweite aufnimmt,
-    // holt die Schleife mit ihr zurueck.
+    // **Opt+Cmd+Entf ist am 260817 danebengetreten** (`82707ef`). Es trug bis
+    // dahin das endgueltige Loeschen und ist mit ihm frei geworden. Neu
+    // vergeben wird es nicht: im Finder bedeutet es "sofort loeschen", und
+    // diese Bedeutung hat KRK nicht mehr (`shared/decisions/
+    // 260817-0536_*_bekommt-f8-den-papierkorb-nachdem-das-endgueltige-loeschen-weggefallen-ist.md`).
     //
     // **Die Eingabetaste stand bis zum 260811 hier und steht es nicht mehr.**
     // Der Nutzer hatte sie am 260804 freigegeben, als der Einstieg in den
@@ -332,15 +334,16 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // bleiben, und wuerde ausgerechnet ctrl+s dem Editor spaeterer Runden
     // verstellen.
     let belegung = Belegung::auslieferung();
-    let text = "shift+delete";
-    let druck = kombi(text).tastendruck();
-    assert!(
-        matches!(
-            belegung.nachschlag(druck),
-            Nachschlag::Tippen | Nachschlag::Unbelegt
-        ),
-        "{text} ist ab Werk belegt"
-    );
+    for text in ["shift+delete", "opt+cmd+delete"] {
+        let druck = kombi(text).tastendruck();
+        assert!(
+            matches!(
+                belegung.nachschlag(druck),
+                Nachschlag::Tippen | Nachschlag::Unbelegt
+            ),
+            "{text} ist ab Werk belegt"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

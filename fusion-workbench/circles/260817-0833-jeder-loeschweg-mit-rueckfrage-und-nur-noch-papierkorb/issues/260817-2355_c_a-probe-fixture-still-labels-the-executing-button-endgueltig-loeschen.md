@@ -29,3 +29,16 @@ body, not its comment.
 
 Replace both occurrences with `"In den Papierkorb räumen"`, the wording the one caller
 actually passes. One edit, no assertion changes meaning.
+
+---
+Resolved: Beide Vorkommen von `"Endgültig löschen"` in
+`die_ausfuehrende_stelle_zeigt_auf_die_ausfuehrende_schaltflaeche` tragen jetzt
+`"In den Papierkorb räumen"`, den Wortlaut, den der eine Aufrufer
+(`Anwendungsdelegierter::in_den_papierkorb`, `appkit/anwendung.rs:4461`)
+wirklich durchreicht. Keine Zusicherung hat dabei ihre Bedeutung geaendert.
+
+Eine dritte Zeile ist mitgegangen, die dieser Datensatz nicht nennt: die
+Schwesterprobe `eine_unbekannte_antwort_stellt_keinen_auftrag` (`:162`) baute
+mit der Kurzform `"In den Papierkorb"`. Der Datensatz sagt, sie benutze „already
+that wording", und das stimmte nur ungefaehr. Beide Proben tragen jetzt
+denselben Wortlaut wie der Aufrufer.

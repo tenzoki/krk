@@ -159,7 +159,7 @@ mod tests {
     /// (`issues/260817-1106_*`).
     #[test]
     fn eine_unbekannte_antwort_stellt_keinen_auftrag() {
-        let schaltflaechen = schaltflaechen("In den Papierkorb");
+        let schaltflaechen = schaltflaechen("In den Papierkorb räumen");
         let stelle = abbruchstelle(&schaltflaechen);
         assert_ne!(
             stelle, AUSFUEHRENDE_STELLE,
@@ -175,14 +175,14 @@ mod tests {
     /// dann aus "Abbrechen" ein `true`.
     #[test]
     fn die_ausfuehrende_stelle_zeigt_auf_die_ausfuehrende_schaltflaeche() {
-        let schaltflaechen = schaltflaechen("Endgültig löschen");
+        let schaltflaechen = schaltflaechen("In den Papierkorb räumen");
         assert_eq!(
             schaltflaechen[AUSFUEHRENDE_STELLE].wirkung,
             Wirkung::Ausfuehren
         );
         assert_eq!(
             schaltflaechen[AUSFUEHRENDE_STELLE].titel,
-            "Endgültig löschen"
+            "In den Papierkorb räumen"
         );
     }
 }

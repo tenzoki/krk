@@ -167,3 +167,50 @@ substanzielle Frage". Als Befund fällt er aus jeder Suche nach aktiver Grundlag
 gehört als Entscheidungsdatensatz in `shared/decisions/`; der Vorschlag steht im
 Abgleichsprotokoll `history/260817-1833-reconciliation.md` unter „Misfiled — should be a
 decision", und die Umlage ist Nutzerarbeit.
+
+---
+Resolved: Die drei Prosaaussagen sind gemessen, und der Wahlpunkt, den dieser
+Datensatz daneben führte, steht jetzt als Entscheidungsdatensatz da.
+
+**Der Defekt: der erste Weg steht an allen drei Dateien.** `appkit/volumes.rs`
+trug die Zählung seit Schritt 9; dazugekommen sind
+`appkit/papierkorb.rs` und `kommandos/loeschwarnung.rs`, beide mit der Bauform
+der Vorlage — Nadel aus `concat!`, `aufrufstellen(inhalt, name) == 0` über die
+eigene Datei, Blindheit am Doc-Kommentar benannt.
+
+| Datei | Polarität | was die Zählung sagt |
+|---|---|---|
+| `appkit/volumes.rs` | 1 | Modulgrenze: beantwortet den Auslöser, beurteilt ihn nicht |
+| `appkit/papierkorb.rs` | 2 | `Ja` ist die Erlaubnis; die zusammenfassende Frage machte daraus die Erlaubnis bei Unkenntnis |
+| `kommandos/loeschwarnung.rs` | 1 **und** 2 | beide Gründe zugleich, siehe unten |
+
+**Der Einwand aus der Fortschrittsnotiz vom 260817-1722 trifft nicht mehr.**
+Dort stand, eine Zählung über die ganze Datei `loeschwarnung.rs` würde
+überversprechen, weil ein künftiger Verbraucher der ersten Polarität eine grüne
+Probe brechen müsste, um richtigen Code zu schreiben. Der Modulkopf derselben
+Datei sagt inzwischen ausdrücklich das Gegenteil (Abschnitt „Ein unentschiedener
+Eingang nennt seinen eigenen Auslöser nicht mit"): in **dieser** Datei ist die
+Frage auch für die erste Polarität unbrauchbar, weil `Ja` und `Unentschieden`
+dort zu verschiedenen Warngründen führen und auseinandergehalten werden müssen.
+Die Zählung sagt damit genau das, was der Kopf sagt, und keinen Satz mehr. Der
+Doc-Kommentar der Probe schreibt beide Gründe getrennt aus.
+
+Nachweis, dass beide neuen Zählungen fangen: je ein Aufruf von
+`ist_warnwuerdig` versuchsweise in den Rumpf gesetzt
+(`fuehrt_einen_papierkorb` beziehungsweise `vor_der_rueckfrage`), und beide
+Proben schlagen fehl; zurückgenommen, beide wieder grün. Die Zählung in
+`volumes.rs` blieb dabei grün, wie sie soll — der Fehler saß nicht in ihrer
+Datei.
+
+**Der Wahlpunkt: der zweite Weg ist jetzt ein Entscheidungsdatensatz.** Der
+Abgleich vom 260817-1833 hat richtig festgestellt, dass „zwei Typen für zwei
+Fragen" kein Defekt ist und als Befund aus jeder Suche nach aktiver Grundlage
+herausfällt. Er steht seit dem 260818 unter
+`decisions/260818-0249_o_bekommen-die-zwei-polaritaeten-des-loeschzielbefunds-zwei-typen.md`,
+mit dem Stand am Baum, drei Möglichkeiten und ihren Kosten. Der Datensatz liegt
+im Circle und nicht in `shared/`, weil die Frage aus dieser Directive entstanden
+ist (Herkunftsregel).
+
+Was am Baum unverändert offen bleibt und dort steht: keine der vier Messungen
+macht die Verdrehung unübersetzbar. Sie fangen sie, nachdem jemand sie
+geschrieben hat.

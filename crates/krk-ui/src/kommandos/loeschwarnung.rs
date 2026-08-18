@@ -498,10 +498,76 @@ pub enum Warngrund {
 /// die Rueckfrage eine Zahl nennen zu lassen, die nicht mehr gilt. Dieselbe
 /// Bauform bindet das Stapelbudget des Editors an die Editorgrenze
 /// (`crate::appkit::editor`).
+///
+/// **Sie las bis zum 260818 `SCHWELLE == 25` und war damit einseitig.** Ein
+/// zweites Zahlwort im `assert!` bindet die Konstante an ein Literal und nicht
+/// die Wortlaute an die Konstante: wer `SCHWELLE` auf 30 hebt und daraufhin die
+/// Zeile mitzieht, auf die der Uebersetzer zeigt, laesst die beiden Wortlaute
+/// bei 25 stehen und bekommt einen gruenen Bau ueber einer Rueckfrage, die die
+/// falsche Zahl nennt
+/// (`issues/260817-1804_*_the-25-lives-in-four-places-and-the-compile-time-assertion-binds-only-one-pair.md`).
+/// Sie liest deshalb die Wortlaute selbst und sucht darin die Dezimalschreibung
+/// von [`SCHWELLE`]. Es gibt kein Literal mehr, das mitgezogen werden koennte,
+/// und das Vorbild aus dem Editor bindet damit wie dort zwei Groessen und nicht
+/// eine Groesse an eine Zahl.
 const _: () = assert!(
-    SCHWELLE == 25,
-    "die Wortlaute des sechsten Ausloesers nennen die 25 ausgeschrieben"
+    nennt_die_zahl(
+        Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle).wortlaut(),
+        SCHWELLE
+    ) && nennt_die_zahl(
+        Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle).wortlaut(),
+        SCHWELLE
+    ),
+    "die beiden Wortlaute des sechsten Ausloesers nennen nicht mehr die Zahl, die SCHWELLE traegt"
 );
+
+/// Steht die Dezimalschreibung von `zahl` in `text`?
+///
+/// Beim Uebersetzen ausgewertet, damit die Zusicherung darueber die Wortlaute
+/// an [`SCHWELLE`] binden kann statt an ein zweites Zahlwort. Ausgeschrieben
+/// steht sie hier, weil `str::contains` nicht `const` ist: der Puffer nimmt die
+/// Ziffern rueckwaerts auf, und die Suche vergleicht sie von hinten gelesen mit
+/// jeder Stelle des Textes.
+///
+/// **Was sie nicht entscheidet:** ob die Zahl im Text als eigenes Wort steht.
+/// Ein Wortlaut „mit 250 Eintraegen" traegt die Ziffernfolge einer `SCHWELLE`
+/// von 25 und kaeme durch. Der Fall, gegen den sie gebaut ist, ist ein anderer:
+/// eine Konstante, die sich bewegt, waehrend die Wortlaute stehen bleiben, und
+/// dagegen haelt sie.
+const fn nennt_die_zahl(text: &str, zahl: u32) -> bool {
+    let heu = text.as_bytes();
+    let mut ziffern = [0u8; 10];
+    let mut laenge = 0usize;
+    let mut rest = zahl;
+    loop {
+        ziffern[laenge] = b'0' + (rest % 10) as u8;
+        laenge += 1;
+        rest /= 10;
+        if rest == 0 {
+            break;
+        }
+    }
+    if heu.len() < laenge {
+        return false;
+    }
+    let mut start = 0usize;
+    while start + laenge <= heu.len() {
+        let mut stelle = 0usize;
+        let mut gleich = true;
+        while stelle < laenge {
+            if heu[start + stelle] != ziffern[laenge - 1 - stelle] {
+                gleich = false;
+                break;
+            }
+            stelle += 1;
+        }
+        if gleich {
+            return true;
+        }
+        start += 1;
+    }
+    false
+}
 
 impl Warngrund {
     /// Der Wortlaut, mit dem dieser Grund in der Rueckfrage steht (C3).
@@ -522,8 +588,12 @@ impl Warngrund {
     /// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: die
     /// Funktion ist rein, und ohne ihren Rueckgabewert nennt die Rueckfrage
     /// ihren Grund nicht.
+    ///
+    /// `const fn`, damit die Zusicherung ueber [`Umfangsgrund`] die beiden
+    /// Wortlaute des sechsten Ausloesers beim Uebersetzen lesen kann. Zur
+    /// Laufzeit aendert das nichts.
     #[must_use = "der Wortlaut ist der einzige Ertrag des Aufrufs; fallengelassen nennt die Rueckfrage ihren Grund nicht"]
-    pub fn wortlaut(self) -> &'static str {
+    pub const fn wortlaut(self) -> &'static str {
         match self {
             Self::Unentscheidbar => "von einem Ziel unbekannter Einordnung",
             Self::Netzlaufwerk => "von einem Netzlaufwerk",
@@ -693,9 +763,20 @@ pub fn warngruende(ziel: &Loeschziel) -> Vec<Warngrund> {
         }
         // Unter der Schwelle, also kein Warngrund.
         Umfang::Genau(_) => {}
-        Umfang::MehrAls(_) => {
+        // Die mitgefuehrte Zahl wird gelesen und nicht weggeworfen. „Mehr als
+        // `n`" traegt den Wortlaut „mit mehr als 25 Eintraegen" nur, wenn `n`
+        // die Schwelle erreicht; `zaehlen` liefert nichts anderes, aber
+        // `Umfang` ist oeffentlich und `MehrAls(10)` damit baubar. Ein
+        // weggeworfener Wert liesse die Rueckfrage aus „mehr als 10" ein „mehr
+        // als 25" machen, also eine Zahl behaupten, die niemand gezaehlt hat.
+        Umfang::MehrAls(gedeckelt) if gedeckelt >= SCHWELLE => {
             gruende.push(Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle));
         }
+        // „Mehr als eine Zahl unter der Schwelle" sagt ueber die Schwelle
+        // nichts: weder dass sie erreicht ist noch dass sie es nicht ist. Das
+        // ist derselbe Fall wie eine ausgefallene Zaehlung und geht denselben
+        // Weg.
+        Umfang::MehrAls(_) => gruende.push(Warngrund::Unentscheidbar),
         Umfang::Unentschieden => gruende.push(Warngrund::Unentscheidbar),
     }
 
@@ -910,6 +991,48 @@ mod tests {
         assert_eq!(
             aufrufe, 1,
             "die Stufenregel des Loeschwegs hat nicht genau einen Aufrufer"
+        );
+    }
+
+    /// In dieser Datei wird nicht nach der Warnwuerdigkeit gefragt.
+    ///
+    /// **Die Messung zu zwei Aussagen des Modulkopfes, die bis zum 260818
+    /// allein als Prosa dastanden** (`issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`).
+    /// Die Datei fuehrt **beide** Polaritaeten, und
+    /// [`Loeschzielbefund::ist_warnwuerdig`] ist in ihr aus zwei verschiedenen
+    /// Gruenden falsch:
+    ///
+    /// - **Zweite Polaritaet, Frage nach dem Papierkorb.** Dort ist `Ja` die
+    ///   Erlaubnis. Eine zusammenfassende Frage machte aus „wir wissen nichts
+    ///   ueber das Ziel" die Erlaubnis zu loeschen und naehme C4 seine Zusage.
+    ///   Das ist der Fehler, gegen den die Zaehlung gebaut ist.
+    /// - **Erste Polaritaet, die sechs Ausloeser.** Dort waere die Frage
+    ///   zulaessig und ist trotzdem unbrauchbar: `Ja` und `Unentschieden`
+    ///   fuehren in [`warngruende`] zu **verschiedenen** Warngruenden, und eine
+    ///   Frage, die beide zusammenzieht, kennt den Unterschied nicht mehr.
+    ///
+    /// Weil beide Gruende in dieser Datei gelten, sagt die Zaehlung ueber die
+    /// **ganze** Datei nicht mehr zu, als der Modulkopf ohnehin sagt. Rot wird
+    /// sie, wenn jemand die Frage doch stellt; die richtige Antwort darauf ist
+    /// die Frage, welche der beiden Polaritaeten er gerade vor sich hat.
+    ///
+    /// Dieselbe Zaehlung steht in `crate::appkit::papierkorb` — der zweiten
+    /// Datei mit der zweiten Polaritaet — und in `crate::appkit::volumes`, dort
+    /// unter einer Modulgrenze als Grund. Was eine Zaehlung im Quelltext
+    /// leistet und was nicht, steht in [`crate::quellbaum`]. Die Nadel steht
+    /// zusammengesetzt da, weil die Probe in dem Baum liegt, den sie liest.
+    #[test]
+    fn hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt() {
+        let zuhause = "krk-ui/src/kommandos/loeschwarnung.rs";
+        let name = concat!("ist_warn", "wuerdig");
+        let dateien = quelldateien();
+        let Some((_, inhalt)) = dateien.iter().find(|(datei, _)| datei == zuhause) else {
+            panic!("{zuhause} steht nicht im gelesenen Quellbaum; die Zaehlung misst nichts");
+        };
+        assert_eq!(
+            aufrufstellen(inhalt, name),
+            0,
+            "diese Datei fragt nach der Warnwuerdigkeit, und sie fuehrt beide Polaritaeten"
         );
     }
 
@@ -1522,21 +1645,32 @@ mod tests {
     /// bleibt die Rueckfrage ruhig, bei 25 nennt sie die 25, und `MehrAls` nennt
     /// sie „mehr als 25".
     ///
-    /// Die letzte Zeile, `Genau(26)`, kann `zaehlen` nicht liefern — es deckelt
-    /// bei `SCHWELLE + 1`. Sie steht trotzdem da, weil der Zweig existiert und
+    /// `Genau(26)` kann `zaehlen` nicht liefern — es deckelt bei
+    /// `SCHWELLE + 1`. Die Zeile steht trotzdem da, weil der Zweig existiert und
     /// weil ein Wortlaut „mit 26 Eintraegen" nirgends vorgesehen ist: die Frage
     /// nennt dann „mehr als 25" und behauptet keine Zahl, die sie nicht traegt.
+    ///
+    /// **Die letzten drei Zeilen messen, dass die Zahl an `MehrAls` gelesen und
+    /// nicht weggeworfen wird.** `MehrAls(25)` und `MehrAls(26)` tragen den
+    /// Wortlaut „mit mehr als 25 Eintraegen", denn beide schliessen die Schwelle
+    /// ein. `MehrAls(10)` tut es nicht: darueber, ob die Schwelle erreicht ist,
+    /// sagt es nichts, und ein Zweig, der die Zahl fallen laesst, liesse die
+    /// Rueckfrage genau hier die 25 behaupten. `zaehlen` liefert diesen Wert
+    /// nicht, [`Umfang`] ist aber oeffentlich und `MehrAls` oeffentlich baubar
+    /// (`issues/260817-1804_*`).
     #[test]
     fn der_umfang_loest_ab_der_schwelle_aus() {
         let genau = Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle);
         let mehr = Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle);
-        let faelle: [(Umfang, Vec<Warngrund>); 6] = [
+        let faelle: [(Umfang, Vec<Warngrund>); 8] = [
             (Umfang::Genau(0), Vec::new()),
             (Umfang::Genau(1), Vec::new()),
             (Umfang::Genau(24), Vec::new()),
             (Umfang::Genau(25), vec![genau]),
             (Umfang::Genau(26), vec![mehr]),
             (Umfang::MehrAls(25), vec![mehr]),
+            (Umfang::MehrAls(26), vec![mehr]),
+            (Umfang::MehrAls(10), vec![Warngrund::Unentscheidbar]),
         ];
 
         for (umfang, erwartet) in faelle {

@@ -81,3 +81,64 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved: Beide Haelften geschlossen, und die bestehende Uebersetzungszusicherung
+ist erweitert statt eine zweite daneben zu setzen.
+
+**Erste Haelfte, die einseitige Zusicherung.** `loeschwarnung.rs` traegt weiter
+genau ein `const _: () = assert!`, und es liest jetzt die beiden Wortlaute
+selbst:
+
+```rust
+const _: () = assert!(
+    nennt_die_zahl(Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle).wortlaut(), SCHWELLE)
+        && nennt_die_zahl(Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle).wortlaut(), SCHWELLE),
+    "…"
+);
+```
+
+`Warngrund::wortlaut` ist dafuer `const fn` geworden (zur Laufzeit unveraendert),
+und `nennt_die_zahl` ist eine `const fn` daneben, die die Dezimalschreibung von
+`SCHWELLE` in einem `&str` sucht — `str::contains` ist nicht `const`. **Das
+zweite Zahlwort im `assert!` ist damit ganz weg**, es gibt kein Literal mehr,
+das jemand mitziehen koennte. Die verbleibende Blindheit steht am Doc-Kommentar
+von `nennt_die_zahl`: sie sucht eine Ziffernfolge und kein Wort, ein Wortlaut
+„mit 250 Eintraegen" kaeme bei einer `SCHWELLE` von 25 durch.
+
+Nachweis in beide Richtungen, je mit `cargo build -p krk-ui`:
+
+| eingebauter Fehler | Ergebnis |
+|---|---|
+| `SCHWELLE` auf 30, Wortlaute unveraendert | Bau bricht ab, `E0080`, Meldung der Zusicherung |
+| `SCHWELLE` bei 25, ein Wortlaut auf „mit 30 Einträgen" | Bau bricht ab, dieselbe Meldung |
+
+Die alte Form haette den ersten Fall gefangen und waere durch die naheliegende
+Antwort darauf — `SCHWELLE == 30` in derselben Zeile nachziehen — sofort wieder
+gruen geworden. Die neue hat diese Zeile nicht mehr.
+
+**Zweite Haelfte, der weggeworfene Wert an `Umfang::MehrAls(_)`.**
+`warngruende` liest ihn jetzt:
+
+```rust
+Umfang::MehrAls(gedeckelt) if gedeckelt >= SCHWELLE => MehrAlsDieSchwelle,
+Umfang::MehrAls(_) => Unentscheidbar,
+```
+
+„Mehr als `n`" traegt den Wortlaut „mit mehr als 25 Eintraegen" nur, wenn `n`
+die Schwelle erreicht; darunter sagt der Wert ueber die Schwelle weder ja noch
+nein, und das ist derselbe Fall wie eine ausgefallene Zaehlung. Der Datensatz
+nennt die Fallunterscheidung eine Ermessensfrage; gebaut ist sie, weil sie eine
+Zeile kostet und die einzige Stelle schliesst, an der die Rueckfrage eine Zahl
+behaupten koennte, die niemand gezaehlt hat.
+
+Gemessen wird sie an der **bestehenden** Tafel `der_umfang_loest_ab_der_schwelle_aus`,
+die von sechs auf acht Zeilen gewachsen ist: `MehrAls(26)` traegt den Wortlaut,
+`MehrAls(10)` fuehrt auf `Unentscheidbar`. Nachweis: den Zweig auf
+`Umfang::MehrAls(_)` zurueckgestellt, und die Probe meldet
+`MehrAls(10) left: [Umfang(MehrAlsDieSchwelle)] right: [Unentscheidbar]`.
+
+Der vom Datensatz vorgeschlagene eigene Probenrumpf mit
+`wortlaut().contains(&SCHWELLE.to_string())` ist **nicht** gebaut: die
+Uebersetzungszusicherung prueft dieselbe Sache frueher und zeigt dabei auf die
+Datei, was eine Probe nicht kann.

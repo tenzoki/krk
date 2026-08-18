@@ -202,6 +202,43 @@ pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Loeschzielbefund {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// In dieser Datei wird nicht nach der Warnwuerdigkeit gefragt.
+    ///
+    /// **Die Messung zu dem Absatz `# Auf welcher Polaritaet der Befund liegt`
+    /// im Modulkopf, der bis zum 260818 allein als Prosa dastand**
+    /// (`issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`).
+    /// Der Befund dieser Datei liegt auf der **zweiten** Polaritaet: `Ja` ist
+    /// die Erlaubnis. [`Loeschzielbefund::ist_warnwuerdig`] zieht `Ja` und
+    /// `Unentschieden` zusammen, und wer die Frage an diesen Rueckgabewert
+    /// haelt, macht aus „wir wissen nichts ueber das Ziel" die Erlaubnis zu
+    /// loeschen und nimmt C4 seine Zusage. Der Uebersetzer sieht die
+    /// Verdrehung nicht — beide Seiten tragen denselben Typ —, und genau das
+    /// ist der Fehler, den dieses Projekt am 260817-1640 einmal hatte.
+    ///
+    /// Die Zaehlung gilt der ganzen Datei, weil die ganze Datei auf einer
+    /// Polaritaet liegt. Dieselbe Zaehlung steht in
+    /// `crate::kommandos::loeschwarnung`, dort mit einem zweiten Grund fuer die
+    /// erste Polaritaet, und in `crate::appkit::volumes` unter einer
+    /// Modulgrenze. Was eine Zaehlung im Quelltext leistet und was nicht, steht
+    /// in [`crate::quellbaum`]. Die Nadel steht zusammengesetzt da, weil die
+    /// Probe in dem Baum liegt, den sie liest.
+    #[test]
+    fn hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt() {
+        let zuhause = "krk-ui/src/appkit/papierkorb.rs";
+        let name = concat!("ist_warn", "wuerdig");
+        let dateien = quelldateien();
+        let Some((_, inhalt)) = dateien.iter().find(|(datei, _)| datei == zuhause) else {
+            panic!("{zuhause} steht nicht im gelesenen Quellbaum; die Zaehlung misst nichts");
+        };
+        assert_eq!(
+            aufrufstellen(inhalt, name),
+            0,
+            "diese Datei fragt nach der Warnwuerdigkeit, und ihr Befund traegt die Erlaubnis \
+             auf der Antwort, die die Frage mit dem Unentschiedenen zusammenzieht"
+        );
+    }
 
     /// Das Benutzerverzeichnis fuehrt einen Papierkorb.
     ///

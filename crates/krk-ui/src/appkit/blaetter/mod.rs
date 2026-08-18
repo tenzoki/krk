@@ -402,11 +402,23 @@ impl<'a> Schaltflaeche<'a> {
 /// | keine Schaltflaeche | `0` |
 ///
 /// **Die zweite Zeile ist ein Blatt, das es nicht geben soll**, und
-/// [`Blatt::mit_schaltflaechen`] laesst es im Probenbau auffliegen. Ein Blatt,
+/// [`Blatt::mit_schaltflaechen`] laesst es auffliegen. Ein Blatt,
 /// dessen Schaltflaechen alle etwas ausfuehren, hat keinen ungefaehrlichen
 /// Ausgang; die Regel nimmt dann die erste Stelle, weil sie die einzige ist,
 /// die jedes Blatt hat. Etwas Ungefaehrliches trifft sie dabei nicht, denn es
 /// gibt nichts Ungefaehrliches zu treffen.
+///
+/// **„Laesst es auffliegen" gilt seit dem 260818 fuer jeden Bau und ist
+/// gemessen.** Bis dahin stand hier „im Probenbau", und der Satz traf auf
+/// keinen Bau zu, den KRK herstellt: die Zusicherung war ein `debug_assert!`
+/// und damit im Auslieferungsbau nicht vorhanden, und im Probenbau erreichte
+/// sie keine Probe
+/// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+/// Beides steht jetzt anders, und `ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf`
+/// haelt es fest. Dass diese Regel dabei total bleibt und die zweite Zeile
+/// ihrer Tafel behaelt, ist Absicht: die Tafel beschreibt, was die reine
+/// Funktion tut, und das Blatt, das sie beschreibt, kommt am Bauer nicht mehr
+/// vorbei.
 ///
 /// Die dritte Zeile kommt nicht vor: ein `NSAlert` ohne zugefuegte
 /// Schaltflaeche legt selbst eine an, und deren Antwort ist
@@ -488,6 +500,24 @@ pub struct Blatt {
     waechter: Option<Retained<Eingabewaechter>>,
 }
 
+/// Die beiden Schaltflaechen von [`Blatt::neu`], in bindender Reihenfolge.
+///
+/// **Als reine Funktion herausgezogen, damit der Bauplan der fuenf Blaetter aus
+/// [`Blatt::neu`] ohne AppKit und ohne Hauptfaden pruefbar ist.** Dieselbe
+/// Bauform wie `super::loeschbestaetigung::schaltflaechen`, und aus demselben
+/// Grund: an einem gebauten `NSAlert` ist nicht mehr abzulesen, welche seiner
+/// Schaltflaechen alles liegen laesst, an dieser Liste schon
+/// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+///
+/// Die Reihenfolge ist bindend und steht bei [`Blatt::neu`] begruendet: die
+/// erste bestaetigt und traegt die Eingabetaste, die zweite bricht ab.
+fn standardschaltflaechen(bestaetigen: &str) -> [Schaltflaeche<'_>; 2] {
+    [
+        Schaltflaeche::neu(bestaetigen, Taste::Eingabe, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+    ]
+}
+
 impl Blatt {
     /// Ein Blatt mit dieser Frage, einer bestaetigenden und einer abbrechenden
     /// Schaltflaeche.
@@ -501,14 +531,7 @@ impl Blatt {
     /// Feld allein reicht dafuer nicht — das Konfliktblatt traegt eines ohne
     /// Waechter —, ein Aufruf von [`Blatt::waechter_anhaengen`] tut es.
     pub fn neu(mtm: MainThreadMarker, frage: &str, bestaetigen: &str) -> Self {
-        Self::mit_schaltflaechen(
-            mtm,
-            frage,
-            &[
-                Schaltflaeche::neu(bestaetigen, Taste::Eingabe, Wirkung::Ausfuehren),
-                Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
-            ],
-        )
+        Self::mit_schaltflaechen(mtm, frage, &standardschaltflaechen(bestaetigen))
     }
 
     /// Ein Blatt mit dieser Frage und diesen Schaltflaechen.
@@ -522,14 +545,30 @@ impl Blatt {
     ///
     /// **Mindestens eine Schaltflaeche traegt [`Wirkung::Liegenlassen`].** Ein
     /// Blatt ohne ungefaehrlichen Ausgang kann eine unbekannte Antwort nicht
-    /// sicher beantworten; im Probenbau fliegt es hier auf, statt still auf
-    /// eine ausfuehrende Schaltflaeche zu fallen.
+    /// sicher beantworten; es fliegt hier auf, statt still auf eine
+    /// ausfuehrende Schaltflaeche zu fallen.
+    ///
+    /// **Die Zusicherung ist seit dem 260818 ein `assert!` und kein
+    /// `debug_assert!`.** Als `debug_assert!` griff sie in keinem Bau, den KRK
+    /// herstellt: `cargo xtask bundle` uebersetzt mit `--profile release`, und
+    /// Cargos Vorgabe dafuer ist `debug-assertions = false`; der Probenbau
+    /// wiederum erreichte die Zeile nicht, weil keine Probe ein Blatt baute
+    /// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+    /// Beide Luecken sind geschlossen: die Form gilt in jedem Profil, und
+    /// `ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf` erreicht sie.
+    ///
+    /// **Sie kostet nichts, was zu sparen waere.** Ein Blatt entsteht auf eine
+    /// Nutzerhandlung hin, und die Pruefung liest zwei Felder. Ausloesen kann
+    /// sie allein ein Bauplan im Quelltext, nie eine Eingabe des Nutzers: die
+    /// Schaltflaechen jedes Blattes stehen fest im Baum. Ein Absturz an dieser
+    /// Stelle meldet also einen Programmierfehler, und die Lage, die er
+    /// abloest, ist ein Blatt, dessen unbekannte Antwort loescht.
     pub fn mit_schaltflaechen(
         mtm: MainThreadMarker,
         frage: &str,
         schaltflaechen: &[Schaltflaeche<'_>],
     ) -> Self {
-        debug_assert!(
+        assert!(
             schaltflaechen
                 .iter()
                 .any(|schaltflaeche| schaltflaeche.wirkung == Wirkung::Liegenlassen),
@@ -806,14 +845,25 @@ mod tests {
     /// **Gezaehlt wird im Quelltext**, weil die Zusage eine Aussage ueber den
     /// Baum ist: dass es kein Blatt gibt, dessen Schaltflaechen alle etwas
     /// ausfuehren. Am Rueckgabewert einer Funktion ist das nicht abzulesen, und
-    /// ein Blatt bauen kann `libtest` nicht — `krk-ui` hat kein
-    /// Bibliotheksziel, und `NSAlert` braucht den Hauptfaden.
+    /// ein Blatt zu bauen kostet den Hauptfaden, den `libtest` nicht hergibt.
     ///
     /// **Wo die Zaehlung blind ist:** sie prueft je Datei und nicht je
     /// Blatt. Eine Datei mit zwei Blaettern, von denen nur eines seine
     /// liegenlassende Schaltflaeche nennt, kaeme durch. Heute traegt jede Datei
-    /// genau ein Blatt; der `debug_assert!` in [`Blatt::mit_schaltflaechen`]
-    /// deckt den Rest ab, sobald das Blatt im Probenbau wirklich aufgeht.
+    /// genau ein Blatt.
+    ///
+    /// **Den Rest deckt die Zusicherung in [`Blatt::mit_schaltflaechen`] ab,
+    /// und sie greift seit dem 260818 wirklich** — in jedem Profil, weil sie
+    /// ein `assert!` ist, und im Probenbau nachgewiesen von
+    /// `ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf`. Bis dahin stand die
+    /// Bedingung „sobald das Blatt im Probenbau wirklich aufgeht" hier, und sie
+    /// trat nicht ein
+    /// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+    ///
+    /// **Die fuenf Blaetter aus [`Blatt::neu`] sieht diese Zaehlung nicht**, und
+    /// sie soll es nicht: ihre Dateien bringen keine Schaltflaechen mit. Deren
+    /// gemeinsamer Bauplan ist eigens gemessen, an
+    /// `der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang`.
     ///
     /// Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum, den
     /// sie liest.
@@ -836,5 +886,72 @@ mod tests {
             geprueft >= 6,
             "die Probe hat nur {geprueft} Blatt-Bauer gefunden; der Baum traegt mindestens sechs"
         );
+    }
+
+    /// Der Bauplan von [`Blatt::neu`] traegt einen ungefaehrlichen Ausgang.
+    ///
+    /// **Die fuenf Blaetter, die ueber [`Blatt::neu`] entstehen, bringen ihre
+    /// Schaltflaechen nicht selbst mit**, also kann die Zaehlprobe darueber sie
+    /// nicht sehen: ihre Dateien nennen [`Wirkung::Liegenlassen`] nicht und
+    /// muessen es auch nicht. Gemessen wird stattdessen der eine Bauplan, den
+    /// alle fuenf teilen, und zwar an derselben reinen Funktion, die
+    /// [`Blatt::neu`] einsetzt.
+    #[test]
+    fn der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang() {
+        let schaltflaechen = standardschaltflaechen("Sichern");
+        assert_eq!(
+            schaltflaechen[abbruchstelle(&schaltflaechen)].wirkung,
+            Wirkung::Liegenlassen,
+            "der Bauplan von Blatt::neu hat keinen ungefaehrlichen Ausgang"
+        );
+        assert_eq!(
+            abbruchstelle(&schaltflaechen),
+            1,
+            "die abbrechende Schaltflaeche steht bei Blatt::neu hinten"
+        );
+    }
+
+    /// Ein Blatt ohne ungefaehrlichen Ausgang fliegt auf.
+    ///
+    /// **Die Messung der Zusicherung selbst.** Zwei Prosastellen dieser Datei
+    /// sagten, [`Blatt::mit_schaltflaechen`] lasse ein Blatt ohne
+    /// ungefaehrlichen Ausgang auffliegen, und keine Probe baute je ein Blatt;
+    /// die Zeile lief damit in keinem Bau
+    /// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
+    /// Diese Probe ist der Bau, in dem sie laeuft.
+    ///
+    /// **AppKit wird dabei nicht angefasst, und darauf beruht die Probe.** Die
+    /// Zusicherung steht als erste Anweisung des Rumpfes, vor `NSAlert::new`;
+    /// die Pruefung stuerzt ab, bevor eine Klasse von AppKit angesprochen ist.
+    /// Der Einwand „ein Blatt bauen braucht den Hauptfaden" trifft den Zweig,
+    /// den diese Probe gar nicht erreicht. Das `new_unchecked` ist aus
+    /// demselben Grund vertretbar wie in `crate::appkit::editor`, und aus einem
+    /// staerkeren: der Marker wird weitergereicht und nie eingeloest.
+    ///
+    /// **Wie sie rot wird, wenn jemand die Zusicherung herausnimmt:** dann
+    /// laeuft sie in `NSAlert::new` auf einem Nebenfaden, AppKit wirft eine
+    /// Ausnahme von Objective-C, und der Probenlauf bricht mit
+    /// „Rust cannot catch foreign exceptions" ab. Ein Fehlschlag ist das, aber
+    /// ein harter: der Abbruch nimmt den ganzen Probenlauf mit, statt eine
+    /// Zeile zu melden. Wer ihn sieht, sucht hier und nicht bei der Probe, die
+    /// zuletzt gemeldet hat.
+    #[test]
+    #[should_panic(expected = "traegt keine Schaltflaeche, die alles liegen laesst")]
+    fn ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf() {
+        let ohne_ausgang = [
+            Schaltflaeche::neu("Löschen", Taste::Eingabe, Wirkung::Ausfuehren),
+            Schaltflaeche::neu("Ersetzen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+        ];
+        assert!(
+            ohne_ausgang
+                .iter()
+                .all(|schaltflaeche| schaltflaeche.wirkung == Wirkung::Ausfuehren),
+            "die Probe prueft nicht, was sie pruefen soll: hier laesst eine Schaltflaeche liegen"
+        );
+        // SAFETY: Der Marker wird an `mit_schaltflaechen` weitergereicht und
+        // dort nie eingeloest: die Zusicherung, die diese Probe messen soll,
+        // steht vor dem ersten Aufruf an AppKit und bricht davor ab.
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        let _ = Blatt::mit_schaltflaechen(mtm, "Was soll geschehen?", &ohne_ausgang);
     }
 }

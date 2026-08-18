@@ -94,3 +94,44 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved: `crates/krk-ui/src/appkit/anwendung.rs` traegt ein neues Pruefmodul
+`loeschzielproben` mit zwei Proben ueber `Anwendungsdelegierter::loeschtexte`.
+Die Stelle war reichbar, wie der Datensatz sagt, und sie ist jetzt gemessen.
+
+**Gebaut ist nicht der vom Datensatz vorgeschlagene Fall, sondern ein
+staerkerer.** Der Vorschlag lautete: ein ruhiges Ziel unter dem
+Benutzerverzeichnis, und die Frage nennt kein Netzlaufwerk. Ein Ziel, das auf
+**allen** Ausloesern `Nein` sagt, faengt einen Tausch der beiden Feldnamen aber
+nicht — vertauscht man `Nein` mit `Nein`, aendert sich nichts. Ein Tausch ist
+nur sichtbar, wo die beiden Tatsachen **verschieden** sind. Die zwei Proben
+stellen deshalb je einen Ort her, an dem genau eine der beiden zutrifft:
+
+| Probe | Ziel | Netzlaufwerk | Arbeitsbaum |
+|---|---|---|---|
+| `ein_arbeitsbaum_kommt_nicht_als_netzlaufwerk_an` | Pruefordner mit `.git` | Nein | Ja |
+| `ein_netzlaufwerk_kommt_nicht_als_arbeitsbaum_an` | `/System/Volumes/Data/home` | Ja | nicht Ja |
+
+Jede prueft beide Richtungen: der zutreffende Wortlaut steht in Frage oder
+Erlaeuterung, der andere steht nicht darin. Die zweite ist zugleich die
+Gegenprobe, die der Datensatz verlangt — ohne sie waere ein `loeschtexte`, das
+nie ein Netzlaufwerk meldet, ebenso gruen. Ihre Vorbedingung, dass unter
+`/System/Volumes/Data/home` ueberhaupt ein eigener Einhaengepunkt steht, wird an
+der Geraetekennung aus `stat(2)` mitgeprueft und **haelt an statt sich zu
+ueberspringen**; die Bauform stammt von `ein_nicht_lokaler_datentraeger_wird_erkannt`
+in `appkit/volumes.rs`.
+
+Nachweis, dass sie den Fehler fangen: die beiden Feldnamen im `Loeschziel`
+vertauscht (`netzlaufwerk: beruehrt_arbeitsbaum, arbeitsbaum: netzlaufwerk`),
+und **beide** Proben schlagen fehl; zurueckgenommen, beide wieder gruen. Damit
+ist genau die Verdrehung gemessen, die `260817-1623` als „would have compiled,
+passed every probe and exchanged local for remote" beschreibt. Eine
+wiedereingefuehrte Umkehrung an `liegt_auf_netzlaufwerk` faengt dieselbe Probe
+mit, denn sie dreht dasselbe Feld.
+
+Punkt 2 der `## Direction` — `Loeschtexte::EndgueltigBisBuendelD` behaelt seine
+Texte — ist **gegenstandslos geworden**. Die Aufzaehlung `Loeschtexte` gibt es
+im Baum nicht mehr (`grep -rn Loeschtexte crates/` ist leer), und `loeschtexte`
+traegt seither drei Argumente statt vier; Buendel D hat den zweiten Loeschweg
+abgeschafft, dessentwegen sie bestand.
