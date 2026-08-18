@@ -9,8 +9,7 @@
 # C7, C10 und C11. Die fuenf Norton-Funktionen und ihre Cmd-Kuerzel stehen dort
 # in der Tabelle "Die ausgelieferten Cmd-Kuerzel" in C3. Bindend sind ausserdem
 # `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md` und
-# `shared/decisions/
-# 260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
+# `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
 #
 # Aufbau je Eintrag:
 #   id               maschinenlesbarer Bezeichner, ASCII, ohne Umlaute
@@ -63,8 +62,7 @@
 # keiner Tastenliste: Umschalt+Entf und Opt+Cmd+Entf. Die zweite trug bis zum
 # 260817 das endgueltige Loeschen. Sie wird nicht neu vergeben: im Finder
 # bedeutet sie "sofort loeschen", und diese Bedeutung hat KRK nicht mehr
-# (`shared/decisions/
-# 260817-0536_*_bekommt-f8-den-papierkorb-nachdem-das-endgueltige-loeschen-weggefallen-ist.md`).
+# (`shared/decisions/260817-0536_*_bekommt-f8-den-papierkorb-nachdem-das-endgueltige-loeschen-weggefallen-ist.md`).
 #
 # Die Eingabetaste stand bis zum 260811 daneben. Sie trug bis zum 260804 den
 # Einstieg in einen Ordner; der liegt seither auf einem Rechtspfeil, bis zum
@@ -82,8 +80,8 @@
 # das haelt sie fuer die Dateizwischenablage einer spaeteren Runde frei: ohne
 # jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Die Reservierung aus C3
 # ist damit eingeloest und nicht gebrochen; C3 schreibt aus, warum
-# (Nutzerentscheid vom 260805-0000, `decisions/
-# 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+# (Nutzerentscheid vom 260805-0000,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
 #
 # Eine Kombination kann im Textfeld etwas anderes bedeuten als im Dateifenster,
 # und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
@@ -119,8 +117,8 @@
 # einen Fall der Doppelung: cmd+a markiert im Dateifenster ueber
 # "alle_markieren" alle Eintraege und waehlt im Textfeld ueber
 # "text_alles_auswaehlen" den Text aus, wie auf dem Mac ueblich
-# (Nutzerentscheid vom 260805, `decisions/
-# 260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# (Nutzerentscheid vom 260805,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -274,9 +272,8 @@ tasten = ["opt+cmd+o"]
 # Kombination kennt, findet die andere ohne Nachschlagen.
 #
 # opt+cmd+o ist ab Werk frei; am 260812 nachgezaehlt, keine Tastenliste dieser
-# Datei nennt es. Nutzerentscheid vom 260812-1105, Moeglichkeit 1 (`circles/
-# 260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/
-# 260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`).
+# Datei nennt es. Nutzerentscheid vom 260812-1105, Moeglichkeit 1
+# (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`).
 
 [[funktion]]
 id = "pfadeingabe"
@@ -350,21 +347,18 @@ tasten = ["shift+cmd+h"]
 #
 # In der Markdown-Ausgabe der Runde 3 stehen sie dagegen nicht: die nimmt eine
 # Funktion nur auf, wenn sie mindestens eine Kombination traegt (Umfang
-# Moeglichkeit 1, Nutzerantwort vom 260811-0110, `circles/
-# 260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/
-# 260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md`).
+# Moeglichkeit 1, Nutzerantwort vom 260811-0110,
+# `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md`).
 # Wer einer der drei eine Kombination zuweist, findet sie danach auch dort.
 #
 # Der Grund fuer die leere Liste ist die Knappheit: die Auslieferung fuehrt 39
-# frei gewaehlte Kombinationen (`circles/
-# 260802-0842-krk-mac-dateimanager-editor-git/decisions/
-# 260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`),
+# frei gewaehlte Kombinationen
+# (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`),
 # und eine Spaltensichtbarkeit ist eine Einstellung, die man einmal trifft,
-# kein Handgriff im Arbeitsfluss. Wer eine Taste dafuer will,
-# traegt sie in seine eigene keymap.toml ein; die Datei ist nach C3 die eine
-# Quelle jeder Belegung und von Hand aenderbar. Nutzerantwort vom 260812-0306,
-# `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
-# 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`.
+# kein Handgriff im Arbeitsfluss. Wer eine Taste dafuer will, traegt sie in
+# seine eigene keymap.toml ein; die Datei ist nach C3 die eine Quelle jeder
+# Belegung und von Hand aenderbar. Nutzerantwort vom 260812-0306,
+# `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`.
 #
 # Die Spalte Name traegt keinen Schalter und deshalb auch keinen Eintrag: sie
 # bleibt immer sichtbar.
@@ -394,11 +388,10 @@ tasten = []
 # Ausgeliefert wird keine Kombination, mit leerer Tastenliste und nicht mit
 # `reserviert_fuer`: dieses Feld heisst "benannt, aber einer spaeteren Runde
 # vorbehalten", und diese Funktion gibt es. Nutzerantwort vom 260814-1610,
-# `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-# 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`. Wer eine
-# Taste dafuer will, weist sie in der Belegungsansicht zu oder traegt sie in
-# seine eigene keymap.toml ein; shift+cmd+f, opt+cmd+f, ctrl+cmd+f und der
-# nackte Tabulator bleiben ausdruecklich frei.
+# `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`.
+# Wer eine Taste dafuer will, weist sie in der Belegungsansicht zu oder traegt
+# sie in seine eigene keymap.toml ein; shift+cmd+f, opt+cmd+f, ctrl+cmd+f und
+# der nackte Tabulator bleiben ausdruecklich frei.
 #
 # Wie die drei Spaltenschalter darueber faellt der Eintrag damit aus der
 # Markdown-Ausgabe der Runde 3, die eine Funktion nur aufnimmt, wenn sie
@@ -418,9 +411,8 @@ tasten = []
 # Ausgeliefert wird auch hier keine Kombination, mit leerer Tastenliste und
 # nicht mit `reserviert_fuer`. Der Nutzerentscheid vom 260814-1610 hat das fuer
 # den ersten Schalter dieser Art so entschieden
-# (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-# 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`), und ein
-# zweiter derselben Art folgt derselben Form, statt eine der dort frei
+# (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`),
+# und ein zweiter derselben Art folgt derselben Form, statt eine der dort frei
 # gehaltenen Kombinationen zu belegen. Wer eine Taste dafuer will, weist sie in
 # der Belegungsansicht zu oder traegt sie in seine eigene keymap.toml ein.
 #
@@ -516,8 +508,8 @@ tasten = ["shift+cmd+y"]
 # schon das y, denn cmd+y blendet sie ein und aus, und der Fokusbefehl erbt
 # ihn, wie l und d es fuer die Leiste und das Dateifenster tun. shift+cmd+v
 # waere der naheliegende Buchstabe gewesen und liegt seit S9 beim Verschieben
-# (F6). Nutzerentscheid vom 260807, `decisions/
-# 260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md`.
+# (F6). Nutzerentscheid vom 260807,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md`.
 
 # ── C7: Sichtbarkeit und Breiten der Bereiche ────────────────────────────────
 # Das Ein- und Ausblenden der Vorschau steht oben bei "vorschau_umschalten":
@@ -535,11 +527,10 @@ tasten = ["opt+cmd+left"]
 # Eine Richtungstaste statt eines Buchstabens, als einziger Bruch mit der
 # Umschaltfamilie auf opt+cmd+<Buchstabe>: beide Dateifenster heissen
 # "Dateifenster", und kein Wort benennt das linke so kurz und eindeutig wie der
-# Pfeil nach links. opt+cmd+left und opt+cmd+right waren ab Werk frei; ctrl+left
-# und ctrl+right tragen weiter das Verschmaelern und Verbreitern des aktiven
-# Bereichs. Nutzerantwort vom 260812-0430, `circles/
-# 260811-1304-statusleiste-mit-bereichsschaltern/decisions/
-# 260812-0415_*_welche-kombinationen-bekommen-die-beiden-neuen-umschalter.md`.
+# Pfeil nach links. opt+cmd+left und opt+cmd+right waren ab Werk frei;
+# ctrl+left und ctrl+right tragen weiter das Verschmaelern und Verbreitern des
+# aktiven Bereichs. Nutzerantwort vom 260812-0430,
+# `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260812-0415_*_welche-kombinationen-bekommen-die-beiden-neuen-umschalter.md`.
 
 [[funktion]]
 id = "zweites_fenster_umschalten"
@@ -598,7 +589,7 @@ tasten = ["ctrl+left"]
 # Gelesen werden Text und Dateiverweis: ein Pfad oder eine URL als Text, und
 # der Dateiverweis, den der Finder bei Cmd+C auf einer Datei ablegt
 # (Nutzerentscheid 260804,
-# `decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`).
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260804-0830_*_was-die-zwischenablage-auswertung-liest.md`).
 #
 # Cmd+C und Cmd+V bleiben von C10 unberuehrt: C10 liest nur, was schon in der
 # Zwischenablage steht, und legt nichts ab. Ab Werk frei sind die beiden seit
@@ -632,11 +623,11 @@ name = "Ordner im Terminal öffnen"
 tasten = ["ctrl+o"]
 # Der Weg von Total Commander, wo Ctrl+O die Kommandozeile oeffnet. Der Nutzer
 # hat das Vorbild am 260805 als tragenden Grund genannt und shift+cmd+t sowie
-# f9 ausdruecklich verworfen (`decisions/
-# 260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`). Es ist die
-# einzige Kombination dieser Datei, die einem Vorbild aus Total Commander
-# folgt; ctrl ist auf dem Mac die unueblichste der vier Zusatztasten, und genau
-# darin liegt hier die Wiedererkennung.
+# f9 ausdruecklich verworfen
+# (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`).
+# Es ist die einzige Kombination dieser Datei, die einem Vorbild aus Total
+# Commander folgt; ctrl ist auf dem Mac die unueblichste der vier Zusatztasten,
+# und genau darin liegt hier die Wiedererkennung.
 #
 # Ein Cmd-Kuerzel daneben traegt die Funktion nicht. Die Zwei-Wege-Regel aus C3
 # gilt fuer die fuenf Funktionen der Norton-Reihe ganz oben und nicht fuer jede
@@ -646,10 +637,10 @@ tasten = ["ctrl+o"]
 # Drei Funktionen der Runde 4. Sie stehen neben C11, weil sie dieselbe Sorte
 # Handlung sind: KRK gibt den angezeigten Ordner oder die betroffenen Eintraege
 # an etwas ausserhalb der Liste weiter und zeigt selbst nichts davon. Die drei
-# Kombinationen sind der Nutzerentscheid vom 260811-1505 (`decisions/
-# 260811-1300_*_welche-vier-kombinationen-gelten-ab-werk.md`, Moeglichkeit 1).
-# Cmd+W steht nicht hier: es ist eine bestehende Belegung, deren Wirkungsbereich
-# dieselbe Runde erweitert, und keine neue Kombination.
+# Kombinationen sind der Nutzerentscheid vom 260811-1505
+# (`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/decisions/260811-1300_*_welche-vier-kombinationen-gelten-ab-werk.md`,
+# Moeglichkeit 1). Cmd+W steht nicht hier: es ist eine bestehende Belegung,
+# deren Wirkungsbereich dieselbe Runde erweitert, und keine neue Kombination.
 
 [[funktion]]
 id = "ordnerpfad_kopieren"
@@ -687,15 +678,14 @@ tasten = ["shift+cmd+s"]
 #
 # Der Preis dieser Kombination ist benannt und angenommen: shift+cmd+s heisst
 # auf dem Mac ueblicherweise "Sichern unter", und der Editor dieses Projekts
-# belegt cmd+s mit "Sichern"; die beiden liegen einen Umschalter auseinander und
-# bedeuten nichts miteinander. "Sichern unter" gibt es in KRK an keiner Stelle
-# und ist in keiner Runde vorgesehen, weil der Editor eine geoeffnete Datei
-# sichert und keine unter neuem Namen anlegt. Der Nutzer hat den Konflikt am
-# 260812-1105 vorgelegt bekommen und angenommen; shift+cmd+f fuer "Freigeben",
-# den Namen von macOS, war die Ausweichmoeglichkeit und ist nicht gewaehlt
-# worden (`circles/
-# 260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/
-# 260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`,
+# belegt cmd+s mit "Sichern"; die beiden liegen einen Umschalter auseinander
+# und bedeuten nichts miteinander. "Sichern unter" gibt es in KRK an keiner
+# Stelle und ist in keiner Runde vorgesehen, weil der Editor eine geoeffnete
+# Datei sichert und keine unter neuem Namen anlegt. Der Nutzer hat den Konflikt
+# am 260812-1105 vorgelegt bekommen und angenommen; shift+cmd+f fuer
+# "Freigeben", den Namen von macOS, war die Ausweichmoeglichkeit und ist nicht
+# gewaehlt worden
+# (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`,
 # Moeglichkeit 1).
 
 [[funktion]]
@@ -709,9 +699,18 @@ tasten = ["return"]
 # (siehe den Kopf dieser Datei).
 #
 # Ein Blatt faengt die Taste weiterhin ab, bevor sie hier ankommt: bei stehender
-# Nachfrage weist der Anwendungsdelegierte jeden Befehl ausser dem Abbruch ab,
-# und der Tastendruck laeuft unveraendert an AppKit weiter, wo ihn die
-# Vorgabeschaltflaeche beantwortet.
+# Nachfrage weist der Anwendungsdelegierte jeden Befehl ab bis auf vier. Es sind
+# der Abbruch ueber `kommandos::operationen::waehrend_blatt_erlaubt` und die
+# drei der Ausnahmeliste `kommandos::zulaessigkeit::immer_erreichbar`, die die
+# Blattsperre ausdruecklich mit aufhebt: "beenden", "fenster_schliessen" und
+# "fenster_einblenden". Der abgewiesene Tastendruck laeuft unveraendert an
+# AppKit weiter, wo ihn die Vorgabeschaltflaeche beantwortet.
+#
+# Fuer diesen Eintrag traegt der Schluss weiter: keiner der drei zusaetzlich
+# zugelassenen Befehle liegt ab Werk auf `return`, sondern auf cmd+q,
+# shift+cmd+w und cmd+n. Welche vier durchkommen, zaehlt die Probe
+# `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch` und
+# schreibt ihre Namen aus; eine fuenfte Zulassung laesst sie rot werden.
 
 # ── Der eingebaute Editor ────────────────────────────────────────────────────
 # Elf Funktionen der Editor-Runde. Der Einstieg ueber F4 steht oben in der
@@ -729,8 +728,7 @@ tasten = ["return"]
 # ausgeschrieben, im Modulkopf von `crates/krk-core/src/tasten/parser.rs`,
 # Abschnitt "Zwei Nachschlagarten, und warum es zwei sein muessen".
 # Nutzerentscheid vom 260808-0155,
-# `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/
-# 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
+# `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
 #
 # Fuer die Eintraege hier folgt daraus: kein Eintrag wandert mit der
 # Tastaturbelegung, und keiner meidet einen Buchstaben. Die elf benutzen e, s,
@@ -865,8 +863,8 @@ tasten = ["f1"]
 # Sie stehen hier, weil C3 zusagt, dass jede Kombination, die in KRK etwas
 # ausloest, in der Belegung steht, von der Konflikterkennung gesehen wird und
 # umbelegbar ist. Ohne diese Eintraege waeren es vier Kuerzel, die keine der
-# drei Zusagen erreicht. Nutzerentscheid vom 260805-0000, `decisions/
-# 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
+# drei Zusagen erreicht. Nutzerentscheid vom 260805-0000,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`.
 #
 # Das Menue ist zugleich der Grund, aus dem ein Textfeld ueberhaupt etwas
 # eingefuegt bekommt: auf dem Mac liegen diese Befehle nicht im Textsystem,
@@ -919,8 +917,8 @@ gehalten_von = "menue"
 # Dort stellt der Ereignisabgriff zu, hier das Menue, und der Fokusvorbehalt
 # laesst die beiden einander nie begegnen: in der Liste markiert cmd+a alle
 # Eintraege, im Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich
-# (Nutzerentscheid vom 260805, `decisions/
-# 260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# (Nutzerentscheid vom 260805,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
 
 [[funktion]]
 id = "text_alles_auswaehlen"
@@ -952,14 +950,14 @@ gehalten_von = "menue"
 # Bloecke ist die Reihenfolge im Menue.
 #
 # **Zwei Kombinationen in einer Zeile, und das ist keine Doppelung.** F2 kommt
-# aus der Norton-Reihe, in der die Funktionstasten die Befehle tragen; cmd+k ist
-# der Mac-Weg auf dieselbe Funktion. Dass eine Funktion ab Werk zwei Wege
+# aus der Norton-Reihe, in der die Funktionstasten die Befehle tragen; cmd+k
+# ist der Mac-Weg auf dieselbe Funktion. Dass eine Funktion ab Werk zwei Wege
 # bekommt, hat der Nutzer am 260802-1409 fuer die Norton-Reihe entschieden
-# (Nachtrag in `shared/decisions/
-# 260802-0842_*_f-tasten-unter-macos-systembelegung.md`), und die
-# Ein-Zeilen-Regel der Belegungsansicht aus C3 haelt beide Wege in einer Zeile
-# zusammen. Ein zweiter Eintrag daneben waere eine zweite Zeile in der Ansicht
-# und ein zweiter Menueeintrag fuer denselben Befehl.
+# (Nachtrag in
+# `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md`), und
+# die Ein-Zeilen-Regel der Belegungsansicht aus C3 haelt beide Wege in einer
+# Zeile zusammen. Ein zweiter Eintrag daneben waere eine zweite Zeile in der
+# Ansicht und ein zweiter Menueeintrag fuer denselben Befehl.
 #
 # Beide Kombinationen waren am 260814 ueber alle Tastenlisten dieser Datei
 # frei; belegt ist allein shift+cmd+k, und das traegt "kopieren" weiter oben.
@@ -993,11 +991,10 @@ tasten = ["opt+cmd+n"]
 # Dessen Aufgabe, das geschlossene Fenster zurueckzuholen, gibt es unveraendert
 # weiter. Die Zusage, den Eintrag spaeter in "Neues Fenster" umzubenennen und
 # das Kuerzel dabei zu behalten, gilt der Runde, die mehrere Fenster einfuehrt
-# (Nutzerantwort vom 260804-0830, `circles/
-# 260802-0842-krk-mac-dateimanager-editor-git/decisions/
-# 260803-2007_*_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`).
-# Eine weitere Instanz ist ein weiterer Prozess und kein zweites Fenster
-# dieses Prozesses; diese Runde fuehrt keine zweiten Fenster ein.
+# (Nutzerantwort vom 260804-0830,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2007_*_was-krk-tut-wenn-das-letzte-fenster-geschlossen-wird.md`).
+# Eine weitere Instanz ist ein weiterer Prozess und kein zweites Fenster dieses
+# Prozesses; diese Runde fuehrt keine zweiten Fenster ein.
 
 # ── C3: das Beenden der Anwendung ────────────────────────────────────────────
 
@@ -1009,8 +1006,8 @@ tasten = ["cmd+q"]
 # Kombination, die in KRK etwas ausloest, in der Belegung steht, von der
 # Konflikterkennung gesehen wird und umbelegbar ist. Cmd+Q beendet die
 # Anwendung und erreichte bis zum 260805 keine der drei Zusagen: S13b hat fuenf
-# Menuekuerzel nachgetragen und dieses uebersehen (`issues/
-# 260805-0753_*_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
+# Menuekuerzel nachgetragen und dieses uebersehen
+# (`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0753_*_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
 #
 # Gebaut wie "fenster_schliessen" weiter oben und nicht wie die vier
 # Textbefehle darueber: eine gewoehnliche Funktion, deren Kommando am
@@ -1020,8 +1017,8 @@ tasten = ["cmd+q"]
 #
 # Der eigene Selektor am Delegierten ist zugleich das Mittel gegen die
 # Zweitform "Quit and Keep Windows" auf Opt+Cmd+Q, die AppKit zu `terminate:`
-# dazustellt, so wie `fensterSchliessen:` es gegen "Close All" war (`issues/
-# 260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
+# dazustellt, so wie `fensterSchliessen:` es gegen "Close All" war
+# (`circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260805-0753_*_macos-stellt-zu-terminate-eine-zweitform-quit-and-keep-windows-auf-opt-cmd-q.md`).
 # Solange er noch nicht steht, traegt die Funktion kein Kommando, wie
 # "belegung_ansehen" oben: der Ereignisabgriff schluckt Cmd+Q dann nicht,
 # sondern reicht es an das Menue weiter, und die Anwendung beendet sich

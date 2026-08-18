@@ -140,3 +140,28 @@ nach der Aussage und nicht nach ihrer Schreibweise — so, wie es der Modulkopf 
 `zulaessigkeit::tests::waehrend_eines_blattes_kommen_genau_diese_vier_durch`. Jede Prosastelle,
 die von vier spricht, hat dort ihren Beleg, und eine fünfte Zulassung lässt die Probe rot
 werden.
+
+---
+Abgleich 260818 (ontocoder, Baumstand `48bb57f`): **die eigene Zeile des Datensatzes ist
+nachgezogen, `CLAUDE.md:124` bleibt offen, und der Datensatz bleibt es damit auch.**
+
+Von den sechs Trägern der Erhebung im Abschnitt darüber sind jetzt fünf behoben. Der Träger
+`resources/default-keymap.toml`, den allein dieser Datensatz nennt, sagt nicht mehr „jeden
+Befehl ausser dem Abbruch", sondern nennt die vier: den Abbruch über
+`kommandos::operationen::waehrend_blatt_erlaubt` und die drei der Ausnahmeliste
+`kommandos::zulaessigkeit::immer_erreichbar`, also „beenden", „fenster_schliessen" und
+„fenster_einblenden". Belegt ist der Wortlaut an der Probe
+`zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch`, die seit `441da86` die
+tatsächlich durchgelassenen Kommandos zählt und ihre Namen ausschreibt; der Absatz nennt sie
+jetzt selbst, damit die nächste Lesung nicht wieder eine Zahl aus einem Kommentar übernimmt.
+
+Der Schluss, den der Absatz zieht, steht weiter und steht jetzt auf der vollständigen Prämisse:
+keiner der drei zusätzlich zugelassenen Befehle liegt ab Werk auf `return`. Nachgezählt in
+derselben Datei, nicht aus einem Kommentar übernommen: `beenden` trägt `cmd+q` (`:995`),
+`fenster_schliessen` trägt `shift+cmd+w` (`:561`) und `fenster_einblenden` trägt `cmd+n`
+(`:552`).
+
+**Offen bleibt `CLAUDE.md:124`.** Die Datei gehört nicht zum Auftrag dieses Executors, und ein
+halb erledigter Datensatz wird nicht geschlossen. Wer sie nachzieht, schließt diesen Datensatz.
+
+`make check` — Exit 0.
