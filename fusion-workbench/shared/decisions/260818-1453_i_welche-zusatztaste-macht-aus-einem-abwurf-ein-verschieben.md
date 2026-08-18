@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `/Applications/Xcode.app/…/MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSDragging.h:72` (`draggingSourceOperationMask`), `:118-119` (`draggingEntered:`, `draggingUpdated:`), `:126-127` (`wantsPeriodicDraggingUpdates`); `…/NSTableView.h:783` und `:787` (`validateDrop:`, `acceptDrop:`); `crates/krk-ui/src/appkit/anwendung.rs:4428` (`uebertragen`, der heutige Weg zu Kopieren und Verschieben), `:5302` (`auftrag_stellen`); `crates/krk-core/src/operation/auftrag.rs:19-31` (`Art`); `crates/krk-ui/src/appkit/zwischenablage.rs` (die eine Hülle um `NSPasteboard`); `shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md` (die Haltung der Runde 12 zu zerstörerischen Wegen)
 
@@ -63,6 +63,6 @@ Möglichkeit 3, mit Möglichkeit 1 als nächstbester. Sie ist die einzige, die d
 
 ---
 Answered: shared/planning/260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md §C5 — Moeglichkeit 1: die Plattform beantwortet die Frage. Kopieren ist die Vorgabe, `cmd` verschiebt, `opt` kopiert ausdruecklich; `shift` traegt keine Bedeutung. KRK deutet keine Zusatztaste selbst, sondern waehlt aus `draggingSourceOperationMask`: enthaelt die Menge das Kopieren, kopiert es, sonst verschiebt es. Der Nutzer hat damit seine Antwort vom 260818 (`shift` verschiebt) ersetzt, nachdem der Widerspruch zwischen der eigenen Deutung und der vom System bereits verengten Menge belegt war.
-Implemented:
+Implemented: d6343e0 — KRK liest die vom System gereichte Vorgangsmenge, statt aus Zusatztasten zu schliessen. Die eine Uebersetzung von NSDragOperation steht in `crates/krk-ui/src/appkit/abwurf.rs` (`angebot`, `zeiger`), die Wahl daraus in der Tafel von `crates/krk-ui/src/kommandos/abwurfregel.rs` (`urteil`). Kopieren ist die Vorgabe, `cmd` verschiebt, `opt` kopiert ausdruecklich; `shift` liest der Baum nirgends.
 Deferred:
 Superseded by:

@@ -52,3 +52,6 @@ row has three purposes and not one, and a head that promises one is the promise 
 out of the Norton block.
 
 **Filed by:** coderev
+
+---
+Resolved: Keine der beiden Aufzaehlungen ueberlebt. Die Datei haelt denselben Befund an zwei aelteren Stellen ohne Liste fest (opt+cmd+o bei :275, opt+cmd+n bei :1016): sie nennen das Ergebnis der Zaehlung, nicht die Menge. Die Runde 13 war von dieser Form abgewichen. :266-272 sagt jetzt, was die Reihe traegt, ohne Zahl und ohne Liste, und nennt das grep, das sie aus der Datei liest.

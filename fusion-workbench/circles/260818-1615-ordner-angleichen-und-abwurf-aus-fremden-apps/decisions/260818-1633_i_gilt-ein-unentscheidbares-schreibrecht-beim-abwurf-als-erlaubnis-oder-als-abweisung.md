@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** planner
 **Cross-references:** `shared/planning/260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md` §C6 (die drei Lagen der frühen Abweisung); `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_*_plan-absicherung-jedes-loeschwegs.md` (die Gegenzusage „Unentschieden gilt als laut"); `crates/krk-core/src/verzeichnis/loeschzielbefund.rs` (Modulkopf, Abschnitt „Warum es die dritte Antwort gibt"); `circles/260817-0833-.../decisions/260818-0249_*_bekommen-die-zwei-polaritaeten-des-loeschzielbefunds-zwei-typen.md` (dieselbe Familie, andere Frage); `/Applications/Xcode.app/…/MacOSX.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSURL.h:247` (`NSURLIsWritableKey`)
 
@@ -49,6 +49,6 @@ Möglichkeit 1. Der tragende Grund ist nicht die Bequemlichkeit, sondern dass di
 
 ---
 Answered: Nutzerentscheid am Plan-Gate der Runde 13, 260818 — Moeglichkeit 1: nur ein gemessenes `false` weist ab, ein unbeantwortbares Schreibrecht laesst den Abwurf zu, und gescheiterte Eintraege erscheinen mit Grund in der Abschlussliste des Vorgangs. Ausgeschrieben in der Tafel der Abwurfregel, Schritt 7 von `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/planning/260818-1633_*_plan-ordner-angleichen-und-abwurf-aus-fremden-apps.md`.
-Implemented:
+Implemented: d6343e0 — `Schreibrecht::Unbekannt` laesst den Abwurf durch; nur ein gemessenes `Nein` weist ab. Die Regel steht ausgeschrieben in der Tafel von `urteil` (`crates/krk-ui/src/kommandos/abwurfregel.rs`), erzeugt wird der Wert in `abwurf::beschreibbarkeit` (`crates/krk-ui/src/appkit/abwurf.rs`), wo ein Pfad ohne gueltiges UTF-8, ein Fehler und ein fehlender Wert alle drei `Unbekannt` liefern und nie `Nein`.
 Deferred:
 Superseded by:

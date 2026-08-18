@@ -263,14 +263,20 @@ tasten = ["left", "cmd+up"]
 id = "ordner_der_datei"
 name = "Ordner der angezeigten Datei zeigen"
 tasten = ["opt+cmd+o"]
-# Die opt+cmd-Reihe traegt in diesem Programm, was einen Ordner herstellt oder
-# liefert: opt+cmd+c kopiert den Pfad des angezeigten Ordners, opt+cmd+g springt
-# zur Adresse aus der Zwischenablage, opt+cmd+s liefert den angezeigten Ordner
-# an das andere Dateifenster, opt+cmd+l, opt+cmd+d, opt+cmd+b, opt+cmd+left und
-# opt+cmd+right schalten Bereiche ein und aus. Dieser Befehl liefert einen
-# Ordner und steht deshalb hier; er ist der unmittelbare Nachbar von opt+cmd+c,
-# das den Pfad desselben Ordners kopiert. Wer die eine Kombination kennt,
-# findet die andere ohne Nachschlagen.
+# Die opt+cmd-Reihe ist keine einzige Familie. Sie traegt Befehle, die einen
+# Ordner herstellen oder liefern, dazu die Umschaltfamilie, die die Bereiche der
+# Fensterzeile ein- und ausblendet, und Einzelne, die zu keiner von beiden
+# gehoeren. Dieser Befehl liefert einen Ordner und steht deshalb hier; er ist
+# der unmittelbare Nachbar von opt+cmd+c, das den Pfad desselben Ordners
+# kopiert. Wer die eine Kombination kennt, findet die andere ohne Nachschlagen.
+#
+# Welche Kombinationen die Reihe fuehrt, sagt die Datei und kein Kommentar:
+#   grep '^tasten' resources/default-keymap.toml | grep -o 'opt+cmd+[a-z]*' | sort -u
+# Bis zum 260818 stand hier eine Aufzaehlung der Reihe. Sie war schon falsch,
+# bevor opt+cmd+s dazukam: opt+cmd+e und opt+cmd+n fehlten ihr, und ihr Vorsatz,
+# die Reihe trage nur Ordnerbefehle, deckte die beiden auch nicht. Eine
+# Aufzaehlung an dieser Stelle ist die zweite Quelle einer Menge, die fast jede
+# Runde erweitert, und geht mit der naechsten Ergaenzung wieder falsch.
 #
 # opt+cmd+o ist ab Werk frei; am 260812 nachgezaehlt, keine Tastenliste dieser
 # Datei nennt es. Nutzerentscheid vom 260812-1105, Moeglichkeit 1
@@ -286,14 +292,37 @@ tasten = ["opt+cmd+s"]
 # liefert dessen Pfad an die Zwischenablage, und dieser hier liefert den Ordner
 # selbst an das andere Dateifenster. Er steht unmittelbar hinter opt+cmd+o,
 # weil beide denselben Gegenstand bewegen und sich nur im Empfaenger
-# unterscheiden. Der Buchstabe folgt der dritten Wahlregel der
-# Auslieferungsbelegung, dem Anfangsbuchstaben des deutschen Verbs: s wie
-# "stellen".
+# unterscheiden.
+#
+# Der Buchstabe folgt der dritten Wahlregel der Auslieferungsbelegung, dem
+# Anfangsbuchstaben des deutschen Verbs: s wie "stellen". Die drei Regeln sind
+# geordnet, und die dritte greift erst, wenn die ersten beiden leer ausgehen;
+# beide sind am 260818 geprueft. Regel 1 nimmt das Mac-Kuerzel fuer dieselbe
+# Sache: der Finder hat kein zweites Dateifenster, kennt die Sache also nicht
+# und hat kein Kuerzel dafuer. Regel 2 nimmt die Norton- oder
+# Total-Commander-Form, sofern sie auf dem Mac frei ist: Total Commander
+# erreicht die Sache ueber ctrl+left und ctrl+right, die den Ordner unter der
+# Auswahl und ersatzweise den angezeigten Ordner im anderen Fenster oeffnen;
+# fuer Norton Commander ist keine Form bekannt, die hier zu zitieren waere.
+# Frei ist dieses Paar auf dem Mac nicht: macOS schaltet damit zwischen den
+# Schreibtischen um, und diese Datei vergibt es an "bereich_verbreitern" und
+# "bereich_verschmaelern". Regel 2 fragt nach der Form selbst und nicht nach
+# einer mac-tauglichen Abwandlung davon; ihre drei Beispiele tab, space und
+# shift+f6 sind unveraenderte Uebernahmen. Sie geht damit leer aus, und Regel 3
+# entscheidet. Die drei Regeln stehen in
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260803-2300_*_auslieferungsbelegung-der-39-frei-gewaehlten-kombinationen.md`;
+# die Total-Commander-Form ist der dokumentierten Belegung jenes Programms
+# entnommen und nicht an einem laufenden Total Commander nachgemessen.
+#
+# "s liest sich als selber Ordner" steht daneben im Spec dieser Runde. Das ist
+# eine Merkhilfe und nicht der Grund: gewaehlt hat den Buchstaben Regel 3 ueber
+# das Verb "stellen".
 #
 # opt+cmd+s ist ab Werk frei; am 260818 gegen alle tasten-Zeilen dieser Datei
-# nachgezaehlt. Belegt sind in der opt+cmd-Reihe zehn Kombinationen, naemlich
-# opt+cmd+b, opt+cmd+c, opt+cmd+d, opt+cmd+e, opt+cmd+g, opt+cmd+l,
-# opt+cmd+left, opt+cmd+n, opt+cmd+o und opt+cmd+right.
+# nachgezaehlt, keine ausser dieser hier nennt es. Dieselbe Auskunft in
+# derselben Form halten der Eintrag darueber fuer opt+cmd+o und
+# "weitere_instanz" fuer opt+cmd+n fest: den Befund, nicht die Liste, gegen die
+# er erhoben wurde.
 
 [[funktion]]
 id = "pfadeingabe"

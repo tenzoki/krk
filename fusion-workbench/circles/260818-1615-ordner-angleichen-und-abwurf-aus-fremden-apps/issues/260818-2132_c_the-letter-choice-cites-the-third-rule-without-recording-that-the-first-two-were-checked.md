@@ -54,3 +54,6 @@ While there, settle which reading of the letter the tree keeps. "s wie stellen" 
 file) and "s liest sich als selber Ordner" (the spec) cannot both be the reason.
 
 **Filed by:** coderev
+
+---
+Resolved: Regel 1 und Regel 2 sind gepruefte Leerstellen und stehen jetzt als solche im Kommentar. Regel 1: der Finder hat kein zweites Dateifenster, also keinen solchen Befehl. Regel 2: der Total Commander erreicht das ueber ctrl+left und ctrl+right, und das Paar ist auf dem Mac doppelt vergeben (Schreibtischwechsel des Systems, und in dieser Datei die Bereichsbreite bei :604 und :609); Regel 2 verlangt die Form selbst und nicht eine Mac-Anpassung. Regel 3 entscheidet, opt+cmd+s bleibt. Die Lesart "s wie selber Ordner" steht jetzt ausdruecklich als Merkhilfe und nicht als Begruendung.
