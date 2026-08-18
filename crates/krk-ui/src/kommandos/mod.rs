@@ -5,7 +5,8 @@
 //! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
-//! Acht Module entlang dessen geschnitten, was ein Tastenbefehl bewegt:
+//! Neun Module entlang dessen geschnitten, was ein Tastenbefehl bewegt — und
+//! seit der Runde 13 eines, das kein Tastenbefehl ist:
 //!
 //! ```text
 //! zulaessigkeit Ob ein Befehl hier gerade wirken darf: kein Blatt, der
@@ -24,10 +25,22 @@
 //! loeschwarnung Der eine Loeschweg vor dem Auftrag: die Stufenfolge bis zur
 //!              Rueckfrage, die Tafel der sechs Ausloeser mit ihrer Rangfolge,
 //!              und die Texte, die daraus entstehen (C2, C3 und C4 der Runde 12)
+//! abwurfregel  Was ein Abwurf aus einer fremden Anwendung trifft und ob er
+//!              ausgefuehrt wird: die Marke und ihr Ziel, das Urteil und sein
+//!              Grund (C4, C5 und C6 der Runde 13)
 //! ```
 //!
-//! **`zulaessigkeit` steht vor den sieben anderen, und das ist die Reihenfolge
-//! des Weges.** Sie ist seit der Runde 7 die erste Frage jedes Befehls, und
+//! **`abwurfregel` steht als letztes, und es ist das eine Modul hier, das kein
+//! Tastenbefehl ist.** Sein Ausloeser ist eine Mausgeste aus einer fremden
+//! Anwendung, und trotzdem wohnt es hier: was das Verzeichnis zusammenhaelt,
+//! ist nicht die Tastatur, sondern die Zusage seines zweiten Absatzes — die
+//! Rechnung steht ohne Fenster da und ist ohne Fenster pruefbar. Fuer den
+//! Abwurf traegt diese Zusage mehr als fuer jeden Tastenbefehl: ein
+//! `NSDraggingInfo` laesst sich ohne Ziehsitzung nicht bauen, und jede Zeile,
+//! die im Annahmezweig entschiede, waere allein von Hand nachpruefbar.
+//!
+//! **`zulaessigkeit` steht vor den sieben uebrigen Tastenbefehlsmodulen, und
+//! das ist die Reihenfolge des Weges.** Sie ist seit der Runde 7 die erste Frage jedes Befehls, und
 //! `fokus` ist einer ihrer drei Bestandteile geworden statt der einen Regel
 //! daneben. Zwei Frager stellen sie, der Ereignisabgriff ueber
 //! `Anwendungsdelegierter::kommando_ausfuehren` und die Ausgrauung des
@@ -61,6 +74,7 @@
 //! Kerns und stehen in `krk_core::verzeichnis`, wo `cargo test -p krk-core` sie
 //! erreicht.
 
+pub mod abwurfregel;
 pub mod auswahl;
 pub mod fokus;
 pub mod loeschwarnung;

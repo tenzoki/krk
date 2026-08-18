@@ -1205,3 +1205,8 @@
 {"ts":"2026-08-18T18:51:24","event":"task_done","turn":1,"task":"P-2","agent":"coder","detail":"make check exit 0; 51 Proben wieder gruen"}
 {"ts":"2026-08-18T18:51:24","event":"commit","turn":1,"detail":"18af77f feat(ui): opt+cmd+s in Belegung und Menue"}
 {"ts":"2026-08-18T18:51:24","event":"task_start","turn":1,"task":"P-4","agent":"coder","detail":"anwendung.rs, tabelle.rs"}
+{"ts":"2026-08-18T19:43:41","event":"task_done","turn":1,"task":"P-5","agent":"coder","detail":"neun Prosazahlen; neunte Stelle 140->280 nicht im Plan"}
+{"ts":"2026-08-18T19:43:41","event":"review_done","turn":1,"agent":"coderev","detail":"6 Datensaetze; verdict=covered; keiner haelt Auslieferung auf"}
+{"ts":"2026-08-18T19:43:41","event":"coherence_review","turn":1,"detail":"verdict=ok | Artefakt-Grundlage: 6 Befunde gefilt, keiner blockierend | Artefakt-Directive: Commits bewegen sich auf die Directive zu, Buendel A vollstaendig | Grundlage-Directive: 1 aktive Entscheidung beruehrt, widerspruchsfrei"}
+{"ts":"2026-08-18T19:43:41","event":"turn_end","turn":1,"detail":"5 Aufgaben erledigt, 6 Defekte gefilt, 5 Commits"}
+{"ts":"2026-08-18T19:43:41","event":"turn_start","turn":2,"detail":"Buendel B (P-6..P-10) plus die Berichtigungen der Durchsicht"}
