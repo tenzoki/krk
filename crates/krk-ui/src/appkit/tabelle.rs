@@ -473,6 +473,13 @@ const KEINE_DATEI: &str = "die Quelle liefert keine Datei auf dem Datenträger";
 /// Grund faellt an derselben Stelle mit, sonst bliebe eine zweite gleiche
 /// Ziehbewegung nach einem Tastendruck stumm
 /// ([`DateifensterQuelle::befehlsantwort_loeschen`]).
+///
+/// **An demselben `Some` haengt die Raeumung beider Dateifenster.** Der
+/// Aufrufer raeumt den Rang 1 auf beiden Seiten, bevor er schreibt, und tut das
+/// genau dann, wenn diese Funktion einen Text liefert — sonst liefe die
+/// Raeumung bei jeder Zeigerbewegung. Warum sie ueberhaupt beide Seiten
+/// braucht, steht bei
+/// [`DateifensterQuelle::befehlsantwort_beidseitig_loeschen`].
 #[must_use]
 fn abwurfmeldung(gemerkt: Option<Abwurfgrund>, jetzt: Option<Abwurfgrund>) -> Option<&'static str> {
     if gemerkt == jetzt {
@@ -686,6 +693,18 @@ pub struct QuelleIvars {
     /// und ein zweiter Weg hinein entstuende sonst. Wahlfrei aus demselben
     /// Grund wie die sechs darueber.
     abwurf: RefCell<Option<Abwurfmelder>>,
+    /// Wie sich die Befehlsantwort an **beiden** Dateifenstern raeumen laesst
+    /// (C7 der Runde 13).
+    ///
+    /// Der achte Rueckruf, wahlfrei wie die sieben darueber. Er geht an
+    /// `Anwendungsdelegierter::befehlsantwort_beidseitig_loeschen`, also an die
+    /// eine Loeschregel des Rangs 1, und traegt keine eigene daneben: von einer
+    /// Quelle aus ist die andere Seite nicht zu erreichen, und die Meldung des
+    /// Abwurfs bliebe sonst hinter einer stehenden Befehlsantwort im aktiven
+    /// Dateifenster liegen. Was ein fehlender Rueckruf bedeutet, entscheidet
+    /// [`DateifensterQuelle::befehlsantwort_beidseitig_loeschen`] an einer
+    /// Stelle.
+    befehlsantwort_raeumer: RefCell<Option<Box<dyn Fn()>>>,
     /// Der Grund, den der vorige Durchgang von
     /// [`DateifensterQuelle::abwurf_pruefen`] gefaellt hat, `None` fuer ein
     /// angenommenes Urteil (C7).
@@ -701,6 +720,12 @@ pub struct QuelleIvars {
     /// [`DateifensterQuelle::befehlsantwort_loeschen`]. Ein Feld, das laenger
     /// stuende als die Zeile, die es meint, liesse eine zweite gleiche
     /// Ziehbewegung stumm.
+    ///
+    /// **Dass die Regel beide Seiten raeumt, gilt auch hier**, und es ist die
+    /// richtige Wirkung: schreibt der Abwurf seine Meldung ueber dem einen
+    /// Dateifenster, faellt der gemerkte Grund des anderen mit dessen Zeile.
+    /// Zieht der Nutzer danach zurueck, wird die Meldung dort neu geschrieben —
+    /// sie folgt dem Zeiger, statt an der Seite zu kleben, die sie zuerst hatte.
     gemeldeter_abwurfgrund: Cell<Option<Abwurfgrund>>,
     /// Der Vorgang, den [`DateifensterQuelle::abwurf_pruefen`] zuletzt
     /// beschlossen hat, `None` fuer ein abgewiesenes Urteil (C5).
@@ -867,6 +892,7 @@ impl DateifensterQuelle {
             auffrischung_vorgemerkt: Cell::new(false),
             vorgang_laeuft: RefCell::new(None),
             abwurf: RefCell::new(None),
+            befehlsantwort_raeumer: RefCell::new(None),
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
         });
@@ -916,6 +942,12 @@ impl DateifensterQuelle {
     /// (C4 bis C6 der Runde 13).
     pub fn abwurf_setzen(&self, melden: Abwurfmelder) {
         *self.ivars().abwurf.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, wie sich die Befehlsantwort an beiden Dateifenstern raeumen
+    /// laesst (C7 der Runde 13).
+    pub fn befehlsantwort_raeumer_setzen(&self, raeumen: Box<dyn Fn()>) {
+        *self.ivars().befehlsantwort_raeumer.borrow_mut() = Some(raeumen);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -1445,10 +1477,18 @@ impl DateifensterQuelle {
     /// sie ist dort weiterhin wahr, und kein Abnahmekriterium verlangt mehr.
     ///
     /// Der Fall ist geprueft und ausdruecklich so entschieden: der breitere Weg
-    /// braeuchte einen dritten Rueckruf von der Quelle zum
-    /// Anwendungsdelegierten, den es heute nicht gibt, also einen neuen
-    /// Mechanismus fuer eine Zeile Anzeige
+    /// braeuchte einen weiteren Rueckruf von der Quelle zum
+    /// Anwendungsdelegierten, also einen neuen Mechanismus fuer eine Zeile
+    /// Anzeige
     /// (`issues/260811-1916_*_der-doppelklick-raeumt-die-befehlsantwort-nur-an-seiner-eigenen-fensterseite-weg.md`).
+    ///
+    /// **Der Rueckruf ist seit der Runde 13 gebaut, und der Entscheid steht
+    /// trotzdem.** Der Abwurf aus C7 hat ihn bekommen, weil seine Meldung ohne
+    /// ihn im nicht aktiven Dateifenster unsichtbar blieb — die Handlung reicht
+    /// dort ueber beide Seiten. Beim Doppelklick tut sie das nicht, und das
+    /// Argument war nie die Verfuegbarkeit des Mechanismus, sondern die
+    /// Reichweite der Handlung. Wer ihn hier nachtraeglich anhaengt, weil es
+    /// ihn jetzt gibt, hat die Begruendung mit ihrem Anlass verwechselt.
     ///
     /// Eine Zeile kleiner als null ist der Klick unter die letzte Zeile, also
     /// auf die leere Flaeche der Liste; er fuehrt zu nichts.
@@ -2739,14 +2779,19 @@ impl DateifensterQuelle {
     /// Raeumt die Antwort auf den vorigen Tastenbefehl weg.
     ///
     /// Die einzige Loeschregel dieses Feldes, gerufen von ihren zwei
-    /// Aufrufern: `Anwendungsdelegierter::kommando_ausfuehren` vor jedem
-    /// Befehl und [`DateifensterQuelle::doppelklick`] an seinem einen Eingang.
-    /// Der zweite Aufruf ist keine zweite Regel, sondern dieselbe an der
-    /// Stelle, die der erste nicht erreicht: ein Doppelklick ist kein Kommando
-    /// und laeuft an `kommando_ausfuehren` vorbei. Er raeumt dabei **nur diese
-    /// eine** Statuszeile, waehrend `kommando_ausfuehren` ueber beide Seiten
-    /// laeuft; der Grund fuer den Unterschied steht bei
-    /// [`DateifensterQuelle::doppelklick`]. Stand
+    /// Aufrufstellen: `Anwendungsdelegierter::befehlsantwort_beidseitig_loeschen`
+    /// fuer beide Dateifenster und [`DateifensterQuelle::doppelklick`] an
+    /// seinem einen Eingang. Der zweite Aufruf ist keine zweite Regel, sondern
+    /// dieselbe an der Stelle, die der erste nicht erreicht: ein Doppelklick
+    /// ist kein Kommando und laeuft an `kommando_ausfuehren` vorbei. Er raeumt
+    /// dabei **nur diese eine** Statuszeile, waehrend die beidseitige Regel
+    /// ueber beide Seiten laeuft; der Grund fuer den Unterschied steht bei
+    /// [`DateifensterQuelle::doppelklick`].
+    ///
+    /// **Zwei Aufrufstellen, aber drei Anlaesse.** Die beidseitige Regel hat
+    /// seit der Runde 13 selbst zwei Wege hinein — jeden Tastenbefehl und die
+    /// Meldung des Abwurfs aus C7 —, und beide gehen durch dieselbe Schleife;
+    /// die Aufzaehlung steht dort und wird hier nicht wiederholt. Stand
     /// keine Antwort, geschieht nichts: sonst schriebe jeder Pfeiltastendruck
     /// die Zeile neu, die sich nicht geaendert hat. Stand eine, kommt zum
     /// Vorschein, was darunter liegt — der Fortschritt der laufenden Operation
@@ -2929,6 +2974,35 @@ impl DateifensterQuelle {
         fragen.as_ref().is_none_or(|fragen| fragen())
     }
 
+    /// Raeumt die Befehlsantwort an **beiden** Dateifenstern weg (C7).
+    ///
+    /// Der Weg zu `Anwendungsdelegierter::befehlsantwort_beidseitig_loeschen`,
+    /// also zu der einen Loeschregel des Rangs 1, und keine zweite daneben:
+    /// eine Quelle erreicht von sich aus nur ihre eigene Seite, und der Rang 1
+    /// gehoert beiden Dateifenstern gemeinsam.
+    ///
+    /// **Warum der Abwurf ueberhaupt beide Seiten braucht**, wo der Doppelklick
+    /// daneben ausdruecklich nur seine eigene raeumt, steht am Ziel dieses
+    /// Rueckrufs: [`statuszeile::zeile`](super::statuszeile::zeile) nimmt
+    /// innerhalb eines Rangs die aktive Seite zuerst, und eine Meldung, die im
+    /// **nicht** aktiven Dateifenster steht, verliert gegen jede stehende
+    /// Befehlsantwort im aktiven.
+    ///
+    /// **Steht der Rueckruf nicht, geschieht nichts.** Das ist kein zweiter,
+    /// engerer Ausgang, sondern gar keiner: eine halbe Raeumung allein an
+    /// dieser Seite waere die zweite Loeschregel, die es hier nicht geben soll,
+    /// und [`Self::befehlsantwort_zeigen`] ueberschreibt das eigene Feld
+    /// ohnehin. Eintreten kann der Fall nicht — der Rueckruf steht seit
+    /// `Anwendungsdelegierter::oberflaeche_aufbauen`, und ein Ziehvorgang
+    /// braucht ein stehendes Fenster —, es ist derselbe Grund wie bei
+    /// [`Self::vorgang_laeuft_fragen`] darueber.
+    fn befehlsantwort_beidseitig_loeschen(&self) {
+        let raeumen = self.ivars().befehlsantwort_raeumer.borrow();
+        if let Some(raeumen) = raeumen.as_ref() {
+            raeumen();
+        }
+    }
+
     /// Was geschaehe, wenn der Nutzer jetzt loslaesst (C4 bis C7).
     ///
     /// Sechs Tatsachen herein, ein Urteil heraus, und keine der sechs wird hier
@@ -2940,7 +3014,9 @@ impl DateifensterQuelle {
     /// Der Reihe nach: der laufende Vorgang, die Marke und mit ihr der
     /// Zielordner, die Quellen aus der Ablage des Ziehvorgangs, das
     /// Schreibrecht des Ziels, die angebotene Menge. Danach das Urteil, die
-    /// Marke an der Tabelle, die entdoppelte Meldung und zuletzt der Zeiger.
+    /// Marke an der Tabelle, die entdoppelte Meldung — und mit ihr, an
+    /// derselben Kante, die Raeumung des Rangs 1 an **beiden** Dateifenstern —
+    /// und zuletzt der Zeiger.
     ///
     /// **Die Ausleihe des Tabmodells endet vor dem ersten Objective-C-Aufruf**,
     /// und zwar in [`Self::eintrag_in_zeile`] und [`Self::angezeigter_ordner`]
@@ -3014,8 +3090,23 @@ impl DateifensterQuelle {
             Abwurfurteil::Ausfuehren(_) => None,
         };
         if let Some(meldung) = abwurfmeldung(self.ivars().gemeldeter_abwurfgrund.get(), grund) {
+            // **Erst raeumen, dann schreiben, und beides an derselben Kante.**
+            // Die Raeumung haengt an demselben `Some` wie die Meldung und
+            // laeuft deshalb nicht bei jeder Zeigerbewegung: `validateDrop:`
+            // laeuft bei jeder, und [`abwurfmeldung`] ist die Entdopplung, die
+            // daraus die wenigen Wechsel macht. Ohne die Raeumung stuende die
+            // Meldung im **nicht** aktiven Dateifenster hinter einer noch
+            // stehenden Befehlsantwort des aktiven und waere nie zu sehen.
+            //
+            // `beschlossener_vorgang` faellt dabei ausdruecklich **nicht** mit;
+            // seine Loeschregel ist die entgegengesetzte, und die Begruendung
+            // steht an dem Feld.
+            self.befehlsantwort_beidseitig_loeschen();
             self.befehlsantwort_zeigen(meldung);
         }
+        // Nach der Raeumung, denn sie hat dieses Feld an beiden Seiten auf
+        // `None` gestellt; der eben gefaellte Grund gehoert hierher und nicht
+        // der geraeumte.
         self.ivars().gemeldeter_abwurfgrund.set(grund);
         self.ivars().beschlossener_vorgang.set(match gefaellt {
             Abwurfurteil::Ausfuehren(vorgang) => Some(vorgang),

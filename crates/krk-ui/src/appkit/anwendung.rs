@@ -1227,12 +1227,13 @@ impl Anwendungsdelegierter {
                     }
                 }));
             // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13).
-            // Zwei Rueckrufe, weil die Dateiliste zwei Dinge braucht, die sie
+            // Drei Rueckrufe, weil die Dateiliste drei Dinge braucht, die sie
             // selbst nicht hat: die Frage nach dem laufenden Vorgang **ohne**
-            // ihre Meldung — `validateDrop:` laeuft bei jeder Zeigerbewegung —
-            // und den Weg in die Operationsmaschine. Auch sie halten den
-            // Delegierten **schwach**, aus demselben Grund wie die vier
-            // darueber.
+            // ihre Meldung — `validateDrop:` laeuft bei jeder Zeigerbewegung —,
+            // den Weg in die Operationsmaschine und die Raeumung des Rangs 1
+            // an **beiden** Dateifenstern, die von einer Quelle aus nicht zu
+            // erreichen ist. Auch sie halten den Delegierten **schwach**, aus
+            // demselben Grund wie die vier darueber.
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
@@ -1251,6 +1252,22 @@ impl Anwendungsdelegierter {
                 .abwurf_setzen(Box::new(move |ziel, quellen, art| {
                     if let Some(selbst) = schwach.load() {
                         selbst.abwurf_ausfuehren(seite, ziel, quellen, art);
+                    }
+                }));
+            // **Die Meldung aus C7 nimmt dieselbe Loeschregel wie ein
+            // Tastenbefehl**, und deshalb geht sie hier heraus statt an der
+            // Quelle zu bleiben: der Rang 1 gehoert beiden Dateifenstern, und
+            // eine Meldung im nicht aktiven verloere sonst gegen eine noch
+            // stehende Befehlsantwort im aktiven. Der Rueckruf traegt die Seite
+            // nicht mit, weil die Regel ohnehin beide raeumt. Auch er haelt den
+            // Delegierten **schwach**, aus demselben Grund wie die fuenf
+            // darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .befehlsantwort_raeumer_setzen(Box::new(move || {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.befehlsantwort_beidseitig_loeschen();
                     }
                 }));
         }
@@ -2897,14 +2914,10 @@ impl Anwendungsdelegierter {
 
         // **Die eine Loeschregel der Befehlsantwort.** Was KRK auf den vorigen
         // Befehl geantwortet hat, gilt bis zum naechsten und keinen Tastendruck
-        // laenger; erst danach darf der Befehl seine eigene Antwort setzen. An
-        // beiden Dateifenstern, weil es genau einen letzten Befehl gibt und
-        // nicht einen je Seite: der Abschlusstext einer Kopie steht im Fenster
-        // des Vorgangs, und ein Befehl im anderen Fenster ist trotzdem neuer.
-        // Damit haengt der oberste Rang an einem Ereignis und an keiner Uhr.
-        for seite in Fensterseite::ALLE {
-            self.dateifenster(seite).quelle().befehlsantwort_loeschen();
-        }
+        // laenger; erst danach darf der Befehl seine eigene Antwort setzen. Die
+        // Regel selbst steht in `Self::befehlsantwort_beidseitig_loeschen`,
+        // seit der Abwurf aus C7 der Runde 13 sie als zweiter Weg braucht.
+        self.befehlsantwort_beidseitig_loeschen();
 
         // **Zuerst nachlesen, was auf dem Schirm steht, dann erst das Modell
         // anfassen.** Der Nutzer kann jede Trennlinie mit der Maus verschoben
@@ -4450,6 +4463,44 @@ impl Anwendungsdelegierter {
         leiste.zustaende_setzen(&sichtbar, &spalten, tief, inhalt);
     }
 
+    /// Raeumt die Antwort auf den vorigen Tastenbefehl an **beiden**
+    /// Dateifenstern weg (Rang 1).
+    ///
+    /// **Die eine Loeschregel des obersten Rangs, an einer Stelle und mit zwei
+    /// Wegen hinein.** Sie raeumt beide Seiten, weil es genau einen letzten
+    /// Befehl gibt und nicht einen je Seite: der Abschlusstext einer Kopie
+    /// steht im Fenster des Vorgangs, und ein Befehl im anderen Fenster ist
+    /// trotzdem neuer. Damit haengt der oberste Rang an einem Ereignis und an
+    /// keiner Uhr.
+    ///
+    /// Die zwei Wege:
+    ///
+    /// 1. [`Self::kommando_ausfuehren`] vor jedem Befehl. Der aeltere Weg, und
+    ///    bis zur Runde 13 der einzige.
+    /// 2. Der Abwurf aus einer fremden Anwendung, wenn er die Meldung aus C7
+    ///    schreibt. Er kommt ueber den achten Rueckruf der Dateiliste herein
+    ///    (`DateifensterQuelle::befehlsantwort_beidseitig_loeschen`), weil eine
+    ///    Quelle von sich aus nur ihre eigene Seite erreicht.
+    ///
+    /// **Warum der Abwurf diesen Weg braucht und nicht seine eigene Seite
+    /// genuegt.** [`statuszeile::zeile`] nimmt innerhalb eines Rangs die
+    /// **aktive** Seite zuerst. Stand also eine Befehlsantwort im aktiven
+    /// Dateifenster und zog der Nutzer ueber das andere, verlor die Meldung des
+    /// Abwurfs den Wettbewerb und war nie zu sehen — das ganze sichtbare
+    /// Verhalten von C7
+    /// (`issues/260818-2332_*_the-drop-writes-a-rank-1-message-without-clearing-the-other-pane-and-loses-it.md`).
+    ///
+    /// **Ein dritter Weg gehoert nicht hierher, sondern zu der Reichweite, die
+    /// er hat.** `DateifensterQuelle::doppelklick` raeumt ausdruecklich nur
+    /// seine eigene Seite: geraeumt wird so weit, wie die Handlung reicht, und
+    /// ein Doppelklick reicht ueber die angeklickte Zeile. Der Abwurf reicht
+    /// weiter, weil seine Meldung sonst nicht erscheint.
+    fn befehlsantwort_beidseitig_loeschen(&self) {
+        for seite in Fensterseite::ALLE {
+            self.dateifenster(seite).quelle().befehlsantwort_loeschen();
+        }
+    }
+
     /// Schreibt die eine Statuszeile ueber die volle Fensterbreite (C5 der
     /// Runde 6).
     ///
@@ -5540,6 +5591,14 @@ impl Anwendungsdelegierter {
     ///
     /// Der vierte Weg ist damit **keine zweite Pruefung**, sondern dieselbe ohne
     /// ihre Nebenwirkung.
+    ///
+    /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
+    /// bliebe: diese Funktion hat seit dem Wegfall ihrer Nebenwirkung gar keine
+    /// mehr, ein nackter Aufruf taete also nichts, und was dabei verlorenginge,
+    /// ist die Antwort auf die Lage 1 aus C6 — es liefe ein zweiter Vorgang an,
+    /// waehrend einer laeuft, und nichts wuerde rot. `unused_results` ist
+    /// erlaubt, dieses Attribut ist deshalb die einzige Sperre.
+    #[must_use = "die Antwort ist die Lage 1 aus C6; fallengelassen faengt ein zweiter Vorgang an, waehrend einer laeuft"]
     fn vorgang_laeuft(&self) -> Option<Art> {
         self.ivars()
             .vorgang
