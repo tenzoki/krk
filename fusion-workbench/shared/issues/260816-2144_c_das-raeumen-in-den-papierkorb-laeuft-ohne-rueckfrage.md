@@ -187,3 +187,47 @@ Dokumentende bleibt beantwortet wie beim Abgleich 260817-1129 vermerkt.
 **Der Übergang auf `_c_` gehört an das Ende von Bündel D**, wenn `grep -rn "EndgueltigLoeschen"
 crates` keinen Treffer mehr liefert. Bis dahin führt dieser Datensatz die Verschärfung als
 offen, und das ist die richtige Auskunft.
+
+---
+Resolved: 260818-0201 by analyst — **read against the tree at `ae665e5`, not carried over from a
+prior record.** Both halves of this defect now stand built: the confirmation the user asked for on
+260816-2144, and the Verschärfung of 260817 that removed the second delete path outright.
+
+**What was measured, command by command.**
+
+| Claim of this record | Command | Result at `ae665e5` |
+|---|---|---|
+| the final-delete path is gone | `grep -rn "EndgueltigLoeschen" crates \| wc -l` | `0` |
+| `f8` and `opt+cmd+delete` are free | `grep -n 'opt+cmd+delete\|"f8"' resources/default-keymap.toml` | one hit: `f8` now sits on `in_papierkorb` beside `delete` and `cmd+delete` (`:158`); `opt+cmd+delete` is unassigned |
+| `endgueltig_loeschen` is out of the keymap | `grep -rn "endgueltig_loeschen" crates resources` | five hits, none of them a live binding: three in a probe that asserts a saved keymap carrying the retired id is rejected, two in prose that names the retired state |
+| the 260802 user ruling is fully superseded | `ls fusion-workbench/shared/decisions` | `260802-0842_s_loeschen-papierkorb-oder-endgueltig.md` — `_s_` since `24bbccc` |
+
+**And the load-bearing question this record was filed for — does any path still remove a file
+without asking — read as a call chain rather than as a grep.** `Kommando::InPapierkorb` is
+dispatched at `crates/krk-ui/src/appkit/anwendung.rs:2898` into `papierkorb_oder_zeichen_zurueck`,
+whose every delete-bearing branch (`:4514`, `:4517`, `:4543`) calls `in_den_papierkorb` (`:4460`),
+which is one line: `loeschen_nach_rueckfrage(Art::InDenPapierkorb, …)` (`:4461`). Inside that body
+the only branch that stages work is `Vorstufe::Rueckfrage`, and it stages it in the sheet's
+callback (`:4718`) behind `Nachstufe::Auftrag`. The other three branches — a running operation, an
+empty selection, a target without a trash — return without an order. `loeschauftrag_stellen`
+(`:4857`) has exactly one caller, that line `:4718`; `Auftrag::in_den_papierkorb`
+(`crates/krk-core/src/operation/auftrag.rs:99`) is constructed nowhere outside it but in its own
+unit probe. So there is one way to a delete order and it passes through a standing sheet with
+"Abbrechen" preselected.
+
+**The four follow-through places from `## Was die Umsetzung mitziehen muss` are done, each read
+rather than assumed:** the 260802 decision carries `_s_`; the round-1 spec was corrected in step 17
+(`da716c1`); `CLAUDE.md` returns no hit for "ohne Rückfrage"; and both module headers now name the
+trash path — `blaetter/loeschbestaetigung.rs:1` reads "Die eine Rueckfrage vor dem Raeumen in den
+Papierkorb", `kommandos/rueckschritt.rs:1-3` "der Weg in den Papierkorb mit seiner Rueckfrage".
+
+**Carrying commits:** `472eb81` (every trash removal asks first), `e2760cd` and `ee85950` (a target
+without a trash is reported instead of deleted), `82707ef` (the final-delete path leaves program
+and keymap), `522cf51` (the tree's prose knows one delete path), `24bbccc` (the 260802 ruling moves
+to `_s_`), `da716c1` (round 1 carries its lifted ruling as an addendum).
+
+**One paragraph of this record is deliberately left standing and is no longer current:** the
+closing question of `## Verschärfung vom 260817`, whether a target without a trash should become
+undeletable. The Abgleich of 260817-1129 already recorded that it was answered the same day in
+`shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
+The wording stays as written; that line binds.

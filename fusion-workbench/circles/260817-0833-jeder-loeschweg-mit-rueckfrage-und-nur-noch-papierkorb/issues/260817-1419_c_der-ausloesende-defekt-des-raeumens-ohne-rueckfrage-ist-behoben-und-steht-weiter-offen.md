@@ -70,3 +70,29 @@ Der Plan führt in Schritt 16 die Entscheidungsdatensätze nach und in Schritt 1
 keinen Schritt für die Defektdatensätze; der auslösende Defekt liegt im gemeinsamen Speicher und
 in keinem Aufgabenauftrag. Das bleibt richtig und ist eine Frage an den Planner, nicht an den
 Abgleich. Der Marker bleibt `_o_`.
+
+---
+Resolved: 260818-0201 by analyst — the record it reports is closed, and the second half of the
+record, the one the Abgleich of 260817-1833 said was the part that carried, is filed as its own
+question.
+
+`shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md` now carries
+`_c_` with a `Resolved:` line naming what was measured and the seven commits that carry it. The
+condition the Abgleich of 260817-1833 set for that move — `grep -rn "EndgueltigLoeschen" crates`
+returning no hit — holds at `ae665e5`: the count is `0`, `resources/default-keymap.toml:158` puts
+`f8` on `in_papierkorb`, and `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md`
+carries `_s_`.
+
+**This record was right that the defect was fixed and wrong about why it could be closed.** Its
+`## Richtung` argued "sein Wortlaut ist von Bündel D nicht mehr betroffen", and the Abgleich showed
+that the `## Verschärfung vom 260817` section was exactly what Bundle D was about. The closure now
+made rests on Bundle D having landed, not on that argument. Recorded here rather than silently
+skipped over: the finding held, its reasoning did not, and the two are worth telling apart.
+
+**The second half stays alive as a decision and not as this defect.** The observation — the plan
+carries step 16 for decision records and step 15 for prose but no step for defect records, so the
+trigger defect sat in the shared store outside every task order — is a question for the planner
+about the shape of a plan, not something a coder fixes in a file. The concrete instance it names
+is now discharged; the shape question is not, and it belongs to whoever writes the next plan. It
+is left here in the body rather than refiled, because a defect record whose defect is discharged
+is the wrong home for a standing recommendation.

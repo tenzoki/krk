@@ -4,7 +4,7 @@
 **Status:** Entwurf
 **Quelle:** Nutzerwunsch vom 260816-2144 („jede Datei-Löschfunktion wird durch eine Rückfrage gesichert"), nachgeschärft am 260817 („Löschen OHNE Papierkorb wird entfernt: alle Datei/Folder-Löschvorgänge gehen immer in den Papierkorb"), dazu die ergänzende Antwort desselben Tages zu Zielen ohne Papierkorb.
 **Baumstand:** `b8e198e`, gelesen am 260817
-**Anlass:** der Schadensfall vom 260817-0344. KRK hat den Speicher `fusion-workbench/shared` des eigenen Projektverzeichnisses mit 189 verfolgten Dateien in den Papierkorb geräumt, auf einen Tastendruck, ohne Rückfrage, und vier Stunden unbemerkt. Forensik: `shared/analyses/260817-0419-verlust-des-speichers-shared.md`. Defekt: `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.
+**Anlass:** der Schadensfall vom 260817-0344. KRK hat den Speicher `fusion-workbench/shared` des eigenen Projektverzeichnisses mit 189 verfolgten Dateien in den Papierkorb geräumt, auf einen Tastendruck, ohne Rückfrage, und vier Stunden unbemerkt. Forensik: `shared/analyses/260817-0419-verlust-des-speichers-shared.md`. Defekt: `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.
 **Ablage:** Dieser Spec entsteht ohne Circle im Blick und liegt deshalb im gemeinsamen Speicher. Der Circle dieser Runde nimmt ihn über sein Feld `Active spec/plan:` an.
 **Nachgezogen am 260817** nach der Abnahme. Der Nutzer hat dabei die drei offenen Fragen beantwortet, und eine der drei Antworten dreht eine frühere Festlegung um. Betroffen sind der Abschnitt `## Was der Nutzer entschieden hat`, C3, C5, die Kalibrierung zum Vorfall, die Abgrenzung und der Abschnitt der ausstehenden Entscheidungen, der danach leer ist. Alles Übrige steht unverändert.
 

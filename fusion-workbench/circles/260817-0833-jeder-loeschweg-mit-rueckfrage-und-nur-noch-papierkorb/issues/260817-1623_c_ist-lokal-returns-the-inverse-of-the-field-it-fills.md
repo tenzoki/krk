@@ -129,3 +129,11 @@ file *does* ask would turn a module boundary into an obligation to cross it. Dro
 rejected because the boundary is real and nothing else holds it.
 
 Verification: `make check` — exit 0.
+
+---
+**Addendum 260818-0201 (analyst).** The `Resolved: 260817-1722` line above states a resolution time that no
+clock produced. The work it closes is in commit `c1b52db`, author time `260817-1713` — 9 minutes *earlier* than the
+time the line claims. A pass that orders closures against commits gets this one out of order, so the
+author time is what binds; the line itself stays as written, because this store keeps a record of a
+state in the wording it had. Finding:
+`issues/260817-1807_*_two-history-filenames-and-four-closure-notes-carry-timestamps-that-no-clock-produced.md`.

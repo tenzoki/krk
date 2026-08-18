@@ -104,3 +104,59 @@ Zwei-Wege-Regel ausgenommen ist. Die Reihe ist damit `vorschau_umschalten`, `kop
 `make check` — Exit 0. Alle vier Abnahmekommandos grün (`cargo build --workspace`,
 `cargo test --workspace`, `cargo fmt --all --check`, `cargo clippy --workspace
 --all-targets -- -D warnings`).
+
+---
+**Addendum 260818-0201 (analyst) — the sentence "Die übrige Datei ist gegen den Baum nachgezählt
+und stimmt" claims a wider scope than was read, and is corrected here rather than in the body.**
+
+This log records a state and keeps its wording; what follows narrows the claim and says what a
+re-measurement at `ae665e5` actually found. The finding that prompted it is
+`issues/260818-0029_*_the-record-claims-the-rest-of-claude-md-was-counted-against-the-tree.md`.
+
+**What the step measured, and what holds.** The four enumerations named in the body, re-run:
+
+| claim in `CLAUDE.md` | command | result |
+|---|---|---|
+| `Wirkungsbereich` seven | `awk '/^pub enum Wirkungsbereich/,/^}/' crates/krk-core/src/tasten/belegung.rs \| grep -cE '^    [A-ZÄÖÜ][A-Za-z]*,'` | `7` |
+| `Bereich` five | same shape over `crates/krk-ui/src/fenstermodell.rs` | `5` |
+| `Fokus` five | same shape over `crates/krk-ui/src/kommandos/fokus.rs` | `5` |
+| `Kommando` carries no Git variant | `awk '/^pub enum Kommando/,/^}/' … \| grep -ciE 'git'` | `0` |
+
+Four for four, and the edited Rückschritt paragraph holds too: `delete` reaches
+`loeschen_nach_rueckfrage` through `papierkorb_oder_zeichen_zurueck` and `in_den_papierkorb`, the
+rule has one caller, and `die_regel_hat_genau_einen_aufrufer` holds the count.
+
+**Five further statements were checked for this addendum, and all five hold.** They were not part
+of the step and are recorded so that the next reader knows which ground has been walked:
+
+- `#![allow(unsafe_code)]` stands in exactly two files, `krk-core/src/verzeichnis/sys.rs:88` and
+  `krk-ui/src/appkit/mod.rs:1`. The five further grep hits are prose about the rule, not sites.
+- The `# Ab welchem macOS…` section stands in 38 of the 40 files under `crates/krk-ui/src/appkit/`,
+  and the two without it are `koordinaten.rs` and `mod.rs` — the two `CLAUDE.md` names.
+- `rust-toolchain.toml` pins `1.97.1` and both Mac architectures.
+- `Cargo.lock` carries no `cc` and no `-sys` package but `windows-sys`.
+- There is one hull around `NSPasteboard`, `crates/krk-ui/src/appkit/zwischenablage.rs`; the other
+  files matching the name only discuss it.
+
+**What does not hold, and it is two statements, both in the sections the phrase "die übrige Datei"
+covers.**
+
+| statement | measured at `ae665e5` |
+|---|---|
+| `:24` region, "**Zehn Runden sind gefahren.**" with a ten-row table | `ls fusion-workbench/circles/*/*_circle.md` gives fourteen records: ten `_b_`, one `_c_`, one `_t_`, one `_a_` (never run) and one `_d_` (deferred). Twelve have been driven. Filed as `shared/issues/260816-2138_*_claude-md-nennt-zehn-gefahrene-runden-es-sind-elf.md`, itself now one round out of date. |
+| `:39`, "liegt als `v0.4.1` aus" | `Cargo.toml:13` reads `0.5.1`, and `git tag` shows `v0.4.3`, `v0.4.4`, `v0.5.0`, `v0.5.1` standing after `v0.4.1`. Filed as `shared/issues/260818-0028_*_claude-md-says-the-bundle-ships-as-v0-4-1-and-four-tags-have-been-set-since.md`. |
+
+Two further sentences drift with the round count rather than independently, and are named so that
+whoever corrects the count corrects them in the same pass: `:39` "Was die Runden 2 bis 10
+hinzugefügt haben", and `:78` "er liegt vor den Runden 5 bis 10 — keine der sechs ist gegen die
+zehn Zusagen gemessen". Both are arithmetic on the same wrong ten.
+
+**Nothing was changed in `CLAUDE.md` under this addendum.** Both defects have records of their own
+in the shared store, which is where they belong: neither arose from this Circle's Directive, and
+`CLAUDE.md` is outside the scope of the task that wrote this addendum.
+
+**The lesson worth keeping, and it is about the sentence rather than the file.** "Die übrige Datei
+ist nachgezählt" states a check over a surface nobody read. A claim that names its scope — these
+four enumerations, by these four commands — survives the next reader, because the next reader can
+see where it stops. The wider form is worse than no claim at all: it stops the next pass from
+looking.

@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** implemented
 **Filed by:** shaper
-**Cross-references:** `shared/decisions/260802-0842_i_loeschen-papierkorb-oder-endgueltig.md` (die überholte Festlegung), `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, `shared/analyses/260817-0419-verlust-des-speichers-shared.md`, `shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`
+**Cross-references:** `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` (die überholte Festlegung), `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, `shared/analyses/260817-0419-verlust-des-speichers-shared.md`, `shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md`
 
 ---
 

@@ -59,3 +59,33 @@ shared store, where they belong, because neither arose from this Circle's Direct
 here is the sentence in the session record. Narrow it to what was measured: the four
 enumerations and the `Kommando` paragraph, named, with the commands that measured them. A claim
 that names its scope survives the next reader; one that says "the rest of the file" does not.
+
+---
+Resolved: 260818-0201 by analyst — **an addendum, not a rewrite**, appended to
+`history/260817-2356-coder-e15-kommentare-und-claude-md.md`. The log records a state and keeps its
+wording; the addendum narrows the claim and carries the measurement.
+
+**Re-measured independently at `ae665e5` rather than taken from this record.** The four
+enumerations this record names all hold, by the four commands it quotes: `Wirkungsbereich` seven,
+`Bereich` five, `Fokus` five, `Kommando` with no Git variant. So does the edited Rückschritt
+paragraph. The two statements it calls false are false, both by direct measurement: fourteen Circle
+records against a ten-row table, and `Cargo.toml:13` reading `0.5.1` with four tags standing after
+`v0.4.1`.
+
+**The survey went past this record, because "the rest of the file" cannot be answered by checking
+the two statements someone already found.** Five further claims of `CLAUDE.md` were measured for
+the addendum and all five hold — the two `#![allow(unsafe_code)]` sites, the 38-of-40 coverage of
+the macOS-floor section with exactly the two named exceptions, the pinned toolchain `1.97.1`, a
+`Cargo.lock` with no `cc` and no `-sys` package but `windows-sys`, and the single hull around
+`NSPasteboard`. That is a fuller answer to "does the rest of the file hold" than either the record
+or the sentence it corrects, and it is written into the addendum so the next pass can see where
+the ground has been walked.
+
+**Two sentences beyond the two are named in the addendum and are not separately filed**, because
+they are arithmetic on the same wrong number rather than independent claims: `:39` "Was die Runden
+2 bis 10 hinzugefügt haben" and `:78` "er liegt vor den Runden 5 bis 10 — keine der sechs ist gegen
+die zehn Zusagen gemessen". Whoever corrects the round count corrects them in the same pass; a
+separate record would be three records for one edit.
+
+**Nothing in `CLAUDE.md` was changed.** Both defects have their own records in the shared store, as
+this record's `## Direction` says they should, and the file is outside the scope of this task.

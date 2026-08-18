@@ -106,3 +106,11 @@ und keinen Warngrund tragen.
 
 Verifikation: `make check` — exit 0. Die Abrechnung im Einzelnen steht in
 `history/260817-1806-coder-t10-die-laute-warnform.md`.
+
+---
+**Addendum 260818-0201 (analyst).** The `Resolved: 260817-1806` line above states a resolution time that no
+clock produced. The work it closes is in commit `792995a`, author time `260817-1739` — 27 minutes *earlier* than the
+time the line claims. A pass that orders closures against commits gets this one out of order, so the
+author time is what binds; the line itself stays as written, because this store keeps a record of a
+state in the wording it had. Finding:
+`issues/260817-1807_*_two-history-filenames-and-four-closure-notes-carry-timestamps-that-no-clock-produced.md`.

@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** superseded
 **Filed by:** shaper
-**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_t_circle.md`, `shared/decisions/260802-0842_a_f-tasten-unter-macos-systembelegung.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_o_directive-zeile-widerspricht-loeschantwort.md`
+**Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/_*_circle.md`, `shared/decisions/260802-0842_*_f-tasten-unter-macos-systembelegung.md`, `circles/260802-0842-krk-mac-dateimanager-editor-git/issues/260802-1105_*_directive-zeile-widerspricht-loeschantwort.md`
 
 ---
 

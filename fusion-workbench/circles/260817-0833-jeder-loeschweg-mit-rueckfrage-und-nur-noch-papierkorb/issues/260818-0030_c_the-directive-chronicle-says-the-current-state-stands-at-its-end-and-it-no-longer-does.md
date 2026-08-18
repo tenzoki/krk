@@ -53,3 +53,43 @@ Two ways, both cheap, and the choice is not obvious enough to make here:
 
 Option 2 is the one the section's own form suggests; option 1 is the one that stays inside the
 plan. A user decision, not a reviewer's.
+
+---
+Resolved: 260818-0201 by analyst — **way 2 of the two this record set out: a dated fifth entry
+appended to the chronicle, and `:543` left untouched.** Nothing existing was reworded.
+
+**Why way 2 and not way 1.** This record left the choice open on the ground that it was a user's
+and not a reviewer's. The task that discharged it named the rule — an addendum rather than a
+rewrite — and way 2 is the addendum: it adds a paragraph, way 1 replaces one. The record itself
+also observed that way 2 "is the pattern the rest of step 17 followed everywhere else", and the
+form the section keeps is the argument for it: four dated entries in a row, each opening
+`**Stand YYMMDD-HHMM: …**`, a shape that is finished by a fifth entry and broken by an edit to the
+preamble.
+
+**What the entry says, and what it is careful about.** It records the fourth correction of the
+Circle-1 Directive as of 260818-0006, names both halves of the sentence it replaced, cites the
+binding decision and the superseded one, and points at the two places the correction already
+stands — the addendum under the Directive in the Circle record and the gate note at `:12`. Below
+it stands one italic line saying that the entry was added on 260818-0201, that it is the fifth, and
+what the gap was: the preamble promised the current state at the end while the 260818-0006 addendum
+lived only at the head. That line carries this record's number, so a reader who finds the gap again
+finds why it was closed this way.
+
+**One marker in the entry is written out and not in the star form, deliberately**:
+`shared/decisions/260802-0842_s_loeschen-papierkorb-oder-endgueltig.md` appears in the phrase
+"steht seither als überholt", where `_s_` is the statement and not a pointer. That is the explicit
+exception in
+`shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md`, and
+the entry says so in a parenthesis so the next sweep does not read it as a lapse. The other three
+citations in the entry are pointers and carry `_*_`.
+
+**The plan's instruction is not broken, and the distinction is worth stating rather than assuming.**
+Step 17 said "Die Chronik am Dokumentende bleibt im Wortlaut stehen", and the gate note at `:12`
+repeats it. Every existing paragraph of the chronicle stands in the wording it had; what happened is
+an addition after them. That is what the recording rule protects — a record of a state keeps its
+words — and it is the same operation the four entries above it each performed in turn.
+
+**The entry is written in German**, unlike this closure note. The chronicle is a numbered series in
+one voice and an entry in another language would not read as the fifth of five; the artifact
+language governs new artifacts, and appending to an existing German series is the case the
+convention's "existing artifacts are not translated" covers.

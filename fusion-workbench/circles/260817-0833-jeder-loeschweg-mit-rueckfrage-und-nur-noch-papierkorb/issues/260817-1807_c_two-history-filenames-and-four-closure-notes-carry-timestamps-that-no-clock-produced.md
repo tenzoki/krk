@@ -93,3 +93,51 @@ Its current value, `260817-1816`, is not in the future: `date +%y%m%d-%H%M` retu
 The **Direction** of this record is unaffected: do not rename the files, add the commit and its
 author time as one line inside each of the four, and read the clock in the same command that
 writes the file.
+
+---
+Resolved: 260818-0201 by analyst — **nothing renamed, nine addenda written**, following this
+record's own `## Direction` and the wider scope the Abgleich of 260817-1833 measured.
+
+**Re-measured first, at `ae665e5`, rather than carried over.** Every history file of this Circle
+against the author time of the commit that added it
+(`git log --diff-filter=A --format='%h %ad' --date=format:'%y%m%d-%H%M' -1 -- <file>`), all
+twenty-four of them:
+
+| history filename | commit | author time | offset |
+|---|---|---|---|
+| `260817-1104-coder-a2-blatt-beschriftung-und-laut.md` | `375d07c` | 260817-1038 | **+26 min** |
+| `260817-1345-coder-b5-frage-nach-dem-papierkorb.md` | `e2760cd` | 260817-1341 | **+4 min** |
+| `260817-1722-coder-t9-tafel-der-ausloeser-und-die-umbenennung.md` | `c1b52db` | 260817-1713 | **+9 min** |
+| `260817-1806-coder-t10-die-laute-warnform.md` | `792995a` | 260817-1739 | **+27 min** |
+
+Four, exactly the four the Abgleich named — the Abgleich's correction of this record's count of
+two is confirmed, and the eight files written since (Bundles D and E, and the two reconciliations)
+add no fifth. The last of them, `260818-0157-…` in `ae665e5` at `260818-0159`, runs two minutes
+behind its commit, which is the expected sign.
+
+**What was written.** One addendum in each of the four history files, naming the commit that added
+it, that commit's author time, and the size of the offset. One addendum in each of the five
+closure notes the Abgleich enumerated — the three `Resolved: 260817-1806` lines, the
+`Nachtrag 260817-1806` in `260817-1107_c_…`, and the `Resolved: 260817-1722` in
+`260817-1623_c_…` — each naming the commit that carries the work the line closes. Nine files, nine
+addenda, no existing wording touched.
+
+**Why no rename, stated as a measurement rather than as a preference.** This record's `## Direction`
+argued it from the location rule and from the four citations pointing at one of the two names. Both
+hold, and the second is now counted: `grep -rn '260817-1806-coder-t10'` returns citations across
+`issues/`, `history/` and `reviews/`, every one of them in a store the location rule freezes. A
+rename would therefore have had to be chased into files that are not allowed to change — the
+citation and the record it cites cannot both be corrected, and the record of a state is the one
+that wins. The addendum buys back exactly what the rename would have bought, the recoverability of
+the chronology from the file itself, and costs nothing.
+
+**One artefact stays unmeasurable, as the Abgleich already recorded**: the `# Updated:` line of
+`fusion-workbench/agentstate.yaml`. The file is untracked, so no past value exists to compare
+against any commit. Nothing was written there.
+
+**The prevention this record proposed is not implemented and is not a defect of this closure.**
+"Read the clock in the same command that writes the file" is a working habit, and no gate in this
+project enforces it — the same shape as the star-form convention, which
+`shared/issues/260817-1130_*_die-sternform-fuer-zitate-…` records as having been broken across four
+rounds precisely because it was accepted without a check in the build. If the habit is to hold, it
+needs a check; that is a question for the user and not something a closure note can settle.

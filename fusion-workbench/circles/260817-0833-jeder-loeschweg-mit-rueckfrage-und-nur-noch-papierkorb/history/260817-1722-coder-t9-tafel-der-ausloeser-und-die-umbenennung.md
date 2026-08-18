@@ -228,3 +228,14 @@ The plan step is **not** marked `[DONE]` and nothing is committed — both belon
 orchestrator. One caveat worth naming: closing `260817-1623` used `git mv`, which stages the
 rename, so that one path already sits in the index. Its content change is unstaged like everything
 else.
+
+---
+**Addendum 260818-0201 (analyst).** This log was added by commit `c1b52db`, author time
+`260817-1713`. Its filename timestamp runs **9 minutes ahead** of that commit, which no clock produces: the
+file cannot have been named after the moment it was committed. For placing this session against the
+commit log, the author time in this line is what binds, not the filename.
+
+The filename itself stays as it is. It is a pointer, and other records cite it; renaming it would
+buy a correct timestamp at the price of dead citations. The finding is
+`issues/260817-1807_*_two-history-filenames-and-four-closure-notes-carry-timestamps-that-no-clock-produced.md`,
+the rule `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md` `## Timestamps`.

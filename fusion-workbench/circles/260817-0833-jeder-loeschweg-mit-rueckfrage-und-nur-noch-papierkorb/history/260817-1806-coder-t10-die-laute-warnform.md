@@ -163,3 +163,14 @@ unchanged; `operationen::loeschfrage` stays where it is and falls with bundle D.
 - `issues/260817-1419_o_der-papierkorbtest-laeuft-vor-den-beiden-billigen-sperren-…` → `_c_`, `Resolved:` note appended
 - `issues/260817-1419_o_der-abschluss-von-260817-1107-…` → `_c_`, `Resolved:` note appended
 - `issues/260817-1107_c_…` — dated `Nachtrag` appended, marker unchanged
+
+---
+**Addendum 260818-0201 (analyst).** This log was added by commit `792995a`, author time
+`260817-1739`. Its filename timestamp runs **27 minutes ahead** of that commit, which no clock produces: the
+file cannot have been named after the moment it was committed. For placing this session against the
+commit log, the author time in this line is what binds, not the filename.
+
+The filename itself stays as it is. It is a pointer, and other records cite it; renaming it would
+buy a correct timestamp at the price of dead citations. The finding is
+`issues/260817-1807_*_two-history-filenames-and-four-closure-notes-carry-timestamps-that-no-clock-produced.md`,
+the rule `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md` `## Timestamps`.

@@ -23,7 +23,7 @@ In der Nacht zum 260817 hat KRK, von Hand bedient, den Ordner `fusion-workbench/
 
 Die Forensik steht in `shared/analyses/260817-0419-verlust-des-speichers-shared.md` und belegt den Hergang mit vier unabhängigen Messungen. Der Nutzer hat danach einen gleichartigen Vorfall auf einem zweiten Gerät berichtet; die Fehlbedienung ist damit belegt und nicht mehr erschlossen.
 
-Der Befund selbst war schon sechs Stunden vor dem Schaden abgelegt, als Risiko: `shared/issues/260816-2144_o_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, gefunden vom Shaper beim Lesen des Baums für eine andere Runde. Er trägt den Stand am Baum, die vier nachzuziehenden Stellen und fünf Fragen, die der Umsetzer nicht raten darf, und hat der Klärung dieser Runde den größten Teil der Vorarbeit abgenommen.
+Der Befund selbst war schon sechs Stunden vor dem Schaden abgelegt, als Risiko: `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, gefunden vom Shaper beim Lesen des Baums für eine andere Runde. Er trägt den Stand am Baum, die vier nachzuziehenden Stellen und fünf Fragen, die der Umsetzer nicht raten darf, und hat der Klärung dieser Runde den größten Teil der Vorarbeit abgenommen.
 
 ### Was diese Runde aufhebt
 
