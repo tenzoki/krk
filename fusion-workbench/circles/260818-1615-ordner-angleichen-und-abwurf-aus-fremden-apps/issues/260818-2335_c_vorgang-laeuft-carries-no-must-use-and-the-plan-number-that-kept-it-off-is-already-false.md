@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coderev
 **Cross-references:** `crates/krk-ui/src/appkit/anwendung.rs`, `fn vorgang_laeuft`; plan `circles/260818-1615-…/planning/260818-1633_*_plan-…` `## Testing Strategy` ("diese Runde setzt vier neue `#[must_use]` und ein `let _ =`"); `CLAUDE.md`, "Was man nicht sieht" (the project rule); session history `history/260818-2230-schritt-9-vorgang-laeuft-und-abwurf-ausfuehren.md`
 

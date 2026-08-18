@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coderev
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs:2992-2995` (`ziel_ist_quellordner`), `crates/krk-ui/src/appkit/zwischenablage.rs:271-289` (`dateiverweise`, the foreign side of the comparison), `crates/krk-ui/src/appkit/anwendung.rs:3378-3392` (the same question asked about two KRK paths, with its reasoning), spec `shared/planning/260818-1510_*_spec-…` §C6 Lage 3 and its third acceptance criterion
 

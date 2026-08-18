@@ -53,3 +53,16 @@ in the section need to move: which line steers which profile family, which profi
 helper emits for long-form agents, and the scope of the sentence that prose is German. The
 `**Language:** de` line and the `**Artifact language:** en` line above it are fixed-format
 declarations and must not be reworded or relocated.
+
+---
+Also seen: 260819-0057 by reconciler — unverändert offen, und der Widerspruch ist in dieser
+Sitzung ein zweites Mal aufgefallen. `CLAUDE.md:4` deklariert weiter `**Artifact language:** en`,
+während der Abschnitt `## Sprache` in seinem Schlussabsatz sagt „Prosa in diesem Projekt ist
+deutsch" und im Absatz davor beschreibt, `**Language:** de` steuere die Profile für Langform-
+Agenten. Der Bestand gibt dem Schlussabsatz recht und der Deklaration nicht: Spec, Plan, beide
+Durchsichten, die vierzehn Sitzungsprotokolle und die Entscheidungsdatensätze der Runde 13 sind
+deutsch; englisch sind allein die elf Defektdatensätze, die die beiden `coderev`-Durchgänge
+gefilt haben. Der Orchestrator dieser Sitzung hat denselben Befund unter „Note for a later pass"
+in `shared/history/260818-1117-orchestrator-session.md` festgehalten. Nichts davon ist in diesem
+Abgleich geändert worden: `CLAUDE.md` ist der Gegenstand eines Kuratorendurchgangs und nicht
+eines Abgleichs.

@@ -1,7 +1,7 @@
 # Implementation Plan: Das andere Dateifenster nachziehen, und Dateien aus fremden Anwendungen abwerfen
 
 **Date:** 2026-08-18
-**Status:** Draft
+**Status:** Complete
 **Spec:** `shared/planning/260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md`, abgenommen am Spec-Gate. Dieser Plan verhandelt keine seiner Nutzerantworten neu.
 **Circle:** `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
 **Baumstand:** `b47355e`, gelesen am 260818-1620. Gegenüber dem Stand `8d5baf6`, gegen den der Spec geschrieben ist, hat sich am Code nichts geändert: `git diff --stat 8d5baf6..HEAD` liefert acht Dateien, alle unter `fusion-workbench/`. Jede Zahl des Specs gilt deshalb unverändert.
@@ -443,7 +443,7 @@ gemeldeter_abwurfgrund: Cell<Option<Abwurfgrund>>,
 
 **Keine Probe dieser Runde baut eine `NSTableView` oder ein `NSDraggingInfo`.** Der Grund steht oben unter Punkt 8 der offenen Fragen und ist die gemessene Grenze von `an_einer_flaeche`. Was am gebauten Bündel zu messen bleibt, steht vollständig unter „Nutzerarbeit"; kein Abnahmekriterium dieses Plans behauptet eine Probe, die es nicht gibt.
 
-**Der Bau ist die eigentliche Prüfung, und `-D warnings` gehört dazu.** `unused_must_use` ist erst unter `-D warnings` ein Fehler, und diese Runde setzt vier neue `#[must_use]` und ein `let _ =`. `make check` fährt die vier Abnahmekommandos in einem Zug. **`cargo` liegt auf diesem Gerät nicht auf dem Standard-PATH**; jeder unmittelbare Aufruf braucht `export PATH="$HOME/.cargo/bin:$PATH"`. **Neben einem `make check` darf kein Messlauf stehen**: `Messplanwaechter::neu` räumt beim Anlegen jede fremde `krk-messplan-*.toml` im Temporärverzeichnis ab, und die Probe `der_messplan_traegt_die_pruefsitzung_…` ruft `plan_schreiben`.
+**Der Bau ist die eigentliche Prüfung, und `-D warnings` gehört dazu.** `unused_must_use` ist erst unter `-D warnings` ein Fehler, und diese Runde setzt **elf** neue `#[must_use]` und **zwei** `let _ =`. Die Zahlen sind am 260819 gegen den Baum gezählt und nicht gegen diesen Plan; hier stand bis dahin „vier und ein", und diese Fassung hat einmal verhindert, dass `vorgang_laeuft` sein Attribut bekam (Befund `issues/260818-2335_*_vorgang-laeuft-carries-no-must-use-and-the-plan-number-that-kept-it-off-is-already-false.md`). Wer sie später braucht, zählt sie und liest sie nicht hier ab: `git diff <basis>..HEAD -- crates/ | grep -c '^+ *#\[must_use'`. Die elf verteilen sich auf `appkit/abwurf.rs` (vier), `appkit/tabelle.rs` (drei), `kommandos/abwurfregel.rs` (zwei) und `appkit/anwendung.rs` (zwei: `bereich_einblenden` und `vorgang_laeuft`); ein drittes `let _ =` steht in einem `#[cfg(test)]`-Modul und zählt in der ausgelieferten Menge nicht mit. `make check` fährt die vier Abnahmekommandos in einem Zug. **`cargo` liegt auf diesem Gerät nicht auf dem Standard-PATH**; jeder unmittelbare Aufruf braucht `export PATH="$HOME/.cargo/bin:$PATH"`. **Neben einem `make check` darf kein Messlauf stehen**: `Messplanwaechter::neu` räumt beim Anlegen jede fremde `krk-messplan-*.toml` im Temporärverzeichnis ab, und die Probe `der_messplan_traegt_die_pruefsitzung_…` ruft `plan_schreiben`.
 
 **Der Abnahmelauf der zehn Zeitzusagen wird nicht gefahren.** Der Spec ordnet sie einzeln gegen die Kennungen in `crates/krk-bench/src/messen.rs` zu; kein Ziehvorgang und kein Ordnerwechsel im anderen Dateifenster kommt darin vor. Diese Runde setzt keine elfte Zahl. An ihre Stelle treten die zwei ohne Messstrecke prüfbaren Kriterien des Specs, und beide stehen unten als Nutzerarbeit.
 
@@ -486,3 +486,77 @@ Was kein Agent messen kann, mit dem Grund je Fall. Es ist zu fahren, nachdem `ca
 - [ ] **Bleibt die Reihenfolge des Specs unter C1 und C2?** Der Ablaufplan des Specs fragt „steht das andere Dateifenster schon auf diesem Ordner?" **vor** „ist es sichtbar?". Die Folge: ein **ausgeblendetes** Dateifenster, dessen sichtbarer Tab denselben Ordner führt, bleibt ausgeblendet, und der Nutzer bekommt die Meldung „steht schon dort" statt das Dateifenster zu sehen. Der Spec ist abgenommen und Schritt 4 baut ihn so; die Beobachtung steht hier, weil sie am Gate leichter umzustoßen ist als nach dem Bau.
 - [ ] **Ist `resources/default-keymap.toml:354` ein Zitat oder eine lebende Aussage?** Die Zeile nennt „39 frei gewählte Kombinationen". Mit `opt+cmd+s` wären es 40, sofern der Satz die ausgelieferte Datei beschreibt; zitiert er einen Datensatz der Runde 1, bleibt er stehen. Schritt 1 entscheidet es an der Stelle und schreibt die Entscheidung in den Commit-Text.
 - [ ] **Die Runde bringt die erste Schreibrechtsprüfung und meldet ihre Abweisung stumm, während der Doppelklick auf einen Ordner ohne Leserecht wortlos in eine leere Liste wechselt.** Die Ungleichheit der beiden Wege ist als `shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md` offen und wird von dieser Runde weder behoben noch verschlimmert. Sie ist hier genannt, weil die Runde die Frage zum zweiten Mal berührt und ein dritter Weg mit einer dritten Antwort das Modell endgültig zerfasern ließe.
+
+
+## Reconciliation Log
+
+**260819-0057, reconciler, Domain `code`.** Baumstand `cac9218`; Bereich `8d5baf6..HEAD`,
+zwölf Commits. Abnahmekommando `make check` am Baumstand gefahren: Exit 0, 1357 Proben grün,
+null rot, `clippy` unter `-D warnings` und `cargo fmt --check` sauber.
+
+**Alle zehn Planschritte stehen zu Recht auf `[DONE]`.** Jede behauptete Erledigung ist
+einzeln gegen den Baum gelesen und nicht aus dem Sitzungsprotokoll übernommen:
+
+| Schritt | Beleg am Baum |
+|---|---|
+| 1 | `resources/default-keymap.toml:286` (`id = "ordner_angleichen"`), Kopfzeile `:34` steht auf 85 Funktionen und 90 Kombinationen |
+| 2 | `crates/krk-core/src/tasten/belegung.rs:367`, `:671`, `:1032`; `crates/krk-ui/src/belegungsmodell.rs:252`; `KENNUNGEN` hat die Länge 79 (`belegung.rs:661`) |
+| 3 | `crates/krk-ui/src/appkit/anwendung.rs:4056` trägt das `#[must_use]`, der Rufer bei `zwischenablage_ansehen` das `let _ =` |
+| 4 | `anwendung.rs:3118` (der Zweig) und `:3410` (`ordner_angleichen`) |
+| 5 | `71413c3`; der Schritt nennt acht Stellen, berichtigt sind **neun** — `menue.rs:1132` kam hinzu. Die Abweichung ist gedeckt: der Schritt schreibt selbst vor, gegen den Baum zu zählen und nicht gegen den Plan |
+| 6 | `crates/krk-ui/src/appkit/zwischenablage.rs:291` (`dateiverweise`) |
+| 7 | `crates/krk-ui/src/kommandos/abwurfregel.rs`, `urteil` bei `:324` mit ausgeschriebener Tafel und ohne Auffangzweig; keine `use objc2`-Zeile |
+| 8 | `crates/krk-ui/src/appkit/abwurf.rs` mit `sorten`, `beschreibbarkeit`, `angebot`, `zeiger` |
+| 9 | `anwendung.rs:5602` (`vorgang_laeuft`), `:5620` (`vorgang_laeuft_schon` als ihr Rufer), `:5679` (`abwurf_ausfuehren`) |
+| 10 | `tabelle.rs:983`/`:1001` (die zwei Protokollmethoden), `:841` und `:921` (die neuen Ivars), `:1133`/`:1139` (die zwei Setzer) |
+
+**Was der Plan gegen den Baum falsch sagt und was davon behoben ist.**
+
+- **Berichtigt in diesem Durchgang:** die Prüfstrategie sagte, die Runde setze „vier neue
+  `#[must_use]` und ein `let _ =`". Am Baum gezählt sind es elf und zwei. Die Zahl war schon
+  falsch, als der Befund `issues/260818-2335_*_…` sie zitierte (dort acht), und ist es seither
+  ein zweites Mal geworden: `4d27c1c` und `cac9218` haben nach jenem Befund drei weitere
+  gesetzt. Die Stelle nennt jetzt das Kommando, das zählt, statt einer Zahl.
+- **Nicht berichtigt, als Befund geführt:** Schritt 9 und die Tabelle unter `## API Changes`
+  nennen `abwurf_ausfuehren` den **dritten** Rufer von `auftrag_starten`. Es ist der vierte;
+  der Baum sagt es an der Funktion selbst („der gemeinsame Teil aller vier Wege hinein",
+  `anwendung.rs`), und `auftrag_starten(` steht an vier Aufrufstellen. Offen als
+  `issues/260818-2228_*_step-9-of-the-plan-calls-the-new-caller-the-third-…`.
+- **Nicht berichtigt, als Befund geführt:** Schritt 1 begründet seinen Zwischenstand damit,
+  die Proben blieben grün. Sie fallen zu 51. Folgenlos geblieben, weil die Schritte 1 und 2
+  in einem Commit gefahren sind (`18af77f`) und der behauptete Zwischenstand deshalb in
+  keinem Baumstand existiert. Offen als
+  `issues/260818-1704_*_der-plan-sagt-die-proben-blieben-nach-schritt-1-gruen-…`.
+- **Nicht berichtigt, an anderer Stelle geführt:** Schritt 6 legt zwei SDK-Symbole auf eine
+  Zeile und schreibt `NSPasteboardURLReadingFileURLsOnlyKey` 10.13 zu; richtig ist 10.6. Der
+  Baum trägt die richtige Zahl (`zwischenablage.rs:129-131`). Vermerkt im Rumpf von
+  `shared/issues/260818-2145_*_der-modulkopf-der-zwischenablage-…`.
+
+**Vier Zahlen des Plans sind in dieser Runde falsch geworden, und keine hält ein Übersetzer.**
+Das ist dieselbe Gestalt, die `CLAUDE.md` für seine eigenen Aufzählungen beschreibt, an einem
+Planungsdatensatz statt an einer Prosastelle im Baum. Die Runde hat sie an drei Stellen richtig
+behandelt — die Aufzählung der `opt+cmd`-Reihe ist in `a7419cd` durch ein `grep` ersetzt worden,
+`abwurf_ausfuehren` hat seine eigene Stellung am Baum gezählt statt sie aus dem Plan zu
+übernehmen, und die Untergrenzen-Abschnitte geben jedem Symbol seine eigene Zeilennummer.
+
+**Zwei Entscheidungsdatensätze, beide `_i_`, beide am Baum nachgeprüft und beide zu Recht so
+markiert.** `shared/decisions/260818-1453_*_welche-zusatztaste-macht-aus-einem-abwurf-ein-verschieben.md`
+und `decisions/260818-1633_*_gilt-ein-unentscheidbares-schreibrecht-…` zitieren `d6343e0`; der
+Commit löst auf. Nachgelesen: `shift` steht im ganzen Baum an keiner Stelle, an der eine
+Zusatztaste gedeutet würde — die vier Fundstellen sind Doc-Kommentare, die ausdrücklich sagen,
+dass KRK sie **nicht** liest. `NSDragOperation` wird an genau einer Stelle in die Sprache der
+Regel übersetzt (`abwurf::angebot`, `abwurf::zeiger`); `abwurfregel.rs` nennt den Typ nur im
+Modulkopf. `Schreibrecht::Unbekannt` steht in der Tafel von `urteil` neben `Ja` und ausgeschrieben
+statt unter einem `_`, und allein ein gemessenes `Nein` weist ab.
+
+**Ein Vorbehalt zur Zitierung.** Beide Datensätze nennen `d6343e0` als Ort der Umsetzung. Der
+Code, den sie zitieren, ist in `07347b8` (`abwurfregel.rs`) und `15a2978` (`abwurf.rs`)
+entstanden; `d6343e0` ist der Commit, der ihn in Betrieb genommen hat. Das ist die zutreffende
+Lesart von „umgesetzt" und wird hier nur festgehalten, damit die spätere Suche nach dem Code
+nicht am Zitat scheitert.
+
+**Status.** Alle zehn Schritte `[DONE]`, `**Status:**` auf `Complete`, Dateimarker `_o_` → `_c_`.
+**„Gebaut" ist die richtige Aussage über diese Runde und „abgenommen" nicht:** die
+Abnahmekriterien von C4 bis C7 sind sämtlich Nutzerarbeit, dazu zwei in C1 und zwei in C2 und
+die zwei Kriterien an der Stelle einer elften Zeitzusage. Kein Agent kann einen Ziehvorgang aus
+einer zweiten Anwendung erheben oder ein Fenster an seiner Breite ziehen.

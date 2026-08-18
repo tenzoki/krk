@@ -59,3 +59,14 @@ Option 1 is the smaller change and the one this defect points at. Neither belong
 which is bound to the plan's wording.
 
 **Filed by:** coder
+
+---
+Abgleich 260819-0057 (reconciler): **bleibt offen; am Baum nachgemessen und unverändert.**
+`Anwendungsdelegierter::abwurf_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:5679-5694`)
+ruft weiter `self.auftrag_starten(seite, auftrag, ziel, positionen)` und reicht damit denselben
+`ziel`-Pfad an den Parameter `quellordner` der Signatur (`:5702-5708`). Für einen Abwurf aus
+einer fremden Anwendung liest die Abschlussliste diesen einen Ordner zweimal, als Quelle und
+als Ziel.
+
+Nicht angefasst von den vier Commits nach dem Filing (`a7419cd`, `4d27c1c`, `cac9218`,
+`a6b3818`): keiner berührt diese Zeile. Der Befund ist damit weder behoben noch überholt.

@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coderev
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs:2987` (the per-movement call), `:2992-2995` (the per-movement O(n) scan), `crates/krk-ui/src/appkit/zwischenablage.rs:271-289` (`dateiverweise`), spec `shared/planning/260818-1510_*_spec-…` `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1` (the enumeration of what the round newly puts on the main thread, and its second criterion)
 

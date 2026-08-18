@@ -46,3 +46,21 @@ oder die beiden Schritte werden zu einem zusammengezogen.
 - `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/planning/260818-1633_*_plan-ordner-angleichen-und-abwurf-aus-fremden-apps.md`, Schritt 1 und 2
 - `crates/krk-ui/src/belegungsmodell.rs:831` (die brechende Stelle)
 - `crates/krk-ui/src/belegungsausgabe.rs:755` (die geprüfte, nicht brechende Stelle)
+
+---
+Abgleich 260819-0057 (reconciler): **bleibt offen, und der Grund ist der Datensatz und nicht
+der Baum.** Die Stelle im Plan steht unverändert: Schritt 1 begründet seinen Zwischenstand
+weiter mit „Der Zwischenstand ist gültig … `belegungsausgabe.rs:755` zählt weiterhin 78 gegen
+78". Gemessen ist die Aussage falsch geblieben.
+
+**Folgen hatte sie keine, und das ist nachprüfbar.** Die Schritte 1 und 2 sind in einem einzigen
+Commit gefahren (`18af77f`), wie der Plan es unter „Dependencies" von Schritt 2 selbst verlangt
+(„**Die Schritte 1 und 2 sind ein Commit.**"). Der Baumstand, in dem 51 Proben fallen, existiert
+deshalb in keinem Commit dieser Runde; `make check` steht am Baumstand `cac9218` auf Exit 0 mit
+1357 grünen Proben.
+
+**Was offen bleibt, ist die Abnahmezeile des Schritts, nicht der Baum.** Sie sagt einem
+späteren Leser eine Messung zu, die nicht hält. Der Plan ist mit diesem Abgleich auf `_c_`
+gesetzt; die Zeile darin bleibt unberichtigt, weil ihre Berichtigung eine Aussage über einen
+Zwischenstand ändern hieße, den die Runde bewusst nicht gefahren ist. Zu entscheiden bleibt,
+ob die Zeile berichtigt oder gestrichen wird.

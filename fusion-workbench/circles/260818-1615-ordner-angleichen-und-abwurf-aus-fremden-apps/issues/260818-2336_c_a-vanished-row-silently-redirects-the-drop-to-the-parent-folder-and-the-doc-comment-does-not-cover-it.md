@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coderev
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs:3057-3065` (`abwurf_annehmen`, the target), `:3037-3050` (the doc comment that reasons about the race), `:2965-3026` (`abwurf_pruefen`, which only ever marks a folder row)
 

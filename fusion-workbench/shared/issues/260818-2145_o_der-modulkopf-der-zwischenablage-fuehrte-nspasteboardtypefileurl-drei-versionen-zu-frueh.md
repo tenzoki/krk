@@ -43,3 +43,35 @@ Resolved: Die Zahl im Modulkopf steht seit dem 260818 auf 10.13, berichtigt in S
 der Runde 13. Der Datensatz bleibt offen für die Frage dahinter, wie eine falsche Angabe
 künftig auffällt; die Antwort hängt an
 `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`.
+
+---
+Abgleich 260819-0057 (reconciler): **die Zahl am Baum stimmt, der Datensatz bleibt zu Recht
+offen, und seine Form verdient eine Anmerkung.**
+
+**Der Bestand.** `crates/krk-ui/src/appkit/zwischenablage.rs:136-139` sagt jetzt
+„**`NSPasteboardTypeFileURL` steht seit 10.13** (`NSPasteboard.h:39`) und nicht seit 10.6, wie
+diese Stelle bis zur Runde 13 sagte", und nennt daneben, dass die Angabe folgenlos geblieben
+ist. Der zweite Fund im Rumpf oben ist ebenfalls am Baum nachgeprüft: `:129-131` führt
+`NSPasteboardURLReadingFileURLsOnlyKey` unter den Symbolen seit 10.6, wie das SDK es sagt. Falsch
+geblieben ist allein der Plan (Schritt 6), der die zwei Symbole auf eine Zeile legt und beiden
+10.13 zuschreibt; der Plan ist mit diesem Abgleich auf `_c_` gesetzt und die Stelle darin
+unberichtigt, weil sie beschreibt, was gefahren wurde.
+
+**Warum der Datensatz offen bleibt.** Die Frage dahinter ist nicht die Zahl, sondern der
+Mechanismus: wie fällt eine **falsche** Angabe künftig auf, wo eine fehlende bei der nächsten
+Durchsicht auffiele. Sie hängt an
+`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` (offen, drei
+Stufen mit Kosten) und wird von diesem Fund gestützt. Die Durchsicht des zweiten Turns hat
+daneben jede Verfügbarkeitszahl der drei Modulköpfe gegen das SDK nachgelesen und alle richtig
+gefunden — das misst die Gewohnheit an einem Tag und ersetzt den Mechanismus nicht.
+
+**Anmerkung zur Form.** Dieser Datensatz trägt eine `Resolved:`-Zeile bei Marker `_o_`. Die
+Konvention kennt diese Verbindung nicht: eine `Resolved:`-Zeile geht dort mit der Umbenennung
+auf `_c_` einher. Der Grund hier ist erkennbar und richtig — der behobene Teil und der offene
+Teil stehen in einem Datensatz —, aber der offene Teil ist der Sache nach eine Frage und keine
+Störung, und er hat seinen eigenen Entscheidungsdatensatz schon. Wer den Datensatz aufräumt,
+hat damit den sauberen Weg: `_c_` mit Verweis auf `260811-2050`, statt einer Mischform, die
+jede Erhebung über `Resolved:`-Zeilen falsch zählt (vgl.
+`shared/issues/260818-0710_*_forty-three-closure-notes-are-written-in-a-form-no-resolved-sweep-finds.md`).
+Nicht in diesem Durchgang geändert, weil die Umbenennung eine Wertung über die offene Frage
+wäre.

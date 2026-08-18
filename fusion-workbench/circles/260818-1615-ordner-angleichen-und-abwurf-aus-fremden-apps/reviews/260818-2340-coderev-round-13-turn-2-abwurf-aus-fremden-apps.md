@@ -147,3 +147,32 @@ The number that argued against it does not bind, because it was already wrong. C
 **Measure first, then decide:** finding 3. If the user's acceptance run includes a large multi-selection drag and the list stays responsive, the record can close with that measurement and only the spec's enumeration needs correcting.
 
 **Nothing here blocks `cargo xtask release`.** The build is green on all four acceptance commands, no defect risks data, and C4 to C7 are unaccepted in any case until the user runs them in the foreground.
+
+---
+
+## Abgleich 260819-0057 (reconciler)
+
+**Alle fünf Befunde dieses Durchgangs sind geschlossen, jeder am Baum nachgelesen.** Die
+Findings und die Reihenfolgeempfehlung bleiben unverändert stehen.
+
+| Befund | Datensatz | Beleg am Baum (`cac9218`) |
+|---|---|---|
+| die Abwurfmeldung räumt die andere Seite nicht und geht verloren | `260818-2332_c_` | `befehlsantwort_beidseitig_loeschen` als eine Regel mit zwei Zugängen (`anwendung.rs:4498`, `tabelle.rs:3195`), die Räumkante am `Some` von `abwurfmeldung`; `4d27c1c` |
+| der Vergleich zweier Schreibweisen desselben Ordners | `260818-2333_c_` | `operation::zielpfad` (`krk-core/src/operation/mod.rs:252`) vergleicht `(st_dev, st_ino)` mit `lstat` und `stat` statt Text; `cac9218` |
+| die Ablage wird bei jeder Zeigerbewegung ganz ausgelesen | `260818-2334_c_` | der fünfte Ivar `abwurfquellen` (`tabelle.rs:921`) unter dem Schlüssel `draggingSequenceNumber` (`:933`), gelesen und geschrieben allein in `DateifensterQuelle::abwurfquellen` (`:3218`) |
+| `vorgang_laeuft` trägt kein `#[must_use]` | `260818-2335_c_` | `anwendung.rs:5601` trägt es mit ausgeschriebenem Grund |
+| eine verschwundene Zeile leitet den Abwurf still um | `260818-2336_c_` | `abwurfziel()` (`tabelle.rs`) trennt die Fälle in einer ausgeschriebenen Tafel; eine verschwundene Zeile und ein gewechselter Typ liefern `Abwurfziel::Keines` und damit `false` an AppKit |
+
+**Zwei Aussagen dieses Durchgangs sind inzwischen überholt, beide durch die Behebungen selbst.**
+
+1. Die Cross-cutting-Beobachtung sagt, die `#[must_use]`-Zahl sei „von vier auf **acht**"
+   gewachsen. Am Baumstand `cac9218` sind es **elf**: `4d27c1c` und `cac9218` haben nach dieser
+   Durchsicht drei weitere gesetzt (`abwurfmeldung`, `gemeinsamer_quellordner`, `abwurfziel`,
+   alle in `tabelle.rs`). Die Stelle im Plan ist mit diesem Abgleich auf das zählende Kommando
+   umgestellt statt auf eine dritte Zahl.
+2. Die Einschätzung des Befundes 2 („kein Datenverlust") ist von seiner eigenen Behebung
+   widerlegt worden. Sie stützte sich auf `copyfile(3)` und `rename(2)` einzeln gemessen; der
+   Baum erreicht beide mit bestehendem Ziel nie, weil `ziel_klaeren` vorher die Konfliktfrage
+   stellt und „Überschreiben" mit `loeschen::baum_entfernen(ziel)` beantwortet, einem echten
+   `remove_file`. Gegen den unreparierten Baum gefahren endete der Fall mit „die Quelle ist weg".
+   Die Kette lag **vor** dieser Runde im Baum; der Abwurf hat sie erreichbar gemacht.

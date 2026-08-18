@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** closed
 **Filed by:** coderev
 **Cross-references:** `crates/krk-ui/src/appkit/tabelle.rs:3016-3019` (`abwurf_pruefen`, the write), `:2734-2737` (`befehlsantwort_zeigen`), `:2754-2766` (`befehlsantwort_loeschen`), `crates/krk-ui/src/appkit/anwendung.rs:2905-2907` (the both-sides clearing in `kommando_ausfuehren`), `crates/krk-ui/src/appkit/statuszeile.rs:597-615` (`zeile`, active side first within a rank), `:235-242` (`Rang::ALLE`, `Befehlsantwort` is rank 1); spec `shared/planning/260818-1510_*_spec-…` §C7, second acceptance criterion
 

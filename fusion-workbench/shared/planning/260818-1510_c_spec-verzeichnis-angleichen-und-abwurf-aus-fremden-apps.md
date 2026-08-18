@@ -217,7 +217,7 @@ Die Prüfung auf einen laufenden Vorgang steht vor der Zielbestimmung, und die B
 **Abnahmekriterien:** sämtlich **Nutzerarbeit**.
 - [ ] Läuft ein Vorgang, weist der Zeiger über der Dateiliste ab, und ein Loslassen bewirkt nichts.
 - [ ] Ist der Zielordner nicht beschreibbar, weist der Zeiger über ihm ab. Steht der Zeiger daneben über einem beschreibbaren Ordner derselben Liste, nimmt er an.
-- [ ] Zieht der Nutzer aus einem Finderfenster, das denselben Ordner zeigt, den das Abwurfziel zeigt, weist der Zeiger ab.
+- [ ] Zieht der Nutzer aus einem Finderfenster, das denselben Ordner **unter derselben Schreibweise** zeigt, den das Abwurfziel zeigt, weist der Zeiger ab. Die frühe Abweisung vergleicht zwei Pfade als Text und ist damit eine Vorhersage, keine Zusage: derselbe Ordner unter einer zweiten Schreibweise rutscht durch und der Zeiger nimmt an. **Was durchrutscht, endet seit `cac9218` als Zeile in der Abschlussliste des Vorgangs und nicht in einer Löschung.** `operation::zielpfad` vergleicht `(st_dev, st_ino)` statt Text und fängt den Fall an der entscheidbaren Stelle ab; davor beantwortete `ziel_klaeren` die Konfliktfrage mit „Überschreiben" und einem echten `remove_file` auf die Quelle (Befund `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/issues/260818-2333_*_the-same-folder-refusal-compares-a-krk-path-against-a-foreign-apps-path-textually.md`).
 - [ ] Verschwindet eine Quelle zwischen dem Loslassen und dem Zugriff, läuft der übrige Vorgang durch, und die verschwundene Quelle steht mit ihrem Grund in der Abschlussliste.
 - [ ] In keiner der Abweisungen entsteht ein halb ausgeführter Vorgang.
 
@@ -294,7 +294,7 @@ Das ist bedeutsam, weil `objc2` keine Verfügbarkeitsangaben mitführt und der �
 
 Die Zuordnung, Zusage für Zusage, gelesen gegen die Kennungen in `crates/krk-bench/src/messen.rs`: L2, L3, L6, L7 und L10 messen das Lesen und Anzeigen von Ordnern und Vorschauen, L4 den Kaltstart, L5 den Wechsel von Tab und Dateifenster, L1 den Tastendruck, der die Auswahl in der Dateiliste bewegt, L8 den Kopier- oder Verschiebevorgang bis zum sichtbaren Fortschritt, L9 die Tastatur während einer laufenden Stapeloperation. Kein Ziehvorgang und kein Wechsel des Ordners im **anderen** Dateifenster kommt darin vor.
 
-**Zwei Wirkungen zweiter Ordnung sind zu nennen, und beide bleiben unter einer Zahl.** Der Tastenbefehl löst im anderen Dateifenster einen gewöhnlichen Lesevorgang aus, also genau den Vorgang, den L2 und L10 im aktiven messen; er tut das auf demselben Weg und mit derselben Stapelmaschine. Der Abwurf mündet in dieselbe Operationsmaschine, die L8 misst. Was diese Runde daneben neu auf den Hauptfaden legt, ist die Prüfung während des Ziehens: ein Vergleich zweier Pfade und eine Frage nach dem Schreibrecht des Zielordners, je Zeigerbewegung höchstens einmal. Gemessen ist diese Beschränkung nicht, und die Runde sagt dafür keine Zahl zu.
+**Zwei Wirkungen zweiter Ordnung sind zu nennen, und beide bleiben unter einer Zahl.** Der Tastenbefehl löst im anderen Dateifenster einen gewöhnlichen Lesevorgang aus, also genau den Vorgang, den L2 und L10 im aktiven messen; er tut das auf demselben Weg und mit derselben Stapelmaschine. Der Abwurf mündet in dieselbe Operationsmaschine, die L8 misst. Was diese Runde daneben neu auf den Hauptfaden legt, ist die Prüfung während des Ziehens, und sie trägt **drei** Posten und nicht zwei. Zwei davon sind von der Zahl der gezogenen Einträge unabhängig: ein Vergleich zweier Pfade und eine Frage nach dem Schreibrecht des Zielordners, je Zeigerbewegung höchstens einmal. Der dritte ist das Auslesen der Ablage des Ziehvorgangs, und er wächst mit der Zahl der Einträge. Diese Stelle stand hier bis zum 260819 nicht, und sie war der teuerste der drei: am release-Bau gemessen kostete ein Aufruf von `dateiverweise` bei 1 Eintrag 0,13 ms, bei 100 Einträgen 6,0 ms, bei 1000 Einträgen 155 ms und bei 5000 Einträgen 585 ms, gegen ein Bild von 16,7 ms bei 60 Hz. Ab hundert gezogenen Einträgen fraß dieser eine Aufruf ein Drittel eines Bildes, ab tausend stand die Anwendung. **Seit `4d27c1c` ist er zwischengespeichert und damit ebenfalls von der Zahl der Einträge unabhängig**: ein Ivar der Datenquelle hält das ausgelesene Ergebnis unter dem Schlüssel `NSDraggingInfo::draggingSequenceNumber` und baut es allein dann neu, wenn die Nummer wechselt (`crates/krk-ui/src/appkit/tabelle.rs`, `DateifensterQuelle::abwurfquellen`; Befund `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/issues/260818-2334_*_every-pointer-movement-decodes-the-whole-drag-pasteboard-and-nothing-names-that-cost.md`). Gemessen ist die Beschränkung damit an dieser einen Stelle und sonst nirgends, und die Runde sagt dafür weiterhin keine Zahl zu.
 
 **An dessen Stelle treten zwei ohne Messstrecke prüfbare Kriterien**, in derselben Bauart, die die Runde 2 dafür gewählt hat:
 - [ ] Der Tastenbefehl zeigt im anderen Dateifenster die erste Bildschirmseite, bevor der Rest des Ordners angehängt ist; ein großer Ordner blockiert dabei nicht die Bedienung des aktiven Dateifensters. **Nutzerarbeit.**
@@ -330,3 +330,33 @@ Die folgenden Punkte sind ausdrücklich ausgeschlossen. Sie stehen einzeln benan
 ## Ausstehende Nutzerentscheidungen
 
 Keine. Die Fragen der beiden Klärungsrunden sind beantwortet, und die Antworten sind oben eingearbeitet. Der Entscheidungsdatensatz zur Zusatztaste (`shared/decisions/260818-1453_*_welche-zusatztaste-macht-aus-einem-abwurf-ein-verschieben.md`) trägt den Marker `_a_` und verweist auf C5 dieses Specs.
+
+## Abgleich 260819-0057
+
+**Reconciler, Domain `code`, Baumstand `cac9218`.** Zwei Stellen dieses Specs sind gegen den
+Baum berichtigt worden, beide vor der Berichtigung am Baum nachgemessen und nicht nach Bericht
+übernommen:
+
+1. **`## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`** zählte zwei Posten auf dem
+   Hauptfaden auf und ließ den dritten aus, das Auslesen der Ablage des Ziehvorgangs. Er war
+   der teuerste der drei und ist seit `4d27c1c` zwischengespeichert. Die Messreihe steht im
+   Befund `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/issues/260818-2334_*_every-pointer-movement-decodes-the-whole-drag-pasteboard-and-nothing-names-that-cost.md`.
+2. **Das dritte Abnahmekriterium von C6** hätte in dieser Fassung als fehlgeschlagen berichtet
+   werden müssen, sobald der Nutzer aus einem Finderfenster zieht, das denselben Ordner unter
+   einer zweiten Schreibweise zeigt. Es liest sich jetzt „unter derselben Schreibweise" und
+   sagt daneben, was mit dem durchgerutschten Fall geschieht.
+
+**Der Spec bleibt in jeder anderen Aussage unangetastet.** Die sieben Fähigkeiten sind gebaut,
+die Planschritte sämtlich am Baum nachgeprüft (`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/planning/260818-1633_*_plan-…`,
+`## Reconciliation Log`), `make check` steht am Baumstand auf Exit 0. **Die Abnahmekriterien
+selbst sind damit nicht abgehakt:** C4 bis C7 sind sämtlich Nutzerarbeit, ebenso zwei Kriterien
+in C1, zwei in C2 und die zwei Kriterien an der Stelle einer elften Zeitzusage. Der Marker `_c_`
+sagt hier „die Runde ist gebaut und ihre Schritte sind belegt" und nicht „abgenommen" — die
+Unterscheidung, die dieses Projekt für jede seiner Runden führt.
+
+**Ein Befund dieser Runde reicht über den Spec hinaus.** Die Kette in `krk-core`, die
+`cac9218` behoben hat, bestand vor dieser Runde: `ziel_klaeren` beantwortete „Überschreiben"
+mit einem echten `remove_file` auf ein Ziel, das unter zweiter Schreibweise die Quelle sein
+konnte. Der Abwurf hat sie nur erreichbar gemacht. Sie liegt außerhalb der Directive dieses
+Specs und innerhalb dessen, was die Runde tun musste, um gefahrlos zu sein.
+

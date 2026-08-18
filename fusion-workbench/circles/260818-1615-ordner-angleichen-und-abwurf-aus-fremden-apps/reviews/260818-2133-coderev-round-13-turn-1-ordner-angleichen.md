@@ -235,3 +235,25 @@ are both single-file prose edits in `resources/default-keymap.toml`, so they tra
 **Nothing here blocks a release.** The build, the tests, the formatting and clippy under
 `-D warnings` are green, and the built command does what C1 and C3 promise in every lage except
 the one M2 names.
+
+---
+
+## Abgleich 260819-0057 (reconciler)
+
+**Alle sechs Befunde dieses Durchgangs sind geschlossen, und jeder ist am Baum nachgelesen und
+nicht aus seiner Abschlussnotiz übernommen.** Die Findings selbst sind unverändert; hier steht
+allein, was aus jedem geworden ist.
+
+| Befund | Datensatz | Beleg am Baum (`cac9218`) |
+|---|---|---|
+| die zwei Nadeln, die nicht auslösen können | `260818-2127_c_` | die Probe `das_angleichen_ruehrt_weder_fokus_noch_sichtbarkeit_an` (`anwendung.rs:7817`) führt jetzt **fünf** Nadeln: `aktives_setzen(`, `fokus_setzen(`, `fokus_holen(`, `bereich_umschalten(`, `ausblenden(` |
+| C1 und C2 widersprechen sich beim ausgeblendeten Fenster | `260818-2128_c_` | `ordner_angleichen` (`anwendung.rs:3410`) blendet zuerst und bedingungslos ein, der Ordnervergleich sitzt dahinter und steuert allein das Lesen; `a6b3818` |
+| der zusätzliche Lesevorgang ist nicht folgenlos | `260818-2129_c_` | der Doc-Kommentar nennt Auswahl und Bildlaufposition als die zwei Größen, die nicht mitgehen |
+| der Rückgabewert bedeutet etwas anderes als der Kommentar sagt | `260818-2130_c_` | `return !sichtbar` im Zweig „steht schon dort", `false` bei der Abweisung wegen zu schmalen Fensters, `true` beim Lesen — drei Ausgänge statt „liefert immer `true`" |
+| zwei Aufzählungen der `opt+cmd`-Reihe | `260818-2131_c_` | `resources/default-keymap.toml:266-279` trägt keine Aufzählung mehr, sondern das `grep`, das die Reihe aus der Datei liest; `a7419cd` |
+| die Buchstabenwahl zitiert die dritte Regel ohne die ersten zwei | `260818-2132_c_` | Regel 1 und Regel 2 stehen als geprüfte Leerstellen im Kommentar, die Lesart „s wie selber Ordner" ausdrücklich als Merkhilfe |
+
+**Eine Aussage dieses Durchgangs ist inzwischen überholt.** Die Zusammenfassung nennt „die neun
+Prosazahlen", die alle gegen den Baum stimmen — das hält. Der Plan nennt für denselben Schritt
+acht; die neunte (`menue.rs:1132`) hat der Executor selbst gefunden. Der Unterschied liegt im
+Plan und nicht in dieser Durchsicht.

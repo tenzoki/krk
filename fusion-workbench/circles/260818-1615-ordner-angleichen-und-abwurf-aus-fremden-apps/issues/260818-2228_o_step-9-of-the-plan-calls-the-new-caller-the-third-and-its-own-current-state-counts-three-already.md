@@ -42,3 +42,20 @@ same round already carries a defect about counts that no compiler holds
 this is one more of that kind, in the plan rather than in the tree.
 
 **Filed by:** coder
+
+---
+Abgleich 260819-0057 (reconciler): **bleibt offen, und der Baum ist die Seite, die richtig
+zählt.** `auftrag_starten(` steht an vier Aufrufstellen (`crates/krk-ui/src/appkit/anwendung.rs`
+`:5149`, `:5407`, `:5567`, `:5693`), und der Doc-Kommentar der Funktion selbst nennt sie „der
+gemeinsame Teil aller **vier** Wege hinein". `abwurf_ausfuehren` ist damit der vierte Rufer.
+
+Der Plan sagt weiterhin „dritte" an zwei Stellen: in der Überschrift von Schritt 9 („und die
+Maschine bekommt ihren dritten Eingang") und in der Tabelle unter `## API Changes` („der dritte
+Rufer von `auftrag_starten`"). Beide sind mit diesem Abgleich nicht berichtigt worden — der Plan
+ist auf `_c_` gesetzt und seine Schrittbeschreibungen bleiben stehen, wie sie gefahren wurden.
+Der Widerspruch zu seinem eigenen `## Current State` („hat heute drei Rufer") besteht unverändert.
+
+**Er gehört in dieselbe Reihe wie drei weitere Zahlen dieser Runde**, die der Plan behauptet und
+kein Übersetzer hält: die vier `#[must_use]` der Prüfstrategie (in Wahrheit elf, in diesem
+Abgleich berichtigt), die acht Prosazahlen von Schritt 5 (in Wahrheit neun, `71413c3`) und die
+SDK-Zuordnung von `NSPasteboardURLReadingFileURLsOnlyKey` in Schritt 6 (10.13 statt 10.6).

@@ -35,3 +35,13 @@ Circle-Datensatz der laufenden Runde nennt sich selbst „die zwölfte gefahrene
 `crates/krk-ui/src/kommandos/mod.rs:26` schreibt „Runde 12" aus. Die Tabelle in `CLAUDE.md`
 führt zehn Zeilen. Damit ist die Zahl seit dem Filing dieses Datensatzes ein zweites Mal
 veraltet, was der Datensatz selbst als Muster benennt.
+
+---
+Also seen: 260819-0057 by reconciler — es sind jetzt **dreizehn**, und `CLAUDE.md` sagt weiter
+zehn. Gezählt über `ls fusion-workbench/circles/*/*_circle.md`: fünfzehn Circle-Datensätze,
+davon zehn `_b_`, zwei `_c_`, einer `_t_` (die laufende Runde 13), einer `_a_` (nie gefahren)
+und einer `_d_`. Gefahren sind damit die zehn beschränkt geschlossenen, die zwei kohärent
+geschlossenen und die laufende: dreizehn. Die Tabelle in `CLAUDE.md` führt zehn Zeilen, und die
+zwei Spannen, die aus derselben Zahl rechnen („die Runden 2 bis 10", „er liegt vor den Runden 5
+bis 10 — keine der sechs"), enden jetzt drei Runden zu früh. Damit ist die Zahl seit dem Filing
+zum dritten Mal veraltet; der Datensatz benennt genau dieses Muster.

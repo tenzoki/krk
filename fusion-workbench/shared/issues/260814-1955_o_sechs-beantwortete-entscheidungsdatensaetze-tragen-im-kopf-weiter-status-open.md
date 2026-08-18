@@ -68,3 +68,30 @@ for f in shared/decisions/*.md circles/*/decisions/*.md; do
   printf '%s %s %s\n' "$(grep -cE '^Answered: *$' "$f")" "$(grep -c '^Answered:' "$f")" "$f"
 done
 ```
+
+---
+Also seen: 260819-0057 by reconciler — **dieselbe Gestalt jetzt auch an Defektdatensätzen, nicht
+nur an Entscheidungsdatensätzen.** Fünf der elf geschlossenen Datensätze der Runde 13 tragen im
+Dateinamen `_c_` und im Kopf weiter `**Status:** open`:
+`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/issues/` `260818-2332`,
+`260818-2333`, `260818-2334`, `260818-2335`, `260818-2336` — die fünf des zweiten
+`coderev`-Durchgangs, die als einzige des Circles überhaupt eine `**Status:**`-Kopfzeile führen.
+Die sechs des ersten Durchgangs und die drei offenen tragen keine, weshalb bei ihnen nichts
+auseinanderlaufen kann.
+
+Nachzuzählen mit:
+
+```sh
+cd fusion-workbench
+for f in shared/issues/*.md circles/*/issues/*.md; do
+  m=$(basename "$f" | sed -nE 's/^[0-9-]+_([a-z])_.*/\1/p')
+  k=$(grep -m1 '^\*\*Status:\*\*' "$f")
+  [ -n "$k" ] && printf '%s  %s  %s\n' "$m" "$k" "$f"
+done
+```
+
+Der Marker bleibt hier `_o_` aus dem Grund, den der Abgleich vom 260815-1812 nennt: zu
+entscheiden ist nicht die Sache, sondern welcher der beiden Abschlüsse gilt — dieser oder der
+von `260815-1216_c_vierzehn-entscheidungsdatensaetze-…`, das die Ursache als „bekannte Lage"
+hingenommen hat. Der Befund von heute erweitert den Geltungsbereich jener Entscheidung um eine
+zweite Datensatzart.

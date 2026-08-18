@@ -79,3 +79,59 @@ second application.
 The shaper observed that `CLAUDE.md` declares `**Artifact language:** en` while every
 artifact in this project is German. The declaration does not match the practice. Not acted
 on here; it belongs in a CLAUDE.md reconciliation pass.
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** coherent
+
+Erhoben am 260819-0102 gegen den Baumstand `cac9218`, Bereich `8d5baf6..HEAD`, zwölf Commits.
+`make check` am Baumstand: Exit 0, 1357 Proben grün, `clippy` unter `-D warnings` und
+`cargo fmt --check` sauber.
+
+**Edges:**
+
+- **Artifact↔Grounding:** 10 von 10 Planschritten einzeln am Baum belegt; 11 von 11
+  Durchsichtsbefunden geschlossen und einzeln nachgelesen; **null offene `coderev`- oder
+  `ontorev`-Befunde**. Vier Driftpunkte gefunden, sämtlich in Planungsprosa und keiner im Baum:
+  die `#[must_use]`-Zahl der Prüfstrategie (vier behauptet, elf gemessen) und das dritte
+  Abnahmekriterium von C6 sowie die Kostenaufzählung des Specs sind in diesem Durchgang
+  berichtigt; die „dritter Rufer"-Zählung und die Grünzusage von Schritt 1 bleiben als
+  `issues/260818-2228_*_` und `issues/260818-1704_*_` mit Beleg offen. Der Baum widerspricht nach
+  diesem Durchgang keinem Datensatz mehr, der ihn beschreibt.
+- **Artifact↔Directive:** die zwölf Commits bewegen sich **auf die Directive zu**, elf davon
+  unmittelbar: `b47355e` legt Spec und Circle an, `18af77f`/`ebfab4f`/`a6b3818` bauen C1 bis C3,
+  `07347b8`/`15a2978`/`d6343e0` bauen C4 bis C7, `71413c3`/`a7419cd`/`4d27c1c` ziehen Prosa und
+  Meldung nach, `79f52af` trägt die Durchsicht ein. Der zwölfte, `cac9218`, behebt eine
+  Datenverlustkette in `krk-core`, die vor dieser Runde bestand und die der Abwurf erst
+  erreichbar gemacht hat: `ziel_klaeren` beantwortete „Überschreiben" mit einem echten
+  `remove_file` auf ein Ziel, das unter zweiter Schreibweise die Quelle sein konnte. **Er wird
+  als Erfüllung der Directive gewertet und nicht als Abdriften**, weil deren eigener Satz „Was
+  KRK nicht ausführen kann, weist es schon während des Ziehens ab" ohne ihn nicht eingelöst,
+  sondern gebrochen wäre. **„Gebaut" ist die richtige Aussage über diese Runde und „abgenommen"
+  nicht:** die Abnahmekriterien von C4 bis C7 sind sämtlich Nutzerarbeit, dazu zwei in C1, zwei
+  in C2 und die zwei Kriterien an der Stelle einer elften Zeitzusage. Kein Agent kann einen
+  Ziehvorgang aus einer zweiten Anwendung erheben oder ein Fenster an seiner Breite ziehen. Das
+  ist die bekannte Eigenschaft dieses Projekts und kein Kohärenzmangel.
+- **Grounding↔Directive:** 11 aktive Entscheidungsdatensätze (9 `_o_`, 2 `_a_`, sämtlich im
+  gemeinsamen Speicher; der eine des Circles steht auf `_i_`). **Keiner widerspricht der
+  Directive.** Zehn berühren sie nicht. Einer wird von ihr ein zweites Mal berührt und trägt
+  jetzt mehr Gewicht als vorher: `shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`
+  fragt, ob eine Rechteabweisung meldet oder schweigt. Die Runde hat den **dritten** Weg mit
+  derselben stummen Antwort hinzugefügt, und ihr eigener Plan hat das unter „Open Questions"
+  vorhergesagt. Das ist kein Widerspruch, sondern eine gewachsene Fälligkeit. Die zwei
+  Entscheidungsdatensätze der Runde stehen auf `_i_`, zitieren `d6343e0` und sind am Baum
+  nachgelesen: `shift` wird nirgends gedeutet, `NSDragOperation` an genau einer Stelle
+  übersetzt, und `Schreibrecht::Unbekannt` steht in der Tafel ausgeschrieben neben `Ja`.
+
+**Rebalance recommendation:** none
+
+Es gibt nichts zu überarbeiten. Die Directive ist gebaut, die Grundlage trägt, und die
+verbliebene Arbeit ist der Abnahmelauf, den nur der Nutzer fahren kann. **Der Abschluss wird
+deshalb voraussichtlich beschränkt (`_b_`) und nicht kohärent (`_c_`)** — das ist in diesem
+Projekt der Normalfall und keine Folge dieses Verdikts: der Marker misst dort die Verfügbarkeit
+des Nutzers und nicht die Reife der Runde.
+
+Vollständiger Abgleich:
+`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/history/260819-0102-reconciliation.md`
