@@ -58,3 +58,6 @@ werden.
 dieses Projekts, und es fällt derzeit in rund zwei Dritteln der Läufe aus einem
 Grund aus, der mit dem Geprüften nichts zu tun hat. Ein Tor, das zufällig
 schließt, wird umgangen. Verwandt: `shared/issues/260815-1019_o_die-wettrennprobe-des-oeffnens-ist-lastabhaengig-und-ihre-marge-traegt-keinen-parallelen-bau.md`.
+
+
+Also seen: 260818-0735 by coder — zweimal in drei `make check`-Läufen ausgefallen, jeweils an derselben 15-Sekunden-Grenze in `crates/krk-core/tests/text.rs:870`; allein aufgerufen läuft die Probe dreimal in Folge grün (9,5 bis 10,3 s).

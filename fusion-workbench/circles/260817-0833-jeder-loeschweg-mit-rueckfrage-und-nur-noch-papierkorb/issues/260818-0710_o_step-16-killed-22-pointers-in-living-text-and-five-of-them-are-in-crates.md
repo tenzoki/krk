@@ -80,3 +80,46 @@ The broad fix is the check that neither the 260815 answer nor the 260818-0201 re
 or an `xtask` target that resolves every workbench citation in the tree against the file store. The
 sweep that produced this record is fifteen lines of shell and found twenty-three dead pointers in a
 tree that four passes had already read.
+
+---
+
+**Teilweise erledigt: 260818-0737 durch `coder`, die fünf unter `crates/`.** Alle fünf stehen
+jetzt in der Sternform, wie
+`shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md`
+es für den lebenden Text verlangt: `arbeitsbaum.rs` (drei Zeilen), `loeschzielbefund.rs`
+(eine), `umfang.rs` (eine). `make check` läuft grün (Exit 0). Der Datensatz bleibt offen,
+denn die übrigen siebzehn stehen unverändert in Spec, Plan und Circle-Datensatz.
+
+**Die eigene Erhebung hat den Umfang unter `crates/` bestätigt und um zwei Klassen erweitert.**
+424 Zitate der Form `YYMMDD-HHMM_x_<slug>` unter `crates/`, `xtask/` und `resources/` sind
+gegen den Dateibestand aufgelöst worden, davon 41 in abgekürzter Schreibweise über ihren
+Namensteil als Präfix. Tote Zeiger im Sinne dieses Datensatzes: genau die gemeldeten fünf.
+Dazu kamen
+
+- **vier Stellen mit ausgeschriebenem Marker, deren Ziel ihn noch trägt** —
+  `crates/krk-core/tests/verzeichnis.rs:2974` (`_o_`), `crates/krk-ui/src/appkit/tabelle.rs:1808`,
+  `:2840` und `:3277` (je `_c_`). Sie sind keine toten Zeiger, sondern die Verstöße gegen die
+  Festlegung vom 260815, die beim nächsten Zustandswechsel ihres Ziels zu toten Zeigern
+  würden. Alle vier sind mitgestellt.
+- **ein toter Zeiger, den keine Markerprüfung findet** —
+  `crates/krk-ui/src/appkit/textautomatik.rs:98` schreibt bereits die Sternform, hat aber den
+  falschen Namensteil: zitiert war
+  `260810-0416_*_zwei-weitere-textveraendernde-automatiken-ohne-enabled-schalter-bleiben-an.md`,
+  der Datensatz heißt
+  `260810-0416_*_zwei-weitere-textveraendernde-automatiken-stehen-an-und-die-probe-sieht-sie-nicht.md`.
+  Berichtigt. Das ist der Fall, den der Abschnitt „Zwei Grenzen der Antwort" des 260815er
+  Datensatzes vorhergesagt hat, und er ist ein Argument für den breiten Fix aus dem Abschnitt
+  `## Fix` oben: eine Prüfung über den Marker allein hätte ihn nicht gesehen.
+
+Unangetastet bleiben zwei Zitate in Kurzform ohne Marker und ohne Namensteil,
+`issues/260809-2322` in `crates/krk-ui/src/hervorhebung.rs:136` und `issues/260810-1001` in
+`crates/krk-ui/src/appkit/belegungsansicht.rs:778`. Beide lösen über ihren Zeitstempel auf, und
+ihr Fehlertyp steht schon in
+`shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md`.
+
+Ablauf und Zahlen im Einzelnen:
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260818-0737-coder-tote-zeiger-in-modulkoepfen-auf-die-sternform.md`.
+
+**Offen bleiben die siebzehn in der Werkbank-Prosa:** neun in
+`shared/planning/260817-0536_*_spec-absicherung-jedes-loeschwegs.md`, vier im Plan dieser Runde
+und vier im Circle-Datensatz.

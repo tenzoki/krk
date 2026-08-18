@@ -29,7 +29,7 @@
 //! traegt am 260817 keine Git-Anbindung, `Kommando` fuehrt keine einzige
 //! Git-Variante, und den Index eines Arbeitsbaums zu lesen waere eine eigene
 //! Runde
-//! (`shared/decisions/260817-0536_a_sieht-die-git-pruefung-nur-den-ordner-selbst-oder-auch-aufwaerts.md`,
+//! (`shared/decisions/260817-0536_*_sieht-die-git-pruefung-nur-den-ordner-selbst-oder-auch-aufwaerts.md`,
 //! Moeglichkeit 4, verworfen als mit den Mitteln dieser Runde nicht
 //! entscheidbar).
 //!
@@ -176,9 +176,9 @@
 //! brauchte es nie.
 //!
 //! Die bindende Grundlage ist
-//! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`
+//! `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`
 //! und, fuer die Reichweite,
-//! `shared/decisions/260817-0536_a_sieht-die-git-pruefung-nur-den-ordner-selbst-oder-auch-aufwaerts.md`.
+//! `shared/decisions/260817-0536_*_sieht-die-git-pruefung-nur-den-ordner-selbst-oder-auch-aufwaerts.md`.
 
 use std::io;
 use std::path::{Path, PathBuf};

@@ -95,7 +95,7 @@ use objc2_foundation::{NSNumber, NSObjectProtocol, NSString};
 /// Die sechste und die siebte, `inlinePredictionType` (macOS 14) und
 /// `mathExpressionCompletionType` (macOS 15), blieben an, weil die Aufzaehlung
 /// nach den fuenf mit `set…Enabled:` aufhoerte
-/// (`issues/260810-0416_*_zwei-weitere-textveraendernde-automatiken-ohne-enabled-schalter-bleiben-an.md`).
+/// (`issues/260810-0416_*_zwei-weitere-textveraendernde-automatiken-stehen-an-und-die-probe-sieht-sie-nicht.md`).
 ///
 /// **Die achte und die neunte sind die Schreibwerkzeuge**, und der Unterschied
 /// ist, wer sie ausloest: sie greifen erst auf einen ausdruecklichen Aufruf des

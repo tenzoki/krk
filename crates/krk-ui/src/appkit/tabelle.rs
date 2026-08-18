@@ -1805,7 +1805,7 @@ impl DateifensterQuelle {
     ///
     /// Das Abnahmekriterium von C4 verlangt allein "ein Tastenbefehl benennt
     /// den ausgewaehlten Eintrag um, direkt in der Liste"
-    /// (`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_c_spec-navigator-geruest.md:254`).
+    /// (`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md:254`).
     /// Der Satz "Return uebernimmt, Escape verwirft" stammt aus dem **Plan**
     /// derselben Runde und nicht aus dem Spec; bis zum 260816 stand er hier als
     /// Zitat aus C4 und schrieb dem Spec damit eine Zusage zu, die er nicht
@@ -2837,7 +2837,7 @@ impl DateifensterDelegierter {
     /// Das `setStringValue:` weiter unten laeuft in **jedem** Durchgang und
     /// fragt nicht, ob diese Zelle gerade der Editor einer Umbenennung ist.
     /// Das sieht nach einem Defekt aus, und der Fehlbefund
-    /// `shared/issues/260815-2203_c_…` ist genau daraus entstanden: waehrend
+    /// `shared/issues/260815-2203_*_…` ist genau daraus entstanden: waehrend
     /// einer Bearbeitung schreibt ein `setStringValue:` wirklich in den
     /// Feldeditor zurueck (der Kopf von [`Namensfeld`] sagt es), also stuende
     /// nach einem Durchgang die Anzeigeform `Bilder/` im Feldeditor und Return
@@ -3274,7 +3274,7 @@ define_class!(
         ///
         /// **Ein Zeichendurchgang der Zeile ist trotzdem kein Weg dorthin**,
         /// und wer beides zusammenliest, kommt sonst zu dem Fehlbefund
-        /// `shared/issues/260815-2203_c_…`: AppKit reicht dem Delegierten nie
+        /// `shared/issues/260815-2203_*_…`: AppKit reicht dem Delegierten nie
         /// eine Zelle mit offenem Feldeditor. Die Messung dazu steht bei
         /// [`DateifensterDelegierter::zellenansicht`].
         ///

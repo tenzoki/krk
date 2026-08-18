@@ -144,7 +144,7 @@
 //! braeuchte er auch dann nicht, wenn in dieser Kiste kein Aufrufer stuende.
 //!
 //! Die bindende Grundlage ist
-//! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
+//! `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
 
 /// Was eine Pruefung ueber ein Loeschziel sagt.
 ///

@@ -149,7 +149,7 @@
 //! es nie.
 //!
 //! Die bindende Grundlage ist
-//! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
+//! `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.
 
 use std::path::PathBuf;
 

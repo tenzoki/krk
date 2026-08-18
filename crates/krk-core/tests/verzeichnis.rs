@@ -2971,7 +2971,7 @@ fn quelltext_von(name: &str) -> String {
 /// ausdruecklich nicht bei**, obwohl der Filter darueber oeffnet: die Datei
 /// fuehrt `Duration` viermal zur Umrechnung der Aenderungszeit, und die Nadel
 /// kann eine Umrechnung nicht von einer Messung trennen
-/// (`issues/260816-1359_o_die-probe-gegen-zeitmessung-im-filter-erreicht-zwei-dateien-des-filterwegs-nicht.md`).
+/// (`issues/260816-1359_*_die-probe-gegen-zeitmessung-im-filter-erreicht-zwei-dateien-des-filterwegs-nicht.md`).
 ///
 /// **`krk-ui/src/tabs.rs` war nicht von Anfang an dabei.** Seit
 /// Schritt F2 traegt sie den Filtertext ueber den Ordnerwechsel, haelt den
