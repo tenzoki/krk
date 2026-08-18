@@ -11,10 +11,15 @@
 //!
 //! Ein zweites Blatt entsteht nicht: zwei Blaetter waeren zwei Wahrheiten ueber
 //! dieselbe Frage. Die laute Form unterscheidet sich von der ruhigen in genau
-//! drei Dingen, und nur eines davon steht in dieser Datei. Der Grund in der
-//! Frage und die Folgen in der Erlaeuterung kommen als Text herein; das
-//! Warnzeichen setzt [`Blatt::als_warnung`], und zwar nur bei `laut`. Die
-//! Schaltflaechen, ihre Reihenfolge und ihre Tasten sind in beiden Formen
+//! drei Dingen, und nur eines davon steht in dieser Datei. Der **erste**
+//! Warngrund in der Frage und die **uebrigen** Gruende als eigener Absatz der
+//! Erlaeuterung kommen als fertiger Text herein; das Warnzeichen setzt
+//! [`Blatt::als_warnung`], und zwar nur bei `laut`. Die Erlaeuterung gewinnt
+//! damit **keinen Satz ueber die Folgen**, sondern die Gruende, die in der
+//! Frage keinen Platz hatten; gebaut wird der Absatz in
+//! [`crate::kommandos::loeschwarnung::frage_und_erlaeuterung`], und gemessen
+//! von dessen Probe `die_frage_nennt_den_ersten_grund_und_die_erlaeuterung_die_uebrigen`.
+//! Die Schaltflaechen, ihre Reihenfolge und ihre Tasten sind in beiden Formen
 //! dieselben (C3).
 //!
 //! ```text

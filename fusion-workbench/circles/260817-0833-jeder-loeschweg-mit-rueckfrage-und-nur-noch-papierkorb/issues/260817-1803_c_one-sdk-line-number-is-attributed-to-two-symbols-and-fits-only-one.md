@@ -56,3 +56,26 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`): each name carries its own line number.
+
+`crates/krk-ui/src/appkit/volumes.rs:133-136` now reads "`NSURLVolumeLocalizedNameKey`
+(`NSURL.h:344`) und `NSURLVolumeIsLocalKey` (`NSURL.h:338`), beide
+`API_AVAILABLE(macos(10.7), …)`, seit 10.7", followed by the rule that keeps the form from
+regressing: a line number that is given for a pair fits at most one of the two on re-reading.
+
+Checked at the local SDK, the same way this record measured it:
+
+```
+$ SDK=$(xcrun --show-sdk-path)
+$ grep -n "NSURLVolumeLocalizedNameKey\|NSURLVolumeIsLocalKey" \
+    "$SDK/System/Library/Frameworks/Foundation.framework/Headers/NSURL.h"
+338:… NSURLVolumeIsLocalKey        API_AVAILABLE(macos(10.7), ios(5.0), watchos(2.0), tvos(9.0));
+344:… NSURLVolumeLocalizedNameKey  API_AVAILABLE(macos(10.7), ios(5.0), watchos(2.0), tvos(9.0));
+```
+
+The four other line numbers the section carries were re-read at the same SDK in this pass and all
+four still hold: `NSURL.h:17` `NSURLResourceKey` (a `typedef`, no annotation), `NSURL.h:52`
+`fileURLWithPath:`, `NSURL.h:183` `resourceValuesForKeys:error:`, `NSValue.h:73` `boolValue`.
+`make check` exit 0.

@@ -51,3 +51,29 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`): both sections name the function that holds the call
+and keep the claim about where in the body it sits.
+
+`crates/krk-core/src/verzeichnis/umfang.rs:136-149` and
+`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:163-176` now read: the one caller is
+`Anwendungsdelegierter::loeschtexte`, and `Anwendungsdelegierter::loeschen_nach_rueckfrage` reaches
+it in the **fourth** branch of its stage rule. The half that carries the cost claim ("erst, wenn die
+beiden billigen Stufen jenes Rumpfes durch sind") stands unchanged and is now checkable in the
+function that holds the call.
+
+Two more sentences of the same class were pulled along in the same pass, both in
+`crates/krk-ui/src/kommandos/loeschwarnung.rs`:
+
+- `:208-215` said `loeschen_nach_rueckfrage` calls `warngruende` and `frage_und_erlaeuterung` in its
+  fourth branch. Both calls sit in `loeschtexte`; the sentence now routes through it.
+- `:1262-1266`, the body of `die_ausloesertafel_hat_genau_einen_aufrufer`, named
+  `loeschen_nach_rueckfrage` as the one caller of the trigger table. Corrected to `loeschtexte`,
+  with the fourth branch kept as the route.
+
+Checked with: `grep -n "loeschtexte" crates/krk-ui/src/appkit/anwendung.rs` (called at `:4687`,
+defined at `:4784`), `grep -rn "umfang::zaehlen\|beruehrt_einen_arbeitsbaum" crates/` (one call
+each, both in the body of `loeschtexte` at `:4799` and `:4810`), and reading the match in
+`loeschen_nach_rueckfrage` at `:4647-4692`, whose fourth arm `Vorstufe::Rueckfrage` opens at
+`:4681`. `make check` exit 0.

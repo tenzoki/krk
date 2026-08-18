@@ -136,12 +136,14 @@
 //! # Wer sie ruft
 //!
 //! Genau einer, und er steht seit dem elften Schritt derselben Runde da:
-//! `Anwendungsdelegierter::loeschen_nach_rueckfrage` in `krk-ui` beschafft die
-//! Tatsachen fuer die Ausloesertafel, und die Zaehlung geschieht dabei einmal je
-//! Loeschbefehl. Sie faellt erst an, wenn die beiden billigen Stufen jenes
-//! Rumpfes durch sind und das Blatt wirklich erscheint; ein Befehl, den ein
-//! laufender Vorgang oder eine leere Auswahl anhaelt, oeffnet hier kein
-//! Verzeichnis. `dead_code` traf das Modul auch vorher nicht, denn `krk-core`
+//! `Anwendungsdelegierter::loeschtexte` in `krk-ui` beschafft die Tatsachen
+//! fuer die Ausloesertafel, und die Zaehlung geschieht dabei einmal je
+//! Loeschbefehl. Der Rumpf, der `loeschtexte` ruft, ist
+//! `Anwendungsdelegierter::loeschen_nach_rueckfrage`, und er ruft es im
+//! **vierten** Zweig seiner Stufenregel. Die Zaehlung faellt deshalb erst an,
+//! wenn die beiden billigen Stufen jenes Rumpfes durch sind und das Blatt
+//! wirklich erscheint; ein Befehl, den ein laufender Vorgang oder eine leere
+//! Auswahl anhaelt, oeffnet hier kein Verzeichnis. `dead_code` traf das Modul auch vorher nicht, denn `krk-core`
 //! ist eine Bibliothek und alles hier ist von ihrer Wurzel aus erreichbar; eine
 //! Ausnahme nach dem Vorbild von `krk-ui/src/kommandos/rueckschritt.rs` brauchte
 //! es nie.

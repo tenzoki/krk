@@ -120,15 +120,28 @@
 //!
 //! # Wer ihn beantwortet
 //!
-//! Die Pruefungen, die ihn liefern, entstehen in derselben Runde und stehen zu
-//! diesem Zeitpunkt noch nicht alle da: die Frage nach dem Papierkorb und die
-//! nach dem Netzlaufwerk in `krk-ui/src/appkit`, weil beide AppKit brauchen,
-//! die Frage nach dem Git-Arbeitsbaum und die gedeckelte Zaehlung des Umfangs
-//! hier im Kern. Solange keine davon dasteht, hat der Typ in dieser Kiste
-//! keinen Aufrufer, und `dead_code` trifft ihn trotzdem nicht: `krk-core` ist
-//! eine Bibliothek, und er ist von ihrer Wurzel aus erreichbar. Eine Ausnahme
-//! nach dem Vorbild von `krk-ui/src/kommandos/rueckschritt.rs` braucht er
-//! deshalb nicht.
+//! Vier Pruefungen liefern ihn, und jede steht dort, wo ihre Frage zu
+//! beantworten ist: die Frage nach dem Papierkorb und die nach dem
+//! Netzlaufwerk in `krk-ui/src/appkit`, weil beide AppKit brauchen, die Frage
+//! nach dem Git-Arbeitsbaum und die gedeckelte Zaehlung des Umfangs hier im
+//! Kern.
+//!
+//! ```text
+//!  Papierkorb       krk-ui/src/appkit/papierkorb.rs  fuehrt_einen_papierkorb
+//!  Netzlaufwerk     krk-ui/src/appkit/volumes.rs     liegt_auf_netzlaufwerk
+//!  Git-Arbeitsbaum  super::arbeitsbaum               beruehrt_einen_arbeitsbaum
+//!  Umfang           super::umfang                    zaehlen
+//! ```
+//!
+//! Die ersten drei liefern diesen Typ selbst. Die vierte antwortet mit
+//! [`super::umfang::Umfang`], dessen Ausgang `Unentschieden` auf ihn verweist
+//! und dieselbe Haltung traegt: eine Zaehlung, die nicht zustande kam, ist eine
+//! Aussage ueber KRKs Kenntnis und nicht ueber die Auswahl.
+//!
+//! **Ob `dead_code` ihn trifft, haengt nicht daran, wer ihn ruft.** `krk-core`
+//! ist eine Bibliothek, und er ist von ihrer Wurzel aus erreichbar; eine
+//! Ausnahme nach dem Vorbild von `krk-ui/src/kommandos/rueckschritt.rs`
+//! braeuchte er auch dann nicht, wenn in dieser Kiste kein Aufrufer stuende.
 //!
 //! Die bindende Grundlage ist
 //! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`.

@@ -92,11 +92,25 @@
 //!
 //! **Auf der ersten**, und alle drei auf derselben:
 //! [`Loeschzielbefund::Ja`] ist der Warngrund, und
-//! [`Loeschzielbefund::Unentschieden`] gehoert zu ihm. Der Aufrufer fragt
-//! [`Loeschzielbefund::ist_warnwuerdig`], nicht auf `Ja` selbst. Die beiden
-//! Polaritaeten und warum die Unterscheidung sicherheitsrelevant ist, stehen im
-//! Modulkopf von [`super::loeschzielbefund`]; die zweite Polaritaet traegt in
-//! dieser Runde allein die Frage nach dem Papierkorb.
+//! [`Loeschzielbefund::Unentschieden`] gehoert zu ihm.
+//! [`Loeschzielbefund::ist_warnwuerdig`] waere fuer einen Wert dieser
+//! Polaritaet die **zulaessige** Frage, denn es fasst genau `Ja` und
+//! `Unentschieden` zusammen.
+//!
+//! **Gestellt wird sie trotzdem von keinem Aufrufer, und wer sie hier
+//! einfuehrt, baut einen Fehler ein.** Wer diesen Befund verbraucht, muss nicht
+//! nur sagen, *dass* gewarnt wird, sondern *welcher* Grund gilt: `Ja` fuehrt
+//! auf den Wortlaut „aus einem Git-Arbeitsbaum", `Unentschieden` auf „von einem
+//! Ziel unbekannter Einordnung", und eine zusammenfassende Frage kann die
+//! beiden nicht mehr trennen. Sie liesse KRK „aus einem Git-Arbeitsbaum" ueber
+//! ein Ziel behaupten, das es nicht einordnen konnte — eine Aussage ohne
+//! Messung dahinter, und C3 verlangt das Gegenteil. Die Fallunterscheidung in
+//! `krk-ui/src/kommandos/loeschwarnung.rs`, `warngruende`, schreibt deshalb
+//! alle drei Antworten aus.
+//!
+//! Die beiden Polaritaeten und warum die Unterscheidung sicherheitsrelevant
+//! ist, stehen im Modulkopf von [`super::loeschzielbefund`]; die zweite
+//! Polaritaet traegt in dieser Runde allein die Frage nach dem Papierkorb.
 //!
 //! # Gemerkt wird nichts
 //!
@@ -149,14 +163,17 @@
 //! # Wer sie ruft
 //!
 //! Genau einer, und er steht seit dem elften Schritt derselben Runde da:
-//! `Anwendungsdelegierter::loeschen_nach_rueckfrage` in `krk-ui` beschafft die
-//! Tatsachen fuer die Ausloesertafel; er loest den angezeigten Ordner und das
+//! `Anwendungsdelegierter::loeschtexte` in `krk-ui` beschafft die Tatsachen
+//! fuer die Ausloesertafel; es loest den angezeigten Ordner und das
 //! Benutzerverzeichnis **einmal je Loeschbefehl** auf und reicht beide hier
-//! herein. Gefragt wird erst, wenn die beiden billigen Stufen jenes Rumpfes
-//! durch sind und das Blatt wirklich erscheint. `dead_code` traf das Modul auch
-//! vorher nicht, denn `krk-core` ist eine Bibliothek und alles hier ist von ihrer
-//! Wurzel aus erreichbar; eine Ausnahme nach dem Vorbild von
-//! `krk-ui/src/kommandos/rueckschritt.rs` brauchte es nie.
+//! herein. Der Rumpf, der `loeschtexte` ruft, ist
+//! `Anwendungsdelegierter::loeschen_nach_rueckfrage`, und er ruft es im
+//! **vierten** Zweig seiner Stufenregel. Gefragt wird deshalb erst, wenn die
+//! beiden billigen Stufen jenes Rumpfes durch sind und das Blatt wirklich
+//! erscheint. `dead_code` traf das Modul auch vorher nicht, denn `krk-core` ist
+//! eine Bibliothek und alles hier ist von ihrer Wurzel aus erreichbar; eine
+//! Ausnahme nach dem Vorbild von `krk-ui/src/kommandos/rueckschritt.rs`
+//! brauchte es nie.
 //!
 //! Die bindende Grundlage ist
 //! `shared/decisions/260817-0536_a_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`

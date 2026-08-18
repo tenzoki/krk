@@ -209,9 +209,10 @@
 //!
 //! Jedes Stueck dieses Moduls hat genau einen Aufrufer, und alle sitzen im
 //! Kommandoweg von `crate::appkit::anwendung`: der gemeinsame Rumpf
-//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`], im dritten ihrer vier
-//! Zweige [`ohne_papierkorb`] und im vierten [`warngruende`] und
-//! [`frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
+//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`] und im dritten ihrer
+//! vier Zweige [`ohne_papierkorb`]; im vierten ruft er
+//! `Anwendungsdelegierter::loeschtexte`, und **dort** stehen [`warngruende`]
+//! und [`frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
 //! [`nach_der_rueckfrage`]. Die Aufruferzaehlung
 //! `die_stufenregel_hat_genau_einen_aufrufer` haelt die Zahl fuer die Regel
 //! fest; sie steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
@@ -1249,7 +1250,7 @@ mod tests {
         }
     }
 
-    /// Genau eine Stelle im Baum fragt die Ausloesertafel — heute keine.
+    /// Genau eine Stelle im Baum fragt die Ausloesertafel.
     ///
     /// **Die zweite Aufruferzaehlung dieses Moduls**, und sie traegt eine andere
     /// Zusage als `die_stufenregel_hat_genau_einen_aufrufer`: die **Einordnung
@@ -1259,8 +1260,10 @@ mod tests {
     /// sagt.
     ///
     /// **Der eine Aufrufer ist seit dem elften Schritt dieser Runde da**, und
-    /// die Erwartung steht deshalb auf eins: `loeschen_nach_rueckfrage` beschafft
-    /// die fuenf Tatsachen und ruft die Tafel, im vierten Zweig der Stufenregel.
+    /// die Erwartung steht deshalb auf eins: `Anwendungsdelegierter::loeschtexte`
+    /// beschafft die fuenf Tatsachen und ruft die Tafel.
+    /// `loeschen_nach_rueckfrage` erreicht `loeschtexte` im vierten Zweig der
+    /// Stufenregel.
     /// Bis dahin hiess diese Probe `die_ausloesertafel_hat_noch_keinen_aufrufer`
     /// und zaehlte null; eine, die „hoechstens eins" erwartet haette, waere fuer
     /// immer gruen gewesen und haette nie etwas gemessen.

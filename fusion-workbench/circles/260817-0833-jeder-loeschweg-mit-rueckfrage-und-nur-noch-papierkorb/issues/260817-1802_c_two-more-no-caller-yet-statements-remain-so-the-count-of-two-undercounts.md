@@ -82,3 +82,32 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`): both sentences corrected, and the search this record
+asks for was run over all of `crates/` rather than over the files one task touched.
+
+**`crates/krk-core/src/verzeichnis/loeschzielbefund.rs:121-144`**, section "Wer ihn beantwortet".
+The "not yet" framing is gone. The section now names the four checks that answer the type and where
+each stands, as a table: `fuehrt_einen_papierkorb` (`krk-ui/src/appkit/papierkorb.rs:185`),
+`liegt_auf_netzlaufwerk` (`krk-ui/src/appkit/volumes.rs:268`), `beruehrt_einen_arbeitsbaum`
+(`super::arbeitsbaum`) and `zaehlen` (`super::umfang`), with the note that the fourth answers via
+`Umfang`, whose `Unentschieden` cites this type.
+
+The `dead_code` sentence was rewritten from a count into a rule that does not age: "Ob `dead_code`
+ihn trifft, haengt nicht daran, wer ihn ruft" — `krk-core` is a library and the type is reachable
+from its root, so the exemption after the pattern of `kommandos/rueckschritt.rs` would not be needed
+even with no in-crate caller. That removes the clause this record found false without putting a new
+count in its place.
+
+**`crates/krk-ui/src/kommandos/loeschwarnung.rs:1253`.** The trailing clause is dropped; the line
+reads "Genau eine Stelle im Baum fragt die Ausloesertafel." The body's caller name was wrong as well
+and is corrected under `260817-1801_c_…`.
+
+Checked with: `grep -rn -- "-> Loeschzielbefund" crates/` for the producers of the type,
+`umfang.rs:183-196` for the `Umfang::Unentschieden` variant that cites it, and the sweep this record
+prescribes, widened to the whole tree: `grep -rn "keinen Aufrufer\|noch keinen\|Zum Zeitpunkt dieses
+Schrittes\|heute keine\|noch keine" crates/`. It returns nine hits after the fix, and none of them
+is a stale caller statement — `editor.rs:52` is explicitly historical ("Bis S26 …"),
+`papierkorb.rs:42` speaks of an `Auftrag`, `titelzusatz.rs:297` of a needle's false positives, the
+rest are unrelated prose. `make check` exit 0.

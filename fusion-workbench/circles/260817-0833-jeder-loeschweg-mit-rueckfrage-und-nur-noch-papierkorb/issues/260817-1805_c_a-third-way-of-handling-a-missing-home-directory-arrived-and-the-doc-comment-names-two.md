@@ -63,3 +63,30 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`): the enumeration lists handlings instead of counting
+callers, and the third handling is in it.
+
+`crates/krk-core/src/ablage/pfade.rs:187-209`. The sentence "Zwei Aufrufer haengen daran" is gone.
+The doc comment now opens with what a `None` means — a statement about KRK's knowledge, not about
+the folder — and lists the three ways the tree handles it, one caller each:
+
+- **Scheitern**: `Ablageort::im_benutzerverzeichnis` returns an error.
+- **Auf `/` ausweichen**: `super::sitzung::standardordner`, because a file pane has to show
+  something.
+- **Unentschieden bleiben**: `Anwendungsdelegierter::loeschtexte` in `krk-ui` passes the `None` on
+  as an open question, and the confirmation before emptying into the trash goes loud on it.
+
+A closing paragraph carries the reasoning this record calls the load-bearing part: a `/` fallback
+invents a path and turns "KRK does not know the home folder" into "the folder lies inside it", which
+is wrong wherever a warning, a permission or a delete command hangs on the value. It ends by saying
+outright that no caller count stands there, and why: the count ages with every new caller, the rule
+above it does not.
+
+Checked with `grep -rn "benutzerverzeichnis()" crates/`. Beyond the definition it returns six
+production call sites — `pfade.rs:269`, `ablage/sitzung.rs:421`, `belegungsausgabe.rs:389` and
+`:441`, `appkit/anwendung.rs:4790` (in `loeschtexte`) and `:6935` (the free wrapper that substitutes
+`/`) — plus two inside `#[test]` bodies (`volumes.rs:483`, `papierkorb.rs:213`), which panic and are
+not a handling of the production question. Every one of the six falls into one of the three listed
+kinds, so the enumeration is complete without naming a number. `make check` exit 0.

@@ -186,11 +186,27 @@ const UNTERPFAD: [&str; 3] = ["Library", "Application Support", "KRK"];
 
 /// Das Benutzerverzeichnis, falls das System eines nennt.
 ///
-/// Die eine Stelle im Kern, die danach fragt. Zwei Aufrufer haengen daran und
-/// gehen mit einem fehlenden Benutzerverzeichnis verschieden um:
-/// [`Ablageort::im_benutzerverzeichnis`] scheitert, weil es ohne Wurzel nichts
-/// abzulegen gibt, und der Auslieferungszustand der Sitzung weicht auf `/` aus,
-/// weil ein Dateifenster einen Ordner zeigen muss.
+/// Die eine Stelle im Kern, die danach fragt. **Ein `None` ist keine Aussage
+/// ueber den Ordner, sondern eine ueber KRKs Kenntnis von ihm.** Der Baum geht
+/// damit auf drei Weisen um, und welche gilt, entscheidet der Aufrufer an
+/// seiner Aufgabe:
+///
+/// - **Scheitern**, wo es ohne Wurzel nichts zu tun gibt:
+///   [`Ablageort::im_benutzerverzeichnis`] gibt einen Fehler zurueck.
+/// - **Auf `/` ausweichen**, wo eine Flaeche einen Ordner zeigen muss:
+///   `super::sitzung::standardordner` tut das, weil ein Dateifenster
+///   trotzdem etwas anzeigen muss.
+/// - **Unentschieden bleiben**, wo aus dem Wert eine Aussage ueber ein Ziel
+///   wuerde: `Anwendungsdelegierter::loeschtexte` in `krk-ui` reicht das `None`
+///   als offene Frage weiter, und die Rueckfrage vor dem Raeumen in den
+///   Papierkorb wird darauf laut.
+///
+/// **Die dritte Weise ist die, die ein neuer Aufrufer am ehesten verfehlt.** Ein
+/// `/` als Ausweichwert erfindet einen Pfad: aus „KRK kennt den Benutzerordner
+/// nicht" wird die Aussage „der Ordner liegt darin". Wo an dem Wert eine
+/// Warnung, eine Erlaubnis oder ein Loeschbefehl haengt, ist das falsch; nur wo
+/// er eine Anzeige fuellt, ist es zulaessig. Eine Zahl der Aufrufer steht hier
+/// bewusst nicht — sie altert mit jedem neuen, die Regel darueber nicht.
 pub fn benutzerverzeichnis() -> Option<PathBuf> {
     std::env::home_dir()
 }

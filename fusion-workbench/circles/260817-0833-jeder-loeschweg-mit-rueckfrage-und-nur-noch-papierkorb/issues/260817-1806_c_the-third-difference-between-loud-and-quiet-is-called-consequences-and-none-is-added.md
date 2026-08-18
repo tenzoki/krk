@@ -64,3 +64,28 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`), in the part that is this record's to make: the code
+file no longer says "Folgen".
+
+`crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs:10-23` now names the third difference the
+way the code produces it and the way `kommandos/loeschwarnung.rs` already described it: the
+**first** warning reason in the question and the **remaining** reasons as their own paragraph of the
+explanation. A following sentence states plainly that the loud explanation gains no sentence about
+consequences, and points at
+`crate::kommandos::loeschwarnung::frage_und_erlaeuterung` and its probe.
+
+Checked with: the body of `frage_und_erlaeuterung` (`loeschwarnung.rs:756-788`), where the loud form
+appends exactly `"\n\nAußerdem: {die uebrigen Wortlaute}."` and nothing else; the unconditional hint
+line at `loeschbestaetigung.rs:136` and the `if laut` around `als_warnung` at `:138-140`; and
+`grep -rn "Folgen in der Erl\|die Folgen" crates/`, which after the fix returns no statement about
+the loud form (`modell.rs:998` is about carrying switch state, `loeschbestaetigung.rs:18` is the new
+sentence saying no consequence is added).
+
+**Left undone, and deliberately:** the same word stands in C3's last acceptance criterion in
+`shared/planning/260817-0536_o_spec-absicherung-jedes-loeschwegs.md`. That spec is user-approved and
+outside this task's scope (code prose under `crates/` only). C3's operative criterion, the "Treffen
+mehrere Ausloeser zugleich zu" bullet two lines above it, is satisfied by the tree; the summary
+bullet names the same thing under a misleading word. One line for bundle E's pass over superseded
+wording, as this record's Direction says. `make check` exit 0.

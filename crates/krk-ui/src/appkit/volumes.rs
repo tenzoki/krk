@@ -69,10 +69,13 @@
 //!
 //! Damit liegt die Antwort auf der **ersten** Polaritaet aus dem Modulkopf von
 //! [`krk_core::verzeichnis::Loeschzielbefund`]: `Ja` ist der Warngrund, und
-//! `Unentschieden` gehoert zu ihm. [`Loeschzielbefund::ist_warnwuerdig`] ist
-//! fuer diesen Wert folglich die **richtige** Frage — anders als bei
+//! `Unentschieden` gehoert zu ihm. [`Loeschzielbefund::ist_warnwuerdig`] waere
+//! fuer diesen Wert folglich eine **zulaessige** Frage — anders als bei
 //! [`super::papierkorb::fuehrt_einen_papierkorb`], das auf der zweiten
-//! Polaritaet liegt und bei dem `Ja` die Erlaubnis ist.
+//! Polaritaet liegt und bei dem `Ja` die Erlaubnis ist. Zulaessig heisst nicht
+//! gebraucht: wer den Befund verbraucht, muss den **Grund** benennen, und dafuer
+//! braucht er `Ja` und `Unentschieden` getrennt. Der Absatz zur Zaehlprobe
+//! weiter unten sagt, warum die Frage auch in dieser Datei nicht steht.
 //!
 //! **Der Ressourcenwert antwortet umgekehrt, und die Umkehrung geschieht genau
 //! einmal: hier, im Rumpf, neben dieser Erklaerung.** Gefragt wird
@@ -127,11 +130,13 @@
 //! `mountedVolumeURLsIncludingResourceValuesForKeys:options:`,
 //! `resourceValuesForKeys:error:` (`NSURL.h:183`) und die Aufzaehlung
 //! `NSVolumeEnumerationOptions` stehen seit 10.6,
-//! `NSURLVolumeLocalizedNameKey` und `NSURLVolumeIsLocalKey` (`NSURL.h:338`,
-//! `API_AVAILABLE(macos(10.7), …)`) seit 10.7. Ein Typname traegt im Kopf keine
-//! Angabe und steht damit seit 10.0: `NSURLResourceKey` (`NSURL.h:17`), der
-//! Schluesseltyp der Ressourcenwerte, ein `typedef` auf `NSString` und keine
-//! eigene Klasse. Alle Zeilenangaben sind am 260817 in
+//! `NSURLVolumeLocalizedNameKey` (`NSURL.h:344`) und `NSURLVolumeIsLocalKey`
+//! (`NSURL.h:338`), beide `API_AVAILABLE(macos(10.7), …)`, seit 10.7. Jeder
+//! Name traegt seine eigene Zeile: eine Zeilenangabe, die fuer ein Paar gilt,
+//! stimmt beim Nachlesen fuer hoechstens einen der beiden. Ein Typname traegt
+//! im Kopf keine Angabe und steht damit seit 10.0: `NSURLResourceKey`
+//! (`NSURL.h:17`), der Schluesseltyp der Ressourcenwerte, ein `typedef` auf
+//! `NSString` und keine eigene Klasse. Alle Zeilenangaben sind am 260817 in
 //! `$(xcrun --show-sdk-path)/System/Library/Frameworks/Foundation.framework/Headers/`
 //! nachgelesen und nicht uebernommen. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen, und
@@ -245,9 +250,13 @@ fn namensteil(pfad: &Path) -> String {
 ///
 /// **Auf der ersten Polaritaet**, wie das Feld `Loeschziel::netzlaufwerk`, das
 /// die Antwort aufnimmt: `Ja` warnt, `Unentschieden` gehoert zu ihm, und
-/// [`Loeschzielbefund::ist_warnwuerdig`] ist damit fuer diesen Wert die
-/// richtige Frage. Gestellt wird sie nicht hier, sondern dort, wo die Rangfolge
-/// aus C3 steht; der Modulkopf sagt, warum.
+/// [`Loeschzielbefund::ist_warnwuerdig`] waere damit fuer diesen Wert eine
+/// zulaessige Frage. **Gestellt wird sie weder hier noch dort, wo die Rangfolge
+/// aus C3 steht**: `crate::kommandos::loeschwarnung::warngruende` schreibt alle
+/// drei Antworten aus, weil `Ja` auf den Wortlaut „von einem Netzlaufwerk"
+/// fuehrt und `Unentschieden` auf „von einem Ziel unbekannter Einordnung",
+/// und eine zusammenfassende Frage wuesste den Unterschied nicht mehr. Der
+/// Modulkopf sagt es im Einzelnen.
 ///
 /// Der Ordner kommt **aufgeloest** herein, wie bei
 /// [`super::papierkorb::fuehrt_einen_papierkorb`] und aus demselben Grund: eine

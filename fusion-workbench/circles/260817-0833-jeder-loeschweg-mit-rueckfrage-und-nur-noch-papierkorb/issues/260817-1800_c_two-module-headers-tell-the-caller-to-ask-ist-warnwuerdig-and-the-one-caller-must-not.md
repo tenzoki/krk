@@ -93,3 +93,25 @@ re-measuring the code.** This record was filed against `792995a`, and the only c
 `e313841`, which touches nothing under `crates/` or `resources/` — it adds this Circle's Bundle C
 review and its nine records and nothing else (`git show --stat e313841`). The cited lines are
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
+
+---
+Resolved 260818 (coder, tree state `ae665e5`): both sentences now say what holds and why.
+
+`crates/krk-core/src/verzeichnis/arbeitsbaum.rs:91-113` keeps "auf der ersten Polaritaet" and
+replaces the flat claim "Der Aufrufer fragt `ist_warnwuerdig`" with: the question **would** be
+admissible for a value on this polarity, no caller asks it, and whoever introduces it builds a
+defect — `Ja` leads to the wording "aus einem Git-Arbeitsbaum" and `Unentschieden` to "von einem
+Ziel unbekannter Einordnung", and a merged question can no longer tell them apart. The paragraph
+names `krk-ui/src/kommandos/loeschwarnung.rs`, `warngruende`, as the place that writes all three
+answers out.
+
+`crates/krk-ui/src/appkit/volumes.rs:70-78` (module header) now reads "waere … eine **zulaessige**
+Frage" and adds the rule that follows: whoever consumes the finding has to name the *reason*, and
+that needs `Ja` and `Unentschieden` apart. `:251-259` (doc comment of `liegt_auf_netzlaufwerk`)
+drops the false half — the question is asked "weder hier noch dort, wo die Rangfolge aus C3 steht"
+— and cites the two wordings it would collapse.
+
+Checked with: `grep -rn "ist_warnwuerdig" crates/` (still no production call site; every call is in
+a probe), `Warngrund::wortlaut` at `loeschwarnung.rs:528-533` for the two exact wordings, and the
+`warngruende` body at `loeschwarnung.rs:670-681` for the three written-out answers. `make check`
+exit 0.
