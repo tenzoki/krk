@@ -126,9 +126,11 @@
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
 # keiner Funktion zugeordnet ist (Plan, Schritt 11).
 
-# ── C3 und C4: die Norton-Reihe, je zwei Wege ────────────────────────────────
-# Jede dieser Funktionen ist ueber die Funktionstaste und ueber ein
-# Cmd-Kuerzel erreichbar. Beide Wege stehen in derselben Zeile.
+# ── C3 und C4: die Norton-Reihe ──────────────────────────────────────────────
+# Sechs Eintraege, und die Zwei-Wege-Regel aus C3 gilt den ersten fuenf: sie
+# sind ueber die Funktionstaste und ueber ein Cmd-Kuerzel erreichbar, und beide
+# Wege stehen in derselben Zeile. Der sechste, `bearbeiten`, traegt allein F4;
+# der Grund steht im Kommentar bei seinem Eintrag.
 
 [[funktion]]
 id = "vorschau_umschalten"

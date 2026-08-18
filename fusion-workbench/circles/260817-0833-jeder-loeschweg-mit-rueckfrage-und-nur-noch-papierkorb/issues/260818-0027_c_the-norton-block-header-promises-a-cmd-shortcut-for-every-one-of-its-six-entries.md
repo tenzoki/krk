@@ -59,3 +59,6 @@ covers the first five, or move `bearbeiten` out of the block. The second is the 
 touches the display order — `belegungsmodell::nach_bereichen` returns a group in file order and
 three consumers show it that way (`resources/default-keymap.toml:37-43`) — so the header wording
 is the cheaper of the two and the one that keeps the file consistent with the round-1 spec.
+
+---
+Resolved: Der Blockkopf sagt jetzt, dass die Zwei-Wege-Regel aus C3 den ersten fünf Einträgen gilt und `bearbeiten` als sechster allein F4 trägt, mit Verweis auf den Grund im Kommentar bei seinem Eintrag. Gegen die Datei gezählt: sechs Einträge, fünf davon mit Cmd-Kürzel. `make check` grün.
