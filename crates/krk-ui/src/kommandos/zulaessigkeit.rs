@@ -104,11 +104,12 @@
 //! so festgelegt.
 //!
 //! Dass sie den dritten Bestandteil nicht aufhebt, faellt heute nicht auf:
-//! alle drei Befehle tragen `Wirkungsbereich::Ueberall`, und
-//! [`fokus::wirkt`](super::fokus::wirkt) sagt dafuer in jedem Fokus ja. Mit
-//! einem dritten Eintrag, der einen Bereich braucht, fiele der Unterschied an,
-//! und die Probe `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf` haelt
-//! ihn fest.
+//! jeder Eintrag der Liste traegt `Wirkungsbereich::Ueberall`, und
+//! [`fokus::wirkt`](super::fokus::wirkt) sagt dafuer in jedem Fokus ja. Sobald
+//! ein Eintrag der Liste einen Bereich braucht, faellt der Unterschied an, und
+//! die Probe `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf` haelt ihn
+//! fest. Eine Ordnungszahl steht hier bewusst nicht: sie altert mit jedem
+//! neuen Eintrag, die Regel darueber nicht.
 
 use krk_core::tasten::Kommando;
 

@@ -165,3 +165,36 @@ derselben Datei, nicht aus einem Kommentar übernommen: `beenden` trägt `cmd+q`
 halb erledigter Datensatz wird nicht geschlossen. Wer sie nachzieht, schließt diesen Datensatz.
 
 `make check` — Exit 0.
+
+---
+Resolved 260818-0350 (coder): **`CLAUDE.md:124` ist nachgezogen, und damit sind alle sechs
+Träger der Tabelle darüber erledigt.**
+
+Der Satz sagte, `Anwendungsdelegierter::kommando_ausfuehren` weise „jedes Kommando außer dem
+Abbruch" ab. Er sagt jetzt, es weise jedes Kommando ab bis auf vier, und schreibt sie aus: den
+Abbruch über `kommandos::operationen::waehrend_blatt_erlaubt`, dessen Rumpf diese eine Zeile
+ist, und die drei der Ausnahmeliste `kommandos::zulaessigkeit::immer_erreichbar`, nämlich
+`Beenden`, `FensterSchliessen` und `FensterEinblenden`. Die Halbaussage über die eine Zeile in
+`waehrend_blatt_erlaubt`, die der alte Satz danebenstellte, ist in denselben Nebensatz
+gewandert und steht nicht mehr für sich.
+
+**Belegt ist der Wortlaut an der Probe, nicht an einem Kommentar.**
+`zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch` (`zulaessigkeit.rs:661`)
+filtert `Kommando::KENNUNGEN` durch `zulaessig` bei stehendem Blatt, behauptet die Länge vier
+und schreibt die vier Namen einzeln aus; eine fünfte Zulassung lässt sie rot werden. Der neue
+Absatz nennt die Probe selbst, damit die nächste Lesung die Zahl dort holt und nicht wieder aus
+einer Prosastelle. Die Formulierung folgt `resources/default-keymap.toml` (Commit `b0eee2c`),
+statt eine dritte Fassung daneben zu setzen.
+
+**Die Erhebung noch einmal gefahren**, mit beiden Nadeln des Abgleichs 260818 über
+`crates/ xtask/ resources/ CLAUDE.md README.md Makefile idea.txt Cargo.toml .claude/`. Keine
+Stelle trägt mehr eine verkürzte Fassung. Was die Nadeln noch finden, ist gelesen und **kein**
+Träger: `editor.rs:1306` erzählt die eigene Berichtigung („Bis zum 260818 stand hier …"),
+`anwendung.rs:406` spricht vom Stand bis S16 und sagt es, `anwendung.rs:6440` und
+`zulaessigkeit.rs:614` nennen die Ausnahmeliste vollständig, `belegung.rs:638` und `:952` sowie
+`operationen.rs:1277` sprechen über je ein einzelnes Kommando und leiten richtig aus
+`waehrend_blatt_erlaubt` ab.
+
+Tabelle der sechs Träger: alle sechs behoben. Der letzte war `CLAUDE.md:124`.
+
+`make check` — Exit 0.
