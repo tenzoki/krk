@@ -1187,3 +1187,8 @@
 {"ts":"2026-08-18T08:14:06","event":"gate_response","turn":4,"detail":"user chose closed-coherent (_c_)"}
 {"ts":"2026-08-18T08:24:08","event":"portfolio_refresh","turn":4,"detail":"circles/260817-0833-.../_c_circle.md; shared/history/260818-1018-playmaker-orchestrator-phase4.md"}
 {"ts":"2026-08-18T08:24:43","event":"session_end","detail":"Complete. 4 Turns, 22 commits, 33 issues closed, 28 filed, Circle closed coherent"}
+{"ts":"2026-08-18T09:17:57","event":"session_start","history_file":"shared/history/260818-1117-orchestrator-session.md","detail":"Setup only; no Directive stated yet; mode unresolved"}
+{"ts":"2026-08-18T12:35:41","event":"scope_resolved","detail":"mode=custom; two features, one Circle by user choice; shaping required; agents: shaper, planner, taskplanner, coder, coderev, reconciler"}
+{"ts":"2026-08-18T12:35:41","event":"shaper_start","agent":"shaper","detail":"Verzeichnis-Angleichen zwischen den Dateifenstern + Ablegen aus fremden Apps in die Dateiliste"}
+{"ts":"2026-08-18T14:12:36","event":"shaper_done","agent":"shaper","detail":"spec: shared/planning/260818-1510_o_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md; 7 Faehigkeiten, ~40 Kriterien"}
+{"ts":"2026-08-18T14:12:36","event":"gate_response","detail":"Spec-Gate: approve; vier abgeleitete Festlegungen uebernommen"}
