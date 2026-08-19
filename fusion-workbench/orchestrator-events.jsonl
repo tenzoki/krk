@@ -1214,3 +1214,12 @@
 {"ts":"2026-08-19T06:13:45","event":"portfolio_refresh","detail":"circles/260818-1615-... auf _c_; portfolio.md nachgezogen"}
 {"ts":"2026-08-19T06:13:45","event":"turn_end","turn":2,"detail":"8 Aufgaben, 11 Befunde geschlossen"}
 {"ts":"2026-08-19T06:13:45","event":"session_end","detail":"Complete. 2 Turns, 14 Commits, 13/13 Aufgaben, 16 Defekte gefilt, 11 geschlossen, Runde 13 kohaerent geschlossen"}
+{"ts":"2026-08-19T18:07:41","event":"session_start","history_file":"shared/history/260819-2007-orchestrator-session.md","detail":"directive pending; no Circle active; domain code; max_turns=12"}
+{"ts":"2026-08-19T18:26:24","event":"session_start","history_file":"shared/history/260819-2026-orchestrator-session.md","detail":"Directive not yet stated; mode unresolved. Domain code, max_turns 12, no active Circle."}
+{"ts":"2026-08-19T18:31:48","event":"gate_hit","agent":"user","detail":"Scope resolution: preview text selection reverses implemented decision 260812-1000_i_was-tut-ein-link-im-gerenderten-markdown-und-bleibt-die-vorschau-unauswaehlbar"}
+{"ts":"2026-08-19T18:35:14","event":"gate_response","agent":"user","detail":"new Circle with a shaping pass"}
+{"ts":"2026-08-19T18:35:14","event":"scope_resolved","detail":"mode=custom; shaping required; topic: text selection and copying in the preview pane; supersedes implemented decision 260812-1000"}
+{"ts":"2026-08-19T18:39:30","event":"gate_response","agent":"user","detail":"artifact language: withdraw the declaration, everything German"}
+{"ts":"2026-08-19T18:39:30","event":"queue_built","detail":"2 tasks, 0 blocked"}
+{"ts":"2026-08-19T18:39:30","event":"turn_start","turn":1,"detail":"1 ready task"}
+{"ts":"2026-08-19T18:39:30","event":"task_start","turn":1,"task":"T1","agent":"coder","detail":"CLAUDE.md language declaration"}

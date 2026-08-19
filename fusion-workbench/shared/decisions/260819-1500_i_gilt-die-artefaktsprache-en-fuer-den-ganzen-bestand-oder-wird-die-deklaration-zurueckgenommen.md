@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** open
+**Status:** implemented
 **Filed by:** curator
 **Cross-references:** `CLAUDE.md:4` gegen `CLAUDE.md:178`; `shared/issues/260817-1610_*_the-language-paragraph-in-claude-md-predates-the-artifact-language-declaration.md`; `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md`, Abschnitt `## Project language`; `shared/history/260819-1440-reconciliation.md`; `shared/history/260819-1500-curator-run.md`, Abschnitt 8
 
@@ -55,6 +55,19 @@ Die Begründung ist keine über Sprachen, sondern eine über Kosten. Die Prosa d
 
 ---
 Answered:
-Implemented:
+Implemented: `CLAUDE.md` — die Zeile `**Artifact language:** en` ist entfernt und der Abschnitt `## Sprache` auf den Stand danach gezogen (Commit siehe Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`, Aufgabe T1). Ausgefuehrt vom coder, Protokoll `shared/history/260819-2040-artefaktsprache-deklaration-zurueckgenommen.md`.
 Deferred:
 Superseded by:
+
+## Antwort 260819-2032
+
+**Möglichkeit 2.** Die Zeile `**Artifact language:** en` fällt aus `CLAUDE.md`; damit steuert
+`**Language:** de` wieder beide Flächen, und der Bestand ist wieder einsprachig, ohne dass eine
+Datei übersetzt wird.
+
+Der Nutzer hat die Frage an dem Punkt beantwortet, an dem sie unmittelbar Arbeit steuerte: der
+Spec der nächsten Runde stand vor dem Schreiben, und die Deklaration hätte ihn englisch verlangt,
+in einen Bestand hinein, der bis auf elf Defektdatensätze deutsch ist.
+
+Die elf englischen Defektdatensätze bleiben stehen. `## Project language` sieht für vorhandene
+Artefakte ausdrücklich keine Übersetzung vor, und diese Antwort löst keine aus.

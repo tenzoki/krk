@@ -71,3 +71,17 @@ eines Abgleichs.
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, unverändert, und in diesem Durchgang unmittelbar spürbar.** `CLAUDE.md:4` deklariert `**Artifact language:** en`. Daneben sagt `:176`, die Zeile `**Language:** de` steuere für Langform-Agenten `default-voice-de.yaml`, und `:178` schließt mit „Prosa in diesem Projekt ist deutsch". Die drei Aussagen stehen unvereinbar nebeneinander.
 
 **Was der Widerspruch heute gekostet hat:** `bin/fusion-rules reconciler` gibt für diesen Durchgang allein `fusion-workbench/stilwerk/chat-voice-de.yaml` aus, also die Kurzform auf Deutsch, während die Artefaktsprache nach der Kopfzeile `en` wäre. Die Sprache der Abgleichsartefakte ist deshalb aus der Aufgabenstellung des Nutzers genommen und nicht aus der Deklaration. Der Marker bleibt `_o_` für den Durchgang des Kurators.
+
+---
+Resolved: Der Nutzer hat die zugrunde liegende Frage am 260819-2032 entschieden
+(`shared/decisions/260819-1500_*_gilt-die-artefaktsprache-en-fuer-den-ganzen-bestand-oder-wird-die-deklaration-zurueckgenommen.md`,
+Möglichkeit 2): die Zeile `**Artifact language:** en` ist aus `CLAUDE.md` entfernt, und der
+Abschnitt `## Sprache` beschreibt wieder den einsprachigen Fall — `**Language:** de` steuert beide
+Flächen, und `bin/fusion-rules` gibt für Langform-Agenten wieder `default-voice-de.yaml` aus.
+Damit stimmen die drei Aussagen, die dieser Datensatz als unvereinbar führt, wieder überein, und
+der Schlusssatz „Prosa in diesem Projekt ist deutsch" ist wieder wörtlich wahr.
+
+Der Datensatz nennt den Kuratorendurchgang als den richtigen Weg, weil ein Coder sonst die Regel
+selbst schriebe statt ihr zu folgen. Diese Grenze ist eingehalten: die Wahl zwischen den drei
+Möglichkeiten hat der Nutzer an einem Gate getroffen, der Coder hat nur den Text auf die
+getroffene Wahl gezogen. Die elf englischen Defektdatensätze bleiben als Bestand stehen.

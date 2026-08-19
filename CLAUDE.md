@@ -1,7 +1,6 @@
 # KRK
 
 **Language:** de
-**Artifact language:** en
 
 ## Worum es geht
 
@@ -176,6 +175,8 @@ Außerhalb aller bisher gefahrenen Runden liegen die KI-Anbindung, ein integrier
 
 ## Sprache
 
-Die zwei Zeilen oben deklarieren zwei verschiedene Sprachen, und jede steuert ein anderes Stilprofil unter `fusion-workbench/stilwerk/`. `**Language:** de` ist die **Chatsprache** und steuert das Kurzform-Profil, das jeder Agent auf seine Ausgabe im Terminal anwendet; `$FUSION_PLUGIN_ROOT/bin/fusion-rules` gibt dafür `fusion-workbench/stilwerk/chat-voice-de.yaml` aus. `**Artifact language:** en` ist die **Artefaktsprache** und steuert das Langform-Schreibprofil; der Helfer gibt dafür `fusion-workbench/stilwerk/default-voice-en.yaml` aus, und zwar nur an die Agenten, die Langform-Prosa schreiben. Ohne die erste Zeile fällt die Auflösung still auf `en` zurück; ohne die zweite steuert die erste beide Flächen. Das Format ist in `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md`, Abschnitt `## Project language`, festgelegt — Zeile nicht umformulieren, nicht verschieben in einen anderen Abschnitt und nicht entfernen.
+Die Zeile `**Language:** de` deklariert die Chatsprache. Eine zweite Zeile für die Artefaktsprache steht nicht mehr in dieser Datei; nach der Fallback-Kette aus `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md`, Abschnitt `## Project language`, heißt eine fehlende zweite Zeile „nicht deklariert", und dann steuert die erste beide Flächen. `**Language:** de` ist damit die Chatsprache und zugleich die Artefaktsprache; sie steuert sowohl das Kurzform-Profil, das jeder Agent auf seine Ausgabe im Terminal anwendet (`$FUSION_PLUGIN_ROOT/bin/fusion-rules` gibt dafür `fusion-workbench/stilwerk/chat-voice-de.yaml` aus), als auch das Langform-Schreibprofil, das die Langform-Prosa-Agenten anwenden (dafür `fusion-workbench/stilwerk/default-voice-de.yaml`). Die Zeile ist formgebunden: nicht umformulieren, nicht verschieben in einen anderen Abschnitt und nicht entfernen.
 
 Prosa in diesem Projekt ist deutsch. Bezeichner im Code, Commit-Messages und maschinenlesbare Artefakte folgen den üblichen englischen Konventionen.
+
+Elf Defektdatensätze aus der Zeit der zurückgenommenen Artefaktsprachen-Deklaration sind englisch und bleiben als Bestand stehen; vorhandene Artefakte werden nach `## Project language` nicht übersetzt.
