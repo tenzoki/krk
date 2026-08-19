@@ -1108,9 +1108,26 @@ impl Anwendungsdelegierter {
         // demselben Grund wie die vier darunter: sonst schloesse sich der Ring
         // Delegierter → Fenster → Rueckruf → Delegierter, und das Fenster lebt
         // ueber sein Schliessen hinaus.
+        //
+        // **Zwei Empfaenger haengen daran, und der erste ist der neuere.**
+        // `aktives_dem_ersthelfer_nachziehen` setzt den Nutzerentscheid vom
+        // 260819 um: liegt der Rang nach dem Wechsel in einem Dateifenster, ist
+        // dieses das aktive. Es steht **vor** dem Nachzug der Anzeige, damit
+        // die schon mit dem neuen `aktiv` rechnet; bis dahin malte der Klick
+        // auf eine Zeile den Rahmen einmal falsch und liess ihn erst von
+        // `aktives_setzen` berichtigen.
+        //
+        // **Der Nachzug der Anzeige steht trotzdem unbedingt daneben.** Hat das
+        // aktive Dateifenster gewechselt, schreibt `aufteilung_nachziehen` die
+        // Farben schon, und diese Zeile schreibt dieselben Werte ein zweites
+        // Mal. Das ist der billigere Fehler: eine Bedingung davor hinge daran,
+        // dass `aktives_setzen` die Anzeige mitnimmt, und liesse sie still
+        // ausfallen, sobald jemand das aendert. Der eine Schreiber der Anzeige
+        // laeuft auf diesem Ausloesepunkt immer.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         fenster.melder_setzen(Box::new(move || {
             if let Some(selbst) = schwach.load() {
+                selbst.aktives_dem_ersthelfer_nachziehen();
                 selbst.fokusanzeige_nachziehen();
             }
         }));
@@ -4209,11 +4226,67 @@ impl Anwendungsdelegierter {
     }
 
     /// Macht das genannte Dateifenster zum aktiven.
+    ///
+    /// **Die eine Stelle dafuer, und drei Anlaesse gehen darueber.** Zwei
+    /// kommen aus [`super::tabelle`]: die Auswahl einer Zeile ueber
+    /// `tableView:shouldSelectRow:` und der Klick auf einen Abschnitt der
+    /// Tableiste, beide ueber `DateifensterQuelle::angefasst`. Der dritte ist
+    /// [`Self::aktives_dem_ersthelfer_nachziehen`] und deckt jede Flaeche eines
+    /// Dateifensters ab, die keine Zeile ist.
     fn aktives_setzen(&self, seite: Fensterseite) {
         if self.ivars().modell.borrow_mut().aktiv_setzen(seite) {
             self.aufteilung_nachziehen();
             self.sitzung_vormerken();
         }
+    }
+
+    /// Macht das Dateifenster zum aktiven, in dem der Ersthelfer liegt.
+    ///
+    /// **Der dritte Anlass von [`Self::aktives_setzen`], und er setzt den
+    /// Nutzerentscheid vom 260819 um** (`shared/decisions/260819-1043_*_welche-
+    /// flaechen-holen-den-fokus-wenn-man-hineinklickt.md`, Moeglichkeit 1):
+    /// jede Flaeche eines Bereichs holt den Fokus, und ein Klick in eine
+    /// Dateiliste macht sie zur aktiven, ob er eine Zeile trifft oder nicht.
+    /// Die Folge ist mitentschieden: F5 und F6 nehmen danach als Quelle das
+    /// zuletzt angeklickte Dateifenster, auch ohne Auswahl.
+    ///
+    /// # Warum hier und nicht an der Tabelle
+    ///
+    /// `tableView:shouldSelectRow:` feuert bei einem Klick unter die letzte
+    /// Zeile nicht, denn es gibt dort keine Zeile; am 260819 auf macOS 15.7.7
+    /// an einem Nachbau des Dateifensters gemessen
+    /// (`shared/analyses/260819-1043-klick-holt-den-fokus-nicht.md`). Ein
+    /// `mouseDown:` an der Tabelle waere trotzdem der falsche Ort: dieselbe
+    /// Messung zeigt, dass AppKit den Klick auf die freie Flaeche schon in ein
+    /// `makeFirstResponder:` uebersetzt und die Tabelle den Rang annimmt. KRK
+    /// muss den Klick also nicht abfangen, sondern nur auf den Rangwechsel
+    /// hoeren — und dafuer gibt es seit C9 genau einen Ausloesepunkt,
+    /// [`Hauptfenster`](super::fenster::Hauptfenster). Eine Ueberschreibung an
+    /// der Tabelle waere die zweite Tuer, die deren Modulkopf ausschliesst,
+    /// und traefe die Lesezeichenleiste ohnehin nicht mit.
+    ///
+    /// # Was er von sich aus in Ruhe laesst
+    ///
+    /// Liegt der Ersthelfer in der Leiste, der Vorschau oder dem Editor,
+    /// geschieht nichts: [`Bereich::seite`] ist die eine Stelle, die aufzaehlt,
+    /// welche Bereiche Dateifenster sind, und liefert fuer die drei uebrigen
+    /// `None`. Damit bleibt `AktivOhneFokus` erhalten, also die Auskunft,
+    /// aus welchem Dateifenster F5 kopiert, waehrend die Tasten im Editor
+    /// ankommen.
+    ///
+    /// **Ein stehendes Blatt braucht keine eigene Abfrage.** Ein Blatt ist
+    /// modal zu seinem Fenster, sein Ersthelfer liegt im Blatt und nicht im
+    /// Hauptfenster, und AppKit laesst waehrenddessen keinen Klick an die
+    /// Bereiche dahinter. Der Ersthelfer des Hauptfensters wechselt also nicht,
+    /// und `aktiv_setzen` liefert `false`. Eine Abfrage auf
+    /// [`Self::blatt_steht`] waere hier ein Zweig, den nichts erreicht —
+    /// anders als in [`Self::fokusanzeige_nachziehen`], das auch ohne
+    /// Rangwechsel gerufen wird und die Abfrage deshalb braucht.
+    fn aktives_dem_ersthelfer_nachziehen(&self) {
+        let Some(seite) = self.bereich_des_ersthelfers().and_then(Bereich::seite) else {
+            return;
+        };
+        self.aktives_setzen(seite);
     }
 
     /// Holt das Fenster nach vorn (C7).
@@ -5500,33 +5573,48 @@ impl Anwendungsdelegierter {
     /// die Antwort, die der Hintergrund nicht aendert. Der Ersthelfer selbst
     /// wechselt beim Wechsel in den Hintergrund nicht; macOS haelt ihn.
     ///
+    /// Der Durchgang selbst steht in [`Self::bereich_des_ersthelfers`]; diese
+    /// Funktion ist nur noch seine Uebersetzung in einen Fokuswert. **Ein
+    /// Ersthelfer, der in keinem der fuenf Bereiche liegt, gilt weiter als
+    /// Dateifenster**, und das ist der Rueckfall, den es seit S43 gibt: das
+    /// Fenster selbst etwa traegt den Rang, bevor der Aufbau den Fokus gesetzt
+    /// hat.
+    fn ersthelferbereich(&self) -> Fokus {
+        match self.bereich_des_ersthelfers() {
+            Some(bereich) => fokus::in_bereich(bereich),
+            None => Fokus::Dateifenster,
+        }
+    }
+
+    /// In welchem der fuenf Bereiche der Ersthelfer liegt, wenn er in einem
+    /// liegt.
+    ///
+    /// **Die eine Stelle, die den Ersthelferrang auf einen Bereich abbildet**,
+    /// und sie hat zwei Frager mit verschiedenen Fragen.
+    /// [`Self::ersthelferbereich`] macht daraus den Fokuswert fuer die Anzeige
+    /// und die Zulaessigkeitsregel; [`Self::aktives_dem_ersthelfer_nachziehen`]
+    /// braucht den Bereich selbst, weil der Fokuswert die beiden Dateifenster
+    /// zusammenwirft und gerade die Unterscheidung zwischen ihnen die gesuchte
+    /// Auskunft ist.
+    ///
     /// Der Durchgang laeuft ueber [`Bereich::ALLE`] und fragt `isDescendantOf:`
     /// gegen die Wurzelansicht jedes Bereichs; die Begruendung fuer den
-    /// Enthaltensschnitt steht an [`Self::fokus`].
-    fn ersthelferbereich(&self) -> Fokus {
-        let Some(haupt) = self.ivars().fenster.get() else {
-            return Fokus::Dateifenster;
-        };
-        let Some(ersthelfer) = haupt.firstResponder() else {
-            return Fokus::Dateifenster;
-        };
+    /// Enthaltensschnitt steht an [`Self::fokus`]. `None` heisst dreierlei und
+    /// laeuft absichtlich zusammen: es gibt noch kein Fenster, der Rang liegt
+    /// bei niemandem, oder sein Traeger ist keine Ansicht und kann damit in
+    /// keinem Teilbaum liegen. Kein Frager unterscheidet die drei.
+    fn bereich_des_ersthelfers(&self) -> Option<Bereich> {
+        let haupt = self.ivars().fenster.get()?;
+        let ersthelfer = haupt.firstResponder()?;
         // Allein eine Ansicht kann in einem Teilbaum liegen. Ein Ersthelfer,
-        // der keine ist — das Fenster selbst etwa —, faellt unten durch.
-        let (Some(ansicht), Some(aufteilung)) = (
-            ersthelfer.downcast_ref::<NSView>(),
-            self.ivars().aufteilung.get(),
-        ) else {
-            return Fokus::Dateifenster;
-        };
-        for bereich in Bereich::ALLE {
-            let getroffen = aufteilung
-                .bereichssicht(bereich)
-                .is_some_and(|wurzel| ansicht.isDescendantOf(&wurzel));
-            if getroffen {
-                return fokus::in_bereich(bereich);
-            }
-        }
-        Fokus::Dateifenster
+        // der keine ist — das Fenster selbst etwa —, faellt hier durch.
+        let ansicht = ersthelfer.downcast_ref::<NSView>()?;
+        let aufteilung = self.ivars().aufteilung.get()?;
+        Bereich::ALLE.into_iter().find(|bereich| {
+            aufteilung
+                .bereichssicht(*bereich)
+                .is_some_and(|wurzel| ansicht.isDescendantOf(&wurzel))
+        })
     }
 
     /// Baut den Auftrag aus der Auswahl des aktiven Dateifensters und startet
@@ -7826,6 +7914,76 @@ mod angleichproben {
             assert!(
                 !rumpf.contains(nadel),
                 "das Angleichen greift an Fokus oder Sichtbarkeit: {nadel}"
+            );
+        }
+    }
+}
+
+/// Der Nachzug der Fokusanzeige bleibt frei von der Auslegung (C9).
+///
+/// **Warum am Quelltext und nicht an einem Rueckgabewert.** Die Zusage lautet
+/// „diese Funktion schreibt Farben und Titel und sonst nichts", und das ist eine
+/// Aussage darueber, was sie **nicht** tut; an keinem Ergebnis ist sie
+/// abzulesen. Der Kopf von [`crate::quellbaum`] beschreibt die Bauform und sagt
+/// auch, was sie nicht kann.
+///
+/// **Die Nadeln stehen zusammengesetzt da**, wie in den Nachbarmodulen: diese
+/// Proben liegen in der Datei, die sie lesen.
+#[cfg(test)]
+mod fokusnachzugproben {
+    use super::zettelproben::{diese_datei, rumpf};
+
+    /// [`Anwendungsdelegierter::fokusanzeige_nachziehen`] legt nichts aus und
+    /// setzt nichts aktiv.
+    ///
+    /// **Der Ring, den diese Probe offen haelt.** `anwenden` setzt `setHidden`,
+    /// und eine ausgeblendete Ansicht, die den Ersthelfer haelt, laesst AppKit
+    /// den Rang neu vergeben — also `makeFirstResponder:` erneut rufen und
+    /// damit die Meldung des Hauptfensters ein zweites Mal ausloesen, die
+    /// diese Funktion gerade erst gerufen hat.
+    ///
+    /// **Seit dem 260819 traegt sie ihr Gewicht wirklich.** Bis dahin war der
+    /// Nachzug der Anzeige der einzige Empfaenger jener Meldung, und die Frage
+    /// stellte sich niemandem. Seither haengt
+    /// `aktives_dem_ersthelfer_nachziehen` als zweiter daran, und **der** geht
+    /// ueber `aktives_setzen` sehr wohl bis `anwenden` durch. Die beiden
+    /// nebeneinander zu stellen statt ineinander ist damit der ganze Unterschied
+    /// zwischen einem Ring und keinem, und das laedt dazu ein, sie beim naechsten
+    /// Mal zusammenzulegen.
+    ///
+    /// **Was sie nicht sieht:** einen Weg, der ueber eine dritte Funktion
+    /// dorthin fuehrt, ohne sie hier beim Namen zu nennen.
+    #[test]
+    fn der_nachzug_der_anzeige_ruehrt_die_auslegung_nicht_an() {
+        let rumpf = rumpf(&diese_datei(), "fokusanzeige_nachziehen");
+        for nadel in [
+            concat!("an", "wenden("),
+            concat!("set", "Hidden("),
+            concat!("aufteilung_", "nachziehen("),
+            concat!("aktives_", "setzen("),
+        ] {
+            assert!(
+                !rumpf.contains(nadel),
+                "der Nachzug der Fokusanzeige greift an die Auslegung: {nadel}"
+            );
+        }
+    }
+
+    /// Der Nachzug der Anzeige schreibt weiter Rahmen **und** Titel (C9, C11).
+    ///
+    /// Die Gegenprobe zur Verneinung darueber: eine Funktion, die nichts mehr
+    /// tut, bestuende jene muehelos. Beide Schreibvorgaenge sind zugesagt, der
+    /// erste von C9 und der zweite vom achten Abnahmekriterium von C11.
+    #[test]
+    fn der_nachzug_der_anzeige_schreibt_rahmen_und_titel() {
+        let rumpf = rumpf(&diese_datei(), "fokusanzeige_nachziehen");
+        for nadel in [
+            concat!("rahmen_", "setzen("),
+            concat!("titel_", "nachziehen("),
+        ] {
+            assert!(
+                rumpf.contains(nadel),
+                "der Nachzug der Fokusanzeige schreibt nicht mehr: {nadel}"
             );
         }
     }

@@ -3554,10 +3554,31 @@ define_class!(
         /// Der Nutzer versucht, eine Zeile auszuwaehlen.
         ///
         /// AppKit ruft das **nur** bei einer Auswahl, die vom Nutzer ausgeht,
-        /// und nicht bei `selectRowIndexes:byExtendingSelection:`. Genau
-        /// deshalb steht hier die Umschaltung des aktiven Dateifensters: ein
-        /// Klick in die andere Liste macht sie zur aktiven, waehrend ein vom
-        /// Programm gelesener Ordner im verdeckten Tab nichts umschaltet.
+        /// und nicht bei `selectRowIndexes:byExtendingSelection:`. Deshalb
+        /// steht hier eine Umschaltung des aktiven Dateifensters: ein Klick in
+        /// die andere Liste macht sie zur aktiven, waehrend ein vom Programm
+        /// gelesener Ordner im verdeckten Tab nichts umschaltet.
+        ///
+        /// **Die einzige Umschaltung ist sie seit dem 260819 nicht mehr.** Bis
+        /// dahin stand hier, sie stehe genau deshalb an dieser Stelle; das galt
+        /// fuer den Klick auf eine Zeile und wurde stillschweigend fuer die
+        /// ganze Regel genommen. Ein Klick unter die letzte Zeile ruft diese
+        /// Methode nicht — es gibt dort keine Zeile —, und das aktive
+        /// Dateifenster blieb auf der anderen Seite stehen
+        /// (`shared/issues/260819-1043_*_ein-klick-unter-die-letzte-zeile-…`).
+        /// Der Nutzerentscheid vom 260819 sagt: jede Flaeche eines
+        /// Dateifensters macht es zum aktiven. Getragen wird das von
+        /// `Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`, das am
+        /// Ersthelferwechsel des Hauptfensters haengt und damit jeden Klick
+        /// sieht, den AppKit in einen Rangwechsel uebersetzt.
+        ///
+        /// **Diese Zeile bleibt trotzdem stehen und ist keine Wiederholung.**
+        /// Der Weg ueber den Ersthelfer greift nur, wenn der Rang wirklich
+        /// wechselt; verweigert der bisherige Ersthelfer ihn — der Editor kann
+        /// das ueber seinen Delegierten —, bleibt er stehen, und dann ist diese
+        /// Zeile die einzige, die den Klick auf eine Zeile noch umsetzt. Beide
+        /// Wege muenden in dieselbe Funktion, `aktives_setzen`, und die zweite
+        /// Meldung ist dort folgenlos.
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(tableView:shouldSelectRow:))]
         fn zeile_waehlbar(&self, _tabelle: &NSTableView, _zeile: NSInteger) -> bool {
