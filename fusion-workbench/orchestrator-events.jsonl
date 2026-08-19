@@ -1210,3 +1210,7 @@
 {"ts":"2026-08-18T19:43:41","event":"coherence_review","turn":1,"detail":"verdict=ok | Artefakt-Grundlage: 6 Befunde gefilt, keiner blockierend | Artefakt-Directive: Commits bewegen sich auf die Directive zu, Buendel A vollstaendig | Grundlage-Directive: 1 aktive Entscheidung beruehrt, widerspruchsfrei"}
 {"ts":"2026-08-18T19:43:41","event":"turn_end","turn":1,"detail":"5 Aufgaben erledigt, 6 Defekte gefilt, 5 Commits"}
 {"ts":"2026-08-18T19:43:41","event":"turn_start","turn":2,"detail":"Buendel B (P-6..P-10) plus die Berichtigungen der Durchsicht"}
+{"ts":"2026-08-19T06:13:45","event":"reconciliation","turn":2,"detail":"verdict=coherent; 3 Textstellen berichtigt, 0 Diskrepanzen offen"}
+{"ts":"2026-08-19T06:13:45","event":"portfolio_refresh","detail":"circles/260818-1615-... auf _c_; portfolio.md nachgezogen"}
+{"ts":"2026-08-19T06:13:45","event":"turn_end","turn":2,"detail":"8 Aufgaben, 11 Befunde geschlossen"}
+{"ts":"2026-08-19T06:13:45","event":"session_end","detail":"Complete. 2 Turns, 14 Commits, 13/13 Aufgaben, 16 Defekte gefilt, 11 geschlossen, Runde 13 kohaerent geschlossen"}

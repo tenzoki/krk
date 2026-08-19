@@ -1,8 +1,8 @@
 # Orchestrator Session — 260818-1117
 
-**Directive:** (not yet stated) — the user invoked `/fusion:setup`; no task scope has been given.
-**Mode:** (unresolved — Phase 0 not yet run)
-**Status:** In progress
+**Directive:** Zwei Features bauen: das andere Dateifenster auf einen Tastendruck auf den Ordner des aktiven stellen, und Dateien und Ordner aus fremden Anwendungen in eine KRK-Dateiliste abwerfen können.
+**Mode:** plan (two features, one Circle)
+**Status:** Complete
 
 ## Setup snapshot
 
@@ -135,3 +135,169 @@ des Nutzers und nicht die Reife der Runde.
 
 Vollständiger Abgleich:
 `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/history/260819-0102-reconciliation.md`
+
+## Budget
+
+| Metric | Count |
+|--------|-------|
+| Turns | 2 |
+| Tasks resolved | 13 of 13 |
+| Tasks skipped/deferred | 0 |
+| Issues created | 16 |
+| Issues resolved | 11 |
+| Decisions answered (`_o_`→`_a_`) | 2 |
+| Decisions implemented (`_a_`→`_i_`) | 2 |
+| Commits | 14 |
+| Agent errors | 2 (both API 529, both retried; neither lost work) |
+| Human gates hit | 8 |
+
+Every record figure above is read off the stores at write time rather than tallied across
+the session, counting the Circle's issue and decision stores alongside the shared ones. A
+first attempt resolved the paths through `bin/fusion-paths` after `.active-circle` had
+already been deleted, which returns the shared stores alone and under-reported the issue
+count by fourteen. The correction is recorded here because the same trap will catch the next
+session that measures after closing its Circle.
+
+## Per-Turn Log
+
+### Turn 1 — bundle A, the command
+
+- Tasks: P-1 keymap entry, P-2 the command in its four mandatory sites, P-3 `#[must_use]` on
+  `bereich_einblenden`, P-4 the command acts, P-5 nine prose counts.
+- Commits: `b47355e`, `18af77f`, `ebfab4f`, `71413c3`, `79f52af`.
+- Review: `coderev`, six findings, none release-blocking.
+- Circuit breaker: OK. Coherence: ok.
+
+Two agents died to an API overload mid-task. Both had written more than their last message
+suggested, so the working tree was inspected before either was retried, rather than
+re-dispatching blind.
+
+### Turn 2 — bundle B, the drop
+
+- Tasks: R-1 three review corrections, P-6 the pasteboard read, P-7 the pure drop rule, P-8
+  the AppKit facts, P-9 the operation machinery's fourth entry, P-10 the table accepts,
+  R-2 two keymap comment defects, plus five further review corrections.
+- Commits: `a6b3818`, `07347b8`, `15a2978`, `d6343e0`, `a7419cd`, `4d27c1c`, `cac9218`,
+  `801d594`.
+- Review: `coderev`, five findings, all fixed.
+- Circuit breaker: OK. Coherence: ok.
+
+## Review coverage
+
+**Range:** `8d5baf6..HEAD` — 14 commits
+**Covered by:** `coderev` 260818-2133 (`8d5baf6..71413c3`), `coderev` 260818-2340
+(`71413c3..a7419cd`)
+**Not covered:** four commits, all of them written after the second review closed:
+- `4d27c1c` fix(ui): die Abwurfmeldung raeumt beide Seiten und geht nicht mehr verloren
+- `cac9218` fix(core): ein Ziel, das unter zweiter Schreibweise die Quelle ist, loescht sie nicht mehr
+- `801d594` docs(workbench): der Abgleich der Runde 13
+- `c09ff3a` docs(workbench): die Runde 13 schliesst kohaerent
+
+`cac9218` is the one worth naming: it changes `krk-core` and no review has read it. It was
+written to close a finding the second review filed, and its own reasoning reverses that
+finding's central claim — the reviewer held the textual path comparison harmless, and the
+implementing agent proved it reaches a real `remove_file`. That reversal is exactly the kind
+of thing a third pass would check. The user ran the acceptance run over the built bundle
+afterwards and all ten checks held, which is evidence of behaviour rather than of review.
+
+**Carried out-of-scope files:** eight, all workbench records rather than code — six session
+histories and `orchestrator-events.jsonl`. The second review opened three of the eleven the
+first had declared and re-declared the rest with its reason.
+
+## Remaining Work
+
+Five defect records filed this session are still open, none blocking:
+
+- `260818-1704` the plan claimed the tests stay green after step 1; 51 fail
+- `260818-2221` the drop passes its target as the source folder, so the completion reads it twice
+- `260818-2228` the plan calls the new caller the third when it is the fourth
+- `shared/260818-2145` a module head carried an availability figure three releases too early;
+  corrected, but the question behind it — how a *wrong* figure is ever noticed — hangs on
+  `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`
+- `shared/260814-0656` a new function ships unbound to every user who has their own keymap
+
+Two findings for a curator pass, both already carried on existing records: `CLAUDE.md` states
+ten rounds where the tree holds thirteen, and its `**Artifact language:** en` line contradicts
+its own `## Sprache` section and the practice of every artifact in the tree.
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant O as Orchestrator
+    participant S as Shaper
+    participant P as Planner
+    participant C as Coder
+    participant OC as Ontocoder
+    participant CR as Coderev
+    participant R as Reconciler
+    participant PM as Playmaker
+
+    U->>O: zwei Features
+    O->>U: GATE Zuschnitt
+    U-->>O: eine Runde
+    O->>S: shape
+    S-->>O: Fragerunde 1
+    O->>U: 4 Fragen
+    U-->>O: Antworten
+    O->>S: Fragerunde 2
+    S-->>O: shift haelt nicht
+    O->>U: 4 Fragen
+    U-->>O: cmd statt shift
+    O->>S: Spec schreiben
+    S-->>O: Spec, 7 Faehigkeiten
+    O->>U: GATE Spec
+    U-->>O: abgenommen
+    O->>S: Circle anlegen
+    S-->>O: 260818-1615
+    O->>P: Plan
+    P-->>O: 10 Schritte, 2 Buendel
+    O->>U: GATE Plan + Schreibrecht
+    U-->>O: abgenommen, Moeglichkeit 1
+
+    Note over O: Turn 1 — Buendel A
+    O->>OC: P-1 Belegungsdatei
+    O->>C: P-3 must_use
+    Note over O: beide API 529, Baum geprueft
+    O->>C: P-2 vier Pflichtstellen
+    C-->>O: make check 0 (18af77f)
+    O->>C: P-4 der Befehl wirkt
+    C-->>O: done (ebfab4f)
+    O->>C: P-5 neun Prosazahlen
+    C-->>O: done (71413c3)
+    O->>CR: review 8d5baf6..71413c3
+    CR-->>O: 6 Befunde
+
+    Note over O: Turn 2 — Buendel B
+    O->>U: GATE C1 gegen C2
+    U-->>O: einblenden ja, lesen nein
+    O->>C: R-1, P-6, P-7 parallel
+    C-->>O: done (a6b3818, 07347b8)
+    O->>C: P-8, P-9 parallel
+    C-->>O: done (15a2978)
+    O->>C: P-10 Tabelle nimmt an
+    C-->>O: done (d6343e0)
+    O->>OC: R-2 Belegungskommentare
+    OC-->>O: done (a7419cd)
+    O->>CR: review 71413c3..a7419cd
+    CR-->>O: 5 Befunde
+    O->>C: Befund 1 + must_use
+    C-->>O: done (4d27c1c)
+    O->>U: GATE drei Restbefunde
+    U-->>O: alle drei
+    O->>C: 2333, 2334, 2336
+    C-->>O: Datenverlustkette (cac9218)
+
+    Note over O: Phase 3
+    O->>R: Abgleich
+    R-->>O: coherent, 3 Textstellen berichtigt
+    O->>U: GATE Abschluss
+    U-->>O: ich nehme jetzt ab
+    O->>U: Buendel 0.5.2 + 10 Pruefungen
+    U-->>O: alles ok
+    Note over O: _t_ -> _c_, kohaerent
+    O->>PM: Portfolio
+    PM-->>O: Warnung: Abnahmelauf nicht hinterlegt
+    Note over O: Abnahmedatensatz nachgetragen
+```
