@@ -1223,3 +1223,6 @@
 {"ts":"2026-08-19T18:39:30","event":"queue_built","detail":"2 tasks, 0 blocked"}
 {"ts":"2026-08-19T18:39:30","event":"turn_start","turn":1,"detail":"1 ready task"}
 {"ts":"2026-08-19T18:39:30","event":"task_start","turn":1,"task":"T1","agent":"coder","detail":"CLAUDE.md language declaration"}
+{"ts":"2026-08-19T18:43:39","event":"task_done","turn":1,"task":"T1","agent":"coder","detail":"6be1e81"}
+{"ts":"2026-08-19T18:43:39","event":"commit","turn":1,"task":"T1","detail":"6be1e81 docs: die Artefaktsprachen-Deklaration faellt"}
+{"ts":"2026-08-19T18:43:39","event":"shaper_start","turn":1,"task":"T2","agent":"shaper","detail":"Auswahl und Kopieren in der Vorschau"}
