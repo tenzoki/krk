@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** implemented
+**Status:** superseded
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/appkit/vorschau.rs:574-575` (`setEditable(false)`, `setSelectable(false)` und die Begründung im Modulkopf); `crates/krk-ui/src/appkit/ereignisse.rs` (`ersthelfer_gehoert_appkit`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md` (der Betrachter, der Verweisen folgen soll); C9 der Runde 1, „Nur lokale Laufwerke"
 
@@ -72,4 +72,4 @@ Vorschau-Tabs, und die ist eine abgenommene Zusage aus C1 der Runde 2.
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812-1105` — Klaerungsrunde des Orchestrators; Sitzungsprotokoll `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md`.
 Implemented: `crates/krk-ui/src/appkit/vorschau.rs:1120-1121` (`setEditable(false)`, `setSelectable(false)` — die Flaeche bleibt unauswaehlbar) und `crates/krk-ui/src/markdown.rs:178,204,572,591` (`linkfarbe` faerbt den Verweis, ohne ihm eine Klickwirkung zu geben) — Schritte 8 und 9 des Plans, Commits `b4d9de2` und `6702800`. Abgeglichen am 260812-2253.
 Deferred:
-Superseded by:
+Superseded by: `shared/decisions/260819-2216_*_wird-die-vorschauflaeche-auswaehlbar-und-was-genau-laesst-sich-auswaehlen.md` — **nur die zweite Haelfte ist ueberholt.** Der Nutzer hat am 260819-2210 entschieden, dass die Vorschauflaeche auswaehlbar wird; damit faellt die Antwort "die Flaeche bleibt unauswaehlbar" und mit ihr die hier abgelehnte Moeglichkeit 3, die er jetzt gewaehlt hat. **Die erste Haelfte gilt unveraendert weiter:** ein Verweis im gerenderten Markdown bekommt Farbe und Unterstreichung, keine Klickwirkung und keinen Zeigefinger, und welche Quellen eine Adresse setzen duerfen, bleibt die erste offene Frage des Circles `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`. Wer diese Umbenennung als Widerruf jener Antwort liest, liest sie falsch.
