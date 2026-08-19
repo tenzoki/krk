@@ -56,3 +56,6 @@ Der Rest des Absatzes bleibt, wie er ist.
 - `xtask/src/main.rs:48-58` — die Hilfe des Kommandos
 - `xtask/src/version.rs:78-88` — die drei Vorhaben, zwei davon taggen
 - `README.md`, `### Versionsstufen` — die richtige Aussage samt Begründung
+
+---
+Resolved: Doppelt gefilt und deshalb zurueckgezogen. Der Sachverhalt steht seit dem 260816 als `shared/issues/260816-1232_*_claude-md-sagt-den-tag-setze-der-nutzer-seit-dem-260813-setzt-ihn-das-werkzeug.md` im Speicher, samt der Folge, die hier als neu beschrieben ist. Was dieser Datensatz an Belegstellen mehr trug, ist dort als `Also seen:` angehaengt. Ursache des Doppels: die Konvention verlangt vor dem Schreiben ein Auflisten der offenen Datensaetze des Zielspeichers, und der Orchestrator hat es unterlassen.

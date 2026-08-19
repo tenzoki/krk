@@ -35,3 +35,6 @@ der Datei, der er gefolgt ist.
 Den Halbsatz streichen oder umdrehen. Die Zahl wählt weiterhin der Nutzer, und
 zwar im Argument von `./release.sh <version>`; der Tag folgt daraus mechanisch.
 Genau so steht es im README, und der Satz dort ist die richtige Fassung.
+
+---
+Also seen: 260819-1230 by orchestrator — in der Praxis eingetreten, und zwar genau in der hier vorhergesagten Form. Der Nutzer fragte vor einer Auslieferung, ob 0.5.3 oder 0.5.4 zu nehmen sei; der Tag v0.5.3 stand bereits auf dem Versions-Commit 0b57157, HEAD war einen Commit weiter und ungetaggt, und ein `./release.sh 0.5.3` waere am vergebenen Tagnamen abgebrochen. Zwei Belegstellen, die dieser Datensatz noch nicht nennt: die Hilfe des Kommandos in `xtask/src/main.rs:48-58` schreibt das Taggen ausdruecklich aus, und `xtask/src/version.rs:78-88` fuehrt drei Vorhaben, von denen zwei taggen (`NurTaggen`, `SetzenEintragenTaggen`).
