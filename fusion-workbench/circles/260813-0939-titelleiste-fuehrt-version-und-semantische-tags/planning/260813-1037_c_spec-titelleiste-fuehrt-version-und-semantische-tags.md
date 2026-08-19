@@ -1,7 +1,7 @@
 # Spec: Die Titelleiste führt Namen und Version, semantische Versionstags decken die Zahl
 
 **Date:** 2026-08-13
-**Status:** Entwurf
+**Status:** Abgeschlossen. Die Runde 8 ist am 260813 kohärent geschlossen, nachdem der Nutzer den Abnahmelauf selbst gefahren hat; alle 59 Abnahmekriterien sind abgenommen bis auf C3.15, den Tag `v0.1.0` auf dem Abschlusscommit. Beleg: `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md`, `## Closure note`, und die Abnahmeliste `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1405-abnahmeliste-e2.md`. Die Kopfzeile stand bis zum Abgleich 260819-1440 auf „Entwurf“ und widersprach damit dem Dateimarker.
 **Source:** Backlog-Eintrag des Nutzers vom 260813-0822, geschlossen mit der Anlage des Circles, und die Directive im Circle-Datensatz `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md`
 **Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`, aktiv seit 260813-1006
 **Grundlage erhoben:** 260813-1037, am Baum unter `crates/`, `xtask/`, `resources/` und an `git`

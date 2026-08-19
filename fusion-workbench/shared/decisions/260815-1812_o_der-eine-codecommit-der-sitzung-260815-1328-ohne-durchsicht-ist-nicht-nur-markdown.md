@@ -74,3 +74,15 @@ Zeile.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft das Verfahren dieses Projekts und die Directive keiner Runde.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **der eine ungedeckte Wurf ist nachgedeckt, die Verfahrensfrage steht, und die Gestalt ist heute wieder aufgetreten.**
+
+**`7fae5ba` ist gedeckt**, und zwar 32 Minuten nach der Ablage dieses Datensatzes: `shared/reviews/260815-1844-coderev-verweisziel-fragt-am-namen-nachgemessen.md` trägt `Reviewed-range: e37a1e3..60a8ca5` und nennt den Commit in seiner Zusammenfassung ausdrücklich. Der Einzelfall der Überschrift ist damit erledigt.
+
+**Die Frage der Abgrenzung ist es nicht.** Ob die Zuordnung „fasst nur Werkbank-Markdown an" von Hand geschieht oder aus `git show --name-only` abgeleitet wird, ist am Baum nicht entscheidbar und auch nicht entschieden. Sie ist ihrer Art nach eine Entscheidung und kein Defekt; der Vorschlag steht im Abgleichsprotokoll `shared/history/260819-1440-reconciliation.md`.
+
+**Also seen: 260819-1440 by reconciler** — `76ceb68` fasst `crates/krk-ui/src/appkit/anwendung.rs` und `crates/krk-ui/src/appkit/tabelle.rs` an, also ausgelieferten Code, und keine Durchsicht deckt ihn: die jüngste Durchsichtsdatei des ganzen Baums ist `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/reviews/260818-2340-coderev-round-13-turn-2-abwurf-aus-fremden-apps.md`, und sie liegt vor dem Commit. Der Wurf ist außerhalb jedes Turns gefahren, nach dem `session_end` der Sitzung 260818-1117, weshalb kein Durchsichtsschritt für ihn vorgesehen war.
+
+---
+Umgelegt am 260819 vom Defekt- in den Entscheidungsspeicher, auf Befund des Abgleichs 260819-1440: der Text sagt selbst, dass zu entscheiden und nicht zu beheben ist. Der Datensatz behaelt vorerst die Gestalt eines Defektberichts; die Abschnitte Options, Constraints und Recommendation fehlen ihm und sind nachzutragen, wenn die Frage vorgelegt wird.

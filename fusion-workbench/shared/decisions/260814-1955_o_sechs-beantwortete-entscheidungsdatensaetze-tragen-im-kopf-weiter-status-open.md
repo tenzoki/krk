@@ -95,3 +95,19 @@ entscheiden ist nicht die Sache, sondern welcher der beiden Abschlüsse gilt —
 von `260815-1216_c_vierzehn-entscheidungsdatensaetze-…`, das die Ursache als „bekannte Lage"
 hingenommen hat. Der Befund von heute erweitert den Geltungsbereich jener Entscheidung um eine
 zweite Datensatzart.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **der Entscheidungsbestand ist sauber geblieben, und die Gestalt ist vollständig in die Defektdatensätze umgezogen.**
+
+**Entscheidungsdatensätze: null Abweichungen von 160.** Marker im Dateinamen und Kopffeld `**Status:**` stimmen über `shared/decisions/` und `circles/*/decisions/` durchgehend überein. Der Bestand, den der Abgleich vom 260815-1812 mit 137 Datensätzen sauber gemeldet hat, ist es geblieben, obwohl seither drei Runden und 23 Datensätze dazugekommen sind. **Der Gegenstand der Überschrift dieses Datensatzes ist damit erledigt.**
+
+**Defektdatensätze: 19 Abweichungen von 27.** Gezählt wurden allein die Defektdatensätze, die überhaupt eine `**Status:**`-Kopfzeile führen; von 27 widersprechen 19 ihrem Dateinamen. Sechs davon sind bloße Schreibungsfälle (`Open` gegen `open`) an `_o_`-Dateien, **dreizehn widersprechen der Sache nach**: zwölfmal `_c_` mit Kopf `open`, einmal `_d_` mit Kopf `open`. Die Häufung sitzt in der Runde 10 (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/`) und in drei Dateien des gemeinsamen Speichers (`260815-1047_c_c1-9-…`, `260815-1047_c_vier-verweise-im-code-…`, `260815-1047_d_die-bedingung-der-moeglichkeit-2-…`).
+
+**Die fünf Dateien aus dem Vermerk „Also seen: 260819-0057" sind berichtigt** und tragen heute `**Status:** closed`.
+
+**Der Marker bleibt `_o_`, und der Grund ist unverändert der von 260815-1812:** zu entscheiden ist nicht die Sache, sondern welcher der zwei Abschlüsse gilt, dieser oder der von `260815-1216_*_vierzehn-entscheidungsdatensaetze-tragen-im-rumpf-einen-anderen-stand-als-im-dateinamen.md`. **Dieser Abgleich hält daneben fest, dass der Datensatz seiner Art nach eine Entscheidung ist und kein Defekt** — sein eigener Text sagt es („zu entscheiden ist … welcher der beiden Abschlüsse gilt"), und die Vokabeln `_o_/_p_/_c_/_d_` des Defektspeichers können diesen Stand nicht ausdrücken. Der Vorschlag steht im Abgleichsprotokoll `shared/history/260819-1440-reconciliation.md` unter `## Falsch abgelegt — gehört in den Entscheidungsspeicher`; verschieben kann ihn nur der Nutzer von Hand.
+
+**Kein neuer Datensatz für die Defektdatensätze.** Die Gestalt ist hier schon aufgenommen, und ein zweiter Datensatz derselben Sache wäre die Doppelung, die die Filialregel ausdrücklich vermeidet.
+
+---
+Umgelegt am 260819 vom Defekt- in den Entscheidungsspeicher, auf Befund des Abgleichs 260819-1440: der Text sagt selbst, dass zu entscheiden und nicht zu beheben ist. Der Datensatz behaelt vorerst die Gestalt eines Defektberichts; die Abschnitte Options, Constraints und Recommendation fehlen ihm und sind nachzutragen, wenn die Frage vorgelegt wird.

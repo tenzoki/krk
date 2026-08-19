@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** analyst
 **Cross-references:** `shared/analyses/260819-1043-klick-holt-den-fokus-nicht.md`; `shared/issues/260819-0900_o_ein-klick-in-das-dateifenster-holt-den-fokus-nicht-der-rahmen-bleibt-stehen.md`; `shared/issues/260819-1043_o_ein-klick-unter-die-letzte-zeile-laesst-das-aktive-dateifenster-stehen-und-malt-den-rahmen-auf-das-andere.md`; `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/` (C9, viertes Abnahmekriterium); `crates/krk-ui/src/appkit/bereichsleiste.rs:647` (die Schalter verweigern den Rang); `crates/krk-ui/src/appkit/statuszeile.rs:54`; `crates/krk-ui/src/kommandos/fokus.rs:262` (`bereich_mit_fokus`)
 
@@ -82,3 +82,15 @@ braucht die zwei Handgriffe am laufenden Bündel, die die Analyse nennt.
 
 ---
 Answered: Nutzerentscheid am 260819 — **Möglichkeit 1**. Jede Fläche eines Bereichs holt den Fokus, und ein Klick in eine Dateiliste setzt sie immer als aktive, auch wenn er keine Zeile trifft. Die Folge ist ausdrücklich mitentschieden: F5 und F6 nehmen danach als Quelle das Dateifenster, in das zuletzt geklickt wurde, auch ohne Auswahl. Statuszeile und Bereichsleiste bleiben außen vor, weil sie keine Bereiche sind. Vorgelegt wurde die Wahl zwischen Möglichkeit 1 und 3; Möglichkeit 2 stand nicht zur Wahl, weil der Nutzer die Korrektur ausdrücklich verlangt hatte.
+
+---
+Implemented: `76ceb68` — `Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen` (`crates/krk-ui/src/appkit/anwendung.rs:4285`) hängt als **erster** von zwei Empfängern am Melder des Ersthelferwechsels (`:1130`) und setzt damit Möglichkeit 1 um: liegt der Rang nach dem Wechsel in einem Dateifenster, ist dieses das aktive, ob der Klick eine Zeile traf oder nicht.
+
+**Am Baumstand `77dcd48` nachgelesen, Stelle für Stelle:**
+
+- **„Jede Fläche eines Bereichs holt den Fokus."** AppKit übersetzt den Klick ohnehin in ein `makeFirstResponder:`, und den führt `Hauptfenster` seit C9 an genau einen Auslösepunkt. Die Leiste ist damit mitgelöst, ohne angefasst zu werden: sie ist eine `NSTableView` (`crates/krk-ui/src/appkit/leiste.rs:3`) und nimmt den Rang von sich aus.
+- **„Ein Klick in eine Dateiliste setzt sie immer als aktive."** `Bereich::seite` (`crates/krk-ui/src/fenstermodell.rs:161`) ist die eine Stelle, die aufzählt, welche Bereiche Dateifenster sind, und liefert für Lesezeichen, Vorschau und Editor `None`; nur `Links` und `Rechts` erreichen `aktives_setzen`.
+- **„Statuszeile und Bereichsleiste bleiben außen vor."** Beide sind keine Bereiche, und die Schalter der Bereichsleiste verweigern den Ersthelferrang ausdrücklich (`crates/krk-ui/src/appkit/bereichsleiste.rs:93`, `refusesFirstResponder`).
+- **`aktives_setzen` hat jetzt drei Anlässe und bleibt die eine Stelle** (`anwendung.rs:4234`): die Zeilenauswahl und der Klick auf einen Abschnitt der Tableiste über `DateifensterQuelle::angefasst`, dazu dieser dritte.
+
+**Der Abnahmeklick des Nutzers ist noch nicht gemeldet, und `_i_` behauptet ihn nicht.** Der Marker sagt nach `rules/fusion-workbench-conventions.md`, Abschnitt `## State Markers — decisions`, dass Code auf der Platte die Antwort einlöst, und das ist geprüft. Ob die Wirkung am laufenden Bündel ankommt, ist eine andere Frage; sie gehört zum Abnahmelauf, den nur der Nutzer fahren kann. Dieselbe Lesart hat die Runde 13 für ihre zwei Datensätze angewandt, die `d6343e0` vor dem Abnahmelauf zitieren.

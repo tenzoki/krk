@@ -70,3 +70,6 @@ als Ziel.
 
 Nicht angefasst von den vier Commits nach dem Filing (`a7419cd`, `4d27c1c`, `cac9218`,
 `a6b3818`): keiner berührt diese Zeile. Der Befund ist damit weder behoben noch überholt.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **unverändert offen, am Baum nachgemessen.** `abwurf_ausfuehren` ruft weiter `let _ = self.auftrag_starten(seite, auftrag, ziel, positionen);` (`crates/krk-ui/src/appkit/anwendung.rs:5781`) und reicht damit den Zielpfad an den Parameter `quellordner`. Der eine Commit seit dem Abgleich vom 260819-0057, der diese Datei anfasst (`76ceb68`), setzt den Fokus-Nachzug ein und berührt die Zeile nicht; die Zeilennummer ist durch ihn von `:5694` auf `:5781` gewandert. `auftrag_starten` hat unverändert vier Aufrufstellen (`:5222`, `:5480`, `:5655`, `:5781`).

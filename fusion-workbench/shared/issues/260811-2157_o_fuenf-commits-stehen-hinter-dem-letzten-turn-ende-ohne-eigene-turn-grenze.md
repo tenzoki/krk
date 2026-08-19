@@ -85,3 +85,8 @@ Innenteil des Turns. Daneben steht `fusion-workbench/orchestrator-live.md` unver
 `Turn 1/5 | Tasks 6/15 | Commits 9` und damit auf einem Stand von vor mehr als drei Stunden,
 waehrend `agentstate.yaml` `turn: 2`, `tasks_done: 15` und `commits: 16` fuehrt. Die zwei
 Anzeigen desselben Standes laufen auseinander.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Gestalt ist heute in verschärfter Form wieder aufgetreten.** Die Sitzung 260818-1117 meldet `session_end` am `2026-08-19T06:13:45`, also 08:13:45 Ortszeit. Danach stehen fünf Commits: `0b57157` (08:54), `76ceb68` (11:20), `91f570d` (14:16), `ee6d033` (14:28) und `77dcd48` (14:29).
+
+**Der Unterschied zur ursprünglichen Beobachtung ist, dass sie diesmal nicht hinter dem letzten Turn-Ende stehen, sondern hinter dem Sitzungsende.** Damit gibt es für sie nicht nur keine Turn-Grenze, sondern auch keinen Durchsichtsschritt und keine Abgleichsstelle; `76ceb68` ist von keiner Durchsicht gedeckt (aufgenommen in `shared/issues/260815-1812_*_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md`).

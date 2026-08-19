@@ -1,7 +1,7 @@
 # Spec: Jeder Löschweg führt in den Papierkorb und fragt vorher nach
 
 **Datum:** 2026-08-17
-**Status:** Entwurf
+**Status:** Abgeschlossen. Die Runde 12 ist am 260818 kohärent geschlossen, und ihr Circle-Datensatz schreibt ausdrücklich aus, dass `_c_` hier **nicht** „vom Nutzer abgenommen“ heißt: der Abnahmelauf ist nicht gefahren (`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md`, `## Closure note`). Die Kopfzeile stand bis zum Abgleich 260819-1440 auf „Entwurf“ und widersprach damit dem Dateimarker.
 **Quelle:** Nutzerwunsch vom 260816-2144 („jede Datei-Löschfunktion wird durch eine Rückfrage gesichert"), nachgeschärft am 260817 („Löschen OHNE Papierkorb wird entfernt: alle Datei/Folder-Löschvorgänge gehen immer in den Papierkorb"), dazu die ergänzende Antwort desselben Tages zu Zielen ohne Papierkorb.
 **Baumstand:** `b8e198e`, gelesen am 260817
 **Anlass:** der Schadensfall vom 260817-0344. KRK hat den Speicher `fusion-workbench/shared` des eigenen Projektverzeichnisses mit 189 verfolgten Dateien in den Papierkorb geräumt, auf einen Tastendruck, ohne Rückfrage, und vier Stunden unbemerkt. Forensik: `shared/analyses/260817-0419-verlust-des-speichers-shared.md`. Defekt: `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.

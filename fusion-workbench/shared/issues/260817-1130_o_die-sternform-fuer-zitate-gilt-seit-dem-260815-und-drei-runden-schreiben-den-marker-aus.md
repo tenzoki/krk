@@ -81,3 +81,6 @@ die Schritt 16 der laufenden Runde in `24bbccc` bewegt hat. Fünf davon stehen i
 ersten Geltungsbereich, den die Entscheidung vom 260815-1230 nennt. Der 23. tote Zeiger ist der
 hier schon gemeldete auf `260802-1036_*_spec-navigator-geruest.md`. Damit sind es nicht mehr drei
 von 52, sondern 23 in einem einzigen Durchgang.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und der Bestand ist gewachsen.** Erhebung über die 205 lebenden Dateien: **62 ausgeschriebene Marker in 11 Dateien**, gegenüber 52 in zehn bei der Ablage. Die drei größten Träger sind `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` (13), `circles/260816-2255-befehle-absetzen-und-makros-speichern/planning/260816-2307_o_plan-befehle-absetzen-und-makros-speichern.md` (12) und `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md` (8). Unter `crates/`, `xtask/` und `resources/` steht keiner mehr; die verbliebenen 62 sind sämtlich Werkbank-Prosa.

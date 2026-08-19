@@ -59,3 +59,6 @@ Der Widerspruch zu seinem eigenen `## Current State` („hat heute drei Rufer") 
 kein Übersetzer hält: die vier `#[must_use]` der Prüfstrategie (in Wahrheit elf, in diesem
 Abgleich berichtigt), die acht Prosazahlen von Schritt 5 (in Wahrheit neun, `71413c3`) und die
 SDK-Zuordnung von `NSPasteboardURLReadingFileURLsOnlyKey` in Schritt 6 (10.13 statt 10.6).
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **unverändert offen.** Am Baum gezählt: `self.auftrag_starten(` steht an vier Stellen (`crates/krk-ui/src/appkit/anwendung.rs:5222`, `:5480`, `:5655`, `:5781`). Der Plan sagt weiter „dritte" an seinen zwei Stellen, `:290` (Überschrift von Schritt 9) und `:427` (Tabelle unter `## API Changes`), und widerspricht damit weiter seinem eigenen `## Current State` bei `:24`. Der Baum ist die Seite, die richtig zählt.

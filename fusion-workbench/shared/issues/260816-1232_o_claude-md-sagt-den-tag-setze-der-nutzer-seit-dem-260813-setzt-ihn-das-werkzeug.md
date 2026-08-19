@@ -38,3 +38,8 @@ Genau so steht es im README, und der Satz dort ist die richtige Fassung.
 
 ---
 Also seen: 260819-1230 by orchestrator — in der Praxis eingetreten, und zwar genau in der hier vorhergesagten Form. Der Nutzer fragte vor einer Auslieferung, ob 0.5.3 oder 0.5.4 zu nehmen sei; der Tag v0.5.3 stand bereits auf dem Versions-Commit 0b57157, HEAD war einen Commit weiter und ungetaggt, und ein `./release.sh 0.5.3` waere am vergebenen Tagnamen abgebrochen. Zwei Belegstellen, die dieser Datensatz noch nicht nennt: die Hilfe des Kommandos in `xtask/src/main.rs:48-58` schreibt das Taggen ausdruecklich aus, und `xtask/src/version.rs:78-88` fuehrt drei Vorhaben, von denen zwei taggen (`NurTaggen`, `SetzenEintragenTaggen`).
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und am Werkzeug nachgelesen.** `CLAUDE.md:106` sagt wortgleich „den Tag setzt der Nutzer, nicht das Werkzeug". Der Baum sagt das Gegenteil: `xtask/src/version.rs:97` baut die Zeichenkette `v{zahl}`, `:216` trägt `fn taggen`, und `vorhaben_bestimmen` (`:329`) führt drei Vorhaben, von denen zwei taggen (`NurTaggen`, `SetzenEintragenTaggen`); die Tafel dazu steht als Kommentar bei `:307-310`. Der Nutzer liefert allein die Zahl, über `./release.sh <version>`.
+
+**Zur Doppelung.** Der Commit `ee6d033` trägt eine Meldung über die Berichtigung dieses Befunds, sein Diff an `CLAUDE.md` ist aber leer; `77dcd48` hat den zweiten Datensatz derselben Sache wieder zurückgenommen (`shared/issues/260819-1230_c_claude-md-sagt-den-tag-setze-der-nutzer-das-werkzeug-setzt-ihn-seit-dem-260813.md`). Dieser Datensatz hier ist der lebende. Der Marker bleibt `_o_` für den Durchgang des Kurators.

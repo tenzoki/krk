@@ -64,3 +64,6 @@ späteren Leser eine Messung zu, die nicht hält. Der Plan ist mit diesem Abglei
 gesetzt; die Zeile darin bleibt unberichtigt, weil ihre Berichtigung eine Aussage über einen
 Zwischenstand ändern hieße, den die Runde bewusst nicht gefahren ist. Zu entscheiden bleibt,
 ob die Zeile berichtigt oder gestrichen wird.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **unverändert offen.** Die beanstandete Abnahmezeile steht wortgleich in `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/planning/260818-1633_c_plan-ordner-angleichen-und-abwurf-aus-fremden-apps.md:238`. Die zwei Commits seit dem Abgleich vom 260819-0057 (`76ceb68`, `91f570d`) berühren weder den Plan noch die zwei Zählstellen. Zu entscheiden bleibt, was der Abgleich vom 0057 schon benannt hat: ob die Zeile berichtigt oder gestrichen wird.

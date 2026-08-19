@@ -53,3 +53,6 @@ and this file already applies that reasoning to `Kommando` ("Für `Kommando` …
 Zahl") and to the round count — or make the tense match the date the paragraph already carries.
 The first is the pattern this file has chosen every other time a number aged, and it is the one
 that cannot age again.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und der Abstand ist von vier auf sieben Tags gewachsen.** `CLAUDE.md:39` sagt unverändert, das Bündel liege als `v0.4.1` aus. `Cargo.toml:13` trägt heute `version = "0.5.4"`, und der jüngste Tag ist `v0.5.4`. Nach `v0.4.1` stehen **sieben** Tags: `v0.4.3`, `v0.4.4`, `v0.5.0`, `v0.5.1`, `v0.5.2`, `v0.5.3`, `v0.5.4`. Der Datensatz misst vier; drei sind seither dazugekommen. Der Marker bleibt `_o_` für den Durchgang des Kurators; dieser Abgleich fasst `CLAUDE.md` nicht an.

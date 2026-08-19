@@ -1,7 +1,7 @@
 # Spec: Das andere Dateifenster nachziehen, und Dateien aus fremden Anwendungen abwerfen
 
 **Datum:** 2026-08-18
-**Status:** Entwurf
+**Status:** Abgeschlossen. Die Runde 13 ist am 260819 kohärent geschlossen, nachdem der Nutzer den Abnahmelauf gefahren hat (`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/history/260819-0810-abnahmelauf.md`, zehn Prüfungen am Bündel 0.5.2). Die Kopfzeile stand bis zum Abgleich 260819-1440 auf „Entwurf“ und widersprach damit dem Dateimarker; der Abgleich vom 260819-0057, der den Marker auf `_c_` gesetzt hat, hat sie übersehen.
 **Quelle:** Nutzerwunsch vom 260818: „Ok. bauen wir zwei neue Features ein: 1.) Ins gleiche Verzeichnis gehen: z.B. Fokus ist in Dateifenster A auf Verzeichnis /tmp/x/a. Nach der Operation ist Dateifenster B auf das gleiche Verzeichnis gestellt. 2.) Dateien oder Ordner von einer anderen App in einen Ordner einer Krk Dateiliste draggen."
 **Baumstand:** `8d5baf6`, gelesen am 260818
 **Ablage:** Dieser Spec entsteht ohne Circle im Blick und liegt deshalb im gemeinsamen Speicher. Der Circle dieser Runde nimmt ihn über sein Feld `Active spec/plan:` an.

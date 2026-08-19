@@ -45,3 +45,8 @@ geschlossenen und die laufende: dreizehn. Die Tabelle in `CLAUDE.md` führt zehn
 zwei Spannen, die aus derselben Zahl rechnen („die Runden 2 bis 10", „er liegt vor den Runden 5
 bis 10 — keine der sechs"), enden jetzt drei Runden zu früh. Damit ist die Zahl seit dem Filing
 zum dritten Mal veraltet; der Datensatz benennt genau dieses Muster.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Zahl in der Überschrift dieses Datensatzes ist selbst überholt.** `CLAUDE.md:12` sagt unverändert „Zehn Runden sind gefahren", und die zwei abgeleiteten Spannen bei `:39` („Runden 2 bis 10") und `:78` („Runden 5 bis 10") stehen ebenso. Nachgezählt am Dateibestand: `ls fusion-workbench/circles/*/_*_circle.md` liefert 15 Datensätze, davon 10 beschränkt geschlossen, **3** kohärent geschlossen (`260813-0939`, `260817-0833`, `260818-1615`), einer vorgesehen (`260804-0933`, nie gefahren) und einer zurückgestellt (`260816-2255`, nie gefahren). **Gefahren sind 13**, nicht elf. Die Prosa in `CLAUDE.md` ist damit zum vierten Mal veraltet.
+
+**Zwei weitere Aussagen derselben Datei hängen an dieser Zahl** und sind mit ihr falsch geworden: `CLAUDE.md` nennt die Runde `260813-0939` als „bisher einzige" kohärent geschlossene, und es sind drei. Der Datensatz bleibt `_o_` für den Durchgang des Kurators; dieser Abgleich fasst `CLAUDE.md` nicht an.

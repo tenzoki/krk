@@ -112,3 +112,8 @@ Auflösung selbst ist im Kern abgedeckt: `cargo test --workspace` läuft am 2608
 (Exit 0), und `crates/krk-core/tests/verzeichnis.rs` prüft `verweisziel::bestimmen` an neun
 Stellen, darunter Ring, benannte Röhre unter Zeitschranke, Datei ohne Leserecht und
 Verzeichnis mit Modus `0111`.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **im Code behoben, am Bündel unbelegt, und deshalb offen.** `DateifensterQuelle::in_zeile_einsteigen` (`crates/krk-ui/src/appkit/tabelle.rs:1969-2000`) löst über `Verweisziel::Ordner` auf und liefert `Einstieg::Eingestiegen`; die Auflösung selbst steht in `crates/krk-core/src/verzeichnis/verweisziel.rs`. Der beschriebene Mechanismus besteht am Baum nicht mehr.
+
+**Der Datensatz verlangt eine Probe am laufenden Bündel**, und die ist in keiner Sitzung seit der Ablage vermerkt. Ein Doppelklick auf eine Ordnerverknüpfung ist Nutzerarbeit, wie jeder Abnahmelauf dieses Projekts; ein Agent kann ihn nicht fahren. Geschlossen wird auf Plausibilität nicht: der Marker bleibt `_o_`, bis der Klick gemeldet ist.

@@ -97,3 +97,6 @@ find fusion-workbench -name '*_c_*.md' -path '*issues*' -exec grep -l '^Resolved
 Nicht behoben, und das ist die richtige Entscheidung für diesen Durchgang: der Nutzer hat am
 Rebalance-Gate „Artefakt überarbeiten" gewählt und dabei die Zeigerreparatur benannt, nicht
 diese. Der Datensatz bleibt offen.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, Zähler unverändert, Nenner gewachsen.** Erneut erhoben: 444 geschlossene Defektdatensätze, davon 401 mit einer Zeile `^Resolved:`, **43 abweichend**. Die 43 sind dieselben wie bei beiden früheren Messungen; gewachsen ist allein die Grundmenge, von 429 auf 444. Neue Schließungen schreiben ihre Notiz also in der gesuchten Form, und der Rückstand ist ein fester Altbestand und keine laufende Quelle.

@@ -35,3 +35,6 @@ zweite — die Statuszeile aus C1 als die eine Meldeflaeche — bleibt richtig.
 ## Ablage
 
 Gemeinsamer Speicher. Betrifft die Oberflaeche und die Directive keiner Runde.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen und wortgleich, nur verschoben.** Die Zeile „Ins Leere, im Ring oder ohne Recht: nicht still verschlucken." steht heute in `crates/krk-ui/src/appkit/tabelle.rs:1984`; bei der Ablage stand sie bei `:1432`. Die Aufzählung ist unverändert dieselbe Verengung auf drei Gründe. Wer den Datensatz nach der alten Zeilennummer prüft, findet nichts und schließt ihn fälschlich.

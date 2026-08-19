@@ -54,3 +54,8 @@ Abschnitt „Was der Übersetzer einfordert, und was er nicht einfordert"); sie 
 übernehmen und nicht neu zu erheben.
 
 **Filed by:** planner
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Rechnung ist ausgezählt.** `CLAUDE.md:120` nennt unverändert zwei nachzuziehende Stellen je neuem Kommando. Am Baum sind es **15**: **vier** hält der Übersetzer über vollständige Fallunterscheidungen (`crates/krk-core/src/tasten/belegung.rs:814` und zwei weitere in derselben Datei, dazu `crates/krk-ui/src/belegungsmodell.rs:227`), **zwei** hält eine Probe über die Kopfzählung von `resources/default-keymap.toml`, und **neun** hält nichts. Die zwei, die `CLAUDE.md` nennt, sind beide übersetzergehalten — also gerade die, die von selbst auffallen.
+
+**Die zwei ungehaltenen Auffangzweige, an denen ein neues Kommando still wirkungslos bleibt, stehen heute bei** `crates/krk-ui/src/appkit/anwendung.rs:3145` (`andere => self.bereichskommando(fokus, andere)`) und `crates/krk-ui/src/appkit/tabelle.rs:1494` (`_ => return false`). Ein Kommando ohne eigenen Zweig übersetzt, besteht jede Probe, steht mit Namen und Kombination im Hauptmenü und tut nichts. Der Marker bleibt `_o_` für den Durchgang des Kurators.

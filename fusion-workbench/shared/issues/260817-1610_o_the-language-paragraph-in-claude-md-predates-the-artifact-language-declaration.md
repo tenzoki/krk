@@ -66,3 +66,8 @@ gefilt haben. Der Orchestrator dieser Sitzung hat denselben Befund unter „Note
 in `shared/history/260818-1117-orchestrator-session.md` festgehalten. Nichts davon ist in diesem
 Abgleich geändert worden: `CLAUDE.md` ist der Gegenstand eines Kuratorendurchgangs und nicht
 eines Abgleichs.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, unverändert, und in diesem Durchgang unmittelbar spürbar.** `CLAUDE.md:4` deklariert `**Artifact language:** en`. Daneben sagt `:176`, die Zeile `**Language:** de` steuere für Langform-Agenten `default-voice-de.yaml`, und `:178` schließt mit „Prosa in diesem Projekt ist deutsch". Die drei Aussagen stehen unvereinbar nebeneinander.
+
+**Was der Widerspruch heute gekostet hat:** `bin/fusion-rules reconciler` gibt für diesen Durchgang allein `fusion-workbench/stilwerk/chat-voice-de.yaml` aus, also die Kurzform auf Deutsch, während die Artefaktsprache nach der Kopfzeile `en` wäre. Die Sprache der Abgleichsartefakte ist deshalb aus der Aufgabenstellung des Nutzers genommen und nicht aus der Deklaration. Der Marker bleibt `_o_` für den Durchgang des Kurators.

@@ -91,3 +91,6 @@ keine Fundstelle dieser Bedeutung mehr, und im übrigen Baum steht keine.
 
 Gemeinsamer Speicher. Die Zahlen sind älter als jede der betroffenen Runden und betreffen
 eine projektweite Gewohnheit.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Zahlen sind seit der Ablage ein weiteres Mal von Hand nachgezogen worden.** `crates/krk-ui/src/belegungsausgabe.rs:45,48,256,730` und `crates/krk-ui/src/appkit/menue.rs:128,799,867` tragen heute 85 und 79, wo sie bei der Ablage 84 und 78 trugen. Die einzige Zusicherung, die eine dieser Zahlen hält, ist unverändert `mit_kommando == Kommando::KENNUNGEN.len()` (`belegungsausgabe.rs:756-758`), und sie hält keine der sieben Prosastellen. Der Datensatz zählt damit den fünften Durchgang von Hand.

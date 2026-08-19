@@ -75,3 +75,8 @@ jede Erhebung über `Resolved:`-Zeilen falsch zählt (vgl.
 `shared/issues/260818-0710_*_forty-three-closure-notes-are-written-in-a-form-no-resolved-sweep-finds.md`).
 Nicht in diesem Durchgang geändert, weil die Umbenennung eine Wertung über die offene Frage
 wäre.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **die Hälfte am Baum ist erledigt, die Hälfte am Verfahren nicht.** `crates/krk-ui/src/appkit/zwischenablage.rs:136-139` liest heute „**`NSPasteboardTypeFileURL` steht seit 10.13** … und nicht seit 10.6", und `:129-131` führt `NSPasteboardURLReadingFileURLsOnlyKey` richtig unter 10.6. Die falsche Zahl im Modulkopf besteht also nicht mehr.
+
+**Offen bleibt, was der Datensatz selbst als seinen zweiten Teil benennt:** dass eine falsche Untergrenzenangabe überhaupt unbemerkt in den Baum kommt, weil `objc2` keine Verfügbarkeitsangaben mitführt und der Übersetzer die Grenze nicht hält. Diese Hälfte hängt an `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` und wird von keiner Codeänderung erledigt. Der Marker bleibt deshalb `_o_`.

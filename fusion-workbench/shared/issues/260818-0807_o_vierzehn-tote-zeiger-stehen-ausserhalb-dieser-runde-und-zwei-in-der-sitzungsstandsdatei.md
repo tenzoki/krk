@@ -98,3 +98,10 @@ Fix, sondern einen Schreiber, der sie beim Umbenennen mitzieht.
 Der breite Fix bleibt, was `260818-0710` sagt: ein `xtask`-Ziel oder eine Probe, die die
 Auflösung bei jedem `make check` fährt. Ohne sie ist der Baum nach jeder Runde wieder in dem
 Zustand, den diese Runde zweimal repariert hat.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Erhebung ist wiederholt.** Über 205 lebende Dateien und 1487 Zitate: **alle vierzehn Zeiger außerhalb der Runde stehen unverändert**, in denselben fünf Dateien — `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_c_plan-notizzettel-….md:402`, `circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_c_bereichsleiste-….md:275`, `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md:70,71`, `circles/260816-1321-…/planning/260816-1359_c_plan-inhaltsfilter-….md:18,18,20,365,380,479` und `circles/260816-2255-…/planning/260816-2307_o_plan-befehle-….md:110,209,424,436`.
+
+**Die zwei Zeiger in der Sitzungsstandsdatei sind gegenstandslos geworden:** `fusion-workbench/agentstate.yaml` besteht nicht mehr, weil der Orchestrator sie beim sauberen Sitzungsende löscht — genau der Verlauf, den dieser Datensatz vorhergesagt hat. **Kein neuer toter Zeiger ist dazugekommen.** Die eine zusätzliche Meldung der Erhebung, `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_c_plan-suche-….md:625`, ist ein Berichtigungsvermerk, der zitiert, was die Zeile früher sagte, und fällt damit unter die Ausnahme „der Marker ist die Aussage selbst".
+
+**Ein Hinweis für die nächste Erhebung:** die ersten zwei der vierzehn Zeiger stehen in der Kurzform mit Auslassung und entgehen einem einfachen Suchmuster über den vollen Namensteil. Das ist dieselbe Falle, die `shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md` beschreibt.
