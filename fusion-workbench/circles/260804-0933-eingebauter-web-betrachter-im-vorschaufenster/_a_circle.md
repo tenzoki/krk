@@ -1206,3 +1206,66 @@ und nicht durch das Schweigen des Portfolios vorentschieden wird.
 Der Playmaker benennt Kandidaten, er aktiviert sie nicht. Die Umbenennung des Datensatzes von
 `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben beim Nutzer über
 `/fusion:next` oder beim Orchestrator.
+
+## Activation proposal
+
+**Proposed on:** 260819-0804
+**Playmaker run:** 260819-0804-playmaker-direct-dispatch
+**Proposed activation moment:** the user's next `/fusion:next`. This run is a direct user
+dispatch and holds no activation confirmation. The playmaker names candidates; the rename of
+this record and the write of `.active-circle` stay with the user or the orchestrator.
+
+**Language note.** This section is written in English because `CLAUDE.md` declares
+`**Artifact language:** en`, added on 260817. The record above it is German and is not
+translated: the boundary applies going forward
+(`rules/fusion-workbench-conventions.md`, `## Project language`).
+
+**Rank 1 of 1.** This Circle is still the project's only anticipated (`_a_`) one, so the ordering
+is not an achievement of the ranking heuristic. What the heuristic contributes is the precondition
+check, and it comes out clean again. One open decision record binds it,
+`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`,
+and its `## Dependencies` section above names exactly one Circle,
+`260802-0842-krk-mac-dateimanager-editor-git` (round 1), which is terminal and built into the
+tree. Counted against that section on 260819, the graph has one edge and not four; the activation
+proposals of 260818-1018 and earlier speak of rounds 1, 5, 6 and 7, and the section does not carry
+them. The deduction for bounded rather than coherent closure of that dependency is not applied, as
+in every run before this one: `CLAUDE.md` states that the bounded marker in this project reports
+the user's availability for the acceptance run, not a round's maturity.
+
+**What round 13 changed for this Circle.** Round 13,
+`260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`, closed coherent on 260819. Four
+things move, and none of them blocks activation.
+
+1. **The two counts this record cites have each grown by one.** `enum Kommando`
+   (`crates/krk-core/src/tasten/belegung.rs`) carries 79 variants, counted on 260819, and
+   `resources/default-keymap.toml` carries 85 `[[funktion]]` blocks. `opt+cmd+s` is taken. The
+   viewer's own commands, the jump-mark toggle among them, are priced against 79 and 85 now.
+2. **The tree now accepts drags, and it did not on 260804.** `abwurf::sorten()` is registered on
+   the file table alone (`crates/krk-ui/src/appkit/tabelle.rs:4336`); no view of the preview pane
+   registers. A web view that would accept its own drops is a second registration point and a
+   question for the activation spec, not an inherited answer.
+3. **The single-wrapper rule held under pressure.** Round 13 read a drag pasteboard and still
+   routes through `appkit/zwischenablage.rs`; `crates/krk-ui/src/appkit/abwurf.rs` names only
+   `NSPasteboardType` constants. The clause in `## Dependencies` above, that this Circle inherits
+   the one clipboard evaluation and builds no second one, still resolves against the tree.
+4. **The status line still carries six ranks.** Counted on 260819 in
+   `crates/krk-ui/src/appkit/statuszeile.rs`, unchanged. The viewer's messages remain the seventh
+   rank, and the enumeration has no catch-all branch, so the build forces the classification.
+
+**No `## Parent grounding stale` section is appended this run.** The trigger is a child Circle
+reaching Bounded Closure (`_b_`), and round 13 closed coherent (`_c_`). Every bounded Circle in
+the tree already carries its note above. What round 13 did age is the four points listed here,
+and they are recorded in this proposal instead of in a section whose condition was not met.
+
+**What stands before activation, unchanged since 260804.** An investigation of the rendering
+mechanism comes first: this Circle deliberately fixes neither a system interface nor a foreign
+crate, and the open decision on availability checking for interfaces from macOS 26 hangs on
+exactly that choice. Then the clarification round over the three open questions above, of which
+the first decides the scope. Clipboard and the page's own links give KRK a viewer; address entry
+and stored web addresses give it a browser.
+
+**One correction belongs before activation.** Line 438 of this record cites a filename part that
+never existed, filed as
+`shared/issues/260818-0752_*_ein-zitat-im-circle-datensatz-des-web-betrachters-nennt-einen-namensteil-den-es-nie-gab.md`
+and still open. It sits in `## Grounding snapshot`, which is read as binding ground at activation.
+The playmaker writes only the three sections its mandate names and does not correct it.

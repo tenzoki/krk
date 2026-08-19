@@ -2,9 +2,9 @@
 
 ---
 **Domain:** code
-**Status:** active
+**Status:** closed
 **Filed by:** orchestrator
-**Active spec/plan:** shared/planning/260818-1510_o_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md
+**Active spec/plan:** shared/planning/260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md
 **Active session history:** shared/history/260818-1117-orchestrator-session.md
 
 ---
@@ -97,3 +97,47 @@ Kein anderer Circle blockiert diesen. Die folgenden Runden binden ihn über ihre
   Zieldateifenster wird auch dann eingeblendet, wenn es den Ordner schon führt, aber nicht
   neu gelesen. Kohärenzverdikt: coherent. Sitzungsprotokoll:
   `shared/history/260818-1117-orchestrator-session.md`
+
+- Runde 2 (Sitzung 260818-1117): Commits `a6b3818..801d594`, acht Stück; Bündel B gebaut, also die
+  Fähigkeiten C4 bis C7, dazu die Berichtigungen beider Durchsichten. Durchsicht
+  `reviews/260818-2340-coderev-round-13-turn-2-abwurf-aus-fremden-apps.md`, fünf Datensätze,
+  alle behoben. Der schwerste kam dabei nicht aus dieser Runde: der textuelle Pfadvergleich
+  hätte über `ziel_klaeren` und „Überschreiben" eine Datei löschen können, deren zweite
+  Schreibweise das Ziel war. Behoben in `krk-core` über `(st_dev, st_ino)`. Kohärenzverdikt:
+  coherent. Abgleich: `history/260819-0102-reconciliation.md`.
+
+## Closure note
+
+**Geschlossen kohärent (`_c_`) am 260819, nach gefahrenem Abnahmelauf des Nutzers.**
+
+Beide Fähigkeiten stehen. `opt+cmd+s` stellt das andere Dateifenster auf den Ordner des
+aktiven und holt es dafür hervor, wenn es ausgeblendet ist; der Zieltab behält seine eigene
+Sicht. Eine Dateiliste nimmt Dateien und Ordner aus fremden Anwendungen entgegen, mit dem
+Ordner unter dem Zeiger oder dem angezeigten als Ziel, Kopieren als Vorgabe, `cmd` für das
+Verschieben und `opt` für das erzwungene Kopieren.
+
+**Der Abnahmelauf ist gefahren, und das unterscheidet diese Runde von zehn der zwölf vorigen.**
+Der Nutzer hat am 260819 die zehn Prüfungen am gebauten Bündel 0.5.2 abgenommen, darunter alle
+Kriterien zu C4 bis C7, die einen Ziehvorgang aus einer zweiten Anwendung verlangen, und die
+zwei aus C2, die das Fenster an seiner Breite zu ziehen verlangen. Damit schließt die Runde
+kohärent statt beschränkt. Sie ist die **dritte**, die kohärent schließt, und nach der Runde 8
+die zweite, die den Abnahmelauf dafür wirklich gefahren hat: die Runde 12 hat kohärent ohne
+einen solchen Lauf geschlossen. Die Liste der zehn abgenommenen Prüfungen steht in
+`history/260819-0810-abnahmelauf.md`; ohne sie stünde die Behauptung des Laufs allein in
+dieser Notiz, die von ihm abhängt.
+
+**Was die Runde über ihren Auftrag hinaus gefunden hat.** Der Abwurf machte einen Weg
+erreichbar, der älter ist als er: `operation::ziel_klaeren` beantwortet „Überschreiben" mit
+`loeschen::baum_entfernen`, also einem echten `remove_file` und nicht dem Papierkorb. War das
+Ziel unter zweiter Schreibweise die Quelle, löschte das die Datei des Nutzers. Gegen den
+unreparierten Baum gefahren endete es mit „die Quelle ist weg: NotFound"; derselbe textuelle
+Schutz ließ einen Ordner 139 Einträge weit in seinen eigenen Baum absteigen. Behoben an der
+entscheidbaren Stelle, `operation::zielpfad` über `(st_dev, st_ino)`, mit `lstat` und `stat`
+für die zwei verschiedenen Fragen.
+
+**Was offen bleibt.** Drei Datensätze im Speicher dieser Runde: die falsche Zusage des Plans
+zum grünen Zwischenstand nach Schritt 1, der Abwurf, der sein Ziel zugleich als Quellordner
+durchreicht und den Abschluss denselben Ordner zweimal lesen lässt, und die „dritter Rufer"-
+Formulierung des Plans. Keiner hält etwas auf.
+
+Sitzungsprotokoll: `shared/history/260818-1117-orchestrator-session.md`
