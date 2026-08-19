@@ -21,7 +21,14 @@
 
 ## Grober Verlauf
 
-- **08-12 Mi** [—] — Keine eigenständige Aktivität. Die beiden Commits um 00:05 gehören nach der Mitternachtsregel zum 11. August.
+- **08-19 Mi** [8-14] — Die Auslieferung springt auf 0.5.4, ein Klick unter die letzte Zeile holt den Fokus, und der Kuratorenlauf zieht dreizehn Aussagen in CLAUDE.md auf den Stand des Baums.
+- **08-18 Di** [7-25] — Runde 13: `opt+cmd+s` gleicht die Ordner an, und eine Dateiliste nimmt Abwürfe aus fremden Anwendungen. Dabei fällt eine Datenverlustkette im Kern auf, die älter ist als die Runde.
+- **08-17 Mo** [8-28] — Runde 12: ein Löschweg in den Papierkorb, Rückfrage vor jedem Vorgang, endgültiges Löschen fällt aus der Anwendung.
+- **08-16 So** [9-28] — Runde 11 (Inhaltsfilter) läuft und schließt; die Makro-Runde wird angelegt und noch am selben Tag zurückgestellt.
+- **08-15 Sa** [7-24] — Der Filtertext übersteht jeden Ordnerwechsel, drei Auslieferungen, und CLAUDE.md verliert seine wiederholten Aufzählungen.
+- **08-14 Fr** [7-27] — Runde 9 (Notizzettel als Blatt) schließt, Runde 10 (Tippen filtert die Dateiliste) beginnt am Abend.
+- **08-13 Do** [5-23] — Zwei Runden an einem Tag: die Instanz- und Menürunde schließt früh, die Titelleisten- und Tag-Runde folgt und bringt `xtask release`.
+- **08-12 Mi** [5-28] — Runde 5 (Bereichsleiste) und Runde 6 (Teilen, Ordnersprung, gerenderte Vorschau) laufen und schließen beide; 48 Commits.
 - **08-11 Di** [7-24] — Runde 3 (Belegungsausgabe) und Runde 4 (vier Tastenbefehle) laufen und schließen am selben Tag, und KRK bekommt sein Symbol.
 - **08-10 Mo** [5-28] — Der längste Tag des Projekts: 68 Commits, alle 48 Planschritte der Editor-Runde abgenommen, ein Defektlauf über sechs Turns, beschränkter Abschluss und der erste vollständig saubere Abnahmelauf.
 - **08-09 So** [11-28] — Der Editor wird bedienbar: Textfläche als fünfter Bereich, Sichern, Fokusanzeige und Nummernspalte. Die Belegungsausgabe kommt als vorgesehener Circle dazu.
@@ -37,7 +44,8 @@
 
 | Woche ab (Mo) | Aktive Tage | Ø aktive Stunden/Tag |
 |---------------|-------------|----------------------|
-| 2026-08-10    | 2           | 20.0                 |
+| 2026-08-17    | 3           | 14.7                 |
+| 2026-08-10    | 7           | 19.6                 |
 | 2026-08-03    | 7           | 15.0                 |
 | 2026-07-27    | 1           | 15.0                 |
 
@@ -539,10 +547,132 @@
 | 00:05 | Dashboard auf abgeschlossen, Wächterzustand nachgezogen, CLAUDE.md kennt vier Runden (2 Commits) | g |
 | 00:05 | Dashboard des Orchestrators auf abgeschlossen | w |
 
-## 2026-08-12 (Mi) [—]
+## 2026-08-12 (Mi) [5-28]
 
-Keine eigenständige Aktivität. Die beiden Commits um 00:05 und die Auffrischung des Dashboards fallen nach der Mitternachtsregel (Aktivität zwischen 00:00 und 05:00 zählt zum Vortag) in den 11. August.
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 05:10 | ein Bereich, der nicht mehr hineinpasst, geht nicht auf | g |
+| 05:25 | das linke Dateifenster lässt sich ausblenden, solange eines bleibt | g |
+| 06:21 | fünf neue Funktionen, drei Spalten zum Wegschalten, ein Editorschalter | g |
+| 07:14 | KRK trägt am Fensterfuß eine Leiste mit acht Schaltern | g |
+| 07:51 | vier Befunde der zweiten Durchsicht, drei im Code und einer im Text | r |
+| 08:22 | Runde 5 (Bereichsleiste) schließt beschränkt | k |
+| 09:27 | das Wegschalten einer Spalte verteilt die Breiten neu | g |
+| 10:00 | Runde 6 beginnt: Teilen, Ordnersprung, Ablage beiseitelegen, gerenderte Vorschau | k |
+| — | 70 Defektdatensätze, 28 Entscheidungen, 43 Sitzungsprotokolle, 11 Durchsichten | i d h r |
+| 24-28 | die Runde 6 läuft über Mitternacht weiter | g |
+
+Der längste Arbeitstag nach dem 10. August: 48 Commits, zwei Runden von Anfang bis Abschluss.
+
+## 2026-08-13 (Do) [5-23]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 05:12 | zwei Sperren über `flock`, und ein Befehl startet eine weitere Instanz | g |
+| 05:23 | `opt+cmd+n` startet eine weitere Instanz, und der Baum ist wieder grün | g |
+| 06:28 | achtzehn Befunde der Durchsichten, und die Zählproben suchen die Sache statt des Namens | r |
+| 12:14 | die Zulässigkeitsregel fragt jetzt auch nach dem Schlüsselfenster | g |
+| 12:15 | eine Tag-Prüfung als Station eins, und README nennt die Versionsstufen | g |
+| 12:32 | die Titelleiste trägt links Namen und Version, der Pfad steht in der Mitte | g |
+| 12:47 | „Über KRK" steht ganz oben im Anwendungsmenü | g |
+| 15:34 | Entscheid: das Bauwerkzeug darf den Tag setzen, Auslieferung in einem Kommando | d |
+| 23:32 | Runde 9 beginnt: Notizzettel als Blatt mit zwei Zetteln | k |
+| — | 49 Defektdatensätze, 26 Sitzungsprotokolle, 7 Durchsichten, 3 Backlog-Einträge | i h r b |
+
+Zwei Runden an einem Tag: die Instanz- und Menürunde schließt früh, die Titelleisten- und Tag-Runde folgt.
+
+## 2026-08-14 (Fr) [7-27]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 07:53 | die Ablage führt zwei Zettel, und atomar schreibt aus einem Leser | g |
+| 07:53 | der Notizzettel liegt auf `f2` und `cmd+k`, in einer Zeile | g |
+| 08:26 | das zehnte Blatt, zwei Zettel als Tabs auf einer nackten Textfläche | g |
+| 08:54 | vier Sicherungsmomente, eine Erklärung, und die Sitzung merkt den Zettel | g |
+| 09:50 | der getippte Zettelstand überlebt eine gescheiterte Sicherung | g |
+| 10:53 | die Kopiergrenze gilt auch beim Beiseitelegen, acht Verweise zeigen richtig | g |
+| 13:19 | Auslieferung 0.3.0 | g |
+| 15:51 | Runde 10 beginnt: Tippen filtert die Dateiliste, flach und tief | k |
+| 21:45 | ein Prüfschritt entscheidet die Sichtbarkeit, das Ordnermodell führt den Filter | g |
+| — | 45 Defektdatensätze, 16 Entscheidungen, 40 Sitzungsprotokolle, 5 Durchsichten | i d h r |
+
+## 2026-08-15 (Sa) [7-24]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 07:36 | CLAUDE.md kennt die zehnte Runde, drei Eigenschaften stehen fest | g |
+| 07:38 | CLAUDE.md wiederholt die Rundentabelle nicht mehr | g |
+| 08:34 | Auslieferung 0.4.0 | g |
+| 10:36 | der Filtertext übersteht jeden Ordnerwechsel, ohne Bedingung | g |
+| 12:59 | Zitate tragen die Sternform, CLAUDE.md kennt die neue Filterregel | g |
+| 13:11 | Auslieferung 0.4.1 | g |
+| 14:18 | neun Prosastellen nennen wieder die Zahl, die die Belegung führt | g |
+| — | 33 Defektdatensätze, 18 Sitzungsprotokolle, 5 Durchsichten, 1 Beratung | i h r t |
+
+Der Tag, an dem CLAUDE.md aufhört, Aufzählungen zu wiederholen, und stattdessen die Kommandos nennt, die zählen.
+
+## 2026-08-16 (So) [9-28]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 10:28 | ein Ende der Umbenennung ohne Umbenennung holt die Anzeigeform zurück | g |
+| 11:27 | Umschalt und Wahl erreichen den Dateifilter, Befehl und Steuerung nicht | g |
+| 12:47 | Auslieferung 0.4.4 | g |
+| 13:22 | Spec des Inhaltsfilters, Circle der elften Runde | p k |
+| 13:49 | die elfte Runde ist aktiv, ihre zwei letzten Fragen sind beantwortet | k |
+| 14:58 | der Plan des Inhaltsfilters, zwölf Schritte in sieben Strängen | p |
+| 15:20 | die begrenzte Lesehülle wohnt in `krk-core` | g |
+| 22:55 | Runde 12 der Makros wird angelegt und noch am selben Tag zurückgestellt | k |
+| — | 19 Defektdatensätze, 9 Entscheidungen, 22 Sitzungsprotokolle, 1 Analyse | i d h a |
+
+## 2026-08-17 (Mo) [8-28]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 10:29 | die Löschfrage entsteht als reine Regel neben dem Kommandoweg | g |
+| 10:38 | das Bestätigungsblatt trägt Beschriftung und Lautstärke als Argument | g |
+| 10:53 | jedes Räumen in den Papierkorb fragt vorher nach | g |
+| 12:48 | die Rückfallstelle eines Blattes ist die abbrechende und nicht die letzte | g |
+| 13:24 | der dreiwertige Befund trägt die dritte Antwort | g |
+| 13:41 | die Hülle um den Papierkorb fragt vorher, ob das Ziel einen führt | g |
+| 14:04 | kein Löschen ohne Papierkorb, und die Stufenfolge ist eine prüfbare Regel | g |
+| — | 55 Defektdatensätze, 30 Sitzungsprotokolle, 6 Durchsichten, 7 Entscheidungen | i h r d |
+
+Runde 12, die einzige bis dahin, die den Marker `_c_` ohne gefahrenen Abnahmelauf trägt: ihre Directive sagt über die zehn Zeitzusagen nichts.
+
+## 2026-08-18 (Di) [7-25]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 07:39 | kein Zitat unter `crates` schreibt den Marker mehr aus | g |
+| 10:31 | Auslieferung 0.5.2 | g |
+| 15:10 | Spec der Runde 13, sieben Fähigkeiten, zwei Klärungsrunden mit dem Nutzer | p |
+| 16:19 | Circle der Runde 13, Spec und Grundlagenaufnahme | k |
+| 20:51 | `opt+cmd+s` steht in der Belegung und im Menü, und wirkt noch nicht | g |
+| 21:05 | `opt+cmd+s` stellt das andere Dateifenster auf den eigenen Ordner | g |
+| 22:07 | die Ablage eines Ziehvorgangs wird gelesen, die Abwurfregel steht | g |
+| 22:38 | die AppKit-Tatsachen des Abwurfs, die Vorgangsfrage ohne Nebenwirkung | g |
+| 23:08 | eine Dateiliste nimmt Abwürfe aus fremden Anwendungen an | g |
+| 24-25 | die Abwurfmeldung räumt beide Seiten; eine Datenverlustkette im Kern fällt auf | g i |
+| — | 22 Defektdatensätze, 23 Sitzungsprotokolle, 3 Durchsichten | i h r |
+
+Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS verengt die Vorgangsmenge aus `opt` und `cmd`, bevor KRK sie sieht. Die Absicht überlebt, die Taste nicht.
+
+## 2026-08-19 (Mi) [8-14]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 08:12 | Runde 13 schließt kohärent, der Abnahmelauf ist gefahren und liegt bei | k h |
+| 08:54 | Auslieferung 0.5.3 | g |
+| 10:43 | Untersuchung: warum ein Klick den Fokus nicht holt — der Nachbau widerlegt die Annahme | a |
+| 11:20 | ein Klick unter die letzte Zeile holt das Dateifenster als aktives | g |
+| 12:30 | der Tagsetzer-Befund war schon gefilt, der Doppelgänger geht zurück | i |
+| 14:16 | Auslieferung 0.5.4 | g |
+| 14:40 | Abgleich zum Sitzungsabschluss, Verdikt kohärent | h |
+| 15:00 | Kuratorenlauf: dreizehn Aussagen in CLAUDE.md auf den Stand des Baums | h |
+| 16:13 | 70 Datensätze archiviert, das Wächterprotokoll mit 40 063 Zeilen gerollt | w |
+| — | 4 Defektdatensätze, 3 Entscheidungen, 6 Sitzungsprotokolle, 1 Analyse | i d h a |
 
 ## Commits gesamt
 
-261 Git-Commits seit Projektbeginn (2026-08-02).
+527 Git-Commits seit Projektbeginn (2026-08-02).
