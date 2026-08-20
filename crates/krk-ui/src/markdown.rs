@@ -167,9 +167,55 @@
 //! dahinter. Gezaehlt wird **im Durchgang** und nicht in einem zweiten danach;
 //! [`Formatierung::laenge`] ist der Endstand dieses Zaehlers und traegt damit
 //! denselben Guertel gegen einen Programmabbruch, den der Editor schon hat.
+//!
+//! # Der Quellbezug: die zweite Auskunft desselben Durchgangs
+//!
+//! Neben dem Text entsteht im selben Durchgang der [`Quellbezug`]. Er sagt zu
+//! jeder Stelle des gerenderten Textes, aus welchen Bytes der Quelle sie
+//! stammt, und er ist die Grundlage dafuer, dass eine Auswahl in der Vorschau
+//! den Quelltext mit seinen Auszeichnungszeichen in die Zwischenablage legt
+//! (C2 der Runde 14).
+//!
+//! **Er entsteht hier und nicht in einem zweiten Durchgang**, und das ist eine
+//! Frage der Entscheidbarkeit und keine der Bequemlichkeit: allein hier ist
+//! bekannt, welche Bytes ein geschriebenes Zeichen hervorgebracht haben. Aus
+//! dem fertigen Text zurueckzurechnen ginge nicht, denn `**` und `# ` stehen
+//! dort nicht mehr.
+//!
+//! Die Abbildung ist eine **Kachelung** aus [`Abschnitt`]en mit zwei Zusagen:
+//!
+//! 1. Die Quellbereiche der Abschnitte reihen sich lueckenlos und
+//!    ueberschneidungsfrei ueber `0..quelle.len()`.
+//! 2. Die Textbereiche der Abschnitte reihen sich ebenso ueber
+//!    `0..formatierung.laenge`.
+//!
+//! Beide fallen aus der Bauart heraus und nicht aus einer Nachpruefung: ein
+//! Abschnitt entsteht genau dann, wenn einer der beiden Zaehler vorrueckt,
+//! [`Zerlegung::kacheln`] ist die eine Stelle dafuer, und beide Zaehler ruecken
+//! nur vorwaerts. Damit hat jede Stelle des Textes genau eine Antwort und jedes
+//! Byte der Quelle genau einen Ort; ein Auffangzweig „keine Antwort" entsteht
+//! nicht. Nachgemessen wird beides von der Kachelungsprobe im Pruefmodul, ueber
+//! einen Satz von zehn Beispielen.
+//!
+//! **Der Vorspann eines Elements bekommt deshalb einen Abschnitt, obwohl er
+//! nicht dasteht.** Fuer die Anzeige faellt er weg, und der Absatz „Wo die
+//! Deckung endet" oben gilt unveraendert; fuers Kopieren dreht sich das
+//! Vorzeichen, denn `- ` und `> ` sind Bytes der Quelle und wollen einen Ort.
+//! Sie bekommen ihn als Abschnitt mit leerem Textbereich, und die Anzeige
+//! aendert sich davon nicht.
+//!
+//! **Die Klammer** ([`Quellelement`]) ist die zweite Auskunft des Durchgangs:
+//! sie sagt zu jedem Element, ob sein Quellbereich Bytes traegt, die im Text
+//! nicht wiederkehren. Verbucht wird sie beim **innersten** offenen Element und
+//! in dem Augenblick, in dem der Abschnitt entsteht; die Auszeichnungszeichen
+//! eines Kindes gehen damit nicht auf seinen Vater ueber. Ein Absatz mit einer
+//! starken Betonung darin traegt selbst keine Klammer, und genau daran haengt
+//! das Beispiel des bindenden Datensatzes — siehe
+//! [`Zerlegung::klammer_verbuchen`].
 
 use std::borrow::Cow;
 use std::ops::Range;
+use std::sync::Arc;
 
 use pulldown_cmark::{Event, Options, Parser, Tag};
 
@@ -189,6 +235,120 @@ pub struct Gerendert {
     pub text: String,
     /// Welche Stelle von [`Gerendert::text`] was traegt.
     pub formatierung: Formatierung,
+    /// Woher jede Stelle von [`Gerendert::text`] stammt.
+    ///
+    /// **Geteilt statt kopiert.** `crate::vorschaumodell::Inhalt` wird bei
+    /// jedem Neuzeichnen des aktiven Tabs geklont; ein zweiter Textspeicher bis
+    /// zur Vorschaugrenze von 1 MB im Klon waere teuer, ein Zaehlerschritt ist
+    /// es nicht. Es ist derselbe Griff, den die Bilddaten seit der Runde 1 tun.
+    ///
+    /// **[`Arc`] und nicht `Rc`**, weil der Arbeitsfaden `krk-vorschau` den
+    /// Wert baut und durch einen Kanal schickt.
+    ///
+    /// **Ein Feld und kein Nachbarwert in der Aufzaehlung:** der Quellbezug
+    /// gehoert zu genau diesem gerenderten Text, und als Feld kann er von ihm
+    /// nicht getrennt werden. Daneben verlangt C2.13, dass die Abbildung auf
+    /// der Seite des Textes liegt und nicht auf der der Einfaerbung.
+    pub quellbezug: Arc<Quellbezug>,
+}
+
+/// Woher jede Stelle des gerenderten Textes stammt (C2 der Runde 14).
+///
+/// Der Aufbau und die beiden Zusagen der Kachelung stehen im Modulkopf unter
+/// „Der Quellbezug: die zweite Auskunft desselben Durchgangs".
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use]
+pub struct Quellbezug {
+    /// Die Quelle, aus der gerendert wurde.
+    ///
+    /// Sie wird nicht ein zweites Mal von der Platte gelesen, sondern ist die
+    /// Eingabe des Durchgangs (C2.3).
+    quelle: String,
+    /// Die Kachelung.
+    ///
+    /// Ihre Quellbereiche decken `0..quelle.len()` lueckenlos und
+    /// ueberschneidungsfrei, ihre Textbereiche `0..formatierung.laenge` ebenso
+    /// (C2.6).
+    abschnitte: Vec<Abschnitt>,
+    /// Die Elemente, die der Durchgang geoeffnet hat, in der Reihenfolge des
+    /// Oeffnens. Traeger der Klammerregel (C2.9).
+    elemente: Vec<Quellelement>,
+}
+
+/// Eine Kachel: ein Stueck gerenderter Text und die Bytes, aus denen es kam.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use]
+struct Abschnitt {
+    /// Der Bereich im gerenderten Text, in UTF-16-Einheiten.
+    ///
+    /// Darf leer sein: dann traegt die Quelle Zeichen, die die Anzeige
+    /// weglaesst — das schliessende `**` einer Betonung, der Vorspann eines
+    /// Listenpunktes.
+    text: Range<usize>,
+    /// Der Bereich in der Quelle, in Bytes.
+    ///
+    /// Darf leer sein: dann hat KRK die Zeichen erzeugt, und der leere Bereich
+    /// ist ihre Verankerung.
+    quelle: Range<usize>,
+    art: Abschnittsart,
+}
+
+/// Welche Seite eines Abschnitts massgeblich ist.
+///
+/// Die Fallunterscheidung ist vollstaendig und ueberschneidungsfrei ueber die
+/// eine Frage, welche Seite den Inhalt traegt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Abschnittsart {
+    /// Text und Quellausschnitt sind Zeichen fuer Zeichen dieselben.
+    ///
+    /// Eine Auswahlgrenze darin rechnet sich genau auf ein Byte um.
+    Woertlich,
+    /// Die Quelle hat diesen Text hervorgebracht, ohne ihm zu gleichen — der
+    /// leere Text eingeschlossen.
+    ///
+    /// Eine Auswahlgrenze darin rundet auf die Raender des Abschnitts.
+    Ersetzt,
+    /// KRK hat diese Zeichen gesetzt; die Quelle kennt sie nicht.
+    ///
+    /// Sie tragen zum Quellausschnitt nichts bei, und einen Auffangzweig „keine
+    /// Antwort" gibt es deshalb nicht (C2.6).
+    Erzeugt,
+}
+
+impl Abschnittsart {
+    /// Ob die Bytes dieses Abschnitts aus dem Text verschwunden sind.
+    ///
+    /// **Ein `match` und kein `matches!`**, nach dem Vorbild von
+    /// [`Inhaltsart::deckt_luecken`] und aus demselben Grund: ein `matches!`
+    /// truege einen stillen `_ => false`, und eine vierte Variante liefe damit
+    /// durch, statt den Bau anzuhalten.
+    ///
+    /// [`Abschnittsart::Erzeugt`] antwortet mit Nein und nicht mit Ja: sein
+    /// Quellbereich ist leer, also verschwindet dort kein Byte.
+    #[must_use]
+    fn verdeckt_quelle(self) -> bool {
+        match self {
+            Abschnittsart::Woertlich => false,
+            Abschnittsart::Ersetzt => true,
+            Abschnittsart::Erzeugt => false,
+        }
+    }
+}
+
+/// Ein Element der Quelle und die Frage, ob es Auszeichnungszeichen traegt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use]
+struct Quellelement {
+    /// Sein Bereich in der Quelle, in Bytes.
+    quelle: Range<usize>,
+    /// Ob sein Quellbereich Bytes traegt, die in seinem gerenderten Bereich
+    /// nicht erscheinen.
+    ///
+    /// Wahr fuer Ueberschrift, Betonung, Verweis, Listenpunkt, Zitat und
+    /// Quelltextblock; falsch fuer einen gewoehnlichen Absatz und fuer eine
+    /// Liste, deren Merkzeichen ihren Punkten gehoeren. Wie sie zustande kommt,
+    /// steht an [`Zerlegung::klammer_verbuchen`].
+    klammer: bool,
 }
 
 /// Zerlegt eine Markdown-Quelle in den sichtbaren Text und seine Stellen (C4).
@@ -253,11 +413,9 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
                 }
             },
             Event::End(_) => zerlegung.schliessen(),
-            Event::Text(inhalt) => {
-                zerlegung.schreiben(&inhalt);
-                zerlegung.gelesen_bis(bereich.end);
-            }
+            Event::Text(inhalt) => zerlegung.schreiben(&inhalt, bereich.end),
             Event::Code(inhalt) => {
+                let ende = bereich.end;
                 zerlegung.oeffnen(
                     bereich,
                     Abschluss::Auszeichnung(Auszeichnung::FesteSchrift),
@@ -265,16 +423,13 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
                     None,
                     Inhaltsart::Zeichen,
                 );
-                zerlegung.schreiben(&inhalt);
+                zerlegung.schreiben(&inhalt, ende);
                 zerlegung.schliessen();
             }
             // Die Zeile, an der das Quelltextraster einer Tabelle haengt: die
             // drei Zeilen einer Tabelle sind ein Absatz mit weichen
             // Umbruechen, und der Umbruch bleibt einer.
-            Event::SoftBreak | Event::HardBreak => {
-                zerlegung.schreiben("\n");
-                zerlegung.gelesen_bis(bereich.end);
-            }
+            Event::SoftBreak | Event::HardBreak => zerlegung.schreiben("\n", bereich.end),
             // Dieselbe Auffangregel fuer die Ereignisse, die kein Ende haben:
             // eine Trennlinie, eingebettetes HTML in der Zeile, alles Uebrige.
             Event::Rule
@@ -537,11 +692,19 @@ struct Offen {
     /// Der zweite Satz der Deckung haengt daran: ein Element ohne ein einziges
     /// Zeichen gibt genau diesen Bereich woertlich heraus.
     quelle: Range<usize>,
-    /// Der wievielte geoeffnete Bereich dieser ist.
+    /// Der wievielte geoeffnete Bereich dieser ist — sein Rang.
     ///
     /// Die Reihenfolge des Oeffnens laeuft von aussen nach innen und ist damit
     /// die Reihenfolge, in der [`Zerlegung::abschliessen`] bei gleichem Anfang
     /// und gleicher Laenge sortiert.
+    ///
+    /// **Zugleich sein Platz in [`Zerlegung::elemente`]**, und deshalb steht
+    /// hier eine Zahl und nicht zwei: beide zaehlen dasselbe Ereignis, naemlich
+    /// das Oeffnen eines Elements. Ein zweiter Zaehler daneben waere die zweite
+    /// Wahrheit ueber dieselbe Sache und liefe beim ersten Element auseinander,
+    /// das nur einer von beiden sieht — derselbe Grund, aus dem
+    /// [`Zerlegung::tiefe`] zaehlt, statt mitzufuehren. [`Zerlegung::schliessen`]
+    /// traegt darueber die Klammer in ihren Eintrag ein.
     rang: usize,
     /// Die Einrueckebene, die dieses Element anlegt.
     ebene: Option<Ebene>,
@@ -557,6 +720,11 @@ struct Offen {
     /// Merkzeichen, so wird der Wunsch doch noch eingeloest; siehe
     /// [`Zerlegung::schliessen`].
     merkzeichen: Option<String>,
+    /// Ob dieses Element Bytes traegt, die im Text nicht wiederkehren.
+    ///
+    /// Waechst waehrend seiner Lebenszeit, siehe
+    /// [`Zerlegung::klammer_verbuchen`].
+    klammer: bool,
 }
 
 /// Der Ausgabetext im Aufbau, mit seinen Stellen und den offenen Elementen.
@@ -580,11 +748,16 @@ struct Zerlegung<'q> {
     /// [`Zerlegung::absetzen`], und dort wird aufgefuellt statt angehaengt.
     trennung: usize,
     offen: Vec<Offen>,
-    /// Wie viele Bereiche bisher geoeffnet wurden; die Quelle der Raenge.
-    raenge: usize,
     einfaerbungen: Vec<Einfaerbung>,
-    /// Die Auszeichnungen mit dem Rang ihres Elements.
+    /// Die Auszeichnungen mit dem Rang ihres Elements ([`Offen::rang`]).
     auszeichnungen: Vec<(usize, Auszeichnungsstelle)>,
+    /// Die Kachelung im Aufbau; sie waechst allein in [`Zerlegung::kacheln`].
+    abschnitte: Vec<Abschnitt>,
+    /// Die Elemente in der Reihenfolge des Oeffnens.
+    ///
+    /// Angelegt wird ein Eintrag in [`Zerlegung::oeffnen`], seine Klammer
+    /// eingetragen in [`Zerlegung::schliessen`].
+    elemente: Vec<Quellelement>,
 }
 
 impl<'q> Zerlegung<'q> {
@@ -597,10 +770,78 @@ impl<'q> Zerlegung<'q> {
             stelle: 0,
             trennung: 0,
             offen: Vec::new(),
-            raenge: 0,
             einfaerbungen: Vec::new(),
             auszeichnungen: Vec::new(),
+            abschnitte: Vec::new(),
+            elemente: Vec::new(),
         }
+    }
+
+    /// Legt einen Abschnitt an und traegt die Quelle bis `bis` ab.
+    ///
+    /// **Die eine Stelle, an der die Kachelung waechst**, und damit die eine
+    /// Stelle, an der [`Zerlegung::gelesen`] vorrueckt. Der Textbereich reicht
+    /// von `von` bis zur jetzigen Stelle, der Quellbereich vom bisherigen
+    /// Lesestand bis `bis`. Weil beide Zaehler nur vorwaerts laufen, reihen
+    /// sich die Abschnitte auf beiden Seiten lueckenlos und
+    /// ueberschneidungsfrei — die zwei Zusagen aus dem Modulkopf fallen daraus
+    /// heraus, statt nachtraeglich geprueft zu werden.
+    ///
+    /// **Ein Rueckschritt in der Quelle wird zum leeren Bereich und nicht zu
+    /// einer Ueberschneidung.** Ein `bis` hinter dem Lesestand kommt vor, wenn
+    /// ein Element seinen Bereich schon abgetragen hat und ein spaeteres
+    /// Ereignis darin noch einmal davor zeigt.
+    fn kacheln(&mut self, von: usize, bis: usize, art: Abschnittsart) {
+        let quelle = self.gelesen..bis.max(self.gelesen);
+        self.gelesen = quelle.end;
+        self.klammer_verbuchen(&quelle, art);
+        self.abschnitte.push(Abschnitt {
+            text: von..self.stelle,
+            quelle,
+            art,
+        });
+    }
+
+    /// Haelt am innersten offenen Element fest, dass Bytes aus seinem
+    /// Quellbereich im Text nicht wiederkehren — seine Klammer (C2.9).
+    ///
+    /// **Verbucht wird beim innersten Element und in dem Augenblick, in dem der
+    /// Abschnitt entsteht.** Damit traegt jeder Abschnitt zu genau einem
+    /// Element bei, und die Auszeichnungszeichen eines Kindes blaehen seinen
+    /// Vater nicht auf. Genau daran haengt das Beispiel des bindenden
+    /// Datensatzes `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`:
+    /// aus `Ein **fetter** Text mit [Verweis](…) darin.` soll eine Auswahl
+    /// `**fetter** Text mit [Verweis](…)` liefern und **nicht** den ganzen
+    /// Absatz. Truege der Absatz die Klammer seiner Kinder mit, waere das die
+    /// vom Nutzer nicht gewaehlte Moeglichkeit 3.
+    ///
+    /// **Leerraum ist keine Auszeichnung.** Der Quellbereich eines Absatzes
+    /// endet hinter seinem Zeilenumbruch, und der steht im Text nicht mehr;
+    /// ohne diesen Halbsatz truege jeder Absatz eine Klammer, und wieder waere
+    /// es Moeglichkeit 3. Ein Merkzeichen `- ` oder ein `> ` bleibt uebrig,
+    /// wenn man den Leerraum abzieht, ein Zeilenumbruch nicht.
+    ///
+    /// **Beschnitten wird auf den Quellbereich des Elements**, denn ein
+    /// Abschnitt darf davor beginnen: in `# **fett**` traegt der erste
+    /// Abschnitt der Betonung die Bytes der Ueberschrift mit, weil der
+    /// Lesestand innerhalb eines Elements aus Zeichen nicht vorrueckt.
+    fn klammer_verbuchen(&mut self, bereich: &Range<usize>, art: Abschnittsart) {
+        if !art.verdeckt_quelle() {
+            return;
+        }
+        let quelle = self.quelle;
+        let Some(innerstes) = self.offen.last_mut() else {
+            return;
+        };
+        if innerstes.klammer {
+            return;
+        }
+        let anfang = bereich.start.max(innerstes.quelle.start);
+        let ende = bereich.end.min(innerstes.quelle.end);
+        if anfang >= ende {
+            return;
+        }
+        innerstes.klammer = !quelle[anfang..ende].trim().is_empty();
     }
 
     /// Merkt vor, dass hier so viele Umbrueche stehen sollen.
@@ -633,10 +874,7 @@ impl<'q> Zerlegung<'q> {
             return;
         }
         let vorher = self.stelle;
-        for _ in 0..fehlend {
-            self.text.push('\n');
-            self.stelle += 1;
-        }
+        self.erzeugen(&"\n".repeat(fehlend));
         for eintrag in &mut self.offen {
             if eintrag.anfang == vorher {
                 eintrag.anfang = self.stelle;
@@ -644,19 +882,60 @@ impl<'q> Zerlegung<'q> {
         }
     }
 
+    /// Schreibt Zeichen, die KRK selbst setzt, und verankert sie in der Quelle.
+    ///
+    /// **Zwei Namen fuer zwei Domaenen**, statt den Quellstand als `Option` zu
+    /// fuehren und im Rumpf eine Fallunterscheidung zu treffen:
+    /// [`Zerlegung::schreiben`] traegt Text, den die Quelle hervorgebracht hat,
+    /// diese Methode Text, den sie nicht kennt — den Abstand zwischen zwei
+    /// Bloecken und das Merkzeichen eines Punktes.
+    ///
+    /// Der Quellbereich des Abschnitts bleibt leer und liegt am Lesestand; zum
+    /// Quellausschnitt einer Auswahl traegt er nichts bei.
+    fn erzeugen(&mut self, stueck: &str) {
+        if stueck.is_empty() {
+            return;
+        }
+        let von = self.stelle;
+        self.text.push_str(stueck);
+        self.stelle += stueck.encode_utf16().count();
+        self.kacheln(von, self.gelesen, Abschnittsart::Erzeugt);
+    }
+
     /// Schreibt ein Stueck Text und zaehlt seine UTF-16-Einheiten mit.
     ///
     /// **Erst der Abstand, dann das Merkzeichen, dann der Text.** Nur in
     /// dieser Reihenfolge steht das Merkzeichen vor dem Zeichen, zu dem es
     /// gehoert, und innerhalb des Bereichs seiner Listenzeile.
-    fn schreiben(&mut self, stueck: &str) {
+    ///
+    /// **`bis` ist der Quellstand hinter dem Stueck**, und daraus entsteht sein
+    /// Abschnitt: er reicht vom Lesestand bis dorthin. Seine Art ist
+    /// [`Abschnittsart::Woertlich`], wenn jene Bytes genau das geschriebene
+    /// Stueck sind, und sonst [`Abschnittsart::Ersetzt`] — dann liegt
+    /// Auszeichnung dazwischen, die der Text weglaesst. Der Parameter steht
+    /// hier und nicht als eigener Aufruf daneben, weil die Herkunft eines
+    /// Zeichens an derselben Stelle bekannt sein muss, an der es geschrieben
+    /// wird.
+    ///
+    /// **Ein leeres Stueck traegt die Quelle trotzdem ab.** Sonst risse die
+    /// Kachelung auf der Quellseite ein Loch.
+    fn schreiben(&mut self, stueck: &str, bis: usize) {
         if stueck.is_empty() {
+            self.gelesen_bis(bis);
             return;
         }
         self.absetzen();
         self.merkzeichen_einloesen();
+        let gelesen = self.gelesen;
+        let von = self.stelle;
         self.text.push_str(stueck);
         self.stelle += stueck.encode_utf16().count();
+        let art = if bis > gelesen && self.quelle[gelesen..bis] == *stueck {
+            Abschnittsart::Woertlich
+        } else {
+            Abschnittsart::Ersetzt
+        };
+        self.kacheln(von, bis, art);
     }
 
     /// Loest die vorgemerkten Merkzeichen der offenen Punkte ein.
@@ -680,14 +959,12 @@ impl<'q> Zerlegung<'q> {
     /// gehoert keinem der offenen Elemente, also ruecken dort alle nach.
     fn merkzeichen_einloesen(&mut self) {
         for stufe in 0..self.offen.len() {
-            let (bis_hierhin, dahinter) = self.offen.split_at_mut(stufe + 1);
-            let Some(merkzeichen) = bis_hierhin[stufe].merkzeichen.take() else {
+            let Some(merkzeichen) = self.offen[stufe].merkzeichen.take() else {
                 continue;
             };
             let vorher = self.stelle;
-            self.text.push_str(&merkzeichen);
-            self.stelle += merkzeichen.encode_utf16().count();
-            for eintrag in dahinter {
+            self.erzeugen(&merkzeichen);
+            for eintrag in &mut self.offen[stufe + 1..] {
                 if eintrag.anfang == vorher {
                     eintrag.anfang = self.stelle;
                 }
@@ -696,8 +973,19 @@ impl<'q> Zerlegung<'q> {
     }
 
     /// Traegt die Quelle bis hierhin als gelesen ab.
+    ///
+    /// **Was dabei abgetragen wird, bekommt einen Abschnitt mit leerem
+    /// Textbereich.** Es sind Bytes, die kein Zeichen hervorgebracht haben: das
+    /// schliessende `**` einer Betonung, das `](Ziel)` eines Verweises, der
+    /// Zeilenumbruch hinter einem Absatz. Ohne sie haette die Kachelung Loecher
+    /// auf der Quellseite, und C2.8 — die Auswahl ueber alles liefert die
+    /// Quelle vollstaendig — fiele an den Raendern der Datei aus.
     fn gelesen_bis(&mut self, bis: usize) {
-        self.gelesen = self.gelesen.max(bis);
+        if bis <= self.gelesen {
+            return;
+        }
+        let von = self.stelle;
+        self.kacheln(von, bis, Abschnittsart::Ersetzt);
     }
 
     /// Schreibt einen Quellbereich woertlich und traegt ihn ab.
@@ -706,8 +994,7 @@ impl<'q> Zerlegung<'q> {
     /// dasteht, ist gelesen.
     fn woertlich(&mut self, bereich: Range<usize>) {
         let quelle = self.quelle;
-        self.schreiben(&quelle[bereich.clone()]);
-        self.gelesen_bis(bereich.end);
+        self.schreiben(&quelle[bereich.clone()], bereich.end);
     }
 
     /// Der erste und der zweite Satz der Deckung: gibt heraus, was bis hierhin
@@ -723,6 +1010,12 @@ impl<'q> Zerlegung<'q> {
     /// Byte gelesen wurde, steht dort sein eigenes Merkzeichen — `- `, `1. `,
     /// `> ` —, und das ist Auszeichnung. Hier endet die Deckung, und der
     /// Modulkopf sagt es an derselben Stelle.
+    ///
+    /// **Fuer den Quellbezug dreht sich an dieser einen Stelle das
+    /// Vorzeichen.** Der Vorspann faellt aus der Anzeige, aber nicht aus der
+    /// Kachelung: er bekommt einen Abschnitt mit leerem Textbereich, und weil
+    /// er die Bytes des Merkzeichens traegt, gibt er seinem Element die
+    /// Klammer. Die Anzeige aendert sich davon nicht.
     ///
     /// **Leerraum faellt weg**, und mit ihm, was die Umgebung auf jeder Zeile
     /// wiederholt ([`ohne_umgebungszeichen`]). Die Abstaende zwischen den
@@ -743,9 +1036,11 @@ impl<'q> Zerlegung<'q> {
             }
             // Der Vorspann: in diesem Element ist noch kein Byte gelesen,
             // also steht hier sein eigenes Merkzeichen. Hier endet die
-            // Deckung, und der Modulkopf sagt es an derselben Stelle.
+            // Deckung, und der Modulkopf sagt es an derselben Stelle. Fuer
+            // den Quellbezug wird er trotzdem abgetragen und bekommt seine
+            // Kachel; genau daran haengt die Klammer eines Listenpunktes.
             if self.gelesen <= anfang {
-                self.gelesen = bis;
+                self.gelesen_bis(bis);
                 return;
             }
         }
@@ -760,12 +1055,12 @@ impl<'q> Zerlegung<'q> {
         } else {
             Cow::Owned(ohne_umgebungszeichen(luecke))
         };
-        self.gelesen = bis;
         if uebergangen.is_empty() {
+            self.gelesen_bis(bis);
             return;
         }
         self.trennen(ABSATZABSTAND);
-        self.schreiben(&uebergangen);
+        self.schreiben(&uebergangen, bis);
         self.trennen(ABSATZABSTAND);
     }
 
@@ -779,16 +1074,21 @@ impl<'q> Zerlegung<'q> {
         inhalt: Inhaltsart,
     ) {
         self.absetzen();
-        self.raenge += 1;
+        let rang = self.elemente.len();
+        self.elemente.push(Quellelement {
+            quelle: quelle.clone(),
+            klammer: false,
+        });
         self.offen.push(Offen {
             anfang: self.stelle,
             was,
             nach,
             quelle,
-            rang: self.raenge,
+            rang,
             ebene,
             inhalt,
             merkzeichen: None,
+            klammer: false,
         });
     }
 
@@ -896,6 +1196,14 @@ impl<'q> Zerlegung<'q> {
     /// ungelesen blieb, gibt es heraus, bevor es sich schliesst. Beim
     /// Endereignis greift [`Zerlegung::luecke_bis`] dafuer nicht: dessen
     /// Quellbereich beginnt am Anfang des Elements und nicht an dieser Luecke.
+    ///
+    /// **Abgetragen wird, solange das Element noch offen steht, und erst danach
+    /// wird es abgeraeumt.** Die Bytes, die sich hier noch abtragen — das
+    /// schliessende `**` einer Betonung, das `](Ziel)` eines Verweises —, sind
+    /// seine eigene Klammer und nicht die seines Vaters, und
+    /// [`Zerlegung::klammer_verbuchen`] verbucht beim innersten offenen
+    /// Element. Raeumte man zuerst ab, faende es den Vater vor, und ein Absatz
+    /// truege die Auszeichnungszeichen jedes seiner Kinder.
     fn schliessen(&mut self) {
         if let Some(ende) = self
             .offen
@@ -914,10 +1222,36 @@ impl<'q> Zerlegung<'q> {
             self.absetzen();
             self.merkzeichen_einloesen();
         }
+        // **Abgetragen wird, solange das Element noch offen steht**, und erst
+        // danach wird es abgeraeumt. Die Bytes, die sich hier noch abtragen —
+        // das schliessende `**` einer Betonung, das `](Ziel)` eines Verweises
+        // —, gehoeren diesem Element und nicht seinem Vater; sie sind seine
+        // Klammer, und [`Zerlegung::klammer_verbuchen`] verbucht beim
+        // innersten offenen Element.
+        let Some(letztes) = self.offen.last_mut() else {
+            return;
+        };
+        let laenge = self.stelle - letztes.anfang;
+        let bereich = letztes.quelle.clone();
+        // Das Merkzeichen faellt mit seinem Punkt weg, bevor der woertliche
+        // Quelltext es einloesen koennte; in jenem Quelltext steht es schon.
+        // Sonst stuende `• - [ref]: …` doppelt da. Bei einer Laenge groesser
+        // null ist es ohnehin schon eingeloest.
+        letztes.merkzeichen = None;
+        if laenge > 0 {
+            self.gelesen_bis(bereich.end);
+        } else {
+            self.woertlich(bereich);
+        }
+        // Dieselbe Frage wie eben und dieselbe Antwort: steht nichts offen, ist
+        // nichts zu schliessen. Der Zweig ist nicht erreichbar, denn zwischen
+        // den beiden Abfragen raeumt niemand ab — [`Zerlegung::woertlich`] und
+        // [`Zerlegung::gelesen_bis`] schreiben und lesen, sie schliessen nicht.
+        // Er steht statt eines `expect`, das den Durchgang abbraeche.
         let Some(eintrag) = self.offen.pop() else {
             return;
         };
-        let laenge = self.stelle - eintrag.anfang;
+        self.elemente[eintrag.rang].klammer = eintrag.klammer;
         if laenge > 0 {
             match eintrag.was {
                 Abschluss::Nichts => {}
@@ -940,9 +1274,6 @@ impl<'q> Zerlegung<'q> {
                     }
                 }
             }
-            self.gelesen_bis(eintrag.quelle.end);
-        } else {
-            self.woertlich(eintrag.quelle);
         }
         self.trennen(eintrag.nach);
     }
@@ -984,6 +1315,11 @@ impl<'q> Zerlegung<'q> {
                     .collect(),
             },
             text: self.text,
+            quellbezug: Arc::new(Quellbezug {
+                quelle: self.quelle.to_owned(),
+                abschnitte: self.abschnitte,
+                elemente: self.elemente,
+            }),
         }
     }
 }
@@ -1847,5 +2183,171 @@ mod tests {
             gerendert("Text\n").formatierung.art,
             Darstellungsart::Markdown
         );
+    }
+
+    // ── Der Quellbezug (C2 der Runde 14) ─────────────────────────────────────
+
+    /// Der Satz von Beispielen, an dem die Kachelung nachgemessen wird.
+    ///
+    /// Zehn Faelle, und jeder steht fuer einen Weg, auf dem Quelltext in den
+    /// Durchgang kommt: der gewoehnliche Absatz, die Ueberschrift, die starke
+    /// Betonung und der Verweis, die Liste ueber zwei Ebenen, der Zitatblock,
+    /// der Quelltextblock, die Verweisdefinition, das Stueck in fester Schrift
+    /// und ein Text, dessen Zeichen mehr als ein Byte und mehr als eine
+    /// UTF-16-Einheit brauchen.
+    const KACHELBEISPIELE: [&str; 10] = [
+        "Ein gewoehnlicher Absatz. Und noch ein Satz dahinter.\n",
+        "# Titel\n\nDarunter steht ein Absatz.\n",
+        "Ein **fetter** Text mit [Verweis](https://example.com) darin.\n",
+        "- eins\n  - tief\n- zwei\n",
+        "> Ein Zitat ueber zwei\n> Zeilen.\n",
+        "```rust\nlet x = 1;\n```\n",
+        "[ref]: https://example.com\n\nText [x][ref].\n",
+        "Ein `code` und *kursiv* im selben Absatz.\n",
+        "Grüße 😀 an *dich*.\n",
+        "- Punkt am Dateianfang\n\nund ein Absatz mit Umbruch am Ende.\n",
+    ];
+
+    /// Misst die beiden Zusagen der Kachelung an einer Quelle nach.
+    ///
+    /// Erstens reihen sich die Quellbereiche lueckenlos und
+    /// ueberschneidungsfrei ueber `0..quelle.len()`, zweitens die Textbereiche
+    /// ebenso ueber `0..formatierung.laenge`. Dazu die Zusage, die
+    /// [`Abschnittsart::Woertlich`] gibt: dort stehen beide Seiten Zeichen fuer
+    /// Zeichen aneinander, und daran haengt in Schritt 2 die Umrechnung einer
+    /// Auswahlgrenze auf ein Byte.
+    fn kachelung_pruefen(quelle: &str) -> Gerendert {
+        let ergebnis = gerendert(quelle);
+        assert_eq!(
+            ergebnis.formatierung.laenge,
+            ergebnis.text.encode_utf16().count(),
+            "der mitgezaehlte Endstand ist die Laenge des Textes: {quelle:?}"
+        );
+        let mut quellstand = 0usize;
+        let mut textstand = 0usize;
+        for abschnitt in &ergebnis.quellbezug.abschnitte {
+            assert_eq!(
+                abschnitt.quelle.start, quellstand,
+                "die Quellseite reiht sich lueckenlos: {quelle:?}, {abschnitt:?}"
+            );
+            assert!(
+                abschnitt.quelle.end >= abschnitt.quelle.start,
+                "kein Abschnitt laeuft rueckwaerts: {quelle:?}, {abschnitt:?}"
+            );
+            assert_eq!(
+                abschnitt.text.start, textstand,
+                "die Textseite reiht sich lueckenlos: {quelle:?}, {abschnitt:?}"
+            );
+            assert!(
+                abschnitt.text.end >= abschnitt.text.start,
+                "kein Abschnitt laeuft rueckwaerts: {quelle:?}, {abschnitt:?}"
+            );
+            quellstand = abschnitt.quelle.end;
+            textstand = abschnitt.text.end;
+            match abschnitt.art {
+                Abschnittsart::Woertlich => assert_eq!(
+                    stueck(
+                        &ergebnis.text,
+                        abschnitt.text.start,
+                        abschnitt.text.end - abschnitt.text.start
+                    ),
+                    quelle[abschnitt.quelle.clone()],
+                    "ein woertlicher Abschnitt haelt beide Seiten aneinander: {quelle:?}"
+                ),
+                Abschnittsart::Ersetzt | Abschnittsart::Erzeugt => {}
+            }
+        }
+        assert_eq!(
+            quellstand,
+            quelle.len(),
+            "die Quellseite deckt bis zum letzten Byte: {quelle:?}"
+        );
+        assert_eq!(
+            textstand, ergebnis.formatierung.laenge,
+            "die Textseite deckt bis zur letzten Stelle: {quelle:?}"
+        );
+        ergebnis
+    }
+
+    /// C2.6: die Kachelung deckt beide Seiten vollstaendig.
+    ///
+    /// Diese Probe ist der Beweis der Totalitaet und keine Aufzaehlung von
+    /// Faellen: sie faengt jeden Ereignisfall, der Quelltext abtraegt, ohne
+    /// einen Abschnitt anzulegen.
+    #[test]
+    fn die_kachelung_deckt_quelle_und_text_lueckenlos() {
+        for quelle in KACHELBEISPIELE {
+            let _ = kachelung_pruefen(quelle);
+        }
+    }
+
+    /// C2.7: die Umrechnung trifft an beiden Enden eines Abschnitts.
+    ///
+    /// „Grüße 😀 an " sind 12 UTF-16-Einheiten, aber 16 Bytes: der Umlaut und
+    /// das scharfe s brauchen je zwei Bytes, das Emoji vier Bytes und zwei
+    /// UTF-16-Einheiten. Ein Abschnitt, der die beiden Zaehler verwechselt,
+    /// steht hier schief.
+    #[test]
+    fn umlaute_und_ein_emoji_treffen_beide_enden_eines_abschnitts() {
+        let quelle = "Grüße 😀 an *dich*.\n";
+        let ergebnis = kachelung_pruefen(quelle);
+        let abschnitte = &ergebnis.quellbezug.abschnitte;
+        assert_eq!(ergebnis.text, "Grüße 😀 an dich.");
+        // Das erste Stueck: woertlich, und beide Zaehler stehen verschieden.
+        assert_eq!(abschnitte[0].art, Abschnittsart::Woertlich);
+        assert_eq!(abschnitte[0].quelle, 0..16, "in Bytes gerechnet");
+        assert_eq!(abschnitte[0].text, 0..12, "in UTF-16-Einheiten gerechnet");
+        // Das letzte Stueck mit Zeichen: der Punkt hinter der Betonung. Seine
+        // Textstelle haengt an derselben Umrechnung, nur vom anderen Ende her.
+        let letzter = abschnitte
+            .iter()
+            .rfind(|abschnitt| !abschnitt.text.is_empty())
+            .expect("ein Abschnitt mit Zeichen");
+        assert_eq!(letzter.art, Abschnittsart::Woertlich);
+        assert_eq!(letzter.quelle, 22..23, "das Byte des Punktes");
+        assert_eq!(letzter.text, 16..17, "die UTF-16-Stelle des Punktes");
+    }
+
+    /// C2.9: wer eine Klammer traegt und wer nicht.
+    ///
+    /// Die Elemente stehen in der Reihenfolge des Oeffnens, also von aussen
+    /// nach innen. Die vierte Zeile ist die tragende: der Absatz des Beispiels
+    /// aus dem bindenden Datensatz traegt **keine** Klammer, obwohl seine
+    /// Kinder welche tragen. Truege er eine, blaehte jede Auswahl darin sich
+    /// auf den ganzen Absatz auf — die vom Nutzer nicht gewaehlte
+    /// Moeglichkeit 3.
+    #[test]
+    fn ueberschrift_betonung_verweis_und_punkt_tragen_eine_klammer_ein_absatz_nicht() {
+        assert_eq!(
+            klammern("# Titel\n\nEin Absatz.\n"),
+            vec![(0..8, true), (9..21, false)],
+            "die Ueberschrift traegt ihr `# `, der Absatz nichts"
+        );
+        assert_eq!(
+            klammern("Ein **fetter** Text mit [Verweis](https://example.com) darin.\n"),
+            vec![(0..62, false), (4..14, true), (24..54, true)],
+            "der Absatz des bindenden Datensatzes traegt keine Klammer, seine Kinder schon"
+        );
+        assert_eq!(
+            klammern("- Punkt\n"),
+            vec![(0..8, false), (0..8, true)],
+            "das Merkzeichen gehoert dem Punkt und nicht der Liste um ihn herum"
+        );
+        assert_eq!(
+            klammern("> Zitat\n"),
+            vec![(0..8, true), (2..8, false)],
+            "das `> ` gehoert dem Zitat und nicht dem Absatz darin"
+        );
+    }
+
+    /// Die Elemente einer Quelle mit ihrer Klammer, in der Reihenfolge des
+    /// Oeffnens, also von aussen nach innen.
+    fn klammern(quelle: &str) -> Vec<(Range<usize>, bool)> {
+        kachelung_pruefen(quelle)
+            .quellbezug
+            .elemente
+            .iter()
+            .map(|element| (element.quelle.clone(), element.klammer))
+            .collect()
     }
 }

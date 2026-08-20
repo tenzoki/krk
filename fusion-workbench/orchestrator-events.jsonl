@@ -1230,3 +1230,13 @@
 {"ts":"2026-08-19T20:32:16","event":"gate_response","turn":1,"agent":"user","detail":"spec approved"}
 {"ts":"2026-08-19T20:32:16","event":"commit","turn":1,"task":"T2","detail":"258bd7c shaping + circle activation; 677c1c6 housekeeping"}
 {"ts":"2026-08-19T20:32:16","event":"planner_start","turn":1,"task":"T3","agent":"planner","detail":"circle 260819-2230-auswahl-und-kopieren-in-der-vorschau"}
+{"ts":"2026-08-20T03:02:16","event":"planner_done","turn":1,"task":"T3","agent":"planner","detail":"circles/260819-2230-.../planning/260819-2245_o_plan-...md"}
+{"ts":"2026-08-20T03:02:16","event":"commit","turn":1,"task":"T3","detail":"41abcb3"}
+{"ts":"2026-08-20T03:02:16","event":"coherence_review","turn":1,"verdict":"ok","detail":"Artefakt<->Grounding: keine Durchsicht faellig, Turn 1 aenderte eine Dokumentationszeile und sonst nur Arbeitsplatz-Datensaetze. Artefakt<->Directive: die drei Commits bewegen sich auf die Directive zu; Spec und Plan sind vom Nutzer an zwei Gates ausdruecklich abgenommen, die den Abgleich fuer diesen Turn tragen. Grounding<->Directive: 8 beantwortete Datensaetze beruehrt, keiner im Widerspruch; einer auf _i_, einer auf _s_ ueberholt."}
+{"ts":"2026-08-20T03:02:16","event":"turn_end","turn":1,"detail":"3 Aufgaben erledigt, 4 Commits, 1 Defekt gefilt"}
+{"ts":"2026-08-20T03:02:16","event":"queue_built","detail":"8 Planschritte, 2 ohne Vorbedingung"}
+{"ts":"2026-08-20T03:02:16","event":"turn_start","turn":2,"detail":"2 ready tasks: S1, S6"}
+{"ts":"2026-08-20T03:02:16","event":"task_start","turn":2,"task":"S1","agent":"coder","detail":"markdown.rs Quellbezug"}
+{"ts":"2026-08-20T03:02:16","event":"task_start","turn":2,"task":"S6","agent":"coder","detail":"zwischenablage.rs fremde Ablage"}
+{"ts":"2026-08-20T03:15:38","event":"task_done","turn":2,"task":"S6","agent":"coder","detail":"9e10b94"}
+{"ts":"2026-08-20T03:15:38","event":"commit","turn":2,"task":"S6","detail":"9e10b94 feat(ui): die eine Huelle um NSPasteboard nimmt jede Ablage entgegen"}
