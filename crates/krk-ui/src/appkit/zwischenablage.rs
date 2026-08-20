@@ -12,6 +12,8 @@
 //!              ├─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
 //!              │
 //!              └<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
+//!                        │
+//!                        └<── text_auf_ablage_schreiben (jede Ablage)
 //!
 //! die Ablage eines Ziehvorgangs
 //! NSDraggingInfo::draggingPasteboard
@@ -21,8 +23,10 @@
 //!
 //! [`lesen`] traegt seit S13 den Sprung, [`inhalt_lesen`] seit S19 die
 //! Vorschau der Zwischenablage, [`text_schreiben`] seit dem 260811 die
-//! Gegenrichtung, [`dateiverweise`] seit der Runde 13 den Abwurf; eine zweite
-//! Huelle um `NSPasteboard` entsteht dabei nicht.
+//! Gegenrichtung, [`dateiverweise`] seit der Runde 13 den Abwurf, und
+//! [`text_auf_ablage_schreiben`] seit der Runde 14 das Schreiben in eine
+//! beliebige Ablage; eine zweite Huelle um `NSPasteboard` entsteht dabei
+//! nicht.
 //! Alles in einem Modul, weil es die eine Frage beantwortet: was steht in der
 //! Zwischenablage, und wohin geht KRK damit. Die Frage ist mit der Runde 4 um
 //! eine Richtung breiter geworden und geblieben, was sie war: eine. Denselben
@@ -120,6 +124,19 @@
 //! Diagnose zu stellen. Ein `NSURL` ohne `path` faellt aus demselben Grund
 //! still weg — er benennt keine Stelle im Dateisystem, und mehr will diese
 //! Funktion von ihm nicht wissen.
+//!
+//! # Seit der Runde 14 nimmt das Schreiben eine fremde Ablage entgegen
+//!
+//! **Bis zur Runde 14 kannte diese Huelle beim Schreiben nur eine Ablage**:
+//! [`text_schreiben`] griff `generalPasteboard` selbst. Das genuegt fuer die
+//! beiden Pfadkopierer, nicht aber fuer einen Ausgabeweg, der seine Ablage von
+//! AppKit gereicht bekommt, so wie [`dateiverweise`] sie beim Lesen schon
+//! gereicht bekommt. [`text_auf_ablage_schreiben`] nimmt deshalb die Ablage als
+//! Parameter entgegen und traegt den Rumpf, den [`text_schreiben`] bis dahin
+//! trug; [`text_schreiben`] reicht ihr seinerseits `generalPasteboard` hinein
+//! und aendert sein Verhalten dadurch nicht. Es ist derselbe Griff wie bei
+//! [`dateiverweise`]: die Huelle beantwortet die Frage nach der Zwischenablage,
+//! und welche es ist, entscheidet der Rufer.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -221,7 +238,8 @@ pub fn inhalt_lesen() -> Zwischenablageinhalt {
     }
 }
 
-/// Legt einen Text als einzige Sorte in die Zwischenablage (C1, C2).
+/// Legt einen Text als einzige Sorte in eine beliebige Ablage (C1, C2 der
+/// Runde 4; C2.10 der Runde 14).
 ///
 /// Liefert, ob das System ihn angenommen hat. Der Aufrufer meldet das in der
 /// Statuszeile; wortlos nichts zu tun ist in keinem der beiden Faelle zulaessig.
@@ -233,12 +251,24 @@ pub fn inhalt_lesen() -> Zwischenablageinhalt {
 /// nimmt jede Sorte weg, die vorher darin stand, auch den Dateiverweis eines im
 /// Finder kopierten Eintrags.
 ///
-/// Warum allein `NSPasteboardTypeString` geschrieben wird und warum diese
-/// Funktion keine Probe traegt, steht im Modulkopf.
-pub fn text_schreiben(text: &str) -> bool {
-    let ablage = NSPasteboard::generalPasteboard();
+/// Warum allein `NSPasteboardTypeString` geschrieben wird, steht im
+/// Modulkopf. Die Ablage kommt herein und wird nicht beschafft, wie bei
+/// [`dateiverweise`]: welche es ist, entscheidet der Rufer, nicht diese
+/// Huelle.
+#[must_use]
+pub fn text_auf_ablage_schreiben(ablage: &NSPasteboard, text: &str) -> bool {
     ablage.clearContents();
     ablage.setString_forType(&NSString::from_str(text), unsafe { NSPasteboardTypeString })
+}
+
+/// Legt einen Text als einzige Sorte in die Zwischenablage des Nutzers (C1, C2).
+///
+/// Reicht `NSPasteboard::generalPasteboard()` an [`text_auf_ablage_schreiben`]
+/// hinein; das Verhalten fuer die beiden Pfadkopierer aus C1 und C2 der Runde 4
+/// bleibt dabei unveraendert. Warum diese Funktion keine Probe traegt, steht im
+/// Modulkopf.
+pub fn text_schreiben(text: &str) -> bool {
+    text_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), text)
 }
 
 /// Uebergibt eine Web-Adresse an den Systembrowser (C10).
@@ -385,6 +415,25 @@ mod proben {
         assert!(
             dateiverweise(&ablage).is_empty(),
             "C7: keine Datei auf dem Datentraeger ist eine Antwort und kein Fehler"
+        );
+    }
+
+    #[test]
+    fn text_auf_ablage_schreiben_legt_den_text_in_die_gereichte_ablage() {
+        let ablage = probenablage("text-schreiben");
+
+        assert!(
+            text_auf_ablage_schreiben(&ablage, "geschriebener Text"),
+            "C2.10: die gereichte Ablage nimmt den Text an"
+        );
+
+        let zurueckgelesen = ablage
+            .stringForType(unsafe { NSPasteboardTypeString })
+            .expect("die Probenablage traegt die Sorte, die eben geschrieben wurde")
+            .to_string();
+        assert_eq!(
+            zurueckgelesen, "geschriebener Text",
+            "der geschriebene Text kommt unveraendert zurueck"
         );
     }
 }

@@ -191,7 +191,7 @@ Vier Bündel, acht Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
 
 ### Bündel C — Der eine Ausgabeweg (C2.10 bis C2.13, C3)
 
-6. **Die eine Hülle um `NSPasteboard` nimmt eine fremde Ablage entgegen**
+6. [DONE] **Die eine Hülle um `NSPasteboard` nimmt eine fremde Ablage entgegen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/zwischenablage.rs`
    - Changes: `pub fn text_auf_ablage_schreiben(ablage: &NSPasteboard, text: &str) -> bool` trägt ab jetzt den Rumpf, den `text_schreiben` (`:238-242`) bisher trug; `text_schreiben` reicht `NSPasteboard::generalPasteboard()` hinein und bleibt für die beiden Pfadkopierer aus C1 und C2 der Runde 4 unverändert im Verhalten. Es ist derselbe Griff, den `dateiverweise(ablage: &NSPasteboard)` seit der Runde 13 tut (`:291`), und aus demselben Grund: die Hülle beantwortet die Frage nach der Zwischenablage, und ob es die des Nutzers oder die eines Vorgangs ist, entscheidet der Rufer. `setString_forType` steht danach weiterhin an genau einer Stelle im Baum. Der Modulkopf wird um die neue Richtung ergänzt, in demselben Aufbau, den er für die vier bisherigen Fragen führt. Bis Schritt 7 den Rufer setzt, trägt die neue Funktion `#[cfg_attr(not(test), expect(dead_code, …))]` nach dem Vorbild aus `kommandos/rueckschritt.rs`; ohne die Zeile hält `-D warnings` den Bau an, und Schritt 7 nimmt sie wieder heraus, weil die Erwartung dann unerfüllt wäre. **Proben:** eine eigene `NSPasteboard` mit eigenem Namen anlegen, einen Text hineinschreiben, ihn zurücklesen. `generalPasteboard` wird dabei nicht angefasst, aus dem Grund, den der Modulkopf für `text_schreiben` schon führt: eine solche Probe würfe weg, was der Entwickler gerade kopiert hat.
