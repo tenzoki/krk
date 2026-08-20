@@ -101,3 +101,27 @@ Nutzerarbeit, die kein Agent fahren kann. Zehn der bisher dreizehn gefahrenen Ru
 genau diesem Grund als beschränkter Abschluss (`_b_`) geschlossen worden. Der Nutzer entscheidet
 am Rebalance-Tor; der Reconciler nimmt ihm die Wahl nicht ab und hat den Circle-Marker `_t_`
 nicht angefasst.
+
+## Portfolio update
+
+Die Runde 14 ist am 260820-1045 kohärent geschlossen, `.active-circle` ist gelöscht, und der
+Playmaker hat `portfolio.md` neu erzeugt. Sein Protokoll:
+`shared/history/260820-1044-playmaker-direct-dispatch.md`.
+
+Drei seiner Befunde gehören in dieses Protokoll, weil sie über die Runde hinausweisen:
+
+- **Rang 1 der vorgesehenen Circles bleibt der Web-Betrachter**, aber der Playmaker empfiehlt ihn
+  nicht als nächsten Lauf. Vor ihm stehen eine Untersuchung des Darstellungsmittels und eine
+  Klärungsrunde über drei Fragen.
+- **Der stärkere Kandidat hat keinen Circle:** die Bewegung zwischen Editor und Vorschau, aus den
+  drei Datensätzen dieses Abnahmelaufs. Kleiner im Zuschnitt, Grundlage zwei Stunden statt zwei
+  Wochen alt, ein Defekt hoher Schwere darunter. Der Playmaker hat ihn benannt und nichts gefilt —
+  einen Rückstandseintrag anzulegen ist dem Nutzer vorbehalten.
+- **Eine `## Parent grounding stale`-Notiz steht am Circle des Web-Betrachters**, obwohl ihre
+  übliche Bedingung nicht erfüllt war: sie fährt normalerweise auf einem beschränkt geschlossenen
+  Kind, und die Runde 14 hat kohärent geschlossen. Die Prüfung fiel trotzdem bejahend aus, weil
+  die Vorschau sich erheblich verändert hat.
+
+**Das Auslieferungstor steht offen:** 22 Commits seit `v0.5.4`, kein Tag an HEAD. Das ist kein
+Befund dieser Runde, sondern der Stand des Baums; `cargo xtask release` bricht in dieser Lage ab,
+bis der Nutzer eine Zahl wählt.

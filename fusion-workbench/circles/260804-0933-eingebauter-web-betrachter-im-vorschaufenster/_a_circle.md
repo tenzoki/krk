@@ -1269,3 +1269,170 @@ never existed, filed as
 `shared/issues/260818-0752_*_ein-zitat-im-circle-datensatz-des-web-betrachters-nennt-einen-namensteil-den-es-nie-gab.md`
 and still open. It sits in `## Grounding snapshot`, which is read as binding ground at activation.
 The playmaker writes only the three sections its mandate names and does not correct it.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260820-1044
+**Playmaker-Lauf:** 260820-1044-playmaker-direct-dispatch
+**Kohärent abgeschlossenes Kind:** `260819-2230-auswahl-und-kopieren-in-der-vorschau`
+(Runde 14), geschlossen am 260820-1045 nach einem Abnahmelauf, den der Nutzer gefahren hat
+
+**Die übliche Auslösebedingung ist nicht erfüllt, und der Vermerk steht trotzdem hier.** Der
+Auftrag des Playmakers knüpft ihn an ein Kind, das beschränkt (`_b_`) schließt; die Runde 14 hat
+kohärent geschlossen. Der Nutzer hat diesen Lauf ausdrücklich beauftragt zu prüfen, ob die Runde
+den Grounding-Schnappschuss dieses Circles veraltet hat. Sie hat: der Schnappschuss stammt vom
+260804 und beschreibt die Vorschaufläche als eine Anzeige, die keinen Fokus nimmt. Genau diese
+Eigenschaft ist gefallen. Der Lauf vom 260819-0804 hat für die Runde 13 anders entschieden und
+ihre Alterung in den Aktivierungsvorschlag geschrieben; dort ging es um die Belegungstabelle und
+nicht um die Fläche, in der dieser Circle leben soll.
+
+**Sprache.** Dieser Abschnitt ist wieder deutsch. Der Lauf vom 260819-0804 schrieb englisch, weil
+`CLAUDE.md` damals `**Artifact language:** en` deklarierte. Der Nutzer hat die Deklaration am
+260819-2032 zurückgenommen (`shared/decisions/260819-1500_*_gilt-die-artefaktsprache-en-fuer-den-ganzen-bestand-oder-wird-die-deklaration-zurueckgenommen.md`,
+Möglichkeit 2), und `bin/fusion-rules` gibt seither `default-voice-de.yaml` aus. Übersetzt wird
+nichts; die Grenze wirkt nach vorn.
+
+### 1. Die Vorschaufläche nimmt jetzt den Fokus, und die Begründung von 260804 ist ersetzt
+
+Der Grounding-Schnappschuss oben rechnet mit einer Vorschau, die nur anzeigt. Seit der Runde 14
+trägt `crates/krk-ui/src/appkit/vorschau.rs:1437` `setSelectable(true)`, und die Fläche ist eine
+eigene Unterklasse `Vorschautext` (`:395`). Alles, was die Textanzeige zeigt, lässt sich
+markieren und kopieren; ein Bild nicht.
+
+Das ist keine Kleinigkeit für diesen Circle, weil die abgelehnte Möglichkeit von damals genau
+diese war. `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_was-tut-ein-link-im-gerenderten-markdown-und-bleibt-die-vorschau-unauswaehlbar.md`
+begründete die Unauswählbarkeit mit der Tastenbedienung: eine auswählbare Fläche nähme den Fokus
+als Textsystem, und der Ereignisabgriff reichte danach jede Taste an AppKit weiter. Die Runde 14
+hat den Einwand nicht widerlegt, sondern umgangen, und zwar mit dem Muster aus Punkt 2. Wer die
+Klärungsrunde dieses Circles fährt, findet die Fläche also in einem Zustand vor, den der
+Schnappschuss für ausgeschlossen hielt.
+
+### 2. Der Ereignisabgriff kennt zwei angemeldete Textflächen statt einer, und eine Web-Ansicht ist weiterhin keine
+
+`Anwendungsdelegierter::ist_eigene_textflaeche` (`crates/krk-ui/src/appkit/anwendung.rs`) prüft
+seit der Runde 14 zwei Flächen über die Objektgleichheit, die des Editors und die der Vorschau.
+`ersthelfer_gehoert_appkit` (`crates/krk-ui/src/appkit/ereignisse.rs`) ruft sie und weist danach
+drei Klassen ab: `NSTextView`, `NSTextField` und `NSText`.
+
+Für diesen Circle bewegt sich der Punkt in beide Richtungen. Zugunsten: das Muster der Anmeldung
+über die Nämlichkeit ist nicht mehr ein Einzelfall des Editors, sondern zweimal angewandt und
+einmal nachgeahmt worden, ohne dass eine zweite Stelle entstanden ist. Wer eine dritte bedienbare
+Fläche in die Fensterzeile baut, hat einen gebauten Präzedenzfall statt einer Überlegung.
+Zulasten: der Vermerk vom 260813-0714 hielt fest, dass eine Web-Ansicht keine der drei Klassen
+ist, und daran hat sich nichts geändert. Die Anmeldung über die Nämlichkeit hilft dort nicht, wo
+der Klassentest ohnehin nicht greift. Eine Web-Ansicht fällt heute durch `ersthelfer_gehoert_appkit`
+hindurch, ohne dass jemand sie angemeldet hätte, und was ihre Tasten dann tun, ist ungemessen.
+
+**Der Nebenbefund gehört dazu, weil er in der Prosa steht, auf die eine Klärungsrunde zugreift.**
+`CLAUDE.md` sagt unter „Was man nicht sieht" weiterhin, die Textfläche des Editors sei die eine
+Ausnahme im Ersthelfervorbehalt. Es sind zwei. Die Schließungsnotiz der Runde 14 nennt die Stelle
+und hat sie bewusst nicht angefasst; ein Kuratorendurchgang ist dem Nutzer vorbehalten.
+
+### 3. Die Auswahl im gerenderten Markdown liefert Quelltext, und das verteuert die zweite offene Frage
+
+Die Runde 14 hat eine Zusage gebaut, die es am 260804 nicht gab: markiert der Nutzer gerenderten
+Text in der Vorschau, landet der **Quelltext mit seinen Auszeichnungszeichen** in der Ablage. Der
+Nutzer hat das am 260819-2210 gegen die Empfehlung des Shapers so entschieden. Getragen wird die
+Zusage von einer Kachelung, die gerenderten Text und Quelle beidseitig lückenlos aufeinander
+abbildet, gebaut in `crates/krk-ui/src/markdown.rs` mit `Zerlegung::kacheln` als der einen
+Stelle, an der sie wächst (Commit `13be459`).
+
+Die Kachelung gibt es für Markdown und für nichts sonst. Die zweite offene Frage oben, ob der
+Betrachter auch lokale HTML-Dateien gerendert zeigt, kostet damit mehr als bisher: ein gerendertes
+HTML in derselben Fläche müsste entweder eine eigene Kachelung mitbringen oder die Zusage der
+Runde 14 für seinen Fall brechen. Der Vermerk vom 260813-0714 hielt fest, dass ein gerendertes
+HTML nach der Runde 6 der zweite Bruch mit der Dreiteilung aus C6 wäre und nicht der erste. Nach
+der Runde 14 ist es der zweite Bruch **und** eine zweite Abbildung.
+
+### 4. Die Grundlage dieses Circles steht zur Hälfte hinter einem Überholt-Marker
+
+Der Datensatz aus Punkt 1 trägt seit der Runde 14 den Marker `_s_`, überholt. Überholt ist aber
+nur seine zweite Hälfte, die Unauswählbarkeit. **Die erste Hälfte gilt unverändert und gehört
+diesem Circle:** ein Verweis im gerenderten Markdown bekommt Farbe und Unterstreichung, keine
+Klickwirkung und keinen Zeigefinger, und welche Quellen eine Adresse setzen dürfen, bleibt die
+erste offene Frage hier. Der Datensatz schreibt das in seiner Zeile `Superseded by:` selbst aus,
+und die Runde 14 hat die Trennung in ihrer Schließungsnotiz wiederholt.
+
+Der Preis ist trotzdem echt und er ist derselbe, den `CLAUDE.md` für zurückgestellte Datensätze
+beschreibt: wer nach aktiver Grundlage sucht, sucht nach `_o_`, `_a_` und `_i_` und bekommt diese
+Datei nicht zu sehen. Die Hälfte, die diesen Circle bindet, ist damit nur noch für den
+auffindbar, der die Datei ohnehin öffnet. Die Klärungsrunde bei der Aktivierung liest sie besser
+ausdrücklich, statt sich auf eine Suche zu verlassen.
+
+### 5. Was sich nicht bewegt hat, damit niemand danach sucht
+
+Am 260820 gegen den Baum gezählt und unverändert gegenüber dem Stand nach der Runde 13:
+`Kommando` (`crates/krk-core/src/tasten/belegung.rs`) trägt 79 Varianten,
+`resources/default-keymap.toml` trägt 85 Funktionsblöcke, und `Rang`
+(`crates/krk-ui/src/appkit/statuszeile.rs`) trägt sechs Werte. Die Runde 14 brauchte weder einen
+Belegungseintrag noch eine `Kommando`-Variante, weil das Kopieren in KRK kein eigener Befehl ist,
+sondern über den Menüeintrag mit Ziel `nil` und Selektor `copy:` die Antwortkette hinunterläuft.
+Die Meldungen des Betrachters wären weiterhin der siebte Rang der Statuszeile, und die
+Aufzählung hat keinen Auffangzweig, der Bau erzwingt also die Einordnung.
+
+Auch die einzige Kante unter `## Dependencies` steht unverändert: sie führt auf
+`260802-0842-krk-mac-dateimanager-editor-git`, die Runde 1, terminal und am Baum gebaut. Die
+Runde 14 zitiert diesen Circle ihrerseits und hält fest, ihr sei ausdrücklich untersagt gewesen,
+seine erste offene Frage vorwegzunehmen. Sie hat das eingehalten.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260820-1044
+**Playmaker-Lauf:** 260820-1044-playmaker-direct-dispatch
+**Vorgeschlagener Aktivierungszeitpunkt:** der nächste `/fusion:next` des Nutzers. Dieser Lauf
+ist eine unmittelbare Nutzerzuteilung und hält keine Aktivierungsbestätigung. Der Playmaker
+benennt Kandidaten; die Umbenennung dieses Datensatzes von `_a_circle.md` auf `_t_circle.md` und
+das Schreiben von `.active-circle` bleiben beim Nutzer oder beim Orchestrator.
+
+**Rang 1 von 1, und die Rangfolge ist zum zwölften Mal keine Leistung der Heuristik.** Dieser
+Circle ist weiterhin der einzige vorgesehene des Projekts. Was die Heuristik beiträgt, ist die
+Prüfung der Vorbedingungen, und sie fällt sauber aus. Ein einziger offener Entscheidungsdatensatz
+bindet ihn, die Verfügbarkeitsprüfung für Schnittstellen ab macOS 26
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`).
+Seine eine Abhängigkeitskante führt auf die Runde 1, die terminal und am Baum gebaut ist. Der
+Abzug für beschränkten statt kohärenten Abschluss ist wie in jedem Lauf davor nicht angesetzt:
+`CLAUDE.md` weist den Marker `_b_` in diesem Projekt als Auskunft über die Verfügbarkeit des
+Nutzers für den Abnahmelauf aus und nicht über die Reife einer Runde. Zehn der vierzehn
+gefahrenen Runden tragen ihn aus diesem einen Grund.
+
+**Was die Runde 14 für diesen Circle geändert hat**, steht im Vermerk unmittelbar über diesem
+Abschnitt. Die Kurzfassung: die Vorschaufläche nimmt jetzt den Fokus und ist auswählbar, der
+Ereignisabgriff kennt zwei angemeldete Textflächen statt einer, die Auswahl im gerenderten
+Markdown liefert Quelltext über eine Kachelung, die es nur für Markdown gibt, und die Hälfte der
+Grundlage, die diesem Circle gehört, steht seither hinter einem Überholt-Marker. Keiner der vier
+Punkte hält die Aktivierung auf; alle vier gehören in die Klärungsrunde.
+
+**Was vor der Aktivierung steht, unverändert seit dem 260804.** Erstens eine Untersuchung des
+Darstellungsmittels. Der Circle legt bewusst nicht fest, womit KRK Web-Inhalt darstellt, weder
+eine Systemschnittstelle noch eine fremde Kiste, und die offene Frage zur Verfügbarkeitsprüfung
+hängt genau an dieser Wahl. Zweitens die Klärungsrunde über die drei offenen Fragen oben. Die
+erste entscheidet den Zuschnitt: bleiben Zwischenablage und Verweisanker der Seite die einzigen
+Quellen einer Adresse, bekommt KRK einen Betrachter; kommen Adresseingabe oder gespeicherte
+Web-Adressen hinzu, bekommt es einen Browser. Die Runde 14 hat diese Frage ausdrücklich nicht
+vorweggenommen und hält das in ihren `## Dependencies` fest.
+
+**Zwei andere Kandidaten stehen daneben, und keiner von beiden ist vorgesehen.**
+
+Der erste ist neu und aus dem Abnahmelauf des Nutzers vom 260820-1030 entstanden: die Bewegung
+zwischen Editor und Vorschau. Drei frisch gefilte Datensätze im gemeinsamen Speicher beschreiben
+sie zusammen, zwei Defekte und eine offene Nutzerfrage mit drei ausgearbeiteten Möglichkeiten
+(`shared/issues/260820-1034_*_f4-setzt-den-fokus-nur-dann-in-den-editor-wenn-er-schon-eine-datei-zeigt.md`,
+`shared/issues/260820-1034_*_cmd-e-bleibt-in-der-vorschau-wirkungslos-und-ist-in-der-dateiliste-gar-nicht-belegt.md`,
+`shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`).
+Dazu gehört der eine lebende Eintrag des Rückstandsspeichers
+(`shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md`),
+der ein viertes Stück desselben Bereichs trägt. Als Runde steht der Bereich nirgends. Der Playmaker rankt ihn nicht mit, weil
+kein vorgesehener Circle ihn führt, und er filt auch keinen Eintrag dafür; das Filen ist dem
+Nutzer vorbehalten.
+
+Der zweite ist der alte: `260816-2255-befehle-absetzen-und-makros-speichern`, am 260817-0445
+zurückgestellt zugunsten der zwölften Runde, mit vollständigem Spec über 54 Abnahmekriterien und
+vollständigem Plan über 22 Schritte, nichts gebaut. Zurückgestellt ist ein Endzustand; eine
+Aufnahme wäre ein neuer Circle, der den zurückgestellten über `## Dependencies` zitiert.
+
+**Eine Berichtigung steht weiterhin vor der Aktivierung.** Zeile 438 dieses Datensatzes zitiert
+einen Namensteil, den es nie gegeben hat, abgelegt als
+`shared/issues/260818-0752_*_ein-zitat-im-circle-datensatz-des-web-betrachters-nennt-einen-namensteil-den-es-nie-gab.md`
+und weiterhin offen. Der Ort macht sie teuer: die Zeile steht im Abschnitt
+`## Grounding snapshot`, der bei der Aktivierung als bindende Grundlage gelesen wird. Der
+Playmaker schreibt nur die drei Abschnitte, die sein Auftrag nennt, und berichtigt sie nicht.
