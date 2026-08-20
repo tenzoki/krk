@@ -14,6 +14,7 @@
 //! Zusage zum Zugriff auf geschuetzte Ordner ist deshalb nur am signierten
 //! Buendel pruefbar, und das Buendel steht daher vor dem ersten Fenster.
 
+mod beglaubigung;
 mod bundle;
 mod git;
 mod messen;
@@ -86,6 +87,32 @@ xtask — Bauwerkzeug fuer KRK
       Die Beglaubigung braucht das vollstaendige Xcode und ein Schluesselbund-
       profil des Entwicklerkontos in KRK_NOTARY_PROFILE; fehlt eines, bricht
       allein sie ab, und das signierte Buendel bleibt liegen.
+
+  ./certify-only.sh <zahl>
+      Beglaubigt ein bereits gebautes target/KRK.app und tut sonst nichts.
+      Der Weg fuer den Fall, dass ein Auslieferungslauf erst an der
+      Beglaubigung gescheitert ist — etwa am Zeitueberlauf des Uploads zu
+      Apple — und das universelle, mit Developer-ID signierte Buendel fertig
+      dasteht. Das Skript reicht an \"make beglaubigen VERSION=<zahl>\" weiter.
+
+  cargo xtask beglaubigen <zahl>
+      Dasselbe ohne die zwei Huellen. Es prueft zweierlei am gebauten Buendel
+      und reicht es dann ein: die Versionszahl gegen die Info.plist des
+      Buendels, damit nicht ein altes target/KRK.app von vorgestern bei Apple
+      landet, und den Signaturstand gegen die zwei Bedingungen der
+      Beglaubigung, naemlich eine Developer-ID in der Signaturkette und die
+      gehaertete Laufzeitumgebung. Danach laeuft dieselbe Station 7 wie bei
+      release: \"xcrun notarytool submit --wait\" und \"xcrun stapler staple\".
+
+      **Es baut nichts** — kein Uebersetzungslauf, kein lipo, keine Montage,
+      keine Signierung; ohne Buendel bricht es ab und nennt release.
+
+      **Und es prueft weder Tag noch Arbeitsbaum.** Genau darin liegt sein
+      Zweck: Station 1 von release haelt eine Wiederholung in dieser Lage an,
+      weil der Tag v<zahl> nach dem Lauf nicht mehr allein auf HEAD steht.
+      Daraus folgt die Grenze: ein so beglaubigtes Buendel ist nicht durch die
+      Vorpruefungen der Auslieferungskette gegangen, und es ist nicht gesagt,
+      dass ein Tag den Stand benennt, aus dem es gebaut wurde.
 
   cargo xtask messen --alle --ordner-a P --ordner-b P --ordner100k P --kopierziel P
       Der eine Einstiegspunkt fuer beide Messstrecken (Schritt 21): baut das
@@ -161,6 +188,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         }
         "version" => version::ausfuehren(&argumente[1..]),
         "release" => release::ausfuehren(&argumente[1..]),
+        "beglaubigen" => beglaubigung::ausfuehren(&argumente[1..]),
         "messen" => messen::ausfuehren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");
@@ -213,6 +241,39 @@ mod tests {
         assert!(meldung.contains("genau ein Argument"), "{meldung}");
         assert!(HILFE.contains("cargo xtask version <zahl>"), "{HILFE}");
         assert!(HILFE.contains("./release.sh <zahl>"), "{HILFE}");
+    }
+
+    /// Der Nur-Beglaubigungsweg steht in der Verteilung und in der Hilfe.
+    ///
+    /// Dieselbe Bauart wie die Probe darueber: ohne Zahl ist es ein
+    /// Aufruffehler und kein unbekannter Unterbefehl, der Befehl ist also
+    /// verteilt worden.
+    #[test]
+    fn beglaubigen_steht_in_verteilung_und_hilfe() {
+        let Err(Abbruch::Aufruf(meldung)) = ausfuehren(&worte(&["beglaubigen"])) else {
+            panic!("beglaubigen ohne Zahl ist ein Aufruffehler");
+        };
+        assert!(meldung.contains("genau ein Argument"), "{meldung}");
+        assert!(HILFE.contains("cargo xtask beglaubigen <zahl>"), "{HILFE}");
+        assert!(HILFE.contains("./certify-only.sh <zahl>"), "{HILFE}");
+    }
+
+    /// Die Hilfe sagt, was der Weg nicht prueft, und was daraus folgt.
+    ///
+    /// Ein Weg, der Station 1 uebergeht, muss das dort sagen, wo jemand ihn
+    /// nachschlaegt. Ohne die zweite Zusage liest sich die erste als
+    /// Bequemlichkeit statt als Grenze.
+    #[test]
+    fn die_hilfe_nennt_die_grenze_des_nur_beglaubigungswegs() {
+        assert!(
+            HILFE.contains("weder Tag noch Arbeitsbaum"),
+            "die Hilfe sagt nicht, was der Weg auslaesst"
+        );
+        assert!(
+            HILFE.contains("Vorpruefungen der Auslieferungskette"),
+            "die Hilfe nennt die Folge nicht"
+        );
+        assert!(HILFE.contains("Es baut nichts"), "{HILFE}");
     }
 
     /// Der ueberholte Satz steht nirgends mehr in der Hilfe.

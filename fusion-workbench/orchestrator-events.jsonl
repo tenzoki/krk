@@ -1266,3 +1266,4 @@
 {"ts":"2026-08-20T06:58:23","event":"gate_hit","agent":"user","detail":"Buendelabnahme: 16 Beobachtungen am laufenden KRK.app 0.5.4 im Vordergrund"}
 {"ts":"2026-08-20T08:51:44","event":"portfolio_refresh","detail":"circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md; shared/history/260820-1044-playmaker-direct-dispatch.md"}
 {"ts":"2026-08-20T09:38:24","event":"session_end","detail":"3 Turns, 19 Commits, Runde 14 kohaerent geschlossen, 17 Defekte gefilt / 8 geschlossen, 8 Entscheidungen gefilt / 6 umgesetzt"}
+{"ts":"2026-08-20T14:00:35","event":"session_start","history_file":"shared/history/260819-2026-orchestrator-session.md","detail":"Fortsetzung nach Sitzungsabschluss: certify-only auf Nutzerwunsch"}

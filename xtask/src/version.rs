@@ -410,7 +410,12 @@ fn arbeitsbaum_meldung(geaendert: &[&str], zahl: &str) -> String {
 /// wie `-rc1` ist damit ausgeschlossen: ihn zuzulassen waere eine Zusage ueber
 /// Vorabstaende, die dieses Projekt nicht gibt, und wer sie geben will, aendert
 /// diese Funktion und weiss dann, was er tut.
-fn versionszahl_pruefen(roh: &str) -> Result<(), String> {
+///
+/// `pub(crate)` seit dem 260820: `beglaubigen` nimmt dieselbe Zahl entgegen
+/// und stellt an sie dieselbe Anforderung. Eine zweite Pruefung daneben waere
+/// eine zweite Vorschrift darueber, wie eine Versionszahl dieses Projekts
+/// aussieht.
+pub(crate) fn versionszahl_pruefen(roh: &str) -> Result<(), String> {
     if let Some(ohne) = roh.strip_prefix('v') {
         return Err(format!(
             "die Versionszahl steht ohne `v`: {ohne} statt {roh}. Das `v` traegt allein der Tag, \

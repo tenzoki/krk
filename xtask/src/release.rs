@@ -58,12 +58,21 @@
 //!    ab, deshalb werden die Voraussetzungen der Beglaubigung erst hier
 //!    geprueft und nicht, wie sonst ueblich, vor dem ersten
 //!    Uebersetzungslauf.
+//!
+//!    **Sie steht seit dem 260820 in `beglaubigung.rs` und nicht mehr hier.**
+//!    Sie hat einen zweiten Rufer bekommen, `cargo xtask beglaubigen`, der
+//!    genau diese Station allein faehrt, wenn ein Lauf erst an ihr gescheitert
+//!    ist und das fertige Buendel schon dasteht. Was dieser zweite Weg
+//!    ausdruecklich nicht prueft, ist Station 1: der Modulkopf von
+//!    `beglaubigung` schreibt aus, warum das sein Zweck und nicht sein Mangel
+//!    ist.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::Abbruch;
+use crate::beglaubigung;
 use crate::bundle;
 use crate::git;
 use crate::sign;
@@ -148,9 +157,6 @@ const GRENZWURZEL: &str = "crates";
 /// Der eine Teilbaum unter [`GRENZWURZEL`], der eine `objc2`-Kiste nennen darf.
 const AUSNAHME: &str = "crates/krk-ui/src/appkit";
 
-/// Die Umgebungsvariable mit dem Namen des notarytool-Schluesselbundprofils.
-pub const NOTAR_PROFIL_VARIABLE: &str = "KRK_NOTARY_PROFILE";
-
 /// Baut, signiert und beglaubigt das Auslieferungspaket.
 pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     if let Some(ueberzaehlig) = argumente.first() {
@@ -185,7 +191,7 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         buendel.display()
     );
 
-    beglaubigen(&buendel)?;
+    beglaubigung::beglaubigen(&buendel)?;
     println!("Beglaubigt und angeheftet: {}", buendel.display());
     Ok(())
 }
@@ -635,110 +641,6 @@ fn zusammenfuegen(vorlage: &bundle::Vorlage) -> Result<PathBuf, Abbruch> {
     }
     println!("lipo -archs: {}", gemeldet.trim());
     Ok(ausgabe_pfad)
-}
-
-/// Reicht das Buendel zur Beglaubigung ein und heftet das Ergebnis an.
-///
-/// Die Voraussetzungen — vollstaendiges Xcode fuer `notarytool` und `stapler`,
-/// ein hinterlegtes Zugangsprofil des Apple-Entwicklerkontos — werden bewusst
-/// erst hier geprueft: fehlt eine, bleibt das gebaute, signierte Buendel
-/// liegen, und die Meldung benennt, was fehlt. Siehe den Modulkopf.
-fn beglaubigen(buendel: &Path) -> Result<(), Abbruch> {
-    werkzeug_pruefen("notarytool", buendel)?;
-    werkzeug_pruefen("stapler", buendel)?;
-
-    let profil = match std::env::var(NOTAR_PROFIL_VARIABLE) {
-        Ok(wert) if !wert.trim().is_empty() => wert.trim().to_owned(),
-        _ => {
-            return Err(Abbruch::Lauf(format!(
-                "Die Beglaubigung braucht die Zugangsdaten eines Apple-Entwicklerkontos, und \
-                 die Umgebungsvariable {NOTAR_PROFIL_VARIABLE} nennt kein \
-                 Schluesselbundprofil. Das gebaute und signierte Buendel liegt unter {}.\n\
-                 \n\
-                 Einmalig hinterlegen:\n\
-                 \x20      xcrun notarytool store-credentials <Profilname> \
-                 --apple-id <Apple-ID> --team-id <Team-Kennung> \
-                 --password <app-spezifisches Passwort>\n\
-                 \n\
-                 Danach: {NOTAR_PROFIL_VARIABLE}=<Profilname> cargo xtask release",
-                buendel.display()
-            )));
-        }
-    };
-
-    // notarytool nimmt kein nacktes Buendel an; ditto packt es so, wie Apple
-    // es fuer die Einreichung vorschreibt.
-    let zip = buendel.with_extension("zip");
-    let gepackt = Command::new("/usr/bin/ditto")
-        .arg("-c")
-        .arg("-k")
-        .arg("--keepParent")
-        .arg(buendel)
-        .arg(&zip)
-        .output()
-        .map_err(|fehler| Abbruch::Lauf(format!("ditto laesst sich nicht starten: {fehler}")))?;
-    if !gepackt.status.success() {
-        return Err(Abbruch::Lauf(format!(
-            "ditto ist gescheitert ({}): {}",
-            gepackt.status,
-            String::from_utf8_lossy(&gepackt.stderr).trim()
-        )));
-    }
-
-    // --wait blockiert bis zum Urteil von Apple; der Fortschritt laeuft
-    // durchgereicht ins Terminal, deshalb status() statt output().
-    let eingereicht = Command::new("/usr/bin/xcrun")
-        .args(["notarytool", "submit"])
-        .arg(&zip)
-        .args(["--keychain-profile", &profil, "--wait"])
-        .status()
-        .map_err(|fehler| Abbruch::Lauf(format!("xcrun laesst sich nicht starten: {fehler}")))?;
-    let _ = fs::remove_file(&zip);
-    if !eingereicht.success() {
-        return Err(Abbruch::Lauf(format!(
-            "xcrun notarytool submit --wait ist gescheitert ({eingereicht}). Das gebaute und \
-             signierte Buendel liegt unter {}; das Protokoll der Einreichung nennt \
-             \"xcrun notarytool log\" mit der oben gemeldeten Einreichungskennung.",
-            buendel.display()
-        )));
-    }
-
-    let angeheftet = Command::new("/usr/bin/xcrun")
-        .args(["stapler", "staple"])
-        .arg(buendel)
-        .status()
-        .map_err(|fehler| Abbruch::Lauf(format!("xcrun laesst sich nicht starten: {fehler}")))?;
-    if !angeheftet.success() {
-        return Err(Abbruch::Lauf(format!(
-            "xcrun stapler staple ist gescheitert ({angeheftet}), das Buendel unter {} ist \
-             beglaubigt, traegt die Beglaubigung aber nicht angeheftet.",
-            buendel.display()
-        )));
-    }
-    Ok(())
-}
-
-/// Prueft, dass `xcrun` das genannte Werkzeug findet.
-///
-/// `notarytool` und `stapler` liegen im vollstaendigen Xcode, nicht in den
-/// Command Line Tools; die Meldung benennt genau das.
-fn werkzeug_pruefen(name: &str, buendel: &Path) -> Result<(), Abbruch> {
-    let gefunden = Command::new("/usr/bin/xcrun")
-        .args(["--find", name])
-        .output()
-        .map_err(|fehler| Abbruch::Lauf(format!("xcrun laesst sich nicht starten: {fehler}")))?;
-    if !gefunden.status.success() {
-        return Err(Abbruch::Lauf(format!(
-            "xcrun findet {name} nicht: die Beglaubigung braucht das vollstaendige Xcode, die \
-             Command Line Tools genuegen nicht. Das gebaute und signierte Buendel liegt unter \
-             {}.\n\
-             \n\
-             Abhilfe: Xcode installieren und die Werkzeugkette umstellen mit\n\
-             \x20      sudo xcode-select -s /Applications/Xcode.app/Contents/Developer",
-            buendel.display()
-        )));
-    }
-    Ok(())
 }
 
 #[cfg(test)]

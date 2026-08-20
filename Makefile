@@ -130,6 +130,21 @@ ausliefern: ## Version setzen, eintragen, taggen und ausliefern: make ausliefern
 release: ## Universelles Buendel bauen, mit Developer-ID signieren, beglaubigen
 	KRK_NOTARY_PROFILE=$(NOTARPROFIL) $(CARGO) xtask release
 
+# Der Nur-Beglaubigungsweg: fuer den Lauf, der erst an der siebten Station
+# gescheitert ist, waehrend das fertige Buendel unter $(BUENDEL) liegt und
+# allein das Ticket fehlt. `make release` faengt in dieser Lage von vorn an und
+# braeche zuvor an Station 1 ab, weil der Tag nach dem Lauf nicht mehr allein
+# auf HEAD steht.
+#
+# Die Zahl ist kein Zierat: xtask haelt sie gegen die Info.plist des gebauten
+# Buendels, damit nicht ein $(BUENDEL) von vorgestern bei Apple landet. Das
+# Ziel baut deshalb auch nichts und haengt an keiner Voraussetzung — ein
+# `bundle` davor ueberschriebe genau das Buendel, um das es geht.
+.PHONY: beglaubigen
+beglaubigen: ## Ein fertiges Buendel allein beglaubigen: make beglaubigen VERSION=0.2.0
+	@test -n "$(VERSION)" || { echo "make beglaubigen braucht eine Zahl: make beglaubigen VERSION=0.2.0"; exit 2; }
+	KRK_NOTARY_PROFILE=$(NOTARPROFIL) $(CARGO) xtask beglaubigen $(VERSION)
+
 # Die zwei Beglaubigungspruefungen duerfen das Ziel nicht scheitern lassen, und
 # der Grund ist kein Nachlassen: ein mit `make bundle` gebautes Buendel traegt
 # eine Entwicklungsidentitaet und **muss** bei spctl durchfallen. Das ist der

@@ -212,7 +212,7 @@ impl Vorlage {
     /// Developer-ID und gehaerteter Laufzeitumgebung, und beide tun das nach
     /// der Montage am fertigen Buendel.
     pub(crate) fn zusammensetzen(&self, binaerquelle: &Path) -> Result<PathBuf, Abbruch> {
-        let buendel = self.wurzel.join("target").join(BUENDELNAME);
+        let buendel = buendelpfad(&self.wurzel);
         let contents = buendel.join("Contents");
         let macos = contents.join("MacOS");
 
@@ -277,6 +277,18 @@ impl Vorlage {
 /// finden, waeren zwei Werkzeugketten in einem Lauf.
 pub(crate) fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
+}
+
+/// Wo das fertige Buendel liegt.
+///
+/// Die eine Stelle, die `target/KRK.app` zusammensetzt: die Montage legt es
+/// dorthin, und `beglaubigen` sucht es dort. Ein zweites Zusammensetzen
+/// anderswo waere die zweite Wahrheit darueber, wo das Buendel entsteht — und
+/// der Weg, auf dem ein Umbenennen des Buendels einen Rufer zuruecklaesst, der
+/// ins Leere greift.
+#[must_use]
+pub(crate) fn buendelpfad(wurzel: &Path) -> PathBuf {
+    wurzel.join("target").join(BUENDELNAME)
 }
 
 /// Die Projektwurzel.
@@ -440,12 +452,17 @@ fn symbol_bauen(wurzel: &Path, ziel: &Path) -> Result<(), Abbruch> {
 
 /// Liest den Wert eines Schluessels aus einer Property-Liste im XML-Format.
 ///
+/// `pub(crate)` seit dem 260820: `beglaubigung` liest damit die Versionszahl
+/// aus der `Info.plist` des **gebauten** Buendels, waehrend die drei Rufer
+/// hier die Vorlage aus `resources/` lesen. Zwei Leser fuer dasselbe Muster
+/// waeren zwei Regeln darueber, was `<key>…</key><string>…</string>` bedeutet.
+///
 /// Bewusst kein Parser: gebraucht wird ein einziger Wert aus einer Datei, die
 /// im selben Projekt liegt und dem Muster `<key>…</key><string>…</string>`
 /// folgt. Steht zwischen Schluessel und Wert ein weiterer `<key>`, ist der
 /// gesuchte Schluessel nicht mit einer Zeichenkette belegt, und die Funktion
 /// liefert nichts, statt den Wert des naechsten Schluessels auszugeben.
-fn plist_zeichenkette(plist: &str, schluessel: &str) -> Option<String> {
+pub(crate) fn plist_zeichenkette(plist: &str, schluessel: &str) -> Option<String> {
     let marke = format!("<key>{schluessel}</key>");
     let hinter_schluessel = plist.split_once(&marke)?.1;
     let (zwischenraum, hinter_beginn) = hinter_schluessel.split_once("<string>")?;

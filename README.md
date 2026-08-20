@@ -357,6 +357,57 @@ Beglaubigung ein so signiertes Bündel nicht annehmen wird. So bleiben Bau,
 `lipo` und die Signierung mit gehärteter Laufzeitumgebung auch auf einem
 Gerät ohne Entwicklerkonto prüfbar.
 
+### Nur beglaubigen
+
+```sh
+./certify-only.sh 0.2.0
+```
+
+Der Weg für den Fall, dass der Lauf **erst an der siebten Station** gescheitert
+ist: das universelle, mit Developer-ID und gehärteter Laufzeitumgebung
+signierte Bündel liegt fertig unter `target/KRK.app`, und allein das Ticket
+fehlt. So geschehen am 260820, als der Upload zu Apple in einen Zeitüberlauf
+lief (`HTTPClientError.deadlineExceeded`).
+
+Dieselben Schichten wie beim ganzen Weg, eine weniger:
+
+```text
+./certify-only.sh 0.2.0
+  └─ make beglaubigen VERSION=0.2.0        Pfad zu cargo, Notarprofil
+       └─ cargo xtask beglaubigen 0.2.0    die Prüfungen und Station 7
+```
+
+**Ein zweites `./release.sh 0.2.0` hilft in dieser Lage nicht.** Es bräche an
+Station 1 ab, denn nach dem Lauf trägt HEAD den Tag `v0.2.0` nicht mehr allein,
+und der Arbeitsbaum ist inzwischen ein anderer — und es übersetzte beide Ziele
+neu, um dasselbe Bündel ein zweites Mal herzustellen.
+
+Geprüft wird zweierlei, und beides am Bündel, das dort liegt:
+
+| Prüfung | Abbruch, wenn |
+|---|---|
+| die Versionszahl | sie von `CFBundleShortVersionString` der `Info.plist` im Bündel abweicht |
+| der Signaturstand | keine `Authority=`-Zeile mit `Developer ID Application` beginnt oder die Merkmalsliste `runtime` nicht nennt |
+
+Die erste Prüfung ist es, die das Argument rechtfertigt: `target/KRK.app`
+überlebt jede Sitzung, und ohne sie ginge ein Bündel von vorgestern still bei
+Apple ein. Die zweite spart eine sinnlose Einreichung, denn ein mit
+`cargo xtask bundle` gebautes Bündel trägt eine Entwicklungsidentität und keine
+gehärtete Laufzeitumgebung; Apple weist es ab. Gegen die `Cargo.toml` wird
+nicht geprüft — sie sagt, was ein *neuer* Bau trüge, und der findet hier nicht
+statt.
+
+**Gebaut wird nichts**: kein Übersetzungslauf, kein `lipo`, keine Montage,
+keine Signierung. Fehlt das Bündel, bricht der Befehl ab und nennt
+`cargo xtask release`.
+
+**Weder Tag noch Arbeitsbaum werden geprüft, und das ist der Zweck des Wegs.**
+Station 1 zu übergehen ist seine Daseinsberechtigung und zugleich seine
+Grenze: ein so beglaubigtes Bündel ist nicht durch die Vorprüfungen der
+Auslieferungskette gegangen, und es ist nicht gesagt, dass ein Tag den Stand
+benennt, aus dem es gebaut wurde. Wer von Grund auf ausliefert, nimmt
+`./release.sh <version>`.
+
 ## Versionspflege
 
 Die Version steht an **einer** Stelle: im Feld `version` unter
