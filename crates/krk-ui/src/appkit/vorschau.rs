@@ -133,6 +133,14 @@
 //! Einen Tastenbefehl, der den Fokus hierher setzt, gibt es weiterhin nicht;
 //! die offene Frage dazu liegt im Entscheidungsspeicher.
 //!
+//! **Was die Auswahl beim Kopieren hergibt, entscheidet eine einzige Stelle**:
+//! [`Vorschautext::auswahl_ablegen`], die Ueberschreibung von
+//! `writeSelectionToPasteboard:types:`. Bei gerendertem Markdown geht der
+//! **Quelltext** mit seinen Auszeichnungszeichen heraus (C2.2 der Runde 14),
+//! sonst der Text, wie er dasteht (C2.1). Kopieren ist dabei kein Befehl von
+//! KRK: der Menueeintrag traegt `copy:` und Ziel `nil`, und die Antwortkette
+//! entscheidet, wer ihn beantwortet — seit dieser Runde auch diese Flaeche.
+//!
 //! **Das Kontextmenue haengt an allen drei Ansichten, und diese Datei baut es
 //! nicht.** Seit C1 der Runde 6 ist das Vorschaufenster der Delegierte seiner
 //! Textanzeige und der seines Menues; es beantwortet allein, welche Datei der
@@ -196,6 +204,20 @@
 //! keine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! [`Vorschaufenster::fokusansicht`] fragt ihn seit der Runde 14.
 //!
+//! **Die Abfangstelle des Kopierens bringt vier weitere Beruehrungen mit, und
+//! keine davon ist juenger.** `writeSelectionToPasteboard:types:` steht in der
+//! Kategorie `NSTextView (NSPasteboard)` (`NSTextView.h:258`) an
+//! `NSTextView.h:277`; weder die Kategorie noch die Methode traegt eine
+//! Verfuegbarkeitsangabe, beide stehen damit seit 10.0. `selectedRange` ist
+//! die Eigenschaft von `NSText` (`NSText.h:100`), ebenfalls ohne Angabe und
+//! damit seit 10.0. `NSPasteboard` steht seit 10.0 (`NSPasteboard.h:157`), der
+//! Typaliasname `NSPasteboardType` ebenso (`NSPasteboard.h:23`), und `NSArray`
+//! seit 10.0 (`NSArray.h:17`). **Die einzelnen Sortennamen** wie
+//! `NSPasteboardTypeString` tragen dagegen `API_AVAILABLE(macos(10.6))`; diese
+//! Datei nennt keinen davon, sie reicht die Ablage an
+//! [`super::zwischenablage::text_auf_ablage_schreiben`] weiter, und die Angabe
+//! steht im Kopf jener Datei.
+//!
 //! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
@@ -210,12 +232,13 @@ use objc2::runtime::ProtocolObject;
 use objc2::{AnyThread, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSEvent, NSImage, NSImageScaling, NSImageView, NSMenu,
-    NSMenuDelegate, NSScrollView, NSTextDelegate, NSTextView, NSTextViewDelegate, NSView,
+    NSMenuDelegate, NSPasteboard, NSPasteboardType, NSScrollView, NSTextDelegate, NSTextView,
+    NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSData, NSDate,
-    NSDateFormatter, NSDateFormatterStyle, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
-    NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
+    MainThreadMarker, NSArray, NSByteCountFormatter, NSByteCountFormatterCountStyle, NSData,
+    NSDate, NSDateFormatter, NSDateFormatterStyle, NSObject, NSObjectProtocol, NSPoint, NSRect,
+    NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
 };
 
 use krk_core::tasten::Kommando;
@@ -233,6 +256,7 @@ use super::tabelle::typ_beschriften;
 use super::tableiste::{self, Tableiste};
 use super::teilen;
 use super::textmerkmale;
+use super::zwischenablage;
 
 /// Die Groesse, mit der die Ansichten entstehen, bevor die Aufteilung sie
 /// auslegt.
@@ -344,13 +368,13 @@ define_class!(
     /// Auswahl in AppKit an einer Stelle zusammen:
     /// `writeSelectionToPasteboard:types:`. Nur eine Unterklasse kommt an
     /// diese Stelle heran; ein Delegiertenweg oder ein Abfangen vor der
-    /// Antwortkette erreichte jeweils nur einen Teil der Wege.
+    /// Antwortkette erreichte jeweils nur einen Teil der Wege. Wie weit diese
+    /// Zusammenfuehrung wirklich traegt, steht am Doc-Kommentar der
+    /// Ueberschreibung selbst: dort ist getrennt, was Apples Beschreibung sagt
+    /// und was an diesem Baum gemessen ist.
     ///
-    /// **In dieser Runde traegt sie die Ueberschreibung noch nicht** — sie
-    /// kommt mit dem Schritt, der den Ausgabeweg baut. Bis dahin ist die
-    /// Klasse in ihrem Verhalten eine `NSTextView` und nichts weiter; der
-    /// Merkposten steht schon, damit der Inhalt ihn setzen kann, ohne dass ein
-    /// Schritt zwei Dinge zugleich aendert.
+    /// Ihre eine Ueberschreibung ist [`Vorschautext::auswahl_ablegen`]; sonst
+    /// ist die Klasse in ihrem Verhalten eine `NSTextView` und nichts weiter.
     ///
     /// **Der Merkposten haelt einen [`Arc`] und keine Kopie.** Der
     /// [`Quellbezug`] entsteht im Durchgang, der rendert, und liegt bereits im
@@ -361,8 +385,9 @@ define_class!(
     /// der Text aus der Zwischenablage.
     // SAFETY:
     // - Die Oberklasse NSTextView stellt an eine Unterklasse keine Bedingung,
-    //   die diese Klasse verletzen koennte: sie ueberschreibt in dieser Runde
-    //   keine Methode und ruft den bezeichneten Erzeuger der Oberklasse.
+    //   die diese Klasse verletzen koennte: sie ruft den bezeichneten Erzeuger
+    //   der Oberklasse, und ihre eine Ueberschreibung reicht jeden Fall, den
+    //   sie nicht selbst beantwortet, unveraendert an die Oberklasse weiter.
     // - Die Klasse implementiert `Drop` nicht.
     #[unsafe(super = NSTextView)]
     #[thread_kind = MainThreadOnly]
@@ -371,6 +396,70 @@ define_class!(
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
     unsafe impl NSObjectProtocol for Vorschautext {}
+
+    impl Vorschautext {
+        /// Der eine Ausgang jeder Auswahl aus der Vorschau (C2.1, C2.2, C2.12
+        /// der Runde 14).
+        ///
+        /// **Zwei Zweige, und der Merkposten entscheidet.** Liegt kein
+        /// [`Quellbezug`] bei, steht hier kein gerendertes Markdown, und die
+        /// Oberklasse legt Zeichen fuer Zeichen ab, was markiert war — roher
+        /// Text, eingefaerbter Quelltext, Metadaten, ein Hinweis, ein leerer
+        /// Tab und der Text aus der Zwischenablage laufen genau so heraus, wie
+        /// sie dastehen (C2.1). Liegt einer bei, geht der **Quelltext** mit
+        /// seinen Auszeichnungszeichen heraus und nicht das Gerenderte
+        /// (C2.2). Der Nutzer hat das am 260819-2210 so entschieden, gegen die
+        /// Empfehlung des Datensatzes
+        /// `shared/decisions/260819-2216_*_was-landet-beim-gerenderten-markdown-in-der-zwischenablage.md`.
+        ///
+        /// **Die Grenzen der Auswahl brauchen keine Umrechnung.** `NSRange`
+        /// zaehlt UTF-16-Einheiten, und das sind genau die Koordinaten, in
+        /// denen der Quellbezug seine Textbereiche fuehrt; gerechnet wird in
+        /// [`Quellbezug::quelltext`] und nicht hier.
+        ///
+        /// # Was Erschliessung ist und was gemessen
+        ///
+        /// **Erschliessung:** dass diese Methode der gemeinsame Ausgang aller
+        /// fuenf Wege ist — `copy:`, der Eintrag des Hauptmenues, der Eintrag
+        /// des Kontextmenues, die Dienste des Systems und das Ziehen einer
+        /// Auswahl mit der Maus. So steht es in Apples Beschreibung
+        /// (`NSTextView.h:258-277`, „Declares all the types to the pasteboard
+        /// then calls writeSelectionToPasteboard:type: for each type"), und
+        /// dieselbe Signatur traegt das Dienste-Protokoll
+        /// `NSServicesMenuRequestor` (`NSApplication.h:539`). **An diesem Baum
+        /// ist keiner der fuenf Wege gemessen**, denn dafuer braucht es KRK im
+        /// Vordergrund, und das ist Nutzerarbeit.
+        ///
+        /// **Gemessen** ist allein, dass es bei **einer** Abfangstelle bleibt:
+        /// die Zaehlprobe
+        /// `die_abfangstelle_steht_im_baum_genau_einmal` liest den Baum.
+        ///
+        /// Der Nutzer nimmt die Wege am laufenden Buendel ab. Traegt einer von
+        /// ihnen nicht, gehoert der Befund in den Datensatz
+        /// `shared/decisions/260819-2216_*_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md`,
+        /// der fuer diesen Fall seine Moeglichkeit 2 bereithaelt. Ein zweiter
+        /// Entwurf steht deshalb **nicht** vorsorglich daneben.
+        // SAFETY: Die Signatur entspricht der von NSTextView
+        // (`NSTextView.h:277`): zwei Objektargumente, ein Wahrheitswert
+        // zurueck.
+        #[unsafe(method(writeSelectionToPasteboard:types:))]
+        fn auswahl_ablegen(
+            &self,
+            ablage: &NSPasteboard,
+            sorten: &NSArray<NSPasteboardType>,
+        ) -> bool {
+            let Some(bezug) = self.quellbezug() else {
+                // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht mit
+                // denselben zwei Argumenten und liefert einen Wahrheitswert.
+                return unsafe {
+                    msg_send![super(self), writeSelectionToPasteboard: ablage, types: sorten]
+                };
+            };
+            let auswahl = self.selectedRange();
+            let quelltext = bezug.quelltext(auswahl.location..auswahl.end());
+            zwischenablage::text_auf_ablage_schreiben(ablage, quelltext)
+        }
+    }
 );
 
 impl Vorschautext {
@@ -403,14 +492,11 @@ impl Vorschautext {
     }
 
     /// Der Quellbezug des Textes, der jetzt dasteht, falls einer beiliegt.
+    ///
+    /// **Ein Rufer und keiner mehr**: [`Vorschautext::auswahl_ablegen`]. `None`
+    /// heisst dort „das hier ist kein gerendertes Markdown", und die Antwort
+    /// entscheidet, welcher der beiden Zweige der Ueberschreibung greift.
     #[must_use]
-    #[expect(
-        dead_code,
-        reason = "der Rufer ist die Ueberschreibung von \
-                  writeSelectionToPasteboard:types: aus dem Schritt, der den \
-                  Ausgabeweg baut; mit ihm wird die Erwartung unerfuellt und \
-                  diese Zeile faellt"
-    )]
     fn quellbezug(&self) -> Option<Arc<Quellbezug>> {
         self.ivars().borrow().clone()
     }
@@ -1638,6 +1724,95 @@ mod tests {
             1,
             "`{setzung}` steht nicht genau einmal; gesetzt wird allein im \
              Markdown-Zweig von `anzeigen`"
+        );
+    }
+
+    /// Die Abfangstelle des Kopierens steht im Baum genau einmal (C2.12 der
+    /// Runde 14).
+    ///
+    /// **Zugesagt ist eine Stelle fuer alle Ausgabewege**, und das ist die
+    /// eine **Ueberschreibung** von `writeSelectionToPasteboard:types:`. Eine
+    /// zweite waere eine zweite Meinung darueber, was eine Auswahl aus KRK
+    /// hergibt — und weil `copy:`, der Menueeintrag, das Kontextmenue, die
+    /// Dienste und das Ziehen alle hier zusammenlaufen, waere sie zugleich
+    /// eine Stelle, an der ein Teil der Wege einen anderen Text ablegte als
+    /// der Rest.
+    ///
+    /// **Warum die Erwartung zwei Fundstellen nennt und nicht eine.** Die
+    /// blosse Zeichenfolge steht im Programmtext zweimal, und beide Male zu
+    /// Recht: einmal als Bezeichnung der Ueberschreibung im
+    /// `#[unsafe(method(...))]`, einmal in der Weitergabe an die Oberklasse
+    /// fuer den Fall ohne Quellbezug. Ein `msg_send!` an `super` kann den
+    /// Selektor nicht anders nennen. Die Probe schreibt die Lage deshalb aus
+    /// und prueft die beiden Haelften einzeln, statt eine Zahl zu erwarten,
+    /// die am Baum von Anfang an rot waere; denselben Fehlgriff haben die
+    /// Proben `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
+    /// und `die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal`
+    /// darueber schon einmal abgewehrt.
+    ///
+    /// # Was diese Nadeln nicht sehen
+    ///
+    /// Sie zaehlen Codezeilen. Eine Ueberschreibung, deren Attribut ueber zwei
+    /// Zeilen umbricht, entginge ihnen, und ob dieselbe Sache anderswo unter
+    /// einem anderen Selektor noch einmal abgefangen ist — etwa ueber
+    /// `writeSelectionToPasteboard:type:` im Singular oder ueber
+    /// `writablePasteboardTypes` —, entscheidet keine Suche im Quelltext. Der
+    /// Kopf von [`crate::quellbaum`] sagt, was daraus folgt. **Dass die eine
+    /// Stelle wirklich alle fuenf Ausgabewege traegt, misst diese Probe
+    /// nicht**; das ist Erschliessung aus Apples Beschreibung und wird am
+    /// laufenden Buendel abgenommen.
+    #[test]
+    fn die_abfangstelle_steht_im_baum_genau_einmal() {
+        // Alle drei Nadeln stehen zusammengesetzt da: die Probe liegt in dem
+        // Baum, den sie liest, und als ein Stueck geschrieben faende jede sich
+        // selbst.
+        let nadel = concat!("writeSelectionTo", "Pasteboard");
+        let ueberschreibung = concat!("unsafe(method(writeSelectionTo", "Pasteboard:types:))");
+        let weitergabe = concat!("super(self), writeSelectionTo", "Pasteboard:");
+        let vorschau = "krk-ui/src/appkit/vorschau.rs";
+
+        let dateien = quelldateien();
+        let stellen: Vec<(String, usize)> = dateien
+            .iter()
+            .map(|(datei, inhalt)| {
+                let zahl = inhalt
+                    .lines()
+                    .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                    .filter(|zeile| zeile.contains(nadel))
+                    .count();
+                (datei.clone(), zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(
+            stellen,
+            vec![(vorschau.to_owned(), 2)],
+            "`{nadel}` steht nicht allein in der Vorschau und dort auf genau \
+             zwei Zeilen; das Kopieren wird an genau einer Stelle abgefangen"
+        );
+
+        let (_, inhalt) = dateien
+            .iter()
+            .find(|(datei, _)| datei == vorschau)
+            .expect("die Vorschau liegt im Quellbaum");
+        let zeilen = |teil: &str| -> usize {
+            inhalt
+                .lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(teil))
+                .count()
+        };
+        assert_eq!(
+            zeilen(ueberschreibung),
+            1,
+            "`{ueberschreibung}` steht nicht genau einmal; die Ueberschreibung \
+             ist der eine Ausgang jeder Auswahl aus der Vorschau"
+        );
+        assert_eq!(
+            zeilen(weitergabe),
+            1,
+            "`{weitergabe}` steht nicht genau einmal; ohne die Weitergabe an \
+             die Oberklasse legte der Zweig ohne Quellbezug nichts ab"
         );
     }
 

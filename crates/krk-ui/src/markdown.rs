@@ -219,13 +219,11 @@
 //! die Huelle ueber die beruehrten Abschnitte, dann der Fixpunkt ueber die
 //! Elemente mit Klammer —, und beide stehen dort ausgeschrieben.
 //!
-//! **Bis Schritt 7 der Runde 14 den Rufer setzt, traegt
-//! [`Quellbezug::quelltext`] `#[cfg_attr(not(test), expect(dead_code, ...))]`.**
-//! `expect` und nicht `allow`, damit die Ausnahme ihr Ablaufdatum selbst
-//! durchsetzt: mit dem Rufer wird die Erwartung unerfuellt, und der Bau haelt
-//! unter `-D warnings` an, bis die Zeilen weg sind. Die Rechnung selbst ist
-//! davon unberuehrt — sie ist ohne AppKit pruefbar (C2.5), und die Proben unten
-//! fahren sie.
+//! **Der eine Rufer sitzt in der Oberflaeche und heisst
+//! `Vorschautext::auswahl_ablegen`** (`appkit/vorschau.rs`), die
+//! Ueberschreibung, an der AppKit jede Auswahl aus der Vorschau ablegt. Die
+//! Rechnung selbst bleibt davon unberuehrt: sie ist ohne AppKit pruefbar
+//! (C2.5), und die Proben unten fahren sie.
 
 use std::borrow::Cow;
 use std::ops::Range;
@@ -327,16 +325,6 @@ impl Quellbezug {
     /// Stufe danach vollstaendig macht, oder es ist der Zeilenumbruch hinter
     /// einem Block, und der schadet in keiner Zwischenablage.
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "der Rufer entsteht in Schritt 7 dieser Runde, in der \
-                      Ueberschreibung von writeSelectionToPasteboard:types: \
-                      an Vorschautext; mit ihm wird die Erwartung unerfuellt \
-                      und diese Zeile faellt"
-        )
-    )]
     pub fn quelltext(&self, auswahl: Range<usize>) -> &str {
         &self.quelle[self.ausschnitt(&auswahl)]
     }

@@ -16,7 +16,11 @@
 //!
 //! Jeder Eintrag bekommt als Ziel `nil` und laeuft damit ueber die
 //! Antwortkette. `cut:`, `copy:` und `paste:` erreichen den Feldeditor des
-//! Textfeldes mit dem Fokus beziehungsweise die Textflaeche des Editors,
+//! Textfeldes mit dem Fokus beziehungsweise die Textflaeche des Editors; seit
+//! der Runde 14 erreicht `copy:` als dritte Flaeche die **Textanzeige der
+//! Vorschau**, die seither auswaehlbar ist und das Ablegen in ihrer
+//! Ueberschreibung von `writeSelectionToPasteboard:types:` abfaengt
+//! ([`super::vorschau::Vorschautext`]).
 //! [`KRK_KOMMANDO`] wie `tastenbelegungSichern:` erreichen den
 //! Anwendungsdelegierten, an dem die Kette endet, und
 //! `orderFrontStandardAboutPanel:` erreicht `NSApplication` und damit eine
