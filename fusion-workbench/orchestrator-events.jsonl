@@ -1247,3 +1247,5 @@
 {"ts":"2026-08-20T04:07:15","event":"task_done","turn":2,"task":"S2","agent":"coder","detail":"91f8727"}
 {"ts":"2026-08-20T04:07:15","event":"task_done","turn":2,"task":"S3","agent":"coder","detail":"dfacf29"}
 {"ts":"2026-08-20T04:07:15","event":"task_start","turn":2,"task":"S4","agent":"coder","detail":"Anmeldung im Ereignisabgriff"}
+{"ts":"2026-08-20T04:19:40","event":"task_done","turn":2,"task":"S4","agent":"coder","detail":"6531f38"}
+{"ts":"2026-08-20T04:19:40","event":"task_start","turn":2,"task":"S5","agent":"coder","detail":"Fokus und Quellbezug am Inhalt"}

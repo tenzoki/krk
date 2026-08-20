@@ -190,7 +190,11 @@
 //! im Kopf des Systems eine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! Genannt seien sie trotzdem: `setSelectable:` wechselt in dieser Runde sein
 //! Argument, und `initWithFrame:` wird ab jetzt ueber `super` und nicht mehr
-//! am fertigen `NSTextView` gerufen.
+//! am fertigen `NSTextView` gerufen. Dazu kommt der **Leser** einer
+//! Eigenschaft, deren Setzer diese Datei schon lange ruft: `isHidden` ist der
+//! Getter von `hidden` aus `NSView` (`NSView.h:92`), traegt dort ebenfalls
+//! keine Verfuegbarkeitsangabe und steht damit seit 10.0.
+//! [`Vorschaufenster::fokusansicht`] fragt ihn seit der Runde 14.
 //!
 //! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
@@ -388,12 +392,12 @@ impl Vorschautext {
     /// `None` nimmt ihn zurueck. Wer den Text der Flaeche ersetzt, ohne diese
     /// Methode zu rufen, laesst den Bezug des **vorigen** Inhalts stehen, und
     /// eine Auswahl lieferte danach Quelltext aus einer anderen Datei.
-    #[expect(
-        dead_code,
-        reason = "der Rufer entsteht im Schritt, der den Quellbezug an den \
-                  Inhalt haengt; mit ihm wird die Erwartung unerfuellt und \
-                  diese Zeile faellt"
-    )]
+    ///
+    /// **Zwei Rufer und keiner mehr**, beide in dieser Datei:
+    /// [`Vorschaufenster::text_zeigen`] nimmt den Bezug des vorigen Inhalts
+    /// zurueck, und der Markdown-Zweig von [`Vorschaufenster::anzeigen`] legt
+    /// den des neuen ab. Ein dritter Ort waere eine zweite Meinung darueber,
+    /// wann ein Quellbezug gilt.
     fn quellbezug_setzen(&self, bezug: Option<Arc<Quellbezug>>) {
         *self.ivars().borrow_mut() = bezug;
     }
@@ -711,8 +715,40 @@ impl Vorschaufenster {
     ///
     /// Fuer die Fokusabfrage und den Fokuswechsel des Anwendungsdelegierten;
     /// sie wird sonst nirgends nach aussen gereicht.
+    ///
+    /// **Seit der Runde 14 beantwortet sie eine Frage mit**: welche der beiden
+    /// Anzeigen steht gerade. Steht die Bildlaufansicht, ist die Antwort die
+    /// Textanzeige; sonst bleibt es bei der Inhaltsflaeche, und damit beim
+    /// heutigen Verhalten fuer ein Bild. Wer den Fokus ueber einen Befehl holt
+    /// statt mit der Maus, bekommt den Ersthelferrang so an die Stelle, an der
+    /// `cmd+a` und `cmd+c` wirken (C1.8 der Runde 14).
+    ///
+    /// **Die Fallunterscheidung fragt danach, welche Anzeige steht, und nicht
+    /// danach, was der Tab zeigt.** Der Grund ist, was der Anwendungsdelegierte
+    /// mit der Antwort tut: `Anwendungsdelegierter::fokusansicht` liefert die
+    /// Ansicht nicht nur als Ersthelfer, sondern seit C1 der Runde 6 auch als
+    /// **Anker** fuer den Freigabedialog — ein solcher Dialog haengt sich an
+    /// eine Flaeche und an deren Rechteck. Eine ausgeblendete Ansicht taugt
+    /// fuer keines von beidem: sie nimmt den Rang nicht an, und ein Anker ohne
+    /// sichtbares Rechteck setzt den Dialog ins Nichts.
+    ///
+    /// Die zwei Zweige sind vollstaendig und ueberschneidungsfrei, weil genau
+    /// eine der beiden Anzeigen sichtbar ist: [`Self::text_zeigen`] und
+    /// [`Self::bild_zeigen`] setzen die beiden Schalter immer gegenlaeufig.
+    ///
+    /// **Es bleibt bei einer Zuordnung von Fokuswert auf Ansicht**, und diese
+    /// Verzweigung steht **innerhalb** davon. Eine zweite Zuordnung daneben
+    /// waeren zwei Wahrheiten darueber, welche Flaeche zu [`Fokus::Vorschau`]
+    /// gehoert; die Begruendung im Langen steht an
+    /// `Anwendungsdelegierter::fokusansicht`.
+    ///
+    /// [`Fokus::Vorschau`]: crate::kommandos::fokus::Fokus::Vorschau
     pub fn fokusansicht(&self) -> &NSView {
-        &self.ivars().inhaltsflaeche
+        if self.ivars().textrolle.isHidden() {
+            &self.ivars().inhaltsflaeche
+        } else {
+            &self.ivars().text
+        }
     }
 
     /// Die Textanzeige, an der die Naemlichkeitsfrage des Fokusvorbehalts
@@ -907,6 +943,19 @@ impl Vorschaufenster {
             Inhalt::Markdown(gerendert) => {
                 self.text_zeigen(&gerendert.text);
                 self.formatierung_anwenden(&gerendert.formatierung);
+                // Der eine Ort, an dem ein Quellbezug gesetzt wird, und er
+                // liegt neben dem einen Ort, an dem die Formatierung gesetzt
+                // wird: beide sind Auskuenfte desselben Durchgangs ueber
+                // denselben Text. `text_zeigen` hat den vorigen Bezug eben
+                // zurueckgenommen, wie es die vorigen Merkmale zurueckgenommen
+                // hat; die Reihenfolge ist deshalb dieselbe.
+                //
+                // **Der `Arc` wandert und wird nicht geklont.** `inhalt` ist
+                // der Klon des aktiven Tabs und gehoert dieser Funktion; der
+                // Quellbezug im Modell bleibt davon unberuehrt.
+                self.ivars()
+                    .text
+                    .quellbezug_setzen(Some(gerendert.quellbezug));
             }
             Inhalt::Hinweis(hinweis) => self.text_zeigen(&hinweis),
             Inhalt::Metadaten(metadaten) => {
@@ -952,9 +1001,25 @@ impl Vorschaufenster {
     /// Modulkopf unter "Warum die Vorschau beide Werte von `Ansicht`
     /// benutzt". Die [`Darstellungsart`] geht dabei in nichts ein: die
     /// Rohansicht bekommt ihre feste Schrift unabhaengig von ihr.
+    ///
+    /// **Und nimmt den Quellbezug des vorigen Inhalts mit zurueck**, an
+    /// derselben Stelle und aus demselben Grund (C1.13 der Runde 14). Ohne die
+    /// Ruecknahme lieferte eine Auswahl im rohen Text einer Datei den Quelltext
+    /// der Markdown-Datei, die vorher dastand. Setzen und Loeschen haben damit
+    /// je genau einen Ort: gesetzt wird im Markdown-Zweig von
+    /// [`Self::anzeigen`], geloescht hier.
+    ///
+    /// **Daraus faellt die ganze Zusage C1.13 heraus, ohne dass eine Regel
+    /// dafuer entsteht.** Jeder Inhaltswechsel laeuft ueber diese Funktion —
+    /// ein Tabwechsel, eine andere Datei, ein neuer Lesevorgang —, also faellt
+    /// der Quellbezug mit ihm. Und weil `setString:` den Textspeicher **ganz**
+    /// ersetzt, laesst AppKit die sichtbare Auswahl von sich aus fallen; eine
+    /// Auswahl je Tab zu merken, waere die vom Nutzer nicht gewaehlte
+    /// Moeglichkeit gewesen.
     fn text_zeigen(&self, text: &str) {
         let ivars = self.ivars();
         ivars.text.setString(&NSString::from_str(text));
+        ivars.text.quellbezug_setzen(None);
         textmerkmale::zuruecksetzen(&ivars.text, Ansicht::Roh, Darstellungsart::EinfacherText);
         ivars.textrolle.setHidden(false);
         ivars.bild.setHidden(true);
@@ -1312,7 +1377,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::SystemTime;
 
-    use crate::quellbaum::quelldateien;
+    use crate::quellbaum::{aufrufstellen, quelldateien};
 
     use super::*;
 
@@ -1501,6 +1566,136 @@ mod tests {
             "`{nicht_bearbeitbar}` steht nicht mehr genau einmal, und zwar an \
              der Textanzeige der Vorschau; die Vorschau zeigt und bearbeitet \
              nicht"
+        );
+    }
+
+    /// Der Quellbezug wird an genau zwei Stellen gesetzt, und beide liegen
+    /// hier (C1.13 der Runde 14).
+    ///
+    /// **Eine Aufruferzaehlung, und sie steht hier zu Recht.** Der Kopf von
+    /// [`crate::quellbaum`] laesst eine solche Zaehlung nur dort zu, wo ein
+    /// Abnahmekriterium die Zahl selbst zusagt, und genau das tut C1.13: die
+    /// Auswahl faellt mit jedem Inhaltswechsel, weil der Quellbezug an einer
+    /// Stelle gesetzt und an einer zurueckgenommen wird. Ein dritter Rufer
+    /// waere eine zweite Meinung darueber, wann ein Quellbezug gilt, und genau
+    /// den soll diese Probe rot werden lassen.
+    ///
+    /// **Die zwei Haelften werden einzeln geprueft.** Die blosse Zahl zwei
+    /// liesse zu, dass beide Rufer setzen und keiner zuruecknimmt; dann truege
+    /// eine Auswahl im rohen Text der naechsten Datei den Quelltext der
+    /// vorigen Markdown-Datei. Gesucht wird deshalb je eine Zeile mit `None`
+    /// und je eine mit `Some(`.
+    ///
+    /// # Was diese Nadeln nicht sehen
+    ///
+    /// [`aufrufstellen`] zaehlt jede Empfaengerform und jeden Pfad, aber
+    /// keinen Aufruf unter einem anderen Namen. Die zwei Nadeln der zweiten
+    /// Haelfte zaehlen daneben **Codezeilen**: ein Aufruf, der zwischen dem
+    /// Namen und seinem Argument umbricht, entginge ihnen. Beide Grenzen
+    /// stehen im Kopf von [`crate::quellbaum`].
+    #[test]
+    fn der_quellbezug_wird_an_genau_zwei_stellen_gesetzt() {
+        // Alle drei Nadeln stehen zusammengesetzt da: die Probe liegt in dem
+        // Baum, den sie liest, und als ein Stueck geschrieben faende jede sich
+        // selbst.
+        let name = concat!("quellbezug_", "setzen");
+        let ruecknahme = concat!("quellbezug_", "setzen(None)");
+        let setzung = concat!("quellbezug_", "setzen(Some(");
+        let vorschau = "krk-ui/src/appkit/vorschau.rs";
+
+        let dateien = quelldateien();
+        let stellen: Vec<(String, usize)> = dateien
+            .iter()
+            .map(|(datei, inhalt)| (datei.clone(), aufrufstellen(inhalt, name)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(
+            stellen,
+            vec![(vorschau.to_owned(), 2)],
+            "`{name}` wird nicht an genau zwei Stellen gerufen, und zwar in \
+             der Vorschau; das Setzen und das Loeschen haben je genau einen Ort"
+        );
+
+        let (_, inhalt) = dateien
+            .iter()
+            .find(|(datei, _)| datei == vorschau)
+            .expect("die Vorschau liegt im Quellbaum");
+        let zeilen = |nadel: &str| -> usize {
+            inhalt
+                .lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+        assert_eq!(
+            zeilen(ruecknahme),
+            1,
+            "`{ruecknahme}` steht nicht genau einmal; ohne die Ruecknahme in \
+             `text_zeigen` truege der naechste Inhalt den Quellbezug des vorigen"
+        );
+        assert_eq!(
+            zeilen(setzung),
+            1,
+            "`{setzung}` steht nicht genau einmal; gesetzt wird allein im \
+             Markdown-Zweig von `anzeigen`"
+        );
+    }
+
+    /// Die Zuordnung von einem Fokuswert auf eine Ansicht steht in der
+    /// Vorschau genau einmal (C1.8 der Runde 14).
+    ///
+    /// **Erklaerungen und keine Aufrufer**, und der Unterschied ist hier der
+    /// tragende: zugesagt ist, dass es bei **einer** Zuordnung bleibt. Wer die
+    /// Verzweigung nach der sichtbaren Anzeige nicht in
+    /// [`Vorschaufenster::fokusansicht`] legte, sondern als zweite Auskunft
+    /// daneben, haette zwei Wahrheiten darueber, welche Flaeche zu
+    /// `Fokus::Vorschau` gehoert — und keine Aufruferzahl saehe das.
+    ///
+    /// **Die zweite Fundstelle ist erwartet und kein Fehlschlag.**
+    /// `Anwendungsdelegierter::fokusansicht` traegt denselben Namen und
+    /// beantwortet die andere Haelfte derselben Frage: welcher Fokuswert
+    /// welchem Bereich gehoert. Die Probe schreibt beide Stellen aus, statt
+    /// eine Zahl zu erwarten, die die Lage nicht trifft; der Plan der Runde 14
+    /// spricht an dieser Stelle nur von der Vorschau, und eine Erwartung ohne
+    /// den Delegierten waere von Anfang an rot. Denselben Fehlgriff hat die
+    /// Probe `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
+    /// darueber schon einmal abgewehrt.
+    ///
+    /// # Was diese Nadel nicht sieht
+    ///
+    /// Sie zaehlt Codezeilen mit `fn` und dem Namen. Eine zweite Zuordnung
+    /// unter einem **anderen** Namen entginge ihr vollstaendig; keine Suche im
+    /// Quelltext entscheidet, ob dieselbe Sache anderswo noch einmal gebaut
+    /// ist. Der Kopf von [`crate::quellbaum`] sagt, was daraus folgt.
+    #[test]
+    fn die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal() {
+        // Zusammengesetzt, wie oben: als ein Stueck geschrieben faende die
+        // Nadel sich selbst.
+        let erklaerung = concat!("fn ", "fokusansicht");
+
+        let stellen: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .map(|(datei, inhalt)| {
+                let zahl = inhalt
+                    .lines()
+                    .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                    .filter(|zeile| zeile.contains(erklaerung))
+                    .count();
+                (datei, zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+
+        assert_eq!(
+            stellen,
+            vec![
+                ("krk-ui/src/appkit/anwendung.rs".to_owned(), 1),
+                ("krk-ui/src/appkit/vorschau.rs".to_owned(), 1),
+            ],
+            "`{erklaerung}` steht nicht genau je einmal beim \
+             Anwendungsdelegierten und in der Vorschau; die Verzweigung nach \
+             der sichtbaren Anzeige gehoert in die eine Zuordnung und nicht \
+             neben sie"
         );
     }
 }
