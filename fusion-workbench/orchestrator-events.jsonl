@@ -1253,3 +1253,9 @@
 {"ts":"2026-08-20T04:37:06","event":"task_start","turn":2,"task":"S7","agent":"coder","detail":"Abfangstelle writeSelectionToPasteboard"}
 {"ts":"2026-08-20T04:51:38","event":"task_done","turn":2,"task":"S7","agent":"coder","detail":"17dad8a"}
 {"ts":"2026-08-20T04:51:38","event":"task_start","turn":2,"task":"S8","agent":"coder","detail":"Zaehlproben und fuenf Prosastellen"}
+{"ts":"2026-08-20T05:39:43","event":"task_done","turn":2,"task":"S8","agent":"coder","detail":"b28cdd6"}
+{"ts":"2026-08-20T05:39:43","event":"review_done","turn":2,"agent":"coderev","detail":"6 Datensaetze: 0 kritisch, 2 hoch, 2 mittel, 2 niedrig; Deckung uncovered=0"}
+{"ts":"2026-08-20T05:39:43","event":"turn_end","turn":2,"detail":"8 Planschritte erledigt, 9 Commits, 6 Defekte gefilt"}
+{"ts":"2026-08-20T05:39:43","event":"gate_response","agent":"user","detail":"beide hohen Befunde jetzt beheben"}
+{"ts":"2026-08-20T05:39:43","event":"turn_start","turn":3,"detail":"1 ready task: R1 Klammerregel an die Raender binden"}
+{"ts":"2026-08-20T05:39:43","event":"task_start","turn":3,"task":"R1","agent":"coder","detail":"Wurzelbehebung der Klammerregel"}

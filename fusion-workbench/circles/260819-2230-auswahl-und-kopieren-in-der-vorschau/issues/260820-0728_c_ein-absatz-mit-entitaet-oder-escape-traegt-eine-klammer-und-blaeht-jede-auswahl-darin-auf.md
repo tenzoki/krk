@@ -61,3 +61,24 @@ und gehört mit ihr zusammen behoben.
 **Schwere:** hoch. Kein Absturz, aber das Ergebnis widerspricht der Nutzerentscheidung, es
 ist still, und `&amp;`, `&nbsp;`, `&#8212;` und `\*` stehen in gewöhnlichem Markdown.
 **Baumstand:** `b28cdd6`.
+
+---
+Resolved: 260820-0803, coder, `crates/krk-ui/src/markdown.rs`. Die Wurzel ist behoben und nicht das
+Symptom: die Klammer hängt jetzt am **Vorspann und am Nachspann** eines Elements — den Bytes vor
+dem ersten und hinter dem letzten Ereignis in seinem Quellbereich — und nicht mehr an der Art eines
+beliebigen Abschnitts in seinem Inneren. `Zerlegung::klammer_verbuchen` ist durch
+`Zerlegung::ereignis_verbuchen` und die reine Funktion `klammer_der_raender` ersetzt;
+`Abschnittsart::verdeckt_quelle` ist mit weggefallen, weil die Art eines Abschnitts über die
+Klammer nichts mehr entscheidet. Dazu trägt `Zerlegung::luecke_bis` die Lücken innerhalb eines
+Elements aus Zeichen jetzt ebenso ab wie den Vorspann eines Elements aus Blöcken — ohne etwas zu
+schreiben, aber so, dass das Stück dahinter Zeichen für Zeichen an seiner Quelle steht; ohne diesen
+Teil lieferte die Auswahl im Escape-Fall weiterhin den halben Absatz statt der zwei Wörter.
+
+Gemessen: `"Ein &amp; hier im Absatz mit vielen Woertern.\n"` mit der Auswahl `"vielen"` liefert
+`"vielen"`, ebenso der Escape `\*` und der harte Umbruch mit Backslash. Die Probe
+`eine_entitaet_oder_ein_escape_im_absatz_blaeht_die_auswahl_nicht_auf` hält alle drei und die
+Klammer des Absatzes; sie ist vor der Behebung gefahren worden und war rot. `make check` exit 0.
+Protokoll: `history/260820-0803-coder-klammer-an-den-raendern.md`.
+
+Der Befund `260820-0731_*_eine-ueberschrift-die-mit-einem-kind-beginnt-…` ist mit derselben
+Änderung geschlossen, wie hier vorgesehen.

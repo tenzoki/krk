@@ -60,3 +60,32 @@ Inneren. Diese Auskunft steht dem Durchgang zur Verfügung: `Offen::quelle` und
 **Schwere:** hoch. Das Ergebnis ist stilles, unvollständiges Markdown: eine kopierte
 Überschriftshälfte kommt als gewöhnlicher Absatz in der Zieldatei an.
 **Baumstand:** `b28cdd6`.
+
+---
+Resolved: 260820-0803, coder, `crates/krk-ui/src/markdown.rs`. Eine Wurzel für beide Richtungen,
+wie dieser Datensatz sie beschreibt: die Klammer hängt am Vorspann und am Nachspann des Elements
+selbst. Verbucht wird nicht mehr der Abschnitt, sondern der **Quellbereich jedes Ereignisses** beim
+umgebenden Element (`Zerlegung::ereignis_verbuchen`, gerufen in `rendern` für jedes Ereignis außer
+dem Ende); daraus entstehen `Offen::innen_ab` und `Offen::innen_bis`, und
+`klammer_der_raender` fragt beim Schließen die beiden Spannen ab. Damit gehört das `# ` einer
+Überschrift ihr auch dann, wenn das erste geschriebene Zeichen tief in einem Kind sitzt — der
+Quellbereich des Kindereignisses liegt fest, das erste geschriebene Zeichen nicht.
+
+Gemessen: `"# **Titel** und noch ein Stueck Text\n"` mit der Auswahl `"noch ein"` liefert
+`"# **Titel** und noch ein Stueck Text\n"`, ebenso mit `` `code` `` und mit einem Verweis am Anfang.
+Die Klammerliste zu `"# **Titel** hier\n"` steht auf `[(0..17, true), (2..11, true)]`, vorher
+`[(0..17, false), (2..11, true)]`.
+
+**Zur Länge des Ergebnisses.** Die Aufgabenstellung nannte als Soll `"# **Titel** und noch ein"`,
+also den Ausschnitt nur bis zum Ende der Auswahl. Gebaut ist die ganze Überschrift, weil beides
+zugleich nicht geht: der bindende Datensatz
+`shared/decisions/260819-2216_a_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`
+schreibt in Möglichkeit b die **Vereinigung** mit dem Quellbereich des berührten Elements vor, und
+die vorhandene Probe `eine_auswahl_in_einer_ueberschrift_liefert_ihr_doppelkreuz` misst genau das,
+nämlich `"# Überschrift\n"` samt Zeilenumbruch am Ende. Eine Klammer, die nur nach vorn erweiterte,
+ließe jene Probe rot werden. Die Zusage C2.2 — die kopierte Überschrift bringt ihr Doppelkreuz mit
+— ist erfüllt.
+
+Die Probe `eine_ueberschrift_mit_einem_kind_am_anfang_behaelt_ihr_doppelkreuz` hält alle vier
+Fälle; sie ist vor der Behebung gefahren worden und war rot. `make check` exit 0. Protokoll:
+`history/260820-0803-coder-klammer-an-den-raendern.md`.

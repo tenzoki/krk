@@ -197,21 +197,28 @@
 //! nicht. Nachgemessen wird beides von der Kachelungsprobe im Pruefmodul, ueber
 //! einen Satz von zehn Beispielen.
 //!
-//! **Der Vorspann eines Elements bekommt deshalb einen Abschnitt, obwohl er
-//! nicht dasteht.** Fuer die Anzeige faellt er weg, und der Absatz „Wo die
-//! Deckung endet" oben gilt unveraendert; fuers Kopieren dreht sich das
-//! Vorzeichen, denn `- ` und `> ` sind Bytes der Quelle und wollen einen Ort.
-//! Sie bekommen ihn als Abschnitt mit leerem Textbereich, und die Anzeige
-//! aendert sich davon nicht.
+//! **Jede Luecke bekommt deshalb einen Abschnitt, obwohl sie nicht dasteht.**
+//! Fuer die Anzeige faellt sie weg, und der Absatz „Wo die Deckung endet" oben
+//! gilt unveraendert; fuers Kopieren dreht sich das Vorzeichen,
+//! denn `# `, `**`, `[`, `- ` und `> ` sind Bytes der Quelle und wollen einen
+//! Ort. Sie bekommen ihn als Abschnitt mit leerem Textbereich, und die Anzeige
+//! aendert sich davon nicht. Das gilt fuer den Vorspann eines Elements aus
+//! Bloecken wie fuer die Auszeichnungszeichen innerhalb eines Elements aus
+//! Zeichen: beide traegt [`Zerlegung::luecke_bis`] ab, ohne etwas zu
+//! schreiben. Damit steht jedes geschriebene Stueck Zeichen fuer Zeichen an
+//! seiner Quelle, statt auf die Auszeichnung davor aufzurunden.
 //!
 //! **Die Klammer** ([`Quellelement`]) ist die zweite Auskunft des Durchgangs:
-//! sie sagt zu jedem Element, ob sein Quellbereich Bytes traegt, die im Text
-//! nicht wiederkehren. Verbucht wird sie beim **innersten** offenen Element und
-//! in dem Augenblick, in dem der Abschnitt entsteht; die Auszeichnungszeichen
-//! eines Kindes gehen damit nicht auf seinen Vater ueber. Ein Absatz mit einer
-//! starken Betonung darin traegt selbst keine Klammer, und genau daran haengt
-//! das Beispiel des bindenden Datensatzes — siehe
-//! [`Zerlegung::klammer_verbuchen`].
+//! sie sagt zu jedem Element, ob es an seinen **Raendern** Zeichen traegt, die
+//! im Text nicht wiederkehren — vor dem ersten Ereignis in seinem Quellbereich
+//! sein Vorspann, hinter dem letzten sein Nachspann. Was dazwischen verdeckt
+//! bleibt, zaehlt nicht: eine Entitaet oder ein Escape mitten in einem Absatz
+//! zerschneidet nichts, denn es steht ganz in dem Stueck, das eine Auswahl
+//! ohnehin liefert. Ein Absatz mit einer starken Betonung darin traegt selbst
+//! keine Klammer, eine Ueberschrift traegt ihr `# ` auch dann, wenn gleich ein
+//! Kind darauf folgt, und genau daran haengt das Beispiel des bindenden
+//! Datensatzes — siehe [`Zerlegung::ereignis_verbuchen`] und
+//! [`klammer_der_raender`].
 //!
 //! **Beantwortet wird daraus genau eine Frage**, und [`Quellbezug::quelltext`]
 //! ist der eine oeffentliche Zugang: zu dieser Auswahl gehoert dieser
@@ -543,39 +550,21 @@ enum Abschnittsart {
     Erzeugt,
 }
 
-impl Abschnittsart {
-    /// Ob die Bytes dieses Abschnitts aus dem Text verschwunden sind.
-    ///
-    /// **Ein `match` und kein `matches!`**, nach dem Vorbild von
-    /// [`Inhaltsart::deckt_luecken`] und aus demselben Grund: ein `matches!`
-    /// truege einen stillen `_ => false`, und eine vierte Variante liefe damit
-    /// durch, statt den Bau anzuhalten.
-    ///
-    /// [`Abschnittsart::Erzeugt`] antwortet mit Nein und nicht mit Ja: sein
-    /// Quellbereich ist leer, also verschwindet dort kein Byte.
-    #[must_use]
-    fn verdeckt_quelle(self) -> bool {
-        match self {
-            Abschnittsart::Woertlich => false,
-            Abschnittsart::Ersetzt => true,
-            Abschnittsart::Erzeugt => false,
-        }
-    }
-}
-
 /// Ein Element der Quelle und die Frage, ob es Auszeichnungszeichen traegt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[must_use]
 struct Quellelement {
     /// Sein Bereich in der Quelle, in Bytes.
     quelle: Range<usize>,
-    /// Ob sein Quellbereich Bytes traegt, die in seinem gerenderten Bereich
-    /// nicht erscheinen.
+    /// Ob es an seinen Raendern Bytes traegt, die in seinem gerenderten
+    /// Bereich nicht erscheinen.
     ///
-    /// Wahr fuer Ueberschrift, Betonung, Verweis, Listenpunkt, Zitat und
-    /// Quelltextblock; falsch fuer einen gewoehnlichen Absatz und fuer eine
-    /// Liste, deren Merkzeichen ihren Punkten gehoeren. Wie sie zustande kommt,
-    /// steht an [`Zerlegung::klammer_verbuchen`].
+    /// Wahr fuer Ueberschrift, Betonung, Verweis, Listenpunkt, Zitat,
+    /// Quelltextblock und das Stueck fester Schrift in der Zeile; falsch fuer
+    /// einen gewoehnlichen Absatz — auch fuer einen mit einer Entitaet oder
+    /// einem Escape darin — und fuer eine Liste, deren Merkzeichen ihren
+    /// Punkten gehoeren. Wie sie zustande kommt, steht an
+    /// [`klammer_der_raender`].
     klammer: bool,
 }
 
@@ -595,6 +584,20 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
         // Der erste Satz der Deckung, vor jedem Ereignis und ohne seine Art zu
         // kennen: was seit dem letzten Stand ungelesen blieb, steht da.
         zerlegung.luecke_bis(bereich.start);
+        // Die Klammer, ebenfalls ohne die Art des Ereignisses zu kennen: jedes
+        // Ereignis verbucht seinen Quellbereich beim umgebenden Element und
+        // schiebt damit dessen Vorspann und Nachspann zusammen (C2.9, siehe
+        // [`Zerlegung::ereignis_verbuchen`]).
+        //
+        // **Das Ende ist die eine Ausnahme**, und sie ist keine Aufzaehlung:
+        // sein Bereich ist der des Elements, das sich gerade schliesst, und
+        // nicht der eines Kindes darin. Verbuchte es sich selbst, haette kein
+        // Element je einen Vorspann. Das `matches!` traegt hier seinen stillen
+        // `_ => false` zu Recht — eine kuenftige Ereignisart der Kiste ist ein
+        // Kind und will verbucht werden.
+        if !matches!(ereignis, Event::End(_)) {
+            zerlegung.ereignis_verbuchen(&bereich);
+        }
         match ereignis {
             Event::Start(tag) => match behandlung(&tag) {
                 Behandlung::Block { umbrueche, art } => {
@@ -948,11 +951,47 @@ struct Offen {
     /// Merkzeichen, so wird der Wunsch doch noch eingeloest; siehe
     /// [`Zerlegung::schliessen`].
     merkzeichen: Option<String>,
-    /// Ob dieses Element Bytes traegt, die im Text nicht wiederkehren.
+    /// Wo das erste Ereignis in seinem Quellbereich begonnen hat; `None`,
+    /// solange keines kam.
     ///
-    /// Waechst waehrend seiner Lebenszeit, siehe
-    /// [`Zerlegung::klammer_verbuchen`].
-    klammer: bool,
+    /// Davor liegt sein **Vorspann**: das `# ` einer Ueberschrift, die
+    /// Sternchen einer Betonung, das `[` eines Verweises, das `- ` eines
+    /// Punktes. Siehe [`Zerlegung::ereignis_verbuchen`].
+    innen_ab: Option<usize>,
+    /// Wo das letzte Ereignis in seinem Quellbereich geendet hat; anfangs sein
+    /// eigener Anfang.
+    ///
+    /// Dahinter liegt sein **Nachspann**: die schliessenden Sternchen, das
+    /// `](Ziel)` eines Verweises, der Zaun eines Quelltextblocks.
+    innen_bis: usize,
+}
+
+/// Ob ein Element an seinen Raendern Zeichen traegt, die der Text weglaesst —
+/// seine Klammer (C2.9).
+///
+/// Gefragt sind der **Vorspann** vor dem ersten Ereignis in seinem
+/// Quellbereich und der **Nachspann** hinter dem letzten. Was dazwischen
+/// verdeckt bleibt, geht die Klammer nichts an: es steht ganz in dem Stueck,
+/// das eine Auswahl ohnehin liefert, und kann an keinem Rand zerschnitten
+/// werden. Wie die beiden Staende entstehen, steht an
+/// [`Zerlegung::ereignis_verbuchen`].
+///
+/// **Leerraum ist keine Auszeichnung.** Der Quellbereich eines Absatzes endet
+/// hinter seinem Zeilenumbruch, und der steht im Text nicht mehr; ohne diesen
+/// Halbsatz truege jeder Absatz eine Klammer, und daraus waere die vom Nutzer
+/// nicht gewaehlte Moeglichkeit 3. Ein Merkzeichen `- ` oder ein `> ` bleibt
+/// uebrig, wenn man den Leerraum abzieht, ein Zeilenumbruch nicht.
+///
+/// **Ein Element ohne ein einziges Ereignis darin ist kein Sonderfall.** Es
+/// hat kein Inneres, also faellt sein ganzer Quellbereich in beide Spannen —
+/// [`Offen::innen_ab`] steht auf `None` und liest sich als sein Ende,
+/// [`Offen::innen_bis`] auf seinem Anfang. So bekommt ein Stueck fester
+/// Schrift `` `code` `` seine Haken, ohne dass jemand es aufzaehlen muesste.
+#[must_use]
+fn klammer_der_raender(quelle: &str, eintrag: &Offen) -> bool {
+    let vorspann = eintrag.quelle.start..eintrag.innen_ab.unwrap_or(eintrag.quelle.end);
+    let nachspann = eintrag.innen_bis..eintrag.quelle.end;
+    !quelle[vorspann].trim().is_empty() || !quelle[nachspann].trim().is_empty()
 }
 
 /// Der Ausgabetext im Aufbau, mit seinen Stellen und den offenen Elementen.
@@ -1022,7 +1061,6 @@ impl<'q> Zerlegung<'q> {
     fn kacheln(&mut self, von: usize, bis: usize, art: Abschnittsart) {
         let quelle = self.gelesen..bis.max(self.gelesen);
         self.gelesen = quelle.end;
-        self.klammer_verbuchen(&quelle, art);
         self.abschnitte.push(Abschnitt {
             text: von..self.stelle,
             quelle,
@@ -1030,46 +1068,50 @@ impl<'q> Zerlegung<'q> {
         });
     }
 
-    /// Haelt am innersten offenen Element fest, dass Bytes aus seinem
-    /// Quellbereich im Text nicht wiederkehren — seine Klammer (C2.9).
+    /// Haelt am innersten offenen Element fest, wie weit sein Inneres reicht —
+    /// die eine Quelle seiner Klammer (C2.9).
     ///
-    /// **Verbucht wird beim innersten Element und in dem Augenblick, in dem der
-    /// Abschnitt entsteht.** Damit traegt jeder Abschnitt zu genau einem
-    /// Element bei, und die Auszeichnungszeichen eines Kindes blaehen seinen
-    /// Vater nicht auf. Genau daran haengt das Beispiel des bindenden
-    /// Datensatzes `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`:
-    /// aus `Ein **fetter** Text mit [Verweis](…) darin.` soll eine Auswahl
-    /// `**fetter** Text mit [Verweis](…)` liefern und **nicht** den ganzen
-    /// Absatz. Truege der Absatz die Klammer seiner Kinder mit, waere das die
-    /// vom Nutzer nicht gewaehlte Moeglichkeit 3.
+    /// **Verbucht wird der Quellbereich eines Ereignisses beim Element, das es
+    /// umschliesst**, und daraus wachsen dessen [`Offen::innen_ab`] und
+    /// [`Offen::innen_bis`] zusammen. Was davor und dahinter uebrig bleibt,
+    /// sind sein Vorspann und sein Nachspann, und allein die beiden entscheiden
+    /// beim Schliessen ueber die Klammer ([`klammer_der_raender`]).
     ///
-    /// **Leerraum ist keine Auszeichnung.** Der Quellbereich eines Absatzes
-    /// endet hinter seinem Zeilenumbruch, und der steht im Text nicht mehr;
-    /// ohne diesen Halbsatz truege jeder Absatz eine Klammer, und wieder waere
-    /// es Moeglichkeit 3. Ein Merkzeichen `- ` oder ein `> ` bleibt uebrig,
-    /// wenn man den Leerraum abzieht, ein Zeilenumbruch nicht.
+    /// **Warum die Raender und nicht die verdeckten Bytes im Inneren.** Der
+    /// bindende Datensatz `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`
+    /// laesst eine beruehrte Auszeichnung ganz mitfahren, weil eine Auswahl
+    /// sie sonst unbalanciert zerschnitte. Zerschneiden kann eine Auswahl aber
+    /// nur, was an den **Raendern** eines Elements steht. Eine Entitaet
+    /// `&amp;` oder ein Escape `\*` mitten in einem Absatz steht ganz in dem
+    /// Stueck, das die Auswahl ohnehin liefert; naehme es dem Absatz eine
+    /// Klammer ab, blaehte sich jede Auswahl darin auf ihn auf — die vom
+    /// Nutzer nicht gewaehlte Moeglichkeit 3 (Defekt `260820-0728`).
+    ///
+    /// **Warum das Ereignis und nicht das geschriebene Zeichen.** Innerhalb
+    /// eines Elements aus Zeichen faellt eine Luecke aus der Anzeige, und was
+    /// dort geschrieben wird, laesst sich der Quelle nicht mehr Byte fuer Byte
+    /// zuordnen. Der Quellbereich eines Ereignisses liegt dagegen fest und
+    /// gehoert dem Kind: in `# **Titel** und mehr` beginnt das erste Ereignis
+    /// der Ueberschrift bei der Betonung, also bleibt ihr das `# ` als
+    /// Vorspann — auch wenn das erste geschriebene Zeichen tief im Kind sitzt
+    /// (Defekt `260820-0731`).
     ///
     /// **Beschnitten wird auf den Quellbereich des Elements**, denn ein
-    /// Abschnitt darf davor beginnen: in `# **fett**` traegt der erste
-    /// Abschnitt der Betonung die Bytes der Ueberschrift mit, weil der
-    /// Lesestand innerhalb eines Elements aus Zeichen nicht vorrueckt.
-    fn klammer_verbuchen(&mut self, bereich: &Range<usize>, art: Abschnittsart) {
-        if !art.verdeckt_quelle() {
-            return;
-        }
-        let quelle = self.quelle;
+    /// Ereignis der Kiste muss nicht in ihm liegen; ein Bereich, der ganz
+    /// draussen liegt, verbucht nichts.
+    fn ereignis_verbuchen(&mut self, bereich: &Range<usize>) {
         let Some(innerstes) = self.offen.last_mut() else {
             return;
         };
-        if innerstes.klammer {
-            return;
-        }
         let anfang = bereich.start.max(innerstes.quelle.start);
         let ende = bereich.end.min(innerstes.quelle.end);
         if anfang >= ende {
             return;
         }
-        innerstes.klammer = !quelle[anfang..ende].trim().is_empty();
+        if innerstes.innen_ab.is_none() {
+            innerstes.innen_ab = Some(anfang);
+        }
+        innerstes.innen_bis = innerstes.innen_bis.max(ende);
     }
 
     /// Merkt vor, dass hier so viele Umbrueche stehen sollen.
@@ -1239,11 +1281,14 @@ impl<'q> Zerlegung<'q> {
     /// `> ` —, und das ist Auszeichnung. Hier endet die Deckung, und der
     /// Modulkopf sagt es an derselben Stelle.
     ///
-    /// **Fuer den Quellbezug dreht sich an dieser einen Stelle das
-    /// Vorzeichen.** Der Vorspann faellt aus der Anzeige, aber nicht aus der
-    /// Kachelung: er bekommt einen Abschnitt mit leerem Textbereich, und weil
-    /// er die Bytes des Merkzeichens traegt, gibt er seinem Element die
-    /// Klammer. Die Anzeige aendert sich davon nicht.
+    /// **Fuer den Quellbezug dreht sich an beiden Stellen das Vorzeichen.**
+    /// Was aus der Anzeige faellt, faellt nicht aus der Kachelung: die Luecke
+    /// bekommt ihren eigenen Abschnitt mit leerem Textbereich, und der
+    /// Lesestand rueckt darueber hinweg. Die Anzeige aendert sich davon nicht,
+    /// wohl aber die Genauigkeit der Abbildung — das Stueck dahinter steht
+    /// danach Zeichen fuer Zeichen an seiner Quelle
+    /// ([`Abschnittsart::Woertlich`]) und rundet nicht mehr auf die
+    /// Auszeichnungszeichen davor auf.
     ///
     /// **Leerraum faellt weg**, und mit ihm, was die Umgebung auf jeder Zeile
     /// wiederholt ([`ohne_umgebungszeichen`]). Die Abstaende zwischen den
@@ -1259,15 +1304,17 @@ impl<'q> Zerlegung<'q> {
             .last()
             .map(|eintrag| (eintrag.inhalt.deckt_luecken(), eintrag.quelle.start))
         {
-            if !deckt {
-                return;
-            }
-            // Der Vorspann: in diesem Element ist noch kein Byte gelesen,
-            // also steht hier sein eigenes Merkzeichen. Hier endet die
-            // Deckung, und der Modulkopf sagt es an derselben Stelle. Fuer
-            // den Quellbezug wird er trotzdem abgetragen und bekommt seine
-            // Kachel; genau daran haengt die Klammer eines Listenpunktes.
-            if self.gelesen <= anfang {
+            // Zwei Luecken fallen aus der Anzeige, und beide werden fuer den
+            // Quellbezug trotzdem abgetragen und bekommen ihre Kachel.
+            //
+            // Die erste: in einem Element aus Zeichen sind die Luecken seine
+            // Auszeichnungszeichen — das `# `, die Sternchen, das `[`.
+            //
+            // Die zweite: der Vorspann eines Elements aus Bloecken. Darin ist
+            // noch kein Byte gelesen, also steht hier sein eigenes
+            // Merkzeichen. Hier endet die Deckung, und der Modulkopf sagt es
+            // an derselben Stelle.
+            if !deckt || self.gelesen <= anfang {
                 self.gelesen_bis(bis);
                 return;
             }
@@ -1303,6 +1350,7 @@ impl<'q> Zerlegung<'q> {
     ) {
         self.absetzen();
         let rang = self.elemente.len();
+        let anfang_der_quelle = quelle.start;
         self.elemente.push(Quellelement {
             quelle: quelle.clone(),
             klammer: false,
@@ -1316,7 +1364,8 @@ impl<'q> Zerlegung<'q> {
             ebene,
             inhalt,
             merkzeichen: None,
-            klammer: false,
+            innen_ab: None,
+            innen_bis: anfang_der_quelle,
         });
     }
 
@@ -1426,12 +1475,12 @@ impl<'q> Zerlegung<'q> {
     /// Quellbereich beginnt am Anfang des Elements und nicht an dieser Luecke.
     ///
     /// **Abgetragen wird, solange das Element noch offen steht, und erst danach
-    /// wird es abgeraeumt.** Die Bytes, die sich hier noch abtragen — das
-    /// schliessende `**` einer Betonung, das `](Ziel)` eines Verweises —, sind
-    /// seine eigene Klammer und nicht die seines Vaters, und
-    /// [`Zerlegung::klammer_verbuchen`] verbucht beim innersten offenen
-    /// Element. Raeumte man zuerst ab, faende es den Vater vor, und ein Absatz
-    /// truege die Auszeichnungszeichen jedes seiner Kinder.
+    /// wird es abgeraeumt.** Sein Merkzeichen muss vorher weg (siehe oben),
+    /// und daran kommt nur heran, wer seinen Eintrag noch vorfindet; die
+    /// aeusseren Punkte dagegen sollen ihres behalten, damit der woertliche
+    /// Quelltext es einloesen kann. Die Klammer haengt daran nicht mehr: sie
+    /// entsteht aus den Raendern des Elements ([`klammer_der_raender`]) und
+    /// nicht aus der Art eines Abschnitts, der zufaellig gerade entsteht.
     fn schliessen(&mut self) {
         if let Some(ende) = self
             .offen
@@ -1451,11 +1500,9 @@ impl<'q> Zerlegung<'q> {
             self.merkzeichen_einloesen();
         }
         // **Abgetragen wird, solange das Element noch offen steht**, und erst
-        // danach wird es abgeraeumt. Die Bytes, die sich hier noch abtragen —
-        // das schliessende `**` einer Betonung, das `](Ziel)` eines Verweises
-        // —, gehoeren diesem Element und nicht seinem Vater; sie sind seine
-        // Klammer, und [`Zerlegung::klammer_verbuchen`] verbucht beim
-        // innersten offenen Element.
+        // danach wird es abgeraeumt: allein hier ist sein Eintrag noch da, und
+        // sein Merkzeichen muss aus ihm heraus, bevor der woertliche Quelltext
+        // es ein zweites Mal einloest.
         let Some(letztes) = self.offen.last_mut() else {
             return;
         };
@@ -1479,7 +1526,7 @@ impl<'q> Zerlegung<'q> {
         let Some(eintrag) = self.offen.pop() else {
             return;
         };
-        self.elemente[eintrag.rang].klammer = eintrag.klammer;
+        self.elemente[eintrag.rang].klammer = klammer_der_raender(quelle, &eintrag);
         if laenge > 0 {
             match eintrag.was {
                 Abschluss::Nichts => {}
@@ -2632,9 +2679,9 @@ mod tests {
     ///
     /// Eine Auswahl mitten in einem langen Absatz liefert die markierten
     /// Zeichen und nicht den Absatz. Der Absatz traegt keine Klammer, also
-    /// erweitert die zweite Stufe nichts; truege er eine — verbuchte
-    /// [`Zerlegung::klammer_verbuchen`] etwa beim aeussersten statt beim
-    /// innersten Element —, stuende hier der ganze Satz.
+    /// erweitert die zweite Stufe nichts; truege er eine — zaehlte
+    /// [`klammer_der_raender`] etwa die verdeckten Bytes in seinem Inneren
+    /// statt der Zeichen an seinen Raendern —, stuende hier der ganze Satz.
     #[test]
     fn eine_auswahl_in_einem_langen_absatz_liefert_nicht_den_absatz() {
         assert_eq!(
@@ -2691,6 +2738,91 @@ mod tests {
     fn eine_auswahl_zwischen_umlauten_und_einem_emoji_trifft_die_bytegrenzen() {
         assert_eq!(kopiert("Grüße 😀 an *dich*.\n", "ße 😀"), "ße 😀");
         assert_eq!(kopiert("Grüße 😀 an *dich*.\n", "dich"), "*dich*");
+    }
+
+    /// C2.9: der Quelltextblock traegt seine Zaeune, das Stueck in der Zeile
+    /// seine Haken.
+    ///
+    /// Die beiden Faelle, die die Probe darueber nicht nennt, und der zweite
+    /// ist der einzige Weg in den Zweig „kein Ereignis darin" von
+    /// [`klammer_der_raender`]: ein Stueck fester Schrift in der Zeile kommt
+    /// als ein einziges Ereignis herein, hat also kein Inneres, und sein
+    /// ganzer Quellbereich faellt in beide Spannen.
+    #[test]
+    fn der_quelltextblock_und_das_stueck_in_der_zeile_tragen_ihre_zeichen() {
+        assert_eq!(
+            klammern("```rust\nlet x = 1;\n```\n"),
+            vec![(0..22, true)],
+            "die Zaeune stehen vor und hinter dem Text des Blocks"
+        );
+        assert_eq!(
+            klammern("Ein `code` im Satz.\n"),
+            vec![(0..20, false), (4..10, true)],
+            "die Haken gehoeren dem Stueck und nicht dem Absatz um es herum"
+        );
+    }
+
+    /// C2.9: eine Entitaet, ein Escape und ein harter Umbruch mitten in einem
+    /// Absatz geben ihm keine Klammer (Defekt `260820-0728`).
+    ///
+    /// Sie stehen **nicht** an seinen Raendern, also zerschneidet eine Auswahl
+    /// sie nicht, und der Absatz bleibt ohne Klammer. Truege er eine, blaehte
+    /// sich jede Auswahl darin auf ihn auf — die vom Nutzer nicht gewaehlte
+    /// Moeglichkeit 3, und zwar bei jedem `&amp;`, jedem `\*` und jedem harten
+    /// Umbruch mit Backslash.
+    #[test]
+    fn eine_entitaet_oder_ein_escape_im_absatz_blaeht_die_auswahl_nicht_auf() {
+        assert_eq!(
+            kopiert("Ein &amp; hier im Absatz mit vielen Woertern.\n", "vielen"),
+            "vielen",
+            "die Entitaet steht mitten im Absatz und zerschneidet nichts"
+        );
+        assert_eq!(
+            kopiert("Ein \\* Stern im Absatz mit vielen Woertern.\n", "vielen"),
+            "vielen",
+            "das Escape steht mitten im Absatz und zerschneidet nichts"
+        );
+        assert_eq!(
+            kopiert("Zeile eins\\\nund vielen Woertern dahinter.\n", "vielen"),
+            "vielen",
+            "der harte Umbruch mit Backslash steht mitten im Absatz"
+        );
+        assert_eq!(
+            klammern("Ein &amp; hier im Absatz.\n"),
+            vec![(0..26, false)],
+            "der Absatz traegt an seinen Raendern nichts als seinen Umbruch"
+        );
+    }
+
+    /// C2.2 und C2.9: eine Ueberschrift, die mit einem Kind beginnt, behaelt
+    /// ihr Doppelkreuz (Defekt `260820-0731`).
+    ///
+    /// Ihr Vorspann ist das `# `, und er gehoert ihr, gleich ob dahinter erst
+    /// eine Betonung, ein Stueck fester Schrift oder ein Verweis kommt. Ohne
+    /// diese Zusage kaeme eine Auswahl in ihrem Schwanz als gewoehnlicher
+    /// Absatz in der Zieldatei an.
+    #[test]
+    fn eine_ueberschrift_mit_einem_kind_am_anfang_behaelt_ihr_doppelkreuz() {
+        assert_eq!(
+            kopiert("# **Titel** und noch ein Stueck Text\n", "noch ein"),
+            "# **Titel** und noch ein Stueck Text\n",
+            "die Betonung am Anfang nimmt der Ueberschrift ihr `# ` nicht"
+        );
+        assert_eq!(
+            kopiert("## `code` und noch ein Stueck Text\n", "noch ein"),
+            "## `code` und noch ein Stueck Text\n",
+            "das Stueck fester Schrift am Anfang ebenso wenig"
+        );
+        assert_eq!(
+            kopiert("# [V](https://e.com) und noch ein Stueck\n", "noch ein"),
+            "# [V](https://e.com) und noch ein Stueck\n",
+            "und der Verweis am Anfang ebenso wenig"
+        );
+        assert_eq!(
+            klammern("# **Titel** hier\n"),
+            vec![(0..17, true), (2..11, true)],
+            "die Ueberschrift traegt ihr `# `, die Betonung ihre Sternchen"
+        );
     }
 
     /// Die Elemente einer Quelle mit ihrer Klammer, in der Reihenfolge des
