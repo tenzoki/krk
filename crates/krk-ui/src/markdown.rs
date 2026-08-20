@@ -212,6 +212,20 @@
 //! starken Betonung darin traegt selbst keine Klammer, und genau daran haengt
 //! das Beispiel des bindenden Datensatzes — siehe
 //! [`Zerlegung::klammer_verbuchen`].
+//!
+//! **Beantwortet wird daraus genau eine Frage**, und [`Quellbezug::quelltext`]
+//! ist der eine oeffentliche Zugang: zu dieser Auswahl gehoert dieser
+//! Quelltext. Die Oberflaeche rechnet nichts. Der Rechenweg hat zwei Stufen —
+//! die Huelle ueber die beruehrten Abschnitte, dann der Fixpunkt ueber die
+//! Elemente mit Klammer —, und beide stehen dort ausgeschrieben.
+//!
+//! **Bis Schritt 7 der Runde 14 den Rufer setzt, traegt
+//! [`Quellbezug::quelltext`] `#[cfg_attr(not(test), expect(dead_code, ...))]`.**
+//! `expect` und nicht `allow`, damit die Ausnahme ihr Ablaufdatum selbst
+//! durchsetzt: mit dem Rufer wird die Erwartung unerfuellt, und der Bau haelt
+//! unter `-D warnings` an, bis die Zeilen weg sind. Die Rechnung selbst ist
+//! davon unberuehrt — sie ist ohne AppKit pruefbar (C2.5), und die Proben unten
+//! fahren sie.
 
 use std::borrow::Cow;
 use std::ops::Range;
@@ -275,6 +289,179 @@ pub struct Quellbezug {
     elemente: Vec<Quellelement>,
 }
 
+impl Quellbezug {
+    /// Der Quelltext zu einer Auswahl im gerenderten Text (C2.2, C2.9).
+    ///
+    /// **Der eine oeffentliche Zugang zum Quellbezug.** Die Oberflaeche reicht
+    /// die Grenzen ihrer Auswahl herein — ein `NSRange` zaehlt UTF-16-Einheiten
+    /// und traegt damit schon die Koordinaten dieser Abbildung — und bekommt
+    /// den Ausschnitt der Quelle heraus, den sie ablegt. Gerechnet wird hier
+    /// und nicht dort.
+    ///
+    /// Der Rechenweg hat zwei Stufen und keine dritte: erst die Huelle ueber
+    /// die beruehrten Abschnitte ([`Quellbezug::huelle_der_abschnitte`]), dann
+    /// der Fixpunkt ueber die Elemente mit Klammer
+    /// ([`Quellbezug::klammern_schliessen`]).
+    ///
+    /// **Warum die zweite Stufe an der Klammer haengt und nicht an jedem
+    /// Element.** Der bindende Datensatz
+    /// `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`
+    /// nennt drei Moeglichkeiten, und der Nutzer hat die zweite gewaehlt: eine
+    /// beruehrte Auszeichnung faehrt ganz mit. Ohne die Bedingung „traegt eine
+    /// Klammer" waere daraus die **nicht** gewaehlte Moeglichkeit 3, die
+    /// blockweise: ein Absatz ist auch ein Element, und jede Auswahl darin
+    /// blaehte sich auf ihn auf. Der Nutzer bekaeme den ganzen Absatz, wo er
+    /// zwei Woerter markiert hat. Die Klammer trennt genau das: ein Element,
+    /// dessen Quellbereich keine Bytes traegt, die der Text weglaesst, kann an
+    /// seinen Raendern auch nichts zerschneiden.
+    ///
+    /// **Warum ein Abschnitt ohne Textzeichen im geschlossenen Auswahlintervall
+    /// mitfaehrt.** Das ist keine Ausnahme, sondern die einzige Lesart, unter
+    /// der ein solcher Abschnitt ueberhaupt erreichbar ist: sein Textbereich
+    /// ist leer, und ein leerer Bereich schneidet kein halboffenes Intervall.
+    /// Nach der halboffenen Lesart fiele jeder Abschnitt heraus, der Quelle
+    /// ohne Anzeige traegt — das Merkzeichen am Dateianfang, der abschliessende
+    /// Zeilenumbruch —, und C2.8 (die Auswahl ueber alles liefert die Datei
+    /// vollstaendig) braeuchte eine Sonderregel. Was die Halbregel dabei
+    /// hereinholt, gehoert entweder einem Element mit Klammer, das die zweite
+    /// Stufe danach vollstaendig macht, oder es ist der Zeilenumbruch hinter
+    /// einem Block, und der schadet in keiner Zwischenablage.
+    #[must_use]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "der Rufer entsteht in Schritt 7 dieser Runde, in der \
+                      Ueberschreibung von writeSelectionToPasteboard:types: \
+                      an Vorschautext; mit ihm wird die Erwartung unerfuellt \
+                      und diese Zeile faellt"
+        )
+    )]
+    pub fn quelltext(&self, auswahl: Range<usize>) -> &str {
+        &self.quelle[self.ausschnitt(&auswahl)]
+    }
+
+    /// Die beiden Stufen der Klammerregel, hintereinander.
+    ///
+    /// Steht als eigene Methode neben [`Quellbezug::quelltext`], damit die
+    /// Regel als Bereich zu pruefen ist und nicht nur als Zeichenfolge.
+    ///
+    /// **Eine verdrehte Auswahl wird zur leeren.** `NSRange` kann sie nicht
+    /// liefern, aber die Rechnung soll auch dann eine Antwort geben und keine
+    /// Panik: ein Bereich, dessen Ende vor seinem Anfang laege, wuerde beim
+    /// Zugriff auf die Quelle abbrechen.
+    fn ausschnitt(&self, auswahl: &Range<usize>) -> Range<usize> {
+        let auswahl = auswahl.start..auswahl.end.max(auswahl.start);
+        let Some(huelle) = self.huelle_der_abschnitte(&auswahl) else {
+            return 0..0;
+        };
+        self.klammern_schliessen(huelle)
+    }
+
+    /// Erste Stufe: die Huelle ueber die Quellbereiche der beruehrten
+    /// Abschnitte.
+    ///
+    /// `None`, wenn kein Abschnitt beitraegt — bei einer leeren Auswahl in
+    /// einem Text ohne Abschnitt ohne Textzeichen an ihrer Stelle, und bei
+    /// einer leeren Quelle.
+    ///
+    /// Eine Huelle und keine Vereinigung: die Abschnitte kacheln die Quelle
+    /// lueckenlos, also liegt zwischen zwei beruehrten Abschnitten nur, was
+    /// ohnehin dazwischen steht.
+    fn huelle_der_abschnitte(&self, auswahl: &Range<usize>) -> Option<Range<usize>> {
+        let mut huelle: Option<Range<usize>> = None;
+        for abschnitt in &self.abschnitte {
+            let Some(beitrag) = self.beitrag(abschnitt, auswahl) else {
+                continue;
+            };
+            huelle = Some(match huelle {
+                Some(bisher) => bisher.start.min(beitrag.start)..bisher.end.max(beitrag.end),
+                None => beitrag,
+            });
+        }
+        huelle
+    }
+
+    /// Was ein einzelner Abschnitt zur Huelle beitraegt.
+    ///
+    /// **Die Fallunterscheidung ueber [`Abschnittsart`] ist vollstaendig und
+    /// ueberschneidungsfrei**, und jeder Zweig steht fuer eine der drei
+    /// Antworten, die die Art gibt:
+    ///
+    /// - [`Abschnittsart::Woertlich`]: beide Seiten stehen Zeichen fuer Zeichen
+    ///   aneinander, also rechnet sich die Auswahlgrenze genau auf ein Byte um
+    ///   ([`byte_zur_stelle`], die eine Umrechnung im Modul, C2.7).
+    /// - [`Abschnittsart::Ersetzt`]: die Quelle hat den Text hervorgebracht,
+    ///   ohne ihm zu gleichen, also gibt es innen nichts umzurechnen und der
+    ///   Abschnitt rundet auf seine Raender.
+    /// - [`Abschnittsart::Erzeugt`]: KRK hat die Zeichen gesetzt, sein
+    ///   Quellbereich ist leer, er traegt nichts bei.
+    fn beitrag(&self, abschnitt: &Abschnitt, auswahl: &Range<usize>) -> Option<Range<usize>> {
+        if !abschnitt.beruehrt(auswahl) {
+            return None;
+        }
+        match abschnitt.art {
+            Abschnittsart::Woertlich => {
+                let stueck = &self.quelle[abschnitt.quelle.clone()];
+                let von = auswahl
+                    .start
+                    .clamp(abschnitt.text.start, abschnitt.text.end)
+                    - abschnitt.text.start;
+                let bis = auswahl.end.clamp(abschnitt.text.start, abschnitt.text.end)
+                    - abschnitt.text.start;
+                let anfang = abschnitt.quelle.start + byte_zur_stelle(stueck, von);
+                let ende = abschnitt.quelle.start + byte_zur_stelle(stueck, bis);
+                Some(anfang..ende)
+            }
+            Abschnittsart::Ersetzt => Some(abschnitt.quelle.clone()),
+            Abschnittsart::Erzeugt => None,
+        }
+    }
+
+    /// Zweite Stufe: der Fixpunkt ueber die Elemente mit Klammer (C2.9).
+    ///
+    /// > Erweitere den Quellausschnitt so lange auf die Huelle mit dem ganzen
+    /// > Quellbereich jedes Elements, das eine Klammer traegt, das der
+    /// > Ausschnitt schneidet und das er nicht ganz enthaelt, bis er sich nicht
+    /// > mehr aendert.
+    ///
+    /// **Das Verfahren endet**, und zwar aus zwei Gruenden zusammen: der
+    /// Ausschnitt waechst allein — jeder Durchgang, der etwas aendert,
+    /// vergroessert ihn um mindestens ein Byte —, und die Quelle ist endlich.
+    /// Ein Element, das der Ausschnitt einmal ganz enthaelt, bleibt darin, denn
+    /// der Ausschnitt schrumpft nie; jedes Element erweitert ihn also
+    /// hoechstens einmal.
+    ///
+    /// **Ueber verschachtelte Elemente ist es dasselbe Verfahren und keine
+    /// zweite Regel.** Wer drei Buchstaben in `**fett *und kursiv* zugleich**`
+    /// markiert, erweitert im ersten Durchgang auf die innere Betonung und im
+    /// zweiten auf die aeussere; niemand fragt dabei nach der Schachtelung.
+    fn klammern_schliessen(&self, mut ausschnitt: Range<usize>) -> Range<usize> {
+        loop {
+            let mut gewachsen = false;
+            for element in &self.elemente {
+                if !element.klammer {
+                    continue;
+                }
+                let bereich = &element.quelle;
+                // Schneidet er ihn? Halboffen gefragt, denn beide Bereiche
+                // zaehlen Bytes und keiner von beiden ist eine Stelle.
+                if bereich.start >= ausschnitt.end || ausschnitt.start >= bereich.end {
+                    continue;
+                }
+                if ausschnitt.start <= bereich.start && bereich.end <= ausschnitt.end {
+                    continue;
+                }
+                ausschnitt = ausschnitt.start.min(bereich.start)..ausschnitt.end.max(bereich.end);
+                gewachsen = true;
+            }
+            if !gewachsen {
+                return ausschnitt;
+            }
+        }
+    }
+}
+
 /// Eine Kachel: ein Stueck gerenderter Text und die Bytes, aus denen es kam.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[must_use]
@@ -291,6 +478,59 @@ struct Abschnitt {
     /// ist ihre Verankerung.
     quelle: Range<usize>,
     art: Abschnittsart,
+}
+
+impl Abschnitt {
+    /// Ob dieser Abschnitt von einer Auswahl beruehrt wird.
+    ///
+    /// **Zwei Lesarten fuer zwei Gestalten desselben Bereichs**, und die Frage,
+    /// die sie trennt, ist eine einzige: traegt der Abschnitt Zeichen?
+    ///
+    /// Ein Abschnitt **mit** Zeichen wird beruehrt, wenn sein Textbereich die
+    /// Auswahl im gewoehnlichen Sinn schneidet, halboffen. So faehrt der
+    /// Abschnitt hinter der Auswahl nicht mit, bloss weil er an ihrem Ende
+    /// beginnt.
+    ///
+    /// Ein Abschnitt **ohne** Zeichen wird beruehrt, wenn seine Textstelle im
+    /// **geschlossenen** Auswahlintervall liegt. Das ist keine angeflickte
+    /// Ausnahme, sondern die einzige Lesart, unter der er ueberhaupt erreichbar
+    /// ist: sein Textbereich ist leer und schneidet nichts. Warum das so sein
+    /// muss und was es hereinholt, steht an [`Quellbezug::quelltext`].
+    #[must_use]
+    fn beruehrt(&self, auswahl: &Range<usize>) -> bool {
+        if self.text.is_empty() {
+            auswahl.start <= self.text.start && self.text.start <= auswahl.end
+        } else {
+            self.text.start < auswahl.end && auswahl.start < self.text.end
+        }
+    }
+}
+
+/// Rechnet eine Stelle im Text auf ihr Byte in der Quelle um (C2.7).
+///
+/// **Die eine Umrechnung zwischen UTF-16-Einheiten und Bytes im Modul.** Sie
+/// steht hier, weil sie nur an einer Stelle etwas zu rechnen hat: innerhalb
+/// eines Abschnitts der Art [`Abschnittsart::Woertlich`], wo `stueck` beide
+/// Seiten zugleich ist — der geschriebene Text und der Ausschnitt der Quelle,
+/// Zeichen fuer Zeichen dieselben. Die beiden anderen Arten rechnen nichts:
+/// [`Abschnittsart::Ersetzt`] rundet auf die Raender, [`Abschnittsart::Erzeugt`]
+/// traegt nichts bei.
+///
+/// Gezaehlt wird ueber die Zeichen und nicht ueber die Bytes, denn ein Umlaut
+/// zaehlt zwei Bytes und eine UTF-16-Einheit, ein Emoji vier Bytes und zwei
+/// Einheiten. Eine Stelle hinter dem Ende gibt die Laenge; eine Stelle mitten
+/// in einem Ersatzpaar gibt das Byte hinter dem Zeichen, statt eine ungueltige
+/// Zeichengrenze zu liefern, an der der Zugriff auf die Quelle abbraeche.
+#[must_use]
+fn byte_zur_stelle(stueck: &str, stelle: usize) -> usize {
+    let mut einheiten = 0usize;
+    for (byte, zeichen) in stueck.char_indices() {
+        if einheiten >= stelle {
+            return byte;
+        }
+        einheiten += zeichen.len_utf16();
+    }
+    stueck.len()
 }
 
 /// Welche Seite eines Abschnitts massgeblich ist.
@@ -2338,6 +2578,131 @@ mod tests {
             vec![(0..8, true), (2..8, false)],
             "das `> ` gehoert dem Zitat und nicht dem Absatz darin"
         );
+    }
+
+    /// Die Auswahl, die im gerenderten Text auf `gesucht` zeigt, in
+    /// UTF-16-Einheiten.
+    ///
+    /// Zaehlt und rechnet nicht um: die Rechnung, die C2.7 an eine Stelle
+    /// bindet, steht in [`byte_zur_stelle`] und bildet eine Textstelle auf ein
+    /// Byte der **Quelle** ab. Hier wird allein die Stelle gesucht, an der der
+    /// Nutzer die Maus aufgesetzt haette.
+    fn auswahl(text: &str, gesucht: &str) -> Range<usize> {
+        let byte = text
+            .find(gesucht)
+            .expect("die gesuchte Stelle steht im Text");
+        let anfang = text[..byte].encode_utf16().count();
+        anfang..anfang + gesucht.encode_utf16().count()
+    }
+
+    /// Der Quelltext zu der Auswahl, die im gerenderten Text auf `gesucht`
+    /// zeigt.
+    fn kopiert(quelle: &str, gesucht: &str) -> String {
+        let ergebnis = kachelung_pruefen(quelle);
+        let stelle = auswahl(&ergebnis.text, gesucht);
+        ergebnis.quellbezug.quelltext(stelle).to_owned()
+    }
+
+    /// C2.2 und C2.9: das Beispiel des bindenden Datensatzes, woertlich.
+    ///
+    /// `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md`
+    /// nennt genau diese Quelle, genau diese Auswahl und genau diese Erwartung.
+    /// Eine zeichenweise Abbildung — die Moeglichkeit 1 jenes Datensatzes —
+    /// lieferte hier `fetter** Text mit [Verweis`, also eine offene Betonung
+    /// und einen Verweis ohne Adresse.
+    #[test]
+    fn das_beispiel_des_datensatzes_liefert_wohlgeformtes_markdown() {
+        assert_eq!(
+            kopiert(
+                "Ein **fetter** Text mit [Verweis](https://example.com) darin.\n",
+                "fetter Text mit Verweis"
+            ),
+            "**fetter** Text mit [Verweis](https://example.com)"
+        );
+    }
+
+    /// C2.9: eine Auswahl innerhalb einer Ueberschrift liefert ihr Doppelkreuz.
+    ///
+    /// Der Quellbereich einer Ueberschrift reicht bis hinter ihren
+    /// Zeilenumbruch, also faehrt der mit; das Doppelkreuz ist der Punkt, und
+    /// ein Umbruch am Ende schadet in keiner Zwischenablage.
+    #[test]
+    fn eine_auswahl_in_einer_ueberschrift_liefert_ihr_doppelkreuz() {
+        assert_eq!(kopiert("# Überschrift\n", "berschr"), "# Überschrift\n");
+    }
+
+    /// C2.9: eine Auswahl im Text eines Verweises liefert seine Adresse mit.
+    #[test]
+    fn eine_auswahl_im_text_eines_verweises_liefert_die_ganze_adresse() {
+        assert_eq!(
+            kopiert("Ein [Verweis](https://example.com) im Satz.\n", "erwei"),
+            "[Verweis](https://example.com)"
+        );
+    }
+
+    /// **Die Probe, die Moeglichkeit 3 ausschliesst.**
+    ///
+    /// Eine Auswahl mitten in einem langen Absatz liefert die markierten
+    /// Zeichen und nicht den Absatz. Der Absatz traegt keine Klammer, also
+    /// erweitert die zweite Stufe nichts; truege er eine — verbuchte
+    /// [`Zerlegung::klammer_verbuchen`] etwa beim aeussersten statt beim
+    /// innersten Element —, stuende hier der ganze Satz.
+    #[test]
+    fn eine_auswahl_in_einem_langen_absatz_liefert_nicht_den_absatz() {
+        assert_eq!(
+            kopiert(
+                "Ein recht langer Absatz mit vielen Woertern, aus dem nur zwei \
+                 Woerter markiert sind und sonst nichts.\n",
+                "zwei Woerter"
+            ),
+            "zwei Woerter"
+        );
+    }
+
+    /// C2.8: die Auswahl ueber alles liefert die Quelle byteweise vollstaendig.
+    ///
+    /// Gemessen an einer Datei, die mit einem Listenpunkt beginnt und mit einem
+    /// Zeilenumbruch endet — die beiden Raender, an denen die Kachelung sonst
+    /// ausfiele. Das `- ` steht vor dem ersten Quellzeichen des gerenderten
+    /// Textes, der Umbruch hinter dem letzten; beide kommen ueber die
+    /// Halbregel fuer Abschnitte ohne Textzeichen mit und brauchen dafuer keine
+    /// Sonderregel.
+    #[test]
+    fn die_auswahl_ueber_alles_liefert_die_quelle_vollstaendig() {
+        for quelle in KACHELBEISPIELE {
+            let ergebnis = kachelung_pruefen(quelle);
+            assert_eq!(
+                ergebnis
+                    .quellbezug
+                    .quelltext(0..ergebnis.formatierung.laenge),
+                quelle,
+                "die Auswahl ueber alles liefert die Datei: {quelle:?}"
+            );
+        }
+    }
+
+    /// C2.9: ueber verschachtelte Elemente ist es dasselbe Verfahren.
+    ///
+    /// Drei Buchstaben mitten in der inneren Betonung erweitern im ersten
+    /// Durchgang auf sie und im zweiten auf die aeussere. Eine zweite Regel
+    /// fuer die Schachtelung gibt es nicht.
+    #[test]
+    fn eine_auswahl_im_verschachtelten_element_liefert_das_aeussere_ganz() {
+        assert_eq!(
+            kopiert("**fett *und kursiv* zugleich**\n", "und"),
+            "**fett *und kursiv* zugleich**"
+        );
+    }
+
+    /// C2.7: die Auswahlgrenzen treffen die Bytegrenzen.
+    ///
+    /// „Grü" sind drei UTF-16-Einheiten und vier Bytes, das Emoji zwei
+    /// Einheiten und vier Bytes. Wer die beiden Zaehler verwechselt, schneidet
+    /// hier mitten in ein Zeichen und bricht beim Zugriff auf die Quelle ab.
+    #[test]
+    fn eine_auswahl_zwischen_umlauten_und_einem_emoji_trifft_die_bytegrenzen() {
+        assert_eq!(kopiert("Grüße 😀 an *dich*.\n", "ße 😀"), "ße 😀");
+        assert_eq!(kopiert("Grüße 😀 an *dich*.\n", "dich"), "*dich*");
     }
 
     /// Die Elemente einer Quelle mit ihrer Klammer, in der Reihenfolge des
