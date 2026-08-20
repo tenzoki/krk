@@ -1261,3 +1261,6 @@
 {"ts":"2026-08-20T05:39:43","event":"task_start","turn":3,"task":"R1","agent":"coder","detail":"Wurzelbehebung der Klammerregel"}
 {"ts":"2026-08-20T06:24:25","event":"task_done","turn":3,"task":"R1","agent":"coder","detail":"05cb614"}
 {"ts":"2026-08-20T06:24:25","event":"turn_end","turn":3,"detail":"Wurzelbehebung, 1 Commit, 2 Defekte geschlossen"}
+{"ts":"2026-08-20T06:58:23","event":"reconciliation","detail":"Verdikt review-needed; 5 Entscheidungen auf _i_, 2 bleiben _a_; Spec und Plan auf _p_"}
+{"ts":"2026-08-20T06:58:23","event":"gate_response","agent":"user","detail":"Nutzer faehrt die Buendelabnahme jetzt selbst"}
+{"ts":"2026-08-20T06:58:23","event":"gate_hit","agent":"user","detail":"Buendelabnahme: 16 Beobachtungen am laufenden KRK.app 0.5.4 im Vordergrund"}
