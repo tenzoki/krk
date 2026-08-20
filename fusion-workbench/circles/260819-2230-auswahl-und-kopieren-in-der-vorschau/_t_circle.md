@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** orchestrator
-**Active spec/plan:** shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md
+**Active spec/plan:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/planning/260819-2245_*_plan-auswahl-und-kopieren-in-der-vorschau.md` — der Plan in Kraft, vom Nutzer am 260819-2252 abgenommen. Der Spec dazu, vor diesem Circle entstanden und deshalb im gemeinsamen Speicher: `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
 **Active session history:** shared/history/260819-2026-orchestrator-session.md
 
 ---

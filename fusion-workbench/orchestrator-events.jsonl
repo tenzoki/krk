@@ -1226,3 +1226,7 @@
 {"ts":"2026-08-19T18:43:39","event":"task_done","turn":1,"task":"T1","agent":"coder","detail":"6be1e81"}
 {"ts":"2026-08-19T18:43:39","event":"commit","turn":1,"task":"T1","detail":"6be1e81 docs: die Artefaktsprachen-Deklaration faellt"}
 {"ts":"2026-08-19T18:43:39","event":"shaper_start","turn":1,"task":"T2","agent":"shaper","detail":"Auswahl und Kopieren in der Vorschau"}
+{"ts":"2026-08-19T20:32:16","event":"shaper_done","turn":1,"task":"T2","agent":"shaper","detail":"shared/planning/260819-2216_o_spec-auswahl-und-kopieren-in-der-vorschau.md"}
+{"ts":"2026-08-19T20:32:16","event":"gate_response","turn":1,"agent":"user","detail":"spec approved"}
+{"ts":"2026-08-19T20:32:16","event":"commit","turn":1,"task":"T2","detail":"258bd7c shaping + circle activation; 677c1c6 housekeeping"}
+{"ts":"2026-08-19T20:32:16","event":"planner_start","turn":1,"task":"T3","agent":"planner","detail":"circle 260819-2230-auswahl-und-kopieren-in-der-vorschau"}
