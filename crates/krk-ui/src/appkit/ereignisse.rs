@@ -966,6 +966,67 @@ mod tests {
         );
     }
 
+    /// Die Menge der eigenen Textflaechen steht an genau einer Stelle, und es
+    /// ist die des Anwendungsdelegierten (C1.7 der Runde 14).
+    ///
+    /// **Die Schwesterprobe zu
+    /// [`die_frage_nach_dem_ersthelfer_steht_an_genau_einer_stelle`] darueber,
+    /// und sie zaehlt die andere Haelfte derselben Frage.** Jene haelt fest,
+    /// dass der Abgriff die Frage genau einmal *stellt*; diese haelt fest, dass
+    /// genau eine Stelle sie *beantwortet*. Bis zur Runde 14 war die Antwort
+    /// ein einziger Vergleich und brauchte keine Probe. Mit der zweiten eigenen
+    /// Textflaeche ist sie eine Aufzaehlung geworden, und eine Aufzaehlung an
+    /// zwei Stellen ist genau der Doppelbau, gegen den dieser Baum seine
+    /// Zaehlproben stellt: die zweite Fassung wuesste von der dritten Flaeche
+    /// nichts, und deren Bereich haette mit dem Fokus in sich selbst wieder
+    /// keinen einzigen Tastenbefehl von KRK.
+    ///
+    /// **Gezaehlt wird die Erklaerung und nicht der Aufrufer.** Der Kopf von
+    /// [`crate::quellbaum`] sagt, warum: eine Aufruferzaehlung bliebe gegen
+    /// einen Doppelbau blind und wuerde umgekehrt rot, sobald ein weiterer
+    /// berechtigter Frager hinzukaeme. Hier ist die Zusage ohnehin eine ueber
+    /// den Baum und keine ueber eine Zahl von Rufern: es gibt diese Antwort
+    /// einmal.
+    ///
+    /// **Die Datei steht in der Erwartung mit dabei.** Die Antwort gehoert
+    /// dorthin, wo die Flaechen gehalten werden, also zum
+    /// Anwendungsdelegierten. Waere sie nach `ereignisse.rs` gewandert, bliebe
+    /// die Zahl eins und die Bauart waere trotzdem die verworfene: dieses Modul
+    /// soll weder den Editor noch die Vorschau kennenlernen, wie sein Kopf es
+    /// ausschreibt.
+    ///
+    /// # Was diese Nadel nicht sieht
+    ///
+    /// Sie sucht die Erklaerung unter **diesem Namen**. Ob dieselbe
+    /// Naemlichkeitsfrage anderswo unter einem anderen Namen noch einmal
+    /// gebaut ist, entscheidet keine Suche im Quelltext; der Kopf von
+    /// [`crate::quellbaum`] sagt, was daraus folgt. Ebenso wenig sagt sie, wie
+    /// **viele** Flaechen die eine Stelle vergleicht — das ist Absicht: eine
+    /// dritte eigene Flaeche waere ein dritter Vergleich dort und eine
+    /// zulaessige Aenderung, keine zweite Fassung.
+    #[test]
+    fn die_menge_der_eigenen_textflaechen_steht_an_genau_einer_stelle() {
+        // Zusammengesetzt, weil die Probe in dem Baum liegt, den sie liest:
+        // als ein Stueck geschrieben faende die Nadel sich selbst.
+        let erklaerung = concat!("fn ", "ist_eigene_", "textflaeche");
+
+        let stellen: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .map(|(name, inhalt)| {
+                let zahl = inhalt.matches(erklaerung).count();
+                (name, zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+
+        assert_eq!(
+            stellen,
+            vec![("krk-ui/src/appkit/anwendung.rs".to_owned(), 1)],
+            "die Menge der eigenen Textflaechen ist nicht genau einmal \
+             erklaert, und zwar beim Anwendungsdelegierten"
+        );
+    }
+
     /// Keine Ansicht bekommt eine eigene `keyDown:`-Behandlung (C1.14).
     ///
     /// **Die Zusage des Modulkopfs, gezaehlt.** Sie traegt seit der Runde 1

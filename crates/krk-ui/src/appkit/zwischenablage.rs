@@ -352,6 +352,7 @@ mod proben {
 
     use super::*;
     use crate::pruefordner::Pruefordner;
+    use crate::quellbaum::quelldateien;
 
     /// Eine Ablage, die niemandem sonst gehoert.
     ///
@@ -434,6 +435,85 @@ mod proben {
         assert_eq!(
             zurueckgelesen, "geschriebener Text",
             "der geschriebene Text kommt unveraendert zurueck"
+        );
+    }
+
+    /// Die Huelle um `NSPasteboard` steht in genau einer Datei (C2.10 und die
+    /// erste Haelfte von C4.7 der Runde 14).
+    ///
+    /// **Die aelteste Zusage dieses Moduls, zum ersten Mal gezaehlt.** Der
+    /// Modulkopf traegt sie seit der Runde 1 — es gibt genau eine Huelle um die
+    /// Zwischenablage —, und bis zur Runde 14 hat nichts sie nachgemessen. Der
+    /// Anlass ist die Runde selbst: sie legt mit
+    /// [`Vorschautext::auswahl_ablegen`](super::super::vorschau) einen zweiten
+    /// Rufer aus einer ganz anderen Ecke des Programms an, und der
+    /// naechstliegende und falsche Weg dorthin waere gewesen, dort selbst zu
+    /// schreiben.
+    ///
+    /// **Zwei Nadeln, weil die Huelle zwei Haelften hat.** Die eine ist das
+    /// Schreiben in eine Ablage, die andere der Griff nach der Ablage des
+    /// angemeldeten Nutzers. Sie koennten einzeln abwandern: wer anderswo in
+    /// eine gereichte Ablage schriebe, umginge die erste; wer sich anderswo die
+    /// allgemeine Ablage holte, die zweite. Der Modulkopf begruendet, warum
+    /// gerade der zweite Griff hier bleiben muss.
+    ///
+    /// **Erwartet wird die Datei und nicht die Zahl der Fundstellen.** Die
+    /// Zusage ist eine ueber den Ort und keine ueber eine Menge: dass der Griff
+    /// nach der allgemeinen Ablage in dieser Datei heute an drei Zeilen steht
+    /// und morgen an zwei, ist keine Aenderung, gegen die diese Probe stehen
+    /// soll. Der Plan der Runde hat an zwei anderen Stellen eine Zahl
+    /// vorweggenommen, die am Baum nicht zutraf
+    /// (`issues/260820-0646_*_der-plan-schreibt-zaehlerwartungen-ohne-sie-gegen-den-baum-zu-halten-dreimal-in-einer-runde.md`);
+    /// hier ist die Zahl von vornherein nicht die Zusage.
+    ///
+    /// # Was diese Nadeln nicht sehen
+    ///
+    /// **Sie zaehlen Codezeilen.** Ein Aufruf, der zwischen dem Namen und
+    /// seinem Argument umbricht, entgeht ihnen, und ob dieselbe Sache anderswo
+    /// ueber `writeObjects:` oder `setData:forType:` noch einmal abgelegt wird,
+    /// entscheidet keine Suche im Quelltext. Der Kopf von [`crate::quellbaum`]
+    /// sagt, was daraus folgt.
+    ///
+    /// **Die zweite Haelfte von C4.7 misst diese Probe nicht.** Die drei
+    /// Pruefordner-Fassungen zaehlt seit der Runde 1
+    /// `genau_drei_pruefordner_fassungen_stehen_im_baum` in
+    /// `krk-core/tests/baum.rs`; eine zweite Zaehlung daneben waere der
+    /// Doppelbau, gegen den beide stehen.
+    #[test]
+    fn die_huelle_um_die_zwischenablage_steht_in_genau_einer_datei() {
+        // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
+        // den sie liest, und als ein Stueck geschrieben faende jede sich selbst.
+        let schreiben = concat!("setString", "_forType");
+        let allgemeine_ablage = concat!("general", "Pasteboard");
+        let huelle = "krk-ui/src/appkit/zwischenablage.rs";
+
+        let dateien = quelldateien();
+        let traeger = |nadel: &str| -> Vec<String> {
+            dateien
+                .iter()
+                .filter(|(_, inhalt)| {
+                    inhalt
+                        .lines()
+                        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                        .any(|zeile| zeile.contains(nadel))
+                })
+                .map(|(name, _)| name.clone())
+                .collect()
+        };
+
+        assert_eq!(
+            traeger(schreiben),
+            vec![huelle.to_owned()],
+            "`{schreiben}` steht nicht allein in der einen Huelle um die \
+             Zwischenablage; ein zweiter Schreiber daneben waere eine zweite \
+             Meinung darueber, wie ein Text abgelegt wird"
+        );
+        assert_eq!(
+            traeger(allgemeine_ablage),
+            vec![huelle.to_owned()],
+            "`{allgemeine_ablage}` steht nicht allein in der einen Huelle um \
+             die Zwischenablage; wer sich die Ablage des Nutzers anderswo holt, \
+             umgeht die Huelle an ihrer zweiten Haelfte"
         );
     }
 }

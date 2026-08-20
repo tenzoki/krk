@@ -17,3 +17,7 @@ Die Zählprobe `jede_bearbeitbare_textflaeche_schaltet_die_automatiken_ab` in de
 ---
 
 Nicht in Schritt 3 behoben: `textautomatik.rs` liegt außerhalb der Dateiliste jenes Schrittes, und ein zweiter `coder` arbeitete zur selben Zeit im selben Baum. Gehört in Schritt 8, der laut Plan „das Netz darunter" für die Prosastellen ist — mit dieser fünften in der Liste.
+
+---
+
+Resolved: Schritt 8 hat den Absatz in `crates/krk-ui/src/appkit/textautomatik.rs` nachgezogen. Der erste Satz hängt jetzt allein an `setEditable(false)` und trägt den Schluss unverändert weiter: was der Nutzer dort nicht tippen kann, kann auch keine Automatik verändern. Ein zweiter Absatz daneben hält den Wegfall von `setSelectable(false)` fest, sagt, dass der alte Grund nicht widerlegt, sondern mit der Anmeldung der Fläche beim Anwendungsdelegierten bezahlt ist, und nennt die eine Aussage, auf die es für dieses Modul ankommt: eine auswählbare Fläche ist keine bearbeitbare. Die Zählprobe `jede_bearbeitbare_textflaeche_schaltet_die_automatiken_ab` in derselben Datei bleibt unberührt und grün, wie der Befund es vorhergesagt hat.

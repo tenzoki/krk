@@ -781,10 +781,17 @@ mod tests {
     /// Die sechs Klassen, die in KRK einen Ersthelfer stellen koennen.
     ///
     /// `NSTableView` steht dreimal im Programm — die Leiste, die beiden
-    /// Dateifenster und die Belegungsansicht —, `NSTextView` zweimal, naemlich
-    /// als Textflaeche des Editors und als Feldeditor eines Textfeldes;
-    /// `NSTextField` traegt die Blaetter. `NSScrollView`, `NSWindow` und
-    /// `NSApplication` stehen dazwischen und am Ende der Antwortkette.
+    /// Dateifenster und die Belegungsansicht —, `NSTextView` seit der Runde 14
+    /// dreimal, naemlich als Textflaeche des Editors, als Feldeditor eines
+    /// Textfeldes und als Textanzeige der Vorschau; `NSTextField` traegt die
+    /// Blaetter. `NSScrollView`, `NSWindow` und `NSApplication` stehen
+    /// dazwischen und am Ende der Antwortkette.
+    ///
+    /// **Die Liste bleibt trotzdem bei sechs Klassen.**
+    /// [`super::vorschau::Vorschautext`] ist eine Unterklasse von `NSTextView`
+    /// und beantwortet die sechs Selektoren ueber dieselbe Vererbungskette; was
+    /// die Ueberschreibung von `writeSelectionToPasteboard:types:` daraus
+    /// macht, misst die Tafel [`GEMESSEN`] nicht und soll sie nicht messen.
     fn ersthelferklassen() -> [(&'static str, &'static AnyClass); 6] {
         [
             ("NSTableView", <NSTableView as ClassType>::class()),

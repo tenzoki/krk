@@ -1251,3 +1251,5 @@
 {"ts":"2026-08-20T04:19:40","event":"task_start","turn":2,"task":"S5","agent":"coder","detail":"Fokus und Quellbezug am Inhalt"}
 {"ts":"2026-08-20T04:37:06","event":"task_done","turn":2,"task":"S5","agent":"coder","detail":"1b85538"}
 {"ts":"2026-08-20T04:37:06","event":"task_start","turn":2,"task":"S7","agent":"coder","detail":"Abfangstelle writeSelectionToPasteboard"}
+{"ts":"2026-08-20T04:51:38","event":"task_done","turn":2,"task":"S7","agent":"coder","detail":"17dad8a"}
+{"ts":"2026-08-20T04:51:38","event":"task_start","turn":2,"task":"S8","agent":"coder","detail":"Zaehlproben und fuenf Prosastellen"}

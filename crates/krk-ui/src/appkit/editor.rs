@@ -3104,10 +3104,16 @@ fn kopf_bauen(mtm: MainThreadMarker) -> Retained<NSTextField> {
 /// Baut die Textflaeche: eine editierbare `NSTextView` in einer
 /// Bildlaufansicht.
 ///
-/// Editierbar und auswaehlbar, anders als die Textanzeige der Vorschau
-/// (`super::vorschau`), die beides ablehnt, damit sie den Fokus nicht als
-/// Textsystem nimmt. Der Editor **will** ihn nehmen, und der Fokusvorbehalt
-/// laesst ihn ueber die Naemlichkeitsfrage aus dem Modulkopf durch.
+/// Editierbar und auswaehlbar, waehrend die Textanzeige der Vorschau
+/// (`super::vorschau`) seit der Runde 14 auswaehlbar, aber nicht bearbeitbar
+/// ist. **Der Unterschied ist damit nur noch einer**, und es ist der, der die
+/// beiden Flaechen unterscheidet: der Editor bearbeitet, die Vorschau zeigt.
+///
+/// Beide nehmen damit den Fokus als Textsystem — der Editor, weil er ihn
+/// braucht, die Vorschau, weil eine auswaehlbare Flaeche ihn nimmt und die
+/// Runde 14 das in Kauf genommen hat. Der Fokusvorbehalt laesst deshalb beide
+/// ueber die Naemlichkeitsfrage aus dem Modulkopf durch; bis zu jener Runde war
+/// die Textflaeche des Editors die einzige, die er so durchliess.
 ///
 /// Die Schrift ist die feste Schreibmaschinenschrift des Nutzers in
 /// Systemgroesse; die Mindestbreite des Bereichs (320 Punkte) ist an ihr

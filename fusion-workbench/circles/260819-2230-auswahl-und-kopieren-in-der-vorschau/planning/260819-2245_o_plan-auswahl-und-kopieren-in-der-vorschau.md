@@ -205,7 +205,7 @@ Vier Bündel, acht Schritte. Jeder Schritt nennt genau einen Executor. **Nach je
 
 ### Bündel D — Die Zählproben und die abgelösten Zusagen
 
-8. **Was nur zusammen zu zählen ist, und die vier Prosastellen**
+8. [DONE] **Was nur zusammen zu zählen ist, und die vier Prosastellen**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/zwischenablage.rs`
    - Changes: Die Zählproben, die erst stehen können, wenn alles gebaut ist, alle über `crate::quellbaum` nach dem Vorbild von `die_frage_nach_dem_ersthelfer_steht_an_genau_einer_stelle` (`ereignisse.rs:923`) und mit zusammengesetzten Nadeln, damit keine sich selbst findet. Erstens: `fn ist_eigene_textflaeche` steht genau einmal im Baum, und die Datei, die es trägt, ist `krk-ui/src/appkit/anwendung.rs` (C1.7). Zweitens: `setString_forType` und `generalPasteboard` stehen zusammen in genau einer Datei, `krk-ui/src/appkit/zwischenablage.rs` (C2.10, C4.7). Drittens: `writeSelectionToPasteboard` steht genau einmal (C2.12). **Für die drei Prüfordner-Fassungen entsteht keine neue Probe**: `genau_drei_pruefordner_fassungen_stehen_im_baum` (`crates/krk-core/tests/baum.rs:114`) misst sie seit der Runde 1, und die zweite Hälfte von C4.7 ist damit ohne eine Zeile eingelöst; der Schritt prüft nur nach, dass sie grün bleibt. Dazu die vier Prosastellen aus der Tabelle oben unter `## Was der Übersetzer einfordert`, soweit die Schritte 3, 4 und 7 sie nicht schon mitgezogen haben; dieser Schritt ist das Netz darunter und nicht der erste Ort. **Kein Datensatz des Arbeitsspeichers wird hier umbenannt**; das steht unten unter `## Welcher Schritt welchen Datensatz realisiert` und gehört dem Abschluss der Runde.

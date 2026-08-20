@@ -17,9 +17,19 @@
 //! Schaden wie in einer Datei des Editors.
 //!
 //! **Die Vorschau ist keine dieser Flaechen und darf es nicht werden.** Sie
-//! setzt `setEditable(false)` und `setSelectable(false)`, damit sie den Fokus
-//! nicht als Textsystem nimmt; was der Nutzer dort nicht tippen kann, kann auch
-//! keine Automatik veraendern.
+//! setzt `setEditable(false)`, und daran haengt der Satz: was der Nutzer dort
+//! nicht tippen kann, kann auch keine Automatik veraendern.
+//!
+//! **`setSelectable(false)` stand hier bis zur Runde 14 daneben, und der
+//! Wegfall aendert an diesem Modul nichts.** Die Textanzeige der Vorschau ist
+//! seither auswaehlbar (C1.1 jener Runde), und der Grund, aus dem der Schalter
+//! stand — eine auswaehlbare Flaeche nimmt den Fokus als Textsystem —, ist
+//! nicht widerlegt, sondern bezahlt: der Anwendungsdelegierte kennt die eigenen
+//! Textflaechen von KRK namentlich und nimmt sie von der Weitergabe an AppKit
+//! aus. Fuer die Automatiken zaehlt allein der andere Schalter, und der ist
+//! unveraendert: eine auswaehlbare Flaeche ist keine bearbeitbare. Der
+//! Modulkopf von [`super::vorschau`] fuehrt aus, warum die beiden Zeilen
+//! verschiedene Fragen beantworten und deshalb nicht miteinander fallen.
 //!
 //! **Was hier steht und was im Editor bleibt.** Hier steht allein, was jede
 //! bearbeitbare Flaeche gleich haben muss. Alles Flaechenspezifische bleibt bei

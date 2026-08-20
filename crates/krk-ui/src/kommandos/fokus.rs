@@ -79,9 +79,13 @@ pub enum Fokus {
     Leiste,
     /// Im Vorschaufenster (C6), dem dritten fokussierbaren Bereich seit S19.
     ///
-    /// Hierhin kommt der Fokus per Mausklick in die Inhaltsflaeche der
-    /// Vorschau und seit dem Nutzerentscheid vom 260807 ueber den Tastenbefehl
-    /// `fokus_vorschau`. Mit dem Fokus hier bedienen die vier Tabbefehle aus
+    /// Hierhin kommt der Fokus per Mausklick in die Vorschau und seit dem
+    /// Nutzerentscheid vom 260807 ueber den Tastenbefehl `fokus_vorschau`.
+    /// **Welche der beiden Ansichten den Rang nimmt, aendert daran nichts:**
+    /// bis zur Runde 14 war es allein die Inhaltsflaeche, seither auch die
+    /// Textanzeige, die jene Runde auswaehlbar gemacht hat. Der Bereich wird
+    /// ueber den Ansichtsbaum entschieden, und beide liegen im Teilbaum der
+    /// Vorschau. Mit dem Fokus hier bedienen die vier Tabbefehle aus
     /// C1 die Vorschau-Tabs — drei von ihnen ueber
     /// [`Wirkungsbereich::Tabbereich`], `tab_schliessen` seit C4 der Runde 4
     /// ueber [`Wirkungsbereich::Ueberall`] und die Verzweigung beim

@@ -133,9 +133,13 @@ pub struct Lage {
     pub blatt_steht: bool,
     /// Ob der Ersthelfer des Schluesselfensters seine AppKit-Bedeutung behaelt.
     ///
-    /// Die Textflaeche des eingebauten Editors ist die eine Ausnahme davon und
-    /// meldet hier `false`; die Naemlichkeitsfrage dahinter beantwortet der
-    /// Anwendungsdelegierte, der die Flaeche haelt.
+    /// Die eigenen Textflaechen von KRK sind die Ausnahme davon und melden
+    /// hier `false`. Es sind seit der Runde 14 zwei, die Textflaeche des
+    /// eingebauten Editors und die Textanzeige der Vorschau; die
+    /// Naemlichkeitsfrage dahinter beantwortet der Anwendungsdelegierte, der
+    /// beide Flaechen haelt. Die Flaeche eines Blattes gehoert ausdruecklich
+    /// nicht dazu und meldet `true`, denn nur so bleibt `Abbrechen` dort
+    /// unzulaessig und schliesst `Esc` den Notizzettel.
     pub ersthelfer_gehoert_appkit: bool,
     /// Ob das Schluesselfenster KRKs Hauptfenster oder ein daran haengendes
     /// Blatt ist.
