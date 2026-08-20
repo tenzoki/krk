@@ -1240,3 +1240,7 @@
 {"ts":"2026-08-20T03:02:16","event":"task_start","turn":2,"task":"S6","agent":"coder","detail":"zwischenablage.rs fremde Ablage"}
 {"ts":"2026-08-20T03:15:38","event":"task_done","turn":2,"task":"S6","agent":"coder","detail":"9e10b94"}
 {"ts":"2026-08-20T03:15:38","event":"commit","turn":2,"task":"S6","detail":"9e10b94 feat(ui): die eine Huelle um NSPasteboard nimmt jede Ablage entgegen"}
+{"ts":"2026-08-20T03:39:08","event":"task_done","turn":2,"task":"S1","agent":"coder","detail":"13be459"}
+{"ts":"2026-08-20T03:39:08","event":"commit","turn":2,"task":"S1","detail":"13be459"}
+{"ts":"2026-08-20T03:39:08","event":"task_start","turn":2,"task":"S2","agent":"coder","detail":"markdown.rs Klammerregel"}
+{"ts":"2026-08-20T03:39:08","event":"task_start","turn":2,"task":"S3","agent":"coder","detail":"vorschau.rs Vorschautext auswaehlbar"}

@@ -6,7 +6,7 @@
 //! │ Tableiste (appkit::tableiste)│  ein Abschnitt je Vorschau-Tab
 //! ├──────────────────────────────┤
 //! │ Inhaltsflaeche               │  nimmt Klick und Fokus entgegen
-//! │   NSScrollView + NSTextView  │  Text, Metadaten, Hinweise
+//! │   NSScrollView + Vorschautext│  Text, Metadaten, Hinweise; auswaehlbar
 //! │     + Nummernspalte          │  nur beim rohen Inhalt einer Datei (C10)
 //! │   NSImageView                │  Bilder; je einer von beiden sichtbar
 //! └──────────────────────────────┘
@@ -102,11 +102,36 @@
 //! erreicht diese Tabs ueber die Verzweigung nach dem Fokus im
 //! Anwendungsdelegierten.
 //!
-//! Die Textanzeige ist dafuer nicht auswaehlbar: eine auswaehlbare naehme den
-//! Fokus als Textsystem, und der Ereignisabgriff reichte jede Taste an AppKit
-//! weiter, statt die Tabbefehle auszufuehren. Einen Tastenbefehl, der den
-//! Fokus hierher setzt, gibt es in dieser Runde nicht; die offene Frage dazu
-//! liegt im Entscheidungsspeicher.
+//! # Die Textanzeige ist auswaehlbar, und das loest eine Zusage ab
+//!
+//! **Bis zur Runde 14 stand hier `setSelectable(false)`.** Die Runde 6 hatte
+//! das ausdruecklich zugesagt (C4, achtes Kriterium: „die beiden Schalter
+//! bleiben, wo sie stehen"). Der Nutzer hat diese Zusage am 260819
+//! **ersetzt und nicht ergaenzt**: der Text der Vorschau soll zu markieren und
+//! zu kopieren sein (C1.1 der Runde 14). Der Schalter ist damit gefallen, und
+//! diese Datei setzt `setSelectable(true)`.
+//!
+//! Der Grund, aus dem er stand, ist dabei nicht widerlegt, sondern bezahlt:
+//! eine auswaehlbare Flaeche nimmt den Fokus als Textsystem, und
+//! [`super::ereignisse::ersthelfer_gehoert_appkit`] reicht dann jede Taste an
+//! AppKit weiter, statt die vier Tabbefehle auszufuehren. Die Gegenmassnahme
+//! ist dieselbe, mit der der Editor seit der Runde 2 lebt: der
+//! Anwendungsdelegierte kennt die eigenen Textflaechen von KRK **namentlich**
+//! und nimmt sie von der Weitergabe aus (C1.7 der Runde 14). Ohne diese
+//! Anmeldung waere die Auswahl mit den Tabbefehlen erkauft.
+//!
+//! **`setEditable(false)` bleibt stehen — aus einem anderen Grund als dem
+//! gefallenen Schalter, und deshalb faellt es nicht mit ihm.** Die
+//! Nichtauswaehlbarkeit war ein **Mittel** gegen den Fokus, und ein Mittel
+//! wird hinfaellig, sobald ein besseres danebensteht. Die
+//! Nichtbearbeitbarkeit ist keines, sondern eine Aussage darueber, was die
+//! Vorschau **ist**: sie zeigt und bearbeitet nicht (C1.4 der Runde 14, und
+//! unveraendert seit C6 der Runde 1). Wer beide Zeilen fuer dieselbe Sache
+//! haelt, nimmt mit dem einen Schalter den anderen mit und macht aus der
+//! Vorschau einen zweiten Editor.
+//!
+//! Einen Tastenbefehl, der den Fokus hierher setzt, gibt es weiterhin nicht;
+//! die offene Frage dazu liegt im Entscheidungsspeicher.
 //!
 //! **Das Kontextmenue haengt an allen drei Ansichten, und diese Datei baut es
 //! nicht.** Seit C1 der Runde 6 ist das Vorschaufenster der Delegierte seiner
@@ -156,6 +181,17 @@
 //! an ihrer schliessenden Klammer `API_AVAILABLE(macos(10.5))`
 //! (`NSCell.h`); ihre Werte tragen keine.
 //!
+//! **Die Runde 14 spricht keine juengere Klasse an, und das ist am SDK
+//! nachgelesen und nicht geschlossen.** [`Vorschautext`] ist eine Unterklasse
+//! von `NSTextView` (`NSTextView.h:76`), erzeugt ueber dessen `initWithFrame:`
+//! (`NSTextView.h:86`); die beiden Schalter `setEditable:` und
+//! `setSelectable:` sind die Setzer der Eigenschaften `editable` und
+//! `selectable` von `NSText` (`NSText.h:89-90`). Keine der vier Stellen traegt
+//! im Kopf des Systems eine Verfuegbarkeitsangabe und steht damit seit 10.0.
+//! Genannt seien sie trotzdem: `setSelectable:` wechselt in dieser Runde sein
+//! Argument, und `initWithFrame:` wird ab jetzt ueber `super` und nicht mehr
+//! am fertigen `NSTextView` gerufen.
+//!
 //! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
@@ -163,6 +199,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
@@ -184,6 +221,7 @@ use crate::editormodell::{Ansicht, Dateityp};
 use crate::hervorhebung::{
     self, Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
+use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
 
 use super::nummernspalte::{self, Nummernspalte};
@@ -211,9 +249,15 @@ define_class!(
     /// Runde 6).
     ///
     /// Ein eigener Ersthelfer, damit [`Fokus::Vorschau`](crate::kommandos::fokus::Fokus)
-    /// ueberhaupt eintreten kann: die Textanzeige darin ist nicht auswaehlbar
-    /// und lehnt den Fokus ab, die Bildanzeige ebenso. Ihr Klick faellt durch
-    /// die Antwortkette hierher.
+    /// ueberhaupt eintreten kann: die Bildanzeige lehnt den Fokus ab, und ihr
+    /// Klick faellt durch die Antwortkette hierher.
+    ///
+    /// **Fuer die Textanzeige gilt das seit der Runde 14 nicht mehr.**
+    /// [`Vorschautext`] ist auswaehlbar (C1.1) und nimmt den Ersthelferrang
+    /// selbst, sobald jemand hineinklickt; der Modulkopf sagt, welche Zusage
+    /// damit abgeloest ist. Diese Flaeche bleibt trotzdem, und aus zwei
+    /// Gruenden: sie traegt die Meldung ueber das Erscheinungsbild (unten),
+    /// und sie faengt den Klick auf ein Bild und auf den leeren Rand.
     ///
     /// **Die zweite Aufgabe kam mit der Einfaerbung.**
     /// `viewDidChangeEffectiveAppearance` ist die eine Stelle, die AppKit fuer
@@ -286,6 +330,88 @@ impl Inhaltsflaeche {
     }
 }
 
+define_class!(
+    /// Die Textanzeige der Vorschau: eine `NSTextView`, die weiss, aus welcher
+    /// Quelle ihr Text gerendert wurde (C1.1 und C2 der Runde 14).
+    ///
+    /// **Warum eine eigene Klasse und nicht die nackte `NSTextView` von
+    /// vorher.** Sobald die Flaeche auswaehlbar ist, fuehren `copy:`, der
+    /// Eintrag des Kontextmenues, die Dienste des Systems und das Ziehen einer
+    /// Auswahl in AppKit an einer Stelle zusammen:
+    /// `writeSelectionToPasteboard:types:`. Nur eine Unterklasse kommt an
+    /// diese Stelle heran; ein Delegiertenweg oder ein Abfangen vor der
+    /// Antwortkette erreichte jeweils nur einen Teil der Wege.
+    ///
+    /// **In dieser Runde traegt sie die Ueberschreibung noch nicht** — sie
+    /// kommt mit dem Schritt, der den Ausgabeweg baut. Bis dahin ist die
+    /// Klasse in ihrem Verhalten eine `NSTextView` und nichts weiter; der
+    /// Merkposten steht schon, damit der Inhalt ihn setzen kann, ohne dass ein
+    /// Schritt zwei Dinge zugleich aendert.
+    ///
+    /// **Der Merkposten haelt einen [`Arc`] und keine Kopie.** Der
+    /// [`Quellbezug`] entsteht im Durchgang, der rendert, und liegt bereits im
+    /// [`Inhalt`] des Tabs; ihn hier ein zweites Mal aufzubauen hiesse, die
+    /// Quelle der Datei ein zweites Mal im Speicher zu halten. `None` heisst
+    /// „was hier steht, ist kein gerendertes Markdown" — roher Text,
+    /// eingefaerbter Quelltext, Metadaten, ein Hinweis, ein leerer Tab oder
+    /// der Text aus der Zwischenablage.
+    // SAFETY:
+    // - Die Oberklasse NSTextView stellt an eine Unterklasse keine Bedingung,
+    //   die diese Klasse verletzen koennte: sie ueberschreibt in dieser Runde
+    //   keine Methode und ruft den bezeichneten Erzeuger der Oberklasse.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTextView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = RefCell<Option<Arc<Quellbezug>>>]
+    pub struct Vorschautext;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Vorschautext {}
+);
+
+impl Vorschautext {
+    /// Eine Textanzeige mit dem genannten Rahmen, noch ohne Quellbezug.
+    ///
+    /// Ueber `initWithFrame:` und nicht ueber `initWithFrame:textContainer:`,
+    /// weil diese Fassung das Textnetz — Textspeicher, Layoutverwalter und
+    /// Behaelter — selbst aufspannt (`NSTextView.h:86`). Genau darauf greifen
+    /// [`textmerkmale`] und [`Nummernspalte`] zu.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
+        // SAFETY: `initWithFrame:` von NSTextView hat die hier angenommene
+        // Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Legt den Quellbezug des Textes ab, der jetzt dasteht.
+    ///
+    /// `None` nimmt ihn zurueck. Wer den Text der Flaeche ersetzt, ohne diese
+    /// Methode zu rufen, laesst den Bezug des **vorigen** Inhalts stehen, und
+    /// eine Auswahl lieferte danach Quelltext aus einer anderen Datei.
+    #[expect(
+        dead_code,
+        reason = "der Rufer entsteht im Schritt, der den Quellbezug an den \
+                  Inhalt haengt; mit ihm wird die Erwartung unerfuellt und \
+                  diese Zeile faellt"
+    )]
+    fn quellbezug_setzen(&self, bezug: Option<Arc<Quellbezug>>) {
+        *self.ivars().borrow_mut() = bezug;
+    }
+
+    /// Der Quellbezug des Textes, der jetzt dasteht, falls einer beiliegt.
+    #[must_use]
+    #[expect(
+        dead_code,
+        reason = "der Rufer ist die Ueberschreibung von \
+                  writeSelectionToPasteboard:types: aus dem Schritt, der den \
+                  Ausgabeweg baut; mit ihm wird die Erwartung unerfuellt und \
+                  diese Zeile faellt"
+    )]
+    fn quellbezug(&self) -> Option<Arc<Quellbezug>> {
+        self.ivars().borrow().clone()
+    }
+}
+
 /// Was das Vorschaufenster haelt.
 pub struct VorschaufensterIvars {
     /// Der Bereich, der in die Aufteilung gehaengt wird.
@@ -295,7 +421,12 @@ pub struct VorschaufensterIvars {
     /// Die Bildlaufansicht um die Textanzeige.
     textrolle: Retained<NSScrollView>,
     /// Die Textanzeige: Text, Metadaten und Hinweise.
-    text: Retained<NSTextView>,
+    ///
+    /// Seit der Runde 14 ein [`Vorschautext`] und keine nackte `NSTextView`.
+    /// Jede Beruehrung hier laeuft weiter ueber die Ableitung auf die
+    /// Oberklasse — [`Nummernspalte::einhaengen`] und [`textmerkmale`]
+    /// eingeschlossen —; die Unterklasse traegt allein den Quellbezug.
+    text: Retained<Vorschautext>,
     /// Die Bildanzeige (C6: Bilder ueber `NSImage`).
     bild: Retained<NSImageView>,
     /// Die Leiste am Kopf. Sie kommt nach dem Objekt zur Welt, weil ihr
@@ -1090,14 +1221,27 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
     }
 }
 
-/// Baut die Textanzeige: eine nicht auswaehlbare `NSTextView` in einer
-/// Bildlaufansicht.
+/// Baut die Textanzeige: einen auswaehlbaren, nicht bearbeitbaren
+/// [`Vorschautext`] in einer Bildlaufansicht.
 ///
-/// Nicht auswaehlbar aus dem Grund im Modulkopf: eine auswaehlbare naehme als
-/// Textsystem den Fokus, und der Ereignisabgriff reichte jede Taste weiter.
-/// **Die beiden Schalter bleiben, wo sie stehen** (C4, achtes Kriterium der
-/// Runde 6): die Merkmale gehen ueber Textspeicher und Layoutverwalter in die
-/// Flaeche und brauchen keine Auswahl.
+/// **Die beiden Schalter sagen nicht mehr dasselbe, und das ist der Kern
+/// dieser Stelle.**
+///
+/// `setSelectable(true)` ist neu und loest eine abgenommene Zusage ab: C4,
+/// achtes Kriterium der Runde 6, sagte „die beiden Schalter bleiben, wo sie
+/// stehen", und der Nutzer hat das am 260819 **ersetzt und nicht ergaenzt**
+/// (C1.1 der Runde 14). Der Grund der alten Zusage — eine auswaehlbare Flaeche
+/// nimmt den Fokus als Textsystem — gilt unveraendert; er ist nur nicht mehr
+/// mit dem Schalter zu bezahlen, sondern mit der Anmeldung der Flaeche beim
+/// Anwendungsdelegierten (C1.7). Der Modulkopf fuehrt das aus.
+///
+/// `setEditable(false)` bleibt davon **unberuehrt**. Es steht hier nicht als
+/// Mittel gegen den Fokus, sondern weil die Vorschau zeigt und nicht bearbeitet
+/// (C1.4); keine Ueberlegung, die den anderen Schalter hat fallen lassen,
+/// trifft diesen. Die Flaeche ist damit auch keine „bearbeitbare
+/// Textflaeche" im Sinne von [`super::textautomatik`] und schaltet dessen
+/// Automatiken nicht ab: was der Nutzer nicht tippen kann, veraendert keine
+/// Automatik.
 ///
 /// Die Schrift ist die der Rohansicht, also die feste Schreibmaschinenschrift
 /// des Nutzers, weil C6 die Anzeige als **rohen** Inhalt zusagt. Sie kommt
@@ -1108,7 +1252,7 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
 fn textanzeige(
     mtm: MainThreadMarker,
     rahmen: NSRect,
-) -> (Retained<NSScrollView>, Retained<NSTextView>) {
+) -> (Retained<NSScrollView>, Retained<Vorschautext>) {
     let rolle = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
     rolle.setHasVerticalScroller(true);
     rolle.setAutohidesScrollers(true);
@@ -1116,9 +1260,9 @@ fn textanzeige(
         NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
     );
 
-    let text = NSTextView::initWithFrame(NSTextView::alloc(mtm), rahmen);
+    let text = Vorschautext::neu(mtm, rahmen);
     text.setEditable(false);
-    text.setSelectable(false);
+    text.setSelectable(true);
     text.setVerticallyResizable(true);
     text.setHorizontallyResizable(false);
     text.setMinSize(NSSize::ZERO);
@@ -1146,6 +1290,8 @@ fn textanzeige(
 mod tests {
     use std::sync::Arc;
     use std::time::SystemTime;
+
+    use crate::quellbaum::quelldateien;
 
     use super::*;
 
@@ -1261,5 +1407,79 @@ mod tests {
                 "appkit/vorschau.rs nennt {name} nicht; die Probe darueber bestaetigte dann nichts"
             );
         }
+    }
+
+    /// Die beiden Schalter stehen je an genau einer Stelle im Baum, und dort
+    /// (C1.1 und C1.4 der Runde 14).
+    ///
+    /// **Die eine Haelfte ist die abgeloeste Zusage.** C4, achtes Kriterium
+    /// der Runde 6, sagte zu, dass die Textanzeige der Vorschau nicht
+    /// auswaehlbar bleibt; der Nutzer hat das am 260819 ersetzt. Diese Probe
+    /// haelt fest, dass die Zeile wirklich weg ist und nicht bloss ein
+    /// zweites Mal daneben steht — an einer gebauten Flaeche ist das nicht zu
+    /// messen, weil `krk-ui` kein Bibliotheksziel hat und eine Probe, die
+    /// dafuer den Hauptfaden behauptet, der bekannte Defekt `260810-1001`
+    /// waere. Die sichtbare Haelfte, dass sich der Text mit der Maus markieren
+    /// laesst, steht als Kriterium am Buendel und ist Nutzerarbeit.
+    ///
+    /// **Die andere Haelfte ist die Zusage, die stehen bleibt.**
+    /// `setEditable(false)` faellt nicht mit dem anderen Schalter, und der
+    /// Doc-Kommentar von [`super::textanzeige`] sagt, warum. Ohne diese
+    /// Haelfte waere die Probe einseitig: sie liesse zu, dass jemand beide
+    /// Zeilen fuer dasselbe haelt und die Vorschau nebenbei bearbeitbar macht.
+    ///
+    /// # Was diese Nadel nicht sieht
+    ///
+    /// **Sie zaehlt Codezeilen und nicht Aufrufe.** Ein Aufruf, der ueber zwei
+    /// Zeilen umbricht, der ueber `setValue:forKey:` geht oder der den Wert
+    /// aus einer Variablen nimmt, entgeht ihr vollstaendig. Der Kopf von
+    /// [`crate::quellbaum`] sagt, warum keine Suche im Quelltext restlos dicht
+    /// ist.
+    ///
+    /// **Und sie unterscheidet `NSTextView` nicht von `NSTextField`.** Die
+    /// eine verbliebene Fundstelle von `setSelectable(false)` sitzt an der
+    /// Meldungszeile des Belegungsblattes, und das ist ein `NSTextField` und
+    /// keine Textanzeige; sie steht deshalb als erwartete Stelle in der
+    /// Erwartung und nicht als Fehlschlag. Der Plan der Runde erwartete an
+    /// dieser Stelle „kommt im Baum nicht mehr vor"; das war am Baum nicht
+    /// nachgesehen, und die Probe schreibt die Lage aus, statt eine
+    /// Erwartung zu setzen, die von Anfang an rot waere.
+    #[test]
+    fn die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort() {
+        // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
+        // den sie liest, und als ein Stueck geschrieben faende jede sich
+        // selbst.
+        let nicht_auswaehlbar = concat!("setSelectable(", "false)");
+        let nicht_bearbeitbar = concat!("setEditable(", "false)");
+
+        let stellen = |nadel: &str| -> Vec<(String, usize)> {
+            quelldateien()
+                .into_iter()
+                .map(|(name, inhalt)| {
+                    let zahl = inhalt
+                        .lines()
+                        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                        .filter(|zeile| zeile.contains(nadel))
+                        .count();
+                    (name, zahl)
+                })
+                .filter(|(_, zahl)| *zahl > 0)
+                .collect()
+        };
+
+        assert_eq!(
+            stellen(nicht_auswaehlbar),
+            vec![("krk-ui/src/appkit/belegungsansicht.rs".to_owned(), 1)],
+            "`{nicht_auswaehlbar}` steht nicht mehr allein an der Meldungszeile \
+             des Belegungsblattes; die Textanzeige der Vorschau ist seit der \
+             Runde 14 auswaehlbar"
+        );
+        assert_eq!(
+            stellen(nicht_bearbeitbar),
+            vec![("krk-ui/src/appkit/vorschau.rs".to_owned(), 1)],
+            "`{nicht_bearbeitbar}` steht nicht mehr genau einmal, und zwar an \
+             der Textanzeige der Vorschau; die Vorschau zeigt und bearbeitet \
+             nicht"
+        );
     }
 }
