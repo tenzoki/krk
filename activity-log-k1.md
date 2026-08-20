@@ -21,7 +21,8 @@
 
 ## Grober Verlauf
 
-- **08-19 Mi** [8-14] — Die Auslieferung springt auf 0.5.4, ein Klick unter die letzte Zeile holt den Fokus, und der Kuratorenlauf zieht dreizehn Aussagen in CLAUDE.md auf den Stand des Baums.
+- **08-20 Do** [5-22] — Runde 14 wird gebaut, vom Nutzer am laufenden Bündel abgenommen und schließt kohärent; danach Auslieferung 0.5.5, der Beglaubigungsweg `./certify-only.sh` und ein Sitzungsabschluss mit Abgleich, Archiv und Kuratorenlauf.
+- **08-19 Mi** [8-23] — Die Auslieferung springt auf 0.5.4, ein Klick unter die letzte Zeile holt den Fokus, der Kuratorenlauf zieht dreizehn Aussagen in CLAUDE.md nach — und am Abend wird Runde 14 geformt: die Vorschaufläche soll auswählbar werden.
 - **08-18 Di** [7-25] — Runde 13: `opt+cmd+s` gleicht die Ordner an, und eine Dateiliste nimmt Abwürfe aus fremden Anwendungen. Dabei fällt eine Datenverlustkette im Kern auf, die älter ist als die Runde.
 - **08-17 Mo** [8-28] — Runde 12: ein Löschweg in den Papierkorb, Rückfrage vor jedem Vorgang, endgültiges Löschen fällt aus der Anwendung.
 - **08-16 So** [9-28] — Runde 11 (Inhaltsfilter) läuft und schließt; die Makro-Runde wird angelegt und noch am selben Tag zurückgestellt.
@@ -44,7 +45,7 @@
 
 | Woche ab (Mo) | Aktive Tage | Ø aktive Stunden/Tag |
 |---------------|-------------|----------------------|
-| 2026-08-17    | 3           | 14.7                 |
+| 2026-08-17    | 4           | 17.5                 |
 | 2026-08-10    | 7           | 19.6                 |
 | 2026-08-03    | 7           | 15.0                 |
 | 2026-07-27    | 1           | 15.0                 |
@@ -658,7 +659,7 @@ Runde 12, die einzige bis dahin, die den Marker `_c_` ohne gefahrenen Abnahmelau
 
 Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS verengt die Vorgangsmenge aus `opt` und `cmd`, bevor KRK sie sieht. Die Absicht überlebt, die Taste nicht.
 
-## 2026-08-19 (Mi) [8-14]
+## 2026-08-19 (Mi) [8-23]
 
 | Zeit | Thema | Src |
 |------|-------|-----|
@@ -671,8 +672,40 @@ Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS veren
 | 14:40 | Abgleich zum Sitzungsabschluss, Verdikt kohärent | h |
 | 15:00 | Kuratorenlauf: dreizehn Aussagen in CLAUDE.md auf den Stand des Baums | h |
 | 16:13 | 70 Datensätze archiviert, das Wächterprotokoll mit 40 063 Zeilen gerollt | w |
-| — | 4 Defektdatensätze, 3 Entscheidungen, 6 Sitzungsprotokolle, 1 Analyse | i d h a |
+| 17:34 | das Tätigkeitsprotokoll trägt die Tage 12. bis 19. August nach | g |
+| 20:07 | Sitzung: die Artefaktsprachen-Deklaration fällt, der Abschnitt Sprache zieht nach | h g |
+| 22:16 | Klärung zur auswählbaren Vorschau: fünf Fragen beantwortet, Spec der Runde 14 steht | h p d |
+| 22:30 | Runde 14 ist geformt und aktiv — die Vorschaufläche wird auswählbar | k g |
+| 22:45 | Umsetzungsplan der Runde 14: vier Bündel, acht Schritte | h p |
+| — | 7 Entscheidungen, 1 Defektdatensatz (geteilter tmp-Namensraum für Commit-Nachrichten) | d i |
+
+## 2026-08-20 (Do) [5-22]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 05:01 | der Umsetzungsplan der Runde 14 geht ein | g |
+| 05:15 | die eine Hülle um `NSPasteboard` nimmt jede Ablage entgegen | g h |
+| 05:38 | der Renderdurchgang gibt eine zweite Auskunft: den Quellbezug | g h |
+| 06:01 | aus einer Auswahl in der Vorschau wird ein Quellausschnitt | g h |
+| 06:06 | die Textanzeige der Vorschau ist eine eigene Klasse und auswählbar | g h |
+| 06:19 | aus einer eigenen Textfläche werden zwei, und die Tasten wirken wieder | g h |
+| 06:36 | der Fokus zeigt auf die Textanzeige, der Quellbezug kommt mit dem Inhalt | g h |
+| 06:51 | Kopieren aus gerendertem Markdown liefert den Quelltext | g h |
+| 07:07 | die Zählproben der Runde 14, und neun Prosastellen statt vier | g h |
+| 07:45 | Durchsicht der Runde 14: sechs Befunde | r g |
+| 08:06 | die Klammer hängt an den Rändern eines Elements, nicht an verdeckten Bytes | g h |
+| 08:34 | Abgleich der Runde 14, Verdikt review-needed — 15 von 39 Kriterien ungefahren | h g |
+| 10:34 | zwei Defekte am Umschalten Editor/Vorschau, dazu eine offene Frage nach der Taste | i d |
+| 10:36 | Abnahmelauf der Runde 14 am laufenden Bündel: die neuen Funktionen halten | g |
+| 10:51 | Runde 14 schließt kohärent, das Portfolio zieht nach | k g h |
+| 11:19 | Kuratorenlauf: fünf Aussagen in CLAUDE.md auf den Stand des Baums | h g |
+| 11:33 | Auslieferung 0.5.5, Sitzungsprotokoll der Runde 14 vollständig | g |
+| 16:24 | `./certify-only.sh` — ein fertiges Bündel lässt sich allein beglaubigen | h g |
+| 20:56 | Abgleich zum Sitzungsabschluss: 15 Marker nachgezogen, Verdikt review-needed | h g |
+| 21:15 | neun terminale Datensätze ins Archiv, das Wächterprotokoll mit 124 Zeilen gerollt | w g |
+| 21:27 | Kuratorenlauf: sechs Einträge auf CLAUDE.md, alle angewandt | h |
+| — | 15 Defektdatensätze, 1 Entscheidung, 1 Durchsicht, 14 Sitzungsprotokolle | i d r h |
 
 ## Commits gesamt
 
-527 Git-Commits seit Projektbeginn (2026-08-02).
+537 Git-Commits seit Projektbeginn (2026-08-02).
