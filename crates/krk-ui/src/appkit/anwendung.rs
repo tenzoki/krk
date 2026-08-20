@@ -2152,7 +2152,7 @@ impl Anwendungsdelegierter {
     /// der `if`-Kette, die vorher las.
     ///
     /// Gefragt ist die **Naemlichkeit** und nicht die Art, aus dem Grund, der
-    /// an [`Self::ist_editorflaeche`] steht: die Textflaeche des Editors ist
+    /// an [`Self::ist_eigene_textflaeche`] steht: die Textflaeche des Editors ist
     /// dieselbe Art wie der Feldeditor eines Textfeldes.
     ///
     /// `None` heisst: dieser Wert haengt an keiner Ansicht. Fuer
@@ -2351,7 +2351,24 @@ impl Anwendungsdelegierter {
         )
     }
 
-    /// Ob dieser Ersthelfer dasselbe Objekt wie die Textflaeche des Editors ist.
+    /// Ob dieser Ersthelfer eine der beiden **eigenen** Textflaechen von KRK
+    /// ist.
+    ///
+    /// Es sind genau zwei, und sie stehen hier einzeln: die Textflaeche des
+    /// Editors ([`Editorbereich::textflaeche`]) und die Textanzeige der
+    /// Vorschau ([`Vorschaufenster::textflaeche`]). Beide sind Bereiche der
+    /// Fensterzeile, beide **wollen** KRKs Tastenbefehle mit dem Fokus in sich
+    /// selbst, und beide sind selbst eine `NSTextView` und fielen ohne diese
+    /// Frage unter den Fokusvorbehalt.
+    ///
+    /// **Die Flaeche eines Blattes wird hier ausdruecklich nicht genannt, und
+    /// das ist keine Luecke.** Fuer sie ist das Gegenteil erwuenscht: solange
+    /// ihr Ersthelfer AppKit gehoert, bleibt `Kommando::Abbrechen` unzulaessig,
+    /// der Tastendruck laeuft unveraendert weiter, und `Esc` schliesst den
+    /// Notizzettel. Eine Anmeldung kehrte beides um. Die Kette im Einzelnen
+    /// steht im Modulkopf von [`blaetter::zettel`](super::blaetter::zettel).
+    /// Wer die Warnung in `CLAUDE.md` ohne diese Fallunterscheidung liest,
+    /// meldet die falsche Flaeche an.
     ///
     /// Die eine Ausnahme vom Fokusvorbehalt, also von Bestandteil (2) der
     /// Zulaessigkeitsregel. Gereicht wird sie als Abschluss an
@@ -2365,17 +2382,36 @@ impl Anwendungsdelegierter {
     /// [`Anwendungsdelegierter::fokus`], das die Liste der Leiste und die
     /// Inhaltsflaeche der Vorschau seit der Runde 1 genauso erkennt.
     ///
-    /// **Solange kein Editor gebaut ist, gibt es keine Textflaeche, mit der zu
-    /// vergleichen waere**, und die Antwort ist `false`: der Vorbehalt wirkt
-    /// dann wie vor dieser Runde. Der Abgriff steht seit `oberflaeche_aufbauen`
-    /// und der Editor auch, aber die Reihenfolge der beiden ist keine Zusage
-    /// dieser Funktion; deshalb `get` und nicht `expect`, wie in
-    /// [`Anwendungsdelegierter::fokus`] fuer Leiste und Vorschau.
-    fn ist_editorflaeche(&self, ersthelfer: &NSResponder) -> bool {
-        self.ivars()
+    /// **Die Menge der eigenen Flaechen entsteht hier und nicht im
+    /// Ereignisabgriff.** Zwei `isEqual`-Vergleiche in einer Funktion, ein
+    /// Abschluss, ein Parameter: [`ereignisse`] kennt weder den Editor noch die
+    /// Vorschau und soll beide nicht kennenlernen; es kennt allein die Frage,
+    /// die hier beantwortet wird. Eine dritte eigene Flaeche kaeme als dritter
+    /// Vergleich in diesen Rumpf.
+    ///
+    /// **Solange ein Bereich nicht gebaut ist, gibt es keine Textflaeche, mit
+    /// der zu vergleichen waere**, und dieser Vergleich antwortet `false`: der
+    /// Vorbehalt wirkt fuer ihn wie vor der Runde, die ihn angemeldet hat. Der
+    /// Abgriff steht seit `oberflaeche_aufbauen` und die beiden Bereiche auch,
+    /// aber die Reihenfolge ist keine Zusage dieser Funktion; deshalb `get` und
+    /// nicht `expect`, wie in [`Anwendungsdelegierter::fokus`] fuer Leiste und
+    /// Vorschau.
+    ///
+    /// [`Editorbereich::textflaeche`]: super::editor::Editorbereich::textflaeche
+    /// [`Vorschaufenster::textflaeche`]: super::vorschau::Vorschaufenster::textflaeche
+    fn ist_eigene_textflaeche(&self, ersthelfer: &NSResponder) -> bool {
+        let editorflaeche = self
+            .ivars()
             .editor
             .get()
-            .is_some_and(|editor| ersthelfer.isEqual(Some(editor.textflaeche())))
+            .is_some_and(|editor| ersthelfer.isEqual(Some(editor.textflaeche())));
+        let vorschauflaeche = self
+            .ivars()
+            .vorschau
+            .get()
+            .is_some_and(|vorschau| ersthelfer.isEqual(Some(vorschau.textflaeche())));
+
+        editorflaeche || vorschauflaeche
     }
 
     /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).
@@ -2804,7 +2840,7 @@ impl Anwendungsdelegierter {
     /// auseinanderlaufen, eine kann es nicht.
     ///
     /// Gefragt ist die Naemlichkeit und nicht die Klasse, wie in
-    /// [`Self::ist_editorflaeche`]: verglichen wird ueber `isEqual:` gegen das
+    /// [`Self::ist_eigene_textflaeche`]: verglichen wird ueber `isEqual:` gegen das
     /// Hauptfenster und gegen dessen `attachedSheet`. Ein Panel, das KRK nicht
     /// gehoert, faellt damit auf [`Schluesselfenster::Fremd`], und ebenso ein
     /// KRK, das gar kein Schluesselfenster hat.
@@ -2854,7 +2890,7 @@ impl Anwendungsdelegierter {
             blatt_steht: self.blatt_steht(),
             ersthelfer_gehoert_appkit: ereignisse::ersthelfer_gehoert_appkit(
                 self.mtm(),
-                &|ersthelfer| self.ist_editorflaeche(ersthelfer),
+                &|ersthelfer| self.ist_eigene_textflaeche(ersthelfer),
             ),
             schluesselfenster_gehoert_krk: schluesselfenster.gehoert_krk(),
             fokus: self.fokus_bei(schluesselfenster),

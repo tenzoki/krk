@@ -715,6 +715,27 @@ impl Vorschaufenster {
         &self.ivars().inhaltsflaeche
     }
 
+    /// Die Textanzeige, an der die Naemlichkeitsfrage des Fokusvorbehalts
+    /// haengt.
+    ///
+    /// Sie geht allein zum Vergleichen nach aussen, wortgleich zu
+    /// [`Editorbereich::textflaeche`](super::editor::Editorbereich::textflaeche):
+    /// der Anwendungsdelegierte haelt sie in
+    /// `Anwendungsdelegierter::ist_eigene_textflaeche` gegen den Ersthelfer des
+    /// Schluesselfensters. Seit sie auswaehlbar ist, nimmt sie den
+    /// Ersthelferrang, und ohne diesen Vergleich fiele sie unter den
+    /// Fokusvorbehalt: mit dem Fokus in der Vorschau wirkte kein einziger
+    /// Tastenbefehl von KRK mehr, die vier Tabbefehle aus C1 der Runde 2
+    /// eingeschlossen.
+    ///
+    /// **Der engere Typ der Unterklasse geht dabei nicht mit hinaus.**
+    /// Verglichen wird ein Objektzeiger, und dafuer traegt `NSTextView` alles,
+    /// was gebraucht wird; wer den [`Quellbezug`] setzen oder lesen will, geht
+    /// ueber die Wege innerhalb dieser Datei.
+    pub fn textflaeche(&self) -> &NSTextView {
+        &self.ivars().text
+    }
+
     /// Zeigt den genannten Eintrag im aktiven Tab (C6).
     ///
     /// Kehrt sofort zurueck; gelesen wird auf dem Arbeitsfaden des Modells,

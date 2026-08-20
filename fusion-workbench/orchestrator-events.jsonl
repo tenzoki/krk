@@ -1244,3 +1244,6 @@
 {"ts":"2026-08-20T03:39:08","event":"commit","turn":2,"task":"S1","detail":"13be459"}
 {"ts":"2026-08-20T03:39:08","event":"task_start","turn":2,"task":"S2","agent":"coder","detail":"markdown.rs Klammerregel"}
 {"ts":"2026-08-20T03:39:08","event":"task_start","turn":2,"task":"S3","agent":"coder","detail":"vorschau.rs Vorschautext auswaehlbar"}
+{"ts":"2026-08-20T04:07:15","event":"task_done","turn":2,"task":"S2","agent":"coder","detail":"91f8727"}
+{"ts":"2026-08-20T04:07:15","event":"task_done","turn":2,"task":"S3","agent":"coder","detail":"dfacf29"}
+{"ts":"2026-08-20T04:07:15","event":"task_start","turn":2,"task":"S4","agent":"coder","detail":"Anmeldung im Ereignisabgriff"}

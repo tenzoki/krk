@@ -783,4 +783,68 @@ mod tests {
             );
         }
     }
+
+    /// Die vier Tabbefehle aus C1 der Runde 2 wirken mit dem Fokus in der
+    /// Vorschau (C1.6, Probenhaelfte).
+    ///
+    /// **Die Zulaessigkeitshaelfte der Anmeldung im Ereignisabgriff.** Seit die
+    /// Textanzeige der Vorschau auswaehlbar ist, nimmt sie den Ersthelferrang;
+    /// gehoerte er AppKit, waere `ersthelfer_gehoert_appkit` wahr, Bestandteil
+    /// (2) wiese ab, und mit dem Fokus in der Vorschau wirkte keiner der vier.
+    /// Die Probe rechnet genau die Lage, die die Anmeldung herstellt: kein
+    /// Blatt, KRKs eigenes Schluesselfenster, [`Fokus::Vorschau`] und ein
+    /// Ersthelfer, der nicht AppKit gehoert.
+    ///
+    /// **Die zweite Zusicherung ist die eigentliche Aussage.** Ohne sie bliebe
+    /// offen, ob die vier auch ohne die Anmeldung durchkaemen; mit ihr zeigt
+    /// die Probe, dass allein der Ersthelferbefund den Unterschied macht. Sie
+    /// ist damit die Probe, die rot wird, wenn die Anmeldung wieder faellt.
+    ///
+    /// Die Tastendruecke selbst misst keine Probe, sondern der Buendellauf;
+    /// `krk-ui` hat kein Bibliotheksziel, und eine Probe, die den Hauptfaden
+    /// behauptet, ist der bekannte Defekt `issues/260810-1001_*`.
+    #[test]
+    fn die_vier_tabbefehle_wirken_mit_dem_fokus_in_der_vorschau() {
+        let vorschau = lage(false, false, true, Fokus::Vorschau);
+        let ohne_anmeldung = lage(false, true, true, Fokus::Vorschau);
+        for kommando in [
+            Kommando::TabNeu,
+            Kommando::TabSchliessen,
+            Kommando::TabNaechster,
+            Kommando::TabVoriger,
+        ] {
+            assert!(
+                zulaessig(kommando, vorschau),
+                "{kommando:?} wirkt mit dem Fokus in der Vorschau nicht"
+            );
+            assert!(
+                !zulaessig(kommando, ohne_anmeldung),
+                "{kommando:?} kaeme auch ohne die Anmeldung der Textflaeche durch"
+            );
+        }
+    }
+
+    /// Pfeil hoch und Pfeil runter bleiben mit dem Fokus in der Vorschau
+    /// zulaessig (C1.10, Probenhaelfte fuer die Zulaessigkeit).
+    ///
+    /// **Zulaessig heisst hier ausdruecklich nicht „bewegt etwas".** Beide
+    /// tragen [`Wirkungsbereich::Navigator`], der die Vorschau seit der Runde 1
+    /// mitfuehrt; sie werden von KRK entgegengenommen, von der Vorschau nicht
+    /// ausgefuehrt und erreichen AppKit deshalb nicht. Genau daran haengt die
+    /// Zusage: waeren sie unzulaessig, liefen sie an AppKit weiter, und die
+    /// Schreibmarke der auswaehlbaren Textanzeige begaenne zu wandern. Der
+    /// Verbrauch ist die andere Haelfte und wird am Buendel abgenommen.
+    ///
+    /// Der Nutzerentscheid dazu ist
+    /// `shared/decisions/260819-2216_*_was-tun-pfeil-hoch-und-runter-in-der-auswaehlbaren-vorschau.md`.
+    #[test]
+    fn die_beiden_pfeiltasten_bleiben_in_der_vorschau_zulaessig() {
+        let vorschau = lage(false, false, true, Fokus::Vorschau);
+        for kommando in [Kommando::AuswahlHoch, Kommando::AuswahlRunter] {
+            assert!(
+                zulaessig(kommando, vorschau),
+                "{kommando:?} ist mit dem Fokus in der Vorschau nicht mehr zulaessig"
+            );
+        }
+    }
 }

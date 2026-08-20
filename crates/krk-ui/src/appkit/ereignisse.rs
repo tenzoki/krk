@@ -138,12 +138,20 @@
 //! daraus auf einen Defekt, den es nicht gibt — genau so entstand
 //! `issues/260810-1102_*_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`.
 //!
-//! **Die eine Ausnahme ist die Textflaeche des Editors.** Sie ist selbst eine
-//! `NSTextView` und fiele damit unter den Vorbehalt; der Editor haette mit dem
-//! Fokus in sich selbst keinen einzigen Tastenbefehl von KRK. Der Vorbehalt
-//! bekommt deshalb keine zweite Regel daneben, sondern eine Ausnahme mit einem
-//! Namen: der Ersthelfer behaelt seine AppKit-Bedeutung, ausser er ist dasselbe
-//! Objekt wie die Textflaeche des Editors.
+//! **Die Ausnahmen sind die eigenen Textflaechen von KRK.** Es sind seit der
+//! Runde 14 zwei, die Textflaeche des Editors und die Textanzeige der Vorschau,
+//! und beide sind selbst eine `NSTextView` und fielen damit unter den
+//! Vorbehalt; ihr Bereich haette mit dem Fokus in sich selbst keinen einzigen
+//! Tastenbefehl von KRK. Der Vorbehalt bekommt deshalb keine zweite Regel
+//! daneben, sondern eine Ausnahme mit einem Namen: der Ersthelfer behaelt seine
+//! AppKit-Bedeutung, ausser er ist dasselbe Objekt wie eine der eigenen
+//! Textflaechen.
+//!
+//! **Die Flaeche eines Blattes gehoert ausdruecklich nicht dazu.** Dort ist
+//! erwuenscht, dass die Tasten AppKit gehoeren: nur so bleibt `Abbrechen`
+//! unzulaessig, und nur deshalb schliesst `Esc` den Notizzettel. Wer die
+//! Ausnahme fuer jede bedienbare Textflaeche liest, meldet die falsche an; der
+//! Modulkopf von [`super::blaetter::zettel`] schreibt die Kette aus.
 //!
 //! **Gefragt ist die Naemlichkeit und nicht die Art.** Eine Frage nach der Art
 //! kann zwei Objekte derselben Art nicht trennen, und der Feldeditor eines
@@ -152,18 +160,21 @@
 //! Objective-C-Zeiger und nicht ueber einen Klassennamen, ein Kennzeichen an
 //! der Ansicht oder einen Gang durch den Ansichtsbaum. Er ist trennscharf, weil
 //! ein Objekt mit genau einem anderen identisch ist, und vollstaendig, weil die
-//! Frage fuer jeden Ersthelfer eine Antwort hat; eine Liste von Ausnahmen
-//! entsteht nirgends. Die Pruefung auf die drei Textklassen bleibt daneben
-//! unveraendert stehen und behaelt ihren Grund.
+//! Frage fuer jeden Ersthelfer eine Antwort hat; die Menge der eigenen
+//! Textflaechen steht beim Anwendungsdelegierten, und in dieser Datei entsteht
+//! keine. Die Pruefung auf die drei Textklassen bleibt daneben unveraendert
+//! stehen und behaelt ihren Grund.
 //!
-//! **Der Abgriff kennt den Editor nicht, und seit der Runde 7 bekommt er ihn
-//! auch nicht mehr hereingereicht.** Die Naemlichkeitsfrage steht als Abschluss
-//! im Aufruf von [`ersthelfer_gehoert_appkit`], und dieser Aufruf steht beim
-//! Anwendungsdelegierten, der die Textflaeche ohnehin haelt. [`Tastenabgriff`]
-//! nimmt den Abschluss nicht mehr entgegen; dieses Modul kennt allein die
-//! Frage, die jemand anders beantwortet. Solange kein Editor gebaut ist,
-//! antwortet der Abschluss immer mit `false`, und der Vorbehalt wirkt wie
-//! zuvor.
+//! **Der Abgriff kennt weder den Editor noch die Vorschau, und seit der Runde 7
+//! bekommt er sie auch nicht mehr hereingereicht.** Die Naemlichkeitsfrage
+//! steht als **ein** Abschluss mit **einem** Parameter im Aufruf von
+//! [`ersthelfer_gehoert_appkit`], und dieser Aufruf steht beim
+//! Anwendungsdelegierten, der die beiden Flaechen ohnehin haelt.
+//! [`Tastenabgriff`] nimmt den Abschluss nicht mehr entgegen; dieses Modul
+//! kennt allein die Frage, die jemand anders beantwortet. Eine dritte eigene
+//! Flaeche waere deshalb ein dritter Vergleich dort und keine Aenderung hier.
+//! Solange ein Bereich nicht gebaut ist, antwortet der Abschluss fuer ihn mit
+//! `false`, und der Vorbehalt wirkt wie zuvor.
 //!
 //! **Der Abgriff kennt kein Dateifenster.** Bis Schritt 11 reichte er das
 //! Kommando unmittelbar an die eine Datenquelle weiter. Seit Schritt 12 gibt es
@@ -372,7 +383,8 @@ impl Tastenabgriff {
     /// warum es zwei Zeichen sind.
     ///
     /// **Kein Abschluss fuer den Ersthelfer mehr.** Bis zur Runde 7 nahm diese
-    /// Funktion `ist_editorflaeche` entgegen und stellte den Fokusvorbehalt
+    /// Funktion den Abschluss entgegen, der heute
+    /// `ist_eigene_textflaeche` heisst, und stellte den Fokusvorbehalt
     /// selbst; er ist jetzt Bestandteil (2) der Zulaessigkeitsregel und wird an
     /// der Senke gestellt. Mit ihm ist auch der `MainThreadMarker` weggefallen:
     /// er stand hier allein, um [`ersthelfer_gehoert_appkit`] das
@@ -669,12 +681,17 @@ fn behandeln(
 /// Blatt am Fenster, ist dessen Panel das Schluesselfenster, und dort sitzt das
 /// Textfeld der Pfadeingabe.
 ///
-/// **Zuerst die Naemlichkeit, dann die Art.** Ist der Ersthelfer dasselbe
-/// Objekt wie die Textflaeche des Editors, gehoert er nicht AppKit, und der
-/// Tastendruck laeuft in den Nachschlag. Diese Frage steht vor der
-/// Klassenpruefung, weil sie ihr sonst zum Opfer fiele: die Textflaeche des
-/// Editors ist eine `NSTextView` wie der Feldeditor auch, und eine Frage nach
-/// der Art kann die beiden nicht trennen. Siehe den Modulkopf.
+/// **Zuerst die Naemlichkeit, dann die Art.** Ist der Ersthelfer eine der
+/// eigenen Textflaechen von KRK, gehoert er nicht AppKit, und der Tastendruck
+/// laeuft in den Nachschlag. Diese Frage steht vor der Klassenpruefung, weil
+/// sie ihr sonst zum Opfer fiele: eine eigene Textflaeche ist eine
+/// `NSTextView` wie der Feldeditor auch, und eine Frage nach der Art kann die
+/// beiden nicht trennen. Siehe den Modulkopf.
+///
+/// **Welche Flaechen dazugehoeren, entscheidet der Abschluss und nicht diese
+/// Datei.** `ist_eigene_textflaeche` wird beim Anwendungsdelegierten gebildet;
+/// dort stehen sie einzeln, und dort waechst die Menge, wenn eine dritte
+/// hinzukommt.
 ///
 /// Sonst gilt die Pruefung auf die drei Textklassen unveraendert. Ein
 /// `NSTextField` gibt beim Bearbeiten seinen Ersthelferrang an den Feldeditor
@@ -684,7 +701,7 @@ fn behandeln(
 /// aelteren Textklassen ab, die AppKit weiterhin fuehrt.
 pub(crate) fn ersthelfer_gehoert_appkit(
     mtm: MainThreadMarker,
-    ist_editorflaeche: &impl Fn(&NSResponder) -> bool,
+    ist_eigene_textflaeche: &impl Fn(&NSResponder) -> bool,
 ) -> bool {
     let Some(fenster) = NSApplication::sharedApplication(mtm).keyWindow() else {
         return false;
@@ -692,7 +709,7 @@ pub(crate) fn ersthelfer_gehoert_appkit(
     let Some(ersthelfer) = fenster.firstResponder() else {
         return false;
     };
-    if ist_editorflaeche(&ersthelfer) {
+    if ist_eigene_textflaeche(&ersthelfer) {
         return false;
     }
     ersthelfer.isKindOfClass(NSTextView::class())
