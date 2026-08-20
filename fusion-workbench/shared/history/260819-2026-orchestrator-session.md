@@ -2,13 +2,13 @@
 
 **Directive:** Aus der Vorschau lässt sich nichts kopieren: die Fläche ist nicht auswählbar, Zeichen zu markieren ist nicht möglich. Das soll gelöst werden. (Wörtlich vom Nutzer am 260819-2031; ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.)
 **Mode:** custom, mit vorgeschalteter Formung (Nutzerentscheid am 260819-2035)
-**Status:** In progress
+**Status:** Abgeschlossen
 
 ## Setup snapshot
 
 - Workbench: `/Users/k1/Projects/productive/krk/fusion-workbench` (plugin version 10.2.0)
 - No interrupted session: `agentstate.yaml` absent at Setup, so the prior session left nothing to resume.
-- A prior history file, `shared/history/260819-2007-orchestrator-session.md`, stands untracked with `**Status:** In progress`. That session wrote its Setup snapshot and went no further; it holds no work and no commits. This session does not adopt it — a session keeps its own history file — and the file is carried into this session's first staging list so it stops sitting outside every commit.
+- A prior history file, `shared/history/260819-2007-orchestrator-session.md`, stands untracked with `**Status:** Abgeschlossen`. That session wrote its Setup snapshot and went no further; it holds no work and no commits. This session does not adopt it — a session keeps its own history file — and the file is carried into this session's first staging list so it stops sitting outside every commit.
 - No active Circle: `.active-circle` absent, so every `OUT_*` resolves into `shared/`.
 - Git HEAD at start: `fce0b6f`
 - Turn budget: `max_turns=12`, resolved from `fusion.json` (`orchestrator.maxTurns`). The configuration loader put no diagnostics on stderr.
@@ -32,14 +32,14 @@
 | Turns | 3 |
 | Planschritte erledigt | 8 von 8 |
 | Aufgaben insgesamt erledigt | 12 |
-| Defektdatensätze gefilt | 14 |
-| Defektdatensätze geschlossen | 7 |
-| Entscheidungsdatensätze gefilt | 7 |
+| Defektdatensätze gefilt | 17 |
+| Defektdatensätze geschlossen | 8 |
+| Entscheidungsdatensätze gefilt | 8 |
 | Entscheidungsdatensätze auf beantwortet | 2 |
 | Entscheidungsdatensätze auf umgesetzt | 6 |
-| Commits | 14 |
+| Commits | 19, dazu der Auslieferungscommit des Nutzers |
 | Agentenfehler | 0 |
-| Nutzergates | 7 |
+| Nutzergates | 9 |
 
 Die vier Datensatzzahlen sind am Dateibestand erhoben und nicht mitgezählt: gegen den Anker
 `fce0b6f` und den Sitzungsbeginn `260819-2026`, über beide Speicher (Circle und gemeinsam).
@@ -125,3 +125,117 @@ Drei seiner Befunde gehören in dieses Protokoll, weil sie über die Runde hinau
 **Das Auslieferungstor steht offen:** 22 Commits seit `v0.5.4`, kein Tag an HEAD. Das ist kein
 Befund dieser Runde, sondern der Stand des Baums; `cargo xtask release` bricht in dieser Lage ab,
 bis der Nutzer eine Zahl wählt.
+
+
+## Review coverage
+
+**Bereich:** `fce0b6f..HEAD` — 19 Commits.
+
+**Gedeckt von:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/reviews/260820-0745-coderev-auswahl-und-kopieren-in-der-vorschau.md`, Bereich `fce0b6f..b28cdd6`, 12 Commits.
+
+**Nicht gedeckt — sieben Commits, einzeln benannt und nicht gezählt:**
+
+- `05cb614` fix(ui): die Klammer haengt an den Raendern eines Elements, nicht an verdeckten Bytes
+- `56afe45` docs(workbench): die Durchsicht der Runde 14 und ihre sechs Datensaetze
+- `dad0a36` chore(workbench): der Abgleich der Runde 14, Verdikt review-needed
+- `70d914d` docs(workbench): der Abnahmelauf der Runde 14 und seine drei Befunde
+- `2beb1de` docs(workbench): die Runde 14 schliesst kohaerent, und das Portfolio zieht nach
+- `7da3098` docs: fuenf Aussagen in CLAUDE.md stehen wieder auf dem Stand des Baums
+- `5d363de` chore(release): die Version steht auf 0.5.5 (Commit des Nutzers)
+
+**Einer davon trägt Code, und das ist die Lücke, die zählt: `05cb614`**, die Wurzelbehebung der
+Klammerregel, 238 geänderte Zeilen in `markdown.rs`. Sie ist **nach** der Durchsicht entstanden,
+weil sie deren Befunde behebt, und keine zweite Durchsicht ist über sie gelaufen. Der Nutzer hat
+sie am Bündel abgenommen; eine Durchsicht ist das nicht. Die übrigen sechs sind
+Arbeitsplatz-Datensätze und der Versionscommit des Nutzers.
+
+**Übernommene nicht geöffnete Dateien:** die Durchsicht nennt zwölf Pfade, die sie nicht geöffnet
+hat, sämtlich Arbeitsplatz-Datensätze und `CLAUDE.md`. Eine nächste Durchsicht hat sie in ihren
+Bereich aufzunehmen.
+
+## Was diese Sitzung über das Verfahren gelernt hat
+
+Vier Befunde binden künftige Arbeit und nicht diese Runde:
+
+- **Der geteilte `/tmp`-Namensraum der Commit-Nachricht** (`shared/issues/260819-2206_o_`). Die
+  Datei dieser Sitzung ist während des Laufs von einer fremden Sitzung überschrieben worden,
+  folgenlos nur deshalb, weil es nach dem `git commit -F` geschah.
+- **`make check` fasst den ganzen Arbeitsbereich** (`shared/issues/260820-0602_o_`). Bei parallelen
+  Agenten gehört ein grünes Ergebnis dem Baum in jenem Augenblick und nicht dem einzelnen Schritt.
+- **Der Plan schreibt Zählerwartungen, ohne sie am Baum zu prüfen** (`circles/…/issues/260820-0646_o_`).
+  Viermal in einer Runde, viermal vom Coder in die richtige Richtung aufgelöst.
+- **Neun falsch gewordene Prosastellen statt der vier, die der Plan führte**
+  (`circles/…/issues/260820-0731_c_`). Eine Erhebung, die von den geänderten Dateien ausgeht,
+  findet die übrigen nicht.
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant S as Shaper
+    participant P as Planner
+    participant C as Coder
+    participant CR as Coderev
+    participant R as Reconciler
+    participant PM as Playmaker
+    participant K as Kurator
+
+    Note over O: Turn 1 — Formung und Planung
+    U->>O: die Vorschau laesst sich nicht markieren
+    O->>U: GATE Vorgehen
+    U-->>O: neue Runde mit Formung
+    O->>U: GATE Artefaktsprache
+    U-->>O: Deklaration zuruecknehmen
+    O->>C: T1 CLAUDE.md
+    C-->>O: done (6be1e81)
+    O->>S: T2 Formung
+    S-->>O: 4 Fragen
+    O->>U: Klaerungsrunde 1
+    U-->>O: 4 Antworten
+    O->>S: Antworten
+    S-->>O: Spec + 7 Datensaetze, 3 Fragen offen
+    O->>U: Klaerungsrunde 2
+    U-->>O: 3 Antworten
+    O->>U: GATE Spec-Abnahme
+    U-->>O: abgenommen (258bd7c)
+    O->>P: T3 Umsetzungsplan
+    P-->>O: 4 Buendel, 8 Schritte (41abcb3)
+    O->>U: GATE Plan-Abnahme
+    U-->>O: abgenommen
+
+    Note over O: Turn 2 — die acht Planschritte
+    O->>C: S1 und S6 nebeneinander
+    C-->>O: done (13be459, 9e10b94)
+    O->>C: S2 und S3 nebeneinander
+    C-->>O: done (91f8727, dfacf29)
+    O->>C: S4, S5, S7, S8 einzeln
+    C-->>O: done (6531f38, 1b85538, 17dad8a, b28cdd6)
+    O->>CR: Durchsicht ueber 12 ungelesene Commits
+    CR-->>O: 6 Datensaetze, 2 hoch (56afe45)
+    O->>U: GATE welche Befunde beheben
+    U-->>O: beide hohen, an der Wurzel
+
+    Note over O: Turn 3 — Wurzelbehebung
+    O->>C: R1 Klammer an die Raender
+    C-->>O: done (05cb614)
+    O->>R: Abgleich
+    R-->>O: review-needed, 5 Datensaetze auf _i_ (dad0a36)
+    O->>U: GATE Abschluss
+    U-->>O: ich fahre die Buendelabnahme
+    U->>O: neue Funktionen halten, 3 Probleme daneben
+    O->>O: 3 Datensaetze gefilt (70d914d)
+
+    Note over O: Abschluss
+    O->>O: _t_ -> _c_, .active-circle geloescht
+    O->>PM: Portfolio nachziehen
+    PM-->>O: portfolio.md neu (2beb1de)
+    O->>K: Kuratorenlauf, Erhebung
+    K-->>O: 5 Vorschlaege, keine Streichung
+    O->>U: GATE Aenderungsbuch
+    U-->>O: alle fuenf
+    O->>K: anwenden
+    K-->>O: 5 von 5 (7da3098)
+    U->>U: release.sh 0.5.5 (5d363de)
+```
