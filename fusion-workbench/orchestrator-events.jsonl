@@ -1264,3 +1264,4 @@
 {"ts":"2026-08-20T06:58:23","event":"reconciliation","detail":"Verdikt review-needed; 5 Entscheidungen auf _i_, 2 bleiben _a_; Spec und Plan auf _p_"}
 {"ts":"2026-08-20T06:58:23","event":"gate_response","agent":"user","detail":"Nutzer faehrt die Buendelabnahme jetzt selbst"}
 {"ts":"2026-08-20T06:58:23","event":"gate_hit","agent":"user","detail":"Buendelabnahme: 16 Beobachtungen am laufenden KRK.app 0.5.4 im Vordergrund"}
+{"ts":"2026-08-20T08:51:44","event":"portfolio_refresh","detail":"circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md; shared/history/260820-1044-playmaker-direct-dispatch.md"}
